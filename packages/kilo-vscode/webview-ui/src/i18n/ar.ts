@@ -1106,6 +1106,9 @@ export const dict = {
   "settings.agentBehaviour.mcpResetAuth.confirm":
     'مسح تسجيل الدخول المحفوظ لـ "{{name}}"؟ ستحتاج إلى تسجيل الدخول مرة أخرى.',
   "settings.agentBehaviour.mcpBrowseMarketplace": "تصفح Marketplace",
+  "settings.agentBehaviour.mcp.timeout.startup.title": "مهلة بدء التشغيل (مللي ثانية)",
+  "settings.agentBehaviour.mcp.timeout.catalog.title": "مهلة الكتالوج (مللي ثانية)",
+  "settings.agentBehaviour.mcp.timeout.execution.title": "مهلة التنفيذ (مللي ثانية)",
   "settings.agentBehaviour.mcpEmpty":
     "لم يتم تهيئة خوادم MCP. أضف خوادم MCP في kilo.jsonc، أو اطلب من الوكيل إضافتها لك.",
   "settings.agentBehaviour.workflows.description":

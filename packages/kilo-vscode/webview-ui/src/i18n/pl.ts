@@ -1132,6 +1132,9 @@ export const dict = {
   "settings.agentBehaviour.mcpResetAuth.confirm":
     'Wyczyścić zapisane logowanie dla "{{name}}"? Będziesz musiał zalogować się ponownie.',
   "settings.agentBehaviour.mcpBrowseMarketplace": "Przeglądaj Marketplace",
+  "settings.agentBehaviour.mcp.timeout.startup.title": "Limit czasu uruchamiania (ms)",
+  "settings.agentBehaviour.mcp.timeout.catalog.title": "Limit czasu katalogu (ms)",
+  "settings.agentBehaviour.mcp.timeout.execution.title": "Limit czasu wykonania (ms)",
   "settings.agentBehaviour.mcpEmpty":
     "Brak skonfigurowanych serwerów MCP. Dodaj serwery MCP w kilo.jsonc lub poproś agenta o ich dodanie.",
   "settings.agentBehaviour.workflows.description":

@@ -1128,6 +1128,9 @@ export const dict = {
   "settings.agentBehaviour.mcpResetAuth.confirm":
     'Очистить сохраненные данные входа для "{{name}}"? Вам нужно будет войти снова.',
   "settings.agentBehaviour.mcpBrowseMarketplace": "Обзор Marketplace",
+  "settings.agentBehaviour.mcp.timeout.startup.title": "Тайм-аут запуска (мс)",
+  "settings.agentBehaviour.mcp.timeout.catalog.title": "Тайм-аут каталога (мс)",
+  "settings.agentBehaviour.mcp.timeout.execution.title": "Тайм-аут выполнения (мс)",
   "settings.agentBehaviour.mcpEmpty":
     "MCP-серверы не настроены. Добавьте MCP-серверы в kilo.jsonc или попросите агента добавить их.",
   "settings.agentBehaviour.workflows.description":

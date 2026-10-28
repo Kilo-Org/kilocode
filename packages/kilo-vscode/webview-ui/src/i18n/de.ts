@@ -1154,6 +1154,9 @@ export const dict = {
   "settings.agentBehaviour.mcpResetAuth.confirm":
     'Die gespeicherte Anmeldung für "{{name}}" löschen? Sie müssen sich erneut anmelden.',
   "settings.agentBehaviour.mcpBrowseMarketplace": "Marketplace durchsuchen",
+  "settings.agentBehaviour.mcp.timeout.startup.title": "Start-Timeout (ms)",
+  "settings.agentBehaviour.mcp.timeout.catalog.title": "Katalog-Timeout (ms)",
+  "settings.agentBehaviour.mcp.timeout.execution.title": "Ausführungs-Timeout (ms)",
   "settings.agentBehaviour.mcpEmpty":
     "Keine MCP-Server konfiguriert. Fügen Sie MCP-Server in kilo.jsonc hinzu oder bitten Sie den Agenten, sie hinzuzufügen.",
   "settings.agentBehaviour.workflows.description":

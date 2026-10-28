@@ -1118,6 +1118,9 @@ export const dict = {
   "settings.agentBehaviour.mcpResetAuth.confirm":
     '"{{name}}"에 저장된 로그인 정보를 지우시겠습니까? 다시 로그인해야 합니다.',
   "settings.agentBehaviour.mcpBrowseMarketplace": "마켓플레이스 둘러보기",
+  "settings.agentBehaviour.mcp.timeout.startup.title": "시작 시간 초과 (ms)",
+  "settings.agentBehaviour.mcp.timeout.catalog.title": "카탈로그 시간 초과 (ms)",
+  "settings.agentBehaviour.mcp.timeout.execution.title": "실행 시간 초과 (ms)",
   "settings.agentBehaviour.mcpEmpty":
     "MCP 서버가 구성되지 않았습니다. kilo.jsonc에서 MCP 서버를 추가하거나 에이전트에게 추가를 요청하세요.",
   "settings.agentBehaviour.workflows.description":

@@ -1114,6 +1114,9 @@ export const dict = {
   "settings.agentBehaviour.mcpResetAuth.confirm":
     'ล้างข้อมูลการเข้าสู่ระบบที่บันทึกไว้สำหรับ "{{name}}" หรือไม่? คุณจะต้องเข้าสู่ระบบอีกครั้ง',
   "settings.agentBehaviour.mcpBrowseMarketplace": "เรียกดู Marketplace",
+  "settings.agentBehaviour.mcp.timeout.startup.title": "หมดเวลาเริ่มต้น (มิลลิวินาที)",
+  "settings.agentBehaviour.mcp.timeout.catalog.title": "หมดเวลาของแค็ตตาล็อก (มิลลิวินาที)",
+  "settings.agentBehaviour.mcp.timeout.execution.title": "หมดเวลาการทำงาน (มิลลิวินาที)",
   "settings.agentBehaviour.mcpEmpty":
     "ไม่ได้กำหนดค่าเซิร์ฟเวอร์ MCP เพิ่มเซิร์ฟเวอร์ MCP ใน kilo.jsonc หรือขอให้เอเจนต์เพิ่มให้คุณ",
   "settings.agentBehaviour.workflows.description":

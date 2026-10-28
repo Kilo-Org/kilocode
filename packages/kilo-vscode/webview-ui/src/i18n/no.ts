@@ -1131,6 +1131,9 @@ export const dict = {
   "settings.agentBehaviour.mcpResetAuth.confirm":
     'Fjerne den lagrede innloggingen for "{{name}}"? Du må logge inn på nytt.',
   "settings.agentBehaviour.mcpBrowseMarketplace": "Bla gjennom Marketplace",
+  "settings.agentBehaviour.mcp.timeout.startup.title": "Oppstartstidsavbrudd (ms)",
+  "settings.agentBehaviour.mcp.timeout.catalog.title": "Katalogtidsavbrudd (ms)",
+  "settings.agentBehaviour.mcp.timeout.execution.title": "Utførelsestidsavbrudd (ms)",
   "settings.agentBehaviour.mcpEmpty":
     "Ingen MCP-servere konfigurert. Legg til MCP-servere i kilo.jsonc, eller be agenten om å legge dem til.",
   "settings.agentBehaviour.workflows.description":

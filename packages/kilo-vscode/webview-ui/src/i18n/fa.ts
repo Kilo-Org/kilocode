@@ -1077,6 +1077,9 @@ export const dict = {
   "settings.agentBehaviour.addMcp.url": "URL سرور",
   "settings.agentBehaviour.addMcp.url.placeholder": "مثلاً http://localhost:3000/sse",
   "settings.agentBehaviour.mcpBrowseMarketplace": "مرور Marketplace",
+  "settings.agentBehaviour.mcp.timeout.startup.title": "مهلت راه‌اندازی (میلی‌ثانیه)",
+  "settings.agentBehaviour.mcp.timeout.catalog.title": "مهلت فهرست (میلی‌ثانیه)",
+  "settings.agentBehaviour.mcp.timeout.execution.title": "مهلت اجرا (میلی‌ثانیه)",
   "settings.agentBehaviour.mcpEmpty":
     "هیچ سرور MCP پیکربندی نشده است. سرورهای MCP را در kilo.jsonc اضافه کنید، یا از agent بخواهید آن‌ها را برایتان اضافه کند.",
   "settings.agentBehaviour.workflows.description":
