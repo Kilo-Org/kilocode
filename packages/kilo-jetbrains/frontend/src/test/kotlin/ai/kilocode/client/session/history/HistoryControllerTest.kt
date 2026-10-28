@@ -960,6 +960,7 @@ class HistoryControllerTest : BasePlatformTestCase() {
             val id = when (open) {
                 is SessionRef.Local -> open.id
                 is SessionRef.Cloud -> "cloud:${open.id}"
+                is SessionRef.Hosted -> open.id
             }
             opened.add(id)
         },

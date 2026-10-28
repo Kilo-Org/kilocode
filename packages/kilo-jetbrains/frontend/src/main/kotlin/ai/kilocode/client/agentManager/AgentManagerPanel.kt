@@ -17,6 +17,7 @@ import ai.kilocode.client.agentManager.worktree.WorktreeStatusBinding
 import ai.kilocode.client.agentManager.worktree.WorktreeStatusService
 import ai.kilocode.client.agentManager.worktree.WorktreeNameCache
 import ai.kilocode.client.agentManager.worktree.runWorktreeSetupScript
+import ai.kilocode.client.app.KiloHostedService
 import ai.kilocode.client.app.KiloWorkspaceService
 import ai.kilocode.client.agentManager.worktree.WorktreeEditorMatchers
 import ai.kilocode.client.agentManager.worktree.WorktreeSessionEditorMatcher
@@ -24,6 +25,10 @@ import ai.kilocode.client.agentManager.worktree.WorktreeSessionEditorKind
 import ai.kilocode.client.agentManager.worktree.WorktreeRowPopupBody
 import ai.kilocode.client.agentManager.worktree.WorktreeTitle
 import ai.kilocode.client.agentManager.worktree.openWorktreeSession
+import ai.kilocode.client.agentManager.hosted.HostedWorkspaceEditorMatcher
+import ai.kilocode.client.agentManager.hosted.HostedWorkspaceRow
+import ai.kilocode.client.agentManager.hosted.HostedWorkspaceRowData
+import ai.kilocode.client.agentManager.hosted.openHostedWorkspace
 import ai.kilocode.client.agentManager.worktree.normalizeWorktreePath
 import ai.kilocode.client.agentManager.worktree.worktreeSessionParams
 import ai.kilocode.client.session.ui.popup.HeaderPopupBody
@@ -72,6 +77,7 @@ import com.intellij.ide.BrowserUtil
 import com.intellij.ide.DeleteProvider
 import com.intellij.ide.actions.RevealFileAction
 import com.intellij.openapi.Disposable
+import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.actionSystem.ActionManager
 import com.intellij.openapi.actionSystem.ActionGroup
 import com.intellij.openapi.actionSystem.ActionUpdateThread
@@ -140,8 +146,11 @@ class AgentManagerPanel(
         showSearch = false,
         onCell = { _, _ -> },
         onOpen = { row, focus ->
-            val item = (row as? WorktreeRow)?.dto ?: return@ActiveList
-            open(item, focus)
+            when (row) {
+                is WorktreeRow -> open(row.dto, focus)
+                is HostedWorkspaceRow -> project?.let { openHostedWorkspace(it, row.data.dto.ref, row.data.dto.name, focus) }
+                else -> Unit
+            }
         },
         menu = ActiveListMenu(WorktreeDataKeys.WORKTREE, group, element = { row ->
             (row as? WorktreeRow)?.dto?.takeIf {
@@ -162,6 +171,7 @@ class AgentManagerPanel(
     private var prs: Map<String, WorktreePrDto> = emptyMap()
     private var dirty: Map<String, WorktreeDirtyDto> = emptyMap()
     private var running: Set<String> = emptySet()
+    private var hostedState = KiloHostedService.HostedState()
     private var hovered: String? = null
     private var orphanBanner: OrphanBanner? = null
 
@@ -179,6 +189,18 @@ class AgentManagerPanel(
         }
         addToCenter(body())
         list.installPopup(group)
+        project?.let { target ->
+            target.service<WorktreeEditorMatchers>().register(HostedWorkspaceEditorMatcher)
+            target.service<KiloHostedService>().let { hosted ->
+                hosted.observe(this) { state ->
+                    ApplicationManager.getApplication().invokeLater {
+                        hostedState = state
+                        sync()
+                    }
+                }
+                hosted.refresh(controller.directory)
+            }
+        }
         sync()
         bindModel()
         controller.onSelect = { key ->
@@ -233,6 +255,7 @@ class AgentManagerPanel(
         controller.reload()
         project?.service<WorktreeStatusService>()?.refreshStats()
         project?.service<WorktreeStatusService>()?.refreshPr()
+        project?.let { target -> target.service<KiloHostedService>().refresh(controller.directory) }
     }
 
     /**
@@ -567,6 +590,10 @@ class AgentManagerPanel(
                     dirty[key],
                     running = running.contains(key),
                 )
+            } + if (hostedState.enabled) {
+                hostedState.items.map { HostedWorkspaceRow(HostedWorkspaceRowData(it, hostedState.statuses[it.ref.key])) }
+            } else {
+                emptyList()
             },
             ActiveListSelection.Preserve,
         )
@@ -605,7 +632,7 @@ class AgentManagerPanel(
     @RequiresEdt
     private fun hover(row: ActiveListItem?) {
         val item = row as? WorktreeRow
-        if (item == null) {
+        if (item == null || row is HostedWorkspaceRow) {
             popup.notifyExit(hovered ?: return)
             hovered = null
             return

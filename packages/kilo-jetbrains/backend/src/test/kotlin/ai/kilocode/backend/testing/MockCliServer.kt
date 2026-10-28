@@ -137,6 +137,22 @@ class MockCliServer : AutoCloseable {
     @Volatile var findFileStatus = 200
     val findFilePaths = CopyOnWriteArrayList<String>()
 
+    // Hosted Session Host responses
+    @Volatile var hostedProviders = """{"providers":[]}"""
+    @Volatile var hostedWorkspaces = """{"items":[],"cursor":null}"""
+    @Volatile var hostedWorkspace = """{"id":{"providerID":"cloud","workspaceID":"wrk_1"},"name":"Cloud Workspace","repository":{"provider":"github","url":"https://github.com/Kilo-Org/kilocode","branch":"main"},"deletionState":"active","created":1.0,"updated":2.0,"lastActivity":3.0,"sessions":[]}"""
+    @Volatile var hostedWorkspaceStatus = """{"deletionState":"active","compute":{"status":"running","detailCode":"ready"},"activity":{"activeSessionCount":1,"hasActiveTurn":false},"wakeOnInput":{"available":true},"billing":{"blocked":false,"rate":{"estimatedHourlyMicrodollars":1000000}},"observedAt":1.0}"""
+    @Volatile var hostedAttach = """{"attachmentID":"wrk_att_test","session":{"providerID":"cloud","sessionID":"ses_cloud"},"expiresAt":${System.currentTimeMillis() + 600_000}}"""
+    @Volatile var hostedMessages = "[]"
+    @Volatile var hostedPromptStatus = 200
+    @Volatile var hostedPromptResponse = "true"
+    @Volatile var lastHostedWorkspacePath: String? = null
+    @Volatile var lastHostedAttachPath: String? = null
+    @Volatile var lastHostedMessagePath: String? = null
+    @Volatile var lastHostedPromptPath: String? = null
+    @Volatile var lastHostedPromptBody: String? = null
+    @Volatile var lastHostedDetachPath: String? = null
+
     // Session REST responses
     @Volatile var sessions = "[]"
     @Volatile var recentSessions = "[]"
@@ -214,6 +230,9 @@ class MockCliServer : AutoCloseable {
     /** Request counts by bare path (e.g. "/session" or "/global/config"). Thread-safe. */
     private val counts = ConcurrentHashMap<String, AtomicInteger>()
     private val requests = Object()
+
+    /** Every request path, including its query string, in arrival order. */
+    val paths = CopyOnWriteArrayList<String>()
     private val streams = Object()
     private val sse = AtomicInteger(0)
 
@@ -371,6 +390,7 @@ class MockCliServer : AutoCloseable {
 
             val output = BufferedWriter(OutputStreamWriter(socket.getOutputStream()))
             val bare = path.substringBefore("?")
+            paths.add(path)
             val latch = sseLatch
 
             // Track request counts
@@ -549,6 +569,37 @@ class MockCliServer : AutoCloseable {
                     lastCloudSessionImportBody = body
                     respond(output, cloudSessionImportStatus, cloudSessionImport)
                 }
+                bare == "/kilocode/session-host/provider" -> respond(output, 200, hostedProviders)
+                bare == "/kilocode/session-host/workspace" -> {
+                    lastHostedWorkspacePath = path
+                    respond(output, 200, hostedWorkspaces)
+                }
+                bare.matches(Regex("/kilocode/session-host/workspace/[^/]+/[^/]+/status")) -> {
+                    lastHostedWorkspacePath = path
+                    respond(output, 200, hostedWorkspaceStatus)
+                }
+                bare.matches(Regex("/kilocode/session-host/workspace/[^/]+/[^/]+")) -> {
+                    lastHostedWorkspacePath = path
+                    respond(output, 200, hostedWorkspace)
+                }
+                bare.matches(Regex("/kilocode/session-host/session/[^/]+/[^/]+/attach")) && method == "POST" -> {
+                    lastHostedAttachPath = path
+                    respond(output, 200, hostedAttach)
+                }
+                bare.matches(Regex("/kilocode/session-host/attachment/[^/]+")) && method == "DELETE" -> {
+                    lastHostedDetachPath = bare
+                    respond(output, 200, "true")
+                }
+                bare == "/session/ses_cloud/message" && method == "GET" -> {
+                    lastHostedMessagePath = path
+                    respond(output, sessionGetStatus, hostedMessages)
+                }
+                bare == "/session/ses_cloud/prompt_async" && method == "POST" -> {
+                    lastHostedPromptPath = path
+                    lastHostedPromptBody = body
+                    respond(output, hostedPromptStatus, hostedPromptResponse)
+                }
+                bare == "/session/ses_cloud/abort" && method == "POST" -> respond(output, 200, "true")
                 bare == "/session/status" -> respond(output, sessionStatusesStatus, sessionStatuses)
                 bare == "/permission" && method == "GET" ->
                     respond(output, pendingPermissionsStatus, pendingPermissions)

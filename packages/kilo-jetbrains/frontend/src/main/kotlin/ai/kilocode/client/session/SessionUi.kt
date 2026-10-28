@@ -318,11 +318,13 @@ class SessionUi(
 
     internal fun currentStyle() = style
 
-    override val pr: WorktreePrDto? get() = branch?.pr
+    private val hosted: Boolean get() = manager?.hosted == true
 
-    override val share: String? get() = controller.model.session?.share?.url
+    override val pr: WorktreePrDto? get() = if (hosted) null else branch?.pr
 
-    override val git: Boolean get() = branch.let { it != null && it.availability != GhAvailability.GIT_MISSING }
+    override val share: String? get() = if (hosted) null else controller.model.session?.share?.url
+
+    override val git: Boolean get() = !hosted && branch.let { it != null && it.availability != GhAvailability.GIT_MISSING }
 
     override val auto: Boolean get() = controller.autoApprove
 
@@ -344,6 +346,7 @@ class SessionUi(
     private val boardSurface: Boolean
         get() {
             if (readonly) return false
+            if (manager?.supportsBoard == false) return false
             if (controller.id == null) return false
             // Defensive: a still-unimported cloud ref already fails the id check above, because
             // controller.id only resolves for a local ref. Once imported the session *is* local and
@@ -381,16 +384,19 @@ class SessionUi(
 
     @RequiresEdt
     override fun compare() {
+        if (manager?.hosted == true) return
         openBranchChanges()
     }
 
     @RequiresEdt
     override fun startShare() {
+        if (manager?.supportsShare == false) return
         controller.setShare(true) { url, err -> onShareResult(url, err, on = true) }
     }
 
     @RequiresEdt
     override fun stopShare() {
+        if (manager?.supportsShare == false) return
         controller.setShare(false) { _, err -> onShareResult(null, err, on = false) }
     }
 
@@ -1114,6 +1120,7 @@ class SessionUi(
 
     @RequiresEdt
     private fun revert(id: String) {
+        if (manager?.supportsRevert == false) return
         pendingRollback = id
         pendingRedo = null
         controller.revert(id)
@@ -1121,6 +1128,7 @@ class SessionUi(
 
     @RequiresEdt
     private fun redo() {
+        if (manager?.supportsRevert == false) return
         pendingRedo = controller.model.revert()?.messageID
         pendingRollback = null
         controller.redo()
@@ -1196,7 +1204,7 @@ class SessionUi(
             SlashAction.MODELS to { prompt.model.open() },
             SlashAction.AGENTS to { prompt.mode.open() },
             SlashAction.VARIANT to { prompt.reasoning.open() },
-            SlashAction.COMPACT to { controller.compact() },
+            SlashAction.COMPACT to { if (manager?.supportsCompact != false) controller.compact() },
             SlashAction.RELOAD to { reloadCoreSettings(workspaces, workspace.directory, project, "slash_command") },
             SlashAction.SETTINGS to { openKiloSettings() },
             SlashAction.HELP to { BrowserUtil.browse(KiloDocs.BASE) },
@@ -1239,6 +1247,7 @@ class SessionUi(
     }
 
     private fun openInlineDiff(files: List<DiffFileDto>, title: String, key: String) {
+        if (manager?.localFiles == false) return
         val dir = controller.sessionDirectory
         cs.launch {
             val branch = workspaces.branchName(dir)
@@ -1364,7 +1373,7 @@ class SessionUi(
      */
     @RequiresEdt
     private fun openBranchChanges() {
-        if (disposed || project.isDisposed) return
+        if (hosted || disposed || project.isDisposed) return
         refreshBranchChanges()
         openBranchDiff()
     }
@@ -1396,7 +1405,7 @@ class SessionUi(
      * null PR, so the dock keeps working while no `gh` process is spawned.
      */
     private fun refreshBranch() {
-        if (readonly) return
+        if (readonly || hosted) return
         branchJob?.cancel()
         val github = KiloPluginSettings.getGithub()
         branchJob = cs.launch {
@@ -1468,6 +1477,7 @@ class SessionUi(
     }
 
     private fun openAttachment(messageId: String, item: FileAttachment) {
+        if (manager?.localFiles == false) return
         val url = item.url.takeIf { it.isNotBlank() } ?: run {
             LOG.info("kind=attachment-open skipped=true reason=blank-url message=$messageId part=${item.id} name=${attachmentName(item)} mime=${item.mime}")
             return

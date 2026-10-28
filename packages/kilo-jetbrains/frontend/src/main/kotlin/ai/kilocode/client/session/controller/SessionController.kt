@@ -148,8 +148,8 @@ class SessionController(
 
     private val listeners = mutableListOf<SessionControllerListener>()
     private var ref: SessionRef? = ref
-    private val sid: String? get() = (ref as? SessionRef.Local)?.id
-    private val directory: String get() = workspace.directory
+    private val sid: String? get() = (ref as? SessionRef.Local)?.id ?: (ref as? SessionRef.Hosted)?.id
+    private val directory: String get() = (ref as? SessionRef.Hosted)?.workspaceKey ?: workspace.directory
     private val updates = SessionUpdateQueue(
       parent,
       cs,
@@ -1142,6 +1142,12 @@ class SessionController(
                 loadSession(token)
                 subscribeEvents()
             }
+            is SessionRef.Hosted -> {
+                val token = SessionLoadState.Loading()
+                startSessionLoading(token)
+                loadSession(token)
+                subscribeEvents()
+            }
             null -> Unit
         }
 
@@ -1284,12 +1290,13 @@ class SessionController(
     }
 
     private fun loadSession(token: SessionLoadState.Loading) {
-        val target = ref as? SessionRef.Local ?: return
+        val target = ref ?: return
         val id = target.id
         val revision = promptRevision
         cs.launch {
             try {
-                val session = target.session ?: runCatching { sessions.get(id, directory) }.getOrNull()
+                val session = (target as? SessionRef.Local)?.session
+                    ?: runCatching { sessions.get(id, directory) }.getOrNull()
                 val items = sessions.messages(id, directory)
                 LOG.debug { "${ChatLogSummary.sid(id)} ${ChatLogSummary.history(items)}" }
                 val discovered = children(items)
@@ -1991,6 +1998,37 @@ class SessionController(
             is ChatEventDto.SessionDiffChanged -> model.setDiff(event.diff)
             is ChatEventDto.TodoUpdated -> model.setTodos(event.todos)
             is ChatEventDto.SessionInterrupted -> interrupted(event)
+            is ChatEventDto.Resnapshot -> if (ref is SessionRef.Hosted) resnapshot()
+        }
+    }
+
+    /**
+     * Replaces hosted history after the backend's event stream reconnected. Ordinary event replay
+     * cannot close the gap left by a dropped SSE connection, so the backend asks for a full reload
+     * and this method rebuilds the transcript before pending prompts are re-probed.
+     */
+    private fun resnapshot() {
+        val target = ref as? SessionRef.Hosted ?: return
+        val id = target.id
+        val revision = promptRevision
+        cs.launch {
+            try {
+                val session = runCatching { sessions.get(id, directory) }.getOrNull()
+                val items = sessions.messages(id, directory)
+                runEdt {
+                    if (disposed) return@runEdt
+                    if (sid != id) return@runEdt
+                    updateModel {
+                        snapshots.clear()
+                        this@SessionController.model.loadHistory(items)
+                        if (session != null) this@SessionController.model.setSession(session)
+                    }
+                    showSession()
+                }
+                recoverPending(id, revision, "hosted-reconnect")
+            } catch (e: Exception) {
+                LOG.warn("${ChatLogSummary.sid(id)} kind=hosted-resnapshot failed message=${e.message}", e)
+            }
         }
     }
 
@@ -3150,6 +3188,7 @@ private fun matchesSession(event: ChatEventDto, id: String): Boolean = when (eve
     is ChatEventDto.SessionCompacted -> event.sessionID == id
     is ChatEventDto.SessionDiffChanged -> event.sessionID == id
     is ChatEventDto.TodoUpdated -> event.sessionID == id
+    is ChatEventDto.Resnapshot -> event.sessionID == id
 }
 
 /** Returns true for the rare prompt events whose delivery is worth logging at INFO. */

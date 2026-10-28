@@ -326,6 +326,17 @@ sealed class ChatEventDto {
      * cancellation as `MessageAbortedError` — byte-identical to what a user Stop produces — so
      * without this signal the UI silently renders "Stopped" for work nobody asked to stop.
      */
+    /**
+     * The hosted event stream reconnected after a gap. Backend-synthesized, never parsed from a CLI
+     * event. The controller reloads hosted history and pending prompts so events missed during the
+     * gap cannot leave the transcript or question cards stale.
+     */
+    @Serializable
+    @SerialName("hosted.resnapshot")
+    data class Resnapshot(
+        val sessionID: String,
+    ) : ChatEventDto()
+
     @Serializable
     @SerialName("session.interrupted")
     data class SessionInterrupted(
