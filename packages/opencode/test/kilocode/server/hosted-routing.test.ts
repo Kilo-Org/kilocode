@@ -1,4 +1,5 @@
 import * as Attachments from "@/kilocode/server/hosted-attachments"
+import { MAX_BODY_BYTES } from "@/kilocode/server/routes/hosted-routing"
 import { HostedFailure, type NativeRequest } from "@/kilocode/session-hosting/types"
 import * as HttpApiServer from "@/server/routes/instance/httpapi/server"
 import { afterEach, beforeEach, describe, expect, test } from "bun:test"
@@ -49,6 +50,37 @@ afterEach(async () => {
 })
 
 describe("hosted attachment routing", () => {
+  test("routes the registered system feed through the hosted provider", async () => {
+    const calls: NativeRequest[] = []
+    const fake = provider("alpha", {
+      route: (request) => {
+        calls.push(request)
+        return Effect.succeed(
+          new Response('data: {"type":"preparing","properties":{}}\n\n', {
+            headers: { "content-type": "text/event-stream" },
+          }),
+        )
+      },
+    })
+    const entry = attach(fake)
+    const response = await app().request(`/cloud-agent/event?workspace=${entry.id}`)
+    expect(response.status).toBe(200)
+    expect(response.headers.get("content-type")).toContain("text/event-stream")
+    expect(await response.text()).toContain('"type":"preparing"')
+    expect(calls[0]?.path).toBe("/cloud-agent/event")
+    expect(calls[0]?.session.sessionID).toBe(SESSION)
+  })
+
+  test("rejects system feeds without a live hosted attachment", async () => {
+    const api = app()
+    const local = await api.request("/cloud-agent/event")
+    expect(local.status).toBe(400)
+    expect(await local.json()).toMatchObject({ message: "A hosted attachment is required for Cloud Agent events" })
+    const unknown = await api.request(`/cloud-agent/event?workspace=${Attachments.createID()}`)
+    expect(unknown.status).toBe(404)
+    expect(await unknown.json()).toMatchObject({ code: "unknown" })
+  })
+
   test("routes a native read to the provider and strips local credentials and selectors", async () => {
     const api = app()
     const fake = provider("alpha")
@@ -71,7 +103,14 @@ describe("hosted attachment routing", () => {
     const call = fake.calls[0]
     expect(call.session.sessionID).toBe(SESSION)
     expect(call.headers.get("accept")).toBe("application/json")
-    for (const stripped of ["authorization", "cookie", "x-kilo-directory", "x-kilo-workspace", "x-kilo-ticket", "host"]) {
+    for (const stripped of [
+      "authorization",
+      "cookie",
+      "x-kilo-directory",
+      "x-kilo-workspace",
+      "x-kilo-ticket",
+      "host",
+    ]) {
       expect(call.headers.get(stripped)).toBeNull()
     }
   })
@@ -231,13 +270,18 @@ describe("hosted attachment routing", () => {
     expect(fake.calls).toHaveLength(0)
   })
 
-  test("renews a lapsed provider descriptor before routing", async () => {
+  test("renews a lapsed provider descriptor before routing without resolving membership again", async () => {
     const api = app()
     let attaches = 0
+    let scans = 0
     const fake = provider("alpha", {
       attach: (input) => {
         attaches += 1
         return Effect.succeed({ session: input.id, expiresAt: Date.now() + 60_000 })
+      },
+      membership: () => {
+        scans += 1
+        return Effect.succeed(undefined)
       },
     })
     const entry = attach(fake, SESSION, 1)
@@ -246,7 +290,133 @@ describe("hosted attachment routing", () => {
 
     expect(response.status).toBe(200)
     expect(attaches).toBe(1)
+    expect(scans).toBe(0)
     expect(fake.calls).toHaveLength(1)
+  })
+
+  test.each([
+    { error: "KILO_SESSION_NOT_FOUND" },
+    { code: "KILO_SESSION_NOT_FOUND" },
+    { error: { code: "KILO_SESSION_NOT_FOUND", message: "not found" } },
+    { error: { message: "not found", data: { code: "KILO_SESSION_NOT_FOUND" } } },
+    { error: { json: { message: "not found", data: { code: "KILO_SESSION_NOT_FOUND" } } } },
+  ])("disposes matching session attachments for deleted-session response %j", async (body) => {
+    const api = app()
+    const calls: NativeRequest[] = []
+    const fake = provider("alpha", {
+      route: (request) => {
+        calls.push(request)
+        return Effect.succeed(Response.json(body, { status: 404 }))
+      },
+    })
+    const entry = Attachments.store.mint({
+      provider: fake.value,
+      session: hosted(fake.value.id, SESSION),
+      expiresAt: Date.now() + 60_000,
+    })
+    const sibling = Attachments.store.mint({
+      provider: fake.value,
+      session: entry.session,
+      expiresAt: Date.now() + 60_000,
+    })
+    const other = Attachments.store.mint({
+      provider: fake.value,
+      session: hosted(fake.value.id, OTHER),
+      expiresAt: Date.now() + 60_000,
+    })
+    const beta = provider("beta")
+    const foreign = Attachments.store.mint({
+      provider: beta.value,
+      session: hosted(beta.value.id, SESSION),
+      expiresAt: Date.now() + 60_000,
+    })
+
+    const missing = await api.request(`/session/${SESSION}/message?workspace=${entry.id}`)
+    expect(missing.status).toBe(404)
+    expect(await missing.json()).toEqual(body)
+    expect(Attachments.store.lookup(entry.id).kind).toBe("disposed")
+    expect(Attachments.store.lookup(sibling.id).kind).toBe("disposed")
+    expect(Attachments.store.lookup(other.id).kind).toBe("found")
+    expect(Attachments.store.lookup(foreign.id).kind).toBe("found")
+
+    const stale = await api.request(`/session/${SESSION}/message?workspace=${entry.id}`)
+    expect(stale.status).toBe(410)
+    expect(await stale.json()).toMatchObject({ code: "disposed" })
+    const closed = await api.request(`/session/${SESSION}/message?workspace=${sibling.id}`)
+    expect(closed.status).toBe(410)
+    expect(calls).toHaveLength(1)
+  })
+
+  test.each(["route", "attach"] as const)(
+    "disposes matching session attachments on provider %s not_found",
+    async (mode) => {
+      const api = app()
+      const missing = () =>
+        Effect.fail(new HostedFailure({ code: "not_found", message: "session deleted", retryable: false }))
+      const fake = provider("alpha", mode === "route" ? { route: missing } : { attach: missing })
+      const entry = Attachments.store.mint({
+        provider: fake.value,
+        session: hosted(fake.value.id, SESSION),
+        expiresAt: mode === "attach" ? 1 : Date.now() + 60_000,
+      })
+      const sibling = Attachments.store.mint({
+        provider: fake.value,
+        session: entry.session,
+        expiresAt: Date.now() + 60_000,
+      })
+
+      const response = await api.request(`/session/${SESSION}/message?workspace=${entry.id}`)
+      expect(response.status).toBe(mode === "attach" ? 503 : 404)
+      expect(Attachments.store.lookup(entry.id).kind).toBe("disposed")
+      expect(Attachments.store.lookup(sibling.id).kind).toBe("disposed")
+
+      const stale = await api.request(`/session/${SESSION}/message?workspace=${sibling.id}`)
+      expect(stale.status).toBe(410)
+    },
+  )
+
+  test("keeps matching attachments when a 404 is not a deleted-session response", async () => {
+    const api = app()
+    const fake = provider("alpha", {
+      route: () => Effect.succeed(Response.json({ error: "MESSAGE_NOT_FOUND" }, { status: 404 })),
+    })
+    const entry = attach(fake)
+
+    const response = await api.request(`/session/${SESSION}/message?workspace=${entry.id}`)
+
+    expect(response.status).toBe(404)
+    expect(await response.json()).toEqual({ error: "MESSAGE_NOT_FOUND" })
+    expect(Attachments.store.lookup(entry.id).kind).toBe("found")
+  })
+
+  test("keeps matching attachments when a 404 body is not JSON and forwards it unchanged", async () => {
+    const api = app()
+    const body = "message not found"
+    const fake = provider("alpha", {
+      route: () => Effect.succeed(new Response(body, { status: 404, headers: { "content-type": "text/plain" } })),
+    })
+    const entry = attach(fake)
+
+    const response = await api.request(`/session/${SESSION}/message?workspace=${entry.id}`)
+
+    expect(response.status).toBe(404)
+    expect(await response.text()).toBe(body)
+    expect(Attachments.store.lookup(entry.id).kind).toBe("found")
+  })
+
+  test("keeps matching attachments when a deleted-session 404 body exceeds the inspection bound", async () => {
+    const api = app()
+    const body = { error: "KILO_SESSION_NOT_FOUND", padding: "x".repeat(MAX_BODY_BYTES) }
+    const fake = provider("alpha", {
+      route: () => Effect.succeed(Response.json(body, { status: 404 })),
+    })
+    const entry = attach(fake)
+
+    const response = await api.request(`/session/${SESSION}/message?workspace=${entry.id}`)
+
+    expect(response.status).toBe(404)
+    expect(await response.json()).toEqual(body)
+    expect(Attachments.store.lookup(entry.id).kind).toBe("found")
   })
 
   test("streams the session-scoped event source without rewriting fence or resnapshot frames", async () => {

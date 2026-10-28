@@ -52,6 +52,10 @@ const COLLECTION: ReadonlyArray<Collection> = [
   { method: "GET", path: "/question", remote: "/kilo/question" },
   { method: "GET", path: "/permission", remote: "/kilo/permission" },
   { method: "GET", path: "/event", remote: "/kilo/event" },
+  // Cloud's system feed (environment preparation and sandbox status). The
+  // attachment selector carries the workspace identity; the directory selector
+  // is derived from the attached root session.
+  { method: "GET", path: "/cloud-agent/event", remote: "/kilo/cloud-agent/event" },
   { method: "POST", pattern: /^\/question\/([^/]+)\/reply$/, remote: (id) => `/kilo/question/${id}/reply` },
   { method: "POST", pattern: /^\/question\/([^/]+)\/reject$/, remote: (id) => `/kilo/question/${id}/reject` },
   { method: "POST", pattern: /^\/permission\/([^/]+)\/reply$/, remote: (id) => `/kilo/permission/${id}/reply` },
