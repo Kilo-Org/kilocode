@@ -97,6 +97,32 @@ class KiloHostedServiceTest {
         assertEquals(0, rpc.workspaceCalls)
     }
 
+    @Test
+    fun `refresh reloads hosted rows and emits an invalidation each time`() = runBlocking(Dispatchers.Default) {
+        val pages = mutableMapOf<String?, HostedWorkspaceListDto>(
+            null to HostedWorkspaceListDto(items = listOf(workspace("1"))),
+        )
+        val service = KiloHostedService(
+            cs = cs,
+            rpc = FakeRpc(pages = pages),
+            gate = { true },
+            log = TestLog(),
+            repo = { "repo" },
+        )
+        service.refresh("/repo")
+        withTimeout(5_000) { service.state.first { !it.loading && it.items.isNotEmpty() } }
+        assertEquals(1L, service.refreshes.value)
+        pages[null] = HostedWorkspaceListDto(items = listOf(workspace("2")))
+
+        service.refresh("/repo")
+        val state = withTimeout(5_000) {
+            service.state.first { !it.loading && it.items.firstOrNull()?.ref?.workspaceID == "wrk_2" }
+        }
+
+        assertEquals(listOf("wrk_2"), state.items.map { it.ref.workspaceID })
+        assertEquals(2L, service.refreshes.value)
+    }
+
     private fun workspace(id: String): HostedWorkspaceDto = HostedWorkspaceDto(
         ref = HostedWorkspaceRefDto("cloud", "wrk_$id"),
         name = "Repo $id",

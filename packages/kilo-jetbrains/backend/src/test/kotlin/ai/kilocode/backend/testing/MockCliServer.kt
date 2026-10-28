@@ -151,6 +151,8 @@ class MockCliServer : AutoCloseable {
     @Volatile var lastHostedMessagePath: String? = null
     @Volatile var lastHostedPromptPath: String? = null
     @Volatile var lastHostedPromptBody: String? = null
+    @Volatile var lastHostedCommandPath: String? = null
+    @Volatile var lastHostedCommandBody: String? = null
     @Volatile var lastHostedDetachPath: String? = null
 
     // Session REST responses
@@ -598,6 +600,11 @@ class MockCliServer : AutoCloseable {
                     lastHostedPromptPath = path
                     lastHostedPromptBody = body
                     respond(output, hostedPromptStatus, hostedPromptResponse)
+                }
+                bare == "/session/ses_cloud/command" && method == "POST" -> {
+                    lastHostedCommandPath = path
+                    lastHostedCommandBody = body
+                    respond(output, 200, "true")
                 }
                 bare == "/session/ses_cloud/abort" && method == "POST" -> respond(output, 200, "true")
                 bare == "/session/status" -> respond(output, sessionStatusesStatus, sessionStatuses)

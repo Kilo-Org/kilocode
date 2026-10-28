@@ -33,6 +33,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.awt.BorderLayout
@@ -102,6 +103,13 @@ class HostedWorkspaceEditorPanel(
         addToTop(header())
         addToCenter(splitter)
         present(null)
+        cs.launch {
+            hosted.refreshes.drop(1).collect {
+                withContext(Dispatchers.Main) {
+                    if (started && !Disposer.isDisposed(this@HostedWorkspaceEditorPanel)) reload()
+                }
+            }
+        }
         addHierarchyListener { event ->
             if (event.changeFlags and java.awt.event.HierarchyEvent.SHOWING_CHANGED.toLong() == 0L) return@addHierarchyListener
             if (isShowing) start()
@@ -193,7 +201,9 @@ class HostedWorkspaceEditorPanel(
                     val text = listOfNotNull(
                         event.step?.takeIf { it.isNotBlank() },
                         event.message?.takeIf { it.isNotBlank() },
+                        event.cloudStatus?.takeIf { it.isNotBlank() },
                         event.sandboxStatus?.takeIf { it.isNotBlank() },
+                        event.sandboxDetail?.takeIf { it.isNotBlank() },
                     ).distinct().joinToString(" · ")
                     withContext(Dispatchers.Main) {
                         if (selected != item.id) return@withContext

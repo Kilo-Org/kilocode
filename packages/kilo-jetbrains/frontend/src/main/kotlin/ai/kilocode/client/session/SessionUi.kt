@@ -48,6 +48,7 @@ import ai.kilocode.client.session.ui.prompt.SessionIssue
 import ai.kilocode.client.session.ui.prompt.SessionIssueAction
 import ai.kilocode.client.session.ui.prompt.SlashAction
 import ai.kilocode.client.session.ui.prompt.mentionParts as promptMentionParts
+import ai.kilocode.client.session.ui.prompt.promptMentions
 import ai.kilocode.client.session.ui.rail.PromptRailController
 import ai.kilocode.client.session.settings.ApprovalReasonVisibilityListener
 import ai.kilocode.client.session.settings.TranscriptDisplayListener
@@ -651,6 +652,7 @@ class SessionUi(
             actions = slashActions(),
             mentions = mentionActions(),
             scope = cs,
+            files = !hosted,
         )
         prompt = PromptPanel(
             project = project,
@@ -662,6 +664,7 @@ class SessionUi(
             completion = completion,
             cs = cs,
             hostedInEditorTab = manager?.hostedInEditorTab == true,
+            files = !hosted,
         )
         connection = ConnectionPanel(this, controller)
         // The banner reports a broken session, so it owns the pointer where it sits: the transcript
@@ -1057,6 +1060,14 @@ class SessionUi(
     private fun sendPrompt(text: String, files: List<PromptPartDto>, select: PromptSelection? = null) {
         if (readonly) return
         if (text.isBlank() && files.isEmpty()) return
+        if (hosted && (files.isNotEmpty() || promptMentions(text).isNotEmpty())) {
+            com.intellij.notification.Notification(
+                "Kilo Code",
+                KiloBundle.message("hosted.prompt.textOnly"),
+                com.intellij.notification.NotificationType.WARNING,
+            ).notify(project)
+            return
+        }
         prompt.clear()
         val follow = scroll.following()
         val action = completion.clientAction(text)
@@ -1075,9 +1086,9 @@ class SessionUi(
             // Only the prompt path uses editor context; gather after the command branches so slash
             // commands and client actions don't pay the editor-context cost or hit its failure modes.
             // Ignore-file VFS reads suspend on Dispatchers.IO before returning to the EDT.
-            val editor = EditorContextGatherer.gather(project, workspace.directory)
+            val editor = if (hosted) null else EditorContextGatherer.gather(project, workspace.directory)
             if (disposed || project.isDisposed) return@launch
-            val allFiles = files + editor.selection
+            val allFiles = files + editor?.selection.orEmpty()
             LOG.debug {
                 val parts = buildList {
                     text.takeIf { it.isNotBlank() }?.let { add(PromptPartDto(type = "text", text = it)) }
@@ -1085,7 +1096,7 @@ class SessionUi(
                 }
                 val agent = controller.model.agent ?: "none"
                 val model = controller.model.model ?: "none"
-                "${ChatLogSummary.prompt(PromptDto(parts = parts, editorContext = editor.context))} agent=$agent model=$model ready=${controller.ready}"
+                "${ChatLogSummary.prompt(PromptDto(parts = parts, editorContext = editor?.context))} agent=$agent model=$model ready=${controller.ready}"
             }
             // Baseline the user-message ids for this send. onStateChanged uses it to tell a prompt
             // that failed before the server ever created its message (restore the draft) apart from a
@@ -1093,7 +1104,7 @@ class SessionUi(
             // the transcript already). A queued send baselines the in-flight turn's message, so that
             // turn cannot be mistaken for confirmation of this one.
             pendingSend = userMessageIds()
-            controller.prompt(text, allFiles, editor.context, select)
+            controller.prompt(text, allFiles, editor?.context, select)
             scroll.followBottom(follow)
         }
     }
@@ -1209,7 +1220,9 @@ class SessionUi(
             SlashAction.SETTINGS to { openKiloSettings() },
             SlashAction.HELP to { BrowserUtil.browse(KiloDocs.BASE) },
         )
-        return SlashAction.ALL.map { spec -> bind(spec, fns.getValue(spec)) }
+        return SlashAction.ALL
+            .filter { !hosted || it != SlashAction.VARIANT && it != SlashAction.COMPACT }
+            .map { spec -> bind(spec, fns.getValue(spec)) }
     }
 
     private fun bind(spec: SlashAction.Spec, action: () -> Unit) = SlashAction(
@@ -1222,7 +1235,7 @@ class SessionUi(
         },
     )
 
-    private fun mentionActions(): List<MentionAction> = MentionAction.ALL.map(::bind)
+    private fun mentionActions(): List<MentionAction> = if (hosted) emptyList() else MentionAction.ALL.map(::bind)
 
     private fun bind(spec: MentionAction.Spec) = MentionAction(
         spec.name,
@@ -1232,6 +1245,7 @@ class SessionUi(
     )
 
     private suspend fun mentionParts(text: String): List<PromptPartDto> {
+        if (hosted) return emptyList()
         val names = MentionAction.ALL.mapTo(mutableSetOf()) { it.name }
         return promptMentionParts(
             text = text,

@@ -7,6 +7,11 @@ import ai.kilocode.backend.testing.MockCliServer
 import ai.kilocode.backend.testing.TestLog
 import ai.kilocode.rpc.dto.HostedIDs
 import ai.kilocode.rpc.dto.HostedWorkspaceRefDto
+import ai.kilocode.rpc.dto.EditorContextDto
+import ai.kilocode.rpc.dto.PartSourceDto
+import ai.kilocode.rpc.dto.PartSourceTextDto
+import ai.kilocode.rpc.dto.PromptDto
+import ai.kilocode.rpc.dto.PromptPartDto
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -14,6 +19,8 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonObject
 import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -27,6 +34,12 @@ class KiloHostedRoutingTest {
     private val apps = mutableListOf<KiloBackendAppService>()
     private val ref = HostedWorkspaceRefDto("cloud", "wrk_1")
     private val session = HostedIDs.session("cloud", "wrk_1", "ses_cloud")
+    private val prompt = PromptDto(
+        parts = listOf(PromptPartDto("text", text = "Explain this project")),
+        providerID = "kilo",
+        modelID = "kilo-auto/free",
+        agent = "code",
+    )
 
     @AfterTest
     fun tearDown() = runBlocking {
@@ -71,12 +84,131 @@ class KiloHostedRoutingTest {
         ready(app)
         val api = KiloSessionRpcApiImpl(appOverride = app, log = TestLog())
 
-        api.prompt(session, ref.key, ai.kilocode.rpc.dto.PromptDto(parts = emptyList()))
+        api.prompt(session, ref.key, prompt)
         api.abort(session, ref.key)
 
         assertTrue(mock.lastHostedPromptPath.orEmpty().contains("/session/ses_cloud/prompt_async?"))
         assertTrue(mock.lastHostedPromptPath.orEmpty().contains("workspace=wrk_att_test"))
+        val body = Json.parseToJsonElement(assertNotNull(mock.lastHostedPromptBody)).jsonObject
+        assertEquals(setOf("parts", "model", "agent"), body.keys)
+        assertEquals(
+            Json.parseToJsonElement("""{"parts":[{"type":"text","text":"Explain this project"}],"model":{"providerID":"kilo","modelID":"kilo-auto/free"},"agent":"code"}"""),
+            body,
+        )
         assertEquals("/session/ses_cloud/abort?workspace=wrk_att_test", mock.paths.lastOrNull { it.startsWith("/session/ses_cloud/abort") })
+    }
+
+    @Test
+    fun `hosted input rejects rich fields and invalid identifiers before attachment`() = runBlocking(Dispatchers.Default) {
+        val app = app(TestLog())
+        ready(app)
+        val api = KiloSessionRpcApiImpl(appOverride = app, log = TestLog())
+        val part = prompt.parts.single()
+        val cases = listOf(
+            "editor context" to prompt.copy(editorContext = EditorContextDto(shell = "/bin/zsh")),
+            "empty editor context" to prompt.copy(editorContext = EditorContextDto()),
+            "variant" to prompt.copy(variant = "high"),
+            "empty variant" to prompt.copy(variant = ""),
+            "noReply true" to prompt.copy(noReply = true),
+            "noReply false" to prompt.copy(noReply = false),
+            "file" to prompt.copy(parts = listOf(PromptPartDto("file", mime = "text/plain", url = "file:///project/main.kt"))),
+            "mixed parts" to prompt.copy(parts = listOf(part, PromptPartDto("file", url = "data:text/plain,hello"))),
+            "unknown part" to prompt.copy(parts = listOf(PromptPartDto("agent", text = "code"))),
+            "missing text" to prompt.copy(parts = listOf(PromptPartDto("text"))),
+            "synthetic true" to prompt.copy(parts = listOf(part.copy(synthetic = true))),
+            "synthetic false" to prompt.copy(parts = listOf(part.copy(synthetic = false))),
+            "source" to prompt.copy(parts = listOf(part.copy(source = PartSourceDto("file", PartSourceTextDto("@main.kt", 0.0, 8.0), path = "main.kt")))),
+            "url" to prompt.copy(parts = listOf(part.copy(url = "file:///project/main.kt"))),
+            "mime" to prompt.copy(parts = listOf(part.copy(mime = "text/plain"))),
+            "filename" to prompt.copy(parts = listOf(part.copy(filename = "main.kt"))),
+            "provider" to prompt.copy(providerID = "anthropic"),
+            "missing provider" to prompt.copy(providerID = null),
+            "missing model" to prompt.copy(modelID = null),
+            "empty model" to prompt.copy(modelID = ""),
+            "model syntax" to prompt.copy(modelID = "model with spaces"),
+            "model length" to prompt.copy(modelID = "a".repeat(256)),
+            "empty agent" to prompt.copy(agent = ""),
+            "agent syntax" to prompt.copy(agent = "Code"),
+            "agent length" to prompt.copy(agent = "a".repeat(51)),
+            "message ID" to prompt.copy(messageID = "msg_1"),
+            "message timestamp" to prompt.copy(messageID = "msg_ABCDEF000001AbCdEfGhIjKlMn"),
+            "message suffix" to prompt.copy(messageID = "msg_000000000001AbCdEfGhIjKlM_"),
+        )
+        for ((name, input) in cases) {
+            assertFailsWith<IllegalArgumentException>(name) { api.prompt(session, ref.key, input) }
+            assertFailsWith<IllegalArgumentException>(name) { api.command(session, ref.key, "review", "changes", input) }
+            assertEquals(0, mock.requestCount("/kilocode/session-host/session/cloud/ses_cloud/attach"), name)
+            assertEquals(0, mock.requestCount("/session/ses_cloud/prompt_async"), name)
+            assertEquals(0, mock.requestCount("/session/ses_cloud/command"), name)
+        }
+    }
+
+    @Test
+    fun `hosted prompt rejects empty and oversized text before attachment`() = runBlocking(Dispatchers.Default) {
+        val app = app(TestLog())
+        ready(app)
+        val api = KiloSessionRpcApiImpl(appOverride = app, log = TestLog())
+        val cases = listOf(
+            prompt.copy(parts = emptyList()),
+            prompt.copy(parts = listOf(PromptPartDto("text", text = ""))),
+            prompt.copy(parts = listOf(PromptPartDto("text", text = "a".repeat(50_001)), PromptPartDto("text", text = "b".repeat(50_000)))),
+        )
+        for (input in cases) {
+            assertFailsWith<IllegalArgumentException> { api.prompt(session, ref.key, input) }
+        }
+        assertEquals(0, mock.requestCount("/kilocode/session-host/session/cloud/ses_cloud/attach"))
+        assertEquals(0, mock.requestCount("/session/ses_cloud/prompt_async"))
+    }
+
+    @Test
+    fun `hosted prompt preserves canonical message IDs and optional selectors`() = runBlocking(Dispatchers.Default) {
+        val app = app(TestLog())
+        ready(app)
+        val api = KiloSessionRpcApiImpl(appOverride = app, log = TestLog())
+        api.prompt(session, ref.key, prompt.copy(
+            parts = listOf(PromptPartDto("text", text = ""), PromptPartDto("text", text = "hello")),
+            messageID = "msg_000000000001AbCdEfGhIjKlMn",
+            modelID = "org/model-v1.2_3:free~latest",
+            agent = "custom-agent-1",
+        ))
+        assertEquals(
+            Json.parseToJsonElement("""{"parts":[{"type":"text","text":""},{"type":"text","text":"hello"}],"messageID":"msg_000000000001AbCdEfGhIjKlMn","model":{"providerID":"kilo","modelID":"org/model-v1.2_3:free~latest"},"agent":"custom-agent-1"}"""),
+            Json.parseToJsonElement(assertNotNull(mock.lastHostedPromptBody)),
+        )
+        api.prompt(session, ref.key, PromptDto(parts = listOf(PromptPartDto("text", text = "hello"))))
+        assertEquals(setOf("parts"), Json.parseToJsonElement(assertNotNull(mock.lastHostedPromptBody)).jsonObject.keys)
+    }
+
+    @Test
+    fun `hosted text commands preserve selectors and contain only Cloud command keys`() = runBlocking(Dispatchers.Default) {
+        val app = app(TestLog())
+        ready(app)
+        val api = KiloSessionRpcApiImpl(appOverride = app, log = TestLog())
+        api.command(session, ref.key, "review", "current changes", prompt.copy(messageID = "msg_000000000001AbCdEfGhIjKlMn"))
+        assertEquals("/session/ses_cloud/command?workspace=wrk_att_test", mock.lastHostedCommandPath)
+        assertEquals(
+            Json.parseToJsonElement("""{"command":"review","arguments":"current changes","agent":"code","model":"kilo/kilo-auto/free","messageID":"msg_000000000001AbCdEfGhIjKlMn"}"""),
+            Json.parseToJsonElement(assertNotNull(mock.lastHostedCommandBody)),
+        )
+        api.command(session, ref.key, "review", "", PromptDto(parts = emptyList()))
+        assertEquals(
+            Json.parseToJsonElement("""{"command":"review","arguments":""}"""),
+            Json.parseToJsonElement(assertNotNull(mock.lastHostedCommandBody)),
+        )
+        assertEquals(1, mock.requestCount("/kilocode/session-host/session/cloud/ses_cloud/attach"))
+    }
+
+    @Test
+    fun `hosted commands reject oversized selectors and arguments before attachment`() = runBlocking(Dispatchers.Default) {
+        val app = app(TestLog())
+        ready(app)
+        val api = KiloSessionRpcApiImpl(appOverride = app, log = TestLog())
+        assertFailsWith<IllegalArgumentException> { api.command(session, ref.key, "", "", prompt) }
+        assertFailsWith<IllegalArgumentException> { api.command(session, ref.key, "a".repeat(257), "", prompt) }
+        assertFailsWith<IllegalArgumentException> { api.command(session, ref.key, "review", "a".repeat(10_001), prompt) }
+        assertFailsWith<IllegalArgumentException> { api.command(session, ref.key, "review", "", prompt.copy(modelID = "a".repeat(252))) }
+        assertEquals(0, mock.requestCount("/kilocode/session-host/session/cloud/ses_cloud/attach"))
+        assertEquals(0, mock.requestCount("/session/ses_cloud/command"))
     }
 
     @Test

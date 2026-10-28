@@ -839,6 +839,7 @@ class SessionController(
 
     fun selectModel(provider: String, id: String) {
         assertEdt()
+        if (ref is SessionRef.Hosted && provider != KILO_PROVIDER) return
         LOG.debug { "${ChatLogSummary.sid(sid ?: ref?.key ?: "pending")} kind=config model=$provider/$id" }
         val agent = model.agent ?: return
         val key = "$provider/$id"
@@ -884,6 +885,7 @@ class SessionController(
 
     fun selectVariant(value: String) {
         assertEdt()
+        if (ref is SessionRef.Hosted) return
         val key = model.model ?: return
         if (value !in model.variants) return
         LOG.debug { "${ChatLogSummary.sid(sid ?: ref?.key ?: "pending")} kind=config variant=$key/$value" }
@@ -1226,6 +1228,7 @@ class SessionController(
                     model.models = state.providers?.let { providers ->
                         providers.providers
                             .filter { it.id == KILO_PROVIDER || it.id in providers.connected }
+                            .filter { ref !is SessionRef.Hosted || it.id == KILO_PROVIDER }
                             .flatMap { provider ->
                                 provider.models.map { (id, info) ->
                                     ModelItem(
@@ -2409,6 +2412,7 @@ class SessionController(
      */
     private fun retryPrompt(): PromptDto? {
         val msg = model.messages().lastOrNull { it.info.role == "user" } ?: return null
+        if (ref is SessionRef.Hosted) return null
         return PromptDto(
             parts = emptyList(),
             messageID = msg.info.id,
@@ -2489,8 +2493,8 @@ class SessionController(
             providerID = provider,
             modelID = modelId,
             agent = agent,
-            variant = variant,
-            editorContext = editorContext,
+            variant = if (ref is SessionRef.Hosted) null else variant,
+            editorContext = if (ref is SessionRef.Hosted) null else editorContext,
         )
     }
 
@@ -2526,6 +2530,16 @@ class SessionController(
     }
 
     private fun selectResolvedModel(key: String?) {
+        if (ref is SessionRef.Hosted) {
+            val selected = key?.takeIf { it.startsWith("$KILO_PROVIDER/") && item(it) != null }
+                ?: model.models.firstOrNull { it.id == "kilo-auto/free" }?.key
+                ?: model.models.firstOrNull()?.key
+            model.model = selected
+            model.variants = emptyList()
+            model.variant = null
+            model.refreshHeader()
+            return
+        }
         model.model = key
         val item = key?.let(::item)
         model.variants = item?.variants ?: emptyList()

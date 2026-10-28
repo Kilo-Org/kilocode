@@ -43,6 +43,7 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
@@ -76,6 +77,9 @@ class KiloBackendHostedManager(
         private const val RENEW_WINDOW_MS = 5_000L
         private const val MAX_BACKOFF_MS = 10_000L
         private const val INITIAL_BACKOFF_MS = 500L
+        private val MODEL = Regex("[a-zA-Z0-9._/\\-:~]{1,255}")
+        private val AGENT = Regex("[a-z][a-z0-9-]{0,49}")
+        private val MESSAGE = Regex("msg_[0-9a-f]{12}[0-9A-Za-z]{14}")
     }
 
     private class Attachment(
@@ -272,6 +276,7 @@ class KiloBackendHostedManager(
         }
 
     suspend fun prompt(id: String, organizationID: String?, prompt: PromptDto) {
+        validate(prompt)
         attached(id, organizationID) { attachment ->
             val body = KiloCliDataParser.buildPromptJson(prompt)
             post(
@@ -283,13 +288,41 @@ class KiloBackendHostedManager(
     }
 
     suspend fun command(id: String, organizationID: String?, command: String, arguments: String, prompt: PromptDto) {
+        validate(prompt, command = true)
+        require(command.length in 1..256) { "Hosted command must contain between 1 and 256 characters" }
+        require(arguments.length <= 10_000) { "Hosted command arguments exceed 10000 characters" }
+        val raw = KiloCliDataParser.buildCommandJson(command, arguments, prompt)
+        val body = if (prompt.messageID == null) raw else {
+            JsonObject(json.parseToJsonElement(raw).jsonObject + ("messageID" to JsonPrimitive(prompt.messageID))).toString()
+        }
         attached(id, organizationID) { attachment ->
-            val body = KiloCliDataParser.buildCommandJson(command, arguments, prompt)
             post(
                 "/session/${attachment.native}/command?workspace=${encode(attachment.id)}",
                 body,
                 "command",
             )
+        }
+    }
+
+    private fun validate(prompt: PromptDto, command: Boolean = false) {
+        require(prompt.editorContext == null) { "Hosted input does not support editor context" }
+        require(prompt.variant == null) { "Hosted input does not support model variants" }
+        require(prompt.noReply == null) { "Hosted input does not support noReply" }
+        require((prompt.providerID == null) == (prompt.modelID == null)) { "Hosted model requires both provider and model IDs" }
+        require(prompt.providerID == null || prompt.providerID == "kilo") { "Hosted input only supports the Kilo provider" }
+        require(prompt.modelID?.let(MODEL::matches) != false) { "Invalid hosted model ID" }
+        require(!command || prompt.modelID == null || "kilo/${prompt.modelID}".length <= 256) { "Hosted command model exceeds 256 characters" }
+        require(prompt.agent?.let(AGENT::matches) != false) { "Invalid hosted agent slug" }
+        require(prompt.messageID?.let(MESSAGE::matches) != false) { "Invalid hosted message ID" }
+        prompt.parts.forEach { part ->
+            require(part.type == "text" && part.text != null) { "Hosted input only supports text parts" }
+            require(part.synthetic == null && part.source == null && part.url == null && part.mime == null && part.filename == null) {
+                "Hosted text parts do not support synthetic or file metadata"
+            }
+        }
+        if (command) return
+        require(prompt.parts.isNotEmpty() && prompt.parts.sumOf { it.text.orEmpty().length.toLong() } in 1..100_000) {
+            "Hosted prompt must contain between 1 and 100000 text characters"
         }
     }
 
@@ -500,7 +533,9 @@ class KiloBackendHostedManager(
         var backoff = INITIAL_BACKOFF_MS
         while (started && attachments[attachment.session] === attachment) {
             val opened = stream("/cloud-agent/event?workspace=${encode(attachment.id)}") { type, data ->
-                parseSystem(attachment, type, data)?.let { _system.tryEmit(it) }
+                runCatching { HostedSystemEventParser.parse(attachment.session, attachment.native, type, data) }
+                    .onFailure { log.warn("hosted system event parse failed message=${it.message}") }
+                    .getOrNull()?.let { _system.tryEmit(it) }
             }
             if (!started || attachments[attachment.session] !== attachment) return
             backoff = if (opened) INITIAL_BACKOFF_MS else (backoff * 2).coerceAtMost(MAX_BACKOFF_MS)
@@ -552,26 +587,6 @@ class KiloBackendHostedManager(
         } finally {
             (source.get() ?: eventSource).cancel()
         }
-    }
-
-    private fun parseSystem(attachment: Attachment, type: String?, data: String): HostedSystemEventDto? {
-        val obj = runCatching { json.parseToJsonElement(data).jsonObject }.getOrNull() ?: return null
-        val payload = obj["payload"]?.jsonObject ?: obj
-        val props = payload["properties"]?.jsonObject ?: payload
-        val kind = payload.string("type") ?: type ?: KiloCliDataParser.extractEventType(data)
-        val native = props.string("sessionID") ?: attachment.native
-        if (native != attachment.native) return null
-        return HostedSystemEventDto(
-            sessionID = attachment.session,
-            kind = kind,
-            step = props.string("step"),
-            action = props.string("action"),
-            message = props.string("message"),
-            cloudStatus = props.string("cloudStatus") ?: props.string("status"),
-            sandboxStatus = props.string("sandboxStatus"),
-            sandboxDetail = props.string("sandboxDetail") ?: props.string("detailCode"),
-            observedAt = props["observedAt"]?.jsonPrimitive?.contentOrNull?.toDoubleOrNull() ?: 0.0,
-        )
     }
 
     private fun close(attachment: Attachment) {

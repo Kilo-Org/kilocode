@@ -19,12 +19,13 @@ import com.intellij.openapi.util.registry.Registry
 import fleet.rpc.client.durable
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * Project-level hosted Cloud workspace discovery.
@@ -38,24 +39,11 @@ class KiloHostedService internal constructor(
     private val cs: CoroutineScope,
     private val rpc: KiloHostedRpcApi?,
     private val app: KiloAppService? = null,
-    private val gate: () -> Boolean = { Registry.`is`("kilo.cloudWorkspaces.enabled", false) },
+    private val gate: () -> Boolean = { Registry.`is`("kilo.cloudWorkspaces.enabled", true) },
     private val log: KiloLog = LOG,
     private val repo: (String) -> String? = ::resolveGitRemoteUrl,
 ) {
-    constructor(project: Project, cs: CoroutineScope) : this(cs, null, project.service<KiloAppService>())
-
-    init {
-        if (app != null) {
-            cs.launch {
-                var ready = false
-                app.state.collect { state ->
-                    val now = state.status == KiloAppStatusDto.READY
-                    if (now && !ready) requestedDir?.let { refresh(it) }
-                    ready = now
-                }
-            }
-        }
-    }
+    constructor(project: Project, cs: CoroutineScope) : this(cs, null, service<KiloAppService>())
 
     companion object {
         private val LOG = KiloLog.create(KiloHostedService::class.java)
@@ -77,34 +65,52 @@ class KiloHostedService internal constructor(
     private val _state = MutableStateFlow(HostedState())
     val state: StateFlow<HostedState> = _state.asStateFlow()
 
+    private val _refreshes = MutableStateFlow(0L)
+    val refreshes: StateFlow<Long> = _refreshes.asStateFlow()
+
     private var generation = 0L
-    private var requested: String? = null
     private var requestedDir: String? = null
+
+    init {
+        if (app != null) {
+            cs.launch {
+                var ready = false
+                app.state.collect { state ->
+                    val now = state.status == KiloAppStatusDto.READY
+                    if (now && !ready) requestedDir?.let { refresh(it) }
+                    ready = now
+                }
+            }
+        }
+    }
 
     /** Whether the experimental Cloud workspace surface is enabled in this IDE. */
     fun enabled(): Boolean = gate()
 
     /**
      * Reloads the first page for [directory]'s repository. A no-op while the gate is off, so the
-     * feature stays invisible until explicitly enabled.
+     * feature can still be explicitly disabled in the Registry.
      */
     fun refresh(directory: String) {
         if (!gate()) {
             _state.value = HostedState(enabled = false)
             return
         }
+        if (requestedDir == directory && _state.value.loading) return
         requestedDir = directory
-        val remote = repo(directory) ?: run {
-            requestedDir = null
-            _state.value = HostedState(enabled = true, error = "No repository remote")
-            return
-        }
-        if (requested == remote && _state.value.loading) return
-        requested = remote
         val run = ++generation
-        _state.value = _state.value.copy(enabled = true, loading = true, repositoryUrl = remote, error = null)
+        _refreshes.value = run
+        _state.value = _state.value.copy(enabled = true, loading = true, error = null)
         cs.launch {
             try {
+                val remote = withContext(Dispatchers.IO) { repo(directory) }
+                if (run != generation) return@launch
+                if (remote == null) {
+                    _state.value = HostedState(enabled = true, error = "No repository remote")
+                    return@launch
+                }
+                _state.value = _state.value.copy(repositoryUrl = remote)
+                log.info("hosted workspace discovery started")
                 val items = mutableListOf<HostedWorkspaceDto>()
                 var cursor: String? = null
                 var providers: List<HostedProviderDto> = emptyList()
@@ -134,11 +140,12 @@ class KiloHostedService internal constructor(
                     cursor = cursor,
                     repositoryUrl = remote,
                 )
+                log.info("hosted workspace discovery completed workspaces=${unique.size} signedOut=$signedOut")
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
                 if (run != generation) return@launch
-                log.warn("hosted workspace discovery failed repo=$remote message=${e.message}", e)
+                log.warn("hosted workspace discovery failed message=${e.message}", e)
                 _state.value = _state.value.copy(loading = false, error = e.message ?: "Cloud workspaces unavailable")
             }
         }

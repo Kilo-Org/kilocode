@@ -4,6 +4,7 @@ import ai.kilocode.client.plugin.KiloPluginSettings
 import ai.kilocode.client.session.controller.PromptSelection
 import ai.kilocode.client.util.edtWait
 import ai.kilocode.rpc.dto.PromptPartDto
+import ai.kilocode.client.session.ui.prompt.PromptPanel
 import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.util.ui.UIUtil
 
@@ -15,6 +16,44 @@ import com.intellij.util.ui.UIUtil
  * own content assertions.
  */
 class SessionUiEditorSelectionTest : SessionUiTestBase() {
+    fun `test hosted send skips editor context selected files and reasoning`() {
+        KiloPluginSettings.setAutoEditorContext(true)
+        val psi = myFixture.addFileToProject("src/Selected.kt", "one\ntwo\nthree\n")
+        val editors = FileEditorManager.getInstance(project)
+        editors.openFile(psi.virtualFile, true)
+        UIUtil.dispatchAllInvocationEvents()
+        editors.selectedTextEditor!!.selectionModel.setSelection(4, 8)
+        workspace = workspaces.workspace(psi.virtualFile.parent.parent.path)
+        val manager = object : SessionManager {
+            override val hosted = true
+            override val showsBranchDock = false
+            override fun newSession() = Unit
+            override fun showHistory(back: (() -> Unit)?) = Unit
+            override fun openSession(ref: SessionRef) = Unit
+        }
+        ui = newUi("hosted:kilo-cloud:worktree_1:ses_one", manager = manager)
+        layout()
+        settle()
+        val panel = find(ui, PromptPanel::class.java)!!
+        panel.setText("Continue the task")
+        panel.send()
+        assertTrue(pumpUntil { rpc.prompts.size == 1 })
+        val sent = rpc.prompts.single()
+        assertEquals("hosted:kilo-cloud:worktree_1:ses_one", sent.first)
+        assertEquals(listOf("text"), sent.third.parts.map { it.type })
+        assertEquals("Continue the task", sent.third.parts.single().text)
+        assertNull(sent.third.editorContext)
+        assertNull(sent.third.variant)
+        assertNull(sent.third.noReply)
+        assertFalse(panel.reasoning.isVisible)
+        assertFalse(panel.reasoning.canCycle())
+        panel.setText("Check @Selected.kt")
+        panel.send()
+        settle()
+        assertEquals("Mention must not dispatch silently without its content", 1, rpc.prompts.size)
+        assertEquals("Check @Selected.kt", panel.text())
+    }
+
     override fun tearDown() {
         try {
             KiloPluginSettings.unsetAutoEditorContext()
