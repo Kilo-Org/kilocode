@@ -5,6 +5,7 @@ import { useLanguage } from "../context/language"
 import { useV2 } from "./client"
 import { SessionList } from "./history"
 import { TaskHeader } from "../components/chat/TaskHeader"
+import { WorkingIndicator, type Retry } from "../components/shared/WorkingIndicator"
 import ProfileView from "../components/profile/ProfileView"
 import { MessageList } from "./messages"
 import { PermissionDock } from "./permission"
@@ -81,10 +82,56 @@ export function Chat() {
     return !!id && v2.data.session.status(id) === "running"
   }
 
+  // The turn's scheduled retry, carried by the running assistant row, drives the working indicator's countdown.
+  const retry = () => {
+    const id = session()
+    if (!id) return undefined
+    const list = v2.data.session.message.list(id)
+    for (let index = list.length - 1; index >= 0; index--) {
+      const message = list[index]
+      if (message.type === "assistant" && message.retry) return message.retry as Retry
+    }
+    return undefined
+  }
+
+  // Start of the running turn. A prompt admitted while the turn already runs is a new `user` row (a steer), so anchor
+  // on the first user row after the last `idle` row, not the last user row: that is the turn's first prompt and it
+  // stays put for every step of the turn, steers included. The data layer inserts the `idle` row on execution end.
+  const turnStart = () => {
+    const id = session()
+    if (!id) return undefined
+    const list = v2.data.session.message.list(id)
+    const idle = list.findLastIndex((item) => item.type === "idle")
+    const user =
+      idle === -1
+        ? list.findLast((item) => item.type === "user")
+        : list.slice(idle + 1).find((item) => item.type === "user")
+    return user?.time.created
+  }
+
+  // A run can start without a new user row (a subagent completion resumes a session). It has no turn start in the
+  // transcript, so remember when the status flipped to running, as v1 restarts its busy period there.
+  const [runStart, setRunStart] = createSignal<number>()
+  let lastRun: { id: string | undefined; active: boolean } | undefined
+  createEffect(
+    on([session, running] as const, ([id, active]) => {
+      if (active && (!lastRun || lastRun.id !== id || !lastRun.active)) setRunStart(Date.now())
+      lastRun = { id, active }
+    }),
+  )
+
+  const started = () => turnStart() ?? runStart()
+
+  // MessageList owns the transcript scroller; the working indicator's scroll button calls back into it.
+  const [scrollToBottom, setScrollToBottom] = createSignal<() => void>(() => {})
+
   // A pending permission or question blocks new prompts.
   const blocked = () => permissions().length > 0 || forms().length > 0
   // The prompt selectors block only while a permission owns the prompt, as v1; a pending question does not.
   const selectorsBlocked = () => permissions().length > 0
+  // v1's SessionDock `showsWorking`: the dock shows the working indicator only while the turn runs or retries and
+  // nothing is blocked. The blocked case hides the row and hands the spacing back to the composer.
+  const working = () => !blocked() && (running() || !!retry())
   // Only a pending permission changes the Send label. A pending question leaves Send in place instead of Stop.
   const questioning = () => permissions().length === 0 && forms().length > 0
   const selection = createSelection(session)
@@ -135,7 +182,12 @@ export function Chat() {
           </Show>
           <div class="chat-messages-wrapper">
             <div class="chat-messages">
-              <MessageList session={session()} onSelectSession={open} onShowHistory={() => setView("history")} />
+              <MessageList
+                session={session()}
+                onSelectSession={open}
+                onShowHistory={() => setView("history")}
+                onScrollToBottomReady={(scroll) => setScrollToBottom(() => scroll)}
+              />
             </div>
           </div>
           <div class="chat-input">
@@ -153,12 +205,29 @@ export function Chat() {
             <Show when={forms()[0]} keyed>
               {(form) => <QuestionDock form={form} />}
             </Show>
+            {/* v1's SessionDock structure over native v2 data: the dock owns the working row, keeps it mounted so the
+                indicator keeps its width lock across the swap, and sits flush on the composer while it is active. */}
+            <div class="session-dock" data-component="session-dock" data-active={working() ? "" : undefined}>
+              <div class="session-dock-state" data-active={working() ? "" : undefined} aria-hidden={!working()}>
+                <div class="session-working">
+                  <WorkingIndicator
+                    session={session() ?? ""}
+                    start={started()}
+                    active={working()}
+                    blocked={blocked()}
+                    retry={retry()}
+                    onScrollToBottom={() => scrollToBottom()()}
+                  />
+                </div>
+              </div>
+            </div>
             <PromptInput
               session={session()}
               running={running()}
               disabled={v2.connection.status() !== "connected" || !!v2.handshake() || blocked()}
               blocked={permissions().length > 0}
               questioning={questioning()}
+              model={selection.model()}
               onSend={send}
               onStop={stop}
               selectors={<Selectors selection={selection} blocked={selectorsBlocked()} />}
