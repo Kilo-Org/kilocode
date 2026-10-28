@@ -1,8 +1,8 @@
 {
   "$comment": "Shared-patch baseline (U-L3-01). Read by script/check-shared-patches.ts and script/check-opencode-annotations.ts. Each shared upstream file that Kilo adds or changes needs an entry: rung (3 = seam patch, 4 = feature patch) and the missing seam. `unmarked` allows lines without markers and states why. Raise a limit only in the PR that adds the patch, and lower it when a patch goes away.",
   "limits": {
-    "files": 58,
-    "markedLines": 458,
+    "files": 59,
+    "markedLines": 461,
     "unmarkedLines": 40,
     "deletedFiles": 0
   },
@@ -110,6 +110,10 @@
     "packages/core/src/plugin/supervisor.ts": {
       "rung": 3,
       "seam": "Appends the embedder plugins registered with phase `post` (`SdkPlugins.all(\"post\")`) after the internal post plugins, so they see the result of config. Provides the existing Location-service context to embedder plugins in both phases, as internal plugins already receive it. No boot-order or upstream default change. Rungs 1 and 2 cannot supply it: the supervisor builds the boot order itself, and host-global registration cannot supply Location-scoped services such as Config."
+    },
+    "packages/core/test/plugin/supervisor-reload.test.ts": {
+      "rung": 3,
+      "seam": "Test timing only: the organization integration test waits up to 5 s (500 retries of 10 ms) for each plugin reload instead of 2 s, the same budget as the other reload wait in the file (200 retries of 25 ms). The 2 s budget ran out on loaded CI runners. No product code changes. No seam: the retry budget is a literal inside the upstream test."
     },
     "packages/server/src/process.ts": {
       "rung": 3,
