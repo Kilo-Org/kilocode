@@ -1,7 +1,9 @@
 // Pure config-file editing for the Settings host: `jsonc-parser` writes that keep comments, the Kilo file-name guard,
 // and the v1-alias removal. Kept free of `vscode` imports so it is unit-testable.
 import path from "node:path"
-import { applyEdits, modify } from "jsonc-parser"
+// The ESM entry: the extension host bundles with `Bun.build`, which leaves the UMD entry's
+// `require("./impl/format")` as a runtime require that fails in `dist/extension.js`.
+import { applyEdits, modify } from "jsonc-parser/lib/esm/main.js"
 import { KiloConfigFiles } from "@opencode/util/kilocode/config/files"
 import type { ConfigEdit } from "./protocol"
 
