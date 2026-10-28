@@ -36,7 +36,7 @@
       "seam": 3,
       "patch": 6
     },
-    "coreImports": 33,
+    "coreImports": 34,
     "sharedPatches": {
       "seam": 36,
       "patch": 26
@@ -61,6 +61,7 @@
     "@opencode/core/config/plugin/skill-file",
     "@opencode/core/credential",
     "@opencode/core/database/database",
+    "@opencode/core/database/path",
     "@opencode/core/effect/app-node-platform",
     "@opencode/core/location",
     "@opencode/core/model",
