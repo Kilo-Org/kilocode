@@ -13,6 +13,7 @@ import { PromptInput } from "./prompt"
 import { QuestionDock } from "./question"
 import { createProfile } from "./profile"
 import { createSelection, Selectors } from "./selectors"
+import { AutoApproveAction, createAutoApprove } from "./auto-approve"
 import { SessionDock } from "../components/chat/SessionDockWorking"
 import { createWorking } from "./working"
 
@@ -92,6 +93,7 @@ export function Chat() {
   // Only a pending permission changes the Send label. A pending question leaves Send in place instead of Stop.
   const questioning = () => permissions().length === 0 && forms().length > 0
   const selection = createSelection(session)
+  const autoApprove = createAutoApprove()
   // The host sends the cycle action for the cycleAgentMode/cyclePreviousAgentMode commands, as in main.
   v2.onCommand((name) => {
     if (name === "cycleAgentMode") selection.cycleAgent(1)
@@ -212,6 +214,7 @@ export function Chat() {
               onSend={send}
               onStop={stop}
               selectors={<Selectors selection={selection} blocked={selectorsBlocked()} />}
+              actions={<AutoApproveAction enabled={autoApprove.enabled()} onToggle={autoApprove.toggle} />}
             />
           </div>
         </div>

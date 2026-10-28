@@ -570,5 +570,15 @@
     "state": "ported",
     "note": "packages/kilo-vscode/test/enhance-prompt.test.ts carries the instruction assertions (question-shaped and instruction-shaped drafts, draft labelling), the cleaner cases (whitespace, fences, matching quotes, internal and mismatched quotes) and the provider quota error message.",
     "by": "v2-enhance-prompt"
+  },
+  "module:packages/kilo-vscode/src/commands/toggle-auto-approve.ts": {
+    "state": "ported",
+    "note": "webview-ui/src/v2/auto-approve.tsx createAutoApprove and webview-ui/src/v2/auto-approve-policy.ts createAutoApproveController replace the host toggle controller: while active they reply \"once\" to each permission request, dedupe across the permission store and the pending sweep, retry a failed reply, and skip sandboxEscalation. src/chat.ts and src/protocol.ts persist the toggle in context.globalState with a default of off. Differences: persistence is global rather than the closest v1 config scope; the sweep covers the current location while new requests arrive on the server-global event stream; the controller runs in the retained webview instead of the extension host before the view is first opened. Window-independent auto-approve is a scoped follow-up.",
+    "by": "v2-auto-approve"
+  },
+  "module:packages/kilo-vscode/src/kilo-provider/auto-approve.ts": {
+    "state": "ported",
+    "note": "webview-ui/src/v2/auto-approve.tsx replaces the v1 bridge: it requests the persisted state, listens for autoApproveStateLoaded, and persists toggles through the requestAutoApproveState/persistAutoApproveState messages in src/protocol.ts, handled by src/chat.ts. Replies use permission.reply({sessionID, requestID, decision: \"once\"}), so v1's SSE/session directory resolution is not needed.",
+    "by": "v2-auto-approve"
   }
 }
