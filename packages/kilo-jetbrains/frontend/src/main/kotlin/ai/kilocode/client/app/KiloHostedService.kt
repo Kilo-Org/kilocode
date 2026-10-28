@@ -30,6 +30,8 @@ import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -64,6 +66,7 @@ class KiloHostedService internal constructor(
     companion object {
         private val LOG = KiloLog.create(KiloHostedService::class.java)
         private const val WATCH_LIMIT = 50
+        private const val STATUS_CONCURRENCY = 8
         private const val INITIAL_BACKOFF_MS = 1_000L
         private const val MAX_BACKOFF_MS = 10_000L
     }
@@ -116,6 +119,7 @@ class KiloHostedService internal constructor(
     val refreshes: StateFlow<Long> = _refreshes.asStateFlow()
 
     @Volatile private var generation = 0L
+    private val statusLimit = Semaphore(STATUS_CONCURRENCY)
     private var requestedDir: String? = null
     private val lock = Any()
     private class Watch(val ref: HostedWorkspaceRefDto, val session: String) {
@@ -398,7 +402,7 @@ class KiloHostedService internal constructor(
         items.map { ws ->
             async {
                 if (run != generation) return@async
-                val status = runCatching { status(ws.ref) }.getOrElse {
+                val status = runCatching { statusLimit.withPermit { status(ws.ref) } }.getOrElse {
                     if (it is CancellationException) throw it
                     log.warn("hosted workspace status unavailable workspace=${ws.ref.key}", it)
                     HostedWorkspaceStatusDto(ws.ref, ws.deletionState, "unavailable", "", 0.0)

@@ -16,6 +16,7 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.flow
@@ -797,6 +798,18 @@ class KiloHostedServiceTest {
         sessionCursor = cursor,
     )
 
+    @Test
+    fun `status reads are bounded for repositories with many workspaces`() = runBlocking {
+        val items = (1..20).map { HostedWorkspaceDto(HostedWorkspaceRefDto("cloud", "wrk_$it"), name = "ws$it") }
+        val rpc = FakeRpc(mapOf(null to HostedWorkspaceListDto(items)))
+        rpc.statusDelay = 25
+        val service = KiloHostedService(cs, rpc, gate = { true }, log = TestLog(), repo = { "repo" })
+        service.refresh("/repo")
+        val state = withTimeout(WAIT) { service.state.first { it.items.size == 20 && !it.loading } }
+        assertEquals(20, state.statuses.size)
+        assertTrue(rpc.maxStatuses in 1..8, "max concurrent status reads=${rpc.maxStatuses}")
+    }
+
     private fun session(id: String) = HostedWorkspaceSessionDto(
         id = "hosted:cloud:wrk_1:$id",
         nativeSessionID = id,
@@ -821,6 +834,9 @@ class KiloHostedServiceTest {
         var gate: CompletableDeferred<Unit>? = null
         var status: HostedWorkspaceStatusDto? = null
         var fail = false
+        @Volatile var statusDelay = 0L
+        @Volatile var maxStatuses = 0
+        private val activeStatuses = java.util.concurrent.atomic.AtomicInteger()
 
         suspend fun send(event: HostedSystemEventDto) {
             val count = withTimeout(WAIT) { events.subscriptionCount.first { it > 0 } }
@@ -854,9 +870,12 @@ class KiloHostedServiceTest {
             ref: HostedWorkspaceRefDto,
             organizationID: String?,
         ): HostedWorkspaceStatusDto {
-            reading.send(Unit)
-            gate?.await()
-            return status ?: HostedWorkspaceStatusDto(
+            maxStatuses = maxOf(maxStatuses, activeStatuses.incrementAndGet())
+            try {
+                if (statusDelay > 0) delay(statusDelay)
+                reading.send(Unit)
+                gate?.await()
+                return status ?: HostedWorkspaceStatusDto(
             ref = ref,
             deletionState = "active",
             computeStatus = "running",
@@ -865,6 +884,9 @@ class KiloHostedServiceTest {
             activeSessionCount = 1,
             rateMicrodollarsPerHour = 1_000_000,
         )
+            } finally {
+                activeStatuses.decrementAndGet()
+            }
         }
 
         override suspend fun systemEvents(

@@ -207,6 +207,16 @@ class KiloBackendHostedManager(
         log.info("Hosted session manager stopped")
     }
 
+    /** Full teardown for application disposal, where no RPC collector can survive the service. */
+    fun close() {
+        started = false
+        reset(detach = true)
+        api = null
+        http = null
+        base = null
+        chat = null
+    }
+
     /** The workspace marker used as the directory for hosted session RPC calls. */
     fun directory(id: String): String? =
         HostedIDs.parseSession(id)?.let { (provider, workspace, _) -> HostedIDs.workspace(provider, workspace) }
@@ -518,7 +528,7 @@ class KiloBackendHostedManager(
         }
         try {
             ensure(id, organizationID)
-        } catch (err: Throwable) {
+        } catch (err: CancellationException) {
             withContext(kotlinx.coroutines.NonCancellable) {
                 lock.withLock {
                     state.retainers--
@@ -526,6 +536,12 @@ class KiloBackendHostedManager(
                 }
             }
             throw err
+        } catch (err: Exception) {
+            // A cold/transient attach failure must not tear down the caller's live subscription:
+            // SessionController logs a failed events flow and never resubscribes. Keep the retained
+            // owner and let restore() retry, then start the native loop once the attachment exists.
+            log.warn("hosted retention deferred session=${ChatLogSummary.sid(id)} message=${err.message}", err)
+            restore(id, state)
         }
     }
 

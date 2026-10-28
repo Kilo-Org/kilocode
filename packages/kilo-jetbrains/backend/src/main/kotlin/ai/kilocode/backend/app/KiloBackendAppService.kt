@@ -997,6 +997,7 @@ class KiloBackendAppService private constructor(
         watcher?.cancel()
         watcher = null
         clearNow()
+        hosted.close()
         connection.dispose()
         if (fast) server.closeForShutdown() else server.dispose()
     }

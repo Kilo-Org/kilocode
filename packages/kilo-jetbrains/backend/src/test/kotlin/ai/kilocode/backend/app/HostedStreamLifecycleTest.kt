@@ -318,6 +318,31 @@ class HostedStreamLifecycleTest {
     }
 
     @Test
+    fun `transient retain failure keeps the transcript subscription and recovers streaming`() = runBlocking(Dispatchers.Default) {
+        ready()
+        mock.hostedAttachStatuses.add(500)
+        val received = Channel<ChatEventDto>(Channel.UNLIMITED)
+        val api = KiloSessionRpcApiImpl(appOverride = app, log = TestLog())
+        val job = scope.launch {
+            api.events(session, HostedIDs.workspace("cloud", "wrk_1")).collect { received.send(it) }
+        }
+        try {
+            assertTrue(mock.awaitRequestCount(attach, 1), "initial attach was not attempted")
+            // The events flow must stay alive and restore() must retry the attachment on its own.
+            assertTrue(mock.awaitFeed(path), "native stream did not recover after a transient retain failure")
+            next(received) { it is ChatEventDto.Resnapshot && it.phase == "start" }
+            mock.pushFeed(path, """{"type":"session.status","properties":{"sessionID":"ses_cloud","status":{"type":"busy"}}}""")
+            assertEquals(
+                "busy",
+                (next(received) { it is ChatEventDto.SessionStatusChanged } as ChatEventDto.SessionStatusChanged).status.type,
+            )
+        } finally {
+            job.cancel()
+            job.join()
+        }
+    }
+
+    @Test
     fun `start reopens owned streams on a replacement CLI without an external read`() = runBlocking(Dispatchers.Default) {
         mock.profile = """{"profile":{"email":"test@test.com","name":"Test"},"balance":null,"currentOrgId":"org_1"}"""
         ready()
