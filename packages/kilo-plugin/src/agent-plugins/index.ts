@@ -1,6 +1,5 @@
 export * as KiloAgentPlugins from "./index"
 
-import { AgentPlugin, type Diagnostic, Paths } from "@kilocode/agent-plugins-core"
 import { Config } from "@opencode/core/config"
 import { Watcher } from "@opencode/core/filesystem/watcher"
 import { KiloConfigPolicy } from "@opencode/core/kilocode/config/policy"
@@ -12,6 +11,9 @@ import { Global } from "@opencode/util/global"
 import { readdir } from "node:fs/promises"
 import path from "node:path"
 import { Effect, FiberMap, Option, PubSub, Scope, Semaphore, Stream } from "effect"
+import type { Diagnostic } from "./diagnostic"
+import { Paths } from "./paths"
+import { AgentPlugin } from "./plugin"
 
 /** A plugin that loaded, with the Kilo values its components map to. */
 export interface Loaded {

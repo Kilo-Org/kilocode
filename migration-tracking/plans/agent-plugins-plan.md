@@ -38,7 +38,7 @@ v1 Kilo has no Agent Plugins support (`git grep` on `origin/main` finds no `plug
 
 | Change | Rung | Why not lower | Location |
 |---|---|---|---|
-| Spec logic: manifest, skills, `mcp.json`, containment, expansion, diagnostics | Kilo-owned logic package, no `@opencode/*` imports | n/a | `packages/kilo-agent-plugins-core/` (new) |
+| Spec logic: manifest, skills, `mcp.json`, containment, expansion, diagnostics | Kilo-owned loader files, no `@opencode/*` imports | n/a | `packages/kilo-plugin/src/agent-plugins/*.ts` except `index.ts` |
 | Discovery, watching, and contribution through `skill.transform` / `mcp.transform` | 1 | n/a | `packages/kilo-plugin/src/agent-plugins/index.ts` |
 | Registration | 2 | n/a | one entry in `KiloPlugins`, `packages/kilo-plugin/src/index.ts:24` |
 | `agent_plugins` config key | Kilo-owned file in core | n/a | `packages/core/src/kilocode/config/policy.ts` |
@@ -50,7 +50,7 @@ No shared upstream file is expected to change. Core-internal imports the adapter
 
 ## Design
 
-### Logic package `packages/kilo-agent-plugins-core`
+### Loader `packages/kilo-plugin/src/agent-plugins/` (everything but `index.ts`)
 
 Pure TypeScript with `effect` (Schema) and `node:fs`/`node:path`. No `@opencode/*` imports (`bun script/upstream/placement.ts --imports` enforces this). Its output is the input to the adapter and, later, to the U-E2-23 installer and the VS Code panel.
 
@@ -176,7 +176,7 @@ A malformed value is reported and ignored, without discarding the rest of the co
 
 ## Conformance checklist to tests
 
-Every row is a test in `packages/kilo-agent-plugins-core/test` with a fixture plugin created in a temp directory.
+Every row is a test in `packages/kilo-plugin/test/agent-plugins/` with a fixture plugin created in a temp directory.
 
 | Spec | Test |
 |---|---|
@@ -220,7 +220,7 @@ There is no v1 screen to compare with. The PR `## Proof` shows v2 only and says 
 
 ## Delivery (one unit per PR)
 
-1. **`feat(agent-plugins): spec loader package`**: `packages/kilo-agent-plugins-core` with the conformance suite. No runtime wiring.
+1. **`feat(agent-plugins): spec loader`**: the loader files in `packages/kilo-plugin/src/agent-plugins/` with the conformance suite. No runtime wiring.
 2. **`feat(agent-plugins): load skills and MCP servers`**: adapter, `KiloPlugins` entry, `agent_plugins` config key, watching, adapter and integration tests, self-test.
 3. **`feat(agent-plugins): list plugins over RPC`**: the `kilocode.agent-plugins` RPC, round-trip test, `bun run check:generated` with no drift, TUI MCP hint fix, docs.
 4. Later, separate units: install and update through U-E2-23 (reuses `AgentPlugin.load` for validation before install), and a Kilo extension namespace (§8) for Kilo-only components such as agents, commands and hooks.
@@ -248,7 +248,7 @@ Checks for each PR:
 
 What landed differs from the design above in these points:
 
-- **Package name.** The logic package is `packages/kilo-agent-plugins-core` (`@kilocode/agent-plugins-core`), so the `kilo-*-core` import rule in `script/upstream/placement.ts --imports` enforces its independence from OpenCode. It uses `Bun.YAML` for frontmatter instead of adding `gray-matter`.
+- **No separate package.** The loader lives beside the adapter in `packages/kilo-plugin/src/agent-plugins/`, as the marketplace keeps its installer logic in `kilo-plugin`. The plugin is its only consumer. `placement.ts --imports` checks only `kilo-*-core` packages, so `test/agent-plugins/boundary.test.ts` keeps the loader files free of `@opencode` imports. Extracting them into a package later is mechanical if a consumer outside the server needs them. The loader uses `Bun.YAML` for frontmatter instead of adding `gray-matter`.
 - **Headers on remote servers (risk 1, confirmed).** A Bun `fetch` test showed that a custom header follows a 307 redirect to another origin; only `Authorization` is dropped. The adapter therefore skips plugin remote servers that declare `headers`, with a `server-unsupported` error. That error names the `mcp.servers` key a user can set to opt in explicitly. Remote servers without headers load. A proper fix needs a redirect policy in core's MCP client (a rung-3 seam) and its own approval.
 - **Separators (risk 3).** Skill IDs and server names use `<plugin>:<name>`. The skill tool, `/api/skill`, code mode (`tools.demo_echo.plugin_env`) and MCP status all work with it (self-test).
 - **Frontmatter keys (risk 5).** Unknown `SKILL.md` keys are ignored; the Agent Skills specification is silent on them.

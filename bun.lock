@@ -259,15 +259,6 @@
         "@typescript/native": "catalog:",
       },
     },
-    "packages/kilo-agent-plugins-core": {
-      "name": "@kilocode/agent-plugins-core",
-      "version": "0.0.0",
-      "devDependencies": {
-        "@tsconfig/bun": "catalog:",
-        "@types/bun": "catalog:",
-        "@typescript/native": "catalog:",
-      },
-    },
     "packages/kilo-cli": {
       "name": "@kilocode/kilo-cli",
       "version": "0.0.0",
@@ -320,7 +311,6 @@
       "name": "@kilocode/kilo-plugin",
       "version": "0.0.0",
       "dependencies": {
-        "@kilocode/agent-plugins-core": "workspace:*",
         "@kilocode/gateway-core": "workspace:*",
         "@opencode/client": "workspace:*",
         "@opencode/core": "workspace:*",
@@ -1427,8 +1417,6 @@
     "@jridgewell/trace-mapping": ["@jridgewell/trace-mapping@0.3.31", "", { "dependencies": { "@jridgewell/resolve-uri": "^3.1.0", "@jridgewell/sourcemap-codec": "^1.4.14" } }, "sha512-zzNR+SdQSDJzc8joaeP8QQoCQr8NuYx2dIIytl1QeBEZHJ9uW6hebsrYgbz8hJwUQao3TWCMtmfV8Nu1twOLAw=="],
 
     "@js-temporal/polyfill": ["@js-temporal/polyfill@0.5.1", "", { "dependencies": { "jsbi": "^4.3.0" } }, "sha512-hloP58zRVCRSpgDxmqCWJNlizAlUgJFqG2ypq79DCvyv9tHjRYMDOcPFjzfl/A1/YxDvRCZz8wvZvmapQnKwFQ=="],
-
-    "@kilocode/agent-plugins-core": ["@kilocode/agent-plugins-core@workspace:packages/kilo-agent-plugins-core"],
 
     "@kilocode/gateway-core": ["@kilocode/gateway-core@workspace:packages/kilo-gateway-core"],
 

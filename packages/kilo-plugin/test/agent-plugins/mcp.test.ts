@@ -1,7 +1,8 @@
 import { describe, expect, test } from "bun:test"
 import { access, writeFile } from "node:fs/promises"
 import path from "node:path"
-import { AgentPlugin, Mcp } from "../src"
+import { Mcp } from "../../src/agent-plugins/mcp"
+import { AgentPlugin } from "../../src/agent-plugins/plugin"
 import { MCP_SCHEMA, PLUGIN_SCHEMA, codes, load, mcp, skill, temp } from "./fixture"
 
 const stdio = (loaded: AgentPlugin.Loaded, name: string) => {

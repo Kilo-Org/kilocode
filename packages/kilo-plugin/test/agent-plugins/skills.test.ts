@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test"
 import path from "node:path"
-import { Skills } from "../src"
+import { Skills } from "../../src/agent-plugins/skills"
 import { codes, load, mcp, skill, temp, write } from "./fixture"
 
 // Spec §6 and §7.1: skills come from immediate children of skills/ and follow the Agent Skills specification.

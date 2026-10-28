@@ -2,7 +2,7 @@ import { mkdir, mkdtemp, realpath, rm, stat, symlink, writeFile } from "node:fs/
 import os from "node:os"
 import path from "node:path"
 import { afterAll } from "bun:test"
-import { AgentPlugin } from "../src"
+import { AgentPlugin } from "../../src/agent-plugins/plugin"
 
 export const PLUGIN_SCHEMA = "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json"
 export const MCP_SCHEMA = "https://agent-plugins.org/schemas/1.0.0/mcp.schema.json"

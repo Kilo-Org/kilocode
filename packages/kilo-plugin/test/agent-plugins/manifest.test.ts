@@ -1,7 +1,8 @@
 import { describe, expect, test } from "bun:test"
 import { mkdir } from "node:fs/promises"
 import path from "node:path"
-import { AgentPlugin, Manifest } from "../src"
+import { Manifest } from "../../src/agent-plugins/manifest"
+import { AgentPlugin } from "../../src/agent-plugins/plugin"
 import { PLUGIN_SCHEMA, codes, load, mcp, skill, temp, write } from "./fixture"
 
 // Spec §5.2-§5.5: the closed manifest, required fields and name constraints.
