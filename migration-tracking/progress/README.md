@@ -21,7 +21,7 @@ Not counted: 1428 branding-only hunks (rename script territory), 561 marker-only
 
 Landed by rung, for patch cells closed by a done-proof: 42 plugin, 4 host, 3 seam, 6 patch.
 
-Ratchets: 27 core-internal upstream modules imported by Kilo packages and adapters (`@opencode/core/app`, `@opencode/core/bus`, `@opencode/core/config`, `@opencode/core/config/discovery`, `@opencode/core/config/normalize`, `@opencode/core/config/plugin/skill-file`, `@opencode/core/effect/app-node-platform`, `@opencode/core/model`, `@opencode/core/model-resolver`, `@opencode/core/permission`, `@opencode/core/plugin/provider/openai`, `@opencode/core/plugin/sdk`, `@opencode/core/plugin/system-prompt/anthropic.txt`, `@opencode/core/plugin/system-prompt/gpt-astra.txt`, `@opencode/core/plugin/system-prompt/gpt.txt`, `@opencode/core/plugin/system-prompt/kimi.txt`, `@opencode/core/plugin/system-prompt/trinity.txt`, `@opencode/core/provider`, `@opencode/core/rpc`, `@opencode/core/schema`, `@opencode/core/session/runner/model`, `@opencode/core/session/runner/prompt/system.txt`, `@opencode/core/session/system-prompt`, `@opencode/core/shell`, `@opencode/core/tool-output`, `@opencode/core/util/wildcard`, `@opencode/core/variant`); 60 shared patches by rung: 35 seam, 25 patch (`script/upstream/shared-patches.json`).
+Ratchets: 33 core-internal upstream modules imported by Kilo packages and adapters (`@opencode/core/app`, `@opencode/core/bus`, `@opencode/core/config`, `@opencode/core/config/discovery`, `@opencode/core/config/normalize`, `@opencode/core/config/plugin/skill-file`, `@opencode/core/credential`, `@opencode/core/database/database`, `@opencode/core/effect/app-node-platform`, `@opencode/core/location`, `@opencode/core/model`, `@opencode/core/model-resolver`, `@opencode/core/permission`, `@opencode/core/plugin/provider/openai`, `@opencode/core/plugin/sdk`, `@opencode/core/plugin/system-prompt/anthropic.txt`, `@opencode/core/plugin/system-prompt/gpt-astra.txt`, `@opencode/core/plugin/system-prompt/gpt.txt`, `@opencode/core/plugin/system-prompt/kimi.txt`, `@opencode/core/plugin/system-prompt/trinity.txt`, `@opencode/core/provider`, `@opencode/core/rpc`, `@opencode/core/schema`, `@opencode/core/session/event`, `@opencode/core/session/projector`, `@opencode/core/session/runner/model`, `@opencode/core/session/runner/prompt/system.txt`, `@opencode/core/session/system-prompt`, `@opencode/core/shell`, `@opencode/core/tool`, `@opencode/core/tool-output`, `@opencode/core/util/wildcard`, `@opencode/core/variant`); 62 shared patches by rung: 36 seam, 26 patch (`script/upstream/shared-patches.json`).
 
 ## History
 
@@ -38,7 +38,7 @@ One point per day from the committed `progress.json` on v2's first-parent histor
 | 2026-10-22 | 93 | 9829 | 0.9% |
 | 2026-10-23 | 150 | 9828 | 1.5% |
 | 2026-10-26 | 157 | 9828 | 1.6% |
-| 2026-10-28 | 592 | 9819 | 6% |
+| 2026-10-28 | 594 | 9819 | 6% |
 | now | 594 | 9819 | 6% |
 
 ## Features

@@ -373,7 +373,7 @@ export const make = Effect.fn("SessionSync.make")(function* (
 
   const status = Effect.fn("SessionSync.status")(function* (input: { directory: string }) {
     const directory = yield* Store.canonical(input.directory).pipe(
-      Effect.catch(() => Effect.succeed(path.resolve(input.directory))),
+      Effect.orElseSucceed(() => path.resolve(input.directory)),
     )
     const c = yield* Store.consent(db, directory)
     const counts = yield* db
@@ -415,7 +415,7 @@ export const make = Effect.fn("SessionSync.make")(function* (
     yield* Assets.prune(db, global)
     const current = yield* credential().pipe(
       Effect.map(digest),
-      Effect.catch(() => Effect.succeed("signed-out")),
+      Effect.orElseSucceed(() => "signed-out"),
     )
     if (observedCredential === undefined || current !== observedCredential) {
       grants.clear()
