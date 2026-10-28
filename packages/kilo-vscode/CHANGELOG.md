@@ -1,5 +1,15 @@
 # kilo-code
 
+## 7.8.23
+
+### Patch Changes
+
+- Updated dependencies [[`0c1d8dd`](https://github.com/Kilo-Org/kilocode/commit/0c1d8dd89ee725e952ad402535c57447e098bb29)]:
+  - @kilocode/kilo-indexing@7.8.23
+  - @opencode-ai/core@7.8.23
+  - @kilocode/kilo-ui@7.8.23
+  - @opencode-ai/ui@7.8.23
+
 ## 7.8.21
 
 ## 7.8.20

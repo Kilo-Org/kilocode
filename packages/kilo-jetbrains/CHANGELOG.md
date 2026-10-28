@@ -4,6 +4,12 @@
 
 ### Patch Changes
 
+- [#14625](https://github.com/Kilo-Org/kilocode/pull/14625) [`fb484d7`](https://github.com/Kilo-Org/kilocode/commit/fb484d77b995848a3ccc7c6c4d29aaae032303e4) Thanks [@maphew](https://github.com/maphew)! - Fix stale lockfile entries slipping through CI unnoticed.
+
+## 7.8.16
+
+### Patch Changes
+
 - [#15295](https://github.com/Kilo-Org/kilocode/pull/15295) [`0cc464f`](https://github.com/Kilo-Org/kilocode/commit/0cc464f3e9203442a3b09912382a6245dfaa94ad) - Keep the prompt navigation popup open when hovering between the timeline stripes, and scroll the list to the hovered prompt, including the last one.
 
 - [#15365](https://github.com/Kilo-Org/kilocode/pull/15365) [`3ef6b23`](https://github.com/Kilo-Org/kilocode/commit/3ef6b235245296e783bb49f71ed987d94442020b) - Preserve session activity events received immediately after the JetBrains backend starts.
