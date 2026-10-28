@@ -11,6 +11,9 @@
 // Output layout matches upstream's, so `bun run install:alpha` and the CI smoke test find the binary the same way:
 // <outdir>/cli-<os>-<arch>/bin/kilo2. Supported flags: --single, --baseline, --target=, --outdir=, --skip-install,
 // --skip-web-ui. The release-only targets that CI does not build (musl, baseline) stay available through --target.
+// Kilo: KILO_CHANNEL, KILO_VERSION, KILO_BUMP and KILO_RELEASE set the build channel and version. Load before
+// `@opencode/script`, which reads the OPENCODE_ names when it loads.
+import "../../../script/kilocode/release-env"
 import { $ } from "bun"
 import { mkdir, rm } from "fs/promises"
 import path from "path"

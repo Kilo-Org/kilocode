@@ -5,6 +5,9 @@ run-name: "${{ github.event_name == 'workflow_dispatch' && (inputs.dry_run && 'p
 # `latest` and `rc` dist-tags of the same packages. The build channel stays `v2` (npm rejects `v2` as a dist-tag because
 # it is a semver range), so the database and service files match the `bun run install:alpha` builds.
 #
+# The build and publish scripts read the version and build channel from KILO_VERSION and KILO_CHANNEL
+# (script/kilocode/release-env.ts copies them to the OPENCODE_ names that upstream's `@opencode/script` reads).
+#
 # Start a publish from the v2 branch: `gh workflow run kilo-v2-publish.yml --ref v2`. This file is not on the default
 # branch, so the GitHub UI shows no "Run workflow" button.
 #
@@ -32,6 +35,13 @@ on:
       - packages/kilo-cli/script/publish.ts
       - packages/cli/script/postinstall.mjs
       - script/kilocode/publish-client.ts
+      - script/kilocode/client-manifest.ts
+      - script/kilocode/release-env.ts
+      # Upstream files the publish flow depends on, so an upstream sync that changes them runs this workflow.
+      - packages/script/src/index.ts
+      - packages/schema/package.json
+      - packages/protocol/package.json
+      - packages/client/package.json
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
@@ -41,7 +51,7 @@ permissions:
   contents: read
 
 env:
-  OPENCODE_CHANNEL: v2
+  KILO_CHANNEL: v2
 
 jobs:
   build:
@@ -83,12 +93,23 @@ jobs:
         working-directory: packages/kilo-cli
         run: bun run script/publish.ts --dry-run
         env:
-          OPENCODE_VERSION: ${{ steps.version.outputs.version }}
+          KILO_VERSION: ${{ steps.version.outputs.version }}
+
+      # The launcher's postinstall script comes from upstream (packages/cli/script/postinstall.mjs). Installing the packed
+      # packages with npm fails here when an upstream sync changes how it finds the binary.
+      - name: Install the packed CLI with npm
+        run: |
+          prefix="$(mktemp -d)"
+          npm install --prefix "$prefix" --no-audit --no-fund packages/kilo-cli/dist/cli-linux-x64/*.tgz packages/kilo-cli/dist/cli/*.tgz
+          test "$("$prefix/node_modules/.bin/kilo2" --version)" = "kilo2 v$KILO_VERSION"
+          test "$("$prefix/node_modules/.bin/kilo" --version)" = "kilo2 v$KILO_VERSION"
+        env:
+          KILO_VERSION: ${{ steps.version.outputs.version }}
 
       - name: Pack client packages (dry run)
         run: bun script/kilocode/publish-client.ts --dry-run
         env:
-          OPENCODE_VERSION: ${{ steps.version.outputs.version }}
+          KILO_VERSION: ${{ steps.version.outputs.version }}
     outputs:
       version: ${{ steps.version.outputs.version }}
 
@@ -198,7 +219,7 @@ jobs:
         working-directory: packages/kilo-cli
         run: bun run script/publish.ts ${{ inputs.dry_run && '--dry-run' || '' }}
         env:
-          OPENCODE_VERSION: ${{ needs.build.outputs.version }}
+          KILO_VERSION: ${{ needs.build.outputs.version }}
           NPM_CONFIG_PROVENANCE: true
 
       - name: Summary
@@ -245,7 +266,7 @@ jobs:
       - name: Publish
         run: bun script/kilocode/publish-client.ts ${{ inputs.dry_run && '--dry-run' || '' }}
         env:
-          OPENCODE_VERSION: ${{ needs.build.outputs.version }}
+          KILO_VERSION: ${{ needs.build.outputs.version }}
           NPM_CONFIG_PROVENANCE: true
 
       - name: Summary
