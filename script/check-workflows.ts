@@ -30,6 +30,8 @@ const DIR = path.join(ROOT, ".github", "workflows")
 const active = new Set([
   // Upstream: lint and typecheck (`bun run check`).
   "check.yml",
+  // Kilo: publishes the v2 CLI to npm with the `kilo-v2` dist-tag.
+  "kilo-v2-publish.yml",
   // Kilo: v2 lane (this guard).
   "kilo-v2.yml",
   // Upstream: unit, e2e and compiled CLI smoke tests.

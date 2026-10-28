@@ -11,6 +11,8 @@ One change, one rung. Use the first rung that works, prove it with the checks be
 
 Kilo is the host, OpenCode is a library. Code moves one way: from upstream files into Kilo-owned files (`packages/kilo-*`, `src/kilocode/`, `test/kilocode/`), never back. Do not propose adding or widening a `kilocode_change` line in an upstream file to remove or shrink a Kilo-owned file; a Kilo-owned mirror of an upstream file (the host entry, a replaced tool) is rung 2 and beats a seam. A patch adds to upstream, it never changes an upstream default: upstream's own test files must pass unchanged against the code without the host. If they do not, the Kilo value belongs in the host, behind a generic knob with upstream's default.
 
+- Do not write comments that describe v1 code or v1 behavior (for example "as in v1", "same as main", "v1 did X"). This keeps the general comment rule: a comment explains a non-obvious constraint or surprising behavior of the v2 code. Use v1 only as a reference while porting, and put v1 evidence in the PR description; `kilo_port` and `kilocode_change` markers are the only v1 references in code.
+
 ## Vocabulary
 
 | Word | Meaning | Marker |
