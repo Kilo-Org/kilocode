@@ -1992,3 +1992,28 @@ describe("KiloProvider.handleLoadMessages / prepend into deleted session", () =>
     expect(loaded).toEqual([])
   })
 })
+
+describe("KiloProvider sidebar worktree source", () => {
+  it("passes the requested session directory rather than the currently open session", async () => {
+    const { provider, internal } = makeProvider(createClient())
+    internal.currentSession = mkSession()
+    provider.setSessionDirectory("source", "/repo/a")
+    provider.setSessionDirectory("s1", "/repo/b")
+    const called = Promise.withResolvers<{ id: string; dir: string }>()
+    provider.setContinueInWorktreeHandler(async (id, _, dir) => {
+      called.resolve({ id, dir })
+    })
+    const listener = Promise.withResolvers<(message: { type: string; sessionId: string }) => Promise<void>>()
+    internal.setupWebviewMessageHandler({
+      onDidReceiveMessage: (handler: (message: { type: string; sessionId: string }) => Promise<void>) => {
+        listener.resolve(handler)
+        return { dispose: () => {} }
+      },
+    })
+    await (
+      await listener.promise
+    )({ type: "continueInWorktree", sessionId: "source" })
+    expect(await called.promise).toEqual({ id: "source", dir: "/repo/a" })
+    provider.dispose()
+  })
+})
