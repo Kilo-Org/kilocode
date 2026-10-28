@@ -40,6 +40,15 @@ import "./styles/chat.css"
 
 type ViewType = "newTask" | "history" | "profile" | "settings" | "subAgentViewer"
 const VALID_VIEWS = new Set<string>(["newTask", "history", "profile", "settings", "subAgentViewer"])
+// Actions on the sidebar's own chat tabs. In list mode the sidebar shows no chat, so they would hit hidden state.
+const CHAT_ACTIONS = new Set<string>([
+  "closeTask",
+  "closeAllTasks",
+  "cycleAgentMode",
+  "cyclePreviousAgentMode",
+  "tabPrevious",
+  "tabNext",
+])
 
 /**
  * Bridge our session store to the DataProvider's expected Data shape.
@@ -282,7 +291,7 @@ const AppContent: Component = () => {
   )
   createEffect(() => vscode.postMessage({ type: "sessionActivity", state: activity() }))
   useSessionVisibility(() =>
-    !migration() && (currentView() === "newTask" || currentView() === "subAgentViewer")
+    !list() && !migration() && (currentView() === "newTask" || currentView() === "subAgentViewer")
       ? session.currentSessionID()
       : undefined,
   )
@@ -407,7 +416,7 @@ const AppContent: Component = () => {
       const message = event.data
       if (message?.type === "action" && message.action) {
         console.log("[Kilo New] App: 🎬 action:", message.action)
-        handleViewAction(message.action)
+        if (!list() || !CHAT_ACTIONS.has(message.action)) handleViewAction(message.action)
       }
       if (message?.type === "navigate" && message.view && VALID_VIEWS.has(message.view)) {
         console.log("[Kilo New] App: 🧭 navigate:", message.view, message.tab ? `tab=${message.tab}` : "")

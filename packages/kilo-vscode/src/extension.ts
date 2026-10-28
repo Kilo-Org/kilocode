@@ -45,7 +45,7 @@ import { sameDirectory } from "./kilo-provider-utils"
 import { mcpAuth } from "./services/mcp-auth"
 import { showAuthUrl } from "./kilo-provider/mcp-oauth"
 import { currentSessionLocation } from "./kilo-provider/chat-settings"
-import { findSessionTab } from "./kilo-provider/session-tabs"
+import { cloudTabKey, findSessionTab } from "./kilo-provider/session-tabs"
 
 let agentManager: AgentManagerProvider | undefined
 let caffeination: CaffeinationService | undefined
@@ -522,15 +522,29 @@ export async function activate(context: vscode.ExtensionContext) {
   }
 
   // Focus the editor tab already showing a session, or open it in a new one.
+  // Tabs opened for a key (session id or cloud key) that have not reported their session yet,
+  // so a second request in that window focuses the new tab instead of opening another.
+  const opening = new Map<string, vscode.WebviewPanel>()
+  const openTab = (key: string) => {
+    const tab = openKiloInNewTab(context, tabPanels, attach, () => opening.delete(key))
+    for (const [panel, item] of tabPanels) {
+      if (item === tab) opening.set(key, panel)
+    }
+    return tab
+  }
+
   const showSessionTab = async (id: string, directory?: string) => {
-    const panel = findSessionTab(tabPanels, id)
+    const panel = findSessionTab(tabPanels, id, opening)
     if (panel) return panel.reveal(panel.viewColumn, false)
-    const tab = openKiloInNewTab(context, tabPanels, attach)
+    const tab = openTab(id)
     await tab.openSession(id, directory ?? provider.getSessionDirectories().get(id))
   }
 
   const showCloudSessionTab = async (id: string) => {
-    const tab = openKiloInNewTab(context, tabPanels, attach)
+    const key = cloudTabKey(id)
+    const panel = findSessionTab(tabPanels, key, opening)
+    if (panel) return panel.reveal(panel.viewColumn, false)
+    const tab = openTab(key)
     await tab.waitForReady()
     tab.postMessage({ type: "openCloudSession", sessionId: id })
   }
@@ -540,15 +554,11 @@ export async function activate(context: vscode.ExtensionContext) {
     vscode.window.registerWebviewPanelSerializer("kilo-code.new.TabPanel", {
       deserializeWebviewPanel(panel: vscode.WebviewPanel) {
         const tabProvider = attach(panel)
-        panel.onDidDispose(
-          () => {
-            console.log("[Kilo New] Tab panel restored from restart disposed")
-            tabPanels.delete(panel)
-            tabProvider.dispose()
-          },
-          null,
-          context.subscriptions,
-        )
+        panel.onDidDispose(() => {
+          console.log("[Kilo New] Tab panel restored from restart disposed")
+          tabPanels.delete(panel)
+          tabProvider.dispose()
+        })
         return Promise.resolve()
       },
     }),
@@ -989,6 +999,7 @@ function openKiloInNewTab(
   context: vscode.ExtensionContext,
   tabPanels: Map<vscode.WebviewPanel, KiloProvider>,
   attach: (panel: vscode.WebviewPanel) => KiloProvider,
+  onDispose?: () => void,
 ) {
   const panel = vscode.window.createWebviewPanel(
     "kilo-code.new.TabPanel",
@@ -1008,15 +1019,14 @@ function openKiloInNewTab(
 
   const tabProvider = attach(panel)
 
-  panel.onDidDispose(
-    () => {
-      console.log("[Kilo New] Tab panel disposed")
-      tabPanels.delete(panel)
-      tabProvider.dispose()
-    },
-    null,
-    context.subscriptions,
-  )
+  // Not added to context.subscriptions: the listener lives on the panel and is released with it,
+  // while a subscription entry would keep every closed panel and provider reachable until deactivation.
+  panel.onDidDispose(() => {
+    console.log("[Kilo New] Tab panel disposed")
+    tabPanels.delete(panel)
+    onDispose?.()
+    tabProvider.dispose()
+  })
   return tabProvider
 }
 
