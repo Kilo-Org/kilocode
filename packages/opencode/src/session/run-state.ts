@@ -9,6 +9,7 @@ import { Session } from "./session"
 import { SessionID } from "./schema"
 import { SessionStatus } from "./status"
 import { SessionDrain } from "@/kilocode/session/drain" // kilocode_change
+import { KiloSessionTurn } from "@/kilocode/session/turn" // kilocode_change
 
 export interface Interface {
   readonly assertNotBusy: (sessionID: SessionID) => Effect.Effect<void, Session.BusyError>
@@ -67,7 +68,7 @@ export const layer = Layer.effect(
         }),
         onBusy: status.set(sessionID, { type: "busy" }),
         onInterrupt,
-        lease: drain.hold(sessionID), // kilocode_change
+        lease: KiloSessionTurn.hold(sessionID, drain.hold(sessionID)), // kilocode_change
       })
       data.runners.set(sessionID, next)
       return next
