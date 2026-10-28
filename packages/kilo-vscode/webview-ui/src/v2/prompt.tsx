@@ -1,5 +1,6 @@
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
+import type { ModelRef } from "@opencode/client"
 import { createEffect, createSignal, onCleanup, onMount, Show, type JSX } from "solid-js"
 import { useLanguage } from "../context/language"
 import { isEnterKeyCommitNotIme } from "../utils/ime-enter"
@@ -10,6 +11,8 @@ export function PromptInput(props: {
   session?: string
   running: boolean
   disabled: boolean
+  /** The model the composer shows; Enhance uses it so the rewrite never depends on another provider. */
+  model?: ModelRef
   onSend: (text: string) => Promise<boolean>
   onStop: () => void
   /** Agent, model and variant controls, before the actions as in main's PromptInput. */
@@ -62,7 +65,8 @@ export function PromptInput(props: {
       .finally(() => setSending(false))
   }
 
-  const canEnhance = () => !props.running && !props.disabled && !enhancing()
+  // v1 disabled Enhance while a prompt submission was in flight, as `isPromptBusy` counted `submitting`.
+  const canEnhance = () => !props.running && !props.disabled && !enhancing() && !sending()
 
   const enhance = () => {
     if (!canEnhance()) return
@@ -77,7 +81,7 @@ export function PromptInput(props: {
     const token = ++enhanceToken
     setEnhancing(true)
     void v2.api.generate
-      .text({ prompt: enhancePromptRequest(draft) })
+      .text({ prompt: enhancePromptRequest(draft), model: props.model })
       .then((response) => {
         if (token !== enhanceToken) return
         setText(cleanEnhancedPrompt(response.text))
@@ -134,6 +138,8 @@ export function PromptInput(props: {
             aria-label={language.t("prompt.placeholder.plain")}
             value={text()}
             onInput={(e) => {
+              // An edit invalidates an in-flight Enhance, so its late result cannot overwrite the new text.
+              enhanceToken++
               preEnhance = null
               setText(e.currentTarget.value)
             }}
