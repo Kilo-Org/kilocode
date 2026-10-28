@@ -12,6 +12,23 @@ import java.awt.Dimension
 
 class ActiveListSelectionTest : BasePlatformTestCase() {
 
+    fun `test renderer clears selection color for unselected row`() {
+        val item = row("a", "Alpha")
+        val model = com.intellij.ui.CollectionListModel(listOf(item))
+        val renderer = ActiveListRenderer(model)
+        val list = com.intellij.ui.components.JBList(model)
+        val stamp = renderer.getListCellRendererComponent(list, item, 0, true, true)
+        fun picker(component: java.awt.Container): ai.kilocode.client.session.ui.PickerRow? {
+            if (component is ai.kilocode.client.session.ui.PickerRow) return component
+            return component.components.filterIsInstance<java.awt.Container>().firstNotNullOfOrNull { picker(it) }
+        }
+        val wrap = picker(stamp)!!
+        assertEquals(UIUtil.getListBackground(true, true), wrap.selectionColor)
+        renderer.getListCellRendererComponent(list, item, 0, false, false)
+        assertNull(wrap.selectionColor)
+        assertEquals(list.background, wrap.background)
+    }
+
     fun `test two phase rebuild keeps selection and mutes onSelect`() {
         var calls = 0
         val view = view { calls++ }

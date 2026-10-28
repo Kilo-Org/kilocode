@@ -130,7 +130,7 @@ internal class ActiveTree(
     init {
         view.onSelect = actions.select
         view.onGeometry = { onScroll?.invoke() }
-        scroll.verticalScrollBar.addAdjustmentListener { view.geometry(); onScroll?.invoke() }
+        scroll.verticalScrollBar.addAdjustmentListener { view.geometry() }
         if (surface == ActiveSurface.ToolWindow) isOpaque = true
         scroll.border = JBUI.Borders.empty()
         addToCenter(scroll)
@@ -250,6 +250,7 @@ internal class ActiveTreeView(
     private var anchorKey: String? = null
     private var pending: String? = null
     private var pendingScroll = true
+    private var revision = 0
     private var popups = 0
     private var popupProperty: Any? = null
     private var restoring = false
@@ -395,9 +396,11 @@ internal class ActiveTreeView(
         val keys = hierarchy.keys(nodes)
         require(keys.size == keys.toSet().size) { "ActiveTree keys must be unique" }
         if (nodes == snapshot && selection == ActiveSelection.Preserve && pending == null) return
+        revision++
         setHovered(null)
         val expanded = expandedKeys()
         val selected = selectedKeys()
+        val parent = (selectedEntry()?.parent as? ActiveEntry)?.key
         val neighbors = selectedEntry()?.let { node ->
             val parent = node.parent ?: return@let emptyList()
             val siblings = (0 until parent.childCount).map { parent.getChildAt(it) as ActiveEntry }
@@ -420,7 +423,7 @@ internal class ActiveTreeView(
             entries.values.filter { it.allowsChildren && expandedOnce.add(it.key) }.forEach {
                 expandPath(TreePath(it.path))
             }
-            restore(selection, selected, viewport, neighbors)
+            restore(selection, selected, viewport, neighbors, parent)
         } finally {
             expandsSelectedPaths = expands
             scrollsOnExpand = scrolls
@@ -432,7 +435,9 @@ internal class ActiveTreeView(
         repaint()
     }
 
-    private fun restore(selection: ActiveSelection, previous: List<String>, viewport: Point?, neighbors: List<String>) {
+    private fun restore(
+        selection: ActiveSelection, previous: List<String>, viewport: Point?, neighbors: List<String>, parent: String?,
+    ) {
         if (selection is ActiveSelection.Key) {
             select(selection.key, true)
             return
@@ -458,12 +463,15 @@ internal class ActiveTreeView(
         } else {
             // Keep a surviving preference alive across an intermediate empty refresh (for example a
             // controller replaceAll that briefly publishes no rows); the next update restores it.
-            pending = previous.firstOrNull()
+            val empty = entries.values.all { it.allowsChildren } ||
+                parent?.let { entries[it]?.childCount == 0 } == true
+            pending = if (empty) previous.firstOrNull() else null
             selectionModel.clearSelection()
             anchorKey = null
         }
         if (viewport != null) {
-            SwingUtilities.invokeLater { setViewport(viewport) }
+            val stamp = revision
+            SwingUtilities.invokeLater { if (stamp == revision) setViewport(viewport) }
         }
     }
 
@@ -490,6 +498,7 @@ internal class ActiveTreeView(
     @RequiresEdt
     fun select(key: String, scroll: Boolean = true): Boolean {
         checkEdt()
+        revision++
         val entry = entries[key] ?: run {
             pending = key
             pendingScroll = scroll
@@ -502,6 +511,7 @@ internal class ActiveTreeView(
     }
 
     private fun reveal(entry: ActiveEntry, scroll: Boolean) {
+        revision++
         val port = parent as? JViewport
         val viewport = port?.viewPosition
         val expands = expandsSelectedPaths
@@ -520,7 +530,10 @@ internal class ActiveTreeView(
             scrollsOnExpand = scrolls
         }
         if (scroll) scrollPathToVisible(TreePath(entry.path))
-        if (!scroll && viewport != null) SwingUtilities.invokeLater { port.viewPosition = viewport }
+        if (!scroll && viewport != null) {
+            val stamp = revision
+            SwingUtilities.invokeLater { if (stamp == revision) port.viewPosition = viewport }
+        }
         anchorKey = entry.key
     }
 
@@ -844,8 +857,7 @@ internal class ActiveTreeView(
                     event.setDropPossible(false)
                     return@setTargetChecker true
                 }
-                event.setDropPossible(true)
-                over(pick.key, event.getPointOn(this))
+                event.setDropPossible(ordering.over(pick.key, event.getPointOn(this)))
                 true
             }
             .setDropHandlerWithResult { event ->

@@ -39,7 +39,7 @@ class ActiveTreeTest : BasePlatformTestCase() {
         val path = view.getPathForRow(0)
         val group = path.lastPathComponent
         view.collapsePath(path)
-        tree.update(nodes, ActiveSelection.Preserve)
+        tree.update(listOf(ActiveTreeNode(Row("group", "Renamed"), nodes.single().children)), ActiveSelection.Preserve)
         assertSame(group, view.getPathForRow(0).lastPathComponent)
         assertFalse(view.isExpanded(path))
         assertTrue(tree.select("leaf", false))
@@ -138,9 +138,92 @@ class ActiveTreeTest : BasePlatformTestCase() {
         assertEquals(height, view.getRowBounds(1).height)
         view.drop()
         assertEquals(listOf("b", "a"), moves.single().keys)
-        tree.update(nodes)
-        view.over("a", Point(100, 300))
+        view.over("a", Point(100, 0))
+        val entry = view.getPathForRow(1).lastPathComponent as ActiveEntry
+        assertEquals("a", entry.key)
+        assertTrue(view.placeholder(entry))
         view.collapsePath(view.getPathForRow(0))
+        assertFalse(view.placeholder(entry))
+        view.expandPath(view.getPathForRow(0))
+        assertEquals("a", (view.getPathForRow(1).lastPathComponent as ActiveEntry).key)
+        assertEquals("b", (view.getPathForRow(2).lastPathComponent as ActiveEntry).key)
+        view.drop()
+        assertEquals(1, moves.size)
+    }
+
+    fun `test removed selection does not disable no op refresh or reselect recreated key`() {
+        val tree = ActiveTree("")
+        val nodes = listOf(ActiveTreeNode(Row("a", "A")))
+        tree.update(nodes + ActiveTreeNode(Row("b", "B")))
+        tree.select("b", false)
+        tree.update(nodes)
+        com.intellij.util.ui.UIUtil.dispatchAllInvocationEvents()
+        var calls = 0
+        (tree.preferredFocus() as ActiveTreeView).onGeometry = { calls++ }
+        tree.update(nodes)
+        assertEquals(0, calls)
+        tree.update(nodes + ActiveTreeNode(Row("b", "Recreated")))
+        assertNull(tree.selected())
+    }
+
+    fun `test empty refresh retains selection until rows return`() {
+        val tree = ActiveTree("")
+        val nodes = listOf(ActiveTreeNode(Row("a", "A")))
+        tree.update(nodes)
+        tree.select("a", false)
+        tree.update(emptyList())
+        tree.update(nodes)
+        assertEquals("a", tree.selected()?.key)
+    }
+
+    fun `test later reveal wins over queued refresh viewport restoration`() {
+        val tree = ActiveTree("")
+        val nodes = (0 until 30).map { ActiveTreeNode(Row("k$it", "Row $it")) }
+        tree.update(nodes)
+        val view = tree.preferredFocus() as ActiveTreeView
+        val scroll = com.intellij.ui.components.JBScrollPane(view)
+        scroll.setSize(400, 100)
+        scroll.doLayout()
+        view.setSize(view.preferredSize)
+        com.intellij.util.ui.UIUtil.dispatchAllInvocationEvents()
+        tree.update(nodes + ActiveTreeNode(Row("new", "New")))
+        scroll.doLayout()
+        scroll.viewport.doLayout()
+        tree.select("new")
+        val position = scroll.viewport.viewPosition
+        assertTrue(position.y > 0)
+        com.intellij.util.ui.UIUtil.dispatchAllInvocationEvents()
+        assertEquals(position, scroll.viewport.viewPosition)
+    }
+
+    fun `test scroll adjustment invokes callback once`() {
+        val tree = ActiveTree("")
+        var calls = 0
+        tree.onScroll = { calls++ }
+        val scroll = tree.components.single() as com.intellij.ui.components.JBScrollPane
+        val view = tree.preferredFocus() as ActiveTreeView
+        view.onGeometry = { calls++ }
+        val event = java.awt.event.AdjustmentEvent(scroll.verticalScrollBar,
+            java.awt.event.AdjustmentEvent.ADJUSTMENT_VALUE_CHANGED, java.awt.event.AdjustmentEvent.TRACK, 1)
+        scroll.verticalScrollBar.adjustmentListeners.first { it.javaClass.name.contains("ActiveTree") }
+            .adjustmentValueChanged(event)
+        assertEquals(1, calls)
+    }
+
+    fun `test movable siblings reorder beside fixed row but cannot cross it`() {
+        val moves = mutableListOf<ActiveMove>()
+        val tree = ActiveTree("", reorder = ActiveReorder({ it.key != "fixed" }, { moves += it }))
+        tree.update(listOf(ActiveTreeNode(Row("group", "Local"), listOf(
+            ActiveTreeNode(Row("fixed", "Fixed")), ActiveTreeNode(Row("a", "A")), ActiveTreeNode(Row("b", "B")),
+        ))))
+        val view = tree.preferredFocus() as ActiveTreeView
+        view.setSize(400, 300)
+        val bounds = view.getRowBounds(2)
+        view.over("b", Point(100, bounds.y))
+        view.drop()
+        assertEquals(listOf("fixed", "b", "a"), moves.single().keys)
+        view.over("a", Point(100, 0))
+        assertFalse(view.placeholder(view.hierarchy.entries.getValue("a")))
         view.drop()
         assertEquals(1, moves.size)
     }

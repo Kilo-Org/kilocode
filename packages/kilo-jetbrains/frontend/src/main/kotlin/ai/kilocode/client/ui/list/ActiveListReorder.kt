@@ -1,7 +1,6 @@
 package ai.kilocode.client.ui.list
 
 import ai.kilocode.client.ui.active.ActiveItem
-import ai.kilocode.client.ui.active.ActiveMove
 import ai.kilocode.client.ui.active.ActiveReorder
 import com.intellij.ide.dnd.DnDDragStartBean
 import com.intellij.ide.dnd.DnDImage
@@ -13,18 +12,8 @@ import java.awt.Point
 import javax.swing.JList
 import javax.swing.TransferHandler
 
-internal class ActiveReorder(
-    val movable: (ActiveItem) -> Boolean = { true },
-    val onMove: (ActiveMove) -> Unit,
-)
-
-internal data class ActiveMove(
-    val key: String,
-    val from: Int,
-    val to: Int,
-    val keys: List<String>,
-)
-
+// This file owns list drag installation and its placeholder, not just the row declaration.
+@Suppress("MatchingDeclarationName")
 internal data class ActiveGap(
     val source: ActiveItem,
     val height: Int,

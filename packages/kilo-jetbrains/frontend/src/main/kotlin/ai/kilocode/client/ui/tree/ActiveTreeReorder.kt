@@ -24,26 +24,31 @@ internal class ActiveTreeReorder(private val view: ActiveTreeView, private val o
             options?.movable?.invoke(entry.item) == true
 
     @RequiresEdt
-    fun over(key: String, point: Point) {
+    fun over(key: String, point: Point): Boolean {
         val entry = view.hierarchy.entries[key]
         val parent = entry?.parent as? ActiveEntry
         val siblings = parent?.let(::siblings).orEmpty()
         val expanded = parent != null && view.isExpanded(TreePath(parent.path))
-        if (entry == null || !expanded || siblings.any { !movable(it) }) {
+        if (entry == null || !expanded || !movable(entry)) {
             cancel()
-            return
+            return false
         }
         val from = siblings.indexOf(entry)
         val index = siblings.indexOfFirst {
             view.regions.bounds(it)?.let { bounds -> point.y <= bounds.y + bounds.height / 2 } == true
         }.takeIf { it >= 0 } ?: siblings.size
         val to = (index - if (index > from) 1 else 0).coerceIn(0, siblings.size - 1)
+        val blocked = (minOf(from, to)..maxOf(from, to)).any { !movable(siblings[it]) }
+        if (blocked) {
+            cancel()
+        }
         val next = Preview(key, parent, preview?.from ?: from, to)
-        if (next != preview) {
+        if (!blocked && next != preview) {
             preview = next
             view.preview { view.hierarchy.move(entry, parent, to) }
             view.selectionModel.selectionPath = TreePath(entry.path)
         }
+        return !blocked
     }
 
     @RequiresEdt
