@@ -111,6 +111,12 @@ jobs:
           echo "$(brew --prefix)/bin" >> "$GITHUB_PATH"
           echo "SHELL=$(brew --prefix)/bin/bash" >> "$GITHUB_ENV"
 
+      # PowerShell's first start on macOS loads the .NET runtime and assemblies. The shell scanner tests
+      # run several pwsh invocations under a five second budget per case, and the first one paid that
+      # cold start on a loaded runner. Warm the runtime so those cases see steady state.
+      - name: Warm PowerShell
+        run: pwsh -NoProfile -Command exit
+
       # Through each package's own test script, like the Linux and Windows unit jobs: core's wrapper
       # gives the run a temporary HOME, OPENCODE_TEST_HOME, XDG directories and TMPDIR.
       - name: Run core platform tests
