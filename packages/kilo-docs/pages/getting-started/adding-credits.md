@@ -15,6 +15,12 @@ These options are available to purchase from your [personal profile page](https:
 
 You can also use subscriptions or credits you may have purchased directly with an AI provider by adding your keys on the [Bring your own Key (BYOK)](https://app.kilo.ai/byok) settings screen. For setup details and supported providers, see [AI Providers documentation](/docs/ai-providers). If your provider is not yet supported, you can also [directly connect your provider](/docs/getting-started/setup-authentication) in the extension and CLI.
 
+## Changing your Kilo Pass plan
+
+If you already have a Kilo Pass, you can change plans, including upgrading to a higher tier such as Expert, from the Kilo Pass subscription settings on your [profile page](https://app.kilo.ai/profile). A plan change takes effect when your next billing period starts, and your current pass stays active until then. You can cancel a pending change before it takes effect.
+
+If your subscription is set to cancel at the end of the current period, resume it before changing plans. Plan selection is disabled while cancellation is pending, because the subscription would end instead of switching plans. Canceling a Kilo Pass also releases any scheduled plan change.
+
 ## Transparent Pricing
 
 At Kilo Code, we believe in complete pricing transparency:
