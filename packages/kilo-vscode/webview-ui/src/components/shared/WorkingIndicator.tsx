@@ -9,7 +9,7 @@
 
 import { Button } from "@kilocode/kilo-ui/button"
 import { Spinner } from "@kilocode/kilo-ui/spinner"
-import { createEffect, createMemo, createSignal, on, onCleanup, onMount, Show } from "solid-js"
+import { createEffect, createMemo, createSignal, on, onCleanup, Show } from "solid-js"
 import { useLanguage } from "../../context/language"
 import { useV2 } from "../../v2/client"
 import { StatusText } from "./StatusText"
@@ -17,23 +17,35 @@ import { StatusText } from "./StatusText"
 /** The retry state of the running turn, from the assistant message's `session.retry.scheduled` data. */
 export type Retry = { attempt: number; at: number; error: { message: string } }
 
-export const WorkingIndicator = (props: { session: string; retry?: Retry; onScrollToBottom?: () => void }) => {
+export const WorkingIndicator = (props: {
+  session: string
+  // The dock shows the working indicator only while the turn runs and nothing is blocked (v1 `showsWorking`).
+  active: boolean
+  // A permission or question parks the turn: the counter holds its value instead of resetting, as on v1.
+  blocked: boolean
+  retry?: Retry
+  onScrollToBottom?: () => void
+}) => {
   const v2 = useV2()
   const language = useLanguage()
   const [elapsed, setElapsed] = createSignal(0)
   const [retryCountdown, setRetryCountdown] = createSignal(0)
 
-  // The indicator mounts when the turn starts, so the counter runs from the first tick. A session change restarts it.
+  // The interval runs only while the turn is timed, so the counter holds while a permission or question parks the
+  // turn and resets once the turn ends. A session change also restarts it.
   createEffect(
     on(
-      () => props.session,
-      () => setElapsed(0),
+      () => [props.session, props.active, props.blocked] as const,
+      ([, active, blocked]) => {
+        if (!active) {
+          if (!blocked) setElapsed(0)
+          return
+        }
+        const id = setInterval(() => setElapsed((value) => value + 1), 1000)
+        onCleanup(() => clearInterval(id))
+      },
     ),
   )
-  onMount(() => {
-    const id = setInterval(() => setElapsed((value) => value + 1), 1000)
-    onCleanup(() => clearInterval(id))
-  })
 
   createEffect(
     on(

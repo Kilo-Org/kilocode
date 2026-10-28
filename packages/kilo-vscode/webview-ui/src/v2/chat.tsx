@@ -99,6 +99,9 @@ export function Chat() {
 
   // A pending permission or question blocks new prompts, as on v1; Stop stays available.
   const blocked = () => permissions().length > 0 || forms().length > 0
+  // v1's SessionDock `showsWorking`: the dock shows the working indicator only while the turn runs or retries and
+  // nothing is blocked. The blocked case hides the row and hands the spacing back to the composer.
+  const working = () => !blocked() && (running() || !!retry())
   const selection = createSelection(session)
 
   const send = (text: string) => {
@@ -165,10 +168,21 @@ export function Chat() {
             <Show when={forms()[0]} keyed>
               {(form) => <QuestionDock form={form} />}
             </Show>
-            {/* The working indicator sits in the dock, directly above the composer, as on v1. */}
-            <Show when={running() || retry()}>
-              <WorkingIndicator session={session() ?? ""} retry={retry()} onScrollToBottom={() => scrollToBottom()()} />
-            </Show>
+            {/* v1's SessionDock structure over native v2 data: the dock owns the working row, keeps it mounted so the
+                indicator keeps its width lock across the swap, and sits flush on the composer while it is active. */}
+            <div class="session-dock" data-component="session-dock" data-active={working() ? "" : undefined}>
+              <div class="session-dock-state" data-active={working() ? "" : undefined} aria-hidden={!working()}>
+                <div class="session-working">
+                  <WorkingIndicator
+                    session={session() ?? ""}
+                    active={working()}
+                    blocked={blocked()}
+                    retry={retry()}
+                    onScrollToBottom={() => scrollToBottom()()}
+                  />
+                </div>
+              </div>
+            </div>
             <PromptInput
               session={session()}
               running={running()}
