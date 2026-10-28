@@ -37,7 +37,7 @@ export function createProfile() {
   const [usage, setUsage] = createSignal<ProviderUsage.Info>()
   const [usageLoading, setUsageLoading] = createSignal(false)
   const [usageError, setUsageError] = createSignal<string>()
-  const state: { attempt?: string; timer?: ReturnType<typeof setTimeout> } = {}
+  const state: { attempt?: string; timer?: ReturnType<typeof setTimeout>; usage: number } = { usage: 0 }
 
   const refresh = async () => {
     // Only the contract's `unauthorized` error means signed out; other failures are real errors.
@@ -70,15 +70,20 @@ export function createProfile() {
           state.timer = setTimeout(() => poll(attempt), POLL)
           return
         }
-        state.attempt = undefined
         if (result.data.status !== "complete") {
+          state.attempt = undefined
           const error = result.data.status === "failed" ? result.data.message : "Authorization expired"
           return void setAuth({ status: "error", error })
         }
         setAuth({ status: "success" })
         // As v1: a new account invalidates the cached usage.
         loadUsage(true)
-        return refresh().then(() => setAuth({ status: "idle" }))
+        // The attempt stays set until the refresh settles, so a failed refresh reaches the error state below.
+        return refresh().then(() => {
+          if (state.attempt !== attempt) return
+          state.attempt = undefined
+          setAuth({ status: "idle" })
+        })
       })
       .catch((error: unknown) => {
         if (state.attempt !== attempt) return
@@ -88,12 +93,14 @@ export function createProfile() {
   }
 
   const loadUsage = (force: boolean) => {
+    // As v1: only the latest request writes, so a response for the previous account cannot replace the new one.
+    const generation = ++state.usage
     setUsageLoading(true)
     setUsageError(undefined)
     void (force ? usageRpc.refresh({}, { location }) : usageRpc.get({}, { location }))
-      .then(setUsage)
-      .catch((error: unknown) => setUsageError(text(error)))
-      .finally(() => setUsageLoading(false))
+      .then((result) => generation === state.usage && setUsage(result))
+      .catch((error: unknown) => generation === state.usage && setUsageError(text(error)))
+      .finally(() => generation === state.usage && setUsageLoading(false))
   }
 
   const cancel = () => {

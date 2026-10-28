@@ -14,9 +14,16 @@ import { Button } from "@kilocode/kilo-ui/button"
 import { isEnterKeyCommitNotIme } from "../../utils/ime-enter"
 import { createTypeahead, isTypeaheadChar } from "../../utils/typeahead"
 
-/** v2 agents carry their display name in `name`; `id` is the value the server stores. */
+/**
+ * v2 agents carry their display name in `name`; `id` is the value the server stores. An agent without a display name
+ * has `name` equal to `id`, and as v1 its slug is title-cased.
+ */
 function formatAgentLabel(agent: AgentInfo): string {
-  return agent.name
+  if (agent.name !== agent.id) return agent.name
+  return agent.id
+    .split(/[-_]/)
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(" ")
 }
 
 // ---------------------------------------------------------------------------

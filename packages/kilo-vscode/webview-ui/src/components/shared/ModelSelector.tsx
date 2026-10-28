@@ -8,7 +8,7 @@
  */
 
 import type { ModelInfo, ProviderInfo } from "@opencode/client"
-import { createEffect, createMemo, createSelector, createSignal, createUniqueId, onCleanup, Show } from "solid-js"
+import { createEffect, createMemo, createSelector, createSignal, createUniqueId, onCleanup, Show, untrack } from "solid-js"
 import type { Component } from "solid-js"
 import { Virtualizer, type VirtualizerHandle } from "virtua/solid"
 import { Button } from "@kilocode/kilo-ui/button"
@@ -128,19 +128,22 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
     if (idx !== undefined) virtualizer()?.scrollToIndex(idx, { align })
   }
 
-  // Opening focuses the search field and the active model; a new search selects its first match.
+  // Opening focuses the search field and the active model; a new search selects its first match. As v1, only `open`
+  // and `search` drive this, so toggling a group keeps the cursor on the group.
   createEffect(() => {
     if (!open()) {
       setSearch("")
       return
     }
     search()
-    const model = active()
-    const key = !hasSearch() && model && index().has(rowKey(model)) ? rowKey(model) : (nodes()[0]?.key ?? "")
-    setSelectedKey(key)
-    requestAnimationFrame(() => {
-      searchRef?.focus()
-      scrollRow(key, hasSearch() ? "nearest" : "center")
+    untrack(() => {
+      const model = active()
+      const key = !hasSearch() && model && index().has(rowKey(model)) ? rowKey(model) : (nodes()[0]?.key ?? "")
+      setSelectedKey(key)
+      requestAnimationFrame(() => {
+        searchRef?.focus()
+        scrollRow(key, hasSearch() ? "nearest" : "center")
+      })
     })
   })
 

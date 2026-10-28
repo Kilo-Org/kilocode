@@ -4,6 +4,7 @@ import { env, Uri, workspace, type ExtensionContext, type WebviewView, type Webv
 import { local } from "./local"
 import type { ToHost, ToWebview } from "./protocol"
 import { bridge } from "./relay"
+import { saveImage } from "./save-image"
 import type { Manager } from "./server"
 
 export function chat(input: { context: ExtensionContext; server: Manager; directory: string }) {
@@ -32,6 +33,7 @@ export function chat(input: { context: ExtensionContext; server: Manager; direct
           return post({ type: "modelSelectorExpandedLoaded", value: input.context.globalState.get(EXPANDED, true) })
         if (message.type === "persistModelSelectorExpanded")
           return void input.context.globalState.update(EXPANDED, message.value)
+        if (message.type === "saveImage") return saveImage(input.directory, message)
       })
       const visibility = view.onDidChangeVisibility(() => post({ type: "webviewActiveChanged", active: view.visible }))
       view.onDidDispose(() => {

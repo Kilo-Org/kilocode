@@ -13,7 +13,7 @@ export type Request = {
 
 export type ToHost = Request | { type: "abort"; id: number } | { type: "open"; url: string } | Ui
 
-/** Messages of the copied v1 UI that the host still handles. */
+/** Messages of the copied v1 UI. The host ignores `webviewFocusChanged` and `setLanguage` for now. */
 export type Ui =
   | { type: "copyToClipboard"; id: string; text: string }
   | { type: "requestModelSelectorExpanded" }

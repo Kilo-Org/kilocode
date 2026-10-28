@@ -33,7 +33,8 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
   const money = createMemo(() => new Intl.NumberFormat(language.locale(), { style: "currency", currency: "USD" }))
 
   const cost = createMemo(() => {
-    const value = info()?.cost ?? 0
+    // The family total: the session and its subagents, as v1 and the TUI footer show.
+    const value = v2.data.session.cost(props.sessionID)
     if (value === 0) return undefined
     return money().format(value)
   })
@@ -52,12 +53,14 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
     if (!target) return
     setRenaming(undefined)
     if (title === target.title) return
-    // Same path as Session History: the session.renamed event updates every view, remember() shows it at once.
+    // Same path as Session History: remember() shows the title at once, the sync reads the new update time.
     void v2.api.session
       .update({ sessionID: target.id, title })
       .then(() => {
         const current = v2.data.session.get(target.id)
         if (current) v2.data.session.remember({ ...current, title })
+        v2.data.session.invalidate(target.id)
+        return v2.data.session.sync(target.id)
       })
       .catch(v2.report)
   }
@@ -120,7 +123,7 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
                 size="small"
                 variant="ghost"
                 disabled={!canCompact()}
-                onClick={() => void v2.api.session.compact({ sessionID: props.sessionID }).catch(v2.report)}
+                onClick={() => void v2.data.session.compact({ sessionID: props.sessionID }).catch(v2.report)}
                 aria-label={language.t("command.session.compact")}
               />
             </Tooltip>
