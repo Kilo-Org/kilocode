@@ -643,56 +643,27 @@
 ## [7.2.1-rc.1] - 2026-10-28
 
 ### Added
-- feat(cli): route hosted sessions through opaque local attachments by @kirillk in https://github.com/Kilo-Org/kilocode/pull/15358
-- feat(agent-manager): let agents choose the worktree base branch by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/15482
-- feat(cli): link custom router entries to platform benchmarks by @iscekic in https://github.com/Kilo-Org/kilocode/pull/15440
-- feat: publish CLI as conda package via rattler-build by @zfralish in https://github.com/Kilo-Org/kilocode/pull/14465
-- feat(cli): add hosted workspaces and cloud system feeds by @eshurakov in https://github.com/Kilo-Org/kilocode/pull/15509
-- feat(jetbrains): add hosted Cloud sessions to Agent Manager by @kirillk in https://github.com/Kilo-Org/kilocode/pull/15531
+- Added hosted Kilo Cloud sessions to Agent Manager. Cloud workspaces now share the same editor chrome as local and worktree sessions, including session rows, date groups, badges, busy spinners, and refresh from the row menu.
+- Cloud discovery now pages through every workspace for a repository, reports the canonical status vocabulary instead of showing healthy workspaces as unknown, and shows the hourly compute price in the workspace header.
+- Linked custom router entries to platform benchmarks.
+- Indexing now prunes ignored directories and bounds LanceDB index growth.
 
 ### Fixed
-- fix(cli): harden browser and MCP OAuth URL handling by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/15383
-- fix(cli): block compromised eMudhra certificates by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/15365
-- fix(ci): pass security alerts to jq as files by @brunoagatao in https://github.com/Kilo-Org/kilocode/pull/15406
-- fix(vscode): keep transcript selection on copy in VS Code 1.143 by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/15472
-- fix(cli): update fff to 0.10.5 to bound watcher work on file bursts by @chrarnoldus in https://github.com/Kilo-Org/kilocode/pull/15434
-- fix(cli): compact at the configured threshold and stop compaction loops by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/15479
-- fix(cli): revert fff bump to 0.9.4 to unbreak release cross-compile by @zfralish in https://github.com/Kilo-Org/kilocode/pull/15506
-- fix(cli): disable binary relocation in conda recipe by @zfralish in https://github.com/Kilo-Org/kilocode/pull/15524
-- fix(cli): fire scheduled tasks once across processes sharing a data directory by @iscekic in https://github.com/Kilo-Org/kilocode/pull/15516
-- fix(cli): keep a reply that another Kilo process is still writing by @iscekic in https://github.com/Kilo-Org/kilocode/pull/15515
-- fix(cli): keep the real exit code of a failed background job by @mardausdennis in https://github.com/Kilo-Org/kilocode/pull/15081
-- fix(cli): give chunked compaction the normal output budget by @mardausdennis in https://github.com/Kilo-Org/kilocode/pull/14976
-- fix(lockfile): regenerate bun.lock and guard workspace version drift by @maphew in https://github.com/Kilo-Org/kilocode/pull/14625
-- fix(indexing): prune ignored directories and bound LanceDB index growth by @maphew in https://github.com/Kilo-Org/kilocode/pull/14706
-- fix(cli): preserve the parent user-agent when loading npm config by @Uddoo in https://github.com/Kilo-Org/kilocode/pull/15274
-- fix(security): make Dependabot catch-all groups the lowest-priority match by @WebReflection in https://github.com/Kilo-Org/kilocode/pull/15540
+- Cloud sessions recover their streams after reconnects without leaving tools running or hiding wake progress, and preparation failures are surfaced with sanitized error details.
+- Kept hosted stream ownership across restarts and retained transcript subscriptions when the first attachment fails transiently.
+- Kept large Cloud repositories from bursting the CLI with concurrent workspace status reads.
+- Aligned hosted prompts with the Cloud input contract.
+- Established a session's event subscription before startup returns so early updates are not missed.
+- Compaction now runs at the configured threshold and stops compaction loops, and chunked compaction gets the normal output budget.
+- Scheduled tasks fire once across processes sharing a data directory.
+- Kept a reply that another Kilo process is still writing, and preserved the real exit code of a failed background job.
+- Restricted browser and MCP OAuth URLs to HTTP(S), and scoped the MCP SSE probe to its own request and redirects.
+- Blocked compromised eMudhra certificates.
+- Preserved the parent user-agent when loading npm config.
 
 ### Changed
-- release(jetbrains): v7.1.12 by @kilo-maintainer[bot] in https://github.com/Kilo-Org/kilocode/pull/15375
-- chore(metrics): Track MCP sign-in outcomes and catalog OAuth requirements by @WebReflection in https://github.com/Kilo-Org/kilocode/pull/15234
-- docs: auto-sync vscode with merged PRs (through 2026-10-23) by @github-actions[bot] in https://github.com/Kilo-Org/kilocode/pull/15193
-- docs: auto-sync other with merged PRs (through 2026-10-20) by @github-actions[bot] in https://github.com/Kilo-Org/kilocode/pull/15194
-- chore(deps): vite updated due launch-editor dependabot alerts by @WebReflection in https://github.com/Kilo-Org/kilocode/pull/15412
-- chore(deps): DOMPurify updated due dependabot alerts by @WebReflection in https://github.com/Kilo-Org/kilocode/pull/15410
-- chore(deps): Next.JS updated due dependabot alerts by @WebReflection in https://github.com/Kilo-Org/kilocode/pull/15420
-- chore(deps): Storybook updated due dependabot alerts by @WebReflection in https://github.com/Kilo-Org/kilocode/pull/15423
-- docs: add GMI Cloud provider page by @kilo-code-bot[bot] in https://github.com/Kilo-Org/kilocode/pull/15432
-- chore(deps): MCP TypeScript SDK updated due dependabot alerts by @WebReflection in https://github.com/Kilo-Org/kilocode/pull/15430
-- chore(deps): Vitest updated due dependabot alerts by @WebReflection in https://github.com/Kilo-Org/kilocode/pull/15437
-- docs: auto-sync gateway with merged PRs (through 2026-10-25) by @github-actions[bot] in https://github.com/Kilo-Org/kilocode/pull/15140
-- chore(deps): upgrade zod in kilo-vscode to 4.6.6+ by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/15483
-- docs: auto-sync gateway with merged PRs (through 2026-10-27) by @github-actions[bot] in https://github.com/Kilo-Org/kilocode/pull/15491
-- docs: describe paid-credit expiry by @iscekic in https://github.com/Kilo-Org/kilocode/pull/15128
-- docs: auto-sync cloud-mobile with merged PRs (through 2026-10-27) by @github-actions[bot] in https://github.com/Kilo-Org/kilocode/pull/15048
-- chore(deps-dev): bump happy-dom from 20.8.9 to 21.0.4 in /packages/kilo-vscode by @dependabot[bot] in https://github.com/Kilo-Org/kilocode/pull/15477
-- docs: document conda rc/main labels in RELEASING by @zfralish in https://github.com/Kilo-Org/kilocode/pull/15530
-- chore(skills): add generic IntelliJ sandbox setup by @eshurakov in https://github.com/Kilo-Org/kilocode/pull/15535
-- chore(jetbrains): bump CLI pin to v7.8.20 by @kilo-maintainer[bot] in https://github.com/Kilo-Org/kilocode/pull/15511
-- chore(jetbrains): bump CLI pin to v7.8.22 by @kilo-maintainer[bot] in https://github.com/Kilo-Org/kilocode/pull/15529
-- chore(jetbrains): bump commonmark to 0.30.1 by @WebReflection in https://github.com/Kilo-Org/kilocode/pull/15538
-- chore(jetbrains): fail fast when Kotlin and the RPC compiler plugin diverge by @WebReflection in https://github.com/Kilo-Org/kilocode/pull/15546
-
+- Bundled Kilo CLI pin updated to v7.8.22 (via v7.8.20).
+- Updated commonmark to 0.30.1.
 
 ## [7.1.12] - 2026-10-22
 
