@@ -526,7 +526,10 @@ export async function activate(context: vscode.ExtensionContext) {
   // so a second request in that window focuses the new tab instead of opening another.
   const opening = new Map<string, vscode.WebviewPanel>()
   const openTab = (key: string) => {
-    const tab = openKiloInNewTab(context, tabPanels, attach, () => opening.delete(key))
+    // Only the panel that owns the entry may clear it; a closed older tab must not drop a newer tab's key.
+    const tab = openKiloInNewTab(context, tabPanels, attach, (closed) => {
+      if (opening.get(key) === closed) opening.delete(key)
+    })
     for (const [panel, item] of tabPanels) {
       if (item === tab) opening.set(key, panel)
     }
@@ -999,7 +1002,7 @@ function openKiloInNewTab(
   context: vscode.ExtensionContext,
   tabPanels: Map<vscode.WebviewPanel, KiloProvider>,
   attach: (panel: vscode.WebviewPanel) => KiloProvider,
-  onDispose?: () => void,
+  onDispose?: (panel: vscode.WebviewPanel) => void,
 ) {
   const panel = vscode.window.createWebviewPanel(
     "kilo-code.new.TabPanel",
@@ -1024,7 +1027,7 @@ function openKiloInNewTab(
   panel.onDidDispose(() => {
     console.log("[Kilo New] Tab panel disposed")
     tabPanels.delete(panel)
-    onDispose?.()
+    onDispose?.(panel)
     tabProvider.dispose()
   })
   return tabProvider
