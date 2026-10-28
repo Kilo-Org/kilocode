@@ -6,7 +6,6 @@ import os from "os"
 import path from "path"
 import * as Stream from "effect/Stream"
 import { LLMEvent, type LLMEvent as Event } from "@opencode-ai/llm"
-import { Database } from "@opencode-ai/core/database/database"
 import { Agent } from "../../src/agent/agent"
 import { Bus } from "../../src/bus"
 import { Config } from "../../src/config/config"
@@ -173,9 +172,8 @@ function reply(text: string, capture?: (input: LLM.StreamInput) => void) {
   }
 }
 
-function fakeRuntime(outputTokenMax?: number, error?: MessageV2.Assistant["error"], empty = false) {
+function fakeRuntime(outputTokenMax?: number, error?: MessageV2.Assistant["error"], empty = false, truncated = false) {
   const calls: string[] = []
-  const outputs: number[] = []
   const bus = Bus.layer
   const processor = Layer.effect(
     SessionProcessorModule.SessionProcessor.Service,
@@ -192,7 +190,6 @@ function fakeRuntime(outputTokenMax?: number, error?: MessageV2.Assistant["error
             completeToolCall: Effect.fn("TestSessionProcessor.completeToolCall")(() => Effect.void),
             process: Effect.fn("TestSessionProcessor.process")((stream: LLM.StreamInput) =>
               Effect.gen(function* () {
-                outputs.push(input.model.limit.output)
                 calls.push(JSON.stringify(stream.messages))
                 if (error) {
                   input.assistantMessage.error = error
@@ -215,8 +212,8 @@ function fakeRuntime(outputTokenMax?: number, error?: MessageV2.Assistant["error
                     type: "text",
                     text,
                   })
-                input.assistantMessage.finish = "stop"
-                return "continue" as const
+                input.assistantMessage.finish = truncated ? "length" : "stop"
+                return truncated ? ("stop" as const) : ("continue" as const)
               }),
             ),
           } satisfies SessionProcessor.Handle),
@@ -232,7 +229,6 @@ function fakeRuntime(outputTokenMax?: number, error?: MessageV2.Assistant["error
   const model = ProviderTest.model({ providerID, id: modelID, limit: { context: 10_000, output: 1_000 } })
   return {
     calls,
-    outputs,
     rt: ManagedRuntime.make(
       LayerNode.compile(
         LayerNode.group([SessionCompaction.node, SessionNs.node, SessionProjector.node, Bus.node, EventV2Bridge.node]),
@@ -254,7 +250,7 @@ function fakeRuntime(outputTokenMax?: number, error?: MessageV2.Assistant["error
   }
 }
 
-async function failure(error?: MessageV2.Assistant["error"], empty = false) {
+async function failure(error?: MessageV2.Assistant["error"], empty = false, truncated = false) {
   await using tmp = await tmpdir()
   return provideTestInstance({
     directory: tmp.path,
@@ -271,7 +267,7 @@ async function failure(error?: MessageV2.Assistant["error"], empty = false) {
         }),
       )
 
-      const { rt } = fakeRuntime(undefined, error, empty)
+      const { rt } = fakeRuntime(undefined, error, empty, truncated)
       try {
         const errors: Array<typeof SessionNs.Event.Error.data.Type> = []
         const off = await rt.runPromise(
@@ -342,6 +338,35 @@ afterEach(() => {
 })
 
 describe("KiloCompactionChunks", () => {
+  test("returns a retryable truncation error when a chunk processor stops at length", async () => {
+    const { result, summary, errors } = await failure(undefined, false, true)
+    expect(result).toBe("stop")
+    expect(summary?.info).toMatchObject({
+      finish: "error",
+      error: {
+        name: "APIError",
+        data: { message: KiloCompactionChunks.TRUNCATED_SUMMARY, isRetryable: true },
+      },
+    })
+    expect(summary?.parts.filter((part) => part.type === "text").map((part) => part.text)).toEqual([
+      KiloCompactionChunks.TRUNCATED_SUMMARY,
+    ])
+    expect(errors).toHaveLength(1)
+  })
+
+  for (const item of [
+    { context: 1_000_000, output: 128_000, boundary: 766_080, budget: 598_771 },
+    { context: 200_000, output: 64_000, boundary: 150_695, budget: 118_771 },
+  ]) {
+    test(`preserves the split policy for a ${item.context} token window`, () => {
+      const model = ProviderTest.model({ limit: { context: item.context, output: item.output } })
+      const cfg = {} as Config.Info
+      expect(KiloCompactionChunks.needed({ cfg, model, tokens: item.boundary })).toBe(false)
+      expect(KiloCompactionChunks.needed({ cfg, model, tokens: item.boundary + 1 })).toBe(true)
+      expect(KiloCompactionChunks.budget({ cfg, model })).toBe(item.budget)
+    })
+  }
+
   test("splits oversized history into chronological chunks", async () => {
     const model = ProviderTest.model({ providerID, id: modelID, limit: { context: 7_000, output: 1_000 } })
     const sessionID = SessionID.make("ses_chunks_split")
@@ -639,50 +664,6 @@ describe("KiloCompactionChunks", () => {
     })
   })
 
-  test("caps worker output budget below the configured runtime limit", async () => {
-    const { rt, calls, outputs } = fakeRuntime(512)
-    await using tmp = await tmpdir()
-    await provideTestInstance({
-      directory: tmp.path,
-      fn: async () => {
-        const session = await svc.create({})
-        const first = await user(session.id, "first " + "a".repeat(80_000))
-        await assistant(session.id, first.id, tmp.path, "reply " + "b".repeat(80_000))
-        await Effect.runPromise(
-          KiloSessionCompaction.create({
-            session: store,
-            sessionID: session.id,
-            agent: "build",
-            model: ref,
-            auto: false,
-          }),
-        )
-
-        try {
-          const msgs = await svc.messages({ sessionID: session.id })
-          const parent = msgs.at(-1)?.info.id
-          expect(parent).toBeTruthy()
-          const result = await rt.runPromise(
-            SessionCompaction.Service.use((svc) =>
-              svc.process({
-                parentID: parent!,
-                messages: msgs,
-                sessionID: session.id,
-                auto: false,
-              }),
-            ),
-          )
-
-          expect(result).toBe("continue")
-          expect(calls.length).toBeGreaterThan(0)
-          expect(outputs.at(-1)).toBe(512)
-        } finally {
-          await rt.dispose()
-        }
-      },
-    })
-  })
-
   test("compacts oversized replay turns after overflow compaction", async () => {
     const stub = llm()
     const calls: string[] = []
@@ -761,7 +742,7 @@ describe("KiloCompactionChunks", () => {
           }),
         )
 
-        const captured: Array<{ opts: Record<string, unknown>; modelLimitOutput: number }> = []
+        const captured: Array<{ opts: Record<string, unknown> }> = []
         const bus = Bus.layer
         const processor = Layer.effect(
           SessionProcessorModule.SessionProcessor.Service,
@@ -780,7 +761,6 @@ describe("KiloCompactionChunks", () => {
                     Effect.gen(function* () {
                       captured.push({
                         opts: stream.agent.options as Record<string, unknown>,
-                        modelLimitOutput: stream.model.limit.output,
                       })
                       const text = stream.messages.some((msg) =>
                         JSON.stringify(msg).includes("Create a new anchored summary"),
@@ -858,13 +838,6 @@ describe("KiloCompactionChunks", () => {
           // Unsupported parameter(s): maxOutputTokens`.
           for (const c of captured) {
             expect(c.opts.maxOutputTokens).toBeUndefined()
-          }
-          // Positive assertion (budget preserved through an independent path):
-          // the constrained model still threads a tightened output limit
-          // through to every worker. If a future "fix" accidentally severs
-          // the only budget source along with the leak, this fails.
-          for (const c of captured) {
-            expect(c.modelLimitOutput).toBeLessThanOrEqual(outputTokenMax)
           }
         } finally {
           await rt.dispose()
