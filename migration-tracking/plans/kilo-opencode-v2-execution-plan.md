@@ -201,7 +201,6 @@ The v2 side stays correct without them, because N4 classifies every Kilo change 
 This phase writes files, so each unit owns fixed paths to avoid colliding with N1:
 - N4 owns `marker-audit/`;
 - N7 owns `plans/kilo-opencode-v2-plan-progress.md` and the test plans;
-- N5 (data part) owns its fixture-data directory.
 
 N1 does not edit these paths, apart from the scope-rename codemod where they name packages.
 
@@ -210,9 +209,6 @@ N1 does not edit these paths, apart from the scope-rename codemod where they nam
    - Also inventory the features behind experimental flags on `main`; these default to post-cutover (Decision 5).
    - File new work under the owning epic, then advance the cutoff.
    - Run it now, then before each gate's go/no-go.
-6. **N5 — v1 reference fixtures.** Record v1 behavior at the cutoff for offline wait, overflow accounting, slow snapshot and snapshot retention, so that #14371–#14374 verify against pinned v1 behavior regardless of later upstream merges. It has two parts:
-   - **before N1:** capture the v1 reference data only, with no imports of v2 packages;
-   - **after N1:** land the v2 test harness that consumes the data, so it uses the renamed `@opencode/*` scope.
 7. **N6 — Package decisions**, split into two issues:
    - **N6a (no blocker):** assess `kilo-docs` (needed at G1) and `kilo-web-ui` (port or obsolete); record `kilo-console` as obsolete.
    - **N6b (blocked by N1):** import `kilo-docs` and `kilo-jetbrains` (for G3). Importing after N1 avoids applying the scope rename twice.
@@ -221,7 +217,7 @@ N1 does not edit these paths, apart from the scope-rename codemod where they nam
 
 ### Phase D — G1: CLI/TUI
 
-10. #14017 runtime: #14371–#14375, #14377, #14379, #14382. Verify against the N5 fixtures. #14378 is split: its tables and bindings are post-cutover, and alerts and sound need a G1 decision in N7.
+10. #14017 runtime: #14371–#14375, #14377, #14379, #14382. #14378 is split: its tables and bindings are post-cutover, and alerts and sound need a G1 decision in N7.
 11. **N8 — Customer v2 store identity** in the `kilo-cli` host:
     - concrete paths per Decision 4;
     - boot fails closed on v1 or OpenCode stores;
@@ -307,15 +303,15 @@ N1 does not edit these paths, apart from the scope-rename codemod where they nam
 
 ```
 Phase 0 (P1–P4: create N1–N17 and child issues) ──> every N-unit below
-Start after Phase 0 (no other blockers): N4, N5 (data part), N6a, N7, N15, N16
+Start after Phase 0 (no other blockers): N4, N6a, N7, N15, N16
 Start now (existing issues): #14425/#14426, #14429/#14430, #14415
 N1 ──> N2 ──> #14381
 N1 ──> N3 (then one child issue per upstream tag)
-N1 ──> N5 (harness part), N6b, N8, and all parity issues below
+N1 ──> N6b, N8, and all parity issues below
 N1 + #14411 started early
 N1 + #14408, #14410, #14412 ──> N17 (preview release train)
 
-G1: #14371..#14375, #14377, #14379, #14382 (need N5)
+G1: #14371..#14375, #14377, #14379, #14382
     #14396, #14397 ──> #14398 ──> #14401
     #14402 ──> #14403..#14406 ──> #14407
     N8 ──> #14413
@@ -344,10 +340,7 @@ Nothing in the tree is skipped. Every issue has a gate, is marked post-cutover w
 | Issue | Title (short) | Placement | Reason / change needed (applied by N7) |
 |---|---|---|---|
 | **#14017** | Runtime and CLI/TUI parity | G1 epic | |
-| #14371 | Offline network wait | G1 | Verify against the N5 fixtures instead of the stale "pinned v1 revision"; drop "before upstream merges move the engine" |
-| #14372 | Overflow accounting | G1 | Same as #14371 |
-| #14373 | Slow-snapshot interaction | G1 | Same as #14371 |
-| #14374 | Snapshot retention/concurrency | G1 | Same as #14371 |
+| #14374 | Snapshot retention/concurrency | G1 | Only snapshot cleanup remains; it moves to worktree teardown (U-E2-26) |
 | #14375 | TUI notifications | G1 | |
 | #14376 | Legacy theme catalogue | **Post-cutover** | Decision 5 (legacy TUI extras) |
 | #14377 | Session scope switching | G1 | |
@@ -395,7 +388,6 @@ Nothing in the tree is skipped. Every issue has a gate, is marked post-cutover w
 | N2 | `kilo-v2` ratchet | Phase B | New, created in Phase 0 |
 | N3 | Sync automation and `e2e` lane | Phase B; tracker with a child per upstream tag | New, created in Phase 0 |
 | N4 | Recurring `main` delta sweep | Phase C; tracker with a child per sweep | New, created in Phase 0 |
-| N5 | v1 reference fixtures | Phase C (data before N1, harness after N1) | New, created in Phase 0 |
 | N6a | Package assessment | Phase C | New, created in Phase 0 |
 | N6b | Package imports | Phase C, after N1 | New, created in Phase 0 |
 | N7 | Progress-plan and issue-body alignment | Phase C | New, created in Phase 0 |
@@ -414,11 +406,10 @@ New issues to create in Phase 0. They are children of #13750 unless the Unit col
 
 | ID | Issue # | Unit | Gate/Phase | Blocked by | Touches |
 |---|---|---|---|---|---|
-| N1 | TBD | Consolidation merge to the latest v2 tag, including the scope-rename codemod, baseline, doc fixes and re-verification | B | — | Whole repo, except the Phase C paths owned by N4, N5 and N7 (codemod only there) |
+| N1 | TBD | Consolidation merge to the latest v2 tag, including the scope-rename codemod, baseline, doc fixes and re-verification | B | — | Whole repo, except the Phase C paths owned by N4 and N7 (codemod only there) |
 | N2 | TBD | `kilo-v2` ratchet and post-merge footprint | B | N1 | `migration-tracking/`, script dir |
 | N3 | TBD | Upstream-tag dry-run workflow and `e2e` lane; one child issue per new upstream tag, merged by the sync owner | B | N1 | New `.github/workflows/kilo-*` files |
 | N4 | TBD | Recurring `main` delta sweep from the cutoff, including the experimental-flag inventory; one child issue per sweep | C, each gate | — | `marker-audit/` |
-| N5 | TBD | v1 reference fixtures for #14371–#14374: v1 data before N1, v2 harness after N1 | C | Harness part: N1 | Fixture data, then test harness |
 | N6a | TBD | Package assessment: `kilo-docs`, `kilo-web-ui`; record `kilo-console` obsolete | C | — | `migration-tracking/` notes only |
 | N6b | TBD | Package imports: `kilo-docs` (G1), `kilo-jetbrains` (G3) | C | N1, N6a | `packages/kilo-docs`, `packages/kilo-jetbrains` |
 | N7 | TBD | Align the progress plan and sweep the issue bodies | C | — | `plans/kilo-opencode-v2-plan-progress.md`, test plans, GitHub |
