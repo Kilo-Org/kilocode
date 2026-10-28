@@ -4,14 +4,14 @@
     "v1Base": "8100c68b507b53aac6b891edbc3040a6011d8969"
   },
   "summary": {
-    "done": 574,
+    "done": 576,
     "total": 9819,
-    "percent": 5.8,
+    "percent": 5.9,
     "dropped": 35,
     "kinds": [
       {
         "kind": "module",
-        "done": 465,
+        "done": 467,
         "total": 3543
       },
       {
@@ -6049,12 +6049,12 @@
     },
     {
       "feature": "vscode",
-      "done": 254,
+      "done": 256,
       "total": 2057,
       "dropped": 0,
       "kinds": {
         "module": {
-          "done": 252,
+          "done": 254,
           "total": 1439
         },
         "api": {
@@ -6418,8 +6418,10 @@
     "module:packages/kilo-vscode/script/build.ts",
     "module:packages/kilo-vscode/script/launch.ts",
     "module:packages/kilo-vscode/src/agent-manager/project/messages.ts",
+    "module:packages/kilo-vscode/src/commands/toggle-auto-approve.ts",
     "module:packages/kilo-vscode/src/extension.ts",
     "module:packages/kilo-vscode/src/image-preview.ts",
+    "module:packages/kilo-vscode/src/kilo-provider/auto-approve.ts",
     "module:packages/kilo-vscode/src/kilo-provider/save-image.ts",
     "module:packages/kilo-vscode/src/legacy-migration/sessions/lib/messages.ts",
     "module:packages/kilo-vscode/src/services/cli-backend/i18n/ar.ts",
