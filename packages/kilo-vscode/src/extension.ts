@@ -38,6 +38,16 @@ export function activate(context: ExtensionContext) {
       await commands.executeCommand("kilo-code.v2.chat.focus")
       await view.post({ type: "command", name: "profile" })
     }),
+    // The host sends the action and the webview decides the next agent, as in main: the agent list and
+    // the selection live in the webview, and only the server owns the committed value.
+    commands.registerCommand("kilo-code.v2.cycleAgentMode", async () => {
+      await commands.executeCommand("kilo-code.v2.chat.focus")
+      await view.post({ type: "command", name: "cycleAgentMode" })
+    }),
+    commands.registerCommand("kilo-code.v2.cyclePreviousAgentMode", async () => {
+      await commands.executeCommand("kilo-code.v2.chat.focus")
+      await view.post({ type: "command", name: "cyclePreviousAgentMode" })
+    }),
     // The webview reconnects on its own: its event stream fails, and the next request starts a new server.
     commands.registerCommand("kilo-code.v2.restartServer", () => server.stop()),
     { dispose: () => void server.stop() },
