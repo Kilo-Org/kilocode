@@ -86,6 +86,11 @@ export function Chat() {
   // Only a pending permission changes the Send label. A pending question leaves Send in place instead of Stop.
   const questioning = () => permissions().length === 0 && forms().length > 0
   const selection = createSelection(session)
+  // The host sends the cycle action for the cycleAgentMode/cyclePreviousAgentMode commands, as in main.
+  v2.onCommand((name) => {
+    if (name === "cycleAgentMode") selection.cycleAgent(1)
+    if (name === "cyclePreviousAgentMode") selection.cycleAgent(-1)
+  })
 
   const send = (text: string) => {
     const id = session() ?? selection.create()
