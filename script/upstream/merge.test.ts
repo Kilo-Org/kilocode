@@ -11,13 +11,12 @@ async function fixture() {
   await r.write("package.json", '{ "name": "fixture", "packageManager": "bun@1.4.2" }\n')
   await r.write(".gitignore", ["tmp/", "", "# Local dev files", "opencode-dev", ""].join("\n"))
   await r.write("src/a.ts", "export const a = 1\n")
-  for (const name of ["check.yml", "test.yml", "deploy.yml"])
-    await r.write(`.github/workflows/${name}`, `name: ${name}\n`)
+  for (const name of ["check.yml", "test.yml", "deploy.yml"]) await r.write(`.github/workflows/${name}`, `name: ${name}\n`)
   await r.release("v2.0.26", "2026-10-08T00:00:00Z")
   await r.git("switch", "-q", "-c", "v2")
   await r.remove(".github/workflows/deploy.yml")
-  for (const name of ["kilo-v2.yml", "kilo-v2-publish.yml"])
-    await r.write(`.github/workflows/${name}`, `name: ${name}\n`)
+  await r.write(".github/workflows/kilo-v2.yml", "name: kilo-v2\n")
+  await r.write(".github/workflows/kilo-v2-publish.yml", "name: kilo-v2-publish\n")
   await r.write("script/check-workflows.ts", await Bun.file(guard).text())
   await r.commit("chore(ci): kilo workflows")
   await r.git("switch", "-q", "dev")
@@ -25,15 +24,12 @@ async function fixture() {
 }
 
 async function run(r: Repo, ...args: string[]) {
-  const proc = Bun.spawn(
-    ["bun", tool, "--base-branch", "HEAD", "--no-fetch", "--no-worktrees", "--no-install", ...args],
-    {
-      cwd: r.dir,
-      env: { ...process.env, GIT_CONFIG_GLOBAL: "/dev/null", GIT_CONFIG_NOSYSTEM: "1" },
-      stdout: "pipe",
-      stderr: "pipe",
-    },
-  )
+  const proc = Bun.spawn(["bun", tool, "--base-branch", "HEAD", "--no-fetch", "--no-worktrees", "--no-install", ...args], {
+    cwd: r.dir,
+    env: { ...process.env, GIT_CONFIG_GLOBAL: "/dev/null", GIT_CONFIG_NOSYSTEM: "1" },
+    stdout: "pipe",
+    stderr: "pipe",
+  })
   const output = (await new Response(proc.stdout).text()) + (await new Response(proc.stderr).text())
   return { code: await proc.exited, output }
 }
