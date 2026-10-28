@@ -677,7 +677,7 @@ export class DirectoryScanner implements IDirectoryScanner {
         // Preserve the original error message from embedders which now have detailed messages
         const errorMessage = lastError.message || "Unknown error"
 
-        onError(new Error(`Failed to process batch after ${attempts} retries: ${errorMessage}`))
+        onError(new Error(`Failed to process batch after ${attempts} attempt(s): ${errorMessage}`))
       }
     }
   }
