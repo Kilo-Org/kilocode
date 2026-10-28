@@ -321,7 +321,7 @@ const lowerToolCall = (part: ToolCallPart, omitIds: boolean, metadataKey: string
 
 const lowerMessages = Effect.fnUntraced(function* (request: LLMRequest) {
   const contents: GeminiContent[] = []
-  const metadataKey = request.model.route.providerMetadataKey ?? String(request.model.provider)
+  const metadataKey = request.model.route.providerMetadataKey ?? request.model.provider
   const omitCallIds = omitsFunctionCallIds(request.model.id)
   const legacyToolMedia = routesLegacyToolMedia(request.model.id)
   let pendingMedia: GeminiInlineDataPart[] | undefined
@@ -960,7 +960,7 @@ export const protocol = Protocol.make({
     event: Schema.Union([Schema.instanceOf(NextRequest), GeminiEvent]),
     initial: (request): ParserState => ({
       route: `${request.model.provider}/${request.model.route.id}`,
-      providerMetadataKey: request.model.route.providerMetadataKey ?? String(request.model.provider),
+      providerMetadataKey: request.model.route.providerMetadataKey ?? request.model.provider,
       hasToolCalls: false,
       lifecycle: Lifecycle.initial(),
       nextReasoningId: 0,

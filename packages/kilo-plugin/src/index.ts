@@ -8,6 +8,7 @@ import { KiloHandshakePlugin } from "./handshake"
 // kilo_port(provider-usage:ce8e021f1ef6) v1 imported the ProviderUsage Location service into location-services.ts.
 import { KiloProviderUsagePlugin } from "./provider-usage"
 import { KiloOpenAIPlugin } from "./openai"
+import { KiloMarketplacePlugin } from "./marketplace"
 import { KiloSessionSync } from "./session-sync"
 
 export { KiloSessionSync }
@@ -32,6 +33,7 @@ export const KiloPlugins = [
   // v1 listed the ProviderUsage node in the Location services. kilo_port(provider-usage:b0945f511fb3)
   KiloProviderUsagePlugin,
   KiloOpenAIPlugin,
+  KiloMarketplacePlugin,
   KiloSessionSync.plugin,
 ] as const
 

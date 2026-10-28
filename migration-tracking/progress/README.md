@@ -8,20 +8,20 @@ Measures Kilo's v1 delta: Kilo `main` pinned at `fb7e96eda540` (the v1 target) c
 
 ## Summary
 
-**157 / 9828 cells done (1.6%)**, 26 dropped. `░░░░░░░░░░░░░░░░`
+**589 / 9819 cells done (6%)**, 35 dropped. `█░░░░░░░░░░░░░░░`
 
 | Kind | Done | Total | % |
 |---|---:|---:|---:|
-| module | 55 | 3547 | 1.6% |
-| api | 2 | 39 | 5.1% |
-| patch | 70 | 3444 | 2% |
-| test | 30 | 2798 | 1.1% |
+| module | 481 | 3543 | 13.6% |
+| api | 5 | 39 | 12.8% |
+| patch | 70 | 3443 | 2% |
+| test | 33 | 2794 | 1.2% |
 
 Not counted: 1428 branding-only hunks (rename script territory), 561 marker-only hunks (block boundaries), generated files. Patch attribution: 0 by tag, 261 by import, 97 by identifier, 4163 unattributed (see below).
 
 Landed by rung, for patch cells closed by a done-proof: 42 plugin, 4 host, 3 seam, 6 patch.
 
-Ratchets: 26 core-internal upstream modules imported by Kilo packages and adapters (`@opencode/core/app`, `@opencode/core/bus`, `@opencode/core/config`, `@opencode/core/config/discovery`, `@opencode/core/config/normalize`, `@opencode/core/effect/app-node-platform`, `@opencode/core/model`, `@opencode/core/model-resolver`, `@opencode/core/permission`, `@opencode/core/plugin/provider/openai`, `@opencode/core/plugin/sdk`, `@opencode/core/plugin/system-prompt/anthropic.txt`, `@opencode/core/plugin/system-prompt/gpt-astra.txt`, `@opencode/core/plugin/system-prompt/gpt.txt`, `@opencode/core/plugin/system-prompt/kimi.txt`, `@opencode/core/plugin/system-prompt/trinity.txt`, `@opencode/core/provider`, `@opencode/core/rpc`, `@opencode/core/schema`, `@opencode/core/session/runner/model`, `@opencode/core/session/runner/prompt/system.txt`, `@opencode/core/session/system-prompt`, `@opencode/core/shell`, `@opencode/core/tool-output`, `@opencode/core/util/wildcard`, `@opencode/core/variant`); 54 shared patches by rung: 33 seam, 21 patch (`script/upstream/shared-patches.json`).
+Ratchets: 27 core-internal upstream modules imported by Kilo packages and adapters (`@opencode/core/app`, `@opencode/core/bus`, `@opencode/core/config`, `@opencode/core/config/discovery`, `@opencode/core/config/normalize`, `@opencode/core/config/plugin/skill-file`, `@opencode/core/effect/app-node-platform`, `@opencode/core/model`, `@opencode/core/model-resolver`, `@opencode/core/permission`, `@opencode/core/plugin/provider/openai`, `@opencode/core/plugin/sdk`, `@opencode/core/plugin/system-prompt/anthropic.txt`, `@opencode/core/plugin/system-prompt/gpt-astra.txt`, `@opencode/core/plugin/system-prompt/gpt.txt`, `@opencode/core/plugin/system-prompt/kimi.txt`, `@opencode/core/plugin/system-prompt/trinity.txt`, `@opencode/core/provider`, `@opencode/core/rpc`, `@opencode/core/schema`, `@opencode/core/session/runner/model`, `@opencode/core/session/runner/prompt/system.txt`, `@opencode/core/session/system-prompt`, `@opencode/core/shell`, `@opencode/core/tool-output`, `@opencode/core/util/wildcard`, `@opencode/core/variant`); 59 shared patches by rung: 35 seam, 24 patch (`script/upstream/shared-patches.json`).
 
 ## History
 
@@ -37,8 +37,9 @@ One point per day from the committed `progress.json` on v2's first-parent histor
 | 2026-10-21 | 90 | 9829 | 0.9% |
 | 2026-10-22 | 93 | 9829 | 0.9% |
 | 2026-10-23 | 150 | 9828 | 1.5% |
-| 2026-10-26 | 153 | 9828 | 1.6% |
-| now | 157 | 9828 | 1.6% |
+| 2026-10-26 | 157 | 9828 | 1.6% |
+| 2026-10-28 | 573 | 9819 | 5.8% |
+| now | 589 | 9819 | 6% |
 
 ## Features
 
@@ -81,14 +82,14 @@ Cells per kind as done/total. A cell is done when it exists on v2 by the rules b
 | gateway | 31/35 |  | 13/18 | 18/22 | 62/75 | 82.7% | `█████████████░░░` | 12 plugin |
 | global | 0/2 |  | 1/4 | 0/1 | 1/7 | 14.3% | `██░░░░░░░░░░░░░░` | 1 host |
 | goals | 0/9 |  | 0/6 | 0/6 | 0/21 | 0% | `░░░░░░░░░░░░░░░░` |  |
-| i18n | 0/20 |  |  |  | 0/20 | 0% | `░░░░░░░░░░░░░░░░` |  |
+| i18n | 20/20 |  |  |  | 20/20 | 100% | `████████████████` |  |
 | image-size | 0/1 |  | 0/2 | 0/1 | 0/4 | 0% | `░░░░░░░░░░░░░░░░` |  |
 | indexing | 0/99 |  | 0/6 | 0/44 | 0/149 | 0% | `░░░░░░░░░░░░░░░░` |  |
 | installation | 0/2 |  | 0/2 | 0/1 | 0/5 | 0% | `░░░░░░░░░░░░░░░░` |  |
 | instance | 0/3 |  | 0/8 | 0/8 | 0/19 | 0% | `░░░░░░░░░░░░░░░░` |  |
 | jetbrains | 0/800 |  |  | 0/432 | 0/1232 | 0% | `░░░░░░░░░░░░░░░░` |  |
 | markdown | 0/2 |  |  | 0/2 | 0/4 | 0% | `░░░░░░░░░░░░░░░░` |  |
-| marketplace | 0/10 | 0/3 | 0/1 | 0/6 | 0/20 | 0% | `░░░░░░░░░░░░░░░░` |  |
+| marketplace | 4/6 | 3/3 |  | 2/2 | 9/11 | 81.8% | `█████████████░░░` |  |
 | mcp | 0/7 |  | 0/7 | 0/9 | 0/23 | 0% | `░░░░░░░░░░░░░░░░` |  |
 | memory | 0/59 |  | 0/2 | 0/14 | 0/75 | 0% | `░░░░░░░░░░░░░░░░` |  |
 | mermaid | 0/7 |  | 0/1 | 0/2 | 0/10 | 0% | `░░░░░░░░░░░░░░░░` |  |
@@ -138,10 +139,10 @@ Cells per kind as done/total. A cell is done when it exists on v2 by the rules b
 | ts-check | 0/2 |  | 0/2 | 0/3 | 0/7 | 0% | `░░░░░░░░░░░░░░░░` |  |
 | tui | 2/15 |  | 1/6 | 2/24 | 5/45 | 11.1% | `██░░░░░░░░░░░░░░` | 1 plugin |
 | tui-sync | 0/1 |  | 0/1 | 0/2 | 0/4 | 0% | `░░░░░░░░░░░░░░░░` |  |
-| ui | 0/248 |  | 0/1 | 0/18 | 0/267 | 0% | `░░░░░░░░░░░░░░░░` |  |
+| ui | 138/248 |  | 0/1 | 0/18 | 138/267 | 51.7% | `████████░░░░░░░░` |  |
 | usage-cost | 0/4 |  |  | 0/5 | 0/9 | 0% | `░░░░░░░░░░░░░░░░` |  |
 | util | 0/8 |  | 0/4 | 0/8 | 0/20 | 0% | `░░░░░░░░░░░░░░░░` |  |
-| vscode | 0/1439 |  |  | 0/618 | 0/2057 | 0% | `░░░░░░░░░░░░░░░░` |  |
+| vscode | 264/1439 |  |  | 1/618 | 265/2057 | 12.9% | `██░░░░░░░░░░░░░░` |  |
 | wakeup | 0/5 | 0/1 | 0/1 | 0/4 | 0/11 | 0% | `░░░░░░░░░░░░░░░░` |  |
 | web-ui | 0/154 |  |  |  | 0/154 | 0% | `░░░░░░░░░░░░░░░░` |  |
 | worktree | 0/4 | 0/1 | 0/1 | 0/6 | 0/12 | 0% | `░░░░░░░░░░░░░░░░` |  |
@@ -319,9 +320,18 @@ Hunks in shared upstream files with no `kilocode_change(<feature>)` tag, no Kilo
 - `module:packages/kilo-gateway/src/types/tui.d.ts`: Type shim for TUI runtime modules that let the v1 package compile TUI code outside the TUI package. The v2 TUI code is in packages/tui. (gateway-finish)
 - `module:packages/kilo-gateway/test/provider.test.ts`: It tested v1 buildRequestHeaders, where request headers replace the defaults. v2 merges the Kilo headers last on purpose, so that they replace the OpenCode referer and title of the upstream KiloPlugin; packages/core/test/kilocode/gateway.test.ts checks the result. (gateway-finish)
 - `module:packages/opencode/src/kilocode/agent/scout.txt`: Scout prompt. Scout (experimental, default off) is not ported. U-E11-05 records the decision. (agents-plugin)
+- `module:packages/opencode/src/kilocode/marketplace/detection.ts`: Runtime detection of installed marketplace items (skill/MCP/agent/plugin scans) is intentionally replaced: v2 lists only marketplace-managed records from the server database (the `kv` table) and reports their status by comparing content fingerprints with the files on disk (packages/kilo-plugin/src/marketplace/index.ts installed/restore, installer.ts inspect). Native/manual items are not adopted, and agent/plugin detection re-lands with their content units. Decision recorded in kilo-v2-migration-plan.md U-E2-23. (kilo-new-marketplace)
+- `module:packages/opencode/src/kilocode/marketplace/plugin-config.ts`: Plugin config patching (patchPlugin) is not carried on v2: plugin/bundle marketplace content is out of scope for the default skills/MCP unit and re-lands with the plugin content unit. Decision recorded in kilo-v2-migration-plan.md U-E2-23. (kilo-new-marketplace)
+- `module:packages/opencode/src/kilocode/marketplace/plugin-spec.ts`: Plugin identity resolution (pluginIdentity) is not carried on v2: plugin/bundle marketplace content is out of scope for the default skills/MCP unit and re-lands with the plugin content unit. Decision recorded in kilo-v2-migration-plan.md U-E2-23. (kilo-new-marketplace)
+- `module:packages/opencode/src/kilocode/marketplace/relevance.ts`: Workspace suggest_for.filename relevance scanning (ripgrep budget/skip rules) is not carried on v2: browse/search filter the catalog client-side by text match; relevance ranking re-lands with its own unit if wanted. Decision recorded in kilo-v2-migration-plan.md U-E2-23. (kilo-new-marketplace)
+- `module:packages/opencode/test/kilocode/marketplace-api.test.ts`: The carried assertions (YAML response parsing, item normalization, per-kind fetch failure aggregation, cached fallback with warning) are covered by packages/kilo-plugin/test/marketplace.test.ts and packages/kilo-plugin/test/marketplace-plugin.test.ts. Dropped on purpose: kebab display-name synthesis (the Kilo catalog ships display names) and JSON-only endpoints (the Kilo catalog serves YAML). (kilo-new-marketplace)
+- `module:packages/opencode/test/kilocode/marketplace-plugin-http.test.ts`: v1 tested the plugin HTTP install endpoints (refresh-cached config, partial removal, malformed config kept). Plugin marketplace content and the HTTP surface are not carried on v2; the skills/MCP API is covered by the kilocode.marketplace RPC round trips in packages/kilo-cli/test/marketplace.test.ts and the OAuth flow in packages/kilo-cli/test/marketplace-oauth.test.ts. Decision recorded in kilo-v2-migration-plan.md U-E2-23. (kilo-new-marketplace)
+- `module:packages/opencode/test/kilocode/marketplace-plugin.test.ts`: v1 tested plugin identity parsing and nested/global plugin source removal helpers. Plugin marketplace content is not carried on v2 (re-lands with the plugin content unit). The same-named v2 file hosts the replacement RPC-plugin lifecycle coverage, not a port of these assertions. (kilo-new-marketplace)
+- `module:packages/opencode/test/kilocode/marketplace-relevance.test.ts`: v1 tested the relevance ranking and exclusion rules; relevance scanning is not carried on v2 (see the relevance module disposition). The client-side text filter is exercised by the TUI browser tests in packages/tui/test/kilocode/marketplace.test.ts. (kilo-new-marketplace)
 - `patch:agent:063e034b577a`: Scout prompt import. Scout (experimental, default off) is not ported. U-E11-05 records the decision. (agents-plugin)
 - `patch:gateway:0468bd6d3d9e`: v1 config schema fields prompt, isFree and ai_sdk_provider for models are not native v2 config fields. The Gateway catalog owns dialect, free status, and backend prompt directives; models.ts parses the prompt enum and kilo-plugin/src/gateway/prompt.ts applies it through session context hooks. Native v2 model package/settings/variant overlays remain configurable. This disposition does not claim that legacy config model.prompt is implemented. (gateway-model-parity)
 - `patch:gateway:d783ce7945b8`: Import for the v1 config schema fields prompt and ai_sdk_provider (see patch:gateway:0468bd6d3d9e). (gateway-finish)
+- `patch:marketplace:5fc326e8ea39`: The v1 kilocode_change in packages/opencode/src/plugin/install.ts (import of marketplace pluginIdentity for upstream plugin patching) serves plugin installs, which v2 does not carry for the default skills/MCP unit. The TUI registration patch is tracked by the updated shared-patches entry; plugin content re-lands with its unit. (kilo-new-marketplace)
 - `patch:unattributed:agent:09375914c157`: Rule for the `suggest` tool, which v2 does not have yet. The suggest unit (U-E2-16) adds the rule with the tool (#14999, differences table). (agents-plugin)
 - `patch:unattributed:agent:0faa6c731275`: Kilo `whenToUse` guidance in the LLM agent generation prompt (`kilo agent create`). v2 has no agent generation and no `generate.txt`. (agents-plugin)
 - `patch:unattributed:agent:1b8fe669272e`: Telemetry options for the LLM agent generation call (`kilo agent create`). v2 has no agent generation, so no call exists to configure. (agents-plugin)

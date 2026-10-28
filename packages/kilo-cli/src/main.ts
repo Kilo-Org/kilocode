@@ -54,6 +54,7 @@ const Handlers = Runtime.handlers(KiloCommands, {
   debug: {
     agents: () => import("@opencode/cli/commands/handlers/debug/agents"),
     config: () => import("@opencode/cli/commands/handlers/debug/config"),
+    "heap-dump": () => import("@opencode/cli/commands/handlers/debug/heap-dump"),
     paths: () => import("@opencode/cli/commands/handlers/debug/paths"),
   },
   mcp: {

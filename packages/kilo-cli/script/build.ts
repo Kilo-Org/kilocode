@@ -11,6 +11,9 @@
 // Output layout matches upstream's, so `bun run install:alpha` and the CI smoke test find the binary the same way:
 // <outdir>/cli-<os>-<arch>/bin/kilo2. Supported flags: --single, --baseline, --target=, --outdir=, --skip-install,
 // --skip-web-ui. The release-only targets that CI does not build (musl, baseline) stay available through --target.
+// Kilo: KILO_CHANNEL, KILO_VERSION, KILO_BUMP and KILO_RELEASE set the build channel and version. Load before
+// `@opencode/script`, which reads the OPENCODE_ names when it loads.
+import "../../../script/kilocode/release-env"
 import { $ } from "bun"
 import { mkdir, rm } from "fs/promises"
 import path from "path"
@@ -19,13 +22,13 @@ import { embed } from "@opencode/script/highlights"
 import { createSolidTransformPlugin } from "@opentui/solid/bun-plugin"
 import type { BunPlugin } from "bun"
 import cliPackage from "../../cli/package.json"
-import { discoverPluginRuntimeSpecifiers, pluginRuntimeLoaderCode } from "@opencode/plugin/runtime-modules"
 import { buildAppArchive } from "../../cli/script/app-assets"
 import { verifyArtifact, verifySimulationGraph } from "../../cli/script/verify-artifact"
 import { resolveOpencodePty } from "../../cli/script/opencode-pty"
 import { NativeArch } from "../../../script/native-arch"
 import { directory } from "../src/env"
 import { brandingPlugin } from "../src/branding/plugin"
+import { createPluginRuntimePlugin } from "./plugin-runtime"
 
 const dir = path.resolve(import.meta.dirname, "..")
 // Kilo: internal releases use `kilo2`, separate from v1. The upstream target names stay the build's internal names.
@@ -82,7 +85,7 @@ const targets =
 if (!targets.length) throw new Error(`Unknown build target: ${requestedTarget}`)
 
 if (!skipInstall)
-  await $`bun install --os="*" --cpu="*" @opentui/core@${cliPackage.dependencies["@opentui/core"]} @opencode-ai/pty@${cliPackage.dependencies["@opencode-ai/pty"]}`
+  await $`bun install --os="*" --cpu="*" --libc="*" @opentui/core@${cliPackage.dependencies["@opentui/core"]} @opencode-ai/pty@${cliPackage.dependencies["@opencode-ai/pty"]}`
 const appArchive = path.join(dir, ".cache", "bun-app-archive.bin")
 await Bun.write(appArchive, await buildAppArchive(Script.channel, { skipBuild: skipWebUi }))
 const appAssetsPlugin: BunPlugin = {
@@ -101,30 +104,7 @@ export default () => readFileSync(archive)`,
     }))
   },
 }
-const pluginRuntimeEntries = discoverPluginRuntimeSpecifiers()
-const pluginRuntimeModulesSource = [
-  "export const resolveHostPackageRoots = () => []",
-  "const modules = {",
-  ...[...pluginRuntimeEntries.keys()].map(
-    (specifier) => `  ${JSON.stringify(specifier)}: ${pluginRuntimeLoaderCode(specifier, pluginRuntimeEntries)},`,
-  ),
-  "}",
-  "export const loadRuntimeModules = () => modules",
-].join("\n")
-const pluginRuntimePlugin: BunPlugin = {
-  name: "opencode-plugin-runtime",
-  setup(build) {
-    build.onLoad({ filter: /plugin[/\\]src[/\\]runtime-modules\.ts$/ }, () => ({
-      contents: pluginRuntimeModulesSource,
-      loader: "ts",
-    }))
-    build.onLoad({ filter: /[/\\]internal[/\\]httpApi(?:Scalar|Swagger)\.js$/ }, () => ({
-      contents:
-        'export const css = ""; export const javascript = \'document.body.textContent = "Scalar/Swagger UI assets are not bundled in OpenCode"\'',
-      loader: "js",
-    }))
-  },
-}
+const pluginRuntimePlugin = createPluginRuntimePlugin()
 
 for (const item of targets) {
   const opencodePty = await resolveOpencodePty({
@@ -231,7 +211,8 @@ export default { path: file, version: ${JSON.stringify(opencodePty.version)}, sh
   verifySimulationGraph(simulationInputs)
   await NativeArch.verify(path.join(outdir, name, "bin", item.os === "win32" ? `${binary}.exe` : binary), item.arch)
 
-  // Kilo: the package.json describes an unpublished artifact. This build publishes nothing.
+  // Kilo: the platform packages have the same names as v1's. script/publish.ts publishes them with the `kilo-v2` npm
+  // dist-tag, so v1's `latest` and `rc` tags do not change.
   await Bun.write(
     path.join(outdir, name, "package.json"),
     JSON.stringify(
@@ -239,7 +220,7 @@ export default { path: file, version: ${JSON.stringify(opencodePty.version)}, sh
         name: `@kilocode/${name}`,
         version: Script.version,
         license: "MIT",
-        private: true,
+        repository: { type: "git", url: "git+https://github.com/Kilo-Org/kilocode.git" },
         os: [item.os],
         cpu: [item.arch],
       },
