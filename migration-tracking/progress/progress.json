@@ -4,14 +4,14 @@
     "v1Base": "8100c68b507b53aac6b891edbc3040a6011d8969"
   },
   "summary": {
-    "done": 560,
+    "done": 563,
     "total": 9828,
     "percent": 5.7,
     "dropped": 26,
     "kinds": [
       {
         "kind": "module",
-        "done": 458,
+        "done": 461,
         "total": 3547
       },
       {
@@ -6048,12 +6048,12 @@
     },
     {
       "feature": "vscode",
-      "done": 249,
+      "done": 252,
       "total": 2057,
       "dropped": 0,
       "kinds": {
         "module": {
-          "done": 249,
+          "done": 252,
           "total": 1439
         },
         "api": {
@@ -6415,6 +6415,8 @@
     "module:packages/kilo-vscode/script/launch.ts",
     "module:packages/kilo-vscode/src/agent-manager/project/messages.ts",
     "module:packages/kilo-vscode/src/extension.ts",
+    "module:packages/kilo-vscode/src/image-preview.ts",
+    "module:packages/kilo-vscode/src/kilo-provider/save-image.ts",
     "module:packages/kilo-vscode/src/legacy-migration/sessions/lib/messages.ts",
     "module:packages/kilo-vscode/src/services/cli-backend/i18n/ar.ts",
     "module:packages/kilo-vscode/src/services/cli-backend/i18n/br.ts",
@@ -6521,6 +6523,7 @@
     "module:packages/kilo-vscode/src/services/i18n/uk.ts",
     "module:packages/kilo-vscode/src/services/i18n/zh.ts",
     "module:packages/kilo-vscode/src/services/i18n/zht.ts",
+    "module:packages/kilo-vscode/src/shared/image-data-url.ts",
     "module:packages/kilo-vscode/src/shared/session-title.ts",
     "module:packages/kilo-vscode/src/util/process.ts",
     "module:packages/kilo-vscode/webview-ui/agent-manager/focus.ts",
