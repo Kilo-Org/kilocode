@@ -133,10 +133,11 @@ export interface TokenUsage {
   cache?: { read: number; write: number }
 }
 
-// Context usage derived from the last assistant message's tokens
+// Reported context usage or an estimate from the latest compaction
 export interface ContextUsage {
   tokens: number
   percentage: number | null
+  estimated?: boolean
 }
 
 export interface FileAttachment {
