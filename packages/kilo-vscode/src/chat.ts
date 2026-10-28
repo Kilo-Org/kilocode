@@ -1,11 +1,12 @@
 // The chat webview view. The webview talks to the server only through the relay, so it never sees the password.
 import { randomBytes } from "node:crypto"
-import { env, Uri, workspace, type ExtensionContext, type WebviewView, type WebviewViewProvider } from "vscode"
+import { commands, env, Uri, workspace, type ExtensionContext, type WebviewView, type WebviewViewProvider } from "vscode"
 import { local } from "./local"
 import type { ToHost, ToWebview } from "./protocol"
 import { bridge } from "./relay"
 import { saveImage } from "./save-image"
 import type { Manager } from "./server"
+import { promptKeybindings, watchKeybindings } from "./shortcuts"
 
 export function chat(input: { context: ExtensionContext; server: Manager; directory: string }) {
   const state: { view?: WebviewView } = {}
@@ -35,11 +36,25 @@ export function chat(input: { context: ExtensionContext; server: Manager; direct
           return void input.context.globalState.update(EXPANDED, message.value)
         if (message.type === "saveImage") return saveImage(input.directory, message)
       })
-      const visibility = view.onDidChangeVisibility(() => post({ type: "webviewActiveChanged", active: view.visible }))
+      // The cycle keybindings are active while the sidebar is visible, as on v1 (`sidebarFocused`).
+      const focus = (visible: boolean) => void commands.executeCommand("setContext", "kilo-code.v2.sidebarFocused", visible)
+      focus(view.visible)
+      const visibility = view.onDidChangeVisibility(() => {
+        focus(view.visible)
+        post({ type: "webviewActiveChanged", active: view.visible })
+      })
+      // The prompt hint shows the same keybind as the cycle command, so send it on load and when the
+      // user's keybindings.json changes.
+      const keybindings = watchKeybindings(input.context, () =>
+        post({ type: "keybindings", bindings: promptKeybindings(input.context) }),
+      )
+      post({ type: "keybindings", bindings: promptKeybindings(input.context) })
       view.onDidDispose(() => {
         link.dispose()
         subscription.dispose()
         visibility.dispose()
+        keybindings.dispose()
+        focus(false)
         if (state.view === view) state.view = undefined
       })
       const uri = (...parts: string[]) => view.webview.asWebviewUri(Uri.joinPath(root, ...parts)).toString()
