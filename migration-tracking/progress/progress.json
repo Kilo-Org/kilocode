@@ -4,7 +4,7 @@
     "v1Base": "8100c68b507b53aac6b891edbc3040a6011d8969"
   },
   "summary": {
-    "done": 573,
+    "done": 574,
     "total": 9819,
     "percent": 5.8,
     "dropped": 35,
@@ -26,7 +26,7 @@
       },
       {
         "kind": "test",
-        "done": 33,
+        "done": 34,
         "total": 2794
       }
     ],
@@ -6049,7 +6049,7 @@
     },
     {
       "feature": "vscode",
-      "done": 253,
+      "done": 254,
       "total": 2057,
       "dropped": 0,
       "kinds": {
@@ -6066,7 +6066,7 @@
           "total": 0
         },
         "test": {
-          "done": 1,
+          "done": 2,
           "total": 618
         }
       }
@@ -6530,6 +6530,7 @@
     "module:packages/kilo-vscode/src/shared/image-data-url.ts",
     "module:packages/kilo-vscode/src/shared/session-title.ts",
     "module:packages/kilo-vscode/src/util/process.ts",
+    "module:packages/kilo-vscode/tests/unit/auto-approve.test.ts",
     "module:packages/kilo-vscode/tests/unit/image-preview.test.ts",
     "module:packages/kilo-vscode/webview-ui/agent-manager/focus.ts",
     "module:packages/kilo-vscode/webview-ui/agent-manager/i18n/ar.ts",

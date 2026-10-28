@@ -26,9 +26,8 @@ export function createAutoApprove() {
   vscode.postMessage({ type: "requestAutoApproveState" })
 
   const approve = (request: PermissionRequest) => {
-    // The toggle may have turned off after this request was picked up (for example inside the sweep).
-    if (!enabled()) return
-    if (!shouldApprove(request, responded)) return
+    // Read `enabled()` here too: the sweep may resolve after the toggle turned off.
+    if (!shouldApprove(request, enabled(), responded)) return
     responded.add(request.id)
     for (const oldest of responded) {
       if (responded.size <= RESPONDED_LIMIT) break

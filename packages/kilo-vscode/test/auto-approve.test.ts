@@ -7,18 +7,19 @@ function request(metadata?: Record<string, unknown>): PermissionRequest {
 }
 
 describe("auto-approve policy", () => {
-  test("approves an unseen request", () => {
-    expect(shouldApprove(request(), new Set())).toBe(true)
-    expect(shouldApprove(request({ command: "ls" }), new Set())).toBe(true)
+  test("approves an unseen request only while active", () => {
+    expect(shouldApprove(request(), true, new Set())).toBe(true)
+    expect(shouldApprove(request({ command: "ls" }), true, new Set())).toBe(true)
+    expect(shouldApprove(request(), false, new Set())).toBe(false)
   })
 
   test("replies to a request only once", () => {
-    expect(shouldApprove(request(), new Set(["per_1"]))).toBe(false)
+    expect(shouldApprove(request(), true, new Set(["per_1"]))).toBe(false)
   })
 
   // v1 excluded sandbox-escalation prompts from auto-approve (toggle-auto-approve.ts on main).
   test("never auto-approves a sandbox escalation", () => {
-    expect(shouldApprove(request({ sandboxEscalation: true }), new Set())).toBe(false)
-    expect(shouldApprove(request({ sandboxEscalation: false }), new Set())).toBe(true)
+    expect(shouldApprove(request({ sandboxEscalation: true }), true, new Set())).toBe(false)
+    expect(shouldApprove(request({ sandboxEscalation: false }), true, new Set())).toBe(true)
   })
 })
