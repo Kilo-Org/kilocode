@@ -483,13 +483,22 @@ it.live("a renamed project has no record, and reinstall adopts the moved files w
         await Bun.write(changed, content)
         await fs.symlink(changed, config)
       })
-      expect(yield* test.rpc.call("kilocode.marketplace", "install", request).pipe(Effect.flip)).toMatchObject({
-        type: "conflict",
-      })
+      // Neither operation may write through the link into a file outside the native config locations.
+      for (const method of ["install", "uninstall"] as const)
+        expect(yield* test.rpc.call("kilocode.marketplace", method, request).pipe(Effect.flip)).toMatchObject({
+          type: "conflict",
+        })
       expect(yield* Effect.promise(() => Bun.file(original).text())).toBe(content)
       expect(yield* Effect.promise(() => Bun.file(changed).text())).toBe(content)
-      // Removing the entry from the redirected file is a plain modification of that file, so it is not chased.
       expect(yield* test.host.storage.get(`installed:kilo:mcp:demo:project:${project}`)).toBeDefined()
+      // The list stays usable: the record that cannot be inspected is flagged instead of failing every record.
+      expect(decodeList(yield* test.rpc.call("kilocode.marketplace", "installed", {}))).toMatchObject([
+        {
+          id: "demo",
+          status: "modified",
+          warnings: [expect.stringContaining("outside its native config locations")],
+        },
+      ])
     }),
 )
 for (const missing of [false, true]) {

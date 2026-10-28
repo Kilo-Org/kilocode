@@ -111,6 +111,16 @@ export const KiloMarketplacePlugin = define<Global.Service | Scope.Scope>({
         const config = hinted ? preferred : await locate(record.scope, resource.server)
         // The canonical file is derived here, never stored, so aliases of one file stay one resource.
         const target = await MarketplaceMcp.resolveFile(config).catch(() => undefined)
+        // Every operation restores through here, so a project config that now resolves outside the native
+        // candidates (a committed symlink) is refused for uninstall and cleanup as it is for install.
+        if (
+          record.scope === "project" &&
+          target &&
+          !KiloConfigFiles.writeCandidates(await MarketplaceMcp.resolveFile(directory(record.scope)), false).includes(
+            target,
+          )
+        )
+          throw new McpError("conflict", `Project MCP config resolves outside its native config locations: ${config}`)
         return { config, server: resource.server, ...(target ? { target } : {}), fingerprints: resource.fingerprints }
       }
       const recorded = record.config ? path.join(directory(record.scope), record.config) : undefined
@@ -259,11 +269,19 @@ export const KiloMarketplacePlugin = define<Global.Service | Scope.Scope>({
         }
         after = scanned.next
       } while (after !== undefined)
+      // A record that cannot be inspected (its config now resolves outside the native locations, say) is
+      // flagged instead of failing the whole list; install and uninstall still refuse it explicitly.
       return yield* Effect.forEach(records, (record) =>
-        Effect.tryPromise({
-          try: () => present(record),
-          catch: (error) => new StorageError("fetch_failed", `Couldn't inspect ${record.id}: ${message(error)}`),
-        }),
+        Effect.promise(() =>
+          present(record).catch(
+            (error): KiloMarketplaceRpc.Installed => ({
+              ...record,
+              ...(record.config ? { config: path.join(directory(record.scope), record.config) } : {}),
+              status: "modified",
+              warnings: [`Couldn't inspect ${record.id}: ${message(error)}`],
+            }),
+          ),
+        ),
       )
     })
 

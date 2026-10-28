@@ -891,7 +891,7 @@ async function main() {
     return
   }
 
-  const past = await history(render(config, data, dispositions).json, git, await base())
+  const past = await history(render(config, data, dispositions).json, git, historyBase(process.env))
   const out = render(config, data, dispositions, past)
   const files = { "progress.json": out.json, "README.md": out.md, "progress.svg": out.svg, "history.svg": out.history, "badge.svg": out.badge }
   if (args.includes("--check")) {
@@ -913,14 +913,12 @@ async function main() {
 }
 
 /**
- * The integration v2 for history and walk. Fork checkouts keep their own divergent origin/v2;
- * when an upstream remote exists, its v2 is the line CI compares against. KILO_PROGRESS_BASE_V2 wins.
+ * The ref whose first-parent history supplies past progress points: `origin/v2`, the integration line, unless
+ * KILO_PROGRESS_BASE_V2 names another. Checkouts whose `origin` is a fork need the override; remote names are
+ * never guessed, because `upstream` is OpenCode's frozen v2 in the standard clone layout.
  */
-async function base() {
-  const override = process.env.KILO_PROGRESS_BASE_V2
-  if (override) return override
-  const remotes = await git(["remote"]).catch(() => "")
-  return remotes.split("\n").includes("upstream") ? "upstream/v2" : "origin/v2"
+export function historyBase(env: Readonly<Record<string, string | undefined>>) {
+  return env.KILO_PROGRESS_BASE_V2 || "origin/v2"
 }
 
 if (import.meta.main) await main()
