@@ -4,6 +4,7 @@ import os from "node:os"
 import path from "node:path"
 import { createSolidTransformPlugin } from "@opentui/solid/bun-plugin"
 import { brandingPlugin } from "../src/branding/plugin"
+import { themeRegistryPlugin } from "../src/theme-registry"
 
 const repo = path.resolve(import.meta.dir, "../../..")
 const entry = path.join(import.meta.dir, "fixtures/theme-render.ts")
@@ -19,7 +20,7 @@ for (const hosted of [false, true]) {
         if (compiled) {
           const result = await Bun.build({
             entrypoints: [entry],
-            plugins: [...(hosted ? [brandingPlugin] : []), createSolidTransformPlugin()],
+            plugins: [...(hosted ? [themeRegistryPlugin, brandingPlugin] : []), createSolidTransformPlugin()],
             compile: { outfile, autoloadBunfig: false, autoloadDotenv: false },
             define: { KILO_BRANDING_COMPILED: "true" },
           })

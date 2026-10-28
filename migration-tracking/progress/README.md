@@ -38,6 +38,7 @@ One point per day from the committed `progress.json` on v2's first-parent histor
 | 2026-10-22 | 93 | 9829 | 0.9% |
 | 2026-10-23 | 150 | 9828 | 1.5% |
 | 2026-10-26 | 157 | 9828 | 1.6% |
+| 2026-10-28 | 157 | 9828 | 1.6% |
 | now | 157 | 9828 | 1.6% |
 
 ## Features

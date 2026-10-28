@@ -8,7 +8,7 @@ import kilo from "../../src/theme.json"
 declare const KILO_BRANDING_COMPILED: boolean
 
 if (typeof KILO_BRANDING_COMPILED === "undefined")
-  await import(process.env.KILO_BRANDING_TEST_HOSTED === "1" ? "../../src/branding/preload" : "@opentui/solid/preload")
+  await import(process.env.KILO_BRANDING_TEST_HOSTED === "1" ? "../../src/preload" : "@opentui/solid/preload")
 
 const { Config } = await import("@opencode/cli/config/index")
 const { KiloTheme } = await import("../../src/theme")

@@ -16,12 +16,18 @@ for (const [file, replacements] of Object.entries(KiloBranding.replacements)) {
     const original = await Bun.file(filename).text()
     const branded = KiloBranding.transform(filename, original)
     for (const [from, to] of replacements) {
-      expect(branded.split(from).length - 1).toBe((original.split(from).length - 1) * (to.split(from).length - 1))
+      expect(branded).not.toContain(from)
       expect(branded).toContain(to)
     }
     expect(branded.match(/@opencode\/[\w/.-]+/g)).toEqual(original.match(/@opencode\/[\w/.-]+/g))
   })
 }
+
+test("does not rewrite the upstream theme registry", async () => {
+  const filename = path.join(repo, "packages/tui/src/theme/index.ts")
+  const original = await Bun.file(filename).text()
+  expect(KiloBranding.transform(filename, original)).toBe(original)
+})
 
 test("does not rename provider identities, theme schemas or wire identifiers", async () => {
   for (const file of [

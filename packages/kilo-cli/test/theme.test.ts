@@ -1,7 +1,6 @@
 import { expect, test } from "bun:test"
 import { RGBA } from "@opentui/core"
 import { migrateV1, parseThemeDocument, resolveThemeDocument, themeModes } from "../../theme/src/tui"
-import { KiloBranding } from "../src/branding/text"
 import kilo from "../src/theme.json"
 
 const document = parseThemeDocument(migrateV1(kilo), "kilo")
@@ -81,17 +80,29 @@ for (const mode of ["light", "dark"] as const) {
   })
 }
 
-test("theme registration fails clearly when either upstream anchor changes", async () => {
-  const file = "tui/src/theme/index.ts"
-  const source = await Bun.file(new URL("../../tui/src/theme/index.ts", import.meta.url)).text()
-  for (const [anchor] of KiloBranding.replacements[file]) {
-    expect(() => KiloBranding.transform(file, source.replace(anchor, "changed"))).toThrow(
-      "Kilo branding no longer matches tui/src/theme/index.ts",
-    )
-  }
-  expect(KiloBranding.transform(file, source).indexOf("    kilo,")).toBeLessThan(
-    KiloBranding.transform(file, source).indexOf("    ...customThemes,"),
+test("the Kilo registry mirror stays in step with upstream", async () => {
+  const upstream = (await Bun.file(new URL("../../tui/src/theme/v1.ts", import.meta.url)).text()).replaceAll(
+    "\r\n",
+    "\n",
   )
+  const mirror = (await Bun.file(new URL("../src/theme-v1.ts", import.meta.url)).text()).replaceAll("\r\n", "\n")
+  const addition = 'import kilo from "./theme.json" with { type: "json" }\n'
+  expect(mirror.split(addition)).toHaveLength(2)
+  expect(mirror.split("  kilo,\n")).toHaveLength(2)
+  expect(
+    mirror
+      .replace(addition, "")
+      .replace("  kilo,\n", "")
+      .replaceAll("../../tui/src/theme/assets/", "./assets/")
+      .replaceAll("../../tui/src/theme/v1", "@opencode/theme/tui/v1"),
+  ).toBe(upstream)
+
+  const original = await import("../../tui/src/theme/v1")
+  const hosted = await import("../src/theme-v1")
+  expect(Object.entries(hosted.DEFAULT_THEMES).filter(([name]) => name !== "kilo")).toEqual(
+    Object.entries(original.DEFAULT_THEMES),
+  )
+  expect(hosted.DEFAULT_THEMES.kilo).toEqual(kilo)
 })
 
 function contrast(first: RGBA, second: RGBA) {
