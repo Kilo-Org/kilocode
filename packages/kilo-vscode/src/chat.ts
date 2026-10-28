@@ -118,7 +118,14 @@ export function html(input: {
 <title>Kilo Code</title>
 <style>
   :root { ${vars} --kilo-font-scale: ${input.size / 13}; --font-size-x-small: var(--kilo-font-size-10); --font-size-small: var(--kilo-font-size-11); --font-size-base: var(--kilo-font-size-13); --font-size-large: var(--kilo-font-size-16); }
-  html { scrollbar-color: auto; }
+  html {
+    scrollbar-color: auto;
+
+    ::-webkit-scrollbar-thumb {
+      border: 3px solid transparent !important;
+      background-clip: padding-box !important;
+    }
+  }
   html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; }
   body { background-color: var(--vscode-sideBar-background, var(--vscode-editor-background)); color: var(--vscode-foreground); font-family: var(--vscode-font-family); }
   #root { height: 100%; }
