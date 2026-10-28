@@ -777,8 +777,9 @@ jobs:
 
       # kilocode_change start - upload the conda packages built above to
       # Anaconda.org. The `channel` input is the Anaconda.org org to publish
-      # under (mirrors ana-cli's `channel: anaconda-cloud`). Pre-releases go
-      # to the `rc` label, stable releases to `main`.
+      # under (mirrors ana-cli's `channel: anaconda-cloud`). Every release,
+      # including pre-releases, goes to the `main` label so the plain
+      # `-c anaconda-cloud` channel resolves it.
       - name: Upload conda package to Anaconda.org
         if: ${{ needs.version.outputs.tag != '' }}
         uses: anaconda/actions/upload-package@a6f488910b4a1e4f3fe01736241ca1b92b4b355a # v0.3.1
@@ -786,6 +787,6 @@ jobs:
           token: ${{ secrets.ANACONDA_API_KEY }}
           packages: packages/opencode/dist/conda/**/*.conda
           channel: anaconda-cloud
-          labels: ${{ inputs.pre_release && 'rc' || 'main' }}
+          labels: main
           force: "true"
       # kilocode_change end
