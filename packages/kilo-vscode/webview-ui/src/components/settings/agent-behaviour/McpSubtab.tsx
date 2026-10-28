@@ -14,6 +14,7 @@ import { useLanguage } from "../../../context/language"
 import { useSettingsConfig } from "../../../v2/settings-config"
 import { createMcp } from "../../../v2/mcp"
 import McpEditView from "./McpEditView"
+import SettingsRow from "../SettingsRow"
 
 const STATUS_KEYS: Record<string, string> = {
   connected: "mcp.status.connected",
@@ -448,28 +449,16 @@ const McpSubtab: Component = () => {
           </div>
           <For each={["startup", "catalog", "execution"] as const}>
             {(key, index) => (
-              <div
-                data-slot="settings-row"
-                data-search-label={language.t(`settings.agentBehaviour.mcp.timeout.${key}.title`)}
-                style={{
-                  "margin-bottom": index() < 2 ? "8px" : "0",
-                  "padding-bottom": index() < 2 ? "8px" : "0",
-                  "border-bottom": index() < 2 ? "1px solid var(--border-weak-base)" : "none",
-                }}
+              <SettingsRow
+                title={language.t(`settings.agentBehaviour.mcp.timeout.${key}.title`)}
+                last={index() === 2}
               >
-                <div data-slot="settings-row-label" style={{ "margin-bottom": "0" }}>
-                  <div data-slot="settings-row-label-title">
-                    <span>{language.t(`settings.agentBehaviour.mcp.timeout.${key}.title`)}</span>
-                  </div>
-                </div>
-                <div data-slot="settings-row-input">
-                  <TextField
-                    value={timeoutValue(key)}
-                    placeholder={language.t("settings.experimental.mcpTimeout.title")}
-                    onChange={(value) => setTimeoutValue(key, value)}
-                  />
-                </div>
-              </div>
+                <TextField
+                  value={timeoutValue(key)}
+                  placeholder={language.t("settings.experimental.mcpTimeout.title")}
+                  onChange={(value) => setTimeoutValue(key, value)}
+                />
+              </SettingsRow>
             )}
           </For>
         </Card>
