@@ -30,7 +30,7 @@ jobs:
       e2e: ${{ steps.packages.outputs.app }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1 # kilocode_change
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           # Pull requests diff against the merge's first parent; pushes diff against the previous dev head.
@@ -82,14 +82,14 @@ jobs:
         shell: bash
     steps:
       - name: Checkout repository
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1 # kilocode_change
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           # Pull requests diff against the merge's first parent; pushes diff against the previous dev head.
           fetch-depth: ${{ github.event_name == 'pull_request' && 2 || 0 }}
 
       - name: Setup Node
-        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0 # kilocode_change
         with:
           node-version: "24"
 
@@ -111,7 +111,7 @@ jobs:
 
       # kilocode_change start - Turborepo 2.x writes .turbo/cache. Each shard has its own cache key.
       - name: Cache Turbo
-        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0 # kilocode_change
         with:
           path: .turbo/cache
           key: turbo-${{ runner.os }}-${{ hashFiles('turbo.json', 'bun.lock') }}-unit-${{ matrix.shard }}-${{ github.sha }}
@@ -143,7 +143,7 @@ jobs:
       # kilocode_change start - JUnit reports of test:ci: failing cases as annotations, and the reports as an artifact
       - name: Publish unit reports
         if: ${{ !cancelled() && matrix.shard != 'packages' }}
-        uses: mikepenz/action-junit-report@bccf2e31636835cf0874589931c4116687171386 # v6.4.0
+        uses: mikepenz/action-junit-report@6ef3fdcfcd5f0b5d14df3e659ef19b8c6820f93d # v6.6.1
         with:
           report_paths: artifacts/unit/*.xml
           annotate_only: true
@@ -155,7 +155,7 @@ jobs:
       - name: Upload unit reports
         if: ${{ !cancelled() && matrix.shard != 'packages' }}
         continue-on-error: true
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2 # kilocode_change
         with:
           name: unit-reports-${{ matrix.settings.name }}-${{ matrix.shard }}
           path: artifacts/unit/*.xml
@@ -173,10 +173,12 @@ jobs:
         working-directory: packages/client
         run: bun run check:generated
 
-      - name: Check generated OpenAPI document
-        if: runner.os == 'Linux'
+      # kilocode_change start - check the generated protocol client like the client and docs checks
+      - name: Check generated protocol
+        if: runner.os == 'Linux' && matrix.shard == 'packages' # kilocode_change
         working-directory: packages/protocol
         run: bun run check:generated
+      # kilocode_change end
 
       - name: Check generated documentation
         if: runner.os == 'Linux' && matrix.shard == 'packages' # kilocode_change
@@ -199,7 +201,7 @@ jobs:
         shell: bash
     steps:
       - name: Checkout repository
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1 # kilocode_change
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           # Pull requests diff against the merge's first parent; pushes diff against the previous dev head.
@@ -235,7 +237,7 @@ jobs:
 
       - name: Setup Node build runtime
         if: ${{ !cancelled() }}
-        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0 # kilocode_change
         with:
           node-version: "26.4.0"
 
@@ -280,12 +282,12 @@ jobs:
         shell: bash
     steps:
       - name: Checkout repository
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1 # kilocode_change
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Setup Node
-        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0 # kilocode_change
         with:
           # Playwright 1.59 hangs while extracting Chromium with Node 24.16.
           node-version: "24.15"
@@ -301,7 +303,7 @@ jobs:
 
       - name: Cache Playwright browsers
         id: playwright-cache
-        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0 # kilocode_change
         with:
           path: ${{ github.workspace }}/.playwright-browsers
           key: ${{ runner.os }}-${{ runner.arch }}-playwright-${{ steps.playwright-version.outputs.version }}-chromium
@@ -345,7 +347,7 @@ jobs:
 
       - name: Upload Playwright artifacts
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2 # kilocode_change
         with:
           name: playwright-${{ matrix.settings.name }}-${{ matrix.suite.id }}-${{ github.run_attempt }}
           if-no-files-found: ignore
@@ -386,7 +388,7 @@ jobs:
     timeout-minutes: 15
     steps:
       - name: Checkout repository
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1 # kilocode_change
         with:
           fetch-depth: ${{ github.event_name == 'pull_request' && 2 || 0 }}
 
