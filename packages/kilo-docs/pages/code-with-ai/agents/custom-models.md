@@ -144,12 +144,12 @@ Kilo resolves token limits in this order:
 
 If you use a custom or local model and don't specify limits — and the model isn't in the built-in catalog — both `context` and `output` resolve to `0`. This has meaningful side effects:
 
-- **Compaction is disabled.** Kilo uses `context` to detect when the conversation exceeds the model's window and needs to be summarized. With `context: 0`, overflow detection is skipped and conversations will grow unbounded until the provider rejects the request.
+- **Automatic compaction is disabled.** Kilo uses `context` to detect when the conversation approaches the model's window and to split large histories before summarizing. With `context: 0`, overflow detection and threshold-based auto-compaction are skipped, so conversations grow until the provider rejects a request. You can still trigger compaction manually — with the Compact session action in the app or `/compact` in the CLI — but without a window Kilo does not pre-split the history, so it first sends the whole conversation in one request. On a large session that request can exceed what the provider accepts, and compaction fails with an empty-summary error.
 - **Output falls back to 32,000 tokens.** When `output` is `0`, Kilo uses its internal default of 32,000 tokens (configurable via the `KILO_EXPERIMENTAL_OUTPUT_TOKEN_MAX` environment variable).
 - **No context usage tracking.** Usage metrics that depend on knowing the context size are skipped.
 
 {% callout type="warning" %}
-For custom and local models, always set `limit.context` and `limit.output` to match the model's actual capabilities. Without these values, automatic context management is disabled.
+For custom and local models, always set `limit.context` and `limit.output` to match the model's actual capabilities. Without these values, automatic context management is disabled, and manual compaction can fail on large sessions.
 {% /callout %}
 
 ## Examples

@@ -785,6 +785,11 @@ export const dict = {
   "context.usage.sessionCost": "Koszt sesji",
   "context.usage.olderSessions": "{{count}} starszych sesji",
   "context.stats.thisSession": "Ta sesja",
+  "context.limits.missing.title": "Limity modelu nie są skonfigurowane",
+  "context.limits.missing.context":
+    "Dla tego modelu nie ustawiono okna kontekstu, więc procent użycia kontekstu jest niedostępny, a automatyczna kompresja może nie zostać uruchomiona. Ręczna kompresja może również zakończyć się niepowodzeniem w dużych sesjach. Ustaw limit.context dla tego modelu w konfiguracji dostawcy.",
+  "context.limits.missing.both":
+    "Dla tego modelu nie ustawiono okna kontekstu ani maksymalnego limitu wyjścia. Automatyczna kompresja może nie zostać uruchomiona, a procent użycia kontekstu jest niedostępny. Ręczna kompresja może również zakończyć się niepowodzeniem w dużych sesjach. Ustaw limit.context i limit.output dla tego modelu w konfiguracji dostawcy.",
 
   "time.today": "Dzisiaj",
   "time.yesterday": "Wczoraj",

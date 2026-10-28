@@ -819,6 +819,11 @@ export const dict = {
   "context.usage.sessionCost": "세션 비용",
   "context.usage.olderSessions": "{{count}}개의 이전 세션",
   "context.stats.thisSession": "이 세션",
+  "context.limits.missing.title": "모델 제한이 구성되지 않음",
+  "context.limits.missing.context":
+    "이 모델에는 컨텍스트 창이 설정되어 있지 않아 컨텍스트 사용 비율을 표시할 수 없으며 자동 압축이 실행되지 않을 수 있습니다. 대규모 세션에서는 수동 압축도 실패할 수 있습니다. 공급자 구성에서 이 모델의 limit.context를 설정하세요.",
+  "context.limits.missing.both":
+    "이 모델에는 컨텍스트 창이나 최대 출력 제한이 설정되어 있지 않습니다. 자동 압축이 실행되지 않을 수 있으며 컨텍스트 사용 비율을 표시할 수 없습니다. 대규모 세션에서는 수동 압축도 실패할 수 있습니다. 공급자 구성에서 이 모델의 limit.context와 limit.output을 설정하세요.",
 
   "time.today": "오늘",
   "time.yesterday": "어제",

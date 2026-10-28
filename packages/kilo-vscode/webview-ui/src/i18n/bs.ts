@@ -827,6 +827,11 @@ export const dict = {
   "context.usage.sessionCost": "Cijena sesije",
   "context.usage.olderSessions": "{{count}} starijih sesija",
   "context.stats.thisSession": "Ova sesija",
+  "context.limits.missing.title": "Ograničenja modela nisu podešena",
+  "context.limits.missing.context":
+    "Za ovaj model nije postavljen kontekstni prozor, pa procenat korištenja konteksta nije dostupan i automatska kompresija se možda neće pokrenuti. Ručna kompresija također može neuspjeti u velikim sesijama. Postavite limit.context za ovaj model u konfiguraciji provajdera.",
+  "context.limits.missing.both":
+    "Za ovaj model nisu postavljeni ni kontekstni prozor ni maksimalno ograničenje izlaza. Automatska kompresija se možda neće pokrenuti, a procenat korištenja konteksta nije dostupan. Ručna kompresija također može neuspjeti u velikim sesijama. Postavite limit.context i limit.output za ovaj model u konfiguraciji provajdera.",
 
   "time.today": "Danas",
   "time.yesterday": "Jučer",

@@ -830,6 +830,11 @@ export const dict = {
   "context.usage.sessionCost": "Custo da sessão",
   "context.usage.olderSessions": "{{count}} sessões anteriores",
   "context.stats.thisSession": "Esta sessão",
+  "context.limits.missing.title": "Limites do modelo não configurados",
+  "context.limits.missing.context":
+    "Este modelo não tem uma janela de contexto definida, então a porcentagem de uso do contexto não está disponível e a compactação automática pode não ser executada. A compactação manual também pode falhar em sessões grandes. Defina limit.context para este modelo na configuração do provedor.",
+  "context.limits.missing.both":
+    "Este modelo não tem uma janela de contexto nem um limite máximo de saída definidos. A compactação automática pode não ser executada e a porcentagem de uso do contexto não está disponível. A compactação manual também pode falhar em sessões grandes. Defina limit.context e limit.output para este modelo na configuração do provedor.",
 
   "time.today": "Hoje",
   "time.yesterday": "Ontem",

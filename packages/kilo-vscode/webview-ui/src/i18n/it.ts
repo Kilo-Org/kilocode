@@ -686,6 +686,11 @@ export const dict = {
   "context.usage.sessionCost": "Costo sessione",
   "context.usage.olderSessions": "{{count}} sessioni precedenti",
   "context.stats.thisSession": "Questa sessione",
+  "context.limits.missing.title": "Limiti del modello non configurati",
+  "context.limits.missing.context":
+    "Per questo modello non è impostata una finestra di contesto, quindi la percentuale di utilizzo del contesto non è disponibile e la compattazione automatica potrebbe non essere eseguita. Anche la compattazione manuale può fallire nelle sessioni di grandi dimensioni. Imposta limit.context per questo modello nella configurazione del provider.",
+  "context.limits.missing.both":
+    "Per questo modello non sono impostati né una finestra di contesto né un limite massimo di output. La compattazione automatica potrebbe non essere eseguita e la percentuale di utilizzo del contesto non è disponibile. Anche la compattazione manuale può fallire nelle sessioni di grandi dimensioni. Imposta limit.context e limit.output per questo modello nella configurazione del provider.",
   "time.today": "Oggi",
   "time.yesterday": "Ieri",
   "time.thisWeek": "Questa settimana",
