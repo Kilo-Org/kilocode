@@ -66,12 +66,12 @@ Reference worktrees (`.worktrees/upstream-sync/`): `upstream` (pristine release 
 ## Resolving what is left
 
 - Keep Kilo's `kilocode_change` lines and take upstream's other changes. Never drop upstream code without a reason in the PR.
-- When a conflict hits a Kilo patch, check the plugin-first order before you re-apply it, and record the result in the sync PR:
+- When a conflict hits a Kilo patch, check the plugin-first order (`migration-tracking/principles.md`, section 2) before you re-apply it, and record the result in the sync PR:
   1. Kilo plugin on the public plugin API (`@opencode/plugin`).
-  2. Kilo host (U-E0-01): `SdkPlugins.register`, Effect layer overrides such as `Global.layerWith`, environment translation at the entry. It does not exist yet.
+  2. Kilo host (`packages/kilo-cli`): `SdkPlugins.register`, Effect layer overrides such as `Global.layerWith`, environment translation at the entry.
   3. Small, generic seam patch in a shared file, marked `kilocode_change`, in a file that changes rarely.
   4. Feature patch in a shared file, marked, last resort, with the reason in the PR.
-  5. Branding and product strings: the rename script (codemods below), never hand edits.
+  5. Branding and product strings: automated renaming in Kilo-owned code (the interim adapter from #15417, mapping reviewed at every sync), never hand edits.
 
   Move the code in a follow-up PR: the sync PR contains only the merge and the conflict resolutions.
 - New upstream workflow: review it, add it to `active` or `removed` in `script/check-workflows.ts`, then `bun script/check-workflows.ts --fix`.
@@ -98,7 +98,7 @@ The sync PR body gives: release and SHA, lag before and after, each conflict and
 Both checks compare the tree with the pinned upstream release commit: the second parent of the newest `chore(upstream): sync` merge in the history, or the initial base of `v2` (`5e73d5cb1f7`, release commit of v2.0.26) before the first sync. They need no network, only a full history.
 
 - `bun script/check-opencode-annotations.ts [--worktree] [--pin <ref>]`: fails on a Kilo line in a shared upstream file without a `kilocode_change` marker. A file that cannot carry markers (JSON) needs an `unmarked` reason in `shared-patches.json`.
-- `bun script/check-shared-patches.ts [--worktree] [--json] [--pin <ref>]` (U-L3-01): prints each shared file that Kilo adds or changes, its marked and unmarked lines, and the shared files Kilo deleted. It fails when a shared file has no entry in `shared-patches.json` (rung and missing seam), or when a count grows above its limit. A PR that adds a shared patch adds the entry and raises the limit in the same diff. Deleted workflows are not counted: `script/check-workflows.ts` governs them. Paths in `skipFiles` are not shared files and are not counted. Generated files (`bun.lock`, listed in `utils/owned.ts`) are listed but not counted: they follow from the `package.json` files, so a new Kilo-owned package does not trip the checks.
+- `bun script/check-shared-patches.ts [--worktree] [--json] [--pin <ref>]`: prints each shared file that Kilo adds or changes, its marked and unmarked lines, and the shared files Kilo deleted. It fails when a shared file has no entry in `shared-patches.json` (rung and missing seam), or when a count grows above its limit. A PR that adds a shared patch adds the entry and raises the limit in the same diff. Deleted workflows are not counted: `script/check-workflows.ts` governs them. Paths in `skipFiles` are not shared files and are not counted. Generated files (`bun.lock`, listed in `utils/owned.ts`) are listed but not counted: they follow from the `package.json` files, so a new Kilo-owned package does not trip the checks.
 
 CI runs both in `.github/workflows/kilo-v2.yml` (job `shared upstream patches`), and the tests of this directory (job `upstream sync tooling tests`).
 
@@ -110,7 +110,7 @@ CI runs both in `.github/workflows/kilo-v2.yml` (job `shared upstream patches`),
 
 `bun script/upstream/placement.ts <path-or-module>` answers, for one module, the questions of `.kilo/skills/v2-feature-placement/SKILL.md` steps 2 to 6, with no model and no network. The input is a repository path or a module specifier (`@opencode/core/session/compaction`). It prints: whether the file is Kilo-owned; the plugin domains whose name or hook names match the module (hooks, editor methods, domain members, from `packages/plugin/src/effect/`); the upstream plugins that are the file, call `transform` on its service, or import it, with their `ctx` uses, services and editor calls; for a builtin tool, the `ToolEditor.update` and `remove` plus `add` calls; the service nodes with their kind and the host call (`Global.node.replace(Global.layerWith(...))`) for `packages/kilo-cli/src/host.ts`, and the `OPENCODE_*` variables it reads; the `shared-patches.json` entries and `kilocode_change` markers for the file; and the lowest rung to start on. `--json` prints the same data. `--pin <ref>` sets the upstream commit for the Kilo-owned check; without a pin in the history (a shallow clone) the check uses the path patterns of `utils/owned.ts` only.
 
-`bun script/upstream/placement.ts --imports [--json]` checks import rule 2 of `migration-tracking/plans/v2-host-strategy.md`: it fails when a logic package (`packages/kilo-*-core/src`) imports `@opencode/*`, and it prints the distinct core-internal modules (under `packages/core/src`, not Kilo-owned) that each adapter (`packages/kilo-*/src`, `packages/*/src/kilocode`) imports, and their total.
+`bun script/upstream/placement.ts --imports [--json]` checks the import rule of `.kilo/skills/v2-feature-placement/SKILL.md` (step 6): it fails when a logic package (`packages/kilo-*-core/src`) imports `@opencode/*`, and it prints the distinct core-internal modules (under `packages/core/src`, not Kilo-owned) that each adapter (`packages/kilo-*/src`, `packages/*/src/kilocode`) imports, and their total.
 
 ## Per-file tools
 

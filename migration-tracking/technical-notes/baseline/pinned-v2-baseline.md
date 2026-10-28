@@ -1,8 +1,8 @@
 # Pinned upstream v2 baseline
 
-Status: living. Refreshed 2026-10-27 on the `v2.1.4` sync branch `upstream-merge-2-1-4` (#15500). This capture describes the proposed sync, not a merge into `origin/v2`. It includes `v2.1.4` only, not `2.2`. The base moves with every upstream sync (plan A4), so re-measure after each sync. The earlier captures remain below. The 2026-08-13 capture at `76dbaf20` (old branch `johnnyeric/v2-baseline`) survives in git history only.
+Status: living. Refreshed 2026-10-27 on the `v2.1.4` sync branch `upstream-merge-2-1-4` (#15500). This capture describes the proposed sync, not a merge into `origin/v2`. It includes `v2.1.4` only, not `2.2`. The base moves with every upstream sync, so re-measure after each sync. The earlier captures remain below. The 2026-08-13 capture at `76dbaf20` (old branch `johnnyeric/v2-baseline`) survives in git history only.
 
-This file records the upstream release `origin/v2` is synced to, the validation commands that this tree defines, and the result of running them. Compare any failing check against this file, and against `origin/v2` before your change, before you attribute it to a change (`migration-context.md`, Conventions).
+This file records the upstream release `origin/v2` is synced to, the validation commands that this tree defines, and the result of running them. Compare any failing check against this file, and against `origin/v2` before your change, before you attribute it to a change.
 
 ## Current capture: `v2.1.4` (2026-10-27)
 
@@ -277,7 +277,7 @@ Use these only as deltas against this table.
 ## Out of scope for this baseline
 
 - **Kilo packages beyond the table above.** Kilo package checks (`kilo-vscode` typecheck, JetBrains Gradle build) start once each package lands. Each landing adds its row to "Kilo packages" in the current capture.
-- **Fork CI settings.** `kilo-v2.yml` runs the Kilo jobs; repo and Actions settings stay an admin task (`migration-context.md`, Deferred admin tasks).
+- **Fork CI settings.** `kilo-v2.yml` runs the Kilo jobs; repo and Actions settings stay an admin task.
 
 ## Reproducer
 
