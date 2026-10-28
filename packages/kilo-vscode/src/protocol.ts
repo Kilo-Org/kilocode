@@ -21,6 +21,7 @@ export type Ui =
   | { type: "webviewFocusChanged"; focused: boolean }
   | { type: "setLanguage"; locale: string }
   | { type: "saveImage"; dataUrl: string; filename: string }
+  | { type: "openProfile" }
 
 export type ToWebview =
   | { type: "response"; id: number; status: number; statusText: string; headers: [string, string][] }
