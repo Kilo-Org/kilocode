@@ -1,5 +1,7 @@
 # kilo-code
 
+## 7.8.21
+
 ## 7.8.20
 
 ### Minor Changes

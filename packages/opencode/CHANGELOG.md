@@ -1,5 +1,11 @@
 # @kilocode/cli
 
+## 7.8.21
+
+### Minor Changes
+
+- [#15509](https://github.com/Kilo-Org/kilocode/pull/15509) [`307ff45`](https://github.com/Kilo-Org/kilocode/commit/307ff45f27ec796309ffb4e2f00f8dab85db3838) - Add hosted workspace operations and a Cloud system feed to the local session-host API. List, create, read, check the status of, and delete hosted workspaces, list their sessions, list available workspace profiles, and start another session in a workspace through the local Kilo API, and follow Cloud session preparation and status events through a local system feed route. Hosted operations now exchange the stored user credential for a short-lived Cloud Agent control token before any Worker call, so the original credential is never sent to the Worker. Hosted attachments stop working once their session or workspace is deleted.
+
 ## 7.8.20
 
 ### Minor Changes
