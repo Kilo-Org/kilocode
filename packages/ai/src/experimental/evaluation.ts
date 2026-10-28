@@ -1,8 +1,8 @@
 import { Effect, Schema } from "effect"
+import { tryRequest } from "../media-model.js"
 import {
   AIError,
   HttpOptions,
-  InvalidRequestError,
   ModelID,
   ProviderID,
   ProviderMetadata,
@@ -223,16 +223,7 @@ export function run<const Model extends EvaluationModel, const Questions extends
 ): Effect.Effect<EvaluationResponseFor<Questions>, AIError, Service>
 export function run(input: EvaluationRequest): Effect.Effect<EvaluationResponse, AIError, Service>
 export function run(input: EvaluationRequest | EvaluationRequestInput) {
-  return Effect.try({
-    try: () => request(input),
-    catch: (cause) =>
-      new AIError({
-        reason: new InvalidRequestError({
-          message: cause instanceof Error ? cause.message : String(cause),
-          cause,
-        }),
-      }),
-  }).pipe(Effect.flatMap(EvaluationClient.evaluate))
+  return tryRequest(() => request(input)).pipe(Effect.flatMap(EvaluationClient.evaluate))
 }
 
 export const Evaluation = {

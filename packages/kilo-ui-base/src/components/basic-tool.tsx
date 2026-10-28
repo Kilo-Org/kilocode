@@ -1,0 +1,428 @@
+import { createEffect, createMemo, For, Match, on, onCleanup, onMount, Show, Switch, type JSX } from "solid-js" // kilocode_change: added createMemo
+import { animate, type AnimationPlaybackControls } from "motion"
+import { useI18n } from "../context/i18n"
+import { createStore } from "solid-js/store"
+import { Collapsible } from "./collapsible"
+import { Icon, type IconProps } from "./icon" // kilocode_change: added Icon
+import { TextShimmer } from "./text-shimmer"
+
+export type TriggerTitle = {
+  title: string
+  titleClass?: string
+  subtitle?: string
+  subtitleClass?: string
+  args?: string[]
+  argsClass?: string
+  action?: JSX.Element
+}
+
+const isTriggerTitle = (val: any): val is TriggerTitle => {
+  return (
+    typeof val === "object" && val !== null && "title" in val && (typeof Node === "undefined" || !(val instanceof Node))
+  )
+}
+
+export interface BasicToolProps {
+  icon: IconProps["name"]
+  iconNode?: JSX.Element // kilocode_change
+  trigger: TriggerTitle | JSX.Element
+  children?: JSX.Element
+  status?: string
+  hideDetails?: boolean
+  defaultOpen?: boolean
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
+  forceOpen?: boolean
+  defer?: boolean
+  retainDetails?: boolean // kilocode_change
+  hasDetails?: boolean // kilocode_change
+  deferredSize?: { height: number; width: number; font: string } // kilocode_change
+  locked?: boolean
+  animated?: boolean
+  allowPendingToggle?: boolean // kilocode_change
+  onSubtitleClick?: () => void
+  onTriggerClick?: JSX.EventHandlerUnion<HTMLElement, MouseEvent>
+  triggerHref?: string
+  clickable?: boolean
+}
+
+const SPRING = { type: "spring" as const, visualDuration: 0.35, bounce: 0 }
+const deferredMounts: Array<{ active: boolean; fn: () => void }> = []
+let deferredFrame: number | undefined
+
+// kilocode_change start
+// Mount deferred tool bodies within a per-frame time budget. Mounting one body
+// per frame kept each diff card's render off a single frame, but an expanded
+// transcript with many cards then needed one frame per card before everything
+// was visible. Spend a fixed budget per frame so cheap bodies mount together.
+// A body whose duration exceeds the budget ends that frame, so later bodies
+// wait for the next one.
+const DEFERRED_MOUNT_BUDGET_MS = 12
+
+function flushDeferredMounts() {
+  const deadline = performance.now() + DEFERRED_MOUNT_BUDGET_MS
+  // Re-arm in `finally`: a throw from one body must not leave `deferredFrame`
+  // pointing at an already-fired frame, which would stall every later mount.
+  try {
+    while (deferredMounts.length > 0) {
+      // Timeline tools are mounted top-to-bottom, but the viewport starts at the latest turn.
+      // Pop from the end so heavy default-open bodies near the bottom become interactive first.
+      const item = deferredMounts.pop()!
+      if (item.active) item.fn()
+      if (performance.now() >= deadline) break
+    }
+  } finally {
+    deferredFrame = deferredMounts.length > 0 ? requestAnimationFrame(flushDeferredMounts) : undefined
+  }
+}
+// kilocode_change end
+
+function scheduleDeferredFlush() {
+  if (deferredFrame !== undefined) return
+  deferredFrame = requestAnimationFrame(() => {
+    deferredFrame = requestAnimationFrame(flushDeferredMounts)
+  })
+}
+
+function scheduleDeferredMount(fn: () => void) {
+  const item = { active: true, fn }
+  deferredMounts.push(item)
+  scheduleDeferredFlush()
+  return () => {
+    item.active = false
+  }
+}
+
+function scheduleFrameMount(fn: () => void) {
+  const frame = requestAnimationFrame(fn)
+  return () => cancelAnimationFrame(frame)
+}
+
+export function BasicTool(props: BasicToolProps) {
+  const [state, setState] = createStore({
+    open: props.defaultOpen ?? false,
+    ready: !props.defer && (props.defaultOpen ?? false),
+    restored: !!(props.defer && props.deferredSize && (props.open ?? props.defaultOpen)), // kilocode_change
+  })
+  const open = () => props.open ?? state.open
+  const ready = () => state.ready
+  // kilocode_change start - keep a restored open card at its measured height
+  // while its expensive body mounts through the deferred frame queue.
+  const reserve = () => {
+    if (!props.defer || ready() || !open()) return
+    if (props.deferredSize == null || props.deferredSize.height <= 0) return
+    return `${props.deferredSize.height}px`
+  }
+  let content: HTMLDivElement | undefined
+  // kilocode_change end
+  const pending = () => props.status === "pending" || props.status === "running"
+  // kilocode_change start - read the trigger getter once. A JSX trigger is
+  // rebuilt on every read of `props.trigger`, and the copy built only for the
+  // Match condition is never inserted, so its mounted effects (fade
+  // animations) outlive the card and leak the transcript row.
+  const node = createMemo(() => props.trigger)
+  const title = () => {
+    const value = node()
+    return isTriggerTitle(value) ? value : undefined
+  }
+  // kilocode_change end
+  // kilocode_change start - testing for children must not evaluate them. Reading
+  // the `children` getter constructs the whole collapsed body tree (and runs
+  // Markdown/diff parsing inside it) on every mount, even while closed, which
+  // dominated the cost of mounting tool cards. `"children" in props` only checks
+  // presence, keeping the body lazy without changing how it renders.
+  const hasChildren = () => "children" in props
+  // kilocode_change end
+  const hasDetails = () => props.hasDetails ?? !!hasChildren() // kilocode_change
+
+  let cancelReady: (() => void) | undefined
+
+  const cancel = () => {
+    cancelReady?.()
+    cancelReady = undefined
+  }
+
+  const scheduleReady = (initial = false) => {
+    cancel()
+    cancelReady = (initial ? scheduleDeferredMount : scheduleFrameMount)(() => {
+      cancelReady = undefined
+      if (!open()) return
+      setState("ready", true)
+    })
+  }
+
+  onCleanup(cancel)
+
+  onMount(() => {
+    // kilocode_change start - stale measurements must not shift the restored row
+    if (props.defer && open() && content && props.deferredSize) {
+      if (
+        Math.abs(content.getBoundingClientRect().width - props.deferredSize.width) > 1 ||
+        getComputedStyle(content).font !== props.deferredSize.font
+      ) {
+        setState({ ready: true, restored: false })
+        return
+      }
+    }
+    // kilocode_change end
+    if (props.defer && open()) scheduleReady(true)
+  })
+
+  const setOpen = (value: boolean) => {
+    if (props.open === undefined) setState("open", value)
+    props.onOpenChange?.(value)
+  }
+
+  createEffect(() => {
+    if (!props.forceOpen) return
+    if (open()) return
+    setOpen(true)
+  })
+
+  createEffect(
+    on(
+      open,
+      (value) => {
+        if (!props.defer) return
+        if (!value) {
+          setState("restored", false) // kilocode_change
+          cancel()
+          if (!props.retainDetails) setState("ready", false) // kilocode_change
+          return
+        }
+
+        scheduleReady()
+      },
+      { defer: true },
+    ),
+  )
+
+  // Animated height for collapsible open/close
+  let contentRef: HTMLDivElement | undefined
+  let heightAnim: AnimationPlaybackControls | undefined
+  const initialOpen = open()
+
+  createEffect(
+    on(
+      open,
+      (isOpen) => {
+        if (!props.animated || !contentRef) return
+        heightAnim?.stop()
+        if (isOpen) {
+          contentRef.style.overflow = "hidden"
+          heightAnim = animate(contentRef, { height: "auto" }, SPRING)
+          void heightAnim.finished.then(() => {
+            if (!contentRef || !open()) return
+            contentRef.style.overflow = "visible"
+            contentRef.style.height = "auto"
+          })
+        } else {
+          contentRef.style.overflow = "hidden"
+          heightAnim = animate(contentRef, { height: "0px" }, SPRING)
+        }
+      },
+      { defer: true },
+    ),
+  )
+
+  onCleanup(() => {
+    // kilocode_change start - complete, not stop: a stopped animation keeps
+    // Motion's reference cycle to the removed element alive (see kilo-ui motion.tsx settle)
+    heightAnim?.complete()
+    // kilocode_change end
+  })
+
+  const handleOpenChange = (value: boolean) => {
+    if (pending() && !props.allowPendingToggle) return // kilocode_change
+    if (props.hideDetails) return // kilocode_change
+    if (props.locked && !value) return
+    setOpen(value)
+    props.onOpenChange?.(value) // kilocode_change
+  }
+
+  // kilocode_change start
+  const end = (event: AnimationEvent) => {
+    if (event.target !== event.currentTarget) return
+    if (!props.retainDetails || open()) return
+    setState("ready", false)
+  }
+  // kilocode_change end
+
+  const trigger = () => (
+    <div
+      data-component="tool-trigger"
+      data-clickable={props.clickable ? "true" : undefined}
+      data-hide-details={props.hideDetails ? "true" : undefined}
+    >
+      <div data-slot="basic-tool-tool-trigger-content">
+        {/* kilocode_change start */}
+        <span data-slot="basic-tool-icon">
+          {props.iconNode ?? <Icon name={props.icon} size="small" />}
+        </span>
+        {/* kilocode_change end */}
+        <div data-slot="basic-tool-tool-info">
+          <Switch>
+            <Match when={title()}>{/* kilocode_change */}
+              {(title) => (
+                <div data-slot="basic-tool-tool-info-structured">
+                  <div data-slot="basic-tool-tool-info-main">
+                    <span
+                      data-slot="basic-tool-tool-title"
+                      classList={{
+                        [title().titleClass ?? ""]: !!title().titleClass,
+                      }}
+                    >
+                      <TextShimmer text={title().title} active={pending()} />
+                    </span>
+                    <Show when={!pending()}>
+                      <Show when={title().subtitle}>
+                        <span
+                          data-slot="basic-tool-tool-subtitle"
+                          classList={{
+                            [title().subtitleClass ?? ""]: !!title().subtitleClass,
+                            clickable: !!props.onSubtitleClick,
+                          }}
+                          onClick={(e) => {
+                            if (props.onSubtitleClick) {
+                              e.stopPropagation()
+                              props.onSubtitleClick()
+                            }
+                          }}
+                        >
+                          {title().subtitle}
+                        </span>
+                      </Show>
+                      <Show when={title().args?.length}>
+                        <For each={title().args}>
+                          {(arg) => (
+                            <span
+                              data-slot="basic-tool-tool-arg"
+                              classList={{
+                                [title().argsClass ?? ""]: !!title().argsClass,
+                              }}
+                            >
+                              {arg}
+                            </span>
+                          )}
+                        </For>
+                      </Show>
+                    </Show>
+                  </div>
+                  <Show when={!pending() && title().action}>
+                    <span data-slot="basic-tool-tool-action">{title().action}</span>
+                  </Show>
+                </div>
+              )}
+            </Match>
+            <Match when={true}>{node() as JSX.Element}</Match>{/* kilocode_change */}
+          </Switch>
+        </div>
+      </div>
+      {/* kilocode_change start */}
+      <Show
+        when={
+          (hasChildren() || hasDetails()) &&
+          !props.hideDetails &&
+          !props.locked &&
+          (!pending() || props.allowPendingToggle)
+        }
+      >
+        <Collapsible.Arrow />
+      </Show>
+      {/* kilocode_change end */}
+    </div>
+  )
+
+  return (
+    <Collapsible open={open()} onOpenChange={handleOpenChange} class="tool-collapsible">
+      <Show
+        when={props.triggerHref}
+        fallback={
+          <Collapsible.Trigger
+            data-hide-details={props.hideDetails ? "true" : undefined}
+            onClick={props.onTriggerClick}
+          >
+            {trigger()}
+          </Collapsible.Trigger>
+        }
+      >
+        {(href) => (
+          <Collapsible.Trigger
+            as="a"
+            href={href()}
+            data-hide-details={props.hideDetails ? "true" : undefined}
+            onClick={props.onTriggerClick}
+          >
+            {trigger()}
+          </Collapsible.Trigger>
+        )}
+      </Show>
+      <Show when={props.animated && hasChildren() && !props.hideDetails}>
+        <div
+          ref={contentRef}
+          data-slot="collapsible-content"
+          data-animated
+          style={{
+            height: initialOpen ? "auto" : "0px",
+            overflow: initialOpen ? "visible" : "hidden",
+          }}
+        >
+          <Show when={!props.defer || ready()}>{props.children}</Show>
+        </div>
+      </Show>
+      {/* kilocode_change start */}
+      <Show when={!props.animated && (hasChildren() || hasDetails()) && !props.hideDetails}>
+        <Collapsible.Content
+          ref={content}
+          onAnimationEnd={end}
+          data-deferred-height={state.restored ? "" : undefined}
+          style={{ "min-height": reserve() }}
+        >
+          <Show when={!props.defer || ready()}>{props.children}</Show>
+        </Collapsible.Content>
+      </Show>
+      {/* kilocode_change end */}
+    </Collapsible>
+  )
+}
+
+function label(input: Record<string, unknown> | undefined) {
+  const keys = ["description", "query", "url", "filePath", "path", "pattern", "name"]
+  return keys.map((key) => input?.[key]).find((value): value is string => typeof value === "string" && value.length > 0)
+}
+
+function args(input: Record<string, unknown> | undefined) {
+  if (!input) return []
+  const skip = new Set(["description", "query", "url", "filePath", "path", "pattern", "name"])
+  return Object.entries(input)
+    .filter(([key]) => !skip.has(key))
+    .flatMap(([key, value]) => {
+      if (typeof value === "string") return [`${key}=${value}`]
+      if (typeof value === "number") return [`${key}=${value}`]
+      if (typeof value === "boolean") return [`${key}=${value}`]
+      return []
+    })
+    .slice(0, 3)
+}
+
+export function GenericTool(props: {
+  tool: string
+  status?: string
+  hideDetails?: boolean
+  input?: Record<string, unknown>
+}) {
+  const i18n = useI18n()
+
+  return (
+    <BasicTool
+      icon="mcp"
+      status={props.status}
+      trigger={{
+        title: i18n.t("ui.basicTool.called", { tool: props.tool }),
+        subtitle: label(props.input),
+        args: args(props.input),
+      }}
+      hideDetails={props.hideDetails}
+    />
+  )
+}

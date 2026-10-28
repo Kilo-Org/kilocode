@@ -13,6 +13,7 @@ import Stats from "../feature-plugins/system/stats"
 import Latex from "@opencode/latex/plugin"
 import Merman from "@opencode/merman/plugin"
 import KiloTeams from "../kilocode/gateway" // kilocode_change - Kilo /teams command
+import KiloMarketplace from "../kilocode/marketplace" // kilocode_change(marketplace) - Kilo /marketplace command
 import KiloNews from "../kilocode/kilo-news" // kilocode_change - Kilo Gateway news on the home screen
 import KiloUsage from "../kilocode/usage" // kilocode_change(provider-usage) - Kilo /usage command
 import KiloSidebarPr from "../kilocode/plugins/sidebar-pr" // kilocode_change(plugin) - Kilo sidebar PR panel
@@ -37,6 +38,7 @@ export const builtins = [
   ...(process.env.OPENCODE_STORY ? [Storybook] : []),
   DiffViewer,
   KiloTeams, // kilocode_change
+  KiloMarketplace, // kilocode_change(marketplace)
   KiloNews, // kilocode_change
   KiloUsage, // kilocode_change(provider-usage)
   KiloSidebarPr, // kilocode_change(plugin)

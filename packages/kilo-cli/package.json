@@ -13,7 +13,8 @@
     "build": "bun run script/build.ts",
     "startup": "bun run script/startup.ts",
     "test": "bun test --timeout 30000",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "typecheck:tsc": "tsc --noEmit"
   },
   "dependencies": {
     "@babel/core": "7.29.7",
@@ -39,6 +40,7 @@
     "@types/babel__core": "7.20.5",
     "@types/bun": "catalog:",
     "@types/node": "catalog:",
-    "@typescript/native": "catalog:"
+    "@typescript/native": "catalog:",
+    "solid-js": "catalog:"
   }
 }

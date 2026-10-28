@@ -1,0 +1,186 @@
+import { Icon as Upstream, type IconProps as Props } from "@opencode-ai/ui/icon"
+import { Show, splitProps } from "solid-js"
+
+const icons: Record<string, { path: string; viewBox: string }> = {
+  "circle-x-outline": {
+    viewBox: "0 0 20 20",
+    path: `<path d="M7.5 7.5L12.5 12.5M12.5 7.5L7.5 12.5M18.3333 10C18.3333 14.6024 14.6024 18.3333 10 18.3333C5.39763 18.3333 1.66667 14.6024 1.66667 10C1.66667 5.39763 5.39763 1.66667 10 1.66667C14.6024 1.66667 18.3333 5.39763 18.3333 10Z" stroke="currentColor" stroke-linecap="square"/>`,
+  },
+  "pull-request": {
+    viewBox: "0 0 20 20",
+    // Stroked at 1.25 on the 20-unit grid (1px at 16px) to match the other outline icons.
+    path: `<circle cx="4.6875" cy="4.0625" r="1.875" stroke="currentColor" stroke-width="1.25"/><circle cx="4.6875" cy="15.9375" r="1.875" stroke="currentColor" stroke-width="1.25"/><circle cx="15.9375" cy="15.9375" r="1.875" stroke="currentColor" stroke-width="1.25"/><path d="M4.6875 5.9375V14.0625M15.9375 14.0625V6.25A2.5 2.5 0 0 0 13.4375 3.75H9.6875M11.5625 1.875L9.6875 3.75L11.5625 5.625" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>`,
+  },
+  "git-commit": {
+    viewBox: "0 0 20 20",
+    path: `<circle cx="10" cy="10" r="2.5" stroke="currentColor" stroke-width="1.25"/><path d="M1.875 10H7.5M12.5 10H18.125" stroke="currentColor" stroke-width="1.25" stroke-linecap="square"/>`,
+  },
+  "git-merge": {
+    viewBox: "0 0 20 20",
+    path: `<circle cx="5" cy="5" r="2.5" stroke="currentColor" stroke-width="1.25"/><circle cx="15" cy="15" r="2.5" stroke="currentColor" stroke-width="1.25"/><path d="M5 17.5V7.5A7.5 7.5 0 0 0 12.5 15" stroke="currentColor" stroke-width="1.25" stroke-linecap="square"/>`,
+  },
+  refresh: {
+    viewBox: "0 0 20 20",
+    path: `<path d="M17.0837 10.0003C17.0837 13.9123 13.9123 17.0837 10.0003 17.0837C6.08833 17.0837 2.91699 13.9123 2.91699 10.0003C2.91699 6.08833 6.08833 2.91699 10.0003 2.91699C12.3717 2.91699 14.4722 4.07428 15.7698 5.83366M15.7698 5.83366V2.91699M15.7698 5.83366H12.8532" stroke="currentColor" stroke-linecap="square"/>`,
+  },
+  memory: {
+    viewBox: "0 0 24 24",
+    path: `<path d="M2 7h4M2 12h4M2 17h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><rect width="16" height="20" x="4" y="2" rx="2" stroke="currentColor" stroke-width="1.5"/>`,
+  },
+  database: {
+    viewBox: "0 0 24 24",
+    path: `<ellipse cx="12" cy="5" rx="7" ry="3" stroke="currentColor" stroke-width="1.5"/><path d="M5 5v7c0 1.66 3.13 3 7 3s7-1.34 7-3V5M5 12v7c0 1.66 3.13 3 7 3s7-1.34 7-3v-7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>`,
+  },
+  extensions: {
+    viewBox: "0 0 20 20",
+    path: `<path d="M8.5 2.5h3v3h3v3h3v3h-3v3h-3v3h-3v-3h-3v-3h-3v-3h3v-3h3v-3Z" stroke="currentColor" stroke-width="1.25" stroke-linejoin="round"/>`,
+  },
+  "book-open-check": {
+    viewBox: "0 0 24 24",
+    path: `<path d="M12 21V7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="m16 12 2 2 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M22 6V4a1 1 0 0 0-1-1h-5a4 4 0 0 0-4 4 4 4 0 0 0-4-4H3a1 1 0 0 0-1 1v13a1 1 0 0 0 1 1h6a3 3 0 0 1 3 3 3 3 0 0 1 3-3h6a1 1 0 0 0 1-1v-1.3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>`,
+  },
+  coffee: {
+    viewBox: "0 0 24 24",
+    path: `<path d="M17 8h1a4 4 0 1 1 0 8h-1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M6 2v2M10 2v2M14 2v2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>`,
+  },
+  "coffee-filled": {
+    viewBox: "0 0 24 24",
+    path: `<path d="M17 8h1a4 4 0 1 1 0 8h-1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4Z" fill="currentColor"/><path d="M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M6 2v2M10 2v2M14 2v2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>`,
+  },
+  microphone: {
+    viewBox: "0 0 24 24",
+    path: `<rect x="9" y="3" width="6" height="11" rx="3" stroke="currentColor" stroke-width="1.5"/><path d="M5.5 10.5a6.5 6.5 0 0 0 13 0M12 17v4M8.5 21h7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>`,
+  },
+  "circuit-board": {
+    viewBox: "0 0 16 16",
+    path: `<path d="M12.5 1H3.5C2.121 1 1 2.121 1 3.5V12.5C1 13.879 2.121 15 3.5 15H12.5C13.879 15 15 13.879 15 12.5V3.5C15 2.121 13.879 1 12.5 1ZM6 6.5C6 6.775 5.775 7 5.5 7C5.225 7 5 6.775 5 6.5C5 6.225 5.225 6 5.5 6C5.775 6 6 6.225 6 6.5ZM12.5 14H6V11.5C6 11.225 6.225 11 6.5 11H9.092C9.299 11.581 9.849 12 10.5 12C11.327 12 12 11.327 12 10.5C12 9.673 11.327 9 10.5 9C9.849 9 9.299 9.419 9.092 10H6.5C5.673 10 5 10.673 5 11.5V14H3.5C2.673 14 2 13.327 2 12.5V3.5C2 2.673 2.673 2 3.5 2H5V5.092C4.419 5.299 4 5.849 4 6.5C4 7.327 4.673 8 5.5 8C6.327 8 7 7.327 7 6.5C7 5.849 6.581 5.299 6 5.092V2H12.5C13.327 2 14 2.673 14 3.5V6H10.908C10.701 5.419 10.151 5 9.5 5C8.673 5 8 5.673 8 6.5C8 7.327 8.673 8 9.5 8C10.151 8 10.701 7.581 10.908 7H14V12.5C14 13.327 13.327 14 12.5 14ZM10 10.5C10 10.225 10.225 10 10.5 10C10.775 10 11 10.225 11 10.5C11 10.775 10.775 11 10.5 11C10.225 11 10 10.775 10 10.5ZM10 6.5C10 6.775 9.775 7 9.5 7C9.225 7 9 6.775 9 6.5C9 6.225 9.225 6 9.5 6C9.775 6 10 6.225 10 6.5Z" fill="currentColor"/>`,
+  },
+  globe: {
+    viewBox: "0 0 20 20",
+    path: `<circle cx="10" cy="10" r="7" stroke="currentColor" stroke-width="1.25"/><path d="M3.25 10H16.75M10 3C12 4.875 13 7.2 13 10C13 12.8 12 15.125 10 17M10 3C8 4.875 7 7.2 7 10C7 12.8 8 15.125 10 17" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>`,
+  },
+  organization: {
+    viewBox: "0 0 16 16",
+    path: `<path d="M6.00195 4.00002C6.00195 2.89655 6.89649 2.00201 7.99995 2.00201C9.10342 2.00201 9.99796 2.89655 9.99796 4.00002C9.99796 5.10348 9.10342 5.99802 7.99995 5.99802C6.89649 5.99802 6.00195 5.10348 6.00195 4.00002ZM7.99995 3.00201C7.44877 3.00201 7.00195 3.44883 7.00195 4.00002C7.00195 4.5512 7.44877 4.99802 7.99995 4.99802C8.55114 4.99802 8.99796 4.5512 8.99796 4.00002C8.99796 3.44883 8.55114 3.00201 7.99995 3.00201ZM11 4.5C11 3.67157 11.6716 3 12.5 3C13.3284 3 14 3.67157 14 4.5C14 5.32843 13.3284 6 12.5 6C11.6716 6 11 5.32843 11 4.5ZM12.5 4C12.2239 4 12 4.22386 12 4.5C12 4.77614 12.2239 5 12.5 5C12.7761 5 13 4.77614 13 4.5C13 4.22386 12.7761 4 12.5 4ZM3.5 3C2.67157 3 2 3.67157 2 4.5C2 5.32843 2.67157 6 3.5 6C4.32843 6 5 5.32843 5 4.5C5 3.67157 4.32843 3 3.5 3ZM3 4.5C3 4.22386 3.22386 4 3.5 4C3.77614 4 4 4.22386 4 4.5C4 4.77614 3.77614 5 3.5 5C3.22386 5 3 4.77614 3 4.5ZM4.26756 6.99969C4.09739 7.29387 4 7.63541 4 7.99969L2 7.99969V10.5C2 11.3285 2.67157 12 3.5 12C3.71194 12 3.91361 11.9561 4.09639 11.8768C4.1705 12.2082 4.28572 12.524 4.43643 12.8187C4.14721 12.9356 3.83112 13 3.5 13C2.11929 13 1 11.8807 1 10.5V7.99969C1 7.44741 1.44772 6.99969 2 6.99969H4.26756ZM11.5636 12.8187C11.8528 12.9356 12.1689 13 12.5 13C13.8807 13 15 11.8807 15 10.5V7.99969C15 7.44741 14.5523 6.99969 14 6.99969H11.7324C11.9026 7.29387 12 7.63541 12 7.9997L14 7.99969V10.5C14 11.3285 13.3284 12 12.5 12C12.2881 12 12.0864 11.9561 11.9036 11.8768C11.8295 12.2082 11.7143 12.524 11.5636 12.8187ZM6 6.99969C5.44772 6.99969 5 7.44741 5 7.99969V11C5 12.6569 6.34315 14 8 14C9.65685 14 11 12.6569 11 11V7.99969C11 7.44741 10.5523 6.99969 10 6.99969H6ZM6 7.99969L10 7.99969V11C10 12.1046 9.10457 13 8 13C6.89543 13 6 12.1046 6 11V7.99969Z" fill="currentColor"/>`,
+  },
+  "thumbs-up": {
+    viewBox: "0 0 20 20",
+    path: `<path d="M1 8.25a1.25 1.25 0 1 1 2.5 0v7.5a1.25 1.25 0 1 1-2.5 0v-7.5ZM11 3V1.7c0-.268.14-.526.395-.607A2 2 0 0 1 14 3c0 .995-.182 1.948-.514 2.826-.204.54.166 1.174.744 1.174h2.52c1.243 0 2.261 1.01 2.146 2.247a23.864 23.864 0 0 1-1.341 5.974C17.153 16.323 16.072 17 14.9 17h-3.192a3 3 0 0 1-1.341-.317l-2.734-1.366A3 3 0 0 0 6.292 15H5V8h.963c.685 0 1.258-.483 1.612-1.068a4.011 4.011 0 0 1 2.166-1.73c.432-.143.853-.386 1.011-.814.16-.432.248-.9.248-1.388Z" stroke="currentColor" fill="none" stroke-linejoin="round"/>`,
+  },
+  "thumbs-down": {
+    viewBox: "0 0 20 20",
+    path: `<path d="M18.905 12.75a1.25 1.25 0 0 1-2.5 0v-7.5a1.25 1.25 0 0 1 2.5 0v7.5ZM8.905 17v1.3c0 .268-.14.526-.395.607A2 2 0 0 1 5.905 17c0-.995.182-1.948.514-2.826.204-.54-.166-1.174-.744-1.174h-2.52c-1.243 0-2.261-1.01-2.146-2.247a23.864 23.864 0 0 1 1.341-5.974C2.547 3.677 3.628 3 4.8 3h3.192a3 3 0 0 1 1.341.317l2.734 1.366A3 3 0 0 0 13.408 5H15v7h-.963c-.685 0-1.258.483-1.612 1.068a4.011 4.011 0 0 1-2.166 1.73c-.432.143-.853.386-1.011.814-.16.432-.248.9-.248 1.388Z" stroke="currentColor" fill="none" stroke-linejoin="round"/>`,
+  },
+  "thumbs-up-filled": {
+    viewBox: "0 0 20 20",
+    path: `<path d="M1 8.25a1.25 1.25 0 1 1 2.5 0v7.5a1.25 1.25 0 1 1-2.5 0v-7.5ZM11 3V1.7c0-.268.14-.526.395-.607A2 2 0 0 1 14 3c0 .995-.182 1.948-.514 2.826-.204.54.166 1.174.744 1.174h2.52c1.243 0 2.261 1.01 2.146 2.247a23.864 23.864 0 0 1-1.341 5.974C17.153 16.323 16.072 17 14.9 17h-3.192a3 3 0 0 1-1.341-.317l-2.734-1.366A3 3 0 0 0 6.292 15H5V8h.963c.685 0 1.258-.483 1.612-1.068a4.011 4.011 0 0 1 2.166-1.73c.432-.143.853-.386 1.011-.814.16-.432.248-.9.248-1.388Z" fill="currentColor"/>`,
+  },
+  "thumbs-down-filled": {
+    viewBox: "0 0 20 20",
+    path: `<path d="M18.905 12.75a1.25 1.25 0 0 1-2.5 0v-7.5a1.25 1.25 0 0 1 2.5 0v7.5ZM8.905 17v1.3c0 .268-.14.526-.395.607A2 2 0 0 1 5.905 17c0-.995.182-1.948.514-2.826.204-.54-.166-1.174-.744-1.174h-2.52c-1.243 0-2.261-1.01-2.146-2.247a23.864 23.864 0 0 1 1.341-5.974C2.547 3.677 3.628 3 4.8 3h3.192a3 3 0 0 1 1.341.317l2.734 1.366A3 3 0 0 0 13.408 5H15v7h-.963c-.685 0-1.258.483-1.612 1.068a4.011 4.011 0 0 1-2.166 1.73c-.432.143-.853.386-1.011.814-.16.432-.248.9-.248 1.388Z" fill="currentColor"/>`,
+  },
+  "files-expand": {
+    viewBox: "0 0 16 16",
+    path: `<path d="M15 6V11C15 13.21 13.21 15 11 15H6C5.26 15 4.62 14.6 4.27 14H11C12.65 14 14 12.65 14 11V4.27C14.6 4.62 15 5.26 15 6ZM11 13H4C2.897 13 2 12.103 2 11V4C2 2.897 2.897 2 4 2H11C12.103 2 13 2.897 13 4V11C13 12.103 12.103 13 11 13ZM4 12H11C11.551 12 12 11.552 12 11V4C12 3.449 11.551 3 11 3H4C3.449 3 3 3.449 3 4V11C3 11.552 3.449 12 4 12ZM9.5 7H8V5.5C8 5.224 7.776 5 7.5 5C7.224 5 7 5.224 7 5.5V7H5.5C5.224 7 5 7.224 5 7.5C5 7.776 5.224 8 5.5 8H7V9.5C7 9.776 7.224 10 7.5 10C7.776 10 8 9.776 8 9.5V8H9.5C9.776 8 10 7.776 10 7.5C10 7.224 9.776 7 9.5 7Z" fill="currentColor"/>`,
+  },
+  "files-collapse": {
+    viewBox: "0 0 16 16",
+    path: `<path d="M14 4.27051C14.5999 4.62053 15 5.26009 15 6V11C15 13.21 13.21 15 11 15H6C5.26009 15 4.62053 14.5999 4.27051 14H11C12.65 14 14 12.65 14 11V4.27051Z" fill="currentColor"/><path d="M9.5 7C9.776 7 10 7.224 10 7.5C10 7.776 9.776 8 9.5 8H5.5C5.224 8 5 7.776 5 7.5C5 7.224 5.224 7 5.5 7H9.5Z" fill="currentColor"/><path fill-rule="evenodd" clip-rule="evenodd" d="M11 2C12.103 2 13 2.897 13 4V11C13 12.103 12.103 13 11 13H4C2.897 13 2 12.103 2 11V4C2 2.897 2.897 2 4 2H11ZM4 3C3.449 3 3 3.449 3 4V11C3 11.552 3.449 12 4 12H11C11.551 12 12 11.552 12 11V4C12 3.449 11.551 3 11 3H4Z" fill="currentColor"/>`,
+  },
+  reload: {
+    viewBox: "0 0 24 24",
+    path: `<path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/><path d="M21 3v5h-5" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 21v-5h5" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/>`,
+  },
+  gauge: {
+    viewBox: "0 0 24 24",
+    path: `<path d="M12 14L9 10M12 14L15 10M21 15C21 18.866 17.866 22 14 22H10C6.134 22 3 18.866 3 15V9C3 5.134 6.134 2 10 2H14C17.866 2 21 5.134 21 9V15Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>`,
+  },
+  target: {
+    viewBox: "0 0 20 20",
+    path: `<circle cx="10" cy="10" r="7.5" stroke="currentColor"/><circle cx="10" cy="10" r="4.5" stroke="currentColor"/><circle cx="10" cy="10" r="1.5" fill="currentColor"/>`,
+  },
+  clock: {
+    viewBox: "0 0 20 20",
+    path: `<circle cx="10" cy="10" r="7" stroke="currentColor" stroke-width="1.25"/><path d="M10 5.75V10L13.25 11.75" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>`,
+  },
+  local: {
+    viewBox: "0 0 20 20",
+    path: `<rect x="2.5" y="3.5" width="15" height="10" rx="1" stroke="currentColor"/><path d="M6 16.5H14" stroke="currentColor" stroke-linecap="square"/><path d="M10 13.5V16.5" stroke="currentColor"/>`,
+  },
+  user: {
+    viewBox: "0 0 20 20",
+    path: `<circle cx="10" cy="6.5" r="3" stroke="currentColor" stroke-width="1.25"/><path d="M4 17c.5-3 2.5-4.5 6-4.5s5.5 1.5 6 4.5" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>`,
+  },
+  "wand-sparkles": {
+    viewBox: "0 0 24 24",
+    path: `<path d="m15 4 1 3 3 1-3 1-1 3-1-3-3-1 3-1 1-3ZM19 13l.7 2.3L22 16l-2.3.7L19 19l-.7-2.3L16 16l2.3-.7L19 13ZM4 20 14 10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>`,
+  },
+  send: {
+    viewBox: "0 0 16 16",
+    path: `<path d="M1.5 1.5 14.5 8 1.5 14.5V9L10 8 1.5 7V1.5Z" fill="currentColor"/>`,
+  },
+  reply: {
+    viewBox: "0 0 20 20",
+    path: `<path d="m9 16-5-5 5-5M4 11h10a4 4 0 0 1 4 4v2" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>`,
+  },
+  smile: {
+    viewBox: "0 0 20 20",
+    path: `<circle cx="10" cy="10" r="7.5" stroke="currentColor" stroke-width="1.25"/><path d="M7 8h.01M13 8h.01M7 12c.9 1.2 2 1.8 3 1.8s2.1-.6 3-1.8" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>`,
+  },
+  pin: {
+    viewBox: "0 0 24 24",
+    path: `<path d="M9.5 14.5L3 21" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M5.00007 9.48528L14.1925 18.6777L15.8895 16.9806L15.4974 13.1944L21.0065 8.5211L15.1568 2.67141L10.4834 8.18034L6.69713 7.78823L5.00007 9.48528Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>`,
+  },
+  "pin-filled": {
+    viewBox: "0 0 24 24",
+    path: `<path d="M9.5 14.5L3 21" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M5.00007 9.48528L14.1925 18.6777L15.8895 16.9806L15.4974 13.1944L21.0065 8.5211L15.1568 2.67141L10.4834 8.18034L6.69713 7.78823L5.00007 9.48528Z" fill="currentColor" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>`,
+  },
+  "warning-filled": {
+    viewBox: "0 0 20 20",
+    path: `<path fill-rule="evenodd" clip-rule="evenodd" d="M10 2.5L18.125 16.25H1.875L10 2.5ZM9.375 7.5H10.625V12H9.375V7.5ZM9.375 13.125H10.625V14.375H9.375V13.125Z" fill="currentColor"/>`,
+  },
+}
+
+type Name = keyof typeof icons
+
+export interface IconProps extends Omit<Props, "name"> {
+  name: Props["name"] | Name
+}
+
+export function Icon(props: IconProps) {
+  const [local, others] = splitProps(props, ["name", "size", "class", "classList"])
+  // Read the table reactively: `name` can switch between a kilo-ui icon and an
+  // upstream icon after mount (for example PR badge status changes).
+  const icon = () => icons[local.name as Name]
+  return (
+    <Show
+      when={icon()}
+      fallback={
+        <Upstream
+          {...others}
+          name={local.name as Props["name"]}
+          size={local.size}
+          class={local.class}
+          classList={local.classList}
+        />
+      }
+    >
+      {(entry) => (
+        <div data-component="icon" data-size={local.size || "normal"}>
+          <svg
+            classList={{
+              ...local.classList,
+              [local.class ?? ""]: !!local.class,
+            }}
+            data-slot="icon-svg"
+            fill="none"
+            viewBox={entry().viewBox}
+            innerHTML={entry().path}
+            aria-hidden="true"
+            {...others}
+          />
+        </div>
+      )}
+    </Show>
+  )
+}

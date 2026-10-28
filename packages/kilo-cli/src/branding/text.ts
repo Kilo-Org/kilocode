@@ -42,19 +42,59 @@ export const replacements = {
     ["Uninstall OpenCode", "Uninstall Kilo"],
     ["shared by OpenCode versions and channels", "shared by Kilo versions and channels"],
   ],
-  "cli/src/services/update-preflight.tsx": [["Loading OpenCode", "Loading Kilo"], product],
+  "cli/src/services/update-preflight.tsx": [
+    ["Loading OpenCode", "Loading Kilo"],
+    product,
+    ['import { go } from "@opencode/tui/logo"', 'import { compact, palette } from "@opencode/tui/logo"'],
+    ["const monogram = go.right.slice(1)", "const monogram = compact"],
+    ["const monogramRamp = ramp(colors.muted, colors.accent)", "const monogramColor = RGBA.fromHex(palette.ink)"],
+    [
+      'const monogramInk = createMemo(() =>\n    props.outcome() === "success" ? shade(monogramRamp, smoothstep(headerFade.progress())) : colors.muted,\n  )',
+      "const monogramInk = () => monogramColor",
+    ],
+    [
+      '<box flexDirection="column">\n      <For each={monogram}>',
+      '<box flexDirection="column" flexShrink={0} width={Math.max(...monogram.map((line) => Bun.stringWidth(line)))}>\n      <For each={monogram}>',
+    ],
+  ],
+  "tui/src/component/logo.tsx": [
+    ['import { go, logo } from "../logo"', 'import { compact, logo, widths, palette } from "../logo"'],
+    ['import { useTheme } from "../context/theme"', 'import { useTheme, useThemes } from "../context/theme"'],
+    [
+      "const theme = useTheme()",
+      'const theme = useTheme()\n  const themes = useThemes()\n  const ink = () => RGBA.fromHex(themes.mode() === "light" ? palette.dim : palette.ink)',
+    ],
+    [
+      "const shadow = tint(theme.background.base, fg, 0.25)",
+      'const shadow = tint(theme.background.base, fg, themes.mode() === "light" ? 0.75 : 0.25)',
+    ],
+    ["theme.text.muted, false", "ink(), false"],
+    ["theme.text.base, true", "ink(), false"],
+    ["dimensions().width < 22", "dimensions().width < widths.split + 2"],
+    ["dimensions().width < 44", "dimensions().width < widths.full + 4"],
+    ["go.right.slice(1)", "compact"],
+    ["logo.left.slice(1)", "logo.left"],
+  ],
   "tui/src/util/error.ts": [commands, ["opencode.json", KiloConfigFiles.newFile]],
   "tui/src/util/error-details.ts": [
     ["this OpenCode component", "this Kilo component"],
     ["global OpenCode configuration", "global Kilo configuration"],
   ],
-  "tui/src/util/presentation.ts": [commands],
+  "tui/src/util/presentation.ts": [
+    commands,
+    ["${bold}opencode${reset}", "${bold}kilo2${reset}"],
+    ['import { logo } from "../logo"', 'import { compact, logo, widths } from "../logo"'],
+    [
+      "  return logo.left.map((line, index) => {\n    const left",
+      '  if ((process.stdout.columns ?? widths.full + pad.length) < widths.full + pad.length)\n    return compact.map((line) => `${pad}${draw(line, dim, "\\x1b[38;5;235m", "\\x1b[48;5;235m")}`)\n\n  return logo.left.map((line, index) => {\n    const left',
+    ],
+  ],
   "tui/src/attention.ts": [product],
   "tui/src/app.tsx": [
     product,
     title,
     ["Update OpenCode", "Kilo update instructions"],
-    ["https://opencode.ai/docs", "https://kilo.ai/docs"],
+    ["https://opencode.ai/v2/docs", "https://kilo.ai/docs"],
   ],
   "tui/src/mini/runtime.lifecycle.ts": [product, title],
   "tui/src/routes/session/permission.tsx": [
@@ -65,6 +105,10 @@ export const replacements = {
   "tui/src/mini/splash.ts": [commands],
   "tui/src/component/dialog-update.tsx": [
     ["Updating OpenCode", "Updating Kilo"],
+    [
+      "Update successful! Restart closes OpenCode, then run opencode to use the new version.",
+      "Update successful! Restart closes Kilo, then run kilo2 to use the new version.",
+    ],
     ["restart OpenCode", "restart Kilo"],
     ["Installing OpenCode", "Installing Kilo"],
     ["OpenCode is already up to date", "Kilo is already up to date"],
@@ -95,10 +139,13 @@ export const replacements = {
 export function transform(file: string, source: string) {
   const key = file.replaceAll("\\", "/").split("/packages/").at(-1) ?? file
   if (!Object.hasOwn(replacements, key)) return source
-  const branded = replacements[key as keyof typeof replacements].reduce((text, [from, to]) => {
-    if (!text.includes(from)) throw new Error(`Kilo branding no longer matches ${key}: ${from}`)
-    return text.replaceAll(from, to)
-  }, source)
+  const branded = replacements[key as keyof typeof replacements].reduce(
+    (text, [from, to]) => {
+      if (!text.includes(from)) throw new Error(`Kilo branding no longer matches ${key}: ${from}`)
+      return text.replaceAll(from, to)
+    },
+    source.replaceAll("\r\n", "\n"),
+  )
   if (key !== "core/src/oauth/page.ts") return branded
   if (!/const WORDMARK = `<svg[\s\S]*?<\/svg>`/.test(branded))
     throw new Error("Kilo OAuth wordmark no longer matches the upstream page")

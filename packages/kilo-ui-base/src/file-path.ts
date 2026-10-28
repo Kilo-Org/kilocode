@@ -1,0 +1,118 @@
+// kilocode_change - new file
+
+/**
+ * Strip an optional :line[-endline][:col] suffix from a code span.
+ * Returns the candidate file path and optional line/column numbers.
+ */
+export function extractSuffix(text: string): { candidate: string; line?: number; column?: number } {
+  // Try :line:col first, then :line (with optional -endline range)
+  const m3 = /^(.+):(\d+)(?:-\d+)?:(\d+)$/.exec(text)
+  if (m3) return { candidate: m3[1], line: +m3[2], column: +m3[3] }
+  const m2 = /^(.+):(\d+)(?:-\d+)?$/.exec(text)
+  if (m2) return { candidate: m2[1], line: +m2[2] }
+  return { candidate: text }
+}
+
+/**
+ * Normalize a candidate path for filesystem validation.
+ * Ensures the path has a ./ prefix if it's a bare relative path,
+ * so the extension can stat-check it against the workspace root.
+ */
+export function normalizeCandidatePath(path: string): string {
+  if (path.startsWith("./") || path.startsWith("../") || path.startsWith("/")) return path
+  // Windows absolute paths (C:\...) — leave as-is
+  if (/^[a-zA-Z]:[/\\]/.test(path)) return path
+  // Windows UNC paths (\\server\...) — leave as-is
+  if (path.startsWith("\\\\")) return path
+  return `./${path}`
+}
+
+// Matches a URI scheme but NOT a Windows drive letter (single char followed by colon).
+const SCHEME_RE = /^[a-zA-Z][a-zA-Z0-9+.-]+:/
+const EXTENSIONLESS_FILES = new Set(["Dockerfile", "LICENSE", "Makefile"])
+
+/**
+ * Strict heuristic for a markdown-link href (`[text](href)`). Link hrefs are
+ * decided at render time and get NO filesystem check, so a false positive would
+ * hijack a real navigation link (e.g. a `docs/getting-started` SPA route) and
+ * try to open a nonexistent file. Keep this conservative: only a basename with
+ * an extension or a known extensionless filename qualifies.
+ */
+export function looksLikeFilePath(path: string): boolean {
+  const name = path.split(/[\\/]/).pop() ?? path
+  return name.includes(".") || EXTENSIONLESS_FILES.has(name)
+}
+
+// Code punctuation that shows up in expressions but never in a bare file path,
+// so a span containing any of these is prose/code, not a file reference. Quotes
+// are intentionally omitted so escapeAttribute still guards the rare path with a
+// stray quote rather than the span being silently dropped.
+const NON_PATH_CHAR = /[()[\]{}<>;=,\s]/
+
+/**
+ * Permissive heuristic for an inline code span. Unlike a link href, a code-span
+ * candidate IS validated against the filesystem afterward, so being liberal here
+ * is safe: a non-file like `useState` is probed once and demoted back to plain
+ * code. This lets extensionless files (`install`, `run-script`, `configure`) and
+ * separator paths become clickable, which a strict "must have an extension" rule
+ * would miss. Spans that are empty or contain code punctuation (`useState()`,
+ * `arr[i]`, `a = b`) are rejected up front so the obvious non-paths never probe.
+ * The extra non-file probes this admits are deduped/batched and cached as
+ * bounded negatives (see file-link-validator.ts) so they don't evict confirmed
+ * files, and each candidate is only probed once its streamed path settles (see
+ * the per-element debounce in message-part.tsx) to cap volume.
+ */
+export function looksLikeCandidate(path: string): boolean {
+  return !!path && !NON_PATH_CHAR.test(path)
+}
+
+/**
+ * Escape a string for safe interpolation into a double-quoted HTML attribute.
+ * Candidate paths come from raw model output, so escaping prevents a value
+ * containing `"` (or `&`/`<`/`>`) from breaking out of the attribute —
+ * defense-in-depth alongside the DOMPurify pass the markdown already runs.
+ */
+export function escapeAttribute(value: string): string {
+  return value.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+}
+
+/**
+ * Extract a file path (with optional line/column) from a markdown link href,
+ * or return undefined when the href is a URL, anchor, scheme, or otherwise
+ * not a file reference.
+ *
+ * Strips `#fragment` and `?query` suffixes, then parses an optional
+ * `:line` or `:line:column` suffix from the remaining path.
+ */
+export function extractFilePathFromHref(href: string): { path: string; line?: number; column?: number } | undefined {
+  if (!href) return undefined
+  // Handle file:// URLs — extract the path component and decode it
+  if (href.startsWith("file://")) {
+    try {
+      const url = new URL(href)
+      const decoded = decodeURIComponent(url.pathname)
+      if (!decoded) return undefined
+      // On Windows, file:///C:/foo gives pathname=/C:/foo — strip the leading slash
+      // so the result is a valid Windows absolute path (C:/foo).
+      const c1 = decoded.charCodeAt(1)
+      const isWindowsDrive =
+        decoded.length >= 4 &&
+        decoded.charCodeAt(0) === 47 /* / */ &&
+        decoded.charCodeAt(2) === 58 /* : */ &&
+        ((c1 >= 65 && c1 <= 90) /* A-Z */ || (c1 >= 97 && c1 <= 122)) /* a-z */
+      return { path: isWindowsDrive ? decoded.slice(1) : decoded }
+    } catch {
+      return undefined
+    }
+  }
+  // Skip actual URLs and non-file schemes (mailto:, tel:, etc.)
+  if (href.includes("://") || SCHEME_RE.test(href)) return undefined
+  // Skip pure anchors
+  if (href.startsWith("#")) return undefined
+  // Strip fragment and query before treating as file path
+  const cleaned = href.replace(/[#?].*$/, "")
+  if (!cleaned) return undefined
+  const { candidate, line, column } = extractSuffix(cleaned)
+  if (!looksLikeFilePath(candidate)) return undefined
+  return { path: candidate, line, column }
+}

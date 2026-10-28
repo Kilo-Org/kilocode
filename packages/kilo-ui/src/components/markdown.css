@@ -1,0 +1,66 @@
+[data-component="markdown"] {
+  .shiki {
+    font-size: var(--font-size-base);
+    margin: 0rem;
+  }
+
+  /* Headings: Same size, distinguished by color and spacing */
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-size: var(--font-size-base);
+    margin-top: 0;
+  }
+
+  hr {
+    margin: 0;
+  }
+
+  pre {
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-weak-base) transparent;
+
+    &::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    &::-webkit-scrollbar-corner {
+      background: transparent;
+    }
+
+    &::-webkit-scrollbar-button {
+      display: none;
+      width: 0;
+      height: 0;
+    }
+
+    &::-webkit-scrollbar-thumb {
+      background: var(--border-weak-base);
+      border-radius: 4px;
+
+      &:hover {
+        background: var(--border-strong-base);
+      }
+    }
+  }
+
+  [data-component="markdown-code"] {
+    background: var(--background-stronger);
+    margin-bottom: 1rem;
+  }
+}
+
+[data-browser-links="true"] a[href^="http"]::before {
+  content: "";
+  display: inline-block;
+  width: 0.95em;
+  height: 0.95em;
+  margin-inline-end: 0.3em;
+  vertical-align: -0.15em;
+  background-color: currentColor;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='10'/%3E%3Cpath d='M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20'/%3E%3Cpath d='M2 12h20'/%3E%3C/svg%3E")
+    center / contain no-repeat;
+}
