@@ -1,12 +1,12 @@
 import { expect, test } from "bun:test"
-import { mkdtemp, rm } from "node:fs/promises"
+import { mkdir, mkdtemp, rm } from "node:fs/promises"
 import os from "node:os"
 import path from "node:path"
 import { KiloConfigFiles } from "@opencode/util/kilocode/config/files"
 import { createSolidTransformPlugin } from "@opentui/solid/bun-plugin"
 import { RGBA, TextAttributes } from "@opentui/core"
 import { brandingPlugin } from "../src/branding/plugin"
-import { KiloBranding } from "../src/branding/text"
+import { KiloBranding } from "../src/branding/transform"
 import { KiloLogo } from "../src/branding/logo-art"
 import { logo, go } from "../../tui/src/logo"
 import { createPluginRuntimePlugin } from "../script/plugin-runtime"
@@ -36,6 +36,184 @@ test("branding is independent of LF or CRLF checkouts", async () => {
   }
 })
 
+test("brands new display wording without changing identifiers or provider names", () => {
+  const source = `import { OpenCode } from "@opencode/client"
+const id = "opencode"
+const schema = "https://opencode.ai/config.json"
+const options = { description: "OpenCode has a new feature", id: "OpenCode" }
+const link = { description: "See https://example.com/opencode.json" }
+const view = <box><text>Start OpenCode now</text><text>OpenCode Go is available</text><text>OpenCode Zen is available</text><input placeholder="Ask OpenCode" /></box>
+const call = OpenCode.make({ title: "OpenCode Console" })
+`
+  const branded = KiloBranding.transform("/repo/packages/tui/src/component/new-view.tsx", source)
+  expect(branded).toContain('description: "Kilo has a new feature"')
+  expect(branded).toContain(">Start Kilo now</text>")
+  expect(branded).toContain('placeholder="Ask Kilo"')
+  expect(branded).toContain('id: "OpenCode"')
+  expect(branded).toContain('const id = "opencode"')
+  expect(branded).toContain('"https://opencode.ai/config.json"')
+  expect(branded).toContain('"See https://example.com/opencode.json"')
+  expect(branded).toContain('from "@opencode/client"')
+  expect(branded).toContain("OpenCode Go is available")
+  expect(branded).toContain("OpenCode Zen is available")
+  expect(branded).toContain('title: "OpenCode Console"')
+})
+
+test("changes only approved display calls and arguments", () => {
+  const source = `import { log } from "@clack/prompts"
+cache.write("OpenCode token", "OpenCode value")
+cache.write("OpenCode key", { description: "OpenCode data" })
+client.warn("OpenCode input")
+log.info("OpenCode is ready", { message: "OpenCode metadata" })
+process.stderr.write("OpenCode is ready")
+process.stderr.write(cache.read("OpenCode token"))
+function example(process) { process.stderr.write("OpenCode input") }
+function another(log) { log.info("OpenCode data") }
+function epilogue() { cache.write("OpenCode token"); return "finished" }
+const DEFAULT_TITLE = cache.read("OpenCode token")
+const view = <text placeholder={cache.read("OpenCode token")}>Ready</text>
+`
+  const result = KiloBranding.transform("/repo/packages/tui/src/new-view.tsx", source)
+  expect(result).toContain('cache.write("OpenCode token", "OpenCode value")')
+  expect(result).toContain('cache.write("OpenCode key", { description: "OpenCode data" })')
+  expect(result).toContain('client.warn("OpenCode input")')
+  expect(result).toContain('log.info("Kilo is ready", { message: "OpenCode metadata" })')
+  expect(result).toContain('process.stderr.write("Kilo is ready")')
+  expect(result).toContain('process.stderr.write(cache.read("OpenCode token"))')
+  expect(result).toContain('function example(process) { process.stderr.write("OpenCode input") }')
+  expect(result).toContain('function another(log) { log.info("OpenCode data") }')
+  expect(result).toContain('function epilogue() { cache.write("OpenCode token"); return "finished" }')
+  expect(result).toContain('const DEFAULT_TITLE = cache.read("OpenCode token")')
+  expect(result).toContain('placeholder={cache.read("OpenCode token")}')
+})
+
+test("brands rendered expression branches without branding predicates or inputs", () => {
+  const source =
+    'const view = <text>{status === "OpenCode" ? `Hello OpenCode ${name}` : "Try OpenCode"}{cache.read("OpenCode token")}</text>'
+  const result = KiloBranding.transform("/repo/packages/tui/src/new-view.tsx", source)
+  expect(result).toContain('status === "OpenCode"')
+  expect(result).toContain("`Hello Kilo ${name}`")
+  expect(result).toContain('"Try Kilo"')
+  expect(result).toContain('cache.read("OpenCode token")')
+})
+
+test("does not brand predicates, lookup keys or data computation arguments", () => {
+  const source = `import { log } from "@clack/prompts"
+const first = { description: kind === "OpenCode" ? "Yes" : "No" }
+const second = { description: records["OpenCode"] }
+const third = { description: kind === "OpenCode" ? "OpenCode selected" : "OpenCode fallback" }
+const fourth = { description: records?.["OpenCode"] ?? "OpenCode fallback" }
+const fifth = { description: format("OpenCode") }
+const sixth = { description: \`OpenCode result: \${format("OpenCode")}\` }
+const input = <input placeholder={kind === "OpenCode" ? "Ask OpenCode" : records["OpenCode"]} />
+log.info(kind === "OpenCode" ? "OpenCode selected" : records["OpenCode"])
+process.stdout.write([kind === "OpenCode" ? "OpenCode selected" : records["OpenCode"]].join(""))
+`
+  const result = KiloBranding.transform("/repo/packages/tui/src/new-view.tsx", source)
+  expect(result).toContain('description: kind === "OpenCode" ? "Yes" : "No"')
+  expect(result).toContain('description: records["OpenCode"]')
+  expect(result).toContain('description: kind === "OpenCode" ? "Kilo selected" : "Kilo fallback"')
+  expect(result).toContain('description: records?.["OpenCode"] ?? "Kilo fallback"')
+  expect(result).toContain('description: format("OpenCode")')
+  expect(result).toContain('description: `Kilo result: ${format("OpenCode")}`')
+  expect(result).toContain('placeholder={kind === "OpenCode" ? "Ask Kilo" : records["OpenCode"]}')
+  expect(result).toContain('log.info(kind === "OpenCode" ? "Kilo selected" : records["OpenCode"])')
+  expect(result).toContain(
+    'process.stdout.write([kind === "OpenCode" ? "Kilo selected" : records["OpenCode"]].join(""))',
+  )
+})
+
+test("brands mixed prose while preserving URLs and provider names", () => {
+  const source = String.raw`const item = { description: "OpenCode, OpenCode Go and OpenCode Zen: see https://opencode.ai/opencode.json and https:\/\/example.com/opencode.json for OpenCode Console at opencode.ai" }`
+  const result = KiloBranding.transform("/repo/packages/tui/src/new-view.ts", source)
+  expect(result).toContain(
+    String.raw`"Kilo, OpenCode Go and OpenCode Zen: see https://opencode.ai/opencode.json and https:\/\/example.com/opencode.json for OpenCode Console at opencode.ai"`,
+  )
+})
+
+test("brands mini, pairing and crash display contexts", async () => {
+  const files = [
+    "tui/src/mini/splash.ts",
+    "cli/src/commands/handlers/pair.ts",
+    "tui/src/component/dialog-update.tsx",
+    "tui/src/component/error-component.tsx",
+  ]
+  const results = await Promise.all(
+    files.map(async (file) => {
+      const filename = path.join(repo, "packages", file)
+      return KiloBranding.transform(filename, await Bun.file(filename).text())
+    }),
+  )
+  expect(results[0]).toContain("`kilo2 mini -s ${meta.session_id}`")
+  expect(results[1]).toContain("run `kilo2 service set hostname 0.0.0.0`")
+  expect(results[1]).toContain("run `kilo2 pair`")
+  expect(results[2]).toContain("`Installing Kilo ${current.version}…`")
+  expect(results[3]).toContain("Reported automatically from the Kilo crash screen")
+  expect(results[3]).toContain("The Kilo TUI crashed with an unexpected error")
+  expect(results[3]).toContain('url.searchParams.set("opencode-version", version)')
+  expect(results[3]).toContain("https://github.com/Kilo-Org/kilocode/issues/new?template=bug-report.yml")
+})
+
+test("selects update and ACP semantics independently of display wording", async () => {
+  const commandsFile = path.join(repo, "packages/cli/src/commands/commands.ts")
+  const commands = (await Bun.file(commandsFile).text()).replace(
+    "Upgrade OpenCode to the latest or a specific version",
+    "Install a future OpenCode release",
+  )
+  expect(KiloBranding.transform(commandsFile, commands)).toContain("Show manual Kilo update instructions")
+  const appFile = path.join(repo, "packages/tui/src/app.tsx")
+  const app = (await Bun.file(appFile).text()).replace("Update OpenCode", "Install OpenCode updates")
+  const brandedApp = KiloBranding.transform(appFile, app)
+  expect(brandedApp).toContain("Kilo update instructions")
+  expect(brandedApp).toContain("https://kilo.ai/docs")
+  const acpFile = path.join(repo, "packages/cli/src/acp/service.ts")
+  const acp = (await Bun.file(acpFile).text())
+    .replace("Login with opencode", "Sign in with opencode now")
+    .replace('agentInfo: { name: "OpenCode"', 'agentInfo: { name: "OpenCode Agent"')
+  const brandedAcp = KiloBranding.transform(acpFile, acp)
+  expect(brandedAcp).toContain('name: "Sign in with Kilo now"')
+  expect(brandedAcp).toContain('agentInfo: { name: "Kilo Agent"')
+  expect(brandedAcp).toContain('command: "kilo2"')
+  expect(brandedAcp).toContain('const AuthMethodID = "opencode-login"')
+  const statsFile = path.join(repo, "packages/tui/src/feature-plugins/system/stats.tsx")
+  const stats = (await Bun.file(statsFile).text())
+    .replace("opencode / stats", "opencode / usage")
+    .replace(">opencode.ai<", ">Visit opencode.ai today<")
+  const brandedStats = KiloBranding.transform(statsFile, stats)
+  expect(brandedStats).toContain("kilo2 / usage")
+  expect(brandedStats).toContain("Visit kilo.ai today")
+})
+
+for (const hosted of [false, true]) {
+  test(`new source and compiled modules ${hosted ? "use Kilo" : "keep upstream branding"}`, async () => {
+    await using root = await temporary()
+    const directory = path.join(root.path, "packages/tui/src")
+    await mkdir(directory, { recursive: true })
+    const filename = path.join(directory, "new-branding.ts")
+    await Bun.write(
+      filename,
+      'const cache = { write: (key, value) => [key, value] }; const stored = cache.write("OpenCode token", "OpenCode value"); const item = { description: "OpenCode has another feature", id: "opencode", stored }; console.log(JSON.stringify(item))',
+    )
+    const preload = path.join(repo, "packages/kilo-cli/src/branding/preload.ts")
+    const source = await run([process.execPath, ...(hosted ? ["--preload", preload] : []), filename], root.path, false)
+    const outfile = path.join(root.path, "new-branding")
+    const built = await Bun.build({
+      entrypoints: [filename],
+      plugins: hosted ? [brandingPlugin] : [],
+      compile: { outfile, autoloadBunfig: false, autoloadDotenv: false },
+    })
+    expect(built.success, built.logs.map(String).join("\n")).toBe(true)
+    const compiled = await run([outfile], root.path, false)
+    const expected = {
+      description: `${hosted ? "Kilo" : "OpenCode"} has another feature`,
+      id: "opencode",
+      stored: ["OpenCode token", "OpenCode value"],
+    }
+    expect(JSON.parse(source)).toEqual(expected)
+    expect(JSON.parse(compiled)).toEqual(expected)
+  }, 60_000)
+}
+
 test("leaves line endings in unmapped modules untouched", () => {
   const source = 'export const provider = "opencode";\r\n'
   expect(KiloBranding.transform("unmapped.ts", source)).toBe(source)
@@ -62,6 +240,82 @@ test("does not rename provider identities, theme schemas or wire identifiers", a
   }
 })
 
+test("brands ACP display fields without changing protocol identifiers", async () => {
+  const files = ["cli/src/acp/service.ts", "cli/src/acp/agent.ts", "cli/src/acp/error.ts", "cli/src/acp/translate.ts"]
+  const sources = await Promise.all(
+    files.map(async (file) => {
+      const filename = path.join(repo, "packages", file)
+      return KiloBranding.transform(filename, await Bun.file(filename).text())
+    }),
+  )
+  expect(sources[0]).toContain('const AuthMethodID = "opencode-login"')
+  expect(sources[0]).toContain('name: "Login with Kilo"')
+  expect(sources[0]).toContain('"terminal-auth": { command: "kilo2", args: ["auth", "login"], label: "Kilo Login" }')
+  expect(sources[0]).toContain('agentInfo: { name: "Kilo"')
+  expect(sources[0]).toContain('command: "kilo2"')
+  expect(sources[1]).toContain('agent({ name: "opencode" })')
+  expect(sources[2]).toContain("Kilo server is unavailable")
+  expect(sources[3]).toContain("Kilo prompt failed")
+})
+
+test("retains branding across existing CLI and TUI display surfaces", async () => {
+  const cases = [
+    ["cli/src/services/service-config.ts", "Usage: kilo2 service get"],
+    ["cli/src/server-process.ts", "kilo2 service set port"],
+    ["cli/src/services/remote-tunnel.ts", "kilo2 service set remote true"],
+    ["cli/src/commands/handlers/mcp/auth.ts", "kilo2 mcp add"],
+    ["cli/src/commands/handlers/acp.ts", "kilo2 acp:"],
+    ["cli/src/commands/handlers/default.ts", "Kilo update could not start"],
+    ["cli/src/commands/handlers/uninstall.ts", "shared by Kilo versions and channels"],
+    ["cli/src/services/update-preflight.tsx", '"Loading Kilo"'],
+    ["tui/src/routes/session/permission.tsx", "Tell Kilo what to do differently"],
+    ["tui/src/mini/footer.permission.tsx", "Tell Kilo what to do differently"],
+    ["tui/src/mini/footer.prompt.tsx", 'description: "close Kilo"'],
+    ["tui/src/component/terminal-pane.tsx", "restart Kilo"],
+    ["tui/src/feature-plugins/sidebar/footer.tsx", "Kilo includes free models"],
+    ["tui/src/config/index.tsx", 'description: "Show the release highlights once after Kilo updates"'],
+  ]
+  for (const [file, expected] of cases) {
+    const filename = path.join(repo, "packages", file)
+    expect(KiloBranding.transform(filename, await Bun.file(filename).text()), file).toContain(expected)
+  }
+})
+
+test("keeps OAuth predicate and lookup data unchanged", async () => {
+  const filename = path.join(repo, "packages/core/src/oauth/page.ts")
+  const source = (await Bun.file(filename).text()).replace(
+    "const provider = options?.provider",
+    'const provider = records["OpenCode"] === "OpenCode" ? options?.provider : undefined',
+  )
+  const result = KiloBranding.transform(filename, source)
+  expect(result).toContain('records["OpenCode"] === "OpenCode"')
+  expect(result).toContain("Kilo is now authorized.")
+})
+
+test("brands the mini terminal error at its shared definition", async () => {
+  const filename = path.join(repo, "packages/cli/src/mini-host.ts")
+  const result = KiloBranding.transform(filename, await Bun.file(filename).text())
+  expect(result).toContain('INTERACTIVE_INPUT_ERROR = "kilo2 mini requires a controlling terminal for input"')
+})
+
+test("brands diagnostic prompts and statistics displays", async () => {
+  for (const file of [
+    "tui/src/util/error-details.ts",
+    "cli/src/commands/handlers/stats.ts",
+    "tui/src/feature-plugins/system/stats.tsx",
+  ]) {
+    const filename = path.join(repo, "packages", file)
+    const result = KiloBranding.transform(filename, await Bun.file(filename).text())
+    if (file.includes("error-details")) {
+      expect(result).toContain("this Kilo component")
+      expect(result).toContain("global Kilo configuration")
+    } else {
+      expect(result).toContain("kilo.ai")
+      expect(result).toContain("kilo2")
+    }
+  }
+})
+
 test("config hints name a file that the Kilo host reads and writes", async () => {
   expect(KiloConfigFiles.names).toContain(KiloConfigFiles.newFile)
   for (const file of ["cli/src/commands/handlers/mcp/auth.ts", "tui/src/util/error.ts"]) {
@@ -74,7 +328,7 @@ test("config hints name a file that the Kilo host reads and writes", async () =>
 })
 
 test("fails clearly if an upstream text anchor changes", () => {
-  expect(() => KiloBranding.transform("/repo/packages/tui/src/util/error.ts", "changed")).toThrow(
+  expect(() => KiloBranding.transform("/repo/packages/tui/src/util/presentation.ts", "changed")).toThrow(
     "Kilo branding no longer matches",
   )
 })
