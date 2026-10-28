@@ -1,5 +1,6 @@
 // The sidebar: history, profile, or one session laid out like main's ChatView (transcript, docks, prompt).
 import { Button } from "@kilocode/kilo-ui/button"
+import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { createEffect, createMemo, createSignal, Match, on, Show, Switch } from "solid-js"
 import { useLanguage } from "../context/language"
 import { useV2 } from "./client"
@@ -22,11 +23,12 @@ export function Chat() {
   const [view, setView] = createSignal<"chat" | "history" | "profile">("chat")
   // Owned here, so a running sign-in survives switching views.
   const profile = createProfile()
+  const startSession = () => {
+    setSession(undefined)
+    setView("chat")
+  }
   v2.onCommand((name) => {
-    if (name === "newSession") {
-      setSession(undefined)
-      setView("chat")
-    }
+    if (name === "newSession") startSession()
     if (name === "history") setView("history")
     if (name === "profile") setView("profile")
   })
@@ -88,6 +90,33 @@ export function Chat() {
   const selection = createSelection(session)
   const working = createWorking(session, blocked)
   let scrollToBottom: (() => void) | undefined
+  // Counts the in-flight first message too, so the dock reserves the same row on the very first send, as on main.
+  // A memo, so the actions row rebuilds only when this flips.
+  const hasMessages = createMemo(() => {
+    const id = session()
+    return !!id && (v2.data.session.message.list(id).length > 0 || working.submitting())
+  })
+  // main's ChatView actions row. Only New Session has a v2 counterpart: the worktree, changes and fork actions need
+  // the Agent Manager and the diff viewer, which v2 does not have yet.
+  const actions = (
+    <Show when={hasMessages()}>
+      <div class="new-task-button-wrapper">
+        <div class="session-actions-row">
+          <Tooltip value={language.t("sidebar.session.newSession.tooltip")} placement="top">
+            <Button
+              variant="secondary"
+              size="small"
+              class="session-new-button"
+              onClick={startSession}
+              aria-label={language.t("sidebar.session.newSession")}
+            >
+              {language.t("sidebar.session.newSession")}
+            </Button>
+          </Tooltip>
+        </div>
+      </div>
+    </Show>
+  )
 
   const send = (text: string) => {
     const id = session() ?? selection.create()
@@ -155,6 +184,8 @@ export function Chat() {
             </Show>
             <SessionDock
               blocked={blocked()}
+              actions={actions}
+              hasActions={hasMessages()}
               status={working.status()}
               submitting={working.submitting()}
               timing={working.timing()}
