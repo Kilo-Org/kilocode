@@ -4,7 +4,9 @@
 // these calls cause, so every open view follows without extra work here.
 import type { FormAnswer, IntegrationAttempt, IntegrationInfo } from "@opencode/client"
 import { createEffect, on } from "solid-js"
+import type { ToHost } from "../../../src/protocol"
 import SettingsPanel from "../components/settings/Settings"
+import { getVSCodeAPI } from "../context/vscode"
 import { credentials } from "../components/settings/provider-catalog"
 import { useV2 } from "./client"
 
@@ -80,8 +82,9 @@ export function createSettings() {
 
 export type SettingsData = ReturnType<typeof createSettings>
 
-/** The Settings view of the sidebar. `onLogin` opens the Profile view, where the Kilo Gateway sign-in runs. */
-export function SettingsView(props: { onLogin: () => void }) {
+/** The Settings editor panel. Sign in opens the sidebar Profile view, where the Kilo Gateway sign-in runs. */
+export function SettingsView() {
   const settings = createSettings()
-  return <SettingsPanel settings={settings} onLogin={props.onLogin} />
+  const login = () => getVSCodeAPI().postMessage({ type: "openProfile" } satisfies ToHost as never)
+  return <SettingsPanel settings={settings} onLogin={login} />
 }

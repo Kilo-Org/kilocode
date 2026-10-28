@@ -35,11 +35,17 @@ interface ViewState {
 
 type Prompt = Extract<FormField, { type: "string" }>
 
-/** The methods that the v1 dialog has a view for. Environment variables cannot be set from the dialog. */
+/**
+ * The methods that the v1 dialog has a view for. Environment variables cannot be set from the dialog. v1 listed the
+ * sign-in methods before the API key, while the v2 server lists the key first, so the key goes last.
+ */
 export function connectMethods(integration: IntegrationInfo | undefined): ConnectMethod[] {
-  return (integration?.methods ?? []).filter(
-    (method): method is ConnectMethod => method.type === "key" || method.type === "oauth" || method.type === "external",
-  )
+  return (integration?.methods ?? [])
+    .filter(
+      (method): method is ConnectMethod =>
+        method.type === "key" || method.type === "oauth" || method.type === "external",
+    )
+    .toSorted((a, b) => Number(a.type === "key") - Number(b.type === "key"))
 }
 
 function formatError(value: unknown, fallback: string): string {

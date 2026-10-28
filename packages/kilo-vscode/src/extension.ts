@@ -2,6 +2,7 @@ import { homedir } from "node:os"
 import { commands, ExtensionMode, window, workspace, type ExtensionContext } from "vscode"
 import { chat } from "./chat"
 import { command, manager } from "./server"
+import { settings } from "./settings-panel"
 
 export function activate(context: ExtensionContext) {
   const output = window.createOutputChannel("Kilo Code (v2)")
@@ -20,6 +21,7 @@ export function activate(context: ExtensionContext) {
     },
   })
   const view = chat({ context, server, directory })
+  const panel = settings({ context, server, directory })
 
   context.subscriptions.push(
     output,
@@ -38,10 +40,8 @@ export function activate(context: ExtensionContext) {
       await commands.executeCommand("kilo-code.v2.chat.focus")
       await view.post({ type: "command", name: "profile" })
     }),
-    commands.registerCommand("kilo-code.v2.settings", async () => {
-      await commands.executeCommand("kilo-code.v2.chat.focus")
-      await view.post({ type: "command", name: "settings" })
-    }),
+    commands.registerCommand("kilo-code.v2.settings", () => panel.open()),
+    panel,
     // The webview reconnects on its own: its event stream fails, and the next request starts a new server.
     commands.registerCommand("kilo-code.v2.restartServer", () => server.stop()),
     { dispose: () => void server.stop() },

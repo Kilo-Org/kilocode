@@ -47,7 +47,13 @@ const ProvidersTab: Component<{ settings: SettingsData; onLogin: () => void }> =
     props.settings
       .integrations()
       .filter((item) => item.id !== KILO_PROVIDER_ID && item.connections.length > 0)
-      .toSorted((a, b) => a.name.localeCompare(b.name)),
+      // As v1: environment connections first, then stored credentials in the order they were added (IDs ascend).
+      .toSorted((a, b) => {
+        const left = credentials(a)[0]?.id ?? ""
+        const right = credentials(b)[0]?.id ?? ""
+        if (left !== right) return left < right ? -1 : 1
+        return a.name.localeCompare(b.name)
+      }),
   )
 
   const popularProviders = createMemo(() =>

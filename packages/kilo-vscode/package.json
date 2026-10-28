@@ -13,7 +13,8 @@
   },
   "main": "./dist/extension.js",
   "activationEvents": [
-    "onStartupFinished"
+    "onStartupFinished",
+    "onWebviewPanel:kilo-code.v2.settingsPanel"
   ],
   "contributes": {
     "viewsContainers": {
