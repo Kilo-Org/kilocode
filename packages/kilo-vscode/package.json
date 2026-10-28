@@ -35,6 +35,39 @@
         }
       ]
     },
+    "configuration": {
+      "title": "Kilo Code (v2)",
+      "properties": {
+        "kilo-code.v2.fontSize": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "default": null,
+          "markdownDescription": "Font size for the Kilo Code (v2) webviews. Null follows `#editor.fontSize#`."
+        },
+        "kilo-code.v2.language": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "Language override for the Kilo Code (v2) webviews. Empty follows the VS Code display language."
+        },
+        "kilo-code.v2.chat.shiftTabCyclesVariant": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "Whether Shift+Tab cycles the reasoning variant while the prompt input has focus."
+        },
+        "kilo-code.v2.claudeCodeCompat": {
+          "type": "boolean",
+          "default": false,
+          "markdownDescription": "Enable compatibility with Claude Code configuration and rules."
+        },
+        "kilo-code.v2.extraCaCerts": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "Path to a file with extra CA certificates to trust."
+        }
+      }
+    },
     "commands": [
       {
         "command": "kilo-code.v2.newSession",
