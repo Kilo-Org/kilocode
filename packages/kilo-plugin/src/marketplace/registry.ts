@@ -15,3 +15,11 @@ export interface Entry {
   readonly payloads: readonly unknown[]
   readonly companions?: readonly { readonly id: string; readonly archive: string }[]
 }
+
+/**
+ * Where a registry's catalog snapshot is cached. The version lets a changed snapshot shape be left behind instead of
+ * misread; old rows are never read again and cost nothing. The gateway plugin removes every `catalog:personal:` row it
+ * did not just write and owns `catalog:anonymous:`, and the version segment keeps these keys out of both prefixes
+ * whatever the registry is called.
+ */
+export const catalogKey = (registry: string, kind: KiloMarketplaceRpc.Kind) => `catalog:v1:${registry}:${kind}`

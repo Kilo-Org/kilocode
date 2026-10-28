@@ -4,6 +4,7 @@ import os from "node:os"
 import path from "node:path"
 import { Installer } from "../src/marketplace/installer"
 import { KiloMarketplaceRegistry } from "../src/marketplace/kilo"
+import { catalogKey } from "../src/marketplace/registry"
 import { SkillError, bounded, extract, fingerprint, prepare, remove, write } from "../src/marketplace/skill"
 
 const SKILLS = `
@@ -51,6 +52,19 @@ const install = async (input: { root: string; id: string; archive: Uint8Array; f
   write(await prepare(input), input.fingerprints)
 
 describe("Kilo marketplace catalog", () => {
+  test("catalog snapshot keys are versioned and stay out of the gateway's catalog prefixes", () => {
+    expect(catalogKey("kilo", "mcp")).toBe("catalog:v1:kilo:mcp")
+    expect(catalogKey("kilo", "skill")).toBe("catalog:v1:kilo:skill")
+    // The gateway removes every `catalog:personal:` row it did not just write and owns `catalog:anonymous:`.
+    // A registry may be called anything, including the gateway's own segments, and still stays outside both.
+    for (const registry of ["personal", "anonymous", "v1", "", "a:b"])
+      for (const kind of ["skill", "mcp"] as const) {
+        const key = catalogKey(registry, kind)
+        expect(key.startsWith("catalog:v1:")).toBe(true)
+        expect(key.startsWith("catalog:personal:") || key.startsWith("catalog:anonymous:")).toBe(false)
+      }
+    expect(catalogKey("kilo", "skill")).not.toBe(catalogKey("kilo", "mcp"))
+  })
   test("normalizes skills and skips entries that do not decode", () => {
     const entries = KiloMarketplaceRegistry.parse("skill", SKILLS)
     expect(entries).toHaveLength(1)
