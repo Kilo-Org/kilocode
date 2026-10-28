@@ -43,6 +43,7 @@ import com.intellij.ui.hover.TreeHoverListener
 import com.intellij.ui.render.RenderingHelper
 import com.intellij.ui.render.RenderingUtil
 import com.intellij.ui.tree.ui.CustomBoundsTreeUI
+import com.intellij.ui.tree.ui.Control
 import com.intellij.ui.treeStructure.Tree
 import com.intellij.util.concurrency.annotations.RequiresEdt
 import com.intellij.util.ui.JBUI
@@ -133,6 +134,11 @@ internal class ActiveTree(
         scroll.verticalScrollBar.addAdjustmentListener { view.geometry() }
         if (surface == ActiveSurface.ToolWindow) isOpaque = true
         scroll.border = JBUI.Borders.empty()
+        // The scroll pane otherwise installs a view border whose scrollbar insets become tree
+        // padding. Keep that chrome outside the tree and let the container own the small padding.
+        view.border = JBUI.Borders.empty()
+        scroll.verticalScrollBar.putClientProperty(JBScrollPane.IGNORE_SCROLLBAR_IN_INSETS, true)
+        scroll.horizontalScrollBar.putClientProperty(JBScrollPane.IGNORE_SCROLLBAR_IN_INSETS, true)
         addToCenter(scroll)
     }
 
@@ -287,6 +293,11 @@ internal class ActiveTreeView(
         selectionModel.selectionMode = TreeSelectionModel.SINGLE_TREE_SELECTION
         putClientProperty(RenderingHelper.SHRINK_LONG_RENDERER, true)
         putClientProperty(RenderingHelper.SHRINK_LONG_SELECTION, true)
+        putClientProperty(Control.Painter.KEY, ActiveTreePainter.Native)
+        // Native framing has a fixed outer cap, not a per-depth surface. Keep native gestures,
+        // but paint a shared frame including the disclosure gutter after the native pass.
+        putClientProperty(RenderingUtil.CUSTOM_SELECTION_BACKGROUND, java.util.function.Supplier { background })
+        RenderingUtil.setHoverPaintingDisabled(this, true)
         setModel(treeModel)
         setCellRenderer(renderer)
         if (surface == ActiveSurface.ToolWindow) isOpaque = true
@@ -383,6 +394,12 @@ internal class ActiveTreeView(
     override fun getBackground(): Color {
         if (surface == ActiveSurface.ToolWindow) return activeToolWindowBackground()
         return super.getBackground() ?: UIUtil.getPanelBackground()
+    }
+
+    override fun paintComponent(g: Graphics) {
+        super.paintComponent(g)
+        if (!wired || ui !is CustomBoundsTreeUI) return
+        regions.paint(g)
     }
 
     override fun getToolTipText(event: MouseEvent): String? {
@@ -584,7 +601,7 @@ internal class ActiveTreeView(
     @RequiresEdt
     fun point(key: String, cell: String?, leading: Boolean): RelativePoint? {
         checkEdt()
-        return entries[key]?.let { entry -> paintedBounds(entry)?.let { bounds ->
+        return entries[key]?.let { entry -> regions.bounds(entry)?.let { bounds ->
             val target = cell?.let { id -> hits(entry).firstOrNull { it.id == id }?.bounds } ?: bounds
             val x = if (leading) target.x else target.x + target.width / 2
             RelativePoint(this, Point(x.coerceIn(bounds.x, bounds.x + bounds.width), target.y + target.height))
@@ -594,7 +611,7 @@ internal class ActiveTreeView(
     @RequiresEdt
     fun hoveredBounds(pane: JComponent): Rectangle? {
         checkEdt()
-        return hoveredKey?.let { entries[it] }?.let(::paintedBounds)
+        return hoveredKey?.let { entries[it] }?.let { regions.bounds(it) }
             ?.let { SwingUtilities.convertRectangle(this, it, pane) }
     }
 
@@ -684,12 +701,11 @@ internal class ActiveTreeView(
 
     private fun entryAtLocation(point: Point): ActiveEntry? = regions.entry(point)
 
-    internal fun bounds(entry: ActiveEntry): Rectangle? = paintedBounds(entry)
+    internal fun bounds(entry: ActiveEntry): Rectangle? = regions.bounds(entry)
 
-    private fun paintedBounds(entry: ActiveEntry): Rectangle? = regions.bounds(entry)
 
     internal fun state(
-        entry: ActiveEntry, selected: Boolean, focused: Boolean, width: Int = this.width,
+        entry: ActiveEntry, selected: Boolean, focused: Boolean, width: Int = regions.width(entry),
     ): ActiveRenderState {
         val active = selected && (focused || popups > 0)
         val enabled = isEnabled && !entry.item.disabled
@@ -697,6 +713,8 @@ internal class ActiveTreeView(
         val fg = UIUtil.getTreeForeground(active, active || focused)
         val background = background
         val selection = UIUtil.getTreeBackground(true, focused || popups > 0)
+        val hover = if (hovered) JBUI.CurrentTheme.Tree.Hover.background(active || focused) else null
+        val backdrop = if (selected) selection else hover ?: background
         val actions = actionsVisible(enabled, selected, hovered, active)
         return ActiveRenderState(
             item = entry.item,
@@ -706,11 +724,11 @@ internal class ActiveTreeView(
             hovered = hovered,
             enabled = enabled,
             background = background,
-            selectionColor = selection,
+            selectionColor = if (selected) selection else hover,
             paintSelection = false,
-            backdrop = if (selected) selection else background,
+            backdrop = backdrop,
             foreground = fg,
-            pillBackground = if (selected) selection else background,
+            pillBackground = backdrop,
             width = width,
             actionsVisible = actions && ui is CustomBoundsTreeUI,
             menuVisible = menuVisible(entry, enabled, hovered),
@@ -784,7 +802,7 @@ internal class ActiveTreeView(
 
     internal fun showMenu(point: Point, context: Boolean = false): Boolean {
         return entryAtLocation(point)?.takeIf(::menuEligible)?.let { entry ->
-            val target = if (context) paintedBounds(entry) else hits(entry)
+            val target = if (context) regions.bounds(entry) else hits(entry)
                 .firstOrNull { it.id == ACTIVE_MENU_CELL && it.bounds.contains(point) }?.bounds
             target?.let {
                 selectionModel.selectionPath = TreePath(entry.path)
@@ -918,7 +936,7 @@ internal class ActiveTreeView(
     }
 
     private fun dragImage(point: Point): Pair<Image, Point>? {
-        return pickable(point)?.let { entries[it] }?.let { entry -> paintedBounds(entry)?.let { bounds ->
+        return pickable(point)?.let { entries[it] }?.let { entry -> regions.cell(entry).let { bounds ->
             renderer.image(state(entry, true, true, bounds.width), bounds.width)?.let { image ->
                 val x = (point.x - bounds.x).coerceIn(0, image.first.width)
                 val y = (point.y - bounds.y).coerceIn(0, image.first.height)
@@ -955,12 +973,15 @@ internal class ActiveTreeRenderer(
         hasFocus: Boolean,
     ): java.awt.Component {
         val entry = value as? ActiveEntry ?: return this
+        // The native delegate makes renderer stamps opaque during its pass.
+        isOpaque = false
         gap = view.placeholder(entry)
         active.isVisible = !gap
+        // A row fills its cell like a list cell, so its trailing menu keeps the list's gap to the
+        // selection edge instead of trailing the title's preferred width.
         val state = view.state(entry, selected, hasFocus)
         active.render(state.copy(bodyHeight = null))
         val size = active.preferredSize
-        active.render(state)
         setPreferredSize(Dimension(size.width, state.bodyHeight ?: size.height))
         activeInvalidate(this)
         return this

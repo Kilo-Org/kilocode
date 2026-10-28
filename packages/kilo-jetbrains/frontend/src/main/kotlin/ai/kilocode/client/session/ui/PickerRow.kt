@@ -3,8 +3,6 @@ package ai.kilocode.client.session.ui
 import ai.kilocode.client.ui.layout.HAlign
 import ai.kilocode.client.ui.layout.VAlign
 import ai.kilocode.client.ui.layout.align
-import com.intellij.openapi.ui.popup.util.PopupUtil
-import com.intellij.ui.NewUI
 import com.intellij.ui.popup.list.SelectablePanel
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
@@ -45,12 +43,10 @@ internal class PickerRow : SelectablePanel() {
         this.background = background
         isOpaque = opaque
         this.selectionColor = if (paintSelection) selectionColor else null
-        if (opaque && NewUI.isEnabled()) {
-            PopupUtil.configListRendererFlexibleHeight(this)
-            return
-        }
+        // Active rows supply their own compact padding. The popup flexible border adds another
+        // platform inset on both sides, which stacks with the row padding and leaves a wide gutter.
         border = JBUI.Borders.empty()
-        selectionArc = 0
+        selectionArc = JBUI.CurrentTheme.Popup.Selection.ARC.get()
         selectionInsets = JBUI.emptyInsets()
     }
 }

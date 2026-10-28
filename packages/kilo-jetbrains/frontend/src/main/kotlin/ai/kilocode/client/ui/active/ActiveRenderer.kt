@@ -134,9 +134,8 @@ internal class ActiveRenderer(
         add(cellPane, BorderLayout.CENTER)
     }
     // The dropdown button keeps the overlay approach: a real empty-icon [spacer] holds the trailing
-    // column in the row layout, and the [glyph] button floats over that slot — revealed on hover —
-    // so the row body is laid out beside the column and never shifts. Both are bare (no border) so
-    // the icon sits flush against the content edge, mirroring the flush leading icon.
+    // column in the row layout, and the [glyph] button floats over that slot, revealed on hover,
+    // so the row body is laid out beside the column and never shifts.
     private val glyph = ActiveActionCell()
     private val spacer = JBLabel(EmptyIcon.create(AllIcons.Actions.More))
     private val row = JPanel(BorderLayout(UiStyle.Gap.md(), 0)).apply {
@@ -144,9 +143,13 @@ internal class ActiveRenderer(
         add(textPane, BorderLayout.CENTER)
         add(endPane, BorderLayout.EAST)
     }
-    private val layers = LayeredOverlayPanel(
+    private val layers = object : LayeredOverlayPanel(
         content = JPanel(BorderLayout()).apply { add(row, BorderLayout.CENTER) },
-    )
+    ) {
+        // Floating children are positioned by layout, not intrinsic row dimensions. Their old
+        // bounds must not grow the next renderer stamp (or its drag image).
+        override fun getPreferredSize(): Dimension = content.preferredSize
+    }
     private val wrap = PickerRow()
     private var bodyHeight: Int? = null
     // JPanel's constructor calls updateUI() before any field below exists, so guard the refresh.
@@ -187,7 +190,7 @@ internal class ActiveRenderer(
             // The dropdown column, so the pill clears it when a list opts into both.
             val gap = if (menu != null) glyph.preferredSize.width else 0
             Rectangle(
-                (host.width - size.width - UiStyle.Gap.pad() - gap).coerceAtLeast(0),
+                (host.width - size.width - row.insets.right - gap).coerceAtLeast(0),
                 ((host.height - size.height) / 2).coerceAtLeast(0),
                 size.width.coerceAtMost(host.width),
                 size.height.coerceAtMost(host.height),
@@ -205,10 +208,10 @@ internal class ActiveRenderer(
             row.add(tail, BorderLayout.EAST)
             // Stretch the glyph column top-to-bottom so its whole height is a click target; the icon
             // stays centered within by the label's own alignment. Width stays at the icon's preferred
-            // size, pinned flush to the right edge.
+            // size, inside the row's trailing padding and the native rounded selection.
             layers.addOverlay(glyph) { host, child ->
                 val width = child.preferredSize.width.coerceAtMost(host.width)
-                Rectangle((host.width - width).coerceAtLeast(0), 0, width, host.height)
+                Rectangle((host.width - row.insets.right - width).coerceAtLeast(0), 0, width, host.height)
             }
         }
         add(wrap, BorderLayout.CENTER)
@@ -235,16 +238,11 @@ internal class ActiveRenderer(
         (titleGroup.layout as BorderLayout).hgap = UiStyle.Gap.xs()
         (descLine.layout as BorderLayout).hgap = UiStyle.Gap.md()
         pill.border = JBUI.Borders.empty(UiStyle.Gap.SM)
-        // Mirror the flush leading icon when a menu column is present: drop the row's trailing inset
-        // and let the empty-icon spacer hold a dedicated column at the content edge. The overlay glyph
-        // then floats over that same slot, revealed on hover.
+        // Keep the row close to the selection edge. The frame's own cap already provides the outer
+        // separation; this is only the content inset inside it, shared by lists and trees.
         (row.layout as BorderLayout).hgap = if (menu == null) UiStyle.Gap.md() else 0
-        row.border = if (menu == null) {
-            JBUI.Borders.empty(UiStyle.Gap.MD, 0, UiStyle.Gap.MD, UiStyle.Gap.PAD)
-        } else {
-            JBUI.Borders.empty(UiStyle.Gap.MD, 0, UiStyle.Gap.MD, 0)
-        }
-        mark.border = if (menu == null) JBUI.Borders.empty() else JBUI.Borders.emptyRight(UiStyle.Gap.MD)
+        row.border = JBUI.Borders.empty(UiStyle.Gap.MD, UiStyle.Gap.SM, UiStyle.Gap.MD, UiStyle.Gap.SM)
+        mark.border = if (menu == null) JBUI.Borders.empty() else JBUI.Borders.emptyRight(UiStyle.Gap.SM)
     }
 
     override fun updateUI() {
@@ -378,8 +376,17 @@ internal class ActiveRenderer(
      * can map a grab point in cell coordinates onto the image. Rendered as the focused selection so
      * the dragged copy reads as a lifted row.
      */
+    @RequiresEdt
     fun rowImage(state: ActiveRenderState, width: Int): Pair<BufferedImage, Point>? {
-        render(state.copy(selected = true, focused = true, active = true, actionsVisible = true))
+        isVisible = true
+        wrap.isVisible = true
+        setPreferredSize(null)
+        render(state.copy(
+            selected = true, focused = true, active = true, width = width,
+            paintSelection = true, opaque = true,
+            menuVisible = false, actionsVisible = false,
+            bodyHeight = state.bodyHeight ?: bodyHeight,
+        ))
         val size = preferredSize
         setBounds(0, 0, width, size.height)
         activeLayout(this)

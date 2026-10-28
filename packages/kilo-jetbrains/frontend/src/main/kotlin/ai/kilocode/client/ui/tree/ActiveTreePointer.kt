@@ -9,15 +9,25 @@ import javax.swing.tree.TreePath
 internal class ActiveTreePointer(private val view: ActiveTreeView, private val actions: ActiveTreeActions) {
     private data class Press(val key: String, val id: String)
     private var press: Press? = null
+    private var disclosure = false
 
-    fun clear() { press = null }
+    fun clear() {
+        press = null
+        disclosure = false
+    }
 
     @RequiresEdt
-    fun process(event: MouseEvent): Boolean = when (event.id) {
-        MouseEvent.MOUSE_PRESSED -> pressed(event)
-        MouseEvent.MOUSE_RELEASED -> released(event)
-        MouseEvent.MOUSE_CLICKED -> clicked(event)
-        else -> false
+    fun process(event: MouseEvent): Boolean {
+        if (disclosure && (event.id == MouseEvent.MOUSE_RELEASED || event.id == MouseEvent.MOUSE_CLICKED)) {
+            if (event.id == MouseEvent.MOUSE_CLICKED) disclosure = false
+            return true
+        }
+        return when (event.id) {
+            MouseEvent.MOUSE_PRESSED -> pressed(event)
+            MouseEvent.MOUSE_RELEASED -> released(event)
+            MouseEvent.MOUSE_CLICKED -> clicked(event)
+            else -> false
+        }
     }
 
     @RequiresEdt
@@ -67,15 +77,19 @@ internal class ActiveTreePointer(private val view: ActiveTreeView, private val a
 
     @RequiresEdt
     fun headless(event: MouseEvent) {
-        view.regions.entry(event.point)?.let { entry ->
-            val path = TreePath(entry.path)
-            when {
-                event.id == MouseEvent.MOUSE_PRESSED ||
-                    (event.id == MouseEvent.MOUSE_CLICKED && event.clickCount == 1) ->
-                    view.selectionModel.selectionPath = path
-                event.id == MouseEvent.MOUSE_CLICKED && event.clickCount == 2 && entry.allowsChildren -> {
-                    if (view.isExpanded(path)) view.collapsePath(path) else view.expandPath(path)
-                }
+        if (event.button != MouseEvent.BUTTON1) return
+        val entry = view.regions.entry(event.point) ?: return
+        val path = TreePath(entry.path)
+        when {
+            event.id == MouseEvent.MOUSE_PRESSED && view.regions.control(entry)?.contains(event.point) == true -> {
+                disclosure = true
+                if (view.isExpanded(path)) view.collapsePath(path) else view.expandPath(path)
+            }
+            event.id == MouseEvent.MOUSE_PRESSED ||
+                (event.id == MouseEvent.MOUSE_CLICKED && event.clickCount == 1) ->
+                view.selectionModel.selectionPath = path
+            event.id == MouseEvent.MOUSE_CLICKED && event.clickCount == 2 && entry.allowsChildren -> {
+                if (view.isExpanded(path)) view.collapsePath(path) else view.expandPath(path)
             }
         }
     }

@@ -1852,10 +1852,14 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
     private fun leafRow(tree: ActiveTreeView, index: Int): Int =
         edt { tree.getRowForPath(TreePath(leafEntry(tree, index).path)) }
 
+    /**
+     * Row rectangle the renderer is laid out at. It is the tree cell minus the shared outer gutter,
+     * which is what the tree itself paints and what a list cell gives its own renderer.
+     */
     private fun rowBounds(tree: ActiveTreeView, index: Int): java.awt.Rectangle =
         edt {
             (tree.parent as? javax.swing.JViewport)?.setSize(tree.width, tree.height)
-            tree.bounds(leafEntry(tree, index))!!
+            tree.regions.cell(leafEntry(tree, index))
         }
 
     private fun selectLeaf(tree: ActiveTreeView, index: Int) {
@@ -1871,7 +1875,7 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
     private fun hitIds(tree: ActiveTreeView, index: Int): Map<String, java.awt.Rectangle> {
         val entry = leafEntry(tree, index)
         edt { (tree.parent as? javax.swing.JViewport)?.setSize(tree.width.coerceAtLeast(360), tree.height.coerceAtLeast(600)) }
-        val bounds = edt { tree.bounds(entry)!! }
+        val bounds = edt { tree.regions.cell(entry) }
         val selected = edt { tree.selectionModel.isPathSelected(TreePath(entry.path)) }
         val comp = edt {
             tree.cellRenderer.getTreeCellRendererComponent(tree, entry, selected, true, false, 0, true)

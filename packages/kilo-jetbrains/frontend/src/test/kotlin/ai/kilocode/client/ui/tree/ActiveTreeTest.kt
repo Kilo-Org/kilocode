@@ -261,4 +261,122 @@ class ActiveTreeTest : BasePlatformTestCase() {
         view.drop()
         assertEquals(1, moves.size)
     }
+
+    fun `test disclosure press toggles once without selecting or activating group`() {
+        val calls = mutableListOf<String>()
+        var selections = 0
+        val tree = ActiveTree("", actions = ActiveTreeActions(
+            select = { selections++ }, open = { item, _ -> calls += item.key },
+        ))
+        val view = tree.preferredFocus() as ActiveTreeView
+        view.setUI(com.intellij.ui.tree.ui.DefaultTreeUI())
+        tree.update(listOf(ActiveTreeNode(Row("main", "Main")), ActiveTreeNode(Row("group", "Local"), listOf(
+            ActiveTreeNode(Row("leaf", "Child")),
+        ))))
+        view.setSize(400, 200)
+        tree.select("main", false)
+        selections = 0
+        val entry = view.hierarchy.entries.getValue("group")
+        val path = TreePath(entry.path)
+        for (expanded in listOf(false, true)) {
+            val bounds = view.regions.control(entry) ?: error("Missing disclosure")
+            val point = Point(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2)
+            for (id in listOf(MouseEvent.MOUSE_PRESSED, MouseEvent.MOUSE_RELEASED, MouseEvent.MOUSE_CLICKED)) {
+                val event = MouseEvent(view, id, 0, 0, point.x, point.y, 1, false, MouseEvent.BUTTON1)
+                view.dispatchEvent(event)
+                assertTrue("Disclosure event must be consumed", event.isConsumed)
+                assertEquals("Toggle happens once on press", expanded, view.isExpanded(path))
+                assertEquals(listOf("main"), tree.selectedKeys())
+            }
+        }
+        assertEquals(0, selections)
+        assertEmpty(calls)
+        val frame = view.regions.frame(entry) ?: error("Missing group frame")
+        for (x in listOf(frame.x + 1, frame.x + frame.width - 1)) {
+            tree.clearSelection()
+            view.dispatchEvent(MouseEvent(view, MouseEvent.MOUSE_PRESSED, 0, 0, x,
+                frame.y + frame.height / 2, 1, false, MouseEvent.BUTTON1))
+            assertEquals(listOf("group"), tree.selectedKeys())
+            assertTrue(view.isExpanded(path))
+        }
+        val point = Point(frame.x + frame.width - 1, frame.y + frame.height / 2)
+        view.dispatchEvent(MouseEvent(view, MouseEvent.MOUSE_CLICKED, 0, 0, point.x, point.y, 2, false, MouseEvent.BUTTON1))
+        assertFalse("Double click on group body still collapses", view.isExpanded(path))
+        assertEmpty(calls)
+    }
+
+    fun `test native keyboard expansion and selection remain installed`() {
+        val tree = ActiveTree("")
+        val view = tree.preferredFocus() as ActiveTreeView
+        view.setUI(com.intellij.ui.tree.ui.DefaultTreeUI())
+        tree.update(listOf(ActiveTreeNode(Row("group", "Local"), listOf(ActiveTreeNode(Row("leaf", "Child"))))))
+        tree.select("group", false)
+        val path = view.selectionPath
+        fun action(name: String) {
+            val action = view.actionMap.get(name) ?: error("Missing native $name action")
+            action.actionPerformed(java.awt.event.ActionEvent(view, java.awt.event.ActionEvent.ACTION_PERFORMED, name))
+        }
+        action("collapse")
+        assertFalse(view.isExpanded(path))
+        action("expand")
+        assertTrue(view.isExpanded(path))
+        action("selectNext")
+        assertEquals(listOf("leaf"), tree.selectedKeys())
+    }
+
+    fun `test native disclosure hit testing matches public painter and painted arrow`() {
+        val tree = ActiveTree("")
+        val view = tree.preferredFocus() as ActiveTreeView
+        val ui = object : com.intellij.ui.tree.ui.DefaultTreeUI() {
+            fun contains(path: TreePath, point: Point) = isLocationInExpandControl(path, point.x, point.y)
+        }
+        view.setUI(ui)
+        tree.update(listOf(ActiveTreeNode(Row("main", "Main")), ActiveTreeNode(Row("group", "Local"), listOf(
+            ActiveTreeNode(Row("leaf", "Child")),
+        ))))
+        view.setSize(400, 200)
+        val entry = view.hierarchy.entries.getValue("group")
+        val path = TreePath(entry.path)
+        val arrow = view.regions.control(entry) ?: error("Missing arrow")
+        val point = Point(arrow.x + arrow.width / 2, arrow.y + arrow.height / 2)
+        assertTrue("Native delegate must hit painted arrow", ui.contains(path, point))
+        assertFalse(ui.contains(path, Point(arrow.x - 1, point.y)))
+        assertFalse(ui.contains(path, Point(arrow.x + arrow.width, point.y)))
+        val main = view.hierarchy.entries.getValue("main")
+        assertNull(view.regions.control(main))
+        assertFalse(ui.contains(TreePath(main.path), Point(point.x, view.getRowBounds(0).height / 2)))
+        val control = com.intellij.ui.tree.ui.DefaultControl()
+        for (selected in listOf(false, true)) {
+            if (selected) tree.select("group", false) else tree.clearSelection()
+            val image = java.awt.image.BufferedImage(view.width, view.height, java.awt.image.BufferedImage.TYPE_INT_ARGB)
+            val graphics = image.createGraphics()
+            try {
+                // A transparent tree inherits this backdrop from its viewport in the real UI.
+                graphics.color = view.background
+                graphics.fillRect(0, 0, image.width, image.height)
+                view.paint(graphics)
+            } finally {
+                graphics.dispose()
+            }
+            val expected = java.awt.image.BufferedImage(arrow.width, arrow.height, java.awt.image.BufferedImage.TYPE_INT_ARGB)
+            val stamp = expected.createGraphics()
+            try {
+                val color = if (selected) com.intellij.util.ui.UIUtil.getTreeBackground(true, false) else view.background
+                stamp.color = color
+                stamp.fillRect(0, 0, expected.width, expected.height)
+                control.paint(view, stamp, 0, 0, expected.width, expected.height, true, false)
+            } finally {
+                stamp.dispose()
+            }
+            // The tree paints the control over its own rounded selection frame, so compare only the
+            // pixels the icon actually inks rather than the flat backdrop behind it.
+            val backdrop = image.getRGB(arrow.x - 1, arrow.y + arrow.height / 2)
+            for (y in 0 until arrow.height) for (x in 0 until arrow.width) {
+                val color = java.awt.Color(expected.getRGB(x, y), true)
+                if (color.red == color.blue && color.red == color.green) continue
+                assertTrue("Painted disclosure ink $x,$y selected=$selected",
+                    image.getRGB(arrow.x + x, arrow.y + y) != backdrop)
+            }
+        }
+    }
 }
