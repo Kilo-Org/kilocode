@@ -120,8 +120,7 @@ export const configure = (input: LanguageModelOptions) => {
   const chat = route.with(rest)
   return {
     id,
-    model: (input: string | ModelID) => {
-      const value = String(input)
+    model: (value: string | ModelID) => {
       if (value.startsWith("openai/"))
         return responses.model<OpenAIProviderOptionsInput>({ id: native ? value.slice("openai/".length) : value })
       if (value.startsWith("anthropic/"))

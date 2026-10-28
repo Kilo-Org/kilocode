@@ -128,7 +128,15 @@ function checkPages(output: string, hosted: boolean) {
     error: string
     bootstrap: string
     modelError: string
+    update: string
+    updateSession: string
   }
+  for (const output of [pages.update, pages.updateSession]) {
+    const text = Bun.stripANSI(output)
+    expect(text).toContain(`Run ${hosted ? "kilo2" : "opencode"} to use 2.1.4`)
+    expect(text).not.toContain(hosted ? "opencode" : "kilo2")
+  }
+  expect(Bun.stripANSI(pages.updateSession)).toContain(`${hosted ? "kilo2" : "opencode"} -s test-session`)
   expect(pages.relative).toBe(pages.success)
   for (const html of [pages.success, pages.error, pages.bootstrap]) {
     expect(html).toContain(hosted ? "· Kilo</title>" : "· OpenCode</title>")
