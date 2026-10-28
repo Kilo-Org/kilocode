@@ -12,6 +12,8 @@ import { PromptInput } from "./prompt"
 import { QuestionDock } from "./question"
 import { createProfile } from "./profile"
 import { createSelection, Selectors } from "./selectors"
+import { SessionDock } from "../components/chat/SessionDockWorking"
+import { createWorking } from "./working"
 
 export function Chat() {
   const v2 = useV2()
@@ -84,6 +86,8 @@ export function Chat() {
   // A pending permission or question blocks new prompts, as on v1; Stop stays available.
   const blocked = () => permissions().length > 0 || forms().length > 0
   const selection = createSelection(session)
+  const working = createWorking(session, blocked)
+  let scrollToBottom: (() => void) | undefined
 
   const send = (text: string) => {
     const id = session() ?? selection.create()
@@ -126,7 +130,12 @@ export function Chat() {
           </Show>
           <div class="chat-messages-wrapper">
             <div class="chat-messages">
-              <MessageList session={session()} onSelectSession={open} onShowHistory={() => setView("history")} />
+              <MessageList
+                session={session()}
+                onSelectSession={open}
+                onShowHistory={() => setView("history")}
+                onScrollToBottomReady={(fn) => (scrollToBottom = fn)}
+              />
             </div>
           </div>
           <div class="chat-input">
@@ -144,6 +153,16 @@ export function Chat() {
             <Show when={forms()[0]} keyed>
               {(form) => <QuestionDock form={form} />}
             </Show>
+            <SessionDock
+              blocked={blocked()}
+              status={working.status()}
+              submitting={working.submitting()}
+              timing={working.timing()}
+              text={working.text()}
+              retry={working.retry()}
+              onCancel={stop}
+              onScrollToBottom={() => scrollToBottom?.()}
+            />
             <PromptInput
               session={session()}
               running={running()}
