@@ -42,10 +42,10 @@ internal object HostedSystemEventParser {
             step = if (attempt != null) null else step?.string("step") ?: step?.string("key")
                 ?: preparation?.string("step") ?: cloud?.string("step"),
             action = action,
-            message = step?.string("latestDetail") ?: preparation?.string("detail")
-                ?: step?.string("safeError") ?: preparation?.string("safeError") ?: attempt?.string("safeError")
+            message = (step?.string("latestDetail") ?: preparation?.string("detail")
                 ?: step?.string("message") ?: step?.string("label")
-                ?: preparation?.string("message")?.takeIf { attempt == null } ?: cloud?.string("message"),
+                ?: preparation?.string("message")?.takeIf { attempt == null }
+                ?: cloud?.string("message"))?.takeUnless { cloud?.string("type") == "error" },
             cloudStatus = cloud?.string("type"),
             sandboxStatus = (sandbox?.string("state") ?: sandbox?.string("status"))
                 ?.takeIf { kind == "cloud.sandbox.status" },
@@ -58,6 +58,11 @@ internal object HostedSystemEventParser {
             attemptID = preparation?.string("attemptId") ?: attempt?.string("id"),
             revision = ((preparation?.get("revision") ?: step?.get("revision") ?: attempt?.get("revision"))
                 as? JsonPrimitive)?.longOrNull?.takeIf { it >= 0 },
+            failure = sequenceOf(preparation?.string("safeError"), attempt?.string("safeError"),
+                step?.string("safeError"))
+                .filterNotNull().firstOrNull { it.matches(Regex("[a-z][a-z0-9_]{0,63}")) },
+            triggerMessageID = (preparation?.string("triggerMessageId") ?: attempt?.string("triggerMessageId"))
+                ?.takeIf { it.matches(Regex("[A-Za-z0-9_-]{1,128}")) },
         )
     }
 

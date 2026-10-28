@@ -17,6 +17,7 @@ object ChatLogSummary {
 
     fun sid(event: ChatEventDto): String? = when (event) {
         is ChatEventDto.MessageUpdated -> event.sessionID
+        is ChatEventDto.MessageTerminal -> event.sessionID
         is ChatEventDto.PartUpdated -> event.sessionID
         is ChatEventDto.PartDelta -> event.sessionID
         is ChatEventDto.PartRemoved -> event.sessionID
@@ -120,6 +121,15 @@ object ChatLogSummary {
     }
 
     fun event(event: ChatEventDto): String = when (event) {
+        is ChatEventDto.MessageTerminal -> join(
+            sid(event.sessionID),
+            "evt=cloud.message.terminal",
+            "mid=${event.messageID}",
+            "status=${event.status}",
+            "delivery=${event.delivery}",
+            "accepted=${event.accepted}",
+        )
+
         is ChatEventDto.MessageUpdated -> join(
             sid(event.sessionID),
             "evt=message.updated",

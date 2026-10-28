@@ -4,6 +4,7 @@ import ai.kilocode.client.app.KiloAppService
 import ai.kilocode.client.app.KiloHostedService
 import ai.kilocode.client.app.KiloSessionService
 import ai.kilocode.client.app.KiloWorkspaceService
+import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.testing.FakeAppRpcApi
 import ai.kilocode.client.testing.FakeSessionRpcApi
 import ai.kilocode.client.testing.FakeWorkspaceRpcApi
@@ -121,6 +122,30 @@ class HostedWorkspaceEditorPanelTest : BasePlatformTestCase() {
         })
         assertEquals(1, rpc.workspaceCalls)
         assertEquals(1, rpc.collectors)
+    }
+
+    fun testPreparationFailureRemainsMountedAfterIdleAndRestartReusesFooter() {
+        emit(HostedSystemEventDto(key, "preparing", action = "attempt_failed", attemptID = "attempt_1",
+            failure = "workspace_setup_failed", message = "Finishing setup", observedAt = 110.0, revision = 8))
+        assertTrue(coroutines.pumpUntil { edtWait {
+            descendants(panel).filterIsInstance<ProgressPanel>().any {
+                it.isVisible && it.labelText().startsWith(KiloBundle.message("hosted.workspace.preparation.setupFailed"))
+            }
+        } })
+        val footer = edtWait { descendants(panel).filterIsInstance<ProgressPanel>().single() }
+        emit(HostedSystemEventDto(key, "cloud.status", cloudStatus = "idle", observedAt = 120.0))
+        assertTrue(coroutines.pumpUntil { hosted.state.value.failure(key) != null &&
+            hosted.state.value.preparations[key]?.cloudStatus == "error" })
+        edtWait {
+            assertTrue(footer.isVisible)
+            assertSame(footer, descendants(panel).filterIsInstance<ProgressPanel>().single())
+        }
+        emit(HostedSystemEventDto(key, "preparing", action = "attempt_started", attemptID = "attempt_2",
+            message = "New preparation", observedAt = 200.0, revision = 1))
+        assertTrue(coroutines.pumpUntil { edtWait { footer.labelText() == "New preparation" } })
+        edtWait { assertSame(footer, descendants(panel).filterIsInstance<ProgressPanel>().single()) }
+        assertNull(hosted.state.value.failure(key))
+        assertEquals("sleeping", hosted.state.value.statuses[ref.key]?.computeStatus)
     }
 
     private fun emit(event: HostedSystemEventDto) { assertTrue(rpc.events.tryEmit(event)) }

@@ -79,7 +79,11 @@ class KiloHostedService internal constructor(
     ) {
         /** Only the current preparation is visible; completed details remain in the cache. */
         fun preparation(session: String): HostedSystemEventDto? = preparations[session]?.takeIf {
-            it.cloudStatus == "preparing" && it.action !in setOf("attempt_completed", "attempt_failed")
+            it.cloudStatus == "preparing" && failure(session) == null && it.action != "attempt_completed"
+        }
+
+        fun failure(session: String): HostedSystemEventDto? = preparations[session]?.takeIf {
+            it.cloudStatus == "error" || it.action == "attempt_failed" || it.failure != null
         }
 
         /** Preparation is presentation only; native idle never changes canonical compute state. */
@@ -115,6 +119,7 @@ class KiloHostedService internal constructor(
         val retired = mutableSetOf<String>()
     }
     private val watches = mutableMapOf<String, Watch>()
+    private val retired = mutableMapOf<String, Set<String>>()
 
     init {
         if (app != null) {
@@ -316,6 +321,7 @@ class KiloHostedService internal constructor(
             return@synchronized
         }
         val keys = items.mapTo(mutableSetOf()) { it.ref.key }
+        retired.keys.removeAll { key -> items.none { key.startsWith(it.ref.key + ":") } }
         watches.toMap().forEach { (key, item) ->
             item.discovered = false
             if (item.ref.key !in keys) {
@@ -333,6 +339,12 @@ class KiloHostedService internal constructor(
         val key = HostedIDs.session(ref.providerID, ref.workspaceID, session)
         return watches.getOrPut(key) {
             Watch(ref, session).also { item ->
+                item.retired += retired[key].orEmpty()
+                _state.value.preparations[key]?.let { cached ->
+                    item.progress = cached.takeIf { it.kind == "preparing" || it.action == "attempt_failed" }
+                    item.lifecycle = cached.takeIf { it.kind == "cloud.status" }
+                    item.closed = cached.cloudStatus != "preparing"
+                }
                 item.job = cs.launch {
                     flow {
                         // The durable boundary must include collection, not just Flow acquisition.
@@ -364,6 +376,7 @@ class KiloHostedService internal constructor(
     private fun clear() = synchronized(lock) {
         watches.values.forEach { it.job?.cancel() }
         watches.clear()
+        retired.clear()
     }
 
     private fun fold(item: Watch, event: HostedSystemEventDto) {
@@ -375,34 +388,44 @@ class KiloHostedService internal constructor(
                 val lifecycle = item.lifecycle
                 if (event.cloudStatus == null || (lifecycle != null && event.observedAt > 0 &&
                     lifecycle.observedAt > event.observedAt)) return
-                if (event.cloudStatus != "preparing" && event.observedAt > 0 &&
-                    (item.progress?.observedAt ?: 0.0) > event.observedAt) return
+                if (event.observedAt > 0 && (item.progress?.observedAt ?: 0.0) > event.observedAt) return
                 item.lifecycle = event.copy(observedAt = event.observedAt.takeIf { it > 0 }
                     ?: lifecycle?.observedAt ?: 0.0)
                 if (event.cloudStatus == "preparing" &&
-                    item.progress?.action in setOf("attempt_completed", "attempt_failed")) {
+                    (old?.cloudStatus == "error" || item.progress?.action in setOf("attempt_completed", "attempt_failed"))) {
                     item.progress?.attemptID?.let { item.retired += it }
                     item.progress = null
                     item.detail = null
                     item.closed = false
                     event
+                } else if (event.cloudStatus == "error") {
+                    item.closed = true
+                    val failed = (old ?: event).copy(
+                        action = "attempt_failed", cloudStatus = "error",
+                        failure = event.failure ?: old?.failure,
+                        observedAt = maxOf(event.observedAt, old?.observedAt ?: 0.0),
+                    )
+                    item.progress = failed
+                    failed
                 } else {
                     item.closed = event.cloudStatus != "preparing" && item.progress != null
-                    old?.copy(cloudStatus = event.cloudStatus) ?: event
+                    old?.copy(cloudStatus = if (old.cloudStatus == "error") "error" else event.cloudStatus) ?: event
                 }
             }
             "preparing" -> {
                 val progress = item.progress
                 val distinct = event.attemptID != null && event.attemptID != progress?.attemptID
-                val terminal = event.action in setOf("attempt_completed", "attempt_failed") ||
-                    (event.attemptID == null && event.step in setOf("ready", "failed"))
+                val failed = event.action in setOf("attempt_failed", "step_failed", "failed") || event.failure != null || event.step == "failed"
+                val terminal = failed || event.action == "attempt_completed" ||
+                    (event.attemptID == null && event.step == "ready")
                 if (event.attemptID?.let { it in item.retired } == true) return
                 if (distinct && progress != null && event.observedAt > 0 && progress.observedAt > event.observedAt) return
                 val revision = event.revision
                 val previous = progress?.revision
                 val finished = !distinct && progress?.action in setOf("attempt_completed", "attempt_failed")
                 if (!distinct && progress != null) {
-                    if (finished && terminal) return
+                    if (finished && terminal && !(progress?.action == "attempt_failed" && failed &&
+                        progress.failure == null && event.failure != null && revision == previous)) return
                     if (revision != null && previous != null) {
                         if (revision < previous) return
                         // An attempt snapshot precedes its latest step at the same revision.
@@ -421,9 +444,11 @@ class KiloHostedService internal constructor(
                     (revision == null && previous == null && event.observedAt == 0.0))) item.closed = false
                 if (!finished || terminal) {
                     item.progress = event.copy(
+                        action = if (failed) "attempt_failed" else event.action,
                         observedAt = event.observedAt.takeIf { it > 0 }
                             ?: progress?.observedAt?.takeIf { !distinct } ?: 0.0,
                         attemptID = event.attemptID ?: progress?.attemptID,
+                        triggerMessageID = event.triggerMessageID ?: progress?.triggerMessageID?.takeIf { !distinct },
                         revision = revision ?: previous?.takeIf { !distinct },
                     )
                 }
@@ -437,13 +462,15 @@ class KiloHostedService internal constructor(
                     action = if (terminal || finished) latest.action else display.action,
                     message = latest.message?.takeIf { latest.action == "attempt_failed" } ?: display.message,
                     cloudStatus = when {
-                        terminal || finished -> if (latest.action == "attempt_failed" || latest.step == "failed") "error" else "ready"
+                        terminal || finished -> if (latest.action == "attempt_failed" || latest.step == "failed" || latest.failure != null) "error" else "ready"
                         closed -> item.lifecycle?.cloudStatus ?: "idle"
                         else -> "preparing"
                     },
                     observedAt = latest.observedAt,
                     attemptID = latest.attemptID,
                     revision = latest.revision,
+                    failure = latest.failure ?: display.failure,
+                    triggerMessageID = latest.triggerMessageID ?: display.triggerMessageID,
                 )
             }
             else -> null
@@ -461,6 +488,11 @@ class KiloHostedService internal constructor(
             current.copy(statuses = current.statuses + (ref.key to next), preparations =
                 if (preparation != null) current.preparations + (event.sessionID to preparation) else current.preparations)
         }
+        if (preparation?.cloudStatus == "error" && preparation != old) {
+            val code = preparation.failure?.takeIf { it.matches(Regex("[a-z][a-z0-9_]{0,63}")) } ?: "unknown"
+            log.warn("hosted preparation failed code=$code")
+        }
+        retired[event.sessionID] = item.retired.toSet()
     }
 
     private suspend fun <T> call(block: suspend KiloHostedRpcApi.() -> T): T {

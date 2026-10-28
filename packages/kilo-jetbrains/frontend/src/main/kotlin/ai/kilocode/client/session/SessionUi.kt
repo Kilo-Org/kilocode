@@ -181,6 +181,7 @@ class SessionUi(
     private var opening = ref != null
     private var pending = false
     private var preparation: String? = null
+    private var preparationFailure: HostedSystemEventDto? = null
     private var loaded: Boolean? = null
     private var revertDraft: Pair<String, List<PromptAttachment>>? = null
     private var pendingRollback: String? = null
@@ -502,11 +503,13 @@ class SessionUi(
     @RequiresEdt
     internal fun setHostedPreparation(event: HostedSystemEventDto?) {
         if (!hosted) return
-        val text = event?.message?.takeIf { it.isNotBlank() }
+        val failure = event?.takeIf { it.cloudStatus == "error" || it.action == "attempt_failed" || it.failure != null }
+        val text = if (failure != null) null else event?.message?.takeIf { it.isNotBlank() }
             ?: event?.let { KiloBundle.message("hosted.workspace.preparing") }
-        if (preparation == text) return
+        if (preparation == text && preparationFailure == failure) return
         preparation = text
-        messageBody.progress.setPreparation(text)
+        preparationFailure = failure
+        messageBody.progress.setPreparation(text, failure)
         scroll.show(body(controller.model.state))
         messageBody.revalidate()
     }
@@ -845,7 +848,7 @@ class SessionUi(
 
                 is SessionControllerEvent.ViewChanged.ShowProgress -> {
                     empty = null
-                    scroll.show(progressBody)
+                    scroll.show(if (preparation != null || preparationFailure != null) messageBody else progressBody)
                 }
 
                 is SessionControllerEvent.ViewChanged.ShowEmpty -> {
@@ -853,7 +856,7 @@ class SessionUi(
                         ?: EmptySessionPanel(this, controller, controller.recents(), timers = timers)
                     empty = panel
                     panel.setBranch(branch)
-                    scroll.show(panel.view)
+                    scroll.show(if (preparation != null || preparationFailure != null) messageBody else panel.view)
                 }
 
                 is SessionControllerEvent.ViewChanged.ShowSession -> {
@@ -910,6 +913,9 @@ class SessionUi(
                     // Covers opening a session with an existing board, and this session's own first
                     // board post; a subagent's post is caught by the busy->idle probe instead.
                     refreshBoardIfEmpty()
+                    if (event is SessionModelEvent.HistoryLoaded || event is SessionModelEvent.Cleared) {
+                        onStateChanged(controller.model.state)
+                    }
                 }
 
                 is SessionModelEvent.QueueChanged -> Unit
@@ -1039,7 +1045,7 @@ class SessionUi(
     }
 
     private fun body(state: SessionState): JPanel {
-        if (preparation != null) return messageBody
+        if (preparation != null || preparationFailure != null) return messageBody
         if (controller.model.showSession) return messageBody
         if (state is SessionState.Retry || state is SessionState.Offline) return progressBody
         if (state is SessionState.Loading) return progressBody

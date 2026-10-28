@@ -48,6 +48,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.contentOrNull
@@ -388,37 +389,56 @@ class KiloBackendHostedManager(
         }
 
     suspend fun pendingPermissions(directory: String, organizationID: String?): List<PermissionRequestDto> {
-        val (provider, workspace) = HostedIDs.parseWorkspace(directory) ?: return emptyList()
+        val (provider, workspace) = HostedIDs.parseWorkspace(directory) ?: throw IllegalArgumentException("Not a hosted workspace")
         val ref = HostedWorkspaceRefDto(provider, workspace)
         return withContext(Dispatchers.IO) {
-            attachments.values
-                .filter { it.ref == ref }
-                .flatMap { candidate -> attached(candidate.session, organizationID) { attachment ->
-                    refresh(attachment)
-                    val raw = get("/permission?workspace=${encode(attachment.id)}", "pendingPermissions")
-                        ?: return@attached emptyList()
-                    KiloCliDataParser.parsePermissionRequests(raw).map { request ->
+            val candidates = attachments.values.filter { it.ref == ref }
+            check(candidates.isNotEmpty()) { "No hosted session attachment for pendingPermissions" }
+            candidates.flatMap { candidate ->
+                attached(candidate.session, organizationID) { attachment ->
+                    val raw = get("/permission?workspace=${encode(attachment.id)}", "pendingPermissions", strict = true)
+                        ?: throw IllegalStateException("Missing pendingPermissions response")
+                    val requests = pending(raw, "pendingPermissions", KiloCliDataParser::parsePermissionRequests)
+                        .map { it.copy(sessionID = attachment.session) }
+                    permissionOwner.entries.removeIf { it.value == attachment.session }
+                    requests.forEach { request ->
                         permissionOwner[request.id] = attachment.session
-                        request.copy(sessionID = attachment.session)
                     }
-                } }
+                    requests
+                }
+            }
         }
     }
 
     suspend fun pendingQuestions(directory: String, organizationID: String?): List<QuestionRequestDto> {
-        val (provider, workspace) = HostedIDs.parseWorkspace(directory) ?: return emptyList()
+        val (provider, workspace) = HostedIDs.parseWorkspace(directory) ?: throw IllegalArgumentException("Not a hosted workspace")
         val ref = HostedWorkspaceRefDto(provider, workspace)
         return withContext(Dispatchers.IO) {
-            attachments.values
-                .filter { it.ref == ref }
-                .flatMap { candidate -> attached(candidate.session, organizationID) { attachment ->
-                    val raw = get("/question?workspace=${encode(attachment.id)}", "pendingQuestions")
-                        ?: return@attached emptyList()
-                    KiloCliDataParser.parseQuestionRequests(raw).map { request ->
+            val candidates = attachments.values.filter { it.ref == ref }
+            check(candidates.isNotEmpty()) { "No hosted session attachment for pendingQuestions" }
+            candidates.flatMap { candidate ->
+                attached(candidate.session, organizationID) { attachment ->
+                    val raw = get("/question?workspace=${encode(attachment.id)}", "pendingQuestions", strict = true)
+                        ?: throw IllegalStateException("Missing pendingQuestions response")
+                    val requests = pending(raw, "pendingQuestions", KiloCliDataParser::parseQuestionRequests)
+                        .map { it.copy(sessionID = attachment.session) }
+                    questionOwner.entries.removeIf { it.value == attachment.session }
+                    requests.forEach { request ->
                         questionOwner[request.id] = attachment.session
-                        request.copy(sessionID = attachment.session)
                     }
-                } }
+                    requests
+                }
+            }
+        }
+    }
+
+    private fun <T> pending(raw: String, op: String, parser: (String) -> List<T>): List<T> {
+        val array = json.parseToJsonElement(raw) as? JsonArray
+            ?: throw IllegalArgumentException("Invalid $op response: expected an array")
+        return array.map { entry ->
+            val parsed = parser(JsonArray(listOf(entry)).toString())
+            require(parsed.size == 1) { "Invalid $op response entry" }
+            parsed.single()
         }
     }
 
@@ -776,18 +796,18 @@ class KiloBackendHostedManager(
         throw IllegalStateException("No hosted session attachment for $op")
     }
 
-    private fun get(path: String, op: String): String? {
-        val client = http ?: return null
-        val url = base ?: return null
+    private fun get(path: String, op: String, strict: Boolean = false): String? {
+        val client = http ?: if (strict) throw IllegalStateException("Hosted session manager not started") else return null
+        val url = base ?: if (strict) throw IllegalStateException("Hosted session manager not started") else return null
         val request = Request.Builder().url("$url$path").get().build()
         return client.newCall(request).execute().use { response ->
             val raw = response.body?.string()
             if (!response.isSuccessful) {
-                if (response.code in setOf(404, 410)) throw HostedHttpException(response.code, "$op failed: HTTP ${response.code}")
+                if (strict || response.code in setOf(404, 410)) throw HostedHttpException(response.code, "$op failed: HTTP ${response.code}")
                 log.warn("hosted $op failed: HTTP ${response.code}")
                 return null
             }
-            raw
+            raw ?: if (strict) throw IllegalStateException("Missing $op response") else null
         }
     }
 

@@ -9,3 +9,5 @@ Keep hosted input text-only without sending local editor context or unsupported 
 Recover hosted event streams across attachment renewal and Cloud snapshot resets, and update workspace preparation and compute badges live without manual refresh.
 
 Show Cloud preparation progress inline in the chat, and simplify Agent Manager workspace rows to a right-aligned status badge with neutral sleeping and green active styling.
+
+Retain safe Cloud preparation errors, reconcile pending interactions at snapshot boundaries, and show message failures without stopping unrelated active work.

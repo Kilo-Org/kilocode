@@ -218,8 +218,10 @@ class MockCliServer : AutoCloseable {
     @Volatile var lastSessionRenameMethod: String? = null
     @Volatile var pendingPermissions = "[]"
     @Volatile var pendingPermissionsStatus = 200
+    val pendingPermissionsStatuses = ConcurrentLinkedQueue<Int>()
     @Volatile var pendingQuestions = "[]"
     @Volatile var pendingQuestionsStatus = 200
+    val pendingQuestionsStatuses = ConcurrentLinkedQueue<Int>()
     @Volatile var instanceReloadStatus = 200
     @Volatile var lastInstanceReloadPath: String? = null
 
@@ -658,9 +660,9 @@ class MockCliServer : AutoCloseable {
                     respond(output, sessionStatusesStatus, sessionStatuses)
                 }
                 bare == "/permission" && method == "GET" ->
-                    respond(output, pendingPermissionsStatus, pendingPermissions)
+                    respond(output, pendingPermissionsStatuses.poll() ?: pendingPermissionsStatus, pendingPermissions)
                 bare == "/question" && method == "GET" ->
-                    respond(output, pendingQuestionsStatus, pendingQuestions)
+                    respond(output, pendingQuestionsStatuses.poll() ?: pendingQuestionsStatus, pendingQuestions)
                 bare == "/session" && method == "GET" -> respond(output, sessionsStatus, sessions)
                 bare == "/session" && method == "POST" -> respond(output, sessionCreateStatus, sessionCreate)
                 bare.matches(Regex("/session/ses_[^/]+")) && method == "GET" ->

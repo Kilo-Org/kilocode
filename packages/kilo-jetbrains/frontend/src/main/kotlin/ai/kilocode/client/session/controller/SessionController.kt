@@ -75,6 +75,8 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.filter
@@ -1746,14 +1748,24 @@ class SessionController(
     }
 
     /** Rehydrate pending permissions/questions and current session status after history load or reconnect. */
-    private suspend fun recoverPending(id: String, revision: Long, trigger: String = "history") {
+    private suspend fun recoverPending(
+        id: String,
+        revision: Long,
+        trigger: String = "history",
+        resolved: Set<String> = emptySet(),
+    ) {
+        val generation = epoch
         try {
-            val permissions = sessions.pendingPermissions(directory).filter { it.sessionID == id }
-            val questions = sessions.pendingQuestions(directory).filter { it.sessionID == id }
+            val permissions = sessions.pendingPermissions(directory).filter { it.sessionID == id && it.id !in resolved }
+            val questions = sessions.pendingQuestions(directory).filter { it.sessionID == id && it.id !in resolved }
             val status = sessions.statuses.value[id]
             // replyAll auto-approves ordinary permissions and skips sensitive ones. A sensitive
             // request must then fall through to a human card rather than go Busy.
             val prompt = card(permissions)
+            val current = withContext(Dispatchers.Main) {
+                !disposed && sid == id && promptRevision == revision && epoch == generation
+            }
+            if (!current) return
             if (permissions.isNotEmpty() && autoApprove) {
                 val count = replyAll(permissions)
                 if (count > 0 && prompt == null) {
@@ -1761,6 +1773,7 @@ class SessionController(
                         if (disposed) return@runEdt
                         if (sid != id) return@runEdt
                         if (promptRevision != revision) return@runEdt
+                        if (epoch != generation) return@runEdt
                         model.setState(SessionState.Busy(KiloBundle.message("session.status.considering")))
                     }
                     return
@@ -1789,12 +1802,16 @@ class SessionController(
                 // taken but before this commit — the model already reflects the fresher truth, so
                 // applying the stale snapshot now could only overwrite it (e.g. Busy over a newly
                 // asked question) or resurrect something already answered/rejected. Discard instead.
-                if (promptRevision != revision) {
+                if (promptRevision != revision || epoch != generation) {
                     LOG.debug { "${ChatLogSummary.sid(id)} kind=recovery trigger=$trigger stale=true" }
                     return@runEdt
                 }
                 updateModel {
                     pending.entries.removeIf { it.value.sessionId == id }
+                    if (ref is SessionRef.Hosted &&
+                        (model.state is SessionState.AwaitingPermission || model.state is SessionState.AwaitingQuestion)) {
+                        model.setState(SessionState.Idle)
+                    }
                     if (queue.isNotEmpty()) {
                         queue.map(::toPermission).forEach(::enqueue)
                         promote()
@@ -1806,6 +1823,11 @@ class SessionController(
                         // prompt, and the status is already correct when the model is Busy.
                         if (!(live is SessionState.Busy && model.state is SessionState.Busy)) model.setState(live)
                     } else {
+                        if (ref is SessionRef.Hosted && (model.state is SessionState.Busy ||
+                            model.state is SessionState.AwaitingPermission || model.state is SessionState.AwaitingQuestion)) {
+                            model.setState(pending.values.firstOrNull()?.let { SessionState.AwaitingPermission(it) }
+                                ?: SessionState.Idle)
+                        }
                         seedOutcome()
                     }
                 }
@@ -1976,6 +1998,8 @@ class SessionController(
                 model.removeMessage(event.messageID)
             }
 
+            is ChatEventDto.MessageTerminal -> model.setTerminal(event)
+
             is ChatEventDto.PermissionAsked -> {
                 asked(event)
             }
@@ -2026,6 +2050,7 @@ class SessionController(
         val id = target.id
         if (phase == "start") {
             epoch++
+            promptRevision++
             hydration?.cancel()
             hydration = null
             updates.holdFlush(false)
@@ -2058,17 +2083,50 @@ class SessionController(
             childParts.clear()
             childParts.putAll(children(items))
             model.loadHistory(items)
+            events.filterIsInstance<ChatEventDto.MessageTerminal>().forEach(model::setTerminal)
             syncHistoryAgent(items)
             events.filterIsInstance<ChatEventDto.SessionDiffChanged>().lastOrNull()?.let { model.setDiff(it.diff) }
             events.filterIsInstance<ChatEventDto.TodoUpdated>().lastOrNull()?.let { model.setTodos(it.todos) }
             val dto = events.filterIsInstance<ChatEventDto.SessionStatusChanged>().lastOrNull()
             if (dto != null) status(dto.status)
+            val permissions = linkedMapOf<String, PermissionRequestDto>()
+            val questions = linkedMapOf<String, QuestionRequestDto>()
+            val resolved = mutableSetOf<String>()
+            events.forEach { event ->
+                when (event) {
+                    is ChatEventDto.PermissionAsked -> {
+                        resolved.remove(event.request.id)
+                        permissions[event.request.id] = event.request
+                    }
+                    is ChatEventDto.PermissionReplied -> {
+                        permissions.remove(event.requestID)
+                        resolved.add(event.requestID)
+                    }
+                    is ChatEventDto.QuestionAsked -> {
+                        resolved.remove(event.request.id)
+                        questions[event.request.id] = event.request
+                    }
+                    is ChatEventDto.QuestionReplied -> {
+                        questions.remove(event.requestID)
+                        resolved.add(event.requestID)
+                    }
+                    is ChatEventDto.QuestionRejected -> {
+                        questions.remove(event.requestID)
+                        resolved.add(event.requestID)
+                    }
+                    else -> Unit
+                }
+            }
+            // Replay must never auto-approve historical requests; only the successful live probe may do that.
+            permissions.values.map(::toPermission).forEach(::enqueue)
+            if (questions.isNotEmpty()) model.setState(SessionState.AwaitingQuestion(toQuestion(questions.values.last())))
+            else if (permissions.isNotEmpty()) promote()
             events.filterIsInstance<ChatEventDto.SessionUpdated>().lastOrNull()?.let { model.setSession(it.session) }
             if (sessionLoadState is SessionLoadState.Loading) setSessionLoadState(SessionLoadState.Idle)
             showSession()
             promptRevision++
             val revision = promptRevision
-            cs.launch { recoverPending(id, revision, "hosted-fence") }
+            cs.launch { recoverPending(id, revision, "hosted-fence", resolved) }
             return
         }
         val generation = ++epoch
@@ -2134,6 +2192,7 @@ class SessionController(
     private fun handleHidden(event: ChatEventDto): Boolean {
         return when (event) {
             is ChatEventDto.Error,
+            is ChatEventDto.MessageTerminal,
             is ChatEventDto.SessionInterrupted,
             is ChatEventDto.PermissionAsked,
             is ChatEventDto.PermissionReplied,
@@ -3272,6 +3331,7 @@ private fun matchesSession(event: ChatEventDto, id: String): Boolean = when (eve
     is ChatEventDto.SessionCreated -> true
     is ChatEventDto.Error -> event.sessionID == null || event.sessionID == id
     is ChatEventDto.MessageRemoved -> event.sessionID == id
+    is ChatEventDto.MessageTerminal -> event.sessionID == id
     is ChatEventDto.PermissionAsked -> event.sessionID == id
     is ChatEventDto.PermissionReplied -> event.sessionID == id
     is ChatEventDto.QuestionAsked -> event.sessionID == id

@@ -178,6 +178,17 @@ sealed class ChatEventDto {
         val info: MessageDto,
     ) : ChatEventDto()
 
+    /** Public Cloud terminal metadata; deliberately excludes provider error/reason text. */
+    @Serializable
+    @SerialName("cloud.message.terminal")
+    data class MessageTerminal(
+        val sessionID: String,
+        val messageID: String,
+        val status: String,
+        val delivery: String,
+        val accepted: Boolean,
+    ) : ChatEventDto()
+
     @Serializable
     @SerialName("message.part.updated")
     data class PartUpdated(

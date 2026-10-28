@@ -17,6 +17,7 @@ internal object HostedEventMapper {
             sessionID = composite,
             info = event.info.copy(sessionID = composite),
         )
+        is ChatEventDto.MessageTerminal -> event.copy(sessionID = composite)
         is ChatEventDto.PartUpdated -> event.copy(
             sessionID = composite,
             part = event.part.copy(sessionID = composite),

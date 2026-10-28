@@ -11,6 +11,43 @@ class HostedSystemEventParserTest {
     private val session = HostedIDs.session("cloud", "wrk_1", native)
 
     @Test
+    fun `safe failure code is separate from simultaneous progress detail and trigger identity`() {
+        val event = assertNotNull(HostedSystemEventParser.parse(session, native, null, """
+            {"type":"preparing","properties":{"preparation":{"attemptId":"attempt_1",
+                "triggerMessageId":"msg_1","action":"step_failed","step":"workspace_setup",
+                "detail":"Finishing setup","safeError":"workspace_setup_failed","revision":8,"timestamp":1234}}}
+        """.trimIndent()))
+        assertEquals("Finishing setup", event.message)
+        assertEquals("workspace_setup_failed", event.failure)
+        assertEquals("msg_1", event.triggerMessageID)
+    }
+
+    @Test
+    fun `failed attempt snapshot replays explicit safe code without its generic message`() {
+        val event = assertNotNull(HostedSystemEventParser.parse(session, native, null, """
+            {"type":"preparing","properties":{"preparation":{"action":"attempt_snapshot",
+                "message":"Preparation snapshot","attempt":{"id":"attempt_1","status":"failed",
+                "triggerMessageId":"msg_1","safeError":"workspace_setup_failed","revision":9}}}}
+        """.trimIndent()))
+        assertEquals("attempt_failed", event.action)
+        assertEquals("workspace_setup_failed", event.failure)
+        assertNull(event.message)
+    }
+
+    @Test
+    fun `cloud error has generic failure semantics without forwarding raw errors`() {
+        for (code in listOf("null", "\"Private error at /home/user\"", "\"${"a".repeat(65)}\"", "{}")) {
+            val event = assertNotNull(HostedSystemEventParser.parse(session, native, null, """
+                {"type":"cloud.status","properties":{"cloudStatus":{"type":"error",
+                    "safeError":$code,"message":"Private server error","error":{"message":"Secret"}}}}
+            """.trimIndent()))
+            assertEquals("error", event.cloudStatus)
+            assertNull(event.failure)
+            assertNull(event.message)
+        }
+    }
+
+    @Test
     fun `structured cloud preparation selects the latest progressing step`() {
         val event = assertNotNull(HostedSystemEventParser.parse(session, native, null, """
             {"type":"cloud.status","properties":{"sessionID":"ses_cloud","cloudStatus":{"type":"preparing","steps":[

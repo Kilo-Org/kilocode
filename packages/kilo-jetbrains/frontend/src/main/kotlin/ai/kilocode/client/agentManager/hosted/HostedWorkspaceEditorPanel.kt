@@ -174,7 +174,7 @@ class HostedWorkspaceEditorPanel(
     @RequiresEdt
     private fun applyStatus() {
         val state = hosted.state.value
-        manager.setPreparation(selected?.let { state.preparation(it) })
+        manager.setPreparation(selected?.let { state.failure(it) ?: state.preparation(it) })
         val item = state.presentation(ref) ?: run {
             compute.text = KiloBundle.message("hosted.workspace.status.unknown")
             return

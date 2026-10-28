@@ -155,4 +155,7 @@ data class HostedSystemEventDto(
     val observedAt: Double = 0.0,
     val attemptID: String? = null,
     val revision: Long? = null,
+    /** Explicit provider safe-error code only; never a raw server error or progress detail. */
+    val failure: String? = null,
+    val triggerMessageID: String? = null,
 )

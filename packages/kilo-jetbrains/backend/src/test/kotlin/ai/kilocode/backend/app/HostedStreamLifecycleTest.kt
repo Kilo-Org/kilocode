@@ -20,6 +20,7 @@ import java.util.concurrent.CountDownLatch
 import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 class HostedStreamLifecycleTest {
@@ -175,6 +176,106 @@ class HostedStreamLifecycleTest {
     }
 
     @Test
+    fun `pending reads without an attachment are unavailable rather than empty`() = runBlocking(Dispatchers.Default) {
+        ready()
+        val directory = HostedIDs.workspace("cloud", "wrk_1")
+        assertFailsWith<IllegalStateException> { app.hosted.pendingPermissions(directory, null) }
+        assertFailsWith<IllegalStateException> { app.hosted.pendingQuestions(directory, null) }
+        open()
+        val other = HostedIDs.workspace("cloud", "wrk_2")
+        assertFailsWith<IllegalStateException> { app.hosted.pendingPermissions(other, null) }
+        assertFailsWith<IllegalStateException> { app.hosted.pendingQuestions(other, null) }
+        Unit
+    }
+
+    @Test
+    fun `successful empty pending arrays are authoritative`() = runBlocking(Dispatchers.Default) {
+        ready()
+        open()
+        val directory = HostedIDs.workspace("cloud", "wrk_1")
+        assertTrue(app.hosted.pendingPermissions(directory, null).isEmpty())
+        assertTrue(app.hosted.pendingQuestions(directory, null).isEmpty())
+        assertTrue(mock.paths.contains("/permission?workspace=wrk_att_test"))
+        assertTrue(mock.paths.contains("/question?workspace=wrk_att_test"))
+    }
+
+    @Test
+    fun `HTTP failures cannot clear hosted pending requests`() = runBlocking(Dispatchers.Default) {
+        ready()
+        open()
+        val directory = HostedIDs.workspace("cloud", "wrk_1")
+        mock.pendingPermissionsStatus = 500
+        mock.pendingQuestionsStatus = 500
+        val permission = assertFailsWith<RuntimeException> { app.hosted.pendingPermissions(directory, null) }
+        val question = assertFailsWith<RuntimeException> { app.hosted.pendingQuestions(directory, null) }
+        assertTrue(permission.message.orEmpty().contains("HTTP 500"))
+        assertTrue(question.message.orEmpty().contains("HTTP 500"))
+        assertEquals(1, mock.requestCount(attach))
+    }
+
+    @Test
+    fun `missing malformed and non-array pending bodies fail`() = runBlocking(Dispatchers.Default) {
+        ready()
+        open()
+        val directory = HostedIDs.workspace("cloud", "wrk_1")
+        listOf("", "{", "{}", "null", "true").forEach { body ->
+            mock.pendingPermissions = body
+            mock.pendingQuestions = body
+            assertFailsWith<IllegalArgumentException>(body) { app.hosted.pendingPermissions(directory, null) }
+            assertFailsWith<IllegalArgumentException>(body) { app.hosted.pendingQuestions(directory, null) }
+        }
+    }
+
+    @Test
+    fun `invalid pending entry fails entire read without dropping valid requests`() = runBlocking(Dispatchers.Default) {
+        ready()
+        open()
+        val directory = HostedIDs.workspace("cloud", "wrk_1")
+        listOf("{}", "null", "true", """{"id":"invalid"}""").forEach { entry ->
+            mock.pendingPermissions = "[$PERMISSION,$entry]"
+            mock.pendingQuestions = "[$QUESTION,$entry]"
+            assertFailsWith<IllegalArgumentException>(entry) { app.hosted.pendingPermissions(directory, null) }
+            assertFailsWith<IllegalArgumentException>(entry) { app.hosted.pendingQuestions(directory, null) }
+        }
+        mock.pendingPermissions = "[$PERMISSION]"
+        mock.pendingQuestions = "[$QUESTION]"
+        val permission = app.hosted.pendingPermissions(directory, null).single()
+        val question = app.hosted.pendingQuestions(directory, null).single()
+        assertEquals("per_1", permission.id)
+        assertEquals(session, permission.sessionID)
+        assertEquals("que_1", question.id)
+        assertEquals(session, question.sessionID)
+    }
+
+    @Test
+    fun `pending permission 404 renews attachment before returning valid response`() = runBlocking(Dispatchers.Default) {
+        ready()
+        open()
+        mock.pendingPermissions = "[$PERMISSION]"
+        mock.pendingPermissionsStatuses.add(404)
+        mock.hostedAttach = """{"attachmentID":"wrk_att_next","session":{"providerID":"cloud","sessionID":"ses_cloud"},"expiresAt":1}"""
+        val request = app.hosted.pendingPermissions(HostedIDs.workspace("cloud", "wrk_1"), null).single()
+        assertEquals(session, request.sessionID)
+        assertEquals(2, mock.requestCount(attach))
+        assertEquals(2, mock.requestCount("/permission"))
+        assertTrue(mock.paths.contains("/permission?workspace=wrk_att_next"))
+    }
+
+    @Test
+    fun `pending question 410 renews attachment before returning valid response`() = runBlocking(Dispatchers.Default) {
+        ready()
+        open()
+        mock.pendingQuestions = "[$QUESTION]"
+        mock.pendingQuestionsStatuses.add(410)
+        mock.hostedAttach = """{"attachmentID":"wrk_att_next","session":{"providerID":"cloud","sessionID":"ses_cloud"},"expiresAt":1}"""
+        val request = app.hosted.pendingQuestions(HostedIDs.workspace("cloud", "wrk_1"), null).single()
+        assertEquals(session, request.sessionID)
+        assertEquals(2, mock.requestCount(attach))
+        assertEquals(2, mock.requestCount("/question"))
+        assertTrue(mock.paths.contains("/question?workspace=wrk_att_next"))
+    }
+
+    @Test
     fun `native fences and status maps isolate colliding sessions across workspaces`() = runBlocking(Dispatchers.Default) {
         ready()
         open()
@@ -200,5 +301,7 @@ class HostedStreamLifecycleTest {
 
     private companion object {
         const val TIMEOUT = 10_000L
+        const val PERMISSION = """{"id":"per_1","sessionID":"ses_cloud","permission":"bash","patterns":["pwd"],"always":[],"metadata":{}}"""
+        const val QUESTION = """{"id":"que_1","sessionID":"ses_cloud","questions":[{"question":"Continue?","header":"Confirm","options":[{"label":"Yes","description":"Continue"}]}]}"""
     }
 }

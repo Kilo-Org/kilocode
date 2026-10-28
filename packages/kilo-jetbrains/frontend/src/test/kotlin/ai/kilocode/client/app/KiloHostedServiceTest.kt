@@ -38,6 +38,99 @@ class KiloHostedServiceTest {
     }
 
     @Test
+    fun `failure survives idle replay and newer attempt retires the failed attempt`() = runBlocking {
+        val ref = HostedWorkspaceRefDto("cloud", "one")
+        val key = "${ref.key}:same"
+        val rpc = FakeRpc()
+        val service = KiloHostedService(cs, rpc, gate = { true }, log = TestLog())
+        val parent = Disposer.newDisposable()
+        try {
+            service.observe(ref, "same", parent)
+            withTimeout(WAIT) { rpc.opened.receive() }
+            val failed = HostedSystemEventDto(key, "preparing", action = "attempt_failed",
+                message = "Finishing setup", failure = "workspace_setup_failed", triggerMessageID = "msg_1",
+                attemptID = "attempt_1", revision = 8, observedAt = 100.0)
+            rpc.send(failed)
+            assertEquals("workspace_setup_failed", service.state.value.failure(key)?.failure)
+            assertNull(service.state.value.preparation(key))
+            rpc.send(HostedSystemEventDto(key, "cloud.status", cloudStatus = "idle", observedAt = 110.0))
+            assertEquals("workspace_setup_failed", service.state.value.failure(key)?.failure)
+            rpc.send(failed.copy(action = "running", failure = null, step = "workspace_setup", revision = 8))
+            assertEquals("workspace_setup_failed", service.state.value.failure(key)?.failure)
+            val fresh = failed.copy(action = "attempt_started", failure = null, message = null,
+                attemptID = "attempt_2", triggerMessageID = "msg_2", revision = 1, observedAt = 200.0)
+            rpc.send(fresh)
+            assertNull(service.state.value.failure(key))
+            assertEquals("attempt_2", service.state.value.preparation(key)?.attemptID)
+            rpc.send(failed.copy(revision = 99, observedAt = 9999.0))
+            rpc.send(HostedSystemEventDto(key, "cloud.status", cloudStatus = "error", observedAt = 150.0))
+            assertNull(service.state.value.failure(key))
+            assertEquals("attempt_2", service.state.value.preparation(key)?.attemptID)
+        } finally { Disposer.dispose(parent) }
+    }
+
+    @Test
+    fun `terminal preparation revision is not gated by a later lifecycle observation clock`() = runBlocking {
+        val ref = HostedWorkspaceRefDto("cloud", "one")
+        val key = "${ref.key}:same"
+        val rpc = FakeRpc()
+        val service = KiloHostedService(cs, rpc, gate = { true }, log = TestLog())
+        val parent = Disposer.newDisposable()
+        try {
+            service.observe(ref, "same", parent)
+            withTimeout(WAIT) { rpc.opened.receive() }
+            val step = HostedSystemEventDto(key, "preparing", step = "workspace_setup", action = "running",
+                attemptID = "attempt_1", revision = 7, observedAt = 100.0)
+            rpc.send(step)
+            rpc.send(HostedSystemEventDto(key, "cloud.status", cloudStatus = "idle", observedAt = 900.0))
+            rpc.send(step.copy(step = null, action = "attempt_failed", failure = "workspace_setup_failed",
+                revision = 8, observedAt = 110.0))
+            assertEquals("workspace_setup_failed", service.state.value.failure(key)?.failure)
+        } finally { Disposer.dispose(parent) }
+    }
+
+    @Test
+    fun `cloud error without code is retained until explicit preparation restart`() = runBlocking {
+        val ref = HostedWorkspaceRefDto("cloud", "one")
+        val key = "${ref.key}:same"
+        val rpc = FakeRpc()
+        val service = KiloHostedService(cs, rpc, gate = { true }, log = TestLog())
+        val parent = Disposer.newDisposable()
+        try {
+            service.observe(ref, "same", parent)
+            withTimeout(WAIT) { rpc.opened.receive() }
+            rpc.send(HostedSystemEventDto(key, "cloud.status", cloudStatus = "error", observedAt = 100.0))
+            assertEquals("attempt_failed", service.state.value.failure(key)?.action)
+            assertNull(service.state.value.failure(key)?.failure)
+            rpc.send(HostedSystemEventDto(key, "cloud.status", cloudStatus = "idle", observedAt = 110.0))
+            assertEquals("error", service.state.value.failure(key)?.cloudStatus)
+            rpc.send(HostedSystemEventDto(key, "cloud.status", cloudStatus = "preparing", observedAt = 120.0))
+            assertNull(service.state.value.failure(key))
+            assertEquals("preparing", service.state.value.preparation(key)?.cloudStatus)
+            rpc.send(HostedSystemEventDto(key, "cloud.status", cloudStatus = "error", observedAt = 100.0))
+            assertNull(service.state.value.failure(key))
+        } finally { Disposer.dispose(parent) }
+    }
+
+    @Test
+    fun `terminal step failure with safe code stays separate from its latest detail`() = runBlocking {
+        val ref = HostedWorkspaceRefDto("cloud", "one")
+        val key = "${ref.key}:same"
+        val rpc = FakeRpc()
+        val service = KiloHostedService(cs, rpc, gate = { true }, log = TestLog())
+        val parent = Disposer.newDisposable()
+        try {
+            service.observe(ref, "same", parent)
+            withTimeout(WAIT) { rpc.opened.receive() }
+            rpc.send(HostedSystemEventDto(key, "preparing", step = "workspace_setup", action = "failed",
+                message = "Finishing setup", failure = "workspace_setup_failed", attemptID = "attempt_1", revision = 8))
+            assertNull(service.state.value.preparation(key))
+            assertEquals("Finishing setup", service.state.value.failure(key)?.message)
+            assertEquals("workspace_setup_failed", service.state.value.failure(key)?.failure)
+        } finally { Disposer.dispose(parent) }
+    }
+
+    @Test
     fun `discovers every page and dedupes workspaces with passive status`() = runBlocking(Dispatchers.Default) {
         val one = workspace("1")
         val two = workspace("2")
