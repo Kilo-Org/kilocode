@@ -1,7 +1,7 @@
 // Web Tools tab on v2 config. Web Search maps the v2 `websearch` selection: `false` is off, a provider selection is
 // on. The Browser Automation rows have no v2 key and are not rendered.
 import { Component, Show, createEffect, createSignal, on } from "solid-js"
-import { Switch } from "@kilocode/kilo-ui/switch"
+import { Switch } from "./Switch"
 import { Card } from "@kilocode/kilo-ui/card"
 import { useLanguage } from "../../context/language"
 import { useSettingsConfig } from "../../v2/settings-config"

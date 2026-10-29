@@ -1,7 +1,7 @@
 // Experimental tab on v2 config. Only the rows with a v2 key are rendered: Share Mode (`share`), Formatter
-// (`formatter`) and LSP (`lsp`). The other v1 rows have no v2 key and are not rendered.
+// (`formatter`) and LSP (`lsp`). The other rows have no v2 key and are not rendered.
 import { Component } from "solid-js"
-import { Switch } from "@kilocode/kilo-ui/switch"
+import { Switch } from "./Switch"
 import { Select } from "@kilocode/kilo-ui/select"
 import { Card } from "@kilocode/kilo-ui/card"
 import { useLanguage } from "../../context/language"
