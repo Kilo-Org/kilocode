@@ -138,6 +138,11 @@ const AgentsSubtab: Component = () => {
                   void (async () => {
                     await config.unset(agentPath(row.id), "project")
                     await config.unset(agentPath(row.id), "global")
+                    // As v1, a removed agent cannot stay the default.
+                    if (config.value(["default_agent"]) === row.id) {
+                      await config.unset(["default_agent"], "project")
+                      await config.unset(["default_agent"], "global")
+                    }
                   })()
                   setCreated((ids) => ids.filter((id) => id !== row.id))
                   if (editing() === row.id) back()
