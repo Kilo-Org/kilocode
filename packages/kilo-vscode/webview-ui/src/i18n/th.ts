@@ -1114,6 +1114,9 @@ export const dict = {
   "settings.agentBehaviour.mcpResetAuth.confirm":
     'ล้างข้อมูลการเข้าสู่ระบบที่บันทึกไว้สำหรับ "{{name}}" หรือไม่? คุณจะต้องเข้าสู่ระบบอีกครั้ง',
   "settings.agentBehaviour.mcpBrowseMarketplace": "เรียกดู Marketplace",
+  "settings.agentBehaviour.mcp.timeout.startup.title": "หมดเวลาเริ่มต้น (มิลลิวินาที)",
+  "settings.agentBehaviour.mcp.timeout.catalog.title": "หมดเวลาของแค็ตตาล็อก (มิลลิวินาที)",
+  "settings.agentBehaviour.mcp.timeout.execution.title": "หมดเวลาการทำงาน (มิลลิวินาที)",
   "settings.agentBehaviour.mcpEmpty":
     "ไม่ได้กำหนดค่าเซิร์ฟเวอร์ MCP เพิ่มเซิร์ฟเวอร์ MCP ใน kilo.jsonc หรือขอให้เอเจนต์เพิ่มให้คุณ",
   "settings.agentBehaviour.workflows.description":
@@ -1133,7 +1136,7 @@ export const dict = {
     "เรียกใช้คำสั่ง shell ของ agent ใน sandbox ระดับระบบปฏิบัติการที่จำกัดการเขียนไปยังโฟลเดอร์สถานะของโปรเจ็กต์และ Kilo",
 
   "settings.autoApprove.description":
-    "กำหนดวิธีอนุญาตการทำงานของเครื่องมือ โดยค่าเริ่มต้นเครื่องมือส่วนใหญ่คืออนุญาต ส่วน doom_loop และ external_directory ค่าเริ่มต้นคือถาม",
+    "กำหนดวิธีอนุญาตการทำงานของเครื่องมือ โดยค่าเริ่มต้นเครื่องมือส่วนใหญ่คืออนุญาต ส่วน Bash ค่าเริ่มต้นคือถาม",
   "settings.autoApprove.maxCost.title": "การแจ้งเตือนค่าใช้จ่ายของเซสชัน",
   "settings.autoApprove.maxCost.description":
     "แจ้งเตือนก่อนดำเนินเซสชันต่อหลังจากค่าใช้จ่ายเกินจำนวน USD นี้ ใช้จำนวนดอลลาร์เต็ม; เว้นว่างไว้เพื่อปิดใช้งาน",

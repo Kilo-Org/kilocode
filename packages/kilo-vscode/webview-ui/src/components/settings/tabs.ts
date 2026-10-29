@@ -37,14 +37,14 @@ export const SETTINGS_TABS_V2: SettingsTabV2[] = [
     id: "agentBehaviour",
     icon: "brain",
     title: "settings.agentBehaviour.title",
-    ready: false,
+    ready: true,
     component: lazy(() => import("./AgentBehaviourTab")),
   },
   {
     id: "autoApprove",
     icon: "checklist",
     title: "settings.autoApprove.title",
-    ready: false,
+    ready: true,
     component: lazy(() => import("./AutoApproveTab")),
   },
   {

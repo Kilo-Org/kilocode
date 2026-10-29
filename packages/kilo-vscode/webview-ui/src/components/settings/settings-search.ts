@@ -105,6 +105,7 @@ const KEY_TAB_OVERRIDES: Record<string, string> = {
 const EXCLUDED_KEYS = new Set([
   "settings.permissions.toast.updateFailed.title",
   "settings.autoCleanup.defaultRetention.title",
+  "settings.autoApprove.maxCost.title",
   "settings.webTools.webSearch.title",
   "agentManager.browser.title",
   // Models keys the v2 Models tab does not render: v2 has no subagent, autocomplete, or speech-to-text settings.
