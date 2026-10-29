@@ -451,9 +451,9 @@ describe("scheduled task cancellation", () => {
           when: new Date(Date.now() + 1_200).toISOString(),
         })
         const logs: unknown[] = []
-        const removed = yield* wake.cancelSession(sessionID, { notify: false }).pipe(
-          Effect.provide(Logger.layer([Logger.make(({ message }) => logs.push(message))])),
-        )
+        const removed = yield* wake
+          .cancelSession(sessionID, { notify: false })
+          .pipe(Effect.provide(Logger.layer([Logger.make(({ message }) => logs.push(message))])))
         expect(removed).toBe(1)
         expect(logs).toContainEqual([
           "wakeup cleanup list failed",
