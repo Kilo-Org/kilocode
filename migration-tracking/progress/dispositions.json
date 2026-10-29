@@ -580,5 +580,20 @@
     "state": "ported",
     "note": "webview-ui/src/v2/auto-approve.tsx replaces the v1 bridge: it requests the persisted state, listens for autoApproveStateLoaded, and persists toggles through the requestAutoApproveState/persistAutoApproveState messages in src/protocol.ts, handled by src/chat.ts. Replies use permission.reply({sessionID, requestID, decision: \"once\"}), so v1's SSE/session directory resolution is not needed.",
     "by": "v2-auto-approve"
+  },
+  "module:packages/kilo-vscode/src/shared/custom-provider.ts": {
+    "state": "ported",
+    "note": "webview-ui/src/components/settings/CustomProviderValidation.ts carries the {env:VAR} key spelling (parseEnvKey) and the config value builder; CustomProviderDialog.tsx carries MASKED_CUSTOM_PROVIDER_KEY and stores the key as a v2 credential through settings.connectKey (the config provider registers a key method). The v1 deep-merge null sentinels are not needed: the host writes providers.<id> with jsonc-parser modify and removes the v1 provider.<id> alias in the same pass.",
+    "by": "settings-custom-provider"
+  },
+  "module:packages/kilo-vscode/tests/unit/custom-provider-dialog-validate.test.ts": {
+    "state": "ported",
+    "note": "packages/kilo-vscode/test/custom-provider.test.ts carries the assertions: provider ID format, duplicate model ids, base URL format, model capability mapping (reasoning and image), header completeness and the {env:VAR} key spelling, plus the providers.<id> write and the provider alias removal.",
+    "by": "settings-custom-provider"
+  },
+  "module:packages/kilo-vscode/tests/unit/provider-visibility.test.ts": {
+    "state": "ported",
+    "note": "webview-ui/src/components/settings/provider-visibility.ts carries disabledProviderOptions and the custom provider package set, and is exercised through the Providers tab. canChangeProviderKey, visibleConnectedIds and providersWithKiloFallback are not needed on v2: integrations and credentials answer directly (credentials(integration), integration.connections) and the Kilo fallback provider does not exist.",
+    "by": "settings-custom-provider"
   }
 }
