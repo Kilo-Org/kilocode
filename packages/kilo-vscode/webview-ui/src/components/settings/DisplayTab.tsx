@@ -3,7 +3,7 @@
 // display presets and the block display modes, and the session preview.
 import { Card } from "@kilocode/kilo-ui/card"
 import { TextField } from "@kilocode/kilo-ui/text-field"
-import { createEffect, type Component } from "solid-js"
+import { createEffect, createSignal, type Component } from "solid-js"
 import { useLanguage } from "../../context/language"
 import { applyFontSize, clampFontSize, fallbackFontSize } from "../../v2/kilo-settings"
 import { useSettingsConfig } from "../../v2/settings-config"
@@ -13,14 +13,23 @@ import Switch from "./Switch"
 const DisplayTab: Component = () => {
   const config = useSettingsConfig()
   const language = useLanguage()
+  // The username commits on blur or Enter, so typing does not rewrite the config file on every keystroke.
+  const [draft, setDraft] = createSignal<string>()
 
   const fontSize = () => clampFontSize(config.setting("fontSize")) ?? fallbackFontSize()
 
   createEffect(() => applyFontSize(fontSize()))
 
-  const username = () => {
+  const storedUsername = () => {
     const value = config.value(["username"])
     return typeof value === "string" ? value : ""
+  }
+  const username = () => draft() ?? storedUsername()
+  const commitUsername = () => {
+    const next = username().trim()
+    if (next) void config.set(["username"], next)
+    else void config.unset(["username"])
+    setDraft(undefined)
   }
 
   return (
@@ -34,10 +43,12 @@ const DisplayTab: Component = () => {
             <TextField
               value={username()}
               placeholder="User"
-              onChange={(value) => {
-                const next = value.trim()
-                if (next) config.set(["username"], next)
-                else config.unset(["username"])
+              onChange={(value) => setDraft(value)}
+              onBlur={commitUsername}
+              onKeyDown={(event) => {
+                if (event.key !== "Enter") return
+                event.preventDefault()
+                commitUsername()
               }}
             />
           </div>
