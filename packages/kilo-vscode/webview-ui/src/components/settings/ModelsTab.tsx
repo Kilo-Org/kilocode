@@ -34,8 +34,11 @@ const ModelsTab: Component<SettingsTabProps> = () => {
   const notSet = () => language.t("settings.providers.notSet")
 
   const current = (path: string[]) => selection(config.value(path))
-  const change = (path: string[]) => (value: ModelSelection | undefined) =>
-    value ? config.set(path, write(value)) : config.unset(path)
+  const change = (path: string[]) => (value: ModelSelection | undefined) => {
+    // Write the scope that already defines the key so a project override is updated in place, not shadowed.
+    const scope = config.source(path) ?? "global"
+    return value ? config.set(path, write(value), scope) : config.unset(path, scope)
+  }
 
   const hidden = () => {
     const project = config.raw("project")?.hide_prompt_training_models

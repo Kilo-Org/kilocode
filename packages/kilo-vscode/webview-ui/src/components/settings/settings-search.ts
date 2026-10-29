@@ -99,7 +99,6 @@ const GROUP_TABS: Record<string, string> = {
 /** Rows whose group tab differs from the tab that actually renders them. */
 const KEY_TAB_OVERRIDES: Record<string, string> = {
   "settings.context.compactionModel.title": "models",
-  "settings.autocomplete.model.title": "models",
 }
 
 /** i18n `*.title` keys under a mapped group that are not rendered rows. */
@@ -108,6 +107,12 @@ const EXCLUDED_KEYS = new Set([
   "settings.autoCleanup.defaultRetention.title",
   "settings.webTools.webSearch.title",
   "agentManager.browser.title",
+  // Models keys the v2 Models tab does not render: v2 has no subagent, autocomplete, or speech-to-text settings.
+  "settings.providers.subagentModel.title",
+  "settings.autocomplete.model.title",
+  "settings.models.speechToTextBaseUrl.title",
+  "settings.models.speechToTextApiKey.title",
+  "settings.models.speechToTextModel.title",
 ])
 
 /** Searchable rows whose title key does not end in `.title`, or that need a description override. */
