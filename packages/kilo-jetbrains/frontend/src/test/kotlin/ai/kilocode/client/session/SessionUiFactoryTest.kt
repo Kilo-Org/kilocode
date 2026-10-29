@@ -131,6 +131,7 @@ class SessionUiFactoryTest : BasePlatformTestCase() {
             val id = when (ref) {
                 is SessionRef.Local -> ref.id
                 is SessionRef.Cloud -> ref.key
+                is SessionRef.Hosted -> ref.key
             }
             opened.add(id)
         }

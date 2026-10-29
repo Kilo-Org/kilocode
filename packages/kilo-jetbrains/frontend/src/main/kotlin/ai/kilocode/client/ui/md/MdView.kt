@@ -46,6 +46,10 @@ interface MdView : Disposable {
     }
 
     fun markdown(): String
+
+    /** At most [limit] leading characters of the source, without copying the whole document. */
+    fun markdown(limit: Int): String = markdown().take(limit)
+
     fun html(): String
     fun overrideSheet(): String
     fun simulateLink(href: String)
