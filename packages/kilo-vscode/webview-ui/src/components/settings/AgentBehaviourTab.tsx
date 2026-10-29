@@ -1,13 +1,15 @@
 // The Agent Behaviour tab shell: the horizontal subtab bar and the active subtab's content. The subtabs come from
-// agent-behaviour/subtabs.ts, and only a ready subtab renders a component.
-import { Component, createSignal, For, Show } from "solid-js"
+// agent-behaviour/subtabs.ts. Only a ready subtab is shown and rendered, so the tab never opens on a blank panel.
+import { Component, createMemo, createSignal, For, Show } from "solid-js"
 import { useLanguage } from "../../context/language"
 import { AGENT_BEHAVIOUR_SUBTABS } from "./agent-behaviour/subtabs"
 
 const AgentBehaviourTab: Component = () => {
   const language = useLanguage()
-  const [active, setActive] = createSignal(AGENT_BEHAVIOUR_SUBTABS[0]?.id ?? "")
-  const current = () => AGENT_BEHAVIOUR_SUBTABS.find((subtab) => subtab.id === active())
+  const ready = createMemo(() => AGENT_BEHAVIOUR_SUBTABS.filter((subtab) => subtab.ready))
+  const [selected, setSelected] = createSignal("")
+  const active = () => ready().find((subtab) => subtab.id === selected()) ?? ready()[0]
+  const current = () => ready().find((subtab) => subtab.id === active()?.id)
 
   return (
     <div>
@@ -19,28 +21,28 @@ const AgentBehaviourTab: Component = () => {
           "margin-bottom": "16px",
         }}
       >
-        <For each={AGENT_BEHAVIOUR_SUBTABS}>
+        <For each={ready()}>
           {(subtab) => {
-            const selected = () => active() === subtab.id
+            const selectedTab = () => active()?.id === subtab.id
             return (
               <button
-                onClick={() => setActive(subtab.id)}
+                onClick={() => setSelected(subtab.id)}
                 style={{
                   padding: "8px 16px",
                   border: "none",
                   background: "transparent",
-                  color: selected() ? "var(--vscode-foreground)" : "var(--vscode-descriptionForeground)",
+                  color: selectedTab() ? "var(--vscode-foreground)" : "var(--vscode-descriptionForeground)",
                   "font-size": "var(--kilo-font-size-13)",
                   "font-family": "var(--vscode-font-family)",
                   cursor: "pointer",
-                  "border-bottom": selected() ? "2px solid var(--vscode-foreground)" : "2px solid transparent",
+                  "border-bottom": selectedTab() ? "2px solid var(--vscode-foreground)" : "2px solid transparent",
                   "margin-bottom": "-1px",
                 }}
                 onMouseEnter={(event) => {
-                  if (!selected()) event.currentTarget.style.color = "var(--vscode-foreground)"
+                  if (!selectedTab()) event.currentTarget.style.color = "var(--vscode-foreground)"
                 }}
                 onMouseLeave={(event) => {
-                  if (!selected()) event.currentTarget.style.color = "var(--vscode-descriptionForeground)"
+                  if (!selectedTab()) event.currentTarget.style.color = "var(--vscode-descriptionForeground)"
                 }}
               >
                 {language.t(subtab.title)}
@@ -50,7 +52,7 @@ const AgentBehaviourTab: Component = () => {
         </For>
       </div>
 
-      <Show when={current()?.ready ? current() : undefined} keyed>
+      <Show when={current()} keyed>
         {(subtab) => {
           const Content = subtab.component
           return <Content />
