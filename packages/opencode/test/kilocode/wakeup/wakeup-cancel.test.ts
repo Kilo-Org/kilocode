@@ -43,6 +43,7 @@ const build = (
   transform: (storage: Storage.Interface) => Storage.Interface = (storage) => storage,
 ) =>
   Effect.gen(function* () {
+    const events: unknown[] = []
     const storage = Context.get(
       yield* Layer.build(
         Storage.layerFromDir(path.join(dir, "storage")).pipe(
@@ -59,7 +60,11 @@ const build = (
               Layer.succeed(Storage.Service, transform(storage)),
               flock,
               Layer.mock(EventV2Bridge.Service, {
-                publish: (definition, data) => Effect.succeed({ id: EventV2.ID.create(), type: definition.type, data }),
+                publish: (definition, data) =>
+                  Effect.sync(() => {
+                    events.push({ type: definition.type, data })
+                    return { id: EventV2.ID.create(), type: definition.type, data }
+                  }),
               }),
               Layer.succeed(
                 Wakeup.Fire,
@@ -70,7 +75,7 @@ const build = (
         ),
       ),
     )
-    return { wake: Context.get(context, Wakeup.Service), storage }
+    return { wake: Context.get(context, Wakeup.Service), storage, events }
   })
 
 const tool = (wake: Wakeup.Interface) =>
@@ -91,6 +96,31 @@ const tool = (wake: Wakeup.Interface) =>
   )
 
 describe("scheduled task cancellation", () => {
+  it.live("session cleanup preserves main's wakeup-only pending announcement count", () =>
+    Effect.gen(function* () {
+      const dir = yield* tmpdirScoped()
+      const { wake, events } = yield* build(dir, [])
+      const sessionID = SessionID.descending()
+      const input = { sessionID, directory: dir, prompt: "pending", delay: "1m" }
+      events.length = 0
+      yield* wake.cancelSession(sessionID, { notify: false })
+      expect(events).toEqual([])
+      yield* wake.cronCreate(input)
+      yield* wake.cronCreate(input)
+      events.length = 0
+      yield* wake.cancelSession(sessionID, { notify: false })
+      expect(events).toEqual([])
+      yield* wake.schedule(input)
+      yield* wake.schedule(input)
+      events.length = 0
+      yield* wake.cancelSession(sessionID, { notify: false })
+      expect(events.map((event) => (event as { data: unknown }).data)).toEqual([
+        { sessionID, pending: 1 },
+        { sessionID, pending: 0 },
+      ])
+    }),
+  )
+
   for (const kind of ["wakeup", "cron"] as const) {
     const create = (wake: Wakeup.Interface, input: Wakeup.Input) =>
       kind === "wakeup" ? wake.schedule(input) : wake.cronCreate(input)

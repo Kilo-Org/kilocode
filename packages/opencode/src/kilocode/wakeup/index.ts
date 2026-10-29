@@ -608,11 +608,11 @@ export namespace Wakeup {
             if (kind === "wakeup") entries.delete(id)
             else cronEntries.delete(id)
             const info = held.find((item) => item.id === id)
+            if (kind === "wakeup" && info) yield* announce(sessionID)
             if (notify && info) yield* notifyGoal(sessionID, id, info.directory, kind)
             count++
           }
         }
-        yield* announce(sessionID)
         return count
       })
 
