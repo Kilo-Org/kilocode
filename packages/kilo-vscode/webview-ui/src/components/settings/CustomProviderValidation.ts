@@ -148,16 +148,19 @@ export function parseEnvKey(apiKey: string): string | undefined {
 }
 
 /**
- * Reads the first edit of a key field that shows `mask`. Text typed anywhere around the mask is kept and the mask is
- * dropped, a deletion inside the mask clears the field, and a value that replaced the mask (a paste over the
- * selection) is kept as is, asterisks included.
+ * Reads the first edit of a key field that shows `mask`. The asterisks left from the mask around the typed text are
+ * dropped (text typed before, after or inside the mask, or over part of it), a deletion inside the mask clears the
+ * field, and asterisks inside a pasted key are kept.
  */
 export function unmaskKey(value: string, mask: string): string {
-  const head = Math.min(value.length - value.replace(/^\*+/, "").length, mask.length)
-  const tail = mask.length - head
-  if (value.length >= mask.length && value.endsWith("*".repeat(tail))) return value.slice(head, value.length - tail)
-  if (/^\**$/.test(value)) return ""
-  return value
+  const core = value.replace(/^\*+/, "")
+  const rest = core.replace(/\*+$/, "")
+  const head = value.length - core.length
+  const tail = core.length - rest.length
+  if (head + tail <= mask.length) return rest
+  // More asterisks than the mask: the typed text itself starts or ends with `*`.
+  const keep = Math.min(head, mask.length)
+  return value.slice(keep, value.length - (mask.length - keep))
 }
 
 type ConfigRecord = Record<string, unknown>

@@ -103,6 +103,8 @@ describe("validateCustomProvider", () => {
     expect(unmaskKey("********sk-1", mask)).toBe("sk-1")
     expect(unmaskKey("sk-1********", mask)).toBe("sk-1")
     expect(unmaskKey("****sk-1****", mask)).toBe("sk-1")
+    expect(unmaskKey("****x***", mask)).toBe("x")
+    expect(unmaskKey("*********", mask)).toBe("*")
     expect(unmaskKey("*******", mask)).toBe("")
     expect(unmaskKey("sk*abc*def", mask)).toBe("sk*abc*def")
   })
