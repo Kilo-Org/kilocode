@@ -7,11 +7,12 @@ import os from "node:os"
 import path from "node:path"
 
 export function resolveGlobalConfigDir(env: NodeJS.ProcessEnv, profile: string): string {
-  const configured = env.OPENCODE_CONFIG_DIR ?? env.KILO_CONFIG_DIR
+  // The server runs `packages/kilo-cli/src/env.ts` first: `KILO_CONFIG_DIR` wins over `OPENCODE_CONFIG_DIR`, and the
+  // app directory is fixed to `kilo2` regardless of the environment, so the host must match both.
+  const configured = env.KILO_CONFIG_DIR ?? env.OPENCODE_CONFIG_DIR
   if (configured) return configured
-  const app = env.OPENCODE_APP_DIR_NAME ?? env.KILO_APP_DIR_NAME ?? "kilo2"
   const base = profile ? path.join(profile, "config") : (env.XDG_CONFIG_HOME ?? path.join(os.homedir(), ".config"))
-  return path.join(base, app)
+  return path.join(base, "kilo2")
 }
 
 /**
