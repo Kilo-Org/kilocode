@@ -3,7 +3,7 @@
 import path from "node:path"
 // The ESM entry: the extension host bundles with `Bun.build`, which leaves the UMD entry's
 // `require("./impl/format")` as a runtime require that fails in `dist/extension.js`.
-import { applyEdits, modify } from "jsonc-parser/lib/esm/main.js"
+import { applyEdits, modify, parse } from "jsonc-parser/lib/esm/main.js"
 import { KiloConfigFiles } from "@opencode/util/kilocode/config/files"
 import type { ConfigEdit } from "./protocol"
 
@@ -14,14 +14,26 @@ export function isKiloConfigFile(file: string): boolean {
   return KiloConfigFiles.names.includes(path.basename(file))
 }
 
+/** True when the document already defines the path, so `modify` can delete it. */
+function defines(text: string, keyPath: string[]): boolean {
+  let current: unknown = parse(text, [], { allowTrailingComma: true })
+  for (const key of keyPath) {
+    if (typeof current !== "object" || current === null) return false
+    current = (current as Record<string, unknown>)[key]
+  }
+  return current !== undefined
+}
+
 /** Apply each edit in order, removing the v1 aliases of every written v2 path in the same pass. */
 export function applyConfigEdits(text: string, edits: ConfigEdit[]): string {
   let result = text.trim().length > 0 ? text : "{\n}\n"
   for (const edit of edits) {
     if (!Array.isArray(edit.path) || edit.path.length === 0) continue
+    // jsonc-parser throws when a delete path is absent, so skip a delete that would remove nothing.
+    if (edit.value === undefined && !defines(result, edit.path)) continue
     result = applyEdits(result, modify(result, edit.path, edit.value, MODIFY))
     for (const alias of aliasOf(edit.path))
-      result = applyEdits(result, modify(result, alias, undefined, MODIFY))
+      if (defines(result, alias)) result = applyEdits(result, modify(result, alias, undefined, MODIFY))
   }
   return result
 }

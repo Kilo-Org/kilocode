@@ -77,9 +77,3 @@ export function parseImport(json: string, taken: string[]): ImportResult {
 export function buildExport(name: string, config: Record<string, unknown>): Record<string, unknown> {
   return { name, ...config }
 }
-
-/** Flatten a nested config into the `value(path)` paths the settings draft writes. Arrays stay whole. */
-export function flattenConfig(value: unknown, prefix: string[] = []): [string[], unknown][] {
-  if (isRecord(value)) return Object.entries(value).flatMap(([key, item]) => flattenConfig(item, [...prefix, key]))
-  return [[prefix, value]]
-}

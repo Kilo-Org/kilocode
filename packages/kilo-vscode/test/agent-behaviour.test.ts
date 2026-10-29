@@ -8,7 +8,7 @@ import {
   permissionRows,
   permissionSummary,
 } from "../webview-ui/src/components/settings/agent-behaviour/agents"
-import { buildExport, flattenConfig, parseImport } from "../webview-ui/src/components/settings/agent-behaviour/mode-io"
+import { buildExport, parseImport } from "../webview-ui/src/components/settings/agent-behaviour/mode-io"
 
 function agent(id: string, extra: Partial<AgentInfo> = {}): AgentInfo {
   return {
@@ -135,16 +135,6 @@ describe("parseImport", () => {
       [],
     )
     expect(result.ok && result.config.permissions).toEqual([{ action: "read", resource: "*", effect: "allow" }])
-  })
-})
-
-describe("flattenConfig", () => {
-  test("flattens nested objects and keeps arrays whole", () => {
-    expect(flattenConfig({ mode: "primary", request: { body: { temperature: 0.2 } } })).toEqual([
-      [["mode"], "primary"],
-      [["request", "body", "temperature"], 0.2],
-    ])
-    expect(flattenConfig({ permissions: [{ action: "read" }] })).toEqual([[["permissions"], [{ action: "read" }]]])
   })
 })
 

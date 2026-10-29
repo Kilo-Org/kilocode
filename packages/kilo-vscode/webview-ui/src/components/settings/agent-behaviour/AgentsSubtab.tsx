@@ -14,7 +14,7 @@ import SettingsRow from "../SettingsRow"
 import { agentConfig, agentPath, agentRows, primaryAgents, type AgentRow } from "./agents"
 import ModeCreateView from "./ModeCreateView"
 import ModeEditView from "./ModeEditView"
-import { MAX_IMPORT_SIZE, flattenConfig, parseImport, type ImportError } from "./mode-io"
+import { MAX_IMPORT_SIZE, parseImport, type ImportError } from "./mode-io"
 
 type View = "list" | "create" | "edit"
 
@@ -87,7 +87,7 @@ const AgentsSubtab: Component = () => {
         setImportError(language.t(errorKey(result.error)))
         return
       }
-      for (const [path, value] of flattenConfig(result.config)) config.set(["agents", result.name, ...path], value)
+      void config.set(agentPath(result.name), result.config)
       setCreated((ids) => (ids.includes(result.name) ? ids : [...ids, result.name]))
       setImportError("")
     }

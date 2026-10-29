@@ -8,7 +8,7 @@ import { Component, Show, createSignal } from "solid-js"
 import { useLanguage } from "../../../context/language"
 import { useSettingsConfig } from "../../../v2/settings-config"
 import SettingsRow from "../SettingsRow"
-import { agentField } from "./agents"
+import { agentPath } from "./agents"
 
 interface Props {
   /** Names already taken (used for uniqueness validation). */
@@ -52,9 +52,11 @@ const ModeCreateView: Component<Props> = (props) => {
       setError(message)
       return
     }
-    config.set(agentField(slug, "mode"), "primary")
-    if (description().trim()) config.set(agentField(slug, "description"), description().trim())
-    if (system().trim()) config.set(agentField(slug, "system"), system().trim())
+    void config.set(agentPath(slug), {
+      mode: "primary",
+      ...(description().trim() ? { description: description().trim() } : {}),
+      ...(system().trim() ? { system: system().trim() } : {}),
+    })
     reset()
     props.onCreated(slug)
   }

@@ -19,6 +19,11 @@ describe("applyConfigEdits", () => {
     expect(parse(result)).toEqual({ username: "alice" })
   })
 
+  test("writes a v2 path into a fresh document when its v1 alias is absent", () => {
+    const result = applyConfigEdits("", [{ path: ["agents", "reviewer", "mode"], value: "primary" }])
+    expect(parse(result)).toEqual({ agents: { reviewer: { mode: "primary" } } })
+  })
+
   test("removes the v1 agent field alias when it writes the v2 field", () => {
     const text = `{
   "agent": { "build": { "prompt": "old" } },
@@ -57,6 +62,13 @@ describe("applyConfigEdits", () => {
   test("removes an unset path", () => {
     const result = applyConfigEdits(`{ "username": "alice", "theme": "dark" }`, [{ path: ["username"] }])
     expect(parse(result)).toEqual({ theme: "dark" })
+  })
+
+  test("skips an unset path that is already absent", () => {
+    const result = applyConfigEdits(`{ "agents": { "reviewer": {} } }`, [
+      { path: ["agents", "reviewer", "request", "body", "temperature"] },
+    ])
+    expect(parse(result)).toEqual({ agents: { reviewer: {} } })
   })
 })
 
