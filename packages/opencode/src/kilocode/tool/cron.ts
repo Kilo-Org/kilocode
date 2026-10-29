@@ -160,8 +160,7 @@ export const CronDeleteTool = Tool.define<typeof CronDeleteParams, CronDeleteMet
       execute: (params, ctx) =>
         Effect.gen(function* () {
           const id = params.id.trim()
-          // Delete is idempotent: an already-fired, already-deleted, or
-          // unknown id is reported, never thrown.
+          // Delete reports absent ids and lock failures; storage removal faults propagate.
           const removed = yield* wake.cronCancel(id as Wakeup.ID, ctx.sessionID)
           if (!removed) {
             return {
@@ -175,7 +174,15 @@ export const CronDeleteTool = Tool.define<typeof CronDeleteParams, CronDeleteMet
             output: `Deleted cron task ${removed.id} (next ${new Date(removed.dueAt).toISOString()}).`,
             metadata: { id: removed.id, deleted: true },
           }
-        }),
+        }).pipe(
+          Effect.catchTag(["LockTimeoutError", "LockCompromisedError"], () =>
+            Effect.succeed({
+              title: "Cron cancellation busy",
+              output: "Could not cancel right now, retry.",
+              metadata: { deleted: false },
+            }),
+          ),
+        ),
     }
   }),
 )

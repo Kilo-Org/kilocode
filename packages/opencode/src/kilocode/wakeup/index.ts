@@ -50,14 +50,14 @@ export namespace Wakeup {
     readonly list: (input?: { sessionID?: SessionID }) => Effect.Effect<Info[]>
     readonly pending: (directory: string) => Effect.Effect<{ sessionID: SessionID; pending: number }[]>
     readonly scheduled: (directory?: string) => Effect.Effect<Map<SessionID, number>>
-    readonly cancel: (id: ID, sessionID?: SessionID) => Effect.Effect<Info | undefined>
+    readonly cancel: (id: ID, sessionID?: SessionID) => Effect.Effect<Info | undefined, EffectFlock.LockError>
     readonly cancelSession: (sessionID: SessionID, options?: { notify?: boolean }) => Effect.Effect<number>
     readonly adopt: (directory: string) => Effect.Effect<void>
     readonly cronCreate: (
       input: CronInput,
     ) => Effect.Effect<CronInfo, InvalidTime | PastTime | InvalidSchedule | TooManyCron>
     readonly cronList: (input?: { sessionID?: SessionID }) => Effect.Effect<CronInfo[]>
-    readonly cronCancel: (id: ID, sessionID?: SessionID) => Effect.Effect<CronInfo | undefined>
+    readonly cronCancel: (id: ID, sessionID?: SessionID) => Effect.Effect<CronInfo | undefined, EffectFlock.LockError>
   }
 
   export class Service extends Context.Service<Service, Interface>()("@kilocode/Wakeup") {}
@@ -109,15 +109,22 @@ export namespace Wakeup {
       // timers for the same records. Every fire and cancel re-reads or removes
       // its record under a cross-process lock, so one process claims each due
       // occurrence and a timer whose record another process removed does not
-      // fire. If the lock fails, run unlocked: a duplicate turn is better than
-      // a lost one. Claims in this process also queue on a local permit, so
+      // fire. If the lock fails, fire and cleanup run unlocked: a duplicate turn
+      // is better than a lost one. Tool cancels fail and leave the task intact.
+      // Claims in this process also queue on a local permit, so
       // they never contend on the file lock and wait out its retry backoff.
       const claims = Semaphore.makeUnsafe(1)
-      const claim = <A>(target: string[], body: Effect.Effect<A>) =>
+      const claim = <A, E = never>(
+        target: string[],
+        body: Effect.Effect<A>,
+        failure?: (err: EffectFlock.LockError) => Effect.Effect<A, E>,
+      ) =>
         claims.withPermits(1)(
           flock.withLock(body, target.join(":")).pipe(
             Effect.catchTag(["LockTimeoutError", "LockCompromisedError"], (err) =>
-              Effect.logWarning("wakeup claim lock failed", { key: target.join(":"), err }).pipe(Effect.andThen(body)),
+              failure
+                ? failure(err)
+                : Effect.logWarning("wakeup claim lock failed", { key: target.join(":"), err }).pipe(Effect.andThen(body)),
             ),
           ),
         )
@@ -368,7 +375,7 @@ export namespace Wakeup {
             }
             yield* storage.write(key(info), info).pipe(Effect.orDie)
             entries.set(info.id, info)
-            yield* arm(info)
+            if (!timers.has(info.id)) yield* arm(info)
             yield* announce(info.sessionID)
             return info
           }),
@@ -442,7 +449,7 @@ export namespace Wakeup {
             }
             yield* storage.write(cronKey(task), task).pipe(Effect.orDie)
             cronEntries.set(task.id, task)
-            yield* armCron(task)
+            if (!cronTimers.has(task.id)) yield* armCron(task)
             return task
           }),
         )
@@ -505,17 +512,38 @@ export namespace Wakeup {
           )
         })
 
+      const remove = (target: string[]) =>
+        claim(
+          target,
+          Effect.gen(function* () {
+            const found = yield* storage.read(target).pipe(
+              Effect.as(true),
+              Effect.catchTag("NotFoundError", () => Effect.succeed(false)),
+              Effect.catch((err) =>
+                Effect.logWarning("wakeup cancel read failed", { key: target.join(":"), kind: target[0], err }).pipe(
+                  Effect.as(true),
+                ),
+              ),
+            )
+            if (!found) return false
+            yield* storage.remove(target).pipe(Effect.orDie)
+            return true
+          }),
+          Effect.fail,
+        )
+
       const cancel = Effect.fn("Wakeup.cancel")(function* (id: ID, sessionID?: SessionID, notify = true) {
         const info = yield* lookup(id)
         if (!info || (sessionID && info.sessionID !== sessionID)) return undefined
+        const removed = yield* remove(key(info))
         const fiber = timers.get(id)
         if (fiber) {
           timers.delete(id)
           yield* Fiber.interrupt(fiber)
         }
         entries.delete(id)
-        yield* claim(key(info), storage.remove(key(info)).pipe(Effect.ignore))
         yield* announce(info.sessionID)
+        if (!removed) return undefined
         if (notify) yield* notifyGoal(info.sessionID, info.id, info.directory, "wakeup")
         return info
       })
@@ -523,13 +551,14 @@ export namespace Wakeup {
       const cronCancel = Effect.fn("Wakeup.cronCancel")(function* (id: ID, sessionID?: SessionID, notify = true) {
         const task = yield* cronLookup(id)
         if (!task || (sessionID && task.sessionID !== sessionID)) return undefined
+        const removed = yield* remove(cronKey(task))
         const fiber = cronTimers.get(id)
         if (fiber) {
           cronTimers.delete(id)
           yield* Fiber.interrupt(fiber)
         }
         cronEntries.delete(id)
-        yield* claim(cronKey(task), storage.remove(cronKey(task)).pipe(Effect.ignore))
+        if (!removed) return undefined
         if (notify) yield* notifyGoal(task.sessionID, task.id, task.directory, "cron")
         return task
       })
@@ -545,11 +574,38 @@ export namespace Wakeup {
         options?: { notify?: boolean },
       ) {
         const notify = options?.notify !== false
-        const held = yield* list({ sessionID })
-        for (const info of held) yield* cancel(info.id, undefined, notify)
-        const scheduled = yield* cronList({ sessionID })
-        for (const task of scheduled) yield* cronCancel(task.id, undefined, notify)
-        return held.length + scheduled.length
+        let count = 0
+        for (const kind of ["wakeup", "cron"] as const) {
+          const held = yield* kind === "wakeup" ? list({ sessionID }) : cronList({ sessionID })
+          const keys = yield* storage.list([kind, String(sessionID)]).pipe(Effect.orDie)
+          const targets = new Map(keys.map((target) => [ID.make(target.at(-1)!), target]))
+          for (const info of held) targets.set(info.id, kind === "wakeup" ? key(info) : cronKey(info))
+          for (const [id, target] of targets) {
+            // Keep main's unlocked fallback after the one bounded lock wait.
+            // A failed record must not prevent cleanup of the remaining keys.
+            const removed = yield* claim(
+              target,
+              storage.remove(target).pipe(
+                Effect.as(true),
+                Effect.catch((err) =>
+                  Effect.logError("wakeup cleanup remove failed", { sessionID, id, kind, err }).pipe(Effect.as(false)),
+                ),
+              ),
+            )
+            if (!removed) continue
+            const map = kind === "wakeup" ? timers : cronTimers
+            const fiber = map.get(id)
+            map.delete(id)
+            if (fiber) yield* Fiber.interrupt(fiber)
+            if (kind === "wakeup") entries.delete(id)
+            else cronEntries.delete(id)
+            const info = held.find((item) => item.id === id)
+            if (notify && info) yield* notifyGoal(sessionID, id, info.directory, kind)
+            count++
+          }
+        }
+        yield* announce(sessionID)
+        return count
       })
 
       // Register once per Wakeup layer build so a goal that settles, pauses, or
