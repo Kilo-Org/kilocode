@@ -131,6 +131,8 @@ const ProvidersTab: Component<{ settings: SettingsData; onLogin: () => void }> =
 
   function canChangeKey(item: IntegrationInfo) {
     if (FIXED_KEY.includes(item.id)) return false
+    // A custom provider changes its key through the custom dialog, like the tab it replaces.
+    if (isCustom(item)) return false
     if (!credentials(item).some((credential) => credential.method === "key")) return false
     // Only offer key replacement when the dialog opens a standard API-key form.
     const methods = connectMethods(item)
@@ -149,7 +151,8 @@ const ProvidersTab: Component<{ settings: SettingsData; onLogin: () => void }> =
     const removal = custom ? config.unset(["providers", item.id], scope) : Promise.resolve(true)
     props.settings.disconnect(item).then(
       async () => {
-        await removal
+        // Only claim success when the config removal also succeeded; the write layer already reported its own error.
+        if (!(await removal)) return
         showToast({
           variant: "success",
           icon: "circle-check",
