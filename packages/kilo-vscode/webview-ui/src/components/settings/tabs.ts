@@ -23,7 +23,7 @@ export const SETTINGS_TABS_V2: SettingsTabV2[] = [
     id: "models",
     icon: "models",
     title: "settings.models.title",
-    ready: false,
+    ready: true,
     component: lazy(() => import("./ModelsTab")),
   },
   {
