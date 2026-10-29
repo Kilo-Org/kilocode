@@ -478,22 +478,22 @@
   },
   "module:packages/opencode/src/kilocode/marketplace/detection.ts": {
     "state": "dropped",
-    "note": "Runtime detection of installed marketplace items (skill/MCP/agent/plugin scans) is intentionally replaced: v2 lists only marketplace-managed records from the server database (the `kv` table) and reports their status by comparing content fingerprints with the files on disk (packages/kilo-plugin/src/marketplace/index.ts installed/restore, installer.ts inspect). Native/manual items are not adopted, and agent/plugin detection re-lands with their content units. Decision recorded in kilo-v2-migration-plan.md U-E2-23.",
+    "note": "Runtime detection of installed marketplace items (skill/MCP/agent/plugin scans) is intentionally replaced: v2 lists only marketplace-managed records from the server database (the `kv` table) and reports their status by comparing content fingerprints with the files on disk (packages/kilo-plugin/src/marketplace/index.ts installed/restore, installer.ts inspect). Native/manual items are not adopted, and agent/plugin detection re-lands with their content units. Decision recorded under U-E2-23 in the former plan (`e39551c9b0:migration-tracking/plans/kilo-v2-migration-plan.md`); marketplace epic #15307.",
     "by": "kilo-new-marketplace"
   },
   "module:packages/opencode/src/kilocode/marketplace/plugin-config.ts": {
     "state": "dropped",
-    "note": "Plugin config patching (patchPlugin) is not carried on v2: plugin/bundle marketplace content is out of scope for the default skills/MCP unit and re-lands with the plugin content unit. Decision recorded in kilo-v2-migration-plan.md U-E2-23.",
+    "note": "Plugin config patching (patchPlugin) is not carried on v2: plugin/bundle marketplace content is out of scope for the default skills/MCP unit and re-lands with the plugin content unit. Decision recorded under U-E2-23 in the former plan (`e39551c9b0:migration-tracking/plans/kilo-v2-migration-plan.md`); marketplace epic #15307.",
     "by": "kilo-new-marketplace"
   },
   "module:packages/opencode/src/kilocode/marketplace/plugin-spec.ts": {
     "state": "dropped",
-    "note": "Plugin identity resolution (pluginIdentity) is not carried on v2: plugin/bundle marketplace content is out of scope for the default skills/MCP unit and re-lands with the plugin content unit. Decision recorded in kilo-v2-migration-plan.md U-E2-23.",
+    "note": "Plugin identity resolution (pluginIdentity) is not carried on v2: plugin/bundle marketplace content is out of scope for the default skills/MCP unit and re-lands with the plugin content unit. Decision recorded under U-E2-23 in the former plan (`e39551c9b0:migration-tracking/plans/kilo-v2-migration-plan.md`); marketplace epic #15307.",
     "by": "kilo-new-marketplace"
   },
   "module:packages/opencode/src/kilocode/marketplace/relevance.ts": {
     "state": "dropped",
-    "note": "Workspace suggest_for.filename relevance scanning (ripgrep budget/skip rules) is not carried on v2: browse/search filter the catalog client-side by text match; relevance ranking re-lands with its own unit if wanted. Decision recorded in kilo-v2-migration-plan.md U-E2-23.",
+    "note": "Workspace suggest_for.filename relevance scanning (ripgrep budget/skip rules) is not carried on v2: browse/search filter the catalog client-side by text match; relevance ranking re-lands with its own unit if wanted. Decision recorded under U-E2-23 in the former plan (`e39551c9b0:migration-tracking/plans/kilo-v2-migration-plan.md`); marketplace epic #15307.",
     "by": "kilo-new-marketplace"
   },
   "patch:marketplace:5fc326e8ea39": {
@@ -508,7 +508,7 @@
   },
   "module:packages/opencode/test/kilocode/marketplace-plugin-http.test.ts": {
     "state": "dropped",
-    "note": "v1 tested the plugin HTTP install endpoints (refresh-cached config, partial removal, malformed config kept). Plugin marketplace content and the HTTP surface are not carried on v2; the skills/MCP API is covered by the kilocode.marketplace RPC round trips in packages/kilo-cli/test/marketplace.test.ts and the OAuth flow in packages/kilo-cli/test/marketplace-oauth.test.ts. Decision recorded in kilo-v2-migration-plan.md U-E2-23.",
+    "note": "v1 tested the plugin HTTP install endpoints (refresh-cached config, partial removal, malformed config kept). Plugin marketplace content and the HTTP surface are not carried on v2; the skills/MCP API is covered by the kilocode.marketplace RPC round trips in packages/kilo-cli/test/marketplace.test.ts and the OAuth flow in packages/kilo-cli/test/marketplace-oauth.test.ts. Decision recorded under U-E2-23 in the former plan (`e39551c9b0:migration-tracking/plans/kilo-v2-migration-plan.md`); marketplace epic #15307.",
     "by": "kilo-new-marketplace"
   },
   "module:packages/opencode/test/kilocode/marketplace-plugin.test.ts": {
@@ -570,5 +570,15 @@
     "state": "ported",
     "note": "packages/kilo-vscode/test/enhance-prompt.test.ts carries the instruction assertions (question-shaped and instruction-shaped drafts, draft labelling), the cleaner cases (whitespace, fences, matching quotes, internal and mismatched quotes) and the provider quota error message.",
     "by": "v2-enhance-prompt"
+  },
+  "module:packages/kilo-vscode/src/commands/toggle-auto-approve.ts": {
+    "state": "ported",
+    "note": "webview-ui/src/v2/auto-approve.tsx createAutoApprove and webview-ui/src/v2/auto-approve-policy.ts createAutoApproveController replace the host toggle controller: while active they reply \"once\" to each permission request, dedupe across the permission store and the pending sweep, retry a failed reply, and skip sandboxEscalation. src/chat.ts and src/protocol.ts persist the toggle in context.globalState with a default of off. Differences: persistence is global rather than the closest v1 config scope; the sweep covers the current location while new requests arrive on the server-global event stream; the controller runs in the retained webview instead of the extension host before the view is first opened. Window-independent auto-approve is a scoped follow-up.",
+    "by": "v2-auto-approve"
+  },
+  "module:packages/kilo-vscode/src/kilo-provider/auto-approve.ts": {
+    "state": "ported",
+    "note": "webview-ui/src/v2/auto-approve.tsx replaces the v1 bridge: it requests the persisted state, listens for autoApproveStateLoaded, and persists toggles through the requestAutoApproveState/persistAutoApproveState messages in src/protocol.ts, handled by src/chat.ts. Replies use permission.reply({sessionID, requestID, decision: \"once\"}), so v1's SSE/session directory resolution is not needed.",
+    "by": "v2-auto-approve"
   }
 }

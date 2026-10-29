@@ -4,14 +4,14 @@
     "v1Base": "8100c68b507b53aac6b891edbc3040a6011d8969"
   },
   "summary": {
-    "done": 594,
+    "done": 597,
     "total": 9819,
-    "percent": 6,
+    "percent": 6.1,
     "dropped": 35,
     "kinds": [
       {
         "kind": "module",
-        "done": 484,
+        "done": 486,
         "total": 3543
       },
       {
@@ -26,7 +26,7 @@
       },
       {
         "kind": "test",
-        "done": 35,
+        "done": 36,
         "total": 2794
       }
     ],
@@ -6050,12 +6050,12 @@
     },
     {
       "feature": "vscode",
-      "done": 269,
+      "done": 272,
       "total": 2057,
       "dropped": 0,
       "kinds": {
         "module": {
-          "done": 267,
+          "done": 269,
           "total": 1439
         },
         "api": {
@@ -6067,7 +6067,7 @@
           "total": 0
         },
         "test": {
-          "done": 2,
+          "done": 3,
           "total": 618
         }
       }
@@ -6423,8 +6423,10 @@
     "module:packages/kilo-vscode/script/build.ts",
     "module:packages/kilo-vscode/script/launch.ts",
     "module:packages/kilo-vscode/src/agent-manager/project/messages.ts",
+    "module:packages/kilo-vscode/src/commands/toggle-auto-approve.ts",
     "module:packages/kilo-vscode/src/extension.ts",
     "module:packages/kilo-vscode/src/image-preview.ts",
+    "module:packages/kilo-vscode/src/kilo-provider/auto-approve.ts",
     "module:packages/kilo-vscode/src/kilo-provider/save-image.ts",
     "module:packages/kilo-vscode/src/legacy-migration/sessions/lib/messages.ts",
     "module:packages/kilo-vscode/src/services/cli-backend/i18n/ar.ts",
@@ -6535,6 +6537,7 @@
     "module:packages/kilo-vscode/src/shared/image-data-url.ts",
     "module:packages/kilo-vscode/src/shared/session-title.ts",
     "module:packages/kilo-vscode/src/util/process.ts",
+    "module:packages/kilo-vscode/tests/unit/auto-approve.test.ts",
     "module:packages/kilo-vscode/tests/unit/image-preview.test.ts",
     "module:packages/kilo-vscode/tests/unit/working-indicator.test.ts",
     "module:packages/kilo-vscode/webview-ui/agent-manager/focus.ts",
