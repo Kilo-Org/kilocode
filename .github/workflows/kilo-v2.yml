@@ -153,6 +153,9 @@ jobs:
       - name: Count shared upstream patches
         run: bun script/check-shared-patches.ts
 
+  # The generated map files change with every merge, so parallel PRs that commit them always conflict and go stale.
+  # PRs change only the inputs (code, done-proofs, features.json, dispositions.json); this job validates them.
+  # `progress-commit` regenerates the map on v2 and commits it.
   progress:
     name: migration progress map
     runs-on: ubuntu-24.04
@@ -163,6 +166,7 @@ jobs:
         with:
           fetch-depth: 0
           filter: blob:none
+          persist-credentials: false
 
       - name: Fetch the pinned v1 target
         # The map measures the v1 delta from `main`, which the v2 checkout does not contain.
@@ -173,15 +177,64 @@ jobs:
         with:
           bun-version-file: package.json
 
-      - name: Check that migration-tracking/progress is current
-        run: bun script/upstream/progress.ts --check
+      - name: Check that the PR does not commit generated map files
+        if: github.event_name == 'pull_request'
+        run: |
+          files=$(git diff --name-only HEAD^1 HEAD -- $(bun script/upstream/progress.ts --outputs))
+          if [ -n "$files" ]; then
+            echo "::error::Do not commit generated progress map files. CI regenerates them on v2. Restore them with: git checkout origin/v2 -- $(echo $files)"
+            exit 1
+          fi
+
+      - name: Validate the map inputs
+        run: bun script/upstream/progress.ts
+
+  # The only job with write access. It runs on pushes to v2, never on pull requests.
+  progress-commit:
+    name: migration progress map commit
+    if: github.event_name == 'push' && github.ref == 'refs/heads/v2'
+    needs: progress
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          filter: blob:none
+
+      - name: Fetch the pinned v1 target
+        run: git fetch --filter=blob:none --no-tags origin main
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version-file: package.json
+
+      - name: Commit the regenerated map
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          paths=$(bun script/upstream/progress.ts --outputs)
+          # Each attempt regenerates on the current v2 tip, so a newer push cannot leave a stale map or a conflict.
+          for attempt in 1 2 3; do
+            git fetch origin v2
+            git reset --hard origin/v2
+            bun script/upstream/progress.ts
+            if git diff --quiet -- $paths; then exit 0; fi
+            git commit -m "chore(progress): regenerate the map" -- $paths
+            git push origin HEAD:v2 && exit 0
+          done
+          exit 1
 
   progress-comment:
     name: migration progress comment
     # Same-repository pull requests only: a fork PR gets a read-only token and cannot comment.
     if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-24.04
-    timeout-minutes: 5
+    timeout-minutes: 10
     permissions:
       contents: read
       pull-requests: write
@@ -189,8 +242,11 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          # The PR merge commit and its first parent (the base branch tip), for the base map and the PR diff.
-          fetch-depth: 2
+          fetch-depth: 0
+          filter: blob:none
+
+      - name: Fetch the pinned v1 target
+        run: git fetch --filter=blob:none --no-tags origin main
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
@@ -200,17 +256,18 @@ jobs:
       - name: Compare the progress map with the base branch
         env:
           REPO: ${{ github.repository }}
-          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
-          git show "HEAD^1:migration-tracking/progress/progress.json" > base.json 2>/dev/null || echo '{}' > base.json
+          # Both maps are generated here, because PRs do not commit the map and a base branch can carry a stale one.
+          git worktree add --detach ../base HEAD^1
+          bun ../base/script/upstream/progress.ts
+          cp ../base/migration-tracking/progress/progress.json base.json
+          bun script/upstream/progress.ts
           git diff -U0 --no-color HEAD^1 HEAD > pr.diff
           {
             echo '<!-- migration-progress -->'
             bun script/upstream/progress.ts --compare base.json migration-tracking/progress/progress.json pr.diff
             echo
-            echo "<img width=\"900\" alt=\"v2 migration progress map at this commit\" src=\"https://raw.githubusercontent.com/$REPO/$HEAD_SHA/migration-tracking/progress/progress.svg\" />"
-            echo
-            echo "[Full map](https://github.com/$REPO/blob/$HEAD_SHA/migration-tracking/progress/README.md) · [how cells close](https://github.com/$REPO/blob/$HEAD_SHA/.kilo/skills/v2-migration/SKILL.md#progress-map)"
+            echo "[Map on v2](https://github.com/$REPO/blob/v2/migration-tracking/progress/README.md) · [how cells close](https://github.com/$REPO/blob/v2/.kilo/skills/v2-migration/SKILL.md#progress-map)"
           } > body.md
 
       - name: Create or update the comment
