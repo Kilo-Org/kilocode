@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test"
-import { mkdtemp, rm } from "node:fs/promises"
+import { mkdir, mkdtemp, rm } from "node:fs/promises"
 import os from "node:os"
 import path from "node:path"
 import { createSolidTransformPlugin } from "@opentui/solid/bun-plugin"
@@ -30,30 +30,71 @@ for (const compiled of [false, true]) {
           expect(result.success).toBe(true)
           expect(result.logs).toEqual([])
         }
-        const child = Bun.spawn(compiled ? [outfile] : [process.execPath, entry], {
-          cwd: repo,
-          env: {
-            ...process.env,
-            KILO_NAME_TEST_HOSTED: hosted ? "1" : "0",
-            KILO_NAME_TEST_PREDEFINED: scenario === "configured" ? (compiled ? "other" : expected) : "",
-            KILO_NAME_TEST_CHILD: "1",
-          },
-          stdout: "pipe",
-          stderr: "pipe",
-          timeout: 30_000,
-        })
-        const [stdout, stderr, code] = await Promise.all([
-          new Response(child.stdout).text(),
-          new Response(child.stderr).text(),
-          child.exited,
-        ])
-        expect(stderr).toBe("")
-        expect(code).toBe(0)
-        expect(JSON.parse(stdout)).toEqual({
-          name: expected,
-          spec: expected,
-          nested: { name: expected, spec: expected },
-        })
+        for (const ambient of [false, true]) {
+          const home = path.join(tmp, ambient ? "injected" : "clean")
+          await mkdir(home)
+          const child = Bun.spawn(compiled ? [outfile] : [process.execPath, entry], {
+            cwd: repo,
+            env: {
+              ...Object.fromEntries(
+                Object.entries({
+                  ...process.env,
+                  ...(ambient
+                    ? {
+                        KILO_NAME_TEST_HOSTED: hosted ? "0" : "1",
+                        KILO_NAME_TEST_PREDEFINED: "ambient-name",
+                        KILO_NAME_TEST_CHILD: "0",
+                        KILO_BRANDING_TEST_HOSTED: "1",
+                        OPENCODE_TEST_HOME: path.join(home, "ambient"),
+                        OPENCODE_CONFIG: path.join(home, "missing.json"),
+                        BUN_OPTIONS: "--invalid-ambient-option",
+                      }
+                    : {}),
+                }).filter(([key]) => /^(PATH|LANG|LC_ALL|TZ|SystemRoot|WINDIR|PATHEXT)$/i.test(key)),
+              ),
+              BUN_OPTIONS: "",
+              HOME: home,
+              USERPROFILE: home,
+              OPENCODE_TEST_HOME: home,
+              XDG_CONFIG_HOME: path.join(home, "config"),
+              XDG_DATA_HOME: path.join(home, "data"),
+              XDG_STATE_HOME: path.join(home, "state"),
+              XDG_CACHE_HOME: path.join(home, "cache"),
+              TMPDIR: home,
+              TEMP: home,
+              TMP: home,
+              KILO_NAME_TEST_HOSTED: hosted ? "1" : "0",
+              KILO_NAME_TEST_PREDEFINED: scenario === "configured" ? (compiled ? "other" : expected) : "",
+              KILO_NAME_TEST_CHILD: "1",
+            },
+            stdout: "pipe",
+            stderr: "pipe",
+            timeout: 30_000,
+          })
+          const [stdout, stderr, code] = await Promise.all([
+            new Response(child.stdout).text(),
+            new Response(child.stderr).text(),
+            child.exited,
+          ])
+          expect(stderr).toBe("")
+          expect(code).toBe(0)
+          const env = {
+            home,
+            userProfile: home,
+            testHome: home,
+            config: path.join(home, "config"),
+            data: path.join(home, "data"),
+            state: path.join(home, "state"),
+            cache: path.join(home, "cache"),
+            bunOptions: "",
+          }
+          expect(JSON.parse(stdout)).toEqual({
+            name: expected,
+            spec: expected,
+            env,
+            nested: { name: expected, spec: expected, env },
+          })
+        }
       } finally {
         await rm(tmp, { recursive: true, force: true })
       }

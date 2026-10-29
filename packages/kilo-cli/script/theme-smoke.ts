@@ -3,12 +3,14 @@ import { mkdir, mkdtemp, rm } from "node:fs/promises"
 import os from "node:os"
 import path from "node:path"
 
-if (import.meta.main) await main()
-
-async function main() {
-  const repo = path.resolve(import.meta.dir, "../../..")
-  const binary = process.argv[2] && path.resolve(process.argv[2])
+if (import.meta.main) {
   if (process.argv.length > 3) throw new Error("Usage: bun script/theme-smoke.ts [compiled-binary-path]")
+  await runThemeSmoke(process.argv[2])
+}
+
+export async function runThemeSmoke(executable?: string) {
+  const repo = path.resolve(import.meta.dir, "../../..")
+  const binary = executable && path.resolve(executable)
   const root = await mkdtemp(path.join(os.tmpdir(), "kilo-theme-smoke-"))
   using backend = fixture()
 
@@ -95,7 +97,7 @@ async function main() {
         await send("opencode", "OpenCode preview", (output) =>
           output.includes(mode === "dark" ? ";250;178;131" : ";59;125;216"),
         )
-        await send("\x1b", "Kilo restored on cancel", (output) => hasKiloPrimary(output, mode))
+        await send("\x1b", "Kilo restored on cancel", (output) => hasKiloPrompt(output, mode))
         console.log(`PASS: ${binary ? "compiled" : "source"} ${mode} picker, upstream preview and cancel`)
       } finally {
         try {
@@ -112,11 +114,7 @@ async function main() {
 }
 
 export function isKiloHome(output: string, mode: "light" | "dark") {
-  return (
-    Bun.stripANSI(output).includes("ctrl+p commands") &&
-    output.includes(mode === "dark" ? "48;2;12;10;9" : "48;2;255;255;255") &&
-    hasKiloPrimary(output, mode)
-  )
+  return Bun.stripANSI(output).includes("ctrl+p commands") && hasKiloPrompt(output, mode)
 }
 
 export function isKiloThemePicker(output: string) {
@@ -124,8 +122,9 @@ export function isKiloThemePicker(output: string) {
   return screen.includes("Themes") && /[●▪]\s*kilo(?:\s|$)/.test(screen)
 }
 
-function hasKiloPrimary(output: string, mode: "light" | "dark") {
-  return output.includes(mode === "dark" ? ";255;221;0" : ";115;100;0")
+export function hasKiloPrompt(output: string, mode: "light" | "dark") {
+  const background = mode === "dark" ? "41;37;36" : "245;245;244"
+  return output.includes(`\x1b[48;2;${background}mAsk anything`)
 }
 
 export async function stopProcessGroup(child: Pick<Bun.Subprocess, "pid" | "exited" | "kill">) {

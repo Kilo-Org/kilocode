@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test"
-import { isKiloHome, isKiloThemePicker, stopProcessGroup } from "../script/theme-smoke"
+import { hasKiloPrompt, isKiloHome, isKiloThemePicker, stopProcessGroup } from "../script/theme-smoke"
 
 for (const marker of ["●", "▪"]) {
   test(`recognizes the selected Kilo row with marker ${marker}`, () => {
@@ -15,16 +15,60 @@ test("a Kilo path in the footer does not count as a selected theme row", () => {
   expect(isKiloThemePicker("● kilo")).toBe(false)
 })
 
-for (const mode of ["dark", "light"] as const) {
-  test(`the ${mode} home screen requires Kilo's primary color`, () => {
-    const background = mode === "dark" ? "\x1b[48;2;12;10;9m" : "\x1b[48;2;255;255;255m"
-    const primary = mode === "dark" ? "\x1b[38;2;255;221;0m" : "\x1b[38;2;115;100;0m"
-    const upstream = mode === "dark" ? "\x1b[38;2;250;178;131m" : "\x1b[38;2;59;125;216m"
-    expect(isKiloHome(`${background}ctrl+p commands`, mode)).toBe(false)
-    expect(isKiloHome(`${background}${upstream}ctrl+p commands`, mode)).toBe(false)
-    expect(isKiloHome(`${background}${primary}ctrl+p commands`, mode)).toBe(true)
-    expect(isKiloHome(`${background}${primary}not ready`, mode)).toBe(false)
-    expect(isKiloHome(`${primary}ctrl+p commands`, mode)).toBe(false)
+for (const frame of [
+  {
+    mode: "dark",
+    ink: "255;221;0",
+    terminal: "12;10;9",
+    kiloPrompt: "41;37;36",
+    kiloText: "166;160;155",
+    upstreamBackground: "10;10;10",
+    upstreamPrompt: "30;30;30",
+    upstreamText: "128;128;128",
+  },
+  {
+    mode: "light",
+    ink: "115;100;0",
+    terminal: "255;255;255",
+    kiloPrompt: "245;245;244",
+    kiloText: "121;113;107",
+    upstreamBackground: "255;255;255",
+    upstreamPrompt: "245;245;245",
+    upstreamText: "138;138;138",
+  },
+] as const) {
+  const logo = `\x1b[15;32H\x1b[38;2;${frame.ink}m\x1b[48;2;${frame.upstreamBackground}m██  ██`
+  const kiloLogo = `\x1b[15;32H\x1b[38;2;${frame.ink}m\x1b[48;2;${frame.terminal}m██  ██`
+  const prompt = `\x1b[0m\x1b[19;27H\x1b[38;2;${frame.kiloText}m\x1b[48;2;${frame.kiloPrompt}mAsk anything… "Fix broken tests"`
+  const upstream = `${logo}\x1b[0m\x1b[19;27H\x1b[38;2;${frame.upstreamText}m\x1b[48;2;${frame.upstreamPrompt}mAsk anything… "Fix broken tests"`
+  const footer = "\x1b[0m\x1b[24;75Hctrl+p commands"
+
+  test(`recognizes the Kilo ${frame.mode} prompt at home and after cancel`, () => {
+    expect(hasKiloPrompt(`${kiloLogo}${prompt}`, frame.mode)).toBe(true)
+    expect(isKiloHome(`${kiloLogo}${prompt}`, frame.mode)).toBe(false)
+    expect(isKiloHome(`${kiloLogo}${prompt}${footer}`, frame.mode)).toBe(true)
+    expect(hasKiloPrompt(`${upstream}${prompt}`, frame.mode)).toBe(true)
+    expect(hasKiloPrompt(prompt, frame.mode === "dark" ? "light" : "dark")).toBe(false)
+  })
+
+  test(`rejects the upstream ${frame.mode} home and cancel frame with Kilo logo ink`, () => {
+    expect(hasKiloPrompt(upstream, frame.mode)).toBe(false)
+    expect(isKiloHome(`${upstream}${footer}`, frame.mode)).toBe(false)
+    const withTerminalBackground = `\x1b[48;2;${frame.terminal}m ${upstream}`
+    expect(hasKiloPrompt(withTerminalBackground, frame.mode)).toBe(false)
+    expect(isKiloHome(`${withTerminalBackground}${footer}`, frame.mode)).toBe(false)
+  })
+
+  test(`requires the ${frame.mode} Kilo background on the prompt itself`, () => {
+    expect(hasKiloPrompt(logo, frame.mode)).toBe(false)
+    expect(hasKiloPrompt(`\x1b[38;2;${frame.kiloPrompt}mAsk anything`, frame.mode)).toBe(false)
+    expect(hasKiloPrompt(`48;2;${frame.kiloPrompt}mAsk anything`, frame.mode)).toBe(false)
+    expect(
+      hasKiloPrompt(
+        `\x1b[48;2;${frame.kiloPrompt}mOther text\x1b[48;2;${frame.upstreamPrompt}mAsk anything`,
+        frame.mode,
+      ),
+    ).toBe(false)
   })
 }
 
@@ -53,6 +97,7 @@ test.skipIf(process.platform === "win32")(
       }
       return chunks.join("")
     })()
+    let stopped = false
     try {
       await Promise.race([
         ready.promise,
@@ -61,24 +106,27 @@ test.skipIf(process.platform === "win32")(
         }),
       ])
       await stopProcessGroup(child)
-      expect(child.signalCode).toBe("SIGKILL")
       const text = await Promise.race([
         output,
         Bun.sleep(5_000).then(() => {
           throw new Error("The descendant still holds the output pipe open")
         }),
       ])
+      stopped = true
+      expect(child.signalCode).toBe("SIGKILL")
       expect(text).toContain("wrapper ready")
       expect(text).toContain("descendant ready")
     } finally {
-      try {
-        process.kill(-child.pid, "SIGKILL")
-      } catch (error) {
-        if (!(error instanceof Error) || !("code" in error) || error.code !== "ESRCH") throw error
+      if (!stopped) {
+        try {
+          process.kill(-child.pid, "SIGKILL")
+        } catch (error) {
+          if (!(error instanceof Error) || !("code" in error) || error.code !== "ESRCH") throw error
+        }
+        child.kill("SIGKILL")
+        await child.exited
+        await output
       }
-      child.kill("SIGKILL")
-      await child.exited
-      await output
     }
   },
   20_000,
