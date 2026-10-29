@@ -26,10 +26,11 @@ const SkillsSubtab: Component = () => {
     }),
   )
 
-  // A skills path or URL change can change the discovered skills. The config resource does not invalidate the skill
-  // resource, so re-sync when the config changes.
+  // A skills path or URL change can change the discovered skills. The server emits no `skill.updated`, so invalidate
+  // the cached list before re-syncing, or `sync()` would return the cached result.
   createEffect(() => {
     config.value(["skills"])
+    v2.data.location.skill.invalidate()
     void v2.data.location.skill.sync().catch(v2.report)
   })
 

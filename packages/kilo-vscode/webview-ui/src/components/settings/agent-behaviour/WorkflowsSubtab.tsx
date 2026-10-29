@@ -90,8 +90,13 @@ const WorkflowsSubtab: Component = () => {
     const found = entry(name)
     if (!found || blocked(name)) return
     const previous = model(name)
+    const changedModel =
+      value !== undefined &&
+      previous !== undefined &&
+      (value.providerID !== previous.providerID || value.modelID !== previous.modelID)
+    // Carry the variant over only when the model changed, so clearing the variant keeps it cleared.
     const next =
-      value && !value.variant && previous?.variant && variants(value).includes(previous.variant)
+      value && changedModel && !value.variant && previous?.variant && variants(value).includes(previous.variant)
         ? { ...value, variant: previous.variant }
         : value
     if (found.key === "commands") {
