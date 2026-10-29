@@ -58,8 +58,9 @@ const DisplayTab: Component = () => {
               value={fontSize()}
               onInput={(event) => setPreview(Number(event.currentTarget.value))}
               onChange={(event) => {
+                const next = Number(event.currentTarget.value)
                 setPreview(undefined)
-                config.setSetting("fontSize", Number(event.currentTarget.value))
+                config.setSetting("fontSize", next)
               }}
               aria-label={language.t("settings.display.fontSize.title")}
             />
