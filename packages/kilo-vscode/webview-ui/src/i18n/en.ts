@@ -53,6 +53,22 @@ export const anacondaDesktopDict = {
 } as const
 
 export const dict = {
+  "settings.experimental.imageGenerationOptions.size.title": "Image size",
+  "settings.experimental.imageGenerationOptions.size.description":
+    "Default output dimensions: auto or WIDTHxHEIGHT. Supported sizes depend on the server.",
+  "settings.experimental.imageGenerationOptions.background.title": "Image background",
+  "settings.experimental.imageGenerationOptions.background.description":
+    "Default background mode, if supported by the server.",
+  "settings.experimental.imageGenerationOptions.seed.title": "Image seed",
+  "settings.experimental.imageGenerationOptions.seed.description":
+    "Default random seed, including zero. Leave empty to let the server choose.",
+  "settings.experimental.imageGenerationOptions.steps.title": "Image steps",
+  "settings.experimental.imageGenerationOptions.steps.description":
+    "Default number of diffusion steps. Supported ranges depend on the server; Gufo accepts 2–100. Leave empty for the server default.",
+  "settings.experimental.imageGenerationOptions.default": "Server default",
+  "settings.experimental.imageGenerationOptions.auto": "Auto",
+  "settings.experimental.imageGenerationOptions.opaque": "Opaque",
+  "settings.experimental.imageGenerationOptions.transparent": "Transparent",
   "settings.experimental.imageGenerationModels.title": "Available image models",
   "settings.experimental.imageGenerationModels.save": "Save the endpoint settings to discover its models.",
   "settings.experimental.imageGenerationModels.error": "{{error}}. You can enter a model ID manually above.",

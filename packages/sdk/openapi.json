@@ -38294,6 +38294,30 @@
               "image_generation_api_key": {
                 "type": "string"
               },
+              "image_generation_options": {
+                "type": "object",
+                "properties": {
+                  "size": {
+                    "type": "string",
+                    "pattern": "^(auto|[1-9]\\d*x[1-9]\\d*)$"
+                  },
+                  "background": {
+                    "type": "string",
+                    "enum": ["auto", "opaque", "transparent"]
+                  },
+                  "seed": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "steps": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 9007199254740991
+                  }
+                },
+                "additionalProperties": false
+              },
               "native_notebook_tools": {
                 "type": "boolean"
               },

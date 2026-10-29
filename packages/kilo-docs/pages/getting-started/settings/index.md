@@ -79,6 +79,23 @@ After saving the endpoint settings, use **Available image models** to select a m
 
 To combine reference images, ask the agent to use the files in a specific order and describe each one's role. The `generate_image` tool accepts an `images` array with up to 10 workspace paths, or the existing `image` argument for one reference. Each file requires read permission before upload. Custom endpoints receive multiple references as ordered `image[]` multipart fields; the selected model must support multiple references.
 
+Custom endpoints also expose **Image size**, **Image background**, **Image seed**, and **Image steps** defaults in Experimental settings. Leave fields empty (or select **Server default**) to omit them. Seed `0` is a valid fixed seed. These defaults are stored globally:
+
+```json
+{
+  "experimental": {
+    "image_generation_options": {
+      "size": "1024x1024",
+      "background": "transparent",
+      "seed": 42,
+      "steps": 20
+    }
+  }
+}
+```
+
+Ask the agent for a different size, background, seed, or step count to override these defaults for an individual request. These controls require a custom Images API and are sent for both generation and editing. Supported values depend on the server: Gufo accepts 2–100 steps and sizes subject to its image limits. Other servers may not implement seed or steps; leave unsupported controls empty.
+
 ### Voice Transcription Model
 
 When the Kilo provider is enabled and you are signed in, choose the transcription model under **Models** > **Speech to Text Model**. This stores `experimental.speech_to_text_model` in your global Kilo CLI config:
