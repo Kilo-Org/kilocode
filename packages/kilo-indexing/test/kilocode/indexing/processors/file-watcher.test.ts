@@ -24,7 +24,8 @@ import { WorktreeOverlay } from "../../../../src/indexing/worktree-overlay"
 
 function createEmbedder(): IEmbedder {
   return {
-    async createEmbeddings(texts) {
+    async createEmbeddings(texts, _model, purpose) {
+      expect(purpose).toBe("document")
       return {
         embeddings: texts.map((_, index) => [index + 1]),
       }

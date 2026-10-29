@@ -1244,6 +1244,9 @@ export const dict = {
   "settings.indexing.kiloSignIn.description": "登入 Kilo 以使用託管嵌入。",
   "settings.indexing.provider.title": "嵌入供應商",
   "settings.indexing.providerField.description": "供應商特定的連線設定。",
+  "settings.indexing.providerField.documentPrompt.description":
+    "用於程式碼索引和檔案更新的選用 prompt_name。需要端點支援。變更此值會重建索引。",
+  "settings.indexing.providerField.queryPrompt.description": "用於程式碼搜尋的選用 prompt_name。需要端點支援。",
   "settings.indexing.qdrantApiKey.description": "Qdrant 執行個體的可選 API 金鑰。",
   "settings.indexing.qdrantApiKey.placeholder": "可選 API 金鑰",
   "settings.indexing.fileExtensions.title": "檔案副檔名",
