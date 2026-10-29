@@ -5,7 +5,10 @@ import path from "node:path"
 // `require("./impl/format")` as a runtime require that fails in `dist/extension.js`.
 import { applyEdits, findNodeAtLocation, modify, parseTree } from "jsonc-parser/lib/esm/main.js"
 import { KiloConfigFiles } from "@opencode/util/kilocode/config/files"
+import { aliasOf } from "./config-aliases"
 import type { ConfigEdit } from "./protocol"
+
+export { aliasOf }
 
 const MODIFY = { formattingOptions: { tabSize: 2, insertSpaces: true, eol: "\n" } }
 
@@ -47,50 +50,3 @@ export function applyConfigEdits(text: string, edits: ConfigEdit[]): string {
   return result
 }
 
-/**
- * The v1 keys that a written v2 path replaces, so both spellings never define the same setting. Every legacy key
- * `core/config/normalize.ts` still reads is listed: `agent`/`mode` merge into `agents`, `tools`/`permission` into
- * `permissions`, `plugin` into `plugins`, and `attachment`/`autoupdate`/`autoshare`/`reference` into their v2 names.
- */
-export function aliasOf(keyPath: string[]): string[][] {
-  if (keyPath.length === 0) return []
-  if (keyPath[0] === "agents") {
-    if (keyPath.length === 3 && keyPath[1] === "title" && keyPath[2] === "model") return [["small_model"]]
-    const tail = keyPath.slice(2)
-    if (tail.length === 1 && tail[0] === "system")
-      return [
-        ["agent", keyPath[1]!, "prompt"],
-        ["mode", keyPath[1]!, "prompt"],
-      ]
-    if (tail.length === 1 && tail[0] === "disabled")
-      return [
-        ["agent", keyPath[1]!, "disable"],
-        ["mode", keyPath[1]!, "disable"],
-      ]
-    return [
-      ["agent", ...keyPath.slice(1)],
-      ["mode", ...keyPath.slice(1)],
-    ]
-  }
-  if (keyPath[0] === "mcp" && keyPath[1] === "servers" && keyPath.length >= 3) return [["mcp", ...keyPath.slice(2)]]
-  if (keyPath[0] === "compaction") {
-    if (keyPath[1] === "keep") return [["compaction", "preserve_recent_tokens"]]
-    if (keyPath[1] === "buffer" && keyPath.length === 2) return [["compaction", "reserved"]]
-    return []
-  }
-  if (keyPath[0] === "policies")
-    return [["enabled_providers"], ["disabled_providers"], ["experimental", "policies"]]
-  const top: Record<string, string[]> = {
-    permissions: ["permission", "tools"],
-    commands: ["command"],
-    providers: ["provider"],
-    snapshots: ["snapshot"],
-    plugins: ["plugin"],
-    media: ["attachment"],
-    update: ["autoupdate"],
-    share: ["autoshare"],
-    references: ["reference"],
-  }
-  const mapped = top[keyPath[0]!]
-  return mapped ? mapped.map((alias) => [alias, ...keyPath.slice(1)]) : []
-}
