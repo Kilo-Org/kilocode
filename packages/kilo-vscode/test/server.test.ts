@@ -4,7 +4,7 @@ import { KiloHandshakeRpc } from "@opencode/schema/kilocode/handshake"
 import { mkdtemp, mkdir, realpath, rm } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import path from "node:path"
-import { command, environment, manager, parse, start, stop } from "../src/server"
+import { command, environment, manager, parse, settingsEnvironment, start, stop } from "../src/server"
 
 const extension = path.resolve(import.meta.dir, "..")
 
@@ -66,6 +66,38 @@ test("environment drops inherited server passwords", () => {
   expect(env.OPENCODE_PASSWORD).toBeUndefined()
   expect(env.OPENCODE_SERVER_PASSWORD).toBeUndefined()
   expect(env.KILO_SERVER_PASSWORD).toBeUndefined()
+})
+
+describe("settingsEnvironment", () => {
+  test("disables Claude Code loading by default", () => {
+    expect(settingsEnvironment({ claudeCodeCompat: false, extraCaCerts: "" })).toEqual({
+      KILO_DISABLE_CLAUDE_CODE: "true",
+    })
+  })
+
+  test("leaves Claude Code loading on when compatibility is enabled", () => {
+    expect(settingsEnvironment({ claudeCodeCompat: true, extraCaCerts: "" })).toEqual({})
+  })
+
+  test("sets the extra CA certificates path, trimmed", () => {
+    expect(settingsEnvironment({ claudeCodeCompat: true, extraCaCerts: "/certs/ca.pem " })).toEqual({
+      NODE_EXTRA_CA_CERTS: "/certs/ca.pem",
+    })
+  })
+
+  test("ignores a blank CA certificates value", () => {
+    expect(settingsEnvironment({ claudeCodeCompat: true, extraCaCerts: "   " })).toEqual({})
+  })
+})
+
+test("environment drops inherited managed settings names", () => {
+  const env = environment(
+    { KILO_DISABLE_CLAUDE_CODE: "true", OPENCODE_DISABLE_CLAUDE_CODE: "true", NODE_EXTRA_CA_CERTS: "/old.pem" },
+    {},
+  )
+  expect(env.KILO_DISABLE_CLAUDE_CODE).toBeUndefined()
+  expect(env.OPENCODE_DISABLE_CLAUDE_CODE).toBeUndefined()
+  expect(env.NODE_EXTRA_CA_CERTS).toBeUndefined()
 })
 
 test("manager keeps a failed start, reports it once and retries after a restart", async () => {

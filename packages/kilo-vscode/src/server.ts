@@ -39,6 +39,19 @@ const V1_ONLY = [
 const PASSWORDS = ["OPENCODE_PASSWORD", "OPENCODE_SERVER_PASSWORD", "KILO_SERVER_PASSWORD"]
 
 /**
+ * Names the extension owns from the Kilo settings (`settingsEnvironment`). An inherited value must not leak into the
+ * server, and a settings change must not be masked by an inherited value, so drop them here and set them again in
+ * `extra`.
+ */
+const MANAGED = [
+  "KILO_DISABLE_CLAUDE_CODE",
+  "KILO_DISABLE_CLAUDE_CODE_SKILLS",
+  "OPENCODE_DISABLE_CLAUDE_CODE",
+  "OPENCODE_DISABLE_CLAUDE_CODE_SKILLS",
+  "NODE_EXTRA_CA_CERTS",
+]
+
+/**
  * The bundled `bin/kilo2` when it exists. Otherwise, in a repository checkout, the isolated dev entry
  * `script/dev-isolated.ts` with its own profile: `KILO_V2_PROFILE`, or a `profile` directory in the extension storage.
  */
@@ -62,11 +75,28 @@ export function command(input: {
 
 export function environment(base: NodeJS.ProcessEnv, extra: Record<string, string>): NodeJS.ProcessEnv {
   return {
-    ...Object.fromEntries(Object.entries(base).filter(([key]) => !V1_ONLY.includes(key) && !PASSWORDS.includes(key))),
+    ...Object.fromEntries(
+      Object.entries(base).filter(
+        ([key]) => !V1_ONLY.includes(key) && !PASSWORDS.includes(key) && !MANAGED.includes(key),
+      ),
+    ),
     // The server trusts the OS certificate store, as VS Code does by default.
     NODE_USE_SYSTEM_CA: base.NODE_USE_SYSTEM_CA ?? "1",
     KILO_CLIENT: "vscode",
     ...extra,
+  }
+}
+
+/**
+ * The server environment derived from the Kilo VS Code settings. The CLI reads the `KILO_` names and translates them
+ * to the `OPENCODE_` names the runtime reads, so the server starts with Claude Code loading off by default. A changed
+ * value applies on the next start, which the extension host triggers by stopping the server.
+ */
+export function settingsEnvironment(values: { claudeCodeCompat: boolean; extraCaCerts: string }): Record<string, string> {
+  const extraCaCerts = values.extraCaCerts.trim()
+  return {
+    ...(values.claudeCodeCompat ? {} : { KILO_DISABLE_CLAUDE_CODE: "true" }),
+    ...(extraCaCerts.length > 0 ? { NODE_EXTRA_CA_CERTS: extraCaCerts } : {}),
   }
 }
 
@@ -85,6 +115,7 @@ export function start(input: {
   command: Command
   cwd: string
   env: NodeJS.ProcessEnv
+  settings?: Record<string, string>
   log?: (text: string) => void
   onExit?: (child: ChildProcess) => void
 }): Promise<Server> {
@@ -94,7 +125,12 @@ export function start(input: {
     cwd: input.cwd,
     // `serve --stdio` removes OPENCODE_PASSWORD from its own environment before it starts tools.
     // dev-isolated.ts runs the CLI in INIT_CWD, which `bun run extension` leaves set to the caller's folder.
-    env: environment(input.env, { ...input.command.env, OPENCODE_PASSWORD: password, INIT_CWD: input.cwd }),
+    env: environment(input.env, {
+      ...input.command.env,
+      ...input.settings,
+      OPENCODE_PASSWORD: password,
+      INIT_CWD: input.cwd,
+    }),
     stdio: ["pipe", "pipe", "pipe"],
     detached: process.platform !== "win32",
   })
@@ -155,12 +191,14 @@ export function stop(child: ChildProcess) {
 /**
  * One server per extension host, started on first use and again after it exits. A failed start is kept for `retry`
  * milliseconds, because every webview request and event stream reconnect would start another server. `onError`
- * reports the first failure after a start or Restart Server.
+ * reports the first failure after a start or Restart Server. `settings` may be a function so a start after a settings
+ * change reads the current values.
  */
 export function manager(input: {
   command: () => Command | undefined
   cwd: string
   env: NodeJS.ProcessEnv
+  settings?: Record<string, string> | (() => Record<string, string>)
   log?: (text: string) => void
   onError?: (error: Error) => void
   retry?: number
@@ -173,6 +211,7 @@ export function manager(input: {
           command: found,
           cwd: input.cwd,
           env: input.env,
+          settings: typeof input.settings === "function" ? input.settings() : input.settings,
           log: input.log,
           onExit: () => {
             if (state.current === promise) state.current = undefined

@@ -56,6 +56,13 @@ describe("applyConfigEdits", () => {
     const result = applyConfigEdits(`{ "username": "alice", "theme": "dark" }`, [{ path: ["username"] }])
     expect(parse(result)).toEqual({ theme: "dark" })
   })
+
+  test("writes under an aliased path when the v1 alias is absent", () => {
+    const result = applyConfigEdits(`{ "commands": { "demo": { "template": "hi" } } }`, [
+      { path: ["commands", "demo", "model"], value: "kilo/kilo-auto/free" },
+    ])
+    expect(parse(result).commands.demo).toEqual({ template: "hi", model: "kilo/kilo-auto/free" })
+  })
 })
 
 describe("aliasOf", () => {

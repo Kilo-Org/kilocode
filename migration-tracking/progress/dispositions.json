@@ -580,5 +580,10 @@
     "state": "ported",
     "note": "webview-ui/src/v2/auto-approve.tsx replaces the v1 bridge: it requests the persisted state, listens for autoApproveStateLoaded, and persists toggles through the requestAutoApproveState/persistAutoApproveState messages in src/protocol.ts, handled by src/chat.ts. Replies use permission.reply({sessionID, requestID, decision: \"once\"}), so v1's SSE/session directory resolution is not needed.",
     "by": "v2-auto-approve"
+  },
+  "module:packages/kilo-vscode/webview-ui/src/components/settings/agent-behaviour/WorkflowsTab.tsx": {
+    "state": "ported",
+    "note": "webview-ui/src/components/settings/agent-behaviour/WorkflowsSubtab.tsx lists workflows from api.command.list plus the config commands map, shows the config description and the read-only template, and writes the per-command model and variant to commands.<n>.model (v2 Config.ModelSelection, the variant in the same value). v2 lists server-discovered commands too. The model override applies to a command defined in config, because a v2 command entry requires a template; the Workflows model picker for file-only workflows is a known gap and stays open.",
+    "by": "settings-rules"
   }
 }
