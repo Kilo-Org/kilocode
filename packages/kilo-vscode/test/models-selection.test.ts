@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test"
-import { selection, write } from "../webview-ui/src/components/settings/models-selection"
+import { preserveVariant, selection, write } from "../webview-ui/src/components/settings/models-selection"
 
 describe("settings model selection mapping", () => {
   test("reads the short string form", () => {
@@ -49,5 +49,19 @@ describe("settings model selection mapping", () => {
   test("round trips a value", () => {
     const value = { providerID: "anthropic", modelID: "claude", variant: "max" }
     expect(selection(write(value))).toEqual(value)
+  })
+
+  test("keeps an existing variant only when the picked model is unchanged", () => {
+    const previous = { providerID: "anthropic", modelID: "claude", variant: "max" }
+    expect(preserveVariant(previous, { providerID: "anthropic", modelID: "claude" })).toEqual({
+      providerID: "anthropic",
+      modelID: "claude",
+      variant: "max",
+    })
+    expect(preserveVariant(previous, { providerID: "anthropic", modelID: "other" })).toEqual({
+      providerID: "anthropic",
+      modelID: "other",
+    })
+    expect(preserveVariant(undefined, { providerID: "kilo", modelID: "x" })).toEqual({ providerID: "kilo", modelID: "x" })
   })
 })

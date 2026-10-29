@@ -44,3 +44,11 @@ export function write(value: ModelSelection | undefined) {
     ...(value.variant ? { variant: value.variant } : {}),
   }
 }
+
+/** Keep an existing variant when the picked model is unchanged, so a re-pick does not drop it. */
+export function preserveVariant(previous: ModelSelection | undefined, next: ModelSelection): ModelSelection {
+  if (previous?.variant && previous.providerID === next.providerID && previous.modelID === next.modelID) {
+    return { ...next, variant: previous.variant }
+  }
+  return next
+}

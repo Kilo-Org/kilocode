@@ -6,7 +6,7 @@ import { useLanguage } from "../../context/language"
 import { useV2 } from "../../v2/client"
 import { useSettingsConfig } from "../../v2/settings-config"
 import ModelPicker from "./ModelPicker"
-import { selection, write, type ModelSelection } from "./models-selection"
+import { selection, write, preserveVariant, type ModelSelection } from "./models-selection"
 import SettingsRow from "./SettingsRow"
 import { Switch } from "./Switch"
 import type { SettingsTabProps } from "./tabs"
@@ -37,7 +37,9 @@ const ModelsTab: Component<SettingsTabProps> = () => {
   const change = (path: string[]) => (value: ModelSelection | undefined) => {
     // Write the scope that already defines the key so a project override is updated in place, not shadowed.
     const scope = config.source(path) ?? "global"
-    return value ? config.set(path, write(value), scope) : config.unset(path, scope)
+    if (!value) return config.unset(path, scope)
+    // This tab hides the variant control, so keep an existing variant when the model itself is unchanged.
+    return config.set(path, write(preserveVariant(selection(config.value(path)), value)), scope)
   }
 
   const hidden = () => {
