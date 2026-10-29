@@ -369,6 +369,8 @@ The tool supports two modes:
 | `worktree` | Creates one Agent Manager git worktree and session per task. Each task gets an isolated checkout, branch, directory, and terminal. |
 | `local` | Creates Agent Manager sessions in the current workspace without git worktree isolation. You can also target an existing managed worktree with its `worktreeID`. |
 
+In `worktree` mode, set a task's `baseBranch` to start its new worktree from a specific existing branch, like the base branch in the New Worktree dialog. Use the branch name without a remote prefix, such as `main` or `release/1.0`. When omitted, the worktree starts from the configured default base branch, or the repository default branch when no default is configured. A task `baseBranch` cannot be combined with `local` mode or `worktreeID`.
+
 Starting another session in an existing worktree reuses its files and branch without rerunning setup. Coordinate edits between sessions sharing that checkout.
 
 Each request can start up to 20 tasks. Sessions started with a prompt inherit the current turn's model and reasoning effort unless you explicitly request a different selection. Sessions created without a prompt use the normal defaults. Ask for independent sessions for separate tasks, or alternate versions of the same task to compare approaches.

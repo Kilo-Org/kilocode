@@ -41,35 +41,30 @@ The underlying models behind each Auto Model tier are updated server-side as bet
 
 You get lean costs on routine work and stronger models when the work demands it — with no manual switching.
 
-### Custom Efficient pools
+### Platform pools
 
-You can constrain `kilo-auto/efficient` to the exact models you trust by configuring an **Efficient model pool** on the **Auto routing** card:
+Kilo selects the model pool for `kilo-auto/efficient` and `kilo-auto/frontier`; they are not configurable per owner. You can still choose your account's platform routing mode, and organization model policy continues to filter which models its members can route to.
 
-- **Personal** — your [profile page](https://app.kilo.ai/profile)
-- **Organization** — your organization's **Providers & Models** page. Owners and billing managers can edit; members see a read-only view.
-
-A pool holds 1–10 exact model and thinking-variant pairs. Variants stay distinct, so the same model with different thinking variants (for example `max` and `xhigh`) counts as separate entries. Leave the pool empty to inherit: an organization without a pool uses each member's personal pool, and a member without a personal pool uses the platform pool.
-
-New entries are benchmarked on demand before they can serve traffic. Each entry shows a status:
-
-| Status | Meaning |
-|---|---|
-| Benchmarking | The pair is being measured and is not used for routing yet |
-| Ready | Proven accurate enough and eligible for routing |
-| Failed | Benchmarking failed — retry the entry |
-| Unavailable | The model or variant is no longer in your catalog — remove the entry |
-
-Routing decides only among ready entries. If no pool entry can serve a request, the request falls back to a fixed, cost-effective baseline model, so quality never drops below that baseline.
-
-{% callout type="note" %}
-You can benchmark up to 10 new or retried pairs per owner per rolling 24 hours. Entries that are already ready or benchmarking don't count against this limit.
-{% /callout %}
+To route across the exact models you trust — including client models the gateway cannot reach — create a [custom auto router](#custom-auto-routers).
 
 {% callout type="warning" title="Data handling for Auto Free" %}
 Auto Free may route your requests to providers that log prompts and outputs and use them to improve their services. Do not submit personal or confidential data when using Auto Free. In particular, it may route to NVIDIA's free endpoints.
 
 For NVIDIA free endpoints (Super/Ultra/etc): Trial use only - do not submit personal or confidential data. Your use is logged for security purposes and to improve NVIDIA products and services. The logged session data for improvement purposes is not linked to your identity or any persistent identifier. For more information about our data processing practices, see our [Privacy Policy](https://www.nvidia.com/en-us/about-nvidia/privacy-policy/). By interacting with this endpoint, you consent to our collection, recording, and use of such information and the [NVIDIA API Trial Terms of Service](https://assets.ngc.nvidia.com/products/api-catalog/legal/NVIDIA%20API%20Trial%20Terms%20of%20Service.pdf).
 {% /callout %}
+
+### Custom auto routers
+
+A custom auto router is your own routing pool under a `kilo-auto/custom/<slug>` model id. Create the router in the Kilo web editor, then register the models this machine can run so the CLI can serve it locally instead of always forwarding to the gateway:
+
+- `kilo auto router list` — list your custom routers, their entries, and each entry's eval status
+- `kilo auto router add <router> <model>` — register a model configured in this CLI as a router entry
+- `kilo auto router remove <router> <model>` — remove a client model entry
+- `kilo auto eval <router>` — run the router's missing client evals locally in Docker
+
+When you select a custom router, Kilo ranks the entries this machine can serve, asks the routing service for a decision, and runs the chosen model through its local provider. See the [CLI command reference](/docs/code-with-ai/platforms/cli-reference#kilo-auto) for every command and option.
+
+An entry can link to a platform model so it reuses that model's platform benchmark instead of running a local client eval. Pass `--measured-as <model>` to `kilo auto router add`, accept the link the CLI suggests when it finds a matching platform model, or set it in the web editor, which suggests a link for each entry and lets you pick another model or clear it. The link applies to each variant whose name matches a measured platform variant; other variants still need a client eval, and linked variants are skipped by `kilo auto eval`. A linked entry serves the newest platform measurement for that model and is flagged stale when the measurement is older than the current benchmark engine or the model has left the catalog. Once stored, a link stays until you clear it in the web editor.
 
 ## Benefits
 
