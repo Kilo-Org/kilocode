@@ -912,6 +912,96 @@ describe("OpenAICompatibleEmbedder", () => {
       expect(mockEmbeddingsCreate).toHaveBeenCalledTimes(2)
     })
 
+    test("does not retry a rejection that names another field", async () => {
+      embedder = new OpenAICompatibleEmbedder(testBaseUrl, testApiKey, "custom-embed", undefined, {
+        dimensions: 2,
+      })
+
+      mockEmbeddingsCreate.mockRejectedValue(Object.assign(new Error("Invalid model"), { status: 400 }))
+
+      const result = await embedder.validateConfiguration()
+
+      expect(result.valid).toBe(false)
+      expect(mockEmbeddingsCreate).toHaveBeenCalledTimes(1)
+    })
+
+    test("retries without dimensions when the rejection has no readable body", async () => {
+      embedder = new OpenAICompatibleEmbedder(testBaseUrl, testApiKey, "custom-embed", undefined, {
+        dimensions: 2,
+      })
+
+      const testEmbedding = new Float32Array([0.25, 0.5])
+      const base64String = Buffer.from(testEmbedding.buffer).toString("base64")
+      mockEmbeddingsCreate
+        .mockRejectedValueOnce(Object.assign(new Error("400 status code (no body)"), { status: 400 }))
+        .mockResolvedValueOnce({
+          data: [{ embedding: base64String }],
+          usage: { prompt_tokens: 1, total_tokens: 1 },
+        })
+
+      const result = await embedder.createEmbeddings(["hello"])
+
+      expect(result.embeddings).toEqual([[0.25, 0.5]])
+      expect(mockEmbeddingsCreate).toHaveBeenCalledTimes(2)
+      expect(mockEmbeddingsCreate.mock.calls.at(1)?.at(0)).toEqual({
+        input: ["hello"],
+        model: "custom-embed",
+        encoding_format: "base64",
+      })
+    })
+
+    test("reports the original error when the retry fails the same way", async () => {
+      embedder = new OpenAICompatibleEmbedder(testBaseUrl, testApiKey, "custom-embed", undefined, {
+        dimensions: 2,
+      })
+
+      mockEmbeddingsCreate.mockRejectedValue(
+        Object.assign(new Error("400 status code (no body)"), { status: 400 }),
+      )
+
+      const result = await embedder.validateConfiguration()
+
+      expect(result.valid).toBe(false)
+      expect(result.error).toBe("Configuration error. Please verify your embedder settings.")
+      expect(mockEmbeddingsCreate).toHaveBeenCalledTimes(2)
+    })
+
+    test("does not send dimensions when sendDimensions is disabled", async () => {
+      embedder = new OpenAICompatibleEmbedder(testBaseUrl, testApiKey, "custom-embed", undefined, {
+        dimensions: 2,
+        sendDimensions: false,
+      })
+
+      mockEmbeddingsCreate.mockResolvedValue({
+        data: [{ embedding: [0.25, 0.5] }],
+        usage: { prompt_tokens: 1, total_tokens: 1 },
+      })
+
+      const result = await embedder.createEmbeddings(["hello"])
+
+      expect(result.embeddings).toEqual([[0.25, 0.5]])
+      expect(mockEmbeddingsCreate).toHaveBeenCalledTimes(1)
+      expect(mockEmbeddingsCreate.mock.calls.at(0)?.at(0)).toEqual({
+        input: ["hello"],
+        model: "custom-embed",
+        encoding_format: "base64",
+      })
+    })
+
+    test("checks the vector size when sendDimensions is disabled", async () => {
+      embedder = new OpenAICompatibleEmbedder(testBaseUrl, testApiKey, "custom-embed", undefined, {
+        dimensions: 2,
+        sendDimensions: false,
+      })
+
+      mockEmbeddingsCreate.mockResolvedValue({
+        data: [{ embedding: [0.25, 0.5, 0.75] }],
+        usage: { prompt_tokens: 1, total_tokens: 1 },
+      })
+
+      await expect(embedder.createEmbeddings(["hello"])).rejects.toThrow("3 dimensions, but 2 are configured")
+    })
+
     test("keeps the server error for a 200 response without data", async () => {
       embedder = new OpenAICompatibleEmbedder(testBaseUrl, testApiKey, testModelId)
 
