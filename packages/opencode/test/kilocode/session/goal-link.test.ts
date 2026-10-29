@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test"
 import type { SessionV1 } from "@opencode-ai/core/v1/session"
 import { Effect, Exit } from "effect"
 import { SessionID } from "@/session/schema"
+import { BackgroundProcess } from "@/kilocode/background-process"
 import { GoalLink } from "@/kilocode/session/goal/link"
 import { GoalPolicy } from "@/kilocode/session/goal/policy"
 import { GoalState } from "@/kilocode/session/goal/state"
@@ -141,6 +142,132 @@ describe("GoalLink.resumeOrQueue", () => {
     )
     await Effect.runPromise(GoalLink.arm(id, { sessionID: id, action: "resume", note: "go" }, dir))
     expect(calls).toEqual(["go"])
+  })
+})
+
+describe("GoalLink.rewait", () => {
+  const process = (input: {
+    id: string
+    sessionID: SessionID
+    status: BackgroundProcess.Status
+    lifetime?: BackgroundProcess.Lifetime
+  }) =>
+    ({
+      id: BackgroundProcess.ID.ascending(input.id),
+      sessionID: input.sessionID,
+      command: "sleep 600",
+      cwd: "/tmp",
+      ports: [],
+      status: input.status,
+      lifetime: input.lifetime ?? "session",
+      ready: false,
+      output: "",
+      time: { started: 1, updated: 1 },
+    }) satisfies BackgroundProcess.Info
+
+  test("re-waits on a live process the session owns", async () => {
+    const id = sid("rewait-live")
+    const other = sid("rewait-other")
+    const decision = await Effect.runPromise(
+      GoalLink.rewait(id, async () => [
+        // A persistent process of another session is reported by list() too.
+        process({ id: "bgp_other", sessionID: other, status: "running", lifetime: "persistent" }),
+        // A process on its way down is not a wait to re-arm.
+        process({ id: "bgp_stopping", sessionID: id, status: "stopping" }),
+        process({ id: "bgp_dead", sessionID: id, status: "exited" }),
+        process({ id: "bgp_live", sessionID: id, status: "running" }),
+      ]),
+    )
+    expect(decision).toEqual({ kind: "process", id: "bgp_live" })
+  })
+
+  test("reports no wait when every process is terminal or foreign", async () => {
+    const id = sid("rewait-none")
+    const decision = await Effect.runPromise(
+      GoalLink.rewait(id, async () => [
+        process({ id: "bgp_other", sessionID: sid("rewait-none-other"), status: "running", lifetime: "persistent" }),
+        process({ id: "bgp_failed", sessionID: id, status: "failed" }),
+      ]),
+    )
+    expect(decision).toEqual({ kind: "none" })
+  })
+
+  test("a fire that lands while the process list is read wins over the re-wait", async () => {
+    const id = sid("rewait-fire")
+    GoalState.start(id)
+    const wait: GoalLink.Wait = { kind: "wakeup", id: "wku_rewait", label: "fired note" }
+    const note = "[scheduled wakeup] fired note"
+    const decision = await Effect.runPromise(
+      GoalLink.rewait(id, async () => {
+        // The scheduler delivers the fire while the runner is inside this read.
+        await Effect.runPromise(GoalLink.resumeOrQueue(id, note, wait))
+        return [process({ id: "bgp_live", sessionID: id, status: "running" })]
+      }),
+    )
+    expect(decision).toEqual({ kind: "fire", note })
+    // Taken, not stranded: a later cycle or a pause cannot deliver it anymore.
+    expect(GoalLink.takePending(id)).toEqual([])
+    GoalState.pause(id)
+    GoalLink.clear(id)
+  })
+
+  test("a fire wins even when no process is left to wait on", async () => {
+    const id = sid("rewait-fire-empty")
+    GoalState.start(id)
+    const wait: GoalLink.Wait = { kind: "cron", id: "wku_empty", label: "poll the deploy" }
+    const note = "[scheduled cron task] poll the deploy"
+    const decision = await Effect.runPromise(
+      GoalLink.rewait(id, async () => {
+        await Effect.runPromise(GoalLink.resumeOrQueue(id, note, wait))
+        return []
+      }),
+    )
+    expect(decision).toEqual({ kind: "fire", note })
+    GoalState.pause(id)
+    GoalLink.clear(id)
+  })
+})
+
+describe("GoalLink epochs", () => {
+  test("taking the watch over supersedes the previous watch", () => {
+    const id = sid("epoch-watch")
+    const wait: GoalLink.Wait = { kind: "process", id: "bgp_p", label: "bgp_p" }
+    GoalLink.set(id, wait)
+    const first = GoalLink.watch(id)
+    // A re-wait on the same process forks a new watch.
+    GoalLink.set(id, wait)
+    const second = GoalLink.watch(id)
+    expect(second).not.toBe(first)
+    GoalLink.clear(id)
+    expect(GoalLink.epoch(id)).not.toBe(second)
+  })
+
+  test("re-recording the same wait keeps the epoch, a different wait replaces it", () => {
+    const id = sid("epoch-same")
+    const wait: GoalLink.Wait = { kind: "process", id: "bgp_p", label: "bgp_p" }
+    const epoch = GoalLink.set(id, wait)
+    expect(GoalLink.set(id, wait)).toBe(epoch)
+    expect(GoalLink.epoch(id)).toBe(epoch)
+    expect(GoalLink.set(id, { kind: "process", id: "bgp_q", label: "bgp_q" })).not.toBe(epoch)
+  })
+
+  test("only taking the awaited wait advances the epoch", () => {
+    const id = sid("epoch-take")
+    const wait: GoalLink.Wait = { kind: "cron", id: "wku_t", label: "x" }
+    const epoch = GoalLink.set(id, wait)
+    expect(GoalLink.take(id, "wku_other")).toBeUndefined()
+    expect(GoalLink.epoch(id)).toBe(epoch)
+    expect(GoalLink.take(id, "wku_t")).toEqual(wait)
+    expect(GoalLink.epoch(id)).not.toBe(epoch)
+  })
+
+  test("release drops the epoch instead of leaving an entry", () => {
+    const id = sid("epoch-release")
+    GoalLink.set(id, { kind: "wakeup", id: "wku_r", label: "x" })
+    GoalLink.watch(id)
+    expect(GoalLink.epoch(id)).toBeGreaterThan(0)
+    GoalLink.release(id)
+    expect(GoalLink.epoch(id)).toBe(0)
   })
 })
 
