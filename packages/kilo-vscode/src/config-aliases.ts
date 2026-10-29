@@ -3,7 +3,13 @@
 export function aliasOf(keyPath: string[]): string[][] {
   if (keyPath.length === 0) return []
   if (keyPath[0] === "agents") {
-    if (keyPath.length === 3 && keyPath[1] === "title" && keyPath[2] === "model") return [["small_model"]]
+    // `small_model` and the v1 `agent`/`mode` maps all feed `agents.title`, so any title write clears all of them.
+    if (keyPath[1] === "title")
+      return [
+        ["small_model"],
+        ["agent", ...keyPath.slice(1)],
+        ["mode", ...keyPath.slice(1)],
+      ]
     const tail = keyPath.slice(2)
     if (tail.length === 1 && tail[0] === "system")
       return [

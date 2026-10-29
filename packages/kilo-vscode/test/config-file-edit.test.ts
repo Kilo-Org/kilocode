@@ -80,6 +80,16 @@ describe("applyConfigEdits", () => {
     expect(parsed.compaction.preserve_recent_tokens).toBeUndefined()
   })
 
+  test("clears small_model and the title agent aliases when the title model is written", () => {
+    const text = `{ "small_model": "kilo/x", "agent": { "title": { "model": "a" } }, "mode": { "title": { "model": "b" } } }`
+    const result = applyConfigEdits(text, [{ path: ["agents", "title", "model"], value: "c" }])
+    const parsed = parse(result)
+    expect(parsed.agents.title.model).toBe("c")
+    expect(parsed.small_model).toBeUndefined()
+    expect(parsed.agent.title.model).toBeUndefined()
+    expect(parsed.mode.title.model).toBeUndefined()
+  })
+
   test("removes an unset path", () => {
     const result = applyConfigEdits(`{ "username": "alice", "theme": "dark" }`, [{ path: ["username"] }])
     expect(parse(result)).toEqual({ theme: "dark" })
@@ -107,7 +117,12 @@ describe("aliasOf", () => {
       ["agent", "build", "disable"],
       ["mode", "build", "disable"],
     ])
-    expect(aliasOf(["agents", "title", "model"])).toEqual([["small_model"]])
+    expect(aliasOf(["agents", "title", "model"])).toEqual([
+      ["small_model"],
+      ["agent", "title", "model"],
+      ["mode", "title", "model"],
+    ])
+    expect(aliasOf(["agents", "title"])).toEqual([["small_model"], ["agent", "title"], ["mode", "title"]])
     expect(aliasOf(["permissions"])).toEqual([["permission"], ["tools"]])
     expect(aliasOf(["commands"])).toEqual([["command"]])
     expect(aliasOf(["providers"])).toEqual([["provider"]])
