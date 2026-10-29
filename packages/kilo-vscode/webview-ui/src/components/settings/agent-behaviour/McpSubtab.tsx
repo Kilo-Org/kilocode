@@ -15,6 +15,7 @@ import { useSettingsConfig } from "../../../v2/settings-config"
 import { createMcp } from "../../../v2/mcp"
 import McpEditView from "./McpEditView"
 import SettingsRow from "../SettingsRow"
+import Switch from "../Switch"
 
 const STATUS_KEYS: Record<string, string> = {
   connected: "mcp.status.connected",
@@ -22,43 +23,6 @@ const STATUS_KEYS: Record<string, string> = {
   needs_auth: "mcp.status.needs_auth",
   disabled: "mcp.status.disabled",
 }
-
-const MCP_SWITCH: Component<{ checked: boolean; disabled?: boolean; label: string; onChange: (value: boolean) => void }> = (
-  props,
-) => (
-  <button
-    type="button"
-    role="switch"
-    aria-checked={props.checked}
-    aria-label={props.label}
-    disabled={props.disabled}
-    onClick={() => props.onChange(!props.checked)}
-    style={{
-      width: "28px",
-      height: "16px",
-      padding: "0",
-      "border-radius": "3px",
-      border: props.checked ? "1px solid var(--icon-strong-base, var(--vscode-button-background))" : "1px solid var(--border-weak-base)",
-      background: props.checked ? "var(--icon-strong-base, var(--vscode-button-background))" : "var(--surface-base)",
-      position: "relative",
-      cursor: props.disabled ? "not-allowed" : "pointer",
-      opacity: props.disabled ? "0.5" : "1",
-      "flex-shrink": "0",
-    }}
-  >
-    <span
-      style={{
-        position: "absolute",
-        top: "1px",
-        left: props.checked ? "12px" : "-1px",
-        width: "14px",
-        height: "14px",
-        "border-radius": "2px",
-        background: "var(--icon-invert-base, var(--vscode-button-foreground))",
-      }}
-    />
-  </button>
-)
 
 const McpSubtab: Component = () => {
   const language = useLanguage()
@@ -324,12 +288,13 @@ const McpSubtab: Component = () => {
                         </Show>
                         <Show when={!needsAuth(name) && !isRemoving(name)}>
                           <div onClick={(e: MouseEvent) => e.stopPropagation()}>
-                            <MCP_SWITCH
+                            <Switch
                               checked={isConnected(name)}
                               disabled={isSigningIn(name)}
-                              label={name}
                               onChange={(enabled) => toggleEnabled(name, enabled)}
-                            />
+                            >
+                              <span class="sr-only">{name}</span>
+                            </Switch>
                           </div>
                         </Show>
                         <Show when={!isRemoving(name) && isConnected(name) && transportOf(name) === "remote"}>

@@ -21,10 +21,15 @@ export function createMcp() {
   const [removing, setRemoving] = createSignal<string[]>([])
   const attempts = new Map<string, Attempt>()
 
-  // A server's sign-in needs its integration and OAuth method, so keep that list loaded alongside the MCP list.
+  // A server's status comes from the MCP list, and its sign-in needs the integration and OAuth method, so keep both
+  // loaded alongside each other when the connection opens.
   createEffect(
     on(v2.connection.status, (status) => {
-      if (status === "connected") void v2.data.location.integration.sync().catch(v2.report)
+      if (status !== "connected") return
+      void Promise.all([
+        v2.data.location.mcp.server.sync(),
+        v2.data.location.integration.sync(),
+      ]).catch(v2.report)
     }),
   )
 
