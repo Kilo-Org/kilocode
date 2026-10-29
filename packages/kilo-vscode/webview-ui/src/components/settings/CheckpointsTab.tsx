@@ -9,6 +9,8 @@ const CheckpointsTab: Component = () => {
   const config = useSettingsConfig()
   const language = useLanguage()
 
+  const write = (path: string[], value: unknown) => config.set(path, value, config.source(path) ?? "global")
+
   return (
     <div>
       <Card>
@@ -19,7 +21,7 @@ const CheckpointsTab: Component = () => {
         >
           <Switch
             checked={config.value(["snapshots"]) !== false}
-            onChange={(checked) => config.set(["snapshots"], checked)}
+            onChange={(checked) => write(["snapshots"], checked)}
             hideLabel
           >
             {language.t("settings.checkpoints.enable.title")}

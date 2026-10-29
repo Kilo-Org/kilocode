@@ -105,7 +105,16 @@ const KEY_TAB_OVERRIDES: Record<string, string> = {
 const EXCLUDED_KEYS = new Set([
   "settings.permissions.toast.updateFailed.title",
   "settings.autoCleanup.defaultRetention.title",
+  "settings.autoCleanup.enable.title",
+  "settings.autoCleanup.lastRun.title",
   "settings.webTools.webSearch.title",
+  "settings.context.compaction.title",
+  "settings.context.compactionLimit.title",
+  "settings.context.prune.title",
+  "settings.context.memory.title",
+  "settings.context.memory.autoSave.title",
+  "settings.context.memory.project.title",
+  "settings.context.memory.storage.title",
   "agentManager.browser.title",
 ])
 

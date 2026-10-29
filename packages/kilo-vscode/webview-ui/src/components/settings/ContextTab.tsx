@@ -6,6 +6,7 @@ import { useLanguage } from "../../context/language"
 import { useSettingsConfig } from "../../v2/settings-config"
 import SettingsRow from "./SettingsRow"
 import PatternList from "./PatternList"
+import { tokenEdit } from "./context-tokens"
 
 const ContextTab: Component = () => {
   const config = useSettingsConfig()
@@ -16,6 +17,9 @@ const ContextTab: Component = () => {
     return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : []
   }
 
+  const write = (path: string[], value: unknown) => config.set(path, value, config.source(path) ?? "global")
+  const clear = (path: string[]) => config.unset(path, config.source(path) ?? "global")
+
   const auto = () => config.value(["compaction", "auto"]) !== false
 
   const tokens = (path: string[]) => {
@@ -24,13 +28,10 @@ const ContextTab: Component = () => {
   }
 
   const saveTokens = (path: string[]) => (input: string) => {
-    const raw = input.trim()
-    if (!raw) {
-      config.unset(path)
-      return
-    }
-    if (!/^\d+$/.test(raw)) return
-    config.set(path, Number(raw))
+    const edit = tokenEdit(input)
+    if (!edit) return
+    if (edit.type === "unset") clear(path)
+    else write(path, edit.value)
   }
 
   // The Models rail entry is a sibling of this tab, so the link activates it through the same Tabs trigger a
@@ -50,7 +51,7 @@ const ContextTab: Component = () => {
           title={language.t("settings.context.autoCompaction.title")}
           description={language.t("settings.context.autoCompaction.description")}
         >
-          <Switch checked={auto()} onChange={(checked) => config.set(["compaction", "auto"], checked)} hideLabel>
+          <Switch checked={auto()} onChange={(checked) => write(["compaction", "auto"], checked)} hideLabel>
             {language.t("settings.context.autoCompaction.title")}
           </Switch>
         </SettingsRow>
@@ -123,7 +124,7 @@ const ContextTab: Component = () => {
         patterns={patterns()}
         description={language.t("settings.context.watcherPatterns.description")}
         placeholder="e.g. **/node_modules/**"
-        onChange={(ignore) => config.set(["watcher", "ignore"], ignore)}
+        onChange={(ignore) => write(["watcher", "ignore"], ignore)}
       />
     </div>
   )
