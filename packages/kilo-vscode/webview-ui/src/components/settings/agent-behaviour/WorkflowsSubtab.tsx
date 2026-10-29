@@ -49,16 +49,23 @@ const WorkflowsSubtab: Component = () => {
 
   const model = (name: string) => parseCommandModel(config.value(["commands", name, "model"]))
 
-  // A v2 command entry requires a template, so a model override only applies to a workflow defined in the config.
-  const hasTemplate = (name: string) => typeof config.value(["commands", name, "template"]) === "string"
-
-  // Write to the file that already defines the command, so a project value is not shadowed by a global write.
-  const scope = (name: string) => config.source(["commands", name]) ?? config.source(["commands"]) ?? "global"
+  // A v2 command entry requires a template, so the model override only applies where a template exists. Read the raw
+  // documents per path (not the shallow merged config), so a command from a lower-priority file is not missed, and
+  // accept the v1 `command` key so a not yet migrated entry keeps working. Write the model next to its template.
+  const templateLocation = (name: string) => {
+    const native = config.source(["commands", name, "template"])
+    if (native) return { scope: native, key: "commands" as const }
+    const legacy = config.source(["command", name, "template"])
+    if (legacy) return { scope: legacy, key: "command" as const }
+    return undefined
+  }
 
   const setModel = (name: string, value: ModelPickerValue | undefined) => {
-    if (!hasTemplate(name)) return
-    if (!value) config.unset(["commands", name, "model"], scope(name))
-    else config.set(["commands", name, "model"], serializeCommandModel(value), scope(name))
+    const found = templateLocation(name)
+    if (!found) return
+    const path = [found.key, name, "model"]
+    if (!value) config.unset(path, found.scope)
+    else config.set(path, serializeCommandModel(value), found.scope)
   }
 
   const toggle = (name: string) => setExpanded((prev) => ({ ...prev, [name]: !prev[name] }))
@@ -175,7 +182,7 @@ const WorkflowsSubtab: Component = () => {
                           onChange={(value) => setModel(name, value)}
                           clearable
                           clearLabel={language.t("settings.providers.notSet")}
-                          blocked={!hasTemplate(name)}
+                          blocked={!templateLocation(name)}
                         />
                       </div>
                       <Show when={template(name)}>
