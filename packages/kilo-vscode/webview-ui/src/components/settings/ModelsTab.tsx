@@ -35,11 +35,13 @@ const ModelsTab: Component<SettingsTabProps> = () => {
 
   // A row reads as set only when a config file sets the key (or a write is in flight). The file value is preferred
   // over the merged value so a resolved config default does not replace what the user set; the merged value is the
-  // fallback for a key that a legacy alias stores.
+  // fallback for a key that a legacy alias stores. While a write is in flight the raw snapshot is stale, so the
+  // optimistic value from `config.value` is used instead.
   const current = (path: string[]) => {
     const scope = config.source(path)
-    if (!scope && !config.pending(path)) return undefined
-    const raw = scope ? readPathValue(config.raw(scope), path) : undefined
+    const pending = config.pending(path)
+    if (!scope && !pending) return undefined
+    const raw = scope && !pending ? readPathValue(config.raw(scope), path) : undefined
     return selection(raw ?? config.value(path))
   }
   const change = (path: string[]) => (value: ModelSelection | undefined) => {
