@@ -11,15 +11,21 @@ export function legacyPath(path: string[]): string[] | undefined {
   return undefined
 }
 
+type Scope = "global" | "project"
+
 /**
  * The file an edit must land in so the merged config changes. A project document wins when it defines either
  * spelling; otherwise keep the existing target, or the global file for a key no document defines.
  */
-type Scope = "global" | "project"
-
 export function writeScope(source: (path: string[]) => Scope | undefined, path: string[]): Scope {
   const legacy = legacyPath(path)
-  if (source(path) === "project") return "project"
-  if (legacy && source(legacy) === "project") return "project"
-  return source(path) ?? (legacy ? source(legacy) : undefined) ?? "global"
+  const written = legacy ? [path, legacy] : [path]
+  if (written.some((candidate) => source(candidate) === "project")) return "project"
+  // Core replaces the whole top-level value of a document, so a project section shadows every leaf under it.
+  if (path.length > 1 && source([path[0]!]) === "project") return "project"
+  for (const candidate of written) {
+    const scope = source(candidate)
+    if (scope) return scope
+  }
+  return "global"
 }
