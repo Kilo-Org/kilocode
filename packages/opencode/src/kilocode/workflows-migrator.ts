@@ -6,6 +6,7 @@ import { InvalidError } from "@opencode-ai/core/v1/config/error"
 import { Filesystem } from "../util/filesystem"
 import { KilocodeMarkdown } from "./config/markdown"
 import { KilocodePaths } from "./paths"
+import { Flag } from "@opencode-ai/core/flag/flag"
 
 export namespace WorkflowsMigrator {
   const home = () => process.env.HOME || process.env.USERPROFILE || os.homedir()
@@ -108,6 +109,7 @@ export namespace WorkflowsMigrator {
     }
 
     // 3. Project workflows (.kilo/workflows/ and .kilocode/workflows/)
+    if (Flag.KILO_DISABLE_PROJECT_CONFIG) return workflows
     for (const dir of KILO_WORKFLOWS_DIRS) {
       workflows.push(...(await loadWorkflowsFromDir(path.join(projectDir, dir), "project", projectDir, warnings)))
     }

@@ -1,6 +1,7 @@
 import * as path from "path"
 import os from "os"
 import * as Log from "@opencode-ai/core/util/log"
+import { Flag } from "@opencode-ai/core/flag/flag"
 import type { Config } from "../config/config"
 import type { ConfigPermissionV1 as ConfigPermission } from "@opencode-ai/core/v1/config/permission"
 
@@ -165,7 +166,7 @@ export namespace IgnoreMigrator {
 
     // 2. Load project .kilocodeignore (higher priority - added last)
     const projectIgnorePath = path.join(options.projectDir, KILOCODEIGNORE_FILE)
-    const projectPatterns = await loadIgnoreFile(projectIgnorePath, "project")
+    const projectPatterns = Flag.KILO_DISABLE_PROJECT_CONFIG ? [] : await loadIgnoreFile(projectIgnorePath, "project")
     allPatterns.push(...projectPatterns)
 
     if (projectPatterns.length > 0) {
