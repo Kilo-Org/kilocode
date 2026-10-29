@@ -448,7 +448,11 @@ export const kiloGatewayHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilo",
     })
 
     const imageModels = Effect.fn("KiloGatewayHttpApi.imageModels")(function* () {
-      const custom = Images.source(yield* config.getGlobal())
+      const global = yield* config.getGlobal()
+      const custom = yield* Effect.try({
+        try: () => Images.source(global),
+        catch: () => new HttpApiError.BadRequest({}),
+      })
       if (custom) {
         const http = yield* HttpClient.HttpClient.pipe(Effect.provide(Network.httpLayer))
         return yield* Images.models(http, custom).pipe(

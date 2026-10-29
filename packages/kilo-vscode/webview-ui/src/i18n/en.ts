@@ -56,6 +56,10 @@ export const dict = {
   "settings.experimental.imageGenerationOptions.size.title": "Image size",
   "settings.experimental.imageGenerationOptions.size.description":
     "Default output dimensions: auto or WIDTHxHEIGHT. Supported sizes depend on the server.",
+  "settings.experimental.imageGenerationOptions.size.error":
+    "Enter auto or positive dimensions such as 1024x1024. Invalid values are not saved.",
+  "settings.experimental.imageGenerationOptions.number.error":
+    "Enter a whole number from {{min}} to {{max}}. Invalid values are not saved.",
   "settings.experimental.imageGenerationOptions.background.title": "Image background",
   "settings.experimental.imageGenerationOptions.background.description":
     "Default background mode, if supported by the server.",
