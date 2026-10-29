@@ -77,7 +77,7 @@ Kilo automatically applies prompt caching on supported providers. Repeated conte
 - Kilo calculates an estimated cost for each request based on configured pricing. This estimate is shown per-request in the chat history.
 - Cache hits are billed at a discounted rate compared to regular input tokens.
 - Requests using **Auto Free** models are billed at $0 on Kilo's side.
-- **BYOK (Bring Your Own Key)** requests are billed at $0 on Kilo's side — you pay the provider directly.
+- **BYOK (Bring Your Own Key)** requests are not charged for inference on Kilo's side — you pay the provider directly. Kilo still charges for the gateway-side costs it incurs on the request, such as server tools, plugins, and PDF parsing.
 
 For current pricing, visit [kilo.ai/models](https://kilo.ai/models).
 
