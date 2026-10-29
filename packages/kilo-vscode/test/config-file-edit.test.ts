@@ -104,7 +104,7 @@ describe("applyConfigEdits", () => {
 
 describe("aliasOf", () => {
   test("maps the v2 paths to every v1 key normalize.ts reads", () => {
-    expect(aliasOf(["agents"])).toEqual([["agent"], ["mode"]])
+    expect(aliasOf(["agents"])).toEqual([["small_model"], ["agent"], ["mode"]])
     expect(aliasOf(["agents", "build", "model"])).toEqual([
       ["agent", "build", "model"],
       ["mode", "build", "model"],
@@ -123,6 +123,14 @@ describe("aliasOf", () => {
       ["mode", "title", "model"],
     ])
     expect(aliasOf(["agents", "title"])).toEqual([["small_model"], ["agent", "title"], ["mode", "title"]])
+    expect(aliasOf(["agents", "title", "system"])).toEqual([
+      ["agent", "title", "prompt"],
+      ["mode", "title", "prompt"],
+    ])
+    expect(aliasOf(["agents", "title", "steps"])).toEqual([
+      ["agent", "title", "steps"],
+      ["mode", "title", "steps"],
+    ])
     expect(aliasOf(["permissions"])).toEqual([["permission"], ["tools"]])
     expect(aliasOf(["commands"])).toEqual([["command"]])
     expect(aliasOf(["providers"])).toEqual([["provider"]])

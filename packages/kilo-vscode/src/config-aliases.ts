@@ -3,28 +3,23 @@
 export function aliasOf(keyPath: string[]): string[][] {
   if (keyPath.length === 0) return []
   if (keyPath[0] === "agents") {
-    // `small_model` and the v1 `agent`/`mode` maps all feed `agents.title`, so any title write clears all of them.
-    if (keyPath[1] === "title")
-      return [
-        ["small_model"],
-        ["agent", ...keyPath.slice(1)],
-        ["mode", ...keyPath.slice(1)],
-      ]
+    if (keyPath.length === 1) return [["small_model"], ["agent"], ["mode"]]
+    const field = keyPath[1]!
     const tail = keyPath.slice(2)
-    if (tail.length === 1 && tail[0] === "system")
-      return [
-        ["agent", keyPath[1]!, "prompt"],
-        ["mode", keyPath[1]!, "prompt"],
-      ]
-    if (tail.length === 1 && tail[0] === "disabled")
-      return [
-        ["agent", keyPath[1]!, "disable"],
-        ["mode", keyPath[1]!, "disable"],
-      ]
-    return [
-      ["agent", ...keyPath.slice(1)],
-      ["mode", ...keyPath.slice(1)],
+    const mapped =
+      tail.length === 1 && tail[0] === "system"
+        ? ["prompt"]
+        : tail.length === 1 && tail[0] === "disabled"
+          ? ["disable"]
+          : tail
+    const generic = [
+      ["agent", field, ...mapped],
+      ["mode", field, ...mapped],
     ]
+    // `small_model` feeds only `agents.title.model`; a whole-title or model write replaces it too.
+    if (field === "title" && (tail.length === 0 || (tail.length === 1 && tail[0] === "model")))
+      return [["small_model"], ...generic]
+    return generic
   }
   if (keyPath[0] === "mcp" && keyPath[1] === "servers" && keyPath.length >= 3) return [["mcp", ...keyPath.slice(2)]]
   if (keyPath[0] === "compaction") {
