@@ -53,13 +53,36 @@ const ProvidersTab: Component<{ settings: SettingsData; onLogin: () => void }> =
   // v2 reports a Kilo account that needs a new sign-in on the connection.
   const kiloFailure = createMemo(() => kilo()?.connections.find((item) => item.status)?.status?.message)
 
+  // The v2 `policies` plus the legacy spellings core still reads (`disabled_providers` denies, `enabled_providers`
+  // allows, `experimental.policies`). A write to `policies` removes those legacy keys in the same pass.
   const policies = createMemo<Policy[]>(() => {
-    const value = config.value(["policies"])
-    return Array.isArray(value) ? (value as Policy[]) : []
+    const direct = config.value(["policies"])
+    const experimental = config.value(["experimental", "policies"])
+    const list: Policy[] = []
+    if (Array.isArray(direct)) list.push(...(direct as Policy[]))
+    if (Array.isArray(experimental)) list.push(...(experimental as Policy[]))
+    for (const [path, effect] of [
+      [["disabled_providers"], "deny"],
+      [["enabled_providers"], "allow"],
+    ] as const) {
+      const legacy = config.value([...path])
+      if (!Array.isArray(legacy)) continue
+      list.push(
+        ...legacy
+          .filter((resource): resource is string => typeof resource === "string")
+          .map((resource) => ({ action: "provider.use", resource, effect })),
+      )
+    }
+    return list
   })
 
   const disabledIds = createMemo(
-    () => new Set(policies().flatMap((item) => (item.action === "provider.use" ? [item.resource] : []))),
+    () =>
+      new Set(
+        policies().flatMap((item) =>
+          item.action === "provider.use" && item.effect === "deny" ? [item.resource] : [],
+        ),
+      ),
   )
 
   /** The custom providers defined in `providers.<id>` config. */
@@ -196,7 +219,7 @@ const ProvidersTab: Component<{ settings: SettingsData; onLogin: () => void }> =
   }
 
   function writeDisabled(next: string[]) {
-    const kept = policies().filter((item) => item.action !== "provider.use")
+    const kept = policies().filter((item) => !(item.action === "provider.use" && item.effect === "deny"))
     const denied = next.map((id) => ({ action: "provider.use", resource: id, effect: "deny" }))
     const scope = config.source(["policies"]) ?? "global"
     const value = [...kept, ...denied]
