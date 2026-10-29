@@ -27,6 +27,192 @@ import kotlinx.coroutines.CompletableDeferred
  */
 class SessionRecoveryTest : SessionControllerTestBase() {
 
+    fun `test hosted snapshot resolves stale interactions without historical approval side effects`() {
+        val id = "hosted:kilo-cloud:worktree_one:ses_one"
+        projectRpc.state.value = workspaceReady()
+        appRpc.state.value = KiloAppStateDto(KiloAppStatusDto.READY)
+        val m = controller(id)
+        collect(m)
+        flush()
+        emit(ChatEventDto.QuestionAsked(id, QuestionRequestDto("old", id, emptyList())))
+        rpc.pendingError = IllegalStateException("Unavailable")
+        emit(ChatEventDto.Resnapshot(id, "start"))
+        emit(ChatEventDto.PermissionAsked(id, PermissionRequestDto("p1", id, "edit", emptyList())))
+        emit(ChatEventDto.PermissionReplied(id, "p1"))
+        emit(ChatEventDto.QuestionAsked(id, QuestionRequestDto("old", id, emptyList())))
+        emit(ChatEventDto.QuestionRejected(id, "old"))
+        emit(ChatEventDto.SessionStatusChanged(id, SessionStatusDto("idle")))
+        emit(ChatEventDto.Resnapshot(id, "complete"))
+        assertTrue(m.model.state is SessionState.Idle)
+        assertTrue(rpc.permissionReplies.isEmpty())
+    }
+
+    fun `test hosted snapshot preserves current interactions when pending probe is unavailable`() {
+        val id = "hosted:kilo-cloud:worktree_one:ses_one"
+        projectRpc.state.value = workspaceReady()
+        val m = controller(id)
+        collect(m)
+        flush()
+        rpc.pendingError = IllegalStateException("Unavailable")
+        emit(ChatEventDto.Resnapshot(id, "start"))
+        emit(ChatEventDto.QuestionAsked(id, QuestionRequestDto("old", id, emptyList())))
+        emit(ChatEventDto.QuestionRejected(id, "old"))
+        emit(ChatEventDto.QuestionAsked(id, QuestionRequestDto("new", id, emptyList())))
+        emit(ChatEventDto.Resnapshot(id, "complete"))
+        assertEquals("new", (m.model.state as SessionState.AwaitingQuestion).question.id)
+        assertTrue(rpc.questionReplies.isEmpty())
+    }
+
+    fun `test hosted successful empty probe clears stale awaiting card`() {
+        val id = "hosted:kilo-cloud:worktree_one:ses_one"
+        projectRpc.state.value = workspaceReady()
+        val m = controller(id)
+        collect(m)
+        flush()
+        rpc.pendingGate = CompletableDeferred()
+        emit(ChatEventDto.Resnapshot(id, "start"))
+        emit(ChatEventDto.QuestionAsked(id, QuestionRequestDto("stale", id, emptyList())))
+        emit(ChatEventDto.Resnapshot(id, "complete"))
+        assertTrue(m.model.state is SessionState.AwaitingQuestion)
+        rpc.pendingGate!!.complete(Unit)
+        flush()
+        assertTrue(m.model.state is SessionState.Idle)
+    }
+
+    fun `test hosted newer live interaction wins over delayed empty snapshot probe`() {
+        val id = "hosted:kilo-cloud:worktree_one:ses_one"
+        projectRpc.state.value = workspaceReady()
+        val m = controller(id)
+        collect(m)
+        flush()
+        rpc.pendingGate = CompletableDeferred()
+        emit(ChatEventDto.Resnapshot(id, "start"))
+        emit(ChatEventDto.SessionStatusChanged(id, SessionStatusDto("idle")))
+        emit(ChatEventDto.Resnapshot(id, "complete"))
+        emit(ChatEventDto.QuestionAsked(id, QuestionRequestDto("live", id, emptyList())))
+        rpc.pendingGate!!.complete(Unit)
+        flush()
+        assertEquals("live", (m.model.state as SessionState.AwaitingQuestion).question.id)
+    }
+
+    fun `test hosted resolved snapshot request is not resurrected by stale successful probe`() {
+        val id = "hosted:kilo-cloud:worktree_one:ses_one"
+        projectRpc.state.value = workspaceReady()
+        val m = controller(id)
+        collect(m)
+        flush()
+        rpc.pendingQuestionList.add(QuestionRequestDto("old", id, emptyList()))
+        emit(ChatEventDto.Resnapshot(id, "start"))
+        emit(ChatEventDto.QuestionAsked(id, QuestionRequestDto("old", id, emptyList())))
+        emit(ChatEventDto.QuestionRejected(id, "old"))
+        emit(ChatEventDto.SessionStatusChanged(id, SessionStatusDto("idle")))
+        emit(ChatEventDto.Resnapshot(id, "complete"))
+        assertTrue(m.model.state is SessionState.Idle)
+    }
+
+    fun `test hosted terminal replay is message correlated and preserves another busy turn`() {
+        val id = "hosted:kilo-cloud:worktree_one:ses_one"
+        rpc.session = rpc.session.copy(id = id)
+        projectRpc.state.value = workspaceReady()
+        val m = controller(id)
+        collect(m)
+        flush()
+        emit(ChatEventDto.MessageUpdated(id, msg("msg1", id, "user")))
+        emit(ChatEventDto.SessionStatusChanged(id, SessionStatusDto("busy")))
+        val event = ChatEventDto.MessageTerminal(id, "msg1", "failed", "sent", true)
+        repeat(5) { emit(event) }
+        assertTrue(m.model.state is SessionState.Busy)
+        assertEquals("failed", m.model.message("msg1")?.terminal?.status)
+        assertTrue(rpc.prompts.isEmpty())
+        assertTrue(rpc.commands.isEmpty())
+        emit(ChatEventDto.Resnapshot(id, "start"))
+        emit(ChatEventDto.MessageUpdated(id, msg("msg1", id, "user")))
+        emit(event)
+        emit(ChatEventDto.SessionStatusChanged(id, SessionStatusDto("busy")))
+        rpc.statuses.value = mapOf(id to SessionStatusDto("busy"))
+        emit(ChatEventDto.Resnapshot(id, "complete"))
+        assertEquals(1, m.model.messages().size)
+        assertEquals("failed", m.model.message("msg1")?.terminal?.status)
+        assertTrue(m.model.state is SessionState.Busy)
+    }
+
+    fun `test hosted fence replaces running tool snapshot before applying live output`() {
+        val id = "hosted:kilo-cloud:worktree_one:ses_one"
+        projectRpc.state.value = workspaceReady()
+        appRpc.state.value = KiloAppStateDto(KiloAppStatusDto.READY, config = ConfigDto(model = "kilo/gpt-5"))
+        val m = controller(id)
+        collect(m)
+        flush()
+        emit(ChatEventDto.SessionStatusChanged(id, SessionStatusDto("busy")))
+        emit(ChatEventDto.MessageUpdated(id, msg("msg1", id, "assistant")))
+        emit(ChatEventDto.PartUpdated(id, part("shell", id, "msg1", "tool", tool = "bash", state = "running")))
+        assertTrue(m.model.state is SessionState.Busy)
+
+        emit(ChatEventDto.Resnapshot(id, "start"))
+        emit(ChatEventDto.MessageUpdated(id, msg("msg1", id, "assistant")))
+        emit(ChatEventDto.PartUpdated(id, part("shell", id, "msg1", "tool", tool = "bash", state = "completed")))
+        emit(ChatEventDto.PartUpdated(id, part("answer", id, "msg1", "text", text = "done")))
+        emit(ChatEventDto.SessionStatusChanged(id, SessionStatusDto("idle")))
+        rpc.statuses.value = mapOf(id to SessionStatusDto("idle"))
+        emit(ChatEventDto.Resnapshot(id, "complete"))
+        emit(ChatEventDto.PartDelta(id, "msg1", "answer", "text", "!"))
+
+        assertTrue(m.model.state is SessionState.Idle)
+        assertEquals(ai.kilocode.client.session.model.ToolExecState.COMPLETED,
+            (m.model.content("msg1", "shell") as ai.kilocode.client.session.model.Tool).state)
+        assertTrue(m.model.toString().contains("done!"))
+    }
+
+    fun `test hosted repeated snapshot removes stale parts without duplicating final text`() {
+        val id = "hosted:kilo-cloud:worktree_one:ses_one"
+        projectRpc.state.value = workspaceReady()
+        val m = controller(id)
+        collect(m)
+        flush()
+        emit(ChatEventDto.MessageUpdated(id, msg("msg1", id, "assistant")))
+        emit(ChatEventDto.PartUpdated(id, part("old", id, "msg1", "text", text = "obsolete")))
+        repeat(100) {
+            emit(ChatEventDto.Resnapshot(id, "start"))
+            emit(ChatEventDto.MessageUpdated(id, msg("msg1", id, "assistant")))
+            emit(ChatEventDto.PartUpdated(id, part("final", id, "msg1", "text", text = "final output")))
+            emit(ChatEventDto.Resnapshot(id, "complete"))
+        }
+        assertModel("assistant#msg1\ntext#final:\n  final output", m)
+        assertEquals(1, m.model.messages().size)
+    }
+
+    fun `test hosted snapshot recovery does not override newer live busy state`() {
+        val id = "hosted:kilo-cloud:worktree_one:ses_one"
+        projectRpc.state.value = workspaceReady()
+        val m = controller(id)
+        collect(m)
+        flush()
+        emit(ChatEventDto.Resnapshot(id, "start"))
+        emit(ChatEventDto.MessageUpdated(id, msg("msg1", id, "assistant")))
+        emit(ChatEventDto.SessionStatusChanged(id, SessionStatusDto("idle")))
+        rpc.statuses.value = mapOf(id to SessionStatusDto("busy"))
+        emit(ChatEventDto.Resnapshot(id, "complete"))
+        emit(ChatEventDto.SessionStatusChanged(id, SessionStatusDto("busy")))
+        assertTrue(m.model.state is SessionState.Busy)
+    }
+
+    fun `test hosted materialized snapshot wins over delayed initial HTTP history`() {
+        val id = "hosted:kilo-cloud:worktree_one:ses_one"
+        projectRpc.state.value = workspaceReady()
+        rpc.history.add(MessageWithPartsDto(msg("old", id, "assistant"), emptyList()))
+        rpc.historyGate = CompletableDeferred()
+        val m = controller(id)
+        collect(m)
+        flush()
+        emit(ChatEventDto.Resnapshot(id, "start"))
+        emit(ChatEventDto.MessageUpdated(id, msg("new", id, "assistant")))
+        emit(ChatEventDto.PartUpdated(id, part("answer", id, "new", "text", text = "new result")))
+        emit(ChatEventDto.Resnapshot(id, "complete"))
+        rpc.historyGate!!.complete(Unit)
+        flush()
+        assertModel("assistant#new\ntext#answer:\n  new result", m)
+    }
+
     override fun setUp() {
         super.setUp()
         // Set a pre-existing session in the fake API

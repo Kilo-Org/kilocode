@@ -1,6 +1,7 @@
 package ai.kilocode.client.session
 
 import ai.kilocode.client.app.KiloAppService
+import ai.kilocode.client.app.KiloHostedService
 import ai.kilocode.client.app.KiloSessionService
 import ai.kilocode.client.app.KiloWorkspaceService
 import ai.kilocode.client.app.Workspace
@@ -109,6 +110,7 @@ class SessionSidePanelManager(
             app = service<KiloAppService>().state,
             open = this::openSession,
             deleted = this::removeSession,
+            refreshes = project.service<KiloHostedService>().refreshes,
         )
         Disposer.register(this) { cs.cancel() }
         return HistoryPanel(this, controller, nav = this::back, manager = this, timers = timers).component
