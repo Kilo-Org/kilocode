@@ -49,6 +49,16 @@ Use **Show Output** to view a running process's console, **Stop** to stop it, or
 
 Use **Fork Session** in a worktree session's row menu, right-click menu, or prompt bar's more menu to try another approach without losing the original conversation. To branch from an earlier message, use that user message's hover toolbar. The copied conversation opens as a new session next to its source; forking does not create a separate worktree.
 
+## Cloud sessions
+
+When you are signed in to Kilo, the **Agents** tool window lists your repository-scoped Cloud workspaces in a **Cloud** section beside local worktrees. Kilo discovers them automatically and shows passive compute and activity status; opening a workspace does not start or wake it.
+
+Open a Cloud workspace to see its sessions in an editor tab, then open a session to continue it with a live transcript, preparation progress, and the same permission and question prompts as a local session. Cloud sessions use Kilo models only.
+
+- **Refresh Cloud** in the **Core** menu reloads Cloud workspaces and sessions without restarting Core. Refresh a single workspace from its row menu.
+- Cloud prompts are text-only: file attachments and file mentions are not supported yet, and Kilo does not send your editor context or selections with a hosted prompt.
+- Local-only actions, such as worktree, pull request, sharing, and Git actions, are disabled for Cloud sessions.
+
 ## Diagrams in chat
 
 Ask Kilo for a Mermaid diagram to visualize a workflow, architecture, data relationship, or timeline. Chat renders `mermaid` and `mmd` code blocks inline, with source shown while streaming or if rendering fails.
