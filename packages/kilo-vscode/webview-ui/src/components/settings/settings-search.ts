@@ -72,9 +72,10 @@ export const SETTINGS_TABS: SettingsTab[] = [
 /**
  * i18n group (the segment after `settings.`) to the tab that renders it.
  * Groups not listed here are not searchable, which keeps dialog-only keys out.
+ * `aboutKiloCode` is absent on purpose: the v2 About tab renders no `data-search-label` rows, so its keys would
+ * become results that open the tab but reveal nothing.
  */
 const GROUP_TABS: Record<string, string> = {
-  aboutKiloCode: "aboutKiloCode",
   agentBehaviour: "agentBehaviour",
   autoApprove: "autoApprove",
   autoCleanup: "checkpoints",

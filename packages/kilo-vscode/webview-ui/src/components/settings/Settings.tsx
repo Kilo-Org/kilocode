@@ -1,12 +1,10 @@
 // Main's Settings view on native v2 data (v2/settings.tsx). The rail and the contents come from SETTINGS_TABS_V2; only
 // the tabs marked ready render. Search indexes the i18n rows of the ready tabs, so a result always has a row to reveal.
-// The header opens the target config files and the save bar writes the draft through `useSettingsConfig`.
+// The header opens the target config files. Writes go straight through `useSettingsConfig`, so there is no save step.
 import { Component, createSignal, createEffect, createMemo, on, Show } from "solid-js"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { Tabs } from "@kilocode/kilo-ui/tabs"
 import { Button } from "@kilocode/kilo-ui/button"
-import { Tooltip } from "@kilocode/kilo-ui/tooltip"
-import { showToast } from "@kilocode/kilo-ui/toast"
 import { useLanguage } from "../../context/language"
 import { useVSCode } from "../../context/vscode"
 import type { ToHost } from "../../../../src/protocol"
@@ -34,8 +32,6 @@ const Settings: Component<SettingsProps> = (props) => {
   const vscode = useVSCode()
   const config = useSettingsConfig()
   const [active, setActive] = createSignal(props.tab ?? READY_TABS[0]?.id ?? "providers")
-  const [saving, setSaving] = createSignal(false)
-  const [saveError, setSaveError] = createSignal<string>()
 
   // Sync when the parent changes the tab prop (e.g. via navigate message)
   createEffect(
@@ -52,38 +48,10 @@ const Settings: Component<SettingsProps> = (props) => {
     props.onTabChange?.(tab)
   }
 
-  const reload = () => {
-    void props.settings.reload().catch((err: unknown) => {
-      showToast({
-        variant: "error",
-        title: language.t("common.requestFailed"),
-        description: err instanceof Error ? err.message : String(err),
-      })
-    })
-  }
-
   const open = (scope: SettingsScope) => {
     const path = config.path(scope)
     if (!path) return
     vscode.postMessage({ type: "openFile", path } satisfies ToHost as never)
-  }
-
-  const discard = () => {
-    config.discard()
-    setSaveError(undefined)
-  }
-
-  const save = async () => {
-    setSaving(true)
-    setSaveError(undefined)
-    try {
-      const ok = await config.save()
-      if (!ok) setSaveError(language.t("settings.saveBar.saveFailed"))
-    } catch (err) {
-      setSaveError(err instanceof Error ? err.message : String(err))
-    } finally {
-      setSaving(false)
-    }
   }
 
   // Search covers the ready tabs only, so every result opens a tab that renders.
@@ -122,12 +90,6 @@ const Settings: Component<SettingsProps> = (props) => {
         <Button variant="secondary" size="small" icon="edit" onClick={() => open("global")}>
           {language.t("settings.openGlobalConfig")}
         </Button>
-        <Tooltip value={language.t("common.reloadDescription")} placement="bottom">
-          <Button variant="secondary" size="small" onClick={reload}>
-            <Icon name="reload" size="small" />
-            {language.t("common.reload")}
-          </Button>
-        </Tooltip>
       </div>
 
       {/* Settings tabs */}
@@ -185,24 +147,6 @@ const Settings: Component<SettingsProps> = (props) => {
           />
         </Show>
       </Tabs>
-
-      {/* Save bar: shown while the draft has unsaved config or VS Code setting changes */}
-      <Show when={config.dirty()}>
-        <div class="settings-save-bar-wrap">
-          <Show when={saveError()}>
-            {(message) => <div class="settings-save-bar-error">{message()}</div>}
-          </Show>
-          <div class="settings-save-bar">
-            <span class="settings-save-bar-label">{language.t("settings.saveBar.unsavedChanges")}</span>
-            <Button variant="ghost" size="small" onClick={discard} disabled={saving()}>
-              {language.t("settings.saveBar.discard")}
-            </Button>
-            <Button variant="primary" size="small" onClick={save} disabled={saving()}>
-              {saving() ? language.t("settings.saveBar.saving") : language.t("settings.saveBar.save")}
-            </Button>
-          </div>
-        </div>
-      </Show>
     </div>
   )
 }
