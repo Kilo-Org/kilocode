@@ -864,6 +864,7 @@ export const dict = {
     "Denne fil blev eksporteret fra en nyere version af Kilo. Nogle indstillinger kan blive ignoreret.",
   "settings.aboutKiloCode.importSettings.success":
     "Indstillinger importeret. Gennemgå ændringerne ovenfor, og klik derefter på Gem.",
+  "settings.aboutKiloCode.importSettings.applied": "Settings imported and applied.",
 
   "settings.aboutKiloCode.telemetry.title": "Telemetri",
   "settings.aboutKiloCode.telemetry.description":

@@ -27,6 +27,11 @@ export function bootFontSize(): number {
   return bootSize
 }
 
+/** The host's current fallback size (the pushed `effectiveFontSize`), or the boot size when the host has not sent one. */
+export function fallbackFontSize(): number {
+  return clampFontSize(kiloSettings().effectiveFontSize) ?? bootSize
+}
+
 const [kiloSettings, setKiloSettings] = createSignal<Record<string, unknown>>(initial())
 export { kiloSettings }
 
@@ -40,7 +45,7 @@ export function applyFontSize(size: number) {
 /** Replace the settings values and apply the font size, or reset it to the boot size when unset. */
 export function applyKiloSettings(values: Record<string, unknown>) {
   setKiloSettings(values)
-  applyFontSize(clampFontSize(values.fontSize) ?? bootSize)
+  applyFontSize(clampFontSize(values.fontSize) ?? clampFontSize(values.effectiveFontSize) ?? bootSize)
 }
 
 /** `kilo-code.v2.chat.shiftTabCyclesVariant`, on by default. */

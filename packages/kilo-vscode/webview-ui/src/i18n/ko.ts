@@ -856,6 +856,7 @@ export const dict = {
   "settings.aboutKiloCode.importSettings.newerVersion":
     "이 파일은 더 최신 버전의 Kilo에서 내보낸 것입니다. 일부 설정이 무시될 수 있습니다.",
   "settings.aboutKiloCode.importSettings.success": "설정을 가져왔습니다. 위의 변경 사항을 확인한 후 저장을 클릭하세요.",
+  "settings.aboutKiloCode.importSettings.applied": "Settings imported and applied.",
 
   "settings.aboutKiloCode.telemetry.title": "원격 측정",
   "settings.aboutKiloCode.telemetry.description":

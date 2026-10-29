@@ -862,6 +862,7 @@ export const dict = {
     "Этот файл был экспортирован из более новой версии Kilo. Некоторые настройки могут быть проигнорированы.",
   "settings.aboutKiloCode.importSettings.success":
     "Настройки импортированы. Просмотрите изменения выше и нажмите «Сохранить».",
+  "settings.aboutKiloCode.importSettings.applied": "Settings imported and applied.",
 
   "settings.aboutKiloCode.telemetry.title": "Телеметрия",
   "settings.aboutKiloCode.telemetry.description":

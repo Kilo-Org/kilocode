@@ -108,8 +108,15 @@ const AboutKiloCodeTab: Component<AboutKiloCodeTabProps> = (props) => {
         if (result.warning === "newerVersion")
           showToast({ variant: "default", title: language.t("settings.aboutKiloCode.importSettings.newerVersion") })
         // Apply every known key to the global config directly, one write at a time.
-        for (const [key, value] of Object.entries(result.config)) await config.set([key], value, "global")
-        showToast({ variant: "success", title: language.t("settings.aboutKiloCode.importSettings.success") })
+        let failed = false
+        for (const [key, value] of Object.entries(result.config)) {
+          if (!(await config.set([key], value, "global"))) failed = true
+        }
+        if (failed) {
+          showToast({ variant: "error", title: language.t("settings.saveBar.saveFailed") })
+          return
+        }
+        showToast({ variant: "success", title: language.t("settings.aboutKiloCode.importSettings.applied") })
       }
       reader.onerror = () => {
         setImporting(false)

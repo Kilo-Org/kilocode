@@ -15,7 +15,7 @@ import type { ToHost, ToWebview } from "./protocol"
 import { bridge } from "./relay"
 import { saveImage } from "./save-image"
 import type { Manager } from "./server"
-import { KILO_SETTING_KEYS, readKiloSettings, settingsHost } from "./settings-host"
+import { effectiveFontSize, KILO_SETTING_KEYS, readKiloSettings, settingsHost } from "./settings-host"
 import { promptKeybindings, watchKeybindings } from "./prompt-keybindings"
 
 export function chat(input: { context: ExtensionContext; server: Manager; directory: string }) {
@@ -145,7 +145,7 @@ export function wire(input: {
     worker: uri("dist", "shiki-worker.js"),
     markdown: uri("dist", "markdown-shiki-worker.js"),
     directory: input.directory,
-    size: size(),
+    size: effectiveFontSize(),
     language: env.language,
     view: input.view,
     settings: readKiloSettings(),
@@ -165,13 +165,6 @@ const EXPANDED = "kilo-code.v2.modelSelectorExpanded"
 const AUTO_APPROVE = "kilo-code.v2.autoApprove"
 const NAMESPACE = "kilo-code.v2"
 const SIZES = [10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24]
-
-/** `kilo-code.v2.fontSize` when set, otherwise `editor.fontSize`, clamped to the v1 slider range. */
-function size() {
-  const configured = workspace.getConfiguration(NAMESPACE).get<number>("fontSize")
-  const raw = typeof configured === "number" ? configured : workspace.getConfiguration("editor").get<number>("fontSize", 13)
-  return Number.isFinite(raw) ? Math.min(24, Math.max(10, Math.round(raw))) : 13
-}
 
 export function html(input: {
   csp: string

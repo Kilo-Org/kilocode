@@ -22,10 +22,21 @@ export const KILO_SETTING_KEYS = [
   "extraCaCerts",
 ] as const
 
+/** `kilo-code.v2.fontSize` when set, otherwise `editor.fontSize`, clamped to the v1 slider range. */
+export function effectiveFontSize(): number {
+  const configured = workspace.getConfiguration(NAMESPACE).get<number>("fontSize")
+  const raw = typeof configured === "number" ? configured : workspace.getConfiguration("editor").get<number>("fontSize", 13)
+  return Number.isFinite(raw) ? Math.min(24, Math.max(10, Math.round(raw))) : 13
+}
+
 /** The config values the webview reads at boot; the same shape as `vscodeSettingsLoaded`. */
 export function readKiloSettings(): Record<string, unknown> {
   const config = workspace.getConfiguration(NAMESPACE)
-  return Object.fromEntries(KILO_SETTING_KEYS.map((key) => [key, config.get(key)]))
+  return {
+    ...Object.fromEntries(KILO_SETTING_KEYS.map((key) => [key, config.get(key)])),
+    // The host's current fallback, so a tab keeps the right size when the setting is unset.
+    effectiveFontSize: effectiveFontSize(),
+  }
 }
 
 /** webview globalState keys that are not configuration, cleared by Reset All Settings. */

@@ -838,6 +838,7 @@ export const dict = {
   "settings.aboutKiloCode.importSettings.newerVersion":
     "This file was exported from a newer version of Kilo. Some settings may be ignored.",
   "settings.aboutKiloCode.importSettings.success": "Settings imported. Review the changes above, then click Save.",
+  "settings.aboutKiloCode.importSettings.applied": "Settings imported and applied.",
 
   "settings.aboutKiloCode.telemetry.title": "Telemetry",
   "settings.aboutKiloCode.telemetry.description":

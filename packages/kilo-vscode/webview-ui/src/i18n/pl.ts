@@ -823,6 +823,7 @@ export const dict = {
     "Ten plik został wyeksportowany z nowszej wersji Kilo. Niektóre ustawienia mogą zostać zignorowane.",
   "settings.aboutKiloCode.importSettings.success":
     "Ustawienia zaimportowane. Przejrzyj powyższe zmiany, a następnie kliknij Zapisz.",
+  "settings.aboutKiloCode.importSettings.applied": "Settings imported and applied.",
 
   "settings.aboutKiloCode.telemetry.title": "Telemetria",
   "settings.aboutKiloCode.telemetry.description":
