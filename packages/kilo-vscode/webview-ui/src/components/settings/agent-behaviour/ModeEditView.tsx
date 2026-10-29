@@ -17,7 +17,7 @@ import { agentConfig, agentField, agentPath, modelSelection, parseModelSelection
 import { buildExport } from "./mode-io"
 
 interface Props {
-  row: AgentRow
+  row: () => AgentRow
   onBack: () => void
   onRemove: (row: AgentRow) => void
 }
@@ -36,19 +36,19 @@ const ModeEditView: Component<Props> = (props) => {
   const [expanded, setExpanded] = createSignal(false)
   const [rules, setRules] = createSignal<PermissionRule[]>()
 
-  const info = () => v2.data.location.agent.list()?.find((agent: AgentInfo) => agent.id === props.row.id)
-  const builtIn = () => props.row.builtIn
-  const scope = () => config.source(agentPath(props.row.id)) ?? "global"
+  const info = () => v2.data.location.agent.list()?.find((agent: AgentInfo) => agent.id === props.row().id)
+  const builtIn = () => props.row().builtIn
+  const scope = () => config.source(agentPath(props.row().id)) ?? "global"
 
   // Config values read the staged edit at their own path, so an unsaved change shows immediately.
-  const description = () => asString(config.value(agentField(props.row.id, "description")))
-  const system = () => asString(config.value(agentField(props.row.id, "system")))
-  const model = () => parseModelSelection(config.value(agentField(props.row.id, "model")))
-  const temperature = () => asNumber(config.value(agentField(props.row.id, "request", "body", "temperature")))
-  const topP = () => asNumber(config.value(agentField(props.row.id, "request", "body", "top_p")))
-  const steps = () => asNumber(config.value(agentField(props.row.id, "steps")))
-  const hidden = () => config.value(agentField(props.row.id, "hidden")) === true
-  const disabled = () => config.value(agentField(props.row.id, "disabled")) === true
+  const description = () => asString(config.value(agentField(props.row().id, "description")))
+  const system = () => asString(config.value(agentField(props.row().id, "system")))
+  const model = () => parseModelSelection(config.value(agentField(props.row().id, "model")))
+  const temperature = () => asNumber(config.value(agentField(props.row().id, "request", "body", "temperature")))
+  const topP = () => asNumber(config.value(agentField(props.row().id, "request", "body", "top_p")))
+  const steps = () => asNumber(config.value(agentField(props.row().id, "steps")))
+  const hidden = () => config.value(agentField(props.row().id, "hidden")) === true
+  const disabled = () => config.value(agentField(props.row().id, "disabled")) === true
 
   // The calculated permissions come from `api.agent.get`; a config-only agent has none.
   createEffect(
@@ -80,20 +80,20 @@ const ModeEditView: Component<Props> = (props) => {
     // Sequential writes so the second edit is not lost to a race with the first on the config file. The
     // default agent is cleared only when the toggle actually applied.
     void (async () => {
-      const ok = await config.set(agentField(props.row.id, key), value, scope())
-      if (ok && value && config.value(["default_agent"]) === props.row.id)
+      const ok = await config.set(agentField(props.row().id, key), value, scope())
+      if (ok && value && config.value(["default_agent"]) === props.row().id)
         await config.unset(["default_agent"], config.source(["default_agent"]) ?? "global")
     })()
   }
 
   const exportMode = () => {
-    const data = buildExport(props.row.id, agentConfig(config.value, props.row.id))
+    const data = buildExport(props.row().id, agentConfig(config.value, props.row().id))
     const json = JSON.stringify(data, null, 2)
     const blob = new Blob([json], { type: "application/json" })
     const url = URL.createObjectURL(blob)
     const anchor = document.createElement("a")
     anchor.href = url
-    anchor.download = `${props.row.id}.agent.json`
+    anchor.download = `${props.row().id}.agent.json`
     anchor.click()
     URL.revokeObjectURL(url)
   }
@@ -106,7 +106,7 @@ const ModeEditView: Component<Props> = (props) => {
         <div style={{ display: "flex", "align-items": "center" }}>
           <IconButton size="small" variant="ghost" icon="arrow-left" onClick={props.onBack} />
           <span style={{ "font-weight": "600", "font-size": "var(--kilo-font-size-14)", "margin-left": "8px" }}>
-            {language.t("settings.agentBehaviour.editMode")} — {props.row.label}
+            {language.t("settings.agentBehaviour.editMode")} — {props.row().label}
           </span>
         </div>
         <Show when={!builtIn()}>
@@ -118,13 +118,13 @@ const ModeEditView: Component<Props> = (props) => {
               title={language.t("settings.agentBehaviour.exportMode")}
               onClick={exportMode}
             />
-            <Show when={props.row.removable}>
+            <Show when={props.row().removable}>
               <IconButton
                 size="small"
                 variant="ghost"
                 icon="close"
                 title={language.t("settings.agentBehaviour.removeAgent.button")}
-                onClick={() => props.onRemove(props.row)}
+                onClick={() => props.onRemove(props.row())}
               />
             </Show>
           </div>
@@ -153,7 +153,7 @@ const ModeEditView: Component<Props> = (props) => {
           <DraftField
             value={() => description() ?? ""}
             placeholder={language.t("settings.agentBehaviour.createMode.description.placeholder")}
-            commit={commitText(agentField(props.row.id, "description"))}
+            commit={commitText(agentField(props.row().id, "description"))}
           />
         </Card>
       </Show>
@@ -168,7 +168,7 @@ const ModeEditView: Component<Props> = (props) => {
           value={() => system() ?? ""}
           placeholder={language.t("settings.agentBehaviour.createMode.prompt.placeholder")}
           multiline
-          commit={commitText(agentField(props.row.id, "system"))}
+          commit={commitText(agentField(props.row().id, "system"))}
         />
       </Card>
 
@@ -182,7 +182,7 @@ const ModeEditView: Component<Props> = (props) => {
             clearable
             clearLabel={language.t("settings.providers.notSet")}
             onChange={(value: ModelPickerValue | undefined) =>
-              config.set(agentField(props.row.id, "model"), modelSelection(value), scope())
+              config.set(agentField(props.row().id, "model"), modelSelection(value), scope())
             }
           />
         </SettingsRow>
@@ -194,7 +194,7 @@ const ModeEditView: Component<Props> = (props) => {
           <DraftField
             value={() => (temperature() !== undefined ? String(temperature()) : "")}
             placeholder={language.t("common.default")}
-            commit={commitNumber(agentField(props.row.id, "request", "body", "temperature"), parseFloat)}
+            commit={commitNumber(agentField(props.row().id, "request", "body", "temperature"), parseFloat)}
           />
         </SettingsRow>
 
@@ -205,7 +205,7 @@ const ModeEditView: Component<Props> = (props) => {
           <DraftField
             value={() => (topP() !== undefined ? String(topP()) : "")}
             placeholder={language.t("common.default")}
-            commit={commitNumber(agentField(props.row.id, "request", "body", "top_p"), parseFloat)}
+            commit={commitNumber(agentField(props.row().id, "request", "body", "top_p"), parseFloat)}
           />
         </SettingsRow>
 
@@ -216,7 +216,7 @@ const ModeEditView: Component<Props> = (props) => {
           <DraftField
             value={() => (steps() !== undefined ? String(steps()) : "")}
             placeholder={language.t("common.default")}
-            commit={commitNumber(agentField(props.row.id, "steps"), (value) => parseInt(value, 10))}
+            commit={commitNumber(agentField(props.row().id, "steps"), (value) => parseInt(value, 10))}
           />
         </SettingsRow>
 
@@ -241,13 +241,13 @@ const ModeEditView: Component<Props> = (props) => {
       </Card>
 
       <Show when={!builtIn()}>
-        <PermissionEditor target={{ kind: "agent", name: props.row.id }} />
+        <PermissionEditor target={{ kind: "agent", name: props.row().id }} />
       </Show>
 
       <Show when={rules()} keyed>
         {(rules) => (
           <Ruleset
-            agent={props.row.id}
+            agent={props.row().id}
             rules={rules}
             expanded={expanded()}
             onToggle={() => setExpanded((value) => !value)}

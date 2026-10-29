@@ -6,7 +6,11 @@ import type { PermissionEffect, PermissionRule } from "@opencode/client"
 export const MAX_IMPORT_SIZE = 1_048_576
 
 const NAME_RE = /^[a-z][a-z0-9-]*$/
-const MODEL_RE = /^[^/\s#]+\/[^/\s#]+(#[^\s#]+)?$/
+// Mirrors `ConfigModel.Selection` in packages/schema/src/config/model.ts: the provider has no `/` or `#`, and the
+// model keeps every `/` but no `#` (so `openrouter/openai/gpt-5#high` is valid).
+const PROVIDER_RE = /^[^/#]+$/
+const MODEL_ID_RE = /^[^#]+$/
+const SHORT_MODEL_RE = /^[^/#]+\/[^#]+(?:#[^#]+)?$/
 const MODES = ["subagent", "primary", "all"] as const
 const EFFECTS = new Set<string>(["allow", "ask", "deny"])
 
@@ -41,11 +45,17 @@ function parseRequestBody(raw: unknown): Record<string, unknown> | undefined {
 
 /** A `ConfigModel.Selection`: the `provider/model[#variant]` string or the explicit `{ providerID, model }` object. */
 function parseModel(raw: unknown): string | Record<string, unknown> | undefined {
-  if (typeof raw === "string") return MODEL_RE.test(raw) ? raw : undefined
+  if (typeof raw === "string") return SHORT_MODEL_RE.test(raw) ? raw : undefined
   if (!isRecord(raw)) return undefined
-  if (typeof raw.providerID !== "string" || !raw.providerID || typeof raw.model !== "string" || !raw.model)
+  if (typeof raw.providerID !== "string" || !PROVIDER_RE.test(raw.providerID) || typeof raw.model !== "string")
     return undefined
-  return { providerID: raw.providerID, model: raw.model, ...(typeof raw.variant === "string" ? { variant: raw.variant } : {}) }
+  if (!MODEL_ID_RE.test(raw.model)) return undefined
+  if (raw.variant !== undefined && (typeof raw.variant !== "string" || !MODEL_ID_RE.test(raw.variant))) return undefined
+  return {
+    providerID: raw.providerID,
+    model: raw.model,
+    ...(typeof raw.variant === "string" ? { variant: raw.variant } : {}),
+  }
 }
 
 /**

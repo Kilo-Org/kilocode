@@ -138,10 +138,10 @@ const AgentsSubtab: Component = () => {
                   void (async () => {
                     await config.unset(agentPath(row.id), "project")
                     await config.unset(agentPath(row.id), "global")
-                    // As v1, a removed agent cannot stay the default.
-                    if (config.value(["default_agent"]) === row.id) {
-                      await config.unset(["default_agent"], "project")
-                      await config.unset(["default_agent"], "global")
+                    // As v1, clear a file's default_agent only when that file itself names the removed agent.
+                    for (const scope of ["project", "global"] as const) {
+                      const raw = config.raw(scope) as Record<string, unknown> | undefined
+                      if (raw?.["default_agent"] === row.id) await config.unset(["default_agent"], scope)
                     }
                   })()
                   setCreated((ids) => ids.filter((id) => id !== row.id))
@@ -170,7 +170,7 @@ const AgentsSubtab: Component = () => {
         />
       </Show>
       <Show when={view() === "edit" ? editingRow() : undefined}>
-        {(row) => <ModeEditView row={row()} onBack={back} onRemove={confirmRemove} />}
+        {(row) => <ModeEditView row={row} onBack={back} onRemove={confirmRemove} />}
       </Show>
       <Show when={view() === "list"}>
         <ListView />

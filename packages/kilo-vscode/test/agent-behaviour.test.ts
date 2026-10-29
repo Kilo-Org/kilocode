@@ -140,10 +140,14 @@ describe("parseImport", () => {
   test("keeps valid model selections and drops malformed ones", () => {
     const valid = parseImport(JSON.stringify({ name: "a", model: "kilo/x#high" }), [])
     expect(valid.ok && valid.config.model).toBe("kilo/x#high")
-    const explicit = parseImport(JSON.stringify({ name: "b", model: { providerID: "kilo", model: "x" } }), [])
+    const multi = parseImport(JSON.stringify({ name: "b", model: "openrouter/openai/gpt-5#high" }), [])
+    expect(multi.ok && multi.config.model).toBe("openrouter/openai/gpt-5#high")
+    const explicit = parseImport(JSON.stringify({ name: "c", model: { providerID: "kilo", model: "x" } }), [])
     expect(explicit.ok && explicit.config.model).toEqual({ providerID: "kilo", model: "x" })
-    const invalid = parseImport(JSON.stringify({ name: "c", model: "claude-sonnet-4" }), [])
-    expect(invalid.ok && invalid.config.model).toBeUndefined()
+    for (const model of ["claude-sonnet-4", "kilo/x#", { providerID: "kilo", model: "x#high" }, { providerID: "kilo/x", model: "y" }]) {
+      const result = parseImport(JSON.stringify({ name: "d", model }), [])
+      expect(result.ok && result.config.model).toBeUndefined()
+    }
   })
 
   test("keeps only a positive integer steps value", () => {
