@@ -658,6 +658,74 @@ describe("kilocode.agent-plugins RPC", () => {
   )
 })
 
+describe("kilocode.agent-plugins RPC edge cases", () => {
+  it.live("enabling clears the name from every native config file of the project", () =>
+    Effect.gen(function* () {
+      const home = yield* Effect.promise(temp)
+      const project = yield* Effect.promise(temp)
+      const disabled = (names: string[]) => JSON.stringify({ agent_plugins: { disabled: names } })
+      yield* Effect.promise(() =>
+        write(path.join(project, ".kilo2"), {
+          "kilo2.jsonc": disabled(["demo"]),
+          "kilo2.json": disabled(["demo", "other"]),
+        }),
+      )
+      const { rpc } = yield* start({ home, project })
+      yield* call(rpc, "setEnabled", { name: "demo", enabled: true, scope: "project" })
+      const read = (file: string) => Effect.promise(() => Bun.file(path.join(project, ".kilo2", file)).json())
+      expect(yield* read("kilo2.jsonc")).toEqual({})
+      expect(yield* read("kilo2.json")).toEqual({ agent_plugins: { disabled: ["other"] } })
+    }),
+  )
+
+  it.live("a rejected plugin can be uninstalled by its directory name", () =>
+    Effect.gen(function* () {
+      const home = yield* Effect.promise(temp)
+      const plugins = path.join(home, ".config/kilo2/plugins")
+      yield* Effect.promise(() => write(path.join(plugins, "broken"), { "plugin.json": "{ not json" }))
+      const { rpc } = yield* start({ home })
+      const plugins_ = (yield* call(rpc, "list", {})) as KiloAgentPluginsRpc.Plugin[]
+      expect(plugins_).toMatchObject([{ status: "rejected", removable: true, root: path.join(plugins, "broken") }])
+      yield* call(rpc, "uninstall", { name: "broken", scope: "global" })
+      expect(yield* Effect.promise(() => exists(path.join(plugins, "broken")))).toBe(false)
+    }),
+  )
+
+  it.live("archive problems are invalid and transfer problems are fetch failures", () =>
+    Effect.gen(function* () {
+      const home = yield* Effect.promise(temp)
+      const outside = yield* Effect.promise(temp)
+      const build = yield* Effect.promise(temp)
+      // A tar whose only top-level entry is a link to a plugin outside the archive.
+      yield* Effect.promise(async () => {
+        await write(path.join(outside, "plugin"), plugin("outside"))
+        await symlink(path.relative(build, path.join(outside, "plugin")), path.join(build, "top"), "dir")
+        await Bun.$`tar -czf linked.tar.gz top`.cwd(build).quiet()
+      })
+      const server = Bun.serve({
+        port: 0,
+        fetch: (request) => {
+          const name = new URL(request.url).pathname
+          if (name === "/linked.tar.gz") return new Response(Bun.file(path.join(build, "linked.tar.gz")))
+          if (name === "/corrupt.tar.gz") return new Response(new Uint8Array([0x1f, 0x8b, 8, 0, 1, 2, 3, 4, 5]))
+          return new Response("missing", { status: 404 })
+        },
+      })
+      yield* Effect.addFinalizer(() => Effect.sync(() => server.stop(true)))
+      const url = (name: string) => `http://127.0.0.1:${server.port}/${name}`
+      const { rpc } = yield* start({ home })
+      const install = (name: string) =>
+        Effect.flip(call(rpc, "install", { source: { type: "archive", url: url(name) }, scope: "global" }))
+
+      expect((yield* install("linked.tar.gz")).type).toBe("invalid")
+      expect(yield* Effect.promise(() => exists(path.join(outside, "plugin/plugin.json")))).toBe(true)
+      expect((yield* install("corrupt.tar.gz")).type).toBe("invalid")
+      expect((yield* install("gone.tar.gz")).type).toBe("fetch_failed")
+      expect(yield* Effect.promise(() => readdir(path.join(home, ".config/kilo2")).catch(() => []))).toEqual([])
+    }),
+  )
+})
+
 async function exists(target: string) {
   return lstat(target).then(
     () => true,

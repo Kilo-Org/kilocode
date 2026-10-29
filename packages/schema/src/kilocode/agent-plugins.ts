@@ -88,15 +88,19 @@ export const Definition = Rpc.define({
       output: portable(Plugin),
       errors: Failure,
     },
-    /** Removes the plugin from the scope's `plugins/` directory; a linked plugin only loses its link. */
+    /**
+     * Removes the plugin from the scope's `plugins/` directory; a linked plugin only loses its link. `name` is the
+     * manifest name or the plugin's directory name (the last segment of `root`), so a rejected plugin without a
+     * readable name can still be removed.
+     */
     uninstall: {
       input: portable(Schema.Struct({ name: Schema.String, scope: Scope, removeData: optional(Schema.Boolean) })),
       output: portable(Schema.Struct({})),
       errors: Failure,
     },
     /**
-     * Disabling adds the name to `agent_plugins.disabled` in the scope's config file. Enabling removes it from the
-     * global and project config files, since a name disabled in either stays disabled.
+     * Disabling adds the name to `agent_plugins.disabled` in the scope's config file. Enabling removes it from every
+     * native config file of both scopes, since the setting is the union of all config documents.
      */
     setEnabled: {
       input: portable(Schema.Struct({ name: Schema.String, enabled: Schema.Boolean, scope: Scope })),

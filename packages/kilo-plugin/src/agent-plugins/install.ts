@@ -22,7 +22,10 @@ export type Source =
 
 const MAX_DOWNLOAD = 64 * 1024 * 1024
 const MAX_EXPANDED = 256 * 1024 * 1024
+const MAX_ENTRIES = 10_000
 const STAGING = ".agent-plugins-staging"
+// A previous version whose restore failed is moved here instead of being deleted with the staging directory.
+const RECOVERY = ".agent-plugins-recovery"
 // Windows reserves these device names for directories; a plugin directory cannot use one.
 const RESERVED = /^(?:con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\.|$)/i
 
@@ -31,7 +34,11 @@ const RESERVED = /^(?:con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\.|$)/i
  * outside `plugins/` first, so discovery never sees a partial copy, then validated with the loader and moved into
  * place in one rename. Replacing a plugin keeps its `PLUGIN_DATA`, which is keyed by the unchanged root path.
  */
-export async function install(input: { source: Source; root: string; replace: boolean }) {
+export function install(input: { source: Source; root: string; replace: boolean }) {
+  return serialized(path.join(input.root, "plugins"), () => place(input))
+}
+
+async function place(input: { source: Source; root: string; replace: boolean }) {
   const staging = path.join(input.root, STAGING, randomUUID())
   const stage = path.join(staging, "plugin")
   try {
@@ -56,29 +63,69 @@ export async function install(input: { source: Source; root: string; replace: bo
     const existing = await fs.lstat(target).catch(() => undefined)
     if (existing && !input.replace)
       throw new InstallError("conflict", `A plugin named "${name}" is already installed at ${target}`)
-    if (existing) {
-      const previous = path.join(staging, "previous")
-      await fs.rename(target, previous)
-      await fs.rename(stage, target).catch(async (error: unknown) => {
-        await fs.rename(previous, target).catch(() => undefined)
-        throw error
-      })
-    } else await fs.rename(stage, target)
+    if (existing) await replace(stage, target, staging, input.root)
+    else await fs.rename(stage, target)
+    await cleanup(staging)
     return { name, target, diagnostics: loaded.diagnostics as readonly Diagnostic.Info[] }
   } catch (error) {
+    // When the previous version could only stay in staging, staging is kept rather than deleting the only copy.
+    if (!(error instanceof KeptError && error.kept.startsWith(staging))) await cleanup(staging)
     if (error instanceof InstallError) throw error
+    if (error instanceof KeptError) throw new InstallError("write_failed", error.message)
     throw new InstallError("write_failed", `Couldn't install the plugin: ${message(error)}`)
-  } finally {
-    await fs.rm(staging, { recursive: true, force: true }).catch(() => undefined)
-    await fs.rmdir(path.dirname(staging)).catch(() => undefined)
   }
 }
 
 /**
- * Removes every plugin named `name` from `<root>/plugins`. A linked plugin directory only loses its link, so the
- * target the user linked is never deleted. `PLUGIN_DATA` is removed only on request (spec §9.1 makes it optional).
+ * Swaps an installed plugin for the staged one. The previous version is kept until the swap or its restore is
+ * confirmed: when both fail, it moves to the recovery directory instead of being deleted with the staging directory.
  */
-export async function uninstall(input: { root: string; name: string; dataRoot: string; removeData: boolean }) {
+async function replace(stage: string, target: string, staging: string, root: string) {
+  const previous = path.join(staging, "previous")
+  await fs.rename(target, previous)
+  const swapped = await fs.rename(stage, target).then(
+    () => undefined,
+    (error: unknown) => error,
+  )
+  if (swapped === undefined) return
+  const restored = await fs.rename(previous, target).then(
+    () => true,
+    () => false,
+  )
+  if (restored) throw swapped
+  const kept = path.join(root, RECOVERY, `${path.basename(target)}-${randomUUID()}`)
+  await fs.mkdir(path.dirname(kept), { recursive: true })
+  const moved = await fs.rename(previous, kept).then(
+    () => kept,
+    // Leave it in staging; the caller skips the cleanup of a directory that still holds it.
+    () => previous,
+  )
+  throw new KeptError(
+    `Couldn't replace the plugin (${message(swapped)}); the previous version is kept at ${moved}`,
+    moved,
+  )
+}
+
+class KeptError extends Error {
+  constructor(
+    message: string,
+    readonly kept: string,
+  ) {
+    super(message)
+  }
+}
+
+/**
+ * Removes every plugin named `name` from `<root>/plugins`: by manifest name, or by directory name, the location
+ * `install` creates, so a plugin whose `plugin.json` is now invalid can still be removed. A linked plugin directory
+ * only loses its link, so the target the user linked is never deleted. `PLUGIN_DATA` is removed only on request
+ * (spec §9.1 makes it optional).
+ */
+export function uninstall(input: { root: string; name: string; dataRoot: string; removeData: boolean }) {
+  return serialized(path.join(input.root, "plugins"), () => remove(input))
+}
+
+async function remove(input: { root: string; name: string; dataRoot: string; removeData: boolean }) {
   const plugins = path.join(input.root, "plugins")
   const children = await fs.readdir(plugins).catch(() => [] as string[])
   const matches = (
@@ -86,14 +133,17 @@ export async function uninstall(input: { root: string; name: string; dataRoot: s
       children.map(async (child) => {
         const target = path.join(plugins, child)
         const inspected = await AgentPlugin.inspect(target)
-        return inspected.manifest?.name === input.name && inspected.root ? { target, root: inspected.root } : undefined
+        const named = inspected.manifest?.name === input.name || child === input.name
+        return named && (await Paths.kind(target)) !== "missing"
+          ? { target, root: inspected.root ?? target, name: inspected.manifest?.name ?? child }
+          : undefined
       }),
     )
   ).filter((item) => item !== undefined)
   if (!matches.length) throw new InstallError("not_found", `No plugin named "${input.name}" in ${plugins}`)
   try {
     for (const match of matches) {
-      const data = AgentPlugin.directory(input.dataRoot, input.name, match.root)
+      const data = AgentPlugin.directory(input.dataRoot, match.name, match.root)
       if ((await fs.lstat(match.target)).isSymbolicLink()) await fs.unlink(match.target)
       else {
         // Moving out of plugins/ first makes the removal atomic for discovery.
@@ -132,7 +182,8 @@ async function download(url: string) {
     }
     return await bounded(response.body, MAX_DOWNLOAD)
   } catch (error) {
-    if (error instanceof InstallError) throw error
+    // A failed or oversized transfer is a fetch failure, never a problem with the plugin itself.
+    if (error instanceof InstallError && error.reason !== "invalid") throw error
     throw new InstallError("fetch_failed", `Couldn't download ${url}: ${message(error)}`)
   }
 }
@@ -142,27 +193,45 @@ async function download(url: string) {
  * its single top-level directory (as in GitHub archives), then `subdirectory` below that.
  */
 async function unpack(archive: Uint8Array, staging: string, stage: string, subdirectory?: string) {
-  const tar =
-    archive[0] === 0x1f && archive[1] === 0x8b
-      ? await bounded(
-          new Blob([new Uint8Array(archive)]).stream().pipeThrough(new DecompressionStream("gzip")),
-          MAX_EXPANDED,
-        )
-      : archive
   const extracted = path.join(staging, "extract")
-  // Bun's extractor keeps file modes (executable servers) and confines entries to the target directory.
-  await new Bun.Archive(tar).extract(extracted).catch((error: unknown) => {
+  // Bad archive content of any kind (corrupt gzip, unreadable tar, unsafe entries) is reported as invalid.
+  try {
+    const tar =
+      archive[0] === 0x1f && archive[1] === 0x8b
+        ? await bounded(
+            new Blob([new Uint8Array(archive)]).stream().pipeThrough(new DecompressionStream("gzip")),
+            MAX_EXPANDED,
+          )
+        : archive
+    const reader = new Bun.Archive(tar)
+    // Check the entries before anything is written: a bounded count, no absolute or parent paths, no duplicates.
+    const names = [...(await reader.files()).keys()].map((name) => name.replaceAll("\\", "/").replace(/^\.\//, ""))
+    if (names.length > MAX_ENTRIES) throw new InstallError("invalid", `The archive has more than ${MAX_ENTRIES} files`)
+    const unsafe = names.find(
+      (name) => name.startsWith("/") || /^[a-z]:/i.test(name) || name.split("/").some((part) => part === ".."),
+    )
+    if (unsafe) throw new InstallError("invalid", `The archive contains an unsafe path: ${unsafe}`)
+    if (new Set(names.map((name) => name.toLowerCase())).size !== names.length)
+      throw new InstallError("invalid", "The archive contains duplicate paths")
+    // Bun's extractor keeps file modes (executable servers) and confines entries to the target directory.
+    await reader.extract(extracted)
+  } catch (error) {
+    if (error instanceof InstallError) throw error
     throw new InstallError("invalid", `Couldn't read the archive: ${message(error)}`)
-  })
+  }
   const top = await fs.readdir(extracted).catch(() => [] as string[])
-  // Resolved, because containment below compares resolved paths (temporary directories are often links).
-  const base = await fs.realpath(
+  // Resolved, because containment below compares resolved paths (temporary directories are often links). A
+  // top-level link must not lead the plugin root out of the archive.
+  const contents = await fs.realpath(extracted)
+  const base = await Paths.inside(
+    contents,
     !top.includes("plugin.json") &&
       top.length === 1 &&
       (await Paths.kind(path.join(extracted, top[0]!))) === "directory"
       ? path.join(extracted, top[0]!)
       : extracted,
   )
+  if (!base) throw new InstallError("invalid", "The archive's top-level directory leads outside the archive")
   const root = subdirectory ? await Paths.inside(base, path.resolve(base, subdirectory)) : base
   if (!root || subdirectory?.startsWith("/"))
     throw new InstallError("invalid", `The subdirectory ${subdirectory} is outside the archive`)
@@ -191,6 +260,22 @@ async function bounded(stream: ReadableStream<Uint8Array>, limit: number) {
     await reader.cancel().catch(() => undefined)
     reader.releaseLock()
   }
+}
+
+async function cleanup(staging: string) {
+  await fs.rm(staging, { recursive: true, force: true }).catch(() => undefined)
+  await fs.rmdir(path.dirname(staging)).catch(() => undefined)
+}
+
+// Installs and uninstalls into one plugins directory run one at a time in this process, so two installs of the same
+// name cannot interleave their renames. Other processes are not covered.
+const queues = new Map<string, Promise<unknown>>()
+function serialized<A>(key: string, task: () => Promise<A>) {
+  const run = (queues.get(key) ?? Promise.resolve()).catch(() => undefined).then(task)
+  queues.set(key, run)
+  return run.finally(() => {
+    if (queues.get(key) === run) queues.delete(key)
+  })
 }
 
 function message(error: unknown) {

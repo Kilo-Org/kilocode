@@ -85,6 +85,24 @@ export const Plugin = define<Global.Service | Scope.Scope>({
     const directory = (scope: KiloAgentPluginsRpc.Scope) => (scope === "global" ? global.config : project)
     const root = (scope: KiloAgentPluginsRpc.Scope) =>
       scope === "global" ? global.config : path.join(project, KiloConfigFiles.directories[0])
+    // The native config files of a scope that exist: the global ones, or the project's and the opened directory's.
+    // A project file that resolves outside its native locations (a committed symlink) is never written.
+    const existing = async (scope: KiloAgentPluginsRpc.Scope) => {
+      const directories = scope === "global" ? [global.config] : [...new Set([project, ctx.location.directory])]
+      const files = new Map<string, string>()
+      for (const item of directories)
+        for (const candidate of KiloConfigFiles.writeCandidates(item, scope === "global")) {
+          if ((await Paths.kind(candidate)) !== "file") continue
+          const resolved = await MarketplaceMcp.resolveFile(candidate)
+          if (
+            scope === "project" &&
+            !KiloConfigFiles.writeCandidates(await MarketplaceMcp.resolveFile(item), false).includes(resolved)
+          )
+            continue
+          files.set(resolved, candidate)
+        }
+      return [...files.values()]
+    }
     const watches = yield* FiberMap.make<string>()
     const changes = yield* PubSub.sliding<string>(1)
     const lock = Semaphore.makeUnsafe(1)
@@ -234,13 +252,14 @@ export const Plugin = define<Global.Service | Scope.Scope>({
         setEnabled: (input, context) =>
           Effect.tryPromise({
             try: async () => {
-              // A name disabled in either scope stays disabled, so enabling clears both; disabling writes one.
-              const scopes: KiloAgentPluginsRpc.Scope[] = input.enabled ? ["global", "project"] : [input.scope]
-              for (const scope of scopes)
-                await MarketplaceMcp.updateValue(
-                  await configFile(directory(scope), scope === "global"),
-                  ["agent_plugins"],
-                  (current) => withDisabled(current, input.name, input.enabled),
+              // `disabled` is the union of every config document, so enabling clears the name from each native config
+              // file of both scopes; disabling writes the scope's config file, as other config writes do.
+              const files = input.enabled
+                ? [...(await existing("global")), ...(await existing("project"))]
+                : [await configFile(directory(input.scope), input.scope === "global")]
+              for (const file of files)
+                await MarketplaceMcp.updateValue(file, ["agent_plugins"], (current) =>
+                  withDisabled(current, input.name, input.enabled),
                 )
             },
             catch: (error) => error,
