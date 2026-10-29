@@ -18,6 +18,8 @@ export interface ModelPickerProps {
   clearLabel: string
   clearable?: boolean
   blocked?: boolean
+  /** Show the variant picker when the selected model has variants. Defaults to true. */
+  showVariants?: boolean
 }
 
 const ModelPicker: Component<ModelPickerProps> = (props) => {
@@ -37,9 +39,10 @@ const ModelPicker: Component<ModelPickerProps> = (props) => {
         providers={providers()}
         value={props.value ? { providerID: props.value.providerID, modelID: props.value.modelID } : null}
         blocked={props.blocked}
+        placeholder={props.clearLabel}
         onSelect={(providerID, modelID) => props.onChange({ providerID, modelID })}
       />
-      <Show when={variants().length > 0}>
+      <Show when={props.showVariants !== false && variants().length > 0}>
         <ThinkingSelectorBase
           variants={variants()}
           value={props.value?.variant}
