@@ -17,6 +17,7 @@ import {
   type ParentComponent,
 } from "solid-js"
 import { parse as parseJsonc } from "jsonc-parser/lib/esm/main.js"
+import { unwrap } from "solid-js/store"
 import { showToast } from "@kilocode/kilo-ui/toast"
 import type { ConfigEdit, ConfigFileContent, ToHost, ToWebview } from "../../../src/protocol"
 import { getVSCodeAPI, useVSCode } from "../context/vscode"
@@ -54,6 +55,11 @@ function sameValue(a: unknown, b: unknown): boolean {
   return JSON.stringify(a ?? null) === JSON.stringify(b ?? null)
 }
 
+/** A plain copy for `postMessage`: config values can be Solid store proxies, which structured clone rejects. */
+function clone<T>(value: T): T {
+  return value === undefined ? value : (JSON.parse(JSON.stringify(unwrap(value))) as T)
+}
+
 function parseJson(text: string | undefined): Json {
   if (!text || text.trim().length === 0) return {}
   const value: unknown = parseJsonc(text, [], { allowTrailingComma: true })
@@ -78,9 +84,13 @@ export function createSettingsConfig() {
   const writers = new Map<number, (result: { ok: boolean; error?: string }) => void>()
   let nextWrite = 1
 
+  const toastError = (message: string) =>
+    showToast({ variant: "error", title: language.t("settings.saveBar.saveFailed"), description: message })
+
   const unsubscribe = vscode.onMessage((raw) => {
     const message = raw as unknown as ToWebview
     if (message.type === "configLoaded") {
+      if (message.error) toastError(message.error)
       setFiles({ global: message.global, project: message.project })
       // Drop only the optimistic values the new file content now covers, so an in-flight edit keeps its value.
       setOptimistic((list) =>
@@ -137,9 +147,15 @@ export function createSettingsConfig() {
 
   const value = (path: string[]) => {
     const key = pathKey(path)
-    const pending = [...optimistic()].toReversed().find((item) => pathKey(item.path) === key)
-    if (pending) return pending.value
+    const entry = [...optimistic()].toReversed().find((item) => pathKey(item.path) === key)
+    if (entry) return entry.value
     return readPath(merged(), path)
+  }
+
+  /** True while a write for this path is in flight, so a caller can prefer `value()` over the raw file. */
+  const pending = (path: string[]) => {
+    const key = pathKey(path)
+    return optimistic().some((item) => pathKey(item.path) === key)
   }
 
   const write = (scope: SettingsScope, edits: ConfigEdit[]) =>
@@ -149,17 +165,15 @@ export function createSettingsConfig() {
       post({ type: "configWrite", id, scope, edits })
     })
 
-  const fail = (message: string) =>
-    showToast({ variant: "error", title: language.t("settings.saveBar.saveFailed"), description: message })
-
   /** Write a value immediately. A VS Code setting passes through `setSetting`. */
   const set = async (path: string[], value: unknown, scope: SettingsScope = "global") => {
     const key = pathKey(path)
-    setOptimistic((list) => [...list.filter((item) => pathKey(item.path) !== key), { scope, path, value }])
-    const result = await write(scope, [{ path, value }])
+    const writeValue = clone(value)
+    setOptimistic((list) => [...list.filter((item) => pathKey(item.path) !== key), { scope, path, value: writeValue }])
+    const result = await write(scope, [{ path, value: writeValue }])
     if (!result.ok) {
       setOptimistic((list) => list.filter((item) => pathKey(item.path) !== key))
-      fail(result.error ?? language.t("settings.saveBar.saveFailed"))
+      toastError(result.error ?? language.t("settings.saveBar.saveFailed"))
     }
     return result.ok
   }
@@ -167,8 +181,9 @@ export function createSettingsConfig() {
   const unset = (path: string[], scope: SettingsScope = "global") => set(path, undefined, scope)
 
   const setSetting = (key: KiloSettingKey, value: unknown) => {
-    setSettingsValues((current) => ({ ...current, [key]: value }))
-    post({ type: "updateVSCodeSettings", values: { [key]: value ?? null } })
+    const writeValue = clone(value ?? null)
+    setSettingsValues((current) => ({ ...current, [key]: writeValue }))
+    post({ type: "updateVSCodeSettings", values: { [key]: writeValue } })
   }
 
   return {
@@ -178,6 +193,7 @@ export function createSettingsConfig() {
     path,
     source,
     value,
+    pending,
     set,
     unset,
     setting: (key: KiloSettingKey) => settingsValues()[key],
