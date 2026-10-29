@@ -60,6 +60,7 @@ const ModelsTab: Component<SettingsTabProps> = () => {
             onChange={change(["model"])}
             clearable
             clearLabel={notSet()}
+            showVariants={false}
           />
         </SettingsRow>
         <SettingsRow
@@ -71,6 +72,7 @@ const ModelsTab: Component<SettingsTabProps> = () => {
             onChange={change(["agents", "title", "model"])}
             clearable
             clearLabel={notSet()}
+            showVariants={false}
           />
         </SettingsRow>
         <SettingsRow
@@ -82,6 +84,7 @@ const ModelsTab: Component<SettingsTabProps> = () => {
             onChange={change(["agents", "compaction", "model"])}
             clearable
             clearLabel={language.t("settings.context.compactionModel.useChatModel")}
+            showVariants={false}
           />
         </SettingsRow>
         <SettingsRow
@@ -105,6 +108,7 @@ const ModelsTab: Component<SettingsTabProps> = () => {
                 onChange={change(["agents", agent.id, "model"])}
                 clearable
                 clearLabel={notSet()}
+                showVariants={false}
               />
             </SettingsRow>
           )}
