@@ -130,6 +130,7 @@ class HistorySessionActionsTest : BasePlatformTestCase() {
             when (ref) {
                 is SessionRef.Local -> opened.add(ref.id)
                 is SessionRef.Cloud -> opened.add("cloud:${ref.id}")
+                is SessionRef.Hosted -> opened.add(ref.id)
             }
         })
         val local = localItem("ses_1")
@@ -148,6 +149,7 @@ class HistorySessionActionsTest : BasePlatformTestCase() {
             when (ref) {
                 is SessionRef.Local -> opened.add(ref.id)
                 is SessionRef.Cloud -> opened.add("cloud:${ref.id}")
+                is SessionRef.Hosted -> opened.add(ref.id)
             }
         })
         val item = cloudItem("cloud_1")

@@ -98,6 +98,34 @@ if (release && !pinned) error(
     "kilo.cli.pinned=false is a dev-only mode and cannot be released. Set kilo.cli.pinned=true before a production/publish build."
 )
 
+// Kotlin and the IntelliJ RPC compiler plugin must move together. The RPC plugin is a Kotlin compiler
+// plugin built for one Kotlin minor line (its version starts with that Kotlin version: 2.3.21-RC2-0.1
+// targets 2.3.x) and relies on compiler internals that change between minors. Under a newer Kotlin,
+// :shared:compileKotlin fails with an opaque ClassCastException (IrGenerationExtension$Companion cannot
+// be cast to ProjectExtensionDescriptor) that does not point at the cause. Dependabot keeps proposing
+// Kotlin minor bumps on their own and never proposes RPC plugin bumps, so this fails at configuration
+// time with the actual rule instead. The Kotlin serialization compiler plugin ships with Kotlin itself,
+// so it must match kotlin-jvm-plugin exactly rather than only on the minor.
+// Context: #14755, #14950, #15157 and #15421 (Kotlin 2.4.x bumps closed for this reason) and #15540
+// (Dependabot grouping).
+fun minor(value: String): String =
+    Regex("^(\\d+\\.\\d+)\\.").find(value)?.groupValues?.get(1)
+        ?: error("Unexpected version format in gradle/libs.versions.toml: $value")
+
+val compiler = libs.versions.kotlin.jvm.plugin.get()
+val serialization = libs.versions.kotlin.serialization.plugin.get()
+val rpc = libs.versions.intellij.rpc.plugin.get()
+if (serialization != compiler) error(
+    "kotlin-serialization-plugin is $serialization but kotlin-jvm-plugin is $compiler. The serialization compiler " +
+        "plugin ships with Kotlin and must use the same version: bump both together in gradle/libs.versions.toml."
+)
+if (minor(compiler) != minor(rpc)) error(
+    "Kotlin $compiler requires an IntelliJ RPC compiler plugin built for Kotlin ${minor(compiler)}.x, but " +
+        "intellij-rpc-plugin is $rpc (built for ${minor(rpc)}.x). Bump kotlin-jvm-plugin, " +
+        "kotlin-serialization-plugin and intellij-rpc-plugin together in gradle/libs.versions.toml, " +
+        "using an RPC build from https://packages.jetbrains.team/maven/p/ij/intellij-dependencies/rpc/rpc.gradle.plugin/"
+)
+
 val channel = providers.gradleProperty("kilo.channel").map { it.trim() }.orElse("default")
 val splitPort = providers.gradleProperty("kilo.splitModeServerPort").map(::port).orElse(0)
 val isolated = providers.gradleProperty("kilo.dev.storage.isolated").map { it.toBoolean() }.orElse(false)
