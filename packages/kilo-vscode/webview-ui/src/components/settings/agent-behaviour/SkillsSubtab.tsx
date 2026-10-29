@@ -43,10 +43,13 @@ const SkillsSubtab: Component = () => {
   const paths = () => skills().filter((item) => !isUrl(item))
   const urls = () => skills().filter(isUrl)
 
+  // Write to the file that already defines the key, so a project value is not shadowed by a global write.
+  const scope = () => config.source(["skills"]) ?? "global"
+
   const write = (nextPaths: string[], nextUrls: string[]) => {
     const next = [...nextPaths, ...nextUrls]
-    if (next.length === 0) config.unset(["skills"])
-    else config.set(["skills"], next)
+    if (next.length === 0) config.unset(["skills"], scope())
+    else config.set(["skills"], next, scope())
   }
 
   const addPath = () => {

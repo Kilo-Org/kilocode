@@ -20,7 +20,6 @@ export function applyConfigEdits(text: string, edits: ConfigEdit[]): string {
   for (const edit of edits) {
     if (!Array.isArray(edit.path) || edit.path.length === 0) continue
     result = applyEdits(result, modify(result, edit.path, edit.value, MODIFY))
-    result = applyEdits(result, modify(result, edit.path, edit.value, MODIFY))
     for (const alias of aliasOf(edit.path)) {
       const tree = parseTree(result)
       // `modify` throws when it would delete a path that does not exist, so remove the alias only when it is present.

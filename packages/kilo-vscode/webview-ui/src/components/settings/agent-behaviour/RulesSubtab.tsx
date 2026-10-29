@@ -1,7 +1,7 @@
 // The Rules subtab: the additional instruction files list plus the Claude Code compatibility switch. Instruction paths
 // live in the config `instructions` array; the switch is the `kilo-code.v2.claudeCodeCompat` VS Code setting, which the
 // host applies to the server spawn environment on the next start.
-import { Component, For, createSignal } from "solid-js"
+import { Component, For, Show, createSignal } from "solid-js"
 import { Button } from "@kilocode/kilo-ui/button"
 import { Card } from "@kilocode/kilo-ui/card"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
@@ -25,9 +25,12 @@ const RulesSubtab: Component = () => {
     return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : []
   }
 
+  // Write to the file that already defines the key, so a project value is not shadowed by a global write.
+  const scope = () => config.source(["instructions"]) ?? "global"
+
   const update = (next: string[]) => {
-    if (next.length === 0) config.unset(["instructions"])
-    else config.set(["instructions"], next)
+    if (next.length === 0) config.unset(["instructions"], scope())
+    else config.set(["instructions"], next, scope())
   }
 
   const add = () => {
@@ -39,8 +42,11 @@ const RulesSubtab: Component = () => {
 
   const remove = (index: number) => update(instructions().filter((_, item) => item !== index))
 
-  // Instruction paths are relative to the workspace; the host opens an absolute path.
+  const isUrl = (value: string) => /^https?:\/\//i.test(value)
+
+  // Instruction paths are relative to the workspace; the host opens an absolute path. A URL is not a local file.
   const open = (file: string) => {
+    if (isUrl(file)) return
     const absolute = file.startsWith("/") || /^[A-Za-z]:[\\/]/.test(file)
       ? file
       : `${v2.directory.replace(/[\\/]+$/, "")}/${file.replace(/^\.?[\\/]/, "")}`
@@ -128,7 +134,9 @@ const RulesSubtab: Component = () => {
                 {path}
               </span>
               <div style={{ display: "flex", "align-items": "center", gap: "4px" }}>
-                <IconButton size="small" variant="ghost" icon="pencil-line" label={path} onClick={() => open(path)} />
+                <Show when={!isUrl(path)}>
+                  <IconButton size="small" variant="ghost" icon="pencil-line" label={path} onClick={() => open(path)} />
+                </Show>
                 <IconButton size="small" variant="ghost" icon="close" onClick={() => remove(index())} />
               </div>
             </div>
