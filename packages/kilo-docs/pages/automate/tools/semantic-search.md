@@ -36,6 +36,8 @@ This tool searches through your indexed codebase using semantic similarity rathe
 - When exploring unfamiliar codebases to understand how features are implemented
 - When finding related code that might be affected by changes or refactoring
 
+If you want Kilo Code to prefer `semantic_search` for broad codebase questions, add that guidance to [AGENTS.md](/docs/customize/agents-md) or your custom rules. The agent may still use exact-text search or file reads when it needs literal matches, nearby context, or files that were not indexed.
+
 ---
 
 ## Key Features
@@ -57,7 +59,7 @@ This tool is only available when the Codebase Indexing feature is properly confi
 
 - **Feature Configured**: Codebase Indexing must be configured in settings
 - **Embedding Provider**: OpenAI API key or Ollama configuration required
-- **Vector Database**: Qdrant instance running and accessible
+- **Vector Store**: LanceDB or Qdrant configured and accessible
 - **Index Status**: Codebase must be indexed (status: "Indexed" or "Indexing")
 
 ---
