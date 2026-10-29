@@ -1129,6 +1129,9 @@ export const dict = {
   "settings.agentBehaviour.mcpResetAuth.title": "Nulstil MCP-login",
   "settings.agentBehaviour.mcpResetAuth.confirm": 'Fjern det gemte login for "{{name}}"? Du skal logge ind igen.',
   "settings.agentBehaviour.mcpBrowseMarketplace": "Gennemse Marketplace",
+  "settings.agentBehaviour.mcp.timeout.startup.title": "Opstartstimeout (ms)",
+  "settings.agentBehaviour.mcp.timeout.catalog.title": "Katalogtimeout (ms)",
+  "settings.agentBehaviour.mcp.timeout.execution.title": "Udførelsestimeout (ms)",
   "settings.agentBehaviour.mcpEmpty":
     "Ingen MCP-servere konfigureret. Tilføj MCP-servere i kilo.jsonc, eller bed agenten om at tilføje dem.",
   "settings.agentBehaviour.workflows.description":
@@ -1148,7 +1151,7 @@ export const dict = {
     "Kør shell-kommandoer for agenten i en sandbox på operativsystemniveau, der begrænser skrivning til projekt- og Kilo-tilstandsmapperne",
 
   "settings.autoApprove.description":
-    "Definer, hvordan værktøjer må køre. De fleste værktøjer er som standard indstillet til Tillad. doom_loop og external_directory er som standard indstillet til Spørg.",
+    "Definer, hvordan værktøjer må køre. De fleste værktøjer er som standard indstillet til Tillad. Bash er som standard indstillet til Spørg.",
   "settings.autoApprove.maxCost.title": "Advarsel om sessionsomkostning",
   "settings.autoApprove.maxCost.description":
     "Advar før en session fortsættes, når forbruget overstiger dette USD-beløb. Brug hele dollars; lad feltet være tomt for at deaktivere.",

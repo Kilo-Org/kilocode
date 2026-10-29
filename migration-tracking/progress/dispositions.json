@@ -580,5 +580,30 @@
     "state": "ported",
     "note": "webview-ui/src/v2/auto-approve.tsx replaces the v1 bridge: it requests the persisted state, listens for autoApproveStateLoaded, and persists toggles through the requestAutoApproveState/persistAutoApproveState messages in src/protocol.ts, handled by src/chat.ts. Replies use permission.reply({sessionID, requestID, decision: \"once\"}), so v1's SSE/session directory resolution is not needed.",
     "by": "v2-auto-approve"
+  },
+  "module:packages/kilo-vscode/src/services/mcp-auth/index.ts": {
+    "state": "ported",
+    "note": "v1 exported McpAuthService and its sign-in state. v2 authenticates MCP OAuth server-side: packages/kilo-vscode/webview-ui/src/v2/mcp.ts starts api.integration.oauth.connect for a server integrationID, opens the authorization URL through the host open message, and polls api.integration.oauth.status; the server emits mcp.status.changed and createData resyncs api.mcp.list.",
+    "by": "settings-mcp"
+  },
+  "module:packages/kilo-vscode/src/services/mcp-auth/service.ts": {
+    "state": "ported",
+    "note": "v1 host service ran the CLI mcp auth commands and tracked the OAuth URL. v2 keeps no host auth service: the webview calls the server directly in packages/kilo-vscode/webview-ui/src/v2/mcp.ts (integration.oauth.connect/status/cancel, mcp.connect/disconnect, credential.remove for reset), and opens the URL through the existing open host message.",
+    "by": "settings-mcp"
+  },
+  "module:packages/kilo-vscode/src/services/mcp-auth/status.ts": {
+    "state": "ported",
+    "note": "v1 derived needs_auth/needs_client_registration/error text from MCP auth events. v2 reads the server McpServer.status (connected, pending, disabled, failed, needs_auth) and maps the label and error in packages/kilo-vscode/webview-ui/src/components/settings/agent-behaviour/McpSubtab.tsx.",
+    "by": "settings-mcp"
+  },
+  "module:packages/kilo-vscode/tests/unit/mcp-oauth-config.test.ts": {
+    "state": "ported",
+    "note": "packages/kilo-vscode/test/mcp-oauth-config.test.ts covers the v2 OAuth mode/field mapping and custom-client validation implemented at packages/kilo-vscode/webview-ui/src/components/settings/agent-behaviour/mcp-oauth-config.ts.",
+    "by": "settings-mcp"
+  },
+  "module:packages/kilo-vscode/webview-ui/src/context/mcp-auth.ts": {
+    "state": "ported",
+    "note": "The v1 context exposed mcpStatus/mcpAuth/mcpRemoving signals and signIn/cancel/reset actions. v2 derives them from the MCP client in packages/kilo-vscode/webview-ui/src/v2/mcp.ts (servers from api.mcp.list, busy/removing signals, OAuth sign-in), and the subtab writes mcp.servers through useSettingsConfig.",
+    "by": "settings-mcp"
   }
 }
