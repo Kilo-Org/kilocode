@@ -168,6 +168,11 @@ export namespace KiloSessionPrompt {
       cancel: (sessionID: SessionID, opts?: { background?: boolean }) => Effect.Effect<void>
       stop: (sessionID: SessionID, work: Effect.Effect<void>) => Effect.Effect<void>
       scope?: "session" | "tree"
+      // kilocode_change start - reject pending permission requests before cancelling
+      // the runner so detached tool fibers blocked on Deferred.await unblock
+      // instead of staying pending forever (#33)
+      rejectPermissions?: (sessionID: SessionID) => Effect.Effect<void>
+      // kilocode_change end
     }) {
       function descendants(sessionID: SessionID): Effect.Effect<SessionID[]> {
         return Effect.gen(function* () {
@@ -182,6 +187,10 @@ export namespace KiloSessionPrompt {
           yield* KiloSessionPromptQueue.cancel(sessionID)
           PlanFollowup.abort(sessionID)
           yield* abortIntakes(sessionID)
+          // kilocode_change start - reject pending permission requests so detached
+          // tool fibers blocked on Deferred.await unblock instead of staying pending
+          if (input.rejectPermissions) yield* input.rejectPermissions(sessionID)
+          // kilocode_change end
           yield* input.cancel(sessionID, { background: input.scope !== "session" })
         })
 
