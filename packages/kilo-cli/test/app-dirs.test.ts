@@ -129,7 +129,7 @@ async function boot(root: string, xdg: Record<string, string>) {
 function environment(root: string, extra: Record<string, string>) {
   // The test preload isolates XDG for in-process tests; a host boot must not inherit it, or any directory override.
   const inherited = Object.fromEntries(
-    Object.entries(process.env).filter(([key]) => !key.startsWith("XDG_") && !/^(OPENCODE|KILO)_/.test(key)),
+    Object.entries(process.env).filter(([key]) => !key.startsWith("XDG_") && !/^(OPENCODE|KILO2?)_/.test(key)),
   )
   return {
     ...inherited,
