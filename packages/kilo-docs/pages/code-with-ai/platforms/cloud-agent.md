@@ -128,6 +128,18 @@ Standard-input prompts must be valid UTF-8 and contain no more than 100,000 char
   - Expect slightly longer setup after idle periods
   - Inactive cloud agent sessions are deleted after **7 days** during the beta, expired sessions are still accessible via the CLI
 
+## Delegating to child sessions
+
+A Cloud Agent session that you start interactively — from the web app, the desktop app, or Agent Manager — can launch child Cloud Agent sessions to work on part of the task. Each child runs in its own isolated sandbox.
+
+A session cannot launch child sessions when any of these apply:
+
+- **It is itself a child.** Child sessions cannot delegate further, so delegation stays one level deep.
+- **It runs on a shared sandbox.** Shared sandboxes do not support child sessions. Start the session on an isolated sandbox instead.
+- **It was started by a bot.** Sessions created by code reviews, security reviews, and triggers never get this capability.
+
+Sessions created before this capability became available keep it disabled. Start a new session to launch child sessions.
+
 ## Worktrees and chats
 
 A worktree is a checkout of your repository on its own branch. It can host multiple chats with separate conversations, but edits from one chat are visible to the others. Use separate worktrees for tasks that need separate checkouts.
@@ -307,6 +319,8 @@ Existing triggers keep any allocation they already have. Legacy allocations are 
 ### Run as webhook creator
 
 By default, organization triggers run as the organization webhook bot. When you create an organization trigger, you can instead select **Run as webhook creator** so each session runs with your identity. Organization billing and repository scope stay with the organization.
+
+Creator-run sessions also resolve GitHub credentials with your own authorization when it is available, so commits and pushes are attributed to your GitHub identity instead of the organization bot. This matches interactive Cloud Agent web sessions. If your account has not authorized the GitHub App, or the repository permissions do not allow it, the session falls back to the installation bot. Organization-bot triggers keep using the organization bot identity.
 
 This is a create-time choice and cannot be changed later. Only you, the creator, can edit a creator-run trigger or run it on demand. Existing triggers keep using the organization webhook bot; create a new trigger to use creator mode.
 
