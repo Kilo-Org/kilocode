@@ -37,21 +37,20 @@ for (const compiled of [false, true]) {
             cwd: repo,
             env: {
               ...Object.fromEntries(
-                Object.entries({
-                  ...process.env,
-                  ...(ambient
-                    ? {
-                        KILO_NAME_TEST_HOSTED: hosted ? "0" : "1",
-                        KILO_NAME_TEST_PREDEFINED: "ambient-name",
-                        KILO_NAME_TEST_CHILD: "0",
-                        KILO_BRANDING_TEST_HOSTED: "1",
-                        OPENCODE_TEST_HOME: path.join(home, "ambient"),
-                        OPENCODE_CONFIG: path.join(home, "missing.json"),
-                        BUN_OPTIONS: "--invalid-ambient-option",
-                      }
-                    : {}),
-                }).filter(([key]) => /^(PATH|LANG|LC_ALL|TZ|SystemRoot|WINDIR|PATHEXT)$/i.test(key)),
+                Object.entries(process.env).filter(([key]) =>
+                  /^(PATH|LANG|LC_ALL|TZ|SystemRoot|WINDIR|PATHEXT)$/i.test(key),
+                ),
               ),
+              // An outer process may export these. The host and fixture must ignore them.
+              ...(ambient
+                ? {
+                    KILO_NAME_TEST_HOSTED: hosted ? "0" : "1",
+                    KILO_NAME_TEST_PREDEFINED: "ambient-name",
+                    KILO_NAME_TEST_CHILD: "0",
+                    KILO_BRANDING_TEST_HOSTED: "ambient",
+                    OPENCODE_CONFIG: path.join(home, "missing.json"),
+                  }
+                : {}),
               BUN_OPTIONS: "",
               HOME: home,
               USERPROFILE: home,
@@ -87,6 +86,8 @@ for (const compiled of [false, true]) {
             state: path.join(home, "state"),
             cache: path.join(home, "cache"),
             bunOptions: "",
+            branding: ambient ? "ambient" : undefined,
+            opencodeConfig: ambient ? path.join(home, "missing.json") : undefined,
           }
           expect(JSON.parse(stdout)).toEqual({
             name: expected,

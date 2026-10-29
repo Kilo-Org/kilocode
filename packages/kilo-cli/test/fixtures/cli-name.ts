@@ -42,5 +42,5 @@ async function childName() {
     child.exited,
   ])
   if (code !== 0 || stderr) throw new Error(`Child command failed: ${code}\n${stderr}`)
-  return JSON.parse(stdout) as { name: string; spec: string }
+  return JSON.parse(stdout) as unknown
 }
