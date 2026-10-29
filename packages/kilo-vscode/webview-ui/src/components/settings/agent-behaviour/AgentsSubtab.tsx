@@ -303,6 +303,7 @@ const AgentsSubtab: Component = () => {
                         size="small"
                         variant="ghost"
                         icon="close"
+                        title={language.t("settings.agentBehaviour.removeAgent.button")}
                         onClick={(event: MouseEvent) => {
                           event.stopPropagation()
                           confirmRemove(row)

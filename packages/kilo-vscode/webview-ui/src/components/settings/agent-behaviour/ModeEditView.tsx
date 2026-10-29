@@ -118,7 +118,13 @@ const ModeEditView: Component<Props> = (props) => {
               onClick={exportMode}
             />
             <Show when={props.row.removable}>
-              <IconButton size="small" variant="ghost" icon="close" onClick={() => props.onRemove(props.row)} />
+              <IconButton
+                size="small"
+                variant="ghost"
+                icon="close"
+                title={language.t("settings.agentBehaviour.removeAgent.button")}
+                onClick={() => props.onRemove(props.row)}
+              />
             </Show>
           </div>
         </Show>
