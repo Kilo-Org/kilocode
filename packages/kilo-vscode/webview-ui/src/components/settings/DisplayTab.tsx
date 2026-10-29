@@ -45,7 +45,7 @@ const DisplayTab: Component = () => {
               placeholder="User"
               onChange={(value) => setDraft(value)}
               onBlur={commitUsername}
-              onKeyDown={(event) => {
+              onKeyDown={(event: KeyboardEvent) => {
                 if (event.key !== "Enter") return
                 event.preventDefault()
                 commitUsername()
