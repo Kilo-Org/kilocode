@@ -22,16 +22,10 @@ const bootSize = (() => {
   return Number.isFinite(px) ? clamp(px) : 13
 })()
 
-/** The font size shown when no explicit `kilo-code.v2.fontSize` is set. */
-export function bootFontSize(): number {
-  return bootSize
-}
-
 /** The host's current fallback size (the pushed `effectiveFontSize`), or the boot size when the host has not sent one. */
 export function fallbackFontSize(): number {
   return clampFontSize(kiloSettings().effectiveFontSize) ?? bootSize
 }
-
 const [kiloSettings, setKiloSettings] = createSignal<Record<string, unknown>>(initial())
 export { kiloSettings }
 

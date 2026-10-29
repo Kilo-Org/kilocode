@@ -27,9 +27,11 @@ const DisplayTab: Component = () => {
   const username = () => draft() ?? storedUsername()
   const commitUsername = () => {
     const next = username().trim()
+    setDraft(undefined)
+    // A blur without an edit should not cost a config write and round trip.
+    if (next === storedUsername()) return
     if (next) void config.set(["username"], next)
     else void config.unset(["username"])
-    setDraft(undefined)
   }
 
   return (
