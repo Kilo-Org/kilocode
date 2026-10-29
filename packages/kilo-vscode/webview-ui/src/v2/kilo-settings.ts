@@ -29,15 +29,11 @@ export function fallbackFontSize(): number {
 const [kiloSettings, setKiloSettings] = createSignal<Record<string, unknown>>(initial())
 export { kiloSettings }
 
-/** Scale the `--kilo-font-size-*` variables, and point the base font tokens at them, as v1 did. */
+/** Scale the `--kilo-font-size-*` variables. The base font tokens in `globals.css` follow them. */
 export function applyFontSize(size: number) {
   const root = document.documentElement
   for (const step of SIZES) root.style.setProperty(`--kilo-font-size-${step}`, `${(size * step) / 13}px`)
   root.style.setProperty("--kilo-font-scale", String(size / 13))
-  root.style.setProperty("--font-size-x-small", "var(--kilo-font-size-10)")
-  root.style.setProperty("--font-size-small", "var(--kilo-font-size-11)")
-  root.style.setProperty("--font-size-base", "var(--kilo-font-size-13)")
-  root.style.setProperty("--font-size-large", "var(--kilo-font-size-16)")
 }
 
 /** Replace the settings values and apply the font size, or reset it to the boot size when unset. */
@@ -50,6 +46,3 @@ export function applyKiloSettings(values: Record<string, unknown>) {
 export function shiftTabCyclesVariant(): boolean {
   return kiloSettings()["chat.shiftTabCyclesVariant"] !== false
 }
-
-// Apply the base font tokens at load, before any host push, as v1's DisplayProvider did on mount.
-applyFontSize(bootSize)
