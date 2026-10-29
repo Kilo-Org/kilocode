@@ -7,7 +7,7 @@ import { useSettingsConfig } from "../../v2/settings-config"
 import SettingsRow from "./SettingsRow"
 import PatternList from "./PatternList"
 import { tokenEdit } from "./context-tokens"
-import { legacyPath, writeScope } from "./settings-scope"
+import { writeScope } from "./settings-scope"
 
 const ContextTab: Component = () => {
   const config = useSettingsConfig()
@@ -18,19 +18,8 @@ const ContextTab: Component = () => {
     return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : []
   }
 
-  // A legacy spelling of the same setting wins in core when both are present, so a write also removes it.
-  const write = (path: string[], value: unknown) => {
-    const scope = writeScope(config.source, path)
-    void config.set(path, value, scope)
-    const legacy = legacyPath(path)
-    if (legacy) void config.unset(legacy, scope)
-  }
-  const clear = (path: string[]) => {
-    const scope = writeScope(config.source, path)
-    void config.unset(path, scope)
-    const legacy = legacyPath(path)
-    if (legacy) void config.unset(legacy, scope)
-  }
+  const write = (path: string[], value: unknown) => config.set(path, value, writeScope(config.source, path))
+  const clear = (path: string[]) => config.unset(path, writeScope(config.source, path))
 
   const auto = () => config.value(["compaction", "auto"]) !== false
 

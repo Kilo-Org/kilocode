@@ -1,7 +1,7 @@
 /**
  * The legacy spelling of a path this tab writes, when the config target uses one. `source()` reads the raw files, so
- * it cannot see a value that only exists under the legacy key. Mirrors `aliasOf` in `src/config-file-edit.ts` for the
- * paths written here.
+ * it cannot see a value that only exists under the legacy key. Lists the same paths as `aliasOf` in
+ * `src/config-file-edit.ts`, for the paths written here.
  */
 export function legacyPath(path: string[]): string[] | undefined {
   if (path.length === 1 && path[0] === "snapshots") return ["snapshot"]
