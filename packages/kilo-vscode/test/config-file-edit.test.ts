@@ -71,6 +71,15 @@ describe("applyConfigEdits", () => {
     expect(parsed.permission).toBeUndefined()
   })
 
+  test("removes the v1 compaction token alias", () => {
+    const result = applyConfigEdits(`{ "compaction": { "preserve_recent_tokens": 1000 } }`, [
+      { path: ["compaction", "keep", "tokens"], value: 2000 },
+    ])
+    const parsed = parse(result)
+    expect(parsed.compaction.keep.tokens).toBe(2000)
+    expect(parsed.compaction.preserve_recent_tokens).toBeUndefined()
+  })
+
   test("removes an unset path", () => {
     const result = applyConfigEdits(`{ "username": "alice", "theme": "dark" }`, [{ path: ["username"] }])
     expect(parse(result)).toEqual({ theme: "dark" })
@@ -109,6 +118,9 @@ describe("aliasOf", () => {
     expect(aliasOf(["share"])).toEqual([["autoshare"]])
     expect(aliasOf(["references"])).toEqual([["reference"]])
     expect(aliasOf(["mcp", "servers", "foo"])).toEqual([["mcp", "foo"]])
+    expect(aliasOf(["compaction", "keep", "tokens"])).toEqual([["compaction", "preserve_recent_tokens"]])
+    expect(aliasOf(["compaction", "buffer"])).toEqual([["compaction", "reserved"]])
+    expect(aliasOf(["policies"])).toEqual([["enabled_providers"], ["disabled_providers"], ["experimental", "policies"]])
     expect(aliasOf(["model"])).toEqual([])
   })
 })
