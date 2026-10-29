@@ -186,7 +186,7 @@ Grow the test surface with each PR.
 
 ## Progress map
 
-`migration-tracking/progress/README.md` is the generated map of Kilo's v1 delta: one cell per Kilo-owned file, `/kilocode/*` API operation and patch in a shared upstream file, grouped by feature. `bun script/upstream/progress.ts` regenerates it; CI fails when it is stale. Module and API cells turn done on their own only when the file name or path literal lands on v2. Renamed files, patch cells and decisions need a proof from you. Every port closes the cells it replaces in the same PR, so for every port:
+`migration-tracking/progress/README.md` is the generated map of Kilo's v1 delta: one cell per Kilo-owned file, `/kilocode/*` API operation and patch in a shared upstream file, grouped by feature. `bun script/upstream/progress.ts` regenerates it. CI regenerates and commits it on every push to v2; a PR never commits the generated files (`progress.json`, `README.md`, `*.svg`), because parallel PRs would conflict on them. Module and API cells turn done on their own only when the file name or path literal lands on v2. Renamed files, patch cells and decisions need a proof from you. Every port closes the cells it replaces in the same PR, so for every port:
 
 - Before you start, run `bun script/upstream/progress.ts --list <feature>`. The open cells are the inventory of the feature; each patch cell names its v1 source line. Read a v1 hunk with `git show <v1Target>:<path> | sed -n '<line-10>,<line+15>p'` (the pin is `pins.v1Target` in `features.json`).
 - Close each cell with the first proof that applies:
@@ -207,7 +207,7 @@ Grow the test surface with each PR.
   - A classification in a task, a plan or a peer message is a claim. Verify it the same way, and report each one you found wrong.
 - Git must track a new file before the map sees it: `git add` new files before you regenerate.
 - A loose patch that lands in `unattributed:<area>` can be proved in place with `kilo_port(unattributed:<area>:<id>)`, which closes the cell. It still belongs to a feature: tag its v1 marker on `main` as `kilocode_change(<feature>)` in a small follow-up PR; the next re-pin moves it into the feature box.
-- Regenerate before you commit: run `bun script/upstream/progress.ts` twice (the output must be identical), then `--check`, then `--list <feature>` again. Every cell that stays open needs a reason in the PR. CI posts one comment per PR with the delta (percent, changed features, closed and dropped cells), the placement line (new marked lines in shared files by rung, new `kilo_port` annotations, new core-internal imports), the two ratchets and the treemap of the head commit; the `progress.json` diff carries the same information.
+- Check before you commit: run `bun script/upstream/progress.ts` (it fails on invalid inputs), then `--list <feature>` again, then restore the generated files with `git checkout origin/v2 -- $(bun script/upstream/progress.ts --outputs)`. Commit only the inputs: code, done-proofs, `features.json` and `dispositions.json`. Every cell that stays open needs a reason in the PR. CI posts one comment per PR with the delta (percent, changed features, closed and dropped cells), the placement line (new marked lines in shared files by rung, new `kilo_port` annotations, new core-internal imports) and the two ratchets, computed from maps it generates for the base and the PR.
 
 ## Evidence
 

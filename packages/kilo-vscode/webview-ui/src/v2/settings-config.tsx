@@ -2,7 +2,7 @@
 // read, and the `kilo-code.v2.*` settings. Config edits go to the host, which owns the files; VS Code setting edits go
 // through `updateVSCodeSettings`. `save()` writes both, reloads the location and refetches the config.
 import { createContext, createEffect, createMemo, createSignal, on, onCleanup, useContext, type ParentComponent } from "solid-js"
-import { parse as parseJsonc } from "jsonc-parser"
+import { parse as parseJsonc } from "jsonc-parser/lib/esm/main.js"
 import type { ConfigEdit, ConfigFileContent, ToHost, ToWebview } from "../../../src/protocol"
 import { getVSCodeAPI, useVSCode } from "../context/vscode"
 import { useV2 } from "./client"
