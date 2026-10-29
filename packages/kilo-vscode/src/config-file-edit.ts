@@ -3,11 +3,28 @@
 import path from "node:path"
 // The ESM entry: the extension host bundles with `Bun.build`, which leaves the UMD entry's
 // `require("./impl/format")` as a runtime require that fails in `dist/extension.js`.
-import { applyEdits, modify } from "jsonc-parser/lib/esm/main.js"
+import { applyEdits, findNodeAtLocation, modify, parseTree } from "jsonc-parser/lib/esm/main.js"
 import { KiloConfigFiles } from "@opencode/util/kilocode/config/files"
 import type { ConfigEdit } from "./protocol"
 
 const MODIFY = { formattingOptions: { tabSize: 2, insertSpaces: true, eol: "\n" } }
+
+/**
+ * Run tasks one at a time in call order. Each task's result resolves its own promise; a rejected task does not break
+ * the chain, so a later write still runs. A read-modify-write over one file must be serialized, or two overlapping
+ * passes both read the pre-edit text and the later write drops the earlier edit.
+ */
+export function serialize(): <T>(task: () => Promise<T>) => Promise<T> {
+  let tail: Promise<unknown> = Promise.resolve()
+  return (task) => {
+    const result = tail.then(task)
+    tail = result.then(
+      () => undefined,
+      () => undefined,
+    )
+    return result
+  }
+}
 
 /** True only for the Kilo v2 config file names, so a write never lands in another file. */
 export function isKiloConfigFile(file: string): boolean {
@@ -20,8 +37,12 @@ export function applyConfigEdits(text: string, edits: ConfigEdit[]): string {
   for (const edit of edits) {
     if (!Array.isArray(edit.path) || edit.path.length === 0) continue
     result = applyEdits(result, modify(result, edit.path, edit.value, MODIFY))
-    for (const alias of aliasOf(edit.path))
+    for (const alias of aliasOf(edit.path)) {
+      // jsonc-parser throws when a delete targets a path the document does not define, so only remove a present alias.
+      const root = parseTree(result)
+      if (!root || !findNodeAtLocation(root, alias)) continue
       result = applyEdits(result, modify(result, alias, undefined, MODIFY))
+    }
   }
   return result
 }
