@@ -134,7 +134,11 @@ const AgentsSubtab: Component = () => {
                 // Delay until after the dialog close animation, as v1, so the list re-render does not
                 // fire a click on a shifted row under the overlay.
                 setTimeout(() => {
-                  config.unset(agentPath(row.id), config.source(agentPath(row.id)) ?? "global")
+                  // Clear every scope that defines the agent; an absent path is a no-op delete on the host.
+                  void (async () => {
+                    await config.unset(agentPath(row.id), "project")
+                    await config.unset(agentPath(row.id), "global")
+                  })()
                   setCreated((ids) => ids.filter((id) => id !== row.id))
                   if (editing() === row.id) back()
                 }, 150)
@@ -160,8 +164,8 @@ const AgentsSubtab: Component = () => {
           }}
         />
       </Show>
-      <Show when={view() === "edit" ? editingRow() : undefined} keyed>
-        {(row) => <ModeEditView row={row} onBack={back} onRemove={confirmRemove} />}
+      <Show when={view() === "edit" ? editingRow() : undefined}>
+        {(row) => <ModeEditView row={row()} onBack={back} onRemove={confirmRemove} />}
       </Show>
       <Show when={view() === "list"}>
         <ListView />

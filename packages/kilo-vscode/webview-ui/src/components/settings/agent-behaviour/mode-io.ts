@@ -6,6 +6,7 @@ import type { PermissionEffect, PermissionRule } from "@opencode/client"
 export const MAX_IMPORT_SIZE = 1_048_576
 
 const NAME_RE = /^[a-z][a-z0-9-]*$/
+const MODEL_RE = /^[^/\s#]+\/[^/\s#]+(#[^\s#]+)?$/
 const MODES = ["subagent", "primary", "all"] as const
 const EFFECTS = new Set<string>(["allow", "ask", "deny"])
 
@@ -38,6 +39,15 @@ function parseRequestBody(raw: unknown): Record<string, unknown> | undefined {
   return Object.keys(body).length > 0 ? body : undefined
 }
 
+/** A `ConfigModel.Selection`: the `provider/model[#variant]` string or the explicit `{ providerID, model }` object. */
+function parseModel(raw: unknown): string | Record<string, unknown> | undefined {
+  if (typeof raw === "string") return MODEL_RE.test(raw) ? raw : undefined
+  if (!isRecord(raw)) return undefined
+  if (typeof raw.providerID !== "string" || !raw.providerID || typeof raw.model !== "string" || !raw.model)
+    return undefined
+  return { providerID: raw.providerID, model: raw.model, ...(typeof raw.variant === "string" ? { variant: raw.variant } : {}) }
+}
+
 /**
  * Parse a raw JSON string into a validated agent name and its v2 config.
  * Returns an error tag (the i18n key suffix) on failure.
@@ -58,11 +68,11 @@ export function parseImport(json: string, taken: string[]): ImportResult {
   const config: Record<string, unknown> = { mode: MODES.find((mode) => mode === data.mode) ?? "primary" }
   if (typeof data.description === "string") config.description = data.description
   if (typeof data.system === "string") config.system = data.system
-  if (typeof data.model === "string") config.model = data.model
-  else if (isRecord(data.model)) config.model = data.model
+  const model = parseModel(data.model)
+  if (model !== undefined) config.model = model
   if (typeof data.hidden === "boolean") config.hidden = data.hidden
   if (typeof data.disabled === "boolean") config.disabled = data.disabled
-  if (typeof data.steps === "number") config.steps = data.steps
+  if (typeof data.steps === "number" && Number.isInteger(data.steps) && data.steps > 0) config.steps = data.steps
   const permissions = parsePermissions(data.permissions)
   if (permissions) config.permissions = permissions
   if (isRecord(data.request)) {

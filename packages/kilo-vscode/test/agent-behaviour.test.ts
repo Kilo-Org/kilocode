@@ -136,6 +136,24 @@ describe("parseImport", () => {
     )
     expect(result.ok && result.config.permissions).toEqual([{ action: "read", resource: "*", effect: "allow" }])
   })
+
+  test("keeps valid model selections and drops malformed ones", () => {
+    const valid = parseImport(JSON.stringify({ name: "a", model: "kilo/x#high" }), [])
+    expect(valid.ok && valid.config.model).toBe("kilo/x#high")
+    const explicit = parseImport(JSON.stringify({ name: "b", model: { providerID: "kilo", model: "x" } }), [])
+    expect(explicit.ok && explicit.config.model).toEqual({ providerID: "kilo", model: "x" })
+    const invalid = parseImport(JSON.stringify({ name: "c", model: "claude-sonnet-4" }), [])
+    expect(invalid.ok && invalid.config.model).toBeUndefined()
+  })
+
+  test("keeps only a positive integer steps value", () => {
+    const valid = parseImport(JSON.stringify({ name: "a", steps: 3 }), [])
+    expect(valid.ok && valid.config.steps).toBe(3)
+    for (const steps of [0, -1, 1.5]) {
+      const result = parseImport(JSON.stringify({ name: "a", steps }), [])
+      expect(result.ok && result.config.steps).toBeUndefined()
+    }
+  })
 })
 
 describe("buildExport", () => {

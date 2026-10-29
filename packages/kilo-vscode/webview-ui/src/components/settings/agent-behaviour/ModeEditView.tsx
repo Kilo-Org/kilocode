@@ -77,10 +77,11 @@ const ModeEditView: Component<Props> = (props) => {
     config.set(path, value.trim() === "" || Number.isNaN(parsed) ? undefined : parsed, scope())
   }
   const writeToggle = (key: "hidden" | "disabled") => (value: boolean) => {
-    // Sequential writes so the second edit is not lost to a race with the first on the config file.
+    // Sequential writes so the second edit is not lost to a race with the first on the config file. The
+    // default agent is cleared only when the toggle actually applied.
     void (async () => {
-      await config.set(agentField(props.row.id, key), value, scope())
-      if (value && config.value(["default_agent"]) === props.row.id)
+      const ok = await config.set(agentField(props.row.id, key), value, scope())
+      if (ok && value && config.value(["default_agent"]) === props.row.id)
         await config.unset(["default_agent"], config.source(["default_agent"]) ?? "global")
     })()
   }
