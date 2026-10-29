@@ -191,7 +191,8 @@
     "mammoth@1.12.0": "patches/mammoth@1.12.0.patch",
     "solid-js@1.9.12": "patches/solid-js@1.9.12.patch",
     "@ai-sdk/openai-compatible@2.0.48": "patches/@ai-sdk%2Fopenai-compatible@2.0.48.patch",
-    "bun-pty@0.4.8": "patches/bun-pty@0.4.8.patch"
+    "bun-pty@0.4.8": "patches/bun-pty@0.4.8.patch",
+    "@ai-sdk/togetherai@2.0.41": "patches/@ai-sdk%2Ftogetherai@2.0.41.patch"
   },
   "version": "7.8.25",
   "peerDependencies": {}
