@@ -3,6 +3,7 @@ import { Switch } from "@kilocode/kilo-ui/switch"
 import { Select } from "@kilocode/kilo-ui/select"
 import { TextField } from "@kilocode/kilo-ui/text-field"
 import { Card } from "@kilocode/kilo-ui/card"
+import { Button } from "@kilocode/kilo-ui/button"
 import { useConfig } from "../../context/config"
 import { useLanguage } from "../../context/language"
 import { useVSCode } from "../../context/vscode"
@@ -47,6 +48,17 @@ const ExperimentalTab: Component = () => {
   })
 
   const experimental = createMemo(() => config().experimental ?? {})
+  const available = () => imageModels.ready() && !imageModels.loading()
+  const status = () => {
+    if (!imageModels.ready()) return language.t("settings.experimental.imageGenerationModels.save")
+    const error = imageModels.error()
+    if (error) return language.t("settings.experimental.imageGenerationModels.error", { error })
+    return language.t(
+      imageModels.loading()
+        ? "settings.experimental.imageGenerationModels.loading"
+        : "settings.experimental.imageGenerationModels.description",
+    )
+  }
 
   const updateExperimental = (key: string, value: unknown) => {
     updateConfig({
@@ -223,6 +235,27 @@ const ExperimentalTab: Component = () => {
               />
             </Show>
           </SettingsRow>
+          <Show when={experimental().image_generation_base_url?.trim()}>
+            <SettingsRow title={language.t("settings.experimental.imageGenerationModels.title")} description={status()}>
+              <Select
+                options={imageModels.models()}
+                current={imageModels.models().find((model) => model.id === experimental().image_generation_model)}
+                value={(model) => model.id}
+                label={(model) => model.name}
+                onSelect={(model) => {
+                  if (model) updateExperimental("image_generation_model", model.id)
+                }}
+                disabled={!available() || !imageModels.models().length}
+                placeholder={language.t("settings.experimental.imageGenerationModels.select")}
+                variant="secondary"
+                size="small"
+                triggerVariant="settings"
+              />
+              <Button variant="secondary" size="small" disabled={!available()} onClick={imageModels.refresh}>
+                {language.t("settings.experimental.imageGenerationModels.refresh")}
+              </Button>
+            </SettingsRow>
+          </Show>
         </Show>
 
         <SettingsRow

@@ -23,7 +23,7 @@ import { buildMercuryEditPrompt } from "@kilocode/kilo-gateway/edit-prompt"
 import { buildKiloHeaders } from "@kilocode/kilo-gateway"
 import { Effect, Schema } from "effect"
 import * as Stream from "effect/Stream"
-import { HttpServerRequest, HttpServerResponse } from "effect/unstable/http"
+import { HttpClient, HttpServerRequest, HttpServerResponse } from "effect/unstable/http"
 import { HttpApiBuilder, HttpApiError } from "effect/unstable/httpapi"
 import * as Log from "@opencode-ai/core/util/log"
 import { Flag } from "@opencode-ai/core/flag/flag"
@@ -40,6 +40,8 @@ import { InstanceStore } from "@/project/instance-store"
 import { ModelCache } from "@/provider/model-cache"
 import { InstanceHttpApi } from "@/server/routes/instance/httpapi/api"
 import { AudioTranscriptionsBody, CloudSessionImportError, EditBody, FimBody } from "../groups/kilo-gateway"
+import * as Images from "@/kilocode/image-generation"
+import * as Network from "@/kilocode/sandbox/network"
 
 const FIM_TIMEOUT_MS = 30_000
 const log = Log.create({ service: "kilo-gateway" })
@@ -446,6 +448,16 @@ export const kiloGatewayHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilo",
     })
 
     const imageModels = Effect.fn("KiloGatewayHttpApi.imageModels")(function* () {
+      const custom = Images.source(yield* config.getGlobal())
+      if (custom) {
+        const http = yield* HttpClient.HttpClient.pipe(Effect.provide(Network.httpLayer))
+        return yield* Images.models(http, custom).pipe(
+          Effect.catch((err) => {
+            logError("imageModels", err)
+            return Effect.fail(new HttpApiError.BadRequest({}))
+          }),
+        )
+      }
       const info = yield* proxyAuth()
       if (!info.auth) return yield* Effect.fail(new HttpApiError.Unauthorized({}))
       if (!info.token) return yield* Effect.fail(new HttpApiError.Unauthorized({}))

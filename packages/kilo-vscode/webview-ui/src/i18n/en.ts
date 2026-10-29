@@ -53,6 +53,14 @@ export const anacondaDesktopDict = {
 } as const
 
 export const dict = {
+  "settings.experimental.imageGenerationModels.title": "Available image models",
+  "settings.experimental.imageGenerationModels.save": "Save the endpoint settings to discover its models.",
+  "settings.experimental.imageGenerationModels.error": "{{error}}. You can enter a model ID manually above.",
+  "settings.experimental.imageGenerationModels.loading": "Loading models…",
+  "settings.experimental.imageGenerationModels.description":
+    "Choose a discovered model, or enter an ID above if the server has no model catalog.",
+  "settings.experimental.imageGenerationModels.select": "Select a model",
+  "settings.experimental.imageGenerationModels.refresh": "Refresh",
   "settings.experimental.imageGenerationBaseUrl.title": "Image generation base URL",
   "settings.experimental.imageGenerationBaseUrl.description":
     "Use a custom Images API on this machine. Leave empty to use Kilo Gateway or OpenRouter.",

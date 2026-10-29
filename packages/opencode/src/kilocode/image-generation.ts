@@ -19,6 +19,39 @@ export function source(cfg: Config.Info) {
 const Response = Schema.Struct({ data: Schema.Array(Schema.Struct({ b64_json: Schema.String })) })
 const run = runner(() => new Error("Image generation cancelled"))
 
+const Catalog = Schema.Struct({
+  data: Schema.Array(
+    Schema.Struct({
+      id: Schema.String,
+      name: Schema.optional(Schema.String),
+      description: Schema.optional(Schema.String),
+      capability: Schema.optional(Schema.String),
+    }),
+  ),
+})
+
+export function models(http: HttpClient.HttpClient, target: NonNullable<ReturnType<typeof source>>) {
+  return Effect.gen(function* () {
+    const res = yield* http
+      .execute(
+        HttpClientRequest.get(`${target.url}/models`).pipe(
+          HttpClientRequest.setHeaders(target.key ? { Authorization: `Bearer ${target.key}` } : {}),
+        ),
+      )
+      .pipe(Effect.provideService(FetchHttpClient.RequestInit, { redirect: "manual" }))
+    if (res.status < 200 || res.status >= 300)
+      return yield* Effect.fail(new Error(`Image model discovery failed (HTTP ${res.status})`))
+    const catalog = yield* Schema.decodeUnknownEffect(Catalog)(yield* res.json)
+    return [
+      ...new Map(
+        catalog.data
+          .filter((model) => model.id && (!model.capability || model.capability === "image"))
+          .map((model) => [model.id, { id: model.id, name: model.name ?? model.id, description: model.description }]),
+      ).values(),
+    ]
+  }).pipe(Effect.timeout("10 seconds"))
+}
+
 export function generate(
   http: HttpClient.HttpClient,
   target: NonNullable<ReturnType<typeof source>>,
