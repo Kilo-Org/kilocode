@@ -1,6 +1,6 @@
 // Web Tools tab on v2 config. Web Search maps the v2 `websearch` selection: `false` is off, a provider selection is
 // on. The Browser Automation rows have no v2 key and are not rendered.
-import { Component, Show } from "solid-js"
+import { Component, Show, createEffect, createSignal, on } from "solid-js"
 import { Switch } from "@kilocode/kilo-ui/switch"
 import { Card } from "@kilocode/kilo-ui/card"
 import { useLanguage } from "../../context/language"
@@ -29,12 +29,32 @@ const BrowserTab: Component = () => {
   const language = useLanguage()
   const config = useSettingsConfig()
 
-  // A selection (including the `random` pseudo-provider) means on.
-  const enabled = () => config.value(WEBSEARCH) !== false
+  // The global row edits the global scope, so it shows the global file value. A staged edit wins until save or
+  // discard clears the draft; `value()` is the merged value and a project file would otherwise mask the global one.
+  const [staged, setStaged] = createSignal<unknown>()
+  createEffect(
+    on(
+      () => config.dirty(),
+      (dirty) => {
+        if (!dirty) setStaged(undefined)
+      },
+    ),
+  )
+
+  const enabled = () => {
+    const draft = staged()
+    if (draft !== undefined) return Boolean(draft)
+    if (config.source(WEBSEARCH) === "project") return Boolean(config.raw("global")["websearch"])
+    return Boolean(config.value(WEBSEARCH))
+  }
   const local = () => config.raw("project")["websearch"]
   const overridden = () => local() !== undefined
 
-  const update = (checked: boolean) => config.set(WEBSEARCH, checked ? { provider: "random" } : false)
+  const update = (checked: boolean) => {
+    const value = checked ? { provider: "random" } : false
+    setStaged(value)
+    config.set(WEBSEARCH, value)
+  }
 
   return (
     <div style={{ display: "flex", "flex-direction": "column", gap: "16px" }}>
