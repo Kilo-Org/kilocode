@@ -106,6 +106,19 @@ it.instance("uses the global Images API for generation and multipart edits witho
     expect(yield* Effect.promise(() => file.bytes())).toEqual(Buffer.from(png, "base64"))
     expect(permissions).toEqual(["write", "read", "write"])
 
+    yield* tool.execute({ prompt: "Combine", images: ["edited.png", "generated.png"], path: "combined.png" }, ctx)
+    const combined = yield* Effect.promise(() => requests.at(2)!.formData())
+    expect(combined.get("image")).toBeNull()
+    expect(combined.getAll("image[]").map((file) => (file instanceof File ? file.name : file))).toEqual([
+      "edited.png",
+      "generated.png",
+    ])
+    expect(permissions).toEqual(["write", "read", "write", "read", "read", "write"])
+    const conflict = yield* tool
+      .execute({ prompt: "Invalid", image: "generated.png", images: ["edited.png"], path: "invalid.png" }, ctx)
+      .pipe(Effect.exit)
+    expect(Exit.isFailure(conflict)).toBe(true)
+
     const http = yield* HttpClient.HttpClient.pipe(Effect.provide(Network.httpLayer))
     const denied = yield* Images.generate(
       http,
@@ -129,7 +142,7 @@ it.instance("uses the global Images API for generation and multipart edits witho
     ).pipe(Effect.exit)
     expect(Exit.isFailure(blocked)).toBe(true)
     if (Exit.isFailure(blocked)) expect(Cause.pretty(blocked.cause)).toContain("Sandbox denied outbound network access")
-    expect(requests).toHaveLength(3)
+    expect(requests).toHaveLength(4)
   }),
 )
 
