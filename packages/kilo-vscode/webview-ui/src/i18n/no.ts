@@ -1153,7 +1153,7 @@ export const dict = {
     "Kjør shell-kommandoer for agenten i en sandbox på operativsystemnivå som begrenser skriving til prosjekt- og Kilo-tilstandsmapper",
 
   "settings.autoApprove.description":
-    "Definer hvordan verktøy kan kjøre. De fleste verktøy har Tillat som standard. doom_loop og external_directory har Spør som standard.",
+    "Definer hvordan verktøy kan kjøre. De fleste verktøy har Tillat som standard. Bash har Spør som standard.",
   "settings.autoApprove.maxCost.title": "Varsel om øktkostnad",
   "settings.autoApprove.maxCost.description":
     "Varsle før en økt fortsetter etter at kostnaden overstiger dette USD-beløpet. Bruk hele dollar; la feltet stå tomt for å deaktivere.",

@@ -1154,7 +1154,7 @@ export const dict = {
     "Uruchamiaj polecenia shell agenta w sandboxie na poziomie systemu operacyjnego, który ogranicza zapisy do katalogów stanu projektu i Kilo",
 
   "settings.autoApprove.description":
-    "Zdefiniuj, jak narzędzia mogą być uruchamiane. Większość narzędzi domyślnie ma ustawienie Zezwalaj. doom_loop i external_directory domyślnie mają ustawienie Pytaj.",
+    "Zdefiniuj, jak narzędzia mogą być uruchamiane. Większość narzędzi domyślnie ma ustawienie Zezwalaj. Bash domyślnie ma ustawienie Pytaj.",
   "settings.autoApprove.maxCost.title": "Alert kosztu sesji",
   "settings.autoApprove.maxCost.description":
     "Ostrzegaj przed kontynuowaniem sesji, gdy jej koszt przekroczy tę kwotę w USD. Używaj pełnych dolarów; pozostaw puste, aby wyłączyć.",

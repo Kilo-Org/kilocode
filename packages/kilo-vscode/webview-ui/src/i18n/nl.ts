@@ -1119,7 +1119,7 @@ export const dict = {
   "settings.agentBehaviour.workflows.modelDescription": "Globale modeloverride",
 
   "settings.autoApprove.description":
-    "Definieer hoe tools mogen worden uitgevoerd. De meeste tools staan standaard op Toestaan. doom_loop en external_directory staan standaard op Vragen.",
+    "Definieer hoe tools mogen worden uitgevoerd. De meeste tools staan standaard op Toestaan. Bash staat standaard op Vragen.",
   "settings.autoApprove.maxCost.title": "Sessiekostenwaarschuwing",
   "settings.autoApprove.maxCost.description":
     "Waarschuw voordat een sessie doorgaat nadat de kosten dit USD-bedrag overschrijden. Gebruik hele dollars; laat leeg om uit te schakelen.",

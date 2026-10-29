@@ -1010,7 +1010,7 @@ export const dict = {
   "settings.agentBehaviour.permissions.hint":
     "Le regole vengono valutate in ordine: l'ultima regola corrispondente vince. Questo è il set di regole risolto dal backend CLI.",
   "settings.autoApprove.description":
-    "Definisci come i tool possono essere eseguiti. La maggior parte dei tool usa Consenti di default. doom_loop e external_directory usano Chiedi di default.",
+    "Definisci come i tool possono essere eseguiti. La maggior parte dei tool usa Consenti di default. Bash usa Chiedi di default.",
   "settings.autoApprove.maxCost.title": "Avviso costo sessione",
   "settings.autoApprove.maxCost.description":
     "Avvisa prima di continuare una sessione quando la spesa supera questo importo in USD. Usa dollari interi; lascia vuoto per disattivare.",

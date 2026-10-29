@@ -71,6 +71,25 @@ describe("applyConfigEdits", () => {
     expect(parsed.permission).toBeUndefined()
   })
 
+  test("removes the v1 compaction token alias", () => {
+    const result = applyConfigEdits(`{ "compaction": { "preserve_recent_tokens": 1000 } }`, [
+      { path: ["compaction", "keep", "tokens"], value: 2000 },
+    ])
+    const parsed = parse(result)
+    expect(parsed.compaction.keep.tokens).toBe(2000)
+    expect(parsed.compaction.preserve_recent_tokens).toBeUndefined()
+  })
+
+  test("clears small_model and the title agent aliases when the title model is written", () => {
+    const text = `{ "small_model": "kilo/x", "agent": { "title": { "model": "a" } }, "mode": { "title": { "model": "b" } } }`
+    const result = applyConfigEdits(text, [{ path: ["agents", "title", "model"], value: "c" }])
+    const parsed = parse(result)
+    expect(parsed.agents.title.model).toBe("c")
+    expect(parsed.small_model).toBeUndefined()
+    expect(parsed.agent.title.model).toBeUndefined()
+    expect(parsed.mode.title.model).toBeUndefined()
+  })
+
   test("removes an unset path", () => {
     const result = applyConfigEdits(`{ "username": "alice", "theme": "dark" }`, [{ path: ["username"] }])
     expect(parse(result)).toEqual({ theme: "dark" })
@@ -85,7 +104,7 @@ describe("applyConfigEdits", () => {
 
 describe("aliasOf", () => {
   test("maps the v2 paths to every v1 key normalize.ts reads", () => {
-    expect(aliasOf(["agents"])).toEqual([["agent"], ["mode"]])
+    expect(aliasOf(["agents"])).toEqual([["small_model"], ["agent"], ["mode"]])
     expect(aliasOf(["agents", "build", "model"])).toEqual([
       ["agent", "build", "model"],
       ["mode", "build", "model"],
@@ -98,7 +117,20 @@ describe("aliasOf", () => {
       ["agent", "build", "disable"],
       ["mode", "build", "disable"],
     ])
-    expect(aliasOf(["agents", "title", "model"])).toEqual([["small_model"]])
+    expect(aliasOf(["agents", "title", "model"])).toEqual([
+      ["small_model"],
+      ["agent", "title", "model"],
+      ["mode", "title", "model"],
+    ])
+    expect(aliasOf(["agents", "title"])).toEqual([["small_model"], ["agent", "title"], ["mode", "title"]])
+    expect(aliasOf(["agents", "title", "system"])).toEqual([
+      ["agent", "title", "prompt"],
+      ["mode", "title", "prompt"],
+    ])
+    expect(aliasOf(["agents", "title", "steps"])).toEqual([
+      ["agent", "title", "steps"],
+      ["mode", "title", "steps"],
+    ])
     expect(aliasOf(["permissions"])).toEqual([["permission"], ["tools"]])
     expect(aliasOf(["commands"])).toEqual([["command"]])
     expect(aliasOf(["providers"])).toEqual([["provider"]])
@@ -109,6 +141,9 @@ describe("aliasOf", () => {
     expect(aliasOf(["share"])).toEqual([["autoshare"]])
     expect(aliasOf(["references"])).toEqual([["reference"]])
     expect(aliasOf(["mcp", "servers", "foo"])).toEqual([["mcp", "foo"]])
+    expect(aliasOf(["compaction", "keep", "tokens"])).toEqual([["compaction", "preserve_recent_tokens"]])
+    expect(aliasOf(["compaction", "buffer"])).toEqual([["compaction", "reserved"]])
+    expect(aliasOf(["policies"])).toEqual([["enabled_providers"], ["disabled_providers"], ["experimental", "policies"]])
     expect(aliasOf(["model"])).toEqual([])
   })
 })

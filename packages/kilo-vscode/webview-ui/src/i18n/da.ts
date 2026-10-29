@@ -1151,7 +1151,7 @@ export const dict = {
     "Kør shell-kommandoer for agenten i en sandbox på operativsystemniveau, der begrænser skrivning til projekt- og Kilo-tilstandsmapperne",
 
   "settings.autoApprove.description":
-    "Definer, hvordan værktøjer må køre. De fleste værktøjer er som standard indstillet til Tillad. doom_loop og external_directory er som standard indstillet til Spørg.",
+    "Definer, hvordan værktøjer må køre. De fleste værktøjer er som standard indstillet til Tillad. Bash er som standard indstillet til Spørg.",
   "settings.autoApprove.maxCost.title": "Advarsel om sessionsomkostning",
   "settings.autoApprove.maxCost.description":
     "Advar før en session fortsættes, når forbruget overstiger dette USD-beløb. Brug hele dollars; lad feltet være tomt for at deaktivere.",
