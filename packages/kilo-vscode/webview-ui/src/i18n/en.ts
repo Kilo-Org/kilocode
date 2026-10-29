@@ -83,7 +83,7 @@ export const dict = {
   "settings.experimental.imageGenerationModels.refresh": "Refresh",
   "settings.experimental.imageGenerationBaseUrl.title": "Image generation base URL",
   "settings.experimental.imageGenerationBaseUrl.description":
-    "Use a custom Images API on this machine. Leave empty to use Kilo Gateway or OpenRouter.",
+    "Use a local or remote Images API. Leave empty to use Kilo Gateway or OpenRouter. HTTP does not encrypt tokens, prompts, or images; use HTTPS or a protected connection for remote servers.",
   "settings.experimental.imageGenerationApiKey.title": "Image generation API key",
   "settings.experimental.imageGenerationApiKey.description": "Optional bearer token for the custom endpoint",
   "settings.experimental.imageGenerationModel.customPlaceholder": "Model ID, or the server default",
