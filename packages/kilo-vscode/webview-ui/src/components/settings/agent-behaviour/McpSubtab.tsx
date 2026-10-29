@@ -39,7 +39,7 @@ const McpSubtab: Component = () => {
 
   const servers = () => config.value(["mcp", "servers"]) as Record<string, Record<string, unknown>> | undefined
 
-  const scopeFor = (name: string) => config.source(["mcp", "servers", name])
+  const scopeFor = (name: string) => config.source(["mcp", "servers", name]) ?? "project"
   const statusOf = (name: string) => mcp.status(name)
   const isConnected = (name: string) => statusOf(name)?.status === "connected"
   const needsAuth = (name: string) => statusOf(name)?.status === "needs_auth"
@@ -88,8 +88,7 @@ const McpSubtab: Component = () => {
               size="large"
               onClick={() => {
                 dialog.close()
-                const scope = scopeFor(name) ?? "global"
-                config.unset(["mcp", "servers", name], scope)
+                config.unset(["mcp", "servers", name], scopeFor(name))
               }}
             >
               {language.t("settings.agentBehaviour.removeMcp.button")}

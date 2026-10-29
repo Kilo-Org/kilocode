@@ -22,7 +22,7 @@ const McpEditView: Component<Props> = (props) => {
   const config = useSettingsConfig()
 
   const path = () => ["mcp", "servers", props.name]
-  const scope = () => config.source(path()) ?? "global"
+  const scope = () => config.source(path()) ?? "project"
   const server = () => ({ ...((config.value(path()) ?? {}) as Record<string, unknown>) })
 
   const initialOauth = oauthFields(server().oauth as OauthValue | false | null | undefined)
@@ -55,9 +55,10 @@ const McpEditView: Component<Props> = (props) => {
   }
 
   const update = (partial: Record<string, unknown>) => {
-    const next = { ...server(), ...partial }
-    const oauth = partial.oauth
-    if ("oauth" in partial && oauth === undefined) delete next.oauth
+    // `value` reads a v2 data-store value, whose nested objects are store proxies: clone to plain data before the
+    // host write, which posts the object across the webview boundary.
+    const next = JSON.parse(JSON.stringify({ ...server(), ...partial })) as Record<string, unknown>
+    if ("oauth" in partial && partial.oauth === undefined) delete next.oauth
     config.set(path(), next, scope())
   }
 
