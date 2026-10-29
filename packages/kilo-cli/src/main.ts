@@ -141,7 +141,7 @@ Effect.gen(function* () {
   Effect.provide(
     LayerNode.compile(LayerNode.group([Global.node, AppProcess.node, Npm.node, EffectFlock.node]), {
       replacements: [
-        // Kilo: KILO_CONFIG_DIR reaches OPENCODE_CONFIG_DIR through ./env, which also names Kilo's `kilo2` app
+        // Kilo: KILO2_CONFIG_DIR reaches OPENCODE_CONFIG_DIR through ./env, which also names Kilo's `kilo2` app
         // directory before the global paths load (U-E1-01).
         Global.node.replace(
           Global.layerWith(process.env.OPENCODE_CONFIG_DIR ? { config: process.env.OPENCODE_CONFIG_DIR } : {}),
