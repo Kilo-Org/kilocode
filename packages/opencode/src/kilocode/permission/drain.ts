@@ -36,6 +36,8 @@ export function drainCovered(
       // Never auto-resolve a skill shell batch; it must get an explicit reply.
       if (entry.info.metadata?.["skillShell"] === true) continue
       if (entry.info.metadata?.["sandboxEscalation"] === true) continue
+      // A PreToolUse hook asked for this call, which the rules already allow: only a reply to it counts.
+      if (entry.info.metadata?.["hookAsk"] === true) continue
       const actions = entry.info.patterns.map((pattern: string) => {
         const rule = skill
           ? Permission.evaluate(entry.info.permission, skill, approved)

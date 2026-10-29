@@ -106,6 +106,10 @@ Behavior: runs from the selected worktree directory, or the main repo root when 
 
 When the project supports it, avoid fixed global resources across worktrees by deriving ports, caches, Docker Compose project names, emulators, or databases from `WORKTREE_PATH` or the branch.
 
+### Scripts in sandboxed sessions
+
+Agent Manager runs setup and run scripts outside the sandbox, so a sandboxed session cannot create, edit, or replace `.kilo/setup-script*`, `.kilo/run-script*`, or their legacy `.kilocode/` copies: the sandbox denies those writes. Do not work around it (renaming or moving `.kilo`, symlinks, writing through another tool or a nested `kilo`). Show the user the script you propose and ask them to save it, or request sandbox escalation for that write.
+
 ### Troubleshooting scripts
 
 - If Run opens configuration instead of running, no valid run script exists for the current platform.
@@ -273,6 +277,56 @@ Skills are markdown files at `skills/<name>/SKILL.md` (or `skill/<name>/SKILL.md
 | `username` | `string` | Display name override |
 | `compaction.auto` | `boolean` | Auto-compact when context full (default: true) |
 | `compaction.prune` | `boolean` | Prune old tool outputs (default: true) |
+| `hooks` | `object` | Shell command hooks on agent events (see below) |
+
+## Hooks
+
+`hooks` runs shell commands on agent events, using the Claude Code hooks format (behavior matches Claude Code 2.1.301 except where the docs list a difference). Hooks are **only read from trusted config**: the global config (`~/.config/kilo/kilo.jsonc`), managed config, and organization config. Hooks in project `kilo.json`, `kilo.jsonc` or `.kilo/` are ignored, so write them to the global file.
+
+```jsonc
+{
+  "hooks": {
+    // After an edit, run a linter; exit code 2 shows its stderr to the agent.
+    "PostToolUse": [
+      { "matcher": "edit|write|apply_patch", "hooks": [{ "type": "command", "command": "~/.config/kilo/hooks/lint.sh" }] }
+    ],
+    // Before a shell command; exit code 2 blocks the call with stderr as the reason.
+    "PreToolUse": [{ "matcher": "bash", "hooks": [{ "type": "command", "command": "~/.config/kilo/hooks/guard.sh", "timeout": 10 }] }],
+    // When the agent finishes; exit code 2 makes it continue with stderr as feedback (capped).
+    "Stop": [{ "hooks": [{ "type": "command", "command": "~/.config/kilo/hooks/tests-pass.sh" }] }]
+  }
+}
+```
+
+Events (30), with what the matcher is tested against:
+
+| Group | Events |
+|---|---|
+| Tools | `PreToolUse`, `PostToolUse`, `PostToolUseFailure`, `PermissionRequest` (tool name); `PostToolBatch`, `TaskCreated`, `TaskCompleted` (no matcher) |
+| Prompts | `UserPromptSubmit` (no matcher), `UserPromptExpansion` (command name), `PreModelSwitch`, `PostModelSwitch` (model) |
+| Sessions | `SessionStart` (`startup\|resume\|fork\|compact`), `SessionEnd` (`other\|prompt_input_exit`), `InstructionsLoaded` (`session_start\|nested_traversal\|compact`) |
+| Agent loop | `Stop` (no matcher), `SubagentStop`, `SubagentStart` (agent type: `explore`/`Explore`, `general`/`general-purpose`), `StopFailure` (`rate_limit`, `overloaded`, ...) |
+| Compaction | `PreCompact`, `PostCompact` (`manual\|auto`) |
+| Environment | `Notification` (`permission_prompt\|agent_needs_input\|idle_prompt`), `ConfigChange` (`user_settings\|project_settings`), `FileChanged` (file names to watch; omitted: only paths hooks add with `watchPaths`), `CwdChanged` (no matcher) |
+| Kilo only | `GoalReport` (`complete\|blocked`), `WakeupFire` (`once\|cron`), `WorktreeSetup` (origin), `WorktreeTeardown`, `CommitMessage`, `BranchName` (no matcher) |
+
+- `matcher` is `*`/omitted (all; on `FileChanged`, `*` is a literal file name), an exact list like `edit|write` (Claude Code names such as `Edit`/`Bash` also match tools), or a regular expression. Events without a matcher ignore it. MCP tools are named `<server>_<tool>` (`mcp__<server>__<tool>` also matches).
+- Handler fields: `command`, `args` (exec form, no shell), `shell` (`bash` default, Git Bash on Windows, or `powershell`), `if` (tool events only, e.g. `"Bash(rm *)"`; a hook with `if` on any other event is skipped), `timeout` (seconds), `onFailure` (`"continue"` default or `"block"`), `async` (run in the background; output and decisions ignored).
+- Default timeout 600 s; 30 s for `UserPromptSubmit`, `PreModelSwitch`, `PostModelSwitch` and `CommitMessage`; 60 s for `WakeupFire` and `WorktreeTeardown`; 300 s for `WorktreeSetup`; 10 s for `BranchName`; all `SessionEnd` hooks share 1.5 s.
+- Each hook gets JSON on stdin: `session_id` (root session), `hook_event_name`, `cwd`, `kilo_session_id`, plus event fields (`tool_name`, `tool_input` with `file_path` added, `tool_response`, `prompt`, `source`, `stop_hook_active`, ...). `apply_patch` runs tool hooks once per patched file. Env: `KILO_PROJECT_DIR`, `KILO_HOOK_EVENT`, `KILO_HOOK_DEPTH`, and `KILO_NO_DAEMON=1` (a `kilo` command in a hook starts its own backend, never attaching to a running daemon).
+
+Exit codes and JSON on stdout combine as in Claude Code:
+
+| Exit code | Effect | JSON on stdout |
+|---|---|---|
+| `0` | Success. Plain stdout is added as context on `UserPromptSubmit`, `UserPromptExpansion`, `SessionStart`, `PostModelSwitch`. | Applied |
+| `2` | Blocks on events that can block (stderr is the reason); on `PostToolUse`/`PostToolUseFailure` stderr goes to the agent; on some events it is shown to the user; ignored on `PermissionRequest` (deny with JSON) | Read, but cannot lift the block |
+| Other, timeout, crash, invalid JSON | Hook error: the action proceeds unless `"onFailure": "block"` (honored only on `PreToolUse`, `PostToolBatch`, `PermissionRequest`, `TaskCreated`, `UserPromptSubmit`, `UserPromptExpansion`, `PreModelSwitch`, `PreCompact`, `WakeupFire`, `WorktreeSetup`, `CommitMessage`, `BranchName`). A `PreModelSwitch` timeout always blocks. | Still applied: a JSON deny on exit 1 blocks |
+
+- JSON fields: `hookSpecificOutput.permissionDecision` (`deny` blocks; `ask` on `PreToolUse` forces a permission prompt that auto-approve never answers, and denies when nobody can answer; `allow` is ignored), `decision: "block"` + `reason`, `continue: false` + `stopReason`, `hookSpecificOutput.additionalContext`, `updatedToolOutput` (`PostToolUse`), `commitMessage`/`branchName`, `watchPaths`, `sessionTitle`, `systemMessage` (shown to the user). A `PreToolUse` `updatedInput` that differs from the input blocks the call; `PermissionRequest` can only deny.
+- Hooks can only make things stricter: they never approve a permission or widen the sandbox. `Stop`/`SubagentStop` continuations are capped (8 in a row, `KILO_STOP_HOOK_BLOCK_CAP`; 24 per turn; 2 on unattended turns).
+- When Claude Code compatibility is on, hooks from `~/.claude/settings.json` also run for the Claude Code events (not `ConfigChange` or Kilo-only events), except in sandboxed sessions. `KILO_DISABLE_CLAUDE_CODE_HOOKS=1` turns them off.
+- Hooks run with the user's permissions outside the sandbox. Docs: https://kilo.ai/docs/customize/hooks
 
 ## TUI Settings (Ctrl+P Command Palette)
 

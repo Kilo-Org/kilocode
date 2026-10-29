@@ -3,6 +3,13 @@ import type { AgentConfig } from "./agents"
 import type { ProviderConfig } from "./providers"
 
 type SdkIndexingStatus = import("@kilocode/sdk/v2/client").IndexingStatus
+type SdkHooks = NonNullable<import("@kilocode/sdk/v2/client").Config["hooks"]>
+
+export type HookEvent = keyof SdkHooks
+export type HookGroup = NonNullable<SdkHooks[HookEvent]>[number]
+export type HookHandler = HookGroup["hooks"][number]
+/** `null` unsets an event (or all hooks) when saving. */
+export type HooksConfig = { [E in HookEvent]?: HookGroup[] | null }
 
 export interface McpOAuthConfig {
   clientId?: string
@@ -194,6 +201,7 @@ export interface Config {
   experimental?: ExperimentalConfig
   sandbox?: SandboxConfig
   indexing?: IndexingConfig
+  hooks?: HooksConfig | null
 }
 
 export interface FeatureFlags {

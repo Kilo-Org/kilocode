@@ -306,6 +306,9 @@ export const dict = {
   "notification.permission.titleSandboxEscalation": "Buiten de sandbox uitvoeren?",
   "notification.permission.descriptionSandboxEscalation":
     "Dit voert het hele commando uit zonder beperkingen voor het bestandssysteem en netwerk, alleen voor dit commando. Git moet naar .git schrijven, dat alleen-lezen is in de sandbox en bij een gekoppelde worktree buiten de worktree ligt. Bash-toestemmingsregels en automatisch goedkeuren keuren deze aanvraag nooit automatisch goed.",
+  "notification.permission.titleHookAsk": "Een hook vraagt om bevestiging",
+  "notification.permission.descriptionHookAsk":
+    "Een hook vraagt je deze aanroep te bevestigen voordat hij wordt uitgevoerd. Automatisch goedkeuren beantwoordt deze vraag nooit.",
   "ui.permission.manageAutoApprove": "Beheer automatisch goedkeuren regels",
   "ui.permission.reject": "Weigeren",
   "ui.permission.feedbackPlaceholder": "Vertel Kilo wat het anders moet doen",
@@ -864,6 +867,7 @@ export const dict = {
 
   "settings.agentBehaviour.subtab.agents": "Agenten",
   "settings.agentBehaviour.subtab.mcpServers": "MCP Servers",
+  "settings.agentBehaviour.subtab.hooks": "Hooks",
   "settings.agentBehaviour.subtab.rules": "Regels",
   "settings.agentBehaviour.subtab.workflows": "Workflows",
   "settings.agentBehaviour.subtab.skills": "Skills",
@@ -1056,7 +1060,148 @@ export const dict = {
   "settings.agentBehaviour.claudeCompat.heading": "Claude Code-compatibiliteit",
   "settings.agentBehaviour.claudeCompat.title": "Claude Code-bestanden laden",
   "settings.agentBehaviour.claudeCompat.description":
-    "Laad CLAUDE.md instructies en vaardigheden uit je Claude Code configuratiemap in sessies. Schakel dit in als je wilt dat Kilo je Claude Code instructies en vaardigheden gebruikt. Herstart vereist.",
+    "Laad CLAUDE.md instructies en vaardigheden uit je Claude Code configuratiemap in sessies. Schakel dit in als je wilt dat Kilo je Claude Code instructies en vaardigheden gebruikt. Herstart vereist. Voert ook Claude Code-hooks uit ~/.claude/settings.json uit met je gebruikersrechten: toolgebeurtenissen, prompt- en sessiegebeurtenissen (UserPromptSubmit, SessionStart, ...), Stop- en subagentgebeurtenissen, compactie en meldingen.",
+  "settings.agentBehaviour.hooks.description":
+    "Voer je eigen opdrachten uit wanneer de agent iets doet: voor of na een toolaanroep, wanneer je een prompt verstuurt, wanneer een sessie start, wanneer de agent stopt, voor compactie en meer. Gebruikt het hooks-formaat van Claude Code.",
+  "settings.agentBehaviour.hooks.warning":
+    "Hooks voeren shell-opdrachten uit met je volledige gebruikersrechten, buiten de sandbox. Voeg alleen opdrachten toe die je vertrouwt.",
+  "settings.agentBehaviour.hooks.scope":
+    "Opgeslagen in je globale configuratie. Hooks in de projectconfiguratie worden genegeerd.",
+  "settings.agentBehaviour.hooks.openConfig": "Configuratiebestand openen",
+  "settings.agentBehaviour.hooks.empty": "Nog geen hooks.",
+  "settings.agentBehaviour.hooks.add": "Hook toevoegen",
+  "settings.agentBehaviour.hooks.allTools": "Alles",
+  "settings.agentBehaviour.hooks.badge.timeout": "Timeout {{seconds}}s",
+  "settings.agentBehaviour.hooks.badge.block": "Blokkeert bij fout",
+  "settings.agentBehaviour.hooks.badge.exec": "Geen shell",
+  "settings.agentBehaviour.hooks.inherited": "Uit andere configuratie",
+  "settings.agentBehaviour.hooks.inherited.help":
+    "Deze hooks worden ook uitgevoerd. Ze komen uit een ander globaal configuratiebestand, beheerde configuratie of je organisatie; bewerk ze waar ze zijn gedefinieerd.",
+  "settings.agentBehaviour.hooks.claude": "Uit Claude Code",
+  "settings.agentBehaviour.hooks.claude.open": "Bestand openen",
+  "settings.agentBehaviour.hooks.claude.active":
+    "Deze hooks uit {{path}} worden ook uitgevoerd, behalve in sessies met sandbox.",
+  "settings.agentBehaviour.hooks.claude.off":
+    'Niet uitgevoerd: schakel "Claude Code-bestanden laden" in op het tabblad Regels en herstart daarna Kilo.',
+  "settings.agentBehaviour.hooks.claude.restart":
+    "Nog niet uitgevoerd: herstart Kilo om de Claude Code-compatibiliteit toe te passen. Worden ze daarna nog steeds niet uitgevoerd, controleer dan of KILO_DISABLE_CLAUDE_CODE_HOOKS niet is ingesteld.",
+  "settings.agentBehaviour.hooks.new": "Nieuwe hook",
+  "settings.agentBehaviour.hooks.edit": "Hook bewerken",
+  "settings.agentBehaviour.hooks.event": "Wanneer",
+  "settings.agentBehaviour.hooks.matcher": "Matcher",
+  "settings.agentBehaviour.hooks.matcher.all": "Matcht alles",
+  "settings.agentBehaviour.hooks.matcher.names": "Matcht exact: {{names}}",
+  "settings.agentBehaviour.hooks.matcher.regex": "Reguliere expressie, gematcht op elke plek in de waarde",
+  "settings.agentBehaviour.hooks.matcher.invalid": "Ongeldige reguliere expressie",
+  "settings.agentBehaviour.hooks.unmatched":
+    "Hier heet geen enkele tool {{names}}, dus deze hook wordt daarvoor nooit uitgevoerd.",
+  "settings.agentBehaviour.hooks.ifIgnored":
+    "Kilo slaat deze hook over: de voorwaarde `if` werkt alleen bij tool-events.",
+  "settings.agentBehaviour.hooks.command": "Opdracht",
+  "settings.agentBehaviour.hooks.command.help":
+    "Ontvangt de gebeurtenis als JSON via stdin en wordt uitgevoerd in de projectmap.",
+  "settings.agentBehaviour.hooks.command.required": "Voer een opdracht in",
+  "settings.agentBehaviour.hooks.exec": "Uitvoeren zonder shell",
+  "settings.agentBehaviour.hooks.exec.help":
+    "Voer de opdracht uit als programma met de onderstaande argumenten, één per regel. Er wordt geen shell gebruikt, dus ~ en $VARIABLES worden niet uitgebreid: gebruik absolute paden.",
+  "settings.agentBehaviour.hooks.args.placeholder": "Eén argument per regel",
+  "settings.agentBehaviour.hooks.timeout": "Timeout (seconden)",
+  "settings.agentBehaviour.hooks.timeout.help":
+    "Standaard {{seconds}} voor deze gebeurtenis. Een hook met een timeout wordt gestopt, samen met alle processen die hij heeft gestart.",
+  "settings.agentBehaviour.hooks.timeout.invalid": "Voer een geheel aantal seconden in, van 1 tot 86400",
+  "settings.agentBehaviour.hooks.block": "Blokkeren als de hook mislukt",
+  "settings.agentBehaviour.hooks.block.help":
+    "Standaard laat een hook die crasht of een timeout krijgt de actie gewoon doorgaan. Schakel dit in voor controles die bij een fout niets mogen doorlaten.",
+  "settings.agentBehaviour.hooks.apply": "Toepassen",
+  "settings.agentBehaviour.hooks.remove.heading": "Hook verwijderen",
+  "settings.agentBehaviour.hooks.remove.confirm":
+    'De hook "{{command}}" verwijderen? Klik op Opslaan om de wijziging toe te passen.',
+  "settings.agentBehaviour.hooks.remove.button": "Verwijderen",
+  "settings.agentBehaviour.hooks.kiloOnly": "Alleen Kilo",
+  "settings.agentBehaviour.hooks.badge.async": "Achtergrond",
+  "settings.agentBehaviour.hooks.group.tools": "Tools",
+  "settings.agentBehaviour.hooks.group.prompt": "Prompts",
+  "settings.agentBehaviour.hooks.group.session": "Sessies",
+  "settings.agentBehaviour.hooks.group.loop": "Agentlus",
+  "settings.agentBehaviour.hooks.group.compaction": "Compactie",
+  "settings.agentBehaviour.hooks.group.environment": "Omgeving",
+  "settings.agentBehaviour.hooks.group.kilo": "Kilo-gebeurtenissen",
+  "settings.agentBehaviour.hooks.event.PreToolUse.help":
+    'Voordat een tool draait. Exitcode 2 of een JSON-deny blokkeert de aanroep; "ask" laat Kilo het je eerst vragen.',
+  "settings.agentBehaviour.hooks.event.PostToolUse.help":
+    "Nadat een tool is gelukt. stderr bij exitcode 2 of additionalContext wordt aan de agent getoond, zoals lintfouten.",
+  "settings.agentBehaviour.hooks.event.PostToolUseFailure.help":
+    "Nadat een tool is mislukt, ook als een shellopdracht eindigt met een code die niet nul is. additionalContext wordt aan de agent getoond.",
+  "settings.agentBehaviour.hooks.event.PostToolBatch.help":
+    "Na een modelstap die tools heeft uitgevoerd, voor de volgende modelaanroep. Een blokkade beëindigt de beurt.",
+  "settings.agentBehaviour.hooks.event.PermissionRequest.help":
+    "Wanneer Kilo een toestemmingsvraag toont. Een JSON-deny weigert de aanroep; hooks kunnen niet goedkeuren.",
+  "settings.agentBehaviour.hooks.event.TaskCreated.help":
+    "Wanneer de agent een todo toevoegt. Een blokkade verwijdert die todo.",
+  "settings.agentBehaviour.hooks.event.TaskCompleted.help":
+    "Wanneer de agent een todo als voltooid markeert. Een blokkade houdt hem open.",
+  "settings.agentBehaviour.hooks.event.UserPromptSubmit.help":
+    "Wanneer je een prompt of opdracht verstuurt. Een blokkade weigert die; stdout wordt aan de prompt toegevoegd.",
+  "settings.agentBehaviour.hooks.event.UserPromptExpansion.help":
+    "Wanneer een eigen opdracht, vaardigheid of MCP-prompt wordt uitgevouwen. Een blokkade weigert die.",
+  "settings.agentBehaviour.hooks.event.PreModelSwitch.help":
+    'Voordat een prompt de sessie naar een ander model overzet. Een blokkade, "ask" of timeout weigert de prompt.',
+  "settings.agentBehaviour.hooks.event.PostModelSwitch.help":
+    "Nadat het model van de sessie is gewijzigd. stdout wordt aan het volgende verzoek toegevoegd.",
+  "settings.agentBehaviour.hooks.event.SessionStart.help":
+    "Wanneer een sessie start, wordt hervat, geforkt of gecompacteerd. stdout wordt aan het gesprek toegevoegd.",
+  "settings.agentBehaviour.hooks.event.SessionEnd.help":
+    "Wanneer een sessie wordt verwijderd of Kilo afsluit. Alle SessionEnd-hooks delen een korte tijd.",
+  "settings.agentBehaviour.hooks.event.InstructionsLoaded.help":
+    "Wanneer een instructiebestand zoals AGENTS.md of CLAUDE.md wordt geladen.",
+  "settings.agentBehaviour.hooks.event.Stop.help":
+    "Wanneer de agent klaar is met antwoorden. Een blokkade laat hem doorgaan, maximaal 8 keer achter elkaar.",
+  "settings.agentBehaviour.hooks.event.SubagentStop.help":
+    "Wanneer een subagent klaar is. Een blokkade laat hem doorgaan.",
+  "settings.agentBehaviour.hooks.event.SubagentStart.help":
+    "Wanneer een subagent start. additionalContext wordt aan zijn eerste prompt toegevoegd.",
+  "settings.agentBehaviour.hooks.event.StopFailure.help":
+    "Wanneer een beurt eindigt met een API-fout, zoals een snelheidslimiet.",
+  "settings.agentBehaviour.hooks.event.PreCompact.help":
+    "Voordat het gesprek wordt gecompacteerd. Een blokkade slaat de compactie over.",
+  "settings.agentBehaviour.hooks.event.PostCompact.help": "Nadat het gesprek is gecompacteerd.",
+  "settings.agentBehaviour.hooks.event.Notification.help":
+    "Wanneer Kilo op je wacht: een toestemmingsvraag, een vraag of inactiviteit na een beurt.",
+  "settings.agentBehaviour.hooks.event.ConfigChange.help":
+    "Nadat Kilo zijn configuratie heeft gewijzigd. Kan niet blokkeren.",
+  "settings.agentBehaviour.hooks.event.FileChanged.help": "Wanneer een bewaakt bestand in de projectmap verandert.",
+  "settings.agentBehaviour.hooks.event.CwdChanged.help":
+    "Wanneer een shellopdracht in een andere map draait dan de vorige.",
+  "settings.agentBehaviour.hooks.event.GoalReport.help":
+    "Voordat een /goal als voltooid of geblokkeerd wordt gemarkeerd. Een blokkade houdt het doel actief.",
+  "settings.agentBehaviour.hooks.event.WakeupFire.help":
+    "Voordat een geplande wakeup of crontaak draait. Een blokkade slaat die over.",
+  "settings.agentBehaviour.hooks.event.WorktreeSetup.help":
+    "Nadat een beheerde worktree is gemaakt en zijn setupscript is uitgevoerd. Een blokkade markeert de setup als mislukt.",
+  "settings.agentBehaviour.hooks.event.WorktreeTeardown.help": "Voordat een beheerde worktree wordt verwijderd.",
+  "settings.agentBehaviour.hooks.event.CommitMessage.help":
+    "Nadat een commitbericht is gegenereerd. hookSpecificOutput.commitMessage vervangt het; een blokkade weigert het.",
+  "settings.agentBehaviour.hooks.event.BranchName.help":
+    "Nadat een branchnaam voor een worktree is gegenereerd. hookSpecificOutput.branchName vervangt die; een blokkade behoudt de huidige naam.",
+  "settings.agentBehaviour.hooks.matcher.values": "Matcht {{field}}: {{values}}. Scheid meerdere waarden met |.",
+  "settings.agentBehaviour.hooks.matcher.kind.tool":
+    "Laat leeg om elke tool te matchen. Scheid toolnamen met | (edit|write). Al het andere is een reguliere expressie. Namen van zowel Kilo als Claude Code werken (bash of Bash); MCP-tools zien eruit als github_create_issue.",
+  "settings.agentBehaviour.hooks.matcher.kind.file":
+    "Bestandsnamen in de projectmap om te bewaken, gescheiden door | (.envrc|.env). Elke naam wordt letterlijk genomen.",
+  "settings.agentBehaviour.hooks.matcher.kind.model":
+    "Modelnamen gescheiden door |, of een reguliere expressie. De canonieke naam (claude-sonnet-4-5), de model-id en provider/model matchen allemaal.",
+  "settings.agentBehaviour.hooks.matcher.kind.name":
+    "Matcht {{field}}. Scheid namen met |, of gebruik een reguliere expressie. Laat leeg om alles te matchen.",
+  "settings.agentBehaviour.hooks.matcher.files": "Bewaakt: {{names}}",
+  "settings.agentBehaviour.hooks.matcher.filesNone":
+    "Bewaakt zelf geen bestand; draait voor paden die andere hooks toevoegen met watchPaths.",
+  "settings.agentBehaviour.hooks.matcher.none": "Deze gebeurtenis heeft geen matcher; de hook draait elke keer.",
+  "settings.agentBehaviour.hooks.async": "Op de achtergrond uitvoeren",
+  "settings.agentBehaviour.hooks.async.help":
+    "Kilo wacht niet op de hook; de uitvoer en exitcode worden alleen gelogd.",
+  "settings.agentBehaviour.hooks.async.noBlock":
+    "Een hook op de achtergrond kan niet blokkeren en geen context toevoegen.",
+  "settings.agentBehaviour.hooks.claude.skipped": "Niet uitgevoerd door Kilo: {{items}}",
   "settings.agentBehaviour.removeMcp.title": "Verwijder MCP-server",
   "settings.agentBehaviour.removeMcp.confirm":
     'MCP-server "{{name}}" verwijderen? Dit zal deze uit je configuratie verwijderen.',
@@ -1220,6 +1365,7 @@ export const dict = {
   "chat.memory.command.failed": "Geheugenopdracht mislukt",
   "chat.memory.updated": "Memory updated",
   "chat.memory.rebuild": "Memory index rebuilt",
+  "chat.hookFeedback": "Hookfeedback ({{event}})",
 
   "settings.commitMessage.title": "Commit Message",
   "settings.commitMessage.override.title": "Aangepaste prompt gebruiken",

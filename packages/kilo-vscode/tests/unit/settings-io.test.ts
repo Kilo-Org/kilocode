@@ -3,6 +3,7 @@ import {
   buildExport,
   parseImport,
   MAX_IMPORT_SIZE,
+  EXCLUDED_KEYS,
   KNOWN_KEYS,
   META_VERSION,
 } from "../../webview-ui/src/components/settings/settings-io"
@@ -340,7 +341,7 @@ describe("constants", () => {
   it("KNOWN_KEYS matches all keys in the Config interface (drift guard)", async () => {
     // Read the Config interface from messages/config.ts and extract its keys.
     // If someone adds a new field to Config, this test fails as a reminder
-    // to also add it to KNOWN_KEYS in settings-io.ts.
+    // to also add it to KNOWN_KEYS (or EXCLUDED_KEYS) in settings-io.ts.
     const src = await Bun.file(require("path").join(__dirname, "../../webview-ui/src/types/messages/config.ts")).text()
     const match = src.match(/export interface Config \{([^}]+)\}/)
     expect(match).not.toBeNull()
@@ -349,6 +350,6 @@ describe("constants", () => {
     expect(keys.length).toBeGreaterThan(0)
 
     const sorted = (arr: readonly string[]) => [...arr].sort()
-    expect(sorted(KNOWN_KEYS)).toEqual(sorted(keys))
+    expect(sorted([...KNOWN_KEYS, ...EXCLUDED_KEYS])).toEqual(sorted(keys))
   })
 })

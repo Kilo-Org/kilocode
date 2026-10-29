@@ -58,6 +58,30 @@ export const PlanFollowupRuntime = {
     const { AppRuntime } = await import("@/effect/app-runtime")
     return AppRuntime.runPromise(Session.Service.use(run))
   },
+  /** PostModelSwitch for the switch to the code model; its context goes on the next model step. */
+  async switched(input: { sessionID: SessionID; from: MessageV2.User["model"]; to: MessageV2.User["model"] }) {
+    const [hooks, app, config, database, events] = await Promise.all([
+      import("@/kilocode/hooks/prompt"),
+      import("@/effect/app-runtime"),
+      import("@/config/config"),
+      import("@opencode-ai/core/database/database"),
+      import("@/event-v2-bridge"),
+    ])
+    return app.AppRuntime.runPromise(
+      Effect.gen(function* () {
+        yield* hooks.KiloHookPrompt.switched({
+          sessionID: input.sessionID,
+          from: { id: input.from.modelID, providerID: input.from.providerID, variant: input.from.variant },
+          to: { id: input.to.modelID, providerID: input.to.providerID, variant: input.to.variant },
+          source: "plan_followup",
+          sessions: yield* Session.Service,
+          config: yield* config.Config.Service,
+          database: yield* database.Database.Service,
+          events: yield* events.EventV2Bridge.Service,
+        })
+      }),
+    )
+  },
   async loop(sessionID: SessionID) {
     const [item, app] = await Promise.all([import("@/session/prompt"), import("@/effect/app-runtime")])
     return app.AppRuntime.runPromise(item.SessionPrompt.Service.use((svc) => svc.loop({ sessionID })))
@@ -581,6 +605,9 @@ export namespace PlanFollowup {
           },
           time: msg.time.created,
         }),
+      )
+      await PlanFollowupRuntime.switched({ sessionID: input.sessionID, from: user.model, to: code.model }).catch(
+        (error: unknown) => log.warn("PostModelSwitch hooks failed", { sessionID: input.sessionID, error }),
       )
       KiloSessionPromptQueue.retarget(input.sessionID, msg.id)
       return "continue"

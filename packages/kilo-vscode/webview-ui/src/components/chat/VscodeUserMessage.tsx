@@ -1,4 +1,4 @@
-import { createMemo, createSignal, Show, type Component } from "solid-js"
+import { createMemo, createSignal, For, Show, type Component } from "solid-js"
 import { UserMessageDisplay } from "@kilocode/kilo-ui/message-part"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
@@ -8,6 +8,7 @@ import { imageMime } from "../../../../src/shared/image-data-url"
 import type { Message, Part, TextPart } from "../../types/messages"
 import { BrowserReferences } from "./BrowserReferences"
 import { ReviewComments } from "./ReviewComments"
+import { notes } from "../settings/hooks-config"
 import { useLanguage } from "../../context/language"
 import { useVSCode } from "../../context/vscode"
 
@@ -28,6 +29,12 @@ interface VscodeUserMessageProps {
 }
 
 const ATTRIBUTION = /\n\n<!-- kilo-agent-manager source=([^ ]+) -->$/
+
+const note = {
+  "font-size": "var(--kilo-font-size-12)",
+  color: "var(--text-weak-base, var(--vscode-descriptionForeground))",
+  "margin-bottom": "4px",
+}
 
 export const VscodeUserMessage: Component<VscodeUserMessageProps> = (props) => {
   const language = useLanguage()
@@ -100,10 +107,34 @@ export const VscodeUserMessage: Component<VscodeUserMessageProps> = (props) => {
       </div>
     )
   })
+  // Hook feedback (Stop continuations, blocked attachments): collapsed notes so users can see why
+  // the agent kept going or why an attachment is missing.
+  const hooks = createMemo(() => notes(props.parts))
+  // A message with only hook notes copies their text.
+  const copy = createMemo(() => {
+    if (view()) return full()
+    if (feedback()) return text()?.text
+    if (text()) return undefined
+    return (
+      hooks()
+        .map((item) => item.text)
+        .join("\n\n") || undefined
+    )
+  })
   const header = createMemo(() => {
-    if (!feedback()) return undefined
+    if (!feedback() && hooks().length === 0) return undefined
     return (
       <>
+        <For each={hooks()}>
+          {(item) => (
+            <details data-slot="user-message-hook-note" style={note}>
+              <summary style={{ cursor: "pointer" }}>{language.t("chat.hookFeedback", { event: item.event })}</summary>
+              <div style={{ "white-space": "pre-wrap", "overflow-wrap": "anywhere", "margin-top": "4px" }}>
+                {item.text}
+              </div>
+            </details>
+          )}
+        </For>
         <Show when={feedback()?.review}>
           {(review) => (
             <ReviewComments comments={review().comments} sessionID={props.message.sessionID} variant="message" />
@@ -121,7 +152,7 @@ export const VscodeUserMessage: Component<VscodeUserMessageProps> = (props) => {
       message={props.message as unknown as Parameters<typeof UserMessageDisplay>[0]["message"]}
       parts={props.parts as unknown as Parameters<typeof UserMessageDisplay>[0]["parts"]}
       text={body()}
-      copyText={view() ? full() : feedback() ? text()?.text : undefined}
+      copyText={copy()}
       bubbleHeader={bubble()}
       header={header()}
       interrupted={props.interrupted}

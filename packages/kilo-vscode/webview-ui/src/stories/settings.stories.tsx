@@ -16,11 +16,24 @@ import AgentBehaviourTab from "../components/settings/AgentBehaviourTab"
 import AutoApproveTab from "../components/settings/AutoApproveTab"
 import ModeEditView from "../components/settings/ModeEditView"
 import McpEditView from "../components/settings/McpEditView"
-import type { AgentConfig, CommandConfig, Config } from "../types/messages"
+import HooksTab from "../components/settings/agent-behaviour/HooksTab"
+import HookEditView from "../components/settings/agent-behaviour/HookEditView"
+import type {
+  AgentConfig,
+  CommandConfig,
+  Config,
+  HooksConfig,
+  HooksInfoLoadedMessage,
+  Message,
+  Part,
+  PermissionRequest,
+} from "../types/messages"
 import IndexingTab from "../components/settings/IndexingTab"
 import CustomProviderDialog from "../components/settings/CustomProviderDialog"
 import { useDialog } from "@kilocode/kilo-ui/context/dialog"
 import { SidebarEmptyState } from "../components/chat/SidebarEmptyState"
+import { VscodeUserMessage } from "../components/chat/VscodeUserMessage"
+import { PermissionDock } from "../components/chat/PermissionDock"
 import { WorkStyleContext, type WorkStyleContextValue } from "../context/work-style"
 
 const meta: Meta = {
@@ -420,6 +433,252 @@ export const AgentBehaviourWorkflowsEmpty: Story = {
       </StoryProviders>
     )
   },
+}
+
+const MOCK_HOOKS: HooksConfig = {
+  PreToolUse: [
+    {
+      matcher: "bash",
+      hooks: [{ type: "command", command: "~/.config/kilo/hooks/guard-rm.sh", onFailure: "block" }],
+    },
+    { matcher: "edit|write|apply_patch", hooks: [{ type: "command", command: "~/.config/kilo/hooks/protect-env.sh" }] },
+  ],
+  PostToolUse: [
+    {
+      matcher: "edit|write",
+      hooks: [
+        { type: "command", command: "node", args: ["/Users/dev/.config/kilo/hooks/lint.js", "--fix"], timeout: 30 },
+      ],
+    },
+  ],
+  SessionStart: [{ matcher: "startup", hooks: [{ type: "command", command: "~/.config/kilo/hooks/context.sh" }] }],
+  Stop: [{ hooks: [{ type: "command", command: "~/.config/kilo/hooks/tests-pass.sh", timeout: 300 }] }],
+  PreCompact: [
+    { matcher: "auto", hooks: [{ type: "command", command: "~/.config/kilo/hooks/backup.sh", onFailure: "block" }] },
+  ],
+  Notification: [
+    {
+      matcher: "permission_prompt|idle_prompt",
+      hooks: [{ type: "command", command: "~/.config/kilo/hooks/notify.sh", async: true }],
+    },
+  ],
+  FileChanged: [
+    { matcher: ".envrc", hooks: [{ type: "command", command: "~/.config/kilo/hooks/direnv-reload.sh" }] },
+    // No matcher: watches nothing itself, runs for the paths a SessionStart hook adds with watchPaths.
+    { hooks: [{ type: "command", command: "~/.config/kilo/hooks/reload-watched.sh" }] },
+  ],
+  GoalReport: [{ matcher: "complete", hooks: [{ type: "command", command: "~/.config/kilo/hooks/verify-goal.sh" }] }],
+}
+
+const MOCK_MANAGED_HOOK = {
+  hooks: [{ type: "command" as const, command: "/opt/company/audit-log.sh", timeout: 5 }],
+}
+
+/** Seeds the data the Hooks tab requests from the extension on mount. */
+function HooksInfoSeed(props: { message: HooksInfoLoadedMessage }) {
+  onMount(() => window.postMessage(props.message, "*"))
+  return null
+}
+
+export const AgentBehaviourHooks: Story = {
+  name: "AgentBehaviourTab — hooks",
+  render: () => (
+    <StoryProviders
+      sessionID="hooks-story"
+      status="idle"
+      config={{ hooks: { ...MOCK_HOOKS, PreToolUse: [...MOCK_HOOKS.PreToolUse!, MOCK_MANAGED_HOOK] } }}
+      globalConfig={{ hooks: MOCK_HOOKS }}
+    >
+      <HooksTab claude />
+      <HooksInfoSeed
+        message={{
+          type: "hooksInfoLoaded",
+          claude: {
+            path: "/Users/dev/.claude/settings.json",
+            enabled: true,
+            hooks: {
+              PostToolUse: [{ matcher: "Edit|Write", hooks: [{ type: "command", command: "npx prettier --write" }] }],
+            },
+          },
+          tools: ["bash", "Bash", "edit", "Edit", "MultiEdit", "write", "Write", "apply_patch", "read", "Read"],
+        }}
+      />
+    </StoryProviders>
+  ),
+}
+
+export const AgentBehaviourHooksEmpty: Story = {
+  name: "AgentBehaviourTab — hooks empty state",
+  render: () => (
+    <StoryProviders sessionID="hooks-empty-story" status="idle" config={{}} globalConfig={{}}>
+      <HooksTab claude={false} />
+    </StoryProviders>
+  ),
+}
+
+/** Claude Code hooks the server runs from ~/.claude/settings.json, plus the ones it skips. */
+export const AgentBehaviourHooksClaude: Story = {
+  name: "AgentBehaviourTab — hooks from Claude Code",
+  render: () => (
+    <StoryProviders sessionID="hooks-claude-story" status="idle" config={{}} globalConfig={{}}>
+      <HooksTab claude />
+      <HooksInfoSeed
+        message={{
+          type: "hooksInfoLoaded",
+          claude: {
+            path: "/Users/dev/.claude/settings.json",
+            enabled: true,
+            hooks: {
+              PreToolUse: [
+                {
+                  matcher: "Bash",
+                  hooks: [{ type: "command", command: "~/.claude/hooks/guard.sh", if: "Bash(rm *)" }],
+                },
+              ],
+              UserPromptSubmit: [{ hooks: [{ type: "command", command: "~/.claude/hooks/prompt-context.sh" }] }],
+              Stop: [{ hooks: [{ type: "command", command: "~/.claude/hooks/notify-done.sh", async: true }] }],
+            },
+            skipped: [
+              { event: "Setup", reason: "not supported by Kilo" },
+              { event: "ConfigChange", reason: "Kilo config only" },
+              { event: "PreToolUse", command: "~/.claude/hooks/a.sh", reason: "asyncRewake" },
+              { event: "PreToolUse", command: "~/.claude/hooks/b.sh", reason: "asyncRewake" },
+            ],
+          },
+          tools: ["bash", "Bash", "edit", "Edit", "write", "Write", "read", "Read"],
+        }}
+      />
+    </StoryProviders>
+  ),
+}
+
+export const AgentBehaviourHookEdit: Story = {
+  name: "AgentBehaviourTab — edit hook",
+  render: () => (
+    <StoryProviders sessionID="hook-edit-story" status="idle" config={{}}>
+      <HookEditView
+        entry={{
+          event: "PreToolUse",
+          group: 0,
+          index: 0,
+          matcher: "bash",
+          handler: { type: "command", command: "~/.config/kilo/hooks/guard-rm.sh", timeout: 10, onFailure: "block" },
+        }}
+        event="PreToolUse"
+        onBack={noop}
+        onApply={noop}
+        onRemove={noop}
+      />
+    </StoryProviders>
+  ),
+}
+
+/** An event without a matcher that cannot block on failure: no matcher card, no onFailure switch. */
+export const AgentBehaviourHookEditLifecycle: Story = {
+  name: "AgentBehaviourTab — edit Stop hook",
+  render: () => (
+    <StoryProviders sessionID="hook-edit-lifecycle-story" status="idle" config={{}}>
+      <HookEditView
+        entry={{
+          event: "Stop",
+          group: 0,
+          index: 0,
+          handler: { type: "command", command: "~/.config/kilo/hooks/tests-pass.sh", timeout: 300 },
+        }}
+        event="Stop"
+        onBack={noop}
+        onApply={noop}
+        onRemove={noop}
+      />
+    </StoryProviders>
+  ),
+}
+
+// What hooks show outside the settings: hook notes in the chat and the prompt a PreToolUse `ask` opens.
+const HOOK_SESSION = "story-session-hooks-001"
+
+function hookMessage(id: string): Message {
+  return { id, sessionID: HOOK_SESSION, role: "user", createdAt: new Date(0).toISOString(), time: { created: 0 } }
+}
+
+function hookText(id: string, messageID: string, value: string, metadata?: Record<string, unknown>): Part {
+  return {
+    id,
+    sessionID: HOOK_SESSION,
+    messageID,
+    type: "text",
+    text: value,
+    ...(metadata ? { synthetic: true, metadata } : {}),
+  }
+}
+
+/** A Stop hook made the agent continue: the continuation message shows only a collapsed note. */
+export const HookFeedbackStop: Story = {
+  name: "AgentBehaviourTab — hooks: Stop feedback note in chat",
+  render: () => (
+    <StoryProviders sessionID={HOOK_SESSION} status="idle">
+      <div style={{ padding: "12px" }}>
+        <VscodeUserMessage
+          message={hookMessage("hook-stop-message")}
+          parts={[
+            hookText(
+              "hook-stop-part",
+              "hook-stop-message",
+              "Stop hook feedback:\n3 tests fail in packages/app. Fix them before finishing.",
+              { hook: { event: "Stop", streak: 1 } },
+            ),
+          ]}
+        />
+      </div>
+    </StoryProviders>
+  ),
+}
+
+/** A PreToolUse hook blocked an @ attachment: the user's text plus a note explaining why the file is missing. */
+export const HookFeedbackAttachment: Story = {
+  name: "AgentBehaviourTab — hooks: blocked attachment note in chat",
+  render: () => (
+    <StoryProviders sessionID={HOOK_SESSION} status="idle">
+      <div style={{ padding: "12px" }}>
+        <VscodeUserMessage
+          message={hookMessage("hook-attach-message")}
+          parts={[
+            hookText("hook-attach-user", "hook-attach-message", "Why does @.env not load in dev?"),
+            hookText(
+              "hook-attach-part",
+              "hook-attach-message",
+              "A PreToolUse hook blocked attaching .env: secrets stay out of the conversation",
+              { hook: { event: "PreToolUse" } },
+            ),
+          ]}
+        />
+      </div>
+    </StoryProviders>
+  ),
+}
+
+const HOOK_ASK: PermissionRequest = {
+  id: "perm-hook-ask",
+  sessionID: HOOK_SESSION,
+  toolName: "webfetch",
+  patterns: ["*"],
+  always: [],
+  args: {
+    hookAsk: true,
+    reason: "This host is not on the approved list.",
+    tool: "webfetch",
+    input: { url: "https://internal.example.com/export?format=csv", format: "text" },
+  },
+}
+
+/** A PreToolUse hook answered "ask": a forced prompt with the hook's reason, the tool and its input, and no auto-approve rules. */
+export const PermissionDockHookAsk: Story = {
+  name: "AgentBehaviourTab — hooks: ask permission prompt",
+  render: () => (
+    <StoryProviders sessionID={HOOK_SESSION} status="busy" permissions={[HOOK_ASK]}>
+      <PermissionDock request={HOOK_ASK} responding={false} onDecide={noop} />
+    </StoryProviders>
+  ),
 }
 
 /** Skills subtab with seeded long paths/URLs in a narrow container — regression fixture for

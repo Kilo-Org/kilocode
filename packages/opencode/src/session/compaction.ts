@@ -24,6 +24,8 @@ import { KiloCompactionPayloadRecovery } from "@/kilocode/session/compaction-pay
 import { KiloCompactionChunks } from "@/kilocode/session/compaction-chunks"
 import { SessionExport } from "@/kilocode/session-export"
 import { KiloSession } from "@/kilocode/session"
+import { KiloHookCompact } from "@/kilocode/hooks/compact"
+import { KiloHookPayload } from "@/kilocode/hooks/payload"
 // kilocode_change end
 import { RuntimeFlags } from "@/effect/runtime-flags"
 import { EventV2Bridge } from "@/event-v2-bridge"
@@ -648,7 +650,7 @@ const layer = Layer.effect(
                 : part
             yield* session.updatePart({
               ...replayPart,
-              ...(replayPart.type === "text" && { synthetic: true }),
+              ...(replayPart.type === "text" && { synthetic: true, metadata: KiloHookPayload.replayed(part) }),
               id: PartID.ascending(),
               messageID: replayMsg.id,
               sessionID: input.sessionID,
@@ -701,7 +703,7 @@ const layer = Layer.effect(
               // Internal marker for auto-compaction followups so provider plugins
               // can distinguish them from manual post-compaction user prompts.
               // This is not a stable plugin contract and may change or disappear.
-              metadata: { compaction_continue: true },
+              metadata: { compaction_continue: true, ...KiloHookPayload.continued(input.messages, userMessage.id) }, // kilocode_change - keep the turn's attendance
               synthetic: true,
               text,
               time: {
@@ -787,6 +789,13 @@ const layer = Layer.effect(
             inputTokens: processor.message.tokens.input,
             outputTokens: processor.message.tokens.output,
           },
+        })
+        yield* KiloHookCompact.compacted({
+          sessionID: input.sessionID,
+          auto: input.auto,
+          summary: summary ?? "",
+          config,
+          database,
         })
         // kilocode_change end
         yield* prune({ sessionID: input.sessionID, reason: "post-compaction" })

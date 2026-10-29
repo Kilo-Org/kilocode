@@ -500,6 +500,105 @@ describe("config overlay routes", () => {
     expect(response.status).toBe(200)
   })
 
+  test("saves global hooks even when project config defines hooks", async () => {
+    await using global = await tmpdir()
+    await using project = await tmpdir()
+    ;(Global.Path as { config: string }).config = global.path
+    const hook = { type: "command", command: "guard" }
+    // Project hooks are ignored at runtime, so they must not block writing the global ones.
+    await config(project.path, { hooks: { PreToolUse: [{ hooks: [{ ...hook, command: "project" }] }] } })
+    const before = await json<Overlay>(await req(project.path, "/config/overlay?scope=global"))
+
+    const response = await req(project.path, "/config/overlay", {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        scope: "global",
+        expected: { path: before.targets.global.path, revision: before.targets.global.revision },
+        set: { hooks: { PreToolUse: [{ matcher: "bash", hooks: [hook] }] } },
+      }),
+    })
+
+    expect(response.status).toBe(200)
+    const saved = (await Bun.file(before.targets.global.path).json()) as Config.Info
+    expect(saved.hooks).toEqual({ PreToolUse: [{ matcher: "bash", hooks: [{ type: "command", command: "guard" }] }] })
+  })
+
+  test("reports a shadowed global hooks write when another global file replaces the same event", async () => {
+    await using global = await tmpdir()
+    await using project = await tmpdir()
+    ;(Global.Path as { config: string }).config = global.path
+    // Global files are merged into one layer, where a later file's event list replaces an earlier one.
+    await Filesystem.write(path.join(global.path, "kilo.jsonc"), "{}")
+    await Filesystem.write(
+      path.join(global.path, "opencode.json"),
+      JSON.stringify({ hooks: { PreToolUse: [{ hooks: [{ type: "command", command: "legacy" }] }] } }),
+    )
+    const before = await json<Overlay>(await req(project.path, "/config/overlay?scope=global"))
+
+    const response = await req(project.path, "/config/overlay", {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        scope: "global",
+        expected: { path: before.targets.global.path, revision: before.targets.global.revision },
+        set: { hooks: { PreToolUse: [{ hooks: [{ type: "command", command: "guard" }] }] } },
+      }),
+    })
+
+    expect(response.status).toBe(409)
+    const body = (await response.json()) as { shadowedBy?: string }
+    expect(body.shadowedBy).toBe(path.join(global.path, "opencode.json"))
+  })
+
+  test("lists the Claude Code hooks Kilo runs and the tool names matchers can use", async () => {
+    await using project = await tmpdir()
+    const file = path.join(Global.Path.home, ".claude", "settings.json")
+    const guard = { type: "command", command: "guard.sh" }
+    // Claude Code accepts timeouts the Kilo config schema does not; they must not break the listing.
+    const lint = { type: "command", command: "lint.sh", timeout: 0.5 }
+    await Filesystem.write(
+      file,
+      JSON.stringify({
+        hooks: {
+          PreToolUse: [{ matcher: "Bash", hooks: [guard] }],
+          PostToolUse: [{ hooks: [lint] }],
+          // Every imported event must survive encoding, with the fields Kilo honors.
+          SessionStart: [{ matcher: "startup", hooks: [{ ...guard, async: true, shell: "bash" }] }],
+          BranchName: [{ hooks: [guard] }],
+          Setup: [{ hooks: [guard] }],
+        },
+      }),
+    )
+    try {
+      const body = await json<{
+        claude: {
+          path: string
+          enabled: boolean
+          hooks?: Config.Info["hooks"]
+          skipped: { event: string; command?: string; reason: string }[]
+        }
+        tools: string[]
+      }>(await req(project.path, "/config/hooks"))
+      expect(body.claude.path).toBe(file)
+      expect(body.claude.hooks).toEqual({
+        PreToolUse: [{ matcher: "Bash", hooks: [{ type: "command", command: "guard.sh" }] }],
+        PostToolUse: [{ hooks: [{ type: "command", command: "lint.sh", timeout: 0.5 }] }],
+        SessionStart: [
+          { matcher: "startup", hooks: [{ type: "command", command: "guard.sh", async: true, shell: "bash" }] },
+        ],
+      })
+      expect(body.claude.skipped).toEqual([
+        { event: "BranchName", reason: "Kilo-only event" },
+        { event: "Setup", reason: "not supported by Kilo" },
+      ])
+      // Kilo tool ids and the Claude Code names matchers use for them.
+      expect(body.tools).toEqual(expect.arrayContaining(["bash", "Bash", "edit", "Edit", "MultiEdit"]))
+    } finally {
+      await rm(file, { force: true })
+    }
+  })
+
   test("surfaces config validation errors as a typed 400 instead of an opaque 500", async () => {
     await using project = await tmpdir()
     const before = await json<Overlay>(await req(project.path, "/config/overlay?scope=project"))

@@ -288,6 +288,7 @@ export const RunCommand = effectCmd({
     const { KiloRunDrain } = yield* Effect.promise(() => import("@/kilocode/cli/run-drain"))
     const { KiloHeadless } = yield* Effect.promise(() => import("@/kilocode/permission/headless"))
     const { KiloRun, KiloRunDaemon } = yield* Effect.promise(() => import("@/kilocode/cli/cmd/run"))
+    const { KiloSessionPhase } = yield* Effect.promise(() => import("@/kilocode/session/phase"))
     // kilocode_change end
     const agentSvc = yield* Agent.Service
     const flags = yield* RuntimeFlags.Service
@@ -915,10 +916,13 @@ export const RunCommand = effectCmd({
               if ("data" in props.error && props.error.data && "message" in props.error.data) {
                 err = String(props.error.data.message)
               }
-              error = error ? error + EOL + err : err
-              // kilocode_change start - stderr first so --format json still surfaces the diagnostic
+              // kilocode_change start - admission errors (a rejected prompt, a hook notice) are shown but do not
+              // fail the run; a rejected prompt still fails it through the prompt or command request's error
+              const admission = KiloSessionPhase.admission(event)
+              if (!admission) error = error ? error + EOL + err : err
+              // stderr first so --format json still surfaces the diagnostic
               UI.error(err)
-              emit("error", { error: props.error })
+              emit("error", { error: props.error, ...(admission ? { phase: "admission" } : {}) })
               // kilocode_change end
             }
 
@@ -947,7 +951,11 @@ export const RunCommand = effectCmd({
               if (!KiloRunAuto.allowed(tracked, permission.sessionID)) continue // kilocode_change
               // kilocode_change start - skill shell batches need an interactive human decision. The server ignores
               // non-interactive approvals, so headless runs must reject explicitly rather than leave them pending.
-              if (permission.metadata?.["skillShell"] === true || permission.metadata?.["sandboxEscalation"] === true) {
+              if (
+                permission.metadata?.["skillShell"] === true ||
+                permission.metadata?.["sandboxEscalation"] === true ||
+                permission.metadata?.["hookAsk"] === true
+              ) {
                 await client.permission.reply({ requestID: permission.id, reply: "reject" })
                 continue
               }

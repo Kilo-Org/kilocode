@@ -1071,7 +1071,7 @@ class SessionController(
         permissions.lastOrNull { manual(it.metadata) }
 
     private fun manual(metadata: Map<String, String>): Boolean =
-        metadata["skillShell"] == "true" || metadata["sandboxEscalation"] == "true"
+        metadata["skillShell"] == "true" || metadata["sandboxEscalation"] == "true" || metadata["hookAsk"] == "true"
 
     private fun updatePermission(id: String, state: PermissionRequestState, message: String? = null) {
         assertEdt()

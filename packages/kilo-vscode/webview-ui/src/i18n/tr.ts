@@ -302,6 +302,9 @@ export const dict = {
   "notification.permission.titleSandboxEscalation": "Korumalı alan dışında çalıştırılsın mı?",
   "notification.permission.descriptionSandboxEscalation":
     "Bu, tüm komutu dosya sistemi ve ağ kısıtlamaları kaldırılmış olarak yalnızca bu komut için çalıştırır. Git, korumalı alanda salt okunur olan ve bağlı bir worktree'de worktree dışında kalan .git dosyasına yazmalıdır. Bash izin kuralları ve otomatik onay bu istemi hiçbir zaman otomatik olarak onaylamaz.",
+  "notification.permission.titleHookAsk": "Bir hook onay istiyor",
+  "notification.permission.descriptionHookAsk":
+    "Bir hook, bu çağrı çalışmadan önce onaylamanızı istiyor. Otomatik onay bu istemi hiçbir zaman yanıtlamaz.",
   "ui.permission.manageAutoApprove": "Otomatik Onay Kurallarını Yönet",
   "ui.permission.reject": "Reddet",
   "ui.permission.feedbackPlaceholder": "Kilo'ya farklı ne yapması gerektiğini söyleyin",
@@ -861,6 +864,7 @@ export const dict = {
 
   "settings.agentBehaviour.subtab.agents": "Ajanlar",
   "settings.agentBehaviour.subtab.mcpServers": "MCP Sunucuları",
+  "settings.agentBehaviour.subtab.hooks": "Hook'lar",
   "settings.agentBehaviour.subtab.rules": "Kurallar",
   "settings.agentBehaviour.subtab.workflows": "İş Akışları",
   "settings.agentBehaviour.subtab.skills": "Beceriler",
@@ -1049,7 +1053,140 @@ export const dict = {
   "settings.agentBehaviour.claudeCompat.heading": "Claude Code Uyumluluğu",
   "settings.agentBehaviour.claudeCompat.title": "Claude Code Dosyalarını Yükle",
   "settings.agentBehaviour.claudeCompat.description":
-    "Claude Code yapılandırma dizininizdeki CLAUDE.md talimatlarını ve becerilerini oturumlara yükleyin. Kilo'nun Claude Code talimatlarınızı ve becerilerinizi kullanmasını istiyorsanız bunu etkinleştirin. Yeniden başlatma gerektirir.",
+    "Claude Code yapılandırma dizininizdeki CLAUDE.md talimatlarını ve becerilerini oturumlara yükleyin. Kilo'nun Claude Code talimatlarınızı ve becerilerinizi kullanmasını istiyorsanız bunu etkinleştirin. Yeniden başlatma gerektirir. Ayrıca ~/.claude/settings.json içindeki Claude Code hook'larını kullanıcı izinlerinizle çalıştırır: araç olayları, istem ve oturum olayları (UserPromptSubmit, SessionStart, ...), Stop ve alt ajan olayları, sıkıştırma ve bildirimler.",
+  "settings.agentBehaviour.hooks.description":
+    "Ajan bir şey yaptığında kendi komutlarınızı çalıştırın: bir araç çağrısından önce veya sonra, bir istem gönderdiğinizde, bir oturum başladığında, ajan durduğunda, sıkıştırmadan önce ve daha fazlası. Claude Code hook biçimini kullanır.",
+  "settings.agentBehaviour.hooks.warning":
+    "Hook'lar, shell komutlarını sandbox dışında ve tam kullanıcı izinlerinizle çalıştırır. Yalnızca güvendiğiniz komutları ekleyin.",
+  "settings.agentBehaviour.hooks.scope":
+    "Küresel yapılandırmanıza kaydedilir. Proje yapılandırmasındaki hook'lar yok sayılır.",
+  "settings.agentBehaviour.hooks.openConfig": "Yapılandırma dosyasını aç",
+  "settings.agentBehaviour.hooks.empty": "Henüz hook yok.",
+  "settings.agentBehaviour.hooks.add": "Hook ekle",
+  "settings.agentBehaviour.hooks.allTools": "Tümü",
+  "settings.agentBehaviour.hooks.badge.timeout": "Zaman aşımı {{seconds}} sn",
+  "settings.agentBehaviour.hooks.badge.block": "Hata durumunda engeller",
+  "settings.agentBehaviour.hooks.badge.exec": "Shell yok",
+  "settings.agentBehaviour.hooks.inherited": "Diğer yapılandırmadan",
+  "settings.agentBehaviour.hooks.inherited.help":
+    "Bu hook'lar da çalışır. Başka bir küresel yapılandırma dosyasından, yönetilen yapılandırmadan veya kuruluşunuzdan gelirler; onları tanımlandıkları yerde düzenleyin.",
+  "settings.agentBehaviour.hooks.claude": "Claude Code'dan",
+  "settings.agentBehaviour.hooks.claude.open": "Dosyayı aç",
+  "settings.agentBehaviour.hooks.claude.active": "{{path}} içindeki bu hook'lar da çalışır; sandbox oturumları hariç.",
+  "settings.agentBehaviour.hooks.claude.off":
+    'Çalıştırılmıyor: Kurallar sekmesinde "Claude Code Dosyalarını Yükle" seçeneğini açın, ardından Kilo uygulamasını yeniden başlatın.',
+  "settings.agentBehaviour.hooks.claude.restart":
+    "Henüz çalıştırılmadı: Claude Code uyumluluğunu uygulamak için Kilo'yu yeniden başlatın. Hâlâ çalışmıyorlarsa KILO_DISABLE_CLAUDE_CODE_HOOKS değişkeninin ayarlanmadığını kontrol edin.",
+  "settings.agentBehaviour.hooks.new": "Yeni hook",
+  "settings.agentBehaviour.hooks.edit": "Hook'u düzenle",
+  "settings.agentBehaviour.hooks.event": "Ne zaman",
+  "settings.agentBehaviour.hooks.matcher": "Eşleştirici",
+  "settings.agentBehaviour.hooks.matcher.all": "Her şeyle eşleşir",
+  "settings.agentBehaviour.hooks.matcher.names": "Tam olarak eşleşir: {{names}}",
+  "settings.agentBehaviour.hooks.matcher.regex": "Normal ifade; değerin herhangi bir yerinde eşleşir",
+  "settings.agentBehaviour.hooks.matcher.invalid": "Geçersiz normal ifade",
+  "settings.agentBehaviour.hooks.unmatched":
+    "Burada {{names}} adında bir araç yok; bu nedenle bu hook onun için hiç çalışmaz.",
+  "settings.agentBehaviour.hooks.ifIgnored": "Kilo bu hook'u atlar: `if` koşulu yalnızca araç olaylarında çalışır.",
+  "settings.agentBehaviour.hooks.command": "Komut",
+  "settings.agentBehaviour.hooks.command.help": "Olayı stdin üzerinden JSON olarak alır ve proje klasöründe çalışır.",
+  "settings.agentBehaviour.hooks.command.required": "Bir komut girin",
+  "settings.agentBehaviour.hooks.exec": "Shell olmadan çalıştır",
+  "settings.agentBehaviour.hooks.exec.help":
+    "Komutu, aşağıdaki argümanlarla (her satıra bir tane) bir program olarak çalıştırır. Shell kullanılmaz, bu nedenle ~ ve $VARIABLES genişletilmez: mutlak yollar kullanın.",
+  "settings.agentBehaviour.hooks.args.placeholder": "Her satıra bir argüman",
+  "settings.agentBehaviour.hooks.timeout": "Zaman aşımı (saniye)",
+  "settings.agentBehaviour.hooks.timeout.help":
+    "Bu olay için varsayılan: {{seconds}}. Zaman aşımına uğrayan bir hook, başlattığı tüm süreçlerle birlikte durdurulur.",
+  "settings.agentBehaviour.hooks.timeout.invalid": "1 ile 86400 arasında tam sayı olarak saniye girin",
+  "settings.agentBehaviour.hooks.block": "Hook başarısız olursa engelle",
+  "settings.agentBehaviour.hooks.block.help":
+    "Varsayılan olarak, çöken veya zaman aşımına uğrayan bir hook işlemin devam etmesine izin verir. Hata durumunda geçişe izin vermemesi gereken korumalar için bunu açın.",
+  "settings.agentBehaviour.hooks.apply": "Uygula",
+  "settings.agentBehaviour.hooks.remove.heading": "Hook'u kaldır",
+  "settings.agentBehaviour.hooks.remove.confirm":
+    '"{{command}}" komutunu çalıştıran hook kaldırılsın mı? Değişikliği uygulamak için Kaydet düğmesine tıklayın.',
+  "settings.agentBehaviour.hooks.remove.button": "Kaldır",
+  "settings.agentBehaviour.hooks.kiloOnly": "Yalnızca Kilo",
+  "settings.agentBehaviour.hooks.badge.async": "Arka plan",
+  "settings.agentBehaviour.hooks.group.tools": "Araçlar",
+  "settings.agentBehaviour.hooks.group.prompt": "İstemler",
+  "settings.agentBehaviour.hooks.group.session": "Oturumlar",
+  "settings.agentBehaviour.hooks.group.loop": "Ajan döngüsü",
+  "settings.agentBehaviour.hooks.group.compaction": "Sıkıştırma",
+  "settings.agentBehaviour.hooks.group.environment": "Ortam",
+  "settings.agentBehaviour.hooks.group.kilo": "Kilo olayları",
+  "settings.agentBehaviour.hooks.event.PreToolUse.help":
+    'Bir araç çalışmadan önce. Çıkış kodu 2 veya JSON deny çağrıyı engeller; "ask" Kilo\'nun önce size sormasını sağlar.',
+  "settings.agentBehaviour.hooks.event.PostToolUse.help":
+    "Bir araç başarılı olduktan sonra. Çıkış kodu 2'nin stderr çıktısı veya additionalContext, lint hataları gibi, ajana gösterilir.",
+  "settings.agentBehaviour.hooks.event.PostToolUseFailure.help":
+    "Bir araç başarısız olduktan sonra; sıfırdan farklı kodla biten bir shell komutu da dahil. additionalContext ajana gösterilir.",
+  "settings.agentBehaviour.hooks.event.PostToolBatch.help":
+    "Araç çalıştıran bir model adımından sonra, sonraki model çağrısından önce. Engelleme turu bitirir.",
+  "settings.agentBehaviour.hooks.event.PermissionRequest.help":
+    "Kilo bir izin istemi gösterdiğinde. JSON deny çağrıyı reddeder; hook'lar onay veremez.",
+  "settings.agentBehaviour.hooks.event.TaskCreated.help":
+    "Ajan bir yapılacak öğesi eklediğinde. Engelleme o öğeyi kaldırır.",
+  "settings.agentBehaviour.hooks.event.TaskCompleted.help":
+    "Ajan bir yapılacak öğesini tamamlandı olarak işaretlediğinde. Engelleme onu açık tutar.",
+  "settings.agentBehaviour.hooks.event.UserPromptSubmit.help":
+    "Bir istem veya komut gönderdiğinizde. Engelleme onu reddeder; stdout isteme eklenir.",
+  "settings.agentBehaviour.hooks.event.UserPromptExpansion.help":
+    "Özel bir komut, beceri veya MCP istemi genişletildiğinde. Engelleme onu reddeder.",
+  "settings.agentBehaviour.hooks.event.PreModelSwitch.help":
+    'Bir istem oturumu başka bir modele geçirmeden önce. Engelleme, "ask" veya zaman aşımı istemi reddeder.',
+  "settings.agentBehaviour.hooks.event.PostModelSwitch.help":
+    "Oturumun modeli değiştikten sonra. stdout sonraki isteğe eklenir.",
+  "settings.agentBehaviour.hooks.event.SessionStart.help":
+    "Bir oturum başladığında, devam ettiğinde, çatallandığında veya sıkıştırıldığında. stdout konuşmaya eklenir.",
+  "settings.agentBehaviour.hooks.event.SessionEnd.help":
+    "Bir oturum silindiğinde veya Kilo kapandığında. Tüm SessionEnd hook'ları kısa bir süreyi paylaşır.",
+  "settings.agentBehaviour.hooks.event.InstructionsLoaded.help":
+    "AGENTS.md veya CLAUDE.md gibi bir talimat dosyası yüklendiğinde.",
+  "settings.agentBehaviour.hooks.event.Stop.help":
+    "Ajan yanıt vermeyi bitirdiğinde. Engelleme onu devam ettirir, art arda en fazla 8 kez.",
+  "settings.agentBehaviour.hooks.event.SubagentStop.help": "Bir alt ajan bittiğinde. Engelleme onu devam ettirir.",
+  "settings.agentBehaviour.hooks.event.SubagentStart.help":
+    "Bir alt ajan başladığında. additionalContext onun ilk istemine eklenir.",
+  "settings.agentBehaviour.hooks.event.StopFailure.help": "Bir tur, hız sınırı gibi bir API hatasıyla bittiğinde.",
+  "settings.agentBehaviour.hooks.event.PreCompact.help": "Konuşma sıkıştırılmadan önce. Engelleme sıkıştırmayı atlar.",
+  "settings.agentBehaviour.hooks.event.PostCompact.help": "Konuşma sıkıştırıldıktan sonra.",
+  "settings.agentBehaviour.hooks.event.Notification.help":
+    "Kilo sizi beklediğinde: bir izin istemi, bir soru veya bir turdan sonra boşta kalma.",
+  "settings.agentBehaviour.hooks.event.ConfigChange.help": "Kilo yapılandırmasını değiştirdikten sonra. Engelleyemez.",
+  "settings.agentBehaviour.hooks.event.FileChanged.help": "Proje klasöründe izlenen bir dosya değiştiğinde.",
+  "settings.agentBehaviour.hooks.event.CwdChanged.help":
+    "Bir shell komutu öncekinden farklı bir klasörde çalıştığında.",
+  "settings.agentBehaviour.hooks.event.GoalReport.help":
+    "Bir /goal tamamlandı veya engellendi olarak işaretlenmeden önce. Engelleme hedefi sürdürür.",
+  "settings.agentBehaviour.hooks.event.WakeupFire.help":
+    "Zamanlanmış bir uyandırma veya cron görevi çalışmadan önce. Engelleme onu atlar.",
+  "settings.agentBehaviour.hooks.event.WorktreeSetup.help":
+    "Yönetilen bir worktree oluşturulduktan ve kurulum betiği çalıştıktan sonra. Engelleme kurulumu başarısız olarak işaretler.",
+  "settings.agentBehaviour.hooks.event.WorktreeTeardown.help": "Yönetilen bir worktree kaldırılmadan önce.",
+  "settings.agentBehaviour.hooks.event.CommitMessage.help":
+    "Bir commit mesajı oluşturulduktan sonra. hookSpecificOutput.commitMessage onu değiştirir; engelleme onu reddeder.",
+  "settings.agentBehaviour.hooks.event.BranchName.help":
+    "Bir worktree için dal adı oluşturulduktan sonra. hookSpecificOutput.branchName onu değiştirir; engelleme mevcut adı korur.",
+  "settings.agentBehaviour.hooks.matcher.values": "{{field}} ile eşleşir: {{values}}. Birden çok değeri | ile ayırın.",
+  "settings.agentBehaviour.hooks.matcher.kind.tool":
+    "Tüm araçlarla eşleşmesi için boş bırakın. Araç adlarını | ile ayırın (edit|write). Bunun dışındaki her şey normal ifade olarak değerlendirilir. Hem Kilo hem Claude Code adları çalışır (bash veya Bash); MCP araçları github_create_issue gibi görünür.",
+  "settings.agentBehaviour.hooks.matcher.kind.file":
+    "Proje klasöründe izlenecek dosya adları, | ile ayrılmış (.envrc|.env). Her ad olduğu gibi alınır.",
+  "settings.agentBehaviour.hooks.matcher.kind.model":
+    "| ile ayrılmış model adları veya bir normal ifade. Kanonik ad (claude-sonnet-4-5), model kimliği ve sağlayıcı/model eşleşir.",
+  "settings.agentBehaviour.hooks.matcher.kind.name":
+    "{{field}} ile eşleşir. Adları | ile ayırın veya bir normal ifade kullanın. Tümüyle eşleşmesi için boş bırakın.",
+  "settings.agentBehaviour.hooks.matcher.files": "İzlenen: {{names}}",
+  "settings.agentBehaviour.hooks.matcher.filesNone":
+    "Kendi başına hiçbir dosyayı izlemez; diğer hook'ların watchPaths ile eklediği yollar için çalışır.",
+  "settings.agentBehaviour.hooks.matcher.none": "Bu olayın eşleştiricisi yok; hook her seferinde çalışır.",
+  "settings.agentBehaviour.hooks.async": "Arka planda çalıştır",
+  "settings.agentBehaviour.hooks.async.help":
+    "Kilo hook'u beklemez; çıktısı ve çıkış kodu yalnızca günlüğe kaydedilir.",
+  "settings.agentBehaviour.hooks.async.noBlock": "Arka plandaki bir hook engelleyemez ve bağlam ekleyemez.",
+  "settings.agentBehaviour.hooks.claude.skipped": "Kilo tarafından çalıştırılmaz: {{items}}",
   "settings.agentBehaviour.removeMcp.title": "MCP sunucusunu kaldır",
   "settings.agentBehaviour.removeMcp.confirm":
     '"{{name}}" MCP sunucusu kaldırılsın mı? Bu, yapılandırmanızdan kaldırılacak.',
@@ -1208,6 +1345,7 @@ export const dict = {
   "chat.memory.command.failed": "Bellek komutu başarısız oldu",
   "chat.memory.updated": "Memory updated",
   "chat.memory.rebuild": "Memory index rebuilt",
+  "chat.hookFeedback": "Hook geri bildirimi ({{event}})",
 
   "settings.commitMessage.title": "Commit Message",
   "settings.commitMessage.override.title": "Özel prompt Kullan",

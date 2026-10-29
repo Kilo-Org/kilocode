@@ -56,6 +56,7 @@ import type {
   Config,
   ConfigCollections,
   FeatureFlags,
+  HooksConfig,
   IndexingStatus,
   KiloEmbeddingModelCatalog,
 } from "./config"
@@ -747,6 +748,21 @@ export interface BrowserSettingsLoadedMessage {
 export interface ClaudeCompatSettingLoadedMessage {
   type: "claudeCompatSettingLoaded"
   enabled: boolean
+}
+
+/** Data for the Hooks settings tab, from the running server. */
+export interface HooksInfoLoadedMessage {
+  type: "hooksInfoLoaded"
+  /** Claude Code user hooks (~/.claude/settings.json) as the server would run them; `enabled` is false when the server was started with them turned off. */
+  claude: {
+    path: string
+    enabled: boolean
+    hooks?: HooksConfig
+    /** Claude Code events and handlers Kilo does not run, with the reason. */
+    skipped?: { event: string; command?: string; reason: string }[]
+  }
+  /** Tool names hook matchers can use here: Kilo tool ids, their Claude Code names, MCP tools. */
+  tools: string[]
 }
 
 export interface ExtensionSettings {
@@ -1889,6 +1905,7 @@ export type ExtensionMessage =
   | SuggestionErrorMessage
   | BrowserSettingsLoadedMessage
   | ClaudeCompatSettingLoadedMessage
+  | HooksInfoLoadedMessage
   | ConfigLoadedMessage
   | ConfigUpdatedMessage
   | ConfigUpdateFailedMessage

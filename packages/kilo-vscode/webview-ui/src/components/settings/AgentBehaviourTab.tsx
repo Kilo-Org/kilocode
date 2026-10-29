@@ -19,6 +19,7 @@ import ModeEditView from "./ModeEditView"
 import ModeCreateView from "./ModeCreateView"
 import McpEditView from "./McpEditView"
 import WorkflowsTab from "./agent-behaviour/WorkflowsTab"
+import HooksTab from "./agent-behaviour/HooksTab"
 import {
   mcpConfigScope,
   mcpEnabledPatch,
@@ -31,7 +32,7 @@ import {
 import { parseImport, MAX_IMPORT_SIZE } from "./mode-io"
 import type { ImportError } from "./mode-io"
 
-type SubtabId = "agents" | "mcpServers" | "rules" | "workflows" | "skills"
+type SubtabId = "agents" | "mcpServers" | "hooks" | "rules" | "workflows" | "skills"
 
 interface SubtabConfig {
   id: SubtabId
@@ -41,6 +42,7 @@ interface SubtabConfig {
 const subtabs: SubtabConfig[] = [
   { id: "agents", labelKey: "settings.agentBehaviour.subtab.agents" },
   { id: "mcpServers", labelKey: "settings.agentBehaviour.subtab.mcpServers" },
+  { id: "hooks", labelKey: "settings.agentBehaviour.subtab.hooks" },
   { id: "rules", labelKey: "settings.agentBehaviour.subtab.rules" },
   { id: "workflows", labelKey: "settings.agentBehaviour.subtab.workflows" },
   { id: "skills", labelKey: "settings.agentBehaviour.subtab.skills" },
@@ -1315,6 +1317,8 @@ const AgentBehaviourTab: Component<Props> = (props) => {
         return renderAgentsSubtab()
       case "mcpServers":
         return renderMcpSubtab()
+      case "hooks":
+        return <HooksTab claude={claudeCompat()} />
       case "rules":
         return renderRulesSubtab()
       case "workflows":
@@ -1332,6 +1336,7 @@ const AgentBehaviourTab: Component<Props> = (props) => {
       <div
         style={{
           display: "flex",
+          "flex-wrap": "wrap",
           gap: "0",
           "border-bottom": "1px solid var(--vscode-panel-border)",
           "margin-bottom": "16px",

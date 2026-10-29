@@ -2,6 +2,7 @@ import { Effect } from "effect"
 import type { Agent } from "@/agent/agent"
 import type { Config } from "@/config/config"
 import type { Provider } from "@/provider/provider"
+import { KiloHookPayload } from "@/kilocode/hooks/payload"
 import { ProviderTransform } from "@/provider/transform"
 import type { LLM } from "@/session/llm"
 import { MessageV2 } from "@/session/message-v2"
@@ -138,6 +139,7 @@ export namespace KiloCompactionChunks {
             sessionID: input.sessionID,
             type: "text" as const,
             synthetic: true,
+            metadata: KiloHookPayload.summary({ info: input.replay.info, parts: input.replay.parts }),
             text: [
               "The original replayed request was too large to send after compaction.",
               "Use this compacted representation of that request instead:",
