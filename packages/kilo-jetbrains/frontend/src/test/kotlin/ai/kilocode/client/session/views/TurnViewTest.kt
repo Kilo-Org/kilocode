@@ -173,6 +173,62 @@ class TurnViewTest : BasePlatformTestCase() {
         assertEquals("Assistant message: Read SessionModel.kt", mv.accessibleContext.accessibleName)
     }
 
+    // upsertMessage replaces the Message instance while the view keeps the original, so a tool part
+    // added after construction exists only in the model's replacement. The summary must still see it.
+    fun `test tool part added after construction is exposed`() {
+        val mv = MessageView(msg("a1", "assistant"), openFile)
+        assertEquals("Assistant message", mv.accessibleContext.accessibleName)
+
+        mv.upsertPart(Tool("t1", "read", toolKind("read")).apply {
+            state = ToolExecState.COMPLETED
+            title = "Read SessionModel.kt"
+        })
+
+        assertEquals("Assistant message: Read SessionModel.kt", mv.accessibleContext.accessibleName)
+    }
+
+    fun `test accessible summary condenses markdown`() {
+        val message = msg("a1", "assistant").also {
+            it.parts["p1"] = text("p1", "## Plan\n**Done** with [a.kt](https://example.com) and `code`")
+        }
+
+        val mv = MessageView(message, openFile)
+
+        assertEquals("Assistant message: Plan Done with a.kt and code", mv.accessibleContext.accessibleName)
+    }
+
+    fun `test user mention link announces the path`() {
+        val message = msg("u1", "user").also {
+            it.parts["p1"] = text("p1", "Look at [src/App.kt](file:///repo/src/App.kt) please")
+        }
+
+        val mv = MessageView(message, openFile)
+
+        assertEquals("User message: Look at src/App.kt please", mv.accessibleContext.accessibleName)
+    }
+
+    // Once the summary is capped, later tokens cannot change the announced prefix, so they must not
+    // trigger a rescan of the growing source.
+    fun `test capped summary stays stable across further deltas`() {
+        val mv = MessageView(msg("a1", "assistant"), openFile)
+        mv.upsertPart(text("p1", "x".repeat(200)))
+        val capped = mv.accessibleContext.accessibleName
+
+        mv.appendDelta("p1", "y".repeat(200))
+
+        assertEquals(capped, mv.accessibleContext.accessibleName)
+    }
+
+    fun `test deltas to a later text part do not replace the first summary`() {
+        val mv = MessageView(msg("a1", "assistant"), openFile)
+        mv.upsertPart(text("p1", "first"))
+        mv.upsertPart(text("p2", "second"))
+
+        mv.appendDelta("p2", " more")
+
+        assertEquals("Assistant message: first", mv.accessibleContext.accessibleName)
+    }
+
     fun `test user message uses prompt shell padding`() {
         val mv = MessageView(msg("u1", "user"), openFile)
         val ins = mv.border.getBorderInsets(mv)
