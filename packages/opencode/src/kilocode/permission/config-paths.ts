@@ -1,5 +1,5 @@
 import path from "path"
-import { existsSync, realpathSync } from "fs"
+import { existsSync, lstatSync, realpathSync } from "fs"
 import { Global } from "@opencode-ai/core/global"
 import { KilocodePaths } from "@/kilocode/paths"
 
@@ -78,22 +78,29 @@ export namespace ConfigProtection {
 
   function physical(filepath: string): string | undefined {
     try {
-      const parts: string[] = []
-      let current = path.resolve(filepath)
-      while (!existsSync(current)) {
-        const parent = path.dirname(current)
-        if (parent === current) return
-        parts.unshift(path.basename(current))
-        current = parent
+      const absolute = path.isAbsolute(filepath) ? filepath : path.resolve(filepath)
+      let current = path.parse(absolute).root
+      const parts = absolute.slice(current.length).split(process.platform === "win32" ? /[\\/]/ : /\//)
+      if (!parts.includes("..") && existsSync(absolute)) return realpathSync.native(absolute)
+      // Resolve links before following '..', including paths to files not yet created.
+      for (const part of parts) {
+        if (!part || part === ".") continue
+        current = path.join(current, part)
+        if (existsSync(current)) {
+          current = realpathSync.native(current)
+          continue
+        }
+        // A dangling link is not a new file: its eventual write target is unknown.
+        if (lstatSync(current, { throwIfNoEntry: false })?.isSymbolicLink()) return undefined
       }
-      return path.join(realpathSync.native(current), ...parts)
+      return current
     } catch {
-      return
+      return undefined
     }
   }
 
   function skillRoot(pattern: string): string | undefined {
-    const dir = pattern.replace(/[\\/]\*$/, "")
+    const dir = pattern.replace(/([\\/])\*$/, "$1")
     if (!path.isAbsolute(dir)) return
     const target = physical(dir)
     if (!target) return
@@ -127,7 +134,7 @@ export namespace ConfigProtection {
   function within(child: string, parent: string): boolean {
     const sep = process.platform === "win32" ? "/" : path.sep
     return keys(child).some((child) =>
-      keys(parent).some((parent) => child === parent || child.startsWith(parent + sep)),
+      keys(parent).some((parent) => child === parent || child.startsWith(parent.endsWith(sep) ? parent : parent + sep)),
     )
   }
 
@@ -151,9 +158,36 @@ export namespace ConfigProtection {
     return false
   }
 
+  // Data protection is separate from config classification, which also grants trust
+  // when parsing global commands and agents. Only file edits get data exceptions.
+  function data(filepath: string, edit = false): boolean {
+    if (!path.isAbsolute(filepath)) return false
+    const root = path.resolve(Global.Path.data)
+    const target = path.resolve(filepath)
+    const canonical = physical(root)
+    const resolved = physical(filepath)
+    if (!resolved) return true
+    const lexical = within(target, root)
+    const inside = canonical && within(resolved, canonical)
+    if (!edit && (within(root, target) || (canonical && within(canonical, resolved)))) return true
+    if (!lexical && !inside) return false
+    if (!edit || !canonical || !inside) return true
+
+    const exempt = (file: string, base: string) => {
+      const relative = normalize(path.relative(base, file))
+      if (/^plans\/[^/]+\.md$/.test(relative)) return true
+      const parts = relative.split("/")
+      if (parts.at(0) !== "worktree" || parts.length < 4) return false
+      // The worktree containers and each checkout's own config remain protected.
+      return !isRelative(parts.slice(3).join("/"))
+    }
+    return !exempt(resolved, canonical) || (lexical && !exempt(target, root))
+  }
+
   /** Return the only persistent rule allowed for one exact global skill subtree. */
   export function globalSkillPattern(request: { permission: string; patterns: readonly string[] }): string | undefined {
     if (request.permission !== "external_directory" || request.patterns.length === 0) return
+    if (request.patterns.some((pattern) => data(pattern.replace(/([\\/])\*$/, "$1")))) return
 
     const roots = request.patterns.map(skillRoot)
     const first = roots[0]
@@ -167,11 +201,11 @@ export namespace ConfigProtection {
 
   /** Check a single path (absolute or relative) against config protection. */
   function protected_(p: string): boolean {
-    return path.isAbsolute(p) ? isAbsolute(p) : isRelative(p)
+    return path.isAbsolute(p) ? isAbsolute(p) || data(p, true) : isRelative(p)
   }
 
   /**
-   * Determine if a permission request targets config files.
+   * Determine if a permission request targets config files or internal data.
    * Gates `edit` permissions and bash-originated `external_directory` requests.
    * File-tool reads are not restricted.
    */
@@ -187,9 +221,9 @@ export namespace ConfigProtection {
       // Bash read-only file commands may read global config when explicitly allowed.
       if (request.metadata?.access === "read") return false
       for (const pattern of request.patterns) {
-        const dir = pattern.replace(/[\\/]\*$/, "")
+        const dir = pattern.replace(/([\\/])\*$/, "$1")
         const target = physical(dir)
-        if (isAbsolute(dir) || (target && isAbsolute(target))) return true
+        if (data(dir) || isAbsolute(dir) || (target && isAbsolute(target))) return true
       }
       return false
     }
