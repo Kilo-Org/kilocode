@@ -542,7 +542,8 @@ describe("kilocode.agent-plugins RPC", () => {
           }),
         )
         await chmod(path.join(demo, "bin/server"), 0o755)
-        await Bun.$`tar -czf ${path.join(build, "repo.tar.gz")} -C ${build} repo-main`.quiet()
+        // Relative paths: GNU tar on Windows reads "C:" in an archive path as a remote host.
+        await Bun.$`tar -czf repo.tar.gz repo-main`.cwd(build).quiet()
       })
       const server = Bun.serve({ port: 0, fetch: () => new Response(Bun.file(path.join(build, "repo.tar.gz"))) })
       yield* Effect.addFinalizer(() => Effect.sync(() => server.stop(true)))
@@ -559,7 +560,9 @@ describe("kilocode.agent-plugins RPC", () => {
       })) as KiloAgentPluginsRpc.Plugin
       const target = path.join(project, ".kilo2/plugins/demo")
       expect(installed).toMatchObject({ root: target, scope: "project", status: "loaded", servers: ["demo:local"] })
-      expect((yield* Effect.promise(() => stat(path.join(target, "bin/server")))).mode & 0o111).not.toBe(0)
+      // Windows has no executable bit to keep.
+      if (process.platform !== "win32")
+        expect((yield* Effect.promise(() => stat(path.join(target, "bin/server")))).mode & 0o111).not.toBe(0)
 
       const escape = yield* Effect.flip(
         call(rpc, "install", { source: { type: "archive", url, subdirectory: "../.." }, scope: "project" }),
