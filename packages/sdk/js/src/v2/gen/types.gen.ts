@@ -2730,6 +2730,8 @@ export type Config = {
     batch_tool?: boolean
     image_generation?: boolean
     image_generation_model?: string
+    image_generation_base_url?: string
+    image_generation_api_key?: string
     native_notebook_tools?: boolean
     glob_include_ignored?: Array<string>
     code_mode?: boolean

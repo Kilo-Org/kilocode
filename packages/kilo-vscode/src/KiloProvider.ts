@@ -181,6 +181,7 @@ import type { ProjectRef, SessionRef, WorktreeRef } from "./agent-manager/projec
 import { indexingConsentStore, registeredProjects } from "./indexing-consent"
 import { fetchKiloEmbeddingModelCatalog } from "@kilocode/kilo-gateway"
 import { fetchImageModels } from "./image-generation/models"
+import { withGlobalImages } from "./image-generation/source"
 import { fetchSpeechToTextModels } from "./speech-to-text/catalog"
 import { SPEECH_TO_TEXT_MODELS } from "./speech-to-text/models"
 import {
@@ -276,6 +277,7 @@ type SandboxSupportClient = {
 }
 type ConfigSnapshot = {
   effective: Config
+  global: Config
   targets: { global: ConfigTarget; project: ConfigTarget }
 }
 
@@ -4129,7 +4131,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       this.cachedGlobalConfig = global
       this.cachedConfigMessage = {
         type: "configLoaded",
-        config: snapshot.effective,
+        config: withGlobalImages(snapshot.effective, snapshot.global),
         globalConfig: global,
         projectConfig,
         bindings,
@@ -4139,7 +4141,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       this.cachedConfigDirectory = dir
       this.postMessage({
         type: "configUpdated",
-        config: snapshot.effective,
+        config: withGlobalImages(snapshot.effective, snapshot.global),
         globalConfig: global,
         projectConfig,
         bindings,
@@ -4212,7 +4214,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       message: getErrorMessage(error) || "Failed to update config",
       details: getConfigErrorDetails(error),
       completedScopes: completed,
-      config: snapshot?.effective,
+      config: snapshot ? withGlobalImages(snapshot.effective, snapshot.global) : undefined,
       globalConfig: snapshot?.targets.global.raw,
       projectConfig: bindings?.project ? snapshot?.targets.project.raw : undefined,
       bindings,

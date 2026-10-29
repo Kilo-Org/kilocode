@@ -55,6 +55,26 @@ Use **Local Config** or **Global Config** in the Settings header to open the mat
 If you check config files into version control, make sure they do not contain API keys or other secrets (e.g., `provider.*.options.apiKey`). Use environment variables for credentials instead.
 {% /callout %}
 
+### Image Generation
+
+Enable **Image Generation** in **Settings → Experimental** to let the agent generate and edit images in your workspace. Generated images appear in chat with a clickable preview.
+
+To use a custom Images API, set its base URL, optional API key, and model ID in the same section. These connection settings are machine-wide and come from your global `~/.config/kilo/kilo.jsonc`:
+
+```json
+{
+  "experimental": {
+    "image_generation": true,
+    "image_generation_base_url": "http://127.0.0.1:8080/v1",
+    "image_generation_model": "Qwen-Image-2.1"
+  }
+}
+```
+
+Set `experimental.image_generation_api_key` if your endpoint requires a bearer token. A custom endpoint works without Kilo sign-in. Leave the base URL empty to use Kilo Gateway or OpenRouter.
+
+The custom endpoint must implement `POST /images/generations` with JSON and `POST /images/edits` with multipart uploads, relative to the base URL. Responses must contain PNG or JPEG image bytes in `data[].b64_json`. Editing accepts PNG/JPEG reference files. Requests can run for up to 15 minutes and stop when you cancel the tool. The original image is saved in the current workspace; its chat preview may be resized.
+
 ### Voice Transcription Model
 
 When the Kilo provider is enabled and you are signed in, choose the transcription model under **Models** > **Speech to Text Model**. This stores `experimental.speech_to_text_model` in your global Kilo CLI config:

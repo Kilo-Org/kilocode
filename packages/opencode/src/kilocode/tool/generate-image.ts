@@ -1,8 +1,7 @@
 // kilocode_change - new file
 import { Effect, Schema } from "effect"
-import { HttpClient, HttpClientRequest, HttpClientResponse } from "effect/unstable/http"
+import { HttpClient, HttpClientRequest } from "effect/unstable/http"
 import * as path from "path"
-import { readFile } from "fs/promises"
 import * as Tool from "../../tool/tool"
 import * as Auth from "../../auth"
 import { FSUtil } from "@opencode-ai/core/fs-util"
@@ -12,6 +11,7 @@ import { assertExternalDirectoryEffect } from "../../tool/external-directory"
 import { Config } from "@/config/config"
 import { KILO_OPENROUTER_BASE } from "@kilocode/kilo-gateway"
 import DESCRIPTION from "./generate-image.txt"
+import * as Images from "../image-generation"
 
 const log = Log.create({ service: "tool.generate_image" })
 
@@ -143,7 +143,7 @@ const Parameters = Schema.Struct({
 type Meta = {
   format?: ImageFormat
   filepath?: string
-  provider?: "kilo" | "openrouter"
+  provider?: "kilo" | "openrouter" | "custom"
   error?: string
 }
 
@@ -161,7 +161,9 @@ export const GenerateImageTool = Tool.define(
       execute: (params: Schema.Schema.Type<typeof Parameters>, ctx: Tool.Context) =>
         Effect.gen(function* () {
           const instance = yield* InstanceState.context
-          const auth = yield* authSvc.get("kilo")
+          const cfg = yield* configSvc.get()
+          const custom = Images.source(yield* configSvc.getGlobal())
+          const auth = custom ? undefined : yield* authSvc.get("kilo")
           const authInput: AuthInput | undefined = auth
             ? {
                 type: auth.type === "api" ? "api" : "oauth",
@@ -170,60 +172,78 @@ export const GenerateImageTool = Tool.define(
                 ...(auth.type === "oauth" && auth.accountId ? { accountId: auth.accountId } : {}),
               }
             : undefined
-          const resolved = resolveProvider(authInput, process.env["OPENROUTER_API_KEY"])
-          if (!resolved) {
+          const resolved = custom ? null : resolveProvider(authInput, process.env["OPENROUTER_API_KEY"])
+          if (!custom && !resolved) {
             return {
               title: "Image generation unavailable",
-              output:
-                "No image generation provider available. Log in to Kilo or set OPENROUTER_API_KEY, then try again.",
+              output: "Configure a custom image endpoint, log in to Kilo, or set OPENROUTER_API_KEY, then try again.",
               metadata: { error: "no-provider" } as Meta,
             }
           }
 
+          const provider = resolved?.provider ?? "custom"
           yield* ctx.metadata({
             title: `Generate image "${params.prompt.slice(0, 60)}"`,
-            metadata: { provider: resolved.provider },
+            metadata: { provider },
           })
 
-          let inputImage: string | undefined
-          if (params.image) {
-            const imgPath = path.isAbsolute(params.image) ? params.image : path.join(instance.directory, params.image)
-            yield* assertExternalDirectoryEffect(ctx, imgPath)
-            const buf = yield* Effect.tryPromise(() => readFile(imgPath))
-            const ext = path.extname(imgPath).slice(1).toLowerCase() || "png"
-            const mime = ext === "jpg" ? "jpeg" : ext
-            inputImage = `data:image/${mime};base64,${buf.toString("base64")}`
-          }
+          const input = params.image
+            ? yield* Effect.gen(function* () {
+                const file = path.resolve(instance.directory, params.image!)
+                yield* assertExternalDirectoryEffect(ctx, file)
+                yield* ctx.ask({
+                  permission: "read",
+                  patterns: [path.relative(instance.worktree, file)],
+                  always: ["*"],
+                  metadata: { filepath: file },
+                })
+                const ext = path.extname(file).slice(1).toLowerCase() || "png"
+                const mime = `image/${ext === "jpg" ? "jpeg" : ext}`
+                if (custom && mime !== "image/png" && mime !== "image/jpeg")
+                  throw new Error("Custom image edits support PNG and JPEG reference images")
+                const bytes = yield* Effect.tryPromise(() => Bun.file(file).bytes())
+                return { bytes, mime, name: path.basename(file) }
+              })
+            : undefined
+          const model =
+            params.model ?? (custom ? custom.model : (cfg.experimental?.image_generation_model ?? DEFAULT_MODEL))
+          const generated = custom
+            ? yield* Images.generate(http, custom, { prompt: params.prompt, model, image: input, signal: ctx.abort })
+            : undefined
+          const req = resolved
+            ? buildRequest(
+                resolved,
+                params.prompt,
+                model ?? DEFAULT_MODEL,
+                input ? `data:${input.mime};base64,${Buffer.from(input.bytes).toString("base64")}` : undefined,
+              )
+            : undefined
+          const response = req
+            ? yield* http.execute(
+                HttpClientRequest.post(req.url).pipe(
+                  HttpClientRequest.setHeaders(req.headers),
+                  HttpClientRequest.bodyText(req.body, "application/json"),
+                ),
+              )
+            : undefined
 
-          const cfg = yield* configSvc.get()
-          const model = params.model ?? cfg.experimental?.image_generation_model ?? DEFAULT_MODEL
-          const req = buildRequest(resolved, params.prompt, model, inputImage)
-
-          const response = yield* http.execute(
-            HttpClientRequest.post(req.url).pipe(
-              HttpClientRequest.setHeaders(req.headers),
-              HttpClientRequest.bodyText(req.body, "application/json"),
-            ),
-          )
-
-          const status = response.status
-          if (status < 200 || status >= 300) {
+          const status = response?.status
+          if (response && status != null && (status < 200 || status >= 300)) {
             const errText = yield* response.text
             log.warn("image generation failed", { status, errText: errText.slice(0, 200) })
             return {
               title: "Image generation failed",
               output: `Image generation request failed (HTTP ${status}).`,
-              metadata: { provider: resolved.provider, error: "http-error" } as Meta,
+              metadata: { provider, error: "http-error" } as Meta,
             }
           }
 
-          const text = yield* response.text
-          const parsed = parseImageResponse(text)
+          const parsed = generated ?? (response ? parseImageResponse(yield* response.text) : null)
           if (!parsed) {
             return {
               title: "Image generation produced no image",
               output: "The model did not return an image. Try a different prompt or model.",
-              metadata: { provider: resolved.provider, error: "no-image" } as Meta,
+              metadata: { provider, error: "no-image" } as Meta,
             }
           }
 
@@ -246,7 +266,7 @@ export const GenerateImageTool = Tool.define(
             metadata: {
               format: parsed.format,
               filepath: absPath,
-              provider: resolved.provider,
+              provider,
             } as Meta,
             attachments: [
               {

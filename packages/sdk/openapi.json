@@ -38288,6 +38288,12 @@
               "image_generation_model": {
                 "type": "string"
               },
+              "image_generation_base_url": {
+                "type": "string"
+              },
+              "image_generation_api_key": {
+                "type": "string"
+              },
               "native_notebook_tools": {
                 "type": "boolean"
               },
