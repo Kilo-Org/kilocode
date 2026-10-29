@@ -19,9 +19,18 @@ describe("applyConfigEdits", () => {
     expect(parse(result)).toEqual({ username: "alice" })
   })
 
-  test("writes a v2 path into a fresh document when its v1 alias is absent", () => {
-    const result = applyConfigEdits("", [{ path: ["agents", "reviewer", "mode"], value: "primary" }])
-    expect(parse(result)).toEqual({ agents: { reviewer: { mode: "primary" } } })
+  test("does not throw when the alias parent does not exist", () => {
+    const result = applyConfigEdits("", [{ path: ["permissions"], value: [{ tool: "bash", action: "allow" }] }])
+    expect(parse(result)).toEqual({ permissions: [{ tool: "bash", action: "allow" }] })
+  })
+
+  test("does not throw when the alias exists under a different parent", () => {
+    const result = applyConfigEdits(`{ "mode": { "build": { "prompt": "old" } } }`, [
+      { path: ["agents", "build", "system"], value: "new" },
+    ])
+    const parsed = parse(result)
+    expect(parsed.agents.build.system).toBe("new")
+    expect(parsed.mode.build.prompt).toBeUndefined()
   })
 
   test("removes the v1 agent field alias when it writes the v2 field", () => {
@@ -64,11 +73,10 @@ describe("applyConfigEdits", () => {
     expect(parse(result)).toEqual({ theme: "dark" })
   })
 
-  test("skips an unset path that is already absent", () => {
-    const result = applyConfigEdits(`{ "agents": { "reviewer": {} } }`, [
-      { path: ["agents", "reviewer", "request", "body", "temperature"] },
-    ])
-    expect(parse(result)).toEqual({ agents: { reviewer: {} } })
+  test("accumulates two consecutive writes to the same file", () => {
+    const first = applyConfigEdits("", [{ path: ["a"], value: 1 }])
+    const second = applyConfigEdits(first, [{ path: ["b"], value: 2 }])
+    expect(parse(second)).toEqual({ a: 1, b: 2 })
   })
 })
 
