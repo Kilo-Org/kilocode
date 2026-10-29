@@ -141,14 +141,16 @@ const McpSubtab: Component = () => {
   const typeTimeout = (key: string, value: string) => setTimeoutDraft((current) => ({ ...current, [key]: value }))
   const commitTimeout = (key: string) => {
     if (!(key in timeoutDraft())) return
-    const value = timeoutDraft()[key].trim()
+    const raw = timeoutDraft()[key].trim()
+    // The schema requires a positive integer. Skip the write and keep the typed text when the value is invalid.
+    if (raw !== "" && (!/^\d+$/.test(raw) || Number(raw) <= 0)) return
     setTimeoutDraft((current) => {
       const next = { ...current }
       delete next[key]
       return next
     })
-    if (value === "" && timeoutValue(key) === "") return
-    config.set(["mcp", "timeout", key], value === "" ? undefined : Number(value), timeoutScope())
+    if (raw === "" && timeoutValue(key) === "") return
+    config.set(["mcp", "timeout", key], raw === "" ? undefined : Number(raw), timeoutScope())
   }
 
   return (
