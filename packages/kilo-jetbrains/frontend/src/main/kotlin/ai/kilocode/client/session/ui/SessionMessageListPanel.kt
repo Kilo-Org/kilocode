@@ -2,6 +2,8 @@ package ai.kilocode.client.session.ui
 
 import ai.kilocode.client.session.SessionDiffOpener
 import ai.kilocode.client.session.SessionFileOpener
+import ai.kilocode.client.plugin.KiloBundle
+import ai.kilocode.rpc.dto.MessageErrorDto
 import ai.kilocode.client.session.model.Outcome
 import ai.kilocode.client.session.model.SessionModel
 import ai.kilocode.client.session.model.SessionModelEvent
@@ -521,9 +523,10 @@ class SessionMessageListPanel(
     }
 
     /**
-     * Renders the failure the session is currently sitting on, and nothing else.
+     * Cloud terminal failures belong to their original prompt, even when a newer turn is active.
+     * Native assistant errors render only for the session's current final attempt.
      *
-     * Only the last turn can show one, and only on its final message:
+     * Only the last turn can show a native assistant error, and only on its final message:
      * - a superseded turn shows nothing. Once the conversation moved past a failure it is history, and a
      *   red card stranded between two later turns is noise the user cannot act on;
      * - within the live turn, only the final attempt speaks. Retry continues a turn by appending another
@@ -531,8 +534,8 @@ class SessionMessageListPanel(
      * - a turn whose final message succeeded says nothing, because a failure it recovered from is not
      *   that turn's outcome.
      *
-     * This keeps the card and the footer in lockstep: both describe the tail, so wherever the reason is
-     * visible the Retry action is offered too (when the tail can be continued).
+     * Native errors and the Retry footer describe the tail. Cloud prompt failures never introduce
+     * global retry or execution actions.
      */
     private fun syncFailures(view: TurnView): Boolean {
         val live = turnViews.values.lastOrNull() === view
@@ -541,7 +544,13 @@ class SessionMessageListPanel(
         var changed = false
         for (id in ids) {
             val msg = msgToView[id] ?: continue
-            val error = model.message(id)?.info?.error?.takeIf { live && id == last }
+            val item = model.message(id)
+            val status = item?.terminal?.status
+            val error = when (status) {
+                "failed" -> MessageErrorDto("CloudMessageFailed", KiloBundle.message("session.cloud.message.failed"))
+                "interrupted" -> MessageErrorDto("CloudMessageInterrupted", KiloBundle.message("session.cloud.message.interrupted"))
+                else -> item?.info?.error?.takeIf { live && id == last }
+            }
             changed = msg.syncError(error) || changed
         }
         return changed
