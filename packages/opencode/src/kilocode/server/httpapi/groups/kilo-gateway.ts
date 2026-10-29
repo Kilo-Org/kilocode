@@ -329,7 +329,7 @@ export const KiloGatewayApi = HttpApi.make("kilo")
           OpenApi.annotations({
             identifier: "kilo.models.images",
             summary: "Image generation models",
-            description: "List image-capable models from the Kilo Gateway OpenRouter passthrough",
+            description: "List image models from the configured Images API or Kilo Gateway",
           }),
         ),
         HttpApiEndpoint.get("transcriptionModels", KiloGatewayPaths.transcriptionModels, {

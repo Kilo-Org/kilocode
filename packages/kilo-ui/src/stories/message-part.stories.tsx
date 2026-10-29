@@ -476,6 +476,44 @@ export const WithRunningTool: Story = {
   ),
 }
 
+export const GeneratedImage: Story = {
+  render: () => {
+    const part: ToolPart = {
+      ...completedToolPart,
+      tool: "generate_image",
+      state: {
+        status: "completed",
+        input: { prompt: "A red pixel", path: "assets/pixel.png" },
+        output: "Image saved to assets/pixel.png.",
+        title: "assets/pixel.png",
+        metadata: { filepath: "/project/assets/pixel.png" },
+        time: { start: now - 8000, end: now - 7500 },
+        attachments: [
+          {
+            id: "generated-image",
+            sessionID: SESSION_ID,
+            messageID: ASST_MSG_ID,
+            type: "file",
+            mime: "image/png",
+            filename: "pixel.png",
+            url: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGAAAABACAYAAADlNHIOAAAAj0lEQVR4nO3RMREAIBDAsJeFDPxPOAEZDM3QvXeZs/bVv+b3QD0AANoBANAOAIB2AAC0AwCgHQAA7QAAaAcAQDsAANoBANAOAIB2AAC0AwCgHQAA7QAAaAcAQDsAANoBANAOAIB2AAC0AwCgHQAA7QAAaAcAQDsAANoBANAOAIB2AAC0AwCgHQAA7QAAaPcAgg6rWP9fiGMAAAAASUVORK5CYII=",
+          },
+        ],
+      },
+    }
+    return (
+      <AllProviders data={createMockData([part])}>
+        <AssistantParts messages={[mockAssistantMessage]} />
+      </AllProviders>
+    )
+  },
+  play: ({ canvasElement }: { canvasElement: HTMLElement }) => {
+    const image = canvasElement.querySelector<HTMLButtonElement>('[data-slot="tool-read-image"]')
+    if (!image) throw new Error("Generated image thumbnail is missing")
+    image.click()
+  },
+}
+
 // --- Edit tool in error state → renders red error card ---
 
 export const WithErrorTool: Story = {
@@ -798,9 +836,7 @@ export const QuestionAnsweredCollapsed: Story = {
     </AllProviders>
   ),
   play: async ({ canvasElement }: { canvasElement: HTMLElement }) => {
-    const trigger = canvasElement
-      .querySelector('[data-slot="basic-tool-tool-title"]')
-      ?.closest("button")
+    const trigger = canvasElement.querySelector('[data-slot="basic-tool-tool-title"]')?.closest("button")
     if (trigger) trigger.click()
   },
 }
@@ -826,9 +862,7 @@ export const QuestionDismissedExpanded: Story = {
     </AllProviders>
   ),
   play: async ({ canvasElement }: { canvasElement: HTMLElement }) => {
-    const trigger = canvasElement
-      .querySelector('[data-slot="basic-tool-tool-title"]')
-      ?.closest("button")
+    const trigger = canvasElement.querySelector('[data-slot="basic-tool-tool-title"]')?.closest("button")
     if (trigger) trigger.click()
   },
 }

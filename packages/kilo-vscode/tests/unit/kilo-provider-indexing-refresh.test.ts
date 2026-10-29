@@ -56,6 +56,8 @@ function createConnection() {
   const patches: unknown[] = []
   const snapshot = {
     effective: {},
+    // Resolved settings may come from a different global file than the writable target.
+    global: { experimental: { image_generation_base_url: "http://localhost:8080/v1" } },
     targets: {
       global: {
         scope: "global",
@@ -78,7 +80,7 @@ function createConnection() {
   const client = {
     global: {
       config: {
-        get: async () => ({ data: {} }),
+        get: async () => ({ data: snapshot.global }),
         update: async () => ({ data: {} }),
       },
     },
@@ -163,6 +165,7 @@ describe("KiloProvider indexing refresh", () => {
       "agentManager.branchPrefix": "",
     })
     const snapshot = await fetchSnapshot(conn.client as never, "/repo", settings)
+    expect(snapshot.config?.experimental?.image_generation_base_url).toBe("http://localhost:8080/v1")
     const provider = new KiloProvider({} as never, conn.service as never)
     const internal = provider as unknown as Internals
     const sent: Array<Record<string, unknown>> = []
