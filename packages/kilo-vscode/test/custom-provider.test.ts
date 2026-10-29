@@ -3,7 +3,13 @@
 import { describe, expect, test } from "bun:test"
 import { parse } from "jsonc-parser"
 import { applyConfigEdits } from "../src/config-file-edit"
-import { disabledProviderOptions, isCustomProvider, isCustomProviderPackage } from "../webview-ui/src/components/settings/provider-visibility"
+import {
+  disabledProviderIds,
+  disabledProviderOptions,
+  isCustomProvider,
+  isCustomProviderPackage,
+  withDisabledProviders,
+} from "../webview-ui/src/components/settings/provider-visibility"
 import {
   mergeProviderConfig,
   parseEnvKey,
@@ -151,6 +157,32 @@ describe("provider-visibility", () => {
     expect(disabledProviderOptions(items, ["vercel"])).toEqual([
       { value: "acme", label: "Acme" },
       { value: "anthropic", label: "Anthropic" },
+    ])
+  })
+
+  test("reads the disabled ids and ignores a legacy allow-list catch-all", () => {
+    expect(
+      disabledProviderIds([
+        { action: "provider.use", resource: "*", effect: "deny" },
+        { action: "provider.use", resource: "anthropic", effect: "allow" },
+        { action: "provider.use", resource: "vercel", effect: "deny" },
+      ]),
+    ).toEqual(["vercel"])
+    expect(disabledProviderIds(undefined)).toEqual([])
+  })
+
+  test("replaces the per-provider denies and keeps the catch-all and other policies", () => {
+    const policies = [
+      { action: "provider.use", resource: "*", effect: "deny" },
+      { action: "provider.use", resource: "anthropic", effect: "allow" },
+      { action: "provider.use", resource: "vercel", effect: "deny" },
+      { action: "tool.use", resource: "bash", effect: "deny" },
+    ]
+    expect(withDisabledProviders(policies, ["deepseek"])).toEqual([
+      { action: "provider.use", resource: "*", effect: "deny" },
+      { action: "provider.use", resource: "anthropic", effect: "allow" },
+      { action: "tool.use", resource: "bash", effect: "deny" },
+      { action: "provider.use", resource: "deepseek", effect: "deny" },
     ])
   })
 })

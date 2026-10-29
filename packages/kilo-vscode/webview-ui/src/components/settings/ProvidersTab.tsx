@@ -28,7 +28,7 @@ import {
   providerNoteKey,
   sortProviders,
 } from "./provider-catalog"
-import { disabledProviderOptions, isCustomProvider } from "./provider-visibility"
+import { disabledProviderIds, disabledProviderOptions, isCustomProvider, withDisabledProviders } from "./provider-visibility"
 
 // Providers whose credentials can only be changed through their own sign-in flow, not an API-key field.
 const FIXED_KEY = [
@@ -61,14 +61,7 @@ const ProvidersTab: Component<{ settings: SettingsData; onLogin: () => void }> =
     return Array.isArray(value) ? (value as Policy[]) : []
   })
 
-  const disabledIds = createMemo(
-    () =>
-      new Set(
-        policies().flatMap((item) =>
-          item.action === "provider.use" && item.effect === "deny" ? [item.resource] : [],
-        ),
-      ),
-  )
+  const disabledIds = createMemo(() => new Set(disabledProviderIds(policies())))
 
   /** The custom providers defined in `providers.<id>` config. */
   const configuredCustoms = createMemo(() => {
@@ -204,10 +197,8 @@ const ProvidersTab: Component<{ settings: SettingsData; onLogin: () => void }> =
   }
 
   function writeDisabled(next: string[]) {
-    const kept = policies().filter((item) => !(item.action === "provider.use" && item.effect === "deny"))
-    const denied = next.map((id) => ({ action: "provider.use", resource: id, effect: "deny" }))
+    const value = withDisabledProviders(policies(), next)
     const scope = config.source(["policies"]) ?? "global"
-    const value = [...kept, ...denied]
     if (value.length === 0) {
       void config.unset(["policies"], scope)
       return

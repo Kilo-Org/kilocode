@@ -34,3 +34,39 @@ export function disabledProviderOptions(items: IntegrationInfo[], disabled: stri
     .map((item) => ({ value: item.id, label: item.name }))
     .sort((a, b) => a.label.localeCompare(b.label))
 }
+
+export type ProviderPolicy = { action: string; resource: string; effect: string }
+
+/**
+ * True for a `provider.use` deny that names one provider. A `resource: "*"` deny is the catch-all of a legacy
+ * `enabled_providers` allow-list, not a disabled provider, so it is excluded.
+ */
+export function isDisabledProviderPolicy(value: unknown): boolean {
+  if (!value || typeof value !== "object") return false
+  const policy = value as { action?: unknown; resource?: unknown; effect?: unknown }
+  return (
+    policy.action === "provider.use" &&
+    policy.effect === "deny" &&
+    typeof policy.resource === "string" &&
+    policy.resource !== "*"
+  )
+}
+
+/** The disabled provider ids in a normalized `policies` value. */
+export function disabledProviderIds(policies: unknown): string[] {
+  if (!Array.isArray(policies)) return []
+  return policies.flatMap((policy) =>
+    isDisabledProviderPolicy(policy) ? [(policy as { resource: string }).resource] : [],
+  )
+}
+
+/**
+ * Replaces the per-provider deny policies with `next`, keeping every other policy, including the `*` catch-all of an
+ * `enabled_providers` allow-list.
+ */
+export function withDisabledProviders(policies: ProviderPolicy[], next: string[]): ProviderPolicy[] {
+  return [
+    ...policies.filter((policy) => !isDisabledProviderPolicy(policy)),
+    ...next.map((id) => ({ action: "provider.use", resource: id, effect: "deny" })),
+  ]
+}

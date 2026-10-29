@@ -27,6 +27,7 @@ import {
 import {
   CUSTOM_PROVIDER_PACKAGE,
   CUSTOM_PROVIDER_PACKAGES,
+  disabledProviderIds,
   isCustomProviderPackage,
   type CustomProviderPackage,
 } from "./provider-visibility"
@@ -134,16 +135,7 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
   }
 
   function disabledIds(): string[] {
-    const policies = config.value(["policies"])
-    if (!Array.isArray(policies)) return []
-    return policies.flatMap((policy) =>
-      policy &&
-      typeof policy === "object" &&
-      (policy as { action?: string }).action === "provider.use" &&
-      (policy as { effect?: string }).effect === "deny"
-        ? [(policy as { resource?: string }).resource ?? ""]
-        : [],
-    )
+    return disabledProviderIds(config.value(["policies"]))
   }
 
   function goBack() {
