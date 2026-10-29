@@ -60,6 +60,8 @@ type ValidateArgs = {
   form: FormState
   t: Translator
   editing: boolean
+  /** Whether the user changed the API key field. An untouched field keeps the stored env and credential. */
+  apiKeyTouched: boolean
   disabledProviders: string[]
   existingProviderIDs: Set<string>
   /** Preserved env vars from the existing provider config (edit mode only). */
@@ -146,10 +148,19 @@ function record(value: unknown): ConfigRecord {
   return value && typeof value === "object" && !Array.isArray(value) ? (value as ConfigRecord) : {}
 }
 
+/** Keeps the other input modalities (pdf, audio) and only adds or removes `image`. */
+function mergeInput(prior: unknown, wantsImage: boolean): string[] {
+  const before = Array.isArray(prior) ? prior.filter((value): value is string => typeof value === "string") : []
+  const kept = before.filter((value) => wantsImage || value !== "image")
+  const next = wantsImage ? [...kept, "text", "image"] : kept.length ? kept : ["text"]
+  return [...new Set(next)]
+}
+
 /**
  * Merges the dialog's value into the existing `providers.<id>`, so fields the dialog does not model survive an edit:
  * other provider settings, `body`, model `limit`/`cost`/`variants` and extra capability keys. A model the dialog no
- * longer lists is removed, and an unchecked Reasoning toggle clears `capabilities.reasoning`.
+ * longer lists is removed, an unchecked Reasoning toggle clears `capabilities.reasoning`, and unchecking Image only
+ * removes `image` from the input modalities.
  */
 export function mergeProviderConfig(existing: unknown, produced: CustomProviderConfigValue): CustomProviderConfigValue {
   if (!existing || typeof existing !== "object" || Array.isArray(existing)) return produced
@@ -163,7 +174,12 @@ export function mergeProviderConfig(existing: unknown, produced: CustomProviderC
       models[id] = model
       continue
     }
-    const capabilities: ConfigRecord = { ...record((prior as ConfigRecord).capabilities), ...model.capabilities }
+    const priorCapabilities = record((prior as ConfigRecord).capabilities)
+    const capabilities: ConfigRecord = {
+      ...priorCapabilities,
+      ...model.capabilities,
+      input: mergeInput(priorCapabilities.input, model.capabilities.input.includes("image")),
+    }
     if (!model.capabilities.reasoning) delete capabilities.reasoning
     models[id] = { ...(prior as ConfigRecord), ...model, capabilities }
   }
@@ -184,10 +200,10 @@ export function validateCustomProvider(input: ValidateArgs): ValidateResult {
   const baseURL = input.form.baseURL.trim()
   const apiKey = input.form.apiKey.trim()
 
-  const rawEnv = parseEnvKey(apiKey)
-  const key = apiKey && !rawEnv ? apiKey : undefined
-  // A typed key replaces a stored env var; only an untouched edit keeps it.
-  const env = rawEnv ? [rawEnv] : key ? undefined : input.editing ? input.existingEnv : undefined
+  const rawEnv = input.apiKeyTouched ? parseEnvKey(apiKey) : undefined
+  const key = input.apiKeyTouched && apiKey && !rawEnv ? apiKey : undefined
+  // A touched field replaces the stored env var; an untouched edit keeps the existing env and credential.
+  const env = rawEnv ? [rawEnv] : input.apiKeyTouched ? undefined : input.editing ? input.existingEnv : undefined
 
   const { idErr, existsErr } = checkProviderID(
     providerID,

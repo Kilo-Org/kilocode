@@ -120,6 +120,7 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
       form,
       t: language.t,
       editing: editing(),
+      apiKeyTouched: apiTouched,
       disabledProviders: disabledIds(),
       existingProviderIDs: new Set(props.settings.integrations().map((item) => item.id)),
       existingEnv: props.existing?.config.env,

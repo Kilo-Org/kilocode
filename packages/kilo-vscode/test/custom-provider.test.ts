@@ -31,6 +31,7 @@ function form(overrides: Partial<FormState> = {}): FormState {
 const base = {
   t,
   editing: false,
+  apiKeyTouched: true,
   disabledProviders: [] as string[],
   existingProviderIDs: new Set<string>(),
 }
@@ -80,6 +81,30 @@ describe("validateCustomProvider", () => {
     expect(parseEnvKey("{env:MY_KEY}")).toBe("MY_KEY")
     expect(output.result?.key).toBeUndefined()
     expect(output.result?.config.env).toEqual(["MY_KEY"])
+  })
+
+  test("keeps the existing env and no key when the key field is untouched", () => {
+    const output = validateCustomProvider({
+      ...base,
+      editing: true,
+      apiKeyTouched: false,
+      existingEnv: ["MY_KEY"],
+      form: form({ apiKey: "********" }),
+    })
+    expect(output.result?.key).toBeUndefined()
+    expect(output.result?.config.env).toEqual(["MY_KEY"])
+  })
+
+  test("drops the existing env when a real key is typed", () => {
+    const output = validateCustomProvider({
+      ...base,
+      editing: true,
+      apiKeyTouched: true,
+      existingEnv: ["MY_KEY"],
+      form: form({ apiKey: "sk-1234" }),
+    })
+    expect(output.result?.key).toBe("sk-1234")
+    expect(output.result?.config.env).toBeUndefined()
   })
 
   test("rejects a bad provider ID and a duplicate model ID", () => {
@@ -180,6 +205,20 @@ describe("mergeProviderConfig", () => {
     const merged = mergeProviderConfig(existing, produced) as unknown as Record<string, any>
     expect(Object.keys(merged.models)).toEqual(["a"])
     expect(merged.models.a.capabilities.reasoning).toBeUndefined()
+  })
+
+  test("keeps the other input modalities when Image is off and adds image when on", () => {
+    const off = mergeProviderConfig(
+      { models: { a: { capabilities: { input: ["text", "image", "pdf"] } } } },
+      produced,
+    ) as unknown as Record<string, any>
+    expect(off.models.a.capabilities.input).toEqual(["text", "pdf"])
+
+    const on = mergeProviderConfig(
+      { models: { a: { capabilities: { input: ["text", "pdf"] } } } },
+      { ...produced, models: { a: { name: "A", capabilities: { input: ["text", "image"] } } } },
+    ) as unknown as Record<string, any>
+    expect(on.models.a.capabilities.input).toEqual(["text", "pdf", "image"])
   })
 })
 
