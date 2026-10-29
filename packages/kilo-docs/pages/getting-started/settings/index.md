@@ -59,7 +59,7 @@ If you check config files into version control, make sure they do not contain AP
 
 Enable **Image Generation** in **Settings → Experimental** to let the agent generate and edit images in your workspace. Generated images appear in chat with a clickable preview.
 
-To use a custom Images API, set its base URL, optional API key, and model ID in the same section. These connection settings are machine-wide and come from your global `~/.config/kilo/kilo.jsonc`:
+To use a local or remote Images API, set its base URL, optional API key, and model ID in the same section. These connection settings are machine-wide and come from your global `~/.config/kilo/kilo.jsonc`:
 
 ```json
 {
@@ -72,6 +72,8 @@ To use a custom Images API, set its base URL, optional API key, and model ID in 
 ```
 
 Set `experimental.image_generation_api_key` if your endpoint requires a bearer token. A custom endpoint works without Kilo sign-in. Leave the base URL empty to use Kilo Gateway or OpenRouter.
+
+HTTP does not encrypt tokens, prompts, or images. Use HTTPS or a protected connection, such as a VPN or SSH tunnel, when connecting to another machine.
 
 The custom endpoint must implement `POST /images/generations` with JSON and `POST /images/edits` with multipart uploads, relative to the base URL. Responses must contain PNG or JPEG image bytes in `data[].b64_json`. Editing accepts PNG/JPEG reference files. Requests can run for up to 15 minutes and stop when you cancel the tool. The original image is saved in the current workspace; its chat preview may be resized.
 
