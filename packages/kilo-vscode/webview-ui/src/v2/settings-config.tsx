@@ -81,6 +81,7 @@ export function createSettingsConfig() {
   const [files, setFiles] = createSignal<{ global?: ConfigFileContent; project?: ConfigFileContent }>({})
   const [settingsValues, setSettingsValues] = createSignal<Record<string, unknown>>(initialSettings())
   const [optimistic, setOptimistic] = createSignal<Optimistic[]>([])
+  const [inflight, setInflight] = createSignal<string[]>([])
   const writers = new Map<number, (result: { ok: boolean; error?: string }) => void>()
   let nextWrite = 1
 
@@ -153,10 +154,7 @@ export function createSettingsConfig() {
   }
 
   /** True while a write for this path is in flight, so a caller can prefer `value()` over the raw file. */
-  const pending = (path: string[]) => {
-    const key = pathKey(path)
-    return optimistic().some((item) => pathKey(item.path) === key)
-  }
+  const pending = (path: string[]) => inflight().includes(pathKey(path))
 
   const write = (scope: SettingsScope, edits: ConfigEdit[]) =>
     new Promise<{ ok: boolean; error?: string }>((resolve) => {
@@ -170,7 +168,13 @@ export function createSettingsConfig() {
     const key = pathKey(path)
     const writeValue = clone(value)
     setOptimistic((list) => [...list.filter((item) => pathKey(item.path) !== key), { scope, path, value: writeValue }])
-    const result = await write(scope, [{ path, value: writeValue }])
+    setInflight((list) => [...list, key])
+    let result: { ok: boolean; error?: string }
+    try {
+      result = await write(scope, [{ path, value: writeValue }])
+    } finally {
+      setInflight((list) => list.filter((item) => item !== key))
+    }
     if (!result.ok) {
       setOptimistic((list) => list.filter((item) => pathKey(item.path) !== key))
       toastError(result.error ?? language.t("settings.saveBar.saveFailed"))
