@@ -1,11 +1,12 @@
 // Web Tools tab on v2 config. Web Search maps the v2 `websearch` selection: `false` is off, a provider selection is
 // on. The Browser Automation rows have no v2 key and are not rendered.
-import { Component, Show, createEffect, createSignal } from "solid-js"
+import { Component, Show } from "solid-js"
 import { Switch } from "./Switch"
 import { Card } from "@kilocode/kilo-ui/card"
 import { useLanguage } from "../../context/language"
 import { useSettingsConfig } from "../../v2/settings-config"
 import SettingsRow from "./SettingsRow"
+import { webSearchEnabled, webSearchSelection } from "./settings-values"
 
 const WEBSEARCH = ["websearch"]
 
@@ -29,28 +30,17 @@ const BrowserTab: Component = () => {
   const language = useLanguage()
   const config = useSettingsConfig()
 
-  // The global row edits the global scope, so it shows the global file value: a project file would otherwise mask it
-  // through the merged value. A write is optimistic, so show it until the global file has been re-read.
-  const [written, setWritten] = createSignal<unknown>()
-  createEffect(() => {
-    const value = config.raw("global")["websearch"]
-    if (written() !== undefined && JSON.stringify(written()) === JSON.stringify(value)) setWritten(undefined)
-  })
-
+  // The global row edits the global scope. A project file that defines `websearch` would mask the global value in
+  // the merged value, so read the global file while the project overrides the key.
   const enabled = () => {
-    if (written() !== undefined) return Boolean(written())
-    if (config.source(WEBSEARCH) === "project") return Boolean(config.raw("global")["websearch"])
-    return Boolean(config.value(WEBSEARCH))
+    if (config.source(WEBSEARCH) === "project") return webSearchEnabled(config.raw("global")["websearch"])
+    return webSearchEnabled(config.value(WEBSEARCH))
   }
   const local = () => config.raw("project")["websearch"]
   const overridden = () => local() !== undefined
 
   const update = (checked: boolean) => {
-    const value = checked ? { provider: "random" } : false
-    setWritten(value)
-    void config.set(WEBSEARCH, value).then((ok) => {
-      if (!ok) setWritten(undefined)
-    })
+    void config.set(WEBSEARCH, webSearchSelection(checked))
   }
 
   return (

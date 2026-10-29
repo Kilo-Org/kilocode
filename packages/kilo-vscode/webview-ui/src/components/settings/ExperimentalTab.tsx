@@ -7,6 +7,7 @@ import { Card } from "@kilocode/kilo-ui/card"
 import { useLanguage } from "../../context/language"
 import { useSettingsConfig } from "../../v2/settings-config"
 import SettingsRow from "./SettingsRow"
+import { keepRecord } from "./settings-values"
 
 interface ShareOption {
   value: string
@@ -18,12 +19,6 @@ const SHARE_OPTIONS: ShareOption[] = [
   { value: "auto", labelKey: "settings.experimental.share.auto" },
   { value: "disabled", labelKey: "settings.experimental.share.disabled" },
 ]
-
-/** A switch keeps an existing per-item record when it is on, and only falls back to the empty record. */
-function toggle(current: unknown, checked: boolean) {
-  if (!checked) return false
-  return typeof current === "object" && current !== null ? current : {}
-}
 
 const ExperimentalTab: Component = () => {
   const language = useLanguage()
@@ -60,7 +55,7 @@ const ExperimentalTab: Component = () => {
         >
           <Switch
             checked={config.value(["formatter"]) !== false}
-            onChange={(checked) => config.set(["formatter"], toggle(config.value(["formatter"]), checked))}
+            onChange={(checked) => config.set(["formatter"], keepRecord(config.value(["formatter"]), checked))}
             hideLabel
           >
             {language.t("settings.experimental.formatter.title")}
@@ -74,7 +69,7 @@ const ExperimentalTab: Component = () => {
         >
           <Switch
             checked={config.value(["lsp"]) !== false}
-            onChange={(checked) => config.set(["lsp"], toggle(config.value(["lsp"]), checked))}
+            onChange={(checked) => config.set(["lsp"], keepRecord(config.value(["lsp"]), checked))}
             hideLabel
           >
             {language.t("settings.experimental.lsp.title")}
