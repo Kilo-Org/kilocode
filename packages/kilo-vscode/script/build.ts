@@ -127,7 +127,9 @@ const host = Bun.build({
   outdir: dist,
   target: "node",
   format: "cjs",
-  external: ["vscode"],
+  // jsonc-parser ships a UMD entry whose sibling requires stay unresolved when bundled; keep it external so
+  // Node resolves it from node_modules.
+  external: ["vscode", "jsonc-parser"],
   sourcemap: "linked",
 })
 
