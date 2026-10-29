@@ -1,37 +1,27 @@
 // The v1 key aliases of a v2 config path, shared by the host (alias removal on write) and the webview (scope lookup).
 // Every legacy key `packages/core/src/config/normalize.ts` still reads is listed here.
-function readPath(source: unknown, path: string[]): unknown {
-  let current: unknown = source
-  for (const key of path) {
-    if (typeof current !== "object" || current === null) return undefined
-    current = (current as Record<string, unknown>)[key]
-  }
-  return current
-}
-
 /**
- * Which scope defines a setting, checking the v2 path and its v1 aliases. The merge replaces one top-level key at a
- * time, so shadowing happens per root: `agents` and its aliases such as `small_model` and `agent` are separate keys
- * that survive the merge independently, and each may be owned by a different scope. Resolve the owner per root, then
- * report the owner of the first candidate (the v2 path, then each alias in precedence order) that defines a value.
+ * The scope whose file a setting is read from and written to. The merge replaces one v2 top-level key at a time and
+ * the project document is later than the global one, so the scope that defines that key, directly or through a v1
+ * alias root such as `tools` or `small_model`, owns the setting and any write to an earlier file would be shadowed.
+ * Project wins over global, as in the merge. The leaf itself is not required: a scope that owns the key owns every
+ * leaf under it, including one it does not define yet, so a new value is written where the merge will keep it.
  */
 export function scopeOf(path: string[], project: unknown, global: unknown): "project" | "global" | undefined {
   if (path.length === 0) return undefined
-  const sources = { project, global } as const
-  const ownerOf = (root: string | undefined): "project" | "global" | undefined => {
-    if (root === undefined) return undefined
-    if (hasRoot(project, root)) return "project"
-    return hasRoot(global, root) ? "global" : undefined
-  }
-  for (const candidate of [path, ...aliasOf(path)]) {
-    const owner = ownerOf(candidate[0])
-    if (owner && readPath(sources[owner], candidate) !== undefined) return owner
-  }
+  const roots = [path[0], ...aliasOf(path).map((alias) => alias[0])]
+  if (owns(project, roots)) return "project"
+  if (owns(global, roots)) return "global"
   return undefined
 }
 
-function hasRoot(source: unknown, root: string): boolean {
-  return typeof source === "object" && source !== null && !Array.isArray(source) && root in source
+function owns(source: unknown, roots: (string | undefined)[]): boolean {
+  return (
+    typeof source === "object" &&
+    source !== null &&
+    !Array.isArray(source) &&
+    roots.some((root) => root !== undefined && root in source)
+  )
 }
 
 export function aliasOf(keyPath: string[]): string[][] {
