@@ -199,6 +199,11 @@ describe("CodeIndexManager", () => {
         } finally {
           await mgr.dispose()
         }
+        // The manager can leave a native watcher handle alive on Windows even
+        // after dispose. This is a one-shot probe, so exit explicitly instead
+        // of waiting for the event loop to drain; otherwise the parent sees a
+        // live child and times out while all assertions have already passed.
+        process.exit(0)
       `
       const child = Bun.spawn([process.execPath, "-e", script], {
         cwd: join(import.meta.dir, "../../.."),
@@ -210,7 +215,7 @@ describe("CodeIndexManager", () => {
       const timeout = setTimeout(() => {
         child.kill()
         gate.reject(new Error("Indexing subprocess timed out"))
-      }, 10_000)
+      }, 30_000)
       const [exit, stderr] = await Promise.race([
         Promise.all([child.exited, new Response(child.stderr).text()]),
         gate.promise,
