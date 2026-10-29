@@ -106,9 +106,9 @@ await Bun.write(
       version,
       license: "MIT",
       repository,
-      // The postinstall script uses the first command as the binary name in the platform packages. `kilo` keeps the
-      // v1 command working, because a global install of this package replaces v1.
-      bin: { kilo2: "./bin/kilo2.exe", kilo: "./bin/kilo2.exe" },
+      // The postinstall script uses the first command as the binary name in the platform packages. Only `kilo2`: a
+      // `kilo` alias would make a v1 user's `kilo` start v2, which keeps its logins and config apart from v1 (D-4).
+      bin: { kilo2: "./bin/kilo2.exe" },
       scripts: { postinstall: "node ./postinstall.mjs" },
       os: ["darwin", "linux", "win32"],
       cpu: ["arm64", "x64"],

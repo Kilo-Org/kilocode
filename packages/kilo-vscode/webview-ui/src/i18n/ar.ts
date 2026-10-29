@@ -1107,6 +1107,9 @@ export const dict = {
   "settings.agentBehaviour.mcpResetAuth.confirm":
     'مسح تسجيل الدخول المحفوظ لـ "{{name}}"؟ ستحتاج إلى تسجيل الدخول مرة أخرى.',
   "settings.agentBehaviour.mcpBrowseMarketplace": "تصفح Marketplace",
+  "settings.agentBehaviour.mcp.timeout.startup.title": "مهلة بدء التشغيل (مللي ثانية)",
+  "settings.agentBehaviour.mcp.timeout.catalog.title": "مهلة الكتالوج (مللي ثانية)",
+  "settings.agentBehaviour.mcp.timeout.execution.title": "مهلة التنفيذ (مللي ثانية)",
   "settings.agentBehaviour.mcpEmpty":
     "لم يتم تهيئة خوادم MCP. أضف خوادم MCP في kilo.jsonc، أو اطلب من الوكيل إضافتها لك.",
   "settings.agentBehaviour.workflows.description":
@@ -1125,7 +1128,7 @@ export const dict = {
     "تشغيل أوامر shell الخاصة بالوكيل داخل sandbox على مستوى نظام التشغيل يقيّد الكتابة على مجلدات حالة المشروع و Kilo",
 
   "settings.autoApprove.description":
-    "تحديد كيفية السماح بتشغيل الأدوات. معظم الأدوات معينة افتراضياً على السماح. doom_loop و external_directory معينة افتراضياً على السؤال.",
+    "تحديد كيفية السماح بتشغيل الأدوات. معظم الأدوات معينة افتراضياً على السماح. Bash معينة افتراضياً على السؤال.",
   "settings.autoApprove.maxCost.title": "تنبيه تكلفة الجلسة",
   "settings.autoApprove.maxCost.description":
     "نبّه قبل متابعة الجلسة بعد أن يتجاوز إنفاقها هذا المبلغ بالدولار الأمريكي. استخدم أرقامًا صحيحة بالدولار؛ اتركه فارغًا للتعطيل.",

@@ -1079,6 +1079,9 @@ export const dict = {
   "settings.agentBehaviour.mcpResetAuth.title": "重置 MCP 登录",
   "settings.agentBehaviour.mcpResetAuth.confirm": '清除 "{{name}}" 的已保存登录信息吗？您需要重新登录。',
   "settings.agentBehaviour.mcpBrowseMarketplace": "浏览市场",
+  "settings.agentBehaviour.mcp.timeout.startup.title": "启动超时 (毫秒)",
+  "settings.agentBehaviour.mcp.timeout.catalog.title": "目录超时 (毫秒)",
+  "settings.agentBehaviour.mcp.timeout.execution.title": "执行超时 (毫秒)",
   "settings.agentBehaviour.mcpEmpty": "未配置 MCP 服务器。在 kilo.jsonc 中添加 MCP 服务器，或让代理为您添加。",
   "settings.agentBehaviour.workflows.description":
     "工作流是在配置中定义的自定义斜杠命令。在聊天中输入 /command-name 来调用它们。命令在 opencode.json 的 'command' 部分中配置。",
@@ -1096,7 +1099,7 @@ export const dict = {
     "在操作系统级沙盒中运行代理 shell 命令，将写入限制在项目和 Kilo 状态目录内",
 
   "settings.autoApprove.description":
-    "定义工具的运行权限。大多数工具默认为「允许」。doom_loop 和 external_directory 默认为「询问」。",
+    "定义工具的运行权限。大多数工具默认为「允许」。Bash 默认为「询问」。",
   "settings.autoApprove.maxCost.title": "会话费用提醒",
   "settings.autoApprove.maxCost.description": "当会话花费超过此美元金额后，在继续前提醒。请使用整数美元；留空则禁用。",
   "settings.autoApprove.level.allow": "允许",

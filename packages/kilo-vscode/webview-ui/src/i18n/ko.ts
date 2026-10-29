@@ -1119,6 +1119,9 @@ export const dict = {
   "settings.agentBehaviour.mcpResetAuth.confirm":
     '"{{name}}"에 저장된 로그인 정보를 지우시겠습니까? 다시 로그인해야 합니다.',
   "settings.agentBehaviour.mcpBrowseMarketplace": "마켓플레이스 둘러보기",
+  "settings.agentBehaviour.mcp.timeout.startup.title": "시작 시간 초과 (ms)",
+  "settings.agentBehaviour.mcp.timeout.catalog.title": "카탈로그 시간 초과 (ms)",
+  "settings.agentBehaviour.mcp.timeout.execution.title": "실행 시간 초과 (ms)",
   "settings.agentBehaviour.mcpEmpty":
     "MCP 서버가 구성되지 않았습니다. kilo.jsonc에서 MCP 서버를 추가하거나 에이전트에게 추가를 요청하세요.",
   "settings.agentBehaviour.workflows.description":
@@ -1138,7 +1141,7 @@ export const dict = {
     "에이전트 셸 명령을 프로젝트 및 Kilo 상태 디렉터리에 대한 쓰기를 제한하는 OS 수준의 샌드박스 내에서 실행",
 
   "settings.autoApprove.description":
-    "도구 실행 허용 방식을 정의합니다. 대부분의 도구 기본값은 '허용'입니다. doom_loop 및 external_directory의 기본값은 '확인'입니다.",
+    "도구 실행 허용 방식을 정의합니다. 대부분의 도구 기본값은 '허용'입니다. Bash의 기본값은 '확인'입니다.",
   "settings.autoApprove.maxCost.title": "세션 비용 알림",
   "settings.autoApprove.maxCost.description":
     "세션 지출이 이 USD 금액을 초과한 뒤 계속하기 전에 알립니다. 정수 달러 금액을 사용하세요. 비활성화하려면 비워 두세요.",

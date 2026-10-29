@@ -1096,6 +1096,9 @@ export const dict = {
   "settings.agentBehaviour.addMcp.url": "Sunucu URL'si",
   "settings.agentBehaviour.addMcp.url.placeholder": "e.g. http://localhost:3000/sse",
   "settings.agentBehaviour.mcpBrowseMarketplace": "Marketplace'e Göz At",
+  "settings.agentBehaviour.mcp.timeout.startup.title": "Başlatma zaman aşımı (ms)",
+  "settings.agentBehaviour.mcp.timeout.catalog.title": "Katalog zaman aşımı (ms)",
+  "settings.agentBehaviour.mcp.timeout.execution.title": "Yürütme zaman aşımı (ms)",
   "settings.agentBehaviour.mcpEmpty":
     "Yapılandırılmış MCP sunucusu yok. kilo.jsonc dosyasına MCP sunucuları ekleyin veya ajanın eklemesini isteyin.",
   "settings.agentBehaviour.workflows.description":
@@ -1109,7 +1112,7 @@ export const dict = {
   "settings.agentBehaviour.workflows.modelDescription": "Global model geçersiz kılması",
 
   "settings.autoApprove.description":
-    "Araçların nasıl çalıştırılacağını tanımlayın. Çoğu araç varsayılan olarak İzin Ver'dir. doom_loop ve external_directory varsayılan olarak Sor'dur.",
+    "Araçların nasıl çalıştırılacağını tanımlayın. Çoğu araç varsayılan olarak İzin Ver'dir. Bash varsayılan olarak Sor'dur.",
   "settings.autoApprove.maxCost.title": "Oturum Maliyeti Uyarısı",
   "settings.autoApprove.maxCost.description":
     "Bir oturumun harcaması bu USD tutarını aştıktan sonra devam etmeden önce uyar. Tam dolar kullanın; devre dışı bırakmak için boş bırakın.",
