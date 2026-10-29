@@ -15,6 +15,7 @@
   },
   "dependencies": {
     "@kilocode/gateway-core": "workspace:*",
+    "@opencode/ai": "workspace:*",
     "@opencode/client": "workspace:*",
     "@opencode/core": "workspace:*",
     "@opencode/plugin": "workspace:*",
@@ -24,7 +25,6 @@
     "jsonc-parser": "3.3.1"
   },
   "devDependencies": {
-    "@opencode/ai": "workspace:*",
     "@tsconfig/bun": "catalog:",
     "@types/bun": "catalog:",
     "@types/node": "catalog:",
