@@ -82,9 +82,10 @@ export function createSettingsConfig() {
   const [files, setFiles] = createSignal<{ global?: ConfigFileContent; project?: ConfigFileContent }>({})
   const [settingsValues, setSettingsValues] = createSignal<Record<string, unknown>>(initialSettings())
   const [optimistic, setOptimistic] = createSignal<Optimistic[]>([])
-  const [inflight, setInflight] = createSignal<string[]>([])
+  const [inflight, setInflight] = createSignal<{ path: string; token: number }[]>([])
   const writers = new Map<number, (result: { ok: boolean; error?: string }) => void>()
   let nextWrite = 1
+  let nextToken = 1
 
   const toastError = (message: string) =>
     showToast({ variant: "error", title: language.t("settings.saveBar.saveFailed"), description: message })
@@ -159,7 +160,7 @@ export function createSettingsConfig() {
   }
 
   /** True while a write for this path is in flight, so a caller can prefer `value()` over the raw file. */
-  const pending = (path: string[]) => inflight().includes(pathKey(path))
+  const pending = (path: string[]) => inflight().some((item) => item.path === pathKey(path))
 
   const write = (scope: SettingsScope, edits: ConfigEdit[]) =>
     new Promise<{ ok: boolean; error?: string }>((resolve) => {
@@ -173,12 +174,14 @@ export function createSettingsConfig() {
     const key = pathKey(path)
     const writeValue = clone(value)
     setOptimistic((list) => [...list.filter((item) => pathKey(item.path) !== key), { scope, path, value: writeValue }])
-    setInflight((list) => [...list, key])
+    // A token per write keeps `pending` true until every write for the path settles, including both scopes.
+    const token = nextToken++
+    setInflight((list) => [...list, { path: key, token }])
     let result: { ok: boolean; error?: string }
     try {
       result = await write(scope, [{ path, value: writeValue }])
     } finally {
-      setInflight((list) => list.filter((item) => item !== key))
+      setInflight((list) => list.filter((item) => item.token !== token))
     }
     if (!result.ok) {
       setOptimistic((list) => list.filter((item) => pathKey(item.path) !== key))
