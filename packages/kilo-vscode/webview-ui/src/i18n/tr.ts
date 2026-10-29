@@ -1095,6 +1095,9 @@ export const dict = {
   "settings.agentBehaviour.addMcp.url": "Sunucu URL'si",
   "settings.agentBehaviour.addMcp.url.placeholder": "e.g. http://localhost:3000/sse",
   "settings.agentBehaviour.mcpBrowseMarketplace": "Marketplace'e Göz At",
+  "settings.agentBehaviour.mcp.timeout.startup.title": "Başlatma zaman aşımı (ms)",
+  "settings.agentBehaviour.mcp.timeout.catalog.title": "Katalog zaman aşımı (ms)",
+  "settings.agentBehaviour.mcp.timeout.execution.title": "Yürütme zaman aşımı (ms)",
   "settings.agentBehaviour.mcpEmpty":
     "Yapılandırılmış MCP sunucusu yok. kilo.jsonc dosyasına MCP sunucuları ekleyin veya ajanın eklemesini isteyin.",
   "settings.agentBehaviour.workflows.description":

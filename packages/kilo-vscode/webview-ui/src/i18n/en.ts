@@ -1086,6 +1086,9 @@ export const dict = {
   "settings.agentBehaviour.mcpBrowseMarketplace": "Browse Marketplace",
   "settings.agentBehaviour.mcpEmpty":
     "No MCP servers configured. Add MCP servers in kilo.jsonc, or ask the agent to add them for you.",
+  "settings.agentBehaviour.mcp.timeout.startup.title": "Startup timeout (ms)",
+  "settings.agentBehaviour.mcp.timeout.catalog.title": "Catalog timeout (ms)",
+  "settings.agentBehaviour.mcp.timeout.execution.title": "Execution timeout (ms)",
   "settings.agentBehaviour.workflows.description":
     "Workflows are custom slash commands defined in your config. Type /command-name in the chat to invoke them. Commands are configured in opencode.json under the 'command' section.",
   "settings.agentBehaviour.workflows.empty":

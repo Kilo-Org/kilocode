@@ -1145,6 +1145,9 @@ export const dict = {
   "settings.agentBehaviour.mcpResetAuth.confirm":
     '¿Borrar el inicio de sesión guardado para "{{name}}"? Deberás iniciar sesión de nuevo.',
   "settings.agentBehaviour.mcpBrowseMarketplace": "Explorar Marketplace",
+  "settings.agentBehaviour.mcp.timeout.startup.title": "Tiempo de espera de inicio (ms)",
+  "settings.agentBehaviour.mcp.timeout.catalog.title": "Tiempo de espera del catálogo (ms)",
+  "settings.agentBehaviour.mcp.timeout.execution.title": "Tiempo de espera de ejecución (ms)",
   "settings.agentBehaviour.mcpEmpty":
     "No hay servidores MCP configurados. Añada servidores MCP en kilo.jsonc o pida al agente que los añada.",
   "settings.agentBehaviour.workflows.description":

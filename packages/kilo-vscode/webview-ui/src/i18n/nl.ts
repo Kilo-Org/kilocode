@@ -1103,6 +1103,9 @@ export const dict = {
   "settings.agentBehaviour.addMcp.url": "Server-URL",
   "settings.agentBehaviour.addMcp.url.placeholder": "e.g. http://localhost:3000/sse",
   "settings.agentBehaviour.mcpBrowseMarketplace": "Bladeren door Marketplace",
+  "settings.agentBehaviour.mcp.timeout.startup.title": "Opstarttime-out (ms)",
+  "settings.agentBehaviour.mcp.timeout.catalog.title": "Catalogustime-out (ms)",
+  "settings.agentBehaviour.mcp.timeout.execution.title": "Uitvoeringstime-out (ms)",
   "settings.agentBehaviour.mcpEmpty":
     "Geen MCP-servers geconfigureerd. Voeg MCP-servers toe in kilo.jsonc of vraag de agent om ze toe te voegen.",
   "settings.agentBehaviour.workflows.description":

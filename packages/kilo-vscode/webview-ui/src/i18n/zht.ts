@@ -1039,6 +1039,9 @@ export const dict = {
   "settings.agentBehaviour.mcpResetAuth.title": "重設 MCP 登入",
   "settings.agentBehaviour.mcpResetAuth.confirm": '要清除 "{{name}}" 的已儲存登入資訊嗎？您需要重新登入。',
   "settings.agentBehaviour.mcpBrowseMarketplace": "瀏覽市場",
+  "settings.agentBehaviour.mcp.timeout.startup.title": "啟動逾時 (毫秒)",
+  "settings.agentBehaviour.mcp.timeout.catalog.title": "目錄逾時 (毫秒)",
+  "settings.agentBehaviour.mcp.timeout.execution.title": "執行逾時 (毫秒)",
   "settings.agentBehaviour.mcpEmpty": "未設定 MCP 伺服器。在 kilo.jsonc 中新增 MCP 伺服器，或請代理為您新增。",
   "settings.agentBehaviour.workflows.description":
     "工作流程是在設定中定義的自訂斜線命令。在聊天中輸入 /command-name 來呼叫它們。命令在 opencode.json 的 'command' 區段中設定。",

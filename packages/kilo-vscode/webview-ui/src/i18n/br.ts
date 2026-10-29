@@ -1143,6 +1143,9 @@ export const dict = {
   "settings.agentBehaviour.mcpResetAuth.confirm":
     "Skarzhañ ar c'hennaskañ kadaviet evit \"{{name}}\"? Ret e vo deoc'h kennaskañ en-dro.",
   "settings.agentBehaviour.mcpBrowseMarketplace": "Explorar Marketplace",
+  "settings.agentBehaviour.mcp.timeout.startup.title": "Tempo limite de inicialização (ms)",
+  "settings.agentBehaviour.mcp.timeout.catalog.title": "Tempo limite do catálogo (ms)",
+  "settings.agentBehaviour.mcp.timeout.execution.title": "Tempo limite de execução (ms)",
   "settings.agentBehaviour.mcpEmpty":
     "Nenhum servidor MCP configurado. Adicione servidores MCP em kilo.jsonc ou peça ao agente para adicioná-los.",
   "settings.agentBehaviour.workflows.description":

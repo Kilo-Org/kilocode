@@ -1131,6 +1131,9 @@ export const dict = {
   "settings.agentBehaviour.mcpResetAuth.confirm":
     'Ukloniti sačuvanu prijavu za "{{name}}"? Morat ćete se ponovo prijaviti.',
   "settings.agentBehaviour.mcpBrowseMarketplace": "Pregledaj Marketplace",
+  "settings.agentBehaviour.mcp.timeout.startup.title": "Vrijeme pokretanja (ms)",
+  "settings.agentBehaviour.mcp.timeout.catalog.title": "Vrijeme kataloga (ms)",
+  "settings.agentBehaviour.mcp.timeout.execution.title": "Vrijeme izvršavanja (ms)",
   "settings.agentBehaviour.mcpEmpty":
     "Nema konfiguriranih MCP servera. Dodajte MCP servere u kilo.jsonc ili zamolite agenta da ih doda.",
   "settings.agentBehaviour.workflows.description":

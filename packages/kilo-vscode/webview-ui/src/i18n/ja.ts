@@ -1126,6 +1126,9 @@ export const dict = {
   "settings.agentBehaviour.mcpResetAuth.confirm":
     '"{{name}}" の保存されたサインイン情報を消去しますか？再度サインインが必要になります。',
   "settings.agentBehaviour.mcpBrowseMarketplace": "マーケットプレイスを閲覧",
+  "settings.agentBehaviour.mcp.timeout.startup.title": "起動タイムアウト (ms)",
+  "settings.agentBehaviour.mcp.timeout.catalog.title": "カタログタイムアウト (ms)",
+  "settings.agentBehaviour.mcp.timeout.execution.title": "実行タイムアウト (ms)",
   "settings.agentBehaviour.mcpEmpty":
     "MCPサーバーが設定されていません。kilo.jsoncでMCPサーバーを追加するか、エージェントに追加を依頼してください。",
   "settings.agentBehaviour.workflows.description":

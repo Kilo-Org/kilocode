@@ -1129,6 +1129,9 @@ export const dict = {
   "settings.agentBehaviour.mcpResetAuth.title": "Nulstil MCP-login",
   "settings.agentBehaviour.mcpResetAuth.confirm": 'Fjern det gemte login for "{{name}}"? Du skal logge ind igen.',
   "settings.agentBehaviour.mcpBrowseMarketplace": "Gennemse Marketplace",
+  "settings.agentBehaviour.mcp.timeout.startup.title": "Opstartstimeout (ms)",
+  "settings.agentBehaviour.mcp.timeout.catalog.title": "Katalogtimeout (ms)",
+  "settings.agentBehaviour.mcp.timeout.execution.title": "Udførelsestimeout (ms)",
   "settings.agentBehaviour.mcpEmpty":
     "Ingen MCP-servere konfigureret. Tilføj MCP-servere i kilo.jsonc, eller bed agenten om at tilføje dem.",
   "settings.agentBehaviour.workflows.description":

@@ -1094,6 +1094,9 @@ export const dict = {
   "settings.agentBehaviour.addMcp.url": "URL сервера",
   "settings.agentBehaviour.addMcp.url.placeholder": "напр. http://localhost:3000/sse",
   "settings.agentBehaviour.mcpBrowseMarketplace": "Переглянути Marketplace",
+  "settings.agentBehaviour.mcp.timeout.startup.title": "Час очікування запуску (мс)",
+  "settings.agentBehaviour.mcp.timeout.catalog.title": "Час очікування каталогу (мс)",
+  "settings.agentBehaviour.mcp.timeout.execution.title": "Час очікування виконання (мс)",
   "settings.agentBehaviour.mcpEmpty":
     "MCP-серверів не налаштовано. Додайте MCP-сервери до kilo.jsonc або попросіть агента додати їх.",
   "settings.agentBehaviour.workflows.description":

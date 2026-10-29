@@ -1158,6 +1158,9 @@ export const dict = {
   "settings.agentBehaviour.mcpResetAuth.confirm":
     'Effacer la connexion enregistrée pour "{{name}}" ? Vous devrez vous reconnecter.',
   "settings.agentBehaviour.mcpBrowseMarketplace": "Parcourir le Marketplace",
+  "settings.agentBehaviour.mcp.timeout.startup.title": "Délai de démarrage (ms)",
+  "settings.agentBehaviour.mcp.timeout.catalog.title": "Délai du catalogue (ms)",
+  "settings.agentBehaviour.mcp.timeout.execution.title": "Délai d'exécution (ms)",
   "settings.agentBehaviour.mcpEmpty":
     "Aucun serveur MCP configuré. Ajoutez des serveurs MCP dans kilo.jsonc ou demandez à l'agent de les ajouter.",
   "settings.agentBehaviour.workflows.description":
