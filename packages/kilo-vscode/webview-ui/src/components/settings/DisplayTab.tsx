@@ -2,13 +2,13 @@
 // Shift+Tab (`kilo-code.v2.*` settings). Not rendered, no v2 contract: token throughput, auto-approval reason, the
 // display presets and the block display modes, and the session preview.
 import { Card } from "@kilocode/kilo-ui/card"
-import { Switch } from "@kilocode/kilo-ui/switch"
 import { TextField } from "@kilocode/kilo-ui/text-field"
 import { createEffect, type Component } from "solid-js"
 import { useLanguage } from "../../context/language"
 import { applyFontSize, bootFontSize } from "../../v2/kilo-settings"
 import { useSettingsConfig } from "../../v2/settings-config"
 import SettingsRow from "./SettingsRow"
+import Switch from "./Switch"
 
 const DisplayTab: Component = () => {
   const config = useSettingsConfig()
