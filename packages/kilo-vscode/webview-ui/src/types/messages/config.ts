@@ -35,6 +35,20 @@ export interface ConfigCollectionEntry {
 
 export type ConfigCollections = Record<string, ConfigCollectionEntry[]>
 
+/** Per-field provenance from the config overlay, keyed by dotted path (e.g. "indexing.model"). */
+export interface ConfigField {
+  key: string
+  path: string[]
+  value?: unknown
+  global?: unknown
+  local?: unknown
+  source: ConfigOrigin
+  inherited: boolean
+  overridden: boolean
+  editable: boolean
+  reason?: string
+}
+
 export interface CommandConfig {
   template?: string
   description?: string
