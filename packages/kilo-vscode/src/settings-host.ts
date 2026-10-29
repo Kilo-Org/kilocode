@@ -102,22 +102,33 @@ export function settingsHost(input: {
     }
   }
 
-  const writeConfig = async (scope: ConfigScope, edits: ConfigEdit[]) => {
-    try {
-      const files = await targets()
-      const file = files[scope]
-      if (!isKiloConfigFile(file)) throw new Error(`Refused a config write outside a Kilo config file: ${file}`)
-      const existing = await read(file)
-      if (existing.trim().length === 0 && edits.every((edit) => edit.value === undefined)) {
-        input.post({ type: "configWritten", ok: true })
-        return
+  // Immediate writes can overlap, and two overlapping read-modify-write passes over the same file would drop one
+  // edit. Run every write through one chain so each reads the text the previous one wrote.
+  let queue: Promise<void> = Promise.resolve()
+
+  const writeConfig = (id: number, scope: ConfigScope, edits: ConfigEdit[]) => {
+    queue = queue.then(async () => {
+      try {
+        const files = await targets()
+        const file = files[scope]
+        if (!isKiloConfigFile(file)) throw new Error(`Refused a config write outside a Kilo config file: ${file}`)
+        const existing = await read(file)
+        if (existing.trim().length === 0 && edits.every((edit) => edit.value === undefined)) {
+          input.post({ type: "configWritten", id, ok: true })
+          return
+        }
+        await mkdir(path.dirname(file), { recursive: true })
+        await writeFile(file, applyConfigEdits(existing, edits))
+        input.post({ type: "configWritten", id, ok: true })
+      } catch (error) {
+        input.post({
+          type: "configWritten",
+          id,
+          ok: false,
+          error: error instanceof Error ? error.message : String(error),
+        })
       }
-      await mkdir(path.dirname(file), { recursive: true })
-      await writeFile(file, applyConfigEdits(existing, edits))
-      input.post({ type: "configWritten", ok: true })
-    } catch (error) {
-      input.post({ type: "configWritten", ok: false, error: error instanceof Error ? error.message : String(error) })
-    }
+    })
   }
 
   const updateSettings = async (values: Record<string, unknown>) => {
@@ -165,7 +176,7 @@ export function settingsHost(input: {
       return true
     }
     if (message.type === "configWrite") {
-      void writeConfig(message.scope, message.edits)
+      writeConfig(message.id, message.scope, message.edits)
       return true
     }
     if (message.type === "requestVSCodeSettings") {
