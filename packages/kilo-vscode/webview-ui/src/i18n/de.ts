@@ -840,6 +840,11 @@ export const dict = {
   "context.usage.sessionCost": "Sitzungskosten",
   "context.usage.olderSessions": "{{count}} ältere Sitzungen",
   "context.stats.thisSession": "Diese Sitzung",
+  "context.limits.missing.title": "Modelllimits nicht konfiguriert",
+  "context.limits.missing.context":
+    "Für dieses Modell ist kein Kontextfenster festgelegt, daher ist der Kontextverbrauch in Prozent nicht verfügbar und die automatische Komprimierung wird möglicherweise nicht ausgeführt. Auch die manuelle Komprimierung kann bei großen Sitzungen fehlschlagen. Legen Sie limit.context in der Anbieterkonfiguration für dieses Modell fest.",
+  "context.limits.missing.both":
+    "Für dieses Modell sind weder Kontextfenster noch maximales Ausgabelimit festgelegt. Die automatische Komprimierung wird möglicherweise nicht ausgeführt und der Kontextverbrauch in Prozent ist nicht verfügbar. Auch die manuelle Komprimierung kann bei großen Sitzungen fehlschlagen. Legen Sie limit.context und limit.output in der Anbieterkonfiguration für dieses Modell fest.",
 
   "time.today": "Heute",
   "time.yesterday": "Gestern",

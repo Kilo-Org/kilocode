@@ -801,6 +801,11 @@ export const dict = {
   "context.usage.sessionCost": "Session cost",
   "context.usage.olderSessions": "{{count}} older sessions",
   "context.stats.thisSession": "This session",
+  "context.limits.missing.title": "Model limits not configured",
+  "context.limits.missing.context":
+    "No context window is set for this model, so the context usage percentage is unavailable and automatic compaction may not run. Manual compaction can also fail on large sessions. Set limit.context for this model in your provider configuration.",
+  "context.limits.missing.both":
+    "No context window or max output limit is set for this model. Automatic compaction may not run, and the context usage percentage is unavailable. Manual compaction can also fail on large sessions. Set limit.context and limit.output for this model in your provider configuration.",
 
   "time.today": "Today",
   "time.yesterday": "Yesterday",
