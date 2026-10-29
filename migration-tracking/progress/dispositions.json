@@ -580,5 +580,25 @@
     "state": "ported",
     "note": "webview-ui/src/v2/auto-approve.tsx replaces the v1 bridge: it requests the persisted state, listens for autoApproveStateLoaded, and persists toggles through the requestAutoApproveState/persistAutoApproveState messages in src/protocol.ts, handled by src/chat.ts. Replies use permission.reply({sessionID, requestID, decision: \"once\"}), so v1's SSE/session directory resolution is not needed.",
     "by": "v2-auto-approve"
+  },
+  "module:packages/kilo-vscode/webview-ui/src/components/settings/ModeCreateView.tsx": {
+    "state": "ported",
+    "note": "webview-ui/src/components/settings/agent-behaviour/ModeCreateView.tsx on the v2 agent contract: the name becomes the agents.<id> config key with the same slug and uniqueness validation, and Create writes mode \"primary\" with the description and system prompt through useSettingsConfig into the shared save bar.",
+    "by": "settings-agents"
+  },
+  "module:packages/kilo-vscode/webview-ui/src/components/settings/ModeEditView.tsx": {
+    "state": "ported",
+    "note": "webview-ui/src/components/settings/agent-behaviour/ModeEditView.tsx on the v2 agent contract: description, system prompt (agents.<id>.system), model and variant (agents.<id>.model through ModelPicker), temperature and top_p (agents.<id>.request.body), steps, hidden and disabled, clearing default_agent when the default becomes hidden or disabled, export, remove for a config-defined agent, the PermissionEditor mount for a custom agent and the read-only calculated permissions from api.agent.get.",
+    "by": "settings-agents"
+  },
+  "module:packages/kilo-vscode/webview-ui/src/components/settings/mode-io.ts": {
+    "state": "ported",
+    "note": "webview-ui/src/components/settings/agent-behaviour/mode-io.ts in the v2 agents.<id> shape: the 1 MB cap tag, the name and JSON validation and the export payload, with focused tests in packages/kilo-vscode/test/agent-behaviour.test.ts.",
+    "by": "settings-agents"
+  },
+  "module:packages/kilo-vscode/webview-ui/src/components/settings/mode-model.ts": {
+    "state": "ported",
+    "note": "The v1 modelPatch helper is replaced by webview-ui/src/components/settings/agent-behaviour/agents.ts (parseModelSelection and modelSelection) with the shared ModelPicker at agents.<id>.model; the variant is part of the same selection.",
+    "by": "settings-agents"
   }
 }

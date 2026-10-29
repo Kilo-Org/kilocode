@@ -13,7 +13,7 @@ export const AGENT_BEHAVIOUR_SUBTABS: AgentBehaviourSubtab[] = [
   {
     id: "agents",
     title: "settings.agentBehaviour.subtab.agents",
-    ready: false,
+    ready: true,
     component: lazy(() => import("./AgentsSubtab")),
   },
   {
