@@ -15,6 +15,7 @@ internal enum class HostedWorkspaceStatus(private val value: String, private val
     STARTING("starting", UiStyle.Badge.Secondary),
     STOPPING("stopping", UiStyle.Badge.Secondary),
     STOPPED("stopped", UiStyle.Badge.Secondary),
+    DELETING("deleting", UiStyle.Badge.ActivityError),
     UNAVAILABLE("unavailable", UiStyle.Badge.ActivityError),
     UNKNOWN("unknown", UiStyle.Badge.Secondary),
     ;
@@ -26,16 +27,24 @@ internal enum class HostedWorkspaceStatus(private val value: String, private val
     )
 
     companion object {
-        fun of(status: HostedWorkspaceStatusDto?): HostedWorkspaceStatus = when (status?.computeStatus) {
-            null -> LOADING
-            "active", "running" -> ACTIVE
-            "setting_up" -> SETTING_UP
-            "sleeping" -> SLEEPING
-            "starting" -> STARTING
-            "stopping" -> STOPPING
-            "stopped" -> STOPPED
-            "error", "unreachable", "unavailable" -> UNAVAILABLE
-            else -> UNKNOWN
+        fun of(status: HostedWorkspaceStatusDto?): HostedWorkspaceStatus {
+            if (status?.deletionState == "deleting" ||
+                (status?.deletion?.started == true && status?.deletion?.completed != true)
+            ) {
+                return DELETING
+            }
+            if (status?.deletionState == "deleted") return UNAVAILABLE
+            return when (status?.computeStatus) {
+                null -> LOADING
+                "active", "running" -> ACTIVE
+                "setting_up" -> SETTING_UP
+                "sleeping" -> SLEEPING
+                "starting" -> STARTING
+                "stopping" -> STOPPING
+                "stopped" -> STOPPED
+                "error", "unreachable", "unavailable" -> UNAVAILABLE
+                else -> UNKNOWN
+            }
         }
     }
 }

@@ -7,7 +7,6 @@ import ai.kilocode.client.app.KiloWorkspaceService
 import ai.kilocode.client.agentManager.WorkspaceSessionEditorPanel
 import ai.kilocode.client.agentManager.WorkspaceSessionHeader
 import ai.kilocode.client.agentManager.WorkspaceSessionListToggle
-import ai.kilocode.client.agentManager.WorkspaceSessionRow
 import ai.kilocode.client.session.history.HistorySection
 import ai.kilocode.client.session.history.HistoryTime
 import ai.kilocode.client.plugin.KiloBundle
@@ -31,7 +30,13 @@ import ai.kilocode.client.vfs.KiloVirtualFileSystem
 import com.intellij.openapi.components.service
 import com.intellij.openapi.fileEditor.FileEditorManager
 import ai.kilocode.rpc.KiloHostedRpcApi
+import ai.kilocode.rpc.dto.HostedAgentDto
+import ai.kilocode.rpc.dto.HostedCreateWorkspaceDto
+import ai.kilocode.rpc.dto.HostedDeleteResultDto
+import ai.kilocode.rpc.dto.HostedMutationResultDto
 import ai.kilocode.rpc.dto.HostedProviderDto
+import ai.kilocode.rpc.dto.HostedStartSessionDto
+import ai.kilocode.rpc.dto.HostedWorkspaceProfileListDto
 import ai.kilocode.rpc.dto.HostedSystemEventDto
 import ai.kilocode.rpc.dto.HostedWorkspaceDto
 import ai.kilocode.rpc.dto.HostedWorkspaceListDto
@@ -45,7 +50,6 @@ import ai.kilocode.rpc.dto.KiloWorkspaceStatusDto
 import ai.kilocode.rpc.dto.SessionStatusDto
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.util.Disposer
-import com.intellij.ide.util.PropertiesComponent
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.testFramework.replaceService
 import com.intellij.ui.components.JBLabel
@@ -98,7 +102,7 @@ class HostedWorkspaceEditorPanelTest : BasePlatformTestCase() {
     override fun tearDown() {
         try {
             edtWait { Disposer.dispose(panel) }
-            edtWait { PropertiesComponent.getInstance(project).unsetValue("kilo.hosted.sessionList.${ref.key}") }
+            edtWait { project.service<HostedManagementService>().forget(ref) }
             coroutines.close()
         } finally { super.tearDown() }
     }
@@ -185,7 +189,7 @@ class HostedWorkspaceEditorPanelTest : BasePlatformTestCase() {
             assertNotNull(descendants(panel).filterIsInstance<WorkspaceSessionHeader>().single())
             val list = descendants(panel).filterIsInstance<JBList<*>>().single()
             val rows = (0 until list.model.size).map { list.model.getElementAt(it) as ActiveListItem }
-            assertTrue(rows.all { it is WorkspaceSessionRow })
+            assertTrue(rows.all { it is HostedSessionRow })
             assertEquals(listOf("${ref.key}:selected", "${ref.key}:other"), rows.map { it.key })
             assertEquals(HistoryTime.title(HistorySection.OLDER), rows.first().section)
             assertEquals("New session", rows.last().title)
@@ -266,7 +270,7 @@ class HostedWorkspaceEditorPanelTest : BasePlatformTestCase() {
                 assertSame(list, splitter.firstComponent)
                 assertSame(title, descendants(panel).filterIsInstance<SimpleColoredComponent>().first())
             }
-            assertEquals("true", PropertiesComponent.getInstance(project).getValue("kilo.hosted.sessionList.${ref.key}"))
+            assertTrue(project.service<HostedManagementService>().listVisible(ref))
         }
     }
 
@@ -385,6 +389,12 @@ class HostedWorkspaceEditorPanelTest : BasePlatformTestCase() {
         }
         override suspend fun workspaceStatus(ref: HostedWorkspaceRefDto, organizationID: String?) =
             HostedWorkspaceStatusDto(ref, "active", "sleeping", "sandbox_stopped", 100.0, rateMicrodollarsPerHour = 1_200_000)
+        override suspend fun workspaceProfiles(organizationID: String?) = HostedWorkspaceProfileListDto()
+        override suspend fun createWorkspace(request: HostedCreateWorkspaceDto) = HostedMutationResultDto()
+        override suspend fun startWorkspaceSession(ref: HostedWorkspaceRefDto, request: HostedStartSessionDto) =
+            HostedMutationResultDto()
+        override suspend fun deleteWorkspace(ref: HostedWorkspaceRefDto, organizationID: String?) =
+            HostedDeleteResultDto(ref)
         override suspend fun systemEvents(ref: HostedWorkspaceRefDto, sessionID: String, organizationID: String?): Flow<HostedSystemEventDto> = flow {
             collectors++
             active++
