@@ -21,13 +21,15 @@ describe("applyConfigEdits", () => {
 
   test("removes the v1 agent field alias when it writes the v2 field", () => {
     const text = `{
-  "agent": { "build": { "prompt": "old" } }
+  "agent": { "build": { "prompt": "old" } },
+  "mode": { "build": { "prompt": "old" } }
 }
 `
     const result = applyConfigEdits(text, [{ path: ["agents", "build", "system"], value: "new" }])
     const parsed = parse(result)
     expect(parsed.agents.build.system).toBe("new")
     expect(parsed.agent.build.prompt).toBeUndefined()
+    expect(parsed.mode.build.prompt).toBeUndefined()
   })
 
   test("removes the v1 direct MCP alias when it writes under mcp.servers", () => {
@@ -59,18 +61,32 @@ describe("applyConfigEdits", () => {
 })
 
 describe("aliasOf", () => {
-  test("maps the v2 paths to the v1 keys from normalize.ts", () => {
-    expect(aliasOf(["agents"])).toEqual(["agent"])
-    expect(aliasOf(["agents", "build", "model"])).toEqual(["agent", "build", "model"])
-    expect(aliasOf(["agents", "build", "system"])).toEqual(["agent", "build", "prompt"])
-    expect(aliasOf(["agents", "build", "disabled"])).toEqual(["agent", "build", "disable"])
-    expect(aliasOf(["agents", "title", "model"])).toEqual(["small_model"])
-    expect(aliasOf(["permissions"])).toEqual(["permission"])
-    expect(aliasOf(["commands"])).toEqual(["command"])
-    expect(aliasOf(["providers"])).toEqual(["provider"])
-    expect(aliasOf(["snapshots"])).toEqual(["snapshot"])
-    expect(aliasOf(["mcp", "servers", "foo"])).toEqual(["mcp", "foo"])
-    expect(aliasOf(["model"])).toBeUndefined()
+  test("maps the v2 paths to every v1 key normalize.ts reads", () => {
+    expect(aliasOf(["agents"])).toEqual([["agent"], ["mode"]])
+    expect(aliasOf(["agents", "build", "model"])).toEqual([
+      ["agent", "build", "model"],
+      ["mode", "build", "model"],
+    ])
+    expect(aliasOf(["agents", "build", "system"])).toEqual([
+      ["agent", "build", "prompt"],
+      ["mode", "build", "prompt"],
+    ])
+    expect(aliasOf(["agents", "build", "disabled"])).toEqual([
+      ["agent", "build", "disable"],
+      ["mode", "build", "disable"],
+    ])
+    expect(aliasOf(["agents", "title", "model"])).toEqual([["small_model"]])
+    expect(aliasOf(["permissions"])).toEqual([["permission"], ["tools"]])
+    expect(aliasOf(["commands"])).toEqual([["command"]])
+    expect(aliasOf(["providers"])).toEqual([["provider"]])
+    expect(aliasOf(["snapshots"])).toEqual([["snapshot"]])
+    expect(aliasOf(["plugins"])).toEqual([["plugin"]])
+    expect(aliasOf(["media"])).toEqual([["attachment"]])
+    expect(aliasOf(["update"])).toEqual([["autoupdate"]])
+    expect(aliasOf(["share"])).toEqual([["autoshare"]])
+    expect(aliasOf(["references"])).toEqual([["reference"]])
+    expect(aliasOf(["mcp", "servers", "foo"])).toEqual([["mcp", "foo"]])
+    expect(aliasOf(["model"])).toEqual([])
   })
 })
 
