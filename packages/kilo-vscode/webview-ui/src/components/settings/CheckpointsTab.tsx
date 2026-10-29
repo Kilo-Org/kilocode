@@ -4,12 +4,13 @@ import { Card } from "@kilocode/kilo-ui/card"
 import { useLanguage } from "../../context/language"
 import { useSettingsConfig } from "../../v2/settings-config"
 import SettingsRow from "./SettingsRow"
+import { writeScope } from "./settings-scope"
 
 const CheckpointsTab: Component = () => {
   const config = useSettingsConfig()
   const language = useLanguage()
 
-  const write = (path: string[], value: unknown) => config.set(path, value, config.source(path) ?? "global")
+  const write = (path: string[], value: unknown) => config.set(path, value, writeScope(config.source, path))
 
   return (
     <div>

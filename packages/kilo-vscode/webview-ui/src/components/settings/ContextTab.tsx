@@ -7,6 +7,7 @@ import { useSettingsConfig } from "../../v2/settings-config"
 import SettingsRow from "./SettingsRow"
 import PatternList from "./PatternList"
 import { tokenEdit } from "./context-tokens"
+import { writeScope } from "./settings-scope"
 
 const ContextTab: Component = () => {
   const config = useSettingsConfig()
@@ -17,8 +18,8 @@ const ContextTab: Component = () => {
     return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : []
   }
 
-  const write = (path: string[], value: unknown) => config.set(path, value, config.source(path) ?? "global")
-  const clear = (path: string[]) => config.unset(path, config.source(path) ?? "global")
+  const write = (path: string[], value: unknown) => config.set(path, value, writeScope(config.source, path))
+  const clear = (path: string[]) => config.unset(path, writeScope(config.source, path))
 
   const auto = () => config.value(["compaction", "auto"]) !== false
 
