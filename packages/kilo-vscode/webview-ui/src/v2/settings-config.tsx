@@ -1,7 +1,8 @@
 // The Settings data layer: live reads over the server config entries (`api.config.get`) and the raw target files the
 // host read. Writes go straight to the host, which owns the files; the v2 server reloads a written file and emits
 // `config.updated`, and `createData` resyncs the config resource, so `value(path)` reads the live merged config.
-// A write keeps a short optimistic value for its path until the resync arrives, so the control does not flicker.
+// A write keeps a short optimistic value for its path until the resync covers that path, so the control does not
+// flicker while another write is still in flight.
 //
 // Commit timing for the tabs: switches and selects write on change, while text and number fields write on blur or
 // Enter (not on every keystroke), so a partial value is never written.
@@ -30,6 +31,12 @@ export type KiloSettingKey = "fontSize" | "language" | "chat.shiftTabCyclesVaria
 
 type Json = Record<string, unknown>
 
+interface Optimistic {
+  scope: SettingsScope
+  path: string[]
+  value: unknown
+}
+
 function readPath(source: unknown, path: string[]): unknown {
   let current: unknown = source
   for (const key of path) {
@@ -41,6 +48,10 @@ function readPath(source: unknown, path: string[]): unknown {
 
 function pathKey(path: string[]): string {
   return JSON.stringify(path)
+}
+
+function sameValue(a: unknown, b: unknown): boolean {
+  return JSON.stringify(a ?? null) === JSON.stringify(b ?? null)
 }
 
 function parseJson(text: string | undefined): Json {
@@ -63,17 +74,27 @@ export function createSettingsConfig() {
 
   const [files, setFiles] = createSignal<{ global?: ConfigFileContent; project?: ConfigFileContent }>({})
   const [settingsValues, setSettingsValues] = createSignal<Record<string, unknown>>(initialSettings())
-  const [optimistic, setOptimistic] = createSignal<{ path: string[]; value: unknown }[]>([])
-  const writers: { resolve: (ok: boolean) => void }[] = []
+  const [optimistic, setOptimistic] = createSignal<Optimistic[]>([])
+  const writers = new Map<number, (result: { ok: boolean; error?: string }) => void>()
+  let nextWrite = 1
 
   const unsubscribe = vscode.onMessage((raw) => {
     const message = raw as unknown as ToWebview
     if (message.type === "configLoaded") {
       setFiles({ global: message.global, project: message.project })
+      // Drop only the optimistic values the new file content now covers, so an in-flight edit keeps its value.
+      setOptimistic((list) =>
+        list.filter((item) => {
+          const text = item.scope === "project" ? message.project.text : message.global.text
+          return !sameValue(readPath(parseJson(text), item.path), item.value)
+        }),
+      )
       return
     }
     if (message.type === "configWritten") {
-      writers.shift()?.resolve(message.ok)
+      const resolve = writers.get(message.id)
+      writers.delete(message.id)
+      resolve?.({ ok: message.ok, error: message.error })
       return
     }
     if (message.type === "vscodeSettingsLoaded") setSettingsValues(message.values)
@@ -91,16 +112,9 @@ export function createSettingsConfig() {
   const entries = () => v2.data.location.config.list() ?? []
 
   // The server reloads a written file on its own, then `config.updated` resyncs the config resource. Re-read the raw
-  // files and drop the optimistic values: the resync now carries the written value.
+  // files; the `configLoaded` reply drops the optimistic values the new content covers.
   createEffect(
-    on(
-      entries,
-      () => {
-        post({ type: "configRead" })
-        setOptimistic([])
-      },
-      { defer: true },
-    ),
+    on(entries, () => post({ type: "configRead" }), { defer: true }),
   )
 
   const merged = createMemo(() => mergeConfigDocuments(entries()))
@@ -129,28 +143,25 @@ export function createSettingsConfig() {
   }
 
   const write = (scope: SettingsScope, edits: ConfigEdit[]) =>
-    new Promise<boolean>((resolve) => {
-      writers.push({ resolve })
-      post({ type: "configWrite", scope, edits })
+    new Promise<{ ok: boolean; error?: string }>((resolve) => {
+      const id = nextWrite++
+      writers.set(id, resolve)
+      post({ type: "configWrite", id, scope, edits })
     })
 
-  const fail = (error: unknown) =>
-    showToast({
-      variant: "error",
-      title: language.t("settings.saveBar.saveFailed"),
-      description: error instanceof Error ? error.message : String(error),
-    })
+  const fail = (message: string) =>
+    showToast({ variant: "error", title: language.t("settings.saveBar.saveFailed"), description: message })
 
   /** Write a value immediately. A VS Code setting passes through `setSetting`. */
   const set = async (path: string[], value: unknown, scope: SettingsScope = "global") => {
     const key = pathKey(path)
-    setOptimistic((list) => [...list.filter((item) => pathKey(item.path) !== key), { path, value }])
-    const ok = await write(scope, [{ path, value }])
-    if (!ok) {
+    setOptimistic((list) => [...list.filter((item) => pathKey(item.path) !== key), { scope, path, value }])
+    const result = await write(scope, [{ path, value }])
+    if (!result.ok) {
       setOptimistic((list) => list.filter((item) => pathKey(item.path) !== key))
-      fail(new Error(language.t("settings.saveBar.saveFailed")))
+      fail(result.error ?? language.t("settings.saveBar.saveFailed"))
     }
-    return ok
+    return result.ok
   }
 
   const unset = (path: string[], scope: SettingsScope = "global") => set(path, undefined, scope)
@@ -160,7 +171,18 @@ export function createSettingsConfig() {
     post({ type: "updateVSCodeSettings", values: { [key]: value ?? null } })
   }
 
-  return { entries, merged, raw, path, source, value, set, unset, setting: (key: KiloSettingKey) => settingsValues()[key], setSetting }
+  return {
+    entries,
+    merged,
+    raw,
+    path,
+    source,
+    value,
+    set,
+    unset,
+    setting: (key: KiloSettingKey) => settingsValues()[key],
+    setSetting,
+  }
 }
 
 export type SettingsConfig = ReturnType<typeof createSettingsConfig>
