@@ -1,5 +1,6 @@
-// The Workflows subtab: one row per command, from `api.command.list` plus the config `commands`. Description and the
-// read-only template come from the config; the per-command model and variant live in `commands.<n>.model`.
+// The Workflows subtab: one row per command, from `api.command.list` plus the config `commands` (and the v1 `command`
+// key). Description and the read-only template come from the config; the per-command model and variant live in the
+// command's `model`. The effective entry is read per config document, because core merges commands per name.
 import { Component, For, Show, createEffect, createMemo, createSignal, on } from "solid-js"
 import { Card } from "@kilocode/kilo-ui/card"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
@@ -21,51 +22,75 @@ const WorkflowsSubtab: Component = () => {
     }),
   )
 
-  const configured = (): Record<string, unknown> => {
-    const value = config.value(["commands"])
-    return value && typeof value === "object" ? (value as Record<string, unknown>) : {}
+  type CommandDocument = { commands?: Record<string, unknown>; command?: Record<string, unknown> }
+  type CommandEntry = { scope: "project" | "global"; key: "commands" | "command"; value: Record<string, unknown> }
+
+  // Core loads commands per document and merges them per name, so the effective entry is the one from the
+  // highest-priority document (project, then global), under the v2 `commands` key or the v1 `command` key. The shallow
+  // merged config keeps only the last document that defines `commands`, so read the raw documents instead.
+  const entry = (name: string): CommandEntry | undefined => {
+    for (const scope of ["project", "global"] as const) {
+      const document = config.raw(scope) as CommandDocument | undefined
+      const native = document?.commands?.[name]
+      if (native && typeof native === "object")
+        return { scope, key: "commands", value: native as Record<string, unknown> }
+      const legacy = document?.command?.[name]
+      if (legacy && typeof legacy === "object")
+        return { scope, key: "command", value: legacy as Record<string, unknown> }
+    }
+    return undefined
   }
 
   const names = createMemo(() => {
     const set = new Set<string>((v2.data.location.command.list() ?? []).map((command) => command.name))
-    for (const name of Object.keys(configured())) set.add(name)
+    for (const scope of ["project", "global"] as const) {
+      const document = config.raw(scope) as CommandDocument | undefined
+      for (const key of ["commands", "command"] as const)
+        for (const name of Object.keys(document?.[key] ?? {})) set.add(name)
+    }
     return [...set].sort()
   })
 
   const discovered = (name: string) => (v2.data.location.command.list() ?? []).find((command) => command.name === name)
 
   const description = (name: string) => {
-    const entry = configured()[name]
-    const configuredDescription =
-      entry && typeof entry === "object" ? (entry as { description?: unknown }).description : undefined
-    return discovered(name)?.description ?? (typeof configuredDescription === "string" ? configuredDescription : undefined)
+    const value = entry(name)?.value.description
+    return discovered(name)?.description ?? (typeof value === "string" ? value : undefined)
   }
 
   const template = (name: string) => {
-    const entry = configured()[name]
-    const value = entry && typeof entry === "object" ? (entry as { template?: unknown }).template : undefined
+    const value = entry(name)?.value.template
     return typeof value === "string" ? value : undefined
   }
 
-  const model = (name: string) => parseCommandModel(config.value(["commands", name, "model"]))
-
-  // A v2 command entry requires a template, so the model override only applies where a template exists. Read the raw
-  // documents per path (not the shallow merged config), so a command from a lower-priority file is not missed, and
-  // accept the v1 `command` key so a not yet migrated entry keeps working. Write the model next to its template.
-  const templateLocation = (name: string) => {
-    const native = config.source(["commands", name, "template"])
-    if (native) return { scope: native, key: "commands" as const }
-    const legacy = config.source(["command", name, "template"])
-    if (legacy) return { scope: legacy, key: "command" as const }
-    return undefined
+  // The v2 key keeps the model and the variant in one Selection value; the v1 key keeps a plain `model` and a separate
+  // `variant`.
+  const model = (name: string): ModelPickerValue | undefined => {
+    const found = entry(name)
+    if (!found) return undefined
+    const base = parseCommandModel(found.value.model)
+    if (!base) return undefined
+    const variant = found.key === "command" && typeof found.value.variant === "string" ? found.value.variant : undefined
+    return variant ? { ...base, variant } : base
   }
 
+  // A v2 command entry requires a template, so the model override only applies where a template exists. Write to the
+  // document that defines the command; migrate a v1 `command` entry to `commands` in the same write (the host removes
+  // the `command` alias), with the variant folded into the model.
+  const blocked = (name: string) => template(name) === undefined
+
   const setModel = (name: string, value: ModelPickerValue | undefined) => {
-    const found = templateLocation(name)
-    if (!found) return
-    const path = [found.key, name, "model"]
-    if (!value) config.unset(path, found.scope)
-    else config.set(path, serializeCommandModel(value), found.scope)
+    const found = entry(name)
+    if (!found || blocked(name)) return
+    if (found.key === "commands") {
+      config.set(["commands", name, "model"], value ? serializeCommandModel(value) : undefined, found.scope)
+      return
+    }
+    const next = { ...found.value }
+    delete next.variant
+    if (value) next.model = serializeCommandModel(value)
+    else delete next.model
+    config.set(["commands", name], next, found.scope)
   }
 
   const toggle = (name: string) => setExpanded((prev) => ({ ...prev, [name]: !prev[name] }))
@@ -182,7 +207,7 @@ const WorkflowsSubtab: Component = () => {
                           onChange={(value) => setModel(name, value)}
                           clearable
                           clearLabel={language.t("settings.providers.notSet")}
-                          blocked={!templateLocation(name)}
+                          blocked={blocked(name)}
                         />
                       </div>
                       <Show when={template(name)}>
