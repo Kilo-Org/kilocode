@@ -50,7 +50,7 @@ const ExperimentalTab: Component = () => {
 
   const updateExperimental = (key: string, value: unknown) => {
     updateConfig({
-      experimental: { ...experimental(), [key]: value },
+      experimental: { [key]: value },
     })
   }
 
@@ -164,23 +164,64 @@ const ExperimentalTab: Component = () => {
 
         <Show when={experimental().image_generation}>
           <SettingsRow
+            title={language.t("settings.experimental.imageGenerationBaseUrl.title")}
+            description={language.t("settings.experimental.imageGenerationBaseUrl.description")}
+          >
+            <TextField
+              value={experimental().image_generation_base_url ?? ""}
+              aria-label={language.t("settings.experimental.imageGenerationBaseUrl.title")}
+              placeholder="http://127.0.0.1:8080/v1"
+              onChange={(value) => {
+                const url = value.trim()
+                const changed = !!url !== !!experimental().image_generation_base_url?.trim()
+                updateExperimental("image_generation_base_url", url || null)
+                if (changed) updateExperimental("image_generation_model", null)
+              }}
+            />
+          </SettingsRow>
+          <Show when={experimental().image_generation_base_url?.trim()}>
+            <SettingsRow
+              title={language.t("settings.experimental.imageGenerationApiKey.title")}
+              description={language.t("settings.experimental.imageGenerationApiKey.description")}
+            >
+              <TextField
+                type="password"
+                aria-label={language.t("settings.experimental.imageGenerationApiKey.title")}
+                value={experimental().image_generation_api_key ?? ""}
+                onChange={(value) => updateExperimental("image_generation_api_key", value.trim() || null)}
+              />
+            </SettingsRow>
+          </Show>
+          <SettingsRow
             title={language.t("settings.experimental.imageGenerationModel.title")}
             description={language.t("settings.experimental.imageGenerationModel.description")}
           >
-            <Select
-              options={imageModels.models().map((m) => ({ value: m.id, label: m.name }))}
-              current={imageModels
-                .models()
-                .map((m) => ({ value: m.id, label: m.name }))
-                .find((m) => m.value === experimental().image_generation_model)}
-              value={(item) => item.value}
-              label={(item) => item.label}
-              onSelect={(item) => updateExperimental("image_generation_model", item?.value ?? undefined)}
-              variant="secondary"
-              size="small"
-              triggerVariant="settings"
-              placeholder={language.t("settings.experimental.imageGenerationModel.placeholder")}
-            />
+            <Show
+              when={!experimental().image_generation_base_url?.trim()}
+              fallback={
+                <TextField
+                  value={experimental().image_generation_model ?? ""}
+                  aria-label={language.t("settings.experimental.imageGenerationModel.title")}
+                  placeholder={language.t("settings.experimental.imageGenerationModel.customPlaceholder")}
+                  onChange={(value) => updateExperimental("image_generation_model", value.trim() || null)}
+                />
+              }
+            >
+              <Select
+                options={imageModels.models().map((m) => ({ value: m.id, label: m.name }))}
+                current={imageModels
+                  .models()
+                  .map((m) => ({ value: m.id, label: m.name }))
+                  .find((m) => m.value === experimental().image_generation_model)}
+                value={(item) => item.value}
+                label={(item) => item.label}
+                onSelect={(item) => updateExperimental("image_generation_model", item?.value ?? undefined)}
+                variant="secondary"
+                size="small"
+                triggerVariant="settings"
+                placeholder={language.t("settings.experimental.imageGenerationModel.placeholder")}
+              />
+            </Show>
           </SettingsRow>
         </Show>
 

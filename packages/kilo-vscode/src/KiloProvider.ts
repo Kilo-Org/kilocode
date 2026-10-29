@@ -177,6 +177,7 @@ import type { ProjectRef, SessionRef, WorktreeRef } from "./agent-manager/projec
 import { indexingConsentStore, registeredProjects } from "./indexing-consent"
 import { fetchKiloEmbeddingModelCatalog } from "@kilocode/kilo-gateway"
 import { fetchImageModels } from "./image-generation/models"
+import { withGlobalImages } from "./image-generation/source"
 import { fetchSpeechToTextModels } from "./speech-to-text/catalog"
 import { SPEECH_TO_TEXT_MODELS } from "./speech-to-text/models"
 import {
@@ -4249,6 +4250,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       // The merged global scope is every global config file combined, which differs
       // from the single file the delete targets.
       const mergedGlobalConfig = (snapshot.mergedGlobal ?? global) as Config
+      const config = withGlobalImages(snapshot.effective, mergedGlobalConfig)
       const homeDir = snapshot.homeDir
       // Capture the previous source before cachedGlobalConfig moves, so a source
       // change still triggers a catalog refresh.
@@ -4256,7 +4258,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       this.cachedGlobalConfig = global
       this.cachedConfigMessage = {
         type: "configLoaded",
-        config: snapshot.effective,
+        config,
         globalConfig: global,
         mergedGlobalConfig,
         ...(homeDir !== undefined ? { homeDir } : {}),
@@ -4269,7 +4271,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       this.cachedConfigDirectory = dir
       this.postMessage({
         type: "configUpdated",
-        config: snapshot.effective,
+        config,
         globalConfig: global,
         mergedGlobalConfig,
         ...(homeDir !== undefined ? { homeDir } : {}),
@@ -4356,7 +4358,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       message: getErrorMessage(error) || "Failed to update config",
       details: getConfigErrorDetails(error),
       completedScopes: completed,
-      config: snapshot?.effective,
+      config: snapshot ? withGlobalImages(snapshot.effective, snapshot.mergedGlobal) : undefined,
       globalConfig: snapshot?.targets.global.raw,
       mergedGlobalConfig: snapshot?.mergedGlobal ?? snapshot?.targets.global.raw,
       ...(snapshot?.homeDir !== undefined ? { homeDir: snapshot.homeDir } : {}),

@@ -328,6 +328,12 @@ export const Info = Schema.Struct({
       image_generation_model: Schema.optional(Schema.String).annotate({
         description: "Model ID to use for image generation (default: openrouter/auto)",
       }),
+      image_generation_base_url: Schema.optional(Schema.String).annotate({
+        description: "Global base URL of a custom Images API. Leave unset to use Kilo Gateway or OpenRouter.",
+      }),
+      image_generation_api_key: Schema.optional(Schema.String).annotate({
+        description: "Optional bearer token for the global custom image generation endpoint.",
+      }),
       native_notebook_tools: Schema.optional(Schema.Boolean).annotate({
         description: "Enable native tools for reading, editing, and executing VS Code notebooks",
       }),

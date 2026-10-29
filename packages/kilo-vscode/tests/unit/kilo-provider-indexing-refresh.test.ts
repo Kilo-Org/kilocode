@@ -56,7 +56,10 @@ function createConnection() {
   const patches: unknown[] = []
   // The merged global scope differs from the single write target, so a payload that
   // reads the wrong field is visible in the assertion.
-  const merged = { permission: { bash: { "*": "ask", "touch *": "allow" } } }
+  const merged = {
+    permission: { bash: { "*": "ask", "touch *": "allow" } },
+    experimental: { image_generation_base_url: "http://localhost:8080/v1" },
+  }
   const mergedWorkspace = { permission: { bash: { "*": "deny" } } }
   const snapshot = {
     effective: {},
@@ -83,7 +86,7 @@ function createConnection() {
   const client = {
     global: {
       config: {
-        get: async () => ({ data: {} }),
+        get: async () => ({ data: merged }),
         update: async () => ({ data: {} }),
       },
     },
@@ -175,6 +178,7 @@ describe("KiloProvider indexing refresh", () => {
       "agentManager.branchPrefix": "",
     })
     const snapshot = await fetchSnapshot(conn.client as never, "/repo", settings)
+    expect(snapshot.config?.experimental?.image_generation_base_url).toBe("http://localhost:8080/v1")
     const provider = new KiloProvider({} as never, conn.service as never)
     const internal = provider as unknown as Internals
     const sent: Array<Record<string, unknown>> = []

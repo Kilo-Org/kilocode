@@ -3,6 +3,7 @@ import type { Config, KiloClient } from "@kilocode/sdk/v2/client"
 import { configFeatures, serverFeatures } from "../features"
 import { retry } from "../services/cli-backend/retry"
 import type { ConfigTarget } from "./config-bindings"
+import { withGlobalImages } from "../image-generation/source"
 
 type Client = Pick<KiloClient, "config" | "global" | "experimental">
 type Settings = {
@@ -21,7 +22,7 @@ export async function fetchSnapshot(client: Client, dir: string, settings: () =>
     retry(() => serverFeatures(client, dir)),
   ])
   return {
-    config,
+    config: config ? withGlobalImages(config, global) : undefined,
     globalConfig: global,
     targets: overlay?.targets as { global: ConfigTarget; project: ConfigTarget } | undefined,
     // The overlay response carries the merged global scope as `global`; the config

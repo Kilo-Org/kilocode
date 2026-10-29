@@ -53,6 +53,12 @@ export const anacondaDesktopDict = {
 } as const
 
 export const dict = {
+  "settings.experimental.imageGenerationBaseUrl.title": "Image generation base URL",
+  "settings.experimental.imageGenerationBaseUrl.description":
+    "Use a custom Images API on this machine. Leave empty to use Kilo Gateway or OpenRouter.",
+  "settings.experimental.imageGenerationApiKey.title": "Image generation API key",
+  "settings.experimental.imageGenerationApiKey.description": "Optional bearer token for the custom endpoint",
+  "settings.experimental.imageGenerationModel.customPlaceholder": "Model ID, or the server default",
   ...anacondaDesktopDict,
   ...cloudProviderDict,
   "task.swarm.title": "Board",
