@@ -1,6 +1,7 @@
 package ai.kilocode.client.session.model
 
 import ai.kilocode.client.util.edtWait
+import ai.kilocode.rpc.dto.ChatEventDto
 import ai.kilocode.rpc.dto.DiffFileDto
 import ai.kilocode.rpc.dto.KiloAppStateDto
 import ai.kilocode.rpc.dto.KiloAppStatusDto
@@ -54,6 +55,107 @@ class SessionModelTest : BasePlatformTestCase() {
         assertEquals(KiloWorkspaceStatusDto.PENDING, model.workspace.status)
         assertFalse(model.isReady())
         assertEquals(SessionState.Idle, model.state)
+    }
+
+    fun `test terminal belongs to original user message without ending newer busy turn`() {
+        model.upsertMessage(msg("u1", "user"))
+        model.upsertMessage(msg("u2", "user"))
+        model.setState(SessionState.Busy("newer turn"))
+        model.setQueued(setOf("u1", "u2"))
+        events.clear()
+        val terminal = ChatEventDto.MessageTerminal("ses", "u1", "failed", "queued", false)
+
+        model.setTerminal(terminal)
+
+        assertEquals(terminal, model.message("u1")!!.terminal)
+        assertNull(model.message("u1")!!.info.error)
+        assertNull(model.message("u2")!!.terminal)
+        assertEquals(setOf("u2"), model.queued)
+        assertEquals(SessionState.Busy("newer turn"), model.state)
+        assertEquals(listOf("QueueChanged [u2]", "MessageUpdated u1"), events.map { it.toString() })
+        events.clear()
+        model.setTerminal(terminal)
+        assertTrue(events.isEmpty())
+        model.setQueued(setOf("u1", "u2"))
+        assertEquals(setOf("u2"), model.queued)
+        assertTrue(events.isEmpty())
+    }
+
+    fun `test terminal before message attaches once without inventing transcript metadata`() {
+        val terminal = ChatEventDto.MessageTerminal("ses", "u1", "interrupted", "sent", true)
+        model.setTerminal(terminal)
+        assertTrue(model.isEmpty())
+        assertTrue(events.isEmpty())
+
+        model.upsertMessage(msg("u1", "user"))
+        assertEquals(terminal, model.message("u1")!!.terminal)
+        assertEquals(0.0, model.message("u1")!!.info.time.created)
+        assertEquals(1, model.messages().size)
+        events.clear()
+        model.setTerminal(terminal)
+        assertTrue(events.isEmpty())
+        model.upsertMessage(msg("u1", "user").copy(agent = "code"))
+        assertEquals(terminal, model.message("u1")!!.terminal)
+    }
+
+    fun `test first terminal is immutable when a contradictory duplicate arrives`() {
+        model.upsertMessage(msg("u1", "user"))
+        val terminal = ChatEventDto.MessageTerminal("ses", "u1", "failed", "queued", false)
+        model.setTerminal(terminal)
+        events.clear()
+
+        model.setTerminal(terminal.copy(status = "completed", delivery = "sent", accepted = true))
+
+        assertEquals(terminal, model.message("u1")!!.terminal)
+        assertTrue(events.isEmpty())
+    }
+
+    fun `test completed terminal clears only correlated queue and preserves busy state`() {
+        model.addMessage(msg("u1", "user"))
+        model.setQueued(setOf("u1", "u2"))
+        model.setState(SessionState.Busy("newer turn"))
+        val terminal = ChatEventDto.MessageTerminal("ses", "u1", "completed", "sent", true)
+        model.setTerminal(terminal)
+        assertEquals(terminal, model.message("u1")!!.terminal)
+        assertEquals(setOf("u2"), model.queued)
+        assertEquals(SessionState.Busy("newer turn"), model.state)
+    }
+
+    fun `test terminal does not attach to assistant or another session`() {
+        model.upsertMessage(msg("a1", "assistant"))
+        model.upsertMessage(msg("u1", "user"))
+        events.clear()
+        model.setTerminal(ChatEventDto.MessageTerminal("ses", "a1", "failed", "sent", true))
+        model.setTerminal(ChatEventDto.MessageTerminal("other", "u1", "failed", "sent", true))
+        assertNull(model.message("a1")!!.terminal)
+        assertNull(model.message("u1")!!.terminal)
+        assertTrue(events.isEmpty())
+    }
+
+    fun `test history reload preserves retained terminals and replay is idempotent`() {
+        val terminal = ChatEventDto.MessageTerminal("ses", "u1", "failed", "sent", true)
+        model.upsertMessage(msg("u1", "user"))
+        model.setTerminal(terminal)
+        model.loadHistory(listOf(MessageWithPartsDto(msg("u1", "user"), emptyList())))
+        assertEquals(terminal, model.message("u1")!!.terminal)
+        events.clear()
+        model.setTerminal(terminal)
+        assertTrue(events.isEmpty())
+        model.loadHistory(emptyList())
+        model.upsertMessage(msg("u1", "user"))
+        assertNull(model.message("u1")!!.terminal)
+    }
+
+    fun `test history refresh removes terminals from different session and clear resets deferred terminals`() {
+        val terminal = ChatEventDto.MessageTerminal("ses", "u1", "failed", "sent", true)
+        model.setTerminal(terminal)
+        model.loadHistory(listOf(MessageWithPartsDto(msg("u1", "user").copy(sessionID = "other"), emptyList())))
+        assertNull(model.message("u1")!!.terminal)
+        model.clear()
+        model.setTerminal(terminal)
+        model.clear()
+        model.upsertMessage(msg("u1", "user"))
+        assertNull(model.message("u1")!!.terminal)
     }
 
     fun `test model mutation works through EDT`() {

@@ -134,6 +134,34 @@ class HistoryControllerTest : BasePlatformTestCase() {
         assertEquals(FakeSessionRpcApi.CloudCall("/test", "next_1", 50, null), rpc.cloudCalls[1])
     }
 
+    fun `test cloud refresh signal reloads cloud history without reloading local sessions`() {
+        val refreshes = MutableStateFlow(0L)
+        val controller = HistoryController(
+            sessions,
+            workspace,
+            coroutines.scope,
+            gitUrlProvider = { null },
+            io = coroutines.dispatcher,
+            refreshes = refreshes,
+        )
+        flush()
+        assertTrue(rpc.cloudCalls.isEmpty())
+        rpc.cloud += cloud("cloud_1", "Cloud One")
+
+        refreshes.value = 1L
+        flush()
+
+        assertEquals(listOf("cloud_1"), controller.cloud.items.map { it.id })
+        assertEquals(1, rpc.cloudCalls.size)
+        assertTrue(rpc.lists.isEmpty())
+        rpc.cloud.clear()
+        rpc.cloud += cloud("cloud_2", "Cloud Two")
+        refreshes.value = 2L
+        flush()
+        assertEquals(listOf("cloud_2"), controller.cloud.items.map { it.id })
+        assertEquals(2, rpc.cloudCalls.size)
+    }
+
     fun `test cloud load records page telemetry`() {
         rpc.cloud += cloud("cloud_1", "Cloud One")
         rpc.cloudCursor = "next_1"
@@ -960,6 +988,7 @@ class HistoryControllerTest : BasePlatformTestCase() {
             val id = when (open) {
                 is SessionRef.Local -> open.id
                 is SessionRef.Cloud -> "cloud:${open.id}"
+                is SessionRef.Hosted -> open.id
             }
             opened.add(id)
         },
