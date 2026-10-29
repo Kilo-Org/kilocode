@@ -40,7 +40,7 @@ export type Ui =
 /** Settings panel messages the host handles directly (it reads and writes the config files). */
 export type Settings =
   | { type: "configRead" }
-  | { type: "configWrite"; scope: ConfigScope; edits: ConfigEdit[] }
+  | { type: "configWrite"; id: number; scope: ConfigScope; edits: ConfigEdit[] }
   | { type: "requestVSCodeSettings" }
   | { type: "updateVSCodeSettings"; values: Record<string, unknown> }
   | { type: "openFile"; path: string }
@@ -58,5 +58,5 @@ export type ToWebview =
   | { type: "autoApproveStateLoaded"; value: boolean }
   | { type: "webviewActiveChanged"; active: boolean }
   | { type: "configLoaded"; global: ConfigFileContent; project: ConfigFileContent }
-  | { type: "configWritten"; ok: boolean; error?: string }
+  | { type: "configWritten"; id: number; ok: boolean; error?: string }
   | { type: "vscodeSettingsLoaded"; values: Record<string, unknown> }
