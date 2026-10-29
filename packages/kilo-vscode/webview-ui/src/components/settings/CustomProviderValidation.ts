@@ -38,7 +38,11 @@ export type FormErrors = {
   baseURL: string | undefined
   models: ModelErrors[]
   headers: Array<{ key?: string; value?: string }>
+  /** Set when the key uses `{env:NAME}` with a name that is not a valid environment variable name. */
+  apiKey?: string
 }
+
+export const INVALID_ENV = "Invalid environment variable name"
 
 export type CustomProviderConfigValue = {
   name: string
@@ -82,6 +86,7 @@ type ValidateResult = {
 
 const PROVIDER_ID = /^[a-z0-9][a-z0-9-_]*$/
 const ENV_NAME = /^[A-Z_][A-Z0-9_]*$/
+const ENV_REF = /^\{env:([^}]+)\}$/
 
 function checkModel(m: ModelEntry, seenModels: Set<string>, t: Translator): ModelErrors {
   const id = m.id.trim()
@@ -136,7 +141,7 @@ function serializeModel(m: ModelEntry): CustomProviderConfigValue["models"][stri
 /** Reads an `{env:VAR}` API-key value: the key comes from an environment variable instead of a stored credential. */
 export function parseEnvKey(apiKey: string): string | undefined {
   const raw = apiKey.trim()
-  const match = raw.match(/^\{env:([^}]+)\}$/)
+  const match = raw.match(ENV_REF)
   if (!match) return
   const name = match[1]?.trim() ?? ""
   return ENV_NAME.test(name) ? name : undefined
@@ -204,6 +209,7 @@ export function validateCustomProvider(input: ValidateArgs): ValidateResult {
   const apiKey = input.form.apiKey.trim()
 
   const rawEnv = input.apiKeyTouched ? parseEnvKey(apiKey) : undefined
+  const envError = input.apiKeyTouched && ENV_REF.test(apiKey) && !rawEnv ? INVALID_ENV : undefined
   const key = input.apiKeyTouched && apiKey && !rawEnv ? apiKey : undefined
   // A touched field replaces the stored env var; an untouched edit keeps the existing env and credential.
   const env = rawEnv ? [rawEnv] : input.apiKeyTouched ? undefined : input.editing ? input.existingEnv : undefined
@@ -237,9 +243,10 @@ export function validateCustomProvider(input: ValidateArgs): ValidateResult {
     baseURL: urlError,
     models: modelErrors,
     headers: headerErrors,
+    ...(envError ? { apiKey: envError } : {}),
   }
 
-  const ok = !idErr && !existsErr && !nameError && !urlError && modelsValid && headersValid
+  const ok = !idErr && !existsErr && !nameError && !urlError && !envError && modelsValid && headersValid
   if (!ok) return { errors }
 
   const headers = Object.fromEntries(

@@ -11,6 +11,7 @@ import {
   withDisabledProviders,
 } from "../webview-ui/src/components/settings/provider-visibility"
 import {
+  INVALID_ENV,
   mergeProviderConfig,
   parseEnvKey,
   validateCustomProvider,
@@ -87,6 +88,12 @@ describe("validateCustomProvider", () => {
     expect(parseEnvKey("{env:MY_KEY}")).toBe("MY_KEY")
     expect(output.result?.key).toBeUndefined()
     expect(output.result?.config.env).toEqual(["MY_KEY"])
+  })
+
+  test("rejects an {env:VAR} spelling with an invalid variable name", () => {
+    const output = validateCustomProvider({ ...base, form: form({ apiKey: "{env:lower}" }) })
+    expect(output.result).toBeUndefined()
+    expect(output.errors.apiKey).toBe(INVALID_ENV)
   })
 
   test("keeps the existing env and no key when the key field is untouched", () => {
@@ -269,7 +276,11 @@ describe("mergeProviderConfig", () => {
 
 describe("applyConfigEdits for providers", () => {
   test("writes providers.<id> when the provider alias is absent", () => {
-    const value = { name: "Acme", package: "@opencode/ai/providers/openai-compatible", settings: { baseURL: "https://x" } }
+    const value = {
+      name: "Acme",
+      package: "@opencode/ai/providers/openai-compatible",
+      settings: { baseURL: "https://x" },
+    }
     const result = applyConfigEdits('{"$schema":"x"}', [{ path: ["providers", "acme"], value }])
     expect(parse(result).providers.acme).toEqual(value)
   })

@@ -133,6 +133,8 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
     setErrors("baseURL", output.errors.baseURL)
     setErrors("models", output.errors.models)
     setErrors("headers", output.errors.headers)
+    if (output.errors.apiKey)
+      showToast({ title: language.t("common.requestFailed"), description: output.errors.apiKey })
     return output.result
   }
 
@@ -224,8 +226,14 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
     const disabled = disabledProviderIds(policies)
     if (disabled.includes(result.providerID)) {
       const policyScope: SettingsScope = config.source(["policies"]) ?? "global"
-      const next = withDisabledProviders((Array.isArray(policies) ? policies : []) as ProviderPolicy[], disabled.filter((id) => id !== result.providerID))
-      const written = next.length === 0 ? await config.unset(["policies"], policyScope) : await config.set(["policies"], next, policyScope)
+      const next = withDisabledProviders(
+        (Array.isArray(policies) ? policies : []) as ProviderPolicy[],
+        disabled.filter((id) => id !== result.providerID),
+      )
+      const written =
+        next.length === 0
+          ? await config.unset(["policies"], policyScope)
+          : await config.set(["policies"], next, policyScope)
       if (!written) {
         setForm("saving", false)
         return
