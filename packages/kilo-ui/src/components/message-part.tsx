@@ -2317,7 +2317,7 @@ function ImageThumbs(props: { files: FilePart[] }) {
     <div data-slot="tool-read-images">
       <For each={props.files}>
         {(file) => (
-          <div data-slot="tool-read-image" onClick={() => preview(file.url, file.filename)}>
+          <button type="button" data-slot="tool-read-image" onClick={() => preview(file.url, file.filename)}>
             <img
               data-slot="tool-read-image-img"
               src={file.url}
@@ -2325,7 +2325,7 @@ function ImageThumbs(props: { files: FilePart[] }) {
               loading="lazy"
               decoding="async"
             />
-          </div>
+          </button>
         )}
       </For>
     </div>
