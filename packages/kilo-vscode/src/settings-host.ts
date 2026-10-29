@@ -2,7 +2,7 @@
 // config (`api.fs.read` is confined to the location) and `api.config.update` writes only `shell`. The host asks the
 // server for the config documents (`api.config.get`), resolves the global and project target files from those
 // entries, then reads and writes them with `jsonc-parser` so comments survive.
-import { readFile, writeFile, mkdir } from "node:fs/promises"
+import { mkdir, readFile, stat, writeFile } from "node:fs/promises"
 import path from "node:path"
 import { commands, workspace, Uri, window, type ExtensionContext } from "vscode"
 import { KiloConfigFiles } from "@opencode/util/kilocode/config/files"
@@ -142,6 +142,19 @@ export function settingsHost(input: {
     void window.showInformationMessage("Kilo Code settings have been reset to defaults.")
   }
 
+  /** Open a config file in the editor, creating it first when the target does not exist yet. */
+  const openConfigFile = async (file: string) => {
+    try {
+      if (isKiloConfigFile(file) && !(await stat(file).catch(() => undefined))) {
+        await mkdir(path.dirname(file), { recursive: true })
+        await writeFile(file, "{\n}\n")
+      }
+      await window.showTextDocument(await workspace.openTextDocument(Uri.file(file)))
+    } catch (error) {
+      void window.showErrorMessage(error instanceof Error ? error.message : String(error))
+    }
+  }
+
   const handle = (message: ToHost) => {
     if (message.type === "configRead") {
       void readConfig()
@@ -164,7 +177,7 @@ export function settingsHost(input: {
       return true
     }
     if (message.type === "openFile") {
-      void workspace.openTextDocument(Uri.file(message.path)).then((document) => window.showTextDocument(document))
+      void openConfigFile(message.path)
       return true
     }
     if (message.type === "openVSCodeSettings") {

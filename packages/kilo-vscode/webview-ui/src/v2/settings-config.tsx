@@ -1,10 +1,25 @@
-// The Settings data layer: one draft over the server config entries (`api.config.get`), the raw target files the host
-// read, and the `kilo-code.v2.*` settings. Config edits go to the host, which owns the files; VS Code setting edits go
-// through `updateVSCodeSettings`. `save()` writes both, reloads the location and refetches the config.
-import { createContext, createEffect, createMemo, createSignal, on, onCleanup, useContext, type ParentComponent } from "solid-js"
+// The Settings data layer: live reads over the server config entries (`api.config.get`) and the raw target files the
+// host read. Writes go straight to the host, which owns the files; the v2 server reloads a written file and emits
+// `config.updated`, and `createData` resyncs the config resource, so `value(path)` reads the live merged config.
+// A write keeps a short optimistic value for its path until the resync arrives, so the control does not flicker.
+//
+// Commit timing for the tabs: switches and selects write on change, while text and number fields write on blur or
+// Enter (not on every keystroke), so a partial value is never written.
+import {
+  createContext,
+  createEffect,
+  createMemo,
+  createSignal,
+  on,
+  onCleanup,
+  useContext,
+  type ParentComponent,
+} from "solid-js"
 import { parse as parseJsonc } from "jsonc-parser/lib/esm/main.js"
+import { showToast } from "@kilocode/kilo-ui/toast"
 import type { ConfigEdit, ConfigFileContent, ToHost, ToWebview } from "../../../src/protocol"
 import { getVSCodeAPI, useVSCode } from "../context/vscode"
+import { useLanguage } from "../context/language"
 import { useV2 } from "./client"
 import { mergeConfigDocuments } from "./settings-merge"
 
@@ -43,14 +58,13 @@ function initialSettings(): Record<string, unknown> {
 export function createSettingsConfig() {
   const v2 = useV2()
   const vscode = useVSCode()
+  const language = useLanguage()
   const post = (message: ToHost) => getVSCodeAPI().postMessage(message as never)
 
   const [files, setFiles] = createSignal<{ global?: ConfigFileContent; project?: ConfigFileContent }>({})
   const [settingsValues, setSettingsValues] = createSignal<Record<string, unknown>>(initialSettings())
-  const [edits, setEdits] = createSignal<{ scope: SettingsScope; edit: ConfigEdit }[]>([])
-  const [settingEdits, setSettingEdits] = createSignal<{ key: string; value: unknown }[]>([])
+  const [optimistic, setOptimistic] = createSignal<{ path: string[]; value: unknown }[]>([])
   const writers: { resolve: (ok: boolean) => void }[] = []
-  const resyncs: (() => void)[] = []
 
   const unsubscribe = vscode.onMessage((raw) => {
     const message = raw as unknown as ToWebview
@@ -76,21 +90,19 @@ export function createSettingsConfig() {
 
   const entries = () => v2.data.location.config.list() ?? []
 
-  // The server watches the config files and emits `config.updated`; `createData` resyncs the config resource, so this
-  // effect re-reads the raw files from the host and releases any `save()` waiting for the new content.
+  // The server reloads a written file on its own, then `config.updated` resyncs the config resource. Re-read the raw
+  // files and drop the optimistic values: the resync now carries the written value.
   createEffect(
     on(
       entries,
       () => {
         post({ type: "configRead" })
-        resyncs.splice(0).forEach((resolve) => resolve())
+        setOptimistic([])
       },
       { defer: true },
     ),
   )
 
-  // Core picks the last document that defines a key (`Config.latest`), so a later document replaces the whole
-  // top-level value; the merge is one pass over the documents in priority order.
   const merged = createMemo(() => mergeConfigDocuments(entries()))
 
   const rawConfig = createMemo(() => ({
@@ -110,88 +122,45 @@ export function createSettingsConfig() {
   }
 
   const value = (path: string[]) => {
-    const entry = edits()
-      .toReversed()
-      .find((item) => pathKey(item.edit.path) === pathKey(path))
-    if (entry) return entry.edit.value
+    const key = pathKey(path)
+    const pending = [...optimistic()].toReversed().find((item) => pathKey(item.path) === key)
+    if (pending) return pending.value
     return readPath(merged(), path)
   }
 
-  const replace = (path: string[], value: unknown, scope: SettingsScope) => {
-    const key = pathKey(path)
-    setEdits((list) => [
-      ...list.filter((item) => !(item.scope === scope && pathKey(item.edit.path) === key)),
-      { scope, edit: { path, value } },
-    ])
-  }
-
-  const set = (path: string[], value: unknown, scope: SettingsScope = "global") => replace(path, value, scope)
-  const unset = (path: string[], scope: SettingsScope = "global") => replace(path, undefined, scope)
-
-  const setting = (key: KiloSettingKey) => {
-    const entry = settingEdits()
-      .toReversed()
-      .find((item) => item.key === key)
-    return entry ? entry.value : settingsValues()[key]
-  }
-
-  const setSetting = (key: KiloSettingKey, value: unknown) =>
-    setSettingEdits((list) => [...list.filter((item) => item.key !== key), { key, value }])
-
-  const write = (scope: SettingsScope, scoped: ConfigEdit[]) =>
+  const write = (scope: SettingsScope, edits: ConfigEdit[]) =>
     new Promise<boolean>((resolve) => {
       writers.push({ resolve })
-      post({ type: "configWrite", scope, edits: scoped })
+      post({ type: "configWrite", scope, edits })
     })
 
-  /** The server reloads a written file on its own. Reload the location only when no resync arrives in time. */
-  const waitForResync = () =>
-    Promise.race([
-      new Promise<void>((resolve) => resyncs.push(resolve)),
-      new Promise<"timeout">((resolve) => window.setTimeout(() => resolve("timeout"), 3000)),
-    ]).then(async (result) => {
-      if (result !== "timeout") return
-      await v2.api.location.reload().catch(v2.report)
-      await v2.data.location.config.sync().catch(v2.report)
-      post({ type: "configRead" })
+  const fail = (error: unknown) =>
+    showToast({
+      variant: "error",
+      title: language.t("settings.saveBar.saveFailed"),
+      description: error instanceof Error ? error.message : String(error),
     })
 
-  const save = async () => {
-    let ok = true
-    for (const scope of ["global", "project"] as const) {
-      const scoped = edits().filter((item) => item.scope === scope).map((item) => item.edit)
-      if (scoped.length === 0) continue
-      ok = (await write(scope, scoped)) && ok
+  /** Write a value immediately. A VS Code setting passes through `setSetting`. */
+  const set = async (path: string[], value: unknown, scope: SettingsScope = "global") => {
+    const key = pathKey(path)
+    setOptimistic((list) => [...list.filter((item) => pathKey(item.path) !== key), { path, value }])
+    const ok = await write(scope, [{ path, value }])
+    if (!ok) {
+      setOptimistic((list) => list.filter((item) => pathKey(item.path) !== key))
+      fail(new Error(language.t("settings.saveBar.saveFailed")))
     }
-    if (!ok) return false
-    const values = Object.fromEntries(settingEdits().map((item) => [item.key, item.value ?? null]))
-    if (Object.keys(values).length > 0) post({ type: "updateVSCodeSettings", values })
-    setEdits([])
-    setSettingEdits([])
-    await waitForResync()
-    return true
+    return ok
   }
 
-  const discard = () => {
-    setEdits([])
-    setSettingEdits([])
+  const unset = (path: string[], scope: SettingsScope = "global") => set(path, undefined, scope)
+
+  const setSetting = (key: KiloSettingKey, value: unknown) => {
+    setSettingsValues((current) => ({ ...current, [key]: value }))
+    post({ type: "updateVSCodeSettings", values: { [key]: value ?? null } })
   }
 
-  return {
-    entries,
-    merged,
-    raw,
-    path,
-    source,
-    value,
-    set,
-    unset,
-    setting,
-    setSetting,
-    dirty: () => edits().length > 0 || settingEdits().length > 0,
-    save,
-    discard,
-  }
+  return { entries, merged, raw, path, source, value, set, unset, setting: (key: KiloSettingKey) => settingsValues()[key], setSetting }
 }
 
 export type SettingsConfig = ReturnType<typeof createSettingsConfig>

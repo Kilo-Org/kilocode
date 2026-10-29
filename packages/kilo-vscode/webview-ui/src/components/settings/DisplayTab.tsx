@@ -3,7 +3,7 @@
 // display presets and the block display modes, and the session preview.
 import { Card } from "@kilocode/kilo-ui/card"
 import { TextField } from "@kilocode/kilo-ui/text-field"
-import { createEffect, type Component } from "solid-js"
+import { createEffect, createSignal, type Component } from "solid-js"
 import { useLanguage } from "../../context/language"
 import { applyFontSize, bootFontSize, clampFontSize } from "../../v2/kilo-settings"
 import { useSettingsConfig } from "../../v2/settings-config"
@@ -13,10 +13,11 @@ import Switch from "./Switch"
 const DisplayTab: Component = () => {
   const config = useSettingsConfig()
   const language = useLanguage()
+  // The dragged value, so the size follows the thumb and commits one write on release.
+  const [preview, setPreview] = createSignal<number>()
 
-  const fontSize = () => clampFontSize(config.setting("fontSize")) ?? bootFontSize()
+  const fontSize = () => preview() ?? clampFontSize(config.setting("fontSize")) ?? bootFontSize()
 
-  // Preview the size live as the slider moves, as main resized without a save.
   createEffect(() => applyFontSize(fontSize()))
 
   const username = () => {
@@ -55,7 +56,11 @@ const DisplayTab: Component = () => {
               max="24"
               step="1"
               value={fontSize()}
-              onInput={(event) => config.setSetting("fontSize", Number(event.currentTarget.value))}
+              onInput={(event) => setPreview(Number(event.currentTarget.value))}
+              onChange={(event) => {
+                setPreview(undefined)
+                config.setSetting("fontSize", Number(event.currentTarget.value))
+              }}
               aria-label={language.t("settings.display.fontSize.title")}
             />
             <span>{fontSize()}px</span>

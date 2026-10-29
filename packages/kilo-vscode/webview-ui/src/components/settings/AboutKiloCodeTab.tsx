@@ -94,7 +94,7 @@ const AboutKiloCodeTab: Component<AboutKiloCodeTabProps> = (props) => {
       }
       setImporting(true)
       const reader = new FileReader()
-      reader.onload = () => {
+      reader.onload = async () => {
         setImporting(false)
         const result = parseImport(reader.result as string)
         if (!result.ok) {
@@ -107,8 +107,8 @@ const AboutKiloCodeTab: Component<AboutKiloCodeTabProps> = (props) => {
         }
         if (result.warning === "newerVersion")
           showToast({ variant: "default", title: language.t("settings.aboutKiloCode.importSettings.newerVersion") })
-        // Apply every known key to the global config directly.
-        for (const [key, value] of Object.entries(result.config)) config.set([key], value, "global")
+        // Apply every known key to the global config directly, one write at a time.
+        for (const [key, value] of Object.entries(result.config)) await config.set([key], value, "global")
         showToast({ variant: "success", title: language.t("settings.aboutKiloCode.importSettings.success") })
       }
       reader.onerror = () => {
