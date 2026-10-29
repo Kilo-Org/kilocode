@@ -636,6 +636,7 @@ export interface RequestKiloEmbeddingModelsMessage {
 
 export interface RequestImageModelsMessage {
   type: "requestImageModels"
+  request: number
 }
 
 export interface RequestSpeechToTextModelsMessage {

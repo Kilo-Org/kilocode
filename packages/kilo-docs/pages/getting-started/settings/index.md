@@ -75,6 +75,8 @@ Set `experimental.image_generation_api_key` if your endpoint requires a bearer t
 
 The custom endpoint must implement `POST /images/generations` with JSON and `POST /images/edits` with multipart uploads, relative to the base URL. Responses must contain PNG or JPEG image bytes in `data[].b64_json`. Editing accepts PNG/JPEG reference files. Requests can run for up to 15 minutes and stop when you cancel the tool. The original image is saved in the current workspace; its chat preview may be resized.
 
+After saving the endpoint settings, use **Available image models** to select a model returned by its `/models` endpoint. **Refresh** reloads the catalog. Discovery uses the same global endpoint and optional token as generation, and excludes models explicitly marked with a non-image `capability`. Manual model entry remains available when discovery is unsupported or the server is offline.
+
 ### Voice Transcription Model
 
 When the Kilo provider is enabled and you are signed in, choose the transcription model under **Models** > **Speech to Text Model**. This stores `experimental.speech_to_text_model` in your global Kilo CLI config:
