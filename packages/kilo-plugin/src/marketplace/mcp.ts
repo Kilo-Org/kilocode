@@ -140,6 +140,26 @@ export function remove(input: { file: string; name: string; fingerprints?: reado
   })
 }
 
+/**
+ * Rewrites one JSON path of a native config file through the same atomic, JSONC-preserving queue as MCP entries.
+ * `update` receives the current value; returning an equal value skips the write, and `undefined` removes the key.
+ */
+export function updateValue(file: string, key: readonly string[], update: (current: unknown) => unknown) {
+  return serialized(file, async (target) => {
+    const text = await read(target)
+    const errors: ParseError[] = []
+    const data: unknown = parse(text, errors, { allowTrailingComma: true })
+    if (errors.length > 0) throw new McpError("invalid_params", `${file} is not valid JSON; fix it first`)
+    const current = key.reduce<unknown>(
+      (value, part) => (value && typeof value === "object" ? (value as Record<string, unknown>)[part] : undefined),
+      data,
+    )
+    const next = update(current)
+    if (JSON.stringify(next) === JSON.stringify(current)) return
+    await save(target, text, [...key], next)
+  })
+}
+
 export async function preflight(input: { file: string; name: string; fingerprints?: readonly string[] }) {
   return serialized(input.file, async (file) => {
     check(await read(file), input.file, input.name, input.fingerprints)

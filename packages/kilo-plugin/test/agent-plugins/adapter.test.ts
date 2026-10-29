@@ -1,5 +1,6 @@
 import { describe, expect } from "bun:test"
-import { mkdir, mkdtemp, readdir, realpath, rm, writeFile } from "node:fs/promises"
+import { chmod, lstat, mkdir, mkdtemp, readdir, realpath, rm, stat, symlink, writeFile } from "node:fs/promises"
+import { parse } from "jsonc-parser"
 import os from "node:os"
 import path from "node:path"
 import { Deferred, Effect, Fiber, Layer, Schema, Stream, type Types } from "effect"
@@ -10,12 +11,17 @@ import { Watcher } from "@opencode/core/filesystem/watcher"
 import { KiloConfigPolicy } from "@opencode/core/kilocode/config/policy"
 import { AbsolutePath } from "@opencode/core/schema"
 import { Skill } from "@opencode/core/skill"
+import { Location } from "@opencode/core/location"
+import { Project } from "@opencode/core/project"
 import type { MCPEditor } from "@opencode/plugin/effect/mcp"
+import type { RpcDomain, RpcHandlers } from "@opencode/plugin/effect/rpc"
+import type { KiloAgentPluginsRpc } from "@opencode/schema/kilocode/agent-plugins"
 import { Directory, Document, Info, type Entry } from "@opencode/schema/config"
 import { Mcp } from "@opencode/schema/mcp"
 import { LayerNode } from "@opencode/util/effect/layer-node"
 import { FSUtil } from "@opencode/util/fs-util"
 import { Global } from "@opencode/util/global"
+import { KiloConfigFiles } from "@opencode/util/kilocode/config/files"
 import { host } from "../../../core/test/plugin/host"
 import { testEffect } from "../../../core/test/lib/effect"
 import type { Diagnostic } from "../../src/agent-plugins/diagnostic"
@@ -96,10 +102,17 @@ const start = Effect.fnUntraced(function* (input: {
   // The global Kilo config directory, then the project's .kilo2, as config discovery orders them.
   const roots = [path.join(input.home, ".config/kilo2"), ...(input.project ? [path.join(input.project, ".kilo2")] : [])]
   const directories = roots.map((root) => new Directory({ type: "directory", path: AbsolutePath.make(root) }))
+  const rpc = rpcHost()
+  const directory = AbsolutePath.make(input.project ?? input.home)
   yield* KiloAgentPlugins.Plugin.effect(
     host({
       skill: { list: () => Effect.die("unused skill.list"), transform: skills.transform, reload: skills.reload },
       mcp: mcp.domain,
+      rpc: rpc.domain,
+      location: new Location.Info({
+        directory,
+        project: { id: Project.ID.global, directory, canonical: directory },
+      }),
     }),
   ).pipe(
     Effect.provide(Config.testLayer([...directories, ...(input.entries ?? [])])),
@@ -113,8 +126,41 @@ const start = Effect.fnUntraced(function* (input: {
       }),
     ),
   )
-  return { skills, mcp }
+  return { skills, mcp, rpc: rpc.captured }
 })
+
+type Handlers = RpcHandlers<typeof KiloAgentPluginsRpc.Definition>
+
+/** A fake RPC domain that keeps the registered handlers and records emitted events. */
+function rpcHost() {
+  const captured = { handlers: undefined as Handlers | undefined, events: [] as string[] }
+  const domain = Object.assign(
+    () => {
+      throw new Error("unused rpc.client")
+    },
+    {
+      register: (_definition: unknown, handlers: Handlers) =>
+        Effect.sync(() => {
+          captured.handlers = handlers
+          return {
+            dispose: Effect.void,
+            events: { emit: (name: string) => Effect.sync(() => void captured.events.push(name)) },
+          }
+        }),
+    },
+  ) as unknown as RpcDomain
+  return { domain, captured }
+}
+
+// Handler errors come back as plain values, the way the RPC route serializes them.
+const context = { error: (type: string, message: string) => ({ type, message }) } as never
+const call = <M extends keyof Handlers>(rpc: { handlers?: Handlers }, method: M, input: Parameters<Handlers[M]>[0]) =>
+  (
+    rpc.handlers![method] as (
+      input: unknown,
+      context: never,
+    ) => Effect.Effect<unknown, { type: string; message: string }>
+  )(input, context)
 
 const ids = (skills: readonly Skill.Info[]) => skills.map((item): string => item.id).toSorted()
 
@@ -264,7 +310,7 @@ describe("Agent Plugins loading rules", () => {
   ) => {
     const reported: [string, Diagnostic.Info][] = []
     const data = path.join(await temp(), "data")
-    const loaded = await KiloAgentPlugins.load(candidates, disabled, data, (root, diagnostic) =>
+    const { active: loaded } = await KiloAgentPlugins.load(candidates, disabled, data, (root, diagnostic) =>
       reported.push([root, diagnostic]),
     )
     return { loaded, reported, data }
@@ -391,3 +437,231 @@ describe("Agent Plugins loading rules", () => {
     }),
   )
 })
+
+describe("kilocode.agent-plugins RPC", () => {
+  const listed = (rpc: { handlers?: Handlers }) =>
+    call(rpc, "list", {}) as Effect.Effect<KiloAgentPluginsRpc.Plugin[], { type: string; message: string }>
+
+  it.live("list describes loaded, rejected, disabled and shadowed plugins", () =>
+    Effect.gen(function* () {
+      const home = yield* Effect.promise(temp)
+      const project = yield* Effect.promise(temp)
+      const global = path.join(home, ".config/kilo2/plugins")
+      yield* Effect.promise(() =>
+        Promise.all([
+          write(path.join(global, "alpha"), {
+            "plugin.json": { $schema: PLUGIN, name: "alpha", version: "1.2.0", description: "Alpha tools" },
+            "skills/one/SKILL.md": skill("one"),
+            "mcp.json": {
+              $schema: MCP,
+              mcpServers: { api: { type: "streamable-http", url: "https://example.com/mcp" } },
+            },
+          }),
+          write(path.join(global, "bad"), { "plugin.json": { $schema: PLUGIN, name: "Bad" } }),
+          write(path.join(global, "off"), plugin("off")),
+          write(path.join(global, "same"), plugin("same")),
+          write(path.join(project, ".kilo2/plugins/same"), plugin("same", { "skills/p/SKILL.md": skill("p") })),
+        ]),
+      )
+      const { rpc } = yield* start({ home, project, entries: [settings({ disabled: ["off"] })] })
+      const plugins = yield* listed(rpc)
+      const byRoot = Object.fromEntries(plugins.map((item) => [item.root, item]))
+      expect(byRoot[path.join(global, "alpha")]).toEqual({
+        name: "alpha",
+        version: "1.2.0",
+        description: "Alpha tools",
+        root: path.join(global, "alpha"),
+        scope: "global",
+        status: "loaded",
+        skills: ["alpha:one"],
+        servers: ["alpha:api"],
+        removable: true,
+        diagnostics: [],
+      })
+      expect(byRoot[path.join(global, "bad")]).toMatchObject({ status: "rejected", removable: true })
+      expect(byRoot[path.join(global, "bad")]!.name).toBeUndefined()
+      expect(byRoot[path.join(global, "bad")]!.diagnostics.map((item) => item.code)).toEqual(["manifest-invalid"])
+      expect(byRoot[path.join(global, "off")]).toMatchObject({ name: "off", status: "disabled", skills: [] })
+      expect(byRoot[path.join(global, "same")]).toMatchObject({ status: "shadowed" })
+      expect(byRoot[path.join(global, "same")]!.diagnostics.map((item) => item.code)).toEqual(["plugin-shadowed"])
+      expect(byRoot[path.join(project, ".kilo2/plugins/same")]).toMatchObject({
+        scope: "project",
+        status: "loaded",
+        skills: ["same:p"],
+        removable: true,
+      })
+    }),
+  )
+
+  it.live("install copies a plugin directory, refuses a duplicate and replaces on request", () =>
+    Effect.gen(function* () {
+      const home = yield* Effect.promise(temp)
+      const source = path.join(yield* Effect.promise(temp), "demo")
+      yield* Effect.promise(() =>
+        write(source, plugin("demo", { "skills/one/SKILL.md": skill("one"), ".git/HEAD": "ref: main" })),
+      )
+      const { rpc, skills } = yield* start({ home })
+      const installed = (yield* call(rpc, "install", {
+        source: { type: "path", path: source },
+        scope: "global",
+      })) as KiloAgentPluginsRpc.Plugin
+      const target = path.join(home, ".config/kilo2/plugins/demo")
+      expect(installed).toMatchObject({ name: "demo", root: target, status: "loaded", skills: ["demo:one"] })
+      expect(ids(yield* skills.list())).toContain("demo:one")
+      expect(rpc.events).toContain("changed")
+      expect(yield* Effect.promise(() => exists(path.join(target, ".git")))).toBe(false)
+      expect(yield* Effect.promise(() => exists(path.join(home, ".config/kilo2/.agent-plugins-staging")))).toBe(false)
+
+      const duplicate = yield* Effect.flip(
+        call(rpc, "install", { source: { type: "path", path: source }, scope: "global" }),
+      )
+      expect(duplicate.type).toBe("conflict")
+
+      yield* Effect.promise(() => write(source, { "skills/two/SKILL.md": skill("two") }))
+      const replaced = (yield* call(rpc, "install", {
+        source: { type: "path", path: source },
+        scope: "global",
+        replace: true,
+      })) as KiloAgentPluginsRpc.Plugin
+      expect(replaced.skills).toEqual(["demo:one", "demo:two"])
+    }),
+  )
+
+  it.live("install unpacks a tar.gz archive, keeps executable servers and honors a subdirectory", () =>
+    Effect.gen(function* () {
+      const home = yield* Effect.promise(temp)
+      const project = yield* Effect.promise(temp)
+      const build = yield* Effect.promise(temp)
+      const demo = path.join(build, "repo-main/plugins/demo")
+      yield* Effect.promise(async () => {
+        await write(
+          demo,
+          plugin("demo", {
+            "bin/server": "#!/bin/sh\n",
+            "mcp.json": { $schema: MCP, mcpServers: { local: { type: "stdio", command: "./bin/server" } } },
+          }),
+        )
+        await chmod(path.join(demo, "bin/server"), 0o755)
+        await Bun.$`tar -czf ${path.join(build, "repo.tar.gz")} -C ${build} repo-main`.quiet()
+      })
+      const server = Bun.serve({ port: 0, fetch: () => new Response(Bun.file(path.join(build, "repo.tar.gz"))) })
+      yield* Effect.addFinalizer(() => Effect.sync(() => server.stop(true)))
+      const url = `http://127.0.0.1:${server.port}/repo.tar.gz`
+      const { rpc } = yield* start({ home, project })
+
+      const missing = yield* Effect.flip(call(rpc, "install", { source: { type: "archive", url }, scope: "project" }))
+      expect(missing.type).toBe("invalid")
+      expect(missing.message).toContain("pass the plugin's subdirectory")
+
+      const installed = (yield* call(rpc, "install", {
+        source: { type: "archive", url, subdirectory: "plugins/demo" },
+        scope: "project",
+      })) as KiloAgentPluginsRpc.Plugin
+      const target = path.join(project, ".kilo2/plugins/demo")
+      expect(installed).toMatchObject({ root: target, scope: "project", status: "loaded", servers: ["demo:local"] })
+      expect((yield* Effect.promise(() => stat(path.join(target, "bin/server")))).mode & 0o111).not.toBe(0)
+
+      const escape = yield* Effect.flip(
+        call(rpc, "install", { source: { type: "archive", url, subdirectory: "../.." }, scope: "project" }),
+      )
+      expect(escape.type).toBe("invalid")
+    }),
+  )
+
+  it.live("install rejects an invalid plugin or missing source and leaves nothing behind", () =>
+    Effect.gen(function* () {
+      const home = yield* Effect.promise(temp)
+      const source = path.join(yield* Effect.promise(temp), "bad")
+      yield* Effect.promise(() => write(source, { "plugin.json": { $schema: PLUGIN, name: "Bad Name" } }))
+      const { rpc } = yield* start({ home })
+      const invalid = yield* Effect.flip(
+        call(rpc, "install", { source: { type: "path", path: source }, scope: "global" }),
+      )
+      expect(invalid.type).toBe("invalid")
+      expect(invalid.message).toContain("Invalid plugin name")
+      const missing = yield* Effect.flip(
+        call(rpc, "install", { source: { type: "path", path: path.join(source, "nope") }, scope: "global" }),
+      )
+      expect(missing.type).toBe("not_found")
+      const config = path.join(home, ".config/kilo2")
+      // Staging is removed and no plugins/ entry was created.
+      expect(yield* Effect.promise(() => readdir(config).catch(() => []))).toEqual([])
+    }),
+  )
+
+  it.live("uninstall removes a plugin and its data on request, and only unlinks a linked plugin", () =>
+    Effect.gen(function* () {
+      const home = yield* Effect.promise(temp)
+      const elsewhere = yield* Effect.promise(temp)
+      const plugins = path.join(home, ".config/kilo2/plugins")
+      const stdio = { $schema: MCP, mcpServers: { db: { type: "stdio", command: "node" } } }
+      yield* Effect.promise(async () => {
+        await write(path.join(plugins, "demo"), plugin("demo", { "mcp.json": stdio }))
+        await write(path.join(elsewhere, "linked"), plugin("linked"))
+        await symlink(path.join(elsewhere, "linked"), path.join(plugins, "linked"), "dir")
+      })
+      const { rpc, mcp } = yield* start({ home })
+      const local = mcp.state.servers.get("demo:db")
+      const data = local?.type === "local" ? local.environment!.PLUGIN_DATA! : ""
+      expect(yield* Effect.promise(() => exists(data))).toBe(true)
+
+      yield* call(rpc, "uninstall", { name: "demo", scope: "global", removeData: true })
+      expect(yield* Effect.promise(() => exists(path.join(plugins, "demo")))).toBe(false)
+      expect(yield* Effect.promise(() => exists(data))).toBe(false)
+      expect(mcp.state.servers.has("demo:db")).toBe(false)
+
+      yield* call(rpc, "uninstall", { name: "linked", scope: "global" })
+      expect(yield* Effect.promise(() => exists(path.join(plugins, "linked")))).toBe(false)
+      expect(yield* Effect.promise(() => exists(path.join(elsewhere, "linked/plugin.json")))).toBe(true)
+      expect(yield* listed(rpc)).toEqual([])
+
+      const missing = yield* Effect.flip(call(rpc, "uninstall", { name: "demo", scope: "global" }))
+      expect(missing.type).toBe("not_found")
+    }),
+  )
+
+  it.live("setEnabled writes agent_plugins.disabled to the scope's config and enabling clears both scopes", () =>
+    Effect.gen(function* () {
+      const home = yield* Effect.promise(temp)
+      const project = yield* Effect.promise(temp)
+      const globalFile = path.join(home, ".config/kilo2", KiloConfigFiles.newFile)
+      const projectFile = path.join(project, KiloConfigFiles.newFile)
+      // An existing JSONC config is the one written, with its comments kept.
+      const globalJsonc = path.join(home, ".config/kilo2/kilo2.jsonc")
+      yield* Effect.promise(() =>
+        write(path.dirname(globalJsonc), { "kilo2.jsonc": '{\n  // keep me\n  "theme": "x"\n}\n' }),
+      )
+      const { rpc } = yield* start({ home, project })
+      const read = (file: string) =>
+        Effect.promise(() =>
+          Bun.file(file)
+            .text()
+            .catch(() => ""),
+        )
+
+      yield* call(rpc, "setEnabled", { name: "demo", enabled: false, scope: "global" })
+      yield* call(rpc, "setEnabled", { name: "demo", enabled: false, scope: "global" })
+      yield* call(rpc, "setEnabled", { name: "other", enabled: false, scope: "project" })
+      yield* call(rpc, "setEnabled", { name: "demo", enabled: false, scope: "project" })
+      expect(yield* read(globalJsonc)).toContain("// keep me")
+      expect(parseJsonc(yield* read(globalJsonc)).agent_plugins).toEqual({ disabled: ["demo"] })
+      expect(parseJsonc(yield* read(projectFile)).agent_plugins).toEqual({ disabled: ["other", "demo"] })
+      expect(yield* Effect.promise(() => exists(globalFile))).toBe(false)
+
+      yield* call(rpc, "setEnabled", { name: "demo", enabled: true, scope: "global" })
+      expect(parseJsonc(yield* read(globalJsonc)).agent_plugins).toBeUndefined()
+      expect(parseJsonc(yield* read(projectFile)).agent_plugins).toEqual({ disabled: ["other"] })
+    }),
+  )
+})
+
+async function exists(target: string) {
+  return lstat(target).then(
+    () => true,
+    () => false,
+  )
+}
+
+function parseJsonc(text: string): { agent_plugins?: unknown } {
+  return parse(text) ?? {}
+}

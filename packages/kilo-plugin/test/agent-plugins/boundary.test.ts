@@ -9,6 +9,7 @@ test("the Agent Plugins loader has no OpenCode imports", async () => {
   expect(files.toSorted()).toEqual([
     "diagnostic.ts",
     "extension.ts",
+    "install.ts",
     "manifest.ts",
     "mcp.ts",
     "paths.ts",

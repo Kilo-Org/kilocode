@@ -93,10 +93,15 @@ export async function load(input: string, options: Options): Promise<Loaded> {
  * user settings such as a disabled list before `load` creates anything for the plugin.
  */
 export async function name(input: string) {
+  return (await inspect(input)).manifest?.name
+}
+
+/** The resolved root and valid manifest of a directory, without discovering components or creating anything. */
+export async function inspect(input: string): Promise<{ root?: string; manifest?: Manifest.Info }> {
   const root = await realpath(input).catch(() => undefined)
-  if (!root) return
+  if (!root) return {}
   const manifest = await readManifest(root)
-  return manifest.type === "valid" ? manifest.manifest.name : undefined
+  return manifest.type === "valid" ? { root, manifest: manifest.manifest } : { root }
 }
 
 /**

@@ -4,16 +4,23 @@ import { Config } from "@opencode/core/config"
 import { Watcher } from "@opencode/core/filesystem/watcher"
 import { KiloConfigPolicy } from "@opencode/core/kilocode/config/policy"
 import { define } from "@opencode/plugin/effect/plugin"
+import type { RpcCallContext } from "@opencode/plugin/effect/rpc"
 import { Directory, Document } from "@opencode/schema/config"
+import { KiloAgentPluginsRpc } from "@opencode/schema/kilocode/agent-plugins"
 import { Mcp } from "@opencode/schema/mcp"
+import { ProjectID } from "@opencode/schema/project-id"
 import { Skill } from "@opencode/schema/skill"
 import { FSUtil } from "@opencode/util/fs-util"
 import { Global } from "@opencode/util/global"
+import { KiloConfigFiles } from "@opencode/util/kilocode/config/files"
 import { readdir } from "node:fs/promises"
 import path from "node:path"
 import { Effect, FiberMap, Option, PubSub, Scope, Semaphore, Stream } from "effect"
+import { McpError, MarketplaceMcp, configFile } from "../marketplace/mcp"
 import type { Diagnostic } from "./diagnostic"
 import { KiloExtension } from "./extension"
+import { Install, InstallError } from "./install"
+import type { Manifest } from "./manifest"
 import { Paths } from "./paths"
 import { AgentPlugin } from "./plugin"
 
@@ -29,17 +36,32 @@ export interface Loaded {
 // node_modules or a server writing state into its root must not trigger refreshes.
 const IGNORE = [...FSUtil.ignoreGlobs, "**/.*", "**/.*/**"]
 
+/** Every plugin found, for the `kilocode.agent-plugins` RPC: also the rejected, disabled and shadowed ones. */
+export interface Listed {
+  readonly root: string
+  readonly scope: Loaded["scope"]
+  readonly status: KiloAgentPluginsRpc.Plugin["status"]
+  readonly manifest?: Manifest.Info
+  readonly skills: readonly string[]
+  readonly servers: readonly string[]
+  readonly removable: boolean
+  readonly diagnostics: readonly Diagnostic.Info[]
+}
+
 interface Candidate {
   readonly path: string
   readonly scope: Loaded["scope"]
+  /** Found in the global or opened project's `plugins/` directory, which `install` and `uninstall` manage. */
+  readonly removable?: boolean
 }
 
 /**
  * Loads Agent Plugins (agent-plugins.org) and contributes their skills and MCP servers. Plugins come from the
  * `plugins/` directory of every Kilo config directory (the global one, then each project `.kilo2`, nearest last) and
  * from the `agent_plugins.paths` config setting. That directory is shared with JS plugins, which load only from a
- * child with a `server` or `index` module; a child with `plugin.json` is an Agent Plugin. User config wins: a config skill with the same ID replaces a plugin skill,
- * and a configured MCP server with the same name is never overwritten.
+ * child with a `server` or `index` module; a child with `plugin.json` is an Agent Plugin. User config wins: a config
+ * skill with the same ID replaces a plugin skill, and a configured MCP server with the same name is never overwritten.
+ * Clients install, list, enable and disable plugins through the `kilocode.agent-plugins` RPC.
  */
 export const Plugin = define<Global.Service | Scope.Scope>({
   id: "kilocode.agent-plugins",
@@ -50,7 +72,19 @@ export const Plugin = define<Global.Service | Scope.Scope>({
     const config = Option.getOrUndefined(yield* Effect.serviceOption(Config.Service))
     const watcher = Option.getOrUndefined(yield* Effect.serviceOption(Watcher.Service))
     const dataRoot = path.join(global.data, "agent-plugins")
-    const state = { loaded: [] as Loaded[], entries: [] as readonly Document[], reported: new Set<string>() }
+    const state = {
+      loaded: [] as Loaded[],
+      listed: [] as Listed[],
+      entries: [] as readonly Document[],
+      reported: new Set<string>(),
+    }
+    // Install and uninstall manage the global config directory and the opened project's .kilo2, as the marketplace
+    // does; an unversioned directory belongs to the global project, so its own directory is the project then.
+    const project =
+      ctx.location.project.id === ProjectID.global ? ctx.location.directory : ctx.location.project.directory
+    const directory = (scope: KiloAgentPluginsRpc.Scope) => (scope === "global" ? global.config : project)
+    const root = (scope: KiloAgentPluginsRpc.Scope) =>
+      scope === "global" ? global.config : path.join(project, KiloConfigFiles.directories[0])
     const watches = yield* FiberMap.make<string>()
     const changes = yield* PubSub.sliding<string>(1)
     const lock = Semaphore.makeUnsafe(1)
@@ -105,9 +139,19 @@ export const Plugin = define<Global.Service | Scope.Scope>({
         const entries = config ? yield* config.entries() : []
         state.entries = entries.filter((entry): entry is Document => entry.type === "document")
         // Config directories come in precedence order: the global directory first, then project ones, nearest last.
-        const roots = config
+        // The two directories install manages are always included, so a plugin installed into a .kilo2 that did not
+        // exist when config was discovered still loads.
+        const discovered: string[] = config
           ? entries.filter((entry): entry is Directory => entry.type === "directory").map((entry) => entry.path)
-          : [global.config]
+          : []
+        const same = (a: string, b: string) => path.resolve(a) === path.resolve(b)
+        const withGlobal = discovered.some((entry) => same(entry, root("global")))
+          ? discovered
+          : [root("global"), ...discovered]
+        // A missing project .kilo2 ranks just above global, below the project directories that exist.
+        const roots = withGlobal.some((entry) => same(entry, root("project")))
+          ? withGlobal
+          : [withGlobal[0]!, root("project"), ...withGlobal.slice(1)]
         const settings = KiloConfigPolicy.agentPlugins(entries)
         const directories = roots.map((root) => path.join(root, "plugins"))
         yield* Effect.forEach(directories, (directory) => watch(directory), { discard: true })
@@ -123,6 +167,9 @@ export const Plugin = define<Global.Service | Scope.Scope>({
                   (child): Candidate => ({
                     path: child,
                     scope: path.resolve(roots[index]!) === path.resolve(global.config) ? "global" : "project",
+                    removable: [root("global"), root("project")].some(
+                      (managed) => path.resolve(managed) === path.resolve(roots[index]!),
+                    ),
                   }),
                 ),
               ),
@@ -130,14 +177,84 @@ export const Plugin = define<Global.Service | Scope.Scope>({
           )).flat(),
           ...explicit.map((item): Candidate => ({ path: item, scope: "explicit" })),
         ]
-        state.loaded = yield* Effect.promise(() => load(candidates, settings.disabled, dataRoot, report))
+        const result = yield* Effect.promise(() => load(candidates, settings.disabled, dataRoot, report))
+        const changed = JSON.stringify(result.listed) !== JSON.stringify(state.listed)
+        state.loaded = result.active
+        state.listed = result.listed
         yield* flush()
+        return changed
       },
       (effect) => lock.withPermit(effect),
     )
 
+    const registration = yield* ctx.rpc
+      .register(KiloAgentPluginsRpc.Definition, {
+        list: () => Effect.sync(() => state.listed.map(describe)),
+        install: (input, context) =>
+          Effect.tryPromise({
+            try: () =>
+              Install.install({
+                source:
+                  input.source.type === "path"
+                    ? { type: "path", path: resolve(input.source.path, global.home, ctx.location.directory) }
+                    : input.source,
+                root: root(input.scope),
+                replace: input.replace ?? false,
+              }),
+            catch: (error) => error,
+          }).pipe(
+            Effect.tap(() => reload),
+            Effect.flatMap((installed) =>
+              Effect.promise(() => Paths.resolve(installed.target)).pipe(
+                Effect.map((target) => state.listed.find((item) => item.root === target)),
+                Effect.flatMap((found) =>
+                  found
+                    ? Effect.succeed(describe(found))
+                    : Effect.fail(new InstallError("not_found", `Installed ${installed.name}, but it was not loaded`)),
+                ),
+              ),
+            ),
+            Effect.mapError((error) => failure(error, context)),
+          ),
+        uninstall: (input, context) =>
+          Effect.tryPromise({
+            try: () =>
+              Install.uninstall({
+                root: root(input.scope),
+                name: input.name,
+                dataRoot,
+                removeData: input.removeData ?? false,
+              }),
+            catch: (error) => error,
+          }).pipe(
+            Effect.tap(() => reload),
+            Effect.as({}),
+            Effect.mapError((error) => failure(error, context)),
+          ),
+        setEnabled: (input, context) =>
+          Effect.tryPromise({
+            try: async () => {
+              // A name disabled in either scope stays disabled, so enabling clears both; disabling writes one.
+              const scopes: KiloAgentPluginsRpc.Scope[] = input.enabled ? ["global", "project"] : [input.scope]
+              for (const scope of scopes)
+                await MarketplaceMcp.updateValue(
+                  await configFile(directory(scope), scope === "global"),
+                  ["agent_plugins"],
+                  (current) => withDisabled(current, input.name, input.enabled),
+                )
+            },
+            catch: (error) => error,
+          }).pipe(
+            // The config watcher reloads the settings and publishes config.updated, which refreshes the plugins.
+            Effect.as({}),
+            Effect.mapError((error) => failure(error, context)),
+          ),
+      })
+      .pipe(Effect.orDie)
+
     // A failed refresh keeps the previous plugins and the watch loop alive.
-    const reload = refresh().pipe(
+    const reload: Effect.Effect<void> = refresh().pipe(
+      Effect.tap((changed) => (changed ? registration.events.emit("changed", {}).pipe(Effect.ignore) : Effect.void)),
       Effect.andThen(ctx.skill.reload()),
       Effect.andThen(ctx.mcp.reload()),
       Effect.catchCause((cause) => Effect.logError("Agent Plugins refresh failed", { cause })),
@@ -180,7 +297,8 @@ export const Plugin = define<Global.Service | Scope.Scope>({
 
 /**
  * Loads every candidate and keeps one plugin per name. Candidates come in increasing precedence (global, then
- * project roots nearest last, then explicit paths): a later plugin with the same name replaces an earlier one.
+ * project roots nearest last, then explicit paths): a later plugin with the same name replaces an earlier one, which
+ * is then listed as shadowed. `active` feeds the skill and MCP transforms; `listed` describes every plugin found.
  */
 export async function load(
   candidates: readonly Candidate[],
@@ -190,27 +308,59 @@ export async function load(
 ) {
   const byName = new Map<string, Loaded>()
   const roots = new Set<string>()
+  const listed: Listed[] = []
   for (const candidate of candidates) {
-    const name = await AgentPlugin.name(candidate.path)
-    if (name && disabled.includes(name)) continue
+    const base = { scope: candidate.scope, removable: candidate.removable ?? false, skills: [], servers: [] }
+    const inspected = await AgentPlugin.inspect(candidate.path)
+    // A disabled plugin is described from its manifest alone, so nothing is created for it.
+    if (inspected.manifest && disabled.includes(inspected.manifest.name)) {
+      if (inspected.root && !roots.has(inspected.root)) {
+        roots.add(inspected.root)
+        listed.push({
+          ...base,
+          root: inspected.root,
+          status: "disabled",
+          manifest: inspected.manifest,
+          diagnostics: [],
+        })
+      }
+      continue
+    }
     const plugin = await AgentPlugin.load(candidate.path, { dataRoot })
     // A directory without plugin.json under a plugins/ folder is not a plugin; an explicit path must be one.
     if (candidate.scope !== "explicit" && plugin.diagnostics.some((item) => item.code === "manifest-missing")) continue
     if (roots.has(plugin.root)) continue
     roots.add(plugin.root)
     const mapped = plugin.manifest ? map(plugin, candidate.scope) : undefined
-    for (const diagnostic of [...plugin.diagnostics, ...(mapped?.diagnostics ?? [])]) report(plugin.root, diagnostic)
-    if (!mapped || !plugin.manifest) continue
+    const diagnostics = [...plugin.diagnostics, ...(mapped?.diagnostics ?? [])]
+    for (const diagnostic of diagnostics) report(plugin.root, diagnostic)
+    if (!mapped || !plugin.manifest) {
+      listed.push({ ...base, root: plugin.root, status: "rejected", diagnostics })
+      continue
+    }
     const previous = byName.get(plugin.manifest.name)
-    if (previous)
-      report(previous.plugin.root, {
+    if (previous) {
+      const shadowed: Diagnostic.Info = {
         severity: "warning",
         code: "plugin-shadowed",
         message: `Plugin "${plugin.manifest.name}" at ${previous.plugin.root} is shadowed by ${plugin.root}`,
-      })
+      }
+      report(previous.plugin.root, shadowed)
+      const index = listed.findIndex((item) => item.root === previous.plugin.root)
+      listed[index] = { ...listed[index]!, status: "shadowed", diagnostics: [...listed[index]!.diagnostics, shadowed] }
+    }
     byName.set(plugin.manifest.name, mapped.loaded)
+    listed.push({
+      ...base,
+      root: plugin.root,
+      status: "loaded",
+      manifest: plugin.manifest,
+      skills: mapped.loaded.skills.map((skill) => skill.id),
+      servers: [...mapped.loaded.servers.keys()],
+      diagnostics,
+    })
   }
-  return [...byName.values()]
+  return { active: [...byName.values()], listed }
 }
 
 /**
@@ -290,4 +440,63 @@ async function nearest(target: string): Promise<string | { missing: string } | u
   const found = await nearest(parent)
   if (!found) return
   return typeof found === "string" ? { missing: target } : found
+}
+
+/** The RPC view of a listed plugin: manifest metadata without the schema and extension data. */
+export function describe(item: Listed): KiloAgentPluginsRpc.Plugin {
+  const manifest = item.manifest
+  return {
+    ...(manifest
+      ? {
+          name: manifest.name,
+          ...(manifest.version ? { version: manifest.version } : {}),
+          ...(manifest.description ? { description: manifest.description } : {}),
+          ...(manifest.author ? { author: manifest.author } : {}),
+          ...(manifest.homepage ? { homepage: manifest.homepage } : {}),
+          ...(manifest.repository ? { repository: manifest.repository } : {}),
+          ...(manifest.license ? { license: manifest.license } : {}),
+          ...(manifest.keywords ? { keywords: manifest.keywords } : {}),
+        }
+      : {}),
+    root: item.root,
+    scope: item.scope,
+    status: item.status,
+    skills: item.skills,
+    servers: item.servers,
+    removable: item.removable,
+    diagnostics: item.diagnostics,
+  }
+}
+
+/**
+ * The next `agent_plugins` value with `name` added to or removed from `disabled`. Other settings are kept; an empty
+ * list drops `disabled`, and an empty object drops `agent_plugins`, so enabling leaves no residue.
+ */
+export function withDisabled(current: unknown, name: string, enabled: boolean) {
+  const settings =
+    current && typeof current === "object" && !Array.isArray(current) ? (current as Record<string, unknown>) : {}
+  const names = Array.isArray(settings.disabled)
+    ? settings.disabled.filter((item): item is string => typeof item === "string")
+    : []
+  if (enabled ? !names.includes(name) : names.includes(name)) return current
+  const disabled = enabled ? names.filter((item) => item !== name) : [...names, name]
+  const { disabled: _, ...rest } = settings
+  const next = disabled.length ? { ...rest, disabled } : rest
+  return Object.keys(next).length ? next : undefined
+}
+
+function resolve(item: string, home: string, directory: string) {
+  return item.startsWith("~/") ? path.join(home, item.slice(2)) : path.resolve(directory, item)
+}
+
+/** Maps a failure to the RPC error the method declares; every method shares one error set. */
+function failure(cause: unknown, context: RpcCallContext<typeof KiloAgentPluginsRpc.Definition.methods.install>) {
+  const message = cause instanceof Error ? cause.message : String(cause)
+  if (cause instanceof InstallError) return context.error(cause.reason, message)
+  if (cause instanceof McpError)
+    return context.error(
+      cause.reason === "conflict" ? "conflict" : cause.reason === "invalid_params" ? "invalid" : "write_failed",
+      message,
+    )
+  return context.error("write_failed", message)
 }
