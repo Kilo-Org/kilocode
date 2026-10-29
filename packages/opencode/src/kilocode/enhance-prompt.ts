@@ -7,6 +7,7 @@ import { AppRuntime } from "@/effect/app-runtime"
 import { Effect } from "effect"
 import * as Log from "@opencode-ai/core/util/log"
 import { opencodeSessionHeaders } from "@/kilocode/provider/opencode-session-headers"
+import { providerRoutingHeaders } from "@kilocode/kilo-gateway"
 
 const log = Log.create({ service: "enhance-prompt" })
 
@@ -22,6 +23,17 @@ export const INSTRUCTION = [
 export function clean(text: string) {
   const stripped = text.replace(/^```\w*\n?|```$/g, "").trim()
   return stripped.replace(/^(['"])([\s\S]*)\1$/, "$2").trim()
+}
+
+export function headers(model: Provider.Model, options: Record<string, unknown>) {
+  return {
+    // Each call is a standalone rewrite, not part of a multi-turn conversation; a fresh ID
+    // per call still satisfies the opencode API's "stable per-conversation ID" requirement.
+    ...opencodeSessionHeaders({ providerID: model.providerID, sessionID: randomUUID() }),
+    // The native OpenAI/Anthropic SDKs drop `provider` from provider options; the gateway
+    // reads routing from this header on every transport, as for chat requests.
+    ...(model.api.npm === "@kilocode/kilo-gateway" ? providerRoutingHeaders(options.provider) : {}),
+  }
 }
 
 /**
@@ -43,18 +55,14 @@ export async function enhancePrompt(text: string): Promise<string> {
     ),
   )
 
+  const options = mergeDeep(ProviderTransform.smallOptions(resolved.model), resolved.model.options)
   const result = await generateText({
     model: resolved.language,
     temperature: resolved.model.capabilities.temperature ? 0.7 : undefined,
-    providerOptions: ProviderTransform.providerOptions(
-      resolved.model,
-      mergeDeep(ProviderTransform.smallOptions(resolved.model), resolved.model.options),
-    ),
+    providerOptions: ProviderTransform.providerOptions(resolved.model, options),
     maxRetries: 3,
     system: INSTRUCTION,
-    // Each call is a standalone rewrite, not part of a multi-turn conversation; a fresh ID
-    // per call still satisfies the opencode API's "stable per-conversation ID" requirement.
-    headers: opencodeSessionHeaders({ providerID: resolved.model.providerID, sessionID: randomUUID() }),
+    headers: headers(resolved.model, options),
     messages: [{ role: "user" as const, content: `Draft prompt to enhance, not answer:\n\n${text}` }],
   })
 
