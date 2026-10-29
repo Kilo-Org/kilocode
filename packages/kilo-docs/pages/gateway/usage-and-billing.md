@@ -28,7 +28,7 @@ Costs are determined by the upstream provider's pricing based on token usage:
 ### Free and BYOK requests
 
 - **Free models**: Models tagged with `:free` have zero cost -- usage is tracked but not billed
-- **BYOK requests**: When using your own API key, the cost is set to $0 on Kilo's side. You pay the provider directly based on your agreement with them
+- **BYOK requests**: When using your own API key, the provider bills model inference to that key, so Kilo does not charge for inference. Kilo still charges for the gateway-side costs it incurs on the request -- such as server tools (web search and web fetch), plugins, and PDF parsing. You pay the provider directly for inference based on your agreement with them
 
 ## Balance management
 

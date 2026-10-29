@@ -67,6 +67,10 @@ The **People** section combines each person into one record, even when that pers
 
 The People section reports current membership. To invite a new person, change a role, or remove a member, open the relevant organization's member settings.
 
+{% callout type="note" %}
+Sub-organizations draw membership from their parent. You can add or invite people to a sub-organization only if they are already active members of the parent organization, and the Add Member search lists parent members only. Someone who leaves the parent organization cannot accept a pending sub-organization invitation.
+{% /callout %}
+
 {% image src="/docs/img/enterprise/sub-organizations-people.webp" alt="Sub-organization People section with search, role, status, assignment, and organization filters" width="100%" caption="Search and filter people across the parent and its sub-organizations." /%}
 
 ### Review usage and credits
