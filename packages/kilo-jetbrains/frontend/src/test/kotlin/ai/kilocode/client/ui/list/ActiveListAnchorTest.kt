@@ -1,5 +1,6 @@
 package ai.kilocode.client.ui.list
 
+import ai.kilocode.client.ui.active.ActiveItem
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.util.ui.UIUtil
 import java.awt.Dimension
@@ -60,7 +61,7 @@ class ActiveListAnchorTest : BasePlatformTestCase() {
         return view
     }
 
-    private fun row(key: String, title: String): ActiveListItem = object : ActiveListItem {
+    private fun row(key: String, title: String): ActiveItem = object : ActiveItem {
         override val key = key
         override val title = title
         override val search = title

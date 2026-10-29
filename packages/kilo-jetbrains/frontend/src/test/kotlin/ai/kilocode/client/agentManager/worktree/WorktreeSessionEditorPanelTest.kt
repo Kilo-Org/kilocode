@@ -1,4 +1,5 @@
 package ai.kilocode.client.agentManager.worktree
+import ai.kilocode.client.ui.list.section
 
 import ai.kilocode.client.util.edtWait
 import ai.kilocode.client.agentManager.WorkspaceSessionListToggle
@@ -35,9 +36,9 @@ import ai.kilocode.client.vfs.KiloVirtualFile
 import ai.kilocode.client.vfs.KiloVirtualFileSystem
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.list.ActiveList
-import ai.kilocode.client.ui.list.ActiveListItem
+import ai.kilocode.client.ui.active.ActiveItem
 import ai.kilocode.client.ui.list.activeListSectionTitle
-import ai.kilocode.client.ui.list.activeListToolWindowBackground
+import ai.kilocode.client.ui.active.activeToolWindowBackground
 import ai.kilocode.rpc.KiloWorktreeRpcApi
 import ai.kilocode.rpc.dto.KiloAppStateDto
 import ai.kilocode.rpc.dto.KiloAppStatusDto
@@ -175,15 +176,15 @@ class WorktreeSessionEditorPanelTest : BasePlatformTestCase() {
         val toolbarPanel = edt { toolbar.parent as JComponent }
         val header = edt { UIUtil.findComponentOfType(panel, WorktreePrHeaderView::class.java)!!.parent as JComponent }
 
-        assertEquals(activeListToolWindowBackground(), edt { panel.background })
+        assertEquals(activeToolWindowBackground(), edt { panel.background })
         assertNull(edt { panel.border })
-        assertEquals(activeListToolWindowBackground(), edt { list.background })
-        assertEquals(activeListToolWindowBackground(), edt { scroll.background })
-        assertEquals(activeListToolWindowBackground(), edt { scroll.viewport.background })
-        assertEquals(activeListToolWindowBackground(), edt { (scroll.viewport.view as JComponent).background })
+        assertEquals(activeToolWindowBackground(), edt { list.background })
+        assertEquals(activeToolWindowBackground(), edt { scroll.background })
+        assertEquals(activeToolWindowBackground(), edt { scroll.viewport.background })
+        assertEquals(activeToolWindowBackground(), edt { (scroll.viewport.view as JComponent).background })
         assertFalse(edt { toolbar.isOpaque })
-        assertEquals(activeListToolWindowBackground(), edt { toolbarPanel.background })
-        assertEquals(activeListToolWindowBackground(), edt { header.background })
+        assertEquals(activeToolWindowBackground(), edt { toolbarPanel.background })
+        assertEquals(activeToolWindowBackground(), edt { header.background })
         assertEquals(0, edt { scroll.border.getBorderInsets(scroll).left })
         assertEquals(0, edt { scroll.viewportBorder.getBorderInsets(scroll).left })
         assertTrue(edt { toolbarPanel.border.getBorderInsets(toolbarPanel).right > 0 })
@@ -529,8 +530,8 @@ class WorktreeSessionEditorPanelTest : BasePlatformTestCase() {
         edt { manager.onListChanged?.invoke() }
 
         val list = edt { UIUtil.findComponentOfType(panel, JBList::class.java)!! }
-        assertEquals("New session", edt { (list.model.getElementAt(0) as ActiveListItem).title })
-        assertEquals("new", edt { (list.selectedValue as ActiveListItem).key })
+        assertEquals("New session", edt { (list.model.getElementAt(0) as ActiveItem).title })
+        assertEquals("new", edt { (list.selectedValue as ActiveItem).key })
     }
 
     fun `test session row title uses regular font`() {
@@ -540,8 +541,8 @@ class WorktreeSessionEditorPanelTest : BasePlatformTestCase() {
 
         val style = edt {
             @Suppress("UNCHECKED_CAST")
-            val list = UIUtil.findComponentOfType(panel, JBList::class.java)!! as JBList<ActiveListItem>
-            val row = list.model.getElementAt(0) as ActiveListItem
+            val list = UIUtil.findComponentOfType(panel, JBList::class.java)!! as JBList<ActiveItem>
+            val row = list.model.getElementAt(0) as ActiveItem
             val comp = list.cellRenderer.getListCellRendererComponent(list, row, 0, true, true)
             val title = rowTitle(comp)
             val iter = title.iterator()
@@ -1154,12 +1155,12 @@ class WorktreeSessionEditorPanelTest : BasePlatformTestCase() {
 
     private fun nowSeconds() = System.currentTimeMillis().toDouble() / 1000.0
 
-    private fun rows(): List<ActiveListItem> {
+    private fun rows(): List<ActiveItem> {
         val view = edt { UIUtil.findComponentOfType(panel, JBList::class.java)!! }
-        return edt { (0 until view.model.size).map { view.model.getElementAt(it) as ActiveListItem } }
+        return edt { (0 until view.model.size).map { view.model.getElementAt(it) as ActiveItem } }
     }
 
-    private fun row(key: String): ActiveListItem = rows().single { it.key == key }
+    private fun row(key: String): ActiveItem = rows().single { it.key == key }
 
     private fun flush() = coroutines.drain(::pump)
 

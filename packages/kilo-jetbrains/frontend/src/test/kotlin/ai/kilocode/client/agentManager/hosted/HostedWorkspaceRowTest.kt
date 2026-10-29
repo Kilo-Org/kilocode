@@ -5,11 +5,11 @@ import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.session.SessionActivityKind
 import ai.kilocode.client.agentManager.worktree.WorktreeIcons
 import ai.kilocode.client.session.SpinnerIcon
-import ai.kilocode.client.ui.list.ActiveListBadgeCell
-import ai.kilocode.client.ui.list.ActiveListConfig
-import ai.kilocode.client.ui.list.ActiveListItem
+import ai.kilocode.client.ui.active.ActiveBadgeCell
+import ai.kilocode.client.ui.active.ActiveConfig
+import ai.kilocode.client.ui.active.ActiveItem
 import ai.kilocode.client.ui.list.ActiveListRenderer
-import ai.kilocode.client.ui.list.activeListLayout
+import ai.kilocode.client.ui.active.activeLayout
 import ai.kilocode.rpc.dto.HostedWorkspaceDto
 import ai.kilocode.rpc.dto.HostedWorkspaceRefDto
 import ai.kilocode.rpc.dto.HostedWorkspaceSessionDto
@@ -160,16 +160,16 @@ class HostedWorkspaceRowTest : BasePlatformTestCase() {
 
     fun `test workspace status badges follow the title rather than the trailing edge`() {
         val rows = listOf(row("sleeping", "Short"), row("running", "A longer Cloud workspace title"))
-        val model = CollectionListModel<ActiveListItem>(rows)
-        val list = JBList<ActiveListItem>(model)
-        val renderer = ActiveListRenderer(model, ActiveListConfig(badgesRight = true))
+        val model = CollectionListModel<ActiveItem>(rows)
+        val list = JBList<ActiveItem>(model)
+        val renderer = ActiveListRenderer(model, ActiveConfig(badgesRight = true))
         list.cellRenderer = renderer
         list.setSize(560, 180)
         val edges = rows.mapIndexed { index, row ->
             val cell = renderer.getListCellRendererComponent(list, row, index, false, true)
             cell.setSize(list.width, cell.preferredSize.height)
-            activeListLayout(cell)
-            val badge = descendants(cell).filterIsInstance<ActiveListBadgeCell>().single { it.cellId == "cloud-compute" }
+            activeLayout(cell)
+            val badge = descendants(cell).filterIsInstance<ActiveBadgeCell>().single { it.cellId == "cloud-compute" }
             val title = rowTitle(cell)
             val pill = SwingUtilities.convertRectangle(badge.parent, badge.bounds, cell)
             val text = SwingUtilities.convertRectangle(title.parent, title.bounds, cell)

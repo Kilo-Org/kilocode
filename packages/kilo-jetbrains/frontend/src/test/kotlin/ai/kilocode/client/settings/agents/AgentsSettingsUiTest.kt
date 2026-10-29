@@ -12,7 +12,7 @@ import ai.kilocode.client.testing.FakeAgentBehaviorRpcApi
 import ai.kilocode.client.testing.FakeAppRpcApi
 import ai.kilocode.client.testing.FakeWorkspaceRpcApi
 import ai.kilocode.client.testing.fire
-import ai.kilocode.client.ui.list.ActiveListItem
+import ai.kilocode.client.ui.active.ActiveItem
 import ai.kilocode.client.ui.list.activeListCellBounds
 import ai.kilocode.rpc.dto.AgentConfigDto
 import ai.kilocode.rpc.dto.AgentCreateDto
@@ -680,12 +680,12 @@ class AgentsSettingsUiTest : BasePlatformTestCase() {
         defaults = emptyMap(),
     )
 
-    private fun rows(panel: AgentsSettingsUi): List<ActiveListItem> {
+    private fun rows(panel: AgentsSettingsUi): List<ActiveItem> {
         val model = list(panel).model
         return (0 until model.size).map { model.getElementAt(it) }
     }
 
-    private fun list(panel: AgentsSettingsUi) = components(panel).filterIsInstance<JBList<ActiveListItem>>().single()
+    private fun list(panel: AgentsSettingsUi) = components(panel).filterIsInstance<JBList<ActiveItem>>().single()
 
     /** The panel disables its search field while a request is in flight. */
     private fun idle(panel: AgentsSettingsUi) =
@@ -728,7 +728,7 @@ class AgentsSettingsUiTest : BasePlatformTestCase() {
 
     private fun center(rect: java.awt.Rectangle) = Point(rect.x + rect.width / 2, rect.y + rect.height / 2)
 
-    private fun click(list: JBList<ActiveListItem>, point: Point) {
+    private fun click(list: JBList<ActiveItem>, point: Point) {
         fire(list, mouse(list, MouseEvent.MOUSE_PRESSED, point))
         fire(list, mouse(list, MouseEvent.MOUSE_RELEASED, point))
     }
@@ -756,7 +756,7 @@ class AgentsSettingsUiTest : BasePlatformTestCase() {
     }
 
     private fun file(name: String, text: String) = LightVirtualFile(name, text)
-    private fun mouse(list: JBList<ActiveListItem>, id: Int, point: Point, count: Int = 1) = MouseEvent(
+    private fun mouse(list: JBList<ActiveItem>, id: Int, point: Point, count: Int = 1) = MouseEvent(
         list,
         id,
         System.currentTimeMillis(),

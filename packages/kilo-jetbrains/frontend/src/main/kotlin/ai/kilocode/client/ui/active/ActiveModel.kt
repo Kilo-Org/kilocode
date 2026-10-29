@@ -1,4 +1,4 @@
-package ai.kilocode.client.ui.list
+package ai.kilocode.client.ui.active
 
 import ai.kilocode.client.ui.FilledBadgeIcon
 import ai.kilocode.client.ui.LiveBadgeIcon
@@ -7,20 +7,19 @@ import ai.kilocode.client.ui.layout.LayoutPass
 import com.intellij.ui.AnimatedIcon
 import com.intellij.util.ui.JBUI
 import java.awt.Component
+import java.awt.Color
+import java.awt.Rectangle
 import java.awt.Container
 import java.awt.Cursor
-import java.awt.Point
-import java.awt.Rectangle
 import javax.swing.Icon
-import javax.swing.JList
-import javax.swing.ListSelectionModel
-import javax.swing.ListCellRenderer
 import javax.swing.SwingUtilities
+import javax.swing.UIManager
+import com.intellij.util.ui.UIUtil
 
 private const val CELL_GAP = 8
 
 /**
- * A pill or status glyph rendered before or after an [ActiveListItem] title. A non-null [id] opts the
+ * A pill or status glyph rendered before or after an [ActiveItem] title. A non-null [id] opts the
  * badge into hit-testing; [action] requires an id to have any effect.
  *
  * [segments] joins multiple worded pills into one badge. An [icon] replaces the pill rather than joining
@@ -33,7 +32,7 @@ private const val CELL_GAP = 8
  * counted and whose text says how many — where the icon alone would report that something is outstanding
  * without saying how much of it.
  */
-internal data class ActiveListBadge(
+internal data class ActiveBadge(
     val text: String,
     val style: UiStyle.Badge.Style = UiStyle.Badge.Secondary,
     val id: String? = null,
@@ -50,7 +49,7 @@ internal data class ActiveListBadge(
  * A row with nothing committed shows the uncommitted counts instead of hiding, so [onLocal] is the click
  * target in that case and [onChanges] the rest of the time.
  */
-internal data class ActiveListMetrics(
+internal data class ActiveMetrics(
     val files: Int = 0,
     val additions: Int = 0,
     val deletions: Int = 0,
@@ -70,19 +69,18 @@ internal data class ActiveListMetrics(
     val action: (() -> Unit)? get() = if (local) onLocal else onChanges
 }
 
-internal enum class ActiveListRowHeight { EQUAL, PREFERRED }
+internal enum class ActiveRowHeight { EQUAL, PREFERRED }
 
-internal enum class ActiveListWeight { PLAIN, BOLD }
+internal enum class ActiveWeight { PLAIN, BOLD }
 
-internal enum class ActiveListIconAlignment { CENTER, TOP }
+internal enum class ActiveIconAlignment { CENTER, TOP }
 
-internal data class ActiveListConfig(
-    val height: ActiveListRowHeight = ActiveListRowHeight.EQUAL,
+internal data class ActiveConfig(
+    val height: ActiveRowHeight = ActiveRowHeight.EQUAL,
     val description: Boolean = true,
     val descriptionIndent: Boolean = true,
     val tooltip: Boolean = true,
-    val iconAlignment: ActiveListIconAlignment = ActiveListIconAlignment.CENTER,
-    val selection: Int = ListSelectionModel.SINGLE_SELECTION,
+    val iconAlignment: ActiveIconAlignment = ActiveIconAlignment.CENTER,
     val hoverActions: Boolean = false,
     /**
      * Keep a selected row's in-place action cells visible while focus sits outside the list.
@@ -93,13 +91,9 @@ internal data class ActiveListConfig(
      */
     val keepActions: Boolean = false,
     /** Weight used for the primary row title. */
-    val title: ActiveListWeight = ActiveListWeight.BOLD,
-    /** Weight used for section headers. */
-    val header: ActiveListWeight = ActiveListWeight.BOLD,
-    /** Show a separator line above section headers, except above the first row. */
-    val divider: Boolean = true,
+    val title: ActiveWeight = ActiveWeight.BOLD,
     /**
-     * Pin title-line [ActiveListItem.badges] to the row's trailing edge instead of letting them trail
+     * Pin title-line [ActiveItem.badges] to the row's trailing edge instead of letting them trail
      * the title text. Turn it on for status glyphs, which are scanned down the list as a column and
      * then line up with the metrics on the description line; leave it off for pills that label the
      * title ("builtin", "env"), which read as part of it and would be covered by the hover actions.
@@ -107,18 +101,18 @@ internal data class ActiveListConfig(
     val badgesRight: Boolean = false,
     /**
      * Wrap the description line to its full height instead of clipping/fading it to one line.
-     * Only meaningful together with [ActiveListRowHeight.PREFERRED]: a wrapped body under
-     * [ActiveListRowHeight.EQUAL] would still be capped to the shared row height.
+     * Only meaningful together with [ActiveRowHeight.PREFERRED]: a wrapped body under
+     * [ActiveRowHeight.EQUAL] would still be capped to the shared row height.
      */
     val wrapDescription: Boolean = false,
 ) {
     companion object {
-        val Equal = ActiveListConfig(ActiveListRowHeight.EQUAL)
-        val Preferred = ActiveListConfig(ActiveListRowHeight.PREFERRED)
+        val Equal = ActiveConfig(ActiveRowHeight.EQUAL)
+        val Preferred = ActiveConfig(ActiveRowHeight.PREFERRED)
     }
 }
 
-internal data class ActiveListCell(
+internal data class ActiveCell(
     val id: String,
     val label: String,
     val enabled: Boolean = true,
@@ -141,10 +135,10 @@ internal data class ActiveListCell(
 )
 
 /**
- * A component in a rendered [ActiveListItem] row that the list hit-tests for clicks, hover cursor,
+ * A component in a rendered [ActiveItem] row that the list hit-tests for clicks, hover cursor,
  * and tooltips.
  */
-internal interface ActiveListHitCell {
+internal interface ActiveHitCell {
     val cellId: String
     fun cellEnabled(): Boolean
     fun cellCursor(): Int
@@ -155,12 +149,12 @@ internal interface ActiveListHitCell {
 /**
  * A row in an [ActiveList]. Carries the display contract shared by settings pages, the worktree
  * list, and the session history stack: a leading icon, a title whose weight follows
- * [ActiveListConfig.title] with an inline [note], a secondary [description] line, [leading] badges
+ * [ActiveConfig.title] with an inline [note], a secondary [description] line, [leading] badges
  * before the title, inline [badges] after it, optional right-aligned [trailing] text, and action
  * [cells]. Action cells are shown for the selected row, including while the list is unfocused.
- * [ActiveListCell.alwaysVisible] also exposes an action on unselected rows.
+ * [ActiveCell.alwaysVisible] also exposes an action on unselected rows.
  */
-internal interface ActiveListItem {
+internal interface ActiveItem {
     val key: String
     /**
      * Stable identity used to restore selection across refreshes. Defaults to [key]; override when
@@ -180,17 +174,16 @@ internal interface ActiveListItem {
      * status icons (running, question, error) so they keep their own hue.
      */
     val tinted: Boolean get() = false
-    val section: String? get() = null
-    val leading: List<ActiveListBadge> get() = emptyList()
+    val leading: List<ActiveBadge> get() = emptyList()
     /** Badges rendered after the title. */
-    val badges: List<ActiveListBadge> get() = emptyList()
+    val badges: List<ActiveBadge> get() = emptyList()
     /** Keep title labels inline even when this list aligns verdict glyphs to its trailing edge. */
     val inlineBadges: Boolean get() = false
-    val secondaryBadges: List<ActiveListBadge> get() = emptyList()
+    val secondaryBadges: List<ActiveBadge> get() = emptyList()
     /** Right-aligned secondary text, such as a relative timestamp. */
     val trailing: String? get() = null
-    val metrics: ActiveListMetrics? get() = null
-    val cells: List<ActiveListCell> get() = emptyList()
+    val metrics: ActiveMetrics? get() = null
+    val cells: List<ActiveCell> get() = emptyList()
     val disabled: Boolean get() = false
     /** Non-null while a background operation owns this row; the text is shown trailing. */
     val progress: String? get() = null
@@ -198,29 +191,24 @@ internal interface ActiveListItem {
     val search: String? get() = null
 }
 
-internal fun activeListSectionTitle(items: List<ActiveListItem>, index: Int): String? {
-    val item = items.getOrNull(index) ?: return null
-    val prev = items.getOrNull(index - 1)
-    return if (prev?.section != item.section) item.section else null
-}
 
-internal fun activeListVisibleCells(
-    item: ActiveListItem,
+internal fun activeVisibleCells(
+    item: ActiveItem,
     active: Boolean,
     menu: Boolean = false,
-): List<ActiveListCell> {
+): List<ActiveCell> {
     if (item.disabled) return emptyList()
     if (item.progress != null) return emptyList()
     val cells = item.cells.filter { active || it.alwaysVisible }
     if (!menu) return cells
-    return cells + activeListMenuCell()
+    return cells + activeMenuCell()
 }
 
-internal fun activeListVisibleCells(item: ActiveListItem, active: Boolean): List<ActiveListCell> {
-    return activeListVisibleCells(item, active, false)
+internal fun activeVisibleCells(item: ActiveItem, active: Boolean): List<ActiveCell> {
+    return activeVisibleCells(item, active, false)
 }
 
-internal fun activeListCellGap() = JBUI.scale(CELL_GAP)
+internal fun activeCellGap() = JBUI.scale(CELL_GAP)
 
 /**
  * Whether [item] paints an animated glyph anywhere in its row, so an animation frame has to repaint it.
@@ -228,7 +216,7 @@ internal fun activeListCellGap() = JBUI.scale(CELL_GAP)
  * Runs per visible row on every animation frame, so this checks each badge list directly instead of wrapping
  * them in a `listOf(...)` first — the wrapper and its iterator would otherwise be allocated every frame.
  */
-internal fun activeListAnimated(item: ActiveListItem): Boolean {
+internal fun activeAnimated(item: ActiveItem): Boolean {
     if (animated(item.icon)) return true
     if (item.cells.any { animated(it.icon) }) return true
     if (item.leading.any { animated(it.icon) }) return true
@@ -242,8 +230,61 @@ private fun animated(icon: Icon?): Boolean = when (icon) {
     else -> false
 }
 
-/** A hit-tested region of a rendered row, in list coordinates, with its interaction metadata. */
-internal class ActiveListHit(
+
+/** Lays out [component] top-down as one [LayoutPass], so an invalidated stamp is measured once per container. */
+internal fun activeLayout(component: Component) {
+    LayoutPass.measure { layoutActive(component) }
+}
+
+private fun layoutActive(component: Component) {
+    if (component !is Container) return
+    component.doLayout()
+    for (child in component.components) layoutActive(child)
+}
+
+/**
+ * Marks a rendered row and everything under it invalid.
+ *
+ * A renderer stamp is one component reused for every row, and it changes content without changing
+ * size. Swing caches each container's preferred/minimum size and skips valid subtrees, so a row would
+ * otherwise be laid out with sizes measured for whichever row the renderer rendered before it.
+ */
+internal fun activeInvalidate(component: Component) {
+    component.invalidate()
+    if (component is Container) for (child in component.components) activeInvalidate(child)
+}
+
+internal enum class ActiveSurface {
+    Default,
+    ToolWindow,
+}
+
+/**
+ * What a refresh should do with the selection. Every policy keeps the rows the user last selected
+ * when they survive the refresh, and none of them scrolls in that case; they differ only in what
+ * happens once those rows are gone.
+ */
+internal sealed interface ActiveSelection {
+    data object Preserve : ActiveSelection
+    data object Slide : ActiveSelection
+    data class Key(val key: String) : ActiveSelection
+}
+
+internal class ActiveReorder(
+    val movable: (ActiveItem) -> Boolean = { true },
+    val onMove: (ActiveMove) -> Unit,
+)
+
+internal data class ActiveMove(
+    val key: String,
+    val from: Int,
+    val to: Int,
+    val keys: List<String>,
+)
+
+
+/** A hit-tested region of a rendered row, in host coordinates, with its interaction metadata. */
+internal class ActiveHit(
     val id: String,
     val bounds: Rectangle,
     val enabled: Boolean,
@@ -252,117 +293,33 @@ internal class ActiveListHit(
     val action: (() -> Unit)?,
 )
 
-/**
- * Hit-test regions for a row, in list coordinates, read back from the actual rendered component
- * tree instead of being re-derived by hand. This keeps the click/cursor/tooltip targets identical
- * to what the [ActiveListRenderer] draws — including the action-cell overlay layer and the
- * horizontal insets the platform's [com.intellij.ui.popup.list.SelectablePanel] adds in the New
- * UI, which a hand-computed layout would miss.
- */
-internal fun activeListHits(
-    list: JList<*>,
-    index: Int,
-    selected: Boolean,
-): List<ActiveListHit> {
-    val model = list.model
-    if (index < 0 || index >= model.size) return emptyList()
-    @Suppress("UNCHECKED_CAST")
-    val renderer = list.cellRenderer as? ListCellRenderer<Any?> ?: return emptyList()
-    val cell = list.getCellBounds(index, index) ?: return emptyList()
-    // Render as focused so the region geometry and focused/unfocused selection state never alter
-    // hit targets.
-    val comp = renderer.getListCellRendererComponent(list, model.getElementAt(index), index, selected, true)
-    comp.setBounds(0, 0, cell.width, cell.height)
-    activeListLayout(comp)
-    val out = mutableListOf<ActiveListHit>()
-    forEachHitCell(comp) { hit ->
-        val target = hit as Component
-        val origin = SwingUtilities.convertPoint(target, 0, 0, comp)
-        out += ActiveListHit(
-            hit.cellId,
-            Rectangle(cell.x + origin.x, cell.y + origin.y, target.width, target.height),
-            hit.cellEnabled(),
-            hit.cellCursor(),
-            hit.cellTooltip(),
-            hit.cellAction(),
-        )
-    }
-    return out
-}
-
-/** Clickable action-cell rectangles for a row, in list coordinates. */
-internal fun activeListCellBounds(
-    list: JList<*>,
-    index: Int,
-    selected: Boolean,
-): Map<String, Rectangle> {
-    val out = linkedMapOf<String, Rectangle>()
-    for (hit in activeListHits(list, index, selected)) out[hit.id] = hit.bounds
-    return out
-}
-
-internal fun activeListCellAt(
-    list: JList<*>,
-    index: Int,
-    point: Point,
-    selected: Boolean,
-    menu: Boolean = false,
-): String? {
-    val model = list.model
-    if (index < 0 || index >= model.size) return null
-    val item = model.getElementAt(index) as? ActiveListItem ?: return null
-    val hits = activeListHits(list, index, selected)
-    if (hits.isEmpty()) return null
-    val bounds = hits.associate { it.id to it.bounds }
-    val fromCell = activeListVisibleCells(item, selected, menu)
-        .firstOrNull { cell -> cell.enabled && bounds[cell.id]?.contains(point) == true }
-        ?.id
-    if (fromCell != null) return fromCell
-    return hits.firstOrNull { it.enabled && it.action != null && it.bounds.contains(point) }?.id
-}
-
-internal fun activeListCellAt(
-    list: JList<*>,
-    index: Int,
-    point: Point,
-    selected: Boolean,
-): String? {
-    return activeListCellAt(list, index, point, selected, false)
-}
-
-/** Lays out [component] top-down as one [LayoutPass], so an invalidated stamp is measured once per container. */
-internal fun activeListLayout(component: Component) {
-    LayoutPass.measure { layoutTree(component) }
-}
-
-private fun layoutTree(component: Component) {
-    if (component !is Container) return
-    component.doLayout()
-    for (child in component.components) layoutTree(child)
-}
-
-/**
- * Marks a rendered row and everything under it invalid.
- *
- * A list renderer is one component reused for every row, and it changes content without changing
- * size. Swing caches each container's preferred/minimum size and - through
- * [java.awt.Container.validate], the layout pass painting uses - skips subtrees that are still
- * valid, so a row would otherwise be laid out with sizes measured for whichever row the renderer
- * rendered before it. Invalidating the whole stamp keeps painting and the [activeListLayout] pass
- * behind [activeListHits] on the same geometry.
- */
-internal fun activeListInvalidate(component: Component) {
-    component.invalidate()
-    if (component is Container) for (child in component.components) activeListInvalidate(child)
-}
-
-private fun forEachHitCell(component: Component, action: (ActiveListHitCell) -> Unit) {
+/** Hit regions of a rendered row, offset into the host's coordinate space. */
+internal fun activeHitCells(component: Component, x: Int, y: Int): List<ActiveHit> {
+    val out = mutableListOf<ActiveHit>()
     fun visit(c: Component) {
-        // Skip hidden subtrees so a badge left visible inside a hidden trailing panel is not
-        // collected as a live hit target.
         if (!c.isVisible) return
-        if (c is ActiveListHitCell && c.cellId.isNotBlank()) action(c)
+        if (c is ActiveHitCell && c.cellId.isNotBlank()) {
+            val origin = SwingUtilities.convertPoint(c, 0, 0, component)
+            out += ActiveHit(
+                c.cellId,
+                Rectangle(x + origin.x, y + origin.y, c.width, c.height),
+                c.cellEnabled(),
+                c.cellCursor(),
+                c.cellTooltip(),
+                c.cellAction(),
+            )
+        }
         if (c is Container) c.components.forEach(::visit)
     }
     visit(component)
+    return out
+}
+
+internal fun activeToolWindowBackground(): Color =
+    UIManager.getColor("ToolWindow.background") ?: UIUtil.getPanelBackground()
+
+/** Refreshes theme fonts/colors on a renderer stamp that is not part of a window's component tree. */
+internal fun activeUpdateUI(component: Component) {
+    if (component is javax.swing.JComponent) component.updateUI()
+    if (component is Container) component.components.forEach(::activeUpdateUI)
 }

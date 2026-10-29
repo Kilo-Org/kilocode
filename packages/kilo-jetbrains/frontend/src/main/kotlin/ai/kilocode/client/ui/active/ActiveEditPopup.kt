@@ -1,4 +1,4 @@
-package ai.kilocode.client.ui.list
+package ai.kilocode.client.ui.active
 
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.ui.UiStyle
@@ -13,28 +13,28 @@ import java.awt.Container
 import javax.swing.JComponent
 import javax.swing.SwingUtilities
 
-data class ActiveListEditOptions(
+data class ActiveEditOptions(
     val value: String,
     val label: String? = KiloBundle.message("common.rename.help"),
     val button: String = KiloBundle.message("common.rename"),
 )
 
-internal fun activeListEditContent(
-    opts: ActiveListEditOptions,
+internal fun activeEditContent(
+    opts: ActiveEditOptions,
     hide: () -> Unit,
     commit: (String) -> Unit,
 ): JComponent {
-    return activeListEditPopup(opts, hide, commit).component
+    return activeEditPopup(opts, hide, commit).component
 }
 
-internal fun showActiveListEditPopup(
+internal fun showActiveEditPopup(
     anchor: RelativePoint,
-    opts: ActiveListEditOptions,
+    opts: ActiveEditOptions,
     commit: (String) -> Unit,
 ): Balloon {
     lateinit var balloon: Balloon
-    val popup = activeListEditPopup(opts, hide = { balloon.hide(true) }, commit)
-    balloon = showActiveListPopup(anchor, popup)
+    val popup = activeEditPopup(opts, hide = { balloon.hide(true) }, commit)
+    balloon = showActivePopup(anchor, popup)
     activeListEditField(popup.component)?.let { field ->
         SwingUtilities.invokeLater {
             field.requestFocusInWindow()
@@ -44,8 +44,8 @@ internal fun showActiveListEditPopup(
     return balloon
 }
 
-private fun activeListEditPopup(
-    opts: ActiveListEditOptions,
+private fun activeEditPopup(
+    opts: ActiveEditOptions,
     hide: () -> Unit,
     commit: (String) -> Unit,
 ): ActiveListPopup {
@@ -60,7 +60,7 @@ private fun activeListEditPopup(
     }
     // A greyed-out primary button reads as a broken popup, so the button stays live and a blank or
     // unchanged name just closes without a rename round trip.
-    return activeListPopup(
+    return activePopup(
         body = body,
         button = opts.button,
         hide = hide,

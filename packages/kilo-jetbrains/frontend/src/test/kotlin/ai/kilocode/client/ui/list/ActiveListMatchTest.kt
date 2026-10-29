@@ -1,5 +1,6 @@
 package ai.kilocode.client.ui.list
 
+import ai.kilocode.client.ui.active.ActiveItem
 import kotlin.test.Test
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
@@ -27,7 +28,7 @@ class ActiveListMatchTest {
         assertTrue(duration < 200.milliseconds, "ambiguous match took $duration")
     }
 
-    private fun item(title: String) = object : ActiveListItem {
+    private fun item(title: String) = object : ActiveItem {
         override val key = title
         override val title = title
     }

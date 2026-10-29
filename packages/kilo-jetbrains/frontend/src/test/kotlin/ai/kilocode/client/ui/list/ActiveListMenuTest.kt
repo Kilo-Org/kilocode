@@ -7,6 +7,8 @@ import ai.kilocode.client.agentManager.worktree.WorktreeDataKeys
 import ai.kilocode.rpc.dto.HostedWorkspaceDto
 import ai.kilocode.rpc.dto.HostedWorkspaceRefDto
 import ai.kilocode.rpc.dto.WorktreeDto
+import ai.kilocode.client.ui.active.ActiveItem
+import ai.kilocode.client.ui.active.ActiveMenu
 import com.intellij.openapi.actionSystem.DefaultActionGroup
 import com.intellij.openapi.actionSystem.impl.SimpleDataContext
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
@@ -15,7 +17,7 @@ import javax.swing.JPanel
 class ActiveListMenuTest : BasePlatformTestCase() {
     fun `test local and cloud popup contexts contain only their own typed workspace`() {
         val dto = WorktreeDto("local", "/repo/local", "Local", "main", false)
-        val local = object : ActiveListItem {
+        val local = object : ActiveItem {
             override val key = dto.id
             override val title = dto.name
             override val search = dto.name
@@ -23,8 +25,8 @@ class ActiveListMenuTest : BasePlatformTestCase() {
         val hosted = HostedWorkspaceDto(HostedWorkspaceRefDto("cloud", "one"))
         val cloud = HostedWorkspaceRow(HostedWorkspaceRowData(hosted, null))
         val group = DefaultActionGroup()
-        val menu = ActiveListMenu(WorktreeDataKeys.WORKTREE, group, element = { row -> dto.takeIf { row === local } },
-            alternate = ActiveListMenu(HostedWorkspaceDataKeys.WORKSPACE, group, element = { row ->
+        val menu = ActiveMenu(WorktreeDataKeys.WORKTREE, group, element = { row -> dto.takeIf { row === local } },
+            alternate = ActiveMenu(HostedWorkspaceDataKeys.WORKSPACE, group, element = { row ->
                 (row as? HostedWorkspaceRow)?.data?.dto
             }))
         val anchor = JPanel()

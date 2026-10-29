@@ -7,7 +7,7 @@ import java.awt.image.BufferedImage
 
 /**
  * A [FilledBadgeIcon] instance is retained by its owning label across an IDE zoom — callers only
- * recreate it when the badge text or style changes, see `ActiveListBadgeCell.update` — so its geometry
+ * recreate it when the badge text or style changes, see `ActiveBadgeCell.update` — so its geometry
  * has to be measured per call rather than captured once.
  */
 @Suppress("UnstableApiUsage")

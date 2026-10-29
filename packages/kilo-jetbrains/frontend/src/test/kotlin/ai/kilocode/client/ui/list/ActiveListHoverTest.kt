@@ -1,5 +1,6 @@
 package ai.kilocode.client.ui.list
 
+import ai.kilocode.client.ui.active.ActiveItem
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.util.ui.UIUtil
 import java.awt.event.MouseEvent
@@ -112,8 +113,8 @@ class ActiveListHoverTest : BasePlatformTestCase() {
         view.list.dispatchEvent(MouseEvent(view.list, MouseEvent.MOUSE_EXITED, System.currentTimeMillis(), 0, 0, 0, 0, false))
     }
 
-    private fun rows(vararg keys: String): List<ActiveListItem> = keys.map { key ->
-        object : ActiveListItem {
+    private fun rows(vararg keys: String): List<ActiveItem> = keys.map { key ->
+        object : ActiveItem {
             override val key = key
             override val title = key
             override val search = key

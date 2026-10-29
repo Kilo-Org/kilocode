@@ -2,6 +2,20 @@ package ai.kilocode.client.ui.list
 
 import ai.kilocode.client.ui.FilledBadgeIcon
 import ai.kilocode.client.ui.UiStyle
+import ai.kilocode.client.ui.active.ActiveBadge
+import ai.kilocode.client.ui.active.ActiveCell
+import ai.kilocode.client.ui.active.ActiveConfig
+import ai.kilocode.client.ui.active.ActiveItem
+import ai.kilocode.client.ui.active.ACTIVE_MENU_CELL
+import ai.kilocode.client.ui.active.ActiveMenu
+import ai.kilocode.client.ui.active.ActiveMove
+import ai.kilocode.client.ui.active.ActiveReorder
+import ai.kilocode.client.ui.active.ActiveRowHeight
+import ai.kilocode.client.ui.active.ActiveSelection
+import ai.kilocode.client.ui.active.ActiveSurface
+import ai.kilocode.client.ui.active.activeAnimated
+import ai.kilocode.client.ui.active.activeRegions
+import ai.kilocode.client.ui.active.activeVisibleCells
 import ai.kilocode.client.ui.layout.Stack
 import ai.kilocode.client.ui.layout.StackAxis
 import com.intellij.openapi.application.ApplicationManager
@@ -43,25 +57,26 @@ import javax.swing.event.ListSelectionEvent
 
 internal class ActiveListView(
     empty: String,
-    private val cfg: ActiveListConfig = ActiveListConfig.Equal,
-    private val surface: ActiveListSurface = ActiveListSurface.Default,
-    private val matcher: (String, ActiveListItem) -> Boolean = ::activeListMatches,
+    private val cfg: ActiveConfig = ActiveConfig.Equal,
+    private val surface: ActiveSurface = ActiveSurface.Default,
+    private val matcher: (String, ActiveItem) -> Boolean = ::activeListMatches,
     private val enter: () -> Boolean = ::activeListEnterFocus,
     private val openOnClick: Boolean = true,
-    private val onOpen: ((ActiveListItem, Boolean) -> Unit)? = null,
-    private val onActivate: ((ActiveListItem) -> Unit)? = null,
-    private val onClick: ((ActiveListItem) -> Unit)? = null,
-    private val menu: ActiveListMenu<*>? = null,
-    private val reorder: ActiveListReorder? = null,
-    private val onHover: ((ActiveListItem?) -> Unit)? = null,
+    private val onOpen: ((ActiveItem, Boolean) -> Unit)? = null,
+    private val onActivate: ((ActiveItem) -> Unit)? = null,
+    private val onClick: ((ActiveItem) -> Unit)? = null,
+    private val menu: ActiveMenu<*>? = null,
+    private val reorder: ActiveReorder? = null,
+    private val onHover: ((ActiveItem?) -> Unit)? = null,
+    private val options: ActiveListOptions = ActiveListOptions(),
     private val onCell: (String, String) -> Unit,
 ) : Stack(StackAxis.VERTICAL), Scrollable {
-    private val model = CollectionListModel<ActiveListItem>()
-    private val renderer = ActiveListRenderer(model, cfg, menu)
+    private val model = CollectionListModel<ActiveItem>()
+    private val renderer = ActiveListRenderer(model, cfg, menu, options)
     // Hover tracking also drives the hover callback, so a consumer that only wants row hover does not
     // have to turn on the hover action bar to get it.
     private val hover = cfg.hoverActions || menu != null || onHover != null
-    internal val list: JBList<ActiveListItem> = object : JBList<ActiveListItem>(model), ActiveListActive {
+    internal val list: JBList<ActiveItem> = object : JBList<ActiveItem>(model), ActiveListActive {
         override fun active(): Boolean = popups > 0
 
         override fun hoveredIndex(): Int = hovered
@@ -74,7 +89,7 @@ internal class ActiveListView(
         }
 
         override fun getBackground(): Color {
-            if (surface == ActiveListSurface.ToolWindow) return activeListToolWindowBackground()
+            if (surface == ActiveSurface.ToolWindow) return activeToolWindowBackground()
             return super.getBackground() ?: UIUtil.getListBackground(false, false)
         }
 
@@ -103,11 +118,11 @@ internal class ActiveListView(
             return UiStyle.Text.tipLines(note.lines())
         }
     }.apply {
-        selectionMode = cfg.selection
+        selectionMode = options.selection
         setExpandableItemsEnabled(false)
         emptyText.text = empty
     }
-    private var items = emptyList<ActiveListItem>()
+    private var items = emptyList<ActiveItem>()
     private var filter = ""
     private var press: Press? = null
     private var popups = 0
@@ -136,7 +151,7 @@ internal class ActiveListView(
     }
 
     init {
-        if (surface == ActiveListSurface.ToolWindow) isOpaque = true
+        if (surface == ActiveSurface.ToolWindow) isOpaque = true
         list.putClientProperty(AnimatedIcon.ANIMATION_IN_RENDERER_ALLOWED, true)
         list.cellRenderer = renderer
         list.registerKeyboardAction(
@@ -320,7 +335,7 @@ internal class ActiveListView(
     }
 
     @RequiresEdt
-    fun selected(): ActiveListItem? {
+    fun selected(): ActiveItem? {
         checkEdt()
         return list.selectedValue
     }
@@ -334,7 +349,7 @@ internal class ActiveListView(
     }
 
     @RequiresEdt
-    fun selectedItems(): List<ActiveListItem> {
+    fun selectedItems(): List<ActiveItem> {
         checkEdt()
         return list.selectedValuesList
     }
@@ -400,7 +415,7 @@ internal class ActiveListView(
     }
 
     @RequiresEdt
-    fun item(key: String): ActiveListItem? {
+    fun item(key: String): ActiveItem? {
         checkEdt()
         return model.items.firstOrNull { it.key == key }
     }
@@ -433,18 +448,18 @@ internal class ActiveListView(
     }
 
     @RequiresEdt
-    fun update(items: List<ActiveListItem>, selection: ActiveListSelection = ActiveListSelection.Preserve) {
+    fun update(items: List<ActiveItem>, selection: ActiveSelection = ActiveSelection.Preserve) {
         checkEdt()
         if (this.items != items) heightKey = null
         this.items = items
         when (selection) {
-            is ActiveListSelection.Key -> {
+            is ActiveSelection.Key -> {
                 anchor = setOf(selection.key)
                 mark = -1
                 sync(Absent.KEEP)
             }
-            ActiveListSelection.Slide -> sync(Absent.SLIDE)
-            ActiveListSelection.Preserve -> sync(Absent.KEEP)
+            ActiveSelection.Slide -> sync(Absent.SLIDE)
+            ActiveSelection.Preserve -> sync(Absent.KEEP)
         }
     }
 
@@ -523,7 +538,7 @@ internal class ActiveListView(
      * slot. Falls back to [absent] once none of the anchored rows survive.
      */
     @RequiresEdt
-    private fun restore(rows: List<ActiveListItem>, absent: Absent, at: Int?) {
+    private fun restore(rows: List<ActiveItem>, absent: Absent, at: Int?) {
         checkEdt()
         val idx = at?.let { activeListIndex(rows, it) }?.takeIf { it >= 0 }
         if (idx != null) {
@@ -616,18 +631,18 @@ internal class ActiveListView(
         val last = list.lastVisibleIndex
         if (first < 0 || last < first) return
         for (idx in first..last) {
-            if (activeListAnimated(model.getElementAt(idx))) repaintRow(idx)
+            if (activeAnimated(model.getElementAt(idx))) repaintRow(idx)
         }
     }
 
     @RequiresEdt
-    private fun syncCellHeight(rows: List<ActiveListItem>) {
+    private fun syncCellHeight(rows: List<ActiveItem>) {
         checkEdt()
         val key = ActiveListHeightKey(cfg, list.width, rows.map(::activeListHeightRow))
         if (heightKey == key) return
         heightKey = key
         renderer.setBodyHeight(null)
-        if (cfg.height == ActiveListRowHeight.PREFERRED) {
+        if (cfg.height == ActiveRowHeight.PREFERRED) {
             if (list.fixedCellHeight == -1) return
             list.fixedCellHeight = -1
             list.revalidate()
@@ -719,7 +734,7 @@ internal class ActiveListView(
 
     private fun open(focus: Boolean) {
         val item = active() ?: return
-        if (item is ActiveListGap) return
+        if (item is ActiveGap) return
         if (item.progress != null) return
         val action = onOpen
         if (action != null) {
@@ -731,12 +746,12 @@ internal class ActiveListView(
 
     private fun source() {
         val item = list.selectedValue ?: return
-        if (item is ActiveListGap) return
+        if (item is ActiveGap) return
         if (item.progress != null) return
         onOpen?.invoke(item, true)
     }
 
-    private fun active(): ActiveListItem? {
+    private fun active(): ActiveItem? {
         list.selectedValue?.let { return it }
         if (model.size == 0) return null
         choose(0, scroll = false)
@@ -745,12 +760,12 @@ internal class ActiveListView(
 
     /**
      * Default action for a double-click. Resolves to the row's explicit activation only: an
-     * [onActivate] handler, then the row's [ActiveListItem.doubleClick] cell, then a [primary] cell.
+     * [onActivate] handler, then the row's [ActiveItem.doubleClick] cell, then a [primary] cell.
      * Unlike Enter, it never falls back to firing an arbitrary first action cell, so a row whose only
      * action is destructive (e.g. delete) does nothing on double-click.
      */
-    private fun activate(item: ActiveListItem) {
-        if (item is ActiveListGap) return
+    private fun activate(item: ActiveItem) {
+        if (item is ActiveGap) return
         if (item.progress != null) return
         val action = onActivate
         if (action != null) {
@@ -761,15 +776,15 @@ internal class ActiveListView(
             fire(item, id)
             return
         }
-        activeListVisibleCells(item, true)
+        activeVisibleCells(item, true)
             .firstOrNull { it.enabled && it.primary }
             ?.let { fire(item, it.id) }
     }
 
-    private fun primary(item: ActiveListItem) {
-        if (item is ActiveListGap) return
+    private fun primary(item: ActiveItem) {
+        if (item is ActiveGap) return
         if (item.progress != null) return
-        val cells = activeListVisibleCells(item, true)
+        val cells = activeVisibleCells(item, true)
         val cell = cells.firstOrNull { it.enabled && it.primary }
         if (cell != null) {
             fire(item, cell.id)
@@ -784,18 +799,8 @@ internal class ActiveListView(
     }
 
     /** Dispatches a click from the row model, never the renderer stamp reused across rows. */
-    private fun fire(item: ActiveListItem, id: String) {
-        val cell = item.cells.firstOrNull { it.id == id }?.action
-        if (cell != null) {
-            cell()
-            return
-        }
-        val region = activeListRegions(item)[id]
-        if (region != null) {
-            region()
-            return
-        }
-        onCell(item.key, id)
+    private fun fire(item: ActiveItem, id: String) {
+        ai.kilocode.client.ui.active.activeDispatch(item, id, onCell)
     }
 
     @RequiresEdt
@@ -805,7 +810,7 @@ internal class ActiveListView(
         if (!list.isEnabled || filter.isNotBlank() || drag != null) return null
         val idx = rowAt(point) ?: return null
         val item = model.getElementAt(idx)
-        if (item is ActiveListGap || item.disabled || item.progress != null) return null
+        if (item is ActiveGap || item.disabled || item.progress != null) return null
         if (!cfg.movable(item)) return null
         val selected = list.isSelectedIndex(idx)
         if (activeListCellAt(list, idx, point, selected, menu?.takeIf { it.available(item) } != null) != null) return null
@@ -822,7 +827,7 @@ internal class ActiveListView(
         checkEdt()
         val idx = rowAt(point) ?: return null
         val item = model.getElementAt(idx)
-        if (item is ActiveListGap) return null
+        if (item is ActiveGap) return null
         val bounds = list.getCellBounds(idx, idx) ?: return null
         val (image, origin) = renderer.rowImage(list, item, idx, bounds.width) ?: return null
         // Clamp so grabbing the section-header band still anchors inside the body image.
@@ -881,7 +886,7 @@ internal class ActiveListView(
         mark = target
         sync(at = target)
         if (source == target) return
-        reorder?.onMove?.invoke(ActiveListMove(state.key, source, target, rows.map { it.key }))
+        reorder?.onMove?.invoke(ActiveMove(state.key, source, target, rows.map { it.key }))
     }
 
     @RequiresEdt
@@ -912,8 +917,8 @@ internal class ActiveListView(
         val bounds = idx.takeIf { it >= 0 }?.let { list.getCellBounds(it, it) } ?: return baseCursor
         if (!bounds.contains(point)) return baseCursor
         val item = model.getElementAt(idx)
-        if (item is ActiveListGap) return baseCursor
-        if (menu == null && item.cells.isEmpty() && activeListRegions(item).isEmpty()) return baseCursor
+        if (item is ActiveGap) return baseCursor
+        if (menu == null && item.cells.isEmpty() && activeRegions(item).isEmpty()) return baseCursor
         val hit = activeListHits(list, idx, list.isSelectedIndex(idx))
             .firstOrNull { it.enabled && it.bounds.contains(point) }
             ?: return baseCursor
@@ -925,7 +930,7 @@ internal class ActiveListView(
         val bounds = idx.takeIf { it >= 0 }?.let { list.getCellBounds(it, it) } ?: return null
         if (!bounds.contains(e.point)) return null
         val item = model.getElementAt(idx)
-        if (item is ActiveListGap) return null
+        if (item is ActiveGap) return null
         val selected = list.isSelectedIndex(idx)
         val id = if (enabled) {
             activeListCellAt(list, idx, e.point, selected, menu?.takeIf { it.available(item) } != null)
@@ -935,9 +940,9 @@ internal class ActiveListView(
             // is only the per-cell handler and is null for every cell routed through the panel-level
             // `onCell` callback (Sign In, Connect, Delete, rename, the row menu glyph, ...), so
             // blocking must key off whether the hit id is a real cell/region, not that field.
-            val ids = activeListVisibleCells(item, selected, menu?.takeIf { it.available(item) } != null)
+            val ids = activeVisibleCells(item, selected, menu?.takeIf { it.available(item) } != null)
                 .map { it.id }
-                .toSet() + activeListRegions(item).keys
+                .toSet() + activeRegions(item).keys
             activeListHits(list, idx, selected)
                 .firstOrNull { it.id in ids && it.bounds.contains(e.point) }
                 ?.id
@@ -951,9 +956,9 @@ internal class ActiveListView(
         val bounds = idx.takeIf { it >= 0 }?.let { list.getCellBounds(it, it) } ?: return false
         if (!bounds.contains(point)) return false
         val item = model.getElementAt(idx)
-        if (item is ActiveListGap) return false
+        if (item is ActiveGap) return false
         if (item.disabled || item.progress != null || !cfg.available(item)) return false
-        val rect = activeListCellBounds(list, idx, list.isSelectedIndex(idx))[ACTIVE_LIST_MENU_CELL] ?: return false
+        val rect = activeListCellBounds(list, idx, list.isSelectedIndex(idx))[ACTIVE_MENU_CELL] ?: return false
         if (!rect.contains(point)) return false
         val popup = JBPopupFactory.getInstance().createActionGroupPopup(
             null,
@@ -1024,14 +1029,14 @@ internal class ActiveListView(
     }
 
     override fun getBackground(): Color {
-        if (surface == ActiveListSurface.ToolWindow) return activeListToolWindowBackground()
+        if (surface == ActiveSurface.ToolWindow) return activeToolWindowBackground()
         return super.getBackground() ?: UIUtil.getPanelBackground()
     }
 
     override fun getScrollableTracksViewportWidth() = true
 
     override fun getScrollableTracksViewportHeight(): Boolean {
-        if (surface != ActiveListSurface.ToolWindow) return false
+        if (surface != ActiveSurface.ToolWindow) return false
         val view = parent as? JViewport ?: return false
         return preferredSize.height < view.height
     }
@@ -1092,14 +1097,14 @@ internal class ActiveListView(
         direction: Int,
     ) = if (orientation == SwingConstants.VERTICAL) visibleRect.height else visibleRect.width
 
-    private data class Hit(val item: ActiveListItem, val id: String?)
+    private data class Hit(val item: ActiveItem, val id: String?)
 
     private data class Press(val key: String, val id: String)
 
     private data class Drag(val key: String, val from: Int, val index: Int, val height: Int)
 
     private data class ActiveListHeightKey(
-        val cfg: ActiveListConfig,
+        val cfg: ActiveConfig,
         val width: Int,
         val rows: List<ActiveListHeightRow>,
     )
@@ -1117,13 +1122,13 @@ private data class ActiveListHeightRow(
     val section: String?,
     val badges: List<ActiveListHeightBadge>,
     val trailing: String?,
-    val cells: List<ActiveListCell>,
+    val cells: List<ActiveCell>,
     val disabled: Boolean,
     val progress: String?,
 )
 
 /**
- * The parts of a badge that can change how tall a row wants to be. [ActiveListBadge.action] and its
+ * The parts of a badge that can change how tall a row wants to be. [ActiveBadge.action] and its
  * tooltip are deliberately left out: an owner is free to build the handler while answering `badges`,
  * and a fresh lambda per read would make the height key miss on every sync.
  */
@@ -1135,7 +1140,7 @@ private data class ActiveListHeightBadge(
     val segments: List<FilledBadgeIcon.Segment>,
 )
 
-private fun activeListHeightRow(item: ActiveListItem): ActiveListHeightRow {
+private fun activeListHeightRow(item: ActiveItem): ActiveListHeightRow {
     return ActiveListHeightRow(
         item.key,
         item.title,
@@ -1151,41 +1156,20 @@ private fun activeListHeightRow(item: ActiveListItem): ActiveListHeightRow {
     )
 }
 
-private fun activeListIndex(items: List<ActiveListItem>, key: String?): Int {
+private fun activeListIndex(items: List<ActiveItem>, key: String?): Int {
     if (key == null) return -1
     return items.indexOfFirst { it.key == key }
 }
 
-private fun activeListIdentityIndex(items: List<ActiveListItem>, id: Any): Int {
+private fun activeListIdentityIndex(items: List<ActiveItem>, id: Any): Int {
     return items.indexOfFirst { it.identity == id || it.key == id }
 }
 
-private fun activeListIndex(items: List<ActiveListItem>, index: Int): Int {
+private fun activeListIndex(items: List<ActiveItem>, index: Int): Int {
     if (items.isEmpty()) return -1
     return index.coerceIn(0, items.lastIndex)
 }
-
-/**
- * What a refresh should do with the selection. Every policy keeps the rows the user last selected
- * when they survive the refresh, and none of them scrolls in that case; they differ only in what
- * happens once those rows are gone.
- */
-internal sealed interface ActiveListSelection {
-    /** Select nothing while the remembered rows are absent, and pick them up again if they return. */
-    data object Preserve : ActiveListSelection
-
-    /**
-     * Select the row that took the remembered row's slot — the following row, or the last row when
-     * the removed one was last — so a deletion moves the highlight instead of dropping it. Clears
-     * only when nothing was selected or the list is now empty.
-     */
-    data object Slide : ActiveListSelection
-
-    /** Select [key] instead, now or as soon as a later refresh brings that row in. */
-    data class Key(val key: String) : ActiveListSelection
-}
-
-internal fun activeListMatches(query: String, item: ActiveListItem): Boolean {
+internal fun activeListMatches(query: String, item: ActiveItem): Boolean {
     if (query.isBlank()) return true
     if (activeListTextMatches(query, item.title)) return true
     val extra = item.search ?: return false
