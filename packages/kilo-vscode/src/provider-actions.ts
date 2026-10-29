@@ -11,6 +11,7 @@ import {
 } from "./shared/custom-provider"
 import { isCustomProviderPackage, KILO_AUTO, KILO_PROVIDER_ID, parseModelString } from "./shared/provider-model"
 import { configFeatures, serverFeatures } from "./features"
+import { withGlobalImages } from "./image-generation/source"
 
 /**
  * Compute the default model selection from CLI config, VS Code settings, or hardcoded fallback.
@@ -274,8 +275,9 @@ async function refreshConfig(ctx: ActionContext, setCachedConfig: SetCachedConfi
   ])
   if (!config) return
   const features = configFeatures(config, await serverFeatures(ctx.client, ctx.workspaceDir))
-  setCachedConfig({ type: "configLoaded", config, globalConfig: global, features })
-  ctx.postMessage({ type: "configUpdated", config, globalConfig: global, features })
+  const next = withGlobalImages(config, global)
+  setCachedConfig({ type: "configLoaded", config: next, globalConfig: global, features })
+  ctx.postMessage({ type: "configUpdated", config: next, globalConfig: global, features })
 }
 
 async function saveGlobal(ctx: ActionContext, config: Config) {
@@ -468,8 +470,11 @@ export async function saveCustomProvider(
       { throwOnError: true },
     )
 
-    const merged = await ctx.client.config.get({ directory: ctx.workspaceDir }, { throwOnError: true })
-    const config = merged.data ?? updated
+    const [merged, global] = await Promise.all([
+      ctx.client.config.get({ directory: ctx.workspaceDir }, { throwOnError: true }),
+      ctx.client.global.config.get({ throwOnError: true }),
+    ])
+    const config = withGlobalImages(merged.data ?? updated ?? {}, global.data)
     const features = configFeatures(config, await serverFeatures(ctx.client, ctx.workspaceDir))
     const msg = { type: "configLoaded", config, globalConfig: updated, features }
     setCachedConfig(msg)

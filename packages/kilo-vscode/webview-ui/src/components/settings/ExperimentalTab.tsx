@@ -186,9 +186,12 @@ const ExperimentalTab: Component = () => {
               placeholder="http://127.0.0.1:8080/v1"
               onChange={(value) => {
                 const url = value.trim()
-                const changed = !!url !== !!experimental().image_generation_base_url?.trim()
-                updateExperimental("image_generation_base_url", url || null)
-                if (changed) updateExperimental("image_generation_model", null)
+                const changed =
+                  url.replace(/\/+$/, "") !==
+                  (experimental().image_generation_base_url?.trim().replace(/\/+$/, "") ?? "")
+                const patch: Record<string, unknown> = { image_generation_base_url: url || null }
+                if (changed) patch.image_generation_model = null
+                updateConfig({ experimental: patch })
               }}
             />
           </SettingsRow>

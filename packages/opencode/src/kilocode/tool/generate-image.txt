@@ -5,5 +5,6 @@ Usage notes:
   - Provide a `path` (relative to the workspace) where the resulting image should be saved — the extension is auto-appended (.png/.jpg) if missing
   - Optionally provide an `image` path to an existing image to edit or transform (custom endpoints support PNG/JPEG; Kilo Gateway and OpenRouter also support GIF/WEBP)
   - For multiple references, provide `images` with up to 10 ordered workspace paths instead of `image`. Describe each reference's role in the prompt; the server receives them in that order.
+  - Each reference must fit the configured image attachment size limit (`attachment.image.max_base64_bytes`, 5 MiB of base64 by default).
   - The tool writes the image to disk and returns it inline in the chat
   - Custom endpoints support optional `size` (auto or WIDTHxHEIGHT), `background` (auto/opaque/transparent), `seed`, and `steps`. Omit them to use global settings or the server defaults; explicit values override global settings. Supported sizes and step ranges depend on the server (Gufo accepts 2–100 steps).

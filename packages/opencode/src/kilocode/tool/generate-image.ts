@@ -9,6 +9,7 @@ import { InstanceState } from "@/effect/instance-state"
 import * as Log from "@opencode-ai/core/util/log"
 import { assertExternalDirectoryEffect } from "../../tool/external-directory"
 import { Config } from "@/config/config"
+import { MAX_BASE64_BYTES } from "@/image/image"
 import { KILO_OPENROUTER_BASE } from "@kilocode/kilo-gateway"
 import DESCRIPTION from "./generate-image.txt"
 import * as Images from "../image-generation"
@@ -202,6 +203,8 @@ export const GenerateImageTool = Tool.define(
           })
 
           const paths = params.images ?? (params.image ? [params.image] : [])
+          const limit = cfg.attachment?.image?.max_base64_bytes ?? MAX_BASE64_BYTES
+          const max = Math.floor(limit / 4) * 3
           const input = yield* Effect.forEach(paths, (name) =>
             Effect.gen(function* () {
               const file = path.resolve(instance.directory, name)
@@ -216,7 +219,12 @@ export const GenerateImageTool = Tool.define(
               const mime = `image/${ext === "jpg" ? "jpeg" : ext}`
               if (custom && mime !== "image/png" && mime !== "image/jpeg")
                 throw new Error("Custom image edits support PNG and JPEG reference images")
-              const bytes = yield* Effect.tryPromise(() => Bun.file(file).bytes())
+              const blob = Bun.file(file)
+              const error = () =>
+                new Error(`Reference image ${name} exceeds the image attachment limit (${limit} base64 bytes)`)
+              if (blob.size > max) return yield* Effect.fail(error())
+              const bytes = yield* Effect.tryPromise(() => blob.slice(0, max + 1).bytes())
+              if (bytes.byteLength > max) return yield* Effect.fail(error())
               return { bytes, mime, name: path.basename(file) }
             }),
           )

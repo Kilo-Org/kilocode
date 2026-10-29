@@ -20,6 +20,7 @@ import { testEffect } from "../../lib/effect"
 const png =
   "iVBORw0KGgoAAAANSUhEUgAAAGAAAABACAYAAADlNHIOAAAAj0lEQVR4nO3RMREAIBDAsJeFDPxPOAEZDM3QvXeZs/bVv+b3QD0AANoBANAOAIB2AAC0AwCgHQAA7QAAaAcAQDsAANoBANAOAIB2AAC0AwCgHQAA7QAAaAcAQDsAANoBANAOAIB2AAC0AwCgHQAA7QAAaAcAQDsAANoBANAOAIB2AAC0AwCgHQAA7QAAaPcAgg6rWP9fiGMAAAAASUVORK5CYII="
 const url = `data:image/png;base64,${png}`
+const gateway: unknown[] = []
 const it = testEffect(
   Layer.mergeAll(
     AppNodeBuilder.build(FSUtil.node),
@@ -31,12 +32,14 @@ const it = testEffect(
     Layer.succeed(
       HttpClient.HttpClient,
       HttpClient.make((request) =>
-        Effect.succeed(
-          HttpClientResponse.fromWeb(
+        Effect.sync(() => {
+          if (request.body._tag !== "Uint8Array") throw new Error("Expected a JSON request")
+          gateway.push(JSON.parse(new TextDecoder().decode(request.body.body)))
+          return HttpClientResponse.fromWeb(
             request,
             Response.json({ choices: [{ message: { images: [{ image_url: { url } }] } }] }),
-          ),
-        ),
+          )
+        }),
       ),
     ),
   ),
@@ -65,8 +68,10 @@ it.instance("uses the global Images API for generation and multipart edits witho
       image_generation_api_key: undefined as string | undefined,
       image_generation_options: { size: "512x512", background: "opaque" as const, seed: 7, steps: 12 },
     }
+    const limits = { max_base64_bytes: png.length }
     const config = TestConfig.make({
-      get: () => Effect.succeed({ experimental: { image_generation_model: "project-model" } }),
+      get: () =>
+        Effect.succeed({ experimental: { image_generation_model: "project-model" }, attachment: { image: limits } }),
       getGlobal: () => Effect.succeed({ experimental: host }),
     })
     const tool = yield* GenerateImageTool.pipe(
@@ -158,18 +163,36 @@ it.instance("uses the global Images API for generation and multipart edits witho
     ).pipe(Effect.exit)
     expect(Exit.isFailure(blocked)).toBe(true)
     if (Exit.isFailure(blocked)) expect(Cause.pretty(blocked.cause)).toContain("Sandbox denied outbound network access")
+
+    limits.max_base64_bytes = png.length - 4
+    const oversized = yield* tool
+      .execute({ prompt: "Edit", image: "generated.png", path: "too-big.png" }, ctx)
+      .pipe(Effect.exit)
+    expect(Exit.isFailure(oversized)).toBe(true)
+    if (Exit.isFailure(oversized))
+      expect(String(Cause.squash(oversized.cause))).toContain("exceeds the image attachment limit")
+
+    host.image_generation_base_url = "localhost:8080/v1"
+    const malformed = yield* tool.execute({ prompt: "Generate", path: "invalid.png" }, ctx).pipe(Effect.exit)
+    expect(Exit.isFailure(malformed)).toBe(true)
+    if (Exit.isFailure(malformed))
+      expect(String(Cause.squash(malformed.cause))).toContain("Image generation base URL must be an HTTP(S) URL")
     expect(requests).toHaveLength(4)
   }),
 )
 
-it.instance("saves the original image and returns an attachment accepted by image normalization", () =>
+it.instance("sends ordered gateway references and preserves the generated image attachment", () =>
   Effect.gen(function* () {
     const instance = yield* TestInstance
     const tool = yield* (yield* GenerateImageTool).init()
     const sessionID = SessionID.make("ses_image")
     const messageID = MessageID.make("msg_image")
+    const gif = "R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"
+    yield* Effect.promise(() => Bun.write(`${instance.directory}/first.png`, Buffer.from(png, "base64")))
+    yield* Effect.promise(() => Bun.write(`${instance.directory}/second.gif`, Buffer.from(gif, "base64")))
+    const permissions: string[] = []
     const result = yield* tool.execute(
-      { prompt: "A red pixel", path: "assets/pixel" },
+      { prompt: "A red pixel", images: ["second.gif", "first.png"], path: "assets/pixel" },
       {
         sessionID,
         messageID,
@@ -177,9 +200,25 @@ it.instance("saves the original image and returns an attachment accepted by imag
         messages: [],
         abort: new AbortController().signal,
         metadata: () => Effect.void,
-        ask: (request) => Effect.sync(() => expect(request.permission).toBe("write")),
+        ask: (request) =>
+          Effect.sync(() => {
+            permissions.push(request.permission)
+          }),
       },
     )
+    expect(permissions).toEqual(["read", "read", "write"])
+    expect(gateway.at(-1)).toMatchObject({
+      messages: [
+        {
+          role: "user",
+          content: [
+            { type: "text", text: "A red pixel" },
+            { type: "image_url", image_url: { url: `data:image/gif;base64,${gif}` } },
+            { type: "image_url", image_url: { url } },
+          ],
+        },
+      ],
+    })
     expect(yield* Effect.promise(() => Bun.file(`${instance.directory}/assets/pixel.png`).bytes())).toEqual(
       Buffer.from(png, "base64"),
     )

@@ -43,7 +43,8 @@ export const ImageModelsProvider: ParentComponent = (props) => {
 
   const unsubscribe = vscode.onMessage((message: ExtensionMessage) => {
     if (message.type === "extensionDataReady") {
-      request()
+      // Recover an early backend-not-ready error without replacing an in-flight discovery.
+      if (error()) request()
       return
     }
     if (
@@ -60,14 +61,9 @@ export const ImageModelsProvider: ParentComponent = (props) => {
     setModels(message.models)
     setError(message.error)
     setLoading(false)
-    if (!message.error) clearTimeout(retry)
   })
 
   request()
-
-  // Retry once after a delay in case the backend wasn't ready for the initial request.
-  const retry = setTimeout(request, 3000)
-  onCleanup(() => clearTimeout(retry))
 
   onCleanup(unsubscribe)
 
