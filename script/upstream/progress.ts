@@ -860,7 +860,7 @@ function render(config: Config, data: Awaited<ReturnType<typeof collect>>, dispo
   return { json: JSON.stringify(json, null, 2) + "\n", md, svg: svg(features, unattributed, landed), history: chart(points), badge: badge("v2 migration", pct(done, total)) }
 }
 
-const OUTPUTS = ["progress.json", "README.md", "progress.svg", "history.svg", "badge.svg"]
+const OUTPUTS = ["progress.json", "README.md", "progress.svg", "history.svg", "badge.svg"] as const
 
 async function main() {
   const args = process.argv.slice(2)
@@ -900,7 +900,8 @@ async function main() {
 
   const past = await history(render(config, data, dispositions).json, git, historyBase(process.env))
   const out = render(config, data, dispositions, past)
-  const files = { "progress.json": out.json, "README.md": out.md, "progress.svg": out.svg, "history.svg": out.history, "badge.svg": out.badge }
+  // Typed by OUTPUTS, so the files CI commits and the files written here cannot drift apart.
+  const files: Record<(typeof OUTPUTS)[number], string> = { "progress.json": out.json, "README.md": out.md, "progress.svg": out.svg, "history.svg": out.history, "badge.svg": out.badge }
   if (args.includes("--check")) {
     const stale = []
     for (const [name, content] of Object.entries(files)) {
