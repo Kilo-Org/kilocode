@@ -139,16 +139,21 @@ class KiloHostedService internal constructor(
         if (app != null) {
             cs.launch {
                 var ready = false
+                var context: String? = null
                 app.state.collect { state ->
                     if (!gate() || state.progress?.profile == ProfileStatusDto.NOT_LOGGED_IN) {
                         ++generation
                         clear()
+                        ready = false
+                        context = null
                         _state.value = HostedState(enabled = gate(), signedOut = gate())
                     }
                     val now = state.status == KiloAppStatusDto.READY &&
                         state.progress?.profile != ProfileStatusDto.NOT_LOGGED_IN
-                    if (now && !ready) requestedDir?.let { refresh(it) }
-                    ready = now
+                    val identity = state.profile?.let { "${it.email}\u0000${it.currentOrgId}" }
+                    if (now && (!ready || identity != context)) requestedDir?.let { refresh(it) }
+                    if (now) ready = true
+                    context = identity
                 }
             }
         }
@@ -276,6 +281,19 @@ class KiloHostedService internal constructor(
 
     suspend fun workspace(ref: HostedWorkspaceRefDto): HostedWorkspaceDto =
         call { workspace(ref, null, null) }
+
+    suspend fun profiles(): ai.kilocode.rpc.dto.HostedWorkspaceProfileListDto = call { workspaceProfiles(null) }
+
+    suspend fun create(request: ai.kilocode.rpc.dto.HostedCreateWorkspaceDto): ai.kilocode.rpc.dto.HostedMutationResultDto =
+        call { createWorkspace(request) }
+
+    suspend fun start(
+        ref: HostedWorkspaceRefDto,
+        request: ai.kilocode.rpc.dto.HostedStartSessionDto,
+    ): ai.kilocode.rpc.dto.HostedMutationResultDto = call { startWorkspaceSession(ref, request) }
+
+    suspend fun delete(ref: HostedWorkspaceRefDto): ai.kilocode.rpc.dto.HostedDeleteResultDto =
+        call { deleteWorkspace(ref, null) }
 
     /** All root sessions in one workspace, optionally reusing an already fetched first page. */
     suspend fun sessions(

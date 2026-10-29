@@ -18,6 +18,7 @@ import ai.kilocode.client.agentManager.worktree.WorktreeStatusService
 import ai.kilocode.client.agentManager.worktree.WorktreeNameCache
 import ai.kilocode.client.agentManager.worktree.runWorktreeSetupScript
 import ai.kilocode.client.app.KiloHostedService
+import ai.kilocode.client.app.KiloAppService
 import ai.kilocode.client.app.KiloWorkspaceService
 import ai.kilocode.client.agentManager.worktree.WorktreeEditorMatchers
 import ai.kilocode.client.agentManager.worktree.WorktreeSessionEditorMatcher
@@ -25,14 +26,25 @@ import ai.kilocode.client.agentManager.worktree.WorktreeSessionEditorKind
 import ai.kilocode.client.agentManager.worktree.WorktreeRowPopupBody
 import ai.kilocode.client.agentManager.worktree.WorktreeTitle
 import ai.kilocode.client.agentManager.worktree.openWorktreeSession
+import ai.kilocode.client.agentManager.hosted.HostedManagementService
+import ai.kilocode.client.agentManager.hosted.HostedWorkspaceCache
+import ai.kilocode.client.agentManager.hosted.HostedWorkspaceDialog
+import ai.kilocode.client.agentManager.hosted.HostedWorkspaceEditorKind
 import ai.kilocode.client.agentManager.hosted.HostedWorkspaceEditorMatcher
+import ai.kilocode.client.agentManager.hosted.HostedWorkspaceTitle
+import ai.kilocode.client.agentManager.hosted.hostedWorkspaceParams
 import ai.kilocode.client.agentManager.hosted.HostedWorkspaceRow
 import ai.kilocode.client.agentManager.hosted.HostedWorkspaceRowData
 import ai.kilocode.client.agentManager.hosted.HostedWorkspaceDataKeys
 import ai.kilocode.client.agentManager.hosted.openHostedWorkspace
 import ai.kilocode.client.app.KiloSessionService
 import ai.kilocode.client.agentManager.worktree.aggregateSessionActivity
+import ai.kilocode.rpc.dto.HostedAgentDto
+import ai.kilocode.rpc.dto.HostedCreateWorkspaceDto
 import ai.kilocode.rpc.dto.HostedIDs
+import ai.kilocode.rpc.dto.HostedRepositoryDto
+import ai.kilocode.rpc.dto.HostedStartSessionDto
+import ai.kilocode.rpc.dto.HostedWorkspaceDto
 import ai.kilocode.client.agentManager.worktree.normalizeWorktreePath
 import ai.kilocode.client.agentManager.worktree.worktreeSessionParams
 import ai.kilocode.client.session.ui.popup.HeaderPopupBody
@@ -98,6 +110,8 @@ import com.intellij.openapi.fileEditor.FileEditorManagerListener
 import com.intellij.openapi.ide.CopyPasteManager
 import com.intellij.openapi.project.DumbAwareAction
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.ui.Messages
+import com.intellij.openapi.ui.popup.JBPopupFactory
 import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.util.concurrency.annotations.RequiresEdt
@@ -185,6 +199,7 @@ class AgentManagerPanel(
     private var dirty: Map<String, WorktreeDirtyDto> = emptyMap()
     private var running: Set<String> = emptySet()
     private var hostedState = KiloHostedService.HostedState()
+    private val hostedCs = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private var activity = emptyMap<String, SessionActivityKind>()
     private var observed = emptySet<String>()
     private var hovered: String? = null
@@ -214,6 +229,12 @@ class AgentManagerPanel(
                     }
                 }
                 hosted.refresh(controller.directory)
+                val management = target.service<HostedManagementService>()
+                hostedCs.launch {
+                    management.preferences.collect {
+                        edt({ !target.isDisposed && !Disposer.isDisposed(this@AgentManagerPanel) }) { sync() }
+                    }
+                }
             }
         }
         sync()
@@ -300,6 +321,263 @@ class AgentManagerPanel(
 
     internal fun move(sessionId: String?, directory: String, surface: String = "sidebar") =
         controller.move(sessionId, directory, surface)
+
+    @RequiresEdt
+    internal fun addExistingHosted(anchor: Component) {
+        val target = project ?: return
+        val hosted = target.service<KiloHostedService>()
+        if (!hosted.enabled()) {
+            KiloNotifications.info(target, KiloBundle.message("hosted.workspace.disabled"))
+            return
+        }
+        val items = hostedState.items
+        if (items.isEmpty()) {
+            KiloNotifications.info(target, KiloBundle.message("hosted.workspace.add.empty"))
+            return
+        }
+        val management = target.service<HostedManagementService>()
+        val labels = items.map {
+            HostedWorkspaceTitle.text(it.name, it.branch, it.ref.workspaceID) +
+                if (management.excluded(it.ref)) " " + KiloBundle.message("hosted.workspace.add.hidden") else ""
+        }
+        JBPopupFactory.getInstance().createPopupChooserBuilder(labels)
+            .setTitle(KiloBundle.message("hosted.workspace.add.title"))
+            .setItemChosenCallback { chosen ->
+                val index = labels.indexOf(chosen)
+                val item = items.getOrNull(index) ?: return@setItemChosenCallback
+                management.restore(item.ref)
+                openHostedWorkspace(target, item)
+                sync()
+            }
+            .createPopup()
+            .showUnderneathOf(anchor)
+    }
+
+    @RequiresEdt
+    internal fun createHosted(anchor: Component) {
+        val target = project ?: return
+        val hosted = target.service<KiloHostedService>()
+        if (!hosted.enabled()) {
+            KiloNotifications.info(target, KiloBundle.message("hosted.workspace.disabled"))
+            return
+        }
+        val repo = hostedState.repositoryUrl
+        if (repo.isNullOrBlank()) {
+            KiloNotifications.error(target, KiloBundle.message("hosted.workspace.create.noRepo"))
+            return
+        }
+        hostedCs.launch {
+            val profiles = hosted.profiles()
+            edt({ !target.isDisposed && !Disposer.isDisposed(this@AgentManagerPanel) }) {
+                val error = profiles.error
+                if (error != null) {
+                    KiloNotifications.error(target, KiloBundle.message("hosted.workspace.profiles.failed"), error.message)
+                    return@edt
+                }
+                val sel = selection() ?: run {
+                    KiloNotifications.error(target, KiloBundle.message("hosted.workspace.create.noModel"))
+                    return@edt
+                }
+                val dialog = HostedWorkspaceDialog(
+                    anchor,
+                    repo,
+                    profiles.items,
+                    sel.first,
+                    sel.second,
+                    withWorkspace = true,
+                )
+                if (!dialog.showAndGet()) return@edt
+                val plan = dialog.plan() ?: return@edt
+                val request = HostedCreateWorkspaceDto(
+                    repository = repository(repo, plan.branch),
+                    profileID = plan.profileID,
+                    prompt = plan.prompt,
+                    agent = HostedAgentDto(plan.agent, plan.model),
+                    operationKey = java.util.UUID.randomUUID().toString(),
+                    messageID = messageID(),
+                )
+                createHosted(request)
+            }
+        }
+    }
+
+    @RequiresEdt
+    private fun createHosted(request: HostedCreateWorkspaceDto) {
+        val target = project ?: return
+        hostedCs.launch {
+            val result = target.service<KiloHostedService>().create(request)
+            edt({ !target.isDisposed && !Disposer.isDisposed(this@AgentManagerPanel) }) {
+                val workspace = result.workspace
+                val session = result.session
+                if (result.failure != null || workspace == null || session == null) {
+                    val failure = result.failure
+                    KiloNotifications.error(
+                        target,
+                        KiloBundle.message("hosted.workspace.create.failed"),
+                        failure?.message,
+                        KiloBundle.message("common.retry"),
+                    ) { createHosted(request) }
+                    return@edt
+                }
+                target.service<HostedManagementService>().select(workspace.ref, session.nativeSessionID)
+                openHostedWorkspace(target, workspace)
+                sync()
+                target.service<KiloHostedService>().refresh(controller.directory)
+            }
+        }
+    }
+
+    @RequiresEdt
+    internal fun newHostedSession(anchor: Component, workspace: HostedWorkspaceDto) {
+        val target = project ?: return
+        val sel = selection() ?: run {
+            KiloNotifications.error(target, KiloBundle.message("hosted.workspace.create.noModel"))
+            return
+        }
+        val dialog = HostedWorkspaceDialog(
+            anchor,
+            workspace.repositoryUrl.orEmpty(),
+            emptyList(),
+            sel.first,
+            sel.second,
+            withWorkspace = false,
+        )
+        if (!dialog.showAndGet()) return
+        val plan = dialog.plan() ?: return
+        startHosted(
+            workspace.ref,
+            HostedStartSessionDto(
+                prompt = plan.prompt,
+                agent = HostedAgentDto(plan.agent, plan.model),
+                operationKey = java.util.UUID.randomUUID().toString(),
+                messageID = messageID(),
+            ),
+        )
+    }
+
+    @RequiresEdt
+    internal fun startHosted(ref: ai.kilocode.rpc.dto.HostedWorkspaceRefDto, request: HostedStartSessionDto) {
+        val target = project ?: return
+        hostedCs.launch {
+            val result = target.service<KiloHostedService>().start(ref, request)
+            edt({ !target.isDisposed && !Disposer.isDisposed(this@AgentManagerPanel) }) {
+                val workspace = result.workspace
+                val session = result.session
+                if (result.failure != null || workspace == null || session == null) {
+                    KiloNotifications.error(
+                        target,
+                        KiloBundle.message("hosted.workspace.session.failed"),
+                        result.failure?.message,
+                        KiloBundle.message("common.retry"),
+                    ) { startHosted(ref, request) }
+                    return@edt
+                }
+                target.service<HostedManagementService>().select(ref, session.nativeSessionID)
+                openHostedWorkspace(target, workspace)
+                sync()
+                target.service<KiloHostedService>().refresh(controller.directory)
+            }
+        }
+    }
+
+    @RequiresEdt
+    internal fun removeHosted(item: HostedWorkspaceDto) {
+        val target = project ?: return
+        val choice = Messages.showYesNoDialog(
+            target,
+            KiloBundle.message("hosted.workspace.remove.message"),
+            KiloBundle.message("hosted.workspace.remove.title"),
+            Messages.getQuestionIcon(),
+        )
+        if (choice != Messages.YES) return
+        target.service<HostedManagementService>().remove(item.ref)
+        service<HostedWorkspaceCache>().remove(item.ref)
+        target.service<KiloVfsManager>().close(HostedWorkspaceEditorKind.ID, hostedWorkspaceParams(item))
+        sync()
+    }
+
+    @RequiresEdt
+    internal fun dismissHosted(item: HostedWorkspaceDto) {
+        val target = project ?: return
+        target.service<HostedManagementService>().dismiss(item.ref)
+        service<HostedWorkspaceCache>().remove(item.ref)
+        target.service<KiloVfsManager>().close(HostedWorkspaceEditorKind.ID, hostedWorkspaceParams(item))
+        sync()
+    }
+
+    @RequiresEdt
+    internal fun deleteHosted(item: HostedWorkspaceDto) {
+        val target = project ?: return
+        val choice = Messages.showYesNoDialog(
+            target,
+            KiloBundle.message("hosted.workspace.delete.message"),
+            KiloBundle.message("hosted.workspace.delete.title"),
+            Messages.getWarningIcon(),
+        )
+        if (choice != Messages.YES) return
+        target.service<HostedManagementService>().markPendingDelete(item.ref)
+        sync()
+        performDelete(item.ref)
+    }
+
+    @RequiresEdt
+    private fun performDelete(ref: ai.kilocode.rpc.dto.HostedWorkspaceRefDto) {
+        val target = project ?: return
+        hostedCs.launch {
+            val result = target.service<KiloHostedService>().delete(ref)
+            edt({ !target.isDisposed && !Disposer.isDisposed(this@AgentManagerPanel) }) {
+                val management = target.service<HostedManagementService>()
+                if (!result.success) {
+                    KiloNotifications.error(
+                        target,
+                        KiloBundle.message("hosted.workspace.delete.failed"),
+                        result.failure?.message,
+                        KiloBundle.message("common.retry"),
+                    ) { performDelete(ref) }
+                    sync()
+                    return@edt
+                }
+                management.forget(ref)
+                service<HostedWorkspaceCache>().remove(ref)
+                target.service<KiloVfsManager>().close(
+                    HostedWorkspaceEditorKind.ID,
+                    mapOf(
+                        HostedWorkspaceEditorKind.PROVIDER to ref.providerID,
+                        HostedWorkspaceEditorKind.WORKSPACE to ref.workspaceID,
+                    ),
+                )
+                sync()
+                target.service<KiloHostedService>().refresh(controller.directory)
+            }
+        }
+    }
+
+    private fun selection(): Pair<String, String>? {
+        if (project == null) return null
+        val app = service<KiloAppService>()
+        val config = app.state.value.config
+        val agent = config?.defaultAgent?.takeIf { it.isNotBlank() } ?: "code"
+        val model = app.models.value.model[agent]?.let { "${it.providerID}/${it.modelID}" }
+            ?: app.models.value.recent.firstOrNull()?.let { "${it.providerID}/${it.modelID}" }
+            ?: config?.model?.takeIf { it.isNotBlank() }
+            ?: return null
+        return agent to model
+    }
+
+    private fun repository(url: String, branch: String?): HostedRepositoryDto {
+        val clean = url.removeSuffix(".git")
+        return when {
+            clean.contains("github.com") -> HostedRepositoryDto(
+                type = "github",
+                repo = clean.substringAfter("github.com/", clean),
+                branch = branch,
+            )
+            clean.contains("gitlab") -> HostedRepositoryDto(type = "gitlab", url = clean, branch = branch)
+            else -> HostedRepositoryDto(type = "git", url = clean, branch = branch)
+        }
+    }
+
+    private fun messageID(): String = "msg_" + java.util.UUID.randomUUID().toString().replace("-", "")
 
     private fun remove(item: WorktreeDto, force: Boolean) {
         controller.remove(item, force, onFailure = { result -> notifyFailed(item, result, force) })
@@ -607,11 +885,19 @@ class AgentManagerPanel(
                     running = running.contains(key),
                 )
             } + if (hostedState.enabled) {
-                hostedState.items.map { dto ->
+                val visible = project?.service<HostedManagementService>()?.visible(hostedState.items)
+                    ?: hostedState.items
+                val management = project?.service<HostedManagementService>()
+                visible.map { dto ->
                     val kinds = activity.filterKeys { id -> HostedIDs.parseSession(id)?.let {
                         it.first == dto.ref.providerID && it.second == dto.ref.workspaceID
                     } == true }.values
-                    val status = hostedState.presentation(dto.ref)
+                    val base = hostedState.presentation(dto.ref)
+                    val deleting = management?.pendingDelete(dto.ref) == true
+                    val status = if (deleting && (base == null || base.deletionState != "deleted")) {
+                        (base ?: ai.kilocode.rpc.dto.HostedWorkspaceStatusDto(dto.ref, "deleting", "unknown", "", 0.0))
+                            .copy(deletionState = "deleting")
+                    } else base
                     val known = dto.sessionCursor == null && dto.sessions.isNotEmpty() &&
                         dto.sessions.all { it.id in observed }
                     val kind = aggregateSessionActivity(kinds) ?: SessionActivityKind.RUNNING.takeIf {
@@ -771,6 +1057,7 @@ class AgentManagerPanel(
     }
 
     override fun dispose() {
+        hostedCs.cancel()
         controller.onSelect = null
         controller.onCreated = null
         controller.onReload = null

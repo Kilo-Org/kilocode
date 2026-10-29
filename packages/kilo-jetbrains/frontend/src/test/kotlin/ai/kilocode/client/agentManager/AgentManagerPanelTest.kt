@@ -1790,6 +1790,14 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
             override suspend fun workspaceStatus(ref: HostedWorkspaceRefDto, organizationID: String?) =
                 HostedWorkspaceStatusDto(ref, "active", "active", "sandbox_ready", 100.0, hasActiveTurn = ref == other)
             override suspend fun systemEvents(ref: HostedWorkspaceRefDto, sessionID: String, organizationID: String?): Flow<HostedSystemEventDto> = emptyFlow()
+            override suspend fun workspaceProfiles(organizationID: String?) =
+                ai.kilocode.rpc.dto.HostedWorkspaceProfileListDto()
+            override suspend fun createWorkspace(request: ai.kilocode.rpc.dto.HostedCreateWorkspaceDto) =
+                ai.kilocode.rpc.dto.HostedMutationResultDto()
+            override suspend fun startWorkspaceSession(ref: HostedWorkspaceRefDto, request: ai.kilocode.rpc.dto.HostedStartSessionDto) =
+                ai.kilocode.rpc.dto.HostedMutationResultDto()
+            override suspend fun deleteWorkspace(ref: HostedWorkspaceRefDto, organizationID: String?) =
+                ai.kilocode.rpc.dto.HostedDeleteResultDto(ref)
         }, gate = { true }, log = TestLog(), repo = { "repo" })
         val sessions = FakeSessionRpcApi()
         project.replaceService(KiloHostedService::class.java, hosted, testRootDisposable)

@@ -1,6 +1,7 @@
 package ai.kilocode.client.agentManager.hosted
 
 import ai.kilocode.client.app.KiloWorkspaceService
+import ai.kilocode.client.app.KiloHostedService
 import ai.kilocode.client.vfs.KiloEditorKind
 import ai.kilocode.client.vfs.KiloEditorKindRegistry
 import ai.kilocode.client.vfs.KiloVirtualFile
@@ -53,6 +54,10 @@ object HostedWorkspaceEditorKind : KiloEditorKind {
         val provider = file.path.params[PROVIDER]?.takeIf { it.isNotBlank() } ?: return BorderLayoutPanel()
         val workspace = file.path.params[WORKSPACE]?.takeIf { it.isNotBlank() } ?: return BorderLayoutPanel()
         val ref = HostedWorkspaceRefDto(provider, workspace)
+        val hosted = project.service<KiloHostedService>()
+        if (!hosted.enabled() || project.service<HostedManagementService>().excluded(ref)) {
+            return BorderLayoutPanel()
+        }
         val dto = service<HostedWorkspaceCache>().get(ref)
         return HostedWorkspaceEditorPanel(
             parent = parent,
