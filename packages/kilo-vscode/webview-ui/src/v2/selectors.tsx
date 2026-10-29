@@ -2,13 +2,15 @@
 // existing session commits each change with switchAgent/switchModel and shows the server's value. Before a session
 // exists, the choice is a local draft that `create` passes to session.create.
 import type { ModelRef } from "@opencode/client"
-import { createEffect, createSignal, on, type Accessor } from "solid-js"
+import { TooltipKeybind } from "@kilocode/kilo-ui/tooltip"
+import { createEffect, createSignal, on, onCleanup, onMount, type Accessor } from "solid-js"
 import { PromptSelectors } from "../components/chat/PromptSelectors"
 import { ModelSelectorBase } from "../components/shared/ModelSelector"
 import { ModeSwitcherBase } from "../components/shared/ModeSwitcher"
 import { ThinkingSelectorBase } from "../components/shared/ThinkingSelector"
 import { useLanguage } from "../context/language"
 import { useV2 } from "./client"
+import { cycleVariant, preserveVariant } from "./variant"
 
 const DEFAULT = "default"
 
@@ -93,6 +95,15 @@ export function createSelection(session: Accessor<string | undefined>) {
     )
   }
 
+  // The same writer for a click and a cycle: a draft keeps the value locally, an existing session commits
+  // it to the server, and an unchanged value is a no-op (as on v1).
+  const selectAgent = (value: string) => {
+    const id = session()
+    if (!id) return void setDraftAgent(value)
+    if (value === agent()?.id) return
+    commit(id, () => v2.api.session.switchAgent({ sessionID: id, agent: value }))
+  }
+
   return {
     agents,
     agent,
@@ -100,17 +111,22 @@ export function createSelection(session: Accessor<string | undefined>) {
     models,
     providers: () => v2.data.location.provider.list(),
     variants,
-    selectAgent(value: string) {
-      const id = session()
-      if (!id) return void setDraftAgent(value)
-      if (value === agent()?.id) return
-      commit(id, () => v2.api.session.switchAgent({ sessionID: id, agent: value }))
+    selectAgent,
+    /** Cycle to the next or previous visible agent, as main's cycleAgent (wraps at both ends). */
+    cycleAgent(direction: 1 | -1) {
+      const list = agents()
+      if (list.length <= 1) return
+      const index = list.findIndex((item) => item.id === agent()?.id)
+      const raw = index + direction
+      const next = raw < 0 ? list.length - 1 : raw >= list.length ? 0 : raw
+      const value = list[next]?.id
+      if (value) selectAgent(value)
     },
     selectModel(providerID: string, modelID: string) {
       const current = model()
       const found = models()?.find((item) => item.providerID === providerID && item.id === modelID)
-      // A variant carries over only when the new model has it.
-      const variant = found?.variants.some((item) => item.id === current?.variant) ? current?.variant : undefined
+      // Carry the effort to the new model when it has it or a nearby effort, as v1; otherwise fall back to default.
+      const variant = preserveVariant(current?.variant, found?.variants.map((item) => item.id) ?? [])
       setModel({ id: modelID, providerID, ...(variant ? { variant } : {}) })
     },
     selectVariant(variant: string | undefined) {
@@ -134,23 +150,51 @@ export function createSelection(session: Accessor<string | undefined>) {
 export type Selection = ReturnType<typeof createSelection>
 
 export function Selectors(props: { selection: Selection; blocked: boolean }) {
+  const v2 = useV2()
   const language = useLanguage()
   const model = () => {
     const current = props.selection.model()
     return current ? { providerID: current.providerID, modelID: current.id } : null
   }
+  // Shift+Tab cycles the effort while the prompt input has focus. v1 gated this on the
+  // chat.shiftTabCyclesVariant setting (on by default); the v2 webview has no settings plumbing yet, so the
+  // enabled default applies and the tooltip hint is shown as well.
+  onMount(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Tab" || !event.shiftKey || event.ctrlKey || event.metaKey || event.altKey) return
+      const active = document.activeElement
+      if (!(active instanceof HTMLTextAreaElement) || !active.classList.contains("prompt-input")) return
+      const variants = props.selection.variants()
+      if (variants.length === 0) return
+      event.preventDefault()
+      props.selection.selectVariant(cycleVariant(props.selection.model()?.variant, variants))
+    }
+    window.addEventListener("keydown", onKeyDown, true)
+    onCleanup(() => window.removeEventListener("keydown", onKeyDown, true))
+  })
+  // The cycle shortcut label the host resolved, as main's modeHint(): the keybind shows next to the title,
+  // and an empty keybind hides the tooltip.
+  const keybind = () => v2.bindings().cycleAgentMode ?? ""
   return (
     <PromptSelectors
       agent={
-        <ModeSwitcherBase
-          agents={props.selection.agents()}
-          value={props.selection.agent()?.id ?? ""}
-          blocked={props.blocked}
-          onSelect={(id) => {
-            props.selection.selectAgent(id)
-            requestAnimationFrame(() => window.dispatchEvent(new Event("focusPrompt")))
-          }}
-        />
+        <TooltipKeybind
+          title={language.t("prompt.shortcutHint.mode")}
+          keybind={keybind()}
+          placement="top"
+          openDelay={0}
+          inactive={!keybind()}
+        >
+          <ModeSwitcherBase
+            agents={props.selection.agents()}
+            value={props.selection.agent()?.id ?? ""}
+            blocked={props.blocked}
+            onSelect={(id) => {
+              props.selection.selectAgent(id)
+              requestAnimationFrame(() => window.dispatchEvent(new Event("focusPrompt")))
+            }}
+          />
+        </TooltipKeybind>
       }
       model={
         <ModelSelectorBase
@@ -171,6 +215,7 @@ export function Selectors(props: { selection: Selection; blocked: boolean }) {
           allowClear
           clearLabel={language.t("common.default")}
           heading={language.t("prompt.thinking.tooltip")}
+          cycleHint
         />
       }
     />

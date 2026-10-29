@@ -5,18 +5,20 @@ description: Use before adding, porting or changing any Kilo behavior on the v2 
 
 # v2 feature placement
 
-One change, one rung. Use the first rung that works, prove it with the checks below, and say in the PR which rung you used and why the lower ones do not work. The placement rules in `migration-tracking/plans/v2-host-strategy.md` section 5 are the source of truth; when this skill and that section disagree, the section wins. Rules: `migration-tracking/technical-notes/v2-fork-conventions.md`, section "Plugin-first extension order".
+One change, one rung. Use the first rung that works, prove it with the checks below, and say in the PR which rung you used and why the lower ones do not work. The placement rules in `migration-tracking/principles.md` (sections 1 and 2) are the source of truth; when this skill and that page disagree, the page wins.
 
 ## Direction
 
 Kilo is the host, OpenCode is a library. Code moves one way: from upstream files into Kilo-owned files (`packages/kilo-*`, `src/kilocode/`, `test/kilocode/`), never back. Do not propose adding or widening a `kilocode_change` line in an upstream file to remove or shrink a Kilo-owned file; a Kilo-owned mirror of an upstream file (the host entry, a replaced tool) is rung 2 and beats a seam. A patch adds to upstream, it never changes an upstream default: upstream's own test files must pass unchanged against the code without the host. If they do not, the Kilo value belongs in the host, behind a generic knob with upstream's default.
+
+- Do not write comments that describe v1 code or v1 behavior (for example "as in v1", "same as main", "v1 did X"). This keeps the general comment rule: a comment explains a non-obvious constraint or surprising behavior of the v2 code. Use v1 only as a reference while porting, and put v1 evidence in the PR description; `kilo_port` and `kilocode_change` markers are the only v1 references in code.
 
 ## Vocabulary
 
 | Word | Meaning | Marker |
 |---|---|---|
 | Plugin hook (rung 1) | An extension point upstream exposes through `@opencode/plugin`; you attach from a Kilo-owned file | none |
-| Host composition (rung 2) | Plugin registration, service replacement, environment translation or boot option in the Kilo host; a Kilo-owned mirror of an upstream file (host entry, replaced tool), listed in `mirroredFiles` once U-L3-01 lands it, named in the PR until then | none |
+| Host composition (rung 2) | Plugin registration, service replacement, environment translation or boot option in the Kilo host; a Kilo-owned mirror of an upstream file (host entry, replaced tool), listed in `mirroredFiles` once the sync tooling has that list, named in the PR until then | none |
 | Seam (rung 3) | One to three generic lines you add to an upstream file so that a plugin hook becomes possible. Carries no Kilo value: no `kilocode/` path, `Kilo*` identifier or Kilo string literal | `kilocode_change(<feature>) seam` |
 | Patch (rung 4) | A Kilo-specific line inside an upstream file, including a registration or import of a Kilo module. One line thick; behavior lives in a Kilo module | `kilocode_change(<feature>)` |
 | Branding (rung 5) | Automated product-text/artwork renaming supplied by Kilo-owned code; PR #15417 uses an interim source/build adapter | none in Kilo-owned files |
@@ -59,7 +61,7 @@ Write the plugin in `packages/kilo-plugin/src/<feature>.ts` (or the feature's ow
 
 #### Add a Kilo RPC
 
-A Kilo RPC is rung 1: the plugin API has an `rpc` domain (`packages/plugin/src/effect/rpc.ts`), and the server serves every registered RPC through one generic route, `rpc.call` (`POST /api/rpc/:rpcID/:method`, `packages/protocol/src/groups/rpc.ts`). The reference is the Gateway RPC, `kilocode.gateway` (U-E0-02).
+A Kilo RPC is rung 1: the plugin API has an `rpc` domain (`packages/plugin/src/effect/rpc.ts`), and the server serves every registered RPC through one generic route, `rpc.call` (`POST /api/rpc/:rpcID/:method`, `packages/protocol/src/groups/rpc.ts`). The reference is the Gateway RPC, `kilocode.gateway`.
 
 1. Contract: `packages/schema/src/kilocode/<feature>.ts`, `Rpc.define({ id: "kilocode.<feature>", methods, events })` with `Rpc` from `../rpc.js`. Wrap each schema in `Schema.toStandardSchemaV1` so the promise client accepts it. Import only `effect` and Schema modules: `@opencode/schema` depends on no Kilo package (that needs a shared `package.json` patch, and the packed SDK check in `packages/sdk/script/verify-package.ts` fails).
 2. Handlers: in the feature's plugin under `packages/kilo-plugin/src/<feature>/`, `yield* ctx.rpc.register(Definition, { ... }).pipe(Effect.orDie)`. A handler fails with `context.error("<name>", message)`, using an error name of the contract. List the plugin in `KiloPlugins`.
@@ -80,7 +82,7 @@ rg -n "export const node = " packages/core/src/<area>* packages/util/src package
 rg -n "process\.env\.OPENCODE_" packages/cli/src packages/core/src/<area>* packages/util/src packages/server/src   # environment the host translates from KILO_*
 ```
 
-The host is `packages/kilo-cli` (U-E0-01). `bun dev` starts it, and every server the CLI starts runs its `serve` handler with the overrides. Where each kind of change goes:
+The host is `packages/kilo-cli`. `bun dev` starts it, and every server the CLI starts runs its `serve` handler with the overrides. Where each kind of change goes:
 
 - Server plugin: add it to `KiloPlugins` in `packages/kilo-plugin/src/index.ts`. `packages/kilo-cli/src/host.ts` registers each one through `SdkPlugins.register` and provides the global services a plugin requires (today `Bus`); a plugin that needs another global service adds it there, with the node in the registration node's `deps`. Never add a Kilo plugin to `core/src/plugin/internal.ts` or `provider.ts`.
 - Service replacement: add `X.node.replace(...)` to `overrides` in `packages/kilo-cli/src/host.ts`. `createRoutes` applies the overrides after its standard set, so they win.
@@ -143,7 +145,7 @@ Every v1 cell you replace gets a proof in the same PR:
 - In a shared upstream file (rung 3 or 4): `// kilocode_change(<feature>:<id>)`.
 - In a Kilo-owned file (rung 1 or 2): `// kilo_port(<feature>:<id>)` on the code that now provides the behavior, also when that code only selects or configures upstream behavior, and on the Kilo-owned v2 test that replaces a v1 test patch cell.
 - A Kilo-owned module or test ported under another name: the v1 file name when it fits, else `state: "ported"` in `dispositions.json` with the v2 path.
-- Behavior upstream v2 provides with no Kilo code: `state: "native"`, with the v2 pointer. Behavior not carried (a shim, dead v1 code, or a decision the plan records): `state: "dropped"`, with the evidence. Behavior that a later unit ports stays open.
+- Behavior upstream v2 provides with no Kilo code: `state: "native"`, with the v2 pointer. Behavior not carried (a shim, dead v1 code, or a recorded decision such as Out of scope in `migration-tracking/plan.md`): `state: "dropped"`, with the evidence. Behavior that an epic still ports stays open.
 
 Close a cell only after you compared the v1 hunk with the v2 code behavior by behavior; a cell with a known gap stays open, with the gap in the PR. The full rules are in the `v2-migration` skill, section "Progress map".
 
@@ -151,8 +153,9 @@ Then regenerate and verify:
 
 ```sh
 git add <new files>   # the map counts only tracked files
-bun script/upstream/progress.ts && bun script/upstream/progress.ts && bun script/upstream/progress.ts --check   # identical output, then check
+bun script/upstream/progress.ts                    # validates the inputs
 bun script/upstream/progress.ts --list <feature>   # each open cell needs a reason in the PR
+git checkout origin/v2 -- $(bun script/upstream/progress.ts --outputs)   # CI regenerates the map on v2; do not commit it
 bun script/check-shared-patches.ts --worktree && bun script/check-opencode-annotations.ts --worktree   # before the commit; CI runs both without --worktree on the commit
 bun typecheck      # from the affected package directory, never tsc
 ```
@@ -178,7 +181,7 @@ Plus: shared files touched with rung, core-internal imports added and mirrored f
 | add, wrap or replace a builtin tool | 1 | `ToolEditor.update` or `remove` + `add` |
 | add a Kilo RPC for clients | 1 | contract in `schema/src/kilocode/<feature>.ts`, `ctx.rpc.register` in `kilo-plugin` |
 | register a plugin, replace a service, set paths, translate env, change a boot option | 2 | `KiloPlugins` in `packages/kilo-plugin`, `overrides` in `packages/kilo-cli/src/host.ts`, `names` in `env.ts` |
-| change the host entry, or re-implement an upstream file | 2 | the mirror in `packages/kilo-cli`, differences marked `Kilo:`, listed in `mirroredFiles` once U-L3-01 lands it (named in the PR until then); never a seam in the mirrored file |
+| change the host entry, or re-implement an upstream file | 2 | the mirror in `packages/kilo-cli`, differences marked `Kilo:`, listed in `mirroredFiles` once the sync tooling has that list (named in the PR until then); never a seam in the mirrored file |
 | register a TUI plugin | 4 | one marked call-out line in `tui/src/plugin/builtins.ts` |
 | a knob upstream does not expose yet | 3 | seam, generic, tagged, `shared-patches.json` |
 | a defect fix or a Kilo decision inside upstream logic with no knob | 4 | one tagged line, policy in a Kilo module |

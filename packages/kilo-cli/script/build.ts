@@ -11,6 +11,9 @@
 // Output layout matches upstream's, so `bun run install:alpha` and the CI smoke test find the binary the same way:
 // <outdir>/cli-<os>-<arch>/bin/kilo2. Supported flags: --single, --baseline, --target=, --outdir=, --skip-install,
 // --skip-web-ui. The release-only targets that CI does not build (musl, baseline) stay available through --target.
+// Kilo: KILO_CHANNEL, KILO_VERSION, KILO_BUMP and KILO_RELEASE set the build channel and version. Load before
+// `@opencode/script`, which reads the OPENCODE_ names when it loads.
+import "../../../script/kilocode/release-env"
 import { $ } from "bun"
 import { mkdir, rm } from "fs/promises"
 import path from "path"
@@ -211,7 +214,8 @@ export default { path: file, version: ${JSON.stringify(opencodePty.version)}, sh
   verifySimulationGraph(simulationInputs)
   await NativeArch.verify(path.join(outdir, name, "bin", item.os === "win32" ? `${binary}.exe` : binary), item.arch)
 
-  // Kilo: the package.json describes an unpublished artifact. This build publishes nothing.
+  // Kilo: the platform packages have the same names as v1's. script/publish.ts publishes them with the `kilo-v2` npm
+  // dist-tag, so v1's `latest` and `rc` tags do not change.
   await Bun.write(
     path.join(outdir, name, "package.json"),
     JSON.stringify(
@@ -219,7 +223,7 @@ export default { path: file, version: ${JSON.stringify(opencodePty.version)}, sh
         name: `@kilocode/${name}`,
         version: Script.version,
         license: "MIT",
-        private: true,
+        repository: { type: "git", url: "git+https://github.com/Kilo-Org/kilocode.git" },
         os: [item.os],
         cpu: [item.arch],
       },

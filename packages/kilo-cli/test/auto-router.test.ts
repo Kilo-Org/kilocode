@@ -69,7 +69,10 @@ test("registers a client model and routes a custom router request to it", async 
     })
     expect(local.requests.map((request) => request.model)).toContain("echo")
     expect(local.requests[0]?.authorization).toBe("Bearer local-key")
-    const decide = backend.state.customRouterBodies.find((item) => item.path === "/v1/decide")?.body as {
+    // The prompt's title request also reaches the router, so pick the code-mode decide body instead of the first.
+    const decide = backend.state.customRouterBodies.find(
+      (item) => item.path === "/v1/decide" && (item.body as { mode?: string }).mode === "code",
+    )?.body as {
       model: string
       sessionId: string
       mode: string
