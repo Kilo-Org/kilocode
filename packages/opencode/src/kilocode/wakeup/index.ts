@@ -124,7 +124,9 @@ export namespace Wakeup {
             Effect.catchTag(["LockTimeoutError", "LockCompromisedError"], (err) =>
               failure
                 ? failure(err)
-                : Effect.logWarning("wakeup claim lock failed", { key: target.join(":"), err }).pipe(Effect.andThen(body)),
+                : Effect.logWarning("wakeup claim lock failed", { key: target.join(":"), err }).pipe(
+                    Effect.andThen(body),
+                  ),
             ),
           ),
         )
@@ -577,7 +579,13 @@ export namespace Wakeup {
         let count = 0
         for (const kind of ["wakeup", "cron"] as const) {
           const held = yield* kind === "wakeup" ? list({ sessionID }) : cronList({ sessionID })
-          const keys = yield* storage.list([kind, String(sessionID)]).pipe(Effect.orDie)
+          const keys = yield* storage.list([kind, String(sessionID)]).pipe(
+            Effect.catch((err) =>
+              Effect.logError("wakeup cleanup list failed", { sessionID, kind, err }).pipe(
+                Effect.as([] as string[][]),
+              ),
+            ),
+          )
           const targets = new Map(keys.map((target) => [ID.make(target.at(-1)!), target]))
           for (const info of held) targets.set(info.id, kind === "wakeup" ? key(info) : cronKey(info))
           for (const [id, target] of targets) {

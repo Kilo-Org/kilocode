@@ -432,6 +432,40 @@ describe("scheduled task cancellation", () => {
       )
     }
 
+    it.live(`${kind} session cleanup logs a list fault and removes the parsed record and timer`, () =>
+      Effect.gen(function* () {
+        const dir = yield* tmpdirScoped()
+        const calls: Wakeup.Info[] = []
+        const sessionID = SessionID.descending()
+        const { wake, storage } = yield* build(dir, calls, undefined, (storage) => ({
+          ...storage,
+          list: (prefix) =>
+            prefix[0] === kind && prefix[1] === sessionID
+              ? Effect.fail(new FSUtil.FileSystemError({ method: "glob", cause: new Error("list denied") }))
+              : storage.list(prefix),
+        }))
+        const task = yield* create(wake, {
+          sessionID,
+          directory: dir,
+          prompt: "parsed despite list fault",
+          when: new Date(Date.now() + 1_200).toISOString(),
+        })
+        const logs: unknown[] = []
+        const removed = yield* wake.cancelSession(sessionID, { notify: false }).pipe(
+          Effect.provide(Logger.layer([Logger.make(({ message }) => logs.push(message))])),
+        )
+        expect(removed).toBe(1)
+        expect(logs).toContainEqual([
+          "wakeup cleanup list failed",
+          expect.objectContaining({ sessionID, kind, err: expect.anything() }),
+        ])
+        expect(yield* storage.list([kind, sessionID])).toEqual([])
+        expect(yield* wake.scheduled(dir)).toEqual(new Map())
+        yield* Effect.sleep(`${Math.max(0, task.dueAt - Date.now()) + 300} millis`)
+        expect(calls).toEqual([])
+      }),
+    )
+
     it.live(`${kind} creation does not arm a second timer after adoption`, () =>
       Effect.gen(function* () {
         const dir = yield* tmpdirScoped()
