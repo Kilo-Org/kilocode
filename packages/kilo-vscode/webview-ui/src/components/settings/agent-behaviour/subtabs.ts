@@ -19,7 +19,7 @@ export const AGENT_BEHAVIOUR_SUBTABS: AgentBehaviourSubtab[] = [
   {
     id: "mcpServers",
     title: "settings.agentBehaviour.subtab.mcpServers",
-    ready: false,
+    ready: true,
     component: lazy(() => import("./McpSubtab")),
   },
   {

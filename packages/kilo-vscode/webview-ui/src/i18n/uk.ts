@@ -1094,6 +1094,9 @@ export const dict = {
   "settings.agentBehaviour.addMcp.url": "URL сервера",
   "settings.agentBehaviour.addMcp.url.placeholder": "напр. http://localhost:3000/sse",
   "settings.agentBehaviour.mcpBrowseMarketplace": "Переглянути Marketplace",
+  "settings.agentBehaviour.mcp.timeout.startup.title": "Час очікування запуску (мс)",
+  "settings.agentBehaviour.mcp.timeout.catalog.title": "Час очікування каталогу (мс)",
+  "settings.agentBehaviour.mcp.timeout.execution.title": "Час очікування виконання (мс)",
   "settings.agentBehaviour.mcpEmpty":
     "MCP-серверів не налаштовано. Додайте MCP-сервери до kilo.jsonc або попросіть агента додати їх.",
   "settings.agentBehaviour.workflows.description":
@@ -1107,7 +1110,7 @@ export const dict = {
   "settings.agentBehaviour.workflows.modelDescription": "Глобальне перевизначення моделі",
 
   "settings.autoApprove.description":
-    "Визначте, як виконуються інструменти. Більшість інструментів за замовчуванням — Дозволити. doom_loop та external_directory за замовчуванням — Запитувати.",
+    "Визначте, як виконуються інструменти. Більшість інструментів за замовчуванням — Дозволити. Bash за замовчуванням — Запитувати.",
   "settings.autoApprove.maxCost.title": "Сповіщення про вартість сесії",
   "settings.autoApprove.maxCost.description":
     "Попереджати перед продовженням сесії, якщо її витрати перевищують цю суму в USD. Використовуйте цілі долари; залиште порожнім, щоб вимкнути.",

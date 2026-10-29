@@ -1077,6 +1077,9 @@ export const dict = {
   "settings.agentBehaviour.addMcp.url": "URL سرور",
   "settings.agentBehaviour.addMcp.url.placeholder": "مثلاً http://localhost:3000/sse",
   "settings.agentBehaviour.mcpBrowseMarketplace": "مرور Marketplace",
+  "settings.agentBehaviour.mcp.timeout.startup.title": "مهلت راه‌اندازی (میلی‌ثانیه)",
+  "settings.agentBehaviour.mcp.timeout.catalog.title": "مهلت فهرست (میلی‌ثانیه)",
+  "settings.agentBehaviour.mcp.timeout.execution.title": "مهلت اجرا (میلی‌ثانیه)",
   "settings.agentBehaviour.mcpEmpty":
     "هیچ سرور MCP پیکربندی نشده است. سرورهای MCP را در kilo.jsonc اضافه کنید، یا از agent بخواهید آن‌ها را برایتان اضافه کند.",
   "settings.agentBehaviour.workflows.description":
@@ -1135,7 +1138,7 @@ export const dict = {
     "قوانین به ترتیب ارزیابی می‌شوند — آخرین قانون منطبق اعمال می‌شود. این مجموعه قوانین حل‌شده از backend CLI است.",
 
   "settings.autoApprove.description":
-    "نحوه اجرای ابزارها را تعریف کنید. اکثر ابزارها به‌طور پیش‌فرض روی Allow هستند. doom_loop و external_directory به‌طور پیش‌فرض روی Ask هستند.",
+    "نحوه اجرای ابزارها را تعریف کنید. اکثر ابزارها به‌طور پیش‌فرض روی Allow هستند. Bash به‌طور پیش‌فرض روی Ask هستند.",
   "settings.autoApprove.maxCost.title": "هشدار هزینه جلسه",
   "settings.autoApprove.maxCost.description":
     "هنگامی که هزینه یک جلسه از این مقدار دلاری فراتر رفت، یک هشدار غیرمسدودکننده نمایش داده شود. از اعداد صحیح استفاده کنید؛ برای غیرفعال کردن خالی بگذارید.",

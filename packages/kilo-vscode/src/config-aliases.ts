@@ -1,5 +1,29 @@
 // The v1 key aliases of a v2 config path, shared by the host (alias removal on write) and the webview (scope lookup).
 // Every legacy key `packages/core/src/config/normalize.ts` still reads is listed here.
+/**
+ * The scope whose file a setting is read from and written to. The merge replaces one v2 top-level key at a time and
+ * the project document is later than the global one, so the scope that defines that key, directly or through a v1
+ * alias root such as `tools` or `small_model`, owns the setting and any write to an earlier file would be shadowed.
+ * Project wins over global, as in the merge. The leaf itself is not required: a scope that owns the key owns every
+ * leaf under it, including one it does not define yet, so a new value is written where the merge will keep it.
+ */
+export function scopeOf(path: string[], project: unknown, global: unknown): "project" | "global" | undefined {
+  if (path.length === 0) return undefined
+  const roots = [path[0], ...aliasOf(path).map((alias) => alias[0])]
+  if (owns(project, roots)) return "project"
+  if (owns(global, roots)) return "global"
+  return undefined
+}
+
+function owns(source: unknown, roots: (string | undefined)[]): boolean {
+  return (
+    typeof source === "object" &&
+    source !== null &&
+    !Array.isArray(source) &&
+    roots.some((root) => root !== undefined && root in source)
+  )
+}
+
 export function aliasOf(keyPath: string[]): string[][] {
   if (keyPath.length === 0) return []
   if (keyPath[0] === "agents") {

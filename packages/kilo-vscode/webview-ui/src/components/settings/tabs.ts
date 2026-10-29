@@ -44,14 +44,14 @@ export const SETTINGS_TABS_V2: SettingsTabV2[] = [
     id: "autoApprove",
     icon: "checklist",
     title: "settings.autoApprove.title",
-    ready: false,
+    ready: true,
     component: lazy(() => import("./AutoApproveTab")),
   },
   {
     id: "browser",
     icon: "window-cursor",
     title: "settings.webTools.title",
-    ready: false,
+    ready: true,
     component: lazy(() => import("./BrowserTab")),
   },
   {
@@ -79,7 +79,7 @@ export const SETTINGS_TABS_V2: SettingsTabV2[] = [
     id: "experimental",
     icon: "settings-gear",
     title: "settings.experimental.title",
-    ready: false,
+    ready: true,
     component: lazy(() => import("./ExperimentalTab")),
   },
   {
