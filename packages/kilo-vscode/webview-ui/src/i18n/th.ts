@@ -1036,6 +1036,16 @@ export const dict = {
   "settings.agentBehaviour.editMode.native":
     "นี่คือโหมดในตัว ไม่สามารถเปลี่ยนคำจำกัดความพื้นฐานได้ แต่คุณสามารถกำหนดค่าการแทนที่ได้ที่ด้านล่าง",
   "settings.agentBehaviour.editMode.promptOverride": "การแทนที่ prompt แบบกำหนดเองสำหรับโหมดในตัวนี้",
+  "settings.agentBehaviour.mode.title": "โหมด",
+  "settings.agentBehaviour.mode.description":
+    "เอเจนต์หลักจะแสดงในตัวสลับโหมดของแชท เอเจนต์ย่อยจะถูกเรียกใช้โดยเอเจนต์อื่นผ่านเครื่องมือ Task เท่านั้น โดยอิงตามคำอธิบาย",
+  "settings.agentBehaviour.mode.primary": "หลัก",
+  "settings.agentBehaviour.mode.subagent": "เอเจนต์ย่อย",
+  "settings.agentBehaviour.mode.all": "หลักและเอเจนต์ย่อย",
+  "settings.agentBehaviour.mode.defaultAgent":
+    "นี่คือเอเจนต์เริ่มต้น จึงไม่สามารถเป็นเอเจนต์ย่อยเพียงอย่างเดียวได้ โปรดเลือกเอเจนต์เริ่มต้นอื่นก่อน",
+  "settings.agentBehaviour.mode.defaultAgentProject":
+    "เอเจนต์นี้เป็นเอเจนต์เริ่มต้นใน kilo.jsonc ของโปรเจกต์ จึงไม่สามารถเป็นเอเจนต์ย่อยเพียงอย่างเดียวได้ โปรดเปลี่ยน default_agent ในไฟล์นั้นก่อน",
   "settings.agentBehaviour.badge.subagent": "เอเจนต์ย่อย",
   "settings.agentBehaviour.permissions.title": "สิทธิ์ที่คำนวณแล้ว",
   "settings.agentBehaviour.permissions.count": "{{count}} กฎ",

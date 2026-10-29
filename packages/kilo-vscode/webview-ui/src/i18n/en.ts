@@ -1128,6 +1128,16 @@ export const dict = {
   "settings.agentBehaviour.editMode.native":
     "This is a built-in mode. Its base definition cannot be changed, but you can configure overrides below.",
   "settings.agentBehaviour.editMode.promptOverride": "Custom prompt override for this built-in mode",
+  "settings.agentBehaviour.mode.title": "Mode",
+  "settings.agentBehaviour.mode.description":
+    "Primary agents appear in the chat's mode switcher. Subagents are only called by other agents through the Task tool, based on their description.",
+  "settings.agentBehaviour.mode.primary": "Primary",
+  "settings.agentBehaviour.mode.subagent": "Subagent",
+  "settings.agentBehaviour.mode.all": "Primary and subagent",
+  "settings.agentBehaviour.mode.defaultAgent":
+    "This is the default agent, so it can't be a subagent only. Choose another default agent first.",
+  "settings.agentBehaviour.mode.defaultAgentProject":
+    "This agent is the default agent in the project's kilo.jsonc, so it can't be a subagent only. Change default_agent there first.",
   "settings.agentBehaviour.badge.subagent": "subagent",
   "settings.agentBehaviour.permissions.title": "Calculated Permissions",
   "settings.agentBehaviour.permissions.count": "{{count}} rules",

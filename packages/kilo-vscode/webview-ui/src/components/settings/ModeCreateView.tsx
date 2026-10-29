@@ -1,5 +1,6 @@
 import { Component, Show, createSignal } from "solid-js"
 import { TextField } from "@kilocode/kilo-ui/text-field"
+import { Select } from "@kilocode/kilo-ui/select"
 import { Card } from "@kilocode/kilo-ui/card"
 import { Button } from "@kilocode/kilo-ui/button"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
@@ -7,6 +8,7 @@ import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { useConfig } from "../../context/config"
 import { useLanguage } from "../../context/language"
 import type { AgentConfig } from "../../types/messages"
+import { MODE_OPTIONS, type AgentMode } from "./agent-mode"
 import SettingsRow from "./SettingsRow"
 
 interface Props {
@@ -22,6 +24,7 @@ const ModeCreateView: Component<Props> = (props) => {
   const [name, setName] = createSignal("")
   const [description, setDescription] = createSignal("")
   const [prompt, setPrompt] = createSignal("")
+  const [mode, setMode] = createSignal<AgentMode>("primary")
   const [error, setError] = createSignal("")
 
   const validate = (val: string): string => {
@@ -35,6 +38,7 @@ const ModeCreateView: Component<Props> = (props) => {
     setName("")
     setDescription("")
     setPrompt("")
+    setMode("primary")
     setError("")
   }
 
@@ -52,7 +56,7 @@ const ModeCreateView: Component<Props> = (props) => {
     }
     const existing = config().agent ?? {}
     const partial: Partial<AgentConfig> = {
-      mode: "primary",
+      mode: mode(),
       description: description().trim() || undefined,
       prompt: prompt().trim() || undefined,
     }
@@ -77,7 +81,6 @@ const ModeCreateView: Component<Props> = (props) => {
         <SettingsRow
           title={language.t("settings.agentBehaviour.createMode.name")}
           description={language.t("settings.agentBehaviour.createMode.name.description")}
-          last
         >
           <TextField
             value={name()}
@@ -98,6 +101,24 @@ const ModeCreateView: Component<Props> = (props) => {
               {error()}
             </div>
           </Show>
+        </SettingsRow>
+        <SettingsRow
+          title={language.t("settings.agentBehaviour.mode.title")}
+          description={language.t("settings.agentBehaviour.mode.description")}
+          last
+        >
+          <Select
+            options={MODE_OPTIONS}
+            current={MODE_OPTIONS.find((o) => o.value === mode())}
+            value={(o) => o.value}
+            label={(o) => language.t(o.labelKey)}
+            onSelect={(o) => {
+              if (o) setMode(o.value)
+            }}
+            variant="secondary"
+            size="small"
+            triggerVariant="settings"
+          />
         </SettingsRow>
       </Card>
 

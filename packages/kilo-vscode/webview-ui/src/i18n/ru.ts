@@ -1052,6 +1052,16 @@ export const dict = {
     "Это встроенный режим. Его базовое определение нельзя изменить, но вы можете настроить переопределения ниже.",
   "settings.agentBehaviour.editMode.promptOverride":
     "Пользовательское переопределение промпта для этого встроенного режима",
+  "settings.agentBehaviour.mode.title": "Режим",
+  "settings.agentBehaviour.mode.description":
+    "Основные агенты отображаются в переключателе режимов чата. Субагенты вызываются только другими агентами через инструмент Task на основе их описания.",
+  "settings.agentBehaviour.mode.primary": "Основной",
+  "settings.agentBehaviour.mode.subagent": "Субагент",
+  "settings.agentBehaviour.mode.all": "Основной и субагент",
+  "settings.agentBehaviour.mode.defaultAgent":
+    "Это агент по умолчанию, поэтому он не может быть только субагентом. Сначала выберите другой агент по умолчанию.",
+  "settings.agentBehaviour.mode.defaultAgentProject":
+    "Этот агент указан как агент по умолчанию в kilo.jsonc проекта, поэтому он не может быть только субагентом. Сначала измените там default_agent.",
   "settings.agentBehaviour.badge.subagent": "субагент",
   "settings.agentBehaviour.permissions.title": "Вычисленные разрешения",
   "settings.agentBehaviour.permissions.count": "{{count}} правил",

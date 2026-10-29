@@ -1079,6 +1079,16 @@ export const dict = {
   "settings.agentBehaviour.editMode.native":
     "Il s'agit d'un mode intégré. Sa définition de base ne peut pas être modifiée, mais vous pouvez configurer des surcharges ci-dessous.",
   "settings.agentBehaviour.editMode.promptOverride": "Remplacement de prompt personnalisé pour ce mode intégré",
+  "settings.agentBehaviour.mode.title": "Mode",
+  "settings.agentBehaviour.mode.description":
+    "Les agents principaux apparaissent dans le sélecteur de mode du chat. Les sous-agents ne sont appelés que par d'autres agents via l'outil Task, en fonction de leur description.",
+  "settings.agentBehaviour.mode.primary": "Principal",
+  "settings.agentBehaviour.mode.subagent": "Sous-agent",
+  "settings.agentBehaviour.mode.all": "Principal et sous-agent",
+  "settings.agentBehaviour.mode.defaultAgent":
+    "C'est l'agent par défaut : il ne peut pas être uniquement un sous-agent. Choisissez d'abord un autre agent par défaut.",
+  "settings.agentBehaviour.mode.defaultAgentProject":
+    "Cet agent est l'agent par défaut dans le kilo.jsonc du projet : il ne peut pas être uniquement un sous-agent. Modifiez d'abord default_agent dans ce fichier.",
   "settings.agentBehaviour.badge.subagent": "sous-agent",
   "settings.agentBehaviour.permissions.title": "Permissions calculées",
   "settings.agentBehaviour.permissions.count": "{{count}} règles",
