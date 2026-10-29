@@ -101,18 +101,15 @@ export function ensureExtension(relPath: string, format: ImageFormat): string {
 
 type ResolvedRequest = { url: string; headers: Record<string, string>; body: string }
 
-function buildRequest(resolved: ResolvedProvider, prompt: string, model: string, inputImage?: string): ResolvedRequest {
+function buildRequest(resolved: ResolvedProvider, prompt: string, model: string, images: string[]): ResolvedRequest {
   const headers: Record<string, string> = {
     Authorization: `Bearer ${resolved.token}`,
     "Content-Type": "application/json",
   }
   if (resolved.organizationId) headers["X-KILOCODE-ORGANIZATIONID"] = resolved.organizationId
 
-  const content = inputImage
-    ? [
-        { type: "text", text: prompt },
-        { type: "image_url", image_url: { url: inputImage } },
-      ]
+  const content = images.length
+    ? [{ type: "text", text: prompt }, ...images.map((url) => ({ type: "image_url", image_url: { url } }))]
     : prompt
 
   return {
@@ -134,6 +131,12 @@ const Parameters = Schema.Struct({
   image: Schema.optional(Schema.String).annotate({
     description:
       "Optional path (relative to the workspace) to an existing image to edit; supports PNG, JPG, JPEG, GIF, and WEBP",
+  }),
+  images: Schema.optional(
+    Schema.Array(Schema.String.check(Schema.isMinLength(1))).check(Schema.isMinLength(1), Schema.isMaxLength(10)),
+  ).annotate({
+    description:
+      "Ordered reference image paths, relative to the workspace. Use either image or images, not both. Up to 10 references; custom endpoints support PNG/JPEG.",
   }),
   model: Schema.optional(Schema.String).annotate({
     description: "Model ID to use for image generation. Omit to use the configured default.",
@@ -161,6 +164,7 @@ export const GenerateImageTool = Tool.define(
       execute: (params: Schema.Schema.Type<typeof Parameters>, ctx: Tool.Context) =>
         Effect.gen(function* () {
           const instance = yield* InstanceState.context
+          if (params.image != null && params.images != null) throw new Error("Provide either image or images, not both")
           const cfg = yield* configSvc.get()
           const custom = Images.source(yield* configSvc.getGlobal())
           const auth = custom ? undefined : yield* authSvc.get("kilo")
@@ -187,35 +191,36 @@ export const GenerateImageTool = Tool.define(
             metadata: { provider },
           })
 
-          const input = params.image
-            ? yield* Effect.gen(function* () {
-                const file = path.resolve(instance.directory, params.image!)
-                yield* assertExternalDirectoryEffect(ctx, file)
-                yield* ctx.ask({
-                  permission: "read",
-                  patterns: [path.relative(instance.worktree, file)],
-                  always: ["*"],
-                  metadata: { filepath: file },
-                })
-                const ext = path.extname(file).slice(1).toLowerCase() || "png"
-                const mime = `image/${ext === "jpg" ? "jpeg" : ext}`
-                if (custom && mime !== "image/png" && mime !== "image/jpeg")
-                  throw new Error("Custom image edits support PNG and JPEG reference images")
-                const bytes = yield* Effect.tryPromise(() => Bun.file(file).bytes())
-                return { bytes, mime, name: path.basename(file) }
+          const paths = params.images ?? (params.image ? [params.image] : [])
+          const input = yield* Effect.forEach(paths, (name) =>
+            Effect.gen(function* () {
+              const file = path.resolve(instance.directory, name)
+              yield* assertExternalDirectoryEffect(ctx, file)
+              yield* ctx.ask({
+                permission: "read",
+                patterns: [path.relative(instance.worktree, file)],
+                always: ["*"],
+                metadata: { filepath: file },
               })
-            : undefined
+              const ext = path.extname(file).slice(1).toLowerCase() || "png"
+              const mime = `image/${ext === "jpg" ? "jpeg" : ext}`
+              if (custom && mime !== "image/png" && mime !== "image/jpeg")
+                throw new Error("Custom image edits support PNG and JPEG reference images")
+              const bytes = yield* Effect.tryPromise(() => Bun.file(file).bytes())
+              return { bytes, mime, name: path.basename(file) }
+            }),
+          )
           const model =
             params.model ?? (custom ? custom.model : (cfg.experimental?.image_generation_model ?? DEFAULT_MODEL))
           const generated = custom
-            ? yield* Images.generate(http, custom, { prompt: params.prompt, model, image: input, signal: ctx.abort })
+            ? yield* Images.generate(http, custom, { prompt: params.prompt, model, images: input, signal: ctx.abort })
             : undefined
           const req = resolved
             ? buildRequest(
                 resolved,
                 params.prompt,
                 model ?? DEFAULT_MODEL,
-                input ? `data:${input.mime};base64,${Buffer.from(input.bytes).toString("base64")}` : undefined,
+                input.map((image) => `data:${image.mime};base64,${Buffer.from(image.bytes).toString("base64")}`),
               )
             : undefined
           const response = req

@@ -77,6 +77,8 @@ The custom endpoint must implement `POST /images/generations` with JSON and `POS
 
 After saving the endpoint settings, use **Available image models** to select a model returned by its `/models` endpoint. **Refresh** reloads the catalog. Discovery uses the same global endpoint and optional token as generation, and excludes models explicitly marked with a non-image `capability`. Manual model entry remains available when discovery is unsupported or the server is offline.
 
+To combine reference images, ask the agent to use the files in a specific order and describe each one's role. The `generate_image` tool accepts an `images` array with up to 10 workspace paths, or the existing `image` argument for one reference. Each file requires read permission before upload. Custom endpoints receive multiple references as ordered `image[]` multipart fields; the selected model must support multiple references.
+
 ### Voice Transcription Model
 
 When the Kilo provider is enabled and you are signed in, choose the transcription model under **Models** > **Speech to Text Model**. This stores `experimental.speech_to_text_model` in your global Kilo CLI config:

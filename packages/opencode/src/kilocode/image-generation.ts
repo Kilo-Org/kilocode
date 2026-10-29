@@ -58,7 +58,7 @@ export function generate(
   input: {
     prompt: string
     model?: string
-    image?: { bytes: Uint8Array; mime: string; name: string }
+    images?: { bytes: Uint8Array; mime: string; name: string }[]
     signal: AbortSignal
   },
 ) {
@@ -67,13 +67,19 @@ export function generate(
     Effect.gen(function* () {
       const fields = { prompt: input.prompt, ...(input.model ? { model: input.model } : {}), n: 1 }
       const form = new FormData()
-      if (input.image) {
+      const images = input.images ?? []
+      if (images.length) {
         for (const [key, value] of Object.entries(fields)) form.set(key, String(value))
-        form.set("image", new Blob([new Uint8Array(input.image.bytes)], { type: input.image.mime }), input.image.name)
+        for (const image of images)
+          form.append(
+            images.length === 1 ? "image" : "image[]",
+            new Blob([new Uint8Array(image.bytes)], { type: image.mime }),
+            image.name,
+          )
       }
-      const request = HttpClientRequest.post(`${target.url}/images/${input.image ? "edits" : "generations"}`).pipe(
+      const request = HttpClientRequest.post(`${target.url}/images/${images.length ? "edits" : "generations"}`).pipe(
         HttpClientRequest.setHeaders(target.key ? { Authorization: `Bearer ${target.key}` } : {}),
-        input.image
+        images.length
           ? HttpClientRequest.bodyFormData(form)
           : HttpClientRequest.bodyText(JSON.stringify(fields), "application/json"),
       )
