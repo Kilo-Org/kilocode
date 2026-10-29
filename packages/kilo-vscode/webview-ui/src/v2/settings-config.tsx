@@ -20,6 +20,7 @@ import { parse as parseJsonc } from "jsonc-parser/lib/esm/main.js"
 import { unwrap } from "solid-js/store"
 import { showToast } from "@kilocode/kilo-ui/toast"
 import type { ConfigEdit, ConfigFileContent, ToHost, ToWebview } from "../../../src/protocol"
+import { aliasOf } from "../../../src/config-aliases"
 import { getVSCodeAPI, useVSCode } from "../context/vscode"
 import { useLanguage } from "../context/language"
 import { useV2 } from "./client"
@@ -81,8 +82,10 @@ export function createSettingsConfig() {
   const [files, setFiles] = createSignal<{ global?: ConfigFileContent; project?: ConfigFileContent }>({})
   const [settingsValues, setSettingsValues] = createSignal<Record<string, unknown>>(initialSettings())
   const [optimistic, setOptimistic] = createSignal<Optimistic[]>([])
+  const [inflight, setInflight] = createSignal<{ path: string; token: number }[]>([])
   const writers = new Map<number, (result: { ok: boolean; error?: string }) => void>()
   let nextWrite = 1
+  let nextToken = 1
 
   const toastError = (message: string) =>
     showToast({ variant: "error", title: language.t("settings.saveBar.saveFailed"), description: message })
@@ -140,8 +143,12 @@ export function createSettingsConfig() {
   const path = (scope: SettingsScope) => files()?.[scope]?.path
 
   const source = (path: string[]): SettingsScope | undefined => {
-    if (readPath(rawConfig().project, path) !== undefined) return "project"
-    if (readPath(rawConfig().global, path) !== undefined) return "global"
+    const aliases = aliasOf(path)
+    const defined = (scope: SettingsScope) =>
+      readPath(rawConfig()[scope], path) !== undefined ||
+      aliases.some((alias) => readPath(rawConfig()[scope], alias) !== undefined)
+    if (defined("project")) return "project"
+    if (defined("global")) return "global"
     return undefined
   }
 
@@ -153,10 +160,7 @@ export function createSettingsConfig() {
   }
 
   /** True while a write for this path is in flight, so a caller can prefer `value()` over the raw file. */
-  const pending = (path: string[]) => {
-    const key = pathKey(path)
-    return optimistic().some((item) => pathKey(item.path) === key)
-  }
+  const pending = (path: string[]) => inflight().some((item) => item.path === pathKey(path))
 
   const write = (scope: SettingsScope, edits: ConfigEdit[]) =>
     new Promise<{ ok: boolean; error?: string }>((resolve) => {
@@ -170,7 +174,15 @@ export function createSettingsConfig() {
     const key = pathKey(path)
     const writeValue = clone(value)
     setOptimistic((list) => [...list.filter((item) => pathKey(item.path) !== key), { scope, path, value: writeValue }])
-    const result = await write(scope, [{ path, value: writeValue }])
+    // A token per write keeps `pending` true until every write for the path settles, including both scopes.
+    const token = nextToken++
+    setInflight((list) => [...list, { path: key, token }])
+    let result: { ok: boolean; error?: string }
+    try {
+      result = await write(scope, [{ path, value: writeValue }])
+    } finally {
+      setInflight((list) => list.filter((item) => item.token !== token))
+    }
     if (!result.ok) {
       setOptimistic((list) => list.filter((item) => pathKey(item.path) !== key))
       toastError(result.error ?? language.t("settings.saveBar.saveFailed"))
