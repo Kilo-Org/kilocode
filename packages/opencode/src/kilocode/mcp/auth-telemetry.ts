@@ -125,6 +125,11 @@ export function redirect(needed: boolean) {
   return update({ redirect: needed, phase: needed ? "callback_setup" : "tool_discovery" })
 }
 
+/** The server connected, but the sign-in could not obtain credentials from it. */
+export function uncredentialed() {
+  return update({ phase: "prepare", code: "no_credentials" })
+}
+
 export function phase(next: Phase) {
   return update({ phase: next })
 }
