@@ -3,7 +3,7 @@
 import path from "node:path"
 // The ESM entry: the extension host bundles with `Bun.build`, which leaves the UMD entry's
 // `require("./impl/format")` as a runtime require that fails in `dist/extension.js`.
-import { applyEdits, modify } from "jsonc-parser/lib/esm/main.js"
+import { applyEdits, findNodeAtLocation, modify, parseTree } from "jsonc-parser/lib/esm/main.js"
 import { KiloConfigFiles } from "@opencode/util/kilocode/config/files"
 import type { ConfigEdit } from "./protocol"
 
@@ -20,8 +20,12 @@ export function applyConfigEdits(text: string, edits: ConfigEdit[]): string {
   for (const edit of edits) {
     if (!Array.isArray(edit.path) || edit.path.length === 0) continue
     result = applyEdits(result, modify(result, edit.path, edit.value, MODIFY))
-    for (const alias of aliasOf(edit.path))
+    for (const alias of aliasOf(edit.path)) {
+      // jsonc-parser throws when a delete targets a path the document does not define, so only remove a present alias.
+      const root = parseTree(result)
+      if (!root || !findNodeAtLocation(root, alias)) continue
       result = applyEdits(result, modify(result, alias, undefined, MODIFY))
+    }
   }
   return result
 }
