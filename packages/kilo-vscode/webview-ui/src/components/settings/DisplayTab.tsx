@@ -5,7 +5,7 @@ import { Card } from "@kilocode/kilo-ui/card"
 import { TextField } from "@kilocode/kilo-ui/text-field"
 import { createEffect, type Component } from "solid-js"
 import { useLanguage } from "../../context/language"
-import { applyFontSize, bootFontSize } from "../../v2/kilo-settings"
+import { applyFontSize, bootFontSize, clampFontSize } from "../../v2/kilo-settings"
 import { useSettingsConfig } from "../../v2/settings-config"
 import SettingsRow from "./SettingsRow"
 import Switch from "./Switch"
@@ -14,10 +14,7 @@ const DisplayTab: Component = () => {
   const config = useSettingsConfig()
   const language = useLanguage()
 
-  const fontSize = () => {
-    const value = config.setting("fontSize")
-    return typeof value === "number" ? value : bootFontSize()
-  }
+  const fontSize = () => clampFontSize(config.setting("fontSize")) ?? bootFontSize()
 
   // Preview the size live as the slider moves, as main resized without a save.
   createEffect(() => applyFontSize(fontSize()))

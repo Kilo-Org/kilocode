@@ -15,7 +15,7 @@ import type { ToHost, ToWebview } from "./protocol"
 import { bridge } from "./relay"
 import { saveImage } from "./save-image"
 import type { Manager } from "./server"
-import { readKiloSettings, settingsHost } from "./settings-host"
+import { KILO_SETTING_KEYS, readKiloSettings, settingsHost } from "./settings-host"
 import { promptKeybindings, watchKeybindings } from "./prompt-keybindings"
 
 export function chat(input: { context: ExtensionContext; server: Manager; directory: string }) {
@@ -98,11 +98,11 @@ export function wire(input: {
     input.view === "settings"
       ? settingsHost({ context: input.context, server: input.server, directory: input.directory, post })
       : undefined
-  // The sidebar carries the live font size and language: push a fresh value when either setting changes.
+  // The sidebar carries the live Kilo settings: push a fresh value when any of them changes.
   const settingsWatch =
     input.view === "chat"
       ? workspace.onDidChangeConfiguration((event) => {
-          if (event.affectsConfiguration(FONT_SIZE) || event.affectsConfiguration(LANGUAGE))
+          if (KILO_SETTING_KEYS.some((key) => event.affectsConfiguration(`${NAMESPACE}.${key}`)))
             post({ type: "vscodeSettingsLoaded", values: readKiloSettings() })
         })
       : undefined
@@ -164,8 +164,6 @@ export function wire(input: {
 const EXPANDED = "kilo-code.v2.modelSelectorExpanded"
 const AUTO_APPROVE = "kilo-code.v2.autoApprove"
 const NAMESPACE = "kilo-code.v2"
-const FONT_SIZE = `${NAMESPACE}.fontSize`
-const LANGUAGE = `${NAMESPACE}.language`
 const SIZES = [10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24]
 
 /** `kilo-code.v2.fontSize` when set, otherwise `editor.fontSize`, clamped to the v1 slider range. */

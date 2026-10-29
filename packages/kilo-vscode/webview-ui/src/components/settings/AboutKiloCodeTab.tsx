@@ -1,6 +1,6 @@
 // Main's About Kilo Code tab on v2 data. The version is the Kilo version from the `kilocode.handshake` RPC, and the
 // status is the connection of the webview's event stream. Telemetry opens the VS Code setting, Settings Transfer
-// exports the global config document and stages an import into the save bar, and Reset All Settings clears the
+// exports the global config document and applies an import to the global config, and Reset All Settings clears the
 // `kilo-code.v2.*` settings and the webview globalState keys. Not rendered, no v2 contract: the port (the host relays
 // requests, so the webview has no server port) and the Roo import.
 import { Button } from "@kilocode/kilo-ui/button"
@@ -70,8 +70,13 @@ const AboutKiloCodeTab: Component<AboutKiloCodeTabProps> = (props) => {
     const anchor = document.createElement("a")
     anchor.href = url
     anchor.download = "kilo-settings.json"
+    document.body.appendChild(anchor)
     anchor.click()
-    URL.revokeObjectURL(url)
+    // Revoke after the download starts and drop the anchor; a synchronous revoke can abort it.
+    window.setTimeout(() => {
+      URL.revokeObjectURL(url)
+      anchor.remove()
+    }, 0)
   }
 
   const handleImport = () => {
@@ -102,7 +107,7 @@ const AboutKiloCodeTab: Component<AboutKiloCodeTabProps> = (props) => {
         }
         if (result.warning === "newerVersion")
           showToast({ variant: "default", title: language.t("settings.aboutKiloCode.importSettings.newerVersion") })
-        // Stage every known key into the global draft; the save bar writes them.
+        // Apply every known key to the global config directly.
         for (const [key, value] of Object.entries(result.config)) config.set([key], value, "global")
         showToast({ variant: "success", title: language.t("settings.aboutKiloCode.importSettings.success") })
       }
@@ -118,7 +123,6 @@ const AboutKiloCodeTab: Component<AboutKiloCodeTabProps> = (props) => {
   }
 
   const handleReset = () => {
-    config.discard()
     post({ type: "resetAllSettings" })
   }
 

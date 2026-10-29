@@ -4,7 +4,7 @@ export const MAX_IMPORT_SIZE = 1_048_576
 /** Current export format version. */
 export const META_VERSION = 1
 
-/** Top-level config keys a v2 settings file may carry. */
+/** Top-level config keys a v2 settings file may carry. Export and import use this one set, so a transfer is lossless. */
 export const KNOWN_KEYS: ReadonlyArray<string> = [
   "shell",
   "model",
@@ -14,25 +14,38 @@ export const KNOWN_KEYS: ReadonlyArray<string> = [
   "enterprise",
   "username",
   "permissions",
+  "permission",
   "policies",
   "agents",
+  "agent",
+  "mode",
+  "small_model",
   "snapshots",
+  "snapshot",
+  "autoupdate",
+  "autoshare",
   "watcher",
   "formatter",
   "lsp",
   "media",
+  "attachment",
   "tool_output",
+  "tools",
   "mcp",
   "compaction",
   "skills",
   "commands",
+  "command",
   "instructions",
   "references",
+  "reference",
   "websearch",
   "plugins",
+  "plugin",
   "worktree",
   "warming",
   "providers",
+  "provider",
   "experimental",
 ]
 
@@ -48,12 +61,13 @@ interface ExportMeta {
   exportedAt: string
 }
 
-/** Build a JSON-serialisable export payload from a parsed config document. */
+/** Build a JSON-serialisable export payload from a parsed config document, keeping only importable keys. */
 export function buildExport(cfg: Record<string, unknown>): Record<string, unknown> {
   const meta: ExportMeta = { version: META_VERSION, exportedAt: new Date().toISOString() }
   const out: Record<string, unknown> = { _meta: meta }
-  for (const [key, value] of Object.entries(cfg)) {
-    if (key === "$schema" || value === undefined || value === null) continue
+  for (const key of KNOWN_KEYS) {
+    const value = cfg[key]
+    if (value === undefined || value === null) continue
     out[key] = value
   }
   return out
@@ -76,7 +90,8 @@ export function parseImport(json: string): ImportResult {
 
   let warning: ImportWarning | undefined
   const meta = obj._meta
-  if (typeof meta === "object" && meta !== null && !Array.isArray(meta)) {
+  const hasMeta = typeof meta === "object" && meta !== null && !Array.isArray(meta)
+  if (hasMeta) {
     const version = (meta as Record<string, unknown>).version
     if (typeof version === "number" && version > META_VERSION) warning = "newerVersion"
   }
@@ -85,7 +100,8 @@ export function parseImport(json: string): ImportResult {
   for (const key of KNOWN_KEYS) {
     if (key in obj && obj[key] !== undefined) config[key] = obj[key]
   }
-  if (Object.keys(config).length === 0) return { ok: false, error: "invalidConfig" }
+  // A `_meta`-only file is a valid export of an empty config; anything else with no known key is invalid.
+  if (Object.keys(config).length === 0 && !hasMeta) return { ok: false, error: "invalidConfig" }
 
   return warning ? { ok: true, config, warning } : { ok: true, config }
 }

@@ -11,6 +11,11 @@ function initial(): Record<string, unknown> {
 
 const clamp = (value: number) => Math.min(24, Math.max(10, Math.round(value)))
 
+/** Clamp a font size to the v1 slider range, or `undefined` when the value is not a finite number. */
+export function clampFontSize(value: unknown): number | undefined {
+  return typeof value === "number" && Number.isFinite(value) ? clamp(value) : undefined
+}
+
 /** The effective font size inlined at boot, from the CSS variables the host wrote. */
 const bootSize = (() => {
   const px = Number.parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--kilo-font-size-13"))
@@ -35,8 +40,7 @@ export function applyFontSize(size: number) {
 /** Replace the settings values and apply the font size, or reset it to the boot size when unset. */
 export function applyKiloSettings(values: Record<string, unknown>) {
   setKiloSettings(values)
-  const raw = Number(values.fontSize)
-  applyFontSize(Number.isFinite(raw) ? clamp(raw) : bootSize)
+  applyFontSize(clampFontSize(values.fontSize) ?? bootSize)
 }
 
 /** `kilo-code.v2.chat.shiftTabCyclesVariant`, on by default. */

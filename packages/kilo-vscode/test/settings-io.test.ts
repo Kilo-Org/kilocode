@@ -21,6 +21,13 @@ describe("buildExport", () => {
     expect(result.username).toBeUndefined()
     expect(result.share).toBeUndefined()
   })
+
+  it("exports only keys that import accepts", () => {
+    const result = buildExport({ username: "ada", future_key: 1, $schema: "x" })
+    expect(result.username).toBe("ada")
+    expect(result.future_key).toBeUndefined()
+    expect(result.$schema).toBeUndefined()
+  })
 })
 
 describe("parseImport", () => {
@@ -37,8 +44,15 @@ describe("parseImport", () => {
     expect(parseImport("not json")).toEqual({ ok: false, error: "invalidJson" })
   })
 
-  it("rejects an object with no known keys", () => {
+  it("rejects an object with no known keys and no _meta", () => {
     expect(parseImport(JSON.stringify({ nope: true }))).toEqual({ ok: false, error: "invalidConfig" })
+  })
+
+  it("accepts a _meta-only file as an empty import", () => {
+    const result = parseImport(JSON.stringify({ _meta: { version: META_VERSION, exportedAt: "x" } }))
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    expect(result.config).toEqual({})
   })
 
   it("warns on a newer export version", () => {
@@ -48,10 +62,10 @@ describe("parseImport", () => {
     expect(result.warning).toBe("newerVersion")
   })
 
-  it("exposes the v2 known keys and the 1 MB cap", () => {
+  it("exposes the v2 and migrated key set and the 1 MB cap", () => {
     expect(KNOWN_KEYS).toContain("username")
     expect(KNOWN_KEYS).toContain("permissions")
-    expect(KNOWN_KEYS).not.toContain("permission")
+    expect(KNOWN_KEYS).toContain("permission")
     expect(MAX_IMPORT_SIZE).toBe(1_048_576)
   })
 })
