@@ -1,6 +1,8 @@
 import type { Component } from "solid-js"
 
-/** Placeholder for the v2 contract of the Auto Approve tab. */
-const AutoApproveTab: Component = () => null
+import PermissionEditor from "./PermissionEditor"
+
+/** Auto-Approve runs on the root `permissions` ruleset. The cost alert has no v2 contract. */
+const AutoApproveTab: Component = () => <PermissionEditor target={{ kind: "root" }} />
 
 export default AutoApproveTab

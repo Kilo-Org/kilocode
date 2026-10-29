@@ -1177,7 +1177,7 @@ export const dict = {
     "Exécuter les commandes shell de l'agent dans un sandbox au niveau du système d'exploitation qui restreint les écritures aux répertoires d'état du projet et de Kilo",
 
   "settings.autoApprove.description":
-    "Définissez comment les outils sont autorisés à s'exécuter. La plupart des outils sont définis sur Autoriser par défaut. doom_loop et external_directory sont définis sur Demander par défaut.",
+    "Définissez comment les outils sont autorisés à s'exécuter. La plupart des outils sont définis sur Autoriser par défaut. Bash est défini sur Demander par défaut.",
   "settings.autoApprove.maxCost.title": "Alerte de coût de session",
   "settings.autoApprove.maxCost.description":
     "Alerter avant de continuer une session lorsque sa dépense dépasse ce montant en USD. Utilisez des dollars entiers ; laissez vide pour désactiver.",

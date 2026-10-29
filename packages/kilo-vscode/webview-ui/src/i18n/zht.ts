@@ -1056,7 +1056,7 @@ export const dict = {
     "在作業系統層級沙盒中執行代理 shell 指令，將寫入限制在專案和 Kilo 狀態目錄內",
 
   "settings.autoApprove.description":
-    "定義工具的執行權限。大多數工具預設為允許。doom_loop 與 external_directory 預設為詢問。",
+    "定義工具的執行權限。大多數工具預設為允許。Bash 預設為詢問。",
   "settings.autoApprove.maxCost.title": "工作階段費用提醒",
   "settings.autoApprove.maxCost.description":
     "當工作階段花費超過此美元金額後，在繼續前提醒。請使用整數美元；留空則停用。",
