@@ -214,6 +214,64 @@ describe("KiloConnectionService backend crash", () => {
 })
 
 describe("KiloConnectionService SSE startup", () => {
+  it.each([false, true])("recovers the current stream or explicitly replaces it (retry: %s)", async (retry) => {
+    const original = globalThis.fetch
+    const chunk = new TextEncoder().encode(
+      'data: {"payload":{"id":"evt_connected","type":"server.connected","properties":{}}}\n\n',
+    )
+    const streams: ReadableStreamDefaultController<Uint8Array>[] = []
+    const reconnecting = Promise.withResolvers<void>()
+    const replaced = Promise.withResolvers<void>()
+    let calls = 0
+    let servers = 0
+    globalThis.fetch = (async (input: RequestInfo | URL) => {
+      const url = input instanceof Request ? input.url : String(input)
+      if (!url.endsWith("/global/event")) return Response.json(true)
+      calls += 1
+      return new Response(
+        new ReadableStream<Uint8Array>({
+          start(controller) {
+            streams.push(controller)
+            if (calls === 1) controller.enqueue(chunk)
+            if (calls === 2) reconnecting.resolve()
+            if (calls === 3) replaced.resolve()
+          },
+        }),
+        { status: 200, headers: { "content-type": "text/event-stream" } },
+      )
+    }) as typeof fetch
+    const service = new KiloConnectionService({} as never)
+    const internal = service as unknown as {
+      serverManager: { getServer(): Promise<unknown> }
+    }
+    internal.serverManager.getServer = async () => {
+      servers += 1
+      return { port: 52512, password: "secret", process: {} }
+    }
+    try {
+      await service.connect("C:\\work\\demo")
+      const client = service.getClient()
+      streams.at(0)!.close()
+      await reconnecting.promise
+      const pending = service.getClientAsync("C:\\work\\demo", undefined, true)
+      const reconnect = retry
+        ? Promise.all([service.connect("C:\\work\\demo"), service.connect("C:\\work\\demo")])
+        : undefined
+      if (retry) await replaced.promise
+      expect(service.getConnectionState()).toBe("connecting")
+      streams.at(retry ? 2 : 1)!.enqueue(chunk)
+      const ready = await pending
+      await reconnect
+      expect(ready).toBe(service.getClient())
+      expect(ready === client).toBe(!retry)
+      expect(calls).toBe(retry ? 3 : 2)
+      expect(servers).toBe(retry ? 2 : 1)
+    } finally {
+      service.dispose()
+      globalThis.fetch = original
+    }
+  })
+
   it("waits through an initial SSE fetch failure until the stream opens", async () => {
     const original = globalThis.fetch
     const chunk = new TextEncoder().encode(
