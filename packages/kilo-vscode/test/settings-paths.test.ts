@@ -11,12 +11,14 @@ describe("resolveGlobalConfigDir", () => {
   })
 
   test("the dev profile maps to <profile>/config/<app>", () => {
-    expect(resolveGlobalConfigDir({}, "/prof")).toBe("/prof/config/kilo2")
-    expect(resolveGlobalConfigDir({ OPENCODE_APP_DIR_NAME: "kilo" }, "/prof")).toBe("/prof/config/kilo")
+    expect(resolveGlobalConfigDir({}, "/prof")).toBe(path.join("/prof", "config", "kilo2"))
+    expect(resolveGlobalConfigDir({ OPENCODE_APP_DIR_NAME: "kilo" }, "/prof")).toBe(
+      path.join("/prof", "config", "kilo"),
+    )
   })
 
   test("a bundled server uses XDG_CONFIG_HOME and the app directory", () => {
-    expect(resolveGlobalConfigDir({ XDG_CONFIG_HOME: "/xdg" }, "")).toBe("/xdg/kilo2")
+    expect(resolveGlobalConfigDir({ XDG_CONFIG_HOME: "/xdg" }, "")).toBe(path.join("/xdg", "kilo2"))
   })
 })
 
