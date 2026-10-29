@@ -21,11 +21,34 @@ for (const [file, replacements] of Object.entries(KiloBranding.replacements)) {
     const branded = KiloBranding.transform(filename, original)
     for (const [from, to] of replacements) {
       expect(branded).toContain(to)
-      if (!to.includes(from)) expect(branded).not.toContain(from)
+      expect(branded.split(from).length - 1).toBe(
+        (original.replaceAll("\r\n", "\n").split(from).length - 1) * (to.split(from).length - 1),
+      )
     }
     expect(branded.match(/@opencode\/[\w/.-]+/g)).toEqual(original.match(/@opencode\/[\w/.-]+/g))
   })
 }
+
+test("does not rewrite the upstream theme registry", async () => {
+  const filename = path.join(repo, "packages/tui/src/theme/index.ts")
+  const original = await Bun.file(filename).text()
+  expect(KiloBranding.transform(filename, original)).toBe(original)
+})
+
+test("does not rewrite CLI or ACP executable selection", async () => {
+  for (const [file, anchor] of [
+    ["cli/src/commands/commands.ts", 'typeof OPENCODE_CLI_NAME === "string" ? OPENCODE_CLI_NAME : "opencode"'],
+    ["cli/src/acp/service.ts", 'command: "opencode"'],
+  ] as const) {
+    const filename = path.join(repo, "packages", file)
+    const original = await Bun.file(filename).text()
+    expect(original).toContain(anchor)
+    expect(KiloBranding.transform(filename, original)).toContain(anchor)
+  }
+  const filename = path.join(repo, "packages/cli/src/acp/agent.ts")
+  const original = await Bun.file(filename).text()
+  expect(KiloBranding.transform(filename, original)).toBe(original)
+})
 
 test("branding is independent of LF or CRLF checkouts", async () => {
   for (const file of Object.keys(KiloBranding.replacements)) {

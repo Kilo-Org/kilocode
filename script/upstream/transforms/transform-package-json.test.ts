@@ -1,4 +1,7 @@
 import { expect, test } from "bun:test"
+import path from "node:path"
+import { pathToFileURL } from "node:url"
+import { repo, type Repo } from "../utils/testing"
 import {
   assertBunPackageManager,
   fixCatalog,
@@ -12,9 +15,10 @@ import {
   prunePatchedDependencies,
   selectBunPackageManager,
   transformDependencies,
+  type PackageJsonResult,
 } from "./transform-package-json"
 
-test("fixScripts preserves Kilo's root dev and lint scripts from base", () => {
+test("fixScripts preserves Kilo root scripts when the base is unknown", () => {
   const ours = { scripts: { dev: "bun script/dev-isolated.ts", lint: "oxlint", build: "tsc" } }
   const pkg: Record<string, unknown> = {
     scripts: { dev: "bun run script/dev.ts", lint: "oxlint && bun script/sdk-docs.ts", test: "bun test" },
@@ -26,8 +30,13 @@ test("fixScripts preserves Kilo's root dev and lint scripts from base", () => {
   const scripts = pkg.scripts as Record<string, string>
   expect(scripts.dev).toBe("bun script/dev-isolated.ts")
   expect(scripts.lint).toBe("oxlint")
+  expect(scripts.build).toBe("tsc")
   expect(scripts.test).toBe("bun test")
-  expect(changes).toEqual(["scripts.dev: preserved from base", "scripts.lint: preserved from base"])
+  expect(changes).toEqual([
+    "scripts.dev: preserved Kilo change",
+    "scripts.lint: preserved Kilo change",
+    "scripts.build: preserved Kilo change",
+  ])
 })
 
 test("fixScripts leaves other packages untouched", () => {
@@ -66,6 +75,98 @@ test("fixScripts and fixExports keep Kilo additions and upstream changes", () =>
   expect(Object.keys(pkg.exports as Record<string, string>)).toEqual(["./*", "./run"])
   expect(Object.keys(pkg.scripts as Record<string, string>)).toEqual(["test", "test:ci", "typecheck", "typecheck:tsc"])
   expect(changes).toEqual(["scripts.test:ci: preserved Kilo change", "exports../*: preserved Kilo change"])
+})
+
+test("fixScripts and fixExports preserve known-base three-way behavior", () => {
+  const base = {
+    scripts: { same: "base", changed: "base", deleted: "base", conflict: "base", removedUp: "base" },
+    exports: {
+      "./same": "base",
+      "./changed": "base",
+      "./deleted": "base",
+      "./conflict": "base",
+      "./removedUp": "base",
+    },
+  }
+  const ours = {
+    scripts: { same: "base", changed: "kilo", conflict: "kilo", removedUp: "base" },
+    exports: { "./same": "base", "./changed": "kilo", "./conflict": "kilo", "./removedUp": "base" },
+  }
+  const pkg: Record<string, unknown> = {
+    scripts: { same: "upstream", changed: "base", deleted: "base", conflict: "upstream", extra: "upstream" },
+    exports: {
+      "./same": "upstream",
+      "./changed": "base",
+      "./deleted": "base",
+      "./conflict": "upstream",
+      "./extra": "upstream",
+    },
+  }
+  const changes: string[] = []
+
+  fixScripts(pkg, "packages/cli/package.json", ours, base, changes)
+  fixExports(pkg, ours, base, changes)
+
+  expect(pkg.scripts).toEqual({ same: "upstream", changed: "kilo", conflict: "upstream", extra: "upstream" })
+  expect(pkg.exports).toEqual({
+    "./same": "upstream",
+    "./changed": "kilo",
+    "./conflict": "upstream",
+    "./extra": "upstream",
+  })
+  expect(changes).toEqual([
+    "scripts.changed: preserved Kilo change",
+    "scripts.deleted: preserved Kilo removal",
+    "exports../changed: preserved Kilo change",
+    "exports../deleted: preserved Kilo removal",
+  ])
+})
+
+test("fixScripts and fixExports treat an empty base as known", () => {
+  const ours = {
+    scripts: { shared: "kilo", kilo: "kilo" },
+    exports: { "./shared": "kilo", "./kilo": "kilo" },
+  }
+  const pkg: Record<string, unknown> = {
+    scripts: { shared: "upstream", upstream: "upstream" },
+    exports: { "./shared": "upstream", "./upstream": "upstream" },
+  }
+  const changes: string[] = []
+
+  fixScripts(pkg, "packages/cli/package.json", ours, {}, changes)
+  fixExports(pkg, ours, {}, changes)
+
+  expect(pkg.scripts).toEqual({ shared: "upstream", kilo: "kilo", upstream: "upstream" })
+  expect(pkg.exports).toEqual({ "./shared": "upstream", "./kilo": "kilo", "./upstream": "upstream" })
+  expect(changes).toEqual(["scripts.kilo: preserved Kilo change", "exports../kilo: preserved Kilo change"])
+})
+
+test("fixScripts preserves root exceptions when both sides changed", () => {
+  const base = { scripts: { dev: "base", lint: "base", test: "base" } }
+  const ours = { scripts: { dev: "kilo", lint: "kilo", test: "kilo" } }
+  const pkg: Record<string, unknown> = { scripts: { dev: "upstream", lint: "upstream", test: "upstream" } }
+  const changes: string[] = []
+
+  fixScripts(pkg, "package.json", ours, base, changes)
+
+  expect(pkg.scripts).toEqual({ dev: "kilo", lint: "kilo", test: "upstream" })
+  expect(changes).toEqual(["scripts.dev: preserved from base", "scripts.lint: preserved from base"])
+})
+
+test("fixScripts and fixExports retain upstream-only entries when ours is empty or missing", () => {
+  const pkg: Record<string, unknown> = {
+    scripts: { build: "bun build" },
+    exports: { "./upstream": "./src/upstream.ts" },
+  }
+  const changes: string[] = []
+
+  fixScripts(pkg, "packages/cli/package.json", { scripts: {} }, null, changes)
+  fixExports(pkg, { exports: {} }, null, changes)
+  fixScripts(pkg, "packages/cli/package.json", null, null, changes)
+  fixExports(pkg, null, null, changes)
+
+  expect(pkg).toEqual({ scripts: { build: "bun build" }, exports: { "./upstream": "./src/upstream.ts" } })
+  expect(changes).toEqual([])
 })
 
 test("fixRepository keeps Kilo metadata only when Kilo changed it from base", () => {
@@ -276,4 +377,151 @@ test("dependency merge takes upstream for values that are not version strings", 
   const ours = { x: { y: "1.0.0" } } as unknown as Record<string, string>
   const theirs = { x: { y: "2.0.0" } } as unknown as Record<string, string>
   expect(mergeWithNewestVersions(ours, theirs, [], "overrides")).toEqual(theirs)
+})
+
+const manifestPath = "packages/cli/package.json"
+const ourManifest = {
+  name: "@opencode/cli",
+  scripts: { test: "kilo test", "test:ci": "kilo ci", noop: "" },
+  exports: { "./*": "./src/*.ts", "./shared": "./src/kilo.ts", "./blocked": null },
+}
+const upstreamManifest = {
+  name: "@opencode/cli",
+  scripts: { test: "upstream test", noop: "upstream noop", pack: "upstream pack" },
+  exports: { "./shared": "./src/upstream.ts", "./blocked": "./src/blocked.ts", "./new": "./src/new.ts" },
+}
+const expectedManifest = {
+  name: "@opencode/cli",
+  scripts: { test: "kilo test", "test:ci": "kilo ci", noop: "", pack: "upstream pack" },
+  exports: { "./*": "./src/*.ts", "./shared": "./src/kilo.ts", "./blocked": null, "./new": "./src/new.ts" },
+}
+const gitEnv = { ...process.env, GIT_CONFIG_GLOBAL: "/dev/null", GIT_CONFIG_NOSYSTEM: "1" }
+
+async function invoke<T extends PackageJsonResult | PackageJsonResult[]>(
+  r: Repo,
+  method: "transformAllPackageJson" | "reconcilePackageJsonFromRefs" | "transformPackageJson",
+  args: unknown[],
+): Promise<T> {
+  const source = [
+    `import { ${method} } from ${JSON.stringify(pathToFileURL(path.join(import.meta.dir, "transform-package-json.ts")).href)}`,
+    `console.log("TRANSFORM_RESULT:" + JSON.stringify(await ${method}(...${JSON.stringify(args)})))`,
+  ].join("\n")
+  const child = Bun.spawn([process.execPath, "-e", source], {
+    cwd: r.dir,
+    env: gitEnv,
+    stdout: "pipe",
+    stderr: "pipe",
+  })
+  const [stdout, stderr, status] = await Promise.all([
+    new Response(child.stdout).text(),
+    new Response(child.stderr).text(),
+    child.exited,
+  ])
+  if (status !== 0) throw new Error(`${stderr}\n${stdout}`)
+  const result = stdout.split("\n").find((line) => line.startsWith("TRANSFORM_RESULT:"))
+  if (!result) throw new Error(`Missing transform result: ${stderr}\n${stdout}`)
+  return JSON.parse(result.slice("TRANSFORM_RESULT:".length)) as T
+}
+
+function expectPreserved(result: PackageJsonResult) {
+  expect(result.file).toBe(manifestPath)
+  expect(result.action).toBe("transformed")
+  expect(result.changes).toEqual([
+    "scripts.test: preserved Kilo change",
+    "scripts.test:ci: preserved Kilo change",
+    "scripts.noop: preserved Kilo change",
+    "exports../*: preserved Kilo change",
+    "exports../shared: preserved Kilo change",
+    "exports../blocked: preserved Kilo change",
+  ])
+}
+
+test("transformAllPackageJson preserves Kilo entries when the base is unknown", async () => {
+  await using r = await repo()
+  await r.write(manifestPath, JSON.stringify(ourManifest, null, 2) + "\n")
+  const oursRef = await r.commit("Kilo manifest")
+  await r.git("update-ref", "refs/remotes/origin/v2", oursRef)
+  const upstream = JSON.stringify(upstreamManifest, null, 2) + "\n"
+  await r.write(manifestPath, upstream)
+
+  const dry = await invoke<PackageJsonResult[]>(r, "transformAllPackageJson", [{ dryRun: true }])
+  expect(dry).toHaveLength(1)
+  expect(dry[0].dryRun).toBe(true)
+  expectPreserved(dry[0])
+  expect(await Bun.file(path.join(r.dir, manifestPath)).text()).toBe(upstream)
+  expect(JSON.parse(await r.git("show", `:${manifestPath}`))).toEqual(ourManifest)
+
+  const result = await invoke<PackageJsonResult[]>(r, "transformAllPackageJson", [])
+  expect(result).toHaveLength(1)
+  expect(result[0].dryRun).toBe(false)
+  expectPreserved(result[0])
+  expect(await Bun.file(path.join(r.dir, manifestPath)).json()).toEqual(expectedManifest)
+  expect(JSON.parse(await r.git("show", `:${manifestPath}`))).toEqual(ourManifest)
+})
+
+test.each([
+  { name: "no merge base", hasBase: false },
+  { name: "no manifest at the merge base", hasBase: true },
+])("reconcilePackageJsonFromRefs preserves Kilo entries with $name", async (scenario) => {
+  await using r = await repo()
+  const base = scenario.hasBase ? await r.commit("empty base") : null
+  await r.write(manifestPath, JSON.stringify(ourManifest, null, 2) + "\n")
+  const oursRef = await r.commit("Kilo manifest")
+  await r.git("switch", "-q", ...(base ? ["-c", "upstream", base] : ["--orphan", "upstream"]))
+  const upstream = JSON.stringify(upstreamManifest, null, 2) + "\n"
+  await r.write(manifestPath, upstream)
+  const theirsRef = await r.commit("upstream manifest")
+  if (base) {
+    expect(await r.git("merge-base", oursRef, theirsRef)).toBe(base)
+    await expect(r.git("cat-file", "-e", `${base}:${manifestPath}`)).rejects.toThrow()
+  }
+  if (!base) await expect(r.git("merge-base", oursRef, theirsRef)).rejects.toThrow()
+  const before = await r.git("show", `:${manifestPath}`)
+
+  const dry = await invoke<PackageJsonResult>(r, "reconcilePackageJsonFromRefs", [
+    manifestPath,
+    { oursRef, theirsRef, dryRun: true },
+  ])
+  expect(dry.dryRun).toBe(true)
+  expectPreserved(dry)
+  expect(await Bun.file(path.join(r.dir, manifestPath)).text()).toBe(upstream)
+  expect(await r.git("show", `:${manifestPath}`)).toBe(before)
+
+  const result = await invoke<PackageJsonResult>(r, "reconcilePackageJsonFromRefs", [
+    manifestPath,
+    { oursRef, theirsRef },
+  ])
+  expect(result.dryRun).toBe(false)
+  expectPreserved(result)
+  expect(await Bun.file(path.join(r.dir, manifestPath)).json()).toEqual(expectedManifest)
+  expect(JSON.parse(await r.git("show", `:${manifestPath}`))).toEqual(expectedManifest)
+})
+
+test("transformPackageJson preserves Kilo entries in an add/add conflict", async () => {
+  await using r = await repo()
+  const base = await r.commit("empty base")
+  await r.write(manifestPath, JSON.stringify(ourManifest, null, 2) + "\n")
+  await r.commit("Kilo manifest")
+  await r.git("switch", "-q", "-c", "upstream", base)
+  await r.write(manifestPath, JSON.stringify(upstreamManifest, null, 2) + "\n")
+  const theirsRef = await r.commit("upstream manifest")
+  await r.git("switch", "-q", "dev")
+  await expect(r.git("merge", "--no-commit", "--no-ff", theirsRef)).rejects.toThrow()
+  const stages = await r.git("ls-files", "-u", "--", manifestPath)
+  expect(stages).not.toContain(` 1\t${manifestPath}`)
+  expect(stages).toContain(` 2\t${manifestPath}`)
+  expect(stages).toContain(` 3\t${manifestPath}`)
+  const before = await Bun.file(path.join(r.dir, manifestPath)).text()
+
+  const dry = await invoke<PackageJsonResult>(r, "transformPackageJson", [manifestPath, { dryRun: true }])
+  expect(dry).toEqual({ file: manifestPath, action: "transformed", changes: [], dryRun: true })
+  expect(await Bun.file(path.join(r.dir, manifestPath)).text()).toBe(before)
+  expect(await r.git("ls-files", "-u", "--", manifestPath)).toBe(stages)
+
+  const result = await invoke<PackageJsonResult>(r, "transformPackageJson", [manifestPath])
+  expect(result.dryRun).toBe(false)
+  expectPreserved(result)
+  expect(await Bun.file(path.join(r.dir, manifestPath)).json()).toEqual(expectedManifest)
+  expect(JSON.parse(await r.git("show", `:${manifestPath}`))).toEqual(expectedManifest)
+  expect(await r.git("diff", "--name-only", "--diff-filter=U", "--", manifestPath)).toBe("")
 })
