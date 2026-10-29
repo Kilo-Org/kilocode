@@ -24,4 +24,10 @@ describe("scopeOf", () => {
   test("returns undefined when neither file defines the path or an alias", () => {
     expect(scopeOf(["share"], {}, {})).toBeUndefined()
   })
+
+  test("returns undefined for a leaf the owning scope shadows", () => {
+    const project = { agents: { build: { description: "d" } } }
+    const global = { agents: { build: { model: "m" } } }
+    expect(scopeOf(["agents", "build", "model"], project, global)).toBeUndefined()
+  })
 })
