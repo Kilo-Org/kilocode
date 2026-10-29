@@ -580,5 +580,20 @@
     "state": "ported",
     "note": "webview-ui/src/v2/auto-approve.tsx replaces the v1 bridge: it requests the persisted state, listens for autoApproveStateLoaded, and persists toggles through the requestAutoApproveState/persistAutoApproveState messages in src/protocol.ts, handled by src/chat.ts. Replies use permission.reply({sessionID, requestID, decision: \"once\"}), so v1's SSE/session directory resolution is not needed.",
     "by": "v2-auto-approve"
+  },
+  "module:packages/opencode/src/kilocode/review/review.txt": {
+    "state": "ported",
+    "note": "packages/kilo-plugin/src/review/review.txt, the v1 prompt with two adaptations: the sub-agent tool is named `subagent` instead of Task, and the sentence tying the default base list to Review.getBaseBranch() in review.ts is dropped (no base-branch helper on v2; review.ts stays open under #15315/#14394). Scope order, effort flags, base order, target validation, worktree metadata candidates (unchanged: Agent Manager metadata, not runtime config), tracks, output format, no-edit rule and the post-review question with `mode` are unchanged. packages/kilo-plugin/test/review-command.test.ts checks them.",
+    "by": "v2-review-cmd"
+  },
+  "module:packages/opencode/src/kilocode/review/command.ts": {
+    "state": "ported",
+    "note": "packages/kilo-plugin/src/review/index.ts KiloReview.Plugin registers `review` with the v1 description through ctx.command.transform and prompts the invoking session with the prompt, `$ARGUMENTS` replaced by the trimmed input. It is in KiloPlugins, after the built-in plugins (replaces the built-in review) and before the config plugins (a config `review` still wins); packages/kilo-cli/test/review-command.test.ts proves both on the host server. v2 Command.Info has no `hints` field. isReviewCommand/reviewCommandName/parseReviewCommand serve review telemetry (session/processor.ts, #15303) and the suggest tool (suggestion/index.ts, #15332); their consumers are open cells and port the helper with them. The command-display.ts use is a no-op special case (name === \"review\").",
+    "by": "v2-review-cmd"
+  },
+  "module:packages/opencode/test/kilocode/review-command.test.ts": {
+    "state": "ported",
+    "note": "packages/kilo-plugin/test/review-command.test.ts carries every prompt assertion (scopes and precedence, metadata candidates, base order, commit and PR review, untrusted input, symlinks, no-edit contract, tracks, adaptive sub-agents) plus scope order, effort flags, the `subagent` adaptation and a decode of the post-review question example with `mode` through QuestionTool.Input; it also runs the built-in then the Kilo command plugin and checks the registered description and prompt. packages/kilo-cli/test/review-command.test.ts replaces the 'resolves the review command' case on the real host server, with the config override. Not carried: the parseReviewCommand cases (telemetry helper, #15303), `hints` (no v2 field), and the Review.getBaseBranch() reference (dropped from the prompt).",
+    "by": "v2-review-cmd"
   }
 }
