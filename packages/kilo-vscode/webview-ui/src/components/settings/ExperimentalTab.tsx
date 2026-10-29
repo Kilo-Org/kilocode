@@ -11,6 +11,7 @@ import { useImageModels } from "../../context/image-models"
 import type { ExtensionMessage } from "../../types/messages"
 import SettingsRow from "./SettingsRow"
 import PatternList from "./PatternList"
+import ImageOptions from "./ImageOptions"
 
 interface ShareOption {
   value: string
@@ -255,6 +256,7 @@ const ExperimentalTab: Component = () => {
                 {language.t("settings.experimental.imageGenerationModels.refresh")}
               </Button>
             </SettingsRow>
+            <ImageOptions />
           </Show>
         </Show>
 

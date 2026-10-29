@@ -12,6 +12,7 @@ export function withGlobalImages<T extends Pick<Config, "experimental">>(
       ...cfg.experimental,
       image_generation_base_url: host?.image_generation_base_url,
       image_generation_api_key: host?.image_generation_api_key,
+      image_generation_options: host?.image_generation_options,
       ...(host?.image_generation_base_url?.trim() ? { image_generation_model: host.image_generation_model } : {}),
     },
   }

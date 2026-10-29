@@ -12,6 +12,7 @@ import { Config } from "@/config/config"
 import { KILO_OPENROUTER_BASE } from "@kilocode/kilo-gateway"
 import DESCRIPTION from "./generate-image.txt"
 import * as Images from "../image-generation"
+import { Options } from "@opencode-ai/core/kilocode/image-generation"
 
 const log = Log.create({ service: "tool.generate_image" })
 
@@ -124,6 +125,7 @@ function buildRequest(resolved: ResolvedProvider, prompt: string, model: string,
 }
 
 const Parameters = Schema.Struct({
+  ...Options.fields,
   prompt: Schema.String.annotate({ description: "Text description of the image to generate or the edits to apply" }),
   path: Schema.String.annotate({
     description: "Filesystem path (relative to the workspace) where the resulting image should be saved",
@@ -167,6 +169,14 @@ export const GenerateImageTool = Tool.define(
           if (params.image != null && params.images != null) throw new Error("Provide either image or images, not both")
           const cfg = yield* configSvc.get()
           const custom = Images.source(yield* configSvc.getGlobal())
+          const options = {
+            size: params.size ?? custom?.options?.size,
+            background: params.background ?? custom?.options?.background,
+            seed: params.seed ?? custom?.options?.seed,
+            steps: params.steps ?? custom?.options?.steps,
+          }
+          if (!custom && Object.values(options).some((value) => value != null))
+            throw new Error("Image size, background, seed, and steps options require a custom Images API endpoint")
           const auth = custom ? undefined : yield* authSvc.get("kilo")
           const authInput: AuthInput | undefined = auth
             ? {
@@ -213,7 +223,13 @@ export const GenerateImageTool = Tool.define(
           const model =
             params.model ?? (custom ? custom.model : (cfg.experimental?.image_generation_model ?? DEFAULT_MODEL))
           const generated = custom
-            ? yield* Images.generate(http, custom, { prompt: params.prompt, model, images: input, signal: ctx.abort })
+            ? yield* Images.generate(http, custom, {
+                prompt: params.prompt,
+                model,
+                images: input,
+                options,
+                signal: ctx.abort,
+              })
             : undefined
           const req = resolved
             ? buildRequest(

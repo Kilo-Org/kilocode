@@ -18,6 +18,7 @@ import { ConfigServerV1 } from "./server"
 import { ConfigSkillsV1 } from "./skills"
 // kilocode_change start
 import { ZodOverride } from "../../effect-zod"
+import { Options as ImageOptions } from "../../kilocode/image-generation"
 import {
   IndexingConfig as KiloIndexingConfig,
   IndexingSchema as KiloIndexingSchema,
@@ -333,6 +334,9 @@ export const Info = Schema.Struct({
       }),
       image_generation_api_key: Schema.optional(Schema.String).annotate({
         description: "Optional bearer token for the global custom image generation endpoint.",
+      }),
+      image_generation_options: Schema.optional(ImageOptions).annotate({
+        description: "Global defaults for custom image generation. Individual tool calls can override these options.",
       }),
       native_notebook_tools: Schema.optional(Schema.Boolean).annotate({
         description: "Enable native tools for reading, editing, and executing VS Code notebooks",

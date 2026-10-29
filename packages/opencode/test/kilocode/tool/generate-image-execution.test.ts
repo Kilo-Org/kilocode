@@ -63,6 +63,7 @@ it.instance("uses the global Images API for generation and multipart edits witho
       image_generation_base_url: `http://127.0.0.1:${server.port}/v1/`,
       image_generation_model: "gufo",
       image_generation_api_key: undefined as string | undefined,
+      image_generation_options: { size: "512x512", background: "opaque" as const, seed: 7, steps: 12 },
     }
     const config = TestConfig.make({
       get: () => Effect.succeed({ experimental: { image_generation_model: "project-model" } }),
@@ -86,21 +87,36 @@ it.instance("uses the global Images API for generation and multipart edits witho
           permissions.push(request.permission)
         }),
     }
-    const result = yield* tool.execute({ prompt: "Generate", path: "generated.png" }, ctx)
+    const result = yield* tool.execute({ prompt: "Generate", path: "generated.png", seed: 0 }, ctx)
     expect(result.attachments?.at(0)?.url).toBe(url)
     const generation = requests.at(0)!
     expect(new URL(generation.url).pathname).toBe("/v1/images/generations")
     expect(generation.headers.get("authorization")).toBeNull()
-    expect(yield* Effect.promise(() => generation.json())).toEqual({ prompt: "Generate", model: "gufo", n: 1 })
+    expect(yield* Effect.promise(() => generation.json())).toEqual({
+      prompt: "Generate",
+      model: "gufo",
+      n: 1,
+      size: "512x512",
+      background: "opaque",
+      seed: 0,
+      steps: 12,
+    })
 
     host.image_generation_api_key = "custom-key"
-    yield* tool.execute({ prompt: "Edit", image: "generated.png", path: "edited.png" }, ctx)
+    yield* tool.execute(
+      { prompt: "Edit", image: "generated.png", path: "edited.png", steps: 20, background: "transparent" },
+      ctx,
+    )
     const edit = requests.at(1)!
     expect(new URL(edit.url).pathname).toBe("/v1/images/edits")
     expect(edit.headers.get("authorization")).toBe("Bearer custom-key")
     const form = yield* Effect.promise(() => edit.formData())
     expect(form.get("prompt")).toBe("Edit")
     expect(form.get("model")).toBe("gufo")
+    expect(form.get("seed")).toBe("7")
+    expect(form.get("steps")).toBe("20")
+    expect(form.get("background")).toBe("transparent")
+    expect(form.get("size")).toBe("512x512")
     const file = form.get("image")
     if (!(file instanceof File)) throw new Error("Missing image upload")
     expect(yield* Effect.promise(() => file.bytes())).toEqual(Buffer.from(png, "base64"))

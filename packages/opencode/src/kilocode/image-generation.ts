@@ -2,6 +2,7 @@ import { Effect, Schema } from "effect"
 import { FetchHttpClient, HttpClient, HttpClientRequest } from "effect/unstable/http"
 import type { Config } from "@/config/config"
 import { runner } from "./tool/host"
+import type { Options } from "@opencode-ai/core/kilocode/image-generation"
 
 export function source(cfg: Config.Info) {
   const base = cfg.experimental?.image_generation_base_url?.trim()
@@ -13,6 +14,7 @@ export function source(cfg: Config.Info) {
     url: base.replace(/\/+$/, ""),
     key: cfg.experimental?.image_generation_api_key?.trim(),
     model: cfg.experimental?.image_generation_model?.trim() || undefined,
+    ...(cfg.experimental?.image_generation_options ? { options: cfg.experimental.image_generation_options } : {}),
   }
 }
 
@@ -59,17 +61,20 @@ export function generate(
     prompt: string
     model?: string
     images?: { bytes: Uint8Array; mime: string; name: string }[]
+    options?: Options
     signal: AbortSignal
   },
 ) {
   if (input.signal.aborted) return Effect.fail(new Error("Image generation cancelled"))
   return run(
     Effect.gen(function* () {
-      const fields = { prompt: input.prompt, ...(input.model ? { model: input.model } : {}), n: 1 }
+      const fields = { prompt: input.prompt, ...(input.model ? { model: input.model } : {}), n: 1, ...input.options }
       const form = new FormData()
       const images = input.images ?? []
       if (images.length) {
-        for (const [key, value] of Object.entries(fields)) form.set(key, String(value))
+        for (const [key, value] of Object.entries(fields)) {
+          if (value != null) form.set(key, String(value))
+        }
         for (const image of images)
           form.append(
             images.length === 1 ? "image" : "image[]",
