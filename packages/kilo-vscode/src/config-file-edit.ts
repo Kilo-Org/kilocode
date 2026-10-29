@@ -9,6 +9,23 @@ import type { ConfigEdit } from "./protocol"
 
 const MODIFY = { formattingOptions: { tabSize: 2, insertSpaces: true, eol: "\n" } }
 
+/**
+ * Run tasks one at a time in call order. Each task's result resolves its own promise; a rejected task does not break
+ * the chain, so a later write still runs. A read-modify-write over one file must be serialized, or two overlapping
+ * passes both read the pre-edit text and the later write drops the earlier edit.
+ */
+export function serialize(): <T>(task: () => Promise<T>) => Promise<T> {
+  let tail: Promise<unknown> = Promise.resolve()
+  return (task) => {
+    const result = tail.then(task)
+    tail = result.then(
+      () => undefined,
+      () => undefined,
+    )
+    return result
+  }
+}
+
 /** True only for the Kilo v2 config file names, so a write never lands in another file. */
 export function isKiloConfigFile(file: string): boolean {
   return KiloConfigFiles.names.includes(path.basename(file))
