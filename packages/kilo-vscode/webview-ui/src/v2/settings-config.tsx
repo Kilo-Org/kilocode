@@ -142,6 +142,12 @@ export function createSettingsConfig() {
     return readPath(merged(), path)
   }
 
+  /** True while a write for this path is in flight, so a caller can prefer `value()` over the raw file. */
+  const pending = (path: string[]) => {
+    const key = pathKey(path)
+    return optimistic().some((item) => pathKey(item.path) === key)
+  }
+
   const write = (scope: SettingsScope, edits: ConfigEdit[]) =>
     new Promise<{ ok: boolean; error?: string }>((resolve) => {
       const id = nextWrite++
@@ -178,6 +184,7 @@ export function createSettingsConfig() {
     path,
     source,
     value,
+    pending,
     set,
     unset,
     setting: (key: KiloSettingKey) => settingsValues()[key],

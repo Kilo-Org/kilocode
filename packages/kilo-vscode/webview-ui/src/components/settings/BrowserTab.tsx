@@ -31,13 +31,12 @@ const BrowserTab: Component = () => {
   const config = useSettingsConfig()
 
   // The global row edits the global scope. When a project file defines `websearch`, the merged value is the
-  // project's, so the global row falls back to the global file. A write is optimistic, so a value that differs from
-  // the merged value is a write in flight for this path and wins until the file is re-read.
+  // project's, so the global row falls back to the global file. A write in flight for this path wins so the row
+  // reflects the edit at once.
   const enabled = () => {
-    const value = config.value(WEBSEARCH)
-    if (config.source(WEBSEARCH) === "project" && value === config.merged()["websearch"])
+    if (config.source(WEBSEARCH) === "project" && !config.pending(WEBSEARCH))
       return webSearchEnabled(config.raw("global")["websearch"])
-    return webSearchEnabled(value)
+    return webSearchEnabled(config.value(WEBSEARCH))
   }
   const local = () => config.raw("project")["websearch"]
   const overridden = () => local() !== undefined
