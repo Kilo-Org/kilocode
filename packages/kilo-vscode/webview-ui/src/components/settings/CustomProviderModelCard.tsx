@@ -2,7 +2,6 @@
 // button. The variant fields are not editable here and are carried through unchanged.
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { TextField } from "@kilocode/kilo-ui/text-field"
-import { Show } from "solid-js"
 import { useLanguage } from "../../context/language"
 import type { ModelEntry, ModelErrors } from "./CustomProviderValidation"
 
@@ -101,12 +100,6 @@ export function ModelCard(props: ModelCardProps) {
           {props.t("provider.custom.models.modalities.image")}
         </label>
       </div>
-
-      <Show when={props.errors.id ?? props.errors.name}>
-        <span role="alert" style={{ "font-size": "var(--kilo-font-size-12)", color: "var(--vscode-errorForeground)" }}>
-          {props.errors.id ?? props.errors.name}
-        </span>
-      </Show>
     </div>
   )
 }

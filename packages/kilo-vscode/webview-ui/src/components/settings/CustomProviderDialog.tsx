@@ -18,6 +18,7 @@ import type { SettingsData } from "../../v2/settings"
 import { useSettingsConfig, type SettingsScope } from "../../v2/settings-config"
 import { ModelCard } from "./CustomProviderModelCard"
 import {
+  mergeProviderConfig,
   validateCustomProvider,
   type CustomProviderConfigValue,
   type HeaderRow,
@@ -210,7 +211,8 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
     const scope: SettingsScope = props.existing
       ? (config.source(["providers", result.providerID]) ?? "global")
       : "global"
-    const ok = await config.set(["providers", result.providerID], result.config, scope)
+    const value = mergeProviderConfig(props.existing?.config, result.config)
+    const ok = await config.set(["providers", result.providerID], value, scope)
     if (!ok) {
       setForm("saving", false)
       return

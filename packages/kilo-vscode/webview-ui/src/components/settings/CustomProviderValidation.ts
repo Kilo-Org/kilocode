@@ -140,6 +140,44 @@ export function parseEnvKey(apiKey: string): string | undefined {
   return ENV_NAME.test(name) ? name : undefined
 }
 
+type ConfigRecord = Record<string, unknown>
+
+function record(value: unknown): ConfigRecord {
+  return value && typeof value === "object" && !Array.isArray(value) ? (value as ConfigRecord) : {}
+}
+
+/**
+ * Merges the dialog's value into the existing `providers.<id>`, so fields the dialog does not model survive an edit:
+ * other provider settings, `body`, model `limit`/`cost`/`variants` and extra capability keys. A model the dialog no
+ * longer lists is removed, and an unchecked Reasoning toggle clears `capabilities.reasoning`.
+ */
+export function mergeProviderConfig(existing: unknown, produced: CustomProviderConfigValue): CustomProviderConfigValue {
+  if (!existing || typeof existing !== "object" || Array.isArray(existing)) return produced
+  const before = existing as ConfigRecord
+  const beforeModels = record(before.models)
+
+  const models: ConfigRecord = {}
+  for (const [id, model] of Object.entries(produced.models)) {
+    const prior = beforeModels[id]
+    if (!prior || typeof prior !== "object") {
+      models[id] = model
+      continue
+    }
+    const capabilities: ConfigRecord = { ...record((prior as ConfigRecord).capabilities), ...model.capabilities }
+    if (!model.capabilities.reasoning) delete capabilities.reasoning
+    models[id] = { ...(prior as ConfigRecord), ...model, capabilities }
+  }
+
+  const merged: ConfigRecord = {
+    ...before,
+    ...produced,
+    settings: { ...record(before.settings), ...produced.settings },
+    models,
+  }
+  if (!produced.env) delete merged.env
+  return merged as CustomProviderConfigValue
+}
+
 export function validateCustomProvider(input: ValidateArgs): ValidateResult {
   const providerID = input.form.providerID.trim()
   const name = input.form.name.trim()
@@ -147,8 +185,9 @@ export function validateCustomProvider(input: ValidateArgs): ValidateResult {
   const apiKey = input.form.apiKey.trim()
 
   const rawEnv = parseEnvKey(apiKey)
-  const env = rawEnv ? [rawEnv] : input.editing ? input.existingEnv : undefined
   const key = apiKey && !rawEnv ? apiKey : undefined
+  // A typed key replaces a stored env var; only an untouched edit keeps it.
+  const env = rawEnv ? [rawEnv] : key ? undefined : input.editing ? input.existingEnv : undefined
 
   const { idErr, existsErr } = checkProviderID(
     providerID,

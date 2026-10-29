@@ -168,17 +168,25 @@ const ProvidersTab: Component<{ settings: SettingsData; onLogin: () => void }> =
   /** Removes a custom provider that has no credential connection yet. */
   function removeCustom(providerID: string, name: string) {
     const scope = config.source(["providers", providerID]) ?? "global"
-    void config.unset(["providers", providerID], scope).then(async (ok) => {
-      if (!ok) return
-      const integration = props.settings.integration(providerID)
-      if (integration) await props.settings.disconnect(integration)
-      showToast({
-        variant: "success",
-        icon: "circle-check",
-        title: language.t("provider.disconnect.toast.disconnected.title", { provider: name }),
-        description: language.t("provider.disconnect.toast.disconnected.description", { provider: name }),
-      })
-    })
+    void (async () => {
+      try {
+        const ok = await config.unset(["providers", providerID], scope)
+        if (!ok) return
+        const integration = props.settings.integration(providerID)
+        if (integration) await props.settings.disconnect(integration)
+        showToast({
+          variant: "success",
+          icon: "circle-check",
+          title: language.t("provider.disconnect.toast.disconnected.title", { provider: name }),
+          description: language.t("provider.disconnect.toast.disconnected.description", { provider: name }),
+        })
+      } catch (err) {
+        showToast({
+          title: language.t("common.requestFailed"),
+          description: err instanceof Error ? err.message : String(err),
+        })
+      }
+    })()
   }
 
   function editCustom(providerID: string, name: string, value: CustomProviderConfigValue) {
