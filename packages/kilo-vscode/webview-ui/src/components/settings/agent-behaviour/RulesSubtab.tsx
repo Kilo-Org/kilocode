@@ -42,7 +42,7 @@ const RulesSubtab: Component = () => {
 
   const remove = (index: number) => update(instructions().filter((_, item) => item !== index))
 
-  const isUrl = (value: string) => /^https?:\/\//i.test(value)
+  const isUrl = (value: string) => /^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(value) && !/^[A-Za-z]:[\\/]/.test(value)
 
   // Instruction paths are relative to the workspace; the host opens an absolute path. A URL is not a local file.
   const open = (file: string) => {

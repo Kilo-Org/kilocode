@@ -26,6 +26,13 @@ const SkillsSubtab: Component = () => {
     }),
   )
 
+  // A skills path or URL change can change the discovered skills. The config resource does not invalidate the skill
+  // resource, so re-sync when the config changes.
+  createEffect(() => {
+    config.value(["skills"])
+    void v2.data.location.skill.sync().catch(v2.report)
+  })
+
   const discovered = () => v2.data.location.skill.list() ?? []
 
   // The v2 key is one array. A v1-written file may still hold the legacy `{ paths, urls }` object.

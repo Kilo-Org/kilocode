@@ -53,9 +53,10 @@ const WorkflowsSubtab: Component = () => {
 
   const discovered = (name: string) => (v2.data.location.command.list() ?? []).find((command) => command.name === name)
 
+  // A configured description wins over the file frontmatter, as in v1.
   const description = (name: string) => {
     const value = entry(name)?.value.description
-    return discovered(name)?.description ?? (typeof value === "string" ? value : undefined)
+    return typeof value === "string" ? value : discovered(name)?.description
   }
 
   const template = (name: string) => {
@@ -74,23 +75,34 @@ const WorkflowsSubtab: Component = () => {
     return variant ? { ...base, variant } : base
   }
 
+  const variants = (value: ModelPickerValue) =>
+    v2.data.location.model
+      .list()
+      ?.find((item) => item.providerID === value.providerID && item.id === value.modelID)
+      ?.variants.map((variant) => variant.id) ?? []
+
   // A v2 command entry requires a template, so the model override only applies where a template exists. Write to the
   // document that defines the command; migrate a v1 `command` entry to `commands` in the same write (the host removes
-  // the `command` alias), with the variant folded into the model.
+  // the `command` alias), with the variant folded into the model. Keep the current variant when the new model has it.
   const blocked = (name: string) => template(name) === undefined
 
   const setModel = (name: string, value: ModelPickerValue | undefined) => {
     const found = entry(name)
     if (!found || blocked(name)) return
+    const previous = model(name)
+    const next =
+      value && !value.variant && previous?.variant && variants(value).includes(previous.variant)
+        ? { ...value, variant: previous.variant }
+        : value
     if (found.key === "commands") {
-      config.set(["commands", name, "model"], value ? serializeCommandModel(value) : undefined, found.scope)
+      config.set(["commands", name, "model"], next ? serializeCommandModel(next) : undefined, found.scope)
       return
     }
-    const next = { ...found.value }
-    delete next.variant
-    if (value) next.model = serializeCommandModel(value)
-    else delete next.model
-    config.set(["commands", name], next, found.scope)
+    const entryValue = { ...found.value }
+    delete entryValue.variant
+    if (next) entryValue.model = serializeCommandModel(next)
+    else delete entryValue.model
+    config.set(["commands", name], entryValue, found.scope)
   }
 
   const toggle = (name: string) => setExpanded((prev) => ({ ...prev, [name]: !prev[name] }))

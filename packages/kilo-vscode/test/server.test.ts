@@ -90,14 +90,20 @@ describe("settingsEnvironment", () => {
   })
 })
 
-test("environment drops inherited managed settings names", () => {
+test("environment drops an inherited owned setting but keeps the rest", () => {
   const env = environment(
-    { KILO_DISABLE_CLAUDE_CODE: "true", OPENCODE_DISABLE_CLAUDE_CODE: "true", NODE_EXTRA_CA_CERTS: "/old.pem" },
+    {
+      KILO_DISABLE_CLAUDE_CODE: "true",
+      OPENCODE_DISABLE_CLAUDE_CODE: "true",
+      KILO_DISABLE_CLAUDE_CODE_SKILLS: "true",
+      NODE_EXTRA_CA_CERTS: "/old.pem",
+    },
     {},
   )
   expect(env.KILO_DISABLE_CLAUDE_CODE).toBeUndefined()
   expect(env.OPENCODE_DISABLE_CLAUDE_CODE).toBeUndefined()
-  expect(env.NODE_EXTRA_CA_CERTS).toBeUndefined()
+  expect(env.KILO_DISABLE_CLAUDE_CODE_SKILLS).toBe("true")
+  expect(env.NODE_EXTRA_CA_CERTS).toBe("/old.pem")
 })
 
 test("manager keeps a failed start, reports it once and retries after a restart", async () => {
