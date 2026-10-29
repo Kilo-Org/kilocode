@@ -3,7 +3,7 @@
 // data layer resyncs that list on `mcp.status.changed`. Sign-in starts an integration OAuth attempt, opens the
 // authorization URL through the host, and polls the attempt until it settles.
 import type { IntegrationOAuthMethod, McpServer } from "@opencode/client"
-import { createSignal } from "solid-js"
+import { createEffect, createSignal, on } from "solid-js"
 import { useV2 } from "./client"
 
 const POLL = 1000
@@ -20,6 +20,13 @@ export function createMcp() {
   const [busy, setBusy] = createSignal<string[]>([])
   const [removing, setRemoving] = createSignal<string[]>([])
   const attempts = new Map<string, Attempt>()
+
+  // A server's sign-in needs its integration and OAuth method, so keep that list loaded alongside the MCP list.
+  createEffect(
+    on(v2.connection.status, (status) => {
+      if (status === "connected") void v2.data.location.integration.sync().catch(v2.report)
+    }),
+  )
 
   const servers = (): McpServer[] => v2.data.location.mcp.server.list() ?? []
   const server = (name: string) => servers().find((item) => item.name === name)
