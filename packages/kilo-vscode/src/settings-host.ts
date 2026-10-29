@@ -2,12 +2,14 @@
 // config (`api.fs.read` is confined to the location) and `api.config.update` writes only `shell`. The host asks the
 // server for the config documents (`api.config.get`), resolves the global and project target files from those
 // entries, then reads and writes them with `jsonc-parser` so comments survive.
+import { existsSync } from "node:fs"
 import { mkdir, readFile, stat, writeFile } from "node:fs/promises"
 import path from "node:path"
 import { commands, workspace, Uri, window, type ExtensionContext } from "vscode"
 import { KiloConfigFiles } from "@opencode/util/kilocode/config/files"
-import { applyConfigEdits, isKiloConfigFile } from "./config-file-edit"
+import { applyConfigEdits, isKiloConfigFile, serialize } from "./config-file-edit"
 import { local } from "./local"
+import { resolveGlobalConfigDir, canonicalPath } from "./settings-paths"
 import type { ConfigEdit, ConfigScope, ToHost, ToWebview } from "./protocol"
 import type { Manager } from "./server"
 
@@ -53,6 +55,15 @@ export function settingsHost(input: {
   directory: string
   post: (message: ToWebview) => void
 }) {
+  // The dev entry (`script/dev-isolated.ts`) keeps everything under `KILO_V2_PROFILE`, and `server.ts` defaults that
+  // to the extension storage. A bundled server inherits the host environment and uses XDG paths directly.
+  const bundled = existsSync(
+    path.join(input.context.extensionPath, "bin", process.platform === "win32" ? "kilo2.exe" : "kilo2"),
+  )
+  const profile = bundled
+    ? ""
+    : (process.env.KILO_V2_PROFILE ?? path.join(input.context.globalStorageUri.fsPath, "profile"))
+
   const listener = workspace.onDidChangeConfiguration((event) => {
     if (KILO_SETTING_KEYS.some((key) => event.affectsConfiguration(`${NAMESPACE}.${key}`)))
       input.post({ type: "vscodeSettingsLoaded", values: readKiloSettings() })
@@ -70,19 +81,34 @@ export function settingsHost(input: {
   /** The global and project config files, from the server's config documents. */
   const targets = async () => {
     const list = await entries()
-    const documents = new Set(
-      list.flatMap((entry) => (entry.type === "document" && entry.path ? [entry.path] : [])),
-    )
-    const globalDir = list
-      .flatMap((entry) => (entry.type === "directory" && entry.path ? [entry.path] : []))
-      .find((directory) => !KiloConfigFiles.directories.includes(path.basename(directory)))
-    if (!globalDir) throw new Error("The server did not report the Kilo global config directory")
-    const global =
-      KiloConfigFiles.writeCandidates(globalDir, true).find((file) => documents.has(file)) ??
-      path.join(globalDir, KiloConfigFiles.newFile)
+    const documents = new Set<string>()
+    const directories: string[] = []
+    for (const entry of list) {
+      if (!entry.path) continue
+      const real = await canonicalPath(entry.path)
+      if (entry.type === "document") documents.add(real)
+      else directories.push(real)
+    }
+    const pick = async (candidates: string[]) => {
+      for (const candidate of candidates) {
+        const real = await canonicalPath(candidate)
+        if (documents.has(real)) return real
+      }
+      return undefined
+    }
+
+    // The project target never depends on the global directory. A missing global directory entry (the directory does
+    // not exist yet) falls back to the same path the spawned server uses, and `writeConfig` creates it.
+    const projectRoot = await canonicalPath(input.directory)
     const project =
-      KiloConfigFiles.writeCandidates(input.directory, false).find((file) => documents.has(file)) ??
-      path.join(input.directory, KiloConfigFiles.newFile)
+      (await pick(KiloConfigFiles.writeCandidates(projectRoot, false))) ??
+      path.join(projectRoot, KiloConfigFiles.newFile)
+    const globalDir = await canonicalPath(
+      directories.find((directory) => !KiloConfigFiles.directories.includes(path.basename(directory))) ??
+        resolveGlobalConfigDir(process.env, profile),
+    )
+    const global =
+      (await pick(KiloConfigFiles.writeCandidates(globalDir, true))) ?? path.join(globalDir, KiloConfigFiles.newFile)
     return { global, project }
   }
 
@@ -104,21 +130,22 @@ export function settingsHost(input: {
         global: { path: files.global, text: global },
         project: { path: files.project, text: project },
       })
-    } catch {
+    } catch (error) {
       input.post({
         type: "configLoaded",
         global: { path: "", text: "" },
         project: { path: "", text: "" },
+        error: error instanceof Error ? error.message : String(error),
       })
     }
   }
 
   // Immediate writes can overlap, and two overlapping read-modify-write passes over the same file would drop one
   // edit. Run every write through one chain so each reads the text the previous one wrote.
-  let queue: Promise<void> = Promise.resolve()
+  const enqueue = serialize()
 
   const writeConfig = (id: number, scope: ConfigScope, edits: ConfigEdit[]) => {
-    queue = queue.then(async () => {
+    void enqueue(async () => {
       try {
         const files = await targets()
         const file = files[scope]

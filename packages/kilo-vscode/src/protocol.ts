@@ -58,6 +58,6 @@ export type ToWebview =
   | { type: "modelSelectorExpandedLoaded"; value: boolean }
   | { type: "autoApproveStateLoaded"; value: boolean }
   | { type: "webviewActiveChanged"; active: boolean }
-  | { type: "configLoaded"; global: ConfigFileContent; project: ConfigFileContent }
+  | { type: "configLoaded"; global: ConfigFileContent; project: ConfigFileContent; error?: string }
   | { type: "configWritten"; id: number; ok: boolean; error?: string }
   | { type: "vscodeSettingsLoaded"; values: Record<string, unknown> }
