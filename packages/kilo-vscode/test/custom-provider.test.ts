@@ -220,6 +220,19 @@ describe("mergeProviderConfig", () => {
     ) as unknown as Record<string, any>
     expect(on.models.a.capabilities.input).toEqual(["text", "pdf", "image"])
   })
+
+  test("keeps the reasoning sub-fields while reasoning stays on", () => {
+    const merged = mergeProviderConfig(
+      { models: { a: { capabilities: { reasoning: { supported: true, effort: ["low"], budget: { min: 1 } } } } } },
+      { ...produced, models: { a: { name: "A", capabilities: { input: ["text"], reasoning: { supported: true } } } } },
+    ) as unknown as Record<string, any>
+    expect(merged.models.a.capabilities.reasoning).toEqual({ supported: true, effort: ["low"], budget: { min: 1 } })
+  })
+
+  test("removes headers when the dialog has none", () => {
+    const merged = mergeProviderConfig({ headers: { "X-Old": "1" } }, produced) as unknown as Record<string, any>
+    expect(merged.headers).toBeUndefined()
+  })
 })
 
 describe("applyConfigEdits for providers", () => {

@@ -181,6 +181,7 @@ export function mergeProviderConfig(existing: unknown, produced: CustomProviderC
       input: mergeInput(priorCapabilities.input, model.capabilities.input.includes("image")),
     }
     if (!model.capabilities.reasoning) delete capabilities.reasoning
+    else capabilities.reasoning = { ...record(priorCapabilities.reasoning), ...model.capabilities.reasoning }
     models[id] = { ...(prior as ConfigRecord), ...model, capabilities }
   }
 
@@ -190,6 +191,8 @@ export function mergeProviderConfig(existing: unknown, produced: CustomProviderC
     settings: { ...record(before.settings), ...produced.settings },
     models,
   }
+  // An empty field clears the stored value: the dialog is the source of truth for headers and env.
+  if (!produced.headers) delete merged.headers
   if (!produced.env) delete merged.env
   return merged as CustomProviderConfigValue
 }

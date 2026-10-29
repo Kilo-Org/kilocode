@@ -137,7 +137,10 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
     const policies = config.value(["policies"])
     if (!Array.isArray(policies)) return []
     return policies.flatMap((policy) =>
-      policy && typeof policy === "object" && (policy as { action?: string }).action === "provider.use"
+      policy &&
+      typeof policy === "object" &&
+      (policy as { action?: string }).action === "provider.use" &&
+      (policy as { effect?: string }).effect === "deny"
         ? [(policy as { resource?: string }).resource ?? ""]
         : [],
     )
@@ -212,7 +215,10 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
     const scope: SettingsScope = props.existing
       ? (config.source(["providers", result.providerID]) ?? "global")
       : "global"
-    const value = mergeProviderConfig(props.existing?.config, result.config)
+    const value = mergeProviderConfig(
+      config.value(["providers", result.providerID]) ?? props.existing?.config,
+      result.config,
+    )
     const ok = await config.set(["providers", result.providerID], value, scope)
     if (!ok) {
       setForm("saving", false)

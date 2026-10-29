@@ -53,27 +53,12 @@ const ProvidersTab: Component<{ settings: SettingsData; onLogin: () => void }> =
   // v2 reports a Kilo account that needs a new sign-in on the connection.
   const kiloFailure = createMemo(() => kilo()?.connections.find((item) => item.status)?.status?.message)
 
-  // The v2 `policies` plus the legacy spellings core still reads (`disabled_providers` denies, `enabled_providers`
-  // allows, `experimental.policies`). A write to `policies` removes those legacy keys in the same pass.
+  // The server's config documents are normalized: the legacy provider lists (`disabled_providers`,
+  // `enabled_providers`) and `experimental.policies` already appear here as `policies`. A write to `policies` removes
+  // those legacy keys in the file, because `config.source` and the host alias map know them.
   const policies = createMemo<Policy[]>(() => {
-    const direct = config.value(["policies"])
-    const experimental = config.value(["experimental", "policies"])
-    const list: Policy[] = []
-    if (Array.isArray(direct)) list.push(...(direct as Policy[]))
-    if (Array.isArray(experimental)) list.push(...(experimental as Policy[]))
-    for (const [path, effect] of [
-      [["disabled_providers"], "deny"],
-      [["enabled_providers"], "allow"],
-    ] as const) {
-      const legacy = config.value([...path])
-      if (!Array.isArray(legacy)) continue
-      list.push(
-        ...legacy
-          .filter((resource): resource is string => typeof resource === "string")
-          .map((resource) => ({ action: "provider.use", resource, effect })),
-      )
-    }
-    return list
+    const value = config.value(["policies"])
+    return Array.isArray(value) ? (value as Policy[]) : []
   })
 
   const disabledIds = createMemo(
