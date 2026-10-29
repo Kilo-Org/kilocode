@@ -73,6 +73,13 @@ export function aliasOf(keyPath: string[]): string[][] {
     ]
   }
   if (keyPath[0] === "mcp" && keyPath[1] === "servers" && keyPath.length >= 3) return [["mcp", ...keyPath.slice(2)]]
+  if (keyPath[0] === "compaction") {
+    if (keyPath[1] === "keep") return [["compaction", "preserve_recent_tokens"]]
+    if (keyPath[1] === "buffer" && keyPath.length === 2) return [["compaction", "reserved"]]
+    return []
+  }
+  if (keyPath[0] === "policies")
+    return [["enabled_providers"], ["disabled_providers"], ["experimental", "policies"]]
   const top: Record<string, string[]> = {
     permissions: ["permission", "tools"],
     commands: ["command"],
