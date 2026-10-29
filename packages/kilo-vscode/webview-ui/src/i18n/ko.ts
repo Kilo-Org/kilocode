@@ -1137,7 +1137,7 @@ export const dict = {
     "에이전트 셸 명령을 프로젝트 및 Kilo 상태 디렉터리에 대한 쓰기를 제한하는 OS 수준의 샌드박스 내에서 실행",
 
   "settings.autoApprove.description":
-    "도구 실행 허용 방식을 정의합니다. 대부분의 도구 기본값은 '허용'입니다. doom_loop 및 external_directory의 기본값은 '확인'입니다.",
+    "도구 실행 허용 방식을 정의합니다. 대부분의 도구 기본값은 '허용'입니다. Bash의 기본값은 '확인'입니다.",
   "settings.autoApprove.maxCost.title": "세션 비용 알림",
   "settings.autoApprove.maxCost.description":
     "세션 지출이 이 USD 금액을 초과한 뒤 계속하기 전에 알립니다. 정수 달러 금액을 사용하세요. 비활성화하려면 비워 두세요.",
