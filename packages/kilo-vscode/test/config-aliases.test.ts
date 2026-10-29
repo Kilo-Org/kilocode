@@ -30,4 +30,16 @@ describe("scopeOf", () => {
     const global = { agents: { build: { model: "m" } } }
     expect(scopeOf(["agents", "build", "model"], project, global)).toBeUndefined()
   })
+
+  test("resolves the owner per root when the v2 root and an alias root differ", () => {
+    const project = { agents: { build: { description: "d" } } }
+    const global = { small_model: "anthropic/claude" }
+    expect(scopeOf(["agents", "title", "model"], project, global)).toBe("global")
+  })
+
+  test("keeps the v2 path owner when it defines the leaf", () => {
+    const project = { agents: { title: { model: "anthropic/claude" } } }
+    const global = { small_model: "openai/gpt" }
+    expect(scopeOf(["agents", "title", "model"], project, global)).toBe("project")
+  })
 })

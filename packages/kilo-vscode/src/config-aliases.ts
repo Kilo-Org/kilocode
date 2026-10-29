@@ -10,24 +10,28 @@ function readPath(source: unknown, path: string[]): unknown {
 }
 
 /**
- * Which scope defines a setting, checking the v2 path and its v1 aliases. The merge replaces a whole top-level key,
- * so the first scope that defines the top-level key (or an alias such as `agent` or `tools`) owns the setting; the
- * other scope is not searched, because its value is shadowed.
+ * Which scope defines a setting, checking the v2 path and its v1 aliases. The merge replaces one top-level key at a
+ * time, so shadowing happens per root: `agents` and its aliases such as `small_model` and `agent` are separate keys
+ * that survive the merge independently, and each may be owned by a different scope. Resolve the owner per root, then
+ * report the owner of the first candidate (the v2 path, then each alias in precedence order) that defines a value.
  */
 export function scopeOf(path: string[], project: unknown, global: unknown): "project" | "global" | undefined {
   if (path.length === 0) return undefined
-  const aliases = aliasOf(path)
-  const roots = [path[0], ...aliases.map((alias) => alias[0])]
-  const owns = (source: unknown) =>
-    typeof source === "object" &&
-    source !== null &&
-    !Array.isArray(source) &&
-    roots.some((root) => root !== undefined && root in source)
-  const owner = owns(project) ? "project" : owns(global) ? "global" : undefined
-  if (!owner) return undefined
-  const source = owner === "project" ? project : global
-  const defined = readPath(source, path) !== undefined || aliases.some((alias) => readPath(source, alias) !== undefined)
-  return defined ? owner : undefined
+  const sources = { project, global } as const
+  const ownerOf = (root: string | undefined): "project" | "global" | undefined => {
+    if (root === undefined) return undefined
+    if (hasRoot(project, root)) return "project"
+    return hasRoot(global, root) ? "global" : undefined
+  }
+  for (const candidate of [path, ...aliasOf(path)]) {
+    const owner = ownerOf(candidate[0])
+    if (owner && readPath(sources[owner], candidate) !== undefined) return owner
+  }
+  return undefined
+}
+
+function hasRoot(source: unknown, root: string): boolean {
+  return typeof source === "object" && source !== null && !Array.isArray(source) && root in source
 }
 
 export function aliasOf(keyPath: string[]): string[][] {
