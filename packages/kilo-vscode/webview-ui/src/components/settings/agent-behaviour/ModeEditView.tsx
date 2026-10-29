@@ -240,9 +240,7 @@ const ModeEditView: Component<Props> = (props) => {
       </Card>
 
       <Show when={!builtIn()}>
-        <Card style={{ "margin-bottom": "12px" }}>
-          <PermissionEditor target={{ kind: "agent", name: props.row.id }} />
-        </Card>
+        <PermissionEditor target={{ kind: "agent", name: props.row.id }} />
       </Show>
 
       <Show when={rules()} keyed>
