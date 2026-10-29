@@ -39,12 +39,13 @@ const McpSubtab: Component = () => {
 
   const servers = () => config.value(["mcp", "servers"]) as Record<string, Record<string, unknown>> | undefined
 
-  const scopeFor = (name: string) => config.source(["mcp", "servers", name]) ?? "project"
+  const scopeFor = (name: string) => config.source(["mcp", "servers", name]) ?? "global"
   const statusOf = (name: string) => mcp.status(name)
   const isConnected = (name: string) => statusOf(name)?.status === "connected"
   const needsAuth = (name: string) => statusOf(name)?.status === "needs_auth"
   const isSigningIn = (name: string) => mcp.busy().includes(name)
   const isRemoving = (name: string) => mcp.removing().includes(name)
+  const isResetting = (name: string) => mcp.resetting().includes(name)
   const transportOf = (name: string) => {
     const server = servers()?.[name] ?? {}
     const type = server.type
@@ -310,7 +311,7 @@ const McpSubtab: Component = () => {
                         </Show>
                         <Show when={!isRemoving(name) && isConnected(name) && transportOf(name) === "remote"}>
                           <div onClick={(e: MouseEvent) => e.stopPropagation()}>
-                            <Button variant="ghost" size="small" onClick={() => confirmReset(name)}>
+                            <Button variant="ghost" size="small" disabled={isResetting(name)} onClick={() => confirmReset(name)}>
                               {language.t("settings.agentBehaviour.mcpResetAuth")}
                             </Button>
                           </div>

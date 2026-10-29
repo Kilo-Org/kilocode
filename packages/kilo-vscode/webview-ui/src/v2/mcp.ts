@@ -3,7 +3,7 @@
 // data layer resyncs that list on `mcp.status.changed`. Sign-in starts an integration OAuth attempt, opens the
 // authorization URL through the host, and polls the attempt until it settles.
 import type { IntegrationOAuthMethod, McpServer } from "@opencode/client"
-import { createEffect, createSignal, on } from "solid-js"
+import { createEffect, createSignal, on, onCleanup } from "solid-js"
 import { useV2 } from "./client"
 
 const POLL = 1000
@@ -12,6 +12,7 @@ interface Attempt {
   integrationID: string
   attemptID: string
   cancelled: boolean
+  timer?: ReturnType<typeof setTimeout>
 }
 
 export function createMcp() {
@@ -19,7 +20,17 @@ export function createMcp() {
   const location = { directory: v2.directory }
   const [busy, setBusy] = createSignal<string[]>([])
   const [removing, setRemoving] = createSignal<string[]>([])
+  const [resetting, setResetting] = createSignal<string[]>([])
   const attempts = new Map<string, Attempt>()
+
+  // Closing the settings panel stops the poll without waiting for the server to expire the attempt.
+  onCleanup(() => {
+    for (const entry of attempts.values()) {
+      entry.cancelled = true
+      if (entry.timer) clearTimeout(entry.timer)
+    }
+    attempts.clear()
+  })
 
   // A server's status comes from the MCP list, and its sign-in needs the integration and OAuth method, so keep both
   // loaded alongside each other when the connection opens.
@@ -99,7 +110,7 @@ export function createMcp() {
           .then((result) => {
             if (entry.cancelled) return resolve()
             const status = result.data.status
-            if (status === "pending") return void setTimeout(poll, POLL)
+            if (status === "pending") return void (entry.timer = setTimeout(poll, POLL))
             if (status === "complete") return resolve()
             reject(new Error(status === "failed" ? result.data.message : "Authorization expired"))
           })
@@ -120,7 +131,7 @@ export function createMcp() {
 
   async function reset(name: string) {
     const target = integration(name)
-    mark(setRemoving, name, true)
+    mark(setResetting, name, true)
     try {
       if (target) {
         const previous = target.connections.filter((item) => item.type === "credential")
@@ -132,9 +143,20 @@ export function createMcp() {
     } catch (error) {
       v2.report(error)
     } finally {
-      mark(setRemoving, name, false)
+      mark(setResetting, name, false)
     }
   }
 
-  return { servers, status: (name: string) => server(name)?.status, busy, removing, connect, disconnect, signIn, cancel, reset }
+  return {
+    servers,
+    status: (name: string) => server(name)?.status,
+    busy,
+    removing,
+    resetting,
+    connect,
+    disconnect,
+    signIn,
+    cancel,
+    reset,
+  }
 }
