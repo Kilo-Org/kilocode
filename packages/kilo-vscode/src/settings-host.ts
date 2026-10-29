@@ -7,7 +7,7 @@ import { mkdir, readFile, stat, writeFile } from "node:fs/promises"
 import path from "node:path"
 import { commands, workspace, Uri, window, type ExtensionContext } from "vscode"
 import { KiloConfigFiles } from "@opencode/util/kilocode/config/files"
-import { applyConfigEdits, isKiloConfigFile } from "./config-file-edit"
+import { applyConfigEdits, isKiloConfigFile, serialize } from "./config-file-edit"
 import { local } from "./local"
 import { resolveGlobalConfigDir, canonicalPath } from "./settings-paths"
 import type { ConfigEdit, ConfigScope, ToHost, ToWebview } from "./protocol"
@@ -128,10 +128,10 @@ export function settingsHost(input: {
 
   // Immediate writes can overlap, and two overlapping read-modify-write passes over the same file would drop one
   // edit. Run every write through one chain so each reads the text the previous one wrote.
-  let queue: Promise<void> = Promise.resolve()
+  const enqueue = serialize()
 
   const writeConfig = (id: number, scope: ConfigScope, edits: ConfigEdit[]) => {
-    queue = queue.then(async () => {
+    void enqueue(async () => {
       try {
         const files = await targets()
         const file = files[scope]

@@ -1,6 +1,9 @@
 import { describe, expect, test } from "bun:test"
 import { parse } from "jsonc-parser"
-import { aliasOf, applyConfigEdits, isKiloConfigFile } from "../src/config-file-edit"
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises"
+import os from "node:os"
+import path from "node:path"
+import { aliasOf, applyConfigEdits, isKiloConfigFile, serialize } from "../src/config-file-edit"
 
 describe("applyConfigEdits", () => {
   test("keeps comments and existing content", () => {
@@ -116,5 +119,34 @@ describe("isKiloConfigFile", () => {
     expect(isKiloConfigFile("/home/.config/kilo2/kilo2.jsonc")).toBe(true)
     expect(isKiloConfigFile("/home/.config/kilo2/kilo.json")).toBe(false)
     expect(isKiloConfigFile("/home/.config/kilo2/other.json")).toBe(false)
+  })
+})
+
+describe("serialize", () => {
+  test("runs two overlapping read-modify-writes so both edits land", async () => {
+    const dir = await mkdtemp(path.join(os.tmpdir(), "kilo-write-"))
+    const file = path.join(dir, "kilo2.json")
+    await writeFile(file, "{}\n")
+    const enqueue = serialize()
+    const write = (key: string, value: unknown) =>
+      enqueue(async () => {
+        const text = await readFile(file, "utf8")
+        await writeFile(file, applyConfigEdits(text, [{ path: [key], value }]))
+      })
+    try {
+      await Promise.all([write("a", 1), write("b", 2)])
+      expect(parse(await readFile(file, "utf8"))).toEqual({ a: 1, b: 2 })
+    } finally {
+      await rm(dir, { recursive: true, force: true })
+    }
+  })
+
+  test("keeps the chain usable after a rejected task", async () => {
+    const enqueue = serialize()
+    const failed = enqueue(async () => {
+      throw new Error("boom")
+    })
+    await expect(failed).rejects.toThrow("boom")
+    await expect(enqueue(async () => "ok")).resolves.toBe("ok")
   })
 })
