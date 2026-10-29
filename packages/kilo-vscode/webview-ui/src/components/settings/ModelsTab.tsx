@@ -102,7 +102,7 @@ const ModelsTab: Component<SettingsTabProps> = () => {
       <Card>
         <For each={agents()}>
           {(agent, index) => (
-            <SettingsRow title={agent.name} last={index() === agents().length - 1}>
+            <SettingsRow title={agent.name.charAt(0).toUpperCase() + agent.name.slice(1)} last={index() === agents().length - 1}>
               <ModelPicker
                 value={current(["agents", agent.id, "model"])}
                 onChange={change(["agents", agent.id, "model"])}
