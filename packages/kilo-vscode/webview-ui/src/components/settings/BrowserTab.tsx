@@ -1,6 +1,6 @@
 // Web Tools tab on v2 config. Web Search maps the v2 `websearch` selection: `false` is off, a provider selection is
 // on. The Browser Automation rows have no v2 key and are not rendered.
-import { Component, Show, createEffect, createSignal, on } from "solid-js"
+import { Component, Show, createEffect, createSignal } from "solid-js"
 import { Switch } from "./Switch"
 import { Card } from "@kilocode/kilo-ui/card"
 import { useLanguage } from "../../context/language"
@@ -29,21 +29,16 @@ const BrowserTab: Component = () => {
   const language = useLanguage()
   const config = useSettingsConfig()
 
-  // The global row edits the global scope, so it shows the global file value. A staged edit wins until save or
-  // discard clears the draft; `value()` is the merged value and a project file would otherwise mask the global one.
-  const [staged, setStaged] = createSignal<unknown>()
-  createEffect(
-    on(
-      () => config.dirty(),
-      (dirty) => {
-        if (!dirty) setStaged(undefined)
-      },
-    ),
-  )
+  // The global row edits the global scope, so it shows the global file value: a project file would otherwise mask it
+  // through the merged value. A write is optimistic, so show it until the global file has been re-read.
+  const [written, setWritten] = createSignal<unknown>()
+  createEffect(() => {
+    const value = config.raw("global")["websearch"]
+    if (written() !== undefined && JSON.stringify(written()) === JSON.stringify(value)) setWritten(undefined)
+  })
 
   const enabled = () => {
-    const draft = staged()
-    if (draft !== undefined) return Boolean(draft)
+    if (written() !== undefined) return Boolean(written())
     if (config.source(WEBSEARCH) === "project") return Boolean(config.raw("global")["websearch"])
     return Boolean(config.value(WEBSEARCH))
   }
@@ -52,8 +47,10 @@ const BrowserTab: Component = () => {
 
   const update = (checked: boolean) => {
     const value = checked ? { provider: "random" } : false
-    setStaged(value)
-    config.set(WEBSEARCH, value)
+    setWritten(value)
+    void config.set(WEBSEARCH, value).then((ok) => {
+      if (!ok) setWritten(undefined)
+    })
   }
 
   return (
