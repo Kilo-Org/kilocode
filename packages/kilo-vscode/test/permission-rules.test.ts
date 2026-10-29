@@ -14,6 +14,7 @@ import {
   setSimpleLevel,
   setWildcardLevel,
   toolExceptions,
+  wildcardRule,
   type PermissionRuleset,
 } from "../webview-ui/src/components/settings/permission-utils"
 
@@ -45,7 +46,7 @@ describe("effectiveConfigLevel", () => {
   test("lets a configured rule override the defaults", () => {
     const rules: PermissionRuleset = [{ action: "shell", resource: "*", effect: "allow" }]
     expect(effectiveConfigLevel(rules, "shell")).toBe("allow")
-    expect(effectiveConfigLevel(rules, "external_directory")).toBe("ask")
+    expect(effectiveConfigLevel(rules, "external_directory")).toBe("allow")
     expect(effectiveConfigLevel(rules, "glob")).toBe("allow")
   })
 })
@@ -149,6 +150,38 @@ describe("simple and grouped tools", () => {
     expect(setSimpleLevel(current, "glob", "deny")).toEqual([
       { action: "grep", resource: "*", effect: "allow" },
       { action: "glob", resource: "*", effect: "deny" },
+    ])
+  })
+})
+
+describe("rule order and wildcard actions", () => {
+  test("keeps a tool after a catch-all that followed its first rule", () => {
+    const current: PermissionRuleset = [
+      { action: "shell", resource: "*", effect: "ask" },
+      { action: "*", resource: "*", effect: "deny" },
+      { action: "shell", resource: "git *", effect: "allow" },
+    ]
+    expect(setWildcardLevel(current, "shell", "ask")).toEqual([
+      { action: "*", resource: "*", effect: "deny" },
+      { action: "shell", resource: "*", effect: "ask" },
+      { action: "shell", resource: "git *", effect: "allow" },
+    ])
+  })
+
+  test("a wildcard action rule belongs to the tool it matches and can be cleared", () => {
+    const rules: PermissionRuleset = [{ action: "web*", resource: "*", effect: "deny" }]
+    expect(inheritedTool(rules, "webfetch")).toBe(false)
+    expect(effectiveRuleLevel(rules, "webfetch")).toBe("deny")
+    expect(wildcardRule(rules, "webfetch")).toEqual({ action: "web*", resource: "*", effect: "deny" })
+    expect(clearSimpleLevel(rules, "webfetch")).toEqual([])
+  })
+
+  test("the catch-all is the global fallback and is never owned by a row", () => {
+    const rules: PermissionRuleset = [{ action: "*", resource: "*", effect: "deny" }]
+    expect(inheritedTool(rules, "shell")).toBe(true)
+    expect(setSimpleLevel(rules, "shell", "allow")).toEqual([
+      { action: "*", resource: "*", effect: "deny" },
+      { action: "shell", resource: "*", effect: "allow" },
     ])
   })
 })

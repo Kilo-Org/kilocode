@@ -1108,7 +1108,7 @@ export const dict = {
   "settings.agentBehaviour.workflows.modelDescription": "Global model geçersiz kılması",
 
   "settings.autoApprove.description":
-    "Araçların nasıl çalıştırılacağını tanımlayın. Çoğu araç varsayılan olarak İzin Ver'dir. doom_loop ve external_directory varsayılan olarak Sor'dur.",
+    "Araçların nasıl çalıştırılacağını tanımlayın. Çoğu araç varsayılan olarak İzin Ver'dir. Bash varsayılan olarak Sor'dur.",
   "settings.autoApprove.maxCost.title": "Oturum Maliyeti Uyarısı",
   "settings.autoApprove.maxCost.description":
     "Bir oturumun harcaması bu USD tutarını aştıktan sonra devam etmeden önce uyar. Tam dolar kullanın; devre dışı bırakmak için boş bırakın.",

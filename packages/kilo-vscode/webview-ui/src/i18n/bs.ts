@@ -1150,7 +1150,7 @@ export const dict = {
     "Pokrenite shell komande agenta unutar sandboxa na nivou operativnog sistema koji ograničava pisanje na direktorije stanja projekta i Kilo",
 
   "settings.autoApprove.description":
-    "Definišite kako je dozvoljeno pokretanje alata. Većina alata je podrazumijevano na Dozvoli. doom_loop i external_directory su podrazumijevano na Pitaj.",
+    "Definišite kako je dozvoljeno pokretanje alata. Većina alata je podrazumijevano na Dozvoli. Bash je podrazumijevano na Pitaj.",
   "settings.autoApprove.maxCost.title": "Upozorenje o trošku sesije",
   "settings.autoApprove.maxCost.description":
     "Upozori prije nastavka sesije nakon što potrošnja premaši ovaj iznos u USD. Koristite cijele dolare; ostavite prazno za isključivanje.",

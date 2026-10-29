@@ -6,11 +6,10 @@ export type PermissionRuleset = Permission.Rule[]
 
 const RESTRICTION_ORDER: Record<PermissionLevel, number> = { allow: 0, ask: 1, deny: 2 }
 
-// The level shown for a tool with no configured rule. The first rule allows every tool, then the two tools that
-// ask by default.
+// The level shown for a tool with no configured rule. The built-in policy starts by allowing every tool, and the
+// shell table is the only appended default that asks.
 export const DEFAULT_RULES: PermissionRuleset = [
   { action: "*", resource: "*", effect: "allow" },
-  { action: "external_directory", resource: "*", effect: "ask" },
   { action: "shell", resource: "*", effect: "ask" },
 ]
 
@@ -51,11 +50,17 @@ export function mostRestrictive(levels: PermissionLevel[]): PermissionLevel {
   )
 }
 
-/** The rule that sets the whole tool, exactly named, or undefined when the tool inherits. */
+// A rule belongs to a tool when its action matches the tool like core does. The "*" catch-all is the global fallback,
+// not a per-tool rule the editor owns, so it never matches a row.
+function matchesAction(action: string, rule: PermissionRule): boolean {
+  return rule.action !== "*" && matchAction(action, rule.action)
+}
+
+/** The rule that sets the whole tool, or undefined when the tool inherits. */
 export function wildcardRule(rules: PermissionRuleset, action: string): PermissionRule | undefined {
   for (let i = rules.length - 1; i >= 0; i--) {
     const item = rules[i]
-    if (item.action === action && item.resource === "*") return item
+    if (item.resource === "*" && matchesAction(action, item)) return item
   }
   return undefined
 }
@@ -66,23 +71,22 @@ export function inheritedTool(rules: PermissionRuleset, action: string): boolean
 
 /** The per-pattern rules of one tool, in order. */
 export function toolExceptions(rules: PermissionRuleset, action: string): PermissionRule[] {
-  return rules.filter((item) => item.action === action && item.resource !== "*")
+  return rules.filter((item) => item.resource !== "*" && matchesAction(action, item))
 }
 
+// Replace a tool's rules at the slot of its last matching rule, so rules that came after it keep overriding it.
 function replaceTool(rules: PermissionRuleset, action: string, next: PermissionRule[]): PermissionRuleset {
   const kept: PermissionRule[] = []
-  let inserted = false
+  let insertAt = -1
   for (const rule of rules) {
-    if (rule.action !== action) {
-      kept.push(rule)
+    if (matchesAction(action, rule)) {
+      insertAt = kept.length
       continue
     }
-    if (!inserted) {
-      kept.push(...next)
-      inserted = true
-    }
+    kept.push(rule)
   }
-  if (!inserted) kept.push(...next)
+  if (insertAt === -1) kept.push(...next)
+  else kept.splice(insertAt, 0, ...next)
   return kept
 }
 

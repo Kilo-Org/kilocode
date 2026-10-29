@@ -55,9 +55,6 @@ interface ToolDef {
   title: string
   descriptionKey: string
   granular?: GranularConfig
-  // Keep non-wildcard rules when the level changes. The permission prompt saves per-resource web rules, and a
-  // scalar level would drop them.
-  preserveExceptions?: boolean
 }
 
 interface GranularToolDef extends ToolDef {
@@ -131,7 +128,8 @@ const GROUPED_TOOLS: GroupedToolDef[] = [
   },
 ]
 
-// There is no browser_open or doom_loop action.
+// There is no browser_open or doom_loop action. These rows have no exception editor, so changing a level replaces
+// every rule for the action, including any per-resource rules the user added elsewhere.
 const TRAILING_TOOLS: ToolDef[] = [
   { action: "websearch", title: "Websearch", descriptionKey: "settings.autoApprove.tool.websearch" },
   { action: "webfetch", title: "Webfetch", descriptionKey: "settings.autoApprove.tool.webfetch" },
@@ -234,10 +232,8 @@ export const PermissionRulesEditor: Component<{
             level={levelFor(tool.action)}
             inherited={ruleInherited(tool.action)}
             showDefaultLevel={props.showDefaultLevel}
-            onChange={(level) =>
-              tool.preserveExceptions ? setWildcard(tool.action, level) : setSimple(tool.action, level)
-            }
-            onInherit={() => (tool.preserveExceptions ? clearWildcard(tool.action) : clearSimple(tool.action))}
+            onChange={(level) => setSimple(tool.action, level)}
+            onInherit={() => clearSimple(tool.action)}
           />
         )}
       </For>
@@ -556,9 +552,11 @@ const PermissionEditor: Component<PermissionEditorProps> = (props) => {
     props.target.kind === "root" ? ["permissions"] : ["agents", props.target.name, "permissions"],
   )
   const rules = createMemo(() => readRules(config.value(path())))
+  // Write back to the file that already defines the value, so a project value is not shadowed by a global write.
+  const scope = () => config.source(path()) ?? "global"
   const onChange = (next: PermissionRuleset) => {
-    if (next.length > 0) config.set(path(), next)
-    else config.unset(path())
+    if (next.length > 0) config.set(path(), next, scope())
+    else config.unset(path(), scope())
   }
 
   return (
