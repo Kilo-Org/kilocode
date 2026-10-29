@@ -37,6 +37,8 @@
 
 ### Patch Changes
 
+- [#15472](https://github.com/Kilo-Org/kilocode/pull/15472) [`9d28e36`](https://github.com/Kilo-Org/kilocode/commit/9d28e36c7734e00a686f7d41e467934134c7f07f) - Fix copying selected chat text with Cmd/Ctrl+C or right-click Copy in VS Code 1.143. The selection no longer clears and focus no longer jumps to the prompt.
+
 - [#15410](https://github.com/Kilo-Org/kilocode/pull/15410) [`5f2aa0b`](https://github.com/Kilo-Org/kilocode/commit/5f2aa0b32fa4fafe1c544ac4a5203fc913e36225) Thanks [@WebReflection](https://github.com/WebReflection)! - Update DOMPurify to 3.4.17 to fix sanitization issues flagged by Dependabot alerts.
 
 - [#15412](https://github.com/Kilo-Org/kilocode/pull/15412) [`0377248`](https://github.com/Kilo-Org/kilocode/commit/0377248fb9af4ba12d04521821372a4d95cb1f6a) Thanks [@WebReflection](https://github.com/WebReflection)! - Update vite to 7.3.7 to fix the launch-editor editor CLI flag misinterpretation flagged by Dependabot (CVE-2026-112944).
