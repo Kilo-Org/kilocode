@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test"
-import { preserveVariant, selection, write } from "../webview-ui/src/components/settings/models-selection"
+import { preserveVariant, readPathValue, selection, write } from "../webview-ui/src/components/settings/models-selection"
 
 describe("settings model selection mapping", () => {
   test("reads the short string form", () => {
@@ -63,5 +63,13 @@ describe("settings model selection mapping", () => {
       modelID: "other",
     })
     expect(preserveVariant(undefined, { providerID: "kilo", modelID: "x" })).toEqual({ providerID: "kilo", modelID: "x" })
+  })
+
+  test("reads a nested config value without defaults", () => {
+    const file = { model: "kilo/kilo-auto/free", agents: { title: { model: { providerID: "kilo", model: "x" } } } }
+    expect(readPathValue(file, ["model"])).toBe("kilo/kilo-auto/free")
+    expect(readPathValue(file, ["agents", "title", "model"])).toEqual({ providerID: "kilo", model: "x" })
+    expect(readPathValue(file, ["agents", "missing", "model"])).toBeUndefined()
+    expect(readPathValue(undefined, ["model"])).toBeUndefined()
   })
 })

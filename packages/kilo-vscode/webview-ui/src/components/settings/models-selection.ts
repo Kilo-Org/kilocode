@@ -52,3 +52,11 @@ export function preserveVariant(previous: ModelSelection | undefined, next: Mode
   }
   return next
 }
+
+/** Read a nested value from a parsed config file, ignoring config defaults. */
+export function readPathValue(source: unknown, path: string[]): unknown {
+  return path.reduce<unknown>((current, key) => {
+    if (typeof current !== "object" || current === null) return undefined
+    return (current as Record<string, unknown>)[key]
+  }, source)
+}

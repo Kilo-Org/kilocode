@@ -6,7 +6,7 @@ import { useLanguage } from "../../context/language"
 import { useV2 } from "../../v2/client"
 import { useSettingsConfig } from "../../v2/settings-config"
 import ModelPicker from "./ModelPicker"
-import { selection, write, preserveVariant, type ModelSelection } from "./models-selection"
+import { selection, write, preserveVariant, readPathValue, type ModelSelection } from "./models-selection"
 import SettingsRow from "./SettingsRow"
 import { Switch } from "./Switch"
 import type { SettingsTabProps } from "./tabs"
@@ -33,7 +33,15 @@ const ModelsTab: Component<SettingsTabProps> = () => {
 
   const notSet = () => language.t("settings.providers.notSet")
 
-  const current = (path: string[]) => selection(config.value(path))
+  // A row reads as set only when a config file sets the key (or a write is in flight). The file value is preferred
+  // over the merged value so a resolved config default does not replace what the user set; the merged value is the
+  // fallback for a key that a legacy alias stores.
+  const current = (path: string[]) => {
+    const scope = config.source(path)
+    if (!scope && !config.pending(path)) return undefined
+    const raw = scope ? readPathValue(config.raw(scope), path) : undefined
+    return selection(raw ?? config.value(path))
+  }
   const change = (path: string[]) => (value: ModelSelection | undefined) => {
     // Write the scope that already defines the key so a project override is updated in place, not shadowed.
     const scope = config.source(path) ?? "global"
