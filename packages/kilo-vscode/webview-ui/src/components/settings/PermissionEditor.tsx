@@ -541,8 +541,16 @@ const ActionSelect: Component<{
   )
 }
 
+// Read the stored ruleset, keeping only well-formed rules so a hand-edited config cannot break the editor.
 function readRules(value: unknown): PermissionRuleset {
-  return Array.isArray(value) ? (value as PermissionRuleset) : []
+  if (!Array.isArray(value)) return []
+  return value.flatMap((item) => {
+    if (typeof item !== "object" || item === null) return []
+    const rule = item as { action?: unknown; resource?: unknown; effect?: unknown }
+    if (typeof rule.action !== "string" || typeof rule.resource !== "string") return []
+    if (rule.effect !== "allow" && rule.effect !== "ask" && rule.effect !== "deny") return []
+    return [{ action: rule.action, resource: rule.resource, effect: rule.effect }]
+  })
 }
 
 const PermissionEditor: Component<PermissionEditorProps> = (props) => {
