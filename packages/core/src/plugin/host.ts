@@ -408,6 +408,8 @@ export const make = Effect.fn("PluginHost.make")(function* (
             set: (name, config) => editor.set(name, Schema.decodeUnknownSync(ServerConfig)(config)),
             update: editor.update,
             remove: editor.remove,
+            // kilocode_change(mcp-guardrails) seam - expose the editor's block to plugins
+            block: editor.block,
           })
         }),
     },

@@ -234,6 +234,8 @@ export type McpStatusFailed = { status: "failed"; error: string }
 
 export type McpStatusNeedsAuth = { status: "needs_auth"; error: string }
 
+export type McpStatusBlocked = { status: "blocked"; reason: string }
+
 export type McpResource = { server: string; name: string; uri: string; description?: string; mimeType?: string }
 
 export type McpResourceTemplate = {
@@ -719,7 +721,13 @@ export type IntegrationCommandAttempt = { attemptID: IntegrationAttemptID; time:
 
 export type McpServer = {
   name: string
-  status: McpStatusConnected | McpStatusPending | McpStatusDisabled | McpStatusFailed | McpStatusNeedsAuth
+  status:
+    | McpStatusConnected
+    | McpStatusPending
+    | McpStatusDisabled
+    | McpStatusFailed
+    | McpStatusNeedsAuth
+    | McpStatusBlocked
   integrationID?: IntegrationID
 }
 

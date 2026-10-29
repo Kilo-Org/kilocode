@@ -17344,6 +17344,9 @@
               },
               {
                 "$ref": "#/components/schemas/Mcp.Status.NeedsAuth"
+              },
+              {
+                "$ref": "#/components/schemas/Mcp.Status.Blocked"
               }
             ]
           },
@@ -17352,6 +17355,20 @@
           }
         },
         "required": ["name", "status"],
+        "additionalProperties": false
+      },
+      "Mcp.Status.Blocked": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": ["blocked"]
+          },
+          "reason": {
+            "type": "string"
+          }
+        },
+        "required": ["status", "reason"],
         "additionalProperties": false
       },
       "Mcp.Status.Connected": {

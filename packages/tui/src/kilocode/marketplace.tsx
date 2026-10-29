@@ -736,6 +736,11 @@ async function mcpInstalled(context: Context, record: Installed, signedIn = fals
       title: `Installed ${record.server}`,
       message: "This MCP server is disabled. Use /mcps to manage it.",
     })
+  if (server?.status.status === "blocked")
+    return context.ui.dialog.alert({
+      title: `Installed ${record.server}; blocked`,
+      message: server.status.reason,
+    })
   if ("overridden" in state && state.message)
     return context.ui.dialog.alert({ title: `Installed ${record.server}`, message: state.message })
   if (server?.status.status === "failed") {

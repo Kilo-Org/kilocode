@@ -14,6 +14,8 @@ import { useLocation } from "../context/location"
 
 function statusError(status: McpServer["status"]) {
   if (status.status === "failed" || status.status === "needs_auth") return status.error
+  // kilocode_change(mcp-guardrails) - a blocked server explains itself with the reason it is blocked
+  if (status.status === "blocked") return status.reason
   return undefined
 }
 
@@ -29,6 +31,10 @@ function Status(props: { status: McpServer["status"]; loading: boolean }) {
   }
   if (props.status.status === "needs_auth") {
     return <>Sign in required →</>
+  }
+  // kilocode_change(mcp-guardrails) - blocked by the organization's MCP policy
+  if (props.status.status === "blocked") {
+    return <>Blocked ⊘</>
   }
   return <>Disabled ○</>
 }
@@ -58,6 +64,8 @@ export function DialogMcp(props: { initialServer?: string; details?: boolean } =
     if (status.status === "connected") return theme.text.feedback.success.base
     if (status.status === "failed") return theme.text.feedback.error.base
     if (status.status === "needs_auth") return theme.text.feedback.warning.base
+    // kilocode_change(mcp-guardrails) - a policy block is a denial the user cannot retry away
+    if (status.status === "blocked") return theme.text.feedback.error.base
     return theme.text.muted
   }
 
@@ -87,6 +95,8 @@ export function DialogMcp(props: { initialServer?: string; details?: boolean } =
     if (status === "connected") return "disconnect"
     if (status === "failed") return "retry"
     if (status === "needs_auth") return "sign in"
+    // kilocode_change(mcp-guardrails) - connecting is refused, so the action shows why
+    if (status === "blocked") return "view reason"
     return "connect"
   })
 
@@ -115,6 +125,11 @@ export function DialogMcp(props: { initialServer?: string; details?: boolean } =
     const server = servers().find((entry) => entry.name === name)
     if (!server || server.status.status === "pending") return
     if (server.status.status === "needs_auth" && server.integrationID) {
+      select(name)
+      return
+    }
+    // kilocode_change(mcp-guardrails) - a blocked server cannot be connected; show the reason instead
+    if (server.status.status === "blocked") {
       select(name)
       return
     }
@@ -154,7 +169,18 @@ export function DialogMcp(props: { initialServer?: string; details?: boolean } =
                 },
               },
             ]}
-            footerHints={focusedError() ? [{ title: "view error", label: "enter", group: "primary" }] : []}
+            footerHints={
+              focusedError()
+                ? [
+                    {
+                      // kilocode_change(mcp-guardrails) - a blocked server has a reason, not an error
+                      title: focusedServer()?.status.status === "blocked" ? "view reason" : "view error",
+                      label: "enter",
+                      group: "primary",
+                    },
+                  ]
+                : []
+            }
           />
         }
       >

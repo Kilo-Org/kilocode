@@ -33,6 +33,9 @@ function icon(status: McpServer["status"]) {
       return "⚠"
     case "failed":
       return "✗"
+    // kilocode_change(mcp-guardrails) - blocked by the organization's MCP policy
+    case "blocked":
+      return "⊘"
     default:
       return "○"
   }
@@ -44,6 +47,9 @@ function describe(status: McpServer["status"]) {
       return "needs authentication"
     case "failed":
       return `failed: ${status.error}`
+    // kilocode_change(mcp-guardrails) - blocked by the organization's MCP policy
+    case "blocked":
+      return `blocked: ${status.reason}`
     default:
       return status.status
   }

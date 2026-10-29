@@ -5,6 +5,7 @@ import {
   KiloDefaults,
   KiloDevice,
   KiloErrors,
+  KiloGuardrails,
   KiloHeaders,
   KiloMachine,
   KiloModels,
@@ -221,6 +222,14 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
           ? account.organizationID
           : process.env.KILO_ORG_ID || organizationID || KiloServer.organizationFromUrl(base) || null,
       }
+    })
+
+    // Resolved live rather than from the catalog, so a login, logout or organization switch applies at once. Guardrails
+    // belong to an organization, so a personal account has none.
+    const guardrailsAccount = Effect.gen(function* () {
+      const account = (yield* resolveCurrentAccount).account
+      if (!account?.token || !account.organizationID || !KiloAccount.compatible(account)) return undefined
+      return { server: account.server, token: account.token, organizationID: account.organizationID }
     })
 
     // Keep valid agents during refresh, but invalidate a changed scope before waiting for the catalog lock.
@@ -980,6 +989,36 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
             )
             if (catalog.failed)
               return yield* Effect.fail(context.error("failed", "Organization selected, but its model catalog is unavailable"))
+            return {}
+          }),
+        "guardrails.policy": (_input, context) =>
+          Effect.gen(function* () {
+            const account = yield* guardrailsAccount
+            if (!account) return null
+            const policy = yield* KiloGuardrails.policy(
+              account.server,
+              account.token,
+              account.organizationID,
+              ctx.app.version,
+            ).pipe(Effect.mapError((error) => context.error("failed", error.message)))
+            if (!policy) return null
+            return {
+              organizationID: account.organizationID,
+              enforcement: policy.mcp.enforcement,
+              allowedServers: policy.mcp.allowedServers,
+            }
+          }),
+        "guardrails.report": (input, context) =>
+          Effect.gen(function* () {
+            const account = yield* guardrailsAccount
+            if (!account || input.connections.length === 0) return {}
+            yield* KiloGuardrails.report(
+              account.server,
+              account.token,
+              account.organizationID,
+              { client: KiloGuardrails.client(), connections: input.connections },
+              ctx.app.version,
+            ).pipe(Effect.mapError((error) => context.error("failed", error.message)))
             return {}
           }),
         modes: (_input, context) =>

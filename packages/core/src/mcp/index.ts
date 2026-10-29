@@ -71,6 +71,9 @@ const unavailable = (server: ServerName, status: Status) => {
       return `MCP server "${server}" needs authentication: ${status.error}. Sign in from /mcps.`
     case "disabled":
       return `MCP server "${server}" is disabled.`
+    // kilocode_change(mcp-guardrails) seam - a transform can block a server with a reason
+    case "blocked":
+      return `MCP server "${server}" is blocked: ${status.reason}.`
     default:
       return `MCP server "${server}" is not connected.`
   }
@@ -87,6 +90,8 @@ type ServerEntry = {
   // Set when a remote server is registered as an OAuth integration; the credential lives in the global store.
   integrationID?: Integration.ID
   registration?: State.Registration
+  // kilocode_change(mcp-guardrails) seam - why a transform blocked this server; a blocked server never starts
+  readonly blocked?: string
 }
 
 // A client-hosted MCP server attached over a connection the client opened. Internal: never listed,
@@ -111,6 +116,8 @@ const endpointLoads = KeyedMutex.makeUnsafe<string>()
 type Data = {
   servers: Map<ServerName, Types.DeepMutable<Mcp.ServerConfig>>
   removed: Set<ServerName>
+  // kilocode_change(mcp-guardrails) seam - blocked server names with their reasons
+  blocked: Map<ServerName, string>
 }
 
 export type Editor = {
@@ -119,6 +126,8 @@ export type Editor = {
   set: (server: ServerName | string, config: Mcp.ServerConfig) => void
   update: (server: ServerName | string, update: (config: Types.DeepMutable<Mcp.ServerConfig>) => void) => void
   remove: (server: ServerName | string) => void
+  // kilocode_change(mcp-guardrails) seam - keeps the server listed with a blocked status instead of starting it
+  block?: (server: ServerName | string, reason: string) => void
 }
 
 const cloneConfig = (config: Mcp.ServerConfig) => structuredClone(config) as Types.DeepMutable<Mcp.ServerConfig>
@@ -450,6 +459,8 @@ export const layer = (options?: Options) =>
 
       const startServer = (name: ServerName, entry: ServerEntry) =>
         Effect.gen(function* () {
+          // kilocode_change(mcp-guardrails) seam - connect, reconnect and recovery all start servers through here
+          if (entry.blocked !== undefined) return
           // Announce the handshake so connect() and credential reconnects don't show a stale
           // disabled/failed status for the duration of the connection attempt.
           entry.status = { status: "pending" }
@@ -523,16 +534,25 @@ export const layer = (options?: Options) =>
         if (entry.registration) yield* entry.registration.dispose
       })
 
-      const replaceServer = Effect.fnUntraced(function* (name: ServerName, serverConfig: Mcp.ServerConfig) {
+      const replaceServer = Effect.fnUntraced(function* (
+        name: ServerName,
+        serverConfig: Mcp.ServerConfig,
+        // kilocode_change(mcp-guardrails) seam - the reason a transform blocked the server
+        blocked?: string,
+      ) {
         const previous = entries.get(name)
         if (previous) yield* disposeServer(name, previous)
         const entry: ServerEntry = {
           config: serverConfig,
-          status: { status: "pending" },
+          // kilocode_change start - mcp-guardrails seam: a blocked server is listed but never registered or started
+          status: blocked === undefined ? { status: "pending" } : { status: "blocked", reason: blocked },
           startup: Latch.makeUnsafe(),
+          blocked,
+          // kilocode_change end
         }
         entries.set(name, entry)
         yield* Effect.gen(function* () {
+          if (blocked !== undefined) return yield* bus.publish(McpEvent.StatusChanged, { server: name })
           yield* register(name, entry)
           if (serverConfig.disabled) {
             entry.status = { status: "disabled" }
@@ -655,23 +675,43 @@ export const layer = (options?: Options) =>
       })
 
       let applied: Map<ServerName, Mcp.ServerConfig> | undefined
+      // kilocode_change(mcp-guardrails) seam - the blocked set that `applied` was reconciled with
+      let appliedBlocked = new Map<ServerName, string>()
       const overrides = new Map<ServerName, Mcp.ServerConfig | false>()
       const reconcileLock = Semaphore.makeUnsafe(1)
       const reconcile = Effect.fnUntraced(function* () {
         const servers = state.get().servers
+        // kilocode_change(mcp-guardrails) seam - blocked servers are listed, never registered or started
+        const blocked = state.get().blocked
         if (!applied && entries.size === 0) {
           for (const [name, server] of servers) {
+            // kilocode_change start - mcp-guardrails seam: seed a blocked entry with its status
+            const reason = blocked.get(name)
             entries.set(name, {
               config: server,
-              status: { status: "pending" },
+              status: reason === undefined ? { status: "pending" } : { status: "blocked", reason },
               startup: Latch.makeUnsafe(),
+              blocked: reason,
             })
+            // kilocode_change end
           }
-          yield* Effect.forEach(entries, ([name, entry]) => register(name, entry), { discard: true })
+          yield* Effect.forEach(
+            Array.from(entries).filter(([, entry]) => entry.blocked === undefined),
+            ([name, entry]) => register(name, entry),
+            { discard: true },
+          )
           applied = servers
+          appliedBlocked = blocked
 
           // Initial connections stay asynchronous so one slow server does not block Location startup.
           for (const [name, entry] of entries) {
+            // kilocode_change start - mcp-guardrails seam: a blocked server stays blocked
+            if (entry.blocked !== undefined) {
+              entry.startup.openUnsafe()
+              yield* bus.publish(McpEvent.StatusChanged, { server: name })
+              continue
+            }
+            // kilocode_change end
             if (entry.config.disabled) {
               entry.status = { status: "disabled" }
               entry.startup.openUnsafe()
@@ -693,14 +733,16 @@ export const layer = (options?: Options) =>
         for (const name of names) {
           const previous = applied?.get(name)
           const updated = servers.get(name)
-          if (isDeepStrictEqual(previous, updated)) continue
+          // kilocode_change(mcp-guardrails) seam - a server whose block changed is replaced even when its config did not
+          if (isDeepStrictEqual(previous, updated) && appliedBlocked.get(name) === blocked.get(name)) continue
           if (!updated) {
             yield* removeServer(name).pipe(locks.withLock(name))
             continue
           }
-          yield* replaceServer(name, updated).pipe(locks.withLock(name))
+          yield* replaceServer(name, updated, blocked.get(name)).pipe(locks.withLock(name))
         }
         applied = servers
+        appliedBlocked = blocked
       })
 
       // Bring a server online (or back to needs_auth) when its integration's credential changes, so an
@@ -734,6 +776,8 @@ export const layer = (options?: Options) =>
             ),
           ),
           removed: new Set(Array.from(overrides).flatMap(([name, config]) => (config === false ? [name] : []))),
+          // kilocode_change(mcp-guardrails) seam - transforms add blocked servers on every replay
+          blocked: new Map(),
         }),
         editor: (editor) => ({
           list: () => Array.from(editor.servers),
@@ -749,6 +793,8 @@ export const layer = (options?: Options) =>
             update(current)
           },
           remove: (server) => editor.servers.delete(ServerName.make(server)),
+          // kilocode_change(mcp-guardrails) seam - record the block; reconcile keeps the server listed but stopped
+          block: (server, reason) => editor.blocked.set(ServerName.make(server), reason),
         }),
         notify: () => State.reconcile(root, fork, () => reconcileLock.withPermit(reconcile())),
       })
@@ -778,6 +824,8 @@ export const layer = (options?: Options) =>
           const name = ServerName.make(server)
           yield* Effect.gen(function* () {
             const target = yield* requireServer(name)
+            // kilocode_change(mcp-guardrails) seam - a blocked server keeps its blocked status
+            if (target.entry.blocked !== undefined) return
             yield* stopServer(name, target.entry)
             target.entry.status = { status: "disabled" }
             yield* bus.publish(McpEvent.StatusChanged, { server: name })

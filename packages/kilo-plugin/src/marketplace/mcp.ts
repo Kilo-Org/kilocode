@@ -12,7 +12,7 @@ import { Option, Schema } from "effect"
 // Translate catalog templates to native Mcp.ServerConfig, stored under mcp.servers.<id>.
 export class McpError extends Error {
   constructor(
-    readonly reason: "invalid_params" | "conflict" | "not_found",
+    readonly reason: "invalid_params" | "conflict" | "not_found" | "unsupported",
     message: string,
   ) {
     super(message)
@@ -31,6 +31,22 @@ export function parameters(item: KiloMarketplaceRpc.Item, option: KiloMarketplac
   const merged = new Map(item.parameters.map((parameter) => [parameter.key, parameter]))
   for (const parameter of option?.parameters ?? []) merged.set(parameter.key, parameter)
   return [...merged.values()]
+}
+
+/**
+ * The server a template installs, read without filling its parameters in. A placeholder stays literal, so a URL or
+ * package name that depends on one cannot be matched against an allow list.
+ */
+export function server(template: string): Mcp.ServerConfig | undefined {
+  const decoded = Schema.decodeUnknownOption(Schema.fromJsonString(Schema.Unknown))(template)
+  if (Option.isNone(decoded) || !decoded.value || typeof decoded.value !== "object" || Array.isArray(decoded.value))
+    return undefined
+  try {
+    return Option.getOrUndefined(decodeServer(convert(decoded.value as Record<string, unknown>)))
+  } catch (error) {
+    if (error instanceof McpError) return undefined
+    throw error
+  }
 }
 
 export function build(input: {

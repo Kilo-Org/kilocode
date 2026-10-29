@@ -173,6 +173,13 @@ export function fixture() {
         },
       ],
     } as unknown,
+    guardrailsStatus: 200,
+    guardrails: { mcp: { enforcement: "off", allowedServers: [] } } as unknown,
+    connectionsStatus: 200,
+    // A fixed report answer. Unset, every connection is allowed and unrecorded.
+    connectionsResponse: undefined as unknown,
+    // Request bodies of the MCP connection reports, in order.
+    connectionBodies: [] as unknown[],
     notificationsStatus: 200,
     notifications: {
       notifications: [
@@ -344,6 +351,28 @@ export function fixture() {
       if (path === "/api/profile/balance") {
         if (state.balanceStatus !== 200) return new Response(null, { status: state.balanceStatus })
         return Response.json(state.balance)
+      }
+      if (/^\/api\/organizations\/[^/]+\/guardrails$/.test(path)) {
+        if (state.guardrailsStatus !== 200) return new Response(null, { status: state.guardrailsStatus })
+        return Response.json(state.guardrails)
+      }
+      if (/^\/api\/organizations\/[^/]+\/guardrails\/mcp-connections$/.test(path)) {
+        const body = (await request.json().catch(() => undefined)) as
+          | { connections?: readonly unknown[] }
+          | undefined
+        state.connectionBodies.push(body)
+        if (state.connectionsStatus !== 200) return new Response(null, { status: state.connectionsStatus })
+        return Response.json(
+          state.connectionsResponse ?? {
+            enforcement: "off",
+            results: (body?.connections ?? []).map(() => ({
+              decision: "allowed",
+              identityKey: null,
+              action: "allow",
+              recorded: false,
+            })),
+          },
+        )
       }
       if (/^\/api\/organizations\/[^/]+\/modes$/.test(path)) {
         if (state.modesStatus !== 200) return new Response(null, { status: state.modesStatus })

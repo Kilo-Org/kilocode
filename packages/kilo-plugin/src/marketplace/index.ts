@@ -1,6 +1,7 @@
 import { define } from "@opencode/plugin/effect/plugin"
 import type { RpcCallContext } from "@opencode/plugin/effect/rpc"
 import { KiloMarketplaceRpc } from "@opencode/schema/kilocode/marketplace"
+import { KiloMcpGuardrailsRpc } from "@opencode/schema/kilocode/mcp-guardrails"
 import { ProjectID } from "@opencode/schema/project-id"
 import { KiloConfigFiles } from "@opencode/util/kilocode/config/files"
 import { Global } from "@opencode/util/global"
@@ -34,6 +35,7 @@ export const KiloMarketplacePlugin = define<Global.Service | Scope.Scope>({
   effect: Effect.fn(function* (ctx) {
     const global = yield* Global.Service
     const registry = KiloMarketplaceRegistry.make()
+    const guardrails = ctx.rpc(KiloMcpGuardrailsRpc.Definition)
     const catalog = new Map<KiloMarketplaceRpc.Kind, { at: number; entries: readonly Entry[] }>()
     // An unversioned directory belongs to the global project; install into the actual opened directory then.
     const project =
@@ -163,7 +165,7 @@ export const KiloMarketplacePlugin = define<Global.Service | Scope.Scope>({
         input.scope === "project" ? (input.project ?? project) : "",
       ].join(":")
 
-    const list = (kind: KiloMarketplaceRpc.Kind, refresh: boolean, query?: string) =>
+    const catalogList = (kind: KiloMarketplaceRpc.Kind, refresh: boolean, query?: string) =>
       Effect.gen(function* () {
         const key = catalogKey(registry.id, kind)
         const cached = catalog.get(kind)
@@ -215,10 +217,60 @@ export const KiloMarketplacePlugin = define<Global.Service | Scope.Scope>({
         }
       })
 
+    // While the organization enforces an MCP allow list, only the install options that match it are offered: an
+    // option the allow list does not name could not run once installed. An unreachable policy hides nothing.
+    const permitted = (kind: KiloMarketplaceRpc.Kind, entries: readonly Entry[]) =>
+      Effect.gen(function* () {
+        if (kind !== "mcp") return entries
+        const candidates = entries.flatMap((entry, index) =>
+          entry.item.options.map((_, option) => ({ index, option, server: configOf(entry.payloads[option]) })),
+        )
+        const answer = yield* guardrails.evaluate({ servers: candidates.map((candidate) => candidate.server) }).pipe(
+          Effect.option,
+        )
+        if (Option.isNone(answer) || answer.value.enforcement !== "enforce") return entries
+        const allowed = new Set(
+          candidates
+            .filter((_, position) => answer.value.results[position]?.decision === "allowed")
+            .map((candidate) => `${candidate.index}:${candidate.option}`),
+        )
+        return entries.flatMap((entry, index): readonly Entry[] => {
+          const keep = (option: number) => allowed.has(`${index}:${option}`)
+          const options = entry.item.options.filter((_, option) => keep(option))
+          if (options.length === 0) return []
+          return [
+            {
+              ...entry,
+              item: { ...entry.item, options },
+              payloads: entry.payloads.filter((_, option) => keep(option)),
+            },
+          ]
+        })
+      })
+
+    const list = (kind: KiloMarketplaceRpc.Kind, refresh: boolean, query?: string) =>
+      catalogList(kind, refresh, query).pipe(
+        Effect.flatMap((result) =>
+          permitted(kind, result.entries).pipe(Effect.map((entries) => ({ ...result, entries }))),
+        ),
+      )
+
     const lookup = (source: string, kind: KiloMarketplaceRpc.Kind, id: string) =>
       Effect.gen(function* () {
         if (source !== registry.id) return undefined
-        return (yield* list(kind, false)).entries.find((entry) => entry.item.id === id)
+        return (yield* catalogList(kind, false)).entries.find((entry) => entry.item.id === id)
+      })
+
+    // The entry as the organization allows it, so a blocked server is refused with a reason instead of a missing option.
+    const allowed = (entry: Entry, option: string | undefined) =>
+      Effect.gen(function* () {
+        if (entry.item.kind !== "mcp") return entry
+        const [kept] = yield* permitted(entry.item.kind, [entry])
+        const selected = option ?? kept?.item.options[0]?.name
+        if (kept && kept.item.options.some((candidate) => candidate.name === selected)) return kept
+        return yield* Effect.fail(
+          new McpError("unsupported", `${entry.item.name} is not on your organization's MCP allowlist`),
+        )
       })
 
     // A stored record names locations. Anything that could point outside the scope is rejected, not trusted.
@@ -307,9 +359,10 @@ export const KiloMarketplacePlugin = define<Global.Service | Scope.Scope>({
                 return yield* Effect.fail(
                   new McpError("not_found", `No ${input.kind} ${input.id} in ${input.registry}`),
                 )
+              const offered = yield* allowed(entry, input.option)
               return yield* Effect.tryPromise({
                 try: async () => ({
-                  ...Installer.preview({ entry, option: input.option, params: input.params }),
+                  ...Installer.preview({ entry: offered, option: input.option, params: input.params }),
                   config: await configFile(directory(input.scope), input.scope === "global"),
                 }),
                 catch: (error) => error,
@@ -327,6 +380,7 @@ export const KiloMarketplacePlugin = define<Global.Service | Scope.Scope>({
                 return yield* Effect.fail(
                   new McpError("not_found", `No ${input.kind} ${input.id} in ${input.registry}`),
                 )
+              const offered = yield* allowed(entry, input.option)
               const stored = yield* read(input)
               const previous = stored
                 ? yield* Effect.tryPromise({ try: () => restore(stored), catch: (error) => error })
@@ -348,7 +402,7 @@ export const KiloMarketplacePlugin = define<Global.Service | Scope.Scope>({
               const written = yield* Effect.tryPromise({
                 try: async (signal) =>
                   Installer.install({
-                    entry,
+                    entry: offered,
                     skills: path.join(roots(input.scope), "skills"),
                     config:
                       input.kind === "skill"
@@ -449,4 +503,11 @@ class StorageError extends Error {
 
 function message(error: unknown) {
   return error instanceof Error ? error.message : String(error)
+}
+
+// An option whose template cannot be read has no identity, so it maps to a command the allow list never admits.
+function configOf(payload: unknown): KiloMcpGuardrailsRpc.Server {
+  const server = typeof payload === "string" ? MarketplaceMcp.server(payload) : undefined
+  if (!server) return { type: "local", command: [] }
+  return server.type === "remote" ? { type: "remote", url: server.url } : { type: "local", command: server.command }
 }

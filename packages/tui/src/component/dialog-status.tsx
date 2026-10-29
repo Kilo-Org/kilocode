@@ -10,7 +10,8 @@ export function DialogStatus() {
   const mcp = createMemo(() => data.location.mcp.server.list() ?? [])
   const color = (status: string) => {
     if (status === "connected") return theme.text.feedback.success.base
-    if (status === "failed") return theme.text.feedback.error.base
+    // kilocode_change(mcp-guardrails) - blocked by the organization's MCP policy
+    if (status === "failed" || status === "blocked") return theme.text.feedback.error.base
     if (status === "needs_auth") return theme.text.feedback.warning.base
     return theme.text.muted
   }
@@ -36,6 +37,10 @@ export function DialogStatus() {
                       <Match when={item.status.status === "disabled"}>Disabled in configuration</Match>
                       <Match when={item.status.status === "needs_auth" && item.status}>
                         {(val) => `Needs authentication: ${val().error}`}
+                      </Match>
+                      {/* kilocode_change(mcp-guardrails) - blocked by the organization's MCP policy */}
+                      <Match when={item.status.status === "blocked" && item.status}>
+                        {(val) => `Blocked: ${val().reason}`}
                       </Match>
                     </Switch>
                   </span>

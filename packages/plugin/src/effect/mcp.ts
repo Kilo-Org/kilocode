@@ -9,6 +9,9 @@ export interface MCPEditor {
   set(name: string, config: Mcp.ServerConfig): void
   update(name: string, update: (config: Types.DeepMutable<Mcp.ServerConfig>) => void): void
   remove(name: string): void
+  // kilocode_change(mcp-guardrails) seam - list the server with a blocked status and the reason instead of starting
+  // it. A host that cannot list blocked servers omits it, and callers fall back to `remove`.
+  block?(name: string, reason: string): void
 }
 
 export interface MCPDomain extends Pick<McpApi<unknown>, "list"> {

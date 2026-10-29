@@ -5,6 +5,7 @@ import { OpencodeFreeTier } from "./gateway/opencode"
 import { KiloGatewayPolicyPlugin } from "./gateway/policy"
 import { GatewayOptions } from "./gateway/options"
 import { KiloHandshakePlugin } from "./handshake"
+import { KiloMcpGuardrailsPlugin } from "./mcp-guardrails"
 // kilo_port(provider-usage:ce8e021f1ef6) v1 imported the ProviderUsage Location service into location-services.ts.
 import { KiloProviderUsagePlugin } from "./provider-usage"
 import { KiloOpenAIPlugin } from "./openai"
@@ -39,4 +40,6 @@ export const KiloPostPlugins = [
   KiloAgentPlugin.Ceiling,
   GatewayOptions.Plugin,
   OpencodeFreeTier.Plugin,
+  // The MCP guard runs after every plugin that adds servers, so it sees the final set and nothing re-adds one.
+  KiloMcpGuardrailsPlugin,
 ] as const

@@ -554,10 +554,21 @@ function App() {
   // the same problem on every refresh while still re-alerting if the state changes.
   const mcpAlerted: Record<string, string> = {}
   createEffect(() => {
+    // kilocode_change start - mcp-guardrails: servers newly blocked by the organization's MCP policy share one toast
+    const blocked: { name: string; reason: string }[] = []
+    // kilocode_change end
     for (const server of data.location.mcp.server.list() ?? []) {
       const status = server.status
+      // kilocode_change start - mcp-guardrails: a blocked server alerts once, like a failed one
+      if (status.status === "blocked" && mcpAlerted[server.name] !== status.status) {
+        mcpAlerted[server.name] = status.status
+        blocked.push({ name: server.name, reason: status.reason })
+        continue
+      }
+      // kilocode_change end
       if (status.status !== "failed" && status.status !== "needs_auth") {
-        delete mcpAlerted[server.name]
+        // kilocode_change(mcp-guardrails) - a blocked server stays alerted until it leaves that state
+        if (status.status !== "blocked") delete mcpAlerted[server.name]
         continue
       }
       if (mcpAlerted[server.name] === status.status) continue
@@ -577,6 +588,15 @@ function App() {
           action: { label: "Open MCP servers", run: () => keymap.dispatch("mcp.list") },
         })
     }
+    // kilocode_change start - mcp-guardrails: report the servers the organization's MCP policy blocked
+    if (blocked.length === 0) return
+    toast.show({
+      variant: "warning",
+      title: blocked.length === 1 ? `MCP server blocked: ${blocked[0].name}` : `${blocked.length} MCP servers blocked`,
+      message: blocked.length === 1 ? blocked[0].reason : "Your organization's MCP policy blocks them. Run /mcps to see why.",
+      action: { label: "Open MCP servers", run: () => keymap.dispatch("mcp.list") },
+    })
+    // kilocode_change end
   })
 
   const copyOnSelectEnabled = () =>

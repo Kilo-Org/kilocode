@@ -267,6 +267,43 @@ export const RouterEvalConfig = Schema.Struct({
 })
 export type RouterEvalConfig = typeof RouterEvalConfig.Type
 
+/** The MCP part of the organization's guardrails; the allow list is what a server must match to run. */
+export const GuardrailsPolicy = Schema.Struct({
+  /** The organization the policy belongs to. */
+  organizationID: Schema.String,
+  enforcement: Schema.Literals(["off", "shadow", "enforce"]),
+  allowedServers: Schema.Array(
+    Schema.Struct({
+      identityKey: Schema.String,
+      name: Schema.String,
+      config: Schema.Union([
+        Schema.Struct({ kind: Schema.Literal("remote"), url: Schema.String }),
+        Schema.Struct({
+          kind: Schema.Literal("package"),
+          ecosystem: Schema.Literals(["npm", "pypi"]),
+          identifier: Schema.String,
+          min_version: optional(Schema.NullOr(Schema.String)),
+        }),
+      ]),
+    }),
+  ),
+})
+export type GuardrailsPolicy = typeof GuardrailsPolicy.Type
+
+export const GuardrailsConnection = Schema.Struct({
+  target: Schema.Union([
+    Schema.Struct({ kind: Schema.Literal("remote"), url: Schema.String }),
+    Schema.Struct({
+      kind: Schema.Literal("package"),
+      ecosystem: Schema.Literals(["npm", "pypi"]),
+      identifier: Schema.String,
+    }),
+  ]),
+  serverName: optional(Schema.String),
+  version: optional(Schema.NullOr(Schema.String)),
+})
+export type GuardrailsConnection = typeof GuardrailsConnection.Type
+
 // The TUI, VS Code, and JetBrains clients use this contract for account/profile, balance, Kilo Pass,
 // BYOK, coding plans, team modes, notifications, media and embedding models, and FIM/edit routing.
 export const Definition = Rpc.define({
@@ -309,6 +346,17 @@ export const Definition = Rpc.define({
     },
     "organization.set": {
       input: portable(Schema.Struct({ organizationID: OrganizationID })),
+      output: portable(Schema.Struct({})),
+      errors: Failure,
+    },
+    "guardrails.policy": {
+      input: portable(Schema.Struct({})),
+      /** `null` when no organization policy applies: signed out, personal account, or an organization the user left. */
+      output: portable(Schema.NullOr(GuardrailsPolicy)),
+      errors: Failure,
+    },
+    "guardrails.report": {
+      input: portable(Schema.Struct({ connections: Schema.Array(GuardrailsConnection) })),
       output: portable(Schema.Struct({})),
       errors: Failure,
     },

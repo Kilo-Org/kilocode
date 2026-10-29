@@ -82,8 +82,14 @@ const NeedsAuth = Schema.Struct({ status: Schema.Literal("needs_auth"), error: S
   identifier: "Mcp.Status.NeedsAuth",
 })
 
+// kilocode_change start - mcp-guardrails seam: a server a transform blocked, with the reason it is not running
+const Blocked = Schema.Struct({ status: Schema.Literal("blocked"), reason: Schema.String }).annotate({
+  identifier: "Mcp.Status.Blocked",
+})
+// kilocode_change end
+
 export type Status = typeof Status.Type
-export const Status = Schema.Union([Connected, Pending, Disabled, Failed, NeedsAuth]).pipe(
+export const Status = Schema.Union([Connected, Pending, Disabled, Failed, NeedsAuth, Blocked]).pipe(
   Schema.toTaggedUnion("status"),
 )
 

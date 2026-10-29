@@ -12,9 +12,12 @@ export function SidebarMcp(props: { context: Plugin.Context; sessionID: string }
     () => list().filter((item) => item.status.status === "failed" || item.status.status === "needs_auth").length,
   )
 
+  // kilocode_change(mcp-guardrails) - servers the organization's MCP policy blocks are counted apart from errors
+  const blocked = createMemo(() => list().filter((item) => item.status.status === "blocked").length)
+
   const dot = (status: string) => {
     if (status === "connected") return theme.text.feedback.success.base
-    if (status === "failed") return theme.text.feedback.error.base
+    if (status === "failed" || status === "blocked") return theme.text.feedback.error.base
     if (status === "disabled") return theme.text.muted
     if (status === "needs_auth") return theme.text.feedback.warning.base
     return theme.text.muted
@@ -41,7 +44,9 @@ export function SidebarMcp(props: { context: Plugin.Context; sessionID: string }
             <Show when={!view.open}>
               <span style={{ fg: theme.text.muted }}>
                 {" "}
-                ({on()} active{bad() > 0 ? `, ${bad()} error${bad() > 1 ? "s" : ""}` : ""})
+                ({on()} active{bad() > 0 ? `, ${bad()} error${bad() > 1 ? "s" : ""}` : ""}
+                {/* kilocode_change(mcp-guardrails) - blocked count */}
+                {blocked() > 0 ? `, ${blocked()} blocked` : ""})
               </span>
             </Show>
           </text>
@@ -55,7 +60,10 @@ export function SidebarMcp(props: { context: Plugin.Context; sessionID: string }
                 minWidth={0}
                 onMouseUp={() =>
                   props.context.ui.dialog.show(() => (
-                    <DialogMcp initialServer={item.name} details={item.status.status === "failed"} />
+                    <DialogMcp
+                      initialServer={item.name}
+                      details={item.status.status === "failed" || item.status.status === "blocked"}
+                    />
                   ))
                 }
               >
@@ -71,7 +79,11 @@ export function SidebarMcp(props: { context: Plugin.Context; sessionID: string }
                   <b>{item.name}</b>
                 </text>
                 <text
-                  fg={item.status.status === "failed" ? theme.text.feedback.error.base : theme.text.muted}
+                  fg={
+                    item.status.status === "failed" || item.status.status === "blocked"
+                      ? theme.text.feedback.error.base
+                      : theme.text.muted
+                  }
                   wrapMode="none"
                   flexShrink={0}
                 >
@@ -81,6 +93,8 @@ export function SidebarMcp(props: { context: Plugin.Context; sessionID: string }
                     <Match when={item.status.status === "failed"}>Error</Match>
                     <Match when={item.status.status === "disabled"}>Disabled</Match>
                     <Match when={item.status.status === "needs_auth"}>Sign in</Match>
+                    {/* kilocode_change(mcp-guardrails) - blocked by the organization's MCP policy */}
+                    <Match when={item.status.status === "blocked"}>Blocked</Match>
                   </Switch>
                 </text>
               </box>
