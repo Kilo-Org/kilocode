@@ -43,6 +43,7 @@ const McpEditView: Component<Props> = (props) => {
   const text = (key: string, fallback: string) => draft()[key] ?? fallback
   const type = (key: string, value: string) => setDraft((current) => ({ ...current, [key]: value }))
   const commit = (key: string, partial: Record<string, unknown>) => {
+    if (!props.name || !(key in draft())) return
     setDraft((current) => {
       const next = { ...current }
       delete next[key]
@@ -55,6 +56,7 @@ const McpEditView: Component<Props> = (props) => {
   }
 
   const update = (partial: Record<string, unknown>) => {
+    if (!props.name) return
     // `value` reads a v2 data-store value, whose nested objects are store proxies: clone to plain data before the
     // host write, which posts the object across the webview boundary.
     const next = JSON.parse(JSON.stringify({ ...server(), ...partial })) as Record<string, unknown>

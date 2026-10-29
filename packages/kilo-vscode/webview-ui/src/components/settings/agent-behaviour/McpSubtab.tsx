@@ -140,12 +140,14 @@ const McpSubtab: Component = () => {
   const timeoutText = (key: string) => timeoutDraft()[key] ?? timeoutValue(key)
   const typeTimeout = (key: string, value: string) => setTimeoutDraft((current) => ({ ...current, [key]: value }))
   const commitTimeout = (key: string) => {
-    const value = (timeoutDraft()[key] ?? timeoutValue(key)).trim()
+    if (!(key in timeoutDraft())) return
+    const value = timeoutDraft()[key].trim()
     setTimeoutDraft((current) => {
       const next = { ...current }
       delete next[key]
       return next
     })
+    if (value === "" && timeoutValue(key) === "") return
     config.set(["mcp", "timeout", key], value === "" ? undefined : Number(value), timeoutScope())
   }
 
