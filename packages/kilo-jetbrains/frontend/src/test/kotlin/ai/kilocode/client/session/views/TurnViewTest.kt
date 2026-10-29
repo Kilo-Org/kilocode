@@ -133,6 +133,46 @@ class TurnViewTest : BasePlatformTestCase() {
         assertEquals("assistant", mv.role)
     }
 
+    fun `test message exposes a bounded accessible text summary`() {
+        val message = msg("a1", "assistant").also {
+            it.parts["p1"] = text("p1", "First line\n  ${"x".repeat(180)}")
+        }
+
+        val mv = MessageView(message, openFile)
+
+        assertEquals(
+            "Assistant message: First line ${"x".repeat(146)}...",
+            mv.accessibleContext.accessibleName,
+        )
+    }
+
+    fun `test accessible summary follows streamed text`() {
+        val mv = MessageView(msg("a1", "assistant"), openFile)
+        assertEquals("Assistant message", mv.accessibleContext.accessibleName)
+
+        mv.upsertPart(text("p1", "Hello"))
+        assertEquals("Assistant message: Hello", mv.accessibleContext.accessibleName)
+
+        mv.appendDelta("p1", "\nfrom Kilo")
+        assertEquals("Assistant message: Hello from Kilo", mv.accessibleContext.accessibleName)
+
+        mv.removePart("p1")
+        assertEquals("Assistant message", mv.accessibleContext.accessibleName)
+    }
+
+    fun `test tool-only message exposes its visible title`() {
+        val message = msg("a1", "assistant").also {
+            it.parts["t1"] = Tool("t1", "read", toolKind("read")).apply {
+                state = ToolExecState.COMPLETED
+                title = "Read SessionModel.kt"
+            }
+        }
+
+        val mv = MessageView(message, openFile)
+
+        assertEquals("Assistant message: Read SessionModel.kt", mv.accessibleContext.accessibleName)
+    }
+
     fun `test user message uses prompt shell padding`() {
         val mv = MessageView(msg("u1", "user"), openFile)
         val ins = mv.border.getBorderInsets(mv)

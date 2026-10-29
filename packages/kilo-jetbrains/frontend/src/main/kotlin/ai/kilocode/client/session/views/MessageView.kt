@@ -46,6 +46,7 @@ import java.awt.Point
 import java.awt.Graphics
 import java.awt.Graphics2D
 import java.awt.RenderingHints
+import javax.accessibility.AccessibleContext
 import javax.swing.JComponent
 import javax.swing.JPanel
 import javax.swing.SwingUtilities
@@ -114,6 +115,7 @@ class MessageView(
     private var sessionId: String? = null
     private var reverted = false
     private var failure: MessageErrorView? = null
+    private var summary = ""
 
     init {
         isOpaque = false
@@ -126,6 +128,7 @@ class MessageView(
             if (isHidden(content)) continue
             addPart(content)
         }
+        syncAccessibility()
         syncVisibility()
     }
 
@@ -485,6 +488,7 @@ class MessageView(
         if (id != null) sources[contentId] = sources[contentId].orEmpty() + delta
         val part = parts[id ?: contentId] ?: return false
         part.appendDelta(delta)
+        syncAccessibility()
         syncPromptToolbar()
         return true
     }
@@ -631,9 +635,53 @@ class MessageView(
 
     @RequiresEdt
     private fun refresh() {
+        syncAccessibility()
         syncVisibility()
         revalidate()
         repaint()
+    }
+
+    @RequiresEdt
+    private fun syncAccessibility() {
+        val prefix = when (role) {
+            SessionUiStyle.View.Message.USER_ROLE -> KiloBundle.message("session.message.accessible.user")
+            SessionUiStyle.View.Message.ASSISTANT_ROLE -> KiloBundle.message("session.message.accessible.assistant")
+            else -> KiloBundle.message("session.message.accessible.other", role)
+        }
+        val text = parts.values.asSequence()
+            .filterIsInstance<TextView>()
+            .map { it.markdown().replace(WHITESPACE, " ").trim() }
+            .firstOrNull { it.isNotEmpty() }
+            ?: msg.parts.values.asSequence()
+                .filter { it.id in parts }
+                .mapNotNull {
+                    when (it) {
+                        is Reasoning -> KiloBundle.message("session.part.reasoning")
+                        is Tool -> it.title?.takeIf(String::isNotBlank) ?: it.name
+                        is FileAttachment -> it.filename ?: KiloBundle.message("session.message.accessible.attachment")
+                        is Compaction -> KiloBundle.message("session.part.compaction")
+                        is Notice -> it.name ?: KiloBundle.message("session.message.accessible.notice")
+                        else -> null
+                    }
+                }
+                .firstOrNull()
+        val detail = text?.replace(WHITESPACE, " ")?.trim()?.takeIf(String::isNotEmpty)?.let(::summarize)
+        val next = detail?.let {
+            KiloBundle.message("session.message.accessible.summary", prefix, it)
+        } ?: prefix
+        if (summary == next) return
+        val old = summary
+        summary = next
+        accessibleContext?.firePropertyChange(AccessibleContext.ACCESSIBLE_NAME_PROPERTY, old, next)
+    }
+
+    override fun getAccessibleContext(): AccessibleContext {
+        if (accessibleContext == null) {
+            accessibleContext = object : AccessibleJPanel() {
+                override fun getAccessibleName() = summary
+            }
+        }
+        return accessibleContext
     }
 
     @RequiresEdt
@@ -792,4 +840,14 @@ class MessageView(
     }
 
     private fun assistantBorder() = JBUI.Borders.empty()
+
+    private companion object {
+        const val ACCESSIBLE_SUMMARY_LIMIT = 160
+        val WHITESPACE = Regex("\\s+")
+
+        fun summarize(text: String): String {
+            if (text.length <= ACCESSIBLE_SUMMARY_LIMIT) return text
+            return text.take(ACCESSIBLE_SUMMARY_LIMIT - 3).trimEnd() + "..."
+        }
+    }
 }
