@@ -137,9 +137,17 @@ const McpSubtab: Component = () => {
     const value = config.value(["mcp", "timeout", key])
     return value === undefined || value === null ? "" : String(value)
   }
-  const setTimeoutValue = (key: string, value: string) => {
-    const trimmed = value.trim()
-    config.set(["mcp", "timeout", key], trimmed === "" ? undefined : Number(trimmed), timeoutScope())
+  const [timeoutDraft, setTimeoutDraft] = createSignal<Record<string, string>>({})
+  const timeoutText = (key: string) => timeoutDraft()[key] ?? timeoutValue(key)
+  const typeTimeout = (key: string, value: string) => setTimeoutDraft((current) => ({ ...current, [key]: value }))
+  const commitTimeout = (key: string) => {
+    const value = (timeoutDraft()[key] ?? timeoutValue(key)).trim()
+    setTimeoutDraft((current) => {
+      const next = { ...current }
+      delete next[key]
+      return next
+    })
+    config.set(["mcp", "timeout", key], value === "" ? undefined : Number(value), timeoutScope())
   }
 
   return (
@@ -419,9 +427,13 @@ const McpSubtab: Component = () => {
                 last={index() === 2}
               >
                 <TextField
-                  value={timeoutValue(key)}
+                  value={timeoutText(key)}
                   placeholder={language.t("settings.experimental.mcpTimeout.title")}
-                  onChange={(value) => setTimeoutValue(key, value)}
+                  onChange={(value) => typeTimeout(key, value)}
+                  onBlur={() => commitTimeout(key)}
+                  onKeyDown={(event: KeyboardEvent) => {
+                    if (event.key === "Enter") commitTimeout(key)
+                  }}
                 />
               </SettingsRow>
             )}

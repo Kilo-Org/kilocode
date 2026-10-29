@@ -37,6 +37,23 @@ const McpEditView: Component<Props> = (props) => {
   const [redirectUri, setRedirectUri] = createSignal(initialOauth.redirectUri)
   const [oauthErrors, setOauthErrors] = createSignal<ReturnType<typeof validateOauth>>({})
 
+  // Config writes are immediate. Text fields keep the typed value in a draft and commit on blur or Enter, so the
+  // file and the live server are not rewritten on every keystroke; a committed key falls back to the config value.
+  const [draft, setDraft] = createSignal<Record<string, string>>({})
+  const text = (key: string, fallback: string) => draft()[key] ?? fallback
+  const type = (key: string, value: string) => setDraft((current) => ({ ...current, [key]: value }))
+  const commit = (key: string, partial: Record<string, unknown>) => {
+    setDraft((current) => {
+      const next = { ...current }
+      delete next[key]
+      return next
+    })
+    update(partial)
+  }
+  const commitOnEnter = (key: string, partial: () => Record<string, unknown>) => (event: KeyboardEvent) => {
+    if (event.key === "Enter") commit(key, partial())
+  }
+
   const update = (partial: Record<string, unknown>) => {
     const next = { ...server(), ...partial }
     const oauth = partial.oauth
@@ -133,9 +150,16 @@ const McpEditView: Component<Props> = (props) => {
             {language.t("settings.agentBehaviour.addMcp.command")}
           </div>
           <TextField
-            value={cmd()}
+            value={text("command", cmd())}
             placeholder={language.t("settings.agentBehaviour.addMcp.command.placeholder")}
-            onChange={(val) => update({ type: "local", command: [val.trim(), ...commandParts().slice(1)] })}
+            onChange={(val) => type("command", val)}
+            onBlur={() =>
+              commit("command", { type: "local", command: [text("command", cmd()).trim(), ...commandParts().slice(1)] })
+            }
+            onKeyDown={commitOnEnter("command", () => ({
+              type: "local",
+              command: [text("command", cmd()).trim(), ...commandParts().slice(1)],
+            }))}
           />
         </Card>
         <Card style={{ "margin-bottom": "12px" }}>
@@ -146,10 +170,16 @@ const McpEditView: Component<Props> = (props) => {
             {language.t("settings.agentBehaviour.addMcp.args.help")}
           </div>
           <TextField
-            value={args()}
+            value={text("args", args())}
             placeholder={language.t("settings.agentBehaviour.addMcp.args.placeholder")}
             multiline
-            onChange={(val) => update({ type: "local", command: [cmd(), ...val.split(/\n/).filter(Boolean)] })}
+            onChange={(val) => type("args", val)}
+            onBlur={() =>
+              commit("args", {
+                type: "local",
+                command: [cmd(), ...text("args", args()).split(/\n/).filter(Boolean)],
+              })
+            }
           />
         </Card>
       </Show>
@@ -160,9 +190,14 @@ const McpEditView: Component<Props> = (props) => {
             {language.t("settings.agentBehaviour.addMcp.url")}
           </div>
           <TextField
-            value={(server().url as string) ?? ""}
+            value={text("url", (server().url as string) ?? "")}
             placeholder={language.t("settings.agentBehaviour.addMcp.url.placeholder")}
-            onChange={(val) => update({ type: "remote", url: val.trim() })}
+            onChange={(val) => type("url", val)}
+            onBlur={() => commit("url", { type: "remote", url: text("url", (server().url as string) ?? "").trim() })}
+            onKeyDown={commitOnEnter("url", () => ({
+              type: "remote",
+              url: text("url", (server().url as string) ?? "").trim(),
+            }))}
           />
         </Card>
 
