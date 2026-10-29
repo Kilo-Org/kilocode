@@ -70,3 +70,16 @@ export function withDisabledProviders(policies: ProviderPolicy[], next: string[]
     ...next.map((id) => ({ action: "provider.use", resource: id, effect: "deny" })),
   ]
 }
+
+/**
+ * The `policies` value that enables provider `id` again. Returns `undefined` when `id` is not disabled (nothing to
+ * write) and an empty list when the key must be unset.
+ */
+export function enableProvider(policies: unknown, id: string): ProviderPolicy[] | undefined {
+  const disabled = disabledProviderIds(policies)
+  if (!disabled.includes(id)) return
+  return withDisabledProviders(
+    (Array.isArray(policies) ? policies : []) as ProviderPolicy[],
+    disabled.filter((item) => item !== id),
+  )
+}

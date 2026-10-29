@@ -19,6 +19,7 @@ import { useSettingsConfig, type SettingsScope } from "../../v2/settings-config"
 import { ModelCard } from "./CustomProviderModelCard"
 import {
   mergeProviderConfig,
+  unmaskKey,
   validateCustomProvider,
   type CustomProviderConfigValue,
   type HeaderRow,
@@ -28,10 +29,9 @@ import {
   CUSTOM_PROVIDER_PACKAGE,
   CUSTOM_PROVIDER_PACKAGES,
   disabledProviderIds,
+  enableProvider,
   isCustomProviderPackage,
-  withDisabledProviders,
   type CustomProviderPackage,
-  type ProviderPolicy,
 } from "./provider-visibility"
 import { credentials } from "./provider-catalog"
 
@@ -222,18 +222,13 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
     }
 
     // Reusing a disabled provider's id is allowed, so saving re-enables it; otherwise it would stay hidden.
-    const policies = config.value(["policies"])
-    const disabled = disabledProviderIds(policies)
-    if (disabled.includes(result.providerID)) {
+    const policies = enableProvider(config.value(["policies"]), result.providerID)
+    if (policies) {
       const policyScope: SettingsScope = config.source(["policies"]) ?? "global"
-      const next = withDisabledProviders(
-        (Array.isArray(policies) ? policies : []) as ProviderPolicy[],
-        disabled.filter((id) => id !== result.providerID),
-      )
       const written =
-        next.length === 0
+        policies.length === 0
           ? await config.unset(["policies"], policyScope)
-          : await config.set(["policies"], next, policyScope)
+          : await config.set(["policies"], policies, policyScope)
       if (!written) {
         setForm("saving", false)
         return
@@ -390,10 +385,11 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
               description={language.t("provider.custom.field.apiKey.description")}
               value={form.apiKey}
               onChange={(value) => {
-                // The field shows the mask until the first edit. Strip the mask characters wherever they are, so an
-                // edit in the middle of the masked value cannot persist stray asterisks as part of the key.
+                // The field shows the mask until the first edit.
                 const next =
-                  !apiTouched && form.apiKey === MASKED_CUSTOM_PROVIDER_KEY ? value.replace(/\*/g, "") : value
+                  !apiTouched && form.apiKey === MASKED_CUSTOM_PROVIDER_KEY
+                    ? unmaskKey(value, MASKED_CUSTOM_PROVIDER_KEY)
+                    : value
                 apiTouched = true
                 setForm("apiKey", next)
               }}

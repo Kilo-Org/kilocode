@@ -6,6 +6,7 @@ import { applyConfigEdits } from "../src/config-file-edit"
 import {
   disabledProviderIds,
   disabledProviderOptions,
+  enableProvider,
   isCustomProvider,
   isCustomProviderPackage,
   withDisabledProviders,
@@ -14,6 +15,7 @@ import {
   INVALID_ENV,
   mergeProviderConfig,
   parseEnvKey,
+  unmaskKey,
   validateCustomProvider,
   type CustomProviderConfigValue,
   type FormState,
@@ -94,6 +96,15 @@ describe("validateCustomProvider", () => {
     const output = validateCustomProvider({ ...base, form: form({ apiKey: "{env:lower}" }) })
     expect(output.result).toBeUndefined()
     expect(output.errors.apiKey).toBe(INVALID_ENV)
+  })
+
+  test("unmasks the first key edit and keeps asterisks of a pasted key", () => {
+    const mask = "********"
+    expect(unmaskKey("********sk-1", mask)).toBe("sk-1")
+    expect(unmaskKey("sk-1********", mask)).toBe("sk-1")
+    expect(unmaskKey("****sk-1****", mask)).toBe("sk-1")
+    expect(unmaskKey("*******", mask)).toBe("")
+    expect(unmaskKey("sk*abc*def", mask)).toBe("sk*abc*def")
   })
 
   test("keeps the existing env and no key when the key field is untouched", () => {
@@ -191,6 +202,21 @@ describe("provider-visibility", () => {
       { action: "tool.use", resource: "bash", effect: "deny" },
       { action: "provider.use", resource: "deepseek", effect: "deny" },
     ])
+  })
+
+  test("enables a saved provider whose id is disabled", () => {
+    const policies = [
+      { action: "provider.use", resource: "*", effect: "deny" },
+      { action: "provider.use", resource: "deepseek", effect: "deny" },
+      { action: "provider.use", resource: "vercel", effect: "deny" },
+    ]
+    expect(enableProvider(policies, "deepseek")).toEqual([
+      { action: "provider.use", resource: "*", effect: "deny" },
+      { action: "provider.use", resource: "vercel", effect: "deny" },
+    ])
+    expect(enableProvider([{ action: "provider.use", resource: "deepseek", effect: "deny" }], "deepseek")).toEqual([])
+    expect(enableProvider(policies, "acme")).toBeUndefined()
+    expect(enableProvider(undefined, "acme")).toBeUndefined()
   })
 })
 
