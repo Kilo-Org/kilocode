@@ -20,7 +20,7 @@ import { parse as parseJsonc } from "jsonc-parser/lib/esm/main.js"
 import { unwrap } from "solid-js/store"
 import { showToast } from "@kilocode/kilo-ui/toast"
 import type { ConfigEdit, ConfigFileContent, ToHost, ToWebview } from "../../../src/protocol"
-import { aliasOf } from "../../../src/config-aliases"
+import { scopeOf } from "../../../src/config-aliases"
 import { getVSCodeAPI, useVSCode } from "../context/vscode"
 import { useLanguage } from "../context/language"
 import { useV2 } from "./client"
@@ -142,15 +142,8 @@ export function createSettingsConfig() {
   /** The target file the host resolved for a scope, so the header can open it. */
   const path = (scope: SettingsScope) => files()?.[scope]?.path
 
-  const source = (path: string[]): SettingsScope | undefined => {
-    const aliases = aliasOf(path)
-    const defined = (scope: SettingsScope) =>
-      readPath(rawConfig()[scope], path) !== undefined ||
-      aliases.some((alias) => readPath(rawConfig()[scope], alias) !== undefined)
-    if (defined("project")) return "project"
-    if (defined("global")) return "global"
-    return undefined
-  }
+  const source = (path: string[]): SettingsScope | undefined =>
+    scopeOf(path, rawConfig().project, rawConfig().global)
 
   const value = (path: string[]) => {
     const key = pathKey(path)
