@@ -1,4 +1,4 @@
-package ai.kilocode.client.agentManager.worktree
+package ai.kilocode.client.agentManager
 
 import ai.kilocode.client.session.SessionActivityKind
 import ai.kilocode.client.ui.FilledBadgeIcon
@@ -16,14 +16,14 @@ import java.awt.event.MouseEvent
 import javax.swing.JComponent
 import javax.swing.KeyStroke
 
-class WorktreeSessionListToggleTest : BasePlatformTestCase() {
+class WorkspaceSessionListToggleTest : BasePlatformTestCase() {
     private var clicks = 0
-    private lateinit var toggle: WorktreeSessionListToggle
+    private lateinit var toggle: WorkspaceSessionListToggle
 
     override fun setUp() {
         super.setUp()
         clicks = 0
-        toggle = edt { WorktreeSessionListToggle { clicks++ } }
+        toggle = edt { WorkspaceSessionListToggle { clicks++ } }
     }
 
     fun `test the badge follows count expansion and activity without rebuilding labels`() {
