@@ -53,6 +53,7 @@ export const AiProvidersNav: NavSection[] = [
       { href: "/ai-providers/gmicloud", children: "GMI Cloud" },
       { href: "/ai-providers/mixlayer", children: "Mixlayer" },
       { href: "/ai-providers/nebius", children: "Nebius Token Factory" },
+      { href: "/ai-providers/empiriolabs", children: "EmpirioLabs AI" },
     ],
   },
   {
