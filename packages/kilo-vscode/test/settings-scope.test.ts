@@ -1,7 +1,34 @@
 import { describe, expect, test } from "bun:test"
-import { writeScope } from "../webview-ui/src/v2/settings-scope"
+import { createGate, writeScope } from "../webview-ui/src/v2/settings-scope"
 
 const loaded = () => Promise.resolve()
+
+describe("createGate", () => {
+  test("holds every waiter until open, then releases them all", async () => {
+    const gate = createGate()
+    const order: string[] = []
+    const first = gate.wait().then(() => order.push("first"))
+    const second = gate.wait().then(() => order.push("second"))
+    await Promise.resolve()
+    expect(order).toEqual([])
+    gate.open()
+    await Promise.all([first, second])
+    expect(order).toEqual(["first", "second"])
+  })
+
+  test("releases a waiter registered after open immediately", async () => {
+    const gate = createGate()
+    gate.open()
+    await gate.wait()
+  })
+
+  test("a repeated open does not disturb released or later waiters", async () => {
+    const gate = createGate()
+    gate.open()
+    gate.open()
+    await gate.wait()
+  })
+})
 
 describe("writeScope", () => {
   test("keeps an explicit scope without waiting", async () => {

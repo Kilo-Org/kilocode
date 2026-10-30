@@ -25,7 +25,7 @@ import { getVSCodeAPI, useVSCode } from "../context/vscode"
 import { useLanguage } from "../context/language"
 import { useV2 } from "./client"
 import { mergeConfigDocuments } from "./settings-merge"
-import { writeScope, type SettingsScope } from "./settings-scope"
+import { createGate, writeScope, type SettingsScope } from "./settings-scope"
 
 export type { SettingsScope }
 
@@ -87,14 +87,7 @@ export function createSettingsConfig() {
   const writers = new Map<number, (result: { ok: boolean; error?: string }) => void>()
   let nextWrite = 1
   let nextToken = 1
-  let filesLoaded = false
-  const loadWaiters: (() => void)[] = []
-
-  /** A write without an explicit scope needs the owner, which is unknown until the first `configLoaded`. */
-  const waitForFiles = () => {
-    if (filesLoaded) return Promise.resolve()
-    return new Promise<void>((resolve) => loadWaiters.push(resolve))
-  }
+  const filesReady = createGate()
 
   const toastError = (message: string) =>
     showToast({ variant: "error", title: language.t("settings.saveBar.saveFailed"), description: message })
@@ -104,8 +97,7 @@ export function createSettingsConfig() {
     if (message.type === "configLoaded") {
       if (message.error) toastError(message.error)
       setFiles({ global: message.global, project: message.project })
-      filesLoaded = true
-      loadWaiters.splice(0).forEach((resolve) => resolve())
+      filesReady.open()
       // Drop only the optimistic values the new file content now covers, so an in-flight edit keeps its value.
       setOptimistic((list) =>
         list.filter((item) => {
@@ -132,6 +124,9 @@ export function createSettingsConfig() {
     }),
   )
   post({ type: "requestVSCodeSettings" })
+  // Read the target files at once, not only after the config list syncs. A failed sync must not leave a no-scope
+  // write waiting forever; the host answers `configLoaded` with the error instead.
+  post({ type: "configRead" })
 
   const entries = () => v2.data.location.config.list() ?? []
 
@@ -175,7 +170,7 @@ export function createSettingsConfig() {
 
   /** Write a value immediately. A VS Code setting passes through `setSetting`. */
   const set = async (path: string[], value: unknown, scope?: SettingsScope) => {
-    const target = await writeScope(scope, waitForFiles, () => source(path))
+    const target = await writeScope(scope, filesReady.wait, () => source(path))
     const key = pathKey(path)
     const writeValue = clone(value)
     setOptimistic((list) => [...list.filter((item) => pathKey(item.path) !== key), { scope: target, path, value: writeValue }])
