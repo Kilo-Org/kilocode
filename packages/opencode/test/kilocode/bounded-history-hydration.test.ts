@@ -106,6 +106,38 @@ function compare(sessionID: SessionID) {
   })
 }
 
+// Adapted from the prior local lazy-history tests: verify exact page edges and an assistant tail.
+function observedDatabase(database: Database.Interface) {
+  const reads: { table: unknown; rows: number }[] = []
+  const db = new Proxy(database.db, {
+    get(target, key) {
+      const value = Reflect.get(target, key, target)
+      if (key !== "select") return typeof value === "function" ? value.bind(target) : value
+      return (...args: unknown[]) => {
+        let table: unknown
+        function track(builder: object): object {
+          return new Proxy(builder, {
+            get(target, key) {
+              const value = Reflect.get(target, key, target)
+              if (key === "all") return (...args: unknown[]) => value.apply(target, args).pipe(
+                Effect.tap((rows: unknown[]) => Effect.sync(() => { reads.push({ table, rows: rows.length }) })),
+              )
+              if (typeof value !== "function") return value
+              return (...args: unknown[]) => {
+                if (key === "from") table = args[0]
+                const next = value.apply(target, args)
+                return next && typeof next === "object" ? track(next) : next
+              }
+            },
+          })
+        }
+        return track(value.apply(target, args))
+      }
+    },
+  })
+  return { service: { db }, reads }
+}
+
 describe("bounded history hydration", () => {
   for (const shape of ["none", "one", "several", "tail", "manual", "unfinished", "error", "missing-tail", "self-tail", "missing-parent", "tie", "reverted", "forked", "queue"]) {
     it.live(`matches full-load model bytes: ${shape}`, () => Effect.gen(function* () {
@@ -180,6 +212,51 @@ describe("bounded history hydration", () => {
         yield* KiloSessionPromptQueue.enqueue(sessionID, user.info.id, compare(sessionID), Effect.die("unexpected cancellation"))
         yield* (yield* Database.Service).db.delete(SessionTable).where(eq(SessionTable.id, sessionID))
         return
+      }
+      yield* compare(sessionID)
+      yield* (yield* Database.Service).db.delete(SessionTable).where(eq(SessionTable.id, sessionID))
+    }))
+  }
+
+  for (const shape of ["boundary-page-edge", "assistant-tail", "empty"]) {
+    it.live(`preserves prior lazy-history coverage: ${shape}`, () => Effect.gen(function* () {
+      const sessionID = SessionID.make(`ses_hydration_prior_${shape}`)
+      const f = fixture(sessionID)
+      let expected: MessageID[] = []
+      let queries = 1
+      if (shape === "boundary-page-edge") {
+        for (let i = 0; i < 120; i++) f.user()
+        f.compact()
+        for (let i = 0; i < 10; i++) f.user()
+        const parent = f.compact()
+        for (let i = 0; i < 48; i++) f.user()
+        expected = f.messages.slice(f.messages.indexOf(parent)).map((message) => message.info.id)
+        expect(f.messages).toHaveLength(182)
+      }
+      if (shape === "assistant-tail") {
+        for (let i = 0; i < 120; i++) f.user()
+        f.compact()
+        const tail = f.assistant(f.user("retained parent"))
+        for (let i = 0; i < 70; i++) f.user()
+        const parent = f.compact(tail)
+        for (let i = 0; i < 10; i++) f.user()
+        expected = [
+          ...f.messages.slice(f.messages.indexOf(parent), f.messages.indexOf(parent) + 2),
+          ...f.messages.slice(f.messages.indexOf(tail), f.messages.indexOf(parent)),
+          ...f.messages.slice(-10),
+        ].map((message) => message.info.id)
+        queries = 2
+      }
+      yield* seed(sessionID, f.messages)
+      const observed = observedDatabase(yield* Database.Service)
+      const selected = yield* MessageV2.filterCompactedEffect(sessionID, project(sessionID)).pipe(
+        Effect.provideService(Database.Service, observed.service),
+      )
+      expect(selected.map((message) => message.info.id)).toEqual(expected)
+      expect(observed.reads.filter((read) => read.table === MessageTable)).toHaveLength(queries)
+      if (shape === "boundary-page-edge") {
+        expect(observed.reads.filter((read) => read.table === MessageTable).map((read) => read.rows)).toEqual([50])
+        expect(observed.reads.filter((read) => read.table === PartTable).reduce((sum, read) => sum + read.rows, 0)).toBe(51)
       }
       yield* compare(sessionID)
       yield* (yield* Database.Service).db.delete(SessionTable).where(eq(SessionTable.id, sessionID))
