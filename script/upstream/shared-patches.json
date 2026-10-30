@@ -1,9 +1,9 @@
 {
   "$comment": "Shared-patch baseline (U-L3-01). Read by script/check-shared-patches.ts and script/check-opencode-annotations.ts. Each shared upstream file that Kilo adds or changes needs an entry: rung (3 = seam patch, 4 = feature patch) and the missing seam. `unmarked` allows lines without markers and states why. Raise a limit only in the PR that adds the patch, and lower it when a patch goes away.",
   "limits": {
-    "files": 67,
+    "files": 69,
     "markedLines": 491,
-    "unmarkedLines": 76,
+    "unmarkedLines": 136,
     "deletedFiles": 0
   },
   "files": {
@@ -95,6 +95,16 @@
       "rung": 3,
       "seam": "Generated OpenAPI document for the optional command template and model metadata exposed by the command list API. The document is generated from the public schema; editing it by hand is not supported.",
       "unmarked": "Generated JSON cannot carry marker comments; bun run generate in packages/protocol owns this file."
+    },
+    "services/www/openapi.json": {
+      "rung": 3,
+      "seam": "Copy of the generated protocol OpenAPI document with the optional command template and model metadata. services/www/script/generate-openapi.ts copies it from packages/protocol/openapi.json.",
+      "unmarked": "Generated JSON cannot carry marker comments; bun script/generate-openapi.ts in services/www owns this file."
+    },
+    "services/www/public/openapi.json": {
+      "rung": 3,
+      "seam": "Public copy of the generated protocol OpenAPI document with the optional command template and model metadata. services/www/script/generate-openapi.ts copies it from packages/protocol/openapi.json.",
+      "unmarked": "Generated JSON cannot carry marker comments; bun script/generate-openapi.ts in services/www owns this file."
     },
     "packages/core/package.json": {
       "rung": 3,
