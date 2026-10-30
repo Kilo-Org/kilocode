@@ -160,4 +160,61 @@ describe("createProviderAction", () => {
     expect(seen).toEqual([])
     action.dispose()
   })
+
+  it("times out a request without a reply and ignores a late reply", async () => {
+    const transport = createTransport()
+    const action = createProviderAction(transport)
+    const seen: string[] = []
+
+    const requestId = action.send(
+      { type: "saveCustomProvider", providerID: "myprovider", config: { name: "My Provider" } },
+      {
+        timeout: 5,
+        onConnected: () => seen.push("connected"),
+        onTimeout: () => seen.push("timeout"),
+      },
+    )
+
+    await Bun.sleep(20)
+    transport.receive({ type: "providerConnected", requestId, providerID: "myprovider" })
+
+    expect(seen).toEqual(["timeout"])
+    action.dispose()
+  })
+
+  it("does not time out a request that got a reply", async () => {
+    const transport = createTransport()
+    const action = createProviderAction(transport)
+    const seen: string[] = []
+
+    const requestId = action.send(
+      { type: "saveCustomProvider", providerID: "myprovider", config: { name: "My Provider" } },
+      {
+        timeout: 5,
+        onConnected: () => seen.push("connected"),
+        onTimeout: () => seen.push("timeout"),
+      },
+    )
+
+    transport.receive({ type: "providerConnected", requestId, providerID: "myprovider" })
+    await Bun.sleep(20)
+
+    expect(seen).toEqual(["connected"])
+    action.dispose()
+  })
+
+  it("does not time out a request after dispose", async () => {
+    const transport = createTransport()
+    const action = createProviderAction(transport)
+    const seen: string[] = []
+
+    action.send(
+      { type: "saveCustomProvider", providerID: "myprovider", config: { name: "My Provider" } },
+      { timeout: 5, onTimeout: () => seen.push("timeout") },
+    )
+    action.dispose()
+    await Bun.sleep(20)
+
+    expect(seen).toEqual([])
+  })
 })
