@@ -20,6 +20,7 @@ export namespace ConfigVariableGuard {
 
   const secret = new Set([
     "KILO_SERVER_PASSWORD",
+    "KILO_SERVER_PASSWORD_FILE",
     "KILO_SERVER_USERNAME",
     "KILO_BROWSER_BROKER_URL",
     "KILO_BROWSER_BROKER_TOKEN",

@@ -74,6 +74,11 @@ export namespace KiloCli {
     if (info) return
     narrow = workerTui(opts)
 
+    // Load KILO_SERVER_PASSWORD_FILE before any command starts a server, worker, or client.
+    const { ServerPassword } = await import("@/kilocode/server/password")
+    const err = await ServerPassword.load()
+    if (err) throw new (await import("@/cli/effect-cmd")).CliError({ message: err })
+
     const { KiloLog } = await import("@/kilocode/log")
     await KiloLog.init()
 

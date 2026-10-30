@@ -92,6 +92,24 @@ test("rejects server credential environment substitutions", async () => {
   ).rejects.toBeInstanceOf(InvalidError)
 })
 
+test("rejects server password file environment substitutions", async () => {
+  // {file:{env:KILO_SERVER_PASSWORD_FILE}} would otherwise expand to the password file path and read it.
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), "kilo-config-variable-password-"))
+  const file = path.join(dir, "password")
+  await fs.writeFile(file, "secret")
+  try {
+    await expect(
+      ConfigVariable.substitute({
+        ...trusted,
+        text: "password={file:{env:KILO_SERVER_PASSWORD_FILE}}",
+        env: { KILO_SERVER_PASSWORD_FILE: file },
+      }),
+    ).rejects.toBeInstanceOf(InvalidError)
+  } finally {
+    await fs.rm(dir, { recursive: true, force: true })
+  }
+})
+
 test("rejects browser broker environment substitutions", async () => {
   for (const key of ["KILO_BROWSER_BROKER_URL", "KILO_BROWSER_BROKER_TOKEN"]) {
     await expect(

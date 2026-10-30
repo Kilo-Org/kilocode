@@ -9,6 +9,7 @@ describe("lsp.launch", () => {
   test("does not expose backend credentials or config", async () => {
     const keys = [
       "KILO_SERVER_PASSWORD",
+      "KILO_SERVER_PASSWORD_FILE",
       "KILO_SERVER_USERNAME",
       "KILO_CONFIG",
       "KILO_CONFIG_CONTENT",
