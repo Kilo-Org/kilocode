@@ -21,7 +21,7 @@ interface Option {
   label: string
 }
 
-const AgentsSubtab: Component = () => {
+const AgentsSubtab: Component<{ navigation?: number }> = (props) => {
   const language = useLanguage()
   const v2 = useV2()
   const config = useSettingsConfig()
@@ -114,6 +114,14 @@ const AgentsSubtab: Component = () => {
     setView("list")
     setEditing("")
   }
+
+  createEffect(
+    on(
+      () => props.navigation,
+      () => back(),
+      { defer: true },
+    ),
+  )
 
   const confirmRemove = (row: AgentRow) => {
     dialog.show(() => (

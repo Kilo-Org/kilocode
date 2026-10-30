@@ -7,8 +7,9 @@ import { useSettingsConfig } from "../../v2/settings-config"
 import SettingsRow from "./SettingsRow"
 import PatternList from "./PatternList"
 import { tokenEdit } from "./context-tokens"
+import type { SettingsTabProps } from "./tabs"
 
-const ContextTab: Component = () => {
+const ContextTab: Component<SettingsTabProps> = (props) => {
   const config = useSettingsConfig()
   const language = useLanguage()
 
@@ -32,15 +33,6 @@ const ContextTab: Component = () => {
     if (!edit) return
     if (edit.type === "unset") clear(path)
     else write(path, edit.value)
-  }
-
-  // The Models rail entry is a sibling of this tab, so the link activates it through the same Tabs trigger a
-  // pointer uses. The Settings view owns the active tab, and a tab component receives no navigation callback.
-  const openModels = () => {
-    const trigger = document.querySelector<HTMLElement>(
-      '[data-slot="tabs-trigger-wrapper"][data-value="models"] [data-slot="tabs-trigger"]',
-    )
-    trigger?.click()
   }
 
   return (
@@ -111,7 +103,7 @@ const ContextTab: Component = () => {
           }}
           onClick={(e) => {
             e.preventDefault()
-            openModels()
+            props.onNavigate({ tab: "models", titleKey: "settings.context.compactionModel.title" })
           }}
         >
           {language.t("settings.context.compactionModel.hint")}

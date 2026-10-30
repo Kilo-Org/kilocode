@@ -2,11 +2,8 @@
  * Search for the Kilo Settings panel.
  *
  * Searchable settings are derived from the i18n `*.title` keys plus a small
- * group-to-tab map, so there is no hand-maintained list to keep in sync. Adding
- * a `settings.<group>...title` key that maps to a tab makes that setting
- * searchable automatically; removing the key removes it. Only the rows whose
- * title key does not end in `.title`, and the two model rows rendered outside
- * their group's tab, need an explicit override below.
+ * group-to-tab map. Nested tabs, section headings, and rows rendered outside
+ * their group's tab use explicit targets below.
  *
  * Ranking and highlighting stay free of Solid and DOM imports so they are
  * unit-testable.
@@ -23,9 +20,16 @@ export interface SettingsTab {
   conditional?: boolean
 }
 
-export interface SettingsEntry {
+export interface SettingsNavigationTarget {
   /** Tab id that renders this setting. */
   tab: string
+  /** Subtab id, when the setting is inside a nested tab. */
+  subtab?: string
+  /** i18n key of the row to reveal, if any. */
+  titleKey?: string
+}
+
+export interface SettingsEntry extends SettingsNavigationTarget {
   /** i18n key of the setting title, also used to locate the row. */
   titleKey: string
   /** Optional override when the description key is not `<titleKey>.description`. */
@@ -72,10 +76,9 @@ export const SETTINGS_TABS: SettingsTab[] = [
 /**
  * i18n group (the segment after `settings.`) to the tab that renders it.
  * Groups not listed here are not searchable, which keeps dialog-only keys out.
- * `aboutKiloCode` is absent on purpose: the v2 About tab renders no `data-search-label` rows, so its keys would
- * become results that open the tab but reveal nothing.
  */
 const GROUP_TABS: Record<string, string> = {
+  aboutKiloCode: "aboutKiloCode",
   agentBehaviour: "agentBehaviour",
   autoApprove: "autoApprove",
   autoCleanup: "checkpoints",
@@ -101,7 +104,16 @@ const KEY_TAB_OVERRIDES: Record<string, string> = {
   "settings.context.compactionModel.title": "models",
 }
 
-/** Keys omitted from automatic rows, including rows with an explicit override below. */
+/** Agent Behaviour rows rendered without opening a separate editor or dialog. */
+const AGENT_BEHAVIOUR_SUBTABS: Record<string, string> = {
+  "settings.agentBehaviour.defaultAgent.title": "agents",
+  "settings.agentBehaviour.claudeCompat.title": "rules",
+  "settings.agentBehaviour.mcp.timeout.startup.title": "mcpServers",
+  "settings.agentBehaviour.mcp.timeout.catalog.title": "mcpServers",
+  "settings.agentBehaviour.mcp.timeout.execution.title": "mcpServers",
+}
+
+/** i18n `*.title` keys under a mapped group that are not rendered rows. */
 const EXCLUDED_KEYS = new Set([
   "settings.permissions.toast.updateFailed.title",
   "settings.autoCleanup.defaultRetention.title",
@@ -144,6 +156,23 @@ const EXCLUDED_KEYS = new Set([
 
 /** Searchable rows whose title key does not end in `.title`, or that need a description override. */
 const EXTRA_ENTRIES: SettingsEntry[] = [
+  { tab: "agentBehaviour", subtab: "agents", titleKey: "settings.agentBehaviour.subtab.agents" },
+  { tab: "agentBehaviour", subtab: "mcpServers", titleKey: "settings.agentBehaviour.subtab.mcpServers" },
+  { tab: "agentBehaviour", subtab: "rules", titleKey: "settings.agentBehaviour.subtab.rules" },
+  { tab: "agentBehaviour", subtab: "workflows", titleKey: "settings.agentBehaviour.subtab.workflows" },
+  { tab: "agentBehaviour", subtab: "skills", titleKey: "settings.agentBehaviour.subtab.skills" },
+  {
+    tab: "agentBehaviour",
+    subtab: "rules",
+    titleKey: "settings.agentBehaviour.instructionFiles",
+    descriptionKey: "settings.agentBehaviour.instructionFiles.description",
+  },
+  { tab: "agentBehaviour", subtab: "skills", titleKey: "settings.agentBehaviour.discoveredSkills" },
+  { tab: "agentBehaviour", subtab: "skills", titleKey: "settings.agentBehaviour.skillPaths" },
+  { tab: "agentBehaviour", subtab: "skills", titleKey: "settings.agentBehaviour.skillUrls" },
+  { tab: "aboutKiloCode", titleKey: "settings.aboutKiloCode.versionInfo" },
+  { tab: "aboutKiloCode", titleKey: "settings.aboutKiloCode.community" },
+  { tab: "aboutKiloCode", titleKey: "settings.aboutKiloCode.cliServer", keywords: ["status", "connection"] },
   {
     tab: "autoApprove",
     titleKey: "settings.autoApprove.maxCost.title",
@@ -185,8 +214,10 @@ export function deriveSettingsEntries(keys: Iterable<string>): SettingsEntry[] {
     if (!TITLE_KEY.test(key) || seen.has(key) || EXCLUDED_KEYS.has(key) || tabTitles.has(key)) continue
     const tab = tabForKey(key)
     if (!tab) continue
+    const subtab = AGENT_BEHAVIOUR_SUBTABS[key]
+    if (tab === "agentBehaviour" && !subtab) continue
     seen.add(key)
-    entries.push({ tab, titleKey: key })
+    entries.push({ tab, titleKey: key, ...(subtab ? { subtab } : {}) })
   }
   for (const entry of EXTRA_ENTRIES) {
     if (seen.has(entry.titleKey)) continue
@@ -201,9 +232,7 @@ export const SETTINGS_ENTRIES: SettingsEntry[] = deriveSettingsEntries([
   ...Object.keys(agentManagerEn),
 ])
 
-export interface SettingsSearchResult {
-  /** Tab id to open. */
-  tab: string
+export interface SettingsSearchResult extends SettingsNavigationTarget {
   /** i18n key of the matched title. */
   titleKey: string
   /** i18n key of the matched description, when the entry has one. */
@@ -304,6 +333,7 @@ export function searchSettings(
     const score = tokens.reduce((sum, token) => sum + scoreToken(token, title, keywords, description, tabLabel), 0)
     results.push({
       tab,
+      ...(entry.subtab ? { subtab: entry.subtab } : {}),
       titleKey: entry.titleKey,
       descriptionKey: descriptionKey || undefined,
       title: titleRaw,
