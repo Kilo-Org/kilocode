@@ -1,15 +1,24 @@
 // The custom provider form's mapping to the v2 `providers.<id>` config value: package, base URL, headers, model
 // capabilities (reasoning, image) and the `{env:VAR}` API-key spelling.
 import { describe, expect, test } from "bun:test"
+import { Document, Info } from "@opencode/schema/config"
+import type { ConfigPolicy } from "@opencode/schema/config/policy"
 import { parse } from "jsonc-parser"
+import { ConfigNormalize } from "../../core/src/config/normalize"
+import { ManagedPolicy } from "../../core/src/managed-policy"
 import { applyConfigEdits } from "../src/config-file-edit"
 import {
+  canDisconnect,
+  canManageProvider,
   disabledProviderIds,
   disabledProviderOptions,
   enableProvider,
+  enableProviderInConfig,
   isCustomProvider,
   isCustomProviderPackage,
+  providerRemovalPath,
   withDisabledProviders,
+  type ProviderPolicy,
 } from "../webview-ui/src/components/settings/provider-visibility"
 import {
   INVALID_ENV,
@@ -43,6 +52,49 @@ const base = {
   apiKeyTouched: true,
   disabledProviders: [] as string[],
   existingProviderIDs: new Set<string>(),
+}
+
+type Scope = "global" | "project"
+
+function policyFixture(input: {
+  global?: unknown
+  project?: unknown
+  system?: ProviderPolicy[]
+  optimistic?: { scope: Scope; value: unknown }
+}) {
+  const paths = { global: "/global/kilo2.json", project: "/project/kilo2.json" }
+  const files = {
+    global: input.global === undefined ? "" : (JSON.stringify(input.global) ?? ""),
+    project: input.project === undefined ? "" : (JSON.stringify(input.project) ?? ""),
+  }
+  const writes: Array<{ scope: Scope; value: unknown }> = []
+  const write = async (scope: Scope, path: string[], value: unknown) => {
+    files[scope] = applyConfigEdits(files[scope], [{ path, value }])
+    writes.push({ scope, value })
+    return true
+  }
+  const config = {
+    entries: () => [
+      ...(input.system ? [{ type: "document", path: "/system/kilo2.json", info: { policies: input.system } }] : []),
+      ...(["global", "project"] as const).flatMap((scope) => {
+        if (!files[scope]) return []
+        const result = ConfigNormalize.normalize(parse(files[scope]))
+        if (result.type !== "normalized") throw new Error("expected normalized config")
+        return [
+          {
+            type: "document",
+            path: paths[scope],
+            info: { policies: result.encoded.policies as ProviderPolicy[] | undefined },
+          },
+        ]
+      }),
+    ],
+    path: (scope: Scope) => paths[scope],
+    optimistic: () => input.optimistic,
+    set: (path: string[], value: unknown, scope: Scope) => write(scope, path, value),
+    unset: (path: string[], scope: Scope) => write(scope, path, undefined),
+  }
+  return { config, files, writes }
 }
 
 describe("validateCustomProvider", () => {
@@ -168,6 +220,17 @@ describe("provider-visibility", () => {
     expect(isCustomProvider(undefined)).toBe(false)
   })
 
+  test("offers custom provider actions for environment connections without allowing other env disconnects", () => {
+    const env = { connections: [{ type: "env" as const, name: "CUSTOM_API_KEY" }] }
+    const key = { connections: [{ type: "credential" as const, id: "cred_1", label: "Key", method: "key" as const }] }
+    const custom = { package: "@opencode/ai/providers/openai-compatible" }
+    expect(canDisconnect(env)).toBe(false)
+    expect(canManageProvider(env, custom)).toBe(true)
+    expect(canManageProvider(env, undefined)).toBe(false)
+    expect(canDisconnect(key)).toBe(true)
+    expect(canManageProvider(key, undefined)).toBe(true)
+  })
+
   test("lists the providers that are not disabled, sorted by name", () => {
     const items = [
       { id: "vercel", name: "Vercel" },
@@ -206,7 +269,20 @@ describe("provider-visibility", () => {
     ])
   })
 
-  test("enables a saved provider whose id is disabled", () => {
+  test("retains the order of unrelated deny and allow rules when disabling a provider", () => {
+    const policies = [
+      { action: "provider.use", resource: "vercel", effect: "deny" },
+      { action: "provider.use", resource: "vercel", effect: "allow" },
+      { action: "provider.use", resource: "old", effect: "deny" },
+    ]
+    expect(withDisabledProviders(policies, ["vercel", "new"])).toEqual([
+      policies[0],
+      policies[1],
+      { action: "provider.use", resource: "new", effect: "deny" },
+    ])
+  })
+
+  test("enables saved or explicitly disabled providers under an allow-list", () => {
     const policies = [
       { action: "provider.use", resource: "*", effect: "deny" },
       { action: "provider.use", resource: "deepseek", effect: "deny" },
@@ -215,10 +291,158 @@ describe("provider-visibility", () => {
     expect(enableProvider(policies, "deepseek")).toEqual([
       { action: "provider.use", resource: "*", effect: "deny" },
       { action: "provider.use", resource: "vercel", effect: "deny" },
+      { action: "provider.use", resource: "deepseek", effect: "allow" },
     ])
     expect(enableProvider([{ action: "provider.use", resource: "deepseek", effect: "deny" }], "deepseek")).toEqual([])
-    expect(enableProvider(policies, "acme")).toBeUndefined()
+    expect(enableProvider(policies, "acme")).toEqual([
+      ...policies,
+      { action: "provider.use", resource: "acme", effect: "allow" },
+    ])
     expect(enableProvider(undefined, "acme")).toBeUndefined()
+  })
+
+  test("follows the last matching wildcard rule without rewriting unrelated policies", () => {
+    const policies = [
+      { action: "provider.use", resource: "*", effect: "deny" },
+      { action: "provider.use", resource: "acme-*", effect: "allow" },
+      { action: "provider.use", resource: "other", effect: "deny" },
+      { action: "provider.use", resource: "other", effect: "allow" },
+    ]
+    expect(enableProvider(policies, "acme-x")).toBeUndefined()
+    expect(
+      enableProvider([...policies, { action: "provider.use", resource: "acme-?", effect: "deny" }], "acme-x"),
+    ).toEqual([
+      ...policies,
+      { action: "provider.use", resource: "acme-?", effect: "deny" },
+      { action: "provider.use", resource: "acme-x", effect: "allow" },
+    ])
+    expect(
+      enableProvider([...policies, { action: "provider.use", resource: "acme-x", effect: "deny" }], "acme-x"),
+    ).toEqual(policies)
+  })
+
+  test("an empty legacy enabled list also needs a provider-specific allow", () => {
+    const normalized = ConfigNormalize.normalize({ enabled_providers: [] })
+    if (normalized.type !== "normalized") throw new Error("expected normalized config")
+    expect(enableProvider(normalized.encoded.policies, "acme")).toEqual([
+      { action: "provider.use", resource: "*", effect: "deny" },
+      { action: "provider.use", resource: "acme", effect: "allow" },
+    ])
+  })
+
+  test("updates the deciding global policy and a project deny without mixing their contents", async () => {
+    const fixture = policyFixture({
+      global: {
+        enabled_providers: ["anthropic"],
+        disabled_providers: ["vercel"],
+        experimental: { policies: [{ action: "tool.use", resource: "shell:*", effect: "deny" }] },
+      },
+      project: {
+        policies: [
+          { action: "provider.use", resource: "acme", effect: "deny" },
+          { action: "integration.use", resource: "mcp:example", effect: "deny" },
+        ],
+      },
+    })
+
+    const decision = (id: string) =>
+      ManagedPolicy.decision(
+        ManagedPolicy.statements(
+          fixture.config.entries().map(
+            (entry) =>
+              new Document({
+                type: "document",
+                info: new Info({ policies: entry.info.policies as ConfigPolicy.Info[] | undefined }),
+              }),
+          ),
+          { statements: [] },
+        ),
+        "provider.use",
+        id,
+      )
+
+    expect(decision("acme")).toBe("deny")
+    expect(await enableProviderInConfig(fixture.config, "acme")).toBe(true)
+    expect(decision("acme")).toBe("allow")
+    expect(decision("anthropic")).toBe("allow")
+    expect(decision("vercel")).toBe("deny")
+    expect(decision("unlisted")).toBe("deny")
+    expect(fixture.writes.map((write) => write.scope)).toEqual(["global", "project"])
+    const global = parse(fixture.files.global)
+    expect(global.enabled_providers).toBeUndefined()
+    expect(global.disabled_providers).toBeUndefined()
+    expect(global.experimental.policies).toBeUndefined()
+    expect(global.policies).toEqual([
+      { action: "provider.use", resource: "*", effect: "deny" },
+      { action: "provider.use", resource: "anthropic", effect: "allow" },
+      { action: "provider.use", resource: "vercel", effect: "deny" },
+      { action: "tool.use", resource: "shell:*", effect: "deny" },
+      { action: "provider.use", resource: "acme", effect: "allow" },
+    ])
+    expect(parse(fixture.files.project).policies).toEqual([
+      { action: "integration.use", resource: "mcp:example", effect: "deny" },
+    ])
+  })
+
+  test("updates a project allow-list in its own scope", async () => {
+    const fixture = policyFixture({
+      global: { policies: [{ action: "integration.use", resource: "mcp:example", effect: "deny" }] },
+      project: { enabled_providers: ["anthropic"] },
+    })
+    expect(await enableProviderInConfig(fixture.config, "acme")).toBe(true)
+    expect(fixture.writes.map((write) => write.scope)).toEqual(["project"])
+    expect(parse(fixture.files.global).policies).toEqual([
+      { action: "integration.use", resource: "mcp:example", effect: "deny" },
+    ])
+    expect(parse(fixture.files.project).policies).toEqual([
+      { action: "provider.use", resource: "*", effect: "deny" },
+      { action: "provider.use", resource: "anthropic", effect: "allow" },
+      { action: "provider.use", resource: "acme", effect: "allow" },
+    ])
+  })
+
+  test("does not overwrite a policy from an uneditable source", async () => {
+    const fixture = policyFixture({ system: [{ action: "provider.use", resource: "*", effect: "deny" }] })
+    expect(await enableProviderInConfig(fixture.config, "acme")).toBe(true)
+    expect(fixture.writes).toEqual([])
+  })
+
+  test("enables a provider disabled by an optimistic write before the document reloads", async () => {
+    const fixture = policyFixture({
+      optimistic: {
+        scope: "global",
+        value: [{ action: "provider.use", resource: "acme", effect: "deny" }],
+      },
+    })
+    expect(await enableProviderInConfig(fixture.config, "acme")).toBe(true)
+    expect(fixture.writes).toEqual([{ scope: "global", value: undefined }])
+  })
+
+  test("keeps other optimistic policy changes in their original scope", async () => {
+    const deny = { action: "provider.use", resource: "*", effect: "deny" }
+    const fixture = policyFixture({
+      global: { policies: [deny] },
+      project: { policies: [] },
+      optimistic: {
+        scope: "global",
+        value: [
+          deny,
+          { action: "provider.use", resource: "other", effect: "deny" },
+          { action: "provider.use", resource: "acme", effect: "deny" },
+        ],
+      },
+    })
+    expect(await enableProviderInConfig(fixture.config, "acme")).toBe(true)
+    expect(fixture.writes).toEqual([
+      {
+        scope: "global",
+        value: [
+          deny,
+          { action: "provider.use", resource: "other", effect: "deny" },
+          { action: "provider.use", resource: "acme", effect: "allow" },
+        ],
+      },
+    ])
   })
 })
 
@@ -319,5 +543,22 @@ describe("applyConfigEdits for providers", () => {
     ])
     expect(parse(result).providers.acme).toEqual({ name: "Acme" })
     expect(parse(result).provider.acme).toBeUndefined()
+  })
+
+  test("removes a legacy-only provider without removing its siblings", () => {
+    const text =
+      '{"provider":{"acme":{"npm":"@opencode/ai/providers/openai-compatible","env":["ACME_KEY"]},"other":{"npm":"other"}}}'
+    const normalized = ConfigNormalize.normalize(parse(text))
+    if (normalized.type !== "normalized") throw new Error("expected normalized config")
+    expect(isCustomProvider((normalized.encoded.providers as Record<string, unknown>).acme)).toBe(true)
+    const result = applyConfigEdits(text, [{ path: providerRemovalPath(parse(text), "acme") }])
+    expect(parse(result).provider).toEqual({ other: { npm: "other" } })
+  })
+
+  test("removes both provider spellings when the canonical parent exists", () => {
+    const text = '{"providers":{"acme":{}},"provider":{"acme":{},"other":{}}}'
+    const result = applyConfigEdits(text, [{ path: providerRemovalPath(parse(text), "acme") }])
+    expect(parse(result).providers.acme).toBeUndefined()
+    expect(parse(result).provider).toEqual({ other: {} })
   })
 })

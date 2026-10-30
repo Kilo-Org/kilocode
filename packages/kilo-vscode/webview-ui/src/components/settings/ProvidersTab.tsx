@@ -28,7 +28,16 @@ import {
   providerNoteKey,
   sortProviders,
 } from "./provider-catalog"
-import { disabledProviderIds, disabledProviderOptions, isCustomProvider, withDisabledProviders } from "./provider-visibility"
+import {
+  canDisconnect,
+  canManageProvider,
+  disabledProviderIds,
+  disabledProviderOptions,
+  enableProviderInConfig,
+  isCustomProvider,
+  providerRemovalPath,
+  withDisabledProviders,
+} from "./provider-visibility"
 
 // Providers whose credentials can only be changed through their own sign-in flow, not an API-key field.
 const FIXED_KEY = [
@@ -125,10 +134,6 @@ const ProvidersTab: Component<{ settings: SettingsData; onLogin: () => void }> =
     return language.t("settings.providers.tag.other")
   }
 
-  function canDisconnect(item: IntegrationInfo) {
-    return credentials(item).length > 0
-  }
-
   function canChangeKey(item: IntegrationInfo) {
     if (FIXED_KEY.includes(item.id)) return false
     // A custom provider changes its key through the custom dialog, like the tab it replaces.
@@ -148,7 +153,9 @@ const ProvidersTab: Component<{ settings: SettingsData; onLogin: () => void }> =
   function disconnect(item: IntegrationInfo) {
     const custom = isCustom(item)
     const scope = config.source(["providers", item.id]) ?? "global"
-    const removal = custom ? config.unset(["providers", item.id], scope) : Promise.resolve(true)
+    const removal = custom
+      ? config.unset(providerRemovalPath(config.raw(scope), item.id), scope)
+      : Promise.resolve(true)
     props.settings.disconnect(item).then(
       async () => {
         // Only claim success when the config removal also succeeded; the write layer already reported its own error.
@@ -174,7 +181,7 @@ const ProvidersTab: Component<{ settings: SettingsData; onLogin: () => void }> =
     const scope = config.source(["providers", providerID]) ?? "global"
     void (async () => {
       try {
-        const ok = await config.unset(["providers", providerID], scope)
+        const ok = await config.unset(providerRemovalPath(config.raw(scope), providerID), scope)
         if (!ok) return
         const integration = props.settings.integration(providerID)
         if (integration) await props.settings.disconnect(integration)
@@ -215,7 +222,7 @@ const ProvidersTab: Component<{ settings: SettingsData; onLogin: () => void }> =
   }
 
   function enableProvider(providerID: string) {
-    writeDisabled([...disabledIds()].filter((id) => id !== providerID))
+    void enableProviderInConfig(config, providerID)
   }
 
   function connectProvider(item: IntegrationInfo) {
@@ -357,7 +364,7 @@ const ProvidersTab: Component<{ settings: SettingsData; onLogin: () => void }> =
                       {language.t("settings.providers.action.signInChatGPT")}
                     </Button>
                   </Show>
-                  <Show when={canDisconnect(item)}>
+                  <Show when={canManageProvider(item, config.value(["providers", item.id]))}>
                     <Show when={canChangeKey(item)}>
                       <Button size="large" variant="ghost" onClick={() => connectProvider(item)}>
                         {language.t("settings.providers.action.changeApiKey")}

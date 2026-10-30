@@ -34,6 +34,11 @@ export function chat(input: { context: ExtensionContext; server: Manager; direct
     state.loaded = true
     for (const message of state.queued.splice(0)) void state.view.webview.postMessage(message)
   }
+  const syncState = () => {
+    if (!state.view) return
+    void send({ type: "autoApproveStateLoaded", value: input.context.globalState.get(AUTO_APPROVE, false) })
+    void send({ type: "modelSelectorExpandedLoaded", value: input.context.globalState.get(EXPANDED, true) })
+  }
   // The cycle keybindings are active only while the webview has focus, as on v1 (`sidebarFocused`).
   const focus = (focused: boolean) => void commands.executeCommand("setContext", "kilo-code.v2.sidebarFocused", focused)
   const provider: WebviewViewProvider = {
@@ -44,6 +49,8 @@ export function chat(input: { context: ExtensionContext; server: Manager; direct
       const visibility = view.onDidChangeVisibility(() => {
         if (!view.visible) focus(false)
         surface.post({ type: "webviewActiveChanged", active: view.visible })
+        // A hidden webview may not receive the reset notification.
+        if (view.visible) syncState()
       })
       // The prompt hint shows the same keybind as the cycle command, so send it on load and when the
       // user's keybindings.json changes.
@@ -66,6 +73,7 @@ export function chat(input: { context: ExtensionContext; server: Manager; direct
   return {
     provider,
     post: send,
+    syncState,
   }
 }
 
@@ -81,6 +89,7 @@ export function wire(input: {
   view: "chat" | "settings"
   /** Called on every message from the webview, before it is handled. */
   onMessage?: () => void
+  onReset?: () => void
 }) {
   const webview = input.webview
   const root = input.context.extensionUri
@@ -96,7 +105,13 @@ export function wire(input: {
   // Config read and write are host-side: only the Settings panel uses them.
   const settings =
     input.view === "settings"
-      ? settingsHost({ context: input.context, server: input.server, directory: input.directory, post })
+      ? settingsHost({
+          context: input.context,
+          server: input.server,
+          directory: input.directory,
+          post,
+          onReset: input.onReset,
+        })
       : undefined
   // The sidebar carries the live Kilo settings: push a fresh value when any of them changes.
   const settingsWatch =

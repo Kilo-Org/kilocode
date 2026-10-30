@@ -145,9 +145,13 @@ export function createSettingsConfig() {
   const source = (path: string[]): SettingsScope | undefined =>
     scopeOf(path, rawConfig().project, rawConfig().global)
 
-  const value = (path: string[]) => {
+  const optimisticValue = (path: string[]) => {
     const key = pathKey(path)
-    const entry = [...optimistic()].toReversed().find((item) => pathKey(item.path) === key)
+    return [...optimistic()].toReversed().find((item) => pathKey(item.path) === key)
+  }
+
+  const value = (path: string[]) => {
+    const entry = optimisticValue(path)
     if (entry) return entry.value
     return readPath(merged(), path)
   }
@@ -198,6 +202,7 @@ export function createSettingsConfig() {
     path,
     source,
     value,
+    optimistic: optimisticValue,
     pending,
     set,
     unset,

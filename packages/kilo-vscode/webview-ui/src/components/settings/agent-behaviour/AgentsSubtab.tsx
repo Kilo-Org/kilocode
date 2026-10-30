@@ -11,7 +11,16 @@ import { useLanguage } from "../../../context/language"
 import { useV2 } from "../../../v2/client"
 import { useSettingsConfig } from "../../../v2/settings-config"
 import SettingsRow from "../SettingsRow"
-import { agentConfig, agentPath, agentRows, primaryAgents, type AgentRow } from "./agent-list"
+import {
+  agentConfig,
+  agentPath,
+  agentRows,
+  clearDefaultAgent,
+  isDefinedAgent,
+  primaryAgents,
+  removeAgentConfig,
+  type AgentRow,
+} from "./agent-list"
 import ModeCreateView from "./ModeCreateView"
 import ModeEditView from "./ModeEditView"
 import { MAX_IMPORT_SIZE, parseImport, type ImportError } from "./mode-io"
@@ -47,7 +56,7 @@ const AgentsSubtab: Component = () => {
 
   const serverAgents = () => v2.data.location.agent.list() ?? []
   const mergedAgents = () => (config.value(["agents"]) as Record<string, unknown> | undefined) ?? {}
-  const isDefined = (id: string) => config.source(agentPath(id)) !== undefined || created().includes(id)
+  const isDefined = (id: string) => isDefinedAgent(id, config.raw("project"), config.raw("global"))
   const extraIds = () => {
     const ids = Object.keys(mergedAgents())
     for (const id of created()) if (!ids.includes(id)) ids.push(id)
@@ -65,7 +74,7 @@ const AgentsSubtab: Component = () => {
 
   const chooseDefault = (value: string) => {
     if (!value) {
-      config.unset(["default_agent"], defaultScope())
+      void clearDefaultAgent(config, currentDefault() ? defaultScope() : undefined)
       return
     }
     if (value === currentDefault()) return
@@ -134,10 +143,8 @@ const AgentsSubtab: Component = () => {
                 // Delay until after the dialog close animation, as v1, so the list re-render does not
                 // fire a click on a shifted row under the overlay.
                 setTimeout(() => {
-                  // Clear every scope that defines the agent; an absent path is a no-op delete on the host.
                   void (async () => {
-                    await config.unset(agentPath(row.id), "project")
-                    await config.unset(agentPath(row.id), "global")
+                    await removeAgentConfig(config, row.id)
                     // As v1, clear a file's default_agent only when that file itself names the removed agent.
                     for (const scope of ["project", "global"] as const) {
                       const raw = config.raw(scope) as Record<string, unknown> | undefined
