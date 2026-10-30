@@ -25,8 +25,9 @@ import { getVSCodeAPI, useVSCode } from "../context/vscode"
 import { useLanguage } from "../context/language"
 import { useV2 } from "./client"
 import { mergeConfigDocuments } from "./settings-merge"
+import { createGate, writeScope, type SettingsScope } from "./settings-scope"
 
-export type SettingsScope = "global" | "project"
+export type { SettingsScope }
 
 /** The i18n key of a Kilo VS Code setting is `kilo-code.v2.<key>`. */
 export type KiloSettingKey = "fontSize" | "language" | "chat.shiftTabCyclesVariant" | "claudeCodeCompat" | "extraCaCerts"
@@ -86,6 +87,7 @@ export function createSettingsConfig() {
   const writers = new Map<number, (result: { ok: boolean; error?: string }) => void>()
   let nextWrite = 1
   let nextToken = 1
+  const filesReady = createGate()
 
   const toastError = (message: string) =>
     showToast({ variant: "error", title: language.t("settings.saveBar.saveFailed"), description: message })
@@ -95,6 +97,7 @@ export function createSettingsConfig() {
     if (message.type === "configLoaded") {
       if (message.error) toastError(message.error)
       setFiles({ global: message.global, project: message.project })
+      filesReady.open()
       // Drop only the optimistic values the new file content now covers, so an in-flight edit keeps its value.
       setOptimistic((list) =>
         list.filter((item) => {
@@ -121,6 +124,9 @@ export function createSettingsConfig() {
     }),
   )
   post({ type: "requestVSCodeSettings" })
+  // Read the target files at once, not only after the config list syncs. A failed sync must not leave a no-scope
+  // write waiting forever; the host answers `configLoaded` with the error instead.
+  post({ type: "configRead" })
 
   const entries = () => v2.data.location.config.list() ?? []
 
@@ -163,16 +169,17 @@ export function createSettingsConfig() {
     })
 
   /** Write a value immediately. A VS Code setting passes through `setSetting`. */
-  const set = async (path: string[], value: unknown, scope: SettingsScope = "global") => {
+  const set = async (path: string[], value: unknown, scope?: SettingsScope) => {
+    const target = await writeScope(scope, filesReady.wait, () => source(path))
     const key = pathKey(path)
     const writeValue = clone(value)
-    setOptimistic((list) => [...list.filter((item) => pathKey(item.path) !== key), { scope, path, value: writeValue }])
+    setOptimistic((list) => [...list.filter((item) => pathKey(item.path) !== key), { scope: target, path, value: writeValue }])
     // A token per write keeps `pending` true until every write for the path settles, including both scopes.
     const token = nextToken++
     setInflight((list) => [...list, { path: key, token }])
     let result: { ok: boolean; error?: string }
     try {
-      result = await write(scope, [{ path, value: writeValue }])
+      result = await write(target, [{ path, value: writeValue }])
     } finally {
       setInflight((list) => list.filter((item) => item.token !== token))
     }
@@ -183,7 +190,7 @@ export function createSettingsConfig() {
     return result.ok
   }
 
-  const unset = (path: string[], scope: SettingsScope = "global") => set(path, undefined, scope)
+  const unset = (path: string[], scope?: SettingsScope) => set(path, undefined, scope)
 
   const setSetting = (key: KiloSettingKey, value: unknown) => {
     const writeValue = clone(value ?? null)
