@@ -12,6 +12,7 @@ export function activate(context: ExtensionContext) {
   const directory = workspace.workspaceFolders?.[0]?.uri.fsPath ?? homedir()
   const alerts = createCostAlerts({
     notify: async (alert) => {
+      // This package ships no l10n bundles, so these strings remain English in every VS Code locale.
       const money = (value: number) =>
         value > 0 && value < 0.00000001
           ? `$${value}`
@@ -20,7 +21,12 @@ export function activate(context: ExtensionContext) {
       const keepGoing = l10n.t("Continue")
       const stop = l10n.t("Stop")
       const choice = await window.showWarningMessage(
-        l10n.t("{0}: session cost {1} has reached your {2} alert threshold. Keep going?", title, money(alert.cost), money(alert.limit)),
+        l10n.t(
+          "{0}: session cost {1} has reached your {2} alert threshold. Keep going?",
+          title,
+          money(alert.cost),
+          money(alert.limit),
+        ),
         keepGoing,
         stop,
       )

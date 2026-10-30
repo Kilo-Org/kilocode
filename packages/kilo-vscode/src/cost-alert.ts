@@ -14,7 +14,14 @@ export function createCostAlert(input: {
 }) {
   const sessions = new Map<
     string,
-    { cost: number; title?: string; shown?: number; pending?: symbol; acknowledged: Set<number> }
+    {
+      cost: number
+      title?: string
+      shown?: number
+      pending?: symbol
+      archived?: boolean
+      acknowledged: Set<number>
+    }
   >()
   let limit = 0
   let disposed = false
@@ -39,13 +46,25 @@ export function createCostAlert(input: {
         if (disposed || sessions.get(sessionID) !== session || session.pending !== token) return
         session.pending = undefined
         if (choice === "continue") session.acknowledged.add(current)
-        if (choice === "stop")
-          void input.stop(sessionID).catch((error: unknown) => {
-            if (disposed || sessions.get(sessionID) !== session) return
-            session.shown = undefined
-            input.onStopError(sessionID, error)
-          })
-        if (limit !== current && choice !== "stop") {
+        if (choice === "stop") {
+          void input.stop(sessionID).then(
+            () => {
+              if (!disposed && sessions.get(sessionID) === session && session.archived) sessions.delete(sessionID)
+            },
+            (error: unknown) => {
+              if (disposed || sessions.get(sessionID) !== session) return
+              session.shown = undefined
+              input.onStopError(sessionID, error)
+              if (session.archived) sessions.delete(sessionID)
+            },
+          )
+          return
+        }
+        if (session.archived) {
+          sessions.delete(sessionID)
+          return
+        }
+        if (limit !== current) {
           session.shown = undefined
           check(sessionID)
         }
@@ -55,6 +74,7 @@ export function createCostAlert(input: {
           session.pending = undefined
           session.shown = undefined
         }
+        if (session.archived) sessions.delete(sessionID)
         input.onError(error)
       },
     )
@@ -72,13 +92,16 @@ export function createCostAlert(input: {
       }
     },
     update(sessionID: string, cost: number, title?: string) {
-      if (disposed || !Number.isFinite(cost) || cost < 0) return
-      const session = sessions.get(sessionID) ?? { cost: 0, acknowledged: new Set<number>() }
+      const session = sessions.get(sessionID)
+      if (!session || disposed || !Number.isFinite(cost) || cost < 0) return
       // A snapshot can finish after a newer usage event. Session costs only increase.
       session.cost = Math.max(session.cost, cost)
       if (title !== undefined) session.title = title
-      sessions.set(sessionID, session)
       check(sessionID)
+    },
+    track(sessionID: string) {
+      if (!disposed && !sessions.has(sessionID))
+        sessions.set(sessionID, { cost: 0, acknowledged: new Set<number>() })
     },
     rearm(sessionID: string) {
       const session = sessions.get(sessionID)
@@ -87,6 +110,12 @@ export function createCostAlert(input: {
       check(sessionID)
     },
     forget(sessionID: string) {
+      const session = sessions.get(sessionID)
+      if (!session) return
+      if (session.pending) {
+        session.archived = true
+        return
+      }
       sessions.delete(sessionID)
     },
     ids() {
@@ -120,7 +149,9 @@ export function createCostAlerts(input: {
   const sync = async (current: Connection, sessionID: string) => {
     try {
       const info = await current.api.session.get({ sessionID }, { signal: current.abort.signal })
-      if (!current.abort.signal.aborted) alert.update(sessionID, info.cost, info.title)
+      if (current.abort.signal.aborted) return
+      if (info.time?.archived !== undefined) return alert.forget(sessionID)
+      alert.update(sessionID, info.cost, info.title)
     } catch (error) {
       if (!current.abort.signal.aborted) input.onError(error)
     }
@@ -128,7 +159,10 @@ export function createCostAlerts(input: {
   const reconcile = async (current: Connection) => {
     try {
       const active = await current.api.session.active({ signal: current.abort.signal })
-      for (const id of Object.keys(active)) alert.rearm(id)
+      for (const id of Object.keys(active)) {
+        alert.track(id)
+        alert.rearm(id)
+      }
       await Promise.all([...new Set([...alert.ids(), ...Object.keys(active)])].map((id) => sync(current, id)))
     } catch (error) {
       if (!current.abort.signal.aborted) input.onError(error)
@@ -143,10 +177,12 @@ export function createCostAlerts(input: {
           if (event.type === "session.usage.updated") alert.update(event.data.sessionID, event.data.cost)
           if (event.type === "session.renamed") alert.update(event.data.sessionID, 0, event.data.title)
           if (event.type === "session.execution.started") {
+            alert.track(event.data.sessionID)
             alert.rearm(event.data.sessionID)
             void sync(current, event.data.sessionID)
           }
-          if (event.type === "session.deleted") alert.forget(event.data.sessionID)
+          if (event.type === "session.archived" || event.type === "session.deleted")
+            alert.forget(event.data.sessionID)
         }
       } catch (error) {
         if (!signal.aborted) input.onError(error)
@@ -171,7 +207,7 @@ export function createCostAlerts(input: {
   return {
     setLimit: alert.setLimit,
     track(sessionID: string) {
-      alert.update(sessionID, 0)
+      alert.track(sessionID)
       if (connection) void sync(connection, sessionID)
     },
     start(server: Pick<Server, "url" | "authorization">) {

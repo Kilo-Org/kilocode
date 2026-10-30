@@ -22,12 +22,14 @@ function setup() {
 describe("session cost alert", () => {
   test("disables invalid thresholds and alerts once at equality per session", () => {
     const { alert, shown } = setup()
+    alert.track("one")
     alert.update("one", 5)
     alert.setLimit(-1)
     alert.setLimit(Number.NaN)
     expect(shown).toEqual([])
     alert.setLimit(5)
     alert.update("one", 6)
+    alert.track("two")
     alert.update("two", 4.99)
     expect(shown).toHaveLength(1)
     alert.update("two", 5)
@@ -37,9 +39,22 @@ describe("session cost alert", () => {
     ])
   })
 
+  test("ignores sessions that are neither opened nor running", () => {
+    const { alert, shown } = setup()
+    alert.setLimit(1)
+    alert.update("unknown", 5)
+    alert.setLimit(2)
+    expect(alert.ids()).toEqual([])
+    expect(shown).toEqual([])
+    alert.track("opened")
+    alert.update("opened", 2)
+    expect(shown.map((value) => value.sessionID)).toEqual(["opened"])
+  })
+
   test("continues once per session and threshold, including fractional dollars", async () => {
     const { alert, shown, replies } = setup()
     alert.setLimit(0.000001)
+    alert.track("one")
     alert.update("one", 0.000001)
     replies[0]("continue")
     await Promise.resolve()
@@ -55,9 +70,11 @@ describe("session cost alert", () => {
     expect(shown).toHaveLength(2)
   })
 
-  test("stop targets the alert session and rearms on the next execution", async () => {
+  test("stop targets the alert session, rearms, and survives archival while pending", async () => {
     const { alert, shown, replies, stopped } = setup()
     alert.setLimit(1)
+    alert.track("one")
+    alert.track("two")
     alert.update("one", 1)
     alert.update("two", 1)
     alert.rearm("two")
@@ -70,12 +87,15 @@ describe("session cost alert", () => {
     alert.forget("two")
     replies[1]("stop")
     await Promise.resolve()
-    expect(stopped).toEqual(["one"])
+    await Promise.resolve()
+    expect(stopped).toEqual(["one", "two"])
+    expect(alert.ids()).toEqual(["one"])
   })
 
   test("keeps a visible alert actionable when the threshold changes", async () => {
     const { alert, shown, replies, stopped } = setup()
     alert.setLimit(1)
+    alert.track("one")
     alert.update("one", 1)
     alert.setLimit(2)
     alert.update("one", 2)
@@ -92,6 +112,7 @@ describe("session cost alert", () => {
   test("rearms a dismissed alert on the next execution", async () => {
     const { alert, shown, replies } = setup()
     alert.setLimit(1)
+    alert.track("one")
     alert.update("one", 1)
     replies[0](undefined)
     await Promise.resolve()
@@ -104,6 +125,7 @@ describe("session cost alert", () => {
   test("does not replace a newer usage event with an older session snapshot", () => {
     const { alert, shown } = setup()
     alert.setLimit(2)
+    alert.track("one")
     alert.update("one", 1)
     alert.update("one", 0.5)
     alert.setLimit(1)
@@ -122,6 +144,7 @@ describe("session cost alert", () => {
       onStopError: (sessionID) => failures.push(sessionID),
     })
     alert.setLimit(1)
+    alert.track("one")
     alert.update("one", 1)
     replies[0]("stop")
     await Promise.resolve()
@@ -139,12 +162,14 @@ test("reconnects active sessions and keeps a pending Stop actionable", async () 
   const recoveredAgain = Promise.withResolvers<CostAlert>()
   const live = Promise.withResolvers<CostAlert>()
   const liveSynced = Promise.withResolvers<void>()
+  const liveResynced = Promise.withResolvers<void>()
   const liveChoice = Promise.withResolvers<CostAlertChoice>()
   const interrupted = Promise.withResolvers<string>()
   const errors: unknown[] = []
   let streams = 0
   let recoveries = 0
   let liveAlerts = 0
+  let liveGets = 0
   const server = Bun.serve({
     hostname: "127.0.0.1",
     port: 0,
@@ -158,7 +183,7 @@ test("reconnects active sessions and keeps a pending Stop actionable", async () 
       if (path === "/api/session/active") return Response.json({ data: { ses_recovered: {} } })
       if (path === "/api/session/ses_recovered") return Response.json({ data: { cost: 1, title: "Fixture" } })
       if (path === "/api/session/ses_live") {
-        liveSynced.resolve()
+        liveGets++ === 0 ? liveSynced.resolve() : liveResynced.resolve()
         return Response.json({ data: { cost: 1.5, title: "Renamed fixture" } })
       }
       if (path === "/api/session/ses_live/interrupt") {
@@ -194,15 +219,21 @@ test("reconnects active sessions and keeps a pending Stop actionable", async () 
     send(controller, { type: "server.connected", data: {} })
     expect(await recovered.promise).toMatchObject({ sessionID: "ses_recovered", cost: 1, title: "Fixture" })
     await Promise.resolve()
+    send(controller, { type: "session.execution.started", data: { sessionID: "ses_live" } })
+    await liveSynced.promise
+    expect(await live.promise).toMatchObject({ sessionID: "ses_live", cost: 1.5, title: "Renamed fixture" })
     send(controller, { type: "session.renamed", data: { sessionID: "ses_live", title: "Renamed fixture" } })
     send(controller, { type: "session.usage.updated", data: { sessionID: "ses_live", cost: 1.5 } })
-    expect(await live.promise).toMatchObject({ sessionID: "ses_live", cost: 1.5, title: "Renamed fixture" })
     alerts.stop()
     alerts.start({ url: server.url.toString(), authorization: "Bearer test" })
     const next = await reconnected.promise
     send(next, { type: "server.connected", data: {} })
     expect(await recoveredAgain.promise).toMatchObject({ sessionID: "ses_recovered", cost: 1 })
-    await liveSynced.promise
+    await liveResynced.promise
+    expect(liveAlerts).toBe(1)
+    send(next, { type: "session.archived", data: { sessionID: "ses_live" } })
+    send(next, { type: "session.usage.updated", data: { sessionID: "ses_live", cost: 2 } })
+    await Promise.resolve()
     expect(liveAlerts).toBe(1)
     liveChoice.resolve("stop")
     expect(await interrupted.promise).toBe("/api/session/ses_live/interrupt")
