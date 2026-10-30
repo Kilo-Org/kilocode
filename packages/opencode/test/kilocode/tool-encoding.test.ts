@@ -278,6 +278,30 @@ describe("tool encoding preservation", () => {
       ),
     )
 
+    // Bun 1.4.2's readline closed before `for await` took the last lines of one synchronous chunk of more than ~1025
+    // lines, so a legacy-encoded file failed with "readline was closed". The count of lines matters, not the size:
+    // the first file is ~147 KB of decoded text (several 64 KB slices), the second ~36 KB (one slice).
+    for (const [name, total, line] of [
+      ["larger than one slice", 3_000, (i: number) => `  // строка ${i}: проверка кодировки windows-1251`],
+      ["smaller than one slice with many lines", 2_000, (i: number) => `строка ${i}`],
+    ] as const) {
+      it.live(`reads a windows-1251 file ${name} to its end`, () =>
+        provideTmpdirInstance((dir) =>
+          Effect.gen(function* () {
+            const filepath = path.join(dir, "legacy.pas")
+            const lines = Array.from({ length: total }, (_, i) => line(i + 1))
+            yield* putEncoded(filepath, lines.join("\r\n") + "\r\n", "windows-1251")
+
+            const result = yield* runRead({ filePath: filepath, offset: total - 10, limit: 20 })
+
+            expect(result.output).toContain(`${total - 10}: ${lines[total - 11]}`)
+            expect(result.output).toContain(`${total}: ${lines[total - 1]}`)
+            expect(result.output).toContain(`(End of file - total ${total} lines)`)
+          }),
+        ),
+      )
+    }
+
     it.live("keeps truncated lines valid when an emoji crosses the boundary", () =>
       provideTmpdirInstance((dir) =>
         Effect.gen(function* () {
