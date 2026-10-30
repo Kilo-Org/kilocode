@@ -1989,6 +1989,12 @@ export const layer = Layer.effect(
             yield* sessions.updateMessage(handle.message)
           }
           // kilocode_change end
+          // kilocode_change start - a step that completed without an error and without asking for a compaction means
+          // the previous compaction did shrink the context. The cap is meant for compactions that do not help (a loop);
+          // counting every successful compaction of the turn ended long turns (e.g. subagents reading a lot of code)
+          // with "Compaction exhausted" on their 4th normal compaction. Count only compactions in a row.
+          if (result !== "compact" && !handle.message.error) compactionAttempts = 0
+          // kilocode_change end
           return "continue" as const
         }).pipe(
           Effect.ensuring(instruction.clear(handle.message.id)),
