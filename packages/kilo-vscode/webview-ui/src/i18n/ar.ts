@@ -696,7 +696,7 @@ export const dict = {
   "settings.agentBehaviour.title": "سلوك الوكيل",
   "settings.autoApprove.title": "الموافقة التلقائية",
   "settings.webTools.title": "أدوات الويب",
-  "settings.webTools.description": "اضبط البحث على الويب وأتمتة المتصفح.",
+  "settings.webTools.description": "اضبط البحث على الويب.",
   "settings.webTools.webSearch.enable": "تمكين لجميع المزوّدين",
   "settings.webTools.browserAutomation": "أتمتة المتصفح",
   "settings.webTools.webSearch.title": "البحث على الويب",
@@ -1030,6 +1030,9 @@ export const dict = {
     "هذا وضع مضمن. لا يمكن تغيير تعريفه الأساسي، ولكن يمكنك تكوين التجاوزات أدناه.",
   "settings.agentBehaviour.editMode.promptOverride": "تجاوز موجه مخصص لهذا الوضع المدمج",
   "settings.agentBehaviour.badge.subagent": "وكيل فرعي",
+  "settings.agentBehaviour.perAgentPermissions.title": "أذونات لكل وكيل",
+  "settings.agentBehaviour.perAgentPermissions.description":
+    "تنطبق هذه الإعدادات على هذا الوكيل المخصص فقط. غيّر قيمة إحدى القوائم المنسدلة من 'افتراضي' لإنشاء تجاوز، أو استخدم 'إضافة مسار' أو 'إضافة أمر' للاستثناءات الخاصة بالأدوات.",
   "settings.agentBehaviour.permissions.title": "الأذونات المحسوبة",
   "settings.agentBehaviour.permissions.count": "{{count}} قواعد",
   "settings.agentBehaviour.permissions.effective": "الفعال (حرف بدل):",

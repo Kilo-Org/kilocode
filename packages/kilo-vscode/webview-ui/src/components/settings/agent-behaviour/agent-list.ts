@@ -27,7 +27,6 @@ export function isBuiltInAgent(id: string) {
 export const agentPath = (id: string) => ["agents", id]
 export const agentField = (id: string, ...rest: string[]) => ["agents", id, ...rest]
 
-/** The agent's effective config from staged edits then the merged documents. */
 export function agentConfig(value: (path: string[]) => unknown, id: string): Record<string, unknown> {
   const config: Record<string, unknown> = {}
   for (const key of ["mode", "description", "system", "model", "hidden", "disabled", "steps", "permissions"]) {

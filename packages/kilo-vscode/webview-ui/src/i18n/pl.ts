@@ -708,7 +708,7 @@ export const dict = {
   "settings.agentBehaviour.title": "Zachowanie agenta",
   "settings.autoApprove.title": "Automatyczne zatwierdzanie",
   "settings.webTools.title": "Narzędzia internetowe",
-  "settings.webTools.description": "Skonfiguruj wyszukiwanie w sieci i automatyzację przeglądarki.",
+  "settings.webTools.description": "Skonfiguruj wyszukiwanie w sieci.",
   "settings.webTools.webSearch.enable": "Włącz dla wszystkich dostawców",
   "settings.webTools.browserAutomation": "Automatyzacja przeglądarki",
   "settings.webTools.webSearch.title": "Wyszukiwanie w sieci",
@@ -1055,6 +1055,9 @@ export const dict = {
     "To jest wbudowany tryb. Jego podstawowa definicja nie może zostać zmieniona, ale poniżej możesz skonfigurować nadpisania.",
   "settings.agentBehaviour.editMode.promptOverride": "Niestandardowe nadpisanie promptu dla tego wbudowanego trybu",
   "settings.agentBehaviour.badge.subagent": "podagent",
+  "settings.agentBehaviour.perAgentPermissions.title": "Uprawnienia dla agenta",
+  "settings.agentBehaviour.perAgentPermissions.description":
+    "Te ustawienia dotyczą tylko tego niestandardowego agenta. Zmień wartość 'Domyślny' na liście rozwijanej, aby utworzyć nadpisanie, lub użyj 'Dodaj ścieżkę' albo 'Dodaj polecenie' dla wyjątków dotyczących konkretnych narzędzi.",
   "settings.agentBehaviour.permissions.title": "Obliczone uprawnienia",
   "settings.agentBehaviour.permissions.count": "{{count}} reguł",
   "settings.agentBehaviour.permissions.effective": "Efektywne (wieloznacznik):",
