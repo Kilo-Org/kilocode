@@ -1139,9 +1139,9 @@ export const dict = {
   "settings.agentBehaviour.mcpEmpty":
     "Brak skonfigurowanych serwerów MCP. Dodaj serwery MCP w kilo.jsonc lub poproś agenta o ich dodanie.",
   "settings.agentBehaviour.workflows.description":
-    "Przepływy pracy to niestandardowe komendy slash zdefiniowane w konfiguracji. Wpisz /command-name na czacie, aby je uruchomić. Komendy konfiguruje się w opencode.json w sekcji 'command'.",
+    "Przepływy pracy to niestandardowe komendy zdefiniowane w konfiguracji lub w plikach Markdown z komendami. Dla każdego przepływu pracy możesz ustawić model i wariant rozumowania.",
   "settings.agentBehaviour.workflows.empty":
-    "Brak skonfigurowanych niestandardowych komend. Dodaj komendy do opencode.json, aby je tu zobaczyć.",
+    "Nie znaleziono niestandardowych komend. Dodaj komendy do kilo2.json lub pliku Markdown w .kilo2/command.",
   "settings.agentBehaviour.workflows.detail.description": "Opis",
   "settings.agentBehaviour.workflows.detail.template": "Szablon",
   "settings.agentBehaviour.workflows.model": "model",

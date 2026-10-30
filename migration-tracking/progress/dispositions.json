@@ -634,7 +634,7 @@
   "module:packages/kilo-vscode/webview-ui/src/components/settings/agent-behaviour/WorkflowsTab.tsx": {
     "state": "ported",
     "v2": "packages/kilo-vscode/webview-ui/src/components/settings/agent-behaviour/WorkflowsSubtab.tsx",
-    "note": "WorkflowsSubtab lists discovered commands, shows their effective description and template, and writes or clears a model and variant in the existing config scope or the global scope for file-only workflows. KiloConfigPolicy applies a model-only commands entry after discovery without copying the Markdown template, and ModelPicker preserves a supported or nearest reasoning variant. Writes are immediate under the settings-config disposition. The updated English help text needs a separate translation follow-up.",
+    "note": "WorkflowsSubtab lists discovered commands, shows their effective description and template, and writes or clears a model and variant in the existing config scope or the global scope for file-only workflows. KiloConfigPolicy applies a model-only commands entry after discovery without copying the Markdown template, and ModelPicker preserves a supported or nearest reasoning variant. Writes are immediate under the settings-config disposition. The help text is translated in all locales.",
     "by": "workflow-file-model"
   },
   "module:packages/kilo-vscode/webview-ui/src/context/mcp-auth.ts": {

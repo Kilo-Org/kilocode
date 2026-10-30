@@ -1138,9 +1138,9 @@ export const dict = {
   "settings.agentBehaviour.mcpEmpty":
     "Nema konfiguriranih MCP servera. Dodajte MCP servere u kilo.jsonc ili zamolite agenta da ih doda.",
   "settings.agentBehaviour.workflows.description":
-    "Tokovi rada su prilagođene slash komande definirane u vašoj konfiguraciji. Upišite /command-name u chat da ih pokrenete. Komande se konfiguriraju u opencode.json pod sekcijom 'command'.",
+    "Tokovi rada su prilagođene komande definirane u vašoj konfiguraciji ili u Markdown datotekama komandi. Možete postaviti model i varijantu zaključivanja za svaki tok rada.",
   "settings.agentBehaviour.workflows.empty":
-    "Nema konfiguriranih prilagođenih komandi. Dodajte komande u opencode.json da ih vidite ovdje.",
+    "Nisu pronađene prilagođene komande. Dodajte komande u kilo2.json ili Markdown datoteku u .kilo2/command.",
   "settings.agentBehaviour.workflows.detail.description": "Opis",
   "settings.agentBehaviour.workflows.detail.template": "Predložak",
   "settings.agentBehaviour.workflows.model": "model",

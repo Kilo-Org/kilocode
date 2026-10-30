@@ -1135,9 +1135,9 @@ export const dict = {
   "settings.agentBehaviour.mcpEmpty":
     "MCP-серверы не настроены. Добавьте MCP-серверы в kilo.jsonc или попросите агента добавить их.",
   "settings.agentBehaviour.workflows.description":
-    "Рабочие процессы — это пользовательские слэш-команды, определённые в вашей конфигурации. Введите /command-name в чате, чтобы вызвать их. Команды настраиваются в opencode.json в разделе 'command'.",
+    "Рабочие процессы: пользовательские команды, определённые в вашей конфигурации или в файлах Markdown с командами. Для каждого рабочего процесса можно задать модель и вариант рассуждения.",
   "settings.agentBehaviour.workflows.empty":
-    "Пользовательские команды не настроены. Добавьте команды в opencode.json, чтобы увидеть их здесь.",
+    "Пользовательские команды не найдены. Добавьте команды в kilo2.json или в файл Markdown в .kilo2/command.",
   "settings.agentBehaviour.workflows.detail.description": "Описание",
   "settings.agentBehaviour.workflows.detail.template": "Шаблон",
   "settings.agentBehaviour.workflows.model": "модель",

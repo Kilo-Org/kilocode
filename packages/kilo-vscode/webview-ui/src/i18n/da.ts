@@ -1136,9 +1136,9 @@ export const dict = {
   "settings.agentBehaviour.mcpEmpty":
     "Ingen MCP-servere konfigureret. Tilføj MCP-servere i kilo.jsonc, eller bed agenten om at tilføje dem.",
   "settings.agentBehaviour.workflows.description":
-    "Workflows er brugerdefinerede slash-kommandoer defineret i din konfiguration. Skriv /command-name i chatten for at aktivere dem. Kommandoer konfigureres i opencode.json under sektionen 'command'.",
+    "Workflows er brugerdefinerede kommandoer, der er defineret i din konfiguration eller i Markdown-kommandofiler. Du kan angive en model og en ræsonneringsvariant for hver workflow.",
   "settings.agentBehaviour.workflows.empty":
-    "Ingen brugerdefinerede kommandoer konfigureret. Tilføj kommandoer til opencode.json for at se dem her.",
+    "Ingen brugerdefinerede kommandoer fundet. Føj kommandoer til kilo2.json eller en Markdown-fil i .kilo2/command.",
   "settings.agentBehaviour.workflows.detail.description": "Beskrivelse",
   "settings.agentBehaviour.workflows.detail.template": "Skabelon",
   "settings.agentBehaviour.workflows.model": "model",

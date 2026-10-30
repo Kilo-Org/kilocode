@@ -1125,9 +1125,9 @@ export const dict = {
   "settings.agentBehaviour.mcpEmpty":
     "MCP 서버가 구성되지 않았습니다. kilo.jsonc에서 MCP 서버를 추가하거나 에이전트에게 추가를 요청하세요.",
   "settings.agentBehaviour.workflows.description":
-    "워크플로우는 구성에서 정의된 사용자 정의 슬래시 명령입니다. 채팅에서 /command-name을 입력하여 실행합니다. 명령은 opencode.json의 'command' 섹션에서 구성됩니다.",
+    "워크플로우는 구성 또는 명령 Markdown 파일에 정의된 사용자 정의 명령입니다. 각 워크플로우에 모델과 추론 변형을 설정할 수 있습니다.",
   "settings.agentBehaviour.workflows.empty":
-    "구성된 사용자 정의 명령이 없습니다. opencode.json에 명령을 추가하면 여기에 표시됩니다.",
+    "사용자 정의 명령을 찾을 수 없습니다. kilo2.json 또는 .kilo2/command의 Markdown 파일에 명령을 추가하세요.",
   "settings.agentBehaviour.workflows.detail.description": "설명",
   "settings.agentBehaviour.workflows.detail.template": "템플릿",
   "settings.agentBehaviour.workflows.model": "모델",
