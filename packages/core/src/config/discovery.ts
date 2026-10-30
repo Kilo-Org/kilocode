@@ -9,7 +9,7 @@ import { makeGlobalNode } from "@opencode/util/effect/app-node" // kilocode_chan
 import { Location } from "../location.js"
 import { AbsolutePath } from "../schema.js"
 import type { Options } from "../config.js"
-import type { Info } from "@opencode/schema/config" // kilocode_change(config) seam - host document decoder
+import type { Entry, Info } from "@opencode/schema/config" // kilocode_change(config) seam - host document decoder
 import type { ConfigNormalize } from "./normalize.js" // kilocode_change(config) seam - host decoder diagnostics
 
 export const names = ["opencode.json", "opencode.jsonc"]
@@ -27,6 +27,9 @@ export interface Layout {
   readonly systemFiles?: readonly string[]
   readonly walk: (input: Walk) => Effect.Effect<readonly string[]>
   readonly systemDirectory?: (platform: NodeJS.Platform, env: NodeJS.ProcessEnv) => AbsolutePath
+  readonly normalize?: (input: unknown) => unknown
+  readonly commandDocuments?: (entries: readonly Entry[], documents: { commands: Info["commands"] }[]) => { commands: Info["commands"] }[]
+  readonly commandMetadata?: boolean
   readonly parse?: (
     input: unknown,
     normalized: Readonly<Record<string, unknown>>,

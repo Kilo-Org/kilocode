@@ -1110,9 +1110,9 @@ export const dict = {
   "settings.agentBehaviour.mcpEmpty":
     "Geen MCP-servers geconfigureerd. Voeg MCP-servers toe in kilo.jsonc of vraag de agent om ze toe te voegen.",
   "settings.agentBehaviour.workflows.description":
-    "Workflows zijn aangepaste slash-commando's gedefinieerd in je configuratie. Typ /command-name in de chat om ze aan te roepen. Commando's worden geconfigureerd in opencode.json onder de sectie 'command'.",
+    "Workflows zijn aangepaste opdrachten die in je configuratie of in Markdown-opdrachtbestanden zijn gedefinieerd. Je kunt voor elke workflow een model en een redeneervariant instellen.",
   "settings.agentBehaviour.workflows.empty":
-    "Geen aangepaste commando's geconfigureerd. Voeg commando's toe aan opencode.json om ze hier te zien.",
+    "Geen aangepaste opdrachten gevonden. Voeg opdrachten toe aan kilo2.json of een Markdown-bestand in .kilo2/command.",
   "settings.agentBehaviour.workflows.detail.description": "Beschrijving",
   "settings.agentBehaviour.workflows.detail.template": "Sjabloon",
   "settings.agentBehaviour.workflows.model": "model",

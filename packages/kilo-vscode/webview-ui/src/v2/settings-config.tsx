@@ -163,7 +163,7 @@ export function createSettingsConfig() {
     })
 
   /** Write a value immediately. A VS Code setting passes through `setSetting`. */
-  const set = async (path: string[], value: unknown, scope: SettingsScope = "global") => {
+  const set = async (path: string[], value: unknown, scope: SettingsScope = "global", preserveAliases = false) => {
     const key = pathKey(path)
     const writeValue = clone(value)
     setOptimistic((list) => [...list.filter((item) => pathKey(item.path) !== key), { scope, path, value: writeValue }])
@@ -172,7 +172,7 @@ export function createSettingsConfig() {
     setInflight((list) => [...list, { path: key, token }])
     let result: { ok: boolean; error?: string }
     try {
-      result = await write(scope, [{ path, value: writeValue }])
+      result = await write(scope, [{ path, value: writeValue, preserveAliases }])
     } finally {
       setInflight((list) => list.filter((item) => item.token !== token))
     }

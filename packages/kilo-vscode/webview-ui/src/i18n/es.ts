@@ -1155,9 +1155,9 @@ export const dict = {
   "settings.agentBehaviour.mcpEmpty":
     "No hay servidores MCP configurados. Añada servidores MCP en kilo.jsonc o pida al agente que los añada.",
   "settings.agentBehaviour.workflows.description":
-    "Los flujos de trabajo son comandos de barra personalizados definidos en su configuración. Escriba /command-name en el chat para invocarlos. Los comandos se configuran en opencode.json en la sección 'command'.",
+    "Los flujos de trabajo son comandos personalizados definidos en su configuración o en archivos Markdown de comandos. Puede establecer un modelo y una variante de razonamiento para cada flujo de trabajo.",
   "settings.agentBehaviour.workflows.empty":
-    "No hay comandos personalizados configurados. Añada comandos a opencode.json para verlos aquí.",
+    "No se encontraron comandos personalizados. Añada comandos a kilo2.json o a un archivo Markdown en .kilo2/command.",
   "settings.agentBehaviour.workflows.detail.description": "Descripción",
   "settings.agentBehaviour.workflows.detail.template": "Plantilla",
   "settings.agentBehaviour.workflows.model": "modelo",

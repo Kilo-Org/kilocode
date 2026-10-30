@@ -1141,9 +1141,9 @@ export const dict = {
   "settings.agentBehaviour.mcpEmpty":
     "Ingen MCP-servere konfigurert. Legg til MCP-servere i kilo.jsonc, eller be agenten om å legge dem til.",
   "settings.agentBehaviour.workflows.description":
-    "Arbeidsflyter er egendefinerte skråstrekkommandoer definert i konfigurasjonen din. Skriv /command-name i chatten for å kjøre dem. Kommandoer konfigureres i opencode.json under seksjonen 'command'.",
+    "Arbeidsflyter er egendefinerte kommandoer som er definert i konfigurasjonen din eller i Markdown-kommandofiler. Du kan angi en modell og en resonneringsvariant for hver arbeidsflyt.",
   "settings.agentBehaviour.workflows.empty":
-    "Ingen egendefinerte kommandoer konfigurert. Legg til kommandoer i opencode.json for å se dem her.",
+    "Fant ingen egendefinerte kommandoer. Legg til kommandoer i kilo2.json eller en Markdown-fil i .kilo2/command.",
   "settings.agentBehaviour.workflows.detail.description": "Beskrivelse",
   "settings.agentBehaviour.workflows.detail.template": "Mal",
   "settings.agentBehaviour.workflows.model": "modell",

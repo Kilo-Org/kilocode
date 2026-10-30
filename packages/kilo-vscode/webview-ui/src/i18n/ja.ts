@@ -1136,9 +1136,9 @@ export const dict = {
   "settings.agentBehaviour.mcpEmpty":
     "MCPサーバーが設定されていません。kilo.jsoncでMCPサーバーを追加するか、エージェントに追加を依頼してください。",
   "settings.agentBehaviour.workflows.description":
-    "ワークフローは設定で定義されたカスタムスラッシュコマンドです。チャットで /command-name と入力して呼び出します。コマンドは opencode.json の 'command' セクションで設定します。",
+    "ワークフローは、設定またはコマンドの Markdown ファイルで定義されたカスタムコマンドです。各ワークフローにモデルと推論バリアントを設定できます。",
   "settings.agentBehaviour.workflows.empty":
-    "カスタムコマンドが設定されていません。opencode.json にコマンドを追加するとここに表示されます。",
+    "カスタムコマンドが見つかりません。kilo2.json または .kilo2/command の Markdown ファイルにコマンドを追加してください。",
   "settings.agentBehaviour.workflows.detail.description": "説明",
   "settings.agentBehaviour.workflows.detail.template": "テンプレート",
   "settings.agentBehaviour.workflows.model": "モデル",

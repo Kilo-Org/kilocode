@@ -1,9 +1,9 @@
 {
   "$comment": "Shared-patch baseline (U-L3-01). Read by script/check-shared-patches.ts and script/check-opencode-annotations.ts. Each shared upstream file that Kilo adds or changes needs an entry: rung (3 = seam patch, 4 = feature patch) and the missing seam. `unmarked` allows lines without markers and states why. Raise a limit only in the PR that adds the patch, and lower it when a patch goes away.",
   "limits": {
-    "files": 60,
-    "markedLines": 466,
-    "unmarkedLines": 40,
+    "files": 69,
+    "markedLines": 491,
+    "unmarkedLines": 136,
     "deletedFiles": 0
   },
   "files": {
@@ -86,6 +86,26 @@
       "rung": 3,
       "seam": "`Options.overrides` (service replacements), passed through to `ServerProcess.start` in packages/server/src/process.ts, so an embedding entry's `serve` handler can replace services in the server it starts. The Kilo host registers the Kilo plugins this way (`SdkPlugins.node` replacement, U-E0-01). Two lines, no Kilo value. Rungs 1 and 2 cannot supply it: `run` built the server options itself and had no way to add a replacement."
     },
+    "packages/client/src/promise/generated/types.ts": {
+      "rung": 3,
+      "seam": "Generated client types for the optional command template and model metadata exposed by the command list API. The client must be regenerated from the public schema.",
+      "unmarked": "Generated TypeScript cannot retain manual marker comments; bun run generate owns this file."
+    },
+    "packages/protocol/openapi.json": {
+      "rung": 3,
+      "seam": "Generated OpenAPI document for the optional command template and model metadata exposed by the command list API. The document is generated from the public schema; editing it by hand is not supported.",
+      "unmarked": "Generated JSON cannot carry marker comments; bun run generate in packages/protocol owns this file."
+    },
+    "services/www/openapi.json": {
+      "rung": 3,
+      "seam": "Copy of the generated protocol OpenAPI document with the optional command template and model metadata. services/www/script/generate-openapi.ts copies it from packages/protocol/openapi.json.",
+      "unmarked": "Generated JSON cannot carry marker comments; bun script/generate-openapi.ts in services/www owns this file."
+    },
+    "services/www/public/openapi.json": {
+      "rung": 3,
+      "seam": "Public copy of the generated protocol OpenAPI document with the optional command template and model metadata. services/www/script/generate-openapi.ts copies it from packages/protocol/openapi.json.",
+      "unmarked": "Generated JSON cannot carry marker comments; bun script/generate-openapi.ts in services/www owns this file."
+    },
     "packages/core/package.json": {
       "rung": 3,
       "seam": "Add a `test:ci` script that runs the Kilo test runner (script/kilocode/test/test-runner.ts) in balanced shards for CI. Turborepo runs only package.json scripts, so the sharded task needs a script in each sharded package (core, tui, cli); the package's own `test` script stays as it is and the runner calls it with file arguments.",
@@ -93,11 +113,31 @@
     },
     "packages/core/src/config.ts": {
       "rung": 3,
-      "seam": "Config discovery layout (feature `config`): `ConfigDiscovery.LayoutService`, a global node with upstream defaults (`opencode.json`, `opencode.jsonc`, `.opencode`, no walk bound) that discovery and `Config` read for the root file names, the project directory names, the file order inside those directories, the upward-walk bound and the global write target (the last existing name). Optional systemFiles and parse hooks let a host select managed file order and decode its own config schema from raw and normalized fields; the decoder also preserves host fields when managed policies split from settings. Generic: no Kilo name, import or condition; without the hooks, the default graph and canonical schema behave as upstream. The Kilo host supplies kilo2 names, v1 file orders, a worktree boundary and the Kilo-owned hide_prompt_training_models schema. Internal releases have no v1 filename fallback (decision 12). Rungs 1 and 2 cannot do it alone: config discovery and parsing run before plugins load, and replacing Config.node would lose the server's configured options."
+      "seam": "Config discovery layout (feature `config`): `ConfigDiscovery.LayoutService`, a global node with upstream defaults (`opencode.json`, `opencode.jsonc`, `.opencode`, no walk bound) that discovery and `Config` read for the root file names, the project directory names, the file order inside those directories, the upward-walk bound and the global write target (the last existing name). Optional systemFiles and parse hooks let a host select managed file order and decode its own config schema from raw and normalized fields; the decoder also preserves host fields when managed policies split from settings. Optional input normalization and command document composition let the host apply model-only overrides after file discovery. Without the hooks, the default graph and canonical schema behave as upstream. The Kilo host supplies kilo2 names, file orders, a worktree boundary and Kilo-owned config policy. Rungs 1 and 2 cannot do it alone: config parsing precedes plugins, the command editor cannot update captured definitions, and replacing Config.node would lose the server's configured options."
     },
     "packages/core/src/config/discovery.ts": {
       "rung": 3,
-      "seam": "Config discovery layout (feature `config`): `ConfigDiscovery.LayoutService`, a global node with upstream defaults (`opencode.json`, `opencode.jsonc`, `.opencode`, no walk bound). Optional systemDirectory, systemFiles and parse hooks let a host select platform managed directories and file order and decode its own config schema. A decoder may report field diagnostics through the existing source-aware normalization warning pipeline, retaining valid fields instead of silently dropping an extension setting or the whole document. Explicit system options keep priority and existing macOS ai.opencode.managed preferences are unchanged. Generic: no Kilo name, import or condition; without the hooks, discovery and parsing behave as upstream. The Kilo host supplies kilo2 names, v1 file orders, the worktree boundary, /etc/kilo, /Library/Application Support/kilo, ProgramData/kilo and its Kilo-owned config schema. Tests inject a directory through explicit system options or the layout, not an ambient test environment override. Rungs 1 and 2 cannot do it alone: discovery and parsing run before plugins load, and replacing Config.node would lose the server's configured options."
+      "seam": "Config discovery layout (feature `config`): `ConfigDiscovery.LayoutService` supplies names, discovery, parsing and optional managed directories with upstream defaults. Optional input normalization and command document composition let a host validate extensions and apply overrides after command discovery. Without these hooks the upstream behavior is unchanged. The Kilo host supplies kilo2 paths and Kilo-owned policy. Rungs 1 and 2 cannot reach native normalization or update captured command definitions, and replacing Config.node would lose the server's configured options."
+    },
+    "packages/core/src/command.ts": {
+      "rung": 3,
+      "seam": "Keep optional template and model metadata on registered commands and return it from command.list. The command editor exposes only add and cannot recover a definition's captured config after registration. Definitions without metadata remain unchanged."
+    },
+    "packages/core/src/config/plugin/command.ts": {
+      "rung": 3,
+      "seam": "Compose the ordered command documents through the optional host callback after file discovery, and pass the resulting template and model to command metadata. The command editor cannot update a captured model, and the host cannot replace Config.node without losing server-specific options. The default callback is absent and native command behavior is unchanged."
+    },
+    "packages/plugin/src/effect/command.ts": {
+      "rung": 3,
+      "seam": "Allow command definitions to expose optional template and model metadata to command.list. The plugin editor otherwise discards this information; definitions without these fields retain the upstream behavior."
+    },
+    "packages/plugin/src/promise/command.ts": {
+      "rung": 3,
+      "seam": "Mirror the optional command template and model metadata in the promise plugin interface. Existing plugin commands may omit both fields."
+    },
+    "packages/schema/src/command.ts": {
+      "rung": 3,
+      "seam": "Expose optional template and model metadata in the command list response so clients can identify configurable commands and show their effective values. Existing commands may omit both fields."
     },
     "packages/core/src/plugin/sdk.ts": {
       "rung": 3,

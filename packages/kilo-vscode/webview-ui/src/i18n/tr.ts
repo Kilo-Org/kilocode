@@ -1102,9 +1102,9 @@ export const dict = {
   "settings.agentBehaviour.mcpEmpty":
     "Yapılandırılmış MCP sunucusu yok. kilo.jsonc dosyasına MCP sunucuları ekleyin veya ajanın eklemesini isteyin.",
   "settings.agentBehaviour.workflows.description":
-    "İş akışları, yapılandırmanızda tanımlanan özel eğik çizgi komutlarıdır. Çağırmak için sohbette /command-name yazın. Komutlar opencode.json dosyasındaki 'command' bölümünde yapılandırılır.",
+    "İş akışları, yapılandırmanızda veya komut Markdown dosyalarında tanımlanan özel komutlardır. Her iş akışı için bir model ve akıl yürütme varyantı ayarlayabilirsiniz.",
   "settings.agentBehaviour.workflows.empty":
-    "Yapılandırılmış özel komut yok. Burada görmek için opencode.json dosyasına komutlar ekleyin.",
+    "Özel komut bulunamadı. kilo2.json dosyasına veya .kilo2/command içindeki bir Markdown dosyasına komut ekleyin.",
   "settings.agentBehaviour.workflows.detail.description": "Açıklama",
   "settings.agentBehaviour.workflows.detail.template": "Şablon",
   "settings.agentBehaviour.workflows.model": "model",
