@@ -1,6 +1,3 @@
-// Main's Display tab on the live v2 config. In scope: Username (config), Font Size and Cycle Reasoning Effort with
-// Shift+Tab (`kilo-code.v2.*` settings). Not rendered, no v2 contract: token throughput, auto-approval reason, the
-// display presets and the block display modes, and the session preview.
 import { Card } from "@kilocode/kilo-ui/card"
 import { TextField } from "@kilocode/kilo-ui/text-field"
 import { createEffect, createSignal, type Component } from "solid-js"

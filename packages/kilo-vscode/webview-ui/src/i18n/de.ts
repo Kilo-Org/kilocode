@@ -762,7 +762,7 @@ export const dict = {
   "settings.agentBehaviour.title": "Agentenverhalten",
   "settings.autoApprove.title": "Automatisch genehmigen",
   "settings.webTools.title": "Web-Tools",
-  "settings.webTools.description": "Konfigurieren Sie Websuche und Browserautomatisierung.",
+  "settings.webTools.description": "Konfigurieren Sie die Websuche.",
   "settings.webTools.webSearch.enable": "Für alle Anbieter aktivieren",
   "settings.webTools.browserAutomation": "Browserautomatisierung",
   "settings.webTools.webSearch.title": "Websuche",
@@ -1077,6 +1077,9 @@ export const dict = {
   "settings.agentBehaviour.editMode.promptOverride":
     "Benutzerdefinierte Prompt-Überschreibung für diesen eingebauten Modus",
   "settings.agentBehaviour.badge.subagent": "Subagent",
+  "settings.agentBehaviour.perAgentPermissions.title": "Berechtigungen pro Agent",
+  "settings.agentBehaviour.perAgentPermissions.description":
+    "Diese Einstellungen gelten nur für diesen benutzerdefinierten Agenten. Ändern Sie den Wert einer Auswahlliste von 'Standard' auf einen anderen Wert, um eine Überschreibung zu erstellen, oder verwenden Sie 'Pfad hinzufügen' oder 'Befehl hinzufügen' für werkzeugspezifische Ausnahmen.",
   "settings.agentBehaviour.permissions.title": "Berechnete Berechtigungen",
   "settings.agentBehaviour.permissions.count": "{{count}} Regeln",
   "settings.agentBehaviour.permissions.effective": "Effektiv (Platzhalter):",

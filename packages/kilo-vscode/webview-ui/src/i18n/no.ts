@@ -712,7 +712,7 @@ export const dict = {
   "settings.agentBehaviour.title": "Agentoppførsel",
   "settings.autoApprove.title": "Automatisk godkjenning",
   "settings.webTools.title": "Nettverktøy",
-  "settings.webTools.description": "Konfigurer nettsøk og nettleserautomatisering.",
+  "settings.webTools.description": "Konfigurer nettsøk.",
   "settings.webTools.webSearch.enable": "Aktiver for alle leverandører",
   "settings.webTools.browserAutomation": "Nettleserautomatisering",
   "settings.webTools.webSearch.title": "Nettsøk",
@@ -1055,6 +1055,9 @@ export const dict = {
     "Dette er en innebygd modus. Grunndefinisjonen kan ikke endres, men du kan konfigurere overstyringer nedenfor.",
   "settings.agentBehaviour.editMode.promptOverride": "Tilpasset prompt-overstyring for denne innebygde modusen",
   "settings.agentBehaviour.badge.subagent": "subagent",
+  "settings.agentBehaviour.perAgentPermissions.title": "Tillatelser per agent",
+  "settings.agentBehaviour.perAgentPermissions.description":
+    "Disse innstillingene gjelder bare for denne tilpassede agenten. Endre verdien i en rullegardinmeny fra 'Standard' for å opprette en overstyring, eller bruk 'Legg til sti' eller 'Legg til kommando' for verktøyspesifikke unntak.",
   "settings.agentBehaviour.permissions.title": "Beregnede tillatelser",
   "settings.agentBehaviour.permissions.count": "{{count}} regler",
   "settings.agentBehaviour.permissions.effective": "Gjeldende (wildcard):",
