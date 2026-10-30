@@ -46,6 +46,7 @@ export async function candidateConfigFiles(input: {
   directories: readonly string[]
   loaded: ReadonlySet<string>
   exists: (file: string) => Promise<boolean>
+  resolve: (file: string) => Promise<string>
 }): Promise<ConfigCandidate[]> {
   const paths = new Set<string>()
   for (const directory of input.directories) {
@@ -54,12 +55,22 @@ export async function candidateConfigFiles(input: {
   }
   paths.add(input.target)
 
-  const found = await Promise.all([...paths].map(async (file) => ({ file, exists: await input.exists(file) })))
+  // Resolve every candidate before the loaded check, because a server document path is the real file and a candidate
+  // can be a symlink to it. The resolved path also deduplicates one file reached through a link and its target.
+  const found = await Promise.all(
+    [...paths].map(async (file) => ({ file, real: await input.resolve(file), exists: await input.exists(file) })),
+  )
+  const seen = new Set<string>()
+  const existing = found.filter((item) => {
+    if (!item.exists || seen.has(item.real)) return false
+    seen.add(item.real)
+    return true
+  })
   const missing = found.filter((item) => item.file === input.target && !item.exists)
-  return [...found.filter((item) => item.exists), ...missing].map((item) => ({
+  return [...existing, ...missing].map((item) => ({
     file: item.file,
     name: path.basename(item.file),
-    loaded: item.exists && input.loaded.has(item.file),
+    loaded: item.exists && input.loaded.has(item.real),
     create: !item.exists,
   }))
 }

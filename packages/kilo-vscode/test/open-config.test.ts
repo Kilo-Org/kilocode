@@ -38,6 +38,7 @@ describe("candidateConfigFiles", () => {
       directories: ["/repo", "/repo/.kilo2"],
       loaded,
       exists: async (file) => existing.has(file),
+      resolve: async (file) => file,
     })
 
     expect(candidates).toEqual([
@@ -53,11 +54,26 @@ describe("candidateConfigFiles", () => {
       directories: ["/repo"],
       loaded: new Set(),
       exists: async (file) => file === "/repo/kilo2.json",
+      resolve: async (file) => file,
     })
 
     expect(candidates).toEqual([
       { file: "/repo/kilo2.json", name: "kilo2.json", loaded: false, create: false },
     ])
+  })
+
+  test("marks a symlinked candidate loaded from its resolved document and lists it once", async () => {
+    const link = "/repo/kilo2.jsonc"
+    const real = "/home/dotfiles/kilo2.jsonc"
+    const candidates = await candidateConfigFiles({
+      target: real,
+      directories: ["/repo", "/home/dotfiles"],
+      loaded: new Set([real]),
+      exists: async (file) => file === link || file === real,
+      resolve: async (file) => (file === link ? real : file),
+    })
+
+    expect(candidates).toEqual([{ file: link, name: "kilo2.jsonc", loaded: true, create: false }])
   })
 })
 

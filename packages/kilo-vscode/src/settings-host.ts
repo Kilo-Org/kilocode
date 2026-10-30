@@ -134,6 +134,7 @@ export function settingsHost(input: {
       }),
       loaded: new Set(documents),
       exists: async (file) => Boolean(await stat(file).catch(() => undefined)),
+      resolve: canonicalPath,
     })
     return chooseConfigFile(candidates, async (items) => {
       const picked = await window.showQuickPick(items, {
