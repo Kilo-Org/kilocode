@@ -169,10 +169,12 @@ test("manager reports every started and stopped server", async () => {
   const second = await server.get()
   expect(starts).toBe(2)
   expect(second.url).not.toBe(first.url)
+  const exited = new Promise<void>((resolve) => second.process.once("exit", () => resolve()))
   await server.stop()
   await secondStop.promise
+  await exited
   expect(stops).toBe(2)
-  await rm(root, { recursive: true, force: true })
+  await rm(root, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 })
 }, 10_000)
 
 test("starts the real v2 server, passes the Kilo handshake and stops when stdin closes", async () => {
