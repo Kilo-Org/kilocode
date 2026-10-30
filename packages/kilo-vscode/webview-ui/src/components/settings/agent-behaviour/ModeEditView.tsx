@@ -13,7 +13,18 @@ import { useSettingsConfig } from "../../../v2/settings-config"
 import ModelPicker, { type ModelPickerValue } from "../ModelPicker"
 import PermissionEditor from "../PermissionEditor"
 import SettingsRow from "../SettingsRow"
-import { agentConfig, agentField, agentPath, modelSelection, parseModelSelection, permissionRows, permissionSummary, type AgentRow, type PermissionRow } from "./agent-list"
+import {
+  agentConfig,
+  agentField,
+  agentPath,
+  modelSelection,
+  parseMaxSteps,
+  parseModelSelection,
+  permissionRows,
+  permissionSummary,
+  type AgentRow,
+  type PermissionRow,
+} from "./agent-list"
 import { buildExport } from "./mode-io"
 
 interface Props {
@@ -74,6 +85,11 @@ const ModeEditView: Component<Props> = (props) => {
   const commitNumber = (path: string[], parse: (value: string) => number) => (value: string) => {
     const parsed = parse(value)
     config.set(path, value.trim() === "" || Number.isNaN(parsed) ? undefined : parsed, scope())
+  }
+  const commitSteps = (value: string) => {
+    const parsed = parseMaxSteps(value)
+    if (parsed === null) return false
+    config.set(agentField(props.row().id, "steps"), parsed, scope())
   }
   const writeToggle = (key: "hidden" | "disabled") => (value: boolean) => {
     // Sequential writes so the second edit is not lost to a race with the first on the config file. The
@@ -215,7 +231,7 @@ const ModeEditView: Component<Props> = (props) => {
           <DraftField
             value={() => (steps() !== undefined ? String(steps()) : "")}
             placeholder={language.t("common.default")}
-            commit={commitNumber(agentField(props.row().id, "steps"), (value) => parseInt(value, 10))}
+            commit={commitSteps}
           />
         </SettingsRow>
 
@@ -307,7 +323,7 @@ const DraftField: Component<{
   value: () => string
   placeholder: string
   multiline?: boolean
-  commit: (value: string) => void
+  commit: (value: string) => void | false | Promise<unknown>
 }> = (props) => {
   const [draft, setDraft] = createSignal(props.value())
   createEffect(on(props.value, (value) => setDraft(value), { defer: true }))
@@ -319,7 +335,7 @@ const DraftField: Component<{
       multiline={props.multiline}
       onChange={setDraft}
       onBlur={() => {
-        if (draft() !== props.value()) props.commit(draft())
+        if (draft() !== props.value() && props.commit(draft()) === false) setDraft(props.value())
       }}
     />
   )

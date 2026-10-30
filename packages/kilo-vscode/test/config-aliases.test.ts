@@ -55,4 +55,11 @@ describe("scopeOf", () => {
     expect(scopeOf(["agents", "build", "model"], project, global)).toBe("project")
     expect(scopeOf(["agents", "build", "permissions"], {}, { agent: { build: { permissions: [] } } })).toBe("global")
   })
+
+  test("places new providers in the scope that owns the providers root or its legacy alias", () => {
+    expect(scopeOf(["providers"], { providers: { existing: {} } }, {})).toBe("project")
+    expect(scopeOf(["providers"], { provider: { existing: {} } }, { providers: {} })).toBe("project")
+    expect(scopeOf(["providers"], {}, { providers: {} })).toBe("global")
+    expect(scopeOf(["providers"], {}, {})).toBeUndefined()
+  })
 })
