@@ -2,4 +2,4 @@
 "@kilocode/cli": patch
 ---
 
-Cancelling a scheduled wakeup or cron task now says when it is busy or was already fired elsewhere instead of reporting it cancelled, and session or goal cleanup also removes damaged scheduled task files
+Report when a scheduled wakeup or cron task is busy or has already fired elsewhere instead of claiming it was cancelled, and remove damaged scheduled task files during session or goal cleanup
