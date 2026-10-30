@@ -213,6 +213,15 @@ describe("bounded history hydration", () => {
         yield* (yield* Database.Service).db.delete(SessionTable).where(eq(SessionTable.id, sessionID))
         return
       }
+      // The prior patch also asserted traversal, not just output, for these boundary cases.
+      const pages: Record<string, number> = { none: 5, unfinished: 5, error: 5, "missing-tail": 10, "self-tail": 1 }
+      if (shape in pages) {
+        const observed = observedDatabase(yield* Database.Service)
+        yield* MessageV2.filterCompactedEffect(sessionID, project(sessionID)).pipe(
+          Effect.provideService(Database.Service, observed.service),
+        )
+        expect(observed.reads.filter((read) => read.table === MessageTable)).toHaveLength(pages[shape])
+      }
       yield* compare(sessionID)
       yield* (yield* Database.Service).db.delete(SessionTable).where(eq(SessionTable.id, sessionID))
     }))
