@@ -1647,13 +1647,21 @@ export const layer = Layer.effect(
         }
 
         if (task?.type === "compaction") {
-          const result = yield* compaction.process({
-            messages: msgs,
-            parentID: task.messageID, // kilocode_change
-            sessionID,
-            auto: task.auto,
-            overflow: task.overflow,
-          })
+          // kilocode_change start - an interrupted compaction must not stay pending
+          const result = yield* compaction
+            .process({
+              messages: msgs,
+              parentID: task.messageID,
+              sessionID,
+              auto: task.auto,
+              overflow: task.overflow,
+            })
+            .pipe(
+              Effect.onInterrupt(() =>
+                KiloSessionPrompt.settleCompaction({ sessions, sessionID, parentID: task.messageID }),
+              ),
+            )
+          // kilocode_change end
           // kilocode_change start - compaction.process returns "stop" after
           // setting a terminal error on the summary message: either a
           // ContextOverflowError or the empty-summary APIError; surface as turn error

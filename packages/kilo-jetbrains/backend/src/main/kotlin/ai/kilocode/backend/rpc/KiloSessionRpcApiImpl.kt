@@ -3,7 +3,9 @@
 package ai.kilocode.backend.rpc
 
 import ai.kilocode.backend.app.ForkHandoff
+import ai.kilocode.backend.app.KiloAppState
 import ai.kilocode.backend.app.KiloBackendAppService
+import ai.kilocode.backend.app.KiloBackendHostedManager
 import ai.kilocode.backend.app.KiloBackendActivityManager
 import ai.kilocode.backend.app.KiloBackendChatManager
 import ai.kilocode.backend.app.KiloBackendSessionManager
@@ -14,6 +16,7 @@ import ai.kilocode.rpc.dto.BackgroundJobDto
 import ai.kilocode.rpc.dto.ChatEventDto
 import ai.kilocode.rpc.dto.CloudSessionListDto
 import ai.kilocode.rpc.dto.DiffFileDto
+import ai.kilocode.rpc.dto.HostedIDs
 import ai.kilocode.rpc.dto.MessageWithPartsDto
 import ai.kilocode.rpc.dto.ModelSelectionDto
 import ai.kilocode.rpc.dto.PermissionAlwaysRulesDto
@@ -33,6 +36,8 @@ import com.intellij.openapi.components.service
 import ai.kilocode.log.KiloLog
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.channels.Channel
@@ -84,6 +89,9 @@ class KiloSessionRpcApiImpl internal constructor(
     private val activity: KiloBackendActivityManager
         get() = app.activity
 
+    private val hosted: KiloBackendHostedManager
+        get() = app.hosted
+
     private val app: KiloBackendAppService
         get() = appOverride ?: service()
 
@@ -95,6 +103,7 @@ class KiloSessionRpcApiImpl internal constructor(
 
     override suspend fun create(directory: String): SessionDto {
         app.requireReady()
+        requireLocalDir(directory, "create")
         log.info("create session: directory=$directory")
         val session = workspaces.get(directory).createSession()
         log.info("create session: id=${session.id}, directory=$directory")
@@ -103,6 +112,7 @@ class KiloSessionRpcApiImpl internal constructor(
 
     override suspend fun fork(id: String, directory: String, messageId: String?): SessionDto {
         app.requireReady()
+        requireLocal(id, "fork")
         log.info("${ChatLogSummary.sid(id)} kind=fork dir=${ChatLogSummary.dir(directory)} message=${messageId != null}")
         val forked = withContext(Dispatchers.IO) { sessions.fork(id, directory, messageId) }
         withContext(Dispatchers.IO) { ForkHandoff.record(chat, forked.id, directory) }
@@ -111,12 +121,14 @@ class KiloSessionRpcApiImpl internal constructor(
 
     override suspend fun get(id: String, directory: String): SessionDto {
         app.requireReady()
+        if (hosted.isHosted(id)) return hosted.get(id, organization())
         val dir = sessions.getDirectory(id, directory)
         return sessions.get(id, dir)
     }
 
     override suspend fun delete(id: String, directory: String) {
         app.requireReady()
+        requireLocal(id, "delete")
         log.info("delete session: id=$id, directory=$directory")
         val dir = sessions.getDirectory(id, directory)
         workspaces.get(dir).deleteSession(id)
@@ -124,15 +136,20 @@ class KiloSessionRpcApiImpl internal constructor(
 
     override suspend fun rename(id: String, directory: String, title: String): ai.kilocode.rpc.dto.SessionDto {
         app.requireReady()
+        requireLocal(id, "rename")
         val dir = sessions.getDirectory(id, directory)
         return sessions.rename(id, dir, title)
     }
 
-    override suspend fun share(id: String, directory: String): SessionDto =
-        ready { sessions.share(id, sessions.getDirectory(id, directory)) }
+    override suspend fun share(id: String, directory: String): SessionDto {
+        requireLocal(id, "share")
+        return ready { sessions.share(id, sessions.getDirectory(id, directory)) }
+    }
 
-    override suspend fun unshare(id: String, directory: String): SessionDto =
-        ready { sessions.unshare(id, sessions.getDirectory(id, directory)) }
+    override suspend fun unshare(id: String, directory: String): SessionDto {
+        requireLocal(id, "unshare")
+        return ready { sessions.unshare(id, sessions.getDirectory(id, directory)) }
+    }
 
     override suspend fun cloudSessions(directory: String, cursor: String?, limit: Int, gitUrl: String?): CloudSessionListDto =
         ready { sessions.cloudSessions(directory, cursor, limit, gitUrl) }
@@ -141,7 +158,7 @@ class KiloSessionRpcApiImpl internal constructor(
         ready { sessions.importCloudSession(id, directory) }
 
     override suspend fun statuses(): Flow<Map<String, SessionStatusDto>> =
-        sessions.statuses
+        combine(sessions.statuses, hosted.statuses) { local, remote -> local + remote }
 
     override suspend fun activity(): Flow<Map<String, SessionActivityDto>> =
         activity.activity
@@ -149,48 +166,81 @@ class KiloSessionRpcApiImpl internal constructor(
     override suspend fun changes(): Flow<SessionChangeDto> =
         sessions.changes
 
-    override suspend fun setDirectory(id: String, directory: String) =
+    override suspend fun setDirectory(id: String, directory: String) {
+        if (hosted.isHosted(id)) return
         sessions.setDirectory(id, directory)
+    }
 
-    override suspend fun getDirectory(id: String, fallback: String): String =
-        sessions.getDirectory(id, fallback)
+    override suspend fun getDirectory(id: String, fallback: String): String {
+        hosted.directory(id)?.let { return it }
+        if (HostedIDs.isWorkspace(fallback)) return fallback
+        return sessions.getDirectory(id, fallback)
+    }
 
     // ------ chat ------
 
-    override suspend fun enhancePrompt(directory: String, text: String): String =
-        ready { chat.enhancePrompt(directory, text) }
+    override suspend fun enhancePrompt(directory: String, text: String): String {
+        requireLocalDir(directory, "enhancePrompt")
+        return ready { chat.enhancePrompt(directory, text) }
+    }
 
     override suspend fun prompt(id: String, directory: String, prompt: PromptDto) {
         app.requireReady()
         log.info("prompt RPC: session=$id, dir=$directory, parts=${prompt.parts.size}")
+        if (hosted.isHosted(id)) {
+            hosted.prompt(id, organization(), prompt)
+            return
+        }
         chat.prompt(id, directory, prompt)
     }
 
     override suspend fun command(id: String, directory: String, command: String, arguments: String, prompt: PromptDto) {
         app.requireReady()
         log.info("command RPC: session=$id, dir=$directory, command=$command, parts=${prompt.parts.size}")
+        if (hosted.isHosted(id)) {
+            hosted.command(id, organization(), command, arguments, prompt)
+            return
+        }
         chat.command(id, directory, command, arguments, prompt)
     }
 
-    override suspend fun abort(id: String, directory: String) =
-        ready { chat.abort(id, directory) }
+    override suspend fun abort(id: String, directory: String) {
+        app.requireReady()
+        if (hosted.isHosted(id)) {
+            hosted.abort(id, organization())
+            return
+        }
+        chat.abort(id, directory)
+    }
 
-    override suspend fun compact(id: String, directory: String, model: ModelSelectionDto) =
+    override suspend fun compact(id: String, directory: String, model: ModelSelectionDto) {
+        requireLocal(id, "compact")
         ready { chat.compact(id, directory, model) }
+    }
 
-    override suspend fun revert(id: String, directory: String, messageID: String, partID: String?) =
+    override suspend fun revert(id: String, directory: String, messageID: String, partID: String?) {
+        requireLocal(id, "revert")
         ready { chat.revert(id, sessions.getDirectory(id, directory), messageID, partID) }
+    }
 
-    override suspend fun deleteMessage(id: String, directory: String, messageID: String): Boolean =
-        ready { chat.deleteMessage(id, sessions.getDirectory(id, directory), messageID) }
+    override suspend fun deleteMessage(id: String, directory: String, messageID: String): Boolean {
+        requireLocal(id, "deleteMessage")
+        return ready { chat.deleteMessage(id, sessions.getDirectory(id, directory), messageID) }
+    }
 
-    override suspend fun unrevert(id: String, directory: String) =
+    override suspend fun unrevert(id: String, directory: String) {
+        requireLocal(id, "unrevert")
         ready { chat.unrevert(id, sessions.getDirectory(id, directory)) }
+    }
 
-    override suspend fun messages(id: String, directory: String): List<MessageWithPartsDto> =
-        ready { chat.messages(id, directory) }
+    override suspend fun messages(id: String, directory: String): List<MessageWithPartsDto> {
+        app.requireReady()
+        if (hosted.isHosted(id)) return hosted.messages(id, organization())
+        return chat.messages(id, directory)
+    }
 
     override suspend fun diff(id: String, directory: String): List<DiffFileDto> = ready {
+        if (hosted.isHosted(id)) return@ready hosted.diff(id, organization())
         // GET /session/:id/diff returns the cumulative, deduplicated, unquoted snapshot diff. Prefer it
         // over concatenating per-message summaries (which duplicate files per turn and skip unquoting).
         val api = app.api ?: throw IllegalStateException("Kilo API is unavailable")
@@ -202,6 +252,8 @@ class KiloSessionRpcApiImpl internal constructor(
     }
 
     override suspend fun diffSides(sessionId: String?, directory: String, file: DiffFileDto, messageId: String?): DiffFileDto? {
+        // Hosted diffs are provider-computed patches; there is no local base to read.
+        if (HostedIDs.isSession(sessionId) || HostedIDs.isWorkspace(directory)) return file
         val patch = file.patch
         if (patch.isNullOrBlank()) return null
         log.info("diffSides start file=${file.file} session=${!sessionId.isNullOrBlank()} message=${!messageId.isNullOrBlank()} patch=${patch.length}")
@@ -271,50 +323,66 @@ class KiloSessionRpcApiImpl internal constructor(
         }
     }
 
-    override suspend fun attachmentPart(id: String, directory: String, messageId: String, partId: String, attachmentKey: String?): PartDto? =
-        ready { chat.attachmentPart(id, directory, messageId, partId, attachmentKey) }
+    override suspend fun attachmentPart(id: String, directory: String, messageId: String, partId: String, attachmentKey: String?): PartDto? {
+        if (hosted.isHosted(id)) return null
+        return ready { chat.attachmentPart(id, directory, messageId, partId, attachmentKey) }
+    }
 
     override suspend fun events(id: String, directory: String): Flow<ChatEventDto> =
         channelFlow {
             log.info("${ChatLogSummary.sid(id)} kind=subscription route=rpc-events start=true dir=${ChatLogSummary.dir(directory)}")
+            val remote = source == null && hosted.isHosted(id)
+            var retained = false
 
-            // Gate: the live SharedFlow subscription must be established before the replay runs, so
-            // the pending-prompt fetch cannot open a window where an event is in neither the
-            // snapshot nor the live stream. For the real SharedFlow path, onSubscription fires after
-            // the subscriber is registered; for the injected test source, onStart is sufficient.
-            val gate = Channel<Unit>(Channel.RENDEZVOUS)
-            val upstream = source
-                ?.onStart { gate.send(Unit) }
-                ?: chat.events.onSubscription { gate.send(Unit) }
+            try {
+                // Gate: the live SharedFlow subscription must be established before the replay runs, so
+                // the pending-prompt fetch cannot open a window where an event is in neither the
+                // snapshot nor the live stream. For the real SharedFlow path, onSubscription fires after
+                // the subscriber is registered; for the injected test source, onStart is sufficient.
+                val gate = Channel<Unit>(Channel.RENDEZVOUS)
+                val upstream = source
+                    ?.onStart { gate.send(Unit) }
+                    ?: chat.events.onSubscription { gate.send(Unit) }
 
-            // 1. Start collecting the live stream immediately.
-            val live = launch {
-                upstream
-                    .filter { event ->
-                        val sid = ChatLogSummary.sid(event)
-                        val passes = event is ChatEventDto.SessionCreated || sid == null || sid == id
-                        if (passes) logEvent(id, "pass=true", event, null)
-                        else logEvent(id, "pass=false", event, sid)
-                        if (passes) {
-                            ChatLogSummary.error(event)?.let { log.warn("${ChatLogSummary.sid(id)} route=rpc-events pass=true $it") }
+                // 1. Start collecting the live stream immediately.
+                val live = launch {
+                    upstream
+                        .filter { event ->
+                            val sid = ChatLogSummary.sid(event)
+                            val passes = event is ChatEventDto.SessionCreated || sid == null || sid == id
+                            if (passes) logEvent(id, "pass=true", event, null)
+                            else logEvent(id, "pass=false", event, sid)
+                            if (passes) {
+                                ChatLogSummary.error(event)?.let { log.warn("${ChatLogSummary.sid(id)} route=rpc-events pass=true $it") }
+                            }
+                            if (passes && event is ChatEventDto.SessionStatusChanged && event.status.type != "busy") {
+                                log.info(
+                                    "${ChatLogSummary.sid(id)} kind=status route=rpc-events pass=true " +
+                                        ChatLogSummary.status(event.status),
+                                )
+                            }
+                            passes
                         }
-                        if (passes && event is ChatEventDto.SessionStatusChanged && event.status.type != "busy") {
-                            log.info(
-                                "${ChatLogSummary.sid(id)} kind=status route=rpc-events pass=true " +
-                                    ChatLogSummary.status(event.status),
-                            )
-                        }
-                        passes
-                    }
-                    .collect { send(it) }
+                        .collect { send(it) }
+                }
+
+                // 2. Wait for the live subscriber to be registered, then replay any pending prompts.
+                gate.receive()
+                if (remote) {
+                    app.requireReady()
+                    // Set the flag only after retain returns: retain already decrements its own count
+                    // when attachment setup fails or is cancelled, and a flag set earlier would make
+                    // the finally block release a second time and drop another live subscriber.
+                    hosted.retain(id, organization())
+                    retained = true
+                }
+                replayPending(id, directory)
+
+                // Keep the channelFlow alive until the live collector completes or is cancelled.
+                live.join()
+            } finally {
+                if (retained) hosted.release(id)
             }
-
-            // 2. Wait for the live subscriber to be registered, then replay any pending prompts.
-            gate.receive()
-            replayPending(id, directory)
-
-            // Keep the channelFlow alive until the live collector completes or is cancelled.
-            live.join()
         }
             .onCompletion { cause ->
                 if (cause == null || cause is CancellationException) {
@@ -329,12 +397,18 @@ class KiloSessionRpcApiImpl internal constructor(
     override suspend fun replyPermission(requestId: String, directory: String, reply: PermissionReplyDto) {
         app.requireReady()
         log.info("replyPermission: requestId=$requestId, reply=${reply.reply}")
+        if (HostedIDs.isWorkspace(directory)) {
+            hosted.replyPermission(requestId, directory, organization(), reply)
+            activity.resolve(requestId)
+            return
+        }
         chat.replyPermission(requestId, directory, reply)
         if (chat.permissionPending(requestId, directory) == false) activity.resolve(requestId)
     }
 
     override suspend fun savePermissionRules(requestId: String, directory: String, rules: PermissionAlwaysRulesDto) {
         app.requireReady()
+        if (HostedIDs.isWorkspace(directory)) return
         log.info("savePermissionRules: requestId=$requestId")
         chat.savePermissionRules(requestId, directory, rules)
     }
@@ -342,6 +416,11 @@ class KiloSessionRpcApiImpl internal constructor(
     override suspend fun replyQuestion(requestId: String, directory: String, answers: QuestionReplyDto) {
         app.requireReady()
         log.info("replyQuestion: requestId=$requestId, answers=${answers.answers.size}")
+        if (HostedIDs.isWorkspace(directory)) {
+            hosted.replyQuestion(requestId, directory, organization(), answers)
+            activity.resolve(requestId)
+            return
+        }
         chat.replyQuestion(requestId, directory, answers)
         if (chat.questionPending(requestId, directory) == false) activity.resolve(requestId)
     }
@@ -349,34 +428,64 @@ class KiloSessionRpcApiImpl internal constructor(
     override suspend fun rejectQuestion(requestId: String, directory: String) {
         app.requireReady()
         log.info("rejectQuestion: requestId=$requestId")
+        if (HostedIDs.isWorkspace(directory)) {
+            hosted.rejectQuestion(requestId, directory, organization())
+            activity.resolve(requestId)
+            return
+        }
         chat.rejectQuestion(requestId, directory)
         if (chat.questionPending(requestId, directory) == false) activity.resolve(requestId)
     }
 
     override suspend fun pendingPermissions(directory: String): List<PermissionRequestDto> =
-        ready { chat.pendingPermissions(directory) }
+        ready {
+            if (HostedIDs.isWorkspace(directory)) hosted.pendingPermissions(directory, organization())
+            else chat.pendingPermissions(directory)
+        }
 
     override suspend fun pendingQuestions(directory: String): List<QuestionRequestDto> =
-        ready { chat.pendingQuestions(directory) }
+        ready {
+            if (HostedIDs.isWorkspace(directory)) hosted.pendingQuestions(directory, organization())
+            else chat.pendingQuestions(directory)
+        }
 
     // ------ shared agent board ------
 
-    override suspend fun sessionBoard(sessionID: String, directory: String, before: String?, limit: Int?): SessionBoardDto =
-        ready { withContext(Dispatchers.IO) { sessions.sessionBoard(sessionID, directory, before, limit) } }
+    override suspend fun sessionBoard(sessionID: String, directory: String, before: String?, limit: Int?): SessionBoardDto {
+        requireLocal(sessionID, "sessionBoard")
+        return ready { withContext(Dispatchers.IO) { sessions.sessionBoard(sessionID, directory, before, limit) } }
+    }
 
-    override suspend fun resetSessionBoard(sessionID: String, directory: String, revision: Int): SessionBoardDto? =
-        ready { withContext(Dispatchers.IO) { sessions.resetSessionBoard(sessionID, directory, revision) } }
+    override suspend fun resetSessionBoard(sessionID: String, directory: String, revision: Int): SessionBoardDto? {
+        requireLocal(sessionID, "resetSessionBoard")
+        return ready { withContext(Dispatchers.IO) { sessions.resetSessionBoard(sessionID, directory, revision) } }
+    }
 
     // ------ background subagents ------
 
     override suspend fun backgroundJobs(id: String, directory: String): Flow<List<BackgroundJobDto>> =
-        sessions.backgroundJobs(id, directory)
+        if (hosted.isHosted(id)) flowOf(emptyList()) else sessions.backgroundJobs(id, directory)
 
-    override suspend fun cancelBackgroundJob(id: String, directory: String): Boolean =
-        ready { withContext(Dispatchers.IO) { sessions.cancelBackgroundJob(id, directory) } }
+    override suspend fun cancelBackgroundJob(id: String, directory: String): Boolean {
+        requireLocal(id, "cancelBackgroundJob")
+        return ready { withContext(Dispatchers.IO) { sessions.cancelBackgroundJob(id, directory) } }
+    }
 
-    override suspend fun promoteBackgroundJob(id: String, directory: String): Boolean =
-        ready { withContext(Dispatchers.IO) { sessions.promoteBackgroundJob(id, directory) } }
+    override suspend fun promoteBackgroundJob(id: String, directory: String): Boolean {
+        requireLocal(id, "promoteBackgroundJob")
+        return ready { withContext(Dispatchers.IO) { sessions.promoteBackgroundJob(id, directory) } }
+    }
+
+    private fun requireLocal(id: String, op: String) {
+        if (hosted.isHosted(id)) throw UnsupportedOperationException("Hosted sessions do not support $op")
+    }
+
+    private fun requireLocalDir(directory: String, op: String) {
+        if (HostedIDs.isWorkspace(directory)) throw UnsupportedOperationException("Hosted workspaces do not support $op")
+    }
+
+    private fun organization(): String? =
+        (app.appState.value as? KiloAppState.Ready)?.data?.profile?.currentOrgId
 
     private suspend fun <T> ready(block: suspend () -> T): T {
         app.requireReady()

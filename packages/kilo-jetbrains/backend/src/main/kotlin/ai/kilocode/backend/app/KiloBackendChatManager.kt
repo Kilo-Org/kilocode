@@ -19,6 +19,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
@@ -85,6 +86,7 @@ class KiloBackendChatManager(
 
     private val _events = MutableSharedFlow<ChatEventDto>(extraBufferCapacity = 128)
     val events: SharedFlow<ChatEventDto> = _events.asSharedFlow()
+    internal val subscriptionCount: StateFlow<Int> = _events.subscriptionCount
 
     private var client: OkHttpClient? = null
     private var base: String? = null
@@ -143,6 +145,24 @@ class KiloBackendChatManager(
         base = null
         normalizer = KiloCliDataParser.ChatEventNormalizer()
         log.info("Chat manager stopped")
+    }
+
+    /**
+     * Publish an event synthesized outside the global SSE stream, such as a remapped hosted event.
+     *
+     * Hosted streams are separate SSE connections, so they enter the same flow here. Status,
+     * activity, and per-session subscriptions all derive from this flow and therefore treat hosted
+     * events exactly like local ones. A dropped event is recovered by the hosted resnapshot.
+     */
+    fun publish(event: ChatEventDto) {
+        if (!_events.tryEmit(event)) {
+            log.warn("${ChatLogSummary.sid(event)} kind=event route=hosted emit=dropped")
+        }
+    }
+
+    /** Hosted replay boundaries and materialized snapshots must not lose events under backpressure. */
+    suspend fun publishAwait(event: ChatEventDto) {
+        _events.emit(event)
     }
 
     // ------ prompt ------
