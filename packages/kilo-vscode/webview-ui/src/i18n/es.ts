@@ -757,7 +757,7 @@ export const dict = {
   "settings.agentBehaviour.title": "Comportamiento del agente",
   "settings.autoApprove.title": "Aprobación automática",
   "settings.webTools.title": "Herramientas web",
-  "settings.webTools.description": "Configura la búsqueda web y la automatización del navegador.",
+  "settings.webTools.description": "Configura la búsqueda web.",
   "settings.webTools.webSearch.enable": "Habilitar para todos los proveedores",
   "settings.webTools.browserAutomation": "Automatización del navegador",
   "settings.webTools.webSearch.title": "Búsqueda web",
@@ -873,6 +873,7 @@ export const dict = {
     "Este archivo fue exportado desde una versión más reciente de Kilo. Algunos ajustes podrían ignorarse.",
   "settings.aboutKiloCode.importSettings.success":
     "Ajustes importados. Revise los cambios anteriores y luego haga clic en Guardar.",
+  "settings.aboutKiloCode.importSettings.applied": "Settings imported and applied.",
 
   "settings.aboutKiloCode.telemetry.title": "Telemetría",
   "settings.aboutKiloCode.telemetry.description":
@@ -1067,6 +1068,9 @@ export const dict = {
     "Este es un modo integrado. Su definición base no se puede cambiar, pero puedes configurar sobreescrituras a continuación.",
   "settings.agentBehaviour.editMode.promptOverride": "Anulación de prompt personalizado para este modo integrado",
   "settings.agentBehaviour.badge.subagent": "subagente",
+  "settings.agentBehaviour.perAgentPermissions.title": "Permisos por agente",
+  "settings.agentBehaviour.perAgentPermissions.description":
+    "Estos ajustes solo se aplican a este agente personalizado. Cambia el valor 'Predeterminado' en una lista desplegable para crear una anulación, o usa 'Agregar ruta' o 'Agregar comando' para excepciones específicas de cada herramienta.",
   "settings.agentBehaviour.permissions.title": "Permisos calculados",
   "settings.agentBehaviour.permissions.count": "{{count}} reglas",
   "settings.agentBehaviour.permissions.effective": "Efectivo (comodín):",
@@ -1145,6 +1149,9 @@ export const dict = {
   "settings.agentBehaviour.mcpResetAuth.confirm":
     '¿Borrar el inicio de sesión guardado para "{{name}}"? Deberás iniciar sesión de nuevo.',
   "settings.agentBehaviour.mcpBrowseMarketplace": "Explorar Marketplace",
+  "settings.agentBehaviour.mcp.timeout.startup.title": "Tiempo de espera de inicio (ms)",
+  "settings.agentBehaviour.mcp.timeout.catalog.title": "Tiempo de espera del catálogo (ms)",
+  "settings.agentBehaviour.mcp.timeout.execution.title": "Tiempo de espera de ejecución (ms)",
   "settings.agentBehaviour.mcpEmpty":
     "No hay servidores MCP configurados. Añada servidores MCP en kilo.jsonc o pida al agente que los añada.",
   "settings.agentBehaviour.workflows.description":
@@ -1164,7 +1171,7 @@ export const dict = {
     "Ejecutar los comandos de shell del agente dentro de un sandbox a nivel de sistema operativo que restringe las escrituras a los directorios de estado del proyecto y de Kilo",
 
   "settings.autoApprove.description":
-    "Defina cómo se permite la ejecución de las herramientas. La mayoría de las herramientas tienen como valor predeterminado Permitir. doom_loop y external_directory tienen como valor predeterminado Preguntar.",
+    "Defina cómo se permite la ejecución de las herramientas. La mayoría de las herramientas tienen como valor predeterminado Permitir. Bash tiene como valor predeterminado Preguntar.",
   "settings.autoApprove.maxCost.title": "Alerta de coste de sesión",
   "settings.autoApprove.maxCost.description":
     "Avisa antes de continuar una sesión cuando su gasto supere este importe en USD. Usa dólares enteros; déjalo vacío para desactivarlo.",
@@ -1245,6 +1252,12 @@ export const dict = {
   "settings.context.compactionLimit.title": "Límite de compactación automática",
   "settings.context.compactionLimit.description":
     "Compactar cuando el contexto alcance este porcentaje de la ventana del modelo. Déjalo en blanco para usar solo el búfer de seguridad.",
+  "settings.context.compactionKeep.title": "Conservar tokens recientes",
+  "settings.context.compactionKeep.description":
+    "Tokens recientes que se conservan literalmente al compactar el contexto. Déjalo vacío para conservar 15.000.",
+  "settings.context.compactionBuffer.title": "Búfer de compactación",
+  "settings.context.compactionBuffer.description":
+    "Tokens que quedan libres bajo el límite de contexto antes de compactar. Déjalo vacío para mantener un 15 % libre, al menos 16.000.",
   "settings.context.prune.title": "Eliminar salidas antiguas",
   "settings.context.prune.description": "Eliminar salidas de herramientas antiguas durante la compactación",
   "settings.context.watcherPatterns": "Patrones de ignorar del observador",

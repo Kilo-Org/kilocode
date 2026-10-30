@@ -682,7 +682,7 @@ export const dict = {
   "settings.agentBehaviour.title": "Agent 行為",
   "settings.autoApprove.title": "自動核准",
   "settings.webTools.title": "網路工具",
-  "settings.webTools.description": "設定網頁搜尋和瀏覽器自動化。",
+  "settings.webTools.description": "設定網頁搜尋。",
   "settings.webTools.webSearch.enable": "為所有供應商啟用",
   "settings.webTools.browserAutomation": "瀏覽器自動化",
   "settings.webTools.webSearch.title": "網頁搜尋",
@@ -788,6 +788,7 @@ export const dict = {
   "settings.aboutKiloCode.importSettings.tooLarge": "檔案過大。設定檔必須小於 1 MB。",
   "settings.aboutKiloCode.importSettings.newerVersion": "此檔案由較新版本的 Kilo 匯出。部分設定可能會被忽略。",
   "settings.aboutKiloCode.importSettings.success": "設定已匯入。請檢視上方的變更，然後點擊儲存。",
+  "settings.aboutKiloCode.importSettings.applied": "Settings imported and applied.",
 
   "settings.aboutKiloCode.telemetry.title": "遙測",
   "settings.aboutKiloCode.telemetry.description":
@@ -966,6 +967,9 @@ export const dict = {
   "settings.agentBehaviour.editMode.native": "這是一個內建模式。它的基礎定義無法更改，但您可以在下方設定覆寫項。",
   "settings.agentBehaviour.editMode.promptOverride": "此內建模式的自訂提示覆寫",
   "settings.agentBehaviour.badge.subagent": "子代理",
+  "settings.agentBehaviour.perAgentPermissions.title": "各 Agent 的權限",
+  "settings.agentBehaviour.perAgentPermissions.description":
+    "這些設定只適用於此自訂 Agent。將下拉選單的值從「預設」改為其他選項以建立覆寫，或使用「新增路徑」或「新增命令」設定工具專屬的例外。",
   "settings.agentBehaviour.permissions.title": "已計算的權限",
   "settings.agentBehaviour.permissions.count": "{{count}} 條規則",
   "settings.agentBehaviour.permissions.effective": "生效（萬用字元）：",
@@ -1039,6 +1043,9 @@ export const dict = {
   "settings.agentBehaviour.mcpResetAuth.title": "重設 MCP 登入",
   "settings.agentBehaviour.mcpResetAuth.confirm": '要清除 "{{name}}" 的已儲存登入資訊嗎？您需要重新登入。',
   "settings.agentBehaviour.mcpBrowseMarketplace": "瀏覽市場",
+  "settings.agentBehaviour.mcp.timeout.startup.title": "啟動逾時 (毫秒)",
+  "settings.agentBehaviour.mcp.timeout.catalog.title": "目錄逾時 (毫秒)",
+  "settings.agentBehaviour.mcp.timeout.execution.title": "執行逾時 (毫秒)",
   "settings.agentBehaviour.mcpEmpty": "未設定 MCP 伺服器。在 kilo.jsonc 中新增 MCP 伺服器，或請代理為您新增。",
   "settings.agentBehaviour.workflows.description":
     "工作流程是在設定中定義的自訂斜線命令。在聊天中輸入 /command-name 來呼叫它們。命令在 opencode.json 的 'command' 區段中設定。",
@@ -1056,7 +1063,7 @@ export const dict = {
     "在作業系統層級沙盒中執行代理 shell 指令，將寫入限制在專案和 Kilo 狀態目錄內",
 
   "settings.autoApprove.description":
-    "定義工具的執行權限。大多數工具預設為允許。doom_loop 與 external_directory 預設為詢問。",
+    "定義工具的執行權限。大多數工具預設為允許。Bash 預設為詢問。",
   "settings.autoApprove.maxCost.title": "工作階段費用提醒",
   "settings.autoApprove.maxCost.description":
     "當工作階段花費超過此美元金額後，在繼續前提醒。請使用整數美元；留空則停用。",
@@ -1119,6 +1126,12 @@ export const dict = {
   "settings.context.compactionModel.hint": "若要選擇用於壓縮的模型，請參閱模型設定。",
   "settings.context.compactionLimit.title": "自動壓縮限制",
   "settings.context.compactionLimit.description": "當上下文達到模型視窗的此百分比時進行壓縮。留空則僅使用安全緩衝區。",
+  "settings.context.compactionKeep.title": "保留最近 Token",
+  "settings.context.compactionKeep.description":
+    "壓縮上下文時依原樣保留的最近 Token 數量。留空則保留 15,000 個。",
+  "settings.context.compactionBuffer.title": "壓縮緩衝區",
+  "settings.context.compactionBuffer.description":
+    "壓縮前在模型上下文上限以下保留的 Token 數量。留空則保留 15%（至少 16,000 個）。",
   "settings.context.prune.title": "修剪舊輸出",
   "settings.context.prune.description": "壓縮期間移除舊的工具輸出",
   "settings.context.watcherPatterns": "檔案監視器忽略模式",

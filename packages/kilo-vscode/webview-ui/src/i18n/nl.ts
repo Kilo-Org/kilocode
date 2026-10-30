@@ -703,7 +703,7 @@ export const dict = {
   "settings.agentBehaviour.title": "Agent Gedrag",
   "settings.autoApprove.title": "Automatisch Goedkeuren",
   "settings.webTools.title": "Webtools",
-  "settings.webTools.description": "Configureer zoeken op internet en browserautomatisering.",
+  "settings.webTools.description": "Configureer het zoeken op internet.",
   "settings.webTools.webSearch.enable": "Inschakelen voor alle providers",
   "settings.webTools.browserAutomation": "Browserautomatisering",
   "settings.webTools.webSearch.title": "Zoeken op internet",
@@ -856,6 +856,7 @@ export const dict = {
     "Dit bestand is geëxporteerd vanuit een nieuwere versie van Kilo. Sommige instellingen worden mogelijk genegeerd.",
   "settings.aboutKiloCode.importSettings.success":
     "Instellingen geïmporteerd. Controleer de bovenstaande wijzigingen en klik vervolgens op Opslaan.",
+  "settings.aboutKiloCode.importSettings.applied": "Settings imported and applied.",
 
   "settings.aboutKiloCode.telemetry.title": "Telemetrie",
   "settings.aboutKiloCode.telemetry.description":
@@ -1103,6 +1104,9 @@ export const dict = {
   "settings.agentBehaviour.addMcp.url": "Server-URL",
   "settings.agentBehaviour.addMcp.url.placeholder": "e.g. http://localhost:3000/sse",
   "settings.agentBehaviour.mcpBrowseMarketplace": "Bladeren door Marketplace",
+  "settings.agentBehaviour.mcp.timeout.startup.title": "Opstarttime-out (ms)",
+  "settings.agentBehaviour.mcp.timeout.catalog.title": "Catalogustime-out (ms)",
+  "settings.agentBehaviour.mcp.timeout.execution.title": "Uitvoeringstime-out (ms)",
   "settings.agentBehaviour.mcpEmpty":
     "Geen MCP-servers geconfigureerd. Voeg MCP-servers toe in kilo.jsonc of vraag de agent om ze toe te voegen.",
   "settings.agentBehaviour.workflows.description":
@@ -1116,7 +1120,7 @@ export const dict = {
   "settings.agentBehaviour.workflows.modelDescription": "Globale modeloverride",
 
   "settings.autoApprove.description":
-    "Definieer hoe tools mogen worden uitgevoerd. De meeste tools staan standaard op Toestaan. doom_loop en external_directory staan standaard op Vragen.",
+    "Definieer hoe tools mogen worden uitgevoerd. De meeste tools staan standaard op Toestaan. Bash staat standaard op Vragen.",
   "settings.autoApprove.maxCost.title": "Sessiekostenwaarschuwing",
   "settings.autoApprove.maxCost.description":
     "Waarschuw voordat een sessie doorgaat nadat de kosten dit USD-bedrag overschrijden. Gebruik hele dollars; laat leeg om uit te schakelen.",
@@ -1198,6 +1202,12 @@ export const dict = {
   "settings.context.compactionLimit.title": "Limiet voor automatisch compacteren",
   "settings.context.compactionLimit.description":
     "Compacteer wanneer de context dit percentage van het modelvenster bereikt. Laat leeg om alleen de veiligheidsbuffer te gebruiken.",
+  "settings.context.compactionKeep.title": "Recente tokens behouden",
+  "settings.context.compactionKeep.description":
+    "Recente tokens die letterlijk behouden blijven bij het comprimeren van de context. Laat leeg om 15.000 te behouden.",
+  "settings.context.compactionBuffer.title": "Compressiebuffer",
+  "settings.context.compactionBuffer.description":
+    "Tokens die vrij blijven onder de contextlimiet voordat er wordt gecomprimeerd. Laat leeg om 15% vrij te houden, minimaal 16.000.",
   "settings.context.prune.title": "Oude Uitvoer Opschonen",
   "settings.context.prune.description": "Verwijder oude tool uitvoer tijdens compactie",
   "settings.context.watcherPatterns": "File Watcher Negeer Patronen",
@@ -1438,6 +1448,9 @@ export const dict = {
   "settings.agentBehaviour.editMode.prompt": "Systeemprompt",
   "settings.agentBehaviour.editMode.promptOverride": "Aangepaste systeemprompt voor deze ingebouwde modus",
   "settings.agentBehaviour.badge.subagent": "subagent",
+  "settings.agentBehaviour.perAgentPermissions.title": "Machtigingen per agent",
+  "settings.agentBehaviour.perAgentPermissions.description":
+    "Deze instellingen gelden alleen voor deze aangepaste agent. Wijzig de waarde 'Standaard' in een keuzelijst om een eigen waarde in te stellen, of gebruik 'Pad toevoegen' of 'Commando toevoegen' voor uitzonderingen voor specifieke tools.",
   "settings.agentBehaviour.permissions.title": "Berekende machtigingen",
   "settings.agentBehaviour.permissions.count": "{{count}} regels",
   "settings.agentBehaviour.permissions.effective": "Effectief (wildcard):",

@@ -1,17 +1,27 @@
 import { homedir } from "node:os"
 import { commands, ExtensionMode, window, workspace, type ExtensionContext } from "vscode"
 import { chat } from "./chat"
-import { command, manager } from "./server"
+import { command, manager, settingsEnvironment } from "./server"
+import { readKiloSettings } from "./settings-host"
 import { settings } from "./settings-panel"
 
 export function activate(context: ExtensionContext) {
   const output = window.createOutputChannel("Kilo Code (v2)")
   const storage = context.globalStorageUri.fsPath
   const directory = workspace.workspaceFolders?.[0]?.uri.fsPath ?? homedir()
+  // Read at each start, so a settings change applies to the next server.
+  const serverSettings = () => {
+    const values = readKiloSettings()
+    return settingsEnvironment({
+      claudeCodeCompat: values.claudeCodeCompat === true,
+      extraCaCerts: typeof values.extraCaCerts === "string" ? values.extraCaCerts : "",
+    })
+  }
   const server = manager({
     command: () => command({ extension: context.extensionPath, storage, env: process.env }),
     cwd: directory,
     env: process.env,
+    settings: serverSettings,
     log: (text) => output.append(text),
     onError: (error) => {
       output.appendLine(error.message)
@@ -21,7 +31,7 @@ export function activate(context: ExtensionContext) {
     },
   })
   const view = chat({ context, server, directory })
-  const panel = settings({ context, server, directory })
+  const panel = settings({ context, server, directory, onReset: view.syncState })
 
   context.subscriptions.push(
     output,
@@ -54,6 +64,15 @@ export function activate(context: ExtensionContext) {
     }),
     // The webview reconnects on its own: its event stream fails, and the next request starts a new server.
     commands.registerCommand("kilo-code.v2.restartServer", () => server.stop()),
+    // Claude Code compatibility and the extra CA certificates are server start environment, so a change needs a new
+    // server. The next request starts one with the current settings.
+    workspace.onDidChangeConfiguration((event) => {
+      if (
+        event.affectsConfiguration("kilo-code.v2.claudeCodeCompat") ||
+        event.affectsConfiguration("kilo-code.v2.extraCaCerts")
+      )
+        void server.stop()
+    }),
     { dispose: () => void server.stop() },
   )
 

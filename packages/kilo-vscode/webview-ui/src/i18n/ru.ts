@@ -748,7 +748,7 @@ export const dict = {
   "settings.agentBehaviour.title": "Поведение агента",
   "settings.autoApprove.title": "Автоодобрение",
   "settings.webTools.title": "Веб-инструменты",
-  "settings.webTools.description": "Настройте веб-поиск и автоматизацию браузера.",
+  "settings.webTools.description": "Настройте веб-поиск.",
   "settings.webTools.webSearch.enable": "Включить для всех провайдеров",
   "settings.webTools.browserAutomation": "Автоматизация браузера",
   "settings.webTools.webSearch.title": "Веб-поиск",
@@ -862,6 +862,7 @@ export const dict = {
     "Этот файл был экспортирован из более новой версии Kilo. Некоторые настройки могут быть проигнорированы.",
   "settings.aboutKiloCode.importSettings.success":
     "Настройки импортированы. Просмотрите изменения выше и нажмите «Сохранить».",
+  "settings.aboutKiloCode.importSettings.applied": "Settings imported and applied.",
 
   "settings.aboutKiloCode.telemetry.title": "Телеметрия",
   "settings.aboutKiloCode.telemetry.description":
@@ -1053,6 +1054,9 @@ export const dict = {
   "settings.agentBehaviour.editMode.promptOverride":
     "Пользовательское переопределение промпта для этого встроенного режима",
   "settings.agentBehaviour.badge.subagent": "субагент",
+  "settings.agentBehaviour.perAgentPermissions.title": "Разрешения для каждого агента",
+  "settings.agentBehaviour.perAgentPermissions.description":
+    "Эти настройки применяются только к этому пользовательскому агенту. Измените значение 'По умолчанию' в раскрывающемся списке, чтобы создать переопределение, или используйте 'Добавить путь' или 'Добавить команду' для исключений конкретных инструментов.",
   "settings.agentBehaviour.permissions.title": "Вычисленные разрешения",
   "settings.agentBehaviour.permissions.count": "{{count}} правил",
   "settings.agentBehaviour.permissions.effective": "Действующие (wildcard):",
@@ -1128,6 +1132,9 @@ export const dict = {
   "settings.agentBehaviour.mcpResetAuth.confirm":
     'Очистить сохраненные данные входа для "{{name}}"? Вам нужно будет войти снова.',
   "settings.agentBehaviour.mcpBrowseMarketplace": "Обзор Marketplace",
+  "settings.agentBehaviour.mcp.timeout.startup.title": "Тайм-аут запуска (мс)",
+  "settings.agentBehaviour.mcp.timeout.catalog.title": "Тайм-аут каталога (мс)",
+  "settings.agentBehaviour.mcp.timeout.execution.title": "Тайм-аут выполнения (мс)",
   "settings.agentBehaviour.mcpEmpty":
     "MCP-серверы не настроены. Добавьте MCP-серверы в kilo.jsonc или попросите агента добавить их.",
   "settings.agentBehaviour.workflows.description":
@@ -1147,7 +1154,7 @@ export const dict = {
     "Выполнять команды оболочки агента в песочнице на уровне ОС, которая ограничивает запись в каталоги состояния проекта и Kilo",
 
   "settings.autoApprove.description":
-    "Определите правила запуска инструментов. Большинство инструментов по умолчанию Разрешены. Для doom_loop и external_directory по умолчанию установлено Спрашивать.",
+    "Определите правила запуска инструментов. Большинство инструментов по умолчанию Разрешены. Для Bash по умолчанию установлено Спрашивать.",
   "settings.autoApprove.maxCost.title": "Оповещение о стоимости сессии",
   "settings.autoApprove.maxCost.description":
     "Предупреждать перед продолжением сессии, если ее стоимость превышает эту сумму в USD. Используйте целые доллары; оставьте пустым, чтобы отключить.",
@@ -1225,6 +1232,12 @@ export const dict = {
   "settings.context.compactionLimit.title": "Лимит автоматического сжатия",
   "settings.context.compactionLimit.description":
     "Сжимать, когда контекст достигает этого процента окна модели. Оставьте пустым, чтобы использовать только буфер безопасности.",
+  "settings.context.compactionKeep.title": "Сохранять последние токены",
+  "settings.context.compactionKeep.description":
+    "Последние токены, сохраняемые дословно при сжатии контекста. Оставьте пустым, чтобы сохранять 15 000.",
+  "settings.context.compactionBuffer.title": "Буфер сжатия",
+  "settings.context.compactionBuffer.description":
+    "Токены, оставляемые свободными ниже лимита контекста перед сжатием. Оставьте пустым, чтобы оставлять 15% свободными, не менее 16 000.",
   "settings.context.prune.title": "Очистить старые выходные данные",
   "settings.context.prune.description": "Удалить старые выходные данные инструментов при сжатии",
   "settings.context.watcherPatterns": "Шаблоны игнорирования наблюдателя файлов",

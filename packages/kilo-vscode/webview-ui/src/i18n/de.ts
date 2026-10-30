@@ -762,7 +762,7 @@ export const dict = {
   "settings.agentBehaviour.title": "Agentenverhalten",
   "settings.autoApprove.title": "Automatisch genehmigen",
   "settings.webTools.title": "Web-Tools",
-  "settings.webTools.description": "Konfigurieren Sie Websuche und Browserautomatisierung.",
+  "settings.webTools.description": "Konfigurieren Sie die Websuche.",
   "settings.webTools.webSearch.enable": "Für alle Anbieter aktivieren",
   "settings.webTools.browserAutomation": "Browserautomatisierung",
   "settings.webTools.webSearch.title": "Websuche",
@@ -880,6 +880,7 @@ export const dict = {
     "Diese Datei wurde mit einer neueren Version von Kilo exportiert. Einige Einstellungen werden möglicherweise ignoriert.",
   "settings.aboutKiloCode.importSettings.success":
     "Einstellungen importiert. Überprüfen Sie die obigen Änderungen und klicken Sie dann auf Speichern.",
+  "settings.aboutKiloCode.importSettings.applied": "Settings imported and applied.",
 
   "settings.aboutKiloCode.telemetry.title": "Telemetrie",
   "settings.aboutKiloCode.telemetry.description":
@@ -1076,6 +1077,9 @@ export const dict = {
   "settings.agentBehaviour.editMode.promptOverride":
     "Benutzerdefinierte Prompt-Überschreibung für diesen eingebauten Modus",
   "settings.agentBehaviour.badge.subagent": "Subagent",
+  "settings.agentBehaviour.perAgentPermissions.title": "Berechtigungen pro Agent",
+  "settings.agentBehaviour.perAgentPermissions.description":
+    "Diese Einstellungen gelten nur für diesen benutzerdefinierten Agenten. Ändern Sie den Wert einer Auswahlliste von 'Standard' auf einen anderen Wert, um eine Überschreibung zu erstellen, oder verwenden Sie 'Pfad hinzufügen' oder 'Befehl hinzufügen' für werkzeugspezifische Ausnahmen.",
   "settings.agentBehaviour.permissions.title": "Berechnete Berechtigungen",
   "settings.agentBehaviour.permissions.count": "{{count}} Regeln",
   "settings.agentBehaviour.permissions.effective": "Effektiv (Platzhalter):",
@@ -1154,6 +1158,9 @@ export const dict = {
   "settings.agentBehaviour.mcpResetAuth.confirm":
     'Die gespeicherte Anmeldung für "{{name}}" löschen? Sie müssen sich erneut anmelden.',
   "settings.agentBehaviour.mcpBrowseMarketplace": "Marketplace durchsuchen",
+  "settings.agentBehaviour.mcp.timeout.startup.title": "Start-Timeout (ms)",
+  "settings.agentBehaviour.mcp.timeout.catalog.title": "Katalog-Timeout (ms)",
+  "settings.agentBehaviour.mcp.timeout.execution.title": "Ausführungs-Timeout (ms)",
   "settings.agentBehaviour.mcpEmpty":
     "Keine MCP-Server konfiguriert. Fügen Sie MCP-Server in kilo.jsonc hinzu oder bitten Sie den Agenten, sie hinzuzufügen.",
   "settings.agentBehaviour.workflows.description":
@@ -1173,7 +1180,7 @@ export const dict = {
     "Shell-Befehle des Agenten in einer Sandbox auf Betriebssystemebene ausführen, die Schreibvorgänge auf die Projekt- und Kilo-Statusverzeichnisse beschränkt",
 
   "settings.autoApprove.description":
-    "Legen Sie fest, wie Tools ausgeführt werden dürfen. Die meisten Tools sind standardmäßig auf Zulassen eingestellt. doom_loop und external_directory sind standardmäßig auf Fragen eingestellt.",
+    "Legen Sie fest, wie Tools ausgeführt werden dürfen. Die meisten Tools sind standardmäßig auf Zulassen eingestellt. Bash ist standardmäßig auf Fragen eingestellt.",
   "settings.autoApprove.maxCost.title": "Sitzungskostenwarnung",
   "settings.autoApprove.maxCost.description":
     "Vor dem Fortsetzen einer Sitzung warnen, wenn ihre Kosten diesen USD-Betrag überschreiten. Ganze Dollarbeträge verwenden; zum Deaktivieren leer lassen.",
@@ -1253,6 +1260,12 @@ export const dict = {
   "settings.context.compactionLimit.title": "Limit für automatische Komprimierung",
   "settings.context.compactionLimit.description":
     "Komprimieren, wenn der Kontext diesen Prozentsatz des Modellfensters erreicht. Leer lassen, um nur den Sicherheitspuffer zu verwenden.",
+  "settings.context.compactionKeep.title": "Aktuelle Tokens behalten",
+  "settings.context.compactionKeep.description":
+    "Aktuelle Tokens, die beim Komprimieren des Kontexts wörtlich erhalten bleiben. Leer lassen, um 15.000 beizubehalten.",
+  "settings.context.compactionBuffer.title": "Komprimierungspuffer",
+  "settings.context.compactionBuffer.description":
+    "Tokens, die vor der Komprimierung unter dem Kontextlimit freibleiben. Leer lassen, um 15 % frei zu halten, mindestens 16.000.",
   "settings.context.prune.title": "Alte Ausgaben bereinigen",
   "settings.context.prune.description": "Alte Werkzeugausgaben während der Komprimierung entfernen",
   "settings.context.watcherPatterns": "Datei-Watcher-Ignorierungsmuster",

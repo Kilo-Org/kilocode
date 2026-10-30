@@ -712,7 +712,7 @@ export const dict = {
   "settings.agentBehaviour.title": "Agentoppførsel",
   "settings.autoApprove.title": "Automatisk godkjenning",
   "settings.webTools.title": "Nettverktøy",
-  "settings.webTools.description": "Konfigurer nettsøk og nettleserautomatisering.",
+  "settings.webTools.description": "Konfigurer nettsøk.",
   "settings.webTools.webSearch.enable": "Aktiver for alle leverandører",
   "settings.webTools.browserAutomation": "Nettleserautomatisering",
   "settings.webTools.webSearch.title": "Nettsøk",
@@ -826,6 +826,7 @@ export const dict = {
     "Denne filen ble eksportert fra en nyere versjon av Kilo. Noen innstillinger kan bli ignorert.",
   "settings.aboutKiloCode.importSettings.success":
     "Innstillinger importert. Gjennomgå endringene ovenfor, og klikk deretter på Lagre.",
+  "settings.aboutKiloCode.importSettings.applied": "Settings imported and applied.",
 
   "settings.aboutKiloCode.telemetry.title": "Telemetri",
   "settings.aboutKiloCode.telemetry.description":
@@ -1054,6 +1055,9 @@ export const dict = {
     "Dette er en innebygd modus. Grunndefinisjonen kan ikke endres, men du kan konfigurere overstyringer nedenfor.",
   "settings.agentBehaviour.editMode.promptOverride": "Tilpasset prompt-overstyring for denne innebygde modusen",
   "settings.agentBehaviour.badge.subagent": "subagent",
+  "settings.agentBehaviour.perAgentPermissions.title": "Tillatelser per agent",
+  "settings.agentBehaviour.perAgentPermissions.description":
+    "Disse innstillingene gjelder bare for denne tilpassede agenten. Endre verdien i en rullegardinmeny fra 'Standard' for å opprette en overstyring, eller bruk 'Legg til sti' eller 'Legg til kommando' for verktøyspesifikke unntak.",
   "settings.agentBehaviour.permissions.title": "Beregnede tillatelser",
   "settings.agentBehaviour.permissions.count": "{{count}} regler",
   "settings.agentBehaviour.permissions.effective": "Gjeldende (wildcard):",
@@ -1131,6 +1135,9 @@ export const dict = {
   "settings.agentBehaviour.mcpResetAuth.confirm":
     'Fjerne den lagrede innloggingen for "{{name}}"? Du må logge inn på nytt.',
   "settings.agentBehaviour.mcpBrowseMarketplace": "Bla gjennom Marketplace",
+  "settings.agentBehaviour.mcp.timeout.startup.title": "Oppstartstidsavbrudd (ms)",
+  "settings.agentBehaviour.mcp.timeout.catalog.title": "Katalogtidsavbrudd (ms)",
+  "settings.agentBehaviour.mcp.timeout.execution.title": "Utførelsestidsavbrudd (ms)",
   "settings.agentBehaviour.mcpEmpty":
     "Ingen MCP-servere konfigurert. Legg til MCP-servere i kilo.jsonc, eller be agenten om å legge dem til.",
   "settings.agentBehaviour.workflows.description":
@@ -1150,7 +1157,7 @@ export const dict = {
     "Kjør shell-kommandoer for agenten i en sandbox på operativsystemnivå som begrenser skriving til prosjekt- og Kilo-tilstandsmapper",
 
   "settings.autoApprove.description":
-    "Definer hvordan verktøy kan kjøre. De fleste verktøy har Tillat som standard. doom_loop og external_directory har Spør som standard.",
+    "Definer hvordan verktøy kan kjøre. De fleste verktøy har Tillat som standard. Bash har Spør som standard.",
   "settings.autoApprove.maxCost.title": "Varsel om øktkostnad",
   "settings.autoApprove.maxCost.description":
     "Varsle før en økt fortsetter etter at kostnaden overstiger dette USD-beløpet. Bruk hele dollar; la feltet stå tomt for å deaktivere.",
@@ -1226,6 +1233,12 @@ export const dict = {
   "settings.context.compactionLimit.title": "Grense for automatisk komprimering",
   "settings.context.compactionLimit.description":
     "Komprimer når konteksten når denne prosentandelen av modellvinduet. La stå tomt for å bare bruke sikkerhetsbufferen.",
+  "settings.context.compactionKeep.title": "Behold nylige tokens",
+  "settings.context.compactionKeep.description":
+    "Nylige tokens som beholdes ordrett når konteksten komprimeres. La stå tomt for å beholde 15 000.",
+  "settings.context.compactionBuffer.title": "Komprimeringsbuffer",
+  "settings.context.compactionBuffer.description":
+    "Tokens som holdes frie under modellens kontekstgrense før komprimering. La stå tomt for å holde 15 % fritt, minst 16 000.",
   "settings.context.prune.title": "Fjern gamle utdata",
   "settings.context.prune.description": "Fjern gamle verktøyutdata under komprimering",
   "settings.context.watcherPatterns": "Filvakt-ignormønstre",

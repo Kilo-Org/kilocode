@@ -8,6 +8,7 @@ import type { ToHost } from "../../../src/protocol"
 import SettingsPanel from "../components/settings/Settings"
 import { getVSCodeAPI } from "../context/vscode"
 import { credentials } from "../components/settings/provider-catalog"
+import { SettingsConfigProvider } from "./settings-config"
 import { useV2 } from "./client"
 
 export const KILO = "kilo"
@@ -87,5 +88,9 @@ export type SettingsData = ReturnType<typeof createSettings>
 export function SettingsView() {
   const settings = createSettings()
   const login = () => getVSCodeAPI().postMessage({ type: "openProfile" } satisfies ToHost as never)
-  return <SettingsPanel settings={settings} onLogin={login} />
+  return (
+    <SettingsConfigProvider>
+      <SettingsPanel settings={settings} onLogin={login} />
+    </SettingsConfigProvider>
+  )
 }

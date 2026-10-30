@@ -751,7 +751,7 @@ export const dict = {
   "settings.agentBehaviour.title": "Ponašanje agenta",
   "settings.autoApprove.title": "Automatsko odobravanje",
   "settings.webTools.title": "Web alati",
-  "settings.webTools.description": "Konfigurišite web pretragu i automatizaciju preglednika.",
+  "settings.webTools.description": "Konfigurišite web pretragu.",
   "settings.webTools.webSearch.enable": "Omogući za sve pružaoce",
   "settings.webTools.browserAutomation": "Automatizacija preglednika",
   "settings.webTools.webSearch.title": "Web pretraga",
@@ -864,6 +864,7 @@ export const dict = {
     "Ovaj fajl je izvezen iz novije verzije Kilo-a. Neke postavke mogu biti zanemarene.",
   "settings.aboutKiloCode.importSettings.success":
     "Postavke su uvezene. Pregledajte promjene iznad, a zatim kliknite Sačuvaj.",
+  "settings.aboutKiloCode.importSettings.applied": "Settings imported and applied.",
 
   "settings.aboutKiloCode.telemetry.title": "Telemetrija",
   "settings.aboutKiloCode.telemetry.description":
@@ -1054,6 +1055,9 @@ export const dict = {
     "Ovo je ugrađeni način rada. Njegova osnovna definicija ne može se mijenjati, ali ispod možete konfigurirati nadjačavanja.",
   "settings.agentBehaviour.editMode.promptOverride": "Prilagođeno nadjačavanje prompta za ovaj ugrađeni mod",
   "settings.agentBehaviour.badge.subagent": "podagent",
+  "settings.agentBehaviour.perAgentPermissions.title": "Dozvole po agentu",
+  "settings.agentBehaviour.perAgentPermissions.description":
+    "Ove postavke važe samo za ovog prilagođenog agenta. Promijenite vrijednost padajućeg menija sa 'Podrazumijevano' da biste kreirali zamjenu ili koristite 'Dodaj putanju' ili 'Dodaj komandu' za izuzetke specifične za alat.",
   "settings.agentBehaviour.permissions.title": "Izračunate dozvole",
   "settings.agentBehaviour.permissions.count": "{{count}} pravila",
   "settings.agentBehaviour.permissions.effective": "Efektivno (wildcard):",
@@ -1131,6 +1135,9 @@ export const dict = {
   "settings.agentBehaviour.mcpResetAuth.confirm":
     'Ukloniti sačuvanu prijavu za "{{name}}"? Morat ćete se ponovo prijaviti.',
   "settings.agentBehaviour.mcpBrowseMarketplace": "Pregledaj Marketplace",
+  "settings.agentBehaviour.mcp.timeout.startup.title": "Vrijeme pokretanja (ms)",
+  "settings.agentBehaviour.mcp.timeout.catalog.title": "Vrijeme kataloga (ms)",
+  "settings.agentBehaviour.mcp.timeout.execution.title": "Vrijeme izvršavanja (ms)",
   "settings.agentBehaviour.mcpEmpty":
     "Nema konfiguriranih MCP servera. Dodajte MCP servere u kilo.jsonc ili zamolite agenta da ih doda.",
   "settings.agentBehaviour.workflows.description":
@@ -1150,7 +1157,7 @@ export const dict = {
     "Pokrenite shell komande agenta unutar sandboxa na nivou operativnog sistema koji ograničava pisanje na direktorije stanja projekta i Kilo",
 
   "settings.autoApprove.description":
-    "Definišite kako je dozvoljeno pokretanje alata. Većina alata je podrazumijevano na Dozvoli. doom_loop i external_directory su podrazumijevano na Pitaj.",
+    "Definišite kako je dozvoljeno pokretanje alata. Većina alata je podrazumijevano na Dozvoli. Bash je podrazumijevano na Pitaj.",
   "settings.autoApprove.maxCost.title": "Upozorenje o trošku sesije",
   "settings.autoApprove.maxCost.description":
     "Upozori prije nastavka sesije nakon što potrošnja premaši ovaj iznos u USD. Koristite cijele dolare; ostavite prazno za isključivanje.",
@@ -1231,6 +1238,12 @@ export const dict = {
   "settings.context.compactionLimit.title": "Limit automatske kompresije",
   "settings.context.compactionLimit.description":
     "Komprimiraj kada kontekst dostigne ovaj procenat prozora modela. Ostavite prazno da koristite samo sigurnosnu rezervu.",
+  "settings.context.compactionKeep.title": "Zadrži nedavne tokene",
+  "settings.context.compactionKeep.description":
+    "Nedavni tokeni koji se zadržavaju doslovno kada se kontekst komprimira. Ostavite prazno da zadržite 15.000.",
+  "settings.context.compactionBuffer.title": "Bafer kompresije",
+  "settings.context.compactionBuffer.description":
+    "Tokeni koji ostaju slobodni ispod ograničenja konteksta prije kompresije. Ostavite prazno da zadržite 15% slobodno, najmanje 16.000.",
   "settings.context.prune.title": "Očisti stare izlaze",
   "settings.context.prune.description": "Ukloni stare izlaze alata tokom kompresije",
   "settings.context.watcherPatterns": "Uzorci ignoriranja za promatrač datoteka",

@@ -702,7 +702,7 @@ export const dict = {
   "settings.agentBehaviour.title": "Поведінка агента",
   "settings.autoApprove.title": "Автоматичне схвалення",
   "settings.webTools.title": "Вебінструменти",
-  "settings.webTools.description": "Налаштуйте вебпошук і автоматизацію браузера.",
+  "settings.webTools.description": "Налаштуйте вебпошук.",
   "settings.webTools.webSearch.enable": "Увімкнути для всіх постачальників",
   "settings.webTools.browserAutomation": "Автоматизація браузера",
   "settings.webTools.webSearch.title": "Вебпошук",
@@ -853,6 +853,7 @@ export const dict = {
     "Цей файл було експортовано з новішої версії Kilo. Деякі налаштування можуть бути проігноровані.",
   "settings.aboutKiloCode.importSettings.success":
     "Налаштування імпортовано. Перегляньте зміни вище, потім натисніть Зберегти.",
+  "settings.aboutKiloCode.importSettings.applied": "Settings imported and applied.",
 
   "settings.aboutKiloCode.telemetry.title": "Телеметрія",
   "settings.aboutKiloCode.telemetry.description":
@@ -1094,6 +1095,9 @@ export const dict = {
   "settings.agentBehaviour.addMcp.url": "URL сервера",
   "settings.agentBehaviour.addMcp.url.placeholder": "напр. http://localhost:3000/sse",
   "settings.agentBehaviour.mcpBrowseMarketplace": "Переглянути Marketplace",
+  "settings.agentBehaviour.mcp.timeout.startup.title": "Час очікування запуску (мс)",
+  "settings.agentBehaviour.mcp.timeout.catalog.title": "Час очікування каталогу (мс)",
+  "settings.agentBehaviour.mcp.timeout.execution.title": "Час очікування виконання (мс)",
   "settings.agentBehaviour.mcpEmpty":
     "MCP-серверів не налаштовано. Додайте MCP-сервери до kilo.jsonc або попросіть агента додати їх.",
   "settings.agentBehaviour.workflows.description":
@@ -1107,7 +1111,7 @@ export const dict = {
   "settings.agentBehaviour.workflows.modelDescription": "Глобальне перевизначення моделі",
 
   "settings.autoApprove.description":
-    "Визначте, як виконуються інструменти. Більшість інструментів за замовчуванням — Дозволити. doom_loop та external_directory за замовчуванням — Запитувати.",
+    "Визначте, як виконуються інструменти. Більшість інструментів за замовчуванням — Дозволити. Bash за замовчуванням — Запитувати.",
   "settings.autoApprove.maxCost.title": "Сповіщення про вартість сесії",
   "settings.autoApprove.maxCost.description":
     "Попереджати перед продовженням сесії, якщо її витрати перевищують цю суму в USD. Використовуйте цілі долари; залиште порожнім, щоб вимкнути.",
@@ -1186,6 +1190,12 @@ export const dict = {
   "settings.context.compactionLimit.title": "Ліміт автоматичного стискання",
   "settings.context.compactionLimit.description":
     "Стискати, коли контекст досягає цього відсотка вікна моделі. Залиште порожнім, щоб використовувати лише буфер безпеки.",
+  "settings.context.compactionKeep.title": "Зберігати останні токени",
+  "settings.context.compactionKeep.description":
+    "Останні токени, що зберігаються дослівно під час стиснення контексту. Залиште порожнім, щоб зберігати 15 000.",
+  "settings.context.compactionBuffer.title": "Буфер стиснення",
+  "settings.context.compactionBuffer.description":
+    "Токени, які залишаються вільними нижче ліміту контексту перед стисненням. Залиште порожнім, щоб залишати 15% вільними, щонайменше 16 000.",
   "settings.context.prune.title": "Очищати старі виводи",
   "settings.context.prune.description": "Видаляти старі виводи інструментів під час стиснення",
   "settings.context.watcherPatterns": "Шаблони ігнорування спостерігача файлів",
@@ -1426,6 +1436,9 @@ export const dict = {
   "settings.agentBehaviour.editMode.promptOverride":
     "Власне перевизначення системного запиту для цього вбудованого режиму",
   "settings.agentBehaviour.badge.subagent": "субагент",
+  "settings.agentBehaviour.perAgentPermissions.title": "Дозволи для кожного агента",
+  "settings.agentBehaviour.perAgentPermissions.description":
+    "Ці налаштування застосовуються лише до цього користувацького агента. Змініть значення 'За замовчуванням' у розкривному списку, щоб створити перевизначення, або скористайтеся кнопками 'Додати шлях' чи 'Додати команду' для винятків окремих інструментів.",
   "settings.agentBehaviour.permissions.title": "Обчислені дозволи",
   "settings.agentBehaviour.permissions.count": "{{count}} правил",
   "settings.agentBehaviour.permissions.effective": "Ефективні (шаблон):",

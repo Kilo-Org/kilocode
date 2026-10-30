@@ -696,7 +696,7 @@ export const dict = {
   "settings.agentBehaviour.title": "سلوك الوكيل",
   "settings.autoApprove.title": "الموافقة التلقائية",
   "settings.webTools.title": "أدوات الويب",
-  "settings.webTools.description": "اضبط البحث على الويب وأتمتة المتصفح.",
+  "settings.webTools.description": "اضبط البحث على الويب.",
   "settings.webTools.webSearch.enable": "تمكين لجميع المزوّدين",
   "settings.webTools.browserAutomation": "أتمتة المتصفح",
   "settings.webTools.webSearch.title": "البحث على الويب",
@@ -844,6 +844,7 @@ export const dict = {
   "settings.aboutKiloCode.importSettings.newerVersion":
     "تم تصدير هذا الملف من إصدار أحدث من Kilo. قد يتم تجاهل بعض الإعدادات.",
   "settings.aboutKiloCode.importSettings.success": "تم استيراد الإعدادات. راجع التغييرات أعلاه، ثم انقر على حفظ.",
+  "settings.aboutKiloCode.importSettings.applied": "Settings imported and applied.",
 
   "settings.aboutKiloCode.telemetry.title": "Telemetry",
   "settings.aboutKiloCode.telemetry.description":
@@ -1029,6 +1030,9 @@ export const dict = {
     "هذا وضع مضمن. لا يمكن تغيير تعريفه الأساسي، ولكن يمكنك تكوين التجاوزات أدناه.",
   "settings.agentBehaviour.editMode.promptOverride": "تجاوز موجه مخصص لهذا الوضع المدمج",
   "settings.agentBehaviour.badge.subagent": "وكيل فرعي",
+  "settings.agentBehaviour.perAgentPermissions.title": "أذونات لكل وكيل",
+  "settings.agentBehaviour.perAgentPermissions.description":
+    "تنطبق هذه الإعدادات على هذا الوكيل المخصص فقط. غيّر قيمة إحدى القوائم المنسدلة من 'افتراضي' لإنشاء تجاوز، أو استخدم 'إضافة مسار' أو 'إضافة أمر' للاستثناءات الخاصة بالأدوات.",
   "settings.agentBehaviour.permissions.title": "الأذونات المحسوبة",
   "settings.agentBehaviour.permissions.count": "{{count}} قواعد",
   "settings.agentBehaviour.permissions.effective": "الفعال (حرف بدل):",
@@ -1106,6 +1110,9 @@ export const dict = {
   "settings.agentBehaviour.mcpResetAuth.confirm":
     'مسح تسجيل الدخول المحفوظ لـ "{{name}}"؟ ستحتاج إلى تسجيل الدخول مرة أخرى.',
   "settings.agentBehaviour.mcpBrowseMarketplace": "تصفح Marketplace",
+  "settings.agentBehaviour.mcp.timeout.startup.title": "مهلة بدء التشغيل (مللي ثانية)",
+  "settings.agentBehaviour.mcp.timeout.catalog.title": "مهلة الكتالوج (مللي ثانية)",
+  "settings.agentBehaviour.mcp.timeout.execution.title": "مهلة التنفيذ (مللي ثانية)",
   "settings.agentBehaviour.mcpEmpty":
     "لم يتم تهيئة خوادم MCP. أضف خوادم MCP في kilo.jsonc، أو اطلب من الوكيل إضافتها لك.",
   "settings.agentBehaviour.workflows.description":
@@ -1124,7 +1131,7 @@ export const dict = {
     "تشغيل أوامر shell الخاصة بالوكيل داخل sandbox على مستوى نظام التشغيل يقيّد الكتابة على مجلدات حالة المشروع و Kilo",
 
   "settings.autoApprove.description":
-    "تحديد كيفية السماح بتشغيل الأدوات. معظم الأدوات معينة افتراضياً على السماح. doom_loop و external_directory معينة افتراضياً على السؤال.",
+    "تحديد كيفية السماح بتشغيل الأدوات. معظم الأدوات معينة افتراضياً على السماح. Bash معينة افتراضياً على السؤال.",
   "settings.autoApprove.maxCost.title": "تنبيه تكلفة الجلسة",
   "settings.autoApprove.maxCost.description":
     "نبّه قبل متابعة الجلسة بعد أن يتجاوز إنفاقها هذا المبلغ بالدولار الأمريكي. استخدم أرقامًا صحيحة بالدولار؛ اتركه فارغًا للتعطيل.",
@@ -1195,6 +1202,12 @@ export const dict = {
   "settings.context.compactionLimit.title": "حد الضغط التلقائي",
   "settings.context.compactionLimit.description":
     "اضغط عندما يصل السياق إلى هذه النسبة المئوية من نافذة النموذج. اتركه فارغاً لاستخدام هامش الأمان فقط.",
+  "settings.context.compactionKeep.title": "الاحتفاظ بالرموز الأخيرة",
+  "settings.context.compactionKeep.description":
+    "الرموز الأخيرة التي تُحفظ نصًا أثناء ضغط السياق. اتركه فارغًا للاحتفاظ بـ 15,000.",
+  "settings.context.compactionBuffer.title": "مخزن الضغط المؤقت",
+  "settings.context.compactionBuffer.description":
+    "الرموز التي تُترك فارغة تحت حد سياق النموذج قبل الضغط. اتركه فارغًا لإبقاء 15% فارغة، على الأقل 16,000.",
   "settings.context.prune.title": "تقليم المخرجات القديمة",
   "settings.context.prune.description": "إزالة مخرجات الأدوات القديمة أثناء الضغط",
   "settings.context.watcherPatterns": "أنماط تجاهل مراقب الملفات",

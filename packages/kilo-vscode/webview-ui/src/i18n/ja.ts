@@ -745,7 +745,7 @@ export const dict = {
   "settings.agentBehaviour.title": "エージェントの動作",
   "settings.autoApprove.title": "自動承認",
   "settings.webTools.title": "ウェブツール",
-  "settings.webTools.description": "ウェブ検索とブラウザ自動化を設定します。",
+  "settings.webTools.description": "ウェブ検索を設定します。",
   "settings.webTools.webSearch.enable": "すべてのプロバイダーで有効化",
   "settings.webTools.browserAutomation": "ブラウザ自動化",
   "settings.webTools.webSearch.title": "ウェブ検索",
@@ -860,6 +860,7 @@ export const dict = {
     "このファイルはより新しいバージョンの Kilo からエクスポートされたものです。一部の設定が無視される場合があります。",
   "settings.aboutKiloCode.importSettings.success":
     "設定をインポートしました。上記の変更内容を確認してから、保存をクリックしてください。",
+  "settings.aboutKiloCode.importSettings.applied": "Settings imported and applied.",
 
   "settings.aboutKiloCode.telemetry.title": "テレメトリ",
   "settings.aboutKiloCode.telemetry.description":
@@ -1050,6 +1051,9 @@ export const dict = {
     "これは組み込みモードです。基本定義は変更できませんが、以下でオーバーライドを設定できます。",
   "settings.agentBehaviour.editMode.promptOverride": "この組み込みモードのカスタムプロンプト上書き",
   "settings.agentBehaviour.badge.subagent": "サブエージェント",
+  "settings.agentBehaviour.perAgentPermissions.title": "エージェントごとの権限",
+  "settings.agentBehaviour.perAgentPermissions.description":
+    "これらの設定はこのカスタムエージェントにのみ適用されます。ドロップダウンの値を「デフォルト」から変更すると上書き設定を作成できます。ツール固有の例外には「パスを追加」または「コマンドを追加」を使用してください。",
   "settings.agentBehaviour.permissions.title": "計算された権限",
   "settings.agentBehaviour.permissions.count": "{{count}} 個のルール",
   "settings.agentBehaviour.permissions.effective": "有効（ワイルドカード）:",
@@ -1126,6 +1130,9 @@ export const dict = {
   "settings.agentBehaviour.mcpResetAuth.confirm":
     '"{{name}}" の保存されたサインイン情報を消去しますか？再度サインインが必要になります。',
   "settings.agentBehaviour.mcpBrowseMarketplace": "マーケットプレイスを閲覧",
+  "settings.agentBehaviour.mcp.timeout.startup.title": "起動タイムアウト (ms)",
+  "settings.agentBehaviour.mcp.timeout.catalog.title": "カタログタイムアウト (ms)",
+  "settings.agentBehaviour.mcp.timeout.execution.title": "実行タイムアウト (ms)",
   "settings.agentBehaviour.mcpEmpty":
     "MCPサーバーが設定されていません。kilo.jsoncでMCPサーバーを追加するか、エージェントに追加を依頼してください。",
   "settings.agentBehaviour.workflows.description":
@@ -1145,7 +1152,7 @@ export const dict = {
     "エージェントのシェルコマンドを、プロジェクトおよびKiloの状態ディレクトリへの書き込みを制限するOSレベルのサンドボックス内で実行",
 
   "settings.autoApprove.description":
-    "ツールの実行許可を定義します。ほとんどのツールはデフォルトで「許可」されます。doom_loop と external_directory はデフォルトで「確認」になります。",
+    "ツールの実行許可を定義します。ほとんどのツールはデフォルトで「許可」されます。Bash はデフォルトで「確認」になります。",
   "settings.autoApprove.maxCost.title": "セッションコストアラート",
   "settings.autoApprove.maxCost.description":
     "セッションの支出がこの米ドル金額を超えた後、続行する前に警告します。整数のドル額を使用してください。無効にするには空欄にします。",
@@ -1220,6 +1227,12 @@ export const dict = {
   "settings.context.compactionLimit.title": "自動圧縮の上限",
   "settings.context.compactionLimit.description":
     "コンテキストがモデルウィンドウのこの割合に達したら圧縮します。安全バッファーのみを使用するには空欄のままにしてください。",
+  "settings.context.compactionKeep.title": "最近のトークンを保持",
+  "settings.context.compactionKeep.description":
+    "コンテキストの圧縮時にそのまま保持する最近のトークン数。空欄にすると 15,000 を保持します。",
+  "settings.context.compactionBuffer.title": "圧縮バッファー",
+  "settings.context.compactionBuffer.description":
+    "圧縮前にモデルのコンテキスト上限より下で空けておくトークン数。空欄にすると 15%（最低 16,000 トークン）を空けます。",
   "settings.context.prune.title": "古い出力を削除",
   "settings.context.prune.description": "圧縮時に古いツール出力を削除",
   "settings.context.watcherPatterns": "ファイルウォッチャー無視パターン",

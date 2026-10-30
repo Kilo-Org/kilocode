@@ -579,7 +579,7 @@ export const dict = {
   "settings.agentBehaviour.title": "Comportamento agente",
   "settings.autoApprove.title": "Approvazione automatica",
   "settings.webTools.title": "Strumenti web",
-  "settings.webTools.description": "Configura la ricerca web e l'automazione del browser.",
+  "settings.webTools.description": "Configura la ricerca web.",
   "settings.webTools.webSearch.enable": "Abilita per tutti i provider",
   "settings.webTools.browserAutomation": "Automazione del browser",
   "settings.webTools.webSearch.title": "Ricerca web",
@@ -721,6 +721,7 @@ export const dict = {
     "Questo file è stato esportato da una versione più recente di Kilo. Alcune impostazioni potrebbero essere ignorate.",
   "settings.aboutKiloCode.importSettings.success":
     "Impostazioni importate. Controlla le modifiche sopra, poi fai clic su Salva.",
+  "settings.aboutKiloCode.importSettings.applied": "Settings imported and applied.",
   "settings.aboutKiloCode.telemetry.title": "Telemetria",
   "settings.aboutKiloCode.telemetry.description":
     'La telemetria è controllata dall\'impostazione integrata di VS Code. Per disabilitarla, vai in Impostazioni > Telemetria > Livello telemetria e impostala su "off". Riavvia VS Code per applicare la modifica.',
@@ -951,6 +952,9 @@ export const dict = {
   "settings.agentBehaviour.addMcp.url": "URL server",
   "settings.agentBehaviour.addMcp.url.placeholder": "es. http://localhost:3000/sse",
   "settings.agentBehaviour.mcpBrowseMarketplace": "Sfoglia Marketplace",
+  "settings.agentBehaviour.mcp.timeout.startup.title": "Timeout di avvio (ms)",
+  "settings.agentBehaviour.mcp.timeout.catalog.title": "Timeout del catalogo (ms)",
+  "settings.agentBehaviour.mcp.timeout.execution.title": "Timeout di esecuzione (ms)",
   "settings.agentBehaviour.mcpEmpty":
     "Nessun server MCP configurato. Aggiungi server MCP in kilo.jsonc, o chiedi all'agente di aggiungerli per te.",
   "settings.agentBehaviour.workflows.description":
@@ -997,6 +1001,9 @@ export const dict = {
     "Questa è una modalità integrata. La sua definizione base non può essere modificata, ma puoi configurare override qui sotto.",
   "settings.agentBehaviour.editMode.promptOverride": "Override prompt personalizzato per questa modalità integrata",
   "settings.agentBehaviour.badge.subagent": "sub-agent",
+  "settings.agentBehaviour.perAgentPermissions.title": "Autorizzazioni per agente",
+  "settings.agentBehaviour.perAgentPermissions.description":
+    "Queste impostazioni si applicano solo a questo agente personalizzato. Modifica il valore 'Predefinito' di un menu a discesa per impostare un valore personalizzato, oppure usa 'Aggiungi percorso' o 'Aggiungi comando' per le eccezioni specifiche dello strumento.",
   "settings.agentBehaviour.permissions.title": "Autorizzazioni calcolate",
   "settings.agentBehaviour.permissions.count": "{{count}} regole",
   "settings.agentBehaviour.permissions.effective": "Effettive (wildcard):",
@@ -1007,7 +1014,7 @@ export const dict = {
   "settings.agentBehaviour.permissions.hint":
     "Le regole vengono valutate in ordine: l'ultima regola corrispondente vince. Questo è il set di regole risolto dal backend CLI.",
   "settings.autoApprove.description":
-    "Definisci come i tool possono essere eseguiti. La maggior parte dei tool usa Consenti di default. doom_loop e external_directory usano Chiedi di default.",
+    "Definisci come i tool possono essere eseguiti. La maggior parte dei tool usa Consenti di default. Bash usa Chiedi di default.",
   "settings.autoApprove.maxCost.title": "Avviso costo sessione",
   "settings.autoApprove.maxCost.description":
     "Avvisa prima di continuare una sessione quando la spesa supera questo importo in USD. Usa dollari interi; lascia vuoto per disattivare.",
@@ -1082,6 +1089,12 @@ export const dict = {
   "settings.context.compactionModel.useChatModel": "Usa il modello di chat",
   "settings.context.compactionModel.hint":
     "Per scegliere quale modello usare per la compattazione, vedi le impostazioni Modelli.",
+  "settings.context.compactionKeep.title": "Mantieni token recenti",
+  "settings.context.compactionKeep.description":
+    "Token recenti mantenuti testualmente durante la compattazione del contesto. Lascia vuoto per mantenerne 15.000.",
+  "settings.context.compactionBuffer.title": "Buffer di compattazione",
+  "settings.context.compactionBuffer.description":
+    "Token lasciati liberi sotto il limite del contesto prima della compattazione. Lascia vuoto per mantenere il 15% libero, almeno 16.000.",
   "settings.context.prune.title": "Riduci output vecchi",
   "settings.context.prune.description": "Rimuovi output tool vecchi durante la compattazione",
   "settings.context.watcherPatterns": "Pattern ignore file watcher",
