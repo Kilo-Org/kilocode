@@ -621,6 +621,26 @@
     "note": "webview-ui/src/components/settings/provider-visibility.ts carries disabledProviderOptions and the custom provider package set, and packages/kilo-vscode/test/custom-provider.test.ts asserts both. canChangeProviderKey, visibleConnectedIds and providersWithKiloFallback are not needed on v2: integrations and credentials answer directly (credentials(integration), integration.connections) and the Kilo fallback provider does not exist.",
     "by": "settings-custom-provider"
   },
+  "module:packages/kilo-vscode/webview-ui/src/components/settings/ModeCreateView.tsx": {
+    "state": "ported",
+    "note": "webview-ui/src/components/settings/agent-behaviour/ModeCreateView.tsx on the v2 agent contract: the name becomes the agents.<id> config key with the same slug and uniqueness validation, and Create writes mode \"primary\" with the description and system prompt through useSettingsConfig as one immediate host write.",
+    "by": "settings-agents"
+  },
+  "module:packages/kilo-vscode/webview-ui/src/components/settings/ModeEditView.tsx": {
+    "state": "ported",
+    "note": "webview-ui/src/components/settings/agent-behaviour/ModeEditView.tsx on the v2 agent contract: description, system prompt (agents.<id>.system), model and variant (agents.<id>.model through ModelPicker), temperature and top_p (agents.<id>.request.body), steps, hidden and disabled, clearing default_agent when the default becomes hidden or disabled, export, remove for a config-defined agent, the PermissionEditor mount for a custom agent and the read-only calculated permissions from api.agent.get.",
+    "by": "settings-agents"
+  },
+  "module:packages/kilo-vscode/webview-ui/src/components/settings/mode-io.ts": {
+    "state": "ported",
+    "note": "webview-ui/src/components/settings/agent-behaviour/mode-io.ts in the v2 agents.<id> shape: the 1 MB cap tag, the name, model, steps, permission and JSON validation and the export payload, with focused tests in packages/kilo-vscode/test/agent-behaviour.test.ts.",
+    "by": "settings-agents"
+  },
+  "module:packages/kilo-vscode/webview-ui/src/components/settings/mode-model.ts": {
+    "state": "ported",
+    "note": "The v1 modelPatch helper is replaced by webview-ui/src/components/settings/agent-behaviour/agents.ts (parseModelSelection and modelSelection) with the shared ModelPicker at agents.<id>.model; the variant is part of the same selection.",
+    "by": "settings-agents"
+  },
   "module:packages/kilo-vscode/webview-ui/src/context/mcp-auth.ts": {
     "state": "ported",
     "note": "The v1 context exposed mcpStatus/mcpAuth/mcpRemoving signals and signIn/cancel/reset actions. v2 derives them from the MCP client in packages/kilo-vscode/webview-ui/src/v2/mcp.ts (servers from api.mcp.list, busy/removing signals, OAuth sign-in), and the subtab writes mcp.servers through useSettingsConfig.",
