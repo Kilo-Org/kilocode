@@ -156,56 +156,6 @@ This enhancement allows you to:
 
 **Note:** When using full endpoint URLs, ensure the URL points to the correct chat completions endpoint for your provider.
 
-## Example: JZSTOKEN
-
-JZSTOKEN provides OpenAI-compatible access to OpenAI, Anthropic, Google, Kimi, DeepSeek, and other models through one API key. It works as a custom provider in Kilo Code; no built-in JZSTOKEN provider is required.
-
-Get a **Standard** key from the [JZSTOKEN API Keys page](https://jzstoken.com/dashboard/keys), then configure the following:
-
-{% tabs %}
-{% tab label="VSCode" %}
-
-1. Open **Settings** and go to **Providers**.
-2. Select **Custom provider**.
-3. Enter `jzstoken` as the provider ID and `JZSTOKEN` as the display name.
-4. Select **OpenAI Compatible** as the provider API.
-5. Set the base URL to `https://jzstoken.com/api/v1`, enter the API key, and fetch the available models.
-6. Select a model from the [JZSTOKEN catalog](https://jzstoken.com/model-pricing), then submit the provider.
-
-{% /tab %}
-{% tab label="CLI" %}
-
-Set the key as an environment variable and add a custom provider to `kilo.json` or `kilo.jsonc`:
-
-```bash
-export JZSTOKEN_API_KEY="your-api-key"
-```
-
-```jsonc
-{
-  "provider": {
-    "jzstoken": {
-      "npm": "@ai-sdk/openai-compatible",
-      "env": ["JZSTOKEN_API_KEY"],
-      "models": {
-        "claude-sonnet-5": {
-          "name": "Claude Sonnet 5",
-        },
-      },
-      "options": {
-        "baseURL": "https://jzstoken.com/api/v1",
-      },
-    },
-  },
-  "model": "jzstoken/claude-sonnet-5",
-}
-```
-
-Add context-window and output-token values under the model's `limit` field when those limits are known. A key created for `jzs-max-3.0` only exposes that model; use a Standard key for other models.
-
-{% /tab %}
-{% /tabs %}
-
 ## Troubleshooting
 
 - **"Invalid API Key":** Double-check that you've entered the API key correctly.
