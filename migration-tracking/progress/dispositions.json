@@ -581,11 +581,6 @@
     "note": "webview-ui/src/v2/auto-approve.tsx replaces the v1 bridge: it requests the persisted state, listens for autoApproveStateLoaded, and persists toggles through the requestAutoApproveState/persistAutoApproveState messages in src/protocol.ts, handled by src/chat.ts. Replies use permission.reply({sessionID, requestID, decision: \"once\"}), so v1's SSE/session directory resolution is not needed.",
     "by": "v2-auto-approve"
   },
-  "module:packages/kilo-vscode/webview-ui/src/components/settings/agent-behaviour/WorkflowsTab.tsx": {
-    "state": "ported",
-    "note": "webview-ui/src/components/settings/agent-behaviour/WorkflowsSubtab.tsx lists workflows from api.command.list plus the config commands map, shows the config description and the read-only template, and writes the per-command model and variant to commands.<n>.model (v2 Config.ModelSelection, the variant in the same value). v2 lists server-discovered commands too. The model override applies to a command defined in config, because a v2 command entry requires a template; the Workflows model picker for file-only workflows is a known gap and stays open.",
-    "by": "settings-rules"
-  },
   "module:packages/kilo-vscode/src/services/mcp-auth/index.ts": {
     "state": "ported",
     "note": "v1 exported McpAuthService and its sign-in state. v2 authenticates MCP OAuth server-side: packages/kilo-vscode/webview-ui/src/v2/mcp.ts starts api.integration.oauth.connect for a server integrationID, opens the authorization URL through the host open message, and polls api.integration.oauth.status; the server emits mcp.status.changed and createData resyncs api.mcp.list.",
@@ -611,11 +606,6 @@
     "note": "packages/kilo-vscode/test/custom-provider.test.ts carries the assertions: provider ID format, duplicate model ids, base URL format, model capability mapping (reasoning and image), header completeness and the {env:VAR} key spelling, plus the providers.<id> write and the provider alias removal.",
     "by": "settings-custom-provider"
   },
-  "module:packages/kilo-vscode/tests/unit/mcp-oauth-config.test.ts": {
-    "state": "ported",
-    "note": "packages/kilo-vscode/test/mcp-oauth-config.test.ts covers the v2 OAuth mode/field mapping and custom-client validation implemented at packages/kilo-vscode/webview-ui/src/components/settings/agent-behaviour/mcp-oauth-config.ts.",
-    "by": "settings-mcp"
-  },
   "module:packages/kilo-vscode/tests/unit/provider-visibility.test.ts": {
     "state": "ported",
     "note": "webview-ui/src/components/settings/provider-visibility.ts carries disabledProviderOptions and the custom provider package set, and packages/kilo-vscode/test/custom-provider.test.ts asserts both. canChangeProviderKey, visibleConnectedIds and providersWithKiloFallback are not needed on v2: integrations and credentials answer directly (credentials(integration), integration.connections) and the Kilo fallback provider does not exist.",
@@ -638,12 +628,112 @@
   },
   "module:packages/kilo-vscode/webview-ui/src/components/settings/mode-model.ts": {
     "state": "ported",
-    "note": "The v1 modelPatch helper is replaced by webview-ui/src/components/settings/agent-behaviour/agents.ts (parseModelSelection and modelSelection) with the shared ModelPicker at agents.<id>.model; the variant is part of the same selection.",
+    "note": "The v1 modelPatch helper is replaced by webview-ui/src/components/settings/agent-behaviour/agent-list.ts (parseModelSelection and modelSelection) with the shared ModelPicker at agents.<id>.model; the variant is part of the same selection.",
     "by": "settings-agents"
   },
   "module:packages/kilo-vscode/webview-ui/src/context/mcp-auth.ts": {
     "state": "ported",
     "note": "The v1 context exposed mcpStatus/mcpAuth/mcpRemoving signals and signIn/cancel/reset actions. v2 derives them from the MCP client in packages/kilo-vscode/webview-ui/src/v2/mcp.ts (servers from api.mcp.list, busy/removing signals, OAuth sign-in), and the subtab writes mcp.servers through useSettingsConfig.",
+    "by": "settings-mcp"
+  },
+  "module:packages/kilo-vscode/webview-ui/src/context/config.tsx": {
+    "state": "ported",
+    "v2": "packages/kilo-vscode/webview-ui/src/v2/settings-config.tsx",
+    "note": "webview-ui/src/v2/settings-config.tsx (createSettingsConfig, useSettingsConfig) replaces ConfigProvider: it reads the merged config and the global and project documents from the host, reports the owning scope per path (source), and writes each set or unset through the host at once. Deliberate difference: v2 has no draft, dirty state, save or discard; external edits hot-reload through config.updated.",
+    "by": "settings-foundation"
+  },
+  "module:packages/kilo-vscode/webview-ui/src/utils/config-scope.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-vscode/src/config-aliases.ts",
+    "note": "splitConfigByScope is replaced by a scope per write: src/config-aliases.ts scopeOf reports the scope that owns a path or its v1 alias, and every settings write names its scope. The v1 global-only rules for indexing, speech-to-text and the agent board are gone with those settings.",
+    "by": "settings-foundation"
+  },
+  "module:packages/kilo-vscode/tests/unit/config-scope.test.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-vscode/test/config-aliases.test.ts",
+    "note": "packages/kilo-vscode/test/config-aliases.test.ts carries the scope assertions (project wins, global only, legacy alias owner, no owner). The indexing, speech-to-text and agent board cases are not carried because v2 has no such settings.",
+    "by": "settings-foundation"
+  },
+  "module:packages/kilo-vscode/webview-ui/src/utils/config-utils.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-vscode/webview-ui/src/v2/settings-merge.ts",
+    "note": "The draft merge helpers (deepMerge, mergeScopedConfig, stripNulls, resolveConfig, ConfigState) are not needed without a draft. webview-ui/src/v2/settings-merge.ts mergeConfigDocuments merges the server config documents, and MCP removal is an unset of mcp.servers.<name> in McpSubtab.tsx, so removeMcpConfig and the removal retention helpers are not needed.",
+    "by": "settings-foundation"
+  },
+  "module:packages/kilo-vscode/tests/unit/config-utils.test.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-vscode/test/settings-merge.test.ts",
+    "note": "packages/kilo-vscode/test/settings-merge.test.ts carries the merge order assertions and packages/kilo-vscode/test/config-file-edit.test.ts the write and unset assertions. The null-sentinel and draft cases are not carried because v2 writes JSONC edits directly.",
+    "by": "settings-foundation"
+  },
+  "module:packages/kilo-vscode/src/kilo-provider/config-file.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-vscode/src/settings-host.ts",
+    "note": "src/settings-host.ts resolves the global and project target files from the server config documents, src/settings-paths.ts gives the global directory fallback and canonical paths, and src/config-file-edit.ts isKiloConfigFile limits writes to the Kilo config file names.",
+    "by": "settings-foundation"
+  },
+  "module:packages/kilo-vscode/src/kilo-provider/remove-config-item.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-vscode/webview-ui/src/components/settings/agent-behaviour/McpSubtab.tsx",
+    "note": "MCP removal is config.unset([\"mcp\", \"servers\", name], scope) in webview-ui/src/components/settings/agent-behaviour/McpSubtab.tsx, written by src/settings-host.ts, which also removes the v1 direct MCP alias (src/config-file-edit.ts). The settings refresh comes from config.updated.",
+    "by": "settings-foundation"
+  },
+  "module:packages/kilo-vscode/tests/unit/remove-config-item.test.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-vscode/test/config-file-edit.test.ts",
+    "note": "packages/kilo-vscode/test/config-file-edit.test.ts asserts the unset path removal and the v1 direct MCP alias removal. The refresh-after-removal case is not needed because the host does not refresh by hand.",
+    "by": "settings-foundation"
+  },
+  "module:packages/kilo-vscode/webview-ui/src/font-size.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-vscode/webview-ui/src/v2/kilo-settings.ts",
+    "note": "webview-ui/src/v2/kilo-settings.ts carries clampFontSize (same 10 to 24 range), the boot size read from --kilo-font-size-13 and applyFontSize over the --kilo-font-size-* variables; DisplayTab.tsx applies it.",
+    "by": "settings-general"
+  },
+  "module:packages/kilo-vscode/src/kilo-provider/font-size.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-vscode/src/settings-host.ts",
+    "note": "src/settings-host.ts listens to onDidChangeConfiguration for the kilo-code.v2.* settings, including fontSize, and posts vscodeSettingsLoaded with the clamped value.",
+    "by": "settings-general"
+  },
+  "module:packages/kilo-vscode/src/kilo-provider/mcp-oauth.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-vscode/webview-ui/src/v2/mcp.ts",
+    "note": "The host MCP sign-in and connect helpers are replaced by server calls in webview-ui/src/v2/mcp.ts (integration.oauth.connect/status/cancel, mcp.connect/disconnect); the authorization URL opens through the existing open host message and the result shows in the MCP subtab.",
+    "by": "settings-mcp"
+  },
+  "module:packages/kilo-vscode/webview-ui/src/components/settings/agent-behaviour-patches.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-vscode/webview-ui/src/components/settings/agent-behaviour/McpSubtab.tsx",
+    "note": "The patch helpers became direct scoped writes: McpSubtab.tsx sets and unsets mcp.servers.<name> fields in the scope from config.source, AgentsSubtab.tsx writes and clears default_agent, ModeEditView.tsx clears default_agent when that agent becomes hidden or disabled, and agent-list.ts agentRows computes removable for config-defined agents. mcpStatusError maps to the McpSubtab status label.",
+    "by": "settings-agents"
+  },
+  "module:packages/kilo-vscode/tests/unit/mode-io.test.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-vscode/test/agent-behaviour.test.ts",
+    "note": "packages/kilo-vscode/test/agent-behaviour.test.ts parseImport and buildExport carry the JSON, name, duplicate, mode default, permission, model and steps validation and the export prefix.",
+    "by": "settings-agents"
+  },
+  "module:packages/kilo-vscode/tests/unit/mode-model.test.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-vscode/test/agent-behaviour.test.ts",
+    "note": "packages/kilo-vscode/test/agent-behaviour.test.ts parseModelSelection and modelSelection carry the model and variant round trip. The variant carry-over cases are not carried: the v2 ModelPicker picks the model and variant as one selection.",
+    "by": "settings-agents"
+  },
+  "module:packages/kilo-vscode/tests/unit/permission-editor.test.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-vscode/test/permission-rules.test.ts",
+    "note": "packages/kilo-vscode/test/permission-rules.test.ts carries effectiveRuleLevel, the config rule order and the patch generation for simple, grouped and granular tools. The onboarding cases are not carried because v2 has no permission onboarding step.",
+    "by": "settings-permissions"
+  },
+  "module:packages/kilo-vscode/tests/unit/mcp-auth-service.test.ts": {
+    "state": "dropped",
+    "note": "Tests the v1 host McpAuthService, which v2 removes: the server owns MCP OAuth state (integration.oauth.*) and the webview calls it directly in webview-ui/src/v2/mcp.ts.",
+    "by": "settings-mcp"
+  },
+  "module:packages/kilo-vscode/tests/unit/mcp-auth-status.test.ts": {
+    "state": "dropped",
+    "note": "Tests needsAuthNames from the removed v1 host service; v2 reads McpServer.status from the server.",
     "by": "settings-mcp"
   }
 }

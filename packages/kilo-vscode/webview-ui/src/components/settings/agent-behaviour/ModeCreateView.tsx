@@ -8,7 +8,7 @@ import { Component, Show, createSignal } from "solid-js"
 import { useLanguage } from "../../../context/language"
 import { useSettingsConfig } from "../../../v2/settings-config"
 import SettingsRow from "../SettingsRow"
-import { agentPath } from "./agents"
+import { agentPath } from "./agent-list"
 
 interface Props {
   /** Names already taken (used for uniqueness validation). */

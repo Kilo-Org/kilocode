@@ -7,7 +7,7 @@ import {
   parseModelSelection,
   permissionRows,
   permissionSummary,
-} from "../webview-ui/src/components/settings/agent-behaviour/agents"
+} from "../webview-ui/src/components/settings/agent-behaviour/agent-list"
 import { buildExport, parseImport } from "../webview-ui/src/components/settings/agent-behaviour/mode-io"
 
 function agent(id: string, extra: Partial<AgentInfo> = {}): AgentInfo {

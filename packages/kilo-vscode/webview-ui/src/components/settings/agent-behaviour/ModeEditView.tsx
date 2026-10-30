@@ -13,7 +13,7 @@ import { useSettingsConfig } from "../../../v2/settings-config"
 import ModelPicker, { type ModelPickerValue } from "../ModelPicker"
 import PermissionEditor from "../PermissionEditor"
 import SettingsRow from "../SettingsRow"
-import { agentConfig, agentField, agentPath, modelSelection, parseModelSelection, permissionRows, permissionSummary, type AgentRow, type PermissionRow } from "./agents"
+import { agentConfig, agentField, agentPath, modelSelection, parseModelSelection, permissionRows, permissionSummary, type AgentRow, type PermissionRow } from "./agent-list"
 import { buildExport } from "./mode-io"
 
 interface Props {
