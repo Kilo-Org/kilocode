@@ -1190,6 +1190,12 @@ export const dict = {
   "settings.context.compactionLimit.title": "Ліміт автоматичного стискання",
   "settings.context.compactionLimit.description":
     "Стискати, коли контекст досягає цього відсотка вікна моделі. Залиште порожнім, щоб використовувати лише буфер безпеки.",
+  "settings.context.compactionKeep.title": "Зберігати останні токени",
+  "settings.context.compactionKeep.description":
+    "Останні токени, що зберігаються дослівно під час стиснення контексту. Залиште порожнім, щоб зберігати 15 000.",
+  "settings.context.compactionBuffer.title": "Буфер стиснення",
+  "settings.context.compactionBuffer.description":
+    "Токени, які залишаються вільними нижче ліміту контексту перед стисненням. Залиште порожнім, щоб залишати 15% вільними, щонайменше 16 000.",
   "settings.context.prune.title": "Очищати старі виводи",
   "settings.context.prune.description": "Видаляти старі виводи інструментів під час стиснення",
   "settings.context.watcherPatterns": "Шаблони ігнорування спостерігача файлів",

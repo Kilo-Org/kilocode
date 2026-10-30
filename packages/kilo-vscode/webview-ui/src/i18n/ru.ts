@@ -1229,6 +1229,12 @@ export const dict = {
   "settings.context.compactionLimit.title": "Лимит автоматического сжатия",
   "settings.context.compactionLimit.description":
     "Сжимать, когда контекст достигает этого процента окна модели. Оставьте пустым, чтобы использовать только буфер безопасности.",
+  "settings.context.compactionKeep.title": "Сохранять последние токены",
+  "settings.context.compactionKeep.description":
+    "Последние токены, сохраняемые дословно при сжатии контекста. Оставьте пустым, чтобы сохранять 15 000.",
+  "settings.context.compactionBuffer.title": "Буфер сжатия",
+  "settings.context.compactionBuffer.description":
+    "Токены, оставляемые свободными ниже лимита контекста перед сжатием. Оставьте пустым, чтобы оставлять 15% свободными, не менее 16 000.",
   "settings.context.prune.title": "Очистить старые выходные данные",
   "settings.context.prune.description": "Удалить старые выходные данные инструментов при сжатии",
   "settings.context.watcherPatterns": "Шаблоны игнорирования наблюдателя файлов",

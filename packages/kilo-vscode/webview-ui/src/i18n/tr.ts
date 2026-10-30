@@ -1190,6 +1190,12 @@ export const dict = {
   "settings.context.compactionLimit.title": "Otomatik sıkıştırma sınırı",
   "settings.context.compactionLimit.description":
     "Bağlam model penceresinin bu yüzdesine ulaştığında sıkıştır. Yalnızca güvenlik tamponunu kullanmak için boş bırakın.",
+  "settings.context.compactionKeep.title": "Son Tokenları Koru",
+  "settings.context.compactionKeep.description":
+    "Bağlam sıkıştırılırken kelimesi kelimesine korunan son tokenlar. 15.000 korumak için boş bırakın.",
+  "settings.context.compactionBuffer.title": "Sıkıştırma Tamponu",
+  "settings.context.compactionBuffer.description":
+    "Sıkıştırmadan önce model bağlam sınırının altında boş bırakılan tokenlar. %15 boş bırakmak için boş bırakın, en az 16.000.",
   "settings.context.prune.title": "Eski Çıktıları Temizle",
   "settings.context.prune.description": "Sıkıştırma sırasında eski araç çıktılarını kaldır",
   "settings.context.watcherPatterns": "Dosya İzleyici Yok Sayma Kalıpları",

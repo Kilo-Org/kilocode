@@ -1215,6 +1215,12 @@ export const dict = {
   "settings.context.compactionLimit.title": "محدودیت فشرده‌سازی خودکار",
   "settings.context.compactionLimit.description":
     "زمانی فشرده‌سازی انجام شود که زمینه به این درصد از پنجره مدل برسد. برای استفاده تنها از بافر ایمنی، خالی بگذارید.",
+  "settings.context.compactionKeep.title": "نگهداشتن توکن‌های اخیر",
+  "settings.context.compactionKeep.description":
+    "توکن‌های اخیری که هنگام فشرده‌سازی زمینه عیناً نگه داشته می‌شوند. برای نگه‌داشتن ۱۵٬۰۰۰ خالی بگذارید.",
+  "settings.context.compactionBuffer.title": "بافر فشرده‌سازی",
+  "settings.context.compactionBuffer.description":
+    "توکن‌هایی که پیش از فشرده‌سازی زیر حد زمینه مدل آزاد نگه داشته می‌شوند. برای آزاد نگه‌داشتن ۱۵٪، حداقل ۱۶٬۰۰۰، خالی بگذارید.",
   "settings.context.prune.title": "حذف خروجی‌های قدیمی",
   "settings.context.prune.description": "حذف خروجی‌های قدیمی ابزار در حین فشرده‌سازی",
   "settings.context.watcherPatterns": "الگوهای نادیده‌گیری ناظر فایل",

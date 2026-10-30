@@ -58,7 +58,7 @@ export const SETTINGS_TABS_V2: SettingsTabV2[] = [
     id: "checkpoints",
     icon: "branch",
     title: "settings.checkpoints.title",
-    ready: false,
+    ready: true,
     component: lazy(() => import("./CheckpointsTab")),
   },
   {
@@ -72,7 +72,7 @@ export const SETTINGS_TABS_V2: SettingsTabV2[] = [
     id: "context",
     icon: "server",
     title: "settings.context.title",
-    ready: false,
+    ready: true,
     component: lazy(() => import("./ContextTab")),
   },
   {

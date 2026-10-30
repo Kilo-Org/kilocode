@@ -1257,6 +1257,12 @@ export const dict = {
   "settings.context.compactionLimit.title": "Limit für automatische Komprimierung",
   "settings.context.compactionLimit.description":
     "Komprimieren, wenn der Kontext diesen Prozentsatz des Modellfensters erreicht. Leer lassen, um nur den Sicherheitspuffer zu verwenden.",
+  "settings.context.compactionKeep.title": "Aktuelle Tokens behalten",
+  "settings.context.compactionKeep.description":
+    "Aktuelle Tokens, die beim Komprimieren des Kontexts wörtlich erhalten bleiben. Leer lassen, um 15.000 beizubehalten.",
+  "settings.context.compactionBuffer.title": "Komprimierungspuffer",
+  "settings.context.compactionBuffer.description":
+    "Tokens, die vor der Komprimierung unter dem Kontextlimit freibleiben. Leer lassen, um 15 % frei zu halten, mindestens 16.000.",
   "settings.context.prune.title": "Alte Ausgaben bereinigen",
   "settings.context.prune.description": "Alte Werkzeugausgaben während der Komprimierung entfernen",
   "settings.context.watcherPatterns": "Datei-Watcher-Ignorierungsmuster",

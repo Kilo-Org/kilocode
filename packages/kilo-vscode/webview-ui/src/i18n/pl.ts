@@ -1236,6 +1236,12 @@ export const dict = {
   "settings.context.compactionLimit.title": "Limit automatycznego kompaktowania",
   "settings.context.compactionLimit.description":
     "Kompaktuj, gdy kontekst osiągnie ten procent okna modelu. Pozostaw puste, aby używać tylko bufora bezpieczeństwa.",
+  "settings.context.compactionKeep.title": "Zachowaj ostatnie tokeny",
+  "settings.context.compactionKeep.description":
+    "Ostatnie tokeny zachowywane dosłownie podczas kompresji kontekstu. Pozostaw puste, aby zachować 15 000.",
+  "settings.context.compactionBuffer.title": "Bufor kompresji",
+  "settings.context.compactionBuffer.description":
+    "Tokeny pozostawiane wolne poniżej limitu kontekstu przed kompresją. Pozostaw puste, aby zachować 15% wolnego miejsca, co najmniej 16 000.",
   "settings.context.prune.title": "Przytnij stare wyjścia",
   "settings.context.prune.description": "Usuń stare wyjścia narzędzi podczas kompakcji",
   "settings.context.watcherPatterns": "Wzorce ignorowania obserwatora plików",

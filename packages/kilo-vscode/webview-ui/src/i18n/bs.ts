@@ -1235,6 +1235,12 @@ export const dict = {
   "settings.context.compactionLimit.title": "Limit automatske kompresije",
   "settings.context.compactionLimit.description":
     "Komprimiraj kada kontekst dostigne ovaj procenat prozora modela. Ostavite prazno da koristite samo sigurnosnu rezervu.",
+  "settings.context.compactionKeep.title": "Zadrži nedavne tokene",
+  "settings.context.compactionKeep.description":
+    "Nedavni tokeni koji se zadržavaju doslovno kada se kontekst komprimira. Ostavite prazno da zadržite 15.000.",
+  "settings.context.compactionBuffer.title": "Bafer kompresije",
+  "settings.context.compactionBuffer.description":
+    "Tokeni koji ostaju slobodni ispod ograničenja konteksta prije kompresije. Ostavite prazno da zadržite 15% slobodno, najmanje 16.000.",
   "settings.context.prune.title": "Očisti stare izlaze",
   "settings.context.prune.description": "Ukloni stare izlaze alata tokom kompresije",
   "settings.context.watcherPatterns": "Uzorci ignoriranja za promatrač datoteka",

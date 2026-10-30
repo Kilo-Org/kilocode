@@ -1230,6 +1230,12 @@ export const dict = {
   "settings.context.compactionLimit.title": "Grense for automatisk komprimering",
   "settings.context.compactionLimit.description":
     "Komprimer når konteksten når denne prosentandelen av modellvinduet. La stå tomt for å bare bruke sikkerhetsbufferen.",
+  "settings.context.compactionKeep.title": "Behold nylige tokens",
+  "settings.context.compactionKeep.description":
+    "Nylige tokens som beholdes ordrett når konteksten komprimeres. La stå tomt for å beholde 15 000.",
+  "settings.context.compactionBuffer.title": "Komprimeringsbuffer",
+  "settings.context.compactionBuffer.description":
+    "Tokens som holdes frie under modellens kontekstgrense før komprimering. La stå tomt for å holde 15 % fritt, minst 16 000.",
   "settings.context.prune.title": "Fjern gamle utdata",
   "settings.context.prune.description": "Fjern gamle verktøyutdata under komprimering",
   "settings.context.watcherPatterns": "Filvakt-ignormønstre",

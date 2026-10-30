@@ -1086,6 +1086,12 @@ export const dict = {
   "settings.context.compactionModel.useChatModel": "Usa il modello di chat",
   "settings.context.compactionModel.hint":
     "Per scegliere quale modello usare per la compattazione, vedi le impostazioni Modelli.",
+  "settings.context.compactionKeep.title": "Mantieni token recenti",
+  "settings.context.compactionKeep.description":
+    "Token recenti mantenuti testualmente durante la compattazione del contesto. Lascia vuoto per mantenerne 15.000.",
+  "settings.context.compactionBuffer.title": "Buffer di compattazione",
+  "settings.context.compactionBuffer.description":
+    "Token lasciati liberi sotto il limite del contesto prima della compattazione. Lascia vuoto per mantenere il 15% libero, almeno 16.000.",
   "settings.context.prune.title": "Riduci output vecchi",
   "settings.context.prune.description": "Rimuovi output tool vecchi durante la compattazione",
   "settings.context.watcherPatterns": "Pattern ignore file watcher",

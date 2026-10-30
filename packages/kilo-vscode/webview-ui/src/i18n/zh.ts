@@ -1160,6 +1160,12 @@ export const dict = {
   "settings.context.compactionModel.hint": "若要选择用于压缩的模型，请参阅模型设置。",
   "settings.context.compactionLimit.title": "自动压缩限制",
   "settings.context.compactionLimit.description": "当上下文达到模型窗口的此百分比时进行压缩。留空则仅使用安全缓冲区。",
+  "settings.context.compactionKeep.title": "保留最近 Token",
+  "settings.context.compactionKeep.description":
+    "压缩上下文时按原样保留的最近 Token 数量。留空则保留 15,000 个。",
+  "settings.context.compactionBuffer.title": "压缩缓冲区",
+  "settings.context.compactionBuffer.description":
+    "压缩前在模型上下文上限以下保留的 Token 数量。留空则保留 15%（至少 16,000 个）。",
   "settings.context.prune.title": "修剪旧输出",
   "settings.context.prune.description": "压缩期间移除旧的工具输出",
   "settings.context.watcherPatterns": "文件监视器忽略模式",

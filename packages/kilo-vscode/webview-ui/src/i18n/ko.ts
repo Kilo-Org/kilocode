@@ -1210,6 +1210,12 @@ export const dict = {
   "settings.context.compactionLimit.title": "자동 압축 한도",
   "settings.context.compactionLimit.description":
     "컨텍스트가 모델 창의 이 비율에 도달하면 압축합니다. 안전 버퍼만 사용하려면 비워 두세요.",
+  "settings.context.compactionKeep.title": "최근 토큰 유지",
+  "settings.context.compactionKeep.description":
+    "컨텍스트를 압축할 때 그대로 유지할 최근 토큰 수입니다. 비워 두면 15,000을 유지합니다.",
+  "settings.context.compactionBuffer.title": "압축 버퍼",
+  "settings.context.compactionBuffer.description":
+    "압축 전에 모델 컨텍스트 한도 아래로 비워 둘 토큰 수입니다. 비워 두면 15%(최소 16,000)를 비워 둡니다.",
   "settings.context.prune.title": "이전 출력 정리",
   "settings.context.prune.description": "압축 중 이전 도구 출력 제거",
   "settings.context.watcherPatterns": "파일 감시자 무시 패턴",
