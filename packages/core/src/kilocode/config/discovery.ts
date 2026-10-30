@@ -25,6 +25,9 @@ export const layout: ConfigDiscovery.Layout = {
   directoryFiles: KiloConfigFiles.directoryFiles,
   systemFiles: KiloConfigFiles.directoryFiles, // kilo_port(unattributed:config:73db79553730) managed .jsonc before .json
   systemDirectory,
+  normalize: KiloConfigPolicy.normalize,
+  commandDocuments: KiloConfigPolicy.commandDocuments,
+  commandMetadata: true,
   parse: KiloConfigPolicy.parse,
   walk: (input) =>
     Effect.gen(function* () {

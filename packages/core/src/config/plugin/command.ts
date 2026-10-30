@@ -36,7 +36,8 @@ export const Plugin = define({
     const agents = yield* Agent.Service
     const subagents = yield* SubagentJob.Service
     const load = Effect.fn("ConfigCommandPlugin.load")(function* () {
-      return yield* Effect.forEach(yield* config.entries(), loadEntry).pipe(Effect.map((documents) => documents.flat()))
+      const entries = yield* config.entries() // kilocode_change(workflow-model) seam - compose discovered command documents
+      return yield* Effect.forEach(entries, loadEntry).pipe(Effect.map((documents) => config.commandDocuments?.(entries, documents.flat()) ?? documents.flat())) // kilocode_change(workflow-model) seam - compose discovered command documents
     })
     const loaded = { documents: [] as { commands: Info["commands"] }[] }
     const reload = load().pipe(
@@ -74,6 +75,7 @@ export const Plugin = define({
           editor.add({
             name,
             description: command.description,
+            ...(config.commandMetadata ? { template: command.template, model: command.model } : {}), // kilocode_change(workflow-model) seam - optional command metadata
             execute: (input) =>
               Effect.gen(function* () {
                 const agent = command.agent === undefined ? undefined : Agent.ID.make(command.agent)

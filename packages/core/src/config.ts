@@ -40,6 +40,8 @@ export interface Interface {
    * source files they parse and rebuild their own state.
    */
   readonly changes: () => Stream.Stream<Watcher.Update>
+  readonly commandDocuments?: (entries: readonly Entry[], documents: { commands: Info["commands"] }[]) => { commands: Info["commands"] }[] // kilocode_change(workflow-model) seam - host command document composition
+  readonly commandMetadata?: boolean // kilocode_change(workflow-model) seam - optional command metadata
   /** Updates supported global config fields while preserving unrelated JSONC content. */
   readonly update?: (patch: Patch) => Effect.Effect<void, FSUtil.Error>
 }
@@ -121,7 +123,7 @@ export const layer = (options?: Options) =>
           return
         }
         // kilocode_change start - config seam: host decoders share the normalization diagnostic pipeline
-        const normalized = ConfigNormalize.normalize(input)
+        const normalized = ConfigNormalize.normalize(layout.normalize?.(input) ?? input)
         const result = { ...normalized, diagnostics: [...normalized.diagnostics] }
         const info = result.type === "rejected"
           ? undefined
@@ -420,6 +422,8 @@ export const layer = (options?: Options) =>
             agents: Effect.filter(sources.agents, fs.isDir),
           }),
         changes: () => Stream.fromPubSub(updates),
+        commandDocuments: (entries, documents) => layout.commandDocuments?.(entries, documents) ?? documents, // kilocode_change(workflow-model) seam - host command document composition
+        commandMetadata: layout.commandMetadata, // kilocode_change(workflow-model) seam - optional command metadata
         update,
       })
     }),

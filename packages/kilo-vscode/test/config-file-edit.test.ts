@@ -100,6 +100,20 @@ describe("applyConfigEdits", () => {
     const second = applyConfigEdits(first, [{ path: ["b"], value: 2 }])
     expect(parse(second)).toEqual({ a: 1, b: 2 })
   })
+
+  test("writes and clears a file-only workflow model without copying its template", () => {
+    const text = `{ "command": { "review": { "model": "old/model", "variant": "low" }, "other": { "template": "Keep" } } }`
+    const saved = applyConfigEdits(text, [
+      { path: ["commands", "review"], value: { model: "fixture/model#high" } },
+    ])
+    expect(parse(saved)).toEqual({
+      command: { other: { template: "Keep" } },
+      commands: { review: { model: "fixture/model#high" } },
+    })
+    const cleared = applyConfigEdits(saved, [{ path: ["commands", "review"] }])
+    expect(parse(cleared).commands.review).toBeUndefined()
+    expect(parse(cleared).command.other.template).toBe("Keep")
+  })
 })
 
 describe("aliasOf", () => {

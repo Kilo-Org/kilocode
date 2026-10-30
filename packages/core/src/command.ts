@@ -22,6 +22,8 @@ export interface Invocation {
 export interface Definition {
   readonly name: string
   readonly description?: string
+  readonly template?: string // kilocode_change(workflow-model) seam - command template metadata
+  readonly model?: Info["model"] // kilocode_change(workflow-model) seam - command model metadata
   readonly execute: (input: Invocation) => Effect.Effect<void, unknown>
 }
 
@@ -66,6 +68,10 @@ export const layer = Layer.effect(
       Info.make({
         name: definition.name,
         description: definition.description,
+        // kilocode_change start - workflow-model seam: expose registered command metadata
+        ...(definition.template === undefined ? {} : { template: definition.template }),
+        ...(definition.model === undefined ? {} : { model: definition.model }),
+        // kilocode_change end
       })
 
     return Service.of({
