@@ -845,6 +845,7 @@ export const dict = {
     "این فایل از نسخه جدیدتری از Kilo صادر شده است. برخی تنظیمات ممکن است نادیده گرفته شوند.",
   "settings.aboutKiloCode.importSettings.success":
     "تنظیمات وارد شد. تغییرات بالا را بررسی کنید، سپس روی ذخیره کلیک کنید.",
+  "settings.aboutKiloCode.importSettings.applied": "Settings imported and applied.",
 
   "settings.aboutKiloCode.telemetry.title": "تله‌متری",
   "settings.aboutKiloCode.telemetry.description":
@@ -1077,6 +1078,9 @@ export const dict = {
   "settings.agentBehaviour.addMcp.url": "URL سرور",
   "settings.agentBehaviour.addMcp.url.placeholder": "مثلاً http://localhost:3000/sse",
   "settings.agentBehaviour.mcpBrowseMarketplace": "مرور Marketplace",
+  "settings.agentBehaviour.mcp.timeout.startup.title": "مهلت راه‌اندازی (میلی‌ثانیه)",
+  "settings.agentBehaviour.mcp.timeout.catalog.title": "مهلت فهرست (میلی‌ثانیه)",
+  "settings.agentBehaviour.mcp.timeout.execution.title": "مهلت اجرا (میلی‌ثانیه)",
   "settings.agentBehaviour.mcpEmpty":
     "هیچ سرور MCP پیکربندی نشده است. سرورهای MCP را در kilo.jsonc اضافه کنید، یا از agent بخواهید آن‌ها را برایتان اضافه کند.",
   "settings.agentBehaviour.workflows.description":
@@ -1135,7 +1139,7 @@ export const dict = {
     "قوانین به ترتیب ارزیابی می‌شوند — آخرین قانون منطبق اعمال می‌شود. این مجموعه قوانین حل‌شده از backend CLI است.",
 
   "settings.autoApprove.description":
-    "نحوه اجرای ابزارها را تعریف کنید. اکثر ابزارها به‌طور پیش‌فرض روی Allow هستند. doom_loop و external_directory به‌طور پیش‌فرض روی Ask هستند.",
+    "نحوه اجرای ابزارها را تعریف کنید. اکثر ابزارها به‌طور پیش‌فرض روی Allow هستند. Bash به‌طور پیش‌فرض روی Ask هستند.",
   "settings.autoApprove.maxCost.title": "هشدار هزینه جلسه",
   "settings.autoApprove.maxCost.description":
     "هنگامی که هزینه یک جلسه از این مقدار دلاری فراتر رفت، یک هشدار غیرمسدودکننده نمایش داده شود. از اعداد صحیح استفاده کنید؛ برای غیرفعال کردن خالی بگذارید.",
@@ -1211,6 +1215,12 @@ export const dict = {
   "settings.context.compactionLimit.title": "محدودیت فشرده‌سازی خودکار",
   "settings.context.compactionLimit.description":
     "زمانی فشرده‌سازی انجام شود که زمینه به این درصد از پنجره مدل برسد. برای استفاده تنها از بافر ایمنی، خالی بگذارید.",
+  "settings.context.compactionKeep.title": "نگهداشتن توکن‌های اخیر",
+  "settings.context.compactionKeep.description":
+    "توکن‌های اخیری که هنگام فشرده‌سازی زمینه عیناً نگه داشته می‌شوند. برای نگه‌داشتن ۱۵٬۰۰۰ خالی بگذارید.",
+  "settings.context.compactionBuffer.title": "بافر فشرده‌سازی",
+  "settings.context.compactionBuffer.description":
+    "توکن‌هایی که پیش از فشرده‌سازی زیر حد زمینه مدل آزاد نگه داشته می‌شوند. برای آزاد نگه‌داشتن ۱۵٪، حداقل ۱۶٬۰۰۰، خالی بگذارید.",
   "settings.context.prune.title": "حذف خروجی‌های قدیمی",
   "settings.context.prune.description": "حذف خروجی‌های قدیمی ابزار در حین فشرده‌سازی",
   "settings.context.watcherPatterns": "الگوهای نادیده‌گیری ناظر فایل",

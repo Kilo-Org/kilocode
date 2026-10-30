@@ -856,6 +856,7 @@ export const dict = {
   "settings.aboutKiloCode.importSettings.newerVersion":
     "이 파일은 더 최신 버전의 Kilo에서 내보낸 것입니다. 일부 설정이 무시될 수 있습니다.",
   "settings.aboutKiloCode.importSettings.success": "설정을 가져왔습니다. 위의 변경 사항을 확인한 후 저장을 클릭하세요.",
+  "settings.aboutKiloCode.importSettings.applied": "Settings imported and applied.",
 
   "settings.aboutKiloCode.telemetry.title": "원격 측정",
   "settings.aboutKiloCode.telemetry.description":
@@ -1118,6 +1119,9 @@ export const dict = {
   "settings.agentBehaviour.mcpResetAuth.confirm":
     '"{{name}}"에 저장된 로그인 정보를 지우시겠습니까? 다시 로그인해야 합니다.',
   "settings.agentBehaviour.mcpBrowseMarketplace": "마켓플레이스 둘러보기",
+  "settings.agentBehaviour.mcp.timeout.startup.title": "시작 시간 초과 (ms)",
+  "settings.agentBehaviour.mcp.timeout.catalog.title": "카탈로그 시간 초과 (ms)",
+  "settings.agentBehaviour.mcp.timeout.execution.title": "실행 시간 초과 (ms)",
   "settings.agentBehaviour.mcpEmpty":
     "MCP 서버가 구성되지 않았습니다. kilo.jsonc에서 MCP 서버를 추가하거나 에이전트에게 추가를 요청하세요.",
   "settings.agentBehaviour.workflows.description":
@@ -1137,7 +1141,7 @@ export const dict = {
     "에이전트 셸 명령을 프로젝트 및 Kilo 상태 디렉터리에 대한 쓰기를 제한하는 OS 수준의 샌드박스 내에서 실행",
 
   "settings.autoApprove.description":
-    "도구 실행 허용 방식을 정의합니다. 대부분의 도구 기본값은 '허용'입니다. doom_loop 및 external_directory의 기본값은 '확인'입니다.",
+    "도구 실행 허용 방식을 정의합니다. 대부분의 도구 기본값은 '허용'입니다. Bash의 기본값은 '확인'입니다.",
   "settings.autoApprove.maxCost.title": "세션 비용 알림",
   "settings.autoApprove.maxCost.description":
     "세션 지출이 이 USD 금액을 초과한 뒤 계속하기 전에 알립니다. 정수 달러 금액을 사용하세요. 비활성화하려면 비워 두세요.",
@@ -1206,6 +1210,12 @@ export const dict = {
   "settings.context.compactionLimit.title": "자동 압축 한도",
   "settings.context.compactionLimit.description":
     "컨텍스트가 모델 창의 이 비율에 도달하면 압축합니다. 안전 버퍼만 사용하려면 비워 두세요.",
+  "settings.context.compactionKeep.title": "최근 토큰 유지",
+  "settings.context.compactionKeep.description":
+    "컨텍스트를 압축할 때 그대로 유지할 최근 토큰 수입니다. 비워 두면 15,000을 유지합니다.",
+  "settings.context.compactionBuffer.title": "압축 버퍼",
+  "settings.context.compactionBuffer.description":
+    "압축 전에 모델 컨텍스트 한도 아래로 비워 둘 토큰 수입니다. 비워 두면 15%(최소 16,000)를 비워 둡니다.",
   "settings.context.prune.title": "이전 출력 정리",
   "settings.context.prune.description": "압축 중 이전 도구 출력 제거",
   "settings.context.watcherPatterns": "파일 감시자 무시 패턴",

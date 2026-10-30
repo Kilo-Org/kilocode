@@ -864,6 +864,7 @@ export const dict = {
     "Denne fil blev eksporteret fra en nyere version af Kilo. Nogle indstillinger kan blive ignoreret.",
   "settings.aboutKiloCode.importSettings.success":
     "Indstillinger importeret. Gennemgå ændringerne ovenfor, og klik derefter på Gem.",
+  "settings.aboutKiloCode.importSettings.applied": "Settings imported and applied.",
 
   "settings.aboutKiloCode.telemetry.title": "Telemetri",
   "settings.aboutKiloCode.telemetry.description":
@@ -1129,6 +1130,9 @@ export const dict = {
   "settings.agentBehaviour.mcpResetAuth.title": "Nulstil MCP-login",
   "settings.agentBehaviour.mcpResetAuth.confirm": 'Fjern det gemte login for "{{name}}"? Du skal logge ind igen.',
   "settings.agentBehaviour.mcpBrowseMarketplace": "Gennemse Marketplace",
+  "settings.agentBehaviour.mcp.timeout.startup.title": "Opstartstimeout (ms)",
+  "settings.agentBehaviour.mcp.timeout.catalog.title": "Katalogtimeout (ms)",
+  "settings.agentBehaviour.mcp.timeout.execution.title": "Udførelsestimeout (ms)",
   "settings.agentBehaviour.mcpEmpty":
     "Ingen MCP-servere konfigureret. Tilføj MCP-servere i kilo.jsonc, eller bed agenten om at tilføje dem.",
   "settings.agentBehaviour.workflows.description":
@@ -1148,7 +1152,7 @@ export const dict = {
     "Kør shell-kommandoer for agenten i en sandbox på operativsystemniveau, der begrænser skrivning til projekt- og Kilo-tilstandsmapperne",
 
   "settings.autoApprove.description":
-    "Definer, hvordan værktøjer må køre. De fleste værktøjer er som standard indstillet til Tillad. doom_loop og external_directory er som standard indstillet til Spørg.",
+    "Definer, hvordan værktøjer må køre. De fleste værktøjer er som standard indstillet til Tillad. Bash er som standard indstillet til Spørg.",
   "settings.autoApprove.maxCost.title": "Advarsel om sessionsomkostning",
   "settings.autoApprove.maxCost.description":
     "Advar før en session fortsættes, når forbruget overstiger dette USD-beløb. Brug hele dollars; lad feltet være tomt for at deaktivere.",
@@ -1225,6 +1229,12 @@ export const dict = {
   "settings.context.compactionLimit.title": "Grænse for automatisk komprimering",
   "settings.context.compactionLimit.description":
     "Komprimér, når konteksten når denne procentdel af modelvinduet. Lad feltet være tomt for kun at bruge sikkerhedsbufferen.",
+  "settings.context.compactionKeep.title": "Behold nylige tokens",
+  "settings.context.compactionKeep.description":
+    "Nylige tokens, der bevares ordret, når konteksten komprimeres. Lad feltet være tomt for at beholde 15.000.",
+  "settings.context.compactionBuffer.title": "Komprimeringsbuffer",
+  "settings.context.compactionBuffer.description":
+    "Tokens, der holdes fri under modelkontekstgrænsen før komprimering. Lad feltet være tomt for at holde 15 % frit, mindst 16.000.",
   "settings.context.prune.title": "Fjern gamle output",
   "settings.context.prune.description": "Fjern gamle værktøjsoutput under komprimering",
   "settings.context.watcherPatterns": "Filvagt-ignormønstre",

@@ -59,6 +59,8 @@ export interface ModelSelectorBaseProps {
   onSelect: (providerID: string, modelID: string) => void
   /** Disable this prompt-scoped selector while a permission owns the prompt. */
   blocked?: boolean
+  /** Trigger text when nothing is selected. Defaults to the "Select model" prompt label. */
+  placeholder?: string
 }
 
 export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
@@ -217,7 +219,7 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
     if (model) return triggerName(model)
     if (props.value) return `${props.value.providerID} / ${props.value.modelID}`
     if (props.models && usable().length === 0) return language.t("dialog.model.noProviders")
-    return language.t("dialog.model.select.title")
+    return props.placeholder ?? language.t("dialog.model.select.title")
   }
   const label = () => `${language.t("dialog.model.select.title")}: ${triggerLabel()}`
 

@@ -15,6 +15,7 @@ import type { ToHost, ToWebview } from "./protocol"
 import { bridge } from "./relay"
 import { saveImage } from "./save-image"
 import type { Manager } from "./server"
+import { effectiveFontSize, KILO_SETTING_KEYS, readKiloSettings, settingsHost } from "./settings-host"
 import { promptKeybindings, watchKeybindings } from "./prompt-keybindings"
 
 export function chat(input: { context: ExtensionContext; server: Manager; directory: string }) {
@@ -92,9 +93,23 @@ export function wire(input: {
     fetch: local,
   })
   const post = (message: ToWebview) => void webview.postMessage(message)
+  // Config read and write are host-side: only the Settings panel uses them.
+  const settings =
+    input.view === "settings"
+      ? settingsHost({ context: input.context, server: input.server, directory: input.directory, post })
+      : undefined
+  // The sidebar carries the live Kilo settings: push a fresh value when any of them changes.
+  const settingsWatch =
+    input.view === "chat"
+      ? workspace.onDidChangeConfiguration((event) => {
+          if (KILO_SETTING_KEYS.some((key) => event.affectsConfiguration(`${NAMESPACE}.${key}`)))
+            post({ type: "vscodeSettingsLoaded", values: readKiloSettings() })
+        })
+      : undefined
   const subscription = webview.onDidReceiveMessage((message: ToHost) => {
     input.onMessage?.()
     if (message.type === "fetch" || message.type === "abort" || message.type === "open") return link.receive(message)
+    if (settings?.handle(message)) return
     // Only the sidebar carries the cycle keybindings; the Settings panel must not change their context.
     if (message.type === "webviewFocusChanged" && input.view === "chat")
       return void commands.executeCommand("setContext", "kilo-code.v2.sidebarFocused", message.focused === true)
@@ -113,6 +128,11 @@ export function wire(input: {
     if (message.type === "persistAutoApproveState")
       return void input.context.globalState.update(AUTO_APPROVE, message.value)
     if (message.type === "saveImage") return saveImage(input.directory, message)
+    // The Language tab applies at once: write `kilo-code.v2.language` and let the change event push it to every view.
+    if (message.type === "setLanguage")
+      return void workspace
+        .getConfiguration(NAMESPACE)
+        .update("language", message.locale || undefined, true)
     // The Kilo Gateway sign-in runs in the Profile view of the sidebar, as main opens its Profile panel.
     if (message.type === "openProfile") return void commands.executeCommand("kilo-code.v2.profile")
   })
@@ -125,14 +145,17 @@ export function wire(input: {
     worker: uri("dist", "shiki-worker.js"),
     markdown: uri("dist", "markdown-shiki-worker.js"),
     directory: input.directory,
-    size: size(),
+    size: effectiveFontSize(),
     language: env.language,
     view: input.view,
+    settings: readKiloSettings(),
   })
   return {
     post,
     dispose() {
       link.dispose()
+      settings?.dispose()
+      settingsWatch?.dispose()
       subscription.dispose()
     },
   }
@@ -140,12 +163,8 @@ export function wire(input: {
 
 const EXPANDED = "kilo-code.v2.modelSelectorExpanded"
 const AUTO_APPROVE = "kilo-code.v2.autoApprove"
+const NAMESPACE = "kilo-code.v2"
 const SIZES = [10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24]
-
-function size() {
-  const raw = workspace.getConfiguration("editor").get<number>("fontSize", 13)
-  return Number.isFinite(raw) ? Math.min(24, Math.max(10, Math.round(raw))) : 13
-}
 
 export function html(input: {
   csp: string
@@ -158,6 +177,7 @@ export function html(input: {
   size: number
   language: string
   view?: "chat" | "settings"
+  settings: Record<string, unknown>
 }) {
   const nonce = randomBytes(16).toString("hex")
   const policy = [
@@ -179,7 +199,7 @@ export function html(input: {
     KILO_AGENT_MANAGER_SETTINGS: false,
     KILO_BROWSER_AUTOMATION: false,
     KILO_AGENT_MANAGER_INTRO_DISMISSED: true,
-    KILO_SETTINGS: {},
+    KILO_SETTINGS: input.settings,
   }
   const script = Object.entries(globals)
     .map(([key, value]) => `window.${key} = ${JSON.stringify(value).replace(/</g, "\\u003c")};`)

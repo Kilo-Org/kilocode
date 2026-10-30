@@ -882,6 +882,7 @@ export const dict = {
     "Ce fichier a été exporté depuis une version plus récente de Kilo. Certains paramètres pourraient être ignorés.",
   "settings.aboutKiloCode.importSettings.success":
     "Paramètres importés. Vérifiez les modifications ci-dessus, puis cliquez sur Enregistrer.",
+  "settings.aboutKiloCode.importSettings.applied": "Settings imported and applied.",
 
   "settings.aboutKiloCode.telemetry.title": "Télémétrie",
   "settings.aboutKiloCode.telemetry.description":
@@ -1158,6 +1159,9 @@ export const dict = {
   "settings.agentBehaviour.mcpResetAuth.confirm":
     'Effacer la connexion enregistrée pour "{{name}}" ? Vous devrez vous reconnecter.',
   "settings.agentBehaviour.mcpBrowseMarketplace": "Parcourir le Marketplace",
+  "settings.agentBehaviour.mcp.timeout.startup.title": "Délai de démarrage (ms)",
+  "settings.agentBehaviour.mcp.timeout.catalog.title": "Délai du catalogue (ms)",
+  "settings.agentBehaviour.mcp.timeout.execution.title": "Délai d'exécution (ms)",
   "settings.agentBehaviour.mcpEmpty":
     "Aucun serveur MCP configuré. Ajoutez des serveurs MCP dans kilo.jsonc ou demandez à l'agent de les ajouter.",
   "settings.agentBehaviour.workflows.description":
@@ -1177,7 +1181,7 @@ export const dict = {
     "Exécuter les commandes shell de l'agent dans un sandbox au niveau du système d'exploitation qui restreint les écritures aux répertoires d'état du projet et de Kilo",
 
   "settings.autoApprove.description":
-    "Définissez comment les outils sont autorisés à s'exécuter. La plupart des outils sont définis sur Autoriser par défaut. doom_loop et external_directory sont définis sur Demander par défaut.",
+    "Définissez comment les outils sont autorisés à s'exécuter. La plupart des outils sont définis sur Autoriser par défaut. Bash est défini sur Demander par défaut.",
   "settings.autoApprove.maxCost.title": "Alerte de coût de session",
   "settings.autoApprove.maxCost.description":
     "Alerter avant de continuer une session lorsque sa dépense dépasse ce montant en USD. Utilisez des dollars entiers ; laissez vide pour désactiver.",
@@ -1260,6 +1264,12 @@ export const dict = {
   "settings.context.compactionLimit.title": "Limite de compactage automatique",
   "settings.context.compactionLimit.description":
     "Compacter lorsque le contexte atteint ce pourcentage de la fenêtre du modèle. Laissez vide pour utiliser uniquement la marge de sécurité.",
+  "settings.context.compactionKeep.title": "Conserver les tokens récents",
+  "settings.context.compactionKeep.description":
+    "Tokens récents conservés mot pour mot lors de la compaction du contexte. Laissez vide pour conserver 15 000.",
+  "settings.context.compactionBuffer.title": "Mémoire tampon de compaction",
+  "settings.context.compactionBuffer.description":
+    "Tokens laissés libres sous la limite de contexte avant la compaction. Laissez vide pour garder 15 % libres, au moins 16 000.",
   "settings.context.prune.title": "Élaguer les anciennes sorties",
   "settings.context.prune.description": "Supprimer les anciennes sorties d'outils pendant la compaction",
   "settings.context.watcherPatterns": "Motifs d'ignorance de l'observateur",

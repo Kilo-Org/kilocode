@@ -11,7 +11,19 @@ export type Request = {
   body?: string
 }
 
-export type ToHost = Request | { type: "abort"; id: number } | { type: "open"; url: string } | Ui
+/** One config write: `path` is the config key path, `value` undefined removes it. */
+export type ConfigEdit = { path: string[]; value?: unknown }
+
+export type ConfigScope = "global" | "project"
+
+export type ConfigFileContent = { path: string; text: string }
+
+export type ToHost =
+  | Request
+  | { type: "abort"; id: number }
+  | { type: "open"; url: string }
+  | Ui
+  | Settings
 
 /** Messages of the copied v1 UI. The host ignores `webviewFocusChanged` and `setLanguage` for now. */
 export type Ui =
@@ -25,6 +37,16 @@ export type Ui =
   | { type: "saveImage"; dataUrl: string; filename: string }
   | { type: "openProfile" }
 
+/** Settings panel messages the host handles directly (it reads and writes the config files). */
+export type Settings =
+  | { type: "configRead" }
+  | { type: "configWrite"; id: number; scope: ConfigScope; edits: ConfigEdit[] }
+  | { type: "requestVSCodeSettings" }
+  | { type: "updateVSCodeSettings"; values: Record<string, unknown> }
+  | { type: "openFile"; path: string }
+  | { type: "openVSCodeSettings"; query: string }
+  | { type: "resetAllSettings" }
+
 export type ToWebview =
   | { type: "response"; id: number; status: number; statusText: string; headers: [string, string][] }
   | { type: "chunk"; id: number; data: Uint8Array }
@@ -36,3 +58,6 @@ export type ToWebview =
   | { type: "modelSelectorExpandedLoaded"; value: boolean }
   | { type: "autoApproveStateLoaded"; value: boolean }
   | { type: "webviewActiveChanged"; active: boolean }
+  | { type: "configLoaded"; global: ConfigFileContent; project: ConfigFileContent; error?: string }
+  | { type: "configWritten"; id: number; ok: boolean; error?: string }
+  | { type: "vscodeSettingsLoaded"; values: Record<string, unknown> }

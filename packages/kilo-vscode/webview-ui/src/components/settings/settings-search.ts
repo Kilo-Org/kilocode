@@ -72,9 +72,10 @@ export const SETTINGS_TABS: SettingsTab[] = [
 /**
  * i18n group (the segment after `settings.`) to the tab that renders it.
  * Groups not listed here are not searchable, which keeps dialog-only keys out.
+ * `aboutKiloCode` is absent on purpose: the v2 About tab renders no `data-search-label` rows, so its keys would
+ * become results that open the tab but reveal nothing.
  */
 const GROUP_TABS: Record<string, string> = {
-  aboutKiloCode: "aboutKiloCode",
   agentBehaviour: "agentBehaviour",
   autoApprove: "autoApprove",
   autoCleanup: "checkpoints",
@@ -98,15 +99,47 @@ const GROUP_TABS: Record<string, string> = {
 /** Rows whose group tab differs from the tab that actually renders them. */
 const KEY_TAB_OVERRIDES: Record<string, string> = {
   "settings.context.compactionModel.title": "models",
-  "settings.autocomplete.model.title": "models",
 }
 
 /** i18n `*.title` keys under a mapped group that are not rendered rows. */
 const EXCLUDED_KEYS = new Set([
   "settings.permissions.toast.updateFailed.title",
   "settings.autoCleanup.defaultRetention.title",
+  "settings.autoCleanup.enable.title",
+  "settings.autoCleanup.lastRun.title",
+  "settings.autoApprove.maxCost.title",
   "settings.webTools.webSearch.title",
+  "settings.browser.enable.title",
+  "settings.browser.headless.title",
+  "settings.browser.systemChrome.title",
+  "settings.experimental.batch.title",
+  "settings.experimental.browserAutomation.title",
+  "settings.experimental.browserAutomation.systemChrome.title",
+  "settings.experimental.browserLinks.title",
+  "settings.experimental.claudeMigration.title",
+  "settings.experimental.codeMode.title",
+  "settings.experimental.continueOnDeny.title",
+  "settings.experimental.conversationPromptHistory.title",
+  "settings.experimental.globIncludeIgnored.title",
+  "settings.experimental.imageGeneration.title",
+  "settings.experimental.imageGenerationModel.title",
+  "settings.experimental.mcpTimeout.title",
+  "settings.experimental.nativeNotebookTools.title",
+  "settings.experimental.remote.title",
+  "settings.context.compaction.title",
+  "settings.context.compactionLimit.title",
+  "settings.context.prune.title",
+  "settings.context.memory.title",
+  "settings.context.memory.autoSave.title",
+  "settings.context.memory.project.title",
+  "settings.context.memory.storage.title",
   "agentManager.browser.title",
+  // Models keys the v2 Models tab does not render: v2 has no subagent, autocomplete, or speech-to-text settings.
+  "settings.providers.subagentModel.title",
+  "settings.autocomplete.model.title",
+  "settings.models.speechToTextBaseUrl.title",
+  "settings.models.speechToTextApiKey.title",
+  "settings.models.speechToTextModel.title",
 ])
 
 /** Searchable rows whose title key does not end in `.title`, or that need a description override. */

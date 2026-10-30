@@ -823,6 +823,7 @@ export const dict = {
     "Ten plik został wyeksportowany z nowszej wersji Kilo. Niektóre ustawienia mogą zostać zignorowane.",
   "settings.aboutKiloCode.importSettings.success":
     "Ustawienia zaimportowane. Przejrzyj powyższe zmiany, a następnie kliknij Zapisz.",
+  "settings.aboutKiloCode.importSettings.applied": "Settings imported and applied.",
 
   "settings.aboutKiloCode.telemetry.title": "Telemetria",
   "settings.aboutKiloCode.telemetry.description":
@@ -1132,6 +1133,9 @@ export const dict = {
   "settings.agentBehaviour.mcpResetAuth.confirm":
     'Wyczyścić zapisane logowanie dla "{{name}}"? Będziesz musiał zalogować się ponownie.',
   "settings.agentBehaviour.mcpBrowseMarketplace": "Przeglądaj Marketplace",
+  "settings.agentBehaviour.mcp.timeout.startup.title": "Limit czasu uruchamiania (ms)",
+  "settings.agentBehaviour.mcp.timeout.catalog.title": "Limit czasu katalogu (ms)",
+  "settings.agentBehaviour.mcp.timeout.execution.title": "Limit czasu wykonania (ms)",
   "settings.agentBehaviour.mcpEmpty":
     "Brak skonfigurowanych serwerów MCP. Dodaj serwery MCP w kilo.jsonc lub poproś agenta o ich dodanie.",
   "settings.agentBehaviour.workflows.description":
@@ -1151,7 +1155,7 @@ export const dict = {
     "Uruchamiaj polecenia shell agenta w sandboxie na poziomie systemu operacyjnego, który ogranicza zapisy do katalogów stanu projektu i Kilo",
 
   "settings.autoApprove.description":
-    "Zdefiniuj, jak narzędzia mogą być uruchamiane. Większość narzędzi domyślnie ma ustawienie Zezwalaj. doom_loop i external_directory domyślnie mają ustawienie Pytaj.",
+    "Zdefiniuj, jak narzędzia mogą być uruchamiane. Większość narzędzi domyślnie ma ustawienie Zezwalaj. Bash domyślnie ma ustawienie Pytaj.",
   "settings.autoApprove.maxCost.title": "Alert kosztu sesji",
   "settings.autoApprove.maxCost.description":
     "Ostrzegaj przed kontynuowaniem sesji, gdy jej koszt przekroczy tę kwotę w USD. Używaj pełnych dolarów; pozostaw puste, aby wyłączyć.",
@@ -1232,6 +1236,12 @@ export const dict = {
   "settings.context.compactionLimit.title": "Limit automatycznego kompaktowania",
   "settings.context.compactionLimit.description":
     "Kompaktuj, gdy kontekst osiągnie ten procent okna modelu. Pozostaw puste, aby używać tylko bufora bezpieczeństwa.",
+  "settings.context.compactionKeep.title": "Zachowaj ostatnie tokeny",
+  "settings.context.compactionKeep.description":
+    "Ostatnie tokeny zachowywane dosłownie podczas kompresji kontekstu. Pozostaw puste, aby zachować 15 000.",
+  "settings.context.compactionBuffer.title": "Bufor kompresji",
+  "settings.context.compactionBuffer.description":
+    "Tokeny pozostawiane wolne poniżej limitu kontekstu przed kompresją. Pozostaw puste, aby zachować 15% wolnego miejsca, co najmniej 16 000.",
   "settings.context.prune.title": "Przytnij stare wyjścia",
   "settings.context.prune.description": "Usuń stare wyjścia narzędzi podczas kompakcji",
   "settings.context.watcherPatterns": "Wzorce ignorowania obserwatora plików",

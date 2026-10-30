@@ -870,6 +870,7 @@ export const dict = {
     "Este arquivo foi exportado de uma versão mais recente do Kilo. Algumas configurações podem ser ignoradas.",
   "settings.aboutKiloCode.importSettings.success":
     "Configurações importadas. Revise as alterações acima e clique em Salvar.",
+  "settings.aboutKiloCode.importSettings.applied": "Settings imported and applied.",
 
   "settings.aboutKiloCode.telemetry.title": "Telemetria",
   "settings.aboutKiloCode.telemetry.description":
@@ -1143,6 +1144,9 @@ export const dict = {
   "settings.agentBehaviour.mcpResetAuth.confirm":
     "Skarzhañ ar c'hennaskañ kadaviet evit \"{{name}}\"? Ret e vo deoc'h kennaskañ en-dro.",
   "settings.agentBehaviour.mcpBrowseMarketplace": "Explorar Marketplace",
+  "settings.agentBehaviour.mcp.timeout.startup.title": "Tempo limite de inicialização (ms)",
+  "settings.agentBehaviour.mcp.timeout.catalog.title": "Tempo limite do catálogo (ms)",
+  "settings.agentBehaviour.mcp.timeout.execution.title": "Tempo limite de execução (ms)",
   "settings.agentBehaviour.mcpEmpty":
     "Nenhum servidor MCP configurado. Adicione servidores MCP em kilo.jsonc ou peça ao agente para adicioná-los.",
   "settings.agentBehaviour.workflows.description":
@@ -1162,7 +1166,7 @@ export const dict = {
     "Executar os comandos shell do agente dentro de um sandbox a nível de sistema operacional que restringe escritas aos diretórios de estado do projeto e do Kilo",
 
   "settings.autoApprove.description":
-    "Defina como as ferramentas têm permissão para serem executadas. A maioria das ferramentas tem o padrão Permitir. doom_loop e external_directory têm o padrão Perguntar.",
+    "Defina como as ferramentas têm permissão para serem executadas. A maioria das ferramentas tem o padrão Permitir. Bash tem o padrão Perguntar.",
   "settings.autoApprove.maxCost.title": "Alerta de custo da sessão",
   "settings.autoApprove.maxCost.description":
     "Alerte antes de continuar uma sessão depois que o gasto exceder este valor em USD. Use valores inteiros em dólares; deixe em branco para desativar.",
@@ -1242,6 +1246,12 @@ export const dict = {
   "settings.context.compactionLimit.title": "Limite de compactação automática",
   "settings.context.compactionLimit.description":
     "Compacte quando o contexto atingir esta porcentagem da janela do modelo. Deixe em branco para usar apenas a margem de segurança.",
+  "settings.context.compactionKeep.title": "Manter tokens recentes",
+  "settings.context.compactionKeep.description":
+    "Tokens recentes mantidos literalmente quando o contexto é compactado. Deixe em branco para manter 15.000.",
+  "settings.context.compactionBuffer.title": "Buffer de compactação",
+  "settings.context.compactionBuffer.description":
+    "Tokens mantidos livres abaixo do limite de contexto antes da compactação. Deixe em branco para manter 15% livre, no mínimo 16.000.",
   "settings.context.prune.title": "Remover saídas antigas",
   "settings.context.prune.description": "Remover saídas antigas de ferramentas durante a compactação",
   "settings.context.watcherPatterns": "Padrões de ignorar do observador",

@@ -829,6 +829,7 @@ export const dict = {
   "settings.aboutKiloCode.importSettings.tooLarge": "文件过大。设置文件必须小于 1 MB。",
   "settings.aboutKiloCode.importSettings.newerVersion": "此文件由较新版本的 Kilo 导出。部分设置可能会被忽略。",
   "settings.aboutKiloCode.importSettings.success": "设置已导入。请查看上方的更改，然后点击保存。",
+  "settings.aboutKiloCode.importSettings.applied": "Settings imported and applied.",
 
   "settings.aboutKiloCode.telemetry.title": "遥测",
   "settings.aboutKiloCode.telemetry.description":
@@ -1078,6 +1079,9 @@ export const dict = {
   "settings.agentBehaviour.mcpResetAuth.title": "重置 MCP 登录",
   "settings.agentBehaviour.mcpResetAuth.confirm": '清除 "{{name}}" 的已保存登录信息吗？您需要重新登录。',
   "settings.agentBehaviour.mcpBrowseMarketplace": "浏览市场",
+  "settings.agentBehaviour.mcp.timeout.startup.title": "启动超时 (毫秒)",
+  "settings.agentBehaviour.mcp.timeout.catalog.title": "目录超时 (毫秒)",
+  "settings.agentBehaviour.mcp.timeout.execution.title": "执行超时 (毫秒)",
   "settings.agentBehaviour.mcpEmpty": "未配置 MCP 服务器。在 kilo.jsonc 中添加 MCP 服务器，或让代理为您添加。",
   "settings.agentBehaviour.workflows.description":
     "工作流是在配置中定义的自定义斜杠命令。在聊天中输入 /command-name 来调用它们。命令在 opencode.json 的 'command' 部分中配置。",
@@ -1095,7 +1099,7 @@ export const dict = {
     "在操作系统级沙盒中运行代理 shell 命令，将写入限制在项目和 Kilo 状态目录内",
 
   "settings.autoApprove.description":
-    "定义工具的运行权限。大多数工具默认为「允许」。doom_loop 和 external_directory 默认为「询问」。",
+    "定义工具的运行权限。大多数工具默认为「允许」。Bash 默认为「询问」。",
   "settings.autoApprove.maxCost.title": "会话费用提醒",
   "settings.autoApprove.maxCost.description": "当会话花费超过此美元金额后，在继续前提醒。请使用整数美元；留空则禁用。",
   "settings.autoApprove.level.allow": "允许",
@@ -1156,6 +1160,12 @@ export const dict = {
   "settings.context.compactionModel.hint": "若要选择用于压缩的模型，请参阅模型设置。",
   "settings.context.compactionLimit.title": "自动压缩限制",
   "settings.context.compactionLimit.description": "当上下文达到模型窗口的此百分比时进行压缩。留空则仅使用安全缓冲区。",
+  "settings.context.compactionKeep.title": "保留最近 Token",
+  "settings.context.compactionKeep.description":
+    "压缩上下文时按原样保留的最近 Token 数量。留空则保留 15,000 个。",
+  "settings.context.compactionBuffer.title": "压缩缓冲区",
+  "settings.context.compactionBuffer.description":
+    "压缩前在模型上下文上限以下保留的 Token 数量。留空则保留 15%（至少 16,000 个）。",
   "settings.context.prune.title": "修剪旧输出",
   "settings.context.prune.description": "压缩期间移除旧的工具输出",
   "settings.context.watcherPatterns": "文件监视器忽略模式",
