@@ -1,12 +1,15 @@
 // The Skills subtab: the discovered skills list plus the skill folder paths and URLs. Discovered skills come from
-// `api.skill.list` and are read-only (v2 has no removal endpoint). Folder paths and URLs both live in the config
-// `skills` array, split here by URL for the two v1 lists.
+// `api.skill.list`; the `kilocode.skill` RPC removes a skill that a configured skill directory discovered. Folder
+// paths and URLs both live in the config `skills` array, split here by URL for the two v1 lists.
 import { Component, For, Show, createEffect, createSignal, on } from "solid-js"
 import { Button } from "@kilocode/kilo-ui/button"
 import { Card } from "@kilocode/kilo-ui/card"
+import { useDialog } from "@kilocode/kilo-ui/context/dialog"
+import { Dialog } from "@kilocode/kilo-ui/dialog"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { TextField } from "@kilocode/kilo-ui/text-field"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
+import { KiloSkillRpc } from "@opencode/schema/kilocode/skill"
 import { useLanguage } from "../../../context/language"
 import { useV2 } from "../../../v2/client"
 import { useSettingsConfig } from "../../../v2/settings-config"
@@ -17,12 +20,35 @@ const SkillsSubtab: Component = () => {
   const language = useLanguage()
   const v2 = useV2()
   const config = useSettingsConfig()
+  const dialog = useDialog()
+  const rpc = v2.api.rpc(KiloSkillRpc.Definition)
+  const location = { directory: v2.directory }
   const [draftPath, setDraftPath] = createSignal("")
   const [draftUrl, setDraftUrl] = createSignal("")
+  const [removable, setRemovable] = createSignal<readonly string[]>([])
+  const [removing, setRemoving] = createSignal<string[]>([])
+
+  const refreshRemovable = (): Promise<void> => {
+    if (v2.connection.status() !== "connected") return Promise.resolve()
+    return rpc
+      .removable({}, { location })
+      .then((paths) => {
+        setRemovable(paths)
+      })
+      .catch((error: unknown) => {
+        v2.report(error)
+      })
+  }
 
   createEffect(
     on(v2.connection.status, (status) => {
-      if (status === "connected") void v2.data.location.skill.sync().catch(v2.report)
+      if (status === "connected")
+        void v2.data.location.skill
+          .sync()
+          .then(refreshRemovable)
+          .catch((error: unknown) => {
+            v2.report(error)
+          })
     }),
   )
 
@@ -31,10 +57,54 @@ const SkillsSubtab: Component = () => {
   createEffect(() => {
     config.value(["skills"])
     v2.data.location.skill.invalidate()
-    void v2.data.location.skill.sync().catch(v2.report)
+    void v2.data.location.skill
+      .sync()
+      .then(refreshRemovable)
+      .catch((error: unknown) => {
+        v2.report(error)
+      })
   })
 
   const discovered = () => v2.data.location.skill.list() ?? []
+  const isRemovable = (file: string) => removable().includes(file)
+
+  const remove = (file: string) => {
+    setRemoving((current) => (current.includes(file) ? current : [...current, file]))
+    void rpc
+      .remove({ path: file }, { location })
+      .then(() => {
+        v2.data.location.skill.invalidate()
+        return v2.data.location.skill.sync()
+      })
+      .then(refreshRemovable)
+      .catch(v2.report)
+      .finally(() => setRemoving((current) => current.filter((item) => item !== file)))
+  }
+
+  const confirmRemove = (skill: { name: string; path: string }) => {
+    dialog.show(() => (
+      <Dialog title={language.t("settings.agentBehaviour.removeSkill.title")} fit>
+        <div class="dialog-confirm-body">
+          <span>{language.t("settings.agentBehaviour.removeSkill.confirm", { name: skill.name })}</span>
+          <div class="dialog-confirm-actions">
+            <Button variant="ghost" size="large" onClick={() => dialog.close()}>
+              {language.t("common.cancel")}
+            </Button>
+            <Button
+              variant="primary"
+              size="large"
+              onClick={() => {
+                dialog.close()
+                setTimeout(() => remove(skill.path), 150)
+              }}
+            >
+              {language.t("settings.agentBehaviour.removeSkill.button")}
+            </Button>
+          </div>
+        </div>
+      </Dialog>
+    ))
+  }
 
   // The v2 key is one array. A v1-written file may still hold the legacy `{ paths, urls }` object.
   const skills = (): string[] => {
@@ -142,6 +212,16 @@ const SkillsSubtab: Component = () => {
                     <div>{skill.path}</div>
                   </div>
                 </div>
+                <Show when={isRemovable(skill.path)}>
+                  <IconButton
+                    size="small"
+                    variant="ghost"
+                    icon="close"
+                    label={language.t("settings.agentBehaviour.removeSkill.button")}
+                    loading={removing().includes(skill.path)}
+                    onClick={() => confirmRemove(skill)}
+                  />
+                </Show>
               </div>
             )}
           </For>

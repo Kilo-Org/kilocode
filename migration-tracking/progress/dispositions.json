@@ -735,5 +735,23 @@
     "state": "dropped",
     "note": "Tests needsAuthNames from the removed v1 host service; v2 reads McpServer.status from the server.",
     "by": "settings-mcp"
+  },
+  "module:packages/opencode/src/kilocode/skill-remove.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-plugin/src/skill/remove.ts",
+    "note": "SkillRemove.roots/target/targets keep the v1 target checks: an absolute registered manifest, not built-in, not a URL cache entry, and a manifest file only. The v2 rule also requires a configured skill directory, so plugin and embedded skills cannot be deleted. The kilocode.skill RPC in packages/kilo-plugin/src/skill/index.ts deletes the manifest, publishes config.updated, and waits for the config skill plugin to rescan.",
+    "by": "skill-removal"
+  },
+  "module:packages/opencode/test/kilocode/skill-remove.test.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-plugin/test/skill-remove.test.ts",
+    "note": "The v2 tests cover the v1 cases (built-in, unregistered, relative, non-manifest, URL cache, accepted registered manifest) plus configured roots, flat skills, nested non-manifest files, traversal, the root itself, non-markdown files, and the removable list.",
+    "by": "skill-removal"
+  },
+  "api:POST /kilocode/skill/remove": {
+    "state": "ported",
+    "v2": "packages/schema/src/kilocode/skill.ts",
+    "note": "The Kilo plugin RPC kilocode.skill remove replaces the v1 POST /kilocode/skill/remove route. The generic server route POST /api/rpc/:rpcID/:method serves it, and the VS Code Skills subtab calls remove with a confirm step.",
+    "by": "skill-removal"
   }
 }
