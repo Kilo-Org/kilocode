@@ -65,7 +65,7 @@ The catalog includes these model references:
 - `hopper/deepseek-v4.1-flash-1017` — standard DeepSeek V4.1 Flash 1017.
 - `hopper/deepseek-v4.1-flash-1017-abliterated` — Hopper's abliterated variant of the same model.
 
-Both entries support tool calling, reasoning, and image input, with a 1,048,576-token context window shared by input and output. Check the [live catalog](https://models.dev/providers/hopper/) for current capabilities, limits, and prices.
+The [Hopper catalog on models.dev](https://models.dev/providers/hopper/) lists tool calling, reasoning, and image input for both models. Both entries have a 1,048,576-token context window shared by input and output. Refer to the catalog for current capabilities, limits, and prices.
 
 For the abliterated variant, use its full model reference:
 
