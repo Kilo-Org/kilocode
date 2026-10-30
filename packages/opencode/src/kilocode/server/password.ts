@@ -6,6 +6,7 @@ import { Flag } from "@opencode-ai/core/flag/flag"
 // /proc/<pid>/environ). The value is kept in memory only and never written back to process.env.
 export namespace ServerPassword {
   let value: string | undefined
+  let previous: string | undefined
 
   export function get() {
     return value
@@ -23,11 +24,15 @@ export namespace ServerPassword {
     const password = text.replace(/\r?\n$/, "")
     if (!password) return `KILO_SERVER_PASSWORD_FILE (${file}) is empty`
     value = password
+    previous = Flag.KILO_SERVER_PASSWORD
     Flag.KILO_SERVER_PASSWORD = password
     return undefined
   }
 
+  // Undoes load(): clears the stored value and restores the flag if load() set it.
   export function reset() {
+    if (value !== undefined && Flag.KILO_SERVER_PASSWORD === value) Flag.KILO_SERVER_PASSWORD = previous
     value = undefined
+    previous = undefined
   }
 }

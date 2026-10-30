@@ -50,6 +50,18 @@ describe("ServerPassword", () => {
     expect(Flag.KILO_SERVER_PASSWORD).toBe("secret\n")
   })
 
+  test("reset() undoes load(), including the flag", async () => {
+    const input = await write("secret\n")
+    await using _ = input.tmp
+    const before = Flag.KILO_SERVER_PASSWORD
+
+    expect(await ServerPassword.load({ KILO_SERVER_PASSWORD_FILE: input.file })).toBeUndefined()
+    expect(Flag.KILO_SERVER_PASSWORD).toBe("secret")
+    ServerPassword.reset()
+    expect(ServerPassword.get()).toBeUndefined()
+    expect(Flag.KILO_SERVER_PASSWORD).toBe(before)
+  })
+
   test("strips a trailing CRLF", async () => {
     const input = await write("secret\r\n")
     await using _ = input.tmp
