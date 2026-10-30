@@ -12,6 +12,9 @@ import ai.kilocode.client.ui.ShimmerLabel
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.util.UiTimer
 import ai.kilocode.client.util.UiTimerSource
+import ai.kilocode.rpc.dto.HostedSystemEventDto
+import ai.kilocode.rpc.dto.MessageDto
+import ai.kilocode.rpc.dto.MessageTimeDto
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.util.Disposer
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
@@ -49,6 +52,113 @@ class ProgressPanelTest : BasePlatformTestCase() {
 
     fun `test panel is hidden initially`() {
         assertFalse(panel.isVisible)
+    }
+
+    fun `test preparation failure is persistent generic localized status without native mutation`() {
+        val clock = FakeClock()
+        replace(clock)
+        val error = HostedSystemEventDto("hosted:cloud:one:ses", "cloud.status", cloudStatus = "error",
+            message = "Raw private server error", failure = "unrecognized_safe_code")
+        panel.setPreparation("Stale progress detail", error)
+        assertTrue(panel.isVisible)
+        assertTrue(panel.labelText().startsWith(KiloBundle.message("hosted.workspace.preparation.failed")))
+        assertFalse(panel.labelText().contains("Raw private"))
+        assertFalse(panel.labelText().contains("unrecognized_safe_code"))
+        assertFalse(panel.labelText().contains("Stale progress"))
+        assertTrue(model.state is SessionState.Idle)
+        assertFalse(spinner().isVisible)
+        assertFalse(clock.timer.isRunning())
+        model.setState(SessionState.Idle)
+        assertTrue(panel.isVisible)
+        panel.setPreparation("New preparation")
+        assertEquals("New preparation", panel.labelText())
+        assertTrue(clock.timer.isRunning())
+    }
+
+    fun `test persistent setup failure churn retains nodes and releases timer`() {
+        val clock = FakeClock()
+        replace(clock)
+        val before = components(panel)
+        repeat(500) { index ->
+            panel.setPreparation("Setup $index")
+            panel.setPreparation(null, HostedSystemEventDto("hosted:cloud:one:ses", "preparing",
+                action = "attempt_failed", failure = "workspace_setup_failed", revision = index.toLong()))
+            model.setState(SessionState.Idle)
+            assertTrue(panel.isVisible)
+            assertTrue(panel.labelText().startsWith(KiloBundle.message("hosted.workspace.preparation.setupFailed")))
+            assertFalse(clock.timer.isRunning())
+            assertEquals(before.size, components(panel).size)
+        }
+        before.zip(components(panel)).forEach { (first, after) -> assertSame(first, after) }
+        panel.setPreparation(null)
+        assertFalse(panel.isVisible)
+        Disposer.dispose(parent)
+        assertFalse(clock.timer.isRunning())
+    }
+
+    fun `test preparation failure does not replace unrelated running native task or pending interaction`() {
+        val error = HostedSystemEventDto("hosted:cloud:one:ses", "preparing", action = "attempt_failed",
+            failure = "workspace_setup_failed", triggerMessageID = "old_msg")
+        model.upsertMessage(MessageDto("new_msg", "ses", "user", MessageTimeDto(created = 200.0)))
+        model.setState(SessionState.Busy("Native task"))
+        panel.setPreparation(null, error)
+        assertEquals("Native task", panel.labelText())
+        assertEquals(SessionState.Busy("Native task"), model.state)
+        model.setState(SessionState.AwaitingQuestion(questionStub()))
+        assertFalse(panel.isVisible)
+        assertTrue(model.state is SessionState.AwaitingQuestion)
+        model.setState(SessionState.AwaitingPermission(stub()))
+        assertFalse(panel.isVisible)
+        assertTrue(model.state is SessionState.AwaitingPermission)
+        model.setState(SessionState.Idle)
+        assertTrue(panel.isVisible)
+    }
+
+    fun `test failure overrides busy from the same failed prompt and unknown identity`() {
+        model.upsertMessage(MessageDto("msg_1", "ses", "user", MessageTimeDto(created = 100.0)))
+        model.setState(SessionState.Busy("Preparing"))
+        val error = HostedSystemEventDto("hosted:cloud:one:ses", "preparing", action = "attempt_failed",
+            failure = "workspace_setup_failed", triggerMessageID = "msg_1", observedAt = 110.0)
+        panel.setPreparation(null, error)
+        assertTrue(panel.labelText().startsWith(KiloBundle.message("hosted.workspace.preparation.setupFailed")))
+        assertEquals(SessionState.Busy("Preparing"), model.state)
+        panel.setPreparation(null, error.copy(triggerMessageID = null))
+        assertTrue(panel.labelText().startsWith(KiloBundle.message("hosted.workspace.preparation.setupFailed")))
+        model.upsertMessage(MessageDto("msg_2", "ses", "user", MessageTimeDto(created = 200.0)))
+        assertEquals("Preparing", panel.labelText())
+    }
+
+    fun `test preparation displays before native turn and restores native status afterward`() {
+        panel.setPreparation("Cloning repository... Receiving objects: 33%")
+        assertTrue(panel.isVisible)
+        assertEquals("Cloning repository... Receiving objects: 33%", panel.labelText())
+        assertTrue(model.state is SessionState.Idle)
+        model.setState(SessionState.Busy("Running commands"))
+        assertEquals("Cloning repository... Receiving objects: 33%", panel.labelText())
+        panel.setPreparation(null)
+        assertEquals("Running commands", panel.labelText())
+        model.setState(SessionState.Idle)
+        assertFalse(panel.isVisible)
+    }
+
+    fun `test streaming preparation retains components and releases progress timer`() {
+        val clock = FakeClock()
+        replace(clock)
+        val before = components(panel)
+        val count = before.size
+        repeat(500) { index ->
+            panel.setPreparation("Receiving objects: $index")
+            assertEquals(count, components(panel).size)
+        }
+        assertEquals("Receiving objects: 499", panel.labelText())
+        assertTrue(clock.timer.isRunning())
+        before.zip(components(panel)).forEach { (first, after) -> assertSame(first, after) }
+        panel.setPreparation(null)
+        assertFalse(panel.isVisible)
+        assertFalse(clock.timer.isRunning())
+        assertEquals(count, components(panel).size)
+        Disposer.dispose(parent)
+        assertFalse(clock.timer.isRunning())
     }
 
     fun `test panel paints the session background`() {

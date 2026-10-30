@@ -2,7 +2,8 @@
   description = "Kilo development flake";
 
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
+    # kilocode_change - pin 26.05 security staging for patched Node/Brotli and x86_64-darwin support
+    nixpkgs.url = "github:NixOS/nixpkgs/4353e7cf16b1392d4def91dc089717e21ce8c71e";
   };
 
   outputs =
@@ -159,7 +160,7 @@
               with pkgs;
               [
                 bun
-                nodejs_20
+                nodejs_24 # kilocode_change - use a supported runtime with the Brotli security fix
                 python3
                 pkg-config
                 openssl
@@ -172,13 +173,13 @@
                 gzip
                 patchelf
                 ripgrep
-                jetbrains.jdk
                 jdk21
                 kilo-dev
                 kilo-install-bin
                 kilo-bin
               ]
               ++ lib.optionals stdenv.isLinux [
+                jetbrains.jdk-21 # kilocode_change - JBR is Linux-only; keep Java 21 on all platforms above
                 libX11
                 libXext
                 libXrender
@@ -212,15 +213,19 @@
         default =
           final: _prev:
           let
+            # kilocode_change start - match the Kilo package and its pinned dependency builder
+            bun = final.callPackage ./nix/bun.nix { };
             node_modules = final.callPackage ./nix/node_modules.nix {
-              inherit rev;
+              inherit bun rev;
             };
-            opencode = final.callPackage ./nix/opencode.nix {
-              inherit node_modules;
+            kilo = final.callPackage ./nix/kilo.nix {
+              inherit bun node_modules;
             };
           in
           {
-            inherit opencode;
+            inherit kilo;
+            opencode = kilo; # Preserve the existing overlay attribute for consumers.
+            # kilocode_change end
           };
       };
 
