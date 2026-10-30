@@ -1132,6 +1132,8 @@ export const dict = {
   "settings.autoApprove.maxCost.title": "تنبيه تكلفة الجلسة",
   "settings.autoApprove.maxCost.description":
     "نبّه قبل متابعة الجلسة بعد أن يتجاوز إنفاقها هذا المبلغ بالدولار الأمريكي. استخدم أرقامًا صحيحة بالدولار؛ اتركه فارغًا للتعطيل.",
+  "settings.autoApprove.maxCost.v2Description":
+    "اعرض تنبيهًا غير حاجب عند وصول تكلفة الجلسة إلى هذا المبلغ بالدولار الأمريكي. اتركه فارغًا للتعطيل.",
   "settings.autoApprove.level.allow": "سماح",
   "settings.autoApprove.level.ask": "سؤال",
   "settings.autoApprove.level.deny": "رفض",

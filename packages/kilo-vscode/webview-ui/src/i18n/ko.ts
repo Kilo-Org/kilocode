@@ -1145,6 +1145,8 @@ export const dict = {
   "settings.autoApprove.maxCost.title": "세션 비용 알림",
   "settings.autoApprove.maxCost.description":
     "세션 지출이 이 USD 금액을 초과한 뒤 계속하기 전에 알립니다. 정수 달러 금액을 사용하세요. 비활성화하려면 비워 두세요.",
+  "settings.autoApprove.maxCost.v2Description":
+    "세션 비용이 이 USD 금액에 도달하면 차단하지 않는 알림을 표시합니다. 비활성화하려면 비워 두세요.",
   "settings.autoApprove.level.allow": "허용",
   "settings.autoApprove.level.ask": "확인",
   "settings.autoApprove.level.deny": "거부",

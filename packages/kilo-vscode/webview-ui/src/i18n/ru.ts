@@ -1155,6 +1155,8 @@ export const dict = {
   "settings.autoApprove.maxCost.title": "Оповещение о стоимости сессии",
   "settings.autoApprove.maxCost.description":
     "Предупреждать перед продолжением сессии, если ее стоимость превышает эту сумму в USD. Используйте целые доллары; оставьте пустым, чтобы отключить.",
+  "settings.autoApprove.maxCost.v2Description":
+    "Показывать неблокирующее предупреждение, когда стоимость сессии достигает этой суммы в USD. Оставьте пустым, чтобы отключить.",
   "settings.autoApprove.level.allow": "Разрешить",
   "settings.autoApprove.level.ask": "Спросить",
   "settings.autoApprove.level.deny": "Отклонить",

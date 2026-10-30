@@ -1181,6 +1181,8 @@ export const dict = {
   "settings.autoApprove.maxCost.title": "Sitzungskostenwarnung",
   "settings.autoApprove.maxCost.description":
     "Vor dem Fortsetzen einer Sitzung warnen, wenn ihre Kosten diesen USD-Betrag überschreiten. Ganze Dollarbeträge verwenden; zum Deaktivieren leer lassen.",
+  "settings.autoApprove.maxCost.v2Description":
+    "Eine nicht blockierende Warnung anzeigen, wenn die Kosten einer Sitzung diesen USD-Betrag erreichen. Leer lassen, um die Warnung zu deaktivieren.",
   "settings.autoApprove.level.allow": "Erlauben",
   "settings.autoApprove.level.ask": "Fragen",
   "settings.autoApprove.level.deny": "Ablehnen",

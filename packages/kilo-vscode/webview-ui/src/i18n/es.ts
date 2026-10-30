@@ -1172,6 +1172,8 @@ export const dict = {
   "settings.autoApprove.maxCost.title": "Alerta de coste de sesión",
   "settings.autoApprove.maxCost.description":
     "Avisa antes de continuar una sesión cuando su gasto supere este importe en USD. Usa dólares enteros; déjalo vacío para desactivarlo.",
+  "settings.autoApprove.maxCost.v2Description":
+    "Mostrar un aviso no bloqueante cuando el coste de una sesión alcance este importe en USD. Déjalo vacío para desactivarlo.",
   "settings.autoApprove.level.allow": "Permitir",
   "settings.autoApprove.level.ask": "Preguntar",
   "settings.autoApprove.level.deny": "Denegar",

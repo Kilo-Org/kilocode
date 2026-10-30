@@ -1124,6 +1124,8 @@ export const dict = {
   "settings.autoApprove.maxCost.title": "Sessiekostenwaarschuwing",
   "settings.autoApprove.maxCost.description":
     "Waarschuw voordat een sessie doorgaat nadat de kosten dit USD-bedrag overschrijden. Gebruik hele dollars; laat leeg om uit te schakelen.",
+  "settings.autoApprove.maxCost.v2Description":
+    "Toon een niet-blokkerende waarschuwing wanneer de kosten van een sessie dit USD-bedrag bereiken. Laat leeg om dit uit te schakelen.",
   "settings.autoApprove.level.allow": "Toestaan",
   "settings.autoApprove.level.ask": "Vragen",
   "settings.autoApprove.level.deny": "Weigeren",

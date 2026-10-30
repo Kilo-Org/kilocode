@@ -1153,6 +1153,8 @@ export const dict = {
   "settings.autoApprove.maxCost.title": "セッションコストアラート",
   "settings.autoApprove.maxCost.description":
     "セッションの支出がこの米ドル金額を超えた後、続行する前に警告します。整数のドル額を使用してください。無効にするには空欄にします。",
+  "settings.autoApprove.maxCost.v2Description":
+    "セッションのコストがこの米ドル金額に達したときに、操作を妨げない通知を表示します。無効にするには空欄にします。",
   "settings.autoApprove.level.allow": "許可",
   "settings.autoApprove.level.ask": "確認",
   "settings.autoApprove.level.deny": "拒否",

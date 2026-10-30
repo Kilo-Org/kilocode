@@ -1143,6 +1143,8 @@ export const dict = {
   "settings.autoApprove.maxCost.title": "هشدار هزینه جلسه",
   "settings.autoApprove.maxCost.description":
     "هنگامی که هزینه یک جلسه از این مقدار دلاری فراتر رفت، یک هشدار غیرمسدودکننده نمایش داده شود. از اعداد صحیح استفاده کنید؛ برای غیرفعال کردن خالی بگذارید.",
+  "settings.autoApprove.maxCost.v2Description":
+    "هنگامی که هزینه یک جلسه به این مقدار دلاری رسید، یک هشدار غیرمسدودکننده نمایش داده شود. برای غیرفعال کردن خالی بگذارید.",
   "settings.autoApprove.level.allow": "اجازه",
   "settings.autoApprove.level.ask": "پرسش",
   "settings.autoApprove.level.deny": "رد کردن",

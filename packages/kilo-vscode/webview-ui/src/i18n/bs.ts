@@ -1158,6 +1158,8 @@ export const dict = {
   "settings.autoApprove.maxCost.title": "Upozorenje o trošku sesije",
   "settings.autoApprove.maxCost.description":
     "Upozori prije nastavka sesije nakon što potrošnja premaši ovaj iznos u USD. Koristite cijele dolare; ostavite prazno za isključivanje.",
+  "settings.autoApprove.maxCost.v2Description":
+    "Prikaži obavještenje koje ne blokira kada trošak sesije dostigne ovaj iznos u USD. Ostavite prazno da onemogućite.",
   "settings.autoApprove.level.allow": "Dozvoli",
   "settings.autoApprove.level.ask": "Pitaj",
   "settings.autoApprove.level.deny": "Odbij",
