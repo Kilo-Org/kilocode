@@ -9,6 +9,7 @@
     "kilocode.provider-usage": 10,
     "kilocode.openai": 10,
     "kilocode.marketplace": 10,
+    "kilocode.review": 10,
     "kilocode.gateway.policy": 15,
     "kilo.agent": 50,
     "kilo.agent.ceiling": 50,
