@@ -741,7 +741,7 @@ export const dict = {
   "settings.agentBehaviour.title": "พฤติกรรมของเอเจนต์",
   "settings.autoApprove.title": "อนุมัติอัตโนมัติ",
   "settings.webTools.title": "เครื่องมือเว็บ",
-  "settings.webTools.description": "กำหนดค่าการค้นหาเว็บและระบบอัตโนมัติของเบราว์เซอร์",
+  "settings.webTools.description": "กำหนดค่าการค้นหาเว็บ",
   "settings.webTools.webSearch.enable": "เปิดใช้สำหรับผู้ให้บริการทั้งหมด",
   "settings.webTools.browserAutomation": "ระบบอัตโนมัติของเบราว์เซอร์",
   "settings.webTools.webSearch.title": "ค้นหาเว็บ",
@@ -1038,6 +1038,9 @@ export const dict = {
     "นี่คือโหมดในตัว ไม่สามารถเปลี่ยนคำจำกัดความพื้นฐานได้ แต่คุณสามารถกำหนดค่าการแทนที่ได้ที่ด้านล่าง",
   "settings.agentBehaviour.editMode.promptOverride": "การแทนที่ prompt แบบกำหนดเองสำหรับโหมดในตัวนี้",
   "settings.agentBehaviour.badge.subagent": "เอเจนต์ย่อย",
+  "settings.agentBehaviour.perAgentPermissions.title": "สิทธิ์สำหรับแต่ละเอเจนต์",
+  "settings.agentBehaviour.perAgentPermissions.description":
+    "การตั้งค่าเหล่านี้ใช้กับเอเจนต์ที่กำหนดเองนี้เท่านั้น เปลี่ยนค่าของรายการดรอปดาวน์จาก 'ค่าเริ่มต้น' เพื่อกำหนดค่าแทน หรือใช้ 'เพิ่มพาธ' หรือ 'เพิ่มคำสั่ง' สำหรับข้อยกเว้นเฉพาะเครื่องมือ",
   "settings.agentBehaviour.permissions.title": "สิทธิ์ที่คำนวณแล้ว",
   "settings.agentBehaviour.permissions.count": "{{count}} กฎ",
   "settings.agentBehaviour.permissions.effective": "มีผล (ไวลด์การ์ด):",

@@ -682,7 +682,7 @@ export const dict = {
   "settings.agentBehaviour.title": "Agent 行為",
   "settings.autoApprove.title": "自動核准",
   "settings.webTools.title": "網路工具",
-  "settings.webTools.description": "設定網頁搜尋和瀏覽器自動化。",
+  "settings.webTools.description": "設定網頁搜尋。",
   "settings.webTools.webSearch.enable": "為所有供應商啟用",
   "settings.webTools.browserAutomation": "瀏覽器自動化",
   "settings.webTools.webSearch.title": "網頁搜尋",
@@ -967,6 +967,9 @@ export const dict = {
   "settings.agentBehaviour.editMode.native": "這是一個內建模式。它的基礎定義無法更改，但您可以在下方設定覆寫項。",
   "settings.agentBehaviour.editMode.promptOverride": "此內建模式的自訂提示覆寫",
   "settings.agentBehaviour.badge.subagent": "子代理",
+  "settings.agentBehaviour.perAgentPermissions.title": "各 Agent 的權限",
+  "settings.agentBehaviour.perAgentPermissions.description":
+    "這些設定只適用於此自訂 Agent。將下拉選單的值從「預設」改為其他選項以建立覆寫，或使用「新增路徑」或「新增命令」設定工具專屬的例外。",
   "settings.agentBehaviour.permissions.title": "已計算的權限",
   "settings.agentBehaviour.permissions.count": "{{count}} 條規則",
   "settings.agentBehaviour.permissions.effective": "生效（萬用字元）：",

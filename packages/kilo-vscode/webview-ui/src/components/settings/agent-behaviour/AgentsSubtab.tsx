@@ -1,5 +1,3 @@
-// The v2 contract of the Agents subtab: the default agent select, the agent list with its badges, and the create,
-// edit, import and remove actions. Config edits are staged into the shared save bar through `useSettingsConfig`.
 import { Button } from "@kilocode/kilo-ui/button"
 import { Card } from "@kilocode/kilo-ui/card"
 import { useDialog } from "@kilocode/kilo-ui/context/dialog"

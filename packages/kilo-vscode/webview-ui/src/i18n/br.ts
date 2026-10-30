@@ -713,7 +713,7 @@ export const dict = {
   "settings.agentBehaviour.title": "Comportamento do Agente",
   "settings.autoApprove.title": "Aprovação Automática",
   "settings.webTools.title": "Ferramentas da Web",
-  "settings.webTools.description": "Configure a pesquisa na web e a automação do navegador.",
+  "settings.webTools.description": "Configure a pesquisa na web.",
   "settings.webTools.webSearch.enable": "Ativar para todos os provedores",
   "settings.webTools.browserAutomation": "Automação do navegador",
   "settings.webTools.webSearch.title": "Pesquisa na Web",
@@ -1065,6 +1065,9 @@ export const dict = {
     "Este é um modo embutido. Sua definição base não pode ser alterada, mas você pode configurar as sobrescritas abaixo.",
   "settings.agentBehaviour.editMode.promptOverride": "Substituição de prompt personalizado para este modo integrado",
   "settings.agentBehaviour.badge.subagent": "subagente",
+  "settings.agentBehaviour.perAgentPermissions.title": "Permissões por Agente",
+  "settings.agentBehaviour.perAgentPermissions.description":
+    "Estas configurações se aplicam somente a este agente personalizado. Altere o valor 'Padrão' de um menu suspenso para criar uma substituição ou use 'Adicionar caminho' ou 'Adicionar comando' para exceções específicas de cada ferramenta.",
   "settings.agentBehaviour.permissions.title": "Permissões Calculadas",
   "settings.agentBehaviour.permissions.count": "{{count}} regras",
   "settings.agentBehaviour.permissions.effective": "Efetiva (curinga):",

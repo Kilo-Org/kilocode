@@ -751,7 +751,7 @@ export const dict = {
   "settings.agentBehaviour.title": "Ponašanje agenta",
   "settings.autoApprove.title": "Automatsko odobravanje",
   "settings.webTools.title": "Web alati",
-  "settings.webTools.description": "Konfigurišite web pretragu i automatizaciju preglednika.",
+  "settings.webTools.description": "Konfigurišite web pretragu.",
   "settings.webTools.webSearch.enable": "Omogući za sve pružaoce",
   "settings.webTools.browserAutomation": "Automatizacija preglednika",
   "settings.webTools.webSearch.title": "Web pretraga",
@@ -1055,6 +1055,9 @@ export const dict = {
     "Ovo je ugrađeni način rada. Njegova osnovna definicija ne može se mijenjati, ali ispod možete konfigurirati nadjačavanja.",
   "settings.agentBehaviour.editMode.promptOverride": "Prilagođeno nadjačavanje prompta za ovaj ugrađeni mod",
   "settings.agentBehaviour.badge.subagent": "podagent",
+  "settings.agentBehaviour.perAgentPermissions.title": "Dozvole po agentu",
+  "settings.agentBehaviour.perAgentPermissions.description":
+    "Ove postavke važe samo za ovog prilagođenog agenta. Promijenite vrijednost padajućeg menija sa 'Podrazumijevano' da biste kreirali zamjenu ili koristite 'Dodaj putanju' ili 'Dodaj komandu' za izuzetke specifične za alat.",
   "settings.agentBehaviour.permissions.title": "Izračunate dozvole",
   "settings.agentBehaviour.permissions.count": "{{count}} pravila",
   "settings.agentBehaviour.permissions.effective": "Efektivno (wildcard):",

@@ -722,7 +722,7 @@ export const dict = {
   "settings.agentBehaviour.title": "智能体行为",
   "settings.autoApprove.title": "自动审批",
   "settings.webTools.title": "网络工具",
-  "settings.webTools.description": "配置网页搜索和浏览器自动化。",
+  "settings.webTools.description": "配置网页搜索。",
   "settings.webTools.webSearch.enable": "为所有提供商启用",
   "settings.webTools.browserAutomation": "浏览器自动化",
   "settings.webTools.webSearch.title": "网页搜索",
@@ -1007,6 +1007,9 @@ export const dict = {
   "settings.agentBehaviour.editMode.native": "这是一个内置模式。它的基础定义无法更改，但您可以在下方配置覆盖项。",
   "settings.agentBehaviour.editMode.promptOverride": "此内置模式的自定义提示覆盖",
   "settings.agentBehaviour.badge.subagent": "子代理",
+  "settings.agentBehaviour.perAgentPermissions.title": "各智能体的权限",
+  "settings.agentBehaviour.perAgentPermissions.description":
+    "这些设置仅适用于此自定义智能体。将下拉菜单的值从“默认”改为其他选项以创建覆盖，或使用“添加路径”或“添加命令”设置工具专属的例外。",
   "settings.agentBehaviour.permissions.title": "计算出的权限",
   "settings.agentBehaviour.permissions.count": "{{count}} 条规则",
   "settings.agentBehaviour.permissions.effective": "生效 (通配符):",

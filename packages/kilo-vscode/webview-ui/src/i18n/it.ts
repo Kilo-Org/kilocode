@@ -579,7 +579,7 @@ export const dict = {
   "settings.agentBehaviour.title": "Comportamento agente",
   "settings.autoApprove.title": "Approvazione automatica",
   "settings.webTools.title": "Strumenti web",
-  "settings.webTools.description": "Configura la ricerca web e l'automazione del browser.",
+  "settings.webTools.description": "Configura la ricerca web.",
   "settings.webTools.webSearch.enable": "Abilita per tutti i provider",
   "settings.webTools.browserAutomation": "Automazione del browser",
   "settings.webTools.webSearch.title": "Ricerca web",
@@ -1001,6 +1001,9 @@ export const dict = {
     "Questa è una modalità integrata. La sua definizione base non può essere modificata, ma puoi configurare override qui sotto.",
   "settings.agentBehaviour.editMode.promptOverride": "Override prompt personalizzato per questa modalità integrata",
   "settings.agentBehaviour.badge.subagent": "sub-agent",
+  "settings.agentBehaviour.perAgentPermissions.title": "Autorizzazioni per agente",
+  "settings.agentBehaviour.perAgentPermissions.description":
+    "Queste impostazioni si applicano solo a questo agente personalizzato. Modifica il valore 'Predefinito' di un menu a discesa per impostare un valore personalizzato, oppure usa 'Aggiungi percorso' o 'Aggiungi comando' per le eccezioni specifiche dello strumento.",
   "settings.agentBehaviour.permissions.title": "Autorizzazioni calcolate",
   "settings.agentBehaviour.permissions.count": "{{count}} regole",
   "settings.agentBehaviour.permissions.effective": "Effettive (wildcard):",

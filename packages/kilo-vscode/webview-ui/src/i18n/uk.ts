@@ -702,7 +702,7 @@ export const dict = {
   "settings.agentBehaviour.title": "Поведінка агента",
   "settings.autoApprove.title": "Автоматичне схвалення",
   "settings.webTools.title": "Вебінструменти",
-  "settings.webTools.description": "Налаштуйте вебпошук і автоматизацію браузера.",
+  "settings.webTools.description": "Налаштуйте вебпошук.",
   "settings.webTools.webSearch.enable": "Увімкнути для всіх постачальників",
   "settings.webTools.browserAutomation": "Автоматизація браузера",
   "settings.webTools.webSearch.title": "Вебпошук",
@@ -1438,6 +1438,9 @@ export const dict = {
   "settings.agentBehaviour.editMode.promptOverride":
     "Власне перевизначення системного запиту для цього вбудованого режиму",
   "settings.agentBehaviour.badge.subagent": "субагент",
+  "settings.agentBehaviour.perAgentPermissions.title": "Дозволи для кожного агента",
+  "settings.agentBehaviour.perAgentPermissions.description":
+    "Ці налаштування застосовуються лише до цього користувацького агента. Змініть значення 'За замовчуванням' у розкривному списку, щоб створити перевизначення, або скористайтеся кнопками 'Додати шлях' чи 'Додати команду' для винятків окремих інструментів.",
   "settings.agentBehaviour.permissions.title": "Обчислені дозволи",
   "settings.agentBehaviour.permissions.count": "{{count}} правил",
   "settings.agentBehaviour.permissions.effective": "Ефективні (шаблон):",

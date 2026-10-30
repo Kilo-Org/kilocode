@@ -701,7 +701,7 @@ export const dict = {
   "settings.agentBehaviour.title": "Ajan Davranışı",
   "settings.autoApprove.title": "Otomatik Onay",
   "settings.webTools.title": "Web Araçları",
-  "settings.webTools.description": "Web aramasını ve tarayıcı otomasyonunu yapılandırın.",
+  "settings.webTools.description": "Web aramasını yapılandırın.",
   "settings.webTools.webSearch.enable": "Tüm Sağlayıcılar İçin Etkinleştir",
   "settings.webTools.browserAutomation": "Tarayıcı Otomasyonu",
   "settings.webTools.webSearch.title": "Web Araması",
@@ -1438,6 +1438,9 @@ export const dict = {
   "settings.agentBehaviour.editMode.prompt": "Sistem İstemi",
   "settings.agentBehaviour.editMode.promptOverride": "Bu yerleşik mod için özel sistem istemi geçersiz kılma",
   "settings.agentBehaviour.badge.subagent": "alt ajan",
+  "settings.agentBehaviour.perAgentPermissions.title": "Ajan Başına İzinler",
+  "settings.agentBehaviour.perAgentPermissions.description":
+    "Bu ayarlar yalnızca bu özel ajan için geçerlidir. Bir geçersiz kılma oluşturmak için açılır menüdeki 'Varsayılan' değerini değiştirin veya araca özgü istisnalar için 'Yol ekle' ya da 'Komut ekle' kullanın.",
   "settings.agentBehaviour.permissions.title": "Hesaplanan İzinler",
   "settings.agentBehaviour.permissions.count": "{{count}} kural",
   "settings.agentBehaviour.permissions.effective": "Geçerli (joker karakter):",

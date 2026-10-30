@@ -704,7 +704,7 @@ export const dict = {
   "settings.agentBehaviour.title": "에이전트 동작",
   "settings.autoApprove.title": "자동 승인",
   "settings.webTools.title": "웹 도구",
-  "settings.webTools.description": "웹 검색 및 브라우저 자동화를 구성합니다.",
+  "settings.webTools.description": "웹 검색을 구성합니다.",
   "settings.webTools.webSearch.enable": "모든 제공업체에 사용",
   "settings.webTools.browserAutomation": "브라우저 자동화",
   "settings.webTools.webSearch.title": "웹 검색",
@@ -1043,6 +1043,9 @@ export const dict = {
     "이것은 내장 모드입니다. 기본 정의는 변경할 수 없지만, 아래에서 재정의를 구성할 수 있습니다.",
   "settings.agentBehaviour.editMode.promptOverride": "이 내장 모드에 대한 사용자 지정 프롬프트 재정의",
   "settings.agentBehaviour.badge.subagent": "서브에이전트",
+  "settings.agentBehaviour.perAgentPermissions.title": "에이전트별 권한",
+  "settings.agentBehaviour.perAgentPermissions.description":
+    "이 설정은 이 사용자 지정 에이전트에만 적용됩니다. 드롭다운 값을 '기본값'에서 변경하여 재정의를 만들거나, '경로 추가' 또는 '명령 추가'를 사용하여 도구별 예외를 설정하세요.",
   "settings.agentBehaviour.permissions.title": "계산된 권한",
   "settings.agentBehaviour.permissions.count": "{{count}}개 규칙",
   "settings.agentBehaviour.permissions.effective": "유효 (와일드카드):",

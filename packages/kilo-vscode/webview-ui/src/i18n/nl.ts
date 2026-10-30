@@ -703,7 +703,7 @@ export const dict = {
   "settings.agentBehaviour.title": "Agent Gedrag",
   "settings.autoApprove.title": "Automatisch Goedkeuren",
   "settings.webTools.title": "Webtools",
-  "settings.webTools.description": "Configureer zoeken op internet en browserautomatisering.",
+  "settings.webTools.description": "Configureer het zoeken op internet.",
   "settings.webTools.webSearch.enable": "Inschakelen voor alle providers",
   "settings.webTools.browserAutomation": "Browserautomatisering",
   "settings.webTools.webSearch.title": "Zoeken op internet",
@@ -1450,6 +1450,9 @@ export const dict = {
   "settings.agentBehaviour.editMode.prompt": "Systeemprompt",
   "settings.agentBehaviour.editMode.promptOverride": "Aangepaste systeemprompt voor deze ingebouwde modus",
   "settings.agentBehaviour.badge.subagent": "subagent",
+  "settings.agentBehaviour.perAgentPermissions.title": "Machtigingen per agent",
+  "settings.agentBehaviour.perAgentPermissions.description":
+    "Deze instellingen gelden alleen voor deze aangepaste agent. Wijzig de waarde 'Standaard' in een keuzelijst om een eigen waarde in te stellen, of gebruik 'Pad toevoegen' of 'Commando toevoegen' voor uitzonderingen voor specifieke tools.",
   "settings.agentBehaviour.permissions.title": "Berekende machtigingen",
   "settings.agentBehaviour.permissions.count": "{{count}} regels",
   "settings.agentBehaviour.permissions.effective": "Effectief (wildcard):",

@@ -745,7 +745,7 @@ export const dict = {
   "settings.agentBehaviour.title": "エージェントの動作",
   "settings.autoApprove.title": "自動承認",
   "settings.webTools.title": "ウェブツール",
-  "settings.webTools.description": "ウェブ検索とブラウザ自動化を設定します。",
+  "settings.webTools.description": "ウェブ検索を設定します。",
   "settings.webTools.webSearch.enable": "すべてのプロバイダーで有効化",
   "settings.webTools.browserAutomation": "ブラウザ自動化",
   "settings.webTools.webSearch.title": "ウェブ検索",
@@ -1051,6 +1051,9 @@ export const dict = {
     "これは組み込みモードです。基本定義は変更できませんが、以下でオーバーライドを設定できます。",
   "settings.agentBehaviour.editMode.promptOverride": "この組み込みモードのカスタムプロンプト上書き",
   "settings.agentBehaviour.badge.subagent": "サブエージェント",
+  "settings.agentBehaviour.perAgentPermissions.title": "エージェントごとの権限",
+  "settings.agentBehaviour.perAgentPermissions.description":
+    "これらの設定はこのカスタムエージェントにのみ適用されます。ドロップダウンの値を「デフォルト」から変更すると上書き設定を作成できます。ツール固有の例外には「パスを追加」または「コマンドを追加」を使用してください。",
   "settings.agentBehaviour.permissions.title": "計算された権限",
   "settings.agentBehaviour.permissions.count": "{{count}} 個のルール",
   "settings.agentBehaviour.permissions.effective": "有効（ワイルドカード）:",

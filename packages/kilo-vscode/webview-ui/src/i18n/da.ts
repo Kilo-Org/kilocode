@@ -750,7 +750,7 @@ export const dict = {
   "settings.agentBehaviour.title": "Agentadfærd",
   "settings.autoApprove.title": "Automatisk godkendelse",
   "settings.webTools.title": "Webværktøjer",
-  "settings.webTools.description": "Konfigurer websøgning og browserautomatisering.",
+  "settings.webTools.description": "Konfigurer websøgning.",
   "settings.webTools.webSearch.enable": "Aktivér for alle udbydere",
   "settings.webTools.browserAutomation": "Browserautomatisering",
   "settings.webTools.webSearch.title": "Websøgning",
@@ -1054,6 +1054,9 @@ export const dict = {
     "Dette er en indbygget tilstand. Dens grundlæggende definition kan ikke ændres, men du kan konfigurere tilsidesættelser nedenfor.",
   "settings.agentBehaviour.editMode.promptOverride": "Tilpasset prompt-tilsidesættelse for denne indbyggede tilstand",
   "settings.agentBehaviour.badge.subagent": "subagent",
+  "settings.agentBehaviour.perAgentPermissions.title": "Tilladelser pr. agent",
+  "settings.agentBehaviour.perAgentPermissions.description":
+    "Disse indstillinger gælder kun for denne tilpassede agent. Skift værdien i en rullemenu fra 'Standard' for at oprette en overstyring, eller brug 'Tilføj sti' eller 'Tilføj kommando' til værktøjsspecifikke undtagelser.",
   "settings.agentBehaviour.permissions.title": "Beregnede tilladelser",
   "settings.agentBehaviour.permissions.count": "{{count}} regler",
   "settings.agentBehaviour.permissions.effective": "Gældende (wildcard):",

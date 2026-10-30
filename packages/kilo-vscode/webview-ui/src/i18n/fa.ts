@@ -665,7 +665,7 @@ export const dict = {
   "settings.agentBehaviour.title": "رفتار عامل",
   "settings.autoApprove.title": "تأیید خودکار",
   "settings.webTools.title": "ابزارهای وب",
-  "settings.webTools.description": "جستجوی وب و اتوماسیون مرورگر را پیکربندی کنید.",
+  "settings.webTools.description": "جستجوی وب را پیکربندی کنید.",
   "settings.webTools.webSearch.enable": "فعال‌سازی برای همه ارائه‌دهندگان",
   "settings.webTools.browserAutomation": "اتوماسیون مرورگر",
   "settings.webTools.webSearch.title": "جستجوی وب",
@@ -1128,6 +1128,9 @@ export const dict = {
     "این یک حالت داخلی است. تعریف پایه آن قابل تغییر نیست، اما می‌توانید تنظیمات سفارشی را در زیر پیکربندی کنید.",
   "settings.agentBehaviour.editMode.promptOverride": "پرامپت سفارشی جایگزین برای این حالت داخلی",
   "settings.agentBehaviour.badge.subagent": "زیرعامل",
+  "settings.agentBehaviour.perAgentPermissions.title": "مجوزهای هر عامل",
+  "settings.agentBehaviour.perAgentPermissions.description":
+    "این تنظیمات فقط برای این عامل سفارشی اعمال می‌شوند. برای ایجاد یک مقدار جایگزین، مقدار یکی از فهرست‌های کشویی را از 'پیش‌فرض' تغییر دهید یا برای استثناهای ویژه هر ابزار از 'افزودن مسیر' یا 'افزودن دستور' استفاده کنید.",
   "settings.agentBehaviour.permissions.title": "مجوزهای محاسبه‌شده",
   "settings.agentBehaviour.permissions.count": "{{count}} قانون",
   "settings.agentBehaviour.permissions.effective": "مؤثر (wildcard):",

@@ -658,7 +658,7 @@ export const dict = {
   "settings.agentBehaviour.title": "Agent Behaviour",
   "settings.autoApprove.title": "Auto-Approve",
   "settings.webTools.title": "Web Tools",
-  "settings.webTools.description": "Configure web search and browser automation.",
+  "settings.webTools.description": "Configure web search.",
   "settings.webTools.webSearch.enable": "Enable for All Providers",
   "settings.webTools.browserAutomation": "Browser Automation",
   "settings.webTools.webSearch.title": "Web Search",
@@ -1134,6 +1134,9 @@ export const dict = {
     "This is a built-in mode. Its base definition cannot be changed, but you can configure overrides below.",
   "settings.agentBehaviour.editMode.promptOverride": "Custom prompt override for this built-in mode",
   "settings.agentBehaviour.badge.subagent": "subagent",
+  "settings.agentBehaviour.perAgentPermissions.title": "Per-Agent Permissions",
+  "settings.agentBehaviour.perAgentPermissions.description":
+    "These settings only apply to this custom agent. Change a dropdown from Default to create an override, or use Add path/Add command for tool-specific exceptions.",
   "settings.agentBehaviour.permissions.title": "Calculated Permissions",
   "settings.agentBehaviour.permissions.count": "{{count}} rules",
   "settings.agentBehaviour.permissions.effective": "Effective (wildcard):",

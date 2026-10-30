@@ -155,7 +155,7 @@ jobs:
 
   # The generated map files change with every merge, so parallel PRs that commit them always conflict and go stale.
   # PRs change only the inputs (code, done-proofs, features.json, dispositions.json); this job validates them.
-  # `progress-commit` regenerates the map on v2 and commits it.
+  # `progress-commit` regenerates the map on v2 and opens or updates the bot PR.
   progress:
     name: migration progress map
     runs-on: ubuntu-24.04
@@ -177,27 +177,42 @@ jobs:
         with:
           bun-version-file: package.json
 
-      - name: Check that the PR does not commit generated map files
+      - name: Check generated map files in the PR
         if: github.event_name == 'pull_request'
+        env:
+          BOT_PR: ${{ github.event.pull_request.user.login == 'github-actions[bot]' && github.event.pull_request.head.repo.full_name == github.repository && github.head_ref == 'progress-map-update' && github.base_ref == 'v2' }}
         run: |
-          files=$(git diff --name-only HEAD^1 HEAD -- $(bun script/upstream/progress.ts --outputs))
+          read -r -a paths <<< "$(bun script/upstream/progress.ts --outputs)"
+          files=$(git diff --name-only --no-renames HEAD^1 HEAD -- "${paths[@]}")
+          if [ "$BOT_PR" = true ]; then
+            if [ "$(git diff --name-only --no-renames HEAD^1 HEAD)" != "$files" ]; then
+              echo "::error::The progress map bot PR must contain only generated files."
+              exit 1
+            fi
+            KILO_PROGRESS_BASE_V2=HEAD^1 bun script/upstream/progress.ts --check
+            exit 0
+          fi
           if [ -n "$files" ]; then
-            echo "::error::Do not commit generated progress map files. CI regenerates them on v2. Restore them with: git checkout origin/v2 -- $(echo $files)"
+            echo "::error::Do not commit generated progress map files. Restore them with: git checkout origin/v2 -- ${paths[*]}"
             exit 1
           fi
 
       - name: Validate the map inputs
         run: bun script/upstream/progress.ts
 
-  # The only job with write access. It runs on pushes to v2, never on pull requests.
+  # Writes the bot branch and PR on pushes to v2, never on pull requests.
   progress-commit:
     name: migration progress map commit
     if: github.event_name == 'push' && github.ref == 'refs/heads/v2'
     needs: progress
     runs-on: ubuntu-24.04
     timeout-minutes: 10
+    concurrency:
+      group: kilo-v2-progress-map
+      cancel-in-progress: false
     permissions:
       contents: write
+      pull-requests: write
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -213,19 +228,41 @@ jobs:
         with:
           bun-version-file: package.json
 
-      - name: Commit the regenerated map
+      - name: Open or update the progress map PR
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          paths=$(bun script/upstream/progress.ts --outputs)
-          # Each attempt regenerates on the current v2 tip, so a newer push cannot leave a stale map or a conflict.
+          bot_pr() {
+            gh api -X GET "repos/$GITHUB_REPOSITORY/pulls" \
+              -f state=open -f base=v2 -f "head=$GITHUB_REPOSITORY_OWNER:progress-map-update" \
+              --jq '.[] | select(.user.login == "github-actions[bot]") | .number'
+          }
+          # Queued runs all regenerate from the current v2 tip, not the push that started them.
           for attempt in 1 2 3; do
-            git fetch origin v2
+            git fetch --prune origin
             git reset --hard origin/v2
             bun script/upstream/progress.ts
-            if git diff --quiet -- $paths; then exit 0; fi
-            git commit -m "chore(progress): regenerate the map" -- $paths
-            git push origin HEAD:v2 && exit 0
+            read -r -a paths <<< "$(bun script/upstream/progress.ts --outputs)"
+            git add -- "${paths[@]}"
+            if git diff --cached --quiet; then
+              pr=$(bot_pr)
+              if [ -n "$pr" ]; then gh pr close "$pr"; fi
+              exit 0
+            fi
+            git commit -m "chore(progress): regenerate the map"
+            if git push --force-with-lease origin HEAD:refs/heads/progress-map-update; then
+              pr=$(bot_pr)
+              if [ -z "$pr" ]; then
+                gh pr create --base v2 --head progress-map-update \
+                  --title "chore(progress): regenerate the map" \
+                  --body "Regenerated from the latest v2 commit. This PR updates automatically on pushes to v2."
+              fi
+              exit 0
+            fi
+            echo "Progress map branch changed; retry $attempt/3"
           done
           exit 1
 
