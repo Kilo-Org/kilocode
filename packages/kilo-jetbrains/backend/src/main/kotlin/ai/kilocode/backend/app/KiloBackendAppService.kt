@@ -148,6 +148,7 @@ class KiloBackendAppService private constructor(
     val sessions = KiloBackendSessionManager(cs, log)
     val retention = KiloBackendRetentionManager(this)
     val chat = KiloBackendChatManager(cs, log)
+    val hosted = KiloBackendHostedManager(cs, log)
     val activity = KiloBackendActivityManager(cs, log)
     val models = KiloBackendModelStateManager(log)
     val workspaces = KiloBackendWorkspaceManager(cs, sessions, log)
@@ -462,7 +463,8 @@ class KiloBackendAppService private constructor(
                     models.start(connection.apiClient!!, connection.port)
                     sessions.start(connection.api!!, connection.apiClient!!, connection.port, connection.events)
                     chat.start(connection.apiClient!!, connection.port, connection.events)
-                    activity.start(sessions.statuses, sessions::sessionDirectory, chat.events)
+                    hosted.start(connection.api!!, connection.apiClient!!, connection.port, chat)
+                    activity.start(sessions.statuses, { id -> hosted.directory(id) ?: sessions.sessionDirectory(id) }, chat.events)
                     workspaces.start(connection.api!!, connection.apiClient!!, connection.port, connection.events)
                     startWatchingGlobalSseEvents()
                     setTelemetry(true)
@@ -897,6 +899,7 @@ class KiloBackendAppService private constructor(
         workspaces.stop()
         models.stop()
         activity.stop()
+        hosted.stop()
         chat.stop()
         sessions.stop()
     }
@@ -994,6 +997,7 @@ class KiloBackendAppService private constructor(
         watcher?.cancel()
         watcher = null
         clearNow()
+        hosted.close()
         connection.dispose()
         if (fast) server.closeForShutdown() else server.dispose()
     }

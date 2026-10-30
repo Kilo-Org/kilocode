@@ -184,6 +184,8 @@ internal interface ActiveListItem {
     val leading: List<ActiveListBadge> get() = emptyList()
     /** Badges rendered after the title. */
     val badges: List<ActiveListBadge> get() = emptyList()
+    /** Keep title labels inline even when this list aligns verdict glyphs to its trailing edge. */
+    val inlineBadges: Boolean get() = false
     val secondaryBadges: List<ActiveListBadge> get() = emptyList()
     /** Right-aligned secondary text, such as a relative timestamp. */
     val trailing: String? get() = null

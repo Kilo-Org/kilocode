@@ -1,4 +1,4 @@
-package ai.kilocode.client.agentManager.worktree
+package ai.kilocode.client.agentManager
 
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.session.SessionActivityKind
@@ -25,14 +25,14 @@ import javax.swing.JPanel
 import javax.swing.KeyStroke
 
 /**
- * Shows/hides the worktree editor's session list. Sits left of the toolbar and, while the list is
+ * Shows/hides a workspace editor's session list. Sits left of the toolbar and, while the list is
  * hidden, carries the session count in a neutral badge — or the activity icon of a background session
  * that needs the user, so a pending question is visible with the list collapsed.
  *
  * Not a [ai.kilocode.client.ui.HoverIcon]: that hosts a single icon and pins icon-only buttons to
  * 24x24, which would clip the trailing badge. The hover treatment is reproduced here instead.
  */
-internal class WorktreeSessionListToggle(
+internal class WorkspaceSessionListToggle(
     private val onClick: () -> Unit,
 ) : JPanel(null) {
     private val glyph = JBLabel(LAYOUT_PARTIAL)
@@ -158,7 +158,7 @@ internal class WorktreeSessionListToggle(
 
         /** A single session is the norm, so the count only earns a badge from the second one on. */
         const val COUNT = 2
-        private val OWNER = WorktreeSessionListToggle::class.java
+        private val OWNER = WorkspaceSessionListToggle::class.java
         val LAYOUT_PARTIAL: Icon = IconLoader.getIcon("/icons/layout-left-partial.svg", OWNER)
         val LAYOUT_FULL: Icon = IconLoader.getIcon("/icons/layout-left-full.svg", OWNER)
     }

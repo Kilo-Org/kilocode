@@ -23,6 +23,7 @@ Git integration needs your system `git`. If the tools are missing or not working
 - If the folder isn't a git repository, use **Initialize Git** in the Changes tab to create one. See [Git integration](/docs/desktop/features/git#set-up-git-for-a-folder).
 - For bare or unsafe repositories, the branch switcher is intentionally hidden. Kilo Desktop shows a short explanation instead of a broken control.
 - **macOS:** if git reports that you haven't agreed to the Xcode license, run `sudo xcodebuild -license` in Terminal, accept it, then try again.
+- **macOS:** if you see *Git was not found. Install Git, then restart Kilo Desktop.*, the Xcode Command Line Tools may be missing. Run `xcode-select --install` in Terminal, then restart Kilo Desktop.
 
 ## The agent asks you to sign in
 

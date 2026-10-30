@@ -121,7 +121,13 @@ Run the auth command and follow the ChatGPT Go, Plus, or Pro sign-in flow:
 kilo auth login --provider codex
 ```
 
-You can also use `--provider openai`. If you already have `OPENAI_API_KEY` or OpenAI config set, ChatGPT OAuth takes priority for Codex models until you log out of the OpenAI provider.
+You can also use `--provider openai`. Kilo Code offers three methods at the prompt:
+
+- **ChatGPT Pro/Plus (browser)** — opens the OpenAI authorize page in your browser for a PKCE OAuth flow. Best for local desktop environments.
+- **ChatGPT Pro/Plus (headless)** — uses a device-code flow. The CLI displays a short code and a URL; open the URL on any device with a browser and enter the code to finish signing in. Use this on a remote host, or behind SSH, Docker, or WSL, where a browser redirect to `127.0.0.1` and the local callback port are not reachable.
+- **Manually enter API Key** — fall back to a standard OpenAI API key.
+
+If you already have `OPENAI_API_KEY` or OpenAI config set, ChatGPT OAuth takes priority for Codex models until you log out of the OpenAI provider.
 
 Then set your default model to one of the OpenAI Codex models available in Kilo Code:
 
@@ -164,6 +170,9 @@ Disconnecting BYOK alone does not remove the ChatGPT identity linked to your Kil
 
 **My local browser sign-in fails with a CSRF or callback error.**
 The direct VS Code and CLI flow uses local port `1455`. Check that another application is not using it. On macOS or Linux, run `lsof -i :1455`. This does not apply to the dashboard BYOK flow.
+
+**I see `Invalid 'instructions': string too long`.**
+When you connect directly with ChatGPT/Codex, OpenAI limits the instructions Kilo can send to about 1 million characters. Your active custom agent's instructions, global and project rules (such as `AGENTS.md`), and instructions supplied by connected MCP servers all count toward this limit. Shorten your custom agent instructions, remove unnecessary rules, or disable MCP servers you don't need. This is an OpenAI limit, not a sign that you've used up your subscription.
 
 **How do I disconnect the local provider?**
 In VS Code, choose **Disconnect** in the provider settings. In the CLI, run `kilo auth logout` and choose OpenAI. This is separate from managing the connection on Kilo's BYOK page.
