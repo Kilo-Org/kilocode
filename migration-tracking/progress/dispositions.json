@@ -735,5 +735,38 @@
     "state": "dropped",
     "note": "Tests needsAuthNames from the removed v1 host service; v2 reads McpServer.status from the server.",
     "by": "settings-mcp"
+  },
+  "module:packages/kilo-vscode/src/kilo-provider/open-config.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-vscode/src/open-config.ts",
+    "note": "packages/kilo-vscode/src/open-config.ts lists the config candidates of one scope from the server directory entries and documents, marks an existing file loaded only when it is a document, and lets chooseConfigFile open the only candidate directly or show a quick pick. src/settings-host.ts openConfigFile applies it to the resolved global or project target and creates the chosen missing file. v1 legacy and recommended sources have no v2 equivalent because Kilo v2 has no legacy fallback and one newFile name.",
+    "by": "open-config-picker"
+  },
+  "module:packages/kilo-vscode/tests/unit/open-config.test.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-vscode/test/open-config.test.ts",
+    "note": "packages/kilo-vscode/test/open-config.test.ts carries the candidate list, the loaded and create status, the direct open for one candidate, the quick pick for several with the chosen file, and dismissal. The v1 no-workspace warning, legacy status, recommended create and localized-error assertions have no v2 equivalent: v2 always has a directory, has no legacy file, and the host shows the error directly.",
+    "by": "open-config-picker"
+  },
+  "module:packages/kilo-vscode/webview-ui/src/utils/open-config.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-vscode/src/open-config.ts",
+    "note": "The v2 webview posts openFile with the host-resolved target (Settings.tsx and config.path) instead of building a localized openConfigFile message. The host owns the scope check and the quick pick, and its labels are fixed English like the other host-side confirmations, so configMessage has no v2 counterpart.",
+    "by": "open-config-picker"
+  },
+  "module:packages/kilo-vscode/tests/unit/open-config-message.test.ts": {
+    "state": "dropped",
+    "note": "Tests configMessage, the v1 webview helper that built the openConfigFile message and its localized labels. v2 has no such message: the webview posts openFile and the host builds the quick pick, so the label assertions are not carried.",
+    "by": "open-config-picker"
+  },
+  "module:packages/kilo-vscode/src/kilo-provider/config-bindings.ts": {
+    "state": "dropped",
+    "note": "ConfigBindings guarded v1 config.overlayUpdate with a connection generation, project generation and target revision, and expired a binding after reconnect, trust revocation, removal or save. v2 writes the config files in the extension host (src/settings-host.ts configWrite with the serialize chain) and the webview has no revision-bound target, so the class has no v2 caller. src/settings-host.ts owns the file target and the write order instead.",
+    "by": "open-config-picker"
+  },
+  "module:packages/kilo-vscode/tests/unit/config-bindings.test.ts": {
+    "state": "dropped",
+    "note": "Tests the removed v1 ConfigBindings class (immutable read target, expiry on reconnect, trust, removal and save, and publication after a concurrent refresh). v2 host writes through src/settings-host.ts with the serialize chain and has no bindings.",
+    "by": "open-config-picker"
   }
 }

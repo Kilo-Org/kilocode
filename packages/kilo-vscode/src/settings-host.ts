@@ -9,6 +9,7 @@ import { commands, workspace, Uri, window, type ExtensionContext } from "vscode"
 import { KiloConfigFiles } from "@opencode/util/kilocode/config/files"
 import { applyConfigEdits, isKiloConfigFile, serialize } from "./config-file-edit"
 import { local } from "./local"
+import { candidateConfigFiles, chooseConfigFile, configDirectories } from "./open-config"
 import { resolveGlobalConfigDir, canonicalPath } from "./settings-paths"
 import type { ConfigEdit, ConfigScope, ToHost, ToWebview } from "./protocol"
 import type { Manager } from "./server"
@@ -79,8 +80,8 @@ export function settingsHost(input: {
   }
 
   /** The global and project config files, from the server's config documents. */
-  const targets = async () => {
-    const list = await entries()
+  const targets = async (found?: ConfigEntry[]) => {
+    const list = found ?? (await entries())
     const documents = new Set<string>()
     const directories: string[] = []
     for (const entry of list) {
@@ -110,6 +111,38 @@ export function settingsHost(input: {
     const global =
       (await pick(KiloConfigFiles.writeCandidates(globalDir, true))) ?? path.join(globalDir, KiloConfigFiles.newFile)
     return { global, project }
+  }
+
+  /** Offer the existing files of a scope plus its missing target, with the server document list as loaded status. */
+  const pickConfigFile = async (scope: ConfigScope, target: string, list: ConfigEntry[]) => {
+    const documents: string[] = []
+    const directories: string[] = []
+    for (const entry of list) {
+      if (!entry.path) continue
+      const real = await canonicalPath(entry.path)
+      if (entry.type === "document") documents.push(real)
+      else directories.push(real)
+    }
+    const candidates = await candidateConfigFiles({
+      target,
+      directories: configDirectories({
+        scope,
+        target,
+        projectRoot: await canonicalPath(input.directory),
+        directories,
+        documents,
+      }),
+      loaded: new Set(documents),
+      exists: async (file) => Boolean(await stat(file).catch(() => undefined)),
+      resolve: canonicalPath,
+    })
+    return chooseConfigFile(candidates, async (items) => {
+      const picked = await window.showQuickPick(items, {
+        title: scope === "global" ? "Open Global Config" : "Open Local Config",
+        placeHolder: "Choose a config file",
+      })
+      return picked ?? undefined
+    })
   }
 
   const read = async (file: string) => {
@@ -194,6 +227,16 @@ export function settingsHost(input: {
   /** Open a config file in the editor, creating it first when the target does not exist yet. */
   const openConfigFile = async (file: string) => {
     try {
+      if (KiloConfigFiles.names.includes(path.basename(file))) {
+        const list = await entries()
+        const files = await targets(list)
+        const scope = file === files.global ? "global" : file === files.project ? "project" : undefined
+        if (scope) {
+          const picked = await pickConfigFile(scope, file, list)
+          if (!picked) return
+          file = picked.file
+        }
+      }
       if (isKiloConfigFile(file) && !(await stat(file).catch(() => undefined))) {
         await mkdir(path.dirname(file), { recursive: true })
         await writeFile(file, "{\n}\n")
