@@ -114,6 +114,25 @@ describe("applyConfigEdits", () => {
     expect(parse(cleared).commands.review).toBeUndefined()
     expect(parse(cleared).command.other.template).toBe("Keep")
   })
+
+  test("preserves a complete legacy command when a model-only write keeps aliases", () => {
+    const legacy = { template: "Review", description: "Review code", agent: "build", model: "old/model" }
+    const text = JSON.stringify({
+      command: { review: legacy },
+      commands: { review: { model: "fixture/model" } },
+    })
+    const saved = applyConfigEdits(text, [
+      { path: ["commands", "review"], value: { model: "fixture/model#high" }, preserveAliases: true },
+    ])
+    expect(parse(saved)).toEqual({
+      command: { review: legacy },
+      commands: { review: { model: "fixture/model#high" } },
+    })
+    const cleared = applyConfigEdits(saved, [{ path: ["commands", "review"], preserveAliases: true }])
+    const result = parse(cleared)
+    expect(result.command.review).toEqual(legacy)
+    expect(result.commands?.review).toBeUndefined()
+  })
 })
 
 describe("aliasOf", () => {

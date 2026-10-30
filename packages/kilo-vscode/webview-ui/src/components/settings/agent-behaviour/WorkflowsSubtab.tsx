@@ -49,6 +49,16 @@ const WorkflowsSubtab: Component = () => {
     return undefined
   }
 
+  const completeLegacy = (name: string, scope: "project" | "global") => {
+    const value = (config.raw(scope) as CommandDocument | undefined)?.command?.[name]
+    return (
+      !!value &&
+      typeof value === "object" &&
+      !Array.isArray(value) &&
+      typeof (value as Record<string, unknown>).template === "string"
+    )
+  }
+
   const names = createMemo(() => {
     const set = new Set<string>((v2.data.location.command.list() ?? []).map((command) => command.name))
     for (const scope of ["project", "global"] as const) {
@@ -74,14 +84,17 @@ const WorkflowsSubtab: Component = () => {
     return discovered(name)?.template ?? (typeof value === "string" ? value : undefined)
   }
 
-  // The v2 key keeps the model and the variant in one Selection value; the v1 key keeps a plain `model` and a separate
-  // `variant`.
+  // The v2 key normally keeps the model and the variant in one Selection value, but a model-only entry may use a
+  // separate variant; the v1 key keeps them separate.
   const model = (name: string): ModelPickerValue | undefined => {
     const found = entry(name, true) ?? entry(name)
     const path = ["commands", name]
     if (config.pending(path)) {
-      const value = config.value(path) as { model?: unknown } | undefined
-      return parseCommandModel(value?.model)
+      const value = config.value(path) as { model?: unknown; variant?: unknown } | undefined
+      const parsed = parseCommandModel(value?.model)
+      return parsed && !parsed.variant && typeof value?.variant === "string"
+        ? { ...parsed, variant: value.variant }
+        : parsed
     }
     const modelPath = [...path, "model"]
     if (config.pending(modelPath)) return parseCommandModel(config.value(modelPath))
@@ -93,8 +106,13 @@ const WorkflowsSubtab: Component = () => {
         : (parseCommandModel(effective?.model) ?? configured)
     if (!base) return undefined
     const variant =
-      found?.key === "command" && typeof found.value.variant === "string" ? found.value.variant : undefined
+      found && !base.variant && typeof found.value.variant === "string" ? found.value.variant : undefined
     return variant ? { ...base, variant } : base
+  }
+
+  const overridden = (name: string) => {
+    const found = entry(name, true) ?? entry(name)
+    return !!found && found.value.model !== undefined
   }
 
   const variants = (value: ModelPickerValue) =>
@@ -113,8 +131,8 @@ const WorkflowsSubtab: Component = () => {
     )
   }
 
-  const save = (path: string[], value: unknown, scope: "project" | "global") => {
-    void config.set(path, value, scope).then((ok) => {
+  const save = (path: string[], value: unknown, scope: "project" | "global", preserveAliases = false) => {
+    void config.set(path, value, scope, preserveAliases).then((ok) => {
       if (ok) getVSCodeAPI().postMessage({ type: "configRead" } as never)
     })
   }
@@ -129,9 +147,14 @@ const WorkflowsSubtab: Component = () => {
       (value.providerID !== previous.providerID || value.modelID !== previous.modelID)
     const preserved = changedModel && value ? preserveVariant(previous?.variant, variants(value)) : undefined
     const next = value && changedModel && !value.variant && preserved ? { ...value, variant: preserved } : value
-    if (!found || typeof found.value.template !== "string") {
-      if (!found && !next) return
-      save(["commands", name], next ? { model: serializeCommandModel(next) } : undefined, found?.scope ?? "global")
+    if (!found) {
+      if (!next) return
+      save(["commands", name], { model: serializeCommandModel(next) }, "global")
+      return
+    }
+    const keepAliases = found.key === "commands" && completeLegacy(name, found.scope)
+    if (typeof found.value.template !== "string") {
+      save(["commands", name], next ? { model: serializeCommandModel(next) } : undefined, found.scope, keepAliases)
       return
     }
     if (found.key === "commands") {
@@ -257,7 +280,7 @@ const WorkflowsSubtab: Component = () => {
                         <ModelPicker
                           value={model(name)}
                           onChange={(value) => setModel(name, value)}
-                          clearable
+                          clearable={overridden(name)}
                           clearLabel={language.t("settings.providers.notSet")}
                           blocked={blocked(name)}
                           preserveVariantOnReselect

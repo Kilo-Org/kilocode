@@ -34,12 +34,13 @@ export function isKiloConfigFile(file: string): boolean {
   return KiloConfigFiles.names.includes(path.basename(file))
 }
 
-/** Apply each edit in order, removing the v1 aliases of every written v2 path in the same pass. */
+/** Apply each edit in order, removing the v1 aliases of every written v2 path unless the edit preserves them. */
 export function applyConfigEdits(text: string, edits: ConfigEdit[]): string {
   let result = text.trim().length > 0 ? text : "{\n}\n"
   for (const edit of edits) {
     if (!Array.isArray(edit.path) || edit.path.length === 0) continue
     result = applyEdits(result, modify(result, edit.path, edit.value, MODIFY))
+    if (edit.preserveAliases) continue
     for (const alias of aliasOf(edit.path)) {
       // jsonc-parser throws when a delete targets a path the document does not define, so only remove a present alias.
       const root = parseTree(result)
