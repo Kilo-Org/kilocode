@@ -7,7 +7,7 @@ import fs from "fs/promises"
 import { Global } from "@opencode-ai/core/global"
 import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import { SessionProjector } from "@opencode-ai/core/session/projector"
-import { describe, expect } from "bun:test"
+import { describe, expect, spyOn } from "bun:test"
 import { Effect, Fiber, Layer } from "effect"
 import { Database } from "@opencode-ai/core/database/database"
 import { Agent as AgentSvc } from "../../src/agent/agent"
@@ -623,6 +623,50 @@ describe("SessionPrompt compaction safety", () => {
         { git: true, config: providerCfg },
       ),
     30_000,
+  )
+
+  it.live("sends byte-identical requests with full and bounded history hydration", () =>
+    provideTmpdirServer(
+      Effect.fnUntraced(function* ({ llm }) {
+        const prompt = yield* SessionPrompt.Service
+        const sessions = yield* Session.Service
+        const chat = yield* sessions.create({ title: "Hydration equivalence" })
+        for (let i = 0; i < 60; i++) {
+          const request = yield* user(chat.id, `old request ${i}`)
+          yield* assistant(chat.id, request.id)
+        }
+        const parent = yield* user(chat.id, "manual summary parent")
+        yield* assistant(chat.id, parent.id, { summary: true, text: "same summary" })
+        const request = yield* user(chat.id, "continue", {
+          editorContext: { activeFile: "src/app.ts", openTabs: ["src/app.ts"] },
+        })
+        yield* file(chat.id, request.id, { mime: "image/png", name: "current.png", body: "CURRENTIMAGE" })
+        const before = new Set((yield* sessions.messages({ sessionID: chat.id })).map((message) => message.info.id))
+
+        // The only replacement selects the old production loader. Every later prompt/provider transform is real.
+        const loader = spyOn(MessageV2, "filterCompactedEffect").mockImplementation((sessionID, project) =>
+          Effect.gen(function* () {
+            const messages = MessageV2.filterCompacted(yield* MessageV2.stream(sessionID))
+            return project ? project(messages) : messages
+          }),
+        )
+        yield* llm.text("same answer")
+        yield* prompt.loop({ sessionID: chat.id }).pipe(Effect.ensuring(Effect.sync(() => loader.mockRestore())))
+        const old = Buffer.from(JSON.stringify((yield* llm.inputs).at(-1)?.messages))
+        for (const message of yield* sessions.messages({ sessionID: chat.id })) {
+          if (!before.has(message.info.id)) yield* sessions.removeMessage({ sessionID: chat.id, messageID: message.info.id })
+        }
+
+        yield* llm.text("same answer")
+        yield* prompt.loop({ sessionID: chat.id })
+        const next = Buffer.from(JSON.stringify((yield* llm.inputs).at(-1)?.messages))
+        expect(yield* llm.calls).toBe(2)
+        expect(next).toEqual(old)
+        expect(next.toString()).toContain("CURRENTIMAGE")
+        expect(next.toString()).not.toContain("old request")
+      }),
+      { git: false, config: (url) => ({ ...providerCfg(url), snapshot: false, compaction: { auto: false, prune: false } }) },
+    ),
   )
 
   it.live("trims plain-text summary history before provider request", () =>

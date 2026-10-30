@@ -28,6 +28,7 @@ import { eq } from "drizzle-orm"
 import { inArray } from "drizzle-orm"
 import { lt } from "drizzle-orm"
 import { or } from "drizzle-orm"
+import { sql } from "drizzle-orm" // kilocode_change
 import { MessageTable, PartTable, SessionTable } from "@opencode-ai/core/session/sql"
 import { ProviderError } from "@/provider/error"
 import { iife } from "@/util/iife"
@@ -714,9 +715,90 @@ export function filterCompacted(msgs: Iterable<WithParts>) {
   return result
 }
 
-export const filterCompactedEffect = Effect.fnUntraced(function* (sessionID: SessionID) {
-  return filterCompacted(yield* stream(sessionID))
+// kilocode_change start - select the retained window before hydrating its full parts
+// project may only select/reorder messages by info; only compaction parts are loaded at that point.
+export const filterCompactedEffect = Effect.fnUntraced(function* (
+  sessionID: SessionID,
+  project?: (messages: WithParts[]) => WithParts[],
+) {
+  // Other consumers retain the full-load behavior; only the prompt supplies the info-only projection.
+  if (!project) return filterCompacted(yield* stream(sessionID))
+  const { db } = yield* Database.Service
+  // Keep boundary discovery and hydration on one read snapshot, including concurrent imports/reverts.
+  return yield* db.transaction(() =>
+    Effect.gen(function* () {
+      const rows: (typeof MessageTable.$inferSelect)[] = []
+      const messages: WithParts[] = []
+      const completed = new Set<string>()
+      let retain: MessageID | undefined
+      let before: Cursor | undefined
+      scan: while (true) {
+        const page = yield* db
+          .select()
+          .from(MessageTable)
+          .where(and(eq(MessageTable.session_id, sessionID), before ? older(before) : undefined))
+          .orderBy(desc(MessageTable.time_created), desc(MessageTable.id))
+          .limit(50)
+          .all()
+        if (!page.length) break
+        const parts = yield* db
+          .select()
+          .from(PartTable)
+          .where(
+            and(
+              inArray(
+                PartTable.message_id,
+                page.map((row) => row.id),
+              ),
+              sql`json_extract(${PartTable.data}, '$.type') = 'compaction'`,
+            ),
+          )
+          .orderBy(PartTable.message_id, PartTable.id)
+          .all()
+        for (const row of page) {
+          rows.push(row)
+          const message = { info: info(row), parts: parts.filter((item) => item.message_id === row.id).map(part) }
+          messages.push(message)
+          if (retain) {
+            if (row.id === retain) break scan
+            continue
+          }
+          if (message.info.role === "user" && completed.has(row.id)) {
+            const compaction = message.parts.find((item): item is CompactionPart => item.type === "compaction")
+            if (!compaction) continue
+            if (!compaction.tail_start_id) break scan
+            retain = compaction.tail_start_id
+            if (row.id === retain) break scan
+            continue
+          }
+          if (message.info.role === "assistant" && message.info.summary && message.info.finish && !message.info.error)
+            completed.add(message.info.parentID)
+        }
+        if (page.length < 50) break
+        const tail = page.at(-1)!
+        before = { id: tail.id, time: tail.time_created }
+      }
+
+      // A dangling tail is not a proven boundary. Preserve the original full-load path.
+      if (retain && rows.at(-1)?.id !== retain) {
+        const all = filterCompacted(yield* stream(sessionID))
+        return project(all)
+      }
+      const filtered = filterCompacted(messages)
+      const selected = project(filtered)
+      const ids = new Set(selected.map((message) => message.info.id))
+      const hydrated: WithParts[] = []
+      const kept = rows.filter((row) => ids.has(row.id))
+      for (let index = 0; index < kept.length; index += 50) {
+        hydrated.push(...(yield* hydrate(db, kept.slice(index, index + 50))))
+      }
+      KiloSessionMessageOrder.annotate(hydrated.toReversed())
+      const byID = new Map(hydrated.map((message) => [message.info.id, message]))
+      return selected.map((message) => byID.get(message.info.id)!)
+    }),
+  ).pipe(Effect.orDie)
 })
+// kilocode_change end
 
 // filterCompacted reorders messages for model consumption
 // ([compaction-user, summary, ...retained tail..., continue-user]), so array

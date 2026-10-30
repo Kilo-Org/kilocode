@@ -1557,12 +1557,12 @@ export const layer = Layer.effect(
         yield* Effect.logInfo("loop", { "session.id": sessionID, step })
 
         // kilocode_change start - provide the upstream Effect database to Kilo's retained prompt loop
-        let msgs = yield* MessageV2.filterCompactedEffect(sessionID).pipe(
+        let msgs = yield* MessageV2.filterCompactedEffect(sessionID, (messages) =>
+          KiloSessionPrompt.trimBeforeLastSummary(KiloSessionPromptQueue.scope(sessionID, messages)),
+        ).pipe(
           Effect.provideService(Database.Service, database),
         )
         // kilocode_change end
-        msgs = KiloSessionPromptQueue.scope(sessionID, msgs) // kilocode_change - hide later queued prompts
-        msgs = KiloSessionPrompt.trimBeforeLastSummary(msgs) // kilocode_change - trim on any completed summary (e.g. manual /compact against a text user)
 
         // kilocode_change start - select loop state by chronology after retained-tail projection
         const latest = KiloSessionMessageOrder.latest(msgs)
