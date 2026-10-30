@@ -1,85 +1,93 @@
 import { describe, expect, test } from "bun:test"
+import path from "node:path"
 import { candidateConfigFiles, chooseConfigFile, configDirectories } from "../src/open-config"
+
+const root = path.join("/", "repo")
+const projectDir = path.join(root, ".kilo2")
+const globalDir = path.join("/", "home", ".config", "kilo2")
+const systemDir = path.join("/", "Library", "Application Support", "kilo")
+const projectJson = path.join(root, "kilo2.json")
+const projectJsonc = path.join(root, "kilo2.jsonc")
+const nestedJson = path.join(projectDir, "kilo2.json")
+const nestedJsonc = path.join(projectDir, "kilo2.jsonc")
 
 describe("configDirectories", () => {
   test("splits global roots from project root and .kilo2 directories", () => {
-    const directories = ["/home/.config/kilo2", "/repo/.kilo2", "/Library/Application Support/kilo"]
-    const documents = ["/home/.config/kilo2/kilo2.jsonc", "/repo/kilo2.jsonc", "/repo/.kilo2/kilo2.json"]
+    const directories = [globalDir, projectDir, systemDir]
+    const documents = [path.join(globalDir, "kilo2.jsonc"), projectJsonc, nestedJson]
 
     expect(
       configDirectories({
         scope: "global",
-        target: "/home/.config/kilo2/kilo2.jsonc",
-        projectRoot: "/repo",
+        target: path.join(globalDir, "kilo2.jsonc"),
+        projectRoot: root,
         directories,
         documents,
       }),
-    ).toEqual(["/home/.config/kilo2", "/Library/Application Support/kilo"])
+    ).toEqual([globalDir, systemDir])
 
     expect(
       configDirectories({
         scope: "project",
-        target: "/repo/.kilo2/kilo2.json",
-        projectRoot: "/repo",
+        target: nestedJson,
+        projectRoot: root,
         directories,
         documents,
       }),
-    ).toEqual(["/repo", "/repo/.kilo2"])
+    ).toEqual([root, projectDir])
   })
 })
 
 describe("candidateConfigFiles", () => {
   test("offers existing files with their loaded status and only the missing target as create", async () => {
-    const existing = new Set(["/repo/kilo2.jsonc", "/repo/.kilo2/kilo2.json"])
-    const loaded = new Set(["/repo/kilo2.jsonc", "/repo/.kilo2/kilo2.json"])
+    const existing = new Set([projectJsonc, nestedJson])
+    const loaded = new Set([projectJsonc, nestedJson])
 
     const candidates = await candidateConfigFiles({
-      target: "/repo/.kilo2/kilo2.jsonc",
-      directories: ["/repo", "/repo/.kilo2"],
+      target: nestedJsonc,
+      directories: [root, projectDir],
       loaded,
       exists: async (file) => existing.has(file),
       resolve: async (file) => file,
     })
 
     expect(candidates).toEqual([
-      { file: "/repo/kilo2.jsonc", name: "kilo2.jsonc", loaded: true, create: false },
-      { file: "/repo/.kilo2/kilo2.json", name: "kilo2.json", loaded: true, create: false },
-      { file: "/repo/.kilo2/kilo2.jsonc", name: "kilo2.jsonc", loaded: false, create: true },
+      { file: projectJsonc, name: "kilo2.jsonc", loaded: true, create: false },
+      { file: nestedJson, name: "kilo2.json", loaded: true, create: false },
+      { file: nestedJsonc, name: "kilo2.jsonc", loaded: false, create: true },
     ])
   })
 
   test("marks an existing file that the server does not load as not loaded", async () => {
     const candidates = await candidateConfigFiles({
-      target: "/repo/kilo2.json",
-      directories: ["/repo"],
+      target: projectJson,
+      directories: [root],
       loaded: new Set(),
-      exists: async (file) => file === "/repo/kilo2.json",
+      exists: async (file) => file === projectJson,
       resolve: async (file) => file,
     })
 
-    expect(candidates).toEqual([
-      { file: "/repo/kilo2.json", name: "kilo2.json", loaded: false, create: false },
-    ])
+    expect(candidates).toEqual([{ file: projectJson, name: "kilo2.json", loaded: false, create: false }])
   })
 
   test("marks a symlinked candidate loaded from its resolved document and lists it once", async () => {
-    const link = "/repo/kilo2.jsonc"
-    const real = "/home/dotfiles/kilo2.jsonc"
+    const realDir = path.join("/", "home", "dotfiles")
+    const real = path.join(realDir, "kilo2.jsonc")
     const candidates = await candidateConfigFiles({
       target: real,
-      directories: ["/repo", "/home/dotfiles"],
+      directories: [root, realDir],
       loaded: new Set([real]),
-      exists: async (file) => file === link || file === real,
-      resolve: async (file) => (file === link ? real : file),
+      exists: async (file) => file === projectJsonc || file === real,
+      resolve: async (file) => (file === projectJsonc ? real : file),
     })
 
-    expect(candidates).toEqual([{ file: link, name: "kilo2.jsonc", loaded: true, create: false }])
+    expect(candidates).toEqual([{ file: projectJsonc, name: "kilo2.jsonc", loaded: true, create: false }])
   })
 })
 
 describe("chooseConfigFile", () => {
-  const one = { file: "/repo/kilo2.json", name: "kilo2.json", loaded: true, create: false }
-  const two = { file: "/repo/kilo2.jsonc", name: "kilo2.jsonc", loaded: false, create: false }
+  const one = { file: projectJson, name: "kilo2.json", loaded: true, create: false }
+  const two = { file: projectJsonc, name: "kilo2.jsonc", loaded: false, create: false }
 
   test("opens the only candidate without a quick pick", async () => {
     const chosen = await chooseConfigFile([one], async () => {
