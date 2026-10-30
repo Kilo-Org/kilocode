@@ -1152,6 +1152,8 @@ export const dict = {
   "settings.autoApprove.maxCost.title": "Session Cost Alert",
   "settings.autoApprove.maxCost.description":
     "Show a non-blocking alert when a session exceeds this USD amount. Use whole dollars; leave empty to disable.",
+  "settings.autoApprove.maxCost.v2Description":
+    "Show a non-blocking alert when a session reaches this USD amount. Leave empty to disable.",
   "settings.autoApprove.level.allow": "Allow",
   "settings.autoApprove.level.ask": "Ask",
   "settings.autoApprove.level.deny": "Deny",

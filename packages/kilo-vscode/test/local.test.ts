@@ -1,4 +1,5 @@
 import { afterAll, expect, test } from "bun:test"
+import { getEventListeners } from "node:events"
 import { local } from "../src/local"
 
 const gate = Promise.withResolvers<void>()
@@ -42,4 +43,14 @@ test("streams each chunk as it arrives", async () => {
   gate.resolve()
   expect(new TextDecoder().decode((await reader.read()).value)).toBe("data: 2\n\n")
   expect((await reader.read()).done).toBe(true)
+})
+
+test("removes abort listeners after completed requests", async () => {
+  const controller = new AbortController()
+  for (let i = 0; i < 12; i++) {
+    const response = await local(`${server.url}echo`, { signal: controller.signal })
+    await response.text()
+  }
+  await new Promise<void>((resolve) => setImmediate(resolve))
+  expect(getEventListeners(controller.signal, "abort")).toHaveLength(0)
 })

@@ -1144,6 +1144,8 @@ export const dict = {
   "settings.autoApprove.maxCost.title": "การแจ้งเตือนค่าใช้จ่ายของเซสชัน",
   "settings.autoApprove.maxCost.description":
     "แจ้งเตือนก่อนดำเนินเซสชันต่อหลังจากค่าใช้จ่ายเกินจำนวน USD นี้ ใช้จำนวนดอลลาร์เต็ม; เว้นว่างไว้เพื่อปิดใช้งาน",
+  "settings.autoApprove.maxCost.v2Description":
+    "แสดงการแจ้งเตือนที่ไม่ปิดกั้นเมื่อค่าใช้จ่ายของเซสชันถึงจำนวน USD นี้ เว้นว่างไว้เพื่อปิดใช้งาน",
   "settings.autoApprove.level.allow": "อนุญาต",
   "settings.autoApprove.level.ask": "ถาม",
   "settings.autoApprove.level.deny": "ปฏิเสธ",

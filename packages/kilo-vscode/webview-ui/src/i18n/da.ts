@@ -1159,6 +1159,8 @@ export const dict = {
   "settings.autoApprove.maxCost.title": "Advarsel om sessionsomkostning",
   "settings.autoApprove.maxCost.description":
     "Advar før en session fortsættes, når forbruget overstiger dette USD-beløb. Brug hele dollars; lad feltet være tomt for at deaktivere.",
+  "settings.autoApprove.maxCost.v2Description":
+    "Vis en advarsel, der ikke blokerer, når en sessions omkostning når dette USD-beløb. Lad feltet være tomt for at deaktivere.",
   "settings.autoApprove.level.allow": "Tillad",
   "settings.autoApprove.level.ask": "Spørg",
   "settings.autoApprove.level.deny": "Afvis",

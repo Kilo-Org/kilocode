@@ -1116,6 +1116,8 @@ export const dict = {
   "settings.autoApprove.maxCost.title": "Oturum Maliyeti Uyarısı",
   "settings.autoApprove.maxCost.description":
     "Bir oturumun harcaması bu USD tutarını aştıktan sonra devam etmeden önce uyar. Tam dolar kullanın; devre dışı bırakmak için boş bırakın.",
+  "settings.autoApprove.maxCost.v2Description":
+    "Bir oturumun maliyeti bu USD tutarına ulaştığında engellemeyen bir uyarı gösterin. Devre dışı bırakmak için boş bırakın.",
   "settings.autoApprove.level.allow": "İzin Ver",
   "settings.autoApprove.level.ask": "Sor",
   "settings.autoApprove.level.deny": "Reddet",

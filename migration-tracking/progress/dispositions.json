@@ -735,5 +735,11 @@
     "state": "dropped",
     "note": "Tests needsAuthNames from the removed v1 host service; v2 reads McpServer.status from the server.",
     "by": "settings-mcp"
+  },
+  "module:packages/kilo-vscode/webview-ui/src/context/cost-alert.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-vscode/src/cost-alert.ts",
+    "note": "src/cost-alert.ts createCostAlert and createCostAlerts, with src/extension.ts, replace the synthetic webview question with a non-blocking VS Code notification. Continue acknowledges the session and threshold, Stop interrupts that session, and a dismissed alert rearms on its next execution. Unlike the webview question, another prompt does not implicitly dismiss the native notification, which cannot be closed programmatically. The limit accepts fractional USD and uses v2 recorded session cost. test/cost-alert.test.ts covers the policy and event stream.",
+    "by": "session-cost-alert"
   }
 }

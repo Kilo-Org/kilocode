@@ -18,7 +18,12 @@ import type { Manager } from "./server"
 import { effectiveFontSize, KILO_SETTING_KEYS, readKiloSettings, settingsHost } from "./settings-host"
 import { promptKeybindings, watchKeybindings } from "./prompt-keybindings"
 
-export function chat(input: { context: ExtensionContext; server: Manager; directory: string }) {
+export function chat(input: {
+  context: ExtensionContext
+  server: Manager
+  directory: string
+  trackCostSession: (sessionID: string) => void
+}) {
   // Commands sent before the webview bundle listens are lost, and a resolved view is not yet loaded. Keep them until
   // the webview sends its first message, which it does on mount.
   const state: { view?: WebviewView; loaded: boolean; queued: ToWebview[] } = { loaded: false, queued: [] }
@@ -87,6 +92,7 @@ export function wire(input: {
   directory: string
   webview: Webview
   view: "chat" | "settings"
+  trackCostSession?: (sessionID: string) => void
   /** Called on every message from the webview, before it is handled. */
   onMessage?: () => void
   onReset?: () => void
@@ -124,6 +130,7 @@ export function wire(input: {
   const subscription = webview.onDidReceiveMessage((message: ToHost) => {
     input.onMessage?.()
     if (message.type === "fetch" || message.type === "abort" || message.type === "open") return link.receive(message)
+    if (message.type === "trackCostSession") return input.trackCostSession?.(message.sessionID)
     if (settings?.handle(message)) return
     // Only the sidebar carries the cycle keybindings; the Settings panel must not change their context.
     if (message.type === "webviewFocusChanged" && input.view === "chat")
