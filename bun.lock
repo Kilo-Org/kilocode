@@ -38,7 +38,7 @@
     },
     "packages/client": {
       "name": "@opencode-ai/client",
-      "version": "7.8.17",
+      "version": "7.8.25",
       "dependencies": {
         "@opencode-ai/protocol": "workspace:*",
         "@opencode-ai/schema": "workspace:*",
@@ -62,7 +62,7 @@
     },
     "packages/codemode": {
       "name": "@opencode-ai/codemode",
-      "version": "7.8.17",
+      "version": "7.8.25",
       "dependencies": {
         "acorn": "8.15.0",
         "effect": "catalog:",
@@ -76,7 +76,7 @@
     },
     "packages/core": {
       "name": "@opencode-ai/core",
-      "version": "7.8.17",
+      "version": "7.8.25",
       "bin": {
         "opencode": "./bin/opencode",
       },
@@ -175,7 +175,7 @@
     },
     "packages/effect-drizzle-sqlite": {
       "name": "@opencode-ai/effect-drizzle-sqlite",
-      "version": "7.8.17",
+      "version": "7.8.25",
       "dependencies": {
         "drizzle-orm": "catalog:",
         "effect": "catalog:",
@@ -189,7 +189,7 @@
     },
     "packages/effect-sqlite-node": {
       "name": "@opencode-ai/effect-sqlite-node",
-      "version": "7.8.17",
+      "version": "7.8.25",
       "dependencies": {
         "effect": "catalog:",
       },
@@ -201,7 +201,7 @@
     },
     "packages/http-recorder": {
       "name": "@opencode-ai/http-recorder",
-      "version": "7.8.17",
+      "version": "7.8.25",
       "dependencies": {
         "@effect/platform-node": "4.0.0-beta.83",
         "@effect/platform-node-shared": "4.0.0-beta.83",
@@ -222,7 +222,7 @@
     },
     "packages/httpapi-codegen": {
       "name": "@opencode-ai/httpapi-codegen",
-      "version": "7.8.17",
+      "version": "7.8.25",
       "dependencies": {
         "effect": "catalog:",
         "prettier": "3.6.2",
@@ -235,7 +235,7 @@
     },
     "packages/kilo-console": {
       "name": "@kilocode/kilo-console",
-      "version": "7.8.17",
+      "version": "7.8.25",
       "dependencies": {
         "@kilocode/kilo-indexing": "workspace:*",
         "@kilocode/kilo-web-ui": "workspace:*",
@@ -257,7 +257,7 @@
     },
     "packages/kilo-docs": {
       "name": "@kilocode/kilo-docs",
-      "version": "7.8.17",
+      "version": "7.8.25",
       "dependencies": {
         "@docsearch/css": "^4",
         "@docsearch/js": "^4",
@@ -287,7 +287,7 @@
     },
     "packages/kilo-gateway": {
       "name": "@kilocode/kilo-gateway",
-      "version": "7.8.17",
+      "version": "7.8.25",
       "dependencies": {
         "@ai-sdk/anthropic": "3.0.82",
         "@ai-sdk/openai": "3.0.88",
@@ -321,7 +321,7 @@
     },
     "packages/kilo-i18n": {
       "name": "@kilocode/kilo-i18n",
-      "version": "7.8.17",
+      "version": "7.8.25",
       "devDependencies": {
         "@tsconfig/node22": "catalog:",
         "@types/bun": "catalog:",
@@ -331,7 +331,7 @@
     },
     "packages/kilo-indexing": {
       "name": "@kilocode/kilo-indexing",
-      "version": "7.8.17",
+      "version": "7.8.25",
       "dependencies": {
         "@aws-sdk/client-bedrock-runtime": "3.1005.0",
         "@aws-sdk/credential-provider-ini": "3.972.31",
@@ -363,11 +363,11 @@
     },
     "packages/kilo-jetbrains": {
       "name": "@kilocode/kilo-jetbrains",
-      "version": "7.8.15",
+      "version": "7.8.22",
     },
     "packages/kilo-memory": {
       "name": "@kilocode/kilo-memory",
-      "version": "7.8.17",
+      "version": "7.8.25",
       "dependencies": {
         "effect": "catalog:",
         "zod": "catalog:",
@@ -381,7 +381,7 @@
     },
     "packages/kilo-sandbox": {
       "name": "@kilocode/sandbox",
-      "version": "7.8.17",
+      "version": "7.8.25",
       "dependencies": {
         "@anthropic-ai/sandbox-runtime": "catalog:",
         "effect": "catalog:",
@@ -396,7 +396,7 @@
     },
     "packages/kilo-telemetry": {
       "name": "@kilocode/kilo-telemetry",
-      "version": "7.8.17",
+      "version": "7.8.25",
       "dependencies": {
         "@kilocode/kilo-gateway": "workspace:*",
         "posthog-node": "4.4.0",
@@ -410,7 +410,7 @@
     },
     "packages/kilo-ui": {
       "name": "@kilocode/kilo-ui",
-      "version": "7.8.17",
+      "version": "7.8.25",
       "dependencies": {
         "@kilocode/sdk": "workspace:*",
         "@kobalte/core": "0.13.11",
@@ -448,7 +448,7 @@
     },
     "packages/kilo-vscode": {
       "name": "kilo-code",
-      "version": "7.8.17",
+      "version": "7.8.25",
       "dependencies": {
         "@anthropic-ai/sdk": "^0.39.0",
         "@kilocode/kilo-gateway": "workspace:*",
@@ -480,7 +480,6 @@
         "lru-cache": "^11.0.2",
         "marked": "catalog:",
         "minimatch": "10.2.6",
-        "openai": "^4.85.4",
         "playwright-core": "1.57.0",
         "quick-lru": "^7.0.0",
         "simple-git": "4.0.2",
@@ -490,7 +489,7 @@
         "web-tree-sitter": "^0.24.7",
         "ws": "8.21.0",
         "yaml": "2.8.3",
-        "zod": "^3.24.2",
+        "zod": "^4.6.6",
       },
       "devDependencies": {
         "@axe-core/playwright": "4.11.3",
@@ -513,7 +512,7 @@
         "esbuild-plugin-solid": "^0.6.0",
         "eslint": "^9.39.2",
         "eslint-config-prettier": "^10.1.8",
-        "happy-dom": "20.8.9",
+        "happy-dom": "21.0.4",
         "knip": "5.85.0",
         "prettier": "3.6.2",
         "qrcode": "^1.5.4",
@@ -528,7 +527,7 @@
     },
     "packages/kilo-web-ui": {
       "name": "@kilocode/kilo-web-ui",
-      "version": "7.8.17",
+      "version": "7.8.25",
       "dependencies": {
         "@kilocode/kilo-ui": "workspace:*",
         "@kobalte/core": "catalog:",
@@ -545,7 +544,7 @@
     },
     "packages/llm": {
       "name": "@opencode-ai/llm",
-      "version": "7.8.17",
+      "version": "7.8.25",
       "dependencies": {
         "@opencode-ai/schema": "workspace:*",
         "@smithy/eventstream-codec": "4.2.14",
@@ -564,7 +563,7 @@
     },
     "packages/opencode": {
       "name": "@kilocode/cli",
-      "version": "7.8.17",
+      "version": "7.8.25",
       "bin": {
         "kilo": "./bin/kilo",
         "kilocode": "./bin/kilo",
@@ -733,7 +732,7 @@
     },
     "packages/plugin": {
       "name": "@kilocode/plugin",
-      "version": "7.8.17",
+      "version": "7.8.25",
       "dependencies": {
         "@ai-sdk/provider": "3.0.8",
         "@kilocode/sdk": "workspace:*",
@@ -762,7 +761,7 @@
     },
     "packages/plugin-atomic-chat": {
       "name": "@kilocode/plugin-atomic-chat",
-      "version": "7.8.17",
+      "version": "7.8.25",
       "dependencies": {
         "@kilocode/plugin": "workspace:*",
       },
@@ -776,7 +775,7 @@
     },
     "packages/protocol": {
       "name": "@opencode-ai/protocol",
-      "version": "7.8.17",
+      "version": "7.8.25",
       "dependencies": {
         "@opencode-ai/schema": "workspace:*",
         "effect": "catalog:",
@@ -789,7 +788,7 @@
     },
     "packages/schema": {
       "name": "@opencode-ai/schema",
-      "version": "7.8.17",
+      "version": "7.8.25",
       "dependencies": {
         "effect": "catalog:",
       },
@@ -801,7 +800,7 @@
     },
     "packages/script": {
       "name": "@opencode-ai/script",
-      "version": "7.8.17",
+      "version": "7.8.25",
       "dependencies": {
         "semver": "^7.6.3",
       },
@@ -812,7 +811,7 @@
     },
     "packages/sdk-next": {
       "name": "@opencode-ai/sdk-next",
-      "version": "7.8.17",
+      "version": "7.8.25",
       "dependencies": {
         "@opencode-ai/client": "workspace:*",
         "@opencode-ai/core": "workspace:*",
@@ -827,7 +826,7 @@
     },
     "packages/sdk/js": {
       "name": "@kilocode/sdk",
-      "version": "7.8.17",
+      "version": "7.8.25",
       "dependencies": {
         "cross-spawn": "catalog:",
       },
@@ -842,7 +841,7 @@
     },
     "packages/server": {
       "name": "@opencode-ai/server",
-      "version": "7.8.17",
+      "version": "7.8.25",
       "dependencies": {
         "@opencode-ai/core": "workspace:*",
         "@opencode-ai/protocol": "workspace:*",
@@ -857,7 +856,7 @@
     },
     "packages/session-ui": {
       "name": "@opencode-ai/session-ui",
-      "version": "7.8.17",
+      "version": "7.8.25",
       "dependencies": {
         "@kilocode/sdk": "workspace:*",
         "@kobalte/core": "catalog:",
@@ -899,7 +898,7 @@
     },
     "packages/storybook": {
       "name": "@opencode-ai/storybook",
-      "version": "7.8.17",
+      "version": "7.8.25",
       "devDependencies": {
         "@opencode-ai/session-ui": "workspace:*",
         "@opencode-ai/ui": "workspace:*",
@@ -924,7 +923,7 @@
     },
     "packages/tui": {
       "name": "@opencode-ai/tui",
-      "version": "7.8.17",
+      "version": "7.8.25",
       "dependencies": {
         "@kilocode/plugin": "workspace:*",
         "@kilocode/sdk": "workspace:*",
@@ -949,7 +948,7 @@
     },
     "packages/ui": {
       "name": "@opencode-ai/ui",
-      "version": "7.8.17",
+      "version": "7.8.25",
       "dependencies": {
         "@kilocode/sdk": "workspace:*",
         "@kobalte/core": "catalog:",
@@ -993,7 +992,7 @@
         "@types/katex": "0.16.7",
         "@types/luxon": "catalog:",
         "@typescript/native-preview": "catalog:",
-        "happy-dom": "20.8.9",
+        "happy-dom": "21.0.4",
         "solid-js": "catalog:",
         "tailwindcss": "catalog:",
         "tw-animate-css": "1.4.0",
@@ -1049,7 +1048,7 @@
     "dompurify": "3.4.17",
     "effect": "catalog:",
     "fastify": ">=5.8.3",
-    "happy-dom": ">=20.8.9",
+    "happy-dom": ">=21.0.4",
     "katex": "0.19.0",
     "lodash": "4.18.1",
     "open": "11.0.4",
@@ -3552,7 +3551,7 @@
 
     "hachure-fill": ["hachure-fill@0.5.2", "", {}, "sha512-3GKBOn+m2LX9iq+JC1064cSFprJY4jL1jCXTcpnfER5HYE2l/4EfWSGzkPa/ZDBmYI0ZOEj5VHV/eKnPGkHuOg=="],
 
-    "happy-dom": ["happy-dom@20.11.1", "", { "dependencies": { "@types/node": ">=20.0.0", "@types/whatwg-mimetype": "^3.0.2", "@types/ws": "^8.18.1", "buffer-image-size": "^0.6.4", "entities": "^7.0.1", "whatwg-mimetype": "^3.0.0", "ws": "^8.21.0" } }, "sha512-XSt8tMzbW9ymE7687xztkO1ckR7qJNQ3LywY9vlYGhGi3zXrGBHuUo2Cl1ztZaICW+1eAGdkLbj6iwVqDT33kg=="],
+    "happy-dom": ["happy-dom@21.0.4", "", { "dependencies": { "@types/node": ">=20.0.0", "@types/whatwg-mimetype": "^3.0.2", "@types/ws": "^8.18.1", "buffer-image-size": "^0.6.4", "entities": "^7.0.1", "whatwg-mimetype": "^3.0.0", "ws": "^8.21.0" } }, "sha512-tFm+GaLBgo6o0awHnvHaNoraVo27qJ+2tZEtZ+cIa08hXbeitrxAJajLI05hsUy/2/YTKcUjQYzHe5mCcraLBw=="],
 
     "has-flag": ["has-flag@4.0.0", "", {}, "sha512-EykJT/Q1KjTWctppgIAgfSO0tKVuZUjhgMr17kqTumMl6Afv3EISleU7qZUzoXDFTAHTDC4NOoG/ZxU3EvlMPQ=="],
 
@@ -5370,6 +5369,8 @@
 
     "gray-matter/js-yaml": ["js-yaml@3.15.1", "", { "dependencies": { "argparse": "^1.0.7", "esprima": "^4.0.0" }, "bin": { "js-yaml": "bin/js-yaml.js" } }, "sha512-S99WuO3HlhO3XN41EtYUNl9zzXjoJx7QvmipxsJVxtCBT0YHEFy+iOJhjSvrmV12nYhWpZaM8lPHkJm0yUMbag=="],
 
+    "happy-dom/ws": ["ws@8.21.2", "", { "peerDependencies": { "bufferutil": "^4.0.1", "utf-8-validate": ">=5.0.2" }, "optionalPeers": ["bufferutil", "utf-8-validate"] }, "sha512-54dMVAo4WIe6SKy3vBgN+9bJZqqQ8IMRevAkOLQALhi49qkkQDQfWdAZ8KQlXiEabw88ARXXdUrlvtbKQX+aKw=="],
+
     "htmlparser2/entities": ["entities@4.5.0", "", {}, "sha512-V0hjH4dGPh9Ao5p0MoRY6BVqtwCjhz6vI5LT8AJ55H+4g9/4vbHx1I54fS0XuclLhDHArPQCiMjDxjaL8fPxhw=="],
 
     "import-fresh/resolve-from": ["resolve-from@4.0.0", "", {}, "sha512-pb/MYmXstAkysRFx8piNI1tGFNQIFA3vkE3Gq4EuA1dF6gHp/+vgZqsCGJapvy8N3Q+4o7FwvquPJcnZ7RYy4g=="],
@@ -5382,13 +5383,11 @@
 
     "katex/commander": ["commander@15.0.0", "", {}, "sha512-z67u4ZhzCL/Tydu1lJARtEZYWbWaN7oYLHbsuzocr6y4N6WZAagG3RQ4FW61V1/0+jImpj293XfrcYnd1qxtPg=="],
 
-    "kilo-code/openai": ["openai@4.104.0", "", { "dependencies": { "@types/node": "^18.11.18", "@types/node-fetch": "^2.6.4", "abort-controller": "^3.0.0", "agentkeepalive": "^4.2.1", "form-data-encoder": "1.7.2", "formdata-node": "^4.3.2", "node-fetch": "^2.6.7" }, "peerDependencies": { "ws": "^8.18.0", "zod": "^3.23.8" }, "optionalPeers": ["ws", "zod"], "bin": { "openai": "bin/cli" } }, "sha512-p99EFNsA/yX6UhVO93f5kJsDRLAg+CTA2RBqdHK4RtK8u5IJw32Hyb2dTGKbnnFmnuoBv5r7Z2CURI9sGZpSuA=="],
-
     "kilo-code/typescript": ["typescript@5.9.3", "", { "bin": { "tsc": "bin/tsc", "tsserver": "bin/tsserver" } }, "sha512-jl1vZzPDinLr9eUt3J/t7V6FgNEw9QjvBPdysz9KfQDD41fQrC2Y4vKQdiaUpFT4bXlb1RHhLpp8wtm6M5TgSw=="],
 
     "kilo-code/web-tree-sitter": ["web-tree-sitter@0.24.7", "", {}, "sha512-CdC/TqVFbXqR+C51v38hv6wOPatKEUGxa39scAeFSm98wIhZxAYonhRQPSMmfZ2w7JDI0zQDdzdmgtNk06/krQ=="],
 
-    "kilo-code/zod": ["zod@3.25.76", "", {}, "sha512-gzUt/qt81nXsFGKIFcC3YnfEAx5NkunCfnDlvuBSSFS02bcXu4Lmea0AFIUwbLWxWPx3d9p8S5QoaujKcNQxcQ=="],
+    "kilo-code/zod": ["zod@4.6.7", "", {}, "sha512-g8W2D2kU6a8untc053fX1uVBKzM7yqAxW/3zwk83+6RyF2+SKOuV+c0wBDhUwzV1PaGapmZH+rmcUzPf+3CGwg=="],
 
     "knip/js-yaml": ["js-yaml@4.3.1", "", { "dependencies": { "argparse": "^2.0.1" }, "bin": { "js-yaml": "bin/js-yaml.js" } }, "sha512-CY6crGq313MX8GkwvB7tzgp99vjQxY1++5y10/BKN/GUfHqWaOGQMNZkBvqSzsZKWk/ijwHlWzzkLulsGHhjWQ=="],
 

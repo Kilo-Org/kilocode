@@ -1,5 +1,69 @@
 # @kilocode/cli
 
+## 7.8.25
+
+### Patch Changes
+
+- [#15274](https://github.com/Kilo-Org/kilocode/pull/15274) [`57d4c30`](https://github.com/Kilo-Org/kilocode/commit/57d4c307253364344157ecbb0f90f157518bd48c) Thanks [@Uddoo](https://github.com/Uddoo)! - Preserve the existing package-manager user-agent when reading npm configuration.
+
+## 7.8.23
+
+### Patch Changes
+
+- [#15081](https://github.com/Kilo-Org/kilocode/pull/15081) [`8862849`](https://github.com/Kilo-Org/kilocode/commit/8862849483c1e61e0dce04cdbee106e4986ea313) Thanks [@mardausdennis](https://github.com/mardausdennis)! - Preserve the real exit code or signal of background jobs owned by Kilo instead of recording a failed job as successful.
+
+- [#14976](https://github.com/Kilo-Org/kilocode/pull/14976) [`b209860`](https://github.com/Kilo-Org/kilocode/commit/b209860c3f957332563164efb63052babd7be04e) Thanks [@mardausdennis](https://github.com/mardausdennis)! - Give large-session compaction enough output space for thinking and a complete summary. Reject cut-off summaries without losing conversation history and explain how to retry.
+
+- [#15515](https://github.com/Kilo-Org/kilocode/pull/15515) [`26662b5`](https://github.com/Kilo-Org/kilocode/commit/26662b5edb68f5947b9de7d9d68e7ce0fa387551) - Keep a reply that another Kilo process on the same data directory is still writing, instead of deleting it when a message arrives through a second process.
+
+- [#15516](https://github.com/Kilo-Org/kilocode/pull/15516) [`58a856e`](https://github.com/Kilo-Org/kilocode/commit/58a856ecd40f7ddfb5e4bc6e0cca1c7c4b79cd91) - Fire each scheduled wakeup and cron task once when several Kilo processes open the same workspace, and keep a cancelled task from firing or coming back in another process.
+
+- Updated dependencies [[`0c1d8dd`](https://github.com/Kilo-Org/kilocode/commit/0c1d8dd89ee725e952ad402535c57447e098bb29)]:
+  - @kilocode/kilo-indexing@7.8.23
+  - @opencode-ai/server@7.8.23
+  - @opencode-ai/tui@7.8.23
+  - @opencode-ai/ui@7.8.23
+
+## 7.8.21
+
+### Minor Changes
+
+- [#15509](https://github.com/Kilo-Org/kilocode/pull/15509) [`307ff45`](https://github.com/Kilo-Org/kilocode/commit/307ff45f27ec796309ffb4e2f00f8dab85db3838) - Add hosted workspace operations and a Cloud system feed to the local session-host API. List, create, read, check the status of, and delete hosted workspaces, list their sessions, list available workspace profiles, and start another session in a workspace through the local Kilo API, and follow Cloud session preparation and status events through a local system feed route. Hosted operations now exchange the stored user credential for a short-lived Cloud Agent control token before any Worker call, so the original credential is never sent to the Worker. Hosted attachments stop working once their session or workspace is deleted.
+
+## 7.8.20
+
+### Minor Changes
+
+- [#15482](https://github.com/Kilo-Org/kilocode/pull/15482) [`ab43c7d`](https://github.com/Kilo-Org/kilocode/commit/ab43c7d4ed670fb77302087d6e47ac1959f0e699) - Let agents choose the base branch when they start Agent Manager worktree sessions.
+
+- [#14465](https://github.com/Kilo-Org/kilocode/pull/14465) [`3ac0983`](https://github.com/Kilo-Org/kilocode/commit/3ac0983c7d7b4d2fcb0371e3aac02edfe3cde7de) Thanks [@zfralish](https://github.com/zfralish)! - Publish the CLI as a `kilo-cli` conda package on Anaconda.org, built with rattler-build for linux-64, linux-aarch64, osx-64, osx-arm64, and win-64 on every release (pre-releases publish to the `rc` label). Install with any conda-compatible package manager (e.g. `pixi add kilo-cli` or `conda install -c anaconda-cloud kilo-cli`).
+
+- [#15440](https://github.com/Kilo-Org/kilocode/pull/15440) [`6c0d427`](https://github.com/Kilo-Org/kilocode/commit/6c0d4273f1b1b7fa85d562c699e7210f90b365b9) - Reuse platform benchmarks for linked custom auto router entries, with confirmed model suggestions, explicit linking controls, and per-variant link status.
+
+### Patch Changes
+
+- [#15483](https://github.com/Kilo-Org/kilocode/pull/15483) [`f9e7774`](https://github.com/Kilo-Org/kilocode/commit/f9e77749281ede26a550149aff283fc0101a8143) - Upgrade zod in the VS Code extension to a patched release that fixes a memory-exhaustion advisory when validating oversized constrained collections.
+
+- [#15479](https://github.com/Kilo-Org/kilocode/pull/15479) [`ccf958a`](https://github.com/Kilo-Org/kilocode/commit/ccf958a1d2a4fa8b5136f228939daa975d0c8feb) - Fix auto-compaction starting well before the configured context threshold, and stop compaction from looping on models without a known context size or after you stop a compaction.
+
+- Updated dependencies [[`6c0d427`](https://github.com/Kilo-Org/kilocode/commit/6c0d4273f1b1b7fa85d562c699e7210f90b365b9)]:
+  - @kilocode/kilo-gateway@7.9.0
+  - @kilocode/kilo-indexing@7.8.19
+  - @kilocode/kilo-telemetry@7.8.19
+  - @opencode-ai/server@7.8.19
+  - @opencode-ai/tui@7.8.19
+  - @opencode-ai/ui@7.8.19
+
+## 7.8.18
+
+### Minor Changes
+
+- [#15358](https://github.com/Kilo-Org/kilocode/pull/15358) [`f96361f`](https://github.com/Kilo-Org/kilocode/commit/f96361fe1470239a30be2633940160fc38c9030a) - Expose hosted cloud sessions through the local Kilo API, so editors can discover, read, and interact with a hosted session without ever handling its provider credentials.
+
+### Patch Changes
+
+- [#15430](https://github.com/Kilo-Org/kilocode/pull/15430) [`ef2f6d9`](https://github.com/Kilo-Org/kilocode/commit/ef2f6d9c7a30b1fc1791bf71f40803aa0ff96975) Thanks [@WebReflection](https://github.com/WebReflection)! - Update the MCP TypeScript SDK to 1.32.1 to fix security issues flagged by Dependabot, including MCP HTTP and OAuth requests following cross-origin redirects. Remote MCP servers whose URL redirects to another origin, or answers `POST` with a `301`, `302` or `303` redirect, no longer connect; use the server's final URL instead.
+
 ## 7.8.16
 
 ### Patch Changes

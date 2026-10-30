@@ -78,6 +78,10 @@ class SessionSidePanelManagerTest : BasePlatformTestCase() {
             it.state.value = KiloWorkspaceStateDto(KiloWorkspaceStatusDto.READY)
         })
         workspace = workspaces.workspace("/test")
+        // SessionHost schedules inactive panels through this registry key. Tests do not load the
+        // plugin's registryKey extensions, so contribute it for every test before any panel can be
+        // disposed; only the tests that need a specific duration change the value.
+        contributeInactiveDisposeTimeout()
     }
 
     override fun tearDown() {
@@ -828,6 +832,7 @@ class SessionSidePanelManagerTest : BasePlatformTestCase() {
                 val id = when (ref) {
                     is SessionRef.Local -> ref.id
                     is SessionRef.Cloud -> ref.key
+                    is SessionRef.Hosted -> ref.key
                     null -> null
                 }
                 created.add(workspace.directory to id)
@@ -890,10 +895,13 @@ class SessionSidePanelManagerTest : BasePlatformTestCase() {
     private fun useLongInactiveDisposeTimeout() = setInactiveDisposeTimeout(60_000)
 
     private fun setInactiveDisposeTimeout(ms: Int) {
-        val key = "kilo.session.inactive.disposeTimeoutMs"
+        Registry.get(INACTIVE_TIMEOUT).setValue(ms, testRootDisposable)
+    }
+
+    private fun contributeInactiveDisposeTimeout() {
         Registry.mutateContributedKeys {
-            it + (key to RegistryKeyDescriptor(
-                key,
+            it + (INACTIVE_TIMEOUT to RegistryKeyDescriptor(
+                INACTIVE_TIMEOUT,
                 "Milliseconds before hidden session UI is disposed after switching away.",
                 "180000",
                 false,
@@ -903,9 +911,8 @@ class SessionSidePanelManagerTest : BasePlatformTestCase() {
             ))
         }
         Disposer.register(testRootDisposable) {
-            Registry.mutateContributedKeys { it - key }
+            Registry.mutateContributedKeys { it - INACTIVE_TIMEOUT }
         }
-        Registry.get(key).setValue(ms, testRootDisposable)
     }
 
     private fun JPanel.controller(): ai.kilocode.client.session.controller.SessionController {
@@ -997,4 +1004,7 @@ class SessionSidePanelManagerTest : BasePlatformTestCase() {
         ),
     )
 
+    private companion object {
+        const val INACTIVE_TIMEOUT = "kilo.session.inactive.disposeTimeoutMs"
+    }
 }

@@ -135,6 +135,7 @@ class PromptPanel(
     private val approve: Boolean = true,
     private val showEnhance: Boolean = true,
     private val hostedInEditorTab: Boolean = false,
+    private val files: Boolean = true,
 ) : BorderLayoutPanel(), SessionEditorStyleTarget, SendPromptContext, PromptSelectors, UiDataProvider {
 
     companion object {
@@ -994,6 +995,10 @@ class PromptPanel(
 
     @RequiresEdt
     private fun addAttachment(item: PromptAttachment) {
+        if (!files) {
+            notify(KiloBundle.message("hosted.prompt.textOnly"))
+            return
+        }
         if (!attachment && !item.reference && PromptAttachmentExtractor.image(item.mime)) {
             LOG.debug { "kind=prompt-attachment add name=${item.name} mime=${item.mime} blocked=unsupported-model" }
             notify(KiloBundle.message("prompt.attachment.unsupported.model"))
@@ -1095,6 +1100,12 @@ class PromptPanel(
         sourceMs: Long,
     ): Future<*> {
         return ApplicationManager.getApplication().executeOnPooledThread {
+            if (!this.files) {
+                ApplicationManager.getApplication().invokeLater {
+                    if (!project.isDisposed) notify(KiloBundle.message("hosted.prompt.textOnly"))
+                }
+                return@executeOnPooledThread
+            }
             val start = System.nanoTime()
             try {
                 val list = files ?: transferable?.let { FileCopyPasteUtil.getFileList(it).orEmpty() }.orEmpty()
