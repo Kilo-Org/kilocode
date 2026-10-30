@@ -68,6 +68,7 @@ describe("Together AI streaming usage", () => {
       ),
     })
     const result = await provider("test").doGenerate({ prompt })
+    expect(requests).toHaveLength(1)
     expect(requests[0]?.stream_options).toBeUndefined()
     expect(result.usage.inputTokens.total).toBe(42)
     expect(result.usage.outputTokens.total).toBe(7)
