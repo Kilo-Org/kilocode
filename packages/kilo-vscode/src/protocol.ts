@@ -32,6 +32,7 @@ export type Ui =
   | { type: "persistModelSelectorExpanded"; value: boolean }
   | { type: "requestAutoApproveState" }
   | { type: "persistAutoApproveState"; value: boolean }
+  | { type: "trackCostSession"; sessionID: string }
   | { type: "webviewFocusChanged"; focused: boolean }
   | { type: "setLanguage"; locale: string }
   | { type: "saveImage"; dataUrl: string; filename: string }

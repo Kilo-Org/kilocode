@@ -101,7 +101,7 @@ const KEY_TAB_OVERRIDES: Record<string, string> = {
   "settings.context.compactionModel.title": "models",
 }
 
-/** i18n `*.title` keys under a mapped group that are not rendered rows. */
+/** Keys omitted from automatic rows, including rows with an explicit override below. */
 const EXCLUDED_KEYS = new Set([
   "settings.permissions.toast.updateFailed.title",
   "settings.autoCleanup.defaultRetention.title",
@@ -144,6 +144,11 @@ const EXCLUDED_KEYS = new Set([
 
 /** Searchable rows whose title key does not end in `.title`, or that need a description override. */
 const EXTRA_ENTRIES: SettingsEntry[] = [
+  {
+    tab: "autoApprove",
+    titleKey: "settings.autoApprove.maxCost.title",
+    descriptionKey: "settings.autoApprove.maxCost.v2Description",
+  },
   {
     tab: "browser",
     titleKey: "settings.webTools.webSearch.enable",

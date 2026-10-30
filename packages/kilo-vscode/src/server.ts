@@ -195,6 +195,8 @@ export function manager(input: {
   settings?: Record<string, string> | (() => Record<string, string>)
   log?: (text: string) => void
   onError?: (error: Error) => void
+  onStart?: (server: Server) => void
+  onStop?: () => void
   retry?: number
 }) {
   const state: { current?: Promise<Server>; failed: boolean } = { failed: false }
@@ -208,15 +210,18 @@ export function manager(input: {
           settings: typeof input.settings === "function" ? input.settings() : input.settings,
           log: input.log,
           onExit: () => {
-            if (state.current === promise) state.current = undefined
+            if (state.current !== promise) return
+            state.current = undefined
+            input.onStop?.()
           },
         })
       : Promise.reject(
           new Error("No Kilo v2 server found. Put a kilo2 binary in bin/ or run the extension from the repository."),
         )
     promise.then(
-      () => {
+      (server) => {
         state.failed = false
+        if (state.current === promise) input.onStart?.(server)
       },
       (error: Error) => {
         if (!state.failed) input.onError?.(error)
@@ -238,6 +243,7 @@ export function manager(input: {
       const current = state.current
       state.current = undefined
       state.failed = false
+      if (current) input.onStop?.()
       return current?.then(
         (server) => stop(server.process),
         () => undefined,
