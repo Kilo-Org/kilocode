@@ -25,19 +25,19 @@ export const AGENT_BEHAVIOUR_SUBTABS: AgentBehaviourSubtab[] = [
   {
     id: "rules",
     title: "settings.agentBehaviour.subtab.rules",
-    ready: false,
+    ready: true,
     component: lazy(() => import("./RulesSubtab")),
   },
   {
     id: "workflows",
     title: "settings.agentBehaviour.subtab.workflows",
-    ready: false,
+    ready: true,
     component: lazy(() => import("./WorkflowsSubtab")),
   },
   {
     id: "skills",
     title: "settings.agentBehaviour.subtab.skills",
-    ready: false,
+    ready: true,
     component: lazy(() => import("./SkillsSubtab")),
   },
 ]
