@@ -1,8 +1,3 @@
-// Main's About Kilo Code tab on v2 data. The version is the Kilo version from the `kilocode.handshake` RPC, and the
-// status is the connection of the webview's event stream. Telemetry opens the VS Code setting, Settings Transfer
-// exports the global config document and applies an import to the global config, and Reset All Settings clears the
-// `kilo-code.v2.*` settings and the webview globalState keys. Not rendered, no v2 contract: the port (the host relays
-// requests, so the webview has no server port) and the Roo import.
 import { Button } from "@kilocode/kilo-ui/button"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { showToast } from "@kilocode/kilo-ui/toast"

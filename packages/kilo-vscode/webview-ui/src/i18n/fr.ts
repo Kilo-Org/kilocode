@@ -763,7 +763,7 @@ export const dict = {
   "settings.agentBehaviour.title": "Comportement de l'agent",
   "settings.autoApprove.title": "Approbation automatique",
   "settings.webTools.title": "Outils web",
-  "settings.webTools.description": "Configurez la recherche web et l’automatisation du navigateur.",
+  "settings.webTools.description": "Configurez la recherche web.",
   "settings.webTools.webSearch.enable": "Activer pour tous les fournisseurs",
   "settings.webTools.browserAutomation": "Automatisation du navigateur",
   "settings.webTools.webSearch.title": "Recherche web",
@@ -1081,6 +1081,9 @@ export const dict = {
     "Il s'agit d'un mode intégré. Sa définition de base ne peut pas être modifiée, mais vous pouvez configurer des surcharges ci-dessous.",
   "settings.agentBehaviour.editMode.promptOverride": "Remplacement de prompt personnalisé pour ce mode intégré",
   "settings.agentBehaviour.badge.subagent": "sous-agent",
+  "settings.agentBehaviour.perAgentPermissions.title": "Permissions par agent",
+  "settings.agentBehaviour.perAgentPermissions.description":
+    "Ces paramètres s'appliquent uniquement à cet agent personnalisé. Modifiez la valeur 'Défaut' d'une liste déroulante pour créer un remplacement, ou utilisez 'Ajouter un chemin' ou 'Ajouter une commande' pour les exceptions propres à chaque outil.",
   "settings.agentBehaviour.permissions.title": "Permissions calculées",
   "settings.agentBehaviour.permissions.count": "{{count}} règles",
   "settings.agentBehaviour.permissions.effective": "Effectif (wildcard) :",
