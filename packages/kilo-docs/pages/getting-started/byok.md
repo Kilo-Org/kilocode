@@ -153,6 +153,20 @@ These rules apply to saved API keys. Eligible requests use a connected ChatGPT s
 - If the key is invalid, the request fails. It does not fall back to using Kilo's keys.
 - Subscription-based providers (such as the Z.ai Coding Plan or Kimi Code) only expose the models included in that plan. Select one of those models to route traffic through your subscription.
 
+## Preview the routes a model uses
+
+When you have at least one saved key, a **Routing preview** appears below the key list on the [BYOK page](https://app.kilo.ai/byok) and in the organization BYOK settings. Pick a catalog model and an API kind (default: Chat Completions) to see the routes a request would try, in order, and why each one is used or skipped:
+
+1. Direct BYOK keys whose provider serves the model, tried in Kilo's provider order. A key is skipped when its upstream does not offer the selected API kind, when the key is disabled, or when it uses provider model IDs instead of catalog IDs.
+2. Your [ChatGPT connection](#connect-a-chatgpt-subscription) for eligible OpenAI models over the Responses API. The step is conditional because the connection is personal and its state is encrypted, so the preview cannot confirm it is active.
+3. Vercel BYOK inference-provider keys, sent together through Vercel AI Gateway. Disabled keys are listed as skipped.
+4. Your Vercel AI Gateway and OpenRouter keys, skipped when the key is disabled, when a provider key is preferred, or when the gateway does not serve the model.
+5. Kilo's own route, through Vercel AI Gateway or OpenRouter, paid with Kilo credits.
+
+Steps below the one that serves the request, including a conditional ChatGPT step, are shown as **Not tried**. When no catalog-mode key serves the model, the preview shows the unsupported-API failure instead. Organization model and provider policies still apply. Changing a key on the page refreshes the preview.
+
+The preview reads your key metadata only. It never decrypts a key or calls the provider.
+
 ## Serve Kilo catalog model IDs (catalog mode)
 
 By default, a provider key serves models under that provider's own IDs. You can switch a key to serve Kilo catalog model IDs instead by turning on **Use Kilo catalog model IDs** when you add or edit the key.

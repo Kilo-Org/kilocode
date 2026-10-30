@@ -43,6 +43,7 @@ Enterprise features for large organizations:
 - [**Audit Logs**](/docs/collaborate/enterprise/audit-logs) — Track and audit team activity
 - [**SSO**](/docs/collaborate/enterprise/sso) — Single sign-on with OIDC and SCIM
 - [**Model Access Controls**](/docs/collaborate/enterprise/model-access-controls) — Limit models and providers
+- [**AI Guardrails**](/docs/collaborate/enterprise/ai-guardrails) — Control which MCP servers and skills your organization can use
 - [**Migration**](/docs/collaborate/enterprise/migration) — Migrate from other AI coding tools
 
 ## Adoption Dashboard
