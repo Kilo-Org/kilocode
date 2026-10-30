@@ -29,6 +29,7 @@ Use your provider API key to route matching models through your account:
 - Azure Foundry (experimental)
 - DeepSeek
 - Fireworks
+- GMI Cloud
 - Google AI Studio
 - Inception
 - Minimax
@@ -60,6 +61,15 @@ These providers offer coding-focused subscriptions or dedicated endpoints. Bring
 - Xiaomi Token Plan (Europe)
 - Xiaomi Token Plan (Singapore)
 - Z.ai Coding Plan
+
+### Gateway keys
+
+These keys route through a gateway that already serves the regular Kilo catalog models, so no separate model entries are needed. Save the gateway's own API key:
+
+- OpenRouter
+- Vercel AI Gateway
+
+A gateway key serves the catalog models its gateway provides. If you save both keys, the Vercel AI Gateway key is used for the models it serves, and the OpenRouter key covers requests that Vercel cannot serve.
 
 ## Connect a ChatGPT subscription
 
@@ -142,6 +152,22 @@ These rules apply to saved API keys. Eligible requests use a connected ChatGPT s
 - If a matching BYOK key exists and the request is not served by a connected subscription like ChatGPT, the request is routed using your key.
 - If the key is invalid, the request fails. It does not fall back to using Kilo's keys.
 - Subscription-based providers (such as the Z.ai Coding Plan or Kimi Code) only expose the models included in that plan. Select one of those models to route traffic through your subscription.
+
+## Serve Kilo catalog model IDs (catalog mode)
+
+By default, a provider key serves models under that provider's own IDs. You can switch a key to serve Kilo catalog model IDs instead by turning on **Use Kilo catalog model IDs** when you add or edit the key.
+
+Catalog mode is off by default for new and existing keys. It is offered only for providers that map at least one model to a catalog ID, and it is not available for Vercel BYOK keys or for the OpenRouter and Vercel AI Gateway keys.
+
+With catalog mode on:
+
+- The key serves catalog model IDs such as `moonshotai/kimi-k2.6`, and its supported models list shows those IDs. The provider-prefixed IDs are no longer served by the key.
+- [Auto Model](/docs/code-with-ai/agents/auto-model) and custom routers can route matching catalog models through the key. For the catalog models it serves, the key is used ahead of a ChatGPT connection and your other BYOK keys.
+- Organization model restrictions apply to requests that use the key. Keys without catalog mode keep their provider-prefixed IDs and stay exempt from those restrictions.
+
+Saved favorites are not rewritten when you switch a key to catalog mode. A saved model that used the provider-prefixed ID fails with a message naming the catalog ID to use; select the catalog model instead.
+
+Personal key owners can change catalog mode. For organization keys, only organization owners and admins can.
 
 ## Using BYOK in the Extensions and CLI
 
