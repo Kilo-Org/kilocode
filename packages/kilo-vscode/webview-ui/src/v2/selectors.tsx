@@ -10,6 +10,7 @@ import { ModeSwitcherBase } from "../components/shared/ModeSwitcher"
 import { ThinkingSelectorBase } from "../components/shared/ThinkingSelector"
 import { useLanguage } from "../context/language"
 import { useV2 } from "./client"
+import { shiftTabCyclesVariant } from "./kilo-settings"
 import { cycleVariant, preserveVariant } from "./variant"
 
 const DEFAULT = "default"
@@ -156,12 +157,12 @@ export function Selectors(props: { selection: Selection; blocked: boolean }) {
     const current = props.selection.model()
     return current ? { providerID: current.providerID, modelID: current.id } : null
   }
-  // Shift+Tab cycles the effort while the prompt input has focus. v1 gated this on the
-  // chat.shiftTabCyclesVariant setting (on by default); the v2 webview has no settings plumbing yet, so the
-  // enabled default applies and the tooltip hint is shown as well.
+  // Shift+Tab cycles the effort while the prompt input has focus, gated on the
+  // `kilo-code.v2.chat.shiftTabCyclesVariant` setting (on by default). The tooltip hint follows the same setting.
   onMount(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key !== "Tab" || !event.shiftKey || event.ctrlKey || event.metaKey || event.altKey) return
+      if (!shiftTabCyclesVariant()) return
       const active = document.activeElement
       if (!(active instanceof HTMLTextAreaElement) || !active.classList.contains("prompt-input")) return
       const variants = props.selection.variants()
@@ -215,7 +216,7 @@ export function Selectors(props: { selection: Selection; blocked: boolean }) {
           allowClear
           clearLabel={language.t("common.default")}
           heading={language.t("prompt.thinking.tooltip")}
-          cycleHint
+          cycleHint={shiftTabCyclesVariant()}
         />
       }
     />

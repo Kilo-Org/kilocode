@@ -864,6 +864,7 @@ export const dict = {
     "Ovaj fajl je izvezen iz novije verzije Kilo-a. Neke postavke mogu biti zanemarene.",
   "settings.aboutKiloCode.importSettings.success":
     "Postavke su uvezene. Pregledajte promjene iznad, a zatim kliknite Sačuvaj.",
+  "settings.aboutKiloCode.importSettings.applied": "Settings imported and applied.",
 
   "settings.aboutKiloCode.telemetry.title": "Telemetrija",
   "settings.aboutKiloCode.telemetry.description":

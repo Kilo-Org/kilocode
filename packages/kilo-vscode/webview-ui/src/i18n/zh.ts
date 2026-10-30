@@ -829,6 +829,7 @@ export const dict = {
   "settings.aboutKiloCode.importSettings.tooLarge": "文件过大。设置文件必须小于 1 MB。",
   "settings.aboutKiloCode.importSettings.newerVersion": "此文件由较新版本的 Kilo 导出。部分设置可能会被忽略。",
   "settings.aboutKiloCode.importSettings.success": "设置已导入。请查看上方的更改，然后点击保存。",
+  "settings.aboutKiloCode.importSettings.applied": "Settings imported and applied.",
 
   "settings.aboutKiloCode.telemetry.title": "遥测",
   "settings.aboutKiloCode.telemetry.description":

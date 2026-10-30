@@ -15,7 +15,7 @@ import type { ToHost, ToWebview } from "./protocol"
 import { bridge } from "./relay"
 import { saveImage } from "./save-image"
 import type { Manager } from "./server"
-import { readKiloSettings, settingsHost } from "./settings-host"
+import { effectiveFontSize, KILO_SETTING_KEYS, readKiloSettings, settingsHost } from "./settings-host"
 import { promptKeybindings, watchKeybindings } from "./prompt-keybindings"
 
 export function chat(input: { context: ExtensionContext; server: Manager; directory: string }) {
@@ -98,6 +98,14 @@ export function wire(input: {
     input.view === "settings"
       ? settingsHost({ context: input.context, server: input.server, directory: input.directory, post })
       : undefined
+  // The sidebar carries the live Kilo settings: push a fresh value when any of them changes.
+  const settingsWatch =
+    input.view === "chat"
+      ? workspace.onDidChangeConfiguration((event) => {
+          if (KILO_SETTING_KEYS.some((key) => event.affectsConfiguration(`${NAMESPACE}.${key}`)))
+            post({ type: "vscodeSettingsLoaded", values: readKiloSettings() })
+        })
+      : undefined
   const subscription = webview.onDidReceiveMessage((message: ToHost) => {
     input.onMessage?.()
     if (message.type === "fetch" || message.type === "abort" || message.type === "open") return link.receive(message)
@@ -120,6 +128,11 @@ export function wire(input: {
     if (message.type === "persistAutoApproveState")
       return void input.context.globalState.update(AUTO_APPROVE, message.value)
     if (message.type === "saveImage") return saveImage(input.directory, message)
+    // The Language tab applies at once: write `kilo-code.v2.language` and let the change event push it to every view.
+    if (message.type === "setLanguage")
+      return void workspace
+        .getConfiguration(NAMESPACE)
+        .update("language", message.locale || undefined, true)
     // The Kilo Gateway sign-in runs in the Profile view of the sidebar, as main opens its Profile panel.
     if (message.type === "openProfile") return void commands.executeCommand("kilo-code.v2.profile")
   })
@@ -132,7 +145,7 @@ export function wire(input: {
     worker: uri("dist", "shiki-worker.js"),
     markdown: uri("dist", "markdown-shiki-worker.js"),
     directory: input.directory,
-    size: size(),
+    size: effectiveFontSize(),
     language: env.language,
     view: input.view,
     settings: readKiloSettings(),
@@ -142,6 +155,7 @@ export function wire(input: {
     dispose() {
       link.dispose()
       settings?.dispose()
+      settingsWatch?.dispose()
       subscription.dispose()
     },
   }
@@ -149,12 +163,8 @@ export function wire(input: {
 
 const EXPANDED = "kilo-code.v2.modelSelectorExpanded"
 const AUTO_APPROVE = "kilo-code.v2.autoApprove"
+const NAMESPACE = "kilo-code.v2"
 const SIZES = [10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24]
-
-function size() {
-  const raw = workspace.getConfiguration("editor").get<number>("fontSize", 13)
-  return Number.isFinite(raw) ? Math.min(24, Math.max(10, Math.round(raw))) : 13
-}
 
 export function html(input: {
   csp: string

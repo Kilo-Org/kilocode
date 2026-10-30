@@ -24,11 +24,25 @@ export const KILO_SETTING_KEYS = [
   "extraCaCerts",
 ] as const
 
+/** `kilo-code.v2.fontSize` when set, otherwise `editor.fontSize`, clamped to the v1 slider range. */
+export function effectiveFontSize(): number {
+  const configured = workspace.getConfiguration(NAMESPACE).get<number>("fontSize")
+  const raw = typeof configured === "number" ? configured : workspace.getConfiguration("editor").get<number>("fontSize", 13)
+  return Number.isFinite(raw) ? Math.min(24, Math.max(10, Math.round(raw))) : 13
+}
+
 /** The config values the webview reads at boot; the same shape as `vscodeSettingsLoaded`. */
 export function readKiloSettings(): Record<string, unknown> {
   const config = workspace.getConfiguration(NAMESPACE)
-  return Object.fromEntries(KILO_SETTING_KEYS.map((key) => [key, config.get(key)]))
+  return {
+    ...Object.fromEntries(KILO_SETTING_KEYS.map((key) => [key, config.get(key)])),
+    // The host's current fallback, so a tab keeps the right size when the setting is unset.
+    effectiveFontSize: effectiveFontSize(),
+  }
 }
+
+/** webview globalState keys that are not configuration, cleared by Reset All Settings. */
+const GLOBAL_STATE_KEYS = ["kilo-code.v2.modelSelectorExpanded", "kilo-code.v2.autoApprove"]
 
 interface ConfigEntry {
   type: "document" | "directory"
@@ -163,6 +177,20 @@ export function settingsHost(input: {
     }
   }
 
+  const resetAllSettings = async () => {
+    const confirmed = await window.showWarningMessage(
+      "Reset all Kilo Code extension settings to defaults?",
+      { modal: true },
+      "Reset",
+    )
+    if (confirmed !== "Reset") return
+    const config = workspace.getConfiguration(NAMESPACE)
+    for (const key of KILO_SETTING_KEYS) await config.update(key, undefined, true)
+    for (const key of GLOBAL_STATE_KEYS) await input.context.globalState.update(key, undefined)
+    input.post({ type: "vscodeSettingsLoaded", values: readKiloSettings() })
+    void window.showInformationMessage("Kilo Code settings have been reset to defaults.")
+  }
+
   /** Open a config file in the editor, creating it first when the target does not exist yet. */
   const openConfigFile = async (file: string) => {
     try {
@@ -179,6 +207,10 @@ export function settingsHost(input: {
   const handle = (message: ToHost) => {
     if (message.type === "configRead") {
       void readConfig()
+      return true
+    }
+    if (message.type === "resetAllSettings") {
+      void resetAllSettings()
       return true
     }
     if (message.type === "configWrite") {

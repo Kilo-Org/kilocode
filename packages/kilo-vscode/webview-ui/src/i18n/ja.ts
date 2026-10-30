@@ -860,6 +860,7 @@ export const dict = {
     "このファイルはより新しいバージョンの Kilo からエクスポートされたものです。一部の設定が無視される場合があります。",
   "settings.aboutKiloCode.importSettings.success":
     "設定をインポートしました。上記の変更内容を確認してから、保存をクリックしてください。",
+  "settings.aboutKiloCode.importSettings.applied": "Settings imported and applied.",
 
   "settings.aboutKiloCode.telemetry.title": "テレメトリ",
   "settings.aboutKiloCode.telemetry.description":

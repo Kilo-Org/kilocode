@@ -845,6 +845,7 @@ export const dict = {
     "این فایل از نسخه جدیدتری از Kilo صادر شده است. برخی تنظیمات ممکن است نادیده گرفته شوند.",
   "settings.aboutKiloCode.importSettings.success":
     "تنظیمات وارد شد. تغییرات بالا را بررسی کنید، سپس روی ذخیره کلیک کنید.",
+  "settings.aboutKiloCode.importSettings.applied": "Settings imported and applied.",
 
   "settings.aboutKiloCode.telemetry.title": "تله‌متری",
   "settings.aboutKiloCode.telemetry.description":
