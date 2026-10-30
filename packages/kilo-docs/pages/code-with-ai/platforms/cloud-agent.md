@@ -156,7 +156,9 @@ Group worktrees into folders in the sidebar. Folders are private to you, not sha
 
 ## Reviewing changes
 
-Select **Changes** in the chat header to open the worktree's saved change summary, including file status and lines added and removed. The view shows the comparison's base branch and when the summary was saved, with the changed-file list on the left and the selected file's diff on the right. Selecting another file replaces the diff in place instead of opening a new tab. Refresh to load the latest saved summary; reloading reads the latest saved revision without starting the workspace. Large summaries can be partial, with some files or line counts omitted.
+Select **Changes** in the chat header to open the worktree's saved change summary. It compares your work two ways: **Uncommitted** first, which shows changes in the working tree since the last commit, and **Against base branch** second, which shows the commits on the worktree branch since it diverged from the base branch. A file you committed and then edited further appears under both. Each file tab is labelled with its comparison, so you can open the same path in either one.
+
+The view shows the comparison's base branch and when the summary was saved, with the changed-file list on the left and the selected file's diff on the right. Selecting another file replaces the diff in place instead of opening a new tab. Refresh to load the latest saved summary; reloading reads the latest saved revision without starting the workspace. Large summaries can be partial, with some files or line counts omitted.
 
 While the change view is open, the current workspace tab is not shown as selected. Select that tab to close the view and return to it.
 
