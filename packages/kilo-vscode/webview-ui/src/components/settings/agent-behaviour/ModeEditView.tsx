@@ -51,7 +51,6 @@ const ModeEditView: Component<Props> = (props) => {
   const builtIn = () => props.row().builtIn
   const scope = () => config.source(agentPath(props.row().id)) ?? "global"
 
-  // Config values read the staged edit at their own path, so an unsaved change shows immediately.
   const description = () => asString(config.value(agentField(props.row().id, "description")))
   const system = () => asString(config.value(agentField(props.row().id, "system")))
   const model = () => parseModelSelection(config.value(agentField(props.row().id, "model")))
@@ -257,7 +256,38 @@ const ModeEditView: Component<Props> = (props) => {
       </Card>
 
       <Show when={!builtIn()}>
-        <PermissionEditor target={{ kind: "agent", name: props.row().id }} />
+        <Card
+          style={{
+            "margin-bottom": "12px",
+            padding: "0",
+            overflow: "hidden",
+            border: "1px solid var(--border-base, var(--vscode-panel-border))",
+          }}
+        >
+          <div
+            style={{
+              padding: "14px 16px 12px",
+              "border-bottom": "1px solid var(--border-weak-base, var(--vscode-panel-border))",
+              background: "var(--bg-subtle-base, var(--vscode-editorWidget-background))",
+            }}
+          >
+            <div data-slot="settings-row-label-title" style={{ "margin-bottom": "6px" }}>
+              {language.t("settings.agentBehaviour.perAgentPermissions.title")}
+            </div>
+            <div
+              style={{
+                "font-size": "var(--kilo-font-size-12)",
+                color: "var(--text-weak-base, var(--vscode-descriptionForeground))",
+                "line-height": "1.45",
+              }}
+            >
+              {language.t("settings.agentBehaviour.perAgentPermissions.description")}
+            </div>
+          </div>
+          <div style={{ padding: "0 16px 4px" }}>
+            <PermissionEditor target={{ kind: "agent", name: props.row().id }} />
+          </div>
+        </Card>
       </Show>
 
       <Show when={rules()} keyed>

@@ -155,7 +155,7 @@ Then regenerate and verify:
 git add <new files>   # the map counts only tracked files
 bun script/upstream/progress.ts                    # validates the inputs
 bun script/upstream/progress.ts --list <feature>   # each open cell needs a reason in the PR
-git checkout origin/v2 -- $(bun script/upstream/progress.ts --outputs)   # CI regenerates the map on v2; do not commit it
+git checkout origin/v2 -- $(bun script/upstream/progress.ts --outputs)   # CI updates the map in a bot PR; do not commit it
 bun script/check-shared-patches.ts --worktree && bun script/check-opencode-annotations.ts --worktree   # before the commit; CI runs both without --worktree on the commit
 bun typecheck      # from the affected package directory, never tsc
 ```

@@ -77,7 +77,6 @@ export function parseMaxSteps(value: string): number | undefined | null {
   return steps
 }
 
-/** The agent's effective config from staged edits then the merged documents. */
 export function agentConfig(value: (path: string[]) => unknown, id: string): Record<string, unknown> {
   const config: Record<string, unknown> = {}
   for (const key of ["mode", "description", "system", "model", "hidden", "disabled", "steps", "permissions"]) {

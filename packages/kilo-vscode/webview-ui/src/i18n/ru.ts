@@ -748,7 +748,7 @@ export const dict = {
   "settings.agentBehaviour.title": "Поведение агента",
   "settings.autoApprove.title": "Автоодобрение",
   "settings.webTools.title": "Веб-инструменты",
-  "settings.webTools.description": "Настройте веб-поиск и автоматизацию браузера.",
+  "settings.webTools.description": "Настройте веб-поиск.",
   "settings.webTools.webSearch.enable": "Включить для всех провайдеров",
   "settings.webTools.browserAutomation": "Автоматизация браузера",
   "settings.webTools.webSearch.title": "Веб-поиск",
@@ -1054,6 +1054,9 @@ export const dict = {
   "settings.agentBehaviour.editMode.promptOverride":
     "Пользовательское переопределение промпта для этого встроенного режима",
   "settings.agentBehaviour.badge.subagent": "субагент",
+  "settings.agentBehaviour.perAgentPermissions.title": "Разрешения для каждого агента",
+  "settings.agentBehaviour.perAgentPermissions.description":
+    "Эти настройки применяются только к этому пользовательскому агенту. Измените значение 'По умолчанию' в раскрывающемся списке, чтобы создать переопределение, или используйте 'Добавить путь' или 'Добавить команду' для исключений конкретных инструментов.",
   "settings.agentBehaviour.permissions.title": "Вычисленные разрешения",
   "settings.agentBehaviour.permissions.count": "{{count}} правил",
   "settings.agentBehaviour.permissions.effective": "Действующие (wildcard):",

@@ -757,7 +757,7 @@ export const dict = {
   "settings.agentBehaviour.title": "Comportamiento del agente",
   "settings.autoApprove.title": "Aprobación automática",
   "settings.webTools.title": "Herramientas web",
-  "settings.webTools.description": "Configura la búsqueda web y la automatización del navegador.",
+  "settings.webTools.description": "Configura la búsqueda web.",
   "settings.webTools.webSearch.enable": "Habilitar para todos los proveedores",
   "settings.webTools.browserAutomation": "Automatización del navegador",
   "settings.webTools.webSearch.title": "Búsqueda web",
@@ -1068,6 +1068,9 @@ export const dict = {
     "Este es un modo integrado. Su definición base no se puede cambiar, pero puedes configurar sobreescrituras a continuación.",
   "settings.agentBehaviour.editMode.promptOverride": "Anulación de prompt personalizado para este modo integrado",
   "settings.agentBehaviour.badge.subagent": "subagente",
+  "settings.agentBehaviour.perAgentPermissions.title": "Permisos por agente",
+  "settings.agentBehaviour.perAgentPermissions.description":
+    "Estos ajustes solo se aplican a este agente personalizado. Cambia el valor 'Predeterminado' en una lista desplegable para crear una anulación, o usa 'Agregar ruta' o 'Agregar comando' para excepciones específicas de cada herramienta.",
   "settings.agentBehaviour.permissions.title": "Permisos calculados",
   "settings.agentBehaviour.permissions.count": "{{count}} reglas",
   "settings.agentBehaviour.permissions.effective": "Efectivo (comodín):",

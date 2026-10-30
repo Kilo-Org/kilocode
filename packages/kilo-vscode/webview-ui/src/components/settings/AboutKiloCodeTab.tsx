@@ -1,8 +1,3 @@
-// Main's About Kilo Code tab on v2 data. The version is the Kilo version from the `kilocode.handshake` RPC, and the
-// status is the connection of the webview's event stream. Telemetry opens the VS Code setting, Settings Transfer
-// exports the global config document and applies an import to the global config, and Reset All Settings clears the
-// `kilo-code.v2.*` settings and the webview globalState keys. Not rendered, no v2 contract: the port (the host relays
-// requests, so the webview has no server port) and the Roo import.
 import { Button } from "@kilocode/kilo-ui/button"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { showToast } from "@kilocode/kilo-ui/toast"
@@ -189,7 +184,7 @@ const AboutKiloCodeTab: Component<AboutKiloCodeTabProps> = (props) => {
   return (
     <div>
       {/* Version Information */}
-      <div style={sectionStyle}>
+      <div data-search-label={language.t("settings.aboutKiloCode.versionInfo")} style={sectionStyle}>
         <h4 style={headingStyle}>{language.t("settings.aboutKiloCode.versionInfo")}</h4>
         <div style={{ display: "flex", "align-items": "center" }}>
           <span style={labelStyle}>{language.t("settings.aboutKiloCode.version.label")}</span>
@@ -198,7 +193,7 @@ const AboutKiloCodeTab: Component<AboutKiloCodeTabProps> = (props) => {
       </div>
 
       {/* Community & Support */}
-      <div style={sectionStyle}>
+      <div data-search-label={language.t("settings.aboutKiloCode.community")} style={sectionStyle}>
         <h4 style={headingStyle}>{language.t("settings.aboutKiloCode.community")}</h4>
         <p style={bodyStyle}>
           {language.t("settings.aboutKiloCode.feedback.prefix")}{" "}
@@ -225,7 +220,7 @@ const AboutKiloCodeTab: Component<AboutKiloCodeTabProps> = (props) => {
       </div>
 
       {/* Telemetry */}
-      <div style={sectionStyle}>
+      <div data-search-label={language.t("settings.aboutKiloCode.telemetry.title")} style={sectionStyle}>
         <h4 style={headingStyle}>{language.t("settings.aboutKiloCode.telemetry.title")}</h4>
         <p style={bodyStyle}>{language.t("settings.aboutKiloCode.telemetry.description")}</p>
         <Button
@@ -239,7 +234,7 @@ const AboutKiloCodeTab: Component<AboutKiloCodeTabProps> = (props) => {
       </div>
 
       {/* CLI Server */}
-      <div style={sectionStyle}>
+      <div data-search-label={language.t("settings.aboutKiloCode.cliServer")} style={sectionStyle}>
         <h4 style={headingStyle}>{language.t("settings.aboutKiloCode.cliServer")}</h4>
         <div style={{ display: "flex", "align-items": "center" }}>
           <span style={labelStyle}>{language.t("settings.aboutKiloCode.status.label")}</span>
@@ -261,7 +256,7 @@ const AboutKiloCodeTab: Component<AboutKiloCodeTabProps> = (props) => {
       </div>
 
       {/* Settings Transfer */}
-      <div style={sectionStyle}>
+      <div data-search-label={language.t("settings.aboutKiloCode.settingsTransfer.title")} style={sectionStyle}>
         <h4 style={headingStyle}>{language.t("settings.aboutKiloCode.settingsTransfer.title")}</h4>
         <p style={bodyStyle}>{language.t("settings.aboutKiloCode.settingsTransfer.description")}</p>
         <div style={{ display: "flex", gap: "8px" }}>
@@ -277,7 +272,7 @@ const AboutKiloCodeTab: Component<AboutKiloCodeTabProps> = (props) => {
       </div>
 
       {/* Reset Settings */}
-      <div style={sectionStyle}>
+      <div data-search-label={language.t("settings.aboutKiloCode.resetSettings.title")} style={sectionStyle}>
         <h4 style={headingStyle}>{language.t("settings.aboutKiloCode.resetSettings.title")}</h4>
         <p style={bodyStyle}>{language.t("settings.aboutKiloCode.resetSettings.description")}</p>
         <Button variant="primary" size="small" onClick={handleReset}>

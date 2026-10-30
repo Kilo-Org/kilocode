@@ -1,5 +1,3 @@
-// The v2 contract of the Agents subtab: the default agent select, the agent list with its badges, and the create,
-// edit, import and remove actions. Config edits are staged into the shared save bar through `useSettingsConfig`.
 import { Button } from "@kilocode/kilo-ui/button"
 import { Card } from "@kilocode/kilo-ui/card"
 import { useDialog } from "@kilocode/kilo-ui/context/dialog"
@@ -32,7 +30,7 @@ interface Option {
   label: string
 }
 
-const AgentsSubtab: Component = () => {
+const AgentsSubtab: Component<{ navigation?: number }> = (props) => {
   const language = useLanguage()
   const v2 = useV2()
   const config = useSettingsConfig()
@@ -125,6 +123,14 @@ const AgentsSubtab: Component = () => {
     setView("list")
     setEditing("")
   }
+
+  createEffect(
+    on(
+      () => props.navigation,
+      () => back(),
+      { defer: true },
+    ),
+  )
 
   const confirmRemove = (row: AgentRow) => {
     dialog.show(() => (
