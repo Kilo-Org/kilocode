@@ -1,15 +1,15 @@
 // The Agent Behaviour tab shell: the horizontal subtab bar and the active subtab's content. The subtabs come from
 // agent-behaviour/subtabs.ts. Only a ready subtab is shown and rendered, so the tab never opens on a blank panel.
-import { Component, createMemo, createSignal, For, Show } from "solid-js"
+import { Component, createMemo, For, Show } from "solid-js"
+import { Dynamic } from "solid-js/web"
 import { useLanguage } from "../../context/language"
 import { AGENT_BEHAVIOUR_SUBTABS } from "./agent-behaviour/subtabs"
+import type { SettingsTabProps } from "./tabs"
 
-const AgentBehaviourTab: Component = () => {
+const AgentBehaviourTab: Component<SettingsTabProps> = (props) => {
   const language = useLanguage()
   const ready = createMemo(() => AGENT_BEHAVIOUR_SUBTABS.filter((subtab) => subtab.ready))
-  const [selected, setSelected] = createSignal("")
-  const active = () => ready().find((subtab) => subtab.id === selected()) ?? ready()[0]
-  const current = () => ready().find((subtab) => subtab.id === active()?.id)
+  const active = createMemo(() => ready().find((subtab) => subtab.id === props.subtab) ?? ready()[0])
 
   return (
     <div>
@@ -26,7 +26,10 @@ const AgentBehaviourTab: Component = () => {
             const selectedTab = () => active()?.id === subtab.id
             return (
               <button
-                onClick={() => setSelected(subtab.id)}
+                data-search-label={language.t(subtab.title)}
+                data-subtab={subtab.id}
+                aria-pressed={selectedTab()}
+                onClick={() => props.onSubtabChange(subtab.id)}
                 style={{
                   padding: "8px 16px",
                   border: "none",
@@ -52,11 +55,8 @@ const AgentBehaviourTab: Component = () => {
         </For>
       </div>
 
-      <Show when={current()} keyed>
-        {(subtab) => {
-          const Content = subtab.component
-          return <Content />
-        }}
+      <Show when={active()}>
+        <Dynamic component={active()!.component} navigation={props.navigation} />
       </Show>
     </div>
   )
