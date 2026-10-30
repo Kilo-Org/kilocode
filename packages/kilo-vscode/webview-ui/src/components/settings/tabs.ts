@@ -9,7 +9,9 @@ import type { SettingsNavigationTarget } from "./settings-search"
 export interface SettingsTabProps {
   settings: SettingsData
   onLogin: () => void
-  subtab: { id: string }
+  subtab: string
+  /** Increments on each search navigation so a subtab can reset its editor without remounting. */
+  navigation: number
   onSubtabChange: (subtab: string) => void
   onNavigate: (target: SettingsNavigationTarget) => void
 }

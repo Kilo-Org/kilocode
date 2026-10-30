@@ -1,6 +1,7 @@
 // The Agent Behaviour tab shell: the horizontal subtab bar and the active subtab's content. The subtabs come from
 // agent-behaviour/subtabs.ts. Only a ready subtab is shown and rendered, so the tab never opens on a blank panel.
 import { Component, createMemo, For, Show } from "solid-js"
+import { Dynamic } from "solid-js/web"
 import { useLanguage } from "../../context/language"
 import { AGENT_BEHAVIOUR_SUBTABS } from "./agent-behaviour/subtabs"
 import type { SettingsTabProps } from "./tabs"
@@ -8,10 +9,7 @@ import type { SettingsTabProps } from "./tabs"
 const AgentBehaviourTab: Component<SettingsTabProps> = (props) => {
   const language = useLanguage()
   const ready = createMemo(() => AGENT_BEHAVIOUR_SUBTABS.filter((subtab) => subtab.ready))
-  const active = createMemo(() => {
-    const subtab = ready().find((item) => item.id === props.subtab.id) ?? ready()[0]
-    return subtab && { ...subtab }
-  })
+  const active = createMemo(() => ready().find((subtab) => subtab.id === props.subtab) ?? ready()[0])
 
   return (
     <div>
@@ -57,11 +55,8 @@ const AgentBehaviourTab: Component<SettingsTabProps> = (props) => {
         </For>
       </div>
 
-      <Show when={active()} keyed>
-        {(subtab) => {
-          const Content = subtab.component
-          return <Content />
-        }}
+      <Show when={active()}>
+        <Dynamic component={active()!.component} navigation={props.navigation} />
       </Show>
     </div>
   )

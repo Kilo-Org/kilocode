@@ -32,7 +32,8 @@ const Settings: Component<SettingsProps> = (props) => {
   const vscode = useVSCode()
   const config = useSettingsConfig()
   const [active, setActive] = createSignal(props.tab ?? READY_TABS[0]?.id ?? "providers")
-  const [subtab, setSubtab] = createSignal({ id: "agents" })
+  const [subtab, setSubtab] = createSignal("agents")
+  const [navigation, setNavigation] = createSignal(0)
 
   // Sync when the parent changes the tab prop (e.g. via navigate message)
   createEffect(
@@ -64,8 +65,10 @@ const Settings: Component<SettingsProps> = (props) => {
     entries: searchEntries,
     translate: (key) => language.t(key),
     onNavigate: (target) => {
-      // A fresh target returns an open subtab editor to its searchable content.
-      if (target.tab === "agentBehaviour") setSubtab({ id: target.subtab ?? "agents" })
+      if (target.tab === "agentBehaviour") {
+        setSubtab(target.subtab ?? "agents")
+        setNavigation((count) => count + 1)
+      }
       onTabChange(target.tab)
     },
   })
@@ -139,7 +142,8 @@ const Settings: Component<SettingsProps> = (props) => {
                 settings={props.settings}
                 onLogin={props.onLogin}
                 subtab={subtab()}
-                onSubtabChange={(id) => setSubtab((current) => (current.id === id ? current : { id }))}
+                navigation={navigation()}
+                onSubtabChange={setSubtab}
                 onNavigate={search.navigate}
               />
             </Tabs.Content>
