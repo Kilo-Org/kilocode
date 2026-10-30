@@ -89,7 +89,7 @@ const ModeEditView: Component<Props> = (props) => {
   }
   const commitSteps = (value: string) => {
     const parsed = parseMaxSteps(value)
-    if (parsed === null) return
+    if (parsed === null) return false
     config.set(agentField(props.row().id, "steps"), parsed, scope())
   }
   const writeToggle = (key: "hidden" | "disabled") => (value: boolean) => {
@@ -293,7 +293,7 @@ const DraftField: Component<{
   value: () => string
   placeholder: string
   multiline?: boolean
-  commit: (value: string) => void
+  commit: (value: string) => void | false | Promise<unknown>
 }> = (props) => {
   const [draft, setDraft] = createSignal(props.value())
   createEffect(on(props.value, (value) => setDraft(value), { defer: true }))
@@ -305,7 +305,7 @@ const DraftField: Component<{
       multiline={props.multiline}
       onChange={setDraft}
       onBlur={() => {
-        if (draft() !== props.value()) props.commit(draft())
+        if (draft() !== props.value() && props.commit(draft()) === false) setDraft(props.value())
       }}
     />
   )
