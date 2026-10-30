@@ -2,6 +2,8 @@
 // read-only permission projection. The list starts from `api.agent.list` and adds the config keys the server does
 // not return, so a disabled mode stays visible, as on v1.
 import type { AgentInfo, PermissionEffect, PermissionRule } from "@opencode/client"
+import { aliasOf } from "../../../../../src/config-aliases"
+import type { ConfigScope } from "../../../../../src/protocol"
 
 // The agents the v2 core plugins register before user config. They have no config document behind them, so the tab
 // shows them as built-in: the override layout, no export and no remove. Mirrors the built-in set in
@@ -24,8 +26,56 @@ export function isBuiltInAgent(id: string) {
   return BUILT_IN_AGENTS.has(id)
 }
 
+export function isAgentNameTaken(id: string, taken: string[]) {
+  return isBuiltInAgent(id) || taken.includes(id)
+}
+
 export const agentPath = (id: string) => ["agents", id]
 export const agentField = (id: string, ...rest: string[]) => ["agents", id, ...rest]
+
+type AgentConfigFiles = {
+  raw: (scope: ConfigScope) => Record<string, unknown>
+  unset: (path: string[], scope: ConfigScope) => Promise<boolean>
+}
+
+function agentDefinitionPaths(id: string, document: Record<string, unknown>): string[][] {
+  const path = agentPath(id)
+  return [path, ...aliasOf(path)].filter((candidate) => {
+    if (candidate.length !== 2) return false
+    const agents = document[candidate[0]]
+    return typeof agents === "object" && agents !== null && !Array.isArray(agents) && Object.hasOwn(agents, id)
+  })
+}
+
+export function isDefinedAgent(id: string, ...documents: Record<string, unknown>[]) {
+  return documents.some((document) => agentDefinitionPaths(id, document).length > 0)
+}
+
+export async function removeAgentConfig(config: AgentConfigFiles, id: string) {
+  for (const scope of ["project", "global"] as const) {
+    for (const path of agentDefinitionPaths(id, config.raw(scope))) {
+      await config.unset(path, scope)
+      // The host also removes legacy aliases when it deletes the canonical path.
+      if (path[0] === "agents") break
+    }
+  }
+}
+
+export async function clearDefaultAgent(config: AgentConfigFiles, activeScope?: ConfigScope) {
+  const scopes = (["project", "global"] as const).filter(
+    (scope) => scope === activeScope || Object.hasOwn(config.raw(scope), "default_agent"),
+  )
+  await Promise.all(scopes.map((scope) => config.unset(["default_agent"], scope)))
+}
+
+/** Blank unsets the value; null means the input must not be written. */
+export function parseMaxSteps(value: string): number | undefined | null {
+  const input = value.trim()
+  if (!input) return undefined
+  const steps = Number(input)
+  if (!/^\d+$/.test(input) || !Number.isSafeInteger(steps) || steps <= 0) return null
+  return steps
+}
 
 export function agentConfig(value: (path: string[]) => unknown, id: string): Record<string, unknown> {
   const config: Record<string, unknown> = {}

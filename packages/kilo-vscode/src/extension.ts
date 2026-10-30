@@ -31,7 +31,7 @@ export function activate(context: ExtensionContext) {
     },
   })
   const view = chat({ context, server, directory })
-  const panel = settings({ context, server, directory })
+  const panel = settings({ context, server, directory, onReset: view.syncState })
 
   context.subscriptions.push(
     output,

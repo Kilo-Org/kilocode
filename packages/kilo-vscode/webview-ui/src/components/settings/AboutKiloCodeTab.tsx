@@ -15,12 +15,13 @@ export interface AboutKiloCodeTabProps {
   onLogin: () => void
 }
 
+// Keep the guard when the About tab unmounts during an import.
+const [importing, setImporting] = createSignal(false)
+
 const AboutKiloCodeTab: Component<AboutKiloCodeTabProps> = (props) => {
   const language = useLanguage()
   const vscode = useVSCode()
   const config = useSettingsConfig()
-  const [importing, setImporting] = createSignal(false)
-
   const open = (url: string) => props.settings.open(url)
   const post = (message: unknown) => vscode.postMessage(message as never)
 
@@ -90,28 +91,39 @@ const AboutKiloCodeTab: Component<AboutKiloCodeTabProps> = (props) => {
       setImporting(true)
       const reader = new FileReader()
       reader.onload = async () => {
-        setImporting(false)
-        const result = parseImport(reader.result as string)
-        if (!result.ok) {
-          const key =
-            result.error === "invalidJson"
-              ? "settings.aboutKiloCode.importSettings.invalidJson"
-              : "settings.aboutKiloCode.importSettings.invalidConfig"
-          showToast({ variant: "error", title: language.t(key) })
-          return
+        try {
+          const result = parseImport(reader.result as string)
+          if (!result.ok) {
+            const key =
+              result.error === "invalidJson"
+                ? "settings.aboutKiloCode.importSettings.invalidJson"
+                : "settings.aboutKiloCode.importSettings.invalidConfig"
+            showToast({ variant: "error", title: language.t(key) })
+            return
+          }
+          if (result.warning === "newerVersion")
+            showToast({ variant: "default", title: language.t("settings.aboutKiloCode.importSettings.newerVersion") })
+          // Apply every known key to the global config directly, one write at a time.
+          const failed: string[] = []
+          for (const [key, value] of Object.entries(result.config)) {
+            try {
+              if (!(await config.set([key], value, "global"))) failed.push(key)
+            } catch {
+              failed.push(key)
+            }
+          }
+          if (failed.length) {
+            showToast({
+              variant: "error",
+              title: language.t("settings.saveBar.saveFailed"),
+              description: failed.join(", "),
+            })
+            return
+          }
+          showToast({ variant: "success", title: language.t("settings.aboutKiloCode.importSettings.applied") })
+        } finally {
+          setImporting(false)
         }
-        if (result.warning === "newerVersion")
-          showToast({ variant: "default", title: language.t("settings.aboutKiloCode.importSettings.newerVersion") })
-        // Apply every known key to the global config directly, one write at a time.
-        let failed = false
-        for (const [key, value] of Object.entries(result.config)) {
-          if (!(await config.set([key], value, "global"))) failed = true
-        }
-        if (failed) {
-          showToast({ variant: "error", title: language.t("settings.saveBar.saveFailed") })
-          return
-        }
-        showToast({ variant: "success", title: language.t("settings.aboutKiloCode.importSettings.applied") })
       }
       reader.onerror = () => {
         setImporting(false)
