@@ -25,10 +25,10 @@ const model = {
   api: { id: "test", url: "https://example.invalid", npm: "@ai-sdk/anthropic" },
 } as Provider.Model
 
-function fixture(sessionID: SessionID) {
+function fixture(sessionID: SessionID, descending = false) {
   const messages: MessageV2.WithParts[] = []
   function user(text = "hello", time = messages.length) {
-    const id = MessageID.make(`msg_${String(messages.length).padStart(6, "0")}`)
+    const id = MessageID.make(`msg_${String(descending ? 100000 - messages.length : messages.length).padStart(6, "0")}`)
     const message: MessageV2.WithParts = {
       info: {
         id, sessionID, role: "user", time: { created: time }, agent: "test",
@@ -40,7 +40,7 @@ function fixture(sessionID: SessionID) {
     return message
   }
   function assistant(parent: MessageV2.WithParts, opts: Partial<MessageV2.Assistant> = {}) {
-    const id = MessageID.make(`msg_${String(messages.length).padStart(6, "0")}`)
+    const id = MessageID.make(`msg_${String(descending ? 100000 - messages.length : messages.length).padStart(6, "0")}`)
     const message: MessageV2.WithParts = {
       info: {
         id, sessionID, role: "assistant", parentID: parent.info.id, time: { created: messages.length },
@@ -142,14 +142,14 @@ function observedDatabase(database: Database.Interface) {
 }
 
 describe("bounded history hydration", () => {
-  for (const shape of ["none", "one", "several", "tail", "manual", "unfinished", "error", "missing-tail", "self-tail", "missing-parent", "tie", "reverted", "forked", "queue"]) {
+  for (const shape of ["none", "one", "several", "tail", "manual", "unfinished", "error", "missing-tail", "self-tail", "missing-parent", "tie", "reverted", "forked", "queue", "nonmonotonic"]) {
     it.live(`matches full-load model bytes: ${shape}`, () => Effect.gen(function* () {
       const sessionID = SessionID.make(`ses_hydration_${shape}`)
-      const f = fixture(sessionID)
+      const f = fixture(sessionID, shape === "nonmonotonic")
       for (let i = 0; i < 121; i++) f.assistant(f.user(`old ${i}`))
       if (shape === "one" || shape === "reverted" || shape === "tie" || shape === "forked" || shape === "queue") f.compact()
       if (shape === "several") { f.compact(); f.assistant(f.user()); f.compact() }
-      if (shape === "tail") {
+      if (shape === "tail" || shape === "nonmonotonic") {
         const tail = f.user("retained")
         for (let i = 0; i < 60; i++) f.assistant(f.user())
         f.compact(tail)
