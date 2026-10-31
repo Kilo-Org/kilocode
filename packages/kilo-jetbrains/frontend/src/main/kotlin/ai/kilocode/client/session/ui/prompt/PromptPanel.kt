@@ -14,6 +14,7 @@ import ai.kilocode.client.session.ui.ReasoningPicker
 import ai.kilocode.client.session.ui.SessionRootPanel
 import ai.kilocode.client.session.model.PromptAttachment
 import ai.kilocode.client.session.model.PromptAttachmentExtractor
+import ai.kilocode.client.session.model.PromptDraft
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionEditorStyleTarget
 import ai.kilocode.client.session.ui.style.SessionUiStyle
@@ -569,6 +570,12 @@ class PromptPanel(
 
     @RequiresEdt
     fun attachments(): List<PromptAttachment> = attachments.toList()
+
+    @RequiresEdt
+    internal fun draft(): PromptDraft? {
+        if (editor.text.isEmpty() && attachments.isEmpty()) return null
+        return PromptDraft(editor.text, attachments())
+    }
 
     @RequiresEdt
     fun setText(value: String) {

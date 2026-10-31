@@ -12,9 +12,12 @@ import ai.kilocode.client.session.history.LocalHistoryItem
 import ai.kilocode.client.session.controller.SessionController
 import ai.kilocode.client.session.model.Permission
 import ai.kilocode.client.session.model.PermissionMeta
+import ai.kilocode.client.session.model.PromptAttachment
 import ai.kilocode.client.session.model.Question
 import ai.kilocode.client.session.model.QuestionItem
 import ai.kilocode.client.session.model.SessionState
+import ai.kilocode.client.session.model.Text
+import ai.kilocode.client.session.ui.prompt.PromptPanel
 import ai.kilocode.client.testing.FakeAppRpcApi
 import ai.kilocode.client.testing.FakeSessionRpcApi
 import ai.kilocode.client.testing.TestUiTimers
@@ -29,6 +32,8 @@ import ai.kilocode.rpc.dto.KiloWorkspaceStateDto
 import ai.kilocode.rpc.dto.KiloWorkspaceStatusDto
 import ai.kilocode.rpc.dto.MessageDto
 import ai.kilocode.rpc.dto.MessageTimeDto
+import ai.kilocode.rpc.dto.MessageWithPartsDto
+import ai.kilocode.rpc.dto.PartDto
 import ai.kilocode.rpc.dto.QuestionInfoDto
 import ai.kilocode.rpc.dto.QuestionRequestDto
 import ai.kilocode.rpc.dto.SessionDto
@@ -40,6 +45,8 @@ import com.intellij.openapi.util.registry.Registry
 import com.intellij.openapi.util.registry.RegistryKeyDescriptor
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import kotlinx.coroutines.flow.MutableSharedFlow
+import java.awt.Component
+import java.awt.Container
 import javax.swing.JLabel
 import javax.swing.JComponent
 import javax.swing.JPanel
@@ -217,6 +224,36 @@ class SessionSidePanelManagerTest : BasePlatformTestCase() {
         assertFalse(ui.contains(first))
     }
 
+    fun `test anonymous draft survives history and back`() {
+        val manager = manager()
+        manager.newSession()
+        val first = active(manager) as SessionUi
+        val item = PromptAttachment("file", "notes.txt", "text/plain", "file:///tmp/notes.txt")
+        prompt(first).setText("Explain the login flow")
+        prompt(first).addAttachmentForTest(item)
+
+        manager.showHistory()
+        back(manager)
+
+        assertSame(first, active(manager))
+        assertEquals("Explain the login flow", prompt(first).text())
+        assertEquals(listOf(item), prompt(first).attachments())
+    }
+
+    fun `test new session reuses hidden anonymous draft`() {
+        val manager = manager()
+        manager.newSession()
+        val first = active(manager) as SessionUi
+        prompt(first).setText("Explain the login flow")
+
+        manager.openSession(session("ses_recent"))
+        manager.newSession()
+
+        assertSame(first, active(manager))
+        assertEquals("Explain the login flow", prompt(first).text())
+        assertEquals(listOf("/test" to null, "/test" to "ses_recent"), created)
+    }
+
     fun `test open session resolves historical workspace`() {
         val manager = manager()
 
@@ -274,6 +311,88 @@ class SessionSidePanelManagerTest : BasePlatformTestCase() {
 
         assertNotSame(first, active(manager))
         assertEquals(listOf("/test" to "ses_1", "/test" to "ses_2", "/test" to "ses_1"), created)
+    }
+
+    fun `test hidden session draft survives history timeout`() {
+        useShortInactiveDisposeTimeout()
+        rpc.histories["ses_1"] = mutableListOf(MessageWithPartsDto(
+            msg("msg_saved", "ses_1", "assistant"),
+            listOf(PartDto("prt_saved", "ses_1", "msg_saved", "text", text = "Saved conversation")),
+        ))
+        val manager = manager()
+        manager.openSession(session("ses_1"))
+        settle()
+        val first = active(manager) as SessionUi
+        val item = PromptAttachment("file", "notes.txt", "text/plain", "file:///tmp/notes.txt")
+        prompt(first).setText("Also check the user name")
+        prompt(first).addAttachmentForTest(item)
+        manager.showHistory()
+
+        expire()
+        assertFalse(ui.contains(first))
+        manager.openSession(session("ses_1"))
+        settle()
+
+        val second = active(manager) as SessionUi
+        assertNotSame(first, second)
+        assertEquals("ses_1", second.id)
+        val text = second.controller().model.content("msg_saved", "prt_saved") as Text
+        assertEquals("Saved conversation", text.content.toString())
+        assertEquals(2, rpc.historyCalls)
+        assertEquals(0, rpc.creates)
+        assertEmpty(rpc.deletes)
+        assertEquals("Also check the user name", prompt(active(manager)).text())
+        assertEquals(listOf(item), prompt(active(manager)).attachments())
+    }
+
+    fun `test cleared restored draft stays empty after another timeout`() {
+        useShortInactiveDisposeTimeout()
+        val manager = manager()
+        manager.openSession(session("ses_1"))
+        prompt(active(manager)).setText("Keep this draft")
+        manager.showHistory()
+        expire()
+        manager.openSession(session("ses_1"))
+        prompt(active(manager)).clear()
+        manager.showHistory()
+        expire()
+        manager.openSession(session("ses_1"))
+
+        assertEquals("", prompt(active(manager)).text())
+        assertEmpty(prompt(active(manager)).attachments())
+    }
+
+    fun `test expired drafts stay with their own sessions`() {
+        useShortInactiveDisposeTimeout()
+        val manager = manager()
+        val text = "  Keep this indentation\n\n"
+        val item = PromptAttachment("file", "notes.txt", "text/plain", "file:///tmp/notes.txt")
+        manager.openSession(session("ses_1"))
+        prompt(active(manager)).setText(text)
+        manager.openSession(session("ses_2"))
+        prompt(active(manager)).addAttachmentForTest(item)
+        manager.showHistory()
+        expire()
+
+        manager.openSession(session("ses_1"))
+        assertEquals(text, prompt(active(manager)).draft()?.text)
+        assertEmpty(prompt(active(manager)).attachments())
+        manager.openSession(session("ses_2"))
+        assertEquals("", prompt(active(manager)).text())
+        assertEquals(listOf(item), prompt(active(manager)).attachments())
+    }
+
+    fun `test deleting expired session discards retained draft`() {
+        useShortInactiveDisposeTimeout()
+        val manager = manager()
+        manager.openSession(session("ses_1"))
+        prompt(active(manager)).setText("Delete this draft")
+        manager.showHistory()
+        expire()
+        remove(manager, "ses_1")
+        manager.openSession(session("ses_1"))
+
+        assertEquals("", prompt(active(manager)).text())
     }
 
     fun `test queued hidden transcript events are discarded after timeout disposal`() {
@@ -723,7 +842,7 @@ class SessionSidePanelManagerTest : BasePlatformTestCase() {
                     workspace,
                     sessions,
                     app,
-                    coroutines.scope,
+                    SessionUiFactory(coroutines.scope).scope(),
                     ref = ref,
                     manager = owner,
                     workspaces = workspaces,
@@ -744,6 +863,15 @@ class SessionSidePanelManagerTest : BasePlatformTestCase() {
     }
 
     private fun active(manager: SessionSidePanelManager) = manager.component.getComponent(0) as JPanel
+
+    private fun prompt(root: Component): PromptPanel {
+        fun find(node: Component): PromptPanel? {
+            if (node is PromptPanel) return node
+            if (node !is Container) return null
+            return node.components.firstNotNullOfOrNull(::find)
+        }
+        return requireNotNull(find(root)) { "PromptPanel not found" }
+    }
 
     private fun controller() = SessionController(
         parent = testRootDisposable,
