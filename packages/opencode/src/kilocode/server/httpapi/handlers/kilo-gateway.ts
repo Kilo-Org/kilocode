@@ -2,6 +2,7 @@ import {
   GatewayError,
   fetchCloudSession,
   fetchKiloImageModels,
+  fetchKiloModelEndpoints,
   fetchKiloTranscriptionModels,
   getCloudSessions,
   getOrganizationId,
@@ -32,7 +33,7 @@ import { KilocodeConfig } from "@/kilocode/config/config"
 import { ClaudeMigration } from "@/kilocode/config/claude-migration"
 import { Auth } from "@/auth"
 import { Config } from "@/config/config"
-import { organization as catalogOrganization } from "@/kilocode/provider/catalog"
+import { compatible, organization as catalogOrganization } from "@/kilocode/provider/catalog"
 import { EventV2Bridge } from "@/event-v2-bridge"
 import { Storage } from "@/storage/storage"
 import { Instance } from "@/kilocode/instance"
@@ -468,6 +469,31 @@ export const kiloGatewayHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilo",
       return result.models
     })
 
+    const modelEndpoints = Effect.fn("KiloGatewayHttpApi.modelEndpoints")(function* (ctx) {
+      // The kilo catalog resolves token, organization and gateway URL exactly
+      // like the models catalog request, so a token meant for a self-hosted
+      // gateway never reaches the default host, and an organization the token
+      // is not scoped to is rejected the same way the models catalog rejects it.
+      // The public catalog is unauthenticated and needs none of it.
+      const options = ctx.query.catalog === "public" ? {} : yield* cache.options("kilo")
+      if (ctx.query.catalog !== "public" && !compatible(options)) {
+        return yield* Effect.fail(new HttpApiError.BadRequest({}))
+      }
+
+      const result = yield* Effect.tryPromise({
+        try: () => fetchKiloModelEndpoints(ctx.query.model, { ...options, catalog: ctx.query.catalog }),
+        catch: () => new HttpApiError.BadRequest({}),
+      })
+
+      if (result.error && result.endpoints.length === 0) {
+        const err =
+          result.error.kind === "unauthorized" ? new HttpApiError.Unauthorized({}) : new HttpApiError.BadRequest({})
+        return yield* Effect.fail(err)
+      }
+
+      return result.endpoints
+    })
+
     const transcriptionModels = Effect.fn("KiloGatewayHttpApi.transcriptionModels")(function* () {
       const info = yield* proxyAuth()
       if (!info.auth) return yield* Effect.fail(new HttpApiError.Unauthorized({}))
@@ -499,6 +525,7 @@ export const kiloGatewayHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilo",
       .handle("edit", edit)
       .handle("audioTranscriptions", audioTranscriptions)
       .handle("imageModels", imageModels)
+      .handle("modelEndpoints", modelEndpoints)
       .handle("transcriptionModels", transcriptionModels)
       .handle("notifications", notifications)
       .handle("organization", organization)
