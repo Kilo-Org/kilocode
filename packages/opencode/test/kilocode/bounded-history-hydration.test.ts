@@ -382,10 +382,12 @@ describe("bounded history hydration", () => {
           partBytes: total.partBytes + (read.table === PartTable ? read.bytes : 0),
         }), { rows: 0, bytes: 0, partRows: 0, partBytes: 0 })
       }
-      const rounds: { round: number; order: string; path: string; ms: number; maxWait: number; probes: number }[] = []
-      for (let round = 0; round < 6; round++) {
-        const order = round % 2 === 0 ? ["old", "new"] : ["new", "old"]
-        for (const name of order) {
+      const rounds: { round: number; slot: number; control: boolean; order: string; path: string; ms: number; maxWait: number; probes: number }[] = []
+      // Three old/old rounds measure the run's own scheduling noise without a product change.
+      for (let round = 0; round < 9; round++) {
+        const order = round >= 6 ? ["old", "old"] : round % 2 === 0 ? ["old", "new"] : ["new", "old"]
+        for (let slot = 0; slot < order.length; slot++) {
+          const name = order[slot]
           const state = { running: true }
           const waits: number[] = []
           const prober = yield* Effect.gen(function* () {
@@ -404,7 +406,7 @@ describe("bounded history hydration", () => {
           state.running = false
           yield* Fiber.join(prober)
           expect(Buffer.from(JSON.stringify(out))).toEqual(reference)
-          rounds.push({ round, order: order.join("/"), path: name, ms, maxWait: Math.max(0, ...waits), probes: waits.length })
+          rounds.push({ round, slot, control: round >= 6, order: order.join("/"), path: name, ms, maxWait: Math.max(0, ...waits), probes: waits.length })
         }
       }
       console.log(JSON.stringify({ costShape: shape, messages: f.messages.length, counts, rounds }))
