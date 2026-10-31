@@ -47,6 +47,18 @@ Kilo selects the model pool for `kilo-auto/efficient` and `kilo-auto/frontier`; 
 
 To route across the exact models you trust — including client models the gateway cannot reach — create a [custom auto router](#custom-auto-routers).
 
+### Routing modes
+
+Account owners choose a routing mode in the Kilo web app. The mode decides how each request is matched to a candidate from the pool, and it applies to the platform Efficient and Frontier tiers and to each custom auto router.
+
+| Mode | Behavior |
+|---|---|
+| **Best accuracy** | Routes to the most accurate candidate that passes the router's filters. |
+| **Cost per accuracy** | Balances cost against accuracy, preferring a cheaper candidate but tolerating small cost differences so it does not switch away from a solid incumbent for a marginal saving. |
+| **Cheapest** | Routes to the lowest-cost candidate that still meets the router's accuracy threshold. A cost tie goes to the higher-accuracy candidate, and when no candidate meets the threshold it routes to the most accurate candidate instead. |
+
+Cheapest reuses the same deny, capability, and active filters as the other modes, along with the low-confidence override that falls back to the most accurate model. Once Cheapest selects a model, that model must keep meeting the router's strict accuracy threshold to stay selected; the small-cost-difference tolerance applies only to Cost per accuracy. Cheapest keeps the model variant it picked.
+
 {% callout type="warning" title="Data handling for Auto Free" %}
 Auto Free may route your requests to providers that log prompts and outputs and use them to improve their services. Do not submit personal or confidential data when using Auto Free. In particular, it may route to NVIDIA's free endpoints.
 

@@ -170,6 +170,12 @@ You can change both choices later:
 
 Display changes apply as a draft. Click **Save** to keep them or **Discard** to revert.
 
+### Display font size and username
+
+The chat UI uses a 13px font by default. Change it from 10 to 24 under **Settings → Display**, and the extension applies the size to every open Kilo webview. In VS Code settings, the same value is the `kilo-code.new.fontSize` setting.
+
+**Username** under the same tab sets the name shown on your messages in conversations. It is stored as `username` in `kilo.jsonc`.
+
 ### Markdown Diff Rendering
 
 Markdown files in Kilo diff viewers can be shown as rendered Markdown instead of a raw text diff. Use the eye/code toggle in a Markdown file header, or set `kilo-code.new.diff.renderMarkdown` to `true` to render Markdown files by default.
@@ -186,6 +192,10 @@ You can export and import settings from the **About Kilo Code** tab in the Setti
 - **Import**: Loads a previously exported JSON file into the settings draft. Changes are not applied immediately — you can review them and click Save or Discard, just like any manual edit.
 
 Config files are also plain-text and portable — you can copy `~/.config/kilo/kilo.jsonc` between machines directly.
+
+### Reset all settings
+
+**About Kilo Code → Reset All Settings** resets the VS Code extension–specific settings to their default values after a confirmation. Settings shared with the CLI, such as agents and auto-approve rules, live in your `kilo.jsonc` config and are not reset. This is the way to clear extension settings that are stored in VS Code rather than in the config file.
 
 {% /tab %}
 {% tab label="CLI" %}
