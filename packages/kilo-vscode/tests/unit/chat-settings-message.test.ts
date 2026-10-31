@@ -2,7 +2,9 @@ import { afterEach, beforeEach, describe, expect, it } from "bun:test"
 import * as vscode from "vscode"
 import {
   buildChatSettingsMessage,
+  buildSessionLocationMessage,
   buildTimelineSettingMessage,
+  currentSessionLocation,
   validChatSetting,
   watchChatConfig,
 } from "../../src/kilo-provider/chat-settings"
@@ -146,6 +148,48 @@ describe("timeline settings", () => {
     expect(parent).toHaveLength(3)
     expect(child).toHaveLength(2)
     main.dispose()
+    expect(listeners.size).toBe(0)
+  })
+})
+
+describe("session open location", () => {
+  it.each([
+    [undefined, "sidebar"],
+    ["sidebar", "sidebar"],
+    ["editorTab", "editorTab"],
+    ["bogus", "sidebar"],
+  ])("maps the saved value %s to %s", (saved, location) => {
+    const state = new Map<string, unknown>()
+    if (saved !== undefined) state.set("sessionOpenLocation", saved)
+    stubConfig(state, "kilo-code.new")
+
+    expect(buildSessionLocationMessage()).toEqual({ type: "sessionLocationLoaded", location })
+    expect(currentSessionLocation()).toBe(location)
+  })
+
+  it("tells open viewers when the setting changes, and ignores other settings", () => {
+    const state = new Map<string, unknown>()
+    stubConfig(state, "kilo-code.new")
+    const listeners = new Set<(event: vscode.ConfigurationChangeEvent) => void>()
+    const workspace = vscode.workspace as unknown as Stub
+    workspace.onDidChangeConfiguration = (listener) => {
+      listeners.add(listener)
+      return new vscode.Disposable(() => listeners.delete(listener))
+    }
+    const emit = (key: string) => {
+      for (const listener of listeners) listener({ affectsConfiguration: (name) => name === key })
+    }
+    const seen: unknown[] = []
+    const watch = watchChatConfig((msg) => seen.push(msg))
+
+    emit("kilo-code.new.showTokenThroughput")
+    expect(seen).toEqual([])
+
+    state.set("sessionOpenLocation", "editorTab")
+    emit("kilo-code.new.sessionOpenLocation")
+    expect(seen).toEqual([{ type: "sessionLocationLoaded", location: "editorTab" }])
+
+    watch.dispose()
     expect(listeners.size).toBe(0)
   })
 })

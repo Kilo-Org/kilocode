@@ -1,5 +1,6 @@
 import * as vscode from "vscode"
 import { integratedBrowserLinkDestination } from "../services/browser-automation/chrome-setting"
+import { sessionLocation, type SessionLocation } from "./session-tabs"
 
 type Post = (msg: unknown) => void
 
@@ -26,8 +27,22 @@ export function buildTimelineSettingMessage() {
   }
 }
 
+export function currentSessionLocation(): SessionLocation {
+  return sessionLocation(vscode.workspace.getConfiguration("kilo-code.new").get("sessionOpenLocation"))
+}
+
+export function buildSessionLocationMessage() {
+  return {
+    type: "sessionLocationLoaded" as const,
+    location: currentSessionLocation(),
+  }
+}
+
 export function watchChatConfig(post: Post): vscode.Disposable {
   return vscode.workspace.onDidChangeConfiguration((event) => {
+    if (event.affectsConfiguration("kilo-code.new.sessionOpenLocation")) {
+      post(buildSessionLocationMessage())
+    }
     if (
       event.affectsConfiguration("kilo-code.new.chat") ||
       event.affectsConfiguration("kilo-code.new.experimental.browserAutomation") ||
