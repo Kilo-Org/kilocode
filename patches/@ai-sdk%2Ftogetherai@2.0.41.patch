@@ -1,0 +1,55 @@
+# Kilo patch: Together AI's chat models never ask for streaming usage.
+#
+# Together AI only returns the final usage chunk when the request carries
+# stream_options: { include_usage: true }. The pinned @ai-sdk/togetherai SDK
+# builds its chat model without that flag, so the AI SDK reports no tokens and
+# Kilo records 0 usage and 0 cost for every Together AI response.
+#
+# The SDK has no includeUsage provider setting, so the flag cannot be enabled
+# from Kilo code; it has to be patched into the SDK itself. Upstream shipped
+# an equivalent fix in @ai-sdk/togetherai 2.0.68, which also enables usage for
+# completion models and pulls in a newer @ai-sdk/provider* family. Keep this
+# patch until the pinned version reaches 2.0.68; dropping it then also turns
+# on usage reporting for completion models.
+#
+# Only the chat model is changed here: completion, embedding, image and
+# reranking models keep their current behaviour.
+diff --git a/dist/index.js b/dist/index.js
+index c451096..2cbc13e 100644
+--- a/dist/index.js
++++ b/dist/index.js
+@@ -318,7 +318,7 @@
+   const createChatModel = (modelId) => {
+     return new import_openai_compatible.OpenAICompatibleChatLanguageModel(
+       modelId,
+-      getCommonModelConfig("chat")
++      { ...getCommonModelConfig("chat"), includeUsage: true }
+     );
+   };
+   const createCompletionModel = (modelId) => new import_openai_compatible.OpenAICompatibleCompletionLanguageModel(
+diff --git a/dist/index.mjs b/dist/index.mjs
+index e2ae6aa..7ed8593 100644
+--- a/dist/index.mjs
++++ b/dist/index.mjs
+@@ -313,7 +313,7 @@
+   const createChatModel = (modelId) => {
+     return new OpenAICompatibleChatLanguageModel(
+       modelId,
+-      getCommonModelConfig("chat")
++      { ...getCommonModelConfig("chat"), includeUsage: true }
+     );
+   };
+   const createCompletionModel = (modelId) => new OpenAICompatibleCompletionLanguageModel(
+diff --git a/src/togetherai-provider.ts b/src/togetherai-provider.ts
+index f63fcf9..85074d1 100644
+--- a/src/togetherai-provider.ts
++++ b/src/togetherai-provider.ts
+@@ -150,7 +150,7 @@
+   const createChatModel = (modelId: TogetherAIChatModelId) => {
+     return new OpenAICompatibleChatLanguageModel(
+       modelId,
+-      getCommonModelConfig('chat'),
++      { ...getCommonModelConfig('chat'), includeUsage: true },
+     );
+   };
+ 

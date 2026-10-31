@@ -1,3 +1,6 @@
+// kilocode_change start - initialize the provider registry before importing a provider from its cycle.
+import "@opencode-ai/core/plugin/provider"
+// kilocode_change end
 import { AISDK } from "@opencode-ai/core/aisdk"
 import { describe, expect } from "bun:test"
 import type { LanguageModelV3 } from "@ai-sdk/provider"
@@ -18,6 +21,8 @@ const addPlugin = Effect.fn(function* () {
   const host = yield* PluginHost.make(plugin)
   yield* TogetherAIPlugin.effect(host)
 })
+
+const sse = (value: unknown) => `data: ${JSON.stringify(value)}\n\n` // kilocode_change
 
 function fakeSelectorSdk(calls: string[]) {
   const make = (method: string) => (id: string) => {
@@ -126,4 +131,72 @@ describe("TogetherAIPlugin", () => {
       expect(calls).toEqual(["languageModel:meta-llama/Llama-3.3-70B-Instruct-Turbo"])
     }),
   )
+
+  // kilocode_change start - regression test for Together AI streaming usage (issue 46).
+  it.effect("requests and reads the final usage chunk for bundled and custom provider IDs", () =>
+    Effect.gen(function* () {
+      const aisdk = yield* AISDK.Service
+      yield* addPlugin()
+
+      for (const providerID of ["togetherai", "custom-togetherai"] as const) {
+        const requests: Record<string, unknown>[] = []
+        const result = yield* aisdk.runSDK({
+          model: ModelV2.Info.make({
+            ...ModelV2.Info.empty(ProviderV2.ID.make(providerID), ModelV2.ID.make("model")),
+            api: { id: ModelV2.ID.make("model"), type: "aisdk", package: "test-provider" },
+          }),
+          package: "@ai-sdk/togetherai",
+          options: {
+            name: providerID,
+            apiKey: "test-key",
+            fetch: Object.assign(
+              async (_input: RequestInfo | URL, init?: RequestInit) => {
+                if (typeof init?.body !== "string") throw new Error("Expected a JSON request body")
+                const body = JSON.parse(init.body)
+                requests.push(body)
+                const stream =
+                  sse({
+                    id: "test",
+                    model: "test",
+                    choices: [{ index: 0, delta: { content: "Hello" }, finish_reason: null }],
+                  }) +
+                  sse({
+                    id: "test",
+                    model: "test",
+                    choices: [{ index: 0, delta: {}, finish_reason: "stop" }],
+                  }) +
+                  (body.stream_options?.include_usage
+                    ? sse({
+                        id: "test",
+                        model: "test",
+                        choices: [],
+                        usage: { prompt_tokens: 42, completion_tokens: 7, total_tokens: 49 },
+                      })
+                    : "") +
+                  "data: [DONE]\n\n"
+                return new Response(stream, { headers: { "content-type": "text/event-stream" } })
+              },
+              { preconnect: () => {} },
+            ),
+          },
+        })
+
+        const model: LanguageModelV3 = result.sdk.languageModel("model")
+        const stream = yield* Effect.promise(async () =>
+          model.doStream({
+            prompt: [{ role: "user" as const, content: [{ type: "text" as const, text: "Hello" }] }],
+          }),
+        )
+        const parts = yield* Effect.promise(() => Array.fromAsync(stream.stream))
+
+        expect(requests).toHaveLength(1)
+        expect(requests[0]?.stream_options).toEqual({ include_usage: true })
+        expect(parts.find((part) => part.type === "text-delta")).toMatchObject({ delta: "Hello" })
+        expect(parts.find((part) => part.type === "finish")).toMatchObject({
+          usage: { inputTokens: { total: 42 }, outputTokens: { total: 7 } },
+        })
+      }
+    }),
+  )
+  // kilocode_change end
 })
