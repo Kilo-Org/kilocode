@@ -19,11 +19,11 @@ export class CacheManager implements ICacheManager {
   private saveTask = Promise.resolve()
 
   constructor(
-    private readonly cacheDirectory: string,
+    public readonly dir: string,
     private readonly workspacePath: string,
   ) {
     const hash = createHash("sha256").update(workspacePath).digest("hex")
-    this.cachePath = path.join(cacheDirectory, `roo-index-cache-${hash}.json`)
+    this.cachePath = path.join(dir, `roo-index-cache-${hash}.json`)
   }
 
   async initialize(): Promise<void> {

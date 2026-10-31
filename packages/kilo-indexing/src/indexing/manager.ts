@@ -160,6 +160,13 @@ export class CodeIndexManager {
     if (!this.isFeatureEnabled || !this.isFeatureConfigured) return
     if (this._retryTask || this._isRecoveringFromError) return
 
+    // Lock contention is not failure: another live session holds the writer
+    // lock, so retrying with backoff only spins while the holder watches.
+    // The second session retries on its own triggers (settings, restart,
+    // watcher events); a retry here would also recreate services, tearing
+    // down the loser's search path for no gain.
+    if (event.error.includes("Another session is indexing this workspace")) return
+
     if (this._retryAttempt >= this._retryMaxAttempts) {
       log.warn("indexing recovery retries exhausted", {
         workspacePath: this.workspacePath,
