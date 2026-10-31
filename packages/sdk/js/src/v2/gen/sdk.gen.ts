@@ -6993,7 +6993,7 @@ export class Models extends HeyApiClient {
   /**
    * Image generation models
    *
-   * List image-capable models from the Kilo Gateway OpenRouter passthrough
+   * List image models from the configured Images API or Kilo Gateway
    */
   public images<ThrowOnError extends boolean = false>(
     parameters?: {

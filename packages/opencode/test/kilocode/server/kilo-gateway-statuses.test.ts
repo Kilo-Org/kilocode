@@ -26,14 +26,18 @@ import {
 import { testEffect } from "../../lib/effect"
 
 const TestHttpApi = HttpApi.make("opencode-instance").addHttpApi(KiloGatewayApi)
-const state: { info: Auth.Info | undefined; config: Config.Info } = {
+const state: { info: Auth.Info | undefined; config: Config.Info; global: Config.Info } = {
   info: new Auth.Api({ type: "api", key: "test-token" }),
   config: {},
+  global: {},
 }
 const auth = Layer.mock(Auth.Service)({
   get: () => Effect.sync(() => state.info),
 })
-const config = TestConfig.layer({ get: () => Effect.sync(() => state.config) })
+const config = TestConfig.layer({
+  get: () => Effect.sync(() => state.config),
+  getGlobal: () => Effect.sync(() => state.global),
+})
 const store = Layer.mock(InstanceStore.Service)({})
 const cache = Layer.mock(ModelCache.Service)({})
 const session = Layer.mock(Session.Service)({})
@@ -104,6 +108,23 @@ function post(path: string, body: Record<string, unknown>) {
 }
 
 describe("Kilo gateway HttpApi statuses", () => {
+  it.live("reports malformed custom image endpoints as bad requests", () =>
+    Effect.gen(function* () {
+      const previous = state.global
+      yield* Effect.acquireRelease(
+        Effect.sync(() => {
+          state.global = { experimental: { image_generation_base_url: "localhost:8080/v1" } }
+        }),
+        () =>
+          Effect.sync(() => {
+            state.global = previous
+          }),
+      )
+      const response = yield* HttpClient.get(KiloGatewayPaths.imageModels)
+      expect(response.status).toBe(400)
+    }),
+  )
+
   const error = new Error("ConnectionRefused")
   for (const failure of [
     {

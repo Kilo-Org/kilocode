@@ -63,6 +63,14 @@ export interface ExperimentalConfig {
   batch_tool?: boolean
   image_generation?: boolean
   image_generation_model?: string
+  image_generation_base_url?: string
+  image_generation_api_key?: string
+  image_generation_options?: {
+    size?: string
+    background?: "auto" | "opaque" | "transparent"
+    seed?: number
+    steps?: number
+  }
   code_mode?: boolean
   native_notebook_tools?: boolean
   glob_include_ignored?: string[]
