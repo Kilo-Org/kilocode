@@ -46,7 +46,7 @@ The most durable approach is to have the agent write an `environment.yml` into t
 
 The agent can create environments and install, update, or remove packages for you. It asks you to approve each change and shows the channels it will use. It won't install packages from local files or from URL or local-path channels. When you're signed in, the agent prefers Anaconda's channels (`defaults` or your organization's channels) and uses `conda-forge` only when a package isn't available there.
 
-The agent can also add or remove conda channels for you, but only named channels (such as `defaults` or `conda-forge`). It changes your user conda settings (`~/.condarc`). If no channels are configured and you haven't named one, the agent asks whether to use Anaconda's `defaults` channel before it continues. It doesn't pick a channel on its own.
+The agent can also add or remove conda channels for you, but only named channels (such as `defaults` or `conda-forge`). Because a channel change affects every later install, Kilo Desktop asks you each time: **Allow adding a conda channel?** or **Allow removing a conda channel?**, with the channel listed under **Channels**. Choose **Allow once** or **Reject** — there's no **Always allow** for channel changes. A warning appears when the channel isn't `main`, `defaults`, or `conda-forge`, and when a new channel would take priority over all your existing ones. Approved changes update your user conda settings (`~/.condarc`). If no channels are configured and you haven't named one, the agent asks whether to use Anaconda's `defaults` channel before it continues. It doesn't pick a channel on its own.
 
 ## If installs fail
 

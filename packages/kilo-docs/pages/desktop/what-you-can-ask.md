@@ -14,6 +14,7 @@ Kilo Desktop's agent works across the tools in your workspace. Describe what you
 | Review and manage changes | "Show me my uncommitted changes and create a branch for this work." | [Git integration](/docs/desktop/features/git) |
 | Manage Python dependencies | "Create a conda environment with Python 3.12 and install pandas." | [Conda environments](/docs/desktop/features/environments) |
 | Work with workspace files | "Read `src/api.py` and add input validation." | [Files](/docs/desktop/features/files) |
+| See results visually | "Chart test coverage by module as an interactive page." or "Draw a sequence diagram of the login flow." | [Pages and diagrams in replies](/docs/desktop/quickstart#pages-and-diagrams-in-replies) |
 
 ## Tips
 
