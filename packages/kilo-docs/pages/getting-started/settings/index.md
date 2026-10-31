@@ -220,6 +220,16 @@ Settings are resolved through an 8-level precedence system (lowest to highest pr
 
 Higher-priority levels override lower ones. This allows organizations to enforce settings at the enterprise level while still letting individual developers customize their local environment.
 
+Enterprise-managed configuration is read from the system location for your platform:
+
+| Platform | Location |
+|---|---|
+| Linux | `/etc/kilo/` |
+| macOS | `/Library/Application Support/kilo/` |
+| Windows | `%ProgramData%\kilo\` |
+
+Managed files accept `kilo.jsonc`, `kilo.json`, `opencode.jsonc`, and `opencode.json`. They load after user, project, and runtime settings and take the highest priority. On macOS, an `ai.opencode.managed` preferences profile deployed by MDM is applied last, after the managed directory.
+
 ### Schema Auto-Injection
 
 When you create or open a `kilo.jsonc` file, the CLI automatically injects a `$schema` property pointing to the config JSON schema. This gives you **autocompletion and validation** in any editor that supports JSON Schema (VS Code, JetBrains, etc.).
