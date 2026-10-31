@@ -32,6 +32,9 @@ export const DesktopNav: NavSection[] = [
   },
   {
     title: "Help",
-    links: [{ href: "/desktop/troubleshooting", children: "Troubleshooting" }],
+    links: [
+      { href: "/desktop/troubleshooting", children: "Troubleshooting" },
+      { href: "/desktop/release-notes", children: "Release notes" },
+    ],
   },
 ]
