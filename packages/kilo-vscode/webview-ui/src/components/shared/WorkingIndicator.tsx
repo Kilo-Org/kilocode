@@ -11,6 +11,8 @@
 import { type Component, Show, createSignal, createEffect, createMemo, onCleanup } from "solid-js"
 import { Spinner } from "@kilocode/kilo-ui/spinner"
 import { Button } from "@kilocode/kilo-ui/button"
+import { useClipboard } from "@kilocode/kilo-ui/context/clipboard"
+import { showToast } from "@kilocode/kilo-ui/toast"
 import { useSession } from "../../context/session"
 import { useLanguage } from "../../context/language"
 import { useVSCode } from "../../context/vscode"
@@ -26,6 +28,7 @@ export const WorkingIndicator: Component<WorkingIndicatorProps> = (props) => {
   const session = useSession()
   const language = useLanguage()
   const vscode = useVSCode()
+  const clipboard = useClipboard()
 
   const [elapsed, setElapsed] = createSignal(0)
   const [retryCountdown, setRetryCountdown] = createSignal(0)
@@ -92,6 +95,11 @@ export const WorkingIndicator: Component<WorkingIndicatorProps> = (props) => {
 
   const isRetrying = () => session.statusInfo().type === "retry"
 
+  const copy = async () => {
+    await clipboard.write(statusText())
+    showToast({ variant: "success", title: language.t("ui.message.copied") })
+  }
+
   // The counter's slot is reserved for exactly as long as the turn is timed, so a
   // state that never counts (a retry with no start time) keeps the row compact.
   const timing = () => tracksElapsed(session.status(), session.submitting(), session.busyTiming(), goal())
@@ -123,6 +131,23 @@ export const WorkingIndicator: Component<WorkingIndicatorProps> = (props) => {
         <span class="sr-only">{language.t("session.messages.scrollToBottom")}</span>
       </Button>
       <Show when={isRetrying()}>
+        <Button
+          variant="ghost"
+          size="small"
+          class="working-copy"
+          onClick={() =>
+            void copy().catch((err) => {
+              console.error("[Kilo New] Failed to copy retry error", err)
+              showToast({
+                variant: "error",
+                title: language.t("common.requestFailed"),
+                description: err instanceof Error ? err.message : String(err),
+              })
+            })
+          }
+        >
+          {language.t("ui.toolErrorCard.copyError")}
+        </Button>
         <Button
           variant="secondary"
           size="small"
