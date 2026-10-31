@@ -140,6 +140,12 @@ To make proper use of all of the Kilo Slack bot's capabilities, it's important t
 
 ---
 
+## Organization Slack integrations
+
+When Slack is connected to an organization, the integration is managed by the organization. Only organization owners and admins can connect, re-install, or disconnect Slack, and only they can change its model. Members see the connection state, can test the connection, and see a note explaining who manages the integration.
+
+---
+
 ## Changing the Model
 
 You can customize which AI model Kilo uses for generating responses.
