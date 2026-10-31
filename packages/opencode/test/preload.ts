@@ -80,6 +80,7 @@ delete process.env["FIREWORKS_API_KEY"]
 delete process.env["CEREBRAS_API_KEY"]
 delete process.env["SAMBANOVA_API_KEY"]
 delete process.env["KILO_SERVER_PASSWORD"]
+delete process.env["KILO_SERVER_PASSWORD_FILE"] // kilocode_change
 delete process.env["KILO_SERVER_USERNAME"]
 delete process.env["KILO_EXPERIMENTAL"]
 delete process.env["KILO_ENABLE_EXPERIMENTAL_MODELS"]

@@ -54,6 +54,7 @@ it.effect("does not expose backend credentials or config to model shell commands
     Effect.sync(() => {
       const values = {
         password: process.env.KILO_SERVER_PASSWORD,
+        file: process.env.KILO_SERVER_PASSWORD_FILE,
         username: process.env.KILO_SERVER_USERNAME,
         config: process.env.KILO_CONFIG,
         content: process.env.KILO_CONFIG_CONTENT,
@@ -62,6 +63,7 @@ it.effect("does not expose backend credentials or config to model shell commands
         token: process.env.KILO_BROWSER_BROKER_TOKEN,
       }
       process.env.KILO_SERVER_PASSWORD = "secret"
+      process.env.KILO_SERVER_PASSWORD_FILE = "/secret/password"
       process.env.KILO_SERVER_USERNAME = "kilo"
       process.env.KILO_CONFIG = "/secret/config.json"
       process.env.KILO_CONFIG_CONTENT = '{"provider":{"apiKey":"secret"}}'
@@ -77,8 +79,8 @@ it.effect("does not expose backend credentials or config to model shell commands
             run({
               command:
                 process.platform === "win32"
-                  ? "if ($env:KILO_SERVER_PASSWORD -or $env:KILO_SERVER_USERNAME -or $env:KILO_CONFIG -or $env:KILO_CONFIG_CONTENT -or $env:KILO_CONFIG_DIR -or $env:KILO_BROWSER_BROKER_URL -or $env:KILO_BROWSER_BROKER_TOKEN) { 'set' } else { 'unset' }"
-                  : 'test -z "$KILO_SERVER_PASSWORD" && test -z "$KILO_SERVER_USERNAME" && test -z "$KILO_CONFIG" && test -z "$KILO_CONFIG_CONTENT" && test -z "$KILO_CONFIG_DIR" && test -z "$KILO_BROWSER_BROKER_URL" && test -z "$KILO_BROWSER_BROKER_TOKEN" && printf unset',
+                  ? "if ($env:KILO_SERVER_PASSWORD -or $env:KILO_SERVER_PASSWORD_FILE -or $env:KILO_SERVER_USERNAME -or $env:KILO_CONFIG -or $env:KILO_CONFIG_CONTENT -or $env:KILO_CONFIG_DIR -or $env:KILO_BROWSER_BROKER_URL -or $env:KILO_BROWSER_BROKER_TOKEN) { 'set' } else { 'unset' }"
+                  : 'test -z "$KILO_SERVER_PASSWORD" && test -z "$KILO_SERVER_PASSWORD_FILE" && test -z "$KILO_SERVER_USERNAME" && test -z "$KILO_CONFIG" && test -z "$KILO_CONFIG_CONTENT" && test -z "$KILO_CONFIG_DIR" && test -z "$KILO_BROWSER_BROKER_URL" && test -z "$KILO_BROWSER_BROKER_TOKEN" && printf unset',
               description: "Check backend credential isolation",
             }),
           ),
@@ -89,6 +91,8 @@ it.effect("does not expose backend credentials or config to model shell commands
       Effect.sync(() => {
         if (values.password === undefined) delete process.env.KILO_SERVER_PASSWORD
         else process.env.KILO_SERVER_PASSWORD = values.password
+        if (values.file === undefined) delete process.env.KILO_SERVER_PASSWORD_FILE
+        else process.env.KILO_SERVER_PASSWORD_FILE = values.file
         if (values.username === undefined) delete process.env.KILO_SERVER_USERNAME
         else process.env.KILO_SERVER_USERNAME = values.username
         if (values.config === undefined) delete process.env.KILO_CONFIG
