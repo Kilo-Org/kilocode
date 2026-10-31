@@ -57,6 +57,7 @@ import { MemoryService } from "@kilocode/kilo-memory/effect/service"
 import { provideTmpdirServer } from "../fixture/fixture"
 import { testEffect } from "../lib/effect"
 import { reply, TestLLMServer } from "../lib/llm-server"
+import { fullHistory } from "./history-baseline"
 
 Log.init({ print: false })
 
@@ -444,7 +445,7 @@ describe("SessionPrompt paged history wire equality", () => {
           let oldLoads = 0
           const loader = spyOn(MessageV2, "filterCompactedEffect").mockImplementation((id) => Effect.gen(function* () {
             oldLoads++
-            return MessageV2.filterCompacted(yield* MessageV2.stream(id))
+            return yield* fullHistory(id)
           }))
           yield* llm.text("same answer")
           yield* prompt.loop({ sessionID }).pipe(Effect.ensuring(Effect.sync(() => loader.mockRestore())))
@@ -778,7 +779,7 @@ describe("SessionPrompt compaction safety", () => {
         const loader = spyOn(MessageV2, "filterCompactedEffect").mockImplementation((sessionID) =>
           Effect.gen(function* () {
             oldLoads++
-            return MessageV2.filterCompacted(yield* MessageV2.stream(sessionID))
+            return yield* fullHistory(sessionID)
           }),
         )
         yield* llm.text("same answer")

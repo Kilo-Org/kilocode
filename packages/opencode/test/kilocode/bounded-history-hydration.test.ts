@@ -16,6 +16,7 @@ import { KiloSessionPromptQueue } from "../../src/kilocode/session/prompt-queue"
 import { KiloSessionMessageOrder } from "../../src/kilocode/session/message-order"
 import type { Provider } from "../../src/provider/provider"
 import { testEffect } from "../lib/effect"
+import { fullHistory } from "./history-baseline"
 
 const it = testEffect(LayerNode.compile(MessageV2.node))
 const model = {
@@ -95,7 +96,7 @@ const project = (sessionID: SessionID) => (messages: MessageV2.WithParts[]) =>
 
 function compare(sessionID: SessionID) {
   return Effect.gen(function* () {
-    const full = project(sessionID)(MessageV2.filterCompacted(yield* MessageV2.stream(sessionID)))
+    const full = project(sessionID)(yield* fullHistory(sessionID))
     const bounded = project(sessionID)(yield* MessageV2.filterCompactedEffect(sessionID))
     expect(Buffer.from(JSON.stringify(bounded))).toEqual(Buffer.from(JSON.stringify(full)))
     expect(KiloSessionMessageOrder.latest(bounded)).toEqual(KiloSessionMessageOrder.latest(full))
@@ -364,7 +365,7 @@ describe("bounded history hydration", () => {
       expect(f.messages).toHaveLength(6000)
       const database = yield* Database.Service
       const old = Effect.gen(function* () {
-        return project(sessionID)(MessageV2.filterCompacted(yield* MessageV2.stream(sessionID)))
+        return project(sessionID)(yield* fullHistory(sessionID))
       })
       const next = Effect.gen(function* () {
         return project(sessionID)(yield* MessageV2.filterCompactedEffect(sessionID))
