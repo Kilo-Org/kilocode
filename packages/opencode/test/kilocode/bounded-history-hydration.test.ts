@@ -1,5 +1,5 @@
 import { describe, expect } from "bun:test"
-import { Effect } from "effect"
+import { Effect, Fiber } from "effect"
 import { eq } from "drizzle-orm"
 import { Database } from "@opencode-ai/core/database/database"
 import { LayerNode } from "@opencode-ai/core/effect/layer-node"
@@ -27,7 +27,7 @@ const model = {
 function fixture(sessionID: SessionID) {
   const messages: MessageV2.WithParts[] = []
   function user(text = "hello", time = messages.length) {
-    const id = MessageID.make(`msg_${String(100000 - messages.length).padStart(6, "0")}`)
+    const id = MessageID.make(`msg_${String(messages.length).padStart(6, "0")}`)
     const message: MessageV2.WithParts = {
       info: {
         id, sessionID, role: "user", time: { created: time }, agent: "test",
@@ -39,7 +39,7 @@ function fixture(sessionID: SessionID) {
     return message
   }
   function assistant(parent: MessageV2.WithParts, opts: Partial<MessageV2.Assistant> = {}) {
-    const id = MessageID.make(`msg_${String(100000 - messages.length).padStart(6, "0")}`)
+    const id = MessageID.make(`msg_${String(messages.length).padStart(6, "0")}`)
     const message: MessageV2.WithParts = {
       info: {
         id, sessionID, role: "assistant", parentID: parent.info.id, time: { created: messages.length },
@@ -96,7 +96,7 @@ const project = (sessionID: SessionID) => (messages: MessageV2.WithParts[]) =>
 function compare(sessionID: SessionID) {
   return Effect.gen(function* () {
     const full = project(sessionID)(MessageV2.filterCompacted(yield* MessageV2.stream(sessionID)))
-    const bounded = yield* MessageV2.filterCompactedEffect(sessionID, project(sessionID))
+    const bounded = project(sessionID)(yield* MessageV2.filterCompactedEffect(sessionID))
     expect(Buffer.from(JSON.stringify(bounded))).toEqual(Buffer.from(JSON.stringify(full)))
     expect(KiloSessionMessageOrder.latest(bounded)).toEqual(KiloSessionMessageOrder.latest(full))
     const old = yield* MessageV2.toModelMessagesEffect(KiloSessionPrompt.maybeStripHistoricalMedia(full), model)
@@ -108,7 +108,7 @@ function compare(sessionID: SessionID) {
 
 // Adapted from the prior local lazy-history tests: verify exact page edges and an assistant tail.
 function observedDatabase(database: Database.Interface) {
-  const reads: { table: unknown; rows: number }[] = []
+  const reads: { table: unknown; rows: number; bytes: number }[] = []
   const db = new Proxy(database.db, {
     get(target, key) {
       const value = Reflect.get(target, key, target)
@@ -120,7 +120,9 @@ function observedDatabase(database: Database.Interface) {
             get(target, key) {
               const value = Reflect.get(target, key, target)
               if (key === "all") return (...args: unknown[]) => value.apply(target, args).pipe(
-                Effect.tap((rows: unknown[]) => Effect.sync(() => { reads.push({ table, rows: rows.length }) })),
+                Effect.tap((rows: unknown[]) => Effect.sync(() => {
+                  reads.push({ table, rows: rows.length, bytes: Buffer.byteLength(JSON.stringify(rows)) })
+                })),
               )
               if (typeof value !== "function") return value
               return (...args: unknown[]) => {
@@ -190,6 +192,8 @@ describe("bounded history hydration", () => {
       if (shape === "tie") for (const message of f.messages) message.info.time.created = 10
       // Revert cleanup deletes the reverted suffix before runLoop hydrates it.
       if (shape === "reverted") f.messages.splice(-2)
+      const later = shape === "queue" ? f.user("LATER QUEUED USER") : undefined
+      if (later) f.assistant(later)
       yield* seed(sessionID, f.messages)
       if (shape === "forked") {
         const child = SessionID.make("ses_hydration_child")
@@ -209,15 +213,20 @@ describe("bounded history hydration", () => {
         yield* (yield* Database.Service).db.delete(SessionTable).where(eq(SessionTable.id, child))
       }
       if (shape === "queue") {
-        yield* KiloSessionPromptQueue.enqueue(sessionID, user.info.id, compare(sessionID), Effect.die("unexpected cancellation"))
+        expect(later!.info.id > user.info.id).toBe(true)
+        yield* KiloSessionPromptQueue.enqueue(sessionID, user.info.id, Effect.gen(function* () {
+          const result = yield* compare(sessionID)
+          expect(result.bounded.some((message) => message.info.id === later!.info.id)).toBe(false)
+          expect(result.bounded.some((message) => message.info.id === user.info.id)).toBe(true)
+        }), Effect.die("unexpected cancellation"))
         yield* (yield* Database.Service).db.delete(SessionTable).where(eq(SessionTable.id, sessionID))
         return
       }
       // The prior patch also asserted traversal, not just output, for these boundary cases.
-      const pages: Record<string, number> = { none: 5, unfinished: 5, error: 5, "missing-tail": 10, "self-tail": 1 }
+      const pages: Record<string, number> = { none: 5, unfinished: 5, error: 5, "missing-tail": 5, "self-tail": 1 }
       if (shape in pages) {
         const observed = observedDatabase(yield* Database.Service)
-        yield* MessageV2.filterCompactedEffect(sessionID, project(sessionID)).pipe(
+        yield* MessageV2.filterCompactedEffect(sessionID).pipe(
           Effect.provideService(Database.Service, observed.service),
         )
         expect(observed.reads.filter((read) => read.table === MessageTable)).toHaveLength(pages[shape])
@@ -258,14 +267,14 @@ describe("bounded history hydration", () => {
       }
       yield* seed(sessionID, f.messages)
       const observed = observedDatabase(yield* Database.Service)
-      const selected = yield* MessageV2.filterCompactedEffect(sessionID, project(sessionID)).pipe(
+      const selected = project(sessionID)(yield* MessageV2.filterCompactedEffect(sessionID).pipe(
         Effect.provideService(Database.Service, observed.service),
-      )
+      ))
       expect(selected.map((message) => message.info.id)).toEqual(expected)
       expect(observed.reads.filter((read) => read.table === MessageTable)).toHaveLength(queries)
       if (shape === "boundary-page-edge") {
-        expect(observed.reads.filter((read) => read.table === MessageTable).map((read) => read.rows)).toEqual([50])
-        expect(observed.reads.filter((read) => read.table === PartTable).reduce((sum, read) => sum + read.rows, 0)).toBe(51)
+        expect(observed.reads.filter((read) => read.table === MessageTable).map((read) => read.rows)).toEqual([51])
+        expect(observed.reads.filter((read) => read.table === PartTable).reduce((sum, read) => sum + read.rows, 0)).toBe(50)
       }
       yield* compare(sessionID)
       yield* (yield* Database.Service).db.delete(SessionTable).where(eq(SessionTable.id, sessionID))
@@ -314,10 +323,98 @@ describe("bounded history hydration", () => {
     const old = { ...counts, ms: performance.now() - start }
     counts.rows = 0; counts.bytes = 0
     const begin = performance.now()
-    const bounded = yield* MessageV2.filterCompactedEffect(sessionID, project(sessionID)).pipe(Effect.provideService(Database.Service, measured))
+    const bounded = project(sessionID)(yield* MessageV2.filterCompactedEffect(sessionID).pipe(Effect.provideService(Database.Service, measured)))
     const next = { ...counts, ms: performance.now() - begin }
     expect(Buffer.from(JSON.stringify(bounded))).toEqual(Buffer.from(JSON.stringify(project(sessionID)(MessageV2.filterCompacted(full)))))
     expect(next.bytes).toBeLessThan(old.bytes / 10)
     console.log(JSON.stringify({ measurement: "driver-returned rows and UTF-8 JSON bytes; not physical disk I/O", messages: f.messages.length, old, next }))
   }))
+
+  for (const shape of ["none", "manual", "auto", "media-boundary"] as const) {
+    it.live(`paged history cost and contention: ${shape}`, () => Effect.gen(function* () {
+      const sessionID = SessionID.make(`ses_history_cost_${shape}`)
+      const f = fixture(sessionID)
+      for (let i = 0; i < 3000; i++) {
+        const summary = shape !== "none" && (shape === "media-boundary" ? i === 2989 : i === 2900)
+        const request = f.user(summary ? "manual summary parent" : "x".repeat(2048))
+        if (summary && shape !== "manual") request.parts = [{
+          id: PartID.make(`prt_${request.info.id}`), messageID: request.info.id, sessionID,
+          type: "compaction", auto: true,
+        }]
+        const reply = f.assistant(request, { summary })
+        reply.parts[0] = { ...reply.parts[0], type: "text", text: "y".repeat(2048) }
+        reply.parts.push({
+          id: PartID.make(`prt_${reply.info.id}_tool`), messageID: reply.info.id, sessionID,
+          type: "tool", tool: "read", callID: `call_${i}`,
+          state: {
+            status: "completed", input: { file: "x" }, output: "z".repeat(8192), title: "t", metadata: {},
+            time: { start: 0, end: 1 },
+          },
+        })
+      }
+      if (shape === "media-boundary") {
+        // The boundary is at index 5978; its page also hydrates 28 older messages.
+        // Put 20 x 2 MiB attachments on those discarded messages, never in model context.
+        for (const message of f.messages.slice(5950, 5970)) message.parts.push({
+          id: PartID.make(`prt_${message.info.id}_media`), messageID: message.info.id, sessionID,
+          type: "file", mime: "image/png", filename: "large.png", url: "data:image/png;base64," + "A".repeat(2 * 1024 * 1024),
+        })
+      }
+      yield* seed(sessionID, f.messages)
+      expect(f.messages).toHaveLength(6000)
+      const database = yield* Database.Service
+      const old = Effect.gen(function* () {
+        return project(sessionID)(MessageV2.filterCompacted(yield* MessageV2.stream(sessionID)))
+      })
+      const next = Effect.gen(function* () {
+        return project(sessionID)(yield* MessageV2.filterCompactedEffect(sessionID))
+      })
+      const reference = Buffer.from(JSON.stringify(yield* old))
+      expect(Buffer.from(JSON.stringify(yield* next))).toEqual(reference)
+      const counts: Record<string, { rows: number; bytes: number; partRows: number; partBytes: number }> = {}
+      for (const [name, load] of [["old", old], ["new", next]] as const) {
+        const observed = observedDatabase(database)
+        const result = yield* load.pipe(Effect.provideService(Database.Service, observed.service))
+        expect(Buffer.from(JSON.stringify(result))).toEqual(reference)
+        counts[name] = observed.reads.reduce((total, read) => ({
+          rows: total.rows + read.rows, bytes: total.bytes + read.bytes,
+          partRows: total.partRows + (read.table === PartTable ? read.rows : 0),
+          partBytes: total.partBytes + (read.table === PartTable ? read.bytes : 0),
+        }), { rows: 0, bytes: 0, partRows: 0, partBytes: 0 })
+      }
+      const rounds: { round: number; order: string; path: string; ms: number; maxWait: number; probes: number }[] = []
+      for (let round = 0; round < 6; round++) {
+        const order = round % 2 === 0 ? ["old", "new"] : ["new", "old"]
+        for (const name of order) {
+          const state = { running: true }
+          const waits: number[] = []
+          const prober = yield* Effect.gen(function* () {
+            while (state.running) {
+              const start = performance.now()
+              yield* database.db.select({ id: SessionTable.id }).from(SessionTable)
+                .where(eq(SessionTable.id, sessionID)).get().pipe(Effect.orDie)
+              waits.push(performance.now() - start)
+              yield* Effect.yieldNow
+            }
+          }).pipe(Effect.forkChild({ startImmediately: true }))
+          yield* Effect.yieldNow
+          const start = performance.now()
+          const out = yield* (name === "old" ? old : next)
+          const ms = performance.now() - start
+          state.running = false
+          yield* Fiber.join(prober)
+          expect(Buffer.from(JSON.stringify(out))).toEqual(reference)
+          rounds.push({ round, order: order.join("/"), path: name, ms, maxWait: Math.max(0, ...waits), probes: waits.length })
+        }
+      }
+      console.log(JSON.stringify({ costShape: shape, messages: f.messages.length, counts, rounds }))
+      if (shape === "none" || shape === "manual") expect(counts.new).toEqual(counts.old)
+      if (shape === "auto") expect(counts.new.bytes).toBeLessThan(counts.old.bytes / 10)
+      if (shape === "media-boundary") {
+        expect(counts.new.partBytes).toBeGreaterThan(20 * 2 * 1024 * 1024)
+        expect(counts.new.partBytes).toBeLessThan(counts.old.partBytes)
+      }
+      yield* database.db.delete(SessionTable).where(eq(SessionTable.id, sessionID))
+    }), 50_000)
+  }
 })
