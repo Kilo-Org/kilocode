@@ -93,6 +93,7 @@ export const iconNames = [
   "fastrouter",
   "evroc",
   "drun",
+  "dothoosh",
   "dinference",
   "digitalocean",
   "deepseek",
