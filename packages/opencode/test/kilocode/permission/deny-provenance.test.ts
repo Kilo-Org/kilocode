@@ -5,6 +5,7 @@ import { Bus } from "../../../src/bus"
 import { Permission } from "../../../src/permission"
 import { PermissionProvenance } from "../../../src/kilocode/permission/provenance"
 import { SessionID } from "../../../src/session/schema"
+import { describeApproval } from "@tui/kilocode/tool-approval"
 import * as CrossSpawnSpawner from "@opencode-ai/core/cross-spawn-spawner"
 import { provideTmpdirInstance } from "../../fixture/fixture"
 import { testEffect } from "../../lib/effect"
@@ -81,5 +82,45 @@ describe("Permission.ask denial provenance", () => {
     })
     expect(approval.rule?.action).toBe("deny")
     expect(approval.rule).toEqual({ permission: "bash", pattern: "rm -rf /", action: "deny" })
+  })
+
+  test("a plugin's veto names the plugin as its source and still carries a deny rule", () => {
+    const approval = PermissionProvenance.classifyDenial({
+      ruleset: [],
+      permission: "bash",
+      patterns: ["npm install"],
+      agent: "build",
+      origins: undefined,
+      pluginReason: "blocked by the org policy plugin",
+    })
+    expect(approval.source).toBe("plugin")
+    expect(approval.rule).toEqual({ permission: "bash", pattern: "npm install", action: "deny" })
+  })
+
+  test("a plugin's veto renders in the TUI as a denial, not as an auto-approval", () => {
+    // The consequence of the rule above being present. `describeApproval` reads the decision
+    // off `rule.action` alone, so a plugin approval carrying no rule renders a refusal with
+    // the same words as an approval.
+    const approval = PermissionProvenance.classifyDenial({
+      ruleset: [],
+      permission: "bash",
+      patterns: ["npm install"],
+      agent: "build",
+      origins: undefined,
+      pluginReason: "blocked by the org policy plugin",
+    })
+    expect(describeApproval({ approval })).toBe("denied by a plugin (matched bash `npm install`)")
+  })
+
+  test("without a plugin reason the denial is still attributed to the rule that matched", () => {
+    const approval = PermissionProvenance.classifyDenial({
+      ruleset: { permission: "bash", pattern: "npm *", action: "deny" as const },
+      permission: "bash",
+      patterns: ["npm install"],
+      agent: "build",
+      origins: undefined,
+    })
+    expect(approval.source).toBe("agent")
+    expect(approval.rule).toEqual({ permission: "bash", pattern: "npm *", action: "deny" })
   })
 })
