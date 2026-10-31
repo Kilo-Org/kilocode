@@ -873,6 +873,11 @@ export function fromError(
               message: parsed.message,
               isRetryable: parsed.isRetryable,
               responseBody: parsed.responseBody,
+              // kilocode_change start - propagate numeric HTTP status (e.g. 504)
+              // from stream error frames so retry logic and UI can classify it.
+              // Only set when defined to avoid changing existing serialized shape.
+              ...(parsed.statusCode !== undefined ? { statusCode: parsed.statusCode } : {}),
+              // kilocode_change end
             },
             {
               cause: e,
