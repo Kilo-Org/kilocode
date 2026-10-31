@@ -67,7 +67,12 @@ Kilo will generate the agent definition and write it to `.kilo/agent/` in your p
 
 ### 2. Using the Settings UI
 
-You can manage agents through the **Settings → Agent Behaviour → Agents** subtab in the extension. This lets you view, create, and edit agent configurations — including the agent's prompt, model, permissions, and other properties.
+You can manage agents through the **Settings → Agent Behaviour → Agents** subtab in the extension. It lists every visible agent with badges for custom, subagent, hidden, disabled, and deprecated entries, and lets you:
+
+- Set the **Default Agent** used when a session starts.
+- Create an agent and edit its prompt, model, permissions, temperature, steps, and visibility.
+- Import an exported agent JSON file, or export an agent to reuse elsewhere.
+- Remove a config-defined agent. Built-in agents keep their base definition and expose overrides only.
 
 ### 3. Markdown Files with YAML Frontmatter
 

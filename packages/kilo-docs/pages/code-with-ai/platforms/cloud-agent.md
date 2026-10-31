@@ -77,7 +77,7 @@ Each repository can have one saved environment that applies automatically when a
 - One setup script
 - Variables, including secrets (encrypted at rest)
 
-Open **Env** beside a repository to create or edit its environment. In an organization, owners and admins can manage repository environments; other members see them read-only.
+Open **Env** beside a repository to create or edit its environment. In an organization, owners and admins can manage repository environments. Other members can open an environment from the **Env** chip or Cloud Agent settings to view its scripts and variables read-only; editing, save, delete, and upload controls, and sandbox selection, are unavailable to them.
 
 When a repository environment applies, its setup script replaces the setup commands from the selected [agent environment profile](#agent-environment-profiles). The profile's variables and agent settings still apply. A warning beside the profile picker explains when a profile's setup is replaced.
 
