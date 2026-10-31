@@ -39,6 +39,8 @@ kilo --help
 
 After installation, run `kilo` and use the `/connect` command to add your first provider credentials. This is the interactive way to configure API keys for model providers.
 
+The dialog lists each provider with a short description — Kilo Gateway is marked **Recommended**. When the Kilo Gateway model list cannot load, its row shows a red `!` with the reason, such as credentials rejected, not signed in, no connection, or a provider error, so you can fix the connection before starting a session.
+
 ## Opening Links
 
 Links in agent responses use terminal hyperlink metadata when the terminal supports it. Kilo also handles links inside the TUI, so mouse capture does not make supported HTTP(S) links inactive. Move the pointer over a link to see the hover underline, then click it to open the default browser.
@@ -122,9 +124,12 @@ The `kilo console` command and its browser interface are deprecated and will be 
 
 #### Provider Commands
 
-| Command | Description |
-|---|---|
-| `/connect` | Connect/add a provider - entry point for new users to add API credentials |
+| Command | Aliases | Description |
+|---|---|---|
+| `/connect` | - | Connect/add a provider - entry point for new users to add API credentials |
+| `/usage` | `/plans`, `/quota` | Show plan and quota usage for your connected providers |
+
+`/usage` opens a **Plans & usage** dialog with one card per detected source: Kilo coding plan quotas, ChatGPT (Codex) rate limits, and MiniMax Token Plan quotas. Each card shows the plan, the usage windows with their percentage used, any reset time, and a **Manage** link when the provider offers one. Press `ctrl+r` to refresh.
 
 #### System Commands
 
@@ -261,6 +266,26 @@ The `diff_open` and `session_move` TUI keybindings run the same actions and are 
   },
 }
 ```
+
+## Home Screen and Session Sidebar
+
+### Home screen news
+
+When you are signed in to Kilo Gateway, the CLI home screen shows the most recent unread Kilo news item, with a `(N new)` count when more than one item is unread. Select the banner to open the **News** dialog, which lists every unread item and its action links. Opening the dialog marks those items as read, and they stay hidden after a restart. Items that are not intended for the CLI are not shown.
+
+The command palette has **Hide news** and **Show news** on the home screen, and the choice persists. Kilo fetches news only while you are signed in, and refetches after you sign in, sign out, or switch teams.
+
+### Session sidebar
+
+The session sidebar shows Kilo panels alongside the built-in ones:
+
+- **Branch PR** — the pull request for the current branch, when `gh` is installed and the branch has one.
+- **Token Usage** — input, output, reasoning, cache read, and cache write tokens, cache hit rate, generation speed, and cost for the whole session, including subagents.
+- **Models** — one row per provider and model, with its step count and cost. Expand a row for its token breakdown.
+- **Terminal Bench 2.0** — the completion score and cost per attempt for the current Kilo model.
+- **Footer** — your Kilo balance, Kilo Pass usage (personal accounts), and the Kilo version.
+
+Select a panel heading to collapse or expand it.
 
 ## Permissions
 
@@ -706,6 +731,21 @@ The CLI supports overriding config values with environment variables. The suppor
 - `KILO_PROVIDER`: Override the active provider ID
 - For `kilocode` provider: `KILOCODE_<FIELD_NAME>` (e.g., `KILOCODE_MODEL` → `kilocodeModel`)
 - For other providers: `KILO_<FIELD_NAME>` (e.g., `KILO_API_KEY` → `apiKey`)
+
+## Self-Hosted Backends
+
+By default the CLI sends Kilo API traffic (sign-in, profile, defaults) to `https://api.kilo.ai` and [AI gateway](/docs/gateway) traffic (chat, model listing, embeddings, autocomplete, transcription) to `https://ai-gateway.kilo.ai/api/v1`. Point either at a different server with these environment variables — for example, to route gateway traffic through a self-hosted gateway for compliance, or a local backend during development.
+
+| Variable | Default | Controls |
+|---|---|---|
+| `KILO_API_URL` | `https://api.kilo.ai` | Kilo API traffic. When set on its own (without `KILO_AI_GATEWAY_URL`), gateway traffic also goes here, under `/api/gateway/v1`. |
+| `KILO_AI_GATEWAY_URL` | `https://ai-gateway.kilo.ai/api/v1` | AI gateway traffic only. |
+
+Set `KILO_AI_GATEWAY_URL` to send only gateway traffic to another server while leaving sign-in and profile requests on the default:
+
+```bash
+KILO_AI_GATEWAY_URL=https://gateway.example.com/api/v1 kilo
+```
 
 ## Using the CLI in an Organization
 

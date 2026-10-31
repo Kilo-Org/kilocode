@@ -37,6 +37,12 @@ Before enabling Code Reviews:
     - [Kilo Discord](https://discord.gg/hZnd57qN)
 - **Kilo Code credits are still used** when the agent performs model reasoning during a review.
 
+### Credit requirement for paid models
+
+A review on a paid model starts only when the owning account's available balance covers the Cloud Agent minimum balance, so a review is never dispatched when its model usage cannot be paid for. If the balance is too low, the review fails before any model runs: Kilo posts a billing notice on the pull or merge request, leaves the review without comments, and marks the platform check as action required (GitHub) or the commit status as failed (GitLab).
+
+Reviews on free models, on models you connect with your own key (BYOK), and on organizations sponsored through Kilo's OSS program skip this check. Every model the review runs is evaluated.
+
 ## Concurrent reviews
 
 Cloud Code Reviews limit how many reviews one owner can run at the same time. Reviews past that limit wait, then start when a slot opens. Local `/review` commands do not count toward this limit.
