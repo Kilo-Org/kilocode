@@ -9207,12 +9207,13 @@ export class AnacondaDesktop extends HeyApiClient {
   /**
    * Get Anaconda Desktop setup status
    *
-   * Discover the locally installed Anaconda Desktop and its active inference server.
+   * Discover the locally installed Anaconda Desktop and its active inference server. Results are throttled; pass refresh=true to force a fresh check.
    */
   public status<ThrowOnError extends boolean = false>(
     parameters?: {
       directory?: string
       workspace?: string
+      refresh?: boolean
     },
     options?: Options<never, ThrowOnError>,
   ) {
@@ -9223,6 +9224,7 @@ export class AnacondaDesktop extends HeyApiClient {
           args: [
             { in: "query", key: "directory" },
             { in: "query", key: "workspace" },
+            { in: "query", key: "refresh" },
           ],
         },
       ],

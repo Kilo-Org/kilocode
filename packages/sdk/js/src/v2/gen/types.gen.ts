@@ -18469,6 +18469,7 @@ export type AnacondaDesktopStatusData = {
   query?: {
     directory?: string
     workspace?: string
+    refresh?: boolean
   }
   url: "/kilocode/anaconda-desktop/status"
 }
