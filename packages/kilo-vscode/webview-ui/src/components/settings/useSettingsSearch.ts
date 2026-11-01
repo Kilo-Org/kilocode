@@ -75,10 +75,13 @@ export function useSettingsSearch(opts: {
     ),
   )
 
-  // Cmd/Ctrl+F opens search, matching the chat search shortcut.
+  // Cmd/Ctrl+F opens search, matching the chat search shortcut. On macOS only
+  // Cmd+F does, because Ctrl+F moves the caret forward in text fields.
   onMount(() => {
+    const mac = /Mac|iPhone|iPad/.test(navigator.userAgent)
     const onKeyDown = (event: KeyboardEvent) => {
-      if (!(event.metaKey || event.ctrlKey) || event.altKey || event.shiftKey || event.key.toLowerCase() !== "f") return
+      const mod = event.metaKey || (event.ctrlKey && !mac)
+      if (!mod || event.altKey || event.shiftKey || event.key.toLowerCase() !== "f") return
       event.preventDefault()
       focus()
     }

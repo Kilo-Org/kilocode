@@ -73,6 +73,7 @@ import { createShortcutHints } from "./ShortcutHints"
 import { useBaseUpdate } from "./update-from-base"
 import { createModeRouter } from "./mode-router"
 import * as modifier from "./modifier"
+import * as native from "./native-keys"
 import { ProjectList } from "./ProjectList"
 import { reportFailure } from "./failure-toast"
 import { TabBar } from "./TabBar"
@@ -1205,34 +1206,7 @@ const AgentManagerContent: Component = () => {
     }
     window.addEventListener("agentManager.openSubagent", subagent)
     window.addEventListener("message", handler)
-    // Prevent Cmd/Ctrl shortcuts from triggering native browser actions
-    const preventDefaults = (e: KeyboardEvent) => {
-      if (!(e.metaKey || e.ctrlKey)) return
-      const target = e.target as HTMLElement | null
-      if (target?.closest("[data-agent-manager-native-text-shortcuts]")) return
-      // Arrow navigation requires Alt modifier (Cmd+Alt+Arrow for tabs/sessions)
-      if (e.altKey && ["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.key)) {
-        e.preventDefault()
-      }
-      // Prevent browser defaults for our shortcuts (new tab, close tab, new window, toggle diff, run, find)
-      if (["t", "w", "n", "d", "e", "f"].includes(e.key.toLowerCase()) && !e.shiftKey) {
-        e.preventDefault()
-      }
-      // Prevent browser defaults for shift variants (new central terminal,
-      // close worktree, advanced/new/open worktree, open PR, terminal cycling)
-      if (["t", "m", "w", "n", "o", "r", "[", "]"].includes(e.key.toLowerCase()) && e.shiftKey) {
-        e.preventDefault()
-      }
-      // Prevent browser defaults for shortcuts help (Cmd/Ctrl+Shift+/)
-      if (["/", "?"].includes(e.key) && e.shiftKey) {
-        e.preventDefault()
-      }
-      // Prevent defaults for jump-to shortcuts (Cmd/Ctrl+1-9)
-      if (/^[1-9]$/.test(e.key)) {
-        e.preventDefault()
-      }
-    }
-    window.addEventListener("keydown", preventDefaults, true)
+    const unblock = native.block(window, isMac)
 
     const shortcut = (e: KeyboardEvent) => sideCtl.press(e)
     window.addEventListener("keydown", shortcut, true)
@@ -1539,7 +1513,7 @@ const AgentManagerContent: Component = () => {
 
     onCleanup(() => {
       window.removeEventListener("message", handler)
-      window.removeEventListener("keydown", preventDefaults, true)
+      unblock()
       window.removeEventListener("keydown", shortcut, true)
       window.removeEventListener("keydown", deleteKeyHandler)
       stopModifier()
