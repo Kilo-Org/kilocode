@@ -1123,6 +1123,16 @@ export const dict = {
   "settings.agentBehaviour.editMode.native":
     "این یک حالت داخلی است. تعریف پایه آن قابل تغییر نیست، اما می‌توانید تنظیمات سفارشی را در زیر پیکربندی کنید.",
   "settings.agentBehaviour.editMode.promptOverride": "پرامپت سفارشی جایگزین برای این حالت داخلی",
+  "settings.agentBehaviour.mode.title": "حالت",
+  "settings.agentBehaviour.mode.description":
+    "عامل‌های اصلی در انتخابگر حالت چت نمایش داده می‌شوند. زیرعامل‌ها فقط توسط عامل‌های دیگر و از طریق ابزار Task، بر اساس توضیحاتشان فراخوانی می‌شوند.",
+  "settings.agentBehaviour.mode.primary": "اصلی",
+  "settings.agentBehaviour.mode.subagent": "زیرعامل",
+  "settings.agentBehaviour.mode.all": "اصلی و زیرعامل",
+  "settings.agentBehaviour.mode.defaultAgent":
+    "این عامل پیش‌فرض است، بنابراین نمی‌تواند فقط زیرعامل باشد. ابتدا عامل پیش‌فرض دیگری انتخاب کنید.",
+  "settings.agentBehaviour.mode.defaultAgentProject":
+    "این عامل در فایل kilo.jsonc پروژه به‌عنوان عامل پیش‌فرض تنظیم شده است، بنابراین نمی‌تواند فقط زیرعامل باشد. ابتدا default_agent را در آنجا تغییر دهید.",
   "settings.agentBehaviour.badge.subagent": "زیرعامل",
   "settings.agentBehaviour.permissions.title": "مجوزهای محاسبه‌شده",
   "settings.agentBehaviour.permissions.count": "{{count}} قانون",

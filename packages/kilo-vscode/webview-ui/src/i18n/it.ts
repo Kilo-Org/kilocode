@@ -996,6 +996,16 @@ export const dict = {
   "settings.agentBehaviour.editMode.native":
     "Questa è una modalità integrata. La sua definizione base non può essere modificata, ma puoi configurare override qui sotto.",
   "settings.agentBehaviour.editMode.promptOverride": "Override prompt personalizzato per questa modalità integrata",
+  "settings.agentBehaviour.mode.title": "Modalità",
+  "settings.agentBehaviour.mode.description":
+    "Gli agenti principali compaiono nel selettore modalità della chat. I sub-agent vengono chiamati solo da altri agenti tramite lo strumento Task, in base alla loro descrizione.",
+  "settings.agentBehaviour.mode.primary": "Principale",
+  "settings.agentBehaviour.mode.subagent": "Sub-agent",
+  "settings.agentBehaviour.mode.all": "Principale e sub-agent",
+  "settings.agentBehaviour.mode.defaultAgent":
+    "Questo è l'agente predefinito, quindi non può essere solo un sub-agent. Scegli prima un altro agente predefinito.",
+  "settings.agentBehaviour.mode.defaultAgentProject":
+    "Questo agente è l'agente predefinito nel kilo.jsonc del progetto, quindi non può essere solo un sub-agent. Modifica prima default_agent lì.",
   "settings.agentBehaviour.badge.subagent": "sub-agent",
   "settings.agentBehaviour.permissions.title": "Autorizzazioni calcolate",
   "settings.agentBehaviour.permissions.count": "{{count}} regole",

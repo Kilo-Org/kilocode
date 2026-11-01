@@ -965,6 +965,15 @@ export const dict = {
   "settings.agentBehaviour.editMode.back": "返回列表",
   "settings.agentBehaviour.editMode.native": "這是一個內建模式。它的基礎定義無法更改，但您可以在下方設定覆寫項。",
   "settings.agentBehaviour.editMode.promptOverride": "此內建模式的自訂提示覆寫",
+  "settings.agentBehaviour.mode.title": "模式",
+  "settings.agentBehaviour.mode.description":
+    "主要 Agent 會顯示在聊天的模式切換器中。子代理只能由其他 Agent 根據其描述透過 Task 工具呼叫。",
+  "settings.agentBehaviour.mode.primary": "主要",
+  "settings.agentBehaviour.mode.subagent": "子代理",
+  "settings.agentBehaviour.mode.all": "主要與子代理",
+  "settings.agentBehaviour.mode.defaultAgent": "這是預設 Agent，因此不能僅作為子代理。請先選擇其他預設 Agent。",
+  "settings.agentBehaviour.mode.defaultAgentProject":
+    "此 Agent 是專案 kilo.jsonc 中的預設 Agent，因此不能僅作為子代理。請先在該檔案中修改 default_agent。",
   "settings.agentBehaviour.badge.subagent": "子代理",
   "settings.agentBehaviour.permissions.title": "已計算的權限",
   "settings.agentBehaviour.permissions.count": "{{count}} 條規則",

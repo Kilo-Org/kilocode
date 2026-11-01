@@ -1066,6 +1066,16 @@ export const dict = {
   "settings.agentBehaviour.editMode.native":
     "Este es un modo integrado. Su definición base no se puede cambiar, pero puedes configurar sobreescrituras a continuación.",
   "settings.agentBehaviour.editMode.promptOverride": "Anulación de prompt personalizado para este modo integrado",
+  "settings.agentBehaviour.mode.title": "Modo",
+  "settings.agentBehaviour.mode.description":
+    "Los agentes principales aparecen en el selector de modos del chat. Los subagentes solo son llamados por otros agentes mediante la herramienta Task, según su descripción.",
+  "settings.agentBehaviour.mode.primary": "Principal",
+  "settings.agentBehaviour.mode.subagent": "Subagente",
+  "settings.agentBehaviour.mode.all": "Principal y subagente",
+  "settings.agentBehaviour.mode.defaultAgent":
+    "Este es el agente predeterminado, así que no puede ser solo un subagente. Elige primero otro agente predeterminado.",
+  "settings.agentBehaviour.mode.defaultAgentProject":
+    "Este agente es el agente predeterminado en el kilo.jsonc del proyecto, así que no puede ser solo un subagente. Cambia primero default_agent allí.",
   "settings.agentBehaviour.badge.subagent": "subagente",
   "settings.agentBehaviour.permissions.title": "Permisos calculados",
   "settings.agentBehaviour.permissions.count": "{{count}} reglas",

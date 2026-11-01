@@ -1425,6 +1425,16 @@ export const dict = {
   "settings.agentBehaviour.editMode.prompt": "Системний запит",
   "settings.agentBehaviour.editMode.promptOverride":
     "Власне перевизначення системного запиту для цього вбудованого режиму",
+  "settings.agentBehaviour.mode.title": "Режим",
+  "settings.agentBehaviour.mode.description":
+    "Основні агенти відображаються в перемикачі режимів чату. Субагенти викликаються лише іншими агентами через інструмент Task на основі їхнього опису.",
+  "settings.agentBehaviour.mode.primary": "Основний",
+  "settings.agentBehaviour.mode.subagent": "Субагент",
+  "settings.agentBehaviour.mode.all": "Основний і субагент",
+  "settings.agentBehaviour.mode.defaultAgent":
+    "Це агент за замовчуванням, тому він не може бути лише субагентом. Спочатку виберіть інший агент за замовчуванням.",
+  "settings.agentBehaviour.mode.defaultAgentProject":
+    "Цей агент указано як агент за замовчуванням у kilo.jsonc проєкту, тому він не може бути лише субагентом. Спочатку змініть там default_agent.",
   "settings.agentBehaviour.badge.subagent": "субагент",
   "settings.agentBehaviour.permissions.title": "Обчислені дозволи",
   "settings.agentBehaviour.permissions.count": "{{count}} правил",

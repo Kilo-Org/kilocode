@@ -1437,6 +1437,16 @@ export const dict = {
     "Dit is een ingebouwde modus. De basisdefinitie kan niet worden gewijzigd, maar u kunt hieronder overrides configureren.",
   "settings.agentBehaviour.editMode.prompt": "Systeemprompt",
   "settings.agentBehaviour.editMode.promptOverride": "Aangepaste systeemprompt voor deze ingebouwde modus",
+  "settings.agentBehaviour.mode.title": "Modus",
+  "settings.agentBehaviour.mode.description":
+    "Primaire agents verschijnen in de modusschakelaar van de chat. Subagents worden alleen door andere agents aangeroepen via de Task-tool, op basis van hun beschrijving.",
+  "settings.agentBehaviour.mode.primary": "Primair",
+  "settings.agentBehaviour.mode.subagent": "Subagent",
+  "settings.agentBehaviour.mode.all": "Primair en subagent",
+  "settings.agentBehaviour.mode.defaultAgent":
+    "Dit is de standaardagent, dus deze kan niet alleen een subagent zijn. Kies eerst een andere standaardagent.",
+  "settings.agentBehaviour.mode.defaultAgentProject":
+    "Deze agent is de standaardagent in de kilo.jsonc van het project, dus deze kan niet alleen een subagent zijn. Wijzig daar eerst default_agent.",
   "settings.agentBehaviour.badge.subagent": "subagent",
   "settings.agentBehaviour.permissions.title": "Berekende machtigingen",
   "settings.agentBehaviour.permissions.count": "{{count}} regels",
