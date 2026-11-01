@@ -23,6 +23,7 @@ import { ConfigValidation } from "../kilocode/config-validation" // kilocode_cha
 import * as EncodedIO from "../kilocode/tool/encoded-io" // kilocode_change
 import * as Encoding from "../kilocode/encoding" // kilocode_change
 import { assertMutablePath } from "../kilocode/agent-manager/protection" // kilocode_change
+import { FilePermission } from "../kilocode/permission/file-pattern" // kilocode_change
 
 const MAX_DIFF_CONTENT = 500_000 // kilocode_change
 
@@ -131,7 +132,7 @@ export const EditTool = Tool.define(
                 cachedFilediff = buildFileDiff(filePath, contentOld, contentNew) // kilocode_change
                 yield* ctx.ask({
                   permission: "edit",
-                  patterns: [path.relative(instance.worktree, filePath)],
+                  patterns: [path.relative(FilePermission.root(instance), filePath)], // kilocode_change
                   always: ["*"],
                   metadata: {
                     filepath: filePath,
@@ -180,7 +181,7 @@ export const EditTool = Tool.define(
               cachedFilediff = buildFileDiff(filePath, contentOld, contentNew) // kilocode_change
               yield* ctx.ask({
                 permission: "edit",
-                patterns: [path.relative(instance.worktree, filePath)],
+                patterns: [path.relative(FilePermission.root(instance), filePath)], // kilocode_change
                 always: ["*"],
                 metadata: {
                   filepath: filePath,
