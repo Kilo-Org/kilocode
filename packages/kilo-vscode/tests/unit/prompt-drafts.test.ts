@@ -2,6 +2,7 @@ import { beforeEach, describe, it, expect } from "bun:test"
 import { createEffect, createRoot, createSignal, on } from "solid-js"
 import { browserFeedbackData, formatBrowserFeedback } from "../../src/shared/browser-feedback"
 import { formatReviewCommentsMarkdown } from "../../src/shared/review-comments"
+import { buildTerminalAttachment } from "../../webview-ui/src/hooks/terminal-context-utils"
 import {
   browserDrafts,
   deleteDraftsForSession,
@@ -41,6 +42,7 @@ describe("failedPrompt", () => {
       text: "Make this button red",
       comments: [],
       browsers: browser.references,
+      images: [],
     })
   })
 
@@ -64,6 +66,7 @@ describe("failedPrompt", () => {
       text: "Apply both",
       comments: review.comments,
       browsers: browser.references,
+      images: [],
     })
   })
 
@@ -71,7 +74,30 @@ describe("failedPrompt", () => {
     const browser = browserFeedbackData([{ id: "button", sessionId: "session", selector: "#save" }])!
     expect(failedPrompt({ text: formatBrowserFeedback(browser.references), browserFeedback: browser })?.text).toBe("")
     expect(failedPrompt({ text: "Unrelated text", browserFeedback: browser })).toBeUndefined()
-    expect(failedPrompt({ text: "Plain draft" })).toEqual({ text: "Plain draft", comments: [], browsers: [] })
+    expect(failedPrompt({ text: "Plain draft" })).toEqual({
+      text: "Plain draft",
+      comments: [],
+      browsers: [],
+      images: [],
+    })
+  })
+
+  it("restores images and dropped text files but not mention context", () => {
+    const text = "check @terminal"
+    const terminal = buildTerminalAttachment(text, "$ ls")
+    if (!terminal) throw new Error("terminal context missing")
+    const restored = failedPrompt({
+      text,
+      files: [
+        { mime: "image/png", url: "data:image/png;base64,abc", filename: "shot.png" },
+        { mime: "text/plain", url: "data:text/plain;base64,aGk=", filename: "notes.md" },
+        terminal,
+      ],
+    })
+    expect(restored?.images).toEqual([
+      { id: expect.any(String), filename: "shot.png", mime: "image/png", dataUrl: "data:image/png;base64,abc" },
+      { id: expect.any(String), filename: "notes.md", mime: "text/plain", dataUrl: "data:text/plain;base64,aGk=" },
+    ])
   })
 })
 

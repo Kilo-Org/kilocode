@@ -139,6 +139,11 @@ const icons: Record<string, { path: string; viewBox: string }> = {
     viewBox: "0 0 20 20",
     path: `<path fill-rule="evenodd" clip-rule="evenodd" d="M10 2.5L18.125 16.25H1.875L10 2.5ZM9.375 7.5H10.625V12H9.375V7.5ZM9.375 13.125H10.625V14.375H9.375V13.125Z" fill="currentColor"/>`,
   },
+  file: {
+    viewBox: "0 0 20 20",
+    // Page outline on the same frame as the upstream `code` icon.
+    path: `<path d="M12.083 2.917H3.75V17.083H16.25V7.083L12.083 2.917ZM12.083 2.917V7.083H16.25" stroke="currentColor" stroke-linecap="square"/>`,
+  },
 }
 
 type Name = keyof typeof icons
