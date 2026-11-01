@@ -31,6 +31,8 @@ class HostedWorkspaceEditorManager(
     override val supportsFork: Boolean get() = false
     override val supportsNewWorktree: Boolean get() = false
     override val supportsMoveToWorktree: Boolean get() = false
+    var onNewSession: (() -> Unit)? = null
+    var onDeleteWorkspace: (() -> Unit)? = null
 
     override fun showHistory(back: (() -> Unit)?) {
         // The workspace editor already lists every hosted root session.
@@ -38,7 +40,23 @@ class HostedWorkspaceEditorManager(
 
     @RequiresEdt
     override fun newSession() {
-        // Opening this editor must not create a hosted session.
+        onNewSession?.invoke()
+    }
+
+    @RequiresEdt
+    fun closeSession(ref: SessionRef.Hosted) {
+        forceSession(ref.key)
+        if (currentUi() == null) clearCurrent()
+    }
+
+    @RequiresEdt
+    fun deleteWorkspace() {
+        onDeleteWorkspace?.invoke()
+    }
+
+    @RequiresEdt
+    fun clearPresentation() {
+        clearCurrent()
     }
 
     @RequiresEdt

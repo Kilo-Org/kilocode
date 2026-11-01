@@ -116,6 +116,90 @@ data class HostedWorkspaceStatusDto(
     val wakeBlockedReason: String? = null,
     val rateMicrodollarsPerHour: Long? = null,
     val billingBlocked: Boolean? = null,
+    val deletion: HostedDeletionDto? = null,
+)
+
+@Serializable
+data class HostedDeletionDto(
+    val started: Boolean = false,
+    val completed: Boolean = false,
+    val startedAt: Double? = null,
+    val phase: String = "not_started",
+    val sessionCount: Int = 0,
+    val runtimeLocationCount: Int = 0,
+    val completedRuntimeLocationCount: Int = 0,
+    val remainingRuntimeLocationCount: Int = 0,
+)
+
+@Serializable
+data class HostedWorkspaceProfileDto(
+    val id: String,
+    val name: String,
+    val description: String? = null,
+    val isDefault: Boolean = false,
+)
+
+@Serializable
+data class HostedWorkspaceProfileListDto(
+    val items: List<HostedWorkspaceProfileDto> = emptyList(),
+    val error: HostedFailureDto? = null,
+)
+
+@Serializable
+data class HostedRepositoryDto(
+    val type: String,
+    val repo: String? = null,
+    val url: String? = null,
+    val branch: String? = null,
+)
+
+@Serializable
+data class HostedAgentDto(
+    val mode: String,
+    val model: String,
+)
+
+@Serializable
+data class HostedCreateWorkspaceDto(
+    val repository: HostedRepositoryDto,
+    val profileID: String,
+    val prompt: String,
+    val agent: HostedAgentDto,
+    val operationKey: String,
+    val messageID: String,
+    val organizationID: String? = null,
+)
+
+@Serializable
+data class HostedStartSessionDto(
+    val prompt: String,
+    val agent: HostedAgentDto,
+    val operationKey: String,
+    val messageID: String,
+    val organizationID: String? = null,
+)
+
+@Serializable
+data class HostedFailureDto(
+    val code: String,
+    val message: String,
+    val retryable: Boolean = false,
+)
+
+@Serializable
+data class HostedMutationResultDto(
+    val workspace: HostedWorkspaceDto? = null,
+    val session: HostedWorkspaceSessionDto? = null,
+    val messageID: String? = null,
+    val replayed: Boolean = false,
+    val failure: HostedFailureDto? = null,
+)
+
+@Serializable
+data class HostedDeleteResultDto(
+    val ref: HostedWorkspaceRefDto,
+    val success: Boolean = false,
+    val failure: HostedFailureDto? = null,
 )
 
 /**

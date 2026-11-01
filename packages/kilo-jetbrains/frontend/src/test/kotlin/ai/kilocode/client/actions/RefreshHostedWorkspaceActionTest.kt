@@ -234,5 +234,19 @@ class RefreshHostedWorkspaceActionTest : BasePlatformTestCase() {
             sessionID: String,
             organizationID: String?,
         ): Flow<HostedSystemEventDto> = error("Workspaces without sessions need no event feed")
+
+        override suspend fun workspaceProfiles(organizationID: String?) =
+            ai.kilocode.rpc.dto.HostedWorkspaceProfileListDto()
+
+        override suspend fun createWorkspace(request: ai.kilocode.rpc.dto.HostedCreateWorkspaceDto) =
+            ai.kilocode.rpc.dto.HostedMutationResultDto()
+
+        override suspend fun startWorkspaceSession(
+            ref: HostedWorkspaceRefDto,
+            request: ai.kilocode.rpc.dto.HostedStartSessionDto,
+        ) = ai.kilocode.rpc.dto.HostedMutationResultDto()
+
+        override suspend fun deleteWorkspace(ref: HostedWorkspaceRefDto, organizationID: String?) =
+            ai.kilocode.rpc.dto.HostedDeleteResultDto(ref)
     }
 }

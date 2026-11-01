@@ -300,6 +300,8 @@
         <group id="Kilo.ToolWindowToolbar">
             <reference ref="Kilo.NewSession"/>
             <reference ref="Kilo.NewWorktree"/>
+            <reference ref="Kilo.HostedWorkspace.AddExisting"/>
+            <reference ref="Kilo.HostedWorkspace.Create"/>
             <reference ref="Kilo.History"/>
             <reference ref="Kilo.Settings"/>
         </group>
@@ -437,6 +439,21 @@
         <action id="Kilo.HostedWorkspace.Refresh"
                 class="ai.kilocode.client.actions.RefreshHostedWorkspaceAction"/>
 
+        <action id="Kilo.HostedWorkspace.AddExisting"
+                class="ai.kilocode.client.actions.HostedAddWorkspaceAction"/>
+
+        <action id="Kilo.HostedWorkspace.Create"
+                class="ai.kilocode.client.actions.HostedCreateWorkspaceAction"/>
+
+        <action id="Kilo.HostedWorkspace.Remove"
+                class="ai.kilocode.client.actions.HostedRemoveWorkspaceAction"/>
+
+        <action id="Kilo.HostedWorkspace.Delete"
+                class="ai.kilocode.client.actions.HostedDeleteWorkspaceAction"/>
+
+        <action id="Kilo.HostedWorkspace.Dismiss"
+                class="ai.kilocode.client.actions.HostedDismissWorkspaceAction"/>
+
         <action id="Kilo.WorktreeSession.Rename"
                 class="ai.kilocode.client.actions.RenameWorktreeSessionAction"/>
 
@@ -451,6 +468,11 @@
 
         <group id="Kilo.Worktree.RowMenu">
             <reference ref="Kilo.HostedWorkspace.Refresh"/>
+            <separator/>
+            <reference ref="Kilo.HostedWorkspace.Remove"/>
+            <reference ref="Kilo.HostedWorkspace.Delete"/>
+            <reference ref="Kilo.HostedWorkspace.Dismiss"/>
+            <separator/>
             <reference ref="Kilo.Worktree.Rename"/>
             <separator/>
             <reference ref="Kilo.Worktree.OpenPr"/>
