@@ -1977,16 +1977,19 @@ export function schema(model: Provider.Model, schema: JSONSchema7): JSONSchema7 
         if (key === "enum" && Array.isArray(value)) {
           // Convert all enum values to strings
           result[key] = value.map((v) => String(v))
-          // If we have integer type with enum, change type to string
-          if (result.type === "integer" || result.type === "number") {
-            result.type = "string"
-          }
         } else if (typeof value === "object" && value !== null) {
           result[key] = sanitizeGemini(value)
         } else {
           result[key] = value
         }
       }
+
+      // kilocode_change start - `enum` can precede `type` (Pydantic v2, FastMCP), so fix the type after the loop
+      // If we have integer type with enum, change type to string
+      if (Array.isArray(result.enum) && (result.type === "integer" || result.type === "number")) {
+        result.type = "string"
+      }
+      // kilocode_change end
 
       // Gemini requires a single `type`, not a JSON Schema type array such as
       // `["number","string"]` (emitted by some MCP servers). Plain `@ai-sdk/google`

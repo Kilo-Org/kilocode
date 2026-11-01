@@ -1400,6 +1400,60 @@ describe("ProviderTransform.schema - gemini nested array items", () => {
   })
 })
 
+// kilocode_change start
+describe("ProviderTransform.schema - gemini integer enums", () => {
+  const geminiModel = {
+    providerID: "google",
+    api: {
+      id: "gemini-3-pro",
+    },
+  } as any
+
+  test("converts an integer enum to a string enum when type comes first", () => {
+    const schema = {
+      type: "object",
+      properties: {
+        level: { type: "integer", title: "Level", enum: [1, 2, 3] },
+      },
+    } as any
+
+    const result = ProviderTransform.schema(geminiModel, schema) as any
+
+    expect(result.properties.level.type).toBe("string")
+    expect(result.properties.level.enum).toEqual(["1", "2", "3"])
+  })
+
+  // Pydantic v2 and FastMCP emit `enum` before `type`.
+  test("converts an integer enum to a string enum when enum comes first", () => {
+    const schema = {
+      type: "object",
+      properties: {
+        level: { enum: [1, 2, 3], title: "Level", type: "integer" },
+      },
+    } as any
+
+    const result = ProviderTransform.schema(geminiModel, schema) as any
+
+    expect(result.properties.level.type).toBe("string")
+    expect(result.properties.level.enum).toEqual(["1", "2", "3"])
+  })
+
+  test("converts a number enum to a string enum when enum comes first", () => {
+    const schema = {
+      type: "object",
+      properties: {
+        ratio: { enum: [0.5, 1.5], type: "number" },
+      },
+    } as any
+
+    const result = ProviderTransform.schema(geminiModel, schema) as any
+
+    expect(result.properties.ratio.type).toBe("string")
+    expect(result.properties.ratio.enum).toEqual(["0.5", "1.5"])
+  })
+})
+// kilocode_change end
+
 describe("ProviderTransform.schema - gemini type arrays", () => {
   // Mirrors @ai-sdk/google's convertJSONSchemaToOpenAPISchema: JSON Schema type
   // arrays (e.g. `["number","string"]`, common in MCP tool schemas) become an
