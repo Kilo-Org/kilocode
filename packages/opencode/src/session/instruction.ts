@@ -205,10 +205,12 @@ const layer: Layer.Layer<
       // kilocode_change end
       const remote = yield* Effect.forEach(urls, fetch, { concurrency: 4 })
 
-      return [
-        ...paths.flatMap((item, i) => (files[i] ? [`Instructions from: ${item}\n${files[i]}`] : [])), // kilocode_change
+      // kilocode_change start - cap combined instructions to stay under provider token limits
+      return KilocodeInstruction.budget([
+        ...paths.flatMap((item, i) => (files[i] ? [`Instructions from: ${item}\n${files[i]}`] : [])),
         ...urls.flatMap((item, i) => (remote[i] ? [`Instructions from: ${item}\n${remote[i]}`] : [])),
-      ]
+      ])
+      // kilocode_change end
     })
 
     const find = Effect.fn("Instruction.find")(function* (dir: string) {
