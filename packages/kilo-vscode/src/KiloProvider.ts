@@ -93,6 +93,7 @@ import { childID } from "./kilo-provider/task-session"
 import { VisibleTaskStreams } from "./kilo-provider/visible-task-streams"
 import { handleNetworkEvent, clearNetworkWaits } from "./kilo-provider/network"
 import { SessionAbort } from "./kilo-provider/abort"
+import { Preparations } from "./kilo-provider/preparations"
 import {
   buildAutocompleteSettingsMessage,
   validAutocompleteSetting,
@@ -4314,6 +4315,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
   /** Abort controllers for active retry loops, keyed by session ID */
   private retryAbortControllers = new Map<string, AbortController>()
+  /** Abort controllers for optional tool readiness, keyed by session ID */
+  private prepareAbortControllers = new Preparations()
 
   /** Execute an SDK call with visible exponential backoff for retryable HTTP errors. */
   private async withRetry(
@@ -4380,11 +4383,20 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
   /** Cancel an active retry loop for a session */
   private cancelRetry(sid: string): void {
+    this.prepareAbortControllers.cancel(sid)
     const controller = this.retryAbortControllers.get(sid)
     if (controller) {
       controller.abort()
       this.postMessage({ type: "sessionStatus", sessionID: sid, status: "idle" })
     }
+  }
+
+  private trackPrepare(sid: string): AbortController {
+    return this.prepareAbortControllers.track(sid)
+  }
+
+  private finishPrepare(sid: string, controller: AbortController): void {
+    this.prepareAbortControllers.finish(sid, controller)
   }
 
   private maxCostSetting(): number {
@@ -4733,6 +4745,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     }
 
     let resolved: { sid: string; dir: string } | undefined
+    let prepareAbort: AbortController | undefined
     try {
       const sandbox = this.sandboxTransitions.get(
         this.sandboxKey({ sessionID, draftID, agentManagerContext: context, contextDirectory }),
@@ -4742,6 +4755,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       if (sandbox) await sandbox
       const sid = resolved.sid
       const dir = resolved.dir
+      prepareAbort = this.trackPrepare(sid)
 
       const parts: Array<TextPartInput | FilePartInput> = []
       if (files) {
@@ -4766,10 +4780,13 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       }
 
       await this.checkpoints.get(sid)
+      if (prepareAbort.signal.aborted) return
       // Wait for Playwright MCP before the prompt so its tools are advertised.
       // Kept outside withRetry so retryable prompt errors keep their backoff.
       // The Integrated Browser does not use Playwright and is not affected.
-      await this.connectionService.prepareTools(dir)
+      await this.connectionService.prepareTools(dir, prepareAbort.signal)
+      if (prepareAbort.signal.aborted) return
+      if (draftID && this.closedDrafts.has(draftID)) return
       await runWithMessageConfirmation(this.confirmations, messageID, "KiloProvider: Message request", () =>
         this.withRetry(
           () =>
@@ -4789,6 +4806,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         ),
       )
     } catch (error) {
+      if (prepareAbort?.signal.aborted) return
       console.error("[Kilo New] KiloProvider: Failed to send message:", error)
       this.postMessage({
         type: "sendMessageFailed",
@@ -4801,6 +4819,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         review,
         browserFeedback,
       })
+    } finally {
+      if (prepareAbort && resolved) this.finishPrepare(resolved.sid, prepareAbort)
     }
   }
 
@@ -4832,6 +4852,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     }
 
     let resolved: { sid: string; dir: string } | undefined
+    let prepareAbort: AbortController | undefined
     try {
       const sandbox = this.sandboxTransitions.get(
         this.sandboxKey({ sessionID, draftID, agentManagerContext: context, contextDirectory }),
@@ -4843,6 +4864,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       if (sandbox && !stopping) await sandbox
       const sid = resolved.sid
       const dir = resolved.dir
+      prepareAbort = this.trackPrepare(sid)
 
       if (messageID) {
         this.connectionService.recordMessageSessionId(messageID, sid)
@@ -4858,7 +4880,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
       if (!control) {
         await this.checkpoints.get(sid)
-        await this.connectionService.prepareTools(dir)
+        if (prepareAbort.signal.aborted) return
+        await this.connectionService.prepareTools(dir, prepareAbort.signal)
+        if (prepareAbort.signal.aborted) return
       }
       const send = () =>
         this.client!.session.command({
@@ -4888,6 +4912,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         this.postMessage({ type: "sessionCommandCompleted", messageID })
       }
     } catch (error) {
+      if (prepareAbort?.signal.aborted) return
       console.error("[Kilo New] KiloProvider: Failed to send command:", error)
       this.postMessage({
         type: "sendMessageFailed",
@@ -4898,6 +4923,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         messageID,
         files,
       })
+    } finally {
+      if (prepareAbort && resolved) this.finishPrepare(resolved.sid, prepareAbort)
     }
   }
 
@@ -6317,6 +6344,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
    * Does NOT kill the server — that's the connection service's job.
    */
   dispose(): void {
+    this.prepareAbortControllers.dispose()
     this.opts.onHidden?.()
     if (this.opts.focusContext) {
       void vscode.commands.executeCommand("setContext", this.opts.focusContext, false)
