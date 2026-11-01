@@ -14,8 +14,12 @@ describe("kilocode logo", () => {
     expect(supports({ ConEmuPID: "123" }, "win32")).toBe(false)
   })
 
-  test("allows modern Windows terminals", () => {
-    expect(supports({ WT_SESSION: "session" }, "win32")).toBe(true)
+  test("falls back in Windows Terminal unless explicitly overridden", () => {
+    expect(supports({ WT_SESSION: "session" }, "win32")).toBe(false)
+    expect(supports({ WT_SESSION: "session", KILO_UNICODE_LOGO: "1" }, "win32")).toBe(true)
+  })
+
+  test("allows Windows terminals with known sextant glyph support", () => {
     expect(supports({ TERM_PROGRAM: "vscode" }, "win32")).toBe(true)
     expect(supports({ WEZTERM_PANE: "1" }, "win32")).toBe(true)
     expect(supports({ TERM_PROGRAM: "WezTerm" }, "win32")).toBe(true)
