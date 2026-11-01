@@ -1105,6 +1105,191 @@ describe("plan follow-up", () => {
       expect(user.info.model).toEqual({ ...model, variant: planVar })
     }))
 
+  test("ask - uses session model on VS Code instead of code agent config", () =>
+    withInstance(async () => {
+      const prev = process.env.KILO_CLIENT
+      process.env.KILO_CLIENT = "vscode"
+      try {
+        const get = spyOn(PlanFollowupRuntime, "agent").mockImplementation(async (name: string) => {
+          if (name === "code") {
+            return {
+              name: "code",
+              mode: "primary",
+              permission: [],
+              options: {},
+              model: config,
+              variant: configVar,
+            } as any
+          }
+          return undefined as any
+        })
+        const modelSpy = spyOn(PlanFollowupRuntime, "modelIfAvailable").mockImplementation(
+          async (providerID: string, modelID: string) => {
+            if (providerID === model.providerID && modelID === model.modelID) return fakeModel
+            if (providerID === config.providerID && modelID === config.modelID) return configFull
+            return undefined
+          },
+        )
+        using _ = {
+          [Symbol.dispose]() {
+            get.mockRestore()
+            modelSpy.mockRestore()
+          },
+        }
+        // Seed with the session model (gpt-4) — different from the code agent's
+        // configured model (gpt-4.1) to detect a silent model switch.
+        const seeded = await seed({ text: "1. Build\n2. Test" })
+        const pending = PlanFollowup.ask({
+          question,
+          sessionID: seeded.sessionID,
+          messages: seeded.messages,
+          abort: AbortSignal.any([]),
+        })
+
+        const item = await waitQuestion(seeded.sessionID)
+        expect(item).toBeDefined()
+        if (!item) return
+        await question.reply({
+          requestID: item.id,
+          answers: [[PlanFollowup.ANSWER_CONTINUE]],
+        })
+
+        await expect(pending).resolves.toBe("continue")
+
+        // On VS Code the session's model takes priority over the code agent's
+        // configured model — no silent model switch when clicking Implement.
+        const user = await latestUser(seeded.sessionID)
+        expect(user?.info.role).toBe("user")
+        if (!user || user.info.role !== "user") return
+        expect(user.info.agent).toBe("code")
+        expect(user.info.model).toEqual({ ...model })
+      } finally {
+        process.env.KILO_CLIENT = prev
+      }
+    }))
+
+  test("ask - VS Code preserves session model variant", () =>
+    withInstance(async () => {
+      const prev = process.env.KILO_CLIENT
+      process.env.KILO_CLIENT = "vscode"
+      try {
+        const get = spyOn(PlanFollowupRuntime, "agent").mockImplementation(async (name: string) => {
+          if (name === "code") {
+            return {
+              name: "code",
+              mode: "primary",
+              permission: [],
+              options: {},
+              model: config,
+              variant: configVar,
+            } as any
+          }
+          return undefined as any
+        })
+        // Provide variants for the session model so the variant is preserved.
+        const sessionFull = full(model, [planVar, "low"])
+        const modelSpy = spyOn(PlanFollowupRuntime, "modelIfAvailable").mockImplementation(
+          async (providerID: string, modelID: string) => {
+            if (providerID === model.providerID && modelID === model.modelID) return sessionFull
+            if (providerID === config.providerID && modelID === config.modelID) return configFull
+            return undefined
+          },
+        )
+        using _ = {
+          [Symbol.dispose]() {
+            get.mockRestore()
+            modelSpy.mockRestore()
+          },
+        }
+        const seeded = await seed({ text: "1. Build\n2. Test", variant: planVar })
+        const pending = PlanFollowup.ask({
+          question,
+          sessionID: seeded.sessionID,
+          messages: seeded.messages,
+          abort: AbortSignal.any([]),
+        })
+
+        const item = await waitQuestion(seeded.sessionID)
+        expect(item).toBeDefined()
+        if (!item) return
+        await question.reply({
+          requestID: item.id,
+          answers: [[PlanFollowup.ANSWER_CONTINUE]],
+        })
+
+        await expect(pending).resolves.toBe("continue")
+
+        const user = await latestUser(seeded.sessionID)
+        expect(user?.info.role).toBe("user")
+        if (!user || user.info.role !== "user") return
+        expect(user.info.agent).toBe("code")
+        expect(user.info.model).toEqual({ ...model, variant: planVar })
+      } finally {
+        process.env.KILO_CLIENT = prev
+      }
+    }))
+
+  test("ask - VS Code falls back to code agent config when session model not in catalog", () =>
+    withInstance(async () => {
+      const prev = process.env.KILO_CLIENT
+      process.env.KILO_CLIENT = "vscode"
+      try {
+        const get = spyOn(PlanFollowupRuntime, "agent").mockImplementation(async (name: string) => {
+          if (name === "code") {
+            return {
+              name: "code",
+              mode: "primary",
+              permission: [],
+              options: {},
+              model: config,
+              variant: configVar,
+            } as any
+          }
+          return undefined as any
+        })
+        // Session model is NOT in the catalog → stamp returns undefined → falls
+        // through to the code agent's configured model (graceful degradation).
+        const modelSpy = spyOn(PlanFollowupRuntime, "modelIfAvailable").mockImplementation(
+          async (providerID: string, modelID: string) => {
+            if (providerID === model.providerID && modelID === model.modelID) return undefined
+            if (providerID === config.providerID && modelID === config.modelID) return configFull
+            return undefined
+          },
+        )
+        using _ = {
+          [Symbol.dispose]() {
+            get.mockRestore()
+            modelSpy.mockRestore()
+          },
+        }
+        const seeded = await seed({ text: "1. Build\n2. Test" })
+        const pending = PlanFollowup.ask({
+          question,
+          sessionID: seeded.sessionID,
+          messages: seeded.messages,
+          abort: AbortSignal.any([]),
+        })
+
+        const item = await waitQuestion(seeded.sessionID)
+        expect(item).toBeDefined()
+        if (!item) return
+        await question.reply({
+          requestID: item.id,
+          answers: [[PlanFollowup.ANSWER_CONTINUE]],
+        })
+
+        await expect(pending).resolves.toBe("continue")
+
+        const user = await latestUser(seeded.sessionID)
+        expect(user?.info.role).toBe("user")
+        if (!user || user.info.role !== "user") return
+        expect(user.info.agent).toBe("code")
+        expect(user.info.model).toEqual({ ...config, variant: configVar })
+      } finally {
+        process.env.KILO_CLIENT = prev
+      }
+    }))
+
   test("ask - new session uses saved code model even when catalog lookup fails", () =>
     withInstance(async () => {
       await writeState({
