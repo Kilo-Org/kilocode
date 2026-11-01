@@ -193,6 +193,21 @@
   color: var(--vscode-descriptionForeground);
 }
 
+.task-header-warning {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  border-radius: 2px;
+  --icon-base: var(--icon-warning-base, var(--vscode-editorWarning-foreground));
+  color: var(--icon-warning-base, var(--vscode-editorWarning-foreground));
+  cursor: help;
+}
+
+.task-header-warning:focus-visible {
+  outline: 1px solid var(--vscode-focusBorder);
+  outline-offset: 2px;
+}
+
 .context-progress-count {
   flex-shrink: 0;
   font-variant-numeric: tabular-nums;
