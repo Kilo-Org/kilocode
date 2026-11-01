@@ -14,6 +14,7 @@ import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
+import java.util.concurrent.RejectedExecutionException
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
@@ -383,8 +384,14 @@ class MockCliServer : AutoCloseable {
     override fun close() {
         if (!closed.compareAndSet(false, true)) return
         shutdownServer()
-        executor.shutdownNow()
-        check(executor.awaitTermination(5, TimeUnit.SECONDS)) { "Mock CLI executor did not terminate" }
+        try {
+            executor.shutdownNow()
+            check(executor.awaitTermination(5, TimeUnit.SECONDS)) { "Mock CLI executor did not terminate" }
+        } finally {
+            // A socket accepted while shutting down may have missed the sweep above. Its client
+            // (no read timeout) would block forever and keep the test scope from completing.
+            drain()
+        }
     }
 
     private fun shutdownServer() {
@@ -394,10 +401,17 @@ class MockCliServer : AutoCloseable {
         val w = sseWriter
         sseWriter = null
         runCatching { w?.close() }
-        connections.forEach { runCatching { it.close() } }
-        connections.clear()
+        // Stop accepting before the sweep so no socket is added after it.
         runCatching { server?.close() }
         server = null
+        drain()
+    }
+
+    private fun drain() {
+        while (true) {
+            val socket = connections.poll() ?: return
+            runCatching { socket.close() }
+        }
     }
 
     private fun acceptLoop(srv: ServerSocket, ready: CountDownLatch) {
@@ -406,7 +420,17 @@ class MockCliServer : AutoCloseable {
             try {
                 val socket = srv.accept()
                 connections.add(socket)
-                executor.submit { handle(socket) }
+                // Accepted right before shutdown: the sweep may already have run.
+                if (srv.isClosed) {
+                    runCatching { socket.close() }
+                    break
+                }
+                try {
+                    executor.submit { handle(socket) }
+                } catch (_: RejectedExecutionException) {
+                    runCatching { socket.close() }
+                    break
+                }
             } catch (_: SocketException) {
                 break
             }
