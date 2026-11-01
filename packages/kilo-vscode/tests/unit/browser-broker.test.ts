@@ -284,6 +284,88 @@ describe("BrowserBroker", () => {
     expect(loading).toEqual([1, 2])
   })
 
+  test("captures agent screenshots at a requested viewport and restores the panel size", async () => {
+    let viewport = { width: 1280, height: 720 }
+    const shots: string[] = []
+    const page = {
+      url: () => "http://localhost:3000/",
+      title: async () => "Responsive",
+      viewportSize: () => viewport,
+      setViewportSize: async (size: { width: number; height: number }) => {
+        viewport = size
+      },
+      evaluate: async () => undefined,
+      screenshot: async () => {
+        shots.push(`${viewport.width}x${viewport.height}`)
+        return Buffer.from("jpeg")
+      },
+      off: () => undefined,
+      on: () => undefined,
+      mainFrame: () => undefined,
+      goto: async () => undefined,
+      reload: async () => undefined,
+    }
+    const broker = fixture(page)
+    const env = await broker.env()
+    const request = (body: Record<string, unknown>) =>
+      fetch(`${env.KILO_BROWSER_BROKER_URL}/browser/open`, {
+        method: "POST",
+        headers: {
+          authorization: `Bearer ${env.KILO_BROWSER_BROKER_TOKEN}`,
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({ sessionID: "agent", directory: "/tmp/project", url: "http://localhost:3000/", ...body }),
+      })
+
+    expect((await request({ viewport: { width: 390, height: 844 } })).status).toBe(200)
+    expect(shots).toEqual(["390x844"])
+    expect(viewport).toEqual({ width: 1280, height: 720 })
+
+    expect((await request({})).status).toBe(200)
+    expect(shots).toEqual(["390x844", "1280x720"])
+
+    for (const invalid of [{ width: 390 }, { width: 100, height: 844 }, { width: 390.5, height: 844 }, "390x844"]) {
+      const response = await request({ viewport: invalid })
+      expect(response.status).toBe(400)
+      expect(((await response.json()) as { error: string }).error).toContain("Browser viewport")
+    }
+    expect(shots).toHaveLength(2)
+  })
+
+  test("serves extension routes only to authenticated clients", async () => {
+    const seen: unknown[] = []
+    const broker = new BrowserBroker({
+      log: () => {},
+      extend: (path, body) => {
+        if (path !== "/playwright/profile") return undefined
+        seen.push(body)
+        if (body.browser === "netscape") return Promise.reject(new Error("Browser is not allowed"))
+        return Promise.resolve({ browser: body.browser })
+      },
+    })
+    brokers.push(broker)
+    const env = await broker.env()
+    const request = (path: string, body: Record<string, unknown>, token = env.KILO_BROWSER_BROKER_TOKEN) =>
+      fetch(`${env.KILO_BROWSER_BROKER_URL}${path}`, {
+        method: "POST",
+        headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
+        body: JSON.stringify({ sessionID: "agent", directory: "/tmp/project", ...body }),
+      })
+
+    const ok = await request("/playwright/profile", { browser: "webkit" })
+    expect(ok.status).toBe(200)
+    expect(await ok.json()).toEqual({ browser: "webkit" })
+    expect(seen).toEqual([{ sessionID: "agent", directory: "/tmp/project", browser: "webkit" }])
+
+    const refused = await request("/playwright/profile", { browser: "netscape" })
+    expect(refused.status).toBe(400)
+    expect(await refused.json()).toEqual({ error: "Browser is not allowed" })
+
+    expect((await request("/playwright/other", {})).status).toBe(404)
+    expect((await request("/playwright/profile", { browser: "webkit" }, "wrong")).status).toBe(401)
+    expect(seen).toHaveLength(2)
+  })
+
   test("protects its local bridge with a bearer token", async () => {
     const broker = new BrowserBroker({ log: () => {} })
     brokers.push(broker)

@@ -1162,17 +1162,45 @@
         "kilo-code.new.browserAutomation.enabled": {
           "type": "boolean",
           "default": false,
-          "description": "Enable browser automation powered by Playwright. When enabled, the AI agent can interact with web pages in a visible Chrome window."
+          "description": "Enable browser automation powered by Playwright. When enabled, the AI agent can start a browser and interact with web pages."
+        },
+        "kilo-code.new.browserAutomation.browsers": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "chrome",
+              "chromium",
+              "msedge",
+              "firefox",
+              "webkit"
+            ],
+            "enumDescriptions": [
+              "Google Chrome installed on this machine.",
+              "Playwright Chromium. Enabling it in Kilo Settings > Web Tools downloads it.",
+              "Microsoft Edge installed on this machine.",
+              "Playwright Firefox. Enabling it in Kilo Settings > Web Tools downloads it.",
+              "Playwright WebKit, the engine behind Safari. Enabling it in Kilo Settings > Web Tools downloads it."
+            ]
+          },
+          "uniqueItems": true,
+          "minItems": 1,
+          "default": [
+            "chrome"
+          ],
+          "description": "Browsers the agent may use for browser automation. For each task the agent picks the browser, device emulation, viewport size, and whether the window is visible."
         },
         "kilo-code.new.browserAutomation.useSystemChrome": {
           "type": "boolean",
           "default": true,
-          "description": "Use your system's installed Chrome browser instead of downloading a separate Chromium instance."
+          "description": "Use your system's installed Chrome browser instead of downloading a separate Chromium instance.",
+          "deprecationMessage": "Use kilo-code.new.browserAutomation.browsers instead. This value only applies while that list is not set."
         },
         "kilo-code.new.browserAutomation.headless": {
           "type": "boolean",
           "default": false,
-          "description": "Run browser automation in headless mode (no visible window). When disabled, you can watch the agent interact with the browser."
+          "description": "Run browser automation in headless mode (no visible window). When disabled, you can watch the agent interact with the browser.",
+          "deprecationMessage": "No longer used. The agent decides per task whether the browser window is visible, and shows it unless asked otherwise."
         },
         "kilo-code.new.agentManager.browser.useSystemChrome": {
           "type": "boolean",

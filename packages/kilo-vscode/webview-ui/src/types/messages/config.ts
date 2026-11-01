@@ -141,9 +141,14 @@ export type IndexingStatus = SdkIndexingStatus
 
 export interface BrowserSettings {
   enabled: boolean
-  useSystemChrome: boolean
-  headless: boolean
+  /** Browsers the agent may use, in canonical order. */
+  browsers: AutomationBrowser[]
 }
+
+export type AutomationBrowser = "chrome" | "chromium" | "msedge" | "firefox" | "webkit"
+/** Browsers that Playwright downloads, which Settings can install. */
+export type AutomationBuild = "chromium" | "firefox" | "webkit"
+export type AutomationBrowserStatus = "installed" | "missing" | "unknown"
 
 export type TerminalCommandDisplay = "expanded" | "collapsed"
 export type CodeEditDisplay = "expanded" | "collapsed"
