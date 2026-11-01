@@ -38,3 +38,8 @@ Readiness:
 - Use `ready.pattern` when the process prints a recognizable line like `ready`, `Local:`, or `started server`.
 - Use `ready.port` when a local server should accept TCP connections on a known port.
 - If readiness is not known, omit `ready`; the process is returned as running immediately.
+
+Wake detection:
+- Set `wake.pattern` to a regular expression matched against each stdout/stderr line. Matching lines are batched and injected into the owning session as a synthetic SessionPrompt.
+- Multiple events arriving within `wake.cooldownMs` (default 1000) are queued and delivered in FIFO order, never dropped. The last event of a closing process is flushed on exit.
+- Use wake detection for tools like `impeccable live-poll --stream` whose outputs are event streams the agent must react to. Omit `wake` for ordinary long-running processes.
