@@ -58,6 +58,10 @@ export const IndexingConfig = z
       .object({
         baseUrl: z.string().optional(),
         apiKey: z.string().optional(),
+        sendDimensions: z
+          .boolean()
+          .optional()
+          .describe("Send the dimensions parameter with embedding requests (default: true)"),
       })
       .strict()
       .optional()
@@ -179,6 +183,7 @@ export const IndexingSchema = Schema.Struct({
     Schema.Struct({
       baseUrl: Schema.optional(Schema.String),
       apiKey: Schema.optional(Schema.String),
+      sendDimensions: Schema.optional(Schema.Boolean),
     }),
   ).annotate({ description: "OpenAI-compatible embedding provider options" }),
   gemini: Schema.optional(
@@ -272,6 +277,7 @@ export function toIndexingConfigInput(cfg: IndexingConfig | undefined): Indexing
     ollamaBaseUrl: cfg?.ollama?.baseUrl,
     openAiCompatibleBaseUrl: cfg?.["openai-compatible"]?.baseUrl,
     openAiCompatibleApiKey: cfg?.["openai-compatible"]?.apiKey,
+    openAiCompatibleSendDimensions: cfg?.["openai-compatible"]?.sendDimensions,
     geminiApiKey: cfg?.gemini?.apiKey,
     mistralApiKey: cfg?.mistral?.apiKey,
     vercelAiGatewayApiKey: cfg?.["vercel-ai-gateway"]?.apiKey,
