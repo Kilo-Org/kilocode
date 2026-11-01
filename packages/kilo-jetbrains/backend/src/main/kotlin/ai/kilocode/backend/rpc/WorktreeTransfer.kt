@@ -5,6 +5,7 @@ import com.intellij.execution.configurations.GeneralCommandLine
 import com.intellij.execution.process.CapturingProcessHandler
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
+import java.nio.file.LinkOption
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption.COPY_ATTRIBUTES
 import java.nio.file.StandardCopyOption.REPLACE_EXISTING
@@ -14,8 +15,8 @@ import kotlin.io.path.fileSize
 
 /**
  * Portable git-state snapshot for "Move to Worktree". Captures uncommitted changes as binary-safe
- * patch files plus untracked file copies, then applies them to a fresh worktree without ever
- * modifying the source working tree.
+ * patch files plus untracked file copies and symlinks, then applies them to a fresh worktree
+ * without ever modifying the source working tree.
  *
  * Ported from `packages/kilo-vscode/src/agent-manager/git-transfer.ts`. Patches are captured to temp
  * files with a redirected stdout rather than decoded to strings: `CapturingProcessHandler` decodes
@@ -36,6 +37,8 @@ internal object WorktreeTransfer {
         val staged: Path?,
         val unstaged: Path?,
         val untracked: Map<String, Path>,
+        /** Symlink path to its target text. Relative targets are kept as stored and are not resolved. */
+        val links: Map<String, String>,
         val storage: Path,
     )
 
@@ -67,23 +70,28 @@ internal object WorktreeTransfer {
         try {
             val unstaged = capturePatch(root, storage, "diff", "--binary")
             val staged = capturePatch(root, storage, "diff", "--cached", "--binary")
-            val untracked = gitLines(root, "ls-files", "--others", "--exclude-standard", "-z")
-                .associateWith { rel ->
-                    runCatching {
-                        val full = root.resolve(rel).normalize()
-                        require(full.startsWith(root)) { "File is outside the source worktree" }
-                        val attrs = Files.readAttributes(full, BasicFileAttributes::class.java)
-                        require(attrs.isRegularFile) { "Not a regular file" }
-                        require(attrs.size() <= MAX_FILE) { "File exceeds the $MAX_FILE byte transfer limit" }
-                        val copy = Files.createTempFile(storage, "file", ".tmp")
-                        Files.copy(full, copy, REPLACE_EXISTING)
-                        require(copy.fileSize() <= MAX_FILE) { "File exceeds the $MAX_FILE byte transfer limit" }
-                        copy
-                    }.getOrElse { err ->
-                        throw IllegalStateException("Failed to capture untracked file $rel: ${err.message}", err)
+            val untracked = linkedMapOf<String, Path>()
+            val links = linkedMapOf<String, String>()
+            for (rel in gitLines(root, "ls-files", "--others", "--exclude-standard", "-z")) {
+                runCatching {
+                    val full = root.resolve(rel).normalize()
+                    require(full.startsWith(root)) { "File is outside the source worktree" }
+                    if (Files.isSymbolicLink(full)) {
+                        links[rel] = Files.readSymbolicLink(full).toString()
+                        return@runCatching
                     }
+                    val attrs = Files.readAttributes(full, BasicFileAttributes::class.java, LinkOption.NOFOLLOW_LINKS)
+                    require(attrs.isRegularFile) { "Not a regular file" }
+                    require(attrs.size() <= MAX_FILE) { "File exceeds the $MAX_FILE byte transfer limit" }
+                    val copy = Files.createTempFile(storage, "file", ".tmp")
+                    Files.copy(full, copy, REPLACE_EXISTING)
+                    require(copy.fileSize() <= MAX_FILE) { "File exceeds the $MAX_FILE byte transfer limit" }
+                    untracked[rel] = copy
+                }.getOrElse { err ->
+                    throw IllegalStateException("Failed to capture untracked file $rel: ${err.message}", err)
                 }
-            return Snapshot(branch, head, staged, unstaged, untracked, storage)
+            }
+            return Snapshot(branch, head, staged, unstaged, untracked, links, storage)
         } catch (e: Exception) {
             discard(storage)
             throw e
@@ -121,6 +129,22 @@ internal object WorktreeTransfer {
             }.exceptionOrNull()
             if (err != null) {
                 LOG.warn("worktree move: failed to write untracked file $rel: ${err.message}", err)
+                return ApplyResult(false, "Failed to write untracked file $rel: ${err.message}")
+            }
+        }
+        snapshot.links.forEach { (rel, link) ->
+            val dst = root.resolve(rel).normalize()
+            if (!dst.startsWith(root)) return ApplyResult(false, "Untracked file is outside the target worktree: $rel")
+            val err = runCatching {
+                Files.createDirectories(dst.parent)
+                // A setup script may have created this path. Replace a file or link; leave a directory so creation fails.
+                if (Files.exists(dst, LinkOption.NOFOLLOW_LINKS) && !Files.isDirectory(dst, LinkOption.NOFOLLOW_LINKS)) {
+                    Files.delete(dst)
+                }
+                Files.createSymbolicLink(dst, Path.of(link))
+            }.exceptionOrNull()
+            if (err != null) {
+                LOG.warn("worktree move: failed to create untracked symlink $rel: ${err.message}", err)
                 return ApplyResult(false, "Failed to write untracked file $rel: ${err.message}")
             }
         }
