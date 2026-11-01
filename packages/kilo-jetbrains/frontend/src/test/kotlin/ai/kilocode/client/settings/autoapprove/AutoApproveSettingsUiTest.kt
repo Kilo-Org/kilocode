@@ -6,7 +6,7 @@ import ai.kilocode.client.app.KiloWorkspaceService
 import ai.kilocode.client.testing.FakeAppRpcApi
 import ai.kilocode.client.testing.FakeWorkspaceRpcApi
 import ai.kilocode.client.testing.fire
-import ai.kilocode.client.ui.list.ActiveListItem
+import ai.kilocode.client.ui.active.ActiveItem
 import ai.kilocode.client.ui.list.activeListCellBounds
 import ai.kilocode.rpc.dto.ConfigDto
 import ai.kilocode.rpc.dto.KiloAppStateDto
@@ -245,7 +245,7 @@ class AutoApproveSettingsUiTest : BasePlatformTestCase() {
         flushUntil { rpc.configPatches.isNotEmpty() }
         edt {
             val jList = jbList(list)
-            assertEquals("git log *", (jList.selectedValue as ActiveListItem).key)
+            assertEquals("git log *", (jList.selectedValue as ActiveItem).key)
             assertEquals(height, jList.fixedCellHeight)
         }
     }
@@ -266,7 +266,7 @@ class AutoApproveSettingsUiTest : BasePlatformTestCase() {
             pick = { choices -> choices.first { it is LevelChoice.Level && it.level == "deny" } }
             clickLevel(list, "*.env")
             val jList = jbList(list)
-            assertEquals("*.env", (jList.selectedValue as ActiveListItem).key)
+            assertEquals("*.env", (jList.selectedValue as ActiveItem).key)
             assertEquals(height, jList.fixedCellHeight)
         }
     }
@@ -295,7 +295,7 @@ class AutoApproveSettingsUiTest : BasePlatformTestCase() {
         val rule = rpc.configPatches.last().permission?.get("bash")
         assertEquals(PermissionRuleDto.Patterns(mapOf("*" to "ask", "git status" to "allow", "git *" to null)), rule)
         edt {
-            assertEquals("git status", (jbList(list).selectedValue as ActiveListItem).key)
+            assertEquals("git status", (jbList(list).selectedValue as ActiveItem).key)
         }
     }
 
@@ -333,7 +333,7 @@ class AutoApproveSettingsUiTest : BasePlatformTestCase() {
     private fun clickLevel(list: SettingsInlineList, key: String) {
         val jList = jbList(list)
         val model = jList.model
-        val idx = (0 until model.size).first { (model.getElementAt(it) as ActiveListItem).key == key }
+        val idx = (0 until model.size).first { (model.getElementAt(it) as ActiveItem).key == key }
         jList.selectedIndex = idx
         jList.setSize(600, jList.preferredSize.height.coerceAtLeast(80))
         jList.doLayout()
@@ -344,7 +344,7 @@ class AutoApproveSettingsUiTest : BasePlatformTestCase() {
     private fun jbList(list: SettingsInlineList): JBList<*> = components(list).filterIsInstance<JBList<*>>().single()
 
     private fun indexOf(list: JBList<*>, key: String): Int = (0 until list.model.size)
-        .first { (list.model.getElementAt(it) as ActiveListItem).key == key }
+        .first { (list.model.getElementAt(it) as ActiveItem).key == key }
 
     private fun button(list: SettingsInlineList, index: Int): JComponent = components(list)
         .filterIsInstance<JComponent>()

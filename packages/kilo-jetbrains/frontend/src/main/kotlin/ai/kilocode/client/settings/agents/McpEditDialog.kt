@@ -8,8 +8,8 @@ import ai.kilocode.client.settings.base.SettingsStackedRow
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.layout.Stack
 import ai.kilocode.client.ui.layout.StackAxis
-import ai.kilocode.client.ui.list.ActiveListActionCell
-import ai.kilocode.client.ui.list.ActiveListCell
+import ai.kilocode.client.ui.active.ActiveActionCell
+import ai.kilocode.client.ui.active.ActiveCell
 import ai.kilocode.client.util.webUrl
 import ai.kilocode.rpc.dto.McpConfigDto
 import ai.kilocode.rpc.dto.McpOAuthDto
@@ -374,8 +374,8 @@ internal class McpEditDialog(
         companion object {
             fun actionSize(): Dimension = action().preferredSize
 
-            private fun action() = ActiveListActionCell().apply {
-                update(ActiveListCell(
+            private fun action() = ActiveActionCell().apply {
+                update(ActiveCell(
                     "delete",
                     KiloBundle.message("common.delete"),
                     icon = AllIcons.Actions.GC,

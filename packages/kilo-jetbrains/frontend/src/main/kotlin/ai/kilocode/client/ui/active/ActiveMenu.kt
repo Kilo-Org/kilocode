@@ -1,4 +1,4 @@
-package ai.kilocode.client.ui.list
+package ai.kilocode.client.ui.active
 
 import com.intellij.openapi.actionSystem.ActionGroup
 import com.intellij.openapi.actionSystem.ActionPlaces
@@ -8,18 +8,24 @@ import com.intellij.openapi.actionSystem.impl.SimpleDataContext
 import com.intellij.ide.DataManager
 import javax.swing.JComponent
 
-internal class ActiveListMenu<T : Any>(
+internal class ActiveMenu<T : Any>(
     private val key: DataKey<T>,
     val group: ActionGroup,
-    private val element: (ActiveListItem) -> T?,
+    private val element: (ActiveItem) -> T?,
     val place: String = ActionPlaces.POPUP,
-    private val alternate: ActiveListMenu<*>? = null,
+    private val eligible: ((ActiveItem) -> Boolean)? = null,
+    private val alternate: ActiveMenu<*>? = null,
 ) {
-    fun available(item: ActiveListItem): Boolean = element(item) != null || alternate?.available(item) == true
+    fun available(item: ActiveItem): Boolean =
+        (eligible?.invoke(item) ?: true) && (element(item) != null || alternate?.available(item) == true)
 
-    fun context(anchor: JComponent, item: ActiveListItem): DataContext {
-        val data = element(item)
-        if (data == null && alternate?.available(item) == true) {
+    private fun fallback(item: ActiveItem): ActiveMenu<*>? =
+        alternate?.takeIf { alternate -> (eligible?.invoke(item) ?: true) && alternate.available(item) }
+
+    fun context(anchor: JComponent, item: ActiveItem): DataContext {
+        val data = if (eligible?.invoke(item) ?: true) element(item) else null
+        val alternate = fallback(item)
+        if (data == null && alternate != null) {
             return SimpleDataContext.builder().setParent(alternate.context(anchor, item)).addNull(key).build()
         }
         val builder = SimpleDataContext.builder()

@@ -13,8 +13,8 @@ import ai.kilocode.client.testing.TestCoroutines
 import ai.kilocode.client.testing.pumpEdt
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.HoverIcon
-import ai.kilocode.client.ui.list.ACTIVE_LIST_DELETE_CELL
-import ai.kilocode.client.ui.list.ACTIVE_LIST_RENAME_CELL
+import ai.kilocode.client.ui.active.ACTIVE_DELETE_CELL
+import ai.kilocode.client.ui.active.ACTIVE_RENAME_CELL
 import ai.kilocode.client.ui.layout.Align
 import ai.kilocode.rpc.dto.CloudSessionDto
 import ai.kilocode.rpc.dto.KiloAppStateDto
@@ -256,7 +256,7 @@ class HistoryControllerTest : BasePlatformTestCase() {
         val row = localHistoryRows(listOf(item), HistoryActivitySnapshot()) { false }[0]
 
         assertEquals(HistoryTime.relative(item), row.trailing)
-        assertEquals(listOf(ACTIVE_LIST_RENAME_CELL, ACTIVE_LIST_DELETE_CELL), row.cells.map { it.id })
+        assertEquals(listOf(ACTIVE_RENAME_CELL, ACTIVE_DELETE_CELL), row.cells.map { it.id })
         assertTrue(row.cells.all { it.iconOnly })
     }
 
@@ -267,7 +267,7 @@ class HistoryControllerTest : BasePlatformTestCase() {
         val row = localHistoryRows(listOf(item), snapshot) { true }[0]
 
         assertEquals(KiloBundle.message("common.deleting"), row.progress)
-        assertEquals(listOf(ACTIVE_LIST_RENAME_CELL, ACTIVE_LIST_DELETE_CELL), row.cells.map { it.id })
+        assertEquals(listOf(ACTIVE_RENAME_CELL, ACTIVE_DELETE_CELL), row.cells.map { it.id })
         assertEquals(listOf(SessionActivityKind.RUNNING.label()), row.badges.map { it.text })
     }
 

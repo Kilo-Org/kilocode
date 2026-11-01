@@ -16,11 +16,12 @@ import ai.kilocode.client.testing.FakeSessionRpcApi
 import ai.kilocode.client.testing.FakeWorkspaceRpcApi
 import ai.kilocode.client.testing.TestCoroutines
 import ai.kilocode.client.testing.TestLog
-import ai.kilocode.client.ui.list.ActiveListItem
-import ai.kilocode.client.ui.list.ActiveListBadgeCell
+import ai.kilocode.client.ui.active.ActiveItem
+import ai.kilocode.client.ui.list.ActiveSection
+import ai.kilocode.client.ui.active.ActiveBadgeCell
 import ai.kilocode.client.ui.FilledBadgeIcon
 import ai.kilocode.client.ui.HoverIcon
-import ai.kilocode.client.ui.list.activeListLayout
+import ai.kilocode.client.ui.active.activeLayout
 import javax.swing.SwingUtilities
 import ai.kilocode.client.ui.layout.Stack
 import ai.kilocode.client.session.ui.ProgressPanel
@@ -136,17 +137,17 @@ class HostedWorkspaceEditorPanelTest : BasePlatformTestCase() {
 
     fun testSessionBadgesUpdateWithoutReloadingOrChangingSelection() {
         val list = edtWait { descendants(panel).filterIsInstance<JBList<*>>().single() }
-        val selection = edtWait { (list.selectedValue as ActiveListItem).key }
+        val selection = edtWait { (list.selectedValue as ActiveItem).key }
         val other = "${ref.key}:other"
         sessions.statuses.value = mapOf(other to SessionStatusDto("busy"))
         assertTrue(coroutines.pumpUntil {
-            edtWait { (0 until list.model.size).map { list.model.getElementAt(it) as ActiveListItem }
+            edtWait { (0 until list.model.size).map { list.model.getElementAt(it) as ActiveItem }
                 .single { it.key == other }.badges.isNotEmpty() }
         })
-        edtWait { assertEquals(selection, (list.selectedValue as ActiveListItem).key) }
+        edtWait { assertEquals(selection, (list.selectedValue as ActiveItem).key) }
         sessions.statuses.value = mapOf(other to SessionStatusDto("idle"))
         assertTrue(coroutines.pumpUntil {
-            edtWait { (0 until list.model.size).map { list.model.getElementAt(it) as ActiveListItem }
+            edtWait { (0 until list.model.size).map { list.model.getElementAt(it) as ActiveItem }
                 .single { it.key == other }.badges.isEmpty() }
         })
         assertEquals(1, rpc.workspaceCalls)
@@ -184,13 +185,13 @@ class HostedWorkspaceEditorPanelTest : BasePlatformTestCase() {
             assertEquals(0.25f, splitter.proportion, 0.01f)
             assertNotNull(descendants(panel).filterIsInstance<WorkspaceSessionHeader>().single())
             val list = descendants(panel).filterIsInstance<JBList<*>>().single()
-            val rows = (0 until list.model.size).map { list.model.getElementAt(it) as ActiveListItem }
+            val rows = (0 until list.model.size).map { list.model.getElementAt(it) as ActiveItem }
             assertTrue(rows.all { it is WorkspaceSessionRow })
             assertEquals(listOf("${ref.key}:selected", "${ref.key}:other"), rows.map { it.key })
-            assertEquals(HistoryTime.title(HistorySection.OLDER), rows.first().section)
+            assertEquals(HistoryTime.title(HistorySection.OLDER), (rows.first() as ActiveSection).section)
             assertEquals("New session", rows.last().title)
             @Suppress("UNCHECKED_CAST")
-            val view = list as JBList<ActiveListItem>
+            val view = list as JBList<ActiveItem>
             val cell = view.cellRenderer.getListCellRendererComponent(view, rows.first(), 0, false, false)
             val title = ai.kilocode.client.testing.rowTitle(cell)
             val iter = title.iterator()
@@ -200,7 +201,7 @@ class HostedWorkspaceEditorPanelTest : BasePlatformTestCase() {
     }
 
     fun testHeaderUsesTheRowBadgeAndSeparateHourlyPriceWithoutRefreshControl() {
-        val cell = edtWait { descendants(panel).filterIsInstance<ActiveListBadgeCell>().single { it.cellId == "cloud-compute" } }
+        val cell = edtWait { descendants(panel).filterIsInstance<ActiveBadgeCell>().single { it.cellId == "cloud-compute" } }
         val initial = edtWait { badge() }
         val header = edtWait { descendants(panel).filterIsInstance<WorkspaceSessionHeader>().single() }
         val count = edtWait { descendants(header).size }
@@ -211,7 +212,7 @@ class HostedWorkspaceEditorPanelTest : BasePlatformTestCase() {
             assertEquals(row.badges.single().text, initial.segments.single().text)
             assertSame(row.badges.single().style, initial.segments.single().style)
             header.setSize(900, header.preferredSize.height)
-            activeListLayout(header)
+            activeLayout(header)
             val pill = SwingUtilities.convertRectangle(cell.parent, cell.bounds, header)
             val title = descendants(header).filterIsInstance<SimpleColoredComponent>().single()
             val name = SwingUtilities.convertRectangle(title.parent, title.bounds, header)
@@ -228,7 +229,7 @@ class HostedWorkspaceEditorPanelTest : BasePlatformTestCase() {
             emit(HostedSystemEventDto(key, "cloud.sandbox.status", sandboxStatus = "sleeping",
                 sandboxDetail = "sandbox_stopped", observedAt = 201.0 + it * 2))
             assertTrue(coroutines.pumpUntil { edtWait { badge().segments.single().text == "Sleeping" } })
-            edtWait { assertSame(cell, descendants(panel).filterIsInstance<ActiveListBadgeCell>().single { it.cellId == "cloud-compute" }) }
+            edtWait { assertSame(cell, descendants(panel).filterIsInstance<ActiveBadgeCell>().single { it.cellId == "cloud-compute" }) }
         }
         edtWait { assertEquals("Sleeping", badge().segments.single().text); assertEquals(count, descendants(header).size) }
     }
@@ -290,11 +291,11 @@ class HostedWorkspaceEditorPanelTest : BasePlatformTestCase() {
 
         assertTrue(coroutines.pumpUntil { edtWait {
             descendants(panel).filterIsInstance<JBList<*>>().single().selectedValue
-                ?.let { (it as ActiveListItem).key == rpc.rootSessions.single().id } == true
+                ?.let { (it as ActiveItem).key == rpc.rootSessions.single().id } == true
         } })
         edtWait {
             assertEquals(rpc.rootSessions.single().id,
-                (descendants(panel).filterIsInstance<JBList<*>>().single().selectedValue as ActiveListItem).key)
+                (descendants(panel).filterIsInstance<JBList<*>>().single().selectedValue as ActiveItem).key)
             assertEquals(1, descendants(panel).filterIsInstance<SessionUi>().size)
         }
     }
@@ -356,7 +357,7 @@ class HostedWorkspaceEditorPanelTest : BasePlatformTestCase() {
 
     private fun emit(event: HostedSystemEventDto) { assertTrue(rpc.events.tryEmit(event)) }
     private fun labels() = descendants(panel).filterIsInstance<JBLabel>().filter { it.text != null }
-    private fun badge(): FilledBadgeIcon = descendants(panel).filterIsInstance<ActiveListBadgeCell>()
+    private fun badge(): FilledBadgeIcon = descendants(panel).filterIsInstance<ActiveBadgeCell>()
         .single { it.cellId == "cloud-compute" }.icon as FilledBadgeIcon
     private fun toggle() {
         val toggle = descendants(panel).filterIsInstance<WorkspaceSessionListToggle>().single()

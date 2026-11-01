@@ -1,4 +1,5 @@
 package ai.kilocode.client.session.history
+import ai.kilocode.client.ui.list.section
 
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.session.SessionManager
@@ -9,13 +10,13 @@ import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.layout.HAlign
 import ai.kilocode.client.ui.layout.VAlign
 import ai.kilocode.client.ui.layout.align
-import ai.kilocode.client.ui.list.ACTIVE_LIST_DELETE_CELL
-import ai.kilocode.client.ui.list.ACTIVE_LIST_RENAME_CELL
+import ai.kilocode.client.ui.active.ACTIVE_DELETE_CELL
+import ai.kilocode.client.ui.active.ACTIVE_RENAME_CELL
 import ai.kilocode.client.ui.list.ActiveList
-import ai.kilocode.client.ui.list.ActiveListConfig
-import ai.kilocode.client.ui.list.ActiveListDeleteOptions
-import ai.kilocode.client.ui.list.ActiveListItem
-import ai.kilocode.client.ui.list.ActiveListSelection
+import ai.kilocode.client.ui.active.ActiveConfig
+import ai.kilocode.client.ui.active.ActiveDeleteOptions
+import ai.kilocode.client.ui.active.ActiveItem
+import ai.kilocode.client.ui.active.ActiveSelection
 import ai.kilocode.client.util.UiTimerSource
 import ai.kilocode.client.util.UiTimers
 import com.intellij.icons.AllIcons
@@ -219,14 +220,15 @@ class HistoryPanel(
 
     private fun localList() = ActiveList(
         KiloBundle.message("history.empty"),
-        cfg = ActiveListConfig(selection = ListSelectionModel.MULTIPLE_INTERVAL_SELECTION, hoverActions = true),
+        cfg = ActiveConfig(hoverActions = true),
+        options = ai.kilocode.client.ui.list.ActiveListOptions(selection = ListSelectionModel.MULTIPLE_INTERVAL_SELECTION),
         showSearch = false,
         openOnClick = false,
         onCell = { key, id ->
             val item = localRows.firstOrNull { it.key == key }?.item ?: return@ActiveList
             when (id) {
-                ACTIVE_LIST_RENAME_CELL -> beginRename(item, id)
-                ACTIVE_LIST_DELETE_CELL -> showDeletePopup(listOf(item), id)
+                ACTIVE_RENAME_CELL -> beginRename(item, id)
+                ACTIVE_DELETE_CELL -> showDeletePopup(listOf(item), id)
             }
         },
         onOpen = { row, _ -> activate(row) },
@@ -237,7 +239,7 @@ class HistoryPanel(
 
     private fun cloudList() = ActiveList(
         KiloBundle.message("history.empty"),
-        cfg = ActiveListConfig(selection = ListSelectionModel.SINGLE_SELECTION),
+        cfg = ActiveConfig(),
         showSearch = false,
         openOnClick = false,
         onCell = { _, _ -> },
@@ -274,8 +276,8 @@ class HistoryPanel(
     private fun syncRows() {
         localRows = localHistoryRows(controller.local.visibleItems, snapshot, controller::deleting)
         cloudRows = cloudHistoryRows(controller.cloud.visibleItems, snapshot)
-        localList.update(localRows, ActiveListSelection.Slide)
-        cloudList.update(cloudRows, ActiveListSelection.Slide)
+        localList.update(localRows, ActiveSelection.Slide)
+        cloudList.update(cloudRows, ActiveSelection.Slide)
     }
 
     @RequiresEdt
@@ -303,7 +305,7 @@ class HistoryPanel(
         })
     }
 
-    private fun activate(row: ActiveListItem) {
+    private fun activate(row: ActiveItem) {
         when (row) {
             is LocalHistoryRow -> controller.open(row.item)
             is CloudHistoryRow -> controller.open(row.item)
@@ -347,7 +349,7 @@ class HistoryPanel(
         controller.requestDelete(active.size)
         localList.confirmDelete(
             localList.point(active[0].id, cell),
-            ActiveListDeleteOptions(message = msg),
+            ActiveDeleteOptions(message = msg),
         ) { active.forEach(controller::delete) }
     }
 
@@ -448,7 +450,7 @@ class HistoryPanel(
 
     private fun activeList(): ActiveList = if (tabs.selectedInfo === cloudInfo) cloudList else localList
 
-    private fun activeRows(): List<ActiveListItem> = if (tabs.selectedInfo === cloudInfo) cloudRows else localRows
+    private fun activeRows(): List<ActiveItem> = if (tabs.selectedInfo === cloudInfo) cloudRows else localRows
 
     private fun activeSearch(): SearchTextField = if (tabs.selectedInfo === cloudInfo) cloudSearch else localSearch
 

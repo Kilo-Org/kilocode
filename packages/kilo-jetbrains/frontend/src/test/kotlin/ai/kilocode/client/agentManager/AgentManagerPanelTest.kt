@@ -1,4 +1,5 @@
 package ai.kilocode.client.agentManager
+import ai.kilocode.client.ui.list.section
 
 import ai.kilocode.client.util.edtWait
 import ai.kilocode.client.agentManager.worktree.KiloRunService
@@ -21,7 +22,7 @@ import ai.kilocode.client.app.KiloSessionService
 import ai.kilocode.client.testing.FakeSessionRpcApi
 import ai.kilocode.client.testing.TestLog
 import ai.kilocode.client.session.SpinnerIcon
-import ai.kilocode.client.ui.list.ACTIVE_LIST_MENU_CELL
+import ai.kilocode.client.ui.active.ACTIVE_MENU_CELL
 import ai.kilocode.rpc.KiloHostedRpcApi
 import ai.kilocode.rpc.dto.HostedWorkspaceDto
 import ai.kilocode.rpc.dto.HostedWorkspaceRefDto
@@ -55,14 +56,16 @@ import ai.kilocode.client.testing.rowLines
 import ai.kilocode.client.testing.rowTitle
 import ai.kilocode.client.ui.PrIcons
 import ai.kilocode.client.ui.mergeLabel
-import ai.kilocode.client.ui.list.ActiveListBadge
-import ai.kilocode.client.ui.list.ActiveListBadgeCell
-import ai.kilocode.client.ui.list.ActiveListItem
-import ai.kilocode.client.ui.list.ActiveListMetrics
-import ai.kilocode.client.ui.list.ActiveListView
-import ai.kilocode.client.ui.list.ACTIVE_LIST_CHANGES_CELL
-import ai.kilocode.client.ui.list.activeListCellBounds
-import ai.kilocode.client.ui.list.activeListToolWindowBackground
+import ai.kilocode.client.ui.active.ActiveBadge
+import ai.kilocode.client.ui.active.ActiveBadgeCell
+import ai.kilocode.client.ui.active.ActiveItem
+import ai.kilocode.client.ui.active.ActiveMetrics
+import ai.kilocode.client.ui.tree.ActiveEntry
+import ai.kilocode.client.ui.tree.ActiveTreeView
+import ai.kilocode.client.ui.active.activeHitCells
+import ai.kilocode.client.ui.active.activeLayout
+import ai.kilocode.client.ui.active.ACTIVE_CHANGES_CELL
+import ai.kilocode.client.ui.active.activeToolWindowBackground
 import ai.kilocode.client.vfs.KiloPath
 import ai.kilocode.client.vfs.KiloVfsManager
 import ai.kilocode.client.vfs.KiloVirtualFile
@@ -97,9 +100,7 @@ import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.testFramework.replaceService
 import com.intellij.ui.SimpleTextAttributes
 import com.intellij.ui.components.JBLabel
-import com.intellij.ui.components.JBList
 import com.intellij.ui.components.JBScrollPane
-import com.intellij.ui.ExpandedItemListCellRendererWrapper
 import com.intellij.ui.scale.JBUIScale
 import com.intellij.util.IJSwingUtilities
 import com.intellij.util.ui.UIUtil
@@ -111,6 +112,8 @@ import java.awt.event.MouseEvent
 import java.awt.Point
 import javax.swing.JComponent
 import javax.swing.SwingUtilities
+import javax.swing.tree.TreePath
+import com.intellij.util.ui.tree.TreeUtil
 import javax.swing.UIManager
 import javax.swing.plaf.FontUIResource
 import kotlinx.coroutines.CompletableDeferred
@@ -124,9 +127,12 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
     private lateinit var rpc: FakeWorktreeRpcApi
     private lateinit var service: KiloWorktreeService
     private lateinit var run: FakeRunRpcApi
+    private var delegate: Any? = null
 
     override fun setUp() {
         super.setUp()
+        delegate = UIManager.get("TreeUI")
+        UIManager.put("TreeUI", "com.intellij.ui.tree.ui.DefaultTreeUI")
         installBrowser()
         coroutines = TestCoroutines()
         rpc = FakeWorktreeRpcApi()
@@ -148,6 +154,7 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
             edt { service<WorktreeNameCache>().clear() }
             coroutines.close(::pump)
         } finally {
+            UIManager.put("TreeUI", delegate)
             super.tearDown()
         }
     }
@@ -163,16 +170,16 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         rpc.beforeCreate = { gate.await() }
         edt { controller.create("feature/y", null) }
 
-        val list = edt { UIUtil.findComponentOfType(panel, JBList::class.java)!! }
+        val list = edt { tree(panel) }
         val pendingId = edt { controller.model.getElementAt(0).id }
-        assertEquals(pendingId, edt { (list.selectedValue as ActiveListItem).key })
+        assertEquals(pendingId, edt { (selectedValue(list) as ActiveItem).key })
 
         gate.complete(Unit)
         flush()
 
         val created = edt { controller.model.getElementAt(0) }
         assertEquals("feature/y", created.branch)
-        assertEquals(created.id, edt { (list.selectedValue as ActiveListItem).key })
+        assertEquals(created.id, edt { (selectedValue(list) as ActiveItem).key })
     }
 
     fun `test creating a worktree opens the created worktree session editor`() {
@@ -182,9 +189,9 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         edt { controller.create("feature/y", null) }
         flush()
 
-        val list = edt { UIUtil.findComponentOfType(panel, JBList::class.java)!! }
+        val list = edt { tree(panel) }
         val created = edt { controller.model.getElementAt(0) }
-        assertEquals(created.id, edt { (list.selectedValue as ActiveListItem).key })
+        assertEquals(created.id, edt { (selectedValue(list) as ActiveItem).key })
         val file = edt { FileEditorManager.getInstance(project).openFiles.single() as KiloVirtualFile }
         assertEquals(WorktreeSessionEditorKind.ID, file.path.kind)
         assertEquals(created.path, file.path.params["path"])
@@ -267,14 +274,14 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         val controller = WorktreeController(service, "/test", coroutines.scope)
         val panel = edt { AgentManagerPanel(testRootDisposable, controller) }
 
-        val list = edt { UIUtil.findComponentOfType(panel, JBList::class.java)!! }
+        val list = edt { tree(panel) }
         val scroll = edt { SwingUtilities.getAncestorOfClass(JBScrollPane::class.java, list) as JBScrollPane }
 
-        assertEquals(activeListToolWindowBackground(), edt { panel.background })
-        assertEquals(activeListToolWindowBackground(), edt { list.background })
-        assertEquals(activeListToolWindowBackground(), edt { scroll.background })
-        assertEquals(activeListToolWindowBackground(), edt { scroll.viewport.background })
-        assertEquals(activeListToolWindowBackground(), edt { (scroll.viewport.view as JComponent).background })
+        assertEquals(activeToolWindowBackground(), edt { panel.background })
+        assertEquals(activeToolWindowBackground(), edt { list.background })
+        assertEquals(activeToolWindowBackground(), edt { scroll.background })
+        assertEquals(activeToolWindowBackground(), edt { scroll.viewport.background })
+        assertEquals(activeToolWindowBackground(), edt { (scroll.viewport.view as JComponent).background })
         assertEquals(0, edt { scroll.viewportBorder.getBorderInsets(scroll).top })
     }
 
@@ -286,10 +293,10 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         flush()
 
         @Suppress("UNCHECKED_CAST")
-        val list = edt { UIUtil.findComponentOfType(panel, JBList::class.java)!! as JBList<Any?> }
+        val list = edt { tree(panel) }
         val title = edt {
-            val row = list.model.getElementAt(0) as ActiveListItem
-            val comp = list.cellRenderer.getListCellRendererComponent(list, row, 0, false, false)
+            val row = leafEntry(list, 0).item
+            val comp = rendered(list, leafEntry(list, 0), false, false)
             rowTitle(comp)
         }
         val iter = title.iterator()
@@ -311,10 +318,7 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         edt { controller.reload() }
         flush()
 
-        // Worktree rows carry a "Local worktrees" section, so the list keeps fixedCellHeight at -1 and
-        // BasicListUI measures each row from the renderer instead — this is the exact call it makes.
-        val list = edt { UIUtil.findComponentOfType(panel, JBList::class.java)!! }
-        assertEquals(-1, edt { list.fixedCellHeight })
+        val list = edt { tree(panel) }
         val before = edt { rowHeight(list) }
         assertTrue("expected a real row height, got $before", before > 0)
 
@@ -347,12 +351,12 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         edt { controller.reload() }
         flush()
 
-        val list = edt { UIUtil.findComponentOfType(panel, JBList::class.java)!! }
+        val list = edt { tree(panel) }
         edt {
             list.setSize(400, 100)
             list.doLayout()
-            val bounds = list.getCellBounds(0, 0)
-            fire(list, MouseEvent(
+            val bounds = list.let { rowBounds(it, 0) }
+            list.dispatchEvent(MouseEvent(
                 list,
                 MouseEvent.MOUSE_CLICKED,
                 System.currentTimeMillis(),
@@ -387,14 +391,15 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         assertEquals("repo", current.description)
         assertNull(current.section)
         assertNull(current.metrics)
-        assertEquals("Local", row(panel, 1).section)
+        assertNull(row(panel, 1).section)
+        assertEquals("Local worktrees", groupTitle(panel))
 
-        val list = edt { UIUtil.findComponentOfType(panel, JBList::class.java)!! }
+        val list = edt { tree(panel) }
         edt {
             list.setSize(400, 120)
             list.doLayout()
-            val bounds = list.getCellBounds(0, 0)
-            fire(list, MouseEvent(
+            val bounds = list.let { rowBounds(it, 0) }
+            list.dispatchEvent(MouseEvent(
                 list,
                 MouseEvent.MOUSE_CLICKED,
                 System.currentTimeMillis(),
@@ -421,13 +426,13 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         val panel = edt { AgentManagerPanel(testRootDisposable, controller) }
         edt { controller.reload() }
         flush()
-        val list = edt { UIUtil.findComponentOfType(panel, JBList::class.java)!! }
-        edt { list.selectedIndex = 1 }
+        val list = edt { tree(panel) }
+        edt { selectLeaf(list, 1) }
 
         edt { controller.reload() }
         flush()
 
-        assertEquals(second.id, edt { (list.selectedValue as ActiveListItem).key })
+        assertEquals(second.id, edt { (selectedValue(list) as ActiveItem).key })
     }
 
     fun `test panel refresh keeps selected worktree across tab switch reload`() {
@@ -439,13 +444,13 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         val panel = edt { AgentManagerPanel(testRootDisposable, controller, project) }
         edt { controller.reload() }
         flush()
-        val list = edt { UIUtil.findComponentOfType(panel, JBList::class.java)!! }
-        edt { list.selectedIndex = 1 }
+        val list = edt { tree(panel) }
+        edt { selectLeaf(list, 1) }
 
         edt { panel.refresh() }
         flush()
 
-        assertEquals(second.id, edt { (list.selectedValue as ActiveListItem).key })
+        assertEquals(second.id, edt { (selectedValue(list) as ActiveItem).key })
     }
 
     fun `test refresh keeps existing selection`() {
@@ -457,16 +462,16 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         val panel = edt { AgentManagerPanel(testRootDisposable, controller, project) }
         edt { controller.reload() }
         flush()
-        val list = edt { UIUtil.findComponentOfType(panel, JBList::class.java)!! }
+        val list = edt { tree(panel) }
         edt {
             ensureWorktreeSessionEditorKind()
             project.service<KiloVfsManager>().open(WorktreeSessionEditorKind.ID, worktreeSessionParams(second), focus = true)
-            list.selectedIndex = 0
+            selectLeaf(list, 0)
             panel.refresh()
         }
         flush()
 
-        assertEquals(first.id, edt { (list.selectedValue as ActiveListItem).key })
+        assertEquals(first.id, edt { (selectedValue(list) as ActiveItem).key })
     }
 
     fun `test refresh uses active worktree editor when no selection exists`() {
@@ -478,7 +483,7 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         val panel = edt { AgentManagerPanel(testRootDisposable, controller, project) }
         edt { controller.reload() }
         flush()
-        val list = edt { UIUtil.findComponentOfType(panel, JBList::class.java)!! }
+        val list = edt { tree(panel) }
         edt {
             ensureWorktreeSessionEditorKind()
             project.service<KiloVfsManager>().open(WorktreeSessionEditorKind.ID, worktreeSessionParams(second), focus = true)
@@ -486,7 +491,7 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         }
         flush()
 
-        assertEquals(second.id, edt { (list.selectedValue as ActiveListItem).key })
+        assertEquals(second.id, edt { (selectedValue(list) as ActiveItem).key })
     }
 
     fun `test selecting worktree editor tab selects its worktree row`() {
@@ -499,14 +504,14 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         edt { controller.reload() }
         flush()
 
-        val list = edt { UIUtil.findComponentOfType(panel, JBList::class.java)!! }
+        val list = edt { tree(panel) }
         edt {
             ensureWorktreeSessionEditorKind()
             project.service<KiloVfsManager>().open(WorktreeSessionEditorKind.ID, worktreeSessionParams(second), focus = true)
         }
         pump()
 
-        assertEquals(second.id, edt { (list.selectedValue as ActiveListItem).key })
+        assertEquals(second.id, edt { (selectedValue(list) as ActiveItem).key })
     }
 
     fun `test selecting non worktree editor tab clears worktree row selection`() {
@@ -517,19 +522,19 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         edt { controller.reload() }
         flush()
 
-        val list = edt { UIUtil.findComponentOfType(panel, JBList::class.java)!! }
+        val list = edt { tree(panel) }
         edt {
             ensureWorktreeSessionEditorKind()
             project.service<KiloVfsManager>().open(WorktreeSessionEditorKind.ID, worktreeSessionParams(item), focus = true)
         }
         pump()
-        assertEquals(item.id, edt { (list.selectedValue as ActiveListItem).key })
+        assertEquals(item.id, edt { (selectedValue(list) as ActiveItem).key })
 
         val file = myFixture.addFileToProject("src/Main.kt", "fun main() = Unit").virtualFile
         edt { FileEditorManager.getInstance(project).openFile(file, true) }
         pump()
 
-        assertEquals(-1, edt { list.selectedIndex })
+        assertEquals(-1, edt { selectedLeaf(list) })
     }
 
     fun `test panel starts with no selection when active editor tab is not worktree`() {
@@ -543,8 +548,8 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         edt { controller.reload() }
         flush()
 
-        val list = edt { UIUtil.findComponentOfType(panel, JBList::class.java)!! }
-        assertEquals(-1, edt { list.selectedIndex })
+        val list = edt { tree(panel) }
+        assertEquals(-1, edt { selectedLeaf(list) })
     }
 
     fun `test custom worktree editor matcher can select a row for another editor kind`() {
@@ -561,11 +566,11 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         }
         flush()
 
-        val list = edt { UIUtil.findComponentOfType(panel, JBList::class.java)!! }
+        val list = edt { tree(panel) }
         edt { FileEditorManager.getInstance(project).openFile(file, true) }
         pump()
 
-        assertEquals(item.id, edt { (list.selectedValue as ActiveListItem).key })
+        assertEquals(item.id, edt { (selectedValue(list) as ActiveItem).key })
     }
 
     fun `test deleting a worktree closes and releases its worktree session editor`() {
@@ -603,19 +608,19 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         val panel = edt { AgentManagerPanel(testRootDisposable, controller, project) }
         edt { controller.reload() }
         flush()
-        val list = edt { UIUtil.findComponentOfType(panel, JBList::class.java)!! }
+        val list = edt { tree(panel) }
 
         edt {
             ensureWorktreeSessionEditorKind()
             project.service<KiloVfsManager>().open(WorktreeSessionEditorKind.ID, worktreeSessionParams(b), focus = true)
         }
         pump()
-        assertEquals(b.id, edt { (list.selectedValue as ActiveListItem).key })
+        assertEquals(b.id, edt { (selectedValue(list) as ActiveItem).key })
 
         edt { controller.remove(b) }
         flush()
 
-        assertEquals(c.id, edt { (list.selectedValue as ActiveListItem).key })
+        assertEquals(c.id, edt { (selectedValue(list) as ActiveItem).key })
         val file = edt { FileEditorManager.getInstance(project).openFiles.single() as KiloVirtualFile }
         assertEquals(c.path, file.path.params["path"])
     }
@@ -629,19 +634,19 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         val panel = edt { AgentManagerPanel(testRootDisposable, controller, project) }
         edt { controller.reload() }
         flush()
-        val list = edt { UIUtil.findComponentOfType(panel, JBList::class.java)!! }
+        val list = edt { tree(panel) }
 
         edt {
             ensureWorktreeSessionEditorKind()
             project.service<KiloVfsManager>().open(WorktreeSessionEditorKind.ID, worktreeSessionParams(b), focus = true)
         }
         pump()
-        assertEquals(b.id, edt { (list.selectedValue as ActiveListItem).key })
+        assertEquals(b.id, edt { (selectedValue(list) as ActiveItem).key })
 
         edt { controller.remove(b) }
         flush()
 
-        assertEquals(a.id, edt { (list.selectedValue as ActiveListItem).key })
+        assertEquals(a.id, edt { (selectedValue(list) as ActiveItem).key })
         val file = edt { FileEditorManager.getInstance(project).openFiles.single() as KiloVirtualFile }
         assertEquals(a.path, file.path.params["path"])
     }
@@ -655,19 +660,19 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         val panel = edt { AgentManagerPanel(testRootDisposable, controller, project) }
         edt { controller.reload() }
         flush()
-        val list = edt { UIUtil.findComponentOfType(panel, JBList::class.java)!! }
+        val list = edt { tree(panel) }
 
         edt {
             ensureWorktreeSessionEditorKind()
             project.service<KiloVfsManager>().open(WorktreeSessionEditorKind.ID, worktreeSessionParams(a), focus = true)
         }
         pump()
-        assertEquals(a.id, edt { (list.selectedValue as ActiveListItem).key })
+        assertEquals(a.id, edt { (selectedValue(list) as ActiveItem).key })
 
         edt { controller.remove(b) }
         flush()
 
-        assertEquals(a.id, edt { (list.selectedValue as ActiveListItem).key })
+        assertEquals(a.id, edt { (selectedValue(list) as ActiveItem).key })
         val file = edt { FileEditorManager.getInstance(project).openFiles.single() as KiloVirtualFile }
         assertEquals(a.path, file.path.params["path"])
     }
@@ -685,7 +690,7 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
 
         val row = row(panel, 0)
         assertSame(SessionActivityKind.QUESTION.icon(), row.icon)
-        assertEquals(emptyList<ActiveListBadge>(), row.badges)
+        assertEquals(emptyList<ActiveBadge>(), row.badges)
     }
 
     fun `test worktree row uses the error icon for error activity`() {
@@ -857,7 +862,7 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         timers.advanceBy(300)
         waitUntil { row(panel, 0).metrics != null || row(panel, 1).metrics != null }
 
-        val list = edt { UIUtil.findComponentOfType(panel, JBList::class.java)!! }
+        val list = edt { tree(panel) }
         edt {
             list.setSize(360, 600)
             list.doLayout()
@@ -909,7 +914,7 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         timers.advanceBy(300)
         waitUntil { row(panel, 0).metrics != null }
 
-        val metrics: ActiveListMetrics = row(panel, 0).metrics ?: error("expected metrics")
+        val metrics: ActiveMetrics = row(panel, 0).metrics ?: error("expected metrics")
         assertEquals(5, metrics.additions)
         assertEquals(2, metrics.deletions)
         assertEquals(2, metrics.files)
@@ -931,13 +936,13 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         assertTrue(row(panel, 0).metrics?.conflict == true)
         // The row's own tooltip is where the mark says what it means: a red crescent alone cannot.
         edt {
-            val view = UIUtil.findComponentOfType(panel, ActiveListView::class.java)!!
-            val list = view.list
+            val view = tree(panel)
+            val list = view
             list.setSize(560, 160)
             list.doLayout()
             UIUtil.dispatchAllInvocationEvents()
             list.clearSelection()
-            val cell = activeListCellBounds(list, 0, selected = false).getValue(ACTIVE_LIST_CHANGES_CELL)
+            val cell = hitIds(list, 0).getValue(ACTIVE_CHANGES_CELL)
             val point = center(cell)
             val hover = MouseEvent(list, MouseEvent.MOUSE_MOVED, System.currentTimeMillis(), 0, point.x, point.y, 0, false)
             val tip = list.getToolTipText(hover) ?: error("expected a tooltip over the changes cell")
@@ -1001,15 +1006,15 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         assertNull(row(panel, 5).metrics)
 
         edt {
-            val view = UIUtil.findComponentOfType(panel, ActiveListView::class.java)!!
-            view.list.setSize(480, 600)
-            view.list.doLayout()
+            val view = tree(panel)
+            view.setSize(480, 600)
+            view.doLayout()
             UIUtil.dispatchAllInvocationEvents()
             for (index in listOf(0, 1, 2, 3)) {
-                assertTrue(activeListCellBounds(view.list, index, selected = false).containsKey(ACTIVE_LIST_CHANGES_CELL))
+                assertTrue(hitIds(view, index).containsKey(ACTIVE_CHANGES_CELL))
             }
             for (index in listOf(4, 5)) {
-                assertFalse(activeListCellBounds(view.list, index, selected = false).containsKey(ACTIVE_LIST_CHANGES_CELL))
+                assertFalse(hitIds(view, index).containsKey(ACTIVE_CHANGES_CELL))
             }
         }
     }
@@ -1057,14 +1062,14 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         flush()
 
         edt {
-            val view = UIUtil.findComponentOfType(panel, ActiveListView::class.java)!!
-            val list = view.list
+            val view = tree(panel)
+            val list = view
             list.setSize(560, 160)
             list.doLayout()
             UIUtil.dispatchAllInvocationEvents()
             list.clearSelection()
-            val renderer = list.cellRenderer.getListCellRendererComponent(list, list.model.getElementAt(0), 0, false, true)
-            renderer.setSize(list.width, list.getCellBounds(0, 0).height)
+            val renderer = rendered(list, leafEntry(list, 0), false, true)
+            renderer.setSize(rowBounds(list, 0).width, rowBounds(list, 0).height)
             components(renderer).filterIsInstance<Container>().forEach { it.doLayout() }
             assertEquals(
                 listOf("3 files", "-1", "+2"),
@@ -1072,13 +1077,13 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
                     .map { it.text },
             )
 
-            val point = center(activeListCellBounds(list, 0, selected = false).getValue(ACTIVE_LIST_CHANGES_CELL))
+            val point = center(hitIds(list, 0).getValue(ACTIVE_CHANGES_CELL))
             val hover = MouseEvent(list, MouseEvent.MOUSE_MOVED, System.currentTimeMillis(), 0, point.x, point.y, 0, false)
             list.mouseMotionListeners.forEach { it.mouseMoved(hover) }
             assertEquals(Cursor.HAND_CURSOR, list.cursor.type)
             assertEquals(KiloBundle.message("worktree.dirty.tooltip.open"), list.getToolTipText(hover))
             for (id in listOf(MouseEvent.MOUSE_PRESSED, MouseEvent.MOUSE_RELEASED, MouseEvent.MOUSE_CLICKED)) {
-                fire(list, MouseEvent(
+                list.dispatchEvent(MouseEvent(
                     list,
                     id,
                     System.currentTimeMillis(),
@@ -1196,17 +1201,17 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         flush()
 
         edt {
-            val view = UIUtil.findComponentOfType(panel, ActiveListView::class.java)!!
-            val list = view.list
+            val view = tree(panel)
+            val list = view
             list.setSize(480, 320)
             list.doLayout()
             UIUtil.dispatchAllInvocationEvents()
-            val areas = (0..1).associateWith { activeListCellBounds(list, it, selected = false).getValue(ACTIVE_LIST_CHANGES_CELL) }
-            activeListCellBounds(list, 0, selected = true)
+            val areas = (0..1).associateWith { hitIds(list, it).getValue(ACTIVE_CHANGES_CELL) }
+            hitIds(list, 0)
             for (index in listOf(1, 0, 1)) {
                 val point = center(areas.getValue(index))
                 for (id in listOf(MouseEvent.MOUSE_PRESSED, MouseEvent.MOUSE_RELEASED, MouseEvent.MOUSE_CLICKED)) {
-                    fire(list, MouseEvent(
+                    list.dispatchEvent(MouseEvent(
                         list,
                         id,
                         System.currentTimeMillis(),
@@ -1324,13 +1329,13 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         assertEquals("pull-request", row.secondaryBadges.single().id)
 
         edt {
-            val view = UIUtil.findComponentOfType(panel, ActiveListView::class.java)!!
-            val list = view.list
+            val view = tree(panel)
+            val list = view
             list.setSize(560, 160)
             list.doLayout()
             UIUtil.dispatchAllInvocationEvents()
             list.clearSelection()
-            val areas = activeListCellBounds(list, 0, selected = false)
+            val areas = hitIds(list, 0)
             val comments = areas.getValue("pr-comments")
             val review = areas.getValue("pr-review")
             val checks = areas.getValue("pr-checks")
@@ -1340,12 +1345,12 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
             assertTrue(kotlin.math.abs(center(comments).y - center(review).y) <= 1)
             assertTrue(kotlin.math.abs(center(review).y - center(checks).y) <= 1)
 
-            val renderer = list.cellRenderer.getListCellRendererComponent(list, row, 0, false, true)
-            renderer.setSize(list.width, list.getCellBounds(0, 0).height)
+            val renderer = rendered(list, leafEntry(list, 0), false, true)
+            renderer.setSize(rowBounds(list, 0).width, rowBounds(list, 0).height)
             components(renderer).filterIsInstance<Container>().forEach { it.doLayout() }
             val title = rowTitle(renderer)
             val header = SwingUtilities.convertPoint(title, 0, 0, renderer)
-            val bounds = list.getCellBounds(0, 0)
+            val bounds = list.let { rowBounds(it, 0) }
             // Line one, clear of the title, and above the PR number on line two.
             assertTrue(comments.x >= bounds.x + header.x + title.width)
             // A column, not a ragged edge: the last glyph ends where the PR pill under it ends, so the
@@ -1401,13 +1406,13 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         val row = row(panel, 0)
 
         edt {
-            val list = UIUtil.findComponentOfType(panel, ActiveListView::class.java)!!.list
+            val list = tree(panel)
             list.setSize(560, 160)
             list.doLayout()
             UIUtil.dispatchAllInvocationEvents()
-            val renderer = list.cellRenderer.getListCellRendererComponent(list, row, 0, false, true)
+            val renderer = rendered(list, leafEntry(list, 0), false, true)
             val cell = components(renderer)
-                .filterIsInstance<ActiveListBadgeCell>()
+                .filterIsInstance<ActiveBadgeCell>()
                 .single { it.cellId == "pr-comments" }
 
             // A pill paints its text inside the icon; this one keeps the figure as real label text so the
@@ -1428,13 +1433,13 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         val row = row(panel, 0)
 
         edt {
-            val list = UIUtil.findComponentOfType(panel, ActiveListView::class.java)!!.list
+            val list = tree(panel)
             list.setSize(560, 160)
             list.doLayout()
             UIUtil.dispatchAllInvocationEvents()
-            val renderer = list.cellRenderer.getListCellRendererComponent(list, row, 0, true, true)
+            val renderer = rendered(list, leafEntry(list, 0), true, true)
             val cell = components(renderer)
-                .filterIsInstance<ActiveListBadgeCell>()
+                .filterIsInstance<ActiveBadgeCell>()
                 .single { it.cellId == "pr-comments" }
 
             // Selection paints the row blue, so a fixed label foreground would leave the count dark on dark.
@@ -1526,13 +1531,13 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         // The row shows the title, the pill shows the number, and the popup header carries the rest, so
         // repeating any of it here is noise over a badge the user is about to click.
         assertEquals("<html>Click to open the pull request in your browser.</html>", tip)
-        val list = edt { UIUtil.findComponentOfType(panel, JBList::class.java)!! }
+        val list = edt { tree(panel) }
         edt {
             list.size = java.awt.Dimension(360, 80)
             list.doLayout()
             UIUtil.dispatchAllInvocationEvents()
         }
-        val area = edt { activeListCellBounds(list, 0, selected = false).getValue("pull-request") }
+        val area = edt { hitIds(list, 0).getValue("pull-request") }
 
         assertEquals(tip, edt { list.getToolTipText(MouseEvent(list, MouseEvent.MOUSE_MOVED, System.currentTimeMillis(), 0, center(area).x, center(area).y, 0, false)) })
     }
@@ -1575,28 +1580,28 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         flush()
 
         edt {
-            val view = UIUtil.findComponentOfType(panel, ActiveListView::class.java)!!
-            val list = view.list
+            val view = tree(panel)
+            val list = view
             list.setSize(560, 160)
             list.doLayout()
             UIUtil.dispatchAllInvocationEvents()
             list.clearSelection()
-            val row = list.model.getElementAt(0)
+            val row = leafEntry(list, 0).item
             assertTrue(row.leading.isEmpty())
             assertTrue(row.badges.isEmpty())
             assertEquals("#7", row.secondaryBadges.single().text)
             assertEquals("pull-request", row.secondaryBadges.single().id)
-            val areas = activeListCellBounds(list, 0, selected = false)
+            val areas = hitIds(list, 0)
             val badge = areas.getValue("pull-request")
-            val changes = areas.getValue(ACTIVE_LIST_CHANGES_CELL)
-            assertEquals(setOf("pull-request", ACTIVE_LIST_CHANGES_CELL), areas.keys)
-            val renderer = list.cellRenderer.getListCellRendererComponent(list, row, 0, false, true)
-            renderer.setSize(list.width, list.getCellBounds(0, 0).height)
+            val changes = areas.getValue(ACTIVE_CHANGES_CELL)
+            assertEquals(setOf("pull-request", ACTIVE_CHANGES_CELL), areas.keys)
+            val renderer = rendered(list, leafEntry(list, 0), false, true)
+            renderer.setSize(rowBounds(list, 0).width, rowBounds(list, 0).height)
             components(renderer).filterIsInstance<Container>().forEach { it.doLayout() }
             val (title, desc) = rowLines(renderer)
             val origin = SwingUtilities.convertPoint(desc, 0, 0, renderer)
             val header = SwingUtilities.convertPoint(title, 0, 0, renderer)
-            val bounds = list.getCellBounds(0, 0)
+            val bounds = list.let { rowBounds(it, 0) }
             assertTrue(origin.x + desc.width + bounds.x <= changes.x)
             assertTrue(changes.x + changes.width <= badge.x)
             assertTrue(kotlin.math.abs(center(badge).y - center(changes).y) <= 1)
@@ -1611,7 +1616,7 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
             assertEquals(Cursor.HAND_CURSOR, list.cursor.type)
             assertEquals(row.secondaryBadges.single().tooltip, list.getToolTipText(hover))
             for (id in listOf(MouseEvent.MOUSE_PRESSED, MouseEvent.MOUSE_RELEASED, MouseEvent.MOUSE_CLICKED)) {
-                fire(list, MouseEvent(
+                list.dispatchEvent(MouseEvent(
                     list,
                     id,
                     System.currentTimeMillis(),
@@ -1644,9 +1649,9 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         val pending = row(panel, 0)
         assertSame(WorktreeIcons.spinner, pending.icon)
         assertEquals(KiloBundle.message("worktree.progress.creating"), pending.progress)
-        assertEquals(emptyList<ActiveListBadge>(), pending.leading)
-        assertEquals(emptyList<ActiveListBadge>(), pending.badges)
-        assertEquals(emptyList<ActiveListBadge>(), pending.secondaryBadges)
+        assertEquals(emptyList<ActiveBadge>(), pending.leading)
+        assertEquals(emptyList<ActiveBadge>(), pending.badges)
+        assertEquals(emptyList<ActiveBadge>(), pending.secondaryBadges)
         assertNull(pending.metrics)
         gate.complete(Unit)
         flush()
@@ -1663,7 +1668,7 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         edt { controller.reload() }
         flush()
 
-        val view = edt { UIUtil.findComponentOfType(panel, ActiveListView::class.java)!! }
+        val view = edt { tree(panel) }
         layout(view)
         // Display order: current (main) row is index 0, then a (1), b (2).
         edt {
@@ -1688,7 +1693,7 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         edt { controller.reload() }
         flush()
 
-        val view = edt { UIUtil.findComponentOfType(panel, ActiveListView::class.java)!! }
+        val view = edt { tree(panel) }
         layout(view)
         edt {
             assertTrue(view.select(b.id))
@@ -1709,7 +1714,7 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         edt { controller.reload() }
         flush()
 
-        val view = edt { UIUtil.findComponentOfType(panel, ActiveListView::class.java)!! }
+        val view = edt { tree(panel) }
         edt {
             assertTrue(view.select(item.id))
             controller.rename(item, "renamed", onFailure = {})
@@ -1717,7 +1722,7 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         flush()
 
         assertEquals(item.id, edt { view.selected()?.key })
-        assertEquals("renamed", edt { (view.selected() as ActiveListItem).title })
+        assertEquals("renamed", edt { (view.selected() as ActiveItem).title })
     }
 
     fun `test the current and pending rows are not draggable`() {
@@ -1731,7 +1736,7 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         val gate = CompletableDeferred<Unit>()
         rpc.beforeCreate = { gate.await() }
         edt { controller.create("feature/pending", null) }
-        val view = edt { UIUtil.findComponentOfType(panel, ActiveListView::class.java)!! }
+        val view = edt { tree(panel) }
         layout(view)
 
         edt {
@@ -1755,7 +1760,7 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         edt { controller.reload() }
         flush()
 
-        val view = edt { UIUtil.findComponentOfType(panel, ActiveListView::class.java)!! }
+        val view = edt { tree(panel) }
         layout(view)
         edt {
             view.over(b.id, rowCenter(view, 1))
@@ -1801,7 +1806,7 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         val panel = edt { AgentManagerPanel(testRootDisposable, controller, project) }
         edt { controller.reload() }
         waitUntil { rows(panel) == 4 }
-        val view = edt { UIUtil.findComponentOfType(panel, ActiveListView::class.java)!! }
+        val view = tree(panel)
         edt {
             assertTrue(view.select(ref.key))
             val row = row(panel, 2) as HostedWorkspaceRow
@@ -1814,10 +1819,13 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
             assertEquals(items.first(), HostedWorkspaceDataKeys.WORKSPACE.getData(context))
             assertNull(WorktreeDataKeys.WORKTREE.getData(context))
             layout(view)
-            val bounds = view.list.getCellBounds(2, 2)
-            view.list.dispatchEvent(MouseEvent(view.list, MouseEvent.MOUSE_MOVED, System.currentTimeMillis(), 0,
-                bounds.x + bounds.width / 2, bounds.y + bounds.height / 2, 0, false))
-            assertTrue(activeListCellBounds(view.list, 2, selected = true).containsKey(ACTIVE_LIST_MENU_CELL))
+            val entry = leaves(view)[2]
+            val at = tree(panel).point(entry.key, ACTIVE_MENU_CELL, false)?.getPoint(view) ?: error("Missing cloud menu anchor")
+            view.dispatchEvent(MouseEvent(view, MouseEvent.MOUSE_MOVED, System.currentTimeMillis(), 0,
+                at.x, at.y, 0, false))
+            val bounds = view.bounds(entry)
+            assertNotNull(bounds)
+            assertTrue(at.x in bounds!!.x..bounds.x + bounds.width)
         }
         sessions.statuses.value = mapOf(second to SessionStatusDto("idle"))
         coroutines.drain()
@@ -1892,13 +1900,7 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         return WorktreeDto(base, "repo", "main", base, main = true)
     }
 
-    /** The preferred height BasicListUI itself measures for row 0 when fixedCellHeight is -1. */
-    @Suppress("UNCHECKED_CAST")
-    private fun rowHeight(rawList: JBList<*>): Int {
-        val list = rawList as JBList<Any?>
-        val renderer = ExpandedItemListCellRendererWrapper.unwrap(list.cellRenderer)
-        return renderer.getListCellRendererComponent(list, list.model.getElementAt(0), 0, false, false).preferredSize.height
-    }
+    private fun rowHeight(tree: ActiveTreeView): Int = rowBounds(tree, 0).height
 
     private fun worktree(name: String): WorktreeDto {
         val path = "${project.basePath!!}/.kilo/worktrees/$name"
@@ -1909,17 +1911,87 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         return (0 until controller.model.size).map { controller.model.getElementAt(it).path }
     }
 
-    private fun layout(view: ActiveListView) {
+    private fun layout(view: ActiveTreeView) {
         edt {
-            view.list.setSize(360, 600)
-            view.list.doLayout()
+            (view.parent as? javax.swing.JViewport)?.setSize(360, 600)
+            view.setSize(360, 600)
+            view.doLayout()
+            TreeUtil.invalidateCacheAndRepaint(view.ui as? javax.swing.plaf.TreeUI)
             UIUtil.dispatchAllInvocationEvents()
         }
     }
 
-    private fun rowCenter(view: ActiveListView, index: Int): Point {
-        val bounds = view.list.getCellBounds(index, index)!!
+    private fun rowCenter(view: ActiveTreeView, index: Int): Point {
+        val bounds = rowBounds(view, index)
         return Point(bounds.x + 8, bounds.y + bounds.height / 2)
+    }
+
+    private fun tree(panel: AgentManagerPanel): ActiveTreeView =
+        edt { UIUtil.findComponentOfType(panel, ActiveTreeView::class.java)!! }
+
+    private fun selectedValue(tree: ActiveTreeView): ActiveItem? =
+        (tree.selectionPath?.lastPathComponent as? ActiveEntry)?.item
+
+    private fun rendered(
+        tree: ActiveTreeView,
+        entry: ActiveEntry,
+        selected: Boolean = false,
+        focused: Boolean = true,
+    ): java.awt.Component =
+        tree.cellRenderer.getTreeCellRendererComponent(tree, entry, selected, true, false, 0, focused)
+
+    private fun groupTitle(panel: AgentManagerPanel): String {
+        val tree = tree(panel)
+        return edt {
+            (0 until tree.rowCount).mapNotNull {
+                tree.getPathForRow(it)?.lastPathComponent as? ActiveEntry
+            }.first { it.allowsChildren }.item.title
+        }
+    }
+
+    private fun leaves(tree: ActiveTreeView): List<ActiveEntry> =
+        edt {
+            (0 until tree.rowCount).mapNotNull {
+                tree.getPathForRow(it)?.lastPathComponent as? ActiveEntry
+            }.filter { !it.allowsChildren }
+        }
+
+    private fun leafEntry(tree: ActiveTreeView, index: Int): ActiveEntry = leaves(tree)[index]
+
+    private fun leafRow(tree: ActiveTreeView, index: Int): Int =
+        edt { tree.getRowForPath(TreePath(leafEntry(tree, index).path)) }
+
+    /**
+     * Row rectangle the renderer is laid out at. It is the tree cell minus the shared outer gutter,
+     * which is what the tree itself paints and what a list cell gives its own renderer.
+     */
+    private fun rowBounds(tree: ActiveTreeView, index: Int): java.awt.Rectangle =
+        edt {
+            (tree.parent as? javax.swing.JViewport)?.setSize(tree.width, tree.height)
+            tree.regions.cell(leafEntry(tree, index))
+        }
+
+    private fun selectLeaf(tree: ActiveTreeView, index: Int) {
+        edt { tree.selectionModel.selectionPath = TreePath(leafEntry(tree, index).path) }
+    }
+
+    private fun selectedLeaf(tree: ActiveTreeView): Int =
+        edt {
+            val selected = tree.selectionPath?.lastPathComponent as? ActiveEntry ?: return@edt -1
+            leaves(tree).indexOfFirst { it.key == selected.key }
+        }
+
+    private fun hitIds(tree: ActiveTreeView, index: Int): Map<String, java.awt.Rectangle> {
+        val entry = leafEntry(tree, index)
+        edt { (tree.parent as? javax.swing.JViewport)?.setSize(tree.width.coerceAtLeast(360), tree.height.coerceAtLeast(600)) }
+        val bounds = edt { tree.regions.cell(entry) }
+        val selected = edt { tree.selectionModel.isPathSelected(TreePath(entry.path)) }
+        val comp = edt {
+            tree.cellRenderer.getTreeCellRendererComponent(tree, entry, selected, true, false, 0, true)
+        }
+        comp.setSize(bounds.width, bounds.height)
+        activeLayout(comp)
+        return activeHitCells(comp, bounds.x, bounds.y).associate { it.id to it.bounds }
     }
 
     private fun <T> edt(block: () -> T): T = edtWait(block)
@@ -1930,15 +2002,9 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         assertTrue(coroutines.pumpUntil { edt(block) })
     }
 
-    private fun row(panel: AgentManagerPanel, idx: Int): ActiveListItem {
-        val list = edt { UIUtil.findComponentOfType(panel, JBList::class.java)!! }
-        return edt { list.model.getElementAt(idx) as ActiveListItem }
-    }
+    private fun row(panel: AgentManagerPanel, idx: Int): ActiveItem = leafEntry(tree(panel), idx).item
 
-    private fun rows(panel: AgentManagerPanel): Int {
-        val list = edt { UIUtil.findComponentOfType(panel, JBList::class.java)!! }
-        return edt { list.model.size }
-    }
+    private fun rows(panel: AgentManagerPanel): Int = leaves(tree(panel)).size
 
     private fun components(root: Component): List<Component> {
         val out = mutableListOf<Component>()

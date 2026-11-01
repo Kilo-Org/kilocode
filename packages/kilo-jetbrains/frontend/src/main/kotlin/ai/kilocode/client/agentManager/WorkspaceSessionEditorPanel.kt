@@ -9,12 +9,13 @@ import ai.kilocode.client.ui.layout.Stack
 import ai.kilocode.client.ui.layout.VAlign
 import ai.kilocode.client.ui.layout.align
 import ai.kilocode.client.ui.list.ActiveList
-import ai.kilocode.client.ui.list.ActiveListConfig
-import ai.kilocode.client.ui.list.ActiveListItem
-import ai.kilocode.client.ui.list.ActiveListMenu
-import ai.kilocode.client.ui.list.ActiveListSurface
-import ai.kilocode.client.ui.list.ActiveListWeight
-import ai.kilocode.client.ui.list.activeListToolWindowBackground
+import ai.kilocode.client.ui.list.ActiveListOptions
+import ai.kilocode.client.ui.active.ActiveConfig
+import ai.kilocode.client.ui.active.ActiveItem
+import ai.kilocode.client.ui.active.ActiveMenu
+import ai.kilocode.client.ui.active.ActiveSurface
+import ai.kilocode.client.ui.active.ActiveWeight
+import ai.kilocode.client.ui.active.activeToolWindowBackground
 import com.intellij.ide.ActivityTracker
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.actionSystem.ActionManager
@@ -59,25 +60,25 @@ abstract class WorkspaceSessionEditorPanel @RequiresEdt constructor(
     private var count = 0
     private var kind: SessionActivityKind? = null
 
-    override fun getBackground(): Color = activeListToolWindowBackground()
+    override fun getBackground(): Color = activeToolWindowBackground()
 
     @RequiresEdt
     internal fun initialize(
         content: JComponent,
         header: JComponent,
         actions: DefaultActionGroup = DefaultActionGroup(),
-        menu: ActiveListMenu<*>? = null,
-        open: (ActiveListItem, Boolean) -> Unit,
+        menu: ActiveMenu<*>? = null,
+        open: (ActiveItem, Boolean) -> Unit,
     ) {
         list = ActiveList(
             KiloBundle.message("worktree.session.list.empty"),
-            cfg = ActiveListConfig(
+            cfg = ActiveConfig(
                 description = false,
-                selection = ListSelectionModel.MULTIPLE_INTERVAL_SELECTION,
                 hoverActions = true,
-                title = ActiveListWeight.PLAIN,
+                title = ActiveWeight.PLAIN,
             ),
-            surface = ActiveListSurface.ToolWindow,
+            surface = ActiveSurface.ToolWindow,
+            options = ActiveListOptions(selection = ListSelectionModel.MULTIPLE_INTERVAL_SELECTION),
             showSearch = false,
             enter = { true },
             onCell = { _, _ -> },
@@ -89,7 +90,7 @@ abstract class WorkspaceSessionEditorPanel @RequiresEdt constructor(
         toolbar.component.isOpaque = false
         splitter.secondComponent = content
         val strip = object : JPanel(BorderLayout()) {
-            override fun getBackground(): Color = activeListToolWindowBackground()
+            override fun getBackground(): Color = activeToolWindowBackground()
 
             override fun updateUI() {
                 super.updateUI()
@@ -110,7 +111,7 @@ abstract class WorkspaceSessionEditorPanel @RequiresEdt constructor(
             add(toolbar.component, BorderLayout.CENTER)
         }
         val bar = object : JPanel(BorderLayout()) {
-            override fun getBackground(): Color = activeListToolWindowBackground()
+            override fun getBackground(): Color = activeToolWindowBackground()
 
             override fun updateUI() {
                 super.updateUI()

@@ -5,8 +5,8 @@ import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.session.SessionActivityKind
 import ai.kilocode.client.session.history.HistoryItem
 import ai.kilocode.client.session.history.HistoryTime
-import ai.kilocode.client.ui.list.ActiveListBadge
-import ai.kilocode.client.ui.list.ActiveListItem
+import ai.kilocode.client.ui.active.ActiveBadge
+import ai.kilocode.client.ui.list.ActiveSection
 
 internal data class WorkspaceSessionRow(
     val item: HistoryItem,
@@ -14,7 +14,7 @@ internal data class WorkspaceSessionRow(
     private val deleting: Boolean = false,
     private val live: String? = null,
     override val search: String = "",
-) : ActiveListItem {
+) : ActiveSection {
     override val key: String get() = item.id
     override val title: String get() {
         val name = live?.takeIf { it.isNotBlank() } ?: item.title
@@ -24,7 +24,7 @@ internal data class WorkspaceSessionRow(
     }
     override val tooltip: String get() = title
     override val progress: String? get() = if (deleting) KiloBundle.message("common.deleting") else null
-    override val badges: List<ActiveListBadge>
-        get() = listOfNotNull(kind?.let { ActiveListBadge(it.label(), it.style()) })
+    override val badges: List<ActiveBadge>
+        get() = listOfNotNull(kind?.let { ActiveBadge(it.label(), it.style()) })
     override val section: String get() = HistoryTime.title(HistoryTime.section(item))
 }

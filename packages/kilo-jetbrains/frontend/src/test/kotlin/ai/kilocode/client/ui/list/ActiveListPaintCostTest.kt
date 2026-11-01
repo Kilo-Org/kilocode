@@ -1,5 +1,9 @@
 package ai.kilocode.client.ui.list
 
+import ai.kilocode.client.ui.active.activeInvalidate
+import ai.kilocode.client.ui.active.activeLayout
+import ai.kilocode.client.ui.active.ActiveItem
+import ai.kilocode.client.ui.active.ActiveBadge
 import ai.kilocode.client.ui.LiveBadgeIcon
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.ui.AnimatedIcon
@@ -27,19 +31,19 @@ class ActiveListPaintCostTest : BasePlatformTestCase() {
     fun `test a row layout pass measures each nested container once`() {
         val glyph = counting()
         val row = row("a", glyph)
-        val model = CollectionListModel<ActiveListItem>(listOf(row))
+        val model = CollectionListModel<ActiveItem>(listOf(row))
         val list = JBList(model).apply { setSize(400, 600) }
         val stamp = ActiveListRenderer(model).getListCellRendererComponent(list, row, 0, false, false)
         stamp.setBounds(0, 0, 400, 80)
 
-        activeListInvalidate(stamp)
+        activeInvalidate(stamp)
         reads = 0
         plain(stamp)
         val before = reads
 
-        activeListInvalidate(stamp)
+        activeInvalidate(stamp)
         reads = 0
-        activeListLayout(stamp)
+        activeLayout(stamp)
         val after = reads
 
         assertTrue("a measured pass should read the row glyphs far less often: plain=$before pass=$after", after * 3 <= before)
@@ -140,13 +144,13 @@ class ActiveListPaintCostTest : BasePlatformTestCase() {
         }
     }
 
-    private fun row(key: String, glyph: Icon): ActiveListItem = object : ActiveListItem {
+    private fun row(key: String, glyph: Icon): ActiveItem = object : ActiveItem {
         override val key = key
         override val title = key
         override val search = key
         override val description = "$key description"
         override val icon = glyph
-        override val badges = listOf(ActiveListBadge("PR", icon = glyph))
-        override val secondaryBadges = listOf(ActiveListBadge("1", icon = glyph))
+        override val badges = listOf(ActiveBadge("PR", icon = glyph))
+        override val secondaryBadges = listOf(ActiveBadge("1", icon = glyph))
     }
 }
