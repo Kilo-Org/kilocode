@@ -33,6 +33,8 @@ import { PermissionProvenance } from "@/kilocode/permission/provenance"
 import { McpApps } from "@/kilocode/mcp/apps"
 import { BoardEnabled } from "@/kilocode/board/enabled"
 import { KiloCodeMode } from "@/kilocode/tool/code-mode" // kilocode_change
+import { forLocalSession } from "@/kilocode/tool/shell-tmp" // kilocode_change
+import { ShellID } from "@/tool/shell/id" // kilocode_change
 // kilocode_change end
 import { isRecord } from "@/util/record"
 import { RuntimeFlags } from "@/effect/runtime-flags"
@@ -181,10 +183,14 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
     permission: input.session.permission,
     networkRestricted: restricted, // kilocode_change - let the registry suppress code-mode in restricted sessions
   })) {
+    // kilocode_change start - give each local session a distinct advertised temp path
+    const description =
+      item.id === ShellID.ToolID ? forLocalSession(item.description, input.session.id) : item.description
+    // kilocode_change end
     const base = ToolJsonSchema.fromTool(item)
     const schema = ProviderTransform.schema(input.model, base)
     tools[item.id] = tool({
-      description: item.description,
+      description,
       inputSchema: jsonSchema(schema),
       execute(args, options) {
         return run.promise(
