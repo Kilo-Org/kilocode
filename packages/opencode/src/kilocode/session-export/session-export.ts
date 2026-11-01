@@ -1,7 +1,9 @@
 import type { Agent } from "@/agent/agent"
 import { Capture, type CaptureDeps } from "./capture"
 import { Config } from "./config"
-import { setKillSwitch } from "./eligibility"
+import { exportableAgent, setKillSwitch } from "./eligibility"
+
+export { exportableAgent }
 import { createSequencer } from "./sequence"
 import { SyncSubscriber } from "./sync-subscriber"
 
