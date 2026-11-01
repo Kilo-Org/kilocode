@@ -56,7 +56,7 @@ export namespace KiloTerminalActivity {
       if (
         event.type === "session.turn.open" ||
         (event.type === "session.status" &&
-          (event.properties.status.type === "busy" || event.properties.status.type === "retry"))
+          (event.properties.status.type === "busy" || event.properties.status.type === "retry" || event.properties.status.type === "waiting")) // kilocode_change - clear outcome when session starts waiting for permission (#33)
       ) {
         setOutcomes(event.properties.sessionID, undefined)
       }

@@ -12,7 +12,7 @@ const ID = Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(200))
 const Name = Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(500))
 const Prompt = Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(100_000))
 
-export const Activity = Schema.Literals(["idle", "busy", "retry", "offline"]).annotate({
+export const Activity = Schema.Literals(["idle", "busy", "retry", "offline", "waiting"]).annotate({ // kilocode_change - added "waiting" for sessions blocked on a permission prompt (#33)
   identifier: "AgentManagerActivity",
 })
 export type Activity = Schema.Schema.Type<typeof Activity>
