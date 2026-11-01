@@ -4,6 +4,7 @@ import { makeLocationNode } from "./effect/app-node"
 import { Context, Deferred, Effect as EffectRuntime, Layer, Schema } from "effect"
 import { Permission } from "@opencode-ai/schema/permission"
 import { EventV2 } from "./event"
+import { PluginV2 } from "./plugin"
 import { Location } from "./location"
 import { AgentV2 } from "./agent"
 import { SessionV2 } from "./session"
@@ -154,11 +155,99 @@ const layer = Layer.effect(
 
     const evaluateInput = EffectRuntime.fnUntraced(function* (input: AssertInput) {
       const rules = yield* configured(input.sessionID, input.agent)
-      if (denied(input, rules)) return { effect: "deny" as const, rules }
+      const metadata = (input.metadata ?? {}) as Record<string, unknown>
+      const beforeInput = {
+        phase: "execute" as const,
+        sessionID: input.sessionID,
+        agent: input.agent,
+        source: input.source,
+        id: input.id,
+        action: input.action,
+        resources: input.resources,
+        save: input.save,
+        metadata,
+        rules,
+      }
+      const beforeOutput = { metadata, effect: undefined as Permission.Effect | undefined }
+      const plugin = yield* EffectRuntime.serviceOption(PluginV2.Service)
+      if (plugin._tag === "Some") {
+        yield* plugin.value.trigger("permission.evaluate.before", beforeInput, beforeOutput).pipe(
+          EffectRuntime.catch(() => EffectRuntime.succeed(undefined)),
+        )
+      }
+
+      if (beforeOutput.effect) {
+        const afterOutput = { effect: beforeOutput.effect }
+        if (plugin._tag === "Some") {
+          yield* plugin.value.trigger(
+            "permission.evaluate.after",
+            {
+              phase: "execute",
+              sessionID: input.sessionID,
+              agent: input.agent,
+              source: input.source,
+              id: input.id,
+              action: input.action,
+              resources: input.resources,
+              save: input.save,
+              decision: beforeOutput.effect,
+              metadata: beforeOutput.metadata,
+              rules,
+            },
+            afterOutput,
+          ).pipe(EffectRuntime.catch(() => EffectRuntime.succeed(afterOutput)))
+        }
+        return { effect: afterOutput.effect ?? beforeOutput.effect, rules }
+      }
+
+      if (denied(input, rules)) {
+        const decision = "deny" as const
+        const afterOutput = { effect: decision }
+        if (plugin._tag === "Some") {
+          yield* plugin.value.trigger(
+            "permission.evaluate.after",
+            {
+              phase: "execute",
+              sessionID: input.sessionID,
+              agent: input.agent,
+              source: input.source,
+              id: input.id,
+              action: input.action,
+              resources: input.resources,
+              save: input.save,
+              decision,
+              metadata: beforeOutput.metadata,
+              rules,
+            },
+            afterOutput,
+          ).pipe(EffectRuntime.catch(() => EffectRuntime.succeed(afterOutput)))
+        }
+        return { effect: afterOutput.effect ?? decision, rules }
+      }
       const all = [...rules, ...(yield* savedRules())]
       const effects = input.resources.map((resource) => evaluate(input.action, resource, all).effect)
-      const effect: Permission.Effect = effects.includes("deny") ? "deny" : effects.includes("ask") ? "ask" : "allow"
-      return { effect, rules: all }
+      const decision: Permission.Effect = effects.includes("deny") ? "deny" : effects.includes("ask") ? "ask" : "allow"
+      const afterOutput = { effect: decision }
+      if (plugin._tag === "Some") {
+        yield* plugin.value.trigger(
+          "permission.evaluate.after",
+          {
+            phase: "execute",
+            sessionID: input.sessionID,
+            agent: input.agent,
+            source: input.source,
+            id: input.id,
+            action: input.action,
+            resources: input.resources,
+            save: input.save,
+            decision,
+            metadata: beforeOutput.metadata,
+            rules,
+          },
+          afterOutput,
+        ).pipe(EffectRuntime.catch(() => EffectRuntime.succeed(afterOutput)))
+      }
+      return { effect: afterOutput.effect ?? decision, rules: all }
     })
 
     function request(input: AssertInput): Request {
