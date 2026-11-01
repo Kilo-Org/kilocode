@@ -7,6 +7,7 @@ import { iife } from "@/util/iife"
 import { kiloProviderOptions } from "@/kilocode/provider-options"
 import { isLing } from "@/kilocode/model-match" // kilocode_change
 import { reasoningSummary } from "@/kilocode/provider/reasoning-summary" // kilocode_change
+import { applyKiloGatewayReasoning } from "@/kilocode/provider/transform" // kilocode_change
 
 type Modality = NonNullable<ModelsDev.Model["modalities"]>["input"][number]
 
@@ -584,6 +585,12 @@ export function message(msgs: ModelMessage[], model: Provider.Model, options: Re
 
     msgs = mapProviderOptions(msgs, remap)
   }
+
+  // kilocode_change start - replay Kilo Gateway assistant reasoning (#42 / upstream #15215)
+  // Runs after the providerOptions remap so it reads and writes exactly the keys
+  // the SDK will see, and last so no later branch can drop the details again.
+  msgs = applyKiloGatewayReasoning(msgs, model) ?? msgs
+  // kilocode_change end
 
   // Strip Responses item IDs before serialization, following Codex and keeping signed request bodies immutable.
   if (
