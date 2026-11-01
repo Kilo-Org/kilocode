@@ -1,4 +1,4 @@
-import type { KiloClient } from "@kilocode/sdk/v2"
+import type { KiloClient, TextPart } from "@kilocode/sdk/v2"
 import { KiloRunDrain } from "../run-drain"
 import { UI } from "@/cli/ui"
 import { FormatError, FormatUnknownError } from "@/cli/error"
@@ -6,8 +6,13 @@ import { DaemonClient } from "@/kilocode/daemon/client"
 import { isBuiltinCommand, type BuiltinCommand } from "@/kilocode/session/builtin-commands"
 import { Provider } from "@/provider/provider"
 import { Filesystem } from "@/util/filesystem"
+import { AnthropicFallback } from "@/kilocode/provider/anthropic-fallback"
 
 export namespace KiloRun {
+  export function text(part: TextPart, emit: (type: string, data: Record<string, unknown>) => boolean) {
+    return AnthropicFallback.marker(part.metadata) || emit("text", { part })
+  }
+
   export async function resolveBuiltin(sdk: KiloClient, command?: string, directory?: string) {
     if (!isBuiltinCommand(command)) return
     const result = await sdk.command.list({ directory })

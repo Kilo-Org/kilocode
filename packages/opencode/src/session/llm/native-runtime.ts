@@ -1,6 +1,7 @@
 import type { Auth } from "@/auth"
 import type { Provider } from "@/provider/provider"
 import { ProviderTransform } from "@/provider/transform"
+import { AnthropicFallback } from "@/kilocode/provider/anthropic-fallback" // kilocode_change
 import { errorMessage } from "@/util/error"
 import { isRecord } from "@/util/record"
 import { asSchema, type ModelMessage, type Tool } from "ai"
@@ -88,11 +89,27 @@ export function stream(input: StreamInput): StreamResult {
   // — if a field ever needs to differ between the two surfaces, the
   // translation belongs here, not split across both packages.
   const tools = nativeTools(input.tools, input)
+  // kilocode_change start - drop unsupported boundaries before transforms choose cache positions
+  const messages = input.messages.map((message) =>
+    message.role !== "assistant" || !Array.isArray(message.content)
+      ? message
+      : {
+          ...message,
+          content: message.content.filter(
+            (part) => part.type !== "text" || !AnthropicFallback.marker(part.providerOptions),
+          ),
+        },
+  )
+  // kilocode_change end
   const request = LLMNative.request({
     model: input.model,
     apiKey: current.apiKey,
     baseURL: current.baseURL,
-    messages: ProviderTransform.message(input.messages, input.model, input.messageTransformOptions ?? input.providerOptions ?? {}), // kilocode_change
+    messages: ProviderTransform.message(
+      messages,
+      input.model,
+      input.messageTransformOptions ?? input.providerOptions ?? {},
+    ), // kilocode_change
     toolChoice: input.toolChoice,
     temperature: input.temperature,
     topP: input.topP,
