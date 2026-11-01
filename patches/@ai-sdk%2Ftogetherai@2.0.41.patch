@@ -1,0 +1,36 @@
+diff --git a/dist/index.js b/dist/index.js
+--- a/dist/index.js
++++ b/dist/index.js
+@@ -318,7 +318,7 @@
+   const createChatModel = (modelId) => {
+     return new import_openai_compatible.OpenAICompatibleChatLanguageModel(
+       modelId,
+-      getCommonModelConfig("chat")
++      { ...getCommonModelConfig("chat"), includeUsage: true }
+     );
+   };
+   const createCompletionModel = (modelId) => new import_openai_compatible.OpenAICompatibleCompletionLanguageModel(
+diff --git a/dist/index.mjs b/dist/index.mjs
+--- a/dist/index.mjs
++++ b/dist/index.mjs
+@@ -313,7 +313,7 @@
+   const createChatModel = (modelId) => {
+     return new OpenAICompatibleChatLanguageModel(
+       modelId,
+-      getCommonModelConfig("chat")
++      { ...getCommonModelConfig("chat"), includeUsage: true }
+     );
+   };
+   const createCompletionModel = (modelId) => new OpenAICompatibleCompletionLanguageModel(
+diff --git a/src/togetherai-provider.ts b/src/togetherai-provider.ts
+--- a/src/togetherai-provider.ts
++++ b/src/togetherai-provider.ts
+@@ -150,7 +150,7 @@
+   const createChatModel = (modelId: TogetherAIChatModelId) => {
+     return new OpenAICompatibleChatLanguageModel(
+       modelId,
+-      getCommonModelConfig('chat'),
++      { ...getCommonModelConfig('chat'), includeUsage: true },
+     );
+   };
+ 
