@@ -80,6 +80,7 @@ function loadedSettings(message: ExtensionMessage): Record<string, unknown> | un
   }
   if (message.type === "chatSettingsLoaded") {
     return {
+      showSessionActions: message.settings.showSessionActions,
       "chat.shiftTabCyclesVariant": message.settings.shiftTabCyclesVariant,
       browserAutomation: message.settings.browserAutomation,
       agentManagerBrowserOpenLinksIn: message.settings.agentManagerBrowserOpenLinksIn,
