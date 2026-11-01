@@ -18,12 +18,13 @@ export interface TranscriptUserRow extends TranscriptMeta {
 }
 
 /**
- * Wall-clock finish time and duration for a completed turn, shown as the
- * turn's chat-line timestamp.
+ * Finish time, duration, and reported cost for a completed turn, shown in
+ * the turn's action row.
  */
 export interface TurnTiming {
   completedAt: number
   durationMs?: number
+  cost?: number
 }
 
 export interface TranscriptAssistantRow extends TranscriptMeta {
@@ -95,7 +96,7 @@ function meta(a: TranscriptRow, b: TranscriptRow) {
 }
 
 function sameTiming(a?: TurnTiming, b?: TurnTiming) {
-  return a?.completedAt === b?.completedAt && a?.durationMs === b?.durationMs
+  return a?.completedAt === b?.completedAt && a?.durationMs === b?.durationMs && a?.cost === b?.cost
 }
 
 function equal(a: TranscriptRow, b: TranscriptRow) {
@@ -136,9 +137,14 @@ function turnTiming(turn: MessageTurn) {
   if (!last?.finish || last.finish === "tool-calls" || last.finish === "unknown") return undefined
   const end = last.time?.completed
   if (typeof end !== "number") return undefined
+  // Message costs already include completed subagents. Sum every step in
+  // this prompt, and do not present an incomplete total as the prompt's cost.
+  const cost = turn.assistant.every((msg) => msg.cost != null)
+    ? turn.assistant.reduce((sum, msg) => sum + (msg.cost ?? 0), 0)
+    : undefined
   const start = turn.user.time?.created
-  if (typeof start !== "number") return { completedAt: end }
-  return { completedAt: end, durationMs: Math.max(0, end - start) }
+  if (typeof start !== "number") return { completedAt: end, cost }
+  return { completedAt: end, durationMs: Math.max(0, end - start), cost }
 }
 
 /**
