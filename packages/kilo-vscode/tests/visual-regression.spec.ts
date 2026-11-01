@@ -123,6 +123,12 @@ const DOCS = new Map<string, string[]>([
       "packages/kilo-docs/pages/customize/workflows.md:/docs/img/screenshot-tests/kilo-vscode/visual-regression/settings/agent-behaviour-workflows-chromium-linux.png",
     ],
   ],
+  [
+    "settings--agent-behaviour-hooks",
+    [
+      "packages/kilo-docs/pages/customize/hooks.md:/docs/img/screenshot-tests/kilo-vscode/visual-regression/settings/agent-behaviour-hooks-chromium-linux.png",
+    ],
+  ],
 ])
 
 // Generate one test() per story so Playwright's scheduler can distribute

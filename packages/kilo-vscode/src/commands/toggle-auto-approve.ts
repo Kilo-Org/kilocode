@@ -17,6 +17,15 @@ export type DirectoryResolver = (sessionId?: string) => string
 export type AllDirectories = () => string[]
 type Asked = Extract<Event, { type: "permission.asked" }>
 
+/**
+ * Prompts auto-approve never answers: sandbox escalations, and confirmations a PreToolUse hook
+ * asked for (`hookAsk`), which only the user may give. The backend refuses non-interactive
+ * replies to both anyway; skipping them keeps a drain from waiting on a refused reply.
+ */
+function forced(metadata: Record<string, unknown> | undefined) {
+  return metadata?.["sandboxEscalation"] === true || metadata?.["hookAsk"] === true
+}
+
 export interface AutoApproveController {
   active(): boolean
   approve(event: Asked, directory?: string): Promise<boolean>
@@ -75,7 +84,7 @@ export function registerToggleAutoApprove(
         const { data: pending } = await retry(() => client.permission.list({ directory: dir }, { throwOnError: true }))
         for (const req of pending) {
           if (generation !== snapshot) break
-          if (req.metadata?.["sandboxEscalation"] === true) continue
+          if (forced(req.metadata)) continue
           await replyOnce(client, req.id, dir, () => generation === snapshot)
         }
       } catch (err) {
@@ -90,7 +99,7 @@ export function registerToggleAutoApprove(
     if (!active) return false
     const client = tryGetClient(connectionService)
     if (!client) return false
-    if (event.properties.metadata?.["sandboxEscalation"] === true) return false
+    if (forced(event.properties.metadata)) return false
     const dir =
       directory ?? connectionService.getPermissionDirectory(event.properties.id) ?? resolve(event.properties.sessionID)
     return replyOnce(client, event.properties.id, dir)

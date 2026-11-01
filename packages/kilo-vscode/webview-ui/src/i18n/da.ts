@@ -303,6 +303,9 @@ export const dict = {
   "notification.permission.titleSandboxEscalation": "Kør uden for sandkassen?",
   "notification.permission.descriptionSandboxEscalation":
     "Dette kører hele kommandoen uden begrænsninger for filsystem og netværk, kun for denne kommando. Git skal skrive til .git, som er skrivebeskyttet i sandkassen og ligger uden for worktreet i et linket worktree. Bash-tilladelsesregler og automatisk godkendelse godkender aldrig denne anmodning automatisk.",
+  "notification.permission.titleHookAsk": "En hook beder om bekræftelse",
+  "notification.permission.descriptionHookAsk":
+    "En hook beder dig bekræfte dette kald, før det kører. Automatisk godkendelse besvarer aldrig denne anmodning.",
   "ui.permission.manageAutoApprove": "Administrer regler for automatisk godkendelse",
   "ui.permission.reject": "Afvis",
   "ui.permission.feedbackPlaceholder": "Fortæl Kilo, hvad den skal gøre anderledes",
@@ -872,6 +875,7 @@ export const dict = {
 
   "settings.agentBehaviour.subtab.agents": "Agenter",
   "settings.agentBehaviour.subtab.mcpServers": "MCP-servere",
+  "settings.agentBehaviour.subtab.hooks": "Hooks",
   "settings.agentBehaviour.subtab.rules": "Regler",
   "settings.agentBehaviour.subtab.workflows": "Arbejdsgange",
   "settings.agentBehaviour.subtab.skills": "Færdigheder",
@@ -1119,7 +1123,142 @@ export const dict = {
   "settings.agentBehaviour.claudeCompat.heading": "Claude Code-kompatibilitet",
   "settings.agentBehaviour.claudeCompat.title": "Indlæs Claude Code-filer",
   "settings.agentBehaviour.claudeCompat.description":
-    "Indlæs CLAUDE.md-instruktioner og -færdigheder fra din Claude Code-konfigurationsmappe i sessioner. Aktivér dette, hvis du vil have Kilo til at bruge dine Claude Code-instruktioner og -færdigheder. Kræver genstart.",
+    "Indlæs CLAUDE.md-instruktioner og -færdigheder fra din Claude Code-konfigurationsmappe i sessioner. Aktivér dette, hvis du vil have Kilo til at bruge dine Claude Code-instruktioner og -færdigheder. Kræver genstart. Kører også Claude Code-hooks fra ~/.claude/settings.json med dine brugerrettigheder: værktøjshændelser, prompt- og sessionshændelser (UserPromptSubmit, SessionStart, ...), Stop- og subagenthændelser, komprimering og notifikationer.",
+  "settings.agentBehaviour.hooks.description":
+    "Kør dine egne kommandoer, når agenten handler: før eller efter et værktøjskald, når du sender en prompt, når en session starter, når agenten stopper, før komprimering og mere. Bruger Claude Code-hookformatet.",
+  "settings.agentBehaviour.hooks.warning":
+    "Hooks kører shell-kommandoer med dine fulde brugerrettigheder uden for sandboxen. Tilføj kun kommandoer, du har tillid til.",
+  "settings.agentBehaviour.hooks.scope":
+    "Gemmes i din globale konfiguration. Hooks i projektkonfigurationen ignoreres.",
+  "settings.agentBehaviour.hooks.openConfig": "Åbn konfigurationsfil",
+  "settings.agentBehaviour.hooks.empty": "Ingen hooks endnu.",
+  "settings.agentBehaviour.hooks.add": "Tilføj hook",
+  "settings.agentBehaviour.hooks.allTools": "Alle",
+  "settings.agentBehaviour.hooks.badge.timeout": "Timeout {{seconds}}s",
+  "settings.agentBehaviour.hooks.badge.block": "Blokerer ved fejl",
+  "settings.agentBehaviour.hooks.badge.exec": "Ingen shell",
+  "settings.agentBehaviour.hooks.inherited": "Fra anden konfiguration",
+  "settings.agentBehaviour.hooks.inherited.help":
+    "Disse hooks kører også. De kommer fra en anden global konfigurationsfil, administreret konfiguration eller din organisation; rediger dem, hvor de er defineret.",
+  "settings.agentBehaviour.hooks.claude": "Fra Claude Code",
+  "settings.agentBehaviour.hooks.claude.open": "Åbn fil",
+  "settings.agentBehaviour.hooks.claude.active":
+    "Disse hooks fra {{path}} kører også, undtagen i sessioner med sandbox.",
+  "settings.agentBehaviour.hooks.claude.off":
+    'Køres ikke: aktivér "Indlæs Claude Code-filer" på fanen Regler, og genstart derefter Kilo.',
+  "settings.agentBehaviour.hooks.claude.restart":
+    "Køres ikke endnu: genstart Kilo for at anvende Claude Code-kompatibilitet. Hvis de stadig ikke kører, så kontrollér, at KILO_DISABLE_CLAUDE_CODE_HOOKS ikke er sat.",
+  "settings.agentBehaviour.hooks.new": "Ny hook",
+  "settings.agentBehaviour.hooks.edit": "Rediger hook",
+  "settings.agentBehaviour.hooks.event": "Hvornår",
+  "settings.agentBehaviour.hooks.matcher": "Matcher",
+  "settings.agentBehaviour.hooks.matcher.all": "Matcher alt",
+  "settings.agentBehaviour.hooks.matcher.names": "Matcher præcis: {{names}}",
+  "settings.agentBehaviour.hooks.matcher.regex": "Regulært udtryk, der matches hvor som helst i værdien",
+  "settings.agentBehaviour.hooks.matcher.invalid": "Ugyldigt regulært udtryk",
+  "settings.agentBehaviour.hooks.unmatched": "Intet værktøj hedder {{names}} her, så denne hook kører aldrig for det.",
+  "settings.agentBehaviour.hooks.ifIgnored":
+    "Kilo springer denne hook over: betingelsen `if` virker kun på værktøjshændelser.",
+  "settings.agentBehaviour.hooks.command": "Kommando",
+  "settings.agentBehaviour.hooks.command.help": "Modtager hændelsen som JSON på stdin og kører i projektmappen.",
+  "settings.agentBehaviour.hooks.command.required": "Angiv en kommando",
+  "settings.agentBehaviour.hooks.exec": "Kør uden shell",
+  "settings.agentBehaviour.hooks.exec.help":
+    "Kør kommandoen som et program med argumenterne nedenfor, ét per linje. Der bruges ingen shell, så ~ og $VARIABLES udvides ikke: brug absolutte stier.",
+  "settings.agentBehaviour.hooks.args.placeholder": "Ét argument per linje",
+  "settings.agentBehaviour.hooks.timeout": "Timeout (sekunder)",
+  "settings.agentBehaviour.hooks.timeout.help":
+    "Standard for denne hændelse er {{seconds}}. En hook, der får timeout, stoppes sammen med alle de processer, den har startet.",
+  "settings.agentBehaviour.hooks.timeout.invalid": "Angiv et helt antal sekunder fra 1 til 86400",
+  "settings.agentBehaviour.hooks.block": "Bloker, hvis hooken fejler",
+  "settings.agentBehaviour.hooks.block.help":
+    "Som standard fortsætter handlingen, hvis en hook crasher eller får timeout. Aktivér dette for kontroller, der ikke må lade noget slippe igennem ved fejl.",
+  "settings.agentBehaviour.hooks.apply": "Anvend",
+  "settings.agentBehaviour.hooks.remove.heading": "Fjern hook",
+  "settings.agentBehaviour.hooks.remove.confirm":
+    'Vil du fjerne hooken "{{command}}"? Klik på Gem for at anvende ændringen.',
+  "settings.agentBehaviour.hooks.remove.button": "Fjern",
+  "settings.agentBehaviour.hooks.kiloOnly": "Kun Kilo",
+  "settings.agentBehaviour.hooks.badge.async": "Baggrund",
+  "settings.agentBehaviour.hooks.group.tools": "Værktøjer",
+  "settings.agentBehaviour.hooks.group.prompt": "Prompts",
+  "settings.agentBehaviour.hooks.group.session": "Sessioner",
+  "settings.agentBehaviour.hooks.group.loop": "Agentløkke",
+  "settings.agentBehaviour.hooks.group.compaction": "Komprimering",
+  "settings.agentBehaviour.hooks.group.environment": "Miljø",
+  "settings.agentBehaviour.hooks.group.kilo": "Kilo-hændelser",
+  "settings.agentBehaviour.hooks.event.PreToolUse.help":
+    'Før et værktøj kører. Exitkode 2 eller et JSON-deny blokerer kaldet; "ask" får Kilo til at spørge dig først.',
+  "settings.agentBehaviour.hooks.event.PostToolUse.help":
+    "Efter et værktøj er lykkedes. stderr ved exitkode 2 eller additionalContext vises for agenten, fx lintfejl.",
+  "settings.agentBehaviour.hooks.event.PostToolUseFailure.help":
+    "Efter et værktøj fejler, også når en shellkommando afsluttes med en kode forskellig fra nul. additionalContext vises for agenten.",
+  "settings.agentBehaviour.hooks.event.PostToolBatch.help":
+    "Efter et modeltrin, der kørte værktøjer, før næste modelkald. En blokering afslutter turen.",
+  "settings.agentBehaviour.hooks.event.PermissionRequest.help":
+    "Når Kilo viser en tilladelsesanmodning. Et JSON-deny afviser kaldet; hooks kan ikke godkende.",
+  "settings.agentBehaviour.hooks.event.TaskCreated.help":
+    "Når agenten tilføjer en todo. En blokering fjerner den todo.",
+  "settings.agentBehaviour.hooks.event.TaskCompleted.help":
+    "Når agenten markerer en todo som fuldført. En blokering holder den åben.",
+  "settings.agentBehaviour.hooks.event.UserPromptSubmit.help":
+    "Når du sender en prompt eller kommando. En blokering afviser den; stdout føjes til prompten.",
+  "settings.agentBehaviour.hooks.event.UserPromptExpansion.help":
+    "Når en brugerdefineret kommando, færdighed eller MCP-prompt udfoldes. En blokering afviser den.",
+  "settings.agentBehaviour.hooks.event.PreModelSwitch.help":
+    'Før en prompt skifter sessionen til en anden model. En blokering, "ask" eller timeout afviser prompten.',
+  "settings.agentBehaviour.hooks.event.PostModelSwitch.help":
+    "Efter sessionens model er ændret. stdout føjes til den næste anmodning.",
+  "settings.agentBehaviour.hooks.event.SessionStart.help":
+    "Når en session starter, genoptages, forgrenes eller komprimeres. stdout føjes til samtalen.",
+  "settings.agentBehaviour.hooks.event.SessionEnd.help":
+    "Når en session slettes, eller Kilo lukker. Alle SessionEnd-hooks deler en kort tidsramme.",
+  "settings.agentBehaviour.hooks.event.InstructionsLoaded.help":
+    "Når en instruktionsfil som AGENTS.md eller CLAUDE.md indlæses.",
+  "settings.agentBehaviour.hooks.event.Stop.help":
+    "Når agenten er færdig med at svare. En blokering får den til at fortsætte, højst 8 gange i træk.",
+  "settings.agentBehaviour.hooks.event.SubagentStop.help":
+    "Når en subagent er færdig. En blokering får den til at fortsætte.",
+  "settings.agentBehaviour.hooks.event.SubagentStart.help":
+    "Når en subagent starter. additionalContext føjes til dens første prompt.",
+  "settings.agentBehaviour.hooks.event.StopFailure.help":
+    "Når en tur slutter med en API-fejl, fx en hastighedsbegrænsning.",
+  "settings.agentBehaviour.hooks.event.PreCompact.help":
+    "Før samtalen komprimeres. En blokering springer komprimeringen over.",
+  "settings.agentBehaviour.hooks.event.PostCompact.help": "Efter samtalen er komprimeret.",
+  "settings.agentBehaviour.hooks.event.Notification.help":
+    "Når Kilo venter på dig: en tilladelsesanmodning, et spørgsmål eller inaktivitet efter en tur.",
+  "settings.agentBehaviour.hooks.event.ConfigChange.help": "Efter Kilo har ændret sin konfiguration. Kan ikke blokere.",
+  "settings.agentBehaviour.hooks.event.FileChanged.help": "Når en overvåget fil i projektmappen ændres.",
+  "settings.agentBehaviour.hooks.event.CwdChanged.help": "Når en shellkommando kører i en anden mappe end den forrige.",
+  "settings.agentBehaviour.hooks.event.GoalReport.help":
+    "Før et /goal markeres som fuldført eller blokeret. En blokering holder målet kørende.",
+  "settings.agentBehaviour.hooks.event.WakeupFire.help":
+    "Før en planlagt wakeup eller cron-opgave kører. En blokering springer den over.",
+  "settings.agentBehaviour.hooks.event.WorktreeSetup.help":
+    "Efter et administreret worktree er oprettet, og dets setupscript har kørt. En blokering markerer setup som mislykket.",
+  "settings.agentBehaviour.hooks.event.WorktreeTeardown.help": "Før et administreret worktree fjernes.",
+  "settings.agentBehaviour.hooks.event.CommitMessage.help":
+    "Efter en commitbesked er genereret. hookSpecificOutput.commitMessage erstatter den; en blokering afviser den.",
+  "settings.agentBehaviour.hooks.event.BranchName.help":
+    "Efter et branchnavn til et worktree er genereret. hookSpecificOutput.branchName erstatter det; en blokering beholder det nuværende navn.",
+  "settings.agentBehaviour.hooks.matcher.values": "Matcher {{field}}: {{values}}. Adskil flere værdier med |.",
+  "settings.agentBehaviour.hooks.matcher.kind.tool":
+    "Lad feltet være tomt for at matche alle værktøjer. Adskil værktøjsnavne med | (edit|write). Alt andet er et regulært udtryk. Både Kilo- og Claude Code-navne virker (bash eller Bash); MCP-værktøjer ser ud som github_create_issue.",
+  "settings.agentBehaviour.hooks.matcher.kind.file":
+    "Filnavne i projektmappen, der skal overvåges, adskilt af | (.envrc|.env). Hvert navn tages bogstaveligt.",
+  "settings.agentBehaviour.hooks.matcher.kind.model":
+    "Modelnavne adskilt af |, eller et regulært udtryk. Det kanoniske navn (claude-sonnet-4-5), model-id'et og udbyder/model matcher alle.",
+  "settings.agentBehaviour.hooks.matcher.kind.name":
+    "Matcher {{field}}. Adskil navne med |, eller brug et regulært udtryk. Lad feltet være tomt for at matche alt.",
+  "settings.agentBehaviour.hooks.matcher.files": "Overvåger: {{names}}",
+  "settings.agentBehaviour.hooks.matcher.filesNone":
+    "Overvåger ingen fil i sig selv; kører for stier, som andre hooks tilføjer med watchPaths.",
+  "settings.agentBehaviour.hooks.matcher.none": "Denne hændelse har ingen matcher; hooken kører hver gang.",
+  "settings.agentBehaviour.hooks.async": "Kør i baggrunden",
+  "settings.agentBehaviour.hooks.async.help": "Kilo venter ikke på hooken; dens output og exitkode logges kun.",
+  "settings.agentBehaviour.hooks.async.noBlock": "En hook i baggrunden kan hverken blokere eller tilføje kontekst.",
+  "settings.agentBehaviour.hooks.claude.skipped": "Køres ikke af Kilo: {{items}}",
   "settings.agentBehaviour.mcpDetail.command": "Kommando",
   "settings.agentBehaviour.mcpDetail.args": "Argumenter",
   "settings.agentBehaviour.mcpDetail.env": "Miljø",
@@ -1247,6 +1386,7 @@ export const dict = {
   "chat.memory.command.failed": "Hukommelseskommando mislykkedes",
   "chat.memory.updated": "Memory updated",
   "chat.memory.rebuild": "Memory index rebuilt",
+  "chat.hookFeedback": "Hookfeedback ({{event}})",
 
   "settings.commitMessage.title": "Commit Message",
   "settings.commitMessage.override.title": "Brug brugerdefineret prompt",

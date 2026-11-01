@@ -141,7 +141,13 @@ export function permissionInfo(request: PermissionRequest): PermissionInfo {
 }
 
 export function temporaryPermission(request: PermissionRequest) {
-  return request.metadata?.["skillShell"] === true || request.metadata?.["sandboxEscalation"] === true
+  // kilocode_change start - PreToolUse hook asks are never remembered either
+  return (
+    request.metadata?.["skillShell"] === true ||
+    request.metadata?.["sandboxEscalation"] === true ||
+    request.metadata?.["hookAsk"] === true
+  )
+  // kilocode_change end
 }
 
 export function permissionAlwaysLines(request: PermissionRequest): string[] {

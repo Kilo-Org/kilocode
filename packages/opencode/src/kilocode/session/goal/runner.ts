@@ -2,8 +2,10 @@ import { Cause, Deferred, Effect, Exit, Option, Scope, Semaphore } from "effect"
 import { SessionV1 } from "@opencode-ai/core/v1/session"
 import { NamedError } from "@opencode-ai/core/util/error"
 import type { EventV2 } from "@opencode-ai/core/event"
+import { Database } from "@opencode-ai/core/database/database"
 import { Interrupted } from "@opencode-ai/schema/kilocode/session-drain"
 import { Command } from "@/command"
+import { Config } from "@/config/config"
 import { EffectBridge } from "@/effect/bridge"
 import { InstanceRef } from "@/effect/instance-ref"
 import { InstanceState } from "@/effect/instance-state"
@@ -16,6 +18,8 @@ import type { CommandInput, PromptInput } from "@/session/prompt"
 import { SessionRunState } from "@/session/run-state"
 import { MessageID, PartID, SessionID } from "@/session/schema"
 import { Suggestion } from "@/kilocode/suggestion"
+import { KiloHookLoop } from "@/kilocode/hooks/loop"
+import { KiloHookUnattended } from "@/kilocode/hooks/unattended"
 import { KiloSessionControl } from "../control"
 import { GoalState } from "./state"
 import { GoalLink } from "./link"
@@ -226,6 +230,8 @@ export namespace Goal {
       const question = yield* Question.Service
       const events = yield* EventV2Bridge.Service
       const drain = yield* SessionDrain.Service
+      const config = yield* Config.Service
+      const database = yield* Database.Service
       const scopes = yield* InstanceState.make(() => Scope.Scope)
       const locks = new Map<SessionID, { semaphore: Semaphore.Semaphore; refs: number }>()
 
@@ -351,32 +357,39 @@ export namespace Goal {
         // A recurring task keeps firing after it resumed the goal, so the goal
         // re-suspends on it at the end of each resumed turn.
         const resumeWait = GoalState.read((yield* sessions.get(input.id).pipe(Effect.orDie)).metadata)?.wait
-        const settle = (status: GoalState.Status, reason: string) =>
-          commit(
-            input.id,
-            Effect.gen(function* () {
-              const session = yield* sessions.get(input.id).pipe(Effect.orDie)
-              if (!guard.running()) return
-              if (status !== "active") GoalState.pause(input.id, true)
-              yield* sessions.setMetadata({
-                sessionID: input.id,
-                metadata: {
-                  ...session.metadata,
-                  "kilo.goal": { text: input.text, status, active: status === "active", reason },
-                },
-              })
-              // Clear the wait record before cancelling so the wakeup side's
-              // cancel notification cannot re-resume the goal being torn down.
-              GoalLink.clear(input.id)
-              yield* GoalLink.cleanup(input.id)
-            }),
-          )
+        // Settling without the commit lock, for callers that already hold it.
+        const finish = (status: GoalState.Status, reason: string) =>
+          Effect.gen(function* () {
+            const session = yield* sessions.get(input.id).pipe(Effect.orDie)
+            if (!guard.running()) return
+            if (status !== "active") GoalState.pause(input.id, true)
+            yield* sessions.setMetadata({
+              sessionID: input.id,
+              metadata: {
+                ...session.metadata,
+                "kilo.goal": { text: input.text, status, active: status === "active", reason },
+              },
+            })
+            // Clear the wait record before cancelling so the wakeup side's
+            // cancel notification cannot re-resume the goal being torn down.
+            GoalLink.clear(input.id)
+            yield* GoalLink.cleanup(input.id)
+          })
+        const settle = (status: GoalState.Status, reason: string) => commit(input.id, finish(status, reason))
         const suspend = (id: SessionID, text: string, wait: GoalLink.Wait) =>
           commit(
             id,
             Effect.gen(function* () {
               const session = yield* sessions.get(id).pipe(Effect.orDie)
               if (!guard.running()) return
+              // A WakeupFire hook skipped this wait's last fire while the turn ran, so the wait would
+              // never end: pause instead. Checked right before the run token drops; a later skip
+              // sees no running turn and pauses the waiting goal itself.
+              const skip = KiloHookUnattended.dropped(id, wait.id)
+              if (skip !== undefined) {
+                yield* finish("paused", skip)
+                return
+              }
               // Publish the wait before dropping the run token so a fire that
               // arrives during this write can still claim it (D3).
               GoalLink.set(id, wait)
@@ -421,6 +434,8 @@ export namespace Goal {
         }
         yield* Effect.gen(function* () {
           let parent: MessageID | undefined
+          // GoalReport hook rejections in this run; the third pauses the goal.
+          let rejected = 0
           const read = yield* context(input.id, () => parent)
           while (input.current() && input.ticket.running()) {
             yield* drain.wait(input.id).pipe(Effect.raceFirst(input.cancelled))
@@ -442,6 +457,10 @@ export namespace Goal {
                 (off) => off,
               )
               const user = read()
+              // Drop a stop left by an earlier, non-goal turn so it cannot settle this one, and wakes
+              // skipped during an earlier turn, which this turn cannot wait on.
+              KiloHookLoop.stopped(input.id)
+              KiloHookUnattended.dropped(input.id)
               const result = yield* bridge.run(
                 ops.prompt(
                   {
@@ -475,6 +494,8 @@ export namespace Goal {
               // instead of settling the goal to paused. A blocked or failed
               // goal turn still wins, matching the documented pause rules.
               const preempted = KiloSessionPromptQueue.consumeSuperseded(input.id, messageID)
+              // Read (and clear) a tool or PostToolBatch hook stop for this turn before anything settles.
+              const halted = KiloHookLoop.stopped(input.id)
               yield* drain.wait(input.id).pipe(Effect.raceFirst(input.cancelled))
               if (cycle.blocked()) {
                 yield* settle(
@@ -487,6 +508,11 @@ export namespace Goal {
                 yield* settle("paused", "Work failed. Review the conversation before resuming.")
                 return { run: false }
               }
+              // A hook that stopped the turn pauses the goal with its reason, not as a turn without progress.
+              if (halted !== undefined) {
+                yield* settle("paused", halted)
+                return { run: false }
+              }
               if (preempted) return { run: true }
               // A fire that reached this in-flight turn is carried into the
               // next cycle instead of starting a second run or being dropped
@@ -497,9 +523,31 @@ export namespace Goal {
               if (report && result.info.finish === "stop") {
                 const late = queued()
                 if (late) return late
+                // Pausing or cancelling the goal interrupts the hook (and kills its process).
+                const verdict = yield* KiloHookUnattended.goal({
+                  sessionID: input.id,
+                  cwd: session.directory,
+                  text: input.text,
+                  report,
+                  attempt: rejected,
+                  agent: input.agent,
+                  config,
+                  database,
+                  sessions,
+                  events,
+                }).pipe(Effect.raceFirst(input.cancelled))
+                if (verdict.retry !== undefined) {
+                  rejected++
+                  return { run: true, note: verdict.retry }
+                }
+                rejected = 0
+                if (verdict.pause !== undefined) {
+                  yield* settle("paused", verdict.pause)
+                  return { run: false }
+                }
                 yield* settle(
                   report.status,
-                  `Reported by the working model, not independently verified: ${report.reason}`,
+                  `Reported by the working model, not independently verified: ${report.reason}${verdict.context}`,
                 )
                 return { run: false }
               }

@@ -52,4 +52,25 @@ describe("createWorkerShutdown", () => {
     expect(order.indexOf("drain")).toBeLessThan(order.indexOf("dispose"))
     expect(order.indexOf("dispose")).toBeLessThan(order.indexOf("stop"))
   })
+
+  test("runs SessionEnd hooks before draining, while sessions are still loaded", async () => {
+    const order: string[] = []
+    const run = createWorkerShutdown({
+      end: async () => {
+        order.push("end")
+      },
+      drain: async () => {
+        order.push("drain")
+      },
+      dispose: async () => {
+        order.push("dispose")
+      },
+      stopServer: async () => {
+        order.push("stop")
+      },
+    })
+
+    await run()
+    expect(order).toEqual(["end", "drain", "dispose", "stop"])
+  })
 })

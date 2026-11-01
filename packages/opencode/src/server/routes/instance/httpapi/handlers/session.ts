@@ -5,6 +5,12 @@ import { KiloSessionHttpApi } from "@/kilocode/server/httpapi/session-fork" // k
 import { KiloSessionPromptQueue } from "@/kilocode/session/prompt-queue" // kilocode_change
 import { mergeScheduled } from "@/kilocode/session/scheduled" // kilocode_change
 import { Wakeup } from "@/kilocode/wakeup" // kilocode_change
+// kilocode_change start
+import { KiloHooks } from "@/kilocode/hooks/hooks"
+import { KiloHookCompact } from "@/kilocode/hooks/compact"
+import { Config } from "@/config/config"
+import { Database } from "@opencode-ai/core/database/database"
+// kilocode_change end
 import { PermissionV1 } from "@opencode-ai/core/v1/permission"
 import { KiloViewers } from "@/kilocode/presence/service" // kilocode_change
 import { Agent } from "@/agent/agent"
@@ -68,6 +74,10 @@ export const sessionHandlers = HttpApiBuilder.group(InstanceHttpApi, "session", 
     const permissionSvc = yield* Permission.Service
     const statusSvc = yield* SessionStatus.Service
     const wake = yield* Wakeup.Service // kilocode_change
+    // kilocode_change start - PreCompact hooks resolve hooks for summarize
+    const config = yield* Config.Service
+    const database = yield* Database.Service
+    // kilocode_change end
     const todoSvc = yield* Todo.Service
     const summary = yield* SessionSummary.Service
     const events = yield* EventV2Bridge.Service
@@ -298,6 +308,19 @@ export const sessionHandlers = HttpApiBuilder.group(InstanceHttpApi, "session", 
       const defaultAgent = yield* agentSvc.defaultAgent()
       const currentAgent = messages.findLast((message) => message.info.role === "user")?.info.agent ?? defaultAgent
 
+      // kilocode_change start - blocked by a PreCompact hook
+      if (
+        !(yield* KiloHookCompact.allow({
+          sessionID: ctx.params.sessionID,
+          trigger: ctx.payload.auto ? "auto" : "manual",
+          manual: true,
+          config,
+          database,
+          events,
+        }))
+      )
+        return false
+      // kilocode_change end
       yield* compactSvc.create({
         sessionID: ctx.params.sessionID,
         agent: currentAgent,
@@ -342,6 +365,8 @@ export const sessionHandlers = HttpApiBuilder.group(InstanceHttpApi, "session", 
               error instanceof Image.SizeError
             )
               return Effect.fail(new InvalidRequestError({ message: error.message, kind: "attachment" })) // kilocode_change - carry a readable message instead of an empty BadRequest
+            if (error instanceof KiloHooks.Blocked)
+              return Effect.fail(new InvalidRequestError({ message: error.message, kind: "hook" })) // kilocode_change
             return Effect.die(error)
           }),
           // kilocode_change end
@@ -362,6 +387,7 @@ export const sessionHandlers = HttpApiBuilder.group(InstanceHttpApi, "session", 
         .pipe(
           Effect.catchCause((cause) => {
             if (Cause.hasInterruptsOnly(cause)) return Effect.void // kilocode_change - Stop is not an error
+            if (KiloHooks.rejected(cause)) return Effect.void // kilocode_change - the hook block was already published
             return Effect.gen(function* () {
               const error = Cause.squash(cause)
               // kilocode_change start - keep SQLite lock failures out of local CLI logs
@@ -397,9 +423,15 @@ export const sessionHandlers = HttpApiBuilder.group(InstanceHttpApi, "session", 
       payload: typeof CommandPayload.Type
     }) {
       yield* requireSession(ctx.params.sessionID)
-      return yield* promptSvc
-        .command({ ...ctx.payload, sessionID: ctx.params.sessionID })
-        .pipe(Effect.mapError(() => new HttpApiError.BadRequest({})))
+      // kilocode_change start - a hook block keeps its reason in the 400 body
+      return yield* promptSvc.command({ ...ctx.payload, sessionID: ctx.params.sessionID }).pipe(
+        Effect.catchIf(
+          (err) => err instanceof KiloHooks.Blocked,
+          (err) => Effect.fail(new InvalidRequestError({ message: err.message, kind: "hook" })),
+        ),
+        Effect.mapError((err) => (err instanceof InvalidRequestError ? err : new HttpApiError.BadRequest({}))),
+      )
+      // kilocode_change end
     })
 
     const shell = Effect.fn("SessionHttpApi.shell")(function* (ctx: {

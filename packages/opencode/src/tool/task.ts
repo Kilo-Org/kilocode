@@ -20,6 +20,7 @@ import { KiloSessionProcessor } from "../kilocode/session/processor" // kilocode
 import { KiloSession } from "../kilocode/session" // kilocode_change
 import { resumeHint } from "../kilocode/task-resume" // kilocode_change
 import { errorMessage } from "@/util/error" // kilocode_change
+import { KiloHookLoop } from "@/kilocode/hooks/loop" // kilocode_change
 import { Effect, Exit, Schema, Scope } from "effect"
 import { Cause } from "effect" // kilocode_change
 import { EffectBridge } from "@/effect/bridge"
@@ -273,7 +274,19 @@ export const TaskTool = Tool.define(
               ...(canTask ? {} : { task: false }),
               ...Object.fromEntries((cfg.experimental?.primary_tools ?? []).map((item) => [item, false])),
             },
-            parts,
+            parts: [
+              ...parts,
+              ...(yield* KiloHookLoop.subagent({
+                parent: ctx.sessionID,
+                child: nextSession,
+                agent: next.name,
+                resumed: session !== undefined,
+                signal: ctx.abort,
+                hooks: ctx.extra?.hooks,
+                config,
+                database,
+              })),
+            ],
           })
           yield* drain.wait(nextSession.id)
           const latest = (yield* sessions.messages({ sessionID: nextSession.id, limit: 1 })).at(-1)

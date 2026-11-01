@@ -6,6 +6,12 @@ export const MAX_IMPORT_SIZE = 1_048_576
 /** Current export format version. */
 export const META_VERSION = 1
 
+/**
+ * Config fields that settings import leaves out on purpose: importing `hooks` would set up commands
+ * that run automatically around every tool call.
+ */
+export const EXCLUDED_KEYS: ReadonlyArray<string> = ["hooks"]
+
 /** Top-level keys recognised as valid Config fields. */
 export const KNOWN_KEYS: ReadonlyArray<string> = [
   "permission",
