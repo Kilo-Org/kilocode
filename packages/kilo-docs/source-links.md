@@ -48,6 +48,8 @@
   <!-- packages/opencode/src/plugin/digitalocean.ts -->
 - <https://cloudflare.com/cdn-cgi/trace>
   <!-- packages/opencode/src/session/network.ts -->
+- <https://commandcode.ai/docs/provider>
+  <!-- packages/opencode/src/kilocode/commandcode/provider.ts -->
 - <https://developers.google.com/identity/sign-in/web/devconsole-project>
   <!-- packages/opencode/src/kilocode/provider/error.ts -->
 - <https://docs.github.com/en/actions/how-tos/security-for-github-actions/security-hardening-your-deployments/configuring-openid-connect-in-amazon-web-services>
