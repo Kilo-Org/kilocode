@@ -1201,7 +1201,7 @@
         },
         "kilo-code.new.attention.notifications": {
           "type": "boolean",
-          "default": false,
+          "default": true,
           "description": "Show VS Code notifications when Kilo completes a task or needs input. Notifications are suppressed while a Kilo panel is active."
         },
         "kilo-code.new.attention.OSNotifications": {
