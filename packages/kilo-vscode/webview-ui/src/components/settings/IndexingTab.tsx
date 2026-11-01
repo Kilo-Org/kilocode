@@ -19,10 +19,9 @@ import SettingsRow from "./SettingsRow"
 import {
   indexingConfig,
   indexingDescription,
-  indexingEnabled,
   indexingEnabledInherited,
+  indexingFieldDisplay,
   indexingInheritance,
-  indexingSource,
   indexingUpdate,
   type IndexingScope,
   type IndexingSource,
@@ -61,6 +60,7 @@ function sourceLabel(source: IndexingSource) {
   if (source === "global") return "Global"
   if (source === "local") return "Local"
   if (source === "mixed") return "Global + Local"
+  if (source === "managed") return "Managed"
   if (source === "default") return "Default"
   return ""
 }
@@ -98,7 +98,9 @@ function providerFields(provider: ProviderId | undefined): Array<{ key: string; 
 const ScopeRows: Component<{
   scope: IndexingScope
   enabled: boolean
+  disabled: boolean
   inherited: boolean
+  managed: boolean
   t: (key: string) => string
   tag: () => string | undefined
   onScope: (next: IndexingScope) => void
@@ -107,7 +109,9 @@ const ScopeRows: Component<{
   const scope = () => props.scope
   const language = { t: props.t }
   const enabled = () => props.enabled
+  const disabled = () => props.disabled
   const inherited = () => props.inherited
+  const managed = () => props.managed
   const changeScope = props.onScope
   const saveEnabled = props.onEnabled
   const tag = props.tag
@@ -145,13 +149,15 @@ const ScopeRows: Component<{
             : language.t("settings.indexing.projectEnable.title")
         }
         description={
-          inherited()
-            ? `Inherited from global config (${enabled() ? "on" : "off"}) until a project value is saved.`
-            : language.t("settings.indexing.enable.description")
+          managed()
+            ? `${language.t("settings.indexing.enable.description")} Inherited from managed config.`
+            : inherited()
+              ? `Inherited from global config (${enabled() ? "on" : "off"}) until a project value is saved.`
+              : language.t("settings.indexing.enable.description")
         }
         tag={tag}
       >
-        <Switch checked={enabled()} onChange={saveEnabled} hideLabel>
+        <Switch checked={enabled()} onChange={saveEnabled} hideLabel disabled={disabled()}>
           {scope() === "global"
             ? language.t("settings.indexing.globalEnable.title")
             : language.t("settings.indexing.projectEnable.title")}
@@ -162,7 +168,15 @@ const ScopeRows: Component<{
 }
 
 const IndexingTab: Component = () => {
-  const { globalConfig, projectConfig, settings, updateGlobalConfig, updateProjectConfig, updateSetting } = useConfig()
+  const {
+    globalConfig,
+    projectConfig,
+    settings,
+    configFields,
+    updateGlobalConfig,
+    updateProjectConfig,
+    updateSetting,
+  } = useConfig()
   const indexing = useIndexing()
   const embeds = useKiloEmbeddingModels()
   const language = useLanguage()
@@ -180,18 +194,26 @@ const IndexingTab: Component = () => {
   const projectCfg = createMemo<IndexingConfig>(() => projectConfig().indexing ?? {})
   const raw = createMemo<IndexingConfig>(() => (scope() === "global" ? globalCfg() : projectCfg()))
   const cfg = createMemo<IndexingConfig>(() => indexingConfig(scope(), globalCfg(), projectCfg()))
-  const enabled = createMemo(() => indexingEnabled(scope(), globalCfg(), projectCfg()))
-  const inherited = createMemo(() => indexingEnabledInherited(scope(), globalCfg(), projectCfg()))
   const consent = createMemo(() => settings()["indexing.consent"] === true)
   const projects = createMemo(() => (settings()["indexing.projects"] as Project[] | undefined) ?? [])
   const projectId = createMemo(() => settings()["indexing.projectId"] as string | undefined)
   const project = createMemo(() => projects().find((item) => item.id === projectId()))
-  const inheritance = (paths: readonly (readonly string[])[]) =>
-    indexingInheritance(scope(), globalCfg(), projectCfg(), paths)
-  const tag = (current: IndexingScope, paths: readonly (readonly string[])[]) =>
-    sourceLabel(indexingSource(current, globalCfg(), projectCfg(), paths)) || undefined
-  const description = (value: string, paths: readonly (readonly string[])[]) =>
-    indexingDescription(value, inheritance(paths))
+  /** Display value + provenance for a field: editable scopes first, then managed/runtime resolution. */
+  const fieldInfo = (path: readonly string[]) =>
+    indexingFieldDisplay(scope(), globalCfg(), projectCfg(), configFields(), path)
+  const tag = (current: IndexingScope, path: readonly string[]) =>
+    sourceLabel(indexingFieldDisplay(current, globalCfg(), projectCfg(), configFields(), path).source) || undefined
+  const description = (value: string, path: readonly string[]) =>
+    indexingDescription(
+      value,
+      fieldInfo(path).source === "managed" ? "managed" : indexingInheritance(scope(), globalCfg(), projectCfg(), [path]),
+    )
+  /** Enable switch resolves through the overlay so managed/enterprise values match its tag. */
+  const enabledField = createMemo(() => fieldInfo(["enabled"]))
+  const enabled = createMemo(() => enabledField().value === true)
+  const enabledDisabled = createMemo(() => !enabledField().editable)
+  const enabledManaged = createMemo(() => enabledField().source === "managed")
+  const inherited = createMemo(() => indexingEnabledInherited(scope(), globalCfg(), projectCfg()))
   const changeScope = (next: IndexingScope) => {
     // Blur first so a pending field edit commits against the scope it was typed in.
     const active = document.activeElement
@@ -208,7 +230,10 @@ const IndexingTab: Component = () => {
     updateProjectConfig(patch)
   }
 
-  const vectorStore = () => cfg().vectorStore ?? DEFAULT_VECTOR_STORE
+  const vectorStore = () =>
+    cfg().vectorStore ??
+    (fieldInfo(["vectorStore"]).value as "lancedb" | "qdrant" | undefined) ??
+    DEFAULT_VECTOR_STORE
   const kiloDefault = () =>
     getKiloEmbeddingModel(embeds.catalog().defaultModel, embeds.catalog())?.id ?? embeds.catalog().defaultModel
   const kiloModels = createMemo(() =>
@@ -221,7 +246,10 @@ const IndexingTab: Component = () => {
     getKiloEmbeddingModel(model ?? undefined, embeds.catalog())?.id
   const kiloValue = () => knownKiloModel(cfg().model) ?? kiloDefault()
   const kiloAvailable = () => !!server.profileData() || provider.authStates()[KILO_PROVIDER_ID] !== undefined
-  const selectedProvider = () => cfg().provider ?? (kiloAvailable() ? "kilo" : undefined)
+  const selectedProvider = () =>
+    cfg().provider ??
+    (fieldInfo(["provider"]).value as ProviderId | null | undefined) ??
+    (kiloAvailable() ? "kilo" : undefined)
   const staleKiloModel = () => selectedProvider() === "kilo" && !!cfg().model && !knownKiloModel(cfg().model)
   const providers = createMemo(() =>
     allProviders.filter((item) => item.value !== "kilo" || kiloAvailable() || selectedProvider() === "kilo"),
@@ -248,7 +276,7 @@ const IndexingTab: Component = () => {
   }
 
   const saveEnabled = (next: boolean) => {
-    if (next && !cfg().provider && kiloAvailable()) {
+    if (next && !cfg().provider && fieldInfo(["provider"]).value === undefined && kiloAvailable()) {
       updateIndexing({
         enabled: next,
         provider: "kilo",
@@ -271,7 +299,9 @@ const IndexingTab: Component = () => {
     const draft = providerDrafts()[draftKey]
     if (draft !== undefined) return draft
     const value = (cfg()[group as keyof IndexingConfig] as Record<string, string | undefined> | undefined)?.[key]
-    return value ?? ""
+    if (value !== undefined) return value
+    const resolved = fieldInfo([group, key]).value
+    return typeof resolved === "string" ? resolved : ""
   }
 
   const storeValue = (group: "qdrant" | "lancedb", key: string) => {
@@ -279,7 +309,9 @@ const IndexingTab: Component = () => {
     const draft = storeDrafts()[draftKey]
     if (draft !== undefined) return draft
     const value = (cfg()[group] as Record<string, string | undefined> | undefined)?.[key]
-    return value ?? ""
+    if (value !== undefined) return value
+    const resolved = fieldInfo([group, key]).value
+    return typeof resolved === "string" ? resolved : ""
   }
 
   const saveProviderField = (group: ProviderId, key: string, value: string) => {
@@ -327,13 +359,18 @@ const IndexingTab: Component = () => {
     const draft = tuningDrafts()[`${scope()}.${key}`]
     if (draft !== undefined) return draft
     const value = cfg()[key]
-    return value === undefined ? "" : String(value)
+    if (value !== undefined) return String(value)
+    const resolved = fieldInfo([key]).value
+    return typeof resolved === "number" ? String(resolved) : ""
   }
 
   const extensionValue = () => {
     const draft = extensionDrafts()[scope()]
     if (draft !== undefined) return draft
-    return cfg().fileExtensions?.join(", ") ?? ""
+    const extensions = cfg().fileExtensions
+    if (extensions !== undefined) return extensions.join(", ")
+    const resolved = fieldInfo(["fileExtensions"]).value
+    return Array.isArray(resolved) ? resolved.join(", ") : ""
   }
 
   const saveExtensions = (value: string) => {
@@ -386,9 +423,11 @@ const IndexingTab: Component = () => {
         <ScopeRows
           scope={scope()}
           enabled={enabled()}
+          disabled={enabledDisabled()}
           inherited={inherited()}
+          managed={enabledManaged()}
           t={language.t}
-          tag={() => tag(scope(), [["enabled"]])}
+          tag={() => tag(scope(), ["enabled"])}
           onScope={changeScope}
           onEnabled={saveEnabled}
         />
@@ -410,8 +449,8 @@ const IndexingTab: Component = () => {
       <Card>
         <SettingsRow
           title={language.t("settings.indexing.provider.title")}
-          description={description(language.t("settings.indexing.provider.description"), [["provider"]])}
-          tag={() => tag(scope(), [["provider"]])}
+          description={description(language.t("settings.indexing.provider.description"), ["provider"])}
+          tag={() => tag(scope(), ["provider"])}
         >
           <Select
             options={providers()}
@@ -423,14 +462,15 @@ const IndexingTab: Component = () => {
             size="small"
             triggerVariant="settings"
             placeholder={language.t("settings.providers.notSet")}
+            disabled={!fieldInfo(["provider"]).editable}
           />
         </SettingsRow>
         <Show when={selectedProvider() === "kilo"}>
           <Show when={kiloModels().length > 0}>
             <SettingsRow
               title={language.t("settings.indexing.kiloModel.title")}
-              description={description(language.t("settings.indexing.kiloModel.description"), [["model"]])}
-              tag={() => tag(scope(), [["model"]])}
+              description={description(language.t("settings.indexing.kiloModel.description"), ["model"])}
+              tag={() => tag(scope(), ["model"])}
             >
               <Select
                 options={kiloModels()}
@@ -449,10 +489,15 @@ const IndexingTab: Component = () => {
         <Show when={selectedProvider() !== "kilo"}>
           <SettingsRow
             title={language.t("settings.indexing.model.title")}
-            description={description(language.t("settings.indexing.model.description"), [["model"]])}
-            tag={() => tag(scope(), [["model"]])}
+            description={description(language.t("settings.indexing.model.description"), ["model"])}
+            tag={() => tag(scope(), ["model"])}
           >
-            <TextField value={cfg().model ?? ""} placeholder="Enter model ID" onChange={saveModel} />
+            <TextField
+              value={(fieldInfo(["model"]).value as string | null | undefined) ?? ""}
+              placeholder="Enter model ID"
+              disabled={!fieldInfo(["model"]).editable}
+              onChange={saveModel}
+            />
           </SettingsRow>
         </Show>
         <SettingsRow
@@ -460,21 +505,21 @@ const IndexingTab: Component = () => {
           description={
             selectedProvider() === "kilo"
               ? language.t("settings.indexing.dimension.description")
-              : description(language.t("settings.indexing.dimension.description"), [["dimension"]])
+              : description(language.t("settings.indexing.dimension.description"), ["dimension"])
           }
-          tag={() => (selectedProvider() === "kilo" ? undefined : tag(scope(), [["dimension"]]))}
+          tag={() => (selectedProvider() === "kilo" ? undefined : tag(scope(), ["dimension"]))}
           last={!selectedProvider() || (fields().length === 0 && !(selectedProvider() === "kilo" && !kiloAvailable()))}
         >
           <TextField
             value={
-              staleKiloModel() || cfg().dimension === undefined || cfg().dimension === null
+              staleKiloModel() || fieldInfo(["dimension"]).value === undefined || fieldInfo(["dimension"]).value === null
                 ? ""
-                : String(cfg().dimension)
+                : String(fieldInfo(["dimension"]).value)
             }
             placeholder={
               selectedProvider() === "kilo" ? "Provided by Kilo" : language.t("settings.indexing.dimension.placeholder")
             }
-            disabled={selectedProvider() === "kilo"}
+            disabled={selectedProvider() === "kilo" || !fieldInfo(["dimension"]).editable}
             onChange={(value) => saveNumber("dimension", value, { integer: true, min: 1 })}
           />
         </SettingsRow>
@@ -496,16 +541,18 @@ const IndexingTab: Component = () => {
                 {(field, index) => (
                   <SettingsRow
                     title={`${name} ${field.label}`}
-                    description={description(language.t("settings.indexing.providerField.description"), [
+                    description={description(
+                      language.t("settings.indexing.providerField.description"),
                       [group, field.key],
-                    ])}
-                    tag={() => tag(scope(), [[group, field.key]])}
+                    )}
+                    tag={() => tag(scope(), [group, field.key])}
                     last={index() === fields.length - 1}
                   >
                     <TextField
                       type={field.key === "apiKey" ? "password" : undefined}
                       value={providerValue(group, field.key)}
                       placeholder={field.placeholder}
+                      disabled={!fieldInfo([group, field.key]).editable}
                       onInput={(e: InputEvent) => {
                         const target = e.currentTarget as HTMLInputElement
                         setProviderDrafts((prev) => ({ ...prev, [`${scope()}.${group}.${field.key}`]: target.value }))
@@ -526,8 +573,8 @@ const IndexingTab: Component = () => {
       <Card>
         <SettingsRow
           title={language.t("settings.indexing.vectorStore.title")}
-          description={description(language.t("settings.indexing.vectorStore.description"), [["vectorStore"]])}
-          tag={() => tag(scope(), [["vectorStore"]])}
+          description={description(language.t("settings.indexing.vectorStore.description"), ["vectorStore"])}
+          tag={() => tag(scope(), ["vectorStore"])}
         >
           <Select
             options={stores}
@@ -545,10 +592,11 @@ const IndexingTab: Component = () => {
           fallback={
             <SettingsRow
               title={language.t("settings.indexing.lancedbDirectory.title")}
-              description={description(language.t("settings.indexing.lancedbDirectory.description"), [
+              description={description(
+                language.t("settings.indexing.lancedbDirectory.description"),
                 ["lancedb", "directory"],
-              ])}
-              tag={() => tag(scope(), [["lancedb", "directory"]])}
+              )}
+              tag={() => tag(scope(), ["lancedb", "directory"])}
               last
             >
               <TextField
@@ -569,8 +617,8 @@ const IndexingTab: Component = () => {
           <>
             <SettingsRow
               title={language.t("settings.indexing.qdrantUrl.title")}
-              description={description(language.t("settings.indexing.qdrantUrl.description"), [["qdrant", "url"]])}
-              tag={() => tag(scope(), [["qdrant", "url"]])}
+              description={description(language.t("settings.indexing.qdrantUrl.description"), ["qdrant", "url"])}
+              tag={() => tag(scope(), ["qdrant", "url"])}
             >
               <TextField
                 value={storeValue("qdrant", "url")}
@@ -587,10 +635,11 @@ const IndexingTab: Component = () => {
             </SettingsRow>
             <SettingsRow
               title={language.t("settings.indexing.qdrantApiKey.title")}
-              description={description(language.t("settings.indexing.qdrantApiKey.description"), [
+              description={description(
+                language.t("settings.indexing.qdrantApiKey.description"),
                 ["qdrant", "apiKey"],
-              ])}
-              tag={() => tag(scope(), [["qdrant", "apiKey"]])}
+              )}
+              tag={() => tag(scope(), ["qdrant", "apiKey"])}
               last
             >
               <TextField
@@ -614,8 +663,8 @@ const IndexingTab: Component = () => {
       <Card>
         <SettingsRow
           title={language.t("settings.indexing.fileExtensions.title")}
-          description={description(language.t("settings.indexing.fileExtensions.description"), [["fileExtensions"]])}
-          tag={() => tag(scope(), [["fileExtensions"]])}
+          description={description(language.t("settings.indexing.fileExtensions.description"), ["fileExtensions"])}
+          tag={() => tag(scope(), ["fileExtensions"])}
         >
           <TextField
             value={extensionValue()}
@@ -636,8 +685,8 @@ const IndexingTab: Component = () => {
           {(item, index) => (
             <SettingsRow
               title={item.label}
-              description={description(language.t("settings.indexing.tuning.description"), [[item.key]])}
-              tag={() => tag(scope(), [[item.key]])}
+              description={description(language.t("settings.indexing.tuning.description"), [item.key])}
+              tag={() => tag(scope(), [item.key])}
               last={index() === tuning.length - 1}
             >
               <TextField

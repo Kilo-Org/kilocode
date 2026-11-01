@@ -51,6 +51,18 @@ function binding(internal: Internals, scope: "global" | "project") {
   })
 }
 
+const managedFields = {
+  "indexing.provider": {
+    key: "indexing.provider",
+    path: ["indexing", "provider"],
+    value: "openai-compatible",
+    source: "system" as const,
+    inherited: false,
+    overridden: false,
+    editable: true,
+  },
+}
+
 function createConnection() {
   let drains = 0
   const patches: unknown[] = []
@@ -74,6 +86,7 @@ function createConnection() {
         raw: {},
       },
     },
+    fields: managedFields,
   }
   const client = {
     global: {
@@ -85,7 +98,7 @@ function createConnection() {
     config: {
       get: async () => ({ data: {} }),
       update: async () => ({ data: {} }),
-      overlay: async () => ({ data: { project: {}, targets: snapshot.targets } }),
+      overlay: async () => ({ data: { project: {}, targets: snapshot.targets, fields: managedFields } }),
       overlayUpdate: async (patch: unknown) => {
         patches.push(patch)
         return { data: snapshot }
@@ -186,14 +199,17 @@ describe("KiloProvider indexing refresh", () => {
       config: snapshot.config,
       globalConfig: snapshot.targets!.global.raw,
       projectConfig: snapshot.targets!.project.raw,
+      collections: snapshot.collections,
       settings: snapshot.settings,
       features: snapshot.features,
+      fields: snapshot.fields,
     }
     expect(sent.map(strip)).toEqual([
       { type: "configLoaded", ...payload },
       { type: "configUpdated", ...payload },
       { type: "configUpdated", ...payload },
     ])
+    expect(sent.every((message) => message.fields === managedFields)).toBe(true)
   })
 
   it("reloadAfterAuthChange refreshes providers immediately but waits for config before indexing", async () => {

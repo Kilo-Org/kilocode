@@ -24,6 +24,7 @@ export async function fetchSnapshot(client: Client, dir: string, settings: () =>
     globalConfig: global,
     targets: overlay?.targets as { global: ConfigTarget; project: ConfigTarget } | undefined,
     collections: overlay?.collections,
+    fields: overlay?.fields,
     settings: settings(),
     features: configFeatures(config, capabilities),
   }
