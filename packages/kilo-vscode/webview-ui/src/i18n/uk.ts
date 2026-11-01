@@ -735,6 +735,10 @@ export const dict = {
     "Залиште порожнім, щоб автоматично визначити розмірність ембедингу з моделі.",
   "settings.indexing.dimension.placeholder": "Авто",
   "settings.indexing.providerField.description": "Налаштування підключення, специфічне для провайдера.",
+  "settings.indexing.providerField.documentPrompt.description":
+    "Необов’язковий prompt_name для індексування коду та оновлень файлів. Потрібна підтримка кінцевої точки. Зміна цього значення перебудовує індекс.",
+  "settings.indexing.providerField.queryPrompt.description":
+    "Необов’язковий prompt_name для пошуку коду. Потрібна підтримка кінцевої точки.",
   "settings.indexing.vectorStore.title": "Векторне сховище",
   "settings.indexing.vectorStore.description": "Виберіть, де зберігаються проіндексовані ембединги.",
   "settings.indexing.lancedbDirectory.title": "Директорія LanceDB",

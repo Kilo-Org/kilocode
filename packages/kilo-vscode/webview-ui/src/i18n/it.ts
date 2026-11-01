@@ -605,6 +605,10 @@ export const dict = {
     "Lascia vuoto per rilevare automaticamente la dimensione embedding dal modello.",
   "settings.indexing.dimension.placeholder": "Auto",
   "settings.indexing.providerField.description": "Impostazione di connessione specifica del provider.",
+  "settings.indexing.providerField.documentPrompt.description":
+    "prompt_name facoltativo per indicizzare il codice e aggiornare i file. Richiede il supporto dell'endpoint. La modifica ricostruisce l'indice.",
+  "settings.indexing.providerField.queryPrompt.description":
+    "prompt_name facoltativo per le ricerche nel codice. Richiede il supporto dell'endpoint.",
   "settings.indexing.vectorStore.title": "Archivio vettoriale",
   "settings.indexing.vectorStore.description": "Scegli dove salvare gli embedding indicizzati.",
   "settings.indexing.lancedbDirectory.title": "Directory LanceDB",

@@ -5,6 +5,7 @@ export interface EmbeddingProfile {
   provider: EmbedderProvider
   modelId: string
   dimension: number
+  documentPrompt?: string
 }
 
 function parseDimension(value?: number): number | undefined {
@@ -18,6 +19,7 @@ export function resolveEmbeddingProfile(
   provider: EmbedderProvider,
   modelId?: string,
   modelDimension?: number,
+  documentPrompt?: string,
 ): EmbeddingProfile | undefined {
   const id = modelId ?? getDefaultModelId(provider)
   const dim = parseDimension(modelDimension) ?? getModelDimension(provider, id)
@@ -26,10 +28,16 @@ export function resolveEmbeddingProfile(
     provider,
     modelId: id,
     dimension: dim,
+    ...(provider === "openai-compatible" && documentPrompt !== undefined ? { documentPrompt } : {}),
   }
 }
 
 export function isEmbeddingProfileEqual(a?: EmbeddingProfile, b?: EmbeddingProfile): boolean {
   if (!a || !b) return false
-  return a.provider === b.provider && a.modelId === b.modelId && a.dimension === b.dimension
+  return (
+    a.provider === b.provider &&
+    a.modelId === b.modelId &&
+    a.dimension === b.dimension &&
+    (a.provider !== "openai-compatible" || a.documentPrompt === b.documentPrompt)
+  )
 }

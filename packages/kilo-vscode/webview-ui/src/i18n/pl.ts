@@ -979,6 +979,10 @@ export const dict = {
   "settings.indexing.kiloSignIn.description": "Zaloguj się do Kilo, aby używać hostowanych osadzeń.",
   "settings.indexing.provider.title": "Dostawca osadzania",
   "settings.indexing.providerField.description": "Ustawienie połączenia specyficzne dla dostawcy.",
+  "settings.indexing.providerField.documentPrompt.description":
+    "Opcjonalny prompt_name do indeksowania kodu i aktualizacji plików. Wymaga obsługi przez punkt końcowy. Zmiana powoduje przebudowanie indeksu.",
+  "settings.indexing.providerField.queryPrompt.description":
+    "Opcjonalny prompt_name do wyszukiwania kodu. Wymaga obsługi przez punkt końcowy.",
   "settings.indexing.qdrantApiKey.description": "Opcjonalny klucz API dla instancji Qdrant.",
   "settings.indexing.qdrantApiKey.placeholder": "Opcjonalny klucz API",
   "settings.indexing.fileExtensions.title": "Rozszerzenia plików",

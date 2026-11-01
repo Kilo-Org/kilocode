@@ -107,7 +107,7 @@ export interface IndexingConfig {
   kilo?: { apiKey?: string; baseUrl?: string; organizationId?: string }
   openai?: { apiKey?: string }
   ollama?: { baseUrl?: string }
-  "openai-compatible"?: { baseUrl?: string; apiKey?: string }
+  "openai-compatible"?: { baseUrl?: string; apiKey?: string; documentPrompt?: string; queryPrompt?: string }
   gemini?: { apiKey?: string }
   mistral?: { apiKey?: string }
   "vercel-ai-gateway"?: { apiKey?: string }
