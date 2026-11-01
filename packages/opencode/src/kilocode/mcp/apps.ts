@@ -48,10 +48,20 @@ export namespace McpApps {
       }
     })
 
-  /** Call a tool on a connected MCP server. Used by MCP Apps for widget-initiated tool calls. */
-  export const callTool = (mcp: MCP.Interface, flags: RuntimeFlags.Info) =>
+  /**
+   * Call a tool on a connected MCP server. Used by MCP Apps for widget-initiated tool calls.
+   *
+   * kilocode_change - this route reaches a connected server with no session, no
+   * permission ask and no security engine, so it is a second way to obtain the authority the agent
+   * path adjudicates. It has no session to attach and inventing one would be worse than the hole, so
+   * when Security Auto is on the route fails safe unless the user explicitly opts back in
+   * (`experimental.security_auto_mcp_apps`). `allowed` carries that decision; omitting it keeps the
+   * historical behaviour for callers that predate the boundary.
+   */
+  export const callTool = (mcp: MCP.Interface, flags: RuntimeFlags.Info, allowed?: Effect.Effect<boolean>) =>
     Effect.fn("McpHttpApi.callTool")(function* (ctx: { payload: typeof CallToolPayload.Type }) {
       if (!flags.experimentalMcpApps) return yield* Effect.fail(new HttpApiError.NotFound({}))
+      if (allowed && !(yield* allowed)) return yield* Effect.fail(new HttpApiError.NotFound({}))
       const client = (yield* mcp.clients())[ctx.payload.server]
       if (!client) return yield* Effect.fail(new HttpApiError.NotFound({}))
       const result = yield* Effect.tryPromise(() =>

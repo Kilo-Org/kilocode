@@ -1,0 +1,2 @@
+# Empty on purpose: the extension host is started with --config pointing here, so Bun does not
+# pick up a bunfig.toml from the workspace (preload or define there would change the approved code).
