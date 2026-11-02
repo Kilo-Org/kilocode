@@ -3,7 +3,14 @@
 import { afterAll, describe, expect, test } from "bun:test"
 import type { CredentialEntry } from "@opencode/client"
 import { resolveHeaders, resolveKey, storedKeyFor } from "../src/custom-provider-models"
-import { fetchOpenAIModels, FetchModelsError, modelsURL, parseModels, sameBaseURL } from "../src/shared/fetch-models"
+import {
+  fetchError,
+  fetchOpenAIModels,
+  FetchModelsError,
+  modelsURL,
+  parseModels,
+  sameBaseURL,
+} from "../src/shared/fetch-models"
 
 const server = Bun.serve({
   port: 0,
@@ -161,7 +168,18 @@ describe("fetchOpenAIModels", () => {
     expect(error.auth).toBe(false)
   })
 
-  test("reports a refused connection with its cause", async () => {
+  test("keeps the connection cause in the message", () => {
+    const refused = Object.assign(new Error("fetch failed"), { cause: new Error("connect ECONNREFUSED 127.0.0.1:9") })
+    expect(fetchError(refused, 15_000).message).toBe("fetch failed: connect ECONNREFUSED 127.0.0.1:9")
+    const plain = fetchError(new Error("fetch failed"), 15_000)
+    expect(plain.message).toBe("fetch failed")
+    expect(plain.auth).toBe(false)
+    expect(fetchError(Object.assign(new Error("aborted"), { name: "TimeoutError" }), 2_000).message).toBe(
+      "The server did not answer within 2 seconds",
+    )
+  })
+
+  test("reports a refused connection", async () => {
     const closed = Bun.serve({ port: 0, fetch: () => new Response() })
     const url = `http://127.0.0.1:${closed.port}`
     closed.stop(true)

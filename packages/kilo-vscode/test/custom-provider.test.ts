@@ -232,6 +232,17 @@ describe("validateCustomProvider", () => {
     expect(output.errors.baseURL).toBe("provider.custom.error.baseURL.format")
   })
 
+  test("keeps a config reference as the base URL so an env-backed provider stays editable", () => {
+    for (const baseURL of ["{env:ACME_BASE_URL}", "{file:/run/secrets/acme-url}"]) {
+      const output = validateCustomProvider({ ...base, form: form({ baseURL }) })
+      expect(output.errors.baseURL).toBeUndefined()
+      expect(output.result?.config.settings.baseURL).toBe(baseURL)
+    }
+    expect(validateCustomProvider({ ...base, form: form({ baseURL: "{env:}" }) }).errors.baseURL).toBe(
+      "provider.custom.error.baseURL.format",
+    )
+  })
+
   test("persists the selected provider package", () => {
     const output = validateCustomProvider({
       ...base,

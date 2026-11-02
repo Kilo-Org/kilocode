@@ -64,7 +64,7 @@ export async function fetchOpenAIModels(input: {
     headers,
     signal: AbortSignal.timeout(timeout),
   }).catch((error: unknown) => {
-    throw requestError(error, timeout)
+    throw fetchError(error, timeout)
   })
 
   if (!response.ok) {
@@ -96,7 +96,8 @@ export function parseModels(body: unknown): FetchedModel[] {
     .toSorted((a, b) => a.id.localeCompare(b.id))
 }
 
-function requestError(error: unknown, timeout: number) {
+/** The error a failed request reports: a readable timeout, and the connection cause when Node hides it. */
+export function fetchError(error: unknown, timeout: number) {
   if (error instanceof Error && (error.name === "TimeoutError" || error.name === "AbortError"))
     return new FetchModelsError(`The server did not answer within ${timeout / 1000} seconds`)
   // Node's fetch reports "fetch failed" and keeps the reason (for example ECONNREFUSED) in `cause`.

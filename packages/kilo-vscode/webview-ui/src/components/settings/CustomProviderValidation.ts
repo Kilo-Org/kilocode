@@ -100,6 +100,8 @@ type ValidateResult = {
 const PROVIDER_ID = /^[a-z0-9][a-z0-9-_]*$/
 const ENV_NAME = /^[A-Z_][A-Z0-9_]*$/
 const ENV_REF = /^\{env:([^}]+)\}$/
+/** A base URL may be one config reference; the server substitutes it before use. */
+const URL_REF = /^\{(?:env|file):[^}]+\}$/
 
 function checkModel(m: ModelEntry, seenModels: Set<string>, t: Translator): ModelErrors {
   const id = m.id.trim()
@@ -256,7 +258,7 @@ export function validateCustomProvider(input: ValidateArgs): ValidateResult {
   const nameError = !name ? input.t("provider.custom.error.name.required") : undefined
   const urlError = !baseURL
     ? input.t("provider.custom.error.baseURL.required")
-    : !/^https?:\/\//.test(baseURL)
+    : !/^https?:\/\//.test(baseURL) && !URL_REF.test(baseURL)
       ? input.t("provider.custom.error.baseURL.format")
       : undefined
 
