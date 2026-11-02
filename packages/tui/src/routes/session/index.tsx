@@ -3305,13 +3305,16 @@ function Subagent(props: ToolProps) {
     return id ? data.session.message.list(id) : []
   })
   const detail = createMemo(() => subagentDetail(messages()))
+  const [syncRetry, setSyncRetry] = createSignal(0)
   const synced = new Set<string>()
 
   createEffect(() => {
     const id = sessionID()
-    if (!id || messages().length > 0 || synced.has(id)) return
-    synced.add(id)
-    void data.session.message.sync(id).catch(() => undefined)
+    const attempt = syncRetry()
+    const key = `${id}:${attempt}`
+    if (!id || messages().length > 0 || attempt > 1 || synced.has(key)) return
+    synced.add(key)
+    void data.session.message.sync(id).catch(() => setSyncRetry((value) => value + 1))
   })
 
   const content = createMemo(() => {
@@ -3321,14 +3324,14 @@ function Subagent(props: ToolProps) {
     const state = detail()
     const retrying = state.retry
     if (isRunning() && retrying) {
-      lines.push(`↳ ${formatSubagentRetry(retrying.attempt, Locale.truncate(retrying.error.message, 80))}`)
+      lines.push(`↳ ${formatSubagentRetry(retrying.attempt, retrying.error.message)}`)
     } else if (isRunning() && state.tools.length > 0) {
       if (state.current) lines.push(`↳ ${subagentToolLabel(state.current)}`)
       else lines.push(`↳ ${formatSubagentToolcalls(state.tools.length)}`)
     } else if (isRunning()) {
       lines.push("↳ Starting…")
     }
-    if (!isRunning() && props.part.state.status === "completed") {
+    if (!isRunning() && props.part.state.status === "completed" && state.duration !== undefined) {
       lines.push(`↳ ${formatCompletedSubagentDetail(state.tools.length, Locale.duration(state.duration))}`)
     }
     return lines.join("\n")
@@ -3366,15 +3369,23 @@ export function subagentDetail(messages: readonly SessionMessageInfo[]) {
   const retry = messages.findLast(
     (message): message is SessionMessageAssistant => message.type === "assistant" && message.retry !== undefined,
   )?.retry
-  const current = tools.findLast((tool) => tool.state.status === "running" || tool.state.status === "completed")
+  const current = tools.findLast(
+    (tool) =>
+      tool.state.status === "streaming" || tool.state.status === "running" || tool.state.status === "completed",
+  )
   const first = messages.find((message) => message.type === "user")?.time.created
   const last = messages.findLast((message) => message.type === "assistant")?.time.completed
-  return { tools, retry, current, duration: first !== undefined && last !== undefined ? last - first : 0 }
+  const duration = first !== undefined && last !== undefined ? last - first : undefined
+  return { tools, retry, current, duration }
 }
+
+const SUBAGENT_TOOL_OMIT = ["content", "patchText", "newString", "oldString"]
 
 export function subagentToolLabel(part: SessionMessageAssistantTool) {
   if (part.state.status === "streaming") return Locale.titlecase(canonicalToolName(part.name))
-  return genericToolSummary(Locale.titlecase(canonicalToolName(part.name)), part.state.input)
+  const args = primitiveInputSummary(part.state.input, SUBAGENT_TOOL_OMIT).replace(/\s+/g, " ")
+  const label = `${Locale.titlecase(canonicalToolName(part.name))}${args ? ` ${args}` : ""}`
+  return Locale.truncate(label, 120)
 }
 
 export function formatSubagentToolcalls(count: number) {
@@ -3382,7 +3393,7 @@ export function formatSubagentToolcalls(count: number) {
 }
 
 export function formatSubagentRetry(attempt: number, message: string) {
-  return `Retrying (attempt ${attempt}) · ${message}`
+  return `Retrying (attempt ${attempt}) · ${Locale.truncate(stripAnsi(message), 80)}`
 }
 
 export function formatCompletedSubagentDetail(toolcalls: number, duration: string) {
@@ -3582,24 +3593,8 @@ function ApplyPatch(props: ToolProps) {
   const theme = useTheme()
   const { currentSyntax: syntax } = useThemes()
   const pathFormatter = usePathFormatter()
-  // kilocode_change start - patch: a moved file reports only its target, so recover the source from the patch text
-  const files = createMemo(() => {
-    const raw = Array.isArray(props.metadata.files) ? props.metadata.files : []
-    const moved = new Set(
-      raw.flatMap((value) => {
-        const file = recordValue(value)
-        if (file?.moved !== true) return []
-        const path = stringValue(file.file) ?? stringValue(file.relativePath)
-        return path ? [path] : []
-      }),
-    )
-    const moves = parsePatchMoves(stringValue(props.input.patchText))
-    let movedIndex = 0
-    return parseApplyPatchFiles(props.metadata.files).map((file) => {
-      const isMoved = moved.has(file.relativePath)
-      return { ...file, moved: isMoved, movedFrom: isMoved ? moves[movedIndex++]?.path : undefined }
-    })
-  })
+  // kilocode_change start - patch: moved file labels
+  const files = createMemo(() => parseApplyPatchEntries(props.metadata.files, props.input.patchText))
   // kilocode_change end
   const targets = createMemo(() => {
     const patch = stringValue(props.input.patchText)
@@ -3763,7 +3758,6 @@ function Question(props: ToolProps) {
   const title = createMemo(() => (dismissed() ? "# Questions (dismissed)" : "# Questions"))
   const subtitle = createMemo(() => {
     if (dismissed()) return `${count()} dismissed`
-    if ((answers()?.length ?? 0) > 0) return `${count()} answered`
     return `${count()} question${count() !== 1 ? "s" : ""}`
   })
 
@@ -3784,7 +3778,12 @@ function Question(props: ToolProps) {
             </InlineTool>
           }
         >
-          <BlockTool title={title()} part={props.part} onClick={() => setExpanded(false)}>
+          <BlockTool
+            title={title()}
+            part={props.part}
+            error={dismissed() ? "" : undefined} // kilocode_change - question: the dismissal message repeats the answer state
+            onClick={() => setExpanded(false)}
+          >
             <box gap={1}>
               <For each={questions()}>
                 {(q, i) => (
@@ -3937,6 +3936,35 @@ export function parsePatchMoves(value: unknown) {
     if (move) moves.push({ path, movePath: move[1].trim() })
   }
   return moves
+}
+
+function patchPathKey(value: string | undefined) {
+  return (value ?? "").replace(/\\/g, "/").replace(/^\.\//, "")
+}
+
+export function parseApplyPatchEntries(value: unknown, patchText: unknown) {
+  const raw = Array.isArray(value) ? value : []
+  const moved = new Set(
+    raw.flatMap((item) => {
+      const file = recordValue(item)
+      if (file?.moved !== true) return []
+      const path = stringValue(file.file) ?? stringValue(file.relativePath)
+      return path ? [patchPathKey(path)] : []
+    }),
+  )
+  // A self-move is not a rename, so it must not claim the target of a later real move.
+  const sources = new Map<string, string>()
+  for (const move of parsePatchMoves(patchText)) {
+    if (!move.path) continue
+    const source = patchPathKey(move.path)
+    const target = patchPathKey(move.movePath)
+    if (!target || source === target) continue
+    sources.set(target, move.path)
+  }
+  return parseApplyPatchFiles(value).map((file) => {
+    const isMoved = moved.has(patchPathKey(file.relativePath))
+    return { ...file, moved: isMoved, movedFrom: isMoved ? sources.get(patchPathKey(file.relativePath)) : undefined }
+  })
 }
 // kilocode_change end
 

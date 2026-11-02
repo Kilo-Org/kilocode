@@ -7,6 +7,8 @@ import {
   applyPatchLabel,
   applyPatchValue,
   formatCompletedSubagentDetail,
+  formatSubagentRetry,
+  parseApplyPatchEntries,
   parsePatchMoves,
   subagentDetail,
   subagentToolLabel,
@@ -235,6 +237,7 @@ test("shows dismissed questions, moved patches, and the live subagent line", asy
     await setup.waitForVisualIdle()
     expect(setup.captureCharFrame()).toContain("# Questions (dismissed)")
     expect(setup.captureCharFrame()).toContain("Dismissed")
+    expect(setup.captureCharFrame()).not.toContain("The user dismissed this question")
   } finally {
     setup.renderer.destroy()
     await task
@@ -258,6 +261,32 @@ test("parsePatchMoves pairs the source and target of each rename", () => {
     ),
   ).toEqual([{ path: "src/old.ts", movePath: "src/new.ts" }])
   expect(parsePatchMoves(undefined)).toEqual([])
+})
+
+test("parseApplyPatchEntries pairs a real move after a self-move", () => {
+  const files = [
+    { file: "same.txt", patch: "diff", additions: 1, deletions: 1, status: "modified" },
+    { file: "moved.txt", patch: "diff", additions: 1, deletions: 1, status: "modified", moved: true },
+  ]
+  const patchText = [
+    "*** Begin Patch",
+    "*** Update File: same.txt",
+    "*** Move to: ./same.txt",
+    "@@",
+    "-before",
+    "+after",
+    "*** Update File: old.txt",
+    "*** Move to: moved.txt",
+    "@@",
+    "-a",
+    "+b",
+    "*** End Patch",
+  ].join("\n")
+  const entries = parseApplyPatchEntries(files, patchText)
+  expect(entries.map((file) => [file.relativePath, file.moved, file.movedFrom])).toEqual([
+    ["same.txt", false, undefined],
+    ["moved.txt", true, "old.txt"],
+  ])
 })
 
 test("patch labels a moved file with both paths", () => {
@@ -285,6 +314,34 @@ test("subagentDetail derives the current tool, tool count, retry, and duration",
   const retry = subagentDetail(retryMessages)
   expect(retry.retry?.attempt).toBe(2)
   expect(retry.retry?.error.message).toBe("rate limited")
+  expect(formatSubagentRetry(2, "\u001b[31mrate limited\u001b[0m")).toBe("Retrying (attempt 2) · rate limited")
+})
+
+test("subagentDetail treats a streaming tool as current and omits an unknown duration", () => {
+  const streaming = subagentDetail([
+    {
+      type: "assistant",
+      id: "streaming_assistant",
+      agent: "general",
+      model,
+      finish: "tool-calls",
+      content: [toolPart("streaming_tool", "write", { status: "streaming", input: '{"path":"a.ts"' })],
+      time: { created: 2_000 },
+    },
+  ])
+  expect(streaming.current?.state.status).toBe("streaming")
+  expect(streaming.current && subagentToolLabel(streaming.current)).toBe("Write")
+  expect(streaming.duration).toBeUndefined()
+  expect(subagentDetail([doneMessages[1]!]).duration).toBeUndefined()
+})
+
+test("subagentToolLabel keeps large tool inputs out of the row", () => {
+  const part = toolPart("write_tool", "write", {
+    status: "running",
+    input: { path: "src/a.ts", content: "x".repeat(5_000) },
+    metadata: {},
+  })
+  expect(subagentToolLabel(part)).toBe("Write [path=src/a.ts]")
 })
 
 function parentMessagesMatch(pathname: string) {
