@@ -19,6 +19,13 @@ export type ConfigScope = "global" | "project"
 export type ConfigFileContent = { path: string; text: string }
 
 /**
+ * The effective Kilo policy values that the config API does not carry, because they are Kilo-only fields on the
+ * upstream config schema. `managed` is true when a config document outside the writable global and project files
+ * sets the value, for example a system or MDM document.
+ */
+export type ConfigPolicy = { hidePromptTrainingModels: boolean; managed: boolean }
+
+/**
  * Where the Settings panel should go. `focus` names a row that a subtab renders itself (an MCP server), while
  * `titleKey` names a row by its i18n key so the panel can scroll to it after the tab renders.
  */
@@ -91,7 +98,7 @@ export type ToWebview =
   | { type: "modelSelectorExpandedLoaded"; value: boolean }
   | { type: "autoApproveStateLoaded"; value: boolean }
   | { type: "webviewActiveChanged"; active: boolean }
-  | { type: "configLoaded"; global: ConfigFileContent; project: ConfigFileContent; error?: string }
+  | { type: "configLoaded"; global: ConfigFileContent; project: ConfigFileContent; policy?: ConfigPolicy; error?: string }
   | { type: "configWritten"; id: number; ok: boolean; error?: string }
   | { type: "vscodeSettingsLoaded"; values: Record<string, unknown> }
   /** The reply to `fetchCustomProviderModels`: `models`, or `error` with `auth` set when the server refused the key. */
