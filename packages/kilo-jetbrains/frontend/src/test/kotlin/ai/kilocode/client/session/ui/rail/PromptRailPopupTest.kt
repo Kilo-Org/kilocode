@@ -12,6 +12,7 @@ import com.intellij.util.ui.JBUI
 import java.awt.Component
 import java.awt.Container
 import java.awt.Dimension
+import java.awt.Point
 import java.awt.Rectangle
 import java.awt.event.ActionEvent
 import java.awt.event.KeyEvent
@@ -79,6 +80,117 @@ class PromptRailPopupTest : BasePlatformTestCase() {
 
         fix.popup.select(39)
         assertEquals("the last row must scroll down again", down, fix.port.viewPosition.y)
+
+        Disposer.dispose(fix.popup.disposable)
+    }
+
+    fun `test the last row is revealed flush with the end of the list`() {
+        val fix = shown(40)
+
+        fix.popup.select(39)
+        val view = fix.port.view ?: error("expected a view")
+        assertEquals(
+            "hovering the last row must leave the list scrolled to its end",
+            view.height - fix.port.extentSize.height,
+            fix.port.viewPosition.y,
+        )
+
+        fix.popup.select(20)
+        fix.popup.select(39)
+        assertEquals(
+            "returning to the last row must scroll back to the end",
+            view.height - fix.port.extentSize.height,
+            fix.port.viewPosition.y,
+        )
+
+        Disposer.dispose(fix.popup.disposable)
+    }
+
+    /**
+     * Isolates the extent listener: changing the viewport size without laying the body out again must
+     * re-reveal the row. The balloon's own relayout path is covered separately below.
+     */
+    fun `test a revealed last row stays revealed when the viewport shrinks`() {
+        val fix = shown(40)
+        fix.popup.select(39)
+        val view = fix.port.view ?: error("expected a view")
+        assertEquals(
+            "precondition: the last row starts flush with the end",
+            view.height - fix.port.extentSize.height,
+            fix.port.viewPosition.y,
+        )
+
+        fix.port.extentSize = Dimension(CAP_W, CAP_H - 80)
+
+        assertEquals(
+            "the last row must stay at the end after the viewport shrinks",
+            view.height - fix.port.extentSize.height,
+            fix.port.viewPosition.y,
+        )
+
+        Disposer.dispose(fix.popup.disposable)
+    }
+
+    /**
+     * The balloon can be laid out more than once, and the platform may settle on a shorter body after
+     * the first pass. A reveal applied against the taller viewport then leaves the list short of the
+     * end, which is what hovering the last stripe exposed.
+     */
+    fun `test a revealed last row stays revealed after a balloon relayout`() {
+        val fix = shown(40)
+        fix.popup.select(39)
+        val view = fix.port.view ?: error("expected a view")
+        assertEquals(
+            "precondition: the last row starts flush with the end",
+            view.height - fix.port.extentSize.height,
+            fix.port.viewPosition.y,
+        )
+
+        fix.popup.fitWithin(CAP_W, CAP_H - 80)
+        fix.popup.component.size = fix.popup.component.preferredSize
+        layoutAll(fix.popup.component)
+
+        assertEquals(
+            "the last row must stay at the end after the body shrinks",
+            view.height - fix.port.extentSize.height,
+            fix.port.viewPosition.y,
+        )
+
+        Disposer.dispose(fix.popup.disposable)
+    }
+
+    /**
+     * Arrow-key navigation moves the list's selection without going through [PromptRailPopup.select].
+     * A later layout must not drag the list back to the row the pointer hovered earlier.
+     */
+    fun `test list selection stops revealing the last hovered row`() {
+        val fix = shown(40)
+        fix.popup.select(20)
+        val list = findList(fix.popup.component) ?: error("expected a JList of rows")
+
+        list.selectedIndex = 39
+        fix.port.viewPosition = Point(0, 0)
+        layoutAll(fix.popup.component)
+
+        assertEquals("the user's row must stay selected", 39, list.selectedIndex)
+        assertEquals("layout must not restore the stale hovered row", 0, fix.port.viewPosition.y)
+
+        Disposer.dispose(fix.popup.disposable)
+    }
+
+    /**
+     * A wheel or scrollbar drag is the user taking over the list. A later balloon resize must not drag
+     * the list back to the row the pointer hovered earlier.
+     */
+    fun `test manual scrolling stops revealing the hovered row on resize`() {
+        val fix = shown(40)
+        fix.popup.select(39)
+        assertTrue("precondition: the hovered row scrolls down", fix.port.viewPosition.y > 0)
+
+        fix.port.viewPosition = Point(0, 0)
+        fix.port.extentSize = Dimension(CAP_W, CAP_H - 80)
+
+        assertEquals("manual scrolling must stop the resize follow", Point(0, 0), fix.port.viewPosition)
 
         Disposer.dispose(fix.popup.disposable)
     }

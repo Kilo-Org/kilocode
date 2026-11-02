@@ -19,6 +19,7 @@ import ai.kilocode.rpc.dto.SessionStatusDto
 import ai.kilocode.rpc.dto.SessionSummaryDto
 import ai.kilocode.rpc.dto.SessionTimeDto
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
@@ -94,7 +95,8 @@ class KiloBackendSessionManager(
         http = httpClient
         base = "http://127.0.0.1:$port"
         if (watcher?.isActive == true) return
-        watcher = cs.launch {
+        // Subscribe before returning because the SSE flow has no replay.
+        watcher = cs.launch(start = CoroutineStart.UNDISPATCHED) {
             events.collect { event ->
                 if (event.type == "session.status") {
                     val pair = KiloCliDataParser.parseSessionStatus(event.data)

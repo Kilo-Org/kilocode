@@ -1,7 +1,11 @@
 package ai.kilocode.client.actions
 
 import ai.kilocode.client.agentManager.worktree.WorktreeDataKeys
+import ai.kilocode.client.agentManager.hosted.HostedWorkspaceDataKeys
+import ai.kilocode.rpc.dto.HostedWorkspaceDto
+import ai.kilocode.rpc.dto.HostedWorkspaceRefDto
 import ai.kilocode.client.app.KiloAppService
+import ai.kilocode.client.app.KiloHostedService
 import ai.kilocode.client.app.KiloWorkspaceService
 import ai.kilocode.client.app.Workspace
 import ai.kilocode.client.session.SessionManager
@@ -9,6 +13,7 @@ import ai.kilocode.client.settings.KiloSettingsSelection
 import ai.kilocode.client.settings.marketplace.MarketplaceConfigurable
 import ai.kilocode.client.testing.FakeAppRpcApi
 import ai.kilocode.client.testing.FakeWorkspaceRpcApi
+import ai.kilocode.client.testing.TestLog
 import ai.kilocode.rpc.dto.ConfigTargetDto
 import ai.kilocode.rpc.dto.KiloWorkspaceStateDto
 import ai.kilocode.rpc.dto.KiloWorkspaceStatusDto
@@ -163,6 +168,36 @@ class KiloRecoveryActionsTest : BasePlatformTestCase() {
         assertEquals("Restart Core", event.presentation.text)
     }
 
+    fun `test refresh cloud uses the current workspace off the UI thread without restarting core`() {
+        val resolved = CompletableDeferred<Pair<String, Boolean>>()
+        val hosted = KiloHostedService(
+            cs = scope,
+            rpc = null,
+            log = TestLog(),
+            repo = { dir ->
+                resolved.complete(dir to ApplicationManager.getApplication().isDispatchThread)
+                null
+            },
+        )
+        project.replaceService(KiloHostedService::class.java, hosted, testRootDisposable)
+        assertTrue("Cloud discovery must be enabled by default", hosted.enabled())
+        val action = RefreshCloudAction()
+        val missing = event(action)
+        update(action, missing)
+        assertFalse(missing.presentation.isEnabled)
+        val active = event(action, workspace("/test cloud"))
+        update(action, active)
+        assertTrue(active.presentation.isEnabled)
+
+        action.actionPerformed(active)
+
+        val result = runBlocking { withTimeout(5_000) { resolved.await() } }
+        assertEquals("/test cloud" to false, result)
+        assertEquals(1L, hosted.refreshes.value)
+        assertEquals(0, appRpc.restarts)
+        assertEquals(0, appRpc.reinstalls)
+    }
+
     fun `test reinstall action adds core suffix in connection retry popup`() {
         val action = ReinstallKiloAction()
         val event = event(action, place = KiloActionPlaces.connectionRetryPopup())
@@ -179,8 +214,9 @@ class KiloRecoveryActionsTest : BasePlatformTestCase() {
 
         assertTrue(xml.contains("<group id=\"Kilo.CliGroup\" text=\"Core\" popup=\"true\">"))
         val reload = xml.indexOf("<reference ref=\"Kilo.ReloadCoreSettings\"/>")
+        val cloud = xml.indexOf("<reference ref=\"Kilo.RefreshCloud\"/>")
         val restart = xml.indexOf("<reference ref=\"Kilo.Restart\"/>")
-        assertTrue(reload < restart)
+        assertTrue(reload < cloud && cloud < restart)
         assertTrue(xml.substring(reload, restart).contains("<separator/>"))
         assertTrue(xml.contains("<reference ref=\"Kilo.Restart\"/>"))
         assertTrue(xml.contains("<reference ref=\"Kilo.Reinstall\"/>"))
@@ -525,6 +561,23 @@ class KiloRecoveryActionsTest : BasePlatformTestCase() {
         update(action, event)
 
         assertFalse(event.presentation.isEnabledAndVisible)
+    }
+
+    fun `test setup script action never offers local setup for a cloud workspace`() {
+        val action = OpenSetupScriptAction()
+        val dto = HostedWorkspaceDto(HostedWorkspaceRefDto("cloud", "one"))
+        val event = AnActionEvent.createFromDataContext("", action.templatePresentation.clone(), DataContext { id ->
+            when {
+                CommonDataKeys.PROJECT.`is`(id) -> project
+                SessionManager.WORKSPACE_KEY.`is`(id) -> workspace("/test")
+                HostedWorkspaceDataKeys.WORKSPACE.`is`(id) -> dto
+                else -> null
+            }
+        })
+        update(action, event)
+        assertFalse(event.presentation.isEnabledAndVisible)
+        action.actionPerformed(event)
+        assertTrue(rpc.setupScriptTargetCalls.isEmpty())
     }
 
     fun `test setup script action visible on a non-main worktree row`() {

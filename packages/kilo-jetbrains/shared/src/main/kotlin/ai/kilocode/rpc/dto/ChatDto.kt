@@ -178,6 +178,17 @@ sealed class ChatEventDto {
         val info: MessageDto,
     ) : ChatEventDto()
 
+    /** Public Cloud terminal metadata; deliberately excludes provider error/reason text. */
+    @Serializable
+    @SerialName("cloud.message.terminal")
+    data class MessageTerminal(
+        val sessionID: String,
+        val messageID: String,
+        val status: String,
+        val delivery: String,
+        val accepted: Boolean,
+    ) : ChatEventDto()
+
     @Serializable
     @SerialName("message.part.updated")
     data class PartUpdated(
@@ -317,6 +328,18 @@ sealed class ChatEventDto {
     data class TodoUpdated(
         val sessionID: String,
         val todos: List<TodoDto> = emptyList(),
+    ) : ChatEventDto()
+
+    /**
+     * The hosted event stream reconnected after a gap. Backend-synthesized, never parsed from a CLI
+     * event. The controller reloads hosted history and pending prompts so events missed during the
+     * gap cannot leave the transcript or question cards stale.
+     */
+    @Serializable
+    @SerialName("hosted.resnapshot")
+    data class Resnapshot(
+        val sessionID: String,
+        val phase: String = "complete",
     ) : ChatEventDto()
 
     /**

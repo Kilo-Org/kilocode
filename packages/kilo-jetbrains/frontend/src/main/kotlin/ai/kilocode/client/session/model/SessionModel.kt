@@ -2,6 +2,8 @@ package ai.kilocode.client.session.model
 
 import ai.kilocode.client.session.background.BackgroundAgent
 import ai.kilocode.client.session.background.BackgroundAgents
+import ai.kilocode.log.KiloLog
+import ai.kilocode.rpc.dto.ChatEventDto
 import ai.kilocode.rpc.dto.DiffFileDto
 import ai.kilocode.rpc.dto.KiloAppStateDto
 import ai.kilocode.rpc.dto.KiloAppStatusDto
@@ -44,6 +46,7 @@ import kotlin.math.roundToInt
 class SessionModel {
 
     companion object {
+        private val LOG = KiloLog.create(SessionModel::class.java)
         /** Part types that are internal server markers and must never be stored or rendered. */
         val SILENT_PART_TYPES = setOf("step-start", "patch")
 
@@ -61,6 +64,7 @@ class SessionModel {
     }
 
     private val entries = LinkedHashMap<String, Message>()
+    private val terminals = mutableMapOf<String, ChatEventDto.MessageTerminal>()
     private val turnEntries = LinkedHashMap<String, Turn>()
     private val hiddenText = mutableSetOf<Pair<String, String>>()
     private val childRefs = HashMap<String, ChildRef>()
@@ -180,13 +184,13 @@ class SessionModel {
     fun upsertMessage(dto: MessageDto): Boolean {
         val existing = entries[dto.id]
         if (existing != null) {
-            val updated = Message(dto).also { it.parts.putAll(existing.parts) }
+            val updated = Message(dto, terminal(dto)).also { it.parts.putAll(existing.parts) }
             entries[dto.id] = updated
             fire(SessionModelEvent.MessageUpdated(updated))
             updateHeader()
             return false
         }
-        val msg = Message(dto)
+        val msg = Message(dto, terminal(dto))
         entries[dto.id] = msg
         fire(SessionModelEvent.MessageAdded(msg))
         regroup()
@@ -198,7 +202,7 @@ class SessionModel {
     @RequiresEdt
     fun addMessage(dto: MessageDto): Message? {
         if (entries.containsKey(dto.id)) return null
-        val msg = Message(dto)
+        val msg = Message(dto, terminal(dto))
         entries[dto.id] = msg
         fire(SessionModelEvent.MessageAdded(msg))
         regroup()
@@ -208,6 +212,7 @@ class SessionModel {
 
     @RequiresEdt
     fun removeMessage(id: String) {
+        terminals.remove(id)
         val msg = entries.remove(id) ?: return
         for (part in msg.parts.values) untrackChild(part)
         hiddenText.removeAll { it.first == id }
@@ -335,10 +340,34 @@ class SessionModel {
 
     @RequiresEdt
     fun setQueued(ids: Set<String>) {
-        if (queued == ids) return
-        queued = ids
-        fire(SessionModelEvent.QueueChanged(ids))
+        val next = ids - terminals.keys
+        if (queued == next) return
+        queued = next
+        fire(SessionModelEvent.QueueChanged(next))
     }
+
+    /** A message terminal is authoritative only for that prompt, never for the session state. */
+    @RequiresEdt
+    fun setTerminal(event: ChatEventDto.MessageTerminal) {
+        if (session?.id?.let { it != event.sessionID } == true) return
+        val msg = entries[event.messageID]
+        if (msg != null && (msg.info.role != "user" || msg.info.sessionID != event.sessionID)) return
+        val previous = terminals[event.messageID]
+        if (previous != null) {
+            if (previous != event) LOG.warn("kind=message-terminal contradiction mid=${event.messageID}")
+            return
+        }
+        terminals[event.messageID] = event
+        setQueued(queued - event.messageID)
+        if (msg == null) return
+        val updated = Message(msg.info, event).also { it.parts.putAll(msg.parts) }
+        entries[event.messageID] = updated
+        fire(SessionModelEvent.MessageUpdated(updated))
+    }
+
+    @RequiresEdt
+    private fun terminal(dto: MessageDto) = terminals[dto.id]
+        ?.takeIf { dto.role == "user" && dto.sessionID == it.sessionID }
 
     @RequiresEdt
     fun setDiff(diff: List<DiffFileDto>) {
@@ -391,6 +420,11 @@ class SessionModel {
 
     @RequiresEdt
     fun loadHistory(history: List<MessageWithPartsDto>) {
+        val retained = history.associate { it.info.id to it.info }
+        terminals.entries.removeIf { (id, event) ->
+            val info = retained[id]
+            info == null || info.role != "user" || info.sessionID != event.sessionID
+        }
         entries.clear()
         childRefs.clear()
         childTools.clear()
@@ -407,7 +441,7 @@ class SessionModel {
         backgroundAgents = emptyList()
         compactionCount = 0
         for (msg in history) {
-            val item = Message(msg.info)
+            val item = Message(msg.info, terminal(msg.info))
             for (part in msg.parts) {
                 if (part.type in SILENT_PART_TYPES) continue
                 if (hiddenSynthetic(item, part)) {
@@ -428,6 +462,7 @@ class SessionModel {
 
     @RequiresEdt
     fun clear() {
+        terminals.clear()
         entries.clear()
         turnEntries.clear()
         childRefs.clear()

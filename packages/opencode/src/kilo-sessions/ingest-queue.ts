@@ -50,12 +50,7 @@ export namespace IngestQueue {
       }
     | {
         type: "session_status"
-        data: {
-          status: "idle" | "busy" | "question" | "permission" | "retry" | "scheduled"
-          // scheduled wakeups: the ISO-8601 due time, present only with status
-          // "scheduled".
-          scheduledAt?: string
-        }
+        data: SessionStatus & (SessionStatusSnapshot | SessionStatusTransition)
       }
     | {
         type: "session_pr_link"
@@ -65,6 +60,24 @@ export namespace IngestQueue {
         type: "agent_notification"
         data: { id: string; message: string }
       }
+
+  type StatusName = "idle" | "busy" | "question" | "permission" | "retry" | "scheduled"
+
+  type SessionStatus = {
+    status: StatusName
+    // scheduled wakeups: the ISO-8601 due time, present only with status
+    // "scheduled".
+    scheduledAt?: string
+  }
+
+  // Historical snapshots omit onset; known transitions replay this whole tuple unchanged.
+  type SessionStatusSnapshot = { occurredAt?: never; previousStatus?: never; transitionId?: never }
+
+  type SessionStatusTransition = {
+    occurredAt: string
+    previousStatus: StatusName | null
+    transitionId: string
+  }
 
   type Share = {
     ingestPath: string
@@ -153,7 +166,9 @@ export namespace IngestQueue {
       if (item.type === "session_diff") return "session_diff"
       if (item.type === "session_open") return "session_open"
       if (item.type === "session_close") return "session_close"
-      if (item.type === "session_status") return "session_status"
+      if (item.type === "session_status") {
+        return item.data.transitionId ? `session_status:${item.data.transitionId}` : "session_status"
+      }
       if (item.type === "session_pr_link") return "session_pr_link"
 
       if (item.type === "message") {

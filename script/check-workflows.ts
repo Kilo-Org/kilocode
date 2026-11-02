@@ -63,6 +63,7 @@ const active = new Set([
   "test.yml",
   "typecheck.yml",
   "validate-cli-smoke.yml",
+  "v2-port-tracker.yml",
   "visual-regression.yml",
   "watch-opencode-releases.yml",
 ])

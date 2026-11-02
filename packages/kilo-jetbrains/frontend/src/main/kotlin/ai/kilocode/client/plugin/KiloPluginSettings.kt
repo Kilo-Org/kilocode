@@ -17,6 +17,7 @@ object KiloPluginSettings {
     private const val CODE_EDIT_DISPLAY_KEY = "kilo.session.codeEditDisplay"
     private const val MCP_TOOL_DISPLAY_KEY = "kilo.session.mcpToolDisplay"
     private const val HOVER_PREVIEW_KEY = "kilo.session.hoverPreview"
+    private const val FETCH_WORKTREE_BASE_KEY = "kilo.worktree.fetchBase"
 
     /**
      * Mode the prompt picker last selected, or null when the CLI's own default should win.
@@ -137,6 +138,16 @@ object KiloPluginSettings {
 
     internal fun unsetHoverPreview() {
         PropertiesComponent.getInstance().unsetValue(HOVER_PREVIEW_KEY)
+    }
+
+    fun getFetchWorktreeBase(): Boolean = PropertiesComponent.getInstance().getBoolean(FETCH_WORKTREE_BASE_KEY, true)
+
+    fun setFetchWorktreeBase(value: Boolean) {
+        PropertiesComponent.getInstance().setValue(FETCH_WORKTREE_BASE_KEY, value.toString())
+    }
+
+    internal fun unsetFetchWorktreeBase() {
+        PropertiesComponent.getInstance().unsetValue(FETCH_WORKTREE_BASE_KEY)
     }
 
     /** Reads every transcript appearance preference as one snapshot. */

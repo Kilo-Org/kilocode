@@ -1,6 +1,8 @@
 package ai.kilocode.client.agentManager.worktree
 
 import ai.kilocode.client.plugin.KiloBundle
+import ai.kilocode.client.agentManager.WorkspaceSessionEditorPanel
+import ai.kilocode.client.agentManager.WorkspaceSessionRow
 import ai.kilocode.client.app.KiloSessionService
 import ai.kilocode.client.diff.KiloDiffComparison
 import ai.kilocode.client.diff.openKiloDiff
@@ -13,40 +15,25 @@ import ai.kilocode.client.session.history.HistoryTime
 import ai.kilocode.client.session.history.LocalHistoryItem
 import ai.kilocode.client.telemetry.Telemetry
 import ai.kilocode.client.util.edt
-import ai.kilocode.client.ui.list.ActiveList
-import ai.kilocode.client.ui.list.ActiveListBadge
-import ai.kilocode.client.ui.list.ActiveListConfig
 import ai.kilocode.client.ui.list.ActiveListDeleteOptions
 import ai.kilocode.client.ui.list.ActiveListEditOptions
 import ai.kilocode.client.ui.list.ActiveListItem
 import ai.kilocode.client.ui.list.ActiveListMenu
-import ai.kilocode.client.ui.list.ActiveListRowHeight
 import ai.kilocode.client.ui.list.ActiveListSelection
-import ai.kilocode.client.ui.list.ActiveListSurface
-import ai.kilocode.client.ui.list.ActiveListWeight
-import ai.kilocode.client.ui.list.activeListToolWindowBackground
-import ai.kilocode.client.ui.layout.HAlign
-import ai.kilocode.client.ui.layout.Stack
-import ai.kilocode.client.ui.layout.VAlign
-import ai.kilocode.client.ui.layout.align
-import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.log.KiloLog
 import ai.kilocode.rpc.dto.SessionDto
 import ai.kilocode.rpc.dto.WorktreeDirtyDto
 import ai.kilocode.rpc.dto.WorktreePrDto
 import ai.kilocode.rpc.dto.WorktreeStatsDto
 import com.intellij.icons.AllIcons
-import com.intellij.ide.ActivityTracker
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.actionSystem.ActionManager
-import com.intellij.openapi.actionSystem.ActionPlaces
 import com.intellij.openapi.actionSystem.ActionUpdateThread
 import com.intellij.openapi.actionSystem.ActionGroup
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.DataSink
 import com.intellij.openapi.actionSystem.DefaultActionGroup
 import com.intellij.openapi.actionSystem.UiDataProvider
-import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.components.service
 import com.intellij.openapi.project.DumbAwareAction
 import com.intellij.openapi.project.Project
@@ -58,15 +45,9 @@ import com.intellij.openapi.wm.IdeFocusManager
 import com.intellij.openapi.wm.ToolWindowManager
 import com.intellij.openapi.wm.WindowManager
 import com.intellij.terminal.frontend.toolwindow.TerminalToolWindowTabsManager
-import com.intellij.ui.IdeBorderFactory
-import com.intellij.ui.OnePixelSplitter
-import com.intellij.ui.SideBorder
 import com.intellij.ui.awt.RelativePoint
 import com.intellij.util.concurrency.annotations.RequiresEdt
-import com.intellij.util.ui.JBInsets
-import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
-import com.intellij.util.ui.components.BorderLayoutPanel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -74,16 +55,8 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import org.jetbrains.plugins.terminal.TerminalToolWindowFactory
-import java.awt.BorderLayout
-import java.awt.Color
 import java.awt.Frame
 import java.awt.event.HierarchyEvent
-import javax.swing.JComponent
-import javax.swing.JSeparator
-import javax.swing.ListSelectionModel
-import javax.swing.JPanel
-import javax.swing.SwingConstants
-import javax.swing.border.Border
 import javax.swing.event.ListDataEvent
 import javax.swing.event.ListDataListener
 
@@ -103,38 +76,11 @@ class WorktreeSessionEditorPanel @RequiresEdt constructor(
     private val save: (Boolean) -> Unit = { value ->
         service<WorktreeSessionListVisibility>().save(worktree.directory, value)
     },
-) : BorderLayoutPanel(), Disposable, UiDataProvider {
-    // Register with the parent before any child component (e.g. the run control) that owns a
-    // coroutine scope or a shared-stream ref, so a failure while constructing later fields cannot
-    // leak those resources: disposing this panel now always tears the children down.
-    init {
-        Disposer.register(parent, this)
-    }
-
+) : WorkspaceSessionEditorPanel(parent), UiDataProvider {
     private val add = NewAction()
     private val rename = RenameAction()
     private val delete = DeleteAction()
-    private val toggle = WorktreeSessionListToggle { flip() }
-    private val toolbar = ActionManager.getInstance().createActionToolbar(ActionPlaces.TOOLBAR, DefaultActionGroup(add, rename, delete), true)
     private val group = ActionManager.getInstance().getAction("Kilo.WorktreeSession.RowMenu") as? ActionGroup ?: DefaultActionGroup()
-    private val list = ActiveList(
-        KiloBundle.message("worktree.session.list.empty"),
-        cfg = ActiveListConfig(
-            ActiveListRowHeight.EQUAL,
-            description = false,
-            selection = ListSelectionModel.MULTIPLE_INTERVAL_SELECTION,
-            hoverActions = true,
-            title = ActiveListWeight.PLAIN,
-        ),
-        surface = ActiveListSurface.ToolWindow,
-        showSearch = false,
-        enter = { true },
-        onCell = { _, _ -> },
-        onOpen = { row, focus -> open(row, focus) },
-        menu = ActiveListMenu(WorktreeSessionDataKeys.SESSION, group, element = { row ->
-            (row as? SessionRow)?.session?.takeIf { canFork(it) || canMove(it) || canRename(it) || canDelete(it) }
-        }),
-    )
     private val run = if (project != null && worktree.directory.isNotBlank()) {
         WorktreeRunControl(project, this, worktree.directory, frame = ::openInNewFrame)
     } else {
@@ -148,30 +94,24 @@ class WorktreeSessionEditorPanel @RequiresEdt constructor(
         openTerminal = ::openTerminal,
         run = run?.button,
     )
-    private val splitter = OnePixelSplitter(false, 0.25f)
     private val cs = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private var started = false
     private var stats: WorktreeStatsDto? = null
     private var dirty: WorktreeDirtyDto? = null
     private var pr: WorktreePrDto? = null
-    // Last known persisted visibility, and whether it is known at all: until the stored value arrives
-    // (or the user clicks) the list stays hidden and nothing is written.
-    private var pref: Boolean? = null
-    private var ready = false
 
     init {
-        isOpaque = true
-        toolbar.targetComponent = this
-        // Keep the toolbar transparent so it shows its themed parent background and tracks
-        // Look-and-Feel changes automatically, instead of caching a color that goes stale.
-        toolbar.component.isOpaque = false
-        syncToolbar()
+        project?.let { banner(GhBanner(it, this)) }
+        initialize(
+            content = manager.component,
+            header = prHeader,
+            actions = DefaultActionGroup(add, rename, delete),
+            menu = ActiveListMenu(WorktreeSessionDataKeys.SESSION, group, element = { row ->
+                item(row.key)?.takeIf { canFork(it) || canMove(it) || canRename(it) || canDelete(it) }
+            }),
+            open = ::open,
+        )
         list.installPopup(group)
-        // The list starts detached: a worktree opens with its sessions hidden until a stored choice
-        // says otherwise (see restore()). Session count never forces it open on its own.
-        splitter.secondComponent = manager.component
-        addToTop(top())
-        addToCenter(splitter)
         bindModel()
         manager.onPresent = { key -> key?.let { list.select(it) } }
         manager.onListChanged = {
@@ -191,13 +131,8 @@ class WorktreeSessionEditorPanel @RequiresEdt constructor(
         }
         bindStatus()
         sync()
-        load(::restore)
+        visibility(load, save)
     }
-
-    override fun getBackground(): Color = activeListToolWindowBackground()
-
-    @RequiresEdt
-    fun preferredFocus(): JComponent = if (expanded()) list.preferredFocus() else manager.component
 
     @RequiresEdt
     fun selectSessions(keys: List<String>) {
@@ -307,134 +242,6 @@ class WorktreeSessionEditorPanel @RequiresEdt constructor(
         manager.start()
         project?.service<WorktreeStatusService>()?.refreshStats()
         project?.service<WorktreeStatusService>()?.refreshPr()
-    }
-
-    @RequiresEdt
-    private fun header(): JComponent {
-        return object : JPanel(BorderLayout()) {
-            override fun getBackground(): Color = activeListToolWindowBackground()
-        }.apply {
-            border = IdeBorderFactory.createBorder(SideBorder.BOTTOM)
-            add(toolbarPanel(), BorderLayout.WEST)
-            add(prHeader, BorderLayout.CENTER)
-        }
-    }
-
-    @RequiresEdt
-    private fun top(): JComponent {
-        val target = project ?: return header()
-        return Stack.vertical()
-            .next(GhBanner(target, this))
-            .next(header())
-    }
-
-    @RequiresEdt
-    private fun toolbarPanel(): JComponent {
-        return object : JPanel(BorderLayout()) {
-            override fun getBackground(): Color = activeListToolWindowBackground()
-
-            // The padding and the divider colour both come from the theme, so they are re-read on
-            // Look-and-Feel changes instead of being captured once at construction.
-            override fun updateUI() {
-                super.updateUI()
-                border = toolbarPanelBorder()
-            }
-        }.apply {
-            // The toggle is centred at its own height instead of tracking the strip, so its hover
-            // box keeps the strip's padding above and below it like a regular toolbar button.
-            add(
-                Stack.horizontal(gap = UiStyle.Gap.sm())
-                    .next(toggle.align(HAlign.LEFT, VAlign.CENTER))
-                    .next(JSeparator(SwingConstants.VERTICAL)),
-                BorderLayout.WEST,
-            )
-            add(toolbar.component, BorderLayout.CENTER)
-        }
-    }
-
-    /**
-     * Standard horizontal-toolbar padding on the three free sides. The right edge stays flush so the
-     * divider still sits directly against the header content beside it.
-     *
-     * The theme insets arrive pre-scaled while [JBUI.Borders.empty] scales what it is handed, so the
-     * unscaled values are read back to avoid scaling twice on HiDPI.
-     */
-    private fun toolbarPanelBorder(): Border {
-        val ins = (JBUI.CurrentTheme.Toolbar.horizontalToolbarInsets() as? JBInsets)?.unscaled
-        return JBUI.Borders.merge(
-            JBUI.Borders.empty(ins?.top ?: STRIP_PAD, ins?.left ?: STRIP_PAD, ins?.bottom ?: STRIP_PAD, 0),
-            IdeBorderFactory.createBorder(SideBorder.RIGHT),
-            true,
-        )
-    }
-
-    @RequiresEdt
-    private fun flip() {
-        syncExpanded(!expanded())
-        ready = true
-        pref = expanded()
-        save(expanded())
-    }
-
-    /**
-     * Applies the stored visibility once the backend answers. A click that landed first already
-     * decided, so a late answer must not overwrite it. No stored value (`null`) leaves the list
-     * exactly as it started -- hidden -- and writes nothing; only an explicit [flip] ever persists
-     * a choice.
-     */
-    @RequiresEdt
-    private fun restore(value: Boolean?) {
-        if (ready) return
-        ready = true
-        pref = value
-        value?.let(::syncExpanded)
-    }
-
-    @RequiresEdt
-    private fun count(): Int {
-        val deleting = manager.deleting()
-        return controller.sessions().count { it.id !in deleting }
-    }
-
-    /**
-     * [SessionHost.activity] carries every session the CLI knows, in every directory, including `task`
-     * subagents that have no row here. Only this worktree's listed sessions can be reached by
-     * expanding the list, so only they may badge the toggle.
-     */
-    @RequiresEdt
-    private fun syncToggle() {
-        val ids = controller.sessions().mapTo(mutableSetOf()) { it.id }
-        toggle.update(
-            expanded(),
-            count(),
-            attention(manager.activity().filterKeys { it in ids }, manager.currentKey(), manager.deleting()),
-        )
-    }
-
-    @RequiresEdt
-    private fun expanded(): Boolean = splitter.firstComponent != null
-
-    @RequiresEdt
-    private fun syncToolbar() {
-        // Tests need a synchronous refresh to assert action presentations; production nudges the
-        // platform's action-update pass instead of the deprecated blocking updateActionsImmediately().
-        if (ApplicationManager.getApplication().isUnitTestMode) {
-            @Suppress("DEPRECATION")
-            toolbar.updateActionsImmediately()
-            return
-        }
-        ActivityTracker.getInstance().inc()
-    }
-
-    @RequiresEdt
-    private fun syncExpanded(value: Boolean) {
-        val changed = expanded() != value
-        if (changed) splitter.firstComponent = if (value) list else null
-        syncToolbar()
-        syncToggle()
-        if (!changed) return
-        splitter.revalidate()
-        splitter.repaint()
     }
 
     @RequiresEdt
@@ -555,12 +362,13 @@ class WorktreeSessionEditorPanel @RequiresEdt constructor(
         val deleting = manager.deleting()
         if (pending || key == SessionHost.NEW) rows += NewRow
         rows += HistoryTime.sorted(controller.sessions().map { LocalHistoryItem(it) })
-            .map { SessionRow(it.session, kinds[it.id], deleting = it.id in deleting, live = titles[it.id]) }
+            .map { WorkspaceSessionRow(it, kinds[it.id], deleting = it.id in deleting, live = titles[it.id],
+                search = listOf(it.title, it.id, it.directory).joinToString(" ")) }
         // The host owns which session is shown, so it also owns the selection: name the row and let
         // the list hold that key until a refresh brings it in.
         val shown = if (pending) SessionHost.NEW else key
         list.update(rows, shown?.let { ActiveListSelection.Key(it) } ?: ActiveListSelection.Preserve)
-        syncToggle()
+        syncToggle(controller.sessions().mapTo(mutableSetOf()) { it.id }, kinds, key, deleting)
     }
 
     @RequiresEdt
@@ -701,38 +509,10 @@ class WorktreeSessionEditorPanel @RequiresEdt constructor(
     private companion object {
         private val LOG = KiloLog.create(WorktreeSessionEditorPanel::class.java)
         private val TERMINAL_DIR = Key.create<String>("kilo.worktree.terminal.dir")
-
-        /** Classic UI leaves the toolbar inset key unset; matches the platform's own fallback. */
-        private const val STRIP_PAD = 2
-    }
-
-    private inner class SessionRow(
-        val session: SessionDto,
-        val kind: SessionActivityKind?,
-        private val deleting: Boolean = false,
-        // Live title of the open session, if any; reflects the agent-generated name as it streams in
-        // before the listed snapshot catches up.
-        private val live: String? = null,
-    ) : ActiveListItem {
-        private val item = LocalHistoryItem(session)
-        override val key: String get() = session.id
-        override val title: String get() {
-            val name = live?.takeIf { it.isNotBlank() } ?: session.title
-            if (name.isBlank()) return KiloBundle.message("worktree.session.untitled")
-            // Show the placeholder as a friendly "New session" until the agent names the session.
-            if (isDefaultSessionTitle(name)) return KiloBundle.message("worktree.session.new")
-            return name
-        }
-        override val tooltip: String get() = title
-        override val progress: String? get() = if (deleting) KiloBundle.message("common.deleting") else null
-        override val badges: List<ActiveListBadge>
-            get() = listOfNotNull(kind?.let { ActiveListBadge(it.label(), it.style()) })
-        override val section: String get() = HistoryTime.title(HistoryTime.section(item))
-        override val search: String get() = listOf(session.title, session.id, session.directory).joinToString(" ")
     }
 
     @RequiresEdt
     private fun selectedSession(): SessionDto? {
-        return list.selectedItems().filterIsInstance<SessionRow>().firstOrNull()?.session
+        return list.selectedItems().firstNotNullOfOrNull { item(it.key) }
     }
 }

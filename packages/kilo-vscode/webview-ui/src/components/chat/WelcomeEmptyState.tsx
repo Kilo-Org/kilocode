@@ -8,6 +8,7 @@ import { recentSessions } from "../../context/session-utils"
 import type { SessionInfo } from "../../types/messages"
 import { formatRelativeDate } from "../../utils/date"
 import { FeedbackDialog } from "./FeedbackDialog"
+import { WorkspaceScopeHint } from "./WorkspaceScopeHint"
 
 interface WelcomeEmptyStateProps {
   sessions?: () => SessionInfo[]
@@ -64,6 +65,7 @@ export const WelcomeEmptyState: Component<WelcomeEmptyStateProps> = (props) => {
     <div class="message-list-empty">
       <KiloLogo />
       <p class="kilo-about-text">{language.t("session.messages.welcome")}</p>
+      <WorkspaceScopeHint />
       <Show when={recent().length > 0 && props.onSelectSession}>
         <div class="recent-sessions">
           <span class="recent-sessions-label">{language.t("session.recent")}</span>

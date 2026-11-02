@@ -110,6 +110,7 @@ class SessionContextMenuActionsTest : SessionUiTestBase() {
         assertEquals(
             listOf(
                 "Kilo.ReloadCoreSettings",
+                "Kilo.RefreshCloud",
                 "---",
                 "Kilo.Restart",
                 "Kilo.Reinstall",

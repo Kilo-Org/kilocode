@@ -153,7 +153,11 @@ export class DirectoryScanner implements IDirectoryScanner {
       absolute: true,
       nodir: true,
       dot: false,
-      ignore: FileIgnore.PATTERNS,
+      ignore: FileIgnore.globs(),
+      // Keep ignore matching case-sensitive on every platform. FileIgnore.match()
+      // compares path segments exactly, so the macOS/Windows nocase default would
+      // prune valid sources (e.g. src/Build/Main.ts) that match() keeps.
+      nocase: false,
       maxDepth: Infinity,
     })
 

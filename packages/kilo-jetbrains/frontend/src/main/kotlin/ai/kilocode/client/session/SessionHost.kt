@@ -195,6 +195,7 @@ abstract class SessionHost(
         val workspace = when (ref) {
             is SessionRef.Local -> ref.session?.directory?.let(resolve) ?: root
             is SessionRef.Cloud -> root
+            is SessionRef.Hosted -> root
         }
         return create(project, workspace, this, ref, timers).also {
             all.add(it)

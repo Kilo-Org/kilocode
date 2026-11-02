@@ -7,6 +7,7 @@ import { Context, Effect, Exit, Layer } from "effect"
 import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import { EventV2 } from "@opencode-ai/core/event"
 import { FSUtil } from "@opencode-ai/core/fs-util"
+import { EffectFlock } from "@opencode-ai/core/util/effect-flock"
 import { EventV2Bridge } from "@/event-v2-bridge"
 import { Git } from "@/git"
 import { Wakeup } from "@/kilocode/wakeup"
@@ -69,7 +70,18 @@ const recorderFire = Layer.effect(
 // Layer.fresh: without it Effect's in-test layer cache hands nested builds the
 // outer test's storage and Fire, so a "restart" would share the first process.
 const serviceLayer = <R>(dir: string, fire: Layer.Layer<Wakeup.Fire, never, R>, published: Published[] = []) =>
-  Layer.fresh(Wakeup.layer.pipe(Layer.provide(Layer.mergeAll(storageLayer(dir), fire, eventsLayer(published)))))
+  Layer.fresh(
+    Wakeup.layer.pipe(
+      Layer.provide(
+        Layer.mergeAll(
+          storageLayer(dir),
+          fire,
+          eventsLayer(published),
+          LayerNode.compile(LayerNode.group([EffectFlock.node])),
+        ),
+      ),
+    ),
+  )
 
 const dirLayer = Layer.effect(
   TestDir,
@@ -568,6 +580,65 @@ describe("Wakeup", () => {
           "8 seconds",
         )
         expect(recorder.calls.map((info) => info.prompt).toSorted()).toEqual(["first wake", "second wake"])
+      }),
+    20_000,
+  )
+
+  it.live(
+    "fires a wakeup once when two processes share the data directory",
+    () =>
+      Effect.gen(function* () {
+        const dir = (yield* TestDir).dir
+        const first: Wakeup.Info[] = []
+        const second: Wakeup.Info[] = []
+        // Two layers on one storage directory stand in for an editor's server
+        // and a terminal TUI that both adopt the same workspace.
+        const a = Context.get(yield* Layer.build(serviceLayer(dir, fireLayer(first))), Wakeup.Service)
+        const b = Context.get(yield* Layer.build(serviceLayer(dir, fireLayer(second))), Wakeup.Service)
+
+        yield* a.schedule({
+          sessionID: session(),
+          directory: dir,
+          prompt: "check the deploy",
+          when: new Date(Date.now() + 1200).toISOString(),
+        })
+        yield* b.adopt(dir)
+
+        yield* pollWithTimeout(
+          Effect.sync(() => (first.length + second.length > 0 ? true : undefined)),
+          "shared wakeup never fired",
+          "8 seconds",
+        )
+        // Both timers came due together; give the losing one time to settle.
+        yield* Effect.sleep("1500 millis")
+        expect([...first, ...second].map((info) => info.prompt)).toEqual(["check the deploy"])
+      }).pipe(Effect.scoped),
+    20_000,
+  )
+
+  it.live(
+    "still fires an armed wakeup whose stored record became unreadable",
+    () =>
+      Effect.gen(function* () {
+        const wake = yield* Wakeup.Service
+        const recorder = yield* Recorder
+        const dir = (yield* TestDir).dir
+
+        const info = yield* wake.schedule({
+          sessionID: session(),
+          directory: dir,
+          prompt: "read failed",
+          when: new Date(Date.now() + 1200).toISOString(),
+        })
+        // Only a missing record means another process took the wakeup.
+        fs.writeFileSync(path.join(dir, "storage", "wakeup", String(info.sessionID), `${info.id}.json`), "{ not json")
+
+        const fired = yield* pollWithTimeout(
+          Effect.sync(() => recorder.calls[0]),
+          "unreadable wakeup never fired",
+          "8 seconds",
+        )
+        expect(fired.id).toBe(info.id)
       }),
     20_000,
   )

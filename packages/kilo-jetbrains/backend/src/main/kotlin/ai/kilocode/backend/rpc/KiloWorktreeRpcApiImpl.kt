@@ -634,7 +634,31 @@ class KiloWorktreeRpcApiImpl(
             val base = Path.of(directory).normalize()
             val branch = request.branch.trim()
             if (branch.isEmpty()) return@withContext CreateWorktreeResultDto(error = "Branch name is required")
-            lock(base, "create") { addWorktree(base, branch, request.existingBranch, request.baseBranch) }
+            lock(base, "create") {
+                val ref = if (request.fetchBase && !request.existingBranch) {
+                    val target = request.baseBranch?.trim()?.takeIf { it.isNotEmpty() }
+                        ?: return@lock CreateWorktreeResultDto(error = "Base branch is required to fetch latest")
+                    val remote = runGit(base, "config", "--get", "branch.$target.remote").stdout.trim()
+                    val merge = runGit(base, "config", "--get", "branch.$target.merge").stdout.trim()
+                    if (remote.isEmpty() || remote == "." || !merge.startsWith("refs/heads/")) {
+                        return@lock addWorktree(base, branch, false, target)
+                    }
+                    val tracked = merge.removePrefix("refs/heads/")
+                    val fetched = runGit(
+                        base,
+                        listOf("fetch", "--quiet", "--no-tags", remote, "+$merge:refs/remotes/$remote/$tracked"),
+                        GIT_WRITE_TIMEOUT_MS,
+                    )
+                    if (!fetched.ok) {
+                        LOG.warn("base fetch failed: branch=$target upstream=$remote/$tracked exit=${fetched.exit} stderr=${fetched.stderr.trim()}")
+                        return@lock CreateWorktreeResultDto(error = reason(fetched, "Could not fetch $remote/$tracked"))
+                    }
+                    "$remote/$tracked"
+                } else {
+                    request.baseBranch
+                }
+                addWorktree(base, branch, request.existingBranch, ref)
+            }
         }
 
     override suspend fun importPr(directory: String, url: String): CreateWorktreeResultDto =

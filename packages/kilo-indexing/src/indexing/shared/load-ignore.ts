@@ -67,15 +67,8 @@ function escape(dir: string): string {
 }
 
 function discovery(): string[] {
-  const result = new Set(FileIgnore.PATTERNS)
-  for (const pattern of FileIgnore.PATTERNS) {
-    if (pattern.includes("/") || [...pattern].some((char) => "*!?[]{}()".includes(char))) {
-      continue
-    }
-    result.add(`${pattern}/**`)
-    result.add(`**/${pattern}/**`)
-  }
-  return [...result]
+  // Single source of truth for the anchored prune globs (see FileIgnore.globs).
+  return FileIgnore.globs()
 }
 
 function rules(dir: string, txt: string): string[] {

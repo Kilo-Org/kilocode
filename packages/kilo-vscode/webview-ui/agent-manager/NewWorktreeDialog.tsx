@@ -59,9 +59,10 @@ import { BranchSelect, BranchSelectPopover } from "../src/components/shared/Bran
 import { tracker } from "./telemetry"
 import { cycleAgent } from "../src/context/session-agent"
 import type { ModeRouter } from "./mode-router"
-import { ProjectSelect } from "./ProjectSelect"
+import { WorktreeOrigin } from "./WorktreeOrigin"
 import { createDialogPreferences } from "./new-worktree-models"
 import { validBranch } from "./new-worktree-branch"
+import { sanitizeBranchName } from "../../src/shared/branch-slug"
 import { shouldComposeGoal, submitPayload } from "./new-worktree-command"
 
 type VersionCount = 1 | 2 | 3 | 4
@@ -157,6 +158,24 @@ function MentionRow(props: { item: MentionResult }) {
   return null
 }
 
+/**
+ * Last branch list per project. Listing branches runs git in the extension
+ * host and can take a noticeable time in large repositories, so a reopened
+ * dialog shows the cached list while it refreshes. Each refresh replaces the
+ * entry, and only the most recently used projects are kept.
+ */
+const branchCache = new Map<string, { branches: BranchInfo[]; detected: string }>()
+const BRANCH_CACHE_LIMIT = 4
+
+function cacheBranches(id: string, branches: BranchInfo[], detected: string) {
+  // Map keeps insertion order, so re-inserting marks the entry most recent.
+  branchCache.delete(id)
+  branchCache.set(id, { branches, detected })
+  if (branchCache.size <= BRANCH_CACHE_LIMIT) return
+  const oldest = branchCache.keys().next().value
+  if (oldest !== undefined) branchCache.delete(oldest)
+}
+
 export const NewWorktreeDialog: Component<{
   onClose: () => void
   defaultBase?: (projectId: string) => string | undefined
@@ -183,7 +202,6 @@ export const NewWorktreeDialog: Component<{
   const [projectOpen, setProjectOpen] = createSignal(false)
   const projects = () => props.projects?.() ?? []
   const showProject = () => projects().length > 0
-  const projectLabel = () => projects().find((item) => item.id === project())?.label ?? ""
   const base = () => {
     const id = project()
     return id ? props.defaultBase?.(id) : undefined
@@ -192,7 +210,9 @@ export const NewWorktreeDialog: Component<{
   // --- Shared branch data (used by both New tab's base branch selector and Import tab) ---
   const [branches, setBranches] = createSignal<BranchInfo[]>([])
   const [branchesLoading, setBranchesLoading] = createSignal(false)
-  const [defaultBranch, setDefaultBranch] = createSignal(base() ?? "main")
+  const [detected, setDetected] = createSignal("main")
+  // The project default follows project state, so "Set as default" updates it live.
+  const defaultBranch = () => base() ?? detected()
   const [branchSearch, setBranchSearch] = createSignal("")
 
   // --- New tab state ---
@@ -217,12 +237,9 @@ export const NewWorktreeDialog: Component<{
   const [starting, setStarting] = createSignal(false)
   const [goalMode, setGoalMode] = createSignal(false)
   const [enhancing, setEnhancing] = createSignal(false)
-  const [showAdvanced, setShowAdvanced] = createSignal(false)
   const [branchName, setBranchName] = createSignal("")
   const [baseBranch, setBaseBranch] = createSignal<string | null>(null)
-  const [baseBranchOpen, setBaseBranchOpen] = createSignal(false)
   const [compareOpen, setCompareOpen] = createSignal(false)
-  const [highlightedIndex, setHighlightedIndex] = createSignal(0)
   const [sandbox, setSandbox] = createSignal<boolean | undefined>(saved.sandbox)
   const [sandboxDefault, setSandboxDefault] = createSignal<boolean | undefined>()
   const [sandboxOverride, setSandboxOverride] = createSignal<boolean | undefined>()
@@ -327,6 +344,26 @@ export const NewWorktreeDialog: Component<{
     vscode.setState({ ...state, advancedDialogImages: imgs.length > 0 ? imgs : undefined })
   }
 
+  // Base branch picks are draft state, like the prompt: they survive closing the
+  // dialog, are kept per project, and never change the project default.
+  const drafts = () =>
+    (vscode.getState<Record<string, unknown>>()?.advancedDialogBase as Record<string, string> | undefined) ?? {}
+
+  const persistBase = (id: string | undefined, value: string | null) => {
+    if (!id) return
+    const state = vscode.getState<Record<string, unknown>>() ?? {}
+    const next = { ...drafts() }
+    if (value) next[id] = value
+    if (!value) delete next[id]
+    vscode.setState({ ...state, advancedDialogBase: Object.keys(next).length > 0 ? next : undefined })
+  }
+
+  const pickBase = (value: string | null) => {
+    const next = value === defaultBranch() ? null : value
+    setBaseBranch(next)
+    persistBase(project(), next)
+  }
+
   createEffect(() => {
     const state = vscode.getState<Record<string, unknown>>() ?? {}
     vscode.setState({
@@ -418,17 +455,29 @@ export const NewWorktreeDialog: Component<{
   // dialog state deliberately survives project changes.
   createEffect(
     on(project, (id) => {
-      setBranches([])
+      // Show the last known list at once and refresh it in the background.
+      const hit = id ? branchCache.get(id) : undefined
+      setBranches(hit?.branches ?? [])
+      setDetected(hit?.detected ?? "main")
+      setBranchesLoading(!hit)
       setBranchSearch("")
-      setHighlightedIndex(0)
-      setBaseBranch(null)
-      setDefaultBranch(id ? (props.defaultBase?.(id) ?? "main") : "main")
-      setBranchesLoading(true)
+      setBaseBranch(id ? (drafts()[id] ?? null) : null)
       vscode.postMessage({ type: "agentManager.requestBranches", projectId: id })
     }),
   )
 
+  // A draft pick that becomes the default (for example after "Set as default")
+  // is no longer an override.
+  createEffect(
+    on(defaultBranch, (value) => {
+      // Before branches load, the detected default is only a placeholder.
+      if (!base() && branchesLoading()) return
+      if (baseBranch() === value) pickBase(null)
+    }),
+  )
+
   const effectiveBaseBranch = () => baseBranch() ?? defaultBranch()
+  const customBase = () => effectiveBaseBranch() !== defaultBranch()
 
   const filteredBranches = createMemo(() => {
     const search = branchSearch().toLowerCase()
@@ -461,8 +510,7 @@ export const NewWorktreeDialog: Component<{
 
   const handleSubmit = () => {
     if (!canSubmit()) return
-    const advanced = showAdvanced()
-    const customBranch = advanced ? branchName() || undefined : undefined
+    const customBranch = branchName().trim() || undefined
     if (!validBranch(customBranch)) {
       showToast({
         variant: "error",
@@ -517,6 +565,7 @@ export const NewWorktreeDialog: Component<{
     preferences.clear()
     persistPrompt("")
     persistImages([])
+    persistBase(target, null)
     props.onClose()
   }
 
@@ -673,9 +722,13 @@ export const NewWorktreeDialog: Component<{
     if (msg.type === "agentManager.branches") {
       const ev = msg as AgentManagerBranchesMessage
       if (ev.projectId !== project()) return
+      if (ev.projectId) cacheBranches(ev.projectId, ev.branches, ev.defaultBranch)
       setBranches(ev.branches)
-      if (!base()) setDefaultBranch(ev.defaultBranch)
+      setDetected(ev.defaultBranch)
       setBranchesLoading(false)
+      // Drop a draft pick whose branch was deleted since it was chosen.
+      const pick = baseBranch()
+      if (pick && ev.branches.length > 0 && !ev.branches.some((b) => b.name === pick)) pickBase(null)
     }
     if (msg.type === "agentManager.importResult") {
       const ev = msg as AgentManagerImportResultMessage
@@ -734,93 +787,103 @@ export const NewWorktreeDialog: Component<{
     vscode.postMessage({ type: "agentManager.importFromBranch", projectId: target, branch: name })
   }
 
-  return (
-    <Dialog title={t("agentManager.dialog.openWorktree")} fit>
-      {/* Tab switcher */}
-      <div class="am-tab-switcher">
-        <button
-          class="am-tab-switcher-pill"
-          classList={{ "am-tab-switcher-pill-active": tab() === "new" }}
-          onClick={click("switch_dialog_tab", "configure_worktree_dialog", () => setTab("new"), { tab: "new" })}
-          type="button"
-        >
-          {t("agentManager.dialog.tab.new")}
-        </button>
-        <button
-          class="am-tab-switcher-pill"
-          classList={{ "am-tab-switcher-pill-active": tab() === "import" }}
-          onClick={click("switch_dialog_tab", "configure_worktree_dialog", () => setTab("import"), { tab: "import" })}
-          type="button"
-        >
-          {t("agentManager.dialog.tab.import")}
-        </button>
-        {/* Project scope applies to both New and Import tabs. */}
-        <Show when={showProject()}>
-          <div class="am-nv-project-inline">
-            <div class="am-selector-wrapper">
-              <DeferredPopover
-                open={projectOpen()}
-                onOpenChange={setProjectOpen}
-                placement="bottom-start"
-                flip={false}
-                sameWidth
-                portal={false}
-                deferDismiss
-                class="am-dropdown"
-                trigger={
-                  <button
-                    class="am-selector-trigger"
-                    type="button"
-                    aria-label={t("agentManager.dialog.project.select")}
-                    disabled={starting() || isPending()}
-                  >
-                    <span class="am-selector-left">
-                      <Icon name="folder" size="small" />
-                      <Show
-                        when={projectLabel()}
-                        fallback={
-                          <span class="am-selector-value am-selector-placeholder">
-                            {t("agentManager.dialog.project.select")}
-                          </span>
-                        }
-                      >
-                        <span class="am-selector-value">{projectLabel()}</span>
-                      </Show>
-                    </span>
-                    <span class="am-selector-right">
-                      <Icon name="selector" size="small" />
-                    </span>
-                  </button>
-                }
-              >
-                <ProjectSelect
-                  projects={projects()}
-                  selected={project()}
-                  onSelect={(id) => {
-                    track("project_select", { changed: id !== props.activeProjectId })
-                    setProject(id)
-                    setProjectOpen(false)
-                  }}
-                  labels={{
-                    missing: t("agentManager.dialog.project.missing"),
-                  }}
-                />
-              </DeferredPopover>
-            </div>
-          </div>
-        </Show>
-      </div>
+  // Where the worktree starts: project (both tabs) and base branch (New tab only).
+  const Origin = (local: { branch: boolean }) => (
+    <WorktreeOrigin
+      projects={projects()}
+      project={project()}
+      onProject={(id) => {
+        track("project_select", { changed: id !== props.activeProjectId })
+        setProject(id)
+      }}
+      projectOpen={projectOpen()}
+      onProjectOpen={setProjectOpen}
+      branch={local.branch}
+      branches={branches()}
+      loading={branchesLoading()}
+      base={effectiveBaseBranch()}
+      fallback={defaultBranch()}
+      onBase={(name) => {
+        track("base_branch_select", { custom: name !== defaultBranch() })
+        pickBase(name)
+      }}
+      onDefault={(name) => {
+        track("base_branch_set_default")
+        vscode.postMessage({ type: "agentManager.setDefaultBaseBranch", projectId: project(), branch: name })
+      }}
+      disabled={starting() || isPending()}
+    />
+  )
 
+  return (
+    <Dialog
+      title={t("agentManager.dialog.openWorktree")}
+      fit
+      transition
+      action={
+        <div class="am-nv-header">
+          <div class="am-nv-mode" role="tablist" data-tab={tab()}>
+            <button
+              class="am-nv-mode-tab"
+              classList={{ "am-nv-mode-tab-active": tab() === "new" }}
+              role="tab"
+              aria-selected={tab() === "new"}
+              onClick={click("switch_dialog_tab", "configure_worktree_dialog", () => setTab("new"), { tab: "new" })}
+              type="button"
+            >
+              {t("agentManager.dialog.tab.new")}
+            </button>
+            <button
+              class="am-nv-mode-tab"
+              classList={{ "am-nv-mode-tab-active": tab() === "import" }}
+              role="tab"
+              aria-selected={tab() === "import"}
+              onClick={click("switch_dialog_tab", "configure_worktree_dialog", () => setTab("import"), {
+                tab: "import",
+              })}
+              type="button"
+            >
+              {t("agentManager.dialog.tab.import")}
+            </button>
+          </div>
+          <IconButton
+            class="am-nv-close"
+            icon="close"
+            variant="ghost"
+            aria-label={t("common.close")}
+            onClick={() => props.onClose()}
+          />
+        </div>
+      }
+    >
       {/* New tab */}
       <Show when={tab() === "new"}>
         <div class="am-nv-dialog" onKeyDown={handleKeyDown}>
           <div class="am-nv-dialog-content">
-            <input
-              class="am-nv-name-input"
-              placeholder={t("agentManager.dialog.namePlaceholder")}
-              value={name()}
-              onInput={(e) => setName(e.currentTarget.value)}
-            />
+            {/* Starting point: origin first, then the worktree name. The branch follows the name unless set. */}
+            <div class="am-nv-start">
+              <Origin branch />
+              <div class="am-nv-name-row">
+                <input
+                  class="am-nv-name-input"
+                  placeholder={t("agentManager.dialog.namePlaceholder")}
+                  value={name()}
+                  onInput={(e) => setName(e.currentTarget.value)}
+                />
+                <label class="am-nv-branch-field" title={t("agentManager.dialog.branchNameHint")}>
+                  <Icon name="branch" size="small" />
+                  <input
+                    class="am-nv-branch-input"
+                    type="text"
+                    spellcheck={false}
+                    aria-label={t("agentManager.dialog.branchName")}
+                    placeholder={sanitizeBranchName(name()) || t("agentManager.dialog.branchNamePlaceholder")}
+                    value={branchName()}
+                    onInput={(e) => setBranchName(e.currentTarget.value)}
+                  />
+                </label>
+              </div>
+            </div>
             {/* Prompt input — reuses the sidebar chat-input base classes for consistent styling */}
             <div
               ref={containerRef}
@@ -1084,137 +1147,19 @@ export const NewWorktreeDialog: Component<{
                 </div>
               </div>
             </div>
-
-            {/* Advanced options toggle */}
-            <button
-              class="am-advanced-toggle"
-              onClick={click(
-                "advanced_options",
-                "configure_worktree_dialog",
-                () => setShowAdvanced(!showAdvanced()),
-                () => ({ action: showAdvanced() ? "close" : "open" }),
-              )}
-              type="button"
-            >
-              <Icon name={showAdvanced() ? "chevron-down" : "chevron-right"} size="small" />
-              <span>{t("agentManager.dialog.advancedOptions")}</span>
-            </button>
-
-            <Show when={showAdvanced()}>
-              <div class="am-advanced-section">
-                <div class="am-advanced-field">
-                  <span class="am-nv-config-label">{t("agentManager.dialog.branchName")}</span>
-                  <input
-                    class="am-advanced-input"
-                    type="text"
-                    placeholder={t("agentManager.dialog.branchNamePlaceholder")}
-                    value={branchName()}
-                    onInput={(e) => setBranchName(e.currentTarget.value)}
-                  />
-                </div>
-                <div class="am-advanced-field">
-                  <span class="am-nv-config-label">{t("agentManager.dialog.baseBranch")}</span>
-                  <div class="am-selector-wrapper">
-                    <BranchSelectPopover
-                      open={baseBranchOpen()}
-                      onOpenChange={(open) => {
-                        setBaseBranchOpen(open)
-                        if (!open) {
-                          setBranchSearch("")
-                          setHighlightedIndex(0)
-                        }
-                      }}
-                      trigger={
-                        <button class="am-selector-trigger" type="button">
-                          <span class="am-selector-left">
-                            <Icon name="branch" size="small" />
-                            <span class="am-selector-value">{effectiveBaseBranch()}</span>
-                            <Show when={!baseBranch()}>
-                              <span class="am-branch-badge">{t("agentManager.dialog.branchBadge.default")}</span>
-                            </Show>
-                          </span>
-                          <span class="am-selector-right">
-                            <Icon name="selector" size="small" />
-                          </span>
-                        </button>
-                      }
-                    >
-                      <BranchSelect
-                        branches={filteredBranches()}
-                        loading={branchesLoading()}
-                        search={branchSearch()}
-                        onSearch={(v) => {
-                          setBranchSearch(v)
-                          setHighlightedIndex(0)
-                        }}
-                        onSelect={(b) => {
-                          setBaseBranch(b.name)
-                          setBaseBranchOpen(false)
-                          setBranchSearch("")
-                          setHighlightedIndex(0)
-                        }}
-                        onSearchKeyDown={(e) => {
-                          const items = filteredBranches()
-                          if (e.key === "ArrowDown") {
-                            e.preventDefault()
-                            e.stopPropagation()
-                            const next = Math.min(highlightedIndex() + 1, items.length - 1)
-                            setHighlightedIndex(next)
-                            requestAnimationFrame(() => {
-                              document
-                                .querySelector(`.am-branch-item[data-index="${next}"]`)
-                                ?.scrollIntoView({ block: "nearest" })
-                            })
-                          } else if (e.key === "ArrowUp") {
-                            e.preventDefault()
-                            e.stopPropagation()
-                            const prev = Math.max(highlightedIndex() - 1, 0)
-                            setHighlightedIndex(prev)
-                            requestAnimationFrame(() => {
-                              document
-                                .querySelector(`.am-branch-item[data-index="${prev}"]`)
-                                ?.scrollIntoView({ block: "nearest" })
-                            })
-                          } else if (e.key === "Enter") {
-                            e.preventDefault()
-                            e.stopPropagation()
-                            const selected = items[highlightedIndex()]
-                            if (selected) {
-                              setBaseBranch(selected.name)
-                              setBaseBranchOpen(false)
-                              setBranchSearch("")
-                              setHighlightedIndex(0)
-                            }
-                          } else if (e.key === "Escape") {
-                            e.preventDefault()
-                            e.stopPropagation()
-                            setBaseBranchOpen(false)
-                            setBranchSearch("")
-                            setHighlightedIndex(0)
-                          }
-                        }}
-                        selected={effectiveBaseBranch()}
-                        highlighted={highlightedIndex()}
-                        onHighlight={setHighlightedIndex}
-                        searchPlaceholder={t("agentManager.dialog.searchBranches")}
-                        emptyLabel={t("agentManager.import.noMatchingBranches")}
-                        defaultLabel={t("agentManager.dialog.branchBadge.default")}
-                        remoteLabel={t("agentManager.dialog.branchBadge.remote")}
-                        defaultName={defaultBranch()}
-                      />
-                    </BranchSelectPopover>
-                  </div>
-                </div>
-              </div>
-            </Show>
-
+          </div>
+          {/* Footer: run options on the left, the action on the right. Always visible. */}
+          <div class="am-nv-dialog-footer">
             {/* Version / compare mode selector */}
             <Show
               when={compareMode()}
               fallback={
                 <div class="am-nv-version-bar">
                   <span class="am-nv-config-label">{t("agentManager.dialog.versions")}</span>
-                  <div class="am-nv-pills">
+                  <div
+                    class="am-nv-pills"
+                    title={versions() > 1 ? t("agentManager.dialog.versionHint", { count: versions() }) : undefined}
+                  >
                     {VERSION_OPTIONS.map((count) => (
                       <button
                         class="am-nv-pill"
@@ -1244,11 +1189,6 @@ export const NewWorktreeDialog: Component<{
                       </button>
                     </Tooltip>
                   </div>
-                  <Show when={versions() > 1}>
-                    <span class="am-nv-version-hint">
-                      {t("agentManager.dialog.versionHint", { count: versions() })}
-                    </span>
-                  </Show>
                 </div>
               }
             >
@@ -1313,9 +1253,6 @@ export const NewWorktreeDialog: Component<{
                 </DeferredPopover>
               </div>
             </Show>
-          </div>
-          {/* Submit button — fixed footer, always visible */}
-          <div class="am-nv-dialog-footer">
             <Button
               variant="primary"
               size="large"
@@ -1323,9 +1260,8 @@ export const NewWorktreeDialog: Component<{
               onClick={click("create_worktree", "configure_worktree_dialog", handleSubmit, () => ({
                 mode: mode(),
                 versionCount: total(),
-                advanced: showAdvanced(),
-                customBranch: showAdvanced() && !!branchName().trim(),
-                customBase: showAdvanced() && !!baseBranch(),
+                customBranch: !!branchName().trim(),
+                customBase: customBase(),
                 hasPrompt: !!prompt().trim(),
                 hasAttachments: imageAttach.images().length > 0,
               }))}
@@ -1340,7 +1276,8 @@ export const NewWorktreeDialog: Component<{
                   </>
                 }
               >
-                {goalMode() ? t("prompt.goal.start") : t("agentManager.dialog.createWorktree")}
+                <span>{goalMode() ? t("prompt.goal.start") : t("agentManager.dialog.createWorktree")}</span>
+                <kbd class="am-nv-submit-kbd">{isMac ? "\u2318\u21b5" : "Ctrl+\u21b5"}</kbd>
               </Show>
             </Button>
           </div>
@@ -1350,6 +1287,9 @@ export const NewWorktreeDialog: Component<{
       {/* Import tab */}
       <Show when={tab() === "import"}>
         <div class="am-import-tab">
+          <Show when={projects().length > 0}>
+            <Origin branch={false} />
+          </Show>
           {/* Pull Request section */}
           <div class="am-import-section">
             <span class="am-nv-config-label">{t("agentManager.import.pullRequest")}</span>

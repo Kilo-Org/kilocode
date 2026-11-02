@@ -103,8 +103,12 @@ export const BrowserOpenTool = Tool.define<
           yield* ctx.ask({
             permission: "browser_open",
             patterns: [`navigate:${url.origin}`],
-            always: [],
-            metadata: { operation: "open", url: url.href },
+            always: [`navigate:${url.origin}`],
+            metadata: {
+              operation: "open",
+              url: url.href,
+              rules: [`navigate:${url.origin}`, "navigate:*"],
+            },
           })
 
           return yield* Effect.gen(function* () {

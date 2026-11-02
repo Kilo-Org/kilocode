@@ -7,7 +7,7 @@
 
 import type { JSX } from "solid-js"
 import type { RGBA } from "@opentui/core"
-import type { ProviderAuthAuthorization } from "@kilocode/sdk/v2"
+import type { ProviderAuthAuthorization, ProviderFailure } from "@kilocode/sdk/v2"
 import { KiloAutoMethod } from "@/kilocode/components/dialog-kilo-auto-method"
 export { selectProvider } from "@/kilocode/anaconda-desktop/tui/setup"
 
@@ -29,16 +29,35 @@ export function renderGutter(
 }
 
 /**
- * Returns a description suffix when the provider has encountered an error,
- * or `undefined` to leave the default description unchanged.
- *
- * NOTE: The sync state only carries failed provider IDs, not the error kind.
- * A generic message is used so it remains accurate for auth, network, and
- * schema failure types alike.
+ * Human-readable reason a provider failed to load, keyed by the typed
+ * `kind` the server reports. Keep this copy in sync with the VS Code
+ * extension's equivalent mapping.
  */
-export function failedDescription(providerID: string, failed: string[]): string | undefined {
+function failureMessage(failure: ProviderFailure): string {
+  switch (failure.kind) {
+    case "unauthorized":
+      return `Credentials rejected${failure.status ? ` (HTTP ${failure.status})` : ""} — sign in again`
+    case "unauthenticated":
+      return "Not signed in — sign in to continue"
+    case "network":
+      return "Couldn't reach the provider — check your connection"
+    case "http":
+      return `Provider error${failure.status ? ` (HTTP ${failure.status})` : ""}`
+    case "schema":
+      return "Unexpected response from the provider"
+  }
+}
+
+/**
+ * Returns a description suffix when the provider has encountered an error,
+ * or `undefined` to leave the default description unchanged. Prefers the
+ * typed failure reason when the server reports one; falls back to a generic
+ * message for older servers that only send provider IDs.
+ */
+export function failedDescription(providerID: string, failed: string[], failures: ProviderFailure[] = []): string | undefined {
   if (!failed.includes(providerID)) return undefined
-  return "(connection error — click to reconnect)"
+  const failure = failures.find((item) => item.providerID === providerID)
+  return failure ? `(${failureMessage(failure)})` : "(connection error — click to reconnect)"
 }
 
 // ---------------------------------------------------------------------------

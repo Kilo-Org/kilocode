@@ -36,6 +36,23 @@ export function resolveKiloAiGatewayBase(env: Readonly<Record<string, string | u
 /** Base URL for AI gateway traffic */
 export const KILO_AI_GATEWAY_BASE = resolveKiloAiGatewayBase()
 
+/** Environment variable for the public auto-routing worker URL */
+export const ENV_KILO_AUTO_ROUTING_URL = "KILO_AUTO_ROUTING_URL"
+
+/** Default public auto-routing worker URL */
+export const DEFAULT_KILO_AUTO_ROUTING_URL = "https://auto-routing.kiloapps.io"
+
+/** Base URL for the public auto-routing worker - can be overridden by KILO_AUTO_ROUTING_URL env var */
+export const KILO_AUTO_ROUTING_BASE = resolveKiloAutoRoutingBase()
+
+/**
+ * Resolve the public auto-routing worker base URL. The trailing slash is
+ * trimmed so callers can join paths with a leading slash.
+ */
+export function resolveKiloAutoRoutingBase(env: Readonly<Record<string, string | undefined>> = process.env) {
+  return (env[ENV_KILO_AUTO_ROUTING_URL] || DEFAULT_KILO_AUTO_ROUTING_URL).replace(/\/+$/, "")
+}
+
 /** Environment variable for custom Event Service URL */
 export const KILO_EVENT_SERVICE_URL_ENV = "EVENT_SERVICE_URL"
 

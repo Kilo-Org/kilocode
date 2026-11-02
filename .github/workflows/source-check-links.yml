@@ -18,7 +18,11 @@ jobs:
     steps:
       - uses: actions/checkout@v6 # kilocode_change
 
-      - uses: oven-sh/setup-bun@v2
+      # kilocode_change start
+      - uses: ./.github/actions/setup-bun
+        with:
+          install: false
+      # kilocode_change end
 
       - name: Check source-links.md is up to date
         run: bun run script/extract-source-links.ts --check

@@ -13,14 +13,19 @@ internal class ActiveListMenu<T : Any>(
     val group: ActionGroup,
     private val element: (ActiveListItem) -> T?,
     val place: String = ActionPlaces.POPUP,
+    private val alternate: ActiveListMenu<*>? = null,
 ) {
-    fun available(item: ActiveListItem): Boolean = element(item) != null
+    fun available(item: ActiveListItem): Boolean = element(item) != null || alternate?.available(item) == true
 
     fun context(anchor: JComponent, item: ActiveListItem): DataContext {
         val data = element(item)
+        if (data == null && alternate?.available(item) == true) {
+            return SimpleDataContext.builder().setParent(alternate.context(anchor, item)).addNull(key).build()
+        }
         val builder = SimpleDataContext.builder()
             .setParent(DataManager.getInstance().getDataContext(anchor))
         if (data != null) builder.add(key, data)
+        alternate?.key?.let { builder.addNull(it) }
         return builder.build()
     }
 }

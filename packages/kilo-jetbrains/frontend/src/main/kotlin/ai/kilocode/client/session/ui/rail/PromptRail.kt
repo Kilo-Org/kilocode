@@ -73,7 +73,7 @@ internal class PromptRail : JComponent() {
         addMouseMotionListener(object : MouseMotionAdapter() {
             override fun mouseMoved(e: MouseEvent) {
                 if (e.modifiersEx and BUTTON_MASK != 0) return
-                setHover(indexAt(e.y))
+                setHover(hoverAt(e.y))
             }
 
             // Mid-drag the bar owns the gesture, so keep handing it the movement.
@@ -194,6 +194,13 @@ internal class PromptRail : JComponent() {
         repaint()
     }
 
+    /** Hover covers each tick's full step, including the gaps reserved for scrollbar presses. */
+    private fun hoverAt(y: Int): Int {
+        val geo = geometry() ?: return -1
+        if (y < geo.top || y >= geo.top + geo.step * entries.size) return -1
+        return (y - geo.top) / geo.step
+    }
+
     /**
      * Tick whose own rows cover [y], or -1 for the gap between two ticks.
      *
@@ -203,9 +210,8 @@ internal class PromptRail : JComponent() {
      */
     private fun indexAt(y: Int): Int {
         val geo = geometry() ?: return -1
-        if (entries.isEmpty()) return -1
-        val idx = (y - geo.top) / geo.step
-        if (idx !in entries.indices) return -1
+        val idx = hoverAt(y)
+        if (idx < 0) return -1
         val center = geo.top + idx * geo.step + geo.step / 2
         val grab = max(JBUI.scale(SessionUiStyle.PromptRail.TICK_THICKNESS), geo.step / 2 - JBUI.scale(2))
         if (abs(y - center) > grab) return -1

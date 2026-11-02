@@ -53,6 +53,7 @@ export const TOOL_LABEL_KEYS: Record<string, string> = {
   webfetch: "ui.permission.toolLabel.webFetch",
   websearch: "ui.permission.toolLabel.webSearch",
   codesearch: "ui.permission.toolLabel.codeSearch",
+  browser_open: "ui.permission.toolLabel.browserOpen",
   todoread: "ui.permission.toolLabel.todoRead",
   todowrite: "ui.permission.toolLabel.todoWrite",
   task: "ui.permission.toolLabel.task",
@@ -76,7 +77,15 @@ export function describeRule(
   if (tool === "doom_loop") {
     return t("ui.permission.doomLoop.rule", { tool: resolveLabel(rule, t) })
   }
-  return rule === "*" ? resolveLabel(tool, t) : `${resolveLabel(tool, t)} ${rule}`
+  const label = resolveLabel(tool, t)
+  return rule === "*" ? label : `${label} ${displayPattern(tool, rule)}`
+}
+
+// Browser navigation patterns carry a "navigate:" prefix so the rule matches the
+// origin. Hide the prefix in the prompt; the saved rule keeps it.
+function displayPattern(tool: string, rule: string) {
+  if (tool !== "browser_open") return rule
+  return rule.startsWith("navigate:") ? rule.slice("navigate:".length) : rule
 }
 
 /**
@@ -103,6 +112,6 @@ export function describePatterns(
   }
 
   const label = resolveLabel(tool, t)
-  if (filtered.length === 1) return { kind: "single", text: `${label} ${filtered[0]}` }
-  return { kind: "multi", title: `${label}:`, paths: filtered }
+  if (filtered.length === 1) return { kind: "single", text: `${label} ${displayPattern(tool, filtered[0])}` }
+  return { kind: "multi", title: `${label}:`, paths: filtered.map((pattern) => displayPattern(tool, pattern)) }
 }

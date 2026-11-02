@@ -76,6 +76,7 @@ import { readTerminalFont, watchTerminalFont } from "./terminal-font"
 import { DestinationState, handleDestination, watchTerminalDestination } from "./terminal-destination"
 import { buildKeybindingMap } from "./format-keybinding"
 import { resolveVersionModels, buildInitialMessages, type CreatedVersion } from "./multi-version"
+import { sessionCreateBody } from "./session-create"
 import { ensureSandbox } from "./sandbox-bootstrap"
 import { Semaphore } from "./semaphore"
 import { PLATFORM } from "./constants"
@@ -986,6 +987,7 @@ export class AgentManagerProvider implements Disposable {
     source?: { sandboxInheritanceToken?: string },
     boot?: { at: number; metadata: () => Promise<Record<string, unknown>> },
     timing?: Timing,
+    agent?: string,
   ): Promise<Session | null> {
     let client: KiloClient
     try {
@@ -1025,12 +1027,12 @@ export class AgentManagerProvider implements Disposable {
         worktreePath,
         () =>
           client.session.create(
-            {
+            sessionCreateBody({
               directory: worktreePath,
-              platform: PLATFORM,
               metadata,
-              ...(source?.sandboxInheritanceToken ? { sandboxInheritanceToken: source.sandboxInheritanceToken } : {}),
-            },
+              agent,
+              sandboxInheritanceToken: source?.sandboxInheritanceToken,
+            }),
             { throwOnError: true },
           ),
         (...args) => this.log(...args),
@@ -1143,8 +1145,7 @@ export class AgentManagerProvider implements Disposable {
         },
         hasScript: () => this.getSetupScriptService()?.hasScript() ?? false,
         setup: (dir, branch, id, early) => this.runSetupScriptForWorktree(dir, branch, id, early),
-        createSessionInWorktree: (dir, branch, id, source, boot, timing) =>
-          this.createSessionInWorktree(dir, branch, id, source, boot, timing),
+        createSessionInWorktree: this.createSessionInWorktree.bind(this),
         sessionMetadata: (client, dir) => sandboxSessionMetadata(this.connectionService.sandboxPreference, client, dir),
         registerWorktreeSession: (sid, dir) => this.registerWorktreeSession(sid, dir),
         notifyReady: (sid, result, wid) => this.notifyWorktreeReady(sid, result, wid),

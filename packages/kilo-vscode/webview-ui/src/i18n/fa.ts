@@ -288,6 +288,14 @@ export const dict = {
   "error.providerAuth.chatgpt.description":
     "دوباره با ChatGPT وارد شوید، سپس پیام خود را مجدداً ارسال کنید تا از مدل‌های Codex استفاده کنید.",
 
+  "provider.failure.unauthorized": "اعتبارنامه رد شد (HTTP {{status}}). دوباره وارد شوید.",
+  "provider.failure.unauthorizedNoStatus": "اعتبارنامه رد شد. دوباره وارد شوید.",
+  "provider.failure.unauthenticated": "وارد نشده‌اید.",
+  "provider.failure.network": "دسترسی به ارائه‌دهنده ممکن نشد. اتصال خود را بررسی کنید.",
+  "provider.failure.http": "خطای ارائه‌دهنده (HTTP {{status}}).",
+  "provider.failure.httpNoStatus": "خطای ارائه‌دهنده.",
+  "provider.failure.schema": "پاسخ غیرمنتظره از ارائه‌دهنده.",
+
   "notification.permission.title": "مجوز لازم است",
   "notification.permission.titleSubagent": "مجوز مورد نیاز است (زیرعامل)",
   "notification.permission.titleSkillShell": "دستورهای شل از مهارت «{{skill}}» اجرا شود؟",
@@ -321,6 +329,7 @@ export const dict = {
   "ui.permission.toolLabel.todoRead": "خواندن Todo",
   "ui.permission.toolLabel.todoWrite": "نوشتن Todo",
   "ui.permission.toolLabel.codeSearch": "جستجوی کد",
+  "ui.permission.toolLabel.browserOpen": "مرورگر یکپارچه",
   "ui.permission.copyCommand": "کپی",
   "ui.approval.auto": "تأیید خودکار",
   "ui.approval.manual": "تأیید شده توسط شما",
@@ -517,6 +526,7 @@ export const dict = {
   "settings.permissions.tool.webfetch.description": "دریافت محتوا از یک URL",
   "settings.permissions.tool.websearch.description": "جستجو در وب",
   "settings.permissions.tool.codesearch.description": "جستجوی کد در وب",
+  "settings.permissions.tool.browser_open.description": "باز کردن صفحه در مرورگر یکپارچه",
   "settings.permissions.tool.external_directory.description": "دسترسی به فایل‌های خارج از پوشه پروژه",
   "settings.permissions.tool.doom_loop.description": "تشخیص فراخوانی‌های تکراری ابزار با ورودی یکسان",
 
@@ -711,6 +721,10 @@ export const dict = {
 
   "session.messages.welcome":
     "Kilo Code یک دستیار هوش مصنوعی برای کدنویسی است. از آن بخواهید ویژگی‌ها بسازد، باگ‌ها را رفع کند یا کدبیس شما را توضیح دهد.",
+  "session.workspaceScope.description": "گفتگوی Kilo فقط از «{{folder}}»، اولین پوشه در این فضای کاری، استفاده می‌کند.",
+  "session.workspaceScope.alternatives":
+    "برای کار با پوشه‌ای دیگر، آن را در پنجره‌ای جداگانه باز کنید یا به‌عنوان پروژه به Agent Manager اضافه کنید.",
+  "session.workspaceScope.dismiss": "بستن راهنمای محدودهٔ فضای کاری",
   "session.messages.scrollToBottom": "رفتن به پایین",
   "session.messages.initializing": "در حال راه‌اندازی...",
   "session.messages.taskStarting": "در حال شروع...",
@@ -1153,6 +1167,8 @@ export const dict = {
     "مدیریت فهرست وظایف. اجازه خواندن و به‌روزرسانی فهرست وظایف داخلی را می‌دهد.",
   "settings.autoApprove.tool.webfetch": "دریافت یک URL. امکان بازیابی محتوا از یک URL مشخص را فراهم می‌کند.",
   "settings.autoApprove.tool.websearch": "جستجو در وب. امکان انجام جستجوهای خارجی در وب را فراهم می‌کند.",
+  "settings.autoApprove.tool.browser_open":
+    "باز کردن صفحه‌ها در مرورگر یکپارچه. این پیش‌نمایش درون‌برنامه‌ای است، نه خودکارسازی مرورگر Playwright.",
   "settings.autoApprove.tool.doom_loop":
     "جلوگیری از اقدامات تکراری یکسان. زمانی فعال می‌شود که همان فراخوانی ابزار با ورودی یکسان تکرار شود.",
 

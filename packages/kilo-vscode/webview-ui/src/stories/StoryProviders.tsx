@@ -119,6 +119,7 @@ const MockProviderProvider: ParentComponent<{ kiloAuth?: boolean; training?: boo
     authStates: () => (props.kiloAuth ? { kilo: "oauth" } : {}) as Record<string, ProviderAuthState>,
     isModelValid: () => true,
     kiloUnavailable: () => false,
+    failures: () => [],
   }
   return <ProviderContext.Provider value={value}>{props.children}</ProviderContext.Provider>
 }

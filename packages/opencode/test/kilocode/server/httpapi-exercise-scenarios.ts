@@ -469,6 +469,163 @@ export const kiloScenarios: Scenario[] = [
     .post("/kilo/cloud/session/import", "kilo.cloud.session.import")
     .at((ctx) => ({ path: "/kilo/cloud/session/import", headers: ctx.headers(), body: { sessionId: "missing" } }))
     .status(401),
+  http.protected
+    .get("/cloud-agent/event", "cloudAgent.systemEvents")
+    .at((ctx) => ({ path: "/cloud-agent/event", headers: ctx.headers() }))
+    .status(400, (_ctx, result) =>
+      Effect.sync(() => {
+        check(result.text.includes("hosted attachment"), "system events without a hosted attachment should be rejected")
+      }),
+    ),
+  http.protected.get("/kilocode/session-host/provider", "sessionHost.providers").json(200, (body) => {
+    object(body)
+    array(body.providers)
+  }),
+  http.protected
+    .get("/kilocode/session-host/session", "sessionHost.list")
+    .at((ctx) => ({ path: "/kilocode/session-host/session", headers: ctx.headers() }))
+    .json(200, (body) => {
+      object(body)
+      array(body.items)
+    }),
+  http.protected
+    .post("/kilocode/session-host/session", "sessionHost.start")
+    .at((ctx) => ({
+      path: "/kilocode/session-host/session",
+      headers: ctx.headers(),
+      body: {
+        repository: { type: "github", repo: "owner/repo" },
+        prompt: "hello",
+        agent: { mode: "build", model: "test/fake" },
+      },
+    }))
+    .status(401),
+  http.protected
+    .get("/kilocode/session-host/session/{providerID}/{sessionID}", "sessionHost.get")
+    .at((ctx) => ({
+      path: route("/kilocode/session-host/session/{providerID}/{sessionID}", {
+        providerID: "kilo-cloud",
+        sessionID: "ses_00000000000000000000000001",
+      }),
+      headers: ctx.headers(),
+    }))
+    .status(401),
+  http.protected
+    .get("/kilocode/session-host/session/{providerID}/{sessionID}/message", "sessionHost.transcript")
+    .at((ctx) => ({
+      path: route("/kilocode/session-host/session/{providerID}/{sessionID}/message", {
+        providerID: "kilo-cloud",
+        sessionID: "ses_00000000000000000000000001",
+      }),
+      headers: ctx.headers(),
+    }))
+    .status(401),
+  http.protected
+    .post("/kilocode/session-host/session/{providerID}/{sessionID}/attach", "sessionHost.attach")
+    .at((ctx) => ({
+      path: route("/kilocode/session-host/session/{providerID}/{sessionID}/attach", {
+        providerID: "kilo-cloud",
+        sessionID: "ses_00000000000000000000000001",
+      }),
+      headers: ctx.headers(),
+    }))
+    .status(401),
+  http.protected
+    .delete("/kilocode/session-host/attachment/{attachmentID}", "sessionHost.detach")
+    .at((ctx) => ({
+      path: route("/kilocode/session-host/attachment/{attachmentID}", {
+        attachmentID: "wrk_att_0000000000000000000000000Z",
+      }),
+      headers: ctx.headers(),
+    }))
+    .status(404),
+  http.protected
+    .get("/kilocode/session-host/workspace", "sessionHost.listWorkspaces")
+    .probe({ path: "/kilocode/session-host/workspace?limit=0" })
+    .at((ctx) => ({ path: "/kilocode/session-host/workspace", headers: ctx.headers() }))
+    .status(401),
+  http.protected
+    .get("/kilocode/session-host/workspace/profiles", "sessionHost.listWorkspaceProfiles")
+    .probe({ path: "/path" })
+    .status(401),
+  http.protected
+    .post("/kilocode/session-host/workspace", "sessionHost.createWorkspace")
+    .at((ctx) => ({
+      path: "/kilocode/session-host/workspace",
+      headers: ctx.headers(),
+      body: {
+        repository: { type: "github", repo: "owner/repo" },
+        profile: { id: "33333333-3333-4333-8333-333333333333" },
+        prompt: "hello",
+        agent: { mode: "build", model: "test/fake" },
+        operationKey: "11111111-1111-4111-8111-111111111111",
+        messageID: "msg_00000000000000000000000002",
+      },
+    }))
+    .status(401),
+  http.protected
+    .get("/kilocode/session-host/workspace/{providerID}/{workspaceID}", "sessionHost.getWorkspace")
+    .at((ctx) => ({
+      path: route("/kilocode/session-host/workspace/{providerID}/{workspaceID}", {
+        providerID: "kilo-cloud",
+        workspaceID: "worktree_00000000-0000-4000-8000-000000000001",
+      }),
+      headers: ctx.headers(),
+    }))
+    .status(401),
+  http.protected
+    .delete("/kilocode/session-host/workspace/{providerID}/{workspaceID}", "sessionHost.deleteWorkspace")
+    .at((ctx) => ({
+      path: route("/kilocode/session-host/workspace/{providerID}/{workspaceID}", {
+        providerID: "kilo-cloud",
+        workspaceID: "worktree_00000000-0000-4000-8000-000000000001",
+      }),
+      headers: ctx.headers(),
+    }))
+    .status(401),
+  http.protected
+    .get("/kilocode/session-host/workspace/{providerID}/{workspaceID}/status", "sessionHost.getWorkspaceStatus")
+    .at((ctx) => ({
+      path: route("/kilocode/session-host/workspace/{providerID}/{workspaceID}/status", {
+        providerID: "kilo-cloud",
+        workspaceID: "httpapi-missing",
+      }),
+      headers: ctx.headers(),
+    }))
+    .status(401),
+  http.protected
+    .get("/kilocode/session-host/workspace/{providerID}/{workspaceID}/session", "sessionHost.listWorkspaceSessions")
+    .probe({
+      path:
+        route("/kilocode/session-host/workspace/{providerID}/{workspaceID}/session", {
+          providerID: "kilo-cloud",
+          workspaceID: "httpapi-missing",
+        }) + "?limit=0",
+    })
+    .at((ctx) => ({
+      path: route("/kilocode/session-host/workspace/{providerID}/{workspaceID}/session", {
+        providerID: "kilo-cloud",
+        workspaceID: "httpapi-missing",
+      }),
+      headers: ctx.headers(),
+    }))
+    .status(401),
+  http.protected
+    .post("/kilocode/session-host/workspace/{providerID}/{workspaceID}/session", "sessionHost.startWorkspaceSession")
+    .at((ctx) => ({
+      path: route("/kilocode/session-host/workspace/{providerID}/{workspaceID}/session", {
+        providerID: "kilo-cloud",
+        workspaceID: "worktree_00000000-0000-4000-8000-000000000001",
+      }),
+      headers: ctx.headers(),
+      body: {
+        prompt: "hello",
+        agent: { mode: "build", model: "test/fake" },
+        operationKey: "22222222-2222-4222-8222-222222222222",
+        messageID: "msg_00000000000000000000000003",
+      },
+    }))
+    .status(401),
   http.protected.get("/network", "network.list").json(200, array),
   http.protected
     .post("/network/{requestID}/reply", "network.reply")
@@ -711,6 +868,34 @@ export const kiloScenarios: Scenario[] = [
       object(body.totals)
       check(body.models.length === 0, "a new session should have no model usage")
     }),
+  http.protected.get("/kilocode/agent-usage/summary", "agentUsage.summary").json(200, (body) => {
+    array(body)
+    for (const item of body) {
+      object(item)
+      check(typeof item.agent === "string", "summary row should include an agent")
+      check(typeof item.runs === "number", "summary row should include a run count")
+      check(typeof item.cost === "number", "summary row should include direct cost")
+      check(typeof item.activeMs === "number", "summary row should include active time")
+    }
+  }),
+  http.protected
+    .get("/kilocode/agent-usage/runs", "agentUsage.runs")
+    .at((ctx) => ({ path: "/kilocode/agent-usage/runs?limit=1", headers: ctx.headers() }))
+    .jsonEffect(200, (body, ctx) =>
+      Effect.gen(function* () {
+        object(body)
+        array(body.items)
+        check(
+          body.next === undefined || typeof body.next === "string",
+          "runs page should return an optional opaque next cursor",
+        )
+        const invalid = yield* request("GET", {
+          path: "/kilocode/agent-usage/runs?cursor=not-a-cursor",
+          headers: ctx.headers(),
+        })
+        check(invalid.status === 400, "a malformed cursor should be rejected with 400")
+      }),
+    ),
   http.protected
     .get("/kilocode/background-jobs", "kilocode.backgroundJobs")
     .at((ctx) => ({

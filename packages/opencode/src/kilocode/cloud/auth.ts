@@ -16,7 +16,7 @@ export namespace CloudAuth {
   }
 
   export class ResolutionError extends Schema.TaggedErrorClass<ResolutionError>()("CloudAuthResolutionError", {
-    kind: Schema.Literals(["missing", "organization"]),
+    kind: Schema.Literals(["missing", "organization", "unavailable"]),
     message: Schema.String,
   }) {}
 
@@ -24,7 +24,15 @@ export namespace CloudAuth {
 
   const credentials = Effect.fn("CloudAuth.credentials")(function* (env: Environment) {
     const service = yield* Auth.Service
-    const info = yield* service.get("kilo")
+    const info = yield* service.get("kilo").pipe(
+      Effect.mapError(
+        () =>
+          new ResolutionError({
+            kind: "unavailable",
+            message: "Kilo credentials could not be read",
+          }),
+      ),
+    )
     const stored = info?.type === "api" ? info.key.trim() : info?.type === "oauth" ? info.access.trim() : undefined
     const fallback = env.KILO_API_KEY?.trim()
     const value = stored || fallback

@@ -1,6 +1,8 @@
 package ai.kilocode.client.agentManager.worktree
 
 import ai.kilocode.client.util.edtWait
+import ai.kilocode.client.agentManager.WorkspaceSessionListToggle
+import ai.kilocode.client.agentManager.WorkspaceSessionRow
 import ai.kilocode.client.app.KiloAppService
 import ai.kilocode.client.app.KiloSessionService
 import ai.kilocode.client.app.KiloWorkspaceService
@@ -561,6 +563,7 @@ class WorktreeSessionEditorPanelTest : BasePlatformTestCase() {
         val row = row("ses_1")
 
         assertEquals("Session ses_1", row.title)
+        assertTrue(row is WorkspaceSessionRow)
         assertNull(row.icon)
         assertNull(row.description)
         assertEquals(KiloBundle.message("session.part.tool.running"), row.badges.single().text)
@@ -1175,8 +1178,8 @@ class WorktreeSessionEditorPanelTest : BasePlatformTestCase() {
         return out
     }
 
-    private fun toggle(root: java.awt.Component = panel): WorktreeSessionListToggle =
-        components(root).filterIsInstance<WorktreeSessionListToggle>().single()
+    private fun toggle(root: java.awt.Component = panel): WorkspaceSessionListToggle =
+        components(root).filterIsInstance<WorkspaceSessionListToggle>().single()
 
     /** The row holding the toggle and its separator, left of the toolbar. */
     private fun row(): JPanel = edt { toggle().parent.parent as JPanel }

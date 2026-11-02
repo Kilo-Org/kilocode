@@ -165,6 +165,11 @@
                 bundle="messages.KiloBundle"
                 key="settings.agentBehavior.rules.displayName"/>
 
+        <registryKey key="kilo.cloudWorkspaces.enabled"
+                     description="Show repository-scoped Cloud workspaces and hosted sessions in Agent Manager."
+                     defaultValue="true"
+                     restartRequired="false"
+                     overrides="false"/>
         <registryKey key="kilo.session.condense"
                      description="Enable event condensing in the session update queue (merges redundant snapshots before model delivery)."
                      defaultValue="true"
@@ -209,6 +214,9 @@
         <action id="Kilo.ReloadCoreSettings"
                 class="ai.kilocode.client.actions.ReloadCoreSettingsAction"/>
 
+        <action id="Kilo.RefreshCloud"
+                class="ai.kilocode.client.actions.RefreshCloudAction"/>
+
         <action id="Kilo.Reinstall"
                 class="ai.kilocode.client.actions.ReinstallKiloAction"/>
 
@@ -239,6 +247,7 @@
 
         <group id="Kilo.CliGroup" text="Core" popup="true">
             <reference ref="Kilo.ReloadCoreSettings"/>
+            <reference ref="Kilo.RefreshCloud"/>
             <separator/>
             <reference ref="Kilo.Restart"/>
             <reference ref="Kilo.Reinstall"/>
@@ -425,6 +434,9 @@
         <action id="Kilo.Worktree.RunSetupScript"
                 class="ai.kilocode.client.actions.RunWorktreeSetupScriptAction"/>
 
+        <action id="Kilo.HostedWorkspace.Refresh"
+                class="ai.kilocode.client.actions.RefreshHostedWorkspaceAction"/>
+
         <action id="Kilo.WorktreeSession.Rename"
                 class="ai.kilocode.client.actions.RenameWorktreeSessionAction"/>
 
@@ -438,6 +450,7 @@
                 class="ai.kilocode.client.actions.ForkWorktreeSessionAction"/>
 
         <group id="Kilo.Worktree.RowMenu">
+            <reference ref="Kilo.HostedWorkspace.Refresh"/>
             <reference ref="Kilo.Worktree.Rename"/>
             <separator/>
             <reference ref="Kilo.Worktree.OpenPr"/>
