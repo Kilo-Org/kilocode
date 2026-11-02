@@ -18,6 +18,7 @@ import { AppRuntime } from "@/effect/app-runtime"
 import { Auth } from "@/auth"
 import { EventV2Bridge } from "@/event-v2-bridge"
 import { SessionHost } from "@/kilocode/session-hosting"
+import { CloudRepository } from "@/kilocode/cloud/repository"
 import type { InstanceContext } from "@/project/instance-context"
 import { context as instanceContext } from "@/project/instance-context"
 import { InstanceStore } from "@/project/instance-store"
@@ -26,7 +27,7 @@ import { Session } from "@/session/session"
 import { Storage } from "@/storage/storage"
 import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
 import { Database } from "@opencode-ai/core/database/database"
-import { afterAll, expect } from "bun:test"
+import { afterAll, expect, spyOn } from "bun:test"
 import { $ } from "bun"
 import { Effect, Layer } from "effect"
 import { HttpClient, HttpClientRequest, HttpRouter } from "effect/unstable/http"
@@ -153,7 +154,14 @@ function layer(url: string) {
 
 const it = testEffect(layer(server.url.origin))
 
-/** A clean pushed worktree whose remote parses as the supported GitHub shorthand. */
+// Substitute only the fixture's repository identity. Git checks, the route,
+// and ingest remain real; remote URL validation has separate Git tests.
+const remote = CloudRepository.remote
+const parser = spyOn(CloudRepository, "remote").mockImplementation((input) =>
+  remote({ ...input, repo: input.repo === "acme/widget" ? "https://github.com/acme/widget.git" : input.repo }),
+)
+
+/** A clean pushed worktree backed by a local bare repository. */
 async function worktree() {
   const work = await tmpdir({ git: true })
   const branch = (await $`git rev-parse --abbrev-ref HEAD`.cwd(work.path).text()).trim()
@@ -178,7 +186,10 @@ async function context(directory: string) {
 async function seed(ctx: InstanceContext) {
   const directory = ctx.directory
   const session = await AppRuntime.runPromise(
-    onInstance(ctx, Session.Service.use((svc) => svc.create({ agent: "code" }))),
+    onInstance(
+      ctx,
+      Session.Service.use((svc) => svc.create({ agent: "code" })),
+    ),
   )
   const messages: string[] = []
   for (let index = 0; index < 2; index++) {
@@ -289,7 +300,9 @@ it.live(
         expect(ingest).toBeDefined()
         expect(ingest!.data.filter((item) => item.type === "message")).toHaveLength(2)
         expect(ingest!.data.filter((item) => item.type === "part").length).toBeGreaterThanOrEqual(2)
-        expect((ingest!.data.find((item) => item.type === "session_diff") as unknown as { data: unknown[] }).data.length).toBe(1)
+        expect(
+          (ingest!.data.find((item) => item.type === "session_diff") as unknown as { data: unknown[] }).data.length,
+        ).toBe(1)
         expect(relay.order).toEqual([`ingest:${seeded.session}`, "continue"])
         expect(relay.body).toMatchObject({
           sessions: [{ sourceKiloSessionId: seeded.session }],
@@ -344,5 +357,6 @@ it.live(
 )
 
 afterAll(() => {
+  parser.mockRestore()
   void server.stop(true)
 })
