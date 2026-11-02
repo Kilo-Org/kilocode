@@ -18,7 +18,7 @@ export function settings(input: {
   onReset: () => void
 }) {
   const state: { panel?: WebviewPanel; post?: (message: ToWebview) => void; target: SettingsNavigation } = {
-    target: {},
+    target: { tab: input.context.workspaceState.get<string>(TAB) },
   }
   const open = (args: unknown[] = []) => {
     const requested = parseSettingsTarget(args)

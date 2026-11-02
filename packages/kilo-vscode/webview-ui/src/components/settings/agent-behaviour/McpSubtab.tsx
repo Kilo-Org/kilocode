@@ -1,7 +1,7 @@
 // The MCP Servers subtab. It lists the servers from `mcp.servers` with their live status (from the MCP client),
 // and each row exposes: expandable details, an enable switch, sign-in for OAuth remotes, reset sign-in, remove,
 // and an edit view. The row writes config through `useSettingsConfig`, in the scope that defines the server.
-import { Component, For, Show, createEffect, createMemo, createSignal } from "solid-js"
+import { Component, For, Show, createEffect, createMemo, createSignal, onCleanup } from "solid-js"
 import { Card } from "@kilocode/kilo-ui/card"
 import { Button } from "@kilocode/kilo-ui/button"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
@@ -24,7 +24,7 @@ const STATUS_KEYS: Record<string, string> = {
   disabled: "mcp.status.disabled",
 }
 
-const McpSubtab: Component<{ focus?: string }> = (props) => {
+const McpSubtab: Component<{ focus?: string; navigation?: number }> = (props) => {
   const language = useLanguage()
   const config = useSettingsConfig()
   const mcp = createMcp()
@@ -77,12 +77,19 @@ const McpSubtab: Component<{ focus?: string }> = (props) => {
 
   // A deep link from chat expands the named server and scrolls it into view. The config may still be loading when
   // the target arrives, so the effect also tracks the server list and retries the scroll until the row is mounted.
+  // The navigation counter is read so a repeated link to the same server expands and scrolls it again.
   createEffect(() => {
+    if (props.navigation === undefined) return
     const name = props.focus
     if (!name) return
     if (!entries().some(([entry]) => entry === name)) return
     setExpanded((prev) => (prev[name] ? prev : { ...prev, [name]: true }))
+    let cancelled = false
+    onCleanup(() => {
+      cancelled = true
+    })
     const reveal = (tries: number) => {
+      if (cancelled) return
       const row = [...document.querySelectorAll<HTMLElement>("[data-mcp-server]")].find(
         (item) => item.dataset.mcpServer === name,
       )
