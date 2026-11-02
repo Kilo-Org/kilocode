@@ -114,6 +114,17 @@ describe("createConnection", () => {
     expect((error as AutocompleteRequestError).message).toBe("FIM request failed: 429 rate limited")
   })
 
+  it("keeps a provider failure message that already names the request", async () => {
+    fimReply = {
+      status: 400,
+      body: { _tag: "RpcError", type: "request", message: "FIM request failed: 401 invalid key", data: { status: 401 } },
+    }
+    const error = await create().fim(request).catch((value: unknown) => value)
+
+    expect((error as AutocompleteRequestError).status).toBe(401)
+    expect((error as AutocompleteRequestError).message).toBe("FIM request failed: 401 invalid key")
+  })
+
   it("maps an `unauthorized` RPC error to status 401", async () => {
     fimReply = { status: 400, body: rpcError("unauthorized", "no creds") }
     const connection = create()

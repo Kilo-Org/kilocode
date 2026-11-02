@@ -155,6 +155,8 @@ function failure(kind: "FIM" | "Edit", error: unknown, signal?: AbortSignal) {
         ? 401
         : null
   const detail = String(error.message)
+  // A provider failure already reads `<kind> request failed: <status> <body>`; keep it as it is.
+  if (detail.startsWith(`${kind} request failed`)) return new AutocompleteRequestError(detail, status)
   return new AutocompleteRequestError(
     status === null ? `${kind} request failed: ${detail}` : `${kind} request failed: ${status} ${detail}`,
     status,
