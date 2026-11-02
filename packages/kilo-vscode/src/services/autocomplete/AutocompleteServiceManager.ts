@@ -118,7 +118,13 @@ export class AutocompleteServiceManager {
   }
 
   public async load() {
+    const previous = this.settings
     this.settings = readSettings()
+    // Another provider or model uses other credentials, so an earlier authentication or credit failure no longer
+    // applies.
+    if (previous && (previous.provider !== this.settings.provider || previous.model !== this.settings.model)) {
+      this.inlineCompletionProvider.resetBackoff()
+    }
 
     this.inlineCompletionProvider.setModel(notebookModel(this.settings.provider, this.settings.model).id)
 

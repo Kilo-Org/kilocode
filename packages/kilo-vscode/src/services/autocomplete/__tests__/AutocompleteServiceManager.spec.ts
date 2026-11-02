@@ -207,6 +207,23 @@ describe("AutocompleteServiceManager (less mocked logic)", () => {
     })
   })
 
+  describe("load()", () => {
+    it("resets the error backoff when the provider or model changes", async () => {
+      const manager = await createManager()
+      let resets = 0
+      manager.inlineCompletionProvider.resetBackoff = () => {
+        resets++
+      }
+      await manager.load()
+      expect(resets).toBe(0)
+
+      state.set("provider", "mistral")
+      state.set("model", "codestral-2508")
+      await manager.load()
+      expect(resets).toBe(1)
+    })
+  })
+
   describe("updateGlobalContext()", () => {
     it("sets the smart keybinding context key from the settings", async () => {
       state.set("enableAutoTrigger", false)
