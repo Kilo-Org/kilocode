@@ -46,6 +46,8 @@
 @import "../components/text-field.css";
 @import "../components/toast.css";
 @import "../components/tool-motion.css";
+@import "../components/tools/image.css";
+@import "../components/tools/plan.css";
 @import "../components/tooltip.css";
 
 /* VS Code variable bridge */

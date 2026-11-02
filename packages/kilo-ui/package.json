@@ -69,6 +69,8 @@
     "./tool-motion": "./src/components/tool-motion.ts",
     "./tool-child-session": "./src/components/tool-child-session.tsx",
     "./tool-approval": "./src/components/tool-approval.tsx",
+    "./tools/image": "./src/components/tools/image.tsx",
+    "./tools/plan": "./src/components/tools/plan.tsx",
     "./line-comment-annotations": "./src/components/line-comment-annotations.tsx",
     "./animated-number": "./src/components/animated-number.tsx",
     "./text-reveal": "./src/components/text-reveal.tsx",

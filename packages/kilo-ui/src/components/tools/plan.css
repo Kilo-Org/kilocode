@@ -1,0 +1,75 @@
+[data-component="plan-tool"] {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 12px;
+  border: 1px solid var(--border-weak-base);
+  border-radius: var(--radius-sm);
+  background: var(--surface-tool-output-base);
+}
+
+[data-slot="plan-tool-header"] {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  font-family: var(--font-family-sans);
+  font-size: var(--font-size-base);
+  line-height: var(--line-height-normal);
+}
+
+[data-slot="plan-tool-label"] {
+  color: var(--text-base);
+  font-weight: var(--font-weight-medium);
+}
+
+[data-slot="plan-tool-badge"] {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 5px;
+  border: 1px solid var(--border-interactive-base);
+  border-radius: 999px;
+  color: var(--text-interactive-base);
+  font-size: var(--font-size-small);
+  font-weight: var(--font-weight-medium);
+  line-height: var(--line-height-normal);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+[data-slot="plan-tool-open"],
+[data-slot="plan-tool-path"] {
+  font-family: var(--font-family-mono);
+  font-size: var(--font-size-small);
+  line-height: var(--line-height-normal);
+  color: var(--text-interactive-base);
+  word-break: break-all;
+}
+
+[data-slot="plan-tool-open"] {
+  align-self: flex-start;
+  padding: 2px 6px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  text-decoration: none;
+  text-underline-offset: 2px;
+
+  &:hover {
+    border-color: var(--border-interactive-base);
+    background: var(--surface-interactive-weak);
+    text-decoration: underline;
+  }
+
+  &:focus-visible {
+    outline: 1px solid var(--border-interactive-base);
+    outline-offset: 1px;
+  }
+}
+
+[data-slot="plan-tool-body"] {
+  margin-top: 2px;
+  color: var(--text-weak);
+  font-size: var(--font-size-small);
+  line-height: var(--line-height-normal);
+  white-space: pre-wrap;
+}
