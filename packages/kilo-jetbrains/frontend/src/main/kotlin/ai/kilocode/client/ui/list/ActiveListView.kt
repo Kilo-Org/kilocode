@@ -2,6 +2,7 @@ package ai.kilocode.client.ui.list
 
 import ai.kilocode.client.ui.FilledBadgeIcon
 import ai.kilocode.client.ui.UiStyle
+import ai.kilocode.client.ui.active.ActiveAnimation
 import ai.kilocode.client.ui.active.ActiveBadge
 import ai.kilocode.client.ui.active.ActiveCell
 import ai.kilocode.client.ui.active.ActiveConfig
@@ -13,11 +14,12 @@ import ai.kilocode.client.ui.active.ActiveReorder
 import ai.kilocode.client.ui.active.ActiveRowHeight
 import ai.kilocode.client.ui.active.ActiveSelection
 import ai.kilocode.client.ui.active.ActiveSurface
-import ai.kilocode.client.ui.active.activeAnimated
 import ai.kilocode.client.ui.active.activeRegions
 import ai.kilocode.client.ui.active.activeVisibleCells
 import ai.kilocode.client.ui.layout.Stack
 import ai.kilocode.client.ui.layout.StackAxis
+import ai.kilocode.client.util.UiTimerSource
+import ai.kilocode.client.util.UiTimers
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.ModalityState
 import com.intellij.openapi.ui.popup.JBPopupFactory
@@ -25,7 +27,6 @@ import com.intellij.openapi.ui.popup.JBPopup
 import com.intellij.openapi.ui.popup.JBPopupListener
 import com.intellij.openapi.ui.popup.LightweightWindowEvent
 import com.intellij.openapi.ui.popup.Balloon
-import com.intellij.ui.AnimatedIcon
 import com.intellij.ui.CollectionListModel
 import com.intellij.ui.ScrollingUtil
 import com.intellij.ui.awt.RelativePoint
@@ -69,6 +70,7 @@ internal class ActiveListView(
     private val reorder: ActiveReorder? = null,
     private val onHover: ((ActiveItem?) -> Unit)? = null,
     private val options: ActiveListOptions = ActiveListOptions(),
+    timers: UiTimerSource = UiTimers,
     private val onCell: (String, String) -> Unit,
 ) : Stack(StackAxis.VERTICAL), Scrollable {
     private val model = CollectionListModel<ActiveItem>()
@@ -139,12 +141,20 @@ internal class ActiveListView(
     private var wired = false
     internal var onSelect: (() -> Unit)? = null
 
-    // Without a delegate every animation frame repaints the whole list, and every row re-renders and re-lays out
-    // its stamp at the frame rate of whichever spinner is running. Only rows that show an animated glyph need
-    // the next frame. REFRESH_DELEGATE is an experimental platform hook, installed/cleared with the view's own
-    // attach/detach (see addNotify/removeNotify) rather than once in init, because a worktree session editor
-    // tab switch detaches and re-attaches this exact view.
-    private val refreshDelegate = Runnable { repaintAnimated() }
+    private val animation = ActiveAnimation(list, timers) { clip ->
+        val first = list.locationToIndex(clip.location)
+        val last = list.locationToIndex(Point(clip.x, clip.y + clip.height - 1))
+        buildList {
+            if (first >= 0) for (index in first..last) {
+                val item = model.getElementAt(index)
+                val bounds = list.getCellBounds(index, index)
+                if (bounds?.intersects(clip) == true) {
+                    val state = renderer.state(list, item, index, list.isSelectedIndex(index), list.hasFocus())
+                    add(ActiveAnimation.Row(item, bounds, state.actionsVisible))
+                }
+            }
+        }
+    }
 
     fun setEmptyText(text: String) {
         list.emptyText.text = text
@@ -152,7 +162,6 @@ internal class ActiveListView(
 
     init {
         if (surface == ActiveSurface.ToolWindow) isOpaque = true
-        list.putClientProperty(AnimatedIcon.ANIMATION_IN_RENDERER_ALLOWED, true)
         list.cellRenderer = renderer
         list.registerKeyboardAction(
             { open(enter()) },
@@ -243,11 +252,18 @@ internal class ActiveListView(
                 mark = list.selectedIndex
                 onSelect?.invoke()
             }
+            if (!restoring) animation.update()
         }
         list.addFocusListener(object : FocusAdapter() {
-            override fun focusGained(e: FocusEvent) = list.repaint()
+            override fun focusGained(e: FocusEvent) {
+                animation.update()
+                list.repaint()
+            }
 
-            override fun focusLost(e: FocusEvent) = list.repaint()
+            override fun focusLost(e: FocusEvent) {
+                animation.update()
+                list.repaint()
+            }
         })
         list.addComponentListener(object : ComponentAdapter() {
             override fun componentResized(e: ComponentEvent) {
@@ -260,24 +276,6 @@ internal class ActiveListView(
         ScrollingUtil.installActions(list)
         next(list)
         wired = true
-    }
-
-    // Symmetric with removeNotify below: the client property only matters while this view is actually showing
-    // (that is when the platform's own animation cycle reads it), and a tab switch detaches and re-attaches the
-    // same view, so installing it once in init would leave it cleared — and the whole-list repaint it exists to
-    // avoid back — for the rest of the view's life after the first switch.
-    override fun addNotify() {
-        super.addNotify()
-        list.putClientProperty(AnimatedIcon.REFRESH_DELEGATE, refreshDelegate)
-    }
-
-    // The delegate closes over this view's model/renderer/items. It costs nothing while the view stays attached
-    // — the platform only reads it during its own paint/animation cycle — but clearing it on detach makes the
-    // delegate's lifetime match the view's instead of depending on how long the platform's animation registry
-    // happens to retain it.
-    override fun removeNotify() {
-        super.removeNotify()
-        list.putClientProperty(AnimatedIcon.REFRESH_DELEGATE, null)
     }
 
     /**
@@ -480,6 +478,7 @@ internal class ActiveListView(
         if (value) setHovered(-1)
         if (list.isEnabled == !value) return
         list.isEnabled = !value
+        animation.update()
         list.repaint()
     }
 
@@ -531,6 +530,7 @@ internal class ActiveListView(
         } finally {
             restoring = false
         }
+        animation.update()
     }
 
     /**
@@ -590,6 +590,7 @@ internal class ActiveListView(
         // Single funnel for every hover transition — mouse move, mouse exit, and the clear that setBusy
         // and a model rebuild perform — so a consumer cannot miss one and leave a popup behind.
         onHover?.invoke(model.items.getOrNull(idx))
+        animation.update()
     }
 
     /**
@@ -621,18 +622,6 @@ internal class ActiveListView(
         checkEdt()
         if (idx < 0) return
         list.getCellBounds(idx, idx)?.let { list.repaint(it) }
-    }
-
-    /** Advances an animation frame: repaints only the visible rows that paint an animated glyph. */
-    @RequiresEdt
-    private fun repaintAnimated() {
-        checkEdt()
-        val first = list.firstVisibleIndex
-        val last = list.lastVisibleIndex
-        if (first < 0 || last < first) return
-        for (idx in first..last) {
-            if (activeAnimated(model.getElementAt(idx))) repaintRow(idx)
-        }
     }
 
     @RequiresEdt
@@ -979,6 +968,7 @@ internal class ActiveListView(
             if (tracked) return
             tracked = true
             popups++
+            animation.update()
             list.repaint()
         }
         add(object : JBPopupListener {
@@ -988,6 +978,7 @@ internal class ActiveListView(
                 if (!tracked) return
                 tracked = false
                 popups = maxOf(0, popups - 1)
+                animation.update()
                 list.repaint()
             }
         })

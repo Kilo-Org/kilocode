@@ -1,10 +1,10 @@
 package ai.kilocode.client.ui.active
 
 import ai.kilocode.client.ui.FilledBadgeIcon
-import ai.kilocode.client.ui.LiveBadgeIcon
 import ai.kilocode.client.ui.UiStyle
+import ai.kilocode.client.ui.animationDelay
 import ai.kilocode.client.ui.layout.LayoutPass
-import com.intellij.ui.AnimatedIcon
+import com.intellij.util.concurrency.annotations.RequiresEdt
 import com.intellij.util.ui.JBUI
 import java.awt.Component
 import java.awt.Color
@@ -189,6 +189,10 @@ internal interface ActiveItem {
     val progress: String? get() = null
     /** Extra text matched by the filter field in addition to [title]; null matches title only. */
     val search: String? get() = null
+
+    /** Next frame delay for visible AnimationIcon glyphs; return null to leave the shared clock. */
+    @RequiresEdt
+    fun animation(time: Long, actions: Boolean): Int? = activeAnimation(this, time, actions)
 }
 
 
@@ -210,24 +214,19 @@ internal fun activeVisibleCells(item: ActiveItem, active: Boolean): List<ActiveC
 
 internal fun activeCellGap() = JBUI.scale(CELL_GAP)
 
-/**
- * Whether [item] paints an animated glyph anywhere in its row, so an animation frame has to repaint it.
- *
- * Runs per visible row on every animation frame, so this checks each badge list directly instead of wrapping
- * them in a `listOf(...)` first — the wrapper and its iterator would otherwise be allocated every frame.
- */
-internal fun activeAnimated(item: ActiveItem): Boolean {
-    if (animated(item.icon)) return true
-    if (item.cells.any { animated(it.icon) }) return true
-    if (item.leading.any { animated(it.icon) }) return true
-    if (item.badges.any { animated(it.icon) }) return true
-    return item.secondaryBadges.any { animated(it.icon) }
-}
-
-private fun animated(icon: Icon?): Boolean = when (icon) {
-    is AnimatedIcon -> true
-    is LiveBadgeIcon -> animated(icon.icon)
-    else -> false
+@RequiresEdt
+private fun activeAnimation(item: ActiveItem, time: Long, actions: Boolean): Int? {
+    var delay = animationDelay(item.icon, time)
+    if (item.progress != null) return delay
+    fun include(icon: Icon?) {
+        val next = animationDelay(icon, time) ?: return
+        delay = delay?.let { minOf(it, next) } ?: next
+    }
+    item.leading.forEach { include(it.icon) }
+    item.badges.forEach { include(it.icon) }
+    item.secondaryBadges.forEach { include(it.icon) }
+    if (!item.disabled) item.cells.forEach { if (actions || it.alwaysVisible) include(it.icon) }
+    return delay
 }
 
 

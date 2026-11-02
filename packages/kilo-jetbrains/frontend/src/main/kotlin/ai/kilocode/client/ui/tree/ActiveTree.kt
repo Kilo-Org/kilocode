@@ -2,6 +2,7 @@ package ai.kilocode.client.ui.tree
 
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.active.ACTIVE_MENU_CELL
+import ai.kilocode.client.ui.active.ActiveAnimation
 import ai.kilocode.client.ui.active.ActiveConfig
 import ai.kilocode.client.ui.active.ActiveDeleteOptions
 import ai.kilocode.client.ui.active.ActiveEditOptions
@@ -16,8 +17,6 @@ import ai.kilocode.client.ui.active.ActiveRowHeight
 import ai.kilocode.client.ui.active.ActiveSelection
 import ai.kilocode.client.ui.active.ActiveSurface
 import ai.kilocode.client.ui.active.activeHitCells
-import ai.kilocode.client.ui.active.activeAnimated
-import com.intellij.ui.AnimatedIcon
 import ai.kilocode.client.ui.active.activeInvalidate
 import ai.kilocode.client.ui.active.activeLayout
 import ai.kilocode.client.ui.active.activeUpdateUI
@@ -25,6 +24,8 @@ import ai.kilocode.client.ui.active.activeToolWindowBackground
 import ai.kilocode.client.ui.active.activeVisibleCells
 import ai.kilocode.client.ui.active.showActiveDeletePopup
 import ai.kilocode.client.ui.active.showActiveEditPopup
+import ai.kilocode.client.util.UiTimerSource
+import ai.kilocode.client.util.UiTimers
 import com.intellij.ide.dnd.DnDDragStartBean
 import com.intellij.ide.dnd.DnDImage
 import com.intellij.ide.dnd.DnDSupport
@@ -102,7 +103,7 @@ internal class ActiveEntry(
  * Rows fill the native tree's available width after the indent/disclosure gutter.
  */
 // The container intentionally exposes the same row/popup operations as ActiveList to its clients.
-@Suppress("TooManyFunctions")
+@Suppress("TooManyFunctions", "LongParameterList")
 internal class ActiveTree(
     emptyText: String,
     cfg: ActiveConfig = ActiveConfig.Equal,
@@ -110,9 +111,10 @@ internal class ActiveTree(
     actions: ActiveTreeActions = ActiveTreeActions(),
     menu: ActiveMenu<*>? = null,
     reorder: ActiveReorder? = null,
+    timers: UiTimerSource = UiTimers,
 ) : BorderLayoutPanel() {
     private val view = ActiveTreeView(
-        emptyText, cfg, surface, actions, menu, reorder,
+        emptyText, cfg, surface, actions, menu, reorder, timers,
     )
     private val scroll = object : JBScrollPane(view) {
         override fun getBackground(): Color {
@@ -245,7 +247,7 @@ internal class ActiveTree(
 }
 
 // Swing overrides and container operations remain on the EDT adapter; stateful algorithms live in delegates.
-@Suppress("TooManyFunctions")
+@Suppress("TooManyFunctions", "LongParameterList")
 internal class ActiveTreeView(
     empty: String,
     private val cfg: ActiveConfig,
@@ -253,6 +255,7 @@ internal class ActiveTreeView(
     private val actions: ActiveTreeActions,
     private val menu: ActiveMenu<*>?,
     private val reorder: ActiveReorder?,
+    timers: UiTimerSource = UiTimers,
 ) : Tree() {
     internal val hierarchy = ActiveTreeModel()
     private val root get() = hierarchy.root
@@ -284,6 +287,22 @@ internal class ActiveTreeView(
     internal var onDragStart: (() -> Unit)? = null
     internal var onDragEnd: (() -> Unit)? = null
 
+    private val animation = ActiveAnimation(this, timers) { clip ->
+        val first = getClosestRowForLocation(clip.x, clip.y)
+        val last = getClosestRowForLocation(clip.x, clip.y + clip.height - 1)
+        buildList {
+            if (first >= 0) for (row in first..last) {
+                val entry = entryAt(row)
+                val bounds = getRowBounds(row)
+                if (entry != null && !placeholder(entry) && bounds?.intersects(clip) == true) {
+                    val state = state(entry, isRowSelected(row), hasFocus())
+                    val frame = Rectangle(0, bounds.y, width, bounds.height)
+                    add(ActiveAnimation.Row(entry.item, frame, state.actionsVisible))
+                }
+            }
+        }
+    }
+
     private val hover = object : TreeHoverListener() {
         override fun onHover(tree: javax.swing.JTree, row: Int) {
             val key = if (row < 0) null else entryAt(row)?.key
@@ -314,6 +333,7 @@ internal class ActiveTreeView(
         if (surface == ActiveSurface.ToolWindow) isOpaque = true
         addTreeSelectionListener {
             if (restoring) return@addTreeSelectionListener
+            animation.update()
             pending = null
             anchorKey = selectedEntry()?.key
             onSelect?.invoke()
@@ -326,12 +346,22 @@ internal class ActiveTreeView(
             }
             private fun changed() {
                 setHovered(null)
-                if (!restoring) onGeometry?.invoke()
+                if (!restoring) {
+                    // Native expansion listeners update their layout cache after this listener.
+                    SwingUtilities.invokeLater { animation.update() }
+                    onGeometry?.invoke()
+                }
             }
         })
         addFocusListener(object : java.awt.event.FocusAdapter() {
-            override fun focusGained(event: java.awt.event.FocusEvent) = repaint()
-            override fun focusLost(event: java.awt.event.FocusEvent) = repaint()
+            override fun focusGained(event: java.awt.event.FocusEvent) {
+                animation.update()
+                repaint()
+            }
+            override fun focusLost(event: java.awt.event.FocusEvent) {
+                animation.update()
+                repaint()
+            }
         })
         addComponentListener(object : java.awt.event.ComponentAdapter() {
             override fun componentResized(event: java.awt.event.ComponentEvent) = geometry()
@@ -364,14 +394,6 @@ internal class ActiveTreeView(
 
     override fun addNotify() {
         super.addNotify()
-        putClientProperty(AnimatedIcon.REFRESH_DELEGATE, Runnable {
-            for (row in 0 until rowCount) {
-                val entry = entryAt(row) ?: continue
-                if (activeAnimated(entry.item) && getRowBounds(row)?.intersects(visibleRect) == true) {
-                    repaintEntry(entry)
-                }
-            }
-        })
         if (installed) return
         installed = true
         TreeHoverListener.DEFAULT.addTo(this)
@@ -379,7 +401,6 @@ internal class ActiveTreeView(
     }
 
     override fun removeNotify() {
-        putClientProperty(AnimatedIcon.REFRESH_DELEGATE, null)
         setHovered(null)
         if (dragging) {
             dragEnded()
@@ -471,6 +492,7 @@ internal class ActiveTreeView(
         TreeUtil.invalidateCacheAndRepaint(ui as? javax.swing.plaf.TreeUI)
         for (row in 0 until rowCount) getRowBounds(row)
         onGeometry?.invoke()
+        animation.update()
         repaint()
     }
 
@@ -680,6 +702,7 @@ internal class ActiveTreeView(
             }
         }
         isEnabled = !value
+        animation.update()
     }
 
     override fun processMouseEvent(e: MouseEvent) {
@@ -777,6 +800,7 @@ internal class ActiveTreeView(
         old?.let { repaintEntry(it) }
         next?.let { entries[it] }?.let { repaintEntry(it) }
         actions.hover?.invoke(next?.let { entries[it]?.item })
+        animation.update()
     }
 
     private fun repaintEntry(entry: ActiveEntry) {
@@ -868,6 +892,7 @@ internal class ActiveTreeView(
             if (popups == 0) popupProperty = getClientProperty(RenderingUtil.ALWAYS_PAINT_SELECTION_AS_FOCUSED)
             popups++
             putClientProperty(RenderingUtil.ALWAYS_PAINT_SELECTION_AS_FOCUSED, true)
+            animation.update()
             repaint()
         }
         add(object : JBPopupListener {
@@ -878,6 +903,7 @@ internal class ActiveTreeView(
                 tracked = false
                 popups = maxOf(0, popups - 1)
                 if (popups == 0) putClientProperty(RenderingUtil.ALWAYS_PAINT_SELECTION_AS_FOCUSED, popupProperty)
+                animation.update()
                 repaint()
             }
         })
@@ -892,6 +918,7 @@ internal class ActiveTreeView(
     fun geometry() {
         setHovered(null)
         pointer.clear()
+        animation.update()
         onGeometry?.invoke()
     }
 
@@ -950,11 +977,13 @@ internal class ActiveTreeView(
             restoring = false
         }
         onGeometry?.invoke()
+        animation.update()
         repaint()
     }
 
     internal fun drop() {
         ordering.drop()
+        animation.update()
     }
 
     /**

@@ -21,7 +21,12 @@ internal class ActiveTreeGeometry(private val view: ActiveTreeView, private val 
 
     @RequiresEdt
     fun paint(g: Graphics) {
-        for (row in 0 until view.rowCount) {
+        val clip = g.clipBounds ?: view.visibleRect
+        if (clip.isEmpty) return
+        val first = view.getClosestRowForLocation(clip.x, clip.y)
+        val last = view.getClosestRowForLocation(clip.x, clip.y + clip.height - 1)
+        if (first < 0) return
+        for (row in first..last) {
             val entry = view.getPathForRow(row).lastPathComponent as? ActiveEntry ?: continue
             paint(g, entry, row)
         }

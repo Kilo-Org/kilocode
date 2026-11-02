@@ -6,11 +6,13 @@ import ai.kilocode.client.ui.FadeText
 import ai.kilocode.client.ui.FilledBadgeIcon
 import ai.kilocode.client.ui.LayeredOverlayPanel
 import ai.kilocode.client.ui.UiStyle
+import ai.kilocode.client.ui.animationFrame
 import ai.kilocode.client.ui.layout.HAlign
 import ai.kilocode.client.ui.layout.LayoutPass
 import ai.kilocode.client.ui.layout.Stack
 import ai.kilocode.client.ui.layout.VAlign
 import ai.kilocode.client.ui.layout.align
+import ai.kilocode.client.util.UiTimers
 import com.intellij.icons.AllIcons
 import com.intellij.openapi.util.registry.Registry
 import com.intellij.ui.SimpleTextAttributes
@@ -72,6 +74,7 @@ internal data class ActiveRenderState(
     val opaque: Boolean = true,
     val bodyHeight: Int? = null,
     val interactive: Boolean = true,
+    val time: Long = UiTimers.now(),
 )
 
 internal class ActiveRenderer(
@@ -295,11 +298,11 @@ internal class ActiveRenderer(
         // The row's ordinary text color rather than the muted one: a labelled glyph is a figure the user is
         // meant to read, and the muted tone made it fainter than the neutral glyph beside it. Selection
         // aware, so a highlighted row does not leave the count dark on dark blue.
-        syncBadges(value, state.foreground)
+        syncBadges(value, state.foreground, state.time)
         // A selected row paints its title in the selection foreground; recolor a tinted glyph to
         // match so it reads as part of the highlighted text. Colored status icons opt out and keep
         // their own hue.
-        icon.icon = value.icon?.let {
+        icon.icon = animationFrame(value.icon, state.time)?.let {
             if (state.active && value.tinted) IconUtil.colorize(it, state.foreground, keepBrightness = false) else it
         }
         mark.isVisible = value.icon != null
@@ -333,7 +336,7 @@ internal class ActiveRenderer(
         descLine.isVisible = descBody.isVisible || detailsPane.isVisible
         trail.foreground = weak
 
-        syncCells(value, state.actionsVisible)
+        syncCells(value, state.actionsVisible, state.time)
         if (!state.interactive) {
             cells.components.forEach { it.isVisible = false }
             cells.isVisible = false
@@ -412,32 +415,32 @@ internal class ActiveRenderer(
         return image to Point(wrap.x.coerceAtLeast(0), wrap.y.coerceAtLeast(0))
     }
 
-    private fun syncBadges(item: ActiveItem, color: Color) {
+    private fun syncBadges(item: ActiveItem, color: Color, time: Long) {
         val hidden = item.progress != null
         val gap = activeIconGap()
         leading.border = JBUI.Borders.emptyRight(gap)
         badges.border = JBUI.Borders.emptyLeft(gap)
-        syncBadges(leading, if (hidden) emptyList() else item.leading, color)
-        syncBadges(badges, if (hidden) emptyList() else item.badges, color)
-        syncBadges(secondary, if (hidden) emptyList() else item.secondaryBadges, color)
+        syncBadges(leading, if (hidden) emptyList() else item.leading, color, time)
+        syncBadges(badges, if (hidden) emptyList() else item.badges, color, time)
+        syncBadges(secondary, if (hidden) emptyList() else item.secondaryBadges, color, time)
     }
 
-    private fun syncBadges(stack: JPanel, items: List<ActiveBadge>, color: Color) {
+    private fun syncBadges(stack: JPanel, items: List<ActiveBadge>, color: Color, time: Long) {
         while (stack.componentCount > items.size) stack.remove(stack.componentCount - 1)
         while (stack.componentCount < items.size) stack.add(ActiveBadgeCell())
         stack.isVisible = items.isNotEmpty()
         for (i in items.indices) {
-            (stack.getComponent(i) as ActiveBadgeCell).update(items[i], color)
+            (stack.getComponent(i) as ActiveBadgeCell).update(items[i], color, time)
         }
     }
 
-    private fun syncCells(item: ActiveItem, selected: Boolean) {
+    private fun syncCells(item: ActiveItem, selected: Boolean, time: Long) {
         val visible = activeVisibleCells(item, selected)
         while (cells.componentCount > visible.size) cells.remove(cells.componentCount - 1)
         while (cells.componentCount < visible.size) cells.add(ActiveActionCell())
         cells.isVisible = visible.isNotEmpty()
         for (i in visible.indices) {
-            (cells.getComponent(i) as ActiveActionCell).update(visible[i])
+            (cells.getComponent(i) as ActiveActionCell).update(visible[i], time)
         }
     }
 }
@@ -488,11 +491,11 @@ internal class ActiveActionCell : JBLabel(), ActiveHitCell {
     override var cellId: String = ""
         private set
 
-    fun update(cell: ActiveCell) {
+    fun update(cell: ActiveCell, time: Long = UiTimers.now()) {
         this.cell = cell
         cellId = cell.id
         text = if (cell.iconOnly) "" else cell.label
-        icon = cell.icon
+        icon = animationFrame(cell.icon, time)
         toolTipText = (cell.tooltip ?: cell.label).takeIf { it.isNotBlank() }
         horizontalAlignment = SwingConstants.CENTER
         isEnabled = cell.enabled
@@ -526,10 +529,10 @@ internal class ActiveBadgeCell : JBLabel(), ActiveHitCell {
      * [JBLabel]'s own foreground is a UIResource that does not inherit from the transparent stack it sits
      * in, so a count would otherwise be unreadable on a selected row.
      */
-    fun update(badge: ActiveBadge, color: Color? = null) {
+    fun update(badge: ActiveBadge, color: Color? = null, time: Long = UiTimers.now()) {
         this.badge = badge
         cellId = badge.id.orEmpty()
-        val next = badge.icon ?: pill(badge)
+        val next = animationFrame(badge.icon, time) ?: pill(badge)
         // Both branches answer with the instance already installed when nothing changed, so a repaint
         // of an unchanged row does not churn the label's icon.
         if (icon !== next) icon = next

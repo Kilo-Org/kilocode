@@ -5,6 +5,9 @@ import ai.kilocode.client.ui.active.activeLayout
 import ai.kilocode.client.ui.active.ActiveItem
 import ai.kilocode.client.ui.active.ActiveBadge
 import ai.kilocode.client.ui.LiveBadgeIcon
+import ai.kilocode.client.ui.AnimationIcon
+import ai.kilocode.client.testing.TestUiTimers
+import com.intellij.openapi.util.Disposer
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.ui.AnimatedIcon
 import com.intellij.ui.CollectionListModel
@@ -50,8 +53,9 @@ class ActiveListPaintCostTest : BasePlatformTestCase() {
     }
 
     fun `test an animation frame repaints only rows that show an animated glyph`() {
-        val spinner = AnimatedIcon(100, EmptyIcon.ICON_16, EmptyIcon.ICON_16)
-        val view = ActiveListView("") { _, _ -> }
+        val timers = TestUiTimers()
+        val spinner = AnimationIcon.Cycle(100, EmptyIcon.ICON_16, EmptyIcon.ICON_16)
+        val view = ActiveListView("", timers = timers) { _, _ -> }
         view.update(listOf(
             row("still", EmptyIcon.ICON_16),
             row("spin", spinner),
@@ -59,39 +63,53 @@ class ActiveListPaintCostTest : BasePlatformTestCase() {
             row("still2", EmptyIcon.ICON_16),
         ))
         layout(view)
-        val delegate = view.list.getClientProperty(AnimatedIcon.REFRESH_DELEGATE) as Runnable
-
-        val dirty = dirty(view.list) { delegate.run() }
+        val dirty = dirty(view.list) { timers.advanceBy(100) }
 
         val rows = listOf(1, 2).map { view.list.getCellBounds(it, it) }
         assertEquals(rows, dirty)
     }
 
-    fun `test the refresh delegate survives a detach and re-attach`() {
-        // A worktree session editor tab switch detaches and re-attaches this exact view, so REFRESH_DELEGATE has
-        // to come back on the next attach — not just once at construction — or every switch after the first
-        // permanently loses the per-row animation repaint and the list starts repainting whole on every frame.
-        val spinner = AnimatedIcon(100, EmptyIcon.ICON_16, EmptyIcon.ICON_16)
-        val view = ActiveListView("") { _, _ -> }
+    fun `test the shared clock survives a detach and re-attach without native icon jobs`() {
+        val timers = TestUiTimers()
+        val spinner = AnimationIcon.Cycle(100, EmptyIcon.ICON_16, EmptyIcon.ICON_16)
+        val view = ActiveListView("", timers = timers) { _, _ -> }
         view.update(listOf(row("spin", spinner)))
-        layout(view)
-        assertNotNull(view.list.getClientProperty(AnimatedIcon.REFRESH_DELEGATE))
-
-        view.removeNotify()
+        val host = layout(view)
+        assertEquals(1, timers.pending)
+        assertEquals(false, view.list.getClientProperty(AnimatedIcon.ANIMATION_IN_RENDERER_ALLOWED))
         assertNull(view.list.getClientProperty(AnimatedIcon.REFRESH_DELEGATE))
 
-        view.addNotify()
+        host.removeNotify()
+        assertEquals(0, timers.pending)
 
-        assertNotNull(view.list.getClientProperty(AnimatedIcon.REFRESH_DELEGATE))
+        host.addNotify()
+
+        assertEquals(1, timers.pending)
+        assertEquals(listOf(view.list.getCellBounds(0, 0)), dirty(view.list) { timers.advanceBy(100) })
     }
 
     fun `test an animation frame repaints nothing when no row animates`() {
-        val view = ActiveListView("") { _, _ -> }
+        val timers = TestUiTimers()
+        val view = ActiveListView("", timers = timers) { _, _ -> }
         view.update(listOf(row("a", EmptyIcon.ICON_16), row("b", EmptyIcon.ICON_16)))
         layout(view)
-        val delegate = view.list.getClientProperty(AnimatedIcon.REFRESH_DELEGATE) as Runnable
+        assertEquals(0, timers.pending)
+        assertEquals(emptyList<Rectangle>(), dirty(view.list) { timers.advanceBy(1000) })
+    }
 
-        assertEquals(emptyList<Rectangle>(), dirty(view.list) { delegate.run() })
+    fun `test filtering out the last animated row stops the clock and clearing the filter restarts it`() {
+        val timers = TestUiTimers()
+        val view = ActiveListView("", timers = timers) { _, _ -> }
+        view.update(listOf(
+            row("still", EmptyIcon.ICON_16),
+            row("spin", AnimationIcon.Cycle(100, EmptyIcon.ICON_16, EmptyIcon.ICON_16)),
+        ))
+        layout(view)
+        assertEquals(1, timers.pending)
+        view.filter("still")
+        assertEquals(0, timers.pending)
+        view.filter("")
+        assertEquals(1, timers.pending)
     }
 
     private fun plain(component: Component) {
@@ -117,17 +135,17 @@ class ActiveListPaintCostTest : BasePlatformTestCase() {
         return out
     }
 
-    private fun layout(view: ActiveListView) {
+    private fun layout(view: ActiveListView): JPanel {
         val pane = JPanel()
         pane.add(view)
         pane.setSize(400, 600)
-        // A bare, never-shown JPanel never becomes displayable, so REFRESH_DELEGATE — installed from addNotify
-        // now, not from init — needs the same attach call an editor tab switch triggers for real.
-        view.addNotify()
         view.setSize(400, 600)
         view.list.setSize(400, 600)
+        pane.addNotify()
+        Disposer.register(testRootDisposable) { pane.removeNotify() }
         view.list.doLayout()
         UIUtil.dispatchAllInvocationEvents()
+        return pane
     }
 
     private fun counting() = object : Icon {

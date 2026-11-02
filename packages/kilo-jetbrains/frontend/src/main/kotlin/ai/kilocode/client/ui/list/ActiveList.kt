@@ -59,7 +59,7 @@ internal class ActiveList(
 ) : BorderLayoutPanel() {
     private val view = ActiveListView(
         emptyText, cfg, surface, matcher, enter, openOnClick, onOpen, onActivate, onClick,
-        menu, reorder, onHover, options, onCell,
+        menu, reorder, onHover, options, onCell = onCell,
     )
     private val search: SearchTextField? = if (showSearch) SearchTextField(false) else null
     private val scroll = object : JBScrollPane(view) {

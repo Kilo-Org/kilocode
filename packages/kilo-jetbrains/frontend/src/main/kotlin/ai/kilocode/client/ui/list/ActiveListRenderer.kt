@@ -183,7 +183,7 @@ internal class ActiveListRenderer(
         return image.first to Point(image.second.x.coerceAtLeast(0), image.second.y.coerceAtLeast(0) + band)
     }
 
-    private fun state(
+    internal fun state(
         list: JList<out ActiveItem>,
         value: ActiveItem,
         index: Int,

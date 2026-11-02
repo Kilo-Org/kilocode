@@ -6,6 +6,8 @@ import ai.kilocode.client.ui.tree.ActiveTreeNode
 import ai.kilocode.client.ui.tree.ActiveTreeView
 import ai.kilocode.client.ui.list.ActiveListRenderer
 import ai.kilocode.client.ui.list.ActiveSection
+import ai.kilocode.client.ui.AnimationIcon
+import ai.kilocode.client.ui.LiveBadgeIcon
 import com.intellij.icons.AllIcons
 import com.intellij.openapi.actionSystem.DataKey
 import com.intellij.openapi.actionSystem.DefaultActionGroup
@@ -29,6 +31,34 @@ class ActiveRendererTest : BasePlatformTestCase() {
         override val description = "Description below title"
         override val icon = AllIcons.Actions.Edit
         override val section = "Section"
+    }
+
+    fun `test all animated row glyphs paint static frames from the same clock`() {
+        val frames = listOf(AllIcons.Actions.Edit, AllIcons.Actions.Refresh)
+        val icon = AnimationIcon.Cycle(100, *frames.toTypedArray())
+        val item = object : ActiveItem {
+            override val key = "animated"
+            override val title = key
+            override val icon = LiveBadgeIcon(icon, UIUtil.getLabelForeground())
+            override val leading = listOf(ActiveBadge("", icon = icon))
+            override val badges = listOf(ActiveBadge("", icon = icon))
+            override val secondaryBadges = listOf(ActiveBadge("", icon = icon))
+            override val cells = listOf(ActiveCell("action", "", icon = icon, alwaysVisible = true))
+        }
+        val tree = ActiveTree("")
+        tree.update(listOf(ActiveTreeNode(item)))
+        val view = tree.preferredFocus() as ActiveTreeView
+        view.setSize(400, 200)
+        val entry = view.hierarchy.entries.getValue(item.key)
+        val renderer = ActiveRenderer()
+        for (time in listOf(0L, 99L, 100L, 199L, 200L, 10_000L)) {
+            renderer.render(view.state(entry, false, false, 400).copy(time = time))
+            val icons = descendants(renderer).filterIsInstance<JBLabel>().mapNotNull { it.icon }
+                .map { (it as? LiveBadgeIcon)?.icon ?: it }
+            assertFalse("Renderer stamps must not schedule native animation jobs", icons.any { it is com.intellij.ui.AnimatedIcon })
+            val frame = frames[(time / 100 % 2).toInt()]
+            assertEquals("Every glyph samples the same frame at $time", 5, icons.count { it === frame })
+        }
     }
 
     fun `test shared menu hit and glyph fit inside native tree selection`() {
