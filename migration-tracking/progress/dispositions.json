@@ -773,10 +773,9 @@
     "by": "open-config-picker"
   },
   "module:packages/kilo-vscode/webview-ui/src/utils/open-config.ts": {
-    "state": "ported",
-    "v2": "packages/kilo-vscode/src/open-config.ts",
-    "note": "The v2 webview posts openFile with the host-resolved target (Settings.tsx and config.path) instead of building a localized openConfigFile message. The host owns the scope check and the quick pick, and its labels are fixed English like the other host-side confirmations, so configMessage has no v2 counterpart.",
-    "by": "open-config-picker"
+    "state": "dropped",
+    "note": "The v1 helper built the localized openConfigFile message: scope, loaded status, create entry and all source labels. v2 has no such message: the webview posts openFile with the host-resolved target and the host quick pick uses fixed English labels like the other host-side confirmations, so configMessage is not carried. The picker behavior is the separate kilo-provider/open-config.ts cell ported to packages/kilo-vscode/src/open-config.ts.",
+    "by": "fix-progress-map"
   },
   "module:packages/kilo-vscode/tests/unit/open-config-message.test.ts": {
     "state": "dropped",
