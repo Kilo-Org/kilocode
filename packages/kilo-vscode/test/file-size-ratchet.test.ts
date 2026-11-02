@@ -7,8 +7,9 @@ import path from "node:path"
 // The cap of a listed file is its line count at the time it was added, or the
 // merged baseline after a base update, rounded up to the nearest 50. Do NOT
 // raise a cap to fit new hand-written code. Instead, extract logic into a
-// smaller module and call it from the original file. A cap only moves when the
-// file is split and the new number reflects the extraction.
+// smaller module and call it from the original file. A cap moves only when the
+// file is split (lower it to the extracted count) or when a base merge raises
+// the baseline (round the merged count up to the nearest 50).
 //
 // Counts use `readFileSync(...).split("\n").length`, the same measure the test
 // enforces, so they include a trailing empty line for a newline-terminated file.
@@ -17,8 +18,8 @@ const MAX_LINES: Record<string, number> = {
   "webview-ui/src/components/settings/ProvidersTab.tsx": 700,
   "webview-ui/src/components/settings/PermissionEditor.tsx": 600,
   "webview-ui/src/v2/question.tsx": 550,
-  // The v2 base added the custom provider models feature on ed11618cb62; cap is the merged baseline.
-  "webview-ui/src/components/settings/CustomProviderDialog.tsx": 932,
+  // The v2 base added the custom provider models feature on ed11618cb62; cap is the merged baseline rounded up.
+  "webview-ui/src/components/settings/CustomProviderDialog.tsx": 950,
   "webview-ui/src/components/settings/agent-behaviour/ModeEditView.tsx": 550,
   "webview-ui/src/components/settings/agent-behaviour/McpSubtab.tsx": 500,
   "webview-ui/src/components/profile/DeviceAuthCard.tsx": 450,
