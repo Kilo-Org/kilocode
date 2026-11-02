@@ -78,12 +78,12 @@ Every descriptor origin must be an explicit loopback origin (`localhost`, `127.0
 
 ## Evidence and security
 
-- The fixture descriptor is never uploaded as an artifact and is deleted after cleanup.
+- The fixture descriptor is never uploaded as an artifact. It is deleted after a `clean` cleanup; when cleanup fails, the provider's leftovers are written to evidence as owned resource ids and the descriptor is kept so the cleanup token remains traceable.
 - Request and result files are written atomically with mode `0600` inside a mode `0700` run directory.
 - Evidence rejects access/session/auth/cleanup token, cookie, authorization, API-key, password, secret, credential, private-key, and private-descriptor field names at any depth, plus bearer/basic/JWT/private-key value shapes. Bare `token`/`tokens` fields are allowed when their values are not secret-shaped so non-secret counters and transcript markers remain reportable.
 - Rejected evidence is not persisted verbatim; the coordinator writes a sanitized failure report instead.
 - Artifact paths must be relative and contained in the run directory.
-- Run ids must be a single safe path segment and must not already exist in the artifacts directory; reused run directories are rejected instead of reading stale results.
+- Run ids must be a single safe path segment. The run directory is claimed with a non-recursive create, so a reused id fails with a `config` error and concurrent runs with the same id cannot share request/result files.
 
 ## Consumers
 

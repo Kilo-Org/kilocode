@@ -15,6 +15,22 @@ export async function ensureDir(dir: string, mode = 0o700) {
   await restrict(dir, mode)
 }
 
+export class DirExistsError extends Error {}
+
+export async function claimDir(dir: string, mode = 0o700) {
+  try {
+    await mkdir(dir, { recursive: false, mode })
+  } catch (error) {
+    if (isExists(error)) throw new DirExistsError(`${dir} already exists`)
+    throw error
+  }
+  await restrict(dir, mode)
+}
+
+function isExists(error: unknown) {
+  return !!error && typeof error === "object" && "code" in error && error.code === "EEXIST"
+}
+
 async function restrict(target: string, mode: number) {
   if (process.platform === "win32") return
   await chmod(target, mode)

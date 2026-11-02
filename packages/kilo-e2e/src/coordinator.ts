@@ -17,7 +17,7 @@ import { ManifestError, validateManifest } from "./scenarios"
 import { OriginError, assertLoopbackOrigins, driverEnv, providerEnv } from "./env"
 import { EvidenceError, parseDriverResult, validateEvidence } from "./evidence"
 import { GitError, createProject, type Project } from "./git"
-import { ProtocolError, ensureDir, exists, readJsonAs, remove, writeJson } from "./protocol"
+import { ProtocolError, claimDir, DirExistsError, ensureDir, exists, readJsonAs, remove, writeJson } from "./protocol"
 import { runChild } from "./process"
 import { SecretFieldError } from "./redact"
 
@@ -207,7 +207,7 @@ async function drive(
   return { result, capabilities: true }
 }
 
-async function cleanup(options: Options): Promise<CleanupResult> {
+async function cleanup(options: Options, descriptor: FixtureDescriptor | undefined): Promise<CleanupResult> {
   const requestPath = join(options.runDir, "provider-cleanup-request.json")
   const resultPath = join(options.runDir, "provider-cleanup-result.json")
   const present = await exists(options.descriptorPath)
@@ -218,12 +218,19 @@ async function cleanup(options: Options): Promise<CleanupResult> {
     descriptorPath: options.descriptorPath,
     descriptorPresent: present,
   })
+  // Leftovers are recorded in sanitized evidence so a failed cleanup can be retried or traced even
+  // when the provider cannot report ownership; only resource ids are kept, never cleanup tokens.
   const failed = (message: string): CleanupResult => ({
     schemaVersion: SCHEMA_VERSION,
     runId: options.runId,
     status: "failed",
     removed: [],
-    leftovers: [],
+    leftovers:
+      descriptor?.cleanup.ids.map((resource) => ({
+        kind: resource.kind,
+        id: resource.id,
+        reason: message,
+      })) ?? [],
     error: message,
   })
   try {
@@ -315,7 +322,13 @@ export async function run(options: RunOptions): Promise<EvidenceReport> {
   if (options.driver.command.length === 0) throw config("IDE driver command is empty")
 
   const runDir = resolve(options.artifactsDir, runId)
-  if (await exists(runDir)) throw config("run directory already exists; choose a new run id")
+  await ensureDir(options.artifactsDir)
+  try {
+    await claimDir(runDir)
+  } catch (error) {
+    if (error instanceof DirExistsError) throw config("run directory already exists; choose a new run id")
+    throw error
+  }
   const artifactsDir = join(runDir, "artifacts")
   const projectDir = join(runDir, "project")
   const descriptorPath = join(runDir, "descriptor.json")
@@ -325,7 +338,6 @@ export async function run(options: RunOptions): Promise<EvidenceReport> {
     state: join(runDir, "state", "state"),
     cache: join(runDir, "state", "cache"),
   }
-  await ensureDir(runDir)
   await ensureDir(artifactsDir)
   for (const dir of Object.values(state)) await ensureDir(dir)
 
@@ -346,6 +358,7 @@ export async function run(options: RunOptions): Promise<EvidenceReport> {
   }
 
   const startedAt = new Date().toISOString()
+  let descriptor: FixtureDescriptor | undefined
   let driver: DriverResult | undefined
   let error: RunError | undefined
   let cancelled = false
@@ -353,7 +366,7 @@ export async function run(options: RunOptions): Promise<EvidenceReport> {
   let stage: "provider" | "project" | "driver" = "provider"
 
   try {
-    const descriptor = await prepare(prepared)
+    descriptor = await prepare(prepared)
     stage = "project"
     const project = await createProject(projectDir)
     stage = "driver"
@@ -366,8 +379,10 @@ export async function run(options: RunOptions): Promise<EvidenceReport> {
     else error = failure(stage, caught)
   }
 
-  const cleanupResult = await cleanup(prepared)
-  await remove(descriptorPath)
+  const cleanupResult = await cleanup(prepared, descriptor)
+  // Keep the descriptor when cleanup cannot prove it removed the owned resources, so the cleanup
+  // token and resource ids remain traceable; the report still records the owned ids in `leftovers`.
+  if (cleanupResult.status === "clean") await remove(descriptorPath)
   if (cleanupResult.status === "failed" && !error) {
     error = new RunError("cleanup_failed", "fixture cleanup did not complete")
   }

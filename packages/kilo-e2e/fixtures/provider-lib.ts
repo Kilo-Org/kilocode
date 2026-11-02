@@ -2,7 +2,7 @@ import { CleanupResult, FixtureDescriptor, ProviderPrepareResult, ProviderReques
 import { readJsonAs, writeJson } from "../src/protocol"
 import { args } from "./cli"
 
-export type ProviderMode = "clean" | "cleanup-fail" | "noop" | "prepare-fail" | "bad-origin"
+export type ProviderMode = "clean" | "cleanup-fail" | "cleanup-crash" | "noop" | "prepare-fail" | "bad-origin"
 
 const ORIGINS = {
   web: "http://127.0.0.1:43100",
@@ -82,6 +82,7 @@ export async function provider(mode: ProviderMode) {
   }
 
   const descriptor = await readJsonAs(request.descriptorPath, FixtureDescriptor)
+  if (mode === "cleanup-crash") process.exit(1)
   if (mode === "cleanup-fail") {
     await writeJson(
       resultPath,

@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test"
 import { join } from "node:path"
-import { run } from "../src/coordinator"
+import { RunError, run } from "../src/coordinator"
 import { manifest } from "../src/scenarios"
 import { command, options, readEvidence, rejected, sandbox } from "./helpers"
 
@@ -196,6 +196,21 @@ describe("coordinator rejection paths", () => {
       expect(evidence.cleanup.status).toBe("failed")
       expect(evidence.cleanup.leftovers).toHaveLength(2)
       expect(evidence.assertions.find((assertion) => assertion.name === "cleanup.complete")?.status).toBe("failed")
+      expect(await Bun.file(join(dir, "run", "descriptor.json")).exists()).toBe(true)
+    })
+  })
+
+  test("records owned resources when cleanup exits without a result", async () => {
+    await sandbox(async (dir) => {
+      const error = await rejected(
+        run(options(dir, { provider: { id: "fake-provider", command: command("provider-cleanup-crash.ts") } })),
+      )
+      expect(error.code).toBe("cleanup_failed")
+      const evidence = await readEvidence(dir)
+      expect(evidence.cleanup.status).toBe("failed")
+      expect(evidence.cleanup.leftovers.map((resource) => resource.kind)).toEqual(["workspace", "cloud-session"])
+      expect(JSON.stringify(evidence)).not.toContain("cleanup-")
+      expect(await Bun.file(join(dir, "run", "descriptor.json")).exists()).toBe(true)
     })
   })
 
@@ -257,6 +272,29 @@ describe("coordinator rejection paths", () => {
       expect(error.code).toBe("config")
       const evidence = await readEvidence(dir)
       expect(evidence.outcome).toBe("passed")
+    })
+  })
+
+  test("allows only one concurrent run to claim a run id", async () => {
+    await sandbox(async (dir) => {
+      const driver = { id: "fake-driver", command: command("driver.ts") }
+      const results = await Promise.allSettled([
+        run(options(dir, { driver })),
+        run(options(dir, { driver })),
+        run(options(dir, { driver })),
+      ])
+      const passed = results.filter((result) => result.status === "fulfilled")
+      const failed = results.filter((result) => result.status === "rejected")
+      expect(passed).toHaveLength(1)
+      expect(failed).toHaveLength(2)
+      for (const result of failed) {
+        if (result.status !== "rejected") continue
+        expect(result.reason).toBeInstanceOf(RunError)
+        expect((result.reason as RunError).code).toBe("config")
+      }
+      const evidence = await readEvidence(dir)
+      expect(evidence.outcome).toBe("passed")
+      expect(evidence.cleanup.status).toBe("clean")
     })
   })
 })
