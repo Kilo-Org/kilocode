@@ -354,6 +354,10 @@ html[data-theme="kilo-vscode"] [data-component="bash-output"] {
     overflow-y: auto;
     overflow-wrap: anywhere;
   }
+
+  [data-slot="message-part-tool-error-action"] {
+    flex: none;
+  }
 }
 
 @media (max-width: 240px) {
