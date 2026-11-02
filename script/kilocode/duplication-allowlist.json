@@ -133,15 +133,6 @@
       "kind": "legacy",
       "owner": "kilo-ui-base",
       "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."
-    },
-    {
-      "files": ["packages/kilo-ui/src/components/message-part.tsx", "packages/kilo-ui/src/components/message-part.tsx"],
-      "fingerprint": "2291e35e3b00f3ea",
-      "maxMatches": 1,
-      "maxTokens": 131,
-      "kind": "legacy",
-      "owner": "kilo-ui",
-      "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."
     }
   ]
 }
