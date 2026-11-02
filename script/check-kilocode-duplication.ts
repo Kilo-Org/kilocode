@@ -250,27 +250,32 @@ export async function scan(cwd: string) {
       throw new Error("Unexpected duplication scanner version")
     }
     const results = array(run.results)
-    if (integer(total.clones) !== results.length)
+    const duplicates = array(json.duplicates)
+    if (integer(total.clones) !== results.length || duplicates.length !== results.length) {
       throw new Error("Duplication reports disagree on the number of findings")
+    }
     const findings = new Map<string, Finding>()
-    for (const value of results) {
+    for (const [index, value] of results.entries()) {
       const result = object(value)
       if (result.ruleId !== "jscpd/duplicate-code") throw new Error("Unexpected duplication scanner result")
-      const locations = [...array(result.locations), ...array(result.relatedLocations)].map((value) => {
-        const location = object(object(value).physicalLocation)
-        const artifact = object(location.artifactLocation)
-        const uri = text(artifact.uri)
-        const region = object(location.region)
-        return {
-          file: matchLocation(uri, directory, scanned),
-          start: integer(region.startLine, 1),
-          end: integer(region.endLine, 1),
-        }
-      })
-      if (locations.length !== 2) throw new Error("Expected two locations for a duplicated block")
+      const duplicate = object(duplicates[index])
+      const first = object(duplicate.firstFile)
+      const second = object(duplicate.secondFile)
+      const locations = [
+        {
+          file: matchLocation(text(first.name), directory, scanned),
+          start: integer(first.start, 1),
+          end: integer(first.end, 1),
+        },
+        {
+          file: matchLocation(text(second.name), directory, scanned),
+          start: integer(second.start, 1),
+          end: integer(second.end, 1),
+        },
+      ]
       const files = locations.map((location) => location.file).sort()
       const hash = fingerprint(object(result.partialFingerprints)["jscpdCloneHash/v1"])
-      const tokens = integer(object(result.properties).token_count, 1)
+      const tokens = integer(duplicate.tokens, 1)
       const id = key({ files, fingerprint: hash })
       const previous = findings.get(id)
       findings.set(id, {
