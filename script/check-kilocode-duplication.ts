@@ -150,6 +150,10 @@ function fingerprint(value: unknown) {
   return hash
 }
 
+function cloneHash(fragment: string) {
+  return new Bun.CryptoHasher("sha256").update(fragment).digest("hex").slice(0, 16)
+}
+
 function key(entry: Pick<Exception, "files" | "fingerprint">) {
   return JSON.stringify([entry.files, entry.fingerprint])
 }
@@ -226,7 +230,7 @@ export async function scan(cwd: string) {
         absolute: true,
         noColors: true,
         noTips: true,
-        reporters: ["json", "sarif"],
+        reporters: ["json"],
         output: temporary,
       }),
     )
@@ -242,23 +246,13 @@ export async function scan(cwd: string) {
     if (code !== 0) throw new Error(`Duplication scanner failed (${code}):\n${stderr || stdout}`)
     const json = object(await Bun.file(join(temporary, "jscpd-report.json")).json())
     const total = object(object(json.statistics).total)
-    const report = object(await Bun.file(join(temporary, "jscpd-report.sarif")).json())
-    const runs = array(report.runs)
-    if (runs.length !== 1) throw new Error("Expected one duplication scanner run")
-    const run = object(runs.at(0))
-    if (object(object(run.tool).driver).version !== scanner.slice("jscpd@".length)) {
-      throw new Error("Unexpected duplication scanner version")
-    }
-    const results = array(run.results)
     const duplicates = array(json.duplicates)
-    if (integer(total.clones) !== results.length || duplicates.length !== results.length) {
-      throw new Error("Duplication reports disagree on the number of findings")
+    if (integer(total.clones) !== duplicates.length) {
+      throw new Error("Duplication report disagrees on the number of findings")
     }
     const findings = new Map<string, Finding>()
-    for (const [index, value] of results.entries()) {
-      const result = object(value)
-      if (result.ruleId !== "jscpd/duplicate-code") throw new Error("Unexpected duplication scanner result")
-      const duplicate = object(duplicates[index])
+    for (const value of duplicates) {
+      const duplicate = object(value)
       const first = object(duplicate.firstFile)
       const second = object(duplicate.secondFile)
       const locations = [
@@ -274,7 +268,7 @@ export async function scan(cwd: string) {
         },
       ]
       const files = locations.map((location) => location.file).sort()
-      const hash = fingerprint(object(result.partialFingerprints)["jscpdCloneHash/v1"])
+      const hash = cloneHash(text(duplicate.fragment))
       const tokens = integer(duplicate.tokens, 1)
       const id = key({ files, fingerprint: hash })
       const previous = findings.get(id)
@@ -290,7 +284,7 @@ export async function scan(cwd: string) {
       scanner,
       files: integer(total.sources, 1),
       lines: integer(total.lines, 1),
-      pairs: results.length,
+      pairs: duplicates.length,
       duplicatedLines: integer(total.duplicatedLines),
       duplicatedTokens: integer(total.duplicatedTokens),
       findings: [...findings.values()].sort((a, b) => key(a).localeCompare(key(b))),
