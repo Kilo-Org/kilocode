@@ -5,6 +5,7 @@ import {
   createUniqueId,
   For,
   Match,
+  on,
   Show,
   Switch,
   type Component,
@@ -20,19 +21,18 @@ import type {
 } from "@opencode/client"
 import { getDirectory, getFilename } from "@opencode/util/path"
 import { checksum } from "@opencode/util/encode"
-import { parseDiffFromFile } from "@pierre/diffs"
 import { useClipboard } from "../context/clipboard"
 import { useDialog } from "../context/dialog"
 import { useFileComponent } from "../context/file"
-import { useI18n } from "../context/i18n"
+import { useI18n, type UiI18n } from "../context/i18n"
 import { Accordion } from "./accordion"
 import { AgentAvatar, taskStatus } from "./agent-avatar"
-import { BasicTool } from "./basic-tool"
+import { BasicTool, initialOpen, rememberOpen, useToolApprovalLine } from "./basic-tool"
 import { Card } from "./card"
 import { attachmentUri, fileDiffs, relativizeProjectPath, toolOutput } from "./content-data"
 import { DiffChanges } from "./diff-changes"
 import { FileIcon } from "./file-icon"
-import { Icon } from "./icon"
+import { Icon, type IconProps } from "./icon"
 import { IconButton } from "./icon-button"
 import { ImagePreview } from "./image-preview"
 import { Markdown } from "./markdown"
@@ -42,6 +42,7 @@ import { ShellOutput } from "./shell-output"
 import { StickyAccordionHeader } from "./sticky-accordion-header"
 import { TextShimmer } from "./text-shimmer"
 import { ToolApprovalProvider, resolveToolApproval } from "./tool-approval"
+import { useToolChildSession } from "./tool-child-session"
 import { readToolOpen, toolOpenKey } from "./tool-open-state"
 import { busy, createThrottledValue, STREAMING_TEXT_RENDER_THROTTLE_MS, TEXT_RENDER_THROTTLE_MS } from "./tool-utils"
 import { Tooltip } from "./tooltip"
@@ -371,6 +372,7 @@ ToolRegistry.register({
     const path = () => string(props.input.path)
     const args = () =>
       ["offset", "limit"].flatMap((key) => (typeof props.input[key] === "number" ? [`${key}=${props.input[key]}`] : []))
+    const line = () => (typeof props.input.offset === "number" ? props.input.offset : undefined)
     const images = () => props.attachments.filter((file) => file.mime.startsWith("image/"))
     return (
       <>
@@ -384,6 +386,14 @@ ToolRegistry.register({
               pending={busy(props.status)}
               subtitle={getFilename(path())}
               args={args()}
+              onClick={
+                props.actions?.openFile && path()
+                  ? (event) => {
+                      event.stopPropagation()
+                      props.actions?.openFile?.(path(), line())
+                    }
+                  : undefined
+              }
             />
           }
         />
@@ -558,35 +568,235 @@ ToolRegistry.register({
   },
 })
 
+function agentTitle(i18n: UiI18n, type: string | undefined) {
+  if (!type) return i18n.t("ui.tool.agent.default")
+  return i18n.t("ui.tool.agent", { type: type[0]!.toUpperCase() + type.slice(1) })
+}
+
+function childToolInfo(
+  i18n: UiI18n,
+  tool: string,
+  input: Record<string, unknown>,
+): { icon: IconProps["name"]; title: string; subtitle?: string } {
+  const path = string(input.filePath) || string(input.path)
+  switch (tool) {
+    case "read":
+      return { icon: "glasses", title: i18n.t("ui.tool.read"), subtitle: path ? getFilename(path) : undefined }
+    case "list":
+      return { icon: "bullet-list", title: i18n.t("ui.tool.list"), subtitle: path ? getFilename(path) : undefined }
+    case "glob":
+      return {
+        icon: "magnifying-glass-menu",
+        title: i18n.t("ui.tool.glob"),
+        subtitle: string(input.pattern) || undefined,
+      }
+    case "grep":
+      return {
+        icon: "magnifying-glass-menu",
+        title: i18n.t("ui.tool.grep"),
+        subtitle: string(input.pattern) || undefined,
+      }
+    case "webfetch":
+      return { icon: "window-cursor", title: i18n.t("ui.tool.webfetch"), subtitle: string(input.url) || undefined }
+    case "websearch":
+      return { icon: "window-cursor", title: i18n.t("ui.tool.websearch"), subtitle: string(input.query) || undefined }
+    case "shell":
+      return {
+        icon: "console",
+        title: i18n.t("ui.tool.shell"),
+        subtitle: string(input.description) || string(input.command) || undefined,
+      }
+    case "edit":
+      return {
+        icon: "code-lines",
+        title: i18n.t("ui.messagePart.title.edit"),
+        subtitle: path ? getFilename(path) : undefined,
+      }
+    case "write":
+      return {
+        icon: "code-lines",
+        title: i18n.t("ui.messagePart.title.write"),
+        subtitle: path ? getFilename(path) : undefined,
+      }
+    case "patch":
+      return { icon: "code-lines", title: i18n.t("ui.tool.patch") }
+    case "todowrite":
+      return { icon: "checklist", title: i18n.t("ui.tool.todos") }
+    case "question":
+      return { icon: "bubble-5", title: i18n.t("ui.tool.questions") }
+    case "skill":
+      return { icon: "brain", title: i18n.t("ui.tool.skill"), subtitle: string(input.name) || undefined }
+    case "subagent":
+      return {
+        icon: "task",
+        title: agentTitle(i18n, string(input.agent) || undefined),
+        subtitle: string(input.description) || undefined,
+      }
+    default:
+      return { icon: "mcp", title: tool }
+  }
+}
+
+// A completed foreground child wraps its final text; a background start returns the model instruction instead.
+function subagentResult(output: string, completed: boolean) {
+  const text = output.trim()
+  if (!text) return ""
+  const match = /^<subagent\b[^>]*>\s*([\s\S]*?)\s*<\/subagent>$/.exec(text)
+  if (match) return match[1]!.trim()
+  return completed ? text : ""
+}
+
 ToolRegistry.register({
   name: "subagent",
   render(props) {
     const i18n = useI18n()
-    const agent = () => string(props.input.agent)
-    const title = () =>
-      agent()
-        ? i18n.t("ui.tool.agent", { type: agent()[0]!.toUpperCase() + agent().slice(1) })
-        : i18n.t("ui.tool.agent.default")
+    const child = useToolChildSession()
+    const childID = () => string(props.metadata.sessionID) || undefined
+    const title = () => agentTitle(i18n, string(props.input.agent) || undefined)
+    const description = () => string(props.input.description)
+    // A background child completes its tool part at launch while the child keeps working.
+    const background = () =>
+      props.input.background === true || (props.status === "completed" && props.metadata.status === "running")
+    const auto = () => props.status === "running" && !background()
+    const stored = initialOpen({ tool: props.tool, partID: props.partID })
+    const [open, setOpen] = createSignal(
+      initialOpen({ tool: props.tool, partID: props.partID, defaultOpen: auto(), forceOpen: props.forceOpen }),
+    )
+    const [touched, setTouched] = createSignal(!!props.forceOpen || stored !== undefined)
+    const [resolved, setResolved] = createSignal(false)
+    const approvalLine = useToolApprovalLine()
+    createEffect(
+      on(
+        childID,
+        (id, previous) => {
+          if (id && !previous) setResolved(true)
+        },
+        { defer: true },
+      ),
+    )
+    createEffect(() => {
+      if (touched()) return
+      if (auto()) {
+        setOpen(true)
+        rememberOpen({ tool: props.tool, partID: props.partID }, true)
+      } else if (background()) {
+        setOpen(false)
+        rememberOpen({ tool: props.tool, partID: props.partID }, false)
+      }
+    })
+    createEffect(() => {
+      const id = childID()
+      if (!id || !open()) return
+      child?.load(id)
+    })
+    const change = (value: boolean) => {
+      setTouched(true)
+      setOpen(value)
+    }
+    const avatar = () => {
+      const id = childID()
+      if (id && child?.running(id)) return "running" as const
+      return taskStatus(props.status)
+    }
+    const canOpen = () => !!childID() && !!props.actions?.openSession
+    const navigate = () => {
+      const id = childID()
+      const action = props.actions?.openSession
+      if (!id || !action) return
+      action(id)
+    }
+    const openChild = (event: MouseEvent) => {
+      if (!canOpen()) return
+      event.stopPropagation()
+      if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return
+      event.preventDefault()
+      navigate()
+    }
+    // The trigger is a button, so this modifier path keeps the open action reachable from the keyboard.
+    const openChildFromTrigger = (event: MouseEvent) => {
+      if (!event.metaKey && !event.ctrlKey) return
+      event.preventDefault()
+      event.stopPropagation()
+      navigate()
+    }
+    const tools = () => {
+      const id = childID()
+      return id && child ? child.tools(id) : []
+    }
+    const result = () => subagentResult(props.output, props.metadata.status === "completed")
+    const label = () => description() || title()
+    const count = () => tools().length
+    const detail = () =>
+      [description() ? title() : undefined, count() > 0 ? `(${count()})` : undefined].filter(Boolean).join(" ")
+    const trigger = () => (
+      <div data-slot="basic-tool-tool-info-structured" data-component="task-tool-heading">
+        <div data-slot="basic-tool-tool-info-main">
+          <span data-slot="basic-tool-tool-title" title={label()}>
+            <TextShimmer text={label()} active={busy(props.status)} />
+          </span>
+          <Show when={detail()}>{(text) => <span data-slot="basic-tool-tool-subtitle">{text()}</span>}</Show>
+          <Show when={background()}>
+            <span data-slot="task-tool-background">{i18n.t("task.backgroundAgents.untitled")}</span>
+          </Show>
+          {approvalLine()}
+        </div>
+        <Show when={canOpen()}>
+          <span data-slot="task-tool-open" title={`${i18n.t("task.open.panel")} (Cmd/Ctrl+Enter)`} onClick={openChild}>
+            <Icon name="square-arrow-top-right" size="small" />
+          </span>
+        </Show>
+      </div>
+    )
     return (
       <BasicTool
         {...props}
-        hideDetails
         icon="task"
-        iconNode={<AgentAvatar id={props.partID} status={taskStatus(props.status)} />}
-        trigger={
-          <div data-slot="basic-tool-tool-info-structured">
-            <div data-slot="basic-tool-tool-info-main">
-              <span data-slot="basic-tool-tool-title">
-                <TextShimmer text={title()} active={busy(props.status)} />
-              </span>
-              <Show when={string(props.input.description)}>
-                {(description) => <span data-slot="basic-tool-tool-subtitle">{description()}</span>}
-              </Show>
-            </div>
-          </div>
+        iconNode={
+          <span
+            data-slot="task-agent-avatar"
+            data-clickable={canOpen() ? "true" : undefined}
+            data-resolve={resolved() ? "true" : undefined}
+            onClick={openChild}
+          >
+            <AgentAvatar id={childID() ?? "unknown"} status={avatar()} />
+          </span>
         }
-        animated
-      />
+        status={props.status}
+        trigger={trigger()}
+        onTriggerClick={openChildFromTrigger}
+        approvalPlacement="hidden"
+        allowPendingToggle
+        defaultOpen={auto()}
+        open={open()}
+        forceOpen={props.forceOpen}
+        defer={stored !== true}
+        onOpenChange={change}
+      >
+        <div data-component="tool-output" data-scrollable>
+          <div data-component="task-tools">
+            <Show when={props.status === "running" && !background() && tools().length === 0}>
+              <div data-slot="task-tool-item" data-state="starting">
+                <span data-slot="task-tool-title">{i18n.t("session.messages.taskStarting")}</span>
+              </div>
+            </Show>
+            <For each={tools()}>
+              {(tool) => {
+                const info = () => childToolInfo(i18n, tool.name, record(tool.state.input) ? tool.state.input : {})
+                return (
+                  <div data-slot="task-tool-item">
+                    <Icon name={info().icon} size="small" />
+                    <span data-slot="task-tool-title">{info().title}</span>
+                    <Show when={info().subtitle}>
+                      {(subtitle) => <span data-slot="task-tool-subtitle">{subtitle()}</span>}
+                    </Show>
+                  </div>
+                )
+              }}
+            </For>
+            <Show when={result()}>{(text) => <Markdown text={text()} />}</Show>
+          </div>
+        </div>
+      </BasicTool>
     )
   },
 })
@@ -686,6 +896,26 @@ function ToolFileMeta(props: { path: string; directory?: string; changes?: FileD
   )
 }
 
+function ToolDiffAction(props: { when: boolean; onClick: (event: MouseEvent) => void }) {
+  const i18n = useI18n()
+  return (
+    <Show when={props.when}>
+      <span data-slot="tool-trigger-actions">
+        <Tooltip value={i18n.t("ui.messagePart.openInDiffViewer")} placement="top" gutter={4}>
+          <IconButton
+            icon="square-arrow-top-right"
+            size="small"
+            variant="ghost"
+            onMouseDown={(event) => event.preventDefault()}
+            onClick={props.onClick}
+            aria-label={i18n.t("ui.messagePart.openInDiffViewer")}
+          />
+        </Tooltip>
+      </span>
+    </Show>
+  )
+}
+
 ToolRegistry.register({
   name: "edit",
   render(props) {
@@ -693,13 +923,34 @@ ToolRegistry.register({
     const component = useFileComponent()
     const diff = () => fileDiffs(props.metadata.files)[0]
     const path = () => diff()?.file || string(props.input.path)
+    // A plain function, not `createMemo`: a memo parses the patch with Pierre
+    // on render, even while the card stays collapsed. Only the deferred body
+    // and the diff action read it.
     const view = () => {
       const file = diff()
-      if (file) return normalize(file).fileDiff
+      if (file) return normalize(file)
       const before = string(props.input.oldString)
       const after = string(props.input.newString)
       if (!before && !after) return
-      return parseDiffFromFile({ name: path(), contents: before }, { name: path(), contents: after })
+      return normalize({ file: path(), before, after, additions: 0, deletions: 0 })
+    }
+    const canOpenDiff = () => {
+      if (!props.actions?.openDiff || !path()) return false
+      // Presence check instead of `view()` so the always-rendered trigger does
+      // not parse the patch while the card stays collapsed.
+      if (diff()?.patch) return true
+      return !!(string(props.input.oldString) || string(props.input.newString))
+    }
+    const openDiff = (event: MouseEvent) => {
+      event.stopPropagation()
+      const value = view()
+      if (!canOpenDiff() || !value) return
+      props.actions?.openDiff?.({
+        file: path(),
+        patch: value.patch,
+        additions: value.additions,
+        deletions: value.deletions,
+      })
     }
     return (
       <div data-component="edit-tool">
@@ -719,6 +970,7 @@ ToolRegistry.register({
                   <ToolFileMeta path={path()} directory={props.directory} changes={diff()} />
                 </div>
               </div>
+              <ToolDiffAction when={canOpenDiff()} onClick={openDiff} />
             </div>
           }
         >
@@ -730,8 +982,8 @@ ToolRegistry.register({
             >
               <div data-component="edit-content">
                 <Show when={view()}>
-                  {(fileDiff) => (
-                    <Dynamic component={component} mode="diff" hunkSeparators="simple" fileDiff={fileDiff()} />
+                  {(value) => (
+                    <Dynamic component={component} mode="diff" hunkSeparators="simple" fileDiff={value().fileDiff} />
                   )}
                 </Show>
               </div>

@@ -1,20 +1,26 @@
 export * as KiloGatewayErrors from "./gateway-errors"
 
 import { KiloErrors } from "@kilocode/gateway-core"
-import { AIError, AIErrorReason, CompactionCheckpointResponse, CompactionResponse, HttpContext } from "@opencode/ai"
+import {
+  AIError,
+  AIErrorReason,
+  CompactionCheckpointResponse,
+  CompactionResponse,
+  HttpContext,
+} from "@opencode/ai/effect"
 import { LLMClient } from "@opencode/ai/route"
 import type {
   CheckpointRequest,
   CompactionRequest,
   EndpointCompactOptions,
-  Service,
+  LLMClientService,
   TriggerCompactOptions,
-} from "@opencode/ai/route/client"
+} from "@opencode/ai/route"
 import { Effect, Layer, Stream } from "effect"
 
 // The native provider classifier keeps the complete normalized frame, including Kilo's retry decision.
 // Known Kilo terminal errors and top-up use the existing override across stream, generate, and compact.
-export const layer = <E, R>(base: Layer.Layer<Service, E, R>) =>
+export const layer = <E, R>(base: Layer.Layer<LLMClientService, E, R>) =>
   Layer.effect(
     LLMClient.Service,
     Effect.gen(function* () {

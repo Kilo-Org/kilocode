@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test"
-import { Usage } from "@opencode/ai"
+import { Usage } from "@opencode/ai/effect"
 import { Money } from "@opencode/schema/money"
 import { KiloSessionUsage } from "../../src/kilocode/session/usage.js"
 import { SessionUsage } from "../../src/session/usage.js"

@@ -798,5 +798,65 @@
     "v2": "packages/kilo-vscode/src/cost-alert.ts",
     "note": "src/cost-alert.ts createCostAlert and createCostAlerts, with src/extension.ts, replace the synthetic webview question with a non-blocking VS Code notification. Continue acknowledges the session and threshold, Stop interrupts that session, and a dismissed alert rearms on its next execution. Unlike the webview question, another prompt does not implicitly dismiss the native notification, which cannot be closed programmatically. The limit accepts fractional USD and uses v2 recorded session cost. test/cost-alert.test.ts covers the policy and event stream.",
     "by": "session-cost-alert"
+  },
+  "module:packages/opencode/src/kilocode/commit-message/index.ts": {
+    "state": "ported",
+    "note": "packages/kilo-plugin/src/commit-message/index.ts KiloCommitMessagePlugin: the barrel is replaced by the plugin that registers the kilocode.commit-message RPC and reads the custom prompt from commit_message.prompt (KiloConfigPolicy.commitMessagePrompt).",
+    "by": "commit-message-port"
+  },
+  "module:packages/opencode/src/kilocode/commit-message/generate.ts": {
+    "state": "ported",
+    "note": "packages/kilo-plugin/src/commit-message/generate.ts CommitMessageGenerate.generate: same SYSTEM_PROMPT, custom prompt replacement, language requirement (none for en), previous-message instruction, code fence and quote cleanup, NoChangesError before any model call, 30 second timeout, provider error text through errorMessage (Error, tagged value, data.message). One generate.text call through the plugin context replaces the session LLM stream; the model is the available small_model (title agent model), else the host small model of the default provider (KiloSmallModel gates kilo-auto/small on Kilo credentials, so local-only setups use their own model), else the default model, at the lowest reasoning variant.",
+    "by": "commit-message-port"
+  },
+  "module:packages/opencode/src/kilocode/commit-message/git-context.ts": {
+    "state": "ported",
+    "note": "packages/kilo-plugin/src/commit-message/git-context.ts CommitMessageGit.getGitContext: staged first, else porcelain status with untracked placeholders, lock file filter, selectedFiles filter, binary placeholder, 4000 character truncation, last 5 commits, windowsHide on every git spawn.",
+    "by": "commit-message-port"
+  },
+  "module:packages/opencode/src/kilocode/commit-message/types.ts": {
+    "state": "ported",
+    "note": "Request and response types: packages/schema/src/kilocode/commit-message.ts KiloCommitMessageRpc.Input and the generate output; GitContext and FileChange moved into packages/kilo-plugin/src/commit-message/git-context.ts.",
+    "by": "commit-message-port"
+  },
+  "module:packages/opencode/test/kilocode/commit-message/generate.test.ts": {
+    "state": "ported",
+    "note": "packages/kilo-plugin/test/commit-message-generate.test.ts carries the model, prompt, previous message, cleanup, no-changes, error-message, custom prompt and language assertions, plus the 30 second timeout. packages/kilo-cli/test/commit-message.test.ts checks small_model selection, the configured prompt and the language through the real host.",
+    "by": "commit-message-port"
+  },
+  "module:packages/opencode/test/kilocode/commit-message/git-context.test.ts": {
+    "state": "ported",
+    "note": "packages/kilo-plugin/test/commit-message-git-context.test.ts carries the parser, status mapping, lock file, staged versus unstaged, binary, truncation, selectedFiles, branch and recent commit assertions against real temporary repositories.",
+    "by": "commit-message-port"
+  },
+  "module:packages/opencode/test/kilocode/commit-message-windows.test.ts": {
+    "state": "ported",
+    "note": "packages/kilo-plugin/test/commit-message-windows.test.ts checks that every git spawn of getGitContext passes windowsHide: true.",
+    "by": "commit-message-port"
+  },
+  "module:packages/opencode/src/kilocode/server/httpapi/groups/commit-message.ts": {
+    "state": "ported",
+    "note": "The /commit-message HttpApi group is replaced by the kilocode.commit-message Kilo RPC contract packages/schema/src/kilocode/commit-message.ts (generate, errors no_changes and failed), served by the generic POST /api/rpc/:rpcID/:method route.",
+    "by": "commit-message-port"
+  },
+  "module:packages/opencode/src/kilocode/server/httpapi/handlers/commit-message.ts": {
+    "state": "ported",
+    "note": "packages/kilo-plugin/src/commit-message/index.ts registers the generate handler with ctx.rpc.register; NoChangesError maps to the no_changes error and every other failure to failed with its message, as the typed 422 errors did.",
+    "by": "commit-message-port"
+  },
+  "module:packages/opencode/test/kilocode/server/commit-message-no-changes.test.ts": {
+    "state": "ported",
+    "note": "packages/kilo-cli/test/commit-message.test.ts calls the RPC through the real host and generated client: a clean repository fails with no_changes and no model call, a model failure and a streamed provider error from a local OpenAI-compatible server keep their message, an unavailable small_model falls back to the default model.",
+    "by": "commit-message-port"
+  },
+  "module:packages/kilo-vscode/src/services/commit-message/index.ts": {
+    "state": "ported",
+    "note": "packages/kilo-vscode/src/commit-message.ts commitMessageCommand, registered as kilo-code.v2.generateCommitMessage in src/extension.ts with scm/title and scm/input entries for git: git extension activation, repository of the clicked view, cancellable source control progress, 35 second client timeout, previous message per repository, language from kilo-code.v2.languageCommitMessage, server errors in an error message.",
+    "by": "commit-message-port"
+  },
+  "module:packages/kilo-vscode/src/services/commit-message/__tests__/index.spec.ts": {
+    "state": "ported",
+    "note": "packages/kilo-vscode/test/commit-message.test.ts carries the missing git extension, no repository, connection failure, input box write, progress options, previous message, multi-repository selection, server error and cancellation assertions, plus the language resolution.",
+    "by": "commit-message-port"
   }
 }

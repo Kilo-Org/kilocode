@@ -1,9 +1,9 @@
 {
   "$comment": "Shared-patch baseline (U-L3-01). Read by script/check-shared-patches.ts and script/check-opencode-annotations.ts. Each shared upstream file that Kilo adds or changes needs an entry: rung (3 = seam patch, 4 = feature patch) and the missing seam. `unmarked` allows lines without markers and states why. Raise a limit only in the PR that adds the patch, and lower it when a patch goes away.",
   "limits": {
-    "files": 70,
-    "markedLines": 576,
-    "unmarkedLines": 138,
+    "files": 69,
+    "markedLines": 579,
+    "unmarkedLines": 78,
     "deletedFiles": 0
   },
   "files": {
@@ -23,17 +23,13 @@
       "rung": 3,
       "seam": "CI authentication: pin `actions/create-github-app-token` to the current release (v3.3.0) so Kilo CI uses a supported action. Upstream's pin lags, and an action reference cannot be overridden from outside the composite action."
     },
-    ".github/publish-python-sdk.yml": {
-      "rung": 3,
-      "seam": "Disabled Python SDK publish workflow: track the current `actions/checkout` (v7.0.1) and `oven-sh/setup-bun` (v2.2.0) releases, and read the Bun version from the root `package.json` (`packageManager`, currently 1.4.4) instead of a hardcoded 1.2.21. The workflow remains commented out, so this is pin hygiene only. No seam: a workflow cannot take its action references from another file."
-    },
     ".github/workflows/check.yml": {
       "rung": 3,
       "seam": "CI triggers and gates: run `check` on push to Kilo's `v2` integration branch (upstream's v2 line is `dev`) and for every pull request, so stacked v2 PRs that target another PR branch are checked; skip `lint:changed` on upstream sync PRs (branch `sync-v*`), whose changed files are upstream's and fail upstream's lint too. No seam: workflow triggers and step conditions cannot be extended from outside the file. Also pins `actions/checkout` (v7.0.1) to the current release; upstream's pin lags."
     },
-    ".github/workflows/test.yml": {
+    ".github/workflows/check-test.yml": {
       "rung": 3,
-      "seam": "CI triggers: run the unit and e2e matrix on push to Kilo's `v2` integration branch (upstream's v2 line is `dev`). Skip the `affected` job, and with it the `e2e-suite` jobs that need it and the `e2e` result check that requires `affected` to succeed: they test only `packages/app` and `packages/session-ui`, which Kilo removed (`skipFiles` in script/upstream/utils/config.ts). Job-level lines, so upstream changes to the e2e steps still merge cleanly. `Build workspace libraries` in upstream's `build` job filters only on `@opencode/cli^...`, because turbo fails on the `@opencode/app^...` filter when the package does not exist. CI speed: `Verify packed workerd SDK` runs in its own `sdk` job (at the end of the file), so it no longer waits for the unit tests in `unit`. The Turbo cache step (upstream removed its broken one in v2.0.31) uses `.turbo/cache` (where Turborepo 2.x writes), keys on turbo.json and bun.lock, and carries the shard. Test shards: a `shard` matrix dimension in `unit` (2 Linux, 3 Windows) sets `KILO_TEST_SHARD` and `KILO_TEST_CONCURRENCY`; core, tui and cli run `test:ci` (the Kilo runner, script/kilocode/test/test-runner.ts), the other packages run `test` once, in shard 1; failing cases from the runner's JUnit reports become annotations, and the reports are an artifact that refreshes the shard weights. No seam: workflow triggers, job conditions, jobs, steps, matrix dimensions and cache keys cannot be extended from outside the file. Upstream has no cache key input or test shard option. Action pins track current releases (`actions/checkout` v7.0.1, `actions/setup-node` v7.1.0, `actions/cache` v6.1.0, `actions/upload-artifact` v7.0.2, `mikepenz/action-junit-report` v6.6.1), and the generated protocol client is checked next to the generated client and docs. Required-check barriers: `unit-required` (name `unit (linux)`) and `required` (name `test (linux)`) aggregate the `unit` matrix, `build` and `sdk`, so a branch ruleset has stable check names; `--affected` now applies to pull requests only, so pushes and manual runs test the full suite; `test:lint-rules` runs next to the Effect rule tests. No seam: a matrix job cannot publish one stable check name, a ruleset cannot require a job that does not exist, and the test invocation is a run step inside the job."
+      "seam": "Upstream renamed `test.yml` to `check-test.yml` in v2.2. CI triggers: run the unit and e2e matrix on push to Kilo's `v2` integration branch (upstream's v2 line is `dev`). Skip the `affected` job, and with it the `e2e-suite` jobs that need it and the `e2e` result check that requires `affected` to succeed: they test only `packages/app` and `packages/session-ui`, which Kilo removed (`skipFiles` in script/upstream/utils/config.ts). Job-level lines, so upstream changes to the e2e steps still merge cleanly. `Build workspace libraries` in upstream's `build` job filters only on `@opencode/cli^...`, because turbo fails on the `@opencode/app^...` filter when the package does not exist. CI speed: `Verify packed workerd SDK` runs in its own `sdk` job (at the end of the file), so it no longer waits for the unit tests in `unit`. The Turbo cache step (upstream removed its broken one in v2.0.31) uses `.turbo/cache` (where Turborepo 2.x writes), keys on turbo.json and bun.lock, and carries the shard. Test shards: a `shard` matrix dimension in `unit` (2 Linux, 3 Windows) sets `KILO_TEST_SHARD` and `KILO_TEST_CONCURRENCY`; core, tui and cli run `test:ci` (the Kilo runner, script/kilocode/test/test-runner.ts), the other packages run `test` once, in shard 1; failing cases from the runner's JUnit reports become annotations, and the reports are an artifact that refreshes the shard weights. No seam: workflow triggers, job conditions, jobs, steps, matrix dimensions and cache keys cannot be extended from outside the file. Upstream has no cache key input or test shard option. Action pins track current releases (`actions/checkout` v7.0.1, `actions/setup-node` v7.1.0, `actions/cache` v6.1.0, `actions/upload-artifact` v7.0.2, `mikepenz/action-junit-report` v6.6.1) and the generated protocol client is checked next to the generated client. Required-check barriers: `unit-required` (name `unit (linux)`) and `required` (name `test (linux)`) aggregate the `unit` matrix, `build` and `sdk`, so a branch ruleset has stable check names; `--affected` now applies to pull requests only, so pushes and manual runs test the full suite; `test:lint-rules` runs next to the Effect rule tests. No seam: a matrix job cannot publish one stable check name, a ruleset cannot require a job that does not exist, and the test invocation is a run step inside the job."
     },
     ".gitignore": {
       "rung": 3,
@@ -58,7 +54,7 @@
     },
     "package.json": {
       "rung": 3,
-      "seam": "Root `dev` script runs script/dev-isolated.ts, which starts the Kilo host entry (packages/kilo-cli) with an isolated profile, so `bun dev` never uses the installed OpenCode or Kilo data. Stays after U-E0-01: `bun dev` from the root reads the upstream root package.json, and upstream's script runs the upstream CLI with the real data. Root `extension` script runs packages/kilo-vscode/script/launch.ts (Kilo-owned), which builds the v2 VS Code extension and opens it in a separate VS Code instance with an isolated profile, as `bun run extension` does on v1. Root `lint` script runs only `oxlint`: its ast-grep and `script/sdk-docs.ts` steps check `packages/gui-extensions`, which Kilo removed (`skipFiles`). Root `install:alpha` script runs script/kilocode/install-alpha.ts (Kilo-owned), which installs the host executable built by the `kilo-v2` workflow; it goes away when v2 is mainline.",
+      "seam": "Root `dev` script runs script/dev-isolated.ts, which starts the Kilo host entry (packages/kilo-cli) with an isolated profile, so `bun dev` never uses the installed OpenCode or Kilo data. Stays after U-E0-01: `bun dev` from the root reads the upstream root package.json, and upstream's script runs the upstream CLI with the real data. Root `extension` script runs packages/kilo-vscode/script/launch.ts (Kilo-owned), which builds the v2 VS Code extension and opens it in a separate VS Code instance with an isolated profile, as `bun run extension` does on v1. Root `lint` script runs only `oxlint`: its ast-grep and `script/sdk-docs.ts` steps check upstream's GUI plugin package (`packages/gui-extensions`, renamed to `packages/gui-plugins` in v2.2), which Kilo removed (`skipFiles`). Root `install:alpha` script runs script/kilocode/install-alpha.ts (Kilo-owned), which installs the host executable built by the `kilo-v2` workflow; it goes away when v2 is mainline.",
       "unmarked": "JSON has no comments."
     },
     "packages/cli/package.json": {
@@ -100,16 +96,6 @@
       "seam": "Generated OpenAPI document for the optional command template and model metadata exposed by the command list API. The document is generated from the public schema; editing it by hand is not supported.",
       "unmarked": "Generated JSON cannot carry marker comments; bun run generate in packages/protocol owns this file."
     },
-    "services/www/openapi.json": {
-      "rung": 3,
-      "seam": "Copy of the generated protocol OpenAPI document with the optional command template and model metadata. services/www/script/generate-openapi.ts copies it from packages/protocol/openapi.json.",
-      "unmarked": "Generated JSON cannot carry marker comments; bun script/generate-openapi.ts in services/www owns this file."
-    },
-    "services/www/public/openapi.json": {
-      "rung": 3,
-      "seam": "Public copy of the generated protocol OpenAPI document with the optional command template and model metadata. services/www/script/generate-openapi.ts copies it from packages/protocol/openapi.json.",
-      "unmarked": "Generated JSON cannot carry marker comments; bun script/generate-openapi.ts in services/www owns this file."
-    },
     "packages/core/package.json": {
       "rung": 3,
       "seam": "Add a `test:ci` script that runs the Kilo test runner (script/kilocode/test/test-runner.ts) in balanced shards for CI. Turborepo runs only package.json scripts, so the sharded task needs a script in each sharded package (core, tui, cli); the package's own `test` script stays as it is and the runner calls it with file arguments.",
@@ -117,7 +103,7 @@
     },
     "packages/core/src/config.ts": {
       "rung": 3,
-      "seam": "Config discovery layout (feature `config`): `ConfigDiscovery.LayoutService`, a global node with upstream defaults (`opencode.json`, `opencode.jsonc`, `.opencode`, no walk bound) that discovery and `Config` read for the root file names, the project directory names, the file order inside those directories, the upward-walk bound and the global write target (the last existing name). Optional systemFiles and parse hooks let a host select managed file order and decode its own config schema from raw and normalized fields; the decoder also preserves host fields when managed policies split from settings. Optional input normalization and command document composition let the host apply model-only overrides after file discovery. Without the hooks, the default graph and canonical schema behave as upstream. The Kilo host supplies kilo2 names, file orders, a worktree boundary and Kilo-owned config policy. Rungs 1 and 2 cannot do it alone: config parsing precedes plugins, the command editor cannot update captured definitions, and replacing Config.node would lose the server's configured options."
+      "seam": "Config discovery layout (feature `config`): `ConfigDiscovery.LayoutService`, a global node with upstream defaults (`opencode.json`, `opencode.jsonc`, `.opencode`, no walk bound) that discovery and `Config` read for the root file names, the project directory names, the file order inside those directories, the upward-walk bound and the global write target (the last existing name). Optional systemFiles and parse hooks let a host select managed file order and decode its own config schema from raw and normalized fields; the decoder also preserves host fields when managed policies split from settings. Optional input normalization and command document composition let the host apply model-only overrides after file discovery. Upstream's integration reloads (v2.2) run discovery with a captured layer context, so that context also carries the layout service. Without the hooks, the default graph and canonical schema behave as upstream. The Kilo host supplies kilo2 names, file orders, a worktree boundary and Kilo-owned config policy. Rungs 1 and 2 cannot do it alone: config parsing precedes plugins, the command editor cannot update captured definitions, and replacing Config.node would lose the server's configured options."
     },
     "packages/core/src/config/discovery.ts": {
       "rung": 3,
@@ -296,6 +282,14 @@
     "packages/core/src/plugin/provider/openai.ts": {
       "rung": 3,
       "seam": "Codex sign-in reads App.Info.product: the originator in the authorize URL, provider headers and model requests, the OAuth token request user agent (as v1 `kilo/<version>`) and the callback page brand. Defaults stay `opencode`, App.useragent and the OpenCode page. Issue #15409. It also exports the browser and headless method registrations, so the Kilo plugin can give them the v1 labels (the integration editor can only replace a method with a full registration, not rename it). A Kilo model.request hook (rung 1) could rewrite the request header alone, but the authorize URL needs this knob anyway, so all originator uses read the same value. Rung 1 cannot supply it: the integration editor lists OAuth methods but cannot wrap a registered method's authorize, and no hook reaches the authorize URL or the loopback callback page. Rung 2 cannot supply it: App.Info had no product identity, and replacing the OpenAI plugin would mirror about 440 lines. Without a product, upstream values stay unchanged and upstream tests pass unchanged."
+    },
+    "packages/cli/test/server-connection.test.ts": {
+      "rung": 4,
+      "seam": "Skips upstream's new `local config commands do not start or require a server` test (v2.2). It expects `mcp add --global` to write `opencode.json`, but the existing Kilo patch in `packages/cli/src/commands/handlers/mcp/add.ts` writes the Kilo names (`kilo2.json`) even without the host. Remove the skip when the CLI write commands read their file names from `ConfigDiscovery.LayoutService` (host knob with upstream defaults) instead of `KiloConfigFiles`."
+    },
+    "packages/tui/test/usage-limits.test.tsx": {
+      "rung": 4,
+      "seam": "Skips upstream's new `usage-limits` test (v2.2). It expects upstream's row pricing in the model picker and the OpenCode Console `/usage` dialog. The Kilo model picker (dialog-model.tsx patch) shows prices in its info panel, and the Kilo usage plugin (`tui/src/kilocode/usage.tsx`) shadows upstream's `usage.show` command on purpose. Remove the skip when the Kilo picker keeps upstream row content and the test no longer needs the Console dialog."
     }
   }
 }

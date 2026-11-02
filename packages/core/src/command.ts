@@ -56,14 +56,6 @@ export const layer = Layer.effect(
   Service,
   Effect.gen(function* () {
     const bus = yield* Bus.Service
-    const state = State.create<Map<string, Definition>, Editor>({
-      name: "command",
-      initial: () => new Map(),
-      editor: (editor) => ({
-        add: (definition) => editor.set(definition.name, definition),
-      }),
-      notify: () => bus.publish(Command.Event.Updated, {}).pipe(Effect.asVoid),
-    })
     const info = (definition: Definition) =>
       Info.make({
         name: definition.name,
@@ -73,6 +65,17 @@ export const layer = Layer.effect(
         ...(definition.model === undefined ? {} : { model: definition.model }),
         // kilocode_change end
       })
+    const state = State.create<Map<string, Definition>, Editor>({
+      name: "command",
+      initial: () => new Map(),
+      editor: (editor) => ({
+        add: (definition) => editor.set(definition.name, definition),
+      }),
+      notify: State.changes(
+        (commands) => Array.from(commands.values(), info),
+        () => bus.publish(Command.Event.Updated, {}).pipe(Effect.asVoid),
+      ),
+    })
 
     return Service.of({
       reload: state.reload,

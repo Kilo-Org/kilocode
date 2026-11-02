@@ -13,10 +13,20 @@ export class Info extends Config.Info.extend<Info>("KiloConfigPolicy.Info")({
     description: "Hide Kilo models that can use prompts for training and deny provider data collection",
   }),
   workflow_models: Schema.Record(Schema.String, ConfigModel.Selection).pipe(optional),
+  // kilo_port(unattributed:core/v1:fb80dc4c3dd4)
+  commit_message: Schema.Struct({
+    prompt: Schema.String.pipe(optional).annotate({
+      description:
+        "Custom system prompt for AI commit message generation. When set, replaces the default conventional commits prompt entirely.",
+    }),
+  })
+    .pipe(optional)
+    .annotate({ description: "Configuration for AI-generated commit messages" }),
 }) {}
 
 const decode = Schema.decodeUnknownOption(Info, { errors: "all", onExcessProperty: "ignore" })
 const policy = Schema.Struct({ hide_prompt_training_models: Schema.optional(Schema.Boolean) })
+const commit = Schema.Struct({ commit_message: Schema.optional(Schema.Struct({ prompt: Schema.optional(Schema.String) })) })
 const decodeModel = Schema.decodeUnknownOption(ConfigModel.Selection)
 
 function record(value: unknown): value is Record<string, unknown> {
@@ -63,6 +73,13 @@ export function parse(
         "ignored invalid hide_prompt_training_models; expected a boolean (true or false), so prompt-training protection was not applied from this field",
     })
   const raw = Option.getOrElse(decoded, () => ({}))
+  const message = Schema.decodeUnknownOption(commit)(input)
+  if (Option.isNone(message))
+    report?.({
+      path: ["commit_message"],
+      kind: "invalid",
+      message: "ignored invalid commit_message; expected an object with an optional string prompt",
+    })
   const models = input instanceof Info ? input.workflow_models : record(input) ? workflowModels(input) : undefined
   // Managed policy splitting clears optional fields with undefined; the encoded schema requires omitted keys.
   return Option.getOrUndefined(
@@ -71,6 +88,7 @@ export function parse(
         Object.entries({
           ...normalized,
           ...raw,
+          ...Option.getOrElse(message, () => ({})),
           workflow_models: models && Object.keys(models).length ? models : undefined,
         }).filter(([, value]) => value !== undefined),
       ),
@@ -119,6 +137,18 @@ export function fromEntries(entries: readonly Config.Entry[]) {
       false,
     ),
   }
+}
+
+/** The custom commit message prompt of the effective entries: the last document that sets one wins, and empty means none. */
+export function commitMessagePrompt(entries: readonly Config.Entry[]) {
+  const prompt = entries.reduce<string | undefined>(
+    (value, entry) =>
+      entry.type === "document" && entry.info instanceof Info && entry.info.commit_message?.prompt !== undefined
+        ? entry.info.commit_message.prompt
+        : value,
+    undefined,
+  )
+  return prompt || undefined
 }
 
 export const get = (config: Interface) => config.entries().pipe(Effect.map(fromEntries))
