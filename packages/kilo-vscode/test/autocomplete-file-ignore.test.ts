@@ -38,3 +38,17 @@ describe("FileIgnoreController", () => {
     expect(controller.validateAccess(path.join(real, "math.ts"))).toBe(false)
   })
 })
+
+describe("FileIgnoreController symlinks that leave the workspace", () => {
+  const outside = fs.mkdtempSync(path.join(os.tmpdir(), "kilo-outside-"))
+  fs.writeFileSync(path.join(outside, "secret.ts"), "export const secret = 1\n")
+  fs.symlinkSync(outside, path.join(real, "escape"), process.platform === "win32" ? "junction" : "dir")
+
+  afterAll(() => fs.rmSync(outside, { recursive: true, force: true }))
+
+  test("denies a file that a workspace symlink points to outside the workspace", async () => {
+    const controller = new FileIgnoreController(link)
+    await controller.initialize()
+    expect(controller.validateAccess(path.join(link, "escape", "secret.ts"))).toBe(false)
+  })
+})

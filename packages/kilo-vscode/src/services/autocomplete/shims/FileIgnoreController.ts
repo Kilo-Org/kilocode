@@ -87,26 +87,24 @@ export class FileIgnoreController {
     }
     const absoluteInput = path.isAbsolute(withoutUri) ? withoutUri : path.resolve(this.workspacePath, withoutUri)
 
-    let resolved = absoluteInput
     const cached = this.realpathCache.get(absoluteInput)
-    if (cached) {
-      resolved = cached
-    } else {
+    let resolved: string | undefined = cached
+    if (!resolved) {
       try {
         resolved = fs.realpathSync(absoluteInput)
         this.cacheRealpath(absoluteInput, resolved)
       } catch {
-        // Keep unresolved path when file does not exist yet.
+        // The file does not exist yet, so it is compared as given below.
       }
     }
 
-    // A resolved file is compared with the resolved workspace, an unresolved one (a file that does not exist yet)
-    // with the workspace path as given.
-    const relative = [
-      path.relative(this.realWorkspacePath || this.workspacePath, resolved),
-      path.relative(this.workspacePath, absoluteInput),
-    ].find((candidate) => candidate && !candidate.startsWith("..") && !path.isAbsolute(candidate) && !WINDOWS_DRIVE.test(candidate))
-    if (!relative) {
+    // A resolved file is compared with the resolved workspace, so a workspace that is itself a symlink works and a
+    // symlink that points outside it is denied. An unresolved path (a file that does not exist yet) is only ever
+    // compared with the workspace path as given.
+    const relative = resolved
+      ? path.relative(this.realWorkspacePath || this.workspacePath, resolved)
+      : path.relative(this.workspacePath, absoluteInput)
+    if (!relative || relative.startsWith("..") || path.isAbsolute(relative) || WINDOWS_DRIVE.test(relative)) {
       return null
     }
 
