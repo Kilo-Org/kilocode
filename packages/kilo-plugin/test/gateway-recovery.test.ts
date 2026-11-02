@@ -11,7 +11,7 @@ import { Rpc } from "@opencode/core/rpc"
 import { Event } from "@opencode/schema/config"
 import { KiloGatewayRpc } from "@opencode/schema/kilocode/gateway"
 import { Global } from "@opencode/util/global"
-import { Effect, Exit, Queue, Scope } from "effect"
+import { Effect, Exit, Queue, Scope, Stream } from "effect"
 import { TestClock } from "effect/testing"
 import { withEnv } from "../../core/test/fixture/env"
 import { testEffect } from "../../core/test/lib/effect"
@@ -251,6 +251,44 @@ it.effect("cancels old account retries, retries a reselected failed scope, and c
         yield* TestClock.adjust("1 hour")
         expect(catalogRequests(backend)).toEqual(calls)
         expect(yield* Queue.size(running.updates)).toBe(0)
+      }),
+    )
+  }),
+)
+
+it.effect("publishes the catalog reason only when it changes", () =>
+  Effect.gen(function* () {
+    const backend = yield* Effect.acquireRelease(
+      Effect.sync(() => fixture()),
+      (backend) => Effect.sync(() => backend[Symbol.dispose]()),
+    )
+    yield* withEnv({ ...env, KILO_API_URL: backend.url }, () =>
+      Effect.gen(function* () {
+        backend.state.teamModelsStatus = 503
+        const running = yield* addPlugin()
+        const client = (yield* Rpc.Service).client(KiloGatewayRpc.Definition)
+        const events = yield* Queue.unbounded<KiloGatewayRpc.CatalogStatus>()
+        yield* client.events.subscribe("catalog").pipe(
+          Stream.runForEach((event) => Queue.offer(events, event.data)),
+          Effect.forkScoped({ startImmediately: true }),
+        )
+        yield* Effect.yieldNow
+        expect(yield* client["catalog.status"]({})).toEqual({ failure: { kind: "http", status: 503 } })
+        // A retry that fails the same way publishes nothing.
+        yield* TestClock.adjust("30 seconds")
+        yield* Queue.take(running.updates)
+        expect(yield* Queue.size(events)).toBe(0)
+        backend.state.teamModelsStatus = 500
+        yield* TestClock.adjust("60 seconds")
+        yield* Queue.take(running.updates)
+        expect(yield* Queue.take(events)).toEqual({ failure: { kind: "http", status: 500 } })
+        expect(yield* client["catalog.status"]({})).toEqual({ failure: { kind: "http", status: 500 } })
+        backend.state.teamModelsStatus = 200
+        yield* TestClock.adjust("120 seconds")
+        yield* Queue.take(running.updates)
+        expect(yield* Queue.take(events)).toEqual({ failure: null })
+        expect(yield* client["catalog.status"]({})).toEqual({ failure: null })
+        expect(yield* Queue.size(events)).toBe(0)
       }),
     )
   }),

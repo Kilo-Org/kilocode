@@ -289,6 +289,9 @@ export const dict = {
   "provider.failure.http": "خطأ في الموفر (HTTP {{status}}).",
   "provider.failure.httpNoStatus": "خطأ في الموفر.",
   "provider.failure.schema": "استجابة غير متوقعة من الموفر.",
+  "provider.failure.organizationMissing": "الفريق المحدد لم يعد متاحًا. اختر فريقًا آخر.",
+  "provider.failure.scopeConflict": "الفريق المحدد يتعارض مع فريق رمز Kilo الخاص بك.",
+  "provider.failure.personalUnavailable": "لا يحتوي هذا الحساب على حساب شخصي. اختر فريقًا.",
 
   "notification.permission.title": "مطلوب إذن",
   "notification.permission.titleSubagent": "مطلوب إذن (وكيل فرعي)",

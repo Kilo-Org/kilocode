@@ -295,6 +295,9 @@ export const dict = {
   "provider.failure.http": "Sağlayıcı hatası (HTTP {{status}}).",
   "provider.failure.httpNoStatus": "Sağlayıcı hatası.",
   "provider.failure.schema": "Sağlayıcıdan beklenmeyen bir yanıt alındı.",
+  "provider.failure.organizationMissing": "Seçilen ekip artık kullanılamıyor. Başka bir ekip seçin.",
+  "provider.failure.scopeConflict": "Seçilen ekip, Kilo belirtecinizin ekibiyle çakışıyor.",
+  "provider.failure.personalUnavailable": "Bu hesabın kişisel hesabı yok. Bir ekip seçin.",
 
   "notification.permission.title": "İzin gerekli",
   "notification.permission.titleSubagent": "İzin gerekli (alt ajan)",

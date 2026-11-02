@@ -222,12 +222,33 @@ export const ModelEntry = Schema.Struct({
 
 export type ModelEntry = typeof ModelEntry.Type
 
+// Why the Kilo model catalog of the current scope failed to load. `unauthorized` and `http` carry the HTTP status when
+// the Kilo API answered. `unauthenticated`: a team is selected but no Kilo credential is available.
+// `organization_missing`: the account is no longer a member of the selected team. `scope_conflict`: the token is
+// scoped to another team than the selected one. `personal_unavailable`: the account has no personal account and no
+// team is selected.
 export const CatalogFailure = Schema.Struct({
-  kind: Schema.Literals(["unauthorized", "network", "schema", "http", "organization_missing"]),
+  kind: Schema.Literals([
+    "unauthorized",
+    "unauthenticated",
+    "network",
+    "schema",
+    "http",
+    "organization_missing",
+    "scope_conflict",
+    "personal_unavailable",
+  ]),
   status: optional(Schema.Int.check(Schema.isGreaterThanOrEqualTo(100), Schema.isLessThanOrEqualTo(599))),
 }).annotate({ identifier: "KiloGateway.CatalogFailure" })
 
 export interface CatalogFailure extends Schema.Schema.Type<typeof CatalogFailure> {}
+
+// The catalog state of the location. `failure` is `null` while the catalog is usable or still loading.
+export const CatalogStatus = Schema.Struct({
+  failure: Schema.NullOr(CatalogFailure),
+}).annotate({ identifier: "KiloGateway.CatalogStatus" })
+
+export interface CatalogStatus extends Schema.Schema.Type<typeof CatalogStatus> {}
 
 export const SessionMetadata = Schema.Struct({
   routedModelID: Schema.optional(Schema.String),
@@ -268,7 +289,8 @@ export const RouterEvalConfig = Schema.Struct({
 export type RouterEvalConfig = typeof RouterEvalConfig.Type
 
 // The TUI, VS Code, and JetBrains clients use this contract for account/profile, balance, Kilo Pass,
-// BYOK, coding plans, team modes, notifications, media and embedding models, and FIM/edit routing.
+// BYOK, coding plans, team modes, notifications, the catalog failure reason, media and embedding models, and FIM/edit
+// routing.
 export const Definition = Rpc.define({
   id: "kilocode.gateway",
   methods: {
@@ -326,6 +348,12 @@ export const Definition = Rpc.define({
       input: portable(Schema.Struct({})),
       output: portable(Schema.Array(ModelEntry)),
       errors: { ...Failure, failed: portable(CatalogFailure) },
+    },
+    // The failure reason of the catalog without the models. The `catalog` event publishes each change.
+    "catalog.status": {
+      input: portable(Schema.Struct({})),
+      output: portable(CatalogStatus),
+      errors: Failure,
     },
     "models.images": {
       input: portable(Schema.Struct({})),
@@ -395,5 +423,7 @@ export const Definition = Rpc.define({
   },
   events: {
     organization: { schema: portable(Schema.Struct({ organizationID: OrganizationID })) },
+    /** The catalog failure reason of the location changed. */
+    catalog: { schema: portable(CatalogStatus) },
   },
 })

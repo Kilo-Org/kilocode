@@ -296,6 +296,9 @@ export const dict = {
   "provider.failure.http": "Udbyderfejl (HTTP {{status}}).",
   "provider.failure.httpNoStatus": "Udbyderfejl.",
   "provider.failure.schema": "Uventet svar fra udbyderen.",
+  "provider.failure.organizationMissing": "Det valgte team er ikke længere tilgængeligt. Vælg et andet team.",
+  "provider.failure.scopeConflict": "Det valgte team er i konflikt med teamet for dit Kilo-token.",
+  "provider.failure.personalUnavailable": "Denne konto har ingen personlig konto. Vælg et team.",
 
   "notification.permission.title": "Tilladelse påkrævet",
   "notification.permission.titleSubagent": "Tilladelse påkrævet (underagent)",

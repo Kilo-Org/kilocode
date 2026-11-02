@@ -291,6 +291,9 @@ export const dict = {
   "provider.failure.http": "Provider error (HTTP {{status}}).",
   "provider.failure.httpNoStatus": "Provider error.",
   "provider.failure.schema": "Unexpected response from the provider.",
+  "provider.failure.organizationMissing": "The selected team is no longer available. Select another team.",
+  "provider.failure.scopeConflict": "The selected team conflicts with the team of your Kilo token.",
+  "provider.failure.personalUnavailable": "This account has no personal account. Select a team.",
 
   "notification.permission.title": "Permission required",
   "notification.permission.titleSubagent": "Permission required (subagent)",

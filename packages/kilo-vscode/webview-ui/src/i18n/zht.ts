@@ -279,6 +279,9 @@ export const dict = {
   "provider.failure.http": "供應商錯誤（HTTP {{status}}）。",
   "provider.failure.httpNoStatus": "供應商錯誤。",
   "provider.failure.schema": "供應商回傳非預期的回應。",
+  "provider.failure.organizationMissing": "所選團隊已無法使用。請選擇其他團隊。",
+  "provider.failure.scopeConflict": "所選團隊與你的 Kilo 權杖所屬團隊衝突。",
+  "provider.failure.personalUnavailable": "此帳戶沒有個人帳戶。請選擇一個團隊。",
 
   "notification.permission.title": "需要權限",
   "notification.permission.titleSubagent": "需要權限（子代理）",

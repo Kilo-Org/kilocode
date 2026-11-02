@@ -300,6 +300,9 @@ export const dict = {
   "provider.failure.http": "Erro do provedor (HTTP {{status}}).",
   "provider.failure.httpNoStatus": "Erro do provedor.",
   "provider.failure.schema": "Resposta inesperada do provedor.",
+  "provider.failure.organizationMissing": "A equipe selecionada não está mais disponível. Selecione outra equipe.",
+  "provider.failure.scopeConflict": "A equipe selecionada entra em conflito com a equipe do seu token Kilo.",
+  "provider.failure.personalUnavailable": "Esta conta não tem uma conta pessoal. Selecione uma equipe.",
 
   "notification.permission.title": "Permissão necessária",
   "notification.permission.titleSubagent": "Permissão necessária (subagente)",

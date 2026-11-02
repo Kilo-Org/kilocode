@@ -305,6 +305,9 @@ export const dict = {
   "provider.failure.http": "Anbieterfehler (HTTP {{status}}).",
   "provider.failure.httpNoStatus": "Anbieterfehler.",
   "provider.failure.schema": "Unerwartete Antwort vom Anbieter.",
+  "provider.failure.organizationMissing": "Das ausgewählte Team ist nicht mehr verfügbar. Wählen Sie ein anderes Team.",
+  "provider.failure.scopeConflict": "Das ausgewählte Team steht im Konflikt mit dem Team Ihres Kilo-Tokens.",
+  "provider.failure.personalUnavailable": "Dieses Konto hat kein persönliches Konto. Wählen Sie ein Team.",
 
   "notification.permission.title": "Berechtigung erforderlich",
   "notification.permission.titleSubagent": "Berechtigung erforderlich (Subagent)",

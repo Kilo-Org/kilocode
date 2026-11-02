@@ -297,6 +297,9 @@ export const dict = {
   "provider.failure.http": "공급자 오류 (HTTP {{status}}).",
   "provider.failure.httpNoStatus": "공급자 오류.",
   "provider.failure.schema": "공급자로부터 예기치 않은 응답을 받았습니다.",
+  "provider.failure.organizationMissing": "선택한 팀을 더 이상 사용할 수 없습니다. 다른 팀을 선택하세요.",
+  "provider.failure.scopeConflict": "선택한 팀이 Kilo 토큰의 팀과 충돌합니다.",
+  "provider.failure.personalUnavailable": "이 계정에는 개인 계정이 없습니다. 팀을 선택하세요.",
 
   "notification.permission.title": "권한 필요",
   "notification.permission.titleSubagent": "권한 필요 (서브에이전트)",

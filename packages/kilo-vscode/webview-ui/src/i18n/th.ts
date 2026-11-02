@@ -294,6 +294,9 @@ export const dict = {
   "provider.failure.http": "เกิดข้อผิดพลาดของผู้ให้บริการ (HTTP {{status}})",
   "provider.failure.httpNoStatus": "เกิดข้อผิดพลาดของผู้ให้บริการ",
   "provider.failure.schema": "ได้รับการตอบกลับที่ไม่คาดคิดจากผู้ให้บริการ",
+  "provider.failure.organizationMissing": "ทีมที่เลือกไม่พร้อมใช้งานอีกต่อไป เลือกทีมอื่น",
+  "provider.failure.scopeConflict": "ทีมที่เลือกขัดแย้งกับทีมของโทเค็น Kilo ของคุณ",
+  "provider.failure.personalUnavailable": "บัญชีนี้ไม่มีบัญชีส่วนตัว เลือกทีม",
 
   "notification.permission.title": "ต้องการสิทธิ์",
   "notification.permission.titleSubagent": "ต้องการสิทธิ์ (ตัวแทนย่อย)",
