@@ -18,6 +18,13 @@ export type ConfigScope = "global" | "project"
 
 export type ConfigFileContent = { path: string; text: string }
 
+/**
+ * The effective Kilo policy values that the config API does not carry, because they are Kilo-only fields on the
+ * upstream config schema. `managed` is true when a config document outside the writable global and project files
+ * sets the value, for example a system or MDM document.
+ */
+export type ConfigPolicy = { hidePromptTrainingModels: boolean; managed: boolean }
+
 export type ToHost =
   | Request
   | { type: "abort"; id: number }
@@ -59,6 +66,6 @@ export type ToWebview =
   | { type: "modelSelectorExpandedLoaded"; value: boolean }
   | { type: "autoApproveStateLoaded"; value: boolean }
   | { type: "webviewActiveChanged"; active: boolean }
-  | { type: "configLoaded"; global: ConfigFileContent; project: ConfigFileContent; error?: string }
+  | { type: "configLoaded"; global: ConfigFileContent; project: ConfigFileContent; policy?: ConfigPolicy; error?: string }
   | { type: "configWritten"; id: number; ok: boolean; error?: string }
   | { type: "vscodeSettingsLoaded"; values: Record<string, unknown> }

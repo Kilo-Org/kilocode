@@ -33,7 +33,9 @@ export function createSettings() {
     loaded: () => v2.data.location.integration.list() !== undefined,
     integration: (id: string) => integrations().find((item) => item.id === id),
     connection: v2.connection.status,
+    connectionError: v2.connection.error,
     version: v2.version,
+    extensionVersion: () => v2.extensionVersion,
     open: v2.open,
     reload: () => v2.api.location.reload(),
     /** v1 replaced the stored key. v2 adds a credential, so the earlier key credentials are removed after it. */

@@ -1,0 +1,45 @@
+import { describe, expect, test } from "bun:test"
+import { configPolicy } from "../src/config-policy"
+
+const targets = { global: "/home/kilo2.json", project: "/repo/.kilo2/kilo2.json" }
+
+describe("configPolicy", () => {
+  test("is off and unmanaged when no document sets the value", () => {
+    expect(configPolicy([{ path: targets.global, text: "{}" }], targets)).toEqual({
+      hidePromptTrainingModels: false,
+      managed: false,
+    })
+  })
+
+  test("reads the last document that sets the value", () => {
+    const documents = [
+      { path: targets.global, text: '{"hide_prompt_training_models": false}' },
+      { path: targets.project, text: '{"hide_prompt_training_models": true}' },
+    ]
+    expect(configPolicy(documents, targets)).toEqual({ hidePromptTrainingModels: true, managed: false })
+  })
+
+  test("is managed when a document outside the writable files sets the value", () => {
+    const documents = [
+      { path: targets.global, text: '{"hide_prompt_training_models": true}' },
+      { path: "/Library/Application Support/kilo/kilo2.json", text: '{"hide_prompt_training_models": false}' },
+    ]
+    expect(configPolicy(documents, targets)).toEqual({ hidePromptTrainingModels: false, managed: true })
+  })
+
+  test("is managed for a document without a path", () => {
+    expect(configPolicy([{ text: '{"hide_prompt_training_models": true}' }], targets)).toEqual({
+      hidePromptTrainingModels: true,
+      managed: true,
+    })
+  })
+
+  test("ignores a non-boolean value and an unreadable document", () => {
+    const documents = [
+      { path: targets.project, text: '{"hide_prompt_training_models": true}' },
+      { path: targets.global, text: '{"hide_prompt_training_models": "yes"}' },
+      { path: "/Library/Application Support/kilo/kilo2.json", text: "not json" },
+    ]
+    expect(configPolicy(documents, targets)).toEqual({ hidePromptTrainingModels: true, managed: false })
+  })
+})
