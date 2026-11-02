@@ -213,6 +213,8 @@ jobs:
     permissions:
       contents: write
       pull-requests: write
+    env:
+      HAS_MAINTAINER_APP: ${{ secrets.KILO_MAINTAINER_APP_ID != '' && secrets.KILO_MAINTAINER_APP_SECRET != '' }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -228,11 +230,13 @@ jobs:
         with:
           bun-version-file: package.json
 
-      # A PR created with the workflow GITHUB_TOKEN does not start its own checks. The Kilo maintainer app
-      # token makes the bot PR a normal app-authored PR, so the `progress` guard runs on it. The action keeps
-      # its upstream input names; the values are the Kilo maintainer app secrets.
+      # A PR created with the workflow GITHUB_TOKEN does not start its own checks. When the Kilo maintainer
+      # app secrets are present, this step makes the bot PR an app-authored PR so the `progress` guard runs
+      # on it. Without them the job falls back to the workflow token and the bot PR stays unvalidated. The
+      # action keeps its upstream input names; the values are the Kilo maintainer app secrets.
       - name: Setup Git Committer
         id: committer
+        if: env.HAS_MAINTAINER_APP == 'true'
         uses: ./.github/actions/setup-git-committer
         with:
           opencode-app-id: ${{ secrets.KILO_MAINTAINER_APP_ID }}
@@ -240,7 +244,7 @@ jobs:
 
       - name: Open or update the progress map PR
         env:
-          GH_TOKEN: ${{ steps.committer.outputs.token }}
+          GH_TOKEN: ${{ steps.committer.outputs.token || github.token }}
           GH_REPO: ${{ github.repository }}
         run: |
           bot_prs() {
