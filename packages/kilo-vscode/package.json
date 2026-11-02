@@ -236,6 +236,16 @@
         "command": "kilo-code.v2.autocomplete.cancelSuggestions",
         "title": "Cancel Suggested Edits",
         "category": "Kilo Code (v2)"
+      },
+      {
+        "command": "kilo-code.v2.autocomplete.nextEdit.acceptOrJump",
+        "title": "Next Edit: Accept or Jump to Suggested Edit",
+        "category": "Kilo Code (v2)"
+      },
+      {
+        "command": "kilo-code.v2.autocomplete.nextEdit.dismiss",
+        "title": "Next Edit: Dismiss Pending Suggestion",
+        "category": "Kilo Code (v2)"
       }
     ],
     "keybindings": [
@@ -273,6 +283,16 @@
         "key": "ctrl+l",
         "mac": "cmd+l",
         "when": "editorTextFocus && !editorTabMovesFocus && !inSnippetMode && kilo-code.v2.autocomplete.enableSmartInlineTaskKeybinding && github.copilot.completions.enabled"
+      },
+      {
+        "command": "kilo-code.v2.autocomplete.nextEdit.acceptOrJump",
+        "key": "tab",
+        "when": "editorTextFocus && !editorTabMovesFocus && !inSnippetMode && !suggestWidgetVisible && kilo-code.v2.nextEdit.hasPendingSuggestion"
+      },
+      {
+        "command": "kilo-code.v2.autocomplete.nextEdit.dismiss",
+        "key": "escape",
+        "when": "editorTextFocus && !editorTabMovesFocus && !inSnippetMode && kilo-code.v2.nextEdit.hasPendingSuggestion"
       }
     ],
     "menus": {

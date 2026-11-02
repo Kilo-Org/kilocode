@@ -82,6 +82,8 @@ const mockVscode = {
     },
   },
   StatusBarAlignment: { Left: 1, Right: 2 },
+  OverviewRulerLane: { Left: 1, Center: 2, Right: 4, Full: 7 },
+  TextEditorRevealType: { Default: 0, InCenter: 1, InCenterIfOutsideViewport: 2, AtTop: 3 },
   ThemeColor: class {
     constructor(public id: string) {}
   },
@@ -97,6 +99,7 @@ const mockVscode = {
     onDidChangeWindowState: () => ({ dispose: noop }),
     onDidChangeTextEditorSelection: () => ({ dispose: noop }),
     onDidChangeActiveTextEditor: () => ({ dispose: noop }),
+    createTextEditorDecorationType: () => ({ key: "decoration", dispose: noop }),
     activeNotebookEditor: undefined,
     visibleTextEditors: [],
     visibleNotebookEditors: [],

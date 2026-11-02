@@ -818,5 +818,145 @@
     "state": "dropped",
     "note": "Work note for v1 issue #6284 (status bar settings link), not runtime code. The v2 status bar tooltip links to kilo-code.v2.settings with the autocomplete tab (packages/kilo-vscode/src/services/autocomplete/AutocompleteStatusBar.ts).",
     "by": "autocomplete-inline"
+  },
+  "module:packages/kilo-vscode/docs/mercury-next-edit-testing.html": {
+    "state": "dropped",
+    "note": "Reviewer playground for the v1 Mercury Next Edit PR (#10536). It documents settings that v1 main no longer contributes (kilo-code.new.autocomplete.nextEdit.apiKey, .baseUrl, .debug) and a direct-key flow that moved to the server. The v2 Next Edit flow is covered by packages/kilo-vscode/test/next-edit-*.test.ts and the self-test recorded in the PR.",
+    "by": "autocomplete-next-edit"
+  },
+  "module:packages/kilo-vscode/docs/nes-examples/01_finish_function_body.py": {
+    "state": "dropped",
+    "note": "Example file of the dropped v1 reviewer playground docs/mercury-next-edit-testing.html, not shipped or loaded by the extension.",
+    "by": "autocomplete-next-edit"
+  },
+  "module:packages/kilo-vscode/docs/nes-examples/02_pattern_continuation.py": {
+    "state": "dropped",
+    "note": "Example file of the dropped v1 reviewer playground docs/mercury-next-edit-testing.html, not shipped or loaded by the extension.",
+    "by": "autocomplete-next-edit"
+  },
+  "module:packages/kilo-vscode/docs/nes-examples/03_typo_completion.py": {
+    "state": "dropped",
+    "note": "Example file of the dropped v1 reviewer playground docs/mercury-next-edit-testing.html, not shipped or loaded by the extension.",
+    "by": "autocomplete-next-edit"
+  },
+  "module:packages/kilo-vscode/docs/nes-examples/04_loop_body.py": {
+    "state": "dropped",
+    "note": "Example file of the dropped v1 reviewer playground docs/mercury-next-edit-testing.html, not shipped or loaded by the extension.",
+    "by": "autocomplete-next-edit"
+  },
+  "module:packages/kilo-vscode/docs/nes-examples/05_class_method.py": {
+    "state": "dropped",
+    "note": "Example file of the dropped v1 reviewer playground docs/mercury-next-edit-testing.html, not shipped or loaded by the extension.",
+    "by": "autocomplete-next-edit"
+  },
+  "module:packages/kilo-vscode/docs/nes-examples/07_multiline_rename_refactor.py": {
+    "state": "dropped",
+    "note": "Example file of the dropped v1 reviewer playground docs/mercury-next-edit-testing.html, not shipped or loaded by the extension.",
+    "by": "autocomplete-next-edit"
+  },
+  "module:packages/kilo-vscode/docs/nes-examples/08_mixed_insert_and_replace.py": {
+    "state": "dropped",
+    "note": "Example file of the dropped v1 reviewer playground docs/mercury-next-edit-testing.html, not shipped or loaded by the extension.",
+    "by": "autocomplete-next-edit"
+  },
+  "module:packages/kilo-vscode/docs/nes-examples/10_mid_token_completion.py": {
+    "state": "dropped",
+    "note": "Example file of the dropped v1 reviewer playground docs/mercury-next-edit-testing.html, not shipped or loaded by the extension.",
+    "by": "autocomplete-next-edit"
+  },
+  "module:packages/kilo-vscode/docs/nes-examples/11_fill_sibling_method.py": {
+    "state": "dropped",
+    "note": "Example file of the dropped v1 reviewer playground docs/mercury-next-edit-testing.html, not shipped or loaded by the extension.",
+    "by": "autocomplete-next-edit"
+  },
+  "module:packages/kilo-vscode/docs/nes-examples/12_type_annotation_insertion.py": {
+    "state": "dropped",
+    "note": "Example file of the dropped v1 reviewer playground docs/mercury-next-edit-testing.html, not shipped or loaded by the extension.",
+    "by": "autocomplete-next-edit"
+  },
+  "module:packages/kilo-vscode/docs/nes-examples/13_docstring_generation.py": {
+    "state": "dropped",
+    "note": "Example file of the dropped v1 reviewer playground docs/mercury-next-edit-testing.html, not shipped or loaded by the extension.",
+    "by": "autocomplete-next-edit"
+  },
+  "module:packages/kilo-vscode/docs/nes-examples/14_no_op_suppression.py": {
+    "state": "dropped",
+    "note": "Example file of the dropped v1 reviewer playground docs/mercury-next-edit-testing.html, not shipped or loaded by the extension.",
+    "by": "autocomplete-next-edit"
+  },
+  "module:packages/kilo-vscode/docs/nes-examples/INSTRUCTIONS.md": {
+    "state": "dropped",
+    "note": "Example file of the dropped v1 reviewer playground docs/mercury-next-edit-testing.html, not shipped or loaded by the extension.",
+    "by": "autocomplete-next-edit"
+  },
+  "module:packages/kilo-vscode/docs/nes-examples/go_07_error_handling.go": {
+    "state": "dropped",
+    "note": "Example file of the dropped v1 reviewer playground docs/mercury-next-edit-testing.html, not shipped or loaded by the extension.",
+    "by": "autocomplete-next-edit"
+  },
+  "module:packages/kilo-vscode/docs/nes-examples/go_08_struct_method.go": {
+    "state": "dropped",
+    "note": "Example file of the dropped v1 reviewer playground docs/mercury-next-edit-testing.html, not shipped or loaded by the extension.",
+    "by": "autocomplete-next-edit"
+  },
+  "module:packages/kilo-vscode/docs/nes-examples/go_09_goroutine_channel.go": {
+    "state": "dropped",
+    "note": "Example file of the dropped v1 reviewer playground docs/mercury-next-edit-testing.html, not shipped or loaded by the extension.",
+    "by": "autocomplete-next-edit"
+  },
+  "module:packages/kilo-vscode/docs/nes-examples/js_07_async_await.js": {
+    "state": "dropped",
+    "note": "Example file of the dropped v1 reviewer playground docs/mercury-next-edit-testing.html, not shipped or loaded by the extension.",
+    "by": "autocomplete-next-edit"
+  },
+  "module:packages/kilo-vscode/docs/nes-examples/js_08_express_route.js": {
+    "state": "dropped",
+    "note": "Example file of the dropped v1 reviewer playground docs/mercury-next-edit-testing.html, not shipped or loaded by the extension.",
+    "by": "autocomplete-next-edit"
+  },
+  "module:packages/kilo-vscode/docs/nes-examples/md_07_prose_negative.md": {
+    "state": "dropped",
+    "note": "Example file of the dropped v1 reviewer playground docs/mercury-next-edit-testing.html, not shipped or loaded by the extension.",
+    "by": "autocomplete-next-edit"
+  },
+  "module:packages/kilo-vscode/docs/nes-examples/rs_07_match_arms.rs": {
+    "state": "dropped",
+    "note": "Example file of the dropped v1 reviewer playground docs/mercury-next-edit-testing.html, not shipped or loaded by the extension.",
+    "by": "autocomplete-next-edit"
+  },
+  "module:packages/kilo-vscode/docs/nes-examples/rs_08_result_chain.rs": {
+    "state": "dropped",
+    "note": "Example file of the dropped v1 reviewer playground docs/mercury-next-edit-testing.html, not shipped or loaded by the extension.",
+    "by": "autocomplete-next-edit"
+  },
+  "module:packages/kilo-vscode/docs/nes-examples/rs_09_lifetimes.rs": {
+    "state": "dropped",
+    "note": "Example file of the dropped v1 reviewer playground docs/mercury-next-edit-testing.html, not shipped or loaded by the extension.",
+    "by": "autocomplete-next-edit"
+  },
+  "module:packages/kilo-vscode/docs/nes-examples/sql_07_join.sql": {
+    "state": "dropped",
+    "note": "Example file of the dropped v1 reviewer playground docs/mercury-next-edit-testing.html, not shipped or loaded by the extension.",
+    "by": "autocomplete-next-edit"
+  },
+  "module:packages/kilo-vscode/docs/nes-examples/sql_08_where_filter.sql": {
+    "state": "dropped",
+    "note": "Example file of the dropped v1 reviewer playground docs/mercury-next-edit-testing.html, not shipped or loaded by the extension.",
+    "by": "autocomplete-next-edit"
+  },
+  "module:packages/kilo-vscode/docs/nes-examples/ts_07_array_transform.ts": {
+    "state": "dropped",
+    "note": "Example file of the dropped v1 reviewer playground docs/mercury-next-edit-testing.html, not shipped or loaded by the extension.",
+    "by": "autocomplete-next-edit"
+  },
+  "module:packages/kilo-vscode/docs/nes-examples/ts_08_param_types.ts": {
+    "state": "dropped",
+    "note": "Example file of the dropped v1 reviewer playground docs/mercury-next-edit-testing.html, not shipped or loaded by the extension.",
+    "by": "autocomplete-next-edit"
+  },
+  "module:packages/kilo-vscode/docs/nes-examples/ts_09_jsx_handler.tsx": {
+    "state": "dropped",
+    "note": "Example file of the dropped v1 reviewer playground docs/mercury-next-edit-testing.html, not shipped or loaded by the extension.",
+    "by": "autocomplete-next-edit"
   }
 }
