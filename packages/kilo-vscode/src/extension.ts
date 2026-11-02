@@ -5,6 +5,7 @@ import { createCostAlerts } from "./cost-alert"
 import { command, manager, settingsEnvironment } from "./server"
 import { readKiloSettings } from "./settings-host"
 import { settings } from "./settings-panel"
+import { toolDiff } from "./tool-diff"
 
 export function activate(context: ExtensionContext) {
   const output = window.createOutputChannel("Kilo Code (v2)")
@@ -76,11 +77,14 @@ export function activate(context: ExtensionContext) {
       })
     },
   })
-  const view = chat({ context, server, directory, trackCostSession: alerts.track })
+  const diffs = toolDiff()
+  const view = chat({ context, server, directory, trackCostSession: alerts.track, diff: diffs })
   const panel = settings({ context, server, directory, onReset: view.syncState })
 
   context.subscriptions.push(
     output,
+    { dispose: () => diffs.dispose() },
+    workspace.registerTextDocumentContentProvider(diffs.scheme, diffs.provider),
     window.registerWebviewViewProvider("kilo-code.v2.chat", view.provider, {
       webviewOptions: { retainContextWhenHidden: true },
     }),

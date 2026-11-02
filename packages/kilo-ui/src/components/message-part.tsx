@@ -51,6 +51,21 @@ export { useGrowIn } from "./tool-utils"
 export type { ReasoningDisplay } from "./reasoning-open"
 export { relativizeProjectPath } from "./content-data"
 
+/** A single-file diff as a renderer passes it to `ToolActions.openDiff`. */
+export type ToolActionDiff = {
+  file: string
+  patch: string
+  additions: number
+  deletions: number
+}
+
+/** Host actions a tool renderer may call. Every action is optional: a client without one renders without it. */
+export type ToolActions = {
+  openFile?: (path: string, line?: number) => void
+  openDiff?: (diff: ToolActionDiff) => void
+  openSession?: (sessionID: string) => void
+}
+
 export type ContentPartProps = {
   item: SessionMessageAssistant["content"][number]
   message: SessionMessageAssistant
@@ -60,6 +75,9 @@ export type ContentPartProps = {
   copy?: boolean
   settled?: boolean
   defaultOpen?: boolean
+  actions?: ToolActions
+  hideDetails?: boolean
+  forceOpen?: boolean
   /** A recovery action for a failed tool call, such as a link to the settings that own the failure. */
   errorAction?: (error: { type: string; message: string }) => JSX.Element | undefined
 }
@@ -94,6 +112,9 @@ export function ContentPart(props: ContentPartProps) {
             directory={props.directory}
             open={props.open}
             defaultOpen={props.defaultOpen}
+            actions={props.actions}
+            hideDetails={props.hideDetails}
+            forceOpen={props.forceOpen}
             errorAction={props.errorAction}
           />
         )}
@@ -169,6 +190,9 @@ export type ToolProps = {
   directory?: string
   openUrl?: (uri: string) => void
   defaultOpen?: boolean
+  actions?: ToolActions
+  hideDetails?: boolean
+  forceOpen?: boolean
 }
 
 const renderers: Record<string, Component<ToolProps>> = {}
@@ -188,6 +212,9 @@ function ToolContent(props: {
   directory?: string
   open?: (uri: string) => void
   defaultOpen?: boolean
+  actions?: ToolActions
+  hideDetails?: boolean
+  forceOpen?: boolean
   errorAction?: (error: { type: string; message: string }) => JSX.Element | undefined
 }) {
   const i18n = useI18n()
@@ -231,6 +258,9 @@ function ToolContent(props: {
                 directory={props.directory}
                 openUrl={props.open}
                 defaultOpen={props.defaultOpen}
+                actions={props.actions}
+                hideDetails={props.hideDetails}
+                forceOpen={props.forceOpen}
               />
             </ToolApprovalProvider>
           }
