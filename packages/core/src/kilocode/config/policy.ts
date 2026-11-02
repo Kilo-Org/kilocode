@@ -13,6 +13,17 @@ export class Info extends Config.Info.extend<Info>("KiloConfigPolicy.Info")({
     description: "Hide Kilo models that can use prompts for training and deny provider data collection",
   }),
   workflow_models: Schema.Record(Schema.String, ConfigModel.Selection).pipe(optional),
+  terminal_command_display: Schema.Literals(["expanded", "collapsed"]).pipe(optional).annotate({
+    description: "Controls whether terminal command blocks are expanded or collapsed by default in the VS Code chat UI",
+  }),
+  code_edit_display: Schema.Literals(["expanded", "collapsed"]).pipe(optional).annotate({
+    description:
+      "Controls whether code edit and diff blocks are expanded or collapsed by default in the VS Code chat UI",
+  }),
+  mcp_tool_display: Schema.Literals(["expanded", "collapsed"]).pipe(optional).annotate({
+    description:
+      "Controls whether MCP and generic tool blocks are expanded or collapsed by default in the VS Code chat UI",
+  }),
   // kilo_port(unattributed:core/v1:fb80dc4c3dd4)
   commit_message: Schema.Struct({
     prompt: Schema.String.pipe(optional).annotate({
@@ -89,10 +100,23 @@ export function parse(
           ...normalized,
           ...raw,
           ...Option.getOrElse(message, () => ({})),
+          ...displaySettings(input),
           workflow_models: models && Object.keys(models).length ? models : undefined,
         }).filter(([, value]) => value !== undefined),
       ),
     ),
+  )
+}
+
+/** The display layouts, ignoring an invalid value instead of failing the whole document. */
+function displaySettings(input: unknown) {
+  if (!record(input)) return {}
+  const decodeLayout = Schema.decodeUnknownOption(Schema.Literals(["expanded", "collapsed"]))
+  return Object.fromEntries(
+    ["terminal_command_display", "code_edit_display", "mcp_tool_display"].flatMap((key) => {
+      const value = Option.getOrUndefined(decodeLayout(input[key]))
+      return value === undefined ? [] : [[key, value]]
+    }),
   )
 }
 

@@ -15,9 +15,11 @@ import { color } from "../utils/timeline/colors"
 import type { TimelineHighlight } from "../utils/timeline/highlight"
 import { partKey, timelinePart } from "../utils/timeline/timeline-parts"
 import { useV2 } from "./client"
+import { displaySettings } from "./display-settings"
 import { tokenThroughputVisible } from "./kilo-settings"
 import { mcpServerFromError } from "./mcp-error"
 import { formatTokenThroughput, turnMetadata } from "./message-status"
+import { toolDefaultOpen } from "./tool-default-open"
 
 export function AssistantMessage(props: {
   message: SessionMessageAssistant
@@ -85,6 +87,10 @@ export function AssistantMessage(props: {
       </Button>
     )
   }
+  // The todo list is a status row rather than a tool block, so it stays open as before; every other tool follows
+  // the display layouts.
+  const defaultOpen = (tool: string) =>
+    tool === "todowrite" ? true : toolDefaultOpen(tool, displaySettings())
   return (
     <div
       class="vscode-session-turn"
@@ -145,7 +151,7 @@ export function AssistantMessage(props: {
                     throughput={index() === copy() ? throughputEl() : undefined}
                     turnMeta={index() === copy() ? turnMetaEl() : undefined}
                     settled={index() < props.message.content.length - 1}
-                    defaultOpen={item.type === "tool" && (item.name === "shell" || item.name === "todowrite")}
+                    defaultOpen={item.type === "tool" ? defaultOpen(item.name) : undefined}
                     actions={props.actions}
                     errorAction={errorAction}
                   />

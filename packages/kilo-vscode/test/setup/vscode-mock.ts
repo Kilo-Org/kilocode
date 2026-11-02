@@ -19,6 +19,16 @@ const noop = () => {}
 const mockUri = {
   parse: (value: string) => ({ scheme: "https", authority: "", path: value, query: "", fragment: "", fsPath: value }),
   file: (path: string) => ({ scheme: "file", authority: "", path, query: "", fragment: "", fsPath: path }),
+  from: (components: { scheme: string; path?: string; query?: string; fragment?: string }) => {
+    const uri = {
+      ...components,
+      path: components.path ?? "",
+      query: components.query ?? "",
+      fragment: components.fragment ?? "",
+      fsPath: components.path ?? "",
+    }
+    return { ...uri, toString: () => `${uri.scheme}://${uri.path}${uri.query ? `?${uri.query}` : ""}` }
+  },
   joinPath: (base: { fsPath: string }, ...segments: string[]) => {
     const joined = [base.fsPath, ...segments].join("/")
     return { scheme: "file", authority: "", path: joined, query: "", fragment: "", fsPath: joined }
