@@ -3299,6 +3299,50 @@ function Subagent(props: ToolProps) {
     const id = sessionID()
     return props.part.state.status === "running" || Boolean(id && data.session.status(id) === "running")
   })
+  // kilocode_change start - subagent: show the child's current tool, retry, tool count, and duration
+  const SUBAGENT_SYNC_RETRY_MS = 500
+  const messages = createMemo(() => {
+    const id = sessionID()
+    return id ? data.session.message.list(id) : []
+  })
+  const detail = createMemo(() => subagentDetail(messages()))
+  const [syncRetry, setSyncRetry] = createSignal(0)
+  const synced = new Set<string>()
+  let syncRetryTimer: ReturnType<typeof setTimeout> | undefined
+  onCleanup(() => clearTimeout(syncRetryTimer))
+
+  createEffect(() => {
+    const id = sessionID()
+    const attempt = syncRetry()
+    const key = `${id}:${attempt}`
+    if (!id || messages().length > 0 || attempt > 1 || synced.has(key)) return
+    synced.add(key)
+    void data.session.message.sync(id).catch(() => {
+      if (attempt > 0) return
+      syncRetryTimer = setTimeout(() => setSyncRetry((value) => value + 1), SUBAGENT_SYNC_RETRY_MS)
+    })
+  })
+
+  const content = createMemo(() => {
+    const lines = [
+      `${continuation() ? "Continue subagent" : `${Locale.titlecase(stringValue(props.input.agent) ?? stringValue(props.input.subagent_type) ?? "General")} Subagent`} — ${description() ?? "Subagent"}${model() ? ` · ${model()}` : ""}`,
+    ]
+    const state = detail()
+    const retrying = state.retry
+    if (isRunning() && retrying) {
+      lines.push(`↳ ${formatSubagentRetry(retrying.attempt, retrying.error.message)}`)
+    } else if (isRunning() && state.tools.length > 0) {
+      if (state.current) lines.push(`↳ ${subagentToolLabel(state.current)}`)
+      else lines.push(`↳ ${formatSubagentToolcalls(state.tools.length)}`)
+    } else if (isRunning()) {
+      lines.push("↳ Starting…")
+    }
+    if (!isRunning() && props.part.state.status === "completed" && state.duration !== undefined) {
+      lines.push(`↳ ${formatCompletedSubagentDetail(state.tools.length, Locale.duration(state.duration))}`)
+    }
+    return lines.join("\n")
+  })
+  // kilocode_change end
 
   return (
     <InlineTool
@@ -3318,10 +3362,51 @@ function Subagent(props: ToolProps) {
         ) : undefined
       }
     >
-      {`${continuation() ? "Continue subagent" : `${Locale.titlecase(stringValue(props.input.agent) ?? stringValue(props.input.subagent_type) ?? "General")} Subagent`} — ${description() ?? "Subagent"}${model() ? ` · ${model()}` : ""}`}
+      {content()}{/* kilocode_change - subagent: live child line */}
     </InlineTool>
   )
 }
+
+// kilocode_change start - subagent: derive the live child line from the child session's stored messages
+export function subagentDetail(messages: readonly SessionMessageInfo[]) {
+  const tools = messages.flatMap((message) =>
+    message.type === "assistant" ? message.content.flatMap((item) => (item.type === "tool" ? [item] : [])) : [],
+  )
+  const retry = messages.findLast(
+    (message): message is SessionMessageAssistant => message.type === "assistant" && message.retry !== undefined,
+  )?.retry
+  const current = tools.findLast(
+    (tool) =>
+      tool.state.status === "streaming" || tool.state.status === "running" || tool.state.status === "completed",
+  )
+  const first = messages.find((message) => message.type === "user")?.time.created
+  const last = messages.findLast((message) => message.type === "assistant")?.time.completed
+  const duration = first !== undefined && last !== undefined ? last - first : undefined
+  return { tools, retry, current, duration }
+}
+
+const SUBAGENT_TOOL_OMIT = ["content", "patchText", "newString", "oldString"]
+
+export function subagentToolLabel(part: SessionMessageAssistantTool) {
+  if (part.state.status === "streaming") return Locale.titlecase(canonicalToolName(part.name))
+  const args = primitiveInputSummary(part.state.input, SUBAGENT_TOOL_OMIT).replace(/\s+/g, " ")
+  const label = `${Locale.titlecase(canonicalToolName(part.name))}${args ? ` ${args}` : ""}`
+  return Locale.truncate(label, 120)
+}
+
+export function formatSubagentToolcalls(count: number) {
+  return `${count} toolcall${count === 1 ? "" : "s"}`
+}
+
+export function formatSubagentRetry(attempt: number, message: string) {
+  return `Retrying (attempt ${attempt}) · ${Locale.truncate(stripAnsi(message), 80)}`
+}
+
+export function formatCompletedSubagentDetail(toolcalls: number, duration: string) {
+  if (toolcalls === 0) return duration
+  return `${formatSubagentToolcalls(toolcalls)} · ${duration}`
+}
+// kilocode_change end
 
 export function subagentModelLabel(
   value: string | undefined,
@@ -3514,7 +3599,9 @@ function ApplyPatch(props: ToolProps) {
   const theme = useTheme()
   const { currentSyntax: syntax } = useThemes()
   const pathFormatter = usePathFormatter()
-  const files = createMemo(() => parseApplyPatchFiles(props.metadata.files))
+  // kilocode_change start - patch: moved file labels
+  const files = createMemo(() => parseApplyPatchEntries(props.metadata.files, props.input.patchText))
+  // kilocode_change end
   const targets = createMemo(() => {
     const patch = stringValue(props.input.patchText)
     if (!patch) return []
@@ -3544,8 +3631,8 @@ function ApplyPatch(props: ToolProps) {
             {(file) => (
               <BlockTool
                 path={{
-                  label: file.type === "add" ? "# Created" : file.type === "delete" ? "# Deleted" : "← Patched",
-                  value: pathFormatter.format(file.relativePath),
+                  label: applyPatchLabel(file), // kilocode_change - patch: label a renamed file as moved
+                  value: applyPatchValue(file, pathFormatter.format), // kilocode_change - patch: show the source and target
                 }}
                 part={props.part}
               >
@@ -3660,28 +3747,64 @@ function Question(props: ToolProps) {
   const questions = createMemo(() => parseQuestions(props.input.questions))
   const answers = createMemo(() => parseQuestionAnswers(props.metadata.answers))
   const count = createMemo(() => questions().length)
+  // kilocode_change start - question: keep dismissed content and the compact expandable summary
+  const dismissed = createMemo(
+    () =>
+      props.metadata.dismissed === true ||
+      (props.part.state.status === "error" && props.part.state.error.message.includes("dismissed")),
+  )
+  const [expanded, setExpanded] = createSignal(false)
 
   function format(answer?: ReadonlyArray<string>) {
+    if (dismissed()) return "Dismissed"
     if (!answer?.length) return "(no answer)"
     return answer.join(", ")
   }
 
+  const title = createMemo(() => (dismissed() ? "# Questions (dismissed)" : "# Questions"))
+  const subtitle = createMemo(() => {
+    if (dismissed()) return `${count()} dismissed`
+    if ((answers()?.length ?? 0) > 0) return `${count()} answered`
+    return `${count()} question${count() !== 1 ? "s" : ""}`
+  })
+
   return (
     <Switch>
-      <Match when={answers()}>
-        <BlockTool title="# Questions" part={props.part}>
-          <box gap={1}>
-            <For each={questions()}>
-              {(q, i) => (
-                <box flexDirection="column">
-                  <text fg={theme.text.muted}>{q.question}</text>
-                  <text fg={theme.text.base}>{format(answers()?.[i()])}</text>
-                </box>
-              )}
-            </For>
-          </box>
-        </BlockTool>
+      <Match when={count() > 0}>
+        <Show
+          when={expanded()}
+          fallback={
+            <InlineTool
+              icon="→"
+              complete={count()}
+              pending="Asking questions…"
+              part={props.part}
+              onClick={() => setExpanded(true)}
+            >
+              {subtitle()}
+            </InlineTool>
+          }
+        >
+          <BlockTool
+            title={title()}
+            part={props.part}
+            error={dismissed() ? "" : undefined} // kilocode_change - question: the dismissal message repeats the answer state
+            onClick={() => setExpanded(false)}
+          >
+            <box gap={1}>
+              <For each={questions()}>
+                {(q, i) => (
+                  <box flexDirection="column">
+                    <text fg={theme.text.muted}>{q.question}</text>
+                    <text fg={theme.text.base}>{format(answers()?.[i()])}</text>
+                  </box>
+                )}
+              </For>
+            </box>
+          </BlockTool>
+        </Show>
       </Match>
+      {/* kilocode_change end */}
       <Match when={true}>
         <InlineTool icon="→" pending="Asking questions…" complete={count()} part={props.part}>
           Asked {count()} question{count() !== 1 ? "s" : ""}
@@ -3792,6 +3915,65 @@ export function parseApplyPatchFiles(value: unknown) {
     return [{ type, relativePath, filePath, patch, additions, deletions, movePath: stringValue(file.movePath) }]
   })
 }
+
+// kilocode_change start - patch: label a renamed file as moved and show its source and target
+type ApplyPatchFile = { type: string; relativePath: string; moved?: boolean; movedFrom?: string }
+
+export function applyPatchLabel(file: ApplyPatchFile) {
+  return file.type === "add" ? "# Created" : file.type === "delete" ? "# Deleted" : file.moved ? "# Moved" : "← Patched"
+}
+
+export function applyPatchValue(file: ApplyPatchFile, format: (value?: string) => string) {
+  if (file.moved && file.movedFrom) return `${format(file.movedFrom)} → ${format(file.relativePath)}`
+  return format(file.relativePath)
+}
+
+export function parsePatchMoves(value: unknown) {
+  const patch = stringValue(value)
+  if (!patch) return []
+  const moves: Array<{ path?: string; movePath: string }> = []
+  let path: string | undefined
+  for (const line of patch.split(/\r?\n/)) {
+    const update = line.match(/^\*\*\* Update File: (.+)$/)
+    if (update) {
+      path = update[1].trim()
+      continue
+    }
+    const move = line.match(/^\*\*\* Move to: (.+)$/)
+    if (move) moves.push({ path, movePath: move[1].trim() })
+  }
+  return moves
+}
+
+function patchPathKey(value: string | undefined) {
+  return (value ?? "").replace(/\\/g, "/").replace(/^\.\//, "")
+}
+
+export function parseApplyPatchEntries(value: unknown, patchText: unknown) {
+  const raw = Array.isArray(value) ? value : []
+  const moved = new Set(
+    raw.flatMap((item) => {
+      const file = recordValue(item)
+      if (file?.moved !== true) return []
+      const path = stringValue(file.file) ?? stringValue(file.relativePath)
+      return path ? [patchPathKey(path)] : []
+    }),
+  )
+  // A self-move is not a rename, so it must not claim the target of a later real move.
+  const sources = new Map<string, string>()
+  for (const move of parsePatchMoves(patchText)) {
+    if (!move.path) continue
+    const source = patchPathKey(move.path)
+    const target = patchPathKey(move.movePath)
+    if (!target || source === target) continue
+    sources.set(target, move.path)
+  }
+  return parseApplyPatchFiles(value).map((file) => {
+    const isMoved = moved.has(patchPathKey(file.relativePath))
+    return { ...file, moved: isMoved, movedFrom: isMoved ? sources.get(patchPathKey(file.relativePath)) : undefined }
+  })
+}
+// kilocode_change end
 
 export function parseQuestions(value: unknown) {
   if (!Array.isArray(value)) return []
