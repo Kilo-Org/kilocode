@@ -302,7 +302,7 @@ export function Chat() {
               retry={working.retry()}
               onCancel={stop}
               onScrollToBottom={() => scrollToBottom?.()}
-              trail={<GoalStatus goal={goal()} />}
+              trail={goal() ? <GoalStatus goal={goal()} /> : undefined}
             />
             <PromptInput
               session={session()}
