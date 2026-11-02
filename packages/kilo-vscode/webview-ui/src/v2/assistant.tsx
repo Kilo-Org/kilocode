@@ -11,6 +11,9 @@ import type { ToHost } from "../../../src/protocol"
 import { useLanguage } from "../context/language"
 import { useVSCode } from "../context/vscode"
 import { formatClock, formatDuration } from "../utils/message-time"
+import { color } from "../utils/timeline/colors"
+import type { TimelineHighlight } from "../utils/timeline/highlight"
+import { partKey, timelinePart } from "../utils/timeline/timeline-parts"
 import { useV2 } from "./client"
 import { tokenThroughputVisible } from "./kilo-settings"
 import { mcpServerFromError } from "./mcp-error"
@@ -20,6 +23,8 @@ export function AssistantMessage(props: {
   message: SessionMessageAssistant
   session: string
   actions?: ToolActions
+  /** The task-timeline bar under the pointer or keyboard focus, if any. */
+  highlight?: () => TimelineHighlight | undefined
 }) {
   const v2 = useV2()
   const language = useLanguage()
@@ -98,18 +103,31 @@ export function AssistantMessage(props: {
             if (motion) useToolSize({ el, body, active: () => motion.live() && !done(), motion })
             // As on v1: a live text part reveals with a grow-in; reasoning and tool parts animate their own height.
             useGrowIn(el, item.type === "text" && !done())
+            const key = partKey(props.message.id, item, index())
+            const highlighted = () =>
+              props.highlight?.()?.msgId === props.message.id && props.highlight?.()?.partId === key
+            const highlightColor = () => {
+              if (!highlighted()) return undefined
+              const part = timelinePart(props.message, item, index())
+              return part ? color(part) : undefined
+            }
             return (
               <div
                 ref={setEl}
                 data-component="tool-part-wrapper"
                 data-part-type={item.type}
-                data-part-id={item.type === "tool" ? item.id : `${props.message.id}:${index()}`}
+                data-part-id={key}
+                data-timeline-highlight={highlighted() ? "" : undefined}
                 data-tool-enter={motion?.entering() ? "" : undefined}
                 data-tool-live={motion?.live() ? "" : undefined}
                 data-tool-status={
                   item.type === "tool" ? (item.state.status === "streaming" ? "pending" : item.state.status) : undefined
                 }
-                style={{ "--tool-stagger": motion?.stagger(), "--tool-beat": motion?.beat() }}
+                style={{
+                  "--timeline-color": highlightColor(),
+                  "--tool-stagger": motion?.stagger(),
+                  "--tool-beat": motion?.beat(),
+                }}
                 onAnimationEnd={(event) => {
                   if (event.animationName === "tool-motion-pop") return motion?.beaten()
                   if (event.target === event.currentTarget && event.animationName === "tool-motion-enter")

@@ -25,6 +25,7 @@ export const KILO_SETTING_KEYS = [
   "language",
   "chat.shiftTabCyclesVariant",
   "showTokenThroughput",
+  "showTaskTimeline",
   "maxCost",
   "claudeCodeCompat",
   "extraCaCerts",
@@ -50,6 +51,16 @@ export function readKiloSettings(): Record<string, unknown> {
     ...Object.fromEntries(KILO_SETTING_KEYS.map((key) => [key, config.get(key)])),
     // The host's current fallback, so a tab keeps the right size when the setting is unset.
     effectiveFontSize: effectiveFontSize(),
+  }
+}
+
+/** Write the `kilo-code.v2.*` settings a webview asked for. Unknown keys are ignored. */
+export async function writeKiloSettings(values: Record<string, unknown>) {
+  const config = workspace.getConfiguration(NAMESPACE)
+  for (const [key, value] of Object.entries(values)) {
+    if (!(KILO_SETTING_KEYS as readonly string[]).includes(key)) continue
+    if (key.startsWith("autocomplete.") && !validAutocompleteSetting(key.slice("autocomplete.".length), value)) continue
+    await config.update(key, value === null ? undefined : value, true)
   }
 }
 
@@ -227,14 +238,7 @@ export function settingsHost(input: {
     })
   }
 
-  const updateSettings = async (values: Record<string, unknown>) => {
-    const config = workspace.getConfiguration(NAMESPACE)
-    for (const [key, value] of Object.entries(values)) {
-      if (!(KILO_SETTING_KEYS as readonly string[]).includes(key)) continue
-      if (key.startsWith("autocomplete.") && !validAutocompleteSetting(key.slice("autocomplete.".length), value)) continue
-      await config.update(key, value === null ? undefined : value, true)
-    }
-  }
+  const updateSettings = (values: Record<string, unknown>) => writeKiloSettings(values)
 
   const resetAllSettings = async () => {
     const confirmed = await window.showWarningMessage(
