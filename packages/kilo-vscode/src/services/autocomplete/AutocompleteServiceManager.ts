@@ -66,6 +66,8 @@ export class AutocompleteServiceManager {
   private inlineCompletionProviderDisposable: vscode.Disposable | null = null
   private inlineCompletionProviderKind: "classic" | "next-edit" | null = null
   private unsubscribeState: (() => void) | null = null
+  /** The last time autocomplete asked for the server, so a stop does not trigger a start loop. */
+  private lastBackendAttempt = 0
   private unsubscribeAuth: (() => void) | null = null
   private readonly config: vscode.Disposable
 
@@ -128,6 +130,8 @@ export class AutocompleteServiceManager {
 
     this.inlineCompletionProvider.setModel(notebookModel(this.settings.provider, this.settings.model).id)
 
+    if (this.settings?.enableAutoTrigger && !this.connection.connected()) this.restartBackend()
+
     await this.updateGlobalContext()
     this.updateStatusBar()
     await this.ensureInlineCompletionProviderRegistration()
@@ -137,6 +141,13 @@ export class AutocompleteServiceManager {
    * Keep the inline completion provider registration in line with the settings. It only disposes and registers
    * again when the desired state changes, because churn during startup can break VS Code's provider tracking.
    */
+  /** Ask for the server again after it stopped, at most once every five seconds so a crash cannot loop. */
+  private restartBackend() {
+    if (Date.now() - this.lastBackendAttempt < 5_000) return
+    this.lastBackendAttempt = Date.now()
+    this.connection.start()
+  }
+
   private async ensureInlineCompletionProviderRegistration() {
     const shouldBeRegistered = this.settings?.enableAutoTrigger ?? false
     const isRegistered = this.inlineCompletionProviderDisposable !== null

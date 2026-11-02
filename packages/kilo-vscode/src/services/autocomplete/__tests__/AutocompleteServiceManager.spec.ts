@@ -208,6 +208,23 @@ describe("AutocompleteServiceManager (less mocked logic)", () => {
   })
 
   describe("load()", () => {
+    it("asks for the server again when it stopped, at most once every five seconds", async () => {
+      AutocompleteServiceManager._resetInstance()
+      state.set("enableAutoTrigger", true)
+      const start = mock()
+      const connection = {
+        connected: () => false,
+        start,
+        onStateChange: () => () => {},
+        onAuthChange: () => () => {},
+      } as unknown as Connection
+      const manager = new AutocompleteServiceManager({ subscriptions: [] } as unknown as vscode.ExtensionContext, connection)
+      managers.push(manager)
+      await manager.load()
+      await manager.load()
+      expect(start).toHaveBeenCalledTimes(1)
+    })
+
     it("resets the error backoff when the provider or model changes", async () => {
       const manager = await createManager()
       let resets = 0
