@@ -1,7 +1,7 @@
 export * as KiloGatewayModel from "./gateway-model"
 
 import { KiloErrors } from "@kilocode/gateway-core"
-import { LanguageModel } from "@opencode/ai"
+import { LanguageModel } from "@opencode/ai/effect"
 import { Auth } from "@opencode/ai/route"
 import { ModelResolver } from "@opencode/core/model-resolver"
 import { Provider } from "@opencode/core/provider"
@@ -39,6 +39,8 @@ const emptyCredentialsLayer = Layer.effect(
           Effect.flatMap((resolved) => resolved ? emptyAuth(resolved) : Effect.undefined),
         ),
         resolveModel: (model, variant) => resolver.resolveModel(model, variant).pipe(Effect.flatMap(emptyAuth)),
+        resolveImage: resolver.resolveImage,
+        resolveDecision: resolver.resolveDecision,
       })
     }),
   )

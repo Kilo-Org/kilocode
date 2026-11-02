@@ -340,7 +340,7 @@ describe("provider-visibility", () => {
       project: {
         policies: [
           { action: "provider.use", resource: "acme", effect: "deny" },
-          { action: "integration.use", resource: "mcp:example", effect: "deny" },
+          { action: "mcp.use", resource: "example", effect: "deny" },
         ],
       },
     })
@@ -355,7 +355,6 @@ describe("provider-visibility", () => {
                 info: new Info({ policies: entry.info.policies as ConfigPolicy.Info[] | undefined }),
               }),
           ),
-          { statements: [] },
         ),
         "provider.use",
         id,
@@ -380,7 +379,7 @@ describe("provider-visibility", () => {
       { action: "provider.use", resource: "acme", effect: "allow" },
     ])
     expect(parse(fixture.files.project).policies).toEqual([
-      { action: "integration.use", resource: "mcp:example", effect: "deny" },
+      { action: "mcp.use", resource: "example", effect: "deny" },
     ])
   })
 

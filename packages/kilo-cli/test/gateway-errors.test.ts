@@ -1,6 +1,6 @@
 import { describe, expect } from "bun:test"
 import { KiloErrors, KiloStream } from "@kilocode/gateway-core"
-import { AIError, LanguageModel, LLM, LLMClient } from "@opencode/ai"
+import { ai, AIError, LanguageModel, LLMClient } from "@opencode/ai/effect"
 import { Anthropic, OpenAI, OpenRouter } from "@opencode/ai/providers"
 import { ModelRetry } from "@opencode/core/model-retry"
 import { SessionRunnerRetry } from "@opencode/core/session/runner/retry"
@@ -23,7 +23,7 @@ const dialects = [
   { name: "Anthropic", model: Anthropic.model("claude-sonnet-4-6", settings) },
 ].map((dialect) => ({ ...dialect, model: LanguageModel.update(dialect.model, { provider: "kilo" }) }))
 const model = dialects[0].model
-const request = (selected: LanguageModel = model) => LLM.request({ model: selected, prompt: "Hello" })
+const request = (selected: LanguageModel = model) => ai.request({ model: selected, prompt: "Hello" })
 
 // Only transport responses are fixtures. Normalization, parsing, error conversion, and retry policy are real.
 const runtime = (response: () => Response, normalize = true) =>
@@ -70,11 +70,13 @@ describe("Kilo Gateway native error path", () => {
           { code: "PROMOTION_MODEL_LIMIT_REACHED", status: 429, message: "sign up" },
         ]) {
           for (const status of [entry.status, 200]) {
-            const cause = yield* LLM.stream(request(dialect.model)).pipe(
-              Stream.runCollect,
-              Effect.flip,
-              Effect.provide(runtime(() => response({ error: { code: entry.code, message: "Rejected" } }, status))),
-            )
+            const cause = yield* ai
+              .stream(request(dialect.model))
+              .pipe(
+                Stream.runCollect,
+                Effect.flip,
+                Effect.provide(runtime(() => response({ error: { code: entry.code, message: "Rejected" } }, status))),
+              )
             const result = yield* decide(cause, dialect.model)
             expect(result.decision).toEqual({ retry: false })
             expect(result.error.message).toContain(entry.message)
@@ -92,11 +94,13 @@ describe("Kilo Gateway native error path", () => {
       for (const status of [402, 429, 500, 503]) {
         for (const code of [status, String(status)]) {
           for (const transport of [status, 200]) {
-            const cause = yield* LLM.stream(request()).pipe(
-              Stream.runCollect,
-              Effect.flip,
-              Effect.provide(runtime(() => response({ error: { code, message: "Rejected" } }, transport))),
-            )
+            const cause = yield* ai
+              .stream(request())
+              .pipe(
+                Stream.runCollect,
+                Effect.flip,
+                Effect.provide(runtime(() => response({ error: { code, message: "Rejected" } }, transport))),
+              )
             const result = yield* decide(cause)
             expect(result.decision.retry).toBe(status !== 402)
             expect(JSON.parse(result.error.response!.body).error.code).toBe(code)
@@ -121,13 +125,15 @@ describe("Kilo Gateway native error path", () => {
         { code: "server_is_overloaded", status: 503, retry: true },
       ]) {
         for (const status of [200, entry.status]) {
-          const cause = yield* LLM.stream(request()).pipe(
-            Stream.runCollect,
-            Effect.flip,
-            Effect.provide(
-              runtime(() => response({ error: { code: entry.code, message: "Fixture guidance" } }, status)),
-            ),
-          )
+          const cause = yield* ai
+            .stream(request())
+            .pipe(
+              Stream.runCollect,
+              Effect.flip,
+              Effect.provide(
+                runtime(() => response({ error: { code: entry.code, message: "Fixture guidance" } }, status)),
+              ),
+            )
           const result = yield* decide(cause)
           expect(result.decision.retry).toBe(entry.retry)
           expect(result.error.message).toContain("Fixture guidance")
@@ -145,11 +151,9 @@ describe("Kilo Gateway native error path", () => {
         { type: "error", message: JSON.stringify({ error }) },
       ].entries()) {
         const selected = dialects[index === 0 ? 1 : index === 1 ? 0 : 2].model
-        const cause = yield* LLM.stream(request(selected)).pipe(
-          Stream.runCollect,
-          Effect.flip,
-          Effect.provide(runtime(() => response(body))),
-        )
+        const cause = yield* ai
+          .stream(request(selected))
+          .pipe(Stream.runCollect, Effect.flip, Effect.provide(runtime(() => response(body))))
         const result = yield* decide(cause, selected)
         expect(result.decision).toEqual({ retry: false })
         expect(result.error.message).toContain("sign in")
@@ -164,7 +168,7 @@ describe("Kilo Gateway native error path", () => {
 
   it.effect("keeps billing metadata in the user error and Retry-After in the actual retry decision", () =>
     Effect.gen(function* () {
-      const billing = yield* LLM.stream(request()).pipe(
+      const billing = yield* ai.stream(request()).pipe(
         Stream.runCollect,
         Effect.flip,
         Effect.provide(
@@ -176,13 +180,15 @@ describe("Kilo Gateway native error path", () => {
         ),
       )
       expect((yield* decide(billing)).error.message).toContain("Buy credits at https://kilo.ai/billing")
-      const limited = yield* LLM.stream(request()).pipe(
-        Stream.runCollect,
-        Effect.flip,
-        Effect.provide(
-          runtime(() => response({ error: { code: 429, message: "Slow down" } }, 429, { "retry-after": "12" })),
-        ),
-      )
+      const limited = yield* ai
+        .stream(request())
+        .pipe(
+          Stream.runCollect,
+          Effect.flip,
+          Effect.provide(
+            runtime(() => response({ error: { code: 429, message: "Slow down" } }, 429, { "retry-after": "12" })),
+          ),
+        )
       expect(limited.reason.http?.headers["retry-after"]).toBe("12")
       expect((yield* decide(limited)).decision).toMatchObject({ retry: true, delay: 12_000 })
     }),
@@ -190,24 +196,28 @@ describe("Kilo Gateway native error path", () => {
 
   it.effect("leaves unknown Kilo and non-Kilo provider errors on the native retry default", () =>
     Effect.gen(function* () {
-      const kiloCause = yield* LLM.stream(request()).pipe(
-        Stream.runCollect,
-        Effect.flip,
-        Effect.provide(
-          runtime(() => response({ error: { code: "new_provider_error", message: "Unrecognized failure" } })),
-        ),
-      )
+      const kiloCause = yield* ai
+        .stream(request())
+        .pipe(
+          Stream.runCollect,
+          Effect.flip,
+          Effect.provide(
+            runtime(() => response({ error: { code: "new_provider_error", message: "Unrecognized failure" } })),
+          ),
+        )
       expect(kiloCause.reason._tag).toBe("UnknownProvider")
       expect(kiloCause.reason.http?.headers["x-should-retry"]).toBeUndefined()
       expect((yield* decide(kiloCause)).decision.retry).toBe(true)
       const selected = LanguageModel.update(model, { provider: "other" })
-      const cause = yield* LLM.stream(request(selected)).pipe(
-        Stream.runCollect,
-        Effect.flip,
-        Effect.provide(
-          runtime(() => response({ error: { code: "new_provider_error", message: "Unrecognized failure" } }), false),
-        ),
-      )
+      const cause = yield* ai
+        .stream(request(selected))
+        .pipe(
+          Stream.runCollect,
+          Effect.flip,
+          Effect.provide(
+            runtime(() => response({ error: { code: "new_provider_error", message: "Unrecognized failure" } }), false),
+          ),
+        )
       expect(cause.reason._tag).toBe("UnknownProvider")
       expect(cause.reason.http?.headers["x-should-retry"]).toBeUndefined()
       expect((yield* decide(cause, selected)).decision.retry).toBe(true)
@@ -224,19 +234,21 @@ describe("Kilo Gateway native error path", () => {
         { code: "server_error", status: 503, retry: false, override: "false" },
         { code: "PAID_MODEL_AUTH_REQUIRED", status: 401, retry: false, override: "true" },
       ]) {
-        const cause = yield* LLM.stream(request()).pipe(
-          Stream.runCollect,
-          Effect.flip,
-          Effect.provide(
-            runtime(() =>
-              response(
-                { error: { code: entry.code, type: "invalid_request_error", message: "Rejected" } },
-                entry.status,
-                entry.override === undefined ? undefined : { "x-should-retry": entry.override },
+        const cause = yield* ai
+          .stream(request())
+          .pipe(
+            Stream.runCollect,
+            Effect.flip,
+            Effect.provide(
+              runtime(() =>
+                response(
+                  { error: { code: entry.code, type: "invalid_request_error", message: "Rejected" } },
+                  entry.status,
+                  entry.override === undefined ? undefined : { "x-should-retry": entry.override },
+                ),
               ),
             ),
-          ),
-        )
+          )
         expect((yield* decide(cause)).decision.retry).toBe(entry.retry)
         if (entry.override !== undefined) expect(cause.reason.http?.headers["x-should-retry"]).toBe(String(entry.retry))
         else expect(cause.reason.http?.headers["x-should-retry"]).not.toBe("true")
@@ -247,11 +259,13 @@ describe("Kilo Gateway native error path", () => {
   it.effect("retains the explicit free-usage cap for generic api_error bodies", () =>
     Effect.gen(function* () {
       for (const status of [200, 500]) {
-        const cause = yield* LLM.stream(request()).pipe(
-          Stream.runCollect,
-          Effect.flip,
-          Effect.provide(runtime(() => response({ error: { message: "FreeUsageLimitError" } }, status))),
-        )
+        const cause = yield* ai
+          .stream(request())
+          .pipe(
+            Stream.runCollect,
+            Effect.flip,
+            Effect.provide(runtime(() => response({ error: { message: "FreeUsageLimitError" } }, status))),
+          )
         expect((yield* decide(cause)).decision.retry).toBe(false)
         expect(cause.reason.http?.headers["x-should-retry"]).toBe("false")
       }
@@ -270,11 +284,9 @@ describe("Kilo Gateway native error path", () => {
             body: { error: { code, message: "Quota exhausted" } },
           })),
         ]) {
-          const cause = yield* LLM.stream(request(dialect.model)).pipe(
-            Stream.runCollect,
-            Effect.flip,
-            Effect.provide(runtime(() => response(entry.body, entry.status))),
-          )
+          const cause = yield* ai
+            .stream(request(dialect.model))
+            .pipe(Stream.runCollect, Effect.flip, Effect.provide(runtime(() => response(entry.body, entry.status))))
           expect((yield* decide(cause, dialect.model)).decision.retry).toBe(false)
           expect(cause.reason.http?.headers["x-should-retry"]).not.toBe("true")
         }
@@ -286,15 +298,17 @@ describe("Kilo Gateway native error path", () => {
     Effect.gen(function* () {
       for (const dialect of dialects) {
         for (const status of [200, 429]) {
-          const cause = yield* LLM.stream(request(dialect.model)).pipe(
-            Stream.runCollect,
-            Effect.flip,
-            Effect.provide(
-              runtime(() =>
-                response({ error: { code: "PROMOTION_MODEL_LIMIT_REACHED" }, message: '{"foo":"bar"}' }, status),
+          const cause = yield* ai
+            .stream(request(dialect.model))
+            .pipe(
+              Stream.runCollect,
+              Effect.flip,
+              Effect.provide(
+                runtime(() =>
+                  response({ error: { code: "PROMOTION_MODEL_LIMIT_REACHED" }, message: '{"foo":"bar"}' }, status),
+                ),
               ),
-            ),
-          )
+            )
           const result = yield* decide(cause, dialect.model)
           expect(result.decision.retry).toBe(false)
           expect(result.error.message).toContain("sign up")
@@ -306,11 +320,13 @@ describe("Kilo Gateway native error path", () => {
   it.effect("keeps the error code rather than the frame marker in bare Anthropic errors", () =>
     Effect.gen(function* () {
       const selected = dialects[2].model
-      const cause = yield* LLM.stream(request(selected)).pipe(
-        Stream.runCollect,
-        Effect.flip,
-        Effect.provide(runtime(() => response({ type: "error", code: "rate_limit_exceeded", message: "Slow down" }))),
-      )
+      const cause = yield* ai
+        .stream(request(selected))
+        .pipe(
+          Stream.runCollect,
+          Effect.flip,
+          Effect.provide(runtime(() => response({ type: "error", code: "rate_limit_exceeded", message: "Slow down" }))),
+        )
       expect(toSessionError(cause).message).toBe("rate_limit_exceeded: Slow down")
       expect((yield* decide(cause, selected)).decision.retry).toBe(true)
     }),
@@ -318,17 +334,19 @@ describe("Kilo Gateway native error path", () => {
 
   it.effect("keeps interrupted native streams on the default transport retry path", () =>
     Effect.gen(function* () {
-      const cause = yield* LLM.stream(request()).pipe(
-        Stream.runCollect,
-        Effect.flip,
-        Effect.provide(
-          layer(
-            truncatedStream([
-              `data: ${JSON.stringify({ choices: [{ delta: { content: "Partial" }, finish_reason: null }] })}\n\n`,
-            ]),
+      const cause = yield* ai
+        .stream(request())
+        .pipe(
+          Stream.runCollect,
+          Effect.flip,
+          Effect.provide(
+            layer(
+              truncatedStream([
+                `data: ${JSON.stringify({ choices: [{ delta: { content: "Partial" }, finish_reason: null }] })}\n\n`,
+              ]),
+            ),
           ),
-        ),
-      )
+        )
       expect(cause.reason).toMatchObject({ _tag: "Transport", operation: "read" })
       expect(cause.reason.http?.headers["x-should-retry"]).toBeUndefined()
       expect((yield* decide(cause)).decision.retry).toBe(true)
@@ -339,11 +357,13 @@ describe("Kilo Gateway native error path", () => {
     Effect.gen(function* () {
       for (const retryable of [undefined, true, false, "false", 0, null]) {
         for (const code of ["PAID_MODEL_AUTH_REQUIRED", "server_error"]) {
-          const cause = yield* LLM.stream(request()).pipe(
-            Stream.runCollect,
-            Effect.flip,
-            Effect.provide(runtime(() => response({ error: { code, message: "Rejected", retryable } }), false)),
-          )
+          const cause = yield* ai
+            .stream(request())
+            .pipe(
+              Stream.runCollect,
+              Effect.flip,
+              Effect.provide(runtime(() => response({ error: { code, message: "Rejected", retryable } }), false)),
+            )
           expect((yield* decide(cause)).decision.retry).toBe(code === "server_error")
         }
       }
@@ -392,14 +412,13 @@ describe("Kilo Gateway native error path", () => {
   it.effect("retries native trigger compaction once for a top-up and stops permanent errors after one call", () =>
     Effect.gen(function* () {
       const input = request(dialects[1].model)
-      if (!LLMClient.canCompact(input, { mechanism: "trigger" }))
-        throw new Error("Fixture must support trigger compaction")
+      if (!ai.canCompact(input, { mechanism: "trigger" })) throw new Error("Fixture must support trigger compaction")
       for (const frame of ["error", "response.failed"]) {
         for (const code of ["PAID_MODEL_AUTH_REQUIRED", "PROMOTION_MODEL_LIMIT_REACHED", "top_up_in_progress"]) {
           const permanent = code !== "top_up_in_progress"
           let calls = 0
           const failed = yield* Deferred.make<void>()
-          const program = LLMClient.compact(input, { mechanism: "trigger" }).pipe(
+          const program = ai.compact(input, { mechanism: "trigger" }).pipe(
             Effect.tapError(() => Deferred.succeed(failed, undefined)),
             ModelRetry.retry,
             Effect.result,
