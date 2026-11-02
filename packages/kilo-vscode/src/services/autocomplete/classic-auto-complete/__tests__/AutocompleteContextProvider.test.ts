@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, mock } from "bun:test"
+import { describe, it, expect, beforeEach, afterEach, spyOn, mock } from "bun:test"
 import { getProcessedSnippets } from "../getProcessedSnippets"
 import type { AutocompleteInput, AutocompleteContextProvider } from "../../types"
 import { AutocompleteSnippetType } from "../../continuedev/core/autocomplete/types"
@@ -6,30 +6,61 @@ import type { FileIgnoreController } from "../../shims/FileIgnoreController"
 import crypto from "crypto"
 import { ContextRetrievalService } from "../../continuedev/core/autocomplete/context/ContextRetrievalService"
 import { VsCodeIde } from "../../continuedev/core/vscode-test-harness/src/VSCodeIde"
+import { HelperVars } from "../../continuedev/core/autocomplete/util/HelperVars"
+// Test-only star imports: bun can spy on plain ESM function exports only through the module namespace,
+// and mock.module is process-global so it is not usable here (it corrupts sibling test files).
+import * as getAllSnippetsModule from "../../continuedev/core/autocomplete/snippets/getAllSnippets"
+import * as filteringModule from "../../continuedev/core/autocomplete/templating/filtering"
 
-// Skipped under bun: these cases mock getProcessedSnippets' whole module graph with vi.mock, which
-// converts to bun's mock.module. mock.module registrations are process-global and overwrite exports
-// for every test file in the run, so they corrupt sibling tests that import the same modules (for
-// example getAllSnippets.test.ts). bun test has no per-file module isolation here.
-describe.skip("AutocompleteContextProvider", () => {
+function createAutocompleteInput(filepath: string = "/test.ts"): AutocompleteInput {
+  return {
+    isUntitledFile: false,
+    completionId: crypto.randomUUID(),
+    filepath,
+    pos: { line: 0, character: 0 },
+    recentlyVisitedRanges: [],
+    recentlyEditedRanges: [],
+  }
+}
+
+function emptySnippetPayload(): getAllSnippetsModule.SnippetPayload {
+  return {
+    recentlyOpenedFileSnippets: [],
+    importDefinitionSnippets: [],
+    rootPathSnippets: [],
+    recentlyEditedRangeSnippets: [],
+    recentlyVisitedRangesSnippets: [],
+    clipboardSnippets: [],
+    staticSnippet: [],
+  }
+}
+
+describe("AutocompleteContextProvider", () => {
   let contextProvider: AutocompleteContextProvider
   let mockIgnoreController: Promise<FileIgnoreController> | undefined
-
-  function createAutocompleteInput(filepath: string = "/test.ts"): AutocompleteInput {
-    return {
-      isUntitledFile: false,
-      completionId: crypto.randomUUID(),
-      filepath,
-      pos: { line: 0, character: 0 },
-      recentlyVisitedRanges: [],
-      recentlyEditedRanges: [],
-    }
-  }
+  let getAllSnippetsSpy: ReturnType<typeof spyOn<typeof getAllSnippetsModule, "getAllSnippetsWithoutRace">>
+  let getSnippetsSpy: ReturnType<typeof spyOn<typeof filteringModule, "getSnippets">>
 
   beforeEach(() => {
     mock.clearAllMocks()
 
     mockIgnoreController = undefined
+
+    // Restorable spies replace the v1 whole-module mocks. Snippet filepaths are already "file://"
+    // URIs because the shared vscode mock does not implement Uri.file().toString(); the assertions
+    // still match v1, whose Uri mock produced the same URIs.
+    spyOn(ContextRetrievalService.prototype, "initializeForFile").mockResolvedValue(undefined)
+    spyOn(VsCodeIde.prototype, "getWorkspaceDirs").mockResolvedValue(["file:///workspace"])
+    spyOn(HelperVars, "create").mockResolvedValue({
+      filepath: "file:///test.ts",
+      lang: { name: "typescript", singleLineComment: "//" },
+    } as any)
+
+    getAllSnippetsSpy = spyOn(getAllSnippetsModule, "getAllSnippetsWithoutRace").mockResolvedValue(emptySnippetPayload())
+    getSnippetsSpy = spyOn(filteringModule, "getSnippets").mockImplementation((_helper, payload) => [
+      ...payload.recentlyOpenedFileSnippets,
+      ...payload.importDefinitionSnippets,
+    ])
 
     const ide = new VsCodeIde({} as any)
     const contextService = new ContextRetrievalService(ide)
@@ -39,6 +70,10 @@ describe.skip("AutocompleteContextProvider", () => {
       modelId: "codestral",
       ignoreController: mockIgnoreController,
     }
+  })
+
+  afterEach(() => {
+    mock.restore()
   })
 
   describe("getProcessedSnippets", () => {
@@ -59,6 +94,17 @@ describe.skip("AutocompleteContextProvider", () => {
     })
 
     it("should return processed snippets when snippets are available", async () => {
+      getAllSnippetsSpy.mockResolvedValueOnce({
+        ...emptySnippetPayload(),
+        recentlyOpenedFileSnippets: [
+          {
+            filepath: "file:///recent.ts",
+            content: "const recent = 1;",
+            type: AutocompleteSnippetType.Code,
+          },
+        ],
+      })
+
       const input = createAutocompleteInput("/test.ts")
       const result = await getProcessedSnippets(
         input,
@@ -78,6 +124,24 @@ describe.skip("AutocompleteContextProvider", () => {
     })
 
     it("should process multiple snippets correctly", async () => {
+      getAllSnippetsSpy.mockResolvedValueOnce({
+        ...emptySnippetPayload(),
+        recentlyOpenedFileSnippets: [
+          {
+            filepath: "file:///file1.ts",
+            content: "const first = 1;",
+            type: AutocompleteSnippetType.Code,
+          },
+        ],
+        importDefinitionSnippets: [
+          {
+            filepath: "file:///file2.ts",
+            content: "const second = 2;",
+            type: AutocompleteSnippetType.Code,
+          },
+        ],
+      })
+
       const input = createAutocompleteInput("/test.ts")
       const result = await getProcessedSnippets(
         input,
@@ -102,6 +166,8 @@ describe.skip("AutocompleteContextProvider", () => {
     })
 
     it("should propagate errors from getAllSnippetsWithoutRace", async () => {
+      getAllSnippetsSpy.mockRejectedValueOnce(new Error("Test error"))
+
       const input = createAutocompleteInput("/test.ts")
 
       await expect(
@@ -141,6 +207,28 @@ describe.skip("AutocompleteContextProvider", () => {
     })
 
     it("should filter out blocked files", async () => {
+      // Mock validateAccess to block /blocked.ts
+      const controller = await mockIgnoreController!
+      ;(controller as any).validateAccess.mockImplementation((path: string) => {
+        return !path.includes("blocked.ts")
+      })
+
+      getAllSnippetsSpy.mockResolvedValueOnce({
+        ...emptySnippetPayload(),
+        recentlyOpenedFileSnippets: [
+          {
+            filepath: "file:///allowed.ts",
+            content: "const allowed = 1;",
+            type: AutocompleteSnippetType.Code,
+          },
+          {
+            filepath: "file:///blocked.ts",
+            content: "const blocked = 2;",
+            type: AutocompleteSnippetType.Code,
+          },
+        ],
+      })
+
       const input = createAutocompleteInput("/test.ts")
       const result = await getProcessedSnippets(
         input,
@@ -162,6 +250,32 @@ describe.skip("AutocompleteContextProvider", () => {
     })
 
     it("should keep snippets without file paths", async () => {
+      const controller = await mockIgnoreController!
+      ;(controller as any).validateAccess.mockReturnValue(false) // Block all files
+
+      getAllSnippetsSpy.mockResolvedValueOnce({
+        ...emptySnippetPayload(),
+        recentlyOpenedFileSnippets: [
+          {
+            filepath: "file:///blocked.ts",
+            content: "const blocked = 1;",
+            type: AutocompleteSnippetType.Code,
+          },
+        ],
+        clipboardSnippets: [
+          {
+            content: "clipboard content",
+            type: AutocompleteSnippetType.Clipboard,
+            copiedAt: "2024-01-01",
+          },
+        ],
+      })
+
+      getSnippetsSpy.mockImplementation((_helper, payload) => [
+        ...payload.recentlyOpenedFileSnippets,
+        ...payload.clipboardSnippets,
+      ])
+
       const input = createAutocompleteInput("/test.ts")
       const result = await getProcessedSnippets(
         input,
@@ -192,6 +306,17 @@ describe.skip("AutocompleteContextProvider", () => {
         modelId: "codestral",
         ignoreController: undefined,
       }
+
+      getAllSnippetsSpy.mockResolvedValueOnce({
+        ...emptySnippetPayload(),
+        recentlyOpenedFileSnippets: [
+          {
+            filepath: "file:///any-file.ts",
+            content: "const any = 1;",
+            type: AutocompleteSnippetType.Code,
+          },
+        ],
+      })
 
       const input = createAutocompleteInput("/test.ts")
       const result = await getProcessedSnippets(
