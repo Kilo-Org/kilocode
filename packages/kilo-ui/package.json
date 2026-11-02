@@ -129,7 +129,8 @@
   "devDependencies": {
     "@babel/core": "7.29.7",
     "@babel/preset-typescript": "7.27.1",
+    "@happy-dom/global-registrator": "20.8.9",
     "babel-preset-solid": "1.9.12",
-    "happy-dom": "21.0.4"
+    "happy-dom": "20.8.9"
   }
 }
