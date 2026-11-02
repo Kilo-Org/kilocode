@@ -1,8 +1,8 @@
 {
   "$comment": "Shared-patch baseline (U-L3-01). Read by script/check-shared-patches.ts and script/check-opencode-annotations.ts. Each shared upstream file that Kilo adds or changes needs an entry: rung (3 = seam patch, 4 = feature patch) and the missing seam. `unmarked` allows lines without markers and states why. Raise a limit only in the PR that adds the patch, and lower it when a patch goes away.",
   "limits": {
-    "files": 69,
-    "markedLines": 495,
+    "files": 68,
+    "markedLines": 494,
     "unmarkedLines": 76,
     "deletedFiles": 0
   },
@@ -283,13 +283,9 @@
       "rung": 4,
       "seam": "Skips upstream's new `local config commands do not start or require a server` test (v2.2). It expects `mcp add --global` to write `opencode.json`, but the existing Kilo patch in `packages/cli/src/commands/handlers/mcp/add.ts` writes the Kilo names (`kilo2.json`) even without the host. Remove the skip when the CLI write commands read their file names from `ConfigDiscovery.LayoutService` (host knob with upstream defaults) instead of `KiloConfigFiles`."
     },
-    "packages/tui/src/component/prompt/autocomplete.tsx": {
-      "rung": 3,
-      "seam": "Slash command name collisions: when two keymap commands share a slash name or alias, the later registration (a plugin's) replaces the earlier one in the slash menu. Upstream v2.2 added a built-in `/usage` (OpenCode Console limits) that collided with Kilo's `/usage` (plans and usage, as v1), and the built-in won. Upstream registers no duplicate slash names, so its own menu is unchanged. No seam: the TUI plugin API cannot remove or replace a built-in command."
-    },
     "packages/tui/test/usage-limits.test.tsx": {
       "rung": 4,
-      "seam": "Skips upstream's new `usage-limits` test (v2.2). It expects upstream's row pricing in the model picker and the OpenCode Console `/usage` dialog; the Kilo model picker (dialog-model.tsx patch) shows prices in its info panel, and Kilo's `/usage` replaces the Console dialog. Remove the skip when the Kilo picker keeps upstream row content."
+      "seam": "Skips upstream's new `usage-limits` test (v2.2). It expects upstream's row pricing in the model picker and the OpenCode Console `/usage` dialog. The Kilo model picker (dialog-model.tsx patch) shows prices in its info panel, and the Kilo usage plugin (`tui/src/kilocode/usage.tsx`) shadows upstream's `usage.show` command on purpose. Remove the skip when the Kilo picker keeps upstream row content and the test no longer needs the Console dialog."
     }
   }
 }

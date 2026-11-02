@@ -32,7 +32,7 @@ Local runs used Bun 1.4.4 (`packageManager`) on macOS arm64 with isolated `OPENC
 | VS Code extension build | pass | `bun run build` in `packages/kilo-vscode` |
 | Native Kilo build | pass, local | `--single --skip-install`; the compiled `kilo2` answered a Gateway prompt with and without an image attachment |
 | CLI and TUI self-test | pass, local | `bun dev run --standalone`, TUI prompt, model picker, `/connect` and Kilo `/usage` |
-| Workflow allowlist, annotations, shared patches, progress map | pass | Shared patches: 69 files, 495 marked and 76 unmarked lines against `958f965d35e` |
+| Workflow allowlist, annotations, shared patches, progress map | pass | Shared patches: 68 files, 494 marked and 76 unmarked lines against `958f965d35e` |
 
 ### Skipped upstream tests
 
