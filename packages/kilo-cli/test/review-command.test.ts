@@ -21,7 +21,7 @@ test("the server lists the Kilo review command instead of the built-in one", asy
 test("a config-defined review command replaces the Kilo review command", async () => {
   const commands = await list({ commands: { review: { description: "team review", template: "Review $ARGUMENTS" } } })
   expect(commands.filter((command) => command.name === "review")).toEqual([
-    { name: "review", description: "team review" },
+    { name: "review", description: "team review", template: "Review $ARGUMENTS" },
   ])
 }, 30_000)
 
@@ -58,7 +58,7 @@ async function list(config: object | undefined) {
             const response = await handler(
               new Request(url, { headers: { authorization: `Basic ${btoa("opencode:secret")}` } }),
             )
-            return ((await response.json()).data ?? []) as { name: string; description?: string }[]
+            return ((await response.json()).data ?? []) as { name: string; description?: string; template?: string }[]
           })
           // Plugins activate in the background; wait for the generation that has the expected review.
           return yield* eventually(get, (data) =>

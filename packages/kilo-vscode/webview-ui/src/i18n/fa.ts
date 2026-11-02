@@ -265,6 +265,7 @@ export const dict = {
   "prompt.toast.promptSendFailed.title": "ارسال پرامپت ناموفق بود",
 
   "mcp.status.connected": "متصل",
+  "mcp.status.pending": "در حال اتصال",
   "mcp.status.failed": "ناموفق",
   "mcp.status.needs_auth": "نیاز به احراز هویت",
   "mcp.status.needs_registration": "نیاز به ثبت کلاینت",
@@ -295,6 +296,9 @@ export const dict = {
   "provider.failure.http": "خطای ارائه‌دهنده (HTTP {{status}}).",
   "provider.failure.httpNoStatus": "خطای ارائه‌دهنده.",
   "provider.failure.schema": "پاسخ غیرمنتظره از ارائه‌دهنده.",
+  "provider.failure.organizationMissing": "تیم انتخاب‌شده دیگر در دسترس نیست. تیم دیگری انتخاب کنید.",
+  "provider.failure.scopeConflict": "تیم انتخاب‌شده با تیم توکن Kilo شما در تعارض است.",
+  "provider.failure.personalUnavailable": "این حساب، حساب شخصی ندارد. یک تیم انتخاب کنید.",
 
   "notification.permission.title": "مجوز لازم است",
   "notification.permission.titleSubagent": "مجوز مورد نیاز است (زیرعامل)",
@@ -1082,11 +1086,11 @@ export const dict = {
   "settings.agentBehaviour.mcp.timeout.catalog.title": "مهلت فهرست (میلی‌ثانیه)",
   "settings.agentBehaviour.mcp.timeout.execution.title": "مهلت اجرا (میلی‌ثانیه)",
   "settings.agentBehaviour.mcpEmpty":
-    "هیچ سرور MCP پیکربندی نشده است. سرورهای MCP را در kilo.jsonc اضافه کنید، یا از agent بخواهید آن‌ها را برایتان اضافه کند.",
+    "هیچ سرور MCP پیکربندی نشده است. سرورهای MCP را در kilo2.json اضافه کنید، یا از agent بخواهید آن‌ها را برایتان اضافه کند.",
   "settings.agentBehaviour.workflows.description":
-    "Workflow‌ها دستورات slash سفارشی هستند که در پیکربندی شما تعریف شده‌اند. برای فراخوانی آن‌ها /command-name را در چت تایپ کنید. دستورات در opencode.json زیر بخش 'command' پیکربندی می‌شوند.",
+    "Workflow‌ها دستورات سفارشی هستند که در پیکربندی شما یا در فایل‌های Markdown دستورات تعریف شده‌اند. می‌توانید برای هر Workflow یک مدل و یک گونه استدلال تعیین کنید.",
   "settings.agentBehaviour.workflows.empty":
-    "هیچ دستور سفارشی پیکربندی نشده است. دستورات را به opencode.json خود اضافه کنید تا اینجا نمایش داده شوند.",
+    "هیچ دستور سفارشی یافت نشد. دستورات را به kilo2.json یا یک فایل Markdown در .kilo2/command اضافه کنید.",
   "settings.agentBehaviour.workflows.detail.description": "توضیحات",
   "settings.agentBehaviour.workflows.detail.template": "قالب",
   "settings.agentBehaviour.workflows.model": "مدل",
@@ -1146,6 +1150,8 @@ export const dict = {
   "settings.autoApprove.maxCost.title": "هشدار هزینه جلسه",
   "settings.autoApprove.maxCost.description":
     "هنگامی که هزینه یک جلسه از این مقدار دلاری فراتر رفت، یک هشدار غیرمسدودکننده نمایش داده شود. از اعداد صحیح استفاده کنید؛ برای غیرفعال کردن خالی بگذارید.",
+  "settings.autoApprove.maxCost.v2Description":
+    "هنگامی که هزینه یک جلسه به این مقدار دلاری رسید، یک هشدار غیرمسدودکننده نمایش داده شود. برای غیرفعال کردن خالی بگذارید.",
   "settings.autoApprove.level.allow": "اجازه",
   "settings.autoApprove.level.ask": "پرسش",
   "settings.autoApprove.level.deny": "رد کردن",
@@ -1305,7 +1311,7 @@ export const dict = {
     "میانبر صفحه‌کلیدی متناسب با کاری که اکنون انجام می‌دهید را در اعلان خالی نمایش می‌دهد، مثلاً نحوه افزودن کد انتخاب‌شده یا بازگشت به اعلان.",
   "settings.display.tokenThroughput.title": "نمایش توان عملیاتی توکن",
   "settings.display.tokenThroughput.description":
-    "نمایش نرخ تولید متن (tokens/sec) در جدیدترین پیام دستیار و سربرگ کار. به‌طور پیش‌فرض نمایش داده می‌شود؛ برای پنهان کردن آن در صورت نیاز، این تنظیم را غیرفعال کنید.",
+    "Display the text-generation rate (tokens/sec) on the latest assistant message footer. Shown by default; disable this setting to hide it when needed.",
   "settings.display.autoApprovalReason.title": "نمایش دلیل تأیید خودکار",
   "settings.display.autoApprovalReason.description":
     "نشان می‌دهد چرا یک فراخوانی ابزار به‌طور خودکار تأیید شده است، مانند یک قانون مجوز مطابق یا پیش‌فرض عامل.",

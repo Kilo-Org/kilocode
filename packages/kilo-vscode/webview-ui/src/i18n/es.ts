@@ -270,6 +270,7 @@ export const dict = {
   "prompt.toast.promptSendFailed.title": "Fallo al enviar prompt",
 
   "mcp.status.connected": "conectado",
+  "mcp.status.pending": "conectando",
   "mcp.status.failed": "fallido",
   "mcp.status.needs_auth": "necesita auth",
   "mcp.status.needs_registration": "necesita registro de cliente",
@@ -300,6 +301,9 @@ export const dict = {
   "provider.failure.http": "Error del proveedor (HTTP {{status}}).",
   "provider.failure.httpNoStatus": "Error del proveedor.",
   "provider.failure.schema": "Respuesta inesperada del proveedor.",
+  "provider.failure.organizationMissing": "El equipo seleccionado ya no está disponible. Selecciona otro equipo.",
+  "provider.failure.scopeConflict": "El equipo seleccionado entra en conflicto con el equipo de tu token de Kilo.",
+  "provider.failure.personalUnavailable": "Esta cuenta no tiene una cuenta personal. Selecciona un equipo.",
 
   "notification.permission.title": "Permiso requerido",
   "notification.permission.titleSubagent": "Permiso requerido (subagente)",
@@ -1153,11 +1157,11 @@ export const dict = {
   "settings.agentBehaviour.mcp.timeout.catalog.title": "Tiempo de espera del catálogo (ms)",
   "settings.agentBehaviour.mcp.timeout.execution.title": "Tiempo de espera de ejecución (ms)",
   "settings.agentBehaviour.mcpEmpty":
-    "No hay servidores MCP configurados. Añada servidores MCP en kilo.jsonc o pida al agente que los añada.",
+    "No hay servidores MCP configurados. Añada servidores MCP en kilo2.json o pida al agente que los añada.",
   "settings.agentBehaviour.workflows.description":
-    "Los flujos de trabajo son comandos de barra personalizados definidos en su configuración. Escriba /command-name en el chat para invocarlos. Los comandos se configuran en opencode.json en la sección 'command'.",
+    "Los flujos de trabajo son comandos personalizados definidos en su configuración o en archivos Markdown de comandos. Puede establecer un modelo y una variante de razonamiento para cada flujo de trabajo.",
   "settings.agentBehaviour.workflows.empty":
-    "No hay comandos personalizados configurados. Añada comandos a opencode.json para verlos aquí.",
+    "No se encontraron comandos personalizados. Añada comandos a kilo2.json o a un archivo Markdown en .kilo2/command.",
   "settings.agentBehaviour.workflows.detail.description": "Descripción",
   "settings.agentBehaviour.workflows.detail.template": "Plantilla",
   "settings.agentBehaviour.workflows.model": "modelo",
@@ -1175,6 +1179,8 @@ export const dict = {
   "settings.autoApprove.maxCost.title": "Alerta de coste de sesión",
   "settings.autoApprove.maxCost.description":
     "Avisa antes de continuar una sesión cuando su gasto supere este importe en USD. Usa dólares enteros; déjalo vacío para desactivarlo.",
+  "settings.autoApprove.maxCost.v2Description":
+    "Mostrar un aviso no bloqueante cuando el coste de una sesión alcance este importe en USD. Déjalo vacío para desactivarlo.",
   "settings.autoApprove.level.allow": "Permitir",
   "settings.autoApprove.level.ask": "Preguntar",
   "settings.autoApprove.level.deny": "Denegar",
@@ -1344,7 +1350,7 @@ export const dict = {
     "Muestra en el prompt vacío el atajo de teclado adecuado a lo que hace ahora, por ejemplo cómo añadir el código seleccionado o volver al prompt.",
   "settings.display.tokenThroughput.title": "Mostrar rendimiento de tokens",
   "settings.display.tokenThroughput.description":
-    "Mostrar la velocidad de generación de texto (tokens/sec) en el último mensaje del asistente y en el encabezado de la tarea. Se muestra de forma predeterminada; desactiva esta opción para ocultarla cuando sea necesario.",
+    "Display the text-generation rate (tokens/sec) on the latest assistant message footer. Shown by default; disable this setting to hide it when needed.",
   "settings.display.autoApprovalReason.title": "Mostrar motivo de aprobación automática",
   "settings.display.autoApprovalReason.description":
     "Muestra por qué se aprobó automáticamente una llamada a una herramienta, como una regla de permisos coincidente o un valor predeterminado del agente.",

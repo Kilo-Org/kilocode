@@ -212,6 +212,7 @@ export const dict = {
     "Il pulsante 'Migliora prompt' aiuta a migliorare il prompt aggiungendo contesto, chiarimenti o riformulazioni. Scrivi un prompt qui e fai di nuovo clic sul pulsante per vedere come funziona.",
   "prompt.toast.promptSendFailed.title": "Invio prompt non riuscito",
   "mcp.status.connected": "connesso",
+  "mcp.status.pending": "connessione",
   "mcp.status.failed": "non riuscito",
   "mcp.status.needs_auth": "richiede autenticazione",
   "mcp.status.needs_registration": "richiede registrazione client",
@@ -956,11 +957,11 @@ export const dict = {
   "settings.agentBehaviour.mcp.timeout.catalog.title": "Timeout del catalogo (ms)",
   "settings.agentBehaviour.mcp.timeout.execution.title": "Timeout di esecuzione (ms)",
   "settings.agentBehaviour.mcpEmpty":
-    "Nessun server MCP configurato. Aggiungi server MCP in kilo.jsonc, o chiedi all'agente di aggiungerli per te.",
+    "Nessun server MCP configurato. Aggiungi server MCP in kilo2.json, o chiedi all'agente di aggiungerli per te.",
   "settings.agentBehaviour.workflows.description":
-    "I workflow sono comandi slash personalizzati definiti nella configurazione. Scrivi /nome-comando nella chat per invocarli. I comandi sono configurati in opencode.json nella sezione 'command'.",
+    "I workflow sono comandi personalizzati definiti nella configurazione o nei file Markdown dei comandi. Puoi impostare un modello e una variante di ragionamento per ogni workflow.",
   "settings.agentBehaviour.workflows.empty":
-    "Nessun comando personalizzato configurato. Aggiungi comandi a opencode.json per vederli qui.",
+    "Nessun comando personalizzato trovato. Aggiungi comandi a kilo2.json o a un file Markdown in .kilo2/command.",
   "settings.agentBehaviour.workflows.detail.description": "Descrizione",
   "settings.agentBehaviour.workflows.detail.template": "Template",
   "settings.agentBehaviour.workflows.model": "modello",
@@ -1018,6 +1019,8 @@ export const dict = {
   "settings.autoApprove.maxCost.title": "Avviso costo sessione",
   "settings.autoApprove.maxCost.description":
     "Avvisa prima di continuare una sessione quando la spesa supera questo importo in USD. Usa dollari interi; lascia vuoto per disattivare.",
+  "settings.autoApprove.maxCost.v2Description":
+    "Mostra un avviso non bloccante quando il costo di una sessione raggiunge questo importo in USD. Lascia vuoto per disattivarlo.",
   "settings.autoApprove.level.allow": "Consenti",
   "settings.autoApprove.level.ask": "Chiedi",
   "settings.autoApprove.level.deny": "Nega",
@@ -1178,7 +1181,7 @@ export const dict = {
     "Mostra nel prompt vuoto la scorciatoia da tastiera adatta a ciò che stai facendo, ad esempio come aggiungere il codice selezionato o tornare al prompt.",
   "settings.display.tokenThroughput.title": "Mostra velocità di generazione dei token",
   "settings.display.tokenThroughput.description":
-    "Mostra la velocità di generazione del testo (tokens/sec) nell'ultimo messaggio dell'assistente e nell'intestazione dell'attività. Visualizzata per impostazione predefinita; disabilita questa impostazione per nasconderla quando necessario.",
+    "Display the text-generation rate (tokens/sec) on the latest assistant message footer. Shown by default; disable this setting to hide it when needed.",
   "settings.display.autoApprovalReason.title": "Mostra motivo dell'approvazione automatica",
   "settings.display.autoApprovalReason.description":
     "Mostra perché una chiamata a uno strumento è stata approvata automaticamente, ad esempio una regola di autorizzazione corrispondente o un valore predefinito dell'agente.",
@@ -1440,6 +1443,9 @@ export const dict = {
   "provider.failure.http": "Errore del provider (HTTP {{status}}).",
   "provider.failure.httpNoStatus": "Errore del provider.",
   "provider.failure.schema": "Risposta imprevista dal provider.",
+  "provider.failure.organizationMissing": "Il team selezionato non è più disponibile. Seleziona un altro team.",
+  "provider.failure.scopeConflict": "Il team selezionato è in conflitto con il team del tuo token Kilo.",
+  "provider.failure.personalUnavailable": "Questo account non ha un account personale. Seleziona un team.",
 
   // Speech to Text tooltips and errors
   "speechToText.tooltip.start": "Avvia input vocale",

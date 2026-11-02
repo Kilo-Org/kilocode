@@ -254,6 +254,7 @@ export const dict = {
   "prompt.toast.promptSendFailed.title": "发送提示失败",
 
   "mcp.status.connected": "已连接",
+  "mcp.status.pending": "正在连接",
   "mcp.status.failed": "失败",
   "mcp.status.needs_auth": "需要授权",
   "mcp.status.needs_registration": "需要客户端注册",
@@ -281,6 +282,9 @@ export const dict = {
   "provider.failure.http": "提供方错误（HTTP {{status}}）。",
   "provider.failure.httpNoStatus": "提供方错误。",
   "provider.failure.schema": "提供方返回了意外的响应。",
+  "provider.failure.organizationMissing": "所选团队已不可用。请选择其他团队。",
+  "provider.failure.scopeConflict": "所选团队与你的 Kilo 令牌所属团队冲突。",
+  "provider.failure.personalUnavailable": "此账户没有个人账户。请选择一个团队。",
 
   "notification.permission.title": "需要权限",
   "notification.permission.titleSubagent": "需要权限（子代理）",
@@ -1085,10 +1089,10 @@ export const dict = {
   "settings.agentBehaviour.mcp.timeout.startup.title": "启动超时 (毫秒)",
   "settings.agentBehaviour.mcp.timeout.catalog.title": "目录超时 (毫秒)",
   "settings.agentBehaviour.mcp.timeout.execution.title": "执行超时 (毫秒)",
-  "settings.agentBehaviour.mcpEmpty": "未配置 MCP 服务器。在 kilo.jsonc 中添加 MCP 服务器，或让代理为您添加。",
+  "settings.agentBehaviour.mcpEmpty": "未配置 MCP 服务器。在 kilo2.json 中添加 MCP 服务器，或让代理为您添加。",
   "settings.agentBehaviour.workflows.description":
-    "工作流是在配置中定义的自定义斜杠命令。在聊天中输入 /command-name 来调用它们。命令在 opencode.json 的 'command' 部分中配置。",
-  "settings.agentBehaviour.workflows.empty": "未配置自定义命令。将命令添加到 opencode.json 即可在此处看到。",
+    "工作流是在配置或命令 Markdown 文件中定义的自定义命令。您可以为每个工作流设置模型和推理变体。",
+  "settings.agentBehaviour.workflows.empty": "未找到自定义命令。请将命令添加到 kilo2.json 或 .kilo2/command 中的 Markdown 文件。",
   "settings.agentBehaviour.workflows.detail.description": "描述",
   "settings.agentBehaviour.workflows.detail.template": "模板",
   "settings.agentBehaviour.workflows.model": "模型",
@@ -1105,6 +1109,7 @@ export const dict = {
     "定义工具的运行权限。大多数工具默认为「允许」。Bash 默认为「询问」。",
   "settings.autoApprove.maxCost.title": "会话费用提醒",
   "settings.autoApprove.maxCost.description": "当会话花费超过此美元金额后，在继续前提醒。请使用整数美元；留空则禁用。",
+  "settings.autoApprove.maxCost.v2Description": "当会话费用达到此美元金额时显示非阻塞提醒。留空则禁用。",
   "settings.autoApprove.level.allow": "允许",
   "settings.autoApprove.level.ask": "询问",
   "settings.autoApprove.level.deny": "拒绝",
@@ -1248,7 +1253,7 @@ export const dict = {
     "在空输入框中显示与当前操作相符的键盘快捷键，例如如何添加所选代码或返回输入框。",
   "settings.display.tokenThroughput.title": "显示令牌吞吐量",
   "settings.display.tokenThroughput.description":
-    "在最新的助手消息和任务标题中显示文本生成速率（tokens/sec）。默认显示；需要时禁用此设置即可隐藏。",
+    "Display the text-generation rate (tokens/sec) on the latest assistant message footer. Shown by default; disable this setting to hide it when needed.",
   "settings.display.autoApprovalReason.title": "显示自动批准原因",
   "settings.display.autoApprovalReason.description": "显示工具调用被自动批准的原因，例如匹配的权限规则或代理默认值。",
 

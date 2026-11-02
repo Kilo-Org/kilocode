@@ -3,7 +3,7 @@
 import { request } from "node:http"
 
 export const local = ((input: RequestInfo | URL, init?: RequestInit) => {
-  const target = new Request(input, init)
+  const target = new Request(input, { ...init, signal: null })
   const signal = init?.signal ?? undefined
   const result = Promise.withResolvers<Response>()
   if (signal?.aborted) return Promise.reject(signal.reason)
@@ -27,9 +27,9 @@ export const local = ((input: RequestInfo | URL, init?: RequestInit) => {
     )
   })
   req.on("error", (error) => result.reject(error))
-  signal?.addEventListener("abort", () => req.destroy(signal.reason instanceof Error ? signal.reason : undefined), {
-    once: true,
-  })
+  const abort = () => req.destroy(signal?.reason instanceof Error ? signal.reason : undefined)
+  signal?.addEventListener("abort", abort, { once: true })
+  req.once("close", () => signal?.removeEventListener("abort", abort))
   if (typeof init?.body === "string") req.write(init.body)
   req.end()
   return result.promise

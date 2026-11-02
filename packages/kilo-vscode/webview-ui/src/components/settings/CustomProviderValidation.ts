@@ -44,6 +44,19 @@ export type FormErrors = {
 
 export const INVALID_ENV = "Invalid environment variable name"
 
+/** The API key field shows this instead of the stored credential; the dialog cannot read the secret. */
+export const MASKED_CUSTOM_PROVIDER_KEY = "********"
+
+/**
+ * Whether the key field holds a change. An untouched field keeps the stored key, and so does the mask put back by an
+ * edit (for example undo), so saving never clears the stored credential by accident.
+ */
+export function keyChanged(apiKey: string, touched: boolean) {
+  return touched && apiKey.trim() !== MASKED_CUSTOM_PROVIDER_KEY
+}
+
+const ANTHROPIC_PACKAGE: CustomProviderPackage = "@opencode/ai/providers/anthropic-compatible"
+
 export type CustomProviderConfigValue = {
   name: string
   package: CustomProviderPackage
@@ -87,6 +100,8 @@ type ValidateResult = {
 const PROVIDER_ID = /^[a-z0-9][a-z0-9-_]*$/
 const ENV_NAME = /^[A-Z_][A-Z0-9_]*$/
 const ENV_REF = /^\{env:([^}]+)\}$/
+/** A base URL may be one config reference; the server substitutes it before use. */
+const URL_REF = /^\{(?:env|file):[^}]+\}$/
 
 function checkModel(m: ModelEntry, seenModels: Set<string>, t: Translator): ModelErrors {
   const id = m.id.trim()
@@ -218,17 +233,25 @@ export function mergeProviderConfig(existing: unknown, produced: CustomProviderC
   return merged as CustomProviderConfigValue
 }
 
+function checkBaseURL(baseURL: string, t: Translator) {
+  if (!baseURL) return t("provider.custom.error.baseURL.required")
+  if (!/^https?:\/\//.test(baseURL) && !URL_REF.test(baseURL)) return t("provider.custom.error.baseURL.format")
+  return undefined
+}
+
 export function validateCustomProvider(input: ValidateArgs): ValidateResult {
   const providerID = input.form.providerID.trim()
   const name = input.form.name.trim()
   const baseURL = input.form.baseURL.trim()
   const apiKey = input.form.apiKey.trim()
 
-  const rawEnv = input.apiKeyTouched ? parseEnvKey(apiKey) : undefined
-  const envError = input.apiKeyTouched && ENV_REF.test(apiKey) && !rawEnv ? INVALID_ENV : undefined
-  const key = input.apiKeyTouched && apiKey && !rawEnv ? apiKey : undefined
+  // An edit can put the mask back, for example with undo; the field then still means "the stored key".
+  const touched = keyChanged(apiKey, input.apiKeyTouched)
+  const rawEnv = touched ? parseEnvKey(apiKey) : undefined
+  const envError = touched && ENV_REF.test(apiKey) && !rawEnv ? INVALID_ENV : undefined
+  const key = touched && apiKey && !rawEnv ? apiKey : undefined
   // A touched field replaces the stored env var; an untouched edit keeps the existing env and credential.
-  const env = rawEnv ? [rawEnv] : input.apiKeyTouched ? undefined : input.editing ? input.existingEnv : undefined
+  const env = rawEnv ? [rawEnv] : touched ? undefined : input.editing ? input.existingEnv : undefined
 
   const { idErr, existsErr } = checkProviderID(
     providerID,
@@ -239,11 +262,7 @@ export function validateCustomProvider(input: ValidateArgs): ValidateResult {
   )
 
   const nameError = !name ? input.t("provider.custom.error.name.required") : undefined
-  const urlError = !baseURL
-    ? input.t("provider.custom.error.baseURL.required")
-    : !/^https?:\/\//.test(baseURL)
-      ? input.t("provider.custom.error.baseURL.format")
-      : undefined
+  const urlError = checkBaseURL(baseURL, input.t)
 
   const seenModels = new Set<string>()
   const modelErrors = input.form.models.map((m) => checkModel(m, seenModels, input.t))
@@ -288,5 +307,183 @@ export function validateCustomProvider(input: ValidateArgs): ValidateResult {
         models: Object.fromEntries(input.form.models.map((m) => [m.id.trim(), serializeModel(m)])),
       },
     },
+  }
+}
+
+// Dialog state from an existing provider. The value can be hand-written, so every field is read defensively.
+
+const EMPTY_MODEL: ModelEntry = { id: "", name: "", reasoning: false, supportsImages: false }
+
+export function emptyModel(): ModelEntry {
+  return { ...EMPTY_MODEL }
+}
+
+/** The model rows of a `providers.<id>` value, or one empty row. */
+export function initModels(config: unknown): ModelEntry[] {
+  const entries = Object.entries(record(record(config).models))
+  if (entries.length === 0) return [emptyModel()]
+  return entries.map(([id, value]) => {
+    const model = record(value)
+    const capabilities = record(model.capabilities)
+    const input = Array.isArray(capabilities.input) ? capabilities.input : []
+    return {
+      id,
+      name: typeof model.name === "string" && model.name.trim() ? model.name : id,
+      reasoning: record(capabilities.reasoning).supported === true,
+      supportsImages: input.includes("image"),
+      variants: model.variants,
+    }
+  })
+}
+
+/** The header rows of a `providers.<id>` value, or one empty row. */
+export function initHeaders(config: unknown): HeaderRow[] {
+  const rows = Object.entries(record(record(config).headers)).flatMap(([key, value]) =>
+    typeof value === "string" ? [{ key, value }] : [],
+  )
+  return rows.length ? rows : [{ key: "", value: "" }]
+}
+
+/** The key field: the mask for a stored key, else the provider's `{env:NAME}` variable, else empty. */
+export function initApiKey(config: unknown, storedKey: boolean): string {
+  if (storedKey) return MASKED_CUSTOM_PROVIDER_KEY
+  const env = record(config).env
+  return Array.isArray(env) && env.length === 1 && typeof env[0] === "string" ? `{env:${env[0]}}` : ""
+}
+
+/** The base URL of a `providers.<id>` value. */
+export function initBaseURL(config: unknown): string {
+  const url = record(record(config).settings).baseURL
+  return typeof url === "string" ? url : ""
+}
+
+// Fetch models: the dialog asks the host to list `GET {baseURL}/models` and offers the result as a picker.
+
+export type FetchedModel = { id: string; name: string }
+
+/** The Anthropic Messages API has no OpenAI-style model list. */
+export function canFetchModels(pkg: CustomProviderPackage, baseURL: string) {
+  return pkg !== ANTHROPIC_PACKAGE && /^https?:\/\//.test(baseURL.trim())
+}
+
+/**
+ * The key a fetch sends. A typed key or an `{env:NAME}` variable wins. An untouched field of an existing provider asks
+ * the host for the stored key. A cleared field sends no key, because saving would store none.
+ */
+export function fetchKey(input: { apiKey: string; touched: boolean; providerID?: string }): {
+  apiKey?: string
+  env?: string
+  providerID?: string
+} {
+  const raw = input.apiKey.trim()
+  const env = parseEnvKey(raw)
+  if (env) return { env }
+  if (ENV_REF.test(raw)) return {}
+  // The mask means "the stored key" even after an edit, for example with undo, so the mask is never sent as a key.
+  if (raw === MASKED_CUSTOM_PROVIDER_KEY) return input.providerID ? { providerID: input.providerID } : {}
+  if (!input.touched) return input.providerID ? { providerID: input.providerID } : {}
+  return raw ? { apiKey: raw } : {}
+}
+
+function modelKeys(models: ModelEntry[]) {
+  return new Set(models.map((model) => model.id.trim().toLowerCase()).filter(Boolean))
+}
+
+/** The fetched models the form does not list yet. Ids compare trimmed and case-insensitively, as validation does. */
+export function freshModels(fetched: FetchedModel[], models: ModelEntry[]) {
+  const existing = modelKeys(models)
+  return fetched.filter((model) => !existing.has(model.id.trim().toLowerCase()))
+}
+
+/**
+ * Appends the picked models to the form's models, or replaces the single empty row. A picked id the form already
+ * lists (for example one typed after the fetch) is skipped. `added` counts only the models actually added.
+ */
+export function addFetchedModels(models: ModelEntry[], picked: FetchedModel[]) {
+  const row = models[0]
+  const empty = models.length === 1 && !!row && !row.id.trim() && !row.name.trim()
+  const existing = modelKeys(models)
+  const added = picked
+    .filter((model) => {
+      const key = model.id.trim().toLowerCase()
+      if (!key || existing.has(key)) return false
+      existing.add(key)
+      return true
+    })
+    .map((model) => ({ ...emptyModel(), id: model.id, name: model.name }))
+  if (added.length === 0) return { models, added: 0 }
+  return { models: empty ? added : [...models, ...added], added: added.length }
+}
+
+/** The dialog fields that a raw config value can repair when it arrives after the dialog opened. */
+export type RawRepairFields = {
+  name: string
+  package: CustomProviderPackage
+  baseURL: string
+  apiKey: string
+  models: ModelEntry[]
+  headers: HeaderRow[]
+}
+
+/**
+ * Header values that still hold the merged (already substituted) value take the raw value, so `{env:...}` and
+ * `{file:...}` references survive a save. A row the user edited keeps its value, and so does a row that the raw config
+ * does not list.
+ */
+export function repairHeaderValues(current: HeaderRow[], initial: HeaderRow[], raw: HeaderRow[]): HeaderRow[] {
+  const key = (row: HeaderRow) => row.key.trim().toLowerCase()
+  const rawByKey = new Map(raw.map((row) => [key(row), row.value]))
+  const initialByKey = new Map(initial.map((row) => [key(row), row.value]))
+  return current.map((row) => {
+    const was = initialByKey.get(key(row))
+    const next = rawByKey.get(key(row))
+    return was !== undefined && next !== undefined && row.value === was ? { ...row, value: next } : row
+  })
+}
+
+/**
+ * The fields to replace when the raw config arrives after the dialog opened. Each field changes only while it still
+ * equals the value the dialog loaded from the merged config, so an edit made in that window is kept. The key also stays
+ * when the user edited it.
+ */
+export function repairFromRaw(input: {
+  current: RawRepairFields
+  initial: RawRepairFields
+  raw: RawRepairFields
+  apiKeyTouched: boolean
+}): Partial<RawRepairFields> {
+  const patch: Partial<RawRepairFields> = {}
+  // Only a field that still holds the merged value and differs in the raw value is repaired, so an unchanged form is
+  // not written and its fetch is not restarted.
+  if (input.current.name === input.initial.name && input.raw.name !== input.current.name) patch.name = input.raw.name
+  if (input.current.package === input.initial.package && input.raw.package !== input.current.package)
+    patch.package = input.raw.package
+  if (input.current.baseURL === input.initial.baseURL && input.raw.baseURL !== input.current.baseURL)
+    patch.baseURL = input.raw.baseURL
+  if (
+    !input.apiKeyTouched &&
+    input.current.apiKey === input.initial.apiKey &&
+    input.raw.apiKey !== input.current.apiKey
+  )
+    patch.apiKey = input.raw.apiKey
+  if (
+    JSON.stringify(input.current.models) === JSON.stringify(input.initial.models) &&
+    JSON.stringify(input.raw.models) !== JSON.stringify(input.current.models)
+  )
+    patch.models = input.raw.models
+  const headers = repairHeaderValues(input.current.headers, input.initial.headers, input.raw.headers)
+  if (JSON.stringify(headers) !== JSON.stringify(input.current.headers)) patch.headers = headers
+  return patch
+}
+
+/**
+ * Orders fetch replies. A new request and every change of the URL, key or package take a new token; a reply applies
+ * only while its token is still the newest, so a slow reply for an old URL never lands.
+ */
+export function createFetchGate() {
+  let token = 0
+  return {
+    next: () => ++token,
+    current: (value: number) => value === token,
   }
 }

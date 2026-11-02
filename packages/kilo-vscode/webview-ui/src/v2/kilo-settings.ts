@@ -1,6 +1,7 @@
 // The `kilo-code.v2.*` VS Code settings. The host inlines them as `window.KILO_SETTINGS` and pushes a fresh set on
 // change; this module keeps the latest values, applies the font size to the page, and reads the Shift+Tab toggle.
 import { createSignal } from "solid-js"
+import { getVSCodeAPI } from "../context/vscode"
 
 const SIZES = [10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24]
 
@@ -45,4 +46,20 @@ export function applyKiloSettings(values: Record<string, unknown>) {
 /** `kilo-code.v2.chat.shiftTabCyclesVariant`, on by default. */
 export function shiftTabCyclesVariant(): boolean {
   return kiloSettings()["chat.shiftTabCyclesVariant"] !== false
+}
+
+/** `kilo-code.v2.showTokenThroughput`, on by default. */
+export function tokenThroughputVisible(): boolean {
+  return kiloSettings()["showTokenThroughput"] !== false
+}
+
+/** `kilo-code.v2.showTaskTimeline`, collapsed by default. */
+export function taskTimelineVisible(): boolean {
+  return kiloSettings()["showTaskTimeline"] === true
+}
+
+/** Persist the graph toggle. The local value changes at once; the host confirms by pushing the settings back. */
+export function setTaskTimelineVisible(value: boolean) {
+  setKiloSettings((current) => ({ ...current, showTaskTimeline: value }))
+  getVSCodeAPI().postMessage({ type: "updateVSCodeSettings", values: { showTaskTimeline: value } })
 }

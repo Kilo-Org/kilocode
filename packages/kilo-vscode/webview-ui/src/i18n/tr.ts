@@ -265,6 +265,7 @@ export const dict = {
   "prompt.toast.promptSendFailed.title": "Komut gönderilemedi",
 
   "mcp.status.connected": "bağlı",
+  "mcp.status.pending": "bağlanıyor",
   "mcp.status.failed": "başarısız",
   "mcp.status.needs_auth": "kimlik doğrulama gerekli",
   "mcp.status.needs_registration": "istemci kaydı gerekli",
@@ -295,6 +296,9 @@ export const dict = {
   "provider.failure.http": "Sağlayıcı hatası (HTTP {{status}}).",
   "provider.failure.httpNoStatus": "Sağlayıcı hatası.",
   "provider.failure.schema": "Sağlayıcıdan beklenmeyen bir yanıt alındı.",
+  "provider.failure.organizationMissing": "Seçilen ekip artık kullanılamıyor. Başka bir ekip seçin.",
+  "provider.failure.scopeConflict": "Seçilen ekip, Kilo belirtecinizin ekibiyle çakışıyor.",
+  "provider.failure.personalUnavailable": "Bu hesabın kişisel hesabı yok. Bir ekip seçin.",
 
   "notification.permission.title": "İzin gerekli",
   "notification.permission.titleSubagent": "İzin gerekli (alt ajan)",
@@ -1100,11 +1104,11 @@ export const dict = {
   "settings.agentBehaviour.mcp.timeout.catalog.title": "Katalog zaman aşımı (ms)",
   "settings.agentBehaviour.mcp.timeout.execution.title": "Yürütme zaman aşımı (ms)",
   "settings.agentBehaviour.mcpEmpty":
-    "Yapılandırılmış MCP sunucusu yok. kilo.jsonc dosyasına MCP sunucuları ekleyin veya ajanın eklemesini isteyin.",
+    "Yapılandırılmış MCP sunucusu yok. kilo2.json dosyasına MCP sunucuları ekleyin veya ajanın eklemesini isteyin.",
   "settings.agentBehaviour.workflows.description":
-    "İş akışları, yapılandırmanızda tanımlanan özel eğik çizgi komutlarıdır. Çağırmak için sohbette /command-name yazın. Komutlar opencode.json dosyasındaki 'command' bölümünde yapılandırılır.",
+    "İş akışları, yapılandırmanızda veya komut Markdown dosyalarında tanımlanan özel komutlardır. Her iş akışı için bir model ve akıl yürütme varyantı ayarlayabilirsiniz.",
   "settings.agentBehaviour.workflows.empty":
-    "Yapılandırılmış özel komut yok. Burada görmek için opencode.json dosyasına komutlar ekleyin.",
+    "Özel komut bulunamadı. kilo2.json dosyasına veya .kilo2/command içindeki bir Markdown dosyasına komut ekleyin.",
   "settings.agentBehaviour.workflows.detail.description": "Açıklama",
   "settings.agentBehaviour.workflows.detail.template": "Şablon",
   "settings.agentBehaviour.workflows.model": "model",
@@ -1116,6 +1120,8 @@ export const dict = {
   "settings.autoApprove.maxCost.title": "Oturum Maliyeti Uyarısı",
   "settings.autoApprove.maxCost.description":
     "Bir oturumun harcaması bu USD tutarını aştıktan sonra devam etmeden önce uyar. Tam dolar kullanın; devre dışı bırakmak için boş bırakın.",
+  "settings.autoApprove.maxCost.v2Description":
+    "Bir oturumun maliyeti bu USD tutarına ulaştığında engellemeyen bir uyarı gösterin. Devre dışı bırakmak için boş bırakın.",
   "settings.autoApprove.level.allow": "İzin Ver",
   "settings.autoApprove.level.ask": "Sor",
   "settings.autoApprove.level.deny": "Reddet",
@@ -1282,7 +1288,7 @@ export const dict = {
     "Boş istemde şu anda yaptığınız işe uyan klavye kısayolunu gösterir, örneğin seçili kodu ekleme veya isteme geri dönme.",
   "settings.display.tokenThroughput.title": "Token İşleme Hızını Göster",
   "settings.display.tokenThroughput.description":
-    "En son asistan mesajında ve görev başlığında metin oluşturma hızını (tokens/sec) gösterin. Varsayılan olarak gösterilir; gerektiğinde gizlemek için bu ayarı devre dışı bırakın.",
+    "Display the text-generation rate (tokens/sec) on the latest assistant message footer. Shown by default; disable this setting to hide it when needed.",
   "settings.display.autoApprovalReason.title": "Otomatik Onay Nedenini Göster",
   "settings.display.autoApprovalReason.description":
     "Bir araç çağrısının neden otomatik olarak onaylandığını gösterir; örneğin eşleşen bir izin kuralı veya aracı varsayılanı.",

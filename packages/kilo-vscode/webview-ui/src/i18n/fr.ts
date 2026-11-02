@@ -270,6 +270,7 @@ export const dict = {
   "prompt.toast.promptSendFailed.title": "Échec de l'envoi du message",
 
   "mcp.status.connected": "connecté",
+  "mcp.status.pending": "connexion",
   "mcp.status.failed": "échoué",
   "mcp.status.needs_auth": "nécessite auth",
   "mcp.status.needs_registration": "nécessite enregistrement client",
@@ -300,6 +301,9 @@ export const dict = {
   "provider.failure.http": "Erreur du fournisseur (HTTP {{status}}).",
   "provider.failure.httpNoStatus": "Erreur du fournisseur.",
   "provider.failure.schema": "Réponse inattendue du fournisseur.",
+  "provider.failure.organizationMissing": "L'équipe sélectionnée n'est plus disponible. Sélectionnez une autre équipe.",
+  "provider.failure.scopeConflict": "L'équipe sélectionnée est en conflit avec l'équipe de votre jeton Kilo.",
+  "provider.failure.personalUnavailable": "Ce compte n'a pas de compte personnel. Sélectionnez une équipe.",
 
   "notification.permission.title": "Permission requise",
   "notification.permission.titleSubagent": "Permission requise (sous-agent)",
@@ -1166,11 +1170,11 @@ export const dict = {
   "settings.agentBehaviour.mcp.timeout.catalog.title": "Délai du catalogue (ms)",
   "settings.agentBehaviour.mcp.timeout.execution.title": "Délai d'exécution (ms)",
   "settings.agentBehaviour.mcpEmpty":
-    "Aucun serveur MCP configuré. Ajoutez des serveurs MCP dans kilo.jsonc ou demandez à l'agent de les ajouter.",
+    "Aucun serveur MCP configuré. Ajoutez des serveurs MCP dans kilo2.json ou demandez à l'agent de les ajouter.",
   "settings.agentBehaviour.workflows.description":
-    "Les workflows sont des commandes slash personnalisées définies dans votre configuration. Tapez /command-name dans le chat pour les invoquer. Les commandes sont configurées dans opencode.json dans la section 'command'.",
+    "Les workflows sont des commandes personnalisées définies dans votre configuration ou dans des fichiers Markdown de commandes. Vous pouvez définir un modèle et une variante de raisonnement pour chaque workflow.",
   "settings.agentBehaviour.workflows.empty":
-    "Aucune commande personnalisée configurée. Ajoutez des commandes à opencode.json pour les voir ici.",
+    "Aucune commande personnalisée trouvée. Ajoutez des commandes à kilo2.json ou à un fichier Markdown dans .kilo2/command.",
   "settings.agentBehaviour.workflows.detail.description": "Description",
   "settings.agentBehaviour.workflows.detail.template": "Modèle",
   "settings.agentBehaviour.workflows.model": "modèle",
@@ -1188,6 +1192,8 @@ export const dict = {
   "settings.autoApprove.maxCost.title": "Alerte de coût de session",
   "settings.autoApprove.maxCost.description":
     "Alerter avant de continuer une session lorsque sa dépense dépasse ce montant en USD. Utilisez des dollars entiers ; laissez vide pour désactiver.",
+  "settings.autoApprove.maxCost.v2Description":
+    "Afficher une alerte non bloquante lorsque le coût d'une session atteint ce montant en USD. Laisser vide pour désactiver.",
   "settings.autoApprove.level.allow": "Autoriser",
   "settings.autoApprove.level.ask": "Demander",
   "settings.autoApprove.level.deny": "Refuser",
@@ -1360,7 +1366,7 @@ export const dict = {
     "Affiche dans le prompt vide le raccourci clavier adapté à ce que vous faites, par exemple pour ajouter le code sélectionné ou revenir au prompt.",
   "settings.display.tokenThroughput.title": "Afficher le débit de tokens",
   "settings.display.tokenThroughput.description":
-    "Afficher la vitesse de génération du texte (tokens/sec) dans le dernier message de l’assistant et dans l’en-tête de la tâche. Affichée par défaut ; désactivez ce paramètre pour la masquer si nécessaire.",
+    "Display the text-generation rate (tokens/sec) on the latest assistant message footer. Shown by default; disable this setting to hide it when needed.",
   "settings.display.autoApprovalReason.title": "Afficher la raison de l'approbation automatique",
   "settings.display.autoApprovalReason.description":
     "Indique pourquoi un appel d'outil a été approuvé automatiquement, par exemple une règle d'autorisation correspondante ou une valeur par défaut d'agent.",

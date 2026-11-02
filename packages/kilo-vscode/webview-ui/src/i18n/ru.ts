@@ -264,6 +264,7 @@ export const dict = {
   "prompt.toast.promptSendFailed.title": "Не удалось отправить запрос",
 
   "mcp.status.connected": "подключено",
+  "mcp.status.pending": "подключение",
   "mcp.status.failed": "ошибка",
   "mcp.status.needs_auth": "требуется авторизация",
   "mcp.status.needs_registration": "требуется регистрация клиента",
@@ -294,6 +295,9 @@ export const dict = {
   "provider.failure.http": "Ошибка провайдера (HTTP {{status}}).",
   "provider.failure.httpNoStatus": "Ошибка провайдера.",
   "provider.failure.schema": "Неожиданный ответ от провайдера.",
+  "provider.failure.organizationMissing": "Выбранная команда больше недоступна. Выберите другую команду.",
+  "provider.failure.scopeConflict": "Выбранная команда конфликтует с командой вашего токена Kilo.",
+  "provider.failure.personalUnavailable": "У этой учетной записи нет личного аккаунта. Выберите команду.",
 
   "notification.permission.title": "Требуется разрешение",
   "notification.permission.titleSubagent": "Требуется разрешение (субагент)",
@@ -1136,11 +1140,11 @@ export const dict = {
   "settings.agentBehaviour.mcp.timeout.catalog.title": "Тайм-аут каталога (мс)",
   "settings.agentBehaviour.mcp.timeout.execution.title": "Тайм-аут выполнения (мс)",
   "settings.agentBehaviour.mcpEmpty":
-    "MCP-серверы не настроены. Добавьте MCP-серверы в kilo.jsonc или попросите агента добавить их.",
+    "MCP-серверы не настроены. Добавьте MCP-серверы в kilo2.json или попросите агента добавить их.",
   "settings.agentBehaviour.workflows.description":
-    "Рабочие процессы — это пользовательские слэш-команды, определённые в вашей конфигурации. Введите /command-name в чате, чтобы вызвать их. Команды настраиваются в opencode.json в разделе 'command'.",
+    "Рабочие процессы: пользовательские команды, определённые в вашей конфигурации или в файлах Markdown с командами. Для каждого рабочего процесса можно задать модель и вариант рассуждения.",
   "settings.agentBehaviour.workflows.empty":
-    "Пользовательские команды не настроены. Добавьте команды в opencode.json, чтобы увидеть их здесь.",
+    "Пользовательские команды не найдены. Добавьте команды в kilo2.json или в файл Markdown в .kilo2/command.",
   "settings.agentBehaviour.workflows.detail.description": "Описание",
   "settings.agentBehaviour.workflows.detail.template": "Шаблон",
   "settings.agentBehaviour.workflows.model": "модель",
@@ -1158,6 +1162,8 @@ export const dict = {
   "settings.autoApprove.maxCost.title": "Оповещение о стоимости сессии",
   "settings.autoApprove.maxCost.description":
     "Предупреждать перед продолжением сессии, если ее стоимость превышает эту сумму в USD. Используйте целые доллары; оставьте пустым, чтобы отключить.",
+  "settings.autoApprove.maxCost.v2Description":
+    "Показывать неблокирующее предупреждение, когда стоимость сессии достигает этой суммы в USD. Оставьте пустым, чтобы отключить.",
   "settings.autoApprove.level.allow": "Разрешить",
   "settings.autoApprove.level.ask": "Спросить",
   "settings.autoApprove.level.deny": "Отклонить",
@@ -1322,7 +1328,7 @@ export const dict = {
     "Показывать в пустом поле запроса сочетание клавиш, подходящее к текущему действию, например как добавить выделенный код или вернуться к запросу.",
   "settings.display.tokenThroughput.title": "Показывать пропускную способность токенов",
   "settings.display.tokenThroughput.description":
-    "Показывать скорость генерации текста (tokens/sec) в последнем сообщении ассистента и в заголовке задачи. Показывается по умолчанию; отключите этот параметр, чтобы при необходимости скрыть её.",
+    "Display the text-generation rate (tokens/sec) on the latest assistant message footer. Shown by default; disable this setting to hide it when needed.",
   "settings.display.autoApprovalReason.title": "Показывать причину автоодобрения",
   "settings.display.autoApprovalReason.description":
     "Показывает, почему вызов инструмента был одобрен автоматически, например по совпавшему правилу разрешений или значению агента по умолчанию.",

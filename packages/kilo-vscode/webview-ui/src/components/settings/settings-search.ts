@@ -102,6 +102,7 @@ const GROUP_TABS: Record<string, string> = {
 /** Rows whose group tab differs from the tab that actually renders them. */
 const KEY_TAB_OVERRIDES: Record<string, string> = {
   "settings.context.compactionModel.title": "models",
+  "settings.autocomplete.model.title": "models",
 }
 
 /** Agent Behaviour rows rendered without opening a separate editor or dialog. */
@@ -146,9 +147,8 @@ const EXCLUDED_KEYS = new Set([
   "settings.context.memory.project.title",
   "settings.context.memory.storage.title",
   "agentManager.browser.title",
-  // Models keys the v2 Models tab does not render: v2 has no subagent, autocomplete, or speech-to-text settings.
+  // Models keys the v2 Models tab does not render: v2 has no subagent or speech-to-text settings.
   "settings.providers.subagentModel.title",
-  "settings.autocomplete.model.title",
   "settings.models.speechToTextBaseUrl.title",
   "settings.models.speechToTextApiKey.title",
   "settings.models.speechToTextModel.title",
@@ -174,11 +174,21 @@ const EXTRA_ENTRIES: SettingsEntry[] = [
   { tab: "aboutKiloCode", titleKey: "settings.aboutKiloCode.community" },
   { tab: "aboutKiloCode", titleKey: "settings.aboutKiloCode.cliServer", keywords: ["status", "connection"] },
   {
+    tab: "autoApprove",
+    titleKey: "settings.autoApprove.maxCost.title",
+    descriptionKey: "settings.autoApprove.maxCost.v2Description",
+  },
+  {
     tab: "browser",
     titleKey: "settings.webTools.webSearch.enable",
     descriptionKey: "settings.webTools.webSearch.description",
   },
   { tab: "notifications", titleKey: "settings.notifications.sounds" },
+  {
+    tab: "commitMessage",
+    titleKey: "settings.commitMessage.language.description",
+    keywords: ["language", "locale"],
+  },
   {
     tab: "agentManager",
     titleKey: "agentManager.worktree.defaultBaseBranch",

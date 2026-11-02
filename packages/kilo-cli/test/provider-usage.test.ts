@@ -130,11 +130,28 @@ test(
     ])
     expect(backend.requests.filter((request) => request.path === "/api/trpc/codingPlans.getUsage")).toHaveLength(1)
 
-    // A plan whose usage request fails stays visible as unavailable.
+    // A failed BYOK read keeps the last good plan: the cloud answer survives, and the usage still refreshes.
+    backend.state.byokStatus = 500
+    expect((await usage.refresh()).items).toMatchObject([
+      { id: "kilo-managed:sub-1", fetchState: "ready", windows: [{ id: "sub-1:five_hour", used: 25, remaining: 75 }] },
+    ])
+
+    // A failed usage read keeps the plan and its windows as stale with a retryable error.
     backend.state.codingPlanUsageStatus = 500
     expect((await usage.refresh()).items).toMatchObject([
-      { id: "kilo-managed:sub-1", fetchState: "unavailable", error: { message: "Usage unavailable." } },
+      {
+        id: "kilo-managed:sub-1",
+        fetchState: "stale",
+        windows: [{ id: "sub-1:five_hour", used: 25, remaining: 75 }],
+        error: { code: "managed_subscription_unavailable", message: "Usage unavailable.", retryable: true },
+      },
     ])
+
+    // A removed plan is not shown. The cache-level prune is covered by the plugin test that seeds two managed
+    // quotas, prunes one, and asserts the other is the only one preserved.
+    backend.state.byokStatus = 200
+    backend.state.codingPlans = { result: { data: { json: [] } } }
+    expect((await usage.refresh()).items).toEqual([])
   }),
   30_000,
 )

@@ -1,14 +1,72 @@
 import { homedir } from "node:os"
-import { commands, ExtensionMode, window, workspace, type ExtensionContext } from "vscode"
+import {
+  commands,
+  env,
+  ExtensionMode,
+  extensions,
+  l10n,
+  ProgressLocation,
+  window,
+  workspace,
+  type ExtensionContext,
+} from "vscode"
 import { chat } from "./chat"
+import { commitMessageCommand, commitMessageLanguage, connect, type GitExports } from "./commit-message"
+import { createCostAlerts } from "./cost-alert"
 import { command, manager, settingsEnvironment } from "./server"
 import { readKiloSettings } from "./settings-host"
+import { registerAutocompleteProvider } from "./services/autocomplete"
+import { createConnection } from "./services/autocomplete/connection"
 import { settings } from "./settings-panel"
+import { toolDiff } from "./tool-diff"
 
 export function activate(context: ExtensionContext) {
   const output = window.createOutputChannel("Kilo Code (v2)")
   const storage = context.globalStorageUri.fsPath
   const directory = workspace.workspaceFolders?.[0]?.uri.fsPath ?? homedir()
+  const alerts = createCostAlerts({
+    notify: async (alert) => {
+      // This package ships no l10n bundles, so these strings remain English in every VS Code locale.
+      const money = (value: number) =>
+        value > 0 && value < 0.00000001
+          ? `$${value}`
+          : `$${value.toFixed(value < 0.0001 ? 8 : value < 1 ? 4 : 2)}`
+      const title = alert.title?.trim() || l10n.t("Session {0}", alert.sessionID.slice(-6))
+      const keepGoing = l10n.t("Continue")
+      const stop = l10n.t("Stop")
+      const openSettings = l10n.t("Open Settings")
+      const choice = await window.showWarningMessage(
+        l10n.t(
+          "{0}: session cost {1} has reached your {2} alert threshold. Keep going?",
+          title,
+          money(alert.cost),
+          money(alert.limit),
+        ),
+        keepGoing,
+        stop,
+        openSettings,
+      )
+      if (choice === keepGoing) return "continue"
+      if (choice === stop) return "stop"
+      if (choice === openSettings)
+        void commands.executeCommand("kilo-code.v2.settings", {
+          tab: "autoApprove",
+          titleKey: "settings.autoApprove.maxCost.title",
+        })
+      return undefined
+    },
+    onError: (error) => output.appendLine(`Cost alert: ${String(error)}`),
+    onStopError: (sessionID, error) => {
+      output.appendLine(`Cost alert: ${String(error)}`)
+      const show = l10n.t("Show Output")
+      void window
+        .showErrorMessage(l10n.t("Could not stop session {0}. It may still be running.", sessionID.slice(-6)), show)
+        .then((choice) => {
+          if (choice === show) output.show()
+        })
+    },
+  })
+  alerts.setLimit(readKiloSettings().maxCost)
   // Read at each start, so a settings change applies to the next server.
   const serverSettings = () => {
     const values = readKiloSettings()
@@ -23,6 +81,15 @@ export function activate(context: ExtensionContext) {
     env: process.env,
     settings: serverSettings,
     log: (text) => output.append(text),
+    // The autocomplete connection is declared below; the server starts only after activation returns.
+    onStart: (started) => {
+      alerts.start(started)
+      autocomplete.started()
+    },
+    onStop: () => {
+      alerts.stop()
+      autocomplete.stopped()
+    },
     onError: (error) => {
       output.appendLine(error.message)
       void window.showErrorMessage(error.message.split("\n")[0], "Show Output").then((choice) => {
@@ -30,11 +97,17 @@ export function activate(context: ExtensionContext) {
       })
     },
   })
-  const view = chat({ context, server, directory })
+  const diffs = toolDiff()
+  const autocomplete = createConnection({ server, directory })
+  context.subscriptions.push({ dispose: autocomplete.dispose })
+  registerAutocompleteProvider(context, autocomplete)
+  const view = chat({ context, server, directory, trackCostSession: alerts.track, diff: diffs })
   const panel = settings({ context, server, directory, onReset: view.syncState })
 
   context.subscriptions.push(
     output,
+    { dispose: () => diffs.dispose() },
+    workspace.registerTextDocumentContentProvider(diffs.scheme, diffs.provider),
     window.registerWebviewViewProvider("kilo-code.v2.chat", view.provider, {
       webviewOptions: { retainContextWhenHidden: true },
     }),
@@ -50,7 +123,8 @@ export function activate(context: ExtensionContext) {
       await commands.executeCommand("kilo-code.v2.chat.focus")
       await view.post({ type: "command", name: "profile" })
     }),
-    commands.registerCommand("kilo-code.v2.settings", () => panel.open()),
+    commands.registerCommand("kilo-code.v2.settings", (...args: unknown[]) => panel.open(args)),
+    commands.registerCommand("kilo-code.v2.settingsSearch", () => panel.open([{ search: true }])),
     panel,
     // The host sends the action and the webview decides the next agent, as in main: the agent list and
     // the selection live in the webview, and only the server owns the committed value.
@@ -62,11 +136,26 @@ export function activate(context: ExtensionContext) {
       await commands.executeCommand("kilo-code.v2.chat.focus")
       await view.post({ type: "command", name: "cyclePreviousAgentMode" })
     }),
+    commands.registerCommand(
+      "kilo-code.v2.generateCommitMessage",
+      commitMessageCommand({
+        git: () => extensions.getExtension<GitExports>("vscode.git"),
+        window,
+        location: ProgressLocation.SourceControl,
+        language: () => {
+          const config = workspace.getConfiguration("kilo-code.v2")
+          return commitMessageLanguage(config.get("languageCommitMessage"), config.get("language"), env.language)
+        },
+        connect: () => connect(server),
+        log: (text) => output.appendLine(text),
+      }),
+    ),
     // The webview reconnects on its own: its event stream fails, and the next request starts a new server.
     commands.registerCommand("kilo-code.v2.restartServer", () => server.stop()),
     // Claude Code compatibility and the extra CA certificates are server start environment, so a change needs a new
     // server. The next request starts one with the current settings.
     workspace.onDidChangeConfiguration((event) => {
+      if (event.affectsConfiguration("kilo-code.v2.maxCost")) alerts.setLimit(readKiloSettings().maxCost)
       if (
         event.affectsConfiguration("kilo-code.v2.claudeCodeCompat") ||
         event.affectsConfiguration("kilo-code.v2.extraCaCerts")
@@ -74,6 +163,7 @@ export function activate(context: ExtensionContext) {
         void server.stop()
     }),
     { dispose: () => void server.stop() },
+    { dispose: alerts.dispose },
   )
 
   // `bun run extension` opens a development host: show the chat right away.

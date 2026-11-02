@@ -6,6 +6,7 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
+    "./autocomplete": "./src/autocomplete.ts",
     "./embedding-catalog": "./src/embedding-catalog.ts",
     "./testing": "./src/testing.ts"
   },

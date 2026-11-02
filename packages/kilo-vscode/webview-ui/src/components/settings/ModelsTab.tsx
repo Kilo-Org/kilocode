@@ -5,6 +5,7 @@ import { Component, For, createEffect, createMemo, on } from "solid-js"
 import { useLanguage } from "../../context/language"
 import { useV2 } from "../../v2/client"
 import { useSettingsConfig } from "../../v2/settings-config"
+import AutocompleteModelRow from "./AutocompleteModelRow"
 import ModelPicker from "./ModelPicker"
 import { selection, write, preserveVariant, readPathValue, type ModelSelection } from "./models-selection"
 import SettingsRow from "./SettingsRow"
@@ -52,13 +53,21 @@ const ModelsTab: Component<SettingsTabProps> = () => {
     return config.set(path, write(preserveVariant(selection(config.value(path)), value)), scope)
   }
 
+  // The effective value comes from the host, which reads every config document because the config API cannot carry
+  // this Kilo-only field. A value the config layer has (an optimistic write) wins, and the raw files are the fallback
+  // when the host could not read the policy.
   const hidden = () => {
+    const value = config.value(["hide_prompt_training_models"])
+    if (typeof value === "boolean") return value
+    const policy = config.policy()
+    if (policy) return policy.hidePromptTrainingModels
     const project = config.raw("project")?.hide_prompt_training_models
     if (typeof project === "boolean") return project
     return config.raw("global")?.hide_prompt_training_models === true
   }
-  const setHidden = (checked: boolean) =>
-    config.set(["hide_prompt_training_models"], checked, config.source(["hide_prompt_training_models"]) ?? "global")
+  // A managed document outside the writable global and project files sets the value, so the switch does not edit it.
+  const hiddenLocked = () => config.policy()?.managed === true
+  const setHidden = (checked: boolean) => config.set(["hide_prompt_training_models"], checked)
 
   return (
     <div>
@@ -85,6 +94,7 @@ const ModelsTab: Component<SettingsTabProps> = () => {
             clearable
             clearLabel={notSet()}
             showVariants={false}
+            includeAutoSmall
           />
         </SettingsRow>
         <SettingsRow
@@ -99,12 +109,17 @@ const ModelsTab: Component<SettingsTabProps> = () => {
             showVariants={false}
           />
         </SettingsRow>
+        <AutocompleteModelRow />
         <SettingsRow
           title={language.t("settings.models.hidePromptTraining.title")}
-          description={language.t("settings.models.hidePromptTraining.description")}
+          description={
+            hiddenLocked()
+              ? language.t("settings.models.hidePromptTraining.managed")
+              : language.t("settings.models.hidePromptTraining.description")
+          }
           last
         >
-          <Switch checked={hidden()} onChange={setHidden} hideLabel>
+          <Switch checked={hidden()} onChange={setHidden} disabled={hiddenLocked()} hideLabel>
             {language.t("settings.models.hidePromptTraining.title")}
           </Switch>
         </SettingsRow>

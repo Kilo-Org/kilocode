@@ -29,6 +29,7 @@ export const AuthStatus = Schema.Struct({
   authenticated: Schema.Boolean,
   organizationID: OrganizationID,
   server: Schema.String,
+  identity: Schema.optional(Schema.String),
 })
 
 export type AuthStatus = typeof AuthStatus.Type
@@ -193,6 +194,49 @@ export const EditTarget = Schema.Struct({
   url: Schema.String,
 })
 
+// One FIM completion. The server sends the provider request with `stream: true` and returns the collected text, so
+// the client never holds the Kilo token or a provider key.
+export const FimRequest = Schema.Struct({
+  prefix: Schema.String,
+  suffix: Schema.String,
+  provider: Schema.optional(Schema.String),
+  model: Schema.optional(Schema.String),
+  maxTokens: Schema.optional(Schema.Finite),
+  temperature: Schema.optional(Schema.Finite),
+})
+
+export const FimResult = Schema.Struct({
+  text: Schema.String,
+  cost: Schema.Finite,
+  inputTokens: Schema.Finite,
+  outputTokens: Schema.Finite,
+})
+
+// One Next Edit request. Clients send structured editor context; the server builds the Mercury prompt.
+export const EditRequest = Schema.Struct({
+  provider: Schema.optional(Schema.String),
+  model: Schema.optional(Schema.String),
+  maxTokens: Schema.optional(Schema.Finite),
+  currentFilePath: Schema.String,
+  currentFileContent: Schema.String,
+  cursorLine: Schema.Finite,
+  cursorCharacter: Schema.Finite,
+  editableRegionStartLine: Schema.Finite,
+  editableRegionEndLine: Schema.Finite,
+  recentlyViewedSnippets: Schema.Array(Schema.Struct({ filepath: Schema.String, content: Schema.String })),
+  editDiffHistory: Schema.Array(Schema.String),
+})
+
+export const EditResult = Schema.Struct({
+  content: Schema.String,
+  usage: Schema.optional(
+    Schema.Struct({
+      prompt_tokens: Schema.optional(Schema.Finite),
+      completion_tokens: Schema.optional(Schema.Finite),
+    }),
+  ),
+})
+
 export const ModelEntry = Schema.Struct({
   id: Schema.String,
   name: Schema.String,
@@ -222,12 +266,33 @@ export const ModelEntry = Schema.Struct({
 
 export type ModelEntry = typeof ModelEntry.Type
 
+// Why the Kilo model catalog of the current scope failed to load. `unauthorized` and `http` carry the HTTP status when
+// the Kilo API answered. `unauthenticated`: a team is selected but no Kilo credential is available.
+// `organization_missing`: the account is no longer a member of the selected team. `scope_conflict`: the token is
+// scoped to another team than the selected one. `personal_unavailable`: the account has no personal account and no
+// team is selected.
 export const CatalogFailure = Schema.Struct({
-  kind: Schema.Literals(["unauthorized", "network", "schema", "http", "organization_missing"]),
+  kind: Schema.Literals([
+    "unauthorized",
+    "unauthenticated",
+    "network",
+    "schema",
+    "http",
+    "organization_missing",
+    "scope_conflict",
+    "personal_unavailable",
+  ]),
   status: optional(Schema.Int.check(Schema.isGreaterThanOrEqualTo(100), Schema.isLessThanOrEqualTo(599))),
 }).annotate({ identifier: "KiloGateway.CatalogFailure" })
 
 export interface CatalogFailure extends Schema.Schema.Type<typeof CatalogFailure> {}
+
+// The catalog state of the location. `failure` is `null` while the catalog is usable or still loading.
+export const CatalogStatus = Schema.Struct({
+  failure: Schema.NullOr(CatalogFailure),
+}).annotate({ identifier: "KiloGateway.CatalogStatus" })
+
+export interface CatalogStatus extends Schema.Schema.Type<typeof CatalogStatus> {}
 
 export const SessionMetadata = Schema.Struct({
   routedModelID: Schema.optional(Schema.String),
@@ -249,6 +314,12 @@ const RouterFailure = {
   ...Failure,
   router: portable(Schema.Struct({ code: Schema.String, retryAt: Schema.optional(Schema.String) })),
 }
+// `request` carries the HTTP status of a failed provider request (or 499 canceled, 504 timed out), so clients can
+// back off by status. Missing credentials and a conflicting team scope fail with `unauthorized`.
+const AutocompleteFailure = {
+  ...Failure,
+  request: portable(Schema.Struct({ status: Schema.Int })),
+}
 const RouterTarget = Schema.Struct({
   /** Router model ID or slug, as `kilo auto router` accepts it. */
   router: Schema.String,
@@ -268,7 +339,8 @@ export const RouterEvalConfig = Schema.Struct({
 export type RouterEvalConfig = typeof RouterEvalConfig.Type
 
 // The TUI, VS Code, and JetBrains clients use this contract for account/profile, balance, Kilo Pass,
-// BYOK, coding plans, team modes, notifications, media and embedding models, and FIM/edit routing.
+// BYOK, coding plans, team modes, notifications, the catalog failure reason, media and embedding models, and FIM/edit
+// routing.
 export const Definition = Rpc.define({
   id: "kilocode.gateway",
   methods: {
@@ -327,6 +399,12 @@ export const Definition = Rpc.define({
       output: portable(Schema.Array(ModelEntry)),
       errors: { ...Failure, failed: portable(CatalogFailure) },
     },
+    // The failure reason of the catalog without the models. The `catalog` event publishes each change.
+    "catalog.status": {
+      input: portable(Schema.Struct({})),
+      output: portable(CatalogStatus),
+      errors: Failure,
+    },
     "models.images": {
       input: portable(Schema.Struct({})),
       output: portable(Schema.Array(ImageModel)),
@@ -351,6 +429,16 @@ export const Definition = Rpc.define({
       input: portable(Schema.Struct({ provider: Schema.optional(Schema.String), model: Schema.optional(Schema.String) })),
       output: portable(EditTarget),
       errors: Failure,
+    },
+    "autocomplete.fim": {
+      input: portable(FimRequest),
+      output: portable(FimResult),
+      errors: AutocompleteFailure,
+    },
+    "autocomplete.edit": {
+      input: portable(EditRequest),
+      output: portable(EditResult),
+      errors: AutocompleteFailure,
     },
     "session.metadata": {
       input: portable(Schema.Struct({ sessionID: Schema.String })),
@@ -395,5 +483,7 @@ export const Definition = Rpc.define({
   },
   events: {
     organization: { schema: portable(Schema.Struct({ organizationID: OrganizationID })) },
+    /** The catalog failure reason of the location changed. */
+    catalog: { schema: portable(CatalogStatus) },
   },
 })

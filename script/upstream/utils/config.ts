@@ -115,10 +115,13 @@ export const defaultConfig: MergeConfig = {
     "packages/desktop/**",
     "packages/app/**",
     "packages/gui-extensions/**",
+    "packages/gui-plugins/**", // upstream v2.2 name of packages/gui-extensions
     "packages/session-ui/**",
     "packages/storybook/**",
+    "packages/stories/**", // upstream v2.2 name of packages/storybook
     "script/sdk-docs.ts",
     "script/ast-grep/gui-extensions/**",
+    "script/ast-grep/gui-plugins/**", // upstream v2.2 name of script/ast-grep/gui-extensions
     // Hosted opencode.ai platform
     "packages/console/**",
     "packages/enterprise/**",

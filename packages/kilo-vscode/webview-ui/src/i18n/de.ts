@@ -275,6 +275,7 @@ export const dict = {
   "prompt.toast.promptSendFailed.title": "Eingabe konnte nicht gesendet werden",
 
   "mcp.status.connected": "verbunden",
+  "mcp.status.pending": "verbindet",
   "mcp.status.failed": "fehlgeschlagen",
   "mcp.status.needs_auth": "benötigt Authentifizierung",
   "mcp.status.needs_registration": "Client-Registrierung erforderlich",
@@ -305,6 +306,9 @@ export const dict = {
   "provider.failure.http": "Anbieterfehler (HTTP {{status}}).",
   "provider.failure.httpNoStatus": "Anbieterfehler.",
   "provider.failure.schema": "Unerwartete Antwort vom Anbieter.",
+  "provider.failure.organizationMissing": "Das ausgewählte Team ist nicht mehr verfügbar. Wählen Sie ein anderes Team.",
+  "provider.failure.scopeConflict": "Das ausgewählte Team steht im Konflikt mit dem Team Ihres Kilo-Tokens.",
+  "provider.failure.personalUnavailable": "Dieses Konto hat kein persönliches Konto. Wählen Sie ein Team.",
 
   "notification.permission.title": "Berechtigung erforderlich",
   "notification.permission.titleSubagent": "Berechtigung erforderlich (Subagent)",
@@ -1162,11 +1166,11 @@ export const dict = {
   "settings.agentBehaviour.mcp.timeout.catalog.title": "Katalog-Timeout (ms)",
   "settings.agentBehaviour.mcp.timeout.execution.title": "Ausführungs-Timeout (ms)",
   "settings.agentBehaviour.mcpEmpty":
-    "Keine MCP-Server konfiguriert. Fügen Sie MCP-Server in kilo.jsonc hinzu oder bitten Sie den Agenten, sie hinzuzufügen.",
+    "Keine MCP-Server konfiguriert. Fügen Sie MCP-Server in kilo2.json hinzu oder bitten Sie den Agenten, sie hinzuzufügen.",
   "settings.agentBehaviour.workflows.description":
-    "Workflows sind benutzerdefinierte Slash-Befehle, die in Ihrer Konfiguration definiert sind. Geben Sie /command-name im Chat ein, um sie aufzurufen. Befehle werden in opencode.json im Abschnitt 'command' konfiguriert.",
+    "Workflows sind benutzerdefinierte Befehle, die in Ihrer Konfiguration oder in Markdown-Befehlsdateien definiert sind. Für jeden Workflow können Sie ein Modell und eine Reasoning-Variante festlegen.",
   "settings.agentBehaviour.workflows.empty":
-    "Keine benutzerdefinierten Befehle konfiguriert. Fügen Sie Befehle zu opencode.json hinzu, um sie hier zu sehen.",
+    "Keine benutzerdefinierten Befehle gefunden. Fügen Sie Befehle zu kilo2.json oder einer Markdown-Datei in .kilo2/command hinzu.",
   "settings.agentBehaviour.workflows.detail.description": "Beschreibung",
   "settings.agentBehaviour.workflows.detail.template": "Vorlage",
   "settings.agentBehaviour.workflows.model": "Modell",
@@ -1184,6 +1188,8 @@ export const dict = {
   "settings.autoApprove.maxCost.title": "Sitzungskostenwarnung",
   "settings.autoApprove.maxCost.description":
     "Vor dem Fortsetzen einer Sitzung warnen, wenn ihre Kosten diesen USD-Betrag überschreiten. Ganze Dollarbeträge verwenden; zum Deaktivieren leer lassen.",
+  "settings.autoApprove.maxCost.v2Description":
+    "Eine nicht blockierende Warnung anzeigen, wenn die Kosten einer Sitzung diesen USD-Betrag erreichen. Leer lassen, um die Warnung zu deaktivieren.",
   "settings.autoApprove.level.allow": "Erlauben",
   "settings.autoApprove.level.ask": "Fragen",
   "settings.autoApprove.level.deny": "Ablehnen",
@@ -1352,7 +1358,7 @@ export const dict = {
     "Zeigt in der leeren Eingabe das Tastenkürzel an, das zu Ihrer aktuellen Tätigkeit passt, zum Beispiel wie Sie ausgewählten Code hinzufügen oder zur Eingabe zurückkehren.",
   "settings.display.tokenThroughput.title": "Token-Durchsatz anzeigen",
   "settings.display.tokenThroughput.description":
-    "Die Textgenerierungsrate (tokens/sec) in der neuesten Assistentennachricht und in der Aufgabenüberschrift anzeigen. Standardmäßig angezeigt; deaktivieren Sie diese Einstellung, um sie bei Bedarf auszublenden.",
+    "Display the text-generation rate (tokens/sec) on the latest assistant message footer. Shown by default; disable this setting to hide it when needed.",
   "settings.display.autoApprovalReason.title": "Grund für automatische Genehmigung anzeigen",
   "settings.display.autoApprovalReason.description":
     "Zeigt, warum ein Tool-Aufruf automatisch genehmigt wurde, z. B. durch eine passende Berechtigungsregel oder einen Agent-Standard.",

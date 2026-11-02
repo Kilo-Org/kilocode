@@ -271,6 +271,7 @@ export const dict = {
   "prompt.toast.promptSendFailed.title": "Kunne ikke sende forespørsel",
 
   "mcp.status.connected": "tilkoblet",
+  "mcp.status.pending": "kobler til",
   "mcp.status.failed": "mislyktes",
   "mcp.status.needs_auth": "trenger autentisering",
   "mcp.status.needs_registration": "trenger klientregistrering",
@@ -303,6 +304,9 @@ export const dict = {
   "provider.failure.http": "Leverandørfeil (HTTP {{status}}).",
   "provider.failure.httpNoStatus": "Leverandørfeil.",
   "provider.failure.schema": "Uventet svar fra leverandøren.",
+  "provider.failure.organizationMissing": "Det valgte teamet er ikke lenger tilgjengelig. Velg et annet team.",
+  "provider.failure.scopeConflict": "Det valgte teamet er i konflikt med teamet til Kilo-tokenet ditt.",
+  "provider.failure.personalUnavailable": "Denne kontoen har ingen personlig konto. Velg et team.",
 
   "notification.permission.title": "Tillatelse påkrevd",
   "notification.permission.titleSubagent": "Tillatelse påkrevd (underagent)",
@@ -1139,11 +1143,11 @@ export const dict = {
   "settings.agentBehaviour.mcp.timeout.catalog.title": "Katalogtidsavbrudd (ms)",
   "settings.agentBehaviour.mcp.timeout.execution.title": "Utførelsestidsavbrudd (ms)",
   "settings.agentBehaviour.mcpEmpty":
-    "Ingen MCP-servere konfigurert. Legg til MCP-servere i kilo.jsonc, eller be agenten om å legge dem til.",
+    "Ingen MCP-servere konfigurert. Legg til MCP-servere i kilo2.json, eller be agenten om å legge dem til.",
   "settings.agentBehaviour.workflows.description":
-    "Arbeidsflyter er egendefinerte skråstrekkommandoer definert i konfigurasjonen din. Skriv /command-name i chatten for å kjøre dem. Kommandoer konfigureres i opencode.json under seksjonen 'command'.",
+    "Arbeidsflyter er egendefinerte kommandoer som er definert i konfigurasjonen din eller i Markdown-kommandofiler. Du kan angi en modell og en resonneringsvariant for hver arbeidsflyt.",
   "settings.agentBehaviour.workflows.empty":
-    "Ingen egendefinerte kommandoer konfigurert. Legg til kommandoer i opencode.json for å se dem her.",
+    "Fant ingen egendefinerte kommandoer. Legg til kommandoer i kilo2.json eller en Markdown-fil i .kilo2/command.",
   "settings.agentBehaviour.workflows.detail.description": "Beskrivelse",
   "settings.agentBehaviour.workflows.detail.template": "Mal",
   "settings.agentBehaviour.workflows.model": "modell",
@@ -1161,6 +1165,8 @@ export const dict = {
   "settings.autoApprove.maxCost.title": "Varsel om øktkostnad",
   "settings.autoApprove.maxCost.description":
     "Varsle før en økt fortsetter etter at kostnaden overstiger dette USD-beløpet. Bruk hele dollar; la feltet stå tomt for å deaktivere.",
+  "settings.autoApprove.maxCost.v2Description":
+    "Vis et varsel som ikke blokkerer når kostnaden for en økt når dette USD-beløpet. La feltet stå tomt for å deaktivere.",
   "settings.autoApprove.level.allow": "Tillat",
   "settings.autoApprove.level.ask": "Spør",
   "settings.autoApprove.level.deny": "Avvis",
@@ -1322,7 +1328,7 @@ export const dict = {
     "Vis hurtigtasten som passer til det du gjør nå, i den tomme ledeteksten, for eksempel hvordan du legger til markert kode eller går tilbake til ledeteksten.",
   "settings.display.tokenThroughput.title": "Vis genereringshastighet",
   "settings.display.tokenThroughput.description":
-    "Vis tekstgenereringshastigheten (tokens/sec) i den nyeste assistentmeldingen og i oppgaveoverskriften. Vises som standard; deaktiver denne innstillingen for å skjule den ved behov.",
+    "Display the text-generation rate (tokens/sec) on the latest assistant message footer. Shown by default; disable this setting to hide it when needed.",
   "settings.display.autoApprovalReason.title": "Vis årsak til automatisk godkjenning",
   "settings.display.autoApprovalReason.description":
     "Viser hvorfor et verktøykall ble automatisk godkjent, for eksempel en samsvarende tillatelsesregel eller en agentstandard.",

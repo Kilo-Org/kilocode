@@ -270,6 +270,7 @@ export const dict = {
   "prompt.toast.promptSendFailed.title": "Falha ao enviar prompt",
 
   "mcp.status.connected": "conectado",
+  "mcp.status.pending": "conectando",
   "mcp.status.failed": "falhou",
   "mcp.status.needs_auth": "precisa de autenticação",
   "mcp.status.needs_registration": "precisa de registro do cliente",
@@ -300,6 +301,9 @@ export const dict = {
   "provider.failure.http": "Erro do provedor (HTTP {{status}}).",
   "provider.failure.httpNoStatus": "Erro do provedor.",
   "provider.failure.schema": "Resposta inesperada do provedor.",
+  "provider.failure.organizationMissing": "A equipe selecionada não está mais disponível. Selecione outra equipe.",
+  "provider.failure.scopeConflict": "A equipe selecionada entra em conflito com a equipe do seu token Kilo.",
+  "provider.failure.personalUnavailable": "Esta conta não tem uma conta pessoal. Selecione uma equipe.",
 
   "notification.permission.title": "Permissão necessária",
   "notification.permission.titleSubagent": "Permissão necessária (subagente)",
@@ -1151,11 +1155,11 @@ export const dict = {
   "settings.agentBehaviour.mcp.timeout.catalog.title": "Tempo limite do catálogo (ms)",
   "settings.agentBehaviour.mcp.timeout.execution.title": "Tempo limite de execução (ms)",
   "settings.agentBehaviour.mcpEmpty":
-    "Nenhum servidor MCP configurado. Adicione servidores MCP em kilo.jsonc ou peça ao agente para adicioná-los.",
+    "Nenhum servidor MCP configurado. Adicione servidores MCP em kilo2.json ou peça ao agente para adicioná-los.",
   "settings.agentBehaviour.workflows.description":
-    "Fluxos de trabalho são comandos de barra personalizados definidos na sua configuração. Digite /command-name no chat para invocá-los. Os comandos são configurados no opencode.json na seção 'command'.",
+    "Os fluxos de trabalho são comandos personalizados definidos na sua configuração ou em arquivos Markdown de comandos. Você pode definir um modelo e uma variante de raciocínio para cada fluxo de trabalho.",
   "settings.agentBehaviour.workflows.empty":
-    "Nenhum comando personalizado configurado. Adicione comandos ao opencode.json para vê-los aqui.",
+    "Nenhum comando personalizado encontrado. Adicione comandos ao kilo2.json ou a um arquivo Markdown em .kilo2/command.",
   "settings.agentBehaviour.workflows.detail.description": "Descrição",
   "settings.agentBehaviour.workflows.detail.template": "Modelo",
   "settings.agentBehaviour.workflows.model": "modelo",
@@ -1173,6 +1177,8 @@ export const dict = {
   "settings.autoApprove.maxCost.title": "Alerta de custo da sessão",
   "settings.autoApprove.maxCost.description":
     "Alerte antes de continuar uma sessão depois que o gasto exceder este valor em USD. Use valores inteiros em dólares; deixe em branco para desativar.",
+  "settings.autoApprove.maxCost.v2Description":
+    "Mostre um alerta não bloqueante quando o custo de uma sessão atingir este valor em USD. Deixe vazio para desativar.",
   "settings.autoApprove.level.allow": "Permitir",
   "settings.autoApprove.level.ask": "Perguntar",
   "settings.autoApprove.level.deny": "Negar",
@@ -1339,7 +1345,7 @@ export const dict = {
     "Mostra no prompt vazio o atalho de teclado adequado ao que você faz agora, por exemplo como adicionar o código selecionado ou voltar ao prompt.",
   "settings.display.tokenThroughput.title": "Mostrar taxa de tokens",
   "settings.display.tokenThroughput.description":
-    "Exibir a taxa de geração de texto (tokens/sec) na mensagem mais recente do assistente e no cabeçalho da tarefa. Exibida por padrão; desative esta configuração para ocultá-la quando necessário.",
+    "Display the text-generation rate (tokens/sec) on the latest assistant message footer. Shown by default; disable this setting to hide it when needed.",
   "settings.display.autoApprovalReason.title": "Mostrar motivo da aprovação automática",
   "settings.display.autoApprovalReason.description":
     "Mostra por que uma chamada de ferramenta foi aprovada automaticamente, como uma regra de permissão correspondente ou um padrão do agente.",

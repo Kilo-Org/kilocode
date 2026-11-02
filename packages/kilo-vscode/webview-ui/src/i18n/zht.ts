@@ -252,6 +252,7 @@ export const dict = {
   "prompt.toast.promptSendFailed.title": "傳送提示失敗",
 
   "mcp.status.connected": "已連線",
+  "mcp.status.pending": "正在連線",
   "mcp.status.failed": "失敗",
   "mcp.status.needs_auth": "需要授權",
   "mcp.status.needs_registration": "需要客戶端註冊",
@@ -279,6 +280,9 @@ export const dict = {
   "provider.failure.http": "供應商錯誤（HTTP {{status}}）。",
   "provider.failure.httpNoStatus": "供應商錯誤。",
   "provider.failure.schema": "供應商回傳非預期的回應。",
+  "provider.failure.organizationMissing": "所選團隊已無法使用。請選擇其他團隊。",
+  "provider.failure.scopeConflict": "所選團隊與你的 Kilo 權杖所屬團隊衝突。",
+  "provider.failure.personalUnavailable": "此帳戶沒有個人帳戶。請選擇一個團隊。",
 
   "notification.permission.title": "需要權限",
   "notification.permission.titleSubagent": "需要權限（子代理）",
@@ -1046,10 +1050,10 @@ export const dict = {
   "settings.agentBehaviour.mcp.timeout.startup.title": "啟動逾時 (毫秒)",
   "settings.agentBehaviour.mcp.timeout.catalog.title": "目錄逾時 (毫秒)",
   "settings.agentBehaviour.mcp.timeout.execution.title": "執行逾時 (毫秒)",
-  "settings.agentBehaviour.mcpEmpty": "未設定 MCP 伺服器。在 kilo.jsonc 中新增 MCP 伺服器，或請代理為您新增。",
+  "settings.agentBehaviour.mcpEmpty": "未設定 MCP 伺服器。在 kilo2.json 中新增 MCP 伺服器，或請代理為您新增。",
   "settings.agentBehaviour.workflows.description":
-    "工作流程是在設定中定義的自訂斜線命令。在聊天中輸入 /command-name 來呼叫它們。命令在 opencode.json 的 'command' 區段中設定。",
-  "settings.agentBehaviour.workflows.empty": "未設定自訂命令。將命令新增至 opencode.json 即可在此處看到。",
+    "工作流程是在您的設定或命令 Markdown 檔案中定義的自訂命令。您可以為每個工作流程設定模型與推理變體。",
+  "settings.agentBehaviour.workflows.empty": "找不到自訂命令。請將命令新增至 kilo2.json 或 .kilo2/command 中的 Markdown 檔案。",
   "settings.agentBehaviour.workflows.detail.description": "描述",
   "settings.agentBehaviour.workflows.detail.template": "範本",
   "settings.agentBehaviour.workflows.model": "模型",
@@ -1067,6 +1071,8 @@ export const dict = {
   "settings.autoApprove.maxCost.title": "工作階段費用提醒",
   "settings.autoApprove.maxCost.description":
     "當工作階段花費超過此美元金額後，在繼續前提醒。請使用整數美元；留空則停用。",
+  "settings.autoApprove.maxCost.v2Description":
+    "當工作階段費用達到此美元金額時顯示非封鎖提醒。留空則停用。",
   "settings.autoApprove.level.allow": "允許",
   "settings.autoApprove.level.ask": "詢問",
   "settings.autoApprove.level.deny": "拒絕",
@@ -1211,7 +1217,7 @@ export const dict = {
     "在空白輸入框中顯示符合目前操作的鍵盤快捷鍵，例如如何新增所選程式碼或返回輸入框。",
   "settings.display.tokenThroughput.title": "顯示權杖吞吐量",
   "settings.display.tokenThroughput.description":
-    "在最新的助理訊息和任務標題中顯示文字生成速率（tokens/sec）。預設顯示；需要時停用此設定即可隱藏。",
+    "Display the text-generation rate (tokens/sec) on the latest assistant message footer. Shown by default; disable this setting to hide it when needed.",
   "settings.display.autoApprovalReason.title": "顯示自動核准原因",
   "settings.display.autoApprovalReason.description": "顯示工具呼叫被自動核准的原因，例如符合的權限規則或代理預設值。",
 

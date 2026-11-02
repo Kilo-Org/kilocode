@@ -120,6 +120,37 @@
 }
 
 /* Task tool child-session tool list (v1.0.25 style) */
+[data-slot="task-tool-open"] {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--icon-weak);
+  cursor: pointer;
+}
+
+[data-slot="task-tool-open"]:hover {
+  color: var(--text-base);
+  background: var(--surface-hover);
+}
+
+[data-slot="task-tool-background"] {
+  flex-shrink: 0;
+  padding: 0 6px;
+  border: 1px solid var(--border-weak-base);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-family-sans);
+  font-size: var(--font-size-small);
+  line-height: var(--line-height-large);
+  color: var(--text-weak);
+}
+
 [data-component="task-tools"] {
   padding: 8px 12px;
   display: flex;
@@ -353,6 +384,10 @@ html[data-theme="kilo-vscode"] [data-component="bash-output"] {
     max-height: 240px;
     overflow-y: auto;
     overflow-wrap: anywhere;
+  }
+
+  [data-slot="message-part-tool-error-action"] {
+    flex: none;
   }
 }
 

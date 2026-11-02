@@ -15,10 +15,26 @@ import type { ToHost, ToWebview } from "./protocol"
 import { bridge } from "./relay"
 import { saveImage } from "./save-image"
 import type { Manager } from "./server"
-import { effectiveFontSize, KILO_SETTING_KEYS, readKiloSettings, settingsHost } from "./settings-host"
+import {
+  effectiveFontSize,
+  KILO_SETTING_KEYS,
+  readKiloSettings,
+  settingsHost,
+  writeKiloSettings,
+} from "./settings-host"
 import { promptKeybindings, watchKeybindings } from "./prompt-keybindings"
+import { openToolFile, type ToolDiff } from "./tool-diff"
 
-export function chat(input: { context: ExtensionContext; server: Manager; directory: string }) {
+// The sidebar may only write the settings its own UI owns. Other views keep their own write path.
+const CHAT_SETTING_KEYS: ReadonlySet<string> = new Set(["showTaskTimeline"])
+
+export function chat(input: {
+  context: ExtensionContext
+  server: Manager
+  directory: string
+  trackCostSession: (sessionID: string) => void
+  diff: ToolDiff
+}) {
   // Commands sent before the webview bundle listens are lost, and a resolved view is not yet loaded. Keep them until
   // the webview sends its first message, which it does on mount.
   const state: { view?: WebviewView; loaded: boolean; queued: ToWebview[] } = { loaded: false, queued: [] }
@@ -87,8 +103,13 @@ export function wire(input: {
   directory: string
   webview: Webview
   view: "chat" | "settings"
+  trackCostSession?: (sessionID: string) => void
+  /** The tool diff surfaces of the chat view. Settings has none. */
+  diff?: ToolDiff
   /** Called on every message from the webview, before it is handled. */
   onMessage?: () => void
+  /** Handles a view-specific message before the standard set. Returns true when it did. */
+  handle?: (message: ToHost) => boolean
   onReset?: () => void
 }) {
   const webview = input.webview
@@ -102,7 +123,8 @@ export function wire(input: {
     fetch: local,
   })
   const post = (message: ToWebview) => void webview.postMessage(message)
-  // Config read and write are host-side: only the Settings panel uses them.
+  // Config read and write are host-side: the Settings panel uses the full host, and the sidebar writes the
+  // `kilo-code.v2.*` settings it owns, such as the task header graph toggle.
   const settings =
     input.view === "settings"
       ? settingsHost({
@@ -112,7 +134,21 @@ export function wire(input: {
           post,
           onReset: input.onReset,
         })
-      : undefined
+      : input.view === "chat"
+        ? {
+            handle: (message: ToHost) => {
+              if (message.type !== "updateVSCodeSettings") return false
+              const values = Object.fromEntries(
+                Object.entries(message.values).filter(([key]) => CHAT_SETTING_KEYS.has(key)),
+              )
+              void writeKiloSettings(values).catch((error: unknown) => {
+                console.error("Failed to write Kilo settings", error)
+              })
+              return true
+            },
+            dispose() {},
+          }
+        : undefined
   // The sidebar carries the live Kilo settings: push a fresh value when any of them changes.
   const settingsWatch =
     input.view === "chat"
@@ -121,9 +157,39 @@ export function wire(input: {
             post({ type: "vscodeSettingsLoaded", values: readKiloSettings() })
         })
       : undefined
+  const handleGlobalState = (message: ToHost) => {
+    switch (message.type) {
+      case "requestModelSelectorExpanded":
+        post({ type: "modelSelectorExpandedLoaded", value: input.context.globalState.get(EXPANDED, true) })
+        return true
+      case "persistModelSelectorExpanded":
+        void input.context.globalState.update(EXPANDED, message.value)
+        return true
+      case "requestAutoApproveState":
+        post({ type: "autoApproveStateLoaded", value: input.context.globalState.get(AUTO_APPROVE, false) })
+        return true
+      case "persistAutoApproveState":
+        void input.context.globalState.update(AUTO_APPROVE, message.value)
+        return true
+      default:
+        return false
+    }
+  }
   const subscription = webview.onDidReceiveMessage((message: ToHost) => {
     input.onMessage?.()
+    if (input.handle?.(message)) return
     if (message.type === "fetch" || message.type === "abort" || message.type === "open") return link.receive(message)
+    if (message.type === "trackCostSession") return input.trackCostSession?.(message.sessionID)
+    if (message.type === "openToolFile") return openToolFile(input.directory, message)
+    if (message.type === "openDiffVirtual") return input.diff?.open(message.diff, message.initialDiffStyle)
+    // A chat recovery link opens the Settings panel at the row that owns the problem.
+    if (message.type === "openSettingsTab")
+      return void commands.executeCommand("kilo-code.v2.settings", {
+        tab: message.tab,
+        subtab: message.subtab,
+        focus: message.focus,
+        titleKey: message.titleKey,
+      })
     if (settings?.handle(message)) return
     // Only the sidebar carries the cycle keybindings; the Settings panel must not change their context.
     if (message.type === "webviewFocusChanged" && input.view === "chat")
@@ -133,21 +199,11 @@ export function wire(input: {
         () => post({ type: "clipboardWriteResult", id: message.id, ok: true }),
         (error: unknown) => post({ type: "clipboardWriteResult", id: message.id, ok: false, error: String(error) }),
       )
-    if (message.type === "requestModelSelectorExpanded")
-      return post({ type: "modelSelectorExpandedLoaded", value: input.context.globalState.get(EXPANDED, true) })
-    if (message.type === "persistModelSelectorExpanded")
-      return void input.context.globalState.update(EXPANDED, message.value)
-    // Auto-approve is a client-side reaction to permission requests, so the host only persists its state.
-    if (message.type === "requestAutoApproveState")
-      return post({ type: "autoApproveStateLoaded", value: input.context.globalState.get(AUTO_APPROVE, false) })
-    if (message.type === "persistAutoApproveState")
-      return void input.context.globalState.update(AUTO_APPROVE, message.value)
+    if (handleGlobalState(message)) return
     if (message.type === "saveImage") return saveImage(input.directory, message)
     // The Language tab applies at once: write `kilo-code.v2.language` and let the change event push it to every view.
     if (message.type === "setLanguage")
-      return void workspace
-        .getConfiguration(NAMESPACE)
-        .update("language", message.locale || undefined, true)
+      return void workspace.getConfiguration(NAMESPACE).update("language", message.locale || undefined, true)
     // The Kilo Gateway sign-in runs in the Profile view of the sidebar, as main opens its Profile panel.
     if (message.type === "openProfile") return void commands.executeCommand("kilo-code.v2.profile")
   })
@@ -162,6 +218,7 @@ export function wire(input: {
     directory: input.directory,
     size: effectiveFontSize(),
     language: env.language,
+    version: (input.context.extension.packageJSON as { version?: string }).version ?? "",
     view: input.view,
     settings: readKiloSettings(),
   })
@@ -191,6 +248,7 @@ export function html(input: {
   directory: string
   size: number
   language: string
+  version: string
   view?: "chat" | "settings"
   settings: Record<string, unknown>
 }) {
@@ -215,6 +273,7 @@ export function html(input: {
     KILO_BROWSER_AUTOMATION: false,
     KILO_AGENT_MANAGER_INTRO_DISMISSED: true,
     KILO_SETTINGS: input.settings,
+    KILO_EXTENSION_VERSION: input.version,
   }
   const script = Object.entries(globals)
     .map(([key, value]) => `window.${key} = ${JSON.stringify(value).replace(/</g, "\\u003c")};`)

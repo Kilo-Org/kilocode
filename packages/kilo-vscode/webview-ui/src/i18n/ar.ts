@@ -259,6 +259,7 @@ export const dict = {
   "prompt.toast.promptSendFailed.title": "فشل إرسال الموجه",
 
   "mcp.status.connected": "متصل",
+  "mcp.status.pending": "جارٍ الاتصال",
   "mcp.status.failed": "فشل",
   "mcp.status.needs_auth": "يحتاج إلى مصادقة",
   "mcp.status.needs_registration": "يحتاج إلى تسجيل العميل",
@@ -289,6 +290,9 @@ export const dict = {
   "provider.failure.http": "خطأ في الموفر (HTTP {{status}}).",
   "provider.failure.httpNoStatus": "خطأ في الموفر.",
   "provider.failure.schema": "استجابة غير متوقعة من الموفر.",
+  "provider.failure.organizationMissing": "الفريق المحدد لم يعد متاحًا. اختر فريقًا آخر.",
+  "provider.failure.scopeConflict": "الفريق المحدد يتعارض مع فريق رمز Kilo الخاص بك.",
+  "provider.failure.personalUnavailable": "لا يحتوي هذا الحساب على حساب شخصي. اختر فريقًا.",
 
   "notification.permission.title": "مطلوب إذن",
   "notification.permission.titleSubagent": "مطلوب إذن (وكيل فرعي)",
@@ -1114,10 +1118,10 @@ export const dict = {
   "settings.agentBehaviour.mcp.timeout.catalog.title": "مهلة الكتالوج (مللي ثانية)",
   "settings.agentBehaviour.mcp.timeout.execution.title": "مهلة التنفيذ (مللي ثانية)",
   "settings.agentBehaviour.mcpEmpty":
-    "لم يتم تهيئة خوادم MCP. أضف خوادم MCP في kilo.jsonc، أو اطلب من الوكيل إضافتها لك.",
+    "لم يتم تهيئة خوادم MCP. أضف خوادم MCP في kilo2.json، أو اطلب من الوكيل إضافتها لك.",
   "settings.agentBehaviour.workflows.description":
-    "سير العمل هي أوامر شرطة مائلة مخصصة محددة في التهيئة الخاصة بك. اكتب /command-name في الدردشة لتشغيلها. يتم تهيئة الأوامر في opencode.json ضمن قسم 'command'.",
-  "settings.agentBehaviour.workflows.empty": "لم يتم تهيئة أوامر مخصصة. أضف أوامر إلى opencode.json لرؤيتها هنا.",
+    "سير العمل هي أوامر مخصصة محددة في التهيئة الخاصة بك أو في ملفات Markdown للأوامر. يمكنك تعيين نموذج ومتغير استدلال لكل سير عمل.",
+  "settings.agentBehaviour.workflows.empty": "لم يتم العثور على أوامر مخصصة. أضف أوامر إلى kilo2.json أو إلى ملف Markdown في .kilo2/command.",
   "settings.agentBehaviour.workflows.detail.description": "الوصف",
   "settings.agentBehaviour.workflows.detail.template": "القالب",
   "settings.agentBehaviour.workflows.model": "النموذج",
@@ -1135,6 +1139,8 @@ export const dict = {
   "settings.autoApprove.maxCost.title": "تنبيه تكلفة الجلسة",
   "settings.autoApprove.maxCost.description":
     "نبّه قبل متابعة الجلسة بعد أن يتجاوز إنفاقها هذا المبلغ بالدولار الأمريكي. استخدم أرقامًا صحيحة بالدولار؛ اتركه فارغًا للتعطيل.",
+  "settings.autoApprove.maxCost.v2Description":
+    "اعرض تنبيهًا غير حاجب عند وصول تكلفة الجلسة إلى هذا المبلغ بالدولار الأمريكي. اتركه فارغًا للتعطيل.",
   "settings.autoApprove.level.allow": "سماح",
   "settings.autoApprove.level.ask": "سؤال",
   "settings.autoApprove.level.deny": "رفض",
@@ -1289,7 +1295,7 @@ export const dict = {
     "إظهار اختصار لوحة المفاتيح الذي يناسب ما تفعله الآن في الموجّه الفارغ، مثل كيفية إضافة الكود المحدد أو العودة إلى الموجّه.",
   "settings.display.tokenThroughput.title": "إظهار إنتاجية الرموز",
   "settings.display.tokenThroughput.description":
-    "عرض معدل توليد النص (tokens/sec) في أحدث رسالة للمساعد وفي رأس المهمة. يظهر افتراضيًا؛ عطّل هذا الإعداد لإخفائه عند الحاجة.",
+    "Display the text-generation rate (tokens/sec) on the latest assistant message footer. Shown by default; disable this setting to hide it when needed.",
   "settings.display.autoApprovalReason.title": "إظهار سبب الموافقة التلقائية",
   "settings.display.autoApprovalReason.description":
     "يظهر سبب الموافقة التلقائية على استدعاء أداة، مثل قاعدة إذن مطابقة أو إعداد افتراضي للوكيل.",

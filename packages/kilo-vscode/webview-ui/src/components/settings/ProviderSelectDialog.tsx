@@ -5,10 +5,13 @@ import { ProviderIcon } from "@kilocode/kilo-ui/provider-icon"
 import { Tag } from "@kilocode/kilo-ui/tag"
 import { Show, createMemo } from "solid-js"
 import { useLanguage } from "../../context/language"
+import { failureMessage } from "../../v2/kilo-catalog"
 import type { SettingsData } from "../../v2/settings"
+import { useSettingsConfig } from "../../v2/settings-config"
 import CustomProviderDialog from "./CustomProviderDialog"
 import ProviderConnectDialog from "./ProviderConnectDialog"
 import { KILO_PROVIDER_ID, isPopularProvider, popularProviderIndex, providerIcon } from "./provider-catalog"
+import { connectableProviders } from "./provider-visibility"
 
 type ProviderItem = {
   kind: "custom" | "provider"
@@ -19,6 +22,8 @@ type ProviderItem = {
 const ProviderSelectDialog = (props: { settings: SettingsData; onLogin: () => void }) => {
   const dialog = useDialog()
   const language = useLanguage()
+  const kiloFailure = createMemo(() => failureMessage(language.t, props.settings.kiloFailure()))
+  const config = useSettingsConfig()
 
   const items = createMemo<ProviderItem[]>(() => {
     language.locale()
@@ -27,7 +32,7 @@ const ProviderSelectDialog = (props: { settings: SettingsData; onLogin: () => vo
     const withKilo = all.some((item) => item.id === KILO_PROVIDER_ID)
       ? all
       : [{ id: KILO_PROVIDER_ID, name: "Kilo Gateway", connections: [] }, ...all]
-    const available = withKilo.filter((item) => item.connections.length === 0)
+    const available = connectableProviders(withKilo, config.value(["policies"]))
 
     return [
       { kind: "custom", id: "custom", name: language.t("settings.providers.tag.customProvider") },
@@ -116,6 +121,19 @@ const ProviderSelectDialog = (props: { settings: SettingsData; onLogin: () => vo
                   <Tag>{language.t("settings.providers.tag.custom")}</Tag>
                 </Show>
               </div>
+              <Show when={item.id === KILO_PROVIDER_ID && kiloFailure()}>
+                {(failure) => (
+                  <span
+                    style={{
+                      "font-size": "var(--kilo-font-size-12)",
+                      color: "var(--vscode-errorForeground)",
+                      "text-align": "start",
+                    }}
+                  >
+                    {failure()}
+                  </span>
+                )}
+              </Show>
             </div>
           </div>
         )}

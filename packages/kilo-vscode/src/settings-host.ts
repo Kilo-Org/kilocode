@@ -8,7 +8,11 @@ import path from "node:path"
 import { commands, workspace, Uri, window, type ExtensionContext } from "vscode"
 import { KiloConfigFiles } from "@opencode/util/kilocode/config/files"
 import { applyConfigEdits, isKiloConfigFile, serialize } from "./config-file-edit"
+import { configPolicy, type PolicyDocument } from "./config-policy"
+import { fetchCustomProviderModels } from "./custom-provider-models"
 import { local } from "./local"
+import { validAutocompleteSetting } from "./services/autocomplete/settings"
+import { candidateConfigFiles, chooseConfigFile, configDirectories } from "./open-config"
 import { resolveGlobalConfigDir, canonicalPath, matchConfigDocument } from "./settings-paths"
 import type { ConfigEdit, ConfigScope, ToHost, ToWebview } from "./protocol"
 import type { Manager } from "./server"
@@ -20,8 +24,17 @@ export const KILO_SETTING_KEYS = [
   "fontSize",
   "language",
   "chat.shiftTabCyclesVariant",
+  "showTokenThroughput",
+  "showTaskTimeline",
+  "maxCost",
   "claudeCodeCompat",
   "extraCaCerts",
+  "languageCommitMessage",
+  "autocomplete.enableAutoTrigger",
+  "autocomplete.enableSmartInlineTaskKeybinding",
+  "autocomplete.enableChatAutocomplete",
+  "autocomplete.provider",
+  "autocomplete.model",
 ] as const
 
 /** `kilo-code.v2.fontSize` when set, otherwise `editor.fontSize`, clamped to the v1 slider range. */
@@ -38,6 +51,16 @@ export function readKiloSettings(): Record<string, unknown> {
     ...Object.fromEntries(KILO_SETTING_KEYS.map((key) => [key, config.get(key)])),
     // The host's current fallback, so a tab keeps the right size when the setting is unset.
     effectiveFontSize: effectiveFontSize(),
+  }
+}
+
+/** Write the `kilo-code.v2.*` settings a webview asked for. Unknown keys are ignored. */
+export async function writeKiloSettings(values: Record<string, unknown>) {
+  const config = workspace.getConfiguration(NAMESPACE)
+  for (const [key, value] of Object.entries(values)) {
+    if (!(KILO_SETTING_KEYS as readonly string[]).includes(key)) continue
+    if (key.startsWith("autocomplete.") && !validAutocompleteSetting(key.slice("autocomplete.".length), value)) continue
+    await config.update(key, value === null ? undefined : value, true)
   }
 }
 
@@ -80,8 +103,8 @@ export function settingsHost(input: {
   }
 
   /** The global and project config files, from the server's config documents. */
-  const targets = async () => {
-    const list = await entries()
+  const targets = async (found?: ConfigEntry[]) => {
+    const list = found ?? (await entries())
     const documents = new Map<string, string>()
     const directories: string[] = []
     for (const entry of list) {
@@ -107,6 +130,38 @@ export function settingsHost(input: {
     return { global, project }
   }
 
+  /** Offer the existing files of a scope plus its missing target, with the server document list as loaded status. */
+  const pickConfigFile = async (scope: ConfigScope, target: string, list: ConfigEntry[]) => {
+    const documents: string[] = []
+    const directories: string[] = []
+    for (const entry of list) {
+      if (!entry.path) continue
+      const real = await canonicalPath(entry.path)
+      if (entry.type === "document") documents.push(real)
+      else directories.push(real)
+    }
+    const candidates = await candidateConfigFiles({
+      target,
+      directories: configDirectories({
+        scope,
+        target,
+        projectRoot: await canonicalPath(input.directory),
+        directories,
+        documents,
+      }),
+      loaded: new Set(documents),
+      exists: async (file) => Boolean(await stat(file).catch(() => undefined)),
+      resolve: canonicalPath,
+    })
+    return chooseConfigFile(candidates, async (items) => {
+      const picked = await window.showQuickPick(items, {
+        title: scope === "global" ? "Open Global Config" : "Open Local Config",
+        placeHolder: "Choose a config file",
+      })
+      return picked ?? undefined
+    })
+  }
+
   const read = async (file: string) => {
     try {
       return await readFile(file, "utf8")
@@ -116,14 +171,33 @@ export function settingsHost(input: {
     }
   }
 
+  // Kilo-only config fields are not in the upstream config schema, so the config API drops them on encode. Read the
+  // documents in priority order, as core does for the effective value, and mark the value managed when the document
+  // that sets it is not one of the two writable files. A document that is not readable JSON, such as a managed
+  // preference plist, is skipped.
+  const policyDocuments = async (list: ConfigEntry[], texts: Map<string, string>) => {
+    const documents: PolicyDocument[] = []
+    for (const entry of list) {
+      if (entry.type !== "document" || !entry.path) continue
+      documents.push({ path: entry.path, text: texts.get(entry.path) ?? (await read(entry.path).catch(() => "")) })
+    }
+    return documents
+  }
+
   const readConfig = async () => {
     try {
-      const files = await targets()
+      const list = await entries()
+      const files = await targets(list)
       const [global, project] = await Promise.all([read(files.global), read(files.project)])
+      const texts = new Map([
+        [files.global, global],
+        [files.project, project],
+      ])
       input.post({
         type: "configLoaded",
         global: { path: files.global, text: global },
         project: { path: files.project, text: project },
+        policy: configPolicy(await policyDocuments(list, texts), files),
       })
     } catch (error) {
       input.post({
@@ -164,13 +238,7 @@ export function settingsHost(input: {
     })
   }
 
-  const updateSettings = async (values: Record<string, unknown>) => {
-    const config = workspace.getConfiguration(NAMESPACE)
-    for (const [key, value] of Object.entries(values)) {
-      if (!(KILO_SETTING_KEYS as readonly string[]).includes(key)) continue
-      await config.update(key, value === null ? undefined : value, true)
-    }
-  }
+  const updateSettings = (values: Record<string, unknown>) => writeKiloSettings(values)
 
   const resetAllSettings = async () => {
     const confirmed = await window.showWarningMessage(
@@ -190,6 +258,16 @@ export function settingsHost(input: {
   /** Open a config file in the editor, creating it first when the target does not exist yet. */
   const openConfigFile = async (file: string) => {
     try {
+      if (KiloConfigFiles.names.includes(path.basename(file))) {
+        const list = await entries()
+        const files = await targets(list)
+        const scope = file === files.global ? "global" : file === files.project ? "project" : undefined
+        if (scope) {
+          const picked = await pickConfigFile(scope, file, list)
+          if (!picked) return
+          file = picked.file
+        }
+      }
       if (isKiloConfigFile(file) && !(await stat(file).catch(() => undefined))) {
         await mkdir(path.dirname(file), { recursive: true })
         await writeFile(file, "{\n}\n")
@@ -227,6 +305,21 @@ export function settingsHost(input: {
     }
     if (message.type === "openVSCodeSettings") {
       void commands.executeCommand("workbench.action.openSettings", message.query)
+      return true
+    }
+    if (message.type === "fetchCustomProviderModels") {
+      void (async () => {
+        // Resolve the config file here: the webview sends only the scope, never a path.
+        const files = message.scope ? await targets().catch(() => undefined) : undefined
+        input.post(
+          await fetchCustomProviderModels({
+            server: input.server,
+            directory: input.directory,
+            request: message,
+            configPath: message.scope ? files?.[message.scope] : undefined,
+          }),
+        )
+      })()
       return true
     }
     return false

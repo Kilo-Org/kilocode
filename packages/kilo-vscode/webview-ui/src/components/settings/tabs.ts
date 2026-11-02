@@ -10,6 +10,8 @@ export interface SettingsTabProps {
   settings: SettingsData
   onLogin: () => void
   subtab: string
+  /** A row that a subtab renders itself, such as an MCP server name. */
+  focus?: string
   /** Increments on each search navigation so a subtab can reset its editor without remounting. */
   navigation: number
   onSubtabChange: (subtab: string) => void
@@ -75,11 +77,25 @@ export const SETTINGS_TABS_V2: SettingsTabV2[] = [
     component: lazy(() => import("./DisplayTab")),
   },
   {
+    id: "autocomplete",
+    icon: "code-lines",
+    title: "settings.autocomplete.title",
+    ready: true,
+    component: lazy(() => import("./AutocompleteTab")),
+  },
+  {
     id: "context",
     icon: "server",
     title: "settings.context.title",
     ready: true,
     component: lazy(() => import("./ContextTab")),
+  },
+  {
+    id: "commitMessage",
+    icon: "edit",
+    title: "settings.commitMessage.title",
+    ready: true,
+    component: lazy(() => import("./CommitMessageTab")),
   },
   {
     id: "experimental",

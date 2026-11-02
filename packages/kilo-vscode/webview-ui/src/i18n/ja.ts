@@ -267,6 +267,7 @@ export const dict = {
   "prompt.toast.promptSendFailed.title": "プロンプトの送信に失敗しました",
 
   "mcp.status.connected": "接続済み",
+  "mcp.status.pending": "接続中",
   "mcp.status.failed": "失敗",
   "mcp.status.needs_auth": "認証が必要",
   "mcp.status.needs_registration": "クライアント登録が必要",
@@ -297,6 +298,9 @@ export const dict = {
   "provider.failure.http": "プロバイダーエラー (HTTP {{status}})。",
   "provider.failure.httpNoStatus": "プロバイダーエラー。",
   "provider.failure.schema": "プロバイダーから予期しない応答がありました。",
+  "provider.failure.organizationMissing": "選択したチームは利用できなくなりました。別のチームを選択してください。",
+  "provider.failure.scopeConflict": "選択したチームが Kilo トークンのチームと一致しません。",
+  "provider.failure.personalUnavailable": "このアカウントには個人アカウントがありません。チームを選択してください。",
 
   "notification.permission.title": "権限が必要です",
   "notification.permission.titleSubagent": "権限が必要です（サブエージェント）",
@@ -1134,11 +1138,11 @@ export const dict = {
   "settings.agentBehaviour.mcp.timeout.catalog.title": "カタログタイムアウト (ms)",
   "settings.agentBehaviour.mcp.timeout.execution.title": "実行タイムアウト (ms)",
   "settings.agentBehaviour.mcpEmpty":
-    "MCPサーバーが設定されていません。kilo.jsoncでMCPサーバーを追加するか、エージェントに追加を依頼してください。",
+    "MCPサーバーが設定されていません。kilo2.jsonでMCPサーバーを追加するか、エージェントに追加を依頼してください。",
   "settings.agentBehaviour.workflows.description":
-    "ワークフローは設定で定義されたカスタムスラッシュコマンドです。チャットで /command-name と入力して呼び出します。コマンドは opencode.json の 'command' セクションで設定します。",
+    "ワークフローは、設定またはコマンドの Markdown ファイルで定義されたカスタムコマンドです。各ワークフローにモデルと推論バリアントを設定できます。",
   "settings.agentBehaviour.workflows.empty":
-    "カスタムコマンドが設定されていません。opencode.json にコマンドを追加するとここに表示されます。",
+    "カスタムコマンドが見つかりません。kilo2.json または .kilo2/command の Markdown ファイルにコマンドを追加してください。",
   "settings.agentBehaviour.workflows.detail.description": "説明",
   "settings.agentBehaviour.workflows.detail.template": "テンプレート",
   "settings.agentBehaviour.workflows.model": "モデル",
@@ -1156,6 +1160,8 @@ export const dict = {
   "settings.autoApprove.maxCost.title": "セッションコストアラート",
   "settings.autoApprove.maxCost.description":
     "セッションの支出がこの米ドル金額を超えた後、続行する前に警告します。整数のドル額を使用してください。無効にするには空欄にします。",
+  "settings.autoApprove.maxCost.v2Description":
+    "セッションのコストがこの米ドル金額に達したときに、操作を妨げない通知を表示します。無効にするには空欄にします。",
   "settings.autoApprove.level.allow": "許可",
   "settings.autoApprove.level.ask": "確認",
   "settings.autoApprove.level.deny": "拒否",
@@ -1316,7 +1322,7 @@ export const dict = {
     "空のプロンプトに、現在の操作に合ったキーボードショートカットを表示します。例: 選択したコードの追加方法やプロンプトへの戻り方。",
   "settings.display.tokenThroughput.title": "トークンスループットを表示",
   "settings.display.tokenThroughput.description":
-    "最新のアシスタントメッセージとタスクヘッダーにテキスト生成速度（tokens/sec）を表示します。デフォルトで表示され、必要に応じてこの設定を無効にすると非表示にできます。",
+    "Display the text-generation rate (tokens/sec) on the latest assistant message footer. Shown by default; disable this setting to hide it when needed.",
   "settings.display.autoApprovalReason.title": "自動承認の理由を表示",
   "settings.display.autoApprovalReason.description":
     "ツール呼び出しが自動承認された理由（一致する権限ルールやエージェントのデフォルトなど）を表示します。",
