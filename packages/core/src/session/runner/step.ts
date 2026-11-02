@@ -8,7 +8,7 @@ import {
   isContextOverflowFailure,
   type ProviderErrorEvent,
   type ToolCall,
-} from "@opencode/ai"
+} from "@opencode/ai/effect"
 import type { Agent } from "@opencode/schema/agent"
 import { Cause, Clock, Data, Effect, Exit, Fiber, Option, Stream } from "effect"
 import { SessionError } from "@opencode/schema/session-error"
@@ -246,8 +246,8 @@ export const make = Effect.gen(function* () {
           // kilocode_change start - gateway: prefer the provider's completed response charge, including zero.
           const usage = record.finish
             ? {
-                cost: record.finish.providerCost ?? SessionUsage.calculateCost(input.model.cost, record.finish.tokens),
-                tokens: record.finish.tokens,
+                ...SessionUsage.record(record.finish.usage, input.model.cost),
+                ...(record.finish.providerCost === undefined ? {} : { cost: record.finish.providerCost }),
               }
             : undefined
           // kilocode_change end

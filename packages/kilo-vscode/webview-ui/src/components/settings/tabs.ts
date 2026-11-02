@@ -84,6 +84,13 @@ export const SETTINGS_TABS_V2: SettingsTabV2[] = [
     component: lazy(() => import("./ContextTab")),
   },
   {
+    id: "commitMessage",
+    icon: "edit",
+    title: "settings.commitMessage.title",
+    ready: true,
+    component: lazy(() => import("./CommitMessageTab")),
+  },
+  {
     id: "experimental",
     icon: "settings-gear",
     title: "settings.experimental.title",

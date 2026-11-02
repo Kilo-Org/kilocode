@@ -1,10 +1,22 @@
 import { homedir } from "node:os"
-import { commands, ExtensionMode, l10n, window, workspace, type ExtensionContext } from "vscode"
+import {
+  commands,
+  env,
+  ExtensionMode,
+  extensions,
+  l10n,
+  ProgressLocation,
+  window,
+  workspace,
+  type ExtensionContext,
+} from "vscode"
 import { chat } from "./chat"
+import { commitMessageCommand, commitMessageLanguage, connect, type GitExports } from "./commit-message"
 import { createCostAlerts } from "./cost-alert"
 import { command, manager, settingsEnvironment } from "./server"
 import { readKiloSettings } from "./settings-host"
 import { settings } from "./settings-panel"
+import { toolDiff } from "./tool-diff"
 
 export function activate(context: ExtensionContext) {
   const output = window.createOutputChannel("Kilo Code (v2)")
@@ -76,11 +88,14 @@ export function activate(context: ExtensionContext) {
       })
     },
   })
-  const view = chat({ context, server, directory, trackCostSession: alerts.track })
+  const diffs = toolDiff()
+  const view = chat({ context, server, directory, trackCostSession: alerts.track, diff: diffs })
   const panel = settings({ context, server, directory, onReset: view.syncState })
 
   context.subscriptions.push(
     output,
+    { dispose: () => diffs.dispose() },
+    workspace.registerTextDocumentContentProvider(diffs.scheme, diffs.provider),
     window.registerWebviewViewProvider("kilo-code.v2.chat", view.provider, {
       webviewOptions: { retainContextWhenHidden: true },
     }),
@@ -109,6 +124,20 @@ export function activate(context: ExtensionContext) {
       await commands.executeCommand("kilo-code.v2.chat.focus")
       await view.post({ type: "command", name: "cyclePreviousAgentMode" })
     }),
+    commands.registerCommand(
+      "kilo-code.v2.generateCommitMessage",
+      commitMessageCommand({
+        git: () => extensions.getExtension<GitExports>("vscode.git"),
+        window,
+        location: ProgressLocation.SourceControl,
+        language: () => {
+          const config = workspace.getConfiguration("kilo-code.v2")
+          return commitMessageLanguage(config.get("languageCommitMessage"), config.get("language"), env.language)
+        },
+        connect: () => connect(server),
+        log: (text) => output.appendLine(text),
+      }),
+    ),
     // The webview reconnects on its own: its event stream fails, and the next request starts a new server.
     commands.registerCommand("kilo-code.v2.restartServer", () => server.stop()),
     // Claude Code compatibility and the extra CA certificates are server start environment, so a change needs a new
