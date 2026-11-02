@@ -285,6 +285,18 @@
         "vitest": "5.0.5",
       },
     },
+    "packages/kilo-e2e": {
+      "name": "@kilocode/kilo-e2e",
+      "version": "7.8.25",
+      "dependencies": {
+        "zod": "catalog:",
+      },
+      "devDependencies": {
+        "@tsconfig/bun": "catalog:",
+        "@types/bun": "catalog:",
+        "@typescript/native-preview": "catalog:",
+      },
+    },
     "packages/kilo-gateway": {
       "name": "@kilocode/kilo-gateway",
       "version": "7.8.25",
@@ -1710,6 +1722,8 @@
     "@kilocode/kilo-console": ["@kilocode/kilo-console@workspace:packages/kilo-console"],
 
     "@kilocode/kilo-docs": ["@kilocode/kilo-docs@workspace:packages/kilo-docs"],
+
+    "@kilocode/kilo-e2e": ["@kilocode/kilo-e2e@workspace:packages/kilo-e2e"],
 
     "@kilocode/kilo-gateway": ["@kilocode/kilo-gateway@workspace:packages/kilo-gateway"],
 
