@@ -62,15 +62,13 @@ test("lists Kilo first under Popular and OpenCode under Services, as v1", async 
   }
 })
 
-test("keeps MCP integrations in their own group above Popular", async () => {
+// Upstream v2.2.5 (anomalyco/opencode#60675) signs MCP servers in from the MCP dialog, so the connect menu leaves them out.
+test("leaves MCP integrations out of the connect menu and keeps Kilo first in Popular", async () => {
   const app = await renderDialog([...services, integration("linear", "Linear", { source: "mcp" })])
   try {
-    expect(lines(app.captureCharFrame(), ["MCP", "Popular", "Linear", "Kilo Gateway"])).toEqual([
-      "MCP",
-      "Linear",
-      "Popular",
-      "Kilo Gateway",
-    ])
+    const frame = app.captureCharFrame()
+    expect(frame).not.toContain("Linear")
+    expect(lines(frame, ["Popular", "Kilo Gateway"])).toEqual(["Popular", "Kilo Gateway"])
   } finally {
     app.renderer.destroy()
   }

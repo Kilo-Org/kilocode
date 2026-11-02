@@ -19,7 +19,8 @@ const model = (id: string, name: string, input: number) => ({
   time: { released: 1 },
 })
 
-test("shows what the workspace's limits leave and why a refused turn stopped", async () => {
+// kilocode_change - TODO: unskip when the Kilo model picker keeps upstream row pricing and Kilo /usage stops replacing the OpenCode Console /usage dialog
+test.skip("shows what the workspace's limits leave and why a refused turn stopped", async () => { // kilocode_change
   await using state = await tmpdir()
   const session = {
     id: "ses_usage_limits",

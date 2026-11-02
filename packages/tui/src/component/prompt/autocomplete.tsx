@@ -497,7 +497,7 @@ export function Autocomplete(props: {
         description: command.description ?? command.title,
         onSelect: slash.arguments ? () => insertSlash(name) : command.run,
       }))
-    })
+    }).filter((item, index, all) => all.findLastIndex((other) => other.display === item.display) === index) // kilocode_change(tui) seam - a later slash command, such as a plugin's, replaces an earlier one with the same name
     const commandNames = new Set<string>()
 
     for (const serverCommand of data.location.command.list(location.current) ?? []) {
