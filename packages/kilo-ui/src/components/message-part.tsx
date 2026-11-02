@@ -899,13 +899,13 @@ ToolRegistry.register({
     const diffAction = (file: FileDiffInfo) => (
       <Show when={props.actions?.openDiff && HUNK_MARKER.test(file.patch)}>
         <div data-slot="apply-patch-open-diff">
-          <Tooltip value={i18n.t("ui.messagePart.openInDiffViewer" as never)} placement="top" gutter={4}>
+          <Tooltip value={i18n.t("ui.messagePart.openInDiffViewer")} placement="top" gutter={4}>
             <IconButton
               icon="square-arrow-top-right"
               size="small"
               variant="ghost"
               onClick={() => openDiff(file)}
-              aria-label={i18n.t("ui.messagePart.openInDiffViewer" as never)}
+              aria-label={i18n.t("ui.messagePart.openInDiffViewer")}
             />
           </Tooltip>
         </div>
