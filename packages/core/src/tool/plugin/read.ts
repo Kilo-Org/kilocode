@@ -104,7 +104,7 @@ export const Plugin = {
                 yield* sessionInstructions.load({ sessionID: context.sessionID, paths: candidates })
                 return candidates
               }).pipe(
-                Effect.catch(() => Effect.succeed([] as string[])),
+                Effect.orElseSucceed(() => [] as string[]),
                 Effect.catchDefect(() => Effect.succeed([] as string[])),
               )
               return { output: result.content, path: result.path, loaded }
