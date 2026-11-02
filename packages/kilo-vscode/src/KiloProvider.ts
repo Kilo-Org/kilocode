@@ -100,6 +100,7 @@ import {
 } from "./services/autocomplete/settings"
 import { routeEarlyMessage } from "./kilo-provider/early-message"
 import * as Board from "./kilo-provider/session-board"
+import { createAgentMap } from "./kilo-provider/agent-map"
 import { handleModelUsageMessage } from "./kilo-provider/model-usage"
 import { handleForkSession } from "./kilo-provider/fork-session"
 import { openConfig } from "./kilo-provider/open-config"
@@ -514,6 +515,11 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private sessionGitDirectories = new Map<string, string>() // Stable Git root resolved for each session.
   private sessionGitRecoveries = new Set<string>() // Sessions whose older history was scanned for a Git root.
   private readonly aborts = new SessionAbort()
+  private readonly agentMap = createAgentMap({
+    client: () => (this.connectionState === "connected" ? this.client : null),
+    dir: (sid) => this.getWorkspaceDirectory(sid),
+    post: (msg) => this.postMessage(msg),
+  })
   private projectID: string | undefined // Current workspace project ID used to filter sessions.
   private loadMessagesAbort: AbortController | null = null // Current load request cancellation.
   private lastReconciledAt = new Map<string, number>() // Per-session focus-mode reconcile timestamp.
@@ -1303,6 +1309,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           modelUsage: (msg) => handleModelUsageMessage(msg, this.extensionContext, (value) => this.postMessage(value)),
           backgroundJobs: (sessionID, requestID) => this.fetchAndSendBackgroundJobs(sessionID, requestID),
           board: (msg) => this.handleBoardMessage(msg),
+          agentMap: (msg) => this.agentMap.handle(msg),
           cancelBackgroundJob: (jobID, sessionID, requestID) => this.cancelBackgroundJob(jobID, sessionID, requestID),
           promoteBackgroundJob: (jobID, sessionID) => this.promoteBackgroundJob(jobID, sessionID),
           caffeination: () => void vscode.commands.executeCommand("kilo-code.new.toggleCaffeination"),
@@ -1490,7 +1497,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
             "kilo-code.new.openSubAgentViewer",
             message.sessionID,
             message.title,
-            this.getWorkspaceDirectory(message.parentSessionID),
+            this.agentMap.directory(message.sessionID) ?? this.getWorkspaceDirectory(message.parentSessionID),
           )
           break
         case "saveImage":
@@ -5988,6 +5995,11 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     if (routed === null)
       console.warn(`[Kilo New] KiloProvider: session ${sessionId} is ambiguous across projects, using workspace root`)
     if (routed) return routed
+    // The agent map reaches sessions this provider never opened, such as Agent
+    // Manager sessions in other worktrees. They run where the map found them.
+    // They stay out of sessionDirectories, which also decides what history lists.
+    const mapped = sessionId && !this.sessionDirectories.has(sessionId) ? this.agentMap.directory(sessionId) : undefined
+    if (mapped) return mapped
     return resolveWorkspaceDirectory({
       sessionID: sessionId,
       sessionDirectories: this.sessionDirectories,

@@ -37,6 +37,7 @@ import { ServerContext } from "../context/server"
 import { getVSCodeAPI } from "../context/vscode"
 import { WorktreeModeProvider } from "../context/worktree-mode"
 import type {
+  AgentMap,
   Message,
   BrowserReference,
   Part,
@@ -1571,8 +1572,8 @@ export const TaskHeaderSubagent: Story = {
   ),
 }
 
-export const BackgroundAgentPanel: Story = {
-  name: "Background agent stack and panel",
+export const AgentMapDockButton: Story = {
+  name: "Agent map button with running agents",
   args: { names: ["Trace overflow recovery", "Trace outbound request size", "Check request limits"] },
   render: (args: { names: string[] }) => {
     const tools: ToolPart[] = args.names.map((description, index) => ({
@@ -1584,13 +1585,10 @@ export const BackgroundAgentPanel: Story = {
       state: { status: "completed", input: { description }, output: "Started background agent", title: description },
       metadata: { sessionId: `child-${index}`, background: true },
     }))
-    const [hidden, setHidden] = createSignal<ReadonlySet<string>>(new Set())
     const session = {
       ...mockSessionValue({ id: SESSION_ID }),
       getSessionToolParts: () => tools,
       allStatusMap: () => Object.fromEntries(tools.map((_, index) => [`child-${index}`, { type: "busy" as const }])),
-      dismissedBackgroundJobs: () => hidden(),
-      dismissBackgroundJobs: (_: string, ids: string[]) => setHidden(new Set([...hidden(), ...ids])),
     }
     const Stack = () => {
       pollBackgroundJobs()
@@ -1607,6 +1605,202 @@ export const BackgroundAgentPanel: Story = {
       </StoryProviders>
     )
   },
+}
+
+// ---------------------------------------------------------------------------
+// Agent map
+// ---------------------------------------------------------------------------
+
+const MAP_START = headerNow - 30 * 60_000
+
+// Running nodes carry an end time here so the captured durations do not tick
+// between screenshot runs. The extension omits it while a node runs.
+const agentMap: AgentMap = {
+  root: SESSION_ID,
+  nodes: [
+    {
+      id: SESSION_ID,
+      kind: "root",
+      title: "Refactor the billing module",
+      agent: "code",
+      model: { providerID: "kilo", modelID: "anthropic/claude-sonnet-4-6" },
+      status: "running",
+      started: MAP_START,
+      tokens: { input: 210_400, output: 18_200, reasoning: 9_100, cache: { read: 208_100, write: 0 } },
+      cost: 1.42,
+    },
+    {
+      id: "ses_audit",
+      kind: "task",
+      parent: SESSION_ID,
+      title: "Audit invoice rounding",
+      agent: "explore",
+      status: "running",
+      background: true,
+      started: MAP_START + 60_000,
+      finished: MAP_START + 60_000 + 29 * 60_000 + 17_000,
+      tokens: { input: 300_100, output: 12_400, reasoning: 0, cache: { read: 218_400, write: 0 } },
+      cost: 0.61,
+    },
+    {
+      id: "ses_providers",
+      kind: "task",
+      parent: SESSION_ID,
+      title: "Map payment provider calls",
+      agent: "general",
+      status: "done",
+      started: MAP_START + 90_000,
+      finished: MAP_START + 90_000 + 12 * 60_000 + 24_000,
+      tokens: { input: 260_000, output: 9_800, reasoning: 0, cache: { read: 136_000, write: 0 } },
+    },
+    {
+      id: "ses_webhooks",
+      kind: "task",
+      parent: "ses_providers",
+      title: "Trace webhook retries",
+      agent: "explore",
+      status: "done",
+      started: MAP_START + 3 * 60_000,
+      finished: MAP_START + 3 * 60_000 + 4 * 60_000 + 2_000,
+      tokens: { input: 88_000, output: 3_100, reasoning: 0, cache: { read: 41_000, write: 0 } },
+    },
+    {
+      id: "ses_currency",
+      kind: "task",
+      parent: SESSION_ID,
+      title: "Check currency formatting",
+      agent: "explore",
+      status: "error",
+      started: MAP_START + 2 * 60_000,
+      finished: MAP_START + 2 * 60_000 + 41_000,
+      tokens: { input: 12_000, output: 400, reasoning: 0, cache: { read: 0, write: 0 } },
+    },
+    {
+      id: "ses_tax",
+      kind: "session",
+      parent: SESSION_ID,
+      title: "Migrate tax tables",
+      agent: "code",
+      status: "waiting",
+      started: MAP_START + 5 * 60_000,
+      finished: MAP_START + 5 * 60_000 + 23 * 60_000 + 50_000,
+      tokens: { input: 150_000, output: 21_000, reasoning: 4_000, cache: { read: 250_500, write: 0 } },
+    },
+    {
+      id: "proc_dev",
+      kind: "process",
+      parent: "ses_tax",
+      title: "Dev server",
+      command: "bun run dev",
+      status: "running",
+      started: MAP_START + 6 * 60_000,
+      finished: MAP_START + 6 * 60_000 + 2 * 60_000 + 9_000,
+      pid: 48213,
+      ports: [5173],
+    },
+  ],
+}
+
+const agentMapTools: ToolPart[] = [
+  {
+    id: "map-task-audit",
+    sessionID: SESSION_ID,
+    messageID: headerAssistantID,
+    type: "tool",
+    tool: "task",
+    state: {
+      status: "completed",
+      input: {
+        description: "Audit invoice rounding",
+        subagent_type: "explore",
+        prompt:
+          "Find every place invoices round amounts and report where the rounding mode differs from banker's rounding.",
+      },
+      output: "Started background agent",
+      title: "Audit invoice rounding",
+    },
+    metadata: { sessionId: "ses_audit", background: true },
+  },
+]
+
+/** Answers the map request with the fixture, opens the map, then the selected node. */
+function AgentMapScene(props: { select?: string }) {
+  const api = getVSCodeAPI()
+  const post = api.postMessage
+  api.postMessage = (message) => {
+    if (message.type !== "requestAgentMap") return post(message)
+    queueMicrotask(() =>
+      window.postMessage(
+        { type: "agentMapLoaded", sessionID: message.sessionID, requestID: message.requestID, map: agentMap },
+        "*",
+      ),
+    )
+  }
+  onCleanup(() => {
+    api.postMessage = post
+  })
+  onMount(() => {
+    const step = () => {
+      if (!document.querySelector('[data-slot="agent-map-canvas"], [data-slot="agent-map-detail"]')) {
+        document.querySelector<HTMLButtonElement>('[data-slot="agent-map-trigger"]')?.click()
+        return false
+      }
+      if (!props.select) return true
+      const node = document.querySelector<HTMLButtonElement>(`[data-slot="agent-map-node"][data-id="${props.select}"]`)
+      node?.click()
+      return !!node
+    }
+    if (step()) return
+    const observer = new MutationObserver(() => {
+      if (step()) observer.disconnect()
+    })
+    observer.observe(document.body, { childList: true, subtree: true })
+    onCleanup(() => observer.disconnect())
+  })
+  const session = {
+    ...mockSessionValue({ id: SESSION_ID, status: "idle" }),
+    messages: () => subagentHeaderMessages,
+    visibleMessages: () => subagentHeaderMessages,
+    currentSession: () => ({
+      id: SESSION_ID,
+      title: "Refactor the billing module",
+      createdAt: new Date(MAP_START).toISOString(),
+      updatedAt: new Date(headerNow).toISOString(),
+    }),
+    getSessionToolParts: (id: string) => (id === SESSION_ID ? agentMapTools : []),
+  }
+  return (
+    <SessionContext.Provider value={session as unknown as SessionContextValue}>
+      <TaskHeader />
+    </SessionContext.Provider>
+  )
+}
+
+export const AgentMapTree: Story = {
+  name: "Agent map, sidebar width",
+  render: () => (
+    <StoryProviders sessionID={SESSION_ID} noPadding>
+      <AgentMapScene />
+    </StoryProviders>
+  ),
+}
+
+export const AgentMapTree1280: Story = {
+  name: "Agent map, editor width",
+  render: () => (
+    <StoryProviders sessionID={SESSION_ID} noPadding>
+      <AgentMapScene />
+    </StoryProviders>
+  ),
+}
+
+export const AgentMapDetail: Story = {
+  name: "Agent map, node details",
+  render: () => (
+    <StoryProviders sessionID={SESSION_ID} noPadding>
+      <AgentMapScene select="ses_audit" />
+    </StoryProviders>
+  ),
 }
 
 const usageTokens = { input: 25_900_000, output: 52_000, reasoning: 4_100, cache: { read: 10_500_000, write: 80_000 } }
@@ -1824,15 +2018,22 @@ function SwarmScene(props: { board?: SessionBoard; open?: boolean }) {
       api.postMessage = post
     })
   }
+  // Opens the agent map from the dock button, then its Board tab.
   onMount(() => {
     if (!props.open) return
     const observer = new MutationObserver(() => {
-      const button = document.querySelector<HTMLButtonElement>(
-        '.session-dock-state[data-active] [data-component="board-trigger"]',
+      const tab = [...document.querySelectorAll<HTMLButtonElement>('.agent-map [role="tab"]')].find(
+        (item) => item.textContent?.trim() === "Board",
       )
-      if (!button) return
-      observer.disconnect()
-      button.click()
+      if (tab) {
+        observer.disconnect()
+        tab.click()
+        return
+      }
+      if (document.querySelector(".agent-map")) return
+      document
+        .querySelector<HTMLButtonElement>('.session-dock-state[data-active] [data-component="agent-stack"]')
+        ?.click()
     })
     observer.observe(document.body, { childList: true, subtree: true })
     onCleanup(() => observer.disconnect())
@@ -1877,7 +2078,7 @@ function SwarmScene(props: { board?: SessionBoard; open?: boolean }) {
 }
 
 export const BoardClosed: Story = {
-  name: "Board, dock button",
+  name: "Board, agent map button",
   render: () => (
     <StoryProviders sessionID={SESSION_ID} config={{ shared_agent_board: true }} noPadding>
       <SwarmScene board={swarm} />
@@ -1895,7 +2096,7 @@ export const BoardEmpty: Story = {
 }
 
 export const BoardOpen: Story = {
-  name: "Board, recent posts",
+  name: "Board, in the agent map",
   render: () => (
     <StoryProviders sessionID={SESSION_ID} config={{ shared_agent_board: true }} noPadding>
       <SwarmScene board={swarm} open />

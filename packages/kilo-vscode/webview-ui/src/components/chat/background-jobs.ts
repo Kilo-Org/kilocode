@@ -11,7 +11,7 @@ import { createStore, reconcile } from "solid-js/store"
 import { useSession } from "../../context/session"
 import { useVSCode } from "../../context/vscode"
 import type { BackgroundJobInfo } from "../../types/messages"
-import { backgroundAgents, backgroundJobAgents, showBackgroundAgent, type BackgroundAgent } from "./background-agents"
+import { backgroundAgents, backgroundJobAgents, type BackgroundAgent } from "./background-agents"
 
 /** Polls the job list of the current session while the view is mounted. */
 export function pollBackgroundJobs() {
@@ -75,10 +75,7 @@ export function useBackgroundAgents() {
     if (!id) return []
     const list = jobs()
     if (!list) return backgroundAgents(session.getSessionToolParts(id), session.allStatusMap())
-    const hidden = session.dismissedBackgroundJobs(id)
-    return backgroundJobAgents(list, id, session.scopedPermissions(id), session.scopedQuestions(id)).filter((agent) =>
-      showBackgroundAgent(agent, hidden),
-    )
+    return backgroundJobAgents(list, id, session.scopedPermissions(id), session.scopedQuestions(id))
   })
   // Every poll reply builds new agent objects. Reconciling by ID keeps each
   // agent the same object while it exists, so lists keyed by reference keep

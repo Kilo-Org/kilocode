@@ -1,9 +1,9 @@
 import { expect, test } from "@playwright/test"
-import type { BackgroundJobInfo, WebviewMessage } from "../webview-ui/src/types/messages"
+import type { AgentMap, BackgroundJobInfo, WebviewMessage } from "../webview-ui/src/types/messages"
 
 const globals = "colorScheme:dark;theme:kilo-vscode;vscodeTheme:dark-modern"
 
-test("Agent panel stops only this session's running agents and clears finished ones", async ({ page }) => {
+test("Agent map button counts this session's running agents and stops them from the map", async ({ page }) => {
   const calls: WebviewMessage[] = []
   await page.exposeFunction("record", (message: WebviewMessage) => calls.push(message))
   await page.addInitScript(() => {
@@ -22,6 +22,30 @@ test("Agent panel stops only this session's running agents and clears finished o
         background: true,
       },
     }))
+    const map = (): AgentMap => ({
+      root: parent,
+      nodes: [
+        { id: parent, kind: "root", title: "Story session", status: "done", started: 1, finished: 2 },
+        ...jobs
+          .filter((job) => job.metadata?.parentSessionId === parent)
+          .map((job) => ({
+            id: String(job.metadata?.sessionId),
+            kind: "task" as const,
+            parent,
+            title: job.title ?? job.id,
+            agent: "explore",
+            status:
+              job.status === "running"
+                ? ("running" as const)
+                : job.status === "cancelled"
+                  ? ("cancelled" as const)
+                  : ("done" as const),
+            background: true,
+            started: 1,
+            finished: job.status === "running" ? undefined : 2,
+          })),
+      ],
+    })
     Object.defineProperty(window, "acquireVsCodeApi", {
       value: () => ({
         getState: () => undefined,
@@ -33,6 +57,12 @@ test("Agent panel stops only this session's running agents and clears finished o
               job.metadata?.sessionId === message.sessionID ? { ...job, status: "cancelled" } : job,
             )
           }
+          if (message.type === "requestAgentMap") {
+            window.postMessage(
+              { type: "agentMapLoaded", sessionID: message.sessionID, requestID: message.requestID, map: map() },
+              "*",
+            )
+          }
           if (message.type !== "requestBackgroundJobs") return
           window.postMessage(
             { type: "backgroundJobsLoaded", sessionID: message.sessionID, requestID: message.requestID, jobs },
@@ -42,20 +72,19 @@ test("Agent panel stops only this session's running agents and clears finished o
       }),
     })
   })
-  await page.goto(`/iframe.html?id=chat--background-agent-panel&viewMode=story&globals=${globals}`)
-  await page.locator('[data-component="agent-stack"]').click()
-  const panel = page.locator('[data-slot="agent-panel"]')
-  await expect(panel.locator('[data-slot="agent-panel-row"][data-status="running"]')).toHaveCount(2)
-  await expect(panel.locator('[data-slot="agent-panel-row"][data-status="completed"]')).toHaveCount(1)
-  await expect(panel.getByRole("button", { name: "Open background agent: first" })).toBeVisible()
-  // The finished agent never ran while polled, but it belongs to this run.
-  await expect(panel.getByRole("button", { name: "Open background agent: finished" })).toBeVisible()
-  await panel.getByRole("button", { name: "Stop all (2)", exact: true }).click()
+  await page.goto(`/iframe.html?id=chat--agent-map-dock-button&viewMode=story&globals=${globals}`)
+  const button = page.locator('[data-component="agent-stack"]')
+  // Two of this session's agents run. The finished one and the other session's agent do not count.
+  await expect(button.locator('[data-slot="agent-stack-count"]')).toHaveText("2")
+  await button.click()
+  const map = page.locator(".agent-map")
+  await expect(map.locator('[data-slot="agent-map-node"][data-status="running"]')).toHaveCount(2)
+  await expect(map.locator('[data-slot="agent-map-node"][data-id="child-2"]')).toHaveAttribute("data-status", "done")
+  await map.getByRole("button", { name: "Stop all (2)", exact: true }).click()
   await expect
     .poll(() => calls)
     .toEqual([0, 1].map((index) => ({ type: "abort", sessionID: `child-${index}`, scope: "tree" })))
-  // Stopped agents stay in the run with their final status.
-  await expect(panel.locator('[data-slot="agent-panel-row"][data-status="cancelled"]')).toHaveCount(2)
-  await panel.getByRole("button", { name: "Clear finished" }).click()
-  await expect(panel).toHaveCount(0)
+  // Stopped agents stay on the map with their final status.
+  await expect(map.locator('[data-slot="agent-map-node"][data-status="cancelled"]')).toHaveCount(2)
+  await expect(button.locator('[data-slot="agent-stack-count"]')).toHaveCount(0)
 })
