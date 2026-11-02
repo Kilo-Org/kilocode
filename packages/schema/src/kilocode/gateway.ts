@@ -162,6 +162,20 @@ export const TranscriptionModel = Schema.Struct({
 
 export type TranscriptionModel = typeof TranscriptionModel.Type
 
+export const AudioTranscriptionInput = Schema.Struct({
+  model: Schema.String,
+  input_audio: Schema.Struct({ data: Schema.String, format: Schema.String }),
+  language: Schema.optional(Schema.String),
+  prompt: Schema.optional(Schema.String),
+  temperature: Schema.optional(Schema.Finite),
+})
+
+export type AudioTranscriptionInput = typeof AudioTranscriptionInput.Type
+
+export const AudioTranscriptionOutput = Schema.Struct({ text: Schema.String })
+
+export type AudioTranscriptionOutput = typeof AudioTranscriptionOutput.Type
+
 // The wire shape of the `models.embeddings` answer. `@kilocode/gateway-core/embedding-catalog` decodes the same shape
 // from the Kilo API; a logic package imports nothing from `@opencode/*` and Schema depends on no Kilo package, so
 // each side keeps its definition and packages/kilo-plugin/test/gateway.test.ts checks that they stay equal.
@@ -412,6 +426,11 @@ export const Definition = Rpc.define({
     "models.transcriptions": {
       input: portable(Schema.Struct({})),
       output: portable(Schema.Array(TranscriptionModel)),
+      errors: Failure,
+    },
+    "audio.transcriptions": {
+      input: portable(AudioTranscriptionInput),
+      output: portable(AudioTranscriptionOutput),
       errors: Failure,
     },
     "models.embeddings": {

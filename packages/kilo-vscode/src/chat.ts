@@ -17,6 +17,7 @@ import { saveImage } from "./save-image"
 import type { Manager } from "./server"
 import { effectiveFontSize, KILO_SETTING_KEYS, readKiloSettings, settingsHost } from "./settings-host"
 import { promptKeybindings, watchKeybindings } from "./prompt-keybindings"
+import { createSpeechToTextHost } from "./speech-to-text/host"
 import { openToolFile, type ToolDiff } from "./tool-diff"
 
 export function chat(input: {
@@ -114,6 +115,14 @@ export function wire(input: {
     fetch: local,
   })
   const post = (message: ToWebview) => void webview.postMessage(message)
+  // Voice input is host-side: the microphone, the custom endpoint key and the Gateway RPC never reach the webview.
+  const speech = createSpeechToTextHost({
+    context: input.context,
+    server: input.server,
+    directory: input.directory,
+    secrets: input.view === "settings",
+    post,
+  })
   // Config read and write are host-side: only the Settings panel uses them.
   const settings =
     input.view === "settings"
@@ -151,9 +160,28 @@ export function wire(input: {
         return false
     }
   }
+  // Leaf host actions that carry no state, kept together so the main handler stays within the complexity limit.
+  const handleLeafMessage = (message: ToHost): boolean => {
+    if (message.type === "saveImage") {
+      void saveImage(input.directory, message)
+      return true
+    }
+    // The Language tab applies at once: write `kilo-code.v2.language` and let the change event push it to every view.
+    if (message.type === "setLanguage") {
+      void workspace.getConfiguration(NAMESPACE).update("language", message.locale || undefined, true)
+      return true
+    }
+    // The Kilo Gateway sign-in runs in the Profile view of the sidebar, as main opens its Profile panel.
+    if (message.type === "openProfile") {
+      void commands.executeCommand("kilo-code.v2.profile")
+      return true
+    }
+    return false
+  }
+
   const subscription = webview.onDidReceiveMessage((message: ToHost) => {
     input.onMessage?.()
-    if (input.handle?.(message)) return
+    if (input.handle?.(message) || speech.handle(message)) return
     if (message.type === "fetch" || message.type === "abort" || message.type === "open") return link.receive(message)
     if (message.type === "trackCostSession") return input.trackCostSession?.(message.sessionID)
     if (message.type === "openToolFile") return openToolFile(input.directory, message)
@@ -176,12 +204,7 @@ export function wire(input: {
         (error: unknown) => post({ type: "clipboardWriteResult", id: message.id, ok: false, error: String(error) }),
       )
     if (handleGlobalState(message)) return
-    if (message.type === "saveImage") return saveImage(input.directory, message)
-    // The Language tab applies at once: write `kilo-code.v2.language` and let the change event push it to every view.
-    if (message.type === "setLanguage")
-      return void workspace.getConfiguration(NAMESPACE).update("language", message.locale || undefined, true)
-    // The Kilo Gateway sign-in runs in the Profile view of the sidebar, as main opens its Profile panel.
-    if (message.type === "openProfile") return void commands.executeCommand("kilo-code.v2.profile")
+    if (handleLeafMessage(message)) return
   })
   const uri = (...parts: string[]) => webview.asWebviewUri(Uri.joinPath(root, ...parts)).toString()
   webview.html = html({
@@ -202,6 +225,7 @@ export function wire(input: {
     post,
     dispose() {
       link.dispose()
+      speech.dispose()
       settings?.dispose()
       settingsWatch?.dispose()
       subscription.dispose()

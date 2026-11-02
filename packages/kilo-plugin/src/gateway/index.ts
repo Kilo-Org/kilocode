@@ -15,6 +15,7 @@ import {
   KiloRequests,
   KiloServer,
   KiloStream,
+  KiloTranscription,
   KiloTrpc,
 } from "@kilocode/gateway-core"
 import type { ConnectionInfo } from "@opencode/client"
@@ -1112,6 +1113,28 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
               server: catalog.account?.baseURL ?? gateway,
               version: ctx.app.version,
             }).pipe(Effect.mapError(() => context.error("failed", "Unable to retrieve Kilo embedding models")))
+          }),
+        "audio.transcriptions": (input, context) =>
+          Effect.gen(function* () {
+            if (!scopeCompatible()) return yield* Effect.fail(context.error("unauthorized", "Organization conflicts with the Kilo token scope"))
+            const account = catalog.account
+            if (!account?.token) return yield* Effect.fail(context.error("unauthorized", "Not signed in to Kilo Gateway"))
+            return yield* KiloTranscription.transcribe(
+              {
+                server: account.baseURL ?? gateway,
+                token: account.token,
+                organizationID: account.organizationID,
+                version: ctx.app.version,
+              },
+              input,
+            ).pipe(
+              Effect.mapError((failure) =>
+                context.error(
+                  failure.kind === "unauthorized" ? "unauthorized" : "failed",
+                  failure.status ? `Speech to text failed with status ${failure.status}` : "Speech to text failed",
+                ),
+              ),
+            )
           }),
         "autocomplete.fimTarget": (input, context) =>
           Effect.suspend(() => {

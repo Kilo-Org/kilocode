@@ -2,8 +2,10 @@
 // Shiki workers) into dist/. The webview config follows main's esbuild.js for the v1 UI packages.
 import { transformAsync } from "@babel/core"
 import { build, type Plugin } from "esbuild"
+import { existsSync } from "node:fs"
 import { copyFile, mkdir, rm } from "node:fs/promises"
 import path from "node:path"
+import { currentFfmpegTarget, ensureFfmpegForTarget } from "./ffmpeg-helper"
 
 const root = path.resolve(import.meta.dir, "..")
 const dist = path.join(root, "dist")
@@ -12,6 +14,15 @@ const production = Bun.argv.includes("--production")
 const meta = Bun.argv.includes("--meta")
 await rm(dist, { recursive: true, force: true })
 await mkdir(dist, { recursive: true })
+// A production package ships the build host's FFmpeg fallback, which Linux, Windows and a failed native macOS
+// capture need. Build each target's package on that target, as v1 did.
+if (production) {
+  const bin = path.join(root, "bin")
+  await mkdir(bin, { recursive: true })
+  await ensureFfmpegForTarget(currentFfmpegTarget(), bin)
+  const helper = path.join(bin, process.platform === "win32" ? "ffmpeg.exe" : "ffmpeg")
+  if (!existsSync(helper)) throw new Error(`FFmpeg helper was not bundled at ${helper}`)
+}
 
 const solid: Plugin = {
   name: "solid",
