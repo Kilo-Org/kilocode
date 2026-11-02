@@ -1,8 +1,8 @@
 // Host side of Fetch models in the custom provider dialog. It picks the key (typed, an `{env:NAME}` variable of the
 // server environment, or the stored credential of an existing provider), applies the custom headers and lists the
 // models. A stored key is read from the server credential API here and never posted to the webview.
-import { homedir } from "node:os"
 import { readFile } from "node:fs/promises"
+import { homedir } from "node:os"
 import path from "node:path"
 import { OpenCode, type CredentialEntry } from "@opencode/client"
 import { local } from "./local"
@@ -25,10 +25,11 @@ export async function fetchCustomProviderModels(input: {
     const apiKey = await resolveKey(request, env, (providerID) =>
       storedKey(input.server, input.directory, providerID, request.baseURL),
     )
+    const configPath = request.configPath
     const headers = await resolveHeaders(
       request.headers,
       env,
-      request.configPath ? (reference) => readReference(reference, request.configPath!) : undefined,
+      configPath ? (reference) => readReference(reference, configPath) : undefined,
     )
     const models = await fetchOpenAIModels({ baseURL: request.baseURL, apiKey, headers })
     return { type: "customProviderModelsFetched", requestId: request.requestId, models }
