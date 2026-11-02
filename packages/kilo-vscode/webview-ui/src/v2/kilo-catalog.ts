@@ -1,7 +1,7 @@
 // The failure reason of the Kilo Gateway catalog: the `kilocode.gateway` RPC reports it with `catalog.status` and
 // publishes each change as its `catalog` event. Settings show it under the Kilo row and in the provider catalog, and
 // the model pickers show it when no model is left.
-import type { OpenCodeClient, OpenCodeEvent } from "@opencode/client"
+import type { OpenCodeClient } from "@opencode/client"
 import { KiloGatewayRpc } from "@opencode/schema/kilocode/gateway"
 import { createEffect, createSignal, on, onCleanup, type Accessor } from "solid-js"
 
@@ -50,7 +50,7 @@ export function createKiloCatalog(input: {
   api: OpenCodeClient
   directory: string
   status: Accessor<string>
-  on: (type: typeof EVENT, handler: (event: OpenCodeEvent) => void) => () => void
+  on: (type: typeof EVENT, handler: () => void) => () => void
 }): Accessor<Failure | undefined> {
   const rpc = input.api.rpc(KiloGatewayRpc.Definition)
   const [failure, setFailure] = createSignal<Failure>()
@@ -59,16 +59,10 @@ export function createKiloCatalog(input: {
     const read = ++state.read
     void rpc["catalog.status"]({}, { location: { directory: input.directory } }).then(
       (result) => read === state.read && setFailure(result.failure ?? undefined),
-      () => {},
+      () => read === state.read && setFailure(undefined),
     )
   }
   createEffect(on(input.status, (status) => status === "connected" && refresh()))
-  onCleanup(
-    input.on(EVENT, (event) => {
-      const status = event.data as KiloGatewayRpc.CatalogStatus
-      ++state.read
-      setFailure(status.failure ?? undefined)
-    }),
-  )
+  onCleanup(input.on(EVENT, () => refresh()))
   return failure
 }

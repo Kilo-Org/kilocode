@@ -31,6 +31,8 @@ const generate = makeLocationNode({
           ? Effect.fail(new Generate.UnavailableError({ message: answer.error }))
           : Effect.succeed(answer.text)
       },
+      image: () => Effect.fail(new Generate.UnavailableError({ message: "unused" })),
+      decisions: () => Effect.fail(new Generate.UnavailableError({ message: "unused" })),
     }),
   ),
   deps: [],
@@ -71,7 +73,9 @@ const boot =
                   config: { directory: path.join(root, "global"), project: true },
                 },
                 () => [],
-                options.model === "real" ? KiloHost.overrides : [...KiloHost.overrides, Generate.node.replace(generate)],
+                options.model === "real"
+                  ? KiloHost.overrides
+                  : [...KiloHost.overrides, Generate.node.replace(generate)],
               ).pipe(Layer.provide(HttpServer.layerServices)),
             )
             const handler = Context.get(context, HttpRouter.HttpRouter)

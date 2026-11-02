@@ -34,6 +34,14 @@ jobs:
       - name: Typecheck (TypeScript 7.1)
         run: bun run typecheck:tsc
 
+      # kilocode_change start - restore v1 metric ratchets
+      - name: Check architecture ratchets
+        run: bun run check:architecture
+
+      - name: Check Kilo-owned code duplication
+        run: bun run check:duplication
+      # kilocode_change end
+
       # Every GUI package file (app, desktop, gui-plugins, the plugin package's GUI SDK, ui, session-ui) a pull request adds or edits must be free of
       # oxlint problems, warn-level rules (anti-slop) included. Other packages are not affected.
       - name: Lint changed files
