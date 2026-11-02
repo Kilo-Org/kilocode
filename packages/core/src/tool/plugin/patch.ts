@@ -353,7 +353,7 @@ function patchFile(change: Prepared, after = change.after): typeof FileDiff.Info
     ...diff,
     file: target,
     patch: trimDiff(diff.patch),
-    ...(change.type === "update" && change.movePath ? { moved: true } : {}), // kilocode_change(patch) - a rename is reported as moved
+    ...(change.type === "update" && change.moveTarget ? { moved: true } : {}), // kilocode_change(patch) - a rename is reported as moved
   }
 }
 

@@ -117,4 +117,27 @@ describe("patch tool move", () => {
       (tmp) => Effect.promise(() => tmp[Symbol.asyncDispose]()),
     ),
   )
+
+  it.live("does not mark a self-move as moved", () =>
+    Effect.acquireUseRelease(
+      Effect.promise(() => tmpdir()),
+      (tmp) =>
+        withTool(tmp.path, (registry) =>
+          Effect.gen(function* () {
+            const target = path.join(tmp.path, "name.txt")
+            yield* Effect.promise(() => fs.writeFile(target, "old content\n"))
+            const settled = yield* executeTool(
+              registry,
+              call(
+                "*** Begin Patch\n*** Update File: name.txt\n*** Move to: ./name.txt\n@@\n-old content\n+new content\n*** End Patch",
+              ),
+            )
+            expect(settled.status).toBe("completed")
+            if (settled.status !== "completed") return
+            expect(settled.output.files[0].moved).toBeUndefined()
+          }),
+        ),
+      (tmp) => Effect.promise(() => tmp[Symbol.asyncDispose]()),
+    ),
+  )
 })
