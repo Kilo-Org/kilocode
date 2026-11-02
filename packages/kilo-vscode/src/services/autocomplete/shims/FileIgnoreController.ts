@@ -38,7 +38,9 @@ export class FileIgnoreController {
     if (!this.workspacePath) {
       return
     }
-    this.realWorkspacePath = fs.existsSync(this.workspacePath) ? fs.realpathSync.native(this.workspacePath) : this.workspacePath
+    // The same resolver as the per-file one: on Windows the native variant returns a different path form, which
+    // makes every comparison fail.
+    this.realWorkspacePath = fs.existsSync(this.workspacePath) ? fs.realpathSync(this.workspacePath) : this.workspacePath
 
     // Try .kilocodeignore first — if it exists, use only that.
     // Use existsSync to distinguish "missing" from "unreadable" — permission
