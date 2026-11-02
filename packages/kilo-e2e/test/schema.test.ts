@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test"
 import { join } from "node:path"
-import { SCHEMA_DOCUMENTS, jsonSchema } from "../src/schema"
+import { SCHEMA_DOCUMENTS, SCHEMA_VERSION, jsonSchema } from "../src/schema"
 import { ALL_MANIFESTS, LANES, SCENARIO_IDS, assertSelectorFree, validateManifest } from "../src/scenarios"
 import { root } from "./helpers"
 
@@ -30,7 +30,7 @@ describe("scenario manifests", () => {
 describe("generated schemas", () => {
   test("committed JSON Schema documents are current", async () => {
     for (const name of Object.keys(SCHEMA_DOCUMENTS)) {
-      const file = join(root, "schema", `${name}.v1.json`)
+      const file = join(root, "schema", `${name}.v${SCHEMA_VERSION}.json`)
       const expected = `${JSON.stringify(jsonSchema(name as keyof typeof SCHEMA_DOCUMENTS), null, 2)}\n`
       expect(await Bun.file(file).text()).toBe(expected)
     }

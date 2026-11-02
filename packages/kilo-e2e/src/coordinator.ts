@@ -315,6 +315,7 @@ export async function run(options: RunOptions): Promise<EvidenceReport> {
   if (options.driver.command.length === 0) throw config("IDE driver command is empty")
 
   const runDir = resolve(options.artifactsDir, runId)
+  if (await exists(runDir)) throw config("run directory already exists; choose a new run id")
   const artifactsDir = join(runDir, "artifacts")
   const projectDir = join(runDir, "project")
   const descriptorPath = join(runDir, "descriptor.json")

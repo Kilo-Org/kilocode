@@ -33,7 +33,6 @@ export async function driver(mode: DriverMode) {
   const descriptor = await readJsonAs(request.descriptorPath, FixtureDescriptor)
   const env = process.env
   const token = request.scenario.expected.terminalTranscriptToken
-  const directive = request.scenario.prompt.directive
 
   const assertions: Assertion[] = [
     { name: "descriptor.available", status: "passed" },
@@ -55,17 +54,14 @@ export async function driver(mode: DriverMode) {
     },
   ]
 
-  if (directive === "open") {
-    assertions.push({ name: "transcript.visible", status: "passed" })
-  } else if (directive === "stream") {
-    assertions.push({ name: "assistant.streamed", status: "passed" })
-    assertions.push({ name: "transcript.token", status: "passed" })
-  } else {
-    assertions.push({ name: "permission.answered", status: "passed" })
-    assertions.push({ name: "transcript.token", status: "passed" })
+  for (const name of [...request.scenario.expected.ui, ...request.scenario.expected.model]) {
+    assertions.push({ name, status: "passed" })
   }
 
-  if (mode === "fail") assertions.push({ name: "assistant.streamed", status: "failed" })
+  if (mode === "fail") {
+    const index = assertions.findIndex((assertion) => assertion.name === request.scenario.expected.ui[0])
+    if (index >= 0) assertions[index] = { name: assertions[index].name, status: "failed" }
+  }
 
   const logs = await artifact(join(request.artifactsDir, "logs"), "driver.log", "fake driver log\n")
   const screenshot = await artifact(

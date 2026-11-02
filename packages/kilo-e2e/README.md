@@ -36,7 +36,7 @@ bun run schema:check
 | `src/protocol.ts` | Atomic private JSON request/result file helpers. |
 | `src/process.ts` | Subprocess invocation with timeout and cancellation. |
 | `src/git.ts` | Deterministic git fixture. |
-| `schema/*.v1.json` | Generated draft-2020-12 JSON Schema for non-TypeScript consumers. |
+| `schema/*.v<version>.json` | Generated draft-2020-12 JSON Schema for non-TypeScript consumers. |
 | `fixtures/` | Fake provider and driver processes used by the demo and tests. |
 
 ## Provider and driver protocol
@@ -49,13 +49,13 @@ Both subprocesses are invoked with exactly two argv flags, which contain file pa
 
 The coordinator writes the request file and reads the result file. The subprocess writes the result file at the requested path. Credentials are never placed on the command line.
 
-- Provider request (`provider-request.v1.json`) is a discriminated union on `operation`:
+- Provider request (`provider-request.v<version>.json`) is a discriminated union on `operation`:
   - `prepare`: run/lane metadata, descriptor path, deterministic project directory, isolated XDG state dirs.
   - `cleanup`: run id, descriptor path, and whether the descriptor exists.
-- The provider writes the private fixture descriptor (mode `0600`) to the requested descriptor path during `prepare`, then writes `provider-prepare-result.v1.json`.
-- During `cleanup` the provider writes `cleanup-result.v1.json`. Cleanup runs after success, assertion failure, driver crash, timeout, cancellation, invalid evidence, and provider prepare failure. A failed cleanup fails the run.
-- Driver request (`driver-request.v1.json`) contains the scenario manifest, descriptor path, deterministic project identity (`path`, `branch`, `commit`), run directory, and artifact directory. Credentials reach the driver only through its inherited environment.
-- Driver result (`driver-result.v1.json`) contains provenance, capability flags, named assertions, last non-secret state, artifact paths, and the scenario outcome.
+- The provider writes the private fixture descriptor (mode `0600`) to the requested descriptor path during `prepare`, then writes `provider-prepare-result.v<version>.json`.
+- During `cleanup` the provider writes `cleanup-result.v<version>.json`. Cleanup runs after success, assertion failure, driver crash, timeout, cancellation, invalid evidence, and provider prepare failure. A failed cleanup fails the run.
+- Driver request (`driver-request.v<version>.json`) contains the scenario manifest, descriptor path, deterministic project identity (`path`, `branch`, `commit`), run directory, and artifact directory. Credentials reach the driver only through its inherited environment.
+- Driver result (`driver-result.v<version>.json`) contains provenance, capability flags, named assertions, last non-secret state, artifact paths, and the scenario outcome. A `passed` outcome must include a passing named assertion for every `expected.ui` and `expected.model` entry in the manifest and must not report any failed assertion; contradictory results are rejected.
 
 Artifact paths in evidence are relative to the run directory and must stay inside it.
 
@@ -83,8 +83,8 @@ Every descriptor origin must be an explicit loopback origin (`localhost`, `127.0
 - Evidence rejects token, cookie, authorization, API-key, password, secret, credential, private-key, and private-descriptor fields at any depth, plus bearer/basic/JWT/private-key value shapes.
 - Rejected evidence is not persisted verbatim; the coordinator writes a sanitized failure report instead.
 - Artifact paths must be relative and contained in the run directory.
-- Run ids must be a single safe path segment.
+- Run ids must be a single safe path segment and must not already exist in the artifacts directory; reused run directories are rejected instead of reading stale results.
 
 ## Consumers
 
-Cloud and IDE consumers should implement against `schema/*.v1.json` rather than importing this package's runtime. The schemas are the stable wire contract; any breaking field change requires a new schema version and a new generated document.
+Cloud and IDE consumers should implement against `schema/*.v<version>.json` rather than importing this package's runtime. The schemas are the stable wire contract; any breaking field change requires a new schema version and a new generated document.

@@ -21,6 +21,14 @@ export function parseDriverResult(input: unknown, manifest: ScenarioManifest, ru
   if (result.lane !== manifest.lane) throw new EvidenceError("mismatch", "driver result lane does not match")
   const missing = manifest.requires.filter((capability) => !result.capabilities.includes(capability))
   if (missing.length > 0) throw new EvidenceError("capability", `driver is missing capabilities: ${missing.join(", ")}`)
+  if (result.outcome === "passed") {
+    const failed = result.assertions.filter((assertion) => assertion.status === "failed")
+    if (failed.length > 0) throw new EvidenceError("mismatch", "driver outcome contradicts its failed assertions")
+    const passed = new Set(result.assertions.filter((assertion) => assertion.status === "passed").map((a) => a.name))
+    const expected = [...manifest.expected.ui, ...manifest.expected.model].filter((name) => !passed.has(name))
+    if (expected.length > 0)
+      throw new EvidenceError("mismatch", `driver is missing passing assertions for: ${expected.join(", ")}`)
+  }
   return result
 }
 

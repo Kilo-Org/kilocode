@@ -4,7 +4,6 @@ import { assertNoSecrets } from "../src/redact"
 describe("evidence secret rejection", () => {
   test("rejects secret-bearing field names at any depth", () => {
     for (const key of [
-      "token",
       "accessToken",
       "session-token",
       "apiKey",
@@ -24,15 +23,26 @@ describe("evidence secret rejection", () => {
     }
     expect(() => assertNoSecrets({ lastState: { authorization: "value" } })).toThrow()
     expect(() => assertNoSecrets({ assertions: [{ name: "x", detail: "y", cookie: "z" }] })).toThrow()
-    expect(() => assertNoSecrets([{ nested: [{ token: "x" }] }])).toThrow()
+    expect(() => assertNoSecrets([{ nested: [{ accessToken: "x" }] }])).toThrow()
   })
 
   test("rejects secret-shaped values", () => {
-    expect(() => assertNoSecrets({ detail: "Bearer abc123" })).toThrow()
+    expect(() => assertNoSecrets({ detail: "Bearer abcdefghijklmnop1234" })).toThrow()
+    expect(() => assertNoSecrets({ detail: "Basic dXNlcjpwYXNzd29yZA==" })).toThrow()
     expect(() => assertNoSecrets({ detail: "sk-live-secret" })).toThrow()
     expect(() => assertNoSecrets({ detail: "ghp_abcdefghij" })).toThrow()
     expect(() => assertNoSecrets({ detail: "eyJabcdefgh.abcdefgh.abcdefgh" })).toThrow()
     expect(() => assertNoSecrets({ detail: "-----BEGIN RSA PRIVATE KEY-----" })).toThrow()
+    expect(() => assertNoSecrets({ token: "sk-live-secret" })).toThrow()
+  })
+
+  test("allows non-secret token names and prose", () => {
+    expect(() =>
+      assertNoSecrets({
+        lastState: { token: "K1-PROMPT-STREAM", tokens: 12, tokenCount: 12 },
+        detail: "basic authentication required",
+      }),
+    ).not.toThrow()
   })
 
   test("accepts redacted evidence content", () => {

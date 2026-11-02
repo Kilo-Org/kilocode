@@ -1,6 +1,4 @@
 const SECRET_KEYS = new Set([
-  "token",
-  "tokens",
   "accesstoken",
   "refreshtoken",
   "idtoken",
@@ -29,8 +27,8 @@ const SECRET_KEYS = new Set([
 ])
 
 const SECRET_VALUES = [
-  /^\s*bearer\s+\S+/i,
-  /^\s*basic\s+[a-z0-9+/=]{8,}/i,
+  /^\s*bearer\s+[a-z0-9._~+/-]{16,}=*\s*$/i,
+  /^\s*basic\s+[a-z0-9+/=]{8,}={0,2}\s*$/i,
   /^gh[pousr]_[A-Za-z0-9]{8,}/,
   /^sk-[A-Za-z0-9_-]{8,}/,
   /-----BEGIN [A-Z ]*PRIVATE KEY-----/,

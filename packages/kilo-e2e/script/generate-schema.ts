@@ -1,6 +1,6 @@
 import { mkdir, writeFile } from "node:fs/promises"
 import { join, resolve } from "node:path"
-import { jsonSchemaDocuments } from "../src/schema"
+import { SCHEMA_VERSION, jsonSchemaDocuments } from "../src/schema"
 
 const root = resolve(import.meta.dir, "..")
 const target = join(root, "schema")
@@ -15,7 +15,7 @@ await mkdir(target, { recursive: true })
 const documents = jsonSchemaDocuments()
 let stale = 0
 for (const [name, schema] of Object.entries(documents)) {
-  const file = join(target, `${name}.v1.json`)
+  const file = join(target, `${name}.v${SCHEMA_VERSION}.json`)
   const next = document(schema)
   const current = await Bun.file(file)
     .text()

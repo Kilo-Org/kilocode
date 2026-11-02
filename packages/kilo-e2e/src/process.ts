@@ -2,7 +2,6 @@ export type Exit = {
   code: number | null
   timedOut: boolean
   cancelled: boolean
-  stderr: string
 }
 
 export type ChildInput = {
@@ -16,19 +15,24 @@ export type ChildInput = {
 }
 
 export async function runChild(input: ChildInput): Promise<Exit> {
-  if (input.signal?.aborted) return { code: null, timedOut: false, cancelled: true, stderr: "" }
+  if (input.signal?.aborted) return { code: null, timedOut: false, cancelled: true }
 
   const flags = { timedOut: false, cancelled: false }
   const proc = Bun.spawn([...input.command, "--request", input.requestPath, "--result", input.resultPath], {
     cwd: input.cwd,
     env: input.env,
     stdout: "ignore",
-    stderr: "pipe",
+    stderr: "ignore",
     windowsHide: true,
   })
 
+  let force: ReturnType<typeof setTimeout> | undefined
   const stop = () => {
-    if (proc.exitCode === null) proc.kill()
+    if (proc.exitCode !== null) return
+    proc.kill()
+    force ??= setTimeout(() => {
+      if (proc.exitCode === null) proc.kill(9)
+    }, 500)
   }
   const onAbort = () => {
     flags.cancelled = true
@@ -43,8 +47,8 @@ export async function runChild(input: ChildInput): Promise<Exit> {
 
   const code = await proc.exited
   clearTimeout(timer)
+  if (force) clearTimeout(force)
   if (input.signal) input.signal.removeEventListener("abort", onAbort)
 
-  const stderr = await new Response(proc.stderr).text()
-  return { code, timedOut: flags.timedOut, cancelled: flags.cancelled, stderr }
+  return { code, timedOut: flags.timedOut, cancelled: flags.cancelled }
 }

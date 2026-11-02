@@ -73,7 +73,7 @@ describe("coordinator cleanup guarantees", () => {
       const evidence = await readEvidence(dir)
       expect(evidence.outcome).toBe("failed")
       expect(evidence.cleanup.removed).toHaveLength(2)
-      expect(evidence.assertions.find((assertion) => assertion.name === "assistant.streamed")?.status).toBe("failed")
+      expect(evidence.assertions.find((assertion) => assertion.name === "transcript.visible")?.status).toBe("failed")
     })
   })
 
@@ -124,6 +124,30 @@ describe("coordinator cleanup guarantees", () => {
       expect(error.code).toBe("driver_result")
       const evidence = await readEvidence(dir)
       expect(evidence.outcome).toBe("failed")
+      expect(evidence.cleanup.removed).toHaveLength(2)
+    })
+  })
+
+  test("escalates to SIGKILL when a driver ignores SIGTERM", async () => {
+    await sandbox(async (dir) => {
+      const controller = new AbortController()
+      const timer = setTimeout(() => controller.abort(), 300)
+      try {
+        const error = await rejected(
+          run(
+            options(dir, {
+              driver: { id: "fake-driver", command: command("driver-ignore-term.ts") },
+              signal: controller.signal,
+              timeouts: { provider: 15_000, driver: 15_000 },
+            }),
+          ),
+        )
+        expect(error.code).toBe("cancelled")
+      } finally {
+        clearTimeout(timer)
+      }
+      const evidence = await readEvidence(dir)
+      expect(evidence.outcome).toBe("cancelled")
       expect(evidence.cleanup.removed).toHaveLength(2)
     })
   })
@@ -220,6 +244,19 @@ describe("coordinator rejection paths", () => {
     await sandbox(async (dir) => {
       const error = await rejected(run(options(dir, { runId: "../escape" })))
       expect(error.code).toBe("config")
+    })
+  })
+
+  test("rejects a reused run directory instead of reading stale results", async () => {
+    await sandbox(async (dir) => {
+      const first = await run(options(dir))
+      expect(first.outcome).toBe("passed")
+      const error = await rejected(
+        run(options(dir, { driver: { id: "fake-driver", command: command("driver-crash.ts") } })),
+      )
+      expect(error.code).toBe("config")
+      const evidence = await readEvidence(dir)
+      expect(evidence.outcome).toBe("passed")
     })
   })
 })
