@@ -2,7 +2,7 @@ import fs from "fs/promises"
 import path from "path"
 import { describe, expect, test } from "bun:test"
 import { DateTime, Effect, Fiber, Layer, Stream } from "effect"
-import { LanguageModel } from "@opencode/ai"
+import { LanguageModel } from "@opencode/ai/effect"
 import { OpenAIChat } from "@opencode/ai/protocols/openai-chat"
 import { TestLLM } from "@opencode/ai/testing"
 import { Agent } from "@opencode/core/agent"
@@ -319,10 +319,15 @@ describe("workflow model discovery", () => {
         yield* changed({ type: "delete", path: globalFile }, (info) => info === undefined)
         expect(yield* command.get("review")).toBeUndefined()
         expect(yield* command.get("orphan")).toBeUndefined()
+        // Command updates publish only when the command list changes, so a complete command marks the reload.
         yield* Effect.promise(() =>
-          fs.writeFile(configFile, JSON.stringify({ commands: { review: { model: "test/other#low" } } })),
+          fs.writeFile(
+            configFile,
+            JSON.stringify({ commands: { review: { model: "test/other#low" }, marker: { template: "Marker" } } }),
+          ),
         )
         yield* changed({ type: "update", path: configFile }, (info) => info === undefined)
+        expect(yield* command.get("marker")).toMatchObject({ template: "Marker" })
         expect(yield* command.get("review")).toBeUndefined()
       }).pipe(Effect.provide(commandLayer(project, global)))
     }),

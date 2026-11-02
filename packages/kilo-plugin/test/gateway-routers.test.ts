@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test"
-import { Media, Message } from "@opencode/ai"
+import { Media, Message } from "@opencode/ai/effect"
 import { KiloCustomRouter } from "@kilocode/gateway-core"
 import { IntegrationID } from "@opencode/schema/integration-id"
 import { Model } from "@opencode/schema/model"
