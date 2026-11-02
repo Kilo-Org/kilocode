@@ -843,8 +843,7 @@ ToolRegistry.register({
       const value = normalize(file)
       return value.fileDiff.hunks.length ? value : undefined
     }
-    const openDiff = (file: FileDiffInfo, event: MouseEvent) => {
-      event.stopPropagation()
+    const openDiff = (file: FileDiffInfo) => {
       const diff = view(file)
       if (!diff || !props.actions?.openDiff) return
       props.actions.openDiff({
@@ -854,18 +853,21 @@ ToolRegistry.register({
         deletions: file.deletions,
       })
     }
+    // The action sits in the file body, not in the row header: the header is a
+    // button, and an interactive control inside it is invalid for assistive tech.
     const diffAction = (file: FileDiffInfo) => (
       <Show when={props.actions?.openDiff && HUNK_MARKER.test(file.patch)}>
-        <Tooltip value={i18n.t("ui.messagePart.openInDiffViewer" as never)} placement="top" gutter={4}>
-          <IconButton
-            icon="square-arrow-top-right"
-            size="small"
-            variant="ghost"
-            onMouseDown={(event) => event.preventDefault()}
-            onClick={(event) => openDiff(file, event)}
-            aria-label={i18n.t("ui.messagePart.openInDiffViewer" as never)}
-          />
-        </Tooltip>
+        <div data-slot="apply-patch-open-diff">
+          <Tooltip value={i18n.t("ui.messagePart.openInDiffViewer" as never)} placement="top" gutter={4}>
+            <IconButton
+              icon="square-arrow-top-right"
+              size="small"
+              variant="ghost"
+              onClick={() => openDiff(file)}
+              aria-label={i18n.t("ui.messagePart.openInDiffViewer" as never)}
+            />
+          </Tooltip>
+        </div>
       </Show>
     )
     const changes = (file: FileDiffInfo) => (
@@ -918,9 +920,6 @@ ToolRegistry.register({
                   </Show>
                 </div>
               </div>
-              <Show when={single()}>
-                {(file) => <span data-slot="tool-trigger-actions">{diffAction(file())}</span>}
-              </Show>
             </div>
           }
         >
@@ -965,7 +964,6 @@ ToolRegistry.register({
                               </div>
                               <div data-slot="apply-patch-trigger-actions">
                                 {changes(file)}
-                                {diffAction(file)}
                                 <Icon name="chevron-grabber-vertical" size="small" />
                               </div>
                             </div>
@@ -975,6 +973,7 @@ ToolRegistry.register({
                           <Show when={expanded().includes(file.file) && view(file)}>
                             {(diff) => (
                               <div data-component="apply-patch-file-diff">
+                                {diffAction(file)}
                                 <Dynamic
                                   component={component}
                                   mode="diff"
@@ -997,6 +996,7 @@ ToolRegistry.register({
                 <Show when={view(file())}>
                   {(diff) => (
                     <div data-component="apply-patch-file-diff">
+                      {diffAction(file())}
                       <Dynamic component={component} mode="diff" hunkSeparators="simple" fileDiff={diff().fileDiff} />
                     </div>
                   )}
