@@ -6,10 +6,11 @@ import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { Switch } from "../Switch"
 import { TextField } from "@kilocode/kilo-ui/text-field"
 import type { AgentInfo, PermissionRule } from "@opencode/client"
-import { Component, For, Show, createEffect, createMemo, createSignal, on } from "solid-js"
+import { Component, For, Show, createEffect, createMemo, createSignal, on, onCleanup } from "solid-js"
 import { useLanguage } from "../../../context/language"
 import { useV2 } from "../../../v2/client"
 import { useSettingsConfig } from "../../../v2/settings-config"
+import { isEnterKeyCommitNotIme } from "../../../utils/ime-enter"
 import ModelPicker, { type ModelPickerValue } from "../ModelPicker"
 import PermissionEditor from "../PermissionEditor"
 import SettingsRow from "../SettingsRow"
@@ -187,7 +188,7 @@ const ModeEditView: Component<Props> = (props) => {
         />
       </Card>
 
-      <Card data-variant="wide-input" style={{ "margin-bottom": "12px" }}>
+      <Card class="settings-wide-input" style={{ "margin-bottom": "12px" }}>
         <SettingsRow
           title={language.t("settings.agentBehaviour.modelOverride.title")}
           description={language.t("settings.agentBehaviour.modelOverride.description")}
@@ -318,7 +319,10 @@ function asNumber(value: unknown): number | undefined {
   return typeof value === "number" ? value : undefined
 }
 
-/** A text field with a local draft that commits on blur, so a config write happens once and not per keystroke. */
+/**
+ * A text field with a local draft that commits on blur, on Enter for a single line, or when the view unmounts, so a
+ * config write happens once and not per keystroke, and switching agents does not drop the draft.
+ */
 const DraftField: Component<{
   value: () => string
   placeholder: string
@@ -326,16 +330,41 @@ const DraftField: Component<{
   commit: (value: string) => void | false | Promise<unknown>
 }> = (props) => {
   const [draft, setDraft] = createSignal(props.value())
-  createEffect(on(props.value, (value) => setDraft(value), { defer: true }))
+  const [dirty, setDirty] = createSignal(false)
+  createEffect(
+    on(
+      props.value,
+      (value) => {
+        setDraft(value)
+        setDirty(false)
+      },
+      { defer: true },
+    ),
+  )
+
+  const change = (value: string) => {
+    setDraft(value)
+    setDirty(value !== props.value())
+  }
+
+  const commit = () => {
+    if (!dirty()) return
+    setDirty(false)
+    if (props.commit(draft()) === false) setDraft(props.value())
+  }
+  onCleanup(commit)
 
   return (
     <TextField
       value={draft()}
       placeholder={props.placeholder}
       multiline={props.multiline}
-      onChange={setDraft}
-      onBlur={() => {
-        if (draft() !== props.value() && props.commit(draft()) === false) setDraft(props.value())
+      onChange={change}
+      onBlur={commit}
+      onKeyDown={(event: KeyboardEvent) => {
+        if (props.multiline || !isEnterKeyCommitNotIme(event)) return
+        event.preventDefault()
+        commit()
       }}
     />
   )

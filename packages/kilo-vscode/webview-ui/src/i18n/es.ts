@@ -270,6 +270,7 @@ export const dict = {
   "prompt.toast.promptSendFailed.title": "Fallo al enviar prompt",
 
   "mcp.status.connected": "conectado",
+  "mcp.status.pending": "conectando",
   "mcp.status.failed": "fallido",
   "mcp.status.needs_auth": "necesita auth",
   "mcp.status.needs_registration": "necesita registro de cliente",
@@ -1153,7 +1154,7 @@ export const dict = {
   "settings.agentBehaviour.mcp.timeout.catalog.title": "Tiempo de espera del catálogo (ms)",
   "settings.agentBehaviour.mcp.timeout.execution.title": "Tiempo de espera de ejecución (ms)",
   "settings.agentBehaviour.mcpEmpty":
-    "No hay servidores MCP configurados. Añada servidores MCP en kilo.jsonc o pida al agente que los añada.",
+    "No hay servidores MCP configurados. Añada servidores MCP en kilo2.json o pida al agente que los añada.",
   "settings.agentBehaviour.workflows.description":
     "Los flujos de trabajo son comandos personalizados definidos en su configuración o en archivos Markdown de comandos. Puede establecer un modelo y una variante de razonamiento para cada flujo de trabajo.",
   "settings.agentBehaviour.workflows.empty":

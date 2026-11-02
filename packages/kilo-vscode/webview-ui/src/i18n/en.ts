@@ -261,6 +261,7 @@ export const dict = {
   "prompt.toast.promptSendFailed.title": "Failed to send prompt",
 
   "mcp.status.connected": "connected",
+  "mcp.status.pending": "connecting",
   "mcp.status.failed": "failed",
   "mcp.status.needs_auth": "needs auth",
   "mcp.status.needs_registration": "needs client registration",
@@ -1086,7 +1087,7 @@ export const dict = {
   "settings.agentBehaviour.addMcp.url.placeholder": "e.g. http://localhost:3000/sse",
   "settings.agentBehaviour.mcpBrowseMarketplace": "Browse Marketplace",
   "settings.agentBehaviour.mcpEmpty":
-    "No MCP servers configured. Add MCP servers in kilo.jsonc, or ask the agent to add them for you.",
+    "No MCP servers configured. Add MCP servers in kilo2.json, or ask the agent to add them for you.",
   "settings.agentBehaviour.mcp.timeout.startup.title": "Startup timeout (ms)",
   "settings.agentBehaviour.mcp.timeout.catalog.title": "Catalog timeout (ms)",
   "settings.agentBehaviour.mcp.timeout.execution.title": "Execution timeout (ms)",

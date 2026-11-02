@@ -13,6 +13,9 @@ import { useSettingsConfig } from "../../../v2/settings-config"
 
 const isUrl = (value: string) => /^https?:\/\//i.test(value)
 
+// The server registers its built-in skills with a virtual path under `/builtin/`; as on v1, the list does not show it.
+const isBuiltInPath = (value: string) => value.startsWith("/builtin/")
+
 const SkillsSubtab: Component = () => {
   const language = useLanguage()
   const v2 = useV2()
@@ -142,7 +145,9 @@ const SkillsSubtab: Component = () => {
                     <Show when={skill.description}>
                       <div>{skill.description}</div>
                     </Show>
-                    <div>{skill.path}</div>
+                    <Show when={!isBuiltInPath(skill.path)}>
+                      <div>{skill.path}</div>
+                    </Show>
                   </div>
                 </div>
               </div>
