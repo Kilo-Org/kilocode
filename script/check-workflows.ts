@@ -28,19 +28,24 @@ const DIR = path.join(ROOT, ".github", "workflows")
 
 // Workflows deliberately accepted into Kilo CI. Sort alphabetically.
 const active = new Set([
+  // Upstream: unit, e2e and compiled CLI smoke tests (`test.yml` before upstream v2.2).
+  "check-test.yml",
   // Upstream: lint and typecheck (`bun run check`).
   "check.yml",
   // Kilo: publishes the v2 CLI to npm with the `kilo-v2` dist-tag.
   "kilo-v2-publish.yml",
   // Kilo: v2 lane (this guard).
   "kilo-v2.yml",
-  // Upstream: unit, e2e and compiled CLI smoke tests.
-  "test.yml",
 ])
 
 // Upstream workflows that Kilo removed: they act outside Kilo CI, or they never trigger on Kilo branches.
 // Sort alphabetically.
 const removed = new Set([
+  "bot-docs-locale.yml",
+  "bot-nix-hashes.yml",
+  "check-bot-scope.yml",
+  "check-nix.yml",
+  "check-process-daemon.yml",
   "close-issues.yml",
   "close-prs.yml",
   "compliance-close.yml",
@@ -55,6 +60,7 @@ const removed = new Set([
   "docs-update.yml",
   "duplicate-issues.yml",
   "models-snapshot.yml",
+  "nightly-beta.yml",
   "nix-eval.yml",
   "nix-hashes.yml",
   "notify-discord.yml",
@@ -64,10 +70,18 @@ const removed = new Set([
   "publish-github-action.yml",
   "publish-vscode.yml",
   "publish.yml",
+  "release-dry-run.yml",
   "release-github-action.yml",
+  "release-process-daemon.yml",
+  "release.yml",
   "review.yml",
   "stats.yml",
   "storybook.yml",
+  "triage-close-issues.yml",
+  "triage-close-prs.yml",
+  "triage-compliance-close.yml",
+  "triage-contributor.yml",
+  "triage-pr-standards.yml",
   "triage.yml",
 ])
 
