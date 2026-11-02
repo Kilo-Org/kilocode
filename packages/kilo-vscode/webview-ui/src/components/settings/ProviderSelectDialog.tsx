@@ -127,7 +127,7 @@ const ProviderSelectDialog = (props: { settings: SettingsData; onLogin: () => vo
                     style={{
                       "font-size": "var(--kilo-font-size-12)",
                       color: "var(--vscode-errorForeground)",
-                      "text-align": "left",
+                      "text-align": "start",
                     }}
                   >
                     {failure()}
