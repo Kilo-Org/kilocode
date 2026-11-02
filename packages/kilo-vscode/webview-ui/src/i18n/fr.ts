@@ -1366,7 +1366,7 @@ export const dict = {
     "Affiche dans le prompt vide le raccourci clavier adapté à ce que vous faites, par exemple pour ajouter le code sélectionné ou revenir au prompt.",
   "settings.display.tokenThroughput.title": "Afficher le débit de tokens",
   "settings.display.tokenThroughput.description":
-    "Afficher la vitesse de génération du texte (tokens/sec) dans le dernier message de l’assistant et dans l’en-tête de la tâche. Affichée par défaut ; désactivez ce paramètre pour la masquer si nécessaire.",
+    "Display the text-generation rate (tokens/sec) on the latest assistant message footer. Shown by default; disable this setting to hide it when needed.",
   "settings.display.autoApprovalReason.title": "Afficher la raison de l'approbation automatique",
   "settings.display.autoApprovalReason.description":
     "Indique pourquoi un appel d'outil a été approuvé automatiquement, par exemple une règle d'autorisation correspondante ou une valeur par défaut d'agent.",

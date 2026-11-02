@@ -3,6 +3,7 @@ import type { SessionMessageAssistant, SessionMessageInfo } from "@opencode/clie
 import {
   formatTokenThroughput,
   terminalStep,
+  turnMetadata,
   turnTiming,
   turnTokensPerSecond,
 } from "../webview-ui/src/v2/message-status"
@@ -23,11 +24,12 @@ const assistant = (input: {
   output?: number
   reasoning?: number
   error?: boolean
+  text?: string
 }) =>
   ({
     id: input.id ?? "a",
     type: "assistant",
-    content: [],
+    content: input.text ? [{ type: "text", text: input.text }] : [],
     time: { created: input.created, streamed: input.streamed, completed: input.completed },
     finish: input.finish,
     tokens:
@@ -105,6 +107,46 @@ describe("turnTokensPerSecond", () => {
     const orphan = assistant({ id: "orphan", created: 100, completed: 200, output: 10 })
     expect(turnTokensPerSecond(orphan, [user("u1", 50)])).toBeUndefined()
   })
+
+  test("returns undefined when the turn input is outside the loaded page", () => {
+    const a1 = assistant({ id: "a1", created: 100, streamed: 200, completed: 300, output: 10 })
+    const a2 = assistant({ id: "a2", created: 400, streamed: 500, completed: 600, output: 10 })
+    expect(turnTokensPerSecond(a2, [a1, a2])).toBeUndefined()
+  })
+})
+
+describe("turnMetadata", () => {
+  test("a terminal step with no text uses the earlier text step as the carrier", () => {
+    const a1 = assistant({
+      id: "a1",
+      created: 1100,
+      streamed: 1300,
+      completed: 1400,
+      output: 50,
+      text: "first",
+      finish: "tool-calls",
+    })
+    const a2 = assistant({ id: "a2", created: 1400, streamed: 1500, completed: 1600, output: 20, finish: "stop" })
+    const metadata = turnMetadata(a2, [user("u1", 1000), a1, a2])
+    expect(metadata?.carrierID).toBe("a1")
+    expect(metadata?.timing).toEqual({ completedAt: 1600, durationMs: 600 })
+    expect(metadata?.tokensPerSecond).toBeCloseTo(70 / 0.3, 5)
+  })
+
+  test("returns undefined when the turn input is outside the loaded page", () => {
+    const a1 = assistant({ id: "a1", created: 100, streamed: 200, completed: 300, output: 10, text: "hi", finish: "stop" })
+    expect(turnMetadata(a1, [a1])).toBeUndefined()
+  })
+
+  test("returns undefined while the terminal step is running", () => {
+    const a1 = assistant({ id: "a1", created: 100, streamed: 200, output: 10, text: "hi", finish: "stop" })
+    expect(turnMetadata(a1, [user("u1", 50), a1])).toBeUndefined()
+  })
+
+  test("returns undefined when no step has text", () => {
+    const a1 = assistant({ id: "a1", created: 100, streamed: 200, completed: 300, output: 10, finish: "stop" })
+    expect(turnMetadata(a1, [user("u1", 50), a1])).toBeUndefined()
+  })
 })
 
 describe("formatting", () => {
@@ -121,10 +163,12 @@ describe("formatting", () => {
 
   test("converts Kilo locales to BCP-47 for Intl", () => {
     // "br" is Kilo's pt-BR, not the Breton language tag.
-    expect(formatTokenThroughput(1166.2, "br")).toBe(
-      new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 1 }).format(1166.2) + " t/s",
-    )
+    expect(formatTokenThroughput(1166.2, "br")).toBe("1.166,2 t/s")
     // "zht" is not a valid tag and must resolve to zh-TW, not the system default.
-    expect(formatClock(0, "zht")).toBe(new Intl.DateTimeFormat("zh-TW", { timeStyle: "short" }).format(new Date(0)))
+    // zh-TW always prefixes a Chinese day period (the exact period depends on the host time zone).
+    const clock = formatClock(0, "zht")
+    expect(clock).toMatch(/[凌晨清晨上午中午下午晚上]/u)
+    expect(clock).not.toContain("AM")
+    expect(clock).not.toContain("PM")
   })
 })

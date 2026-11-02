@@ -1311,7 +1311,7 @@ export const dict = {
     "میانبر صفحه‌کلیدی متناسب با کاری که اکنون انجام می‌دهید را در اعلان خالی نمایش می‌دهد، مثلاً نحوه افزودن کد انتخاب‌شده یا بازگشت به اعلان.",
   "settings.display.tokenThroughput.title": "نمایش توان عملیاتی توکن",
   "settings.display.tokenThroughput.description":
-    "نمایش نرخ تولید متن (tokens/sec) در جدیدترین پیام دستیار و سربرگ کار. به‌طور پیش‌فرض نمایش داده می‌شود؛ برای پنهان کردن آن در صورت نیاز، این تنظیم را غیرفعال کنید.",
+    "Display the text-generation rate (tokens/sec) on the latest assistant message footer. Shown by default; disable this setting to hide it when needed.",
   "settings.display.autoApprovalReason.title": "نمایش دلیل تأیید خودکار",
   "settings.display.autoApprovalReason.description":
     "نشان می‌دهد چرا یک فراخوانی ابزار به‌طور خودکار تأیید شده است، مانند یک قانون مجوز مطابق یا پیش‌فرض عامل.",

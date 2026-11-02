@@ -1295,7 +1295,7 @@ export const dict = {
     "إظهار اختصار لوحة المفاتيح الذي يناسب ما تفعله الآن في الموجّه الفارغ، مثل كيفية إضافة الكود المحدد أو العودة إلى الموجّه.",
   "settings.display.tokenThroughput.title": "إظهار إنتاجية الرموز",
   "settings.display.tokenThroughput.description":
-    "عرض معدل توليد النص (tokens/sec) في أحدث رسالة للمساعد وفي رأس المهمة. يظهر افتراضيًا؛ عطّل هذا الإعداد لإخفائه عند الحاجة.",
+    "Display the text-generation rate (tokens/sec) on the latest assistant message footer. Shown by default; disable this setting to hide it when needed.",
   "settings.display.autoApprovalReason.title": "إظهار سبب الموافقة التلقائية",
   "settings.display.autoApprovalReason.description":
     "يظهر سبب الموافقة التلقائية على استدعاء أداة، مثل قاعدة إذن مطابقة أو إعداد افتراضي للوكيل.",

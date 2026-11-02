@@ -1322,7 +1322,7 @@ export const dict = {
     "空のプロンプトに、現在の操作に合ったキーボードショートカットを表示します。例: 選択したコードの追加方法やプロンプトへの戻り方。",
   "settings.display.tokenThroughput.title": "トークンスループットを表示",
   "settings.display.tokenThroughput.description":
-    "最新のアシスタントメッセージとタスクヘッダーにテキスト生成速度（tokens/sec）を表示します。デフォルトで表示され、必要に応じてこの設定を無効にすると非表示にできます。",
+    "Display the text-generation rate (tokens/sec) on the latest assistant message footer. Shown by default; disable this setting to hide it when needed.",
   "settings.display.autoApprovalReason.title": "自動承認の理由を表示",
   "settings.display.autoApprovalReason.description":
     "ツール呼び出しが自動承認された理由（一致する権限ルールやエージェントのデフォルトなど）を表示します。",

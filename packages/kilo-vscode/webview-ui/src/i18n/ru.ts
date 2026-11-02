@@ -1328,7 +1328,7 @@ export const dict = {
     "Показывать в пустом поле запроса сочетание клавиш, подходящее к текущему действию, например как добавить выделенный код или вернуться к запросу.",
   "settings.display.tokenThroughput.title": "Показывать пропускную способность токенов",
   "settings.display.tokenThroughput.description":
-    "Показывать скорость генерации текста (tokens/sec) в последнем сообщении ассистента и в заголовке задачи. Показывается по умолчанию; отключите этот параметр, чтобы при необходимости скрыть её.",
+    "Display the text-generation rate (tokens/sec) on the latest assistant message footer. Shown by default; disable this setting to hide it when needed.",
   "settings.display.autoApprovalReason.title": "Показывать причину автоодобрения",
   "settings.display.autoApprovalReason.description":
     "Показывает, почему вызов инструмента был одобрен автоматически, например по совпавшему правилу разрешений или значению агента по умолчанию.",

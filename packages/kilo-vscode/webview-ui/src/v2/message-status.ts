@@ -32,6 +32,8 @@ export function turnTokensPerSecond(
   const index = messages.findIndex((item) => item.id === message.id)
   const end = index === -1 ? messages.length : index + 1
   const start = inputIndex(messages, end, legacyTurns(messages))
+  // The turn input is outside the loaded page, so a prefix slice would show a rate for only the tail.
+  if (start === -1) return undefined
   const steps = messages
     .slice(start + 1, end)
     .filter((item): item is SessionMessageAssistant => item.type === "assistant")
@@ -44,6 +46,43 @@ export function turnTokensPerSecond(
   if (output <= 0 || duration <= 0) return undefined
   // Aggregate before dividing so each step is weighted by its provider-active duration.
   return output / (duration / 1_000)
+}
+
+/**
+ * The footer metadata of the turn that contains `message`: the turn's terminal
+ * step drives the timing and rate, while the last text-bearing step carries them
+ * (as v1 `attachTiming`). Returns undefined until the terminal step completes.
+ */
+export function turnMetadata(
+  message: SessionMessageAssistant,
+  messages: readonly SessionMessageInfo[],
+): { carrierID: string; timing: { completedAt: number; durationMs?: number }; tokensPerSecond: number | undefined } | undefined {
+  const index = messages.findIndex((item) => item.id === message.id)
+  if (index === -1) return undefined
+  const legacy = legacyTurns(messages)
+  const start = inputIndex(messages, index + 1, legacy)
+  if (start === -1) return undefined
+  // Steers keep the turn open, so only an idle closes it. Legacy transcripts end at the next prompt.
+  let end = messages.length
+  for (let i = start + 1; i < messages.length; i++) {
+    const item = messages[i]
+    if (legacy ? item.type === "user" || item.type === "synthetic" : item.type === "idle") {
+      end = i
+      break
+    }
+  }
+  const steps = messages
+    .slice(start + 1, end)
+    .filter((item): item is SessionMessageAssistant => item.type === "assistant")
+  const terminal = steps.at(-1)
+  if (!terminal || terminal.time.completed === undefined || !terminalStep(terminal)) return undefined
+  const carrier = steps.findLast((step) => step.content.some((part) => part.type === "text" && !!part.text.trim()))
+  if (!carrier) return undefined
+  return {
+    carrierID: carrier.id,
+    timing: turnTiming(terminal, messages)!,
+    tokensPerSecond: turnTokensPerSecond(terminal, messages),
+  }
 }
 
 /** Format a text-generation rate, for example `1,166.2 t/s`. */

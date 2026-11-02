@@ -14,7 +14,7 @@ import { formatClock, formatDuration } from "../utils/message-time"
 import { useV2 } from "./client"
 import { tokenThroughputVisible } from "./kilo-settings"
 import { mcpServerFromError } from "./mcp-error"
-import { formatTokenThroughput, terminalStep, turnTiming, turnTokensPerSecond } from "./message-status"
+import { formatTokenThroughput, turnMetadata } from "./message-status"
 
 export function AssistantMessage(props: { message: SessionMessageAssistant; session: string }) {
   const v2 = useV2()
@@ -24,12 +24,14 @@ export function AssistantMessage(props: { message: SessionMessageAssistant; sess
   const copy = () =>
     done() ? props.message.content.findLastIndex((item) => item.type === "text" && !!item.text.trim()) : -1
   const messages = () => v2.data.session.message.list(props.session)
-  // Metadata shows only on a completed terminal step: an error or a real finish,
-  // not an intermediate tool-calls hand-off.
-  const settled = () => terminalStep(props.message) && props.message.time.completed !== undefined
-  const timing = createMemo(() => (settled() ? turnTiming(props.message, messages()) : undefined))
+  // The turn's terminal step drives the timing and rate; its last text-bearing
+  // step carries them, so an empty or error-terminal step still shows them on
+  // the earlier text row.
+  const metadata = createMemo(() => turnMetadata(props.message, messages()))
+  const isCarrier = () => metadata()?.carrierID === props.message.id
+  const timing = createMemo(() => (isCarrier() ? metadata()?.timing : undefined))
   const throughputValue = createMemo(() =>
-    settled() && tokenThroughputVisible() ? turnTokensPerSecond(props.message, messages()) : undefined,
+    isCarrier() && tokenThroughputVisible() ? metadata()?.tokensPerSecond : undefined,
   )
   const throughputEl = createMemo<JSX.Element | undefined>(() => {
     const value = throughputValue()
