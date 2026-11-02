@@ -118,17 +118,16 @@ export const IGNORE_PATH_PATTERNS: Partial<Record<LanguageName, RegExp[]>> = {
 }
 
 export async function getParserForFile(filepath: string) {
+  // Resolve the language first: a parser waits on a wasm module, so do not allocate one for files whose grammar is
+  // not installed.
+  const language = await getLanguageForFile(filepath).catch(() => undefined)
+  if (!language) {
+    return undefined
+  }
   try {
     await Parser.init()
     const parser = new Parser()
-
-    const language = await getLanguageForFile(filepath)
-    if (!language) {
-      return undefined
-    }
-
     parser.setLanguage(language)
-
     return parser
   } catch (e) {
     console.error("Unable to load language for file", filepath, e)
