@@ -22,6 +22,7 @@ function setup(input: {
   connect?: () => Promise<Generate>
   generate?: Generate
   cancel?: boolean
+  timeout?: number
 }) {
   const record = {
     errors: [] as string[],
@@ -69,7 +70,7 @@ function setup(input: {
     language: () => "de",
     connect: input.connect ?? (async () => generate),
   }
-  return { command: commitMessageCommand(host), record }
+  return { command: commitMessageCommand(host, input.timeout), record }
 }
 
 describe("generate commit message command", () => {
@@ -143,6 +144,23 @@ describe("generate commit message command", () => {
     })
     await command()
     expect(record.errors).toEqual(["No changes found to generate a commit message for"])
+    expect(repo.inputBox.value).toBe("")
+  })
+
+  test("a generation that exceeds the timeout aborts the request and shows the timeout error", async () => {
+    const repo = repository("/repo")
+    const state: { signal?: AbortSignal } = {}
+    const { command, record } = setup({
+      repositories: [repo],
+      timeout: 5,
+      generate: (_input, signal) => {
+        state.signal = signal
+        return new Promise((_resolve, reject) => signal.addEventListener("abort", () => reject(new Error("aborted"))))
+      },
+    })
+    await command()
+    expect(state.signal?.aborted).toBe(true)
+    expect(record.errors).toEqual(["Commit message generation timed out. Please try again."])
     expect(repo.inputBox.value).toBe("")
   })
 

@@ -4,9 +4,9 @@
 import { OpenCode } from "@opencode/client"
 import { KiloCommitMessageRpc } from "@opencode/schema/kilocode/commit-message"
 import type { CancellationToken, Progress, ProgressLocation, ProgressOptions, SourceControl } from "vscode"
-import { normalizeLocale } from "../webview-ui/src/context/language-utils"
 import { local } from "./local"
 import type { Manager } from "./server"
+import { normalizeLocale } from "./shared/locale"
 
 /** The client-side limit: a little longer than the 30 seconds of the server, so the server can answer first. */
 export const TIMEOUT = 35_000
@@ -46,8 +46,11 @@ export interface CommitMessageHost {
   log?: (text: string) => void
 }
 
-/** The command handler. VS Code passes the source control of the clicked view title or input box. */
-export function commitMessageCommand(host: CommitMessageHost) {
+/**
+ * The command handler. VS Code passes the source control of the clicked view title or input box. `timeout` is the
+ * client-side limit in milliseconds.
+ */
+export function commitMessageCommand(host: CommitMessageHost, timeout = TIMEOUT) {
   // The last message per repository, so a second click asks for a different one.
   const last: { path?: string; message?: string } = {}
   return async (arg?: Pick<SourceControl, "rootUri">) => {
@@ -77,7 +80,7 @@ export function commitMessageCommand(host: CommitMessageHost) {
           const timer = setTimeout(() => {
             state.timedOut = true
             controller.abort()
-          }, TIMEOUT)
+          }, timeout)
           try {
             const result = await generate(
               {

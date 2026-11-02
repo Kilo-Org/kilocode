@@ -95,14 +95,15 @@ const CommitMessageTab: Component = () => {
           </Switch>
         </SettingsRow>
 
-        <Show when={expanded()}>
-          <div data-search-label={language.t("settings.commitMessage.prompt.title")} style={{ "padding-top": "8px" }}>
-            <div data-slot="settings-row-label-title" style={{ "margin-bottom": "4px" }}>
-              {language.t("settings.commitMessage.prompt.title")}
-            </div>
-            <div data-slot="settings-row-label-subtitle" style={{ "margin-bottom": "8px" }}>
-              {language.t("settings.commitMessage.prompt.description")}
-            </div>
+        {/* Mounted while collapsed too, so a search result for the prompt reveals this row. */}
+        <div data-search-label={language.t("settings.commitMessage.prompt.title")} style={{ "padding-top": "8px" }}>
+          <div data-slot="settings-row-label-title" style={{ "margin-bottom": "4px" }}>
+            {language.t("settings.commitMessage.prompt.title")}
+          </div>
+          <div data-slot="settings-row-label-subtitle" style={{ "margin-bottom": "8px" }}>
+            {language.t("settings.commitMessage.prompt.description")}
+          </div>
+          <Show when={expanded()}>
             <div style={{ "max-height": "300px", overflow: "auto" }}>
               <TextField
                 value={draft() ?? saved()}
@@ -114,8 +115,8 @@ const CommitMessageTab: Component = () => {
                 label={language.t("settings.commitMessage.prompt.title")}
               />
             </div>
-          </div>
-        </Show>
+          </Show>
+        </div>
       </div>
     </Card>
   )
