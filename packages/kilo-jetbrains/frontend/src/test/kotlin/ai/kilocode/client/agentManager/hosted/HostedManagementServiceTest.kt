@@ -1,6 +1,7 @@
 package ai.kilocode.client.agentManager.hosted
 
 import ai.kilocode.client.app.KiloAppService
+import ai.kilocode.rpc.dto.HostedIDs
 import ai.kilocode.rpc.dto.HostedWorkspaceDto
 import ai.kilocode.rpc.dto.HostedWorkspaceRefDto
 import ai.kilocode.rpc.dto.KiloAppStateDto
@@ -63,18 +64,34 @@ class HostedManagementServiceTest : BasePlatformTestCase() {
     fun testClosedChildrenAndSelectionPersistIndependently() {
         val management = project.service<HostedManagementService>()
         management.refreshScope()
+        val two = HostedIDs.session(ref.providerID, ref.workspaceID, "ses_two")
         management.close(ref, "ses_one")
         management.close(ref, "ses_two")
         management.reopen(ref, "ses_one")
-        management.select(ref, "ses_two")
+        management.select(ref, two)
 
         assertEquals(setOf("ses_two"), management.closed(ref))
-        assertEquals("ses_two", management.selected(ref))
+        assertEquals(two, management.selected(ref))
         assertTrue(management.pendingDelete(ref) == false)
 
         management.markPendingDelete(ref)
         assertTrue(management.pendingDelete(ref))
         management.clearDelete(ref)
         assertFalse(management.pendingDelete(ref))
+    }
+
+    fun testClosingBackgroundChildKeepsTheSelectedSession() {
+        val management = project.service<HostedManagementService>()
+        management.refreshScope()
+        val selected = HostedIDs.session(ref.providerID, ref.workspaceID, "ses_one")
+        management.select(ref, selected)
+
+        management.close(ref, "ses_two")
+
+        assertEquals(selected, management.selected(ref))
+        assertEquals(setOf("ses_two"), management.closed(ref))
+
+        management.close(ref, "ses_one")
+        assertEquals(null, management.selected(ref))
     }
 }

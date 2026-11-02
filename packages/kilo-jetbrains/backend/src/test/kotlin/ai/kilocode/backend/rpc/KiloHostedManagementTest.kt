@@ -65,7 +65,7 @@ class KiloHostedManagementTest {
             repository = HostedRepositoryDto("github", repo = "Kilo-Org/kilocode", branch = "main"),
             profileID = "00000000-0000-4000-8000-000000000001",
             prompt = "Build it",
-            agent = HostedAgentDto("code", "kilo/kilo-auto/free"),
+            agent = HostedAgentDto("code", "kilo/kilo-auto/free", "high"),
             operationKey = "00000000-0000-4000-8000-000000000002",
             messageID = "msg_create",
         )
@@ -77,22 +77,25 @@ class KiloHostedManagementTest {
         assertEquals("github", createBody["repository"]?.jsonObject?.get("type")?.jsonPrimitive?.content)
         assertEquals("Kilo-Org/kilocode", createBody["repository"]?.jsonObject?.get("repo")?.jsonPrimitive?.content)
         assertEquals("00000000-0000-4000-8000-000000000001", createBody["profile"]?.jsonObject?.get("id")?.jsonPrimitive?.content)
+        assertEquals("high", createBody["agent"]?.jsonObject?.get("variant")?.jsonPrimitive?.content)
         assertEquals("msg_create", createBody["messageID"]?.jsonPrimitive?.content)
 
         val start = api.startWorkspaceSession(
             ref,
             HostedStartSessionDto(
                 prompt = "Another",
-                agent = HostedAgentDto("code", "kilo/kilo-auto/free"),
+                agent = HostedAgentDto("code", "kilo/kilo-auto/free", "low"),
                 operationKey = "00000000-0000-4000-8000-000000000003",
                 messageID = "msg_start",
             ),
         )
         assertEquals(HostedIDs.session("cloud", "wrk_1", "ses_cloud_2"), start.session?.id)
+        val startBody = Json.parseToJsonElement(assertNotNull(mock.lastHostedStartBody)).jsonObject
         assertEquals(
             setOf("prompt", "agent", "operationKey", "messageID"),
-            Json.parseToJsonElement(assertNotNull(mock.lastHostedStartBody)).jsonObject.keys,
+            startBody.keys,
         )
+        assertEquals("low", startBody["agent"]?.jsonObject?.get("variant")?.jsonPrimitive?.content)
 
         val status = api.workspaceStatus(ref, null)
         assertEquals("active", status.deletionState)
@@ -101,6 +104,19 @@ class KiloHostedManagementTest {
 
         val deleted = api.deleteWorkspace(ref, null)
         assertTrue(deleted.success)
+        assertTrue(mock.lastHostedDeletePath.orEmpty().startsWith("/kilocode/session-host/workspace/cloud/wrk_1"))
+    }
+
+    @Test
+    fun `delete treats a missing workspace as already removed`() = runBlocking(Dispatchers.Default) {
+        mock.hostedManagementStatus = 404
+        val app = app(TestLog())
+        ready(app)
+
+        val deleted = KiloHostedRpcApiImpl(app).deleteWorkspace(ref, null)
+
+        assertTrue(deleted.success)
+        assertNull(deleted.failure)
         assertTrue(mock.lastHostedDeletePath.orEmpty().startsWith("/kilocode/session-host/workspace/cloud/wrk_1"))
     }
 

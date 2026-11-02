@@ -1,6 +1,7 @@
 package ai.kilocode.client.agentManager.hosted
 
 import ai.kilocode.client.app.KiloAppService
+import ai.kilocode.rpc.dto.HostedIDs
 import ai.kilocode.rpc.dto.HostedWorkspaceDto
 import ai.kilocode.rpc.dto.HostedWorkspaceRefDto
 import com.intellij.openapi.components.Service
@@ -84,7 +85,13 @@ class HostedManagementService internal constructor(
 
     fun close(ref: HostedWorkspaceRefDto, sessionID: String) {
         val closed = current().closed + (ref.key to (closed(ref) + sessionID))
-        write(current().copy(closed = closed, selected = current().selected - ref.key))
+        val key = current().selected[ref.key]
+        val selected = if (key == HostedIDs.session(ref.providerID, ref.workspaceID, sessionID)) {
+            current().selected - ref.key
+        } else {
+            current().selected
+        }
+        write(current().copy(closed = closed, selected = selected))
     }
 
     fun reopen(ref: HostedWorkspaceRefDto, sessionID: String) {

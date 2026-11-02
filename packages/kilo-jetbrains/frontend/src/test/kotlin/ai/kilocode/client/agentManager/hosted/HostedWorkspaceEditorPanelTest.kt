@@ -60,6 +60,7 @@ import com.intellij.ui.SimpleTextAttributes
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.CompletableDeferred
 import java.awt.Component
 import java.awt.Container
 import java.awt.event.ActionEvent
@@ -320,6 +321,23 @@ class HostedWorkspaceEditorPanelTest : BasePlatformTestCase() {
         } })
     }
 
+    fun testSignedOutResetDiscardsAnInFlightReload() {
+        val gate = CompletableDeferred<Unit>()
+        rpc.gate = gate
+        val before = rpc.statusCalls
+        val reads = rpc.workspaceCalls
+        rpc.list = HostedWorkspaceListDto(signedOut = true)
+
+        hosted.refresh("/signed-out")
+        assertTrue(coroutines.pumpUntil { rpc.workspaceCalls > reads })
+        assertTrue(coroutines.pumpUntil { hosted.state.value.signedOut })
+        gate.complete(Unit)
+        assertTrue(coroutines.pumpUntil { rpc.statusCalls > before })
+        edtWait {}
+        edtWait {}
+        edtWait { assertEquals(0, descendants(panel).filterIsInstance<JBList<*>>().single().model.size) }
+    }
+
     fun testWorkspaceHeaderPullsBranchAndCustomNameFromWorkspaceMetadata() {
         val title = edtWait { descendants(panel).filterIsInstance<SimpleColoredComponent>().first() }
         edtWait { assertEquals("feature/cloud", title.getCharSequence(true).toString()) }
@@ -375,6 +393,8 @@ class HostedWorkspaceEditorPanelTest : BasePlatformTestCase() {
         var collectors = 0
         var active = 0
         var workspaceCalls = 0
+        var statusCalls = 0
+        var gate: CompletableDeferred<Unit>? = null
         var name: String? = null
         var list = HostedWorkspaceListDto()
         var rootSessions = listOf(
@@ -385,10 +405,13 @@ class HostedWorkspaceEditorPanelTest : BasePlatformTestCase() {
         override suspend fun workspaces(repositoryUrl: String?, cursor: String?, organizationID: String?) = list
         override suspend fun workspace(ref: HostedWorkspaceRefDto, sessionCursor: String?, organizationID: String?): HostedWorkspaceDto {
             workspaceCalls++
+            gate?.await()
             return HostedWorkspaceDto(ref, name = name, branch = "feature/cloud", sessions = rootSessions)
         }
-        override suspend fun workspaceStatus(ref: HostedWorkspaceRefDto, organizationID: String?) =
-            HostedWorkspaceStatusDto(ref, "active", "sleeping", "sandbox_stopped", 100.0, rateMicrodollarsPerHour = 1_200_000)
+        override suspend fun workspaceStatus(ref: HostedWorkspaceRefDto, organizationID: String?): HostedWorkspaceStatusDto {
+            statusCalls++
+            return HostedWorkspaceStatusDto(ref, "active", "sleeping", "sandbox_stopped", 100.0, rateMicrodollarsPerHour = 1_200_000)
+        }
         override suspend fun workspaceProfiles(organizationID: String?) = HostedWorkspaceProfileListDto()
         override suspend fun createWorkspace(request: HostedCreateWorkspaceDto) = HostedMutationResultDto()
         override suspend fun startWorkspaceSession(ref: HostedWorkspaceRefDto, request: HostedStartSessionDto) =

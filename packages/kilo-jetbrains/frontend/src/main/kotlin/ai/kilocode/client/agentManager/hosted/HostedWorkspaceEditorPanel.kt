@@ -82,6 +82,7 @@ class HostedWorkspaceEditorPanel @RequiresEdt constructor(
     private var started = false
     private var loadGeneration = 0L
     private var identity: String? = null
+    private var signedOut = false
 
     init {
         project.service<WorktreeEditorMatchers>().register(HostedWorkspaceEditorMatcher)
@@ -117,6 +118,13 @@ class HostedWorkspaceEditorPanel @RequiresEdt constructor(
                 withContext(Dispatchers.Main) {
                     if (Disposer.isDisposed(this@HostedWorkspaceEditorPanel)) return@withContext
                     if (state.signedOut || !hosted.enabled()) {
+                        // The reset is authoritative only when entering the signed-out surface; a
+                        // later signed-in refresh publishes intermediate states that still carry
+                        // signedOut=true and must not invalidate the reload it started.
+                        if (!signedOut) {
+                            signedOut = true
+                            loadGeneration++
+                        }
                         observation?.let(Disposer::dispose)
                         observation = null
                         selected = null
@@ -125,6 +133,7 @@ class HostedWorkspaceEditorPanel @RequiresEdt constructor(
                         list.update(emptyList())
                         return@withContext
                     }
+                    signedOut = false
                     applyStatus()
                 }
             }
@@ -145,6 +154,7 @@ class HostedWorkspaceEditorPanel @RequiresEdt constructor(
                     val previous = identity
                     identity = key
                     if (previous == null || previous == key) return@withContext
+                    loadGeneration++
                     observation?.let(Disposer::dispose)
                     observation = null
                     selected = null
@@ -311,8 +321,7 @@ class HostedWorkspaceEditorPanel @RequiresEdt constructor(
 
     @RequiresEdt
     private fun newHostedSession() {
-        val sel = selection()
-        if (sel == null) {
+        val sel = hostedSelection(service<KiloAppService>()) ?: run {
             KiloNotifications.error(project, KiloBundle.message("hosted.workspace.create.noModel"))
             return
         }
@@ -320,16 +329,17 @@ class HostedWorkspaceEditorPanel @RequiresEdt constructor(
             this,
             dto.repositoryUrl.orEmpty(),
             emptyList(),
-            sel.first,
-            sel.second,
+            sel.agent,
+            sel.model,
             withWorkspace = false,
+            variant = sel.variant,
         )
         if (!dialog.showAndGet()) return
         val plan = dialog.plan() ?: return
         startHosted(
             HostedStartSessionDto(
                 prompt = plan.prompt,
-                agent = HostedAgentDto(plan.agent, plan.model),
+                agent = HostedAgentDto(plan.agent, plan.model, plan.variant),
                 operationKey = java.util.UUID.randomUUID().toString(),
                 messageID = "msg_" + java.util.UUID.randomUUID().toString().replace("-", ""),
             ),
@@ -352,7 +362,7 @@ class HostedWorkspaceEditorPanel @RequiresEdt constructor(
                     ) { startHosted(request) }
                     return@withContext
                 }
-                management.select(ref, session.nativeSessionID)
+                management.select(ref, session.id)
                 sessions = (sessions + session).distinctBy { it.id }
                 open(session, focus = true)
                 hosted.refresh(project.basePath.orEmpty())
@@ -380,6 +390,7 @@ class HostedWorkspaceEditorPanel @RequiresEdt constructor(
             withContext(Dispatchers.Main) {
                 if (Disposer.isDisposed(this@HostedWorkspaceEditorPanel)) return@withContext
                 if (!result.success) {
+                    management.clearDelete(ref)
                     KiloNotifications.error(
                         project,
                         KiloBundle.message("hosted.workspace.delete.failed"),
@@ -394,17 +405,6 @@ class HostedWorkspaceEditorPanel @RequiresEdt constructor(
                 hosted.refresh(project.basePath.orEmpty())
             }
         }
-    }
-
-    private fun selection(): Pair<String, String>? {
-        val app = service<KiloAppService>()
-        val config = app.state.value.config
-        val agent = config?.defaultAgent?.takeIf { it.isNotBlank() } ?: "code"
-        val model = app.models.value.model[agent]?.let { "${it.providerID}/${it.modelID}" }
-            ?: app.models.value.recent.firstOrNull()?.let { "${it.providerID}/${it.modelID}" }
-            ?: config?.model?.takeIf { it.isNotBlank() }
-            ?: return null
-        return agent to model
     }
 
     private inner class NewSessionAction : DumbAwareAction(

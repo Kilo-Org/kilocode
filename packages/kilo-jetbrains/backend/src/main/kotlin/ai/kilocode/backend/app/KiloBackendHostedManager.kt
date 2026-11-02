@@ -335,8 +335,10 @@ class KiloBackendHostedManager(
             val result = parseResult(response.body, request.messageID)
                 ?: return@withContext mutationFailure(response, "create workspace")
             val ref = HostedWorkspaceRefDto(result.provider, result.workspace)
-            val workspace = runCatching { workspace(ref, null, request.organizationID) }.getOrNull()
-                ?: HostedWorkspaceDto(ref)
+            val workspace = runCatching { workspace(ref, null, request.organizationID) }.getOrElse {
+                if (it is CancellationException) throw it
+                null
+            } ?: HostedWorkspaceDto(ref)
             val session = workspacesession(ref, result.session, workspace)
             HostedMutationResultDto(
                 workspace = workspace,
@@ -359,8 +361,10 @@ class KiloBackendHostedManager(
         if (response.code !in 200..299) return@withContext mutationFailure(response, "start session")
         val result = parseResult(response.body, request.messageID)
             ?: return@withContext mutationFailure(response, "start session")
-        val workspace = runCatching { workspace(ref, null, request.organizationID) }.getOrNull()
-            ?: HostedWorkspaceDto(ref)
+        val workspace = runCatching { workspace(ref, null, request.organizationID) }.getOrElse {
+            if (it is CancellationException) throw it
+            null
+        } ?: HostedWorkspaceDto(ref)
         HostedMutationResultDto(
             workspace = workspace,
             session = workspacesession(ref, result.session, workspace),
@@ -378,10 +382,19 @@ class KiloBackendHostedManager(
             organizationID?.let { append("?organizationID=").append(encode(it)) }
         }
         val response = control("DELETE", path, null)
-        if (response.code !in 200..299) return@withContext HostedDeleteResultDto(ref, failure = failure(response, "delete workspace"))
+        if (response.code !in 200..299) {
+            // Cloud already removed the workspace, so local attachments and statuses are stale.
+            if (response.code == 404) {
+                disposeWorkspace(ref)
+                return@withContext HostedDeleteResultDto(ref, success = true)
+            }
+            return@withContext HostedDeleteResultDto(ref, failure = failure(response, "delete workspace"))
+        }
         val root = parse(response.body)
         val success = root?.get("success")?.jsonPrimitive?.contentOrNull == "true"
         if (!success) {
+            // The request may have been dispatched before Cloud returned an unreadable body.
+            disposeWorkspace(ref)
             return@withContext HostedDeleteResultDto(
                 ref,
                 failure = HostedFailureDto("invalid_response", "Cloud did not confirm deletion", retryable = true),
@@ -1024,6 +1037,7 @@ class KiloBackendHostedManager(
         putJsonObject("agent") {
             put("mode", request.agent.mode)
             put("model", request.agent.model)
+            request.agent.variant?.takeIf { it.isNotBlank() }?.let { put("variant", it) }
         }
         put("operationKey", request.operationKey)
         put("messageID", request.messageID)
@@ -1035,6 +1049,7 @@ class KiloBackendHostedManager(
         putJsonObject("agent") {
             put("mode", request.agent.mode)
             put("model", request.agent.model)
+            request.agent.variant?.takeIf { it.isNotBlank() }?.let { put("variant", it) }
         }
         put("operationKey", request.operationKey)
         put("messageID", request.messageID)

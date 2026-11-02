@@ -2,8 +2,10 @@ package ai.kilocode.client.actions
 
 import ai.kilocode.client.agentManager.AgentManagerPanel
 import ai.kilocode.client.agentManager.SidePanelKeys
+import ai.kilocode.client.agentManager.SidePanelMode
 import ai.kilocode.client.agentManager.hosted.HostedWorkspaceDataKeys
 import ai.kilocode.client.app.KiloHostedService
+import ai.kilocode.client.plugin.KiloBundle
 import com.intellij.openapi.actionSystem.ActionUpdateThread
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
@@ -24,14 +26,22 @@ abstract class HostedWorkspaceAction : AnAction(), DumbAware {
 }
 
 class HostedAddWorkspaceAction : HostedWorkspaceAction() {
+    init {
+        templatePresentation.text = KiloBundle.message("action.Kilo.HostedWorkspace.AddExisting.text")
+        templatePresentation.description = KiloBundle.message("action.Kilo.HostedWorkspace.AddExisting.description")
+        templatePresentation.icon = KiloActionIcons.add
+    }
+
     override fun update(e: AnActionEvent) {
         val hosted = hosted(e)
         if (hosted == null) {
             e.presentation.isEnabledAndVisible = false
             return
         }
-        e.presentation.isVisible = hosted.enabled()
-        e.presentation.isEnabled = hosted.enabled() && hosted.state.value.items.isNotEmpty()
+        e.presentation.isVisible = hosted.enabled() &&
+            e.getData(SidePanelKeys.MODE) == SidePanelMode.AGENT_MANAGER
+        e.presentation.isEnabled = e.presentation.isVisible &&
+            hosted.state.value.items.isNotEmpty() && panel(e) != null
     }
 
     override fun actionPerformed(e: AnActionEvent) {
@@ -42,14 +52,22 @@ class HostedAddWorkspaceAction : HostedWorkspaceAction() {
 }
 
 class HostedCreateWorkspaceAction : HostedWorkspaceAction() {
+    init {
+        templatePresentation.text = KiloBundle.message("action.Kilo.HostedWorkspace.Create.text")
+        templatePresentation.description = KiloBundle.message("action.Kilo.HostedWorkspace.Create.description")
+        templatePresentation.icon = KiloActionIcons.add
+    }
+
     override fun update(e: AnActionEvent) {
         val hosted = hosted(e)
         if (hosted == null) {
             e.presentation.isEnabledAndVisible = false
             return
         }
-        e.presentation.isVisible = hosted.enabled()
-        e.presentation.isEnabled = hosted.enabled() && !hosted.state.value.repositoryUrl.isNullOrBlank()
+        e.presentation.isVisible = hosted.enabled() &&
+            e.getData(SidePanelKeys.MODE) == SidePanelMode.AGENT_MANAGER
+        e.presentation.isEnabled = e.presentation.isVisible &&
+            !hosted.state.value.repositoryUrl.isNullOrBlank() && panel(e) != null
     }
 
     override fun actionPerformed(e: AnActionEvent) {

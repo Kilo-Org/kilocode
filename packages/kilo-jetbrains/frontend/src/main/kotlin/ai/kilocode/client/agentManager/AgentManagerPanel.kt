@@ -32,6 +32,8 @@ import ai.kilocode.client.agentManager.hosted.HostedWorkspaceDialog
 import ai.kilocode.client.agentManager.hosted.HostedWorkspaceEditorKind
 import ai.kilocode.client.agentManager.hosted.HostedWorkspaceEditorMatcher
 import ai.kilocode.client.agentManager.hosted.HostedWorkspaceTitle
+import ai.kilocode.client.agentManager.hosted.hostedRepository
+import ai.kilocode.client.agentManager.hosted.hostedSelection
 import ai.kilocode.client.agentManager.hosted.hostedWorkspaceParams
 import ai.kilocode.client.agentManager.hosted.HostedWorkspaceRow
 import ai.kilocode.client.agentManager.hosted.HostedWorkspaceRowData
@@ -42,7 +44,6 @@ import ai.kilocode.client.agentManager.worktree.aggregateSessionActivity
 import ai.kilocode.rpc.dto.HostedAgentDto
 import ai.kilocode.rpc.dto.HostedCreateWorkspaceDto
 import ai.kilocode.rpc.dto.HostedIDs
-import ai.kilocode.rpc.dto.HostedRepositoryDto
 import ai.kilocode.rpc.dto.HostedStartSessionDto
 import ai.kilocode.rpc.dto.HostedWorkspaceDto
 import ai.kilocode.client.agentManager.worktree.normalizeWorktreePath
@@ -114,6 +115,7 @@ import com.intellij.openapi.ui.Messages
 import com.intellij.openapi.ui.popup.JBPopupFactory
 import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.vfs.VirtualFile
+import com.intellij.ui.SimpleListCellRenderer
 import com.intellij.util.concurrency.annotations.RequiresEdt
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.components.BorderLayoutPanel
@@ -336,15 +338,15 @@ class AgentManagerPanel(
             return
         }
         val management = target.service<HostedManagementService>()
-        val labels = items.map {
-            HostedWorkspaceTitle.text(it.name, it.branch, it.ref.workspaceID) +
-                if (management.excluded(it.ref)) " " + KiloBundle.message("hosted.workspace.add.hidden") else ""
-        }
-        JBPopupFactory.getInstance().createPopupChooserBuilder(labels)
+        JBPopupFactory.getInstance().createPopupChooserBuilder(items)
+            .setRenderer(
+                SimpleListCellRenderer.create("") { item ->
+                    HostedWorkspaceTitle.text(item.name, item.branch, item.ref.workspaceID) +
+                        if (management.excluded(item.ref)) " " + KiloBundle.message("hosted.workspace.add.hidden") else ""
+                },
+            )
             .setTitle(KiloBundle.message("hosted.workspace.add.title"))
-            .setItemChosenCallback { chosen ->
-                val index = labels.indexOf(chosen)
-                val item = items.getOrNull(index) ?: return@setItemChosenCallback
+            .setItemChosenCallback { item ->
                 management.restore(item.ref)
                 openHostedWorkspace(target, item)
                 sync()
@@ -374,7 +376,7 @@ class AgentManagerPanel(
                     KiloNotifications.error(target, KiloBundle.message("hosted.workspace.profiles.failed"), error.message)
                     return@edt
                 }
-                val sel = selection() ?: run {
+                val sel = hostedSelection(service<KiloAppService>()) ?: run {
                     KiloNotifications.error(target, KiloBundle.message("hosted.workspace.create.noModel"))
                     return@edt
                 }
@@ -382,17 +384,18 @@ class AgentManagerPanel(
                     anchor,
                     repo,
                     profiles.items,
-                    sel.first,
-                    sel.second,
+                    sel.agent,
+                    sel.model,
                     withWorkspace = true,
+                    variant = sel.variant,
                 )
                 if (!dialog.showAndGet()) return@edt
                 val plan = dialog.plan() ?: return@edt
                 val request = HostedCreateWorkspaceDto(
-                    repository = repository(repo, plan.branch),
+                    repository = hostedRepository(repo, plan.branch),
                     profileID = plan.profileID,
                     prompt = plan.prompt,
-                    agent = HostedAgentDto(plan.agent, plan.model),
+                    agent = HostedAgentDto(plan.agent, plan.model, plan.variant),
                     operationKey = java.util.UUID.randomUUID().toString(),
                     messageID = messageID(),
                 )
@@ -419,7 +422,7 @@ class AgentManagerPanel(
                     ) { createHosted(request) }
                     return@edt
                 }
-                target.service<HostedManagementService>().select(workspace.ref, session.nativeSessionID)
+                target.service<HostedManagementService>().select(workspace.ref, session.id)
                 openHostedWorkspace(target, workspace)
                 sync()
                 target.service<KiloHostedService>().refresh(controller.directory)
@@ -430,7 +433,7 @@ class AgentManagerPanel(
     @RequiresEdt
     internal fun newHostedSession(anchor: Component, workspace: HostedWorkspaceDto) {
         val target = project ?: return
-        val sel = selection() ?: run {
+        val sel = hostedSelection(service<KiloAppService>()) ?: run {
             KiloNotifications.error(target, KiloBundle.message("hosted.workspace.create.noModel"))
             return
         }
@@ -438,9 +441,10 @@ class AgentManagerPanel(
             anchor,
             workspace.repositoryUrl.orEmpty(),
             emptyList(),
-            sel.first,
-            sel.second,
+            sel.agent,
+            sel.model,
             withWorkspace = false,
+            variant = sel.variant,
         )
         if (!dialog.showAndGet()) return
         val plan = dialog.plan() ?: return
@@ -448,7 +452,7 @@ class AgentManagerPanel(
             workspace.ref,
             HostedStartSessionDto(
                 prompt = plan.prompt,
-                agent = HostedAgentDto(plan.agent, plan.model),
+                agent = HostedAgentDto(plan.agent, plan.model, plan.variant),
                 operationKey = java.util.UUID.randomUUID().toString(),
                 messageID = messageID(),
             ),
@@ -472,7 +476,7 @@ class AgentManagerPanel(
                     ) { startHosted(ref, request) }
                     return@edt
                 }
-                target.service<HostedManagementService>().select(ref, session.nativeSessionID)
+                target.service<HostedManagementService>().select(ref, session.id)
                 openHostedWorkspace(target, workspace)
                 sync()
                 target.service<KiloHostedService>().refresh(controller.directory)
@@ -528,6 +532,7 @@ class AgentManagerPanel(
             edt({ !target.isDisposed && !Disposer.isDisposed(this@AgentManagerPanel) }) {
                 val management = target.service<HostedManagementService>()
                 if (!result.success) {
+                    management.clearDelete(ref)
                     KiloNotifications.error(
                         target,
                         KiloBundle.message("hosted.workspace.delete.failed"),
@@ -549,31 +554,6 @@ class AgentManagerPanel(
                 sync()
                 target.service<KiloHostedService>().refresh(controller.directory)
             }
-        }
-    }
-
-    private fun selection(): Pair<String, String>? {
-        if (project == null) return null
-        val app = service<KiloAppService>()
-        val config = app.state.value.config
-        val agent = config?.defaultAgent?.takeIf { it.isNotBlank() } ?: "code"
-        val model = app.models.value.model[agent]?.let { "${it.providerID}/${it.modelID}" }
-            ?: app.models.value.recent.firstOrNull()?.let { "${it.providerID}/${it.modelID}" }
-            ?: config?.model?.takeIf { it.isNotBlank() }
-            ?: return null
-        return agent to model
-    }
-
-    private fun repository(url: String, branch: String?): HostedRepositoryDto {
-        val clean = url.removeSuffix(".git")
-        return when {
-            clean.contains("github.com") -> HostedRepositoryDto(
-                type = "github",
-                repo = clean.substringAfter("github.com/", clean),
-                branch = branch,
-            )
-            clean.contains("gitlab") -> HostedRepositoryDto(type = "gitlab", url = clean, branch = branch)
-            else -> HostedRepositoryDto(type = "git", url = clean, branch = branch)
         }
     }
 

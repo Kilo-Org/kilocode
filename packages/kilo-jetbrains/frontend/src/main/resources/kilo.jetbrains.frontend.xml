@@ -296,16 +296,6 @@
         <action id="Kilo.History"
                 class="ai.kilocode.client.actions.HistoryAction"/>
 
-        <!-- Declarative toolbar group for the Kilo tool window title bar -->
-        <group id="Kilo.ToolWindowToolbar">
-            <reference ref="Kilo.NewSession"/>
-            <reference ref="Kilo.NewWorktree"/>
-            <reference ref="Kilo.HostedWorkspace.AddExisting"/>
-            <reference ref="Kilo.HostedWorkspace.Create"/>
-            <reference ref="Kilo.History"/>
-            <reference ref="Kilo.Settings"/>
-        </group>
-
         <action id="Kilo.SendPrompt"
                 class="ai.kilocode.client.actions.SendPromptAction"
                 text="Send Prompt"

@@ -402,6 +402,39 @@ class KiloHostedServiceTest {
     }
 
     @Test
+    fun `refresh queued during a discovery replays after the in-flight run`() = runBlocking(Dispatchers.Default) {
+        val started = CompletableDeferred<Unit>()
+        val gate = CompletableDeferred<Unit>()
+        val calls = java.util.concurrent.atomic.AtomicInteger()
+        val rpc = object : KiloHostedRpcApi by FakeRpc() {
+            override suspend fun workspaces(
+                repositoryUrl: String?,
+                cursor: String?,
+                organizationID: String?,
+            ): HostedWorkspaceListDto {
+                if (calls.incrementAndGet() == 1) {
+                    started.complete(Unit)
+                    gate.await()
+                    return HostedWorkspaceListDto(listOf(workspace("old")))
+                }
+                return HostedWorkspaceListDto(listOf(workspace("fresh")))
+            }
+        }
+        val service = KiloHostedService(cs, rpc, gate = { true }, log = TestLog(), repo = { "repo" })
+
+        service.refresh("/repo")
+        withTimeout(WAIT) { started.await() }
+        service.refresh("/repo")
+        gate.complete(Unit)
+
+        val state = withTimeout(WAIT) {
+            service.state.first { !it.loading && it.items.singleOrNull()?.ref?.workspaceID == "wrk_fresh" }
+        }
+        assertEquals(2, calls.get())
+        assertEquals("wrk_fresh", state.items.single().ref.workspaceID)
+    }
+
+    @Test
     fun `live status is ordered independently from preparation and preserves billing`() = runBlocking {
         val ref = HostedWorkspaceRefDto("cloud", "wrk_1")
         val key = "${ref.key}:same"

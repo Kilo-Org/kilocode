@@ -157,6 +157,7 @@ data class HostedRepositoryDto(
 data class HostedAgentDto(
     val mode: String,
     val model: String,
+    val variant: String? = null,
 )
 
 @Serializable

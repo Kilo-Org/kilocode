@@ -18,6 +18,7 @@ internal data class HostedCreatePlan(
     val profileID: String,
     val agent: String,
     val model: String,
+    val variant: String?,
 )
 
 internal class HostedWorkspaceDialog(
@@ -27,6 +28,7 @@ internal class HostedWorkspaceDialog(
     private val agent: String,
     private val model: String,
     private val withWorkspace: Boolean,
+    private val variant: String? = null,
 ) : DialogWrapper(parent, false) {
     private val branch = JBTextField().apply {
         emptyText.text = KiloBundle.message("hosted.workspace.dialog.branch.placeholder")
@@ -77,6 +79,7 @@ internal class HostedWorkspaceDialog(
             profileID = selected,
             agent = mode.text.trim(),
             model = chosen.text.trim(),
+            variant = variant,
         )
         super.doOKAction()
     }

@@ -2,10 +2,16 @@ package ai.kilocode.client.app
 
 import ai.kilocode.log.KiloLog
 import ai.kilocode.rpc.KiloHostedRpcApi
+import ai.kilocode.rpc.dto.HostedCreateWorkspaceDto
+import ai.kilocode.rpc.dto.HostedDeleteResultDto
+import ai.kilocode.rpc.dto.HostedFailureDto
+import ai.kilocode.rpc.dto.HostedMutationResultDto
 import ai.kilocode.rpc.dto.HostedProviderDto
 import ai.kilocode.rpc.dto.HostedIDs
+import ai.kilocode.rpc.dto.HostedStartSessionDto
 import ai.kilocode.rpc.dto.HostedSystemEventDto
 import ai.kilocode.rpc.dto.HostedWorkspaceDto
+import ai.kilocode.rpc.dto.HostedWorkspaceProfileListDto
 import ai.kilocode.rpc.dto.HostedWorkspaceRefDto
 import ai.kilocode.rpc.dto.HostedWorkspaceSessionDto
 import ai.kilocode.rpc.dto.HostedWorkspaceStatusDto
@@ -120,7 +126,8 @@ class KiloHostedService internal constructor(
 
     @Volatile private var generation = 0L
     private val statusLimit = Semaphore(STATUS_CONCURRENCY)
-    private var requestedDir: String? = null
+    @Volatile private var requestedDir: String? = null
+    @Volatile private var queued: String? = null
     private val lock = Any()
     private class Watch(val ref: HostedWorkspaceRefDto, val session: String) {
         var owners = 0
@@ -169,12 +176,17 @@ class KiloHostedService internal constructor(
     fun refresh(directory: String) {
         if (!gate()) {
             ++generation
+            queued = null
             clear()
             _state.value = HostedState(enabled = false)
             return
         }
-        if (requestedDir == directory && _state.value.loading) return
+        if (requestedDir == directory && _state.value.loading) {
+            queued = directory
+            return
+        }
         requestedDir = directory
+        queued = null
         val run = ++generation
         _refreshes.value = run
         _state.update { it.copy(enabled = true, loading = true, error = null) }
@@ -238,8 +250,21 @@ class KiloHostedService internal constructor(
                 if (run != generation) return@launch
                 log.warn("hosted workspace discovery failed message=${e.message}", e)
                 _state.update { it.copy(loading = false, error = e.message ?: "Cloud workspaces unavailable") }
+            } finally {
+                if (run == generation) drain()
             }
         }
+    }
+
+    /**
+     * Runs a refresh requested while another discovery was in flight. The in-flight run cannot
+     * observe the newer identity without this replay, and superseding it without starting a new run
+     * would leave [HostedState.loading] stuck.
+     */
+    private fun drain() {
+        val next = queued ?: return
+        queued = null
+        refresh(next)
     }
 
     /** Loads the next workspace page, if the provider returned one. */
@@ -282,18 +307,40 @@ class KiloHostedService internal constructor(
     suspend fun workspace(ref: HostedWorkspaceRefDto): HostedWorkspaceDto =
         call { workspace(ref, null, null) }
 
-    suspend fun profiles(): ai.kilocode.rpc.dto.HostedWorkspaceProfileListDto = call { workspaceProfiles(null) }
+    suspend fun profiles(): HostedWorkspaceProfileListDto = try {
+        call { workspaceProfiles(null) }
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: Exception) {
+        HostedWorkspaceProfileListDto(error = failure(e, "Cloud profiles unavailable"))
+    }
 
-    suspend fun create(request: ai.kilocode.rpc.dto.HostedCreateWorkspaceDto): ai.kilocode.rpc.dto.HostedMutationResultDto =
+    suspend fun create(request: HostedCreateWorkspaceDto): HostedMutationResultDto = try {
         call { createWorkspace(request) }
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: Exception) {
+        HostedMutationResultDto(failure = failure(e, "Cloud workspace creation failed"))
+    }
 
     suspend fun start(
         ref: HostedWorkspaceRefDto,
-        request: ai.kilocode.rpc.dto.HostedStartSessionDto,
-    ): ai.kilocode.rpc.dto.HostedMutationResultDto = call { startWorkspaceSession(ref, request) }
+        request: HostedStartSessionDto,
+    ): HostedMutationResultDto = try {
+        call { startWorkspaceSession(ref, request) }
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: Exception) {
+        HostedMutationResultDto(failure = failure(e, "Cloud session start failed"))
+    }
 
-    suspend fun delete(ref: HostedWorkspaceRefDto): ai.kilocode.rpc.dto.HostedDeleteResultDto =
+    suspend fun delete(ref: HostedWorkspaceRefDto): HostedDeleteResultDto = try {
         call { deleteWorkspace(ref, null) }
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: Exception) {
+        HostedDeleteResultDto(ref, failure = failure(e, "Cloud workspace deletion failed"))
+    }
 
     /** All root sessions in one workspace, optionally reusing an already fetched first page. */
     suspend fun sessions(
@@ -569,6 +616,9 @@ class KiloHostedService internal constructor(
         val api = rpc
         return if (api != null) block(api) else durable { block(KiloHostedRpcApi.getInstance()) }
     }
+
+    private fun failure(e: Exception, message: String) =
+        HostedFailureDto("unavailable", e.message ?: message, retryable = true)
 
     private fun dedupe(items: List<HostedWorkspaceDto>): List<HostedWorkspaceDto> {
         val seen = LinkedHashMap<String, HostedWorkspaceDto>()
