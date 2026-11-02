@@ -45,6 +45,11 @@ export async function ensureFfmpegForTarget(target: string, bin: string): Promis
   }
 }
 
+/** False for a target with no helper package, such as win32-arm64; capture then needs a system FFmpeg. */
+export function hasFfmpegPackage(target: string): boolean {
+  return target in packages
+}
+
 export function currentFfmpegTarget(): string {
   const os = process.platform === "win32" ? "win32" : process.platform
   const arch = process.arch === "x64" ? "x64" : process.arch === "arm64" ? "arm64" : process.arch

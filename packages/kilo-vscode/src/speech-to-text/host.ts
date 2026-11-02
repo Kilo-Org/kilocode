@@ -37,6 +37,7 @@ export function createSpeechToTextHost(input: {
   const starts = new Map<string, Promise<boolean>>()
   const stopping = new Set<string>()
   let catalog: { server: string; at: number; models: SpeechToTextModelDef[] } | undefined
+  let active: string | undefined
 
   const target = async (): Promise<Target> => input.server.get()
 
@@ -88,6 +89,7 @@ export function createSpeechToTextHost(input: {
   }
 
   const start = (message: Start) => {
+    active = message.requestId
     const task = startSpeechCapture({
       requestId: message.requestId,
       model: message.model || "",
@@ -98,19 +100,24 @@ export function createSpeechToTextHost(input: {
     void task
       .then((started) => {
         starts.delete(message.requestId)
-        if (!started) return
+        if (!started) {
+          if (active === message.requestId) active = undefined
+          return
+        }
         if (stopping.has(message.requestId) || cancelled.has(message.requestId)) return
         input.post({ type: "speechToTextStarted", requestId: message.requestId })
       })
       .catch((err: unknown) => {
         starts.delete(message.requestId)
         stopping.delete(message.requestId)
+        if (active === message.requestId) active = undefined
         if (cancelled.delete(message.requestId)) return
         input.post({ type: "speechToTextError", error: messageOf(err, "Speech recording failed"), requestId: message.requestId })
       })
   }
 
   const stop = (message: Stop) => {
+    if (stopping.has(message.requestId)) return
     const ctrl = new AbortController()
     const ready = starts.get(message.requestId)?.catch(() => false) ?? Promise.resolve(true)
     aborts.set(message.requestId, ctrl)
@@ -127,6 +134,7 @@ export function createSpeechToTextHost(input: {
       .then((result) => {
         aborts.delete(message.requestId)
         stopping.delete(message.requestId)
+        if (active === message.requestId) active = undefined
         if (!result) return
         if (cancelled.delete(message.requestId)) return
         if (!result.ok && result.code === "cancelled") return
@@ -144,12 +152,14 @@ export function createSpeechToTextHost(input: {
       .catch((err: unknown) => {
         aborts.delete(message.requestId)
         stopping.delete(message.requestId)
+        if (active === message.requestId) active = undefined
         if (cancelled.delete(message.requestId)) return
         input.post({ type: "speechToTextError", error: messageOf(err, "Speech to text request failed"), requestId: message.requestId })
       })
   }
 
   const cancel = (message: Cancel) => {
+    if (active === message.requestId) active = undefined
     const ctrl = aborts.get(message.requestId)
     if (ctrl) {
       cancelled.add(message.requestId)
@@ -249,7 +259,18 @@ export function createSpeechToTextHost(input: {
     return false
   }
 
-  return { handle, postStatus, dispose: () => aborts.forEach((ctrl) => ctrl.abort()) }
+  return {
+    handle,
+    postStatus,
+    dispose: () => {
+      // A disposed webview cannot be relied on to send its cancel, so stop the microphone here.
+      if (active) cancel({ type: "speechToTextCancel", requestId: active })
+      for (const id of starts.keys()) {
+        if (id !== active) cancel({ type: "speechToTextCancel", requestId: id })
+      }
+      aborts.forEach((ctrl) => ctrl.abort())
+    },
+  }
 }
 
 function offline(remote: boolean): SpeechToTextStatus {
