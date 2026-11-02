@@ -184,6 +184,18 @@ describe("validateCustomProvider", () => {
     expect(output.result?.config.env).toEqual(["MY_KEY"])
   })
 
+  test("keeps the stored key when an edit puts the mask back", () => {
+    const output = validateCustomProvider({
+      ...base,
+      editing: true,
+      apiKeyTouched: true,
+      existingEnv: ["MY_KEY"],
+      form: form({ apiKey: MASKED_CUSTOM_PROVIDER_KEY }),
+    })
+    expect(output.result?.key).toBeUndefined()
+    expect(output.result?.config.env).toEqual(["MY_KEY"])
+  })
+
   test("drops the existing env when a real key is typed", () => {
     const output = validateCustomProvider({
       ...base,
@@ -351,6 +363,11 @@ describe("fetch models in the dialog", () => {
     expect(fetchKey({ apiKey: "{env:MY_KEY}", touched: false, providerID: "p" })).toEqual({ env: "MY_KEY" })
     expect(fetchKey({ apiKey: MASKED_CUSTOM_PROVIDER_KEY, touched: false, providerID: "p" })).toEqual({ providerID: "p" })
     expect(fetchKey({ apiKey: "", touched: false, providerID: "p" })).toEqual({ providerID: "p" })
+  })
+
+  test("treats the mask as the stored key even after an edit", () => {
+    expect(fetchKey({ apiKey: MASKED_CUSTOM_PROVIDER_KEY, touched: true, providerID: "p" })).toEqual({ providerID: "p" })
+    expect(fetchKey({ apiKey: MASKED_CUSTOM_PROVIDER_KEY, touched: true })).toEqual({})
   })
 
   test("sends no key for a cleared field, an invalid env name or a new provider without a key", () => {

@@ -11,7 +11,7 @@ import { Select } from "@kilocode/kilo-ui/select"
 import { Spinner } from "@kilocode/kilo-ui/spinner"
 import { TextField } from "@kilocode/kilo-ui/text-field"
 import { showToast } from "@kilocode/kilo-ui/toast"
-import { For, Show, createEffect, createMemo, createSignal, onCleanup } from "solid-js"
+import { For, Show, createEffect, createMemo, createSignal, on, onCleanup } from "solid-js"
 import { createStore } from "solid-js/store"
 import { useLanguage } from "../../context/language"
 import { getVSCodeAPI, useVSCode } from "../../context/vscode"
@@ -87,16 +87,19 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
    * the server's merged config has already substituted, so a save never writes a resolved secret into the file. The
    * merged value is the fallback, for example for the legacy `provider.<id>` spelling.
    */
-  function storedConfig(providerID: string): unknown {
+  function rawProvider(providerID: string): unknown {
     const source = config.source(["providers", providerID])
     const scopes: SettingsScope[] = source === "global" ? ["global", "project"] : ["project", "global"]
-    const raw = scopes
+    return scopes
       .map((scope) => {
         const providers = config.raw(scope).providers
         return providers && typeof providers === "object" ? (providers as Record<string, unknown>)[providerID] : undefined
       })
       .find((value) => value && typeof value === "object" && !Array.isArray(value))
-    return raw ?? config.value(["providers", providerID])
+  }
+
+  function storedConfig(providerID: string): unknown {
+    return rawProvider(providerID) ?? config.value(["providers", providerID])
   }
 
   const editing = () => !!props.existing
@@ -106,16 +109,29 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
     return credentials(integration).some((credential) => credential.method === "key")
   }
 
+  function nameOf(value: unknown, fallback: string | undefined) {
+    const name = (value as { name?: unknown } | undefined)?.name
+    return typeof name === "string" && name.trim() ? name : (fallback ?? "")
+  }
+
+  function packageOf(value: unknown): CustomProviderPackage {
+    const pkg = (value as { package?: unknown } | undefined)?.package
+    return isCustomProviderPackage(pkg) ? pkg : CUSTOM_PROVIDER_PACKAGE
+  }
+
+  /** The env vars of the provider's config, kept when an untouched key field is saved. */
+  function existingEnv(): string[] | undefined {
+    if (!props.existing) return
+    const env = (storedConfig(props.existing.providerID) as { env?: unknown } | undefined)?.env
+    return Array.isArray(env) ? env.filter((item): item is string => typeof item === "string") : undefined
+  }
+
   const initial = props.existing ? (storedConfig(props.existing.providerID) ?? props.existing.config) : undefined
-  const fields = (initial ?? {}) as { name?: unknown; package?: unknown; env?: unknown }
-  const existingEnv = Array.isArray(fields.env)
-    ? fields.env.filter((item): item is string => typeof item === "string")
-    : undefined
 
   const [form, setForm] = createStore({
     providerID: props.existing?.providerID ?? "",
-    name: typeof fields.name === "string" && fields.name.trim() ? fields.name : (props.existing?.name ?? ""),
-    package: (isCustomProviderPackage(fields.package) ? fields.package : CUSTOM_PROVIDER_PACKAGE) as CustomProviderPackage,
+    name: nameOf(initial, props.existing?.name),
+    package: packageOf(initial),
     baseURL: initBaseURL(initial),
     apiKey: props.existing ? initApiKey(initial, existingKey()) : "",
     models: initModels(initial),
@@ -197,6 +213,42 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
     }, DEBOUNCE_MS)
     onCleanup(() => clearTimeout(timer))
   })
+
+  // `config.raw` is empty until the host's configRead reply lands. A dialog opened before that starts from the merged
+  // config, where `{env:...}` is already substituted; re-read the raw value as soon as it arrives so Submit cannot
+  // write the resolved secret back. Only an untouched form is replaced.
+  const rawValue = createMemo(() => (props.existing ? rawProvider(props.existing.providerID) : undefined))
+  const snapshot = () =>
+    JSON.stringify([form.providerID, form.name, form.package, form.baseURL, form.apiKey, form.models, form.headers])
+  let initialSnapshot = snapshot()
+  let fromRaw = !props.existing || rawValue() !== undefined
+
+  createEffect(
+    on(rawValue, (value) => {
+      if (!props.existing || fromRaw) return
+      fromRaw = true
+      if (!value || snapshot() !== initialSnapshot) return
+      const pkg = packageOf(value)
+      const apiKey = initApiKey(value, existingKey())
+      const models = initModels(value)
+      const headers = initHeaders(value)
+      setForm({
+        name: nameOf(value, props.existing.name),
+        package: pkg,
+        baseURL: initBaseURL(value),
+        apiKey,
+        models,
+        headers,
+      })
+      setErrors("models", models.map(() => ({})))
+      setErrors("headers", headers.map(() => ({})))
+      initialSnapshot = snapshot()
+      // A base URL with a resolved env reference now differs, so restart the auto-fetch from the raw value.
+      setFetchPackage(pkg)
+      setFetchURL(initBaseURL(value))
+      setFetchKeyValue(apiKey)
+    }),
+  )
 
   function doFetch() {
     // Read every value before the request, so the reply handler does not subscribe to the store.
@@ -317,7 +369,7 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
       apiKeyTouched: apiTouched,
       disabledProviders: disabledIds(),
       existingProviderIDs: new Set(props.settings.integrations().map((item) => item.id)),
-      existingEnv,
+      existingEnv: existingEnv(),
     })
     setErrors("providerID", output.errors.providerID)
     setErrors("name", output.errors.name)
@@ -723,7 +775,7 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
                     </div>
                   </div>
 
-                  <Show when={models().length > 10}>
+                  <Show when={models().length > 10 || debouncedSearch().length > 0}>
                     <TextField
                       label={language.t("provider.custom.models.fetch.search")}
                       hideLabel

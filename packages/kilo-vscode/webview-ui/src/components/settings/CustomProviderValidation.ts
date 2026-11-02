@@ -229,11 +229,13 @@ export function validateCustomProvider(input: ValidateArgs): ValidateResult {
   const baseURL = input.form.baseURL.trim()
   const apiKey = input.form.apiKey.trim()
 
-  const rawEnv = input.apiKeyTouched ? parseEnvKey(apiKey) : undefined
-  const envError = input.apiKeyTouched && ENV_REF.test(apiKey) && !rawEnv ? INVALID_ENV : undefined
-  const key = input.apiKeyTouched && apiKey && !rawEnv ? apiKey : undefined
+  // An edit can put the mask back, for example with undo; the field then still means "the stored key".
+  const touched = input.apiKeyTouched && apiKey !== MASKED_CUSTOM_PROVIDER_KEY
+  const rawEnv = touched ? parseEnvKey(apiKey) : undefined
+  const envError = touched && ENV_REF.test(apiKey) && !rawEnv ? INVALID_ENV : undefined
+  const key = touched && apiKey && !rawEnv ? apiKey : undefined
   // A touched field replaces the stored env var; an untouched edit keeps the existing env and credential.
-  const env = rawEnv ? [rawEnv] : input.apiKeyTouched ? undefined : input.editing ? input.existingEnv : undefined
+  const env = rawEnv ? [rawEnv] : touched ? undefined : input.editing ? input.existingEnv : undefined
 
   const { idErr, existsErr } = checkProviderID(
     providerID,
@@ -365,6 +367,8 @@ export function fetchKey(input: { apiKey: string; touched: boolean; providerID?:
   const env = parseEnvKey(raw)
   if (env) return { env }
   if (ENV_REF.test(raw)) return {}
+  // The mask means "the stored key" even after an edit, for example with undo, so the mask is never sent as a key.
+  if (raw === MASKED_CUSTOM_PROVIDER_KEY) return input.providerID ? { providerID: input.providerID } : {}
   if (!input.touched) return input.providerID ? { providerID: input.providerID } : {}
   return raw ? { apiKey: raw } : {}
 }

@@ -20,9 +20,15 @@ export class FetchModelsError extends Error {
   }
 }
 
-/** `{baseURL}/models`, with surrounding spaces and trailing slashes of the base URL removed. */
+/**
+ * `{baseURL}/models`, with surrounding spaces and trailing slashes of the path removed. The path grows after the base
+ * URL path, so a query string (`?api-version=x`) stays a query, and a fragment is dropped.
+ */
 export function modelsURL(baseURL: string) {
-  return baseURL.trim().replace(/\/+$/, "") + "/models"
+  const url = new URL(baseURL.trim())
+  url.pathname = `${url.pathname.replace(/\/+$/, "")}/models`
+  url.hash = ""
+  return url.toString()
 }
 
 /** True when two base URLs differ only by surrounding spaces or trailing slashes. */
@@ -46,7 +52,14 @@ export async function fetchOpenAIModels(input: {
   }
   if (input.apiKey) headers["Authorization"] = `Bearer ${input.apiKey}`
 
-  const response = await fetch(modelsURL(input.baseURL), {
+  const target = (() => {
+    try {
+      return modelsURL(input.baseURL)
+    } catch {
+      throw new FetchModelsError("Invalid base URL")
+    }
+  })()
+  const response = await fetch(target, {
     method: "GET",
     headers,
     signal: AbortSignal.timeout(timeout),

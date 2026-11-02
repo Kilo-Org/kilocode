@@ -54,6 +54,19 @@ describe("modelsURL", () => {
     expect(modelsURL("http://localhost:11434")).toBe("http://localhost:11434/models")
   })
 
+  test("keeps a query string a query and drops the fragment", () => {
+    expect(modelsURL("https://api.example.com/v1?api-version=2024-01")).toBe(
+      "https://api.example.com/v1/models?api-version=2024-01",
+    )
+    expect(modelsURL("https://api.example.com/v1#frag")).toBe("https://api.example.com/v1/models")
+    expect(modelsURL("https://api.example.com/v1/?x=1#f")).toBe("https://api.example.com/v1/models?x=1")
+  })
+
+  test("reports a base URL that is not a URL", async () => {
+    const error = await failure(fetchOpenAIModels({ baseURL: "http://" }))
+    expect(error.message).toBe("Invalid base URL")
+  })
+
   test("compares base URLs without trailing slashes or spaces", () => {
     expect(sameBaseURL("https://example.com/v1", " https://example.com/v1/ ")).toBe(true)
     expect(sameBaseURL("https://example.com/v1", "https://example.com/v2")).toBe(false)
