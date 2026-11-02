@@ -13,10 +13,12 @@ describe("private JSON protocol files", () => {
       await ensureDir(runDir)
       await writeJson(file, { schemaVersion: 1 })
 
-      expect((await stat(runDir)).mode & 0o777).toBe(0o700)
-      expect((await stat(file)).mode & 0o777).toBe(0o600)
       expect(await readJson(file)).toEqual({ schemaVersion: 1 })
       expect((await readdir(runDir)).filter((name) => name.includes(".tmp"))).toEqual([])
+      if (process.platform !== "win32") {
+        expect((await stat(runDir)).mode & 0o777).toBe(0o700)
+        expect((await stat(file)).mode & 0o777).toBe(0o600)
+      }
     })
   })
 
