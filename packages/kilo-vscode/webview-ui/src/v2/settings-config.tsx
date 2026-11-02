@@ -19,7 +19,7 @@ import {
 import { parse as parseJsonc } from "jsonc-parser/lib/esm/main.js"
 import { unwrap } from "solid-js/store"
 import { showToast } from "@kilocode/kilo-ui/toast"
-import type { ConfigEdit, ConfigFileContent, ToHost, ToWebview } from "../../../src/protocol"
+import type { ConfigEdit, ConfigFileContent, ConfigPolicy, ToHost, ToWebview } from "../../../src/protocol"
 import { scopeOf } from "../../../src/config-aliases"
 import { getVSCodeAPI, useVSCode } from "../context/vscode"
 import { useLanguage } from "../context/language"
@@ -88,6 +88,7 @@ export function createSettingsConfig() {
   const post = (message: ToHost) => getVSCodeAPI().postMessage(message as never)
 
   const [files, setFiles] = createSignal<{ global?: ConfigFileContent; project?: ConfigFileContent }>({})
+  const [policy, setPolicy] = createSignal<ConfigPolicy>()
   const [settingsValues, setSettingsValues] = createSignal<Record<string, unknown>>(initialSettings())
   const [optimistic, setOptimistic] = createSignal<Optimistic[]>([])
   const [inflight, setInflight] = createSignal<{ path: string; token: number }[]>([])
@@ -104,6 +105,7 @@ export function createSettingsConfig() {
     if (message.type === "configLoaded") {
       if (message.error) toastError(message.error)
       setFiles({ global: message.global, project: message.project })
+      setPolicy(message.policy)
       filesReady.open()
       // Drop only the optimistic values the new file content now covers, so an in-flight edit keeps its value.
       setOptimistic((list) =>
@@ -213,6 +215,7 @@ export function createSettingsConfig() {
     entries,
     merged,
     raw,
+    policy,
     path,
     source,
     value,

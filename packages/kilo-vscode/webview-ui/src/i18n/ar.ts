@@ -259,6 +259,7 @@ export const dict = {
   "prompt.toast.promptSendFailed.title": "فشل إرسال الموجه",
 
   "mcp.status.connected": "متصل",
+  "mcp.status.pending": "جارٍ الاتصال",
   "mcp.status.failed": "فشل",
   "mcp.status.needs_auth": "يحتاج إلى مصادقة",
   "mcp.status.needs_registration": "يحتاج إلى تسجيل العميل",
@@ -1114,7 +1115,7 @@ export const dict = {
   "settings.agentBehaviour.mcp.timeout.catalog.title": "مهلة الكتالوج (مللي ثانية)",
   "settings.agentBehaviour.mcp.timeout.execution.title": "مهلة التنفيذ (مللي ثانية)",
   "settings.agentBehaviour.mcpEmpty":
-    "لم يتم تهيئة خوادم MCP. أضف خوادم MCP في kilo.jsonc، أو اطلب من الوكيل إضافتها لك.",
+    "لم يتم تهيئة خوادم MCP. أضف خوادم MCP في kilo2.json، أو اطلب من الوكيل إضافتها لك.",
   "settings.agentBehaviour.workflows.description":
     "سير العمل هي أوامر مخصصة محددة في التهيئة الخاصة بك أو في ملفات Markdown للأوامر. يمكنك تعيين نموذج ومتغير استدلال لكل سير عمل.",
   "settings.agentBehaviour.workflows.empty": "لم يتم العثور على أوامر مخصصة. أضف أوامر إلى kilo2.json أو إلى ملف Markdown في .kilo2/command.",

@@ -105,6 +105,7 @@ export function useSettingsSearch(opts: {
     move,
     choose,
     navigate,
+    reveal,
     select,
     results,
     searching,

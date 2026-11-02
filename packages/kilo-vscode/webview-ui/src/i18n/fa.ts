@@ -265,6 +265,7 @@ export const dict = {
   "prompt.toast.promptSendFailed.title": "ارسال پرامپت ناموفق بود",
 
   "mcp.status.connected": "متصل",
+  "mcp.status.pending": "در حال اتصال",
   "mcp.status.failed": "ناموفق",
   "mcp.status.needs_auth": "نیاز به احراز هویت",
   "mcp.status.needs_registration": "نیاز به ثبت کلاینت",
@@ -1082,7 +1083,7 @@ export const dict = {
   "settings.agentBehaviour.mcp.timeout.catalog.title": "مهلت فهرست (میلی‌ثانیه)",
   "settings.agentBehaviour.mcp.timeout.execution.title": "مهلت اجرا (میلی‌ثانیه)",
   "settings.agentBehaviour.mcpEmpty":
-    "هیچ سرور MCP پیکربندی نشده است. سرورهای MCP را در kilo.jsonc اضافه کنید، یا از agent بخواهید آن‌ها را برایتان اضافه کند.",
+    "هیچ سرور MCP پیکربندی نشده است. سرورهای MCP را در kilo2.json اضافه کنید، یا از agent بخواهید آن‌ها را برایتان اضافه کند.",
   "settings.agentBehaviour.workflows.description":
     "Workflow‌ها دستورات سفارشی هستند که در پیکربندی شما یا در فایل‌های Markdown دستورات تعریف شده‌اند. می‌توانید برای هر Workflow یک مدل و یک گونه استدلال تعیین کنید.",
   "settings.agentBehaviour.workflows.empty":

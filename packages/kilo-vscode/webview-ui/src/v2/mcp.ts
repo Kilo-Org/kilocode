@@ -129,6 +129,18 @@ export function createMcp() {
       .catch(() => undefined)
   }
 
+  async function remove(name: string, write: () => Promise<unknown>) {
+    mark(setRemoving, name, true)
+    try {
+      await write()
+      await sync()
+    } catch (error) {
+      v2.report(error)
+    } finally {
+      mark(setRemoving, name, false)
+    }
+  }
+
   async function reset(name: string) {
     const target = integration(name)
     mark(setResetting, name, true)
@@ -157,6 +169,7 @@ export function createMcp() {
     disconnect,
     signIn,
     cancel,
+    remove,
     reset,
   }
 }
