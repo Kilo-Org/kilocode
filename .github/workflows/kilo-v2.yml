@@ -247,6 +247,10 @@ jobs:
           GH_TOKEN: ${{ steps.committer.outputs.token || github.token }}
           GH_REPO: ${{ github.repository }}
         run: |
+          if [ "$HAS_MAINTAINER_APP" != "true" ]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          fi
           bot_prs() {
             gh api -X GET "repos/$GITHUB_REPOSITORY/pulls" \
               -f state=open -f base=v2 -f "head=$GITHUB_REPOSITORY_OWNER:progress-map-update" \
