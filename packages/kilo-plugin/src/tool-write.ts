@@ -1,3 +1,4 @@
+import { resolvePath } from "@opencode/core/file-access"
 import { fileDiff } from "@opencode/core/tool/plugin/file-diff"
 import { define } from "@opencode/plugin/effect/plugin"
 import { Bom } from "@opencode/util/bom"
@@ -15,7 +16,7 @@ type Output = { readonly target: string; readonly resource: string; readonly exi
  * the file header and in the diff viewer. The core tool returns no diff, so the file is read again here after
  * formatting, rather than reusing the permission preview, which describes the content before the formatter runs.
  *
- * Only a target inside the Location is read before the call, because that read runs before the tool's
+ * Only a target the tool treats as internal is read before the call, because that read runs before the tool's
  * external-directory approval.
  */
 export const KiloWriteToolPlugin = define<FSUtil.Service | Scope.Scope>({
@@ -27,8 +28,8 @@ export const KiloWriteToolPlugin = define<FSUtil.Service | Scope.Scope>({
         const execute = tool.execute
         tool.execute = (input: Input, context) =>
           Effect.gen(function* () {
-            const target = path.resolve(ctx.location.directory, input.path)
-            const before = FSUtil.contains(ctx.location.directory, target) ? yield* existing(fs, target) : undefined
+            const target = resolvePath(ctx.location.directory, input.path)
+            const before = internal(ctx.location, target) ? yield* existing(fs, target) : undefined
             const result = yield* execute(input, context)
             const output = result.output as Output | undefined
             if (before === undefined || output === undefined) return result
@@ -41,6 +42,18 @@ export const KiloWriteToolPlugin = define<FSUtil.Service | Scope.Scope>({
     )
   }),
 })
+
+/**
+ * The worktree is internal too, as in `FileAccess.resolve`, when it is a real directory rather than a filesystem
+ * root. Keeping the rule here avoids the Location-scoped FileAccess service, which the host does not give plugins.
+ */
+const internal = (location: { directory: string; project: { directory: string } }, target: string) => {
+  const worktree = path.resolve(location.project.directory)
+  return (
+    FSUtil.contains(location.directory, target) ||
+    (worktree !== path.parse(worktree).root && FSUtil.contains(worktree, target))
+  )
+}
 
 /** The current text, or an empty string when the write creates the file. */
 const existing = (fs: FSUtil.Interface, target: string) =>
