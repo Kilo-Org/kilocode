@@ -121,7 +121,7 @@ const mockVscode = {
       text: "",
       tooltip: "",
       color: undefined as unknown,
-      command: undefined as string | undefined,
+      command: undefined as unknown,
       show: noop,
       hide: noop,
       dispose: noop,
