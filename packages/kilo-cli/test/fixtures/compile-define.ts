@@ -2,7 +2,6 @@
 // one resolves. Pin the host libc the way `script/build.ts` does for release targets, so a compiled test binary uses
 // the native package that is installed for the running libc. Loader files are not a reliable signal: glibc hosts with
 // musl installed for static builds have them too.
-import { existsSync } from "node:fs"
 import path from "node:path"
 
 const hostLibc = process.platform === "linux" && !runningGlibc() ? "musl" : "glibc"
@@ -15,11 +14,17 @@ export const compileDefine = {
 function runningGlibc() {
   const report = process.report?.getReport() as { header?: Record<string, unknown> } | undefined
   if (report?.header && "glibcVersionRuntime" in report.header) return true
-  // Bun installs the native variant for the running libc, so the installed package is the next-best signal.
+  // Bun installs only the native variant of the running libc, as an optional dependency inside @opentui/core.
   if (installed("")) return true
   return !installed("-musl")
 }
 
 function installed(suffix: string) {
-  return existsSync(path.join(import.meta.dir, "../../node_modules/@opentui", `core-linux-${process.arch}${suffix}`))
+  try {
+    const core = path.dirname(Bun.resolveSync("@opentui/core/package.json", import.meta.dir))
+    Bun.resolveSync(`@opentui/core-linux-${process.arch}${suffix}/package.json`, core)
+    return true
+  } catch {
+    return false
+  }
 }
