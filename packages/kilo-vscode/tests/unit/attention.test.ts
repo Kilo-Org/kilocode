@@ -451,7 +451,7 @@ describe("attention defaults", () => {
     const properties = manifest.contributes.configuration.properties
 
     expect(properties["kilo-code.new.attention.enabled"]?.default).toBe(false)
-    expect(properties["kilo-code.new.attention.notifications"]?.default).toBe(false)
+    expect(properties["kilo-code.new.attention.notifications"]?.default).toBe(true)
     expect(properties["kilo-code.new.attention.OSNotifications"]?.default).toBe(false)
     expect(properties["kilo-code.new.attention.sound"]?.default).toBe("default")
     expect(properties["kilo-code.new.attention.sound"]?.enum).toEqual(["default", "system", ...CustomSoundIDs])

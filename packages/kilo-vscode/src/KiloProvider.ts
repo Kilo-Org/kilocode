@@ -3715,7 +3715,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       type: "notificationSettingsLoaded",
       settings: {
         attentionEnabled: attention.get<boolean>("enabled", false),
-        attentionNotifications: attention.get<boolean>("notifications", false),
+        attentionNotifications: attention.get<boolean>("notifications", true),
         attentionOSNotifications: attention.get<boolean>("OSNotifications", false),
         attentionSound: attention.get<string>("sound", "default"),
         osNotificationsAvailable: ["win32", "darwin", "linux"].includes(process.platform),
