@@ -12,7 +12,12 @@ export class ProtocolError extends Error {
 
 export async function ensureDir(dir: string, mode = 0o700) {
   await mkdir(dir, { recursive: true, mode })
-  await chmod(dir, mode)
+  await restrict(dir, mode)
+}
+
+async function restrict(target: string, mode: number) {
+  if (process.platform === "win32") return
+  await chmod(target, mode)
 }
 
 export async function writeJson(file: string, value: unknown, mode = 0o600) {
@@ -20,7 +25,7 @@ export async function writeJson(file: string, value: unknown, mode = 0o600) {
   const data = `${JSON.stringify(value, null, 2)}\n`
   const tmp = `${file}.${process.pid}.${randomUUID()}.tmp`
   await writeFile(tmp, data, { mode })
-  await chmod(tmp, mode)
+  await restrict(tmp, mode)
   await rename(tmp, file)
 }
 
