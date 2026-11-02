@@ -52,7 +52,8 @@
   word-break: break-all;
 }
 
-[data-slot="image-tool-note"] {
+[data-slot="image-tool-note"],
+[data-slot="image-tool-generating"] {
   font-size: var(--font-size-small);
   line-height: var(--line-height-normal);
   color: var(--text-weaker);

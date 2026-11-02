@@ -92,6 +92,21 @@ test("an unnamed image without a prompt falls back to the card title", async () 
   expect(button.querySelector("img")?.getAttribute("alt")).toBe("Image")
 })
 
+test("a pending image call shows the generating state instead of a saved path", async () => {
+  const card = mountImage({
+    input: { prompt: "A cat on a mat" },
+    metadata: { path: "/repo/out/cat", model: "test/painter" },
+    status: "pending",
+    forceOpen: true,
+  })
+  const state = await waitFor(() => card.host.querySelector('[data-slot="image-tool-generating"]'))
+
+  expect(state.textContent).toBe("Generating image...")
+  expect(card.host.querySelector('[data-slot="image-tool-path"]')).toBeNull()
+  expect(card.host.querySelector('[data-slot="image-tool-note"]')).toBeNull()
+  expect(card.host.querySelector('[data-slot="image-tool-image-content"]')).toBeNull()
+})
+
 test("clicking a generated image opens the image preview", async () => {
   const card = mountImage({
     input: { prompt: "A cat on a mat" },

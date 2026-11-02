@@ -4,6 +4,7 @@ import { useDialog } from "../../context/dialog"
 import { BasicTool } from "../basic-tool"
 import { ImagePreview } from "../image-preview"
 import type { ToolProps } from "../message-part"
+import { busy } from "../tool-utils"
 
 const title = "Image"
 
@@ -34,38 +35,47 @@ export const ImageTool: Component<ToolProps> = (props) => {
       }}
     >
       <div data-component="image-tool">
-        <Show when={images().length}>
-          <div data-slot="image-tool-images">
-            <For each={images()}>
-              {(file) => (
-                <button
-                  type="button"
-                  data-slot="image-tool-image"
-                  onClick={() => preview(file)}
-                  aria-label={file.name || prompt() || title}
-                >
-                  <img
-                    data-slot="image-tool-image-content"
-                    src={file.uri}
-                    alt={file.name || prompt() || title}
-                    loading="lazy"
-                    decoding="async"
-                  />
-                </button>
-              )}
-            </For>
-          </div>
-        </Show>
-        <Show when={path()}>
-          <div data-slot="image-tool-path">{path()}</div>
-        </Show>
-        <Show when={model()}>
-          <div data-slot="image-tool-model">{model()}</div>
-        </Show>
-        <Show when={!images().length && path()}>
-          <div data-slot="image-tool-note">
-            The image is generated in the background and saved with its format extension when the job finishes.
-          </div>
+        <Show
+          when={busy(props.status)}
+          fallback={
+            <>
+              <Show when={images().length}>
+                <div data-slot="image-tool-images">
+                  <For each={images()}>
+                    {(file) => (
+                      <button
+                        type="button"
+                        data-slot="image-tool-image"
+                        onClick={() => preview(file)}
+                        aria-label={file.name || prompt() || title}
+                      >
+                        <img
+                          data-slot="image-tool-image-content"
+                          src={file.uri}
+                          alt={file.name || prompt() || title}
+                          loading="lazy"
+                          decoding="async"
+                        />
+                      </button>
+                    )}
+                  </For>
+                </div>
+              </Show>
+              <Show when={path()}>
+                <div data-slot="image-tool-path">{path()}</div>
+              </Show>
+              <Show when={model()}>
+                <div data-slot="image-tool-model">{model()}</div>
+              </Show>
+              <Show when={!images().length && path()}>
+                <div data-slot="image-tool-note">
+                  The image is generated in the background and saved with its format extension when the job finishes.
+                </div>
+              </Show>
+            </>
+          }
+        >
+          <div data-slot="image-tool-generating">Generating image...</div>
         </Show>
       </div>
     </BasicTool>
