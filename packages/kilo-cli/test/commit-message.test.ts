@@ -31,6 +31,9 @@ const generate = makeLocationNode({
           ? Effect.fail(new Generate.UnavailableError({ message: answer.error }))
           : Effect.succeed(answer.text)
       },
+      // The commit message path only needs text.
+      image: () => Effect.die("image is not used by the commit message"),
+      decisions: () => Effect.die("decisions are not used by the commit message"),
     }),
   ),
   deps: [],
