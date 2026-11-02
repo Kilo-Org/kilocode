@@ -71,6 +71,23 @@ class ActiveTreeAnimationTest : BasePlatformTestCase() {
         assertEquals(1, timers.pending)
     }
 
+    fun `test overlay paint does not install the renderer in a cell renderer pane`() {
+        val tree = ActiveTree("")
+        tree.update(listOf(ActiveTreeNode(Row("row"))))
+        val view = attach(tree)
+        val entry = view.hierarchy.entries.getValue("row")
+        view.selectionModel.selectionPath = TreePath(entry.path)
+        val before = view.componentCount
+        val image = BufferedImage(maxOf(view.width, 1), maxOf(view.height, 1), BufferedImage.TYPE_INT_ARGB)
+        val graphics = image.createGraphics()
+        try {
+            view.regions.paint(graphics)
+        } finally {
+            graphics.dispose()
+        }
+        assertEquals(before, view.componentCount)
+    }
+
     fun `test clipped tree overlay never visits unrelated rows`() {
         val reads = mutableSetOf<Int>()
         val tree = ActiveTree("")

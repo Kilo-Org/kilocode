@@ -6,14 +6,15 @@ import ai.kilocode.client.ui.active.activeLayout
 import ai.kilocode.client.session.ui.PickerRow
 import com.intellij.ui.tree.ui.CustomBoundsTreeUI
 import com.intellij.ui.tree.ui.DefaultControl
+import com.intellij.util.concurrency.annotations.RequiresEdt
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.tree.TreeUtil
-import com.intellij.util.concurrency.annotations.RequiresEdt
+import java.awt.Component
+import java.awt.Graphics
 import java.awt.Point
 import java.awt.Rectangle
+import javax.swing.JComponent
 import javax.swing.tree.TreePath
-import javax.swing.SwingUtilities
-import java.awt.Graphics
 
 /** Uses the native delegate's painted bounds for both renderer layout and hit regions. */
 internal class ActiveTreeGeometry(private val view: ActiveTreeView, private val renderer: ActiveTreeRenderer) {
@@ -41,7 +42,7 @@ internal class ActiveTreeGeometry(private val view: ActiveTreeView, private val 
         if (frame == null || content == null || g.clipBounds?.intersects(frame) == false) return
         if (state.selectionColor != null) {
             surface.update(view.background, state.selectionColor, true, true)
-            SwingUtilities.paintComponent(g, surface, view, frame.x, frame.y, frame.width, frame.height)
+            paintLocal(g, surface, frame.x, frame.y, frame.width, frame.height)
         }
         val path = TreePath(entry.path)
         ActiveTreePainter.paint(
@@ -52,12 +53,29 @@ internal class ActiveTreeGeometry(private val view: ActiveTreeView, private val 
         val stamp = renderer.getTreeCellRendererComponent(
             view, entry, state.selected, view.isExpanded(path), !entry.allowsChildren, row, view.hasFocus(),
         )
-        // The stamp is also reused for hit testing. SwingUtilities.paintComponent does not validate
-        // it like the native tree renderer pane does, so lay it out in local coordinates first.
+        // The stamp is also reused for hit testing. Lay it out in local coordinates before painting.
+        // Do not use SwingUtilities.paintComponent here: it parents the stamp to a CellRendererPane
+        // that outlives this paint and keeps the renderer, tree, and host callbacks reachable.
         val cell = cell(entry)
         stamp.setBounds(0, 0, cell.width, cell.height)
         activeLayout(stamp)
-        SwingUtilities.paintComponent(g, stamp, view, cell.x, cell.y, cell.width, cell.height)
+        paintLocal(g, stamp, cell.x, cell.y, cell.width, cell.height)
+    }
+
+    private fun paintLocal(g: Graphics, component: Component, x: Int, y: Int, width: Int, height: Int) {
+        val buffered = component is JComponent && component.isDoubleBuffered
+        if (buffered) (component as JComponent).isDoubleBuffered = false
+        try {
+            component.setBounds(0, 0, width, height)
+            val local = g.create(x, y, width, height)
+            try {
+                component.paint(local)
+            } finally {
+                local.dispose()
+            }
+        } finally {
+            if (buffered) (component as JComponent).isDoubleBuffered = true
+        }
     }
 
     @RequiresEdt
