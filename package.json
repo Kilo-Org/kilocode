@@ -22,6 +22,7 @@
     "extension": "bun --cwd packages/kilo-vscode script/launch.ts",
     "extension:isolated": "bun --cwd packages/kilo-vscode script/launch.ts --isolated",
     "extension:isolated:clean": "bun --cwd packages/kilo-vscode script/launch.ts --isolated --clean",
+    "e2e:demo": "bun run --cwd packages/kilo-e2e demo",
     "dev-setup": "bun run --cwd packages/opencode --conditions=browser src/index.ts dev-setup",
     "dev:local": "bun run packages/opencode/script/dev-local.ts",
     "test:script:ci": "mkdir -p .artifacts/unit && bun test ./script --timeout 30000 --reporter=junit --reporter-outfile=.artifacts/unit/junit.xml"

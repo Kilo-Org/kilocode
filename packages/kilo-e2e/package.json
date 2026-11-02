@@ -1,0 +1,37 @@
+{
+  "$schema": "https://json.schemastore.org/package.json",
+  "name": "@kilocode/kilo-e2e",
+  "version": "7.8.25",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "description": "IDE-neutral end-to-end contracts, fixtures, evidence, and coordinator for Kilo clients",
+  "exports": {
+    ".": "./src/index.ts",
+    "./schema": "./src/schema.ts",
+    "./scenarios": "./src/scenarios.ts",
+    "./coordinator": "./src/coordinator.ts",
+    "./env": "./src/env.ts",
+    "./evidence": "./src/evidence.ts"
+  },
+  "files": [
+    "src",
+    "schema"
+  ],
+  "scripts": {
+    "typecheck": "tsgo --noEmit",
+    "test": "bun test --timeout 30000",
+    "test:ci": "mkdir -p .artifacts/unit && bun test --timeout 30000 --reporter=junit --reporter-outfile=.artifacts/unit/junit.xml",
+    "demo": "bun src/cli.ts demo",
+    "schema:generate": "bun script/generate-schema.ts",
+    "schema:check": "bun script/generate-schema.ts --check"
+  },
+  "dependencies": {
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@tsconfig/bun": "catalog:",
+    "@types/bun": "catalog:",
+    "@typescript/native-preview": "catalog:"
+  }
+}
