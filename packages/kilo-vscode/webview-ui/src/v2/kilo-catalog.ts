@@ -59,15 +59,20 @@ export function createKiloCatalog(input: {
     const read = ++state.read
     void rpc["catalog.status"]({}, { location: { directory: input.directory } }).then(
       (result) => read === state.read && setFailure(result.failure ?? undefined),
-      () => {},
+      // A failed read is not a reason to keep an older one on screen.
+      () => read === state.read && setFailure(undefined),
     )
   }
   createEffect(on(input.status, (status) => status === "connected" && refresh()))
   onCleanup(
     input.on(EVENT, (event) => {
-      const status = event.data as KiloGatewayRpc.CatalogStatus
-      ++state.read
-      setFailure(status.failure ?? undefined)
+      const status = event.data as KiloGatewayRpc.CatalogStatus | undefined
+      if (status?.failure) {
+        ++state.read
+        setFailure(status.failure)
+        return
+      }
+      refresh()
     }),
   )
   return failure
