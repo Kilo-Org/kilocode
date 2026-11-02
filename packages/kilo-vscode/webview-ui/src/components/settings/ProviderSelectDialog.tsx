@@ -123,7 +123,13 @@ const ProviderSelectDialog = (props: { settings: SettingsData; onLogin: () => vo
               </div>
               <Show when={item.id === KILO_PROVIDER_ID && kiloFailure()}>
                 {(failure) => (
-                  <span style={{ "font-size": "var(--kilo-font-size-12)", color: "var(--vscode-errorForeground)" }}>
+                  <span
+                    style={{
+                      "font-size": "var(--kilo-font-size-12)",
+                      color: "var(--vscode-errorForeground)",
+                      "text-align": "left",
+                    }}
+                  >
                     {failure()}
                   </span>
                 )}
