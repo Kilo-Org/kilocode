@@ -186,8 +186,19 @@ const decodeTranscriptionCatalog = Schema.decodeUnknownOption(TranscriptionCatal
 export { EmbeddingCatalog } from "./embedding-catalog.js"
 const decodeEmbeddingCatalog = Schema.decodeUnknownOption(EmbeddingCatalog)
 
+// `unauthenticated`: a team is selected but no Kilo credential is available. `organization_missing`: the account is no
+// longer a member of the selected team. `scope_conflict`: the token is scoped to another team than the selected one.
+// `personal_unavailable`: the account has no personal account and no team is selected.
 export interface Failure {
-  readonly kind: "unauthorized" | "network" | "schema" | "http" | "organization_missing"
+  readonly kind:
+    | "unauthorized"
+    | "unauthenticated"
+    | "network"
+    | "schema"
+    | "http"
+    | "organization_missing"
+    | "scope_conflict"
+    | "personal_unavailable"
   readonly status?: number
   readonly retryAfter?: number
 }

@@ -15,6 +15,7 @@ import type { IntegrationInfo } from "@opencode/client"
 import { Component, For, Show, createMemo, createSignal } from "solid-js"
 import { useLanguage } from "../../context/language"
 import type { SettingsData } from "../../v2/settings"
+import { failureMessage, failureNeedsSignIn } from "../../v2/kilo-catalog"
 import { useSettingsConfig } from "../../v2/settings-config"
 import CustomProviderDialog from "./CustomProviderDialog"
 import type { CustomProviderConfigValue } from "./CustomProviderValidation"
@@ -60,7 +61,13 @@ const ProvidersTab: Component<{ settings: SettingsData; onLogin: () => void }> =
   const kilo = createMemo(() => props.settings.integration(KILO_PROVIDER_ID))
   const kiloLoggedIn = createMemo(() => (kilo()?.connections.length ?? 0) > 0)
   // v2 reports a Kilo account that needs a new sign-in on the connection.
-  const kiloFailure = createMemo(() => kilo()?.connections.find((item) => item.status)?.status?.message)
+  const kiloNeedsAuth = createMemo(() => kilo()?.connections.find((item) => item.status)?.status?.message)
+  // The catalog reason wins over the connection message. Missing or rejected credentials offer the sign-in action.
+  const kiloFailure = createMemo(() => failureMessage(language.t, props.settings.kiloFailure()) ?? kiloNeedsAuth())
+  const kiloSignIn = createMemo(() => {
+    const failure = props.settings.kiloFailure()
+    return !kiloLoggedIn() || !!kiloNeedsAuth() || (!!failure && failureNeedsSignIn(failure))
+  })
 
   // The server's config documents are normalized: the legacy provider lists (`disabled_providers`,
   // `enabled_providers`) and `experimental.policies` already appear here as `policies`. A write to `policies` removes
@@ -271,7 +278,7 @@ const ProvidersTab: Component<{ settings: SettingsData; onLogin: () => void }> =
                 Kilo Gateway
               </span>
               <Show
-                when={kiloLoggedIn() && !kiloFailure()}
+                when={!kiloSignIn()}
                 fallback={
                   <Button size="small" variant="secondary" onClick={() => props.onLogin()}>
                     {language.t("common.signIn")}

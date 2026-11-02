@@ -282,6 +282,9 @@ export const dict = {
   "provider.failure.http": "提供方错误（HTTP {{status}}）。",
   "provider.failure.httpNoStatus": "提供方错误。",
   "provider.failure.schema": "提供方返回了意外的响应。",
+  "provider.failure.organizationMissing": "所选团队已不可用。请选择其他团队。",
+  "provider.failure.scopeConflict": "所选团队与你的 Kilo 令牌所属团队冲突。",
+  "provider.failure.personalUnavailable": "此账户没有个人账户。请选择一个团队。",
 
   "notification.permission.title": "需要权限",
   "notification.permission.titleSubagent": "需要权限（子代理）",

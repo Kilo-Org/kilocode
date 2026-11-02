@@ -9,6 +9,7 @@ import { commands, workspace, Uri, window, type ExtensionContext } from "vscode"
 import { KiloConfigFiles } from "@opencode/util/kilocode/config/files"
 import { applyConfigEdits, isKiloConfigFile, serialize } from "./config-file-edit"
 import { configPolicy, type PolicyDocument } from "./config-policy"
+import { fetchCustomProviderModels } from "./custom-provider-models"
 import { local } from "./local"
 import { candidateConfigFiles, chooseConfigFile, configDirectories } from "./open-config"
 import { resolveGlobalConfigDir, canonicalPath, matchConfigDocument } from "./settings-paths"
@@ -291,6 +292,21 @@ export function settingsHost(input: {
     }
     if (message.type === "openVSCodeSettings") {
       void commands.executeCommand("workbench.action.openSettings", message.query)
+      return true
+    }
+    if (message.type === "fetchCustomProviderModels") {
+      void (async () => {
+        // Resolve the config file here: the webview sends only the scope, never a path.
+        const files = message.scope ? await targets().catch(() => undefined) : undefined
+        input.post(
+          await fetchCustomProviderModels({
+            server: input.server,
+            directory: input.directory,
+            request: message,
+            configPath: message.scope ? files?.[message.scope] : undefined,
+          }),
+        )
+      })()
       return true
     }
     return false

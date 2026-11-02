@@ -304,6 +304,9 @@ export const dict = {
   "provider.failure.http": "Leverandørfeil (HTTP {{status}}).",
   "provider.failure.httpNoStatus": "Leverandørfeil.",
   "provider.failure.schema": "Uventet svar fra leverandøren.",
+  "provider.failure.organizationMissing": "Det valgte teamet er ikke lenger tilgjengelig. Velg et annet team.",
+  "provider.failure.scopeConflict": "Det valgte teamet er i konflikt med teamet til Kilo-tokenet ditt.",
+  "provider.failure.personalUnavailable": "Denne kontoen har ingen personlig konto. Velg et team.",
 
   "notification.permission.title": "Tillatelse påkrevd",
   "notification.permission.titleSubagent": "Tillatelse påkrevd (underagent)",

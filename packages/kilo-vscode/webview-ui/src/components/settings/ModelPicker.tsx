@@ -2,7 +2,9 @@
 // selected model has variants. `clearable` adds a clear control that calls `onChange` with undefined.
 import { Component, Show, createMemo } from "solid-js"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
+import { useLanguage } from "../../context/language"
 import { useV2 } from "../../v2/client"
+import { failureMessage } from "../../v2/kilo-catalog"
 import { ModelSelectorBase } from "../shared/ModelSelector"
 import { ThinkingSelectorBase } from "../shared/ThinkingSelector"
 
@@ -31,6 +33,7 @@ export interface ModelPickerProps {
 
 const ModelPicker: Component<ModelPickerProps> = (props) => {
   const v2 = useV2()
+  const language = useLanguage()
   const models = () => v2.data.location.model.list()
   const providers = () => v2.data.location.provider.list()
 
@@ -51,6 +54,7 @@ const ModelPicker: Component<ModelPickerProps> = (props) => {
           includeAutoSmall={props.includeAutoSmall}
           placeholder={props.clearLabel}
           label={props.modelLabel}
+          failure={failureMessage(language.t, v2.kiloFailure())}
           onSelect={(providerID, modelID) =>
             props.onChange(
               props.preserveVariantOnReselect && props.value?.providerID === providerID && props.value.modelID === modelID

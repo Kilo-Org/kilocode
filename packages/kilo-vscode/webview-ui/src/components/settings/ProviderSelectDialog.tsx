@@ -5,6 +5,7 @@ import { ProviderIcon } from "@kilocode/kilo-ui/provider-icon"
 import { Tag } from "@kilocode/kilo-ui/tag"
 import { Show, createMemo } from "solid-js"
 import { useLanguage } from "../../context/language"
+import { failureMessage } from "../../v2/kilo-catalog"
 import type { SettingsData } from "../../v2/settings"
 import { useSettingsConfig } from "../../v2/settings-config"
 import CustomProviderDialog from "./CustomProviderDialog"
@@ -21,6 +22,7 @@ type ProviderItem = {
 const ProviderSelectDialog = (props: { settings: SettingsData; onLogin: () => void }) => {
   const dialog = useDialog()
   const language = useLanguage()
+  const kiloFailure = createMemo(() => failureMessage(language.t, props.settings.kiloFailure()))
   const config = useSettingsConfig()
 
   const items = createMemo<ProviderItem[]>(() => {
@@ -119,6 +121,19 @@ const ProviderSelectDialog = (props: { settings: SettingsData; onLogin: () => vo
                   <Tag>{language.t("settings.providers.tag.custom")}</Tag>
                 </Show>
               </div>
+              <Show when={item.id === KILO_PROVIDER_ID && kiloFailure()}>
+                {(failure) => (
+                  <span
+                    style={{
+                      "font-size": "var(--kilo-font-size-12)",
+                      color: "var(--vscode-errorForeground)",
+                      "text-align": "left",
+                    }}
+                  >
+                    {failure()}
+                  </span>
+                )}
+              </Show>
             </div>
           </div>
         )}
