@@ -476,6 +476,13 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
     const result = validate()
     if (!result) return
 
+    // Without the raw files the form can only come from the merged config, where `{env:...}` and `{file:...}` are
+    // already substituted. Saving that would persist a secret, so refuse instead.
+    if (props.existing && !config.path("global") && !config.path("project")) {
+      showToast({ variant: "error", title: language.t("settings.saveBar.saveFailed") })
+      return
+    }
+
     setForm("saving", true)
     const scope: SettingsScope =
       config.source(props.existing ? ["providers", result.providerID] : ["providers"]) ?? "global"
