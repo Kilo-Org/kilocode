@@ -2,11 +2,9 @@
 // OpenAI-compatible endpoint. The webview never sees the server password or the audio bytes.
 import { mkdir, readFile, writeFile } from "node:fs/promises"
 import path from "node:path"
-import { env as vscodeEnv, type ExtensionContext } from "vscode"
 import { applyConfigEdits, configWriteQueue } from "../config-file-edit"
 import type { ToHost, ToWebview, SpeechToTextStatus } from "../protocol"
 import type { Manager } from "../server"
-import { resolveKiloProfile } from "../settings-paths"
 import type { Target } from "../relay"
 import { fetchGatewayModels, isGatewaySignedIn, transcriptionModels } from "./catalog"
 import { cancelSpeechCapture, prewarmSpeechCapture, startSpeechCapture, stopSpeechCapture } from "./capture"
@@ -22,16 +20,43 @@ type Save = { type: "speechToTextSave"; requestId: string; key: "base_url" | "ap
 
 const CATALOG_TTL = 60_000
 
+type Dependencies = {
+  start: typeof startSpeechCapture
+  stop: typeof stopSpeechCapture
+  cancel: typeof cancelSpeechCapture
+  prewarm: typeof prewarmSpeechCapture
+  readSettings: typeof readSpeechSettings
+  writeTarget: typeof globalSpeechWriteTarget
+  fetchModels: typeof fetchGatewayModels
+  signedIn: typeof isGatewaySignedIn
+  staticModels: typeof transcriptionModels
+  transcribe: typeof transcribeSpeech
+}
+
 export function createSpeechToTextHost(input: {
-  context: ExtensionContext
   server: Manager
   directory: string
+  remote: boolean
+  profile: string
   /** Settings sends the custom key back to its own view; the composer never receives it. */
   secrets?: boolean
+  deps?: Partial<Dependencies>
   post: (message: ToWebview) => void
 }) {
-  const remote = !!vscodeEnv.remoteName
-  const profile = resolveKiloProfile(input.context)
+  const deps: Dependencies = {
+    start: startSpeechCapture,
+    stop: stopSpeechCapture,
+    cancel: cancelSpeechCapture,
+    prewarm: prewarmSpeechCapture,
+    readSettings: readSpeechSettings,
+    writeTarget: globalSpeechWriteTarget,
+    fetchModels: fetchGatewayModels,
+    signedIn: isGatewaySignedIn,
+    staticModels: transcriptionModels,
+    transcribe: transcribeSpeech,
+    ...input.deps,
+  }
+  const { remote, profile } = input
   const aborts = new Map<string, AbortController>()
   const cancelled = new Set<string>()
   const starts = new Map<string, Promise<boolean>>()
@@ -44,20 +69,20 @@ export function createSpeechToTextHost(input: {
   const gatewayCatalog = async (target: Target, signal?: AbortSignal) => {
     if (catalog && catalog.server === target.url && Date.now() - catalog.at < CATALOG_TTL)
       return { models: catalog.models, error: undefined }
-    const result = await fetchGatewayModels(target, input.directory, signal)
+    const result = await deps.fetchModels(target, input.directory, signal)
     // Do not cache a failure: the next status request retries instead of showing the static list for a minute.
-    if (!result.ok) return { models: [...transcriptionModels()], error: result.error }
+    if (!result.ok) return { models: [...deps.staticModels()], error: result.error }
     catalog = { server: target.url, at: Date.now(), models: result.models }
     return { models: result.models, error: undefined }
   }
 
   const status = async (): Promise<SpeechToTextStatus> => {
-    const settings = await readSpeechSettings({ env: process.env, profile })
+    const settings = await deps.readSettings({ env: process.env, profile })
     if (settings.baseUrl)
       return resolveSpeechStatus({ settings, remote, signedIn: false, models: [], secrets: input.secrets })
     const server = await target()
     const [signedIn, found] = await Promise.all([
-      isGatewaySignedIn(server, input.directory),
+      deps.signedIn(server, input.directory),
       gatewayCatalog(server),
     ])
     return resolveSpeechStatus({
@@ -85,12 +110,12 @@ export function createSpeechToTextHost(input: {
   }
 
   const prewarm = () => {
-    void prewarmSpeechCapture().catch((err: unknown) => console.warn("[Kilo v2] Speech capture prewarm failed:", err))
+    void deps.prewarm().catch((err: unknown) => console.warn("[Kilo v2] Speech capture prewarm failed:", err))
   }
 
   const start = (message: Start) => {
     active = message.requestId
-    const task = startSpeechCapture({
+    const task = deps.start({
       requestId: message.requestId,
       model: message.model || "",
       language: message.language,
@@ -126,10 +151,10 @@ export function createSpeechToTextHost(input: {
     void ready
       .then(async (started) => {
         if (!started) return undefined
-        const audio = await stopSpeechCapture(message.requestId)
-        const settings = await readSpeechSettings({ env: process.env, profile })
+        const audio = await deps.stop(message.requestId)
+        const settings = await deps.readSettings({ env: process.env, profile })
         const server = await target()
-        return transcribeSpeech({ server, directory: input.directory, settings, audio, signal: ctrl.signal })
+        return deps.transcribe({ server, directory: input.directory, settings, audio, signal: ctrl.signal })
       })
       .then((result) => {
         aborts.delete(message.requestId)
@@ -176,7 +201,7 @@ export function createSpeechToTextHost(input: {
       stopping.delete(message.requestId)
       void ready
         .catch(() => false)
-        .then((started) => (started ? cancelSpeechCapture(message.requestId) : undefined))
+        .then((started) => (started ? deps.cancel(message.requestId) : undefined))
         .then(() => {
           cancelled.delete(message.requestId)
           input.post({ type: "speechToTextCancelled", requestId: message.requestId })
@@ -192,7 +217,7 @@ export function createSpeechToTextHost(input: {
       return
     }
 
-    void cancelSpeechCapture(message.requestId)
+    void deps.cancel(message.requestId)
       .then(() => input.post({ type: "speechToTextCancelled", requestId: message.requestId }))
       .catch((err: unknown) =>
         input.post({
@@ -205,7 +230,7 @@ export function createSpeechToTextHost(input: {
 
   const save = (message: Save) => {
     configWriteQueue(async () => {
-      const target = globalSpeechWriteTarget(process.env, profile)
+      const target = deps.writeTarget(process.env, profile)
       const existing = await readFile(target, "utf8").catch(() => "")
       const edits = [
         {
@@ -263,10 +288,12 @@ export function createSpeechToTextHost(input: {
     handle,
     postStatus,
     dispose: () => {
-      // A disposed webview cannot be relied on to send its cancel, so stop the microphone here.
-      if (active) cancel({ type: "speechToTextCancel", requestId: active })
+      // A disposed webview cannot be relied on to send its cancel, so stop the microphone here. Capture the id,
+      // because cancel() clears `active`.
+      const current = active
+      if (current) cancel({ type: "speechToTextCancel", requestId: current })
       for (const id of starts.keys()) {
-        if (id !== active) cancel({ type: "speechToTextCancel", requestId: id })
+        if (id !== current) cancel({ type: "speechToTextCancel", requestId: id })
       }
       aborts.forEach((ctrl) => ctrl.abort())
     },

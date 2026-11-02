@@ -16,6 +16,7 @@ import { bridge } from "./relay"
 import { saveImage } from "./save-image"
 import type { Manager } from "./server"
 import { effectiveFontSize, KILO_SETTING_KEYS, readKiloSettings, settingsHost } from "./settings-host"
+import { resolveKiloProfile } from "./settings-paths"
 import { promptKeybindings, watchKeybindings } from "./prompt-keybindings"
 import { createSpeechToTextHost } from "./speech-to-text/host"
 import { openToolFile, type ToolDiff } from "./tool-diff"
@@ -117,9 +118,10 @@ export function wire(input: {
   const post = (message: ToWebview) => void webview.postMessage(message)
   // Voice input is host-side: the microphone, the custom endpoint key and the Gateway RPC never reach the webview.
   const speech = createSpeechToTextHost({
-    context: input.context,
     server: input.server,
     directory: input.directory,
+    remote: !!env.remoteName,
+    profile: resolveKiloProfile(input.context),
     secrets: input.view === "settings",
     post,
   })

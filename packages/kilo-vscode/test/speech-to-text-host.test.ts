@@ -1,11 +1,11 @@
-import { afterAll, beforeEach, describe, expect, it, mock } from "bun:test"
+import { beforeEach, describe, expect, it } from "bun:test"
+import { createSpeechToTextHost } from "../src/speech-to-text/host"
 
 type Posted = Record<string, unknown> & { type: string }
 type Capture = {
   start: (input: { requestId: string; model: string; language?: string }) => Promise<boolean>
   stop: (requestId: string) => Promise<{ data: string; format: "m4a"; model: string; language?: string }>
   cancel: (requestId: string) => Promise<void>
-  prewarm: () => Promise<void>
 }
 type Transcribe = (input: {
   signal?: AbortSignal
@@ -18,35 +18,23 @@ const state = {
   transcribe: undefined as Transcribe | undefined,
 }
 
-const capture: Capture = {
-  start: (input) => state.capture?.start(input) ?? Promise.resolve(true),
-  stop: (id) => state.capture?.stop(id) ?? Promise.reject(new Error("no recording")),
-  cancel: (id) => state.capture?.cancel(id) ?? Promise.resolve(),
+const deps = {
+  start: (input: { requestId: string; model: string; language?: string }) =>
+    state.capture?.start(input) ?? Promise.resolve(true),
+  stop: (requestId: string) => state.capture?.stop(requestId) ?? Promise.reject(new Error("no recording")),
+  cancel: (requestId: string) => state.capture?.cancel(requestId) ?? Promise.resolve(),
   prewarm: () => Promise.resolve(),
+  readSettings: async () => state.settings,
+  writeTarget: () => "/tmp/kilo-speech-test.json",
+  fetchModels: async () => ({
+    ok: true as const,
+    models: [{ id: "gw/model", label: "Gateway Model", provider: "Kilo" }],
+  }),
+  signedIn: async () => state.signedIn,
+  staticModels: () => [{ id: "static/model", label: "Static Model", provider: "Kilo" }],
+  transcribe: (input: { signal?: AbortSignal }) =>
+    state.transcribe?.(input) ?? Promise.resolve({ ok: true as const, text: "default" }),
 }
-
-mock.module("vscode", () => ({ env: { remoteName: undefined } }))
-mock.module("../src/speech-to-text/capture", () => ({
-  startSpeechCapture: capture.start,
-  stopSpeechCapture: capture.stop,
-  cancelSpeechCapture: capture.cancel,
-  prewarmSpeechCapture: capture.prewarm,
-}))
-mock.module("../src/speech-to-text/catalog", () => ({
-  fetchGatewayModels: async () => ({ ok: true, models: [{ id: "gw/model", label: "Gateway Model", provider: "Kilo" }] }),
-  isGatewaySignedIn: async () => state.signedIn,
-  transcriptionModels: () => [{ id: "static/model", label: "Static Model", provider: "Kilo" }],
-}))
-mock.module("../src/speech-to-text/config", () => ({
-  readSpeechSettings: async () => state.settings,
-  globalSpeechWriteTarget: () => "/tmp/kilo-speech-test.json",
-}))
-mock.module("../src/speech-to-text/transcribe", () => ({
-  transcribeSpeech: (input: { signal?: AbortSignal }) =>
-    state.transcribe?.(input) ?? Promise.resolve({ ok: true, text: "default" }),
-}))
-
-const { createSpeechToTextHost } = await import("../src/speech-to-text/host")
 
 async function waitFor(check: () => boolean, label: string) {
   for (let i = 0; i < 100; i++) {
@@ -59,12 +47,11 @@ async function waitFor(check: () => boolean, label: string) {
 function setup() {
   const posted: Posted[] = []
   const host = createSpeechToTextHost({
-    context: {
-      extensionPath: "/nonexistent-extension",
-      globalStorageUri: { fsPath: "/nonexistent-storage" },
-    } as never,
     server: { get: async () => ({ url: "http://127.0.0.1:1", authorization: "Basic test" }) } as never,
     directory: "/repo",
+    remote: false,
+    profile: "/profile",
+    deps,
     post: (message) => posted.push(message as Posted),
   })
   const find = (type: string) => posted.filter((item) => item.type === type)
@@ -110,7 +97,6 @@ describe("speech host status", () => {
 describe("speech host recording", () => {
   it("acknowledges start and posts the transcript after stop", async () => {
     state.capture = {
-      ...capture,
       start: async () => true,
       stop: async (id) => ({ data: "AAAA", format: "m4a", model: id }),
       cancel: async () => {},
@@ -131,7 +117,6 @@ describe("speech host recording", () => {
     let started: (value: boolean) => void = () => {}
     let stops = 0
     state.capture = {
-      ...capture,
       start: () => new Promise((resolve) => (started = resolve)),
       stop: async (id) => {
         stops++
@@ -157,7 +142,6 @@ describe("speech host recording", () => {
     let resolveTranscribe: (value: { ok: true; text: string }) => void = () => {}
     let transcribing = false
     state.capture = {
-      ...capture,
       start: async () => true,
       stop: async (id) => ({ data: "AAAA", format: "m4a", model: id }),
       cancel: async () => {},
@@ -184,7 +168,6 @@ describe("speech host recording", () => {
 
   it("cancels an in-flight transcription without posting a result", async () => {
     state.capture = {
-      ...capture,
       start: async () => true,
       stop: async (id) => ({ data: "AAAA", format: "m4a", model: id }),
       cancel: async () => {},
@@ -214,7 +197,6 @@ describe("speech host recording", () => {
     let cancelled = 0
     let resolveStart: (value: boolean) => void = () => {}
     state.capture = {
-      ...capture,
       start: () => new Promise((resolve) => (resolveStart = resolve)),
       stop: async (id) => ({ data: "AAAA", format: "m4a", model: id }),
       cancel: async () => {
@@ -234,10 +216,32 @@ describe("speech host recording", () => {
     host.dispose()
   })
 
+  it("cancels a pending start exactly once on dispose", async () => {
+    let cancelled = 0
+    let resolveStart: (value: boolean) => void = () => {}
+    state.capture = {
+      start: () => new Promise((resolve) => (resolveStart = resolve)),
+      stop: async (id) => ({ data: "AAAA", format: "m4a", model: id }),
+      cancel: async () => {
+        cancelled++
+      },
+    }
+    const { host, find } = setup()
+
+    host.handle({ type: "speechToTextStart", requestId: "1", model: "custom" })
+    host.dispose()
+    resolveStart(true)
+    await waitFor(() => cancelled === 1, "capture cancel")
+    await new Promise((resolve) => setTimeout(resolve, 20))
+
+    expect(cancelled).toBe(1)
+    expect(find("speechToTextCancelled")).toHaveLength(1)
+    expect(find("speechToTextStarted")).toHaveLength(0)
+  })
+
   it("cancels an active recording on dispose", async () => {
     let cancelled = 0
     state.capture = {
-      ...capture,
       start: async () => true,
       stop: async (id) => ({ data: "AAAA", format: "m4a", model: id }),
       cancel: async () => {
@@ -252,5 +256,3 @@ describe("speech host recording", () => {
     await waitFor(() => cancelled === 1, "capture cancel")
   })
 })
-
-afterAll(() => mock.restore())
