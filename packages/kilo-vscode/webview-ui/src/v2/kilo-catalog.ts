@@ -66,6 +66,7 @@ export function createKiloCatalog(input: {
   onCleanup(
     input.on(EVENT, (event) => {
       const status = event.data as KiloGatewayRpc.CatalogStatus
+      ++state.read
       setFailure(status.failure ?? undefined)
     }),
   )

@@ -140,10 +140,6 @@
   background: var(--surface-hover);
 }
 
-[data-slot="task-tool-open"]:focus-visible {
-  outline: 1px solid var(--border-focus);
-}
-
 [data-slot="task-tool-background"] {
   flex-shrink: 0;
   padding: 0 6px;

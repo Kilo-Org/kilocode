@@ -8,7 +8,7 @@ import type { ToHost } from "../../../src/protocol"
 import { useLanguage } from "../context/language"
 import { getVSCodeAPI } from "../context/vscode"
 import { useV2 } from "./client"
-import { childTools } from "./child-session"
+import { childTools, createChildSessions } from "./child-session"
 import { SessionList } from "./history"
 import { TaskHeader } from "../components/chat/TaskHeader"
 import ProfileView from "../components/profile/ProfileView"
@@ -53,28 +53,13 @@ export function Chat() {
   }
 
   // Subagent cards read the child session's tools from the same store as the open session. Load a child's message
-  // history when its card first asks for it; later tool events update the loaded messages in place. The loaded set
-  // is bounded to the open session tree: leaving that tree evicts it, so a long-lived sidebar does not keep every
-  // child transcript it has ever expanded.
-  const loadedChildren = new Set<string>()
-  const hydrate = async (sessionID: string) => {
-    await v2.data.session.message.sync(sessionID)
-    for (let page = 0; page < 4 && v2.data.session.message.more(sessionID); page++) {
-      await v2.data.session.message.loadMore(sessionID)
-    }
-  }
-  const load = (sessionID: string) => {
-    if (loadedChildren.has(sessionID)) return
-    loadedChildren.add(sessionID)
-    void hydrate(sessionID).catch((error) => {
-      loadedChildren.delete(sessionID)
-      v2.report(error)
-    })
-  }
+  // history when its card first asks for it; later tool events update the loaded messages in place. Leaving a session
+  // tree releases every child loaded from it, so a long-lived sidebar does not keep every expanded child transcript.
+  const children = createChildSessions({ data: v2.data, report: v2.report })
   const childSessions: ToolChildSession = {
     tools: (sessionID) => childTools(v2.data.session.message.list(sessionID)),
     running: (sessionID) => v2.data.session.status(sessionID) === "running",
-    load,
+    load: children.load,
   }
   let previousSession: string | undefined
   createEffect(
@@ -83,11 +68,7 @@ export function Chat() {
       (id) => {
         const previous = previousSession
         previousSession = id
-        if (!id || !previous || previous === id) return
-        loadedChildren.clear()
-        // Opening a child or returning to its parent keeps the cached tree the card reads.
-        if (v2.data.session.root(id) === previous || v2.data.session.root(previous) === id) return
-        v2.data.session.evict(previous)
+        children.switchTo(id, previous)
       },
       { defer: true },
     ),
@@ -96,23 +77,12 @@ export function Chat() {
     on(
       v2.connection.status,
       (status) => {
-        if (status !== "connected") return
-        for (const id of loadedChildren) {
-          void hydrate(id).catch((error) => {
-            loadedChildren.delete(id)
-            v2.report(error)
-          })
-        }
+        if (status === "connected") void children.resync()
       },
       { defer: true },
     ),
   )
-  onCleanup(() => {
-    loadedChildren.clear()
-    const id = session()
-    if (id) v2.data.session.evict(id)
-  })
-
+  onCleanup(() => children.release())
   createEffect(
     on(session, (id) => {
       if (id) getVSCodeAPI().postMessage({ type: "trackCostSession", sessionID: id } satisfies ToHost as never)

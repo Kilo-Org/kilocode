@@ -8,3 +8,67 @@ export function childTools(messages: readonly SessionMessageInfo[]) {
       : [],
   )
 }
+
+type ChildSessionData = {
+  session: {
+    message: {
+      list: (sessionID: string) => readonly SessionMessageInfo[]
+      sync: (sessionID: string) => Promise<unknown>
+      more: (sessionID: string) => boolean
+      loadMore: (sessionID: string) => Promise<unknown>
+    }
+    status: (sessionID: string) => string | undefined
+    root: (sessionID: string) => string
+    evict: (sessionID: string) => void
+  }
+}
+
+/**
+ * Loads the child histories a subagent card asks for. The page cap keeps a long child transcript from paging without
+ * bound; leaving a session tree releases every child loaded from it.
+ */
+export function createChildSessions(input: {
+  data: ChildSessionData
+  report: (error: unknown) => void
+  pages?: number
+}) {
+  const loaded = new Set<string>()
+  const hydrate = async (sessionID: string) => {
+    await input.data.session.message.sync(sessionID)
+    for (let page = 0; page < (input.pages ?? 4) && input.data.session.message.more(sessionID); page++) {
+      await input.data.session.message.loadMore(sessionID)
+    }
+  }
+  const load = async (sessionID: string) => {
+    if (loaded.has(sessionID)) return
+    loaded.add(sessionID)
+    try {
+      await hydrate(sessionID)
+    } catch (error) {
+      loaded.delete(sessionID)
+      input.report(error)
+    }
+  }
+  const resync = () =>
+    Promise.all(
+      [...loaded].map(async (sessionID) => {
+        try {
+          await hydrate(sessionID)
+        } catch (error) {
+          loaded.delete(sessionID)
+          input.report(error)
+        }
+      }),
+    )
+  const release = () => {
+    const roots = new Set([...loaded].map((sessionID) => input.data.session.root(sessionID)))
+    loaded.clear()
+    for (const root of roots) input.data.session.evict(root)
+  }
+  const switchTo = (sessionID: string | undefined, previous: string | undefined) => {
+    if (!previous || previous === sessionID) return
+    if (sessionID !== undefined && input.data.session.root(sessionID) === input.data.session.root(previous)) return
+    release()
+  }
+  return { hydrate, load, resync, release, switchTo, loaded }
+}
