@@ -180,7 +180,7 @@ jobs:
       - name: Check generated map files in the PR
         if: github.event_name == 'pull_request'
         env:
-          BOT_PR: ${{ github.event.pull_request.user.login == 'github-actions[bot]' && github.event.pull_request.head.repo.full_name == github.repository && github.head_ref == 'progress-map-update' && github.base_ref == 'v2' }}
+          BOT_PR: ${{ github.event.pull_request.user.type == 'Bot' && github.event.pull_request.head.repo.full_name == github.repository && github.head_ref == 'progress-map-update' && github.base_ref == 'v2' }}
         run: |
           read -r -a paths <<< "$(bun script/upstream/progress.ts --outputs)"
           files=$(git diff --name-only --no-renames HEAD^1 HEAD -- "${paths[@]}")
@@ -193,7 +193,7 @@ jobs:
             exit 0
           fi
           if [ -n "$files" ]; then
-            echo "::error::Do not commit generated progress map files. Restore them with: git checkout origin/v2 -- ${paths[*]}"
+            echo "::error::Do not commit generated progress map files. Restore them with: git checkout HEAD -- ${paths[*]}"
             exit 1
           fi
 
@@ -228,41 +228,74 @@ jobs:
         with:
           bun-version-file: package.json
 
+      # A PR created with the workflow GITHUB_TOKEN does not start its own checks. The Kilo maintainer app
+      # token makes the bot PR a normal app-authored PR, so the `progress` guard runs on it. The action keeps
+      # its upstream input names; the values are the Kilo maintainer app secrets.
+      - name: Setup Git Committer
+        id: committer
+        uses: ./.github/actions/setup-git-committer
+        with:
+          opencode-app-id: ${{ secrets.KILO_MAINTAINER_APP_ID }}
+          opencode-app-secret: ${{ secrets.KILO_MAINTAINER_APP_SECRET }}
+
       - name: Open or update the progress map PR
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ steps.committer.outputs.token }}
           GH_REPO: ${{ github.repository }}
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          bot_pr() {
+          bot_prs() {
             gh api -X GET "repos/$GITHUB_REPOSITORY/pulls" \
               -f state=open -f base=v2 -f "head=$GITHUB_REPOSITORY_OWNER:progress-map-update" \
-              --jq '.[] | select(.user.login == "github-actions[bot]") | .number'
+              --jq '.[] | .number'
+          }
+          # Keep at most one open bot PR. The branch is fixed, so closing an old PR must not delete it.
+          close_stale_prs() {
+            keep="${1:-}"
+            bot_prs | while read -r number; do
+              [ -n "$number" ] || continue
+              [ "$number" = "$keep" ] && continue
+              gh pr close "$number" || true
+            done
           }
           # Queued runs all regenerate from the current v2 tip, not the push that started them.
           for attempt in 1 2 3; do
             git fetch --prune origin
             git reset --hard origin/v2
+            base_sha=$(git rev-parse HEAD)
+            cp migration-tracking/progress/progress.json base.json
             bun script/upstream/progress.ts
             read -r -a paths <<< "$(bun script/upstream/progress.ts --outputs)"
             git add -- "${paths[@]}"
             if git diff --cached --quiet; then
-              pr=$(bot_pr)
-              if [ -n "$pr" ]; then gh pr close "$pr"; fi
+              # A queued run can find the map already current. Close every older bot PR and leave none open.
+              close_stale_prs
               exit 0
             fi
-            git commit -m "chore(progress): regenerate the map"
-            if git push --force-with-lease origin HEAD:refs/heads/progress-map-update; then
-              pr=$(bot_pr)
-              if [ -z "$pr" ]; then
-                gh pr create --base v2 --head progress-map-update \
-                  --title "chore(progress): regenerate the map" \
-                  --body "Regenerated from the latest v2 commit. This PR updates automatically on pushes to v2."
+            git commit -m "chore(progress): regenerate the map for $base_sha"
+            if ! git push --force-with-lease origin HEAD:refs/heads/progress-map-update; then
+              echo "Progress map branch changed; retry $attempt/3"
+              continue
+            fi
+            {
+              echo "Regenerated from \`v2\` at \`$base_sha\`."
+              echo
+              bun script/upstream/progress.ts --compare base.json migration-tracking/progress/progress.json
+            } > body.md
+            pr=$(bot_prs | head -n 1)
+            if [ -n "$pr" ]; then
+              close_stale_prs "$pr"
+              gh pr edit "$pr" --body-file body.md
+            else
+              close_stale_prs
+              if ! gh pr create --base v2 --head progress-map-update \
+                --title "chore(progress): regenerate the map" \
+                --body-file body.md; then
+                pr=$(bot_prs | head -n 1)
+                if [ -z "$pr" ]; then exit 1; fi
+                gh pr edit "$pr" --body-file body.md
               fi
-              exit 0
             fi
-            echo "Progress map branch changed; retry $attempt/3"
+            exit 0
           done
           exit 1
 

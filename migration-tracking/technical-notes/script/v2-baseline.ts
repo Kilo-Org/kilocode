@@ -81,7 +81,9 @@ const CHECKS: Check[] = [
   { name: "workflow-allowlist", cwd: ".", argv: ["bun", "script/check-workflows.ts"] },
   { name: "opencode-annotations", cwd: ".", argv: ["bun", "script/check-opencode-annotations.ts"] },
   { name: "shared-patches", cwd: ".", argv: ["bun", "script/check-shared-patches.ts"] },
-  { name: "progress-map", cwd: ".", argv: ["bun", "script/upstream/progress.ts", "--check"], skip: noV1Target },
+  // Only the map bot PR has freshly generated outputs. On a feature branch or a v2 tip with a pending
+  // bot PR, --check fails by design, so record it without failing the baseline.
+  { name: "progress-map", cwd: ".", argv: ["bun", "script/upstream/progress.ts", "--check"], skip: noV1Target, gated: false },
   { name: "upstream-install", cwd: "script/upstream", argv: ["bun", "install", "--frozen-lockfile"] },
   { name: "upstream-typecheck", cwd: "script/upstream", argv: ["bun", "run", "typecheck"] },
   { name: "upstream-test", cwd: "script/upstream", argv: ["bun", "test"] },
