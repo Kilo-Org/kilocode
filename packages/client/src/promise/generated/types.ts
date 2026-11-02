@@ -72,6 +72,7 @@ export type FileDiffInfo = {
   additions: number
   deletions: number
   status: "added" | "deleted" | "modified"
+  moved?: boolean
   more?: true
 }
 
@@ -3798,6 +3799,7 @@ export type ExperimentalSessionImportInput = {
         readonly additions: number
         readonly deletions: number
         readonly status: "added" | "deleted" | "modified"
+        readonly moved?: boolean
         readonly more?: true
       }>
     }

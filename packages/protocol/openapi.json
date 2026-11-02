@@ -18233,6 +18233,9 @@
             "type": "string",
             "enum": ["added", "deleted", "modified"]
           },
+          "moved": {
+            "type": "boolean"
+          },
           "more": {
             "type": "boolean",
             "enum": [true]

@@ -1107,6 +1107,10 @@ ToolRegistry.register({
   },
 })
 
+// Cheap `@@` marker check: keeps the open-diff action hidden for payloads that
+// are not a unified diff, without parsing every file while the tool is collapsed.
+const HUNK_MARKER = /^\s*@@/m
+
 ToolRegistry.register({
   name: "patch",
   render(props) {
@@ -1125,11 +1129,44 @@ ToolRegistry.register({
       )
       setSeeded(true)
     })
+    // A search hit inside a collapsed file row must be visible without opening
+    // every row by hand, so a forced open expands all of them.
+    createEffect(() => {
+      if (!props.forceOpen) return
+      setExpanded(list().map((file) => file.file))
+    })
     const view = (file: FileDiffInfo) => {
       if (!file.patch) return
       const value = normalize(file)
       return value.fileDiff.hunks.length ? value : undefined
     }
+    const openDiff = (file: FileDiffInfo) => {
+      const diff = view(file)
+      if (!diff || !props.actions?.openDiff) return
+      props.actions.openDiff({
+        file: file.file,
+        patch: diff.patch,
+        additions: file.additions,
+        deletions: file.deletions,
+      })
+    }
+    // The action sits in the file body, not in the row header: the header is a
+    // button, and an interactive control inside it is invalid for assistive tech.
+    const diffAction = (file: FileDiffInfo) => (
+      <Show when={props.actions?.openDiff && HUNK_MARKER.test(file.patch)}>
+        <div data-slot="apply-patch-open-diff">
+          <Tooltip value={i18n.t("ui.messagePart.openInDiffViewer")} placement="top" gutter={4}>
+            <IconButton
+              icon="square-arrow-top-right"
+              size="small"
+              variant="ghost"
+              onClick={() => openDiff(file)}
+              aria-label={i18n.t("ui.messagePart.openInDiffViewer")}
+            />
+          </Tooltip>
+        </div>
+      </Show>
+    )
     const changes = (file: FileDiffInfo) => (
       <Switch>
         <Match when={file.status === "added"}>
@@ -1140,6 +1177,11 @@ ToolRegistry.register({
         <Match when={file.status === "deleted"}>
           <span data-slot="apply-patch-change" data-type="removed">
             {i18n.t("ui.patch.action.deleted")}
+          </span>
+        </Match>
+        <Match when={file.moved}>
+          <span data-slot="apply-patch-change" data-type="modified">
+            {i18n.t("ui.patch.action.moved")}
           </span>
         </Match>
         <Match when={true}>
@@ -1193,7 +1235,15 @@ ToolRegistry.register({
                     {(file) => (
                       <Accordion.Item
                         value={file.file}
-                        data-type={file.status === "deleted" ? "delete" : file.status === "added" ? "add" : "update"}
+                        data-type={
+                          file.status === "deleted"
+                            ? "delete"
+                            : file.status === "added"
+                              ? "add"
+                              : file.moved
+                                ? "move"
+                                : "update"
+                        }
                       >
                         <StickyAccordionHeader>
                           <Accordion.Trigger>
@@ -1220,6 +1270,7 @@ ToolRegistry.register({
                           <Show when={expanded().includes(file.file) && view(file)}>
                             {(diff) => (
                               <div data-component="apply-patch-file-diff">
+                                {diffAction(file)}
                                 <Dynamic
                                   component={component}
                                   mode="diff"
@@ -1242,6 +1293,7 @@ ToolRegistry.register({
                 <Show when={view(file())}>
                   {(diff) => (
                     <div data-component="apply-patch-file-diff">
+                      {diffAction(file())}
                       <Dynamic component={component} mode="diff" hunkSeparators="simple" fileDiff={diff().fileDiff} />
                     </div>
                   )}
