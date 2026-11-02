@@ -1009,7 +1009,8 @@ ToolRegistry.register({
     }
     const view = () => {
       const file = diff()
-      return file ? normalize(file) : undefined
+      // A large write arrives without a patch: show the written content instead.
+      return file?.patch ? normalize(file) : undefined
     }
     // Cheap presence check instead of `view()` so a collapsed card never
     // parses its patch just to decide whether to show the button.
@@ -1032,7 +1033,7 @@ ToolRegistry.register({
       <div data-component="write-tool">
         <BasicTool
           {...props}
-          revision={diff()?.patch ?? string(props.input.content)}
+          revision={diff()?.patch || string(props.input.content)}
           icon="code-lines"
           defer
           hasDetails

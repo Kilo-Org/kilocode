@@ -171,6 +171,26 @@ describe("Kilo write tool diff", () => {
     }),
   )
 
+  it.live("keeps the counts and drops the patch above the size limit", () =>
+    withTempDir((tmp) =>
+      withTool(
+        tmp.path,
+        () => Effect.succeed(false),
+        (registry) => executeTool(registry, call({ path: "large.txt", content: "x".repeat(300_000) })),
+      ).pipe(
+        Effect.tap((settled) =>
+          Effect.sync(() => {
+            expect(settled.metadata).toEqual({
+              files: [
+                expect.objectContaining({ file: "large.txt", status: "added", additions: 1, deletions: 0, patch: "" }),
+              ],
+            })
+          }),
+        ),
+      ),
+    ),
+  )
+
   it.live("leaves a write outside the Location without a diff", () =>
     withTempDir((active) =>
       withTempDir((outside) =>
