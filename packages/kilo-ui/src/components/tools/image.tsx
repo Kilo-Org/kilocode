@@ -4,7 +4,6 @@ import { useDialog } from "../../context/dialog"
 import { BasicTool } from "../basic-tool"
 import { ImagePreview } from "../image-preview"
 import type { ToolProps } from "../message-part"
-import { busy } from "../tool-utils"
 
 const title = "Image"
 
@@ -21,7 +20,7 @@ export const ImageTool: Component<ToolProps> = (props) => {
   const sources = () =>
     Array.isArray(props.input.images) ? props.input.images.filter((item): item is string => typeof item === "string") : []
   const preview = (file: ToolFileContent) => {
-    dialog.show(() => <ImagePreview src={file.uri} alt={file.name ?? prompt()} />)
+    dialog.show(() => <ImagePreview src={file.uri} alt={file.name || prompt() || title} />)
   }
   return (
     <BasicTool
@@ -31,8 +30,7 @@ export const ImageTool: Component<ToolProps> = (props) => {
       trigger={{
         title,
         subtitle: prompt(),
-        args: [busy(props.status) ? "generating" : "", model(), sources().length ? `${sources().length} sources` : ""]
-          .filter(Boolean),
+        args: [model(), sources().length ? `${sources().length} sources` : ""].filter(Boolean),
       }}
     >
       <div data-component="image-tool">
@@ -44,12 +42,12 @@ export const ImageTool: Component<ToolProps> = (props) => {
                   type="button"
                   data-slot="image-tool-image"
                   onClick={() => preview(file)}
-                  aria-label={file.name ?? prompt() ?? title}
+                  aria-label={file.name || prompt() || title}
                 >
                   <img
                     data-slot="image-tool-image-content"
                     src={file.uri}
-                    alt={file.name ?? prompt() ?? title}
+                    alt={file.name || prompt() || title}
                     loading="lazy"
                     decoding="async"
                   />
@@ -65,7 +63,9 @@ export const ImageTool: Component<ToolProps> = (props) => {
           <div data-slot="image-tool-model">{model()}</div>
         </Show>
         <Show when={!images().length && path()}>
-          <div data-slot="image-tool-note">The generated image is saved to the path above.</div>
+          <div data-slot="image-tool-note">
+            The image is generated in the background and saved with its format extension when the job finishes.
+          </div>
         </Show>
       </div>
     </BasicTool>

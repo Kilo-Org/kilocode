@@ -78,7 +78,18 @@ test("image card shows the saved path when the tool part has no image attachment
   await waitFor(() => card.host.querySelector('[data-slot="image-tool-path"]'))
 
   expect(card.host.querySelector('[data-slot="image-tool-image-content"]')).toBeNull()
-  expect(card.host.querySelector('[data-slot="image-tool-note"]')?.textContent).toContain("saved to the path")
+  expect(card.host.querySelector('[data-slot="image-tool-note"]')?.textContent).toContain("format extension")
+})
+
+test("an unnamed image without a prompt falls back to the card title", async () => {
+  const card = mountImage({
+    attachments: [{ type: "file", uri: "data:image/png;base64,AAAA", mime: "image/png" }],
+    forceOpen: true,
+  })
+  const button = await waitFor(() => card.host.querySelector<HTMLButtonElement>('[data-slot="image-tool-image"]'))
+
+  expect(button.getAttribute("aria-label")).toBe("Image")
+  expect(button.querySelector("img")?.getAttribute("alt")).toBe("Image")
 })
 
 test("clicking a generated image opens the image preview", async () => {

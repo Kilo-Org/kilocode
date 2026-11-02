@@ -1,4 +1,5 @@
 import { Show, type Component } from "solid-js"
+import { BasicTool } from "../basic-tool"
 import { relativizeProjectPath } from "../content-data"
 import type { ToolProps } from "../message-part"
 
@@ -18,24 +19,24 @@ export const PlanTool: Component<ToolProps> = (props) => {
     props.actions.openFile(plan())
   }
   return (
-    <div data-component="plan-tool">
-      <div data-slot="plan-tool-header">
-        <span data-slot="plan-tool-label">{label}</span>
-        <span data-slot="plan-tool-badge">{badge}</span>
-      </div>
-      <Show when={plan()}>
-        <Show
-          when={props.actions?.openFile}
-          fallback={<span data-slot="plan-tool-path">{display()}</span>}
-        >
+    <Show
+      when={props.status === "completed" && plan()}
+      fallback={<BasicTool {...props} icon="checklist" hideDetails trigger={{ title: badge }} />}
+    >
+      <div data-component="plan-tool">
+        <div data-slot="plan-tool-header">
+          <span data-slot="plan-tool-label">{label}</span>
+          <span data-slot="plan-tool-badge">{badge}</span>
+        </div>
+        <Show when={props.actions?.openFile} fallback={<span data-slot="plan-tool-path">{display()}</span>}>
           <a data-slot="plan-tool-open" href="#" onClick={open}>
             {display()}
           </a>
         </Show>
-      </Show>
-      <Show when={props.output}>
-        <div data-slot="plan-tool-body">{props.output}</div>
-      </Show>
-    </div>
+        <Show when={props.output}>
+          <div data-slot="plan-tool-body">{props.output}</div>
+        </Show>
+      </div>
+    </Show>
   )
 }

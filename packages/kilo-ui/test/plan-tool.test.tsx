@@ -94,3 +94,21 @@ test("plan card shows a plain path without an open action", async () => {
   expect(path.textContent).toBe(".kilo/plans/change.md")
   expect(card.host.querySelector('[data-slot="plan-tool-open"]')).toBeNull()
 })
+
+test("plan card waits for a completed call before claiming the plan is ready", async () => {
+  const card = mountTool("plan_exit", {
+    input: {},
+    metadata: { plan: "/repo/.kilo/plans/change.md" },
+    directory: "/repo",
+    partID: "plan-pending",
+    status: "pending",
+  })
+  mounted.push(card)
+  await waitFor(() => card.host.querySelector('[data-slot="basic-tool-tool-title"]'))
+
+  expect(card.host.querySelector('[data-component="plan-tool"]')).toBeNull()
+  expect(card.host.querySelector('[data-slot="plan-tool-label"]')).toBeNull()
+  expect(
+    card.host.querySelector('[data-slot="basic-tool-tool-title"] [data-component="text-shimmer"]')?.getAttribute("aria-label"),
+  ).toBe("Plan")
+})
