@@ -335,8 +335,12 @@ describe("cloneHash", () => {
     expect(cloneHash(lf, 1, 5)).toBe(cloneHash(crlf, 1, 5))
   })
 
-  test("depends on the range", () => {
+  test("hashes the exact inclusive line window", () => {
     const source = "a\nb\nc\nd\n"
-    expect(cloneHash(source, 1, 2)).not.toBe(cloneHash(source, 2, 3))
+    expect(cloneHash(source, 2, 3)).toBe(cloneHash("b\nc", 1, 2))
+  })
+
+  test("normalizes trailing whitespace per line", () => {
+    expect(cloneHash("a \nb\n", 1, 2)).toBe(cloneHash("a\nb", 1, 2))
   })
 })
