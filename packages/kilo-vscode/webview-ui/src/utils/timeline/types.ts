@@ -9,5 +9,5 @@ export type TimelinePart =
       name: string
       status: "streaming" | "running" | "completed" | "error"
       input: unknown
-      output: string
+      outputLength: number
     }

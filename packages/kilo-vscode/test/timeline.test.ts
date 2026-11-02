@@ -116,7 +116,7 @@ describe("timelineParts", () => {
       name: "read",
       status: "streaming",
       input: '{"path":',
-      output: "",
+      outputLength: 0,
     })
   })
 
@@ -135,7 +135,7 @@ describe("timelineParts", () => {
       ]),
     ])
 
-    expect(part?.type === "tool" && part.output).toBe("first\nsecond")
+    expect(part?.type === "tool" && part.outputLength).toBe(12)
   })
 })
 
@@ -172,7 +172,7 @@ describe("sizes", () => {
         name: "read",
         status: "completed",
         input: { path: "a.ts" },
-        output: "12345",
+        outputLength: 5,
       },
     ])
 
@@ -196,7 +196,7 @@ describe("timelineBars", () => {
     name: "read",
     status: "completed",
     input: {},
-    output: "",
+    outputLength: 0,
     ...overrides,
   })
 

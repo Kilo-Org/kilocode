@@ -46,7 +46,7 @@ function inputLength(input: unknown): number {
 
 function content(part: TimelinePart): number {
   if (part.type === "text" || part.type === "reasoning") return part.text.length
-  return inputLength(part.input) + part.output.length
+  return inputLength(part.input) + part.outputLength
 }
 
 export function sizes(parts: readonly TimelinePart[]): BarSize[] {

@@ -25,6 +25,9 @@ import {
 import { promptKeybindings, watchKeybindings } from "./prompt-keybindings"
 import { openToolFile, type ToolDiff } from "./tool-diff"
 
+// The sidebar may only write the settings its own UI owns. Other views keep their own write path.
+const CHAT_SETTING_KEYS: ReadonlySet<string> = new Set(["showTaskTimeline"])
+
 export function chat(input: {
   context: ExtensionContext
   server: Manager
@@ -135,7 +138,12 @@ export function wire(input: {
         ? {
             handle: (message: ToHost) => {
               if (message.type !== "updateVSCodeSettings") return false
-              void writeKiloSettings(message.values)
+              const values = Object.fromEntries(
+                Object.entries(message.values).filter(([key]) => CHAT_SETTING_KEYS.has(key)),
+              )
+              void writeKiloSettings(values).catch((error: unknown) => {
+                console.error("Failed to write Kilo settings", error)
+              })
               return true
             },
             dispose() {},

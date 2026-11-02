@@ -10,9 +10,10 @@ import type { TimelinePart } from "./types"
 
 const SUPPRESSED_TOOLS = new Set(["todowrite", "todoread"])
 
-function toolOutput(state: SessionMessageAssistantTool["state"]): string {
-  if (state.status !== "completed") return ""
-  return state.content.flatMap((item) => (item.type === "text" ? [item.text] : [])).join("\n")
+function toolOutputLength(state: SessionMessageAssistantTool["state"]): number {
+  if (state.status !== "completed") return 0
+  const texts = state.content.flatMap((item) => (item.type === "text" ? [item.text] : []))
+  return texts.reduce((sum, text) => sum + text.length, 0) + Math.max(0, texts.length - 1)
 }
 
 /** One renderable content item, or undefined when the item is suppressed. */
@@ -35,7 +36,7 @@ export function timelinePart(
     name: item.name,
     status: item.state.status,
     input: item.state.input,
-    output: toolOutput(item.state),
+    outputLength: toolOutputLength(item.state),
   }
 }
 

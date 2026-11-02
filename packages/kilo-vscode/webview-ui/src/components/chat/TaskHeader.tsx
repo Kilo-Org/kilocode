@@ -193,8 +193,10 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
       for (const id of pending) {
         if (version !== run) return
         attempted.add(id)
-        await v2.data.session.sync(id, { children: true }).catch(() => {})
-        synced.add(id)
+        await v2.data.session
+          .sync(id, { children: true })
+          .then(() => synced.add(id))
+          .catch(() => {})
       }
       const known = untrack(() => new Set([props.sessionID, ...v2.data.session.family(props.sessionID)]))
       frontier = [...known]
