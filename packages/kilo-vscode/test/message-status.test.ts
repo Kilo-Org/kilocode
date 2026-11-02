@@ -133,9 +133,54 @@ describe("turnMetadata", () => {
     expect(metadata?.tokensPerSecond).toBeCloseTo(70 / 0.3, 5)
   })
 
-  test("returns undefined when the turn input is outside the loaded page", () => {
+  test("keeps a clock-only timing when the turn input is outside the loaded page", () => {
     const a1 = assistant({ id: "a1", created: 100, streamed: 200, completed: 300, output: 10, text: "hi", finish: "stop" })
-    expect(turnMetadata(a1, [a1])).toBeUndefined()
+    const metadata = turnMetadata(a1, [a1])
+    expect(metadata?.carrierID).toBe("a1")
+    expect(metadata?.timing).toEqual({ completedAt: 300 })
+    expect(metadata?.tokensPerSecond).toBeUndefined()
+  })
+
+  test("keeps the carrier when the loaded prefix starts after an idle", () => {
+    const a1 = assistant({ id: "a1", created: 100, streamed: 200, completed: 300, output: 10, text: "hi", finish: "stop" })
+    const metadata = turnMetadata(a1, [idle("i0", 0), a1])
+    expect(metadata?.carrierID).toBe("a1")
+    expect(metadata?.timing).toEqual({ completedAt: 300 })
+    expect(metadata?.tokensPerSecond).toBeUndefined()
+  })
+
+  test("a steer keeps both steps in the same turn", () => {
+    const a1 = assistant({ id: "a1", created: 200, streamed: 500, output: 100 })
+    const a2 = assistant({
+      id: "a2",
+      created: 400,
+      streamed: 500,
+      completed: 600,
+      output: 100,
+      text: "done",
+      finish: "stop",
+    })
+    const metadata = turnMetadata(a2, [user("u1", 100), a1, user("u2", 350), a2, idle("i1", 700)])
+    expect(metadata?.carrierID).toBe("a2")
+    expect(metadata?.timing).toEqual({ completedAt: 600, durationMs: 500 })
+    expect(metadata?.tokensPerSecond).toBeCloseTo(500, 5)
+  })
+
+  test("an idle closes the turn and excludes the previous turn's steps", () => {
+    const a1 = assistant({ id: "a1", created: 200, streamed: 300, output: 500 })
+    const a2 = assistant({
+      id: "a2",
+      created: 400,
+      streamed: 500,
+      completed: 600,
+      output: 100,
+      text: "done",
+      finish: "stop",
+    })
+    const metadata = turnMetadata(a2, [user("u1", 100), a1, idle("i1", 260), user("u2", 300), a2])
+    expect(metadata?.carrierID).toBe("a2")
+    expect(metadata?.timing).toEqual({ completedAt: 600, durationMs: 300 })
+    expect(metadata?.tokensPerSecond).toBeCloseTo(1000, 5)
   })
 
   test("returns undefined while the terminal step is running", () => {

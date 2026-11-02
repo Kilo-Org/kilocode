@@ -51,7 +51,8 @@ export function turnTokensPerSecond(
 /**
  * The footer metadata of the turn that contains `message`: the turn's terminal
  * step drives the timing and rate, while the last text-bearing step carries them
- * (as v1 `attachTiming`). Returns undefined until the terminal step completes.
+ * (as v1 `attachTiming`). The clock survives an input outside the loaded page;
+ * the duration and rate do not. Returns undefined until the terminal completes.
  */
 export function turnMetadata(
   message: SessionMessageAssistant,
@@ -60,28 +61,24 @@ export function turnMetadata(
   const index = messages.findIndex((item) => item.id === message.id)
   if (index === -1) return undefined
   const legacy = legacyTurns(messages)
+  const end = turnEnd(messages, index, legacy)
   const start = inputIndex(messages, index + 1, legacy)
-  if (start === -1) return undefined
-  // Steers keep the turn open, so only an idle closes it. Legacy transcripts end at the next prompt.
-  let end = messages.length
-  for (let i = start + 1; i < messages.length; i++) {
-    const item = messages[i]
-    if (legacy ? item.type === "user" || item.type === "synthetic" : item.type === "idle") {
-      end = i
-      break
-    }
-  }
+  // Without a known turn input, start at the current turn's first step so a
+  // previous turn's carrier is never borrowed.
+  const lower = start >= 0 ? start + 1 : previousBoundary(messages, index)
   const steps = messages
-    .slice(start + 1, end)
+    .slice(lower, end)
     .filter((item): item is SessionMessageAssistant => item.type === "assistant")
   const terminal = steps.at(-1)
-  if (!terminal || terminal.time.completed === undefined || !terminalStep(terminal)) return undefined
+  if (!terminal) return undefined
+  const completedAt = terminal.time.completed
+  if (completedAt === undefined || !terminalStep(terminal)) return undefined
   const carrier = steps.findLast((step) => step.content.some((part) => part.type === "text" && !!part.text.trim()))
   if (!carrier) return undefined
   return {
     carrierID: carrier.id,
-    timing: turnTiming(terminal, messages)!,
-    tokensPerSecond: turnTokensPerSecond(terminal, messages),
+    timing: turnTiming(terminal, messages) ?? { completedAt },
+    tokensPerSecond: start === -1 ? undefined : turnTokensPerSecond(terminal, messages),
   }
 }
 
@@ -107,4 +104,24 @@ function inputIndex(messages: readonly SessionMessageInfo[], end: number, legacy
     input = index
   }
   return input
+}
+
+// The turn ends at the next idle, so steers stay in it. Legacy transcripts have
+// no idle markers, so they end at the next prompt.
+function turnEnd(messages: readonly SessionMessageInfo[], index: number, legacy: boolean): number {
+  for (let i = index; i < messages.length; i++) {
+    const item = messages[i]
+    if (legacy ? item.type === "user" || item.type === "synthetic" : item.type === "idle") return i
+  }
+  return messages.length
+}
+
+// One past the last input or idle before `index`: the current turn's first step
+// when the input is outside the loaded page. Prevents borrowing a previous turn.
+function previousBoundary(messages: readonly SessionMessageInfo[], index: number): number {
+  for (let i = index - 1; i >= 0; i--) {
+    const type = messages[i].type
+    if (type === "idle" || type === "user" || type === "synthetic") return i + 1
+  }
+  return 0
 }
