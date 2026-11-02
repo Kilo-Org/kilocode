@@ -137,10 +137,6 @@ export class AutocompleteServiceManager {
     await this.ensureInlineCompletionProviderRegistration()
   }
 
-  /**
-   * Keep the inline completion provider registration in line with the settings. It only disposes and registers
-   * again when the desired state changes, because churn during startup can break VS Code's provider tracking.
-   */
   /** Ask for the server again after it stopped, at most once every five seconds so a crash cannot loop. */
   private restartBackend() {
     if (Date.now() - this.lastBackendAttempt < 5_000) return
@@ -148,6 +144,10 @@ export class AutocompleteServiceManager {
     this.connection.start()
   }
 
+  /**
+   * Keep the inline completion provider registration in line with the settings. It only disposes and registers
+   * again when the desired state changes, because churn during startup can break VS Code's provider tracking.
+   */
   private async ensureInlineCompletionProviderRegistration() {
     const shouldBeRegistered = this.settings?.enableAutoTrigger ?? false
     const isRegistered = this.inlineCompletionProviderDisposable !== null
