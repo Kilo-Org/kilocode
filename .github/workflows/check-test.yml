@@ -75,14 +75,16 @@ jobs:
             concurrency: 2 # kilocode_change - test processes per package and shard (KILO_TEST_CONCURRENCY)
           - name: windows
             host: blacksmith-4vcpu-windows-2025
-            shards: 3 # kilocode_change
+            shards: 4 # kilocode_change
             concurrency: 1 # kilocode_change
         # kilocode_change start - the KILO_TEST_SHARD index; Linux runs two shards. The `packages` leg runs the
         # packages without `test:ci` and the Linux-only checks, in parallel with the shards.
-        shard: [packages, 1, 2, 3]
+        shard: [packages, 1, 2, 3, 4]
         exclude:
           - settings: { name: linux, host: blacksmith-4vcpu-ubuntu-2404, shards: 2, concurrency: 2 }
             shard: 3
+          - settings: { name: linux, host: blacksmith-4vcpu-ubuntu-2404, shards: 2, concurrency: 2 }
+            shard: 4
         # kilocode_change end
     runs-on: ${{ matrix.settings.host }}
     defaults:
@@ -140,18 +142,20 @@ jobs:
         timeout-minutes: 20
         run: |
           # The runners have four vCPUs, and each Bun test process performs its own concurrent work.
-          # kilocode_change start - core, tui and cli run in balanced shards through `test:ci`; the other packages run in the `packages` leg
+          # kilocode_change start - core, tui, cli and kilo-cli run in balanced shards through `test:ci`; the other packages run in the `packages` leg
           # `--affected` applies to pull requests only. A merge can break the interaction of two green
           # PRs, so pushes and manual runs test the full suite to catch it.
-          args=(--concurrency=3)
           if [ "${{ github.event_name }}" = "pull_request" ]; then
-            args+=(--affected)
+            affected=(--affected)
+          else
+            affected=()
           fi
           if [ "${{ matrix.shard }}" = "packages" ]; then
-            GITHUB_ACTIONS=false bun turbo test "${args[@]}" --filter='!@opencode/core' --filter='!@opencode/tui' --filter='!@opencode/cli'
+            GITHUB_ACTIONS=false bun turbo test --concurrency=3 "${affected[@]}" --filter='!@opencode/core' --filter='!@opencode/tui' --filter='!@opencode/cli' --filter='!@kilocode/kilo-cli'
             exit
           fi
-          GITHUB_ACTIONS=false bun turbo test:ci "${args[@]}"
+          # The four sharded packages run at once, so each shard job needs concurrency 4 for no task to wait.
+          GITHUB_ACTIONS=false bun turbo test:ci --concurrency=4 "${affected[@]}"
           # kilocode_change end
         env:
           OPENCODE_EXPERIMENTAL_DISABLE_FILEWATCHER: ${{ runner.os == 'Windows' && 'true' || 'false' }}
