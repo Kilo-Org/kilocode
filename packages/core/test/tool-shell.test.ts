@@ -212,6 +212,7 @@ const largeOutputCommand = (release: string) =>
     ? `[Console]::Out.Write('x' * 140001); while (!(Test-Path -LiteralPath '${release}')) { Start-Sleep -Milliseconds 25 }`
     : `printf 'x'; printf '\\303\\251%.0s' $(seq 1 70000); while [ ! -e '${release}' ]; do sleep 0.05; done`
 const LIVE_PREVIEW_LIMIT = 30_000
+const LIVE_PREVIEW_PREFIX = "...\n\n"
 // kilocode_change end
 
 const withSession = <A, E, R>(directory: string, body: (registry: Tool.Interface) => Effect.Effect<A, E, R>) =>
@@ -1605,19 +1606,21 @@ describe("ShellTool", () => {
                 progress: (update) =>
                   Effect.gen(function* () {
                     updates.push(update)
-                    if (typeof update.output !== "string" || !update.output.startsWith("...\n\n")) return
+                    if (typeof update.output !== "string" || !update.output.startsWith(LIVE_PREVIEW_PREFIX)) return
                     yield* Effect.promise(() => fs.writeFile(release, ""))
                   }),
               })
               const bounded = updates.filter(
-                (update) => typeof update.output === "string" && update.output.startsWith("...\n\n"),
+                (update) => typeof update.output === "string" && update.output.startsWith(LIVE_PREVIEW_PREFIX),
               )
               expect(bounded.length).toBeGreaterThan(0)
               for (const update of bounded) {
                 const output = update.output as string
-                expect(output.length).toBeLessThanOrEqual(LIVE_PREVIEW_LIMIT + "...\n\n".length)
+                expect(output.startsWith(LIVE_PREVIEW_PREFIX)).toBe(true)
+                const tail = output.slice(LIVE_PREVIEW_PREFIX.length)
+                expect(tail).toHaveLength(LIVE_PREVIEW_LIMIT)
                 // A byte window can split a multi-byte character; the leading partial character is dropped.
-                expect(output.slice(4).startsWith("\uFFFD")).toBe(false)
+                expect(tail.startsWith("\uFFFD")).toBe(false)
               }
               expect(settled.metadata).toMatchObject({ exit: 0, truncated: true })
               expect(settled.metadata).not.toHaveProperty("output")
