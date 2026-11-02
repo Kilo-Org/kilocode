@@ -149,6 +149,12 @@
         "icon": "$(settings-gear)"
       },
       {
+        "command": "kilo-code.v2.settingsSearch",
+        "title": "Search Settings",
+        "category": "Kilo Code (v2)",
+        "icon": "$(search)"
+      },
+      {
         "command": "kilo-code.v2.restartServer",
         "title": "Restart Server",
         "category": "Kilo Code (v2)"
@@ -176,6 +182,12 @@
         "key": "ctrl+shift+.",
         "mac": "cmd+shift+.",
         "when": "kilo-code.v2.sidebarFocused"
+      },
+      {
+        "command": "kilo-code.v2.settingsSearch",
+        "key": "ctrl+f",
+        "mac": "cmd+f",
+        "when": "activeWebviewPanelId == 'kilo-code.v2.settingsPanel'"
       }
     ],
     "menus": {

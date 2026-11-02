@@ -25,12 +25,27 @@ export type ConfigFileContent = { path: string; text: string }
  */
 export type ConfigPolicy = { hidePromptTrainingModels: boolean; managed: boolean }
 
+/**
+ * Where the Settings panel should go. `focus` names a row that a subtab renders itself (an MCP server), while
+ * `titleKey` names a row by its i18n key so the panel can scroll to it after the tab renders.
+ */
+export type SettingsNavigation = {
+  tab?: string
+  subtab?: string
+  focus?: string
+  titleKey?: string
+  search?: boolean
+}
+
 export type ToHost =
   | Request
   | { type: "abort"; id: number }
   | { type: "open"; url: string }
   | Ui
   | Settings
+  | ({ type: "openSettingsTab" } & SettingsNavigation)
+  | { type: "settingsReady" }
+  | { type: "settingsTabChanged"; tab: string }
 
 /** Messages of the copied v1 UI. The host ignores `webviewFocusChanged` and `setLanguage` for now. */
 export type Ui =
@@ -61,6 +76,7 @@ export type ToWebview =
   | { type: "end"; id: number }
   | { type: "error"; id: number; message: string }
   | { type: "command"; name: "newSession" | "history" | "profile" | "cycleAgentMode" | "cyclePreviousAgentMode" }
+  | ({ type: "navigate" } & SettingsNavigation)
   | { type: "keybindings"; bindings: Record<string, string> }
   | { type: "clipboardWriteResult"; id: string; ok: boolean; error?: string }
   | { type: "modelSelectorExpandedLoaded"; value: boolean }
