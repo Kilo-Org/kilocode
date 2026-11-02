@@ -1,6 +1,6 @@
 // The Kilo catalog failure reasons: their message keys and the sign-in action, as v1 `provider-failure.test.ts`.
 import { describe, expect, mock, test } from "bun:test"
-import type { OpenCodeClient } from "@opencode/client"
+import type { OpenCodeClient, OpenCodeEvent } from "@opencode/client"
 import type { KiloGatewayRpc } from "@opencode/schema/kilocode/gateway"
 import type { Accessor, Setter } from "solid-js"
 import { dict } from "../webview-ui/src/i18n/en"
@@ -73,7 +73,7 @@ describe("failureNeedsSignIn", () => {
 })
 
 describe("createKiloCatalog", () => {
-  test("refreshes on each connected transition and on each catalog event", async () => {
+  test("applies the failure on each connected transition and catalog event", async () => {
     const catalog = makeCatalog()
     try {
       catalog.setStatus("connected")
@@ -93,9 +93,13 @@ describe("createKiloCatalog", () => {
       await tick()
       expect(catalog.failure()).toEqual({ kind: "http", status: 503 })
 
-      catalog.emit()
-      catalog.emit()
-      expect(catalog.calls).toHaveLength(4)
+      // The event carries the reason; it must not trigger another catalog.status read.
+      catalog.emit({ kind: "schema" })
+      expect(catalog.failure()).toEqual({ kind: "schema" })
+      expect(catalog.calls).toHaveLength(2)
+
+      catalog.emit(null)
+      expect(catalog.failure()).toBeUndefined()
     } finally {
       catalog.dispose()
     }
@@ -106,7 +110,11 @@ describe("createKiloCatalog", () => {
     try {
       catalog.setStatus("connected")
       await tick()
-      catalog.emit()
+      expect(catalog.calls).toHaveLength(1)
+
+      catalog.setStatus("disconnected")
+      catalog.setStatus("connected")
+      await tick()
       expect(catalog.calls).toHaveLength(2)
 
       catalog.calls[1].resolve({ failure: { kind: "http", status: 503 } })
@@ -121,26 +129,27 @@ describe("createKiloCatalog", () => {
     }
   })
 
-  test("a failed read clears the reason only when it is the latest", async () => {
+  test("a failed refresh keeps the previous reason and a catalog event clears it", async () => {
     const catalog = makeCatalog()
     try {
       catalog.setStatus("connected")
       await tick()
-      catalog.emit()
+      expect(catalog.calls).toHaveLength(1)
+
+      catalog.calls[0].resolve({ failure: { kind: "network" } })
+      await tick()
+      expect(catalog.failure()).toEqual({ kind: "network" })
+
+      catalog.setStatus("disconnected")
+      catalog.setStatus("connected")
+      await tick()
       expect(catalog.calls).toHaveLength(2)
 
-      catalog.calls[1].resolve({ failure: { kind: "network" } })
+      catalog.calls[1].reject(new Error("latest"))
       await tick()
       expect(catalog.failure()).toEqual({ kind: "network" })
 
-      catalog.calls[0].reject(new Error("stale"))
-      await tick()
-      expect(catalog.failure()).toEqual({ kind: "network" })
-
-      catalog.emit()
-      expect(catalog.calls).toHaveLength(3)
-      catalog.calls[2].reject(new Error("latest"))
-      await tick()
+      catalog.emit(null)
       expect(catalog.failure()).toBeUndefined()
     } finally {
       catalog.dispose()
@@ -152,7 +161,7 @@ const tick = () => new Promise((resolve) => setTimeout(resolve, 0))
 
 function makeCatalog() {
   const [status, setStatus] = createSignal("disconnected")
-  const listeners = new Set<() => void>()
+  const listeners = new Set<(event: OpenCodeEvent) => void>()
   const calls: Array<{
     resolve: (value: { failure?: KiloGatewayRpc.CatalogFailure }) => void
     reject: (error: unknown) => void
@@ -181,8 +190,8 @@ function makeCatalog() {
     ...setup,
     calls,
     setStatus,
-    emit: () => {
-      for (const listener of listeners) listener()
+    emit: (failure: KiloGatewayRpc.CatalogStatus["failure"]) => {
+      for (const listener of listeners) listener({ data: { failure } } as unknown as OpenCodeEvent)
     },
   }
 }

@@ -31,6 +31,8 @@ const generate = makeLocationNode({
           ? Effect.fail(new Generate.UnavailableError({ message: answer.error }))
           : Effect.succeed(answer.text)
       },
+      image: () => Effect.die("unused"),
+      decisions: () => Effect.die("unused"),
     }),
   ),
   deps: [],
