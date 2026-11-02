@@ -97,7 +97,7 @@ const ModeEditView: Component<Props> = (props) => {
     void (async () => {
       const ok = await config.set(agentField(props.row().id, key), value, scope())
       if (ok && value && config.value(["default_agent"]) === props.row().id)
-        await config.unset(["default_agent"], config.source(["default_agent"]) ?? "global")
+        await config.unset(["default_agent"])
     })()
   }
 

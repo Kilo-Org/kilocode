@@ -67,4 +67,18 @@ describe("writeScope", () => {
   test("falls back to global when no file owns the path", async () => {
     expect(await writeScope(undefined, loaded, () => undefined)).toBe("global")
   })
+
+  test("a write started before the first configLoaded uses the project owner", async () => {
+    const gate = createGate()
+    let project: Record<string, unknown> | undefined
+    const owner = () => (project && "snapshots" in project ? "project" : undefined)
+
+    // An eager `owner() ?? "global"` resolves before the files arrive and shadows the project value.
+    expect(await writeScope(owner() ?? "global", gate.wait, owner)).toBe("global")
+
+    const pending = writeScope(undefined, gate.wait, owner)
+    project = { snapshots: false }
+    gate.open()
+    expect(await pending).toBe("project")
+  })
 })

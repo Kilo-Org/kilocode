@@ -9,7 +9,7 @@ const CheckpointsTab: Component = () => {
   const config = useSettingsConfig()
   const language = useLanguage()
 
-  const write = (path: string[], value: unknown) => config.set(path, value, config.source(path) ?? "global")
+  const write = (path: string[], value: unknown) => config.set(path, value)
 
   return (
     <div>
