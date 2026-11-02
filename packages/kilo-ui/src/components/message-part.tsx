@@ -686,6 +686,26 @@ function ToolFileMeta(props: { path: string; directory?: string; changes?: FileD
   )
 }
 
+function ToolDiffAction(props: { when: boolean; onClick: (event: MouseEvent) => void }) {
+  const i18n = useI18n()
+  return (
+    <Show when={props.when}>
+      <span data-slot="tool-trigger-actions">
+        <Tooltip value={i18n.t("ui.messagePart.openInDiffViewer")} placement="top" gutter={4}>
+          <IconButton
+            icon="square-arrow-top-right"
+            size="small"
+            variant="ghost"
+            onMouseDown={(event) => event.preventDefault()}
+            onClick={props.onClick}
+            aria-label={i18n.t("ui.messagePart.openInDiffViewer")}
+          />
+        </Tooltip>
+      </span>
+    </Show>
+  )
+}
+
 ToolRegistry.register({
   name: "edit",
   render(props) {
@@ -750,9 +770,31 @@ ToolRegistry.register({
     const component = useFileComponent()
     const diff = () => fileDiffs(props.metadata.files)[0]
     const path = () => string(props.input.path)
+    // A write that leaves the file as it was has an empty diff: show only the header.
+    const unchanged = () => {
+      const file = diff()
+      return !busy(props.status) && !!file && !file.additions && !file.deletions
+    }
     const view = () => {
       const file = diff()
       return file ? normalize(file) : undefined
+    }
+    // Cheap presence check instead of `view()` so a collapsed card never
+    // parses its patch just to decide whether to show the button.
+    const canOpenDiff = () => !!props.actions?.openDiff && !!path() && !!diff()?.patch
+    const openDiff = () => {
+      const value = view()
+      if (!props.actions?.openDiff || !value) return
+      props.actions.openDiff({
+        file: value.file || path(),
+        patch: value.patch,
+        additions: value.additions,
+        deletions: value.deletions,
+      })
+    }
+    const handleOpenDiffClick = (event: MouseEvent) => {
+      event.stopPropagation()
+      openDiff()
     }
     return (
       <div data-component="write-tool">
@@ -762,6 +804,7 @@ ToolRegistry.register({
           icon="code-lines"
           defer
           hasDetails
+          hideDetails={props.hideDetails || unchanged()}
           trigger={
             <div data-component="write-trigger">
               <div data-slot="message-part-title-area">
@@ -772,6 +815,7 @@ ToolRegistry.register({
                   <ToolFileMeta path={path()} directory={props.directory} changes={diff()} />
                 </div>
               </div>
+              <ToolDiffAction when={canOpenDiff()} onClick={handleOpenDiffClick} />
             </div>
           }
         >

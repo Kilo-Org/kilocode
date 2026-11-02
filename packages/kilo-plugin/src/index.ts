@@ -10,6 +10,7 @@ import { KiloProviderUsagePlugin } from "./provider-usage"
 import { KiloOpenAIPlugin } from "./openai"
 import { KiloMarketplacePlugin } from "./marketplace"
 import { KiloSkillPlugin } from "./skill"
+import { KiloWriteToolPlugin } from "./tool-write"
 
 /**
  * The Kilo plugins on the public plugin API (plugin-first rung 1), in registration order. The Kilo host
@@ -33,6 +34,7 @@ export const KiloPlugins = [
   KiloOpenAIPlugin,
   KiloMarketplacePlugin,
   KiloSkillPlugin,
+  KiloWriteToolPlugin,
 ] as const
 
 /** Kilo plugins that run after the config plugins: the host registers them with phase `post`. */
