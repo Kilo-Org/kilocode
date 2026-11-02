@@ -31,6 +31,7 @@ import {
   initBaseURL,
   initHeaders,
   initModels,
+  keyChanged,
   mergeProviderConfig,
   unmaskKey,
   validateCustomProvider,
@@ -467,7 +468,8 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
     }
 
     try {
-      if (apiTouched) await applyKey(result.providerID, result.key)
+      // A field back at the mask keeps the stored key; disconnecting here would clear it.
+      if (keyChanged(form.apiKey, apiTouched)) await applyKey(result.providerID, result.key)
     } catch (err) {
       setForm("saving", false)
       showToast({

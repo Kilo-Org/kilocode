@@ -32,6 +32,7 @@ import {
   initBaseURL,
   initHeaders,
   initModels,
+  keyChanged,
   mergeProviderConfig,
   parseEnvKey,
   unmaskKey,
@@ -368,6 +369,14 @@ describe("fetch models in the dialog", () => {
   test("treats the mask as the stored key even after an edit", () => {
     expect(fetchKey({ apiKey: MASKED_CUSTOM_PROVIDER_KEY, touched: true, providerID: "p" })).toEqual({ providerID: "p" })
     expect(fetchKey({ apiKey: MASKED_CUSTOM_PROVIDER_KEY, touched: true })).toEqual({})
+  })
+
+  test("counts a key change only when the field is not the mask", () => {
+    expect(keyChanged("sk-1", true)).toBe(true)
+    expect(keyChanged("", true)).toBe(true)
+    expect(keyChanged(MASKED_CUSTOM_PROVIDER_KEY, true)).toBe(false)
+    expect(keyChanged(MASKED_CUSTOM_PROVIDER_KEY, false)).toBe(false)
+    expect(keyChanged("sk-1", false)).toBe(false)
   })
 
   test("sends no key for a cleared field, an invalid env name or a new provider without a key", () => {

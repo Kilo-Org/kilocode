@@ -47,6 +47,14 @@ export const INVALID_ENV = "Invalid environment variable name"
 /** The API key field shows this instead of the stored credential; the dialog cannot read the secret. */
 export const MASKED_CUSTOM_PROVIDER_KEY = "********"
 
+/**
+ * Whether the key field holds a change. An untouched field keeps the stored key, and so does the mask put back by an
+ * edit (for example undo), so saving never clears the stored credential by accident.
+ */
+export function keyChanged(apiKey: string, touched: boolean) {
+  return touched && apiKey.trim() !== MASKED_CUSTOM_PROVIDER_KEY
+}
+
 const ANTHROPIC_PACKAGE: CustomProviderPackage = "@opencode/ai/providers/anthropic-compatible"
 
 export type CustomProviderConfigValue = {
@@ -230,7 +238,7 @@ export function validateCustomProvider(input: ValidateArgs): ValidateResult {
   const apiKey = input.form.apiKey.trim()
 
   // An edit can put the mask back, for example with undo; the field then still means "the stored key".
-  const touched = input.apiKeyTouched && apiKey !== MASKED_CUSTOM_PROVIDER_KEY
+  const touched = keyChanged(apiKey, input.apiKeyTouched)
   const rawEnv = touched ? parseEnvKey(apiKey) : undefined
   const envError = touched && ENV_REF.test(apiKey) && !rawEnv ? INVALID_ENV : undefined
   const key = touched && apiKey && !rawEnv ? apiKey : undefined
