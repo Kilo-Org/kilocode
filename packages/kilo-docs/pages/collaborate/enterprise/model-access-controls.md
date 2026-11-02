@@ -25,7 +25,11 @@ This means newly added models and providers are automatically available to your 
 
 Navigate to your organization's **Providers & Models** page to configure access controls.
 
-The page has three tabs:
+The page has an **Auto routing** card followed by two tabs.
+
+### Auto routing Card
+
+Holds your organization's Auto routing settings, including the Efficient model pool that constrains `kilo-auto/efficient` to specific model and thinking-variant pairs. Owners, admins, and billing managers can edit these settings; members see a read-only view. The card saves its own changes. See [Custom Efficient pools](/docs/code-with-ai/agents/auto-model#custom-efficient-pools) for how the pool is benchmarked and routed.
 
 ### Models Tab
 
@@ -45,13 +49,9 @@ Lists all providers. For each provider you can:
 
 When you toggle a provider off, all models it offers become unavailable to team members. Re-enabling the provider restores access to all its models.
 
-### Auto routing Tab
-
-Holds your organization's Auto routing settings, including the Efficient model pool that constrains `kilo-auto/efficient` to specific model and thinking-variant pairs. Owners, admins, and billing managers can edit these settings; members see a read-only view. See [Custom Efficient pools](/docs/code-with-ai/agents/auto-model#custom-efficient-pools) for how the pool is benchmarked and routed.
-
 ### Saving Changes
 
-A status bar appears at the bottom of the page whenever you have unsaved changes. Click **Save** to apply your changes, or **Cancel** to discard them. Changes take effect immediately for all team members once saved.
+A status bar appears at the bottom of the page whenever you have unsaved changes on the **Models** or **Providers** tab. Click **Save** to apply your changes, or **Cancel** to discard them. Changes take effect immediately for all team members once saved.
 
 ## Virtual models
 

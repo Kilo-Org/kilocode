@@ -54,7 +54,7 @@ You also choose whether the link **includes new messages**:
 
 The same lifetime and new-message options apply when you share a cloud session from the web and when you share an authenticated session through MCP. Creating a replacement link disables the previous link for that session. Reopening the share dialog lets you copy the link that is already displayed instead of creating another one.
 
-Unsharing a session, or creating a replacement link, disables the existing link. Links created before these options were available keep their original lifetime and message behavior; create a new link if you need a different duration or live updates.
+Unsharing a session disables its link. Links created before these options were available keep their original lifetime and message behavior; create a new link if you need a different duration or live updates.
 
 Note: Sharing creates a read‑only view for the public link so your private session remains in your account.
 
