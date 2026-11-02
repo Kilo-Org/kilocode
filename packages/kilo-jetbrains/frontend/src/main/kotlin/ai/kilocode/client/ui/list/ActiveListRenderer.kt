@@ -120,7 +120,12 @@ internal class ActiveListRenderer(
     // drifting to the far right of the row. A list that opts into [ActiveListConfig.badgesRight] gets
     // the group stretched across the row instead, which lands its badges on the same trailing edge as
     // the metrics and secondary badges below them.
-    private val header = titleGroup.align(if (cfg.badgesRight) HAlign.FIT else HAlign.LEFT, VAlign.CENTER)
+    private var inline = false
+    private val header = titleGroup.align(
+        if (cfg.badgesRight) HAlign.FIT else HAlign.LEFT,
+        VAlign.CENTER,
+        maxW = if (cfg.badgesRight) { { if (inline) titleGroup.preferredSize.width else Int.MAX_VALUE } } else null,
+    )
     // Carries the description as a [FadeText] rather than the JBLabel it used to be, so both lines of a
     // row clip the same way: cut and faded, not ellipsed through the label UI. The internal padding and
     // border a colored component ships with are cleared to keep the label's own geometry, which would
@@ -284,6 +289,7 @@ internal class ActiveListRenderer(
         val weak = UiStyle.Colors.weak()
         val titleFg = if (value.progress != null) weak else fg
         val section = activeListSectionTitle(model.items, index)
+        inline = value.inlineBadges
 
         background = list.background
         top.background = list.background

@@ -51,8 +51,12 @@ updates:
         update-types:
           - "version-update:semver-major"
     # Related packages move together. Group names must end in "-minor-patch"
-    # so dependabot-auto-merge.yml recognises them. A dependency joins the
-    # first group that matches it.
+    # so dependabot-auto-merge.yml recognises them. When a dependency matches
+    # several groups, Dependabot puts it in the most specific one, not the
+    # first one listed. A group with no `patterns` scores higher than any
+    # wildcard pattern, so the catch-all group must declare `patterns: ["*"]`
+    # (the lowest score). Without it, the catch-all takes every dependency
+    # matched only by a wildcard, like "@vitest/*", away from its named group.
     groups:
       react-minor-patch:
         patterns:
@@ -71,6 +75,8 @@ updates:
           - "minor"
           - "patch"
       kilo-docs-minor-patch:
+        patterns:
+          - "*"
         update-types:
           - "minor"
           - "patch"
@@ -96,7 +102,7 @@ updates:
         update-types:
           - "version-update:semver-major"
     # One bad update must not block the rest, and coupled artifacts must move
-    # together (same "-minor-patch" suffix and first-match rules as above).
+    # together (same "-minor-patch" suffix and specificity rules as above).
     groups:
       intellij-minor-patch:
         patterns:
@@ -133,6 +139,8 @@ updates:
           - "minor"
           - "patch"
       jetbrains-minor-patch:
+        patterns:
+          - "*"
         update-types:
           - "minor"
           - "patch"

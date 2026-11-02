@@ -17,6 +17,27 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 
 class SessionUpdateQueueTest : SessionControllerTestBase() {
 
+    fun `test hosted fence reconciles hidden transcript without waiting for tab selection`() {
+        val id = "hosted:kilo-cloud:worktree_one:ses_one"
+        appRpc.state.value = ai.kilocode.rpc.dto.KiloAppStateDto(ai.kilocode.rpc.dto.KiloAppStatusDto.READY)
+        projectRpc.state.value = workspaceReady()
+        val m = controller(id, flushMs = 250L)
+        collect(m)
+        flush()
+        hide(m)
+        emit(ChatEventDto.Resnapshot(id, "start"), flush = false)
+        emit(ChatEventDto.MessageUpdated(id, msg("msg1", id, "assistant")), flush = false)
+        emit(ChatEventDto.PartUpdated(id, part("answer", id, "msg1", "text", text = "complete")), flush = false)
+        emit(ChatEventDto.SessionStatusChanged(id, SessionStatusDto("idle")), flush = false)
+        emit(ChatEventDto.Resnapshot(id, "complete"), flush = false)
+        settle()
+        assertModel("assistant#msg1\ntext#answer:\n  complete", m)
+        assertEquals(SessionState.Idle, m.model.state)
+        show(m)
+        settle()
+        assertEquals(1, m.model.messages().size)
+    }
+
     fun `test hidden controller buffers until shown`() {
         appRpc.state.value = ai.kilocode.rpc.dto.KiloAppStateDto(ai.kilocode.rpc.dto.KiloAppStatusDto.READY)
         projectRpc.state.value = workspaceReady()

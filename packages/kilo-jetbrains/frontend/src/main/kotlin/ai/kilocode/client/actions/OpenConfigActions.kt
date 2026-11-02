@@ -4,6 +4,7 @@ import ai.kilocode.client.KiloNotifications
 import ai.kilocode.client.agentManager.worktree.WorktreeDataKeys
 import ai.kilocode.client.app.KiloWorkspaceService
 import ai.kilocode.client.plugin.KiloBundle
+import ai.kilocode.client.agentManager.hosted.HostedWorkspaceDataKeys
 import ai.kilocode.client.telemetry.Telemetry
 import ai.kilocode.rpc.dto.ConfigTargetDto
 import com.intellij.openapi.actionSystem.ActionUpdateThread
@@ -90,7 +91,9 @@ class OpenSetupScriptAction : AnAction(
 
     /** Worktree-row-only: hidden on the main worktree row, like Run. */
     override fun update(e: AnActionEvent) {
-        if (e.getData(WorktreeDataKeys.WORKTREE)?.main == true) {
+        if (e.getData(HostedWorkspaceDataKeys.WORKSPACE) != null ||
+            e.getData(WorktreeDataKeys.WORKTREE)?.main == true
+        ) {
             e.presentation.isEnabledAndVisible = false
             return
         }
@@ -108,6 +111,7 @@ class OpenSetupScriptAction : AnAction(
     }
 
     override fun actionPerformed(e: AnActionEvent) {
+        if (e.getData(HostedWorkspaceDataKeys.WORKSPACE) != null) return
         val dir = e.workspaceDirectory() ?: return
         Telemetry.send("Worktree Setup Script Opened", mapOf("surface" to "worktree_row"))
         service<KiloWorkspaceService>().openSetupScript(dir) { ok ->

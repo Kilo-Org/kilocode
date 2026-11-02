@@ -36,7 +36,7 @@ Model inference is deducted from your balance at the upstream provider's rate wi
 
 ### Individual accounts
 
-Your account balance is the difference between total credits purchased and total usage. Check your balance in the [Kilo dashboard](https://app.kilo.ai).
+Your available balance includes unused credits that have not expired, after usage and other balance adjustments. Check your balance and any credit expiration dates in the [Kilo application](https://app.kilo.ai).
 
 When your balance reaches zero, requests to paid models will return HTTP 402 with a link to add credits:
 
@@ -58,8 +58,14 @@ Organizations have their own balance pool that members draw from. Organization b
 
 - **Shared balance**: All members use a common credit pool
 - **Per-user daily limits**: Cap individual member spending (e.g., $5/day per user)
-- **Auto top-up**: Automatically replenish credits when the balance drops below a threshold
+- **Auto top-up**: Replenish credits when usage or a requested credit-funded service triggers a top-up below the configured threshold. Credit expiration and balance viewing alone never trigger a charge
 - **Minimum balance alerts**: Email notifications when the balance drops below a configured amount
+
+### Credit expiration
+
+Paid purchases expire one calendar year after purchase. Each personal or organization Kilo Pass paid allotment expires one calendar year after issuance, including monthly allotments under annual plans. Paid Apple in-app-purchase credits do not expire, including remaining Apple subscription credits.
+
+Existing balances and previously disclosed paid terms are preserved, including pending purchases and prepaid annual terms through renewal. Promotional and bonus deadlines are unchanged. Usage draws from the earliest-expiring credits first, with nonexpiring credits last. For details, see [credit expiration and spending order](/docs/getting-started/adding-credits#credit-expiration-and-spending-order).
 
 ## Organization controls
 

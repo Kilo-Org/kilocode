@@ -12,9 +12,11 @@ import ai.kilocode.client.ui.ShimmerLabel
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.util.UiTimerSource
 import ai.kilocode.client.util.UiTimers
+import ai.kilocode.rpc.dto.HostedSystemEventDto
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.util.Disposer
 import com.intellij.ui.components.JBLabel
+import com.intellij.util.concurrency.annotations.RequiresEdt
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.components.BorderLayoutPanel
 import java.awt.Color
@@ -42,13 +44,15 @@ import javax.swing.JPanel
  * appears below all turn views inside the scroll pane.
  */
 class ProgressPanel(
-    model: SessionModel,
+    private val model: SessionModel,
     parent: Disposable,
     private val clock: UiTimerSource = UiTimers,
 ) : BorderLayoutPanel(), SessionEditorStyleTarget {
 
     private var style = SessionEditorStyle.current()
     private var state: SessionState = SessionState.Idle
+    private var preparation: String? = null
+    private var failure: HostedSystemEventDto? = null
 
     // Elapsed time is tracked as banked time from previous running stretches
     // (`accrued`) plus the start of the current stretch (`began`, `null` when
@@ -86,6 +90,7 @@ class ProgressPanel(
 
         model.addListener(parent) { event ->
             if (event is SessionModelEvent.StateChanged) onState(event.state)
+            if (failure != null && (event is SessionModelEvent.MessageAdded || event is SessionModelEvent.MessageUpdated)) onState(state)
         }
     }
 
@@ -100,8 +105,47 @@ class ProgressPanel(
 
     override fun getBackground(): Color = SessionUiStyle.Colors.sessionBackground()
 
-    private fun onState(state: SessionState) {
-        this.state = state
+    @RequiresEdt
+    fun setPreparation(value: String?, error: HostedSystemEventDto? = null) {
+        val text = value?.takeIf { it.isNotBlank() }
+        if (preparation == text && failure == error) return
+        preparation = text
+        failure = error
+        onState(state)
+    }
+
+    @RequiresEdt
+    private fun onState(value: SessionState) {
+        this.state = value
+        val latest = model.messages().lastOrNull { it.info.role == "user" }?.info
+        val failed = failure?.takeUnless {
+            value is SessionState.AwaitingPermission || value is SessionState.AwaitingQuestion ||
+                (value.isBusy() && latest != null &&
+                    ((it.triggerMessageID != null && latest.id != it.triggerMessageID) ||
+                        (it.triggerMessageID == null && it.observedAt > 0 && latest.time.created > it.observedAt)))
+        }
+        elapsed.isVisible = failed == null
+        if (failed != null) {
+            val key = if (failed.failure == "workspace_setup_failed")
+                "hosted.workspace.preparation.setupFailed" else "hosted.workspace.preparation.failed"
+            text = KiloBundle.message(key) +
+                "\n" + KiloBundle.message("hosted.workspace.preparation.retry")
+            spinner.isVisible = false
+            busy.isShimmering = false
+            busy.isVisible = false
+            status.isVisible = true
+            status.foreground = UiStyle.Colors.errorLabelForeground()
+            status.sync(text)
+            pause()
+            tick.stop()
+            isVisible = true
+            revalidate()
+            repaint()
+            return
+        }
+        val state = preparation?.takeUnless {
+            value is SessionState.AwaitingPermission || value is SessionState.AwaitingQuestion || value is SessionState.Error
+        }?.let { SessionState.Busy(it) } ?: value
         when (state) {
             is SessionState.Busy -> {
                 text = state.text
@@ -204,7 +248,7 @@ class ProgressPanel(
         status.font = style.regularFont
         elapsed.font = style.regularFont
         elapsed.foreground = SessionUiStyle.Text.Secondary.foreground()
-        if (state is SessionState.Busy) busy.foreground = style.editorForeground
+        if (state is SessionState.Busy || preparation != null) busy.foreground = style.editorForeground
         revalidate()
         repaint()
     }
@@ -321,8 +365,8 @@ private class Footer(
         val label = active()
         val text = if (label is StatusLabel) label.natural() else label.preferredSize
         val spin = if (spinner.isVisible) spinner.preferredSize else Dimension()
-        val time = elapsed.preferredSize
-        val slots = if (spinner.isVisible) 2 else 1
+        val time = if (elapsed.isVisible) elapsed.preferredSize else Dimension()
+        val slots = (if (spinner.isVisible) 1 else 0) + (if (elapsed.isVisible) 1 else 0)
         val gap = UiStyle.Gap.md()
         val natural = spin.width + text.width + time.width + gap * slots
         val width = if (space > 0) minOf(space, natural) else natural

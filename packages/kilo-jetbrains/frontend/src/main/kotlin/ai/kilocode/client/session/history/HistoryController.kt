@@ -14,6 +14,7 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -29,6 +30,7 @@ class HistoryController(
     private val gitUrlProvider: () -> String? = { resolveGitRemoteUrl(workspace.directory) },
     private val telemetry: (String, Map<String, String>) -> Unit = { event, props -> Telemetry.send(event, props) },
     private val io: CoroutineDispatcher = Dispatchers.IO,
+    refreshes: Flow<Long>? = null,
 ) {
     companion object {
         const val CLOUD_LIMIT = 50
@@ -76,6 +78,11 @@ class HistoryController(
                     }
                     prev = state.status
                 }
+            }
+        }
+        if (refreshes != null) {
+            cs.launch {
+                refreshes.drop(1).collect { edt { reloadCloud() } }
             }
         }
     }

@@ -1,8 +1,12 @@
 import * as Attachments from "@/kilocode/server/hosted-attachments"
+import { hosted, provider } from "./hosted-fixture"
+import { HostedWorkspaceID } from "@/kilocode/session-hosting/types"
 import { WorkspaceV2 } from "@opencode-ai/core/workspace"
 import { describe, expect, test } from "bun:test"
 import { Schema } from "effect"
-import { hosted, provider } from "./hosted-fixture"
+
+const scope = (providerID: string, workspaceID: string) =>
+  Schema.decodeUnknownSync(HostedWorkspaceID)({ providerID, workspaceID })
 
 describe("hosted attachments", () => {
   test("mints an opaque id that stays valid under the workspace selector parser", () => {
@@ -125,5 +129,110 @@ describe("hosted attachments", () => {
     expect(store.count(session)).toBe(1)
     store.dispose(second.id)
     expect(store.count(session)).toBe(0)
+  })
+
+  test("disposes every attachment for one composite native session identity", () => {
+    const store = Attachments.create()
+    const alpha = provider("alpha")
+    const beta = provider("beta")
+    const session = hosted("alpha", "ses_00000000000000000000000001")
+    const first = store.mint({ provider: alpha.value, session, expiresAt: Date.now() + 60_000 })
+    const second = store.mint({ provider: alpha.value, session, expiresAt: Date.now() + 60_000 })
+    const other = store.mint({
+      provider: alpha.value,
+      session: hosted("alpha", "ses_00000000000000000000000002"),
+      expiresAt: Date.now() + 60_000,
+    })
+    const foreign = store.mint({
+      provider: beta.value,
+      session: hosted("beta", "ses_00000000000000000000000001"),
+      expiresAt: Date.now() + 60_000,
+    })
+
+    store.disposeSession(session)
+
+    expect(store.lookup(first.id).kind).toBe("disposed")
+    expect(store.lookup(second.id).kind).toBe("disposed")
+    expect(store.lookup(other.id).kind).toBe("found")
+    expect(store.lookup(foreign.id).kind).toBe("found")
+
+    store.disposeSession(session)
+    expect(store.lookup(first.id).kind).toBe("disposed")
+    expect(store.lookup(second.id).kind).toBe("disposed")
+    expect(store.lookup(other.id).kind).toBe("found")
+    expect(store.lookup(foreign.id).kind).toBe("found")
+  })
+
+  test("disposes every attachment in one workspace without touching other workspaces or providers", () => {
+    const store = Attachments.create()
+    const alpha = provider("alpha")
+    const beta = provider("beta")
+    const workspace = scope("alpha", "workspace-one")
+    const other = scope("alpha", "workspace-two")
+    const foreign = scope("beta", "workspace-one")
+    const first = store.mint({
+      provider: alpha.value,
+      session: hosted("alpha", "ses_00000000000000000000000001"),
+      workspace,
+      expiresAt: Date.now() + 60_000,
+    })
+    const sibling = store.mint({
+      provider: alpha.value,
+      session: hosted("alpha", "ses_00000000000000000000000002"),
+      workspace,
+      expiresAt: Date.now() + 60_000,
+    })
+    const lonely = store.mint({
+      provider: alpha.value,
+      session: hosted("alpha", "ses_00000000000000000000000003"),
+      expiresAt: Date.now() + 60_000,
+    })
+    const survivor = store.mint({
+      provider: alpha.value,
+      session: hosted("alpha", "ses_00000000000000000000000004"),
+      workspace: other,
+      expiresAt: Date.now() + 60_000,
+    })
+    const isolated = store.mint({
+      provider: beta.value,
+      session: hosted("beta", "ses_00000000000000000000000001"),
+      workspace: foreign,
+      expiresAt: Date.now() + 60_000,
+    })
+
+    store.disposeWorkspace(workspace)
+
+    expect(store.lookup(first.id).kind).toBe("disposed")
+    expect(store.lookup(sibling.id).kind).toBe("disposed")
+    expect(store.lookup(lonely.id).kind).toBe("found")
+    expect(store.lookup(survivor.id).kind).toBe("found")
+    expect(store.lookup(isolated.id).kind).toBe("found")
+
+    store.disposeWorkspace(workspace)
+    expect(store.lookup(first.id).kind).toBe("disposed")
+  })
+
+  test("renewal preserves workspace membership", () => {
+    let clock = 1_000
+    const store = Attachments.create({ now: () => clock })
+    const fake = provider("alpha")
+    const workspace = scope("alpha", "workspace-one")
+    const entry = store.mint({
+      provider: fake.value,
+      session: hosted("alpha", "ses_00000000000000000000000001"),
+      workspace,
+      expiresAt: 5_000,
+    })
+
+    clock += Attachments.LEASE_MS / 2
+    store.renew(entry, { expiresAt: 9_999 })
+
+    expect(store.lookup(entry.id)).toMatchObject({
+      kind: "found",
+      entry: { workspace, expiresAt: 9_999 },
+    })
+
+    store.disposeWorkspace(workspace)
+    expect(store.lookup(entry.id).kind).toBe("disposed")
   })
 })

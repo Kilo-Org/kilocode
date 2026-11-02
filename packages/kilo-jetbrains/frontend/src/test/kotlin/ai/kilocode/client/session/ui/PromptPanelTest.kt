@@ -1625,6 +1625,30 @@ class PromptPanelTest : BasePlatformTestCase() {
         assertEquals(1, panel.attachmentCountForTest())
     }
 
+    fun `test text-only prompt rejects restored file drafts and image paste but sends text`() {
+        val calls = mutableListOf<Pair<String, List<PromptPartDto>>>()
+        val panel = PromptPanel(project, { text, parts -> calls += text to parts }, {}, files = false)
+        panel.setReady(true)
+        panel.setDraft("plain text", listOf(
+            PromptAttachment(id = "notes", name = "notes.txt", mime = "text/plain", url = "file:///tmp/notes.txt", reference = true),
+        ))
+        assertTrue(panel.attachments().isEmpty())
+        PlatformTestUtil.waitForFuture(panel.processPasteForTest(
+            ImageTransferable(BufferedImage(2, 2, BufferedImage.TYPE_INT_ARGB)),
+        ))
+        UIUtil.dispatchAllInvocationEvents()
+        assertTrue(panel.attachments().isEmpty())
+        val editor = realizedEditor(panel)
+        val paste = PromptAttachmentPasteProvider()
+        paste.performPaste(pasteContext(editor, ImageTransferable(BufferedImage(2, 2, BufferedImage.TYPE_INT_ARGB))))
+        panel.setText("plain text")
+        panel.send()
+        waitForSend { calls.size == 1 }
+        assertEquals("plain text", calls.single().first)
+        assertTrue(calls.single().second.isEmpty())
+        assertTrue(panel.attachments().isEmpty())
+    }
+
     fun `test prompt button switches between send and stop state`() {
         val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> })
 

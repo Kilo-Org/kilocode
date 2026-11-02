@@ -46,6 +46,9 @@ import type {
   BackgroundProcessStopSessionResponses,
   BranchNameGenerateErrors,
   BranchNameGenerateResponses,
+  CloudAgentSystemEventsErrors,
+  CloudAgentSystemEventsResponse,
+  CloudAgentSystemEventsResponses,
   CommandListErrors,
   CommandListResponses,
   CommitMessageGenerateErrors,
@@ -414,12 +417,27 @@ import type {
   SessionGetResponses,
   SessionHostAttachErrors,
   SessionHostAttachResponses,
+  SessionHostCreateWorkspaceErrors,
+  SessionHostCreateWorkspaceInput,
+  SessionHostCreateWorkspaceResponses,
+  SessionHostDeleteWorkspaceErrors,
+  SessionHostDeleteWorkspaceResponses,
   SessionHostDetachErrors,
   SessionHostDetachResponses,
   SessionHostGetErrors,
   SessionHostGetResponses,
+  SessionHostGetWorkspaceErrors,
+  SessionHostGetWorkspaceResponses,
+  SessionHostGetWorkspaceStatusErrors,
+  SessionHostGetWorkspaceStatusResponses,
   SessionHostListErrors,
   SessionHostListResponses,
+  SessionHostListWorkspaceProfilesErrors,
+  SessionHostListWorkspaceProfilesResponses,
+  SessionHostListWorkspacesErrors,
+  SessionHostListWorkspaceSessionsErrors,
+  SessionHostListWorkspaceSessionsResponses,
+  SessionHostListWorkspacesResponses,
   SessionHostOrganizationId,
   SessionHostProviderId,
   SessionHostProvidersErrors,
@@ -427,8 +445,12 @@ import type {
   SessionHostStartErrors,
   SessionHostStartInput,
   SessionHostStartResponses,
+  SessionHostStartWorkspaceSessionErrors,
+  SessionHostStartWorkspaceSessionResponses,
   SessionHostTranscriptErrors,
   SessionHostTranscriptResponses,
+  SessionHostWorkspaceId,
+  SessionHostWorkspaceSessionStartBody,
   SessionInitErrors,
   SessionInitResponses,
   SessionListErrors,
@@ -6705,6 +6727,42 @@ export class CommitMessage extends HeyApiClient {
   }
 }
 
+export class CloudAgent extends HeyApiClient {
+  /**
+   * Subscribe to Cloud Agent system events
+   *
+   * Read preparation and sandbox status events through an opaque hosted attachment.
+   */
+  public systemEvents<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+    },
+    options?: Options<never, ThrowOnError, CloudAgentSystemEventsResponse>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).sse.get<
+      CloudAgentSystemEventsResponses,
+      CloudAgentSystemEventsErrors,
+      ThrowOnError
+    >({
+      url: "/cloud-agent/event",
+      ...options,
+      ...params,
+    })
+  }
+}
+
 export class EnhancePrompt extends HeyApiClient {
   /**
    * Enhance prompt
@@ -9711,6 +9769,293 @@ export class SessionHost extends HeyApiClient {
       ...params,
     })
   }
+
+  /**
+   * List hosted workspaces
+   *
+   * List workspaces from the authenticated default session host provider. A workspace is the shared compute and repository identity that groups root sessions.
+   */
+  public listWorkspaces<ThrowOnError extends boolean = false>(
+    parameters?: {
+      limit?: string
+      sessionLimit?: string
+      cursor?: string
+      repositoryUrl?: string
+      organizationID?: SessionHostOrganizationId
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "limit" },
+            { in: "query", key: "sessionLimit" },
+            { in: "query", key: "cursor" },
+            { in: "query", key: "repositoryUrl" },
+            { in: "query", key: "organizationID" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<
+      SessionHostListWorkspacesResponses,
+      SessionHostListWorkspacesErrors,
+      ThrowOnError
+    >({
+      url: "/kilocode/session-host/workspace",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Create a hosted workspace
+   *
+   * Create a hosted workspace and its root session. Reuse the same operation key and message ID to retry safely.
+   */
+  public createWorkspace<ThrowOnError extends boolean = false>(
+    parameters?: {
+      sessionHostCreateWorkspaceInput?: SessionHostCreateWorkspaceInput
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [{ args: [{ key: "sessionHostCreateWorkspaceInput", map: "body" }] }],
+    )
+    return (options?.client ?? this.client).post<
+      SessionHostCreateWorkspaceResponses,
+      SessionHostCreateWorkspaceErrors,
+      ThrowOnError
+    >({
+      url: "/kilocode/session-host/workspace",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
+
+  /**
+   * List workspace creation profiles
+   *
+   * List authorized profile summaries for workspace creation. Secret and environment values are never returned.
+   */
+  public listWorkspaceProfiles<ThrowOnError extends boolean = false>(
+    parameters?: {
+      organizationID?: SessionHostOrganizationId
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams([parameters], [{ args: [{ in: "query", key: "organizationID" }] }])
+    return (options?.client ?? this.client).get<
+      SessionHostListWorkspaceProfilesResponses,
+      SessionHostListWorkspaceProfilesErrors,
+      ThrowOnError
+    >({
+      url: "/kilocode/session-host/workspace/profiles",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Delete a hosted workspace
+   *
+   * Delete a hosted workspace and invalidate its local attachments. Attachments for other workspaces are preserved.
+   */
+  public deleteWorkspace<ThrowOnError extends boolean = false>(
+    parameters: {
+      providerID: SessionHostProviderId
+      workspaceID: SessionHostWorkspaceId
+      organizationID?: SessionHostOrganizationId
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "providerID" },
+            { in: "path", key: "workspaceID" },
+            { in: "query", key: "organizationID" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).delete<
+      SessionHostDeleteWorkspaceResponses,
+      SessionHostDeleteWorkspaceErrors,
+      ThrowOnError
+    >({
+      url: "/kilocode/session-host/workspace/{providerID}/{workspaceID}",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Get a hosted workspace
+   *
+   * Read one hosted workspace with a bounded page of its root sessions.
+   */
+  public getWorkspace<ThrowOnError extends boolean = false>(
+    parameters: {
+      providerID: SessionHostProviderId
+      workspaceID: SessionHostWorkspaceId
+      sessionLimit?: string
+      sessionCursor?: string
+      organizationID?: SessionHostOrganizationId
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "providerID" },
+            { in: "path", key: "workspaceID" },
+            { in: "query", key: "sessionLimit" },
+            { in: "query", key: "sessionCursor" },
+            { in: "query", key: "organizationID" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<
+      SessionHostGetWorkspaceResponses,
+      SessionHostGetWorkspaceErrors,
+      ThrowOnError
+    >({
+      url: "/kilocode/session-host/workspace/{providerID}/{workspaceID}",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Read hosted workspace status
+   *
+   * Read passive compute, activity, wake, billing, and deletion progress without waking compute.
+   */
+  public getWorkspaceStatus<ThrowOnError extends boolean = false>(
+    parameters: {
+      providerID: SessionHostProviderId
+      workspaceID: SessionHostWorkspaceId
+      organizationID?: SessionHostOrganizationId
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "providerID" },
+            { in: "path", key: "workspaceID" },
+            { in: "query", key: "organizationID" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<
+      SessionHostGetWorkspaceStatusResponses,
+      SessionHostGetWorkspaceStatusErrors,
+      ThrowOnError
+    >({
+      url: "/kilocode/session-host/workspace/{providerID}/{workspaceID}/status",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * List hosted workspace sessions
+   *
+   * List a bounded page of a hosted workspace's root sessions.
+   */
+  public listWorkspaceSessions<ThrowOnError extends boolean = false>(
+    parameters: {
+      providerID: SessionHostProviderId
+      workspaceID: SessionHostWorkspaceId
+      limit?: string
+      cursor?: string
+      organizationID?: SessionHostOrganizationId
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "providerID" },
+            { in: "path", key: "workspaceID" },
+            { in: "query", key: "limit" },
+            { in: "query", key: "cursor" },
+            { in: "query", key: "organizationID" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<
+      SessionHostListWorkspaceSessionsResponses,
+      SessionHostListWorkspaceSessionsErrors,
+      ThrowOnError
+    >({
+      url: "/kilocode/session-host/workspace/{providerID}/{workspaceID}/session",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Start a session in a hosted workspace
+   *
+   * Add a root session to an existing hosted workspace. The workspace supplies repository, environment, and compute; reuse the same operation key and message ID to retry safely.
+   */
+  public startWorkspaceSession<ThrowOnError extends boolean = false>(
+    parameters: {
+      providerID: SessionHostProviderId
+      workspaceID: SessionHostWorkspaceId
+      sessionHostWorkspaceSessionStartBody?: SessionHostWorkspaceSessionStartBody
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "providerID" },
+            { in: "path", key: "workspaceID" },
+            { key: "sessionHostWorkspaceSessionStartBody", map: "body" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<
+      SessionHostStartWorkspaceSessionResponses,
+      SessionHostStartWorkspaceSessionErrors,
+      ThrowOnError
+    >({
+      url: "/kilocode/session-host/workspace/{providerID}/{workspaceID}/session",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
 }
 
 export class Suggestion extends HeyApiClient {
@@ -12485,6 +12830,11 @@ export class KiloClient extends HeyApiClient {
   private _commitMessage?: CommitMessage
   get commitMessage(): CommitMessage {
     return (this._commitMessage ??= new CommitMessage({ client: this.client }))
+  }
+
+  private _cloudAgent?: CloudAgent
+  get cloudAgent(): CloudAgent {
+    return (this._cloudAgent ??= new CloudAgent({ client: this.client }))
   }
 
   private _enhancePrompt?: EnhancePrompt

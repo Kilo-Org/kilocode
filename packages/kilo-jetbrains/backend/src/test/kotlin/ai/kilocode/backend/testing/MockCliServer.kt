@@ -137,6 +137,30 @@ class MockCliServer : AutoCloseable {
     @Volatile var findFileStatus = 200
     val findFilePaths = CopyOnWriteArrayList<String>()
 
+    // Hosted Session Host responses
+    @Volatile var hostedProviders = """{"providers":[]}"""
+    @Volatile var hostedWorkspaces = """{"items":[],"cursor":null}"""
+    @Volatile var hostedWorkspace = """{"id":{"providerID":"cloud","workspaceID":"wrk_1"},"name":"Cloud Workspace","repository":{"provider":"github","url":"https://github.com/Kilo-Org/kilocode","branch":"main"},"deletionState":"active","created":1.0,"updated":2.0,"lastActivity":3.0,"sessions":[]}"""
+    @Volatile var hostedWorkspaceStatus = """{"deletionState":"active","compute":{"status":"running","detailCode":"ready"},"activity":{"activeSessionCount":1,"hasActiveTurn":false},"wakeOnInput":{"available":true},"billing":{"blocked":false,"rate":{"estimatedHourlyMicrodollars":1000000}},"observedAt":1.0}"""
+    @Volatile var hostedAttach = """{"attachmentID":"wrk_att_test","session":{"providerID":"cloud","sessionID":"ses_cloud"},"expiresAt":${System.currentTimeMillis() + 600_000}}"""
+    @Volatile var hostedAttachStatus = 200
+    val hostedAttachStatuses = ConcurrentLinkedQueue<Int>()
+    val hostedAttachments = ConcurrentHashMap<String, String>()
+    val hostedStreamStatus = ConcurrentHashMap<String, Int>()
+    @Volatile var statusGate: CountDownLatch? = null
+    @Volatile var hostedMessages = "[]"
+    val hostedMessageStatuses = ConcurrentLinkedQueue<Int>()
+    @Volatile var hostedPromptStatus = 200
+    @Volatile var hostedPromptResponse = "true"
+    @Volatile var lastHostedWorkspacePath: String? = null
+    @Volatile var lastHostedAttachPath: String? = null
+    @Volatile var lastHostedMessagePath: String? = null
+    @Volatile var lastHostedPromptPath: String? = null
+    @Volatile var lastHostedPromptBody: String? = null
+    @Volatile var lastHostedCommandPath: String? = null
+    @Volatile var lastHostedCommandBody: String? = null
+    @Volatile var lastHostedDetachPath: String? = null
+
     // Session REST responses
     @Volatile var sessions = "[]"
     @Volatile var recentSessions = "[]"
@@ -194,8 +218,10 @@ class MockCliServer : AutoCloseable {
     @Volatile var lastSessionRenameMethod: String? = null
     @Volatile var pendingPermissions = "[]"
     @Volatile var pendingPermissionsStatus = 200
+    val pendingPermissionsStatuses = ConcurrentLinkedQueue<Int>()
     @Volatile var pendingQuestions = "[]"
     @Volatile var pendingQuestionsStatus = 200
+    val pendingQuestionsStatuses = ConcurrentLinkedQueue<Int>()
     @Volatile var instanceReloadStatus = 200
     @Volatile var lastInstanceReloadPath: String? = null
 
@@ -214,8 +240,44 @@ class MockCliServer : AutoCloseable {
     /** Request counts by bare path (e.g. "/session" or "/global/config"). Thread-safe. */
     private val counts = ConcurrentHashMap<String, AtomicInteger>()
     private val requests = Object()
+
+    /** Every request path, including its query string, in arrival order. */
+    val paths = CopyOnWriteArrayList<String>()
     private val streams = Object()
     private val sse = AtomicInteger(0)
+    private class Feed(val socket: Socket, val writer: BufferedWriter) {
+        val latch = CountDownLatch(1)
+    }
+    private val feeds = ConcurrentHashMap<String, Feed>()
+    private val openings = ConcurrentHashMap<String, AtomicInteger>()
+
+    fun awaitFeed(path: String, target: Int = 1, timeout: Long = 5_000): Boolean {
+        val end = System.currentTimeMillis() + timeout
+        synchronized(streams) {
+            while ((openings[path]?.get() ?: 0) < target) {
+                val wait = end - System.currentTimeMillis()
+                if (wait <= 0) return false
+                streams.wait(wait)
+            }
+            return true
+        }
+    }
+
+    fun pushFeed(path: String, data: String, type: String? = null) {
+        val feed = checkNotNull(feeds[path]) { "No SSE feed for $path" }
+        synchronized(feed.writer) {
+            if (type != null) feed.writer.write("event: $type\n")
+            feed.writer.write("data: $data\n\n")
+            feed.writer.flush()
+        }
+    }
+
+    fun closeFeed(path: String) {
+        feeds.remove(path)?.let {
+            it.socket.close()
+            it.latch.countDown()
+        }
+    }
 
     val sseConnectionCount: Int
         get() = sse.get()
@@ -326,6 +388,8 @@ class MockCliServer : AutoCloseable {
     }
 
     private fun shutdownServer() {
+        feeds.values.forEach { it.latch.countDown() }
+        feeds.clear()
         sseLatch.countDown()
         val w = sseWriter
         sseWriter = null
@@ -371,6 +435,7 @@ class MockCliServer : AutoCloseable {
 
             val output = BufferedWriter(OutputStreamWriter(socket.getOutputStream()))
             val bare = path.substringBefore("?")
+            paths.add(path)
             val latch = sseLatch
 
             // Track request counts
@@ -380,7 +445,7 @@ class MockCliServer : AutoCloseable {
             // Optional delay for race condition testing
             val delay = responseDelay
             if (delay > 0) Thread.sleep(delay)
-            if (bare != "/global/event") responseGate?.await()
+            if (bare !in setOf("/global/event", "/event", "/cloud-agent/event")) responseGate?.await()
             if (bare.startsWith("/config/warnings")) warningsGate?.await()
             if (bare == "/experimental/capabilities") capabilitiesGate?.await()
 
@@ -440,6 +505,11 @@ class MockCliServer : AutoCloseable {
                     respond(output, organizationSetStatus, "true")
                 }
                 path == "/global/event" -> handleSse(output, latch)
+                bare in setOf("/event", "/cloud-agent/event") -> {
+                    val status = hostedStreamStatus[path] ?: 200
+                    if (status != 200) respond(output, status, """{"error":"attachment unavailable"}""")
+                    else handleFeed(path, socket, output)
+                }
                 bare == "/path" -> respond(output, 200, this.path)
                 bare == "/provider" -> respond(output, providersStatus, providers)
                 bare == "/provider/auth" -> respond(output, providerAuthStatus, providerAuth)
@@ -549,11 +619,50 @@ class MockCliServer : AutoCloseable {
                     lastCloudSessionImportBody = body
                     respond(output, cloudSessionImportStatus, cloudSessionImport)
                 }
-                bare == "/session/status" -> respond(output, sessionStatusesStatus, sessionStatuses)
+                bare == "/kilocode/session-host/provider" -> respond(output, 200, hostedProviders)
+                bare == "/kilocode/session-host/workspace" -> {
+                    lastHostedWorkspacePath = path
+                    respond(output, 200, hostedWorkspaces)
+                }
+                bare.matches(Regex("/kilocode/session-host/workspace/[^/]+/[^/]+/status")) -> {
+                    lastHostedWorkspacePath = path
+                    respond(output, 200, hostedWorkspaceStatus)
+                }
+                bare.matches(Regex("/kilocode/session-host/workspace/[^/]+/[^/]+")) -> {
+                    lastHostedWorkspacePath = path
+                    respond(output, 200, hostedWorkspace)
+                }
+                bare.matches(Regex("/kilocode/session-host/session/[^/]+/[^/]+/attach")) && method == "POST" -> {
+                    lastHostedAttachPath = path
+                    respond(output, hostedAttachStatuses.poll() ?: hostedAttachStatus, hostedAttachments[bare] ?: hostedAttach)
+                }
+                bare.matches(Regex("/kilocode/session-host/attachment/[^/]+")) && method == "DELETE" -> {
+                    lastHostedDetachPath = bare
+                    respond(output, 200, "true")
+                }
+                bare == "/session/ses_cloud/message" && method == "GET" -> {
+                    lastHostedMessagePath = path
+                    respond(output, hostedMessageStatuses.poll() ?: sessionGetStatus, hostedMessages)
+                }
+                bare == "/session/ses_cloud/prompt_async" && method == "POST" -> {
+                    lastHostedPromptPath = path
+                    lastHostedPromptBody = body
+                    respond(output, hostedPromptStatus, hostedPromptResponse)
+                }
+                bare == "/session/ses_cloud/command" && method == "POST" -> {
+                    lastHostedCommandPath = path
+                    lastHostedCommandBody = body
+                    respond(output, 200, "true")
+                }
+                bare == "/session/ses_cloud/abort" && method == "POST" -> respond(output, 200, "true")
+                bare == "/session/status" -> {
+                    statusGate?.await()
+                    respond(output, sessionStatusesStatus, sessionStatuses)
+                }
                 bare == "/permission" && method == "GET" ->
-                    respond(output, pendingPermissionsStatus, pendingPermissions)
+                    respond(output, pendingPermissionsStatuses.poll() ?: pendingPermissionsStatus, pendingPermissions)
                 bare == "/question" && method == "GET" ->
-                    respond(output, pendingQuestionsStatus, pendingQuestions)
+                    respond(output, pendingQuestionsStatuses.poll() ?: pendingQuestionsStatus, pendingQuestions)
                 bare == "/session" && method == "GET" -> respond(output, sessionsStatus, sessions)
                 bare == "/session" && method == "POST" -> respond(output, sessionCreateStatus, sessionCreate)
                 bare.matches(Regex("/session/ses_[^/]+")) && method == "GET" ->
@@ -677,6 +786,19 @@ class MockCliServer : AutoCloseable {
         sseConnected.countDown()
         // Block until SSE is closed or server shuts down
         latch.await()
+    }
+
+    private fun handleFeed(path: String, socket: Socket, writer: BufferedWriter) {
+        writer.write("HTTP/1.1 200 OK\r\nContent-Type: text/event-stream\r\nConnection: keep-alive\r\n\r\n")
+        writer.flush()
+        val feed = Feed(socket, writer)
+        feeds[path] = feed
+        openings.computeIfAbsent(path) { AtomicInteger() }.incrementAndGet()
+        synchronized(streams) { streams.notifyAll() }
+        // Client cancellation must release passive discovery streams without a test-side close.
+        socket.getInputStream().read()
+        feeds.remove(path, feed)
+        feed.latch.countDown()
     }
 
     private companion object {

@@ -4,10 +4,15 @@ import { SessionHost } from "@/kilocode/session-hosting"
 import {
   HostedFailure,
   StartInput,
+  deletionDispatched,
+  type CreateWorkspaceInput,
+  type HostedWorkspaceID,
   type OrganizationID,
   type Provider,
   type ProviderID,
   type RemoteSessionID,
+  type WorkspaceID,
+  type WorkspaceSessionStartBody,
 } from "@/kilocode/session-hosting/types"
 import { SessionHostEvent } from "@opencode-ai/schema/kilocode/session-host-event"
 import {
@@ -67,7 +72,9 @@ export const sessionHostHandlers = HttpApiBuilder.group(InstanceHttpApi, "sessio
           state,
           ...(reason ? { reason } : {}),
         })
-        .pipe(Effect.catchCause((cause) => Effect.sync(() => log.error("availability event publish failed", { cause }))))
+        .pipe(
+          Effect.catchCause((cause) => Effect.sync(() => log.error("availability event publish failed", { cause }))),
+        )
 
     const require = (id: ProviderID) => host.registry.require(id).pipe(Effect.mapError(mapFailure))
 
@@ -97,6 +104,19 @@ export const sessionHostHandlers = HttpApiBuilder.group(InstanceHttpApi, "sessio
       providerID: params.providerID,
       sessionID: params.sessionID,
     })
+
+    const workspaceID = (params: { providerID: ProviderID; workspaceID: WorkspaceID }): HostedWorkspaceID => ({
+      providerID: params.providerID,
+      workspaceID: params.workspaceID,
+    })
+
+    const invalidate = <A>(id: HostedWorkspaceID, effect: Effect.Effect<A, HostedFailure>) =>
+      effect.pipe(
+        Effect.catch((error) => {
+          if (error.code === "not_found") Attachments.store.disposeWorkspace(id)
+          return Effect.fail(error)
+        }),
+      )
 
     const providers = Effect.fn("SessionHostHttpApi.providers")(function* () {
       const items = yield* Effect.forEach(host.registry.providers, (provider) =>
@@ -164,15 +184,18 @@ export const sessionHostHandlers = HttpApiBuilder.group(InstanceHttpApi, "sessio
     }) {
       const provider = yield* require(ctx.params.providerID)
       const organizationID = ctx.query.organizationID
-      const descriptor = yield* provider
-        .attach({
-          id: identity(ctx.params),
-          ...(organizationID ? { organizationID } : {}),
-        })
-        .pipe(Effect.mapError(mapFailure))
+      const input = {
+        id: identity(ctx.params),
+        ...(organizationID ? { organizationID } : {}),
+      }
+      const descriptor = yield* provider.attach(input).pipe(Effect.mapError(mapFailure))
+      const workspace = provider.membership
+        ? yield* provider.membership(input).pipe(Effect.mapError(mapFailure))
+        : undefined
       const entry = Attachments.store.mint({
         provider,
         session: descriptor.session,
+        ...(workspace ? { workspace } : {}),
         ...(organizationID ? { organizationID } : {}),
         expiresAt: descriptor.expiresAt,
       })
@@ -200,6 +223,132 @@ export const sessionHostHandlers = HttpApiBuilder.group(InstanceHttpApi, "sessio
       return { detached: true }
     })
 
+    const listWorkspaces = Effect.fn("SessionHostHttpApi.listWorkspaces")(function* (ctx: {
+      query: {
+        limit?: number
+        sessionLimit?: number
+        cursor?: string
+        repositoryUrl?: string
+        organizationID?: OrganizationID
+      }
+    }) {
+      const provider = yield* resolveDefault.pipe(Effect.mapError(mapFailure))
+      return yield* provider
+        .listWorkspaces({
+          ...(ctx.query.limit === undefined ? {} : { limit: ctx.query.limit }),
+          ...(ctx.query.sessionLimit === undefined ? {} : { sessionLimit: ctx.query.sessionLimit }),
+          ...(ctx.query.cursor === undefined ? {} : { cursor: ctx.query.cursor }),
+          ...(ctx.query.repositoryUrl === undefined ? {} : { repositoryUrl: ctx.query.repositoryUrl }),
+          ...(ctx.query.organizationID === undefined ? {} : { organizationID: ctx.query.organizationID }),
+        })
+        .pipe(Effect.mapError(mapFailure))
+    })
+
+    const listWorkspaceProfiles = Effect.fn("SessionHostHttpApi.listWorkspaceProfiles")(function* (ctx: {
+      query: { organizationID?: OrganizationID }
+    }) {
+      const provider = yield* resolveDefault.pipe(Effect.mapError(mapFailure))
+      return yield* provider
+        .listWorkspaceProfiles(
+          ctx.query.organizationID === undefined ? {} : { organizationID: ctx.query.organizationID },
+        )
+        .pipe(Effect.mapError(mapFailure))
+    })
+
+    const createWorkspace = Effect.fn("SessionHostHttpApi.createWorkspace")(function* (ctx: {
+      payload: CreateWorkspaceInput
+    }) {
+      const provider = yield* resolveDefault.pipe(Effect.mapError(mapFailure))
+      return yield* provider.createWorkspace(ctx.payload).pipe(Effect.mapError(mapFailure))
+    })
+
+    const getWorkspace = Effect.fn("SessionHostHttpApi.getWorkspace")(function* (ctx: {
+      params: { providerID: ProviderID; workspaceID: WorkspaceID }
+      query: { sessionLimit?: number; sessionCursor?: string; organizationID?: OrganizationID }
+    }) {
+      const provider = yield* require(ctx.params.providerID)
+      return yield* invalidate(
+        workspaceID(ctx.params),
+        provider.getWorkspace({
+          id: { providerID: ctx.params.providerID, workspaceID: ctx.params.workspaceID },
+          ...(ctx.query.sessionLimit === undefined ? {} : { sessionLimit: ctx.query.sessionLimit }),
+          ...(ctx.query.sessionCursor === undefined ? {} : { sessionCursor: ctx.query.sessionCursor }),
+          ...(ctx.query.organizationID === undefined ? {} : { organizationID: ctx.query.organizationID }),
+        }),
+      ).pipe(Effect.mapError(mapFailure))
+    })
+
+    const getWorkspaceStatus = Effect.fn("SessionHostHttpApi.getWorkspaceStatus")(function* (ctx: {
+      params: { providerID: ProviderID; workspaceID: WorkspaceID }
+      query: { organizationID?: OrganizationID }
+    }) {
+      const provider = yield* require(ctx.params.providerID)
+      return yield* invalidate(
+        workspaceID(ctx.params),
+        provider.getWorkspaceStatus({
+          id: { providerID: ctx.params.providerID, workspaceID: ctx.params.workspaceID },
+          ...(ctx.query.organizationID === undefined ? {} : { organizationID: ctx.query.organizationID }),
+        }),
+      ).pipe(Effect.mapError(mapFailure))
+    })
+
+    const listWorkspaceSessions = Effect.fn("SessionHostHttpApi.listWorkspaceSessions")(function* (ctx: {
+      params: { providerID: ProviderID; workspaceID: WorkspaceID }
+      query: { limit?: number; cursor?: string; organizationID?: OrganizationID }
+    }) {
+      const provider = yield* require(ctx.params.providerID)
+      const workspace = yield* invalidate(
+        workspaceID(ctx.params),
+        provider.getWorkspace({
+          id: { providerID: ctx.params.providerID, workspaceID: ctx.params.workspaceID },
+          ...(ctx.query.limit === undefined ? {} : { sessionLimit: ctx.query.limit }),
+          ...(ctx.query.cursor === undefined ? {} : { sessionCursor: ctx.query.cursor }),
+          ...(ctx.query.organizationID === undefined ? {} : { organizationID: ctx.query.organizationID }),
+        }),
+      ).pipe(Effect.mapError(mapFailure))
+      return {
+        items: workspace.sessions,
+        ...(workspace.cursor === undefined ? {} : { cursor: workspace.cursor }),
+      }
+    })
+
+    const deleteWorkspace = Effect.fn("SessionHostHttpApi.deleteWorkspace")(function* (ctx: {
+      params: { providerID: ProviderID; workspaceID: WorkspaceID }
+      query: { organizationID?: OrganizationID }
+    }) {
+      const provider = yield* require(ctx.params.providerID)
+      const id = workspaceID(ctx.params)
+      const result = yield* provider
+        .deleteWorkspace({
+          id,
+          ...(ctx.query.organizationID === undefined ? {} : { organizationID: ctx.query.organizationID }),
+        })
+        .pipe(
+          Effect.catch((error) => {
+            if (error.code === "not_found" || deletionDispatched(error)) {
+              Attachments.store.disposeWorkspace(id)
+            }
+            return Effect.fail(error)
+          }),
+          Effect.mapError(mapFailure),
+        )
+      Attachments.store.disposeWorkspace(id)
+      return result
+    })
+
+    const startWorkspaceSession = Effect.fn("SessionHostHttpApi.startWorkspaceSession")(function* (ctx: {
+      params: { providerID: ProviderID; workspaceID: WorkspaceID }
+      payload: WorkspaceSessionStartBody
+    }) {
+      const provider = yield* require(ctx.params.providerID)
+      return yield* provider
+        .startWorkspaceSession({
+          id: { providerID: ctx.params.providerID, workspaceID: ctx.params.workspaceID },
+          ...ctx.payload,
+        })
+        .pipe(Effect.mapError(mapFailure))
+    })
+
     return handlers
       .handle("providers", providers)
       .handle("list", list)
@@ -208,5 +357,13 @@ export const sessionHostHandlers = HttpApiBuilder.group(InstanceHttpApi, "sessio
       .handle("transcript", transcript)
       .handle("attach", attach)
       .handle("detach", detach)
+      .handle("listWorkspaces", listWorkspaces)
+      .handle("listWorkspaceProfiles", listWorkspaceProfiles)
+      .handle("createWorkspace", createWorkspace)
+      .handle("getWorkspace", getWorkspace)
+      .handle("getWorkspaceStatus", getWorkspaceStatus)
+      .handle("listWorkspaceSessions", listWorkspaceSessions)
+      .handle("deleteWorkspace", deleteWorkspace)
+      .handle("startWorkspaceSession", startWorkspaceSession)
   }),
 )

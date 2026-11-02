@@ -12,6 +12,29 @@ import ai.kilocode.client.agentManager.worktree.WorktreeController
 import ai.kilocode.client.agentManager.worktree.WorktreeEditorMatcher
 import ai.kilocode.client.agentManager.worktree.WorktreeEditorMatchers
 import ai.kilocode.client.agentManager.worktree.WorktreeIcons
+import ai.kilocode.client.agentManager.hosted.HostedWorkspaceRow
+import ai.kilocode.client.agentManager.hosted.HostedWorkspaceIcons
+import ai.kilocode.client.agentManager.hosted.HostedWorkspaceDataKeys
+import ai.kilocode.client.agentManager.worktree.WorktreeDataKeys
+import ai.kilocode.client.app.KiloHostedService
+import ai.kilocode.client.app.KiloSessionService
+import ai.kilocode.client.testing.FakeSessionRpcApi
+import ai.kilocode.client.testing.TestLog
+import ai.kilocode.client.session.SpinnerIcon
+import ai.kilocode.client.ui.list.ACTIVE_LIST_MENU_CELL
+import ai.kilocode.rpc.KiloHostedRpcApi
+import ai.kilocode.rpc.dto.HostedWorkspaceDto
+import ai.kilocode.rpc.dto.HostedWorkspaceRefDto
+import ai.kilocode.rpc.dto.HostedWorkspaceListDto
+import ai.kilocode.rpc.dto.HostedWorkspaceStatusDto
+import ai.kilocode.rpc.dto.HostedWorkspaceSessionDto
+import ai.kilocode.rpc.dto.HostedProviderDto
+import ai.kilocode.rpc.dto.HostedSystemEventDto
+import ai.kilocode.rpc.dto.HostedIDs
+import ai.kilocode.rpc.dto.SessionStatusDto
+import com.intellij.openapi.actionSystem.DataContext
+import com.intellij.openapi.actionSystem.DataKey
+import ai.kilocode.client.test.CopyProviderSink
 import ai.kilocode.client.agentManager.worktree.WorktreeNameCache
 import ai.kilocode.client.agentManager.worktree.WorktreeSessionEditorKind
 import ai.kilocode.client.agentManager.worktree.WorktreeStatusService
@@ -92,6 +115,8 @@ import javax.swing.UIManager
 import javax.swing.plaf.FontUIResource
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.emptyFlow
 
 @Suppress("UnstableApiUsage")
 class AgentManagerPanelTest : BasePlatformTestCase() {
@@ -362,7 +387,7 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         assertEquals("repo", current.description)
         assertNull(current.section)
         assertNull(current.metrics)
-        assertEquals("Local worktrees", row(panel, 1).section)
+        assertEquals("Local", row(panel, 1).section)
 
         val list = edt { UIUtil.findComponentOfType(panel, JBList::class.java)!! }
         edt {
@@ -1741,6 +1766,87 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         // The optimistic swap is discarded; reload restores the backend (listed) order.
         assertEquals(listOf(a.path, b.path), edt { worktreeIds(controller) })
         assertEquals(listOf(listOf(b.path, a.path)), rpc.reorders.toList())
+    }
+
+    fun `test cloud rows share busy indicators and popup context without reloading or losing selection`() {
+        val ref = HostedWorkspaceRefDto("cloud", "one")
+        val other = HostedWorkspaceRefDto("cloud", "two")
+        val key = HostedIDs.session(ref.providerID, ref.workspaceID, "same")
+        val second = HostedIDs.session(other.providerID, other.workspaceID, "same")
+        val third = HostedIDs.session(other.providerID, other.workspaceID, "sibling")
+        val items = listOf(
+            HostedWorkspaceDto(ref, name = "Cloud one", sessions = listOf(HostedWorkspaceSessionDto(key, "same"))),
+            HostedWorkspaceDto(other, name = "Cloud two", sessions = listOf(
+                HostedWorkspaceSessionDto(second, "same"), HostedWorkspaceSessionDto(third, "sibling"))),
+        )
+        val calls = java.util.concurrent.CopyOnWriteArrayList<String?>()
+        val hosted = KiloHostedService(coroutines.scope, object : KiloHostedRpcApi {
+            override suspend fun providers(): List<HostedProviderDto> = emptyList()
+            override suspend fun workspaces(repositoryUrl: String?, cursor: String?, organizationID: String?): HostedWorkspaceListDto {
+                calls += repositoryUrl
+                return HostedWorkspaceListDto(items)
+            }
+            override suspend fun workspace(ref: HostedWorkspaceRefDto, sessionCursor: String?, organizationID: String?) = items.single { it.ref == ref }
+            override suspend fun workspaceStatus(ref: HostedWorkspaceRefDto, organizationID: String?) =
+                HostedWorkspaceStatusDto(ref, "active", "active", "sandbox_ready", 100.0, hasActiveTurn = ref == other)
+            override suspend fun systemEvents(ref: HostedWorkspaceRefDto, sessionID: String, organizationID: String?): Flow<HostedSystemEventDto> = emptyFlow()
+        }, gate = { true }, log = TestLog(), repo = { "repo" })
+        val sessions = FakeSessionRpcApi()
+        project.replaceService(KiloHostedService::class.java, hosted, testRootDisposable)
+        project.replaceService(KiloSessionService::class.java,
+            KiloSessionService(project, coroutines.scope, sessions), testRootDisposable)
+        rpc.listed += main()
+        rpc.listed += worktree("aardvark")
+        val controller = WorktreeController(service, project.basePath!!, coroutines.scope)
+        val panel = edt { AgentManagerPanel(testRootDisposable, controller, project) }
+        edt { controller.reload() }
+        waitUntil { rows(panel) == 4 }
+        val view = edt { UIUtil.findComponentOfType(panel, ActiveListView::class.java)!! }
+        edt {
+            assertTrue(view.select(ref.key))
+            val row = row(panel, 2) as HostedWorkspaceRow
+            assertEquals("Active", row.badges.single().text)
+            assertSame(HostedWorkspaceIcons.cloud, row.icon)
+            assertSame(SpinnerIcon.icon, row(panel, 3).icon)
+            assertEquals("Cloud", row.section)
+            val context = context(panel)
+            assertEquals(project, com.intellij.openapi.actionSystem.CommonDataKeys.PROJECT.getData(context))
+            assertEquals(items.first(), HostedWorkspaceDataKeys.WORKSPACE.getData(context))
+            assertNull(WorktreeDataKeys.WORKTREE.getData(context))
+            layout(view)
+            val bounds = view.list.getCellBounds(2, 2)
+            view.list.dispatchEvent(MouseEvent(view.list, MouseEvent.MOUSE_MOVED, System.currentTimeMillis(), 0,
+                bounds.x + bounds.width / 2, bounds.y + bounds.height / 2, 0, false))
+            assertTrue(activeListCellBounds(view.list, 2, selected = true).containsKey(ACTIVE_LIST_MENU_CELL))
+        }
+        sessions.statuses.value = mapOf(second to SessionStatusDto("idle"))
+        coroutines.drain()
+        edt { assertSame(SpinnerIcon.icon, row(panel, 3).icon) }
+        sessions.statuses.value = mapOf(key to SessionStatusDto("busy"), second to SessionStatusDto("idle"), third to SessionStatusDto("idle"))
+        waitUntil { row(panel, 2).icon === SpinnerIcon.icon && row(panel, 3).icon === HostedWorkspaceIcons.cloud }
+        sessions.activity.value = mapOf(key to SessionActivityDto("/cloud", SessionActivityKindDto.PERMISSION))
+        waitUntil { row(panel, 2).icon === WorktreeIcons.forRow(false, SessionActivityKind.PERMISSION) }
+        sessions.activity.value = emptyMap()
+        sessions.statuses.value = mapOf(key to SessionStatusDto("idle"), second to SessionStatusDto("idle"), third to SessionStatusDto("idle"))
+        waitUntil { row(panel, 2).icon === HostedWorkspaceIcons.cloud }
+        edt {
+            assertEquals(ref.key, view.selected()?.key)
+            assertEquals(1, calls.size)
+            assertTrue(view.select(worktree("aardvark").id))
+            val context = context(panel)
+            assertNull(HostedWorkspaceDataKeys.WORKSPACE.getData(context))
+            assertNotNull(WorktreeDataKeys.WORKTREE.getData(context))
+        }
+    }
+
+    private fun context(panel: AgentManagerPanel): DataContext {
+        val values = mutableMapOf<String, Any>()
+        panel.uiDataSnapshot(object : CopyProviderSink() {
+            override fun <T : Any> set(key: DataKey<T>, data: T?) {
+                if (data != null) values[key.name] = data
+            }
+        })
+        return DataContext { values[it] }
     }
 
     private fun prs(

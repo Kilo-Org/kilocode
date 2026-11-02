@@ -5,6 +5,7 @@
 // in Kilo-Org/cloud.
 import {
   AUTO_ROUTING_CUSTOM_ROUTERS_PATH,
+  AUTO_ROUTING_PLATFORM_MEASUREMENTS_PATH,
   CUSTOM_ROUTER_DECIDE_PATH,
   CUSTOM_ROUTER_EVAL_CASE_PATH,
   CUSTOM_ROUTER_EVAL_PLAN_PATH,
@@ -17,6 +18,7 @@ import {
   CustomRouterListResponseSchema,
   CustomRouterReferenceSchema,
   CustomRouterResponseSchema,
+  PlatformMeasurementsResponseSchema,
   customRouterClientEntriesPath,
   type ClientCustomRouterEntry,
   type CustomRouterDecideRequest,
@@ -28,6 +30,8 @@ import {
   type CustomRouterErrorCode,
   type CustomRouterListResponse,
   type CustomRouterResponse,
+  type CustomRouterSummary,
+  type PlatformMeasurementsResponse,
 } from "./custom-router.js"
 import { KILO_API_BASE, KILO_AUTO_ROUTING_BASE } from "./constants.js"
 import { getDefaultHeaders, buildKiloHeaders } from "../headers.js"
@@ -149,6 +153,16 @@ export function fetchCustomRouters(options: RequestOptions): Promise<CustomRoute
   })
 }
 
+export function fetchPlatformMeasurements(
+  input: RequestOptions & { baseRouter: CustomRouterSummary["baseRouter"] },
+): Promise<PlatformMeasurementsResponse> {
+  return request(input, {
+    url: web(`${AUTO_ROUTING_PLATFORM_MEASUREMENTS_PATH}?router=${encodeURIComponent(input.baseRouter)}`),
+    method: "GET",
+    parse: (value) => PlatformMeasurementsResponseSchema.parse(value),
+  })
+}
+
 export function registerCustomRouterClientEntry(
   input: RequestOptions & { scope: CustomRouterReference["scope"]; slug: string; entry: ClientCustomRouterEntry },
 ): Promise<CustomRouterResponse> {
@@ -184,9 +198,7 @@ export function decideCustomRouter(
   })
 }
 
-export function fetchClientEvalPlan(
-  input: RequestOptions & { routerId: string },
-): Promise<ClientEvalPlanResponse> {
+export function fetchClientEvalPlan(input: RequestOptions & { routerId: string }): Promise<ClientEvalPlanResponse> {
   return request(input, {
     url: worker(CUSTOM_ROUTER_EVAL_PLAN_PATH),
     method: "POST",
@@ -206,9 +218,7 @@ export function fetchClientEvalCase(
   })
 }
 
-export function uploadClientEvalResult(
-  input: RequestOptions & { body: unknown },
-): Promise<ClientEvalResultResponse> {
+export function uploadClientEvalResult(input: RequestOptions & { body: unknown }): Promise<ClientEvalResultResponse> {
   return request(input, {
     url: worker(CUSTOM_ROUTER_EVAL_RESULT_PATH),
     method: "POST",

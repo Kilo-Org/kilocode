@@ -59,6 +59,78 @@ class KiloCliDataParserTest {
     @Nested
     inner class SseEvents {
 
+        @Test
+        fun `Cloud terminal events parse flat and wrapped public envelopes`() {
+            for (status in listOf("failed", "interrupted", "completed")) {
+                val type = if (status == "completed") "cloud.message.completed" else "cloud.message.failed"
+                val props = """{"sessionID":"ses_cloud","messageId":"msg_prompt","status":"$status","delivery":"sent","accepted":true,"directory":"/cloud"}"""
+                val flat = """{"type":"$type","properties":$props}"""
+                val expected = ChatEventDto.MessageTerminal("ses_cloud", "msg_prompt", status, "sent", true)
+                assertEquals(expected, KiloCliDataParser.parseChatEvent(type, flat))
+                assertEquals(expected, KiloCliDataParser.parseChatEvent(type, """{"directory":"/cloud","payload":$flat}"""))
+                assertEquals(listOf(expected), KiloCliDataParser.ChatEventNormalizer().parse(type, flat))
+            }
+        }
+
+        @Test
+        fun `Cloud failed terminal preserves public delivery and acceptance independently`() {
+            for (delivery in listOf("queued", "sent")) {
+                for (accepted in listOf(false, true)) {
+                    val data = """{"properties":{"sessionID":"ses_cloud","messageId":"msg_prompt","status":"failed","delivery":"$delivery","accepted":$accepted}}"""
+                    assertEquals(
+                        ChatEventDto.MessageTerminal("ses_cloud", "msg_prompt", "failed", delivery, accepted),
+                        KiloCliDataParser.parseChatEvent("cloud.message.failed", data),
+                    )
+                }
+            }
+        }
+
+        @Test
+        fun `Cloud terminals ignore private reason error and unknown fields`() {
+            val data = """{"properties":{"sessionID":"ses_cloud","messageId":"msg_prompt","status":"failed","delivery":"queued","accepted":false,"reason":"private provider details","error":{"message":"private credentials"},"unknown":{"nested":true}}}"""
+            val event = KiloCliDataParser.parseChatEvent("cloud.message.failed", data)
+            assertEquals(ChatEventDto.MessageTerminal("ses_cloud", "msg_prompt", "failed", "queued", false), event)
+            assertFalse(event.toString().contains("private"))
+            assertNull(KiloCliDataParser.parseChatEvent("cloud.message.rejected", data))
+        }
+
+        @Test
+        fun `Cloud terminals reject malformed fields without throwing`() {
+            val props = """{"sessionID":"ses_cloud","messageId":"msg_prompt","status":"failed","delivery":"sent","accepted":true}"""
+            val invalid = listOf(
+                props.replace("\"ses_cloud\"", "\"\""),
+                props.replace("\"ses_cloud\"", "{}"),
+                props.replace("\"msg_prompt\"", "\" \""),
+                props.replace("\"msg_prompt\"", "123"),
+                props.replace("\"messageId\"", "\"messageID\""),
+                props.replace("\"failed\"", "\"completed\""),
+                props.replace("\"failed\"", "{}"),
+                props.replace("\"sent\"", "\"unknown\""),
+                props.replace("\"sent\"", "[]"),
+                props.replace("true", "\"true\""),
+                props.replace("true", "null"),
+                props.replace(",\"accepted\":true", ""),
+            )
+            for (value in invalid) {
+                assertNull(KiloCliDataParser.parseChatEvent("cloud.message.failed", """{"properties":$value}"""), value)
+            }
+            for (data in listOf("{}", """{"properties":[]}""", """{"payload":false}""", """{"payload":{"properties":null}}""")) {
+                assertNull(KiloCliDataParser.parseChatEvent("cloud.message.failed", data), data)
+            }
+        }
+
+        @Test
+        fun `Cloud completed terminal rejects inconsistent completion`() {
+            for (props in listOf(
+                """{"status":"failed","delivery":"sent","accepted":true}""",
+                """{"status":"completed","delivery":"queued","accepted":true}""",
+                """{"status":"completed","delivery":"sent","accepted":false}""",
+            )) {
+                val data = """{"properties":{"sessionID":"ses_cloud","messageId":"msg_prompt",${props.removeSurrounding("{", "}")}}}"""
+                assertNull(KiloCliDataParser.parseChatEvent("cloud.message.completed", data))
+            }
+        }
+
         // ---- extractEventType ----
 
         @Test

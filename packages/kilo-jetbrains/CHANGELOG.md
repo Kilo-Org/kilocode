@@ -1,5 +1,17 @@
 # Changelog
 
+## 7.9.0
+
+### Minor Changes
+
+- [#15531](https://github.com/Kilo-Org/kilocode/pull/15531) [`de87d2f`](https://github.com/Kilo-Org/kilocode/commit/de87d2f4e13964cd915495451bb8e301ab0bade0) - Continue Cloud sessions directly from Agent Manager with live transcripts, preparation progress, permission and question prompts, and reliable stream recovery. Cloud workspace editors now match local worktree editors, show clear compute and activity status, and support refreshing Cloud workspaces from the row menu.
+
+## 7.8.16
+
+### Patch Changes
+
+- [#14625](https://github.com/Kilo-Org/kilocode/pull/14625) [`fb484d7`](https://github.com/Kilo-Org/kilocode/commit/fb484d77b995848a3ccc7c6c4d29aaae032303e4) Thanks [@maphew](https://github.com/maphew)! - Fix stale lockfile entries slipping through CI unnoticed.
+
 ## 7.8.16
 
 ### Patch Changes
@@ -633,6 +645,34 @@
 - [#12059](https://github.com/Kilo-Org/kilocode/pull/12059) [`8ea3f10`](https://github.com/Kilo-Org/kilocode/commit/8ea3f10495e28c8a131b805d51f8f7524895148b) - Increase spacing before non-initial user prompts in the JetBrains session transcript.
 
 ## [Unreleased]
+
+## [7.2.1-rc.1] - 2026-10-28
+
+### Added
+
+- Added hosted Kilo Cloud sessions to Agent Manager. Cloud workspaces now share the same editor chrome as local and worktree sessions, including session rows, date groups, badges, busy spinners, and refresh from the row menu.
+- Cloud discovery now pages through every workspace for a repository, reports the canonical status vocabulary instead of showing healthy workspaces as unknown, and shows the hourly compute price in the workspace header.
+- Linked custom router entries to platform benchmarks.
+- Indexing now prunes ignored directories and bounds LanceDB index growth.
+
+### Fixed
+
+- Cloud sessions recover their streams after reconnects without leaving tools running or hiding wake progress, and preparation failures are surfaced with sanitized error details.
+- Kept hosted stream ownership across restarts and retained transcript subscriptions when the first attachment fails transiently.
+- Kept large Cloud repositories from bursting the CLI with concurrent workspace status reads.
+- Aligned hosted prompts with the Cloud input contract.
+- Established a session's event subscription before startup returns so early updates are not missed.
+- Compaction now runs at the configured threshold and stops compaction loops, and chunked compaction gets the normal output budget.
+- Scheduled tasks fire once across processes sharing a data directory.
+- Kept a reply that another Kilo process is still writing, and preserved the real exit code of a failed background job.
+- Restricted browser and MCP OAuth URLs to HTTP(S), and scoped the MCP SSE probe to its own request and redirects.
+- Blocked compromised eMudhra certificates.
+- Preserved the parent user-agent when loading npm config.
+
+### Changed
+
+- Bundled Kilo CLI pin updated to v7.8.22 (via v7.8.20).
+- Updated commonmark to 0.30.1.
 
 ## [7.1.12] - 2026-10-22
 

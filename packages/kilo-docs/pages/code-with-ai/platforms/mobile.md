@@ -42,6 +42,8 @@ Four actions are available from outside the app. On iOS they appear in the **Sho
 
 **Start agent** uses the same create path as the in-app new-session screen, including your repository, model preference, and mode. An unsupported GitHub or GitLab repository reports a repository-specific reason and a next action, and a start-agent request with no prompt is refused as prompt-required instead of being left to time out.
 
+**Start agent** asks for confirmation in the app before it creates a session. A native alert shows the full prompt and the named repository, or your most recent repository when the request did not name one. Both platforms bring the app to the foreground first, and the alert waits until the app is active before it appears, so a start requested from a shortcut or another app is not silently dropped. Choosing Cancel returns a cancelled result to the caller and creates no session.
+
 **Open session** and **Open pull request** open the same screens as their in-app controls. A pull request link that is not a review link reports the app's not-a-pull-request message and opens nothing.
 
 ### App icon shortcuts and Quick Settings tile
@@ -117,13 +119,17 @@ The new-session screen includes a **Run on** picker that chooses where your sess
 
 Remote sessions start with the mode and model selected on the new-session screen; older CLI versions that don't accept those fields fall back to their own defaults. By default, the workspace is the CLI's launch directory. Use **Folder** to choose a child folder, including nested folders, before starting. If the CLI cannot list folders, the app explains this and starts in the launch directory instead. In organization context, the new session belongs to that organization.
 
+When you select a computer as the run target, the agent picker offers the built-in agents, the profile's agents, and the agents the connected CLI loads for the selected launch folder — including project agents from the project's `.kilo/agents` directory. If you switch the target away from that computer, an agent that only that CLI offered falls back to `code`. Opening an existing remote session merges the profile's agents with the agents the CLI reports for that session's folder. Agents a CLI reports carry no model pin, so the model picker keeps its own choice.
+
 For Cloud Agent sessions, choose a repository from GitHub, GitLab, or, for organizations, Bitbucket. The picker groups repositories by provider and includes **Recently used**. Each provider has its own connection and error messages, so a problem with one does not hide the others.
 
-Cloud Agent sessions also offer a **Sandbox** field, which starts on the backend's default destination. Tap it to pick a sandbox type from a sheet that groups the types the backend offers by provider; the field then shows the choice, such as `Cloudflare · Shared`. While the options load, a field-sized skeleton holds the slot, and a failed load shows **Couldn't load sandbox options** with **Retry**. If a chosen type is no longer offered, the field shows why and offers **Use Default**, and you cannot start until you resolve it. Starting sends the type you picked, or the backend default when you pick nothing. Owners without sandbox selection see no Sandbox field.
+Cloud Agent sessions also offer a **Sandbox** field, which starts on the backend's default destination. The owner's default sandbox and per-repository overrides are set in [Cloud Agent settings](/docs/code-with-ai/platforms/cloud-agent#choosing-where-sessions-run). Tap it to pick a sandbox type from a sheet that groups the types the backend offers by provider; the field then shows the choice, such as `Cloudflare · Shared`. While the options load, a field-sized skeleton holds the slot, and a failed load shows **Couldn't load sandbox options** with **Retry**. If a chosen type is no longer offered, the field shows why and offers **Use Default**, and you cannot start until you resolve it. Starting sends the type you picked, or the backend default when you pick nothing. Owners without sandbox selection see no Sandbox field.
 
 ## Agent environment profiles
 
 The **Profile** tab lets you browse, create, edit, and delete [agent environment profiles](/docs/code-with-ai/platforms/cloud-agent#agent-environment-profiles) from your phone. Profiles are personal or organization-owned, and you can manage their repository bindings and reorder them with the up and down buttons. Each profile row shows its MCP server count.
+
+Organization-owned profiles are read-only for members: only organization owners and admins can create, edit, or delete one. Members can open an organization profile and use it for a session, but its editor is read-only. You can always create and manage your own personal profiles.
 
 When you start a session, pick a profile in the new-session screen or choose **No profile**. The active profile appears as a chip on the new-session and session screens; in an organization session, tap the chip to open the profile in its owner's scope. You can also change the profile under **Advanced Configuration** while starting a session. Environment variables and setup commands you enter under **Advanced Configuration** are sent with the session even if you do not save them to a profile.
 
@@ -138,6 +144,19 @@ Home has a **New task from a picture** button beneath the new-task button. It of
 Open a finished session and tap **Continue** to copy its conversation into a new session. The form starts with the source repository, mode, model, and reasoning variant. Choose **Cloud Agent** or a connected CLI in **Run on**, then tap **Start**.
 
 The CLI must support importing sessions. If it does not, the app explains why and disables **Start** rather than creating an empty session. An unavailable model or repository also prevents starting until you choose an available option.
+
+### Forking a session from a message
+
+Long-press a message in a Cloud Agent or remote CLI session and select **Fork from here** to start a new session cut at that point. This uses the same Continue screen described above, so you choose the destination and the model.
+
+- **Assistant message** — the fork keeps the transcript up to and including that message.
+- **User message** — the fork cuts before that message and puts its text in the new composer.
+
+The action is not shown on the first user message, on queued or failed messages, or on a reply that is still streaming. A message that is not saved yet reports **This message is not saved yet. Try again in a moment.**
+
+A Cloud Agent source has no per-message file changes, so the Continue screen reports **Files start from the base branch.** For a computer destination it reports **Files on this computer are not changed.**
+
+Forking to a connected CLI needs a CLI that supports the session cut. An older CLI shows **Update the Kilo CLI**, and **Start** stays disabled.
 
 ## Live session counts
 
@@ -160,6 +179,47 @@ Every chat has a **Kilo tools** switch in its Kilo tools sheet. It is on by defa
 The Kilo tools sheet names the connection state and offers **Retry** only when retrying can help. If the server is slow, refuses the session, or disappears mid-chat, the chat stays usable and reports what happened; a failed call reaches the model as a failed tool result.
 
 Signing out drops the connection and its tools, and signing in as another user never shows the previous account's tools.
+
+## Remote MCP servers
+
+Quick Chat can connect to remote [MCP servers](/docs/automate/mcp/what-is-mcp) so the model can use the tools they expose. Manage servers in the chat's MCP settings, where you add or edit a server and choose how it authenticates:
+
+- **No sign-in** — the server accepts requests without credentials.
+- **Bearer token** — enter the server's token; the app sends it with every request.
+- **OAuth sign-in** — the app runs the server's OAuth flow in your browser, then stores the resulting tokens for your account and refreshes them automatically. If a refresh fails, the request fails as unauthorized.
+
+When an OAuth server needs you to sign in, its row shows **Sign in to use this server** with a **Sign in** button instead of **Retry**. OAuth credentials are kept for your account and cleared when you sign out, delete the server, or change its URL or authentication type.
+
+### MCP Apps views
+
+Some remote MCP servers attach an MCP Apps view to a tool. After a call to that tool finishes, the chat transcript draws the view in a card under the tool call, and you can interact with it on your phone. The view can call tools its own server offers, open links, and resize to fit its content. Tools without a view keep their usual result, and a call that has not finished keeps its usual row.
+
+The view runs in a sandboxed page that allows only the origins the server declared for it. A server that declares none gets no external origins, and anything that would widen that policy is rejected. The app does not offer views sampling, model context updates, messages, or downloads, and a view cannot call a tool its server was not discovered to offer.
+
+## Web search in chat
+
+A chat can search the web with the `web_search` tool, which runs through Kilo's own web search service. The **Search the web** switch at the top of the Quick Chat tools sheet turns it on for that chat, and the model names its sources in the reply.
+
+- The switch is on by default for a chat on a Kilo model, and off for a chat on a custom backend or an on-device model (Apple, Gemini Nano, or GGUF). Your choice is stored for the chat and follows it to a new model.
+- The set of tools is fixed when a chat starts, so moving the switch starts a new session, as the Kilo tools switch does. A model without a tool loop still gets no tools.
+- One question can run up to five searches, and a search stops after 15 seconds.
+- Offline, the tool fails immediately without sending a request.
+- If your web search allowance is used up and you have no credit, a toast reports it and the model is told it could not search.
+
+## On-device models
+
+Quick Chat can run a model on your phone. The Chat backend settings sheet lists the models you have downloaded, shows downloads in progress, and offers **Browse models** and a direct link form. Use **Browse models** to open the model catalog, a searchable list of GGUF models from Hugging Face.
+
+The catalog has a search field and two tabs:
+
+- **Fits this device** — models whose smallest quantization file should fit in your device's memory.
+- **All** — every model the catalog offers.
+
+Recommended models are pinned at the top of the list. Open a model to see its downloads, likes, parameters, context window, and license, whether it supports tools or images, and every single-file quantization. Each quantization shows its download size, the estimated memory it needs, and a fit badge: **Fits**, **Tight fit**, **Too large**, or **Not enough storage**.
+
+- A **Too large** quantization asks for confirmation before it downloads. A gated model, or one that does not fit on disk, cannot download.
+- Downloads are checked against the model's published checksum. If a file does not match, the partial download is removed and you can try again. A model added by direct link publishes no checksum, so it is not checked.
+- Split files (such as `-00001-of-00002.gguf`) and files that are not a quantization are not offered, because the on-device runner loads a single file.
 
 ## Hiding thinking details
 

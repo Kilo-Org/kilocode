@@ -1,5 +1,7 @@
 import type { FailureCode, NativeRequest } from "@/kilocode/session-hosting/types"
 import { isNativePath } from "@/kilocode/session-hosting/native-routes"
+import { errorCode } from "@/kilocode/session-hosting/response"
+import { readBoundedJson } from "@/kilocode/cloud/response-json"
 import { Effect, Stream } from "effect"
 import { HttpServerRequest, HttpServerResponse } from "effect/unstable/http"
 import * as Attachments from "../hosted-attachments"
@@ -57,7 +59,11 @@ interface ServerRequest {
 
 /** The attachment id carried in the existing workspace selector slot. */
 export function attachmentID(url: URL, headers: Headers) {
-  const candidates = [url.searchParams.get("workspace"), url.searchParams.get("location[workspace]"), headers["x-kilo-workspace"]]
+  const candidates = [
+    url.searchParams.get("workspace"),
+    url.searchParams.get("location[workspace]"),
+    headers["x-kilo-workspace"],
+  ]
   for (const value of candidates) {
     if (value && Attachments.isID(value)) return value
   }
@@ -115,10 +121,17 @@ export function resolve(
     if (found.kind !== "found") return { type: "fail", reason: found.kind } satisfies Plan
     const entry = found.entry
     if (entry.expiresAt <= Date.now()) {
-      const attached = yield* entry.provider.attach({
-        id: entry.session,
-        ...(entry.organizationID ? { organizationID: entry.organizationID } : {}),
-      }).pipe(Effect.catch(() => Effect.succeed(undefined)))
+      const attached = yield* entry.provider
+        .attach({
+          id: entry.session,
+          ...(entry.organizationID ? { organizationID: entry.organizationID } : {}),
+        })
+        .pipe(
+          Effect.catch((error) => {
+            if (error.code === "not_found") invalidate(entry, store)
+            return Effect.succeed(undefined)
+          }),
+        )
       if (!attached) return { type: "fail", reason: "unavailable" } satisfies Plan
       store.renew(entry, { expiresAt: attached.expiresAt })
     } else {
@@ -147,10 +160,29 @@ export function respond(plan: Routed, request: ServerRequest): Effect.Effect<Htt
       ...(plan.entry.organizationID ? { organizationID: plan.entry.organizationID } : {}),
     }
     return yield* route(native).pipe(
-      Effect.flatMap(forwardResponse),
-      Effect.catch((error) => Effect.succeed(failure(error.code))),
+      Effect.flatMap((response) => {
+        if (response.status !== 404) return forwardResponse(response)
+        return Effect.tryPromise({
+          try: () => readBoundedJson(response.clone(), MAX_BODY_BYTES),
+          catch: () => undefined,
+        }).pipe(
+          Effect.catch(() => Effect.succeed(undefined)),
+          Effect.flatMap((body) => {
+            if (errorCode(body) === "KILO_SESSION_NOT_FOUND") invalidate(plan.entry)
+            return forwardResponse(response)
+          }),
+        )
+      }),
+      Effect.catch((error) => {
+        if (error.code === "not_found") invalidate(plan.entry)
+        return Effect.succeed(failure(error.code))
+      }),
     )
   })
+}
+
+function invalidate(entry: Attachments.Entry, store: Attachments.Store = Attachments.store) {
+  store.disposeSession(entry.session)
 }
 
 function forward(headers: Headers) {
@@ -182,8 +214,8 @@ function payload(request: ServerRequest) {
       ),
       Effect.catch((error) => Effect.fail(error instanceof BodyError ? error : new BodyError("invalid"))),
       Effect.match({
-        onFailure: (error) => ({ kind: error.kind } as const),
-        onSuccess: (bytes) => ({ kind: "ok", ...(bytes.byteLength > 0 ? { bytes } : {}) } as const),
+        onFailure: (error) => ({ kind: error.kind }) as const,
+        onSuccess: (bytes) => ({ kind: "ok", ...(bytes.byteLength > 0 ? { bytes } : {}) }) as const,
       }),
     )
   })
@@ -205,10 +237,10 @@ function forwardResponse(response: Response): Effect.Effect<HttpServerResponse.H
   if (!response.body) return Effect.succeed(HttpServerResponse.raw(null, options))
   if (contentType?.startsWith("text/event-stream")) {
     return Effect.succeed(
-      HttpServerResponse.stream(
-        Stream.fromReadableStream({ evaluate: () => response.body!, onError: (err) => err }),
-        { contentType: "text/event-stream", headers },
-      ),
+      HttpServerResponse.stream(Stream.fromReadableStream({ evaluate: () => response.body!, onError: (err) => err }), {
+        contentType: "text/event-stream",
+        headers,
+      }),
     )
   }
   // Native non-streaming routes are bounded JSON. Buffer them instead of
