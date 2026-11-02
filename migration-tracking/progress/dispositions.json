@@ -798,5 +798,10 @@
     "v2": "packages/kilo-vscode/src/cost-alert.ts",
     "note": "src/cost-alert.ts createCostAlert and createCostAlerts, with src/extension.ts, replace the synthetic webview question with a non-blocking VS Code notification. Continue acknowledges the session and threshold, Stop interrupts that session, and a dismissed alert rearms on its next execution. Unlike the webview question, another prompt does not implicitly dismiss the native notification, which cannot be closed programmatically. The limit accepts fractional USD and uses v2 recorded session cost. test/cost-alert.test.ts covers the policy and event stream.",
     "by": "session-cost-alert"
+  },
+  "module:packages/opencode/test/kilocode/server/httpapi-kilo-edit.test.ts": {
+    "state": "ported",
+    "note": "packages/kilo-gateway-core/test/autocomplete-request.test.ts (Kilo headers and body, fenced body and usage, direct Inception BYOK, unreadable error body status passthrough, 504 timeout, 499 cancel) and packages/kilo-plugin/test/gateway-autocomplete.test.ts (401 as unauthorized without Kilo auth, 400 for a FIM model, team header and feature header on the Gateway request) carry the assertions for the kilocode.gateway autocomplete.edit RPC, which replaces the v1 /kilo/edit route.",
+    "by": "autocomplete-server"
   }
 }

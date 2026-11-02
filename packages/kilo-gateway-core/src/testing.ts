@@ -273,6 +273,15 @@ export function fixture() {
     evalStatus: 200,
     // Request bodies of the custom router routes, in order.
     customRouterBodies: [] as { method: string; path: string; body: unknown }[],
+    // FIM and Next Edit routes: the stream chunks or JSON body they answer with, and the requests they received.
+    fimStatus: 200,
+    fim: [{ choices: [{ text: "fixture completion" }] }, { usage: { prompt_tokens: 5, completion_tokens: 2 }, cost: 0.0001 }] as unknown[],
+    editStatus: 200,
+    edit: { choices: [{ message: { content: "```\nfixture edit\n```" } }], usage: { prompt_tokens: 7, completion_tokens: 3 } } as unknown,
+    autocompleteRequests: [] as { path: string; body: unknown; feature: string | null }[],
+    // The FIM route never answers and counts the requests whose client went away.
+    fimHang: false,
+    fimAborted: 0,
   }
   const requests: { method: string; path: string; authorization: string | null; organizationID?: string }[] = []
   const server = Bun.serve({
@@ -348,6 +357,27 @@ export function fixture() {
       if (/^\/api\/organizations\/[^/]+\/modes$/.test(path)) {
         if (state.modesStatus !== 200) return new Response(null, { status: state.modesStatus })
         return Response.json(state.modes)
+      }
+      if (path.endsWith("/fim/completions") || path.endsWith("/edit/completions")) {
+        state.autocompleteRequests.push({
+          path,
+          body: await request.json(),
+          feature: request.headers.get("x-kilocode-feature"),
+        })
+        if (path.endsWith("/edit/completions"))
+          return state.editStatus === 200 ? Response.json(state.edit) : new Response("edit failed", { status: state.editStatus })
+        if (state.fimHang)
+          return new Promise<Response>((_resolve, reject) =>
+            request.signal.addEventListener("abort", () => {
+              state.fimAborted++
+              reject(new Error("aborted"))
+            }),
+          )
+        if (state.fimStatus !== 200) return new Response("fim failed", { status: state.fimStatus })
+        return new Response(
+          [...state.fim.map((chunk) => `data: ${JSON.stringify(chunk)}\n\n`), "data: [DONE]\n\n"].join(""),
+          { headers: { "content-type": "text/event-stream" } },
+        )
       }
       if (path === "/api/users/notifications") {
         if (state.notificationsStatus !== 200) return new Response(null, { status: state.notificationsStatus })
