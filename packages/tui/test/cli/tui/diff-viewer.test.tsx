@@ -69,6 +69,57 @@ test("closing the diff viewer returns to the route it opened from", async () => 
   }
 })
 
+// kilocode_change start - diff-viewer-reentry: verify palette visibility and prevent nested return routes.
+test("full-screen diff viewer exposes close instead of open in the palette", async () => {
+  const viewer = await renderDiffViewer([], { initialRoute: { type: "home" }, open: false })
+  try {
+    expect(viewer.palette()).toEqual(["diff.open"])
+    viewer.keymap().dispatch("diff.open")
+    await viewer.app.waitFor(() => viewer.commands.has("diff.close"))
+    expect(viewer.palette()).toEqual(["diff.close"])
+
+    const pop = viewer.keymap().mode.push("modal")
+    expect(viewer.palette()).toEqual(["diff.close"])
+    const route = viewer.current()
+    viewer.app.mockInput.pressKey("q")
+    await viewer.app.flush()
+    expect(viewer.current()).toBe(route)
+
+    viewer.keymap().dispatch("diff.close")
+    pop()
+    await viewer.app.flush()
+    expect(viewer.current()).toEqual({ type: "home" })
+    expect(viewer.palette()).toEqual(["diff.open"])
+  } finally {
+    viewer.app.renderer.destroy()
+  }
+})
+
+test.each([{ type: "home" }, { type: "session", sessionID: "session-1" }] satisfies Route[])(
+  "full-screen diff viewer blocks re-entry from %j",
+  async (route) => {
+    const viewer = await renderDiffViewer([], { initialRoute: route, keybinds: { "diff.open": "ctrl+y" } })
+    try {
+      const current = viewer.current()
+      viewer.app.mockInput.pressKey("y", { ctrl: true })
+      await viewer.app.flush()
+      expect(viewer.current()).toBe(current)
+
+      viewer.keymap().dispatch("diff.open")
+      expect(viewer.current()).toBe(current)
+      viewer.commands.get("diff.open")!.run()
+      expect(viewer.current()).toBe(current)
+
+      viewer.app.mockInput.pressKey("q")
+      await viewer.app.waitFor(() => viewer.current().type !== "plugin")
+      expect(viewer.current()).toEqual(route)
+    } finally {
+      viewer.app.renderer.destroy()
+    }
+  },
+)
+// kilocode_change end
+
 test.each([80, 160])("standalone full-screen diff does not expose panel-only toggling at %i columns", async (width) => {
   const viewer = await renderDiffViewer([], {
     width,
@@ -1982,6 +2033,10 @@ async function renderDiffViewer(
   let vcsDiffInput: unknown
   let imageReadInput: unknown
   let shortcut: (command: string) => string | undefined = () => undefined
+  // kilocode_change start - diff-viewer-reentry: expose the production keymap and reachable palette commands.
+  let keys: Keymap | undefined
+  let available: ReturnType<typeof Keymap.useCommands> = () => []
+  // kilocode_change end
   const stored: { info: Info } = {
     info: { keybinds: options.keybinds, diffs: { source: options.source, single: options.single } },
   }
@@ -2046,6 +2101,10 @@ async function renderDiffViewer(
     function Content() {
       const dialog = useDialog()
       const keymap = Keymap.use()
+      // kilocode_change start - diff-viewer-reentry: use the same command selector as the palette.
+      keys = keymap
+      available = Keymap.useCommands()
+      // kilocode_change end
       const shortcuts = Keymap.useShortcuts()
       if (options.onSessionTab) {
         Keymap.createLayer(() => ({
@@ -2166,6 +2225,13 @@ async function renderDiffViewer(
   return {
     app,
     commands,
+    // kilocode_change start - diff-viewer-reentry: inspect enabled commands and dispatch real bindings.
+    keymap: () => keys!,
+    palette: () =>
+      available()
+        .filter((command) => command.palette)
+        .map((command) => command.id),
+    // kilocode_change end
     current,
     shortcut: (command: string) => shortcut(command),
     vcsDiffInput: () => vcsDiffInput,

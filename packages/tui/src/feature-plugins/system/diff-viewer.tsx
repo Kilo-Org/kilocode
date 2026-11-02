@@ -585,13 +585,14 @@ export function DiffViewerContent(props: {
     props.onClose()
   }
 
+  // kilocode_change start - diff-viewer-reentry: keep close reachable in the palette's modal mode.
+  props.context.keymap.layer(() => ({
+    mode: "global",
+    commands: [{ id: "diff.close", title: "Close diff viewer", group: "VCS", palette: true, bind: false, run: close }],
+  }))
+  // kilocode_change end
+
   const commands: KeymapCommand[] = [
-    {
-      id: "diff.close",
-      title: "Close diff viewer",
-      group: "VCS",
-      run: close,
-    },
     {
       id: "diff.down",
       title: "Move diff viewer down",
@@ -852,6 +853,7 @@ export function DiffViewerContent(props: {
   )
 
   props.context.keymap.layer(() => ({
+    bindings: ["diff.close"], // kilocode_change(diff-viewer-reentry) - close keys stay inactive while a dialog is open.
     commands,
   }))
 
@@ -1310,6 +1312,12 @@ function DiffViewerHelpDialog(props: { context: Plugin.Context; single: boolean;
 
 function Commands(props: { context: Plugin.Context }) {
   const config = useConfig()
+  // kilocode_change start - diff-viewer-reentry: preserve the original return route while the viewer is open.
+  const closed = () => {
+    const route = props.context.ui.router.current()
+    return route.type !== "plugin" || route.id !== "opencode.diffs" || route.name !== ROUTE
+  }
+  // kilocode_change end
   props.context.keymap.layer(() => ({
     mode: "global",
     commands: [
@@ -1319,7 +1327,9 @@ function Commands(props: { context: Plugin.Context }) {
         slash: { name: "diff" },
         group: "VCS",
         palette: true,
+        enabled: closed, // kilocode_change(diff-viewer-reentry) - hide and disable opening the current route.
         run() {
+          if (!closed()) return // kilocode_change(diff-viewer-reentry) - also guard direct command calls.
           const route = props.context.ui.router.current()
           props.context.ui.dialog.clear()
           const current = props.context.ui.panel.current()
