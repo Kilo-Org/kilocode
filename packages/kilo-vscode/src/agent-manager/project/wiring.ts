@@ -1,0 +1,125 @@
+/**
+ * Factory for the Agent Manager multi-project wiring: registry, context
+ * coordinator, message-handler dependencies, and host change listeners.
+ *
+ * Extracted from AgentManagerProvider (file-size cap). VS Code-free; the Host
+ * interface abstracts all platform capabilities.
+ */
+
+import type { Host, Disposable } from "../host"
+import type { GitOps } from "../GitOps"
+import { ProjectRegistry } from "./registry"
+import type { ProjectContext, ProjectInitResult } from "./context"
+import { ProjectContexts, type ProjectSnapshot } from "./contexts"
+import type { ProjectMessageDeps } from "./messages"
+import { createSettingsHandler, type SettingsHandler } from "./settings"
+import { poolHome } from "../pool/home"
+
+export interface ProjectWiring {
+  registry: ProjectRegistry
+  contexts: ProjectContexts
+  /** Project-scoped settings handler shared with the Kilo Settings editor. */
+  settings: SettingsHandler
+  messages: ProjectMessageDeps
+  /** Payload for the agentManager.projects webview message. */
+  snapshots(): { type: "agentManager.projects"; projects: ProjectSnapshot[] }
+  dispose(): void
+}
+
+export function createProjectWiring(opts: {
+  host: Host
+  git: GitOps
+  log: (...args: unknown[]) => void
+  output: (msg: string) => void
+  /** Re-initialize provider state for a freshly activated context. */
+  activate: (ctx: ProjectContext) => void
+  /** Clear the applied project when the last project is removed. */
+  empty: () => void
+  /** Initialize an expanded background context and push its state. */
+  expand: (ctx: ProjectContext) => void
+  /** Ensure a context's repository state is ready (no-op once initialized). */
+  ready: (ctx: ProjectContext, opts?: { warm?: boolean }) => Promise<ProjectInitResult>
+  /** Push the project catalog to the webview. */
+  push: () => void
+  /** Push one project's state (or every context when omitted) to the webview. */
+  pushState: (ctx?: ProjectContext) => void
+  /** Re-derive the pinned project after workspace folder changes. */
+  changed: () => void
+  removed?: (id: string) => void
+  /** Acknowledge an atomically validated sidebar selection. */
+  selected: (target: import("./route").SidebarTarget) => void
+  /** Post an outbound message to the webview. */
+  post: (message: import("../types").AgentManagerOutMessage) => void
+  /** Route one session to a directory inside a project (override + project route). */
+  routeSession?: (projectId: string, sessionId: string, directory: string, generation: number) => void
+}): ProjectWiring {
+  const registry = new ProjectRegistry(
+    { read: () => opts.host.readProjects(), write: (value) => opts.host.writeProjects(value) },
+    (msg) => opts.log(msg),
+  )
+  const contexts = new ProjectContexts({
+    workspaceRoot: () => opts.host.workspacePath(),
+    registry,
+    changed: () => opts.push(),
+    remove: (id) => {
+      opts.host.unregisterProjectRoutes(id)
+      opts.removed?.(id)
+    },
+    deps: {
+      log: opts.output,
+      git: opts.git,
+      worktreePool: () => opts.host.worktreePool(),
+      poolHome: poolHome(),
+      sized: (ctx) => opts.pushState(ctx),
+    },
+  })
+  const messages: ProjectMessageDeps = {
+    registry,
+    contexts,
+    pickFolder: (input) => opts.host.pickFolder(input),
+    onboarding: opts.host,
+    activate: opts.activate,
+    empty: opts.empty,
+    expand: opts.expand,
+    ready: opts.ready,
+    push: opts.push,
+    pushState: opts.pushState,
+    selected: opts.selected,
+    post: opts.post,
+    routeSession: opts.routeSession,
+    git: opts.git,
+    error: (message) => opts.host.showError(message),
+    openSettings: (tab, projectId) => opts.host.openSettings(tab, projectId),
+    log: opts.log,
+  }
+  const settings = createSettingsHandler({
+    contexts,
+    open: (path) => opts.host.openDocument(path),
+    push: opts.pushState,
+    log: opts.log,
+  })
+  const listeners: Disposable[] = [
+    opts.host.onDidChangeWorkspaceFolders(() => opts.changed()),
+    opts.host.onDidChangeWorktreePool((enabled) => {
+      for (const project of contexts.snapshots()) {
+        const manager = contexts.get(project.id)?.peekWorktrees()
+        if (!manager) continue
+        if (enabled) manager.warmPool()
+        else manager.disposePool().catch((err) => opts.log("Failed to clear worktree pool:", err))
+      }
+    }),
+  ]
+  return {
+    registry,
+    contexts,
+    settings,
+    messages,
+    snapshots: () => ({
+      type: "agentManager.projects",
+      projects: contexts.snapshots(),
+    }),
+    dispose: () => {
+      for (const listener of listeners) listener.dispose()
+    },
+  }
+}

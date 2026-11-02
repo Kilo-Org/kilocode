@@ -1,31 +1,24 @@
-// The v2 data layer of the webview: `@opencode/client` over the host relay, the event stream and `createData`.
+// The v2 data layer of the sidebar webview: `@opencode/client` over the host relay, the event stream and the data of
+// the workspace directory.
 import { OpenCode, type OpenCodeClient } from "@opencode/client"
-import { createClientConnection, createData } from "@opencode/client/solid"
-import { KiloHandshakeRpc } from "@opencode/schema/kilocode/handshake"
-import { createContext, createEffect, createSignal, on, onCleanup, useContext, type ParentComponent } from "solid-js"
+import { createClientConnection } from "@opencode/client/solid"
+import { createContext, createSignal, onCleanup, useContext, type ParentComponent } from "solid-js"
 import type { ToWebview } from "../../../src/protocol"
 import { getVSCodeAPI } from "../context/vscode"
 import { events } from "./events"
-import { createKiloCatalog } from "./kilo-catalog"
+import { createV2Scope, type V2 } from "./scope"
 import { transport } from "./transport"
+
+export { message, type V2 } from "./scope"
 
 function create(directory: string) {
   const vscode = getVSCodeAPI()
   const bridge = transport((message) => vscode.postMessage(message as never))
   const api: OpenCodeClient = OpenCode.make({ baseUrl: "http://kilo.invalid", fetch: bridge.fetch })
   const event = events()
-  // The host inlines the extension version; the server handshake reports the server version separately.
-  const extensionVersion =
-    (window as unknown as { KILO_EXTENSION_VERSION?: string }).KILO_EXTENSION_VERSION ?? ""
-  const [error, setError] = createSignal("")
-  const [version, setVersion] = createSignal("")
-  const [handshake, setHandshake] = createSignal("")
-  const [loading, setLoading] = createSignal(true)
   const [bindings, setBindings] = createSignal<Record<string, string>>({})
   const commands = new Set<(name: string) => void>()
   const connection = createClientConnection(api, { onEvent: event.emit, pageLifecycle: true })
-  const data = createData({ api: () => api, directory, connection, event, onError: (err) => setError(message(err)) })
-  const kiloFailure = createKiloCatalog({ api, directory, status: connection.status, on: event.on })
 
   const receive = (event: MessageEvent<ToWebview>) => {
     const message = event.data
@@ -38,50 +31,19 @@ function create(directory: string) {
   onCleanup(() => window.removeEventListener("message", receive))
   onCleanup(event.clear)
 
-  createEffect(
-    on(connection.status, (status) => {
-      if (status !== "connected") return
-      setLoading(true)
-      void api.session
-        .list({ directory, parentID: null, order: "desc", limit: 50 })
-        .then((response) => response.data.forEach(data.session.remember))
-        .catch((err: unknown) => setError(message(err)))
-        .finally(() => setLoading(false))
-      void api
-        .rpc(KiloHandshakeRpc.Definition)
-        .get({}, { location: { directory } })
-        .then((info) => {
-          setVersion(info.version)
-          setHandshake("")
-        })
-        .catch((err: unknown) => setHandshake(`Not a Kilo v2 server: ${message(err)}`))
-    }),
-  )
-
-  return {
+  return createV2Scope({
     api,
-    data,
-    directory,
     connection,
-    loading,
+    event,
+    directory,
     bindings,
-    version,
-    extensionVersion,
-    handshake,
-    error,
-    /** Why the Kilo Gateway catalog failed to load; undefined while it is usable or loading. */
-    kiloFailure,
-    setError,
-    report: (err: unknown) => setError(message(err)),
-    open: (url: string) => vscode.postMessage({ type: "open", url } as never),
-    onCommand(handler: (name: string) => void) {
+    onCommand(handler) {
       commands.add(handler)
       onCleanup(() => commands.delete(handler))
     },
-  }
+    open: (url) => vscode.postMessage({ type: "open", url } as never),
+  })
 }
-
-export type V2 = ReturnType<typeof create>
 
 const Context = createContext<V2>()
 
@@ -89,14 +51,13 @@ export const V2Provider: ParentComponent<{ directory: string }> = (props) => (
   <Context.Provider value={create(props.directory)}>{props.children}</Context.Provider>
 )
 
+/** Provides an existing directory scope, for example one Agent Manager worktree. */
+export const V2Scope: ParentComponent<{ value: V2 }> = (props) => (
+  <Context.Provider value={props.value}>{props.children}</Context.Provider>
+)
+
 export function useV2() {
   const value = useContext(Context)
   if (!value) throw new Error("useV2 must be used inside V2Provider")
   return value
-}
-
-export function message(error: unknown) {
-  if (error instanceof Error) return error.message
-  if (typeof error === "object" && error !== null && "message" in error) return String(error.message)
-  return String(error)
 }

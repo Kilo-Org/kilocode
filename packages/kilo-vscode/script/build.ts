@@ -155,7 +155,10 @@ const results = await Promise.all([
   }),
   build({
     ...common,
-    entryPoints: { webview: path.join(root, "webview-ui/src/index.tsx") },
+    entryPoints: {
+      webview: path.join(root, "webview-ui/src/index.tsx"),
+      "agent-manager": path.join(root, "webview-ui/agent-manager/index.tsx"),
+    },
     outdir: dist,
     format: "iife",
     platform: "browser",

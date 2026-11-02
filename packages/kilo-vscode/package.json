@@ -14,7 +14,8 @@
   "main": "./dist/extension.js",
   "activationEvents": [
     "onStartupFinished",
-    "onWebviewPanel:kilo-code.v2.settingsPanel"
+    "onWebviewPanel:kilo-code.v2.settingsPanel",
+    "onWebviewPanel:kilo-code.v2.agentManagerPanel"
   ],
   "contributes": {
     "icons": {
@@ -241,6 +242,43 @@
           "type": "boolean",
           "default": false,
           "markdownDescription": "Enable autocomplete suggestions in the chat input."
+        },
+        "kilo-code.v2.agentManager.autoBranchNaming": {
+          "type": "boolean",
+          "default": true,
+          "scope": "application",
+          "description": "Automatically name new Agent Manager branches when the conversation describes a clear task. Explicitly named and published branches are never renamed."
+        },
+        "kilo-code.v2.agentManager.branchPrefix": {
+          "type": "string",
+          "default": "",
+          "scope": "application",
+          "description": "Prefix for automatically named Agent Manager branches, for example 'marius/' or 'feature/'. Explicit branch names are unchanged."
+        },
+        "kilo-code.v2.agentManager.worktreePool": {
+          "type": "boolean",
+          "default": true,
+          "scope": "application",
+          "description": "Pre-warm a ready worktree in the background so new Agent Manager sessions start faster. Uses extra disk space equal to one checkout per open project. Turn off to create worktrees only on demand."
+        },
+        "kilo-code.v2.agentManager.terminalButtonDestination": {
+          "type": "string",
+          "scope": "application",
+          "default": "agentManager",
+          "enum": [
+            "vscode",
+            "agentManager"
+          ],
+          "enumDescriptions": [
+            "Open or focus the VS Code integrated terminal.",
+            "Open or focus an embedded terminal in the Agent Manager side panel."
+          ],
+          "description": "Default destination for the Agent Manager terminal button and Focus Terminal keyboard shortcut. The terminal button's dropdown remembers its own choice per Agent Manager panel; this setting only applies to panels that never picked one."
+        },
+        "kilo-code.v2.agentManager.pushFixes": {
+          "type": "boolean",
+          "default": true,
+          "description": "Agent Manager: when you send pull request CI failures or review comments to the agent, or update a worktree from its base, ask the agent to commit and push so the pull request updates. Permission prompts still apply. Disable to keep commits manual."
         }
       }
     },
@@ -308,6 +346,183 @@
         "command": "kilo-code.v2.autocomplete.cancelSuggestions",
         "title": "Cancel Suggested Edits",
         "category": "Kilo Code (v2)"
+      },
+      {
+        "command": "kilo-code.v2.agentManager.open",
+        "title": "Agent Manager",
+        "category": "Kilo Code (v2)",
+        "icon": "$(organization)"
+      },
+      {
+        "command": "kilo-code.v2.agentManager.openInNewWindow",
+        "title": "Open Agent Manager in New Window",
+        "category": "Kilo Code (v2)",
+        "icon": "$(empty-window)"
+      },
+      {
+        "command": "kilo-code.v2.agentManager.previousSession",
+        "title": "Agent Manager: Previous Session",
+        "category": "Kilo Code (v2)"
+      },
+      {
+        "command": "kilo-code.v2.agentManager.nextSession",
+        "title": "Agent Manager: Next Session",
+        "category": "Kilo Code (v2)"
+      },
+      {
+        "command": "kilo-code.v2.agentManager.previousTab",
+        "title": "Previous Session Tab",
+        "category": "Kilo Code (v2)"
+      },
+      {
+        "command": "kilo-code.v2.agentManager.nextTab",
+        "title": "Next Session Tab",
+        "category": "Kilo Code (v2)"
+      },
+      {
+        "command": "kilo-code.v2.agentManager.previousTerminal",
+        "title": "Agent Manager: Previous Terminal",
+        "category": "Kilo Code (v2)"
+      },
+      {
+        "command": "kilo-code.v2.agentManager.nextTerminal",
+        "title": "Agent Manager: Next Terminal",
+        "category": "Kilo Code (v2)"
+      },
+      {
+        "command": "kilo-code.v2.agentManager.diagnostics",
+        "title": "Agent Manager: Show Worktree Diagnostics",
+        "category": "Kilo Code (v2)"
+      },
+      {
+        "command": "kilo-code.v2.agentManager.search",
+        "title": "Agent Manager: Search Worktrees and Sessions",
+        "category": "Kilo Code (v2)"
+      },
+      {
+        "command": "kilo-code.v2.agentManager.showTerminal",
+        "title": "Agent Manager: Focus Terminal",
+        "category": "Kilo Code (v2)",
+        "icon": "$(terminal)"
+      },
+      {
+        "command": "kilo-code.v2.agentManager.runScript",
+        "title": "Agent Manager: Run Script",
+        "category": "Kilo Code (v2)",
+        "icon": "$(play)"
+      },
+      {
+        "command": "kilo-code.v2.agentManager.toggleDiff",
+        "title": "Agent Manager: Toggle Diff Panel",
+        "category": "Kilo Code (v2)",
+        "icon": "$(diff)"
+      },
+      {
+        "command": "kilo-code.v2.agentManager.showShortcuts",
+        "title": "Agent Manager: Show Keyboard Shortcuts",
+        "category": "Kilo Code (v2)",
+        "icon": "$(keyboard)"
+      },
+      {
+        "command": "kilo-code.v2.agentManager.newTab",
+        "title": "Agent Manager: New Tab",
+        "category": "Kilo Code (v2)"
+      },
+      {
+        "command": "kilo-code.v2.agentManager.newTerminalTab",
+        "title": "Agent Manager: New Terminal Tab",
+        "category": "Kilo Code (v2)"
+      },
+      {
+        "command": "kilo-code.v2.agentManager.newSideTerminal",
+        "title": "Agent Manager: New Sidebar Terminal Tab",
+        "category": "Kilo Code (v2)"
+      },
+      {
+        "command": "kilo-code.v2.agentManager.closeTab",
+        "title": "Agent Manager: Close Tab",
+        "category": "Kilo Code (v2)"
+      },
+      {
+        "command": "kilo-code.v2.agentManager.newWorktree",
+        "title": "Agent Manager: Configure New Worktree",
+        "category": "Kilo Code (v2)"
+      },
+      {
+        "command": "kilo-code.v2.agentManager.quickWorktree",
+        "title": "Agent Manager: New Worktree",
+        "category": "Kilo Code (v2)"
+      },
+      {
+        "command": "kilo-code.v2.agentManager.openWorktree",
+        "title": "Agent Manager: Open Worktree",
+        "category": "Kilo Code (v2)"
+      },
+      {
+        "command": "kilo-code.v2.agentManager.updateFromBase",
+        "title": "Agent Manager: Update from base",
+        "category": "Kilo Code (v2)",
+        "enablement": "activeWebviewPanelId == 'kilo-code.v2.agentManagerPanel'"
+      },
+      {
+        "command": "kilo-code.v2.agentManager.openPR",
+        "title": "Agent Manager: Open Pull Request",
+        "category": "Kilo Code (v2)"
+      },
+      {
+        "command": "kilo-code.v2.agentManager.closeWorktree",
+        "title": "Agent Manager: Close Worktree",
+        "category": "Kilo Code (v2)"
+      },
+      {
+        "command": "kilo-code.v2.agentManager.advancedWorktree",
+        "title": "Agent Manager: Configure New Worktree",
+        "category": "Kilo Code (v2)"
+      },
+      {
+        "command": "kilo-code.v2.agentManager.jumpTo1",
+        "title": "Agent Manager: Jump to Item 1",
+        "category": "Kilo Code (v2)"
+      },
+      {
+        "command": "kilo-code.v2.agentManager.jumpTo2",
+        "title": "Agent Manager: Jump to Item 2",
+        "category": "Kilo Code (v2)"
+      },
+      {
+        "command": "kilo-code.v2.agentManager.jumpTo3",
+        "title": "Agent Manager: Jump to Item 3",
+        "category": "Kilo Code (v2)"
+      },
+      {
+        "command": "kilo-code.v2.agentManager.jumpTo4",
+        "title": "Agent Manager: Jump to Item 4",
+        "category": "Kilo Code (v2)"
+      },
+      {
+        "command": "kilo-code.v2.agentManager.jumpTo5",
+        "title": "Agent Manager: Jump to Item 5",
+        "category": "Kilo Code (v2)"
+      },
+      {
+        "command": "kilo-code.v2.agentManager.jumpTo6",
+        "title": "Agent Manager: Jump to Item 6",
+        "category": "Kilo Code (v2)"
+      },
+      {
+        "command": "kilo-code.v2.agentManager.jumpTo7",
+        "title": "Agent Manager: Jump to Item 7",
+        "category": "Kilo Code (v2)"
+      },
+      {
+        "command": "kilo-code.v2.agentManager.jumpTo8",
+        "title": "Agent Manager: Jump to Item 8",
+        "category": "Kilo Code (v2)"
+      },
+      {
+        "command": "kilo-code.v2.agentManager.jumpTo9",
+        "title": "Agent Manager: Jump to Item 9",
+        "category": "Kilo Code (v2)"
       }
     ],
     "keybindings": [
@@ -315,13 +530,13 @@
         "command": "kilo-code.v2.cycleAgentMode",
         "key": "ctrl+.",
         "mac": "cmd+.",
-        "when": "kilo-code.v2.sidebarFocused"
+        "when": "kilo-code.v2.sidebarFocused || activeWebviewPanelId == 'kilo-code.v2.agentManagerPanel'"
       },
       {
         "command": "kilo-code.v2.cyclePreviousAgentMode",
         "key": "ctrl+shift+.",
         "mac": "cmd+shift+.",
-        "when": "kilo-code.v2.sidebarFocused"
+        "when": "kilo-code.v2.sidebarFocused || activeWebviewPanelId == 'kilo-code.v2.agentManagerPanel'"
       },
       {
         "command": "kilo-code.v2.settingsSearch",
@@ -345,10 +560,194 @@
         "key": "ctrl+l",
         "mac": "cmd+l",
         "when": "editorTextFocus && !editorTabMovesFocus && !inSnippetMode && kilo-code.v2.autocomplete.enableSmartInlineTaskKeybinding && github.copilot.completions.enabled"
+      },
+      {
+        "command": "kilo-code.v2.agentManager.open",
+        "key": "ctrl+shift+m",
+        "mac": "cmd+shift+m"
+      },
+      {
+        "command": "kilo-code.v2.agentManager.previousSession",
+        "key": "ctrl+alt+up",
+        "mac": "cmd+alt+up",
+        "when": "activeWebviewPanelId == 'kilo-code.v2.agentManagerPanel'"
+      },
+      {
+        "command": "kilo-code.v2.agentManager.nextSession",
+        "key": "ctrl+alt+down",
+        "mac": "cmd+alt+down",
+        "when": "activeWebviewPanelId == 'kilo-code.v2.agentManagerPanel'"
+      },
+      {
+        "command": "kilo-code.v2.agentManager.previousTab",
+        "key": "ctrl+alt+left",
+        "mac": "cmd+alt+left",
+        "when": "activeWebviewPanelId == 'kilo-code.v2.agentManagerPanel'"
+      },
+      {
+        "command": "kilo-code.v2.agentManager.nextTab",
+        "key": "ctrl+alt+right",
+        "mac": "cmd+alt+right",
+        "when": "activeWebviewPanelId == 'kilo-code.v2.agentManagerPanel'"
+      },
+      {
+        "command": "kilo-code.v2.agentManager.previousTerminal",
+        "key": "ctrl+shift+[",
+        "mac": "cmd+shift+[",
+        "when": "activeWebviewPanelId == 'kilo-code.v2.agentManagerPanel'"
+      },
+      {
+        "command": "kilo-code.v2.agentManager.nextTerminal",
+        "key": "ctrl+shift+]",
+        "mac": "cmd+shift+]",
+        "when": "activeWebviewPanelId == 'kilo-code.v2.agentManagerPanel'"
+      },
+      {
+        "command": "kilo-code.v2.agentManager.search",
+        "key": "ctrl+f",
+        "mac": "cmd+f",
+        "when": "activeWebviewPanelId == 'kilo-code.v2.agentManagerPanel' && !terminalFocus"
+      },
+      {
+        "command": "kilo-code.v2.agentManager.showTerminal",
+        "key": "ctrl+/",
+        "mac": "cmd+/",
+        "when": "activeWebviewPanelId == 'kilo-code.v2.agentManagerPanel' && !kilo-code.v2.sidebarFocused"
+      },
+      {
+        "command": "kilo-code.v2.agentManager.runScript",
+        "key": "ctrl+e",
+        "mac": "cmd+e",
+        "when": "activeWebviewPanelId == 'kilo-code.v2.agentManagerPanel' && (isMac || !terminalFocus)"
+      },
+      {
+        "command": "kilo-code.v2.agentManager.toggleDiff",
+        "key": "ctrl+d",
+        "mac": "cmd+d",
+        "when": "activeWebviewPanelId == 'kilo-code.v2.agentManagerPanel'"
+      },
+      {
+        "command": "kilo-code.v2.agentManager.showShortcuts",
+        "key": "ctrl+shift+/",
+        "mac": "cmd+shift+/",
+        "when": "activeWebviewPanelId == 'kilo-code.v2.agentManagerPanel'"
+      },
+      {
+        "command": "kilo-code.v2.agentManager.newTab",
+        "key": "ctrl+t",
+        "mac": "cmd+t",
+        "when": "activeWebviewPanelId == 'kilo-code.v2.agentManagerPanel' && !kilo-code.v2.agentManager.sideTerminalFocused"
+      },
+      {
+        "command": "kilo-code.v2.agentManager.newTerminalTab",
+        "key": "ctrl+shift+t",
+        "mac": "cmd+shift+t",
+        "when": "activeWebviewPanelId == 'kilo-code.v2.agentManagerPanel' && !kilo-code.v2.agentManager.sideTerminalFocused"
+      },
+      {
+        "command": "kilo-code.v2.agentManager.newSideTerminal",
+        "key": "ctrl+t",
+        "mac": "cmd+t",
+        "when": "activeWebviewPanelId == 'kilo-code.v2.agentManagerPanel' && kilo-code.v2.agentManager.sideTerminalFocused"
+      },
+      {
+        "command": "kilo-code.v2.agentManager.closeTab",
+        "key": "ctrl+w",
+        "mac": "cmd+w",
+        "when": "activeWebviewPanelId == 'kilo-code.v2.agentManagerPanel'"
+      },
+      {
+        "command": "kilo-code.v2.agentManager.newWorktree",
+        "key": "ctrl+n",
+        "mac": "cmd+n",
+        "when": "activeWebviewPanelId == 'kilo-code.v2.agentManagerPanel'"
+      },
+      {
+        "command": "kilo-code.v2.agentManager.quickWorktree",
+        "key": "ctrl+shift+n",
+        "mac": "cmd+shift+n",
+        "when": "activeWebviewPanelId == 'kilo-code.v2.agentManagerPanel'"
+      },
+      {
+        "command": "kilo-code.v2.agentManager.openWorktree",
+        "key": "ctrl+shift+o",
+        "mac": "cmd+shift+o",
+        "when": "activeWebviewPanelId == 'kilo-code.v2.agentManagerPanel'"
+      },
+      {
+        "command": "kilo-code.v2.agentManager.openPR",
+        "key": "ctrl+shift+r",
+        "mac": "cmd+shift+r",
+        "when": "activeWebviewPanelId == 'kilo-code.v2.agentManagerPanel'"
+      },
+      {
+        "command": "kilo-code.v2.agentManager.closeWorktree",
+        "key": "ctrl+shift+w",
+        "mac": "cmd+shift+w",
+        "when": "activeWebviewPanelId == 'kilo-code.v2.agentManagerPanel'"
+      },
+      {
+        "command": "kilo-code.v2.agentManager.jumpTo1",
+        "key": "ctrl+1",
+        "mac": "cmd+1",
+        "when": "activeWebviewPanelId == 'kilo-code.v2.agentManagerPanel'"
+      },
+      {
+        "command": "kilo-code.v2.agentManager.jumpTo2",
+        "key": "ctrl+2",
+        "mac": "cmd+2",
+        "when": "activeWebviewPanelId == 'kilo-code.v2.agentManagerPanel'"
+      },
+      {
+        "command": "kilo-code.v2.agentManager.jumpTo3",
+        "key": "ctrl+3",
+        "mac": "cmd+3",
+        "when": "activeWebviewPanelId == 'kilo-code.v2.agentManagerPanel'"
+      },
+      {
+        "command": "kilo-code.v2.agentManager.jumpTo4",
+        "key": "ctrl+4",
+        "mac": "cmd+4",
+        "when": "activeWebviewPanelId == 'kilo-code.v2.agentManagerPanel'"
+      },
+      {
+        "command": "kilo-code.v2.agentManager.jumpTo5",
+        "key": "ctrl+5",
+        "mac": "cmd+5",
+        "when": "activeWebviewPanelId == 'kilo-code.v2.agentManagerPanel'"
+      },
+      {
+        "command": "kilo-code.v2.agentManager.jumpTo6",
+        "key": "ctrl+6",
+        "mac": "cmd+6",
+        "when": "activeWebviewPanelId == 'kilo-code.v2.agentManagerPanel'"
+      },
+      {
+        "command": "kilo-code.v2.agentManager.jumpTo7",
+        "key": "ctrl+7",
+        "mac": "cmd+7",
+        "when": "activeWebviewPanelId == 'kilo-code.v2.agentManagerPanel'"
+      },
+      {
+        "command": "kilo-code.v2.agentManager.jumpTo8",
+        "key": "ctrl+8",
+        "mac": "cmd+8",
+        "when": "activeWebviewPanelId == 'kilo-code.v2.agentManagerPanel'"
+      },
+      {
+        "command": "kilo-code.v2.agentManager.jumpTo9",
+        "key": "ctrl+9",
+        "mac": "cmd+9",
+        "when": "activeWebviewPanelId == 'kilo-code.v2.agentManagerPanel'"
       }
     ],
     "menus": {
       "view/title": [
+        {
+          "command": "kilo-code.v2.agentManager.open",
+          "when": "view == kilo-code.v2.chat",
+          "group": "navigation@0"
+        },
         {
           "command": "kilo-code.v2.newSession",
           "when": "view == kilo-code.v2.chat",
@@ -383,6 +782,12 @@
           "group": "navigation",
           "when": "scmProvider == git"
         }
+      ],
+      "commandPalette": [
+        {
+          "command": "kilo-code.v2.agentManager.advancedWorktree",
+          "when": "false"
+        }
       ]
     }
   },
@@ -391,7 +796,7 @@
     "package": "bun script/build.ts --production",
     "extension": "bun script/launch.ts",
     "typecheck": "tsc --noEmit && tsc --noEmit -p webview-ui",
-    "lint": "cd ../.. && oxlint --config .oxlintrc.json packages/kilo-vscode/src packages/kilo-vscode/webview-ui/src packages/kilo-vscode/script packages/kilo-vscode/test",
+    "lint": "cd ../.. && oxlint --config .oxlintrc.json packages/kilo-vscode/src packages/kilo-vscode/webview-ui/src packages/kilo-vscode/webview-ui/agent-manager packages/kilo-vscode/script packages/kilo-vscode/test",
     "test": "bun test"
   },
   "dependencies": {
@@ -406,8 +811,14 @@
     "@opencode/util": "workspace:*",
     "@pierre/diffs": "1.2.10",
     "@thisbeyond/solid-dnd": "0.7.5",
+    "@xterm/addon-clipboard": "0.2.0",
+    "@xterm/addon-fit": "0.11.0",
+    "@xterm/addon-unicode-graphemes": "0.4.0",
+    "@xterm/addon-web-links": "0.12.0",
+    "@xterm/xterm": "6.0.0",
     "diff": "catalog:",
     "fastest-levenshtein": "1.0.16",
+    "friendly-words": "1.3.1",
     "fuzzysort": "catalog:",
     "ignore": "7.0.5",
     "js-tiktoken": "1.0.21",
@@ -415,6 +826,7 @@
     "lru-cache": "11.5.2",
     "marked": "catalog:",
     "quick-lru": "7.3.0",
+    "simple-git": "4.0.2",
     "solid-js": "catalog:",
     "uri-js": "4.4.1",
     "virtua": "0.49.1",

@@ -34,6 +34,11 @@ export const KILO_SETTING_KEYS = [
   "autocomplete.enableChatAutocomplete",
   "autocomplete.provider",
   "autocomplete.model",
+  "agentManager.autoBranchNaming",
+  "agentManager.branchPrefix",
+  "agentManager.worktreePool",
+  "agentManager.terminalButtonDestination",
+  "agentManager.pushFixes",
 ] as const
 
 /** `kilo-code.v2.fontSize` when set, otherwise `editor.fontSize`, clamped to the v1 slider range. */

@@ -105,7 +105,7 @@ export function wire(input: {
   server: Manager
   directory: string
   webview: Webview
-  view: "chat" | "settings"
+  view: View
   trackCostSession?: (sessionID: string) => void
   /** The tool diff surfaces of the chat view. Settings has none. */
   diff?: ToolDiff
@@ -114,6 +114,8 @@ export function wire(input: {
   /** Handles a view-specific message before the standard set. Returns true when it did. */
   handle?: (message: ToHost) => boolean
   onReset?: () => void
+  /** Extra window globals of the webview bundle. */
+  globals?: Record<string, unknown>
 }) {
   const webview = input.webview
   const root = input.context.extensionUri
@@ -163,7 +165,7 @@ export function wire(input: {
         : undefined
   // The sidebar carries the live Kilo settings: push a fresh value when any of them changes.
   const settingsWatch =
-    input.view === "chat"
+    input.view !== "settings"
       ? workspace.onDidChangeConfiguration((event) => {
           if (KILO_SETTING_KEYS.some((key) => event.affectsConfiguration(`${NAMESPACE}.${key}`)))
             post({ type: "vscodeSettingsLoaded", values: readKiloSettings() })
@@ -262,8 +264,8 @@ export function wire(input: {
   const uri = (...parts: string[]) => webview.asWebviewUri(Uri.joinPath(root, ...parts)).toString()
   webview.html = html({
     csp: webview.cspSource,
-    script: uri("dist", "webview.js"),
-    style: uri("dist", "webview.css"),
+    script: uri("dist", `${ENTRY[input.view]}.js`),
+    style: uri("dist", `${ENTRY[input.view]}.css`),
     icons: uri("assets", "icons"),
     worker: uri("dist", "shiki-worker.js"),
     markdown: uri("dist", "markdown-shiki-worker.js"),
@@ -273,6 +275,7 @@ export function wire(input: {
     version: (input.context.extension.packageJSON as { version?: string }).version ?? "",
     view: input.view,
     settings: readKiloSettings(),
+    globals: input.globals,
   })
   return {
     post,
@@ -289,6 +292,8 @@ export function wire(input: {
 const EXPANDED = "kilo-code.v2.modelSelectorExpanded"
 const AUTO_APPROVE = "kilo-code.v2.autoApprove"
 const NAMESPACE = "kilo-code.v2"
+// The Agent Manager panel loads its own bundle; the sidebar and the Settings panel share one.
+const ENTRY = { chat: "webview", settings: "webview", agentManager: "agent-manager" } as const
 const SIZES = [10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24]
 
 export function html(input: {
@@ -302,8 +307,9 @@ export function html(input: {
   size: number
   language: string
   version: string
-  view?: "chat" | "settings"
+  view?: View
   settings: Record<string, unknown>
+  globals?: Record<string, unknown>
 }) {
   const nonce = randomBytes(16).toString("hex")
   const policy = [
@@ -327,6 +333,7 @@ export function html(input: {
     KILO_AGENT_MANAGER_INTRO_DISMISSED: true,
     KILO_SETTINGS: input.settings,
     KILO_EXTENSION_VERSION: input.version,
+    ...input.globals,
   }
   const script = Object.entries(globals)
     .map(([key, value]) => `window.${key} = ${JSON.stringify(value).replace(/</g, "\\u003c")};`)
@@ -338,7 +345,7 @@ export function html(input: {
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta http-equiv="Content-Security-Policy" content="${policy}">
 <link rel="stylesheet" href="${input.style}">
-<title>Kilo Code</title>
+<title>${input.view === "agentManager" ? "Agent Manager" : "Kilo Code"}</title>
 <style>
   :root { ${vars} --kilo-font-scale: ${input.size / 13}; --font-size-x-small: var(--kilo-font-size-10); --font-size-small: var(--kilo-font-size-11); --font-size-base: var(--kilo-font-size-13); --font-size-large: var(--kilo-font-size-16); }
   html {
@@ -350,7 +357,7 @@ export function html(input: {
     }
   }
   html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; }
-  body { background-color: ${input.view === "settings" ? "var(--vscode-editor-background)" : "var(--vscode-sideBar-background, var(--vscode-editor-background))"}; color: var(--vscode-foreground); font-family: var(--vscode-font-family); }
+  body { background-color: ${input.view && input.view !== "chat" ? "var(--vscode-editor-background)" : "var(--vscode-sideBar-background, var(--vscode-editor-background))"}; color: var(--vscode-foreground); font-family: var(--vscode-font-family); }
   #root { height: 100%; }
   .container { height: 100vh; }
 </style>
@@ -366,6 +373,8 @@ export function html(input: {
 function escape(text: string) {
   return text.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
 }
+
+type View = "chat" | "settings" | "agentManager"
 
 type Surface = Extract<
   ToHost,
