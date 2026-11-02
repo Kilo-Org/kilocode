@@ -2,7 +2,14 @@ import { expect, test } from "bun:test"
 import { copyFile, mkdir, mkdtemp, rm } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { dirname, join, resolve } from "node:path"
-import { compare, parse, prune, scan, type Exception, type Finding } from "../../../script/check-kilocode-duplication"
+import {
+  compare,
+  parse,
+  prune,
+  scan,
+  type Exception,
+  type Finding,
+} from "../../../../script/check-kilocode-duplication"
 
 const source = `export function summarize(input: readonly number[]) {
   const positive = input.filter((value) => Number.isFinite(value) && value > 0)
@@ -220,8 +227,9 @@ test(
   async () => {
     await fixture({ [first]: source, [second]: source }, async (root) => {
       const script = "script/check-kilocode-duplication.ts"
-      await mkdir(join(root, "script"))
-      await copyFile(resolve(import.meta.dir, "../../../", script), join(root, script))
+      await mkdir(join(root, "script"), { recursive: true })
+      await mkdir(join(root, "script/kilocode"), { recursive: true })
+      await copyFile(resolve(import.meta.dir, "../../../../", script), join(root, script))
       const invoke = async (args: string[] = []) => {
         const proc = Bun.spawn([process.execPath, script, ...args], {
           cwd: root,
@@ -237,7 +245,7 @@ test(
         return { code, text: stdout + stderr }
       }
       expect((await invoke(["--init"])).code).toBe(0)
-      const baseline = Bun.file(join(root, "script/kilocode-duplication-allowlist.json"))
+      const baseline = Bun.file(join(root, "script/kilocode/duplication-allowlist.json"))
       const initial = await baseline.text()
       expect((await invoke()).code).toBe(0)
       const third = join(root, "packages/kilo-example/src/third.ts")

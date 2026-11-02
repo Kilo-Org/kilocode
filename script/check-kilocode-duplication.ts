@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url"
 
 const scanner = "jscpd@5.0.16"
 const root = resolve(import.meta.dir, "..")
-const filename = "script/kilocode-duplication-allowlist.json"
+const filename = "script/kilocode/duplication-allowlist.json"
 const roots = [
   "packages/kilo-*/src",
   "packages/kilo-vscode/webview-ui",
@@ -86,6 +86,12 @@ function integer(value: unknown, minimum = 0) {
   return value
 }
 
+// Bun realpath returns a namespaced path on Windows (\\?\C:\...), which makes path.relative treat
+// a normal absolute path as a different root. Strip the namespace so both sides compare normally.
+function localPath(value: string) {
+  return value.replace(/^\\\\\?\\UNC\\/i, "\\\\").replace(/^\\\\\?\\/i, "")
+}
+
 function path(value: unknown) {
   const file = text(value)
   if (
@@ -138,7 +144,7 @@ export function parse(value: unknown): Exception[] {
 }
 
 export async function scan(cwd: string) {
-  const directory = await realpath(cwd)
+  const directory = localPath(await realpath(cwd))
   const candidates = new Set<string>()
   for (const scope of roots) {
     const glob = new Bun.Glob(`${scope}/**/*.{ts,tsx,js,jsx,mjs,cjs,mts,cts,css}`)
@@ -210,9 +216,11 @@ export async function scan(cwd: string) {
         const location = object(object(value).physicalLocation)
         const artifact = object(location.artifactLocation)
         const uri = text(artifact.uri)
-        const absolute = isAbsolute(uri)
-          ? uri
-          : fileURLToPath(new URL(uri, text(object(object(run.originalUriBaseIds)[text(artifact.uriBaseId)]).uri)))
+        const absolute = localPath(
+          isAbsolute(uri)
+            ? uri
+            : fileURLToPath(new URL(uri, text(object(object(run.originalUriBaseIds)[text(artifact.uriBaseId)]).uri))),
+        )
         const region = object(location.region)
         return {
           file: path(relative(directory, absolute).replaceAll("\\", "/")),

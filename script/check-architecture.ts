@@ -19,7 +19,7 @@
 import path from "node:path"
 
 const ROOT = path.resolve(import.meta.dir, "..")
-const ALLOWLIST_PATH = path.join(ROOT, "script", "architecture-allowlist.json")
+const ALLOWLIST_PATH = path.join(ROOT, "script", "kilocode", "architecture-allowlist.json")
 
 type Entry = { count: number; owner: string; reason: string }
 type Allowlist = {
@@ -176,7 +176,7 @@ for (const [file, hit] of coreHits) {
     violations.push({
       file,
       rule: "core-directionality",
-      message: `Ratchet drift: expected ${expected.count} site(s), found ${hit.count}. Update script/architecture-allowlist.json!`,
+      message: `Ratchet drift: expected ${expected.count} site(s), found ${hit.count}. Update script/kilocode/architecture-allowlist.json!`,
     })
   }
 }
@@ -186,7 +186,7 @@ for (const file of Object.keys(allowedCore)) {
     violations.push({
       file,
       rule: "core-directionality",
-      message: `Stale allowlist entry: no forbidden dependency found in ${file}. Remove from script/architecture-allowlist.json!`,
+      message: `Stale allowlist entry: no forbidden dependency found in ${file}. Remove from script/kilocode/architecture-allowlist.json!`,
     })
   }
 }
@@ -217,7 +217,7 @@ for (const [file, hit] of gatewayHits) {
     violations.push({
       file,
       rule: "kilo-gateway-core-isolation",
-      message: `Ratchet drift: expected ${expected.count} site(s), found ${hit.count}. Update script/architecture-allowlist.json!`,
+      message: `Ratchet drift: expected ${expected.count} site(s), found ${hit.count}. Update script/kilocode/architecture-allowlist.json!`,
     })
   }
 }
@@ -227,7 +227,7 @@ for (const file of Object.keys(allowedGateway)) {
     violations.push({
       file,
       rule: "kilo-gateway-core-isolation",
-      message: `Stale allowlist entry: no @opencode dependency found in ${file}. Remove from script/architecture-allowlist.json!`,
+      message: `Stale allowlist entry: no @opencode dependency found in ${file}. Remove from script/kilocode/architecture-allowlist.json!`,
     })
   }
 }
@@ -245,11 +245,11 @@ for (const file of KILO_FILES) {
 
 ratchet("kilo-instance-state", instanceHits, {
   unclassified: (count) =>
-    `Unclassified InstanceState.make found in Kilo-owned code (${count} site(s)). Encapsulate state in a scoped Effect Service in packages/core or add to script/architecture-allowlist.json.`,
+    `Unclassified InstanceState.make found in Kilo-owned code (${count} site(s)). Encapsulate state in a scoped Effect Service in packages/core or add to script/kilocode/architecture-allowlist.json.`,
   drift: (file, expected, count) =>
-    `Ratchet drift for InstanceState.make in ${file}: expected ${expected}, found ${count}. Update script/architecture-allowlist.json!`,
+    `Ratchet drift for InstanceState.make in ${file}: expected ${expected}, found ${count}. Update script/kilocode/architecture-allowlist.json!`,
   stale: (file) =>
-    `Stale allowlist entry: no InstanceState.make found in ${file}. Remove from script/architecture-allowlist.json to lock in progress!`,
+    `Stale allowlist entry: no InstanceState.make found in ${file}. Remove from script/kilocode/architecture-allowlist.json to lock in progress!`,
 })
 
 // ---------------------------------------------------------------------------
@@ -267,9 +267,9 @@ ratchet("kilo-database-constructors", databaseHits, {
   unclassified: (count) =>
     `Unclassified SQLite constructor (new Database / new DatabaseSync) in Kilo code (${count} site(s)). Route persistence through Database.Service in @opencode/core.`,
   drift: (file, expected, count) =>
-    `Ratchet drift for database constructor in ${file}: expected ${expected}, found ${count}. Update script/architecture-allowlist.json!`,
+    `Ratchet drift for database constructor in ${file}: expected ${expected}, found ${count}. Update script/kilocode/architecture-allowlist.json!`,
   stale: (file) =>
-    `Stale database constructor allowlist entry: no direct instantiation found in ${file}. Remove from script/architecture-allowlist.json!`,
+    `Stale database constructor allowlist entry: no direct instantiation found in ${file}. Remove from script/kilocode/architecture-allowlist.json!`,
 })
 
 // ---------------------------------------------------------------------------
@@ -287,9 +287,9 @@ ratchet("kilo-tool-process-env", toolHits, {
   unclassified: (count) =>
     `Direct process.env read found in Kilo tool (${count} site(s)). Pass configuration via Tool.Context or Env.Service.`,
   drift: (file, expected, count) =>
-    `Ratchet drift for process.env in ${file}: expected ${expected}, found ${count}. Update script/architecture-allowlist.json!`,
+    `Ratchet drift for process.env in ${file}: expected ${expected}, found ${count}. Update script/kilocode/architecture-allowlist.json!`,
   stale: (file) =>
-    `Stale tool-process-env entry: no process.env read found in ${file}. Remove from script/architecture-allowlist.json!`,
+    `Stale tool-process-env entry: no process.env read found in ${file}. Remove from script/kilocode/architecture-allowlist.json!`,
 })
 
 // ---------------------------------------------------------------------------
@@ -310,9 +310,9 @@ ratchet("kilo-httpapi-handlers", handlerHits, {
   unclassified: (count) =>
     `Direct OS/process operations forbidden in Kilo HttpApi route handlers (${count} site(s)). Delegate to domain Effect services.`,
   drift: (file, expected, count) =>
-    `Ratchet drift for OS/process operations in ${file}: expected ${expected}, found ${count}. Update script/architecture-allowlist.json!`,
+    `Ratchet drift for OS/process operations in ${file}: expected ${expected}, found ${count}. Update script/kilocode/architecture-allowlist.json!`,
   stale: (file) =>
-    `Stale handler allowlist entry: no raw OS/process operation found in ${file}. Remove from script/architecture-allowlist.json!`,
+    `Stale handler allowlist entry: no raw OS/process operation found in ${file}. Remove from script/kilocode/architecture-allowlist.json!`,
 })
 
 // ---------------------------------------------------------------------------
@@ -326,7 +326,7 @@ if (violations.length > 0) {
     console.error(`    ↳ ${violation.message}\n`)
   }
   console.error("Architecture rules protect domain decoupling and enable fast in-process testing.")
-  console.error("To refactor an existing site, update script/architecture-allowlist.json.")
+  console.error("To refactor an existing site, update script/kilocode/architecture-allowlist.json.")
   process.exit(1)
 }
 
