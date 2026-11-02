@@ -101,7 +101,7 @@ export function activate(context: ExtensionContext) {
   const autocomplete = createConnection({ server, directory })
   context.subscriptions.push({ dispose: autocomplete.dispose })
   registerAutocompleteProvider(context, autocomplete)
-  const view = chat({ context, server, directory, trackCostSession: alerts.track, diff: diffs })
+  const view = chat({ context, server, directory, trackCostSession: alerts.track, diff: diffs, autocomplete })
   const panel = settings({ context, server, directory, onReset: view.syncState })
 
   context.subscriptions.push(

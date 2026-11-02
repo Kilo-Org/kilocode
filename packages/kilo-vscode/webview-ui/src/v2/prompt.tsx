@@ -3,6 +3,8 @@ import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import type { ModelRef } from "@opencode/client"
 import { createEffect, createSignal, onCleanup, onMount, Show, type JSX } from "solid-js"
 import { useLanguage } from "../context/language"
+import { useVSCode } from "../context/vscode"
+import { useGhostText } from "../hooks/useGhostText"
 import { isEnterKeyCommitNotIme } from "../utils/ime-enter"
 import { message, useV2 } from "./client"
 import { cleanEnhancedPrompt, enhancePromptRequest, normalizeEnhancePromptErrorMessage } from "./enhance-prompt"
@@ -25,10 +27,12 @@ export function PromptInput(props: {
   actions?: JSX.Element
 }) {
   const v2 = useV2()
+  const vscode = useVSCode()
   const language = useLanguage()
   const [text, setText] = createSignal("")
   const [sending, setSending] = createSignal(false)
   const [enhancing, setEnhancing] = createSignal(false)
+  const ghost = useGhostText(vscode, text, () => v2.connection.status() === "connected")
   // The draft Enhance replaced, so Ctrl/Cmd+Z restores it once.
   let preEnhance: string | null = null
   // Ignores a late result after a newer Enhance or a newer edit.
@@ -61,6 +65,23 @@ export function PromptInput(props: {
   const focus = () => refs.input?.focus({ preventScroll: true })
   onMount(() => window.addEventListener("focusPrompt", focus))
   onCleanup(() => window.removeEventListener("focusPrompt", focus))
+
+  // The cursor must sit at the end of the text for Tab or ArrowRight to accept the ghost text.
+  const atEnd = () => {
+    const input = refs.input
+    return (
+      !!input &&
+      input.selectionStart === input.selectionEnd &&
+      input.selectionEnd === input.value.length
+    )
+  }
+
+  const acceptSuggestion = () => {
+    const result = ghost.accept()
+    if (!result) return
+    setText(text() + result.text)
+    focus()
+  }
 
   const send = () => {
     if (!ready()) return
@@ -141,6 +162,9 @@ export function PromptInput(props: {
         <div class="prompt-input-ghost-wrapper">
           <div class="prompt-input-highlight-overlay" ref={(el) => (refs.overlay = el)} aria-hidden="true" dir="auto">
             <span>{text()}</span>
+            <Show when={ghost.text()}>
+              <span class="prompt-input-ghost-text">{ghost.text()}</span>
+            </Show>
             <Show when={text().endsWith("\n")}>
               <br />
             </Show>
@@ -160,14 +184,39 @@ export function PromptInput(props: {
               // An edit invalidates an in-flight Enhance, so its late result cannot overwrite the new text.
               enhanceToken++
               preEnhance = null
-              setText(e.currentTarget.value)
+              const value = e.currentTarget.value
+              setText(value)
+              ghost.scheduleRequest(value, refs.input)
             }}
             onKeyDown={(e) => {
               if (undoEnhance(e)) return
+              if (e.key === "Tab" && !e.shiftKey && ghost.text()) {
+                if (!atEnd()) return
+                e.preventDefault()
+                acceptSuggestion()
+                return
+              }
+              if (e.key === "ArrowRight" && ghost.text()) {
+                if (!atEnd()) return
+                e.preventDefault()
+                acceptSuggestion()
+                return
+              }
+              if (e.key === "Escape" && ghost.text()) {
+                e.preventDefault()
+                e.stopPropagation()
+                ghost.dismiss()
+                return
+              }
               if (!isEnterKeyCommitNotIme(e) || e.shiftKey) return
               e.preventDefault()
               send()
             }}
+            onKeyUp={() => ghost.sync(refs.input)}
+            onFocus={() => ghost.sync(refs.input)}
+            onBlur={() => ghost.sync(refs.input)}
+            onSelect={() => ghost.sync(refs.input)}
+            onClick={() => ghost.sync(refs.input)}
             onScroll={scroll}
             aria-disabled={props.disabled}
             readOnly={props.disabled}

@@ -162,7 +162,8 @@
     },
     {
       "files": ["packages/kilo-vscode/src/chat.ts"],
-      "rules": { "complexity": ["error", 23] }
+      // The chat autocomplete routing adds one branch to the message handler.
+      "rules": { "complexity": ["error", 24] }
     },
     {
       "files": ["packages/kilo-vscode/webview-ui/src/components/settings/agent-behaviour/WorkflowsSubtab.tsx"],
