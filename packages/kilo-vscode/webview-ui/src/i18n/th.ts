@@ -212,7 +212,6 @@ export const dict = {
   "prompt.action.send.recording": "ถอดเสียงและส่ง",
   "prompt.action.stop": "หยุด",
   "prompt.action.stop.background": "หยุดเอเจนต์หลัก เอเจนต์เบื้องหลังจะยังคงทำงานต่อ",
-  "prompt.agents.show": "แสดงเอเจนต์เบื้องหลัง",
   "prompt.action.enhance": "ปรับปรุงพรอมต์",
   "prompt.action.more": "การดำเนินการเพิ่มเติม",
   "prompt.paste.expand": "คลิกเพื่อขยายข้อความที่วาง",

@@ -214,7 +214,6 @@ export const dict = {
   "prompt.action.send.recording": "Transcriberen en verzenden",
   "prompt.action.stop": "Stop",
   "prompt.action.stop.background": "Hoofdagent stoppen. Achtergrondagenten blijven actief.",
-  "prompt.agents.show": "Achtergrondagenten tonen",
   "prompt.action.enhance": "Prompt verbeteren",
   "prompt.action.more": "Meer acties",
   "prompt.paste.expand": "Klik om geplakte tekst uit te vouwen",

@@ -214,7 +214,6 @@ export const dict = {
   "prompt.action.send.recording": "Транскрибувати та надіслати",
   "prompt.action.stop": "Зупинити",
   "prompt.action.stop.background": "Зупинити головного агента. Фонові агенти продовжать роботу.",
-  "prompt.agents.show": "Показати фонових агентів",
   "prompt.action.enhance": "Покращити запит",
   "prompt.action.more": "Інші дії",
   "prompt.paste.expand": "Натисніть, щоб розгорнути вставлений текст",

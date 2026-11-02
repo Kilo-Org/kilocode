@@ -212,7 +212,6 @@ export const dict = {
   "prompt.action.send.recording": "转录并发送",
   "prompt.action.stop": "停止",
   "prompt.action.stop.background": "停止主智能体。后台智能体将继续运行。",
-  "prompt.agents.show": "显示后台智能体",
   "prompt.action.enhance": "优化提示词",
   "prompt.action.more": "更多操作",
   "prompt.paste.expand": "点击展开粘贴的文本",

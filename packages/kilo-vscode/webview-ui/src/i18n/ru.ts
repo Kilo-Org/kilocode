@@ -212,7 +212,6 @@ export const dict = {
   "prompt.action.send.recording": "Расшифровать и отправить",
   "prompt.action.stop": "Остановить",
   "prompt.action.stop.background": "Остановить основного агента. Фоновые агенты продолжат работу.",
-  "prompt.agents.show": "Показать фоновых агентов",
   "prompt.action.enhance": "Улучшить промпт",
   "prompt.action.more": "Другие действия",
   "prompt.paste.expand": "Нажмите, чтобы развернуть вставленный текст",

@@ -206,7 +206,6 @@ export const dict = {
   "prompt.action.send.recording": "轉錄並傳送",
   "prompt.action.stop": "停止",
   "prompt.action.stop.background": "停止主 Agent。背景 Agent 會繼續執行。",
-  "prompt.agents.show": "顯示背景 Agent",
   "prompt.action.enhance": "改善提示詞",
   "prompt.action.more": "更多動作",
   "prompt.paste.expand": "點擊展開貼上的文字",

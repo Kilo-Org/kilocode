@@ -215,7 +215,6 @@ export const dict = {
   "prompt.action.send.recording": "Transcrire et envoyer",
   "prompt.action.stop": "Arrêter",
   "prompt.action.stop.background": "Arrêter l'agent principal. Les agents en arrière-plan continuent de s'exécuter.",
-  "prompt.agents.show": "Afficher les agents en arrière-plan",
   "prompt.action.enhance": "Améliorer le prompt",
   "prompt.action.more": "Autres actions",
   "prompt.paste.expand": "Cliquez pour développer le texte collé",

@@ -213,7 +213,6 @@ export const dict = {
   "prompt.action.send.recording": "Yazıya dök ve gönder",
   "prompt.action.stop": "Durdur",
   "prompt.action.stop.background": "Ana ajanı durdur. Arka plan ajanları çalışmaya devam eder.",
-  "prompt.agents.show": "Arka plan ajanlarını göster",
   "prompt.action.enhance": "Komutu geliştir",
   "prompt.action.more": "Diğer eylemler",
   "prompt.paste.expand": "Yapıştırılan metni genişletmek için tıklayın",

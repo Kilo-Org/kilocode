@@ -214,7 +214,6 @@ export const dict = {
   "prompt.action.send.recording": "Transkrybuj i wyślij",
   "prompt.action.stop": "Zatrzymaj",
   "prompt.action.stop.background": "Zatrzymaj głównego agenta. Agenci w tle nadal działają.",
-  "prompt.agents.show": "Pokaż agentów w tle",
   "prompt.action.enhance": "Ulepsz prompt",
   "prompt.action.more": "Więcej akcji",
   "prompt.paste.expand": "Kliknij, aby rozwinąć wklejony tekst",

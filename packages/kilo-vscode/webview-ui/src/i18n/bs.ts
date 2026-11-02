@@ -214,7 +214,6 @@ export const dict = {
   "prompt.action.send.recording": "Transkribuj i pošalji",
   "prompt.action.stop": "Zaustavi",
   "prompt.action.stop.background": "Zaustavi glavnog agenta. Agenti u pozadini nastavljaju raditi.",
-  "prompt.agents.show": "Prikaži agente u pozadini",
   "prompt.action.enhance": "Poboljšaj prompt",
   "prompt.action.more": "Više akcija",
   "prompt.paste.expand": "Kliknite da proširite zalijepljeni tekst",

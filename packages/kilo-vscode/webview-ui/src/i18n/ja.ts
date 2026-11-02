@@ -214,7 +214,6 @@ export const dict = {
   "prompt.action.send.recording": "文字起こしして送信",
   "prompt.action.stop": "停止",
   "prompt.action.stop.background": "メインエージェントを停止します。バックグラウンドエージェントは実行を続けます。",
-  "prompt.agents.show": "バックグラウンドエージェントを表示",
   "prompt.action.enhance": "プロンプトを改善",
   "prompt.action.more": "その他の操作",
   "prompt.paste.expand": "クリックして貼り付けたテキストを展開",

@@ -210,7 +210,6 @@ export const dict = {
   "prompt.action.send.recording": "Transcribe and send",
   "prompt.action.stop": "Stop",
   "prompt.action.stop.background": "Stop main agent. Background agents keep running.",
-  "prompt.agents.show": "Show background agents",
   "prompt.action.enhance": "Enhance prompt",
   "prompt.action.more": "More actions",
   "prompt.paste.expand": "Click to expand pasted text",

@@ -220,7 +220,6 @@ export const dict = {
   "prompt.action.send.recording": "Transkribieren und senden",
   "prompt.action.stop": "Stopp",
   "prompt.action.stop.background": "Hauptagent stoppen. Hintergrund-Agenten laufen weiter.",
-  "prompt.agents.show": "Hintergrund-Agenten anzeigen",
   "prompt.action.enhance": "Prompt verbessern",
   "prompt.action.more": "Weitere Aktionen",
   "prompt.paste.expand": "Klicken, um eingefügten Text zu erweitern",

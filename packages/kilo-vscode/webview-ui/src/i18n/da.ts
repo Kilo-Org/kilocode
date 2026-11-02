@@ -213,7 +213,6 @@ export const dict = {
   "prompt.action.send.recording": "Transskriber og send",
   "prompt.action.stop": "Stop",
   "prompt.action.stop.background": "Stop hovedagenten. Baggrundsagenter kører videre.",
-  "prompt.agents.show": "Vis baggrundsagenter",
   "prompt.action.enhance": "Forbedr prompt",
   "prompt.action.more": "Flere handlinger",
   "prompt.paste.expand": "Klik for at udvide den indsatte tekst",
