@@ -59,7 +59,7 @@ export function createKiloCatalog(input: {
     const read = ++state.read
     void rpc["catalog.status"]({}, { location: { directory: input.directory } }).then(
       (result) => read === state.read && setFailure(result.failure ?? undefined),
-      () => {},
+      () => read === state.read && setFailure(undefined),
     )
   }
   createEffect(on(input.status, (status) => status === "connected" && refresh()))
