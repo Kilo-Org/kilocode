@@ -177,7 +177,7 @@ describe("Kilo Gateway autocomplete RPC", () => {
     Effect.acquireUseRelease(
       Effect.sync(() => fixture()),
       (backend) =>
-        withEnv({ ...env, KILO_API_URL: backend.url }, () =>
+        withEnv({ ...env, KILO_API_URL: backend.url, MISTRAL_API_KEY: "env-key" }, () =>
           Effect.gen(function* () {
             yield* addPlugin()
             const credentials = yield* Credential.Service
@@ -187,7 +187,9 @@ describe("Kilo Gateway autocomplete RPC", () => {
             })
             const original = globalThis.fetch
             const authorization: string[] = []
-            globalThis.fetch = (async (_input: RequestInfo | URL, init?: RequestInit) => {
+            const urls: string[] = []
+            globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+              urls.push(typeof input === "string" ? input : input instanceof URL ? input.href : input.url)
               authorization.push(new Headers(init?.headers).get("authorization") ?? "")
               return new Response('data: {"choices":[{"text":"stored"}]}\n\ndata: [DONE]\n\n', {
                 headers: { "content-type": "text/event-stream" },
@@ -204,6 +206,7 @@ describe("Kilo Gateway autocomplete RPC", () => {
               .pipe(Effect.ensuring(Effect.sync(() => (globalThis.fetch = original))))
             expect(result).toEqual({ text: "stored", cost: 0, inputTokens: 0, outputTokens: 0 })
             expect(authorization).toEqual(["Bearer stored-key"])
+            expect(urls).toEqual(["https://api.mistral.ai/v1/fim/completions"])
           }),
         ),
       (backend) => Effect.sync(() => backend[Symbol.dispose]()),
