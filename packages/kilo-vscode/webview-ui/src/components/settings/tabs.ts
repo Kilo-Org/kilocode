@@ -10,6 +10,8 @@ export interface SettingsTabProps {
   settings: SettingsData
   onLogin: () => void
   subtab: string
+  /** A row that a subtab renders itself, such as an MCP server name. */
+  focus?: string
   /** Increments on each search navigation so a subtab can reset its editor without remounting. */
   navigation: number
   onSubtabChange: (subtab: string) => void

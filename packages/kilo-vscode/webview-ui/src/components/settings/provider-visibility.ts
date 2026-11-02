@@ -40,6 +40,15 @@ export function providerRemovalPath(raw: Record<string, unknown>, id: string): s
   return [!("providers" in raw) && "provider" in raw ? "provider" : "providers", id]
 }
 
+/** The integrations the connect dialog may offer: not connected and not denied by a `provider.use` policy. */
+export function connectableProviders<T extends { id: string; connections: readonly unknown[] }>(
+  items: T[],
+  policies: unknown,
+): T[] {
+  const disabled = new Set(disabledProviderIds(policies))
+  return items.filter((item) => item.connections.length === 0 && !disabled.has(item.id))
+}
+
 /** The providers a user may still disable, sorted by name. */
 export function disabledProviderOptions(items: IntegrationInfo[], disabled: string[]) {
   const current = new Set(disabled)

@@ -265,6 +265,7 @@ export const dict = {
   "prompt.toast.promptSendFailed.title": "Komut gönderilemedi",
 
   "mcp.status.connected": "bağlı",
+  "mcp.status.pending": "bağlanıyor",
   "mcp.status.failed": "başarısız",
   "mcp.status.needs_auth": "kimlik doğrulama gerekli",
   "mcp.status.needs_registration": "istemci kaydı gerekli",
@@ -1100,7 +1101,7 @@ export const dict = {
   "settings.agentBehaviour.mcp.timeout.catalog.title": "Katalog zaman aşımı (ms)",
   "settings.agentBehaviour.mcp.timeout.execution.title": "Yürütme zaman aşımı (ms)",
   "settings.agentBehaviour.mcpEmpty":
-    "Yapılandırılmış MCP sunucusu yok. kilo.jsonc dosyasına MCP sunucuları ekleyin veya ajanın eklemesini isteyin.",
+    "Yapılandırılmış MCP sunucusu yok. kilo2.json dosyasına MCP sunucuları ekleyin veya ajanın eklemesini isteyin.",
   "settings.agentBehaviour.workflows.description":
     "İş akışları, yapılandırmanızda veya komut Markdown dosyalarında tanımlanan özel komutlardır. Her iş akışı için bir model ve akıl yürütme varyantı ayarlayabilirsiniz.",
   "settings.agentBehaviour.workflows.empty":

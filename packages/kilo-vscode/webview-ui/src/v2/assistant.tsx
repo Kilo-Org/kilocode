@@ -1,18 +1,45 @@
 import type { SessionMessageAssistant } from "@opencode/client"
 import { createSignal, For, Show } from "solid-js"
+import { Button } from "@kilocode/kilo-ui/button"
 import { ContentPart, useGrowIn } from "@kilocode/kilo-ui/message-part"
 import { Card } from "@kilocode/kilo-ui/card"
 import { Collapsible } from "@kilocode/kilo-ui/collapsible"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { useToolMotion, useToolSize } from "@kilocode/kilo-ui/tool-motion"
+import type { ToHost } from "../../../src/protocol"
 import { useLanguage } from "../context/language"
+import { useVSCode } from "../context/vscode"
 import { useV2 } from "./client"
+import { mcpServerFromError } from "./mcp-error"
 
 export function AssistantMessage(props: { message: SessionMessageAssistant; session: string }) {
   const v2 = useV2()
+  const language = useLanguage()
+  const vscode = useVSCode()
   const done = () => props.message.time.completed !== undefined
   const copy = () =>
     done() ? props.message.content.findLastIndex((item) => item.type === "text" && !!item.text.trim()) : -1
+  // A failed MCP tool call points at the server row that can fix it.
+  const errorAction = (error: { type: string; message: string }) => {
+    const server = mcpServerFromError(error.message)
+    if (!server) return undefined
+    return (
+      <Button
+        variant="secondary"
+        size="small"
+        onClick={() =>
+          vscode.postMessage({
+            type: "openSettingsTab",
+            tab: "agentBehaviour",
+            subtab: "mcpServers",
+            focus: server,
+          } satisfies ToHost as never)
+        }
+      >
+        {language.t("prompt.mcp.openSettings")}
+      </Button>
+    )
+  }
   return (
     <div
       class="vscode-session-turn"
@@ -59,6 +86,7 @@ export function AssistantMessage(props: { message: SessionMessageAssistant; sess
                     copy={index() === copy()}
                     settled={index() < props.message.content.length - 1}
                     defaultOpen={item.type === "tool" && (item.name === "shell" || item.name === "todowrite")}
+                    errorAction={errorAction}
                   />
                 </div>
               </div>

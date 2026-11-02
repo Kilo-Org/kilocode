@@ -212,6 +212,7 @@ export const dict = {
     "Il pulsante 'Migliora prompt' aiuta a migliorare il prompt aggiungendo contesto, chiarimenti o riformulazioni. Scrivi un prompt qui e fai di nuovo clic sul pulsante per vedere come funziona.",
   "prompt.toast.promptSendFailed.title": "Invio prompt non riuscito",
   "mcp.status.connected": "connesso",
+  "mcp.status.pending": "connessione",
   "mcp.status.failed": "non riuscito",
   "mcp.status.needs_auth": "richiede autenticazione",
   "mcp.status.needs_registration": "richiede registrazione client",
@@ -956,7 +957,7 @@ export const dict = {
   "settings.agentBehaviour.mcp.timeout.catalog.title": "Timeout del catalogo (ms)",
   "settings.agentBehaviour.mcp.timeout.execution.title": "Timeout di esecuzione (ms)",
   "settings.agentBehaviour.mcpEmpty":
-    "Nessun server MCP configurato. Aggiungi server MCP in kilo.jsonc, o chiedi all'agente di aggiungerli per te.",
+    "Nessun server MCP configurato. Aggiungi server MCP in kilo2.json, o chiedi all'agente di aggiungerli per te.",
   "settings.agentBehaviour.workflows.description":
     "I workflow sono comandi personalizzati definiti nella configurazione o nei file Markdown dei comandi. Puoi impostare un modello e una variante di ragionamento per ogni workflow.",
   "settings.agentBehaviour.workflows.empty":

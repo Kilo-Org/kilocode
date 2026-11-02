@@ -4,6 +4,8 @@ import { lazy, type Component } from "solid-js"
 
 export interface AgentBehaviourSubtabProps {
   navigation?: number
+  /** A row the subtab owns, such as an MCP server name. */
+  focus?: string
 }
 
 export interface AgentBehaviourSubtab {
