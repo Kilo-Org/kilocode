@@ -18,10 +18,12 @@ const InjectedMetadata = Schema.Struct({
 })
 
 export interface Interface {
+  // kilocode_change start - session instructions load result: report the paths that were newly injected
   readonly load: (input: {
     readonly sessionID: SessionSchema.ID
     readonly paths: ReadonlyArray<string>
-  }) => Effect.Effect<void, MessageDecodeError | FSUtil.Error>
+  }) => Effect.Effect<ReadonlyArray<string>, MessageDecodeError | FSUtil.Error>
+  // kilocode_change end
 }
 
 export class Service extends Context.Service<Service, Interface>()("@opencode/SessionInstructions") {}
@@ -53,11 +55,12 @@ const layer = Layer.effect(
         next.set(input.sessionID, new Set([...existing, ...newlyClaimed]))
         return [newlyClaimed, next]
       })
-      if (claimed.length === 0) return
-      yield* Effect.gen(function* () {
+      // kilocode_change start - session instructions load result: return the paths this call injected
+      if (claimed.length === 0) return []
+      return yield* Effect.gen(function* () {
         const alreadyInjected = yield* previouslyInjected(db, input.sessionID)
         const toInject = claimed.filter((path) => !alreadyInjected.has(path))
-        if (toInject.length === 0) return
+        if (toInject.length === 0) return []
         const files = yield* Effect.forEach(
           toInject,
           (path) =>
@@ -67,7 +70,7 @@ const layer = Layer.effect(
           { concurrency: "unbounded" },
         )
         const readable = files.filter((file): file is { path: string; content: string } => file !== undefined)
-        if (readable.length === 0) return
+        if (readable.length === 0) return []
         // Publish directly rather than through Session.synthetic: a Location-scoped layer
         // cannot depend on Session (it routes through LocationServiceMap, forming a type
         // cycle with this node). The durable publish commits the synthetic and its metadata
@@ -78,6 +81,7 @@ const layer = Layer.effect(
           description: `Loaded ${readable.map((file) => describePath(root, file.path)).join(", ")}`,
           metadata: { instruction: { paths: readable.map((file) => file.path) } },
         })
+        return readable.map((file) => file.path)
       }).pipe(
         Effect.ensuring(
           Ref.update(inFlight, (map) => {
@@ -91,6 +95,7 @@ const layer = Layer.effect(
           }),
         ),
       )
+      // kilocode_change end
     })
 
     return Service.of({ load })

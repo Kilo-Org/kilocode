@@ -68,6 +68,7 @@ const readLayer = (directory: string, loaded: string[][]) => {
     load: (input) =>
       Effect.sync(() => {
         loaded.push([...input.paths])
+        return [...input.paths]
       }),
   })
   const imageLayer = AppNodeBuilder.build(Image.node)

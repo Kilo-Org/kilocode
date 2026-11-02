@@ -101,8 +101,7 @@ export const Plugin = {
                   (file) => !FSUtil.contains(dirname(file), root) && file !== resolved,
                 )
                 if (candidates.length === 0) return []
-                yield* sessionInstructions.load({ sessionID: context.sessionID, paths: candidates })
-                return candidates
+                return yield* sessionInstructions.load({ sessionID: context.sessionID, paths: candidates })
               }).pipe(
                 Effect.orElseSucceed(() => [] as string[]),
                 Effect.catchDefect(() => Effect.succeed([] as string[])),
