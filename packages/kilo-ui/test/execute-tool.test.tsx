@@ -1,10 +1,15 @@
-import { afterEach, expect, test } from "bun:test"
+import { afterEach, beforeEach, expect, test } from "bun:test"
 import type { ToolProps } from "../src/components/message-part"
+import { resetToolOpenState } from "../src/components/tool-open-state"
 import { ExecuteTool } from "../src/components/tools/execute"
 import { MarkedProvider } from "../src/context/marked"
 import { mount, waitFor, type Mounted } from "./harness"
 
 let mounted: Mounted[] = []
+
+beforeEach(() => {
+  resetToolOpenState()
+})
 
 afterEach(() => {
   for (const card of mounted) card.dispose()
@@ -42,7 +47,7 @@ function calls(host: ParentNode) {
   }))
 }
 
-test("renders one row per nested call with its tool, server and status", () => {
+test("renders one row per nested call with its tool, server and status", async () => {
   const card = mountExecute({
     metadata: {
       toolCalls: [
@@ -53,6 +58,7 @@ test("renders one row per nested call with its tool, server and status", () => {
     },
     forceOpen: true,
   })
+  await waitFor(() => card.host.querySelector('[data-component="execute-tool"]'))
 
   expect(card.host.querySelector('[data-component="execute-tool"]')).not.toBeNull()
   expect(calls(card.host)).toEqual([
@@ -103,7 +109,7 @@ test("keeps the raw script collapsed after the result", async () => {
   expect(result?.compareDocumentPosition(script!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
 })
 
-test("marks a failed script and its failed call", () => {
+test("marks a failed script and its failed call", async () => {
   const card = mountExecute({
     metadata: {
       error: true,
@@ -111,16 +117,28 @@ test("marks a failed script and its failed call", () => {
     },
     forceOpen: true,
   })
+  await waitFor(() => card.host.querySelector('[data-component="execute-tool"]'))
 
   expect(card.host.querySelector('[data-component="execute-tool"]')?.getAttribute("data-state")).toBe("error")
   expect(card.host.querySelector('[data-slot="execute-tool-error"]')?.textContent).toBe("Error")
   expect(calls(card.host)[0]?.status).toBe("error")
 })
 
-test("renders an empty card when the script made no nested calls", () => {
+test("renders an empty card when the script made no nested calls", async () => {
   const card = mountExecute({ forceOpen: true })
+  await waitFor(() => card.host.querySelector('[data-component="execute-tool"]'))
 
   expect(card.host.querySelector('[data-slot="execute-tool-calls"]')).toBeNull()
   expect(card.host.querySelector('[data-slot="basic-tool-tool-subtitle"]')).toBeNull()
   expect(card.host.querySelector('[data-component="execute-tool"]')).not.toBeNull()
+})
+
+test("keeps the body unbuilt while the card is collapsed", () => {
+  const card = mountExecute({
+    metadata: { toolCalls: [{ tool: "demo.status", status: "completed" }] },
+    output: "healthy",
+  })
+
+  expect(card.host.querySelector('[data-component="tool-trigger"]')).not.toBeNull()
+  expect(card.host.querySelector('[data-component="execute-tool"]')).toBeNull()
 })

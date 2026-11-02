@@ -1,5 +1,5 @@
 import type { ToolFileContent } from "@opencode/client"
-import { For, Show, createMemo, type JSX } from "solid-js"
+import { For, Index, Show, createMemo, type JSX } from "solid-js"
 import { BasicTool } from "../basic-tool"
 import { FileIcon } from "../file-icon"
 import { Markdown } from "../markdown"
@@ -154,7 +154,7 @@ const codeStyle = {
 function callStatusStyle(status: CallStatus): JSX.CSSProperties {
   return {
     flex: "0 0 auto",
-    color: status === "error" ? "var(--text-critical-base, var(--text-weak))" : "var(--text-weak)",
+    color: status === "error" ? "var(--text-on-critical-base)" : "var(--text-weak)",
   }
 }
 
@@ -177,6 +177,7 @@ export function ExecuteTool(props: ToolProps) {
       {...props}
       icon="code"
       hasDetails
+      defer
       trigger={
         <div data-slot="basic-tool-tool-info-structured">
           <div data-slot="basic-tool-tool-info-main">
@@ -196,13 +197,13 @@ export function ExecuteTool(props: ToolProps) {
       <div data-component="execute-tool" data-state={failed() ? "error" : "ok"} style={rootStyle}>
         <Show when={calls().length > 0}>
           <div data-slot="execute-tool-calls" style={listStyle}>
-            <For each={calls()}>
+            <Index each={calls()}>
               {(call) => (
-                <div data-slot="execute-tool-call" data-status={call.status} style={callStyle}>
+                <div data-slot="execute-tool-call" data-status={call().status} style={callStyle}>
                   <span data-slot="execute-tool-call-name" style={callNameStyle}>
-                    {call.name}
+                    {call().name}
                   </span>
-                  <Show when={call.server}>
+                  <Show when={call().server}>
                     {(server) => (
                       <span data-slot="execute-tool-call-server" style={serverStyle}>
                         {server()}
@@ -211,12 +212,12 @@ export function ExecuteTool(props: ToolProps) {
                   </Show>
                   <span
                     data-slot="execute-tool-call-status"
-                    data-status={call.status}
-                    style={callStatusStyle(call.status)}
+                    data-status={call().status}
+                    style={callStatusStyle(call().status)}
                   >
-                    {statusLabel(call.status)}
+                    {statusLabel(call().status)}
                   </span>
-                  <Show when={argumentsText(call.input)}>
+                  <Show when={argumentsText(call().input)}>
                     {(args) => (
                       <code data-slot="execute-tool-call-arguments" style={argsStyle}>
                         {args()}
@@ -225,7 +226,7 @@ export function ExecuteTool(props: ToolProps) {
                   </Show>
                 </div>
               )}
-            </For>
+            </Index>
           </div>
         </Show>
         <Show when={files().length > 0}>
