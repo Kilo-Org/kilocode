@@ -84,8 +84,8 @@ export type FetchCustomProviderModels = {
   env?: string
   providerID?: string
   headers?: Record<string, string>
-  /** The config file of the provider, so `{file:...}` header references resolve like the server resolves them. */
-  configPath?: string
+  /** The scope that owns the provider: the host resolves its own config file for `{file:...}` header references. */
+  scope?: "global" | "project"
 }
 
 export type ToWebview =

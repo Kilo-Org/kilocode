@@ -235,6 +235,9 @@ describe("host key and headers", () => {
       "X-Plain": "nested-token",
       "X-Env": "t-1",
     })
+    await Bun.write(path.join(dir, "big.txt"), "x".repeat(70 * 1024))
+    expect(await readReference("big.txt", configPath)).toBe("")
+    expect(await readReference("nested", configPath)).toBe("")
     expect(await readReference("missing.txt", configPath)).toBe("")
     expect(await readReference("~/../../etc/definitely-missing-kilo", configPath)).toBe("")
     await rm(dir, { recursive: true, force: true })

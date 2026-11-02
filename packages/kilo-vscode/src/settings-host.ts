@@ -295,9 +295,18 @@ export function settingsHost(input: {
       return true
     }
     if (message.type === "fetchCustomProviderModels") {
-      void fetchCustomProviderModels({ server: input.server, directory: input.directory, request: message }).then(
-        input.post,
-      )
+      void (async () => {
+        // Resolve the config file here: the webview sends only the scope, never a path.
+        const files = message.scope ? await targets().catch(() => undefined) : undefined
+        input.post(
+          await fetchCustomProviderModels({
+            server: input.server,
+            directory: input.directory,
+            request: message,
+            configPath: message.scope ? files?.[message.scope] : undefined,
+          }),
+        )
+      })()
       return true
     }
     return false

@@ -1,7 +1,7 @@
 // Host side of Fetch models in the custom provider dialog. It picks the key (typed, an `{env:NAME}` variable of the
 // server environment, or the stored credential of an existing provider), applies the custom headers and lists the
 // models. A stored key is read from the server credential API here and never posted to the webview.
-import { readFile } from "node:fs/promises"
+import { readFile, stat } from "node:fs/promises"
 import { homedir } from "node:os"
 import path from "node:path"
 import { OpenCode, type CredentialEntry } from "@opencode/client"
@@ -16,6 +16,8 @@ export async function fetchCustomProviderModels(input: {
   server: Manager
   directory: string
   request: FetchCustomProviderModels
+  /** The config file the host resolved for the provider's scope; a webview-supplied path is never used. */
+  configPath?: string
   /** The extension host environment; the server starts with the same variables. */
   env?: NodeJS.ProcessEnv
 }): Promise<Extract<ToWebview, { type: "customProviderModelsFetched" }>> {
@@ -25,7 +27,7 @@ export async function fetchCustomProviderModels(input: {
     const apiKey = await resolveKey(request, env, (providerID) =>
       storedKey(input.server, input.directory, providerID, request.baseURL),
     )
-    const configPath = request.configPath
+    const configPath = input.configPath
     const headers = await resolveHeaders(
       request.headers,
       env,
@@ -82,15 +84,22 @@ export async function resolveHeaders(
   return Object.fromEntries(entries)
 }
 
-/** Reads one `{file:path}` reference: trimmed content, empty when the file is missing, as the server does. */
+/**
+ * Reads one `{file:path}` reference: trimmed content, empty when the file is missing, as the server does. Header values
+ * are small, so a huge or non-regular file reads as empty instead of stalling the host.
+ */
 export async function readReference(reference: string, configPath: string) {
   const expanded = reference.startsWith("~/") ? path.join(homedir(), reference.slice(2)) : reference
   const resolved = path.isAbsolute(expanded) ? expanded : path.resolve(path.dirname(configPath), expanded)
+  const info = await stat(resolved).catch(() => undefined)
+  if (!info?.isFile() || info.size > MAX_REFERENCE_BYTES) return ""
   return readFile(resolved, "utf8").then(
     (content) => content.trim(),
     () => "",
   )
 }
+
+const MAX_REFERENCE_BYTES = 64 * 1024
 
 /**
  * The stored key of an existing provider: its active key credential, else its newest one. It applies only while the

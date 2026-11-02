@@ -280,10 +280,8 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
       .filter((header) => header.key && header.value)
     const headers = rows.length ? Object.fromEntries(rows.map((header) => [header.key, header.value])) : undefined
     const models = form.models.map((model) => ({ ...model }))
-    // `{file:...}` header references resolve from the same file the provider is saved to.
-    const configPath = config.path(
-      config.source(props.existing ? ["providers", props.existing.providerID] : ["providers"]) ?? "global",
-    )
+    // The host resolves `{file:...}` from the config file of this scope; the dialog never sends a path.
+    const scope = config.source(props.existing ? ["providers", props.existing.providerID] : ["providers"]) ?? "global"
 
     const token = gate.next()
     clearFetch()
@@ -323,7 +321,7 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
       baseURL: url,
       ...key,
       headers,
-      configPath,
+      scope,
     } satisfies ToHost as never)
   }
 
@@ -476,9 +474,9 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
     const result = validate()
     if (!result) return
 
-    // Without the raw files the form can only come from the merged config, where `{env:...}` and `{file:...}` are
-    // already substituted. Saving that would persist a secret, so refuse instead.
-    if (props.existing && !config.path("global") && !config.path("project")) {
+    // Without the provider's value from a writable config file, the form can only come from the merged config, where
+    // `{env:...}` and `{file:...}` are already substituted. Saving that would persist a secret, so refuse instead.
+    if (props.existing && !rawProvider(props.existing.providerID)) {
       showToast({ variant: "error", title: language.t("settings.saveBar.saveFailed") })
       return
     }
