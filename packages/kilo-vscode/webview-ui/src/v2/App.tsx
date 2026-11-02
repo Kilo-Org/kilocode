@@ -7,6 +7,7 @@ import { Toast } from "@kilocode/kilo-ui/toast"
 import { LanguageProvider } from "../context/language"
 import { RichProvider } from "../context/rich-provider"
 import { useVSCode, VSCodeProvider } from "../context/vscode"
+import { SpeechToTextStatusProvider } from "../components/speech-to-text/status"
 import { Chat } from "./chat"
 import { V2Provider } from "./client"
 import { applyKiloSettings, kiloSettings } from "./kilo-settings"
@@ -43,11 +44,13 @@ const LiveSettings: ParentComponent<{ directory: string; view: string }> = (prop
     >
       <RichProvider>
         <V2Provider directory={props.directory}>
-          <div class="container">
-            <Show when={props.view === "settings"} fallback={<Chat />}>
-              <SettingsView />
-            </Show>
-          </div>
+          <SpeechToTextStatusProvider>
+            <div class="container">
+              <Show when={props.view === "settings"} fallback={<Chat />}>
+                <SettingsView />
+              </Show>
+            </div>
+          </SpeechToTextStatusProvider>
         </V2Provider>
       </RichProvider>
     </LanguageProvider>

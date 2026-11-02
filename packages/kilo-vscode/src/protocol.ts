@@ -43,15 +43,52 @@ export type SettingsNavigation = {
   search?: boolean
 }
 
+export type SpeechToTextModel = {
+  readonly id: string
+  readonly label: string
+  readonly provider: string
+  readonly verbatim?: boolean
+}
+
+export type SpeechSettingKey = "base_url" | "api_key" | "model"
+
+export type SpeechToTextSettings = {
+  readonly baseUrl?: string
+  readonly apiKey?: string
+  readonly model?: string
+}
+
+/** `enabled` is whether the composer may show the microphone; `signedIn` is the Gateway account state. */
+export type SpeechToTextStatus = {
+  readonly enabled: boolean
+  readonly remote: boolean
+  readonly signedIn: boolean
+  readonly source: "gateway" | "custom"
+  readonly model: string
+  readonly models: SpeechToTextModel[]
+  readonly settings: SpeechToTextSettings
+  readonly catalogError?: string
+}
+
 export type ToHost =
   | Request
   | { type: "abort"; id: number }
   | { type: "open"; url: string }
   | Ui
   | Settings
+  | Speech
   | ({ type: "openSettingsTab" } & SettingsNavigation)
   | { type: "settingsReady" }
   | { type: "settingsTabChanged"; tab: string }
+
+/** Voice input: the host owns the microphone, the custom endpoint and the Gateway RPC. */
+export type Speech =
+  | { type: "speechToTextPrewarm" }
+  | { type: "speechToTextConfig" }
+  | { type: "speechToTextStart"; requestId: string; model: string; language?: string }
+  | { type: "speechToTextStop"; requestId: string }
+  | { type: "speechToTextCancel"; requestId: string }
+  | { type: "speechToTextSave"; requestId: string; key: SpeechSettingKey; value: string }
 
 /** Messages of the copied v1 UI. The host ignores `webviewFocusChanged` and `setLanguage` for now. */
 export type Ui =
@@ -111,6 +148,12 @@ export type ToWebview =
   | { type: "configLoaded"; global: ConfigFileContent; project: ConfigFileContent; policy?: ConfigPolicy; error?: string }
   | { type: "configWritten"; id: number; ok: boolean; error?: string }
   | { type: "vscodeSettingsLoaded"; values: Record<string, unknown> }
+  | { type: "speechToTextConfigLoaded"; status: SpeechToTextStatus }
+  | { type: "speechToTextStarted"; requestId: string }
+  | { type: "speechToTextResult"; requestId: string; text: string }
+  | { type: "speechToTextError"; requestId: string; error: string; code?: string }
+  | { type: "speechToTextCancelled"; requestId: string }
+  | { type: "speechToTextSaved"; requestId: string; ok: boolean; error?: string }
   /** The reply to `fetchCustomProviderModels`: `models`, or `error` with `auth` set when the server refused the key. */
   | {
       type: "customProviderModelsFetched"
