@@ -455,11 +455,11 @@ jobs:
     timeout-minutes: 5
     steps:
       - name: Verify the unit matrix passed
-        # The matrix is skipped on a draft pull request, so its verdict is `skipped` there and not a failure.
+        # `unit` is skipped on purpose for a draft pull request and for a quarantine dispatch.
         run: |
           result="${{ needs.unit.result }}"
-          if [ "$result" = "skipped" ] && [ "${{ github.event.pull_request.draft }}" = "true" ]; then
-            echo "Draft pull request: the unit matrix is skipped"
+          if [ "$result" = "skipped" ] && [ "${{ github.event.pull_request.draft || (github.event_name == 'workflow_dispatch' && inputs.quarantine) }}" = "true" ]; then
+            echo "The unit matrix is skipped on purpose: ${{ github.event_name }}"
             exit 0
           fi
           test "$result" = "success"
@@ -475,13 +475,13 @@ jobs:
     timeout-minutes: 5
     steps:
       - name: Verify the v2 CI jobs passed
-        # `unit` and `build` are skipped on a draft pull request; `sdk` always runs.
+        # `unit` and `build` are skipped on purpose for a draft pull request and for a quarantine dispatch; `sdk` always runs.
         run: |
           unit="${{ needs.unit.result }}"
           build="${{ needs.build.result }}"
           sdk="${{ needs.sdk.result }}"
           echo "unit=$unit build=$build sdk=$sdk"
-          if [ "${{ github.event.pull_request.draft }}" = "true" ] && [ "$unit" = "skipped" ] && [ "$build" = "skipped" ]; then
+          if [ "$unit" = "skipped" ] && [ "$build" = "skipped" ] && [ "${{ github.event.pull_request.draft || (github.event_name == 'workflow_dispatch' && inputs.quarantine) }}" = "true" ]; then
             test "$sdk" = "success"
             exit 0
           fi
