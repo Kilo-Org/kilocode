@@ -493,7 +493,11 @@ export class VscodeHost implements Host {
   ): Promise<T> {
     return await vscode.window.withProgress(
       { location: vscode.ProgressLocation.Notification, title, cancellable: opts?.cancellable ?? true },
-      (progress, token) => task(() => token.isCancellationRequested, (message) => progress.report({ message })),
+      (progress, token) =>
+        task(
+          () => token.isCancellationRequested,
+          (message) => progress.report({ message }),
+        ),
     )
   }
 

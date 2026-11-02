@@ -438,7 +438,10 @@ describe("Continue in Cloud — operation lifecycle", () => {
       error: () => undefined,
       withProgress: async (title, task, opts) => {
         opens.push({ title, cancellable: opts?.cancellable })
-        return await task(() => false, () => undefined)
+        return await task(
+          () => false,
+          () => undefined,
+        )
       },
     })
 
@@ -461,7 +464,11 @@ describe("Continue in Cloud — operation lifecycle", () => {
     const reports: string[] = []
     const controller = createContinuationController({
       error: () => undefined,
-      withProgress: async (_title, task) => await task(() => false, (message) => reports.push(message)),
+      withProgress: async (_title, task) =>
+        await task(
+          () => false,
+          (message) => reports.push(message),
+        ),
     })
     controller.setKey("op-1")
     const event = (operationKey: string, directory: string, stage: string) => ({

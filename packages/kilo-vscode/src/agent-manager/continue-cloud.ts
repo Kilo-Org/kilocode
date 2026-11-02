@@ -120,9 +120,7 @@ export function continuationStage(event: unknown, operationKey: string | undefin
 }
 
 /** Modes Cloud replaced with a named fallback, in source order. */
-export function fallbackModes(
-  sessions: readonly { agent: { mode: string }; modeFallback: boolean }[],
-): string[] {
+export function fallbackModes(sessions: readonly { agent: { mode: string }; modeFallback: boolean }[]): string[] {
   return sessions.filter((session) => session.modeFallback).map((session) => session.agent.mode)
 }
 
@@ -239,19 +237,15 @@ export async function continueInCloud(host: ContinueCloudHost, req: ContinueClou
   return failed(host, req, code, ambiguous)
 }
 
-async function succeeded(
-  host: ContinueCloudHost,
-  worktreeId: string,
-  url: string,
-  fallbacks: string[],
-): Promise<null> {
+async function succeeded(host: ContinueCloudHost, worktreeId: string, url: string, fallbacks: string[]): Promise<null> {
   attempts.delete(worktreeId)
   host.capture("Agent Manager Continue in Cloud", {
     source: PLATFORM,
     worktreeId,
     fallbacks: fallbacks.length,
   })
-  const note = fallbacks.length > 0 ? ` ${fallbacks.length} session(s) used a fallback mode: ${fallbacks.join(", ")}.` : ""
+  const note =
+    fallbacks.length > 0 ? ` ${fallbacks.length} session(s) used a fallback mode: ${fallbacks.join(", ")}.` : ""
   const answer = await host.choose("info", `Continued in Cloud.${note}`, ["Open", "Copy Link"])
   if (answer === "Open") host.openUrl(url)
   if (answer === "Copy Link") host.copy(url)
@@ -288,11 +282,7 @@ export interface ContinueCloudPanel {
   readonly activeSessionId: string | undefined
   readonly projectId: string | undefined
   readonly getClient: () => KiloClient
-  readonly choose: (
-    kind: "info" | "error",
-    message: string,
-    actions: readonly string[],
-  ) => Promise<string | undefined>
+  readonly choose: (kind: "info" | "error", message: string, actions: readonly string[]) => Promise<string | undefined>
   readonly openUrl: (url: string) => void
   readonly copy: (text: string) => void
   readonly error: (message: string) => void
@@ -320,9 +310,7 @@ export async function startContinuation(panel: ContinueCloudPanel, worktreeId: s
     .filter((session) => !state.isSessionClosed(session.id))
     .map((session) => session.id)
   const activeSessionId =
-    panel.activeSessionId && sessionIds.includes(panel.activeSessionId)
-      ? panel.activeSessionId
-      : (sessionIds[0] ?? "")
+    panel.activeSessionId && sessionIds.includes(panel.activeSessionId) ? panel.activeSessionId : (sessionIds[0] ?? "")
   return continueInCloud(
     {
       client: panel.getClient,
@@ -356,10 +344,7 @@ export interface ContinuationProgress {
   readonly stage: ContinuationStage
 }
 
-export function continuationProgress(
-  active: ActiveContinuation,
-  event: unknown,
-): ContinuationProgress | undefined {
+export function continuationProgress(active: ActiveContinuation, event: unknown): ContinuationProgress | undefined {
   if (!active.operationKey) return undefined
   if (event == null || typeof event !== "object") return undefined
   const properties = (event as { properties?: unknown }).properties
@@ -397,7 +382,9 @@ export interface ContinuationController {
  * so ignoring it cannot leave either alive.
  */
 export function createContinuationController(ui: ContinuationUi): ContinuationController {
-  let active: { worktreeId: string; directory: string; operationKey?: string; report: (message: string) => void } | undefined
+  let active:
+    | { worktreeId: string; directory: string; operationKey?: string; report: (message: string) => void }
+    | undefined
   let pendingKey: string | undefined
 
   return {

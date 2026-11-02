@@ -231,46 +231,23 @@ export function provider(options: Options): Provider {
 
   const resolveRaw = (orgID?: string) => provided(CloudAuth.resolve({ orgID, env }))
 
-  const resolve = (orgID?: string) =>
-    resolveRaw(orgID).pipe(
-      Effect.mapError((error) => {
-        if (error._tag !== "CloudAuthResolutionError") {
-          return new HostedFailure({
-            code: "unavailable",
-            message: "Kilo credentials could not be read",
-            retryable: true,
-          })
-        }
-        if (error.kind === "missing") {
-          return new HostedFailure({ code: "signed_out", message: error.message, retryable: false })
-        }
-        if (error.kind === "unavailable") {
-          return new HostedFailure({ code: "auth_unavailable", message: error.message, retryable: true })
-        }
-        return new HostedFailure({ code: "rejected", message: error.message, retryable: false })
-      }),
-    )
+  const authFailure = (error: CloudAuth.ResolutionError) => {
+    if (error.kind === "missing") {
+      return new HostedFailure({ code: "signed_out", message: error.message, retryable: false })
+    }
+    if (error.kind === "unavailable") {
+      return new HostedFailure({ code: "auth_unavailable", message: error.message, retryable: true })
+    }
+    return new HostedFailure({ code: "rejected", message: error.message, retryable: false })
+  }
+
+  const resolve = (orgID?: string) => resolveRaw(orgID).pipe(Effect.mapError(authFailure))
 
   // Continuation resolves the bearer only: Cloud takes the organization from the
   // source sessions' ingest rows, so no organization is attached here.
   const resolveToken: Effect.Effect<CloudAuth.Resolved, HostedFailure> = provided(CloudAuth.token(env)).pipe(
     Effect.map((token) => ({ token }) satisfies CloudAuth.Resolved),
-    Effect.mapError((error) => {
-      if (error._tag !== "CloudAuthResolutionError") {
-        return new HostedFailure({
-          code: "unavailable",
-          message: "Kilo credentials could not be read",
-          retryable: true,
-        })
-      }
-      if (error.kind === "missing") {
-        return new HostedFailure({ code: "signed_out", message: error.message, retryable: false })
-      }
-      if (error.kind === "unavailable") {
-        return new HostedFailure({ code: "auth_unavailable", message: error.message, retryable: true })
-      }
-      return new HostedFailure({ code: "rejected", message: error.message, retryable: false })
-    }),
+    Effect.mapError(authFailure),
   )
 
   const availability: Effect.Effect<Availability> = Effect.suspend(() => resolveRaw()).pipe(
