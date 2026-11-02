@@ -219,16 +219,21 @@ export const Plugin = {
               yield* context.progress({ shellID: info.id })
 
               // kilocode_change start - stream the current output and running state while the command runs
-              const preview = Effect.gen(function* () {
-                const latest = yield* shell.output(info.id, { cursor: Number.MAX_SAFE_INTEGER })
-                const start = Math.max(0, latest.size - LIVE_OUTPUT_LIMIT)
-                const page = yield* shell.output(info.id, { cursor: start, limit: latest.size - start })
-                const text = start > 0 ? page.output.replace(/^\uFFFD+/, "") : page.output
-                return text.length <= LIVE_OUTPUT_LIMIT ? text : `...\n\n${text.slice(-LIVE_OUTPUT_LIMIT)}`
+              const size = Effect.gen(function* () {
+                return (yield* shell.output(info.id, { cursor: Number.MAX_SAFE_INTEGER })).size
               })
+              const preview = (bytes: number) =>
+                Effect.gen(function* () {
+                  // Four bytes per character covers any UTF-8 code point, so the window holds at least the limit.
+                  const start = Math.max(0, bytes - LIVE_OUTPUT_LIMIT * 4)
+                  const page = yield* shell.output(info.id, { cursor: start, limit: bytes - start })
+                  const text = start > 0 ? page.output.replace(/^\uFFFD+/, "") : page.output
+                  return text.length <= LIVE_OUTPUT_LIMIT ? text : `...\n\n${text.slice(-LIVE_OUTPUT_LIMIT)}`
+                })
               const report = (output: string) =>
                 context.progress({ shellID: info.id, output, status: "running" })
-              let published = yield* preview.pipe(Effect.catchTag("Shell.NotFoundError", () => Effect.succeed("")))
+              let seen = yield* size.pipe(Effect.catchTag("Shell.NotFoundError", () => Effect.succeed(0)))
+              let published = yield* preview(seen)
               yield* report(published)
               // The child fiber stops on every normal return below; an interrupted or failed call interrupts it
               // with the tool fiber, so no path leaves it publishing after the call settles.
@@ -236,7 +241,11 @@ export const Plugin = {
                 Effect.gen(function* () {
                   while (true) {
                     yield* Effect.sleep(LIVE_OUTPUT_INTERVAL)
-                    const output = yield* preview
+                    const bytes = yield* size
+                    // The output file is append-only, so an unchanged size means an unchanged preview.
+                    if (bytes === seen) continue
+                    seen = bytes
+                    const output = yield* preview(bytes)
                     if (output === published) continue
                     published = output
                     yield* report(output)

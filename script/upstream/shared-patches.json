@@ -2,7 +2,7 @@
   "$comment": "Shared-patch baseline (U-L3-01). Read by script/check-shared-patches.ts and script/check-opencode-annotations.ts. Each shared upstream file that Kilo adds or changes needs an entry: rung (3 = seam patch, 4 = feature patch) and the missing seam. `unmarked` allows lines without markers and states why. Raise a limit only in the PR that adds the patch, and lower it when a patch goes away.",
   "limits": {
     "files": 73,
-    "markedLines": 778,
+    "markedLines": 833,
     "unmarkedLines": 83,
     "deletedFiles": 0
   },
@@ -143,7 +143,7 @@
     },
     "packages/core/test/tool-shell.test.ts": {
       "rung": 4,
-      "seam": "Test coverage for the marked live-output progress behavior. The existing progress test asserted a single update, which the new behavior supersedes; the added tests cover streamed output before exit and the background running state. The harness must stay next to the upstream shell tests because it composes the real Job, Session and Shell services."
+      "seam": "Test coverage for the marked live-output progress behavior. The existing progress test asserted a single update, which the new behavior supersedes; the added tests cover streamed output before exit, the bounded large-output preview, the background running state and interruption. The harness must stay next to the upstream shell tests because it composes the real Job, Session and Shell services."
     },
     "packages/core/src/plugin/sdk.ts": {
       "rung": 3,

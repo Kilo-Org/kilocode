@@ -207,6 +207,11 @@ const streamingCommand = (release: string) =>
   isWindows
     ? `[Console]::Out.Write('begin'); [Console]::Out.Flush(); while (!(Test-Path -LiteralPath '${release}')) { Start-Sleep -Milliseconds 25 }; [Console]::Out.Write(' end')`
     : `printf begin; while [ ! -e '${release}' ]; do sleep 0.05; done; printf ' end'`
+const largeOutputCommand = (release: string) =>
+  isWindows
+    ? `[Console]::Out.Write('x' * 140001); while (!(Test-Path -LiteralPath '${release}')) { Start-Sleep -Milliseconds 25 }`
+    : `printf 'x'; printf '\\303\\251%.0s' $(seq 1 70000); while [ ! -e '${release}' ]; do sleep 0.05; done`
+const LIVE_PREVIEW_LIMIT = 30_000
 // kilocode_change end
 
 const withSession = <A, E, R>(directory: string, body: (registry: Tool.Interface) => Effect.Effect<A, E, R>) =>
@@ -1582,6 +1587,48 @@ describe("ShellTool", () => {
         (tmp) => Effect.promise(() => tmp[Symbol.asyncDispose]().then(() => undefined)),
       ),
     { timeout: 15_000 },
+  )
+
+  it.live(
+    "bounds the streamed preview for large output",
+    () =>
+      Effect.acquireUseRelease(
+        Effect.promise(() => tmpdir()),
+        (tmp) => {
+          reset()
+          const release = path.join(tmp.path, "shell-large-output-release")
+          return withSession(tmp.path, (registry) =>
+            Effect.gen(function* () {
+              const updates: Tool.Metadata[] = []
+              const settled = yield* executeTool(registry, {
+                ...call({ command: largeOutputCommand(release) }, "call-large-output"),
+                progress: (update) =>
+                  Effect.gen(function* () {
+                    updates.push(update)
+                    if (typeof update.output !== "string" || !update.output.startsWith("...\n\n")) return
+                    yield* Effect.promise(() => fs.writeFile(release, ""))
+                  }),
+              })
+              const bounded = updates.filter(
+                (update) => typeof update.output === "string" && update.output.startsWith("...\n\n"),
+              )
+              expect(bounded.length).toBeGreaterThan(0)
+              for (const update of bounded) {
+                const output = update.output as string
+                expect(output.length).toBeLessThanOrEqual(LIVE_PREVIEW_LIMIT + "...\n\n".length)
+                // A byte window can split a multi-byte character; the leading partial character is dropped.
+                expect(output.slice(4).startsWith("\uFFFD")).toBe(false)
+              }
+              expect(settled.metadata).toMatchObject({ exit: 0, truncated: true })
+              expect(settled.metadata).not.toHaveProperty("output")
+              const content = settled.content?.[0]
+              expect(content?.type === "text" ? content.text : "").toContain("full output saved to ")
+            }).pipe(Effect.ensuring(Effect.promise(() => fs.writeFile(release, "")).pipe(Effect.ignore))),
+          )
+        },
+        (tmp) => Effect.promise(() => tmp[Symbol.asyncDispose]().then(() => undefined)),
+      ),
+    { timeout: 20_000 },
   )
   // kilocode_change end
 
