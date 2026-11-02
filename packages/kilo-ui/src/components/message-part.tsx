@@ -1022,18 +1022,42 @@ ToolRegistry.register({
     const component = useFileComponent()
     const diff = () => fileDiffs(props.metadata.files)[0]
     const path = () => string(props.input.path)
+    // A write that leaves the file as it was has an empty diff: show only the header.
+    const unchanged = () => {
+      const file = diff()
+      return !busy(props.status) && !!file && !file.additions && !file.deletions
+    }
     const view = () => {
       const file = diff()
-      return file ? normalize(file) : undefined
+      // A large write arrives without a patch: show the written content instead.
+      return file?.patch ? normalize(file) : undefined
+    }
+    // Cheap presence check instead of `view()` so a collapsed card never
+    // parses its patch just to decide whether to show the button.
+    const canOpenDiff = () => !!props.actions?.openDiff && !!path() && !!diff()?.patch
+    const openDiff = () => {
+      const value = view()
+      if (!props.actions?.openDiff || !value) return
+      props.actions.openDiff({
+        file: value.file || path(),
+        patch: value.patch,
+        additions: value.additions,
+        deletions: value.deletions,
+      })
+    }
+    const handleOpenDiffClick = (event: MouseEvent) => {
+      event.stopPropagation()
+      openDiff()
     }
     return (
       <div data-component="write-tool">
         <BasicTool
           {...props}
-          revision={diff()?.patch ?? string(props.input.content)}
+          revision={diff()?.patch || string(props.input.content)}
           icon="code-lines"
           defer
           hasDetails
+          hideDetails={props.hideDetails || unchanged()}
           trigger={
             <div data-component="write-trigger">
               <div data-slot="message-part-title-area">
@@ -1044,6 +1068,7 @@ ToolRegistry.register({
                   <ToolFileMeta path={path()} directory={props.directory} changes={diff()} />
                 </div>
               </div>
+              <ToolDiffAction when={canOpenDiff()} onClick={handleOpenDiffClick} />
             </div>
           }
         >
