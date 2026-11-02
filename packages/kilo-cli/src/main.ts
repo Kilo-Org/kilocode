@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 
-// The Kilo host entry (U-E0-01, #15172). Mirror of packages/cli/src/index.ts (v2.0.30): the same layers and the
+// The Kilo host entry (U-E0-01, #15172). Mirror of packages/cli/src/index.ts (v2.2.5): the same layers and the
 // upstream command handlers, with Kilo's composition added: KILO_* environment translation and the `kilo2` app
 // directory (./env, imported first), Kilo's app name, and a serve handler (./serve) that gives the server the Kilo
 // plugins and service overrides (./host). Every server the CLI starts (background service, standalone, stdio) runs this entry with `serve`.
@@ -21,10 +21,24 @@ import { Npm } from "@opencode/util/npm"
 import { EffectFlock } from "@opencode/util/effect-flock"
 import { Heap } from "@opencode/cli/heap"
 import { CpuProfile } from "@opencode/cli/cpu-profile"
+import { ShutdownDeadline } from "@opencode/cli/shutdown-deadline"
 import { KiloApp } from "./app"
 import { AutoCommand } from "./auto/auto"
 
 import { ensurePluginRuntime } from "./index"
+
+// Keep requests to the local service off any proxy. Bun reads lowercase `no_proxy` alone whenever it is set, so both
+// spellings get the same merged list.
+const noProxy = [
+  ...new Set(
+    [process.env.NO_PROXY, process.env.no_proxy, "127.0.0.1,localhost,::1"].flatMap((value) =>
+      (value ?? "").split(",").flatMap((entry) => entry.trim() || []),
+    ),
+  ),
+].join(",")
+
+process.env.NO_PROXY = noProxy
+process.env.no_proxy = noProxy
 
 ensurePluginRuntime()
 
@@ -106,6 +120,7 @@ const Handlers = Runtime.handlers(KiloCommands, {
 Effect.gen(function* () {
   yield* Heap.listen
   yield* CpuProfile.listen
+  yield* ShutdownDeadline.install()
   const runFork = Effect.runForkWith(yield* Effect.context<never>())
   const uncaughtException = (cause: Error, origin: "uncaughtException" | "unhandledRejection") => {
     runFork(Effect.logError("uncaught exception", { cause, origin }))

@@ -23,7 +23,9 @@ export function failureMessage(t: (key: string, vars?: { status: number }) => st
     case "network":
       return t("provider.failure.network")
     case "http":
-      return failure.status ? t("provider.failure.http", { status: failure.status }) : t("provider.failure.httpNoStatus")
+      return failure.status
+        ? t("provider.failure.http", { status: failure.status })
+        : t("provider.failure.httpNoStatus")
     case "schema":
       return t("provider.failure.schema")
     case "organization_missing":
@@ -61,6 +63,6 @@ export function createKiloCatalog(input: {
     )
   }
   createEffect(on(input.status, (status) => status === "connected" && refresh()))
-  onCleanup(input.on(EVENT, refresh))
+  onCleanup(input.on(EVENT, () => refresh()))
   return failure
 }

@@ -4,7 +4,8 @@ import type { AutocompleteStatusBarStateProps } from "./types"
 import { humanFormatSessionCost, formatTime } from "./statusbar-utils"
 
 const SUPPORTED_PROVIDER_DISPLAY_NAME = "Kilo Gateway"
-const SETTINGS_COMMAND = `command:kilo-code.v2.settings?${encodeURIComponent(JSON.stringify(["autocomplete"]))}`
+const SETTINGS_TARGET = encodeURIComponent(JSON.stringify(["autocomplete"]))
+const SETTINGS_COMMAND = `command:kilo-code.v2.settings?${SETTINGS_TARGET}`
 
 export class AutocompleteStatusBar {
   statusBar: vscode.StatusBarItem
@@ -20,6 +21,8 @@ export class AutocompleteStatusBar {
   private init() {
     this.statusBar.text = t("kilocode:autocomplete.statusBar.enabled")
     this.statusBar.tooltip = this.createMarkdownTooltip(t("kilocode:autocomplete.statusBar.tooltip.basic"))
+    // A click opens Settings on the Autocomplete tab, like the tooltip link.
+    this.statusBar.command = { command: "kilo-code.v2.settings", title: "Autocomplete", arguments: ["autocomplete"] }
     this.statusBar.show()
   }
 

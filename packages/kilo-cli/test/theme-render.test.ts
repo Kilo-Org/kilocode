@@ -5,6 +5,7 @@ import path from "node:path"
 import { createSolidTransformPlugin } from "@opentui/solid/bun-plugin"
 import { brandingPlugin } from "../src/branding/plugin"
 import { hostMirrorsPlugin } from "../src/mirrors"
+import { compileDefine } from "./fixtures/compile-define"
 
 const repo = path.resolve(import.meta.dir, "../../..")
 const entry = path.join(import.meta.dir, "fixtures/theme-render.ts")
@@ -22,7 +23,7 @@ for (const hosted of [false, true]) {
             entrypoints: [entry],
             plugins: [...(hosted ? [hostMirrorsPlugin, brandingPlugin] : []), createSolidTransformPlugin()],
             compile: { outfile, autoloadBunfig: false, autoloadDotenv: false },
-            define: { KILO_BRANDING_COMPILED: "true" },
+            define: compileDefine,
           })
           expect(result.success, result.logs.map(String).join("\n")).toBe(true)
         }

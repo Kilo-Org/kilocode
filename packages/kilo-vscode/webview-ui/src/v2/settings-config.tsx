@@ -37,6 +37,7 @@ export type KiloSettingKey =
   | "maxCost"
   | "claudeCodeCompat"
   | "extraCaCerts"
+  | "languageCommitMessage"
   | "autocomplete.enableAutoTrigger"
   | "autocomplete.enableSmartInlineTaskKeybinding"
   | "autocomplete.enableChatAutocomplete"

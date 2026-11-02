@@ -33,11 +33,17 @@ const session = Session.Info.make({
 })
 
 // Compile the upstream runner node through the actual host replacement and its declared dependencies.
-const runner = (resolver: ModelResolver.Interface, rpc: Rpc.Interface) =>
+const runner = (resolver: Pick<ModelResolver.Interface, "resolve" | "resolveModel">, rpc: Rpc.Interface) =>
   LayerNode.compile(SessionRunnerModel.node, {
     replacements: [
       ...KiloHost.overrides,
-      ModelResolver.node.replace(Layer.succeed(ModelResolver.Service, resolver)),
+      ModelResolver.node.replace(
+        Layer.succeed(ModelResolver.Service, {
+          ...resolver,
+          resolveImage: () => Effect.undefined,
+          resolveDecision: () => Effect.undefined,
+        }),
+      ),
       Rpc.node.replace(Layer.succeed(Rpc.Service, rpc)),
     ],
   })

@@ -119,16 +119,15 @@ export const IGNORE_PATH_PATTERNS: Partial<Record<LanguageName, RegExp[]>> = {
 
 export async function getParserForFile(filepath: string) {
   try {
+    // The runtime must be initialised before a grammar loads. A parser waits on that runtime, so allocate it only
+    // once the language for this file is known.
     await Parser.init()
-    const parser = new Parser()
-
-    const language = await getLanguageForFile(filepath)
+    const language = await getLanguageForFile(filepath).catch(() => undefined)
     if (!language) {
       return undefined
     }
-
+    const parser = new Parser()
     parser.setLanguage(language)
-
     return parser
   } catch (e) {
     console.error("Unable to load language for file", filepath, e)
