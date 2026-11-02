@@ -118,6 +118,11 @@
           "default": true,
           "markdownDescription": "Show the text-generation rate on the latest assistant message."
         },
+        "kilo-code.v2.showTaskTimeline": {
+          "type": "boolean",
+          "default": false,
+          "markdownDescription": "Show the task timeline graph in the chat header."
+        },
         "kilo-code.v2.maxCost": {
           "type": "number",
           "default": 0,

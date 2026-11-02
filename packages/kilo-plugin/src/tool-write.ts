@@ -42,7 +42,7 @@ export const KiloWriteToolPlugin = define<FSUtil.Service | Scope.Scope>({
             const after = yield* read(fs, output.target)
             if (after === undefined) return result
             const file = fileDiff(output.resource, before, after, output.existed ? "modified" : "added")
-            return { ...result, metadata: { ...result.metadata, files: [bounded(file)] } }
+            return { ...result, metadata: { ...result.metadata, files: [bounded(file)] } } // kilo_port(unattributed:tool:0bc16fea6c47)
           })
       }),
     )

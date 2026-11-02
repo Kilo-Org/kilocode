@@ -954,10 +954,14 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
         authStatus: () =>
           Effect.sync(() => {
             const account = scopeCompatible() ? catalog.account : undefined
+            const organizationID = account?.organizationID ?? catalog.organizationID ?? null
             return {
               authenticated: Boolean(account?.token),
-              organizationID: account?.organizationID ?? catalog.organizationID ?? null,
+              organizationID,
               server: catalog.account?.server ?? server,
+              ...(account?.token && organizationID === null
+                ? { identity: snapshotKey(account.server ?? server, account.token) }
+                : {}),
             }
           }),
         profile: (_input, context) =>

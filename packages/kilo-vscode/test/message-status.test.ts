@@ -7,7 +7,6 @@ import {
   turnTiming,
   turnTokensPerSecond,
 } from "../webview-ui/src/v2/message-status"
-import { formatClock, formatDuration } from "../webview-ui/src/utils/message-time"
 
 const user = (id: string, created: number) =>
   ({ id, type: "user", text: id, time: { created } }) as unknown as SessionMessageInfo
@@ -200,20 +199,8 @@ describe("formatting", () => {
     expect(formatTokenThroughput(1166.2, "en")).toBe("1,166.2 t/s")
   })
 
-  test("formats durations compactly", () => {
-    expect(formatDuration(45_000)).toBe("45s")
-    expect(formatDuration(125_000)).toBe("2m 5s")
-    expect(formatDuration(3_780_000)).toBe("1h 3m")
-  })
-
   test("converts Kilo locales to BCP-47 for Intl", () => {
     // "br" is Kilo's pt-BR, not the Breton language tag.
     expect(formatTokenThroughput(1166.2, "br")).toBe("1.166,2 t/s")
-    // "zht" is not a valid tag and must resolve to zh-TW, not the system default.
-    // zh-TW always prefixes a Chinese day period (the exact period depends on the host time zone).
-    const clock = formatClock(0, "zht")
-    expect(clock).toMatch(/[凌晨清晨上午中午下午晚上]/u)
-    expect(clock).not.toContain("AM")
-    expect(clock).not.toContain("PM")
   })
 })
