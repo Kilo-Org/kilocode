@@ -1,12 +1,14 @@
 // The Workflows subtab: one row per command, from `api.command.list` plus the config `commands` (and the v1 `command`
-// key). Description and the read-only template come from the config; the per-command model and variant live in the
-// command's `model`. The effective entry is read per config document, because core merges commands per name.
+// key). The server supplies the effective description, template and model; model-only entries override a discovered
+// workflow without copying its template.
 import { Component, For, Show, createEffect, createMemo, createSignal, on } from "solid-js"
 import { Card } from "@kilocode/kilo-ui/card"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { useLanguage } from "../../../context/language"
+import { getVSCodeAPI } from "../../../context/vscode"
 import { useV2 } from "../../../v2/client"
 import { useSettingsConfig } from "../../../v2/settings-config"
+import { preserveVariant } from "../../../v2/variant"
 import ModelPicker, { type ModelPickerValue } from "../ModelPicker"
 import { parseCommandModel, serializeCommandModel } from "./command-model"
 
@@ -28,51 +30,89 @@ const WorkflowsSubtab: Component = () => {
   // Core loads commands per document and merges them per name, so the effective entry is the one from the
   // highest-priority document (project, then global), under the v2 `commands` key or the v1 `command` key. The shallow
   // merged config keeps only the last document that defines `commands`, so read the raw documents instead.
-  const entry = (name: string): CommandEntry | undefined => {
+  const entry = (name: string, modelOnly = false): CommandEntry | undefined => {
     for (const scope of ["project", "global"] as const) {
       const document = config.raw(scope) as CommandDocument | undefined
       const native = document?.commands?.[name]
-      if (native && typeof native === "object")
-        return { scope, key: "commands", value: native as Record<string, unknown> }
       const legacy = document?.command?.[name]
-      if (legacy && typeof legacy === "object")
-        return { scope, key: "command", value: legacy as Record<string, unknown> }
+      const key = native && typeof native === "object" ? "commands" : "command"
+      const value = key === "commands" ? native : legacy
+      if (!value || typeof value !== "object" || Array.isArray(value)) continue
+      const command = value as Record<string, unknown>
+      if (
+        modelOnly &&
+        ("template" in command || Object.keys(command).some((part) => part !== "model" && part !== "variant"))
+      )
+        continue
+      return { scope, key, value: command }
     }
     return undefined
+  }
+
+  const completeLegacy = (name: string, scope: "project" | "global") => {
+    const value = (config.raw(scope) as CommandDocument | undefined)?.command?.[name]
+    return (
+      !!value &&
+      typeof value === "object" &&
+      !Array.isArray(value) &&
+      typeof (value as Record<string, unknown>).template === "string"
+    )
   }
 
   const names = createMemo(() => {
     const set = new Set<string>((v2.data.location.command.list() ?? []).map((command) => command.name))
     for (const scope of ["project", "global"] as const) {
       const document = config.raw(scope) as CommandDocument | undefined
-      for (const key of ["commands", "command"] as const)
-        for (const name of Object.keys(document?.[key] ?? {})) set.add(name)
+      for (const key of ["commands", "command"] as const) {
+        for (const [name, value] of Object.entries(document?.[key] ?? {})) {
+          if (value && typeof value === "object" && "template" in value && typeof value.template === "string") set.add(name)
+        }
+      }
     }
     return [...set].sort()
   })
 
   const discovered = (name: string) => (v2.data.location.command.list() ?? []).find((command) => command.name === name)
 
-  // A configured description wins over the file frontmatter, as in v1.
   const description = (name: string) => {
     const value = entry(name)?.value.description
-    return typeof value === "string" ? value : discovered(name)?.description
+    return discovered(name)?.description ?? (typeof value === "string" ? value : undefined)
   }
 
   const template = (name: string) => {
     const value = entry(name)?.value.template
-    return typeof value === "string" ? value : undefined
+    return discovered(name)?.template ?? (typeof value === "string" ? value : undefined)
   }
 
-  // The v2 key keeps the model and the variant in one Selection value; the v1 key keeps a plain `model` and a separate
-  // `variant`.
+  // The v2 key normally keeps the model and the variant in one Selection value, but a model-only entry may use a
+  // separate variant; the v1 key keeps them separate.
   const model = (name: string): ModelPickerValue | undefined => {
-    const found = entry(name)
-    if (!found) return undefined
-    const base = parseCommandModel(found.value.model)
+    const found = entry(name, true) ?? entry(name)
+    const path = ["commands", name]
+    if (config.pending(path)) {
+      const value = config.value(path) as { model?: unknown; variant?: unknown } | undefined
+      const parsed = parseCommandModel(value?.model)
+      return parsed && !parsed.variant && typeof value?.variant === "string"
+        ? { ...parsed, variant: value.variant }
+        : parsed
+    }
+    const modelPath = [...path, "model"]
+    if (config.pending(modelPath)) return parseCommandModel(config.value(modelPath))
+    const effective = discovered(name)
+    const configured = parseCommandModel(found?.value.model)
+    const base =
+      found && (typeof found.value.template !== "string" || found.value.template === effective?.template)
+        ? (configured ?? parseCommandModel(effective?.model))
+        : (parseCommandModel(effective?.model) ?? configured)
     if (!base) return undefined
-    const variant = found.key === "command" && typeof found.value.variant === "string" ? found.value.variant : undefined
+    const variant =
+      found && !base.variant && typeof found.value.variant === "string" ? found.value.variant : undefined
     return variant ? { ...base, variant } : base
+  }
+
+  const overridden = (name: string) => {
+    const found = entry(name, true) ?? entry(name)
+    return !!found && found.value.model !== undefined
   }
 
   const variants = (value: ModelPickerValue) =>
@@ -81,33 +121,51 @@ const WorkflowsSubtab: Component = () => {
       ?.find((item) => item.providerID === value.providerID && item.id === value.modelID)
       ?.variants.map((variant) => variant.id) ?? []
 
-  // A v2 command entry requires a template, so the model override only applies where a template exists. Write to the
-  // document that defines the command; migrate a v1 `command` entry to `commands` in the same write (the host removes
-  // the `command` alias), with the variant folded into the model. Keep the current variant when the new model has it.
-  const blocked = (name: string) => template(name) === undefined
+  const blocked = (name: string) => {
+    const found = entry(name)
+    return (
+      template(name) === undefined ||
+      (!!found &&
+        typeof found.value.template !== "string" &&
+        Object.keys(found.value).some((key) => key !== "model" && key !== "variant"))
+    )
+  }
+
+  const save = (path: string[], value: unknown, scope: "project" | "global", preserveAliases = false) => {
+    void config.set(path, value, scope, preserveAliases).then((ok) => {
+      if (ok) getVSCodeAPI().postMessage({ type: "configRead" } as never)
+    })
+  }
 
   const setModel = (name: string, value: ModelPickerValue | undefined) => {
-    const found = entry(name)
-    if (!found || blocked(name)) return
+    const found = entry(name, true) ?? entry(name)
+    if (blocked(name)) return
     const previous = model(name)
     const changedModel =
       value !== undefined &&
       previous !== undefined &&
       (value.providerID !== previous.providerID || value.modelID !== previous.modelID)
-    // Carry the variant over only when the model changed, so clearing the variant keeps it cleared.
-    const next =
-      value && changedModel && !value.variant && previous?.variant && variants(value).includes(previous.variant)
-        ? { ...value, variant: previous.variant }
-        : value
+    const preserved = changedModel && value ? preserveVariant(previous?.variant, variants(value)) : undefined
+    const next = value && changedModel && !value.variant && preserved ? { ...value, variant: preserved } : value
+    if (!found) {
+      if (!next) return
+      save(["commands", name], { model: serializeCommandModel(next) }, "global")
+      return
+    }
+    const keepAliases = found.key === "commands" && completeLegacy(name, found.scope)
+    if (typeof found.value.template !== "string") {
+      save(["commands", name], next ? { model: serializeCommandModel(next) } : undefined, found.scope, keepAliases)
+      return
+    }
     if (found.key === "commands") {
-      config.set(["commands", name, "model"], next ? serializeCommandModel(next) : undefined, found.scope)
+      save(["commands", name, "model"], next ? serializeCommandModel(next) : undefined, found.scope)
       return
     }
     const entryValue = { ...found.value }
     delete entryValue.variant
     if (next) entryValue.model = serializeCommandModel(next)
     else delete entryValue.model
-    config.set(["commands", name], entryValue, found.scope)
+    save(["commands", name], entryValue, found.scope)
   }
 
   const toggle = (name: string) => setExpanded((prev) => ({ ...prev, [name]: !prev[name] }))
@@ -222,9 +280,14 @@ const WorkflowsSubtab: Component = () => {
                         <ModelPicker
                           value={model(name)}
                           onChange={(value) => setModel(name, value)}
-                          clearable
+                          clearable={overridden(name)}
                           clearLabel={language.t("settings.providers.notSet")}
                           blocked={blocked(name)}
+                          preserveVariantOnReselect
+                          showUnavailableVariant
+                          modelLabel={`/${name} ${language.t("settings.agentBehaviour.workflows.model")}`}
+                          variantLabel={`/${name} ${language.t("settings.agentBehaviour.workflows.variant")}`}
+                          clearButtonLabel={`/${name} ${language.t("settings.providers.notSet")}`}
                         />
                       </div>
                       <Show when={template(name)}>

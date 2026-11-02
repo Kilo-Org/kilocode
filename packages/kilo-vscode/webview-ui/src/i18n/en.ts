@@ -1091,9 +1091,9 @@ export const dict = {
   "settings.agentBehaviour.mcp.timeout.catalog.title": "Catalog timeout (ms)",
   "settings.agentBehaviour.mcp.timeout.execution.title": "Execution timeout (ms)",
   "settings.agentBehaviour.workflows.description":
-    "Workflows are custom slash commands defined in your config. Type /command-name in the chat to invoke them. Commands are configured in opencode.json under the 'command' section.",
+    "Workflows are custom commands defined in your config or command Markdown files. You can set a model and reasoning variant for each workflow.",
   "settings.agentBehaviour.workflows.empty":
-    "No custom commands configured. Add commands to your opencode.json to see them here.",
+    "No custom commands found. Add commands to kilo2.json or a .kilo2/command Markdown file.",
   "settings.agentBehaviour.workflows.detail.description": "Description",
   "settings.agentBehaviour.workflows.detail.template": "Template",
   "settings.agentBehaviour.workflows.model": "model",

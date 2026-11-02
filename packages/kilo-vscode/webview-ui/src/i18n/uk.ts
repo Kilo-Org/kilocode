@@ -1101,9 +1101,9 @@ export const dict = {
   "settings.agentBehaviour.mcpEmpty":
     "MCP-серверів не налаштовано. Додайте MCP-сервери до kilo.jsonc або попросіть агента додати їх.",
   "settings.agentBehaviour.workflows.description":
-    "Робочі процеси — це власні команди з косою рискою, визначені у вашій конфігурації. Введіть /назва-команди в чаті, щоб викликати їх. Команди налаштовуються в розділі 'command' файлу opencode.json.",
+    "Робочі процеси це власні команди, визначені у вашій конфігурації або у файлах Markdown з командами. Для кожного робочого процесу можна задати модель і варіант міркування.",
   "settings.agentBehaviour.workflows.empty":
-    "Власних команд не налаштовано. Додайте команди до opencode.json, щоб вони з'явилися тут.",
+    "Власних команд не знайдено. Додайте команди до kilo2.json або до файлу Markdown у .kilo2/command.",
   "settings.agentBehaviour.workflows.detail.description": "Опис",
   "settings.agentBehaviour.workflows.detail.template": "Шаблон",
   "settings.agentBehaviour.workflows.model": "модель",

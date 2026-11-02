@@ -1164,9 +1164,9 @@ export const dict = {
   "settings.agentBehaviour.mcpEmpty":
     "Keine MCP-Server konfiguriert. Fügen Sie MCP-Server in kilo.jsonc hinzu oder bitten Sie den Agenten, sie hinzuzufügen.",
   "settings.agentBehaviour.workflows.description":
-    "Workflows sind benutzerdefinierte Slash-Befehle, die in Ihrer Konfiguration definiert sind. Geben Sie /command-name im Chat ein, um sie aufzurufen. Befehle werden in opencode.json im Abschnitt 'command' konfiguriert.",
+    "Workflows sind benutzerdefinierte Befehle, die in Ihrer Konfiguration oder in Markdown-Befehlsdateien definiert sind. Für jeden Workflow können Sie ein Modell und eine Reasoning-Variante festlegen.",
   "settings.agentBehaviour.workflows.empty":
-    "Keine benutzerdefinierten Befehle konfiguriert. Fügen Sie Befehle zu opencode.json hinzu, um sie hier zu sehen.",
+    "Keine benutzerdefinierten Befehle gefunden. Fügen Sie Befehle zu kilo2.json oder einer Markdown-Datei in .kilo2/command hinzu.",
   "settings.agentBehaviour.workflows.detail.description": "Beschreibung",
   "settings.agentBehaviour.workflows.detail.template": "Vorlage",
   "settings.agentBehaviour.workflows.model": "Modell",
