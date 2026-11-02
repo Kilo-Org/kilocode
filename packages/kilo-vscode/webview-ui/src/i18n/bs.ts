@@ -298,6 +298,9 @@ export const dict = {
   "provider.failure.http": "Greška provajdera (HTTP {{status}}).",
   "provider.failure.httpNoStatus": "Greška provajdera.",
   "provider.failure.schema": "Neočekivan odgovor od provajdera.",
+  "provider.failure.organizationMissing": "Odabrani tim više nije dostupan. Odaberite drugi tim.",
+  "provider.failure.scopeConflict": "Odabrani tim je u sukobu s timom vašeg Kilo tokena.",
+  "provider.failure.personalUnavailable": "Ovaj račun nema lični račun. Odaberite tim.",
 
   "notification.permission.title": "Potrebna dozvola",
   "notification.permission.titleSubagent": "Potrebna dozvola (podagent)",

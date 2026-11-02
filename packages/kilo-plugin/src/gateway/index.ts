@@ -131,6 +131,18 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
     let cachedProjectID: string | null | undefined
     let cachedMachineID: string | null | undefined
     let organizationModes: readonly KiloModes.OrganizationMode[] = []
+    // The `catalog` event publishes only a changed reason, so a retry that fails the same way stays quiet. Clients
+    // read the current reason with `catalog.status`. The emitter exists once the RPC is registered, and the first
+    // publish after the registration always emits.
+    let emitCatalog: ((status: KiloGatewayRpc.CatalogStatus) => Effect.Effect<void, unknown>) | undefined
+    let publishedCatalog = ""
+    const publishCatalog = Effect.suspend(() => {
+      const status = catalogStatus(catalog)
+      const key = JSON.stringify(status)
+      if (!emitCatalog || key === publishedCatalog) return Effect.void
+      publishedCatalog = key
+      return emitCatalog(status).pipe(Effect.catch(() => Effect.void))
+    })
 
     const getProjectID = Effect.gen(function* () {
       if (cachedProjectID !== undefined) return cachedProjectID ?? undefined
@@ -299,7 +311,7 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
           envActive,
           models: [],
           failed: true,
-          failure: { kind: "unauthorized" },
+          failure: { kind: "unauthenticated" },
           anonymous: true,
         }
         return
@@ -307,7 +319,15 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
 
       // A scoped token cannot select another team (or Personal), even if the profile belongs to both teams.
       if (current && !KiloAccount.compatible(current)) {
-        catalog = { account: current, connection, envActive, models: [], failed: true, anonymous: false }
+        catalog = {
+          account: current,
+          connection,
+          envActive,
+          models: [],
+          failed: true,
+          failure: { kind: "scope_conflict" },
+          anonymous: false,
+        }
         return
       }
 
@@ -333,27 +353,42 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
         return
       }
 
-      const fetchedProfile: { profile: Option.Option<KiloProfile.Info>; unauthorized: boolean } = token
-        ? yield* KiloProfile.get(api, token).pipe(
-            Effect.map((profile) => ({ profile: Option.some(profile), unauthorized: false })),
-            Effect.catch((error) =>
-              Effect.succeed({ profile: Option.none<KiloProfile.Info>(), unauthorized: error.message === "Invalid token" }),
-            ),
-          )
-        : { profile: Option.none<KiloProfile.Info>(), unauthorized: false }
+      const fetchedProfile: { profile: Option.Option<KiloProfile.Info>; failure?: KiloProfile.ProfileError["reason"] } =
+        token
+          ? yield* KiloProfile.get(api, token).pipe(
+              Effect.map((profile) => ({ profile: Option.some(profile) })),
+              Effect.catch((error) => Effect.succeed({ profile: Option.none<KiloProfile.Info>(), failure: error.reason })),
+            )
+          : { profile: Option.none<KiloProfile.Info>() }
       const profile = fetchedProfile.profile
       if (targetEpoch !== epoch) return
-// An outage leaves the team-only status unknown, so fail closed. A rejected token keeps v1's catalog 401
+      // An outage leaves the team-only status unknown, so fail closed. A rejected token keeps v1's catalog 401
       // fallback to the anonymous free catalog rather than hiding free models from an expired credential.
-      if (token && !organizationID && Option.isNone(profile) && !fetchedProfile.unauthorized) {
-        catalog = { account: current, connection, envActive, models: [], failed: true, anonymous: false }
+      if (token && !organizationID && fetchedProfile.failure && fetchedProfile.failure.kind !== "unauthorized") {
+        catalog = {
+          account: current,
+          connection,
+          envActive,
+          models: [],
+          failed: true,
+          failure: fetchedProfile.failure,
+          anonymous: false,
+        }
         return
       }
       // A key login can have no saved organization. Team-only accounts must not request a personal catalog.
       if (current && !organizationID && Option.isSome(profile) && profile.value.hasPersonalAccount === false) {
         organizationID = KiloProfile.defaultOrganizationID(profile.value)
         if (resolved.personalSelected || !organizationID) {
-          catalog = { account: current, connection, envActive, models: [], failed: true, anonymous: false }
+          catalog = {
+            account: current,
+            connection,
+            envActive,
+            models: [],
+            failed: true,
+            failure: { kind: "personal_unavailable" },
+            anonymous: false,
+          }
           return
         }
         current = { ...current, organizationID }
@@ -487,7 +522,9 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
             Effect.gen(function* () {
               if (targetEpoch !== epoch) return
               yield* loadCatalog(targetEpoch, attempt + 1)
-              if (targetEpoch === epoch) yield* ctx.provider.reload()
+              if (targetEpoch !== epoch) return
+              yield* ctx.provider.reload()
+              yield* publishCatalog
             }),
           ),
         ),
@@ -519,6 +556,7 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
       ) {
         catalog = { envActive: false, models: [], failed: true, anonymous: true }
         yield* ctx.provider.reload()
+        yield* publishCatalog
       }
       if (targetEpoch !== epoch) return
       server = resolved.server
@@ -531,7 +569,11 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
       yield* cancelRetry
       yield* lock.withPermit(
         loadCatalog(targetEpoch, 0).pipe(
-          Effect.andThen(Effect.suspend(() => (targetEpoch === epoch ? ctx.provider.reload() : Effect.void))),
+          Effect.andThen(
+            Effect.suspend(() =>
+              targetEpoch === epoch ? ctx.provider.reload().pipe(Effect.andThen(publishCatalog)) : Effect.void,
+            ),
+          ),
         ),
       )
     })
@@ -865,7 +907,7 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
       }),
     )
 
-    yield* ctx.rpc
+    const registration = yield* ctx.rpc
       .register(KiloGatewayRpc.Definition, {
         ...GatewayRouters.handlers({
           account: routerAccount,
@@ -1056,10 +1098,15 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
             if (target.provider === "kilo" && !scopeCompatible()) return Effect.fail(context.error("unauthorized", "Organization conflicts with the Kilo token scope"))
             return Effect.succeed(target)
           }),
+        "catalog.status": () => Effect.sync(() => catalogStatus(catalog)),
         "session.metadata": (input) =>
           Effect.sync(() => sessionMetadata.get(input.sessionID) ?? {}),
       })
       .pipe(Effect.orDie)
+    // The first publish announces the reason of a new plugin instance, for example after a location reload, so
+    // clients of the previous instance read it again.
+    emitCatalog = (status) => registration.events.emit("catalog", status)
+    yield* publishCatalog
 
     yield* ctx.event.subscribe().pipe(
       Stream.filter(
@@ -1081,6 +1128,14 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
     }
   }),
 })
+
+// The public reason drops the retry delay, so only a changed kind or status is a change. A failed catalog without a
+// reason is a changed scope that is still loading.
+function catalogStatus(catalog: CatalogState): KiloGatewayRpc.CatalogStatus {
+  if (!catalog.failed || !catalog.failure) return { failure: null }
+  const failure = catalog.failure
+  return { failure: { kind: failure.kind, ...(failure.status === undefined ? {} : { status: failure.status }) } }
+}
 
 function isLoopback(server: string): boolean {
   if (!URL.canParse(server)) return false

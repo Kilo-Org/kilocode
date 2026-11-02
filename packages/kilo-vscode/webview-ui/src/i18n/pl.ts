@@ -299,6 +299,9 @@ export const dict = {
   "provider.failure.http": "Błąd dostawcy (HTTP {{status}}).",
   "provider.failure.httpNoStatus": "Błąd dostawcy.",
   "provider.failure.schema": "Nieoczekiwana odpowiedź od dostawcy.",
+  "provider.failure.organizationMissing": "Wybrany zespół nie jest już dostępny. Wybierz inny zespół.",
+  "provider.failure.scopeConflict": "Wybrany zespół jest w konflikcie z zespołem Twojego tokena Kilo.",
+  "provider.failure.personalUnavailable": "To konto nie ma konta osobistego. Wybierz zespół.",
 
   "notification.permission.title": "Wymagane uprawnienie",
   "notification.permission.titleSubagent": "Wymagane uprawnienie (podagent)",

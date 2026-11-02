@@ -1443,6 +1443,9 @@ export const dict = {
   "provider.failure.http": "Errore del provider (HTTP {{status}}).",
   "provider.failure.httpNoStatus": "Errore del provider.",
   "provider.failure.schema": "Risposta imprevista dal provider.",
+  "provider.failure.organizationMissing": "Il team selezionato non è più disponibile. Seleziona un altro team.",
+  "provider.failure.scopeConflict": "Il team selezionato è in conflitto con il team del tuo token Kilo.",
+  "provider.failure.personalUnavailable": "Questo account non ha un account personale. Seleziona un team.",
 
   // Speech to Text tooltips and errors
   "speechToText.tooltip.start": "Avvia input vocale",

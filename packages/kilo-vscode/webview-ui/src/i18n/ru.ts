@@ -295,6 +295,9 @@ export const dict = {
   "provider.failure.http": "Ошибка провайдера (HTTP {{status}}).",
   "provider.failure.httpNoStatus": "Ошибка провайдера.",
   "provider.failure.schema": "Неожиданный ответ от провайдера.",
+  "provider.failure.organizationMissing": "Выбранная команда больше недоступна. Выберите другую команду.",
+  "provider.failure.scopeConflict": "Выбранная команда конфликтует с командой вашего токена Kilo.",
+  "provider.failure.personalUnavailable": "У этой учетной записи нет личного аккаунта. Выберите команду.",
 
   "notification.permission.title": "Требуется разрешение",
   "notification.permission.titleSubagent": "Требуется разрешение (субагент)",

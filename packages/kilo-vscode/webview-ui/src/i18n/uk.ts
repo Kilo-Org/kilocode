@@ -299,6 +299,9 @@ export const dict = {
   "provider.failure.http": "Помилка провайдера (HTTP {{status}}).",
   "provider.failure.httpNoStatus": "Помилка провайдера.",
   "provider.failure.schema": "Неочікувана відповідь від провайдера.",
+  "provider.failure.organizationMissing": "Вибрана команда більше недоступна. Виберіть іншу команду.",
+  "provider.failure.scopeConflict": "Вибрана команда конфліктує з командою вашого токена Kilo.",
+  "provider.failure.personalUnavailable": "Цей обліковий запис не має особистого облікового запису. Виберіть команду.",
 
   "notification.permission.title": "Потрібен дозвіл",
   "notification.permission.titleSubagent": "Потрібен дозвіл (підагент)",
