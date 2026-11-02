@@ -81,8 +81,8 @@ describe("readSpeechSettings", () => {
 
   it("lists both root config files in load order", () => {
     expect(globalSpeechConfigFiles({ KILO2_CONFIG_DIR: "/config" }, "")).toEqual([
-      "/config/kilo2.json",
-      "/config/kilo2.jsonc",
+      path.join("/config", "kilo2.json"),
+      path.join("/config", "kilo2.jsonc"),
     ])
   })
 
