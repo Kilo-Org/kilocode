@@ -180,6 +180,7 @@ export function wire(input: {
     directory: input.directory,
     size: effectiveFontSize(),
     language: env.language,
+    version: (input.context.extension.packageJSON as { version?: string }).version ?? "",
     view: input.view,
     settings: readKiloSettings(),
   })
@@ -209,6 +210,7 @@ export function html(input: {
   directory: string
   size: number
   language: string
+  version: string
   view?: "chat" | "settings"
   settings: Record<string, unknown>
 }) {
@@ -233,6 +235,7 @@ export function html(input: {
     KILO_BROWSER_AUTOMATION: false,
     KILO_AGENT_MANAGER_INTRO_DISMISSED: true,
     KILO_SETTINGS: input.settings,
+    KILO_EXTENSION_VERSION: input.version,
   }
   const script = Object.entries(globals)
     .map(([key, value]) => `window.${key} = ${JSON.stringify(value).replace(/</g, "\\u003c")};`)
