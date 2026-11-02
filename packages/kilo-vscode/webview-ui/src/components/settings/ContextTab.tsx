@@ -18,8 +18,8 @@ const ContextTab: Component<SettingsTabProps> = (props) => {
     return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : []
   }
 
-  const write = (path: string[], value: unknown) => config.set(path, value, config.source(path) ?? "global")
-  const clear = (path: string[]) => config.unset(path, config.source(path) ?? "global")
+  const write = (path: string[], value: unknown) => config.set(path, value)
+  const clear = (path: string[]) => config.unset(path)
 
   const auto = () => config.value(["compaction", "auto"]) !== false
 

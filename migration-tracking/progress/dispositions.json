@@ -645,13 +645,13 @@
   "module:packages/kilo-vscode/webview-ui/src/context/config.tsx": {
     "state": "ported",
     "v2": "packages/kilo-vscode/webview-ui/src/v2/settings-config.tsx",
-    "note": "webview-ui/src/v2/settings-config.tsx (createSettingsConfig, useSettingsConfig) replaces ConfigProvider: it reads the merged config and the global and project documents from the host, reports the owning scope per path (source), and writes each set or unset through the host at once. Deliberate difference: v2 has no draft, dirty state, save or discard; external edits hot-reload through config.updated.",
+    "note": "webview-ui/src/v2/settings-config.tsx (createSettingsConfig, useSettingsConfig) replaces ConfigProvider: it reads the merged config and the global and project documents from the host, reports the owning scope per path (source), and writes each set or unset through the host at once. `set` and `unset` default the scope to `source(path) ?? \"global\"`: a write without an explicit scope waits for the first `configLoaded` gate in settings-scope.ts, then uses the file that owns the path, or global when no file owns it or the read fails, because the host still answers `configLoaded` with its error. CheckpointsTab, ContextTab, ModelsTab and ModeEditView pass no scope, so their writes use this gate. Deliberate difference: v2 has no draft, dirty state, save or discard; external edits hot-reload through config.updated.",
     "by": "settings-foundation"
   },
   "module:packages/kilo-vscode/webview-ui/src/utils/config-scope.ts": {
     "state": "ported",
     "v2": "packages/kilo-vscode/src/config-aliases.ts",
-    "note": "splitConfigByScope is replaced by a scope per write: src/config-aliases.ts scopeOf reports the scope that owns a path or its v1 alias, and every settings write names its scope. The v1 global-only rules for indexing, speech-to-text and the agent board are gone with those settings.",
+    "note": "splitConfigByScope is replaced by a scope per write: src/config-aliases.ts scopeOf reports the scope that owns a path or its v1 alias, and every settings write names its scope. `set` and `unset` default to `source(path) ?? \"global\"`, resolved after the first `configLoaded` gate, with the global fallback when the config read fails; CheckpointsTab, ContextTab, ModelsTab and ModeEditView pass no scope and use it. The v1 global-only rules for indexing, speech-to-text and the agent board are gone with those settings.",
     "by": "settings-foundation"
   },
   "module:packages/kilo-vscode/tests/unit/config-scope.test.ts": {
@@ -747,5 +747,46 @@
     "v2": "packages/kilo-vscode/src/cost-alert.ts",
     "note": "src/cost-alert.ts createCostAlert and createCostAlerts, with src/extension.ts, replace the synthetic webview question with a non-blocking VS Code notification. Continue acknowledges the session and threshold, Stop interrupts that session, and a dismissed alert rearms on its next execution. Unlike the webview question, another prompt does not implicitly dismiss the native notification, which cannot be closed programmatically. The limit accepts fractional USD and uses v2 recorded session cost. test/cost-alert.test.ts covers the policy and event stream.",
     "by": "session-cost-alert"
+  },
+  "module:packages/kilo-vscode/webview-ui/src/components/settings/AutoApproveTab.tsx": {
+    "state": "ported",
+    "note": "The tab carries the permission editor and the maxCost VS Code setting only. The Session Cost Alert itself is the host observer and native notification in packages/kilo-vscode/src/cost-alert.ts (session-cost-alert), not a tab feature. v1's in-chat cost question and its whole-dollar rounding are not carried.",
+    "by": "settings-map-fixes"
+  },
+  "module:packages/kilo-vscode/webview-ui/src/components/settings/BrowserTab.tsx": {
+    "state": "ported",
+    "note": "v2 renders Web Search only. v1's Browser Automation rows (enable, Use System Chrome, headless) are not carried; the open cell module:packages/kilo-vscode/src/services/browser-automation/settings.ts tracks them.",
+    "by": "settings-map-fixes"
+  },
+  "module:packages/kilo-vscode/webview-ui/src/components/settings/DisplayTab.tsx": {
+    "state": "ported",
+    "note": "v2 carries the username, font size and Shift+Tab cycle rows only. v1's token throughput, approval reason, shortcut hints and display mode rows (reasoning, terminal command, code edit, MCP tool, work style presets), and the session preview, are not carried; open cells src/kilo-provider/throughput-settings.ts, auto-approval-reason-settings.ts, shortcut-hints-settings.ts and src/shared/work-style-presets.ts track them.",
+    "by": "settings-map-fixes"
+  },
+  "module:packages/kilo-vscode/webview-ui/src/components/settings/ModelsTab.tsx": {
+    "state": "ported",
+    "note": "v2 carries the default, small, title, compaction and per-agent model rows, plus hide_prompt_training_models. v1's subagent model and variant, autocomplete model and speech-to-text base URL, API key and model rows are not carried; open cells src/services/autocomplete/settings.ts, src/speech-to-text/models.ts and webview-ui/src/components/speech-to-text/model-selector.ts track them.",
+    "by": "settings-map-fixes"
+  },
+  "module:packages/kilo-vscode/webview-ui/src/components/settings/CheckpointsTab.tsx": {
+    "state": "ported",
+    "note": "v2 carries the snapshots switch only. v1's automatic checkpoints cleanup (retention enabled, maximum age, last run, run now and stop) is not carried; the open cell module:packages/kilo-vscode/webview-ui/src/components/settings/cleanup.ts tracks it.",
+    "by": "settings-map-fixes"
+  },
+  "module:packages/kilo-vscode/webview-ui/src/components/settings/ExperimentalTab.tsx": {
+    "state": "ported",
+    "note": "v2 carries share, formatter and lsp only. v1 also had remote control, browser automation, batch tool, image generation and its model, notebook tools, continue-on-deny, code mode, Claude migration, prompt history, glob include ignored, MCP timeout and tool toggles; none are carried.",
+    "by": "settings-map-fixes"
+  },
+  "module:packages/kilo-vscode/webview-ui/src/components/settings/ContextTab.tsx": {
+    "state": "ported",
+    "note": "v2 carries the auto compaction switch, compaction.keep.tokens, compaction.buffer and watcher patterns. v1's Memory section (project enable, auto save, storage inspect) and Prune row are not carried; v1 compaction.threshold_percent became keep.tokens plus buffer.",
+    "by": "settings-map-fixes"
+  },
+  "module:packages/kilo-vscode/tests/unit/settings-io.test.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-vscode/test/settings-io.test.ts",
+    "note": "The v2 test closes by basename but does not carry the v1 memory_model import and round-trip, the provider and MCP secret round-trip, or the KNOWN_KEYS versus Config interface drift guard.",
+    "by": "settings-map-fixes"
   }
 }

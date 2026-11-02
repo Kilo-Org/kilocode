@@ -45,11 +45,9 @@ const ModelsTab: Component<SettingsTabProps> = () => {
     return selection(raw ?? config.value(path))
   }
   const change = (path: string[]) => (value: ModelSelection | undefined) => {
-    // Write the scope that already defines the key so a project override is updated in place, not shadowed.
-    const scope = config.source(path) ?? "global"
-    if (!value) return config.unset(path, scope)
+    if (!value) return config.unset(path)
     // This tab hides the variant control, so keep an existing variant when the model itself is unchanged.
-    return config.set(path, write(preserveVariant(selection(config.value(path)), value)), scope)
+    return config.set(path, write(preserveVariant(selection(config.value(path)), value)))
   }
 
   const hidden = () => {
@@ -57,8 +55,7 @@ const ModelsTab: Component<SettingsTabProps> = () => {
     if (typeof project === "boolean") return project
     return config.raw("global")?.hide_prompt_training_models === true
   }
-  const setHidden = (checked: boolean) =>
-    config.set(["hide_prompt_training_models"], checked, config.source(["hide_prompt_training_models"]) ?? "global")
+  const setHidden = (checked: boolean) => config.set(["hide_prompt_training_models"], checked)
 
   return (
     <div>
