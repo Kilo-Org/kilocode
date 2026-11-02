@@ -104,6 +104,14 @@ jobs:
         if: runner.os == 'Linux' && matrix.shard == 'packages' # kilocode_change
         run: bun run lint:effect-simplifications
 
+      # kilocode_change start - the repo defines this ast-grep lane and no workflow ran it, so a rule
+      # edit could break the rules without CI noticing. `lint:effect-patterns` stays out until its 27
+      # current violations are fixed or ratcheted.
+      - name: Test lint rules
+        if: runner.os == 'Linux' && matrix.shard == 'packages' # kilocode_change
+        run: bun run test:lint-rules
+      # kilocode_change end
+
       - name: Configure git identity
         run: |
           git config --global user.email "bot@opencode.ai"
@@ -125,8 +133,12 @@ jobs:
         run: |
           # The runners have four vCPUs, and each Bun test process performs its own concurrent work.
           # kilocode_change start - core, tui and cli run in balanced shards through `test:ci`; the other packages run in the `packages` leg
+          # `--affected` applies to pull requests only. A merge can break the interaction of two green
+          # PRs, so pushes and manual runs test the full suite to catch it.
           args=(--concurrency=3)
-          [ "${{ github.event_name }}" = "workflow_dispatch" ] || args+=(--affected)
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            args+=(--affected)
+          fi
           if [ "${{ matrix.shard }}" = "packages" ]; then
             GITHUB_ACTIONS=false bun turbo test "${args[@]}" --filter='!@opencode/core' --filter='!@opencode/tui' --filter='!@opencode/cli'
             exit
@@ -405,4 +417,35 @@ jobs:
         env:
           TURBO_SCM_BASE: ${{ github.event_name == 'pull_request' && format('{0}^1', github.sha) || github.event.before }}
           TURBO_SCM_HEAD: ${{ github.sha }}
+  # kilocode_change end
+
+  # kilocode_change start - stable check names for the branch ruleset; the unit job is a matrix, so a
+  # shard name cannot be required safely.
+  unit-required:
+    name: unit (linux)
+    runs-on: blacksmith-4vcpu-ubuntu-2404
+    needs:
+      - unit
+    if: always()
+    timeout-minutes: 5
+    steps:
+      - name: Verify the unit matrix passed
+        run: test "${{ needs.unit.result }}" = "success"
+
+  required:
+    name: test (linux)
+    runs-on: blacksmith-4vcpu-ubuntu-2404
+    needs:
+      - unit
+      - build
+      - sdk
+    if: always()
+    timeout-minutes: 5
+    steps:
+      - name: Verify the v2 CI jobs passed
+        run: |
+          echo "unit=${{ needs.unit.result }} build=${{ needs.build.result }} sdk=${{ needs.sdk.result }}"
+          test "${{ needs.unit.result }}" = "success"
+          test "${{ needs.build.result }}" = "success"
+          test "${{ needs.sdk.result }}" = "success"
   # kilocode_change end
