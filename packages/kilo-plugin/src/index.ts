@@ -1,4 +1,5 @@
 import { KiloAgentPlugin } from "./agent"
+import { KiloCommitMessagePlugin } from "./commit-message"
 // kilo_port(gateway:17e39e074eaf) v1 registered the Gateway auth plugin in the upstream plugin list.
 import { KiloGatewayPlugin } from "./gateway"
 import { OpencodeFreeTier } from "./gateway/opencode"
@@ -33,6 +34,7 @@ export const KiloPlugins = [
   KiloOpenAIPlugin,
   KiloMarketplacePlugin,
   KiloSkillPlugin,
+  KiloCommitMessagePlugin,
 ] as const
 
 /** Kilo plugins that run after the config plugins: the host registers them with phase `post`. */

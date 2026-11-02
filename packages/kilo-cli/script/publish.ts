@@ -2,9 +2,10 @@
 
 // Publishes the Kilo host that script/build.ts built to npm as `@kilocode/cli` with the `kilo-v2` dist-tag.
 //
-// Mirror of the npm part of packages/cli/script/publish.ts (upstream). It publishes one platform package per target
-// (`@kilocode/cli-<os>-<arch>`, written by script/build.ts) and then the `@kilocode/cli` launcher package. The launcher
-// has the platform packages as optional dependencies, and its postinstall script copies the matching binary into place.
+// Mirror of the npm part of upstream's publish script (packages/cli/script/publish.ts, replaced by pack.ts in v2.2).
+// It publishes one platform package per target (`@kilocode/cli-<os>-<arch>`, written by script/build.ts) and then the
+// `@kilocode/cli` launcher package. The launcher has the platform packages as optional dependencies, and its
+// postinstall script copies the matching binary into place.
 // Upstream's update artifacts, Docker image, AUR and Homebrew steps are not part of this script.
 //
 // v1 publishes the same package names under the `latest` and `rc` dist-tags. This script uses only its own dist-tag,

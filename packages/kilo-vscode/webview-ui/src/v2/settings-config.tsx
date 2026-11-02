@@ -38,6 +38,7 @@ export type KiloSettingKey =
   | "maxCost"
   | "claudeCodeCompat"
   | "extraCaCerts"
+  | "languageCommitMessage"
 
 type Json = Record<string, unknown>
 

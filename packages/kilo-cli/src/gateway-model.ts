@@ -1,13 +1,14 @@
 export * as KiloGatewayModel from "./gateway-model"
 
 import { KiloErrors } from "@kilocode/gateway-core"
-import { LanguageModel } from "@opencode/ai"
+import { LanguageModel } from "@opencode/ai/effect"
 import { Auth } from "@opencode/ai/route"
 import { ModelResolver } from "@opencode/core/model-resolver"
 import { Provider } from "@opencode/core/provider"
 import { Rpc } from "@opencode/core/rpc"
 import { SessionRunnerModel } from "@opencode/core/session/runner/model"
 import { KiloGatewayRpc } from "@opencode/schema/kilocode/gateway"
+import { Model } from "@opencode/schema/model"
 import { makeLocationNode } from "@opencode/util/effect/app-node"
 import { Effect, Layer } from "effect"
 
@@ -34,11 +35,21 @@ const emptyCredentialsLayer = Layer.effect(
           }),
         }
       })
+      const emptyToken = (ref: Model.Ref) =>
+        ref.providerID !== "kilo"
+          ? Effect.succeed(false)
+          : providers.get(ref.providerID).pipe(Effect.map((provider) => provider?.settings?.kiloEmptyToken === true))
       return ModelResolver.Service.of({
         resolve: (requested) => resolver.resolve(requested).pipe(
           Effect.flatMap((resolved) => resolved ? emptyAuth(resolved) : Effect.undefined),
         ),
         resolveModel: (model, variant) => resolver.resolveModel(model, variant).pipe(Effect.flatMap(emptyAuth)),
+        // Media routes have no auth override like `route.with` above. With an explicitly empty Kilo credential, a
+        // Kilo image or decision model would fall back to a stale lower-priority key, so it fails closed instead.
+        resolveImage: (ref) =>
+          emptyToken(ref).pipe(Effect.flatMap((empty) => (empty ? Effect.undefined : resolver.resolveImage(ref)))),
+        resolveDecision: (ref) =>
+          emptyToken(ref).pipe(Effect.flatMap((empty) => (empty ? Effect.undefined : resolver.resolveDecision(ref)))),
       })
     }),
   )
