@@ -24,7 +24,8 @@ const LOGS = path.join(ROOT, "migration-tracking/technical-notes/baseline/logs")
 process.chdir(ROOT)
 
 // CI order. `gated: false` marks checks CI does not run; the baseline records them, but they do not
-// fail the run. Steps deliberately not mirrored:
+// fail the run. `botOnly: true` marks the map check that CI runs only on the map bot PR; it gates the
+// baseline only when the checkout is the bot branch. Steps deliberately not mirrored:
 // - check.yml `lint:changed`: pull requests only, against the merge's first parent.
 // - test.yml `affected` and `e2e`: disabled on the fork (`if: false`), they test removed packages.
 // - test.yml shards and `--affected`: the baseline runs every package once (core, tui and cli through their
@@ -81,7 +82,9 @@ const CHECKS: Check[] = [
   { name: "workflow-allowlist", cwd: ".", argv: ["bun", "script/check-workflows.ts"] },
   { name: "opencode-annotations", cwd: ".", argv: ["bun", "script/check-opencode-annotations.ts"] },
   { name: "shared-patches", cwd: ".", argv: ["bun", "script/check-shared-patches.ts"] },
-  { name: "progress-map", cwd: ".", argv: ["bun", "script/upstream/progress.ts", "--check"], skip: noV1Target },
+  // Only the map bot PR has freshly generated outputs. On a feature branch or a v2 tip with a pending
+  // bot PR, --check fails by design, so record it without failing the baseline.
+  { name: "progress-map", cwd: ".", argv: ["bun", "script/upstream/progress.ts", "--check"], skip: noV1Target, botOnly: true },
   { name: "upstream-install", cwd: "script/upstream", argv: ["bun", "install", "--frozen-lockfile"] },
   { name: "upstream-typecheck", cwd: "script/upstream", argv: ["bun", "run", "typecheck"] },
   { name: "upstream-test", cwd: "script/upstream", argv: ["bun", "test"] },
@@ -104,6 +107,8 @@ type Check = {
   isolate?: boolean
   /** A reason to skip on this host, or undefined */
   skip?: () => Promise<string | undefined>
+  /** CI runs this only on the map bot PR; it gates the baseline only on that branch. */
+  botOnly?: boolean
   gated?: boolean
 }
 
@@ -160,6 +165,7 @@ if (unknown.length > 0) {
 await mkdir(LOGS, { recursive: true })
 console.log(`\n# checks (bun ${Bun.version}, node ${await nodeVersion()}, ${process.platform}-${process.arch})`)
 const started = Bun.nanoseconds()
+const botBranch = (await git("rev-parse", "--abbrev-ref", "HEAD")) === "progress-map-update"
 const results = []
 for (const check of CHECKS.filter((check) => !only || only.has(check.name))) {
   const reason = await check.skip?.()
@@ -184,10 +190,11 @@ for (const check of CHECKS.filter((check) => !only || only.has(check.name))) {
   if (home) await rm(home, { recursive: true, force: true })
   await Bun.write(log, `$ ${check.argv.join(" ")}\n(cwd ${check.cwd})\n\n${stdout}${stderr}`)
   const seconds = ((Bun.nanoseconds() - begin) / 1e9).toFixed(1)
-  const gated = check.gated !== false
+  const gated = check.gated !== false && (!check.botOnly || botBranch)
   results.push({ name: check.name, code, gated })
   const status = code === 0 ? "ok  " : gated ? "FAIL" : "red "
-  console.log(`${status} ${check.name.padEnd(28)} ${seconds.padStart(7)}s  ${path.relative(ROOT, log)}${gated ? "" : "  (not run by CI)"}`)
+  const note = gated ? "" : check.botOnly ? "  (bot PR only)" : "  (not run by CI)"
+  console.log(`${status} ${check.name.padEnd(28)} ${seconds.padStart(7)}s  ${path.relative(ROOT, log)}${note}`)
 }
 console.log(`\ntotal ${((Bun.nanoseconds() - started) / 1e9 / 60).toFixed(1)} min`)
 

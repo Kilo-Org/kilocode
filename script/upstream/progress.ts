@@ -25,7 +25,8 @@
  *
  * Usage, from the repository root:
  *   bun script/upstream/progress.ts                 regenerate progress.json and README.md
- *   bun script/upstream/progress.ts --check         exit 1 when the committed output is stale
+ *   bun script/upstream/progress.ts --check         exit 1 when the committed output is stale; this is the map
+ *     bot PR check and fails by design on a feature branch while a bot PR is pending
  *   bun script/upstream/progress.ts --outputs       print the generated file paths (CI updates them in a bot PR)
  *   bun script/upstream/progress.ts --list <feature>  print the open cells of one feature
  *   bun script/upstream/progress.ts --compare <base.json> <head.json> [<pr.diff>]  markdown delta for a PR comment;
