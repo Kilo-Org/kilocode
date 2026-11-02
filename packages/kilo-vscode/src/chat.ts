@@ -122,6 +122,24 @@ export function wire(input: {
   const post = (message: ToWebview) => void webview.postMessage(message)
   // The chat autocomplete surface, created on the first request so a connection-less host can still answer.
   let chatAutocomplete: ChatTextAreaAutocomplete | undefined
+  const handleChatAutocomplete = (message: ToHost): boolean => {
+    if (input.view !== "chat") return false
+    if (message.type === "chatCompletionAccepted") {
+      chatAutocomplete?.telemetry.captureAcceptSuggestion(message.suggestionLength)
+      return true
+    }
+    if (message.type !== "requestChatCompletion") return false
+    if (!input.autocomplete) {
+      post({ type: "chatCompletionResult", text: "", requestId: message.requestId })
+      return true
+    }
+    chatAutocomplete ??= new ChatTextAreaAutocomplete(input.autocomplete)
+    void chatAutocomplete.handle(
+      { type: "requestChatCompletion", text: message.text, requestId: message.requestId },
+      { postMessage: (result) => post(result) },
+    )
+    return true
+  }
   // Config read and write are host-side: only the Settings panel uses them.
   const settings =
     input.view === "settings"
@@ -190,19 +208,7 @@ export function wire(input: {
       return void workspace.getConfiguration(NAMESPACE).update("language", message.locale || undefined, true)
     // The Kilo Gateway sign-in runs in the Profile view of the sidebar, as main opens its Profile panel.
     if (message.type === "openProfile") return void commands.executeCommand("kilo-code.v2.profile")
-    // Chat textarea autocomplete: only the sidebar composer asks for it.
-    if (input.view === "chat" && message.type === "requestChatCompletion") {
-      const autocomplete = input.autocomplete
-      if (!autocomplete) return post({ type: "chatCompletionResult", text: "", requestId: message.requestId })
-      chatAutocomplete ??= new ChatTextAreaAutocomplete(autocomplete)
-      void chatAutocomplete.handle(
-        { type: "requestChatCompletion", text: message.text, requestId: message.requestId },
-        { postMessage: (result) => post(result) },
-      )
-      return
-    }
-    if (input.view === "chat" && message.type === "chatCompletionAccepted")
-      return chatAutocomplete?.telemetry.captureAcceptSuggestion(message.suggestionLength)
+    if (handleChatAutocomplete(message)) return
   })
   const uri = (...parts: string[]) => webview.asWebviewUri(Uri.joinPath(root, ...parts)).toString()
   webview.html = html({
