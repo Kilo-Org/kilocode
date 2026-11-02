@@ -3300,6 +3300,7 @@ function Subagent(props: ToolProps) {
     return props.part.state.status === "running" || Boolean(id && data.session.status(id) === "running")
   })
   // kilocode_change start - subagent: show the child's current tool, retry, tool count, and duration
+  const SUBAGENT_SYNC_RETRY_MS = 500
   const messages = createMemo(() => {
     const id = sessionID()
     return id ? data.session.message.list(id) : []
@@ -3307,6 +3308,8 @@ function Subagent(props: ToolProps) {
   const detail = createMemo(() => subagentDetail(messages()))
   const [syncRetry, setSyncRetry] = createSignal(0)
   const synced = new Set<string>()
+  let syncRetryTimer: ReturnType<typeof setTimeout> | undefined
+  onCleanup(() => clearTimeout(syncRetryTimer))
 
   createEffect(() => {
     const id = sessionID()
@@ -3314,7 +3317,10 @@ function Subagent(props: ToolProps) {
     const key = `${id}:${attempt}`
     if (!id || messages().length > 0 || attempt > 1 || synced.has(key)) return
     synced.add(key)
-    void data.session.message.sync(id).catch(() => setSyncRetry((value) => value + 1))
+    void data.session.message.sync(id).catch(() => {
+      if (attempt > 0) return
+      syncRetryTimer = setTimeout(() => setSyncRetry((value) => value + 1), SUBAGENT_SYNC_RETRY_MS)
+    })
   })
 
   const content = createMemo(() => {
@@ -3758,6 +3764,7 @@ function Question(props: ToolProps) {
   const title = createMemo(() => (dismissed() ? "# Questions (dismissed)" : "# Questions"))
   const subtitle = createMemo(() => {
     if (dismissed()) return `${count()} dismissed`
+    if ((answers()?.length ?? 0) > 0) return `${count()} answered`
     return `${count()} question${count() !== 1 ? "s" : ""}`
   })
 

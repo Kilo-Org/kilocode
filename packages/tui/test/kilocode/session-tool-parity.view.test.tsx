@@ -179,12 +179,18 @@ test("shows dismissed questions, moved patches, and the live subagent line", asy
   await setup.renderer.setupTerminal()
   setup.renderer.start()
 
+  let doneSyncs = 0
   const calls = createFetch((url) => {
     if (url.pathname === "/api/session") return json({ data: sessions, cursor: {} })
     if (url.pathname === "/api/session/active")
       return json({ data: { [liveChild]: { type: "running" }, [retryChild]: { type: "running" } } })
     const session = sessions.find((item) => url.pathname === `/api/session/${item.id}`)
     if (session) return json({ data: session })
+    if (url.pathname === `/api/session/${doneChild}/message`) {
+      doneSyncs += 1
+      if (doneSyncs === 1) return new Response("transient", { status: 503 })
+      return json({ data: doneMessages.toReversed(), cursor: {} })
+    }
     const messages = parentMessagesMatch(url.pathname) ?? childMessagesMatch(url.pathname)
     if (messages) return json({ data: messages.toReversed(), cursor: {} })
     if (/^\/api\/session\/[^/]+\/inbox$/.test(url.pathname)) return json({ data: [] })
@@ -215,6 +221,7 @@ test("shows dismissed questions, moved patches, and the live subagent line", asy
         frame.includes("src/new.ts") &&
         frame.includes("Inspect parser") &&
         frame.includes("Summarize parser") &&
+        frame.includes("2 toolcalls · 5.0s") &&
         frame.includes("rate limited"),
       wait,
     )
@@ -230,6 +237,7 @@ test("shows dismissed questions, moved patches, and the live subagent line", asy
     expect(find("Summarize parser")).toContain("General Subagent — Summarize parser")
     expect(lines.some((line) => line.includes("2 toolcalls · 5.0s"))).toBeTrue()
     expect(lines.some((line) => line.includes("Retrying (attempt 2) · rate limited"))).toBeTrue()
+    expect(doneSyncs).toBe(2)
 
     const dismissedRow = lines.findIndex((line) => line.includes("1 dismissed"))
     await setup.mockMouse.click(6, dismissedRow)
