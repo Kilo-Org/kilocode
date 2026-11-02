@@ -152,11 +152,10 @@ test(
     backend.state.fimHang = true
     const abort = new AbortController()
     const pending = gateway.rpc["autocomplete.fim"]({ prefix: "", suffix: "" }, { ...gateway.options, signal: abort.signal })
-    while (backend.state.autocompleteRequests.length < 3) await Bun.sleep(5)
+    await until(() => backend.state.autocompleteRequests.length >= 3, "the hung FIM request reached the fixture")
     abort.abort()
-    await expect(pending).rejects.toBeDefined()
-    while (backend.state.fimAborted === 0) await Bun.sleep(5)
-    expect(backend.state.fimAborted).toBe(1)
+    expect(await pending.then(() => false, () => true)).toBe(true)
+    await until(() => backend.state.fimAborted === 1, "the fixture saw the aborted FIM request")
   }),
   30_000,
 )
@@ -172,6 +171,14 @@ test(
   }),
   30_000,
 )
+
+/** Waits for a condition, so a missing signal fails the test instead of passing every assertion. */
+async function until(condition: () => boolean, what: string, timeout = 5_000) {
+  for (const start = Date.now(); Date.now() - start < timeout; await Bun.sleep(5)) {
+    if (condition()) return
+  }
+  throw new Error(`Timed out waiting until ${what}`)
+}
 
 const edit = {
   currentFilePath: "src/index.ts",

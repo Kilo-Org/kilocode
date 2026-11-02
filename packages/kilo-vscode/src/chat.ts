@@ -19,12 +19,14 @@ import type { AutocompleteConnection } from "./services/autocomplete/connection"
 import { ChatTextAreaAutocomplete } from "./services/autocomplete/chat-autocomplete/ChatTextAreaAutocomplete"
 import { effectiveFontSize, KILO_SETTING_KEYS, readKiloSettings, settingsHost } from "./settings-host"
 import { promptKeybindings, watchKeybindings } from "./prompt-keybindings"
+import { openToolFile, type ToolDiff } from "./tool-diff"
 
 export function chat(input: {
   context: ExtensionContext
   server: Manager
   directory: string
   trackCostSession: (sessionID: string) => void
+  diff: ToolDiff
   /** The autocomplete connection of the extension host, when one exists. */
   autocomplete?: AutocompleteConnection
 }) {
@@ -97,6 +99,8 @@ export function wire(input: {
   webview: Webview
   view: "chat" | "settings"
   trackCostSession?: (sessionID: string) => void
+  /** The tool diff surfaces of the chat view. Settings has none. */
+  diff?: ToolDiff
   /** The autocomplete connection of the extension host, when one exists. */
   autocomplete?: AutocompleteConnection
   /** Called on every message from the webview, before it is handled. */
@@ -137,11 +141,31 @@ export function wire(input: {
             post({ type: "vscodeSettingsLoaded", values: readKiloSettings() })
         })
       : undefined
+  const handleGlobalState = (message: ToHost) => {
+    switch (message.type) {
+      case "requestModelSelectorExpanded":
+        post({ type: "modelSelectorExpandedLoaded", value: input.context.globalState.get(EXPANDED, true) })
+        return true
+      case "persistModelSelectorExpanded":
+        void input.context.globalState.update(EXPANDED, message.value)
+        return true
+      case "requestAutoApproveState":
+        post({ type: "autoApproveStateLoaded", value: input.context.globalState.get(AUTO_APPROVE, false) })
+        return true
+      case "persistAutoApproveState":
+        void input.context.globalState.update(AUTO_APPROVE, message.value)
+        return true
+      default:
+        return false
+    }
+  }
   const subscription = webview.onDidReceiveMessage((message: ToHost) => {
     input.onMessage?.()
     if (input.handle?.(message)) return
     if (message.type === "fetch" || message.type === "abort" || message.type === "open") return link.receive(message)
     if (message.type === "trackCostSession") return input.trackCostSession?.(message.sessionID)
+    if (message.type === "openToolFile") return openToolFile(input.directory, message)
+    if (message.type === "openDiffVirtual") return input.diff?.open(message.diff, message.initialDiffStyle)
     // A chat recovery link opens the Settings panel at the row that owns the problem.
     if (message.type === "openSettingsTab")
       return void commands.executeCommand("kilo-code.v2.settings", {
@@ -159,21 +183,11 @@ export function wire(input: {
         () => post({ type: "clipboardWriteResult", id: message.id, ok: true }),
         (error: unknown) => post({ type: "clipboardWriteResult", id: message.id, ok: false, error: String(error) }),
       )
-    if (message.type === "requestModelSelectorExpanded")
-      return post({ type: "modelSelectorExpandedLoaded", value: input.context.globalState.get(EXPANDED, true) })
-    if (message.type === "persistModelSelectorExpanded")
-      return void input.context.globalState.update(EXPANDED, message.value)
-    // Auto-approve is a client-side reaction to permission requests, so the host only persists its state.
-    if (message.type === "requestAutoApproveState")
-      return post({ type: "autoApproveStateLoaded", value: input.context.globalState.get(AUTO_APPROVE, false) })
-    if (message.type === "persistAutoApproveState")
-      return void input.context.globalState.update(AUTO_APPROVE, message.value)
+    if (handleGlobalState(message)) return
     if (message.type === "saveImage") return saveImage(input.directory, message)
     // The Language tab applies at once: write `kilo-code.v2.language` and let the change event push it to every view.
     if (message.type === "setLanguage")
-      return void workspace
-        .getConfiguration(NAMESPACE)
-        .update("language", message.locale || undefined, true)
+      return void workspace.getConfiguration(NAMESPACE).update("language", message.locale || undefined, true)
     // The Kilo Gateway sign-in runs in the Profile view of the sidebar, as main opens its Profile panel.
     if (message.type === "openProfile") return void commands.executeCommand("kilo-code.v2.profile")
     // Chat textarea autocomplete: only the sidebar composer asks for it.

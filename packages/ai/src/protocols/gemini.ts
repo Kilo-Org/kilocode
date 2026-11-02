@@ -32,21 +32,11 @@ import { Lifecycle } from "./utils/lifecycle.js"
 
 const ADAPTER = "gemini"
 const CONTINUATION = "CONTINUATION"
-// Google documents this sentinel for replaying Gemini 3 function calls after their original signature was lost.
+// Google documents this sentinel for replaying function calls after their original signature was lost.
 const SKIP_THOUGHT_SIGNATURE_VALIDATOR = "skip_thought_signature_validator"
 // Gemini 2.5 rejects a budget under the model's minimum: 512 on Flash-Lite, the highest, and 128 on Pro.
 const MIN_THINKING_BUDGET = 512
 export const DEFAULT_BASE_URL = "https://generativelanguage.googleapis.com/v1beta"
-
-// Gemini 3 rejects replayed function calls without a thought signature. Google's SDKs avoid that in normal chats by
-// retaining complete model responses, but OpenCode reconstructs durable history and may encounter an unsigned call
-// from an older or external session. Model IDs are open-ended, so unknown Gemini aliases inherit current behavior.
-const requiresThoughtSignatureFallback = (modelID: string) => {
-  if (!/(^|\/)gemini-/i.test(modelID)) return false
-  if (/(^|\/)gemini-(?:1|2)(?:[.-]|$)/i.test(modelID)) return false
-  if (/(^|\/)gemini-pro(?:-vision)?$/i.test(modelID)) return false
-  return !/(^|\/)gemini-robotics-er-1\.5(?:[.-]|$)/i.test(modelID)
-}
 
 // Gemini 3 accepts media nested inside function responses; matched Gemini 2.5 variants reject it,
 // so their tool-result attachments lower as a separate user turn instead.
@@ -86,7 +76,6 @@ const GeminiInlineDataPart = Schema.Struct({
 })
 type GeminiInlineDataPart = Schema.Schema.Type<typeof GeminiInlineDataPart>
 
-/** Gemini Files API reference; the only remote input Gemini accepts. */
 const GeminiFileDataPart = Schema.Struct({
   fileData: Schema.Struct({
     mimeType: Schema.String,
@@ -230,6 +219,7 @@ const GeminiUsage = Schema.Struct({
   promptTokenCount: optionalNull(Schema.Number),
   candidatesTokenCount: optionalNull(Schema.Number),
   totalTokenCount: optionalNull(Schema.Number),
+  ...ProviderShared.ReportedBilling.fields,
 })
 type GeminiUsage = Schema.Schema.Type<typeof GeminiUsage>
 
@@ -324,7 +314,7 @@ const lowerMessages = Effect.fnUntraced(function* (request: LLMRequest) {
   const metadataKey = request.model.route.providerMetadataKey ?? request.model.provider
   const omitCallIds = omitsFunctionCallIds(request.model.id)
   const legacyToolMedia = routesLegacyToolMedia(request.model.id)
-  let pendingMedia: GeminiInlineDataPart[] | undefined
+  let pendingMedia: Array<GeminiInlineDataPart | typeof GeminiFileDataPart.Type> | undefined
   const flushMedia = () => {
     if (!pendingMedia) return
     contents.push({ role: "user", parts: [{ text: "Attached media from tool result:" }, ...pendingMedia] })
@@ -390,11 +380,7 @@ const lowerMessages = Effect.fnUntraced(function* (request: LLMRequest) {
           const signature = lowered.thoughtSignature
           parts.push({
             ...lowered,
-            thoughtSignature:
-              signature ??
-              (requiresThoughtSignatureFallback(request.model.id) && !hasSignedToolCall
-                ? SKIP_THOUGHT_SIGNATURE_VALIDATOR
-                : undefined),
+            thoughtSignature: signature ?? (!hasSignedToolCall ? SKIP_THOUGHT_SIGNATURE_VALIDATOR : undefined),
           })
           if (signature !== undefined) hasSignedToolCall = true
           continue
@@ -426,10 +412,11 @@ const lowerMessages = Effect.fnUntraced(function* (request: LLMRequest) {
       const media: GeminiInlineDataPart[] = []
       for (const item of content) {
         if (item.type === "text") continue
-        const value = yield* ProviderShared.requireInlineMedia("Gemini", ProviderShared.toolFileMedia(item).media)
-        media.push({ inlineData: { mimeType: value.mime, data: value.base64 } })
+        const value = yield* GeminiGenerateContent.mediaPart("Gemini", GeminiGenerateContent.toolMedia(item))
+        // Nested fileData can be accepted without the model seeing the video, even on newer Gemini models.
+        if (legacyToolMedia || "fileData" in value) (pendingMedia ??= []).push(value)
+        else media.push(value)
       }
-      if (legacyToolMedia && media.length > 0) (pendingMedia ??= []).push(...media)
       parts.push({
         functionResponse: {
           ...(omitCallIds ? {} : { id: part.id }),
@@ -438,7 +425,7 @@ const lowerMessages = Effect.fnUntraced(function* (request: LLMRequest) {
             name: part.name,
             content: text.join("\n"),
           },
-          parts: legacyToolMedia || media.length === 0 ? undefined : media,
+          parts: media.length === 0 ? undefined : media,
         },
       })
     }
@@ -539,6 +526,7 @@ const mapUsage = (
     cacheReadInputTokens: cached,
     reasoningTokens: thoughts,
     totalTokens: ProviderShared.totalTokens(promptTokens, outputTokens, usage.totalTokenCount ?? undefined),
+    cost: usage.cost,
     providerMetadata: providerMetadata(metadataKey, metadata),
   })
 }
@@ -555,6 +543,8 @@ const mapContinuedUsage = (requests: ReadonlyArray<GeminiUsage>, metadataKey: st
       cachedContentTokenCount: requests[0].cachedContentTokenCount,
       candidatesTokenCount: sum("candidatesTokenCount"),
       thoughtsTokenCount: sum("thoughtsTokenCount"),
+      // Every continued request is billed on its own.
+      cost: sum("cost"),
     },
     metadataKey,
     {

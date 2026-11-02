@@ -233,6 +233,12 @@ export function mergeProviderConfig(existing: unknown, produced: CustomProviderC
   return merged as CustomProviderConfigValue
 }
 
+function checkBaseURL(baseURL: string, t: Translator) {
+  if (!baseURL) return t("provider.custom.error.baseURL.required")
+  if (!/^https?:\/\//.test(baseURL) && !URL_REF.test(baseURL)) return t("provider.custom.error.baseURL.format")
+  return undefined
+}
+
 export function validateCustomProvider(input: ValidateArgs): ValidateResult {
   const providerID = input.form.providerID.trim()
   const name = input.form.name.trim()
@@ -256,11 +262,7 @@ export function validateCustomProvider(input: ValidateArgs): ValidateResult {
   )
 
   const nameError = !name ? input.t("provider.custom.error.name.required") : undefined
-  const urlError = !baseURL
-    ? input.t("provider.custom.error.baseURL.required")
-    : !/^https?:\/\//.test(baseURL) && !URL_REF.test(baseURL)
-      ? input.t("provider.custom.error.baseURL.format")
-      : undefined
+  const urlError = checkBaseURL(baseURL, input.t)
 
   const seenModels = new Set<string>()
   const modelErrors = input.form.models.map((m) => checkModel(m, seenModels, input.t))

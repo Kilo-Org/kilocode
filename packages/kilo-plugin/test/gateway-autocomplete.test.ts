@@ -1,6 +1,7 @@
 import { describe, expect } from "bun:test"
 import { fixture } from "@kilocode/gateway-core/testing"
 import { Effect } from "effect"
+import { Credential } from "@opencode/core/credential"
 import { Integration } from "@opencode/core/integration"
 import { Model } from "@opencode/core/model"
 import { Plugin } from "@opencode/core/plugin"
@@ -166,6 +167,43 @@ describe("Kilo Gateway autocomplete RPC", () => {
                 .pipe(Effect.flip),
             ).toMatchObject({ type: "unauthorized", message: "Missing inception provider API key" })
             expect(backend.state.autocompleteRequests).toEqual([])
+          }),
+        ),
+      (backend) => Effect.sync(() => backend[Symbol.dispose]()),
+    ),
+  )
+
+  it.live("uses the stored key of a direct provider before the environment", () =>
+    Effect.acquireUseRelease(
+      Effect.sync(() => fixture()),
+      (backend) =>
+        withEnv({ ...env, KILO_API_URL: backend.url }, () =>
+          Effect.gen(function* () {
+            yield* addPlugin()
+            const credentials = yield* Credential.Service
+            yield* credentials.create({
+              integrationID: Integration.ID.make("mistral"),
+              value: Credential.Key.make({ type: "key", key: "stored-key" }),
+            })
+            const original = globalThis.fetch
+            const authorization: string[] = []
+            globalThis.fetch = (async (_input: RequestInfo | URL, init?: RequestInit) => {
+              authorization.push(new Headers(init?.headers).get("authorization") ?? "")
+              return new Response('data: {"choices":[{"text":"stored"}]}\n\ndata: [DONE]\n\n', {
+                headers: { "content-type": "text/event-stream" },
+              })
+            }) as typeof globalThis.fetch
+            const rpc = yield* Rpc.Service
+            const result = yield* rpc
+              .call("kilocode.gateway", "autocomplete.fim", {
+                prefix: "x = ",
+                suffix: "",
+                provider: "mistral",
+                model: "codestral-2508",
+              })
+              .pipe(Effect.ensuring(Effect.sync(() => (globalThis.fetch = original))))
+            expect(result).toEqual({ text: "stored", cost: 0, inputTokens: 0, outputTokens: 0 })
+            expect(authorization).toEqual(["Bearer stored-key"])
           }),
         ),
       (backend) => Effect.sync(() => backend[Symbol.dispose]()),

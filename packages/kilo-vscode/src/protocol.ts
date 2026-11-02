@@ -19,6 +19,12 @@ export type ConfigScope = "global" | "project"
 export type ConfigFileContent = { path: string; text: string }
 
 /**
+ * A single-file diff that the host can render natively. The shape matches `ToolActionDiff` in `@kilocode/kilo-ui`;
+ * it is not imported from there, because the Solid UI package must not enter the Node host typecheck.
+ */
+export type ToolActionDiff = { file: string; patch: string; additions: number; deletions: number }
+
+/**
  * The effective Kilo policy values that the config API does not carry, because they are Kilo-only fields on the
  * upstream config schema. `managed` is true when a config document outside the writable global and project files
  * sets the value, for example a system or MDM document.
@@ -61,6 +67,8 @@ export type Ui =
   | { type: "setLanguage"; locale: string }
   | { type: "saveImage"; dataUrl: string; filename: string }
   | { type: "openProfile" }
+  | { type: "openToolFile"; filePath: string; line?: number; column?: number; sessionID?: string }
+  | { type: "openDiffVirtual"; diff: ToolActionDiff; initialDiffStyle?: "unified" | "split" }
 
 /** Settings panel messages the host handles directly (it reads and writes the config files). */
 export type Settings =

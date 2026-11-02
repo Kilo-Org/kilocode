@@ -11,7 +11,7 @@ async function fixture() {
   await r.write("package.json", '{ "name": "fixture", "packageManager": "bun@1.4.2" }\n')
   await r.write(".gitignore", ["tmp/", "", "# Local dev files", "opencode-dev", ""].join("\n"))
   await r.write("src/a.ts", "export const a = 1\n")
-  for (const name of ["check.yml", "test.yml", "deploy.yml"]) await r.write(`.github/workflows/${name}`, `name: ${name}\n`)
+  for (const name of ["check.yml", "check-test.yml", "deploy.yml"]) await r.write(`.github/workflows/${name}`, `name: ${name}\n`)
   await r.release("v2.0.26", "2026-10-08T00:00:00Z")
   await r.git("switch", "-q", "-c", "v2")
   await r.remove(".github/workflows/deploy.yml")

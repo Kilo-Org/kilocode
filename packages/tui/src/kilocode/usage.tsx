@@ -221,8 +221,16 @@ export default Plugin.define({
     context.ui.slot({
       append: "app",
       render() {
+        const show = () => {
+          const route = context.ui.router.current()
+          context.ui.dialog.show(() => (
+            <DialogUsage context={context} sessionID={route.type === "session" ? route.sessionID : undefined} />
+          ))
+        }
         context.keymap.layer(() => ({
           mode: "global",
+          // Above the app layer, so the command below shadows upstream's command of the same ID.
+          priority: 1,
           commands: [
             {
               id: "kilo.usage",
@@ -231,13 +239,12 @@ export default Plugin.define({
               group: "Kilo",
               palette: true,
               slash: { name: "usage", aliases: ["plans", "quota"] },
-              run: () => {
-                const route = context.ui.router.current()
-                context.ui.dialog.show(() => (
-                  <DialogUsage context={context} sessionID={route.type === "session" ? route.sessionID : undefined} />
-                ))
-              },
+              run: show,
             },
+            // Upstream's `usage.show` (`/usage`, OpenCode Console limits) is disabled: the keymap reaches only the first
+            // command of an ID, so its slash entry, palette entry, keybind and `dispatch("usage.show")` (the "View usage"
+            // toast action) all lead to the Kilo dialog instead.
+            { id: "usage.show", bind: false, run: show },
           ],
         }))
         return null
