@@ -43,8 +43,9 @@ export function failureNeedsSignIn(failure: Failure) {
 }
 
 /**
- * Reads the reason on each connection and again on each `catalog` event. Only the latest read writes, so a slow
- * answer for an earlier state cannot replace a newer one. A server without the method reports no reason.
+ * Reads the reason on each connection and applies the reason each `catalog` event carries. Only the latest read
+ * writes, so a slow answer for an earlier state cannot replace a newer one. A server without the method reports no
+ * reason.
  */
 export function createKiloCatalog(input: {
   api: OpenCodeClient
