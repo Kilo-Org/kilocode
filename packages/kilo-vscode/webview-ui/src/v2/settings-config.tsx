@@ -39,6 +39,11 @@ export type KiloSettingKey =
   | "claudeCodeCompat"
   | "extraCaCerts"
   | "languageCommitMessage"
+  | "autocomplete.enableAutoTrigger"
+  | "autocomplete.enableSmartInlineTaskKeybinding"
+  | "autocomplete.enableChatAutocomplete"
+  | "autocomplete.provider"
+  | "autocomplete.model"
 
 type Json = Record<string, unknown>
 

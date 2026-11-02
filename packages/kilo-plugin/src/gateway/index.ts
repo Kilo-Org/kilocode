@@ -907,6 +907,33 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
       }),
     )
 
+    // The key for an autocomplete request stays in this process: the Kilo token of the active scope, or the stored
+    // key of a direct provider with its environment variable as fallback.
+    const autocompleteCredential = (provider: KiloAutocomplete.AutocompleteProviderID) =>
+      Effect.gen(function* () {
+        if (provider === "kilo") {
+          if (!scopeCompatible()) return { ok: false as const, message: "Organization conflicts with the Kilo token scope" }
+          const account = activeAccount()
+          if (!account) return { ok: false as const, message: "Not authenticated with Kilo Gateway" }
+          return {
+            ok: true as const,
+            key: account.token,
+            headers: {
+              ...KiloHeaders.provider({ version: ctx.app.version, organizationID: account.organizationID }),
+              [KiloHeaders.HEADER_FEATURE]: "autocomplete",
+            },
+          }
+        }
+        const connection = yield* ctx.integration.connection.active(provider)
+        const credential = connection
+          ? yield* ctx.integration.connection.resolve(connection).pipe(Effect.orElseSucceed(() => undefined))
+          : undefined
+        const key =
+          (credential?.type === "key" ? credential.key : undefined) ??
+          KiloAutocomplete.DIRECT_PROVIDER_ENV[provider].map((name) => process.env[name]).find(Boolean)
+        if (!key) return { ok: false as const, message: `Missing ${provider} provider API key` }
+        return { ok: true as const, key, headers: {} }
+      })
     const registration = yield* ctx.rpc
       .register(KiloGatewayRpc.Definition, {
         ...GatewayRouters.handlers({
@@ -1099,6 +1126,63 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
             return Effect.succeed(target)
           }),
         "catalog.status": () => Effect.sync(() => catalogStatus(catalog)),
+        "autocomplete.fim": (input, context) =>
+          Effect.gen(function* () {
+            const target = KiloAutocomplete.resolveFimTarget(input.provider, input.model, catalog.account?.baseURL ?? gateway)
+            const credential = yield* autocompleteCredential(target.provider)
+            if (!credential.ok) return yield* Effect.fail(context.error("unauthorized", credential.message))
+            return yield* Effect.tryPromise({
+              try: (signal) =>
+                KiloAutocomplete.requestFim({
+                  target,
+                  key: credential.key,
+                  headers: credential.headers,
+                  signal,
+                  prefix: input.prefix,
+                  suffix: input.suffix,
+                  maxTokens: input.maxTokens,
+                  temperature: input.temperature,
+                }),
+              catch: (error) =>
+                error instanceof KiloAutocomplete.AutocompleteRequestError
+                  ? context.error("request", error.message, { status: error.status })
+                  : context.error("failed", error instanceof Error ? error.message : String(error)),
+            })
+          }),
+        "autocomplete.edit": (input, context) =>
+          Effect.gen(function* () {
+            const target = KiloAutocomplete.resolveEditTarget(input.provider, input.model, catalog.account?.baseURL ?? gateway)
+            if (target.provider === "kilo" && !target.url)
+              return yield* Effect.fail(
+                context.error("request", "Next Edit currently requires the Inception provider (mercury-edit-2).", { status: 400 }),
+              )
+            const credential = yield* autocompleteCredential(target.provider)
+            if (!credential.ok) return yield* Effect.fail(context.error("unauthorized", credential.message))
+            return yield* Effect.tryPromise({
+              try: (signal) =>
+                KiloAutocomplete.requestEdit({
+                  target,
+                  key: credential.key,
+                  headers: credential.headers,
+                  signal,
+                  maxTokens: input.maxTokens,
+                  context: {
+                    currentFilePath: input.currentFilePath,
+                    currentFileContent: input.currentFileContent,
+                    cursorLine: input.cursorLine,
+                    cursorCharacter: input.cursorCharacter,
+                    editableRegionStartLine: input.editableRegionStartLine,
+                    editableRegionEndLine: input.editableRegionEndLine,
+                    recentlyViewedSnippets: input.recentlyViewedSnippets,
+                    editDiffHistory: input.editDiffHistory,
+                  },
+                }),
+              catch: (error) =>
+                error instanceof KiloAutocomplete.AutocompleteRequestError
+                  ? context.error("request", error.message, { status: error.status })
+                  : context.error("failed", error instanceof Error ? error.message : String(error)),
+            })
+          }),
         "session.metadata": (input) =>
           Effect.sync(() => sessionMetadata.get(input.sessionID) ?? {}),
       })

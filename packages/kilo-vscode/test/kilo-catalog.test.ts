@@ -1,6 +1,6 @@
 // The Kilo catalog failure reasons: their message keys and the sign-in action, as v1 `provider-failure.test.ts`.
 import { describe, expect, mock, test } from "bun:test"
-import type { OpenCodeClient } from "@opencode/client"
+import type { OpenCodeClient, OpenCodeEvent } from "@opencode/client"
 import type { KiloGatewayRpc } from "@opencode/schema/kilocode/gateway"
 import type { Accessor, Setter } from "solid-js"
 import { dict } from "../webview-ui/src/i18n/en"
@@ -152,7 +152,7 @@ const tick = () => new Promise((resolve) => setTimeout(resolve, 0))
 
 function makeCatalog() {
   const [status, setStatus] = createSignal("disconnected")
-  const listeners = new Set<() => void>()
+  const listeners = new Set<(event: OpenCodeEvent) => void>()
   const calls: Array<{
     resolve: (value: { failure?: KiloGatewayRpc.CatalogFailure }) => void
     reject: (error: unknown) => void
@@ -181,8 +181,8 @@ function makeCatalog() {
     ...setup,
     calls,
     setStatus,
-    emit: () => {
-      for (const listener of listeners) listener()
+    emit: (status: KiloGatewayRpc.CatalogStatus = { failure: null }) => {
+      for (const listener of listeners) listener({ data: status } as unknown as OpenCodeEvent)
     },
   }
 }
