@@ -34,6 +34,14 @@ describe("settings search targets", () => {
     expect(result).toMatchObject({ tab: "aboutKiloCode", tabOnly: false })
   })
 
+  test.each([
+    ["commit language", "settings.commitMessage.language.description"],
+    ["custom prompt", "settings.commitMessage.override.title"],
+  ])("finds the Commit Message row for %s", (query, titleKey) => {
+    const result = searchSettings(query, translate).find((item) => item.titleKey === titleKey)
+    expect(result).toMatchObject({ tab: "commitMessage", tabOnly: false })
+  })
+
   test("does not index agent dialog and editor rows that cannot be revealed", () => {
     const keys = SETTINGS_ENTRIES.map((entry) => entry.titleKey)
     expect(keys).not.toContain("settings.agentBehaviour.removeMcp.title")
