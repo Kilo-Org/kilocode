@@ -10,6 +10,7 @@ import { KiloBranding } from "../src/branding/text"
 import { KiloLogo } from "../src/branding/logo-art"
 import { logo, go } from "../../tui/src/logo"
 import { createPluginRuntimePlugin } from "../script/plugin-runtime"
+import { compileDefine } from "./fixtures/compile-define"
 
 const repo = path.resolve(import.meta.dir, "../../..")
 const entry = path.join(import.meta.dir, "fixtures/branding.ts")
@@ -115,7 +116,7 @@ for (const hosted of [false, true]) {
       entrypoints: [entry],
       plugins: hosted ? [brandingPlugin] : [],
       compile: { outfile, autoloadBunfig: false, autoloadDotenv: false },
-      define: { KILO_BRANDING_COMPILED: "true" },
+      define: compileDefine,
     })
     expect(result.success, result.logs.map(String).join("\n")).toBe(true)
     checkPages(await run([outfile], root.path, !hosted), hosted)
@@ -136,7 +137,7 @@ for (const hosted of [false, true]) {
       entrypoints: [path.join(import.meta.dir, "fixtures/branding-tsx.ts")],
       plugins: [...(hosted ? [brandingPlugin] : []), createSolidTransformPlugin()],
       compile: { outfile, autoloadBunfig: false, autoloadDotenv: false },
-      define: { KILO_BRANDING_COMPILED: "true" },
+      define: compileDefine,
     })
     expect(result.success, result.logs.map(String).join("\n")).toBe(true)
     checkOnboarding(await run([outfile], root.path, !hosted), hosted)
@@ -166,7 +167,7 @@ for (const hosted of [false, true]) {
         entrypoints: [path.join(import.meta.dir, "fixtures/logo-render.ts")],
         plugins: [...(hosted ? [brandingPlugin] : []), createSolidTransformPlugin()],
         compile: { outfile, autoloadBunfig: false, autoloadDotenv: false },
-        define: { KILO_BRANDING_COMPILED: "true" },
+        define: compileDefine,
       })
       expect(result.success, result.logs.map(String).join("\n")).toBe(true)
       checkLogos(await run([outfile, modern ? "1" : "0"], root.path, !hosted), hosted, modern)
@@ -270,7 +271,7 @@ for (const hosted of [false, true]) {
       entrypoints: [path.join(import.meta.dir, "fixtures/epilogue.ts")],
       plugins: [...(hosted ? [brandingPlugin] : []), createSolidTransformPlugin()],
       compile: { outfile, autoloadBunfig: false, autoloadDotenv: false },
-      define: { KILO_BRANDING_COMPILED: "true" },
+      define: compileDefine,
     })
     expect(result.success, result.logs.map(String).join("\n")).toBe(true)
     checkEpilogue(await run([outfile, "48"], root.path, !hosted), hosted, 48)
@@ -319,7 +320,7 @@ for (const hosted of [false, true]) {
       entrypoints: [path.join(import.meta.dir, "fixtures/epilogue-resize.ts")],
       plugins: [...(hosted ? [brandingPlugin] : []), createSolidTransformPlugin(), createPluginRuntimePlugin()],
       compile: { outfile, autoloadBunfig: false, autoloadDotenv: false },
-      define: { KILO_BRANDING_COMPILED: "true" },
+      define: compileDefine,
     })
     expect(result.success, result.logs.map(String).join("\n")).toBe(true)
     for (const columns of [
