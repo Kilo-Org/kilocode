@@ -863,5 +863,20 @@
     "state": "ported",
     "note": "packages/kilo-gateway-core/test/autocomplete-request.test.ts (Kilo headers and body, fenced body and usage, direct Inception BYOK, unreadable error body status passthrough, 504 timeout, 499 cancel) and packages/kilo-plugin/test/gateway-autocomplete.test.ts (401 as unauthorized without Kilo auth, 400 for a FIM model, team header and feature header on the Gateway request) carry the assertions for the kilocode.gateway autocomplete.edit RPC, which replaces the v1 /kilo/edit route.",
     "by": "autocomplete-server"
+  },
+  "module:packages/kilo-vscode/src/services/autocomplete/migrate-default.ts": {
+    "state": "dropped",
+    "note": "One-time migration of stored kilo-code.new.autocomplete provider/model values to the unset default. The v2 extension reads new keys (kilo-code.v2.autocomplete.*), which have no stored v1 values to migrate; unset already resolves to the default model (packages/kilo-vscode/src/services/autocomplete/settings.ts readAutocompleteSettings).",
+    "by": "autocomplete-inline"
+  },
+  "module:packages/kilo-vscode/tests/unit/autocomplete-migrate-default.test.ts": {
+    "state": "dropped",
+    "note": "Tests the dropped migrate-default.ts migration of kilo-code.new.autocomplete values; v2 reads kilo-code.v2.autocomplete.* keys with no v1 values to migrate.",
+    "by": "autocomplete-inline"
+  },
+  "module:packages/kilo-vscode/docs/error-handling/autocomplete-settings-link.md": {
+    "state": "dropped",
+    "note": "Work note for v1 issue #6284 (status bar settings link), not runtime code. The v2 status bar tooltip links to kilo-code.v2.settings with the autocomplete tab (packages/kilo-vscode/src/services/autocomplete/AutocompleteStatusBar.ts).",
+    "by": "autocomplete-inline"
   }
 }
