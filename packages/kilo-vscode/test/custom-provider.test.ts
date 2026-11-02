@@ -22,12 +22,26 @@ import {
 } from "../webview-ui/src/components/settings/provider-visibility"
 import {
   INVALID_ENV,
+  MASKED_CUSTOM_PROVIDER_KEY,
+  addFetchedModels,
+  canFetchModels,
+  createFetchGate,
+  fetchKey,
+  freshModels,
+  initApiKey,
+  initBaseURL,
+  initHeaders,
+  initModels,
+  keyChanged,
   mergeProviderConfig,
   parseEnvKey,
+  repairFromRaw,
+  repairHeaderValues,
   unmaskKey,
   validateCustomProvider,
   type CustomProviderConfigValue,
   type FormState,
+  type ModelEntry,
 } from "../webview-ui/src/components/settings/CustomProviderValidation"
 
 const t = (key: string) => key
@@ -173,6 +187,18 @@ describe("validateCustomProvider", () => {
     expect(output.result?.config.env).toEqual(["MY_KEY"])
   })
 
+  test("keeps the stored key when an edit puts the mask back", () => {
+    const output = validateCustomProvider({
+      ...base,
+      editing: true,
+      apiKeyTouched: true,
+      existingEnv: ["MY_KEY"],
+      form: form({ apiKey: MASKED_CUSTOM_PROVIDER_KEY }),
+    })
+    expect(output.result?.key).toBeUndefined()
+    expect(output.result?.config.env).toEqual(["MY_KEY"])
+  })
+
   test("drops the existing env when a real key is typed", () => {
     const output = validateCustomProvider({
       ...base,
@@ -206,6 +232,273 @@ describe("validateCustomProvider", () => {
     const output = validateCustomProvider({ ...base, form: form({ baseURL: "api.example.com" }) })
     expect(output.result).toBeUndefined()
     expect(output.errors.baseURL).toBe("provider.custom.error.baseURL.format")
+  })
+
+  test("keeps a config reference as the base URL so an env-backed provider stays editable", () => {
+    for (const baseURL of ["{env:ACME_BASE_URL}", "{file:/run/secrets/acme-url}"]) {
+      const output = validateCustomProvider({ ...base, form: form({ baseURL }) })
+      expect(output.errors.baseURL).toBeUndefined()
+      expect(output.result?.config.settings.baseURL).toBe(baseURL)
+    }
+    expect(validateCustomProvider({ ...base, form: form({ baseURL: "{env:}" }) }).errors.baseURL).toBe(
+      "provider.custom.error.baseURL.format",
+    )
+  })
+
+  test("persists the selected provider package", () => {
+    const output = validateCustomProvider({
+      ...base,
+      form: form({ package: "@opencode/ai/providers/anthropic-compatible" }),
+    })
+    expect(output.result?.config.package).toBe("@opencode/ai/providers/anthropic-compatible")
+  })
+
+  test("rejects an existing provider id unless it is disabled", () => {
+    const taken = validateCustomProvider({ ...base, existingProviderIDs: new Set(["myprovider"]), form: form() })
+    expect(taken.result).toBeUndefined()
+    expect(taken.errors.providerID).toBe("provider.custom.error.providerID.exists")
+
+    const disabled = validateCustomProvider({
+      ...base,
+      existingProviderIDs: new Set(["myprovider"]),
+      disabledProviders: ["myprovider"],
+      form: form(),
+    })
+    expect(disabled.errors.providerID).toBeUndefined()
+    expect(disabled.result?.providerID).toBe("myprovider")
+  })
+
+  test("requires a name for every model and a value for every header key", () => {
+    const output = validateCustomProvider({
+      ...base,
+      form: form({
+        models: [{ id: "a", name: " ", reasoning: false, supportsImages: false }],
+        headers: [
+          { key: "X-A", value: "" },
+          { key: "x-a", value: "2" },
+        ],
+      }),
+    })
+    expect(output.result).toBeUndefined()
+    expect(output.errors.models[0]?.name).toBe("provider.custom.error.required")
+    expect(output.errors.headers[0]?.value).toBe("provider.custom.error.required")
+    expect(output.errors.headers[1]?.key).toBe("provider.custom.error.duplicate")
+  })
+})
+
+describe("edit round trip", () => {
+  const existing = {
+    name: "Acme",
+    package: "@opencode/ai/providers/openai",
+    env: ["ACME_KEY"],
+    settings: { baseURL: "https://acme.example/v1", timeout: 9000 },
+    headers: { "X-Org": "acme", "X-Token": "{env:ACME_TOKEN}" },
+    body: { store: false },
+    models: {
+      "vision-pro": {
+        name: "Vision Pro",
+        limit: { context: 128000 },
+        capabilities: { input: ["text", "image", "pdf"], reasoning: { supported: true, effort: ["low", "high"] } },
+        variants: [{ id: "high", settings: { reasoningEffort: "high" } }],
+      },
+      "text-mini": { name: "Text Mini", capabilities: { input: ["text"] } },
+    },
+  }
+
+  function load(config: unknown, storedKey = false): FormState {
+    return {
+      providerID: "acme",
+      name: "Acme",
+      package: "@opencode/ai/providers/openai",
+      baseURL: initBaseURL(config),
+      apiKey: initApiKey(config, storedKey),
+      models: initModels(config),
+      headers: initHeaders(config),
+      saving: false,
+    }
+  }
+
+  test("loads every field back, including headers with env references and model capabilities", () => {
+    const state = load(existing)
+    expect(state.baseURL).toBe("https://acme.example/v1")
+    expect(state.apiKey).toBe("{env:ACME_KEY}")
+    expect(state.headers).toEqual([
+      { key: "X-Org", value: "acme" },
+      { key: "X-Token", value: "{env:ACME_TOKEN}" },
+    ])
+    expect(state.models.map(({ id, name, reasoning, supportsImages }) => ({ id, name, reasoning, supportsImages }))).toEqual([
+      { id: "vision-pro", name: "Vision Pro", reasoning: true, supportsImages: true },
+      { id: "text-mini", name: "Text Mini", reasoning: false, supportsImages: false },
+    ])
+  })
+
+  test("saving an unchanged form writes the same value back", () => {
+    const output = validateCustomProvider({
+      ...base,
+      editing: true,
+      apiKeyTouched: false,
+      existingEnv: existing.env,
+      form: load(existing),
+    })
+    expect(output.result?.key).toBeUndefined()
+    expect(mergeProviderConfig(existing, output.result!.config)).toEqual(existing as unknown as CustomProviderConfigValue)
+  })
+
+  test("shows the mask for a stored key and nothing for a provider without a key", () => {
+    expect(initApiKey(existing, true)).toBe(MASKED_CUSTOM_PROVIDER_KEY)
+    expect(initApiKey({ name: "x" }, false)).toBe("")
+    expect(initApiKey({ env: ["A", "B"] }, false)).toBe("")
+  })
+
+  test("reads a hand-written value without failing", () => {
+    const odd = { settings: "x", headers: { "X-A": 1, "X-B": "b" }, models: { m: { capabilities: { input: "image" } } } }
+    expect(initBaseURL(odd)).toBe("")
+    expect(initHeaders(odd)).toEqual([{ key: "X-B", value: "b" }])
+    expect(initModels(odd)).toEqual([{ id: "m", name: "m", reasoning: false, supportsImages: false, variants: undefined }])
+    expect(initModels(undefined)).toEqual([{ id: "", name: "", reasoning: false, supportsImages: false }])
+    expect(initHeaders(undefined)).toEqual([{ key: "", value: "" }])
+  })
+})
+
+describe("late raw config", () => {
+  const model = (id: string, name = id): ModelEntry => ({ id, name, reasoning: false, supportsImages: false })
+  // The dialog loaded from the merged config: header values are already substituted.
+  const initial = {
+    name: "Acme",
+    package: "@opencode/ai/providers/openai-compatible" as const,
+    baseURL: "https://acme.example/v1",
+    apiKey: "",
+    models: [model("m", "Model")],
+    headers: [{ key: "X-Token", value: "sk-resolved" }],
+  }
+  // The raw file still has the reference.
+  const raw = { ...initial, headers: [{ key: "X-Token", value: "{env:ACME_TOKEN}" }] }
+
+  test("replaces the fields that still hold the merged value", () => {
+    const patch = repairFromRaw({ current: initial, initial, raw, apiKeyTouched: false })
+    expect(patch).toEqual({ headers: [{ key: "X-Token", value: "{env:ACME_TOKEN}" }] })
+  })
+
+  test("keeps a field the user edited in that window", () => {
+    const patch = repairFromRaw({
+      current: { ...initial, name: "Acme 2" },
+      initial,
+      raw,
+      apiKeyTouched: false,
+    })
+    expect(patch.name).toBeUndefined()
+    expect(patch.headers).toEqual([{ key: "X-Token", value: "{env:ACME_TOKEN}" }])
+  })
+
+  test("repairs only the header rows the user did not change", () => {
+    const initialHeaders = [
+      { key: "X-Token", value: "sk-resolved" },
+      { key: "X-Org", value: "acme" },
+    ]
+    const rawHeaders = [
+      { key: "X-Token", value: "{env:ACME_TOKEN}" },
+      { key: "X-Org", value: "{file:org.txt}" },
+    ]
+    const current = [
+      { key: "X-Token", value: "sk-resolved" },
+      { key: "X-Org", value: "edited" },
+    ]
+    expect(repairHeaderValues(current, initialHeaders, rawHeaders)).toEqual([
+      { key: "X-Token", value: "{env:ACME_TOKEN}" },
+      { key: "X-Org", value: "edited" },
+    ])
+  })
+
+  test("keeps a key the user edited, and repairs an untouched one", () => {
+    const keyed = { ...initial, apiKey: "********" }
+    const rawKeyed = { ...keyed, apiKey: "{env:ACME_KEY}" }
+    expect(repairFromRaw({ current: keyed, initial: keyed, raw: rawKeyed, apiKeyTouched: true }).apiKey).toBeUndefined()
+    expect(repairFromRaw({ current: keyed, initial: keyed, raw: rawKeyed, apiKeyTouched: false }).apiKey).toBe(
+      "{env:ACME_KEY}",
+    )
+  })
+
+  test("returns no patch when the form already matches the raw value", () => {
+    expect(repairFromRaw({ current: raw, initial: raw, raw, apiKeyTouched: false })).toEqual({})
+    expect(repairFromRaw({ current: raw, initial: initial, raw, apiKeyTouched: false })).toEqual({})
+  })
+})
+
+describe("fetch models in the dialog", () => {
+  const model = (id: string, name = id): ModelEntry => ({ id, name, reasoning: false, supportsImages: false })
+
+  test("fetches only for an http URL and not for the Anthropic package", () => {
+    expect(canFetchModels("@opencode/ai/providers/openai-compatible", "http://localhost:11434/v1")).toBe(true)
+    expect(canFetchModels("@opencode/ai/providers/openai", " https://api.example.com/v1")).toBe(true)
+    expect(canFetchModels("@opencode/ai/providers/openai-compatible", "localhost:11434")).toBe(false)
+    expect(canFetchModels("@opencode/ai/providers/openai-compatible", "")).toBe(false)
+    expect(canFetchModels("@opencode/ai/providers/anthropic-compatible", "https://api.example.com/v1")).toBe(false)
+  })
+
+  test("sends a typed key, an env variable, or the provider id for the stored key", () => {
+    expect(fetchKey({ apiKey: " sk-1 ", touched: true, providerID: "p" })).toEqual({ apiKey: "sk-1" })
+    expect(fetchKey({ apiKey: "{env:MY_KEY}", touched: true })).toEqual({ env: "MY_KEY" })
+    expect(fetchKey({ apiKey: "{env:MY_KEY}", touched: false, providerID: "p" })).toEqual({ env: "MY_KEY" })
+    expect(fetchKey({ apiKey: MASKED_CUSTOM_PROVIDER_KEY, touched: false, providerID: "p" })).toEqual({ providerID: "p" })
+    expect(fetchKey({ apiKey: "", touched: false, providerID: "p" })).toEqual({ providerID: "p" })
+  })
+
+  test("treats the mask as the stored key even after an edit", () => {
+    expect(fetchKey({ apiKey: MASKED_CUSTOM_PROVIDER_KEY, touched: true, providerID: "p" })).toEqual({ providerID: "p" })
+    expect(fetchKey({ apiKey: MASKED_CUSTOM_PROVIDER_KEY, touched: true })).toEqual({})
+  })
+
+  test("counts a key change only when the field is not the mask", () => {
+    expect(keyChanged("sk-1", true)).toBe(true)
+    expect(keyChanged("", true)).toBe(true)
+    expect(keyChanged(MASKED_CUSTOM_PROVIDER_KEY, true)).toBe(false)
+    expect(keyChanged(MASKED_CUSTOM_PROVIDER_KEY, false)).toBe(false)
+    expect(keyChanged("sk-1", false)).toBe(false)
+  })
+
+  test("sends no key for a cleared field, an invalid env name or a new provider without a key", () => {
+    expect(fetchKey({ apiKey: "", touched: true, providerID: "p" })).toEqual({})
+    expect(fetchKey({ apiKey: "{env:lower}", touched: true, providerID: "p" })).toEqual({})
+    expect(fetchKey({ apiKey: "", touched: false })).toEqual({})
+  })
+
+  test("offers only fetched models the form does not list yet", () => {
+    const fetched = [
+      { id: "a", name: "a" },
+      { id: "B", name: "B" },
+      { id: "c", name: "C" },
+    ]
+    expect(freshModels(fetched, [model(" A "), model("b"), model("")])).toEqual([{ id: "c", name: "C" }])
+  })
+
+  test("replaces the single empty row and appends otherwise", () => {
+    const picked = [
+      { id: "x", name: "X" },
+      { id: "y", name: "y" },
+    ]
+    expect(addFetchedModels([model("", "")], picked)).toEqual({ models: [model("x", "X"), model("y")], added: 2 })
+    expect(addFetchedModels([model("a")], picked)).toEqual({
+      models: [model("a"), model("x", "X"), model("y")],
+      added: 2,
+    })
+  })
+
+  test("skips picked models already in the form, including one typed after the fetch", () => {
+    const rows = [model("a"), model("X ")]
+    expect(addFetchedModels(rows, [{ id: "x", name: "x" }])).toEqual({ models: rows, added: 0 })
+    expect(addFetchedModels(rows, [{ id: "x", name: "x" }, { id: "z", name: "z" }]).added).toBe(1)
+  })
+
+  test("applies only the reply of the newest request", () => {
+    const gate = createFetchGate()
+    const first = gate.next()
+    const second = gate.next()
+    expect(gate.current(first)).toBe(false)
+    expect(gate.current(second)).toBe(true)
+
+    // A URL, key or package change takes a token too, so a reply still in flight is dropped.
+    gate.next()
+    expect(gate.current(second)).toBe(false)
   })
 })
 
