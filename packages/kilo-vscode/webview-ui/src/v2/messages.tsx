@@ -3,6 +3,7 @@
 import type { SessionMessageInfo } from "@opencode/client"
 import { createAutoScroll } from "@kilocode/kilo-ui/hooks"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
+import type { ToolActions } from "@kilocode/kilo-ui/message-part"
 import { Spinner } from "@kilocode/kilo-ui/spinner"
 import { createSignal, For, Match, onCleanup, Show, Switch } from "solid-js"
 import { useLanguage } from "../context/language"
@@ -13,6 +14,7 @@ import { Welcome } from "./welcome"
 
 export function MessageList(props: {
   session?: string
+  actions?: ToolActions
   onSelectSession: (id: string) => void
   onShowHistory: () => void
   /** Receives the handler the session dock calls to scroll to the bottom, as on main. */
@@ -90,7 +92,9 @@ export function MessageList(props: {
                           {(user) => <UserMessage message={user()} />}
                         </Match>
                         <Match when={message.type === "assistant" && message}>
-                          {(assistant) => <AssistantMessage message={assistant()} session={id()} />}
+                          {(assistant) => (
+                            <AssistantMessage message={assistant()} session={id()} actions={props.actions} />
+                          )}
                         </Match>
                         {/* A run can fail before any step, for example without a usable model. As the TUI, the idle
                             row carries that error. A failed step already shows its error on the assistant row. */}
