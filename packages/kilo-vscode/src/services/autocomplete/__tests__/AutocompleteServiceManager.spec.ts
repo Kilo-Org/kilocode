@@ -166,7 +166,11 @@ describe("AutocompleteServiceManager (less mocked logic)", () => {
   describe("ensureInlineCompletionProviderRegistration()", () => {
     it("registers the provider when enableAutoTrigger is true", async () => {
       const manager = await createManager()
-      ;(manager as unknown as { settings: unknown }).settings = { enableAutoTrigger: true }
+      ;(manager as unknown as { settings: unknown }).settings = {
+        enableAutoTrigger: true,
+        provider: "kilo",
+        model: "mistralai/codestral-2508",
+      }
 
       await (manager as unknown as { ensureInlineCompletionProviderRegistration: () => Promise<void> }).ensureInlineCompletionProviderRegistration()
 
@@ -176,6 +180,43 @@ describe("AutocompleteServiceManager (less mocked logic)", () => {
       expect((manager as unknown as { inlineCompletionProviderDisposable: unknown }).inlineCompletionProviderDisposable).toBe(
         disposables[0],
       )
+    })
+
+    it("registers classic notebook fallback when Next Edit is selected", async () => {
+      const manager = await createManager()
+      ;(manager as unknown as { settings: unknown }).settings = {
+        enableAutoTrigger: true,
+        provider: "kilo",
+        model: "inception/mercury-next-edit",
+      }
+
+      await (manager as unknown as { ensureInlineCompletionProviderRegistration: () => Promise<void> }).ensureInlineCompletionProviderRegistration()
+
+      expect(registered).toEqual([
+        { selector: [{ scheme: "file" }], provider: manager.nextEditProvider },
+        { selector: [{ scheme: "vscode-notebook-cell" }], provider: manager.inlineCompletionProvider },
+      ])
+      expect(manager.currentMode).toBe("next-edit")
+      expect(
+        (manager as unknown as { notebookCompletionProviderDisposable: unknown }).notebookCompletionProviderDisposable,
+      ).toBe(disposables[1])
+    })
+
+    it("swaps the provider when the model kind changes while enabled", async () => {
+      const manager = await createManager()
+      const settings = manager as unknown as {
+        settings: unknown
+        ensureInlineCompletionProviderRegistration: () => Promise<void>
+      }
+      settings.settings = { enableAutoTrigger: true, provider: "kilo", model: "inception/mercury-next-edit" }
+      await settings.ensureInlineCompletionProviderRegistration()
+      settings.settings = { enableAutoTrigger: true, provider: "kilo", model: "mistralai/codestral-2508" }
+      await settings.ensureInlineCompletionProviderRegistration()
+
+      expect(disposables[0]?.dispose).toHaveBeenCalledTimes(1)
+      expect(disposables[1]?.dispose).toHaveBeenCalledTimes(1)
+      expect(registered[2]?.provider).toBe(manager.inlineCompletionProvider)
+      expect(manager.currentMode).toBe("classic")
     })
 
     it("does not register the provider when enableAutoTrigger is false", async () => {

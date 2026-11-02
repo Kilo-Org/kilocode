@@ -13,6 +13,11 @@ import type { Connection } from "./connection"
 import { hasValidCredentials, fimModel as notebookModel } from "./fim"
 import { AUTOCOMPLETE_SECTION, readAutocompleteSettings } from "./settings"
 import { DEFAULT_AUTOCOMPLETE_MODEL, getAutocompleteModel } from "../../shared/autocomplete-models"
+import { NextEditInlineCompletionProvider } from "./next-edit/NextEditInlineCompletionProvider"
+import { disposeLog } from "./next-edit/log"
+import { NextEditSuggestionManager } from "./next-edit/NextEditSuggestionManager"
+import { toAllowedMercuryRecentSnippets } from "./next-edit/recentSnippetsAdapter"
+import type { FileIgnoreController } from "./shims/FileIgnoreController"
 
 export function selector(kind: "classic" | "next-edit"): vscode.DocumentSelector {
   return kind === "classic" ? [{ scheme: "file" }, { scheme: "vscode-notebook-cell" }] : [{ scheme: "file" }]
@@ -63,7 +68,12 @@ export class AutocompleteServiceManager {
 
   public readonly codeActionProvider: AutocompleteCodeActionProvider
   public readonly inlineCompletionProvider: AutocompleteInlineCompletionProvider
+  public readonly nextEditProvider: NextEditInlineCompletionProvider
+  public readonly nextEditSuggestionManager: NextEditSuggestionManager
   private inlineCompletionProviderDisposable: vscode.Disposable | null = null
+  private notebookCompletionProviderDisposable: vscode.Disposable | null = null
+  /** The resolved ignore controller, for synchronous snippet filtering. */
+  private ignoreControllerSync: FileIgnoreController | null = null
   private inlineCompletionProviderKind: "classic" | "next-edit" | null = null
   private unsubscribeState: (() => void) | null = null
   /** The last time autocomplete asked for the server, so a stop does not trigger a start loop. */
@@ -84,7 +94,8 @@ export class AutocompleteServiceManager {
 
     const workspacePath = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? ""
 
-    this.codeActionProvider = new AutocompleteCodeActionProvider()
+    this.nextEditSuggestionManager = new NextEditSuggestionManager()
+    this.codeActionProvider = new AutocompleteCodeActionProvider(() => this.nextEditSuggestionManager.isPending())
     this.inlineCompletionProvider = new AutocompleteInlineCompletionProvider(
       this.context,
       DEFAULT_AUTOCOMPLETE_MODEL.id,
@@ -95,6 +106,47 @@ export class AutocompleteServiceManager {
       new AutocompleteTelemetry(),
       (status) => this.handleFatalAutocompleteError(status),
     )
+    void this.inlineCompletionProvider.ignoreController.then((ignore) => {
+      this.ignoreControllerSync = ignore
+    })
+
+    this.nextEditProvider = new NextEditInlineCompletionProvider({
+      connection,
+      suggestionManager: this.nextEditSuggestionManager,
+      getModelSelection: () => {
+        const info = getAutocompleteModel(this.settings?.provider, this.settings?.model)
+        return { providerId: info.providerID, modelId: info.modelID }
+      },
+      isFileAllowed: async (fsPath) => (await this.inlineCompletionProvider.ignoreController).validateAccess(fsPath),
+      getRecentlyViewedSnippets: () => {
+        // One recently visited ranges cache serves both providers. Snippets stay empty until the ignore controller
+        // can approve each file.
+        const ignore = this.ignoreControllerSync
+        if (!ignore) return []
+        return toAllowedMercuryRecentSnippets(
+          this.inlineCompletionProvider.recentlyVisitedRangesService.getSnippets(),
+          (path) => ignore.validateAccess(path),
+        )
+      },
+      onFatalError: (status) => this.handleFatalAutocompleteError(status),
+      onSuggestion: (event) => {
+        const name =
+          event.status === "error"
+            ? AutocompleteTelemetryEvent.AUTOCOMPLETE_LLM_REQUEST_FAILED
+            : event.shown
+              ? AutocompleteTelemetryEvent.AUTOCOMPLETE_LLM_SUGGESTION_RETURNED
+              : AutocompleteTelemetryEvent.AUTOCOMPLETE_LLM_REQUEST_COMPLETED
+        captureAutocompleteTelemetry(name, {
+          mode: "next-edit",
+          model: getAutocompleteModel(this.settings?.provider, this.settings?.model).id,
+          latencyMs: event.latencyMs,
+          inputTokens: event.inputTokens,
+          outputTokens: event.outputTokens,
+          shown: event.shown,
+          errorStatus: event.errorStatus,
+        })
+      },
+    })
 
     // A server start or stop changes whether requests can run. A new server may also carry a new login, so give
     // autocomplete a fresh chance after a failure.
@@ -150,21 +202,50 @@ export class AutocompleteServiceManager {
    */
   private async ensureInlineCompletionProviderRegistration() {
     const shouldBeRegistered = this.settings?.enableAutoTrigger ?? false
+    const info = getAutocompleteModel(this.settings?.provider, this.settings?.model)
+    const desiredKind: "classic" | "next-edit" = info.kind === "edit" ? "next-edit" : "classic"
+
+    // A model change while enabled swaps the provider.
+    if (
+      shouldBeRegistered &&
+      this.inlineCompletionProviderKind !== null &&
+      this.inlineCompletionProviderKind !== desiredKind
+    ) {
+      this.unregister()
+    }
+
+    if (!shouldBeRegistered && this.inlineCompletionProviderKind === "next-edit") {
+      this.nextEditSuggestionManager.clear()
+    }
     const isRegistered = this.inlineCompletionProviderDisposable !== null
     if (shouldBeRegistered === isRegistered) return
 
     if (!shouldBeRegistered) {
-      this.inlineCompletionProviderDisposable?.dispose()
-      this.inlineCompletionProviderDisposable = null
-      this.inlineCompletionProviderKind = null
+      this.unregister()
       return
     }
 
     this.inlineCompletionProviderDisposable = vscode.languages.registerInlineCompletionItemProvider(
-      selector("classic"),
-      this.inlineCompletionProvider,
+      selector(desiredKind),
+      desiredKind === "next-edit" ? this.nextEditProvider : this.inlineCompletionProvider,
     )
-    this.inlineCompletionProviderKind = "classic"
+    // Next Edit works on files only; notebook cells keep FIM with the sibling FIM model.
+    if (desiredKind === "next-edit") {
+      this.notebookCompletionProviderDisposable = vscode.languages.registerInlineCompletionItemProvider(
+        [{ scheme: "vscode-notebook-cell" }],
+        this.inlineCompletionProvider,
+      )
+    }
+    this.inlineCompletionProviderKind = desiredKind
+  }
+
+  private unregister() {
+    if (this.inlineCompletionProviderKind === "next-edit") this.nextEditSuggestionManager.clear()
+    this.inlineCompletionProviderDisposable?.dispose()
+    this.notebookCompletionProviderDisposable?.dispose()
+    this.inlineCompletionProviderDisposable = null
+    this.notebookCompletionProviderDisposable = null
+    this.inlineCompletionProviderKind = null
   }
 
   /** Which provider is currently registered (`null` if none). */
@@ -316,13 +397,12 @@ export class AutocompleteServiceManager {
     this.unsubscribeAuth = null
     this.config.dispose()
 
-    if (this.inlineCompletionProviderDisposable) {
-      this.inlineCompletionProviderDisposable.dispose()
-      this.inlineCompletionProviderDisposable = null
-      this.inlineCompletionProviderKind = null
-    }
+    this.unregister()
 
     this.inlineCompletionProvider.dispose()
+    this.nextEditProvider.dispose()
+    this.nextEditSuggestionManager.dispose()
+    disposeLog()
 
     AutocompleteServiceManager._instance = null
   }
