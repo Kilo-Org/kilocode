@@ -700,6 +700,15 @@ ToolRegistry.register({
       event.preventDefault()
       action(id)
     }
+    const openChildKey = (event: KeyboardEvent) => {
+      if (event.key !== "Enter" && event.key !== " ") return
+      const id = childID()
+      const action = props.actions?.openSession
+      if (!id || !action) return
+      event.preventDefault()
+      event.stopPropagation()
+      action(id)
+    }
     const tools = () => {
       const id = childID()
       return id && child ? child.tools(id) : []
@@ -722,13 +731,16 @@ ToolRegistry.register({
           {approvalLine()}
         </div>
         <Show when={canOpen()}>
-          <IconButton
-            icon="square-arrow-top-right"
-            size="small"
-            variant="ghost"
-            aria-label={i18n.t("task.open.tab")}
+          <span
+            data-slot="task-tool-open"
+            role="button"
+            tabIndex={0}
+            aria-label={i18n.t("task.open.panel")}
             onClick={openChild}
-          />
+            onKeyDown={openChildKey}
+          >
+            <Icon name="square-arrow-top-right" size="small" />
+          </span>
         </Show>
       </div>
     )
@@ -743,11 +755,13 @@ ToolRegistry.register({
             data-resolve={resolved() ? "true" : undefined}
             onClick={openChild}
           >
-            <AgentAvatar id={childID() ?? props.partID} status={avatar()} />
+            <AgentAvatar id={childID() ?? "unknown"} status={avatar()} />
           </span>
         }
         status={props.status}
         trigger={trigger()}
+        approvalPlacement="hidden"
+        allowPendingToggle
         defaultOpen={auto()}
         open={open()}
         forceOpen={props.forceOpen}

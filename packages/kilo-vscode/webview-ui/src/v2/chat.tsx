@@ -3,7 +3,7 @@ import { Button } from "@kilocode/kilo-ui/button"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import type { ToolActions } from "@kilocode/kilo-ui/message-part"
 import { ToolChildSessionProvider, type ToolChildSession } from "@kilocode/kilo-ui/tool-child-session"
-import { createEffect, createMemo, createSignal, Match, on, Show, Switch } from "solid-js"
+import { createEffect, createMemo, createSignal, Match, on, onCleanup, Show, Switch } from "solid-js"
 import type { ToHost } from "../../../src/protocol"
 import { useLanguage } from "../context/language"
 import { getVSCodeAPI } from "../context/vscode"
@@ -53,20 +53,65 @@ export function Chat() {
   }
 
   // Subagent cards read the child session's tools from the same store as the open session. Load a child's message
-  // history once, when its card first asks for it; later tool events update the loaded messages in place.
+  // history when its card first asks for it; later tool events update the loaded messages in place. The loaded set
+  // is bounded to the open session tree: leaving that tree evicts it, so a long-lived sidebar does not keep every
+  // child transcript it has ever expanded.
   const loadedChildren = new Set<string>()
+  const hydrate = async (sessionID: string) => {
+    await v2.data.session.message.sync(sessionID)
+    for (let page = 0; page < 4 && v2.data.session.message.more(sessionID); page++) {
+      await v2.data.session.message.loadMore(sessionID)
+    }
+  }
+  const load = (sessionID: string) => {
+    if (loadedChildren.has(sessionID)) return
+    loadedChildren.add(sessionID)
+    void hydrate(sessionID).catch((error) => {
+      loadedChildren.delete(sessionID)
+      v2.report(error)
+    })
+  }
   const childSessions: ToolChildSession = {
     tools: (sessionID) => childTools(v2.data.session.message.list(sessionID)),
     running: (sessionID) => v2.data.session.status(sessionID) === "running",
-    load: (sessionID) => {
-      if (loadedChildren.has(sessionID)) return
-      loadedChildren.add(sessionID)
-      void v2.data.session.message.sync(sessionID).catch((error) => {
-        loadedChildren.delete(sessionID)
-        v2.report(error)
-      })
-    },
+    load,
   }
+  let previousSession: string | undefined
+  createEffect(
+    on(
+      session,
+      (id) => {
+        const previous = previousSession
+        previousSession = id
+        if (!id || !previous || previous === id) return
+        loadedChildren.clear()
+        // Opening a child or returning to its parent keeps the cached tree the card reads.
+        if (v2.data.session.root(id) === previous || v2.data.session.root(previous) === id) return
+        v2.data.session.evict(previous)
+      },
+      { defer: true },
+    ),
+  )
+  createEffect(
+    on(
+      v2.connection.status,
+      (status) => {
+        if (status !== "connected") return
+        for (const id of loadedChildren) {
+          void hydrate(id).catch((error) => {
+            loadedChildren.delete(id)
+            v2.report(error)
+          })
+        }
+      },
+      { defer: true },
+    ),
+  )
+  onCleanup(() => {
+    loadedChildren.clear()
+    const id = session()
+    if (id) v2.data.session.evict(id)
+  })
 
   createEffect(
     on(session, (id) => {
