@@ -3,7 +3,7 @@
 import { commands, Range, Uri, window, workspace, type TextDocumentContentProvider } from "vscode"
 import type { ToolActionDiff } from "./protocol"
 import { resolveToolFilePath, virtualDiffPath } from "./tool-diff-path"
-import { filePosition, patchDocuments } from "./tool-diff-patch"
+import { filePosition, patchFiles } from "./tool-diff-patch"
 
 const SCHEME = "kilo-tool-diff"
 
@@ -19,25 +19,46 @@ export function toolDiff() {
   const closed = workspace.onDidCloseTextDocument((document) => {
     if (document.uri.scheme === SCHEME) documents.delete(document.uri.toString())
   })
+  const openOne = (file: string, before: string, after: string, preview: boolean) => {
+    const name = file.split(/[\\/]/).pop() || file
+    const id = `${sequence++}`
+    const left = virtualUri(id, "before", file)
+    const right = virtualUri(id, "after", file)
+    documents.set(left.toString(), before)
+    documents.set(right.toString(), after)
+    void commands
+      .executeCommand("vscode.diff", left, right, `Changes: ${name}`, { preview })
+      .then(undefined, (error: unknown) => {
+        // No editor will close these documents, so drop them here instead of keeping their text for the session.
+        documents.delete(left.toString())
+        documents.delete(right.toString())
+        report(`Could not open the diff for ${file}`, error)
+      })
+  }
+  /**
+   * One native diff per file, in patch order. VS Code has no combined multi-file diff, so a multi-file patch opens
+   * one editor per file. A single file stays a preview tab; several files are kept as tabs so none replaces another.
+   *
+   * A native diff editor follows the user's `diffEditor.renderSideBySide` setting, so `initialDiffStyle` cannot
+   * change the layout of this diff. The argument stays in the protocol for clients that send it.
+   */
+  const openMany = (diffs: ToolActionDiff[], _initialDiffStyle?: "unified" | "split") => {
+    const files = diffs.flatMap((diff) =>
+      patchFiles(diff.patch).map((part) => ({
+        file: part.file || diff.file,
+        before: part.before,
+        after: part.after,
+      })),
+    )
+    const preview = files.length === 1
+    for (const file of files) openOne(file.file, file.before, file.after, preview)
+  }
   return {
     scheme: SCHEME,
     provider,
-    /**
-     * A native diff editor follows the user's `diffEditor.renderSideBySide` setting, so `initialDiffStyle` cannot
-     * change the layout of this diff. The argument stays in the protocol for clients that send it.
-     */
-    open(diff: ToolActionDiff, _initialDiffStyle?: "unified" | "split") {
-      const { before, after } = patchDocuments(diff.patch)
-      const name = diff.file.split(/[\\/]/).pop() || diff.file
-      const id = `${sequence++}`
-      const left = virtualUri(id, "before", diff.file)
-      const right = virtualUri(id, "after", diff.file)
-      documents.set(left.toString(), before)
-      documents.set(right.toString(), after)
-      void commands
-        .executeCommand("vscode.diff", left, right, `Changes: ${name}`, { preview: true })
-        .then(undefined, (error: unknown) => report(`Could not open the diff for ${diff.file}`, error))
-    },
+    /** One file's patch. A combined patch opens every file it carries. */
+    open: (diff: ToolActionDiff, initialDiffStyle?: "unified" | "split") => openMany([diff], initialDiffStyle),
+    openMany,
     dispose() {
       closed.dispose()
       documents.clear()

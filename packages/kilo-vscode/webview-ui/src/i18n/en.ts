@@ -767,6 +767,8 @@ export const dict = {
   "sidebar.topBar.profile": "Profile",
   "sidebar.topBar.settings": "Settings",
   "sidebar.session.newSession": "New Session",
+  "sidebar.session.changes.title": "Changes",
+  "sidebar.session.changes.openAll": "Open All",
   "sidebar.session.newSession.tooltip": "Start a fresh conversation while keeping the current session intact.",
   "sidebar.session.newWorktree": "New Worktree",
   "sidebar.session.newWorktree.tooltip":

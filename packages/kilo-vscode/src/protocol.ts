@@ -31,6 +31,24 @@ export type ToolActionDiff = { file: string; patch: string; additions: number; d
  */
 export type ConfigPolicy = { hidePromptTrainingModels: boolean; managed: boolean }
 
+export type ToolDisplayLayout = "expanded" | "collapsed"
+
+/**
+ * How the chat starts each kind of tool block. The three Kilo config keys are not in the config API, so the host
+ * reads the config documents and sends the effective values, with the same defaults as v1.
+ */
+export type DisplaySettings = {
+  terminalCommandDisplay: ToolDisplayLayout
+  codeEditDisplay: ToolDisplayLayout
+  mcpToolDisplay: ToolDisplayLayout
+}
+
+export const DISPLAY_DEFAULTS: DisplaySettings = {
+  terminalCommandDisplay: "expanded",
+  codeEditDisplay: "collapsed",
+  mcpToolDisplay: "collapsed",
+}
+
 /**
  * Where the Settings panel should go. `focus` names a row that a subtab renders itself (an MCP server), while
  * `titleKey` names a row by its i18n key so the panel can scroll to it after the tab renders.
@@ -43,15 +61,52 @@ export type SettingsNavigation = {
   search?: boolean
 }
 
+export type SpeechToTextModel = {
+  readonly id: string
+  readonly label: string
+  readonly provider: string
+  readonly verbatim?: boolean
+}
+
+export type SpeechSettingKey = "base_url" | "api_key" | "model"
+
+export type SpeechToTextSettings = {
+  readonly baseUrl?: string
+  readonly apiKey?: string
+  readonly model?: string
+}
+
+/** `enabled` is whether the composer may show the microphone; `signedIn` is the Gateway account state. */
+export type SpeechToTextStatus = {
+  readonly enabled: boolean
+  readonly remote: boolean
+  readonly signedIn: boolean
+  readonly source: "gateway" | "custom"
+  readonly model: string
+  readonly models: SpeechToTextModel[]
+  readonly settings: SpeechToTextSettings
+  readonly catalogError?: string
+}
+
 export type ToHost =
   | Request
   | { type: "abort"; id: number }
   | { type: "open"; url: string }
   | Ui
   | Settings
+  | Speech
   | ({ type: "openSettingsTab" } & SettingsNavigation)
   | { type: "settingsReady" }
   | { type: "settingsTabChanged"; tab: string }
+
+/** Voice input: the host owns the microphone, the custom endpoint and the Gateway RPC. */
+export type Speech =
+  | { type: "speechToTextPrewarm" }
+  | { type: "speechToTextConfig" }
+  | { type: "speechToTextStart"; requestId: string; model: string; language?: string }
+  | { type: "speechToTextStop"; requestId: string }
+  | { type: "speechToTextCancel"; requestId: string }
+  | { type: "speechToTextSave"; requestId: string; key: SpeechSettingKey; value: string }
 
 /** Messages of the copied v1 UI. The host ignores `webviewFocusChanged` and `setLanguage` for now. */
 export type Ui =
@@ -67,6 +122,8 @@ export type Ui =
   | { type: "openProfile" }
   | { type: "openToolFile"; filePath: string; line?: number; column?: number; sessionID?: string }
   | { type: "openDiffVirtual"; diff: ToolActionDiff; initialDiffStyle?: "unified" | "split" }
+  | { type: "openDiffsVirtual"; diffs: ToolActionDiff[]; initialDiffStyle?: "unified" | "split" }
+  | { type: "requestDisplaySettings" }
 
 /** Settings panel messages the host handles directly (it reads and writes the config files). */
 export type Settings =
@@ -111,6 +168,13 @@ export type ToWebview =
   | { type: "configLoaded"; global: ConfigFileContent; project: ConfigFileContent; policy?: ConfigPolicy; error?: string }
   | { type: "configWritten"; id: number; ok: boolean; error?: string }
   | { type: "vscodeSettingsLoaded"; values: Record<string, unknown> }
+  | { type: "displaySettingsLoaded"; values: DisplaySettings; error?: string }
+  | { type: "speechToTextConfigLoaded"; status: SpeechToTextStatus }
+  | { type: "speechToTextStarted"; requestId: string }
+  | { type: "speechToTextResult"; requestId: string; text: string }
+  | { type: "speechToTextError"; requestId: string; error: string; code?: string }
+  | { type: "speechToTextCancelled"; requestId: string }
+  | { type: "speechToTextSaved"; requestId: string; ok: boolean; error?: string }
   /** The reply to `fetchCustomProviderModels`: `models`, or `error` with `auth` set when the server refused the key. */
   | {
       type: "customProviderModelsFetched"

@@ -29,6 +29,12 @@ export function serialize(): <T>(task: () => Promise<T>) => Promise<T> {
   }
 }
 
+/**
+ * One queue for every config-file write in the extension host. The Settings host and the speech settings both write
+ * the same global file, so they must share the chain or one edit can drop the other.
+ */
+export const configWriteQueue = serialize()
+
 /** True only for the Kilo v2 config file names, so a write never lands in another file. */
 export function isKiloConfigFile(file: string): boolean {
   return KiloConfigFiles.names.includes(path.basename(file))

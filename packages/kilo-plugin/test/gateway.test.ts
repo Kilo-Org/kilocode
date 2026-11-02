@@ -2557,6 +2557,13 @@ describe("KiloGatewayPlugin", () => {
                 expect(yield* rpc.call("kilocode.gateway", "models.transcriptions", {})).toEqual([
                   { id: "openai/gpt-4o-mini-transcribe", name: "GPT-4o Mini Transcribe" },
                 ])
+                expect(
+                  yield* rpc.call("kilocode.gateway", "audio.transcriptions", {
+                    model: "openai/gpt-4o-mini-transcribe",
+                    input_audio: { data: "AAAA", format: "m4a" },
+                    language: "en",
+                  }),
+                ).toEqual({ text: "Make the header sticky" })
                 expect(yield* rpc.call("kilocode.gateway", "models.embeddings", {})).toMatchObject({
                   defaultModel: "mistralai/mistral-embed-2312",
                   models: [{ id: "mistralai/codestral-embed-2505", dimension: 1536, note: "code" }, { dimension: 1024 }],

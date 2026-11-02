@@ -1,8 +1,8 @@
 {
   "$comment": "Shared-patch baseline (U-L3-01). Read by script/check-shared-patches.ts and script/check-opencode-annotations.ts. Each shared upstream file that Kilo adds or changes needs an entry: rung (3 = seam patch, 4 = feature patch) and the missing seam. `unmarked` allows lines without markers and states why. Raise a limit only in the PR that adds the patch, and lower it when a patch goes away.",
   "limits": {
-    "files": 71,
-    "markedLines": 622,
+    "files": 73,
+    "markedLines": 1058,
     "unmarkedLines": 90,
     "deletedFiles": 0
   },
@@ -137,6 +137,14 @@
       "rung": 4,
       "seam": "Set the optional `moved` flag when an update hunk has a move target. The move already applies here; only the result metadata loses the fact that it was a rename. The tool has no plugin hook for its own result metadata, and add, delete and plain update hunks stay unchanged."
     },
+    "packages/core/src/tool/plugin/shell.ts": {
+      "rung": 4,
+      "seam": "Publish the running command's current output and running state to the tool card while it executes. The shell tool exposes no progress stream for its own execution, and a plugin can wrap the whole execute but cannot read the shell output that execute owns. The marked block pages the shell's file-backed output on a short interval, publishes progress metadata, and stops before the call settles. The final result and metadata are unchanged."
+    },
+    "packages/core/test/tool-shell.test.ts": {
+      "rung": 4,
+      "seam": "Test coverage for the marked live-output progress behavior. The existing progress test asserted a single update, which the new behavior supersedes; the added tests cover streamed output before exit, the bounded large-output preview, the background running state and interruption. The harness must stay next to the upstream shell tests because it composes the real Job, Session and Shell services."
+    },
     "packages/core/src/plugin/sdk.ts": {
       "rung": 3,
       "seam": "Registration phase for embedder plugins: `register(plugin, { phase: \"post\" })` and `all(phase)`. Without a phase, `all()` returns what it returned before. The Kilo agents use it: the agent ceiling must run after `ConfigAgentPlugin`, which is an internal post plugin (U-E2-12). Six lines, no Kilo value. Rungs 1 and 2 cannot supply it: the store had no phase, so every embedder plugin ran before the internal post plugins and a plugin could not act on the result of config."
@@ -245,7 +253,7 @@
     },
     "packages/tui/src/routes/session/index.tsx": {
       "rung": 4,
-      "seam": "The production transcript has no plugin renderer slot for assistant footers, token usage rows, or intermediate step labels. Narrow call-outs render Kilo-owned actual-route components while preserving requested Auto identity and upstream rendering."
+      "seam": "The production transcript has no plugin renderer slot for assistant footers, token usage rows, or intermediate step labels. Narrow call-outs render Kilo-owned actual-route components while preserving requested Auto identity and upstream rendering. The same closed tool renderers need three transcript behaviors that upstream does not expose: a dismissed question summary, a moved label for a renamed patch target, and a live child line for a subagent with its current tool, retry, tool count, and duration. No tool renderer hook or generic knob reaches these rows."
     },
     "packages/tui/src/routes/session/group-view.tsx": {
       "rung": 4,

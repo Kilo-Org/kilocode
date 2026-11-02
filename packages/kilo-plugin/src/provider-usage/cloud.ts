@@ -6,6 +6,9 @@ import type { ProviderUsage } from "@opencode/schema/kilocode/provider-usage"
 // Kilo coding plans with their quota windows, as v1 built them (packages/core/src/kilocode/provider-usage/cloud.ts
 // on main). The data comes from the `kilocode.gateway` RPC, which owns the Kilo account.
 
+/** The snapshot id prefix of every Kilo managed plan source. */
+export const managedPrefix = "kilo-managed:"
+
 /** Active or past-due plans whose coding plan key is installed and enabled in BYOK, sorted by ID. */
 export function plans(
   subscriptions: readonly KiloGatewayRpc.CodingPlanSubscription[],
@@ -37,7 +40,7 @@ export function snapshot(
   base: string,
 ): ProviderUsage.UsageSnapshot {
   const common = {
-    id: `kilo-managed:${subscription.id}`,
+    id: `${managedPrefix}${subscription.id}`,
     sourceKind: "kilo_managed",
     sourceLabel: "via Kilo",
     planState: subscription.cancelAtPeriodEnd

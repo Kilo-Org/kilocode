@@ -2,9 +2,24 @@
 // entry because the directory does not exist yet. Mirrors `packages/util/src/global.ts` and the dev entry:
 // `KILO2_CONFIG_DIR`/`OPENCODE_CONFIG_DIR` wins; in dev (`KILO_V2_PROFILE`) the server config home is
 // `<profile>/config`; otherwise `<XDG_CONFIG_HOME or ~/.config>/<app>`.
+import { existsSync } from "node:fs"
 import { realpath } from "node:fs/promises"
 import os from "node:os"
 import path from "node:path"
+
+/**
+ * The profile that holds the server config. A bundled server inherits the host environment and uses XDG paths; the
+ * dev entry sets `KILO_V2_PROFILE` and there is no bundled binary. Every host module uses this one rule.
+ */
+export function resolveKiloProfile(
+  context: { extensionPath: string; globalStorageUri: { fsPath: string } },
+  env: NodeJS.ProcessEnv = process.env,
+  platform: NodeJS.Platform = process.platform,
+): string {
+  const bundled = existsSync(path.join(context.extensionPath, "bin", platform === "win32" ? "kilo2.exe" : "kilo2"))
+  if (bundled) return ""
+  return env.KILO_V2_PROFILE ?? path.join(context.globalStorageUri.fsPath, "profile")
+}
 
 export function resolveGlobalConfigDir(env: NodeJS.ProcessEnv, profile: string): string {
   // The server runs `packages/kilo-cli/src/env.ts` first: `KILO2_CONFIG_DIR` wins over `OPENCODE_CONFIG_DIR`, and the

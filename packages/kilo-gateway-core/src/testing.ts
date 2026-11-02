@@ -191,6 +191,8 @@ export function fixture() {
         { id: "openai/gpt-4o-mini-transcribe", name: "GPT-4o Mini Transcribe" },
       ],
     } as unknown,
+    audioTranscriptionsStatus: 200,
+    audioTranscriptions: { text: "Make the header sticky" } as unknown,
     embeddingModelsStatus: 200,
     embeddingModels: {
       defaultModel: "mistralai/mistral-embed-2312",
@@ -391,6 +393,15 @@ export function fixture() {
         if (state.transcriptionModelsStatus !== 200)
           return new Response(null, { status: state.transcriptionModelsStatus })
         return Response.json(state.transcriptionModels)
+      }
+      if (
+        path === "/api/gateway/audio/transcriptions" ||
+        path === "/api/gateway/v1/audio/transcriptions" ||
+        path === "/api/v1/audio/transcriptions"
+      ) {
+        if (state.audioTranscriptionsStatus !== 200)
+          return new Response(null, { status: state.audioTranscriptionsStatus })
+        return Response.json(state.audioTranscriptions)
       }
       if (
         path === "/api/gateway/embedding-models" ||

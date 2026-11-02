@@ -3,6 +3,9 @@
   "version": "0.0.1",
   "type": "module",
   "license": "MIT",
+  "scripts": {
+    "test": "bun --conditions=browser test test"
+  },
   "exports": {
     "./font": "./src/components/font.tsx",
     "./button": "./src/components/button.tsx",
@@ -122,5 +125,12 @@
     "@opencode-ai/ui": "workspace:*",
     "@kilocode/kilo-i18n": "workspace:*"
   },
-  "private": true
+  "private": true,
+  "devDependencies": {
+    "@babel/core": "7.29.7",
+    "@babel/preset-typescript": "7.27.1",
+    "@happy-dom/global-registrator": "20.8.9",
+    "babel-preset-solid": "1.9.12",
+    "happy-dom": "20.8.9"
+  }
 }

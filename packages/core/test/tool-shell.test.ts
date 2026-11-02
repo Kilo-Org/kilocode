@@ -202,6 +202,18 @@ const progressOverflowCommand = (bytes: number, release: string) =>
   isWindows
     ? `[Console]::Out.Write(('x' * ${bytes})); while (!(Test-Path -LiteralPath '${release}')) { Start-Sleep -Milliseconds 50 }`
     : `head -c ${bytes} /dev/zero | tr '\\0' 'x'; while [ ! -e '${release}' ]; do sleep 0.05; done`
+// kilocode_change start - live output progress coverage
+const streamingCommand = (release: string) =>
+  isWindows
+    ? `[Console]::Out.Write('begin'); [Console]::Out.Flush(); while (!(Test-Path -LiteralPath '${release}')) { Start-Sleep -Milliseconds 25 }; [Console]::Out.Write(' end')`
+    : `printf begin; while [ ! -e '${release}' ]; do sleep 0.05; done; printf ' end'`
+const largeOutputCommand = (release: string) =>
+  isWindows
+    ? `[Console]::Out.Write('x' * 140002); while (!(Test-Path -LiteralPath '${release}')) { Start-Sleep -Milliseconds 25 }`
+    : `printf 'x'; printf '\\303\\251%.0s' $(seq 1 70000); printf 'y'; while [ ! -e '${release}' ]; do sleep 0.05; done`
+const LIVE_PREVIEW_LIMIT = 30_000
+const LIVE_PREVIEW_PREFIX = "...\n\n"
+// kilocode_change end
 
 const withSession = <A, E, R>(directory: string, body: (registry: Tool.Interface) => Effect.Effect<A, E, R>) =>
   Effect.gen(function* () {
@@ -1412,8 +1424,9 @@ describe("ShellTool", () => {
     { timeout: 15_000 },
   )
 
+  // kilocode_change start - live output progress coverage
   it.live(
-    "reports shell ID progress once",
+    "reports the shell ID before any streamed output",
     () =>
       Effect.acquireUseRelease(
         Effect.promise(() => tmpdir()),
@@ -1422,12 +1435,18 @@ describe("ShellTool", () => {
           return withSession(tmp.path, (registry) =>
             Effect.gen(function* () {
               const updates: Tool.Metadata[] = []
-              yield* executeTool(registry, {
+              const settled = yield* executeTool(registry, {
                 ...call({ command: helloCommand }, "call-shell-id-progress"),
                 progress: (update) => Effect.sync(() => updates.push(update)),
               })
-              expect(updates).toHaveLength(1)
-              expect(updates[0]?.shellID).toMatch(/^sh_/)
+              expect(updates[0]).toEqual({ shellID: expect.stringMatching(/^sh_/) })
+              expect(updates[1]).toMatchObject({
+                shellID: updates[0]?.shellID,
+                status: "running",
+                output: expect.any(String),
+              })
+              expect(settled.metadata).toMatchObject({ exit: 0, truncated: false })
+              expect(settled.metadata).not.toHaveProperty("output")
             }),
           )
         },
@@ -1435,6 +1454,195 @@ describe("ShellTool", () => {
       ),
     { timeout: 15_000 },
   )
+
+  it.live(
+    "streams output while the command is still running",
+    () =>
+      Effect.acquireUseRelease(
+        Effect.promise(() => tmpdir()),
+        (tmp) => {
+          reset()
+          const release = path.join(tmp.path, "shell-stream-release")
+          return withSession(tmp.path, (registry) =>
+            Effect.gen(function* () {
+              const updates: Tool.Metadata[] = []
+              const settled = yield* executeTool(registry, {
+                ...call({ command: streamingCommand(release) }, "call-live-output"),
+                progress: (update) =>
+                  Effect.gen(function* () {
+                    updates.push(update)
+                    if (typeof update.output !== "string" || !update.output.includes("begin")) return
+                    yield* Effect.promise(() => fs.writeFile(release, ""))
+                  }),
+              })
+              const streamed = updates.filter(
+                (update) => typeof update.output === "string" && update.output.includes("begin"),
+              )
+              expect(streamed.length).toBeGreaterThan(0)
+              expect(streamed[0]).toMatchObject({ status: "running", shellID: expect.stringMatching(/^sh_/) })
+              expect(settled.metadata).toMatchObject({ exit: 0, truncated: false })
+              expect(settled.metadata).not.toHaveProperty("output")
+              expect(settled.content).toEqual([{ type: "text", text: "begin end" }])
+            }).pipe(
+              Effect.ensuring(
+                Effect.promise(() => fs.writeFile(release, "")).pipe(Effect.ignore),
+              ),
+            ),
+          )
+        },
+        (tmp) => Effect.promise(() => tmp[Symbol.asyncDispose]().then(() => undefined)),
+      ),
+    { timeout: 15_000 },
+  )
+
+  it.live(
+    "reports the running state for a background command",
+    () =>
+      Effect.acquireUseRelease(
+        Effect.promise(() => tmpdir()),
+        (tmp) => {
+          reset()
+          return withSession(tmp.path, (registry) =>
+            Effect.gen(function* () {
+              const updates: Tool.Metadata[] = []
+              const settled = yield* executeTool(registry, {
+                ...call({ command: idleCommand, timeout: 50, background: true }, "call-background-progress"),
+                progress: (update) => Effect.sync(() => updates.push(update)),
+              })
+              const running = updates.filter((update) => update.status === "running")
+              expect(running.length).toBeGreaterThan(0)
+              expect(running[0]).toMatchObject({ status: "running", shellID: expect.stringMatching(/^sh_/) })
+              expect(typeof running[0]?.output).toBe("string")
+              expect(settled.metadata).toMatchObject({ status: "running", truncated: false })
+              expect(settled.metadata).not.toHaveProperty("output")
+            }),
+          )
+        },
+        (tmp) => Effect.promise(() => tmp[Symbol.asyncDispose]().then(() => undefined)),
+      ),
+    { timeout: 15_000 },
+  )
+
+  it.live(
+    "stops streaming progress when the call is interrupted",
+    () =>
+      Effect.acquireUseRelease(
+        Effect.promise(() => tmpdir()),
+        (tmp) => {
+          reset()
+          const release = path.join(tmp.path, "shell-interrupt-release")
+          return withSession(tmp.path, (registry) =>
+            Effect.gen(function* () {
+              const updates: Tool.Metadata[] = []
+              const execution = yield* executeTool(registry, {
+                ...call({ command: streamingCommand(release) }, "call-interrupt-progress"),
+                progress: (update) => Effect.sync(() => updates.push(update)),
+              }).pipe(Effect.forkScoped({ startImmediately: true }))
+
+              const untilStreamed = (remaining = 200): Effect.Effect<void, Error> =>
+                Effect.gen(function* () {
+                  if (updates.some((update) => typeof update.output === "string" && update.output.includes("begin")))
+                    return
+                  if (remaining <= 0) return yield* Effect.fail(new Error("Timed out waiting for streamed output"))
+                  yield* Effect.sleep(Duration.millis(25))
+                  return yield* untilStreamed(remaining - 1)
+                })
+              yield* untilStreamed()
+
+              yield* Fiber.interrupt(execution)
+              const settled = updates.length
+              yield* Effect.sleep(Duration.millis(300))
+              expect(updates.length).toBe(settled)
+            }).pipe(Effect.ensuring(Effect.promise(() => fs.writeFile(release, "")).pipe(Effect.ignore))),
+          )
+        },
+        (tmp) => Effect.promise(() => tmp[Symbol.asyncDispose]().then(() => undefined)),
+      ),
+    { timeout: 15_000 },
+  )
+
+  it.live(
+    "reports empty output for a command that produces none",
+    () =>
+      Effect.acquireUseRelease(
+        Effect.promise(() => tmpdir()),
+        (tmp) => {
+          reset()
+          const silent = isWindows ? "Start-Sleep -Milliseconds 300" : "sleep 0.3"
+          return withSession(tmp.path, (registry) =>
+            Effect.gen(function* () {
+              const updates: Tool.Metadata[] = []
+              const settled = yield* executeTool(registry, {
+                ...call({ command: silent }, "call-silent-progress"),
+                progress: (update) => Effect.sync(() => updates.push(update)),
+              })
+              const streamed = updates.filter((update) => "output" in update)
+              expect(streamed.length).toBeGreaterThan(0)
+              expect(streamed.every((update) => update.output === "" && update.status === "running")).toBe(true)
+              expect(settled.metadata).toMatchObject({ exit: 0, truncated: false })
+              expect(settled.metadata).not.toHaveProperty("output")
+              expect(settled.content).toEqual([{ type: "text", text: "(no output)" }])
+            }),
+          )
+        },
+        (tmp) => Effect.promise(() => tmp[Symbol.asyncDispose]().then(() => undefined)),
+      ),
+    { timeout: 15_000 },
+  )
+
+  it.live(
+    "bounds the streamed preview for large output",
+    () =>
+      Effect.acquireUseRelease(
+        Effect.promise(() => tmpdir()),
+        (tmp) => {
+          reset()
+          const release = path.join(tmp.path, "shell-large-output-release")
+          return withSession(tmp.path, (registry) =>
+            Effect.gen(function* () {
+              const updates: Tool.Metadata[] = []
+              const settled = yield* executeTool(registry, {
+                ...call({ command: largeOutputCommand(release) }, "call-large-output"),
+                progress: (update) =>
+                  Effect.gen(function* () {
+                    updates.push(update)
+                    if (typeof update.output !== "string" || !update.output.startsWith(LIVE_PREVIEW_PREFIX)) return
+                    yield* Effect.promise(() => fs.writeFile(release, ""))
+                  }),
+              })
+              const bounded = updates.filter(
+                (update) => typeof update.output === "string" && update.output.startsWith(LIVE_PREVIEW_PREFIX),
+              )
+              if (!isWindows) {
+                const expected = Buffer.from(`x${"é".repeat(70_000)}y`)
+                const window = expected.length - LIVE_PREVIEW_LIMIT * 4
+                // The fixture must start the window inside the multi-byte character, or the strip proves nothing.
+                expect(window).toBe(20_002)
+                const first = expected.subarray(window, window + 1)[0] ?? 0
+                expect(first).toBeGreaterThanOrEqual(0x80)
+                expect(first).toBeLessThanOrEqual(0xbf)
+              }
+              expect(bounded.length).toBeGreaterThan(0)
+              for (const update of bounded) {
+                const output = update.output as string
+                expect(output.startsWith(LIVE_PREVIEW_PREFIX)).toBe(true)
+                const tail = output.slice(LIVE_PREVIEW_PREFIX.length)
+                expect(tail).toHaveLength(LIVE_PREVIEW_LIMIT)
+                // A byte window can split a multi-byte character; the leading partial character is dropped.
+                expect(tail.startsWith("\uFFFD")).toBe(false)
+              }
+              expect(settled.metadata).toMatchObject({ exit: 0, truncated: true })
+              expect(settled.metadata).not.toHaveProperty("output")
+              const content = settled.content?.[0]
+              expect(content?.type === "text" ? content.text : "").toContain("full output saved to ")
+            }).pipe(Effect.ensuring(Effect.promise(() => fs.writeFile(release, "")).pipe(Effect.ignore))),
+          )
+        },
+        (tmp) => Effect.promise(() => tmp[Symbol.asyncDispose]().then(() => undefined)),
+      ),
+    { timeout: 20_000 },
+  )
+  // kilocode_change end
 
   it.live("returns the shell id for a background command", () =>
     Effect.acquireUseRelease(

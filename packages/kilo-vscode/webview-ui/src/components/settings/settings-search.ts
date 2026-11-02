@@ -147,11 +147,8 @@ const EXCLUDED_KEYS = new Set([
   "settings.context.memory.project.title",
   "settings.context.memory.storage.title",
   "agentManager.browser.title",
-  // Models keys the v2 Models tab does not render: v2 has no subagent or speech-to-text settings.
+  // Models keys the v2 Models tab does not render: v2 has no subagent settings.
   "settings.providers.subagentModel.title",
-  "settings.models.speechToTextBaseUrl.title",
-  "settings.models.speechToTextApiKey.title",
-  "settings.models.speechToTextModel.title",
 ])
 
 /** Searchable rows whose title key does not end in `.title`, or that need a description override. */
