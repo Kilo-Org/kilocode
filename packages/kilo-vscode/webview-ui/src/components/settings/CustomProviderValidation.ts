@@ -413,6 +413,67 @@ export function addFetchedModels(models: ModelEntry[], picked: FetchedModel[]) {
   return { models: empty ? added : [...models, ...added], added: added.length }
 }
 
+/** The dialog fields that a raw config value can repair when it arrives after the dialog opened. */
+export type RawRepairFields = {
+  name: string
+  package: CustomProviderPackage
+  baseURL: string
+  apiKey: string
+  models: ModelEntry[]
+  headers: HeaderRow[]
+}
+
+/**
+ * Header values that still hold the merged (already substituted) value take the raw value, so `{env:...}` and
+ * `{file:...}` references survive a save. A row the user edited keeps its value, and so does a row that the raw config
+ * does not list.
+ */
+export function repairHeaderValues(current: HeaderRow[], initial: HeaderRow[], raw: HeaderRow[]): HeaderRow[] {
+  const key = (row: HeaderRow) => row.key.trim().toLowerCase()
+  const rawByKey = new Map(raw.map((row) => [key(row), row.value]))
+  const initialByKey = new Map(initial.map((row) => [key(row), row.value]))
+  return current.map((row) => {
+    const was = initialByKey.get(key(row))
+    const next = rawByKey.get(key(row))
+    return was !== undefined && next !== undefined && row.value === was ? { ...row, value: next } : row
+  })
+}
+
+/**
+ * The fields to replace when the raw config arrives after the dialog opened. Each field changes only while it still
+ * equals the value the dialog loaded from the merged config, so an edit made in that window is kept. The key also stays
+ * when the user edited it.
+ */
+export function repairFromRaw(input: {
+  current: RawRepairFields
+  initial: RawRepairFields
+  raw: RawRepairFields
+  apiKeyTouched: boolean
+}): Partial<RawRepairFields> {
+  const patch: Partial<RawRepairFields> = {}
+  // Only a field that still holds the merged value and differs in the raw value is repaired, so an unchanged form is
+  // not written and its fetch is not restarted.
+  if (input.current.name === input.initial.name && input.raw.name !== input.current.name) patch.name = input.raw.name
+  if (input.current.package === input.initial.package && input.raw.package !== input.current.package)
+    patch.package = input.raw.package
+  if (input.current.baseURL === input.initial.baseURL && input.raw.baseURL !== input.current.baseURL)
+    patch.baseURL = input.raw.baseURL
+  if (
+    !input.apiKeyTouched &&
+    input.current.apiKey === input.initial.apiKey &&
+    input.raw.apiKey !== input.current.apiKey
+  )
+    patch.apiKey = input.raw.apiKey
+  if (
+    JSON.stringify(input.current.models) === JSON.stringify(input.initial.models) &&
+    JSON.stringify(input.raw.models) !== JSON.stringify(input.current.models)
+  )
+    patch.models = input.raw.models
+  const headers = repairHeaderValues(input.current.headers, input.initial.headers, input.raw.headers)
+  if (JSON.stringify(headers) !== JSON.stringify(input.current.headers)) patch.headers = headers
+  return patch
+}
+
 /**
  * Orders fetch replies. A new request and every change of the URL, key or package take a new token; a reply applies
  * only while its token is still the newest, so a slow reply for an old URL never lands.

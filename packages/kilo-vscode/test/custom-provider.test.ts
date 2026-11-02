@@ -35,6 +35,8 @@ import {
   keyChanged,
   mergeProviderConfig,
   parseEnvKey,
+  repairFromRaw,
+  repairHeaderValues,
   unmaskKey,
   validateCustomProvider,
   type CustomProviderConfigValue,
@@ -355,6 +357,70 @@ describe("edit round trip", () => {
     expect(initModels(odd)).toEqual([{ id: "m", name: "m", reasoning: false, supportsImages: false, variants: undefined }])
     expect(initModels(undefined)).toEqual([{ id: "", name: "", reasoning: false, supportsImages: false }])
     expect(initHeaders(undefined)).toEqual([{ key: "", value: "" }])
+  })
+})
+
+describe("late raw config", () => {
+  const model = (id: string, name = id): ModelEntry => ({ id, name, reasoning: false, supportsImages: false })
+  // The dialog loaded from the merged config: header values are already substituted.
+  const initial = {
+    name: "Acme",
+    package: "@opencode/ai/providers/openai-compatible" as const,
+    baseURL: "https://acme.example/v1",
+    apiKey: "",
+    models: [model("m", "Model")],
+    headers: [{ key: "X-Token", value: "sk-resolved" }],
+  }
+  // The raw file still has the reference.
+  const raw = { ...initial, headers: [{ key: "X-Token", value: "{env:ACME_TOKEN}" }] }
+
+  test("replaces the fields that still hold the merged value", () => {
+    const patch = repairFromRaw({ current: initial, initial, raw, apiKeyTouched: false })
+    expect(patch).toEqual({ headers: [{ key: "X-Token", value: "{env:ACME_TOKEN}" }] })
+  })
+
+  test("keeps a field the user edited in that window", () => {
+    const patch = repairFromRaw({
+      current: { ...initial, name: "Acme 2" },
+      initial,
+      raw,
+      apiKeyTouched: false,
+    })
+    expect(patch.name).toBeUndefined()
+    expect(patch.headers).toEqual([{ key: "X-Token", value: "{env:ACME_TOKEN}" }])
+  })
+
+  test("repairs only the header rows the user did not change", () => {
+    const initialHeaders = [
+      { key: "X-Token", value: "sk-resolved" },
+      { key: "X-Org", value: "acme" },
+    ]
+    const rawHeaders = [
+      { key: "X-Token", value: "{env:ACME_TOKEN}" },
+      { key: "X-Org", value: "{file:org.txt}" },
+    ]
+    const current = [
+      { key: "X-Token", value: "sk-resolved" },
+      { key: "X-Org", value: "edited" },
+    ]
+    expect(repairHeaderValues(current, initialHeaders, rawHeaders)).toEqual([
+      { key: "X-Token", value: "{env:ACME_TOKEN}" },
+      { key: "X-Org", value: "edited" },
+    ])
+  })
+
+  test("keeps a key the user edited, and repairs an untouched one", () => {
+    const keyed = { ...initial, apiKey: "********" }
+    const rawKeyed = { ...keyed, apiKey: "{env:ACME_KEY}" }
+    expect(repairFromRaw({ current: keyed, initial: keyed, raw: rawKeyed, apiKeyTouched: true }).apiKey).toBeUndefined()
+    expect(repairFromRaw({ current: keyed, initial: keyed, raw: rawKeyed, apiKeyTouched: false }).apiKey).toBe(
+      "{env:ACME_KEY}",
+    )
+  })
+
+  test("returns no patch when the form already matches the raw value", () => {
+    expect(repairFromRaw({ current: raw, initial: raw, raw, apiKeyTouched: false })).toEqual({})
+    expect(repairFromRaw({ current: raw, initial: initial, raw, apiKeyTouched: false })).toEqual({})
   })
 })
 

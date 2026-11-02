@@ -1,8 +1,11 @@
 // Fetch models for the custom provider dialog: the `GET {baseURL}/models` request against a local OpenAI-compatible
 // server, the reply parsing and error kinds, and the host's choice of key and headers.
+import { mkdtemp, rm } from "node:fs/promises"
+import { tmpdir } from "node:os"
+import path from "node:path"
 import { afterAll, describe, expect, test } from "bun:test"
 import type { CredentialEntry } from "@opencode/client"
-import { resolveHeaders, resolveKey, storedKeyFor } from "../src/custom-provider-models"
+import { readReference, resolveHeaders, resolveKey, storedKeyFor } from "../src/custom-provider-models"
 import {
   fetchError,
   fetchOpenAIModels,
@@ -206,13 +209,35 @@ describe("host key and headers", () => {
     expect(await resolveKey({ env: "lower" }, { lower: "x" }, none)).toBeUndefined()
   })
 
-  test("substitutes {env:NAME} in header values as the server does", () => {
-    expect(resolveHeaders({ "X-Token": "Bearer {env:TOKEN}", "X-Missing": "{env:NOPE}", "X-Plain": "a" }, env)).toEqual({
-      "X-Token": "Bearer t-1",
-      "X-Missing": "",
-      "X-Plain": "a",
+  test("substitutes {env:NAME} in header values as the server does", async () => {
+    expect(await resolveHeaders({ "X-Token": "Bearer {env:TOKEN}", "X-Missing": "{env:NOPE}", "X-Plain": "a" }, env)).toEqual(
+      {
+        "X-Token": "Bearer t-1",
+        "X-Missing": "",
+        "X-Plain": "a",
+      },
+    )
+    expect(await resolveHeaders(undefined, env)).toBeUndefined()
+  })
+
+  test("substitutes {file:path} from the provider's config file", async () => {
+    const dir = await mkdtemp(path.join(tmpdir(), "kilo-fetch-"))
+    const configPath = path.join(dir, "kilo.json")
+    await Bun.write(path.join(dir, "token.txt"), "  sk-from-file\n")
+    await Bun.write(path.join(dir, "nested", "other.txt"), "nested-token")
+    const headers = await resolveHeaders(
+      { "X-Token": "Bearer {file:token.txt}", "X-Plain": "{file:nested/other.txt}", "X-Env": "{env:TOKEN}" },
+      env,
+      (reference) => readReference(reference, configPath),
+    )
+    expect(headers).toEqual({
+      "X-Token": "Bearer sk-from-file",
+      "X-Plain": "nested-token",
+      "X-Env": "t-1",
     })
-    expect(resolveHeaders(undefined, env)).toBeUndefined()
+    expect(await readReference("missing.txt", configPath)).toBe("")
+    expect(await readReference("~/../../etc/definitely-missing-kilo", configPath)).toBe("")
+    await rm(dir, { recursive: true, force: true })
   })
 })
 

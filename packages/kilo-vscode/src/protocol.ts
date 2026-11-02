@@ -84,6 +84,8 @@ export type FetchCustomProviderModels = {
   env?: string
   providerID?: string
   headers?: Record<string, string>
+  /** The config file of the provider, so `{file:...}` header references resolve like the server resolves them. */
+  configPath?: string
 }
 
 export type ToWebview =

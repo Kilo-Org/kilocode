@@ -33,10 +33,12 @@ import {
   initModels,
   keyChanged,
   mergeProviderConfig,
+  repairFromRaw,
   unmaskKey,
   validateCustomProvider,
   type CustomProviderConfigValue,
   type FetchedModel,
+  type RawRepairFields,
 } from "./CustomProviderValidation"
 import {
   CUSTOM_PROVIDER_PACKAGE,
@@ -217,38 +219,56 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
 
   // `config.raw` is empty until the host's configRead reply lands. A dialog opened before that starts from the merged
   // config, where `{env:...}` is already substituted; re-read the raw value as soon as it arrives so Submit cannot
-  // write the resolved secret back. Only an untouched form is replaced.
+  // write the resolved secret back. Fields edited in that window keep their value. `on` runs its callback once on the
+  // initial effect run, hence `defer` and the value guard: only a real value may end the repair.
+  const initialFields: RawRepairFields = {
+    name: form.name,
+    package: form.package,
+    baseURL: form.baseURL,
+    apiKey: form.apiKey,
+    models: form.models.map((model) => ({ ...model })),
+    headers: form.headers.map((header) => ({ ...header })),
+  }
   const rawValue = createMemo(() => (props.existing ? rawProvider(props.existing.providerID) : undefined))
-  const snapshot = () =>
-    JSON.stringify([form.providerID, form.name, form.package, form.baseURL, form.apiKey, form.models, form.headers])
-  let initialSnapshot = snapshot()
   let fromRaw = !props.existing || rawValue() !== undefined
 
   createEffect(
-    on(rawValue, (value) => {
-      if (!props.existing || fromRaw) return
-      fromRaw = true
-      if (!value || snapshot() !== initialSnapshot) return
-      const pkg = packageOf(value)
-      const apiKey = initApiKey(value, existingKey())
-      const models = initModels(value)
-      const headers = initHeaders(value)
-      setForm({
-        name: nameOf(value, props.existing.name),
-        package: pkg,
-        baseURL: initBaseURL(value),
-        apiKey,
-        models,
-        headers,
-      })
-      setErrors("models", models.map(() => ({})))
-      setErrors("headers", headers.map(() => ({})))
-      initialSnapshot = snapshot()
-      // A base URL with a resolved env reference now differs, so restart the auto-fetch from the raw value.
-      setFetchPackage(pkg)
-      setFetchURL(initBaseURL(value))
-      setFetchKeyValue(apiKey)
-    }),
+    on(
+      rawValue,
+      (value) => {
+        if (!props.existing || fromRaw || !value) return
+        fromRaw = true
+        const patch = repairFromRaw({
+          current: {
+            name: form.name,
+            package: form.package,
+            baseURL: form.baseURL,
+            apiKey: form.apiKey,
+            models: form.models.map((model) => ({ ...model })),
+            headers: form.headers.map((header) => ({ ...header })),
+          },
+          initial: initialFields,
+          raw: {
+            name: nameOf(value, props.existing.name),
+            package: packageOf(value),
+            baseURL: initBaseURL(value),
+            apiKey: initApiKey(value, existingKey()),
+            models: initModels(value),
+            headers: initHeaders(value),
+          },
+          apiKeyTouched: apiTouched,
+        })
+        if (Object.keys(patch).length === 0) return
+        setForm(patch)
+        if (patch.models) setErrors("models", patch.models.map(() => ({})))
+        if (patch.headers) setErrors("headers", patch.headers.map(() => ({})))
+        // The auto-fetch reads these signals, so a repaired URL or key restarts it.
+        setFetchPackage(patch.package ?? form.package)
+        setFetchURL(patch.baseURL ?? form.baseURL)
+        setFetchKeyValue(patch.apiKey ?? form.apiKey)
+      },
+      { defer: true },
+    ),
   )
 
   function doFetch() {
@@ -260,6 +280,10 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
       .filter((header) => header.key && header.value)
     const headers = rows.length ? Object.fromEntries(rows.map((header) => [header.key, header.value])) : undefined
     const models = form.models.map((model) => ({ ...model }))
+    // `{file:...}` header references resolve from the same file the provider is saved to.
+    const configPath = config.path(
+      config.source(props.existing ? ["providers", props.existing.providerID] : ["providers"]) ?? "global",
+    )
 
     const token = gate.next()
     clearFetch()
@@ -299,6 +323,7 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
       baseURL: url,
       ...key,
       headers,
+      configPath,
     } satisfies ToHost as never)
   }
 

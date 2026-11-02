@@ -1,6 +1,9 @@
 // Host side of Fetch models in the custom provider dialog. It picks the key (typed, an `{env:NAME}` variable of the
 // server environment, or the stored credential of an existing provider), applies the custom headers and lists the
 // models. A stored key is read from the server credential API here and never posted to the webview.
+import { homedir } from "node:os"
+import { readFile } from "node:fs/promises"
+import path from "node:path"
 import { OpenCode, type CredentialEntry } from "@opencode/client"
 import { local } from "./local"
 import type { FetchCustomProviderModels, ToWebview } from "./protocol"
@@ -22,11 +25,12 @@ export async function fetchCustomProviderModels(input: {
     const apiKey = await resolveKey(request, env, (providerID) =>
       storedKey(input.server, input.directory, providerID, request.baseURL),
     )
-    const models = await fetchOpenAIModels({
-      baseURL: request.baseURL,
-      apiKey,
-      headers: resolveHeaders(request.headers, env),
-    })
+    const headers = await resolveHeaders(
+      request.headers,
+      env,
+      request.configPath ? (reference) => readReference(reference, request.configPath!) : undefined,
+    )
+    const models = await fetchOpenAIModels({ baseURL: request.baseURL, apiKey, headers })
     return { type: "customProviderModelsFetched", requestId: request.requestId, models }
   } catch (error) {
     return {
@@ -51,14 +55,39 @@ export async function resolveKey(
   return undefined
 }
 
-/** Header values may use `{env:NAME}`; the server substitutes them the same way, and an unset name is empty. */
-export function resolveHeaders(headers: Record<string, string> | undefined, env: NodeJS.ProcessEnv) {
+/**
+ * Header values may use `{env:NAME}` and `{file:path}`; the server substitutes both the same way. An unset variable or
+ * an unreadable file is empty. Relative file paths resolve from the provider's config file, as on the server.
+ */
+export async function resolveHeaders(
+  headers: Record<string, string> | undefined,
+  env: NodeJS.ProcessEnv,
+  readFileReference?: (value: string) => Promise<string>,
+) {
   if (!headers) return undefined
-  return Object.fromEntries(
-    Object.entries(headers).map(([key, value]) => [
-      key,
-      value.replace(/\{env:([^}]+)\}/g, (_, name: string) => env[name] || ""),
-    ]),
+  const entries = await Promise.all(
+    Object.entries(headers).map(async ([key, value]) => {
+      const withEnv = value.replace(/\{env:([^}]+)\}/g, (_, name: string) => env[name] || "")
+      if (!readFileReference || !withEnv.includes("{file:")) return [key, withEnv] as const
+      const parts = await Promise.all(
+        withEnv.split(/(\{file:[^}]+\})/).map(async (part) => {
+          const match = part.match(/^\{file:([^}]+)\}$/)
+          return match ? readFileReference(match[1]!) : part
+        }),
+      )
+      return [key, parts.join("")] as const
+    }),
+  )
+  return Object.fromEntries(entries)
+}
+
+/** Reads one `{file:path}` reference: trimmed content, empty when the file is missing, as the server does. */
+export async function readReference(reference: string, configPath: string) {
+  const expanded = reference.startsWith("~/") ? path.join(homedir(), reference.slice(2)) : reference
+  const resolved = path.isAbsolute(expanded) ? expanded : path.resolve(path.dirname(configPath), expanded)
+  return readFile(resolved, "utf8").then(
+    (content) => content.trim(),
+    () => "",
   )
 }
 
