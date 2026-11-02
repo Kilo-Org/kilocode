@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test"
 import { mkdir, mkdtemp, realpath, rm, symlink, writeFile } from "node:fs/promises"
 import os from "node:os"
 import path from "node:path"
-import { canonicalPath, matchConfigDocument, resolveGlobalConfigDir } from "../src/settings-paths"
+import { canonicalPath, matchConfigDocument, resolveGlobalConfigDir, resolveKiloProfile } from "../src/settings-paths"
 
 describe("resolveGlobalConfigDir", () => {
   test("KILO2_CONFIG_DIR wins over OPENCODE_CONFIG_DIR and the dev profile", () => {
@@ -40,6 +40,26 @@ describe("resolveGlobalConfigDir", () => {
   test("a bundled server uses XDG_CONFIG_HOME and the kilo2 app directory", () => {
     expect(resolveGlobalConfigDir({ XDG_CONFIG_HOME: "/xdg" }, "")).toBe(path.join("/xdg", "kilo2"))
     expect(resolveGlobalConfigDir({}, "")).toBe(path.join(os.homedir(), ".config", "kilo2"))
+  })
+})
+
+describe("resolveKiloProfile", () => {
+  test("uses KILO_V2_PROFILE, then the extension storage, when there is no bundled binary", () => {
+    const context = { extensionPath: "/ext", globalStorageUri: { fsPath: "/storage" } }
+    expect(resolveKiloProfile(context, { KILO_V2_PROFILE: "/prof" }, "linux")).toBe("/prof")
+    expect(resolveKiloProfile(context, {}, "linux")).toBe(path.join("/storage", "profile"))
+  })
+
+  test("uses XDG paths for a bundled binary, even with a dev profile variable", async () => {
+    const base = await mkdtemp(path.join(os.tmpdir(), "kilo-profile-"))
+    try {
+      await mkdir(path.join(base, "ext", "bin"), { recursive: true })
+      await writeFile(path.join(base, "ext", "bin", "kilo2"), "")
+      const context = { extensionPath: path.join(base, "ext"), globalStorageUri: { fsPath: "/storage" } }
+      expect(resolveKiloProfile(context, { KILO_V2_PROFILE: "/prof" }, "linux")).toBe("")
+    } finally {
+      await rm(base, { recursive: true, force: true })
+    }
   })
 })
 

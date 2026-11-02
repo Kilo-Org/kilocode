@@ -388,7 +388,7 @@
   },
   "scripts": {
     "build": "bun script/build.ts",
-    "package": "bun script/build.ts",
+    "package": "bun script/build.ts --production",
     "extension": "bun script/launch.ts",
     "typecheck": "tsc --noEmit && tsc --noEmit -p webview-ui",
     "lint": "cd ../.. && oxlint --config .oxlintrc.json packages/kilo-vscode/src packages/kilo-vscode/webview-ui/src packages/kilo-vscode/script packages/kilo-vscode/test",
