@@ -750,7 +750,7 @@
   },
   "module:packages/kilo-vscode/webview-ui/src/components/settings/AutoApproveTab.tsx": {
     "state": "ported",
-    "note": "The tab carries the permission editor and the Session Cost Alert threshold through config.setting(\"maxCost\") and the host observer in packages/kilo-vscode/src/cost-alert.ts (session-cost-alert). v1's in-chat cost question and its whole-dollar rounding are not carried: the v2 alert is a native notification and the threshold accepts fractional USD.",
+    "note": "The tab carries the permission editor and the maxCost VS Code setting only. The Session Cost Alert itself is the host observer and native notification in packages/kilo-vscode/src/cost-alert.ts (session-cost-alert), not a tab feature. v1's in-chat cost question and its whole-dollar rounding are not carried.",
     "by": "settings-map-fixes"
   },
   "module:packages/kilo-vscode/webview-ui/src/components/settings/BrowserTab.tsx": {
