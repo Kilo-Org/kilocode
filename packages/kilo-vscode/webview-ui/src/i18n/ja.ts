@@ -1136,9 +1136,9 @@ export const dict = {
   "settings.agentBehaviour.mcpEmpty":
     "MCPサーバーが設定されていません。kilo.jsoncでMCPサーバーを追加するか、エージェントに追加を依頼してください。",
   "settings.agentBehaviour.workflows.description":
-    "ワークフローは設定で定義されたカスタムスラッシュコマンドです。チャットで /command-name と入力して呼び出します。コマンドは opencode.json の 'command' セクションで設定します。",
+    "ワークフローは、設定またはコマンドの Markdown ファイルで定義されたカスタムコマンドです。各ワークフローにモデルと推論バリアントを設定できます。",
   "settings.agentBehaviour.workflows.empty":
-    "カスタムコマンドが設定されていません。opencode.json にコマンドを追加するとここに表示されます。",
+    "カスタムコマンドが見つかりません。kilo2.json または .kilo2/command の Markdown ファイルにコマンドを追加してください。",
   "settings.agentBehaviour.workflows.detail.description": "説明",
   "settings.agentBehaviour.workflows.detail.template": "テンプレート",
   "settings.agentBehaviour.workflows.model": "モデル",
@@ -1156,6 +1156,8 @@ export const dict = {
   "settings.autoApprove.maxCost.title": "セッションコストアラート",
   "settings.autoApprove.maxCost.description":
     "セッションの支出がこの米ドル金額を超えた後、続行する前に警告します。整数のドル額を使用してください。無効にするには空欄にします。",
+  "settings.autoApprove.maxCost.v2Description":
+    "セッションのコストがこの米ドル金額に達したときに、操作を妨げない通知を表示します。無効にするには空欄にします。",
   "settings.autoApprove.level.allow": "許可",
   "settings.autoApprove.level.ask": "確認",
   "settings.autoApprove.level.deny": "拒否",

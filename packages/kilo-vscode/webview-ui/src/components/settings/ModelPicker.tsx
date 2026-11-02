@@ -20,6 +20,11 @@ export interface ModelPickerProps {
   blocked?: boolean
   /** Show the variant picker when the selected model has variants. Defaults to true. */
   showVariants?: boolean
+  preserveVariantOnReselect?: boolean
+  showUnavailableVariant?: boolean
+  modelLabel?: string
+  variantLabel?: string
+  clearButtonLabel?: string
 }
 
 const ModelPicker: Component<ModelPickerProps> = (props) => {
@@ -40,9 +45,21 @@ const ModelPicker: Component<ModelPickerProps> = (props) => {
         value={props.value ? { providerID: props.value.providerID, modelID: props.value.modelID } : null}
         blocked={props.blocked}
         placeholder={props.clearLabel}
-        onSelect={(providerID, modelID) => props.onChange({ providerID, modelID })}
+        label={props.modelLabel}
+        onSelect={(providerID, modelID) =>
+          props.onChange(
+            props.preserveVariantOnReselect && props.value?.providerID === providerID && props.value.modelID === modelID
+              ? props.value
+              : { providerID, modelID },
+          )
+        }
       />
-      <Show when={props.showVariants !== false && variants().length > 0}>
+      <Show
+        when={
+          props.showVariants !== false &&
+          (variants().length > 0 || (props.showUnavailableVariant && props.value?.variant))
+        }
+      >
         <ThinkingSelectorBase
           variants={variants()}
           value={props.value?.variant}
@@ -55,6 +72,7 @@ const ModelPicker: Component<ModelPickerProps> = (props) => {
           placement="bottom-start"
           globalTrigger={false}
           blocked={props.blocked}
+          label={props.variantLabel}
         />
       </Show>
       <Show when={props.clearable && props.value}>
@@ -62,7 +80,7 @@ const ModelPicker: Component<ModelPickerProps> = (props) => {
           size="small"
           variant="ghost"
           icon="close"
-          aria-label={props.clearLabel}
+          aria-label={props.clearButtonLabel ?? props.clearLabel}
           onClick={() => props.onChange(undefined)}
         />
       </Show>

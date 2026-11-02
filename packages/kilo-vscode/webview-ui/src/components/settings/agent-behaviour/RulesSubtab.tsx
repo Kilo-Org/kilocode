@@ -76,7 +76,9 @@ const RulesSubtab: Component = () => {
             "border-bottom": "1px solid var(--border-weak-base)",
           }}
         >
-          <div style={{ "font-weight": "500" }}>{language.t("settings.agentBehaviour.instructionFiles")}</div>
+          <div data-search-label={language.t("settings.agentBehaviour.instructionFiles")} style={{ "font-weight": "500" }}>
+            {language.t("settings.agentBehaviour.instructionFiles")}
+          </div>
           <div
             style={{
               "font-size": "var(--kilo-font-size-12)",

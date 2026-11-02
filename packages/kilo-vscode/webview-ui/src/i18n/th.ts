@@ -1124,9 +1124,9 @@ export const dict = {
   "settings.agentBehaviour.mcpEmpty":
     "ไม่ได้กำหนดค่าเซิร์ฟเวอร์ MCP เพิ่มเซิร์ฟเวอร์ MCP ใน kilo.jsonc หรือขอให้เอเจนต์เพิ่มให้คุณ",
   "settings.agentBehaviour.workflows.description":
-    "เวิร์กโฟลว์คือคำสั่งสแลชแบบกำหนดเองที่กำหนดไว้ในการตั้งค่าของคุณ พิมพ์ /command-name ในแชทเพื่อเรียกใช้ คำสั่งถูกกำหนดค่าใน opencode.json ภายใต้ส่วน 'command'",
+    "เวิร์กโฟลว์คือคำสั่งแบบกำหนดเองที่กำหนดไว้ในการตั้งค่าของคุณหรือในไฟล์ Markdown ของคำสั่ง คุณสามารถตั้งค่าโมเดลและตัวแปรการให้เหตุผลสำหรับแต่ละเวิร์กโฟลว์",
   "settings.agentBehaviour.workflows.empty":
-    "ไม่มีคำสั่งแบบกำหนดเองที่กำหนดค่าไว้ เพิ่มคำสั่งใน opencode.json เพื่อดูที่นี่",
+    "ไม่พบคำสั่งแบบกำหนดเอง เพิ่มคำสั่งใน kilo2.json หรือไฟล์ Markdown ใน .kilo2/command",
   "settings.agentBehaviour.workflows.detail.description": "คำอธิบาย",
   "settings.agentBehaviour.workflows.detail.template": "เทมเพลต",
   "settings.agentBehaviour.workflows.model": "โมเดล",
@@ -1144,6 +1144,8 @@ export const dict = {
   "settings.autoApprove.maxCost.title": "การแจ้งเตือนค่าใช้จ่ายของเซสชัน",
   "settings.autoApprove.maxCost.description":
     "แจ้งเตือนก่อนดำเนินเซสชันต่อหลังจากค่าใช้จ่ายเกินจำนวน USD นี้ ใช้จำนวนดอลลาร์เต็ม; เว้นว่างไว้เพื่อปิดใช้งาน",
+  "settings.autoApprove.maxCost.v2Description":
+    "แสดงการแจ้งเตือนที่ไม่ปิดกั้นเมื่อค่าใช้จ่ายของเซสชันถึงจำนวน USD นี้ เว้นว่างไว้เพื่อปิดใช้งาน",
   "settings.autoApprove.level.allow": "อนุญาต",
   "settings.autoApprove.level.ask": "ถาม",
   "settings.autoApprove.level.deny": "ปฏิเสธ",

@@ -29,7 +29,7 @@ import {
   CUSTOM_PROVIDER_PACKAGE,
   CUSTOM_PROVIDER_PACKAGES,
   disabledProviderIds,
-  enableProvider,
+  enableProviderInConfig,
   isCustomProviderPackage,
   type CustomProviderPackage,
 } from "./provider-visibility"
@@ -208,9 +208,8 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
     if (!result) return
 
     setForm("saving", true)
-    const scope: SettingsScope = props.existing
-      ? (config.source(["providers", result.providerID]) ?? "global")
-      : "global"
+    const scope: SettingsScope =
+      config.source(props.existing ? ["providers", result.providerID] : ["providers"]) ?? "global"
     const value = mergeProviderConfig(
       config.value(["providers", result.providerID]) ?? props.existing?.config,
       result.config,
@@ -221,18 +220,10 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
       return
     }
 
-    // Reusing a disabled provider's id is allowed, so saving re-enables it; otherwise it would stay hidden.
-    const policies = enableProvider(config.value(["policies"]), result.providerID)
-    if (policies) {
-      const policyScope: SettingsScope = config.source(["policies"]) ?? "global"
-      const written =
-        policies.length === 0
-          ? await config.unset(["policies"], policyScope)
-          : await config.set(["policies"], policies, policyScope)
-      if (!written) {
-        setForm("saving", false)
-        return
-      }
+    // Saving enables the provider even when a wildcard policy denies it.
+    if (!(await enableProviderInConfig(config, result.providerID))) {
+      setForm("saving", false)
+      return
     }
 
     try {

@@ -3,11 +3,17 @@
 // The `ready` line is on its own so a later change that flips one tab does not touch the neighbouring entries.
 import { lazy, type Component } from "solid-js"
 import type { SettingsData } from "../../v2/settings"
+import type { SettingsNavigationTarget } from "./settings-search"
 
-/** Props every tab component receives. A tab that needs neither is typed `Component` and ignores them. */
+/** Props every tab component receives. */
 export interface SettingsTabProps {
   settings: SettingsData
   onLogin: () => void
+  subtab: string
+  /** Increments on each search navigation so a subtab can reset its editor without remounting. */
+  navigation: number
+  onSubtabChange: (subtab: string) => void
+  onNavigate: (target: SettingsNavigationTarget) => void
 }
 
 export interface SettingsTabV2 {

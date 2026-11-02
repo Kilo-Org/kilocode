@@ -2,7 +2,9 @@
 import { Button } from "@kilocode/kilo-ui/button"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { createEffect, createMemo, createSignal, Match, on, Show, Switch } from "solid-js"
+import type { ToHost } from "../../../src/protocol"
 import { useLanguage } from "../context/language"
+import { getVSCodeAPI } from "../context/vscode"
 import { useV2 } from "./client"
 import { SessionList } from "./history"
 import { TaskHeader } from "../components/chat/TaskHeader"
@@ -38,6 +40,12 @@ export function Chat() {
     setSession(id)
     setView("chat")
   }
+
+  createEffect(
+    on(session, (id) => {
+      if (id) getVSCodeAPI().postMessage({ type: "trackCostSession", sessionID: id } satisfies ToHost as never)
+    }),
+  )
 
   // The open session and its subagents. Subagent permissions and forms carry the subagent's session ID.
   const family = createMemo(() => {
