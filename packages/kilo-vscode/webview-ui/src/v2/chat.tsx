@@ -2,11 +2,13 @@
 import { Button } from "@kilocode/kilo-ui/button"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import type { ToolActions } from "@kilocode/kilo-ui/message-part"
+import { ToolChildSessionProvider, type ToolChildSession } from "@kilocode/kilo-ui/tool-child-session"
 import { createEffect, createMemo, createSignal, Match, on, Show, Switch } from "solid-js"
 import type { ToHost } from "../../../src/protocol"
 import { useLanguage } from "../context/language"
 import { getVSCodeAPI } from "../context/vscode"
 import { useV2 } from "./client"
+import { childTools } from "./child-session"
 import { SessionList } from "./history"
 import { TaskHeader } from "../components/chat/TaskHeader"
 import ProfileView from "../components/profile/ProfileView"
@@ -48,6 +50,22 @@ export function Chat() {
       getVSCodeAPI().postMessage({ type: "openToolFile", filePath, line } satisfies ToHost as never),
     openDiff: (diff) => getVSCodeAPI().postMessage({ type: "openDiffVirtual", diff } satisfies ToHost as never),
     openSession: open,
+  }
+
+  // Subagent cards read the child session's tools from the same store as the open session. Load a child's message
+  // history once, when its card first asks for it; later tool events update the loaded messages in place.
+  const loadedChildren = new Set<string>()
+  const childSessions: ToolChildSession = {
+    tools: (sessionID) => childTools(v2.data.session.message.list(sessionID)),
+    running: (sessionID) => v2.data.session.status(sessionID) === "running",
+    load: (sessionID) => {
+      if (loadedChildren.has(sessionID)) return
+      loadedChildren.add(sessionID)
+      void v2.data.session.message.sync(sessionID).catch((error) => {
+        loadedChildren.delete(sessionID)
+        v2.report(error)
+      })
+    },
   }
 
   createEffect(
@@ -186,15 +204,17 @@ export function Chat() {
             {(id) => <TaskHeader sessionID={id} />}
           </Show>
           <div class="chat-messages-wrapper">
-            <div class="chat-messages">
-              <MessageList
-                session={session()}
-                actions={toolActions}
-                onSelectSession={open}
-                onShowHistory={() => setView("history")}
-                onScrollToBottomReady={(fn) => (scrollToBottom = fn)}
-              />
-            </div>
+            <ToolChildSessionProvider value={childSessions}>
+              <div class="chat-messages">
+                <MessageList
+                  session={session()}
+                  actions={toolActions}
+                  onSelectSession={open}
+                  onShowHistory={() => setView("history")}
+                  onScrollToBottomReady={(fn) => (scrollToBottom = fn)}
+                />
+              </div>
+            </ToolChildSessionProvider>
           </div>
           <div class="chat-input">
             <Show when={v2.handshake() || v2.error()}>
