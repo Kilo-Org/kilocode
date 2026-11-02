@@ -28,6 +28,7 @@ describe("evidence secret rejection", () => {
 
   test("rejects secret-shaped values", () => {
     expect(() => assertNoSecrets({ detail: "Bearer abcdefghijklmnop1234" })).toThrow()
+    expect(() => assertNoSecrets({ detail: "Bearer eyJhbGciOiJIUzI1NiJ9 (expires in 3600s)" })).toThrow()
     expect(() => assertNoSecrets({ detail: "Basic dXNlcjpwYXNzd29yZA==" })).toThrow()
     expect(() => assertNoSecrets({ detail: "sk-live-secret" })).toThrow()
     expect(() => assertNoSecrets({ detail: "ghp_abcdefghij" })).toThrow()
