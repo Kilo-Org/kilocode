@@ -1,9 +1,10 @@
-import { expect, test } from "bun:test"
+import { describe, expect, test } from "bun:test"
 import { copyFile, mkdir, mkdtemp, rm } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { dirname, join, resolve } from "node:path"
 import {
   compare,
+  matchLocation,
   parse,
   prune,
   scan,
@@ -301,4 +302,26 @@ test("rejects malformed and duplicate exception entries", () => {
   expect(() => parse({ ...data, exceptions: [entry, entry] })).toThrow("Duplicate exception")
   expect(() => parse({ ...data, scanner: "jscpd@latest" })).toThrow("Unsupported duplication allowlist")
   expect(() => parse({ ...data, exceptions: undefined })).toThrow()
+})
+
+describe("matchLocation", () => {
+  const scanned = [
+    { repo: "src/first.ts", match: "src/first.ts" },
+    { repo: "packages/kilo-example/src/first.ts", match: "packages/kilo-example/src/first.ts" },
+  ]
+
+  test("returns the longest matching scan path suffix", () => {
+    expect(matchLocation("/tmp/repo/packages/kilo-example/src/first.ts", "/tmp/repo", scanned)).toBe(
+      "packages/kilo-example/src/first.ts",
+    )
+  })
+
+  test("strips a nested scanner base prefix", () => {
+    const uri = "C:\\runner\\work\\C:\\tmp\\repo\\packages\\kilo-example\\src\\first.ts"
+    expect(matchLocation(uri, "/tmp/repo", scanned)).toBe("packages/kilo-example/src/first.ts")
+  })
+
+  test("rejects a location outside the scan root", () => {
+    expect(() => matchLocation("/outside/file.ts", "/tmp/repo", scanned)).toThrow("uri: /outside/file.ts")
+  })
 })

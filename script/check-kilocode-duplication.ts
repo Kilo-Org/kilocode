@@ -110,10 +110,13 @@ function nestedDrive(uri: string) {
   return matches.length > 1 ? uri.slice(last.index) : uri
 }
 
-function matchLocation(uri: string, directory: string, scanned: { repo: string; match: string }[]) {
+export function matchLocation(uri: string, directory: string, scanned: { repo: string; match: string }[]) {
   const raw = nestedDrive(uri.startsWith("file:") ? fileURLToPath(uri) : uri)
   const normalized = raw.replaceAll("\\", "/").toLowerCase()
-  const found = scanned.find((entry) => normalized.endsWith(entry.match))
+  const found = scanned
+    .filter((entry) => normalized.endsWith(entry.match))
+    .sort((left, right) => right.match.length - left.match.length)
+    .at(0)
   if (found) return found.repo
   const base = normalized.split("/").at(-1) ?? ""
   const byBase = scanned.filter((entry) => entry.match === base || entry.match.endsWith(`/${base}`))
