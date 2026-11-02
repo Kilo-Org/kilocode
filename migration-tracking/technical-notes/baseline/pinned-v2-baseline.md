@@ -205,7 +205,7 @@ None is attributable to a Kilo change. The failing tests do not exercise the 14 
 
 ## Validation commands defined by this tree
 
-Derived from the root `package.json`, `.github/workflows/check.yml`, `.github/workflows/test.yml` and per-package scripts. The local/official compiler distinction below was refreshed for `v2.1.4`; result coverage is stated in the current capture.
+Derived from the root `package.json`, `.github/workflows/check.yml`, `.github/workflows/check-test.yml` and per-package scripts. The local/official compiler distinction below was refreshed for `v2.1.4`; result coverage is stated in the current capture.
 
 | Purpose | Command | Working dir | Run by upstream CI |
 |---|---|---|---|
@@ -228,7 +228,7 @@ Constraints:
 - Tests cannot run from the root (`bunfig.toml` test root `do-not-run-tests-from-root`). Run them from a package directory or through turbo.
 - Use package scripts, not direct compiler invocations. `bun typecheck` uses Bun's checker in upstream packages and official TypeScript in Kilo packages. `bun run typecheck:tsc` uses official TypeScript; it is the source of truth when the compilers disagree.
 - `.husky/pre-push` checks the bun version, then runs `bun run check`.
-- `check.yml` and `test.yml` run on pushes to branches named `dev` or `v2`, and on every pull request. Upstream's `check.yml` filters pushes and pull requests by branch (`[dev, v2]` at the initial base, `[dev]` at `v2.0.30`). Kilo changed it on 2026-10-13 (#15016; `.github/workflows/check.yml:5-7`, marked): `v2` is in the push branches and the pull-request trigger is unfiltered, so a PR into `v2` or into a stacked PR branch is checked. `test.yml` already runs on every pull request upstream; Kilo added `v2` to its push branches. **Verified 2026-10-16:** `typecheck` (`check.yml`), `unit (linux)` and `unit (windows)` (`test.yml`) and the `kilo-v2.yml` jobs run on the fork; `typecheck` ran and passed on #15192, whose base is `fold-plan-delta`. `e2e` is skipped on the fork since #15151 (`affected` in `test.yml` is `if: false`); it still ran on #15136, where Windows failed and Linux passed. The 2026-10-11 capture had found no pull request targeting the integration branch or `kilo-v2-clean-bootstrap` (`gh pr list`).
+- `check.yml` and `check-test.yml` (upstream's `test.yml` before v2.2) run on pushes to branches named `dev` or `v2`, and on every pull request. Upstream's `check.yml` filters pushes and pull requests by branch (`[dev, v2]` at the initial base, `[dev]` at `v2.0.30`). Kilo changed it on 2026-10-13 (#15016; `.github/workflows/check.yml:5-7`, marked): `v2` is in the push branches and the pull-request trigger is unfiltered, so a PR into `v2` or into a stacked PR branch is checked. `test.yml` already runs on every pull request upstream; Kilo added `v2` to its push branches (the same trigger now lives in `check-test.yml`). **Verified 2026-10-16:** `typecheck` (`check.yml`), `unit (linux)` and `unit (windows)` (`test.yml`, now `check-test.yml`) and the `kilo-v2.yml` jobs run on the fork; `typecheck` ran and passed on #15192, whose base is `fold-plan-delta`. `e2e` is skipped on the fork since #15151 (`affected` in `test.yml` is `if: false`); it still ran on #15136, where Windows failed and Linux passed. The 2026-10-11 capture had found no pull request targeting the integration branch or `kilo-v2-clean-bootstrap` (`gh pr list`).
 - `packages/www` no longer exists. Generated docs live in `services/www`, and `typecheck.yml` was replaced by `check.yml`.
 
 ## Previous capture: initial base (2026-10-11)
