@@ -10,6 +10,7 @@ import type { ToHost } from "../../../src/protocol"
 import { useLanguage } from "../context/language"
 import { useVSCode } from "../context/vscode"
 import { useV2 } from "./client"
+import { sessionDiffRange } from "./session-diff-range"
 
 export function SessionChanges(props: { sessionID: string; onClose: () => void }) {
   const v2 = useV2()
@@ -27,11 +28,7 @@ export function SessionChanges(props: { sessionID: string; onClose: () => void }
       v2.api.message.list({ sessionID, type: "user", order: "asc", limit: 1 }),
       v2.api.message.list({ sessionID, type: "user", order: "desc", limit: 1 }),
     ])
-      .then(([oldest, newest]) => {
-        const from = oldest.data[0]?.id
-        const last = newest.data[0]?.id
-        return v2.api.session.diff({ sessionID, from, to: last === from ? undefined : last })
-      })
+      .then(([oldest, newest]) => v2.api.session.diff({ sessionID, ...sessionDiffRange(oldest, newest) }))
       .then((data) => setFiles(data))
       .catch((reason: unknown) => setError(reason instanceof Error ? reason.message : String(reason)))
       .finally(() => setLoading(false))
