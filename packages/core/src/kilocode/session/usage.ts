@@ -1,6 +1,6 @@
 export * as KiloSessionUsage from "./usage.js"
 
-import type { ProviderMetadata, Usage } from "@opencode/ai"
+import type { ProviderMetadata, Usage } from "@opencode/ai/effect"
 import { Money } from "@opencode/schema/money"
 import { sql } from "drizzle-orm"
 

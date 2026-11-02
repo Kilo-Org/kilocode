@@ -185,6 +185,11 @@ const EXTRA_ENTRIES: SettingsEntry[] = [
   },
   { tab: "notifications", titleKey: "settings.notifications.sounds" },
   {
+    tab: "commitMessage",
+    titleKey: "settings.commitMessage.language.description",
+    keywords: ["language", "locale"],
+  },
+  {
     tab: "agentManager",
     titleKey: "agentManager.worktree.defaultBaseBranch",
     descriptionKey: "agentManager.settings.defaultBaseBranch.description",
