@@ -142,7 +142,9 @@ jobs:
         timeout-minutes: 20
         run: |
           # The runners have four vCPUs, and each Bun test process performs its own concurrent work.
-          # kilocode_change start - core, tui, cli and kilo-cli run in balanced shards through `test:ci`; the other packages run in the `packages` leg
+          # kilocode_change start - core, tui and cli run in balanced shards through `test:ci`. The `packages` leg
+          # runs the other packages and the Kilo host suite: its slowest file (branding) would be a single long pole
+          # in a shard job, so it runs here in parallel with the small packages instead.
           # `--affected` applies to pull requests only. A merge can break the interaction of two green
           # PRs, so pushes and manual runs test the full suite to catch it.
           if [ "${{ github.event_name }}" = "pull_request" ]; then
@@ -151,22 +153,30 @@ jobs:
             affected=()
           fi
           if [ "${{ matrix.shard }}" = "packages" ]; then
-            GITHUB_ACTIONS=false bun turbo test --concurrency=3 "${affected[@]}" --filter='!@opencode/core' --filter='!@opencode/tui' --filter='!@opencode/cli' --filter='!@kilocode/kilo-cli'
+            # The Kilo host suite is the slowest one. It runs in parallel with the other packages, unsplit, so its
+            # one heavy file is not a long pole in a shard job and the two lanes share one setup.
+            KILO_TEST_CONCURRENCY=4 GITHUB_ACTIONS=false bun turbo test:ci --concurrency=1 "${affected[@]}" --filter='@kilocode/kilo-cli' &
+            host=$!
+            other=0
+            GITHUB_ACTIONS=false bun turbo test --concurrency=3 "${affected[@]}" --filter='!@opencode/core' --filter='!@opencode/tui' --filter='!@opencode/cli' --filter='!@kilocode/kilo-cli' || other=$?
+            hoststatus=0
+            wait "$host" || hoststatus=$?
+            test "$other" -eq 0 && test "$hoststatus" -eq 0
             exit
           fi
-          # The four sharded packages run at once, so each shard job needs concurrency 4 for no task to wait.
-          GITHUB_ACTIONS=false bun turbo test:ci --concurrency=4 "${affected[@]}"
+          GITHUB_ACTIONS=false bun turbo test:ci --concurrency=3 "${affected[@]}"
           # kilocode_change end
         env:
           OPENCODE_EXPERIMENTAL_DISABLE_FILEWATCHER: ${{ runner.os == 'Windows' && 'true' || 'false' }}
           TURBO_SCM_BASE: ${{ github.event_name == 'pull_request' && format('{0}^1', github.sha) || github.event.before }}
           TURBO_SCM_HEAD: ${{ github.sha }}
-          KILO_TEST_SHARD: ${{ matrix.shard }}/${{ matrix.settings.shards }} # kilocode_change
+          # The `packages` leg runs no shard: the Kilo host suite runs there in parallel, not split.
+          KILO_TEST_SHARD: ${{ matrix.shard != 'packages' && format('{0}/{1}', matrix.shard, matrix.settings.shards) || '' }} # kilocode_change
           KILO_TEST_CONCURRENCY: ${{ matrix.settings.concurrency }} # kilocode_change
 
       # kilocode_change start - JUnit reports of test:ci: failing cases as annotations, and the reports as an artifact
       - name: Publish unit reports
-        if: ${{ !cancelled() && matrix.shard != 'packages' }}
+        if: ${{ !cancelled() }}
         uses: mikepenz/action-junit-report@6ef3fdcfcd5f0b5d14df3e659ef19b8c6820f93d # v6.6.1
         with:
           report_paths: artifacts/unit/*.xml
@@ -177,7 +187,7 @@ jobs:
 
       # Input for script/kilocode/test/test-durations.ts, which refreshes the shard weights. Not a test result.
       - name: Upload unit reports
-        if: ${{ !cancelled() && matrix.shard != 'packages' }}
+        if: ${{ !cancelled() }}
         continue-on-error: true
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2 # kilocode_change
         with:
