@@ -7,6 +7,7 @@ import type { ToolActions } from "@kilocode/kilo-ui/message-part"
 import { Spinner } from "@kilocode/kilo-ui/spinner"
 import { createSignal, For, Match, onCleanup, Show, Switch } from "solid-js"
 import { useLanguage } from "../context/language"
+import { onTimelineHighlight, type TimelineHighlight } from "../utils/timeline/highlight"
 import { AssistantMessage, ErrorCard } from "./assistant"
 import { useV2 } from "./client"
 import { UserMessage } from "./user"
@@ -23,6 +24,9 @@ export function MessageList(props: {
   const v2 = useV2()
   const language = useLanguage()
   const [older, setOlder] = createSignal(false)
+  const [highlight, setHighlight] = createSignal<TimelineHighlight>()
+  onCleanup(onTimelineHighlight(setHighlight))
+  let scrollEl: HTMLDivElement | undefined
   // createData already puts pending user input into the message list. Only queued input waits for the end of the
   // turn, so it moves below the transcript, as in the TUI (packages/tui/src/routes/session/rows.ts).
   const queued = () =>
@@ -42,6 +46,27 @@ export function MessageList(props: {
   props.onScrollToBottomReady?.(() => autoScroll.resume())
   onCleanup(() => props.onScrollToBottomReady?.(undefined))
 
+  // A task-timeline bar click scrolls the transcript to its part, or to its
+  // message when the part is not mounted. Jumps stay instant: while pinned at
+  // the bottom a smooth scroll's first frames sit within the auto-follow
+  // threshold, which would resume following and snap the view back down.
+  const onScrollToMessage = (e: Event) => {
+    const detail = (e as CustomEvent<{ id: string; partId?: string }>).detail
+    if (!detail?.id) return
+    const el = scrollEl
+    if (!el) return
+    const target =
+      (detail.partId ? el.querySelector<HTMLElement>(`[data-part-id="${CSS.escape(detail.partId)}"]`) : undefined) ??
+      el.querySelector<HTMLElement>(`[data-message="${CSS.escape(detail.id)}"]`)
+    if (!target) return
+    autoScroll.pause()
+    const box = target.getBoundingClientRect()
+    const container = el.getBoundingClientRect()
+    el.scrollBy({ top: box.top - container.top - Math.max(0, (container.height - box.height) / 2) })
+  }
+  window.addEventListener("scrollToMessage", onScrollToMessage)
+  onCleanup(() => window.removeEventListener("scrollToMessage", onScrollToMessage))
+
   const loadOlder = () => {
     const id = props.session
     if (!id) return
@@ -55,7 +80,10 @@ export function MessageList(props: {
   return (
     <div class="message-list-container">
       <div
-        ref={(el) => autoScroll.scrollRef(el)}
+        ref={(el) => {
+          scrollEl = el
+          autoScroll.scrollRef(el)
+        }}
         onScroll={autoScroll.handleScroll}
         class="message-list"
         data-slot="message-list"
@@ -93,7 +121,12 @@ export function MessageList(props: {
                         </Match>
                         <Match when={message.type === "assistant" && message}>
                           {(assistant) => (
-                            <AssistantMessage message={assistant()} session={id()} actions={props.actions} />
+                            <AssistantMessage
+                              message={assistant()}
+                              session={id()}
+                              actions={props.actions}
+                              highlight={highlight}
+                            />
                           )}
                         </Match>
                         {/* A run can fail before any step, for example without a usable model. As the TUI, the idle

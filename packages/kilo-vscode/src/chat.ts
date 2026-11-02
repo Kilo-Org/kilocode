@@ -15,10 +15,19 @@ import { DISPLAY_DEFAULTS, type ToHost, type ToWebview } from "./protocol"
 import { bridge } from "./relay"
 import { saveImage } from "./save-image"
 import type { Manager } from "./server"
-import { effectiveFontSize, KILO_SETTING_KEYS, readKiloSettings, settingsHost } from "./settings-host"
+import {
+  effectiveFontSize,
+  KILO_SETTING_KEYS,
+  readKiloSettings,
+  settingsHost,
+  writeKiloSettings,
+} from "./settings-host"
 import { promptKeybindings, watchKeybindings } from "./prompt-keybindings"
 import { readDisplaySettings } from "./display-settings"
 import { openToolFile, type ToolDiff } from "./tool-diff"
+
+// The sidebar may only write the settings its own UI owns. Other views keep their own write path.
+const CHAT_SETTING_KEYS: ReadonlySet<string> = new Set(["showTaskTimeline"])
 
 export function chat(input: {
   context: ExtensionContext
@@ -115,7 +124,8 @@ export function wire(input: {
     fetch: local,
   })
   const post = (message: ToWebview) => void webview.postMessage(message)
-  // Config read and write are host-side: only the Settings panel uses them.
+  // Config read and write are host-side: the Settings panel uses the full host, and the sidebar writes the
+  // `kilo-code.v2.*` settings it owns, such as the task header graph toggle.
   const settings =
     input.view === "settings"
       ? settingsHost({
@@ -125,7 +135,21 @@ export function wire(input: {
           post,
           onReset: input.onReset,
         })
-      : undefined
+      : input.view === "chat"
+        ? {
+            handle: (message: ToHost) => {
+              if (message.type !== "updateVSCodeSettings") return false
+              const values = Object.fromEntries(
+                Object.entries(message.values).filter(([key]) => CHAT_SETTING_KEYS.has(key)),
+              )
+              void writeKiloSettings(values).catch((error: unknown) => {
+                console.error("Failed to write Kilo settings", error)
+              })
+              return true
+            },
+            dispose() {},
+          }
+        : undefined
   // The sidebar carries the live Kilo settings: push a fresh value when any of them changes.
   const settingsWatch =
     input.view === "chat"

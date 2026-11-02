@@ -29,6 +29,7 @@ export const AuthStatus = Schema.Struct({
   authenticated: Schema.Boolean,
   organizationID: OrganizationID,
   server: Schema.String,
+  identity: Schema.optional(Schema.String),
 })
 
 export type AuthStatus = typeof AuthStatus.Type

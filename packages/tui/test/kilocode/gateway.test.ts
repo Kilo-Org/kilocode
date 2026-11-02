@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test"
-import { accountOptions } from "../../src/kilocode/gateway"
+import { accountOptions, usageDetailsUrl } from "../../src/kilocode/gateway"
 
 const organizations = [
   { id: "acme", name: "Acme", role: "owner" },
@@ -24,4 +24,11 @@ test("hides the personal account for team-only accounts, unless there are no tea
   expect(accountOptions({ ...profile, organizations: [] }, null).map((option) => option.title)).toEqual([
     "Personal Account",
   ])
+})
+
+test("builds the team usage details URL and falls back to the personal URL", () => {
+  expect(usageDetailsUrl("acme")).toBe("https://app.kilo.ai/organizations/acme/usage-details")
+  expect(usageDetailsUrl(null)).toBe("https://app.kilo.ai/usage")
+  expect(usageDetailsUrl(undefined)).toBe("https://app.kilo.ai/usage")
+  expect(usageDetailsUrl("")).toBe("https://app.kilo.ai/usage")
 })

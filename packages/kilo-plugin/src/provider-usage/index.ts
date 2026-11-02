@@ -4,7 +4,7 @@ import { KiloGatewayRpc } from "@opencode/schema/kilocode/gateway"
 import { ProviderUsage } from "@opencode/schema/kilocode/provider-usage"
 import { Effect, Option } from "effect"
 import { UsageCache } from "./cache"
-import { UsageCloud } from "./cloud"
+import { UsageCloud, managedPrefix } from "./cloud"
 import { CodexUsage } from "./codex"
 import { MiniMaxUsage } from "./minimax"
 
@@ -24,25 +24,49 @@ export const create = (options: Options = {}) =>
       const gateway = ctx.rpc(KiloGatewayRpc.Definition)
       const cache = UsageCache.make()
 
-      // v1 shows coding plans only for a personal account: a team has no coding plans.
-      const managed = Effect.gen(function* () {
-        const status = yield* gateway.authStatus({})
-        if (!status.authenticated || status.organizationID) return []
-        const [subscriptions, byok] = yield* Effect.all([gateway.codingPlans({}), gateway.byok({})], {
-          concurrency: 2,
-        })
-        return yield* Effect.forEach(
-          UsageCloud.plans(subscriptions, byok),
-          (subscription) =>
-            gateway.codingPlanUsage({ subscriptionID: subscription.id }).pipe(
-              Effect.option,
-              Effect.map((usage) =>
-                UsageCloud.snapshot(subscription, Option.getOrUndefined(usage), UsageCloud.app(status.server)),
-              ),
-            ),
-          { concurrency: "unbounded" },
+      const load = () =>
+        Effect.runPromise(
+          Effect.all([attempt(gateway.codingPlans({})), attempt(gateway.byok({}))], { concurrency: 2 }).pipe(
+            Effect.map(([plans, byok]): UsageCache.CloudState => ({ plans, byok })),
+          ),
         )
-      }).pipe(Effect.orElseSucceed((): ProviderUsage.UsageSnapshot[] => []))
+
+      // Coding plans belong to a personal account: a team has no coding plans. A failed read keeps only the
+      // snapshots of the verified account, so a defect or a failed auth read never reveals another account.
+      const managed = (force: boolean) =>
+        Effect.gen(function* () {
+          const status = yield* gateway.authStatus({}).pipe(Effect.option)
+          // An unverified account cannot prove which cells are its own: do not preserve them.
+          if (Option.isNone(status)) return []
+          if (!status.value.authenticated || status.value.organizationID) {
+            cache.clearManaged()
+            return []
+          }
+          const identity = status.value.identity
+          if (!identity) return []
+          const server = status.value.server
+          const state = yield* Effect.promise(() => cache.cloud(identity, force, load))
+          if (!state.plans.ok || !state.byok.ok) return cache.preservePrefix(managedPrefix, identity)
+          const detected = UsageCloud.plans(state.plans.value, state.byok.value)
+          cache.prunePrefix(
+            managedPrefix,
+            detected.map((subscription) => `${managedPrefix}${subscription.id}`),
+          )
+          return yield* Effect.forEach(
+            detected,
+            (subscription) =>
+              Effect.promise(() =>
+                cache.source(`${managedPrefix}${subscription.id}`, identity, force, () =>
+                  Effect.runPromise(
+                    gateway.codingPlanUsage({ subscriptionID: subscription.id }).pipe(Effect.option),
+                  ).then((usage) =>
+                    UsageCloud.snapshot(subscription, Option.getOrUndefined(usage), UsageCloud.app(server)),
+                  ),
+                ),
+              ),
+            { concurrency: "unbounded" },
+          )
+        })
 
       // A failed read is not a missing credential: v1 kept the last snapshot of that source as stale.
       const credential = (provider: ProviderInfo) =>
@@ -96,9 +120,16 @@ export const create = (options: Options = {}) =>
             Effect.map((result) => result.data),
             Effect.orElseSucceed((): readonly ProviderInfo[] => []),
           )
-          const groups = yield* Effect.all([managed, minimax(providers, force), codex(providers, force)], {
-            concurrency: "unbounded",
-          })
+          // A failure or a defect in one source must not hide the others. A defect in managed cannot prove the
+          // account, so it answers empty rather than exposing unverified managed cells.
+          const groups = yield* Effect.all(
+            [
+              contain(managed(force), () => []),
+              minimax(providers, force),
+              codex(providers, force),
+            ],
+            { concurrency: "unbounded" },
+          )
           const items = groups.flat()
           return { items, generatedAt: cache.settle(items) }
         })
@@ -110,6 +141,21 @@ export const create = (options: Options = {}) =>
   })
 
 export const KiloProviderUsagePlugin = create()
+
+/**
+ * Keeps one usage source from hiding the others. A rejected promise inside the source becomes a defect, so this
+ * must catch every cause, not only typed failures.
+ */
+export function contain<A>(effect: Effect.Effect<A, unknown>, fallback: () => A): Effect.Effect<A> {
+  return effect.pipe(Effect.catchCause(() => Effect.succeed(fallback())))
+}
+
+function attempt<T>(effect: Effect.Effect<T, unknown>): Effect.Effect<UsageCache.Result<T>> {
+  return effect.pipe(
+    Effect.map((value): UsageCache.Result<T> => ({ ok: true, value })),
+    Effect.orElseSucceed((): UsageCache.Result<T> => ({ ok: false })),
+  )
+}
 
 function configuredKey(provider: ProviderInfo) {
   const header = Object.entries(provider.headers ?? {}).find(([key]) => key.toLowerCase() === "x-api-key")?.[1]
