@@ -270,6 +270,7 @@ export const dict = {
   "prompt.toast.promptSendFailed.title": "Échec de l'envoi du message",
 
   "mcp.status.connected": "connecté",
+  "mcp.status.pending": "connexion",
   "mcp.status.failed": "échoué",
   "mcp.status.needs_auth": "nécessite auth",
   "mcp.status.needs_registration": "nécessite enregistrement client",
@@ -1166,7 +1167,7 @@ export const dict = {
   "settings.agentBehaviour.mcp.timeout.catalog.title": "Délai du catalogue (ms)",
   "settings.agentBehaviour.mcp.timeout.execution.title": "Délai d'exécution (ms)",
   "settings.agentBehaviour.mcpEmpty":
-    "Aucun serveur MCP configuré. Ajoutez des serveurs MCP dans kilo.jsonc ou demandez à l'agent de les ajouter.",
+    "Aucun serveur MCP configuré. Ajoutez des serveurs MCP dans kilo2.json ou demandez à l'agent de les ajouter.",
   "settings.agentBehaviour.workflows.description":
     "Les workflows sont des commandes personnalisées définies dans votre configuration ou dans des fichiers Markdown de commandes. Vous pouvez définir un modèle et une variante de raisonnement pour chaque workflow.",
   "settings.agentBehaviour.workflows.empty":

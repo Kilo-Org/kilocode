@@ -210,8 +210,8 @@
   white-space: nowrap;
 }
 
-/* Wider inputs inside cards with data-variant="wide-input" (e.g. edit mode config) */
-[data-variant="wide-input"] [data-slot="settings-row-input"] {
+/* Wider inputs inside cards with the settings-wide-input class (e.g. edit mode config) */
+.settings-wide-input [data-slot="settings-row-input"] {
   flex: 1 1 0%;
   max-width: none;
 }

@@ -29,8 +29,8 @@ const AboutKiloCodeTab: Component<AboutKiloCodeTabProps> = (props) => {
     const status = props.settings.connection()
     if (status === "connected") return "connected"
     if (status === "connecting") return "connecting"
-    // The event stream dropped and retries: the server is not reachable.
-    return "disconnected"
+    // The event stream dropped. A recovery error is shown as an error; otherwise it keeps retrying.
+    return props.settings.connectionError() ? "error" : "disconnected"
   }
 
   const getStatusColor = () => {
@@ -188,6 +188,10 @@ const AboutKiloCodeTab: Component<AboutKiloCodeTabProps> = (props) => {
         <h4 style={headingStyle}>{language.t("settings.aboutKiloCode.versionInfo")}</h4>
         <div style={{ display: "flex", "align-items": "center" }}>
           <span style={labelStyle}>{language.t("settings.aboutKiloCode.version.label")}</span>
+          <span style={valueStyle}>{props.settings.extensionVersion() || "—"}</span>
+        </div>
+        <div style={{ display: "flex", "align-items": "center", "margin-top": "8px" }}>
+          <span style={labelStyle}>{language.t("settings.aboutKiloCode.serverVersion.label")}</span>
           <span style={valueStyle}>{props.settings.version() || "—"}</span>
         </div>
       </div>

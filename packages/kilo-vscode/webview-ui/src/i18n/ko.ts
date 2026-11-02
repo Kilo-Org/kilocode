@@ -267,6 +267,7 @@ export const dict = {
   "prompt.toast.promptSendFailed.title": "프롬프트 전송 실패",
 
   "mcp.status.connected": "연결됨",
+  "mcp.status.pending": "연결 중",
   "mcp.status.failed": "실패",
   "mcp.status.needs_auth": "인증 필요",
   "mcp.status.needs_registration": "클라이언트 등록 필요",
@@ -1126,7 +1127,7 @@ export const dict = {
   "settings.agentBehaviour.mcp.timeout.catalog.title": "카탈로그 시간 초과 (ms)",
   "settings.agentBehaviour.mcp.timeout.execution.title": "실행 시간 초과 (ms)",
   "settings.agentBehaviour.mcpEmpty":
-    "MCP 서버가 구성되지 않았습니다. kilo.jsonc에서 MCP 서버를 추가하거나 에이전트에게 추가를 요청하세요.",
+    "MCP 서버가 구성되지 않았습니다. kilo2.json에서 MCP 서버를 추가하거나 에이전트에게 추가를 요청하세요.",
   "settings.agentBehaviour.workflows.description":
     "워크플로우는 구성 또는 명령 Markdown 파일에 정의된 사용자 정의 명령입니다. 각 워크플로우에 모델과 추론 변형을 설정할 수 있습니다.",
   "settings.agentBehaviour.workflows.empty":
