@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Kilo Architecture Ratchet Allowlist",
+  "description": "Baseline exception list for Kilo-owned domain architecture boundaries and state ratchets on the v2 package layout. Upstream-owned shared opencode files are exempt to prevent upstream merge conflicts. As Kilo legacy sites are refactored into clean Effect layers, decrement counts or remove entries to lock in progress.",
+  "rules": {
+    "core-directionality": {
+      "description": "Forbidden imports in packages/schema/src, packages/core/src, packages/protocol/src, and packages/client/src. Target: domain packages depend only in the allowed direction.",
+      "allowed": {}
+    },
+    "kilo-gateway-core-isolation": {
+      "description": "Imports from @opencode/* in packages/kilo-gateway-core/src. Target: Kilo logic packages stay independent of @opencode/*.",
+      "allowed": {}
+    },
+    "kilo-instance-state": {
+      "description": "Legacy InstanceState.make usages in Kilo-owned code (packages/kilo-*/src/**, packages/*/src/kilocode/**). Target: encapsulate in scoped Effect Services in packages/core.",
+      "allowed": {}
+    },
+    "kilo-database-constructors": {
+      "description": "Direct new Database() / new DatabaseSync() instantiations in Kilo-owned code. Target: all persistence routes through core Database.Service.",
+      "allowed": {}
+    },
+    "kilo-tool-process-env": {
+      "description": "Direct process.env reads in Kilo-owned tools. Target: pass configuration explicitly via Tool.Context or Env.Service.",
+      "allowed": {}
+    },
+    "kilo-httpapi-handlers": {
+      "description": "Raw OS or process operations in Kilo-owned HTTP handler files. Target: delegate to domain Effect services.",
+      "allowed": {}
+    }
+  }
+}

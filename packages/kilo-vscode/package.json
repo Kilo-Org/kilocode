@@ -296,7 +296,7 @@
     "package": "bun script/build.ts",
     "extension": "bun script/launch.ts",
     "typecheck": "tsc --noEmit && tsc --noEmit -p webview-ui",
-    "lint": "oxlint --config ../../.oxlintrc.json src webview-ui/src script test",
+    "lint": "cd ../.. && oxlint --config .oxlintrc.json packages/kilo-vscode/src packages/kilo-vscode/webview-ui/src packages/kilo-vscode/script packages/kilo-vscode/test",
     "test": "bun test"
   },
   "dependencies": {
