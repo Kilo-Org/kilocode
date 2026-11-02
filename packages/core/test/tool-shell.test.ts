@@ -209,8 +209,8 @@ const streamingCommand = (release: string) =>
     : `printf begin; while [ ! -e '${release}' ]; do sleep 0.05; done; printf ' end'`
 const largeOutputCommand = (release: string) =>
   isWindows
-    ? `[Console]::Out.Write('x' * 140001); while (!(Test-Path -LiteralPath '${release}')) { Start-Sleep -Milliseconds 25 }`
-    : `printf 'x'; printf '\\303\\251%.0s' $(seq 1 70000); while [ ! -e '${release}' ]; do sleep 0.05; done`
+    ? `[Console]::Out.Write('x' * 140002); while (!(Test-Path -LiteralPath '${release}')) { Start-Sleep -Milliseconds 25 }`
+    : `printf 'x'; printf '\\303\\251%.0s' $(seq 1 70000); printf 'y'; while [ ! -e '${release}' ]; do sleep 0.05; done`
 const LIVE_PREVIEW_LIMIT = 30_000
 const LIVE_PREVIEW_PREFIX = "...\n\n"
 // kilocode_change end
@@ -1613,6 +1613,15 @@ describe("ShellTool", () => {
               const bounded = updates.filter(
                 (update) => typeof update.output === "string" && update.output.startsWith(LIVE_PREVIEW_PREFIX),
               )
+              if (!isWindows) {
+                const expected = Buffer.from(`x${"é".repeat(70_000)}y`)
+                const window = expected.length - LIVE_PREVIEW_LIMIT * 4
+                // The fixture must start the window inside the multi-byte character, or the strip proves nothing.
+                expect(window).toBe(20_002)
+                const first = expected.subarray(window, window + 1)[0] ?? 0
+                expect(first).toBeGreaterThanOrEqual(0x80)
+                expect(first).toBeLessThanOrEqual(0xbf)
+              }
               expect(bounded.length).toBeGreaterThan(0)
               for (const update of bounded) {
                 const output = update.output as string
