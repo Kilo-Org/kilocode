@@ -2,6 +2,7 @@ import * as Attachments from "@/kilocode/server/hosted-attachments"
 import { SessionHostApi, SessionHostPaths } from "@/kilocode/server/httpapi/groups/session-host"
 import { sessionHostHandlers } from "@/kilocode/server/httpapi/handlers/session-host"
 import { SessionHost } from "@/kilocode/session-hosting"
+import { PROVIDER } from "@/kilocode/session-hosting/kilo-cloud"
 import { HostedWorkspaceID } from "@/kilocode/session-hosting/types"
 import { Auth } from "@/auth"
 import { GlobalBus, type GlobalEvent } from "@/bus/global"
@@ -11,6 +12,9 @@ import { schemaErrorLayer } from "@/server/routes/instance/httpapi/middleware/sc
 import { SessionV1 } from "@opencode-ai/core/v1/session"
 import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
 import { Database } from "@opencode-ai/core/database/database"
+import { AppRuntime } from "@/effect/app-runtime"
+import { ContinuationIntentTable } from "@opencode-ai/core/kilocode/continuation/sql"
+import { createKiloClient } from "@kilocode/sdk/v2"
 import { NodeHttpServer } from "@effect/platform-node"
 import { afterAll, afterEach, describe, expect } from "bun:test"
 import { Effect, Layer, Schema } from "effect"
@@ -28,6 +32,8 @@ const OTHER_WORKSPACE = "worktree_87654321-4321-4321-8321-cba987654321"
 const CLOUD = "workspace_12345678-1234-1234-1234-123456789abc"
 const CONTROL = "kilo-test-control-value"
 const PROFILE = "33333333-3333-4333-8333-333333333333"
+const ACCOUNT = "oauth/account-wire"
+const NEW_ONE = "ses_0000000000000000000000000a"
 const MESSAGE = "msg_00000000000000000000000009"
 const TOKEN = "kilo-test-bearer-value"
 
@@ -87,6 +93,7 @@ type State = {
   workspace: "ok" | "missing"
   status: "ok" | "missing"
   remove: "ok" | "invalid" | "unauthorized" | "conflict" | "unavailable"
+  continuation: "ok" | "balance" | "mismatch"
 }
 
 function workspaceSession(kiloSessionId: string, workspaceId: string) {
@@ -134,6 +141,7 @@ function harness(initial: Partial<State> = {}) {
     workspace: "ok",
     status: "ok",
     remove: "ok",
+    continuation: "ok",
     ...initial,
   }
   const server = Bun.serve({
@@ -149,6 +157,33 @@ function harness(initial: Partial<State> = {}) {
         auth: request.headers.get("authorization"),
         body,
       })
+      if (url.pathname === "/api/profile") {
+        return Response.json({ user: { id: ACCOUNT } })
+      }
+      if (url.pathname === "/trpc/continueHostedWorkspace") {
+        if (state.continuation === "balance") {
+          return Response.json({ error: { message: "insufficient_balance" } }, { status: 402 })
+        }
+        if (state.continuation === "mismatch") {
+          return Response.json({ error: { message: "operation_key_reuse_mismatch" } }, { status: 409 })
+        }
+        return Response.json({
+          result: {
+            data: {
+              sessions: [
+                {
+                  sourceKiloSessionId: SESSION,
+                  kiloSessionId: NEW_ONE,
+                  cloudAgentSessionId: CLOUD,
+                  agent: { mode: "build", model: "test/fake" },
+                  modeFallback: false,
+                },
+              ],
+              activeKiloSessionId: NEW_ONE,
+            },
+          },
+        })
+      }
       if (url.pathname === "/api/cloud-agent-next/token") {
         if (state.token === "invalid") return new Response("invalid", { status: 418 })
         return Response.json({ token: CONTROL, expiresAt: new Date(Date.now() + 600_000).toISOString() })
@@ -345,6 +380,7 @@ afterEach(() => {
   app.state.workspace = "ok"
   app.state.status = "ok"
   app.state.remove = "ok"
+  app.state.continuation = "ok"
 })
 afterAll(() => {
   void app.stop()
@@ -805,6 +841,94 @@ describe("session host HttpApi", () => {
       const response = yield* HttpClient.execute(HttpClientRequest.delete(workspacePath()))
       expect(response.status).toBe(502)
       expect(Attachments.store.lookup(entry.id).kind).toBe("found")
+    }),
+  )
+  it.live("returns the typed 409 and 402 continuation errors through the generated client", () =>
+    Effect.gen(function* () {
+      const directory = "/tmp/kilo-continuation-wire"
+      const saved = {
+        KILO_API_KEY: process.env["KILO_API_KEY"],
+        KILO_API_URL: process.env["KILO_API_URL"],
+        CLOUD_AGENT_NEXT_BASE_URL: process.env["CLOUD_AGENT_NEXT_BASE_URL"],
+        KILO_WEB_APP_URL: process.env["KILO_WEB_APP_URL"],
+      }
+      process.env["KILO_API_KEY"] = TOKEN
+      process.env["KILO_API_URL"] = app.url
+      process.env["CLOUD_AGENT_NEXT_BASE_URL"] = app.url
+      process.env["KILO_WEB_APP_URL"] = app.url
+
+      try {
+        for (const [state, status, code] of [
+          ["mismatch", 409, "operation_key_reuse_mismatch"],
+          ["balance", 402, "insufficient_balance"],
+        ] as const) {
+          app.state.continuation = state
+          const operationKey = crypto.randomUUID()
+          const selection = JSON.stringify({ directory, sessionIDs: [SESSION], activeSessionID: SESSION })
+          // A matching intent makes the route take the replay path straight to
+          // the provider, so the real handler and Cloud mapping are exercised.
+          yield* Effect.promise(() =>
+            AppRuntime.runPromise(
+              Database.Service.use((db) =>
+                db.db
+                  .insert(ContinuationIntentTable)
+                  .values({
+              account_id: ACCOUNT,
+              operation_key: operationKey,
+              selection_json: selection,
+              cloud_origin: app.url,
+              provider: PROVIDER,
+              prepared_json: JSON.stringify({
+                operationKey,
+                clientProvenance: "agent-manager",
+                repository: { type: "github", repo: "Kilo-Org/kilocode", branch: "main" },
+                activeSourceKiloSessionId: SESSION,
+                sessions: [{ sourceKiloSessionId: SESSION, agent: { mode: "build", model: "test/fake" } }],
+              }),
+                    created_at: Date.now(),
+                    expires_at: Date.now() + 60_000,
+                  })
+                  .run(),
+              ),
+            ),
+          )
+
+          const body = {
+            sessionHostContinueWorkspaceInput: {
+              operationKey,
+              directory,
+              sessionIDs: [SESSION],
+              activeSessionID: SESSION,
+            },
+          }
+          // Drive the real handler in-memory and capture its exact response.
+          const response = yield* HttpClientRequest.post(SessionHostPaths.workspaceContinue).pipe(
+            HttpClientRequest.bodyJson(body.sessionHostContinueWorkspaceInput),
+            Effect.flatMap(HttpClient.execute),
+          )
+          expect(response.status).toBe(status)
+          const text = yield* response.text
+
+          // Pass those real bytes through the generated client and assert the
+          // typed continuation error fields.
+          const typed = createKiloClient({
+            baseUrl: "http://handler.invalid",
+            fetch: (async () =>
+              new Response(text, { status, headers: { "content-type": "application/json" } })) as unknown as typeof fetch,
+          })
+          const { error } = yield* Effect.promise(() =>
+            typed.sessionHost.continueWorkspace(body, { throwOnError: false }),
+          )
+          expect(error).toMatchObject({ code, retryable: false })
+          expect(typeof (error as { message?: unknown }).message).toBe("string")
+        }
+      } finally {
+        app.state.continuation = "ok"
+        for (const [key, value] of Object.entries(saved)) {
+          if (value === undefined) delete process.env[key]
+          else process.env[key] = value
+        }
+      }
     }),
   )
 })

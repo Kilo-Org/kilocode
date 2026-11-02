@@ -338,6 +338,15 @@ export const ProjectSidebarBody: Component<Props> = (props) => {
             )
           }
           onCopyPath={() => navigator.clipboard.writeText(worktree.path)}
+          // The extension host owns the open session selection and the active
+          // session, so the webview sends only the worktree identity.
+          onContinueInCloud={() =>
+            post({
+              type: "agentManager.continueInCloud",
+              projectId: props.project.id,
+              worktreeId: worktree.id,
+            })
+          }
           onOpen={() => post({ type: "agentManager.openWorktree", worktreeId: worktree.id })}
           onOpenComments={() => props.onOpenComments?.(props.project.id, worktree.id)}
           onOpenPR={() => props.onOpenPR?.(props.project.id, worktree.id)}

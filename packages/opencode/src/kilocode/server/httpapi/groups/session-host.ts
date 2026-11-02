@@ -1,6 +1,8 @@
 import { ID as AttachmentID } from "@/kilocode/server/hosted-attachments"
 import {
   Availability,
+  ContinueWorkspaceInput,
+  ContinueWorkspaceResult,
   CreateWorkspaceInput,
   CreateWorkspaceResult,
   DeleteWorkspaceResult,
@@ -46,6 +48,7 @@ export const SessionHostPaths = {
   attach: `${root}/session/:providerID/:sessionID/attach`,
   attachment: `${root}/attachment/:attachmentID`,
   workspace: `${root}/workspace`,
+  workspaceContinue: `${root}/workspace/continue`,
   workspaceProfiles: `${root}/workspace/profiles`,
   workspaceDetail: `${root}/workspace/:providerID/:workspaceID`,
   workspaceStatus: `${root}/workspace/:providerID/:workspaceID/status`,
@@ -60,6 +63,21 @@ export class SessionHostGoneError extends Schema.ErrorClass<SessionHostGoneError
   { code: Schema.String, message: Schema.String },
   { httpApiStatus: 410 },
 ) {}
+
+/**
+ * A typed Continue-in-Cloud failure. It carries `code`, `message`, and
+ * `retryable` so the client can decide whether to keep the operation key:
+ * `creation_in_progress` and `continuation_incomplete` are retryable, an
+ * `operation_key_reuse_mismatch` is terminal.
+ */
+export class SessionHostContinuationError extends Schema.ErrorClass<SessionHostContinuationError>(
+  "SessionHostContinuationError",
+)({ code: Schema.String, message: Schema.String, retryable: Schema.Boolean }, { httpApiStatus: 409 }) {}
+
+/** Continue-in-Cloud needs a funded account. Always retryable: false. */
+export class SessionHostInsufficientBalanceError extends Schema.ErrorClass<SessionHostInsufficientBalanceError>(
+  "SessionHostInsufficientBalanceError",
+)({ code: Schema.String, message: Schema.String, retryable: Schema.Boolean }, { httpApiStatus: 402 }) {}
 
 export const SessionHostProviderStatus = Schema.Struct({
   id: ProviderID,
@@ -255,6 +273,18 @@ export const SessionHostApi = HttpApi.make("session-host")
             summary: "Create a hosted workspace",
             description:
               "Create a hosted workspace and its root session. Reuse the same operation key and message ID to retry safely.",
+          }),
+        ),
+        HttpApiEndpoint.post("continueWorkspace", SessionHostPaths.workspaceContinue, {
+          payload: ContinueWorkspaceInput,
+          success: described(ContinueWorkspaceResult, "Local worktree continued in Cloud"),
+          error: [...SessionErrors, SessionHostContinuationError, SessionHostInsufficientBalanceError],
+        }).annotateMerge(
+          OpenApi.annotations({
+            identifier: "sessionHost.continueWorkspace",
+            summary: "Continue a local worktree in Cloud",
+            description:
+              "Copy the open root sessions of one local worktree into a new hosted workspace. The CLI validates Git, sessions, and sync and stores one durable request body; reuse the same operation key to retry safely.",
           }),
         ),
         HttpApiEndpoint.get("listWorkspaceProfiles", SessionHostPaths.workspaceProfiles, {

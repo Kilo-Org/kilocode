@@ -564,6 +564,19 @@ export const kiloScenarios: Scenario[] = [
     }))
     .status(401),
   http.protected
+    .post("/kilocode/session-host/workspace/continue", "sessionHost.continueWorkspace")
+    .at((ctx) => ({
+      path: "/kilocode/session-host/workspace/continue",
+      headers: ctx.headers(),
+      body: {
+        operationKey: "11111111-1111-4111-8111-111111111111",
+        directory: "/tmp/example",
+        sessionIDs: ["ses_00000000000000000000000001"],
+        activeSessionID: "ses_00000000000000000000000001",
+      },
+    }))
+    .status(401),
+  http.protected
     .get("/kilocode/session-host/workspace/{providerID}/{workspaceID}", "sessionHost.getWorkspace")
     .at((ctx) => ({
       path: route("/kilocode/session-host/workspace/{providerID}/{workspaceID}", {

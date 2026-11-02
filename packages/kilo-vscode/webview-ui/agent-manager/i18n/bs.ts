@@ -87,6 +87,7 @@ export const dict = {
   "agentManager.worktree.defaultBaseBranch": "Zadana bazna grana",
   "agentManager.worktree.defaultBaseBranchAuto": "Automatsko otkrivanje",
   "agentManager.worktree.copyPath": "Kopiraj putanju",
+  "agentManager.worktree.continueInCloud": "Continue in Cloud",
   "agentManager.worktree.openInVscode": "Otvori u VS Code",
   "agentManager.worktree.rename": "Preimenuj",
   "agentManager.worktree.pin": "Zakači",
