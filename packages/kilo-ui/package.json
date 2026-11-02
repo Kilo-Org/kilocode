@@ -9,7 +9,7 @@
   "exports": {
     "./font": "./src/components/font.tsx",
     "./button": "./src/components/button.tsx",
-    "./chart": "./src/components/chart.tsx",
+    "./chart": "./src/components/tools/chart.tsx",
     "./code": "./src/components/code.tsx",
     "./diff": "./src/components/diff.tsx",
     "./diff-ssr": "./src/components/diff-ssr.tsx",

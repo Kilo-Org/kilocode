@@ -892,5 +892,15 @@
     "state": "ported",
     "note": "packages/kilo-plugin/test/review-command.test.ts carries every prompt assertion (scopes and precedence, metadata candidates, base order, commit and PR review, untrusted input, symlinks, no-edit contract, tracks, adaptive sub-agents) plus scope order, effort flags, the `subagent` adaptation and a decode of the post-review question example with `mode` through QuestionTool.Input; it also runs the built-in then the Kilo command plugin and checks the registered description and prompt. packages/kilo-cli/test/review-command.test.ts replaces the 'resolves the review command' case on the real host server, with the config override. Not carried: the parseReviewCommand cases (telemetry helper, #15303), `hints` (no v2 field), and the Review.getBaseBranch() reference (dropped from the prompt).",
     "by": "v2-review-cmd"
+  },
+  "module:packages/opencode/src/kilocode/tool/chart.ts": {
+    "state": "ported",
+    "note": "packages/kilo-plugin/src/tool-chart.ts KiloChartToolPlugin registers the chart tool with the same title, description and spec input schema, the same JSON parse and type/data validation messages, the same area remap to a filled line chart, and the same spec JSON as the model-facing content. It is registered only for the VS Code client, as v1 did through Flag.KILO_CLIENT. packages/kilo-ui/src/components/tools/chart.tsx renders the output. Telemetry tracking is not carried because v2 has no telemetry service.",
+    "by": "chart-card"
+  },
+  "module:packages/opencode/test/kilocode/chart-tool-gating.test.ts": {
+    "state": "ported",
+    "note": "packages/kilo-plugin/test/tool-chart.test.ts checks that the chart tool is registered for the VS Code app and absent for other clients, and covers spec normalization, the area remap, invalid JSON and invalid spec output. packages/kilo-ui/test/chart-tool.test.tsx covers the renderer header, error state and dataset colors.",
+    "by": "chart-card"
   }
 }
