@@ -50,3 +50,20 @@ plugin({
     build.onResolve({ filter: /^solid-js\/store$/ }, () => ({ path: solidStore }))
   },
 })
+
+// Vite's `?worker&url` import has no meaning to Bun. The file viewer only
+// passes the value to a Worker constructor, so a placeholder URL is enough to
+// load the real module graph.
+plugin({
+  name: "vite-worker-url",
+  setup(build) {
+    build.onResolve({ filter: /\?worker&url$/ }, (args) => ({
+      path: args.path,
+      namespace: "vite-worker-url",
+    }))
+    build.onLoad({ filter: /.*/, namespace: "vite-worker-url" }, (args) => ({
+      loader: "js",
+      contents: `export default ${JSON.stringify(args.path)}`,
+    }))
+  },
+})
