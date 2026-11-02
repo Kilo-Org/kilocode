@@ -101,6 +101,15 @@ function locationPath(uri: string, directory: string) {
   return localPath(resolve(directory, uri))
 }
 
+// jscpd can prefix a location URI with a base directory that is not the scan root, so match the
+// longest known scan path suffix first and keep the absolute resolution only as a fallback.
+function matchLocation(uri: string, directory: string, scanned: { repo: string; match: string }[]) {
+  const normalized = (uri.startsWith("file:") ? fileURLToPath(uri) : uri).replaceAll("\\", "/").toLowerCase()
+  const found = scanned.find((entry) => normalized.endsWith(entry.match))
+  if (found) return found.repo
+  return path(relative(directory, locationPath(uri, directory)).replaceAll("\\", "/"))
+}
+
 function path(value: unknown) {
   const file = text(value)
   if (
@@ -175,6 +184,10 @@ export async function scan(cwd: string) {
     files.push(absolute)
   }
   if (files.length === 0) throw new Error("No Kilo-owned source files found for duplication analysis")
+  const scanned = files.map((file) => {
+    const repo = relative(directory, file).replaceAll("\\", "/")
+    return { repo, match: repo.toLowerCase() }
+  })
   const temporary = await mkdtemp(join(tmpdir(), "kilo-duplication-"))
   try {
     const config = join(temporary, "config.json")
@@ -225,10 +238,9 @@ export async function scan(cwd: string) {
         const location = object(object(value).physicalLocation)
         const artifact = object(location.artifactLocation)
         const uri = text(artifact.uri)
-        const absolute = locationPath(uri, directory)
         const region = object(location.region)
         return {
-          file: path(relative(directory, absolute).replaceAll("\\", "/")),
+          file: matchLocation(uri, directory, scanned),
           start: integer(region.startLine, 1),
           end: integer(region.endLine, 1),
         }
