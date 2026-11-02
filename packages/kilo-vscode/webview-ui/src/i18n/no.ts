@@ -1328,7 +1328,7 @@ export const dict = {
     "Vis hurtigtasten som passer til det du gjør nå, i den tomme ledeteksten, for eksempel hvordan du legger til markert kode eller går tilbake til ledeteksten.",
   "settings.display.tokenThroughput.title": "Vis genereringshastighet",
   "settings.display.tokenThroughput.description":
-    "Vis tekstgenereringshastigheten (tokens/sec) i den nyeste assistentmeldingen og i oppgaveoverskriften. Vises som standard; deaktiver denne innstillingen for å skjule den ved behov.",
+    "Display the text-generation rate (tokens/sec) on the latest assistant message footer. Shown by default; disable this setting to hide it when needed.",
   "settings.display.autoApprovalReason.title": "Vis årsak til automatisk godkjenning",
   "settings.display.autoApprovalReason.description":
     "Viser hvorfor et verktøykall ble automatisk godkjent, for eksempel en samsvarende tillatelsesregel eller en agentstandard.",

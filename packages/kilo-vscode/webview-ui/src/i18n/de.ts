@@ -1358,7 +1358,7 @@ export const dict = {
     "Zeigt in der leeren Eingabe das Tastenkürzel an, das zu Ihrer aktuellen Tätigkeit passt, zum Beispiel wie Sie ausgewählten Code hinzufügen oder zur Eingabe zurückkehren.",
   "settings.display.tokenThroughput.title": "Token-Durchsatz anzeigen",
   "settings.display.tokenThroughput.description":
-    "Die Textgenerierungsrate (tokens/sec) in der neuesten Assistentennachricht und in der Aufgabenüberschrift anzeigen. Standardmäßig angezeigt; deaktivieren Sie diese Einstellung, um sie bei Bedarf auszublenden.",
+    "Display the text-generation rate (tokens/sec) on the latest assistant message footer. Shown by default; disable this setting to hide it when needed.",
   "settings.display.autoApprovalReason.title": "Grund für automatische Genehmigung anzeigen",
   "settings.display.autoApprovalReason.description":
     "Zeigt, warum ein Tool-Aufruf automatisch genehmigt wurde, z. B. durch eine passende Berechtigungsregel oder einen Agent-Standard.",

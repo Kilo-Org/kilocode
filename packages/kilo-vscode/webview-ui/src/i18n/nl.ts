@@ -1300,7 +1300,7 @@ export const dict = {
     "Toon in de lege prompt de sneltoets die past bij wat je nu doet, bijvoorbeeld hoe je geselecteerde code toevoegt of terugkeert naar de prompt.",
   "settings.display.tokenThroughput.title": "Tokendoorvoer weergeven",
   "settings.display.tokenThroughput.description":
-    "Toon de tekstgeneratiesnelheid (tokens/sec) in het meest recente assistentbericht en in de taakkoptekst. Wordt standaard weergegeven; schakel deze instelling uit om de snelheid indien nodig te verbergen.",
+    "Display the text-generation rate (tokens/sec) on the latest assistant message footer. Shown by default; disable this setting to hide it when needed.",
   "settings.display.autoApprovalReason.title": "Reden voor automatische goedkeuring weergeven",
   "settings.display.autoApprovalReason.description":
     "Toont waarom een tool-aanroep automatisch is goedgekeurd, zoals een overeenkomende machtigingsregel of een agentstandaard.",

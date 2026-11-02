@@ -1287,7 +1287,7 @@ export const dict = {
     "Показувати в порожньому полі запиту сполучення клавіш, що відповідає поточній дії, наприклад як додати виділений код або повернутися до запиту.",
   "settings.display.tokenThroughput.title": "Показувати пропускну здатність токенів",
   "settings.display.tokenThroughput.description":
-    "Показувати швидкість генерації тексту (tokens/sec) в останньому повідомленні асистента та в заголовку завдання. Показується за замовчуванням; вимкніть цей параметр, щоб за потреби її приховати.",
+    "Display the text-generation rate (tokens/sec) on the latest assistant message footer. Shown by default; disable this setting to hide it when needed.",
   "settings.display.autoApprovalReason.title": "Показувати причину автосхвалення",
   "settings.display.autoApprovalReason.description":
     "Показує, чому виклик інструмента схвалено автоматично, наприклад через відповідне правило дозволів або стандартне значення агента.",

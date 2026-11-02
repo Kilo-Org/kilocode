@@ -1327,7 +1327,7 @@ export const dict = {
     "Vis den tastaturgenvej i den tomme prompt, der passer til det, du gør nu, for eksempel hvordan du tilføjer markeret kode eller vender tilbage til prompten.",
   "settings.display.tokenThroughput.title": "Vis genereringshastighed",
   "settings.display.tokenThroughput.description":
-    "Vis tekstgenereringshastigheden (tokens/sec) i den seneste assistentbesked og i opgaveoverskriften. Vises som standard; deaktiver denne indstilling for at skjule den efter behov.",
+    "Display the text-generation rate (tokens/sec) on the latest assistant message footer. Shown by default; disable this setting to hide it when needed.",
   "settings.display.autoApprovalReason.title": "Vis grund til automatisk godkendelse",
   "settings.display.autoApprovalReason.description":
     "Viser, hvorfor et værktøjskald blev automatisk godkendt, f.eks. en matchende tilladelsesregel eller en agentstandard.",

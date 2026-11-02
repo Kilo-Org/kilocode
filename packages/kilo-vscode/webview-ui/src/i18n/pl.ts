@@ -1336,7 +1336,7 @@ export const dict = {
     "Pokazuje w pustym polu promptu skrót klawiszowy pasujący do tego, co teraz robisz, na przykład jak dodać zaznaczony kod lub wrócić do promptu.",
   "settings.display.tokenThroughput.title": "Pokaż przepustowość tokenów",
   "settings.display.tokenThroughput.description":
-    "Wyświetlaj szybkość generowania tekstu (tokens/sec) w najnowszej wiadomości asystenta i nagłówku zadania. Domyślnie jest wyświetlana; wyłącz to ustawienie, aby w razie potrzeby ją ukryć.",
+    "Display the text-generation rate (tokens/sec) on the latest assistant message footer. Shown by default; disable this setting to hide it when needed.",
   "settings.display.autoApprovalReason.title": "Pokaż powód automatycznego zatwierdzenia",
   "settings.display.autoApprovalReason.description":
     "Pokazuje, dlaczego wywołanie narzędzia zostało automatycznie zatwierdzone, na przykład pasująca reguła uprawnień lub wartość domyślna agenta.",

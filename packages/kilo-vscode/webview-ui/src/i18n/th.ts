@@ -1302,7 +1302,7 @@ export const dict = {
     "แสดงปุ่มลัดที่เหมาะกับสิ่งที่คุณทำอยู่ในช่องพรอมต์ที่ว่าง เช่น วิธีเพิ่มโค้ดที่เลือกหรือกลับไปที่พรอมต์",
   "settings.display.tokenThroughput.title": "แสดงอัตราการประมวลผลโทเคน",
   "settings.display.tokenThroughput.description":
-    "แสดงอัตราการสร้างข้อความ (tokens/sec) ในข้อความล่าสุดของผู้ช่วยและส่วนหัวของงาน แสดงโดยค่าเริ่มต้น; ปิดใช้งานการตั้งค่านี้เพื่อซ่อนเมื่อจำเป็น",
+    "Display the text-generation rate (tokens/sec) on the latest assistant message footer. Shown by default; disable this setting to hide it when needed.",
   "settings.display.autoApprovalReason.title": "แสดงเหตุผลการอนุมัติอัตโนมัติ",
   "settings.display.autoApprovalReason.description":
     "แสดงสาเหตุที่การเรียกเครื่องมือได้รับการอนุมัติอัตโนมัติ เช่น กฎสิทธิ์ที่ตรงกันหรือค่าเริ่มต้นของเอเจนต์",
