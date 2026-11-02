@@ -2,13 +2,17 @@
 import { describe, expect, mock, test } from "bun:test"
 import type { OpenCodeClient } from "@opencode/client"
 import type { KiloGatewayRpc } from "@opencode/schema/kilocode/gateway"
+import type { Accessor, Setter } from "solid-js"
 import { dict } from "../webview-ui/src/i18n/en"
 
 // The package resolves the server build of Solid outside a renderer, where effects never run.
 const CLIENT_SOLID = "solid-js/dist/solid.js"
 mock.module("solid-js", () => import(CLIENT_SOLID))
 
-const { createRoot, createSignal } = (await import(CLIENT_SOLID)) as typeof import("solid-js")
+const { createRoot, createSignal } = (await import(CLIENT_SOLID)) as {
+  createRoot: <T>(fn: (dispose: () => void) => T) => T
+  createSignal: <T>(value: T) => [Accessor<T>, Setter<T>]
+}
 const { createKiloCatalog, failureMessage, failureNeedsSignIn } = await import("../webview-ui/src/v2/kilo-catalog")
 
 const t = (key: string, vars?: { status: number }) => (vars ? `${key}:${vars.status}` : key)
