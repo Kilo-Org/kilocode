@@ -92,6 +92,15 @@ function localPath(value: string) {
   return value.replace(/^\\\\\?\\UNC\\/i, "\\\\").replace(/^\\\\\?\\/i, "")
 }
 
+// The scanner can report a relative URI with a base that points at the process directory instead
+// of the scan root, so resolve relative locations against the root that was scanned.
+function locationPath(uri: string, directory: string) {
+  if (uri.startsWith("file:")) return localPath(fileURLToPath(uri))
+  if (/^[/\\][a-zA-Z]:[\\/]/.test(uri)) return localPath(uri.slice(1))
+  if (isAbsolute(uri) || /^[a-zA-Z]:[\\/]/.test(uri)) return localPath(uri)
+  return localPath(resolve(directory, uri))
+}
+
 function path(value: unknown) {
   const file = text(value)
   if (
@@ -216,11 +225,7 @@ export async function scan(cwd: string) {
         const location = object(object(value).physicalLocation)
         const artifact = object(location.artifactLocation)
         const uri = text(artifact.uri)
-        const absolute = localPath(
-          isAbsolute(uri)
-            ? uri
-            : fileURLToPath(new URL(uri, text(object(object(run.originalUriBaseIds)[text(artifact.uriBaseId)]).uri))),
-        )
+        const absolute = locationPath(uri, directory)
         const region = object(location.region)
         return {
           file: path(relative(directory, absolute).replaceAll("\\", "/")),
