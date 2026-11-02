@@ -40,6 +40,24 @@ describe("auto-approve controller", () => {
     expect(replies).toEqual(["a", "b"])
   })
 
+  test("stops approving requests after auto-approve is reset", () => {
+    const replies: string[] = []
+    const controller = createAutoApproveController((item) => {
+      replies.push(item.id)
+      return Promise.resolve()
+    })
+
+    controller.setEnabled(true)
+    controller.approve([request("before")])
+    controller.setEnabled(false)
+    controller.approve([request("after")])
+    expect(replies).toEqual(["before"])
+
+    controller.setEnabled(true)
+    controller.approve([request("after")])
+    expect(replies).toEqual(["before", "after"])
+  })
+
   test("retries a request whose reply failed", async () => {
     const replies: string[] = []
     let fail = true

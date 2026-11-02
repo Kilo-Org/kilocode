@@ -262,7 +262,12 @@ export type PermissionSource = { type: "tool"; messageID: string; id: string }
 
 export type PermissionSavedID = string
 
-export type CommandInfo = { name: string; description?: string }
+export type CommandInfo = {
+  name: string
+  description?: string
+  template?: string
+  model?: string | { providerID: string; model: string; variant?: string }
+}
 
 export type RpcOutput = { output?: any }
 

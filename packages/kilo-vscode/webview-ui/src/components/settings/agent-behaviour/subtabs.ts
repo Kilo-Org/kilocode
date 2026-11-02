@@ -2,11 +2,15 @@
 // only ready subtabs. The `ready` line is on its own so a later change that flips one subtab does not touch the others.
 import { lazy, type Component } from "solid-js"
 
+export interface AgentBehaviourSubtabProps {
+  navigation?: number
+}
+
 export interface AgentBehaviourSubtab {
   id: string
   title: string
   ready: boolean
-  component: Component
+  component: Component<AgentBehaviourSubtabProps>
 }
 
 export const AGENT_BEHAVIOUR_SUBTABS: AgentBehaviourSubtab[] = [

@@ -1,5 +1,5 @@
 // The v2 contract of the Create New Mode view. The name becomes the `agents.<name>` config key, so validation keeps
-// it to a slug and rejects the names already listed.
+// it to a slug and rejects built-in names and names already listed.
 import { Button } from "@kilocode/kilo-ui/button"
 import { Card } from "@kilocode/kilo-ui/card"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
@@ -8,7 +8,7 @@ import { Component, Show, createSignal } from "solid-js"
 import { useLanguage } from "../../../context/language"
 import { useSettingsConfig } from "../../../v2/settings-config"
 import SettingsRow from "../SettingsRow"
-import { agentPath } from "./agent-list"
+import { agentPath, isAgentNameTaken } from "./agent-list"
 
 interface Props {
   /** Names already taken (used for uniqueness validation). */
@@ -29,7 +29,7 @@ const ModeCreateView: Component<Props> = (props) => {
   const validate = (value: string): string => {
     if (!value.trim()) return language.t("settings.agentBehaviour.createMode.nameRequired")
     if (!/^[a-z][a-z0-9-]*$/.test(value.trim())) return language.t("settings.agentBehaviour.createMode.nameInvalid")
-    if (props.taken.includes(value.trim())) return language.t("settings.agentBehaviour.createMode.nameTaken")
+    if (isAgentNameTaken(value.trim(), props.taken)) return language.t("settings.agentBehaviour.createMode.nameTaken")
     return ""
   }
 

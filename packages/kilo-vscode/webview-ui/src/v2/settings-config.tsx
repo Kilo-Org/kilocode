@@ -151,9 +151,13 @@ export function createSettingsConfig() {
   const source = (path: string[]): SettingsScope | undefined =>
     scopeOf(path, rawConfig().project, rawConfig().global)
 
-  const value = (path: string[]) => {
+  const optimisticValue = (path: string[]) => {
     const key = pathKey(path)
-    const entry = [...optimistic()].toReversed().find((item) => pathKey(item.path) === key)
+    return [...optimistic()].toReversed().find((item) => pathKey(item.path) === key)
+  }
+
+  const value = (path: string[]) => {
+    const entry = optimisticValue(path)
     if (entry) return entry.value
     return readPath(merged(), path)
   }
@@ -169,7 +173,7 @@ export function createSettingsConfig() {
     })
 
   /** Write a value immediately. A VS Code setting passes through `setSetting`. */
-  const set = async (path: string[], value: unknown, scope?: SettingsScope) => {
+  const set = async (path: string[], value: unknown, scope?: SettingsScope, preserveAliases = false) => {
     const target = await writeScope(scope, filesReady.wait, () => source(path))
     const key = pathKey(path)
     const writeValue = clone(value)
@@ -179,7 +183,7 @@ export function createSettingsConfig() {
     setInflight((list) => [...list, { path: key, token }])
     let result: { ok: boolean; error?: string }
     try {
-      result = await write(target, [{ path, value: writeValue }])
+      result = await write(target, [{ path, value: writeValue, preserveAliases }])
     } finally {
       setInflight((list) => list.filter((item) => item.token !== token))
     }
@@ -205,6 +209,7 @@ export function createSettingsConfig() {
     path,
     source,
     value,
+    optimistic: optimisticValue,
     pending,
     set,
     unset,

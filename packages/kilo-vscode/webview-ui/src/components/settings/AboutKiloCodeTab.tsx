@@ -15,12 +15,13 @@ export interface AboutKiloCodeTabProps {
   onLogin: () => void
 }
 
+// Keep the guard when the About tab unmounts during an import.
+const [importing, setImporting] = createSignal(false)
+
 const AboutKiloCodeTab: Component<AboutKiloCodeTabProps> = (props) => {
   const language = useLanguage()
   const vscode = useVSCode()
   const config = useSettingsConfig()
-  const [importing, setImporting] = createSignal(false)
-
   const open = (url: string) => props.settings.open(url)
   const post = (message: unknown) => vscode.postMessage(message as never)
 
@@ -90,28 +91,39 @@ const AboutKiloCodeTab: Component<AboutKiloCodeTabProps> = (props) => {
       setImporting(true)
       const reader = new FileReader()
       reader.onload = async () => {
-        setImporting(false)
-        const result = parseImport(reader.result as string)
-        if (!result.ok) {
-          const key =
-            result.error === "invalidJson"
-              ? "settings.aboutKiloCode.importSettings.invalidJson"
-              : "settings.aboutKiloCode.importSettings.invalidConfig"
-          showToast({ variant: "error", title: language.t(key) })
-          return
+        try {
+          const result = parseImport(reader.result as string)
+          if (!result.ok) {
+            const key =
+              result.error === "invalidJson"
+                ? "settings.aboutKiloCode.importSettings.invalidJson"
+                : "settings.aboutKiloCode.importSettings.invalidConfig"
+            showToast({ variant: "error", title: language.t(key) })
+            return
+          }
+          if (result.warning === "newerVersion")
+            showToast({ variant: "default", title: language.t("settings.aboutKiloCode.importSettings.newerVersion") })
+          // Apply every known key to the global config directly, one write at a time.
+          const failed: string[] = []
+          for (const [key, value] of Object.entries(result.config)) {
+            try {
+              if (!(await config.set([key], value, "global"))) failed.push(key)
+            } catch {
+              failed.push(key)
+            }
+          }
+          if (failed.length) {
+            showToast({
+              variant: "error",
+              title: language.t("settings.saveBar.saveFailed"),
+              description: failed.join(", "),
+            })
+            return
+          }
+          showToast({ variant: "success", title: language.t("settings.aboutKiloCode.importSettings.applied") })
+        } finally {
+          setImporting(false)
         }
-        if (result.warning === "newerVersion")
-          showToast({ variant: "default", title: language.t("settings.aboutKiloCode.importSettings.newerVersion") })
-        // Apply every known key to the global config directly, one write at a time.
-        let failed = false
-        for (const [key, value] of Object.entries(result.config)) {
-          if (!(await config.set([key], value, "global"))) failed = true
-        }
-        if (failed) {
-          showToast({ variant: "error", title: language.t("settings.saveBar.saveFailed") })
-          return
-        }
-        showToast({ variant: "success", title: language.t("settings.aboutKiloCode.importSettings.applied") })
       }
       reader.onerror = () => {
         setImporting(false)
@@ -172,7 +184,7 @@ const AboutKiloCodeTab: Component<AboutKiloCodeTabProps> = (props) => {
   return (
     <div>
       {/* Version Information */}
-      <div style={sectionStyle}>
+      <div data-search-label={language.t("settings.aboutKiloCode.versionInfo")} style={sectionStyle}>
         <h4 style={headingStyle}>{language.t("settings.aboutKiloCode.versionInfo")}</h4>
         <div style={{ display: "flex", "align-items": "center" }}>
           <span style={labelStyle}>{language.t("settings.aboutKiloCode.version.label")}</span>
@@ -181,7 +193,7 @@ const AboutKiloCodeTab: Component<AboutKiloCodeTabProps> = (props) => {
       </div>
 
       {/* Community & Support */}
-      <div style={sectionStyle}>
+      <div data-search-label={language.t("settings.aboutKiloCode.community")} style={sectionStyle}>
         <h4 style={headingStyle}>{language.t("settings.aboutKiloCode.community")}</h4>
         <p style={bodyStyle}>
           {language.t("settings.aboutKiloCode.feedback.prefix")}{" "}
@@ -208,7 +220,7 @@ const AboutKiloCodeTab: Component<AboutKiloCodeTabProps> = (props) => {
       </div>
 
       {/* Telemetry */}
-      <div style={sectionStyle}>
+      <div data-search-label={language.t("settings.aboutKiloCode.telemetry.title")} style={sectionStyle}>
         <h4 style={headingStyle}>{language.t("settings.aboutKiloCode.telemetry.title")}</h4>
         <p style={bodyStyle}>{language.t("settings.aboutKiloCode.telemetry.description")}</p>
         <Button
@@ -222,7 +234,7 @@ const AboutKiloCodeTab: Component<AboutKiloCodeTabProps> = (props) => {
       </div>
 
       {/* CLI Server */}
-      <div style={sectionStyle}>
+      <div data-search-label={language.t("settings.aboutKiloCode.cliServer")} style={sectionStyle}>
         <h4 style={headingStyle}>{language.t("settings.aboutKiloCode.cliServer")}</h4>
         <div style={{ display: "flex", "align-items": "center" }}>
           <span style={labelStyle}>{language.t("settings.aboutKiloCode.status.label")}</span>
@@ -244,7 +256,7 @@ const AboutKiloCodeTab: Component<AboutKiloCodeTabProps> = (props) => {
       </div>
 
       {/* Settings Transfer */}
-      <div style={sectionStyle}>
+      <div data-search-label={language.t("settings.aboutKiloCode.settingsTransfer.title")} style={sectionStyle}>
         <h4 style={headingStyle}>{language.t("settings.aboutKiloCode.settingsTransfer.title")}</h4>
         <p style={bodyStyle}>{language.t("settings.aboutKiloCode.settingsTransfer.description")}</p>
         <div style={{ display: "flex", gap: "8px" }}>
@@ -260,7 +272,7 @@ const AboutKiloCodeTab: Component<AboutKiloCodeTabProps> = (props) => {
       </div>
 
       {/* Reset Settings */}
-      <div style={sectionStyle}>
+      <div data-search-label={language.t("settings.aboutKiloCode.resetSettings.title")} style={sectionStyle}>
         <h4 style={headingStyle}>{language.t("settings.aboutKiloCode.resetSettings.title")}</h4>
         <p style={bodyStyle}>{language.t("settings.aboutKiloCode.resetSettings.description")}</p>
         <Button variant="primary" size="small" onClick={handleReset}>

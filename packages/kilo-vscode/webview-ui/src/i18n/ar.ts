@@ -1116,8 +1116,8 @@ export const dict = {
   "settings.agentBehaviour.mcpEmpty":
     "لم يتم تهيئة خوادم MCP. أضف خوادم MCP في kilo.jsonc، أو اطلب من الوكيل إضافتها لك.",
   "settings.agentBehaviour.workflows.description":
-    "سير العمل هي أوامر شرطة مائلة مخصصة محددة في التهيئة الخاصة بك. اكتب /command-name في الدردشة لتشغيلها. يتم تهيئة الأوامر في opencode.json ضمن قسم 'command'.",
-  "settings.agentBehaviour.workflows.empty": "لم يتم تهيئة أوامر مخصصة. أضف أوامر إلى opencode.json لرؤيتها هنا.",
+    "سير العمل هي أوامر مخصصة محددة في التهيئة الخاصة بك أو في ملفات Markdown للأوامر. يمكنك تعيين نموذج ومتغير استدلال لكل سير عمل.",
+  "settings.agentBehaviour.workflows.empty": "لم يتم العثور على أوامر مخصصة. أضف أوامر إلى kilo2.json أو إلى ملف Markdown في .kilo2/command.",
   "settings.agentBehaviour.workflows.detail.description": "الوصف",
   "settings.agentBehaviour.workflows.detail.template": "القالب",
   "settings.agentBehaviour.workflows.model": "النموذج",

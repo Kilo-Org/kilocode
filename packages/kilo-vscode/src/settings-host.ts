@@ -9,7 +9,7 @@ import { commands, workspace, Uri, window, type ExtensionContext } from "vscode"
 import { KiloConfigFiles } from "@opencode/util/kilocode/config/files"
 import { applyConfigEdits, isKiloConfigFile, serialize } from "./config-file-edit"
 import { local } from "./local"
-import { resolveGlobalConfigDir, canonicalPath } from "./settings-paths"
+import { resolveGlobalConfigDir, canonicalPath, matchConfigDocument } from "./settings-paths"
 import type { ConfigEdit, ConfigScope, ToHost, ToWebview } from "./protocol"
 import type { Manager } from "./server"
 
@@ -54,6 +54,7 @@ export function settingsHost(input: {
   server: Manager
   directory: string
   post: (message: ToWebview) => void
+  onReset?: () => void
 }) {
   // The dev entry (`script/dev-isolated.ts`) keeps everything under `KILO_V2_PROFILE`, and `server.ts` defaults that
   // to the extension storage. A bundled server inherits the host environment and uses XDG paths directly.
@@ -81,34 +82,28 @@ export function settingsHost(input: {
   /** The global and project config files, from the server's config documents. */
   const targets = async () => {
     const list = await entries()
-    const documents = new Set<string>()
+    const documents = new Map<string, string>()
     const directories: string[] = []
     for (const entry of list) {
       if (!entry.path) continue
       const real = await canonicalPath(entry.path)
-      if (entry.type === "document") documents.add(real)
+      if (entry.type === "document") documents.set(real, entry.path)
       else directories.push(real)
-    }
-    const pick = async (candidates: string[]) => {
-      for (const candidate of candidates) {
-        const real = await canonicalPath(candidate)
-        if (documents.has(real)) return real
-      }
-      return undefined
     }
 
     // The project target never depends on the global directory. A missing global directory entry (the directory does
     // not exist yet) falls back to the same path the spawned server uses, and `writeConfig` creates it.
     const projectRoot = await canonicalPath(input.directory)
     const project =
-      (await pick(KiloConfigFiles.writeCandidates(projectRoot, false))) ??
+      (await matchConfigDocument(KiloConfigFiles.writeCandidates(projectRoot, false), documents)) ??
       path.join(projectRoot, KiloConfigFiles.newFile)
     const globalDir = await canonicalPath(
       directories.find((directory) => !KiloConfigFiles.directories.includes(path.basename(directory))) ??
         resolveGlobalConfigDir(process.env, profile),
     )
     const global =
-      (await pick(KiloConfigFiles.writeCandidates(globalDir, true))) ?? path.join(globalDir, KiloConfigFiles.newFile)
+      (await matchConfigDocument(KiloConfigFiles.writeCandidates(globalDir, true), documents)) ??
+      path.join(globalDir, KiloConfigFiles.newFile)
     return { global, project }
   }
 
@@ -148,7 +143,7 @@ export function settingsHost(input: {
     void enqueue(async () => {
       try {
         const files = await targets()
-        const file = files[scope]
+        const file = await canonicalPath(files[scope])
         if (!isKiloConfigFile(file)) throw new Error(`Refused a config write outside a Kilo config file: ${file}`)
         const existing = await read(file)
         if (existing.trim().length === 0 && edits.every((edit) => edit.value === undefined)) {
@@ -187,6 +182,7 @@ export function settingsHost(input: {
     const config = workspace.getConfiguration(NAMESPACE)
     for (const key of KILO_SETTING_KEYS) await config.update(key, undefined, true)
     for (const key of GLOBAL_STATE_KEYS) await input.context.globalState.update(key, undefined)
+    input.onReset?.()
     input.post({ type: "vscodeSettingsLoaded", values: readKiloSettings() })
     void window.showInformationMessage("Kilo Code settings have been reset to defaults.")
   }
