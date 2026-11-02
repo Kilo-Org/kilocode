@@ -77,6 +77,13 @@ export const SETTINGS_TABS_V2: SettingsTabV2[] = [
     component: lazy(() => import("./DisplayTab")),
   },
   {
+    id: "autocomplete",
+    icon: "code-lines",
+    title: "settings.autocomplete.title",
+    ready: true,
+    component: lazy(() => import("./AutocompleteTab")),
+  },
+  {
     id: "context",
     icon: "server",
     title: "settings.context.title",
