@@ -56,7 +56,7 @@ const AgentBehaviourTab: Component<SettingsTabProps> = (props) => {
       </div>
 
       <Show when={active()}>
-        <Dynamic component={active()!.component} navigation={props.navigation} />
+        <Dynamic component={active()!.component} navigation={props.navigation} focus={props.focus} />
       </Show>
     </div>
   )
