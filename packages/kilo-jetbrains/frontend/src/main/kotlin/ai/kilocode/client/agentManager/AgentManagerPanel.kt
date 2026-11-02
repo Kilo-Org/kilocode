@@ -80,6 +80,7 @@ import ai.kilocode.rpc.dto.WorktreeStatsDto
 import com.intellij.icons.AllIcons
 import com.intellij.ide.BrowserUtil
 import com.intellij.ide.DeleteProvider
+import com.intellij.ide.IdeTooltipManager
 import com.intellij.ide.actions.RevealFileAction
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.actionSystem.ActionManager
@@ -200,7 +201,12 @@ class AgentManagerPanel(
         Disposer.register(this, popup)
         // A row that scrolls or gets selected is no longer under the balloon that points at it, and a
         // busy list or a rebuilt model has already dropped the hover the popup was opened from.
-        tree.onScroll = { popup.hideAll() }
+        tree.onScroll = { dismissTransient() }
+        // Drag gestures move the pointer across rows without the normal hover path, and any transient
+        // window that stays up can cache the tree's accessibility view against a window that is about
+        // to be disposed. Clear both ends of the drag, then let the next real pointer move restore it.
+        tree.onDragStart = { dismissTransient() }
+        tree.onDragEnd = { dismissTransient() }
         isOpaque = true
         project?.let {
             val orphan = OrphanBanner(it, controller, this)
@@ -664,6 +670,15 @@ class AgentManagerPanel(
         return (0 until controller.model.size)
             .map { controller.model.getElementAt(it) }
             .firstOrNull { it.id == key }
+    }
+
+    /**
+     * Tears down every transient window anchored to the tree rows. Both are dismissed before a drag and
+     * once it ends so focus returns to the tree without a popup or tooltip window owning the pointer.
+     */
+    private fun dismissTransient() {
+        popup.hideAll()
+        IdeTooltipManager.getInstance().hideCurrentNow(false)
     }
 
     /**

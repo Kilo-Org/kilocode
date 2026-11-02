@@ -128,9 +128,17 @@ internal class ActiveTree(
     /** Called when the tree scrolls or a row changes position under an anchored popup. */
     var onScroll: (() -> Unit)? = null
 
+    /** Called when a row drag starts, before the native drag loop takes over. */
+    var onDragStart: (() -> Unit)? = null
+
+    /** Called once the drag ends, whether it dropped or was cancelled. */
+    var onDragEnd: (() -> Unit)? = null
+
     init {
         view.onSelect = actions.select
         view.onGeometry = { onScroll?.invoke() }
+        view.onDragStart = { onDragStart?.invoke() }
+        view.onDragEnd = { onDragEnd?.invoke() }
         scroll.verticalScrollBar.addAdjustmentListener { view.geometry() }
         if (surface == ActiveSurface.ToolWindow) isOpaque = true
         scroll.border = JBUI.Borders.empty()
@@ -264,6 +272,7 @@ internal class ActiveTreeView(
     private var popups = 0
     private var popupProperty: Any? = null
     private var restoring = false
+    private var dragging = false
     private var baseCursor: Cursor = Cursor.getDefaultCursor()
     private var externalGroup: ActionGroup? = null
     private var installed = false
@@ -272,6 +281,8 @@ internal class ActiveTreeView(
     private var height: Int? = null
     internal var onSelect: (() -> Unit)? = null
     internal var onGeometry: (() -> Unit)? = null
+    internal var onDragStart: (() -> Unit)? = null
+    internal var onDragEnd: (() -> Unit)? = null
 
     private val hover = object : TreeHoverListener() {
         override fun onHover(tree: javax.swing.JTree, row: Int) {
@@ -370,7 +381,11 @@ internal class ActiveTreeView(
     override fun removeNotify() {
         putClientProperty(AnimatedIcon.REFRESH_DELEGATE, null)
         setHovered(null)
-        cancelDrag()
+        if (dragging) {
+            dragEnded()
+        } else {
+            cancelDrag()
+        }
         if (installed) {
             installed = false
             TreeHoverListener.DEFAULT.removeFrom(this)
@@ -656,9 +671,13 @@ internal class ActiveTreeView(
     fun setLocked(value: Boolean) {
         checkEdt()
         if (value) {
-            setHovered(null)
-            cancelDrag()
-            pointer.clear()
+            if (dragging) {
+                dragEnded()
+            } else {
+                setHovered(null)
+                cancelDrag()
+                pointer.clear()
+            }
         }
         isEnabled = !value
     }
@@ -749,13 +768,15 @@ internal class ActiveTreeView(
         enabled && hovered && menu?.available(entry.item) == true && ui is CustomBoundsTreeUI
 
     private fun setHovered(key: String?) {
-        if (key == null) TreeHoverListener.DEFAULT.mouseExited(this)
-        if (hoveredKey == key) return
+        // A drag owns the pointer; row hover would reopen the popup after the drag started.
+        val next = if (dragging) null else key
+        if (next == null) TreeHoverListener.DEFAULT.mouseExited(this)
+        if (hoveredKey == next) return
         val old = hoveredKey?.let { entries[it] }
-        hoveredKey = key
+        hoveredKey = next
         old?.let { repaintEntry(it) }
-        key?.let { entries[it] }?.let { repaintEntry(it) }
-        actions.hover?.invoke(key?.let { entries[it]?.item })
+        next?.let { entries[it] }?.let { repaintEntry(it) }
+        actions.hover?.invoke(next?.let { entries[it]?.item })
     }
 
     private fun repaintEntry(entry: ActiveEntry) {
@@ -882,7 +903,12 @@ internal class ActiveTreeView(
         if (java.awt.GraphicsEnvironment.isHeadless()) return
         SmoothAutoScroller.installDropTargetAsNecessary(this)
         DnDSupport.createBuilder(this)
-            .setBeanProvider { info -> pickable(info.point)?.let { DnDDragStartBean(TreePick(this, it)) } }
+            .setBeanProvider { info ->
+                pickable(info.point)?.let { key ->
+                    dragStarted()
+                    DnDDragStartBean(TreePick(this, key))
+                }
+            }
             .setImageProvider { info ->
                 dragImage(info.point)?.let { DnDImage(it.first, it.second) }
             }
@@ -901,7 +927,7 @@ internal class ActiveTreeView(
                 drop()
                 true
             }
-            .setDropEndedCallback { cancelDrag() }
+            .setDropEndedCallback { dragEnded() }
             .install()
     }
 
@@ -929,6 +955,34 @@ internal class ActiveTreeView(
 
     internal fun drop() {
         ordering.drop()
+    }
+
+    /**
+     * Clears transient hover and pointer state before the native drag loop starts, so a hover popup or
+     * tooltip cannot be queried as the tree's accessibility view while the drag is in progress.
+     */
+    private fun dragStarted() {
+        if (dragging) return
+        dragging = true
+        pointer.clear()
+        setHovered(null)
+        cursor = baseCursor
+        onDragStart?.invoke()
+    }
+
+    /**
+     * Clears every drag-scoped leftover, including a preview the drop handler never consumed, then
+     * repaints. Selection stays on the row the drag ended at; only invalid transient state is dropped.
+     */
+    private fun dragEnded() {
+        val started = dragging
+        dragging = false
+        cancelDrag()
+        pointer.clear()
+        setHovered(null)
+        cursor = baseCursor
+        repaint()
+        if (started) onDragEnd?.invoke()
     }
 
     private fun cancelDrag() {
