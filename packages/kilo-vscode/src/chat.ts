@@ -17,12 +17,14 @@ import { saveImage } from "./save-image"
 import type { Manager } from "./server"
 import { effectiveFontSize, KILO_SETTING_KEYS, readKiloSettings, settingsHost } from "./settings-host"
 import { promptKeybindings, watchKeybindings } from "./prompt-keybindings"
+import { openToolFile, type ToolDiff } from "./tool-diff"
 
 export function chat(input: {
   context: ExtensionContext
   server: Manager
   directory: string
   trackCostSession: (sessionID: string) => void
+  diff: ToolDiff
 }) {
   // Commands sent before the webview bundle listens are lost, and a resolved view is not yet loaded. Keep them until
   // the webview sends its first message, which it does on mount.
@@ -93,6 +95,8 @@ export function wire(input: {
   webview: Webview
   view: "chat" | "settings"
   trackCostSession?: (sessionID: string) => void
+  /** The tool diff surfaces of the chat view. Settings has none. */
+  diff?: ToolDiff
   /** Called on every message from the webview, before it is handled. */
   onMessage?: () => void
   /** Handles a view-specific message before the standard set. Returns true when it did. */
@@ -134,6 +138,8 @@ export function wire(input: {
     if (input.handle?.(message)) return
     if (message.type === "fetch" || message.type === "abort" || message.type === "open") return link.receive(message)
     if (message.type === "trackCostSession") return input.trackCostSession?.(message.sessionID)
+    if (message.type === "openToolFile") return openToolFile(input.directory, message)
+    if (message.type === "openDiffVirtual") return input.diff?.open(message.diff, message.initialDiffStyle)
     // A chat recovery link opens the Settings panel at the row that owns the problem.
     if (message.type === "openSettingsTab")
       return void commands.executeCommand("kilo-code.v2.settings", {
