@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, mock } from "bun:test"
+import { afterAll, beforeEach, describe, expect, it, mock } from "bun:test"
 
 type Posted = Record<string, unknown> & { type: string }
 type Capture = {
@@ -252,3 +252,5 @@ describe("speech host recording", () => {
     await waitFor(() => cancelled === 1, "capture cancel")
   })
 })
+
+afterAll(() => mock.restore())
