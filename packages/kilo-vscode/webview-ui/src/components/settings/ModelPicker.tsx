@@ -25,6 +25,8 @@ export interface ModelPickerProps {
   modelLabel?: string
   variantLabel?: string
   clearButtonLabel?: string
+  /** Offer the Gateway small model. Only the small model row sets this, as on v1. */
+  includeAutoSmall?: boolean
 }
 
 const ModelPicker: Component<ModelPickerProps> = (props) => {
@@ -46,6 +48,7 @@ const ModelPicker: Component<ModelPickerProps> = (props) => {
           providers={providers()}
           value={props.value ? { providerID: props.value.providerID, modelID: props.value.modelID } : null}
           blocked={props.blocked}
+          includeAutoSmall={props.includeAutoSmall}
           placeholder={props.clearLabel}
           label={props.modelLabel}
           onSelect={(providerID, modelID) =>

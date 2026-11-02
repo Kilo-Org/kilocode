@@ -20,6 +20,7 @@ export function activate(context: ExtensionContext) {
       const title = alert.title?.trim() || l10n.t("Session {0}", alert.sessionID.slice(-6))
       const keepGoing = l10n.t("Continue")
       const stop = l10n.t("Stop")
+      const openSettings = l10n.t("Open Settings")
       const choice = await window.showWarningMessage(
         l10n.t(
           "{0}: session cost {1} has reached your {2} alert threshold. Keep going?",
@@ -29,9 +30,15 @@ export function activate(context: ExtensionContext) {
         ),
         keepGoing,
         stop,
+        openSettings,
       )
       if (choice === keepGoing) return "continue"
       if (choice === stop) return "stop"
+      if (choice === openSettings)
+        void commands.executeCommand("kilo-code.v2.settings", {
+          tab: "autoApprove",
+          titleKey: "settings.autoApprove.maxCost.title",
+        })
       return undefined
     },
     onError: (error) => output.appendLine(`Cost alert: ${String(error)}`),
@@ -89,7 +96,8 @@ export function activate(context: ExtensionContext) {
       await commands.executeCommand("kilo-code.v2.chat.focus")
       await view.post({ type: "command", name: "profile" })
     }),
-    commands.registerCommand("kilo-code.v2.settings", () => panel.open()),
+    commands.registerCommand("kilo-code.v2.settings", (...args: unknown[]) => panel.open(args)),
+    commands.registerCommand("kilo-code.v2.settingsSearch", () => panel.open([{ search: true }])),
     panel,
     // The host sends the action and the webview decides the next agent, as in main: the agent list and
     // the selection live in the webview, and only the server owns the committed value.

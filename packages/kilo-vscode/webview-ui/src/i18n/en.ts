@@ -819,6 +819,7 @@ export const dict = {
   "settings.aboutKiloCode.port.label": "Port:",
   "settings.aboutKiloCode.versionInfo": "Version Information",
   "settings.aboutKiloCode.version.label": "Version:",
+  "settings.aboutKiloCode.serverVersion.label": "Server Version:",
   "settings.aboutKiloCode.community": "Community & Support",
   "settings.aboutKiloCode.feedback.prefix": "If you have any questions or feedback, feel free to open an issue on",
   "settings.aboutKiloCode.feedback.or": "or",
@@ -1330,6 +1331,8 @@ export const dict = {
   "settings.models.hidePromptTraining.title": "Hide Prompt-Training Models",
   "settings.models.hidePromptTraining.description":
     "Hide Kilo Gateway models whose providers may use your prompts for training.",
+  "settings.models.hidePromptTraining.managed":
+    "This value comes from a configuration file that this panel cannot change, such as a managed or enterprise file.",
   "settings.providers.modeModels": "Model per Mode",
   "settings.providers.modeModels.description":
     "Override the default model for specific modes. If not set, the global default model is used.",

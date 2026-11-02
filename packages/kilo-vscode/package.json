@@ -49,7 +49,55 @@
         "kilo-code.v2.language": {
           "type": "string",
           "default": "",
-          "markdownDescription": "Language override for the Kilo Code (v2) webviews. Empty follows the VS Code display language."
+          "markdownDescription": "Language override for the Kilo Code (v2) webviews. Empty follows the VS Code display language.",
+          "enum": [
+            "",
+            "en",
+            "zh",
+            "zht",
+            "ko",
+            "de",
+            "es",
+            "fr",
+            "da",
+            "ja",
+            "pl",
+            "ru",
+            "ar",
+            "no",
+            "br",
+            "th",
+            "bs",
+            "tr",
+            "nl",
+            "uk",
+            "it",
+            "fa"
+          ],
+          "enumDescriptions": [
+            "Auto (VS Code language)",
+            "English",
+            "简体中文",
+            "繁體中文",
+            "한국어",
+            "Deutsch",
+            "Español",
+            "Français",
+            "Dansk",
+            "日本語",
+            "Polski",
+            "Русский",
+            "العربية",
+            "Norsk",
+            "Português (Brasil)",
+            "ภาษาไทย",
+            "Bosanski",
+            "Türkçe",
+            "Nederlands",
+            "Українська",
+            "Italiano",
+            "فارسی"
+          ]
         },
         "kilo-code.v2.chat.shiftTabCyclesVariant": {
           "type": "boolean",
@@ -101,6 +149,12 @@
         "icon": "$(settings-gear)"
       },
       {
+        "command": "kilo-code.v2.settingsSearch",
+        "title": "Search Settings",
+        "category": "Kilo Code (v2)",
+        "icon": "$(search)"
+      },
+      {
         "command": "kilo-code.v2.restartServer",
         "title": "Restart Server",
         "category": "Kilo Code (v2)"
@@ -128,6 +182,12 @@
         "key": "ctrl+shift+.",
         "mac": "cmd+shift+.",
         "when": "kilo-code.v2.sidebarFocused"
+      },
+      {
+        "command": "kilo-code.v2.settingsSearch",
+        "key": "ctrl+f",
+        "mac": "cmd+f",
+        "when": "activeWebviewPanelId == 'kilo-code.v2.settingsPanel'"
       }
     ],
     "menus": {
