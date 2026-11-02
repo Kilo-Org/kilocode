@@ -11,12 +11,13 @@ import {
   type WebviewViewProvider,
 } from "vscode"
 import { local } from "./local"
-import type { ToHost, ToWebview } from "./protocol"
+import { DISPLAY_DEFAULTS, type ToHost, type ToWebview } from "./protocol"
 import { bridge } from "./relay"
 import { saveImage } from "./save-image"
 import type { Manager } from "./server"
 import { effectiveFontSize, KILO_SETTING_KEYS, readKiloSettings, settingsHost } from "./settings-host"
 import { promptKeybindings, watchKeybindings } from "./prompt-keybindings"
+import { readDisplaySettings } from "./display-settings"
 import { openToolFile, type ToolDiff } from "./tool-diff"
 
 export function chat(input: {
@@ -133,6 +134,33 @@ export function wire(input: {
             post({ type: "vscodeSettingsLoaded", values: readKiloSettings() })
         })
       : undefined
+  // The display layouts are Kilo-only config keys, so the chat reads them through the host when the webview asks,
+  // and again when the config changes. A failed read keeps the v1 defaults.
+  const postDisplaySettings = () => {
+    void input.server
+      .get()
+      .then((server) => readDisplaySettings({ server, directory: input.directory }))
+      .then((values) => post({ type: "displaySettingsLoaded", values }))
+      .catch((error: unknown) =>
+        post({
+          type: "displaySettingsLoaded",
+          values: DISPLAY_DEFAULTS,
+          error: error instanceof Error ? error.message : String(error),
+        }),
+      )
+  }
+  const handleSurface = (message: Surface) => {
+    switch (message.type) {
+      case "openToolFile":
+        return openToolFile(input.directory, message)
+      case "openDiffVirtual":
+        return input.diff?.open(message.diff, message.initialDiffStyle)
+      case "openDiffsVirtual":
+        return input.diff?.openMany(message.diffs, message.initialDiffStyle)
+      case "requestDisplaySettings":
+        return postDisplaySettings()
+    }
+  }
   const handleGlobalState = (message: ToHost) => {
     switch (message.type) {
       case "requestModelSelectorExpanded":
@@ -156,8 +184,7 @@ export function wire(input: {
     if (input.handle?.(message)) return
     if (message.type === "fetch" || message.type === "abort" || message.type === "open") return link.receive(message)
     if (message.type === "trackCostSession") return input.trackCostSession?.(message.sessionID)
-    if (message.type === "openToolFile") return openToolFile(input.directory, message)
-    if (message.type === "openDiffVirtual") return input.diff?.open(message.diff, message.initialDiffStyle)
+    if (isSurface(message)) return handleSurface(message)
     // A chat recovery link opens the Settings panel at the row that owns the problem.
     if (message.type === "openSettingsTab")
       return void commands.executeCommand("kilo-code.v2.settings", {
@@ -288,4 +315,18 @@ export function html(input: {
 
 function escape(text: string) {
   return text.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+}
+
+type Surface = Extract<
+  ToHost,
+  { type: "openToolFile" | "openDiffVirtual" | "openDiffsVirtual" | "requestDisplaySettings" }
+>
+
+function isSurface(message: ToHost): message is Surface {
+  return (
+    message.type === "openToolFile" ||
+    message.type === "openDiffVirtual" ||
+    message.type === "openDiffsVirtual" ||
+    message.type === "requestDisplaySettings"
+  )
 }

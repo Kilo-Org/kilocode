@@ -31,6 +31,24 @@ export type ToolActionDiff = { file: string; patch: string; additions: number; d
  */
 export type ConfigPolicy = { hidePromptTrainingModels: boolean; managed: boolean }
 
+export type ToolDisplayLayout = "expanded" | "collapsed"
+
+/**
+ * How the chat starts each kind of tool block. The three Kilo config keys are not in the config API, so the host
+ * reads the config documents and sends the effective values, with the same defaults as v1.
+ */
+export type DisplaySettings = {
+  terminalCommandDisplay: ToolDisplayLayout
+  codeEditDisplay: ToolDisplayLayout
+  mcpToolDisplay: ToolDisplayLayout
+}
+
+export const DISPLAY_DEFAULTS: DisplaySettings = {
+  terminalCommandDisplay: "expanded",
+  codeEditDisplay: "collapsed",
+  mcpToolDisplay: "collapsed",
+}
+
 /**
  * Where the Settings panel should go. `focus` names a row that a subtab renders itself (an MCP server), while
  * `titleKey` names a row by its i18n key so the panel can scroll to it after the tab renders.
@@ -67,6 +85,8 @@ export type Ui =
   | { type: "openProfile" }
   | { type: "openToolFile"; filePath: string; line?: number; column?: number; sessionID?: string }
   | { type: "openDiffVirtual"; diff: ToolActionDiff; initialDiffStyle?: "unified" | "split" }
+  | { type: "openDiffsVirtual"; diffs: ToolActionDiff[]; initialDiffStyle?: "unified" | "split" }
+  | { type: "requestDisplaySettings" }
 
 /** Settings panel messages the host handles directly (it reads and writes the config files). */
 export type Settings =
@@ -111,6 +131,7 @@ export type ToWebview =
   | { type: "configLoaded"; global: ConfigFileContent; project: ConfigFileContent; policy?: ConfigPolicy; error?: string }
   | { type: "configWritten"; id: number; ok: boolean; error?: string }
   | { type: "vscodeSettingsLoaded"; values: Record<string, unknown> }
+  | { type: "displaySettingsLoaded"; values: DisplaySettings; error?: string }
   /** The reply to `fetchCustomProviderModels`: `models`, or `error` with `auth` set when the server refused the key. */
   | {
       type: "customProviderModelsFetched"

@@ -2,7 +2,7 @@
 // upstream config schema. The host reads the documents itself and compares the defining document with the two
 // writable files. Kept free of `vscode` imports so it is unit-testable.
 import { parse } from "jsonc-parser/lib/esm/main.js"
-import type { ConfigPolicy } from "./protocol"
+import { DISPLAY_DEFAULTS, type ConfigPolicy, type DisplaySettings, type ToolDisplayLayout } from "./protocol"
 
 export type PolicyDocument = { path?: string; text: string }
 
@@ -26,4 +26,25 @@ export function configPolicy(
     managed = document.path === undefined || !writable.has(document.path)
   }
   return { hidePromptTrainingModels, managed }
+}
+
+function layout(value: unknown): ToolDisplayLayout | undefined {
+  return value === "expanded" || value === "collapsed" ? value : undefined
+}
+
+/**
+ * The effective display layouts, in document priority order as core reads them. The three keys are Kilo-only, so
+ * the config API cannot carry them, and an unset or invalid key keeps the default.
+ */
+export function displaySettings(documents: PolicyDocument[]): DisplaySettings {
+  const result = { ...DISPLAY_DEFAULTS }
+  for (const document of documents) {
+    const parsed: unknown = parse(document.text, [], { allowTrailingComma: true })
+    if (!parsed || typeof parsed !== "object") continue
+    const value = parsed as Record<string, unknown>
+    result.terminalCommandDisplay = layout(value.terminal_command_display) ?? result.terminalCommandDisplay
+    result.codeEditDisplay = layout(value.code_edit_display) ?? result.codeEditDisplay
+    result.mcpToolDisplay = layout(value.mcp_tool_display) ?? result.mcpToolDisplay
+  }
+  return result
 }

@@ -64,6 +64,8 @@ export type ToolActionDiff = {
 export type ToolActions = {
   openFile?: (path: string, line?: number) => void
   openDiff?: (diff: ToolActionDiff) => void
+  /** Opens several changed files at once, for a patch that changes more than one. */
+  openDiffs?: (diffs: ToolActionDiff[]) => void
   openSession?: (sessionID: string) => void
 }
 

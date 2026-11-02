@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test"
-import { configPolicy } from "../src/config-policy"
+import { configPolicy, displaySettings } from "../src/config-policy"
 
 const targets = { global: "/home/kilo2.json", project: "/repo/.kilo2/kilo2.json" }
 
@@ -41,5 +41,42 @@ describe("configPolicy", () => {
       { path: "/Library/Application Support/kilo/kilo2.json", text: "not json" },
     ]
     expect(configPolicy(documents, targets)).toEqual({ hidePromptTrainingModels: true, managed: false })
+  })
+})
+
+describe("displaySettings", () => {
+  test("uses the v1 defaults when no document sets a layout", () => {
+    expect(displaySettings([{ path: targets.global, text: "{}" }])).toEqual({
+      terminalCommandDisplay: "expanded",
+      codeEditDisplay: "collapsed",
+      mcpToolDisplay: "collapsed",
+    })
+  })
+
+  test("reads each layout from the last document that sets it", () => {
+    const documents = [
+      {
+        path: targets.global,
+        text: '{"terminal_command_display": "collapsed", "code_edit_display": "expanded"}',
+      },
+      { path: targets.project, text: '{"terminal_command_display": "expanded", "mcp_tool_display": "expanded"}' },
+    ]
+    expect(displaySettings(documents)).toEqual({
+      terminalCommandDisplay: "expanded",
+      codeEditDisplay: "expanded",
+      mcpToolDisplay: "expanded",
+    })
+  })
+
+  test("keeps the default for an invalid layout and an unreadable document", () => {
+    const documents = [
+      { path: targets.global, text: '{"terminal_command_display": "hidden", "mcp_tool_display": "expanded"}' },
+      { path: targets.project, text: "not json" },
+    ]
+    expect(displaySettings(documents)).toEqual({
+      terminalCommandDisplay: "expanded",
+      codeEditDisplay: "collapsed",
+      mcpToolDisplay: "expanded",
+    })
   })
 })
