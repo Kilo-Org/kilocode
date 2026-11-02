@@ -15,7 +15,13 @@ import type { ToHost, ToWebview } from "./protocol"
 import { bridge } from "./relay"
 import { saveImage } from "./save-image"
 import type { Manager } from "./server"
-import { effectiveFontSize, KILO_SETTING_KEYS, readKiloSettings, settingsHost } from "./settings-host"
+import {
+  effectiveFontSize,
+  KILO_SETTING_KEYS,
+  readKiloSettings,
+  settingsHost,
+  writeKiloSettings,
+} from "./settings-host"
 import { promptKeybindings, watchKeybindings } from "./prompt-keybindings"
 import { openToolFile, type ToolDiff } from "./tool-diff"
 
@@ -114,7 +120,8 @@ export function wire(input: {
     fetch: local,
   })
   const post = (message: ToWebview) => void webview.postMessage(message)
-  // Config read and write are host-side: only the Settings panel uses them.
+  // Config read and write are host-side: the Settings panel uses the full host, and the sidebar writes the
+  // `kilo-code.v2.*` settings it owns, such as the task header graph toggle.
   const settings =
     input.view === "settings"
       ? settingsHost({
@@ -124,7 +131,16 @@ export function wire(input: {
           post,
           onReset: input.onReset,
         })
-      : undefined
+      : input.view === "chat"
+        ? {
+            handle: (message: ToHost) => {
+              if (message.type !== "updateVSCodeSettings") return false
+              void writeKiloSettings(message.values)
+              return true
+            },
+            dispose() {},
+          }
+        : undefined
   // The sidebar carries the live Kilo settings: push a fresh value when any of them changes.
   const settingsWatch =
     input.view === "chat"
