@@ -15,6 +15,7 @@ import {
   KiloRequests,
   KiloServer,
   KiloStream,
+  KiloTranscription,
   KiloTrpc,
 } from "@kilocode/gateway-core"
 import type { ConnectionInfo } from "@opencode/client"
@@ -131,6 +132,18 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
     let cachedProjectID: string | null | undefined
     let cachedMachineID: string | null | undefined
     let organizationModes: readonly KiloModes.OrganizationMode[] = []
+    // The `catalog` event publishes only a changed reason, so a retry that fails the same way stays quiet. Clients
+    // read the current reason with `catalog.status`. The emitter exists once the RPC is registered, and the first
+    // publish after the registration always emits.
+    let emitCatalog: ((status: KiloGatewayRpc.CatalogStatus) => Effect.Effect<void, unknown>) | undefined
+    let publishedCatalog = ""
+    const publishCatalog = Effect.suspend(() => {
+      const status = catalogStatus(catalog)
+      const key = JSON.stringify(status)
+      if (!emitCatalog || key === publishedCatalog) return Effect.void
+      publishedCatalog = key
+      return emitCatalog(status).pipe(Effect.catch(() => Effect.void))
+    })
 
     const getProjectID = Effect.gen(function* () {
       if (cachedProjectID !== undefined) return cachedProjectID ?? undefined
@@ -299,7 +312,7 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
           envActive,
           models: [],
           failed: true,
-          failure: { kind: "unauthorized" },
+          failure: { kind: "unauthenticated" },
           anonymous: true,
         }
         return
@@ -307,7 +320,15 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
 
       // A scoped token cannot select another team (or Personal), even if the profile belongs to both teams.
       if (current && !KiloAccount.compatible(current)) {
-        catalog = { account: current, connection, envActive, models: [], failed: true, anonymous: false }
+        catalog = {
+          account: current,
+          connection,
+          envActive,
+          models: [],
+          failed: true,
+          failure: { kind: "scope_conflict" },
+          anonymous: false,
+        }
         return
       }
 
@@ -333,27 +354,42 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
         return
       }
 
-      const fetchedProfile: { profile: Option.Option<KiloProfile.Info>; unauthorized: boolean } = token
-        ? yield* KiloProfile.get(api, token).pipe(
-            Effect.map((profile) => ({ profile: Option.some(profile), unauthorized: false })),
-            Effect.catch((error) =>
-              Effect.succeed({ profile: Option.none<KiloProfile.Info>(), unauthorized: error.message === "Invalid token" }),
-            ),
-          )
-        : { profile: Option.none<KiloProfile.Info>(), unauthorized: false }
+      const fetchedProfile: { profile: Option.Option<KiloProfile.Info>; failure?: KiloProfile.ProfileError["reason"] } =
+        token
+          ? yield* KiloProfile.get(api, token).pipe(
+              Effect.map((profile) => ({ profile: Option.some(profile) })),
+              Effect.catch((error) => Effect.succeed({ profile: Option.none<KiloProfile.Info>(), failure: error.reason })),
+            )
+          : { profile: Option.none<KiloProfile.Info>() }
       const profile = fetchedProfile.profile
       if (targetEpoch !== epoch) return
-// An outage leaves the team-only status unknown, so fail closed. A rejected token keeps v1's catalog 401
+      // An outage leaves the team-only status unknown, so fail closed. A rejected token keeps v1's catalog 401
       // fallback to the anonymous free catalog rather than hiding free models from an expired credential.
-      if (token && !organizationID && Option.isNone(profile) && !fetchedProfile.unauthorized) {
-        catalog = { account: current, connection, envActive, models: [], failed: true, anonymous: false }
+      if (token && !organizationID && fetchedProfile.failure && fetchedProfile.failure.kind !== "unauthorized") {
+        catalog = {
+          account: current,
+          connection,
+          envActive,
+          models: [],
+          failed: true,
+          failure: fetchedProfile.failure,
+          anonymous: false,
+        }
         return
       }
       // A key login can have no saved organization. Team-only accounts must not request a personal catalog.
       if (current && !organizationID && Option.isSome(profile) && profile.value.hasPersonalAccount === false) {
         organizationID = KiloProfile.defaultOrganizationID(profile.value)
         if (resolved.personalSelected || !organizationID) {
-          catalog = { account: current, connection, envActive, models: [], failed: true, anonymous: false }
+          catalog = {
+            account: current,
+            connection,
+            envActive,
+            models: [],
+            failed: true,
+            failure: { kind: "personal_unavailable" },
+            anonymous: false,
+          }
           return
         }
         current = { ...current, organizationID }
@@ -487,7 +523,9 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
             Effect.gen(function* () {
               if (targetEpoch !== epoch) return
               yield* loadCatalog(targetEpoch, attempt + 1)
-              if (targetEpoch === epoch) yield* ctx.provider.reload()
+              if (targetEpoch !== epoch) return
+              yield* ctx.provider.reload()
+              yield* publishCatalog
             }),
           ),
         ),
@@ -519,6 +557,7 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
       ) {
         catalog = { envActive: false, models: [], failed: true, anonymous: true }
         yield* ctx.provider.reload()
+        yield* publishCatalog
       }
       if (targetEpoch !== epoch) return
       server = resolved.server
@@ -531,7 +570,11 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
       yield* cancelRetry
       yield* lock.withPermit(
         loadCatalog(targetEpoch, 0).pipe(
-          Effect.andThen(Effect.suspend(() => (targetEpoch === epoch ? ctx.provider.reload() : Effect.void))),
+          Effect.andThen(
+            Effect.suspend(() =>
+              targetEpoch === epoch ? ctx.provider.reload().pipe(Effect.andThen(publishCatalog)) : Effect.void,
+            ),
+          ),
         ),
       )
     })
@@ -865,7 +908,34 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
       }),
     )
 
-    yield* ctx.rpc
+    // The key for an autocomplete request stays in this process: the Kilo token of the active scope, or the stored
+    // key of a direct provider with its environment variable as fallback.
+    const autocompleteCredential = (provider: KiloAutocomplete.AutocompleteProviderID) =>
+      Effect.gen(function* () {
+        if (provider === "kilo") {
+          if (!scopeCompatible()) return { ok: false as const, message: "Organization conflicts with the Kilo token scope" }
+          const account = activeAccount()
+          if (!account) return { ok: false as const, message: "Not authenticated with Kilo Gateway" }
+          return {
+            ok: true as const,
+            key: account.token,
+            headers: {
+              ...KiloHeaders.provider({ version: ctx.app.version, organizationID: account.organizationID }),
+              [KiloHeaders.HEADER_FEATURE]: "autocomplete",
+            },
+          }
+        }
+        const connection = yield* ctx.integration.connection.active(provider)
+        const credential = connection
+          ? yield* ctx.integration.connection.resolve(connection).pipe(Effect.orElseSucceed(() => undefined))
+          : undefined
+        const key =
+          (credential?.type === "key" ? credential.key : undefined) ??
+          KiloAutocomplete.DIRECT_PROVIDER_ENV[provider].map((name) => process.env[name]).find(Boolean)
+        if (!key) return { ok: false as const, message: `Missing ${provider} provider API key` }
+        return { ok: true as const, key, headers: {} }
+      })
+    const registration = yield* ctx.rpc
       .register(KiloGatewayRpc.Definition, {
         ...GatewayRouters.handlers({
           account: routerAccount,
@@ -884,10 +954,14 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
         authStatus: () =>
           Effect.sync(() => {
             const account = scopeCompatible() ? catalog.account : undefined
+            const organizationID = account?.organizationID ?? catalog.organizationID ?? null
             return {
               authenticated: Boolean(account?.token),
-              organizationID: account?.organizationID ?? catalog.organizationID ?? null,
+              organizationID,
               server: catalog.account?.server ?? server,
+              ...(account?.token && organizationID === null
+                ? { identity: snapshotKey(account.server ?? server, account.token) }
+                : {}),
             }
           }),
         profile: (_input, context) =>
@@ -1044,6 +1118,28 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
               version: ctx.app.version,
             }).pipe(Effect.mapError(() => context.error("failed", "Unable to retrieve Kilo embedding models")))
           }),
+        "audio.transcriptions": (input, context) =>
+          Effect.gen(function* () {
+            if (!scopeCompatible()) return yield* Effect.fail(context.error("unauthorized", "Organization conflicts with the Kilo token scope"))
+            const account = catalog.account
+            if (!account?.token) return yield* Effect.fail(context.error("unauthorized", "Not signed in to Kilo Gateway"))
+            return yield* KiloTranscription.transcribe(
+              {
+                server: account.baseURL ?? gateway,
+                token: account.token,
+                organizationID: account.organizationID,
+                version: ctx.app.version,
+              },
+              input,
+            ).pipe(
+              Effect.mapError((failure) =>
+                context.error(
+                  failure.kind === "unauthorized" ? "unauthorized" : "failed",
+                  failure.status ? `Speech to text failed with status ${failure.status}` : "Speech to text failed",
+                ),
+              ),
+            )
+          }),
         "autocomplete.fimTarget": (input, context) =>
           Effect.suspend(() => {
             const target = KiloAutocomplete.resolveFimTarget(input.provider, input.model, catalog.account?.baseURL ?? gateway)
@@ -1056,10 +1152,72 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
             if (target.provider === "kilo" && !scopeCompatible()) return Effect.fail(context.error("unauthorized", "Organization conflicts with the Kilo token scope"))
             return Effect.succeed(target)
           }),
+        "catalog.status": () => Effect.sync(() => catalogStatus(catalog)),
+        "autocomplete.fim": (input, context) =>
+          Effect.gen(function* () {
+            const target = KiloAutocomplete.resolveFimTarget(input.provider, input.model, catalog.account?.baseURL ?? gateway)
+            const credential = yield* autocompleteCredential(target.provider)
+            if (!credential.ok) return yield* Effect.fail(context.error("unauthorized", credential.message))
+            return yield* Effect.tryPromise({
+              try: (signal) =>
+                KiloAutocomplete.requestFim({
+                  target,
+                  key: credential.key,
+                  headers: credential.headers,
+                  signal,
+                  prefix: input.prefix,
+                  suffix: input.suffix,
+                  maxTokens: input.maxTokens,
+                  temperature: input.temperature,
+                }),
+              catch: (error) =>
+                error instanceof KiloAutocomplete.AutocompleteRequestError
+                  ? context.error("request", error.message, { status: error.status })
+                  : context.error("failed", error instanceof Error ? error.message : String(error)),
+            })
+          }),
+        "autocomplete.edit": (input, context) =>
+          Effect.gen(function* () {
+            const target = KiloAutocomplete.resolveEditTarget(input.provider, input.model, catalog.account?.baseURL ?? gateway)
+            if (target.provider === "kilo" && !target.url)
+              return yield* Effect.fail(
+                context.error("request", "Next Edit currently requires the Inception provider (mercury-edit-2).", { status: 400 }),
+              )
+            const credential = yield* autocompleteCredential(target.provider)
+            if (!credential.ok) return yield* Effect.fail(context.error("unauthorized", credential.message))
+            return yield* Effect.tryPromise({
+              try: (signal) =>
+                KiloAutocomplete.requestEdit({
+                  target,
+                  key: credential.key,
+                  headers: credential.headers,
+                  signal,
+                  maxTokens: input.maxTokens,
+                  context: {
+                    currentFilePath: input.currentFilePath,
+                    currentFileContent: input.currentFileContent,
+                    cursorLine: input.cursorLine,
+                    cursorCharacter: input.cursorCharacter,
+                    editableRegionStartLine: input.editableRegionStartLine,
+                    editableRegionEndLine: input.editableRegionEndLine,
+                    recentlyViewedSnippets: input.recentlyViewedSnippets,
+                    editDiffHistory: input.editDiffHistory,
+                  },
+                }),
+              catch: (error) =>
+                error instanceof KiloAutocomplete.AutocompleteRequestError
+                  ? context.error("request", error.message, { status: error.status })
+                  : context.error("failed", error instanceof Error ? error.message : String(error)),
+            })
+          }),
         "session.metadata": (input) =>
           Effect.sync(() => sessionMetadata.get(input.sessionID) ?? {}),
       })
       .pipe(Effect.orDie)
+    // The first publish announces the reason of a new plugin instance, for example after a location reload, so
+    // clients of the previous instance read it again.
+    emitCatalog = (status) => registration.events.emit("catalog", status)
+    yield* publishCatalog
 
     yield* ctx.event.subscribe().pipe(
       Stream.filter(
@@ -1081,6 +1239,14 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
     }
   }),
 })
+
+// The public reason drops the retry delay, so only a changed kind or status is a change. A failed catalog without a
+// reason is a changed scope that is still loading.
+function catalogStatus(catalog: CatalogState): KiloGatewayRpc.CatalogStatus {
+  if (!catalog.failed || !catalog.failure) return { failure: null }
+  const failure = catalog.failure
+  return { failure: { kind: failure.kind, ...(failure.status === undefined ? {} : { status: failure.status }) } }
+}
 
 function isLoopback(server: string): boolean {
   if (!URL.canParse(server)) return false

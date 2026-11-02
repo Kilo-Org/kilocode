@@ -6,6 +6,7 @@ import { createContext, createEffect, createSignal, on, onCleanup, useContext, t
 import type { ToWebview } from "../../../src/protocol"
 import { getVSCodeAPI } from "../context/vscode"
 import { events } from "./events"
+import { createKiloCatalog } from "./kilo-catalog"
 import { transport } from "./transport"
 
 function create(directory: string) {
@@ -13,6 +14,9 @@ function create(directory: string) {
   const bridge = transport((message) => vscode.postMessage(message as never))
   const api: OpenCodeClient = OpenCode.make({ baseUrl: "http://kilo.invalid", fetch: bridge.fetch })
   const event = events()
+  // The host inlines the extension version; the server handshake reports the server version separately.
+  const extensionVersion =
+    (window as unknown as { KILO_EXTENSION_VERSION?: string }).KILO_EXTENSION_VERSION ?? ""
   const [error, setError] = createSignal("")
   const [version, setVersion] = createSignal("")
   const [handshake, setHandshake] = createSignal("")
@@ -21,6 +25,7 @@ function create(directory: string) {
   const commands = new Set<(name: string) => void>()
   const connection = createClientConnection(api, { onEvent: event.emit, pageLifecycle: true })
   const data = createData({ api: () => api, directory, connection, event, onError: (err) => setError(message(err)) })
+  const kiloFailure = createKiloCatalog({ api, directory, status: connection.status, on: event.on })
 
   const receive = (event: MessageEvent<ToWebview>) => {
     const message = event.data
@@ -61,8 +66,11 @@ function create(directory: string) {
     loading,
     bindings,
     version,
+    extensionVersion,
     handshake,
     error,
+    /** Why the Kilo Gateway catalog failed to load; undefined while it is usable or loading. */
+    kiloFailure,
     setError,
     report: (err: unknown) => setError(message(err)),
     open: (url: string) => vscode.postMessage({ type: "open", url } as never),

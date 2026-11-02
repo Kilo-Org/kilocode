@@ -109,6 +109,21 @@ export function getAutocompleteModel(provider?: string, model?: string): Autocom
   return DEFAULT_AUTOCOMPLETE_MODEL
 }
 
+export function getAutocompleteModelById(id: string): AutocompleteModelDef {
+  return AUTOCOMPLETE_MODELS.find((item) => item.id === id) ?? DEFAULT_AUTOCOMPLETE_MODEL
+}
+
+export function validAutocompleteProvider(value: unknown) {
+  if (typeof value !== "string") return false
+  return AUTOCOMPLETE_MODELS.some((item) => item.providerID === value)
+}
+
+export function validAutocompleteModel(value: unknown) {
+  if (typeof value !== "string") return false
+  const resolved = aliases[value] ?? value
+  return AUTOCOMPLETE_MODELS.some((item) => item.modelID === resolved)
+}
+
 export type FimTarget =
   | { readonly provider: "kilo"; readonly model: string; readonly url: string }
   | { readonly provider: "inception"; readonly model: string; readonly url: string }
@@ -297,4 +312,182 @@ export async function requestMistralFim(request: (url: string) => Promise<Respon
   const second = await request(secondUrl)
   if (second.ok) preferredMistralEndpoint = secondUrl
   return second
+}
+
+// Direct provider keys fall back to these variables when no stored credential exists.
+export const DIRECT_PROVIDER_ENV: Record<DirectAutocompleteProviderID, readonly string[]> = {
+  mistral: ["MISTRAL_API_KEY"],
+  inception: ["INCEPTION_API_KEY"],
+}
+
+export const REQUEST_TIMEOUT_MS = 30_000
+const FIM_MAX_TOKENS = 256
+const FIM_TEMPERATURE = 0.2
+const EDIT_MAX_TOKENS = 512
+
+/** A failed provider request with the HTTP status it maps to (499 canceled, 504 timed out). */
+export class AutocompleteRequestError extends Error {
+  constructor(
+    message: string,
+    readonly status: number,
+  ) {
+    super(message)
+    this.name = "AutocompleteRequestError"
+  }
+}
+
+export interface FimResult {
+  readonly text: string
+  readonly cost: number
+  readonly inputTokens: number
+  readonly outputTokens: number
+}
+
+export interface EditResult {
+  readonly content: string
+  readonly usage?: { readonly prompt_tokens?: number; readonly completion_tokens?: number }
+}
+
+interface RequestOptions {
+  readonly key: string
+  /** Attribution headers for the Kilo Gateway; empty for a direct provider. */
+  readonly headers?: Record<string, string>
+  readonly signal?: AbortSignal
+  readonly fetch?: typeof globalThis.fetch
+}
+
+/**
+ * One FIM completion. The provider streams server-sent events; this reads the stream to the end and returns the
+ * collected text with the usage and cost of the last chunks that carry them.
+ */
+export async function requestFim(
+  input: RequestOptions & {
+    readonly target: FimTarget
+    readonly prefix: string
+    readonly suffix: string
+    readonly maxTokens?: number
+    readonly temperature?: number
+  },
+): Promise<FimResult> {
+  const timeout = AbortSignal.timeout(REQUEST_TIMEOUT_MS)
+  const signal = input.signal ? AbortSignal.any([input.signal, timeout]) : timeout
+  const run = (url: string) =>
+    (input.fetch ?? globalThis.fetch)(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${input.key}`, ...input.headers },
+      signal,
+      body: JSON.stringify({
+        model: input.target.model,
+        prompt: input.prefix,
+        suffix: input.suffix,
+        max_tokens: input.maxTokens ?? FIM_MAX_TOKENS,
+        temperature: input.temperature ?? FIM_TEMPERATURE,
+        stream: true,
+      }),
+    })
+  try {
+    const response = input.target.provider === "mistral" ? await requestMistralFim(run) : await run(input.target.url)
+    if (!response.ok) {
+      const text = await readText(response)
+      throw new AutocompleteRequestError(`FIM request failed: ${response.status} ${text}`, response.status)
+    }
+    return parseFimStream(await response.text())
+  } catch (error) {
+    throw requestError(error, "FIM", timeout, signal)
+  }
+}
+
+/** One Next Edit request. Mercury answers with a fenced replacement of the editable region. */
+export async function requestEdit(
+  input: RequestOptions & {
+    readonly target: EditTarget
+    readonly context: MercuryEditContext
+    readonly maxTokens?: number
+  },
+): Promise<EditResult> {
+  const timeout = AbortSignal.timeout(REQUEST_TIMEOUT_MS)
+  const signal = input.signal ? AbortSignal.any([input.signal, timeout]) : timeout
+  try {
+    const response = await (input.fetch ?? globalThis.fetch)(input.target.url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${input.key}`, ...input.headers },
+      signal,
+      body: JSON.stringify({
+        model: input.target.model,
+        max_tokens: input.maxTokens ?? EDIT_MAX_TOKENS,
+        // Mercury rejects a system message on this endpoint, so the whole prompt is one user message.
+        messages: [{ role: "user", content: buildMercuryEditPrompt(input.context) }],
+      }),
+    })
+    if (!response.ok) {
+      const text = await readText(response)
+      throw new AutocompleteRequestError(`Edit request failed: ${response.status} ${text}`, response.status)
+    }
+    const json = (await response.json()) as {
+      choices?: { message?: { content?: string } }[]
+      usage?: { prompt_tokens?: number; completion_tokens?: number }
+    }
+    return {
+      content: extractFencedBody(json.choices?.[0]?.message?.content ?? ""),
+      ...(json.usage
+        ? { usage: { prompt_tokens: json.usage.prompt_tokens, completion_tokens: json.usage.completion_tokens } }
+        : {}),
+    }
+  } catch (error) {
+    throw requestError(error, "Edit", timeout, signal)
+  }
+}
+
+/**
+ * The text, usage and cost of a FIM event stream. A chunk carries the text in `choices[0].delta.content` (chat
+ * style) or `choices[0].text` (completion style). A body without `data:` lines is read as one JSON chunk.
+ */
+export function parseFimStream(body: string): FimResult {
+  const lines = body.split(/\r?\n/)
+  const events = lines.some((line) => line.startsWith("data:"))
+    ? lines.filter((line) => line.startsWith("data:")).map((line) => line.slice(5).trim())
+    : [body.trim()]
+  return events
+    .filter((data) => data.length > 0 && data !== "[DONE]")
+    .map((data) => parseChunk(data))
+    .reduce<FimResult>(
+      (result, chunk) => {
+        const choice = chunk?.choices?.[0]
+        const content = choice?.delta?.content ?? choice?.text
+        return {
+          text: content ? result.text + content : result.text,
+          cost: typeof chunk?.cost === "number" ? chunk.cost : result.cost,
+          inputTokens: chunk?.usage ? (chunk.usage.prompt_tokens ?? 0) : result.inputTokens,
+          outputTokens: chunk?.usage ? (chunk.usage.completion_tokens ?? 0) : result.outputTokens,
+        }
+      },
+      { text: "", cost: 0, inputTokens: 0, outputTokens: 0 },
+    )
+}
+
+interface FimChunk {
+  choices?: { delta?: { content?: string | null }; text?: string | null }[]
+  usage?: { prompt_tokens?: number; completion_tokens?: number }
+  cost?: number
+}
+
+function parseChunk(data: string): FimChunk | undefined {
+  try {
+    const value: unknown = JSON.parse(data)
+    return typeof value === "object" && value !== null ? (value as FimChunk) : undefined
+  } catch {
+    return undefined
+  }
+}
+
+async function readText(response: Response) {
+  return response.text().catch(() => "<unreadable>")
+}
+
+function requestError(error: unknown, kind: "FIM" | "Edit", timeout: AbortSignal, signal: AbortSignal) {
+  if (error instanceof AutocompleteRequestError) return error
+  if ((error instanceof DOMException && error.name === "TimeoutError") || timeout.aborted)
+    return new AutocompleteRequestError(`${kind} request timed out`, 504)
+  if (signal.aborted) return new AutocompleteRequestError(`${kind} request canceled`, 499)
+  return error
 }

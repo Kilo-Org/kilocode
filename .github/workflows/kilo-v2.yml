@@ -155,7 +155,7 @@ jobs:
 
   # The generated map files change with every merge, so parallel PRs that commit them always conflict and go stale.
   # PRs change only the inputs (code, done-proofs, features.json, dispositions.json); this job validates them.
-  # `progress-commit` regenerates the map on v2 and commits it.
+  # `progress-commit` regenerates the map on v2 and opens or updates the bot PR.
   progress:
     name: migration progress map
     runs-on: ubuntu-24.04
@@ -177,27 +177,44 @@ jobs:
         with:
           bun-version-file: package.json
 
-      - name: Check that the PR does not commit generated map files
+      - name: Check generated map files in the PR
         if: github.event_name == 'pull_request'
+        env:
+          BOT_PR: ${{ github.event.pull_request.user.type == 'Bot' && github.event.pull_request.head.repo.full_name == github.repository && github.head_ref == 'progress-map-update' && github.base_ref == 'v2' }}
         run: |
-          files=$(git diff --name-only HEAD^1 HEAD -- $(bun script/upstream/progress.ts --outputs))
+          read -r -a paths <<< "$(bun script/upstream/progress.ts --outputs)"
+          files=$(git diff --name-only --no-renames HEAD^1 HEAD -- "${paths[@]}")
+          if [ "$BOT_PR" = true ]; then
+            if [ "$(git diff --name-only --no-renames HEAD^1 HEAD)" != "$files" ]; then
+              echo "::error::The progress map bot PR must contain only generated files."
+              exit 1
+            fi
+            KILO_PROGRESS_BASE_V2=HEAD^1 bun script/upstream/progress.ts --check
+            exit 0
+          fi
           if [ -n "$files" ]; then
-            echo "::error::Do not commit generated progress map files. CI regenerates them on v2. Restore them with: git checkout origin/v2 -- $(echo $files)"
+            echo "::error::Do not commit generated progress map files. Restore them with: git checkout HEAD -- ${paths[*]}"
             exit 1
           fi
 
       - name: Validate the map inputs
         run: bun script/upstream/progress.ts
 
-  # The only job with write access. It runs on pushes to v2, never on pull requests.
+  # Writes the bot branch and PR on pushes to v2, never on pull requests.
   progress-commit:
     name: migration progress map commit
     if: github.event_name == 'push' && github.ref == 'refs/heads/v2'
     needs: progress
     runs-on: ubuntu-24.04
     timeout-minutes: 10
+    concurrency:
+      group: kilo-v2-progress-map
+      cancel-in-progress: false
     permissions:
       contents: write
+      pull-requests: write
+    env:
+      HAS_MAINTAINER_APP: ${{ secrets.KILO_MAINTAINER_APP_ID != '' && secrets.KILO_MAINTAINER_APP_SECRET != '' }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -213,19 +230,80 @@ jobs:
         with:
           bun-version-file: package.json
 
-      - name: Commit the regenerated map
+      # A PR created with the workflow GITHUB_TOKEN does not start its own checks. When the Kilo maintainer
+      # app secrets are present, this step makes the bot PR an app-authored PR so the `progress` guard runs
+      # on it. Without them the job falls back to the workflow token and the bot PR stays unvalidated. The
+      # action keeps its upstream input names; the values are the Kilo maintainer app secrets.
+      - name: Setup Git Committer
+        id: committer
+        if: env.HAS_MAINTAINER_APP == 'true'
+        uses: ./.github/actions/setup-git-committer
+        with:
+          opencode-app-id: ${{ secrets.KILO_MAINTAINER_APP_ID }}
+          opencode-app-secret: ${{ secrets.KILO_MAINTAINER_APP_SECRET }}
+
+      - name: Open or update the progress map PR
+        env:
+          GH_TOKEN: ${{ steps.committer.outputs.token || github.token }}
+          GH_REPO: ${{ github.repository }}
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          paths=$(bun script/upstream/progress.ts --outputs)
-          # Each attempt regenerates on the current v2 tip, so a newer push cannot leave a stale map or a conflict.
+          if [ "$HAS_MAINTAINER_APP" != "true" ]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          fi
+          bot_prs() {
+            gh api -X GET "repos/$GITHUB_REPOSITORY/pulls" \
+              -f state=open -f base=v2 -f "head=$GITHUB_REPOSITORY_OWNER:progress-map-update" \
+              --jq '.[] | .number'
+          }
+          # Keep at most one open bot PR. The branch is fixed, so closing an old PR must not delete it.
+          close_stale_prs() {
+            keep="${1:-}"
+            bot_prs | while read -r number; do
+              [ -n "$number" ] || continue
+              [ "$number" = "$keep" ] && continue
+              gh pr close "$number" || true
+            done
+          }
+          # Queued runs all regenerate from the current v2 tip, not the push that started them.
           for attempt in 1 2 3; do
-            git fetch origin v2
+            git fetch --prune origin
             git reset --hard origin/v2
+            base_sha=$(git rev-parse HEAD)
+            cp migration-tracking/progress/progress.json base.json
             bun script/upstream/progress.ts
-            if git diff --quiet -- $paths; then exit 0; fi
-            git commit -m "chore(progress): regenerate the map" -- $paths
-            git push origin HEAD:v2 && exit 0
+            read -r -a paths <<< "$(bun script/upstream/progress.ts --outputs)"
+            git add -- "${paths[@]}"
+            if git diff --cached --quiet; then
+              # A queued run can find the map already current. Close every older bot PR and leave none open.
+              close_stale_prs
+              exit 0
+            fi
+            git commit -m "chore(progress): regenerate the map for $base_sha"
+            if ! git push --force-with-lease origin HEAD:refs/heads/progress-map-update; then
+              echo "Progress map branch changed; retry $attempt/3"
+              continue
+            fi
+            {
+              echo "Regenerated from \`v2\` at \`$base_sha\`."
+              echo
+              bun script/upstream/progress.ts --compare base.json migration-tracking/progress/progress.json
+            } > body.md
+            pr=$(bot_prs | head -n 1)
+            if [ -n "$pr" ]; then
+              close_stale_prs "$pr"
+              gh pr edit "$pr" --body-file body.md
+            else
+              close_stale_prs
+              if ! gh pr create --base v2 --head progress-map-update \
+                --title "chore(progress): regenerate the map" \
+                --body-file body.md; then
+                pr=$(bot_prs | head -n 1)
+                if [ -z "$pr" ]; then exit 1; fi
+                gh pr edit "$pr" --body-file body.md
+              fi
+            fi
+            exit 0
           done
           exit 1
 
@@ -357,3 +435,32 @@ jobs:
       - name: Test the sharded test runner
         working-directory: script/kilocode/test
         run: bun test
+
+  # Required-check barrier for the v2-only lane: the host build, the macOS platform tests, the
+  # shared-patch ratchets and the Kilo package tests are all critical, but a matrix job name and a
+  # per-job name cannot be required safely.
+  required:
+    name: kilo-v2
+    needs:
+      - workflows
+      - build
+      - macos
+      - shared
+      - progress
+      - upstream-tooling
+      - kilo-packages
+    if: always()
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Verify the Kilo v2 jobs passed
+        run: |
+          echo "workflows=${{ needs.workflows.result }} build=${{ needs.build.result }} macos=${{ needs.macos.result }} shared=${{ needs.shared.result }}"
+          echo "progress=${{ needs.progress.result }} upstream-tooling=${{ needs.upstream-tooling.result }} kilo-packages=${{ needs.kilo-packages.result }}"
+          test "${{ needs.workflows.result }}" = "success"
+          test "${{ needs.build.result }}" = "success"
+          test "${{ needs.macos.result }}" = "success"
+          test "${{ needs.shared.result }}" = "success"
+          test "${{ needs.progress.result }}" = "success"
+          test "${{ needs.upstream-tooling.result }}" = "success"
+          test "${{ needs.kilo-packages.result }}" = "success"

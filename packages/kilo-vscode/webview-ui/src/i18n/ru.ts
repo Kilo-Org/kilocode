@@ -264,6 +264,7 @@ export const dict = {
   "prompt.toast.promptSendFailed.title": "Не удалось отправить запрос",
 
   "mcp.status.connected": "подключено",
+  "mcp.status.pending": "подключение",
   "mcp.status.failed": "ошибка",
   "mcp.status.needs_auth": "требуется авторизация",
   "mcp.status.needs_registration": "требуется регистрация клиента",
@@ -294,6 +295,9 @@ export const dict = {
   "provider.failure.http": "Ошибка провайдера (HTTP {{status}}).",
   "provider.failure.httpNoStatus": "Ошибка провайдера.",
   "provider.failure.schema": "Неожиданный ответ от провайдера.",
+  "provider.failure.organizationMissing": "Выбранная команда больше недоступна. Выберите другую команду.",
+  "provider.failure.scopeConflict": "Выбранная команда конфликтует с командой вашего токена Kilo.",
+  "provider.failure.personalUnavailable": "У этой учетной записи нет личного аккаунта. Выберите команду.",
 
   "notification.permission.title": "Требуется разрешение",
   "notification.permission.titleSubagent": "Требуется разрешение (субагент)",
@@ -748,7 +752,7 @@ export const dict = {
   "settings.agentBehaviour.title": "Поведение агента",
   "settings.autoApprove.title": "Автоодобрение",
   "settings.webTools.title": "Веб-инструменты",
-  "settings.webTools.description": "Настройте веб-поиск и автоматизацию браузера.",
+  "settings.webTools.description": "Настройте веб-поиск.",
   "settings.webTools.webSearch.enable": "Включить для всех провайдеров",
   "settings.webTools.browserAutomation": "Автоматизация браузера",
   "settings.webTools.webSearch.title": "Веб-поиск",
@@ -862,6 +866,7 @@ export const dict = {
     "Этот файл был экспортирован из более новой версии Kilo. Некоторые настройки могут быть проигнорированы.",
   "settings.aboutKiloCode.importSettings.success":
     "Настройки импортированы. Просмотрите изменения выше и нажмите «Сохранить».",
+  "settings.aboutKiloCode.importSettings.applied": "Settings imported and applied.",
 
   "settings.aboutKiloCode.telemetry.title": "Телеметрия",
   "settings.aboutKiloCode.telemetry.description":
@@ -1053,6 +1058,9 @@ export const dict = {
   "settings.agentBehaviour.editMode.promptOverride":
     "Пользовательское переопределение промпта для этого встроенного режима",
   "settings.agentBehaviour.badge.subagent": "субагент",
+  "settings.agentBehaviour.perAgentPermissions.title": "Разрешения для каждого агента",
+  "settings.agentBehaviour.perAgentPermissions.description":
+    "Эти настройки применяются только к этому пользовательскому агенту. Измените значение 'По умолчанию' в раскрывающемся списке, чтобы создать переопределение, или используйте 'Добавить путь' или 'Добавить команду' для исключений конкретных инструментов.",
   "settings.agentBehaviour.permissions.title": "Вычисленные разрешения",
   "settings.agentBehaviour.permissions.count": "{{count}} правил",
   "settings.agentBehaviour.permissions.effective": "Действующие (wildcard):",
@@ -1128,12 +1136,15 @@ export const dict = {
   "settings.agentBehaviour.mcpResetAuth.confirm":
     'Очистить сохраненные данные входа для "{{name}}"? Вам нужно будет войти снова.',
   "settings.agentBehaviour.mcpBrowseMarketplace": "Обзор Marketplace",
+  "settings.agentBehaviour.mcp.timeout.startup.title": "Тайм-аут запуска (мс)",
+  "settings.agentBehaviour.mcp.timeout.catalog.title": "Тайм-аут каталога (мс)",
+  "settings.agentBehaviour.mcp.timeout.execution.title": "Тайм-аут выполнения (мс)",
   "settings.agentBehaviour.mcpEmpty":
-    "MCP-серверы не настроены. Добавьте MCP-серверы в kilo.jsonc или попросите агента добавить их.",
+    "MCP-серверы не настроены. Добавьте MCP-серверы в kilo2.json или попросите агента добавить их.",
   "settings.agentBehaviour.workflows.description":
-    "Рабочие процессы — это пользовательские слэш-команды, определённые в вашей конфигурации. Введите /command-name в чате, чтобы вызвать их. Команды настраиваются в opencode.json в разделе 'command'.",
+    "Рабочие процессы: пользовательские команды, определённые в вашей конфигурации или в файлах Markdown с командами. Для каждого рабочего процесса можно задать модель и вариант рассуждения.",
   "settings.agentBehaviour.workflows.empty":
-    "Пользовательские команды не настроены. Добавьте команды в opencode.json, чтобы увидеть их здесь.",
+    "Пользовательские команды не найдены. Добавьте команды в kilo2.json или в файл Markdown в .kilo2/command.",
   "settings.agentBehaviour.workflows.detail.description": "Описание",
   "settings.agentBehaviour.workflows.detail.template": "Шаблон",
   "settings.agentBehaviour.workflows.model": "модель",
@@ -1147,10 +1158,12 @@ export const dict = {
     "Выполнять команды оболочки агента в песочнице на уровне ОС, которая ограничивает запись в каталоги состояния проекта и Kilo",
 
   "settings.autoApprove.description":
-    "Определите правила запуска инструментов. Большинство инструментов по умолчанию Разрешены. Для doom_loop и external_directory по умолчанию установлено Спрашивать.",
+    "Определите правила запуска инструментов. Большинство инструментов по умолчанию Разрешены. Для Bash по умолчанию установлено Спрашивать.",
   "settings.autoApprove.maxCost.title": "Оповещение о стоимости сессии",
   "settings.autoApprove.maxCost.description":
     "Предупреждать перед продолжением сессии, если ее стоимость превышает эту сумму в USD. Используйте целые доллары; оставьте пустым, чтобы отключить.",
+  "settings.autoApprove.maxCost.v2Description":
+    "Показывать неблокирующее предупреждение, когда стоимость сессии достигает этой суммы в USD. Оставьте пустым, чтобы отключить.",
   "settings.autoApprove.level.allow": "Разрешить",
   "settings.autoApprove.level.ask": "Спросить",
   "settings.autoApprove.level.deny": "Отклонить",
@@ -1225,6 +1238,12 @@ export const dict = {
   "settings.context.compactionLimit.title": "Лимит автоматического сжатия",
   "settings.context.compactionLimit.description":
     "Сжимать, когда контекст достигает этого процента окна модели. Оставьте пустым, чтобы использовать только буфер безопасности.",
+  "settings.context.compactionKeep.title": "Сохранять последние токены",
+  "settings.context.compactionKeep.description":
+    "Последние токены, сохраняемые дословно при сжатии контекста. Оставьте пустым, чтобы сохранять 15 000.",
+  "settings.context.compactionBuffer.title": "Буфер сжатия",
+  "settings.context.compactionBuffer.description":
+    "Токены, оставляемые свободными ниже лимита контекста перед сжатием. Оставьте пустым, чтобы оставлять 15% свободными, не менее 16 000.",
   "settings.context.prune.title": "Очистить старые выходные данные",
   "settings.context.prune.description": "Удалить старые выходные данные инструментов при сжатии",
   "settings.context.watcherPatterns": "Шаблоны игнорирования наблюдателя файлов",
@@ -1309,7 +1328,7 @@ export const dict = {
     "Показывать в пустом поле запроса сочетание клавиш, подходящее к текущему действию, например как добавить выделенный код или вернуться к запросу.",
   "settings.display.tokenThroughput.title": "Показывать пропускную способность токенов",
   "settings.display.tokenThroughput.description":
-    "Показывать скорость генерации текста (tokens/sec) в последнем сообщении ассистента и в заголовке задачи. Показывается по умолчанию; отключите этот параметр, чтобы при необходимости скрыть её.",
+    "Display the text-generation rate (tokens/sec) on the latest assistant message footer. Shown by default; disable this setting to hide it when needed.",
   "settings.display.autoApprovalReason.title": "Показывать причину автоодобрения",
   "settings.display.autoApprovalReason.description":
     "Показывает, почему вызов инструмента был одобрен автоматически, например по совпавшему правилу разрешений или значению агента по умолчанию.",

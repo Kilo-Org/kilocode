@@ -254,6 +254,7 @@ export const dict = {
   "prompt.toast.promptSendFailed.title": "发送提示失败",
 
   "mcp.status.connected": "已连接",
+  "mcp.status.pending": "正在连接",
   "mcp.status.failed": "失败",
   "mcp.status.needs_auth": "需要授权",
   "mcp.status.needs_registration": "需要客户端注册",
@@ -281,6 +282,9 @@ export const dict = {
   "provider.failure.http": "提供方错误（HTTP {{status}}）。",
   "provider.failure.httpNoStatus": "提供方错误。",
   "provider.failure.schema": "提供方返回了意外的响应。",
+  "provider.failure.organizationMissing": "所选团队已不可用。请选择其他团队。",
+  "provider.failure.scopeConflict": "所选团队与你的 Kilo 令牌所属团队冲突。",
+  "provider.failure.personalUnavailable": "此账户没有个人账户。请选择一个团队。",
 
   "notification.permission.title": "需要权限",
   "notification.permission.titleSubagent": "需要权限（子代理）",
@@ -722,7 +726,7 @@ export const dict = {
   "settings.agentBehaviour.title": "智能体行为",
   "settings.autoApprove.title": "自动审批",
   "settings.webTools.title": "网络工具",
-  "settings.webTools.description": "配置网页搜索和浏览器自动化。",
+  "settings.webTools.description": "配置网页搜索。",
   "settings.webTools.webSearch.enable": "为所有提供商启用",
   "settings.webTools.browserAutomation": "浏览器自动化",
   "settings.webTools.webSearch.title": "网页搜索",
@@ -829,6 +833,7 @@ export const dict = {
   "settings.aboutKiloCode.importSettings.tooLarge": "文件过大。设置文件必须小于 1 MB。",
   "settings.aboutKiloCode.importSettings.newerVersion": "此文件由较新版本的 Kilo 导出。部分设置可能会被忽略。",
   "settings.aboutKiloCode.importSettings.success": "设置已导入。请查看上方的更改，然后点击保存。",
+  "settings.aboutKiloCode.importSettings.applied": "Settings imported and applied.",
 
   "settings.aboutKiloCode.telemetry.title": "遥测",
   "settings.aboutKiloCode.telemetry.description":
@@ -1006,6 +1011,9 @@ export const dict = {
   "settings.agentBehaviour.editMode.native": "这是一个内置模式。它的基础定义无法更改，但您可以在下方配置覆盖项。",
   "settings.agentBehaviour.editMode.promptOverride": "此内置模式的自定义提示覆盖",
   "settings.agentBehaviour.badge.subagent": "子代理",
+  "settings.agentBehaviour.perAgentPermissions.title": "各智能体的权限",
+  "settings.agentBehaviour.perAgentPermissions.description":
+    "这些设置仅适用于此自定义智能体。将下拉菜单的值从“默认”改为其他选项以创建覆盖，或使用“添加路径”或“添加命令”设置工具专属的例外。",
   "settings.agentBehaviour.permissions.title": "计算出的权限",
   "settings.agentBehaviour.permissions.count": "{{count}} 条规则",
   "settings.agentBehaviour.permissions.effective": "生效 (通配符):",
@@ -1078,10 +1086,13 @@ export const dict = {
   "settings.agentBehaviour.mcpResetAuth.title": "重置 MCP 登录",
   "settings.agentBehaviour.mcpResetAuth.confirm": '清除 "{{name}}" 的已保存登录信息吗？您需要重新登录。',
   "settings.agentBehaviour.mcpBrowseMarketplace": "浏览市场",
-  "settings.agentBehaviour.mcpEmpty": "未配置 MCP 服务器。在 kilo.jsonc 中添加 MCP 服务器，或让代理为您添加。",
+  "settings.agentBehaviour.mcp.timeout.startup.title": "启动超时 (毫秒)",
+  "settings.agentBehaviour.mcp.timeout.catalog.title": "目录超时 (毫秒)",
+  "settings.agentBehaviour.mcp.timeout.execution.title": "执行超时 (毫秒)",
+  "settings.agentBehaviour.mcpEmpty": "未配置 MCP 服务器。在 kilo2.json 中添加 MCP 服务器，或让代理为您添加。",
   "settings.agentBehaviour.workflows.description":
-    "工作流是在配置中定义的自定义斜杠命令。在聊天中输入 /command-name 来调用它们。命令在 opencode.json 的 'command' 部分中配置。",
-  "settings.agentBehaviour.workflows.empty": "未配置自定义命令。将命令添加到 opencode.json 即可在此处看到。",
+    "工作流是在配置或命令 Markdown 文件中定义的自定义命令。您可以为每个工作流设置模型和推理变体。",
+  "settings.agentBehaviour.workflows.empty": "未找到自定义命令。请将命令添加到 kilo2.json 或 .kilo2/command 中的 Markdown 文件。",
   "settings.agentBehaviour.workflows.detail.description": "描述",
   "settings.agentBehaviour.workflows.detail.template": "模板",
   "settings.agentBehaviour.workflows.model": "模型",
@@ -1095,9 +1106,10 @@ export const dict = {
     "在操作系统级沙盒中运行代理 shell 命令，将写入限制在项目和 Kilo 状态目录内",
 
   "settings.autoApprove.description":
-    "定义工具的运行权限。大多数工具默认为「允许」。doom_loop 和 external_directory 默认为「询问」。",
+    "定义工具的运行权限。大多数工具默认为「允许」。Bash 默认为「询问」。",
   "settings.autoApprove.maxCost.title": "会话费用提醒",
   "settings.autoApprove.maxCost.description": "当会话花费超过此美元金额后，在继续前提醒。请使用整数美元；留空则禁用。",
+  "settings.autoApprove.maxCost.v2Description": "当会话费用达到此美元金额时显示非阻塞提醒。留空则禁用。",
   "settings.autoApprove.level.allow": "允许",
   "settings.autoApprove.level.ask": "询问",
   "settings.autoApprove.level.deny": "拒绝",
@@ -1156,6 +1168,12 @@ export const dict = {
   "settings.context.compactionModel.hint": "若要选择用于压缩的模型，请参阅模型设置。",
   "settings.context.compactionLimit.title": "自动压缩限制",
   "settings.context.compactionLimit.description": "当上下文达到模型窗口的此百分比时进行压缩。留空则仅使用安全缓冲区。",
+  "settings.context.compactionKeep.title": "保留最近 Token",
+  "settings.context.compactionKeep.description":
+    "压缩上下文时按原样保留的最近 Token 数量。留空则保留 15,000 个。",
+  "settings.context.compactionBuffer.title": "压缩缓冲区",
+  "settings.context.compactionBuffer.description":
+    "压缩前在模型上下文上限以下保留的 Token 数量。留空则保留 15%（至少 16,000 个）。",
   "settings.context.prune.title": "修剪旧输出",
   "settings.context.prune.description": "压缩期间移除旧的工具输出",
   "settings.context.watcherPatterns": "文件监视器忽略模式",
@@ -1235,7 +1253,7 @@ export const dict = {
     "在空输入框中显示与当前操作相符的键盘快捷键，例如如何添加所选代码或返回输入框。",
   "settings.display.tokenThroughput.title": "显示令牌吞吐量",
   "settings.display.tokenThroughput.description":
-    "在最新的助手消息和任务标题中显示文本生成速率（tokens/sec）。默认显示；需要时禁用此设置即可隐藏。",
+    "Display the text-generation rate (tokens/sec) on the latest assistant message footer. Shown by default; disable this setting to hide it when needed.",
   "settings.display.autoApprovalReason.title": "显示自动批准原因",
   "settings.display.autoApprovalReason.description": "显示工具调用被自动批准的原因，例如匹配的权限规则或代理默认值。",
 

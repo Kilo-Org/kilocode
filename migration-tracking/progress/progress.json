@@ -4,14 +4,14 @@
     "v1Base": "8100c68b507b53aac6b891edbc3040a6011d8969"
   },
   "summary": {
-    "done": 597,
-    "total": 9819,
-    "percent": 6.1,
-    "dropped": 35,
+    "done": 646,
+    "total": 9817,
+    "percent": 6.6,
+    "dropped": 37,
     "kinds": [
       {
         "kind": "module",
-        "done": 486,
+        "done": 524,
         "total": 3543
       },
       {
@@ -26,8 +26,8 @@
       },
       {
         "kind": "test",
-        "done": 36,
-        "total": 2794
+        "done": 47,
+        "total": 2792
       }
     ],
     "landed": {
@@ -2371,12 +2371,12 @@
     },
     {
       "feature": "ui",
-      "done": 138,
+      "done": 139,
       "total": 267,
       "dropped": 0,
       "kinds": {
         "module": {
-          "done": 138,
+          "done": 139,
           "total": 248
         },
         "api": {
@@ -6049,12 +6049,12 @@
     },
     {
       "feature": "vscode",
-      "done": 272,
-      "total": 2057,
-      "dropped": 0,
+      "done": 320,
+      "total": 2055,
+      "dropped": 2,
       "kinds": {
         "module": {
-          "done": 269,
+          "done": 306,
           "total": 1439
         },
         "api": {
@@ -6066,8 +6066,8 @@
           "total": 0
         },
         "test": {
-          "done": 3,
-          "total": 618
+          "done": 14,
+          "total": 616
         }
       }
     },
@@ -6344,6 +6344,7 @@
     "module:packages/kilo-ui/src/components/status-indicator.css",
     "module:packages/kilo-ui/src/components/sticky-accordion-header.tsx",
     "module:packages/kilo-ui/src/components/switch.css",
+    "module:packages/kilo-ui/src/components/switch.tsx",
     "module:packages/kilo-ui/src/components/tabs.css",
     "module:packages/kilo-ui/src/components/tabs.tsx",
     "module:packages/kilo-ui/src/components/tag.css",
@@ -6426,6 +6427,10 @@
     "module:packages/kilo-vscode/src/extension.ts",
     "module:packages/kilo-vscode/src/image-preview.ts",
     "module:packages/kilo-vscode/src/kilo-provider/auto-approve.ts",
+    "module:packages/kilo-vscode/src/kilo-provider/config-file.ts",
+    "module:packages/kilo-vscode/src/kilo-provider/font-size.ts",
+    "module:packages/kilo-vscode/src/kilo-provider/mcp-oauth.ts",
+    "module:packages/kilo-vscode/src/kilo-provider/remove-config-item.ts",
     "module:packages/kilo-vscode/src/kilo-provider/save-image.ts",
     "module:packages/kilo-vscode/src/legacy-migration/sessions/lib/messages.ts",
     "module:packages/kilo-vscode/src/services/cli-backend/i18n/ar.ts",
@@ -6533,11 +6538,26 @@
     "module:packages/kilo-vscode/src/services/i18n/uk.ts",
     "module:packages/kilo-vscode/src/services/i18n/zh.ts",
     "module:packages/kilo-vscode/src/services/i18n/zht.ts",
+    "module:packages/kilo-vscode/src/services/mcp-auth/index.ts",
+    "module:packages/kilo-vscode/src/services/mcp-auth/service.ts",
+    "module:packages/kilo-vscode/src/services/mcp-auth/status.ts",
+    "module:packages/kilo-vscode/src/shared/custom-provider.ts",
     "module:packages/kilo-vscode/src/shared/image-data-url.ts",
     "module:packages/kilo-vscode/src/shared/session-title.ts",
     "module:packages/kilo-vscode/src/util/process.ts",
     "module:packages/kilo-vscode/tests/unit/auto-approve.test.ts",
+    "module:packages/kilo-vscode/tests/unit/config-scope.test.ts",
+    "module:packages/kilo-vscode/tests/unit/config-utils.test.ts",
+    "module:packages/kilo-vscode/tests/unit/custom-provider-dialog-validate.test.ts",
+    "module:packages/kilo-vscode/tests/unit/custom-provider.test.ts",
     "module:packages/kilo-vscode/tests/unit/image-preview.test.ts",
+    "module:packages/kilo-vscode/tests/unit/mcp-oauth-config.test.ts",
+    "module:packages/kilo-vscode/tests/unit/mode-io.test.ts",
+    "module:packages/kilo-vscode/tests/unit/mode-model.test.ts",
+    "module:packages/kilo-vscode/tests/unit/permission-editor.test.ts",
+    "module:packages/kilo-vscode/tests/unit/provider-visibility.test.ts",
+    "module:packages/kilo-vscode/tests/unit/remove-config-item.test.ts",
+    "module:packages/kilo-vscode/tests/unit/settings-io.test.ts",
     "module:packages/kilo-vscode/tests/unit/working-indicator.test.ts",
     "module:packages/kilo-vscode/webview-ui/agent-manager/focus.ts",
     "module:packages/kilo-vscode/webview-ui/agent-manager/i18n/ar.ts",
@@ -6581,13 +6601,37 @@
     "module:packages/kilo-vscode/webview-ui/src/components/profile/ProfileView.tsx",
     "module:packages/kilo-vscode/webview-ui/src/components/profile/ProviderUsageCards.tsx",
     "module:packages/kilo-vscode/webview-ui/src/components/settings/AboutKiloCodeTab.tsx",
+    "module:packages/kilo-vscode/webview-ui/src/components/settings/AgentBehaviourTab.tsx",
+    "module:packages/kilo-vscode/webview-ui/src/components/settings/AutoApproveTab.tsx",
+    "module:packages/kilo-vscode/webview-ui/src/components/settings/BrowserTab.tsx",
+    "module:packages/kilo-vscode/webview-ui/src/components/settings/CheckpointsTab.tsx",
+    "module:packages/kilo-vscode/webview-ui/src/components/settings/ContextTab.tsx",
+    "module:packages/kilo-vscode/webview-ui/src/components/settings/CustomProviderDialog.tsx",
+    "module:packages/kilo-vscode/webview-ui/src/components/settings/CustomProviderModelCard.tsx",
+    "module:packages/kilo-vscode/webview-ui/src/components/settings/CustomProviderValidation.ts",
+    "module:packages/kilo-vscode/webview-ui/src/components/settings/DisplayTab.tsx",
+    "module:packages/kilo-vscode/webview-ui/src/components/settings/ExperimentalTab.tsx",
+    "module:packages/kilo-vscode/webview-ui/src/components/settings/LanguageTab.tsx",
+    "module:packages/kilo-vscode/webview-ui/src/components/settings/McpEditView.tsx",
+    "module:packages/kilo-vscode/webview-ui/src/components/settings/ModeCreateView.tsx",
+    "module:packages/kilo-vscode/webview-ui/src/components/settings/ModeEditView.tsx",
+    "module:packages/kilo-vscode/webview-ui/src/components/settings/ModelsTab.tsx",
+    "module:packages/kilo-vscode/webview-ui/src/components/settings/PermissionEditor.tsx",
     "module:packages/kilo-vscode/webview-ui/src/components/settings/ProviderConnectDialog.tsx",
     "module:packages/kilo-vscode/webview-ui/src/components/settings/ProviderSelectDialog.tsx",
     "module:packages/kilo-vscode/webview-ui/src/components/settings/ProvidersTab.tsx",
     "module:packages/kilo-vscode/webview-ui/src/components/settings/Settings.tsx",
+    "module:packages/kilo-vscode/webview-ui/src/components/settings/SettingsRow.tsx",
     "module:packages/kilo-vscode/webview-ui/src/components/settings/SettingsSearch.tsx",
     "module:packages/kilo-vscode/webview-ui/src/components/settings/SettingsSearchResults.tsx",
+    "module:packages/kilo-vscode/webview-ui/src/components/settings/agent-behaviour-patches.ts",
+    "module:packages/kilo-vscode/webview-ui/src/components/settings/mcp-oauth-config.ts",
+    "module:packages/kilo-vscode/webview-ui/src/components/settings/mode-io.ts",
+    "module:packages/kilo-vscode/webview-ui/src/components/settings/mode-model.ts",
+    "module:packages/kilo-vscode/webview-ui/src/components/settings/permission-utils.ts",
     "module:packages/kilo-vscode/webview-ui/src/components/settings/provider-catalog.ts",
+    "module:packages/kilo-vscode/webview-ui/src/components/settings/provider-visibility.ts",
+    "module:packages/kilo-vscode/webview-ui/src/components/settings/settings-io.ts",
     "module:packages/kilo-vscode/webview-ui/src/components/settings/settings-search.ts",
     "module:packages/kilo-vscode/webview-ui/src/components/settings/useSettingsSearch.ts",
     "module:packages/kilo-vscode/webview-ui/src/components/shared/DeferredPopover.tsx",
@@ -6600,6 +6644,7 @@
     "module:packages/kilo-vscode/webview-ui/src/components/shared/ThinkingSelector.tsx",
     "module:packages/kilo-vscode/webview-ui/src/components/shared/WorkingIndicator.tsx",
     "module:packages/kilo-vscode/webview-ui/src/components/shared/working-indicator-utils.ts",
+    "module:packages/kilo-vscode/webview-ui/src/context/config.tsx",
     "module:packages/kilo-vscode/webview-ui/src/context/language-dictionaries/ar.ts",
     "module:packages/kilo-vscode/webview-ui/src/context/language-dictionaries/br.ts",
     "module:packages/kilo-vscode/webview-ui/src/context/language-dictionaries/bs.ts",
@@ -6622,8 +6667,10 @@
     "module:packages/kilo-vscode/webview-ui/src/context/language-dictionaries/zht.ts",
     "module:packages/kilo-vscode/webview-ui/src/context/language-utils.ts",
     "module:packages/kilo-vscode/webview-ui/src/context/language.tsx",
+    "module:packages/kilo-vscode/webview-ui/src/context/mcp-auth.ts",
     "module:packages/kilo-vscode/webview-ui/src/context/rich-provider.tsx",
     "module:packages/kilo-vscode/webview-ui/src/context/vscode.tsx",
+    "module:packages/kilo-vscode/webview-ui/src/font-size.ts",
     "module:packages/kilo-vscode/webview-ui/src/i18n/ar.ts",
     "module:packages/kilo-vscode/webview-ui/src/i18n/br.ts",
     "module:packages/kilo-vscode/webview-ui/src/i18n/bs.ts",
@@ -6677,6 +6724,8 @@
     "module:packages/kilo-vscode/webview-ui/src/styles/welcome.css",
     "module:packages/kilo-vscode/webview-ui/src/types/messages/profile.ts",
     "module:packages/kilo-vscode/webview-ui/src/types/messages/provider-usage.ts",
+    "module:packages/kilo-vscode/webview-ui/src/utils/config-scope.ts",
+    "module:packages/kilo-vscode/webview-ui/src/utils/config-utils.ts",
     "module:packages/kilo-vscode/webview-ui/src/utils/date.ts",
     "module:packages/kilo-vscode/webview-ui/src/utils/focus.ts",
     "module:packages/kilo-vscode/webview-ui/src/utils/ime-enter.ts",
@@ -6809,6 +6858,8 @@
     "module:packages/kilo-gateway/src/types/jsx.d.ts",
     "module:packages/kilo-gateway/src/types/tui.d.ts",
     "module:packages/kilo-gateway/test/provider.test.ts",
+    "module:packages/kilo-vscode/tests/unit/mcp-auth-service.test.ts",
+    "module:packages/kilo-vscode/tests/unit/mcp-auth-status.test.ts",
     "module:packages/opencode/src/kilocode/agent/scout.txt",
     "module:packages/opencode/src/kilocode/marketplace/detection.ts",
     "module:packages/opencode/src/kilocode/marketplace/plugin-config.ts",

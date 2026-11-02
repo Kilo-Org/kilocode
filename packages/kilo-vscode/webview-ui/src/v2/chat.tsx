@@ -1,9 +1,15 @@
 // The sidebar: history, profile, or one session laid out like main's ChatView (transcript, docks, prompt).
 import { Button } from "@kilocode/kilo-ui/button"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
-import { createEffect, createMemo, createSignal, Match, on, Show, Switch } from "solid-js"
+import type { ToolActions } from "@kilocode/kilo-ui/message-part"
+import { ToolChildSessionProvider, type ToolChildSession } from "@kilocode/kilo-ui/tool-child-session"
+import { createEffect, createMemo, createSignal, Match, on, onCleanup, Show, Switch } from "solid-js"
+import type { ToHost } from "../../../src/protocol"
 import { useLanguage } from "../context/language"
+import { getVSCodeAPI } from "../context/vscode"
 import { useV2 } from "./client"
+import { childTools, createChildSessions } from "./child-session"
+import { useDisplaySettings } from "./display-settings"
 import { SessionList } from "./history"
 import { TaskHeader } from "../components/chat/TaskHeader"
 import ProfileView from "../components/profile/ProfileView"
@@ -13,6 +19,7 @@ import { PromptInput } from "./prompt"
 import { QuestionDock } from "./question"
 import { createProfile } from "./profile"
 import { createSelection, Selectors } from "./selectors"
+import { SessionChanges } from "./session-changes"
 import { AutoApproveAction, createAutoApprove } from "./auto-approve"
 import { SessionDock } from "../components/chat/SessionDockWorking"
 import { createWorking } from "./working"
@@ -22,11 +29,21 @@ export function Chat() {
   const language = useLanguage()
   const [session, setSession] = createSignal<string>()
   const [view, setView] = createSignal<"chat" | "history" | "profile">("chat")
+  const [changes, setChanges] = createSignal(false)
+  // Display layouts are Kilo-only config keys, so the host reads them. Ask on connect and after every config change.
+  const display = useDisplaySettings()
+  createEffect(
+    on(v2.connection.status, (status) => {
+      if (status === "connected") display.request()
+    }),
+  )
+  onCleanup(v2.data.on("config.updated", () => display.request()))
   // Owned here, so a running sign-in survives switching views.
   const profile = createProfile()
   const startSession = () => {
     setSession(undefined)
     setView("chat")
+    setChanges(false)
   }
   v2.onCommand((name) => {
     if (name === "newSession") startSession()
@@ -37,7 +54,54 @@ export function Chat() {
   const open = (id: string) => {
     setSession(id)
     setView("chat")
+    setChanges(false)
   }
+
+  // What a tool renderer may ask the host to open. The host owns the editor and the diff surfaces.
+  const toolActions: ToolActions = {
+    openFile: (filePath, line) =>
+      getVSCodeAPI().postMessage({ type: "openToolFile", filePath, line } satisfies ToHost as never),
+    openDiff: (diff) => getVSCodeAPI().postMessage({ type: "openDiffVirtual", diff } satisfies ToHost as never),
+    openDiffs: (diffs) => getVSCodeAPI().postMessage({ type: "openDiffsVirtual", diffs } satisfies ToHost as never),
+    openSession: open,
+  }
+
+  // Subagent cards read the child session's tools from the same store as the open session. Load a child's message
+  // history when its card first asks for it; later tool events update the loaded messages in place. Leaving a session
+  // tree releases every child loaded from it, so a long-lived sidebar does not keep every expanded child transcript.
+  const children = createChildSessions({ data: v2.data, report: v2.report })
+  const childSessions: ToolChildSession = {
+    tools: (sessionID) => childTools(v2.data.session.message.list(sessionID)),
+    running: (sessionID) => v2.data.session.status(sessionID) === "running",
+    load: children.load,
+  }
+  let previousSession: string | undefined
+  createEffect(
+    on(
+      session,
+      (id) => {
+        const previous = previousSession
+        previousSession = id
+        children.switchTo(id, previous)
+      },
+      { defer: true },
+    ),
+  )
+  createEffect(
+    on(
+      v2.connection.status,
+      (status) => {
+        if (status === "connected") void children.resync()
+      },
+      { defer: true },
+    ),
+  )
+  onCleanup(() => children.release(session()))
+  createEffect(
+    on(session, (id) => {
+      if (id) getVSCodeAPI().postMessage({ type: "trackCostSession", sessionID: id } satisfies ToHost as never)
+    }),
+  )
 
   // The open session and its subagents. Subagent permissions and forms carry the subagent's session ID.
   const family = createMemo(() => {
@@ -107,8 +171,8 @@ export function Chat() {
     const id = session()
     return !!id && (v2.data.session.message.list(id).length > 0 || working.submitting())
   })
-  // main's ChatView actions row. Only New Session has a v2 counterpart: the worktree, changes and fork actions need
-  // the Agent Manager and the diff viewer, which v2 does not have yet.
+  // main's ChatView actions row. New Session and Changes have v2 counterparts: the worktree and fork actions need
+  // the Agent Manager, and the changes view lists this session's files instead of the working tree.
   const actions = (
     <Show when={hasMessages()}>
       <div class="new-task-button-wrapper">
@@ -124,6 +188,14 @@ export function Chat() {
               {language.t("sidebar.session.newSession")}
             </Button>
           </Tooltip>
+          <Button
+            variant="secondary"
+            size="small"
+            aria-pressed={changes()}
+            onClick={() => setChanges((open) => !open)}
+          >
+            {language.t("sidebar.session.changes.title")}
+          </Button>
         </div>
       </div>
     </Show>
@@ -169,14 +241,25 @@ export function Chat() {
             {(id) => <TaskHeader sessionID={id} />}
           </Show>
           <div class="chat-messages-wrapper">
-            <div class="chat-messages">
-              <MessageList
-                session={session()}
-                onSelectSession={open}
-                onShowHistory={() => setView("history")}
-                onScrollToBottomReady={(fn) => (scrollToBottom = fn)}
-              />
-            </div>
+            <ToolChildSessionProvider value={childSessions}>
+              <div class="chat-messages">
+                <Show
+                  when={changes() ? session() : undefined}
+                  keyed
+                  fallback={
+                    <MessageList
+                      session={session()}
+                      actions={toolActions}
+                      onSelectSession={open}
+                      onShowHistory={() => setView("history")}
+                      onScrollToBottomReady={(fn) => (scrollToBottom = fn)}
+                    />
+                  }
+                >
+                  {(id) => <SessionChanges sessionID={id} onClose={() => setChanges(false)} />}
+                </Show>
+              </div>
+            </ToolChildSessionProvider>
           </div>
           <div class="chat-input">
             <Show when={v2.handshake() || v2.error()}>

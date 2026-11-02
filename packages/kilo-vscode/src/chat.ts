@@ -11,13 +11,33 @@ import {
   type WebviewViewProvider,
 } from "vscode"
 import { local } from "./local"
-import type { ToHost, ToWebview } from "./protocol"
+import { DISPLAY_DEFAULTS, type ToHost, type ToWebview } from "./protocol"
 import { bridge } from "./relay"
 import { saveImage } from "./save-image"
 import type { Manager } from "./server"
+import {
+  effectiveFontSize,
+  KILO_SETTING_KEYS,
+  readKiloSettings,
+  settingsHost,
+  writeKiloSettings,
+} from "./settings-host"
+import { resolveKiloProfile } from "./settings-paths"
 import { promptKeybindings, watchKeybindings } from "./prompt-keybindings"
+import { readDisplaySettings } from "./display-settings"
+import { createSpeechToTextHost } from "./speech-to-text/host"
+import { openToolFile, type ToolDiff } from "./tool-diff"
 
-export function chat(input: { context: ExtensionContext; server: Manager; directory: string }) {
+// The sidebar may only write the settings its own UI owns. Other views keep their own write path.
+const CHAT_SETTING_KEYS: ReadonlySet<string> = new Set(["showTaskTimeline"])
+
+export function chat(input: {
+  context: ExtensionContext
+  server: Manager
+  directory: string
+  trackCostSession: (sessionID: string) => void
+  diff: ToolDiff
+}) {
   // Commands sent before the webview bundle listens are lost, and a resolved view is not yet loaded. Keep them until
   // the webview sends its first message, which it does on mount.
   const state: { view?: WebviewView; loaded: boolean; queued: ToWebview[] } = { loaded: false, queued: [] }
@@ -33,6 +53,11 @@ export function chat(input: { context: ExtensionContext; server: Manager; direct
     state.loaded = true
     for (const message of state.queued.splice(0)) void state.view.webview.postMessage(message)
   }
+  const syncState = () => {
+    if (!state.view) return
+    void send({ type: "autoApproveStateLoaded", value: input.context.globalState.get(AUTO_APPROVE, false) })
+    void send({ type: "modelSelectorExpandedLoaded", value: input.context.globalState.get(EXPANDED, true) })
+  }
   // The cycle keybindings are active only while the webview has focus, as on v1 (`sidebarFocused`).
   const focus = (focused: boolean) => void commands.executeCommand("setContext", "kilo-code.v2.sidebarFocused", focused)
   const provider: WebviewViewProvider = {
@@ -43,6 +68,8 @@ export function chat(input: { context: ExtensionContext; server: Manager; direct
       const visibility = view.onDidChangeVisibility(() => {
         if (!view.visible) focus(false)
         surface.post({ type: "webviewActiveChanged", active: view.visible })
+        // A hidden webview may not receive the reset notification.
+        if (view.visible) syncState()
       })
       // The prompt hint shows the same keybind as the cycle command, so send it on load and when the
       // user's keybindings.json changes.
@@ -65,6 +92,7 @@ export function chat(input: { context: ExtensionContext; server: Manager; direct
   return {
     provider,
     post: send,
+    syncState,
   }
 }
 
@@ -78,8 +106,14 @@ export function wire(input: {
   directory: string
   webview: Webview
   view: "chat" | "settings"
+  trackCostSession?: (sessionID: string) => void
+  /** The tool diff surfaces of the chat view. Settings has none. */
+  diff?: ToolDiff
   /** Called on every message from the webview, before it is handled. */
   onMessage?: () => void
+  /** Handles a view-specific message before the standard set. Returns true when it did. */
+  handle?: (message: ToHost) => boolean
+  onReset?: () => void
 }) {
   const webview = input.webview
   const root = input.context.extensionUri
@@ -92,9 +126,128 @@ export function wire(input: {
     fetch: local,
   })
   const post = (message: ToWebview) => void webview.postMessage(message)
+  // Voice input is host-side: the microphone, the custom endpoint key and the Gateway RPC never reach the webview.
+  const speech = createSpeechToTextHost({
+    server: input.server,
+    directory: input.directory,
+    remote: !!env.remoteName,
+    profile: resolveKiloProfile(input.context),
+    secrets: input.view === "settings",
+    post,
+  })
+  // Config read and write are host-side: the Settings panel uses the full host, and the sidebar writes the
+  // `kilo-code.v2.*` settings it owns, such as the task header graph toggle.
+  const settings =
+    input.view === "settings"
+      ? settingsHost({
+          context: input.context,
+          server: input.server,
+          directory: input.directory,
+          post,
+          onReset: input.onReset,
+        })
+      : input.view === "chat"
+        ? {
+            handle: (message: ToHost) => {
+              if (message.type !== "updateVSCodeSettings") return false
+              const values = Object.fromEntries(
+                Object.entries(message.values).filter(([key]) => CHAT_SETTING_KEYS.has(key)),
+              )
+              void writeKiloSettings(values).catch((error: unknown) => {
+                console.error("Failed to write Kilo settings", error)
+              })
+              return true
+            },
+            dispose() {},
+          }
+        : undefined
+  // The sidebar carries the live Kilo settings: push a fresh value when any of them changes.
+  const settingsWatch =
+    input.view === "chat"
+      ? workspace.onDidChangeConfiguration((event) => {
+          if (KILO_SETTING_KEYS.some((key) => event.affectsConfiguration(`${NAMESPACE}.${key}`)))
+            post({ type: "vscodeSettingsLoaded", values: readKiloSettings() })
+        })
+      : undefined
+  // The display layouts are Kilo-only config keys, so the chat reads them through the host when the webview asks,
+  // and again when the config changes. A failed read keeps the v1 defaults.
+  const postDisplaySettings = () => {
+    void input.server
+      .get()
+      .then((server) => readDisplaySettings({ server, directory: input.directory }))
+      .then((values) => post({ type: "displaySettingsLoaded", values }))
+      .catch((error: unknown) =>
+        post({
+          type: "displaySettingsLoaded",
+          values: DISPLAY_DEFAULTS,
+          error: error instanceof Error ? error.message : String(error),
+        }),
+      )
+  }
+  const handleSurface = (message: Surface) => {
+    switch (message.type) {
+      case "openToolFile":
+        return openToolFile(input.directory, message)
+      case "openDiffVirtual":
+        return input.diff?.open(message.diff, message.initialDiffStyle)
+      case "openDiffsVirtual":
+        return input.diff?.openMany(message.diffs, message.initialDiffStyle)
+      case "requestDisplaySettings":
+        return postDisplaySettings()
+    }
+  }
+  const handleGlobalState = (message: ToHost) => {
+    switch (message.type) {
+      case "requestModelSelectorExpanded":
+        post({ type: "modelSelectorExpandedLoaded", value: input.context.globalState.get(EXPANDED, true) })
+        return true
+      case "persistModelSelectorExpanded":
+        void input.context.globalState.update(EXPANDED, message.value)
+        return true
+      case "requestAutoApproveState":
+        post({ type: "autoApproveStateLoaded", value: input.context.globalState.get(AUTO_APPROVE, false) })
+        return true
+      case "persistAutoApproveState":
+        void input.context.globalState.update(AUTO_APPROVE, message.value)
+        return true
+      default:
+        return false
+    }
+  }
+  // Leaf host actions that carry no state, kept together so the main handler stays within the complexity limit.
+  const handleLeafMessage = (message: ToHost): boolean => {
+    if (message.type === "saveImage") {
+      void saveImage(input.directory, message)
+      return true
+    }
+    // The Language tab applies at once: write `kilo-code.v2.language` and let the change event push it to every view.
+    if (message.type === "setLanguage") {
+      void workspace.getConfiguration(NAMESPACE).update("language", message.locale || undefined, true)
+      return true
+    }
+    // The Kilo Gateway sign-in runs in the Profile view of the sidebar, as main opens its Profile panel.
+    if (message.type === "openProfile") {
+      void commands.executeCommand("kilo-code.v2.profile")
+      return true
+    }
+    return false
+  }
+
   const subscription = webview.onDidReceiveMessage((message: ToHost) => {
     input.onMessage?.()
+    if (input.handle?.(message) || speech.handle(message)) return
     if (message.type === "fetch" || message.type === "abort" || message.type === "open") return link.receive(message)
+    if (message.type === "trackCostSession") return input.trackCostSession?.(message.sessionID)
+    if (isSurface(message)) return handleSurface(message)
+    // A chat recovery link opens the Settings panel at the row that owns the problem.
+    if (message.type === "openSettingsTab")
+      return void commands.executeCommand("kilo-code.v2.settings", {
+        tab: message.tab,
+        subtab: message.subtab,
+        focus: message.focus,
+        titleKey: message.titleKey,
+      })
+    if (settings?.handle(message)) return
     // Only the sidebar carries the cycle keybindings; the Settings panel must not change their context.
     if (message.type === "webviewFocusChanged" && input.view === "chat")
       return void commands.executeCommand("setContext", "kilo-code.v2.sidebarFocused", message.focused === true)
@@ -103,18 +256,8 @@ export function wire(input: {
         () => post({ type: "clipboardWriteResult", id: message.id, ok: true }),
         (error: unknown) => post({ type: "clipboardWriteResult", id: message.id, ok: false, error: String(error) }),
       )
-    if (message.type === "requestModelSelectorExpanded")
-      return post({ type: "modelSelectorExpandedLoaded", value: input.context.globalState.get(EXPANDED, true) })
-    if (message.type === "persistModelSelectorExpanded")
-      return void input.context.globalState.update(EXPANDED, message.value)
-    // Auto-approve is a client-side reaction to permission requests, so the host only persists its state.
-    if (message.type === "requestAutoApproveState")
-      return post({ type: "autoApproveStateLoaded", value: input.context.globalState.get(AUTO_APPROVE, false) })
-    if (message.type === "persistAutoApproveState")
-      return void input.context.globalState.update(AUTO_APPROVE, message.value)
-    if (message.type === "saveImage") return saveImage(input.directory, message)
-    // The Kilo Gateway sign-in runs in the Profile view of the sidebar, as main opens its Profile panel.
-    if (message.type === "openProfile") return void commands.executeCommand("kilo-code.v2.profile")
+    if (handleGlobalState(message)) return
+    if (handleLeafMessage(message)) return
   })
   const uri = (...parts: string[]) => webview.asWebviewUri(Uri.joinPath(root, ...parts)).toString()
   webview.html = html({
@@ -125,14 +268,19 @@ export function wire(input: {
     worker: uri("dist", "shiki-worker.js"),
     markdown: uri("dist", "markdown-shiki-worker.js"),
     directory: input.directory,
-    size: size(),
+    size: effectiveFontSize(),
     language: env.language,
+    version: (input.context.extension.packageJSON as { version?: string }).version ?? "",
     view: input.view,
+    settings: readKiloSettings(),
   })
   return {
     post,
     dispose() {
       link.dispose()
+      speech.dispose()
+      settings?.dispose()
+      settingsWatch?.dispose()
       subscription.dispose()
     },
   }
@@ -140,12 +288,8 @@ export function wire(input: {
 
 const EXPANDED = "kilo-code.v2.modelSelectorExpanded"
 const AUTO_APPROVE = "kilo-code.v2.autoApprove"
+const NAMESPACE = "kilo-code.v2"
 const SIZES = [10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24]
-
-function size() {
-  const raw = workspace.getConfiguration("editor").get<number>("fontSize", 13)
-  return Number.isFinite(raw) ? Math.min(24, Math.max(10, Math.round(raw))) : 13
-}
 
 export function html(input: {
   csp: string
@@ -157,7 +301,9 @@ export function html(input: {
   directory: string
   size: number
   language: string
+  version: string
   view?: "chat" | "settings"
+  settings: Record<string, unknown>
 }) {
   const nonce = randomBytes(16).toString("hex")
   const policy = [
@@ -179,7 +325,8 @@ export function html(input: {
     KILO_AGENT_MANAGER_SETTINGS: false,
     KILO_BROWSER_AUTOMATION: false,
     KILO_AGENT_MANAGER_INTRO_DISMISSED: true,
-    KILO_SETTINGS: {},
+    KILO_SETTINGS: input.settings,
+    KILO_EXTENSION_VERSION: input.version,
   }
   const script = Object.entries(globals)
     .map(([key, value]) => `window.${key} = ${JSON.stringify(value).replace(/</g, "\\u003c")};`)
@@ -218,4 +365,18 @@ export function html(input: {
 
 function escape(text: string) {
   return text.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+}
+
+type Surface = Extract<
+  ToHost,
+  { type: "openToolFile" | "openDiffVirtual" | "openDiffsVirtual" | "requestDisplaySettings" }
+>
+
+function isSurface(message: ToHost): message is Surface {
+  return (
+    message.type === "openToolFile" ||
+    message.type === "openDiffVirtual" ||
+    message.type === "openDiffsVirtual" ||
+    message.type === "requestDisplaySettings"
+  )
 }

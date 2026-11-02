@@ -1,6 +1,6 @@
 export * as KiloQuestionPlugin from "./question"
 
-import { ToolFailure } from "@opencode/ai"
+import { ToolFailure } from "@opencode/ai/effect"
 // Core internals with no public surface: the Form and Permission services that the native question tool uses (the
 // plugin API has no forms domain), and the native tool's name, model content and dismissal error. The session runner
 // recognizes a dismissal only as `QuestionTool.CancelledError`, so the mirror must raise that class.

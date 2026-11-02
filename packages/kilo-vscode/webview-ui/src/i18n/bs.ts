@@ -267,6 +267,7 @@ export const dict = {
   "prompt.toast.promptSendFailed.title": "Neuspješno slanje upita",
 
   "mcp.status.connected": "povezano",
+  "mcp.status.pending": "povezivanje",
   "mcp.status.failed": "neuspjelo",
   "mcp.status.needs_auth": "potrebna autentifikacija",
   "mcp.status.needs_registration": "potrebna registracija klijenta",
@@ -297,6 +298,9 @@ export const dict = {
   "provider.failure.http": "Greška provajdera (HTTP {{status}}).",
   "provider.failure.httpNoStatus": "Greška provajdera.",
   "provider.failure.schema": "Neočekivan odgovor od provajdera.",
+  "provider.failure.organizationMissing": "Odabrani tim više nije dostupan. Odaberite drugi tim.",
+  "provider.failure.scopeConflict": "Odabrani tim je u sukobu s timom vašeg Kilo tokena.",
+  "provider.failure.personalUnavailable": "Ovaj račun nema lični račun. Odaberite tim.",
 
   "notification.permission.title": "Potrebna dozvola",
   "notification.permission.titleSubagent": "Potrebna dozvola (podagent)",
@@ -751,7 +755,7 @@ export const dict = {
   "settings.agentBehaviour.title": "Ponašanje agenta",
   "settings.autoApprove.title": "Automatsko odobravanje",
   "settings.webTools.title": "Web alati",
-  "settings.webTools.description": "Konfigurišite web pretragu i automatizaciju preglednika.",
+  "settings.webTools.description": "Konfigurišite web pretragu.",
   "settings.webTools.webSearch.enable": "Omogući za sve pružaoce",
   "settings.webTools.browserAutomation": "Automatizacija preglednika",
   "settings.webTools.webSearch.title": "Web pretraga",
@@ -864,6 +868,7 @@ export const dict = {
     "Ovaj fajl je izvezen iz novije verzije Kilo-a. Neke postavke mogu biti zanemarene.",
   "settings.aboutKiloCode.importSettings.success":
     "Postavke su uvezene. Pregledajte promjene iznad, a zatim kliknite Sačuvaj.",
+  "settings.aboutKiloCode.importSettings.applied": "Settings imported and applied.",
 
   "settings.aboutKiloCode.telemetry.title": "Telemetrija",
   "settings.aboutKiloCode.telemetry.description":
@@ -1054,6 +1059,9 @@ export const dict = {
     "Ovo je ugrađeni način rada. Njegova osnovna definicija ne može se mijenjati, ali ispod možete konfigurirati nadjačavanja.",
   "settings.agentBehaviour.editMode.promptOverride": "Prilagođeno nadjačavanje prompta za ovaj ugrađeni mod",
   "settings.agentBehaviour.badge.subagent": "podagent",
+  "settings.agentBehaviour.perAgentPermissions.title": "Dozvole po agentu",
+  "settings.agentBehaviour.perAgentPermissions.description":
+    "Ove postavke važe samo za ovog prilagođenog agenta. Promijenite vrijednost padajućeg menija sa 'Podrazumijevano' da biste kreirali zamjenu ili koristite 'Dodaj putanju' ili 'Dodaj komandu' za izuzetke specifične za alat.",
   "settings.agentBehaviour.permissions.title": "Izračunate dozvole",
   "settings.agentBehaviour.permissions.count": "{{count}} pravila",
   "settings.agentBehaviour.permissions.effective": "Efektivno (wildcard):",
@@ -1131,12 +1139,15 @@ export const dict = {
   "settings.agentBehaviour.mcpResetAuth.confirm":
     'Ukloniti sačuvanu prijavu za "{{name}}"? Morat ćete se ponovo prijaviti.',
   "settings.agentBehaviour.mcpBrowseMarketplace": "Pregledaj Marketplace",
+  "settings.agentBehaviour.mcp.timeout.startup.title": "Vrijeme pokretanja (ms)",
+  "settings.agentBehaviour.mcp.timeout.catalog.title": "Vrijeme kataloga (ms)",
+  "settings.agentBehaviour.mcp.timeout.execution.title": "Vrijeme izvršavanja (ms)",
   "settings.agentBehaviour.mcpEmpty":
-    "Nema konfiguriranih MCP servera. Dodajte MCP servere u kilo.jsonc ili zamolite agenta da ih doda.",
+    "Nema konfiguriranih MCP servera. Dodajte MCP servere u kilo2.json ili zamolite agenta da ih doda.",
   "settings.agentBehaviour.workflows.description":
-    "Tokovi rada su prilagođene slash komande definirane u vašoj konfiguraciji. Upišite /command-name u chat da ih pokrenete. Komande se konfiguriraju u opencode.json pod sekcijom 'command'.",
+    "Tokovi rada su prilagođene komande definirane u vašoj konfiguraciji ili u Markdown datotekama komandi. Možete postaviti model i varijantu zaključivanja za svaki tok rada.",
   "settings.agentBehaviour.workflows.empty":
-    "Nema konfiguriranih prilagođenih komandi. Dodajte komande u opencode.json da ih vidite ovdje.",
+    "Nisu pronađene prilagođene komande. Dodajte komande u kilo2.json ili Markdown datoteku u .kilo2/command.",
   "settings.agentBehaviour.workflows.detail.description": "Opis",
   "settings.agentBehaviour.workflows.detail.template": "Predložak",
   "settings.agentBehaviour.workflows.model": "model",
@@ -1150,10 +1161,12 @@ export const dict = {
     "Pokrenite shell komande agenta unutar sandboxa na nivou operativnog sistema koji ograničava pisanje na direktorije stanja projekta i Kilo",
 
   "settings.autoApprove.description":
-    "Definišite kako je dozvoljeno pokretanje alata. Većina alata je podrazumijevano na Dozvoli. doom_loop i external_directory su podrazumijevano na Pitaj.",
+    "Definišite kako je dozvoljeno pokretanje alata. Većina alata je podrazumijevano na Dozvoli. Bash je podrazumijevano na Pitaj.",
   "settings.autoApprove.maxCost.title": "Upozorenje o trošku sesije",
   "settings.autoApprove.maxCost.description":
     "Upozori prije nastavka sesije nakon što potrošnja premaši ovaj iznos u USD. Koristite cijele dolare; ostavite prazno za isključivanje.",
+  "settings.autoApprove.maxCost.v2Description":
+    "Prikaži obavještenje koje ne blokira kada trošak sesije dostigne ovaj iznos u USD. Ostavite prazno da onemogućite.",
   "settings.autoApprove.level.allow": "Dozvoli",
   "settings.autoApprove.level.ask": "Pitaj",
   "settings.autoApprove.level.deny": "Odbij",
@@ -1231,6 +1244,12 @@ export const dict = {
   "settings.context.compactionLimit.title": "Limit automatske kompresije",
   "settings.context.compactionLimit.description":
     "Komprimiraj kada kontekst dostigne ovaj procenat prozora modela. Ostavite prazno da koristite samo sigurnosnu rezervu.",
+  "settings.context.compactionKeep.title": "Zadrži nedavne tokene",
+  "settings.context.compactionKeep.description":
+    "Nedavni tokeni koji se zadržavaju doslovno kada se kontekst komprimira. Ostavite prazno da zadržite 15.000.",
+  "settings.context.compactionBuffer.title": "Bafer kompresije",
+  "settings.context.compactionBuffer.description":
+    "Tokeni koji ostaju slobodni ispod ograničenja konteksta prije kompresije. Ostavite prazno da zadržite 15% slobodno, najmanje 16.000.",
   "settings.context.prune.title": "Očisti stare izlaze",
   "settings.context.prune.description": "Ukloni stare izlaze alata tokom kompresije",
   "settings.context.watcherPatterns": "Uzorci ignoriranja za promatrač datoteka",
@@ -1314,7 +1333,7 @@ export const dict = {
     "Prikazuje u praznom promptu prečicu tastature koja odgovara onome što sada radite, na primjer kako dodati odabrani kod ili se vratiti u prompt.",
   "settings.display.tokenThroughput.title": "Prikaži protok tokena",
   "settings.display.tokenThroughput.description":
-    "Prikažite brzinu generisanja teksta (tokens/sec) u najnovijoj poruci asistenta i zaglavlju zadatka. Prikazuje se podrazumijevano; onemogućite ovu postavku da biste je po potrebi sakrili.",
+    "Display the text-generation rate (tokens/sec) on the latest assistant message footer. Shown by default; disable this setting to hide it when needed.",
   "settings.display.autoApprovalReason.title": "Prikaži razlog automatskog odobravanja",
   "settings.display.autoApprovalReason.description":
     "Prikazuje zašto je poziv alata automatski odobren, kao što je odgovarajuće pravilo dozvole ili zadana vrijednost agenta.",

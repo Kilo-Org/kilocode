@@ -60,3 +60,51 @@ it.effect("reads fresh effective entries without filesystem, global paths or plu
     expect(yield* KiloConfigPolicy.get(config)).toEqual({ hide_prompt_training_models: false })
   }).pipe(Effect.provide(Config.testLayer())),
 )
+
+test("commit_message.prompt is a Kilo setting, and an invalid value keeps the other settings", () => {
+  const valid = { commit_message: { prompt: "Write a haiku." }, shell: "valid" }
+  const normalized = ConfigNormalize.normalize(valid)
+  if (normalized.type !== "normalized") throw new Error("expected canonical normalization")
+  expect(KiloConfigPolicy.parse(valid, normalized.encoded)?.commit_message).toEqual({ prompt: "Write a haiku." })
+
+  const invalid = { commit_message: { prompt: 1 }, shell: "valid" }
+  const diagnostics: ConfigNormalize.Diagnostic[] = []
+  const parsed = KiloConfigPolicy.parse(invalid, { shell: "valid" }, (diagnostic) => diagnostics.push(diagnostic))
+  expect(parsed?.shell).toBe("valid")
+  expect(parsed?.commit_message).toBeUndefined()
+  expect(diagnostics).toEqual([{ kind: "invalid", path: ["commit_message"], message: expect.any(String) }])
+})
+
+test("the last document that sets the commit message prompt wins, and an empty prompt means none", () => {
+  const document = (prompt?: string) =>
+    new Document({
+      type: "document",
+      info: new KiloConfigPolicy.Info({ commit_message: prompt === undefined ? undefined : { prompt } }),
+    })
+  expect(KiloConfigPolicy.commitMessagePrompt([])).toBeUndefined()
+  expect(KiloConfigPolicy.commitMessagePrompt([document("global"), document()])).toBe("global")
+  expect(KiloConfigPolicy.commitMessagePrompt([document("global"), document("project")])).toBe("project")
+  expect(KiloConfigPolicy.commitMessagePrompt([document("global"), document("")])).toBeUndefined()
+})
+
+test("the display layouts are Kilo settings, and an invalid layout is ignored", () => {
+  const valid = {
+    terminal_command_display: "collapsed",
+    code_edit_display: "expanded",
+    mcp_tool_display: "collapsed",
+    shell: "valid",
+  }
+  const normalized = ConfigNormalize.normalize(valid)
+  if (normalized.type !== "normalized") throw new Error("expected canonical normalization")
+  expect(KiloConfigPolicy.parse(valid, normalized.encoded)).toMatchObject({
+    terminal_command_display: "collapsed",
+    code_edit_display: "expanded",
+    mcp_tool_display: "collapsed",
+  })
+
+  const invalid = { terminal_command_display: "hidden", code_edit_display: "expanded", shell: "valid" }
+  const parsed = KiloConfigPolicy.parse(invalid, { shell: "valid" })
+  expect(parsed?.terminal_command_display).toBeUndefined()
+  expect(parsed?.code_edit_display).toBe("expanded")
+  expect(parsed?.shell).toBe("valid")
+})

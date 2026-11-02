@@ -267,6 +267,7 @@ export const dict = {
   "prompt.toast.promptSendFailed.title": "프롬프트 전송 실패",
 
   "mcp.status.connected": "연결됨",
+  "mcp.status.pending": "연결 중",
   "mcp.status.failed": "실패",
   "mcp.status.needs_auth": "인증 필요",
   "mcp.status.needs_registration": "클라이언트 등록 필요",
@@ -297,6 +298,9 @@ export const dict = {
   "provider.failure.http": "공급자 오류 (HTTP {{status}}).",
   "provider.failure.httpNoStatus": "공급자 오류.",
   "provider.failure.schema": "공급자로부터 예기치 않은 응답을 받았습니다.",
+  "provider.failure.organizationMissing": "선택한 팀을 더 이상 사용할 수 없습니다. 다른 팀을 선택하세요.",
+  "provider.failure.scopeConflict": "선택한 팀이 Kilo 토큰의 팀과 충돌합니다.",
+  "provider.failure.personalUnavailable": "이 계정에는 개인 계정이 없습니다. 팀을 선택하세요.",
 
   "notification.permission.title": "권한 필요",
   "notification.permission.titleSubagent": "권한 필요 (서브에이전트)",
@@ -704,7 +708,7 @@ export const dict = {
   "settings.agentBehaviour.title": "에이전트 동작",
   "settings.autoApprove.title": "자동 승인",
   "settings.webTools.title": "웹 도구",
-  "settings.webTools.description": "웹 검색 및 브라우저 자동화를 구성합니다.",
+  "settings.webTools.description": "웹 검색을 구성합니다.",
   "settings.webTools.webSearch.enable": "모든 제공업체에 사용",
   "settings.webTools.browserAutomation": "브라우저 자동화",
   "settings.webTools.webSearch.title": "웹 검색",
@@ -856,6 +860,7 @@ export const dict = {
   "settings.aboutKiloCode.importSettings.newerVersion":
     "이 파일은 더 최신 버전의 Kilo에서 내보낸 것입니다. 일부 설정이 무시될 수 있습니다.",
   "settings.aboutKiloCode.importSettings.success": "설정을 가져왔습니다. 위의 변경 사항을 확인한 후 저장을 클릭하세요.",
+  "settings.aboutKiloCode.importSettings.applied": "Settings imported and applied.",
 
   "settings.aboutKiloCode.telemetry.title": "원격 측정",
   "settings.aboutKiloCode.telemetry.description":
@@ -1042,6 +1047,9 @@ export const dict = {
     "이것은 내장 모드입니다. 기본 정의는 변경할 수 없지만, 아래에서 재정의를 구성할 수 있습니다.",
   "settings.agentBehaviour.editMode.promptOverride": "이 내장 모드에 대한 사용자 지정 프롬프트 재정의",
   "settings.agentBehaviour.badge.subagent": "서브에이전트",
+  "settings.agentBehaviour.perAgentPermissions.title": "에이전트별 권한",
+  "settings.agentBehaviour.perAgentPermissions.description":
+    "이 설정은 이 사용자 지정 에이전트에만 적용됩니다. 드롭다운 값을 '기본값'에서 변경하여 재정의를 만들거나, '경로 추가' 또는 '명령 추가'를 사용하여 도구별 예외를 설정하세요.",
   "settings.agentBehaviour.permissions.title": "계산된 권한",
   "settings.agentBehaviour.permissions.count": "{{count}}개 규칙",
   "settings.agentBehaviour.permissions.effective": "유효 (와일드카드):",
@@ -1118,12 +1126,15 @@ export const dict = {
   "settings.agentBehaviour.mcpResetAuth.confirm":
     '"{{name}}"에 저장된 로그인 정보를 지우시겠습니까? 다시 로그인해야 합니다.',
   "settings.agentBehaviour.mcpBrowseMarketplace": "마켓플레이스 둘러보기",
+  "settings.agentBehaviour.mcp.timeout.startup.title": "시작 시간 초과 (ms)",
+  "settings.agentBehaviour.mcp.timeout.catalog.title": "카탈로그 시간 초과 (ms)",
+  "settings.agentBehaviour.mcp.timeout.execution.title": "실행 시간 초과 (ms)",
   "settings.agentBehaviour.mcpEmpty":
-    "MCP 서버가 구성되지 않았습니다. kilo.jsonc에서 MCP 서버를 추가하거나 에이전트에게 추가를 요청하세요.",
+    "MCP 서버가 구성되지 않았습니다. kilo2.json에서 MCP 서버를 추가하거나 에이전트에게 추가를 요청하세요.",
   "settings.agentBehaviour.workflows.description":
-    "워크플로우는 구성에서 정의된 사용자 정의 슬래시 명령입니다. 채팅에서 /command-name을 입력하여 실행합니다. 명령은 opencode.json의 'command' 섹션에서 구성됩니다.",
+    "워크플로우는 구성 또는 명령 Markdown 파일에 정의된 사용자 정의 명령입니다. 각 워크플로우에 모델과 추론 변형을 설정할 수 있습니다.",
   "settings.agentBehaviour.workflows.empty":
-    "구성된 사용자 정의 명령이 없습니다. opencode.json에 명령을 추가하면 여기에 표시됩니다.",
+    "사용자 정의 명령을 찾을 수 없습니다. kilo2.json 또는 .kilo2/command의 Markdown 파일에 명령을 추가하세요.",
   "settings.agentBehaviour.workflows.detail.description": "설명",
   "settings.agentBehaviour.workflows.detail.template": "템플릿",
   "settings.agentBehaviour.workflows.model": "모델",
@@ -1137,10 +1148,12 @@ export const dict = {
     "에이전트 셸 명령을 프로젝트 및 Kilo 상태 디렉터리에 대한 쓰기를 제한하는 OS 수준의 샌드박스 내에서 실행",
 
   "settings.autoApprove.description":
-    "도구 실행 허용 방식을 정의합니다. 대부분의 도구 기본값은 '허용'입니다. doom_loop 및 external_directory의 기본값은 '확인'입니다.",
+    "도구 실행 허용 방식을 정의합니다. 대부분의 도구 기본값은 '허용'입니다. Bash의 기본값은 '확인'입니다.",
   "settings.autoApprove.maxCost.title": "세션 비용 알림",
   "settings.autoApprove.maxCost.description":
     "세션 지출이 이 USD 금액을 초과한 뒤 계속하기 전에 알립니다. 정수 달러 금액을 사용하세요. 비활성화하려면 비워 두세요.",
+  "settings.autoApprove.maxCost.v2Description":
+    "세션 비용이 이 USD 금액에 도달하면 차단하지 않는 알림을 표시합니다. 비활성화하려면 비워 두세요.",
   "settings.autoApprove.level.allow": "허용",
   "settings.autoApprove.level.ask": "확인",
   "settings.autoApprove.level.deny": "거부",
@@ -1206,6 +1219,12 @@ export const dict = {
   "settings.context.compactionLimit.title": "자동 압축 한도",
   "settings.context.compactionLimit.description":
     "컨텍스트가 모델 창의 이 비율에 도달하면 압축합니다. 안전 버퍼만 사용하려면 비워 두세요.",
+  "settings.context.compactionKeep.title": "최근 토큰 유지",
+  "settings.context.compactionKeep.description":
+    "컨텍스트를 압축할 때 그대로 유지할 최근 토큰 수입니다. 비워 두면 15,000을 유지합니다.",
+  "settings.context.compactionBuffer.title": "압축 버퍼",
+  "settings.context.compactionBuffer.description":
+    "압축 전에 모델 컨텍스트 한도 아래로 비워 둘 토큰 수입니다. 비워 두면 15%(최소 16,000)를 비워 둡니다.",
   "settings.context.prune.title": "이전 출력 정리",
   "settings.context.prune.description": "압축 중 이전 도구 출력 제거",
   "settings.context.watcherPatterns": "파일 감시자 무시 패턴",
@@ -1286,7 +1305,7 @@ export const dict = {
     "빈 프롬프트에 현재 작업에 맞는 키보드 단축키를 표시합니다. 예: 선택한 코드를 추가하거나 프롬프트로 돌아가는 방법.",
   "settings.display.tokenThroughput.title": "토큰 처리량 표시",
   "settings.display.tokenThroughput.description":
-    "최신 어시스턴트 메시지와 작업 헤더에 텍스트 생성 속도(tokens/sec)를 표시합니다. 기본적으로 표시되며, 필요할 때 이 설정을 비활성화하면 숨길 수 있습니다.",
+    "Display the text-generation rate (tokens/sec) on the latest assistant message footer. Shown by default; disable this setting to hide it when needed.",
   "settings.display.autoApprovalReason.title": "자동 승인 이유 표시",
   "settings.display.autoApprovalReason.description":
     "일치하는 권한 규칙이나 에이전트 기본값 등 도구 호출이 자동 승인된 이유를 표시합니다.",

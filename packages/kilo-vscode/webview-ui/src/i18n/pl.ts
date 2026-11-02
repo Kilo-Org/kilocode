@@ -268,6 +268,7 @@ export const dict = {
   "prompt.toast.promptSendFailed.title": "Nie udało się wysłać zapytania",
 
   "mcp.status.connected": "połączono",
+  "mcp.status.pending": "łączenie",
   "mcp.status.failed": "niepowodzenie",
   "mcp.status.needs_auth": "wymaga autoryzacji",
   "mcp.status.needs_registration": "wymaga rejestracji klienta",
@@ -298,6 +299,9 @@ export const dict = {
   "provider.failure.http": "Błąd dostawcy (HTTP {{status}}).",
   "provider.failure.httpNoStatus": "Błąd dostawcy.",
   "provider.failure.schema": "Nieoczekiwana odpowiedź od dostawcy.",
+  "provider.failure.organizationMissing": "Wybrany zespół nie jest już dostępny. Wybierz inny zespół.",
+  "provider.failure.scopeConflict": "Wybrany zespół jest w konflikcie z zespołem Twojego tokena Kilo.",
+  "provider.failure.personalUnavailable": "To konto nie ma konta osobistego. Wybierz zespół.",
 
   "notification.permission.title": "Wymagane uprawnienie",
   "notification.permission.titleSubagent": "Wymagane uprawnienie (podagent)",
@@ -708,7 +712,7 @@ export const dict = {
   "settings.agentBehaviour.title": "Zachowanie agenta",
   "settings.autoApprove.title": "Automatyczne zatwierdzanie",
   "settings.webTools.title": "Narzędzia internetowe",
-  "settings.webTools.description": "Skonfiguruj wyszukiwanie w sieci i automatyzację przeglądarki.",
+  "settings.webTools.description": "Skonfiguruj wyszukiwanie w sieci.",
   "settings.webTools.webSearch.enable": "Włącz dla wszystkich dostawców",
   "settings.webTools.browserAutomation": "Automatyzacja przeglądarki",
   "settings.webTools.webSearch.title": "Wyszukiwanie w sieci",
@@ -823,6 +827,7 @@ export const dict = {
     "Ten plik został wyeksportowany z nowszej wersji Kilo. Niektóre ustawienia mogą zostać zignorowane.",
   "settings.aboutKiloCode.importSettings.success":
     "Ustawienia zaimportowane. Przejrzyj powyższe zmiany, a następnie kliknij Zapisz.",
+  "settings.aboutKiloCode.importSettings.applied": "Settings imported and applied.",
 
   "settings.aboutKiloCode.telemetry.title": "Telemetria",
   "settings.aboutKiloCode.telemetry.description":
@@ -1054,6 +1059,9 @@ export const dict = {
     "To jest wbudowany tryb. Jego podstawowa definicja nie może zostać zmieniona, ale poniżej możesz skonfigurować nadpisania.",
   "settings.agentBehaviour.editMode.promptOverride": "Niestandardowe nadpisanie promptu dla tego wbudowanego trybu",
   "settings.agentBehaviour.badge.subagent": "podagent",
+  "settings.agentBehaviour.perAgentPermissions.title": "Uprawnienia dla agenta",
+  "settings.agentBehaviour.perAgentPermissions.description":
+    "Te ustawienia dotyczą tylko tego niestandardowego agenta. Zmień wartość 'Domyślny' na liście rozwijanej, aby utworzyć nadpisanie, lub użyj 'Dodaj ścieżkę' albo 'Dodaj polecenie' dla wyjątków dotyczących konkretnych narzędzi.",
   "settings.agentBehaviour.permissions.title": "Obliczone uprawnienia",
   "settings.agentBehaviour.permissions.count": "{{count}} reguł",
   "settings.agentBehaviour.permissions.effective": "Efektywne (wieloznacznik):",
@@ -1132,12 +1140,15 @@ export const dict = {
   "settings.agentBehaviour.mcpResetAuth.confirm":
     'Wyczyścić zapisane logowanie dla "{{name}}"? Będziesz musiał zalogować się ponownie.',
   "settings.agentBehaviour.mcpBrowseMarketplace": "Przeglądaj Marketplace",
+  "settings.agentBehaviour.mcp.timeout.startup.title": "Limit czasu uruchamiania (ms)",
+  "settings.agentBehaviour.mcp.timeout.catalog.title": "Limit czasu katalogu (ms)",
+  "settings.agentBehaviour.mcp.timeout.execution.title": "Limit czasu wykonania (ms)",
   "settings.agentBehaviour.mcpEmpty":
-    "Brak skonfigurowanych serwerów MCP. Dodaj serwery MCP w kilo.jsonc lub poproś agenta o ich dodanie.",
+    "Brak skonfigurowanych serwerów MCP. Dodaj serwery MCP w kilo2.json lub poproś agenta o ich dodanie.",
   "settings.agentBehaviour.workflows.description":
-    "Przepływy pracy to niestandardowe komendy slash zdefiniowane w konfiguracji. Wpisz /command-name na czacie, aby je uruchomić. Komendy konfiguruje się w opencode.json w sekcji 'command'.",
+    "Przepływy pracy to niestandardowe komendy zdefiniowane w konfiguracji lub w plikach Markdown z komendami. Dla każdego przepływu pracy możesz ustawić model i wariant rozumowania.",
   "settings.agentBehaviour.workflows.empty":
-    "Brak skonfigurowanych niestandardowych komend. Dodaj komendy do opencode.json, aby je tu zobaczyć.",
+    "Nie znaleziono niestandardowych komend. Dodaj komendy do kilo2.json lub pliku Markdown w .kilo2/command.",
   "settings.agentBehaviour.workflows.detail.description": "Opis",
   "settings.agentBehaviour.workflows.detail.template": "Szablon",
   "settings.agentBehaviour.workflows.model": "model",
@@ -1151,10 +1162,12 @@ export const dict = {
     "Uruchamiaj polecenia shell agenta w sandboxie na poziomie systemu operacyjnego, który ogranicza zapisy do katalogów stanu projektu i Kilo",
 
   "settings.autoApprove.description":
-    "Zdefiniuj, jak narzędzia mogą być uruchamiane. Większość narzędzi domyślnie ma ustawienie Zezwalaj. doom_loop i external_directory domyślnie mają ustawienie Pytaj.",
+    "Zdefiniuj, jak narzędzia mogą być uruchamiane. Większość narzędzi domyślnie ma ustawienie Zezwalaj. Bash domyślnie ma ustawienie Pytaj.",
   "settings.autoApprove.maxCost.title": "Alert kosztu sesji",
   "settings.autoApprove.maxCost.description":
     "Ostrzegaj przed kontynuowaniem sesji, gdy jej koszt przekroczy tę kwotę w USD. Używaj pełnych dolarów; pozostaw puste, aby wyłączyć.",
+  "settings.autoApprove.maxCost.v2Description":
+    "Pokaż nieblokujące ostrzeżenie, gdy koszt sesji osiągnie tę kwotę w USD. Pozostaw puste, aby wyłączyć.",
   "settings.autoApprove.level.allow": "Zezwól",
   "settings.autoApprove.level.ask": "Pytaj",
   "settings.autoApprove.level.deny": "Odmów",
@@ -1232,6 +1245,12 @@ export const dict = {
   "settings.context.compactionLimit.title": "Limit automatycznego kompaktowania",
   "settings.context.compactionLimit.description":
     "Kompaktuj, gdy kontekst osiągnie ten procent okna modelu. Pozostaw puste, aby używać tylko bufora bezpieczeństwa.",
+  "settings.context.compactionKeep.title": "Zachowaj ostatnie tokeny",
+  "settings.context.compactionKeep.description":
+    "Ostatnie tokeny zachowywane dosłownie podczas kompresji kontekstu. Pozostaw puste, aby zachować 15 000.",
+  "settings.context.compactionBuffer.title": "Bufor kompresji",
+  "settings.context.compactionBuffer.description":
+    "Tokeny pozostawiane wolne poniżej limitu kontekstu przed kompresją. Pozostaw puste, aby zachować 15% wolnego miejsca, co najmniej 16 000.",
   "settings.context.prune.title": "Przytnij stare wyjścia",
   "settings.context.prune.description": "Usuń stare wyjścia narzędzi podczas kompakcji",
   "settings.context.watcherPatterns": "Wzorce ignorowania obserwatora plików",
@@ -1317,7 +1336,7 @@ export const dict = {
     "Pokazuje w pustym polu promptu skrót klawiszowy pasujący do tego, co teraz robisz, na przykład jak dodać zaznaczony kod lub wrócić do promptu.",
   "settings.display.tokenThroughput.title": "Pokaż przepustowość tokenów",
   "settings.display.tokenThroughput.description":
-    "Wyświetlaj szybkość generowania tekstu (tokens/sec) w najnowszej wiadomości asystenta i nagłówku zadania. Domyślnie jest wyświetlana; wyłącz to ustawienie, aby w razie potrzeby ją ukryć.",
+    "Display the text-generation rate (tokens/sec) on the latest assistant message footer. Shown by default; disable this setting to hide it when needed.",
   "settings.display.autoApprovalReason.title": "Pokaż powód automatycznego zatwierdzenia",
   "settings.display.autoApprovalReason.description":
     "Pokazuje, dlaczego wywołanie narzędzia zostało automatycznie zatwierdzone, na przykład pasująca reguła uprawnień lub wartość domyślna agenta.",

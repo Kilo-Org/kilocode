@@ -1,4 +1,5 @@
 import { KiloAgentPlugin } from "./agent"
+import { KiloCommitMessagePlugin } from "./commit-message"
 // kilo_port(gateway:17e39e074eaf) v1 registered the Gateway auth plugin in the upstream plugin list.
 import { KiloGatewayPlugin } from "./gateway"
 import { OpencodeFreeTier } from "./gateway/opencode"
@@ -9,6 +10,9 @@ import { KiloHandshakePlugin } from "./handshake"
 import { KiloProviderUsagePlugin } from "./provider-usage"
 import { KiloOpenAIPlugin } from "./openai"
 import { KiloMarketplacePlugin } from "./marketplace"
+import { KiloSkillPlugin } from "./skill"
+import { KiloWriteToolPlugin } from "./tool-write"
+import { KiloReview } from "./review"
 import { KiloQuestionPlugin } from "./question"
 
 /**
@@ -32,6 +36,11 @@ export const KiloPlugins = [
   KiloProviderUsagePlugin,
   KiloOpenAIPlugin,
   KiloMarketplacePlugin,
+  KiloSkillPlugin,
+  KiloWriteToolPlugin,
+  KiloCommitMessagePlugin,
+  // The Kilo review command replaces the built-in `review`. kilo_port(review:efc710228c1f)
+  KiloReview.Plugin,
   KiloQuestionPlugin.Plugin,
 ] as const
 
