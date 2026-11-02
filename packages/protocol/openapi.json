@@ -5170,17 +5170,13 @@
             "schema": {
               "anyOf": [
                 {
-                  "anyOf": [
-                    {
-                      "$ref": "#/components/schemas/Model.Type"
-                    },
-                    {
-                      "type": "array",
-                      "items": {
-                        "$ref": "#/components/schemas/Model.Type"
-                      }
-                    }
-                  ]
+                  "$ref": "#/components/schemas/Model.Type"
+                },
+                {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Model.Type"
+                  }
                 },
                 {
                   "type": "null"
@@ -10594,229 +10590,221 @@
             "schema": {
               "anyOf": [
                 {
-                  "anyOf": [
-                    {
-                      "anyOf": [
-                        {
-                          "type": "string",
-                          "enum": [
-                            "location.shutdown",
-                            "models-dev.refreshed",
-                            "credential.updated",
-                            "credential.switched",
-                            "integration.updated",
-                            "provider.updated",
-                            "model.updated",
-                            "agent.updated",
-                            "session.created",
-                            "session.agent.selected",
-                            "session.model.selected",
-                            "session.moved",
-                            "session.renamed",
-                            "session.metadata.updated",
-                            "session.permissions",
-                            "session.viewed",
-                            "session.archived",
-                            "session.unarchived",
-                            "session.usage.updated",
-                            "session.deleted",
-                            "session.forked",
-                            "session.inbox.delivered",
-                            "session.inbox.enqueued",
-                            "session.inbox.cancelled",
-                            "session.inbox.delivery.changed",
-                            "session.execution.started",
-                            "session.execution.succeeded",
-                            "session.execution.failed",
-                            "session.execution.interrupted",
-                            "session.instructions.updated",
-                            "session.synthetic",
-                            "session.skill.activated",
-                            "session.shell.started",
-                            "session.shell.ended",
-                            "session.step.started",
-                            "session.step.streamed",
-                            "session.step.ended",
-                            "session.step.failed",
-                            "session.text.started",
-                            "session.text.delta",
-                            "session.text.ended",
-                            "session.reasoning.started",
-                            "session.reasoning.delta",
-                            "session.reasoning.ended",
-                            "session.tool.input.started",
-                            "session.tool.input.delta",
-                            "session.tool.input.ended",
-                            "session.tool.called",
-                            "session.tool.progress",
-                            "session.tool.success",
-                            "session.tool.failed",
-                            "session.retry.scheduled",
-                            "session.compaction.started",
-                            "session.compaction.delta",
-                            "session.compaction.ended",
-                            "session.compaction.failed",
-                            "session.revert.staged",
-                            "session.revert.cleared",
-                            "session.revert.committed",
-                            "filesystem.changed",
-                            "reference.updated",
-                            "permission.asked",
-                            "permission.replied",
-                            "plugin.updated",
-                            "project.updated",
-                            "worktree.updated",
-                            "worktree.resolved",
-                            "command.updated",
-                            "config.updated",
-                            "skill.updated",
-                            "pty.created",
-                            "pty.updated",
-                            "pty.exited",
-                            "pty.deleted",
-                            "persistent-pty.added",
-                            "persistent-pty.removed",
-                            "persistent-pty.updated",
-                            "shell.created",
-                            "shell.exited",
-                            "shell.deleted",
-                            "form.created",
-                            "form.replied",
-                            "form.cancelled",
-                            "websearch.updated",
-                            "artifact.updated",
-                            "session.status",
-                            "session.idle",
-                            "tui.prompt.append",
-                            "tui.command.execute",
-                            "tui.toast.show",
-                            "tui.session.select",
-                            "installation.updated",
-                            "installation.update-available",
-                            "vcs.branch.updated",
-                            "mcp.status.changed",
-                            "mcp.resources.changed"
-                          ]
-                        },
-                        {
-                          "type": "string",
-                          "pattern": "^rpc\\.[\\s\\S]*?$"
-                        }
-                      ]
-                    },
-                    {
-                      "type": "array",
-                      "items": {
-                        "anyOf": [
-                          {
-                            "type": "string",
-                            "enum": [
-                              "location.shutdown",
-                              "models-dev.refreshed",
-                              "credential.updated",
-                              "credential.switched",
-                              "integration.updated",
-                              "provider.updated",
-                              "model.updated",
-                              "agent.updated",
-                              "session.created",
-                              "session.agent.selected",
-                              "session.model.selected",
-                              "session.moved",
-                              "session.renamed",
-                              "session.metadata.updated",
-                              "session.permissions",
-                              "session.viewed",
-                              "session.archived",
-                              "session.unarchived",
-                              "session.usage.updated",
-                              "session.deleted",
-                              "session.forked",
-                              "session.inbox.delivered",
-                              "session.inbox.enqueued",
-                              "session.inbox.cancelled",
-                              "session.inbox.delivery.changed",
-                              "session.execution.started",
-                              "session.execution.succeeded",
-                              "session.execution.failed",
-                              "session.execution.interrupted",
-                              "session.instructions.updated",
-                              "session.synthetic",
-                              "session.skill.activated",
-                              "session.shell.started",
-                              "session.shell.ended",
-                              "session.step.started",
-                              "session.step.streamed",
-                              "session.step.ended",
-                              "session.step.failed",
-                              "session.text.started",
-                              "session.text.delta",
-                              "session.text.ended",
-                              "session.reasoning.started",
-                              "session.reasoning.delta",
-                              "session.reasoning.ended",
-                              "session.tool.input.started",
-                              "session.tool.input.delta",
-                              "session.tool.input.ended",
-                              "session.tool.called",
-                              "session.tool.progress",
-                              "session.tool.success",
-                              "session.tool.failed",
-                              "session.retry.scheduled",
-                              "session.compaction.started",
-                              "session.compaction.delta",
-                              "session.compaction.ended",
-                              "session.compaction.failed",
-                              "session.revert.staged",
-                              "session.revert.cleared",
-                              "session.revert.committed",
-                              "filesystem.changed",
-                              "reference.updated",
-                              "permission.asked",
-                              "permission.replied",
-                              "plugin.updated",
-                              "project.updated",
-                              "worktree.updated",
-                              "worktree.resolved",
-                              "command.updated",
-                              "config.updated",
-                              "skill.updated",
-                              "pty.created",
-                              "pty.updated",
-                              "pty.exited",
-                              "pty.deleted",
-                              "persistent-pty.added",
-                              "persistent-pty.removed",
-                              "persistent-pty.updated",
-                              "shell.created",
-                              "shell.exited",
-                              "shell.deleted",
-                              "form.created",
-                              "form.replied",
-                              "form.cancelled",
-                              "websearch.updated",
-                              "artifact.updated",
-                              "session.status",
-                              "session.idle",
-                              "tui.prompt.append",
-                              "tui.command.execute",
-                              "tui.toast.show",
-                              "tui.session.select",
-                              "installation.updated",
-                              "installation.update-available",
-                              "vcs.branch.updated",
-                              "mcp.status.changed",
-                              "mcp.resources.changed"
-                            ]
-                          },
-                          {
-                            "type": "string",
-                            "pattern": "^rpc\\.[\\s\\S]*?$"
-                          }
-                        ]
-                      }
-                    }
+                  "type": "string",
+                  "enum": [
+                    "location.shutdown",
+                    "models-dev.refreshed",
+                    "credential.updated",
+                    "credential.switched",
+                    "integration.updated",
+                    "provider.updated",
+                    "model.updated",
+                    "agent.updated",
+                    "session.created",
+                    "session.agent.selected",
+                    "session.model.selected",
+                    "session.moved",
+                    "session.renamed",
+                    "session.metadata.updated",
+                    "session.permissions",
+                    "session.viewed",
+                    "session.archived",
+                    "session.unarchived",
+                    "session.usage.updated",
+                    "session.deleted",
+                    "session.forked",
+                    "session.inbox.delivered",
+                    "session.inbox.enqueued",
+                    "session.inbox.cancelled",
+                    "session.inbox.delivery.changed",
+                    "session.execution.started",
+                    "session.execution.succeeded",
+                    "session.execution.failed",
+                    "session.execution.interrupted",
+                    "session.instructions.updated",
+                    "session.synthetic",
+                    "session.skill.activated",
+                    "session.shell.started",
+                    "session.shell.ended",
+                    "session.step.started",
+                    "session.step.streamed",
+                    "session.step.ended",
+                    "session.step.failed",
+                    "session.text.started",
+                    "session.text.delta",
+                    "session.text.ended",
+                    "session.reasoning.started",
+                    "session.reasoning.delta",
+                    "session.reasoning.ended",
+                    "session.tool.input.started",
+                    "session.tool.input.delta",
+                    "session.tool.input.ended",
+                    "session.tool.called",
+                    "session.tool.progress",
+                    "session.tool.success",
+                    "session.tool.failed",
+                    "session.retry.scheduled",
+                    "session.compaction.started",
+                    "session.compaction.delta",
+                    "session.compaction.ended",
+                    "session.compaction.failed",
+                    "session.revert.staged",
+                    "session.revert.cleared",
+                    "session.revert.committed",
+                    "filesystem.changed",
+                    "reference.updated",
+                    "permission.asked",
+                    "permission.replied",
+                    "plugin.updated",
+                    "project.updated",
+                    "worktree.updated",
+                    "worktree.resolved",
+                    "command.updated",
+                    "config.updated",
+                    "skill.updated",
+                    "pty.created",
+                    "pty.updated",
+                    "pty.exited",
+                    "pty.deleted",
+                    "persistent-pty.added",
+                    "persistent-pty.removed",
+                    "persistent-pty.updated",
+                    "shell.created",
+                    "shell.exited",
+                    "shell.deleted",
+                    "form.created",
+                    "form.replied",
+                    "form.cancelled",
+                    "websearch.updated",
+                    "artifact.updated",
+                    "session.status",
+                    "session.idle",
+                    "tui.prompt.append",
+                    "tui.command.execute",
+                    "tui.toast.show",
+                    "tui.session.select",
+                    "installation.updated",
+                    "installation.update-available",
+                    "vcs.branch.updated",
+                    "mcp.status.changed",
+                    "mcp.resources.changed"
                   ]
+                },
+                {
+                  "type": "string",
+                  "pattern": "^rpc\\.[\\s\\S]*?$"
+                },
+                {
+                  "type": "array",
+                  "items": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "enum": [
+                          "location.shutdown",
+                          "models-dev.refreshed",
+                          "credential.updated",
+                          "credential.switched",
+                          "integration.updated",
+                          "provider.updated",
+                          "model.updated",
+                          "agent.updated",
+                          "session.created",
+                          "session.agent.selected",
+                          "session.model.selected",
+                          "session.moved",
+                          "session.renamed",
+                          "session.metadata.updated",
+                          "session.permissions",
+                          "session.viewed",
+                          "session.archived",
+                          "session.unarchived",
+                          "session.usage.updated",
+                          "session.deleted",
+                          "session.forked",
+                          "session.inbox.delivered",
+                          "session.inbox.enqueued",
+                          "session.inbox.cancelled",
+                          "session.inbox.delivery.changed",
+                          "session.execution.started",
+                          "session.execution.succeeded",
+                          "session.execution.failed",
+                          "session.execution.interrupted",
+                          "session.instructions.updated",
+                          "session.synthetic",
+                          "session.skill.activated",
+                          "session.shell.started",
+                          "session.shell.ended",
+                          "session.step.started",
+                          "session.step.streamed",
+                          "session.step.ended",
+                          "session.step.failed",
+                          "session.text.started",
+                          "session.text.delta",
+                          "session.text.ended",
+                          "session.reasoning.started",
+                          "session.reasoning.delta",
+                          "session.reasoning.ended",
+                          "session.tool.input.started",
+                          "session.tool.input.delta",
+                          "session.tool.input.ended",
+                          "session.tool.called",
+                          "session.tool.progress",
+                          "session.tool.success",
+                          "session.tool.failed",
+                          "session.retry.scheduled",
+                          "session.compaction.started",
+                          "session.compaction.delta",
+                          "session.compaction.ended",
+                          "session.compaction.failed",
+                          "session.revert.staged",
+                          "session.revert.cleared",
+                          "session.revert.committed",
+                          "filesystem.changed",
+                          "reference.updated",
+                          "permission.asked",
+                          "permission.replied",
+                          "plugin.updated",
+                          "project.updated",
+                          "worktree.updated",
+                          "worktree.resolved",
+                          "command.updated",
+                          "config.updated",
+                          "skill.updated",
+                          "pty.created",
+                          "pty.updated",
+                          "pty.exited",
+                          "pty.deleted",
+                          "persistent-pty.added",
+                          "persistent-pty.removed",
+                          "persistent-pty.updated",
+                          "shell.created",
+                          "shell.exited",
+                          "shell.deleted",
+                          "form.created",
+                          "form.replied",
+                          "form.cancelled",
+                          "websearch.updated",
+                          "artifact.updated",
+                          "session.status",
+                          "session.idle",
+                          "tui.prompt.append",
+                          "tui.command.execute",
+                          "tui.toast.show",
+                          "tui.session.select",
+                          "installation.updated",
+                          "installation.update-available",
+                          "vcs.branch.updated",
+                          "mcp.status.changed",
+                          "mcp.resources.changed"
+                        ]
+                      },
+                      {
+                        "type": "string",
+                        "pattern": "^rpc\\.[\\s\\S]*?$"
+                      }
+                    ]
+                  }
                 },
                 {
                   "type": "null"
@@ -11392,10 +11380,12 @@
                     "properties": {
                       "rows": {
                         "type": "integer",
+                        "maximum": 9007199254740991,
                         "exclusiveMinimum": 0
                       },
                       "cols": {
                         "type": "integer",
+                        "maximum": 9007199254740991,
                         "exclusiveMinimum": 0
                       }
                     },
@@ -14204,7 +14194,8 @@
                   },
                   "timeout": {
                     "type": "integer",
-                    "minimum": 0
+                    "minimum": 0,
+                    "maximum": 9007199254740991
                   },
                   "metadata": {
                     "type": "object"
@@ -14457,7 +14448,7 @@
             "in": "query",
             "schema": {
               "type": "string",
-              "pattern": "^[+-]?\\d*\\.?\\d+(?:[Ee][+-]?\\d+)?$"
+              "pattern": "^[+-]?(?:\\d+(?:\\.\\d+)?|\\.\\d+)(?:[Ee][+-]?\\d+)?$"
             },
             "required": false
           },
@@ -14466,7 +14457,7 @@
             "in": "query",
             "schema": {
               "type": "string",
-              "pattern": "^[+-]?\\d*\\.?\\d+(?:[Ee][+-]?\\d+)?$"
+              "pattern": "^[+-]?(?:\\d+(?:\\.\\d+)?|\\.\\d+)(?:[Ee][+-]?\\d+)?$"
             },
             "required": false
           }
@@ -14491,11 +14482,13 @@
                         },
                         "cursor": {
                           "type": "integer",
-                          "minimum": 0
+                          "minimum": 0,
+                          "maximum": 9007199254740991
                         },
                         "size": {
                           "type": "integer",
-                          "minimum": 0
+                          "minimum": 0,
+                          "maximum": 9007199254740991
                         },
                         "truncated": {
                           "type": "boolean"
@@ -15629,7 +15622,9 @@
                       "type": "string"
                     },
                     "pid": {
-                      "type": "integer"
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
                     },
                     "memory": {
                       "type": "object",
@@ -15886,7 +15881,8 @@
                               "anyOf": [
                                 {
                                   "type": "integer",
-                                  "minimum": 0
+                                  "minimum": 0,
+                                  "maximum": 9007199254740991
                                 },
                                 {
                                   "type": "null"
@@ -15897,7 +15893,8 @@
                               "anyOf": [
                                 {
                                   "type": "integer",
-                                  "minimum": 0
+                                  "minimum": 0,
+                                  "maximum": 9007199254740991
                                 },
                                 {
                                   "type": "null"
@@ -16536,6 +16533,7 @@
           },
           "steps": {
             "type": "integer",
+            "maximum": 9007199254740991,
             "exclusiveMinimum": 0
           },
           "permissions": {
@@ -16857,6 +16855,7 @@
           },
           "steps": {
             "type": "integer",
+            "maximum": 9007199254740991,
             "exclusiveMinimum": 0
           },
           "disabled": {
@@ -17157,14 +17156,17 @@
                   },
                   "max_width": {
                     "type": "integer",
+                    "maximum": 9007199254740991,
                     "exclusiveMinimum": 0
                   },
                   "max_height": {
                     "type": "integer",
+                    "maximum": 9007199254740991,
                     "exclusiveMinimum": 0
                   },
                   "max_base64_bytes": {
                     "type": "integer",
+                    "maximum": 9007199254740991,
                     "exclusiveMinimum": 0
                   }
                 },
@@ -17178,10 +17180,12 @@
             "properties": {
               "max_lines": {
                 "type": "integer",
+                "maximum": 9007199254740991,
                 "exclusiveMinimum": 0
               },
               "max_bytes": {
                 "type": "integer",
+                "maximum": 9007199254740991,
                 "exclusiveMinimum": 0
               }
             },
@@ -17195,14 +17199,17 @@
                 "properties": {
                   "startup": {
                     "type": "integer",
+                    "maximum": 9007199254740991,
                     "exclusiveMinimum": 0
                   },
                   "catalog": {
                     "type": "integer",
+                    "maximum": 9007199254740991,
                     "exclusiveMinimum": 0
                   },
                   "execution": {
                     "type": "integer",
+                    "maximum": 9007199254740991,
                     "exclusiveMinimum": 0
                   }
                 },
@@ -17235,7 +17242,8 @@
                 "properties": {
                   "tokens": {
                     "type": "integer",
-                    "minimum": 0
+                    "minimum": 0,
+                    "maximum": 9007199254740991
                   }
                 },
                 "additionalProperties": false
@@ -17247,7 +17255,8 @@
                   },
                   {
                     "type": "integer",
-                    "minimum": 0
+                    "minimum": 0,
+                    "maximum": 9007199254740991
                   }
                 ]
               }
@@ -17394,7 +17403,8 @@
               },
               "subagent_depth": {
                 "type": "integer",
-                "minimum": 0
+                "minimum": 0,
+                "maximum": 9007199254740991
               },
               "location_idle_timeout": {
                 "anyOf": [
@@ -17511,7 +17521,9 @@
                 "enum": ["context"]
               },
               "size": {
-                "type": "integer"
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
               }
             },
             "required": ["type", "size"],
@@ -17572,10 +17584,14 @@
                 "type": "object",
                 "properties": {
                   "min": {
-                    "type": "integer"
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
                   },
                   "max": {
-                    "type": "integer"
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
                   }
                 },
                 "additionalProperties": false
@@ -17723,13 +17739,19 @@
             "type": "object",
             "properties": {
               "context": {
-                "type": "integer"
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
               },
               "input": {
-                "type": "integer"
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
               },
               "output": {
-                "type": "integer"
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
               }
             },
             "additionalProperties": false
@@ -18162,7 +18184,8 @@
           },
           "expires": {
             "type": "integer",
-            "minimum": 0
+            "minimum": 0,
+            "maximum": 9007199254740991
           },
           "metadata": {
             "type": "object"
@@ -18198,11 +18221,13 @@
           },
           "additions": {
             "type": "integer",
-            "minimum": 0
+            "minimum": 0,
+            "maximum": 9007199254740991
           },
           "deletions": {
             "type": "integer",
-            "minimum": 0
+            "minimum": 0,
+            "maximum": 9007199254740991
           },
           "status": {
             "type": "string",
@@ -18423,42 +18448,6 @@
           "$ref": "#/components/schemas/Form.Field"
         }
       },
-      "Form.Fields_1": {
-        "type": "array",
-        "prefixItems": [
-          {
-            "$ref": "#/components/schemas/Form.Field"
-          }
-        ],
-        "minItems": 1,
-        "items": {
-          "$ref": "#/components/schemas/Form.Field"
-        }
-      },
-      "Form.Fields_2": {
-        "type": "array",
-        "prefixItems": [
-          {
-            "$ref": "#/components/schemas/Form.Field"
-          }
-        ],
-        "minItems": 1,
-        "items": {
-          "$ref": "#/components/schemas/Form.Field"
-        }
-      },
-      "Form.Fields_3": {
-        "type": "array",
-        "prefixItems": [
-          {
-            "$ref": "#/components/schemas/Form.Field"
-          }
-        ],
-        "minItems": 1,
-        "items": {
-          "$ref": "#/components/schemas/Form.Field"
-        }
-      },
       "Form.ID": {
         "type": "string",
         "pattern": "^frm_"
@@ -18589,11 +18578,13 @@
           },
           "minItems": {
             "type": "integer",
-            "minimum": 0
+            "minimum": 0,
+            "maximum": 9007199254740991
           },
           "maxItems": {
             "type": "integer",
-            "minimum": 0
+            "minimum": 0,
+            "maximum": 9007199254740991
           },
           "custom": {
             "type": "boolean"
@@ -18776,11 +18767,13 @@
           },
           "minLength": {
             "type": "integer",
-            "minimum": 0
+            "minimum": 0,
+            "maximum": 9007199254740991
           },
           "maxLength": {
             "type": "integer",
-            "minimum": 0
+            "minimum": 0,
+            "maximum": 9007199254740991
           },
           "pattern": {
             "type": "string"
@@ -18810,15 +18803,11 @@
             "type": "string"
           },
           {
-            "anyOf": [
-              {
-                "type": "number"
-              },
-              {
-                "type": "string",
-                "enum": ["Infinity", "-Infinity", "NaN"]
-              }
-            ]
+            "type": "number"
+          },
+          {
+            "type": "string",
+            "enum": ["Infinity", "-Infinity", "NaN"]
           },
           {
             "type": "boolean"
@@ -18847,15 +18836,11 @@
                 "type": "string"
               },
               {
-                "anyOf": [
-                  {
-                    "type": "number"
-                  },
-                  {
-                    "type": "string",
-                    "enum": ["Infinity", "-Infinity", "NaN"]
-                  }
-                ]
+                "type": "number"
+              },
+              {
+                "type": "string",
+                "enum": ["Infinity", "-Infinity", "NaN"]
               },
               {
                 "type": "boolean"
@@ -19120,7 +19105,7 @@
             "$ref": "#/components/schemas/Generate.Usage"
           },
           "native": {
-            "$ref": "#/components/schemas/Generate.Native_1"
+            "$ref": "#/components/schemas/Generate.Native"
           }
         },
         "required": ["answers"],
@@ -19180,7 +19165,7 @@
       },
       "Generate.ImageAspect": {
         "type": "string",
-        "pattern": "^[+-]?\\d*\\.?\\d+(?:[Ee][+-]?\\d+)?:[+-]?\\d*\\.?\\d+(?:[Ee][+-]?\\d+)?$",
+        "pattern": "^[+-]?(?:\\d+(?:\\.\\d+)?|\\.\\d+)(?:[Ee][+-]?\\d+)?:[+-]?(?:\\d+(?:\\.\\d+)?|\\.\\d+)(?:[Ee][+-]?\\d+)?$",
         "description": "Aspect ratio as width:height, for example 16:9"
       },
       "Generate.ImageOutput": {
@@ -19220,6 +19205,7 @@
           },
           "n": {
             "type": "integer",
+            "maximum": 9007199254740991,
             "exclusiveMinimum": 0
           },
           "aspect": {
@@ -19267,10 +19253,6 @@
         "additionalProperties": false
       },
       "Generate.Native": {
-        "type": "object",
-        "description": "Provider-specific data the shared fields do not cover"
-      },
-      "Generate.Native_1": {
         "type": "object",
         "description": "Provider-specific data the shared fields do not cover"
       },
@@ -19332,7 +19314,9 @@
               "type": "object",
               "properties": {
                 "value": {
-                  "type": "integer"
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
                 },
                 "label": {
                   "type": "string"
@@ -19468,10 +19452,14 @@
             "enum": ["InstructionEntryValueTooLargeError"]
           },
           "actualBytes": {
-            "type": "integer"
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
           },
           "maxBytes": {
-            "type": "integer"
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
           },
           "message": {
             "type": "string"
@@ -19962,7 +19950,7 @@
             "type": "string"
           },
           "form": {
-            "$ref": "#/components/schemas/Form.Fields_3"
+            "$ref": "#/components/schemas/Form.Fields"
           }
         },
         "required": ["id", "type", "label"],
@@ -20010,7 +19998,7 @@
             "type": "string"
           },
           "form": {
-            "$ref": "#/components/schemas/Form.Fields_2"
+            "$ref": "#/components/schemas/Form.Fields"
           }
         },
         "required": ["type"],
@@ -20052,7 +20040,7 @@
             "type": "string"
           },
           "form": {
-            "$ref": "#/components/schemas/Form.Fields_1"
+            "$ref": "#/components/schemas/Form.Fields"
           }
         },
         "required": ["id", "type", "label"],
@@ -20249,14 +20237,17 @@
             "properties": {
               "startup": {
                 "type": "integer",
+                "maximum": 9007199254740991,
                 "exclusiveMinimum": 0
               },
               "catalog": {
                 "type": "integer",
+                "maximum": 9007199254740991,
                 "exclusiveMinimum": 0
               },
               "execution": {
                 "type": "integer",
+                "maximum": 9007199254740991,
                 "exclusiveMinimum": 0
               }
             },
@@ -20338,14 +20329,17 @@
             "properties": {
               "startup": {
                 "type": "integer",
+                "maximum": 9007199254740991,
                 "exclusiveMinimum": 0
               },
               "catalog": {
                 "type": "integer",
+                "maximum": 9007199254740991,
                 "exclusiveMinimum": 0
               },
               "execution": {
                 "type": "integer",
+                "maximum": 9007199254740991,
                 "exclusiveMinimum": 0
               }
             },
@@ -20637,7 +20631,9 @@
                 "enum": ["context"]
               },
               "size": {
-                "type": "integer"
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
               }
             },
             "required": ["type", "size"],
@@ -20744,13 +20740,19 @@
             "type": "object",
             "properties": {
               "context": {
-                "type": "integer"
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
               },
               "input": {
-                "type": "integer"
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
               },
               "output": {
-                "type": "integer"
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
               }
             },
             "required": ["context", "output"],
@@ -20910,7 +20912,9 @@
             "type": "string"
           },
           "expires_in": {
-            "type": "integer"
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
           }
         },
         "required": ["code", "expires_in"],
@@ -21116,10 +21120,12 @@
             "properties": {
               "cols": {
                 "type": "integer",
+                "maximum": 9007199254740991,
                 "exclusiveMinimum": 0
               },
               "rows": {
                 "type": "integer",
+                "maximum": 9007199254740991,
                 "exclusiveMinimum": 0
               }
             },
@@ -21184,11 +21190,13 @@
           },
           "pid": {
             "type": "integer",
-            "minimum": 0
+            "minimum": 0,
+            "maximum": 9007199254740991
           },
           "exitCode": {
             "type": "integer",
-            "minimum": 0
+            "minimum": 0,
+            "maximum": 9007199254740991
           },
           "sessionID": {
             "$ref": "#/components/schemas/Session.ID"
@@ -21218,10 +21226,12 @@
             "properties": {
               "cols": {
                 "type": "integer",
+                "maximum": 9007199254740991,
                 "exclusiveMinimum": 0
               },
               "rows": {
                 "type": "integer",
+                "maximum": 9007199254740991,
                 "exclusiveMinimum": 0
               }
             },
@@ -21233,11 +21243,13 @@
             "properties": {
               "head": {
                 "type": "integer",
-                "minimum": 0
+                "minimum": 0,
+                "maximum": 9007199254740991
               },
               "tail": {
                 "type": "integer",
-                "minimum": 0
+                "minimum": 0,
+                "maximum": 9007199254740991
               }
             },
             "required": ["head", "tail"],
@@ -21293,10 +21305,12 @@
               },
               "cols": {
                 "type": "integer",
+                "maximum": 9007199254740991,
                 "exclusiveMinimum": 0
               },
               "rows": {
                 "type": "integer",
+                "maximum": 9007199254740991,
                 "exclusiveMinimum": 0
               },
               "cursor": {
@@ -21304,11 +21318,13 @@
                 "properties": {
                   "x": {
                     "type": "integer",
-                    "minimum": 0
+                    "minimum": 0,
+                    "maximum": 9007199254740991
                   },
                   "y": {
                     "type": "integer",
-                    "minimum": 0
+                    "minimum": 0,
+                    "maximum": 9007199254740991
                   }
                 },
                 "required": ["x", "y"],
@@ -21341,11 +21357,13 @@
             "properties": {
               "x": {
                 "type": "integer",
-                "minimum": 0
+                "minimum": 0,
+                "maximum": 9007199254740991
               },
               "y": {
                 "type": "integer",
-                "minimum": 0
+                "minimum": 0,
+                "maximum": 9007199254740991
               }
             },
             "required": ["x", "y"],
@@ -21366,10 +21384,12 @@
             "properties": {
               "cols": {
                 "type": "integer",
+                "maximum": 9007199254740991,
                 "exclusiveMinimum": 0
               },
               "rows": {
                 "type": "integer",
+                "maximum": 9007199254740991,
                 "exclusiveMinimum": 0
               }
             },
@@ -21630,19 +21650,23 @@
         "properties": {
           "created": {
             "type": "integer",
-            "minimum": 0
+            "minimum": 0,
+            "maximum": 9007199254740991
           },
           "updated": {
             "type": "integer",
-            "minimum": 0
+            "minimum": 0,
+            "maximum": 9007199254740991
           },
           "active": {
             "type": "integer",
-            "minimum": 0
+            "minimum": 0,
+            "maximum": 9007199254740991
           },
           "archived": {
             "type": "integer",
-            "minimum": 0
+            "minimum": 0,
+            "maximum": 9007199254740991
           }
         },
         "required": ["created", "updated", "active"],
@@ -21821,7 +21845,7 @@
       },
       "Provider.CacheTTL": {
         "type": "string",
-        "pattern": "^[+-]?\\d*\\.?\\d+(?:[Ee][+-]?\\d+)?(?:ms|s|m|h|d)$"
+        "pattern": "^[+-]?(?:\\d+(?:\\.\\d+)?|\\.\\d+)(?:[Ee][+-]?\\d+)?(?:ms|s|m|h|d)$"
       },
       "Provider.Compaction": {
         "anyOf": [
@@ -22046,7 +22070,9 @@
           "status": {
             "anyOf": [
               {
-                "type": "integer"
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
               },
               {
                 "type": "null"
@@ -22056,7 +22082,9 @@
           "retryAfterMs": {
             "anyOf": [
               {
-                "type": "integer"
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
               },
               {
                 "type": "null"
@@ -22094,11 +22122,13 @@
           },
           "pid": {
             "type": "integer",
-            "minimum": 0
+            "minimum": 0,
+            "maximum": 9007199254740991
           },
           "exitCode": {
             "type": "integer",
-            "minimum": 0
+            "minimum": 0,
+            "maximum": 9007199254740991
           }
         },
         "required": ["id", "title", "command", "args", "cwd", "status", "pid"],
@@ -22150,6 +22180,7 @@
           },
           "expires_in": {
             "type": "integer",
+            "maximum": 9007199254740991,
             "exclusiveMinimum": 0
           }
         },
@@ -22452,6 +22483,7 @@
           },
           "times": {
             "type": "integer",
+            "maximum": 9007199254740991,
             "exclusiveMinimum": 0
           }
         },
@@ -22499,11 +22531,13 @@
           },
           "remainingRuns": {
             "type": "integer",
-            "minimum": 0
+            "minimum": 0,
+            "maximum": 9007199254740991
           },
           "runCount": {
             "type": "integer",
-            "minimum": 0
+            "minimum": 0,
+            "maximum": 9007199254740991
           },
           "lastFiredAt": {
             "type": "number"
@@ -22740,7 +22774,8 @@
           },
           "pid": {
             "type": "integer",
-            "minimum": 0
+            "minimum": 0,
+            "maximum": 9007199254740991
           },
           "hostname": {
             "anyOf": [
@@ -23273,7 +23308,7 @@
             "type": "string"
           },
           "native": {
-            "$ref": "#/components/schemas/Session.Message.Native_3"
+            "$ref": "#/components/schemas/Session.Message.Native"
           },
           "cost": {
             "$ref": "#/components/schemas/Money.USD"
@@ -23302,7 +23337,7 @@
             "type": "string"
           },
           "native": {
-            "$ref": "#/components/schemas/Session.Message.Native_1"
+            "$ref": "#/components/schemas/Session.Message.Native"
           },
           "time": {
             "type": "object",
@@ -23326,6 +23361,7 @@
         "properties": {
           "attempt": {
             "type": "integer",
+            "maximum": 9007199254740991,
             "exclusiveMinimum": 0
           },
           "at": {
@@ -23372,7 +23408,7 @@
             "type": "boolean"
           },
           "native": {
-            "$ref": "#/components/schemas/Session.Message.Native_2"
+            "$ref": "#/components/schemas/Session.Message.Native"
           },
           "state": {
             "anyOf": [
@@ -23458,7 +23494,7 @@
             "$ref": "#/components/schemas/Model.Ref"
           },
           "native": {
-            "$ref": "#/components/schemas/Session.Message.Native_4"
+            "$ref": "#/components/schemas/Session.Message.Native"
           },
           "summary": {
             "type": "string"
@@ -23725,18 +23761,6 @@
       "Session.Message.Native": {
         "type": "object"
       },
-      "Session.Message.Native_1": {
-        "type": "object"
-      },
-      "Session.Message.Native_2": {
-        "type": "object"
-      },
-      "Session.Message.Native_3": {
-        "type": "object"
-      },
-      "Session.Message.Native_4": {
-        "type": "object"
-      },
       "Session.Message.Shell": {
         "type": "object",
         "properties": {
@@ -23792,11 +23816,13 @@
               },
               "cursor": {
                 "type": "integer",
-                "minimum": 0
+                "minimum": 0,
+                "maximum": 9007199254740991
               },
               "size": {
                 "type": "integer",
-                "minimum": 0
+                "minimum": 0,
+                "maximum": 9007199254740991
               },
               "truncated": {
                 "type": "boolean"
@@ -24102,7 +24128,8 @@
           },
           "retryAfterMs": {
             "type": "integer",
-            "minimum": 0
+            "minimum": 0,
+            "maximum": 9007199254740991
           }
         },
         "required": ["type", "message"],
@@ -24232,7 +24259,8 @@
           },
           "steps": {
             "type": "integer",
-            "minimum": 0
+            "minimum": 0,
+            "maximum": 9007199254740991
           }
         },
         "required": ["date", "steps"],
@@ -24256,19 +24284,23 @@
           },
           "sessions": {
             "type": "integer",
-            "minimum": 0
+            "minimum": 0,
+            "maximum": 9007199254740991
           },
           "subagents": {
             "type": "integer",
-            "minimum": 0
+            "minimum": 0,
+            "maximum": 9007199254740991
           },
           "prompts": {
             "type": "integer",
-            "minimum": 0
+            "minimum": 0,
+            "maximum": 9007199254740991
           },
           "steps": {
             "type": "integer",
-            "minimum": 0
+            "minimum": 0,
+            "maximum": 9007199254740991
           },
           "tokens": {
             "$ref": "#/components/schemas/TokenUsage.Info"
@@ -24281,11 +24313,13 @@
           },
           "activeDays": {
             "type": "integer",
-            "minimum": 0
+            "minimum": 0,
+            "maximum": 9007199254740991
           },
           "streak": {
             "type": "integer",
-            "minimum": 0
+            "minimum": 0,
+            "maximum": 9007199254740991
           },
           "activity": {
             "type": "array",
@@ -24324,7 +24358,8 @@
           },
           "steps": {
             "type": "integer",
-            "minimum": 0
+            "minimum": 0,
+            "maximum": 9007199254740991
           },
           "tokens": {
             "$ref": "#/components/schemas/TokenUsage.Info"
@@ -24341,19 +24376,23 @@
         "properties": {
           "calls": {
             "type": "integer",
-            "minimum": 0
+            "minimum": 0,
+            "maximum": 9007199254740991
           },
           "succeeded": {
             "type": "integer",
-            "minimum": 0
+            "minimum": 0,
+            "maximum": 9007199254740991
           },
           "failed": {
             "type": "integer",
-            "minimum": 0
+            "minimum": 0,
+            "maximum": 9007199254740991
           },
           "unfinished": {
             "type": "integer",
-            "minimum": 0
+            "minimum": 0,
+            "maximum": 9007199254740991
           }
         },
         "required": ["calls", "succeeded", "failed", "unfinished"],
@@ -24367,19 +24406,23 @@
           },
           "calls": {
             "type": "integer",
-            "minimum": 0
+            "minimum": 0,
+            "maximum": 9007199254740991
           },
           "succeeded": {
             "type": "integer",
-            "minimum": 0
+            "minimum": 0,
+            "maximum": 9007199254740991
           },
           "failed": {
             "type": "integer",
-            "minimum": 0
+            "minimum": 0,
+            "maximum": 9007199254740991
           },
           "unfinished": {
             "type": "integer",
-            "minimum": 0
+            "minimum": 0,
+            "maximum": 9007199254740991
           },
           "durationP50": {
             "type": "number"
@@ -24524,7 +24567,8 @@
           },
           "pid": {
             "type": "integer",
-            "minimum": 0
+            "minimum": 0,
+            "maximum": 9007199254740991
           },
           "exit": {
             "type": "number"
@@ -24960,11 +25004,13 @@
           },
           "additions": {
             "type": "integer",
-            "minimum": 0
+            "minimum": 0,
+            "maximum": 9007199254740991
           },
           "deletions": {
             "type": "integer",
-            "minimum": 0
+            "minimum": 0,
+            "maximum": 9007199254740991
           },
           "status": {
             "type": "string",
@@ -25132,15 +25178,11 @@
           "dcid": {
             "anyOf": [
               {
-                "anyOf": [
-                  {
-                    "type": "number"
-                  },
-                  {
-                    "type": "string",
-                    "enum": ["Infinity", "-Infinity", "NaN"]
-                  }
-                ]
+                "type": "number"
+              },
+              {
+                "type": "string",
+                "enum": ["Infinity", "-Infinity", "NaN"]
               },
               {
                 "type": "null"
