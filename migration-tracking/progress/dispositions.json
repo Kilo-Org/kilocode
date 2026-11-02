@@ -848,5 +848,15 @@
     "state": "ported",
     "note": "packages/kilo-cli/test/commit-message.test.ts calls the RPC through the real host and generated client: a clean repository fails with no_changes and no model call, a model failure and a streamed provider error from a local OpenAI-compatible server keep their message, an unavailable small_model falls back to the default model.",
     "by": "commit-message-port"
+  },
+  "module:packages/kilo-vscode/src/services/commit-message/index.ts": {
+    "state": "ported",
+    "note": "packages/kilo-vscode/src/commit-message.ts commitMessageCommand, registered as kilo-code.v2.generateCommitMessage in src/extension.ts with scm/title and scm/input entries for git: git extension activation, repository of the clicked view, cancellable source control progress, 35 second client timeout, previous message per repository, language from kilo-code.v2.languageCommitMessage, server errors in an error message.",
+    "by": "commit-message-port"
+  },
+  "module:packages/kilo-vscode/src/services/commit-message/__tests__/index.spec.ts": {
+    "state": "ported",
+    "note": "packages/kilo-vscode/test/commit-message.test.ts carries the missing git extension, no repository, connection failure, input box write, progress options, previous message, multi-repository selection, server error and cancellation assertions, plus the language resolution.",
+    "by": "commit-message-port"
   }
 }
