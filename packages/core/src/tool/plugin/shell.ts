@@ -5,7 +5,7 @@ import type { Context } from "@opencode/plugin/effect/plugin"
 import type { SessionHooks } from "@opencode/plugin/effect/session"
 import type { ShellCreateBefore } from "@opencode/plugin/effect/shell"
 import type { Tool } from "@opencode/schema/tool"
-import { Deferred, Effect, Schema, Scope } from "effect"
+import { Deferred, Duration, Effect, Fiber, Schema, Scope } from "effect" // kilocode_change - Duration, Fiber
 import { Environment } from "../../environment/index.js"
 import { Job } from "../../job.js"
 import { FileAccess } from "../../file-access.js"
@@ -73,6 +73,11 @@ const Output = Schema.Struct({
 })
 
 type Output = typeof Output.Type
+
+// kilocode_change start - live output preview for tool progress while a command runs
+const LIVE_OUTPUT_LIMIT = 30_000
+const LIVE_OUTPUT_INTERVAL = Duration.millis(100)
+// kilocode_change end
 
 const resultMessages = (output: Output) => {
   const notice = output.status === "running" ? BACKGROUND_INSTRUCTION : ShellResult.notice(output)
@@ -213,6 +218,34 @@ export const Plugin = {
               )
               yield* context.progress({ shellID: info.id })
 
+              // kilocode_change start - stream the current output and running state while the command runs
+              const preview = Effect.gen(function* () {
+                const latest = yield* shell.output(info.id, { cursor: Number.MAX_SAFE_INTEGER })
+                const start = Math.max(0, latest.size - LIVE_OUTPUT_LIMIT)
+                const page = yield* shell.output(info.id, { cursor: start, limit: latest.size - start })
+                const text = start > 0 ? page.output.replace(/^\uFFFD+/, "") : page.output
+                return text.length <= LIVE_OUTPUT_LIMIT ? text : `...\n\n${text.slice(-LIVE_OUTPUT_LIMIT)}`
+              })
+              const report = (output: string) =>
+                context.progress({ shellID: info.id, output, status: "running" })
+              let published = yield* preview.pipe(Effect.catchTag("Shell.NotFoundError", () => Effect.succeed("")))
+              yield* report(published)
+              // The child fiber stops on every normal return below; an interrupted or failed call interrupts it
+              // with the tool fiber, so no path leaves it publishing after the call settles.
+              const streamed = yield* Effect.forkChild(
+                Effect.gen(function* () {
+                  while (true) {
+                    yield* Effect.sleep(LIVE_OUTPUT_INTERVAL)
+                    const output = yield* preview
+                    if (output === published) continue
+                    published = output
+                    yield* report(output)
+                  }
+                }).pipe(Effect.catchTag("Shell.NotFoundError", () => Effect.void)),
+              )
+              const stop = Fiber.interrupt(streamed)
+              // kilocode_change end
+
               const settled = yield* Deferred.make<Output>()
               const run = Effect.gen(function* () {
                 const result = yield* shell.result(info)
@@ -248,6 +281,7 @@ export const Plugin = {
               if (input.background === true) {
                 yield* jobs.background(job.id)
                 yield* notifyWhenDone(context.sessionID, job.id, info.id, info.command, settled)
+                yield* stop // kilocode_change
                 return backgroundResult(info.id, info.file)
               }
 
@@ -257,13 +291,15 @@ export const Plugin = {
               if (result?.type === "backgrounded") {
                 yield* shell.timeout(info.id, 0)
                 yield* notifyWhenDone(context.sessionID, job.id, info.id, info.command, settled)
+                yield* stop // kilocode_change
                 return backgroundResult(info.id, info.file)
               }
               if (result?.info.status === "error")
-                return yield* Effect.fail(new Error(result.info.error ?? "Command failed"))
-              if (result?.info.status === "cancelled") return yield* Effect.fail(new Error("Command cancelled"))
+                return yield* stop.pipe(Effect.andThen(Effect.fail(new Error(result.info.error ?? "Command failed")))) // kilocode_change
+              if (result?.info.status === "cancelled") // kilocode_change
+                return yield* stop.pipe(Effect.andThen(Effect.fail(new Error("Command cancelled")))) // kilocode_change
 
-              return yield* Deferred.await(settled)
+              return yield* Deferred.await(settled).pipe(Effect.ensuring(stop)) // kilocode_change
             }).pipe(
               Effect.map(toolResult),
               Effect.mapError(
