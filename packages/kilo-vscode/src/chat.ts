@@ -95,6 +95,8 @@ export function wire(input: {
   trackCostSession?: (sessionID: string) => void
   /** Called on every message from the webview, before it is handled. */
   onMessage?: () => void
+  /** Handles a view-specific message before the standard set. Returns true when it did. */
+  handle?: (message: ToHost) => boolean
   onReset?: () => void
 }) {
   const webview = input.webview
@@ -129,8 +131,17 @@ export function wire(input: {
       : undefined
   const subscription = webview.onDidReceiveMessage((message: ToHost) => {
     input.onMessage?.()
+    if (input.handle?.(message)) return
     if (message.type === "fetch" || message.type === "abort" || message.type === "open") return link.receive(message)
     if (message.type === "trackCostSession") return input.trackCostSession?.(message.sessionID)
+    // A chat recovery link opens the Settings panel at the row that owns the problem.
+    if (message.type === "openSettingsTab")
+      return void commands.executeCommand("kilo-code.v2.settings", {
+        tab: message.tab,
+        subtab: message.subtab,
+        focus: message.focus,
+        titleKey: message.titleKey,
+      })
     if (settings?.handle(message)) return
     // Only the sidebar carries the cycle keybindings; the Settings panel must not change their context.
     if (message.type === "webviewFocusChanged" && input.view === "chat")

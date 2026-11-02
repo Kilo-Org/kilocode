@@ -1,7 +1,7 @@
 // The MCP Servers subtab. It lists the servers from `mcp.servers` with their live status (from the MCP client),
 // and each row exposes: expandable details, an enable switch, sign-in for OAuth remotes, reset sign-in, remove,
 // and an edit view. The row writes config through `useSettingsConfig`, in the scope that defines the server.
-import { Component, For, Show, createMemo, createSignal } from "solid-js"
+import { Component, For, Show, createEffect, createMemo, createSignal, onCleanup } from "solid-js"
 import { Card } from "@kilocode/kilo-ui/card"
 import { Button } from "@kilocode/kilo-ui/button"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
@@ -24,7 +24,7 @@ const STATUS_KEYS: Record<string, string> = {
   disabled: "mcp.status.disabled",
 }
 
-const McpSubtab: Component = () => {
+const McpSubtab: Component<{ focus?: string; navigation?: number }> = (props) => {
   const language = useLanguage()
   const config = useSettingsConfig()
   const mcp = createMcp()
@@ -74,6 +74,33 @@ const McpSubtab: Component = () => {
   }
 
   const toggle = (name: string) => setExpanded((prev) => ({ ...prev, [name]: !prev[name] }))
+
+  // A deep link from chat expands the named server and scrolls it into view. The config may still be loading when
+  // the target arrives, so the effect also tracks the server list and retries the scroll until the row is mounted.
+  // The navigation counter is read so a repeated link to the same server expands and scrolls it again.
+  createEffect(() => {
+    if (props.navigation === undefined) return
+    const name = props.focus
+    if (!name) return
+    if (!entries().some(([entry]) => entry === name)) return
+    setExpanded((prev) => (prev[name] ? prev : { ...prev, [name]: true }))
+    let cancelled = false
+    onCleanup(() => {
+      cancelled = true
+    })
+    const reveal = (tries: number) => {
+      if (cancelled) return
+      const row = [...document.querySelectorAll<HTMLElement>("[data-mcp-server]")].find(
+        (item) => item.dataset.mcpServer === name,
+      )
+      if (!row) {
+        if (tries < 120) requestAnimationFrame(() => reveal(tries + 1))
+        return
+      }
+      row.scrollIntoView({ block: "center" })
+    }
+    requestAnimationFrame(() => reveal(0))
+  })
 
   const confirmRemove = (name: string) => {
     dialog.show(() => (
@@ -196,6 +223,7 @@ const McpSubtab: Component = () => {
                 }
                 return (
                   <div
+                    data-mcp-server={name}
                     style={{
                       "border-bottom": index() < entries().length - 1 ? "1px solid var(--border-weak-base)" : "none",
                     }}
