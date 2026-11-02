@@ -1,6 +1,7 @@
 // The sidebar: history, profile, or one session laid out like main's ChatView (transcript, docks, prompt).
 import { Button } from "@kilocode/kilo-ui/button"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
+import type { ToolActions } from "@kilocode/kilo-ui/message-part"
 import { createEffect, createMemo, createSignal, Match, on, Show, Switch } from "solid-js"
 import type { ToHost } from "../../../src/protocol"
 import { useLanguage } from "../context/language"
@@ -39,6 +40,14 @@ export function Chat() {
   const open = (id: string) => {
     setSession(id)
     setView("chat")
+  }
+
+  // What a tool renderer may ask the host to open. The host owns the editor and the diff surfaces.
+  const toolActions: ToolActions = {
+    openFile: (filePath, line) =>
+      getVSCodeAPI().postMessage({ type: "openToolFile", filePath, line } satisfies ToHost as never),
+    openDiff: (diff) => getVSCodeAPI().postMessage({ type: "openDiffVirtual", diff } satisfies ToHost as never),
+    openSession: open,
   }
 
   createEffect(
@@ -180,6 +189,7 @@ export function Chat() {
             <div class="chat-messages">
               <MessageList
                 session={session()}
+                actions={toolActions}
                 onSelectSession={open}
                 onShowHistory={() => setView("history")}
                 onScrollToBottomReady={(fn) => (scrollToBottom = fn)}

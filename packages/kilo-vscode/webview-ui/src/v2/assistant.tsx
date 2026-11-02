@@ -1,7 +1,7 @@
 import type { SessionMessageAssistant } from "@opencode/client"
 import { createMemo, createSignal, For, Show, type JSX } from "solid-js"
 import { Button } from "@kilocode/kilo-ui/button"
-import { ContentPart, useGrowIn } from "@kilocode/kilo-ui/message-part"
+import { ContentPart, useGrowIn, type ToolActions } from "@kilocode/kilo-ui/message-part"
 import { Card } from "@kilocode/kilo-ui/card"
 import { Collapsible } from "@kilocode/kilo-ui/collapsible"
 import { Icon } from "@kilocode/kilo-ui/icon"
@@ -16,7 +16,11 @@ import { tokenThroughputVisible } from "./kilo-settings"
 import { mcpServerFromError } from "./mcp-error"
 import { formatTokenThroughput, turnMetadata } from "./message-status"
 
-export function AssistantMessage(props: { message: SessionMessageAssistant; session: string }) {
+export function AssistantMessage(props: {
+  message: SessionMessageAssistant
+  session: string
+  actions?: ToolActions
+}) {
   const v2 = useV2()
   const language = useLanguage()
   const vscode = useVSCode()
@@ -124,6 +128,7 @@ export function AssistantMessage(props: { message: SessionMessageAssistant; sess
                     turnMeta={index() === copy() ? turnMetaEl() : undefined}
                     settled={index() < props.message.content.length - 1}
                     defaultOpen={item.type === "tool" && (item.name === "shell" || item.name === "todowrite")}
+                    actions={props.actions}
                     errorAction={errorAction}
                   />
                 </div>

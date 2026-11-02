@@ -435,3 +435,32 @@ jobs:
       - name: Test the sharded test runner
         working-directory: script/kilocode/test
         run: bun test
+
+  # Required-check barrier for the v2-only lane: the host build, the macOS platform tests, the
+  # shared-patch ratchets and the Kilo package tests are all critical, but a matrix job name and a
+  # per-job name cannot be required safely.
+  required:
+    name: kilo-v2
+    needs:
+      - workflows
+      - build
+      - macos
+      - shared
+      - progress
+      - upstream-tooling
+      - kilo-packages
+    if: always()
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Verify the Kilo v2 jobs passed
+        run: |
+          echo "workflows=${{ needs.workflows.result }} build=${{ needs.build.result }} macos=${{ needs.macos.result }} shared=${{ needs.shared.result }}"
+          echo "progress=${{ needs.progress.result }} upstream-tooling=${{ needs.upstream-tooling.result }} kilo-packages=${{ needs.kilo-packages.result }}"
+          test "${{ needs.workflows.result }}" = "success"
+          test "${{ needs.build.result }}" = "success"
+          test "${{ needs.macos.result }}" = "success"
+          test "${{ needs.shared.result }}" = "success"
+          test "${{ needs.progress.result }}" = "success"
+          test "${{ needs.upstream-tooling.result }}" = "success"
+          test "${{ needs.kilo-packages.result }}" = "success"
