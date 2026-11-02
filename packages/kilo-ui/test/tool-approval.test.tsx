@@ -10,7 +10,7 @@ import {
 } from "../src/components/tool-approval"
 import { resetToolOpenState } from "../src/components/tool-open-state"
 import { agentApproval, manualApproval } from "./fixtures"
-import { mount, settle, type Mounted } from "./harness"
+import { mount, waitFor, type Mounted } from "./harness"
 
 let mounted: Mounted[] = []
 
@@ -93,7 +93,7 @@ test("BasicTool injects the approval line into its body and honors the visibilit
     </ToolApprovalProvider>
   ))
   mounted.push(value)
-  await settle()
+  await waitFor(() => value.host.querySelector('[data-slot="tool-approval-line"]'))
 
   expect(value.host.querySelector('[data-slot="tool-approval-line"]')).not.toBeNull()
 
@@ -107,7 +107,6 @@ test("BasicTool injects the approval line into its body and honors the visibilit
     </ToolApprovalProvider>
   ))
   mounted.push(hidden)
-  await settle()
 
   expect(hidden.host.querySelector('[data-slot="tool-approval-line"]')).toBeNull()
 })

@@ -2,7 +2,7 @@ import { afterEach, beforeEach, expect, test } from "bun:test"
 import type { ToolActionDiff } from "../src/components/message-part"
 import { resetToolOpenState } from "../src/components/tool-open-state"
 import { editedFile, patchedFiles, unchangedFile, writtenFile } from "./fixtures"
-import { mountTool, settle, type Mounted } from "./harness"
+import { mountTool, waitFor, type Mounted } from "./harness"
 
 let mounted: Mounted[] = []
 
@@ -31,7 +31,7 @@ test("edit card renders the file header, change counts and the real diff body", 
     forceOpen: true,
   })
   mounted.push(card)
-  await settle()
+  await waitFor(() => card.host.querySelector('[data-component="edit-content"] [data-component="file"]'))
 
   expect(card.host.querySelector('[data-component="edit-tool"]')).not.toBeNull()
   expect(card.host.querySelector('[data-slot="message-part-title-text"]')?.textContent).toBe("Edit")
@@ -57,7 +57,7 @@ test("write card renders the written file and its diff", async () => {
     forceOpen: true,
   })
   mounted.push(card)
-  await settle()
+  await waitFor(() => card.host.querySelector('[data-component="write-content"] [data-component="file"]'))
 
   expect(card.host.querySelector('[data-component="write-tool"]')).not.toBeNull()
   expect(card.host.querySelector('[data-slot="message-part-title-text"]')?.textContent).toBe("Write")
@@ -74,7 +74,7 @@ test("an unchanged write hides its details", async () => {
     forceOpen: true,
   })
   mounted.push(card)
-  await settle()
+  await waitFor(() => card.host.querySelector('[data-component="tool-trigger"]')?.getAttribute("data-hide-details") === "true")
 
   expect(card.host.querySelector('[data-component="write-content"]')).toBeNull()
   expect(card.host.querySelector('[data-component="tool-trigger"]')?.getAttribute("data-hide-details")).toBe("true")
@@ -89,7 +89,7 @@ test("patch card renders a single file with its diff", async () => {
     forceOpen: true,
   })
   mounted.push(card)
-  await settle()
+  await waitFor(() => card.host.querySelector('[data-component="apply-patch-file-diff"] [data-component="file"]'))
 
   expect(card.host.querySelector('[data-component="apply-patch-tool"]')).not.toBeNull()
   expect(card.host.querySelector('[data-slot="message-part-title-text"]')?.textContent).toBe("Patch")
@@ -106,7 +106,7 @@ test("patch card lists every file in a multi-file patch", async () => {
     forceOpen: true,
   })
   mounted.push(card)
-  await settle()
+  await waitFor(() => card.host.querySelectorAll('[data-slot="apply-patch-filename"]').length === 2)
 
   const names = [...card.host.querySelectorAll('[data-slot="apply-patch-filename"]')].map((node) => node.textContent)
   expect(names).toEqual(["math.ts", "legacy.ts"])

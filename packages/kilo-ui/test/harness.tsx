@@ -43,10 +43,6 @@ export function mountTool(name: string, props: Partial<ToolProps> = {}) {
   ))
 }
 
-export async function settle() {
-  await new Promise((resolve) => setTimeout(resolve, 50))
-}
-
 export async function waitFor<T>(probe: () => T | null | undefined, timeout = 1000) {
   const started = Date.now()
   for (;;) {
