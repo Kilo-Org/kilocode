@@ -258,6 +258,9 @@ async function cleanup(options: Options, descriptor: FixtureDescriptor | undefin
     if (exit.code !== 0) return failed(`fixture provider cleanup exited with code ${exit.code}`)
     const result = await readJsonAs(resultPath, CleanupResult)
     if (result.runId !== options.runId) return failed("fixture provider cleanup run id does not match")
+    if (result.status === "failed" && result.leftovers.length === 0) {
+      return failed(result.error ?? "fixture provider cleanup did not complete")
+    }
     return result
   } catch (error) {
     if (error instanceof ProtocolError) return failed("fixture provider cleanup result is not a valid document")

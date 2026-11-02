@@ -214,6 +214,26 @@ describe("coordinator rejection paths", () => {
     })
   })
 
+  test("recovers owned resources from the on-disk descriptor when prepare validation and cleanup both fail", async () => {
+    await sandbox(async (dir) => {
+      const error = await rejected(
+        run(
+          options(dir, { provider: { id: "fake-provider", command: command("provider-bad-prepare-cleanup-fail.ts") } }),
+        ),
+      )
+      expect(error.code).toBe("provider_result")
+      const evidence = await readEvidence(dir)
+      expect(evidence.cleanup.status).toBe("failed")
+      expect(evidence.cleanup.leftovers.map((resource) => `${resource.kind}:${resource.id}`)).toEqual([
+        "workspace:ws-run",
+        "cloud-session:cs-run",
+      ])
+      const text = await Bun.file(join(dir, "run", "evidence.json")).text()
+      expect(text).not.toContain("cleanup-run")
+      expect(await Bun.file(join(dir, "run", "descriptor.json")).exists()).toBe(true)
+    })
+  })
+
   test("allows no-op cleanup", async () => {
     await sandbox(async (dir) => {
       const evidence = await run(

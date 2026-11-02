@@ -13,7 +13,9 @@ const ORIGINS = {
   fakeLlm: "http://127.0.0.1:43105",
 }
 
-export async function provider(mode: ProviderMode) {
+export type PrepareMode = "bad-prepare"
+
+export async function provider(mode: ProviderMode, prepareMode?: PrepareMode) {
   const { request: requestPath, result: resultPath } = args()
   const request = await readJsonAs(requestPath, ProviderRequest)
 
@@ -54,6 +56,19 @@ export async function provider(mode: ProviderMode) {
       state: request.state,
     }
     await writeJson(request.descriptorPath, descriptor)
+    if (prepareMode === "bad-prepare") {
+      await writeJson(
+        resultPath,
+        ProviderPrepareResult.parse({
+          schemaVersion: SCHEMA_VERSION,
+          operation: "prepare",
+          runId: request.runId,
+          descriptorPath: `${request.descriptorPath}.elsewhere`,
+          provider: { id: "fake-provider-bad-prepare", version: "0.0.0" },
+        }),
+      )
+      return
+    }
     await writeJson(
       resultPath,
       ProviderPrepareResult.parse({
@@ -81,7 +96,8 @@ export async function provider(mode: ProviderMode) {
     return
   }
 
-  const descriptor = await readJsonAs(request.descriptorPath, FixtureDescriptor)
+  const descriptor =
+    prepareMode === "bad-prepare" ? undefined : await readJsonAs(request.descriptorPath, FixtureDescriptor)
   if (mode === "cleanup-crash") process.exit(1)
   if (mode === "cleanup-fail") {
     await writeJson(
@@ -91,7 +107,7 @@ export async function provider(mode: ProviderMode) {
         runId: request.runId,
         status: "failed",
         removed: [],
-        leftovers: descriptor.cleanup.ids.map((resource) => ({
+        leftovers: (descriptor?.cleanup.ids ?? []).map((resource) => ({
           kind: resource.kind,
           id: resource.id,
           reason: "owned resource could not be removed",
@@ -108,7 +124,7 @@ export async function provider(mode: ProviderMode) {
       schemaVersion: SCHEMA_VERSION,
       runId: request.runId,
       status: "clean",
-      removed: descriptor.cleanup.ids,
+      removed: descriptor?.cleanup.ids ?? [],
       leftovers: [],
     }),
   )
