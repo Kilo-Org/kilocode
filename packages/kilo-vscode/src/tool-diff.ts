@@ -1,8 +1,8 @@
 // Opens tool-call results in VS Code: a file at a line, or a native diff of the before and after text of one file.
 // The diff side documents are virtual, because a tool call has no file on disk that holds the before state.
-import path from "node:path"
 import { commands, Range, Uri, window, workspace, type TextDocumentContentProvider } from "vscode"
 import type { ToolActionDiff } from "./protocol"
+import { resolveToolFilePath, virtualDiffPath } from "./tool-diff-path"
 import { filePosition, patchDocuments } from "./tool-diff-patch"
 
 const SCHEME = "kilo-tool-diff"
@@ -14,6 +14,11 @@ export function toolDiff() {
   const provider: TextDocumentContentProvider = {
     provideTextDocumentContent: (uri) => documents.get(uri.toString()) ?? "",
   }
+  // Each diff gets new ids, so its two documents are never reused. Deleting them when they close keeps the map
+  // bounded without blanking a diff that is still open.
+  const closed = workspace.onDidCloseTextDocument((document) => {
+    if (document.uri.scheme === SCHEME) documents.delete(document.uri.toString())
+  })
   return {
     scheme: SCHEME,
     provider,
@@ -34,6 +39,7 @@ export function toolDiff() {
         .then(undefined, (error: unknown) => report(`Could not open the diff for ${diff.file}`, error))
     },
     dispose() {
+      closed.dispose()
       documents.clear()
     },
   }
@@ -43,9 +49,7 @@ export type ToolDiff = ReturnType<typeof toolDiff>
 
 /** Opens a file relative to the workspace, or at its absolute path, at a 1-based line and column when given. */
 export function openToolFile(directory: string, message: { filePath: string; line?: number; column?: number }) {
-  const uri = path.isAbsolute(message.filePath)
-    ? Uri.file(message.filePath)
-    : Uri.joinPath(Uri.file(directory), message.filePath)
+  const uri = Uri.file(resolveToolFilePath(directory, message.filePath))
   const position = filePosition(message.line, message.column)
   const selection = position && new Range(position.line, position.column, position.line, position.column)
   void workspace
@@ -57,7 +61,7 @@ export function openToolFile(directory: string, message: { filePath: string; lin
 }
 
 function virtualUri(id: string, side: "before" | "after", file: string) {
-  return Uri.from({ scheme: SCHEME, path: `/${id}/${side}/${file.replace(/^\/+/, "")}` })
+  return Uri.from({ scheme: SCHEME, path: virtualDiffPath(id, side, file) })
 }
 
 function report(headline: string, error: unknown) {

@@ -72,8 +72,11 @@ function pad(match: RegExpExecArray, before: string[], after: string[]) {
   const oldCount = match[2] === undefined ? 1 : Number(match[2])
   const freshStart = Number(match[3])
   const freshCount = match[4] === undefined ? 1 : Number(match[4])
-  while (before.length < oldStart - 1) before.push("")
-  while (after.length < freshStart - 1) after.push("")
+  // A zero-count side starts after its last line, so its start is the number of lines to keep, not start - 1.
+  const oldPad = oldCount === 0 ? oldStart : oldStart - 1
+  const freshPad = freshCount === 0 ? freshStart : freshStart - 1
+  while (before.length < oldPad) before.push("")
+  while (after.length < freshPad) after.push("")
   return { old: oldCount, fresh: freshCount }
 }
 

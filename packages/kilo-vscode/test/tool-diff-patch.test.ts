@@ -83,6 +83,18 @@ describe("patchDocuments", () => {
     expect(documents.after.split("\n")).toEqual(["a", "B", "c", "", "", "", "", "h", "I", "j", ""])
   })
 
+  test("pads an insertion hunk to the line it follows", () => {
+    const patch = ["@@ -1,2 +1,2 @@", " a", " b", "@@ -3,0 +4 @@", "+new", ""].join("\n")
+
+    expect(patchDocuments(patch)).toEqual({ before: "a\nb\n\n", after: "a\nb\n\nnew\n" })
+  })
+
+  test("keeps the line before a deletion hunk when its new side has no lines", () => {
+    const patch = ["@@ -1,2 +1,2 @@", " a", " b", "@@ -4 +3,0 @@", "-d", ""].join("\n")
+
+    expect(patchDocuments(patch)).toEqual({ before: "a\nb\n\nd\n", after: "a\nb\n\n" })
+  })
+
   test("opens only the first file of a multi-file patch", () => {
     const patch = [
       "diff --git a/one b/one",
