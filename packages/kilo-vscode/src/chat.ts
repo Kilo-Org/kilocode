@@ -133,6 +133,24 @@ export function wire(input: {
             post({ type: "vscodeSettingsLoaded", values: readKiloSettings() })
         })
       : undefined
+  const handleGlobalState = (message: ToHost) => {
+    switch (message.type) {
+      case "requestModelSelectorExpanded":
+        post({ type: "modelSelectorExpandedLoaded", value: input.context.globalState.get(EXPANDED, true) })
+        return true
+      case "persistModelSelectorExpanded":
+        void input.context.globalState.update(EXPANDED, message.value)
+        return true
+      case "requestAutoApproveState":
+        post({ type: "autoApproveStateLoaded", value: input.context.globalState.get(AUTO_APPROVE, false) })
+        return true
+      case "persistAutoApproveState":
+        void input.context.globalState.update(AUTO_APPROVE, message.value)
+        return true
+      default:
+        return false
+    }
+  }
   const subscription = webview.onDidReceiveMessage((message: ToHost) => {
     input.onMessage?.()
     if (input.handle?.(message)) return
@@ -157,21 +175,11 @@ export function wire(input: {
         () => post({ type: "clipboardWriteResult", id: message.id, ok: true }),
         (error: unknown) => post({ type: "clipboardWriteResult", id: message.id, ok: false, error: String(error) }),
       )
-    if (message.type === "requestModelSelectorExpanded")
-      return post({ type: "modelSelectorExpandedLoaded", value: input.context.globalState.get(EXPANDED, true) })
-    if (message.type === "persistModelSelectorExpanded")
-      return void input.context.globalState.update(EXPANDED, message.value)
-    // Auto-approve is a client-side reaction to permission requests, so the host only persists its state.
-    if (message.type === "requestAutoApproveState")
-      return post({ type: "autoApproveStateLoaded", value: input.context.globalState.get(AUTO_APPROVE, false) })
-    if (message.type === "persistAutoApproveState")
-      return void input.context.globalState.update(AUTO_APPROVE, message.value)
+    if (handleGlobalState(message)) return
     if (message.type === "saveImage") return saveImage(input.directory, message)
     // The Language tab applies at once: write `kilo-code.v2.language` and let the change event push it to every view.
     if (message.type === "setLanguage")
-      return void workspace
-        .getConfiguration(NAMESPACE)
-        .update("language", message.locale || undefined, true)
+      return void workspace.getConfiguration(NAMESPACE).update("language", message.locale || undefined, true)
     // The Kilo Gateway sign-in runs in the Profile view of the sidebar, as main opens its Profile panel.
     if (message.type === "openProfile") return void commands.executeCommand("kilo-code.v2.profile")
   })

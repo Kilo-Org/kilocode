@@ -22,6 +22,8 @@
     "lint:changed": "bun script/lint-changed.ts",
     "lint:effect-patterns": "ast-grep scan -c script/ast-grep/sgconfig.yml packages/util/src packages/core/src packages/server/src packages/protocol/src packages/cli/src",
     "lint:effect-simplifications": "ast-grep scan -c script/ast-grep/effect-simplifications/sgconfig.yml --off=unused-suppression packages",
+    "check:architecture": "bun run script/check-architecture.ts",
+    "check:duplication": "bun run script/check-kilocode-duplication.ts",
     "test:lint-rules": "ast-grep test -c script/ast-grep/sgconfig.yml",
     "test:effect-simplification-rules": "ast-grep test -c script/ast-grep/effect-simplifications/sgconfig.yml",
     "typecheck": "bun turbo typecheck --concurrency=3",
