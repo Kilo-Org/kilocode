@@ -6,10 +6,11 @@ import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { Switch } from "../Switch"
 import { TextField } from "@kilocode/kilo-ui/text-field"
 import type { AgentInfo, PermissionRule } from "@opencode/client"
-import { Component, For, Show, createEffect, createMemo, createSignal, on } from "solid-js"
+import { Component, For, Show, createEffect, createMemo, createSignal, on, onCleanup } from "solid-js"
 import { useLanguage } from "../../../context/language"
 import { useV2 } from "../../../v2/client"
 import { useSettingsConfig } from "../../../v2/settings-config"
+import { isEnterKeyCommitNotIme } from "../../../utils/ime-enter"
 import ModelPicker, { type ModelPickerValue } from "../ModelPicker"
 import PermissionEditor from "../PermissionEditor"
 import SettingsRow from "../SettingsRow"
@@ -49,7 +50,10 @@ const ModeEditView: Component<Props> = (props) => {
 
   const info = () => v2.data.location.agent.list()?.find((agent: AgentInfo) => agent.id === props.row().id)
   const builtIn = () => props.row().builtIn
-  const scope = () => config.source(agentPath(props.row().id)) ?? "global"
+  // The non-keyed Show accessor for `row` is stale during unmount cleanup, which still commits a draft, so resolve
+  // the write target once at render.
+  const agent = props.row().id
+  const writeScope = config.source(agentPath(agent)) ?? "global"
 
   const description = () => asString(config.value(agentField(props.row().id, "description")))
   const system = () => asString(config.value(agentField(props.row().id, "system")))
@@ -81,34 +85,35 @@ const ModeEditView: Component<Props> = (props) => {
   const summary = createMemo(() => permissionSummary(rows()))
 
   // A text field commits on blur; a select, picker or switch commits on change, as the v2 settings contract.
-  const commitText = (path: string[]) => (value: string) => config.set(path, value.trim() ? value : undefined, scope())
+  const commitText = (path: string[]) => (value: string) =>
+    config.set(path, value.trim() ? value : undefined, writeScope)
   const commitNumber = (path: string[], parse: (value: string) => number) => (value: string) => {
     const parsed = parse(value)
-    config.set(path, value.trim() === "" || Number.isNaN(parsed) ? undefined : parsed, scope())
+    config.set(path, value.trim() === "" || Number.isNaN(parsed) ? undefined : parsed, writeScope)
   }
   const commitSteps = (value: string) => {
     const parsed = parseMaxSteps(value)
     if (parsed === null) return false
-    config.set(agentField(props.row().id, "steps"), parsed, scope())
+    config.set(agentField(agent, "steps"), parsed, writeScope)
   }
   const writeToggle = (key: "hidden" | "disabled") => (value: boolean) => {
     // Sequential writes so the second edit is not lost to a race with the first on the config file. The
     // default agent is cleared only when the toggle actually applied.
     void (async () => {
-      const ok = await config.set(agentField(props.row().id, key), value, scope())
-      if (ok && value && config.value(["default_agent"]) === props.row().id)
+      const ok = await config.set(agentField(agent, key), value, writeScope)
+      if (ok && value && config.value(["default_agent"]) === agent)
         await config.unset(["default_agent"], config.source(["default_agent"]) ?? "global")
     })()
   }
 
   const exportMode = () => {
-    const data = buildExport(props.row().id, agentConfig(config.value, props.row().id))
+    const data = buildExport(agent, agentConfig(config.value, agent))
     const json = JSON.stringify(data, null, 2)
     const blob = new Blob([json], { type: "application/json" })
     const url = URL.createObjectURL(blob)
     const anchor = document.createElement("a")
     anchor.href = url
-    anchor.download = `${props.row().id}.agent.json`
+    anchor.download = `${agent}.agent.json`
     anchor.click()
     URL.revokeObjectURL(url)
   }
@@ -168,7 +173,7 @@ const ModeEditView: Component<Props> = (props) => {
           <DraftField
             value={() => description() ?? ""}
             placeholder={language.t("settings.agentBehaviour.createMode.description.placeholder")}
-            commit={commitText(agentField(props.row().id, "description"))}
+            commit={commitText(agentField(agent, "description"))}
           />
         </Card>
       </Show>
@@ -183,11 +188,11 @@ const ModeEditView: Component<Props> = (props) => {
           value={() => system() ?? ""}
           placeholder={language.t("settings.agentBehaviour.createMode.prompt.placeholder")}
           multiline
-          commit={commitText(agentField(props.row().id, "system"))}
+          commit={commitText(agentField(agent, "system"))}
         />
       </Card>
 
-      <Card data-variant="wide-input" style={{ "margin-bottom": "12px" }}>
+      <Card class="settings-wide-input" style={{ "margin-bottom": "12px" }}>
         <SettingsRow
           title={language.t("settings.agentBehaviour.modelOverride.title")}
           description={language.t("settings.agentBehaviour.modelOverride.description")}
@@ -197,7 +202,7 @@ const ModeEditView: Component<Props> = (props) => {
             clearable
             clearLabel={language.t("settings.providers.notSet")}
             onChange={(value: ModelPickerValue | undefined) =>
-              config.set(agentField(props.row().id, "model"), modelSelection(value), scope())
+              config.set(agentField(agent, "model"), modelSelection(value), writeScope)
             }
           />
         </SettingsRow>
@@ -209,7 +214,7 @@ const ModeEditView: Component<Props> = (props) => {
           <DraftField
             value={() => (temperature() !== undefined ? String(temperature()) : "")}
             placeholder={language.t("common.default")}
-            commit={commitNumber(agentField(props.row().id, "request", "body", "temperature"), parseFloat)}
+            commit={commitNumber(agentField(agent, "request", "body", "temperature"), parseFloat)}
           />
         </SettingsRow>
 
@@ -220,7 +225,7 @@ const ModeEditView: Component<Props> = (props) => {
           <DraftField
             value={() => (topP() !== undefined ? String(topP()) : "")}
             placeholder={language.t("common.default")}
-            commit={commitNumber(agentField(props.row().id, "request", "body", "top_p"), parseFloat)}
+            commit={commitNumber(agentField(agent, "request", "body", "top_p"), parseFloat)}
           />
         </SettingsRow>
 
@@ -285,7 +290,7 @@ const ModeEditView: Component<Props> = (props) => {
             </div>
           </div>
           <div style={{ padding: "0 16px 4px" }}>
-            <PermissionEditor target={{ kind: "agent", name: props.row().id }} />
+            <PermissionEditor target={{ kind: "agent", name: agent }} />
           </div>
         </Card>
       </Show>
@@ -293,7 +298,7 @@ const ModeEditView: Component<Props> = (props) => {
       <Show when={rules()} keyed>
         {(rules) => (
           <Ruleset
-            agent={props.row().id}
+            agent={agent}
             rules={rules}
             expanded={expanded()}
             onToggle={() => setExpanded((value) => !value)}
@@ -318,24 +323,54 @@ function asNumber(value: unknown): number | undefined {
   return typeof value === "number" ? value : undefined
 }
 
-/** A text field with a local draft that commits on blur, so a config write happens once and not per keystroke. */
+/**
+ * A text field with a local draft that commits on blur, on Enter for a single line, or when the view unmounts, so a
+ * config write happens once and not per keystroke, and switching agents does not drop the draft.
+ */
 const DraftField: Component<{
   value: () => string
   placeholder: string
   multiline?: boolean
   commit: (value: string) => void | false | Promise<unknown>
 }> = (props) => {
+  const [current, setCurrent] = createSignal(props.value())
   const [draft, setDraft] = createSignal(props.value())
-  createEffect(on(props.value, (value) => setDraft(value), { defer: true }))
+  const [dirty, setDirty] = createSignal(false)
+  createEffect(
+    on(
+      props.value,
+      (value) => {
+        setCurrent(value)
+        setDraft(value)
+        setDirty(false)
+      },
+      { defer: true },
+    ),
+  )
+
+  const change = (value: string) => {
+    setDraft(value)
+    setDirty(value !== current())
+  }
+
+  const commit = () => {
+    if (!dirty()) return
+    setDirty(false)
+    if (props.commit(draft()) === false) setDraft(current())
+  }
+  onCleanup(commit)
 
   return (
     <TextField
       value={draft()}
       placeholder={props.placeholder}
       multiline={props.multiline}
-      onChange={setDraft}
-      onBlur={() => {
-        if (draft() !== props.value() && props.commit(draft()) === false) setDraft(props.value())
+      onChange={change}
+      onBlur={commit}
+      onKeyDown={(event: KeyboardEvent) => {
+        if (props.multiline || !isEnterKeyCommitNotIme(event)) return
+        event.preventDefault()
+        commit()
       }}
     />
   )

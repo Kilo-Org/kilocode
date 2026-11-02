@@ -7,6 +7,7 @@ import { TextField } from "@kilocode/kilo-ui/text-field"
 import { Component, Show, createSignal } from "solid-js"
 import { useLanguage } from "../../../context/language"
 import { useSettingsConfig } from "../../../v2/settings-config"
+import { isEnterKeyCommitNotIme } from "../../../utils/ime-enter"
 import SettingsRow from "../SettingsRow"
 import { agentPath, isAgentNameTaken } from "./agent-list"
 
@@ -70,7 +71,7 @@ const ModeCreateView: Component<Props> = (props) => {
         </span>
       </div>
 
-      <Card data-variant="wide-input" style={{ "margin-bottom": "12px" }}>
+      <Card class="settings-wide-input" style={{ "margin-bottom": "12px" }}>
         <SettingsRow
           title={language.t("settings.agentBehaviour.createMode.name")}
           description={language.t("settings.agentBehaviour.createMode.name.description")}
@@ -82,6 +83,11 @@ const ModeCreateView: Component<Props> = (props) => {
             onChange={(value) => {
               setName(value)
               setError("")
+            }}
+            onKeyDown={(event: KeyboardEvent) => {
+              if (!isEnterKeyCommitNotIme(event)) return
+              event.preventDefault()
+              submit()
             }}
           />
           <Show when={error()}>
@@ -109,6 +115,11 @@ const ModeCreateView: Component<Props> = (props) => {
           value={description()}
           placeholder={language.t("settings.agentBehaviour.createMode.description.placeholder")}
           onChange={(value) => setDescription(value)}
+          onKeyDown={(event: KeyboardEvent) => {
+            if (!isEnterKeyCommitNotIme(event)) return
+            event.preventDefault()
+            submit()
+          }}
         />
       </Card>
 

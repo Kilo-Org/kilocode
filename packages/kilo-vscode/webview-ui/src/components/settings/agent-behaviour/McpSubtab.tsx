@@ -19,6 +19,7 @@ import Switch from "../Switch"
 
 const STATUS_KEYS: Record<string, string> = {
   connected: "mcp.status.connected",
+  pending: "mcp.status.pending",
   failed: "mcp.status.failed",
   needs_auth: "mcp.status.needs_auth",
   disabled: "mcp.status.disabled",
@@ -116,7 +117,7 @@ const McpSubtab: Component<{ focus?: string; navigation?: number }> = (props) =>
               size="large"
               onClick={() => {
                 dialog.close()
-                config.unset(["mcp", "servers", name], scopeFor(name))
+                void mcp.remove(name, () => config.unset(["mcp", "servers", name], scopeFor(name)))
               }}
             >
               {language.t("settings.agentBehaviour.removeMcp.button")}
