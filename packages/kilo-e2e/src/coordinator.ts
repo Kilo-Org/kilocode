@@ -11,6 +11,7 @@ import {
   SCHEMA_VERSION,
   StateDirs,
   type Assertion,
+  type Resource,
   type ScenarioManifest,
 } from "./schema"
 import { ManifestError, validateManifest } from "./scenarios"
@@ -231,11 +232,11 @@ async function cleanup(options: Options, descriptor: FixtureDescriptor | undefin
   // Leftovers are recorded in sanitized evidence so a failed cleanup can be retried or traced even
   // when the provider cannot report ownership; only resource ids are kept, never cleanup tokens.
   const owned = descriptor ?? (await recoverDescriptor(options))
-  const failed = (message: string): CleanupResult => ({
+  const failed = (message: string, removed: Resource[] = []): CleanupResult => ({
     schemaVersion: SCHEMA_VERSION,
     runId: options.runId,
     status: "failed",
-    removed: [],
+    removed,
     leftovers:
       owned?.cleanup.ids.map((resource) => ({
         kind: resource.kind,
@@ -259,7 +260,7 @@ async function cleanup(options: Options, descriptor: FixtureDescriptor | undefin
     const result = await readJsonAs(resultPath, CleanupResult)
     if (result.runId !== options.runId) return failed("fixture provider cleanup run id does not match")
     if (result.status === "failed" && result.leftovers.length === 0) {
-      return failed(result.error ?? "fixture provider cleanup did not complete")
+      return failed(result.error?.trim() || "fixture provider cleanup did not complete", result.removed)
     }
     return result
   } catch (error) {

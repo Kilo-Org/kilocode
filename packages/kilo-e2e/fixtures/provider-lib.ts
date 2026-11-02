@@ -106,13 +106,13 @@ export async function provider(mode: ProviderMode, prepareMode?: PrepareMode) {
         schemaVersion: SCHEMA_VERSION,
         runId: request.runId,
         status: "failed",
-        removed: [],
+        removed: prepareMode === "bad-prepare" ? [{ kind: "workspace", id: `ws-${request.runId}` }] : [],
         leftovers: (descriptor?.cleanup.ids ?? []).map((resource) => ({
           kind: resource.kind,
           id: resource.id,
           reason: "owned resource could not be removed",
         })),
-        error: "fake cleanup failure",
+        error: prepareMode === "bad-prepare" ? "" : "fake cleanup failure",
       }),
     )
     return

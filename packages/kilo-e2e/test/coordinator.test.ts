@@ -228,6 +228,11 @@ describe("coordinator rejection paths", () => {
         "workspace:ws-run",
         "cloud-session:cs-run",
       ])
+      expect(evidence.cleanup.removed.map((resource) => `${resource.kind}:${resource.id}`)).toEqual([
+        "workspace:ws-run",
+      ])
+      expect(evidence.cleanup.error).toBe("fixture provider cleanup did not complete")
+      expect(evidence.cleanup.leftovers.every((resource) => resource.reason.length > 0)).toBe(true)
       const text = await Bun.file(join(dir, "run", "evidence.json")).text()
       expect(text).not.toContain("cleanup-run")
       expect(await Bun.file(join(dir, "run", "descriptor.json")).exists()).toBe(true)
