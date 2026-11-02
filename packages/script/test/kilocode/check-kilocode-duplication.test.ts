@@ -3,6 +3,7 @@ import { copyFile, mkdir, mkdtemp, rm } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { dirname, join, resolve } from "node:path"
 import {
+  cloneHash,
   compare,
   matchLocation,
   parse,
@@ -323,5 +324,19 @@ describe("matchLocation", () => {
 
   test("rejects a location outside the scan root", () => {
     expect(() => matchLocation("/outside/file.ts", "/tmp/repo", scanned)).toThrow("uri: /outside/file.ts")
+  })
+})
+
+describe("cloneHash", () => {
+  test("is stable across CRLF and LF sources", () => {
+    const lines = ["export function one() {", "  return 1", "}", "const x = 1", "const y = 2"]
+    const lf = lines.join("\n")
+    const crlf = lines.join("\r\n")
+    expect(cloneHash(lf, 1, 5)).toBe(cloneHash(crlf, 1, 5))
+  })
+
+  test("depends on the range", () => {
+    const source = "a\nb\nc\nd\n"
+    expect(cloneHash(source, 1, 2)).not.toBe(cloneHash(source, 2, 3))
   })
 })

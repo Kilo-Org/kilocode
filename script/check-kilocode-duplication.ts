@@ -150,8 +150,12 @@ function fingerprint(value: unknown) {
   return hash
 }
 
-function cloneHash(fragment: string) {
-  return new Bun.CryptoHasher("sha256").update(fragment).digest("hex").slice(0, 16)
+export function cloneHash(content: string, start: number, end: number) {
+  const lines = content
+    .split(/\r?\n/)
+    .slice(start - 1, end)
+    .map((line) => line.trimEnd())
+  return new Bun.CryptoHasher("sha256").update(lines.join("\n")).digest("hex").slice(0, 16)
 }
 
 function key(entry: Pick<Exception, "files" | "fingerprint">) {
@@ -198,12 +202,14 @@ export async function scan(cwd: string) {
     }
   }
   const files: string[] = []
+  const sources = new Map<string, string>()
   for (const file of [...candidates].sort()) {
     const absolute = join(directory, file)
     const info = await lstat(absolute)
     if (info.isSymbolicLink()) continue
     if (info.size > 10 * 1024 * 1024) throw new Error(`Source exceeds the duplication scanner size limit: ${file}`)
     const content = await Bun.file(absolute).text()
+    sources.set(file, content)
     if (/jscpd:ignore-(?:start|end)/.test(content)) {
       throw new Error(`Inline duplication suppression is not allowed: ${file}. Use a bounded exception instead.`)
     }
@@ -268,7 +274,9 @@ export async function scan(cwd: string) {
         },
       ]
       const files = locations.map((location) => location.file).sort()
-      const hash = cloneHash(text(duplicate.fragment))
+      const source = sources.get(locations[0].file)
+      if (!source) throw new Error(`Missing scanned source for duplication location: ${locations[0].file}`)
+      const hash = cloneHash(source, locations[0].start, locations[0].end)
       const tokens = integer(duplicate.tokens, 1)
       const id = key({ files, fingerprint: hash })
       const previous = findings.get(id)
