@@ -25,6 +25,7 @@ import { useClipboard } from "../context/clipboard"
 import { useDialog } from "../context/dialog"
 import { useFileComponent } from "../context/file"
 import { useI18n, type UiI18n } from "../context/i18n"
+import { createAutoScroll } from "../hooks/create-auto-scroll"
 import { Accordion } from "./accordion"
 import { AgentAvatar, taskStatus } from "./agent-avatar"
 import { BasicTool, initialOpen, rememberOpen, useToolApprovalLine } from "./basic-tool"
@@ -67,6 +68,10 @@ export type ToolActions = {
   /** Opens several changed files at once, for a patch that changes more than one. */
   openDiffs?: (diffs: ToolActionDiff[]) => void
   openSession?: (sessionID: string) => void
+  /** Stops one session and anything it started, for the stop action of a running subagent. */
+  interruptSession?: (sessionID: string) => void
+  /** Moves the open session's foreground tools into background observation, so a subagent keeps running. */
+  continueInBackground?: () => void
 }
 
 export type ContentPartProps = {
@@ -216,6 +221,8 @@ export type ToolProps = {
   actions?: ToolActions
   hideDetails?: boolean
   forceOpen?: boolean
+  /** Diff counts derived from streamed tool input until the final diff metadata arrives. */
+  provisional?: { additions: number; deletions: number }
 }
 
 const renderers: Record<string, Component<ToolProps>> = {}
@@ -228,6 +235,206 @@ export const ToolRegistry = {
   render(name: string) {
     return renderers[name]
   },
+}
+
+// Strings that count while the model streams a tool input. Other fields show
+// once the call starts running, so a trigger never reads a half-written path.
+const STREAM_LIVE = new Set(["content", "command", "oldString", "newString", "patchText", "edits"])
+// Large streamed strings only feed the provisional diff count. Keeping them out
+// of the card input avoids rendering a file that is still arriving.
+const STREAM_HIDDEN = new Set(["content", "oldString", "newString", "patchText", "edits"])
+
+type InputScan = {
+  depth: number
+  str: boolean
+  esc: boolean
+  key: boolean
+  expect: "key" | "colon" | "value" | "comma"
+  name: string
+  start: number
+  safe: number
+  open: boolean
+  lit: boolean
+  uni: number
+}
+
+/**
+ * Reads the complete top-level fields of a tool input JSON object that the
+ * server still streams. A value whose key is in `live` also comes back while
+ * its string is open, so a provisional count can grow with the content.
+ */
+function partialInput(raw: string, live: ReadonlySet<string>) {
+  const text = raw.trimStart()
+  if (!text.startsWith("{")) return undefined
+  const scan: InputScan = {
+    depth: 0,
+    str: false,
+    esc: false,
+    key: false,
+    expect: "key",
+    name: "",
+    start: 0,
+    safe: 1,
+    open: false,
+    lit: false,
+    uni: -1,
+  }
+  for (let i = 0; i < text.length; i++) {
+    if (scan.str) {
+      scanString(scan, text, i)
+      continue
+    }
+    if (scanOutside(scan, text, i)) return jsonRecord(text.slice(0, i + 1))
+  }
+  return scanFinish(scan, text, live)
+}
+
+function scanString(scan: InputScan, text: string, i: number) {
+  const c = text[i]
+  if (scan.esc) {
+    scan.esc = false
+    if (c === "u") scan.uni = i - 1
+    return
+  }
+  if (c === "\\") {
+    scan.esc = true
+    return
+  }
+  if (c !== '"') return
+  scan.str = false
+  if (scan.depth !== 1) return
+  if (scan.key) {
+    scan.name = (jsonParse(text.slice(scan.start, i + 1)) as string | undefined) ?? ""
+    scan.expect = "colon"
+    return
+  }
+  scan.safe = i + 1
+  scan.open = false
+  scan.expect = "comma"
+}
+
+function scanOutside(scan: InputScan, text: string, i: number) {
+  const c = text[i]
+  if (c === '"') {
+    scan.str = true
+    if (scan.depth !== 1) return false
+    scan.start = i
+    scan.key = scan.expect === "key"
+    scan.open = !scan.key
+    return false
+  }
+  if (c === "{" || c === "[") {
+    scan.depth++
+    return false
+  }
+  if (c === "}" || c === "]") {
+    scan.depth--
+    if (scan.depth === 0) return true
+    if (scan.depth === 1) {
+      scan.safe = i + 1
+      scan.expect = "comma"
+    }
+    return false
+  }
+  if (scan.depth === 1) scanTop(scan, c, i)
+  return false
+}
+
+function scanTop(scan: InputScan, c: string, i: number) {
+  const space = c === " " || c === "\n" || c === "\r" || c === "\t"
+  if (scan.lit && (c === "," || space)) {
+    scan.safe = i
+    scan.lit = false
+    scan.expect = "comma"
+  }
+  if (c === ":") scan.expect = "value"
+  if (c === ",") scan.expect = "key"
+  if (!space && scan.expect === "value" && c !== ":") scan.lit = true
+}
+
+function scanFinish(scan: InputScan, text: string, live: ReadonlySet<string>) {
+  if (!(scan.str && scan.open && scan.depth === 1 && live.has(scan.name))) {
+    return jsonRecord(text.slice(0, scan.safe) + "}")
+  }
+  // Close the open live string. Drop an escape that is not complete yet.
+  const cut = scan.esc ? text.length - 1 : scan.uni >= 0 && scan.uni + 6 > text.length ? scan.uni : text.length
+  return jsonRecord(text.slice(0, cut) + '"}')
+}
+
+function jsonParse(text: string) {
+  try {
+    return JSON.parse(text) as unknown
+  } catch {
+    return undefined
+  }
+}
+
+function jsonRecord(text: string) {
+  const value = jsonParse(text)
+  if (!value || typeof value !== "object" || Array.isArray(value)) return undefined
+  return value as Record<string, unknown>
+}
+
+function cardInput(raw: string) {
+  const parsed = partialInput(raw, STREAM_LIVE)
+  if (!parsed) return {}
+  return Object.fromEntries(Object.entries(parsed).filter(([key]) => !STREAM_HIDDEN.has(key)))
+}
+
+// Count lines like the final diff: a trailing newline does not start a new line.
+function lineCount(text: string) {
+  if (!text) return 0
+  let count = text.endsWith("\n") ? 0 : 1
+  for (let i = text.indexOf("\n"); i !== -1; i = text.indexOf("\n", i + 1)) count++
+  return count
+}
+
+/**
+ * A provisional diff count from the arguments streamed so far. It can differ
+ * from the final metadata because of context, replaceAll, or formatting.
+ */
+function provisionalChanges(tool: string, input: Record<string, unknown> | undefined) {
+  if (!input) return undefined
+  if (tool === "write" && typeof input.content === "string")
+    return { additions: lineCount(input.content), deletions: 0 }
+  if (tool !== "edit") return undefined
+  const before = input.oldString
+  const after = input.newString
+  if (typeof before !== "string" && typeof after !== "string") return undefined
+  return {
+    additions: lineCount(typeof after === "string" ? after : ""),
+    deletions: lineCount(typeof before === "string" ? before : ""),
+  }
+}
+
+const ERROR_HINTS = [
+  "before overwriting it. Use the Read tool first",
+  "has been modified since it was last read",
+  "oldString and newString are identical",
+  "must match exactly, including whitespace",
+  "Found multiple matches for oldString",
+]
+
+function cleanError(message: string) {
+  return message.replace("Error: ", "")
+}
+
+function errorHint(error: { message: string }) {
+  const cleaned = cleanError(error.message)
+  return ERROR_HINTS.some((hint) => cleaned.includes(hint)) ? cleaned : undefined
+}
+
+// The message title, as v1 showed it: the part before the first ": " when it
+// is short enough to read as a heading, with an HTTP code kept beside it.
+function errorParts(error: { type: string; message: string; status?: number }) {
+  const cleaned = cleanError(error.message)
+  if (!cleaned) return { title: error.type, message: "", code: error.status ? String(error.status) : undefined }
+  const [title, ...rest] = cleaned.split(": ")
+  const message = rest.join(": ")
+  const code = error.status ? String(error.status) : undefined
+  const detail = code && message.startsWith(code) ? message.slice(code.length).trimStart() : message
+  if (!title || title.length >= 30) return { title: undefined, message: cleaned, code }
+  return { title, message: detail, code }
 }
 
 function ToolContent(props: {
@@ -246,9 +453,21 @@ function ToolContent(props: {
     const value = state()
     return "metadata" in value ? (value.metadata ?? {}) : {}
   }
+  const streamed = () => {
+    const value = state()
+    if (value.status !== "streaming") return undefined
+    return partialInput(value.input, STREAM_LIVE)
+  }
   const input = (): Record<string, unknown> => {
     const value = state()
-    return value.status === "streaming" ? {} : value.input
+    if (value.status !== "streaming") return value.input
+    return cardInput(value.input)
+  }
+  const provisional = () => {
+    const value = state()
+    if (value.status === "streaming") return provisionalChanges(props.item.name, streamed())
+    if (value.status === "running") return provisionalChanges(props.item.name, value.input)
+    return undefined
   }
   const attachments = () => {
     const value = state()
@@ -284,30 +503,57 @@ function ToolContent(props: {
                 actions={props.actions}
                 hideDetails={props.hideDetails}
                 forceOpen={props.forceOpen}
+                provisional={provisional()}
               />
             </ToolApprovalProvider>
           }
         >
-          <Card variant="error">
-            <div data-component="tool-error">
-              <Icon name="circle-ban-sign" size="small" />
-              <div data-slot="message-part-tool-error-content">
-                <div data-slot="message-part-tool-error-heading">
-                  <div data-slot="message-part-tool-error-title">{error()?.type}</div>
-                  <Show when={error()?.status}>
-                    {(code) => <span data-slot="message-part-tool-error-code">{code()}</span>}
-                  </Show>
-                </div>
-                <span data-slot="message-part-tool-error-message">{error()?.message}</span>
-                <Show when={error() && props.errorAction?.(error()!)}>
-                  {(action) => <div data-slot="message-part-tool-error-action">{action()}</div>}
-                </Show>
+          <Show
+            when={error() && errorHint(error()!)}
+            fallback={<ToolErrorCard error={error()!} errorAction={props.errorAction} />}
+          >
+            {(hint) => (
+              <div data-component="tool-hint">
+                <Icon name="arrow-right" size="small" />
+                <span data-slot="tool-hint-message">{hint()}</span>
               </div>
-            </div>
-          </Card>
+            )}
+          </Show>
         </Show>
       </div>
     </Show>
+  )
+}
+
+function ToolErrorCard(props: {
+  error: { type: string; message: string; status?: number }
+  errorAction?: (error: { type: string; message: string }) => JSX.Element | undefined
+}) {
+  const parts = () => errorParts(props.error)
+  return (
+    <Card variant="error">
+      <div data-component="tool-error">
+        <Icon name="circle-ban-sign" size="small" />
+        <div data-slot="message-part-tool-error-content">
+          <Show when={parts().title}>
+            {(title) => (
+              <div data-slot="message-part-tool-error-heading">
+                <div data-slot="message-part-tool-error-title">{title()}</div>
+                <Show when={parts().code}>
+                  {(code) => <span data-slot="message-part-tool-error-code">{code()}</span>}
+                </Show>
+              </div>
+            )}
+          </Show>
+          <Show when={parts().message}>
+            {(message) => <span data-slot="message-part-tool-error-message">{message()}</span>}
+          </Show>
+          <Show when={props.errorAction?.(props.error)}>
+            {(action) => <div data-slot="message-part-tool-error-action">{action()}</div>}
+          </Show>
+        </div>
+      </div>
+    </Card>
   )
 }
 
@@ -363,24 +609,84 @@ function Output(props: { text: string; preview?: boolean }) {
   )
 }
 
+function ToolLoadedFile(props: { text: string; onClick?: () => void }) {
+  return (
+    <div class="w-full min-w-0">
+      <div data-component="tool-loaded-file" classList={{ clickable: !!props.onClick }} onClick={props.onClick}>
+        <Icon name="enter" size="small" />
+        <span>{props.text}</span>
+      </div>
+    </div>
+  )
+}
+
 function McpTool(props: ToolProps) {
   const i18n = useI18n()
-  const keys = ["description", "query", "url", "path", "pattern", "id"]
+  const dialog = useDialog()
+  const keys = ["description", "query", "url", "filePath", "path", "pattern", "name", "id"]
   const subtitle = () => keys.map((key) => string(props.input[key])).find(Boolean)
+  // One extra argument, so a custom tool shows a primitive the label keys do not cover.
+  const args = () =>
+    Object.entries(props.input)
+      .filter(([key]) => !keys.includes(key))
+      .flatMap(([key, value]) =>
+        typeof value === "string" || typeof value === "number" || typeof value === "boolean" ? [`${key}=${value}`] : [],
+      )
+      .slice(0, 1)
   const input = () =>
     Object.keys(props.input).length ? "```json\n" + JSON.stringify(props.input, null, 2) + "\n```" : ""
+  const output = () => {
+    if (!props.output) return ""
+    const parsed = jsonParse(props.output)
+    if (!parsed || typeof parsed !== "object") return props.output
+    return "```json\n" + JSON.stringify(parsed, null, 2) + "\n```"
+  }
+  const images = () => props.attachments.filter((file) => file.mime.startsWith("image/"))
+  const files = () => props.attachments.filter((file) => !file.mime.startsWith("image/"))
   return (
-    <BasicTool {...props} icon="mcp" trigger={{ title: props.tool, subtitle: subtitle() }}>
+    <BasicTool {...props} icon="mcp" trigger={{ title: props.tool, subtitle: subtitle(), args: args() }}>
       <Show when={input()}>
         <div data-slot="mcp-section-label">{i18n.t("ui.messagePart.mcp.input")}</div>
         <Output text={input()} />
       </Show>
-      <Show when={props.output}>
+      <Show when={output()}>
         <Show when={input()}>
           <div data-slot="mcp-tool-divider" />
         </Show>
         <div data-slot="mcp-section-label">{i18n.t("ui.messagePart.mcp.output")}</div>
-        <Output text={props.output} />
+        <Output text={output()} />
+      </Show>
+      <Show when={images().length}>
+        <div data-slot="tool-read-images">
+          <For each={images()}>
+            {(file) => (
+              <div
+                data-slot="tool-read-image"
+                onClick={() => dialog.show(() => <ImagePreview src={file.uri} alt={file.name ?? undefined} />)}
+              >
+                <img
+                  data-slot="tool-read-image-img"
+                  src={file.uri}
+                  alt={file.name ?? i18n.t("ui.message.attachment.alt")}
+                  loading="lazy"
+                  decoding="async"
+                />
+              </div>
+            )}
+          </For>
+        </div>
+      </Show>
+      <Show when={files().length}>
+        <div data-slot="mcp-attachments">
+          <For each={files()}>
+            {(file) => (
+              <div data-slot="mcp-attachment">
+                <FileIcon node={{ path: file.name ?? "", type: "file" }} />
+                <span>{file.name ?? i18n.t("ui.message.attachment.alt")}</span>
+              </div>
+            )}
+          </For>
+        </div>
       </Show>
     </BasicTool>
   )
@@ -396,6 +702,11 @@ ToolRegistry.register({
       ["offset", "limit"].flatMap((key) => (typeof props.input[key] === "number" ? [`${key}=${props.input[key]}`] : []))
     const line = () => (typeof props.input.offset === "number" ? props.input.offset : undefined)
     const images = () => props.attachments.filter((file) => file.mime.startsWith("image/"))
+    const loaded = () => {
+      const value = props.metadata.loaded
+      if (!Array.isArray(value)) return []
+      return value.filter((file): file is string => typeof file === "string")
+    }
     return (
       <>
         <BasicTool
@@ -419,6 +730,14 @@ ToolRegistry.register({
             />
           }
         />
+        <For each={loaded()}>
+          {(filepath) => (
+            <ToolLoadedFile
+              text={`${i18n.t("ui.tool.loaded")} ${relativizeProjectPath(filepath, props.directory)}`}
+              onClick={props.actions?.openFile ? () => props.actions?.openFile?.(filepath) : undefined}
+            />
+          )}
+        </For>
         <Show when={images().length}>
           <div data-slot="tool-read-images">
             <For each={images()}>
@@ -745,6 +1064,28 @@ ToolRegistry.register({
       const id = childID()
       return id && child ? child.tools(id) : []
     }
+    const active = () => props.status === "running" && !background()
+    const autoScroll = createAutoScroll({ working: () => active() })
+    let viewport: HTMLDivElement | undefined
+    let content: HTMLDivElement | undefined
+    createEffect(() => {
+      autoScroll.scrollRef(active() ? viewport : undefined)
+      autoScroll.contentRef(active() ? content : undefined)
+      if (!active() && viewport) viewport.scrollTop = 0
+    })
+    const stop = (event: MouseEvent) => {
+      event.stopPropagation()
+      const id = childID()
+      if (id) props.actions?.interruptSession?.(id)
+    }
+    const continueInBackground = (event: MouseEvent) => {
+      event.stopPropagation()
+      props.actions?.continueInBackground?.()
+    }
+    // Stop only this subagent and anything it started. The parent keeps running.
+    const stoppable = () => !!childID() && avatar() === "running" && !!props.actions?.interruptSession
+    // A running foreground child can move to background observation, matching the v1 task card.
+    const promotable = () => !!childID() && !!props.actions?.continueInBackground && auto()
     const result = () => subagentResult(props.output, props.metadata.status === "completed")
     const label = () => description() || title()
     const count = () => tools().length
@@ -762,6 +1103,32 @@ ToolRegistry.register({
           </Show>
           {approvalLine()}
         </div>
+        <Show when={stoppable()}>
+          <Tooltip value={i18n.t("task.stop")} placement="top" gutter={4}>
+            <IconButton
+              icon="stop"
+              size="small"
+              variant="ghost"
+              data-slot="task-tool-open"
+              aria-label={i18n.t("task.stop")}
+              onMouseDown={(event) => event.preventDefault()}
+              onClick={stop}
+            />
+          </Tooltip>
+        </Show>
+        <Show when={promotable()}>
+          <Tooltip value={i18n.t("task.backgroundAgents.continueInBackground")} placement="top" gutter={4}>
+            <IconButton
+              icon="arrow-down-to-line"
+              size="small"
+              variant="ghost"
+              data-slot="task-tool-open"
+              aria-label={i18n.t("task.backgroundAgents.continueInBackground")}
+              onMouseDown={(event) => event.preventDefault()}
+              onClick={continueInBackground}
+            />
+          </Tooltip>
+        </Show>
         <Show when={canOpen()}>
           <span data-slot="task-tool-open" title={`${i18n.t("task.open.panel")} (Cmd/Ctrl+Enter)`} onClick={openChild}>
             <Icon name="square-arrow-top-right" size="small" />
@@ -794,8 +1161,23 @@ ToolRegistry.register({
         defer={stored !== true}
         onOpenChange={change}
       >
-        <div data-component="tool-output" data-scrollable>
-          <div data-component="task-tools">
+        <div
+          ref={(el) => {
+            viewport = el
+            autoScroll.scrollRef(active() ? el : undefined)
+            if (!active()) el.scrollTop = 0
+          }}
+          onScroll={autoScroll.handleScroll}
+          data-component="tool-output"
+          data-scrollable
+        >
+          <div
+            ref={(el) => {
+              content = el
+              autoScroll.contentRef(active() ? el : undefined)
+            }}
+            data-component="task-tools"
+          >
             <Show when={props.status === "running" && !background() && tools().length === 0}>
               <div data-slot="task-tool-item" data-state="starting">
                 <span data-slot="task-tool-title">{i18n.t("session.messages.taskStarting")}</span>
@@ -902,9 +1284,14 @@ function ToolFileAccordion(props: { path: string; directory?: string; actions?: 
   )
 }
 
-function ToolFileMeta(props: { path: string; directory?: string; changes?: FileDiffInfo }) {
+function ToolFileMeta(props: {
+  path: string
+  directory?: string
+  changes?: FileDiffInfo | { additions: number; deletions: number }
+  fallback?: JSX.Element
+}) {
   return (
-    <Show when={props.path}>
+    <Show when={props.path} fallback={props.fallback}>
       <span data-slot="message-part-meta-line" title={props.path}>
         <span data-slot="message-part-title-filename">{getFilename(props.path)}</span>
         <Show when={props.path.includes("/")}>
@@ -945,6 +1332,9 @@ ToolRegistry.register({
     const component = useFileComponent()
     const diff = () => fileDiffs(props.metadata.files)[0]
     const path = () => diff()?.file || string(props.input.path)
+    // While the call runs, the streamed input gives a provisional count until
+    // the final diff metadata arrives.
+    const streamed = () => (busy(props.status) ? props.provisional : undefined)
     // A plain function, not `createMemo`: a memo parses the patch with Pierre
     // on render, even while the card stays collapsed. Only the deferred body
     // and the diff action read it.
@@ -989,7 +1379,7 @@ ToolRegistry.register({
                   <span data-slot="message-part-title-text">
                     <TextShimmer text={i18n.t("ui.messagePart.title.edit")} active={busy(props.status)} />
                   </span>
-                  <ToolFileMeta path={path()} directory={props.directory} changes={diff()} />
+                  <ToolFileMeta path={path()} directory={props.directory} changes={diff() ?? streamed()} />
                 </div>
               </div>
               <ToolDiffAction when={canOpenDiff()} onClick={openDiff} />
@@ -1024,6 +1414,9 @@ ToolRegistry.register({
     const component = useFileComponent()
     const diff = () => fileDiffs(props.metadata.files)[0]
     const path = () => string(props.input.path)
+    // While the file streams, the input gives a provisional line count before
+    // the final diff metadata exists.
+    const streamed = () => (busy(props.status) ? props.provisional : undefined)
     // A write that leaves the file as it was has an empty diff: show only the header.
     const unchanged = () => {
       const file = diff()
@@ -1067,7 +1460,21 @@ ToolRegistry.register({
                   <span data-slot="message-part-title-text">
                     <TextShimmer text={i18n.t("ui.messagePart.title.write")} active={busy(props.status)} />
                   </span>
-                  <ToolFileMeta path={path()} directory={props.directory} changes={diff()} />
+                  <ToolFileMeta
+                    path={path()}
+                    directory={props.directory}
+                    changes={diff() ?? streamed()}
+                    fallback={
+                      // Some models stream the content before the file path.
+                      <Show when={streamed()}>
+                        {(changes) => (
+                          <div data-slot="message-part-tool-changes">
+                            <DiffChanges changes={changes()} />
+                          </div>
+                        )}
+                      </Show>
+                    }
+                  />
                 </div>
               </div>
               <ToolDiffAction when={canOpenDiff()} onClick={handleOpenDiffClick} />
@@ -1152,6 +1559,26 @@ ToolRegistry.register({
         deletions: file.deletions,
       })
     }
+    // A multi-file patch opens every changed file in one diff view. Files without
+    // a parseable hunk are skipped, as the per-file action does for them.
+    const openAllDiffs = (event: MouseEvent) => {
+      event.stopPropagation()
+      const diffs = list().flatMap((file) => {
+        const diff = view(file)
+        if (!diff) return []
+        return [
+          {
+            file: file.file,
+            patch: diff.patch,
+            additions: file.additions,
+            deletions: file.deletions,
+          },
+        ]
+      })
+      if (diffs.length) props.actions?.openDiffs?.(diffs)
+    }
+    const canOpenAll = () =>
+      list().length > 1 && !!props.actions?.openDiffs && list().some((file) => HUNK_MARKER.test(file.patch))
     // The action sits in the file body, not in the row header: the header is a
     // button, and an interactive control inside it is invalid for assistive tech.
     const diffAction = (file: FileDiffInfo) => (
@@ -1219,6 +1646,7 @@ ToolRegistry.register({
                   </Show>
                 </div>
               </div>
+              <ToolDiffAction when={canOpenAll()} onClick={openAllDiffs} />
             </div>
           }
         >
@@ -1309,11 +1737,36 @@ ToolRegistry.register({
   },
 })
 
-function TodoCheckbox(props: { checked: boolean; children: JSX.Element }) {
+type TodoItem = { content?: unknown; status?: unknown; changed?: unknown; done?: unknown; started?: unknown }
+
+type TodoView = {
+  mode?: "full" | "compact"
+  todos?: TodoItem[]
+  hiddenBefore?: number
+  hiddenAfter?: number
+}
+
+function isTodoView(value: unknown): value is TodoView {
+  if (!value || typeof value !== "object") return false
+  return Array.isArray((value as TodoView).todos)
+}
+
+function hiddenTodos(direction: "earlier" | "later", count: number) {
+  return `${count} ${direction} ${count === 1 ? "to-do" : "to-dos"} hidden`
+}
+
+function TodoCheckbox(props: { checked: boolean; done?: boolean; started?: boolean; children: JSX.Element }) {
   const id = createUniqueId()
   const state = () => (props.checked ? "" : undefined)
   return (
-    <div role="group" data-component="checkbox" data-readonly="" data-checked={state()}>
+    <div
+      role="group"
+      data-component="checkbox"
+      data-readonly=""
+      data-checked={state()}
+      data-done={props.done ? "" : undefined}
+      data-started={props.started ? "" : undefined}
+    >
       <input
         type="checkbox"
         id={`${id}-input`}
@@ -1362,7 +1815,9 @@ ToolRegistry.register({
   name: "todowrite",
   render(props) {
     const i18n = useI18n()
-    const todos = () => records(props.metadata.todos ?? props.input.todos)
+    const view = () => (isTodoView(props.metadata.view) ? props.metadata.view : undefined)
+    const todos = () => records(props.metadata.todos ?? props.input.todos) as TodoItem[]
+    const shown = () => view()?.todos ?? todos()
     return (
       <BasicTool
         {...props}
@@ -1379,20 +1834,31 @@ ToolRegistry.register({
           />
         }
       >
-        <Show when={todos().length}>
+        <Show when={shown().length}>
           <div data-component="todos">
-            <For each={todos()}>
+            <Show when={view()?.mode === "compact" && (view()?.hiddenBefore ?? 0) > 0}>
+              <div data-slot="message-part-todo-hidden">{hiddenTodos("earlier", view()?.hiddenBefore ?? 0)}</div>
+            </Show>
+            <For each={shown()}>
               {(todo) => (
-                <TodoCheckbox checked={todo.status === "completed"}>
+                <TodoCheckbox
+                  checked={todo.status === "completed"}
+                  done={todo.done === true}
+                  started={todo.started === true}
+                >
                   <span
                     data-slot="message-part-todo-content"
                     data-completed={todo.status === "completed" ? "completed" : undefined}
+                    data-changed={todo.changed === true ? "changed" : undefined}
                   >
                     {string(todo.content)}
                   </span>
                 </TodoCheckbox>
               )}
             </For>
+            <Show when={view()?.mode === "compact" && (view()?.hiddenAfter ?? 0) > 0}>
+              <div data-slot="message-part-todo-hidden">{hiddenTodos("later", view()?.hiddenAfter ?? 0)}</div>
+            </Show>
           </div>
         </Show>
       </BasicTool>
@@ -1462,7 +1928,7 @@ ToolRegistry.register({
           <ToolTriggerRow
             title={i18n.t("ui.tool.skill")}
             pending={busy(props.status)}
-            subtitle={string(props.input.id)}
+            subtitle={string(props.metadata.name) || string(props.input.id)}
           />
         }
         animated

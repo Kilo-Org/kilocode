@@ -1,8 +1,8 @@
 {
   "$comment": "Shared-patch baseline (U-L3-01). Read by script/check-shared-patches.ts and script/check-opencode-annotations.ts. Each shared upstream file that Kilo adds or changes needs an entry: rung (3 = seam patch, 4 = feature patch) and the missing seam. `unmarked` allows lines without markers and states why. Raise a limit only in the PR that adds the patch, and lower it when a patch goes away.",
   "limits": {
-    "files": 73,
-    "markedLines": 1029,
+    "files": 74,
+    "markedLines": 1044,
     "unmarkedLines": 83,
     "deletedFiles": 0
   },
@@ -136,6 +136,10 @@
     "packages/core/src/tool/plugin/patch.ts": {
       "rung": 4,
       "seam": "Set the optional `moved` flag when an update hunk has a move target. The move already applies here; only the result metadata loses the fact that it was a rename. The tool has no plugin hook for its own result metadata, and add, delete and plain update hunks stay unchanged."
+    },
+    "packages/core/src/tool/plugin/read.ts": {
+      "rung": 4,
+      "seam": "Publish the instruction files discovered by a read in tool metadata so the client can list them under the read card. The discovery and injection already happen here; a plugin can wrap execute but cannot read the candidates that execute owns, and moving the walk into the host would duplicate the read's path and location rules. The tool input, output and injected instructions stay unchanged."
     },
     "packages/core/src/tool/plugin/shell.ts": {
       "rung": 4,

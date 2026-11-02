@@ -84,8 +84,9 @@ export const Plugin = {
               // directory listing the walk starts at the directory itself (so its own AGENTS.md
               // is discovered); for a file it starts at the file's dirname. External reads are
               // skipped, and discovery failures never fail the read.
-              yield* Effect.gen(function* () {
-                if (result.target.externalDirectory !== undefined) return
+              // kilocode_change start - read loaded files: report the discovered instruction files to the client
+              const loaded = yield* Effect.gen(function* () {
+                if (result.target.externalDirectory !== undefined) return [] as string[]
                 const resolved = yield* fs.resolve(result.target.absolute)
                 const root = yield* fs.resolve(location.directory)
                 // The Location and its ancestors are already supplied by initial instructions,
@@ -99,18 +100,25 @@ export const Plugin = {
                 const candidates = (yield* Effect.forEach(discovered, fs.resolve)).filter(
                   (file) => !FSUtil.contains(dirname(file), root) && file !== resolved,
                 )
-                if (candidates.length === 0) return
+                if (candidates.length === 0) return []
                 yield* sessionInstructions.load({ sessionID: context.sessionID, paths: candidates })
+                return candidates
               }).pipe(
-                Effect.catch(() => Effect.void),
-                Effect.catchDefect(() => Effect.void),
+                Effect.catch(() => Effect.succeed([] as string[])),
+                Effect.catchDefect(() => Effect.succeed([] as string[])),
               )
-              return { output: result.content, path: result.path }
+              return { output: result.content, path: result.path, loaded }
+              // kilocode_change end
             }).pipe(
               Effect.map((result) => ({
                 output: result.output,
                 content: toModelContent(result.path, input.offset, result.output),
-                metadata: { truncated: result.output.type === "file" ? false : result.output.truncated },
+                // kilocode_change start - read loaded files: carry the discovered instruction paths in tool metadata
+                metadata: {
+                  truncated: result.output.type === "file" ? false : result.output.truncated,
+                  ...(result.loaded.length ? { loaded: result.loaded } : {}),
+                },
+                // kilocode_change end
               })),
               Effect.mapError((error) => {
                 if (error instanceof ToolFailure) return error

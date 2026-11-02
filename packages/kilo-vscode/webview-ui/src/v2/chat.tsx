@@ -64,6 +64,14 @@ export function Chat() {
     openDiff: (diff) => getVSCodeAPI().postMessage({ type: "openDiffVirtual", diff } satisfies ToHost as never),
     openDiffs: (diffs) => getVSCodeAPI().postMessage({ type: "openDiffsVirtual", diffs } satisfies ToHost as never),
     openSession: open,
+    interruptSession: (sessionID) => {
+      void v2.api.session.interrupt({ sessionID }).catch(v2.report)
+    },
+    // The subagent job blocks the parent session, so backgrounding is a whole-session request.
+    continueInBackground: () => {
+      const id = session()
+      if (id) void v2.api.session.background({ sessionID: id }).catch(v2.report)
+    },
   }
 
   // Subagent cards read the child session's tools from the same store as the open session. Load a child's message
