@@ -3305,10 +3305,12 @@ function Subagent(props: ToolProps) {
     return id ? data.session.message.list(id) : []
   })
   const detail = createMemo(() => subagentDetail(messages()))
+  const synced = new Set<string>()
 
   createEffect(() => {
     const id = sessionID()
-    if (!id || messages().length > 0) return
+    if (!id || messages().length > 0 || synced.has(id)) return
+    synced.add(id)
     void data.session.message.sync(id).catch(() => undefined)
   })
 
