@@ -5,6 +5,7 @@ import path from "node:path"
 import { createSolidTransformPlugin } from "@opentui/solid/bun-plugin"
 import { brandingPlugin } from "../src/branding/plugin"
 import { hostMirrorsPlugin } from "../src/mirrors"
+import { compileDefine } from "./fixtures/compile-define"
 
 const repo = path.resolve(import.meta.dir, "../../..")
 const entry = path.join(import.meta.dir, "fixtures/cli-name.ts")
@@ -23,7 +24,7 @@ for (const compiled of [false, true]) {
             plugins: [...(hosted ? [hostMirrorsPlugin, brandingPlugin] : []), createSolidTransformPlugin()],
             compile: { outfile, autoloadBunfig: false, autoloadDotenv: false },
             define: {
-              KILO_BRANDING_COMPILED: "true",
+              ...compileDefine,
               ...(hosted ? { OPENCODE_CLI_NAME: JSON.stringify(expected) } : {}),
             },
           })

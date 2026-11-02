@@ -4,7 +4,7 @@
 // The base is the release commit that `pinned()` returns (the second parent of the newest
 // `chore(upstream): sync v2.x.y (<sha>)` merge), so the script follows each sync without an edit.
 // Ref verification is offline and always runs. --checks also runs the commands that CI runs on the
-// v2 line (.github/workflows/check.yml, test.yml, kilo-v2.yml) and writes each output to
+// v2 line (.github/workflows/check.yml, check-test.yml, kilo-v2.yml) and writes each output to
 // migration-tracking/technical-notes/baseline/logs (gitignored by the root `logs/` rule).
 //
 // Usage:
@@ -27,20 +27,20 @@ process.chdir(ROOT)
 // fail the run. `botOnly: true` marks the map check that CI runs only on the map bot PR; it gates the
 // baseline only when the checkout is the bot branch. Steps deliberately not mirrored:
 // - check.yml `lint:changed`: pull requests only, against the merge's first parent.
-// - test.yml `affected` and `e2e`: disabled on the fork (`if: false`), they test removed packages.
-// - test.yml shards and `--affected`: the baseline runs every package once (core, tui and cli through their
+// - check-test.yml `affected` and `e2e`: disabled on the fork (`if: false`), they test removed packages.
+// - check-test.yml shards and `--affected`: the baseline runs every package once (core, tui and cli through their
 //   own `test` script, which `test:ci` shards in CI), with --force so turbo replays no cached result.
-// - test.yml Windows matrix, JUnit reports and artifact uploads; kilo-v2.yml CLI archive and upload, and
+// - check-test.yml Windows matrix, JUnit reports and artifact uploads; kilo-v2.yml CLI archive and upload, and
 //   `migration progress comment` (posts to the PR). The darwin-arm64 or linux-x64 build of kilo-v2.yml is
 //   the cli-build check on this host.
-// - test.yml Node build: runs only on Node 26 or later, which CI pins (26.4.0).
+// - check-test.yml Node build: runs only on Node 26 or later, which CI pins (26.4.0).
 const CHECKS: Check[] = [
   // .github/actions/setup-bun, used by every job that installs. A plain `bun install` can reorder
   // `patchedDependencies` in bun.lock on this tree; the frozen install fails on a real drift instead.
   { name: "install", cwd: ".", argv: ["bun", "install", "--frozen-lockfile"] },
   // check.yml
   { name: "check", cwd: ".", argv: ["bun", "run", "check"] },
-  // test.yml unit
+  // check-test.yml unit
   { name: "effect-simplification-rules", cwd: ".", argv: ["bun", "run", "test:effect-simplification-rules"] },
   { name: "effect-simplifications", cwd: ".", argv: ["bun", "run", "lint:effect-simplifications"] },
   {
@@ -52,10 +52,9 @@ const CHECKS: Check[] = [
   },
   { name: "codemode-publish-dry-run", cwd: "packages/codemode", argv: ["bun", "run", "script/publish.ts", "--dry-run"] },
   { name: "client-check-generated", cwd: "packages/client", argv: ["bun", "run", "check:generated"] },
-  { name: "www-check-generated", cwd: "services/www", argv: ["bun", "run", "check:generated"] },
-  // test.yml sdk
+  // check-test.yml sdk
   { name: "sdk-verify-package", cwd: ".", argv: ["bun", "turbo", "verify:package", "--filter=@opencode/sdk"] },
-  // test.yml build (the upstream CLI)
+  // check-test.yml build (the upstream CLI)
   { name: "cli-build", cwd: "packages/cli", argv: ["bun", "run", "script/build.ts", "--single", "--skip-install"] },
   {
     name: "cli-binary-version",
