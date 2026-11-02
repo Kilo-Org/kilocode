@@ -1059,6 +1059,8 @@ const tui: TuiPlugin = async (api) => {
     },
   ])
 
+  const closed = () => api.route.current.name !== ROUTE // kilocode_change
+
   api.keymap.registerLayer({
     commands: [
       {
@@ -1067,9 +1069,9 @@ const tui: TuiPlugin = async (api) => {
         slashName: "diff",
         category: "VCS",
         namespace: "palette",
-        enabled: () => api.route.current.name !== ROUTE, // kilocode_change
+        enabled: closed, // kilocode_change
         run() {
-          if (api.route.current.name === ROUTE) return // kilocode_change
+          if (!closed()) return // kilocode_change
           api.route.navigate(ROUTE, {
             mode: "git",
             sessionID: "params" in api.route.current ? api.route.current.params?.sessionID : undefined,
