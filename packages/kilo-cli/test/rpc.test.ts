@@ -114,6 +114,9 @@ test(
       hasPersonalAccount: true,
       organizationID: null,
     })
+    const personal = await gateway.rpc.authStatus({}, gateway.options)
+    expect(personal).toMatchObject({ authenticated: true, organizationID: null, server: gateway.server })
+    expect(personal.identity).toMatch(/^catalog:personal:[0-9a-f]{64}$/)
     expect(await gateway.rpc["organization.set"]({ organizationID: "first" }, gateway.options)).toEqual({})
     expect(await gateway.rpc.authStatus({}, gateway.options)).toEqual({
       authenticated: true,
