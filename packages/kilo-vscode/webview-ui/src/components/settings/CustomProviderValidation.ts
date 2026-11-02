@@ -44,6 +44,11 @@ export type FormErrors = {
 
 export const INVALID_ENV = "Invalid environment variable name"
 
+/** The API key field shows this instead of the stored credential; the dialog cannot read the secret. */
+export const MASKED_CUSTOM_PROVIDER_KEY = "********"
+
+const ANTHROPIC_PACKAGE: CustomProviderPackage = "@opencode/ai/providers/anthropic-compatible"
+
 export type CustomProviderConfigValue = {
   name: string
   package: CustomProviderPackage
@@ -288,5 +293,120 @@ export function validateCustomProvider(input: ValidateArgs): ValidateResult {
         models: Object.fromEntries(input.form.models.map((m) => [m.id.trim(), serializeModel(m)])),
       },
     },
+  }
+}
+
+// Dialog state from an existing provider. The value can be hand-written, so every field is read defensively.
+
+const EMPTY_MODEL: ModelEntry = { id: "", name: "", reasoning: false, supportsImages: false }
+
+export function emptyModel(): ModelEntry {
+  return { ...EMPTY_MODEL }
+}
+
+/** The model rows of a `providers.<id>` value, or one empty row. */
+export function initModels(config: unknown): ModelEntry[] {
+  const entries = Object.entries(record(record(config).models))
+  if (entries.length === 0) return [emptyModel()]
+  return entries.map(([id, value]) => {
+    const model = record(value)
+    const capabilities = record(model.capabilities)
+    const input = Array.isArray(capabilities.input) ? capabilities.input : []
+    return {
+      id,
+      name: typeof model.name === "string" && model.name.trim() ? model.name : id,
+      reasoning: record(capabilities.reasoning).supported === true,
+      supportsImages: input.includes("image"),
+      variants: model.variants,
+    }
+  })
+}
+
+/** The header rows of a `providers.<id>` value, or one empty row. */
+export function initHeaders(config: unknown): HeaderRow[] {
+  const rows = Object.entries(record(record(config).headers)).flatMap(([key, value]) =>
+    typeof value === "string" ? [{ key, value }] : [],
+  )
+  return rows.length ? rows : [{ key: "", value: "" }]
+}
+
+/** The key field: the mask for a stored key, else the provider's `{env:NAME}` variable, else empty. */
+export function initApiKey(config: unknown, storedKey: boolean): string {
+  if (storedKey) return MASKED_CUSTOM_PROVIDER_KEY
+  const env = record(config).env
+  return Array.isArray(env) && env.length === 1 && typeof env[0] === "string" ? `{env:${env[0]}}` : ""
+}
+
+/** The base URL of a `providers.<id>` value. */
+export function initBaseURL(config: unknown): string {
+  const url = record(record(config).settings).baseURL
+  return typeof url === "string" ? url : ""
+}
+
+// Fetch models: the dialog asks the host to list `GET {baseURL}/models` and offers the result as a picker.
+
+export type FetchedModel = { id: string; name: string }
+
+/** The Anthropic Messages API has no OpenAI-style model list. */
+export function canFetchModels(pkg: CustomProviderPackage, baseURL: string) {
+  return pkg !== ANTHROPIC_PACKAGE && /^https?:\/\//.test(baseURL.trim())
+}
+
+/**
+ * The key a fetch sends. A typed key or an `{env:NAME}` variable wins. An untouched field of an existing provider asks
+ * the host for the stored key. A cleared field sends no key, because saving would store none.
+ */
+export function fetchKey(input: { apiKey: string; touched: boolean; providerID?: string }): {
+  apiKey?: string
+  env?: string
+  providerID?: string
+} {
+  const raw = input.apiKey.trim()
+  const env = parseEnvKey(raw)
+  if (env) return { env }
+  if (ENV_REF.test(raw)) return {}
+  if (!input.touched) return input.providerID ? { providerID: input.providerID } : {}
+  return raw ? { apiKey: raw } : {}
+}
+
+function modelKeys(models: ModelEntry[]) {
+  return new Set(models.map((model) => model.id.trim().toLowerCase()).filter(Boolean))
+}
+
+/** The fetched models the form does not list yet. Ids compare trimmed and case-insensitively, as validation does. */
+export function freshModels(fetched: FetchedModel[], models: ModelEntry[]) {
+  const existing = modelKeys(models)
+  return fetched.filter((model) => !existing.has(model.id.trim().toLowerCase()))
+}
+
+/**
+ * Appends the picked models to the form's models, or replaces the single empty row. A picked id the form already
+ * lists (for example one typed after the fetch) is skipped. `added` counts only the models actually added.
+ */
+export function addFetchedModels(models: ModelEntry[], picked: FetchedModel[]) {
+  const row = models[0]
+  const empty = models.length === 1 && !!row && !row.id.trim() && !row.name.trim()
+  const existing = modelKeys(models)
+  const added = picked
+    .filter((model) => {
+      const key = model.id.trim().toLowerCase()
+      if (!key || existing.has(key)) return false
+      existing.add(key)
+      return true
+    })
+    .map((model) => ({ ...emptyModel(), id: model.id, name: model.name }))
+  if (added.length === 0) return { models, added: 0 }
+  return { models: empty ? added : [...models, ...added], added: added.length }
+}
+
+/**
+ * Orders fetch replies. A new request and every change of the URL, key or package take a new token; a reply applies
+ * only while its token is still the newest, so a slow reply for an old URL never lands.
+ */
+export function createFetchGate() {
+  let token = 0
+  return {
+    next: () => ++token,
+    current: (value: number) => value === token,
   }
 }

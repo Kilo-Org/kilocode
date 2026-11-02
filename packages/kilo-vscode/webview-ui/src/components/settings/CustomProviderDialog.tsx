@@ -1,29 +1,41 @@
 // The custom provider dialog: provider ID, name, package, base URL, API key, models and headers. The config draft
 // goes through `useSettingsConfig` (the host owns the file) and the key is a v2 credential (`settings.connectKey`),
-// because the config provider registers a key method for every configured provider.
+// because the config provider registers a key method for every configured provider. Fetch models asks the host to
+// list the base URL's models (`fetchCustomProviderModels`), so a stored key never reaches the webview.
 import { Button } from "@kilocode/kilo-ui/button"
 import { useDialog } from "@kilocode/kilo-ui/context/dialog"
 import { Dialog } from "@kilocode/kilo-ui/dialog"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { ProviderIcon } from "@kilocode/kilo-ui/provider-icon"
 import { Select } from "@kilocode/kilo-ui/select"
+import { Spinner } from "@kilocode/kilo-ui/spinner"
 import { TextField } from "@kilocode/kilo-ui/text-field"
 import { showToast } from "@kilocode/kilo-ui/toast"
-import { For, Show } from "solid-js"
+import { For, Show, createEffect, createMemo, createSignal, onCleanup } from "solid-js"
 import { createStore } from "solid-js/store"
 import { useLanguage } from "../../context/language"
-import { getVSCodeAPI } from "../../context/vscode"
-import type { ToHost } from "../../../../src/protocol"
+import { getVSCodeAPI, useVSCode } from "../../context/vscode"
+import type { ToHost, ToWebview } from "../../../../src/protocol"
 import type { SettingsData } from "../../v2/settings"
 import { useSettingsConfig, type SettingsScope } from "../../v2/settings-config"
 import { ModelCard } from "./CustomProviderModelCard"
 import {
+  MASKED_CUSTOM_PROVIDER_KEY,
+  addFetchedModels,
+  canFetchModels,
+  createFetchGate,
+  emptyModel,
+  fetchKey,
+  freshModels,
+  initApiKey,
+  initBaseURL,
+  initHeaders,
+  initModels,
   mergeProviderConfig,
   unmaskKey,
   validateCustomProvider,
   type CustomProviderConfigValue,
-  type HeaderRow,
-  type ModelEntry,
+  type FetchedModel,
 } from "./CustomProviderValidation"
 import {
   CUSTOM_PROVIDER_PACKAGE,
@@ -35,8 +47,10 @@ import {
 } from "./provider-visibility"
 import { credentials } from "./provider-catalog"
 
-/** The API key field shows this instead of the stored credential; the dialog cannot read the secret. */
-export const MASKED_CUSTOM_PROVIDER_KEY = "********"
+export { MASKED_CUSTOM_PROVIDER_KEY }
+
+const DEBOUNCE_MS = 500
+const SEARCH_DEBOUNCE_MS = 150
 
 const PACKAGE_OPTIONS: Array<{ value: CustomProviderPackage; label: string }> = [
   { value: CUSTOM_PROVIDER_PACKAGES[0], label: "OpenAI Compatible" },
@@ -44,7 +58,16 @@ const PACKAGE_OPTIONS: Array<{ value: CustomProviderPackage; label: string }> = 
   { value: CUSTOM_PROVIDER_PACKAGES[2], label: "Anthropic Messages" },
 ]
 
-const EMPTY_MODEL: ModelEntry = { id: "", name: "", reasoning: false, supportsImages: false }
+/** Subsequence fuzzy match: "gpt4o" matches "gpt-4o-mini". */
+function fuzzy(query: string, target: string) {
+  const q = query.toLowerCase()
+  const t = target.toLowerCase()
+  let qi = 0
+  for (let ti = 0; ti < t.length && qi < q.length; ti++) {
+    if (t[ti] === q[qi]) qi++
+  }
+  return qi === q.length
+}
 
 export interface CustomProviderDialogProps {
   settings: SettingsData
@@ -53,34 +76,28 @@ export interface CustomProviderDialogProps {
   existing?: { providerID: string; name: string; config: CustomProviderConfigValue }
 }
 
-function initModels(config: CustomProviderConfigValue | undefined): ModelEntry[] {
-  if (!config?.models || typeof config.models !== "object") return [{ ...EMPTY_MODEL }]
-  const entries = Object.entries(config.models)
-  if (entries.length === 0) return [{ ...EMPTY_MODEL }]
-  return entries.map(([id, model]) => {
-    const input = model.capabilities?.input ?? []
-    return {
-      id,
-      name: model.name ?? id,
-      reasoning: model.capabilities?.reasoning?.supported === true,
-      supportsImages: input.includes("image"),
-      variants: model.variants,
-    }
-  })
-}
-
-function initHeaders(config: CustomProviderConfigValue | undefined): HeaderRow[] {
-  const headers = config?.headers
-  if (!headers || typeof headers !== "object") return [{ key: "", value: "" }]
-  const entries = Object.entries(headers)
-  if (entries.length === 0) return [{ key: "", value: "" }]
-  return entries.map(([key, value]) => ({ key, value }))
-}
-
 const CustomProviderDialog = (props: CustomProviderDialogProps) => {
   const dialog = useDialog()
   const config = useSettingsConfig()
   const language = useLanguage()
+  const vscode = useVSCode()
+
+  /**
+   * The provider's value in the config file that owns it. It keeps `{env:NAME}` and `{file:...}` references, which
+   * the server's merged config has already substituted, so a save never writes a resolved secret into the file. The
+   * merged value is the fallback, for example for the legacy `provider.<id>` spelling.
+   */
+  function storedConfig(providerID: string): unknown {
+    const source = config.source(["providers", providerID])
+    const scopes: SettingsScope[] = source === "global" ? ["global", "project"] : ["project", "global"]
+    const raw = scopes
+      .map((scope) => {
+        const providers = config.raw(scope).providers
+        return providers && typeof providers === "object" ? (providers as Record<string, unknown>)[providerID] : undefined
+      })
+      .find((value) => value && typeof value === "object" && !Array.isArray(value))
+    return raw ?? config.value(["providers", providerID])
+  }
 
   const editing = () => !!props.existing
   const existingKey = () => {
@@ -89,16 +106,20 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
     return credentials(integration).some((credential) => credential.method === "key")
   }
 
+  const initial = props.existing ? (storedConfig(props.existing.providerID) ?? props.existing.config) : undefined
+  const fields = (initial ?? {}) as { name?: unknown; package?: unknown; env?: unknown }
+  const existingEnv = Array.isArray(fields.env)
+    ? fields.env.filter((item): item is string => typeof item === "string")
+    : undefined
+
   const [form, setForm] = createStore({
     providerID: props.existing?.providerID ?? "",
-    name: props.existing?.name ?? "",
-    package: (isCustomProviderPackage(props.existing?.config?.package)
-      ? props.existing!.config.package
-      : CUSTOM_PROVIDER_PACKAGE) as CustomProviderPackage,
-    baseURL: (props.existing?.config?.settings as { baseURL?: string } | undefined)?.baseURL ?? "",
-    apiKey: existingKey() ? MASKED_CUSTOM_PROVIDER_KEY : "",
-    models: initModels(props.existing?.config),
-    headers: initHeaders(props.existing?.config),
+    name: typeof fields.name === "string" && fields.name.trim() ? fields.name : (props.existing?.name ?? ""),
+    package: (isCustomProviderPackage(fields.package) ? fields.package : CUSTOM_PROVIDER_PACKAGE) as CustomProviderPackage,
+    baseURL: initBaseURL(initial),
+    apiKey: props.existing ? initApiKey(initial, existingKey()) : "",
+    models: initModels(initial),
+    headers: initHeaders(initial),
     saving: false,
   })
 
@@ -118,6 +139,176 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
 
   let apiTouched = false
 
+  // ── Fetch models state ──────────────────────────────────────────────
+
+  const [fetching, setFetching] = createSignal(false)
+  const [fetchError, setFetchError] = createSignal<string>()
+  const [fetchedModels, setFetchedModels] = createSignal<FetchedModel[]>()
+  const [selected, setSelected] = createSignal<Set<string>>(new Set())
+  const [fetchStatus, setFetchStatus] = createSignal<string>()
+
+  const [search, setSearch] = createSignal("")
+  const [debouncedSearch, setDebouncedSearch] = createSignal("")
+
+  createEffect(() => {
+    const query = search()
+    const timer = setTimeout(() => setDebouncedSearch(query), SEARCH_DEBOUNCE_MS)
+    onCleanup(() => clearTimeout(timer))
+  })
+
+  const filtered = createMemo(() => {
+    const models = fetchedModels()
+    if (!models) return []
+    const query = debouncedSearch()
+    if (!query) return models
+    return models.filter((model) => fuzzy(query, model.id) || fuzzy(query, model.name))
+  })
+
+  // Dedicated signals drive the auto-fetch. An effect that read the form store would also rerun on unrelated store
+  // writes, such as an added model row, and clear the picker.
+  const [fetchPackage, setFetchPackage] = createSignal(form.package)
+  const [fetchURL, setFetchURL] = createSignal(form.baseURL)
+  const [fetchKeyValue, setFetchKeyValue] = createSignal(form.apiKey)
+  const gate = createFetchGate()
+  let unsubscribe: (() => void) | undefined
+  onCleanup(() => unsubscribe?.())
+
+  function clearFetch() {
+    unsubscribe?.()
+    unsubscribe = undefined
+    setFetching(false)
+    setFetchedModels(undefined)
+    setFetchError(undefined)
+    setFetchStatus(undefined)
+    setSearch("")
+  }
+
+  createEffect(() => {
+    const pkg = fetchPackage()
+    const url = fetchURL()
+    fetchKeyValue()
+    // A change of the URL, key or package drops the shown result and any reply still in flight, manual ones included.
+    gate.next()
+    clearFetch()
+    if (!canFetchModels(pkg, url)) return
+    const token = gate.next()
+    const timer = setTimeout(() => {
+      if (gate.current(token)) doFetch()
+    }, DEBOUNCE_MS)
+    onCleanup(() => clearTimeout(timer))
+  })
+
+  function doFetch() {
+    // Read every value before the request, so the reply handler does not subscribe to the store.
+    const url = fetchURL().trim()
+    const key = fetchKey({ apiKey: form.apiKey, touched: apiTouched, providerID: props.existing?.providerID })
+    const rows = form.headers
+      .map((header) => ({ key: header.key.trim(), value: header.value.trim() }))
+      .filter((header) => header.key && header.value)
+    const headers = rows.length ? Object.fromEntries(rows.map((header) => [header.key, header.value])) : undefined
+    const models = form.models.map((model) => ({ ...model }))
+
+    const token = gate.next()
+    clearFetch()
+    setFetching(true)
+
+    const requestId = crypto.randomUUID()
+    const stop = vscode.onMessage((raw) => {
+      const message = raw as unknown as ToWebview
+      if (message.type !== "customProviderModelsFetched" || message.requestId !== requestId) return
+      stop()
+      if (unsubscribe === stop) unsubscribe = undefined
+      if (!gate.current(token)) return
+      setFetching(false)
+
+      if (message.error) {
+        setFetchError(message.auth ? language.t("provider.custom.models.fetch.authError") : message.error)
+        return
+      }
+      const fetched = message.models ?? []
+      if (fetched.length === 0) {
+        setFetchError(language.t("provider.custom.models.fetch.empty"))
+        return
+      }
+      const fresh = freshModels(fetched, models)
+      if (fresh.length === 0) {
+        setFetchStatus(language.t("provider.custom.models.fetch.allExist"))
+        return
+      }
+      setSelected(new Set(fresh.map((model) => model.id)))
+      setFetchedModels(fresh)
+    })
+    unsubscribe = stop
+
+    getVSCodeAPI().postMessage({
+      type: "fetchCustomProviderModels",
+      requestId,
+      baseURL: url,
+      ...key,
+      headers,
+    } satisfies ToHost as never)
+  }
+
+  // ── Model picker actions ────────────────────────────────────────────
+
+  function toggleModel(id: string) {
+    const next = new Set(selected())
+    if (next.has(id)) next.delete(id)
+    else next.add(id)
+    setSelected(next)
+  }
+
+  function selectAll() {
+    const next = new Set(selected())
+    for (const model of filtered()) next.add(model.id)
+    setSelected(next)
+  }
+
+  function deselectAll() {
+    const next = new Set(selected())
+    for (const model of filtered()) next.delete(model.id)
+    setSelected(next)
+  }
+
+  function addSelected() {
+    const models = fetchedModels()
+    if (!models) return
+    const picked = models.filter((model) => selected().has(model.id))
+    if (picked.length === 0) return
+
+    const result = addFetchedModels(form.models, picked)
+    if (result.added > 0) {
+      setForm("models", result.models)
+      setErrors(
+        "models",
+        result.models.map(() => ({})),
+      )
+    }
+
+    // Keep the picker open with the models that were not picked. Every picked model leaves the picker, including one
+    // skipped as a duplicate, so the user is not asked again.
+    const remaining = models.filter((model) => !picked.includes(model))
+    if (result.added > 0)
+      setFetchStatus(language.t("provider.custom.models.fetch.added", { count: String(result.added) }))
+    else if (remaining.length === 0) setFetchStatus(language.t("provider.custom.models.fetch.allExist"))
+    else setFetchStatus(undefined)
+
+    if (remaining.length === 0) {
+      setFetchedModels(undefined)
+      setSearch("")
+      return
+    }
+    setFetchedModels(remaining)
+    setSelected(new Set<string>())
+  }
+
+  function cancelFetch() {
+    setFetchedModels(undefined)
+    setSearch("")
+  }
+
+  // ── Form helpers ────────────────────────────────────────────────────
+
   function validate() {
     const output = validateCustomProvider({
       form,
@@ -126,7 +317,7 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
       apiKeyTouched: apiTouched,
       disabledProviders: disabledIds(),
       existingProviderIDs: new Set(props.settings.integrations().map((item) => item.id)),
-      existingEnv: props.existing?.config.env,
+      existingEnv,
     })
     setErrors("providerID", output.errors.providerID)
     setErrors("name", output.errors.name)
@@ -151,7 +342,7 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
   }
 
   function addModel() {
-    setForm("models", (v) => [...v, { ...EMPTY_MODEL }])
+    setForm("models", (v) => [...v, emptyModel()])
     setErrors("models", (v) => [...v, {}])
   }
 
@@ -210,10 +401,7 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
     setForm("saving", true)
     const scope: SettingsScope =
       config.source(props.existing ? ["providers", result.providerID] : ["providers"]) ?? "global"
-    const value = mergeProviderConfig(
-      config.value(["providers", result.providerID]) ?? props.existing?.config,
-      result.config,
-    )
+    const value = mergeProviderConfig(storedConfig(result.providerID) ?? props.existing?.config, result.config)
     const ok = await config.set(["providers", result.providerID], value, scope)
     if (!ok) {
       setForm("saving", false)
@@ -356,6 +544,7 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
                 onSelect={(option) => {
                   if (!option) return
                   setForm("package", option.value)
+                  setFetchPackage(option.value)
                 }}
                 variant="secondary"
                 triggerVariant="settings"
@@ -365,7 +554,10 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
               label={language.t("provider.custom.field.baseURL.label")}
               placeholder={language.t("provider.custom.field.baseURL.placeholder")}
               value={form.baseURL}
-              onChange={(value) => setForm("baseURL", value)}
+              onChange={(value) => {
+                setForm("baseURL", value)
+                setFetchURL(value)
+              }}
               validationState={errors.baseURL ? "invalid" : undefined}
               error={errors.baseURL}
             />
@@ -383,6 +575,7 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
                     : value
                 apiTouched = true
                 setForm("apiKey", next)
+                setFetchKeyValue(next)
               }}
             />
           </div>
@@ -398,16 +591,31 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
                 gap: "8px",
               }}
             >
-              <label
-                style={{
-                  "font-size": "var(--kilo-font-size-12)",
-                  "font-weight": "500",
-                  color: "var(--text-weak-base)",
-                }}
-              >
-                {language.t("provider.custom.models.label")}
-              </label>
+              <div style={{ display: "flex", "align-items": "center", gap: "8px" }}>
+                <label
+                  style={{
+                    "font-size": "var(--kilo-font-size-12)",
+                    "font-weight": "500",
+                    color: "var(--text-weak-base)",
+                  }}
+                >
+                  {language.t("provider.custom.models.label")}
+                </label>
+                <Show when={fetching()}>
+                  <Spinner style={{ width: "12px", height: "12px" }} />
+                </Show>
+              </div>
               <div style={{ display: "flex", gap: "8px", "align-items": "center", "flex-wrap": "wrap" }}>
+                <Button
+                  type="button"
+                  size="small"
+                  variant="ghost"
+                  icon="reset"
+                  onClick={doFetch}
+                  disabled={fetching() || !canFetchModels(form.package, form.baseURL)}
+                >
+                  {language.t("provider.custom.models.fetch.button")}
+                </Button>
                 <Button
                   type="button"
                   size="small"
@@ -446,6 +654,136 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
             <Button type="button" size="small" variant="ghost" icon="plus-small" onClick={addModel}>
               {language.t("provider.custom.models.add")}
             </Button>
+
+            <Show when={fetchError()}>
+              {(err) => (
+                <span
+                  data-slot="custom-provider-fetch-error"
+                  style={{ "font-size": "var(--kilo-font-size-12)", color: "var(--vscode-errorForeground, #f14c4c)" }}
+                >
+                  {err()}
+                </span>
+              )}
+            </Show>
+
+            <Show when={!fetchError() && fetchStatus()}>
+              {(status) => (
+                <span
+                  data-slot="custom-provider-fetch-status"
+                  style={{
+                    "font-size": "var(--kilo-font-size-12)",
+                    color: "var(--text-weak-base, var(--vscode-descriptionForeground))",
+                  }}
+                >
+                  {status()}
+                </span>
+              )}
+            </Show>
+
+            <Show when={fetchedModels()}>
+              {(models) => (
+                <div
+                  data-slot="custom-provider-fetch-picker"
+                  style={{
+                    border: "1px solid var(--border-weak-base, var(--vscode-panel-border))",
+                    "border-radius": "6px",
+                    padding: "12px",
+                    display: "flex",
+                    "flex-direction": "column",
+                    gap: "8px",
+                  }}
+                >
+                  <div style={{ display: "flex", "justify-content": "space-between", "align-items": "center" }}>
+                    <span
+                      style={{
+                        "font-size": "var(--kilo-font-size-12)",
+                        "font-weight": "500",
+                        color: "var(--text-weak-base)",
+                      }}
+                    >
+                      <Show
+                        when={debouncedSearch()}
+                        fallback={language.t("provider.custom.models.fetch.found", {
+                          count: String(models().length),
+                        })}
+                      >
+                        {language.t("provider.custom.models.fetch.showing", {
+                          shown: String(filtered().length),
+                          total: String(models().length),
+                        })}
+                      </Show>
+                    </span>
+                    <div style={{ display: "flex", gap: "8px" }}>
+                      <Button type="button" size="small" variant="ghost" onClick={selectAll}>
+                        {language.t("provider.custom.models.fetch.selectAll")}
+                      </Button>
+                      <Button type="button" size="small" variant="ghost" onClick={deselectAll}>
+                        {language.t("provider.custom.models.fetch.deselectAll")}
+                      </Button>
+                    </div>
+                  </div>
+
+                  <Show when={models().length > 10}>
+                    <TextField
+                      label={language.t("provider.custom.models.fetch.search")}
+                      hideLabel
+                      placeholder={language.t("provider.custom.models.fetch.search")}
+                      value={search()}
+                      onChange={setSearch}
+                    />
+                  </Show>
+
+                  <div
+                    style={{
+                      "max-height": "200px",
+                      "overflow-y": "auto",
+                      display: "flex",
+                      "flex-direction": "column",
+                      gap: "2px",
+                    }}
+                  >
+                    <For each={filtered()}>
+                      {(model) => (
+                        <label
+                          style={{
+                            display: "flex",
+                            "align-items": "center",
+                            gap: "8px",
+                            padding: "4px 2px",
+                            cursor: "pointer",
+                            "font-size": "var(--kilo-font-size-13)",
+                            color: "var(--text-base, var(--vscode-foreground))",
+                          }}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={selected().has(model.id)}
+                            onChange={() => toggleModel(model.id)}
+                            style={{ cursor: "pointer" }}
+                          />
+                          {model.id}
+                        </label>
+                      )}
+                    </For>
+                  </div>
+
+                  <div style={{ display: "flex", gap: "8px", "margin-top": "4px" }}>
+                    <Button
+                      type="button"
+                      size="small"
+                      variant="primary"
+                      onClick={addSelected}
+                      disabled={selected().size === 0}
+                    >
+                      {language.t("provider.custom.models.fetch.add", { count: String(selected().size) })}
+                    </Button>
+                    <Button type="button" size="small" variant="ghost" onClick={cancelFetch}>
+                      {language.t("common.cancel")}
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </Show>
           </div>
 
           {/* Headers */}

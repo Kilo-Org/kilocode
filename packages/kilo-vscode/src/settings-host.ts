@@ -8,6 +8,7 @@ import path from "node:path"
 import { commands, workspace, Uri, window, type ExtensionContext } from "vscode"
 import { KiloConfigFiles } from "@opencode/util/kilocode/config/files"
 import { applyConfigEdits, isKiloConfigFile, serialize } from "./config-file-edit"
+import { fetchCustomProviderModels } from "./custom-provider-models"
 import { local } from "./local"
 import { candidateConfigFiles, chooseConfigFile, configDirectories } from "./open-config"
 import { resolveGlobalConfigDir, canonicalPath, matchConfigDocument } from "./settings-paths"
@@ -271,6 +272,12 @@ export function settingsHost(input: {
     }
     if (message.type === "openVSCodeSettings") {
       void commands.executeCommand("workbench.action.openSettings", message.query)
+      return true
+    }
+    if (message.type === "fetchCustomProviderModels") {
+      void fetchCustomProviderModels({ server: input.server, directory: input.directory, request: message }).then(
+        input.post,
+      )
       return true
     }
     return false
