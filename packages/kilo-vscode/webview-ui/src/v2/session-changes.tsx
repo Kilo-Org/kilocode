@@ -1,5 +1,6 @@
 // Lists the files a session changed and opens them as native VS Code diffs. The diff covers the whole session: it
-// starts at the first user message and ends at the last, because `session.diff` defaults to the newest turn only.
+// asks the server for the oldest and the newest user message, because `session.diff` defaults to the newest turn and
+// the client message cache only holds a page of messages.
 import type { FileDiffInfo } from "@opencode/client"
 import { Button } from "@kilocode/kilo-ui/button"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
@@ -20,13 +21,17 @@ export function SessionChanges(props: { sessionID: string; onClose: () => void }
 
   const load = () => {
     const sessionID = props.sessionID
-    const users = v2.data.session.message
-      .list(sessionID)
-      .flatMap((message) => (message.type === "user" ? [message.id] : []))
     setLoading(true)
     setError("")
-    void v2.api.session
-      .diff({ sessionID, from: users[0], to: users.length > 1 ? users.at(-1) : undefined })
+    void Promise.all([
+      v2.api.message.list({ sessionID, type: "user", order: "asc", limit: 1 }),
+      v2.api.message.list({ sessionID, type: "user", order: "desc", limit: 1 }),
+    ])
+      .then(([oldest, newest]) => {
+        const from = oldest.data[0]?.id
+        const last = newest.data[0]?.id
+        return v2.api.session.diff({ sessionID, from, to: last === from ? undefined : last })
+      })
       .then((data) => setFiles(data))
       .catch((reason: unknown) => setError(reason instanceof Error ? reason.message : String(reason)))
       .finally(() => setLoading(false))

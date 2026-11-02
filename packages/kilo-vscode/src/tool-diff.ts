@@ -28,7 +28,12 @@ export function toolDiff() {
     documents.set(right.toString(), after)
     void commands
       .executeCommand("vscode.diff", left, right, `Changes: ${name}`, { preview })
-      .then(undefined, (error: unknown) => report(`Could not open the diff for ${file}`, error))
+      .then(undefined, (error: unknown) => {
+        // No editor will close these documents, so drop them here instead of keeping their text for the session.
+        documents.delete(left.toString())
+        documents.delete(right.toString())
+        report(`Could not open the diff for ${file}`, error)
+      })
   }
   /**
    * One native diff per file, in patch order. VS Code has no combined multi-file diff, so a multi-file patch opens

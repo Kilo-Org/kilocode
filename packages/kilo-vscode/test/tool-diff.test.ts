@@ -8,11 +8,12 @@ type Call = [string, ...unknown[]]
 const original = vscode.commands.executeCommand
 const calls: Call[] = []
 
-function stub() {
+function stub(failure?: Error) {
   calls.length = 0
   ;(vscode.commands as unknown as { executeCommand: (command: string, ...args: unknown[]) => Promise<unknown> }).executeCommand =
     async (command: string, ...args: unknown[]) => {
       calls.push([command, ...args])
+      if (failure) throw failure
       return undefined
     }
 }
@@ -78,6 +79,26 @@ describe("toolDiff", () => {
     expect(calls).toHaveLength(1)
     expect(calls[0]![3]).toBe("Changes: one")
     expect(calls[0]![4]).toEqual({ preview: true })
+    diff.dispose()
+  })
+
+  test("drops both virtual documents when the diff command rejects", async () => {
+    stub(new Error("no diff editor"))
+    const diff = toolDiff()
+    const single: ToolActionDiff = {
+      file: "one",
+      patch: ["--- a/one", "+++ b/one", "@@ -1 +1 @@", "-a", "+b", ""].join("\n"),
+      additions: 1,
+      deletions: 1,
+    }
+
+    diff.open(single)
+    await tick()
+
+    const left = calls[0]![1] as vscode.Uri
+    const right = calls[0]![2] as vscode.Uri
+    expect(diff.provider.provideTextDocumentContent(left, {} as never)).toBe("")
+    expect(diff.provider.provideTextDocumentContent(right, {} as never)).toBe("")
     diff.dispose()
   })
 
