@@ -17,6 +17,15 @@
     "onWebviewPanel:kilo-code.v2.settingsPanel"
   ],
   "contributes": {
+    "icons": {
+      "kilo-v2-logo": {
+        "description": "Kilo Code (v2) logo",
+        "default": {
+          "fontPath": "assets/icons/kilo-icon-font.woff2",
+          "fontCharacter": "\\F101"
+        }
+      }
+    },
     "viewsContainers": {
       "activitybar": [
         {
@@ -120,6 +129,55 @@
           "type": "string",
           "default": "",
           "markdownDescription": "Path to a file with extra CA certificates to trust."
+        },
+        "kilo-code.v2.autocomplete.model": {
+          "type": "string",
+          "enum": [
+            "mistralai/codestral-2508",
+            "inception/mercury-edit-2",
+            "inception/mercury-next-edit",
+            "codestral-2508",
+            "mercury-edit-2",
+            "mercury-next-edit"
+          ],
+          "enumDescriptions": [
+            "Codestral via Kilo Gateway",
+            "Mercury Edit 2 (FIM) via Kilo Gateway",
+            "Mercury Edit 2 (Next Edit), multi-line edit predictions with jump-to-edit UX, via Kilo Gateway",
+            "Codestral via your connected Mistral provider API key",
+            "Mercury Edit 2 (FIM) via your connected Inception provider API key",
+            "Mercury Edit 2 (Next Edit), multi-line edit predictions with jump-to-edit UX, via your connected Inception provider API key"
+          ],
+          "markdownDescription": "Model to use for inline autocomplete suggestions. If unset, the recommended default is used."
+        },
+        "kilo-code.v2.autocomplete.provider": {
+          "type": "string",
+          "enum": [
+            "kilo",
+            "mistral",
+            "inception"
+          ],
+          "enumDescriptions": [
+            "Use autocomplete models through Kilo Gateway",
+            "Use autocomplete models through your connected Mistral provider API key",
+            "Use autocomplete models through your connected Inception provider API key"
+          ],
+          "markdownDescription": "Provider to use for inline autocomplete suggestions. If unset, Kilo Gateway is used."
+        },
+        "kilo-code.v2.autocomplete.enableAutoTrigger": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "Enable automatic inline completion suggestions."
+        },
+        "kilo-code.v2.autocomplete.enableSmartInlineTaskKeybinding": {
+          "type": "boolean",
+          "default": false,
+          "markdownDescription": "Enable the smart inline task keybinding (`Ctrl+L` / `Cmd+L`) that generates a suggestion at the cursor."
+        },
+        "kilo-code.v2.autocomplete.enableChatAutocomplete": {
+          "type": "boolean",
+          "default": false,
+          "markdownDescription": "Enable autocomplete suggestions in the chat input."
         }
       }
     },
@@ -168,6 +226,16 @@
         "command": "kilo-code.v2.cyclePreviousAgentMode",
         "title": "Cycle Previous Agent Mode",
         "category": "Kilo Code (v2)"
+      },
+      {
+        "command": "kilo-code.v2.autocomplete.generateSuggestions",
+        "title": "Generate Suggested Edits",
+        "category": "Kilo Code (v2)"
+      },
+      {
+        "command": "kilo-code.v2.autocomplete.cancelSuggestions",
+        "title": "Cancel Suggested Edits",
+        "category": "Kilo Code (v2)"
       }
     ],
     "keybindings": [
@@ -188,6 +256,23 @@
         "key": "ctrl+f",
         "mac": "cmd+f",
         "when": "activeWebviewPanelId == 'kilo-code.v2.settingsPanel'"
+      },
+      {
+        "command": "kilo-code.v2.autocomplete.cancelSuggestions",
+        "key": "escape",
+        "when": "editorTextFocus && !editorTabMovesFocus && !inSnippetMode && kilo-code.v2.autocomplete.hasSuggestions"
+      },
+      {
+        "command": "kilo-code.v2.autocomplete.generateSuggestions",
+        "key": "ctrl+l",
+        "mac": "cmd+l",
+        "when": "editorTextFocus && !editorTabMovesFocus && !inSnippetMode && kilo-code.v2.autocomplete.enableSmartInlineTaskKeybinding && !github.copilot.completions.enabled"
+      },
+      {
+        "command": "kilo-code.v2.autocomplete.showIncompatibilityExtensionPopup",
+        "key": "ctrl+l",
+        "mac": "cmd+l",
+        "when": "editorTextFocus && !editorTabMovesFocus && !inSnippetMode && kilo-code.v2.autocomplete.enableSmartInlineTaskKeybinding && github.copilot.completions.enabled"
       }
     ],
     "menus": {
@@ -224,6 +309,7 @@
     "test": "bun test"
   },
   "dependencies": {
+    "@kilocode/gateway-core": "workspace:*",
     "@kilocode/kilo-i18n": "workspace:*",
     "@kilocode/kilo-ui": "workspace:*",
     "@kobalte/core": "catalog:",
@@ -235,11 +321,18 @@
     "@pierre/diffs": "1.2.10",
     "@thisbeyond/solid-dnd": "0.7.5",
     "diff": "catalog:",
+    "fastest-levenshtein": "1.0.16",
     "fuzzysort": "catalog:",
+    "ignore": "7.0.5",
+    "js-tiktoken": "1.0.21",
     "jsonc-parser": "3.3.1",
+    "lru-cache": "11.5.2",
     "marked": "catalog:",
+    "quick-lru": "7.3.0",
     "solid-js": "catalog:",
-    "virtua": "0.49.1"
+    "uri-js": "4.4.1",
+    "virtua": "0.49.1",
+    "web-tree-sitter": "0.25.10"
   },
   "devDependencies": {
     "@babel/core": "7.29.7",

@@ -5,6 +5,7 @@ import { Component, For, createEffect, createMemo, on } from "solid-js"
 import { useLanguage } from "../../context/language"
 import { useV2 } from "../../v2/client"
 import { useSettingsConfig } from "../../v2/settings-config"
+import AutocompleteModelRow from "./AutocompleteModelRow"
 import ModelPicker from "./ModelPicker"
 import { selection, write, preserveVariant, readPathValue, type ModelSelection } from "./models-selection"
 import SettingsRow from "./SettingsRow"
@@ -108,6 +109,7 @@ const ModelsTab: Component<SettingsTabProps> = () => {
             showVariants={false}
           />
         </SettingsRow>
+        <AutocompleteModelRow />
         <SettingsRow
           title={language.t("settings.models.hidePromptTraining.title")}
           description={

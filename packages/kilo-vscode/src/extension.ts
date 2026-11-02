@@ -4,6 +4,8 @@ import { chat } from "./chat"
 import { createCostAlerts } from "./cost-alert"
 import { command, manager, settingsEnvironment } from "./server"
 import { readKiloSettings } from "./settings-host"
+import { registerAutocompleteProvider } from "./services/autocomplete"
+import { createConnection } from "./services/autocomplete/connection"
 import { settings } from "./settings-panel"
 
 export function activate(context: ExtensionContext) {
@@ -67,8 +69,15 @@ export function activate(context: ExtensionContext) {
     env: process.env,
     settings: serverSettings,
     log: (text) => output.append(text),
-    onStart: alerts.start,
-    onStop: alerts.stop,
+    // The autocomplete connection is declared below; the server starts only after activation returns.
+    onStart: (started) => {
+      alerts.start(started)
+      autocomplete.started()
+    },
+    onStop: () => {
+      alerts.stop()
+      autocomplete.stopped()
+    },
     onError: (error) => {
       output.appendLine(error.message)
       void window.showErrorMessage(error.message.split("\n")[0], "Show Output").then((choice) => {
@@ -76,6 +85,9 @@ export function activate(context: ExtensionContext) {
       })
     },
   })
+  const autocomplete = createConnection({ server, directory })
+  context.subscriptions.push({ dispose: autocomplete.dispose })
+  registerAutocompleteProvider(context, autocomplete)
   const view = chat({ context, server, directory, trackCostSession: alerts.track })
   const panel = settings({ context, server, directory, onReset: view.syncState })
 

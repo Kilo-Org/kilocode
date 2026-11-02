@@ -37,6 +37,11 @@ export type KiloSettingKey =
   | "maxCost"
   | "claudeCodeCompat"
   | "extraCaCerts"
+  | "autocomplete.enableAutoTrigger"
+  | "autocomplete.enableSmartInlineTaskKeybinding"
+  | "autocomplete.enableChatAutocomplete"
+  | "autocomplete.provider"
+  | "autocomplete.model"
 
 type Json = Record<string, unknown>
 
