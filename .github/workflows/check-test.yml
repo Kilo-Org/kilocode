@@ -445,7 +445,14 @@ jobs:
     timeout-minutes: 5
     steps:
       - name: Verify the unit matrix passed
-        run: test "${{ needs.unit.result }}" = "success"
+        # The matrix is skipped on a draft pull request, so its verdict is `skipped` there and not a failure.
+        run: |
+          result="${{ needs.unit.result }}"
+          if [ "$result" = "skipped" ] && [ "${{ github.event.pull_request.draft }}" = "true" ]; then
+            echo "Draft pull request: the unit matrix is skipped"
+            exit 0
+          fi
+          test "$result" = "success"
 
   required:
     name: test (linux)
@@ -458,9 +465,17 @@ jobs:
     timeout-minutes: 5
     steps:
       - name: Verify the v2 CI jobs passed
+        # `unit` and `build` are skipped on a draft pull request; `sdk` always runs.
         run: |
-          echo "unit=${{ needs.unit.result }} build=${{ needs.build.result }} sdk=${{ needs.sdk.result }}"
-          test "${{ needs.unit.result }}" = "success"
-          test "${{ needs.build.result }}" = "success"
-          test "${{ needs.sdk.result }}" = "success"
+          unit="${{ needs.unit.result }}"
+          build="${{ needs.build.result }}"
+          sdk="${{ needs.sdk.result }}"
+          echo "unit=$unit build=$build sdk=$sdk"
+          if [ "${{ github.event.pull_request.draft }}" = "true" ] && [ "$unit" = "skipped" ] && [ "$build" = "skipped" ]; then
+            test "$sdk" = "success"
+            exit 0
+          fi
+          test "$unit" = "success"
+          test "$build" = "success"
+          test "$sdk" = "success"
   # kilocode_change end
