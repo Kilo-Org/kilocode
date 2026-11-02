@@ -54,7 +54,7 @@ export class RecentlyEditedTracker {
     // Check for overlap with any existing ranges
     for (let i = 0; i < this.recentlyEditedRanges.length; i++) {
       let range = this.recentlyEditedRanges[i]
-      if (range.range.intersection(editedRange.range)) {
+      if (range.uri.toString() === editedRange.uri.toString() && range.range.intersection(editedRange.range)) {
         const union = range.range.union(editedRange.range)
         const contents = await this._getContentsForRange({
           ...range,
