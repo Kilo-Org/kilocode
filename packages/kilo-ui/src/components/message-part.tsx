@@ -372,6 +372,7 @@ ToolRegistry.register({
     const path = () => string(props.input.path)
     const args = () =>
       ["offset", "limit"].flatMap((key) => (typeof props.input[key] === "number" ? [`${key}=${props.input[key]}`] : []))
+    const line = () => (typeof props.input.offset === "number" ? props.input.offset : undefined)
     const images = () => props.attachments.filter((file) => file.mime.startsWith("image/"))
     return (
       <>
@@ -385,6 +386,14 @@ ToolRegistry.register({
               pending={busy(props.status)}
               subtitle={getFilename(path())}
               args={args()}
+              onClick={
+                props.actions?.openFile && path()
+                  ? (event) => {
+                      event.stopPropagation()
+                      props.actions?.openFile?.(path(), line())
+                    }
+                  : undefined
+              }
             />
           }
         />
