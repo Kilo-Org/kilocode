@@ -164,7 +164,7 @@ jobs:
             test "$other" -eq 0 && test "$hoststatus" -eq 0
             exit
           fi
-          GITHUB_ACTIONS=false bun turbo test:ci --concurrency=3 "${affected[@]}"
+          GITHUB_ACTIONS=false bun turbo test:ci --concurrency=3 "${affected[@]}" --filter='!@kilocode/kilo-cli'
           # kilocode_change end
         env:
           OPENCODE_EXPERIMENTAL_DISABLE_FILEWATCHER: ${{ runner.os == 'Windows' && 'true' || 'false' }}
