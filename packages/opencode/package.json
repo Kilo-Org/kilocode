@@ -163,7 +163,7 @@
     "jsonc-parser": "3.3.1",
     "mammoth": "1.12.0",
     "mime-types": "3.0.2",
-    "minimatch": "10.2.6",
+    "minimatch": "11.0.1",
     "npm-package-arg": "13.0.2",
     "open": "11.0.4",
     "opencode-gitlab-auth": "2.1.0",
