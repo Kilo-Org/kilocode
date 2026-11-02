@@ -26,6 +26,7 @@ export const KILO_SETTING_KEYS = [
   "maxCost",
   "claudeCodeCompat",
   "extraCaCerts",
+  "languageCommitMessage",
 ] as const
 
 /** `kilo-code.v2.fontSize` when set, otherwise `editor.fontSize`, clamped to the v1 slider range. */
