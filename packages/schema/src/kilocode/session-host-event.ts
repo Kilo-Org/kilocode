@@ -20,4 +20,17 @@ export const Availability = Event.define({
 
 export const AvailabilityInfo = Availability.data
 
-export const Definitions = Event.inventory(Availability)
+/**
+ * Local progress for one Continue-in-Cloud preparation, keyed by the client's
+ * `operationKey`. It is emitted only when real work starts, never on a timer.
+ */
+export const Continuation = Event.define({
+  type: "session.host.continuation",
+  schema: {
+    operationKey: Schema.String,
+    directory: Schema.String,
+    stage: Schema.Literals(["checking", "syncing", "creating"]),
+  },
+})
+
+export const Definitions = Event.inventory(Availability, Continuation)

@@ -91,6 +91,7 @@ export const dict = {
   "agentManager.worktree.defaultBaseBranch": "Гілка за замовчуванням",
   "agentManager.worktree.defaultBaseBranchAuto": "Автоматичне визначення",
   "agentManager.worktree.copyPath": "Копіювати шлях",
+  "agentManager.worktree.continueInCloud": "Continue in Cloud",
   "agentManager.worktree.openInVscode": "Відкрити у VS Code",
   "agentManager.worktree.rename": "Перейменувати",
   "agentManager.worktree.pin": "Закріпити",

@@ -43,6 +43,7 @@ function provider(name: string, session: string, options: { default?: boolean; a
       Effect.fail(new HostedFailure({ code: "not_found", message: input.id.workspaceID, retryable: false })),
     deleteWorkspace: (input) => Effect.succeed({ workspace: input.id, success: true }),
     createWorkspace: () => Effect.fail(new HostedFailure({ code: "rejected", message: "unused", retryable: false })),
+    continueWorkspace: () => Effect.fail(new HostedFailure({ code: "rejected", message: "unused", retryable: false })),
     startWorkspaceSession: () =>
       Effect.fail(new HostedFailure({ code: "rejected", message: "unused", retryable: false })),
     attach: (input) => Effect.succeed({ session: input.id, expiresAt: 1 }),
