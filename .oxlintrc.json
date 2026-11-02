@@ -142,6 +142,43 @@
           }
         ]
       }
+    },
+    {
+      // Kilo VS Code metric gates, ported from the v1 ESLint config for the same scope: 3000 lines per file and complexity 20 per function.
+      "files": ["packages/kilo-vscode/src/**", "packages/kilo-vscode/webview-ui/**"],
+      "rules": {
+        "max-lines": ["error", 3000],
+        "complexity": ["error", 20]
+      }
+    },
+    // Per-file complexity exceptions, measured on this branch. Each cap is that file's current maximum. Existing violations are capped at their current maximum, new code must stay <= 20, do not raise these caps, refactor instead.
+    {
+      "files": ["packages/kilo-vscode/src/config-aliases.ts"],
+      "rules": { "complexity": ["error", 21] }
+    },
+    {
+      "files": ["packages/kilo-vscode/src/chat.ts"],
+      "rules": { "complexity": ["error", 23] }
+    },
+    {
+      "files": ["packages/kilo-vscode/webview-ui/src/components/settings/agent-behaviour/WorkflowsSubtab.tsx"],
+      "rules": { "complexity": ["error", 23] }
+    },
+    {
+      "files": ["packages/kilo-vscode/webview-ui/src/components/settings/CustomProviderValidation.ts"],
+      "rules": { "complexity": ["error", 25] }
+    },
+    {
+      "files": ["packages/kilo-vscode/webview-ui/src/components/settings/provider-visibility.ts"],
+      "rules": { "complexity": ["error", 23] }
+    },
+    {
+      "files": ["packages/kilo-vscode/webview-ui/src/v2/question.tsx"],
+      "rules": { "complexity": ["error", 29] }
+    },
+    {
+      "files": ["packages/kilo-vscode/webview-ui/src/v2/form.ts"],
+      "rules": { "complexity": ["error", 44] }
     }
   ],
   "ignorePatterns": [

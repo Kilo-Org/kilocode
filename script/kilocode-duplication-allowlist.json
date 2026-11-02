@@ -1,0 +1,147 @@
+{
+  "version": 1,
+  "scanner": "jscpd@5.0.16",
+  "exceptions": [
+    {
+      "files": ["packages/kilo-gateway-core/src/embedding-catalog.ts", "packages/schema/src/kilocode/gateway.ts"],
+      "fingerprint": "7f6235d19944e0da",
+      "maxMatches": 1,
+      "maxTokens": 101,
+      "kind": "legacy",
+      "owner": "kilo-gateway-core",
+      "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."
+    },
+    {
+      "files": [
+        "packages/kilo-ui-base/src/components/basic-tool.css",
+        "packages/kilo-ui-base/src/components/basic-tool.css"
+      ],
+      "fingerprint": "34e54c14d33caa01",
+      "maxMatches": 1,
+      "maxTokens": 124,
+      "kind": "legacy",
+      "owner": "kilo-ui-base",
+      "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."
+    },
+    {
+      "files": [
+        "packages/kilo-ui-base/src/components/button.css",
+        "packages/kilo-ui-base/src/components/icon-button.css"
+      ],
+      "fingerprint": "88351f3955738ae0",
+      "maxMatches": 1,
+      "maxTokens": 196,
+      "kind": "legacy",
+      "owner": "kilo-ui-base",
+      "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."
+    },
+    {
+      "files": [
+        "packages/kilo-ui-base/src/components/button.css",
+        "packages/kilo-ui-base/src/components/icon-button.css"
+      ],
+      "fingerprint": "a854f8188a946352",
+      "maxMatches": 1,
+      "maxTokens": 153,
+      "kind": "legacy",
+      "owner": "kilo-ui-base",
+      "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."
+    },
+    {
+      "files": [
+        "packages/kilo-ui-base/src/components/button.css",
+        "packages/kilo-ui-base/src/components/icon-button.css"
+      ],
+      "fingerprint": "ddaedba18282ff28",
+      "maxMatches": 1,
+      "maxTokens": 103,
+      "kind": "legacy",
+      "owner": "kilo-ui-base",
+      "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."
+    },
+    {
+      "files": ["packages/kilo-ui-base/src/components/checkbox.css", "packages/kilo-ui-base/src/components/switch.css"],
+      "fingerprint": "566f07d9f3cbdb51",
+      "maxMatches": 1,
+      "maxTokens": 106,
+      "kind": "legacy",
+      "owner": "kilo-ui-base",
+      "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."
+    },
+    {
+      "files": ["packages/kilo-ui-base/src/components/file.tsx", "packages/kilo-ui/src/components/code.tsx"],
+      "fingerprint": "bb967c03ab9721bf",
+      "maxMatches": 1,
+      "maxTokens": 124,
+      "kind": "legacy",
+      "owner": "kilo-ui-base",
+      "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."
+    },
+    {
+      "files": ["packages/kilo-ui-base/src/components/list.css", "packages/kilo-ui-base/src/components/list.css"],
+      "fingerprint": "256262cc4a25c531",
+      "maxMatches": 1,
+      "maxTokens": 120,
+      "kind": "legacy",
+      "owner": "kilo-ui-base",
+      "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."
+    },
+    {
+      "files": [
+        "packages/kilo-ui-base/src/components/text-field.css",
+        "packages/kilo-ui-base/src/components/text-field.css"
+      ],
+      "fingerprint": "23faa782c8873dc3",
+      "maxMatches": 1,
+      "maxTokens": 101,
+      "kind": "legacy",
+      "owner": "kilo-ui-base",
+      "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."
+    },
+    {
+      "files": ["packages/kilo-ui-base/src/context/marked.tsx", "packages/kilo-ui-base/src/pierre/kilo-diff-theme.ts"],
+      "fingerprint": "a8a26948ecb5606a",
+      "maxMatches": 1,
+      "maxTokens": 958,
+      "kind": "legacy",
+      "owner": "kilo-ui-base",
+      "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."
+    },
+    {
+      "files": ["packages/kilo-ui-base/src/pierre/commented-lines.ts", "packages/kilo-ui/src/components/code.tsx"],
+      "fingerprint": "56863de8e780234f",
+      "maxMatches": 1,
+      "maxTokens": 147,
+      "kind": "legacy",
+      "owner": "kilo-ui-base",
+      "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."
+    },
+    {
+      "files": ["packages/kilo-ui-base/src/pierre/commented-lines.ts", "packages/kilo-ui/src/pierre/diff-dom.ts"],
+      "fingerprint": "7fafcc6f1eee41ea",
+      "maxMatches": 1,
+      "maxTokens": 122,
+      "kind": "legacy",
+      "owner": "kilo-ui-base",
+      "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."
+    },
+    {
+      "files": ["packages/kilo-ui-base/src/pierre/file-find.ts", "packages/kilo-ui/src/components/code.tsx"],
+      "fingerprint": "9d68d3411761ec98",
+      "maxMatches": 1,
+      "maxTokens": 101,
+      "kind": "legacy",
+      "owner": "kilo-ui-base",
+      "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."
+    },
+    {
+      "files": ["packages/kilo-ui/src/components/message-part.tsx", "packages/kilo-ui/src/components/message-part.tsx"],
+      "fingerprint": "ea035d7b83a98f2e",
+      "maxMatches": 1,
+      "maxTokens": 131,
+      "kind": "legacy",
+      "owner": "kilo-ui",
+      "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."
+    }
+  ]
+}
