@@ -224,12 +224,11 @@ describe("coordinator rejection paths", () => {
       expect(error.code).toBe("provider_result")
       const evidence = await readEvidence(dir)
       expect(evidence.cleanup.status).toBe("failed")
-      expect(evidence.cleanup.leftovers.map((resource) => `${resource.kind}:${resource.id}`)).toEqual([
-        "workspace:ws-run",
-        "cloud-session:cs-run",
-      ])
       expect(evidence.cleanup.removed.map((resource) => `${resource.kind}:${resource.id}`)).toEqual([
         "workspace:ws-run",
+      ])
+      expect(evidence.cleanup.leftovers.map((resource) => `${resource.kind}:${resource.id}`)).toEqual([
+        "cloud-session:cs-run",
       ])
       expect(evidence.cleanup.error).toBe("fixture provider cleanup did not complete")
       expect(evidence.cleanup.leftovers.every((resource) => resource.reason.length > 0)).toBe(true)

@@ -232,19 +232,23 @@ async function cleanup(options: Options, descriptor: FixtureDescriptor | undefin
   // Leftovers are recorded in sanitized evidence so a failed cleanup can be retried or traced even
   // when the provider cannot report ownership; only resource ids are kept, never cleanup tokens.
   const owned = descriptor ?? (await recoverDescriptor(options))
-  const failed = (message: string, removed: Resource[] = []): CleanupResult => ({
-    schemaVersion: SCHEMA_VERSION,
-    runId: options.runId,
-    status: "failed",
-    removed,
-    leftovers:
-      owned?.cleanup.ids.map((resource) => ({
-        kind: resource.kind,
-        id: resource.id,
-        reason: message,
-      })) ?? [],
-    error: message,
-  })
+  const failed = (message: string, removed: Resource[] = []): CleanupResult => {
+    const done = new Set(removed.map((resource) => `${resource.kind}:${resource.id}`))
+    return {
+      schemaVersion: SCHEMA_VERSION,
+      runId: options.runId,
+      status: "failed",
+      removed,
+      leftovers: (owned?.cleanup.ids ?? [])
+        .filter((resource) => !done.has(`${resource.kind}:${resource.id}`))
+        .map((resource) => ({
+          kind: resource.kind,
+          id: resource.id,
+          reason: message,
+        })),
+      error: message,
+    }
+  }
   try {
     await writeJson(requestPath, request)
     const exit = await runChild({
