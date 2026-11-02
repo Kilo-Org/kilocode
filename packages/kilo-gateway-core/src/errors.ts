@@ -32,6 +32,11 @@ export interface ParsedError {
 export function catalogMessage(failure: KiloModels.Failure) {
   if (failure.kind === "organization_missing")
     return "The selected Kilo team is no longer available. Select another team or clear the team selection."
+  if (failure.kind === "unauthenticated") return "Not signed in to Kilo Gateway. Sign in to load the team model catalog."
+  if (failure.kind === "scope_conflict")
+    return "The selected Kilo team conflicts with the team of the Kilo token. Select the token's team or use another token."
+  if (failure.kind === "personal_unavailable")
+    return "This Kilo account has no personal account. Select a team to load its model catalog."
   const reason = failure.status ? `HTTP ${failure.status}` : failure.kind
   return `Failed to load the Kilo model catalog (${reason}). Check your connection and credentials.`
 }

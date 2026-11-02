@@ -148,6 +148,11 @@ test("maps each Kilo catalog failure to the v1 message", () => {
   expect(failedDescription({ kind: "organization_missing" })).toBe(
     "(Selected team is no longer available - use /teams)",
   )
+  expect(failedDescription({ kind: "unauthenticated" })).toBe("(Not signed in - sign in to continue)")
+  expect(failedDescription({ kind: "scope_conflict" })).toBe(
+    "(Selected team conflicts with the Kilo token - use /teams)",
+  )
+  expect(failedDescription({ kind: "personal_unavailable" })).toBe("(No personal account - select a team with /teams)")
 })
 
 // The visible rows that start with one of the names, in screen order.

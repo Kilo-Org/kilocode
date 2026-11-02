@@ -10,6 +10,7 @@ import { ModeSwitcherBase } from "../components/shared/ModeSwitcher"
 import { ThinkingSelectorBase } from "../components/shared/ThinkingSelector"
 import { useLanguage } from "../context/language"
 import { useV2 } from "./client"
+import { failureMessage } from "./kilo-catalog"
 import { shiftTabCyclesVariant } from "./kilo-settings"
 import { cycleVariant, preserveVariant } from "./variant"
 
@@ -203,6 +204,7 @@ export function Selectors(props: { selection: Selection; blocked: boolean }) {
           providers={props.selection.providers()}
           value={model()}
           blocked={props.blocked}
+          failure={failureMessage(language.t, v2.kiloFailure())}
           onSelect={props.selection.selectModel}
         />
       }

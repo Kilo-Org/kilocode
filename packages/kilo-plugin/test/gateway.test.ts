@@ -1793,7 +1793,7 @@ describe("KiloGatewayPlugin", () => {
           const providers = yield* Provider.Service
           expect(yield* rpc.call("kilocode.gateway", "authStatus", {})).toMatchObject({ authenticated: false, organizationID: "selected" })
           expect((yield* providers.available()).some((provider) => provider.id === kilo)).toBe(false)
-          expect(yield* rpc.client(KiloGatewayRpc.Definition).models({}).pipe(Effect.flip)).toMatchObject({ type: "failed", data: { kind: "unauthorized" } })
+          expect(yield* rpc.client(KiloGatewayRpc.Definition).models({}).pipe(Effect.flip)).toMatchObject({ type: "failed", data: { kind: "unauthenticated" } })
           expect(yield* rpc.client(KiloGatewayRpc.Definition)["models.images"]({}).pipe(Effect.flip)).toMatchObject({ type: "unauthorized" })
           const session = yield* host.session.create({ title: "no token" })
           const hooks = yield* PluginHooks.Service
