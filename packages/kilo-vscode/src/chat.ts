@@ -15,6 +15,8 @@ import type { ToHost, ToWebview } from "./protocol"
 import { bridge } from "./relay"
 import { saveImage } from "./save-image"
 import type { Manager } from "./server"
+import type { AutocompleteConnection } from "./services/autocomplete/connection"
+import { ChatTextAreaAutocomplete } from "./services/autocomplete/chat-autocomplete/ChatTextAreaAutocomplete"
 import { effectiveFontSize, KILO_SETTING_KEYS, readKiloSettings, settingsHost } from "./settings-host"
 import { promptKeybindings, watchKeybindings } from "./prompt-keybindings"
 
@@ -23,6 +25,8 @@ export function chat(input: {
   server: Manager
   directory: string
   trackCostSession: (sessionID: string) => void
+  /** The autocomplete connection of the extension host, when one exists. */
+  autocomplete?: AutocompleteConnection
 }) {
   // Commands sent before the webview bundle listens are lost, and a resolved view is not yet loaded. Keep them until
   // the webview sends its first message, which it does on mount.
@@ -93,6 +97,8 @@ export function wire(input: {
   webview: Webview
   view: "chat" | "settings"
   trackCostSession?: (sessionID: string) => void
+  /** The autocomplete connection of the extension host, when one exists. */
+  autocomplete?: AutocompleteConnection
   /** Called on every message from the webview, before it is handled. */
   onMessage?: () => void
   /** Handles a view-specific message before the standard set. Returns true when it did. */
@@ -110,6 +116,8 @@ export function wire(input: {
     fetch: local,
   })
   const post = (message: ToWebview) => void webview.postMessage(message)
+  // The chat autocomplete surface, created on the first request so a connection-less host can still answer.
+  let chatAutocomplete: ChatTextAreaAutocomplete | undefined
   // Config read and write are host-side: only the Settings panel uses them.
   const settings =
     input.view === "settings"
@@ -168,6 +176,19 @@ export function wire(input: {
         .update("language", message.locale || undefined, true)
     // The Kilo Gateway sign-in runs in the Profile view of the sidebar, as main opens its Profile panel.
     if (message.type === "openProfile") return void commands.executeCommand("kilo-code.v2.profile")
+    // Chat textarea autocomplete: only the sidebar composer asks for it.
+    if (input.view === "chat" && message.type === "requestChatCompletion") {
+      const autocomplete = input.autocomplete
+      if (!autocomplete) return post({ type: "chatCompletionResult", text: "", requestId: message.requestId })
+      chatAutocomplete ??= new ChatTextAreaAutocomplete(autocomplete)
+      void chatAutocomplete.handle(
+        { type: "requestChatCompletion", text: message.text, requestId: message.requestId },
+        { postMessage: (result) => post(result) },
+      )
+      return
+    }
+    if (input.view === "chat" && message.type === "chatCompletionAccepted")
+      return chatAutocomplete?.telemetry.captureAcceptSuggestion(message.suggestionLength)
   })
   const uri = (...parts: string[]) => webview.asWebviewUri(Uri.joinPath(root, ...parts)).toString()
   webview.html = html({
@@ -187,6 +208,7 @@ export function wire(input: {
   return {
     post,
     dispose() {
+      chatAutocomplete?.dispose()
       link.dispose()
       settings?.dispose()
       settingsWatch?.dispose()

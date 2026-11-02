@@ -46,6 +46,8 @@ export type ToHost =
   | ({ type: "openSettingsTab" } & SettingsNavigation)
   | { type: "settingsReady" }
   | { type: "settingsTabChanged"; tab: string }
+  | { type: "requestChatCompletion"; text: string; requestId: string }
+  | { type: "chatCompletionAccepted"; suggestionLength?: number }
 
 /** Messages of the copied v1 UI. The host ignores `webviewFocusChanged` and `setLanguage` for now. */
 export type Ui =
@@ -111,3 +113,4 @@ export type ToWebview =
       error?: string
       auth?: boolean
     }
+  | { type: "chatCompletionResult"; text: string; requestId: string }
