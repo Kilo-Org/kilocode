@@ -44,8 +44,10 @@ Keep Awake prevents system sleep only. It does not keep the display on and does 
 
 | Platform | Mechanism |
 |---|---|
-| macOS | `/usr/bin/caffeinate` |
+| macOS | `/usr/bin/caffeinate -i` (idle sleep only) |
 | Linux | `systemd-inhibit` |
-| Windows | `SetThreadExecutionState` through PowerShell |
+| Windows | `SetThreadExecutionState` through PowerShell (idle sleep only) |
 
 If the required command is not available, Kilo reports that Keep Awake is unavailable and does not start the inhibitor.
+
+On macOS and Windows, Keep Awake stops only idle sleep; it does not override sleep that the lid or the user triggers. On a Mac laptop with no external display, closing the lid or choosing Sleep puts it to sleep, and the running sessions pause until it wakes. Apple documents that an idle-sleep assertion leaves the Mac free to "sleep for lid close, Apple menu, low battery, or other sleep reasons" ([Apple](https://developer.apple.com/documentation/iokit/kiopmassertiontypepreventuseridlesystemsleep)). With an external display and power connected (closed-display mode), a Mac laptop can keep running with the lid closed. On Windows, what closing the lid does follows the power settings ([Microsoft](https://learn.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-setthreadexecutionstate)).
