@@ -46,3 +46,8 @@ export function applyKiloSettings(values: Record<string, unknown>) {
 export function shiftTabCyclesVariant(): boolean {
   return kiloSettings()["chat.shiftTabCyclesVariant"] !== false
 }
+
+/** `kilo-code.v2.showTokenThroughput`, on by default. */
+export function tokenThroughputVisible(): boolean {
+  return kiloSettings()["showTokenThroughput"] !== false
+}

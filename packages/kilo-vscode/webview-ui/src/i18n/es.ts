@@ -1350,7 +1350,7 @@ export const dict = {
     "Muestra en el prompt vacío el atajo de teclado adecuado a lo que hace ahora, por ejemplo cómo añadir el código seleccionado o volver al prompt.",
   "settings.display.tokenThroughput.title": "Mostrar rendimiento de tokens",
   "settings.display.tokenThroughput.description":
-    "Mostrar la velocidad de generación de texto (tokens/sec) en el último mensaje del asistente y en el encabezado de la tarea. Se muestra de forma predeterminada; desactiva esta opción para ocultarla cuando sea necesario.",
+    "Display the text-generation rate (tokens/sec) on the latest assistant message footer. Shown by default; disable this setting to hide it when needed.",
   "settings.display.autoApprovalReason.title": "Mostrar motivo de aprobación automática",
   "settings.display.autoApprovalReason.description":
     "Muestra por qué se aprobó automáticamente una llamada a una herramienta, como una regla de permisos coincidente o un valor predeterminado del agente.",

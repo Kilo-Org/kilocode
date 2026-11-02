@@ -1253,7 +1253,7 @@ export const dict = {
     "在空输入框中显示与当前操作相符的键盘快捷键，例如如何添加所选代码或返回输入框。",
   "settings.display.tokenThroughput.title": "显示令牌吞吐量",
   "settings.display.tokenThroughput.description":
-    "在最新的助手消息和任务标题中显示文本生成速率（tokens/sec）。默认显示；需要时禁用此设置即可隐藏。",
+    "Display the text-generation rate (tokens/sec) on the latest assistant message footer. Shown by default; disable this setting to hide it when needed.",
   "settings.display.autoApprovalReason.title": "显示自动批准原因",
   "settings.display.autoApprovalReason.description": "显示工具调用被自动批准的原因，例如匹配的权限规则或代理默认值。",
 

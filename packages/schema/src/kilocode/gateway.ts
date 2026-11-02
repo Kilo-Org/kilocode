@@ -193,6 +193,49 @@ export const EditTarget = Schema.Struct({
   url: Schema.String,
 })
 
+// One FIM completion. The server sends the provider request with `stream: true` and returns the collected text, so
+// the client never holds the Kilo token or a provider key.
+export const FimRequest = Schema.Struct({
+  prefix: Schema.String,
+  suffix: Schema.String,
+  provider: Schema.optional(Schema.String),
+  model: Schema.optional(Schema.String),
+  maxTokens: Schema.optional(Schema.Finite),
+  temperature: Schema.optional(Schema.Finite),
+})
+
+export const FimResult = Schema.Struct({
+  text: Schema.String,
+  cost: Schema.Finite,
+  inputTokens: Schema.Finite,
+  outputTokens: Schema.Finite,
+})
+
+// One Next Edit request. Clients send structured editor context; the server builds the Mercury prompt.
+export const EditRequest = Schema.Struct({
+  provider: Schema.optional(Schema.String),
+  model: Schema.optional(Schema.String),
+  maxTokens: Schema.optional(Schema.Finite),
+  currentFilePath: Schema.String,
+  currentFileContent: Schema.String,
+  cursorLine: Schema.Finite,
+  cursorCharacter: Schema.Finite,
+  editableRegionStartLine: Schema.Finite,
+  editableRegionEndLine: Schema.Finite,
+  recentlyViewedSnippets: Schema.Array(Schema.Struct({ filepath: Schema.String, content: Schema.String })),
+  editDiffHistory: Schema.Array(Schema.String),
+})
+
+export const EditResult = Schema.Struct({
+  content: Schema.String,
+  usage: Schema.optional(
+    Schema.Struct({
+      prompt_tokens: Schema.optional(Schema.Finite),
+      completion_tokens: Schema.optional(Schema.Finite),
+    }),
+  ),
+})
+
 export const ModelEntry = Schema.Struct({
   id: Schema.String,
   name: Schema.String,
@@ -269,6 +312,12 @@ export const PLATFORM_METADATA_KEY = "kilocode.platform"
 const RouterFailure = {
   ...Failure,
   router: portable(Schema.Struct({ code: Schema.String, retryAt: Schema.optional(Schema.String) })),
+}
+// `request` carries the HTTP status of a failed provider request (or 499 canceled, 504 timed out), so clients can
+// back off by status. Missing credentials and a conflicting team scope fail with `unauthorized`.
+const AutocompleteFailure = {
+  ...Failure,
+  request: portable(Schema.Struct({ status: Schema.Int })),
 }
 const RouterTarget = Schema.Struct({
   /** Router model ID or slug, as `kilo auto router` accepts it. */
@@ -379,6 +428,16 @@ export const Definition = Rpc.define({
       input: portable(Schema.Struct({ provider: Schema.optional(Schema.String), model: Schema.optional(Schema.String) })),
       output: portable(EditTarget),
       errors: Failure,
+    },
+    "autocomplete.fim": {
+      input: portable(FimRequest),
+      output: portable(FimResult),
+      errors: AutocompleteFailure,
+    },
+    "autocomplete.edit": {
+      input: portable(EditRequest),
+      output: portable(EditResult),
+      errors: AutocompleteFailure,
     },
     "session.metadata": {
       input: portable(Schema.Struct({ sessionID: Schema.String })),

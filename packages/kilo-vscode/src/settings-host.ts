@@ -11,6 +11,7 @@ import { applyConfigEdits, isKiloConfigFile, serialize } from "./config-file-edi
 import { configPolicy, type PolicyDocument } from "./config-policy"
 import { fetchCustomProviderModels } from "./custom-provider-models"
 import { local } from "./local"
+import { validAutocompleteSetting } from "./services/autocomplete/settings"
 import { candidateConfigFiles, chooseConfigFile, configDirectories } from "./open-config"
 import { resolveGlobalConfigDir, canonicalPath, matchConfigDocument } from "./settings-paths"
 import type { ConfigEdit, ConfigScope, ToHost, ToWebview } from "./protocol"
@@ -23,10 +24,16 @@ export const KILO_SETTING_KEYS = [
   "fontSize",
   "language",
   "chat.shiftTabCyclesVariant",
+  "showTokenThroughput",
   "maxCost",
   "claudeCodeCompat",
   "extraCaCerts",
   "languageCommitMessage",
+  "autocomplete.enableAutoTrigger",
+  "autocomplete.enableSmartInlineTaskKeybinding",
+  "autocomplete.enableChatAutocomplete",
+  "autocomplete.provider",
+  "autocomplete.model",
 ] as const
 
 /** `kilo-code.v2.fontSize` when set, otherwise `editor.fontSize`, clamped to the v1 slider range. */
@@ -224,6 +231,7 @@ export function settingsHost(input: {
     const config = workspace.getConfiguration(NAMESPACE)
     for (const [key, value] of Object.entries(values)) {
       if (!(KILO_SETTING_KEYS as readonly string[]).includes(key)) continue
+      if (key.startsWith("autocomplete.") && !validAutocompleteSetting(key.slice("autocomplete.".length), value)) continue
       await config.update(key, value === null ? undefined : value, true)
     }
   }

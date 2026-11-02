@@ -1217,7 +1217,7 @@ export const dict = {
     "在空白輸入框中顯示符合目前操作的鍵盤快捷鍵，例如如何新增所選程式碼或返回輸入框。",
   "settings.display.tokenThroughput.title": "顯示權杖吞吐量",
   "settings.display.tokenThroughput.description":
-    "在最新的助理訊息和任務標題中顯示文字生成速率（tokens/sec）。預設顯示；需要時停用此設定即可隱藏。",
+    "Display the text-generation rate (tokens/sec) on the latest assistant message footer. Shown by default; disable this setting to hide it when needed.",
   "settings.display.autoApprovalReason.title": "顯示自動核准原因",
   "settings.display.autoApprovalReason.description": "顯示工具呼叫被自動核准的原因，例如符合的權限規則或代理預設值。",
 

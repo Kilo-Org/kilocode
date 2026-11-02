@@ -29,4 +29,15 @@ describe("KiloAutocomplete models", () => {
     expect(KiloAutocomplete.getAutocompleteModel("kilo", "inception/mercury-edit").id).toBe("kilo/inception/mercury-edit-2")
     expect(KiloAutocomplete.getAutocompleteModel("kilo", "unknown/model")).toBe(KiloAutocomplete.DEFAULT_AUTOCOMPLETE_MODEL)
   })
+
+  test("looks models up by ID and validates stored provider and model settings", () => {
+    expect(KiloAutocomplete.getAutocompleteModelById("mistral/codestral-2508").providerID).toBe("mistral")
+    expect(KiloAutocomplete.getAutocompleteModelById("missing")).toBe(KiloAutocomplete.DEFAULT_AUTOCOMPLETE_MODEL)
+    expect(["kilo", "mistral", "inception"].every(KiloAutocomplete.validAutocompleteProvider)).toBe(true)
+    expect(KiloAutocomplete.validAutocompleteProvider("openai")).toBe(false)
+    expect(KiloAutocomplete.validAutocompleteModel("inception/mercury-edit")).toBe(true)
+    expect(KiloAutocomplete.validAutocompleteModel("mercury-next-edit")).toBe(true)
+    expect(KiloAutocomplete.validAutocompleteModel("gpt-5")).toBe(false)
+    expect(KiloAutocomplete.validAutocompleteModel(1)).toBe(false)
+  })
 })

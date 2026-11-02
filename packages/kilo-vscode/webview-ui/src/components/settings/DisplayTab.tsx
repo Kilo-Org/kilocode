@@ -74,7 +74,6 @@ const DisplayTab: Component = () => {
         <SettingsRow
           title={language.t("settings.display.shiftTabCycle.title")}
           description={language.t("settings.display.shiftTabCycle.description")}
-          last
         >
           <Switch
             checked={config.setting("chat.shiftTabCyclesVariant") !== false}
@@ -82,6 +81,20 @@ const DisplayTab: Component = () => {
             hideLabel
           >
             {language.t("settings.display.shiftTabCycle.title")}
+          </Switch>
+        </SettingsRow>
+
+        <SettingsRow
+          title={language.t("settings.display.tokenThroughput.title")}
+          description={language.t("settings.display.tokenThroughput.description")}
+          last
+        >
+          <Switch
+            checked={config.setting("showTokenThroughput") !== false}
+            onChange={(checked) => config.setSetting("showTokenThroughput", checked)}
+            hideLabel
+          >
+            {language.t("settings.display.tokenThroughput.title")}
           </Switch>
         </SettingsRow>
       </Card>

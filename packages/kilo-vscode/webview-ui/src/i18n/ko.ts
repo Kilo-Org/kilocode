@@ -1305,7 +1305,7 @@ export const dict = {
     "빈 프롬프트에 현재 작업에 맞는 키보드 단축키를 표시합니다. 예: 선택한 코드를 추가하거나 프롬프트로 돌아가는 방법.",
   "settings.display.tokenThroughput.title": "토큰 처리량 표시",
   "settings.display.tokenThroughput.description":
-    "최신 어시스턴트 메시지와 작업 헤더에 텍스트 생성 속도(tokens/sec)를 표시합니다. 기본적으로 표시되며, 필요할 때 이 설정을 비활성화하면 숨길 수 있습니다.",
+    "Display the text-generation rate (tokens/sec) on the latest assistant message footer. Shown by default; disable this setting to hide it when needed.",
   "settings.display.autoApprovalReason.title": "자동 승인 이유 표시",
   "settings.display.autoApprovalReason.description":
     "일치하는 권한 규칙이나 에이전트 기본값 등 도구 호출이 자동 승인된 이유를 표시합니다.",

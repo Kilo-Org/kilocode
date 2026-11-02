@@ -34,10 +34,16 @@ export type KiloSettingKey =
   | "fontSize"
   | "language"
   | "chat.shiftTabCyclesVariant"
+  | "showTokenThroughput"
   | "maxCost"
   | "claudeCodeCompat"
   | "extraCaCerts"
   | "languageCommitMessage"
+  | "autocomplete.enableAutoTrigger"
+  | "autocomplete.enableSmartInlineTaskKeybinding"
+  | "autocomplete.enableChatAutocomplete"
+  | "autocomplete.provider"
+  | "autocomplete.model"
 
 type Json = Record<string, unknown>
 
