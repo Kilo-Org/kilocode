@@ -444,15 +444,15 @@ export function provider(options: Options): Provider {
         retryable: false,
       })
     }
-    if (response.status === 401) {
+    if (code === "organization_mismatch") {
+      return new HostedFailure({ code, message: "Selected sessions belong to different accounts", retryable: false })
+    }
+    if (response.status === 401 || response.status === 403) {
       return new HostedFailure({
         code: "unauthorized",
         message: "Kilo Cloud rejected these credentials",
         retryable: false,
       })
-    }
-    if (code === "organization_mismatch") {
-      return new HostedFailure({ code, message: "Selected sessions belong to different accounts", retryable: false })
     }
     if (code === "operation_key_reuse_mismatch") {
       return new HostedFailure({ code, message: "This operation key was used for a different request", retryable: false })

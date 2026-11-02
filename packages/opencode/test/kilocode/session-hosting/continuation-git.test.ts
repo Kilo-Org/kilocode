@@ -10,11 +10,29 @@ import { tmpdir } from "../../fixture/fixture"
 
 const layer = LayerNode.compile(LayerNode.group([Git.node]))
 
+// Git validation uses real local repositories. Only the supported remote URL
+// is substituted; these tests do not prove GitHub network access.
+const urls = new Map<string, string>()
+
+function transport(git: Git.Interface, directory: string): Git.Interface {
+  return {
+    ...git,
+    run: (args, opts) =>
+      git.run(args, opts).pipe(
+        Effect.map((result) => {
+          const url = urls.get(directory)
+          if (url && args.join(" ") === "remote get-url origin") return { ...result, text: () => url }
+          return result
+        }),
+      ),
+  }
+}
+
 function check(directory: string) {
   return Effect.runPromise(
     Effect.gen(function* () {
       const git = yield* Git.Service
-      return yield* Continuation.checkWorktree(git, directory)
+      return yield* Continuation.checkWorktree(transport(git, directory), directory)
     }).pipe(Effect.provide(layer), Effect.flip),
   )
 }
@@ -23,7 +41,7 @@ function checkExit(directory: string) {
   return Effect.runPromise(
     Effect.gen(function* () {
       const git = yield* Git.Service
-      return yield* Continuation.checkWorktree(git, directory)
+      return yield* Continuation.checkWorktree(transport(git, directory), directory)
     }).pipe(Effect.provide(layer), Effect.exit),
   )
 }
@@ -39,9 +57,7 @@ async function repo() {
   return { work, remote, branch, bare }
 }
 
-// A local bare repository reached through the relative path remote `acme/widget`.
-// That path is the supported GitHub shorthand, so `CloudRepository.parse` accepts
-// it while real Git resolves it against the worktree — no network and no mocks.
+// A local bare repository supplies actual Git objects for the supported-URL cases.
 async function supported() {
   const work = await tmpdir({ git: true })
   const branch = (await $`git rev-parse --abbrev-ref HEAD`.cwd(work.path).text()).trim()
@@ -52,6 +68,7 @@ async function supported() {
   await Bun.write(path.join(work.path, ".git", "info", "exclude"), "acme/\n")
   await $`git remote add origin acme/widget`.cwd(work.path).quiet()
   await $`git push -u origin ${branch}`.cwd(work.path).quiet()
+  urls.set(work.path, "https://github.com/acme/widget.git")
   return { work, branch, bare }
 }
 
@@ -168,4 +185,11 @@ test("uses the configured upstream branch when the local name differs", async ()
   if (Exit.isSuccess(exit)) {
     expect(exit.value).toEqual({ type: "github", repo: "acme/widget", branch: "review/nested" })
   }
+})
+
+test("rejects a relative local remote that resembles GitHub shorthand", async () => {
+  const { work } = await supported()
+  await using cleanup = work
+  urls.delete(work.path)
+  expect(await check(work.path)).toMatchObject({ code: "remote_unsupported", retryable: false })
 })

@@ -132,7 +132,7 @@ export namespace Continuation {
       }
 
       const parsed = yield* Effect.try({
-        try: () => CloudRepository.parse({ repo: remoteUrl.text, branch }),
+        try: () => CloudRepository.remote({ repo: remoteUrl.text, branch }),
         catch: () => failure("remote_unsupported", "The remote repository is not supported", false),
       })
       if (parsed.type === "git") {
@@ -265,7 +265,8 @@ export namespace Continuation {
         }
       })
 
-    // Retry: extend retention only, never replace the stored body.
+    // Expiry is a garbage-collection deadline, not permission to replace a
+    // request under the same key. A retained retry renews its immutable body.
     const touch = (input: Omit<Stored, "preparedJSON">) =>
       db
         .transaction((tx) =>

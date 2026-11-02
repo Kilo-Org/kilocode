@@ -80,7 +80,7 @@ it.effect("touch extends retention without replacing the body", () =>
 
     yield* intents.insert({ ...base(), preparedJSON: '{"body":"one"}' })
     const before = (yield* intents.read(OPERATION)).at(0)
-    const touched = yield* intents.touch({ ...base({ now: 2_000 }), })
+    const touched = yield* intents.touch({ ...base({ now: 2_000 }) })
     expect(touched).toEqual({ ok: true, preparedJSON: '{"body":"one"}' })
     const after = (yield* intents.read(OPERATION)).at(0)
     expect(after?.prepared_json).toBe('{"body":"one"}')
@@ -104,5 +104,17 @@ it.effect("sweeps expired other intents but keeps the current one", () =>
     expect((yield* intents.read(OPERATION)).length).toBe(0)
     expect((yield* intents.read(OTHER)).length).toBe(0)
     expect((yield* intents.read(fresh)).length).toBe(1)
+  }),
+)
+
+it.effect("renews an unswept expired retry without replacing its immutable request", () =>
+  Effect.gen(function* () {
+    const { db } = yield* Database.Service
+    const intents = Continuation.store(db)
+    yield* intents.insert({ ...base(), preparedJSON: '{"body":"original"}' })
+    const now = 1_000 + 31 * DAY
+    const result = yield* intents.touch(base({ now }))
+    expect(result).toEqual({ ok: true, preparedJSON: '{"body":"original"}' })
+    expect((yield* intents.read(OPERATION)).at(0)?.expires_at).toBeGreaterThan(now)
   }),
 )

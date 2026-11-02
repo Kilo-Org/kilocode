@@ -1225,3 +1225,33 @@ for (const missing of ["share", "client"] as const) {
     expect(sent).toHaveLength(2)
   })
 }
+
+test("settle does not wait for another session's in-flight flush", async () => {
+  const gate = Promise.withResolvers<Response>()
+  const started = Promise.withResolvers<void>()
+  const q = IngestQueue.create({
+    log: { error: () => {} },
+    getShare: async (id) => ({ ingestPath: `/ingest/${id}` }),
+    getClient: async () => ({
+      url: "https://ingest.test",
+      fetch: async (url) => {
+        if (String(url).includes("unrelated")) {
+          started.resolve()
+          return gate.promise
+        }
+        return new Response("{}", { status: 200 })
+      },
+    }),
+  })
+  const data = [{ type: "session_status" as const, data: { status: "idle" as const } }]
+  await q.sync("unrelated", data)
+  const pending = q.flush("unrelated")
+  await started.promise
+  try {
+    await q.sync("selected", data)
+    expect(await q.settle(["selected"], 50)).toEqual({ ok: true })
+  } finally {
+    gate.resolve(new Response("{}", { status: 200 }))
+    await pending
+  }
+})

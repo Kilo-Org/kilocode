@@ -483,3 +483,23 @@ describe("Continue in Cloud — operation lifecycle", () => {
     expect(reports).toEqual(["Syncing sessions…"])
   })
 })
+
+describe("Continue in Cloud — SDK errors", () => {
+  beforeEach(() => resetContinuationAttempts())
+
+  for (const [tag, code] of [
+    ["UnauthorizedError", "unauthorized"],
+    ["ServiceUnavailableError", "unavailable"],
+    ["UpstreamError", "invalid_response"],
+  ] as const) {
+    it(`shows an actionable message for ${tag} and retains the request`, async () => {
+      const h = harness()
+      h.reply.error = { _tag: tag, message: "Request failed" }
+      await continueInCloud(h.host, request)
+      await continueInCloud(h.host, { ...request, sessionIds: ["ses-new"], activeSessionId: "ses-new" })
+      expect(h.prompts[0]).toContain(CONTINUATION_ACTIONS[code])
+      expect(h.keys[0]).toBe(h.keys[1])
+      expect(h.selections).toEqual([request.sessionIds, request.sessionIds])
+    })
+  }
+})

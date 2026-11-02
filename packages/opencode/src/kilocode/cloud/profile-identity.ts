@@ -58,6 +58,7 @@ export namespace ProfileIdentity {
       catch: () => fail("unavailable", "Kilo profile is unreachable"),
     })
     if (!response.ok) {
+      yield* Effect.promise(() => response.body?.cancel().catch(() => undefined) ?? Promise.resolve())
       return yield* Effect.fail(
         response.status === 401 || response.status === 403
           ? fail("signed_out", "Kilo rejected these credentials")

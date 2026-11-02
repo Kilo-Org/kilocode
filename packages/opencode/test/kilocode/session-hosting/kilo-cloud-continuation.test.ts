@@ -211,13 +211,18 @@ it.effect("reads the continuation code from a real nested tRPC envelope", () => 
     }
 
     const orgShape = harness(() =>
-      Response.json({ error: { json: { message: "organization_mismatch", data: { code: "FORBIDDEN" } } } }, { status: 409 }),
+      Response.json(
+        { error: { json: { message: "organization_mismatch", data: { code: "FORBIDDEN" } } } },
+        { status: 409 },
+      ),
     )
     const orgError = yield* client(orgShape.url).continueWorkspace(input).pipe(Effect.flip)
     expect(orgError).toMatchObject({ code: "organization_mismatch", retryable: false })
     orgShape.stop()
 
-    const progress = harness(() => Response.json({ error: { json: { message: "creation_in_progress" } } }, { status: 409 }))
+    const progress = harness(() =>
+      Response.json({ error: { json: { message: "creation_in_progress" } } }, { status: 409 }),
+    )
     const progressError = yield* client(progress.url).continueWorkspace(input).pipe(Effect.flip)
     expect(progressError).toMatchObject({ code: "creation_in_progress", retryable: true })
     progress.stop()
@@ -287,3 +292,18 @@ test("rejects a durable body with an over-long mode or variant before it is stor
   } as ContinueBody
   expect(Option.isSome(decode(boundary))).toBe(true)
 })
+
+it.effect("maps 403 authentication failures without hiding organization mismatches", () =>
+  Effect.gen(function* () {
+    for (const [message, code] of [
+      ["Forbidden", "unauthorized"],
+      ["organization_mismatch", "organization_mismatch"],
+    ]) {
+      const app = harness(() => Response.json({ error: { message, data: { code: "FORBIDDEN" } } }, { status: 403 }))
+      yield* Effect.gen(function* () {
+        const error = yield* client(app.url).continueWorkspace(input).pipe(Effect.flip)
+        expect(error).toMatchObject({ code, retryable: false })
+      }).pipe(Effect.ensuring(Effect.sync(() => app.stop())))
+    }
+  }),
+)

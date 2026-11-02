@@ -66,6 +66,7 @@ export const CONTINUATION_ACTIONS: Record<string, string> = {
   signed_out: "Sign in to Kilo, then retry.",
   auth_unavailable: "Kilo credentials are unavailable. Retry.",
   unavailable: "Kilo Cloud is temporarily unavailable. Retry.",
+  invalid_response: "Kilo Cloud returned an invalid response. Retry with the same request.",
 }
 
 /**
@@ -136,7 +137,7 @@ interface Attempt {
  */
 const attempts = new Map<string, Attempt>()
 
-/** Clear retained attempts. Exists for tests and panel teardown. */
+/** Clear retained attempts for test isolation. */
 export function resetContinuationAttempts(): void {
   attempts.clear()
 }
@@ -156,10 +157,14 @@ function attempt(id: string, request: ContinueCloudRequest): Attempt {
 
 function readCode(error: unknown): string | undefined {
   if (!error || typeof error !== "object") return undefined
-  const record = error as { code?: unknown; data?: { code?: unknown } }
+  const record = error as { code?: unknown; data?: { code?: unknown }; _tag?: unknown }
   if (typeof record.code === "string") return record.code
   const nested = record.data?.code
-  return typeof nested === "string" ? nested : undefined
+  if (typeof nested === "string") return nested
+  if (record._tag === "UnauthorizedError") return "unauthorized"
+  if (record._tag === "ServiceUnavailableError") return "unavailable"
+  if (record._tag === "UpstreamError") return "invalid_response"
+  return undefined
 }
 
 /**

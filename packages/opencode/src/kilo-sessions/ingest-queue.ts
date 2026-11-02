@@ -119,11 +119,11 @@ export namespace IngestQueue {
 
     // In-flight flush promises. flush() deletes the queue entry before I/O, so an empty queue is not
     // quiescence — drain must join these too.
-    const inflight = new Set<Promise<void>>()
+    const inflight = new Map<Promise<void>, string>()
 
-    // Last terminal flush outcome per session. `settle` requires `ok` for every
-    // requested session, so a queued-but-never-flushed session reads as clean.
-    const outcome = new Map<string, "ok" | "failed" | "retry">()
+    // Retain only unsuccessful outcomes. Successful sessions need no entry;
+    // settle also joins their in-flight work and checks their pending queue.
+    const outcome = new Map<string, "failed" | "retry">()
 
     // Last successfully resolved client and per-session share. Drain falls back to these when
     // getClient/getShare fail during teardown (e.g. authValid HTTP check).
@@ -252,7 +252,7 @@ export namespace IngestQueue {
 
       const items = Array.from(queued.data.values())
       const done = run(sessionId, items)
-      inflight.add(done)
+      inflight.set(done, sessionId)
       try {
         await done
       } finally {
@@ -343,7 +343,7 @@ export namespace IngestQueue {
         if (response.ok) {
           options.log.info?.("ingest flush ok", { sessionId, items: items.length })
           retry.delete(sessionId)
-          outcome.set(sessionId, "ok")
+          outcome.delete(sessionId)
           return
         }
 
@@ -478,9 +478,11 @@ export namespace IngestQueue {
       kick()
 
       while (true) {
-        // Join every started flush before reading an outcome, so a stale
+        // Join the selected sessions' flushes before reading an outcome, so a stale
         // `failed`/`retry` value from a prior attempt is never judged.
         const pending = Array.from(inflight)
+          .filter(([, id]) => ids.includes(id))
+          .map(([work]) => work)
         if (pending.length > 0) {
           const left = deadline - now()
           if (left <= 0) return { ok: false as const, reason: "timeout" as const }
@@ -533,7 +535,7 @@ export namespace IngestQueue {
 
         if (inflight.size === 0) continue
 
-        const pending = Array.from(inflight)
+        const pending = Array.from(inflight.keys())
         const left = Math.max(0, deadline - now())
         let timer: Timer | undefined
         const timeout = new Promise<void>((resolve) => {
