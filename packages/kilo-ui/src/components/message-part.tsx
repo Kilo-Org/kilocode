@@ -20,7 +20,6 @@ import type {
 } from "@opencode/client"
 import { getDirectory, getFilename } from "@opencode/util/path"
 import { checksum } from "@opencode/util/encode"
-import { parseDiffFromFile } from "@pierre/diffs"
 import { useClipboard } from "../context/clipboard"
 import { useDialog } from "../context/dialog"
 import { useFileComponent } from "../context/file"
@@ -695,6 +694,26 @@ function ToolFileMeta(props: { path: string; directory?: string; changes?: FileD
   )
 }
 
+function ToolDiffAction(props: { when: boolean; onClick: (event: MouseEvent) => void }) {
+  const i18n = useI18n()
+  return (
+    <Show when={props.when}>
+      <span data-slot="tool-trigger-actions">
+        <Tooltip value={i18n.t("ui.messagePart.openInDiffViewer")} placement="top" gutter={4}>
+          <IconButton
+            icon="square-arrow-top-right"
+            size="small"
+            variant="ghost"
+            onMouseDown={(event) => event.preventDefault()}
+            onClick={props.onClick}
+            aria-label={i18n.t("ui.messagePart.openInDiffViewer")}
+          />
+        </Tooltip>
+      </span>
+    </Show>
+  )
+}
+
 ToolRegistry.register({
   name: "edit",
   render(props) {
@@ -702,13 +721,34 @@ ToolRegistry.register({
     const component = useFileComponent()
     const diff = () => fileDiffs(props.metadata.files)[0]
     const path = () => diff()?.file || string(props.input.path)
+    // A plain function, not `createMemo`: a memo parses the patch with Pierre
+    // on render, even while the card stays collapsed. Only the deferred body
+    // and the diff action read it.
     const view = () => {
       const file = diff()
-      if (file) return normalize(file).fileDiff
+      if (file) return normalize(file)
       const before = string(props.input.oldString)
       const after = string(props.input.newString)
       if (!before && !after) return
-      return parseDiffFromFile({ name: path(), contents: before }, { name: path(), contents: after })
+      return normalize({ file: path(), before, after, additions: 0, deletions: 0 })
+    }
+    const canOpenDiff = () => {
+      if (!props.actions?.openDiff || !path()) return false
+      // Presence check instead of `view()` so the always-rendered trigger does
+      // not parse the patch while the card stays collapsed.
+      if (diff()?.patch) return true
+      return !!(string(props.input.oldString) || string(props.input.newString))
+    }
+    const openDiff = (event: MouseEvent) => {
+      event.stopPropagation()
+      const value = view()
+      if (!canOpenDiff() || !value) return
+      props.actions?.openDiff?.({
+        file: path(),
+        patch: value.patch,
+        additions: value.additions,
+        deletions: value.deletions,
+      })
     }
     return (
       <div data-component="edit-tool">
@@ -728,6 +768,7 @@ ToolRegistry.register({
                   <ToolFileMeta path={path()} directory={props.directory} changes={diff()} />
                 </div>
               </div>
+              <ToolDiffAction when={canOpenDiff()} onClick={openDiff} />
             </div>
           }
         >
@@ -739,8 +780,8 @@ ToolRegistry.register({
             >
               <div data-component="edit-content">
                 <Show when={view()}>
-                  {(fileDiff) => (
-                    <Dynamic component={component} mode="diff" hunkSeparators="simple" fileDiff={fileDiff()} />
+                  {(value) => (
+                    <Dynamic component={component} mode="diff" hunkSeparators="simple" fileDiff={value().fileDiff} />
                   )}
                 </Show>
               </div>
