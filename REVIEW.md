@@ -52,7 +52,7 @@ Skip in sync PRs: style, OpenCode branding in upstream code (a rename script han
 
 ### Do not duplicate CI
 
-Do not comment on what CI reports: workflow allowlist, `kilocode_change` markers, shared-patch counts and the migration progress map (`kilo-v2.yml`), lint and typecheck (`check.yml`), unit and e2e tests and generated SDK freshness (`test.yml`). If a CI job did not run, or passed with all steps skipped, say so in the summary.
+Do not comment on what CI reports: workflow allowlist, `kilocode_change` markers, shared-patch counts and the migration progress map (`kilo-v2.yml`), lint and typecheck (`check.yml`), unit and e2e tests and generated SDK freshness (`test.yml`). If a CI job did not run, or passed with all steps skipped, say so in the summary. CI checks the progress map format, not its claims: check that a new proof or disposition matches the code.
 
 ### Flag (high confidence only)
 
@@ -62,12 +62,12 @@ Do not comment on what CI reports: workflow allowlist, `kilocode_change` markers
 - **Repository rules:** no `.changeset` files on `v2`; no hand edits of generated client files (Protocol or HttpApi changes need `bun run generate` in `packages/client`); Client code never imports Core or Server.
 - **Style (AGENTS.md), clear violations in new code only:** `any`, empty `catch`, unneeded `try`/`catch`, `let` where `const` with a ternary or early return is simple, `else` after `return`, aliased or star imports, type-position `import("...")`, nested service yields in Effect, revalidating values a schema or type already guarantees, single-use helpers that do not name a real concept.
 - **Tests:** new behavior has tests in its package; prefer real integration (the Kilo Gateway, or a local HTTP fixture server) over mocks; flag tests that copy the logic under test. New logic with no test is a WARNING. An untested branch next to a tested main path, TUI rendering, or ported v1 code that nothing calls yet is a SUGGESTION. Every skipped or deleted test needs a reason in the PR.
-- **Ports from v1:** compare with the v1 code on `origin/main`. A faithful port is not a style finding; flag behavior that differs from v1 without a reason in the PR body.
+- **Ports from v1:** compare with the v1 code on `origin/main`. A faithful port is not a style finding; flag behavior that differs from v1 without a reason in the PR body. Also check that the ported behavior is reachable on v2: a v1 caller with no v2 equivalent, or new code that nothing uses, is a finding even when it is outside the diff.
 - **PR body (SUGGESTION, summary only):** commands, file names or evidence in the body that do not match the code.
 
 ### Skip
 
-Other style preferences, TODO comments, generated and lock files, style patterns already used in the same package (a copied pattern can still be a bug), existing OpenCode strings, and lines the PR does not change.
+Other style preferences, TODO comments, generated and lock files, style patterns already used in the same package (a copied pattern can still be a bug), existing OpenCode strings, lines the PR does not change, issues that already exist in v1 or in the pinned upstream release, and findings that an earlier review raised and the author fixed or answered.
 
 ## Severity
 
