@@ -11,8 +11,8 @@ export type Request = {
   body?: string
 }
 
-/** One config write: `path` is the config key path, `value` undefined removes it. */
-export type ConfigEdit = { path: string[]; value?: unknown }
+/** One config write: `path` is the config key path, `value` undefined removes it. `preserveAliases` keeps v1 keys. */
+export type ConfigEdit = { path: string[]; value?: unknown; preserveAliases?: boolean }
 
 export type ConfigScope = "global" | "project"
 

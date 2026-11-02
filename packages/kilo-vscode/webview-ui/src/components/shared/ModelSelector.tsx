@@ -61,6 +61,8 @@ export interface ModelSelectorBaseProps {
   blocked?: boolean
   /** Trigger text when nothing is selected. Defaults to the "Select model" prompt label. */
   placeholder?: string
+  /** Accessible name for the selector trigger. */
+  label?: string
 }
 
 export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
@@ -246,7 +248,7 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
             return props.blocked || usable().length === 0
           },
           get ["aria-label"]() {
-            return label()
+            return props.label ?? label()
           },
         }}
         trigger={

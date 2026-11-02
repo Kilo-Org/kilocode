@@ -1048,8 +1048,8 @@ export const dict = {
   "settings.agentBehaviour.mcp.timeout.execution.title": "執行逾時 (毫秒)",
   "settings.agentBehaviour.mcpEmpty": "未設定 MCP 伺服器。在 kilo.jsonc 中新增 MCP 伺服器，或請代理為您新增。",
   "settings.agentBehaviour.workflows.description":
-    "工作流程是在設定中定義的自訂斜線命令。在聊天中輸入 /command-name 來呼叫它們。命令在 opencode.json 的 'command' 區段中設定。",
-  "settings.agentBehaviour.workflows.empty": "未設定自訂命令。將命令新增至 opencode.json 即可在此處看到。",
+    "工作流程是在您的設定或命令 Markdown 檔案中定義的自訂命令。您可以為每個工作流程設定模型與推理變體。",
+  "settings.agentBehaviour.workflows.empty": "找不到自訂命令。請將命令新增至 kilo2.json 或 .kilo2/command 中的 Markdown 檔案。",
   "settings.agentBehaviour.workflows.detail.description": "描述",
   "settings.agentBehaviour.workflows.detail.template": "範本",
   "settings.agentBehaviour.workflows.model": "模型",
