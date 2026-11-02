@@ -22,6 +22,8 @@ function toPosix(filePath: string): string {
 
 export class FileIgnoreController {
   private workspacePath: string
+  /** The workspace path with symlinks resolved, for example /private/var on macOS for /var. */
+  private realWorkspacePath = ""
   private ignoreInstance: Ignore = ignore()
   private readonly realpathCache = new Map<string, string>()
 
@@ -36,6 +38,7 @@ export class FileIgnoreController {
     if (!this.workspacePath) {
       return
     }
+    this.realWorkspacePath = fs.existsSync(this.workspacePath) ? fs.realpathSync.native(this.workspacePath) : this.workspacePath
 
     // Try .kilocodeignore first — if it exists, use only that.
     // Use existsSync to distinguish "missing" from "unreadable" — permission
@@ -97,8 +100,13 @@ export class FileIgnoreController {
       }
     }
 
-    const relative = path.relative(this.workspacePath, resolved)
-    if (!relative || relative.startsWith("..") || path.isAbsolute(relative) || WINDOWS_DRIVE.test(relative)) {
+    // A resolved file is compared with the resolved workspace, an unresolved one (a file that does not exist yet)
+    // with the workspace path as given.
+    const relative = [
+      path.relative(this.realWorkspacePath || this.workspacePath, resolved),
+      path.relative(this.workspacePath, absoluteInput),
+    ].find((candidate) => candidate && !candidate.startsWith("..") && !path.isAbsolute(candidate) && !WINDOWS_DRIVE.test(candidate))
+    if (!relative) {
       return null
     }
 
