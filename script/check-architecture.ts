@@ -17,11 +17,18 @@
  */
 
 import path from "node:path"
+import {
+  forbiddenDirection,
+  HIGHER_LAYERS,
+  importSpecifiers,
+  ratchet,
+  type Entry,
+  type Violation,
+} from "./kilocode/architecture-rules"
 
 const ROOT = path.resolve(import.meta.dir, "..")
 const ALLOWLIST_PATH = path.join(ROOT, "script", "kilocode", "architecture-allowlist.json")
 
-type Entry = { count: number; owner: string; reason: string }
 type Allowlist = {
   rules?: Record<string, { allowed?: Record<string, Entry> }>
 }
@@ -29,7 +36,6 @@ type Allowlist = {
 const allowlist: Allowlist = await Bun.file(ALLOWLIST_PATH).json()
 const allowed = (rule: string) => allowlist.rules?.[rule]?.allowed ?? {}
 
-type Violation = { file: string; rule: string; message: string }
 const violations: Violation[] = []
 
 function scan(pattern: string) {
@@ -45,75 +51,15 @@ function read(file: string) {
   return Bun.file(path.join(ROOT, file)).text()
 }
 
-function importSpecifiers(text: string) {
-  const specifiers: string[] = []
-  for (const match of text.matchAll(/\bfrom\s+["']([^"']+)["']/g)) specifiers.push(match[1])
-  for (const match of text.matchAll(/\bimport\s*\(\s*["']([^"']+)["']\s*\)/g)) specifiers.push(match[1])
-  for (const match of text.matchAll(/\bimport\s+["']([^"']+)["']/g)) specifiers.push(match[1])
-  return specifiers
-}
-
-function isPackage(specifier: string, pkg: string) {
-  return specifier === pkg || specifier.startsWith(`${pkg}/`)
-}
-
-function isInternalAlias(specifier: string) {
-  return specifier === "@/" || specifier.startsWith("@/")
-}
-
 // ---------------------------------------------------------------------------
 // Shared scopes
 // ---------------------------------------------------------------------------
 
 const KILO_FILES = uniqueFiles(["packages/kilo-*/src/**/*.{ts,tsx}", "packages/*/src/kilocode/**/*.{ts,tsx}"])
 
-function ratchet(
-  rule: string,
-  hits: Map<string, number>,
-  messages: {
-    unclassified: (count: number) => string
-    drift: (file: string, expected: number, count: number) => string
-    stale: (file: string) => string
-  },
-) {
-  const allowedSites = allowed(rule)
-
-  for (const [file, count] of hits) {
-    const expected = allowedSites[file]
-    if (!expected) {
-      violations.push({ file, rule, message: messages.unclassified(count) })
-    } else if (expected.count !== count) {
-      violations.push({ file, rule, message: messages.drift(file, expected.count, count) })
-    }
-  }
-
-  for (const file of Object.keys(allowedSites)) {
-    if (!hits.has(file)) {
-      violations.push({ file, rule, message: messages.stale(file) })
-    }
-  }
-}
-
 // ---------------------------------------------------------------------------
 // Rule 1: Core Directionality Guard
 // ---------------------------------------------------------------------------
-
-const HIGHER_LAYERS = [
-  "@opencode/core",
-  "@opencode/protocol",
-  "@opencode/server",
-  "@opencode/client",
-  "@opencode/cli",
-  "@opencode/tui",
-  "@opencode/sdk",
-]
-
-function forbiddenDirection(specifier: string, forbidden: string[]) {
-  if (isInternalAlias(specifier)) return "internal alias (@/)"
-  if (forbidden.some((pkg) => isPackage(specifier, pkg))) return "higher layer package"
-  if (specifier.startsWith("@kilocode/")) return "Kilo package"
-  return null
-}
 
 const CORE_DIRECTIONS = [
   {
@@ -243,14 +189,16 @@ for (const file of KILO_FILES) {
   if (count > 0) instanceHits.set(file, count)
 }
 
-ratchet("kilo-instance-state", instanceHits, {
-  unclassified: (count) =>
-    `Unclassified InstanceState.make found in Kilo-owned code (${count} site(s)). Encapsulate state in a scoped Effect Service in packages/core or add to script/kilocode/architecture-allowlist.json.`,
-  drift: (file, expected, count) =>
-    `Ratchet drift for InstanceState.make in ${file}: expected ${expected}, found ${count}. Update script/kilocode/architecture-allowlist.json!`,
-  stale: (file) =>
-    `Stale allowlist entry: no InstanceState.make found in ${file}. Remove from script/kilocode/architecture-allowlist.json to lock in progress!`,
-})
+violations.push(
+  ...ratchet("kilo-instance-state", instanceHits, allowed("kilo-instance-state"), {
+    unclassified: (count) =>
+      `Unclassified InstanceState.make found in Kilo-owned code (${count} site(s)). Encapsulate state in a scoped Effect Service in packages/core or add to script/kilocode/architecture-allowlist.json.`,
+    drift: (file, expected, count) =>
+      `Ratchet drift for InstanceState.make in ${file}: expected ${expected}, found ${count}. Update script/kilocode/architecture-allowlist.json!`,
+    stale: (file) =>
+      `Stale allowlist entry: no InstanceState.make found in ${file}. Remove from script/kilocode/architecture-allowlist.json to lock in progress!`,
+  }),
+)
 
 // ---------------------------------------------------------------------------
 // Rule 4: Kilo Database Direct Instantiation Guard (Kilo-owned code)
@@ -263,14 +211,16 @@ for (const file of KILO_FILES) {
   if (count > 0) databaseHits.set(file, count)
 }
 
-ratchet("kilo-database-constructors", databaseHits, {
-  unclassified: (count) =>
-    `Unclassified SQLite constructor (new Database / new DatabaseSync) in Kilo code (${count} site(s)). Route persistence through Database.Service in @opencode/core.`,
-  drift: (file, expected, count) =>
-    `Ratchet drift for database constructor in ${file}: expected ${expected}, found ${count}. Update script/kilocode/architecture-allowlist.json!`,
-  stale: (file) =>
-    `Stale database constructor allowlist entry: no direct instantiation found in ${file}. Remove from script/kilocode/architecture-allowlist.json!`,
-})
+violations.push(
+  ...ratchet("kilo-database-constructors", databaseHits, allowed("kilo-database-constructors"), {
+    unclassified: (count) =>
+      `Unclassified SQLite constructor (new Database / new DatabaseSync) in Kilo code (${count} site(s)). Route persistence through Database.Service in @opencode/core.`,
+    drift: (file, expected, count) =>
+      `Ratchet drift for database constructor in ${file}: expected ${expected}, found ${count}. Update script/kilocode/architecture-allowlist.json!`,
+    stale: (file) =>
+      `Stale database constructor allowlist entry: no direct instantiation found in ${file}. Remove from script/kilocode/architecture-allowlist.json!`,
+  }),
+)
 
 // ---------------------------------------------------------------------------
 // Rule 5: Kilo Tool process.env Reads Guard
@@ -283,14 +233,16 @@ for (const file of KILO_FILES.filter((entry) => entry.includes("/tool/"))) {
   if (count > 0) toolHits.set(file, count)
 }
 
-ratchet("kilo-tool-process-env", toolHits, {
-  unclassified: (count) =>
-    `Direct process.env read found in Kilo tool (${count} site(s)). Pass configuration via Tool.Context or Env.Service.`,
-  drift: (file, expected, count) =>
-    `Ratchet drift for process.env in ${file}: expected ${expected}, found ${count}. Update script/kilocode/architecture-allowlist.json!`,
-  stale: (file) =>
-    `Stale tool-process-env entry: no process.env read found in ${file}. Remove from script/kilocode/architecture-allowlist.json!`,
-})
+violations.push(
+  ...ratchet("kilo-tool-process-env", toolHits, allowed("kilo-tool-process-env"), {
+    unclassified: (count) =>
+      `Direct process.env read found in Kilo tool (${count} site(s)). Pass configuration via Tool.Context or Env.Service.`,
+    drift: (file, expected, count) =>
+      `Ratchet drift for process.env in ${file}: expected ${expected}, found ${count}. Update script/kilocode/architecture-allowlist.json!`,
+    stale: (file) =>
+      `Stale tool-process-env entry: no process.env read found in ${file}. Remove from script/kilocode/architecture-allowlist.json!`,
+  }),
+)
 
 // ---------------------------------------------------------------------------
 // Rule 6: Kilo HttpApi Handler Boundaries (No raw OS operations in Kilo handlers)
@@ -306,14 +258,16 @@ for (const file of handlerFiles) {
   if (count > 0) handlerHits.set(file, count)
 }
 
-ratchet("kilo-httpapi-handlers", handlerHits, {
-  unclassified: (count) =>
-    `Direct OS/process operations forbidden in Kilo HttpApi route handlers (${count} site(s)). Delegate to domain Effect services.`,
-  drift: (file, expected, count) =>
-    `Ratchet drift for OS/process operations in ${file}: expected ${expected}, found ${count}. Update script/kilocode/architecture-allowlist.json!`,
-  stale: (file) =>
-    `Stale handler allowlist entry: no raw OS/process operation found in ${file}. Remove from script/kilocode/architecture-allowlist.json!`,
-})
+violations.push(
+  ...ratchet("kilo-httpapi-handlers", handlerHits, allowed("kilo-httpapi-handlers"), {
+    unclassified: (count) =>
+      `Direct OS/process operations forbidden in Kilo HttpApi route handlers (${count} site(s)). Delegate to domain Effect services.`,
+    drift: (file, expected, count) =>
+      `Ratchet drift for OS/process operations in ${file}: expected ${expected}, found ${count}. Update script/kilocode/architecture-allowlist.json!`,
+    stale: (file) =>
+      `Stale handler allowlist entry: no raw OS/process operation found in ${file}. Remove from script/kilocode/architecture-allowlist.json!`,
+  }),
+)
 
 // ---------------------------------------------------------------------------
 // Output & Exit

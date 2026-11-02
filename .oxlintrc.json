@@ -142,7 +142,8 @@
           }
         ]
       }
-    },
+    }, // kilocode_change
+    // kilocode_change start
     {
       // Kilo VS Code metric gates, ported from the v1 ESLint config for the same scope: 3000 lines per file and complexity 20 per function.
       "files": ["packages/kilo-vscode/src/**", "packages/kilo-vscode/webview-ui/**"],
@@ -180,6 +181,7 @@
       "files": ["packages/kilo-vscode/webview-ui/src/v2/form.ts"],
       "rules": { "complexity": ["error", 44] }
     }
+    // kilocode_change end
   ],
   "ignorePatterns": [
     "**/node_modules",

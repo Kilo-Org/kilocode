@@ -101,13 +101,32 @@ function locationPath(uri: string, directory: string) {
   return localPath(resolve(directory, uri))
 }
 
-// jscpd can prefix a location URI with a base directory that is not the scan root, so match the
+// The scanner can prefix a location URI with a base directory that is not the scan root, so match the
 // longest known scan path suffix first and keep the absolute resolution only as a fallback.
+function nestedDrive(uri: string) {
+  const matches = [...uri.matchAll(/[a-zA-Z]:[\\/]/g)]
+  const last = matches.at(-1)
+  if (!last || last.index === undefined) return uri
+  return matches.length > 1 ? uri.slice(last.index) : uri
+}
+
 function matchLocation(uri: string, directory: string, scanned: { repo: string; match: string }[]) {
-  const normalized = (uri.startsWith("file:") ? fileURLToPath(uri) : uri).replaceAll("\\", "/").toLowerCase()
+  const raw = nestedDrive(uri.startsWith("file:") ? fileURLToPath(uri) : uri)
+  const normalized = raw.replaceAll("\\", "/").toLowerCase()
   const found = scanned.find((entry) => normalized.endsWith(entry.match))
   if (found) return found.repo
-  return path(relative(directory, locationPath(uri, directory)).replaceAll("\\", "/"))
+  const base = normalized.split("/").at(-1) ?? ""
+  const byBase = scanned.filter((entry) => entry.match === base || entry.match.endsWith(`/${base}`))
+  if (byBase.length === 1 && byBase[0]) return byBase[0].repo
+  const fallback = relative(directory, locationPath(raw, directory)).replaceAll("\\", "/")
+  if (
+    isAbsolute(fallback) ||
+    fallback.includes("\\") ||
+    fallback.split("/").some((part) => !part || part === ".." || part === ".")
+  ) {
+    throw new Error(`Expected a repository-relative path: ${fallback} (uri: ${uri})`)
+  }
+  return fallback
 }
 
 function path(value: unknown) {
@@ -194,7 +213,7 @@ export async function scan(cwd: string) {
     await Bun.write(
       config,
       JSON.stringify({
-        path: files,
+        path: files.map((file) => file.replaceAll("\\", "/")),
         mode: "weak",
         minLines: 10,
         minTokens: 100,
