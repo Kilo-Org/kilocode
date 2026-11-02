@@ -298,6 +298,9 @@ export const dict = {
   "provider.failure.http": "プロバイダーエラー (HTTP {{status}})。",
   "provider.failure.httpNoStatus": "プロバイダーエラー。",
   "provider.failure.schema": "プロバイダーから予期しない応答がありました。",
+  "provider.failure.organizationMissing": "選択したチームは利用できなくなりました。別のチームを選択してください。",
+  "provider.failure.scopeConflict": "選択したチームが Kilo トークンのチームと一致しません。",
+  "provider.failure.personalUnavailable": "このアカウントには個人アカウントがありません。チームを選択してください。",
 
   "notification.permission.title": "権限が必要です",
   "notification.permission.titleSubagent": "権限が必要です（サブエージェント）",

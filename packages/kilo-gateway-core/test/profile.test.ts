@@ -29,6 +29,21 @@ test("reads nested and flat profile responses", async () => {
   await expect(Effect.runPromise(KiloProfile.get(backend.url, "token"))).rejects.toThrow("Invalid token")
 })
 
+test("classifies profile failures like catalog failures", async () => {
+  using backend = fixture()
+  const reason = async () => (await Effect.runPromise(Effect.flip(KiloProfile.get(backend.url, "token")))).reason
+  backend.state.profileStatus = 403
+  expect(await reason()).toEqual({ kind: "unauthorized", status: 403 })
+  backend.state.profileStatus = 502
+  expect(await reason()).toEqual({ kind: "http", status: 502 })
+  backend.state.profileStatus = 200
+  backend.state.profile = { organizations: "invalid" }
+  expect(await reason()).toEqual({ kind: "schema" })
+  const offline = fixture()
+  offline[Symbol.dispose]()
+  expect((await Effect.runPromise(Effect.flip(KiloProfile.get(offline.url, "token")))).reason).toEqual({ kind: "network" })
+})
+
 test("fetches balance from the API root of an organization-scoped token server", async () => {
   using backend = fixture()
   expect(

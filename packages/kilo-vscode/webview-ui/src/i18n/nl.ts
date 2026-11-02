@@ -300,6 +300,9 @@ export const dict = {
   "provider.failure.http": "Providerfout (HTTP {{status}}).",
   "provider.failure.httpNoStatus": "Providerfout.",
   "provider.failure.schema": "Onverwacht antwoord van de provider.",
+  "provider.failure.organizationMissing": "Het geselecteerde team is niet meer beschikbaar. Selecteer een ander team.",
+  "provider.failure.scopeConflict": "Het geselecteerde team conflicteert met het team van je Kilo-token.",
+  "provider.failure.personalUnavailable": "Dit account heeft geen persoonlijk account. Selecteer een team.",
 
   "notification.permission.title": "Toestemming vereist",
   "notification.permission.titleSubagent": "Toestemming vereist (subagent)",

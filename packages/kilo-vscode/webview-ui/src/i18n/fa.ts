@@ -296,6 +296,9 @@ export const dict = {
   "provider.failure.http": "خطای ارائه‌دهنده (HTTP {{status}}).",
   "provider.failure.httpNoStatus": "خطای ارائه‌دهنده.",
   "provider.failure.schema": "پاسخ غیرمنتظره از ارائه‌دهنده.",
+  "provider.failure.organizationMissing": "تیم انتخاب‌شده دیگر در دسترس نیست. تیم دیگری انتخاب کنید.",
+  "provider.failure.scopeConflict": "تیم انتخاب‌شده با تیم توکن Kilo شما در تعارض است.",
+  "provider.failure.personalUnavailable": "این حساب، حساب شخصی ندارد. یک تیم انتخاب کنید.",
 
   "notification.permission.title": "مجوز لازم است",
   "notification.permission.titleSubagent": "مجوز مورد نیاز است (زیرعامل)",
