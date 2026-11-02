@@ -2,6 +2,7 @@ import { KiloAgentPlugin } from "./agent"
 import { KiloCommitMessagePlugin } from "./commit-message"
 // kilo_port(gateway:17e39e074eaf) v1 registered the Gateway auth plugin in the upstream plugin list.
 import { KiloGatewayPlugin } from "./gateway"
+import { KiloGoalPlugin } from "./goal"
 import { OpencodeFreeTier } from "./gateway/opencode"
 import { KiloGatewayPolicyPlugin } from "./gateway/policy"
 import { GatewayOptions } from "./gateway/options"
@@ -30,6 +31,8 @@ export const KiloPlugins = [
   KiloHandshakePlugin,
   // v1 imported the Kilo agent module into agent.ts. kilo_port(agent:2e5632e7bfc6)
   KiloAgentPlugin.Plugin,
+  // The Kilo session goal: the `kilocode.goal` RPC, the `/goal` command, and the goal loop.
+  KiloGoalPlugin,
   KiloGatewayPlugin,
   // v1 listed the ProviderUsage node in the Location services. kilo_port(provider-usage:b0945f511fb3)
   KiloProviderUsagePlugin,

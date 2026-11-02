@@ -892,5 +892,70 @@
     "state": "ported",
     "note": "packages/kilo-plugin/test/review-command.test.ts carries every prompt assertion (scopes and precedence, metadata candidates, base order, commit and PR review, untrusted input, symlinks, no-edit contract, tracks, adaptive sub-agents) plus scope order, effort flags, the `subagent` adaptation and a decode of the post-review question example with `mode` through QuestionTool.Input; it also runs the built-in then the Kilo command plugin and checks the registered description and prompt. packages/kilo-cli/test/review-command.test.ts replaces the 'resolves the review command' case on the real host server, with the config override. Not carried: the parseReviewCommand cases (telemetry helper, #15303), `hints` (no v2 field), and the Review.getBaseBranch() reference (dropped from the prompt).",
     "by": "v2-review-cmd"
+  },
+  "module:packages/opencode/src/kilocode/session/goal/state.ts": {
+    "state": "ported",
+    "note": "packages/kilo-plugin/src/goal/state.ts stores read/write state in plugin storage, strips optional undefined values, and projects an active goal armed by an earlier boot as paused. The client shape is the kilocode.goal RPC contract in packages/schema/src/kilocode/goal.ts.",
+    "by": "goal-port"
+  },
+  "module:packages/opencode/src/kilocode/session/goal/instructions.ts": {
+    "state": "ported",
+    "note": "packages/kilo-plugin/src/goal/instructions.ts kickoff/resume/continue prompts carry the goal text, the autonomous-work rules, the goal_report instruction, the background-wait rule, and the unavailable question tool.",
+    "by": "goal-port"
+  },
+  "module:packages/opencode/src/kilocode/session/goal/policy.ts": {
+    "state": "ported",
+    "note": "packages/kilo-plugin/src/goal/index.ts: the goal tool refuses control while the goal turn runs; the question tool is rejected through tool hook execute.before; goal_report accepts only a root session with an active or waiting goal; reports are matched to an assistant step in the current goal turn.",
+    "by": "goal-port"
+  },
+  "module:packages/opencode/src/kilocode/session/goal/tool.ts": {
+    "state": "ported",
+    "note": "packages/kilo-plugin/src/goal/index.ts registers goal and goal_report through the tool transform, with the permission actions goal and goal_report, the same acceptance rules, and the v1 descriptions adapted to v2 terminology.",
+    "by": "goal-port"
+  },
+  "module:packages/opencode/src/kilocode/session/goal/runner.ts": {
+    "state": "ported",
+    "note": "packages/kilo-plugin/src/goal/index.ts experimental.idle stop hook replaces the v1 drain runner: it reads the goal, classifies background work as waiting, settles a report or a failed/no-progress turn, and admits the next synthetic continuation in the same execution. Step outcomes are evaluated in packages/kilo-plugin/src/goal/progress.ts.",
+    "by": "goal-port"
+  },
+  "module:packages/opencode/src/kilocode/session/goal/link.ts": {
+    "state": "ported",
+    "note": "packages/kilo-plugin/src/goal/index.ts maps the idle hook background list to a wait kind, id and label; packages/schema/src/kilocode/goal.ts Wait carries it. v2 has no schedule_wakeup, cron_create or background_process tools yet, so the wait covers v2 background shells and subagents instead of scheduling tools; the scheduling features keep their own open boxes.",
+    "by": "goal-port"
+  },
+  "module:packages/opencode/test/kilocode/session/goal.test.ts": {
+    "state": "ported",
+    "note": "packages/kilo-plugin/test/goal.test.ts covers command parsing, progress counting after the goal prompt, goal_report settlement, the report-versus-pause race, waiting on background work, goal-tool refusal during a goal turn, and the RPC get handler.",
+    "by": "goal-port"
+  },
+  "patch:goals:32d5a987d3b1": {
+    "state": "native",
+    "note": "The v2 RPC event stream carries kilocode.goal.changed; packages/client/src/promise/rpc.ts events.on delivers it without a session event-manifest entry.",
+    "by": "goal-port"
+  },
+  "patch:goals:b983b6af7e4b": {
+    "state": "native",
+    "note": "The generic POST /api/rpc/:rpcID/:method route (packages/protocol/src/groups/rpc.ts) serves kilocode.goal.get; no per-feature server route is registered.",
+    "by": "goal-port"
+  },
+  "patch:goals:76a03ae19282": {
+    "state": "dropped",
+    "note": "v1 patched the task tool so delegated failures reached the goal owner. In v2 the goal idle hook evaluates every tool part for the goal turn, and goal storage is per session, so a delegated session has no goal and cannot report one. No task-tool patch is needed.",
+    "by": "goal-port"
+  },
+  "patch:goals:8f2a39a24f88": {
+    "state": "dropped",
+    "note": "v1 projected goal state into Session.Info. v2 clients read kilocode.goal through the RPC, and the goal lives in plugin storage keyed by session, so children and forks start without a goal and Session.Info is unchanged.",
+    "by": "goal-port"
+  },
+  "patch:goals:ce1b66acd237": {
+    "state": "native",
+    "note": "The v2 goal RPC contract is covered by packages/kilo-plugin/test/goal.test.ts; there is no session event-manifest entry to test.",
+    "by": "goal-port"
+  },
+  "patch:goals:eb79ff7a4e15": {
+    "state": "dropped",
+    "note": "v1 patched prompt admission and run-state so a goal could own the prompt queue and surface its state. v2 keeps the session execution stop hook and synthetic input in the goal plugin; no prompt or run-state patch is needed, and the task test change is covered by the plugin test.",
+    "by": "goal-port"
   }
 }

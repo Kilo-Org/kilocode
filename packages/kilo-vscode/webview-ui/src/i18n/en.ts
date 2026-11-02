@@ -749,6 +749,7 @@ export const dict = {
   "session.goal.active": "Active",
   "session.goal.complete": "Complete (model-reported)",
   "session.goal.blocked": "Blocked",
+  "session.goal.waiting": "Waiting",
   "session.goal.restart": "Restart goal",
   "session.goal.paused": "Paused",
   "session.goal.pause": "Pause",
