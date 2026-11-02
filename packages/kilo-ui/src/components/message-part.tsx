@@ -691,14 +691,25 @@ ToolRegistry.register({
       return taskStatus(props.status)
     }
     const canOpen = () => !!childID() && !!props.actions?.openSession
-    const openChild = (event: MouseEvent) => {
+    const navigate = () => {
       const id = childID()
       const action = props.actions?.openSession
       if (!id || !action) return
+      action(id)
+    }
+    const openChild = (event: MouseEvent) => {
+      if (!canOpen()) return
       event.stopPropagation()
       if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return
       event.preventDefault()
-      action(id)
+      navigate()
+    }
+    // The trigger is a button, so this modifier path keeps the open action reachable from the keyboard.
+    const openChildFromTrigger = (event: MouseEvent) => {
+      if (!event.metaKey && !event.ctrlKey) return
+      event.preventDefault()
+      event.stopPropagation()
+      navigate()
     }
     const tools = () => {
       const id = childID()
@@ -722,7 +733,7 @@ ToolRegistry.register({
           {approvalLine()}
         </div>
         <Show when={canOpen()}>
-          <span data-slot="task-tool-open" title={i18n.t("task.open.panel")} onClick={openChild}>
+          <span data-slot="task-tool-open" title={`${i18n.t("task.open.panel")} (Cmd/Ctrl+Enter)`} onClick={openChild}>
             <Icon name="square-arrow-top-right" size="small" />
           </span>
         </Show>
@@ -744,6 +755,7 @@ ToolRegistry.register({
         }
         status={props.status}
         trigger={trigger()}
+        onTriggerClick={openChildFromTrigger}
         approvalPlacement="hidden"
         allowPendingToggle
         defaultOpen={auto()}

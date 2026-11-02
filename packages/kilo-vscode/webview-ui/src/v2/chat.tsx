@@ -82,7 +82,7 @@ export function Chat() {
       { defer: true },
     ),
   )
-  onCleanup(() => children.release())
+  onCleanup(() => children.release(session()))
   createEffect(
     on(session, (id) => {
       if (id) getVSCodeAPI().postMessage({ type: "trackCostSession", sessionID: id } satisfies ToHost as never)

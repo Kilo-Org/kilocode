@@ -60,15 +60,21 @@ export function createChildSessions(input: {
         }
       }),
     )
-  const release = () => {
-    const roots = new Set([...loaded].map((sessionID) => input.data.session.root(sessionID)))
+  const evict = (roots: Iterable<string>) => {
+    for (const root of new Set(roots)) input.data.session.evict(root)
+  }
+  const release = (sessionID?: string) => {
+    const roots = sessionID
+      ? [input.data.session.root(sessionID)]
+      : [...loaded].map((id) => input.data.session.root(id))
     loaded.clear()
-    for (const root of roots) input.data.session.evict(root)
+    evict(roots)
   }
   const switchTo = (sessionID: string | undefined, previous: string | undefined) => {
     if (!previous || previous === sessionID) return
     if (sessionID !== undefined && input.data.session.root(sessionID) === input.data.session.root(previous)) return
-    release()
+    loaded.clear()
+    input.data.session.evict(input.data.session.root(previous))
   }
   return { hydrate, load, resync, release, switchTo, loaded }
 }
