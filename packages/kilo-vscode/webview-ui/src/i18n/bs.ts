@@ -267,6 +267,7 @@ export const dict = {
   "prompt.toast.promptSendFailed.title": "Neuspješno slanje upita",
 
   "mcp.status.connected": "povezano",
+  "mcp.status.pending": "povezivanje",
   "mcp.status.failed": "neuspjelo",
   "mcp.status.needs_auth": "potrebna autentifikacija",
   "mcp.status.needs_registration": "potrebna registracija klijenta",
@@ -1142,7 +1143,7 @@ export const dict = {
   "settings.agentBehaviour.mcp.timeout.catalog.title": "Vrijeme kataloga (ms)",
   "settings.agentBehaviour.mcp.timeout.execution.title": "Vrijeme izvršavanja (ms)",
   "settings.agentBehaviour.mcpEmpty":
-    "Nema konfiguriranih MCP servera. Dodajte MCP servere u kilo.jsonc ili zamolite agenta da ih doda.",
+    "Nema konfiguriranih MCP servera. Dodajte MCP servere u kilo2.json ili zamolite agenta da ih doda.",
   "settings.agentBehaviour.workflows.description":
     "Tokovi rada su prilagođene komande definirane u vašoj konfiguraciji ili u Markdown datotekama komandi. Možete postaviti model i varijantu zaključivanja za svaki tok rada.",
   "settings.agentBehaviour.workflows.empty":

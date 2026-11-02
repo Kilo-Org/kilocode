@@ -27,6 +27,8 @@ export interface ModelPickerProps {
   modelLabel?: string
   variantLabel?: string
   clearButtonLabel?: string
+  /** Offer the Gateway small model. Only the small model row sets this, as on v1. */
+  includeAutoSmall?: boolean
 }
 
 const ModelPicker: Component<ModelPickerProps> = (props) => {
@@ -40,24 +42,28 @@ const ModelPicker: Component<ModelPickerProps> = (props) => {
   )
   const variants = createMemo(() => selected()?.variants.map((variant) => variant.id) ?? [])
 
+  // The row wraps in a narrow panel, so the variant and clear controls move below the model instead of being cut off.
   return (
-    <div style={{ display: "flex", gap: "8px", "align-items": "center" }}>
-      <ModelSelectorBase
-        models={models()}
-        providers={providers()}
-        value={props.value ? { providerID: props.value.providerID, modelID: props.value.modelID } : null}
-        blocked={props.blocked}
-        placeholder={props.clearLabel}
-        label={props.modelLabel}
-        failure={failureMessage(language.t, v2.kiloFailure())}
-        onSelect={(providerID, modelID) =>
-          props.onChange(
-            props.preserveVariantOnReselect && props.value?.providerID === providerID && props.value.modelID === modelID
-              ? props.value
-              : { providerID, modelID },
-          )
-        }
-      />
+    <div style={{ display: "flex", gap: "8px", "align-items": "center", "flex-wrap": "wrap", "min-width": 0 }}>
+      <div style={{ "min-width": 0, "max-width": "100%" }}>
+        <ModelSelectorBase
+          models={models()}
+          providers={providers()}
+          value={props.value ? { providerID: props.value.providerID, modelID: props.value.modelID } : null}
+          blocked={props.blocked}
+          includeAutoSmall={props.includeAutoSmall}
+          placeholder={props.clearLabel}
+          label={props.modelLabel}
+          failure={failureMessage(language.t, v2.kiloFailure())}
+          onSelect={(providerID, modelID) =>
+            props.onChange(
+              props.preserveVariantOnReselect && props.value?.providerID === providerID && props.value.modelID === modelID
+                ? props.value
+                : { providerID, modelID },
+            )
+          }
+        />
+      </div>
       <Show
         when={
           props.showVariants !== false &&

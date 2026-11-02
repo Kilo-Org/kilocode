@@ -8,6 +8,7 @@ import path from "node:path"
 import { commands, workspace, Uri, window, type ExtensionContext } from "vscode"
 import { KiloConfigFiles } from "@opencode/util/kilocode/config/files"
 import { applyConfigEdits, isKiloConfigFile, serialize } from "./config-file-edit"
+import { configPolicy, type PolicyDocument } from "./config-policy"
 import { local } from "./local"
 import { candidateConfigFiles, chooseConfigFile, configDirectories } from "./open-config"
 import { resolveGlobalConfigDir, canonicalPath, matchConfigDocument } from "./settings-paths"
@@ -150,14 +151,33 @@ export function settingsHost(input: {
     }
   }
 
+  // Kilo-only config fields are not in the upstream config schema, so the config API drops them on encode. Read the
+  // documents in priority order, as core does for the effective value, and mark the value managed when the document
+  // that sets it is not one of the two writable files. A document that is not readable JSON, such as a managed
+  // preference plist, is skipped.
+  const policyDocuments = async (list: ConfigEntry[], texts: Map<string, string>) => {
+    const documents: PolicyDocument[] = []
+    for (const entry of list) {
+      if (entry.type !== "document" || !entry.path) continue
+      documents.push({ path: entry.path, text: texts.get(entry.path) ?? (await read(entry.path).catch(() => "")) })
+    }
+    return documents
+  }
+
   const readConfig = async () => {
     try {
-      const files = await targets()
+      const list = await entries()
+      const files = await targets(list)
       const [global, project] = await Promise.all([read(files.global), read(files.project)])
+      const texts = new Map([
+        [files.global, global],
+        [files.project, project],
+      ])
       input.post({
         type: "configLoaded",
         global: { path: files.global, text: global },
         project: { path: files.project, text: project },
+        policy: configPolicy(await policyDocuments(list, texts), files),
       })
     } catch (error) {
       input.post({

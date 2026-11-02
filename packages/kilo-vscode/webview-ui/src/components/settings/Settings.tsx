@@ -19,6 +19,15 @@ import { useSettingsSearch } from "./useSettingsSearch"
 export interface SettingsProps {
   settings: SettingsData
   tab?: string
+  subtab?: string
+  /** A row that a subtab renders itself, such as an MCP server name. */
+  focus?: string
+  /** i18n key of a row to reveal after its tab renders. */
+  titleKey?: string
+  /** Increments on each host navigation, so the same target applies again. */
+  navigation?: number
+  /** Increments to focus the search field. */
+  searchRequest?: number
   onTabChange?: (tab: string) => void
   /** Opens the Profile view, where the Kilo Gateway sign-in runs. */
   onLogin: () => void
@@ -27,25 +36,19 @@ export interface SettingsProps {
 const READY_TABS = SETTINGS_TABS_V2.filter((tab) => tab.ready)
 const READY_IDS = new Set(READY_TABS.map((tab) => tab.id))
 
+const initialTab = (tab?: string) => (tab && READY_IDS.has(tab) ? tab : (READY_TABS[0]?.id ?? "providers"))
+
 const Settings: Component<SettingsProps> = (props) => {
   const language = useLanguage()
   const vscode = useVSCode()
   const config = useSettingsConfig()
-  const [active, setActive] = createSignal(props.tab ?? READY_TABS[0]?.id ?? "providers")
-  const [subtab, setSubtab] = createSignal("agents")
+  const [active, setActive] = createSignal(initialTab(props.tab))
+  const [subtab, setSubtab] = createSignal(props.subtab ?? "agents")
   const [navigation, setNavigation] = createSignal(0)
-
-  // Sync when the parent changes the tab prop (e.g. via navigate message)
-  createEffect(
-    on(
-      () => props.tab,
-      (tab) => {
-        if (tab) setActive(tab)
-      },
-    ),
-  )
+  const [focus, setFocus] = createSignal<string>()
 
   const onTabChange = (tab: string) => {
+    if (!READY_IDS.has(tab)) return
     setActive(tab)
     props.onTabChange?.(tab)
   }
@@ -64,14 +67,29 @@ const Settings: Component<SettingsProps> = (props) => {
     tabs: searchTabs,
     entries: searchEntries,
     translate: (key) => language.t(key),
+    searchRequest: () => props.searchRequest,
     onNavigate: (target) => {
-      if (target.tab === "agentBehaviour") {
-        setSubtab(target.subtab ?? "agents")
-        setNavigation((count) => count + 1)
-      }
       onTabChange(target.tab)
+      if (target.tab === "agentBehaviour") setSubtab(target.subtab ?? "agents")
+      setFocus(undefined)
+      setNavigation((count) => count + 1)
     },
   })
+
+  // A command or a chat link can name a tab, a subtab, a row that a subtab owns, or a row by its i18n key.
+  createEffect(
+    on(
+      () => props.navigation,
+      (request) => {
+        if (!request) return
+        if (props.tab) onTabChange(props.tab)
+        if (props.subtab) setSubtab(props.subtab)
+        setFocus(props.focus)
+        setNavigation((count) => count + 1)
+        if (props.titleKey) search.reveal(language.t(props.titleKey))
+      },
+    ),
+  )
 
   return (
     <div
@@ -142,6 +160,7 @@ const Settings: Component<SettingsProps> = (props) => {
                 settings={props.settings}
                 onLogin={props.onLogin}
                 subtab={subtab()}
+                focus={focus()}
                 navigation={navigation()}
                 onSubtabChange={setSubtab}
                 onNavigate={search.navigate}

@@ -264,6 +264,7 @@ export const dict = {
   "prompt.toast.promptSendFailed.title": "ไม่สามารถส่งพร้อมท์",
 
   "mcp.status.connected": "เชื่อมต่อแล้ว",
+  "mcp.status.pending": "กำลังเชื่อมต่อ",
   "mcp.status.failed": "ล้มเหลว",
   "mcp.status.needs_auth": "ต้องการการตรวจสอบสิทธิ์",
   "mcp.status.needs_registration": "ต้องการลงทะเบียนไคลเอนต์",
@@ -1125,7 +1126,7 @@ export const dict = {
   "settings.agentBehaviour.mcp.timeout.catalog.title": "หมดเวลาของแค็ตตาล็อก (มิลลิวินาที)",
   "settings.agentBehaviour.mcp.timeout.execution.title": "หมดเวลาการทำงาน (มิลลิวินาที)",
   "settings.agentBehaviour.mcpEmpty":
-    "ไม่ได้กำหนดค่าเซิร์ฟเวอร์ MCP เพิ่มเซิร์ฟเวอร์ MCP ใน kilo.jsonc หรือขอให้เอเจนต์เพิ่มให้คุณ",
+    "ไม่ได้กำหนดค่าเซิร์ฟเวอร์ MCP เพิ่มเซิร์ฟเวอร์ MCP ใน kilo2.json หรือขอให้เอเจนต์เพิ่มให้คุณ",
   "settings.agentBehaviour.workflows.description":
     "เวิร์กโฟลว์คือคำสั่งแบบกำหนดเองที่กำหนดไว้ในการตั้งค่าของคุณหรือในไฟล์ Markdown ของคำสั่ง คุณสามารถตั้งค่าโมเดลและตัวแปรการให้เหตุผลสำหรับแต่ละเวิร์กโฟลว์",
   "settings.agentBehaviour.workflows.empty":

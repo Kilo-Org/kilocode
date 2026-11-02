@@ -264,6 +264,7 @@ export const dict = {
   "prompt.toast.promptSendFailed.title": "Не удалось отправить запрос",
 
   "mcp.status.connected": "подключено",
+  "mcp.status.pending": "подключение",
   "mcp.status.failed": "ошибка",
   "mcp.status.needs_auth": "требуется авторизация",
   "mcp.status.needs_registration": "требуется регистрация клиента",
@@ -1139,7 +1140,7 @@ export const dict = {
   "settings.agentBehaviour.mcp.timeout.catalog.title": "Тайм-аут каталога (мс)",
   "settings.agentBehaviour.mcp.timeout.execution.title": "Тайм-аут выполнения (мс)",
   "settings.agentBehaviour.mcpEmpty":
-    "MCP-серверы не настроены. Добавьте MCP-серверы в kilo.jsonc или попросите агента добавить их.",
+    "MCP-серверы не настроены. Добавьте MCP-серверы в kilo2.json или попросите агента добавить их.",
   "settings.agentBehaviour.workflows.description":
     "Рабочие процессы: пользовательские команды, определённые в вашей конфигурации или в файлах Markdown с командами. Для каждого рабочего процесса можно задать модель и вариант рассуждения.",
   "settings.agentBehaviour.workflows.empty":

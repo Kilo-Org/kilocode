@@ -60,6 +60,8 @@ export type ContentPartProps = {
   copy?: boolean
   settled?: boolean
   defaultOpen?: boolean
+  /** A recovery action for a failed tool call, such as a link to the settings that own the failure. */
+  errorAction?: (error: { type: string; message: string }) => JSX.Element | undefined
 }
 
 export function ContentPart(props: ContentPartProps) {
@@ -87,7 +89,13 @@ export function ContentPart(props: ContentPartProps) {
       </Match>
       <Match when={props.item.type === "tool" && props.item}>
         {(item) => (
-          <ToolContent item={item()} directory={props.directory} open={props.open} defaultOpen={props.defaultOpen} />
+          <ToolContent
+            item={item()}
+            directory={props.directory}
+            open={props.open}
+            defaultOpen={props.defaultOpen}
+            errorAction={props.errorAction}
+          />
         )}
       </Match>
     </Switch>
@@ -180,6 +188,7 @@ function ToolContent(props: {
   directory?: string
   open?: (uri: string) => void
   defaultOpen?: boolean
+  errorAction?: (error: { type: string; message: string }) => JSX.Element | undefined
 }) {
   const i18n = useI18n()
   const state = () => props.item.state
@@ -237,6 +246,9 @@ function ToolContent(props: {
                   </Show>
                 </div>
                 <span data-slot="message-part-tool-error-message">{error()?.message}</span>
+                <Show when={error() && props.errorAction?.(error()!)}>
+                  {(action) => <div data-slot="message-part-tool-error-action">{action()}</div>}
+                </Show>
               </div>
             </div>
           </Card>

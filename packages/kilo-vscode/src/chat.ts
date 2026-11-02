@@ -95,6 +95,8 @@ export function wire(input: {
   trackCostSession?: (sessionID: string) => void
   /** Called on every message from the webview, before it is handled. */
   onMessage?: () => void
+  /** Handles a view-specific message before the standard set. Returns true when it did. */
+  handle?: (message: ToHost) => boolean
   onReset?: () => void
 }) {
   const webview = input.webview
@@ -129,8 +131,17 @@ export function wire(input: {
       : undefined
   const subscription = webview.onDidReceiveMessage((message: ToHost) => {
     input.onMessage?.()
+    if (input.handle?.(message)) return
     if (message.type === "fetch" || message.type === "abort" || message.type === "open") return link.receive(message)
     if (message.type === "trackCostSession") return input.trackCostSession?.(message.sessionID)
+    // A chat recovery link opens the Settings panel at the row that owns the problem.
+    if (message.type === "openSettingsTab")
+      return void commands.executeCommand("kilo-code.v2.settings", {
+        tab: message.tab,
+        subtab: message.subtab,
+        focus: message.focus,
+        titleKey: message.titleKey,
+      })
     if (settings?.handle(message)) return
     // Only the sidebar carries the cycle keybindings; the Settings panel must not change their context.
     if (message.type === "webviewFocusChanged" && input.view === "chat")
@@ -169,6 +180,7 @@ export function wire(input: {
     directory: input.directory,
     size: effectiveFontSize(),
     language: env.language,
+    version: (input.context.extension.packageJSON as { version?: string }).version ?? "",
     view: input.view,
     settings: readKiloSettings(),
   })
@@ -198,6 +210,7 @@ export function html(input: {
   directory: string
   size: number
   language: string
+  version: string
   view?: "chat" | "settings"
   settings: Record<string, unknown>
 }) {
@@ -222,6 +235,7 @@ export function html(input: {
     KILO_BROWSER_AUTOMATION: false,
     KILO_AGENT_MANAGER_INTRO_DISMISSED: true,
     KILO_SETTINGS: input.settings,
+    KILO_EXTENSION_VERSION: input.version,
   }
   const script = Object.entries(globals)
     .map(([key, value]) => `window.${key} = ${JSON.stringify(value).replace(/</g, "\\u003c")};`)

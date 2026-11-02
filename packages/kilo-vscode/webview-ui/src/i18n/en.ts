@@ -261,6 +261,7 @@ export const dict = {
   "prompt.toast.promptSendFailed.title": "Failed to send prompt",
 
   "mcp.status.connected": "connected",
+  "mcp.status.pending": "connecting",
   "mcp.status.failed": "failed",
   "mcp.status.needs_auth": "needs auth",
   "mcp.status.needs_registration": "needs client registration",
@@ -821,6 +822,7 @@ export const dict = {
   "settings.aboutKiloCode.port.label": "Port:",
   "settings.aboutKiloCode.versionInfo": "Version Information",
   "settings.aboutKiloCode.version.label": "Version:",
+  "settings.aboutKiloCode.serverVersion.label": "Server Version:",
   "settings.aboutKiloCode.community": "Community & Support",
   "settings.aboutKiloCode.feedback.prefix": "If you have any questions or feedback, feel free to open an issue on",
   "settings.aboutKiloCode.feedback.or": "or",
@@ -1089,7 +1091,7 @@ export const dict = {
   "settings.agentBehaviour.addMcp.url.placeholder": "e.g. http://localhost:3000/sse",
   "settings.agentBehaviour.mcpBrowseMarketplace": "Browse Marketplace",
   "settings.agentBehaviour.mcpEmpty":
-    "No MCP servers configured. Add MCP servers in kilo.jsonc, or ask the agent to add them for you.",
+    "No MCP servers configured. Add MCP servers in kilo2.json, or ask the agent to add them for you.",
   "settings.agentBehaviour.mcp.timeout.startup.title": "Startup timeout (ms)",
   "settings.agentBehaviour.mcp.timeout.catalog.title": "Catalog timeout (ms)",
   "settings.agentBehaviour.mcp.timeout.execution.title": "Execution timeout (ms)",
@@ -1332,6 +1334,8 @@ export const dict = {
   "settings.models.hidePromptTraining.title": "Hide Prompt-Training Models",
   "settings.models.hidePromptTraining.description":
     "Hide Kilo Gateway models whose providers may use your prompts for training.",
+  "settings.models.hidePromptTraining.managed":
+    "This value comes from a configuration file that this panel cannot change, such as a managed or enterprise file.",
   "settings.providers.modeModels": "Model per Mode",
   "settings.providers.modeModels.description":
     "Override the default model for specific modes. If not set, the global default model is used.",

@@ -14,6 +14,9 @@ function create(directory: string) {
   const bridge = transport((message) => vscode.postMessage(message as never))
   const api: OpenCodeClient = OpenCode.make({ baseUrl: "http://kilo.invalid", fetch: bridge.fetch })
   const event = events()
+  // The host inlines the extension version; the server handshake reports the server version separately.
+  const extensionVersion =
+    (window as unknown as { KILO_EXTENSION_VERSION?: string }).KILO_EXTENSION_VERSION ?? ""
   const [error, setError] = createSignal("")
   const [version, setVersion] = createSignal("")
   const [handshake, setHandshake] = createSignal("")
@@ -63,6 +66,7 @@ function create(directory: string) {
     loading,
     bindings,
     version,
+    extensionVersion,
     handshake,
     error,
     /** Why the Kilo Gateway catalog failed to load; undefined while it is usable or loading. */

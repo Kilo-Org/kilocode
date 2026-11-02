@@ -268,6 +268,7 @@ export const dict = {
   "prompt.toast.promptSendFailed.title": "Nie udało się wysłać zapytania",
 
   "mcp.status.connected": "połączono",
+  "mcp.status.pending": "łączenie",
   "mcp.status.failed": "niepowodzenie",
   "mcp.status.needs_auth": "wymaga autoryzacji",
   "mcp.status.needs_registration": "wymaga rejestracji klienta",
@@ -1143,7 +1144,7 @@ export const dict = {
   "settings.agentBehaviour.mcp.timeout.catalog.title": "Limit czasu katalogu (ms)",
   "settings.agentBehaviour.mcp.timeout.execution.title": "Limit czasu wykonania (ms)",
   "settings.agentBehaviour.mcpEmpty":
-    "Brak skonfigurowanych serwerów MCP. Dodaj serwery MCP w kilo.jsonc lub poproś agenta o ich dodanie.",
+    "Brak skonfigurowanych serwerów MCP. Dodaj serwery MCP w kilo2.json lub poproś agenta o ich dodanie.",
   "settings.agentBehaviour.workflows.description":
     "Przepływy pracy to niestandardowe komendy zdefiniowane w konfiguracji lub w plikach Markdown z komendami. Dla każdego przepływu pracy możesz ustawić model i wariant rozumowania.",
   "settings.agentBehaviour.workflows.empty":

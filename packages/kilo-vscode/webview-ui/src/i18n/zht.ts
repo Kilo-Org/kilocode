@@ -252,6 +252,7 @@ export const dict = {
   "prompt.toast.promptSendFailed.title": "傳送提示失敗",
 
   "mcp.status.connected": "已連線",
+  "mcp.status.pending": "正在連線",
   "mcp.status.failed": "失敗",
   "mcp.status.needs_auth": "需要授權",
   "mcp.status.needs_registration": "需要客戶端註冊",
@@ -1049,7 +1050,7 @@ export const dict = {
   "settings.agentBehaviour.mcp.timeout.startup.title": "啟動逾時 (毫秒)",
   "settings.agentBehaviour.mcp.timeout.catalog.title": "目錄逾時 (毫秒)",
   "settings.agentBehaviour.mcp.timeout.execution.title": "執行逾時 (毫秒)",
-  "settings.agentBehaviour.mcpEmpty": "未設定 MCP 伺服器。在 kilo.jsonc 中新增 MCP 伺服器，或請代理為您新增。",
+  "settings.agentBehaviour.mcpEmpty": "未設定 MCP 伺服器。在 kilo2.json 中新增 MCP 伺服器，或請代理為您新增。",
   "settings.agentBehaviour.workflows.description":
     "工作流程是在您的設定或命令 Markdown 檔案中定義的自訂命令。您可以為每個工作流程設定模型與推理變體。",
   "settings.agentBehaviour.workflows.empty": "找不到自訂命令。請將命令新增至 kilo2.json 或 .kilo2/command 中的 Markdown 檔案。",

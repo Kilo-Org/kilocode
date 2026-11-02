@@ -16,6 +16,7 @@ import { Tag } from "@kilocode/kilo-ui/tag"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { useLanguage } from "../../context/language"
 import { isEnterKeyCommitNotIme } from "../../utils/ime-enter"
+import { pickerModels } from "./model-selector-filter"
 import { PopupSelector } from "./PopupSelector"
 
 const KILO_GATEWAY_ID = "kilo"
@@ -65,6 +66,8 @@ export interface ModelSelectorBaseProps {
   label?: string
   /** Why the Kilo Gateway catalog failed to load, shown when no model is usable. */
   failure?: string
+  /** Offer the Gateway small model. Only the small model row sets this, as on v1. */
+  includeAutoSmall?: boolean
 }
 
 export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
@@ -82,9 +85,7 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
   let searchRef: HTMLInputElement | undefined
 
   const hasSearch = () => search().trim().length > 0
-  const usable = createMemo(() =>
-    (props.models ?? []).filter((model) => model.enabled && model.status !== "deprecated"),
-  )
+  const usable = createMemo(() => pickerModels(props.models ?? [], props.includeAutoSmall))
   const active = createMemo(() =>
     (props.models ?? []).find(
       (model) => model.providerID === props.value?.providerID && model.id === props.value?.modelID,

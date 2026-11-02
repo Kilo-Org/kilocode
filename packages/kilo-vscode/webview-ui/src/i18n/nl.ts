@@ -269,6 +269,7 @@ export const dict = {
   "prompt.toast.promptSendFailed.title": "Verzenden prompt mislukt",
 
   "mcp.status.connected": "verbonden",
+  "mcp.status.pending": "verbinden",
   "mcp.status.failed": "mislukt",
   "mcp.status.needs_auth": "authenticatie vereist",
   "mcp.status.needs_registration": "clientregistratie vereist",
@@ -1111,7 +1112,7 @@ export const dict = {
   "settings.agentBehaviour.mcp.timeout.catalog.title": "Catalogustime-out (ms)",
   "settings.agentBehaviour.mcp.timeout.execution.title": "Uitvoeringstime-out (ms)",
   "settings.agentBehaviour.mcpEmpty":
-    "Geen MCP-servers geconfigureerd. Voeg MCP-servers toe in kilo.jsonc of vraag de agent om ze toe te voegen.",
+    "Geen MCP-servers geconfigureerd. Voeg MCP-servers toe in kilo2.json of vraag de agent om ze toe te voegen.",
   "settings.agentBehaviour.workflows.description":
     "Workflows zijn aangepaste opdrachten die in je configuratie of in Markdown-opdrachtbestanden zijn gedefinieerd. Je kunt voor elke workflow een model en een redeneervariant instellen.",
   "settings.agentBehaviour.workflows.empty":

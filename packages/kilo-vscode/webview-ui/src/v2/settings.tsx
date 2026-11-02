@@ -3,10 +3,10 @@
 // `api.location.reload`. createData resyncs integrations and providers on the credential and integration events
 // these calls cause, so every open view follows without extra work here.
 import type { FormAnswer, IntegrationAttempt, IntegrationInfo } from "@opencode/client"
-import { createEffect, on } from "solid-js"
-import type { ToHost } from "../../../src/protocol"
+import { createEffect, createSignal, on, onCleanup, onMount } from "solid-js"
+import type { SettingsNavigation, ToHost } from "../../../src/protocol"
 import SettingsPanel from "../components/settings/Settings"
-import { getVSCodeAPI } from "../context/vscode"
+import { useVSCode } from "../context/vscode"
 import { credentials } from "../components/settings/provider-catalog"
 import { SettingsConfigProvider } from "./settings-config"
 import { useV2 } from "./client"
@@ -34,7 +34,9 @@ export function createSettings() {
     integration: (id: string) => integrations().find((item) => item.id === id),
     connection: v2.connection.status,
     kiloFailure: v2.kiloFailure,
+    connectionError: v2.connection.error,
     version: v2.version,
+    extensionVersion: () => v2.extensionVersion,
     open: v2.open,
     reload: () => v2.api.location.reload(),
     /** v1 replaced the stored key. v2 adds a credential, so the earlier key credentials are removed after it. */
@@ -88,10 +90,40 @@ export type SettingsData = ReturnType<typeof createSettings>
 /** The Settings editor panel. Sign in opens the sidebar Profile view, where the Kilo Gateway sign-in runs. */
 export function SettingsView() {
   const settings = createSettings()
-  const login = () => getVSCodeAPI().postMessage({ type: "openProfile" } satisfies ToHost as never)
+  const vscode = useVSCode()
+  const [target, setTarget] = createSignal<SettingsNavigation>({})
+  // Counts host navigations, so the same target applies again when it is sent twice.
+  const [navigation, setNavigation] = createSignal(0)
+  const [searchRequest, setSearchRequest] = createSignal(0)
+  const login = () => vscode.postMessage({ type: "openProfile" } satisfies ToHost as never)
+  // The host keeps the current target and replies after this message, which a message posted earlier would miss.
+  onMount(() => vscode.postMessage({ type: "settingsReady" } satisfies ToHost as never))
+  const unsubscribe = vscode.onMessage((raw) => {
+    const message = raw as { type?: string } & SettingsNavigation
+    if (message.type !== "navigate") return
+    setTarget({
+      tab: message.tab,
+      subtab: message.subtab,
+      focus: message.focus,
+      titleKey: message.titleKey,
+    })
+    setNavigation((count) => count + 1)
+    if (message.search) setSearchRequest((count) => count + 1)
+  })
+  onCleanup(unsubscribe)
   return (
     <SettingsConfigProvider>
-      <SettingsPanel settings={settings} onLogin={login} />
+      <SettingsPanel
+        settings={settings}
+        onLogin={login}
+        tab={target().tab}
+        subtab={target().subtab}
+        focus={target().focus}
+        titleKey={target().titleKey}
+        navigation={navigation()}
+        searchRequest={searchRequest()}
+        onTabChange={(tab) => vscode.postMessage({ type: "settingsTabChanged", tab } satisfies ToHost as never)}
+      />
     </SettingsConfigProvider>
   )
 }

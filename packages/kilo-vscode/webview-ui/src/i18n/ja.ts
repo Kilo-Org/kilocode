@@ -267,6 +267,7 @@ export const dict = {
   "prompt.toast.promptSendFailed.title": "プロンプトの送信に失敗しました",
 
   "mcp.status.connected": "接続済み",
+  "mcp.status.pending": "接続中",
   "mcp.status.failed": "失敗",
   "mcp.status.needs_auth": "認証が必要",
   "mcp.status.needs_registration": "クライアント登録が必要",
@@ -1137,7 +1138,7 @@ export const dict = {
   "settings.agentBehaviour.mcp.timeout.catalog.title": "カタログタイムアウト (ms)",
   "settings.agentBehaviour.mcp.timeout.execution.title": "実行タイムアウト (ms)",
   "settings.agentBehaviour.mcpEmpty":
-    "MCPサーバーが設定されていません。kilo.jsoncでMCPサーバーを追加するか、エージェントに追加を依頼してください。",
+    "MCPサーバーが設定されていません。kilo2.jsonでMCPサーバーを追加するか、エージェントに追加を依頼してください。",
   "settings.agentBehaviour.workflows.description":
     "ワークフローは、設定またはコマンドの Markdown ファイルで定義されたカスタムコマンドです。各ワークフローにモデルと推論バリアントを設定できます。",
   "settings.agentBehaviour.workflows.empty":
