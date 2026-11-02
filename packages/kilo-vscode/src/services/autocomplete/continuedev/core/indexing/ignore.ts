@@ -111,9 +111,11 @@ export function isSecurityConcern(filePathOrUri: string) {
     // Intentionally ignore - not a valid file URL, continue with original path
   }
   if (path.isAbsolute(filepath)) {
-    const dir = path.dirname(filepath).split(/\/|\\/).at(-1) ?? ""
-    const basename = path.basename(filepath)
-    filepath = `${dir ? dir + "/" : ""}${basename}`
+    const segments = filepath.split(/\/|\\/).filter(Boolean)
+    // Every trailing slice keeps its full directory context, so a sensitive directory nested deeper than the
+    // immediate parent still matches the ignored directory patterns.
+    const slices = segments.map((_, index) => segments.slice(index).join("/"))
+    return slices.some((slice) => defaultFileAndFolderSecurityIgnores.ignores(slice))
   }
   if (!filepath) {
     return false
