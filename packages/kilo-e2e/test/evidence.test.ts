@@ -1,6 +1,17 @@
 import { describe, expect, test } from "bun:test"
 import { EvidenceError, parseDriverResult } from "../src/evidence"
-import { SCHEMA_VERSION, type Assertion, type DriverResult, type ScenarioManifest } from "../src/schema"
+import {
+  CleanupResult,
+  FixtureDescriptor,
+  SCHEMA_VERSION,
+  type Assertion,
+  type DriverResult,
+  type ScenarioManifest,
+} from "../src/schema"
+import { assertNoSecrets } from "../src/redact"
+import { join } from "node:path"
+import { ProtocolError, readJsonAs, writeJson } from "../src/protocol"
+import { sandbox } from "./helpers"
 import { manifest } from "../src/scenarios"
 
 function result(scenario: ScenarioManifest, overrides: Partial<DriverResult> = {}): DriverResult {
@@ -71,5 +82,41 @@ describe("driver result consistency", () => {
       return
     }
     throw new Error("expected capability rejection")
+  })
+})
+
+describe("cleanup failure reporting", () => {
+  test("sanitized leftovers name owned resources without leaking the cleanup token", () => {
+    const leftovers = [
+      { kind: "workspace", id: "ws-run", reason: "fixture provider cleanup exited with code 1" },
+      { kind: "cloud-session", id: "cs-run", reason: "fixture provider cleanup exited with code 1" },
+    ]
+    const value = {
+      schemaVersion: SCHEMA_VERSION,
+      runId: "run",
+      status: "failed",
+      removed: [],
+      leftovers,
+    }
+    expect(CleanupResult.safeParse(value).success).toBe(true)
+    assertNoSecrets(value)
+    expect(JSON.stringify(value)).not.toContain("cleanup-")
+  })
+})
+
+describe("malformed subprocess results", () => {
+  test("rejection messages do not echo document content", async () => {
+    await sandbox(async (dir) => {
+      const file = join(dir, "result.json")
+      await writeJson(file, { schemaVersion: SCHEMA_VERSION, descriptorPath: "secret-value" })
+      try {
+        await readJsonAs(file, FixtureDescriptor)
+      } catch (error) {
+        expect(error).toBeInstanceOf(ProtocolError)
+        expect((error as Error).message).not.toContain("secret-value")
+        return
+      }
+      throw new Error("expected a protocol error")
+    })
   })
 })

@@ -207,6 +207,16 @@ async function drive(
   return { result, capabilities: true }
 }
 
+// A provider may write the descriptor and then fail prepare validation; re-read it best-effort so
+// cleanup failures can still report (and a provider retry can trace) the owned resources.
+async function recoverDescriptor(options: Options): Promise<FixtureDescriptor | undefined> {
+  if (!(await exists(options.descriptorPath))) return undefined
+  return readJsonAs(options.descriptorPath, FixtureDescriptor).then(
+    (descriptor) => descriptor,
+    () => undefined,
+  )
+}
+
 async function cleanup(options: Options, descriptor: FixtureDescriptor | undefined): Promise<CleanupResult> {
   const requestPath = join(options.runDir, "provider-cleanup-request.json")
   const resultPath = join(options.runDir, "provider-cleanup-result.json")
@@ -220,13 +230,14 @@ async function cleanup(options: Options, descriptor: FixtureDescriptor | undefin
   })
   // Leftovers are recorded in sanitized evidence so a failed cleanup can be retried or traced even
   // when the provider cannot report ownership; only resource ids are kept, never cleanup tokens.
+  const owned = descriptor ?? (await recoverDescriptor(options))
   const failed = (message: string): CleanupResult => ({
     schemaVersion: SCHEMA_VERSION,
     runId: options.runId,
     status: "failed",
     removed: [],
     leftovers:
-      descriptor?.cleanup.ids.map((resource) => ({
+      owned?.cleanup.ids.map((resource) => ({
         kind: resource.kind,
         id: resource.id,
         reason: message,
