@@ -1,0 +1,71 @@
+// Pure turn-status helpers for the v2 assistant footer. The semantics mirror the
+// TUI (`packages/tui/src/routes/session/rows.ts`): a turn starts at the nearest
+// user or synthetic input, and its rate weights each model-generation step by
+// the step's active streamed duration.
+import type { SessionMessageAssistant, SessionMessageInfo } from "@opencode/client"
+import { localeToBcp47, type Locale } from "../context/language-utils"
+
+/** True when the step ends the turn: an error, or a finish that is not an intermediate hand-off. */
+export function terminalStep(message: SessionMessageAssistant): boolean {
+  if (message.error) return true
+  return !!message.finish && message.finish !== "tool-calls" && message.finish !== "unknown"
+}
+
+/** Finish time and, when the turn input is known, its duration in milliseconds. */
+export function turnTiming(
+  message: SessionMessageAssistant,
+  messages: readonly SessionMessageInfo[],
+): { completedAt: number; durationMs?: number } | undefined {
+  const completedAt = message.time.completed
+  if (completedAt === undefined) return undefined
+  const index = messages.findIndex((item) => item.id === message.id)
+  const input = messages[inputIndex(messages, index === -1 ? messages.length : index, legacyTurns(messages))]
+  if (!input) return { completedAt }
+  return { completedAt, durationMs: Math.max(0, completedAt - input.time.created) }
+}
+
+/** Weighted text-generation rate across the turn's steps, output plus reasoning over streamed time. */
+export function turnTokensPerSecond(
+  message: SessionMessageAssistant,
+  messages: readonly SessionMessageInfo[],
+): number | undefined {
+  const index = messages.findIndex((item) => item.id === message.id)
+  const end = index === -1 ? messages.length : index + 1
+  const start = inputIndex(messages, end, legacyTurns(messages))
+  const steps = messages
+    .slice(start + 1, end)
+    .filter((item): item is SessionMessageAssistant => item.type === "assistant")
+  const durations = steps.flatMap((step) =>
+    step.time.streamed === undefined ? [] : [Math.max(0, step.time.streamed - step.time.created)],
+  )
+  if (steps.length === 0 || durations.length !== steps.length) return undefined
+  const output = steps.reduce((total, step) => total + (step.tokens?.output ?? 0) + (step.tokens?.reasoning ?? 0), 0)
+  const duration = durations.reduce((total, value) => total + value, 0)
+  if (output <= 0 || duration <= 0) return undefined
+  // Aggregate before dividing so each step is weighted by its provider-active duration.
+  return output / (duration / 1_000)
+}
+
+/** Format a text-generation rate, for example `1,166.2 t/s`. */
+export function formatTokenThroughput(value: number, locale: Locale): string {
+  return new Intl.NumberFormat(localeToBcp47(locale), { maximumFractionDigits: 1 }).format(value) + " t/s"
+}
+
+/** A session without idle markers predates them, so a turn ends at the next prompt. */
+function legacyTurns(messages: readonly SessionMessageInfo[]): boolean {
+  return !messages.some((message) => message.type === "idle")
+}
+
+// Walk back only as far as the turn boundary: the nearest input in legacy
+// sessions, otherwise the first input after the previous idle marker.
+function inputIndex(messages: readonly SessionMessageInfo[], end: number, legacy: boolean): number {
+  let input = -1
+  for (let index = end - 1; index >= 0; index--) {
+    const message = messages[index]
+    if (message.type === "idle") return input
+    if (message.type !== "user" && message.type !== "synthetic") continue
+    if (legacy) return index
+    input = index
+  }
+  return input
+}

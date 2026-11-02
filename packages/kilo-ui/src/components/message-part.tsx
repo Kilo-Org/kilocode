@@ -60,6 +60,10 @@ export type ContentPartProps = {
   copy?: boolean
   settled?: boolean
   defaultOpen?: boolean
+  /** Turn generation rate shown in the action row of the copy-carrying text part. */
+  throughput?: JSX.Element
+  /** Finish clock and turn duration shown in the same action row. */
+  turnMeta?: JSX.Element
   /** A recovery action for a failed tool call, such as a link to the settings that own the failure. */
   errorAction?: (error: { type: string; message: string }) => JSX.Element | undefined
 }
@@ -74,6 +78,8 @@ export function ContentPart(props: ContentPartProps) {
             id={`${props.message.id}:${props.index}`}
             streaming={props.message.time.completed === undefined}
             copy={props.copy}
+            throughput={props.throughput}
+            turnMeta={props.turnMeta}
             open={props.open}
           />
         )}
@@ -107,6 +113,8 @@ function TextContent(props: {
   id: string
   streaming: boolean
   copy?: boolean
+  throughput?: JSX.Element
+  turnMeta?: JSX.Element
   open?: (uri: string) => void
 }) {
   const i18n = useI18n()
@@ -135,22 +143,34 @@ function TextContent(props: {
         <div data-slot="text-part-body">
           <Markdown text={text()} cacheKey={props.id} streaming={props.streaming} onClick={click} />
         </div>
-        <Show when={props.copy}>
+        <Show when={props.copy || props.throughput || props.turnMeta}>
           <div data-slot="assistant-copy-wrapper">
-            <Tooltip
-              value={copied() ? i18n.t("ui.message.copied") : i18n.t("ui.message.copyResponse")}
-              placement="top"
-              gutter={4}
-            >
-              <IconButton
-                icon={copied() ? "check" : "copy"}
-                size="normal"
-                variant="ghost"
-                onMouseDown={(event) => event.preventDefault()}
-                onClick={copy}
-                aria-label={copied() ? i18n.t("ui.message.copied") : i18n.t("ui.message.copyResponse")}
-              />
-            </Tooltip>
+            <Show when={props.copy}>
+              <Tooltip
+                value={copied() ? i18n.t("ui.message.copied") : i18n.t("ui.message.copyResponse")}
+                placement="top"
+                gutter={4}
+              >
+                <IconButton
+                  icon={copied() ? "check" : "copy"}
+                  size="normal"
+                  variant="ghost"
+                  onMouseDown={(event) => event.preventDefault()}
+                  onClick={copy}
+                  aria-label={copied() ? i18n.t("ui.message.copied") : i18n.t("ui.message.copyResponse")}
+                />
+              </Tooltip>
+            </Show>
+            <Show when={props.throughput}>
+              {(el) => <span data-slot="assistant-throughput-inline">{el()}</span>}
+            </Show>
+            <Show when={props.turnMeta}>
+              {(el) => (
+                <span data-slot="assistant-turn-meta" class="cursor-default">
+                  {el()}
+                </span>
+              )}
+            </Show>
           </div>
         </Show>
       </div>

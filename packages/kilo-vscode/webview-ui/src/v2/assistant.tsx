@@ -1,16 +1,20 @@
 import type { SessionMessageAssistant } from "@opencode/client"
-import { createSignal, For, Show } from "solid-js"
+import { createMemo, createSignal, For, Show, type JSX } from "solid-js"
 import { Button } from "@kilocode/kilo-ui/button"
 import { ContentPart, useGrowIn } from "@kilocode/kilo-ui/message-part"
 import { Card } from "@kilocode/kilo-ui/card"
 import { Collapsible } from "@kilocode/kilo-ui/collapsible"
 import { Icon } from "@kilocode/kilo-ui/icon"
+import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { useToolMotion, useToolSize } from "@kilocode/kilo-ui/tool-motion"
 import type { ToHost } from "../../../src/protocol"
 import { useLanguage } from "../context/language"
 import { useVSCode } from "../context/vscode"
+import { formatClock, formatDuration } from "../utils/message-time"
 import { useV2 } from "./client"
+import { tokenThroughputVisible } from "./kilo-settings"
 import { mcpServerFromError } from "./mcp-error"
+import { formatTokenThroughput, terminalStep, turnTiming, turnTokensPerSecond } from "./message-status"
 
 export function AssistantMessage(props: { message: SessionMessageAssistant; session: string }) {
   const v2 = useV2()
@@ -19,6 +23,36 @@ export function AssistantMessage(props: { message: SessionMessageAssistant; sess
   const done = () => props.message.time.completed !== undefined
   const copy = () =>
     done() ? props.message.content.findLastIndex((item) => item.type === "text" && !!item.text.trim()) : -1
+  const messages = () => v2.data.session.message.list(props.session)
+  // Metadata shows only on a completed terminal step: an error or a real finish,
+  // not an intermediate tool-calls hand-off.
+  const settled = () => terminalStep(props.message) && props.message.time.completed !== undefined
+  const timing = createMemo(() => (settled() ? turnTiming(props.message, messages()) : undefined))
+  const throughputValue = createMemo(() =>
+    settled() && tokenThroughputVisible() ? turnTokensPerSecond(props.message, messages()) : undefined,
+  )
+  const throughputEl = createMemo<JSX.Element | undefined>(() => {
+    const value = throughputValue()
+    if (value === undefined) return undefined
+    const speed = formatTokenThroughput(value, language.locale())
+    return (
+      <Tooltip value={language.t("chat.throughput.tooltip", { speed })} placement="top">
+        <span data-component="assistant-throughput">{speed}</span>
+      </Tooltip>
+    )
+  })
+  const turnMetaEl = createMemo<JSX.Element | undefined>(() => {
+    const value = timing()
+    if (!value) return undefined
+    return (
+      <span data-component="message-time">
+        {formatClock(value.completedAt, language.locale())}
+        <Show when={value.durationMs}>
+          {(ms) => <span data-slot="message-time-duration"> · {formatDuration(ms())}</span>}
+        </Show>
+      </span>
+    )
+  })
   // A failed MCP tool call points at the server row that can fix it.
   const errorAction = (error: { type: string; message: string }) => {
     const server = mcpServerFromError(error.message)
@@ -84,6 +118,8 @@ export function AssistantMessage(props: { message: SessionMessageAssistant; sess
                     directory={v2.directory}
                     open={v2.open}
                     copy={index() === copy()}
+                    throughput={index() === copy() ? throughputEl() : undefined}
+                    turnMeta={index() === copy() ? turnMetaEl() : undefined}
                     settled={index() < props.message.content.length - 1}
                     defaultOpen={item.type === "tool" && (item.name === "shell" || item.name === "todowrite")}
                     errorAction={errorAction}
