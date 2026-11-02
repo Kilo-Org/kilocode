@@ -810,6 +810,10 @@ ToolRegistry.register({
   },
 })
 
+// Cheap `@@` marker check: keeps the open-diff action hidden for payloads that
+// are not a unified diff, without parsing every file while the tool is collapsed.
+const HUNK_MARKER = /^\s*@@/m
+
 ToolRegistry.register({
   name: "patch",
   render(props) {
@@ -828,11 +832,42 @@ ToolRegistry.register({
       )
       setSeeded(true)
     })
+    // A search hit inside a collapsed file row must be visible without opening
+    // every row by hand, so a forced open expands all of them.
+    createEffect(() => {
+      if (!props.forceOpen) return
+      setExpanded(list().map((file) => file.file))
+    })
     const view = (file: FileDiffInfo) => {
       if (!file.patch) return
       const value = normalize(file)
       return value.fileDiff.hunks.length ? value : undefined
     }
+    const openDiff = (file: FileDiffInfo, event: MouseEvent) => {
+      event.stopPropagation()
+      const diff = view(file)
+      if (!diff || !props.actions?.openDiff) return
+      props.actions.openDiff({
+        file: file.file,
+        patch: diff.patch,
+        additions: file.additions,
+        deletions: file.deletions,
+      })
+    }
+    const diffAction = (file: FileDiffInfo) => (
+      <Show when={props.actions?.openDiff && HUNK_MARKER.test(file.patch)}>
+        <Tooltip value={i18n.t("ui.messagePart.openInDiffViewer" as never)} placement="top" gutter={4}>
+          <IconButton
+            icon="square-arrow-top-right"
+            size="small"
+            variant="ghost"
+            onMouseDown={(event) => event.preventDefault()}
+            onClick={(event) => openDiff(file, event)}
+            aria-label={i18n.t("ui.messagePart.openInDiffViewer" as never)}
+          />
+        </Tooltip>
+      </Show>
+    )
     const changes = (file: FileDiffInfo) => (
       <Switch>
         <Match when={file.status === "added"}>
@@ -843,6 +878,11 @@ ToolRegistry.register({
         <Match when={file.status === "deleted"}>
           <span data-slot="apply-patch-change" data-type="removed">
             {i18n.t("ui.patch.action.deleted")}
+          </span>
+        </Match>
+        <Match when={file.moved}>
+          <span data-slot="apply-patch-change" data-type="modified">
+            {i18n.t("ui.patch.action.moved")}
           </span>
         </Match>
         <Match when={true}>
@@ -878,6 +918,9 @@ ToolRegistry.register({
                   </Show>
                 </div>
               </div>
+              <Show when={single()}>
+                {(file) => <span data-slot="tool-trigger-actions">{diffAction(file())}</span>}
+              </Show>
             </div>
           }
         >
@@ -896,7 +939,15 @@ ToolRegistry.register({
                     {(file) => (
                       <Accordion.Item
                         value={file.file}
-                        data-type={file.status === "deleted" ? "delete" : file.status === "added" ? "add" : "update"}
+                        data-type={
+                          file.status === "deleted"
+                            ? "delete"
+                            : file.status === "added"
+                              ? "add"
+                              : file.moved
+                                ? "move"
+                                : "update"
+                        }
                       >
                         <StickyAccordionHeader>
                           <Accordion.Trigger>
@@ -914,6 +965,7 @@ ToolRegistry.register({
                               </div>
                               <div data-slot="apply-patch-trigger-actions">
                                 {changes(file)}
+                                {diffAction(file)}
                                 <Icon name="chevron-grabber-vertical" size="small" />
                               </div>
                             </div>

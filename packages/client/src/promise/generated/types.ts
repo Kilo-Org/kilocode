@@ -65,6 +65,7 @@ export type FileDiffInfo = {
   additions: number
   deletions: number
   status: "added" | "deleted" | "modified"
+  moved?: boolean
 }
 
 export type SessionsCursor = string
@@ -3295,6 +3296,7 @@ export type SessionImportInput = {
           readonly additions: number
           readonly deletions: number
           readonly status: "added" | "deleted" | "modified"
+          readonly moved?: boolean
         }>
       }
       readonly location: { readonly directory: string }
@@ -3348,6 +3350,7 @@ export type SessionImportInput = {
           readonly additions: number
           readonly deletions: number
           readonly status: "added" | "deleted" | "modified"
+          readonly moved?: boolean
         }>
       }
       readonly location: { readonly directory: string }
@@ -3401,6 +3404,7 @@ export type SessionImportInput = {
           readonly additions: number
           readonly deletions: number
           readonly status: "added" | "deleted" | "modified"
+          readonly moved?: boolean
         }>
       }
       readonly location: { readonly directory: string }

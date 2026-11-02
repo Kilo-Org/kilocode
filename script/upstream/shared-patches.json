@@ -1,9 +1,9 @@
 {
   "$comment": "Shared-patch baseline (U-L3-01). Read by script/check-shared-patches.ts and script/check-opencode-annotations.ts. Each shared upstream file that Kilo adds or changes needs an entry: rung (3 = seam patch, 4 = feature patch) and the missing seam. `unmarked` allows lines without markers and states why. Raise a limit only in the PR that adds the patch, and lower it when a patch goes away.",
   "limits": {
-    "files": 69,
-    "markedLines": 491,
-    "unmarkedLines": 136,
+    "files": 71,
+    "markedLines": 493,
+    "unmarkedLines": 140,
     "deletedFiles": 0
   },
   "files": {
@@ -138,6 +138,14 @@
     "packages/schema/src/command.ts": {
       "rung": 3,
       "seam": "Expose optional template and model metadata in the command list response so clients can identify configurable commands and show their effective values. Existing commands may omit both fields."
+    },
+    "packages/schema/src/file-diff.ts": {
+      "rung": 4,
+      "seam": "Optional `moved` flag on a file diff so clients can label a rename. The patch tool output is this shared struct and no plugin can add a field to an upstream schema; without the flag both clients report a rename as an unlabelled modification. Every other producer omits it, so upstream behavior and defaults are unchanged."
+    },
+    "packages/core/src/tool/plugin/patch.ts": {
+      "rung": 4,
+      "seam": "Set the optional `moved` flag when an update hunk has a move target. The move already applies here; only the result metadata loses the fact that it was a rename. The tool has no plugin hook for its own result metadata, and add, delete and plain update hunks stay unchanged."
     },
     "packages/core/src/plugin/sdk.ts": {
       "rung": 3,
