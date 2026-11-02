@@ -175,7 +175,10 @@ const SkillsSubtab: Component = () => {
   return (
     <div>
       {/* Discovered skills */}
-      <h4 style={{ "margin-top": "0", "margin-bottom": "8px" }}>
+      <h4
+        data-search-label={language.t("settings.agentBehaviour.discoveredSkills")}
+        style={{ "margin-top": "0", "margin-bottom": "8px" }}
+      >
         {language.t("settings.agentBehaviour.discoveredSkills")}
       </h4>
       <Show
@@ -229,7 +232,12 @@ const SkillsSubtab: Component = () => {
       </Show>
 
       {/* Skill paths */}
-      <h4 style={{ "margin-top": "0", "margin-bottom": "8px" }}>{language.t("settings.agentBehaviour.skillPaths")}</h4>
+      <h4
+        data-search-label={language.t("settings.agentBehaviour.skillPaths")}
+        style={{ "margin-top": "0", "margin-bottom": "8px" }}
+      >
+        {language.t("settings.agentBehaviour.skillPaths")}
+      </h4>
       <Card style={{ "margin-bottom": "16px" }}>
         <div
           style={{
@@ -268,7 +276,12 @@ const SkillsSubtab: Component = () => {
       </Card>
 
       {/* Skill URLs */}
-      <h4 style={{ "margin-top": "0", "margin-bottom": "8px" }}>{language.t("settings.agentBehaviour.skillUrls")}</h4>
+      <h4
+        data-search-label={language.t("settings.agentBehaviour.skillUrls")}
+        style={{ "margin-top": "0", "margin-bottom": "8px" }}
+      >
+        {language.t("settings.agentBehaviour.skillUrls")}
+      </h4>
       <Card>
         <div
           style={{

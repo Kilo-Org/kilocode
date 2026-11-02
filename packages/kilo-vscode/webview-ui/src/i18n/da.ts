@@ -1139,9 +1139,9 @@ export const dict = {
   "settings.agentBehaviour.mcpEmpty":
     "Ingen MCP-servere konfigureret. Tilføj MCP-servere i kilo.jsonc, eller bed agenten om at tilføje dem.",
   "settings.agentBehaviour.workflows.description":
-    "Workflows er brugerdefinerede slash-kommandoer defineret i din konfiguration. Skriv /command-name i chatten for at aktivere dem. Kommandoer konfigureres i opencode.json under sektionen 'command'.",
+    "Workflows er brugerdefinerede kommandoer, der er defineret i din konfiguration eller i Markdown-kommandofiler. Du kan angive en model og en ræsonneringsvariant for hver workflow.",
   "settings.agentBehaviour.workflows.empty":
-    "Ingen brugerdefinerede kommandoer konfigureret. Tilføj kommandoer til opencode.json for at se dem her.",
+    "Ingen brugerdefinerede kommandoer fundet. Føj kommandoer til kilo2.json eller en Markdown-fil i .kilo2/command.",
   "settings.agentBehaviour.workflows.detail.description": "Beskrivelse",
   "settings.agentBehaviour.workflows.detail.template": "Skabelon",
   "settings.agentBehaviour.workflows.model": "model",
@@ -1159,6 +1159,8 @@ export const dict = {
   "settings.autoApprove.maxCost.title": "Advarsel om sessionsomkostning",
   "settings.autoApprove.maxCost.description":
     "Advar før en session fortsættes, når forbruget overstiger dette USD-beløb. Brug hele dollars; lad feltet være tomt for at deaktivere.",
+  "settings.autoApprove.maxCost.v2Description":
+    "Vis en advarsel, der ikke blokerer, når en sessions omkostning når dette USD-beløb. Lad feltet være tomt for at deaktivere.",
   "settings.autoApprove.level.allow": "Tillad",
   "settings.autoApprove.level.ask": "Spørg",
   "settings.autoApprove.level.deny": "Afvis",

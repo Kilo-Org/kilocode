@@ -958,9 +958,9 @@ export const dict = {
   "settings.agentBehaviour.mcpEmpty":
     "Nessun server MCP configurato. Aggiungi server MCP in kilo.jsonc, o chiedi all'agente di aggiungerli per te.",
   "settings.agentBehaviour.workflows.description":
-    "I workflow sono comandi slash personalizzati definiti nella configurazione. Scrivi /nome-comando nella chat per invocarli. I comandi sono configurati in opencode.json nella sezione 'command'.",
+    "I workflow sono comandi personalizzati definiti nella configurazione o nei file Markdown dei comandi. Puoi impostare un modello e una variante di ragionamento per ogni workflow.",
   "settings.agentBehaviour.workflows.empty":
-    "Nessun comando personalizzato configurato. Aggiungi comandi a opencode.json per vederli qui.",
+    "Nessun comando personalizzato trovato. Aggiungi comandi a kilo2.json o a un file Markdown in .kilo2/command.",
   "settings.agentBehaviour.workflows.detail.description": "Descrizione",
   "settings.agentBehaviour.workflows.detail.template": "Template",
   "settings.agentBehaviour.workflows.model": "modello",
@@ -1018,6 +1018,8 @@ export const dict = {
   "settings.autoApprove.maxCost.title": "Avviso costo sessione",
   "settings.autoApprove.maxCost.description":
     "Avvisa prima di continuare una sessione quando la spesa supera questo importo in USD. Usa dollari interi; lascia vuoto per disattivare.",
+  "settings.autoApprove.maxCost.v2Description":
+    "Mostra un avviso non bloccante quando il costo di una sessione raggiunge questo importo in USD. Lascia vuoto per disattivarlo.",
   "settings.autoApprove.level.allow": "Consenti",
   "settings.autoApprove.level.ask": "Chiedi",
   "settings.autoApprove.level.deny": "Nega",

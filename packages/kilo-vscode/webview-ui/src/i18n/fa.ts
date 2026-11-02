@@ -1084,9 +1084,9 @@ export const dict = {
   "settings.agentBehaviour.mcpEmpty":
     "هیچ سرور MCP پیکربندی نشده است. سرورهای MCP را در kilo.jsonc اضافه کنید، یا از agent بخواهید آن‌ها را برایتان اضافه کند.",
   "settings.agentBehaviour.workflows.description":
-    "Workflow‌ها دستورات slash سفارشی هستند که در پیکربندی شما تعریف شده‌اند. برای فراخوانی آن‌ها /command-name را در چت تایپ کنید. دستورات در opencode.json زیر بخش 'command' پیکربندی می‌شوند.",
+    "Workflow‌ها دستورات سفارشی هستند که در پیکربندی شما یا در فایل‌های Markdown دستورات تعریف شده‌اند. می‌توانید برای هر Workflow یک مدل و یک گونه استدلال تعیین کنید.",
   "settings.agentBehaviour.workflows.empty":
-    "هیچ دستور سفارشی پیکربندی نشده است. دستورات را به opencode.json خود اضافه کنید تا اینجا نمایش داده شوند.",
+    "هیچ دستور سفارشی یافت نشد. دستورات را به kilo2.json یا یک فایل Markdown در .kilo2/command اضافه کنید.",
   "settings.agentBehaviour.workflows.detail.description": "توضیحات",
   "settings.agentBehaviour.workflows.detail.template": "قالب",
   "settings.agentBehaviour.workflows.model": "مدل",
@@ -1146,6 +1146,8 @@ export const dict = {
   "settings.autoApprove.maxCost.title": "هشدار هزینه جلسه",
   "settings.autoApprove.maxCost.description":
     "هنگامی که هزینه یک جلسه از این مقدار دلاری فراتر رفت، یک هشدار غیرمسدودکننده نمایش داده شود. از اعداد صحیح استفاده کنید؛ برای غیرفعال کردن خالی بگذارید.",
+  "settings.autoApprove.maxCost.v2Description":
+    "هنگامی که هزینه یک جلسه به این مقدار دلاری رسید، یک هشدار غیرمسدودکننده نمایش داده شود. برای غیرفعال کردن خالی بگذارید.",
   "settings.autoApprove.level.allow": "اجازه",
   "settings.autoApprove.level.ask": "پرسش",
   "settings.autoApprove.level.deny": "رد کردن",

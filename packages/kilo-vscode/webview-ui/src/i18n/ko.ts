@@ -1128,9 +1128,9 @@ export const dict = {
   "settings.agentBehaviour.mcpEmpty":
     "MCP 서버가 구성되지 않았습니다. kilo.jsonc에서 MCP 서버를 추가하거나 에이전트에게 추가를 요청하세요.",
   "settings.agentBehaviour.workflows.description":
-    "워크플로우는 구성에서 정의된 사용자 정의 슬래시 명령입니다. 채팅에서 /command-name을 입력하여 실행합니다. 명령은 opencode.json의 'command' 섹션에서 구성됩니다.",
+    "워크플로우는 구성 또는 명령 Markdown 파일에 정의된 사용자 정의 명령입니다. 각 워크플로우에 모델과 추론 변형을 설정할 수 있습니다.",
   "settings.agentBehaviour.workflows.empty":
-    "구성된 사용자 정의 명령이 없습니다. opencode.json에 명령을 추가하면 여기에 표시됩니다.",
+    "사용자 정의 명령을 찾을 수 없습니다. kilo2.json 또는 .kilo2/command의 Markdown 파일에 명령을 추가하세요.",
   "settings.agentBehaviour.workflows.detail.description": "설명",
   "settings.agentBehaviour.workflows.detail.template": "템플릿",
   "settings.agentBehaviour.workflows.model": "모델",
@@ -1148,6 +1148,8 @@ export const dict = {
   "settings.autoApprove.maxCost.title": "세션 비용 알림",
   "settings.autoApprove.maxCost.description":
     "세션 지출이 이 USD 금액을 초과한 뒤 계속하기 전에 알립니다. 정수 달러 금액을 사용하세요. 비활성화하려면 비워 두세요.",
+  "settings.autoApprove.maxCost.v2Description":
+    "세션 비용이 이 USD 금액에 도달하면 차단하지 않는 알림을 표시합니다. 비활성화하려면 비워 두세요.",
   "settings.autoApprove.level.allow": "허용",
   "settings.autoApprove.level.ask": "확인",
   "settings.autoApprove.level.deny": "거부",

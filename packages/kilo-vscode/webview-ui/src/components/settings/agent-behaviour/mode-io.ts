@@ -1,6 +1,7 @@
 // Import and export for the Agents subtab, in the v2 `agents.<id>` shape. `parseImport` validates an uploaded JSON
 // file and returns a config the tab writes at `agents.<id>`; `buildExport` builds the JSON of an edited mode.
 import type { PermissionEffect, PermissionRule } from "@opencode/client"
+import { isAgentNameTaken } from "./agent-list"
 
 /** Maximum import file size in bytes (1 MB). */
 export const MAX_IMPORT_SIZE = 1_048_576
@@ -73,7 +74,7 @@ export function parseImport(json: string, taken: string[]): ImportResult {
 
   const name = typeof data.name === "string" ? data.name.trim() : ""
   if (!name || !NAME_RE.test(name)) return { ok: false, error: "invalidName" }
-  if (taken.includes(name)) return { ok: false, error: "nameTaken" }
+  if (isAgentNameTaken(name, taken)) return { ok: false, error: "nameTaken" }
 
   const config: Record<string, unknown> = { mode: MODES.find((mode) => mode === data.mode) ?? "primary" }
   if (typeof data.description === "string") config.description = data.description

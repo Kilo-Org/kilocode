@@ -1,5 +1,11 @@
 import { createEffect, createMemo, createSignal, createUniqueId, on, onCleanup, onMount } from "solid-js"
-import { searchSettings, type SettingsEntry, type SettingsSearchResult, type SettingsTab } from "./settings-search"
+import {
+  searchSettings,
+  type SettingsEntry,
+  type SettingsNavigationTarget,
+  type SettingsSearchResult,
+  type SettingsTab,
+} from "./settings-search"
 
 /** Search state, keyboard navigation, and result reveal for the settings page. */
 export function useSettingsSearch(opts: {
@@ -7,7 +13,7 @@ export function useSettingsSearch(opts: {
   /** v2: the indexable rows the v2 Settings view renders. */
   entries?: () => SettingsEntry[]
   translate: (key: string) => string
-  onSelectTab: (tab: string) => void
+  onNavigate: (target: SettingsNavigationTarget) => void
   searchRequest?: () => number | undefined
 }) {
   const [query, setQuery] = createSignal("")
@@ -56,12 +62,14 @@ export function useSettingsSearch(opts: {
     requestAnimationFrame(() => attempt(0))
   }
 
-  const select = (result: SettingsSearchResult) => {
-    opts.onSelectTab(result.tab)
+  const navigate = (target: SettingsNavigationTarget) => {
+    opts.onNavigate(target)
     clear()
-    if (result.tabOnly) return
-    reveal(opts.translate(result.titleKey))
+    if (target.titleKey) reveal(opts.translate(target.titleKey))
   }
+
+  const select = (result: SettingsSearchResult) =>
+    navigate({ tab: result.tab, subtab: result.subtab, titleKey: result.tabOnly ? undefined : result.titleKey })
 
   const choose = () => {
     const next = results().at(Math.min(active(), results().length - 1))
@@ -96,6 +104,7 @@ export function useSettingsSearch(opts: {
     focusTick,
     move,
     choose,
+    navigate,
     select,
     results,
     searching,

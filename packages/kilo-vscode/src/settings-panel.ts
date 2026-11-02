@@ -5,7 +5,12 @@ import { Uri, ViewColumn, window, type Disposable, type ExtensionContext, type W
 import { wire } from "./chat"
 import type { Manager } from "./server"
 
-export function settings(input: { context: ExtensionContext; server: Manager; directory: string }) {
+export function settings(input: {
+  context: ExtensionContext
+  server: Manager
+  directory: string
+  onReset: () => void
+}) {
   const state: { panel?: WebviewPanel } = {}
   const attach = (panel: WebviewPanel) => {
     const root = input.context.extensionUri
