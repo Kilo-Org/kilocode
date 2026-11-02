@@ -170,7 +170,7 @@ jobs:
           OPENCODE_EXPERIMENTAL_DISABLE_FILEWATCHER: ${{ runner.os == 'Windows' && 'true' || 'false' }}
           TURBO_SCM_BASE: ${{ github.event_name == 'pull_request' && format('{0}^1', github.sha) || github.event.before }}
           TURBO_SCM_HEAD: ${{ github.sha }}
-          # The `packages` leg runs no shard: the Kilo host suite runs there in parallel, not split.
+          # kilocode_change - the `packages` leg runs no shard: the Kilo host suite runs there in parallel, not split.
           KILO_TEST_SHARD: ${{ matrix.shard != 'packages' && format('{0}/{1}', matrix.shard, matrix.settings.shards) || '' }} # kilocode_change
           KILO_TEST_CONCURRENCY: ${{ matrix.settings.concurrency }} # kilocode_change
 
