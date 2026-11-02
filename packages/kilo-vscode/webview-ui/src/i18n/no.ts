@@ -1161,6 +1161,8 @@ export const dict = {
   "settings.autoApprove.maxCost.title": "Varsel om øktkostnad",
   "settings.autoApprove.maxCost.description":
     "Varsle før en økt fortsetter etter at kostnaden overstiger dette USD-beløpet. Bruk hele dollar; la feltet stå tomt for å deaktivere.",
+  "settings.autoApprove.maxCost.v2Description":
+    "Vis et varsel som ikke blokkerer når kostnaden for en økt når dette USD-beløpet. La feltet stå tomt for å deaktivere.",
   "settings.autoApprove.level.allow": "Tillat",
   "settings.autoApprove.level.ask": "Spør",
   "settings.autoApprove.level.deny": "Avvis",

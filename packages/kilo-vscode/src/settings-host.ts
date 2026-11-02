@@ -20,6 +20,7 @@ export const KILO_SETTING_KEYS = [
   "fontSize",
   "language",
   "chat.shiftTabCyclesVariant",
+  "maxCost",
   "claudeCodeCompat",
   "extraCaCerts",
 ] as const

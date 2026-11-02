@@ -56,6 +56,13 @@
           "default": true,
           "markdownDescription": "Whether Shift+Tab cycles the reasoning variant while the prompt input has focus."
         },
+        "kilo-code.v2.maxCost": {
+          "type": "number",
+          "default": 0,
+          "minimum": 0,
+          "scope": "application",
+          "markdownDescription": "Show a non-blocking alert when a session reaches this cost in USD. Set to 0 to disable."
+        },
         "kilo-code.v2.claudeCodeCompat": {
           "type": "boolean",
           "default": false,

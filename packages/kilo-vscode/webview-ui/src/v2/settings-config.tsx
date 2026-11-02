@@ -30,7 +30,13 @@ import { createGate, writeScope, type SettingsScope } from "./settings-scope"
 export type { SettingsScope }
 
 /** The i18n key of a Kilo VS Code setting is `kilo-code.v2.<key>`. */
-export type KiloSettingKey = "fontSize" | "language" | "chat.shiftTabCyclesVariant" | "claudeCodeCompat" | "extraCaCerts"
+export type KiloSettingKey =
+  | "fontSize"
+  | "language"
+  | "chat.shiftTabCyclesVariant"
+  | "maxCost"
+  | "claudeCodeCompat"
+  | "extraCaCerts"
 
 type Json = Record<string, unknown>
 

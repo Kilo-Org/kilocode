@@ -1067,6 +1067,8 @@ export const dict = {
   "settings.autoApprove.maxCost.title": "工作階段費用提醒",
   "settings.autoApprove.maxCost.description":
     "當工作階段花費超過此美元金額後，在繼續前提醒。請使用整數美元；留空則停用。",
+  "settings.autoApprove.maxCost.v2Description":
+    "當工作階段費用達到此美元金額時顯示非封鎖提醒。留空則停用。",
   "settings.autoApprove.level.allow": "允許",
   "settings.autoApprove.level.ask": "詢問",
   "settings.autoApprove.level.deny": "拒絕",

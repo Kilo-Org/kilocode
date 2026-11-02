@@ -1105,6 +1105,7 @@ export const dict = {
     "定义工具的运行权限。大多数工具默认为「允许」。Bash 默认为「询问」。",
   "settings.autoApprove.maxCost.title": "会话费用提醒",
   "settings.autoApprove.maxCost.description": "当会话花费超过此美元金额后，在继续前提醒。请使用整数美元；留空则禁用。",
+  "settings.autoApprove.maxCost.v2Description": "当会话费用达到此美元金额时显示非阻塞提醒。留空则禁用。",
   "settings.autoApprove.level.allow": "允许",
   "settings.autoApprove.level.ask": "询问",
   "settings.autoApprove.level.deny": "拒绝",

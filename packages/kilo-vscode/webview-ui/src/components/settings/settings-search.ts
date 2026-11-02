@@ -174,6 +174,11 @@ const EXTRA_ENTRIES: SettingsEntry[] = [
   { tab: "aboutKiloCode", titleKey: "settings.aboutKiloCode.community" },
   { tab: "aboutKiloCode", titleKey: "settings.aboutKiloCode.cliServer", keywords: ["status", "connection"] },
   {
+    tab: "autoApprove",
+    titleKey: "settings.autoApprove.maxCost.title",
+    descriptionKey: "settings.autoApprove.maxCost.v2Description",
+  },
+  {
     tab: "browser",
     titleKey: "settings.webTools.webSearch.enable",
     descriptionKey: "settings.webTools.webSearch.description",

@@ -1115,6 +1115,8 @@ export const dict = {
   "settings.autoApprove.maxCost.title": "Сповіщення про вартість сесії",
   "settings.autoApprove.maxCost.description":
     "Попереджати перед продовженням сесії, якщо її витрати перевищують цю суму в USD. Використовуйте цілі долари; залиште порожнім, щоб вимкнути.",
+  "settings.autoApprove.maxCost.v2Description":
+    "Показувати неблокувальне попередження, коли вартість сесії досягає цієї суми в USD. Залиште порожнім, щоб вимкнути.",
   "settings.autoApprove.level.allow": "Дозволити",
   "settings.autoApprove.level.ask": "Запитувати",
   "settings.autoApprove.level.deny": "Відхилити",
