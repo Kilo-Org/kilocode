@@ -1,5 +1,6 @@
 package ai.kilocode.client.agentManager
 
+import ai.kilocode.client.actions.AgentManagerAddAction
 import ai.kilocode.client.util.edtWait
 import ai.kilocode.client.agentManager.worktree.KiloRunService
 import ai.kilocode.client.agentManager.worktree.KiloWorktreeService
@@ -34,6 +35,9 @@ import ai.kilocode.rpc.dto.HostedIDs
 import ai.kilocode.rpc.dto.SessionStatusDto
 import com.intellij.openapi.actionSystem.DataContext
 import com.intellij.openapi.actionSystem.DataKey
+import com.intellij.openapi.actionSystem.ActionPlaces
+import com.intellij.openapi.actionSystem.AnActionEvent
+import com.intellij.openapi.actionSystem.impl.SimpleDataContext
 import ai.kilocode.client.test.CopyProviderSink
 import ai.kilocode.client.agentManager.worktree.WorktreeNameCache
 import ai.kilocode.client.agentManager.worktree.WorktreeSessionEditorKind
@@ -224,6 +228,25 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         assertEquals(listOf("show"), order)
         assertEquals(0, edt { controller.model.size })
         assertTrue(rpc.creates.isEmpty())
+    }
+
+    fun `test Add Local opens the existing worktree dialog`() {
+        val order = mutableListOf<String>()
+        val plan = NewWorktreePlan.Create("feature/local", "main", PendingPrompt("build locally"))
+        val controller = WorktreeController(service, "/test", coroutines.scope)
+        val panel = edt {
+            AgentManagerPanel(testRootDisposable, controller, project, dialog = { _, _ -> FakeWorktreeDialog(plan, order) })
+        }
+        val local = AgentManagerAddAction().getChildren(null).first()
+        val context = SimpleDataContext.builder().add(SidePanelKeys.WORKTREE_PANEL, panel).build()
+        val event = AnActionEvent.createFromAnAction(local, null, ActionPlaces.TOOLWINDOW_TITLE, context)
+
+        edt { local.actionPerformed(event) }
+        flush()
+
+        assertEquals(listOf("show"), order)
+        assertEquals("feature/local", rpc.creates.single().branch)
+        assertEquals("main", rpc.creates.single().baseBranch)
     }
 
     fun `test configure imports an existing branch`() {

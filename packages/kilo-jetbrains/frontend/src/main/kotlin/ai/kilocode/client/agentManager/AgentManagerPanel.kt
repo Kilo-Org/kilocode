@@ -18,7 +18,6 @@ import ai.kilocode.client.agentManager.worktree.WorktreeStatusService
 import ai.kilocode.client.agentManager.worktree.WorktreeNameCache
 import ai.kilocode.client.agentManager.worktree.runWorktreeSetupScript
 import ai.kilocode.client.app.KiloHostedService
-import ai.kilocode.client.app.KiloAppService
 import ai.kilocode.client.app.KiloWorkspaceService
 import ai.kilocode.client.agentManager.worktree.WorktreeEditorMatchers
 import ai.kilocode.client.agentManager.worktree.WorktreeSessionEditorMatcher
@@ -31,9 +30,7 @@ import ai.kilocode.client.agentManager.hosted.HostedWorkspaceCache
 import ai.kilocode.client.agentManager.hosted.HostedWorkspaceDialog
 import ai.kilocode.client.agentManager.hosted.HostedWorkspaceEditorKind
 import ai.kilocode.client.agentManager.hosted.HostedWorkspaceEditorMatcher
-import ai.kilocode.client.agentManager.hosted.HostedWorkspaceTitle
 import ai.kilocode.client.agentManager.hosted.hostedRepository
-import ai.kilocode.client.agentManager.hosted.hostedSelection
 import ai.kilocode.client.agentManager.hosted.hostedWorkspaceParams
 import ai.kilocode.client.agentManager.hosted.HostedWorkspaceRow
 import ai.kilocode.client.agentManager.hosted.HostedWorkspaceRowData
@@ -112,10 +109,8 @@ import com.intellij.openapi.ide.CopyPasteManager
 import com.intellij.openapi.project.DumbAwareAction
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.Messages
-import com.intellij.openapi.ui.popup.JBPopupFactory
 import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.vfs.VirtualFile
-import com.intellij.ui.SimpleListCellRenderer
 import com.intellij.util.concurrency.annotations.RequiresEdt
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.components.BorderLayoutPanel
@@ -325,37 +320,6 @@ class AgentManagerPanel(
         controller.move(sessionId, directory, surface)
 
     @RequiresEdt
-    internal fun addExistingHosted(anchor: Component) {
-        val target = project ?: return
-        val hosted = target.service<KiloHostedService>()
-        if (!hosted.enabled()) {
-            KiloNotifications.info(target, KiloBundle.message("hosted.workspace.disabled"))
-            return
-        }
-        val items = hostedState.items
-        if (items.isEmpty()) {
-            KiloNotifications.info(target, KiloBundle.message("hosted.workspace.add.empty"))
-            return
-        }
-        val management = target.service<HostedManagementService>()
-        JBPopupFactory.getInstance().createPopupChooserBuilder(items)
-            .setRenderer(
-                SimpleListCellRenderer.create("") { item ->
-                    HostedWorkspaceTitle.text(item.name, item.branch, item.ref.workspaceID) +
-                        if (management.excluded(item.ref)) " " + KiloBundle.message("hosted.workspace.add.hidden") else ""
-                },
-            )
-            .setTitle(KiloBundle.message("hosted.workspace.add.title"))
-            .setItemChosenCallback { item ->
-                management.restore(item.ref)
-                openHostedWorkspace(target, item)
-                sync()
-            }
-            .createPopup()
-            .showUnderneathOf(anchor)
-    }
-
-    @RequiresEdt
     internal fun createHosted(anchor: Component) {
         val target = project ?: return
         val hosted = target.service<KiloHostedService>()
@@ -376,21 +340,14 @@ class AgentManagerPanel(
                     KiloNotifications.error(target, KiloBundle.message("hosted.workspace.profiles.failed"), error.message)
                     return@edt
                 }
-                val sel = hostedSelection(
-                    service<KiloAppService>(),
-                    service<KiloWorkspaceService>().workspace(controller.directory).state.value.providers,
-                ) ?: run {
-                    KiloNotifications.error(target, KiloBundle.message("hosted.workspace.create.noModel"))
-                    return@edt
-                }
                 val dialog = HostedWorkspaceDialog(
                     anchor,
+                    target,
+                    controller.directory,
                     repo,
                     profiles.items,
-                    sel.agent,
-                    sel.model,
                     withWorkspace = true,
-                    variant = sel.variant,
+                    branch = controller.defaultBranch,
                 )
                 if (!dialog.showAndGet()) return@edt
                 val plan = dialog.plan() ?: return@edt
@@ -436,21 +393,13 @@ class AgentManagerPanel(
     @RequiresEdt
     internal fun newHostedSession(anchor: Component, workspace: HostedWorkspaceDto) {
         val target = project ?: return
-        val sel = hostedSelection(
-            service<KiloAppService>(),
-            service<KiloWorkspaceService>().workspace(controller.directory).state.value.providers,
-        ) ?: run {
-            KiloNotifications.error(target, KiloBundle.message("hosted.workspace.create.noModel"))
-            return
-        }
         val dialog = HostedWorkspaceDialog(
             anchor,
+            target,
+            controller.directory,
             workspace.repositoryUrl.orEmpty(),
             emptyList(),
-            sel.agent,
-            sel.model,
             withWorkspace = false,
-            variant = sel.variant,
         )
         if (!dialog.showAndGet()) return
         val plan = dialog.plan() ?: return

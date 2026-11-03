@@ -1,15 +1,19 @@
 package ai.kilocode.client.agentManager.hosted
 
+import ai.kilocode.client.agentManager.AgentManagerDialog
+import ai.kilocode.client.app.KiloAppService
+import ai.kilocode.client.app.KiloWorkspaceService
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.rpc.dto.HostedWorkspaceProfileDto
-import com.intellij.openapi.ui.DialogWrapper
-import com.intellij.openapi.ui.ValidationInfo
-import com.intellij.ui.components.JBScrollPane
-import com.intellij.ui.components.JBTextArea
+import com.intellij.openapi.components.service
+import com.intellij.openapi.project.Project
+import com.intellij.openapi.ui.ComboBox
+import com.intellij.ui.SimpleListCellRenderer
 import com.intellij.ui.components.JBTextField
 import com.intellij.util.ui.FormBuilder
+import com.intellij.util.concurrency.annotations.RequiresEdt
 import java.awt.Component
-import javax.swing.JComboBox
+import java.awt.GridBagConstraints
 import javax.swing.JComponent
 
 internal data class HostedCreatePlan(
@@ -21,72 +25,81 @@ internal data class HostedCreatePlan(
     val variant: String?,
 )
 
-internal class HostedWorkspaceDialog(
+internal class HostedWorkspaceDialog @RequiresEdt constructor(
     parent: Component,
+    project: Project,
+    directory: String,
     private val repositoryUrl: String,
     private val profiles: List<HostedWorkspaceProfileDto>,
-    private val agent: String,
-    private val model: String,
     private val withWorkspace: Boolean,
-    private val variant: String? = null,
-) : DialogWrapper(parent, false) {
-    private val branch = JBTextField().apply {
+    branch: String = "",
+    app: KiloAppService = service(),
+    workspaces: KiloWorkspaceService = service(),
+) : AgentManagerDialog(parent, project, directory, false, app, workspaces) {
+    private val branch = JBTextField(branch).apply {
         emptyText.text = KiloBundle.message("hosted.workspace.dialog.branch.placeholder")
     }
-    private val profile = JComboBox(profiles.map { it.name }.toTypedArray())
-    private val prompt = JBTextArea(6, 48).apply {
-        lineWrap = true
-        wrapStyleWord = true
+    private val profile = ComboBox(profiles.toTypedArray()).apply {
+        renderer = SimpleListCellRenderer.create("") { it.name }
     }
-    private val mode = JBTextField(agent)
-    private val chosen = JBTextField(model)
     private var result: HostedCreatePlan? = null
 
     init {
         title = KiloBundle.message(if (withWorkspace) "hosted.workspace.dialog.create.title" else "hosted.workspace.dialog.session.title")
         init()
+        setOKButtonText(KiloBundle.message(if (withWorkspace) "hosted.workspace.dialog.create" else "hosted.workspace.session.new"))
     }
 
-    override fun createCenterPanel(): JComponent = FormBuilder.createFormBuilder()
-        .addLabeledComponent(KiloBundle.message("hosted.workspace.dialog.repository"), JBTextField(repositoryUrl).apply { isEnabled = false })
-        .apply {
+    override fun createCenterPanel(): JComponent {
+        val repo = JBTextField(repositoryUrl, 67).apply { isEditable = false }
+        val fields = object : FormBuilder() {
+            override fun getFill(component: JComponent) = GridBagConstraints.HORIZONTAL
+        }.apply {
             if (withWorkspace) {
                 addLabeledComponent(KiloBundle.message("hosted.workspace.dialog.branch"), branch)
                 addLabeledComponent(KiloBundle.message("hosted.workspace.dialog.profile"), profile)
             }
-        }
-        .addLabeledComponent(KiloBundle.message("hosted.workspace.dialog.prompt"), JBScrollPane(prompt))
-        .addLabeledComponent(KiloBundle.message("hosted.workspace.dialog.agent"), mode)
-        .addLabeledComponent(KiloBundle.message("hosted.workspace.dialog.model"), chosen)
-        .panel
-
-    override fun doValidate(): ValidationInfo? {
-        if (prompt.text.isBlank()) return ValidationInfo(KiloBundle.message("hosted.workspace.dialog.prompt.required"), prompt)
-        if (mode.text.isBlank()) return ValidationInfo(KiloBundle.message("hosted.workspace.dialog.agent.required"), mode)
-        if (chosen.text.isBlank()) return ValidationInfo(KiloBundle.message("hosted.workspace.dialog.model.required"), chosen)
-        if (withWorkspace && profiles.isEmpty()) return ValidationInfo(KiloBundle.message("hosted.workspace.dialog.profile.required"), profile)
-        if (withWorkspace && profiles.none { it.id == selectedProfileID() }) {
-            return ValidationInfo(KiloBundle.message("hosted.workspace.dialog.profile.invalid"), profile)
-        }
-        return null
+        }.panel
+        val heading = FormBuilder.createFormBuilder()
+            .addLabeledComponent(KiloBundle.message("hosted.workspace.dialog.repository"), repo)
+            .panel
+        return content(heading, fields)
     }
 
-    override fun doOKAction() {
-        val selected = if (withWorkspace) selectedProfileID() else ""
-        val chosenModel = chosen.text.trim()
+    override fun getPreferredFocusedComponent(): JComponent = prompt.defaultFocusedComponent
+
+    override fun getDimensionServiceKey(): String = "ai.kilocode.HostedWorkspaceDialog.v2"
+
+    override fun doOKAction() = submitCreate(prompt.text())
+
+    override fun submitCreate(text: String) {
+        setErrorText(null)
+        val picked = pending(text)
+        if (picked == null) {
+            setErrorText(KiloBundle.message("hosted.workspace.dialog.prompt.required"), prompt)
+            return
+        }
+        val mode = picked.agent
+        val model = picked.model
+        if (mode == null || model == null || picked.provider != "kilo") {
+            setErrorText(KiloBundle.message("hosted.workspace.create.noModel"), prompt)
+            return
+        }
+        val selected = profile.selectedItem as? HostedWorkspaceProfileDto
+        if (withWorkspace && (selected == null || selected !in profiles)) {
+            setErrorText(KiloBundle.message("hosted.workspace.dialog.profile.required"), profile)
+            return
+        }
         result = HostedCreatePlan(
-            prompt = prompt.text.trim(),
+            prompt = picked.text,
             branch = branch.text.trim().takeIf { withWorkspace && it.isNotBlank() },
-            profileID = selected,
-            agent = mode.text.trim(),
-            model = chosenModel,
-            variant = variant.takeIf { chosenModel == model },
+            profileID = selected?.id.orEmpty(),
+            agent = mode,
+            model = "${picked.provider}/$model",
+            variant = picked.variant,
         )
-        super.doOKAction()
+        close(OK_EXIT_CODE)
     }
 
     fun plan(): HostedCreatePlan? = result
-
-    private fun selectedProfileID(): String =
-        profiles.getOrNull(profile.selectedIndex)?.id.orEmpty()
 }
