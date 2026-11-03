@@ -6,11 +6,12 @@ import { Dialog } from "@kilocode/kilo-ui/dialog"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { List } from "@kilocode/kilo-ui/list"
 import { Spinner } from "@kilocode/kilo-ui/spinner"
-import { createMemo, createSignal, Show, type JSX } from "solid-js"
+import { createMemo, createSignal, onMount, Show, type JSX } from "solid-js"
 import { SessionRenameEditor } from "../components/shared/SessionRenameEditor"
 import { useLanguage } from "../context/language"
 import { formatRelativeDate } from "../utils/date"
 import { useV2Optional, type V2 } from "./client"
+import { sameSessionDirectory } from "./history-directory"
 
 const groups = ["time.today", "time.yesterday", "time.thisWeek", "time.thisMonth", "time.older"] as const
 
@@ -42,10 +43,29 @@ export function SessionList(props: {
   const [saving, setSaving] = createSignal(false)
   const [notice, setNotice] = createSignal("")
   const [removed, setRemoved] = createSignal<ReadonlySet<string>>(new Set())
+
+  // Remember the IDs returned by the directory-scoped API. The server already
+  // knows which sessions belong to this scope, including symlinked workspaces.
+  const [loadedIds, setLoadedIds] = createSignal<ReadonlySet<string>>(new Set())
+  onMount(() => {
+    if (!scope || props.sessions) return
+    void scope.api.session
+      .list({ directory: scope.directory, parentID: null, order: "desc", limit: 50 })
+      .then((response) => {
+        response.data.forEach(scope.data.session.remember)
+        setLoadedIds(new Set(response.data.map((item) => item.id)))
+      })
+      .catch(scope.report)
+  })
+
   const items = createMemo(() =>
     (
       props.sessions?.() ??
-      scope?.data.session.list().filter((item) => !item.parentID && item.location.directory === scope.directory) ??
+      scope?.data.session.list().filter(
+        (item) =>
+          !item.parentID &&
+          (loadedIds().has(item.id) || sameSessionDirectory(item.location.directory, scope.directory)),
+      ) ??
       []
     )
       .filter((item) => !removed().has(item.id))
