@@ -29,7 +29,11 @@ import { createSpeechToTextHost } from "./speech-to-text/host"
 import { openToolFile, type ToolDiff } from "./tool-diff"
 
 // The sidebar may only write the settings its own UI owns. Other views keep their own write path.
-const CHAT_SETTING_KEYS: ReadonlySet<string> = new Set(["showTaskTimeline"])
+// The settings each webview may write; the Settings panel writes every Kilo setting through its own handler.
+const VIEW_SETTING_KEYS: Record<"chat" | "agentManager", ReadonlySet<string>> = {
+  chat: new Set(["showTaskTimeline"]),
+  agentManager: new Set(["showTaskTimeline", "agentManager.pushFixes"]),
+}
 
 export function chat(input: {
   context: ExtensionContext
@@ -139,8 +143,9 @@ export function wire(input: {
   })
   // Config read and write are host-side: the Settings panel uses the full host, and the sidebar writes the
   // `kilo-code.v2.*` settings it owns, such as the task header graph toggle.
+  const view = input.view
   const settings =
-    input.view === "settings"
+    view === "settings"
       ? settingsHost({
           context: input.context,
           server: input.server,
@@ -148,21 +153,19 @@ export function wire(input: {
           post,
           onReset: input.onReset,
         })
-      : input.view === "chat"
-        ? {
-            handle: (message: ToHost) => {
-              if (message.type !== "updateVSCodeSettings") return false
-              const values = Object.fromEntries(
-                Object.entries(message.values).filter(([key]) => CHAT_SETTING_KEYS.has(key)),
-              )
-              void writeKiloSettings(values).catch((error: unknown) => {
-                console.error("Failed to write Kilo settings", error)
-              })
-              return true
-            },
-            dispose() {},
-          }
-        : undefined
+      : {
+          handle: (message: ToHost) => {
+            if (message.type !== "updateVSCodeSettings") return false
+            const values = Object.fromEntries(
+              Object.entries(message.values).filter(([key]) => VIEW_SETTING_KEYS[view].has(key)),
+            )
+            void writeKiloSettings(values).catch((error: unknown) => {
+              console.error("Failed to write Kilo settings", error)
+            })
+            return true
+          },
+          dispose() {},
+        }
   // The sidebar carries the live Kilo settings: push a fresh value when any of them changes.
   const settingsWatch =
     input.view !== "settings"
@@ -249,7 +252,7 @@ export function wire(input: {
         focus: message.focus,
         titleKey: message.titleKey,
       })
-    if (settings?.handle(message)) return
+    if (settings.handle(message)) return
     // Only the sidebar carries the cycle keybindings; the Settings panel must not change their context.
     if (message.type === "webviewFocusChanged" && input.view === "chat")
       return void commands.executeCommand("setContext", "kilo-code.v2.sidebarFocused", message.focused === true)
@@ -282,7 +285,7 @@ export function wire(input: {
     dispose() {
       link.dispose()
       speech.dispose()
-      settings?.dispose()
+      settings.dispose()
       settingsWatch?.dispose()
       subscription.dispose()
     },

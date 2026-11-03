@@ -1,5 +1,6 @@
 import * as fs from "node:fs"
 import * as path from "node:path"
+import { KiloConfigFiles } from "@opencode/util/kilocode/config/files"
 
 // TODO: Remove the legacy .kilocode -> .kilo migration helpers below after the
 // GA release cleanup tracked in https://github.com/Kilo-Org/kilocode/issues/6986.
@@ -15,6 +16,8 @@ export const SNAPSHOT_INITIALIZATION = "wait" as const
 
 /** Kilo config directory name (project-level and inside worktrees). */
 export const KILO_DIR = ".kilo"
+/** The project directory of the v2 config; it holds the Agent Manager state. */
+export const STATE_DIR = KiloConfigFiles.directories[0]
 
 /** Legacy config directory name for backward compatibility reads. */
 export const LEGACY_DIR = ".kilocode"

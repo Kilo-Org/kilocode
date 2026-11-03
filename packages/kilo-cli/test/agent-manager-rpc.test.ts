@@ -2,6 +2,7 @@ import { expect, test } from "bun:test"
 import { fixture } from "@kilocode/gateway-core/testing"
 import { OpenCode, type RpcClient } from "@opencode/client"
 import { LocationServiceMap } from "@opencode/core/location-service-map"
+import { Project } from "@opencode/core/project"
 import { Tool } from "@opencode/core/tool"
 import { Agent } from "@opencode/schema/agent"
 import { KiloAgentManagerRpc } from "@opencode/schema/kilocode/agent-manager"
@@ -11,9 +12,11 @@ import { Session } from "@opencode/schema/session"
 import { SessionMessage } from "@opencode/schema/session-message"
 import { Tool as ToolSchema } from "@opencode/schema/tool"
 import { createRoutes } from "@opencode/server/routes"
+import { Global } from "@opencode/util/global"
+import { Hash } from "@opencode/util/hash"
 import { Context, Effect, Fiber, Layer, References } from "effect"
 import { HttpEffect, HttpRouter, HttpServer } from "effect/http"
-import { mkdtemp, rm } from "node:fs/promises"
+import { access, mkdir, mkdtemp, realpath, rm, writeFile } from "node:fs/promises"
 import os from "node:os"
 import path from "node:path"
 import { KiloHost } from "../src/host"
@@ -25,7 +28,7 @@ const boot =
     body: (input: {
       readonly client: ReturnType<typeof OpenCode.make>
       readonly directory: string
-    }) => Effect.Effect<void, unknown, LocationServiceMap.Service>,
+    }) => Effect.Effect<void, unknown, LocationServiceMap.Service | Project.Service | Global.Service>,
   ) =>
   async () => {
     using backend = fixture()
@@ -183,6 +186,30 @@ test(
         })
 
         yield* roundTrip
+
+        const projects = yield* Project.Service
+        const global = yield* Global.Service
+        const resolved = yield* projects.resolve(AbsolutePath.make(directory))
+        const canonicalRoot = yield* Effect.promise(() => canonical(resolved.directory))
+        const name = "removed-snapshot"
+        const worktree = path.join(directory, ".kilo", "worktrees", name)
+        const canonicalWorktree = path.join(canonicalRoot, ".kilo", "worktrees", name)
+        const snapshot = path.join(global.data, "snapshot", resolved.id, Hash.fast(canonicalWorktree))
+        yield* Effect.promise(() => mkdir(path.join(canonicalRoot, ".kilo", "worktrees"), { recursive: true }))
+        yield* Effect.promise(() => mkdir(path.join(snapshot, "objects"), { recursive: true }))
+        yield* Effect.promise(() => writeFile(path.join(snapshot, "objects", "pack-test.pack"), "pack"))
+
+        expect(yield* Effect.promise(() => rpc.removeSnapshot({ worktree }, { location }))).toEqual({ removed: true })
+        expect(yield* Effect.promise(() => exists(snapshot))).toBe(false)
+        expect(yield* Effect.promise(() => rpc.removeSnapshot({ worktree }, { location }))).toEqual({ removed: false })
+        const rejectedSnapshot = yield* Effect.tryPromise({
+          try: () => rpc.removeSnapshot({ worktree: path.join(resolved.directory, "outside") }, { location }),
+          catch: (error) => ({
+            type:
+              typeof error === "object" && error !== null && "type" in error ? String(error.type) : "unknown",
+          }),
+        }).pipe(Effect.flip)
+        expect(rejectedSnapshot.type).toBe("invalid_worktree")
       }).pipe(Effect.provide(LocationServiceMap.Service.get(ref)))
 
       controller.abort()
@@ -216,6 +243,17 @@ async function waitFor(check: () => boolean) {
     await Bun.sleep(20)
   }
   throw new Error("timed out waiting for a condition")
+}
+
+async function canonical(file: string) {
+  return realpath(file)
+}
+
+async function exists(file: string) {
+  return access(file).then(
+    () => true,
+    () => false,
+  )
 }
 
 function waitForPending(

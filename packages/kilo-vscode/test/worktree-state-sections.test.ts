@@ -10,7 +10,7 @@ describe("WorktreeStateManager sections", () => {
 
   beforeEach(() => {
     root = fs.mkdtempSync(path.join(os.tmpdir(), "wtsm-sec-"))
-    fs.mkdirSync(path.join(root, ".kilo"), { recursive: true })
+    fs.mkdirSync(path.join(root, ".kilo2"), { recursive: true })
     mgr = new WorktreeStateManager(root, () => {})
   })
 
@@ -332,7 +332,7 @@ describe("WorktreeStateManager sections", () => {
       await mgr.flush()
       await mgr.save()
       // Simulate stale data: manually remove section from worktreeOrder
-      const file = path.join(root, ".kilo", "agent-manager.json")
+      const file = path.join(root, ".kilo2", "agent-manager.json")
       const data = JSON.parse(fs.readFileSync(file, "utf-8"))
       data.worktreeOrder = [wt.id] // section ID missing
       fs.writeFileSync(file, JSON.stringify(data))
@@ -347,7 +347,7 @@ describe("WorktreeStateManager sections", () => {
       const wt = mgr.addWorktree({ branch: "a", path: "/tmp/a", parentBranch: "main" })
       await mgr.flush()
       await mgr.save()
-      const file = path.join(root, ".kilo", "agent-manager.json")
+      const file = path.join(root, ".kilo2", "agent-manager.json")
       const data = JSON.parse(fs.readFileSync(file, "utf-8"))
       data.worktreeOrder = [] // worktree ID missing
       fs.writeFileSync(file, JSON.stringify(data))
@@ -362,7 +362,7 @@ describe("WorktreeStateManager sections", () => {
       const sec = mgr.addSection("S", null, [wt.id])
       await mgr.flush()
       await mgr.save()
-      const file = path.join(root, ".kilo", "agent-manager.json")
+      const file = path.join(root, ".kilo2", "agent-manager.json")
       const data = JSON.parse(fs.readFileSync(file, "utf-8"))
       data.worktreeOrder = [sec.id]
       fs.writeFileSync(file, JSON.stringify(data))
@@ -377,7 +377,7 @@ describe("WorktreeStateManager sections", () => {
       const sec = mgr.addSection("S", null)
       await mgr.flush()
       await mgr.save()
-      const file = path.join(root, ".kilo", "agent-manager.json")
+      const file = path.join(root, ".kilo2", "agent-manager.json")
       const data = JSON.parse(fs.readFileSync(file, "utf-8"))
       data.worktreeOrder = [sec.id, wt.id]
       fs.writeFileSync(file, JSON.stringify(data))

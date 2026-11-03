@@ -69,15 +69,13 @@ test("uses a browser-valid close code when replay overflows", () => {
 test("keeps raw PTY line endings and initializes Unicode widths before attaching", () => {
   expect(terminal).toContain("convertEol: false")
   expect(terminal).toContain('term.unicode.activeVersion = "15-graphemes"')
-  expect(terminal.indexOf("term.loadAddon(new UnicodeGraphemesAddon())")).toBeLessThan(
-    terminal.indexOf("open(props.wsUrl)"),
-  )
+  expect(terminal.indexOf("term.loadAddon(new UnicodeGraphemesAddon())")).toBeLessThan(terminal.indexOf("open()"))
 })
 
 test("fits and forces the initial PTY dimensions before socket attach", () => {
   expect(terminal).toContain("const syncSize = (force = false)")
   expect(terminal).toContain("if (props.active) syncSize(true)")
-  expect(terminal.indexOf("fitNow()\n      if (!ws) open(props.wsUrl)")).toBeGreaterThan(-1)
+  expect(terminal.indexOf("fitNow()\n      if (!ws) open()")).toBeGreaterThan(-1)
 })
 
 test("keeps terminal sockets mounted while history is open", () => {
@@ -96,7 +94,7 @@ test("re-sends dimensions when an optimistic terminal receives its PTY", () => {
   )?.[1]
   expect(created).toBeDefined()
   expect(created).toContain("fitNow()")
-  expect(created!.indexOf("fitNow()")).toBeLessThan(created!.indexOf("open(message.wsUrl)"))
+  expect(created!.indexOf("fitNow()")).toBeLessThan(created!.indexOf("open()"))
 })
 
 test("clamps the restored inspector width to the shared layout bounds", () => {

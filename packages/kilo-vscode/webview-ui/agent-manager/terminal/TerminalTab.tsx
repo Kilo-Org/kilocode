@@ -1,13 +1,12 @@
 /**
  * Experimental xterm.js terminal tab.
  *
- * Mounts an xterm Terminal in a ref'd div and opens a WebSocket directly
- * to the CLI server's `/pty/:id/connect` endpoint. Output frames come back
- * as text (PTY bytes) or binary (control frames with a leading 0x00 byte
- * carrying cursor metadata — see `packages/opencode/src/pty/index.ts:46`).
- *
- * The extension host is only involved at terminal create/close/resize time;
- * once the WebSocket is up, raw bytes bypass postMessage entirely.
+ * Mounts an xterm Terminal in a ref'd div and streams its PTY through the
+ * extension-host relay (`./socket.ts`). Output frames arrive as text (PTY
+ * bytes) or binary (control frames with a leading 0x00 byte carrying cursor
+ * metadata). The relay forwards them over the panel message channel, which is
+ * the only path because the server rejects a browser `Origin` on its PTY
+ * connect route.
  */
 
 import { Component, createEffect, onCleanup, onMount } from "solid-js"
@@ -21,13 +20,13 @@ import { useVSCode } from "../v2/vscode"
 import { useLanguage } from "../../src/context/language"
 import type { ScriptTerminalStatus, TerminalFont } from "./state"
 import { createInputBuffer, createReplayGate, createWriteBatcher } from "./replay"
+import { TerminalSocket } from "./socket"
 import { registerTerminalOutput, unregisterTerminalOutput } from "./output"
 import { registerActivity } from "./activity"
 import type { Activity } from "../v2/activity"
 
 interface Props {
   terminalId: string
-  wsUrl: string
   /** Terminal font settings forwarded from the extension host. Used on
    *  initial mount; live changes arrive via `agentManager.terminal.fontChanged`. */
   font: TerminalFont
@@ -216,7 +215,7 @@ export const TerminalTab: Component<Props> = (props) => {
     // strips these itself, so this only fires for real title codes.
     const disposeTitle = term.onTitleChange((title) => props.onTitleChange?.(title))
 
-    let ws: WebSocket | undefined
+    let ws: TerminalSocket | undefined
     let closed = false
     const input = createInputBuffer()
     let user = false
@@ -226,6 +225,8 @@ export const TerminalTab: Component<Props> = (props) => {
     let fallbackTimer: ReturnType<typeof setTimeout> | undefined
     let streamed = false
     let socketEnded = false
+    let opened = false
+    let attached = false
     const activity = registerActivity(term.parser, (state) => {
       props.onActivityChange?.(closed || socketEnded ? "idle" : state)
     })
@@ -275,18 +276,18 @@ export const TerminalTab: Component<Props> = (props) => {
     const send = (data: string) => {
       const reply = replay.draining() && !user
       user = false
-      if (props.restartable && (replay.blocked() || disconnected || ws?.readyState !== WebSocket.OPEN)) {
+      if (props.restartable && (replay.blocked() || disconnected || ws?.readyState !== TerminalSocket.OPEN)) {
         input.add(data, reply)
         if (disconnected) requestRestart()
         return
       }
-      if (ws?.readyState === WebSocket.OPEN) {
+      if (ws?.readyState === TerminalSocket.OPEN) {
         ws.send(data)
         return
       }
     }
     const flush = (all = false) => {
-      if (ws?.readyState !== WebSocket.OPEN) return
+      if (ws?.readyState !== TerminalSocket.OPEN) return
       if (readyTimer) {
         clearTimeout(readyTimer)
         readyTimer = undefined
@@ -316,15 +317,17 @@ export const TerminalTab: Component<Props> = (props) => {
     for (const event of ["input", "paste", "compositionend", "mousedown", "wheel"]) {
       host.addEventListener(event, markUser, true)
     }
-    const open = (url: string) => {
-      if (closed || !url) return
-      if (ws && ws.readyState !== WebSocket.CLOSING && ws.readyState !== WebSocket.CLOSED) return
+    const open = () => {
+      if (closed) return
+      if (ws && ws.readyState !== TerminalSocket.CLOSING && ws.readyState !== TerminalSocket.CLOSED) return
       replay.attach(disconnected)
-      const next = new WebSocket(url)
+      const next = new TerminalSocket(vscode, props.terminalId)
       next.binaryType = "arraybuffer"
       ws = next
+      opened = false
       next.onopen = () => {
         if (closed || ws !== next) return
+        opened = true
         socketEnded = false
         if (props.restartable && disconnected) {
           fallbackTimer = setTimeout(() => {
@@ -374,6 +377,14 @@ export const TerminalTab: Component<Props> = (props) => {
         socketEnded = true
         activity.clear()
         noteFailure()
+        // A socket that never opened was refused before any output. Re-open
+        // once: the relay mints a fresh ticket for every open, so a stale or
+        // already consumed ticket is recoverable without ending the terminal.
+        if (!opened && !attached) {
+          attached = true
+          open()
+          return
+        }
         if (props.restartable) {
           disconnected = true
           restartRequested = false
@@ -403,8 +414,12 @@ export const TerminalTab: Component<Props> = (props) => {
       term.loadAddon(new ClipboardAddon())
       term.refresh(0, Math.max(0, term.rows - 1))
     }
-    const restarted = (url: string) => {
-      open(url)
+    // The host replaced the PTY behind this terminal, so the old relay socket
+    // only carries frames from the terminal we are leaving behind.
+    const restarted = () => {
+      if (ws) ws.close()
+      ws = undefined
+      open()
     }
 
     // Resize the visible terminal and forward new cols/rows to the backend
@@ -457,7 +472,7 @@ export const TerminalTab: Component<Props> = (props) => {
       frame = undefined
       if (closed) return
       fitNow()
-      if (!ws) open(props.wsUrl)
+      if (!ws) open()
       deferred = requestAnimationFrame(loadAddons)
     })
 
@@ -513,7 +528,7 @@ export const TerminalTab: Component<Props> = (props) => {
     }
     const fontSub = vscode.onMessage((message) => {
       if (message.type === "agentManager.terminal.restarted") {
-        if (message.terminalId === props.terminalId) restarted(message.wsUrl)
+        if (message.terminalId === props.terminalId) restarted()
         return
       }
 
@@ -525,7 +540,7 @@ export const TerminalTab: Component<Props> = (props) => {
           // force the first resize again once the created response arrives.
           fitNow()
           scheduleRepaint()
-          open(message.wsUrl)
+          open()
         }
         return
       }

@@ -1,5 +1,6 @@
 // One session laid out like main's ChatView: task header, transcript, docks and prompt. The sidebar shows one at a
 // time; the Agent Manager shows one per selected tab, each in the store of its directory.
+import type { FileDiffInfo } from "@opencode/client"
 import type { ToolActions } from "@kilocode/kilo-ui/message-part"
 import { ToolChildSessionProvider, type ToolChildSession } from "@kilocode/kilo-ui/tool-child-session"
 import { createEffect, createMemo, on, onCleanup, Show, type JSX } from "solid-js"
@@ -28,8 +29,16 @@ export function SessionView(props: {
   /** Replaces the transcript with `replacement` while true, for example with the session changes. */
   replace?: boolean
   replacement?: JSX.Element
+  /** Replaces the welcome screen of an empty session. */
+  empty?: () => JSX.Element
   /** Read-only sessions show the transcript without docks and prompt. */
   readOnly?: boolean
+  /** Shows the speech to text control; the Agent Manager has none. */
+  speech?: boolean
+  /** Opens the proposed changes of an edit permission request. */
+  onPreviewEdit?: (files: FileDiffInfo[], sessionID: string) => void
+  /** Receives the composer append function, for example for review comments. */
+  onAppendReady?: (append: (value: string, send: boolean) => void) => void
 }) {
   const v2 = useV2()
   const session = () => props.session
@@ -173,6 +182,7 @@ export function SessionView(props: {
                   actions={props.actions}
                   onSelectSession={(id) => props.actions.openSession?.(id)}
                   onShowHistory={props.onShowHistory}
+                  empty={props.empty}
                   onScrollToBottomReady={(fn) => (scrollToBottom = fn)}
                 />
               }
@@ -193,7 +203,7 @@ export function SessionView(props: {
             </div>
           </Show>
           <Show when={permissions()[0]} keyed>
-            {(request) => <PermissionDock request={request} />}
+            {(request) => <PermissionDock request={request} onPreview={props.onPreviewEdit} />}
           </Show>
           <Show when={forms()[0]} keyed>
             {(form) => <QuestionDock form={form} />}
@@ -218,6 +228,8 @@ export function SessionView(props: {
             questioning={questioning()}
             onSend={send}
             onStop={stop}
+            speech={props.speech}
+            onAppendReady={props.onAppendReady}
             selectors={<Selectors selection={selection} blocked={selectorsBlocked()} />}
             actions={<AutoApproveAction enabled={autoApprove.enabled()} onToggle={autoApprove.toggle} />}
           />

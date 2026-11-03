@@ -14,6 +14,8 @@ import { ProjectContexts, type ProjectSnapshot } from "./contexts"
 import type { ProjectMessageDeps } from "./messages"
 import { createSettingsHandler, type SettingsHandler } from "./settings"
 import { poolHome } from "../pool/home"
+import type { SidebarTarget } from "./route"
+import type { AgentManagerOutMessage } from "../types"
 
 export interface ProjectWiring {
   registry: ProjectRegistry
@@ -47,9 +49,9 @@ export function createProjectWiring(opts: {
   changed: () => void
   removed?: (id: string) => void
   /** Acknowledge an atomically validated sidebar selection. */
-  selected: (target: import("./route").SidebarTarget) => void
+  selected: (target: SidebarTarget) => void
   /** Post an outbound message to the webview. */
-  post: (message: import("../types").AgentManagerOutMessage) => void
+  post: (message: AgentManagerOutMessage) => void
   /** Route one session to a directory inside a project (override + project route). */
   routeSession?: (projectId: string, sessionId: string, directory: string, generation: number) => void
 }): ProjectWiring {

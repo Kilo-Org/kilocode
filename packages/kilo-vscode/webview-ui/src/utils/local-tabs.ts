@@ -17,32 +17,20 @@ export type ApplyLocalTabOrder = (items: { id: string }[], order: string[]) => {
 export interface LocalTabInventory {
   local: readonly string[]
   external?: ReadonlySet<string>
-  unresolved?: ReadonlySet<string>
   rejected?: ReadonlySet<string>
 }
 
 type TrackedSession = { id: string; worktreeId: string | null }
-type LoadedSession = { id: string; parentID?: string | null }
+type LoadedSession = { id: string; parentID?: string }
 
+/** Loaded sessions carry their full metadata: a session without a parent is a root session. */
 export function trackedSessionInventory(managed: TrackedSession[], loaded: LoadedSession[]): LocalTabInventory {
   const lookup = new Map(loaded.map((item) => [item.id, item]))
-  const root = (id: string) => {
-    const info = lookup.get(id)
-    return !info || info.parentID === null
-  }
-  const unresolved = new Set(loaded.filter((item) => item.parentID === undefined).map((item) => item.id))
-  const rejected = new Set(
-    managed
-      .filter((item) => {
-        const info = lookup.get(item.id)
-        return info?.parentID !== undefined && info.parentID !== null
-      })
-      .map((item) => item.id),
-  )
+  const root = (id: string) => !lookup.get(id)?.parentID
+  const rejected = new Set(managed.filter((item) => !root(item.id)).map((item) => item.id))
   return {
     local: managed.filter((item) => !item.worktreeId && root(item.id)).map((item) => item.id),
     external: new Set(managed.filter((item) => item.worktreeId && root(item.id)).map((item) => item.id)),
-    unresolved,
     rejected,
   }
 }
@@ -222,7 +210,6 @@ export function restoreTrackedTabs(
       (id) =>
         !closed.has(id) &&
         !inventory.external?.has(id) &&
-        !inventory.unresolved?.has(id) &&
         !inventory.rejected?.has(id),
     )
   const real = current.filter((id) => !check(id) && !closed.has(id))
@@ -275,7 +262,7 @@ export function reconcileTrackedTabs(
       ids.push(id)
       continue
     }
-    if (inventory.external?.has(id) || inventory.unresolved?.has(id) || inventory.rejected?.has(id)) continue
+    if (inventory.external?.has(id) || inventory.rejected?.has(id)) continue
     if (!ready || seen.has(id) || local.has(id)) {
       ids.push(id)
       continue

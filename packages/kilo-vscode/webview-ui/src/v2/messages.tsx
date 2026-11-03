@@ -5,7 +5,7 @@ import { createAutoScroll } from "@kilocode/kilo-ui/hooks"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import type { ToolActions } from "@kilocode/kilo-ui/message-part"
 import { Spinner } from "@kilocode/kilo-ui/spinner"
-import { createSignal, For, Match, onCleanup, Show, Switch } from "solid-js"
+import { createSignal, For, Match, onCleanup, Show, Switch, type JSX } from "solid-js"
 import { useLanguage } from "../context/language"
 import { onTimelineHighlight, type TimelineHighlight } from "../utils/timeline/highlight"
 import { AssistantMessage, ErrorCard } from "./assistant"
@@ -18,6 +18,8 @@ export function MessageList(props: {
   actions?: ToolActions
   onSelectSession: (id: string) => void
   onShowHistory: () => void
+  /** Replaces the welcome screen of an empty session, for example with the Agent Manager introduction. */
+  empty?: () => JSX.Element
   /** Receives the handler the session dock calls to scroll to the bottom, as on main. */
   onScrollToBottomReady?: (handler: (() => void) | undefined) => void
 }) {
@@ -96,7 +98,11 @@ export function MessageList(props: {
           class={empty() ? "message-list-content-empty" : "message-list-content"}
         >
           <Show when={empty()}>
-            <Welcome onSelectSession={props.onSelectSession} onShowHistory={props.onShowHistory} />
+            {props.empty ? (
+              props.empty()
+            ) : (
+              <Welcome onSelectSession={props.onSelectSession} onShowHistory={props.onShowHistory} />
+            )}
           </Show>
           <Show when={!empty() && props.session}>
             {(id) => (

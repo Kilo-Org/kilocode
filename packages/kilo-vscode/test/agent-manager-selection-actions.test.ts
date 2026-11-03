@@ -253,7 +253,6 @@ for (const target of ["local", "wt-b"]) {
           terms.add(`prj-a:${target}`, {
             id,
             title: "Terminal",
-            wsUrl: "",
             font: { fontFamily: "Menlo", fontSize: 12 },
             placement: "tab",
           })
@@ -287,7 +286,6 @@ for (const target of ["local", "wt-b"]) {
           terms.add(`${placement === "tab" ? "prj-b" : "prj-a"}:${target}`, {
             id: `terminal:${placement}`,
             title: "Terminal",
-            wsUrl: "",
             font: { fontFamily: "Menlo", fontSize: 12 },
             placement,
           })

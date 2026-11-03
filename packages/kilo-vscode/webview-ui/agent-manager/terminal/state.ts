@@ -33,11 +33,10 @@ export { isTerminalTabId, SCRIPT_TERMINAL_PREFIX, TERMINAL_PREFIX }
 /** Status is separate from mounted xterm records so snapshot updates never remount them. */
 export type ScriptTerminalStatus = Pick<ScriptTerminalView, "state" | "exitCode" | "kind">
 
-/** One row in `terminalsByContext`. `wsUrl` is short-lived and never persisted. */
+/** One row in `terminalsByContext`. */
 export interface TerminalTabState {
   id: string
   title: string
-  wsUrl: string
   font: TerminalFont
   placement: TerminalPlacement
   /** Provider-owned script terminal, never created through the webview create flow. */
@@ -72,7 +71,7 @@ export interface TerminalStateControls {
   /** Add a terminal record to one context. */
   add(worktreeId: string | null, term: TerminalTabState): void
   /** Fill an optimistic terminal record without replacing its xterm-owning object. */
-  attach(terminalId: string, input: Pick<TerminalTabState, "title" | "wsUrl" | "font">): boolean
+  attach(terminalId: string, input: Pick<TerminalTabState, "title" | "font">): boolean
   /** Drop a terminal from its context (location resolved automatically).
    *  Returns the removed record so callers can react to placement. */
   remove(terminalId: string): TerminalTabStateWithContext | undefined
@@ -316,14 +315,13 @@ export function createTerminalState(selection: Accessor<string | null>): Termina
     })
   }
 
-  const attach = (terminalId: string, input: Pick<TerminalTabState, "title" | "wsUrl" | "font">) => {
+  const attach = (terminalId: string, input: Pick<TerminalTabState, "title" | "font">) => {
     const key = contextFor(terminalId)
     const term = terminalsByContext()[key ?? ""]?.find((item) => item.id === terminalId)
     if (!term) return false
     // Keep the record reference stable so Solid's <For> never remounts the
     // xterm that already owns focus and buffered input.
     term.title = input.title
-    term.wsUrl = input.wsUrl
     term.font = input.font
     setTitle(terminalId, input.title)
     return true
@@ -395,7 +393,6 @@ export function createTerminalState(selection: Accessor<string | null>): Termina
         const term: TerminalTabStateWithContext = {
           id: view.terminalId,
           title: view.title,
-          wsUrl: view.wsUrl,
           font: view.font,
           placement: "side",
           kind: view.kind,
@@ -711,7 +708,6 @@ export function createTerminalHandlers(deps: TerminalHandlerDeps) {
     deps.state.add(key === deps.LOCAL ? null : key, {
       id,
       title: "Terminal",
-      wsUrl: "",
       font,
       placement: "side",
     })
@@ -962,7 +958,6 @@ function handleCreated(deps: TerminalMessageHandlerDeps, msg: CreatedMessage) {
   const term = {
     id: msg.terminalId,
     title: msg.title,
-    wsUrl: msg.wsUrl,
     font: msg.font,
     placement: msg.placement,
   }

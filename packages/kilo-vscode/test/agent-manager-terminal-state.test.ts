@@ -72,7 +72,6 @@ function createdSide(createId: string, terminalId: string, title = "Terminal 1",
     worktreeId,
     terminalId,
     title,
-    wsUrl: `ws://${terminalId}`,
     font,
   } satisfies ExtensionMessage
 }
@@ -90,7 +89,6 @@ function script(
         worktreeId: null,
         kind: "run",
         title: "Run",
-        wsUrl: `ws://${terminalId}`,
         state,
         ...(exitCode === undefined ? {} : { exitCode }),
         font,
@@ -106,14 +104,12 @@ describe("Agent Manager terminal state", () => {
       item.state.add(null, {
         id: "terminal:tab",
         title: "Terminal 1",
-        wsUrl: "ws://tab",
         font,
         placement: "tab",
       })
       item.state.add(null, {
         id: "terminal:side",
         title: "Terminal 2",
-        wsUrl: "ws://side",
         font,
         placement: "side",
       })
@@ -135,7 +131,7 @@ describe("Agent Manager terminal state", () => {
   it("hydrates complete Run snapshots without create ids and preserves mounted terminal records", () => {
     createRoot((dispose) => {
       const item = scene()
-      item.state.add(null, { id: "terminal:user", title: "Terminal 1", wsUrl: "ws://user", font, placement: "side" })
+      item.state.add(null, { id: "terminal:user", title: "Terminal 1", font, placement: "side" })
       const user = item.state.sidesForContext(LOCAL)[0]!
 
       expect(item.dispatch(script("script:run"))).toBe(true)
@@ -184,7 +180,6 @@ describe("Agent Manager terminal state", () => {
             worktreeId: "wt-1",
             kind: "setup",
             title: "Setup",
-            wsUrl: "ws://script:setup",
             state: "running",
             font,
           },
@@ -219,7 +214,6 @@ describe("Agent Manager terminal state", () => {
             worktreeId: "wt-1",
             kind: "setup",
             title: "Setup",
-            wsUrl: "ws://script:setup-a",
             state: "running",
             font,
           },
@@ -229,7 +223,6 @@ describe("Agent Manager terminal state", () => {
             worktreeId: "wt-1",
             kind: "setup",
             title: "Setup",
-            wsUrl: "ws://script:setup-b",
             state: "running",
             font,
           },
@@ -257,7 +250,6 @@ describe("Agent Manager terminal state", () => {
             worktreeId: "wt-background",
             kind: "setup",
             title: "Setup",
-            wsUrl: "ws://script:setup-background",
             state: "running",
             font,
           },
@@ -281,7 +273,6 @@ describe("Agent Manager terminal state", () => {
             worktreeId: "wt-background",
             kind: "run",
             title: "Run",
-            wsUrl: "ws://script:run-background",
             state: "running",
             font,
           },
@@ -297,7 +288,6 @@ describe("Agent Manager terminal state", () => {
             worktreeId: "wt-background",
             kind: "run",
             title: "Run",
-            wsUrl: "ws://script:run-background",
             state: "running",
             font,
           },
@@ -306,7 +296,6 @@ describe("Agent Manager terminal state", () => {
             worktreeId: "wt-background",
             kind: "setup",
             title: "Setup",
-            wsUrl: "ws://script:setup-background",
             state: "running",
             font,
           },
@@ -333,7 +322,6 @@ describe("Agent Manager terminal state", () => {
       const optimistic = item.state.sidesForContext(LOCAL)[0]
       expect(item.dispatch(createdSide(createId, createId))).toBe(true)
       expect(item.state.sidesForContext(LOCAL)[0]).toBe(optimistic)
-      expect(optimistic?.wsUrl).toBe(`ws://${createId}`)
       expect(item.state.sideActiveFor(LOCAL)).toBe(createId)
       expect(item.events.activated).toEqual([])
       expect(item.events.selected).toEqual([])
@@ -399,8 +387,8 @@ describe("Agent Manager terminal state", () => {
   it("switches the active side terminal on select", () => {
     createRoot((dispose) => {
       const item = scene()
-      item.state.add(null, { id: "terminal:one", title: "Terminal 1", wsUrl: "ws://one", font, placement: "side" })
-      item.state.add(null, { id: "terminal:two", title: "Terminal 2", wsUrl: "ws://two", font, placement: "side" })
+      item.state.add(null, { id: "terminal:one", title: "Terminal 1", font, placement: "side" })
+      item.state.add(null, { id: "terminal:two", title: "Terminal 2", font, placement: "side" })
       item.state.setSideActive(LOCAL, "terminal:two")
 
       item.handlers.selectSide("terminal:one")
@@ -413,8 +401,8 @@ describe("Agent Manager terminal state", () => {
   it("cycles side terminals in both directions and wraps", () => {
     createRoot((dispose) => {
       const item = scene()
-      item.state.add(null, { id: "terminal:one", title: "Terminal 1", wsUrl: "ws://one", font, placement: "side" })
-      item.state.add(null, { id: "terminal:two", title: "Terminal 2", wsUrl: "ws://two", font, placement: "side" })
+      item.state.add(null, { id: "terminal:one", title: "Terminal 1", font, placement: "side" })
+      item.state.add(null, { id: "terminal:two", title: "Terminal 2", font, placement: "side" })
       item.state.setSideActive(LOCAL, "terminal:one")
 
       expect(item.handlers.cycle("next", "side")).toBe(true)
@@ -431,8 +419,8 @@ describe("Agent Manager terminal state", () => {
   it("cycles main terminal tabs independently from side terminals", () => {
     createRoot((dispose) => {
       const item = scene()
-      item.state.add(null, { id: "terminal:one", title: "Terminal 1", wsUrl: "ws://one", font, placement: "tab" })
-      item.state.add(null, { id: "terminal:two", title: "Terminal 2", wsUrl: "ws://two", font, placement: "tab" })
+      item.state.add(null, { id: "terminal:one", title: "Terminal 1", font, placement: "tab" })
+      item.state.add(null, { id: "terminal:two", title: "Terminal 2", font, placement: "tab" })
       item.state.setActiveId("terminal:one")
 
       expect(item.handlers.cycle("next", "tab")).toBe(true)
@@ -446,8 +434,8 @@ describe("Agent Manager terminal state", () => {
   it("starts terminal cycling at the boundary when no terminal is active", () => {
     createRoot((dispose) => {
       const item = scene()
-      item.state.add(null, { id: "terminal:one", title: "Terminal 1", wsUrl: "ws://one", font, placement: "tab" })
-      item.state.add(null, { id: "terminal:two", title: "Terminal 2", wsUrl: "ws://two", font, placement: "tab" })
+      item.state.add(null, { id: "terminal:one", title: "Terminal 1", font, placement: "tab" })
+      item.state.add(null, { id: "terminal:two", title: "Terminal 2", font, placement: "tab" })
       item.state.setActiveId(undefined)
 
       expect(item.handlers.cycle("next", "tab")).toBe(true)
@@ -462,7 +450,7 @@ describe("Agent Manager terminal state", () => {
   it("keeps the session open when its last main terminal closes", () => {
     createRoot((dispose) => {
       const item = scene()
-      item.state.add(null, { id: "terminal:one", title: "Terminal 1", wsUrl: "ws://one", font, placement: "tab" })
+      item.state.add(null, { id: "terminal:one", title: "Terminal 1", font, placement: "tab" })
       item.state.setActiveId("terminal:one")
       item.state.setFocusedId("terminal:one")
 
@@ -476,7 +464,7 @@ describe("Agent Manager terminal state", () => {
   it("does not close an active terminal from another context", () => {
     createRoot((dispose) => {
       const item = scene("wt-2")
-      item.state.add("wt-1", { id: "terminal:one", title: "Terminal 1", wsUrl: "ws://one", font, placement: "tab" })
+      item.state.add("wt-1", { id: "terminal:one", title: "Terminal 1", font, placement: "tab" })
       item.state.setActiveId("terminal:one")
 
       expect(item.handlers.closeActive()).toBe(false)
@@ -494,8 +482,8 @@ describe("Agent Manager terminal state", () => {
   it("moves activation to the last remaining side terminal on close", () => {
     createRoot((dispose) => {
       const item = scene()
-      item.state.add(null, { id: "terminal:one", title: "Terminal 1", wsUrl: "ws://one", font, placement: "side" })
-      item.state.add(null, { id: "terminal:two", title: "Terminal 2", wsUrl: "ws://two", font, placement: "side" })
+      item.state.add(null, { id: "terminal:one", title: "Terminal 1", font, placement: "side" })
+      item.state.add(null, { id: "terminal:two", title: "Terminal 2", font, placement: "side" })
       item.state.setSideActive(LOCAL, "terminal:two")
 
       expect(item.handlers.closeSide("terminal:two")).toBe(true)
@@ -517,11 +505,11 @@ describe("Agent Manager terminal state", () => {
   it("keeps only the target side terminal on close others", () => {
     createRoot((dispose) => {
       const item = scene()
-      item.state.add(null, { id: "terminal:one", title: "Terminal 1", wsUrl: "ws://one", font, placement: "side" })
-      item.state.add(null, { id: "terminal:two", title: "Terminal 2", wsUrl: "ws://two", font, placement: "side" })
-      item.state.add(null, { id: "terminal:three", title: "Terminal 3", wsUrl: "ws://three", font, placement: "side" })
+      item.state.add(null, { id: "terminal:one", title: "Terminal 1", font, placement: "side" })
+      item.state.add(null, { id: "terminal:two", title: "Terminal 2", font, placement: "side" })
+      item.state.add(null, { id: "terminal:three", title: "Terminal 3", font, placement: "side" })
       // Another context must survive untouched: "others" is per context.
-      item.state.add("wt-1", { id: "terminal:other", title: "Other", wsUrl: "ws://other", font, placement: "side" })
+      item.state.add("wt-1", { id: "terminal:other", title: "Other", font, placement: "side" })
       item.state.setSideActive(LOCAL, "terminal:one")
 
       item.handlers.closeSideOthers("terminal:two")
@@ -541,7 +529,7 @@ describe("Agent Manager terminal state", () => {
   it("waits for Run closure confirmation while user terminal closes stay optimistic", () => {
     createRoot((dispose) => {
       const item = scene()
-      item.state.add(null, { id: "terminal:user", title: "Terminal 1", wsUrl: "ws://user", font, placement: "side" })
+      item.state.add(null, { id: "terminal:user", title: "Terminal 1", font, placement: "side" })
       item.dispatch(script("script:run"))
 
       expect(item.handlers.closeSide("script:run")).toBe(true)
@@ -599,7 +587,7 @@ describe("Agent Manager terminal state", () => {
   it("tracks OSC titles per terminal without touching the terminal records", () => {
     createRoot((dispose) => {
       const item = scene()
-      item.state.add(null, { id: "terminal:one", title: "Terminal 1", wsUrl: "ws://one", font, placement: "side" })
+      item.state.add(null, { id: "terminal:one", title: "Terminal 1", font, placement: "side" })
       const before = item.state.sidesForContext(LOCAL)[0]!
 
       item.state.setTitle("terminal:one", "npm run dev")
@@ -620,10 +608,10 @@ describe("Agent Manager terminal state", () => {
   it("reorders side terminals within their context via drag", () => {
     createRoot((dispose) => {
       const item = scene()
-      item.state.add(null, { id: "terminal:one", title: "Terminal 1", wsUrl: "ws://one", font, placement: "side" })
-      item.state.add(null, { id: "terminal:two", title: "Terminal 2", wsUrl: "ws://two", font, placement: "side" })
-      item.state.add(null, { id: "terminal:three", title: "Terminal 3", wsUrl: "ws://three", font, placement: "side" })
-      item.state.add(null, { id: "terminal:tab", title: "Terminal 4", wsUrl: "ws://tab", font, placement: "tab" })
+      item.state.add(null, { id: "terminal:one", title: "Terminal 1", font, placement: "side" })
+      item.state.add(null, { id: "terminal:two", title: "Terminal 2", font, placement: "side" })
+      item.state.add(null, { id: "terminal:three", title: "Terminal 3", font, placement: "side" })
+      item.state.add(null, { id: "terminal:tab", title: "Terminal 4", font, placement: "tab" })
 
       // Drag the first side terminal onto the third position.
       expect(item.state.reorderSideDrag(LOCAL, "terminal:one", "terminal:three")).toBe(true)
@@ -660,8 +648,8 @@ describe("Agent Manager terminal state", () => {
   it("reports the focused side terminal only for the current context", () => {
     createRoot((dispose) => {
       const item = scene()
-      item.state.add(null, { id: "terminal:side", title: "Terminal 1", wsUrl: "ws://side", font, placement: "side" })
-      item.state.add(null, { id: "terminal:tab", title: "Terminal 2", wsUrl: "ws://tab", font, placement: "tab" })
+      item.state.add(null, { id: "terminal:side", title: "Terminal 1", font, placement: "side" })
+      item.state.add(null, { id: "terminal:tab", title: "Terminal 2", font, placement: "tab" })
 
       expect(item.state.sideFocusedId()).toBeUndefined()
       item.state.setFocusedId("terminal:tab")
@@ -772,7 +760,6 @@ describe("Agent Manager terminal state", () => {
         projectId: "prj-1",
         terminalId: "terminal:tab",
         title: "Terminal 1",
-        wsUrl: "ws://tab",
         font,
       }
       expect(item.dispatch(created)).toBe(true)
@@ -796,7 +783,6 @@ describe("Agent Manager terminal state", () => {
       item.state.add(item.ns(key), {
         id: "terminal:current",
         title: "Current",
-        wsUrl: "ws://current",
         font,
         placement: "tab",
       })

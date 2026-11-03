@@ -260,6 +260,14 @@ export const Definition = Rpc.define({
         not_found: portable(Schema.Undefined),
       },
     },
+    /** Removes the snapshot repository of a managed worktree that is already gone. */
+    removeSnapshot: {
+      input: portable(Schema.Struct({ worktree: Schema.String })),
+      output: portable(Schema.Struct({ removed: Schema.Boolean })),
+      errors: {
+        invalid_worktree: portable(Schema.Undefined),
+      },
+    },
   },
   events: {
     /** A tool call asked Agent Manager to start sessions. */

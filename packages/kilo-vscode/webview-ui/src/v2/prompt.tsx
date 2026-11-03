@@ -30,6 +30,10 @@ export function PromptInput(props: {
   selectors?: JSX.Element
   /** Prompt toolbar actions (auto-approve, and later indexing, sandbox and enhance as on main). */
   actions?: JSX.Element
+  /** Shows the speech to text control. The Agent Manager has none, so it mounts no speech status provider. */
+  speech?: boolean
+  /** Receives a function that appends text to the draft and, when `send` is true, sends it. */
+  onAppendReady?: (append: (value: string, send: boolean) => void) => void
 }) {
   const v2 = useV2()
   const language = useLanguage()
@@ -48,8 +52,8 @@ export function PromptInput(props: {
     language,
     showToast,
   )
-  const speechStatus = useSpeechStatus()
-  const canUseSpeech = () => speechStatus.status().enabled
+  const speechStatus = props.speech === false ? undefined : useSpeechStatus()
+  const canUseSpeech = () => speechStatus?.status().enabled === true
   // Recording is enough to send: the transcript arrives first and the send continues from it. No other speech state
   // may send, or a draft would leave before the transcript is ready and the transcript would become a draft.
   const canSend = () =>
@@ -100,6 +104,7 @@ export function PromptInput(props: {
   }
 
   const startSpeech = () => {
+    if (!speechStatus) return
     speech.start({ model: speechStatus.status().model, insert: insertSpeechText })
   }
 
@@ -140,6 +145,15 @@ export function PromptInput(props: {
     }
     submit()
   }
+
+  props.onAppendReady?.((value, shouldSend) => {
+    const current = text()
+    enhanceToken++
+    preEnhance = null
+    setText(current.trim() ? `${current}\n\n${value}` : value)
+    if (shouldSend) send()
+    else focus()
+  })
 
   const shortcut = createSpeechShortcut({
     speech,

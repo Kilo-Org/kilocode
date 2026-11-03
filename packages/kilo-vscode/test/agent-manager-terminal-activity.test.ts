@@ -56,7 +56,7 @@ it("accepts all states, ignores invalid signals, and clears on expiry and dispos
 it("aggregates main and side terminals without remounting or crossing projects", () => {
   const state = createTerminalState(() => "one:wt")
   const add = (id: string, context: string, placement: "tab" | "side") =>
-    state.add(context, { id, title: id, placement, wsUrl: "", font: { fontFamily: "monospace", fontSize: 12 } })
+    state.add(context, { id, title: id, placement, font: { fontFamily: "monospace", fontSize: 12 } })
   add("first", "one:wt", "tab")
   add("second", "one:wt", "side")
   add("other", "two:wt", "tab")

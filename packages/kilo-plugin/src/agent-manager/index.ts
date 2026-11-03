@@ -2,17 +2,22 @@ import { define } from "@opencode/plugin/effect/plugin"
 import { Agent } from "@opencode/schema/agent"
 import { KiloAgentManagerRpc } from "@opencode/schema/kilocode/agent-manager"
 import { SessionID } from "@opencode/schema/session-id"
-import { Effect, Ref } from "effect"
+import { FSUtil } from "@opencode/util/fs-util"
+import { Global } from "@opencode/util/global"
+import { Effect, Ref, type Scope } from "effect"
 import { guard } from "./guard"
 import { installPermission } from "./permission"
 import { createService, type Emit } from "./service"
+import { SnapshotCleanup } from "./snapshot"
 import { makeTools, type Runtime } from "./tool"
 
 // The Agent Manager plugin: the `kilocode.agent-manager` RPC that the VS Code extension answers, the two model-facing
 // tools that ask it, the state-file guard on the mutation tools, and the side-effect permission hardening.
-export const KiloAgentManagerPlugin = define({
+export const KiloAgentManagerPlugin = define<FSUtil.Service | Global.Service | Scope.Scope>({
   id: "kilocode.agent-manager",
   effect: Effect.fn("KiloAgentManagerPlugin")(function* (ctx) {
+    const fs = yield* FSUtil.Service
+    const global = yield* Global.Service
     const emit = yield* Ref.make<Emit | undefined>(undefined)
     const manager = yield* createService({
       requested: (request) =>
@@ -46,6 +51,24 @@ export const KiloAgentManagerPlugin = define({
             Effect.as({}),
             Effect.catchTag("AgentManager.NotFoundError", () =>
               Effect.fail(context.error("not_found", "Unknown Agent Manager request")),
+            ),
+          ),
+        removeSnapshot: (input, context) =>
+          SnapshotCleanup.remove({
+            data: global.data,
+            project: ctx.location.project.id,
+            directory: ctx.location.project.directory,
+            worktree: input.worktree,
+            fs,
+          }).pipe(
+            Effect.map((removed) => ({ removed })),
+            Effect.catch((error) =>
+              Effect.fail(
+                context.error(
+                  "invalid_worktree",
+                  error instanceof Error ? error.message : String(error),
+                ),
+              ),
             ),
           ),
       })

@@ -125,7 +125,6 @@ export function renderTerminalLayer(props: {
               <div class={`am-terminal-slot ${visible() ? "am-terminal-slot-visible" : ""}`} inert={!visible()}>
                 <TerminalTab
                   terminalId={term.id}
-                  wsUrl={term.wsUrl}
                   restartable={term.kind === undefined}
                   active={visible()}
                   focusSerial={focusSerial(props.state, term.id)}
@@ -174,7 +173,6 @@ export function renderSideTerminalLayer(props: {
             <div class={`am-terminal-slot ${active() ? "am-terminal-slot-visible" : ""}`} inert={!active()}>
               <TerminalTab
                 terminalId={term.id}
-                wsUrl={term.wsUrl}
                 active={active()}
                 focusOnActivate={false}
                 focusSerial={focusSerial(props.state, term.id)}

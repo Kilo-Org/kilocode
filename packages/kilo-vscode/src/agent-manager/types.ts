@@ -30,7 +30,6 @@ export interface ScriptTerminalView {
   worktreeId: string | null
   kind: ScriptTerminalKind
   title: "Run" | "Setup"
-  wsUrl: string
   state: ScriptTerminalState
   exitCode?: number
   font: TerminalFont
@@ -97,6 +96,7 @@ import type {
   PRMergeState,
   PRMergeStatus,
 } from "../../webview-ui/agent-manager/pr/pr-types"
+import type { PRCommentRequest, PRCommentResult } from "../shared/pr-comment-actions"
 
 export type {
   PRState,
@@ -245,14 +245,12 @@ interface TerminalCreatedMessage {
   projectId?: string
   terminalId: string
   title: string
-  wsUrl: string
   font: TerminalFont
 }
 
 interface TerminalRestartedMessage {
   type: "agentManager.terminal.restarted"
   terminalId: string
-  wsUrl: string
 }
 
 interface TerminalClosedMessage {
@@ -281,6 +279,25 @@ interface TerminalFontChangedMessage {
 interface ScriptTerminalsMessage {
   type: "agentManager.scriptTerminals"
   terminals: ScriptTerminalView[]
+}
+
+interface TerminalSocketOpenedMessage {
+  type: "agentManager.terminal.socket.opened"
+  socketId: string
+}
+
+interface TerminalSocketMessage {
+  type: "agentManager.terminal.socket.message"
+  socketId: string
+  /** Terminal bytes as text, or a binary control/text frame as raw bytes. */
+  data: string | Uint8Array
+}
+
+interface TerminalSocketClosedMessage {
+  type: "agentManager.terminal.socket.closed"
+  socketId: string
+  code: number
+  reason: string
 }
 
 interface ErrorOutMessage {
@@ -366,6 +383,14 @@ interface ImportResultMessage {
 interface KeybindingsMessage {
   type: "agentManager.keybindings"
   bindings: Record<string, string>
+}
+
+interface CaffeinationMessage {
+  type: "agentManager.caffeination"
+  enabled: boolean
+  active: boolean
+  available: boolean
+  error?: string
 }
 
 interface RepoInfoMessage {
@@ -486,7 +511,7 @@ interface RunStatusMessage extends RunStatus {
 /** All messages the Agent Manager extension sends to the webview. */
 export type AgentManagerOutMessage =
   | WorktreeDeletedMessage
-  | import("../shared/pr-comment-actions").PRCommentResult
+  | PRCommentResult
   | WorktreeActivityMessage
   | WorktreeStatsMessage
   | LocalStatsMessage
@@ -506,6 +531,7 @@ export type AgentManagerOutMessage =
   | BranchesMessage
   | ImportResultMessage
   | KeybindingsMessage
+  | CaffeinationMessage
   | RepoInfoMessage
   | ApplyWorktreeDiffResultMessage
   | WorktreeDiffLoadingMessage
@@ -527,6 +553,9 @@ export type AgentManagerOutMessage =
   | TerminalDestinationChangedMessage
   | TerminalFontChangedMessage
   | ScriptTerminalsMessage
+  | TerminalSocketOpenedMessage
+  | TerminalSocketMessage
+  | TerminalSocketClosedMessage
 
 // ---------------------------------------------------------------------------
 // Webview → Extension messages (onMessage)
@@ -941,6 +970,29 @@ interface OpenSessionsIn {
   sessionIDs: string[]
 }
 
+interface VisibleSessionIn {
+  type: "agentManager.visibleSession"
+  sessionID: string | null
+}
+
+/** Reports a prompt the webview just sent, so the host can name the worktree branch. */
+interface PromptSentIn {
+  type: "agentManager.promptSent"
+  sessionId: string
+  text: string
+  providerID?: string
+  modelID?: string
+}
+
+interface RequestCaffeinationIn {
+  type: "agentManager.requestCaffeination"
+}
+
+interface SetCaffeinationIn {
+  type: "agentManager.setCaffeination"
+  enabled: boolean
+}
+
 interface OpenFileIn {
   type: "agentManager.openFile"
   sessionId: string
@@ -1158,6 +1210,25 @@ interface TerminalRestartIn {
   rows?: number
 }
 
+interface TerminalSocketOpenIn {
+  type: "agentManager.terminal.socket.open"
+  socketId: string
+  terminalId: string
+}
+
+interface TerminalSocketSendIn {
+  type: "agentManager.terminal.socket.send"
+  socketId: string
+  data: string | Uint8Array
+}
+
+interface TerminalSocketCloseIn {
+  type: "agentManager.terminal.socket.close"
+  socketId: string
+  code?: number
+  reason?: string
+}
+
 interface TerminalDestinationSelectedIn {
   type: "agentManager.terminal.destinationSelected"
   destination: TerminalDestination
@@ -1165,7 +1236,7 @@ interface TerminalDestinationSelectedIn {
 
 /** All messages the Agent Manager expects from the webview (onMessage input). */
 export type AgentManagerInMessage =
-  | import("../shared/pr-comment-actions").PRCommentRequest
+  | PRCommentRequest
   | CreateWorktreeIn
   | RequestProjectsIn
   | AddProjectIn
@@ -1179,6 +1250,7 @@ export type AgentManagerInMessage =
   | RememberTargetIn
   | SetProjectExpandedIn
   | SetProjectOrderIn
+  | BaseUpdateRequest
   | DeleteWorktreeIn
   | RemoveStaleWorktreeIn
   | RestoreWorktreeIn
@@ -1231,6 +1303,10 @@ export type AgentManagerInMessage =
   | CommentActionIn
   | CommentReactionIn
   | OpenSessionsIn
+  | VisibleSessionIn
+  | PromptSentIn
+  | RequestCaffeinationIn
+  | SetCaffeinationIn
   | OpenFileIn
   | CopyFilePathIn
   | GenericOpenFileIn
@@ -1257,4 +1333,7 @@ export type AgentManagerInMessage =
   | TerminalStopIn
   | TerminalResizeIn
   | TerminalRestartIn
+  | TerminalSocketOpenIn
+  | TerminalSocketSendIn
+  | TerminalSocketCloseIn
   | TerminalDestinationSelectedIn

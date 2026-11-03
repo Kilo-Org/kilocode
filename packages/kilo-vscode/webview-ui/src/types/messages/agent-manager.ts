@@ -399,14 +399,12 @@ export interface AgentManagerTerminalCreatedMessage {
   projectId?: string
   terminalId: string
   title: string
-  wsUrl: string
   font: TerminalFont
 }
 
 export interface AgentManagerTerminalRestartedMessage {
   type: "agentManager.terminal.restarted"
   terminalId: string
-  wsUrl: string
 }
 
 export interface AgentManagerTerminalFontChangedMessage {
@@ -443,7 +441,6 @@ export interface ScriptTerminalView {
   worktreeId: string | null
   kind: ScriptTerminalKind
   title: "Run" | "Setup"
-  wsUrl: string
   state: "running" | "stopping" | "exited" | "failed"
   exitCode?: number
   font: TerminalFont
@@ -452,6 +449,25 @@ export interface ScriptTerminalView {
 export interface AgentManagerScriptTerminalsMessage {
   type: "agentManager.scriptTerminals"
   terminals: ScriptTerminalView[]
+}
+
+export interface AgentManagerTerminalSocketOpenedMessage {
+  type: "agentManager.terminal.socket.opened"
+  socketId: string
+}
+
+export interface AgentManagerTerminalSocketMessage {
+  type: "agentManager.terminal.socket.message"
+  socketId: string
+  /** Terminal bytes as text, or a binary control/text frame as raw bytes. */
+  data: string | Uint8Array
+}
+
+export interface AgentManagerTerminalSocketClosedMessage {
+  type: "agentManager.terminal.socket.closed"
+  socketId: string
+  code: number
+  reason: string
 }
 
 export interface AgentManagerRunStatusMessage extends RunStatus {
@@ -655,6 +671,9 @@ export type AgentManagerExtensionMessage =
   | AgentManagerTerminalErrorMessage
   | AgentManagerTerminalDestinationChangedMessage
   | AgentManagerScriptTerminalsMessage
+  | AgentManagerTerminalSocketOpenedMessage
+  | AgentManagerTerminalSocketMessage
+  | AgentManagerTerminalSocketClosedMessage
   | AgentManagerRunStatusMessage
   | AgentManagerKeybindingsMessage
   | AgentManagerMultiVersionProgressMessage
@@ -984,6 +1003,25 @@ export interface AgentManagerTerminalRestartRequest {
   rows?: number
 }
 
+export interface AgentManagerTerminalSocketOpenRequest {
+  type: "agentManager.terminal.socket.open"
+  socketId: string
+  terminalId: string
+}
+
+export interface AgentManagerTerminalSocketSendRequest {
+  type: "agentManager.terminal.socket.send"
+  socketId: string
+  data: string | Uint8Array
+}
+
+export interface AgentManagerTerminalSocketCloseRequest {
+  type: "agentManager.terminal.socket.close"
+  socketId: string
+  code?: number
+  reason?: string
+}
+
 /** Open a file in the selected worktree for a specific session. */
 export interface AgentManagerOpenFileRequest {
   type: "agentManager.openFile"
@@ -1202,6 +1240,22 @@ export interface AgentManagerVisibleSessionMessage {
   sessionID: string | null
 }
 
+/** Reports a prompt the webview just sent, so the host can name the worktree branch. */
+export interface AgentManagerPromptSentMessage {
+  type: "agentManager.promptSent"
+  sessionId: string
+  text: string
+  providerID?: string
+  modelID?: string
+}
+
+/** Open the Kilo settings panel, optionally on the Agent Manager tab of one project. */
+export interface AgentManagerOpenSettingsPanelMessage {
+  type: "openSettingsPanel"
+  tab?: string
+  projectId?: string
+}
+
 /** Section CRUD messages. */
 export interface CreateSectionRequest {
   type: "agentManager.createSection"
@@ -1307,6 +1361,9 @@ export type AgentManagerWebviewMessage =
   | AgentManagerTerminalDestinationSelectedRequest
   | AgentManagerTerminalResizeRequest
   | AgentManagerTerminalRestartRequest
+  | AgentManagerTerminalSocketOpenRequest
+  | AgentManagerTerminalSocketSendRequest
+  | AgentManagerTerminalSocketCloseRequest
   | AgentManagerOpenFileRequest
   | AgentManagerCopyFilePathRequest
   | CreateMultiVersionRequest
@@ -1337,6 +1394,8 @@ export type AgentManagerWebviewMessage =
   | SetDefaultBaseBranchRequest
   | AgentManagerOpenSessionsMessage
   | AgentManagerVisibleSessionMessage
+  | AgentManagerPromptSentMessage
+  | AgentManagerOpenSettingsPanelMessage
   | CreateSectionRequest
   | RenameSectionRequest
   | DeleteSectionRequest
