@@ -20,7 +20,7 @@ const artifacts = {
   },
   steroid: {
     file: "mcp-steroid-0.102.zip",
-    url: "https://github.com/jonnyzzz/mcp-steroid/releases/download/v0.102/mcp-steroid-0.102.0-r-c68d8f15d.zip",
+    url: "https://github.com/jonnyzzz/devrig-website/releases/download/v0.102/mcp-steroid-0.102.0-r-c68d8f15d.zip",
     sha: "e5d5b3330f8473fa015d8c18756e687d8ed7f72c6af42a8ccb1bc6706af63bd5",
   },
 }
