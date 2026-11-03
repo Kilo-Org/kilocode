@@ -333,17 +333,21 @@ export class WorktreePool {
       ready: Promise.resolve(oid),
       refreshed: false,
     }
-    this.refresh(slot)
+    await this.refresh(slot)
     return slot
   }
 
-  private refresh(slot: PoolSlot): void {
-    void Promise.resolve()
-      .then(() => this.deps.client(slot.path).raw(["status", "--porcelain"]))
-      .then(() => {
-        slot.refreshed = true
-      })
-      .catch((e) => this.deps.log(`worktree pool: status refresh failed for ${slot.path}: ${e}`))
+  /** Part of the warm-up: awaited so `dispose` does not remove a slot while its status runs. */
+  private async refresh(slot: PoolSlot): Promise<void> {
+    await this.deps
+      .client(slot.path)
+      .raw(["status", "--porcelain"])
+      .then(
+        () => {
+          slot.refreshed = true
+        },
+        (e: unknown) => this.deps.log(`worktree pool: status refresh failed for ${slot.path}: ${e}`),
+      )
   }
 
   private async take(
@@ -495,7 +499,7 @@ export class WorktreePool {
       slot.baseRef = point.ref
       slot.refreshed = false
       await this.writeMeta(slot.path, { pooled: true, owner: process.pid, baseRef: point.ref, baseOid: oid })
-      this.refresh(slot)
+      await this.refresh(slot)
     }
   }
 

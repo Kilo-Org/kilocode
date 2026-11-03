@@ -141,10 +141,13 @@ describe("WorktreeManager pool warm-up", () => {
     const root = await createTempRepo()
     const manager = createManager(root, 1, 200)
     manager.warmPool()
-    await waitForPooledSlot(root)
+    const slot = await waitForPooledSlot(root)
     await manager.poolIdle()
 
-    await manager.createWorktree({})
+    const result = await manager.createWorktree({})
+    // A pool miss would leave the slot in place and schedule no replacement warm-up.
+    expect(existsSync(slot)).toBe(false)
+    expect(existsSync(result.path)).toBe(true)
     await manager.disposePool()
     await new Promise((resolve) => setTimeout(resolve, 400))
     await manager.poolIdle()
