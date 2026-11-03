@@ -91,9 +91,11 @@ import ai.kilocode.rpc.dto.WorktreeStatsDto
 import ai.kilocode.rpc.dto.WorktreeStatsListDto
 import ai.kilocode.rpc.dto.SessionActivityDto
 import ai.kilocode.rpc.dto.SessionActivityKindDto
+import com.intellij.ide.IdeEventQueue
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.components.service
 import com.intellij.openapi.fileEditor.FileEditorManager
+import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.ui.SearchTextField
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
@@ -268,6 +270,20 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         val panel = edt { AgentManagerPanel(testRootDisposable, controller) }
 
         assertNull(edt { UIUtil.findComponentOfType(panel, SearchTextField::class.java) })
+    }
+
+    fun `test local worktrees group has no context menu`() {
+        val controller = WorktreeController(service, "/test", coroutines.scope)
+        val panel = edt { AgentManagerPanel(testRootDisposable, controller) }
+        val view = tree(panel)
+        layout(view)
+
+        edt {
+            val entry = (0 until view.rowCount)
+                .map { view.getPathForRow(it).lastPathComponent as ActiveEntry }
+                .single { it.allowsChildren }
+            assertFalse(view.showMenu(center(view.bounds(entry)!!), context = true))
+        }
     }
 
     fun `test worktree list paints tool window background`() {
@@ -1818,14 +1834,22 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
             assertEquals(project, com.intellij.openapi.actionSystem.CommonDataKeys.PROJECT.getData(context))
             assertEquals(items.first(), HostedWorkspaceDataKeys.WORKSPACE.getData(context))
             assertNull(WorktreeDataKeys.WORKTREE.getData(context))
+            panel.addNotify()
+            Disposer.register(testRootDisposable) { panel.removeNotify() }
             layout(view)
-            val entry = leaves(view)[2]
-            val at = tree(panel).point(entry.key, ACTIVE_MENU_CELL, false)?.getPoint(view) ?: error("Missing cloud menu anchor")
-            view.dispatchEvent(MouseEvent(view, MouseEvent.MOUSE_MOVED, System.currentTimeMillis(), 0,
-                at.x, at.y, 0, false))
-            val bounds = view.bounds(entry)
-            assertNotNull(bounds)
-            assertTrue(at.x in bounds!!.x..bounds.x + bounds.width)
+            val point = rowCenter(view, 2)
+            val screen = Point(point)
+            SwingUtilities.convertPointToScreen(screen, view)
+            IdeEventQueue.getInstance().dispatchEvent(MouseEvent(view, MouseEvent.MOUSE_MOVED, 0, 0,
+                point.x, point.y, screen.x, screen.y, 0, false, MouseEvent.NOBUTTON))
+            val menu = hitIds(view, 2).getValue(ACTIVE_MENU_CELL)
+            assertFalse("Cloud rows must render a usable menu glyph", menu.isEmpty)
+            val at = center(menu)
+            val move = MouseEvent(view, MouseEvent.MOUSE_MOVED, 0, 0,
+                at.x, at.y, 0, 0, 0, false, MouseEvent.NOBUTTON)
+            val hit = view.regions.hit(move, enabled = true)
+            assertEquals(ref.key, hit?.entry?.key)
+            assertEquals(ACTIVE_MENU_CELL, hit?.id)
         }
         sessions.statuses.value = mapOf(second to SessionStatusDto("idle"))
         coroutines.drain()

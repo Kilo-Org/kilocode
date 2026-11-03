@@ -85,6 +85,44 @@ class ActiveTreeTest : BasePlatformTestCase() {
         assertEquals(listOf("a"), tree.selectedKeys())
     }
 
+    fun `test cached equal heights grow and shrink when the tallest row changes or is removed`() {
+        val tree = ActiveTree("")
+        val short = ActiveTreeNode(Row("a", "A"))
+        val tall = ActiveTreeNode(Row("b", "B", "Description"))
+        tree.update(listOf(short, tall))
+        val view = tree.preferredFocus() as ActiveTreeView
+        val height = view.getRowBounds(0).height
+
+        tree.update(listOf(short, ActiveTreeNode(Row("b", "B"))))
+        val compact = view.getRowBounds(0).height
+        assertTrue(compact < height)
+        assertEquals(compact, view.getRowBounds(1).height)
+
+        tree.update(listOf(short, tall))
+        assertEquals(height, view.getRowBounds(0).height)
+        tree.update(listOf(short))
+        assertEquals(compact, view.getRowBounds(0).height)
+    }
+
+    fun `test unchanged sibling reconciliation does not search for each child index`() {
+        var searches = 0
+        val parent = object : javax.swing.tree.DefaultMutableTreeNode(null, true) {
+            override fun getIndex(child: javax.swing.tree.TreeNode?): Int {
+                searches++
+                return super.getIndex(child)
+            }
+        }
+        val model = ActiveTreeModel()
+        val nodes = (0 until 200).map { ActiveTreeNode(Row(it.toString(), "Row $it")) }
+        model.sync(nodes, parent)
+        searches = 0
+
+        model.sync(nodes, parent)
+
+        assertEquals("Unchanged sibling ordering should use direct indexed access", 0, searches)
+        assertEquals(200, parent.childCount)
+    }
+
     fun `test missing pending request does not discard surviving selection`() {
         val tree = ActiveTree("")
         tree.update(listOf(ActiveTreeNode(Row("a", "A"))))
@@ -365,7 +403,8 @@ class ActiveTreeTest : BasePlatformTestCase() {
             } finally {
                 graphics.dispose()
             }
-            val expected = java.awt.image.BufferedImage(arrow.width, arrow.height, java.awt.image.BufferedImage.TYPE_INT_ARGB)
+            val bounds = view.getRowBounds(1)
+            val expected = java.awt.image.BufferedImage(arrow.width, bounds.height, java.awt.image.BufferedImage.TYPE_INT_ARGB)
             val stamp = expected.createGraphics()
             try {
                 val color = if (selected) com.intellij.util.ui.UIUtil.getTreeBackground(true, false) else view.background
@@ -378,11 +417,11 @@ class ActiveTreeTest : BasePlatformTestCase() {
             // The tree paints the control over its own rounded selection frame, so compare only the
             // pixels the icon actually inks rather than the flat backdrop behind it.
             val backdrop = image.getRGB(arrow.x - 1, arrow.y + arrow.height / 2)
-            for (y in 0 until arrow.height) for (x in 0 until arrow.width) {
+            for (y in 0 until expected.height) for (x in 0 until expected.width) {
                 val color = java.awt.Color(expected.getRGB(x, y), true)
                 if (color.red == color.blue && color.red == color.green) continue
                 assertTrue("Painted disclosure ink $x,$y selected=$selected",
-                    image.getRGB(arrow.x + x, arrow.y + y) != backdrop)
+                    image.getRGB(arrow.x + x, bounds.y + y) != backdrop)
             }
         }
     }

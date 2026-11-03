@@ -90,6 +90,24 @@ class ActiveListRowHeightTest : BasePlatformTestCase() {
         override fun hashCode() = 31 * key.hashCode() + glyph.hashCode()
     }
 
+    fun `test ordinary rows discard placeholder preferred dimensions`() {
+        val row = wrapRow("Description")
+        val model = CollectionListModel<ActiveItem>(listOf(row))
+        val list = JBList(model).apply { setSize(400, 200) }
+        val renderer = ActiveListRenderer(model, ActiveConfig.Preferred)
+        val expected = renderer.getListCellRendererComponent(list, row, 0, false, false).preferredSize
+        assertTrue(expected.height > 0)
+        val gap = ActiveGap(row, expected.height * 3)
+        assertEquals(
+            gap.height,
+            renderer.getListCellRendererComponent(list, gap, 0, false, false).preferredSize.height,
+        )
+
+        val stamp = renderer.getListCellRendererComponent(list, row, 0, false, false)
+
+        assertEquals(expected, stamp.preferredSize)
+    }
+
     // --- ActiveConfig.wrapDescription ---
 
     fun `test wrapDescription is opt-in - default config keeps a single-line description at any width`() {

@@ -3,23 +3,31 @@ package ai.kilocode.client.ui.tree
 import ai.kilocode.client.testing.TestUiTimers
 import ai.kilocode.client.ui.AnimationIcon
 import ai.kilocode.client.ui.active.ActiveItem
+import ai.kilocode.client.ui.active.ActiveSurface
 import ai.kilocode.client.ui.active.activeLayout
+import com.intellij.ide.IdeEventQueue
 import com.intellij.openapi.util.Disposer
+import com.intellij.openapi.util.SystemInfo
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.ui.AnimatedIcon
+import com.intellij.ui.render.RenderingUtil
 import com.intellij.ui.tree.ui.DefaultTreeUI
 import com.intellij.util.ui.EmptyIcon
 import com.intellij.util.ui.UIUtil
 import java.awt.BorderLayout
 import java.awt.Component
 import java.awt.Graphics
+import java.awt.Point
 import java.awt.Rectangle
+import java.awt.event.ActionEvent
+import java.awt.event.MouseEvent
 import java.awt.image.BufferedImage
 import javax.swing.CellRendererPane
 import javax.swing.Icon
 import javax.swing.JComponent
 import javax.swing.JPanel
 import javax.swing.RepaintManager
+import javax.swing.SwingUtilities
 import javax.swing.tree.TreePath
 
 class ActiveTreeAnimationTest : BasePlatformTestCase() {
@@ -74,7 +82,7 @@ class ActiveTreeAnimationTest : BasePlatformTestCase() {
         assertEquals(1, timers.pending)
     }
 
-    fun `test overlay paints row stamps in a tree owned renderer pane and releases them`() {
+    fun `test tree paints each row once in an owned renderer pane and releases it`() {
         val panes = mutableListOf<CellRendererPane?>()
         val icon = object : Icon {
             override fun getIconWidth() = 16
@@ -92,7 +100,7 @@ class ActiveTreeAnimationTest : BasePlatformTestCase() {
         val image = BufferedImage(maxOf(view.width, 1), maxOf(view.height, 1), BufferedImage.TYPE_INT_ARGB)
         val graphics = image.createGraphics()
         try {
-            repeat(3) { view.regions.paint(graphics) }
+            repeat(3) { view.paint(graphics) }
         } finally {
             graphics.dispose()
         }
@@ -104,6 +112,75 @@ class ActiveTreeAnimationTest : BasePlatformTestCase() {
         }
         assertNull((view.cellRenderer as Component).parent)
         assertEquals(before, view.componentCount)
+    }
+
+    fun `test changing one row does not remeasure or rebuild bounds for unchanged rows`() {
+        var reads = 0
+        fun node(key: String, text: String = key) = ActiveTreeNode(object : ActiveItem {
+            override val key = key
+            override val title: String get() {
+                reads++
+                return text
+            }
+        })
+        val nodes = (0 until 200).map { node(it.toString()) }
+        val tree = ActiveTree("")
+        tree.update(nodes)
+        val view = attach(tree)
+        repeat(view.rowCount) { view.getRowBounds(it) }
+        reads = 0
+
+        tree.update(nodes.dropLast(1) + node("199", "Updated"))
+
+        assertTrue("Only the changed row needs measuring, not all 200 leaves: $reads title reads", reads < 20)
+        assertEquals(200, view.rowCount)
+    }
+
+    fun `test keyboard deselection retains the native lead focus indicator`() {
+        val tree = ActiveTree("", surface = ActiveSurface.ToolWindow)
+        tree.update(listOf(ActiveTreeNode(Row("row"))))
+        val view = attach(tree)
+        view.setSelectionRow(0)
+        view.actionMap.get("toggleAndAnchor").actionPerformed(ActionEvent(view, ActionEvent.ACTION_PERFORMED, ""))
+        assertTrue(tree.selectedKeys().isEmpty())
+        assertEquals(0, view.leadSelectionRow)
+
+        val frame = view.regions.frame(view.getPathForRow(0).lastPathComponent as ActiveEntry)!!
+        val image = BufferedImage(view.width, view.height, BufferedImage.TYPE_INT_ARGB)
+        val graphics = image.createGraphics()
+        try {
+            view.putClientProperty(RenderingUtil.ALWAYS_PAINT_SELECTION_AS_FOCUSED, true)
+            view.paint(graphics)
+
+            val color = if (SystemInfo.isMac) view.background else RenderingUtil.getSelectionBackground(view)
+            assertEquals(color.rgb, image.getRGB(frame.x + frame.width / 2, frame.y))
+        } finally {
+            graphics.dispose()
+        }
+    }
+
+    fun `test hover recovers on movement within the same row after a payload refresh`() {
+        val hovered = mutableListOf<String?>()
+        val tree = ActiveTree("", actions = ActiveTreeActions(hover = { hovered += it?.key }))
+        tree.update(listOf(ActiveTreeNode(Row("row"))))
+        val view = attach(tree)
+        val bounds = view.getRowBounds(0)
+        fun move(offset: Int) {
+            val point = Point(bounds.x + 20 + offset, bounds.y + bounds.height / 2)
+            val screen = Point(point)
+            SwingUtilities.convertPointToScreen(screen, view)
+            IdeEventQueue.getInstance().dispatchEvent(MouseEvent(view, MouseEvent.MOUSE_MOVED, 0, 0,
+                point.x, point.y, screen.x, screen.y, 0, false, MouseEvent.NOBUTTON))
+        }
+
+        move(0)
+        assertNotNull(tree.hoveredBounds(view))
+        tree.update(listOf(ActiveTreeNode(Row("row", EmptyIcon.ICON_16))))
+        assertNull(tree.hoveredBounds(view))
+        move(1)
+
+        assertEquals(listOf("row", null, "row"), hovered)
+        assertNotNull(tree.hoveredBounds(view))
     }
 
     fun `test overlay releases renderer stamps when painting fails`() {

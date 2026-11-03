@@ -78,7 +78,13 @@ internal class ActiveTreeReorder(private val view: ActiveTreeView, private val o
     fun cancel() {
         if (preview != null) {
             preview = null
-            view.preview { view.hierarchy.sync() }
+            view.preview {
+                val selected = view.selectedKeys()
+                view.hierarchy.sync()
+                view.selectionModel.selectionPaths = selected.mapNotNull { key ->
+                    view.hierarchy.entries[key]?.takeIf { it.root === view.hierarchy.root }?.let { TreePath(it.path) }
+                }.toTypedArray()
+            }
         }
     }
 

@@ -150,7 +150,6 @@ class ActiveRendererTest : BasePlatformTestCase() {
         ))))
         val view = tree.preferredFocus() as ActiveTreeView
         view.setSize(400, 300)
-        assertEquals(view.background, com.intellij.ui.render.RenderingUtil.getSelectionBackground(view))
         assertTrue(com.intellij.ui.render.RenderingUtil.isHoverPaintingDisabled(view))
         val renderer = ActiveRenderer(menu = menu)
         val positions = mutableListOf<Int>()

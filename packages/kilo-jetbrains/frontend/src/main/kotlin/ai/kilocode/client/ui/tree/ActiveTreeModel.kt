@@ -28,12 +28,13 @@ internal class ActiveTreeModel {
     @RequiresEdt
     fun sync(nodes: List<ActiveTreeNode> = snapshot, parent: DefaultMutableTreeNode = root) {
         val wanted = nodes.map(::node)
+        val kept = wanted.toHashSet()
         for (index in parent.childCount - 1 downTo 0) {
             val child = parent.getChildAt(index) as ActiveEntry
-            if (child !in wanted) model.removeNodeFromParent(child)
+            if (child !in kept) model.removeNodeFromParent(child)
         }
         wanted.forEachIndexed { index, node ->
-            if (node.parent !== parent || parent.getIndex(node) != index) move(node, parent, index)
+            if (index >= parent.childCount || parent.getChildAt(index) !== node) move(node, parent, index)
         }
         nodes.forEachIndexed { index, spec ->
             spec.children?.let { sync(it, wanted[index]) }

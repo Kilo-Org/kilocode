@@ -6,6 +6,7 @@ import ai.kilocode.client.ui.active.ActiveItem
 import ai.kilocode.client.ui.active.ActiveBadge
 import ai.kilocode.client.ui.LiveBadgeIcon
 import ai.kilocode.client.ui.AnimationIcon
+import ai.kilocode.client.ui.layout.LayoutPass
 import ai.kilocode.client.testing.TestUiTimers
 import com.intellij.openapi.util.Disposer
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
@@ -19,6 +20,8 @@ import java.awt.Component
 import java.awt.Container
 import java.awt.Graphics
 import java.awt.Rectangle
+import java.awt.image.BufferedImage
+import javax.swing.CellRendererPane
 import javax.swing.Icon
 import javax.swing.JComponent
 import javax.swing.JPanel
@@ -50,6 +53,42 @@ class ActiveListPaintCostTest : BasePlatformTestCase() {
         val after = reads
 
         assertTrue("a measured pass should read the row glyphs far less often: plain=$before pass=$after", after * 3 <= before)
+    }
+
+    fun `test native renderer painting keeps the scoped measurement pass`() {
+        val row = row("a", counting())
+        val model = CollectionListModel<ActiveItem>(listOf(row))
+        val list = JBList(model).apply { setSize(400, 600) }
+        val renderer = ActiveListRenderer(model)
+        val pane = CellRendererPane()
+        list.add(pane)
+        val host = JPanel().apply {
+            add(list)
+            addNotify()
+        }
+        val image = BufferedImage(400, 80, BufferedImage.TYPE_INT_ARGB)
+        val graphics = image.createGraphics()
+        try {
+            val first = renderer.getListCellRendererComponent(list, row, 0, false, false)
+            pane.paintComponent(graphics, first, list, 0, 0, image.width, image.height, true)
+            repeat(3) {
+                val stamp = renderer.getListCellRendererComponent(list, row, 0, false, false)
+                reads = 0
+                LayoutPass.measure { pane.paintComponent(graphics, stamp, list, 0, 0, image.width, image.height, true) }
+                val expected = reads
+                assertTrue("Native validation requires an attached renderer", stamp.isDisplayable)
+                assertTrue("The paint must measure row glyphs", expected > 0)
+
+                renderer.getListCellRendererComponent(list, row, 0, false, false)
+                reads = 0
+                pane.paintComponent(graphics, stamp, list, 0, 0, image.width, image.height, true)
+
+                assertEquals("Native painting must cache the same measurements as an enclosing pass", expected, reads)
+            }
+        } finally {
+            graphics.dispose()
+            host.removeNotify()
+        }
     }
 
     fun `test an animation frame repaints only rows that show an animated glyph`() {

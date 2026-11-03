@@ -1,13 +1,12 @@
 package ai.kilocode.client.ui.list
 
-import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.active.ActiveConfig
 import ai.kilocode.client.ui.active.ActiveItem
 import ai.kilocode.client.ui.active.ActiveMenu
 import ai.kilocode.client.ui.active.ActiveRenderState
 import ai.kilocode.client.ui.active.ActiveRenderer
 import ai.kilocode.client.ui.active.ActiveWeight
-import ai.kilocode.client.ui.active.activeLayout
+import ai.kilocode.client.ui.layout.LayoutPass
 import com.intellij.openapi.util.registry.Registry
 import com.intellij.ui.CollectionListModel
 import com.intellij.ui.GroupHeaderSeparator
@@ -16,14 +15,10 @@ import com.intellij.util.concurrency.annotations.RequiresEdt
 import com.intellij.util.ui.JBInsets
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
-import java.awt.BasicStroke
 import java.awt.BorderLayout
 import java.awt.Dimension
 import java.awt.Graphics
-import java.awt.Graphics2D
-import java.awt.Image
 import java.awt.Point
-import java.awt.RenderingHints
 import java.awt.image.BufferedImage
 import javax.swing.JList
 import javax.swing.JPanel
@@ -65,6 +60,9 @@ internal class ActiveListRenderer(
         (insets as? JBInsets)?.update()
     }
 
+    // Container.validateTree bypasses child validate() overrides, so the stamp owns the measure pass.
+    override fun validate() = LayoutPass.measure { super.validate() }
+
     @RequiresEdt
     override fun getListCellRendererComponent(
         list: JList<out ActiveItem>,
@@ -73,8 +71,6 @@ internal class ActiveListRenderer(
         selected: Boolean,
         focused: Boolean,
     ): JPanel {
-        val active = selected && (focused || list.hasFocus() || (list as? ActiveListActive)?.active() == true)
-        val fg = UIUtil.getListForeground(active, active || focused)
         val sectionTitle = activeListSectionTitle(model.items, index)
 
         background = list.background
@@ -90,35 +86,9 @@ internal class ActiveListRenderer(
             return this
         }
         gap = false
+        body.setPreferredSize(null)
         body.body().isVisible = true
-        val hovered = (list as? ActiveListActive)?.hoveredIndex() == index
-        val show = when {
-            cfg.hoverActions -> list.isEnabled && selected && hovered
-            cfg.keepActions -> selected && list.isEnabled
-            else -> active && list.isEnabled
-        }
-        val selection = UIUtil.getListBackground(true, active)
-        body.render(
-            ActiveRenderState(
-                item = value,
-                selected = selected,
-                focused = focused,
-                active = active,
-                hovered = hovered,
-                enabled = list.isEnabled,
-                background = list.background,
-                selectionColor = if (selected) selection else null,
-                paintSelection = true,
-                backdrop = if (selected && activeFade()) selection else list.background,
-                foreground = fg,
-                pillBackground = if (selected && list.isEnabled) selection else list.background,
-                width = list.width,
-                actionsVisible = show,
-                menuVisible = list.isEnabled && hovered && menu?.available(value) == true,
-                opaque = true,
-                bodyHeight = bodyHeight,
-            ),
-        )
+        body.render(state(list, value, index, selected, focused))
         return this
     }
 
@@ -216,6 +186,7 @@ internal class ActiveListRenderer(
             actionsVisible = show,
             menuVisible = list.isEnabled && hovered && menu?.available(value) == true,
             opaque = true,
+            bodyHeight = bodyHeight,
         )
     }
 }

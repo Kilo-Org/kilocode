@@ -3,7 +3,11 @@ package ai.kilocode.client.ui.tree
 import ai.kilocode.client.ui.active.ActiveHit
 import ai.kilocode.client.ui.active.activeHitCells
 import ai.kilocode.client.ui.active.activeLayout
+import ai.kilocode.client.ui.active.activePlaceholder
 import ai.kilocode.client.session.ui.PickerRow
+import com.intellij.openapi.util.SystemInfo
+import com.intellij.ui.paint.RectanglePainter
+import com.intellij.ui.render.RenderingUtil
 import com.intellij.ui.tree.ui.CustomBoundsTreeUI
 import com.intellij.ui.tree.ui.DefaultControl
 import com.intellij.util.concurrency.annotations.RequiresEdt
@@ -11,6 +15,7 @@ import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.tree.TreeUtil
 import java.awt.Component
 import java.awt.Graphics
+import java.awt.Graphics2D
 import java.awt.Point
 import java.awt.Rectangle
 import javax.swing.CellRendererPane
@@ -40,8 +45,11 @@ internal class ActiveTreeGeometry(private val view: ActiveTreeView, private val 
         val state = view.state(entry, view.isRowSelected(row), view.hasFocus())
         val frame = frame(entry)
         val content = bounds(entry)
-        if (view.placeholder(entry)) return
         if (frame == null || content == null || g.clipBounds?.intersects(frame) == false) return
+        if (view.placeholder(entry)) {
+            activePlaceholder(g, cell(entry))
+            return
+        }
         if (state.selectionColor != null) {
             surface.update(view.background, state.selectionColor, true, true)
             paintLocal(g, surface, frame)
@@ -60,6 +68,11 @@ internal class ActiveTreeGeometry(private val view: ActiveTreeView, private val 
         stamp.setBounds(0, 0, cell.width, cell.height)
         activeLayout(stamp)
         paintLocal(g, stamp, cell)
+        val lead = !SystemInfo.isMac && !state.selected && view.leadSelectionPath?.lastPathComponent === entry
+        if (lead && RenderingUtil.isFocused(view) && g is Graphics2D) {
+            g.color = RenderingUtil.getSelectionBackground(view)
+            RectanglePainter.DRAW.paint(g, frame.x, frame.y, frame.width, frame.height, 0)
+        }
     }
 
     @RequiresEdt
@@ -134,8 +147,10 @@ internal class ActiveTreeGeometry(private val view: ActiveTreeView, private val 
         val depth = TreeUtil.getNodeDepth(view, TreePath(entry.path))
         val local = ActiveTreePainter.getControlOffset(control, depth, !entry.allowsChildren)
         if (local < 0) return@let null
-        val y = bounds.y + (bounds.height - control.height) / 2
-        Rectangle(view.insets.left + local, y, control.width, control.height)
+        // DefaultTreeUI extends the painted control's hit target by two vertical pixels.
+        val height = minOf(bounds.height, control.height + 2)
+        val y = bounds.y + (bounds.height - height) / 2
+        Rectangle(view.insets.left + local, y, control.width, height)
     }
 
     @RequiresEdt

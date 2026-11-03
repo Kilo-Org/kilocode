@@ -173,7 +173,6 @@ class AgentManagerPanel(
                         canOpenSetupScript(it) || canRunSetup(it) || canCopyBranch(it)
                 }
             },
-            eligible = { it is WorktreeRow },
             alternate = ActiveMenu(HostedWorkspaceDataKeys.WORKSPACE, group, element = { row ->
                 (row as? HostedWorkspaceRow)?.data?.dto
             }),

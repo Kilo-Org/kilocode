@@ -16,9 +16,7 @@ import ai.kilocode.client.ui.active.ActiveReorder
 import ai.kilocode.client.ui.active.ActiveRowHeight
 import ai.kilocode.client.ui.active.ActiveSelection
 import ai.kilocode.client.ui.active.ActiveSurface
-import ai.kilocode.client.ui.active.activeHitCells
 import ai.kilocode.client.ui.active.activeInvalidate
-import ai.kilocode.client.ui.active.activeLayout
 import ai.kilocode.client.ui.active.activeUpdateUI
 import ai.kilocode.client.ui.active.activeToolWindowBackground
 import ai.kilocode.client.ui.active.activeVisibleCells
@@ -69,7 +67,6 @@ import javax.swing.ScrollPaneConstants
 import javax.swing.SwingUtilities
 import javax.swing.ToolTipManager
 import javax.swing.tree.DefaultMutableTreeNode
-import javax.swing.tree.DefaultTreeModel
 import javax.swing.tree.TreePath
 import javax.swing.tree.TreeSelectionModel
 
@@ -282,6 +279,7 @@ internal class ActiveTreeView(
     private var wired = false
     private val snapshot get() = hierarchy.snapshot
     private var height: Int? = null
+    private val heights = HashMap<String, Pair<ActiveItem, Int>>()
     internal var onSelect: (() -> Unit)? = null
     internal var onGeometry: (() -> Unit)? = null
     internal var onDragStart: (() -> Unit)? = null
@@ -325,10 +323,8 @@ internal class ActiveTreeView(
         selectionModel.selectionMode = TreeSelectionModel.SINGLE_TREE_SELECTION
         putClientProperty(RenderingHelper.SHRINK_LONG_RENDERER, true)
         putClientProperty(RenderingHelper.SHRINK_LONG_SELECTION, true)
-        putClientProperty(Control.Painter.KEY, ActiveTreePainter.Native)
-        // Native framing has a fixed outer cap, not a per-depth surface. Keep native gestures,
-        // but paint a shared frame including the disclosure gutter after the native pass.
-        putClientProperty(RenderingUtil.CUSTOM_SELECTION_BACKGROUND, java.util.function.Supplier { background })
+        putClientProperty(Control.Painter.KEY, ActiveTreePainter)
+        // Native layout and gestures share the owned painter's disclosure and row geometry.
         RenderingUtil.setHoverPaintingDisabled(this, true)
         setModel(treeModel)
         setCellRenderer(renderer)
@@ -422,6 +418,7 @@ internal class ActiveTreeView(
         if (!wired) return
         setRowHeight(0)
         activeUpdateUI(renderer.active)
+        heights.clear()
         measure()
         geometry()
         TreeUtil.invalidateCacheAndRepaint(ui as? javax.swing.plaf.TreeUI)
@@ -435,9 +432,16 @@ internal class ActiveTreeView(
     }
 
     override fun paintComponent(g: Graphics) {
-        super.paintComponent(g)
-        if (!wired || ui !is CustomBoundsTreeUI) return
+        if (!wired || ui !is CustomBoundsTreeUI) {
+            super.paintComponent(g)
+            return
+        }
+        if (isOpaque) {
+            g.color = background
+            g.fillRect(0, 0, width, getHeight())
+        }
         regions.paint(g)
+        emptyText.paint(this, g)
     }
 
     override fun getToolTipText(event: MouseEvent): String? {
@@ -478,7 +482,7 @@ internal class ActiveTreeView(
         try {
             hierarchy.update(nodes)
             ordering.refresh()
-            measure()
+            if (measure()) TreeUtil.invalidateCacheAndRepaint(ui as? javax.swing.plaf.TreeUI)
             expanded.forEach { key ->
                 entries[key]?.takeIf { it.allowsChildren }?.let { expandPath(TreePath(it.path)) }
             }
@@ -491,8 +495,6 @@ internal class ActiveTreeView(
             scrollsOnExpand = scrolls
             restoring = false
         }
-        TreeUtil.invalidateCacheAndRepaint(ui as? javax.swing.plaf.TreeUI)
-        for (row in 0 until rowCount) getRowBounds(row)
         onGeometry?.invoke()
         animation.update()
         repaint()
@@ -540,12 +542,18 @@ internal class ActiveTreeView(
     }
 
 
-    private fun measure() {
-        height = null
-        if (cfg.height != ActiveRowHeight.EQUAL) return
-        height = entries.values.filter { !it.allowsChildren }.maxOfOrNull {
-            renderer.preferredHeight(state(it, false, false).copy(actionsVisible = false, menuVisible = false), width)
+    private fun measure(): Boolean {
+        if (cfg.height != ActiveRowHeight.EQUAL) return false
+        val before = height
+        heights.keys.retainAll(entries.keys)
+        height = entries.values.asSequence().filter { !it.allowsChildren }.maxOfOrNull { entry ->
+            val cached = heights[entry.key]
+            if (cached?.first == entry.item) return@maxOfOrNull cached.second
+            renderer.preferredHeight(
+                state(entry, false, false).copy(actionsVisible = false, menuVisible = false), width,
+            ).also { heights[entry.key] = entry.item to it }
         }
+        return height != before
     }
 
 
@@ -720,7 +728,7 @@ internal class ActiveTreeView(
     internal fun placeholder(entry: ActiveEntry): Boolean = ordering.placeholder(entry)
 
     private fun syncCursor() {
-        val point = if (isShowing) {
+        val point = if (isShowing && !java.awt.GraphicsEnvironment.isHeadless()) {
             mousePosition ?: Point(0, 0)
         } else {
             Point(0, 0)
@@ -795,7 +803,10 @@ internal class ActiveTreeView(
     private fun setHovered(key: String?) {
         // A drag owns the pointer; row hover would reopen the popup after the drag started.
         val next = if (dragging) null else key
-        if (next == null) TreeHoverListener.DEFAULT.mouseExited(this)
+        if (next == null) {
+            TreeHoverListener.DEFAULT.mouseExited(this)
+            hover.mouseExited(this)
+        }
         if (hoveredKey == next) return
         val old = hoveredKey?.let { entries[it] }
         hoveredKey = next

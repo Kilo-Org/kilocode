@@ -41,12 +41,4 @@ object ActiveTreePainter : Control.Painter {
         if (offset < 0) return
         control.paint(c, g, x + offset, y, control.width, height, expanded, selected)
     }
-
-    /** Native pass only measures the arrow; the rounded overlay paints it once after the frame. */
-    object Native : Control.Painter by ActiveTreePainter {
-        override fun paint(
-            c: Component, g: Graphics, x: Int, y: Int, width: Int, height: Int,
-            control: Control, depth: Int, leaf: Boolean, expanded: Boolean, selected: Boolean,
-        ) = Unit
-    }
 }
