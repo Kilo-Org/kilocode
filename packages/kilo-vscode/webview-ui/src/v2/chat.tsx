@@ -2,10 +2,10 @@
 import { Button } from "@kilocode/kilo-ui/button"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import type { ToolActions } from "@kilocode/kilo-ui/message-part"
-import { createEffect, createSignal, type JSX, Match, on, onCleanup, Show, Switch } from "solid-js"
+import { createEffect, createSignal, type JSX, Match, on, onCleanup, onMount, Show, Switch } from "solid-js"
 import type { ToHost } from "../../../src/protocol"
 import { useLanguage } from "../context/language"
-import { getVSCodeAPI } from "../context/vscode"
+import { getVSCodeAPI, useVSCode } from "../context/vscode"
 import { useV2 } from "./client"
 import { useDisplaySettings } from "./display-settings"
 import { SessionList } from "./history"
@@ -13,12 +13,14 @@ import ProfileView from "../components/profile/ProfileView"
 import { createProfile } from "./profile"
 import { SessionChanges } from "./session-changes"
 import { SessionView } from "./session-view"
+import { formatReviewCommentsMarkdown } from "../utils/review-comment-markdown"
 
 export function Chat() {
   const v2 = useV2()
   const language = useLanguage()
   const [session, setSession] = createSignal<string>()
   const [view, setView] = createSignal<"chat" | "history" | "profile">("chat")
+  let appendReview: ((value: string, send: boolean) => void) | undefined
   const [changes, setChanges] = createSignal(false)
   // Display layouts are Kilo-only config keys, so the host reads them. Ask on connect and after every config change.
   const display = useDisplaySettings()
@@ -47,10 +49,20 @@ export function Chat() {
     setChanges(false)
   }
 
+  // A document tab in the editor posts review comments here, because this view owns the prompt they belong to.
+  const vscode = useVSCode()
+  onMount(() => {
+    const message = vscode.onMessage((item) => {
+      if (item.type !== "appendReviewComments") return
+      appendReview?.(formatReviewCommentsMarkdown(item.comments), item.autoSend)
+    })
+    onCleanup(message)
+  })
+
   // What a tool renderer may ask the host to open. The host owns the editor and the diff surfaces.
   const toolActions: ToolActions = {
     openFile: (filePath, line) =>
-      getVSCodeAPI().postMessage({ type: "openToolFile", filePath, line } satisfies ToHost as never),
+      getVSCodeAPI().postMessage({ type: "openToolFile", filePath, line, sessionID: session() } satisfies ToHost as never),
     openDiff: (diff) => getVSCodeAPI().postMessage({ type: "openDiffVirtual", diff } satisfies ToHost as never),
     openDiffs: (diffs) => getVSCodeAPI().postMessage({ type: "openDiffsVirtual", diffs } satisfies ToHost as never),
     openSession: open,
@@ -111,6 +123,7 @@ export function Chat() {
           actions={toolActions}
           onShowHistory={() => setView("history")}
           row={row}
+          onAppendReady={(append) => (appendReview = append)}
           replace={changes() && !!session()}
           replacement={
             <Show when={changes() ? session() : undefined} keyed>

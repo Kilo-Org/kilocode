@@ -11,6 +11,7 @@ import {
   type ExtensionContext,
 } from "vscode"
 import { createAgentManagerConnection } from "./agent-manager/connection"
+import { DocumentViewerProvider } from "./DocumentViewerProvider"
 import { AgentManagerProvider } from "./agent-manager/AgentManagerProvider"
 import { createPanel, PANEL_TYPE } from "./agent-manager/panel"
 import { ensureCommandsSkipShell } from "./agent-manager/terminal-host"
@@ -115,7 +116,21 @@ export function activate(context: ExtensionContext) {
   const autocomplete = createConnection({ server, directory })
   context.subscriptions.push({ dispose: autocomplete.dispose })
   registerAutocompleteProvider(context, autocomplete)
-  const view = chat({ context, server, directory, trackCostSession: alerts.track, diff: diffs })
+  const documentsRef: { current?: DocumentViewerProvider } = {}
+  const view = chat({
+    context,
+    server,
+    directory,
+    trackCostSession: alerts.track,
+    diff: diffs,
+    documents: () => documentsRef.current,
+  })
+  const documents = new DocumentViewerProvider({
+    extension: context,
+    directory,
+    onComments: (comments, autoSend) => void view.post({ type: "appendReviewComments", comments, autoSend }),
+  })
+  documentsRef.current = documents
   const agentHost = new VscodeHost(context, { server, directory })
   const agentPanel = createPanel({ context, server, directory, trackCostSession: alerts.track })
   const agentManager = new AgentManagerProvider(agentHost, connection, agentPanel)
@@ -214,6 +229,11 @@ export function activate(context: ExtensionContext) {
     }),
     window.registerWebviewPanelSerializer(PANEL_TYPE, {
       deserializeWebviewPanel: async (restored) => agentManager.deserializePanel(restored),
+    }),
+    documents,
+    // A restored document tab reloads its own tabs from the messages it missed, so start it empty instead.
+    window.registerWebviewPanelSerializer(DocumentViewerProvider.viewType, {
+      deserializeWebviewPanel: async (restored) => restored.dispose(),
     }),
     commands.registerCommand("kilo-code.v2.agentManager.open", () => agentManager.openPanel()),
     commands.registerCommand("kilo-code.v2.agentManager.openInNewWindow", async () => {

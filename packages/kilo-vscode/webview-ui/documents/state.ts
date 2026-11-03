@@ -1,0 +1,209 @@
+import { createSignal, type Accessor } from "solid-js"
+import type { ReviewComment } from "../diff-viewer/review-comments"
+
+export interface DocumentMessage {
+  type?: "document.result" | "agentManager.document"
+  sessionId: string
+  contextKey?: string
+  file: string
+  requestedFile?: string
+  content?: string
+  kind?: "text" | "image"
+  mime?: string
+  data?: string
+  error?: string
+}
+
+export interface DocumentTab {
+  id: string
+  file: string
+  sessionId?: string
+  line?: number
+  column?: number
+}
+
+export interface DocumentData {
+  file: string
+  content?: string
+  kind?: "text" | "image"
+  mime?: string
+  data?: string
+  error?: string
+  loading: boolean
+}
+
+function key(context: string, file: string): string {
+  return `${context}:${file}`
+}
+
+/** Tabs keep the path they were opened with (possibly absolute); loaded data carries the canonical relative path. */
+export function documentPath(tab: DocumentTab, get: (file: string) => DocumentData | undefined): string {
+  return get(tab.file)?.file ?? tab.file
+}
+
+export function isMarkdownPath(file: string): boolean {
+  return /\.(md|mdx|markdown)$/i.test(file)
+}
+
+export function createDocuments(
+  context: Accessor<string | null>,
+  session: Accessor<string | null> = context,
+  send: (sessionId: string, file: string, contextKey: string) => void,
+) {
+  const [tabs, setTabs] = createSignal<Record<string, DocumentTab[]>>({})
+  const [active, setActive] = createSignal<Record<string, string | undefined>>({})
+  const [data, setData] = createSignal<Record<string, DocumentData>>({})
+
+  const current = () => context() ?? ""
+  const list = () => tabs()[current()] ?? []
+  const selected = () => active()[current()]
+  const document = (file: string) => data()[key(current(), file)]
+
+  const request = (file: string, sessionId = session() ?? "", contextKey = current()) => {
+    const ctx = current()
+    if (!ctx) return
+    const id = key(ctx, file)
+    setData((prev) => ({ ...prev, [id]: { ...(prev[id] ?? { file }), file, loading: true, error: undefined } }))
+    send(sessionId, file, contextKey)
+  }
+
+  const open = (file: string, sessionId = session() ?? "", line?: number, column?: number) => {
+    const ctx = current()
+    if (!ctx || !file) return
+    setTabs((prev) => {
+      const list = prev[ctx] ?? []
+      const id = key(ctx, file)
+      if (list.some((tab) => tab.id === id)) {
+        return { ...prev, [ctx]: list.map((tab) => (tab.id === id ? { ...tab, sessionId, line, column } : tab)) }
+      }
+      return { ...prev, [ctx]: [...list, { id, file, sessionId, line, column }] }
+    })
+    setActive((prev) => ({ ...prev, [ctx]: key(ctx, file) }))
+    request(file, sessionId)
+    return true
+  }
+
+  const select = (id: string) => {
+    const ctx = current()
+    if (!ctx) return
+    const tab = (tabs()[ctx] ?? []).find((item) => item.id === id)
+    if (!tab) return
+    setActive((prev) => ({ ...prev, [ctx]: id }))
+    if (!document(tab.file)) request(tab.file, tab.sessionId)
+  }
+
+  const close = (id: string) => {
+    const ctx = current()
+    const list = tabs()[ctx] ?? []
+    const index = list.findIndex((tab) => tab.id === id)
+    if (index < 0) return
+    const next = list.filter((tab) => tab.id !== id)
+    setTabs((prev) => ({ ...prev, [ctx]: next }))
+    if (active()[ctx] !== id) return
+    const target = next[Math.min(index, next.length - 1)]
+    setActive((prev) => ({ ...prev, [ctx]: target?.id }))
+  }
+
+  const closeOthers = (id: string) => {
+    const ctx = current()
+    const tab = (tabs()[ctx] ?? []).find((item) => item.id === id)
+    if (!tab) return
+    setTabs((prev) => ({ ...prev, [ctx]: [tab] }))
+    setActive((prev) => ({ ...prev, [ctx]: id }))
+  }
+
+  const reorder = (from: string, to: string) => {
+    const ctx = current()
+    const list = tabs()[ctx] ?? []
+    const fromIndex = list.findIndex((tab) => tab.id === from)
+    const toIndex = list.findIndex((tab) => tab.id === to)
+    if (fromIndex < 0 || toIndex < 0 || fromIndex === toIndex) return
+    const next = [...list]
+    const [item] = next.splice(fromIndex, 1)
+    next.splice(toIndex, 0, item!)
+    setTabs((prev) => ({ ...prev, [ctx]: next }))
+  }
+
+  const onMessage = (message: DocumentMessage) => {
+    const id = key(message.contextKey ?? message.sessionId, message.requestedFile ?? message.file)
+    setData((prev) => ({
+      ...prev,
+      [id]: {
+        file: message.file,
+        content: message.content,
+        kind: message.kind,
+        mime: message.mime,
+        data: message.data,
+        error: message.error,
+        loading: false,
+      },
+    }))
+  }
+
+  return { tabs: list, active: selected, document, open, select, close, closeOthers, reorder, onMessage, request }
+}
+
+export function createDocumentComments(context: Accessor<string | null>) {
+  const [byContext, setByContext] = createSignal<Record<string, ReviewComment[]>>({})
+  const comments = () => {
+    const ctx = context()
+    return ctx ? (byContext()[ctx] ?? []) : []
+  }
+  const setComments = (value: ReviewComment[]) => {
+    const ctx = context()
+    if (!ctx) return
+    setByContext((prev) => ({ ...prev, [ctx]: value }))
+  }
+  return { comments, setComments }
+}
+
+/** The transport each surface provides for the panel: the Agent Manager panel and the editor tab answer differently. */
+export interface DocumentTransport {
+  send: (sessionId: string, file: string, contextKey: string) => void
+  openFile: (file: string, sessionId?: string, line?: number, column?: number) => boolean
+  copyPath: (file: string, sessionId?: string) => boolean
+  onMessage: (handler: (message: DocumentMessage) => void) => () => void
+}
+
+export function createDocumentInspector(
+  transport: DocumentTransport,
+  context: Accessor<string | null>,
+  project: Accessor<string | undefined>,
+  isOpen: Accessor<boolean>,
+  openPanel: () => void,
+  closePanel: () => void,
+) {
+  const scope = () => `${project() ?? "single"}:${context() ?? ""}`
+  const documents = createDocuments(scope, context, transport.send)
+  const comments = createDocumentComments(scope)
+  const open = (file?: string, sessionId?: string, line?: number, column?: number) => {
+    if (!file) {
+      openPanel()
+      return true
+    }
+    const sid = sessionId ?? context()
+    if (!sid || !documents.open(file, sid, line, column)) return false
+    openPanel()
+    return true
+  }
+  const openFile = (file: string, line?: number, column?: number, sessionId = context()) => {
+    if (!sessionId) return false
+    return transport.openFile(file, sessionId, line, column)
+  }
+  const copyPath = (file: string, sessionId = context()) => {
+    if (!sessionId) return false
+    return transport.copyPath(file, sessionId)
+  }
+  const subscribe = (handler: (message: DocumentMessage) => void) => {
+    const off = transport.onMessage((message) => {
+      if (message.type === "document.result" || message.type === "agentManager.document") handler(message)
+    })
+    return off
+  }
+  // The toolbar button is a way back to already-open documents, not a way to open an empty panel: documents arrive
+  // from a file reference or a diff row. Tabs are keyed per worktree, so this hides itself on a worktree with none,
+  // and stays visible while the panel is open so it can still be toggled shut.
+  const available = () => documents.tabs().length > 0 || isOpen()
+  const toggle = () => (isOpen() ? closePanel() : open())
+  return { documents, comments, open, openFile, copyPath, toggle, available, isOpen, scope, subscribe }
+}

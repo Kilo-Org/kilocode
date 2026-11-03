@@ -1,5 +1,6 @@
 // Messages between the webview and the extension host. The webview has no server credentials: it sends HTTP
 // requests through the host (`fetch`), and the host streams each response back in order.
+import type { ReviewCommentData } from "./shared/review-comments"
 
 export type Request = {
   type: "fetch"
@@ -208,6 +209,7 @@ export type ToWebview =
   | { type: "modelSelectorExpandedLoaded"; value: boolean }
   | { type: "autoApproveStateLoaded"; value: boolean }
   | { type: "webviewActiveChanged"; active: boolean }
+  | { type: "appendReviewComments"; comments: ReviewCommentData[]; autoSend: boolean }
   | { type: "configLoaded"; global: ConfigFileContent; project: ConfigFileContent; policy?: ConfigPolicy; error?: string }
   | { type: "configWritten"; id: number; ok: boolean; error?: string }
   | { type: "vscodeSettingsLoaded"; values: Record<string, unknown> }

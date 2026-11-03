@@ -164,6 +164,8 @@ import { createChatFocus, createFocusBridge, createPromptFocus, forgetTerminalFo
 import { createAppDiffPanelFocus } from "./diff-panel-focus"
 import { clampPanelWidth, createPanelResize, maxPanelWidth, minPanelWidth, SidePanel } from "./side-panel-layout"
 import { createSidePanel, sideHostNeeded } from "./side-panel-state"
+import { createDocumentInspector, isMarkdownPath } from "../documents/state"
+import { DocumentPanelHost } from "./documents/DocumentPanelHost"
 import { SubagentPanel } from "./SubagentPanel"
 import { attachSubagentEvent, createSubagentController } from "./subagent-tabs"
 import { EditPreviewPanel } from "./EditPreviewPanel"
@@ -353,6 +355,34 @@ const AgentManagerContent: Component = () => {
     setDiffStyle(style)
     to({ type: "agentManager.setReviewDiffStyle", style })
   }
+  const documentInspector = createDocumentInspector(
+    {
+      send: (sessionId, file, contextKey) => to({ type: "agentManager.requestDocument", sessionId, file, contextKey }),
+      openFile: (file, sessionId, line, column) => {
+        if (!sessionId) return false
+        to({ type: "agentManager.openFile", sessionId, filePath: file, line, column })
+        return true
+      },
+      copyPath: (file, sessionId) => {
+        if (!sessionId) return false
+        to({ type: "agentManager.copyFilePath", sessionId, filePath: file })
+        return true
+      },
+      onMessage: (handler) =>
+        onHostMessage((message) => {
+          if (message.type === "agentManager.document") handler(message)
+        }),
+    },
+    selection,
+    currentProjectId,
+    () => sidePanel() === SidePanel.Documents,
+    () => {
+      closeHistory()
+      setReviewActive(false)
+      panels.open(SidePanel.Documents)
+    },
+    () => panels.close(SidePanel.Documents),
+  )
   const subagentCtl = createSubagentController({
     project: currentProjectId,
     current: () => sessions.currentSessionID(),
@@ -1097,7 +1127,10 @@ const AgentManagerContent: Component = () => {
     editPreview.open(diff, sessionID, diffStyle())
   }
   const toolActions: ToolActions = {
-    openFile: (filePath, line) => to({ type: "agentManager.openFile", filePath, line }),
+    openFile: (filePath, line) => {
+      if (isMarkdownPath(filePath) && documentInspector.open(filePath, sessions.currentSessionID(), line)) return
+      to({ type: "agentManager.openFile", filePath, line })
+    },
     openDiff: (diff) => previewEdit([diff]),
     openDiffs: (diffs) => previewEdit(diffs),
     openSession: (id) => {
@@ -1642,6 +1675,7 @@ const AgentManagerContent: Component = () => {
       subagents.open(detail.sessionID, typeof detail.title === "string" ? detail.title : undefined, parent)
     }
     window.addEventListener("agentManager.openSubagent", subagent)
+    const documents = documentInspector.subscribe((message) => documentInspector.documents.onMessage(message))
 
     const terminalDispatch = createTerminalMessageHandler({
       state: terms,
@@ -1830,6 +1864,7 @@ const AgentManagerContent: Component = () => {
       stopModifier()
       window.removeEventListener("agentManager.openSubagent", subagent)
       window.removeEventListener(APPEND_REVIEW_COMMENTS, reviewCommentsEvent)
+      documents()
       unsubscribe()
     })
   })
@@ -2105,6 +2140,7 @@ const AgentManagerContent: Component = () => {
             onOpenFile={(ctx: string, file: string, line?: number) =>
               to({ type: "agentManager.openFile", sessionId: ctx, filePath: file, line })
             }
+            onOpenDocument={(file: string) => documentInspector.open(file)}
             onRevertFile={(key, ctx, file) => revertCtl.revertFor(key, ctx, review.scope(), file)}
             revertingFiles={revertCtl.revertingFor}
             activeTerminalId={terms.activeId()}
@@ -2145,6 +2181,13 @@ const AgentManagerContent: Component = () => {
           <Show when={editPreview.preview()}>
             <EditPreviewPanel state={editPreview} visible={() => sidePanel() === SidePanel.EditPreview} />
           </Show>
+          <DocumentPanelHost
+            inspector={documentInspector}
+            onClosePanel={() => panels.close(SidePanel.Documents)}
+            onSendAll={focusCtl.focus}
+            activeTerminalId={terms.activeId()}
+            visible={() => sidePanel() === SidePanel.Documents}
+          />
           <SideTerminalPanel
             state={terms}
             contextKey={terms.sideKey}
@@ -2257,9 +2300,9 @@ const AgentManagerContent: Component = () => {
         prStatus={() => activePR()?.pr}
         prOpen={prOpen}
         onTogglePR={togglePRPanel}
-        documentsOpen={() => false}
-        documentsAvailable={() => false}
-        onToggleDocuments={() => undefined}
+        documentsOpen={documentInspector.isOpen}
+        documentsAvailable={documentInspector.available}
+        onToggleDocuments={documentInspector.toggle}
         subagentsAvailable={() => subagentCtl.tabs.tabs().length > 0 || subagentCtl.toolbar.available().length > 0}
         subagentsOpen={() => sidePanel() === SidePanel.Subagents}
         onToggleSubagents={subagentCtl.toolbar.toggle}

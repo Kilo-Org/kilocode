@@ -76,6 +76,7 @@ export interface MessageHost {
   sendDiffBranches: (sessionId: string, scope?: string, projectId?: string) => Promise<void>
   openWorktreeDirectory: (worktreeId: string) => void
   openWorktreeFile: (id: string, filePath: string, line?: number, column?: number) => void
+  readDocument: (sessionId: string, file: string, contextKey?: string) => void
   runKey: (worktreeId: string) => string
   view: (sessionIds: string[]) => void
   trackOpenSessions: (sessionIds: string[]) => void
@@ -360,6 +361,10 @@ async function handleDiff(m: AgentManagerInMessage, host: MessageHost): Promise<
   }
   if (m.type === "agentManager.openFile") {
     host.openWorktreeFile(m.sessionId, m.filePath, m.line, m.column)
+    return true
+  }
+  if (m.type === "agentManager.requestDocument") {
+    host.readDocument(m.sessionId, m.file, m.contextKey)
     return true
   }
   if (m.type === "agentManager.copyFilePath") {

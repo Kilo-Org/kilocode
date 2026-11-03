@@ -95,6 +95,7 @@ export interface ProviderHostsSource {
   sendDiffBranches(sessionId: string, scope?: string, projectId?: string): Promise<void>
   openWorktreeDirectory(id: string): void
   openWorktreeFile(id: string, file: string, line?: number, column?: number): void
+  readDocument(sessionId: string, file: string, contextKey?: string): void
   runKey(id: string): string
   trackOpenSessions(ids: string[]): void
   trackVisibleSession(id: string | null): void
@@ -147,6 +148,7 @@ export function messageHost(p: ProviderHostsSource): MessageHost {
     sendDiffBranches: (id, scope, project) => p.sendDiffBranches(id, scope, project),
     openWorktreeDirectory: (id) => p.openWorktreeDirectory(id),
     openWorktreeFile: (id, file, line, column) => p.openWorktreeFile(id, file, line, column),
+    readDocument: (sessionId, file, contextKey) => p.readDocument(sessionId, file, contextKey),
     runKey: (id) => p.runKey(id),
     view: (ids) => p.connection.view(ids),
     trackOpenSessions: (ids) => p.trackOpenSessions(ids),

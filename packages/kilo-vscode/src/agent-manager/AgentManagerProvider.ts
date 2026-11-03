@@ -59,7 +59,8 @@ import { pruneSubagents, sessionMissing } from "./prune-subagents"
 import { readTerminalFont, watchTerminalFont } from "./terminal-font"
 import { DestinationState, watchTerminalDestination } from "./terminal-destination"
 import { buildKeybindingMap } from "./format-keybinding"
-import { resolveWorktreeFile } from "./worktree-file-path"
+import { readDocument } from "../documents/document-reader"
+import { resolveWorktreeFile, resolveWorktreeRoot } from "./worktree-file-path"
 import { focusPanelPrompt, revealPanel } from "./focus-panel"
 import { formatLog } from "./log-format"
 import { HealthScheduler } from "./worktree-health"
@@ -975,6 +976,12 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
   public openWorktreeFile(id: string, filePath: string, line?: number, column?: number): void {
     const target = resolveWorktreeFile(this.getStateManager(), id, filePath, this.getRoot())
     if (target) this.host.openFile(target, line, column)
+  }
+
+  public readDocument(sessionId: string, file: string, contextKey?: string): void {
+    const root = resolveWorktreeRoot(this.getStateManager(), sessionId, this.getRoot())
+    const result = root ? readDocument(root, file) : { error: "The document context is no longer available." }
+    this.postToWebview({ type: "agentManager.document", sessionId, file, requestedFile: file, contextKey, ...result })
   }
 
   public postToWebview(message: AgentManagerOutMessage): void {
