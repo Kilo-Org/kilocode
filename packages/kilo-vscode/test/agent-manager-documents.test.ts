@@ -2,6 +2,7 @@ import { describe, expect, it } from "bun:test"
 import { createSignal } from "solid-js"
 import {
   createDocumentInspector,
+  documentPath,
   type DocumentMessage,
   type DocumentTransport,
 } from "../webview-ui/documents/state"
@@ -115,6 +116,66 @@ describe("document inspector", () => {
     state.inspector.toggle()
     expect(state.open()).toBe(false)
     expect(state.inspector.available()).toBe(false)
+  })
+
+  it("posts copyFilePath and openFile requests scoped to the active session", () => {
+    const state = setup()
+    state.inspector.open("README.md", "ses-1")
+
+    expect(state.inspector.copyPath("src/index.ts")).toBe(true)
+    expect(state.copied).toEqual([{ file: "src/index.ts", sessionId: "wt-a" }])
+
+    expect(state.inspector.openFile("src/index.ts", 4, 2)).toBe(true)
+    expect(state.opened).toEqual([{ file: "src/index.ts", sessionId: "wt-a", line: 4, column: 2 }])
+  })
+
+  it("does not post copyFilePath or openFile requests without an active session", () => {
+    const state = setup()
+    state.setSelection(null)
+
+    expect(state.inspector.copyPath("src/index.ts")).toBe(false)
+    expect(state.inspector.openFile("src/index.ts")).toBe(false)
+    expect(state.copied).toEqual([])
+    expect(state.opened).toEqual([])
+  })
+
+  it("keeps content and comments scoped when switching worktrees and projects", () => {
+    const state = setup()
+    state.inspector.subscribe((message) => state.inspector.documents.onMessage(message))
+    state.inspector.open("plans/plan.md", "ses-a")
+    const handler = [...state.watched][0]
+    handler?.({
+      type: "agentManager.document",
+      sessionId: "ses-a",
+      contextKey: "project-a:wt-a",
+      requestedFile: "plans/plan.md",
+      file: "plans/plan.md",
+      kind: "text",
+      content: "# Worktree A",
+    })
+    state.inspector.comments.setComments([{ id: "a", file: "plans/plan.md", side: "additions", line: 1, comment: "A", selectedText: "" }])
+
+    state.setOpen(false)
+    state.setSelection("wt-b")
+    expect(state.inspector.documents.tabs()).toEqual([])
+    expect(state.inspector.documents.document("plans/plan.md")).toBeUndefined()
+    expect(state.inspector.comments.comments()).toEqual([])
+
+    state.setSelection("wt-a")
+    expect(state.inspector.documents.tabs()).toHaveLength(1)
+    expect(state.inspector.documents.document("plans/plan.md")?.content).toBe("# Worktree A")
+    expect(state.inspector.comments.comments().map((item) => item.comment)).toEqual(["A"])
+
+    state.setProject("project-b")
+    expect(state.inspector.documents.tabs()).toEqual([])
+    expect(state.inspector.comments.comments()).toEqual([])
+  })
+
+  it("uses the canonical relative path for tabs opened with an absolute path", () => {
+    const tab = { id: "wt:C:/repo/docs/file.md", file: "C:/repo/docs/file.md" }
+    const data = { file: "docs/file.md", content: "# Hi", loading: false }
+    expect(documentPath(tab, () => data)).toBe("docs/file.md")
+    expect(documentPath(tab, () => undefined)).toBe(tab.file)
   })
 
   it("opens the selected document in the editor for its session", () => {
