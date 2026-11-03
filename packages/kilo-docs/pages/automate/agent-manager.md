@@ -15,6 +15,7 @@ The Agent Manager is a **full-panel editor tab** built directly into the extensi
 - Setup scripts and `.env` auto-copy on worktree creation
 - Session import from existing branches, external worktrees, or GitHub PR URLs
 - "Continue in Worktree" to promote a sidebar session to the Agent Manager
+- "Continue in Cloud" to copy a worktree's open conversations into a hosted Cloud Agent workspace
 - The same providers, BYOK keys, custom providers, and extension features supported in the sidebar
 
 {% callout type="tip" %}
@@ -307,6 +308,21 @@ Kilo creates the worktree from the selected project's configured default base br
 Explicit branch names preserve slashes and case, such as `feature/MyTask`. The checkout directory can have a different name.
 
 To create a worktree immediately from the default base branch, press `Cmd+Shift+N` (macOS) / `Ctrl+Shift+N` (Windows/Linux). This uses the selected project's configured default, or the automatic remote-default fallback when no configured default exists.
+
+### Continue in Cloud
+
+Copy a worktree's open conversations into a hosted [Cloud Agent](/docs/code-with-ai/platforms/cloud-agent) workspace so you can keep working from a browser. Right-click the worktree and choose **Continue in Cloud**.
+
+The command copies the worktree's open top-level sessions, up to 10, and switches the Cloud workspace to the session that is active locally. Before it starts, Kilo checks that:
+
+- You are signed in to Kilo with session sync enabled.
+- The worktree has no uncommitted changes. Commit or stash them first, because Cloud works from the pushed branch rather than your local working tree.
+- The current branch is pushed to a GitHub or GitLab remote, and the remote contains the worktree's HEAD. Push the branch first.
+- Every copied session is idle and belongs to this worktree.
+
+All copied sessions must belong to the same account. On success, choose **Open** to open the active conversation in the browser, or **Copy Link** to copy the workspace URL. If a session's model is not available in Cloud, Kilo substitutes a fallback and names it in the success message.
+
+Kilo prepares the request once and reuses it on retry, so retrying after a balance or partial-creation failure does not create a second workspace. The worktree's sessions stay in Agent Manager.
 
 ### Slash Commands in the Worktree Prompt
 

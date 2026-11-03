@@ -27,6 +27,7 @@ Use your provider API key to route matching models through your account:
 - Anthropic
 - AWS Bedrock
 - Azure Foundry (experimental)
+- Cohere
 - DeepSeek
 - Fireworks
 - Google AI Studio

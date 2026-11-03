@@ -73,7 +73,7 @@ Kilo automatically applies prompt caching on supported providers. Repeated conte
 
 ## How Costs Are Calculated
 
-- Inference costs are a pass-through of provider pricing with no markup. A separate 5% payment-processing fee applies when you purchase Kilo credits.
+- Inference costs are a pass-through of provider pricing with no markup. Kilo is not currently charging a separate payment-processing fee when you purchase Kilo credits.
 - Kilo calculates an estimated cost for each request based on configured pricing. This estimate is shown per-request in the chat history.
 - Cache hits are billed at a discounted rate compared to regular input tokens.
 - Requests using **Auto Free** models are billed at $0 on Kilo's side.

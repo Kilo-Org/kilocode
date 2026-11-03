@@ -5,17 +5,18 @@ description: "Automatically generate meaningful git commit messages"
 
 # Generate Commit Messages
 
-Generate descriptive commit messages automatically based on your staged git changes. Kilo Code analyzes your staged files and creates conventional commit messages that follow best practices.
+Generate descriptive commit messages automatically from your git changes. Kilo Code analyzes your files and creates conventional commit messages that follow best practices.
 
 {% callout type="info" %}
-This feature only analyzes **staged changes**. Make sure to stage your files using `git add` or via `VS Code` interface before generating commit messages.
+Kilo Code analyzes your **staged changes** first. If nothing is staged, it falls back to your **unstaged and untracked changes**, so you can generate a message without staging files first. Untracked files are represented by their path.
 {% /callout %}
 
 ## How It Works
 
 The git commit message generator:
 
-- Analyzes only your **staged changes** (not unstaged or untracked files)
+- Analyzes your **staged changes** first, then falls back to unstaged and untracked changes when nothing is staged
+- Ignores lock files (such as `package-lock.json`, `Cargo.lock`, and `poetry.lock`) at any depth
 - Uses AI to understand the context and purpose of your changes
 - Creates descriptive commit messages that explain what was changed and why following the [Conventional Commits](https://www.conventionalcommits.org/) (by default, customizable)
 
@@ -23,7 +24,7 @@ The git commit message generator:
 
 ### Generating a Commit Message
 
-1. Stage your changes using `git add` or the VS Code git interface
+1. Optionally stage your changes using `git add` or the VS Code git interface. Kilo Code uses staged changes first, then unstaged and untracked changes.
 2. In the VS Code Source Control panel, look for the `Kilo Code` logo next to the commit message field)
 3. Click the logo to generate a commit message
 
@@ -68,6 +69,10 @@ You can also set it directly in the project config:
   }
 }
 ```
+
+### Commit message language
+
+Generated messages follow your Kilo Code interface language by default. To use a different language for commit messages than the rest of the UI, open **Settings > Commit Message** and pick a language, or set `kilo-code.new.languageCommitMessage` in VS Code settings. The default, `sync`, follows the extension's interface language; any other value uses that language for the generated message.
 
 {% callout type="info" %}
 Git commit message generation is a **VS Code extension feature**. It is not available in the CLI/TUI.
@@ -122,9 +127,9 @@ setup steps for new contributors
 
 ## Troubleshooting
 
-### No Staged Changes
+### No Changes to Describe
 
-If the button doesn't appear or generation fails, ensure you have staged changes:
+If generation fails with "No changes found to generate a commit message for", the repository has no staged, unstaged, or untracked changes. Make an edit or stage files, then try again:
 
 ```bash
 git add <files>

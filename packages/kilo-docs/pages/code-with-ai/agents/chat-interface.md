@@ -92,6 +92,8 @@ When more than one session is open, the sidebar and Kilo editor tabs show a sess
 
 Hover a session tab next to the active tab to see its shortcut. When the prompt is empty, its placeholder also shows the shortcut. To hide these prompt hints, turn off **Show shortcut hints** in **Settings > Display**. To change the keys, search for **Previous Session Tab** or **Next Session Tab** in **Keyboard Shortcuts**. These are the same keys that switch tabs in the Agent Manager, and each window acts on the surface that has focus.
 
+To open the tab switcher (the list button at the end of the session tab strip) without the mouse, run **Kilo Code: Show Open Tabs** from the Command Palette, or assign it a keybinding. It opens the switcher for the chat you last focused, or the sidebar when Agent Manager was last focused. The command has no effect when only one session tab is open.
+
 {% /tab %}
 {% tab label="CLI" %}
 

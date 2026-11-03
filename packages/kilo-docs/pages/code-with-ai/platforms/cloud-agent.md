@@ -188,6 +188,8 @@ In the web app, manage profiles from the **Profiles** tab of the [Cloud Agent se
 
 Only organization owners and admins can create, edit, or delete an organization-owned profile. Other members can open the profile and use it for a session, but they see its settings read-only. Personal profiles are unaffected — every account can create and manage its own.
 
+A profile holds up to **50 variables**. Variable keys must start with a letter or underscore, then contain only letters, digits, and underscores, up to 128 characters. Names the sandbox runtime owns are reserved, such as `HOME`, `SESSION_ID`, `SESSION_HOME`, `pnpm_config_store_dir`, and any name beginning with `XDG_`, `KILO`, or `OPENCODE`. The web and mobile editors keep keys in this shape, prefixing `_` when a key would start with a digit. These rules apply when you add a variable; keys stored earlier stay editable.
+
 ### Importing a local configuration
 
 You can import a local Kilo configuration ZIP into a profile to move your agents, slash commands, skills, and instructions into the cloud. Open the profile in the **Profiles** tab and use the **Import** tab.
@@ -301,6 +303,8 @@ When creating a trigger, you choose an **activation mode** that cannot be change
 Triggers can use an [agent environment profile](#agent-environment-profiles) to configure the execution environment for triggered sessions, or run without one and use the repository and account defaults. The agent resolves the profile at runtime, so profile updates apply automatically to future executions. Profiles referenced by triggers cannot be deleted until those triggers are updated or removed.
 
 Which profiles a trigger offers depends on how it runs. Organization triggers run as the organization webhook bot by default and select organization profiles; a trigger created with **Run as webhook creator** selects personal profiles instead. Clearing a profile returns the trigger to the repository and account defaults, and existing triggers keep the profile they already have until you change it.
+
+Webhook and scheduled triggers can run a specific [agent](/docs/code-with-ai/agents/using-agents) instead of the default. Enter the agent slug in the **Custom agent** field. Agents defined in the trigger's [agent environment profile](#agent-environment-profiles) are validated when you save. An agent that exists only in the repository cannot be checked until the triggered session clones the repository, so a missing agent fails that run promptly with a message naming the agent instead of timing out later. Leave the field empty to use the default agent. Clear it to return to the default.
 
 For models that support it, webhook and scheduled triggers can set a **reasoning effort** next to the model selector. **Default** leaves the model's behavior unchanged; a specific effort applies to each session the trigger starts.
 
