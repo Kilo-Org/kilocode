@@ -11,7 +11,7 @@ import * as path from "node:path"
 import type { Host, PanelContext, OutputHandle, Disposable } from "./host"
 import type { PRMergeMethod } from "./types"
 import { repoName, validateCloneUrl } from "./project/clone"
-import { samePath } from "./project/paths"
+import { checkoutRoot, samePath } from "./project/paths"
 import { keybindings, watchKeybindings } from "../kilo-provider/shortcut-context"
 import { createPanel } from "./panel"
 import type { Manager } from "../server"
@@ -39,7 +39,10 @@ export class VscodeHost implements Host {
   }
 
   workspacePath(): string | undefined {
-    return vscode.workspace.workspaceFolders?.[0]?.uri.fsPath
+    const folder = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath
+    if (!folder) return undefined
+    // Worktrees and Agent Manager state belong to the checkout, also when the open folder is a subfolder of it.
+    return checkoutRoot(folder) ?? folder
   }
 
   dirtyFiles(): string[] {

@@ -68,6 +68,14 @@ export function projectIdFor(root: string): string {
   return `prj-${createHash("sha1").update(root).digest("hex").slice(0, 12)}`
 }
 
+/** The nearest checkout top level that contains `dir`, found by its `.git` entry (directory or file). */
+export function checkoutRoot(dir: string): string | undefined {
+  if (fs.existsSync(path.join(dir, ".git"))) return dir
+  const parent = path.dirname(dir)
+  if (parent === dir) return undefined
+  return checkoutRoot(parent)
+}
+
 /** Resolve linked worktrees to the primary checkout so project-local state is shared by the repository. */
 export async function resolveProjectRoot(
   dir: string,

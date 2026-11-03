@@ -376,7 +376,7 @@ export function html(input: {
     }
   }
   html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; }
-  body { background-color: ${input.view && input.view !== "chat" ? "var(--vscode-editor-background)" : "var(--vscode-sideBar-background, var(--vscode-editor-background))"}; color: var(--vscode-foreground); font-family: var(--vscode-font-family); }
+  body { background-color: ${input.view === "settings" ? "var(--vscode-editor-background)" : "var(--vscode-sideBar-background, var(--vscode-editor-background))"}; color: var(--vscode-foreground); font-family: var(--vscode-font-family); }
   #root { height: 100%; }
   .container { height: 100vh; }
 </style>

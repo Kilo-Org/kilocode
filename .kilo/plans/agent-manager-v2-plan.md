@@ -105,3 +105,13 @@ Clean up: `st stop-vscode --cleanup true; st stop; rm -rf /tmp/am-st-ws`.
 - server log: /tmp/am-st-user/User/globalStorage/kilocode.kilo-code-v2/profile/data/kilo2/log/opencode-local.log
 - FOLLOW-UP: tracked session missing on the server (state file from another profile/DB) shows raw "Session not found: ses_..." in the AM view and binds the composer to it. Check v1 handling (state-recovery / prune) and match.
 - FOLLOW-UP: reused user-dir restore: AM panel restored but not visible in main window after relaunch; verify "Reload window" flow explicitly.
+
+## Self-test log (2026-11-03)
+- PASS local session prompt (Grep tool, answer 1.2.3).
+- PASS quick worktree create (dirt-plough), edit in worktree only, stats +1 -1, session title on card and tab.
+- PASS New Worktree dialog: compare 2 models -> 2 worktrees, grouped "2 versions", each right model and answer.
+- FIXED: sessionsLoaded never set (dialog would not open); local tab lost after first prompt (v1 parentID null vs v2 undefined); intro covered transcript; duplicate sessions across stores; selectionActivated adapter passed projectId as worktreeId.
+- Composer parity with sidebar: speech (provider mounted in AM, dialog has voice), auto-approve and expanded picker sync across views, keybindings + webviewActiveChanged pushed to panel, cycle agent commands target AM when active, dialog default model = agent model then server default.
+- Harness note: keypresses do not reach VS Code keybindings from webviews; use run-command.
+- Chat view title buttons follow v1 order: new session, history, Agent Manager, profile, settings.
+- Sidebar button order verified against v1 for every Agent Manager sidebar group (header icons, project row, worktree/session rows, footer, tab bar, side panel strip, terminal destination); AM components are order-identical to v1. Chat view title order guarded by test/chat-view-title-order.test.ts.

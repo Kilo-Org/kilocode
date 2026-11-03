@@ -749,29 +749,29 @@
     "menus": {
       "view/title": [
         {
-          "command": "kilo-code.v2.agentManager.open",
+          "command": "kilo-code.v2.newSession",
           "when": "view == kilo-code.v2.chat",
           "group": "navigation@0"
         },
         {
-          "command": "kilo-code.v2.newSession",
-          "when": "view == kilo-code.v2.chat",
-          "group": "navigation"
-        },
-        {
           "command": "kilo-code.v2.history",
           "when": "view == kilo-code.v2.chat",
-          "group": "navigation"
+          "group": "navigation@1"
+        },
+        {
+          "command": "kilo-code.v2.agentManager.open",
+          "when": "view == kilo-code.v2.chat",
+          "group": "navigation@2"
         },
         {
           "command": "kilo-code.v2.profile",
           "when": "view == kilo-code.v2.chat",
-          "group": "navigation"
+          "group": "navigation@3"
         },
         {
           "command": "kilo-code.v2.settings",
           "when": "view == kilo-code.v2.chat",
-          "group": "navigation"
+          "group": "navigation@4"
         }
       ],
       "scm/title": [

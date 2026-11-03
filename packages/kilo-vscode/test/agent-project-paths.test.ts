@@ -5,6 +5,7 @@ import * as path from "path"
 import { simpleGit } from "simple-git"
 import {
   canonicalizePath,
+  checkoutRoot,
   findTrackedBranch,
   resolveProjectRoot,
   samePath,
@@ -164,6 +165,25 @@ describe("project-paths", () => {
         return simpleGit(cwd).raw(args)
       })
       expect(fallback).toBe(canonicalizePath(root))
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true })
+    }
+  })
+
+  it("checkoutRoot resolves a subfolder to the checkout that contains it", () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "kilo-checkout-"))
+    try {
+      const repo = path.join(dir, "repo")
+      const linked = path.join(repo, ".kilo", "worktrees", "feature")
+      fs.mkdirSync(path.join(repo, ".git"), { recursive: true })
+      fs.mkdirSync(path.join(repo, "packages", "app"), { recursive: true })
+      fs.mkdirSync(path.join(linked, "src"), { recursive: true })
+      fs.writeFileSync(path.join(linked, ".git"), "gitdir: ../../../.git/worktrees/feature\n")
+      fs.mkdirSync(path.join(dir, "plain"))
+      expect(checkoutRoot(path.join(repo, "packages", "app"))).toBe(repo)
+      expect(checkoutRoot(repo)).toBe(repo)
+      expect(checkoutRoot(path.join(linked, "src"))).toBe(linked)
+      expect(checkoutRoot(path.join(dir, "plain"))).toBe(checkoutRoot(dir))
     } finally {
       fs.rmSync(dir, { recursive: true, force: true })
     }
