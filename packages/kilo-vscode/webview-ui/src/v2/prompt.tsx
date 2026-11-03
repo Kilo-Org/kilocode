@@ -132,12 +132,32 @@ export function PromptInput(props: {
   })
 
   const focusInput = () => refs.input?.focus({ preventScroll: true })
+  // The restore chain outlives the event that started it, so every handle is tracked and dropped on unmount.
+  const frames = new Set<number>()
+  const timers = new Set<ReturnType<typeof setTimeout>>()
+  let disposed = false
+  const frame = (run: () => void) => {
+    const id = requestAnimationFrame(() => {
+      frames.delete(id)
+      if (!disposed) run()
+    })
+    frames.add(id)
+  }
+  const timer = (run: () => void, delay: number) => {
+    const id = setTimeout(() => {
+      timers.delete(id)
+      if (!disposed) run()
+    }, delay)
+    timers.add(id)
+  }
   // A restore retries after the dialog, menu or question that owned focus closes, but never takes focus from
   // another text control, a popup or a selection.
   const onFocusPrompt = (event: Event) => {
     const detail = event instanceof CustomEvent ? (event.detail as Record<string, unknown> | undefined) : undefined
     const force = detail?.force === true
     const allowed = () =>
+      !disposed &&
+      !!refs.input?.isConnected &&
       promptFocusAllowed({
         force,
         deferToQuestion: detail?.deferFocusToQuestion === true,
@@ -159,15 +179,22 @@ export function PromptInput(props: {
       focus()
     }
     queueMicrotask(restore)
-    requestAnimationFrame(() => {
+    frame(() => {
       restore()
-      requestAnimationFrame(restore)
-      setTimeout(restore, 0)
-      setTimeout(restore, 50)
+      frame(restore)
+      timer(restore, 0)
+      timer(restore, 50)
     })
   }
   onMount(() => window.addEventListener("focusPrompt", onFocusPrompt))
-  onCleanup(() => window.removeEventListener("focusPrompt", onFocusPrompt))
+  onCleanup(() => {
+    disposed = true
+    for (const id of frames) cancelAnimationFrame(id)
+    for (const id of timers) clearTimeout(id)
+    frames.clear()
+    timers.clear()
+    window.removeEventListener("focusPrompt", onFocusPrompt)
+  })
 
   const insertSpeechText = (value: string) => {
     const ref = refs.input

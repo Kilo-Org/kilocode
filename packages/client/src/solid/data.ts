@@ -410,7 +410,14 @@ export function createData(config: CreateDataInput) {
   const sending = new Map<string, Promise<unknown>>()
   const messageLoads = new Map<string, Promise<unknown>>()
   // kilocode_change start - session-history: sessions whose loaded page reached the start of the transcript
-  const messageStart = new Set<string>()
+  const [messageStart, setMessageStart] = createSignal<ReadonlySet<string>>(new Set())
+  const markStart = (sessionID: string, complete: boolean) =>
+    setMessageStart((current) => {
+      const next = new Set(current)
+      if (complete) next.add(sessionID)
+      else next.delete(sessionID)
+      return next
+    })
   // kilocode_change end
   const compacting = new Map<string, { id: string; observed: Set<string>; request: Promise<SessionInboxCompaction> }>()
   onCleanup(() => compacting.clear())
@@ -627,7 +634,7 @@ export function createData(config: CreateDataInput) {
     sync.invalidate(`session.message:${sessionID}`)
     messageLoads.delete(sessionID)
     // kilocode_change start - session-history
-    messageStart.delete(sessionID)
+    markStart(sessionID, false)
     // kilocode_change end
     // Keep unacknowledged submissions until their echo or rollback settles them.
     const pending = store.session.pending[sessionID]?.filter((item) => outbox.has(item.id)) ?? []
@@ -682,7 +689,7 @@ export function createData(config: CreateDataInput) {
     store.session.pending[sessionID]?.forEach((item) => outbox.delete(item.id))
     messageIndex.delete(sessionID)
     // kilocode_change start - session-history
-    messageStart.delete(sessionID)
+    markStart(sessionID, false)
     // kilocode_change end
     sync.invalidate(`session:${sessionID}`)
     sync.invalidate(`session.family:${sessionID}`)
@@ -1833,7 +1840,7 @@ export function createData(config: CreateDataInput) {
         },
         /** Whether the loaded transcript reaches the start of the session history. */
         startLoaded(sessionID: string) {
-          return messageStart.has(sessionID)
+          return messageStart().has(sessionID)
         },
         // kilocode_change end
         sync(sessionID: string) {
@@ -1865,9 +1872,7 @@ export function createData(config: CreateDataInput) {
             const messages = local.length === 0 ? fetched : [...fetched, ...local]
             batch(() => {
               // kilocode_change start - session-history
-              const complete = response.data.length < limit
-              if (complete) messageStart.add(sessionID)
-              else messageStart.delete(sessionID)
+              markStart(sessionID, response.data.length < limit)
               // kilocode_change end
               messageIndex.set(sessionID, new Map(messages.map((message, index) => [message.id, index])))
               setStore("session", "message", sessionID, reconcile(messages))
@@ -1944,9 +1949,7 @@ export function createData(config: CreateDataInput) {
             const messages = [...fetched.reverse().filter((item) => !ids.has(item.id)), ...existing]
             batch(() => {
               // kilocode_change start - session-history
-              const complete = !next || lastPage < lastLimit
-              if (complete) messageStart.add(sessionID)
-              else messageStart.delete(sessionID)
+              markStart(sessionID, !next || lastPage < lastLimit)
               // kilocode_change end
               options?.beforePublish?.()
               messageIndex.set(sessionID, new Map(messages.map((item, position) => [item.id, position])))

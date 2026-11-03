@@ -6,9 +6,9 @@ import { useLanguage } from "../src/context/language"
 import type { V2 } from "../src/v2/client"
 import { SessionList } from "../src/v2/history"
 import type { SessionInfo } from "../src/types/messages/agent-manager"
-import { historyTabTarget, type HistorySource } from "./history-tabs"
+import { tabForKey } from "../src/utils/tab-navigation"
 
-type Source = HistorySource
+type Source = "local" | "worktree"
 
 export default function HistoryView(props: {
   sessions: () => SessionInfo[]
@@ -28,7 +28,8 @@ export default function HistoryView(props: {
   const tabs: Partial<Record<Source, HTMLButtonElement>> = {}
   const sources = (): Source[] => (props.worktreeSessionIds?.() ? ["local", "worktree"] : ["local"])
   const move = (event: KeyboardEvent, current: Source) => {
-    const next = historyTabTarget(sources(), current, event.key)
+    if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return
+    const next = tabForKey(sources(), current, event.key)
     if (!next) return
     event.preventDefault()
     tabs[next]?.focus()

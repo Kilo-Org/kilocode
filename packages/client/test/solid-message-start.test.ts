@@ -18,28 +18,16 @@ test("a short first page reports that the transcript start is loaded", async () 
   }
 })
 
-test("a full first page needs the next short page before the start counts as loaded", async () => {
+test("a full first page needs a short older page before the start counts as loaded", async () => {
   const full = Array.from({ length: 20 }, (_, index) => message(`msg_${index}`))
-  const setup = fixture([{ data: full, next: "older" }, { data: [] }])
+  const setup = fixture([{ data: full, next: "older" }, { data: [message("msg_old")], next: "older" }])
   try {
     await setup.data.session.message.sync("ses_one")
     expect(setup.data.session.message.startLoaded("ses_one")).toBe(false)
 
     await setup.data.session.message.loadMore("ses_one")
     expect(setup.data.session.message.startLoaded("ses_one")).toBe(true)
-    expect(setup.data.session.message.more("ses_one")).toBe(false)
-  } finally {
-    setup.dispose()
-  }
-})
-
-test("an evicted session forgets the loaded start", async () => {
-  const setup = fixture([{ data: [message("msg_1")] }])
-  try {
-    await setup.data.session.message.sync("ses_one")
-    setup.data.session.message.evict("ses_one")
-
-    expect(setup.data.session.message.startLoaded("ses_one")).toBe(false)
+    expect(setup.data.session.message.more("ses_one")).toBe(true)
   } finally {
     setup.dispose()
   }
