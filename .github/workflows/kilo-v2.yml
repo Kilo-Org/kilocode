@@ -411,9 +411,8 @@ jobs:
         working-directory: packages/kilo-plugin
         run: bun test
 
-      - name: Test the Kilo host
-        working-directory: packages/kilo-cli
-        run: bun test
+      # The Kilo host suite is the slowest one in CI. `check-test` shards it on Linux and Windows through its
+      # `test:ci` task, so this job no longer runs it a second time.
 
       # Hard-fails when a user-visible OpenCode string on the CLI/TUI/OAuth surface is not rebranded.
       - name: Audit branding coverage

@@ -773,10 +773,9 @@
     "by": "open-config-picker"
   },
   "module:packages/kilo-vscode/webview-ui/src/utils/open-config.ts": {
-    "state": "ported",
-    "v2": "packages/kilo-vscode/src/open-config.ts",
-    "note": "The v2 webview posts openFile with the host-resolved target (Settings.tsx and config.path) instead of building a localized openConfigFile message. The host owns the scope check and the quick pick, and its labels are fixed English like the other host-side confirmations, so configMessage has no v2 counterpart.",
-    "by": "open-config-picker"
+    "state": "dropped",
+    "note": "The v1 helper built the localized openConfigFile message: scope, loaded status, create entry and all source labels. v2 has no such message: the webview posts openFile with the host-resolved target and the host quick pick uses fixed English labels like the other host-side confirmations, so configMessage is not carried. The picker behavior is the separate kilo-provider/open-config.ts cell ported to packages/kilo-vscode/src/open-config.ts.",
+    "by": "fix-progress-map"
   },
   "module:packages/kilo-vscode/tests/unit/open-config-message.test.ts": {
     "state": "dropped",
@@ -878,5 +877,35 @@
     "state": "dropped",
     "note": "Work note for v1 issue #6284 (status bar settings link), not runtime code. The v2 status bar tooltip links to kilo-code.v2.settings with the autocomplete tab (packages/kilo-vscode/src/services/autocomplete/AutocompleteStatusBar.ts).",
     "by": "autocomplete-inline"
+  },
+  "module:packages/opencode/src/kilocode/review/review.txt": {
+    "state": "ported",
+    "note": "packages/kilo-plugin/src/review/review.txt, the v1 prompt with two adaptations: the sub-agent tool is named `subagent` instead of Task, and the sentence tying the default base list to Review.getBaseBranch() in review.ts is dropped (no base-branch helper on v2; review.ts stays open under #15315/#14394). Scope order, effort flags, base order, target validation, worktree metadata candidates (unchanged: Agent Manager metadata, not runtime config), tracks, output format, no-edit rule and the post-review question with `mode` are unchanged. packages/kilo-plugin/test/review-command.test.ts checks them.",
+    "by": "v2-review-cmd"
+  },
+  "module:packages/opencode/src/kilocode/review/command.ts": {
+    "state": "ported",
+    "note": "packages/kilo-plugin/src/review/index.ts KiloReview.Plugin registers `review` with the v1 description through ctx.command.transform and prompts the invoking session with the prompt, `$ARGUMENTS` replaced by the trimmed input. It is in KiloPlugins, after the built-in plugins (replaces the built-in review) and before the config plugins (a config `review` still wins); packages/kilo-cli/test/review-command.test.ts proves both on the host server. v2 Command.Info has no `hints` field. isReviewCommand/reviewCommandName/parseReviewCommand serve review telemetry (session/processor.ts, #15303) and the suggest tool (suggestion/index.ts, #15332); their consumers are open cells and port the helper with them. The command-display.ts use is a no-op special case (name === \"review\").",
+    "by": "v2-review-cmd"
+  },
+  "module:packages/opencode/test/kilocode/review-command.test.ts": {
+    "state": "ported",
+    "note": "packages/kilo-plugin/test/review-command.test.ts carries every prompt assertion (scopes and precedence, metadata candidates, base order, commit and PR review, untrusted input, symlinks, no-edit contract, tracks, adaptive sub-agents) plus scope order, effort flags, the `subagent` adaptation and a decode of the post-review question example with `mode` through QuestionTool.Input; it also runs the built-in then the Kilo command plugin and checks the registered description and prompt. packages/kilo-cli/test/review-command.test.ts replaces the 'resolves the review command' case on the real host server, with the config override. Not carried: the parseReviewCommand cases (telemetry helper, #15303), `hints` (no v2 field), and the Review.getBaseBranch() reference (dropped from the prompt).",
+    "by": "v2-review-cmd"
+  },
+  "module:packages/kilo-vscode/webview-ui/src/context/todo-revert.ts": {
+    "state": "ported",
+    "note": "webview-ui/src/v2/todo-state.ts todoState applies the staged revert to the message parts before it selects the latest completed todowrite list: messages after the revert message are hidden, parts at or after the reverted part are hidden, and a message-level revert hides the message. The v2 part order is the content order, so the reverted part is found by id instead of comparing ids.",
+    "by": "composer-todos"
+  },
+  "module:packages/kilo-vscode/tests/unit/todo-revert.test.ts": {
+    "state": "ported",
+    "note": "packages/kilo-vscode/test/todo-dock.test.ts carries the revert assertions: a reverted write keeps the list before it, the latest state returns without a revert, and a reverted part inside one message keeps only the earlier todowrite parts.",
+    "by": "composer-todos"
+  },
+  "module:packages/opencode/test/kilocode/todowrite-description.test.ts": {
+    "state": "ported",
+    "note": "packages/kilo-plugin/test/todo-tool.test.ts asserts the v1 description phrases on the Kilo todowrite tool, and the Kilo host registers that tool unconditionally through KiloPlugins.",
+    "by": "composer-todos"
   }
 }

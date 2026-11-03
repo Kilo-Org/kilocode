@@ -118,6 +118,11 @@
           "default": true,
           "markdownDescription": "Show the text-generation rate on the latest assistant message."
         },
+        "kilo-code.v2.showTaskTimeline": {
+          "type": "boolean",
+          "default": false,
+          "markdownDescription": "Show the task timeline graph in the chat header."
+        },
         "kilo-code.v2.maxCost": {
           "type": "number",
           "default": 0,
@@ -383,7 +388,7 @@
   },
   "scripts": {
     "build": "bun script/build.ts",
-    "package": "bun script/build.ts",
+    "package": "bun script/build.ts --production",
     "extension": "bun script/launch.ts",
     "typecheck": "tsc --noEmit && tsc --noEmit -p webview-ui",
     "lint": "cd ../.. && oxlint --config .oxlintrc.json packages/kilo-vscode/src packages/kilo-vscode/webview-ui/src packages/kilo-vscode/script packages/kilo-vscode/test",

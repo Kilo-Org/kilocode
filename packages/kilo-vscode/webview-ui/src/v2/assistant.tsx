@@ -11,32 +11,43 @@ import type { ToHost } from "../../../src/protocol"
 import { useLanguage } from "../context/language"
 import { useVSCode } from "../context/vscode"
 import { formatClock, formatDuration } from "../utils/message-time"
+import { color } from "../utils/timeline/colors"
+import type { TimelineHighlight } from "../utils/timeline/highlight"
+import { partKey, timelinePart } from "../utils/timeline/timeline-parts"
 import { useV2 } from "./client"
+import { displaySettings } from "./display-settings"
 import { tokenThroughputVisible } from "./kilo-settings"
 import { mcpServerFromError } from "./mcp-error"
-import { formatTokenThroughput, turnMetadata } from "./message-status"
+import { formatTokenThroughput, type TurnMetadata } from "./message-status"
+import { toolDefaultOpen } from "./tool-default-open"
 
 export function AssistantMessage(props: {
   message: SessionMessageAssistant
   session: string
   actions?: ToolActions
+  /** The task-timeline bar under the pointer or keyboard focus, if any. */
+  highlight?: () => TimelineHighlight | undefined
+  /** The message content rendered by this row. A large message is split across several rows. */
+  parts?: SessionMessageAssistant["content"]
+  /** Index of the first rendered content item in the message. */
+  start?: number
+  /** The turn footer metadata, attached to the turn's carrier row by the transcript partition. */
+  metadata?: TurnMetadata
+  rowKey?: string
 }) {
   const v2 = useV2()
   const language = useLanguage()
   const vscode = useVSCode()
   const done = () => props.message.time.completed !== undefined
-  const copy = () =>
-    done() ? props.message.content.findLastIndex((item) => item.type === "text" && !!item.text.trim()) : -1
-  const messages = () => v2.data.session.message.list(props.session)
-  // The turn's terminal step drives the timing and rate; its last text-bearing
-  // step carries them, so an empty or error-terminal step still shows them on
-  // the earlier text row.
-  const metadata = createMemo(() => turnMetadata(props.message, messages()))
-  const isCarrier = () => metadata()?.carrierID === props.message.id
-  const timing = createMemo(() => (isCarrier() ? metadata()?.timing : undefined))
-  const throughputValue = createMemo(() =>
-    isCarrier() && tokenThroughputVisible() ? metadata()?.tokensPerSecond : undefined,
+  const copy = createMemo(() =>
+    done() ? props.message.content.findLastIndex((item) => item.type === "text" && !!item.text.trim()) : -1,
   )
+  const parts = () => props.parts ?? props.message.content
+  const offset = () => props.start ?? 0
+  // The error belongs to the whole message, so only its last row renders it.
+  const lastChunk = () => offset() + parts().length >= props.message.content.length
+  const timing = () => props.metadata?.timing
+  const throughputValue = () => (tokenThroughputVisible() ? props.metadata?.tokensPerSecond : undefined)
   const throughputEl = createMemo<JSX.Element | undefined>(() => {
     const value = throughputValue()
     if (value === undefined) return undefined
@@ -80,36 +91,54 @@ export function AssistantMessage(props: {
       </Button>
     )
   }
+  // The todo list is a status row rather than a tool block, so it stays open as before; every other tool follows
+  // the display layouts.
+  const defaultOpen = (tool: string) => (tool === "todowrite" ? true : toolDefaultOpen(tool, displaySettings()))
   return (
     <div
       class="vscode-session-turn"
       data-row="assistant"
       data-message={props.message.id}
       data-session={props.session}
+      data-row-key={props.rowKey}
       data-live={!done() ? "" : undefined}
     >
       <div class="vscode-session-turn-assistant">
-        <For each={props.message.content}>
+        <For each={parts()}>
           {(item, index) => {
+            const at = () => offset() + index()
             const [el, setEl] = createSignal<HTMLDivElement>()
             const [body, setBody] = createSignal<HTMLDivElement>()
             const motion =
               item.type === "tool" ? useToolMotion({ id: item.id, status: () => item.state.status }) : undefined
             if (motion) useToolSize({ el, body, active: () => motion.live() && !done(), motion })
-            // As on v1: a live text part reveals with a grow-in; reasoning and tool parts animate their own height.
+            // A live text part reveals with a grow-in; reasoning and tool parts animate their own height.
             useGrowIn(el, item.type === "text" && !done())
+            const key = partKey(props.message.id, item, at())
+            const highlighted = () =>
+              props.highlight?.()?.msgId === props.message.id && props.highlight?.()?.partId === key
+            const highlightColor = () => {
+              if (!highlighted()) return undefined
+              const part = timelinePart(props.message, item, at())
+              return part ? color(part) : undefined
+            }
             return (
               <div
                 ref={setEl}
                 data-component="tool-part-wrapper"
                 data-part-type={item.type}
-                data-part-id={item.type === "tool" ? item.id : `${props.message.id}:${index()}`}
+                data-part-id={key}
+                data-timeline-highlight={highlighted() ? "" : undefined}
                 data-tool-enter={motion?.entering() ? "" : undefined}
                 data-tool-live={motion?.live() ? "" : undefined}
                 data-tool-status={
                   item.type === "tool" ? (item.state.status === "streaming" ? "pending" : item.state.status) : undefined
                 }
-                style={{ "--tool-stagger": motion?.stagger(), "--tool-beat": motion?.beat() }}
+                style={{
+                  "--timeline-color": highlightColor(),
+                  "--tool-stagger": motion?.stagger(),
+                  "--tool-beat": motion?.beat(),
+                }}
                 onAnimationEnd={(event) => {
                   if (event.animationName === "tool-motion-pop") return motion?.beaten()
                   if (event.target === event.currentTarget && event.animationName === "tool-motion-enter")
@@ -120,14 +149,14 @@ export function AssistantMessage(props: {
                   <ContentPart
                     item={item}
                     message={props.message}
-                    index={index()}
+                    index={at()}
                     directory={v2.directory}
                     open={v2.open}
-                    copy={index() === copy()}
-                    throughput={index() === copy() ? throughputEl() : undefined}
-                    turnMeta={index() === copy() ? turnMetaEl() : undefined}
-                    settled={index() < props.message.content.length - 1}
-                    defaultOpen={item.type === "tool" && (item.name === "shell" || item.name === "todowrite")}
+                    copy={at() === copy()}
+                    throughput={at() === copy() ? throughputEl() : undefined}
+                    turnMeta={at() === copy() ? turnMetaEl() : undefined}
+                    settled={at() < props.message.content.length - 1}
+                    defaultOpen={item.type === "tool" ? defaultOpen(item.name) : undefined}
                     actions={props.actions}
                     errorAction={errorAction}
                   />
@@ -136,7 +165,7 @@ export function AssistantMessage(props: {
             )
           }}
         </For>
-        <Show when={props.message.error}>{(error) => <ErrorCard error={error()} />}</Show>
+        <Show when={lastChunk() ? props.message.error : undefined}>{(error) => <ErrorCard error={error()} />}</Show>
       </div>
     </div>
   )

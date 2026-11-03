@@ -11,7 +11,9 @@ import { KiloProviderUsagePlugin } from "./provider-usage"
 import { KiloOpenAIPlugin } from "./openai"
 import { KiloMarketplacePlugin } from "./marketplace"
 import { KiloSkillPlugin } from "./skill"
+import { KiloTodoPlugin } from "./todo"
 import { KiloWriteToolPlugin } from "./tool-write"
+import { KiloReview } from "./review"
 
 /**
  * The Kilo plugins on the public plugin API (plugin-first rung 1), in registration order. The Kilo host
@@ -35,8 +37,11 @@ export const KiloPlugins = [
   KiloOpenAIPlugin,
   KiloMarketplacePlugin,
   KiloSkillPlugin,
+  KiloTodoPlugin,
   KiloWriteToolPlugin,
   KiloCommitMessagePlugin,
+  // The Kilo review command replaces the built-in `review`. kilo_port(review:efc710228c1f)
+  KiloReview.Plugin,
 ] as const
 
 /** Kilo plugins that run after the config plugins: the host registers them with phase `post`. */

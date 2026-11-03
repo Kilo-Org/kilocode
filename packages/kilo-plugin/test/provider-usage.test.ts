@@ -1,8 +1,10 @@
 import { describe, expect, test } from "bun:test"
 import type { ProviderUsage } from "@opencode/schema/kilocode/provider-usage"
+import { Effect } from "effect"
 import { UsageCache } from "../src/provider-usage/cache"
 import { UsageCloud } from "../src/provider-usage/cloud"
 import { CodexUsage } from "../src/provider-usage/codex"
+import { contain } from "../src/provider-usage/index"
 import { MiniMaxUsage } from "../src/provider-usage/minimax"
 
 // The v1 assertions of packages/core/test/kilocode-provider-usage-{cloud,codex,minimax}.test.ts on main that cover the
@@ -260,5 +262,259 @@ describe("direct source cache", () => {
     expect(cache.settle(kept)).toBe(new Date(8_000).toISOString())
     expect(cache.settle([])).toBe(new Date(20_000).toISOString())
     expect(cache.preserve("codex-chatgpt")).toEqual([])
+  })
+})
+
+describe("managed cloud cache", () => {
+  const subscription = {
+    id: "sub-1",
+    planId: "plan",
+    planName: "Pro",
+    providerName: "Anthropic",
+    providerId: "anthropic",
+    canQueryUsage: true,
+    hasInstalledByokKey: true,
+    status: "active" as const,
+    cancelAtPeriodEnd: false,
+  }
+  const key = { id: "k", provider_id: "anthropic", management_source: "coding_plan" as const, is_enabled: true }
+  const goodState: UsageCache.CloudState = {
+    plans: { ok: true, value: [subscription] },
+    byok: { ok: true, value: [key] },
+  }
+  const failedState: UsageCache.CloudState = {
+    plans: { ok: false },
+    byok: { ok: true, value: [key] },
+  }
+  const good: UsageCache.Cloud = {
+    identity: "one",
+    ...goodState,
+  }
+  const failed: UsageCache.Cloud = {
+    identity: "one",
+    ...failedState,
+  }
+  const snapshot = (id: string, used: number): ProviderUsage.UsageSnapshot => ({
+    id,
+    providerID: "anthropic",
+    sourceKind: "kilo_managed",
+    providerLabel: "Anthropic",
+    planLabel: "Pro",
+    sourceLabel: "via Kilo",
+    fetchState: "ready",
+    planState: "active",
+    routingState: "active",
+    windows: [
+      { id: `${id}:w`, resource: "subscription", unit: "percent", orientation: "remaining_percent", used, state: "active" },
+    ],
+  })
+
+  test("keeps a good answer for 60 s and the previous answer when a refresh fails", async () => {
+    let now = 1_000_000
+    const cache = UsageCache.make(() => now)
+    let calls = 0
+    const load = async () => (calls++ === 0 ? goodState : failedState)
+    expect(await cache.cloud("one", false, load)).toEqual(good)
+    now += 10_000
+    expect(await cache.cloud("one", false, load)).toEqual(good)
+    expect(calls).toBe(1)
+    // Past the success TTL the loader runs again; its failed part keeps the previous plans.
+    now += 51_000
+    expect(await cache.cloud("one", false, load)).toEqual(good)
+    expect(calls).toBe(2)
+    // The kept answer uses the error TTL.
+    now += 9_000
+    await cache.cloud("one", false, load)
+    expect(calls).toBe(2)
+    now += 2_000
+    await cache.cloud("one", false, load)
+    expect(calls).toBe(3)
+  })
+
+  test("keeps a failed answer for 10 s when there is no previous value", async () => {
+    let now = 0
+    const cache = UsageCache.make(() => now)
+    let calls = 0
+    const load = async () => {
+      calls++
+      return failedState
+    }
+    expect(await cache.cloud("one", false, load)).toEqual(failed)
+    now += 9_000
+    await cache.cloud("one", false, load)
+    expect(calls).toBe(1)
+    now += 2_000
+    await cache.cloud("one", false, load)
+    expect(calls).toBe(2)
+  })
+
+  test("preserves the managed quotas as stale and prunes or clears them", async () => {
+    const cache = UsageCache.make(() => 0)
+    await cache.source("kilo-managed:a", "one", false, async () => snapshot("kilo-managed:a", 10))
+    await cache.source("kilo-managed:b", "one", false, async () => snapshot("kilo-managed:b", 20))
+    await cache.source("codex-chatgpt", "token", false, async () => snapshot("codex-chatgpt", 5))
+
+    expect(cache.preservePrefix("kilo-managed:", "one")).toMatchObject([
+      { id: "kilo-managed:a", fetchState: "stale", windows: [{ used: 10 }] },
+      { id: "kilo-managed:b", fetchState: "stale", windows: [{ used: 20 }] },
+    ])
+    cache.prunePrefix("kilo-managed:", ["kilo-managed:a"])
+    expect(cache.preservePrefix("kilo-managed:", "one")).toMatchObject([{ id: "kilo-managed:a" }])
+
+    await cache.cloud("one", false, async () => goodState)
+    cache.clearManaged()
+    expect(cache.preservePrefix("kilo-managed:", "one")).toEqual([])
+    // The cloud answer is cleared too, and the direct sources stay.
+    let reloaded = 0
+    await cache.cloud("one", false, async () => {
+      reloaded++
+      return goodState
+    })
+    expect(reloaded).toBe(1)
+    expect(cache.preserve("codex-chatgpt")).toMatchObject([{ id: "codex-chatgpt", fetchState: "stale" }])
+  })
+
+  test("preservePrefix returns only the cells of the requested account", async () => {
+    const cache = UsageCache.make(() => 0)
+    await cache.source("kilo-managed:a", "a", false, async () => snapshot("kilo-managed:a", 10))
+
+    expect(cache.preservePrefix("kilo-managed:", "b")).toEqual([])
+    expect(cache.preservePrefix("kilo-managed:", undefined)).toEqual([])
+    expect(cache.preservePrefix("kilo-managed:", "a")).toMatchObject([
+      { id: "kilo-managed:a", fetchState: "stale", windows: [{ used: 10 }] },
+    ])
+  })
+
+  test("a new account identity drops the cached managed quotas", async () => {
+    const cache = UsageCache.make(() => 0)
+    await cache.cloud("one", false, async () => goodState)
+    await cache.source("kilo-managed:a", "one", false, async () => snapshot("kilo-managed:a", 10))
+    const otherState: UsageCache.CloudState = { plans: { ok: true, value: [] }, byok: { ok: true, value: [] } }
+    const other: UsageCache.Cloud = { identity: "two", ...otherState }
+    expect(await cache.cloud("two", true, async () => otherState)).toEqual(other)
+    expect(cache.preservePrefix("kilo-managed:", "one")).toEqual([])
+  })
+
+  test("a new identity never keeps the previous account plans when the read fails", async () => {
+    let now = 0
+    const cache = UsageCache.make(() => now)
+    await cache.cloud("one", false, async () => goodState)
+    await cache.source("kilo-managed:a", "one", false, async () => snapshot("kilo-managed:a", 10))
+
+    const failedOtherState: UsageCache.CloudState = { plans: { ok: false }, byok: { ok: false } }
+    const failedOther: UsageCache.Cloud = { identity: "two", ...failedOtherState }
+    expect(await cache.cloud("two", true, async () => failedOtherState)).toEqual(failedOther)
+    expect(cache.preservePrefix("kilo-managed:", "one")).toEqual([])
+
+    // The failed answer expires with the error TTL, then the new account's good answer is used.
+    now += 10_000
+    const otherState: UsageCache.CloudState = { plans: { ok: true, value: [subscription] }, byok: { ok: true, value: [key] } }
+    const other: UsageCache.Cloud = { identity: "two", ...otherState }
+    expect(await cache.cloud("two", false, async () => otherState)).toEqual(other)
+  })
+
+  test("a cache hit of one identity is not returned for another and prunes the previous sources", async () => {
+    const cache = UsageCache.make(() => 0)
+    expect(await cache.cloud("a", false, async () => goodState)).toEqual({ identity: "a", ...goodState })
+    await cache.source("kilo-managed:a", "a", false, async () => snapshot("kilo-managed:a", 10))
+
+    const otherState: UsageCache.CloudState = { plans: { ok: true, value: [] }, byok: { ok: true, value: [] } }
+    const other: UsageCache.Cloud = { identity: "b", ...otherState }
+    let loads = 0
+    expect(
+      await cache.cloud("b", false, async () => {
+        loads++
+        return otherState
+      }),
+    ).toEqual(other)
+    expect(loads).toBe(1)
+    expect(cache.preservePrefix("kilo-managed:", "a")).toEqual([])
+
+    // A second call of the new identity uses its own cached answer.
+    expect(
+      await cache.cloud("b", false, async () => {
+        loads++
+        return otherState
+      }),
+    ).toEqual(other)
+    expect(loads).toBe(1)
+  })
+
+  test("concurrent calls of different identities do not share the in-flight load", async () => {
+    const cache = UsageCache.make(() => 0)
+    let loads = 0
+    const load = (state: UsageCache.CloudState) => async () => {
+      loads++
+      await Bun.sleep(5)
+      return state
+    }
+    const stateA: UsageCache.CloudState = { plans: { ok: true, value: [subscription] }, byok: { ok: true, value: [] } }
+    const stateB: UsageCache.CloudState = { plans: { ok: true, value: [] }, byok: { ok: true, value: [] } }
+    const [first, second] = await Promise.all([
+      cache.cloud("a", false, load(stateA)),
+      cache.cloud("b", false, load(stateB)),
+    ])
+    expect(loads).toBe(2)
+    expect(first).toEqual({ identity: "a", ...stateA })
+    expect(second).toEqual({ identity: "b", ...stateB })
+  })
+
+  test("a rejected load does not poison the cache", async () => {
+    const cache = UsageCache.make(() => 0)
+    await expect(
+      cache.cloud("one", false, async () => {
+        throw new Error("boom")
+      }),
+    ).rejects.toThrow("boom")
+    expect(await cache.cloud("one", false, async () => goodState)).toEqual(good)
+  })
+
+  test("a pruned source cannot be re-added by an in-flight load", async () => {
+    const cache = UsageCache.make(() => 0)
+    await cache.cloud("one", false, async () => goodState)
+    let release!: () => void
+    const running = cache.source(
+      "kilo-managed:a",
+      "one",
+      false,
+      () =>
+        new Promise((resolve) => {
+          release = () => resolve(snapshot("kilo-managed:a", 10))
+        }),
+    )
+    const otherState: UsageCache.CloudState = { plans: { ok: true, value: [] }, byok: { ok: true, value: [] } }
+    await cache.cloud("two", true, async () => otherState)
+    release()
+    expect((await running).windows[0].used).toBe(10)
+    expect(cache.preservePrefix("kilo-managed:", "one")).toEqual([])
+  })
+})
+
+describe("managed defect containment", () => {
+  const fallback: ProviderUsage.UsageSnapshot[] = [
+    {
+      id: "kilo-managed:kept",
+      providerID: "anthropic",
+      sourceKind: "kilo_managed",
+      providerLabel: "Anthropic",
+      planLabel: "Pro",
+      sourceLabel: "via Kilo",
+      fetchState: "stale",
+      planState: "active",
+      routingState: "active",
+      windows: [],
+    },
+  ]
+
+  // The guard of the managed group in packages/kilo-plugin/src/provider-usage/index.ts.
+  const guarded = (effect: Effect.Effect<ProviderUsage.UsageSnapshot[], unknown>) =>
+    contain(effect, () => fallback)
+
+  test("a failure or a defect answers with the fallback instead of failing the read", async () => {
+    expect(await Effect.runPromise(guarded(Effect.succeed<ProviderUsage.UsageSnapshot[]>([])))).toEqual([])
+    expect(await Effect.runPromise(guarded(Effect.fail("failed")))).toEqual(fallback)
+    expect(await Effect.runPromise(guarded(Effect.die("boom")))).toEqual(fallback)
+    // The production fallback of the managed group returns no unverified cells.
+    expect(await Effect.runPromise(contain(Effect.die("boom"), () => []))).toEqual([])
   })
 })

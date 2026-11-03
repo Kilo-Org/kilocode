@@ -2,18 +2,17 @@
 // config (`api.fs.read` is confined to the location) and `api.config.update` writes only `shell`. The host asks the
 // server for the config documents (`api.config.get`), resolves the global and project target files from those
 // entries, then reads and writes them with `jsonc-parser` so comments survive.
-import { existsSync } from "node:fs"
 import { mkdir, readFile, stat, writeFile } from "node:fs/promises"
 import path from "node:path"
 import { commands, workspace, Uri, window, type ExtensionContext } from "vscode"
 import { KiloConfigFiles } from "@opencode/util/kilocode/config/files"
-import { applyConfigEdits, isKiloConfigFile, serialize } from "./config-file-edit"
+import { applyConfigEdits, configWriteQueue, isKiloConfigFile } from "./config-file-edit"
 import { configPolicy, type PolicyDocument } from "./config-policy"
 import { fetchCustomProviderModels } from "./custom-provider-models"
 import { local } from "./local"
 import { validAutocompleteSetting } from "./services/autocomplete/settings"
 import { candidateConfigFiles, chooseConfigFile, configDirectories } from "./open-config"
-import { resolveGlobalConfigDir, canonicalPath, matchConfigDocument } from "./settings-paths"
+import { resolveGlobalConfigDir, resolveKiloProfile, canonicalPath, matchConfigDocument } from "./settings-paths"
 import type { ConfigEdit, ConfigScope, ToHost, ToWebview } from "./protocol"
 import type { Manager } from "./server"
 
@@ -25,6 +24,7 @@ export const KILO_SETTING_KEYS = [
   "language",
   "chat.shiftTabCyclesVariant",
   "showTokenThroughput",
+  "showTaskTimeline",
   "maxCost",
   "claudeCodeCompat",
   "extraCaCerts",
@@ -53,6 +53,16 @@ export function readKiloSettings(): Record<string, unknown> {
   }
 }
 
+/** Write the `kilo-code.v2.*` settings a webview asked for. Unknown keys are ignored. */
+export async function writeKiloSettings(values: Record<string, unknown>) {
+  const config = workspace.getConfiguration(NAMESPACE)
+  for (const [key, value] of Object.entries(values)) {
+    if (!(KILO_SETTING_KEYS as readonly string[]).includes(key)) continue
+    if (key.startsWith("autocomplete.") && !validAutocompleteSetting(key.slice("autocomplete.".length), value)) continue
+    await config.update(key, value === null ? undefined : value, true)
+  }
+}
+
 /** webview globalState keys that are not configuration, cleared by Reset All Settings. */
 const GLOBAL_STATE_KEYS = ["kilo-code.v2.modelSelectorExpanded", "kilo-code.v2.autoApprove"]
 
@@ -70,12 +80,7 @@ export function settingsHost(input: {
 }) {
   // The dev entry (`script/dev-isolated.ts`) keeps everything under `KILO_V2_PROFILE`, and `server.ts` defaults that
   // to the extension storage. A bundled server inherits the host environment and uses XDG paths directly.
-  const bundled = existsSync(
-    path.join(input.context.extensionPath, "bin", process.platform === "win32" ? "kilo2.exe" : "kilo2"),
-  )
-  const profile = bundled
-    ? ""
-    : (process.env.KILO_V2_PROFILE ?? path.join(input.context.globalStorageUri.fsPath, "profile"))
+  const profile = resolveKiloProfile(input.context)
 
   const listener = workspace.onDidChangeConfiguration((event) => {
     if (KILO_SETTING_KEYS.some((key) => event.affectsConfiguration(`${NAMESPACE}.${key}`)))
@@ -199,11 +204,9 @@ export function settingsHost(input: {
   }
 
   // Immediate writes can overlap, and two overlapping read-modify-write passes over the same file would drop one
-  // edit. Run every write through one chain so each reads the text the previous one wrote.
-  const enqueue = serialize()
-
+  // edit. Every writer in the host shares one chain so each reads the text the previous one wrote.
   const writeConfig = (id: number, scope: ConfigScope, edits: ConfigEdit[]) => {
-    void enqueue(async () => {
+    void configWriteQueue(async () => {
       try {
         const files = await targets()
         const file = await canonicalPath(files[scope])
@@ -227,14 +230,7 @@ export function settingsHost(input: {
     })
   }
 
-  const updateSettings = async (values: Record<string, unknown>) => {
-    const config = workspace.getConfiguration(NAMESPACE)
-    for (const [key, value] of Object.entries(values)) {
-      if (!(KILO_SETTING_KEYS as readonly string[]).includes(key)) continue
-      if (key.startsWith("autocomplete.") && !validAutocompleteSetting(key.slice("autocomplete.".length), value)) continue
-      await config.update(key, value === null ? undefined : value, true)
-    }
-  }
+  const updateSettings = (values: Record<string, unknown>) => writeKiloSettings(values)
 
   const resetAllSettings = async () => {
     const confirmed = await window.showWarningMessage(
