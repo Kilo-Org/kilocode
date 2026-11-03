@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test"
 import type { PermissionRequest } from "@opencode/client"
-import { createAutoApproveController, shouldApprove } from "../webview-ui/src/v2/auto-approve-policy"
+import { createAutoApproveController, shouldApprove } from "../src/agent-manager/provider-auto-approve"
 
 function request(id: string, metadata?: Record<string, unknown>): PermissionRequest {
   return { id, sessionID: "ses_1", action: "bash", resources: ["ls"], metadata } as PermissionRequest

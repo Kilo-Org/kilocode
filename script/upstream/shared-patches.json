@@ -1,8 +1,8 @@
 {
   "$comment": "Shared-patch baseline (U-L3-01). Read by script/check-shared-patches.ts and script/check-opencode-annotations.ts. Each shared upstream file that Kilo adds or changes needs an entry: rung (3 = seam patch, 4 = feature patch) and the missing seam. `unmarked` allows lines without markers and states why. Raise a limit only in the PR that adds the patch, and lower it when a patch goes away.",
   "limits": {
-    "files": 74,
-    "markedLines": 1058,
+    "files": 80,
+    "markedLines": 1093,
     "unmarkedLines": 225,
     "deletedFiles": 0
   },
@@ -306,6 +306,30 @@
     "packages/tui/test/usage-limits.test.tsx": {
       "rung": 4,
       "seam": "Skips upstream's new `usage-limits` test (v2.2). It expects upstream's row pricing in the model picker and the OpenCode Console `/usage` dialog. The Kilo model picker (dialog-model.tsx patch) shows prices in its info panel, and the Kilo usage plugin (`tui/src/kilocode/usage.tsx`) shadows upstream's `usage.show` command on purpose. Remove the skip when the Kilo picker keeps upstream row content and the test no longer needs the Console dialog."
+    },
+    "packages/core/src/permission.ts": {
+      "rung": 3,
+      "seam": "Passes the rules the effect was evaluated against (configured plus project saved rules) and the active unattended rules to the existing permission evaluate hook. The hook event carries only the computed effect, and the plugin API cannot read saved rules or the unattended state, so a hook cannot tell an exact saved approval from a wildcard one. Replacing Permission.node would mirror the whole service for two read-only fields. Upstream behavior does not change."
+    },
+    "packages/plugin/src/effect/permission.ts": {
+      "rung": 3,
+      "seam": "Optional read-only `rules` and `unattended` fields on PermissionEvaluation, the permission evaluate hook event that core fills. Hooks that ignore them see no change."
+    },
+    "packages/core/src/pty.ts": {
+      "rung": 3,
+      "seam": "Optional `allowExited` attach input: attach to an exited session to replay its retained output, then deliver the end event with the exit code. The Agent Manager shows the output of a setup or run script that finished before its tab connected. Upstream keeps exited sessions and their output (`pty.list` returns them), but `attach` refuses them and no plugin hook or layer reaches the attach path. Omitted input keeps upstream's `ExitedError`."
+    },
+    "packages/server/src/handlers/pty.ts": {
+      "rung": 3,
+      "seam": "Pass `replayExited=1` from the PTY connect query to the `allowExited` attach input in packages/core/src/pty.ts. The connect route is the only path a client reaches `attach` through, and its handler has no extension point for query options. Without the query parameter the route behaves as upstream."
+    },
+    "packages/client/src/solid/data.ts": {
+      "rung": 3,
+      "seam": "Adds a per-session `session.message.evict(sessionID)` that drops one session's cached messages. The existing `session.evict` clears the root and every known descendant, so the Agent Manager inspector cannot release one subagent without blanking the parent transcript. Omitted calls behave as upstream."
+    },
+    "packages/client/test/solid-eviction.test.ts": {
+      "rung": 4,
+      "seam": "Covers the per-session message evict added in packages/client/src/solid/data.ts, so closing an inspector subagent does not clear its parent transcript."
     },
     "patches/virtua@0.49.1.patch": {
       "rung": 4,

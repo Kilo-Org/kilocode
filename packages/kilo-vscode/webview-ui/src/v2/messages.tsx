@@ -69,6 +69,8 @@ export function MessageList(props: {
   actions?: ToolActions
   onSelectSession: (id: string) => void
   onShowHistory: () => void
+  /** Replaces the welcome screen of an empty session, for example with the Agent Manager introduction. */
+  empty?: () => JSX.Element
   /** Receives the handler the session dock calls to scroll to the bottom. */
   onScrollToBottomReady?: (handler: (() => void) | undefined) => void
 }) {
@@ -427,7 +429,11 @@ export function MessageList(props: {
           class={empty() ? "message-list-content-empty" : "message-list-content"}
         >
           <Show when={empty()}>
-            <Welcome onSelectSession={props.onSelectSession} onShowHistory={props.onShowHistory} />
+            {props.empty ? (
+              props.empty()
+            ) : (
+              <Welcome onSelectSession={props.onSelectSession} onShowHistory={props.onShowHistory} />
+            )}
           </Show>
           <Show when={!empty() && props.session}>
             {(id) => (
