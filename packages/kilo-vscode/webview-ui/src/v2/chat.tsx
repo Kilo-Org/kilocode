@@ -5,7 +5,7 @@ import type { ToolActions } from "@kilocode/kilo-ui/message-part"
 import { createEffect, createSignal, type JSX, Match, on, onCleanup, Show, Switch } from "solid-js"
 import type { ToHost } from "../../../src/protocol"
 import { useLanguage } from "../context/language"
-import { getVSCodeAPI } from "../context/vscode"
+import { getVSCodeAPI, useVSCode } from "../context/vscode"
 import { useV2 } from "./client"
 import { useDisplaySettings } from "./display-settings"
 import { SessionList } from "./history"
@@ -22,6 +22,15 @@ export function Chat() {
   const [changes, setChanges] = createSignal(false)
   // Display layouts are Kilo-only config keys, so the host reads them. Ask on connect and after every config change.
   const display = useDisplaySettings()
+  // An element reference picked in the Integrated Browser arrives from the host as text for the composer.
+  const vscode = useVSCode()
+  let append: ((value: string, send: boolean) => void) | undefined
+  onCleanup(
+    vscode.onMessage((message) => {
+      if (message.type !== "browserReference") return
+      append?.(message.text, false)
+    }),
+  )
   createEffect(
     on(v2.connection.status, (status) => {
       if (status === "connected") display.request()
@@ -108,6 +117,7 @@ export function Chat() {
         <SessionView
           session={session()}
           onSession={setSession}
+          onAppendReady={(value) => (append = value)}
           actions={toolActions}
           onShowHistory={() => setView("history")}
           row={row}

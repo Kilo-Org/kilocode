@@ -1,14 +1,22 @@
-// Web Tools tab on v2 config. Web Search maps the v2 `websearch` selection: `false` is off, a provider selection is
-// on. The Browser Automation rows have no v2 key and are not rendered.
+// Web Tools tab. Web Search maps the v2 `websearch` selection: `false` is off, a provider selection is on. The
+// Integrated Browser and Playwright automation are `kilo-code.v2.*` editor settings, so their rows write those.
 import { Component, Show } from "solid-js"
+import { Select } from "@kilocode/kilo-ui/select"
 import { Switch } from "./Switch"
 import { Card } from "@kilocode/kilo-ui/card"
 import { useLanguage } from "../../context/language"
-import { useSettingsConfig } from "../../v2/settings-config"
+import { useSettingsConfig, type KiloSettingKey } from "../../v2/settings-config"
 import SettingsRow from "./SettingsRow"
 import { webSearchEnabled, webSearchSelection } from "./settings-values"
 
 const WEBSEARCH = ["websearch"]
+
+type LinkDestination = "external" | "integrated"
+
+const LINK_OPTIONS: { value: LinkDestination; labelKey: string }[] = [
+  { value: "external", labelKey: "settings.experimental.browserLinks.external" },
+  { value: "integrated", labelKey: "settings.experimental.browserLinks.integrated" },
+]
 
 const Header: Component<{ title: string }> = (props) => (
   <h4
@@ -43,6 +51,16 @@ const BrowserTab: Component = () => {
 
   const update = (checked: boolean) => {
     void config.set(WEBSEARCH, webSearchSelection(checked))
+  }
+
+  // Editor settings, not v2 config: the extension host reads them to run the browser and register the MCP server.
+  const setting = (key: KiloSettingKey, fallback: boolean) => {
+    const value = config.setting(key)
+    return typeof value === "boolean" ? value : fallback
+  }
+  const links = () => {
+    const value = config.setting("agentManager.browser.openLinksIn")
+    return value === "external" ? "external" : "integrated"
   }
 
   return (
@@ -92,6 +110,99 @@ const BrowserTab: Component = () => {
               </Switch>
             </SettingsRow>
           </Show>
+        </Card>
+      </div>
+
+      <div>
+        <Header title={language.t("settings.experimental.browserAutomation.title")} />
+        <Card>
+          <SettingsRow
+            title={language.t("settings.experimental.browserAutomation.title")}
+            description={language.t("settings.experimental.browserAutomation.description")}
+            tag={() => language.t("settings.config.scope.global")}
+          >
+            <Switch
+              checked={setting("integratedBrowser", false)}
+              onChange={(checked) => config.setSetting("integratedBrowser", checked)}
+              hideLabel
+            >
+              {language.t("settings.experimental.browserAutomation.title")}
+            </Switch>
+          </SettingsRow>
+          <SettingsRow
+            title={language.t("settings.experimental.browserAutomation.systemChrome.title")}
+            description={language.t("settings.experimental.browserAutomation.systemChrome.description")}
+          >
+            <Switch
+              checked={setting("agentManager.browser.useSystemChrome", true)}
+              onChange={(checked) => config.setSetting("agentManager.browser.useSystemChrome", checked)}
+              hideLabel
+            >
+              {language.t("settings.experimental.browserAutomation.systemChrome.title")}
+            </Switch>
+          </SettingsRow>
+          <SettingsRow
+            title={language.t("settings.experimental.browserLinks.title")}
+            description={language.t("settings.experimental.browserLinks.description")}
+            last
+          >
+            <Select
+              options={LINK_OPTIONS}
+              current={LINK_OPTIONS.find((option) => option.value === links())}
+              value={(option) => option.value}
+              label={(option) => language.t(option.labelKey)}
+              onSelect={(option) => {
+                if (!option || option.value === links()) return
+                config.setSetting("agentManager.browser.openLinksIn", option.value)
+              }}
+              variant="secondary"
+              size="small"
+              triggerVariant="settings"
+            />
+          </SettingsRow>
+        </Card>
+      </div>
+
+      <div>
+        <Header title={language.t("settings.webTools.browserAutomation")} />
+        <Card>
+          <SettingsRow
+            title={language.t("settings.browser.enable.title")}
+            description={language.t("settings.browser.enable.description")}
+          >
+            <Switch
+              checked={setting("browserAutomation.enabled", false)}
+              onChange={(checked) => config.setSetting("browserAutomation.enabled", checked)}
+              hideLabel
+            >
+              {language.t("settings.browser.enable.title")}
+            </Switch>
+          </SettingsRow>
+          <SettingsRow
+            title={language.t("settings.browser.systemChrome.title")}
+            description={language.t("settings.browser.systemChrome.description")}
+          >
+            <Switch
+              checked={setting("browserAutomation.useSystemChrome", true)}
+              onChange={(checked) => config.setSetting("browserAutomation.useSystemChrome", checked)}
+              hideLabel
+            >
+              {language.t("settings.browser.systemChrome.title")}
+            </Switch>
+          </SettingsRow>
+          <SettingsRow
+            title={language.t("settings.browser.headless.title")}
+            description={language.t("settings.browser.headless.description")}
+            last
+          >
+            <Switch
+              checked={setting("browserAutomation.headless", false)}
+              onChange={(checked) => config.setSetting("browserAutomation.headless", checked)}
+              hideLabel
+            >
+              {language.t("settings.browser.headless.title")}
+            </Switch>
+          </SettingsRow>
         </Card>
       </div>
     </div>

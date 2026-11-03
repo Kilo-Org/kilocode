@@ -424,10 +424,12 @@
         "friendly-words": "1.3.1",
         "fuzzysort": "catalog:",
         "ignore": "7.0.5",
+        "ipaddr.js": "1.9.1",
         "js-tiktoken": "1.0.21",
         "jsonc-parser": "3.3.1",
         "lru-cache": "11.5.2",
         "marked": "catalog:",
+        "playwright-core": "1.57.0",
         "quick-lru": "7.3.0",
         "simple-git": "4.0.2",
         "solid-js": "catalog:",
@@ -3305,6 +3307,8 @@
     "pkg-conf": ["pkg-conf@4.0.0", "", { "dependencies": { "find-up": "^6.0.0", "load-json-file": "^7.0.0" } }, "sha512-7dmgi4UY4qk+4mj5Cd8v/GExPo0K+SlY+hulOSdfZ/T6jVH6//y7NtzZo5WrfhDBxuQ0jCa7fLZmNaNh7EWL/w=="],
 
     "pkg-up": ["pkg-up@3.1.0", "", { "dependencies": { "find-up": "^3.0.0" } }, "sha512-nDywThFk1i4BQK4twPQ6TA4RT8bDY96yeuCVBWL3ePARCiEKDRSrNGbFIgUJpLp+XeIR65v8ra7WuJOFUBtkMA=="],
+
+    "playwright-core": ["playwright-core@1.57.0", "", { "bin": { "playwright-core": "cli.js" } }, "sha512-agTcKlMw/mjBWOnD6kFZttAAGHgi/Nw0CZ2o6JqWSbMlI219lAFLZZCyqByTsvVAJq5XA5H8cA6PrvBRpBWEuQ=="],
 
     "plur": ["plur@5.1.0", "", { "dependencies": { "irregular-plurals": "^3.3.0" } }, "sha512-VP/72JeXqak2KiOzjgKtQen5y3IZHn+9GOuLDafPv0eXa47xq0At93XahYBs26MsifCQ4enGKwbjBTKgb9QJXg=="],
 
