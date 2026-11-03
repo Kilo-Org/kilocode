@@ -41,7 +41,6 @@ async function remove(dir: string) {
 }
 
 const tick = () => new Promise((resolve) => setTimeout(resolve, 0))
-const settle = () => new Promise((resolve) => setTimeout(resolve, 100))
 
 function request(id: string, metadata?: Record<string, unknown>) {
   return { id, sessionID: `ses_${id}`, action: "bash", resources: ["ls"], metadata } as never
@@ -236,6 +235,6 @@ describe("Agent Manager host wiring", () => {
     expect(replied).toEqual(["per_host"])
     expect(opened()).toBe(0)
     provider.dispose()
-    await settle()
+    await provider.shutdown()
   })
 })
