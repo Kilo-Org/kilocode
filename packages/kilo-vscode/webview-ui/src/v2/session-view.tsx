@@ -9,6 +9,7 @@ import { getVSCodeAPI } from "../context/vscode"
 import { TaskHeader } from "../components/chat/TaskHeader"
 import { SessionDock } from "../components/chat/SessionDockWorking"
 import { useV2 } from "./client"
+import { sessionMissing } from "./scope"
 import { childTools, createChildSessions } from "./child-session"
 import { MessageList } from "./messages"
 import { PermissionDock } from "./permission"
@@ -39,6 +40,8 @@ export function SessionView(props: {
   onAppendReady?: (append: (value: string, send: boolean) => void) => void
   /** Receives each prompt the server admitted, with the model it runs on. */
   onPrompted?: (sessionID: string, text: string, model: ModelRef | undefined) => void
+  /** Receives a session the server does not have (deleted, or from another database) instead of an error card. */
+  onMissing?: (sessionID: string) => void
 }) {
   const v2 = useV2()
   const session = () => props.session
@@ -98,7 +101,11 @@ export function SessionView(props: {
         v2.data.session.sync(id, { children: true }),
         v2.data.session.message.sync(id),
         v2.data.session.pending.sync(id),
-      ]).catch(v2.report)
+      ]).catch((err: unknown) => {
+        // A session created here is known before the server has it; only a session nobody created is missing.
+        if (props.onMissing && sessionMissing(err) && !v2.data.session.get(id)) return props.onMissing(id)
+        v2.report(err)
+      })
     }),
   )
   // A new session is not on the server until its create request settles, so these reads can fail. Events add

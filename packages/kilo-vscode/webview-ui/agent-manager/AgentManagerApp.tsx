@@ -672,6 +672,12 @@ const AgentManagerContent: Component = () => {
     rememberSession: (sel, id) => registry.active().sessionRestore.set(sel, id),
     set: (sel, tab) => registry.active().tabMemory.set(sel, tab),
   })
+  const activateAfterRemoval = (order: string[], removed: string) => {
+    const after = nextTabAfterClose(order, removed)
+    setActivePendingId(after && isPending(after) ? after : undefined)
+    if (after && !isPending(after)) return sessions.selectSession(after)
+    sessions.clearCurrentSession()
+  }
   createEffect(() => {
     if (!worktreesLoaded()) return
     const all = sessions.sessions()
@@ -685,7 +691,14 @@ const AgentManagerContent: Component = () => {
     )
     if (!next) return
     for (const id of next.forget) to({ type: "agentManager.forgetSession", sessionId: id })
+    const previous = localSessionIDs()
     setLocalSessionIDs(next.ids)
+    // A tab that leaves here was not closed by the user; the shown session must follow the remaining tabs.
+    untrack(() => {
+      const current = sessions.currentSessionID()
+      if (selection() !== LOCAL || !current || !previous.includes(current) || next.ids.includes(current)) return
+      activateAfterRemoval(previous.filter((id) => id === current || next.ids.includes(id)), current)
+    })
   })
   createEffect(() => {
     const ids = new Set(worktrees().map((wt) => wt.id))
@@ -1982,6 +1995,7 @@ const AgentManagerContent: Component = () => {
                   empty={intro.render}
                   onAppendReady={(append) => (promptAppend = append)}
                   onPreviewEdit={(files, sessionID) => previewEdit(files, sessionID)}
+                  onMissing={(id) => handleCloseTab(id)}
                   onPrompted={(sessionId, text, model) =>
                     to({
                       type: "agentManager.promptSent",

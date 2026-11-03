@@ -85,6 +85,11 @@ export function createV2Scope(input: {
 
 export type V2 = ReturnType<typeof createV2Scope>
 
+/** True when the server reports that a session does not exist: the client names declared errors by their tag. */
+export function sessionMissing(error: unknown) {
+  return error instanceof Error && error.name === "SessionNotFoundError"
+}
+
 export function message(error: unknown) {
   if (error instanceof Error) return error.message
   if (typeof error === "object" && error !== null && "message" in error) return String(error.message)
