@@ -90,6 +90,7 @@ export const dict = {
   "agentManager.worktree.defaultBaseBranch": "Standaard basis branch",
   "agentManager.worktree.defaultBaseBranchAuto": "Automatisch detecteren",
   "agentManager.worktree.copyPath": "Pad kopiëren",
+  "agentManager.worktree.continueInCloud": "Continue in Cloud",
   "agentManager.worktree.openInVscode": "Openen in VS Code",
   "agentManager.worktree.rename": "Hernoemen",
   "agentManager.worktree.pin": "Vastmaken",
