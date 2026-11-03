@@ -57,7 +57,7 @@ const ModelsTab: Component = () => {
   const customSpeech = createMemo(() => hasCustomSpeechToTextSource(config()))
 
   function updateSpeech(patch: Record<string, string | null>) {
-    updateConfig({ experimental: { ...config().experimental, ...patch } })
+    updateConfig({ experimental: patch })
   }
   const variantKey = createMemo(() => config().subagent_model ?? undefined)
   const subagentVariants = createMemo(() => Object.keys(provider.findModel(subagentModel())?.variants ?? {}))

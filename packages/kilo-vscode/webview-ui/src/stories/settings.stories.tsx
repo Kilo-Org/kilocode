@@ -22,6 +22,8 @@ import CustomProviderDialog from "../components/settings/CustomProviderDialog"
 import { useDialog } from "@kilocode/kilo-ui/context/dialog"
 import { SidebarEmptyState } from "../components/chat/SidebarEmptyState"
 import { WorkStyleContext, type WorkStyleContextValue } from "../context/work-style"
+import { ConfigContext, useConfig } from "../context/config"
+import { ImageModelsProvider } from "../context/image-models"
 
 const meta: Meta = {
   title: "Settings",
@@ -51,6 +53,45 @@ export const SettingsPanel: Story = {
       <div style={{ height: "700px", display: "flex", "flex-direction": "column" }}>
         <Settings />
       </div>
+    </StoryProviders>
+  ),
+}
+
+function ImageSettings() {
+  const context = useConfig()
+  const [patch, setPatch] = createSignal<Partial<Config>>()
+  return (
+    <ConfigContext.Provider
+      value={{
+        ...context,
+        updateConfig: (patch) => {
+          setPatch(patch)
+          context.updateConfig(patch)
+        },
+      }}
+    >
+      <ImageModelsProvider>
+        <Settings tab="experimental" />
+      </ImageModelsProvider>
+      <pre data-testid="image-settings-patch">{JSON.stringify(patch())}</pre>
+    </ConfigContext.Provider>
+  )
+}
+
+export const CustomImages: Story = {
+  name: "Settings — custom image endpoint",
+  render: () => (
+    <StoryProviders
+      config={{
+        experimental: {
+          image_generation: true,
+          image_generation_base_url: "http://127.0.0.1:8080/v1",
+          image_generation_model: "Qwen-Image-2.1",
+          image_generation_api_key: "resolved-token",
+        },
+      }}
+    >
+      <ImageSettings />
     </StoryProviders>
   ),
 }

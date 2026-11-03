@@ -7,7 +7,11 @@ import {
   saveCustomProvider,
 } from "../../src/provider-actions"
 
-type ExistingGlobal = { disabled_providers?: string[]; provider?: Record<string, unknown> }
+type ExistingGlobal = {
+  disabled_providers?: string[]
+  provider?: Record<string, unknown>
+  experimental?: Record<string, unknown>
+}
 
 function createCtx(existing: ExistingGlobal = { disabled_providers: [] }, merged: ExistingGlobal = existing) {
   const calls = {
@@ -108,6 +112,48 @@ function createSavedProvider() {
     ...createProvider(),
   }
 }
+
+it.each(["disconnect", "save"])("keeps project image connections out of %s config messages", async (action) => {
+  const project = {
+    provider: { myprovider: createSavedProvider() },
+    experimental: {
+      image_generation: true,
+      image_generation_base_url: "https://project.example/v1",
+      image_generation_api_key: "project-key",
+      image_generation_options: { seed: 7 },
+    },
+  }
+  const { ctx, calls, setCachedConfig } = createCtx({}, project)
+  if (action === "save")
+    await saveCustomProvider(ctx, "req", "myprovider", createProvider(), undefined, false, null, setCachedConfig)
+  if (action === "disconnect") await disconnectProvider(ctx, "req", "myprovider", null, setCachedConfig)
+  const config = expect.objectContaining({
+    experimental: {
+      image_generation: true,
+      image_generation_base_url: undefined,
+      image_generation_api_key: undefined,
+      image_generation_options: undefined,
+    },
+  })
+  expect(calls.cached).toContainEqual(expect.objectContaining({ type: "configLoaded", config }))
+  expect(calls.posts).toContainEqual(expect.objectContaining({ type: "configUpdated", config }))
+})
+
+it("uses resolved global image settings after saving a provider", async () => {
+  const global = {
+    experimental: {
+      image_generation_base_url: "https://images.example/v1",
+      image_generation_api_key: "resolved-key",
+      image_generation_model: "image-model",
+      image_generation_options: { seed: 7 },
+    },
+  }
+  const { ctx, calls, setCachedConfig } = createCtx(global, {})
+  await saveCustomProvider(ctx, "req", "myprovider", createProvider(), undefined, false, null, setCachedConfig)
+  const config = expect.objectContaining(global)
+  expect(calls.cached).toContainEqual(expect.objectContaining({ type: "configLoaded", config }))
+  expect(calls.posts).toContainEqual(expect.objectContaining({ type: "configUpdated", config }))
+})
 
 describe("disconnectProvider", () => {
   for (const scope of ["global", "project", "both"]) {

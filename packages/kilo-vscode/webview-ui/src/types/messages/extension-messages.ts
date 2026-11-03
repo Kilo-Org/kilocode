@@ -537,6 +537,8 @@ export interface KiloEmbeddingModelsLoadedMessage {
 
 export interface ImageModelsLoadedMessage {
   type: "imageModelsLoaded"
+  request: number
+  error?: string
   models: Array<{ id: string; name: string; description?: string }>
 }
 
