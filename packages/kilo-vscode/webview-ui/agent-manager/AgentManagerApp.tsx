@@ -1097,7 +1097,11 @@ const AgentManagerContent: Component = () => {
     editPreview.open(diff, sessionID, diffStyle())
   }
   const toolActions: ToolActions = {
-    openFile: (filePath, line) => to({ type: "agentManager.openFile", filePath, line }),
+    openFile: (filePath, line) => {
+      const sessionId = sessions.currentSessionID()
+      if (!sessionId) return
+      to({ type: "agentManager.openFile", sessionId, filePath, line })
+    },
     openDiff: (diff) => previewEdit([diff]),
     openDiffs: (diffs) => previewEdit(diffs),
     openSession: (id) => {
@@ -1445,6 +1449,13 @@ const AgentManagerContent: Component = () => {
     project: activeProjectId,
   })
   const diffScopeId = review.id
+  const openTurnChanges = (sessionID: string, turnID: string) => {
+    if (activeDiffSession() !== sessionID) return
+    closeHistory()
+    setReviewActive(false)
+    review.openTurn(turnID)
+    panels.open(SidePanel.Diff)
+  }
   const reviewComments = createMemo(() => {
     const key = diffScopeId()
     if (!key) return [] as ReviewComment[]
@@ -2008,6 +2019,7 @@ const AgentManagerContent: Component = () => {
                   empty={intro.render}
                   onAppendReady={(append) => (promptAppend = append)}
                   onPreviewEdit={(files, sessionID) => previewEdit(files, sessionID)}
+                  onViewTurnChanges={openTurnChanges}
                   onMissing={(id) => handleCloseTab(id)}
                   onPrompted={(sessionId, text, model) =>
                     to({

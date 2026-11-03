@@ -59,7 +59,7 @@ import { pruneSubagents, sessionMissing } from "./prune-subagents"
 import { readTerminalFont, watchTerminalFont } from "./terminal-font"
 import { DestinationState, watchTerminalDestination } from "./terminal-destination"
 import { buildKeybindingMap } from "./format-keybinding"
-import { resolveWorktreeFile } from "./worktree-file-path"
+import { resolveWorktreeFile, sessionDirectory } from "./worktree-file-path"
 import { focusPanelPrompt, revealPanel } from "./focus-panel"
 import { formatLog } from "./log-format"
 import { HealthScheduler } from "./worktree-health"
@@ -527,6 +527,11 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
     this.openSessions = ids
     for (const id of ids) this.panelSessions.add(id)
     this.syncView()
+  }
+
+  /** Default directory for a file the visible session saves, for example a rendered diagram. */
+  public imageDirectory(): string | undefined {
+    return sessionDirectory(this.state, this.visibleSession, this.getRoot())
   }
 
   public trackVisibleSession(id: string | null): void {

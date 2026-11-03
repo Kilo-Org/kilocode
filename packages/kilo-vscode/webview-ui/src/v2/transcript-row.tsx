@@ -10,6 +10,8 @@ export function TranscriptRowView(props: {
   session: string
   actions?: ToolActions
   highlight?: () => TimelineHighlight | undefined
+  /** Opens the files changed by one turn. */
+  onViewTurnChanges?: (sessionID: string, turnID: string) => void
 }) {
   return (
     <div style={{ display: "contents" }}>
@@ -28,6 +30,11 @@ export function TranscriptRowView(props: {
               start={row().start}
               metadata={row().metadata}
               rowKey={row().key}
+              onViewTurnChanges={
+                props.onViewTurnChanges
+                  ? () => props.onViewTurnChanges?.(props.session, row().turn)
+                  : undefined
+              }
             />
           )}
         </Match>

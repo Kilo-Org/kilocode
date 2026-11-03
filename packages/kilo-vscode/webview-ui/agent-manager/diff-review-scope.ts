@@ -7,8 +7,9 @@
  * and the full-screen review tab consume the single instance returned here.
  */
 
-import { createEffect, createMemo, createSignal, type Accessor } from "solid-js"
+import { createEffect, createMemo, createSignal, on, type Accessor } from "solid-js"
 import type { BranchInfo } from "../src/types/messages/agent-manager"
+import type { DiffScope } from "./diff-scope-state"
 import { composeDiffId, createDiffScope, isDiffScope, scopeDescriptors } from "./diff-scope-state"
 
 interface VsCode {
@@ -32,13 +33,18 @@ export interface DiffReviewScopeOptions {
 
 export function createDiffReviewScope(opts: DiffReviewScopeOptions) {
   const scope = createDiffScope(opts.key)
-  // The composite id (ctx#scope, or ctx#session:<sid>) the extension keys
-  // diff data by. Rebuilds when the active session changes while the Session
-  // scope is active, so a session tab switch refetches that session's diff.
+  // A turn selected from a transcript row replaces the scoped source until the
+  // user picks another scope or changes context.
+  const [turn, setTurn] = createSignal<string>()
+  const activeScope = createMemo((): DiffScope => (turn() ? "turn" : scope.scope()))
+  // The composite id (ctx#scope, ctx#session:<sid> or ctx#turn:<sid>:<mid>) the
+  // extension keys diff data by. Rebuilds when the active session changes while
+  // the Session scope is active, so a session tab switch refetches that diff.
   const id = createMemo(() => {
     const ctx = opts.ctx()
     if (!ctx) return undefined
-    return composeDiffId(ctx, scope.scope(), scope.scope() === "session" ? opts.session() : undefined)
+    const active = activeScope()
+    return composeDiffId(ctx, active, opts.session(), active === "turn" ? turn() : undefined)
   })
 
   // Branch picker state for the active context (Branch scope only).
@@ -55,8 +61,17 @@ export function createDiffReviewScope(opts: DiffReviewScopeOptions) {
   const descriptors = createMemo(() => {
     const ctx = opts.ctx()
     if (!ctx) return []
-    return scopeDescriptors(ctx, opts.session())
+    return scopeDescriptors(ctx, opts.session(), turn())
   })
+
+  // A turn belongs to one session of one context. Leave it when either changes.
+  createEffect(
+    on(
+      [opts.ctx, opts.session] as const,
+      () => setTurn(undefined),
+      { defer: true },
+    ),
+  )
 
   // Fall back to Branch when the active session disappears (tab closed,
   // session deleted) while the Session scope is selected.
@@ -64,19 +79,28 @@ export function createDiffReviewScope(opts: DiffReviewScopeOptions) {
     const ctx = opts.ctx()
     if (!ctx) return
     if (scope.scope() === "session" && !opts.session()) scope.setScope("branch")
+    if (turn() && !opts.session()) setTurn(undefined)
   })
 
-  const isBranch = () => scope.scope() === "branch"
+  const isBranch = () => activeScope() === "branch"
 
   const select = (next: string) => {
     const ctx = opts.ctx()
     if (!ctx) return
     const value = next.slice(ctx.length + 1)
+    if (value.startsWith("turn:")) return
+    setTurn(undefined)
     if (value.startsWith("session")) {
       scope.setScope("session")
       return
     }
-    scope.setScope(isDiffScope(value) ? value : "branch")
+    scope.setScope(isDiffScope(value) && value !== "turn" ? value : "branch")
+  }
+
+  /** Show the files changed by one turn of the active session. */
+  const openTurn = (messageID: string) => {
+    if (!opts.ctx() || !opts.session()) return
+    setTurn(messageID)
   }
 
   const selectBase = (branch: string | undefined) => {
@@ -132,10 +156,11 @@ export function createDiffReviewScope(opts: DiffReviewScopeOptions) {
   }
 
   return {
-    scope: scope.scope,
+    scope: activeScope,
     id,
     descriptors,
     isBranch,
+    openTurn,
     select,
     selectBase,
     onBranches,

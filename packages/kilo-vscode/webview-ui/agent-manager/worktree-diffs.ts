@@ -28,8 +28,8 @@ const BUDGET = 64 * 1024 * 1024
  * the default branch scope.
  */
 export function wireDiffId(id: string) {
-  const { ctx, scope, sessionId } = parseDiffId(id)
-  return { sessionId: ctx, scope, diffSessionId: sessionId }
+  const { ctx, scope, sessionId, turnId } = parseDiffId(id)
+  return { sessionId: ctx, scope, diffSessionId: sessionId, turnId }
 }
 
 export function diffDataKey(project: string | undefined, id: string): string {

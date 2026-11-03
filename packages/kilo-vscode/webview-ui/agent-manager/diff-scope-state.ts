@@ -30,7 +30,7 @@ export {
  * it is omitted while a context has none (e.g. an empty worktree or the local
  * context with no open session).
  */
-export function scopeDescriptors(ctx: string, sessionId?: string): DiffSourceDescriptor[] {
+export function scopeDescriptors(ctx: string, sessionId?: string, turnId?: string): DiffSourceDescriptor[] {
   const out: DiffSourceDescriptor[] = [
     {
       id: composeDiffId(ctx, "branch"),
@@ -53,6 +53,14 @@ export function scopeDescriptors(ctx: string, sessionId?: string): DiffSourceDes
       group: "Session",
       capabilities: { revert: false, comments: true },
     })
+    if (turnId) {
+      out.push({
+        id: composeDiffId(ctx, "turn", sessionId, turnId),
+        type: "turn",
+        group: "Session",
+        capabilities: { revert: false, comments: true },
+      })
+    }
   }
   return out
 }

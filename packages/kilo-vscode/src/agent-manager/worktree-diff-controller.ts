@@ -339,8 +339,8 @@ export class WorktreeDiffController {
    * activate() and is carried by the PanelContext.
    */
   private source(id: string, panelCtx: PanelContext): DiffSource {
-    const { ctx, scope, sessionId } = parseDiffId(id)
-    const built = this.ctx.catalog.build(scopeToSourceId(scope, ctx, sessionId), panelCtx)
+    const { ctx, scope, sessionId, turnId } = parseDiffId(id)
+    const built = this.ctx.catalog.build(scopeToSourceId(scope, ctx, sessionId, turnId), panelCtx)
     return {
       ...built,
       descriptor: { ...built.descriptor, id },

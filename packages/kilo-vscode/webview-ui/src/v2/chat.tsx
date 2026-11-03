@@ -47,6 +47,26 @@ export function Chat() {
     setChanges(false)
   }
 
+  // A turn shows its own changes: `from` is the user message that opened it, and the
+  // server ends the range at the next idle marker.
+  const openTurnChanges = (sessionID: string, turnID: string) => {
+    void v2.api.session
+      .diff({ sessionID, from: turnID })
+      .then((files) => {
+        if (files.length === 0) return
+        getVSCodeAPI().postMessage({
+          type: "openDiffsVirtual",
+          diffs: files.map((file) => ({
+            file: file.file,
+            patch: file.patch,
+            additions: file.additions,
+            deletions: file.deletions,
+          })),
+        } satisfies ToHost as never)
+      })
+      .catch(v2.report)
+  }
+
   // What a tool renderer may ask the host to open. The host owns the editor and the diff surfaces.
   const toolActions: ToolActions = {
     openFile: (filePath, line) =>
@@ -110,6 +130,7 @@ export function Chat() {
           onSession={setSession}
           actions={toolActions}
           onShowHistory={() => setView("history")}
+          onViewTurnChanges={openTurnChanges}
           row={row}
           replace={changes() && !!session()}
           replacement={

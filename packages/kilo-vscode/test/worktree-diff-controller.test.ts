@@ -290,3 +290,24 @@ describe("WorktreeDiffController.setBase", () => {
     controller.stop()
   })
 })
+
+describe("WorktreeDiffController turn scope", () => {
+  it("builds the turn source of the active worktree and keeps the composite id", async () => {
+    const { controller, builds, posted } = make({
+      diffs: () => [{ file: "turn.ts", before: "", after: "", additions: 1, deletions: 0 }],
+    })
+    try {
+      controller.start("w1#turn:s1:msg_1")
+      await waitFor(() => builds.length === 1)
+      expect(builds[0]!.id).toBe("turn:s1:msg_1")
+      expect(builds[0]!.ctx.dir).toBe("/wt")
+      await waitFor(() => byType(posted, "agentManager.worktreeDiff").length === 1)
+      expect(byType(posted, "agentManager.worktreeDiff")[0]).toMatchObject({
+        sessionId: "w1#turn:s1:msg_1",
+        diffs: [{ file: "turn.ts" }],
+      })
+    } finally {
+      controller.stop()
+    }
+  })
+})

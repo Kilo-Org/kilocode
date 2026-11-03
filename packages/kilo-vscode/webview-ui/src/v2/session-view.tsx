@@ -44,6 +44,8 @@ export function SessionView(props: {
   onPrompted?: (sessionID: string, text: string, model: ModelRef | undefined) => void
   /** Receives a session the server does not have (deleted, or from another database) instead of an error card. */
   onMissing?: (sessionID: string) => void
+  /** Opens the files changed by one turn. */
+  onViewTurnChanges?: (sessionID: string, turnID: string) => void
 }) {
   const v2 = useV2()
   const session = () => props.session
@@ -203,6 +205,7 @@ export function SessionView(props: {
                   onShowHistory={props.onShowHistory}
                   empty={props.empty}
                   onScrollToBottomReady={(fn) => (scrollToBottom = fn)}
+                  onViewTurnChanges={props.onViewTurnChanges}
                 />
               }
             >

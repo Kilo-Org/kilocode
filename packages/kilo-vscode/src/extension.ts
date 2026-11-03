@@ -117,8 +117,16 @@ export function activate(context: ExtensionContext) {
   registerAutocompleteProvider(context, autocomplete)
   const view = chat({ context, server, directory, trackCostSession: alerts.track, diff: diffs })
   const agentHost = new VscodeHost(context, { server, directory })
-  const agentPanel = createPanel({ context, server, directory, trackCostSession: alerts.track })
+  let agentManagerRef: AgentManagerProvider | undefined
+  const agentPanel = createPanel({
+    context,
+    server,
+    directory,
+    trackCostSession: alerts.track,
+    saveImageDirectory: () => agentManagerRef?.imageDirectory(),
+  })
   const agentManager = new AgentManagerProvider(agentHost, connection, agentPanel)
+  agentManagerRef = agentManager
   // The Settings panel edits Agent Manager project settings through the provider's shared handler, so it is created
   // after the provider and receives a lazy getter.
   const panel = settings({
