@@ -18,8 +18,6 @@ const State = Schema.Struct({
   status: Schema.Literals(["starting", "ready", "loading", "error", "closed"]),
   url: Schema.optional(Schema.String),
   title: Schema.optional(Schema.String),
-  screenshot: Schema.optional(Schema.String.check(Schema.isMaxLength(3 * 1024 * 1024))),
-  mime: Schema.optional(Schema.Literal("image/jpeg")),
   errors: Schema.Number,
   logs: Schema.optional(Schema.Array(Schema.String.check(Schema.isMaxLength(1000)))),
   error: Schema.optional(Schema.String),
@@ -82,7 +80,12 @@ export async function openPage(input: {
   const response = await fetch(new URL("/browser/open", input.broker.url), {
     method: "POST",
     headers: { authorization: `Bearer ${input.broker.token}`, "content-type": "application/json" },
-    body: JSON.stringify({ sessionID: input.sessionID, directory: input.directory, url: input.url.href }),
+    body: JSON.stringify({
+      sessionID: input.sessionID,
+      directory: input.directory,
+      url: input.url.href,
+      capture: false,
+    }),
     signal: AbortSignal.timeout(TIMEOUT),
   })
   const body: unknown = await response.json().catch(() => undefined)
@@ -154,8 +157,7 @@ export const KiloBrowserToolPlugin = define({
                 state.logs?.length
                   ? `Console diagnostics:\n${state.logs.map((line) => `- ${line}`).join("\n")}`
                   : undefined,
-                "The user sees this page in the Integrated Browser. The page image is not returned, because tool",
-                "images become model input and not every model accepts them.",
+                "The user sees this page in the Integrated Browser.",
               ]
                 .filter(Boolean)
                 .join("\n"),
@@ -167,7 +169,7 @@ export const KiloBrowserToolPlugin = define({
                 errors: state.errors,
               } satisfies Meta,
             }
-          }).pipe(Effect.orDie),
+          }),
       }),
     )
   }),

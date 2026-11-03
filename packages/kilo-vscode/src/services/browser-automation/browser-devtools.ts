@@ -20,6 +20,8 @@ type Message = { method?: string; params?: { mode?: string } }
 
 const LIFETIME = 15 * 60 * 1000
 const PAYLOAD = 16 * 1024 * 1024
+const QUEUED_BYTES = 32 * 1024 * 1024
+const QUEUED_MESSAGES = 256
 
 function equal(left: string, right: string): boolean {
   const actual = Buffer.from(left)
@@ -191,7 +193,13 @@ export class BrowserDevtools {
   }
 
   private connect(req: IncomingMessage, socket: Duplex, head: Buffer): void {
-    const route = new URL(req.url ?? "/", `http://127.0.0.1:${this.port}`)
+    // A malformed upgrade target must not escape the listener as an uncaught exception.
+    let route: URL
+    try {
+      route = new URL(req.url ?? "/", `http://127.0.0.1:${this.port}`)
+    } catch {
+      return reject(socket, 400, "Malformed request target")
+    }
     const scope = this.match(req, route)
     if (!scope || scope.path !== "connect") return reject(socket, 401, "Unauthorized")
     if (req.headers.origin !== `http://127.0.0.1:${this.port}`) return reject(socket, 403, "Forbidden")
@@ -211,6 +219,7 @@ export class BrowserDevtools {
       maxPayload: PAYLOAD,
     })
     const queued: Array<{ data: RawData; binary: boolean }> = []
+    const queuedBytes = { value: 0 }
     target.sockets.add(client)
 
     const close = () => {
@@ -221,6 +230,7 @@ export class BrowserDevtools {
     }
 
     upstream.on("open", () => {
+      queuedBytes.value = 0
       for (const item of queued.splice(0)) upstream.send(item.data, { binary: item.binary })
     })
     upstream.on("message", (data, binary) => {
@@ -248,7 +258,16 @@ export class BrowserDevtools {
         upstream.send(data, { binary })
         return
       }
-      if (upstream.readyState === WebSocket.CONNECTING) queued.push({ data, binary })
+      if (upstream.readyState !== WebSocket.CONNECTING) return
+      // The upstream may stall before its socket opens. Cap what one client can buffer in the extension host.
+      const size = Array.isArray(data) ? data.reduce((total, item) => total + item.byteLength, 0) : data.byteLength
+      if (queuedBytes.value + size > QUEUED_BYTES || queued.length >= QUEUED_MESSAGES) {
+        this.log("Browser developer tools client exceeded the connect buffer", { browser: target.browser })
+        close()
+        return
+      }
+      queuedBytes.value += size
+      queued.push({ data, binary })
     })
     client.on("error", (error) => {
       this.log("Browser developer tools client failed", { browser: target.browser, error })

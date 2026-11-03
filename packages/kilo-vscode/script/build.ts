@@ -146,7 +146,8 @@ const results = await Promise.all([
     // A CommonJS host cannot parse `import.meta`; it reaches the bundle when a dynamic import wraps an ESM graph.
     if ((await Bun.file(path.join(dist, "extension.js")).text()).includes("import.meta"))
       throw new Error("extension host bundle contains import.meta and would fail to activate")
-    await cp(path.join(root, "node_modules", "playwright-core"), path.join(dist, "node_modules", "playwright-core"), {
+    const playwright = path.dirname(Bun.resolveSync("playwright-core/package.json", root))
+    await cp(playwright, path.join(dist, "node_modules", "playwright-core"), {
       recursive: true,
       dereference: true,
       filter: (file) => path.basename(file) !== "node_modules",

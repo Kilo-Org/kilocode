@@ -160,6 +160,7 @@ type RequestBody = {
   projectID?: unknown
   directory?: unknown
   url?: unknown
+  capture?: unknown
 }
 
 const MAX_BODY = 32 * 1024
@@ -291,7 +292,11 @@ export class BrowserBroker {
     if (this.starting) return this.starting
     this.starting = new Promise<void>((resolve, reject) => {
       this.server = createServer((req, res) => {
-        void this.handle(req, res)
+        void this.handle(req, res).catch((error: unknown) => {
+          this.opts.log("Browser request failed", error)
+          if (!res.headersSent) json(res, 500, { error: "Browser request failed" })
+          else res.end()
+        })
       })
       this.server.on("connection", (socket) => {
         this.sockets.add(socket)
@@ -1169,7 +1174,11 @@ export class BrowserBroker {
     const project = typeof body.projectID === "string" ? body.projectID : undefined
     if (path === "/browser/open") {
       if (typeof body.url !== "string") throw new Error("A local application URL is required")
-      return this.open({ projectId: project, sessionId: body.sessionID, directory: body.directory }, body.url)
+      return this.open(
+        { projectId: project, sessionId: body.sessionID, directory: body.directory },
+        body.url,
+        body.capture !== false,
+      )
     }
     if (!["/browser/refresh", "/browser/close"].includes(path)) return undefined
     const entry = this.require(body.sessionID, body.directory, project)
@@ -1179,7 +1188,15 @@ export class BrowserBroker {
   }
 
   private async handle(req: IncomingMessage, res: ServerResponse): Promise<void> {
-    const route = new URL(req.url ?? "/", "http://127.0.0.1")
+    // A request target is untrusted input: the URL parser throws on a malformed authority, and the caller is a
+    // detached handler, so answer 400 instead of leaving the request without a response.
+    let route: URL
+    try {
+      route = new URL(req.url ?? "/", "http://127.0.0.1")
+    } catch {
+      json(res, 400, { error: "Malformed request target" })
+      return
+    }
     if (this.tools && (await this.tools.handle(req, res, route))) return
     if (!this.authorized(req)) {
       json(res, 401, { error: "Unauthorized" })

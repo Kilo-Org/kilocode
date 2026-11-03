@@ -28,6 +28,8 @@ export function Chat() {
   onCleanup(
     vscode.onMessage((message) => {
       if (message.type !== "browserReference") return
+      // A tab outlives a session switch, so a reference can arrive for a session the composer no longer shows.
+      if (message.reference.sessionId !== session()) return
       append?.(message.text, false)
     }),
   )

@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test"
 import { unlinkSync } from "node:fs"
 import path from "node:path"
 import { build } from "esbuild"
-import { solidPlugin } from "esbuild-plugin-solid"
+import { createSolidPlugin } from "../script/solid-cache"
 
 const root = path.resolve(import.meta.dir, "..")
 const webview = path.join(root, "webview-ui")
@@ -31,7 +31,7 @@ describe("reusable browser view", () => {
             ctx.onResolve({ filter: /^solid-js(\/web|\/store)?$/ }, (args) => ({ path: aliases[args.path] }))
           },
         },
-        solidPlugin(),
+        createSolidPlugin({ root }),
       ],
       target: "es2022",
       write: false,
