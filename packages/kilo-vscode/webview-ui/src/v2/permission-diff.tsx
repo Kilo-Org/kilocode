@@ -6,9 +6,10 @@ import { normalize } from "@kilocode/kilo-ui/session-diff"
 import { For, Show, createMemo } from "solid-js"
 
 function splitPath(file: string) {
-  const parts = file.split("/")
-  if (parts.length === 1) return { name: file, directory: undefined }
-  return { name: parts[parts.length - 1] ?? file, directory: parts.slice(0, -1).join("/") }
+  const normalized = file.replaceAll("\\", "/")
+  const separator = normalized.lastIndexOf("/")
+  if (separator === -1) return { name: file, directory: undefined }
+  return { name: normalized.slice(separator + 1), directory: normalized.slice(0, separator) }
 }
 
 /** The proposed changes of an edit or write permission request, rendered beside the approval controls. */
