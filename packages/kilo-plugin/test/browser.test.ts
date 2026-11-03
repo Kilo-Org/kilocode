@@ -95,8 +95,6 @@ describe("browser_open request", () => {
           status: "ready",
           url: "http://localhost:3000/",
           title: "Application",
-          screenshot: "data:image/jpeg;base64,c2NyZWVu",
-          mime: "image/jpeg",
           errors: 1,
           logs: ["[error] missing favicon"],
         })
@@ -121,9 +119,9 @@ describe("browser_open request", () => {
       sessionID: "session",
       directory: "/repo",
       url: "http://localhost:3000/",
+      capture: false,
     })
     expect(state.title).toBe("Application")
-    expect(state.screenshot).toStartWith("data:image/jpeg;base64,")
     expect(state.errors).toBe(1)
   })
 

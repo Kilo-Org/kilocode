@@ -26,6 +26,7 @@ describe("Playwright MCP lifecycle", () => {
   let service: BrowserAutomationService
   let enabled = true
   let startup = false
+  let failAdd = false
 
   function folders(dirs: string[]) {
     Object.defineProperty(vscode.workspace, "workspaceFolders", {
@@ -40,6 +41,7 @@ describe("Playwright MCP lifecycle", () => {
     failed.clear()
     enabled = true
     startup = false
+    failAdd = false
     folders(["/repo"])
     Object.defineProperty(vscode.workspace, "isTrusted", { configurable: true, value: true })
     vscode.workspace.getConfiguration = (() => ({
@@ -68,6 +70,7 @@ describe("Playwright MCP lifecycle", () => {
         if (request.method === "PUT" && url.pathname.startsWith("/api/experimental/mcp/")) {
           const body = (await request.json()) as { config?: { command?: string[] } } | undefined
           recorded.push({ method: "add", server: url.pathname.split("/").at(-1) ?? "", directory, command: body?.config?.command })
+          if (failAdd) return Response.json({ error: "MCP registration failed" }, { status: 500 })
           if (startup) failed.add(directory)
           else active.add(directory)
           return new Response(null, { status: 204 })
@@ -168,9 +171,11 @@ describe("Playwright MCP lifecycle", () => {
     expect(listeners.size).toBe(0)
   })
 
-  test("an unreachable server does not reject the sync", async () => {
-    http.stop(true)
-    await service.syncWithSettings().catch(() => undefined)
-    expect(recorded).toEqual([])
+  test("a failed registration resolves and records the attempt", async () => {
+    failAdd = true
+    const result = await service.syncWithSettings()
+    expect(result).toBeUndefined()
+    expect(recorded.map((item) => item.method)).toEqual(["add"])
+    expect(active.size).toBe(0)
   })
 })
