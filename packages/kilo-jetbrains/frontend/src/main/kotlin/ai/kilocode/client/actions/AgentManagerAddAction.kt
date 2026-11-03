@@ -2,9 +2,11 @@ package ai.kilocode.client.actions
 
 import ai.kilocode.client.agentManager.SidePanelKeys
 import ai.kilocode.client.agentManager.SidePanelMode
+import ai.kilocode.client.agentManager.hosted.HostedWorkspaceIcons
 import ai.kilocode.client.app.KiloHostedService
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.telemetry.Telemetry
+import com.intellij.icons.AllIcons
 import com.intellij.openapi.actionSystem.ActionUpdateThread
 import com.intellij.openapi.actionSystem.ActionGroup
 import com.intellij.openapi.actionSystem.AnAction
@@ -63,6 +65,10 @@ class AgentManagerAddAction : ActionGroup(
         titleButton(presentation, place)
 
     private class Local : AnAction(KiloBundle.message("agentManager.add.local")), DumbAware {
+        init {
+            templatePresentation.icon = AllIcons.Vcs.Branch
+        }
+
         override fun getActionUpdateThread() = ActionUpdateThread.BGT
 
         override fun update(e: AnActionEvent) {
@@ -76,6 +82,10 @@ class AgentManagerAddAction : ActionGroup(
     }
 
     private class Cloud : AnAction(KiloBundle.message("agentManager.add.cloud")), DumbAware {
+        init {
+            templatePresentation.icon = HostedWorkspaceIcons.cloud
+        }
+
         override fun getActionUpdateThread() = ActionUpdateThread.BGT
 
         override fun update(e: AnActionEvent) {

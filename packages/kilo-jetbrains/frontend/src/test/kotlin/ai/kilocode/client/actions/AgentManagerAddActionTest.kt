@@ -2,12 +2,14 @@ package ai.kilocode.client.actions
 
 import ai.kilocode.client.agentManager.SidePanelKeys
 import ai.kilocode.client.agentManager.SidePanelMode
+import ai.kilocode.client.agentManager.hosted.HostedWorkspaceIcons
 import com.intellij.openapi.actionSystem.ActionPlaces
 import com.intellij.openapi.actionSystem.ActionUiKind
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.DataContext
 import com.intellij.openapi.actionSystem.Presentation
 import com.intellij.openapi.actionSystem.ex.ActionUtil
+import com.intellij.icons.AllIcons
 import com.intellij.openapi.actionSystem.impl.ActionButtonWithText
 import com.intellij.openapi.util.JDOMUtil
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
@@ -70,12 +72,29 @@ class AgentManagerAddActionTest : BasePlatformTestCase() {
         assertFalse(event.presentation.isEnabled)
     }
 
+    fun `test add hint has no planned-feature copy`() {
+        val hint = ai.kilocode.client.plugin.KiloBundle.message("agentManager.add.hint")
+
+        assertFalse(hint.contains("<hr"))
+        assertFalse(hint.contains("coming soon", ignoreCase = true))
+    }
+
+    fun `test add group items carry branch and cloud icons`() {
+        val children = AgentManagerAddAction().getChildren(null)
+
+        assertSame(AllIcons.Vcs.Branch, children[0].templatePresentation.icon)
+        assertSame(HostedWorkspaceIcons.cloud, children[1].templatePresentation.icon)
+    }
+
     fun `test add group offers local and cloud only`() {
         val action = AgentManagerAddAction()
 
         assertTrue(action.isPopup)
         assertTrue(action.templatePresentation.isPerformGroup)
-        assertEquals(listOf("Local", "Cloud"), action.getChildren(null).map { it.templatePresentation.text })
+        assertEquals(
+            listOf("New Task in Local Worktree", "New Task on Cloud"),
+            action.getChildren(null).map { it.templatePresentation.text },
+        )
     }
 
     fun `test unified Add group replaces the standalone cloud actions`() {

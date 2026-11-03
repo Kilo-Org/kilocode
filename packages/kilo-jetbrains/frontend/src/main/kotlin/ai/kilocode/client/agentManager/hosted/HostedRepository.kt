@@ -6,6 +6,12 @@ import java.net.URI
 private val scp = Regex("^([^@/\\s]+)@([^:/\\s]+):(.+)$")
 private val shorthand = Regex("^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$")
 
+/** The repository name shown in creation dialogs, without credentials or a `.git` suffix. */
+internal fun hostedRepositoryName(url: String): String {
+    val clean = url.trim().removeSuffix("/").removeSuffix(".git")
+    return clean.substringAfterLast('/').substringAfterLast(':')
+}
+
 /**
  * Normalizes a Git remote URL into the Cloud repository shape. GitHub remotes use a bare
  * `owner/repository` value for both HTTPS and SSH forms; every other remote keeps a clone URL.

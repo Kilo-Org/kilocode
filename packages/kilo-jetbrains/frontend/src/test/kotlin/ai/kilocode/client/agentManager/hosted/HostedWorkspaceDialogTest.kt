@@ -81,6 +81,18 @@ class HostedWorkspaceDialogTest : BasePlatformTestCase() {
         }
     }
 
+    fun `test prompt fills the dialog center in both creation modes`() {
+        open()
+        ready()
+        edt { assertPromptCentered() }
+
+        edt { Disposer.dispose(requireNotNull(dialog).disposable) }
+        dialog = null
+        open(profiles = emptyList(), withWorkspace = false)
+        ready()
+        edt { assertPromptCentered() }
+    }
+
     fun `test default cloud selections create a plan with an optional blank branch`() {
         open()
         ready()
@@ -215,11 +227,10 @@ class HostedWorkspaceDialogTest : BasePlatformTestCase() {
                 val controls = controls()
                 assertEmpty(controls.filterIsInstance<JBCheckBox>())
                 assertEmpty(controls.filterIsInstance<JBTabs>())
-                assertEquals(1, controls.filterIsInstance<ComboBox<*>>().size)
-                assertEquals(
-                    "https://github.com/kilo-org/kilocode.git",
-                    controls.filterIsInstance<JBTextField>().single { !it.isEditable }.text,
-                )
+                assertEquals(2, controls.filterIsInstance<ComboBox<*>>().size)
+                assertEquals("kilocode", repository().getItemAt(0))
+                assertEquals(1, repository().itemCount)
+                assertEmpty(controls.filterIsInstance<JBTextField>().filter { !it.isEditable })
                 submit()
             }
 
@@ -234,7 +245,7 @@ class HostedWorkspaceDialogTest : BasePlatformTestCase() {
 
         edt {
             val controls = controls()
-            assertEmpty(controls.filterIsInstance<ComboBox<*>>())
+            assertEquals(listOf("kilocode"), (0 until repository().itemCount).map { repository().getItemAt(it) })
             assertEmpty(controls.filterIsInstance<JBTextField>().filter { it.isEditable })
             submit()
         }
@@ -409,7 +420,16 @@ class HostedWorkspaceDialogTest : BasePlatformTestCase() {
 
     private fun branch(): JBTextField = controls().filterIsInstance<JBTextField>().single { it.isEditable }
 
-    private fun profile(): ComboBox<*> = controls().filterIsInstance<ComboBox<*>>().single()
+    private fun repository(): ComboBox<*> =
+        controls().filterIsInstance<ComboBox<*>>().single { it.getItemAt(0) is String }
+
+    private fun profile(): ComboBox<*> =
+        controls().filterIsInstance<ComboBox<*>>().single { it.getItemAt(0) is HostedWorkspaceProfileDto }
+
+    private fun assertPromptCentered() {
+        val layout = requireNotNull(prompt().parent).layout as java.awt.BorderLayout
+        assertEquals(java.awt.BorderLayout.CENTER, layout.getConstraints(prompt()))
+    }
 
     private fun controls(): List<Component> {
         // The headless DialogWrapper peer has no content pane; its focused editor still owns the real UI tree.

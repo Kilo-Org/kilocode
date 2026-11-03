@@ -19,7 +19,6 @@ import ai.kilocode.client.session.ui.prompt.MentionAction
 import ai.kilocode.client.session.ui.prompt.PromptPanel
 import ai.kilocode.client.session.ui.prompt.SlashAction
 import ai.kilocode.client.ui.UiStyle
-import ai.kilocode.client.ui.layout.Stack
 import ai.kilocode.rpc.dto.KiloAppStatusDto
 import ai.kilocode.rpc.dto.ModelSelectionDto
 import ai.kilocode.rpc.dto.ModelsWorkspaceDto
@@ -29,6 +28,7 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.DialogWrapper
 import com.intellij.util.concurrency.annotations.RequiresEdt
 import com.intellij.util.ui.JBUI
+import com.intellij.util.ui.components.BorderLayoutPanel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -77,7 +77,7 @@ internal abstract class AgentManagerDialog @RequiresEdt constructor(
     @Volatile private var disposed = false
 
     @RequiresEdt
-    protected fun content(above: JComponent, below: JComponent): JComponent {
+    protected fun content(above: JComponent?, below: JComponent): JComponent {
         prompt.mode.onSelect = { item ->
             agent = item.id
             syncSelection()
@@ -108,11 +108,12 @@ internal abstract class AgentManagerDialog @RequiresEdt constructor(
                 prompt.setReady(true)
             }
         }
-        return Stack.vertical(gap = UiStyle.Gap.pad())
-            .next(above)
-            .next(prompt)
-            .next(below)
-            .apply { border = JBUI.Borders.empty(UiStyle.Gap.sm()) }
+        return BorderLayoutPanel().apply {
+            border = JBUI.Borders.empty(UiStyle.Gap.sm())
+            above?.let(::addToTop)
+            addToCenter(prompt)
+            addToBottom(below)
+        }
     }
 
     @RequiresEdt

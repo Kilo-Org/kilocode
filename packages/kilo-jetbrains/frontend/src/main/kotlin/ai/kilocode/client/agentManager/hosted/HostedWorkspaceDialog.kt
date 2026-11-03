@@ -39,6 +39,7 @@ internal class HostedWorkspaceDialog @RequiresEdt constructor(
     private val branch = JBTextField(branch).apply {
         emptyText.text = KiloBundle.message("hosted.workspace.dialog.branch.placeholder")
     }
+    private val repository = ComboBox(arrayOf(hostedRepositoryName(repositoryUrl)))
     private val profile = ComboBox(profiles.toTypedArray()).apply {
         renderer = SimpleListCellRenderer.create("") { it.name }
     }
@@ -51,19 +52,16 @@ internal class HostedWorkspaceDialog @RequiresEdt constructor(
     }
 
     override fun createCenterPanel(): JComponent {
-        val repo = JBTextField(repositoryUrl, 67).apply { isEditable = false }
         val fields = object : FormBuilder() {
             override fun getFill(component: JComponent) = GridBagConstraints.HORIZONTAL
         }.apply {
+            addLabeledComponent(KiloBundle.message("hosted.workspace.dialog.repository"), repository)
             if (withWorkspace) {
                 addLabeledComponent(KiloBundle.message("hosted.workspace.dialog.branch"), branch)
                 addLabeledComponent(KiloBundle.message("hosted.workspace.dialog.profile"), profile)
             }
         }.panel
-        val heading = FormBuilder.createFormBuilder()
-            .addLabeledComponent(KiloBundle.message("hosted.workspace.dialog.repository"), repo)
-            .panel
-        return content(heading, fields)
+        return content(null, fields)
     }
 
     override fun getPreferredFocusedComponent(): JComponent = prompt.defaultFocusedComponent

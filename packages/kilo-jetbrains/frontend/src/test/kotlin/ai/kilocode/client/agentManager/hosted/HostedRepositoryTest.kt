@@ -27,6 +27,13 @@ class HostedRepositoryTest {
     }
 
     @Test
+    fun `repository name drops credentials host and git suffix`() {
+        assertEquals("kilocode", hostedRepositoryName("git@github.com:Kilo-Org/kilocode.git"))
+        assertEquals("kilocode", hostedRepositoryName("https://github.com/Kilo-Org/kilocode.git"))
+        assertEquals("kilocode", hostedRepositoryName("Kilo-Org/kilocode"))
+    }
+
+    @Test
     fun `short github values keep the repository path`() {
         val repo = hostedRepository("Kilo-Org/kilocode", null)
 
