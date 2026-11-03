@@ -11,6 +11,7 @@ import { KiloHandshakePlugin } from "./handshake"
 import { KiloProviderUsagePlugin } from "./provider-usage"
 import { KiloOpenAIPlugin } from "./openai"
 import { KiloMarketplacePlugin } from "./marketplace"
+import { KiloPrivacyPlugin } from "./privacy"
 import { KiloSkillPlugin } from "./skill"
 import { KiloTodoPlugin } from "./todo"
 import { KiloWriteToolPlugin } from "./tool-write"
@@ -43,6 +44,7 @@ export const KiloPlugins = [
   KiloTodoPlugin,
   KiloWriteToolPlugin,
   KiloCommitMessagePlugin,
+  KiloPrivacyPlugin,
   KiloBranchNamePlugin,
   KiloAgentManagerPlugin,
   // The Kilo review command replaces the built-in `review`. kilo_port(review:efc710228c1f)
