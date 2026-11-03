@@ -101,6 +101,14 @@ test("fails loudly when a structural anchor drifts", () => {
   )
 })
 
+test("fails loudly when a semantic override anchor drifts", () => {
+  // acp/service.ts is an override file but not a structural one, so this hits the
+  // override presence guard, not structural.apply.
+  expect(() => KiloBranding.transform("/repo/packages/cli/src/acp/service.ts", "changed")).toThrow(
+    "Kilo branding no longer matches",
+  )
+})
+
 test("brands user-visible text dynamically instead of failing on an unknown anchor", () => {
   // A text-only module whose wording no longer matches any specific anchor is
   // not an error: the rule engine brands what it recognizes and leaves the rest
