@@ -1,9 +1,9 @@
 {
   "$comment": "Shared-patch baseline (U-L3-01). Read by script/check-shared-patches.ts and script/check-opencode-annotations.ts. Each shared upstream file that Kilo adds or changes needs an entry: rung (3 = seam patch, 4 = feature patch) and the missing seam. `unmarked` allows lines without markers and states why. Raise a limit only in the PR that adds the patch, and lower it when a patch goes away.",
   "limits": {
-    "files": 77,
+    "files": 78,
     "markedLines": 1070,
-    "unmarkedLines": 91,
+    "unmarkedLines": 225,
     "deletedFiles": 0
   },
   "files": {
@@ -54,7 +54,7 @@
     },
     "package.json": {
       "rung": 3,
-      "seam": "Root `dev` script runs script/dev-isolated.ts, which starts the Kilo host entry (packages/kilo-cli) with an isolated profile, so `bun dev` never uses the installed OpenCode or Kilo data. Stays after U-E0-01: `bun dev` from the root reads the upstream root package.json, and upstream's script runs the upstream CLI with the real data. Root `extension` script runs packages/kilo-vscode/script/launch.ts (Kilo-owned), which builds the v2 VS Code extension and opens it in a separate VS Code instance with an isolated profile, as `bun run extension` does on v1. Root `lint` script runs only `oxlint`: its ast-grep and `script/sdk-docs.ts` steps check upstream's GUI plugin package (`packages/gui-extensions`, renamed to `packages/gui-plugins` in v2.2), which Kilo removed (`skipFiles`). Root `install:alpha` script runs script/kilocode/install-alpha.ts (Kilo-owned), which installs the host executable built by the `kilo-v2` workflow; it goes away when v2 is mainline. Root devDependency `@types/node` (catalog version): TypeScript searches `node_modules/@types` in every parent directory before it follows a package's own dependencies, and Agent Manager worktrees live inside another checkout (`.kilo/worktrees/<name>`). Without a root copy, packages that do not declare `@types/node` (ai, cli, tui, server and others) load the parent checkout's version, so a worktree's typecheck depends on what another checkout installed. No lower rung: the root manifest decides what the root `node_modules/@types` contains, and `bunfig.toml` and the package tsconfigs are upstream files too.",
+      "seam": "Root `dev` script runs script/dev-isolated.ts, which starts the Kilo host entry (packages/kilo-cli) with an isolated profile, so `bun dev` never uses the installed OpenCode or Kilo data. Stays after U-E0-01: `bun dev` from the root reads the upstream root package.json, and upstream's script runs the upstream CLI with the real data. Root `extension` script runs packages/kilo-vscode/script/launch.ts (Kilo-owned), which builds the v2 VS Code extension and opens it in a separate VS Code instance with an isolated profile, as `bun run extension` does on v1. Root `lint` script runs only `oxlint`: its ast-grep and `script/sdk-docs.ts` steps check upstream's GUI plugin package (`packages/gui-extensions`, renamed to `packages/gui-plugins` in v2.2), which Kilo removed (`skipFiles`). Root `install:alpha` script runs script/kilocode/install-alpha.ts (Kilo-owned), which installs the host executable built by the `kilo-v2` workflow; it goes away when v2 is mainline. Root devDependency `@types/node` (catalog version): TypeScript searches `node_modules/@types` in every parent directory before it follows a package's own dependencies, and Agent Manager worktrees live inside another checkout (`.kilo/worktrees/<name>`). Without a root copy, packages that do not declare `@types/node` (ai, cli, tui, server and others) load the parent checkout's version, so a worktree's typecheck depends on what another checkout installed. No lower rung: the root manifest decides what the root `node_modules/@types` contains, and `bunfig.toml` and the package tsconfigs are upstream files too. `patchedDependencies` registers `patches/virtua@0.49.1.patch` (Kilo-owned, the same patch as v1), which adds `VirtualizerHandle.measure()` and clamps the rendered range to the data length; the v2 VS Code transcript (packages/kilo-vscode/webview-ui/src/v2/messages.tsx) uses `measure()` to re-pin the bottom when the live turn is handed to the virtualizer. No seam: bun reads patches only from the root package.json.",
       "unmarked": "JSON has no comments."
     },
     "packages/cli/package.json": {
@@ -322,6 +322,11 @@
     "packages/server/src/handlers/pty.ts": {
       "rung": 3,
       "seam": "Pass `replayExited=1` from the PTY connect query to the `allowExited` attach input in packages/core/src/pty.ts. The connect route is the only path a client reaches `attach` through, and its handler has no extension point for query options. Without the query parameter the route behaves as upstream."
+    },
+    "patches/virtua@0.49.1.patch": {
+      "rung": 4,
+      "seam": "Add `VirtualizerHandle.measure()` and clamp the rendered range to the data length in `virtua`. The v2 VS Code transcript uses `measure()` to re-pin the bottom in the same task when the last live turn is handed to the virtualizer, and the clamp prevents an out-of-range row when the virtual list shrinks. Set through `patchedDependencies` in the root package.json, so the patch applies from the root install. The same patch is on v1. No lower rung: the API lives inside the package and the transcript cannot re-pin before paint without it.",
+      "unmarked": "Patch files are applied verbatim; a marker inside the diff would change the patched source. The same patch ships on v1."
     }
   }
 }
