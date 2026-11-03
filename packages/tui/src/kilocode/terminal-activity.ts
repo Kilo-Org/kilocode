@@ -44,7 +44,11 @@ export function activity(data: Plugin.Context["data"], sessionID: string): State
   return "idle"
 }
 
-/** Emits on every change and as a heartbeat, so a reader can drop stale packets by their stamp. */
+/**
+ * Emits on every change and as a heartbeat, so a reader can drop stale packets by their stamp. A finished turn is
+ * emitted once: the reader clears its indicator after its own window, and the next turn reports again. Repeating it
+ * would keep a finished check on the tab forever, because the last outcome outlives the turn.
+ */
 export function createEmitter(input: {
   data: Plugin.Context["data"]
   session: () => string | undefined
@@ -58,7 +62,7 @@ export function createEmitter(input: {
     const id = input.session()
     const state = id ? activity(input.data, id) : "idle"
     const at = now()
-    if (last?.state === state && at - last.at < HEARTBEAT) return
+    if (last?.state === state && (state === "done" || at - last.at < HEARTBEAT)) return
     emit(state, at)
     last = { state, at }
   }

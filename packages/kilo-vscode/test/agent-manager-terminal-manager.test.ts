@@ -147,42 +147,36 @@ describe("Agent Manager terminal replacement ownership", () => {
   })
 
   for (const action of ["close", "dispose"] as const) {
-    for (const stage of ["create", "resize"] as const) {
-      it(`reaps a replacement when ${action} starts during ${stage}`, async () => {
-        const ready = Promise.withResolvers<void>()
-        const release = Promise.withResolvers<void>()
-        const pause = async () => {
-          ready.resolve()
-          await release.promise
-        }
-        const test = fixture({
-          create:
-            stage === "create"
-              ? async (count) => {
-                  if (count === 2) await pause()
-                }
-              : undefined,
-          update: stage === "resize" ? pause : undefined,
-        })
-        await test.manager.create(params)
-        const restarting = test.manager.restart(params.terminalId, 80, 24)
-        await ready.promise
-        const closing = action === "close" ? test.manager.close(params.terminalId) : test.manager.dispose()
-        // Closing intent must prevent another restart even while removal waits.
-        const ignored = test.manager.restart(params.terminalId)
-        // A hung create/resize must not keep the panel's teardown waiting.
-        await closing
-        release.resolve()
-        expect(await ignored).toBeUndefined()
-        expect(await restarting).toBeUndefined()
-        await closing
-        expect([...test.live]).toEqual([])
-        expect(test.manager.titles(null)).toEqual([])
-        expect(test.count()).toBe(2)
-        await test.manager.dispose()
-        expect([...test.live]).toEqual([])
+    it(`reaps a replacement when ${action} starts during create`, async () => {
+      const ready = Promise.withResolvers<void>()
+      const release = Promise.withResolvers<void>()
+      const pause = async () => {
+        ready.resolve()
+        await release.promise
+      }
+      const test = fixture({
+        create: async (count) => {
+          if (count === 2) await pause()
+        },
       })
-    }
+      await test.manager.create(params)
+      const restarting = test.manager.restart(params.terminalId, 80, 24)
+      await ready.promise
+      const closing = action === "close" ? test.manager.close(params.terminalId) : test.manager.dispose()
+      // Closing intent must prevent another restart even while removal waits.
+      const ignored = test.manager.restart(params.terminalId)
+      // A hung create must not keep the panel's teardown waiting.
+      await closing
+      release.resolve()
+      expect(await ignored).toBeUndefined()
+      expect(await restarting).toBeUndefined()
+      await closing
+      expect([...test.live]).toEqual([])
+      expect(test.manager.titles(null)).toEqual([])
+      expect(test.count()).toBe(2)
+      await test.manager.dispose()
+      expect([...test.live]).toEqual([])
+    })
 
     it(`does not replace the entry while ${action}'s removal is pending`, async () => {
       const creating = Promise.withResolvers<void>()
@@ -269,52 +263,32 @@ describe("Agent Manager terminal replacement ownership", () => {
     })
   }
 
-  for (const stage of ["create", "resize"] as const) {
-    it(`preserves the original after ${stage} failure and cleans up before retry`, async () => {
-      let failing = true
-      const fail = async () => {
-        if (!failing) return
-        throw new Error("setup failed")
-      }
-      const test = fixture({
-        create:
-          stage === "create"
-            ? async (count) => {
-                if (count > 1) await fail()
-              }
-            : undefined,
-        update: stage === "resize" ? fail : undefined,
-      })
-      await test.manager.create(params)
-      await expect(test.manager.restart(params.terminalId, 80, 24)).rejects.toThrow("setup failed")
-      expect([...test.live]).toEqual(["pty-1"])
-      expect(test.manager.titles(null)).toEqual([params.title])
-      failing = false
-      expect(await test.manager.restart(params.terminalId, 80, 24)).toBe(true)
-      expect([...test.live]).toEqual(["pty-3"])
-      expect(await test.manager.close(params.terminalId)).toBe(true)
-      expect([...test.live]).toEqual([])
-    })
-  }
-
-  it("retains a replacement whose cleanup throws after setup fails", async () => {
-    let offline = true
+  it("preserves the original after a create failure and cleans up before retry", async () => {
+    let failing = true
     const test = fixture({
-      update: async () => {
-        throw new Error("resize failed")
-      },
-      remove: async (id) => {
-        if (id === "pty-2" && offline) throw new Error("offline")
+      create: async (count) => {
+        if (count > 1 && failing) throw new Error("setup failed")
       },
     })
     await test.manager.create(params)
-    await expect(test.manager.restart(params.terminalId, 80, 24)).rejects.toThrow("resize failed")
-    expect([...test.live]).toEqual(["pty-1", "pty-2"])
-    expect(await test.manager.close(params.terminalId)).toBe(false)
-    expect([...test.live]).toEqual(["pty-2"])
-    offline = false
+    await expect(test.manager.restart(params.terminalId, 80, 24)).rejects.toThrow("setup failed")
+    expect([...test.live]).toEqual(["pty-1"])
+    expect(test.manager.titles(null)).toEqual([params.title])
+    failing = false
+    expect(await test.manager.restart(params.terminalId, 80, 24)).toBe(true)
+    expect([...test.live]).toEqual(["pty-3"])
     expect(await test.manager.close(params.terminalId)).toBe(true)
     expect([...test.live]).toEqual([])
+  })
+
+  it("reuses the last known size when a restart carries none", async () => {
+    const test = fixture()
+    await test.manager.create({ ...params, cols: 120, rows: 40 })
+    await test.manager.resize(params.terminalId, 100, 30)
+    expect(await test.manager.restart(params.terminalId)).toBe(true)
+    expect(test.creates[1]?.size).toEqual({ cols: 100, rows: 30 })
+    expect(test.updates).toEqual([{ ptyID: "pty-1", location: { directory: "/workspace" }, size: { cols: 100, rows: 30 } }])
+    await test.manager.dispose()
   })
 
   it("retains an old PTY when removal fails after restart", async () => {

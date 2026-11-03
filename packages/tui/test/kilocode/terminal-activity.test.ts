@@ -92,8 +92,19 @@ describe("terminal activity", () => {
     emitter.tick()
     expect(packets.at(-1)).toBe(format("done", 6_500))
 
+    // A finished turn is not repeated, so the reader can clear the indicator.
+    time += HEARTBEAT
+    emitter.tick()
+    expect(packets.at(-1)).toBe(format("done", 6_500))
+
+    scene.outcome = {}
+    scene.status = { ses_1: "running" }
+    time += 500
+    emitter.tick()
+    expect(packets.at(-1)).toBe(format("busy", 12_000))
+
     emitter.stop()
-    expect(packets.at(-1)).toBe(format("idle", 6_500))
+    expect(packets.at(-1)).toBe(format("idle", 12_000))
   })
 
   test("emits idle when no session is open", () => {

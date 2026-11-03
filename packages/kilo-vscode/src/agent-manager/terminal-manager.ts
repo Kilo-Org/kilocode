@@ -87,6 +87,8 @@ interface Entry {
   worktreeId: string | null
   cwd: string
   title: string
+  /** Last known dimensions, reused when a restart does not carry a new size. */
+  size?: { cols: number; rows: number }
 }
 
 export class TerminalManager {
@@ -191,6 +193,7 @@ export class TerminalManager {
       worktreeId: params.worktreeId,
       cwd: params.cwd,
       title: data.title ?? params.title,
+      size: initial,
     }
     this.entries.set(params.terminalId, entry)
     this.owned.add(entry)
@@ -201,6 +204,7 @@ export class TerminalManager {
       this.pending.delete(params.terminalId)
       const error = await this.resizePty(entry.cwd, entry.ptyID, queued)
       if (error) this.deps.log(`Initial terminal resize failed (${params.terminalId}): ${error}`)
+      else entry.size = queued
     }
     this.deps.log(`Terminal created: ${params.terminalId} -> pty ${entry.ptyID} cwd=${entry.cwd}`)
     return { terminalId: params.terminalId, worktreeId: entry.worktreeId, title: entry.title }
@@ -236,6 +240,7 @@ export class TerminalManager {
     this.pending.delete(terminalId)
     const error = await this.resizePty(entry.cwd, entry.ptyID, { cols, rows })
     if (error) this.deps.log(`Terminal resize failed (${terminalId}): ${error}`)
+    else entry.size = { cols, rows }
   }
 
   /** Titles of every live terminal in a context, used by the router to pick
@@ -352,23 +357,20 @@ export class TerminalManager {
     try {
       const client = await this.deps.connection.client()
       const old = entry.ptyID
+      const size = cols !== undefined && rows !== undefined ? { cols, rows } : entry.size
       const created = await client.pty.create({
         location: { directory: entry.cwd },
         cwd: entry.cwd,
         title: entry.title,
-        // Spawn at the webview's size so the replacement shell's first bytes are not wrapped for 80 columns.
-        ...(cols !== undefined && rows !== undefined ? { size: { cols, rows } } : {}),
+        // Spawn at the known size so the replacement shell's first bytes are not wrapped for 80 columns.
+        ...(size ? { size } : {}),
         env,
       })
       const info = created.data
       entry.ptys.add(info.id)
       try {
         if (entry.revision !== revision || this.entries.get(entry.terminalId) !== entry) return false
-        if (cols !== undefined && rows !== undefined) {
-          const error = await this.resizePty(entry.cwd, info.id, { cols, rows })
-          if (error) throw new Error(`Failed to resize replacement PTY: ${error}`)
-        }
-        if (entry.revision !== revision || this.entries.get(entry.terminalId) !== entry) return false
+        entry.size = size
         entry.ptyID = info.id
         await this.remove(entry, old)
         if (entry.revision !== revision || this.entries.get(entry.terminalId) !== entry) return false

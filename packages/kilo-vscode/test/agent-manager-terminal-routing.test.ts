@@ -373,8 +373,9 @@ describe("Agent Manager terminal routing", () => {
     await router.dispose()
   })
 
-  it("keeps a terminal tracked when explicit close fails", async () => {
+  it("keeps a terminal tracked when explicit close fails and releases its relay after success", async () => {
     const messages: AgentManagerOutMessage[] = []
+    const released: string[] = []
     let attempts = 0
     const client: FakeClient = {
       pty: {
@@ -394,7 +395,7 @@ describe("Agent Manager terminal routing", () => {
       getProjectId: () => "prj-1",
       log: () => undefined,
       post: (message) => messages.push(message),
-      closed: () => undefined,
+      closed: (terminalId) => released.push(terminalId),
       getTerminalFont: () => font,
     })
 
@@ -406,10 +407,12 @@ describe("Agent Manager terminal routing", () => {
     router.handle({ type: "agentManager.terminal.close", terminalId: created.terminalId })
     await wait()
     expect(messages.at(-1)).toMatchObject({ type: "agentManager.terminal.error", terminalId: created.terminalId })
+    expect(released).toEqual([])
 
     router.handle({ type: "agentManager.terminal.close", terminalId: created.terminalId })
     await wait()
     expect(messages.at(-1)).toMatchObject({ type: "agentManager.terminal.closed", terminalId: created.terminalId })
+    expect(released).toEqual([created.terminalId])
     expect(attempts).toBe(2)
     await router.dispose()
   })
