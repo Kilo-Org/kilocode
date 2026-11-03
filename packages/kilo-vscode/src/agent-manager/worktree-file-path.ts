@@ -6,11 +6,10 @@ import type { WorktreeStateManager } from "./WorktreeStateManager"
 /** The directory a worktree id, session id, or `local` reads files from. */
 export function resolveWorktreeRoot(
   state: WorktreeStateManager | undefined,
-  id: string | undefined,
+  id: string,
   root: string | undefined,
 ): string | undefined {
-  // No id means the caller has no context and reads from the project root.
-  if (!id || id === "local") return root
+  if (id === "local") return root
   if (!state) return
   const worktree = state.getWorktree(id)
   if (worktree) return worktree.path
@@ -29,7 +28,7 @@ export function resolveWorktreeRoot(
  */
 export function resolveWorktreeFile(
   state: WorktreeStateManager | undefined,
-  id: string | undefined,
+  id: string,
   file: string,
   root: string | undefined,
 ): string | undefined {

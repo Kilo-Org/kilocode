@@ -1138,8 +1138,10 @@ const AgentManagerContent: Component = () => {
   }
   const toolActions: ToolActions = {
     openFile: (filePath, line) => {
-      if (isMarkdownPath(filePath) && documentInspector.open(filePath, sessions.currentSessionID(), line)) return
-      to({ type: "agentManager.openFile", filePath, line })
+      // Tool paths are raw model strings, so the resolver needs the session to pick the worktree or local root.
+      const sessionId = sessions.currentSessionID() ?? selection() ?? LOCAL
+      if (isMarkdownPath(filePath) && documentInspector.open(filePath, sessionId, line)) return
+      to({ type: "agentManager.openFile", sessionId, filePath, line })
     },
     openDiff: (diff) => previewEdit([diff]),
     openDiffs: (diffs) => previewEdit(diffs),
