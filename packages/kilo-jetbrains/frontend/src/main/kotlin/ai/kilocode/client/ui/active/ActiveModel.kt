@@ -214,7 +214,13 @@ internal fun activeVisibleCells(item: ActiveItem, active: Boolean): List<ActiveC
 
 internal fun activeCellGap() = JBUI.scale(CELL_GAP)
 
-/** Standard icon/text gap, left unscaled so Borders can scale it exactly once. */
+/**
+ * Unscaled gap around a row's badge columns.
+ *
+ * Read from the same theme key as [JBUI.CurrentTheme.ActionsList.elementIconGap] but left unscaled, so
+ * one value can feed both the layout gaps (which need pixels) and [JBUI.Borders] (which scales what it
+ * is handed).
+ */
 internal fun activeIconGap() = JBUI.getInt("ActionsList.icon.gap", UiStyle.Gap.MD)
 
 @RequiresEdt

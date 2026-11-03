@@ -38,13 +38,6 @@ import javax.swing.JPanel
 import javax.swing.SwingConstants
 
 /**
- * Unscaled gap around a row's badge columns.
- *
- * Read from the same theme key as [JBUI.CurrentTheme.ActionsList.elementIconGap] but left unscaled, so
- * one value can feed both the layout gaps (which need pixels) and [JBUI.Borders] (which scales what it
- * is handed).
- */
-/**
  * Whether row text that does not fit fades into the row background instead of stopping at a bare cut.
  *
  * On by default. Off leaves the cut exposed, which is legible but reads as the end of the text rather than
