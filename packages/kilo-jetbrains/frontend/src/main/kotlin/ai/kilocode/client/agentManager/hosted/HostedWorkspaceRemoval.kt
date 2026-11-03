@@ -3,8 +3,8 @@ package ai.kilocode.client.agentManager.hosted
 import ai.kilocode.client.KiloNotifications
 import ai.kilocode.client.app.KiloHostedService
 import ai.kilocode.client.plugin.KiloBundle
-import ai.kilocode.client.ui.list.ActiveListDeleteOptions
-import ai.kilocode.client.ui.list.showActiveListDeletePopup
+import ai.kilocode.client.ui.active.ActiveDeleteOptions
+import ai.kilocode.client.ui.active.showActiveDeletePopup
 import ai.kilocode.client.vfs.KiloVfsManager
 import ai.kilocode.rpc.dto.HostedWorkspaceDto
 import ai.kilocode.rpc.dto.HostedWorkspaceRefDto
@@ -37,11 +37,11 @@ class HostedWorkspaceRemoval internal constructor(
     fun isDeleting(ref: HostedWorkspaceRefDto): Boolean = ref.key in _deleting.value
 
     fun confirm(anchor: RelativePoint, ref: HostedWorkspaceRefDto, directory: String) {
-        val opts = ActiveListDeleteOptions(
+        val opts = ActiveDeleteOptions(
             message = KiloBundle.message("hosted.workspace.delete.message"),
             detail = KiloBundle.message("hosted.workspace.delete.detail"),
         )
-        showActiveListDeletePopup(anchor, opts) { delete(ref, directory) }
+        showActiveDeletePopup(anchor, opts) { delete(ref, directory) }
     }
 
     fun delete(ref: HostedWorkspaceRefDto, directory: String) {

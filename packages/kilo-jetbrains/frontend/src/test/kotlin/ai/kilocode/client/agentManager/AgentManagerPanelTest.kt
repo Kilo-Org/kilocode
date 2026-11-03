@@ -1967,8 +1967,8 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         edt { panel.createHosted(request) }
         flush()
 
-        val view = edt { UIUtil.findComponentOfType(panel, ActiveListView::class.java)!! }
-        val pending = edt { view.selected()!! }
+        val view = tree(panel)
+        val pending = edt { selectedValue(view)!! }
         assertTrue(pending.key.contains(HostedWorkspaceEditorKind.PENDING_PREFIX))
         assertEquals(KiloBundle.message("hosted.workspace.progress.creating.short"), pending.progress)
         assertEmpty(pending.badges)
@@ -1977,7 +1977,7 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         assertTrue(pendingFile.path.params[HostedWorkspaceEditorKind.WORKSPACE]!!.startsWith(HostedWorkspaceEditorKind.PENDING_PREFIX))
 
         createGate.complete(Unit)
-        waitUntil { rows(panel) == 2 && view.selected()?.key == createdRef.key }
+        waitUntil { rows(panel) == 2 && edt { selectedValue(view)?.key } == createdRef.key }
         assertEquals(2, calls.size)
 
         val removal = project.service<HostedWorkspaceRemoval>()
