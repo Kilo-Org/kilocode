@@ -47,6 +47,10 @@ import { useToolChildSession } from "./tool-child-session"
 import { readToolOpen, toolOpenKey } from "./tool-open-state"
 import { busy, createThrottledValue, STREAMING_TEXT_RENDER_THROTTLE_MS, TEXT_RENDER_THROTTLE_MS } from "./tool-utils"
 import { Tooltip } from "./tooltip"
+import { ChartTool } from "./tools/chart"
+import { ExecuteTool } from "./tools/execute"
+import { ImageTool } from "./tools/image"
+import { PlanTool } from "./tools/plan"
 
 export { ToolApprovalProvider, resolveToolApproval, ToolApprovalVisibilityProvider } from "./tool-approval"
 export { useGrowIn } from "./tool-utils"
@@ -1968,6 +1972,26 @@ ToolRegistry.register({
       />
     )
   },
+})
+
+ToolRegistry.register({
+  name: "execute",
+  render: ExecuteTool,
+})
+
+ToolRegistry.register({
+  name: "chart",
+  render: ChartTool,
+})
+
+ToolRegistry.register({
+  name: "experimental_image_generate",
+  render: ImageTool,
+})
+
+ToolRegistry.register({
+  name: "plan_exit",
+  render: PlanTool,
 })
 
 export function UserMessageDisplay(props: { message: SessionMessageUser; copyLabel?: string }) {
