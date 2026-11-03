@@ -1,0 +1,60 @@
+[data-component="image-tool"] {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-top: 8px;
+}
+
+[data-slot="image-tool-images"] {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  max-width: min(100%, 64ch);
+}
+
+[data-slot="image-tool-image"] {
+  display: block;
+  max-width: 100%;
+  max-height: 320px;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  border: 1px solid var(--border-weak-base);
+  border-radius: var(--radius-sm);
+  background: var(--surface-tool-output-base);
+  overflow: hidden;
+  cursor: pointer;
+  transition: border-color 0.15s ease;
+
+  &:hover {
+    border-color: var(--border-strong-base);
+  }
+
+  &:focus-visible {
+    outline: 1px solid var(--border-interactive-base);
+    outline-offset: 1px;
+  }
+}
+
+[data-slot="image-tool-image-content"] {
+  display: block;
+  max-width: 100%;
+  max-height: 320px;
+  object-fit: contain;
+}
+
+[data-slot="image-tool-path"],
+[data-slot="image-tool-model"] {
+  font-family: var(--font-family-mono);
+  font-size: var(--font-size-small);
+  line-height: var(--line-height-normal);
+  color: var(--text-weak);
+  word-break: break-all;
+}
+
+[data-slot="image-tool-note"],
+[data-slot="image-tool-generating"] {
+  font-size: var(--font-size-small);
+  line-height: var(--line-height-normal);
+  color: var(--text-weaker);
+}
