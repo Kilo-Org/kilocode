@@ -2,11 +2,12 @@ export * as TodoTool from "./todo.js"
 
 import { ToolFailure } from "@opencode/ai/effect"
 import type { Context } from "@opencode/plugin/effect/plugin"
-import { Effect, Schema } from "effect"
+import { Effect, Option, Schema } from "effect" // kilocode_change - todo view reads optional history metadata
 import { Config } from "../../config.js"
 import { ConfigEntryObserver } from "../../config/plugin/entry-observer.js"
 import { Permission } from "../../permission.js"
 import DESCRIPTION from "../todowrite.txt"
+import { TodoView } from "../../kilocode/todo-view.js" // kilocode_change - todo view: derive the compact client view
 
 export const name = "todowrite"
 
@@ -70,11 +71,39 @@ export const Plugin = {
               })
               .pipe(
                 Effect.mapError((error) => new ToolFailure({ message: "Unable to update todos", error })),
-                Effect.as({
-                  output: { todos: input.todos },
-                  content: summarize(input.todos),
-                  metadata: { todos: input.todos },
-                }),
+                // kilocode_change start - todo view: read the previous list from the session history
+                Effect.flatMap(() =>
+                  Effect.gen(function* () {
+                    const before = yield* Effect.gen(function* () {
+                      const messages = yield* ctx.session.context({ sessionID: context.sessionID })
+                      return (
+                        messages
+                          .flatMap((message) => (message.type === "assistant" ? message.content : []))
+                          .flatMap((part) => {
+                            if (part.type !== "tool" || part.name !== name) return []
+                            if (part.state.status !== "completed") return []
+                            const todos = Option.getOrUndefined(
+                              Schema.decodeUnknownOption(Schema.Array(Info))(part.state.metadata?.todos),
+                            )
+                            return todos ? [todos] : []
+                          })
+                          .at(-1) ?? []
+                      )
+                    }).pipe(
+                      Effect.orElseSucceed(() => [] as Info[]),
+                      Effect.catchDefect(() => Effect.succeed([] as Info[])),
+                    )
+                    return {
+                      output: { todos: input.todos },
+                      content: summarize(input.todos),
+                      metadata: {
+                        todos: input.todos,
+                        ...(before.length ? { view: TodoView.calculate(before, input.todos) } : {}),
+                      },
+                    }
+                  }),
+                ),
+                // kilocode_change end
               ),
         })
       })
