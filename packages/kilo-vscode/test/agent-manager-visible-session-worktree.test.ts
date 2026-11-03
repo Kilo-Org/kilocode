@@ -117,7 +117,9 @@ describe("Agent Manager viewed sessions", () => {
     const conn = connection()
     const view = (conn as unknown as { view: ReturnType<typeof mock> }).view
     const provider = providerAt(root, conn)
-    provider.openPanel(true)
+    // Only the panel visibility matters here, so skip the panel lifecycle and its async state initialization.
+    const internals = provider as unknown as { panel: { visible: boolean } }
+    internals.panel = { visible: true }
     seed(provider, root)
 
     provider.trackOpenSessions(["ses-first", "ses-second"])
