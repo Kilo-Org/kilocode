@@ -41,6 +41,7 @@ const SCRIPT = `
     },
     { id: "generated-image", type: "file", mime: "image/png", url: "data:image/png;base64,AAAA" },
     { id: "empty-image", type: "file", mime: "image/png", url: "" },
+    { id: "legacy-image", type: "file", mime: "image/png", url: "file:///repo/dot.png" },
     { id: "generated-audio", type: "file", mime: "audio/wav", url: "data:audio/wav;base64,AAAA" },
   ]
   const visible = parts.filter((part) => isRenderable(part, message)).map((part) => part.id)

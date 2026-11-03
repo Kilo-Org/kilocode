@@ -640,7 +640,10 @@ const layer = Layer.effect(
                 messageID: ctx.assistantMessage.id,
                 id: () => PartID.ascending(),
               }),
-              (part) => session.updatePart(part),
+              (part) =>
+                KiloGeneratedFile.normalize(part, image).pipe(
+                  Effect.flatMap((item) => (item ? session.updatePart(item) : Effect.void)),
+                ),
             )
             // kilocode_change end
             // kilocode_change start - persist late-arriving OpenRouter reasoning details for replay

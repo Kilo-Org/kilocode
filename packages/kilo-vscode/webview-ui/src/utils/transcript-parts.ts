@@ -1,4 +1,4 @@
-import { PART_MAPPING, ToolRegistry } from "@kilocode/kilo-ui/message-part"
+import { PART_MAPPING, ToolRegistry, viewable } from "@kilocode/kilo-ui/message-part"
 import type { AssistantMessage, Part } from "@kilocode/sdk/v2"
 import { snapshotProgress } from "../context/session-utils"
 
@@ -16,6 +16,6 @@ export function isRenderable(part: Part, message: AssistantMessage): boolean {
   }
   if (part.type === "reasoning") return !!part.text?.replace("[REDACTED]", "").trim()
   // Model-generated images arrive as assistant file parts.
-  if (part.type === "file") return part.mime.startsWith("image/") && !!part.url
+  if (part.type === "file") return viewable(part)
   return !!PART_MAPPING[part.type]
 }

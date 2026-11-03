@@ -14,6 +14,7 @@ import { Provider } from "@/provider/provider"
 import { Session } from "@/session/session"
 import { LLMAISDK } from "@/session/llm/ai-sdk"
 import { KiloGeneratedFile } from "@/kilocode/session/generated-file"
+import { Image } from "@/image/image"
 import { LLM } from "../../../src/session/llm"
 import { MessageV2 } from "../../../src/session/message-v2"
 import { SessionProcessor } from "../../../src/session/processor"
@@ -44,6 +45,45 @@ describe("KiloGeneratedFile.from", () => {
   test("ignores non-image and empty files", () => {
     expect(KiloGeneratedFile.from({ mediaType: "audio/wav", base64: "AAAA" })).toBeUndefined()
     expect(KiloGeneratedFile.from({ mediaType: "image/png", base64: "" })).toBeUndefined()
+  })
+})
+
+describe("KiloGeneratedFile.normalize", () => {
+  const part = (mime: string, url: string): SessionV1.FilePart => ({
+    id: PartID.ascending(),
+    sessionID: SessionID.descending(),
+    messageID: MessageID.ascending(),
+    type: "file",
+    mime,
+    url,
+  })
+  const failing: Image.Interface = {
+    normalize: () =>
+      Effect.fail(new Image.SizeError({ bytes: 1, max: 0, width: 1, height: 1, max_width: 0, max_height: 0 })),
+  }
+  const unavailable: Image.Interface = { normalize: () => Effect.fail(new Image.ResizerUnavailableError()) }
+  const run = (input: SessionV1.FilePart, image: Image.Interface) =>
+    Effect.runPromise(KiloGeneratedFile.normalize(input, image))
+
+  test("keeps hosted images without decoding them", async () => {
+    const input = part("image/png", "https://cdn.example.com/a.png")
+    expect(await run(input, failing)).toBe(input)
+  })
+
+  test("omits raster images that cannot be brought under the image limits", async () => {
+    expect(await run(part("image/png", `data:image/png;base64,${PNG}`), failing)).toBeUndefined()
+  })
+
+  test("keeps raster images when the resizer is unavailable", async () => {
+    const input = part("image/png", `data:image/png;base64,${PNG}`)
+    expect(await run(input, unavailable)).toBe(input)
+  })
+
+  test("caps non-raster inline images at the image size limit", async () => {
+    const small = part("image/svg+xml", "data:image/svg+xml;base64,PHN2Zy8+")
+    expect(await run(small, failing)).toBe(small)
+    const large = part("image/svg+xml", `data:image/svg+xml;base64,${"A".repeat(Image.MAX_BASE64_BYTES + 1)}`)
+    expect(await run(large, failing)).toBeUndefined()
   })
 })
 

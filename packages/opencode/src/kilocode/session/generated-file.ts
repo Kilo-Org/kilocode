@@ -1,5 +1,8 @@
 import type { ProviderMetadata } from "@opencode-ai/llm"
 import type { SessionV1 } from "@opencode-ai/core/v1/session"
+import { Effect } from "effect"
+import { Image } from "@/image/image"
+import { KiloAttachment } from "@/kilocode/session/attachment"
 import { isRecord } from "@/util/record"
 
 /**
@@ -67,4 +70,31 @@ export namespace KiloGeneratedFile {
       filename: name(file.mime, index),
     }))
   }
+
+  /**
+   * Bound inline images like tool attachments before they reach the session store and every
+   * part update: raster images go through `Image.normalize` (dimension and size limits), other
+   * inline images are kept only under the same size limit. Hosted URLs are not stored inline.
+   * Returns undefined when the image cannot be brought under the limits.
+   */
+  export const normalize = Effect.fn("KiloGeneratedFile.normalize")(function* (
+    part: SessionV1.FilePart,
+    image: Image.Interface,
+  ) {
+    if (!part.url.startsWith("data:")) return part
+    if (KiloAttachment.classify(part.mime) !== "raster") {
+      if (Buffer.byteLength(part.url, "utf8") <= Image.MAX_BASE64_BYTES) return part
+      yield* Effect.logWarning("generated image omitted: over the size limit", { mime: part.mime })
+      return undefined
+    }
+    return yield* image.normalize(part).pipe(
+      Effect.catchIf(
+        (error) => error instanceof Image.ResizerUnavailableError,
+        () => Effect.succeed(part),
+      ),
+      Effect.catch((error) =>
+        Effect.logWarning("generated image omitted: could not be normalized", { error }).pipe(Effect.as(undefined)),
+      ),
+    )
+  })
 }

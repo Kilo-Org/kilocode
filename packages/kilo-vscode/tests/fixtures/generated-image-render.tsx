@@ -73,8 +73,21 @@ const tool: ToolPart = {
     metadata: {},
     title: "dot.png",
     time: { start: 1, end: 2 },
-    attachments: [{ ...file, id: "attachment", filename: "dot.png" }],
+    attachments: [
+      { ...file, id: "attachment", filename: "dot.png" },
+      // Sessions saved before inline data used workspace file:// URLs, which the webview CSP blocks.
+      { ...file, id: "legacy", url: "file:///test/old.png", filename: "old.png" },
+    ],
   },
+}
+
+// send_file deliveries are unnormalized mobile payloads and stay out of the transcript.
+const delivery: ToolPart = {
+  ...tool,
+  id: "delivery",
+  callID: "delivery-call",
+  tool: "send_file",
+  state: { ...tool.state, attachments: [{ ...file, id: "delivery-file", filename: "sent.png" }] },
 }
 
 assert.equal(isRenderable(file, message), true, "assistant image file parts must be renderable")
@@ -87,6 +100,7 @@ const dispose = render(
       <MarkedProvider>
         <Part part={file} message={message} />
         <Part part={tool} message={message} />
+        <Part part={delivery} message={message} />
       </MarkedProvider>
     </DialogProvider>
   ),

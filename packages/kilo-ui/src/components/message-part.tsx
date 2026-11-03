@@ -402,7 +402,7 @@ function renderable(part: PartType, showReasoningSummaries = true) {
   }
   if (part.type === "text") return !!part.text?.trim()
   if (part.type === "reasoning") return showReasoningSummaries && !!part.text?.trim()
-  if (part.type === "file") return part.mime.startsWith("image/") && !!part.url
+  if (part.type === "file") return viewable(part)
   return !!PART_MAPPING[part.type]
 }
 
@@ -1529,8 +1529,11 @@ PART_MAPPING["tool"] = function ToolPartDisplay(props) {
                 readonly={props.readonly}
               />
             </ToolApprovalProvider>
-            {/* Tools without a dedicated card (generate_image, MCP tools) show returned images even when collapsed. */}
-            <Show when={!ToolRegistry.render(part.tool) && part.state.status === "completed"}>
+            {/* Tools without a dedicated card (generate_image, MCP tools) show returned images even when collapsed.
+                send_file attachments are unnormalized mobile deliveries, so they stay out of the transcript. */}
+            <Show
+              when={!ToolRegistry.render(part.tool) && part.tool !== "send_file" && part.state.status === "completed"}
+            >
               <ImageList files={part.state.status === "completed" ? part.state.attachments : undefined} />
             </Show>
           </Match>
@@ -2288,9 +2291,14 @@ function ToolDiffAction(props: { when: boolean; onClick: (e: MouseEvent) => void
   )
 }
 
+// Webviews only load inline and https images; older generate_image parts carry blocked file:// URLs.
+export function viewable(file: FilePart) {
+  return file.mime.startsWith("image/") && (file.url.startsWith("data:image/") || file.url.startsWith("https://"))
+}
+
 /** Image thumbnails for tool attachments and model-generated images; click opens a preview. */
 function ImageList(props: { files?: FilePart[] }) {
-  const images = createMemo(() => (props.files ?? []).filter((file) => file.mime.startsWith("image/") && file.url))
+  const images = createMemo(() => (props.files ?? []).filter(viewable))
   return (
     <Show when={images().length > 0}>
       <ImageThumbs files={images()} />
