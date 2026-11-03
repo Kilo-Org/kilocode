@@ -23,7 +23,7 @@ if (production) {
   const bin = path.join(root, "bin")
   await mkdir(bin, { recursive: true })
   await ensureFfmpegForTarget(target, bin)
-  const helper = path.join(bin, process.platform === "win32" ? "ffmpeg.exe" : "ffmpeg")
+  const helper = path.join(bin, target.startsWith("win32") ? "ffmpeg.exe" : "ffmpeg")
   if (!existsSync(helper)) {
     // win32-arm64 has no helper package. v1 shipped it without one, and capture falls back to a system FFmpeg.
     if (hasFfmpegPackage(target)) throw new Error(`FFmpeg helper was not bundled at ${helper}`)

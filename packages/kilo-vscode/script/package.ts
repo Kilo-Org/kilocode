@@ -32,7 +32,7 @@ if (!config) throw new Error(`Unknown target ${target}. Use one of: ${Object.key
 const source = path.join(cli, config.dist, "bin", config.binary)
 if (!existsSync(source))
   throw new Error(
-    `The ${target} CLI binary is missing at ${source}. Build it first: bun run --cwd packages/kilo-cli script/build.ts --target=${config.dist}`,
+    `The ${target} CLI binary is missing at ${source}. Build it first: bun run --cwd packages/kilo-cli script/build.ts --target=${config.dist.replace(/^cli-/, "opencode-")}`,
   )
 
 await rm(bin, { recursive: true, force: true })
