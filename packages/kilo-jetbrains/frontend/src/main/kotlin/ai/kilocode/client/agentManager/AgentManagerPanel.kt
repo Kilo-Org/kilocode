@@ -376,10 +376,10 @@ class AgentManagerPanel(
                     KiloNotifications.error(target, KiloBundle.message("hosted.workspace.profiles.failed"), error.message)
                     return@edt
                 }
-        val sel = hostedSelection(
-            service<KiloAppService>(),
-            service<KiloWorkspaceService>().workspace(controller.directory).state.value.providers,
-        ) ?: run {
+                val sel = hostedSelection(
+                    service<KiloAppService>(),
+                    service<KiloWorkspaceService>().workspace(controller.directory).state.value.providers,
+                ) ?: run {
                     KiloNotifications.error(target, KiloBundle.message("hosted.workspace.create.noModel"))
                     return@edt
                 }
@@ -437,9 +437,9 @@ class AgentManagerPanel(
     internal fun newHostedSession(anchor: Component, workspace: HostedWorkspaceDto) {
         val target = project ?: return
         val sel = hostedSelection(
-                    service<KiloAppService>(),
-                    service<KiloWorkspaceService>().workspace(controller.directory).state.value.providers,
-                ) ?: run {
+            service<KiloAppService>(),
+            service<KiloWorkspaceService>().workspace(controller.directory).state.value.providers,
+        ) ?: run {
             KiloNotifications.error(target, KiloBundle.message("hosted.workspace.create.noModel"))
             return
         }
