@@ -16,7 +16,9 @@ export default Plugin.define({
               title: "Copy session transcript",
               description: "Copy the whole session transcript to the clipboard",
               group: "Kilo",
-              palette: true,
+              // The native palette command already covers Ctrl+P; this adds only the slash name, and
+              // `session.copy` exists only while a session route is mounted.
+              enabled: () => context.ui.router.current().type === "session",
               slash: { name: "copy-session" },
               run: () => context.keymap.dispatch("session.copy"), // kilo_port(unattributed:tui/routes:667ed16d042a)
             },

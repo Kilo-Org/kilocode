@@ -8,8 +8,8 @@ import { tmpdir } from "../fixture/fixture"
 
 const sessionID = "ses_copy_session"
 
-test("the /copy-session slash command resolves to the native session transcript copy", async () => {
-  await using state = await tmpdir()
+async function launch(args: { sessionID?: string }) {
+  const state = await tmpdir()
   const setup = await createTestRenderer({ width: 100, height: 30, kittyKeyboard: true })
   await setup.renderer.setupTerminal()
   setup.renderer.start()
@@ -50,10 +50,22 @@ test("the /copy-session slash command resolves to the native session transcript 
       config: { get: async () => ({ animations: false }), update: async () => ({}) },
       packages: { prepare: async () => ({ directory: "" }) },
       terminalHandoff: async () => ({ renderer: setup.renderer, mode: "dark", complete: () => {} }),
-      args: { sessionID },
+      args,
       log: () => {},
     }).pipe(Effect.provide(Global.layerWith({ state: state.path })), Effect.provide(FileSystem.layerNoop({}))),
   )
+  const dispose = async () => {
+    copy.mockRestore()
+    setup.renderer.destroy()
+    await task
+    await server.stop()
+    await state[Symbol.asyncDispose]()
+  }
+  return { setup, copy, dispose }
+}
+
+test("the /copy-session slash command resolves to the native session transcript copy", async () => {
+  const { setup, copy, dispose } = await launch({ sessionID })
   try {
     await setup.waitFor(() => setup.renderer.currentFocusedEditor instanceof TextareaRenderable)
     setup.mockInput.typeText("/copy-session")
@@ -70,9 +82,41 @@ test("the /copy-session slash command resolves to the native session transcript 
         !(setup.renderer.currentFocusedEditor instanceof InputRenderable),
     )
   } finally {
-    copy.mockRestore()
-    setup.renderer.destroy()
-    await task
-    await server.stop()
+    await dispose()
+  }
+})
+
+test("the /copy-session slash command is not offered outside a session", async () => {
+  const { setup, copy, dispose } = await launch({})
+  try {
+    await setup.waitFor(() => setup.renderer.currentFocusedEditor instanceof TextareaRenderable)
+    setup.mockInput.typeText("/copy-session")
+    await setup.waitForFrame((frame) => frame.includes("/copy-session"))
+    await setup.renderOnce()
+    expect(setup.captureCharFrame()).not.toContain("Copy the whole session transcript")
+    expect(copy).not.toHaveBeenCalled()
+  } finally {
+    await dispose()
+  }
+})
+
+test("the palette keeps the single native Copy session transcript command", async () => {
+  const { setup, dispose } = await launch({ sessionID })
+  try {
+    await setup.waitFor(() => setup.renderer.currentFocusedEditor instanceof TextareaRenderable)
+    setup.mockInput.pressKey("p", { ctrl: true })
+    await setup.waitFor(() => setup.renderer.currentFocusedEditor instanceof InputRenderable)
+    await setup.mockInput.typeText("Copy session transcript")
+    await setup.waitForFrame((frame) => frame.includes("Copy session transcript"))
+    await setup.renderOnce()
+    const rows = setup
+      .captureCharFrame()
+      .split("\n")
+      .filter((line) => line.includes("Copy session transcript"))
+    // The native command owns the palette row; the plugin command is slash-only, so no Kilo row duplicates it.
+    expect(rows.filter((line) => line.includes("Kilo"))).toHaveLength(0)
+    expect(rows.filter((line) => line.includes("Session"))).toHaveLength(1)
+  } finally {
+    await dispose()
   }
 })
