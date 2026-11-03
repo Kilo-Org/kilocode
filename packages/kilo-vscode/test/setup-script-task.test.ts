@@ -7,6 +7,7 @@ import { createSetupScriptTask, pickSetupTask, runWorktreeSetupScript } from "..
 import { SetupScriptService } from "../src/agent-manager/SetupScriptService"
 import { setupTaskIdentity, type RunTask } from "../src/agent-manager/SetupScriptRunner"
 import type { AgentManagerOutMessage } from "../src/agent-manager/types"
+import { failure } from "./setup/failure"
 
 interface StartCall {
   kind: string
@@ -83,7 +84,7 @@ describe("createSetupScriptTask", () => {
     })
 
     ctx.starts[0]?.done({ exitCode: 0 })
-    await expect(result).resolves.toBe(0)
+    expect(await result).toBe(0)
   })
 
   it("resolves a nonzero exit code so the runner can report it", async () => {
@@ -92,7 +93,7 @@ describe("createSetupScriptTask", () => {
     await wait()
     ctx.starts[0]?.done({ exitCode: 42 })
 
-    await expect(result).resolves.toBe(42)
+    expect(await result).toBe(42)
   })
 
   it("rejects when the terminal reports an execution error", async () => {
@@ -101,7 +102,7 @@ describe("createSetupScriptTask", () => {
     await wait()
     ctx.starts[0]?.done({ error: "Setup terminal was removed before it exited" })
 
-    await expect(result).rejects.toThrow("Setup terminal was removed before it exited")
+    expect(await failure(result)).toContain("Setup terminal was removed before it exited")
   })
 
   it("rejects when the terminal is stopped externally", async () => {
@@ -110,14 +111,14 @@ describe("createSetupScriptTask", () => {
     await wait()
     ctx.starts[0]?.done({ stopped: true })
 
-    await expect(result).rejects.toThrow("Setup script was stopped")
+    expect(await failure(result)).toContain("Setup script was stopped")
   })
 
   it("rejects when the backend refuses to create the terminal", async () => {
     const ctx = harness({ startError: new Error("Not connected to CLI backend") })
     const result = ctx.task(config)
 
-    await expect(result).rejects.toThrow("Not connected to CLI backend")
+    expect(await failure(result)).toContain("Not connected to CLI backend")
   })
 
   it("times out, rejects, and stops the process tree", async () => {
@@ -125,7 +126,7 @@ describe("createSetupScriptTask", () => {
     const result = ctx.task(config)
     await wait()
 
-    await expect(result).rejects.toThrow("Setup script timed out after 5 minutes")
+    expect(await failure(result)).toContain("Setup script timed out after 5 minutes")
     expect(ctx.stops).toEqual(["wt-1"])
 
     // A late exit after the timeout must not settle the promise again.
@@ -155,7 +156,7 @@ describe("createSetupScriptTask", () => {
     })
     const result = task(config)
 
-    await expect(result).rejects.toThrow("Setup script timed out after 5 minutes")
+    expect(await failure(result)).toContain("Setup script timed out after 5 minutes")
     expect(kills).toEqual(["Setup script timed out after 5 minutes"])
     expect(stops).toEqual([])
   })
@@ -180,7 +181,7 @@ describe("createSetupScriptTask", () => {
     })
     const result = task(config)
 
-    await expect(result).rejects.toThrow("Setup script timed out after 5 minutes")
+    expect(await failure(result)).toContain("Setup script timed out after 5 minutes")
     gate.resolve({
       stop: () => {
         stops.push("wt-1")
@@ -212,7 +213,7 @@ describe("createSetupScriptTask", () => {
       env: async () => ({}),
     })
 
-    await expect(task(config)).resolves.toBe(0)
+    expect(await task(config)).toBe(0)
     await wait()
     // The exited PTY must not be stopped: its tab retains the output.
     expect(stops).toEqual([])
@@ -242,7 +243,7 @@ describe("createSetupScriptTask", () => {
       env: async () => ({}),
     })
 
-    await expect(task(config)).resolves.toBe(7)
+    expect(await task(config)).toBe(7)
     expect(syncs).toBeGreaterThanOrEqual(2)
     // The watchdog stops once the script settles.
     const seen = syncs
@@ -253,7 +254,7 @@ describe("createSetupScriptTask", () => {
   it("refuses to run in an untrusted workspace without touching the backend", async () => {
     const ctx = harness({ trusted: false })
 
-    await expect(ctx.task(config)).rejects.toThrow("Trust the workspace before running setup scripts")
+    expect(await failure(ctx.task(config))).toContain("Trust the workspace before running setup scripts")
     expect(ctx.starts).toEqual([])
   })
 })
@@ -288,7 +289,7 @@ describe("pickSetupTask", () => {
   it("does not redirect an untrusted embedded selection to VS Code", async () => {
     const { task, vscode } = pick({ destination: "agentManager", worktreeId: "wt-1", trusted: false })
     expect(task).not.toBe(vscode)
-    await expect(task(config)).rejects.toThrow("Trust the workspace before running setup scripts")
+    expect(await failure(task(config))).toContain("Trust the workspace before running setup scripts")
   })
 
   it("uses the embedded script terminal when the Agent Manager panel is selected", async () => {
@@ -299,7 +300,7 @@ describe("pickSetupTask", () => {
     await wait()
     expect(ctx.starts[0]?.kind).toBe("setup")
     ctx.starts[0]?.done({ exitCode: 0 })
-    await expect(result).resolves.toBe(0)
+    expect(await result).toBe(0)
   })
 })
 
@@ -375,9 +376,9 @@ describe("runWorktreeSetupScript", () => {
 
   it("keeps worktree creation best-effort when the script fails", async () => {
     const scene = flow(true, { code: 3 })
-    await expect(
-      runWorktreeSetupScript(scene.input, { worktreePath: "/repo/worktree", repoPath: "/repo" }),
-    ).resolves.toBeUndefined()
+    expect(
+      await runWorktreeSetupScript(scene.input, { worktreePath: "/repo/worktree", repoPath: "/repo" }),
+    ).toBeUndefined()
     expect(scene.runs).toEqual(["/repo/worktree"])
     expect(scene.posted).toContainEqual({
       type: "agentManager.worktreeSetup",

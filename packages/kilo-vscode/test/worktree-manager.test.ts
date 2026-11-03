@@ -15,6 +15,7 @@ import { GitOps } from "../src/agent-manager/GitOps"
 import type { PRInfo } from "../src/agent-manager/git-import"
 import { BUDGET } from "../src/agent-manager/command-budget"
 import { simpleGit } from "simple-git"
+import { failure } from "./setup/failure"
 
 // Each test gets its own temp directory -- no shared state, safe to run in parallel.
 const tempDirs: string[] = []
@@ -282,7 +283,7 @@ describe("WorktreeManager.createWorktree", () => {
     "rejects invalid explicit branch %s before creating directories",
     async (branchName) => {
       const root = await createTempRepo()
-      await expect(createManager(root).createWorktree({ branchName })).rejects.toThrow()
+      expect(await failure(createManager(root).createWorktree({ branchName }))).toBeString()
       expect(existsSync(path.join(root, ".kilo", "worktrees"))).toBe(false)
     },
   )
@@ -425,7 +426,7 @@ describe("WorktreeManager.createWorktree", () => {
     const root = await createTempRepo()
     const mgr = createManager(root)
 
-    await expect(mgr.createWorktree({ existingBranch: "nonexistent" })).rejects.toThrow(
+    expect(await failure(mgr.createWorktree({ existingBranch: "nonexistent" }))).toContain(
       'Branch "nonexistent" does not exist',
     )
   })
@@ -435,7 +436,7 @@ describe("WorktreeManager.createWorktree", () => {
     tempDirs.push(root)
     gitExec(["git", "init", "-b", "main", root])
 
-    await expect(createManager(root).createWorktree({ baseBranch: "main", branchName: "feature" })).rejects.toThrow(
+    expect(await failure(createManager(root).createWorktree({ baseBranch: "main", branchName: "feature" }))).toContain(
       "This repository has no commits yet. Create an initial commit before using worktrees.",
     )
   })
@@ -455,7 +456,7 @@ describe("WorktreeManager.createWorktree", () => {
     tempDirs.push(dir)
     const mgr = createManager(dir)
 
-    await expect(mgr.createWorktree({ prompt: "test" })).rejects.toThrow("not a git repository")
+    expect(await failure(mgr.createWorktree({ prompt: "test" }))).toContain("not a git repository")
   })
 
   it("creates worktrees directory under .kilo/worktrees/", async () => {
@@ -567,7 +568,7 @@ describe("WorktreeManager.removeWorktree", () => {
     const remove = spyOn(fs, "rm").mockRejectedValueOnce(Object.assign(new Error("directory busy"), { code: "EBUSY" }))
 
     try {
-      await expect(manager.removeWorktree(worktree.path, worktree.branch)).rejects.toThrow("directory busy")
+      expect(await failure(manager.removeWorktree(worktree.path, worktree.branch))).toContain("directory busy")
       expect(existsSync(worktree.path)).toBe(true)
       expect((await simpleGit(root).branch()).all).toContain(worktree.branch)
     } finally {
@@ -597,7 +598,7 @@ describe("WorktreeManager.removeWorktree", () => {
       try {
         const ready = await child.stdout.getReader().read()
         expect(Buffer.from(ready.value ?? []).toString()).toContain("ready")
-        await expect(manager.removeWorktree(worktree.path, worktree.branch)).rejects.toThrow()
+        expect(await failure(manager.removeWorktree(worktree.path, worktree.branch))).toBeString()
         expect(existsSync(worktree.path)).toBe(true)
         expect((await simpleGit(root).branch()).all).toContain(worktree.branch)
       } finally {
@@ -1077,7 +1078,7 @@ describe("WorktreeManager.restoreWorktree", () => {
     const root = await createTempRepo()
     const mgr = createManager(root)
 
-    await expect(mgr.restoreWorktree(path.join(root, "elsewhere"), "main")).rejects.toThrow(/outside/)
+    expect(await failure(mgr.restoreWorktree(path.join(root, "elsewhere"), "main"))).toMatch(/outside/)
   })
 
   it("refuses to overwrite an existing directory", async () => {
@@ -1085,7 +1086,7 @@ describe("WorktreeManager.restoreWorktree", () => {
     const mgr = createManager(root)
     const wt = await mgr.createWorktree({ prompt: "occupied" })
 
-    await expect(mgr.restoreWorktree(wt.path, wt.branch)).rejects.toThrow(/already exists/)
+    expect(await failure(mgr.restoreWorktree(wt.path, wt.branch))).toMatch(/already exists/)
   })
 })
 
@@ -1143,7 +1144,7 @@ describe("WorktreeManager.detachOrphanDirectory", () => {
     const mgr = createManager(root)
     const wt = await mgr.createWorktree({ prompt: "live" })
 
-    await expect(mgr.detachOrphanDirectory(wt.path)).rejects.toThrow(/live worktree/)
+    expect(await failure(mgr.detachOrphanDirectory(wt.path))).toMatch(/live worktree/)
     expect(existsSync(wt.path)).toBe(true)
   })
 
@@ -1152,7 +1153,7 @@ describe("WorktreeManager.detachOrphanDirectory", () => {
     const mgr = createManager(root)
     await fs.mkdir(path.join(root, "outside"), { recursive: true })
 
-    await expect(mgr.detachOrphanDirectory(path.join(root, "outside"))).rejects.toThrow(/outside/)
+    expect(await failure(mgr.detachOrphanDirectory(path.join(root, "outside")))).toMatch(/outside/)
     expect(existsSync(path.join(root, "outside"))).toBe(true)
   })
 
@@ -1166,7 +1167,7 @@ describe("WorktreeManager.detachOrphanDirectory", () => {
     const leftover = path.join(root, ".kilo", "worktrees", "leftover")
     await fs.mkdir(leftover, { recursive: true })
 
-    await expect(mgr.detachOrphanDirectory(leftover)).rejects.toThrow(/cannot list worktrees/)
+    expect(await failure(mgr.detachOrphanDirectory(leftover))).toMatch(/cannot list worktrees/)
     expect(existsSync(leftover)).toBe(true)
   })
 
@@ -1296,7 +1297,7 @@ describe("WorktreeManager.renameBranch", () => {
     const hash = (await simpleGit(root).revparse(["HEAD"])).trim()
     await simpleGit(root).raw(["update-ref", `refs/remotes/origin/${created.branch}`, hash])
 
-    await expect(mgr.renameBranch(created.path, created.branch, "fix-auth")).rejects.toThrow(
+    expect(await failure(mgr.renameBranch(created.path, created.branch, "fix-auth"))).toContain(
       "already exists on a remote",
     )
   })
@@ -1580,7 +1581,7 @@ describe("WorktreeManager.resolveStartPoint", () => {
     const root = await createTempRepo()
     const mgr = createManager(root)
 
-    await expect(mgr.resolveStartPoint("nonexistent", undefined, { allowFallback: false })).rejects.toThrow(
+    expect(await failure(mgr.resolveStartPoint("nonexistent", undefined, { allowFallback: false }))).toContain(
       "Could not resolve start point",
     )
   })
@@ -1905,7 +1906,7 @@ describe("WorktreeManager.createWorktree advanced", () => {
       title: "Topic PR",
     })
 
-    await expect(manager.createFromPR("https://github.com/org/repo/pull/1")).rejects.toThrow(
+    expect(await failure(manager.createFromPR("https://github.com/org/repo/pull/1"))).toContain(
       'Could not resolve start point for branch "missing"',
     )
     expect(existsSync(path.join(clone, ".kilo", "worktrees"))).toBe(false)

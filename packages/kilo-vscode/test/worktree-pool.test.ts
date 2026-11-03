@@ -5,6 +5,7 @@ import fs from "node:fs/promises"
 import { existsSync, readFileSync } from "node:fs"
 import { simpleGit } from "simple-git"
 import { WorktreeManager } from "../src/agent-manager/WorktreeManager"
+import { failure } from "./setup/failure"
 
 const tempDirs: string[] = []
 // Pool home for the current test. Slots never live inside the test repository.
@@ -449,7 +450,7 @@ describe("WorktreeManager commit detection", () => {
     tempDirs.push(root)
     gitExec(["git", "init", "-b", "main", root])
 
-    await expect(createManager(root).defaultBranch()).rejects.toThrow(
+    expect(await failure(createManager(root).defaultBranch())).toContain(
       "This repository has no commits yet. Create an initial commit before using worktrees.",
     )
   })
