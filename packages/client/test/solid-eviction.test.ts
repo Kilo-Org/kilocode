@@ -53,6 +53,7 @@ test("evicts a whole family while preserving metadata and attention", async () =
   }
 })
 
+// kilocode_change start
 test("evicts one session's messages without clearing its family", async () => {
   const setup = fixture()
   try {
@@ -69,6 +70,7 @@ test("evicts one session's messages without clearing its family", async () => {
     setup.dispose()
   }
 })
+// kilocode_change end
 
 test("evicting an in-flight read leaves the next sync invalidated", async () => {
   const requested = Promise.withResolvers<void>()
