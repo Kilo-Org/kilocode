@@ -10,8 +10,8 @@ import ai.kilocode.client.settings.base.SettingsPanel
 import ai.kilocode.client.settings.base.SettingsToolbarAction
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.layout.Stack
-import ai.kilocode.client.ui.list.ActiveListConfig
-import ai.kilocode.client.ui.list.ActiveListSelection
+import ai.kilocode.client.ui.active.ActiveConfig
+import ai.kilocode.client.ui.active.ActiveSelection
 import ai.kilocode.client.ui.list.ActiveListView
 import ai.kilocode.client.ui.picker.PickerListRenderer
 import ai.kilocode.client.ui.picker.PickerPopup
@@ -492,7 +492,7 @@ internal class ProvidersContent(
     private val enable: (ProviderSettingsProviderDto) -> Unit,
     private val edit: (ProviderSettingsProviderDto) -> Unit,
 ) : BaseContentPanel() {
-    private val view = ActiveListView(KiloBundle.message("settings.providers.noMatches"), ActiveListConfig.Preferred) { key, id ->
+    private val view = ActiveListView(KiloBundle.message("settings.providers.noMatches"), ActiveConfig.Preferred) { key, id ->
         activate(key, id)
     }
     private var state = ProviderSettingsDto()
@@ -509,7 +509,7 @@ internal class ProvidersContent(
         ProvidersSettingsUi.LOG.info("provider settings content update: start providers=${state.providers.size} connected=${state.connected.size} disabled=${state.disabled.size} descriptions=$notes")
         this.state = state
         val rows = providerListRows(state, "", disabledRows = busy)
-        view.update(rows, select?.let { ActiveListSelection.Key(it) } ?: ActiveListSelection.Preserve)
+        view.update(rows, select?.let { ActiveSelection.Key(it) } ?: ActiveSelection.Preserve)
         ProvidersSettingsUi.LOG.info("provider settings content update: completed rows=${rows.size}")
     }
 

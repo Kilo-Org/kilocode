@@ -20260,6 +20260,123 @@
         ]
       }
     },
+    "/kilocode/session-host/workspace/continue": {
+      "post": {
+        "tags": ["session-host"],
+        "operationId": "sessionHost.continueWorkspace",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Local worktree continued in Cloud",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionHostContinueWorkspaceResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "InvalidRequestError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/InvalidRequestError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/InvalidRequestError"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "402": {
+            "description": "SessionHostPaymentRequiredError | SessionHostInsufficientBalanceError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/SessionHostPaymentRequiredError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/SessionHostInsufficientBalanceError"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "NotFoundError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "ConflictError | SessionHostContinuationError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/ConflictError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/SessionHostContinuationError"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "UpstreamError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UpstreamError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "ServiceUnavailableError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServiceUnavailableError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Copy the open root sessions of one local worktree into a new hosted workspace. The CLI validates Git, sessions, and sync and stores one durable request body; reuse the same operation key to retry safely.",
+        "summary": "Continue a local worktree in Cloud",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SessionHostContinueWorkspaceInput"
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.sessionHost.continueWorkspace({\n  ...\n})"
+          }
+        ]
+      }
+    },
     "/kilocode/session-host/workspace/profiles": {
       "get": {
         "tags": ["session-host"],
@@ -30036,6 +30153,9 @@
             "$ref": "#/components/schemas/EventSessionHostAvailability1"
           },
           {
+            "$ref": "#/components/schemas/EventSessionHostContinuation1"
+          },
+          {
             "$ref": "#/components/schemas/EventServerInstanceDisposed"
           },
           {
@@ -30397,6 +30517,9 @@
           },
           {
             "$ref": "#/components/schemas/EventSessionHostAvailability"
+          },
+          {
+            "$ref": "#/components/schemas/EventSessionHostContinuation"
           },
           {
             "$ref": "#/components/schemas/EventServerInstanceDisposed"
@@ -33540,6 +33663,9 @@
               },
               {
                 "$ref": "#/components/schemas/EventSessionHostAvailability"
+              },
+              {
+                "$ref": "#/components/schemas/EventSessionHostContinuation"
               },
               {
                 "type": "object",
@@ -36740,6 +36866,38 @@
                       }
                     },
                     "required": ["providerID", "state"],
+                    "additionalProperties": false
+                  }
+                },
+                "required": ["id", "type", "properties"],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "pattern": "^evt_"
+                  },
+                  "type": {
+                    "type": "string",
+                    "enum": ["session.host.continuation"]
+                  },
+                  "properties": {
+                    "type": "object",
+                    "properties": {
+                      "operationKey": {
+                        "type": "string"
+                      },
+                      "directory": {
+                        "type": "string"
+                      },
+                      "stage": {
+                        "type": "string",
+                        "enum": ["checking", "syncing", "creating"]
+                      }
+                    },
+                    "required": ["operationKey", "directory", "stage"],
                     "additionalProperties": false
                   }
                 },
@@ -45397,6 +45555,132 @@
         "required": ["workspace", "session", "messageID", "replayed"],
         "additionalProperties": false
       },
+      "SessionHostContinueWorkspaceInput": {
+        "type": "object",
+        "properties": {
+          "operationKey": {
+            "type": "string",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|[fF]{8}-[fF]{4}-[fF]{4}-[fF]{4}-[fF]{12})$",
+            "format": "uuid"
+          },
+          "directory": {
+            "type": "string",
+            "minLength": 1
+          },
+          "sessionIDs": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "minItems": 1,
+            "maxItems": 10
+          },
+          "activeSessionID": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": ["operationKey", "directory", "sessionIDs", "activeSessionID"],
+        "additionalProperties": false
+      },
+      "SessionHostContinuationAgent": {
+        "type": "object",
+        "properties": {
+          "mode": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 50
+          },
+          "model": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "variant": {
+            "type": "string",
+            "maxLength": 50
+          }
+        },
+        "required": ["mode", "model"],
+        "additionalProperties": false
+      },
+      "SessionHostContinueWorkspaceSession": {
+        "type": "object",
+        "properties": {
+          "source": {
+            "type": "string"
+          },
+          "destination": {
+            "$ref": "#/components/schemas/SessionHostIdentity"
+          },
+          "agent": {
+            "$ref": "#/components/schemas/SessionHostContinuationAgent"
+          },
+          "modeFallback": {
+            "type": "boolean"
+          }
+        },
+        "required": ["source", "destination", "agent", "modeFallback"],
+        "additionalProperties": false
+      },
+      "SessionHostContinueWorkspaceResult": {
+        "type": "object",
+        "properties": {
+          "workspace": {
+            "$ref": "#/components/schemas/SessionHostWorkspaceIdentity"
+          },
+          "sessions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SessionHostContinueWorkspaceSession"
+            }
+          },
+          "active": {
+            "$ref": "#/components/schemas/SessionHostIdentity"
+          },
+          "url": {
+            "type": "string"
+          },
+          "replayed": {
+            "type": "boolean"
+          }
+        },
+        "required": ["workspace", "sessions", "active", "url", "replayed"],
+        "additionalProperties": false
+      },
+      "SessionHostContinuationError": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          },
+          "retryable": {
+            "type": "boolean"
+          }
+        },
+        "required": ["code", "message", "retryable"],
+        "additionalProperties": false
+      },
+      "SessionHostInsufficientBalanceError": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          },
+          "retryable": {
+            "type": "boolean"
+          }
+        },
+        "required": ["code", "message", "retryable"],
+        "additionalProperties": false
+      },
       "SessionHostWorkspaceProfileSummary": {
         "type": "object",
         "properties": {
@@ -46627,6 +46911,9 @@
           },
           {
             "$ref": "#/components/schemas/session.host.availability"
+          },
+          {
+            "$ref": "#/components/schemas/SessionHostContinuation"
           }
         ]
       },
@@ -51796,6 +52083,37 @@
               }
             },
             "required": ["providerID", "state"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["id", "type", "properties"],
+        "additionalProperties": false
+      },
+      "EventSessionHostContinuation": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["session.host.continuation"]
+          },
+          "properties": {
+            "type": "object",
+            "properties": {
+              "operationKey": {
+                "type": "string"
+              },
+              "directory": {
+                "type": "string"
+              },
+              "stage": {
+                "type": "string",
+                "enum": ["checking", "syncing", "creating"]
+              }
+            },
+            "required": ["operationKey", "directory", "stage"],
             "additionalProperties": false
           }
         },
@@ -60960,6 +61278,60 @@
         "required": ["id", "type", "data"],
         "additionalProperties": false
       },
+      "SessionHostContinuation": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^evt_"
+          },
+          "metadata": {
+            "type": "object"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["session.host.continuation"]
+          },
+          "durable": {
+            "type": "object",
+            "properties": {
+              "aggregateID": {
+                "type": "string"
+              },
+              "seq": {
+                "type": "integer"
+              },
+              "version": {
+                "type": "integer"
+              }
+            },
+            "required": ["aggregateID", "seq", "version"],
+            "additionalProperties": false
+          },
+          "location": {
+            "$ref": "#/components/schemas/LocationRef"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "operationKey": {
+                "type": "string"
+              },
+              "directory": {
+                "type": "string"
+              },
+              "stage": {
+                "type": "string",
+                "enum": ["checking", "syncing", "creating"]
+              }
+            },
+            "required": ["operationKey", "directory", "stage"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["id", "type", "data"],
+        "additionalProperties": false
+      },
       "QuestionV2Request": {
         "type": "object",
         "properties": {
@@ -64275,6 +64647,38 @@
               }
             },
             "required": ["providerID", "state"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["id", "type", "properties"],
+        "additionalProperties": false
+      },
+      "EventSessionHostContinuation1": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^evt_"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["session.host.continuation"]
+          },
+          "properties": {
+            "type": "object",
+            "properties": {
+              "operationKey": {
+                "type": "string"
+              },
+              "directory": {
+                "type": "string"
+              },
+              "stage": {
+                "type": "string",
+                "enum": ["checking", "syncing", "creating"]
+              }
+            },
+            "required": ["operationKey", "directory", "stage"],
             "additionalProperties": false
           }
         },

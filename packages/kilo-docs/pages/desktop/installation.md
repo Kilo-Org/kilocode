@@ -22,7 +22,7 @@ Kilo Desktop is distributed as a native installer for your operating system. Dow
 
 Some capabilities rely on tools already installed on your system:
 
-- **Git integration** uses your system `git`. Install git to review changes and switch branches from a chat. See [Git integration](/docs/desktop/features/git).
+- **Git integration** uses your system `git` (version 2.17 or newer). Install git to review changes and switch branches from a chat. See [Git integration](/docs/desktop/features/git).
 - **Conda environments** and **local inference** use a conda runtime that the app provisions for you. See [Conda environments](/docs/desktop/features/environments).
 - **Local inference** also needs a model file in **GGUF format** (`.gguf`) that you provide. Import one from the [Local Model Server](/docs/desktop/settings/ai#local-model-server) settings. See [Local inference](/docs/desktop/features/local-inference).
 

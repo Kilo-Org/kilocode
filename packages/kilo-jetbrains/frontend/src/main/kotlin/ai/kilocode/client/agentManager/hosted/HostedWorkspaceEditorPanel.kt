@@ -13,11 +13,11 @@ import ai.kilocode.client.session.SessionRef
 import ai.kilocode.client.session.SessionManager
 import ai.kilocode.client.session.history.HostedHistoryItem
 import ai.kilocode.client.session.history.HistoryTime
-import ai.kilocode.client.ui.list.ActiveListBadgeCell
+import ai.kilocode.client.ui.active.ActiveBadgeCell
 import ai.kilocode.client.ui.layout.HAlign
 import ai.kilocode.client.ui.layout.VAlign
 import ai.kilocode.client.ui.layout.align
-import ai.kilocode.client.ui.list.ActiveListSelection
+import ai.kilocode.client.ui.active.ActiveSelection
 import ai.kilocode.client.vfs.KiloVfsManager
 import ai.kilocode.rpc.dto.HostedAgentDto
 import ai.kilocode.rpc.dto.HostedStartSessionDto
@@ -66,7 +66,7 @@ class HostedWorkspaceEditorPanel @RequiresEdt constructor(
     private val cs = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val empty = JBLabel(KiloBundle.message("hosted.workspace.empty"))
     private val header = WorkspaceSessionHeader()
-    private val compute = ActiveListBadgeCell()
+    private val compute = ActiveBadgeCell()
     private val price = JBLabel().apply { isVisible = false }
     private val newSession = NewSessionAction()
     private val delete = DeleteAction()
@@ -282,7 +282,7 @@ class HostedWorkspaceEditorPanel @RequiresEdt constructor(
         } else if (empty.text != KiloBundle.message("hosted.workspace.empty")) {
             empty.text = KiloBundle.message("hosted.workspace.empty")
         }
-        list.update(rows, route?.let { ActiveListSelection.Key(it.id) } ?: ActiveListSelection.Preserve)
+        list.update(rows, route?.let { ActiveSelection.Key(it.id) } ?: ActiveSelection.Preserve)
         syncToggle(sessions.mapTo(mutableSetOf()) { it.id }, kinds, current)
         if (!select || initialSession == null) return
         if (initialSession.id == current) return

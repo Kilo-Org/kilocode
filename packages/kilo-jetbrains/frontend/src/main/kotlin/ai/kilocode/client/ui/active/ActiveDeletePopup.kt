@@ -1,4 +1,4 @@
-package ai.kilocode.client.ui.list
+package ai.kilocode.client.ui.active
 
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.ui.UiStyle
@@ -11,34 +11,34 @@ import com.intellij.ui.components.JBLabel
 import com.intellij.util.ui.UIUtil
 import javax.swing.JComponent
 
-data class ActiveListDeleteOptions(
+data class ActiveDeleteOptions(
     val message: String,
     val detail: String? = null,
     val gate: String? = null,
     val button: String = KiloBundle.message("common.delete"),
 )
 
-internal fun activeListDeleteContent(
-    opts: ActiveListDeleteOptions,
+internal fun activeDeleteContent(
+    opts: ActiveDeleteOptions,
     hide: () -> Unit,
     confirm: (Boolean) -> Unit,
 ): JComponent {
-    return activeListDeletePopup(opts, hide, confirm).component
+    return activeDeletePopup(opts, hide, confirm).component
 }
 
-internal fun showActiveListDeletePopup(
+internal fun showActiveDeletePopup(
     anchor: RelativePoint,
-    opts: ActiveListDeleteOptions,
+    opts: ActiveDeleteOptions,
     confirm: (Boolean) -> Unit,
 ): Balloon {
     lateinit var balloon: Balloon
-    val popup = activeListDeletePopup(opts, hide = { balloon.hide(true) }, confirm)
-    balloon = showActiveListPopup(anchor, popup)
+    val popup = activeDeletePopup(opts, hide = { balloon.hide(true) }, confirm)
+    balloon = showActivePopup(anchor, popup)
     return balloon
 }
 
-private fun activeListDeletePopup(
-    opts: ActiveListDeleteOptions,
+private fun activeDeletePopup(
+    opts: ActiveDeleteOptions,
     hide: () -> Unit,
     confirm: (Boolean) -> Unit,
 ): ActiveListPopup {
@@ -54,7 +54,7 @@ private fun activeListDeletePopup(
         }
         gate?.let { next(it) }
     }
-    val popup = activeListPopup(
+    val popup = activePopup(
         body = body,
         button = opts.button,
         enabled = { gate?.isSelected ?: true },

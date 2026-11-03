@@ -87,6 +87,7 @@ export const dict = {
   "agentManager.worktree.defaultBaseBranch": "Standard basisgren",
   "agentManager.worktree.defaultBaseBranchAuto": "Automatisk registrering",
   "agentManager.worktree.copyPath": "Kopier sti",
+  "agentManager.worktree.continueInCloud": "Continue in Cloud",
   "agentManager.worktree.openInVscode": "Åbn i VS Code",
   "agentManager.worktree.rename": "Omdøb",
   "agentManager.worktree.pin": "Fastgør",

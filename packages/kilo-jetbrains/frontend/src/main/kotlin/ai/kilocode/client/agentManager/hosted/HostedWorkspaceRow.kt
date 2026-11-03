@@ -3,13 +3,14 @@ package ai.kilocode.client.agentManager.hosted
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.agentManager.worktree.WorktreeIcons
 import ai.kilocode.client.session.SessionActivityKind
-import ai.kilocode.client.ui.list.ActiveListBadge
-import ai.kilocode.client.ui.list.ActiveListItem
+import ai.kilocode.client.ui.active.ActiveBadge
+import ai.kilocode.client.ui.active.ActiveItem
+import ai.kilocode.client.ui.list.ActiveSection
 import ai.kilocode.rpc.dto.HostedWorkspaceDto
 import ai.kilocode.rpc.dto.HostedWorkspaceStatusDto
 import javax.swing.Icon
 
-/** A Cloud workspace row in the Agent Manager list, distinct from local worktrees. */
+/** A Cloud workspace row in the Agent Manager tree, distinct from local worktrees. */
 internal data class HostedWorkspaceRowData(
     val dto: HostedWorkspaceDto,
     val status: HostedWorkspaceStatusDto?,
@@ -19,7 +20,7 @@ internal data class HostedWorkspaceRowData(
 
 internal class HostedWorkspaceRow(
     val data: HostedWorkspaceRowData,
-) : ActiveListItem {
+) : ActiveSection {
     private val dto get() = data.dto
     private val status get() = data.status
 
@@ -41,7 +42,7 @@ internal class HostedWorkspaceRow(
         get() = listOfNotNull(dto.name, dto.repositoryUrl, dto.branch, dto.ref.providerID, dto.ref.workspaceID)
             .joinToString(" ")
     override val progress: String? get() = data.progress
-    override val badges: List<ActiveListBadge>
+    override val badges: List<ActiveBadge>
         get() = if (data.progress == null) listOf(HostedWorkspaceStatus.of(status).badge()) else emptyList()
 
     override fun equals(other: Any?): Boolean {

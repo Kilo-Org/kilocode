@@ -14,7 +14,7 @@ import ai.kilocode.client.testing.TEST_WAIT_MS
 import ai.kilocode.client.testing.TestCoroutines
 import ai.kilocode.client.testing.fire
 import ai.kilocode.client.testing.pumpEdt
-import ai.kilocode.client.ui.list.ActiveListItem
+import ai.kilocode.client.ui.active.ActiveItem
 import ai.kilocode.client.ui.list.activeListCellBounds
 import ai.kilocode.rpc.dto.ConfigDto
 import ai.kilocode.rpc.dto.KiloAppStateDto
@@ -329,7 +329,7 @@ class RulesSettingsUiTest : BasePlatformTestCase() {
         app._state.value = state
     }
 
-    private fun click(list: JBList<ActiveListItem>, panel: RulesSettingsUi, key: String, id: String) {
+    private fun click(list: JBList<ActiveItem>, panel: RulesSettingsUi, key: String, id: String) {
         edt {
             list.size = Dimension(520, 320)
             list.doLayout()
@@ -340,7 +340,7 @@ class RulesSettingsUiTest : BasePlatformTestCase() {
         }
     }
 
-    private fun doubleClick(list: JBList<ActiveListItem>, panel: RulesSettingsUi, key: String) {
+    private fun doubleClick(list: JBList<ActiveItem>, panel: RulesSettingsUi, key: String) {
         edt {
             list.size = Dimension(520, 320)
             list.doLayout()
@@ -351,13 +351,13 @@ class RulesSettingsUiTest : BasePlatformTestCase() {
         }
     }
 
-    private fun rows(panel: RulesSettingsUi): List<ActiveListItem> {
+    private fun rows(panel: RulesSettingsUi): List<ActiveItem> {
         val list = rulesList(panel)
         val model = list.model
         return (0 until model.size).map { model.getElementAt(it) }
     }
 
-    private fun rulesList(panel: RulesSettingsUi) = components(panel).filterIsInstance<JBList<ActiveListItem>>().single()
+    private fun rulesList(panel: RulesSettingsUi) = components(panel).filterIsInstance<JBList<ActiveItem>>().single()
 
     private fun bannerIntro(info: SettingsInfo): String {
         val pane = com.intellij.util.ui.UIUtil.findComponentOfType(info, javax.swing.JEditorPane::class.java) ?: error("no banner text")
@@ -366,18 +366,18 @@ class RulesSettingsUiTest : BasePlatformTestCase() {
 
     private fun toggle(panel: RulesSettingsUi): SettingsToggle = components(panel).filterIsInstance<SettingsToggle>().single()
 
-    private fun scrollFor(panel: RulesSettingsUi, list: JBList<ActiveListItem>) = components(panel)
+    private fun scrollFor(panel: RulesSettingsUi, list: JBList<ActiveItem>) = components(panel)
         .filterIsInstance<JBScrollPane>()
         .single { pane -> pane.viewport.view === list.parent }
 
     private fun center(rect: java.awt.Rectangle) = Point(rect.x + rect.width / 2, rect.y + rect.height / 2)
 
-    private fun click(list: JBList<ActiveListItem>, point: Point) {
+    private fun click(list: JBList<ActiveItem>, point: Point) {
         fire(list, mouse(list, MouseEvent.MOUSE_PRESSED, point))
         fire(list, mouse(list, MouseEvent.MOUSE_RELEASED, point))
     }
 
-    private fun mouse(list: JBList<ActiveListItem>, id: Int, point: Point, count: Int = 1) = MouseEvent(
+    private fun mouse(list: JBList<ActiveItem>, id: Int, point: Point, count: Int = 1) = MouseEvent(
         list,
         id,
         System.currentTimeMillis(),

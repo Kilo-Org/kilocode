@@ -86,6 +86,7 @@ export const dict = {
   "agentManager.worktree.defaultBaseBranch": "الفرع الأساسي الافتراضي",
   "agentManager.worktree.defaultBaseBranchAuto": "اكتشاف تلقائي",
   "agentManager.worktree.copyPath": "نسخ المسار",
+  "agentManager.worktree.continueInCloud": "Continue in Cloud",
   "agentManager.worktree.openInVscode": "فتح في VS Code",
   "agentManager.worktree.rename": "إعادة تسمية",
   "agentManager.worktree.pin": "تثبيت",

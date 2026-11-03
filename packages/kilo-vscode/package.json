@@ -466,6 +466,11 @@
         "category": "Kilo Code"
       },
       {
+        "command": "kilo-code.new.showOpenTabs",
+        "title": "Show Open Tabs",
+        "category": "Kilo Code"
+      },
+      {
         "command": "kilo-code.new.cycleAgentMode",
         "title": "Cycle Agent Mode",
         "category": "Kilo Code"
@@ -1370,7 +1375,7 @@
     "@axe-core/playwright": "4.11.3",
     "@babel/core": "^7.28.4",
     "@babel/preset-typescript": "^7.27.1",
-    "@playwright/test": "1.57.0",
+    "@playwright/test": "1.64.1",
     "@storybook/addon-a11y": "10.6.2",
     "@storybook/addon-docs": "10.6.2",
     "@types/diff": "^6.0.0",
@@ -1429,8 +1434,8 @@
     "js-tiktoken": "^1.0.18",
     "lru-cache": "^11.0.2",
     "marked": "catalog:",
-    "minimatch": "10.2.6",
-    "playwright-core": "1.57.0",
+    "minimatch": "11.0.1",
+    "playwright-core": "1.64.1",
     "quick-lru": "^7.0.0",
     "simple-git": "4.0.2",
     "solid-js": "^1.9.11",
