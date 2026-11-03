@@ -9,6 +9,7 @@ import com.intellij.ui.popup.list.SelectablePanel
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
 import java.awt.BorderLayout
+import java.awt.Color
 import javax.swing.JComponent
 import javax.swing.JList
 import javax.swing.border.Border
@@ -30,12 +31,29 @@ internal class PickerRow : SelectablePanel() {
     fun update(list: JList<*>, selected: Boolean, focused: Boolean) {
         background = list.background
         selectionColor = if (selected) UIUtil.getListBackground(true, focused) else null
+        // Popup list rows keep the platform inset. PickerListRenderer.trailingInset mirrors it for
+        // hit testing, and the popup header pads with the same value so row content stays aligned.
         if (NewUI.isEnabled()) {
             PopupUtil.configListRendererFlexibleHeight(this)
             return
         }
         border = JBUI.Borders.empty()
         selectionArc = 0
+        selectionInsets = JBUI.emptyInsets()
+    }
+
+    /**
+     * Container-neutral update for hosts that already know their backdrop and selection color, such
+     * as the native tree, where the tree itself paints the selection and the row must stay transparent.
+     */
+    fun update(background: Color?, selectionColor: Color?, opaque: Boolean, paintSelection: Boolean) {
+        this.background = background
+        isOpaque = opaque
+        this.selectionColor = if (paintSelection) selectionColor else null
+        // Active rows supply their own compact padding. The popup flexible border adds another
+        // platform inset on both sides, which stacks with the row padding and leaves a wide gutter.
+        border = JBUI.Borders.empty()
+        selectionArc = JBUI.CurrentTheme.Popup.Selection.ARC.get()
         selectionInsets = JBUI.emptyInsets()
     }
 }
