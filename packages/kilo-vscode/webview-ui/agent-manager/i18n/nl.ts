@@ -514,6 +514,7 @@ export const dict = {
   "agentManager.intro.guide": "Lees de handleiding",
   "agentManager.intro.dismiss": "Introductie overslaan",
   "agentManager.intro.reopen": "Hoe Agent Manager werkt",
+  "agentManager.splash.preview.label": "Voorbeeld van Agent Manager-zijbalk",
   "agentManager.splash.eyebrow": "AGENT MANAGER",
   "agentManager.splash.hide": "Verbergen",
   "agentManager.splash.hideLabel": "Introductie van Agent Manager verbergen",

@@ -507,6 +507,7 @@ export const dict = {
   "agentManager.intro.guide": "راهنما را بخوانید",
   "agentManager.intro.dismiss": "رد کردن مقدمه",
   "agentManager.intro.reopen": "Agent Manager چگونه کار می‌کند",
+  "agentManager.splash.preview.label": "پیش‌نمایش نوار کناری Agent Manager",
   "agentManager.splash.eyebrow": "AGENT MANAGER",
   "agentManager.splash.hide": "پنهان کردن",
   "agentManager.splash.hideLabel": "پنهان کردن معرفی Agent Manager",

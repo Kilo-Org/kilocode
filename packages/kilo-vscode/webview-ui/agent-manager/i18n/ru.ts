@@ -509,6 +509,7 @@ export const dict = {
   "agentManager.intro.guide": "Читать руководство",
   "agentManager.intro.dismiss": "Пропустить введение",
   "agentManager.intro.reopen": "Как работает Agent Manager",
+  "agentManager.splash.preview.label": "Предпросмотр боковой панели Agent Manager",
   "agentManager.splash.eyebrow": "AGENT MANAGER",
   "agentManager.splash.hide": "Скрыть",
   "agentManager.splash.hideLabel": "Скрыть знакомство с Agent Manager",

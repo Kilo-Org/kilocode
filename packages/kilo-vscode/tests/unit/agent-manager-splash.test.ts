@@ -3,6 +3,9 @@ import { createRoot } from "solid-js"
 import { createFold } from "../../webview-ui/agent-manager/splash/fold"
 import { splash } from "../../webview-ui/agent-manager/splash/gate"
 import { navigate, start, wrap } from "../../webview-ui/agent-manager/splash/carousel-logic"
+import { frame } from "../../webview-ui/agent-manager/splash/frame"
+import { examples, type Row } from "../../webview-ui/agent-manager/splash/examples"
+import { fleet, rowId } from "../../webview-ui/agent-manager/splash/fleet"
 import { isKnownRootSession, LOCAL } from "../../webview-ui/agent-manager/navigate"
 import { backgroundCreated } from "../../webview-ui/agent-manager/project/local-tabs"
 import { createProjectStore } from "../../webview-ui/agent-manager/project/store"
@@ -178,5 +181,162 @@ describe("Agent Manager splash example carousel", () => {
     expect(navigate("Home", 3, 5, false)).toBe(0)
     expect(navigate("End", 1, 5, true)).toBe(4)
     expect(navigate("ArrowDown", 1, 5, false)).toBeUndefined()
+  })
+})
+
+describe("Agent Manager splash preview framing", () => {
+  // A 300px list with a 40px sticky project header and a 28px fade leaves rows 40..272 readable.
+  const view = { height: 300, fade: 28, header: 40 }
+
+  it("keeps the current scroll when every marked row is already readable", () => {
+    expect(frame({ ...view, top: 60, bottom: 200, active: { top: 60, bottom: 100 }, current: 0 })).toBe(0)
+  })
+
+  it("scrolls the least distance that shows every marked row", () => {
+    expect(frame({ ...view, top: 120, bottom: 340, active: { top: 120, bottom: 160 }, current: 0 })).toBe(68)
+    expect(frame({ ...view, top: 60, bottom: 200, active: { top: 60, bottom: 100 }, current: 100 })).toBe(20)
+  })
+
+  it("reveals only the active row when the marked rows do not fit", () => {
+    const rows = { ...view, top: 0, bottom: 600 }
+    expect(frame({ ...rows, active: { top: 500, bottom: 540 }, current: 0 })).toBe(268)
+    expect(frame({ ...rows, active: { top: 100, bottom: 140 }, current: 268 })).toBe(60)
+  })
+
+  it("never scrolls above the top", () => {
+    expect(frame({ ...view, top: 10, bottom: 50, active: { top: 10, bottom: 50 }, current: 30 })).toBe(0)
+  })
+})
+
+describe("Agent Manager splash markers", () => {
+  it("resolves every feature row to a sidebar id rendered by its fleet", () => {
+    for (const example of examples) {
+      const ids = new Set(
+        fleet(example).flatMap((row) => [
+          row.project.id,
+          ...row.state.worktrees.flatMap((wt) => [wt.id, ...(wt.groupId ? [wt.groupId] : [])]),
+          ...(row.state.sections ?? []).map((section) => section.id),
+        ]),
+      )
+      for (const feature of example.features) expect(ids.has(rowId(example, feature.row))).toBe(true)
+    }
+  })
+
+  it("leaves the live sidebar unchanged without a marker and badges it with one", () => fixture("sidebar-marker"))
+})
+
+describe("Agent Manager splash feature rows", () => {
+  it("keeps the prototype's fixture rows in order", () => {
+    expect(
+      examples.map((example) =>
+        example.fixture.projects.flatMap((project) =>
+          project.rows.flatMap((row) =>
+            row.kind === "session"
+              ? row.session.title
+              : row.kind === "section"
+                ? [row.section.name, ...row.section.sessions.map((session) => session.title)]
+                : row.kind === "versions"
+                  ? row.sessions.map((session) => session.title)
+                  : row.branch,
+          ),
+        ),
+      ),
+    ).toEqual([
+      ["Usage billing: metering endpoint", "Usage billing: pricing page", "Usage billing: queue and alarms"],
+      [
+        "main",
+        "ORCHESTRATE",
+        "Orchestrator · scheduler latency pass",
+        "PATCHES",
+        "Reduce run-queue lock contention",
+        "Batch io_uring submissions",
+        "Pin hot kthreads to isolated cores",
+      ],
+      [
+        "IMPLEMENT",
+        "Rate-limit the login endpoint",
+        "Paginate the audit log",
+        "OPS",
+        "Merge Captain",
+        "Issue Delegator",
+        "Adversarial Reviewer",
+      ],
+      ["main", "Cut cold start time · Kilo Auto", "Cut cold start time · Claude", "Cut cold start time · GPT"],
+      [
+        "main",
+        "Logo direction · geometric",
+        "Logo direction · wordmark",
+        "Logo direction · monogram",
+        "Color and type tokens",
+        "Social card templates",
+      ],
+    ])
+    expect(examples.map((example) => fleet(example).map((row) => row.state.worktrees.length))).toEqual([
+      [1, 1, 1],
+      [4],
+      [5],
+      [3],
+      [5],
+    ])
+  })
+
+  it("resolves every feature row to exactly one fixture row", () => {
+    for (const example of examples) {
+      expect(example.features).toHaveLength(3)
+      const resolve = (target: Row) => {
+        const projects = example.fixture.projects.filter((project) => project.id === target.project)
+        expect(projects).toHaveLength(1)
+        const project = projects.at(0)!
+        if (target.kind === "project") return projects
+        if (target.kind === "section") {
+          return project.rows.filter((row) => row.kind === "section" && row.section.id === target.section)
+        }
+        if (target.kind === "group") {
+          return project.rows.filter((row) => row.kind === "versions" && row.id === target.group)
+        }
+        return project.rows
+          .flatMap((row) =>
+            row.kind === "session"
+              ? [row.session]
+              : row.kind === "section"
+                ? row.section.sessions
+                : row.kind === "versions"
+                  ? row.sessions
+                  : [],
+          )
+          .filter((session) => session.id === target.session)
+      }
+      for (const feature of example.features) expect(resolve(feature.row)).toHaveLength(1)
+    }
+  })
+
+  it("targets the prototype's project, section, version group and sessions", () => {
+    expect(examples.map((example) => example.features.map((feature) => feature.row))).toEqual([
+      [
+        { kind: "project", project: "billing-api" },
+        { kind: "session", project: "billing-api", session: "usage-metering" },
+        { kind: "session", project: "web-app", session: "pricing-page" },
+      ],
+      [
+        { kind: "session", project: "kernel-sched", session: "orchestrator" },
+        { kind: "session", project: "kernel-sched", session: "rq-lock" },
+        { kind: "session", project: "kernel-sched", session: "kthread-pin" },
+      ],
+      [
+        { kind: "session", project: "api", session: "merge-captain" },
+        { kind: "section", project: "api", section: "implement" },
+        { kind: "session", project: "api", session: "adversarial-reviewer" },
+      ],
+      [
+        { kind: "group", project: "storefront", group: "cold-start" },
+        { kind: "session", project: "storefront", session: "cold-start-a" },
+        { kind: "session", project: "storefront", session: "cold-start-b" },
+      ],
+      [
+        { kind: "group", project: "brand-kit", group: "logo" },
+        { kind: "session", project: "brand-kit", session: "tokens" },
+        { kind: "session", project: "brand-kit", session: "social-cards" },
+      ],
+    ])
   })
 })

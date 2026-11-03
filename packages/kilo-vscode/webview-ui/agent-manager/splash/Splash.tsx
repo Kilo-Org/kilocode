@@ -6,10 +6,11 @@ import { useLanguage } from "../../src/context/language"
 import type { SessionInfo } from "../../src/types/messages"
 import { examples } from "./examples"
 import { Carousel } from "./Carousel"
+import { Preview } from "./Preview"
 import "./splash.css"
 
 /** Every example's numbered features share one grid cell, so the height never changes. */
-function Features(props: { selected: Accessor<number> }) {
+function Features(props: { selected: Accessor<number>; onHover: (index: number | undefined) => void }) {
   const { t } = useLanguage()
   return (
     <div class="am-splash-feature-stack">
@@ -23,7 +24,11 @@ function Features(props: { selected: Accessor<number> }) {
           >
             <For each={example.features}>
               {(feature, position) => (
-                <li class="am-splash-feature">
+                <li
+                  class="am-splash-feature"
+                  onMouseEnter={() => props.onHover(position())}
+                  onMouseLeave={() => props.onHover(undefined)}
+                >
                   <span class="am-splash-feature-marker" aria-hidden="true">
                     {position() + 1}
                   </span>
@@ -52,7 +57,12 @@ export function SplashExpanded(props: {
   const { t } = useLanguage()
   const title = createUniqueId()
   const [selected, setSelected] = createSignal(props.initialExample ?? 0)
+  const [hover, setHover] = createSignal<number>()
   const example = () => examples.at(selected())!
+  const select = (index: number) => {
+    setSelected(index)
+    setHover(undefined)
+  }
   return (
     <section class="am-splash" aria-labelledby={title}>
       <article class="am-splash-hero">
@@ -75,8 +85,8 @@ export function SplashExpanded(props: {
           {t("agentManager.splash.title")}
         </h2>
         <p class="am-splash-subtitle">{t("agentManager.splash.subtitle")}</p>
-        <Carousel selected={selected} onSelect={setSelected} />
-        <Features selected={selected} />
+        <Carousel selected={selected} onSelect={select} />
+        <Features selected={selected} onHover={setHover} />
         <div class="am-splash-actions">
           <Show when={props.git} fallback={<p>{t("agentManager.setup.error.not_git_repo")}</p>}>
             <Button variant="primary" onClick={props.onCreateWorktree}>
@@ -90,6 +100,7 @@ export function SplashExpanded(props: {
             </button>
           </span>
         </div>
+        <Preview selected={selected} hover={hover} />
         <div class="sr-only" role="status" aria-live="polite" aria-atomic="true">
           {t(example().title)} — {t(example().pitch)}
         </div>

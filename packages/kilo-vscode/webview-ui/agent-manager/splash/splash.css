@@ -1,5 +1,6 @@
 /* The splash switches to its wide layout from 880px of its own width. */
 .am-splash {
+  --am-splash-fade: 28px;
   --am-splash-card-gap: 10px;
   width: 100%;
   container: am-splash / inline-size;
@@ -10,11 +11,12 @@
 }
 
 .am-splash-hero {
+  --am-splash-preview-height: 340px;
   max-width: 1120px;
   margin: 0 auto;
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  grid-template-areas: "head" "title" "sub" "nav" "pitch" "features" "cta";
+  grid-template-areas: "head" "title" "sub" "nav" "pitch" "sidebar" "features" "cta";
   gap: 12px;
   padding: 16px;
   border: calc(var(--spacing) * 0.25) solid var(--border-weak-base);
@@ -236,7 +238,7 @@
   overflow-wrap: break-word;
 }
 
-/* Numbered features */
+/* Numbered features beside the preview */
 
 .am-splash-feature-stack {
   grid-area: features;
@@ -265,6 +267,12 @@
   font-size: var(--kilo-font-size-12);
 }
 
+.am-splash-feature:hover {
+  background: var(--surface-base-hover);
+  border-radius: var(--radius-sm);
+  box-shadow: 0 0 0 1px var(--am-splash-accent);
+}
+
 .am-splash-feature-text {
   min-width: 0;
   overflow-wrap: break-word;
@@ -283,7 +291,8 @@
   line-height: 1.45;
 }
 
-.am-splash-feature-marker {
+.am-splash-feature-marker,
+.am-splash-row-marker {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -300,6 +309,10 @@
 
 .am-splash-feature-marker {
   margin-top: 1px;
+}
+
+.am-splash-row-marker-hover {
+  box-shadow: var(--am-splash-ring);
 }
 
 /* Actions */
@@ -355,10 +368,61 @@
   outline-offset: 2px;
 }
 
+/* Preview: the real sidebar, inert, cropped to a fixed height with a bottom fade */
+
+.am-splash-preview {
+  grid-area: sidebar;
+  align-self: start;
+  min-width: 0;
+}
+
+.am-splash-preview-card {
+  height: var(--am-splash-preview-height);
+  padding: calc(var(--spacing) * 2);
+  border: calc(var(--spacing) * 0.25) solid var(--border-weak-base);
+  border-radius: var(--radius-md);
+  background: var(--surface-base);
+  font-size: var(--font-size-base);
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+}
+
+.am-splash-preview-fleet,
+.am-splash-preview-card .am-projects {
+  height: 100%;
+}
+
+.am-splash-preview-card .am-projects-footer {
+  display: none;
+}
+
+/* The bottom padding lets framing lift the last rows above the fade. */
+.am-splash-preview-card .am-projects-list {
+  padding-bottom: var(--am-splash-fade);
+  scrollbar-width: none;
+  mask-image: linear-gradient(to bottom, black calc(100% - var(--am-splash-fade)), transparent);
+}
+
+.am-splash-legend {
+  display: none;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  padding: 12px 4px 0;
+  color: var(--text-weak);
+  font-size: var(--kilo-font-size-12);
+}
+
+.am-splash-legend > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
 /* Tones: chart hues mixed toward text weight so small tags and inverse numbers stay readable. */
 
 .am-splash [data-tone] {
   --am-splash-tone: color-mix(in srgb, var(--am-splash-accent, var(--text-base)) 25%, var(--text-base));
+  --am-splash-ring: 0 0 0 2px var(--surface-base), 0 0 0 4px var(--am-splash-accent);
 }
 
 .am-splash [data-tone="crossStack"] {
@@ -383,6 +447,11 @@
 
 @container am-splash (width >= 880px) {
   .am-splash-hero {
+    --am-splash-preview-height: 428px;
+    grid-template-columns: minmax(0, 1fr) 360px;
+    grid-template-areas: "head sidebar" "title sidebar" "sub sidebar" "nav sidebar" "pitch sidebar" "features sidebar" "fill sidebar" "cta sidebar";
+    grid-template-rows: auto auto auto auto auto auto 1fr auto;
+    column-gap: 30px;
     row-gap: 14px;
     padding: 24px 26px;
   }
@@ -423,6 +492,10 @@
   .am-splash-feature-description::before {
     content: " · ";
     color: var(--text-weaker);
+  }
+
+  .am-splash-legend {
+    display: flex;
   }
 }
 

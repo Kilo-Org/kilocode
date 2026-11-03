@@ -500,6 +500,7 @@ export const dict = {
   "agentManager.intro.guide": "가이드 읽기",
   "agentManager.intro.dismiss": "소개 건너뛰기",
   "agentManager.intro.reopen": "Agent Manager 작동 방식",
+  "agentManager.splash.preview.label": "Agent Manager 사이드바 미리보기",
   "agentManager.splash.eyebrow": "AGENT MANAGER",
   "agentManager.splash.hide": "숨기기",
   "agentManager.splash.hideLabel": "Agent Manager 소개 숨기기",

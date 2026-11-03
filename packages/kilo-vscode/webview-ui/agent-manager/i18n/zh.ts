@@ -487,6 +487,7 @@ export const dict = {
   "agentManager.intro.guide": "阅读指南",
   "agentManager.intro.dismiss": "跳过介绍",
   "agentManager.intro.reopen": "Agent Manager 的工作原理",
+  "agentManager.splash.preview.label": "Agent Manager 侧边栏预览",
   "agentManager.splash.eyebrow": "AGENT MANAGER",
   "agentManager.splash.hide": "隐藏",
   "agentManager.splash.hideLabel": "隐藏 Agent Manager 简介",
