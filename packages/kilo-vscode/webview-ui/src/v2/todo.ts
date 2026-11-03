@@ -13,13 +13,18 @@ export function useTodoSource(id: Accessor<string | undefined>): TodoDockSource 
     return todoState(messages, session ? v2.data.session.get(session)?.revert : undefined)
   })
   // The initial sync loads a short window of recent messages. If no write is in
-  // that window, the current list is older, so load the rest once. This runs at
-  // most once per session because `more` turns false after `all` completes.
+  // that window, the current list is older, so load the rest once. The set keeps
+  // a failed load from retrying on every streamed message.
+  const paged = new Set<string>()
   createEffect(() => {
     const session = id()
-    if (!session) return
+    if (!session || paged.has(session)) return
+    const messages = v2.data.session.message.list(session)
+    // Nothing is loaded yet. The sync that follows will run this effect again.
+    if (messages.length === 0) return
+    paged.add(session)
     const revert = v2.data.session.get(session)?.revert
-    if (hasTodoWrite(v2.data.session.message.list(session), revert)) return
+    if (hasTodoWrite(messages, revert)) return
     if (!v2.data.session.message.more(session)) return
     void v2.data.session.message.loadMore(session, { all: true })
   })
