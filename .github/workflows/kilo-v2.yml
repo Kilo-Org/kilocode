@@ -415,6 +415,11 @@ jobs:
         working-directory: packages/kilo-cli
         run: bun test
 
+      # Hard-fails when a user-visible OpenCode string on the CLI/TUI/OAuth surface is not rebranded.
+      - name: Audit branding coverage
+        working-directory: packages/kilo-cli
+        run: bun run branding:audit
+
       - name: Typecheck the VS Code extension
         working-directory: packages/kilo-vscode
         run: bun run typecheck

@@ -158,24 +158,34 @@ surface the current list already enumerates), not the whole tree. Scope lives in
 `rules.ts` as an explicit glob/path set so the audit and the loader share one
 source of truth. Files entirely outside scope are passed through unchanged.
 
-## 5. Coverage audit (`script/branding-audit.ts`)
+## 5. Coverage audit (`packages/kilo-cli/script/branding-audit.ts`) — done
 
 The structural fix for hidden regressions. The audit:
 
-1. resolves the pinned upstream commit (`pinned()` from
-   `script/upstream/utils/upstream.ts`), with no network;
-2. reads the in-scope files at that pin;
-3. runs the rule engine + structural transforms;
-4. reports any residual user-visible `OpenCode` / `opencode` / `opencode.ai`
-   token that remains in a transformable span and is not in `PROTECTED`;
-5. exits non-zero when it finds residuals, with file:line and the offending
-   span.
+1. reads the committed **working tree** (not the pinned upstream tree) for the
+   user-facing surface — `git ls-files` over `packages/{cli,tui}/src` and
+   `packages/core/src/oauth`, excluding tests, `.d.ts`, fixtures, snapshots,
+   storybook and `kilocode/`. Working tree, not pin, because it must see what
+   actually ships: a shared file Kilo patches (for example `mcp/add.ts`, whose
+   `kilocode_change(config)` seam uses `KiloConfigFiles`) must be audited as
+   patched, not as upstream wrote it — auditing the pin produced false positives
+   there;
+2. for each file runs the rule engine's `userVisibleSpans` + `brandSpan`;
+3. reports two failure modes: **missing interception** (a non-intercepted file
+   the rules would brand → its OpenCode ships raw) and **rule gap** (an
+   intercepted file where a user-visible OpenCode/opencode token survives the
+   rules; near-impossible by construction, kept as a tripwire);
+4. suppresses reviewed non-branding files via a file-level allowlist
+   (`branding-audit-allow.ts`), each with a reason, and warns on a stale entry;
+5. exits non-zero on any unexpected finding, with `file:line:col` and the span.
 
-Wiring: a package script (`branding:audit`), a `bun test` wrapper so it runs
-with the suite, and a step in `.github/workflows/kilo-v2.yml`. It also becomes a
-documented step in the sync checklist (`.kilo/agent/upstream-merge.md` /
-`v2-migration` skill "Branding and upstream drift"), replacing the "proposed"
-audit the skills currently describe.
+Wiring: the `branding:audit` package script, the `branding-audit.test.ts`
+"baseline is clean" integration assertion, and an explicit step in the
+`kilo-packages` job of `.github/workflows/kilo-v2.yml` (the `shared` job has no
+dependencies installed, so the audit — which needs Babel — runs in
+`kilo-packages`). The sync checklist in the `v2-migration` and
+`v2-feature-placement` skills now points at the audit instead of calling it
+"proposed".
 
 Net effect on the two failure modes:
 
@@ -218,9 +228,15 @@ engine`. A byte-for-byte parity test proved the new pipeline reproduces the
    plus the preserved protected-anchor and end-to-end compile tests. The phase-1
    parity test and the `legacy-branding` fixture were deleted, their
    behaviour-preserving evidence captured in the phase-1 commit.
-3. **Audit.** Add `branding-audit.ts`, its test, the package script, CI step,
-   and sync-checklist doc update. Widen interception from the `files` list to the
-   broader glob (decision 1) here.
+3. **Audit. (done)** Added `packages/kilo-cli/script/branding-audit.ts`, its test,
+   the `branding:audit` package script, the `kilo-packages` CI step, and the
+   sync-checklist updates in the `v2-migration` / `v2-feature-placement` skills.
+   The broader glob (decision 1) is the audit's scan scope (`packages/{cli,tui}/src`
+   - `packages/core/src/oauth`); the loader still intercepts the curated `files`
+     set, and the audit's hard-fail forces that set to stay complete. This also
+     closes phase-2 review findings 1 and 2 (unverified branding on non-compile-tested
+     files is now a checked failure). The audit reads the working tree, not the pin
+     (see §5).
 4. **Delete dead data.** Update `migration-tracking/progress/dispositions.json`
    (the `oauth/page.ts` note and any branding cell notes) to describe the engine;
    update the branding description in the `v2-migration` / `v2-feature-placement`

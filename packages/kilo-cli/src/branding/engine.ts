@@ -5,12 +5,21 @@ import { KiloBrandingRules } from "./rules"
 
 type Node = { type: string; start?: number | null; end?: number | null; [key: string]: unknown }
 
-// Rebrand the user-visible text of one module. The source is parsed so the
-// rules only ever touch string literals, template text and JSX text; every
-// other byte — imports, identifiers, structure — is preserved exactly by
-// slicing the original source at the span offsets rather than re-printing the
-// AST.
-export function brandText(filePath: string, source: string): string {
+/** One unprotected user-visible text span: a string-literal inner, template text, or JSX text. */
+export interface Span {
+  start: number
+  end: number
+  raw: string
+  bareStringLiteral: boolean
+}
+
+/**
+ * Parse a module and return its normalized source and every unprotected
+ * user-visible text span. This is the one place that decides what counts as
+ * branding-eligible text (string literals, template text, JSX text, minus the
+ * protected code contexts), shared by the rebrander and the branding audit.
+ */
+export function userVisibleSpans(filePath: string, source: string): { normalized: string; spans: Span[] } {
   const normalized = source.replaceAll("\r\n", "\n")
   const file = parseSync(normalized, {
     filename: filePath,
@@ -22,22 +31,27 @@ export function brandText(filePath: string, source: string): string {
   const program = (file as { program?: Node } | null)?.program
   if (!program) throw new Error(`Kilo branding could not parse ${filePath}`)
 
-  const edits: { start: number; end: number; value: string }[] = []
-  const record = (start: number, end: number, raw: string, bareStringLiteral: boolean) => {
-    const branded = KiloBrandingRules.brandSpan(raw, { bareStringLiteral })
-    if (branded !== raw) edits.push({ start, end, value: branded })
-  }
-
+  const spans: Span[] = []
   const visit = (node: Node, parent: Node | null) => {
     if (node.type === "StringLiteral" && typeof node.start === "number" && typeof node.end === "number") {
       if (!isProtected(node, parent))
-        record(node.start + 1, node.end - 1, normalized.slice(node.start + 1, node.end - 1), true)
+        spans.push({
+          start: node.start + 1,
+          end: node.end - 1,
+          raw: normalized.slice(node.start + 1, node.end - 1),
+          bareStringLiteral: true,
+        })
     } else if (
       (node.type === "TemplateElement" || node.type === "JSXText") &&
       typeof node.start === "number" &&
       typeof node.end === "number"
     ) {
-      record(node.start, node.end, normalized.slice(node.start, node.end), false)
+      spans.push({
+        start: node.start,
+        end: node.end,
+        raw: normalized.slice(node.start, node.end),
+        bareStringLiteral: false,
+      })
     }
     for (const key of types.VISITOR_KEYS[node.type] ?? []) {
       const child = node[key]
@@ -47,7 +61,20 @@ export function brandText(filePath: string, source: string): string {
     }
   }
   visit(program, null)
+  return { normalized, spans }
+}
 
+// Rebrand the user-visible text of one module. The source is parsed so the
+// rules only ever touch string literals, template text and JSX text; every
+// other byte — imports, identifiers, structure — is preserved exactly by
+// slicing the original source at the span offsets rather than re-printing the
+// AST.
+export function brandText(filePath: string, source: string): string {
+  const { normalized, spans } = userVisibleSpans(filePath, source)
+  const edits = spans.flatMap((span) => {
+    const branded = KiloBrandingRules.brandSpan(span.raw, { bareStringLiteral: span.bareStringLiteral })
+    return branded === span.raw ? [] : [{ start: span.start, end: span.end, value: branded }]
+  })
   edits.sort((a, b) => b.start - a.start)
   let out = normalized
   for (const edit of edits) out = out.slice(0, edit.start) + edit.value + out.slice(edit.end)
