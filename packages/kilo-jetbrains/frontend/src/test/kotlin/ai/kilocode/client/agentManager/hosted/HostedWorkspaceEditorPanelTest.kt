@@ -90,7 +90,7 @@ class HostedWorkspaceEditorPanelTest : BasePlatformTestCase() {
         }), testRootDisposable)
         panel = edtWait { HostedWorkspaceEditorPanel(testRootDisposable, project, ref, "Cloud workspace") }
         assertTrue(coroutines.pumpUntil { edtWait {
-            badge().segments.single().text == "Sleeping" && descendants(panel).any { it is SessionUi }
+            badge().segments.singleOrNull()?.text == "Sleeping" && descendants(panel).any { it is SessionUi }
         } })
         edtWait { toggle() }
     }
@@ -106,7 +106,7 @@ class HostedWorkspaceEditorPanelTest : BasePlatformTestCase() {
     fun testPreparationIsMountedAndComputeFollowsLiveEventsWithoutRefresh() {
         emit(HostedSystemEventDto(key, "cloud.status", step = "allocate", message = "Preparing compute",
             cloudStatus = "preparing", observedAt = 110.0))
-        assertTrue(coroutines.pumpUntil { edtWait { badge().segments.single().text == "Starting" } })
+        assertTrue(coroutines.pumpUntil { edtWait { badge().segments.singleOrNull()?.text == "Starting" } })
         val footer = edtWait { descendants(panel).filterIsInstance<ProgressPanel>().single() }
         edtWait {
             assertTrue(footer.isVisible)
@@ -119,14 +119,14 @@ class HostedWorkspaceEditorPanelTest : BasePlatformTestCase() {
             message = "Cloning repository... Receiving objects: 33%", observedAt = 120.0))
         assertTrue(coroutines.pumpUntil { edtWait { footer.labelText().contains("33%") } })
         emit(HostedSystemEventDto(key, "cloud.sandbox.status", sandboxStatus = "running", sandboxDetail = "ready", observedAt = 200.0))
-        assertTrue(coroutines.pumpUntil { edtWait { badge().segments.single().text == "Setting Up" } })
+        assertTrue(coroutines.pumpUntil { edtWait { badge().segments.singleOrNull()?.text == "Setting Up" } })
         edtWait { assertSame(ai.kilocode.client.ui.UiStyle.Badge.Secondary, badge().segments.single().style) }
         emit(HostedSystemEventDto(key, "cloud.status", cloudStatus = "idle", observedAt = 210.0))
         assertTrue(coroutines.pumpUntil { edtWait { !footer.isVisible } })
-        assertTrue(coroutines.pumpUntil { edtWait { badge().segments.single().text == "Active" } })
+        assertTrue(coroutines.pumpUntil { edtWait { badge().segments.singleOrNull()?.text == "Active" } })
         assertEquals("running", hosted.state.value.statuses[ref.key]?.computeStatus)
         emit(HostedSystemEventDto(key, "cloud.sandbox.status", sandboxStatus = "sleeping", sandboxDetail = "sandbox_stopped", observedAt = 300.0))
-        assertTrue(coroutines.pumpUntil { edtWait { badge().segments.single().text == "Sleeping" } })
+        assertTrue(coroutines.pumpUntil { edtWait { badge().segments.singleOrNull()?.text == "Sleeping" } })
         assertEquals(1, rpc.collectors)
         emit(HostedSystemEventDto(key, "cloud.status", message = "Preparing again",
             cloudStatus = "preparing", observedAt = 400.0))
@@ -224,10 +224,10 @@ class HostedWorkspaceEditorPanelTest : BasePlatformTestCase() {
         repeat(100) {
             emit(HostedSystemEventDto(key, "cloud.sandbox.status", sandboxStatus = "active",
                 sandboxDetail = "sandbox_ready", observedAt = 200.0 + it * 2))
-            assertTrue(coroutines.pumpUntil { edtWait { badge().segments.single().text == "Active" } })
+            assertTrue(coroutines.pumpUntil { edtWait { badge().segments.singleOrNull()?.text == "Active" } })
             emit(HostedSystemEventDto(key, "cloud.sandbox.status", sandboxStatus = "sleeping",
                 sandboxDetail = "sandbox_stopped", observedAt = 201.0 + it * 2))
-            assertTrue(coroutines.pumpUntil { edtWait { badge().segments.single().text == "Sleeping" } })
+            assertTrue(coroutines.pumpUntil { edtWait { badge().segments.singleOrNull()?.text == "Sleeping" } })
             edtWait { assertSame(cell, descendants(panel).filterIsInstance<ActiveListBadgeCell>().single { it.cellId == "cloud-compute" }) }
         }
         edtWait { assertEquals("Sleeping", badge().segments.single().text); assertEquals(count, descendants(header).size) }
@@ -311,8 +311,9 @@ class HostedWorkspaceEditorPanelTest : BasePlatformTestCase() {
         assertTrue(coroutines.pumpUntil { rpc.collectors > initial && rpc.active == 1 })
         emit(HostedSystemEventDto(key, "cloud.status", message = "Preparing after sign-in",
             cloudStatus = "preparing", observedAt = 500.0))
+        // The progress panel mounts asynchronously after the event, so keep polling until it exists.
         assertTrue(coroutines.pumpUntil { edtWait {
-            descendants(panel).filterIsInstance<ProgressPanel>().single().labelText() == "Preparing after sign-in"
+            descendants(panel).filterIsInstance<ProgressPanel>().singleOrNull()?.labelText() == "Preparing after sign-in"
         } })
     }
 
