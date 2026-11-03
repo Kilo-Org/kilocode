@@ -174,10 +174,14 @@ describe("partitionTranscript", () => {
 
   test("keeps queued prompts outside the transcript rows", () => {
     const messages = [user("u1", 0), assistant({ id: "a1", created: 1, completed: 2, text: "done", finish: "stop" })]
-    const partition = partitionTranscript(messages, [queued("q1")], false)
+    const queue = [queued("q1")]
+    const partition = partitionTranscript(messages, queue, false)
 
-    expect(partition.queued).toEqual([{ key: "queued:q1", item: queued("q1") }])
+    expect(partition.queued).toEqual([{ key: "queued:q1", item: queue[0] }])
     expect(partition.rows.some((row) => row.key === "queued:q1")).toBe(false)
+
+    const next = partitionTranscript([...messages, user("u2", 3)], queue, false, partition)
+    expect(next.queued[0]).toBe(partition.queued[0])
   })
 
   test("shows an idle error only when no failed step already shows it", () => {

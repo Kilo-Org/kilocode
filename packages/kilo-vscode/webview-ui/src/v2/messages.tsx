@@ -161,6 +161,7 @@ export function MessageList(props: {
     if (messages().length === 0) return
     requestAnimationFrame(() => {
       if (pendingRestore() !== id) return
+      if (!scrollEl()?.isConnected) return
       const handle = virtualizer()
       const state = getScroll(id)
       const anchor = resolveAnchor(state, virtualKeys())
@@ -202,6 +203,7 @@ export function MessageList(props: {
   createEffect(() => {
     const target = pendingJump()
     if (!target) return
+    if (!scrollEl()?.isConnected) return
     if (target.session !== props.session) {
       setPendingJump(undefined)
       return

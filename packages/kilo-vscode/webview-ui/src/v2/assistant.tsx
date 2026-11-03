@@ -39,8 +39,9 @@ export function AssistantMessage(props: {
   const language = useLanguage()
   const vscode = useVSCode()
   const done = () => props.message.time.completed !== undefined
-  const copy = () =>
-    done() ? props.message.content.findLastIndex((item) => item.type === "text" && !!item.text.trim()) : -1
+  const copy = createMemo(() =>
+    done() ? props.message.content.findLastIndex((item) => item.type === "text" && !!item.text.trim()) : -1,
+  )
   const parts = () => props.parts ?? props.message.content
   const offset = () => props.start ?? 0
   const timing = () => props.metadata?.timing

@@ -63,11 +63,16 @@ export function partitionTranscript(
 ): TranscriptPartition {
   const reused = reuseRows(transcriptRows(messages), previous)
   const split = splitDirect(reused, live)
+  const priorQueued = new Map((previous?.queued ?? []).map((row) => [row.key, row]))
   return {
     rows: reused,
     virtualKeys: split.virtual.map((row) => row.key),
     directKeys: split.direct.map((row) => row.key),
-    queued: queued.map((item) => ({ key: `queued:${item.id}`, item })),
+    queued: queued.map((item) => {
+      const key = `queued:${item.id}`
+      const old = priorQueued.get(key)
+      return old && old.item === item ? old : { key, item }
+    }),
   }
 }
 
