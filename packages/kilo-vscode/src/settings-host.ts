@@ -6,6 +6,7 @@ import { mkdir, readFile, stat, writeFile } from "node:fs/promises"
 import path from "node:path"
 import { commands, workspace, Uri, window, type ExtensionContext } from "vscode"
 import { KiloConfigFiles } from "@opencode/util/kilocode/config/files"
+import type { SettingsHandler } from "./agent-manager/project/settings"
 import { applyConfigEdits, configWriteQueue, isKiloConfigFile } from "./config-file-edit"
 import { configPolicy, type PolicyDocument } from "./config-policy"
 import { fetchCustomProviderModels } from "./custom-provider-models"
@@ -13,7 +14,7 @@ import { local } from "./local"
 import { validAutocompleteSetting } from "./services/autocomplete/settings"
 import { candidateConfigFiles, chooseConfigFile, configDirectories } from "./open-config"
 import { resolveGlobalConfigDir, resolveKiloProfile, canonicalPath, matchConfigDocument } from "./settings-paths"
-import type { ConfigEdit, ConfigScope, ToHost, ToWebview } from "./protocol"
+import type { AgentManagerSettings, ConfigEdit, ConfigScope, ToHost, ToWebview } from "./protocol"
 import type { Manager } from "./server"
 
 const NAMESPACE = "kilo-code.v2"
@@ -25,6 +26,7 @@ export const KILO_SETTING_KEYS = [
   "chat.shiftTabCyclesVariant",
   "showTokenThroughput",
   "showTaskTimeline",
+  "showShortcutHints",
   "maxCost",
   "claudeCodeCompat",
   "extraCaCerts",
@@ -34,6 +36,11 @@ export const KILO_SETTING_KEYS = [
   "autocomplete.enableChatAutocomplete",
   "autocomplete.provider",
   "autocomplete.model",
+  "agentManager.autoBranchNaming",
+  "agentManager.branchPrefix",
+  "agentManager.worktreePool",
+  "agentManager.terminalButtonDestination",
+  "agentManager.pushFixes",
 ] as const
 
 /** `kilo-code.v2.fontSize` when set, otherwise `editor.fontSize`, clamped to the v1 slider range. */
@@ -77,6 +84,8 @@ export function settingsHost(input: {
   directory: string
   post: (message: ToWebview) => void
   onReset?: () => void
+  /** The Agent Manager project settings handler, owned by the provider. Absent in views without a provider. */
+  agentManager?: () => SettingsHandler | undefined
 }) {
   // The dev entry (`script/dev-isolated.ts`) keeps everything under `KILO_V2_PROFILE`, and `server.ts` defaults that
   // to the extension storage. A bundled server inherits the host environment and uses XDG paths directly.
@@ -270,6 +279,42 @@ export function settingsHost(input: {
     }
   }
 
+  /** The Agent Manager rows read and write a project the provider owns, so the handler stays provider-scoped. */
+  const handleAgentManager = async (message: AgentManagerSettings) => {
+    const handler = input.agentManager?.()
+    if (!handler) return
+    if (message.type === "agentManagerSettings") {
+      const projects = await handler.projects(message.projectId)
+      const projectId = projects.some((project) => project.id === message.projectId)
+        ? message.projectId
+        : projects[0]?.id
+      input.post({ type: "agentManagerSettingsLoaded", requestId: message.requestId, projectId, projects })
+      return
+    }
+    if (message.type === "agentManagerSettingsBranches") {
+      const result = await handler.branches(message.projectId)
+      input.post(
+        result
+          ? { type: "agentManagerSettingsBranchesLoaded", requestId: message.requestId, ...result }
+          : { type: "agentManagerSettingsBranchesLoaded", requestId: message.requestId, projectId: message.projectId, error: "Could not read the branches of this project." },
+      )
+      return
+    }
+    if (message.type === "agentManagerSetDefaultBaseBranch") {
+      await handler.setDefaultBaseBranch(message.projectId, message.branch)
+    } else if (message.type === "agentManagerConfigureSetupScript") {
+      await handler.configureSetupScript(message.projectId)
+    }
+    // Both writes change the project snapshot, so the rows refresh from the same handler.
+    const projects = await handler.projects(message.projectId)
+    input.post({
+      type: "agentManagerSettingsLoaded",
+      requestId: message.requestId,
+      projectId: message.projectId,
+      projects,
+    })
+  }
+
   const handle = (message: ToHost) => {
     if (message.type === "configRead") {
       void readConfig()
@@ -297,6 +342,15 @@ export function settingsHost(input: {
     }
     if (message.type === "openVSCodeSettings") {
       void commands.executeCommand("workbench.action.openSettings", message.query)
+      return true
+    }
+    if (
+      message.type === "agentManagerSettings" ||
+      message.type === "agentManagerSettingsBranches" ||
+      message.type === "agentManagerSetDefaultBaseBranch" ||
+      message.type === "agentManagerConfigureSetupScript"
+    ) {
+      void handleAgentManager(message)
       return true
     }
     if (message.type === "fetchCustomProviderModels") {

@@ -187,6 +187,8 @@ const layer = Layer.effect(
         metadata: input.metadata,
         source: input.source,
         effect,
+        rules: all, // kilocode_change(permission) seam - the rules the effect was evaluated against
+        unattended: yield* Unattended, // kilocode_change(permission) seam - the rules that settle an unanswered ask
       })
       const unattended = yield* Unattended
       if (event.effect !== "ask" || unattended === undefined)

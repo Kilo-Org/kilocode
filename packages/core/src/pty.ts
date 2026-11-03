@@ -57,6 +57,7 @@ export type AttachInput = {
   readonly onData: (chunk: string) => void
   // Fired once when the session stops producing output: process exit (exitCode set), removal, or service teardown.
   readonly onEnd: (event: { exitCode?: number }) => void
+  readonly allowExited?: boolean // kilocode_change - replay an exited session's retained output, then end
 }
 
 export type Attachment = {
@@ -259,7 +260,7 @@ const layer = Layer.effect(
 
     const attach = Effect.fn("Pty.attach")(function* (id: ID, input: AttachInput) {
       const session = yield* requireSession(id)
-      if (session.info.status !== "running") return yield* new ExitedError({ ptyID: id })
+      if (session.info.status !== "running" && !input.allowExited) return yield* new ExitedError({ ptyID: id }) // kilocode_change
       yield* Effect.logInfo("client attached to session", { id, directory: location.directory })
       const token = {}
       const subscriber: Subscriber = {
@@ -268,6 +269,7 @@ const layer = Layer.effect(
         active: false,
         detached: false,
         pending: [],
+        end: session.info.status === "exited" ? { exitCode: session.info.exitCode } : undefined, // kilocode_change
       }
       session.subscribers.set(token, subscriber)
       const start = session.bufferCursor

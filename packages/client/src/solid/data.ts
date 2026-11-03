@@ -1817,6 +1817,12 @@ export function createData(config: CreateDataInput) {
           const position = messageIndex.get(sessionID)?.get(messageID)
           return position === undefined ? undefined : messages?.[position]
         },
+        // kilocode_change start
+        /** Drop the cached messages of one session without touching its parent or children. */
+        evict(sessionID: string) {
+          evictSession(sessionID)
+        },
+        // kilocode_change end
         sync(sessionID: string) {
           return sync.run(`session.message:${sessionID}`, async () => {
             const started = deletionEpoch

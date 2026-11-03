@@ -53,8 +53,8 @@ describe("solid transform cache", () => {
       expect(changed).toContain("beta")
       expect(changed).not.toContain("poison-hit")
     } finally {
-      await rm(root, { recursive: true, force: true })
-      await rm(cacheDir, { recursive: true, force: true })
+      await rm(root, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 })
+      await rm(cacheDir, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 })
     }
   })
 })

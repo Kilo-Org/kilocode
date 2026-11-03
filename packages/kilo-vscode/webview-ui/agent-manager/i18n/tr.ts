@@ -113,6 +113,14 @@ export const dict = {
   "agentManager.hoverCard.commits": "Commit'ler",
 
   "agentManager.session.new": "Yeni oturum",
+
+  "agentManager.history.title": "Açık oturumlar",
+
+  "agentManager.history.back": "Geri",
+
+  "agentManager.sidebar.resize": "Kenar çubuğu boyutunu değiştir",
+
+  "agentManager.review.resize": "İnceleme boyutunu değiştir",
   "agentManager.session.untitled": "Adsız",
   "agentManager.session.newSession": "Yeni Oturum",
   "agentManager.session.openInWorktree": "Worktree içinde aç",

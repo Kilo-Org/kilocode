@@ -106,6 +106,7 @@ export function SettingsView() {
       subtab: message.subtab,
       focus: message.focus,
       titleKey: message.titleKey,
+      projectId: message.projectId,
     })
     setNavigation((count) => count + 1)
     if (message.search) setSearchRequest((count) => count + 1)
@@ -120,6 +121,7 @@ export function SettingsView() {
         subtab={target().subtab}
         focus={target().focus}
         titleKey={target().titleKey}
+        projectId={target().projectId}
         navigation={navigation()}
         searchRequest={searchRequest()}
         onTabChange={(tab) => vscode.postMessage({ type: "settingsTabChanged", tab } satisfies ToHost as never)}

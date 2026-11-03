@@ -1,4 +1,4 @@
-import type { PermissionRequest } from "@opencode/client"
+import type { FileDiffInfo, PermissionRequest } from "@opencode/client"
 import { Button } from "@kilocode/kilo-ui/button"
 import { DockPrompt } from "@kilocode/kilo-ui/dock-prompt"
 import { Icon } from "@kilocode/kilo-ui/icon"
@@ -19,7 +19,11 @@ const LABELS: Record<string, string> = {
   external_directory: "externalDirectory",
 }
 
-export function PermissionDock(props: { request: PermissionRequest }) {
+export function PermissionDock(props: {
+  request: PermissionRequest
+  /** Opens the proposed file changes of an edit request; the Agent Manager shows them in its edit preview. */
+  onPreview?: (files: FileDiffInfo[], sessionID: string) => void
+}) {
   const v2 = useV2()
   const language = useLanguage()
   const [sending, setSending] = createSignal(false)
@@ -30,6 +34,15 @@ export function PermissionDock(props: { request: PermissionRequest }) {
   const description = () => {
     const value = props.request.metadata?.description
     return typeof value === "string" ? value : undefined
+  }
+  // Edit and write requests carry the proposed change as `metadata.files`.
+  const files = () => {
+    const value = props.request.metadata?.files
+    if (!Array.isArray(value)) return []
+    return value.filter(
+      (item): item is FileDiffInfo =>
+        typeof item === "object" && item !== null && !Array.isArray(item) && typeof item.file === "string",
+    )
   }
   const action = () => {
     const key = `ui.permission.toolLabel.${LABELS[props.request.action] ?? props.request.action}`
@@ -78,6 +91,16 @@ export function PermissionDock(props: { request: PermissionRequest }) {
               )}
             </Show>
             <Show when={command()}>{(text) => <PermissionCommand command={text()} />}</Show>
+            <Show when={props.onPreview && files().length > 0}>
+              <Button
+                variant="ghost"
+                size="small"
+                data-slot="permission-preview"
+                onClick={() => props.onPreview?.(files(), props.request.sessionID)}
+              >
+                {language.t("agentManager.editPreview.openInPanel")}
+              </Button>
+            </Show>
             <div data-slot="permission-patterns">
               <span data-slot="permission-patterns-title">{action()}</span>
               <For each={props.request.resources}>

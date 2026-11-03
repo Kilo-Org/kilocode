@@ -1,23 +1,16 @@
 // Auto-approve for permission requests, ported from v1's composer toggle
-// (packages/kilo-vscode/src/commands/toggle-auto-approve.ts on main). v1 kept the
-// toggle in the extension host and auto-replied "once" to each permission.asked
-// event. v2 has no such server toggle, so the webview reacts to the requests it
-// receives over the v2 client and the host only persists the on/off state.
+// (packages/kilo-vscode/src/commands/toggle-auto-approve.ts on main). The host owns the sweep of every permission
+// event, so it covers sessions in directories this webview does not show, including while no panel is open. This
+// webview only renders the toggle and persists the on/off state.
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
-import { createEffect, createSignal, on, onCleanup } from "solid-js"
+import { createSignal, onCleanup } from "solid-js"
 import { useLanguage } from "../context/language"
 import { useVSCode } from "../context/vscode"
-import { createAutoApproveController } from "./auto-approve-policy"
-import { useV2 } from "./client"
 
 export function createAutoApprove() {
-  const v2 = useV2()
   const vscode = useVSCode()
   const [enabled, setEnabled] = createSignal(false)
-  const controller = createAutoApproveController((request) =>
-    v2.data.session.permission.reply({ sessionID: request.sessionID, requestID: request.id, decision: "once" }),
-  )
 
   onCleanup(
     vscode.onMessage((message) => {
@@ -25,25 +18,6 @@ export function createAutoApprove() {
     }),
   )
   vscode.postMessage({ type: "requestAutoApproveState" })
-  createEffect(() => controller.setEnabled(enabled()))
-
-  // Requests that arrive while connected: the event stream fills the session permission store, and this reads it.
-  createEffect(() => {
-    if (!enabled() || v2.connection.status() !== "connected") return
-    for (const id of v2.data.session.permission.sessions())
-      controller.approve(v2.data.session.permission.list(id) ?? [])
-  })
-
-  // Requests that were already pending before this client connected: the event stream does not replay them.
-  createEffect(
-    on([enabled, v2.connection.status] as const, ([active, status]) => {
-      if (!active || status !== "connected") return
-      void v2.api.permission.request
-        .list({ location: { directory: v2.directory } })
-        .then((response) => controller.approve(response.data))
-        .catch(v2.report)
-    }),
-  )
 
   return {
     enabled,

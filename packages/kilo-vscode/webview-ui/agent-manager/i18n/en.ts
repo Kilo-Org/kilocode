@@ -153,6 +153,10 @@ export const dict = {
   "agentManager.hoverCard.commits": "Commits",
 
   "agentManager.session.new": "New session",
+  "agentManager.history.title": "Open sessions",
+  "agentManager.history.back": "Back",
+  "agentManager.sidebar.resize": "Resize the sidebar",
+  "agentManager.review.resize": "Resize the inspector",
   "agentManager.session.untitled": "Untitled",
   "agentManager.session.newSession": "New Session",
   "agentManager.session.openInWorktree": "Open in worktree",

@@ -2,7 +2,7 @@ import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { showToast } from "@kilocode/kilo-ui/toast"
 import type { ModelRef } from "@opencode/client"
-import { createEffect, createSignal, onCleanup, onMount, Show, type JSX } from "solid-js"
+import { createEffect, createSignal, on, onCleanup, onMount, Show, untrack, type JSX } from "solid-js"
 import { SpeechToTextButton } from "../components/speech-to-text/SpeechToTextButton"
 import { createSpeechShortcut } from "../components/speech-to-text/shortcut"
 import { useSpeechStatus } from "../components/speech-to-text/status"
@@ -14,8 +14,25 @@ import { message, useV2 } from "./client"
 import { cleanEnhancedPrompt, enhancePromptRequest, normalizeEnhancePromptErrorMessage } from "./enhance-prompt"
 import { insertSpacedText } from "./prompt-speech"
 
+// Drafts live outside the component so a composer remounted for another session restores its own text, as v1 did.
+// The key is the session id, or the pending tab id before a first prompt creates the session.
+const drafts = new Map<string, string>()
+
+export const promptDrafts = {
+  get(key: string | undefined) {
+    return key ? (drafts.get(key) ?? "") : ""
+  },
+  set(key: string | undefined, value: string) {
+    if (!key) return
+    if (value) drafts.set(key, value)
+    else drafts.delete(key)
+  },
+}
+
 export function PromptInput(props: {
   session?: string
+  /** Draft identity: the session id, or the pending tab id before a session exists. */
+  draftKey?: string
   running: boolean
   disabled: boolean
   /** The model the composer shows; Enhance uses it so the rewrite never depends on another provider. */
@@ -30,10 +47,12 @@ export function PromptInput(props: {
   selectors?: JSX.Element
   /** Prompt toolbar actions (auto-approve, and later indexing, sandbox and enhance as on main). */
   actions?: JSX.Element
+  /** Receives a function that appends text to the draft and, when `send` is true, sends it. */
+  onAppendReady?: (append: (value: string, send: boolean) => void) => void
 }) {
   const v2 = useV2()
   const language = useLanguage()
-  const [text, setText] = createSignal("")
+  const [text, setText] = createSignal(promptDrafts.get(props.draftKey))
   const [sending, setSending] = createSignal(false)
   const [enhancing, setEnhancing] = createSignal(false)
   // The draft Enhance replaced, so Ctrl/Cmd+Z restores it once.
@@ -70,6 +89,30 @@ export function PromptInput(props: {
     refs.overlay.scrollTop = refs.input.scrollTop
     refs.overlay.scrollLeft = refs.input.scrollLeft
   }
+
+  // Switching drafts saves the text of the draft being left and restores the target draft. SessionView normally
+  // remounts this component for another key; this also covers a key change without a remount.
+  let draft = props.draftKey
+  createEffect(
+    on(
+      () => props.draftKey,
+      (key) => {
+        if (key === draft) return
+        promptDrafts.set(draft, untrack(text))
+        draft = key
+        const value = promptDrafts.get(key)
+        enhanceToken++
+        preEnhance = null
+        setText(value)
+        if (refs.input) {
+          refs.input.value = value
+          refs.input.scrollTop = 0
+        }
+        scroll()
+      },
+    ),
+  )
+  onCleanup(() => promptDrafts.set(draft, text()))
 
   createEffect(() => {
     text()
@@ -140,6 +183,15 @@ export function PromptInput(props: {
     }
     submit()
   }
+
+  props.onAppendReady?.((value, shouldSend) => {
+    const current = text()
+    enhanceToken++
+    preEnhance = null
+    setText(current.trim() ? `${current}\n\n${value}` : value)
+    if (shouldSend) send()
+    else focus()
+  })
 
   const shortcut = createSpeechShortcut({
     speech,

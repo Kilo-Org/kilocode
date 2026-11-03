@@ -240,7 +240,7 @@ describe("host key and headers", () => {
     expect(await readReference("nested", configPath)).toBe("")
     expect(await readReference("missing.txt", configPath)).toBe("")
     expect(await readReference("~/../../etc/definitely-missing-kilo", configPath)).toBe("")
-    await rm(dir, { recursive: true, force: true })
+    await rm(dir, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 })
   })
 })
 

@@ -13,7 +13,7 @@ fs.writeFileSync(path.join(real, "math.ts"), "export const a = 1\n")
 fs.writeFileSync(path.join(real, ".env"), "SECRET=1\n")
 fs.writeFileSync(path.join(root, "outside.ts"), "\n")
 
-afterAll(() => fs.rmSync(root, { recursive: true, force: true }))
+afterAll(() => fs.rmSync(root, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 }))
 
 describe("FileIgnoreController", () => {
   test("allows workspace files when the workspace path is a symlink", async () => {
@@ -44,7 +44,7 @@ describe("FileIgnoreController symlinks that leave the workspace", () => {
   fs.writeFileSync(path.join(outside, "secret.ts"), "export const secret = 1\n")
   fs.symlinkSync(outside, path.join(real, "escape"), process.platform === "win32" ? "junction" : "dir")
 
-  afterAll(() => fs.rmSync(outside, { recursive: true, force: true }))
+  afterAll(() => fs.rmSync(outside, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 }))
 
   test("denies a file that a workspace symlink points to outside the workspace", async () => {
     const controller = new FileIgnoreController(link)
