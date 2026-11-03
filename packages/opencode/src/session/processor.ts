@@ -635,15 +635,15 @@ const layer = Layer.effect(
             yield* Effect.forEach(Object.keys(ctx.reasoningMap), finishReasoning)
             // kilocode_change start - persist model-generated images as assistant file parts
             yield* Effect.forEach(
-              KiloGeneratedFile.parts(value.providerMetadata, {
+              yield* KiloGeneratedFile.store({
+                metadata: value.providerMetadata,
                 sessionID: ctx.assistantMessage.sessionID,
                 messageID: ctx.assistantMessage.id,
                 id: () => PartID.ascending(),
+                image,
+                config: yield* config.get(),
               }),
-              (part) =>
-                KiloGeneratedFile.normalize(part, image).pipe(
-                  Effect.flatMap((item) => (item ? session.updatePart(item) : Effect.void)),
-                ),
+              (part) => session.updatePart(part),
             )
             // kilocode_change end
             // kilocode_change start - persist late-arriving OpenRouter reasoning details for replay

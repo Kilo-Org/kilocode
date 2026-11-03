@@ -2293,7 +2293,9 @@ function ToolDiffAction(props: { when: boolean; onClick: (e: MouseEvent) => void
 
 // Webviews only load inline and https images; older generate_image parts carry blocked file:// URLs.
 export function viewable(file: FilePart) {
-  return file.mime.startsWith("image/") && (file.url.startsWith("data:image/") || file.url.startsWith("https://"))
+  // MIME types and URL schemes are case-insensitive.
+  const url = file.url.slice(0, 11).toLowerCase()
+  return file.mime.toLowerCase().startsWith("image/") && (url.startsWith("data:image/") || url.startsWith("https://"))
 }
 
 /** Image thumbnails for tool attachments and model-generated images; click opens a preview. */

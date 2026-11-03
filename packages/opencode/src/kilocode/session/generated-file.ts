@@ -1,6 +1,6 @@
 import type { ProviderMetadata } from "@opencode-ai/llm"
 import type { SessionV1 } from "@opencode-ai/core/v1/session"
-import { Effect } from "effect"
+import { Cause, Effect, Exit } from "effect"
 import { Image } from "@/image/image"
 import { KiloAttachment } from "@/kilocode/session/attachment"
 import { isRecord } from "@/util/record"
@@ -28,7 +28,7 @@ export namespace KiloGeneratedFile {
     if (!data) return
     // Providers that return a hosted image URL instead of inline data hand it through as-is.
     if (/^https:\/\//i.test(data)) return { mime, url: data }
-    if (data.startsWith("data:")) return { mime, url: data }
+    if (/^data:/i.test(data)) return { mime, url: data }
     return { mime, url: `data:${mime};base64,${data}` }
   }
 
@@ -71,30 +71,71 @@ export namespace KiloGeneratedFile {
     }))
   }
 
+  type Limits = { attachment?: { image?: { max_base64_bytes?: number } } }
+
   /**
    * Bound inline images like tool attachments before they reach the session store and every
    * part update: raster images go through `Image.normalize` (dimension and size limits), other
-   * inline images are kept only under the same size limit. Hosted URLs are not stored inline.
-   * Returns undefined when the image cannot be brought under the limits.
+   * inline images are kept only under the configured base64 size limit. Hosted URLs are not
+   * stored inline. Returns undefined when the image cannot be brought under the limits.
    */
   export const normalize = Effect.fn("KiloGeneratedFile.normalize")(function* (
     part: SessionV1.FilePart,
     image: Image.Interface,
+    limit: number,
   ) {
-    if (!part.url.startsWith("data:")) return part
+    if (!/^data:/i.test(part.url)) return part
     if (KiloAttachment.classify(part.mime) !== "raster") {
-      if (Buffer.byteLength(part.url, "utf8") <= Image.MAX_BASE64_BYTES) return part
-      yield* Effect.logWarning("generated image omitted: over the size limit", { mime: part.mime })
-      return undefined
+      const data = part.url.slice(part.url.indexOf(",") + 1)
+      return Buffer.byteLength(data, "utf8") <= limit ? part : undefined
     }
     return yield* image.normalize(part).pipe(
       Effect.catchIf(
         (error) => error instanceof Image.ResizerUnavailableError,
         () => Effect.succeed(part),
       ),
-      Effect.catch((error) =>
-        Effect.logWarning("generated image omitted: could not be normalized", { error }).pipe(Effect.as(undefined)),
+    )
+  })
+
+  /**
+   * Parts to persist for the images carried on a step-finish event. Each image is normalized in
+   * isolation, so a failure or defect only drops that image. Dropped images are logged and
+   * reported to the user with a local notice that is not replayed to the model, matching the
+   * tool-attachment path.
+   */
+  export const store = Effect.fn("KiloGeneratedFile.store")(function* (input: {
+    metadata: ProviderMetadata | undefined
+    sessionID: SessionV1.FilePart["sessionID"]
+    messageID: SessionV1.FilePart["messageID"]
+    id: () => SessionV1.FilePart["id"]
+    image: Image.Interface
+    config: Limits
+  }) {
+    const limit = input.config.attachment?.image?.max_base64_bytes ?? Image.MAX_BASE64_BYTES
+    const files = parts(input.metadata, input)
+    const results = yield* Effect.forEach(files, (part) =>
+      normalize(part, input.image, limit).pipe(
+        Effect.exit,
+        Effect.map((exit) => ({ part, exit })),
       ),
     )
+    const kept = results.flatMap((item) => (Exit.isSuccess(item.exit) && item.exit.value ? [item.exit.value] : []))
+    const dropped = results.filter((item) => !Exit.isSuccess(item.exit) || !item.exit.value)
+    if (dropped.length === 0) return kept
+    yield* Effect.logWarning("generated images omitted", {
+      sessionID: input.sessionID,
+      messageID: input.messageID,
+      parts: dropped.map((item) => item.part.id),
+      causes: dropped.flatMap((item) => (Exit.isFailure(item.exit) ? [Cause.pretty(item.exit.cause)] : [])),
+    })
+    const notice: SessionV1.TextPart = {
+      id: input.id(),
+      sessionID: input.sessionID,
+      messageID: input.messageID,
+      type: "text",
+      text: `[${dropped.length} generated image${dropped.length === 1 ? "" : "s"} omitted: could not be processed within the image size limit.]`,
+      ignored: true,
+    }
+    return [...kept, notice]
   })
 }
