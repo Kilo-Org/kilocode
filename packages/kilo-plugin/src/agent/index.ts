@@ -149,9 +149,10 @@ const readOnlyShell: Table = {
 // it. `gh` drops from ask to deny for that reason, and `find` is denied because it can mutate through
 // `-delete` and `-exec` (glob and list cover the read-only need). Evaluation takes the last matching
 // rule, so the `gh` denies must come after the inherited `gh <subcommand>` allows; the inherited `gh`
-// entries are dropped and a single trailing deny replaces them.
+// commands are dropped and a single trailing deny replaces them. Table keys are `<command> <args>`
+// patterns, so match the `gh ` command token (not the `gh` prefix, which would also catch a `ghq`).
 const exploreShell: Table = {
-  ...Object.fromEntries(Object.entries(readOnlyShell).filter(([resource]) => !resource.startsWith("gh"))),
+  ...Object.fromEntries(Object.entries(readOnlyShell).filter(([resource]) => !resource.startsWith("gh "))),
   "gh *": "deny",
   "find *": "deny",
 }
