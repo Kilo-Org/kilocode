@@ -1,5 +1,6 @@
-// Hook event registry: plain data with no imports, so the CLI, the config schema, the VS Code
-// webview tests and the cloud config schema mirror can all read it.
+// Hook event registry: plain data with no imports, so the CLI, the config schema and the VS Code
+// webview tests can all read it. Adding or renaming an event, or changing a description, also
+// needs apps/web/src/app/config.json/extras.ts in Kilo-Org/cloud, which mirrors it by hand.
 
 /** What a hook matcher is tested against for an event. */
 export type Matcher =
@@ -114,7 +115,8 @@ export const EVENTS = {
     failure: true,
   },
   TaskCompleted: {
-    description: "When a todo is marked completed. A block keeps that todo open.",
+    description:
+      "When a todo is marked completed. A block keeps that todo open; exit 2 from a missing script does not.",
     kilo: false,
     claude: true,
     group: "tools",
@@ -206,7 +208,8 @@ export const EVENTS = {
     failure: false,
   },
   Stop: {
-    description: "When the agent finishes responding. A block makes it continue (at most 8 times in a row).",
+    description:
+      "When the agent finishes responding. A block makes it continue (at most 8 times in a row); exit 2 from a missing script does not.",
     kilo: false,
     claude: true,
     group: "loop",
@@ -217,7 +220,8 @@ export const EVENTS = {
     missing: true,
   },
   SubagentStop: {
-    description: "When a subagent finishes. A block makes it continue. Matcher: agent type.",
+    description:
+      "When a subagent finishes. A block makes it continue; exit 2 from a missing script does not. Matcher: agent type.",
     kilo: false,
     claude: true,
     group: "loop",

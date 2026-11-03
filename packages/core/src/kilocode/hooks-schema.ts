@@ -20,7 +20,7 @@ const Handler = Schema.Struct({
   }),
   timeout: Schema.optional(PositiveInt).annotate({
     description:
-      'Timeout in seconds. Default: 600; 30 for UserPromptSubmit and the model-switch events; 10 for BranchName; see the docs for the rest. A hook that times out does not block unless onFailure is "block"; on PreModelSwitch a timeout always blocks.',
+      'Timeout in seconds. Default: 600; 30 for UserPromptSubmit and the model-switch events; 10 for BranchName; see the docs for the rest. SessionEnd hooks share one 1.5 s budget per exit or deleted session, raised to the largest SessionEnd timeout (at most 60 s, or 3 s when kilo serve or the TUI exits). A hook that times out does not block unless onFailure is "block"; on PreModelSwitch a timeout always blocks.',
   }),
   onFailure: Schema.optional(Schema.Literals(["continue", "block"])).annotate({
     description:
@@ -35,7 +35,7 @@ const Group = Schema.Struct({
   matcher: Schema.optional(
     Schema.String.annotate({
       description:
-        'What it matches depends on the event (tool name, source, trigger, ...): "*" or omitted matches everything, "a|b" matches exact names, anything else is a regular expression. Ignored on events without a matcher.',
+        'What it matches depends on the event (tool name, source, trigger, ...): "*" or omitted matches everything, "a|b" matches exact names, anything else is a regular expression. On StopFailure only letters, digits, "_" and "|" make exact names. On FileChanged it lists file names in the project folder, each taken literally ("*" is a file named *); without a matcher, the hook runs only for paths added with watchPaths. Ignored on events without a matcher.',
     }),
   ),
   hooks: Schema.mutable(Schema.Array(Handler)),
