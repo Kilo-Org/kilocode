@@ -11,9 +11,11 @@ import { KiloConfigFiles } from "@opencode/util/kilocode/config/files"
 // Semantic rewrites that are Kilo product copy rather than a mechanical brand
 // swap (for example, upgrades are disabled, so the upgrade description changes
 // meaning). File-scoped and applied whole-file before the generic rules so a
-// later OpenCode -> Kilo pass cannot pre-empt them. Few by design and reviewed
-// at every upstream sync; a reworded anchor stops matching and the audit
-// surfaces the now-unbranded text.
+// later OpenCode -> Kilo pass cannot pre-empt them. Few by design; like the
+// structural transforms these are exact, so a reworded upstream anchor fails
+// loud (`Kilo branding no longer matches`) and a human re-decides the Kilo copy
+// — the audit cannot catch the drift, because the generic rule would otherwise
+// brand the leftover token and leave nothing unbranded.
 export const overrides = [
   {
     file: "cli/src/commands/commands.ts",

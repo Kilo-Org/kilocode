@@ -153,10 +153,12 @@ section of the `v2-feature-placement` skill requires.
 
 ### 4.3 File scope
 
-The engine runs on a configured scope of user-facing files (the TUI/CLI/core
-surface the current list already enumerates), not the whole tree. Scope lives in
-`rules.ts` as an explicit glob/path set so the audit and the loader share one
-source of truth. Files entirely outside scope are passed through unchanged.
+Two scopes, deliberately different. The loader intercepts the curated file set
+in `text.ts` (`files`); only those files are rebranded at load/build time, and
+everything else is passed through unchanged. The audit scans a broader glob of
+the user-facing surface (`PATHSPECS`/`INCLUDE` in `branding-audit.ts`) and
+hard-fails on any file the rules would brand that is not in the loader's set, so
+the curated set is forced to stay complete.
 
 ## 5. Coverage audit (`packages/kilo-cli/script/branding-audit.ts`) — done
 
@@ -194,25 +196,29 @@ Net effect on the two failure modes:
 - **New unlisted string (T):** either the engine brands it automatically, or the
   audit flags it. No silent passthrough.
 
-## 6. Test migration
+## 6. Tests
 
-Current tests iterate `KiloBranding.replacements`. New coverage:
+Final coverage after the rollout below:
 
-- **Parity golden test (migration safety):** during phase 1, assert the new
-  `transform()` produces byte-identical output to the old exact-list `transform()`
-  over every in-scope pinned upstream file. This is the proof the refactor is
-  behaviour-preserving before the list is deleted.
-- **Engine unit tests:** representative spans for each rule and precedence;
-  case preservation (`OpenCode`/`opencode`).
-- **Protected-anchor tests:** port `branding.test.ts` lines 33–98 — provider
-  identities, theme schema, wire IDs, `@opencode/*` imports, `command: "opencode"`,
+- **brandSpan rule tests** (`branding-rules.test.ts`): literal-longest-first, the
+  product and command rules, the bare-executable-name guard, and that imports and
+  dotted IDs are left alone.
+- **Per-file invariant** (`branding.test.ts`): every intercepted file is changed
+  by `transform` and keeps its `@opencode/*` specifiers.
+- **Audit** (`branding-audit.test.ts`): a non-intercepted fixture with OpenCode
+  text is flagged, code that only looks like branding is not, and the real-surface
+  baseline has no unexpected finding, stale allowlist entry, or unparseable file.
+- **Protected-anchor tests** (`branding.test.ts`): provider identities, theme
+  schema, wire IDs, `@opencode/*` imports, `command: "opencode"` and
   `OPENCODE_CLI_NAME` all unchanged.
-- **Preserve existing hard guards:** source + compiled parity, TSX through the
-  Solid compiler, OAuth HTML escaping and autoClose (`checkPages`), logo guard
-  (`logo-guard.test.ts`), preflight (`logo-preflight.test.ts`), cli-name, acp-wire,
-  theme-render.
-- **Audit test:** a fixture with a planted unbranded string fails the audit; a
-  clean fixture passes.
+- **Structural-subset test** (`branding.test.ts`): every `structural.ts` key is in
+  the loader's `files`.
+- **Preserved hard guards:** source + compiled parity, TSX through the Solid
+  compiler, OAuth HTML escaping and autoClose, the split logo/epilogue/resize
+  suites, cli-name, acp-wire, theme-render.
+
+A byte-for-byte parity test against the pre-refactor transform guarded phase 1 and
+was removed with the exact list in phase 2; its evidence is in the phase-1 commit.
 
 ## 7. Rollout (phased, each phase green on `bun run check` + `packages/kilo-cli` tests)
 
@@ -231,12 +237,12 @@ engine`. A byte-for-byte parity test proved the new pipeline reproduces the
 3. **Audit. (done)** Added `packages/kilo-cli/script/branding-audit.ts`, its test,
    the `branding:audit` package script, the `kilo-packages` CI step, and the
    sync-checklist updates in the `v2-migration` / `v2-feature-placement` skills.
-   The broader glob (decision 1) is the audit's scan scope (`packages/{cli,tui}/src`
-   - `packages/core/src/oauth`); the loader still intercepts the curated `files`
-     set, and the audit's hard-fail forces that set to stay complete. This also
-     closes phase-2 review findings 1 and 2 (unverified branding on non-compile-tested
-     files is now a checked failure). The audit reads the working tree, not the pin
-     (see §5).
+   The broader glob (decision 1) is the audit's scan scope (`packages/cli/src`,
+   `packages/tui/src` and `packages/core/src/oauth`); the loader still intercepts
+   the curated `files` set, and the audit's hard-fail forces that set to stay
+   complete. This also closes phase-2 review findings 1 and 2 (unverified branding
+   on non-compile-tested files is now a checked failure). The audit reads the
+   working tree, not the pin (see §5).
 4. **Delete dead data.** Update `migration-tracking/progress/dispositions.json`
    (the `oauth/page.ts` note and any branding cell notes) to describe the engine;
    update the branding description in the `v2-migration` / `v2-feature-placement`

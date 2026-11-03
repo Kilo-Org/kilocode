@@ -145,8 +145,9 @@ async function main() {
     for (const f of unexpected)
       console.error(`  [${f.kind}] packages/${f.file}:${f.line}:${f.column}  ${JSON.stringify(f.snippet)}`)
     console.error(
-      `\nFix each: add the file to KiloBranding.files (missing-interception), extend the rules/PROTECTED (rule-gap),` +
-        ` or add a reviewed entry to branding-audit-allow.ts if the text is genuinely not Kilo branding.`,
+      `\nFix each: add the file to KiloBranding.files (missing-interception), extend the rules (rules.ts) or the` +
+        ` protected contexts (isProtected in engine.ts) for a rule-gap, or add a reviewed entry to` +
+        ` branding-audit-allow.ts if the text is genuinely not Kilo branding.`,
     )
   }
   process.exit(1)

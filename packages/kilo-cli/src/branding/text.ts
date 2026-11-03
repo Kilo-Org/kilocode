@@ -66,7 +66,10 @@ export function transform(file: string, source: string) {
   if (!intercepted.has(id)) return source
   let out = source.replaceAll("\r\n", "\n")
   for (const override of KiloBrandingRules.overrides)
-    if (id === override.file) out = out.replaceAll(override.from, override.to)
+    if (id === override.file) {
+      if (!out.includes(override.from)) throw new Error(`Kilo branding no longer matches ${id}: ${override.from}`)
+      out = out.replaceAll(override.from, override.to)
+    }
   out = KiloBrandingStructural.apply(id, out)
   return KiloBrandingEngine.brandText(file, out)
 }
