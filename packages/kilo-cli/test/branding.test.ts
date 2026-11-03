@@ -97,9 +97,21 @@ test("config hints name a file that the Kilo host reads and writes", async () =>
   }
 })
 
-test("fails clearly if an upstream text anchor changes", () => {
-  expect(() => KiloBranding.transform("/repo/packages/tui/src/util/error.ts", "changed")).toThrow(
+test("fails loudly when a structural anchor drifts", () => {
+  expect(() => KiloBranding.transform("/repo/packages/tui/src/util/presentation.ts", "changed")).toThrow(
     "Kilo branding no longer matches",
+  )
+})
+
+test("brands user-visible text dynamically instead of failing on an unknown anchor", () => {
+  // A text-only module whose wording no longer matches any specific anchor is
+  // not an error: the rule engine brands what it recognizes and leaves the rest
+  // for the branding audit, rather than throwing like the old exact list.
+  expect(KiloBranding.transform("/repo/packages/tui/src/util/error.ts", 'const help = "Restart opencode now"')).toBe(
+    'const help = "Restart kilo2 now"',
+  )
+  expect(KiloBranding.transform("/repo/packages/tui/src/util/error.ts", 'const ok = "nothing to rebrand"')).toBe(
+    'const ok = "nothing to rebrand"',
   )
 })
 
