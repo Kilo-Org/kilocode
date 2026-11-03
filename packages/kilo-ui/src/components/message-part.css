@@ -816,3 +816,47 @@ html[data-theme="kilo-vscode"] [data-component="reasoning-part"] {
     line-height: var(--line-height-large);
   }
 }
+
+[data-slot="mcp-attachments"] {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 4px 12px 12px;
+
+  [data-slot="mcp-attachment"] {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    color: var(--text-weak);
+    font-size: var(--font-size-small);
+    line-height: var(--line-height-large);
+
+    [data-component="file-icon"] {
+      width: 16px;
+      height: 16px;
+      flex: none;
+    }
+
+    span {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+  }
+}
+
+[data-slot="apply-patch-open-all"] {
+  display: flex;
+  justify-content: flex-end;
+  padding: 4px 12px;
+}
+
+[data-slot="apply-patch-open-all-invalid"] {
+  padding: 0 12px 8px;
+  color: var(--text-weak);
+  font-size: var(--font-size-small);
+  font-style: italic;
+  line-height: var(--line-height-large);
+}

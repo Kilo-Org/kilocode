@@ -1265,7 +1265,7 @@ function ToolFileAccordion(props: { path: string; directory?: string; actions?: 
                 <div data-slot="apply-patch-file-name-container">
                   <Show when={props.path.includes("/")}>
                     <span data-slot="apply-patch-directory">
-                      {relativizeProjectPath(getDirectory(props.path), props.directory)}
+                      {`\u2066${relativizeProjectPath(getDirectory(props.path), props.directory)}\u2069`}
                     </span>
                   </Show>
                   <span data-slot="apply-patch-filename">{getFilename(props.path)}</span>
@@ -1708,7 +1708,7 @@ ToolRegistry.register({
                                 <div data-slot="apply-patch-file-name-container">
                                   <Show when={file.file.includes("/")}>
                                     <span data-slot="apply-patch-directory">
-                                      {relativizeProjectPath(getDirectory(file.file), props.directory)}
+                                      {`\u2066${relativizeProjectPath(getDirectory(file.file), props.directory)}\u2069`}
                                     </span>
                                   </Show>
                                   <span data-slot="apply-patch-filename">{getFilename(file.file)}</span>
