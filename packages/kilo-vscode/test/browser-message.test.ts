@@ -117,15 +117,14 @@ describe("browser inspection responses", () => {
     })
     const viewport = { width: 400, height: 300, revision: 1, active: true }
     await view.broker.viewport("session", "project", view.current.browserId, view.current.navigation, viewport)
-    // The cursor reporter installs after the viewport is accepted, so wait for its script before reporting.
-    for (let attempt = 0; attempt < 1000 && view.scripts.length === 0; attempt++) await Bun.sleep(5)
-    const source = view.scripts.at(-1)
-    if (!source) throw new Error("The cursor reporter was not installed")
+    // The reporter script carries the stream epoch when it is installed; the epoch starts at zero.
+    const source = view.scripts.at(-1) ?? ""
+    const epoch = source.match(/\)\("__kiloCursor", (\d+),/)?.at(1) ?? "0"
     view.protocol.emit("Runtime.executionContextCreated", { context: { id: 7, name: "kilo-cursor" } })
     const report = (cursor: string) =>
       view.protocol.emit("Runtime.bindingCalled", {
         name: "__kiloCursor",
-        payload: `${source.match(/\)\("__kiloCursor", (\d+),/)?.at(1)}:${cursor}`,
+        payload: `${epoch}:${cursor}`,
         executionContextId: 7,
       })
     report("pointer")
