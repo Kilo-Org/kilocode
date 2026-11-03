@@ -56,7 +56,7 @@ update. Add an entry only for a genuine exception: a semantic rewrite goes in
 import/logic rewrite goes in `structural.ts`. If a protected string is being
 rebranded by mistake, extend the protection in `engine.ts`.
 
-The set of intercepted files is the keys of `replacements` in `text.ts`. The
+The set of intercepted files is the `files` list in `text.ts`. The
 branding audit (see the design note) reports any user-visible OpenCode string
 the rules leave behind at each sync, so a miss is a checked failure rather than
 a silent regression.
@@ -83,8 +83,7 @@ any unlisted string; the rule engine plus the audit remove both failure modes.
 
 ## Files
 
-- `text.ts` — entry point `transform()`, and `replacements` (the intercepted
-  files and the expected results the tests assert against).
+- `text.ts` — entry point `transform()`, and `files` (the intercepted modules).
 - `rules.ts` — `overrides`, `literals`, and `brandSpan()` (the per-span rules).
 - `engine.ts` — AST-scoped text transform and the protected-context rules.
 - `structural.ts` — import/logic rewrites, the OAuth wordmark, `brandLogoModule`.

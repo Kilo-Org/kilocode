@@ -15,17 +15,14 @@ import { compileDefine } from "./fixtures/compile-define"
 const repo = path.resolve(import.meta.dir, "../../..")
 const entry = path.join(import.meta.dir, "fixtures/branding.ts")
 
-for (const [file, replacements] of Object.entries(KiloBranding.replacements)) {
-  test(`brands only the selected text in ${file}`, async () => {
+for (const file of KiloBranding.files) {
+  test(`rebrands ${file} without touching @opencode specifiers`, async () => {
     const filename = path.join(repo, "packages", file)
     const original = await Bun.file(filename).text()
     const branded = KiloBranding.transform(filename, original)
-    for (const [from, to] of replacements) {
-      expect(branded).toContain(to)
-      expect(branded.split(from).length - 1).toBe(
-        (original.replaceAll("\r\n", "\n").split(from).length - 1) * (to.split(from).length - 1),
-      )
-    }
+    // Every intercepted file has something to rebrand, so the pipeline must
+    // change it, and it must never rewrite an @opencode import specifier.
+    expect(branded).not.toBe(original.replaceAll("\r\n", "\n"))
     expect(branded.match(/@opencode\/[\w/.-]+/g)).toEqual(original.match(/@opencode\/[\w/.-]+/g))
   })
 }
@@ -52,7 +49,7 @@ test("does not rewrite CLI or ACP executable selection", async () => {
 })
 
 test("branding is independent of LF or CRLF checkouts", async () => {
-  for (const file of Object.keys(KiloBranding.replacements)) {
+  for (const file of KiloBranding.files) {
     const filename = path.join(repo, "packages", file)
     const lf = (await Bun.file(filename).text()).replaceAll("\r\n", "\n")
     const crlf = lf.replaceAll("\n", "\r\n")

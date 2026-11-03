@@ -13,9 +13,7 @@ export const brandingPlugin: BunPlugin = {
         contents: KiloBrandingStructural.brandLogoModule(source, path.join(import.meta.dir, "logo-art.ts")),
       }
     })
-    const files = Object.keys(KiloBranding.replacements)
-      .map((file) => file.replaceAll(".", "\\.").replaceAll("/", "[/\\\\]"))
-      .join("|")
+    const files = KiloBranding.files.map((file) => file.replaceAll(".", "\\.").replaceAll("/", "[/\\\\]")).join("|")
     build.onLoad({ filter: new RegExp(`[/\\\\]packages[/\\\\](?:${files})$`) }, async (args) => {
       const key = args.path.replaceAll("\\", "/").split("/packages/").at(-1) ?? args.path
       const contents = KiloBranding.transform(args.path, await Bun.file(args.path).text())

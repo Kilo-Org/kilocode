@@ -206,20 +206,25 @@ Current tests iterate `KiloBranding.replacements`. New coverage:
 
 ## 7. Rollout (phased, each phase green on `bun run check` + `packages/kilo-cli` tests)
 
-1. **Scaffold, prove parity.** Add `engine.ts`, `rules.ts`, `structural.ts`.
-   Recompose `transform()` to `structural -> engine`. Seed rules so the parity
-   golden test passes against the current list. `text.ts` still holds the data
-   during this phase.
-2. **Flip to rules.** Replace the exact text entries with the rule set; keep M/W
-   explicit; grow `PROTECTED` and the command-token guard until parity holds and
-   every protected anchor is unchanged.
+1. **Scaffold, prove parity. (done — commit a4338becb5)** Add `engine.ts`,
+   `rules.ts`, `structural.ts`. Recompose `transform()` to `structural ->
+engine`. A byte-for-byte parity test proved the new pipeline reproduces the
+   exact-list output over every intercepted file at the current pin; the exact
+   list stayed in `text.ts` as the oracle during this phase.
+2. **Flip to rules. (done)** Replaced the exact `[from, to]` text map with the
+   `files` interception set in `text.ts`; structural pairs live only in
+   `structural.ts` now (no more duplication). The per-file test became an
+   invariant test (pipeline changes the file; `@opencode` specifiers preserved)
+   plus the preserved protected-anchor and end-to-end compile tests. The phase-1
+   parity test and the `legacy-branding` fixture were deleted, their
+   behaviour-preserving evidence captured in the phase-1 commit.
 3. **Audit.** Add `branding-audit.ts`, its test, the package script, CI step,
-   and sync-checklist doc update.
-4. **Delete dead data.** Remove the exact text list; update
-   `migration-tracking/progress/dispositions.json` (the `oauth/page.ts` note and
-   any branding cell notes) to describe the engine; update the branding
-   description in the `v2-migration` / `v2-feature-placement` skills from
-   "exact-list interim adapter" to "rule engine + audit".
+   and sync-checklist doc update. Widen interception from the `files` list to the
+   broader glob (decision 1) here.
+4. **Delete dead data.** Update `migration-tracking/progress/dispositions.json`
+   (the `oauth/page.ts` note and any branding cell notes) to describe the engine;
+   update the branding description in the `v2-migration` / `v2-feature-placement`
+   skills from "exact-list interim adapter" to "rule engine + audit".
 
 ## 8. Risks and mitigations
 
