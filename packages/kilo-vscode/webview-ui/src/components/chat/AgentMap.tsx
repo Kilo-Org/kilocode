@@ -132,12 +132,17 @@ const AgentMapDialog: Component<{ readonly?: boolean; board?: SwarmBoardState }>
     board.mark()
   })
 
+  // Each request walks the whole family on the backend. The map is out of
+  // sight while the webview is hidden or the Board tab shows, so polls wait
+  // until it shows again, and then one runs at once.
+  const visible = () => vscode.active() && shown() === "map"
   const request = () => {
-    if (!id) return
+    if (!id || !visible()) return
     if (pending && Date.now() - pending.at < STALE) return
     pending = { id: `agent-map:${id}:${++revision}`, at: Date.now() }
     vscode.postMessage({ type: "requestAgentMap", sessionID: id, requestID: pending.id })
   }
+  createEffect(on(visible, (value) => value && request(), { defer: true }))
 
   onMount(() => {
     const unsub = vscode.onMessage((message) => {

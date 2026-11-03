@@ -1725,6 +1725,8 @@ const agentMapTools: ToolPart[] = [
 
 /** Answers the map request with the fixture, opens the map, then the selected node. */
 function AgentMapScene(props: { select?: string }) {
+  // The map asks for data only while its view is active, as the host reports.
+  window.postMessage({ type: "webviewActiveChanged", active: true }, "*")
   const api = getVSCodeAPI()
   const post = api.postMessage
   api.postMessage = (message) => {
@@ -1742,6 +1744,9 @@ function AgentMapScene(props: { select?: string }) {
   onMount(() => {
     const step = () => {
       if (!document.querySelector('[data-slot="agent-map-canvas"], [data-slot="agent-map-detail"]')) {
+        // The open dialog shows a spinner until the map arrives. Opening it again
+        // would remount it, and that mutation would click again before the reply lands.
+        if (document.querySelector(".agent-map")) return false
         document.querySelector<HTMLButtonElement>('[data-slot="agent-map-trigger"]')?.click()
         return false
       }
@@ -1769,9 +1774,12 @@ function AgentMapScene(props: { select?: string }) {
     }),
     getSessionToolParts: (id: string) => (id === SESSION_ID ? agentMapTools : []),
   }
+  // The screenshot covers the story root, so it fills the viewport the dialog covers.
   return (
     <SessionContext.Provider value={session as unknown as SessionContextValue}>
-      <TaskHeader />
+      <div style={{ height: "720px" }}>
+        <TaskHeader />
+      </div>
     </SessionContext.Provider>
   )
 }

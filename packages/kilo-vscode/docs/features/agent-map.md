@@ -44,11 +44,11 @@ The webview cannot build the map itself: it holds only the sessions it opened, a
 2. Walk down level by level: `session.children` for Task subagents, and the worktree family session list (`experimental.session.list` with `worktrees`, filtered to sessions updated since the root started) for Agent Manager sessions.
 3. Per directory in the tree: session status, pending permissions and questions, and background processes. Per parent: background jobs, which tell how a background agent ended.
 4. Read the transcript of each session that started something that has stopped, to leave out what reverted turns started (see Reverts).
-5. `build()` lays out the nodes. It is pure and covered by `tests/unit/agent-map.test.ts`.
+5. `build()` lays out the nodes. It is pure. `tests/unit/agent-map.test.ts` covers it, and covers `load()` against a fake client.
 
-The dialog polls every two seconds while it is open. The map stops at 200 nodes and marks itself truncated.
+The dialog polls every two seconds while the map shows. Each poll walks the whole family, so it waits while the webview is inactive (`vscode.active()`, the same gate the board uses) or the Board tab is open, and polls once as soon as the map shows again. The map stops at 200 nodes and marks itself truncated.
 
-The provider keeps the directory of every node in the maps it loaded. For a session it has no directory of its own for, `getWorkspaceDirectory` falls back to that one, so Stop and the sub-agent viewer reach the backend instance that runs the session, including Agent Manager sessions in other worktrees. The map does not add them to `sessionDirectories`, which also decides which directories session history lists.
+The provider keeps the directory of every node in the maps it loaded, up to 2,000 entries. A map refreshes the entries it sees, and the oldest go first. It does not keep only the latest map, because a transcript opened from an earlier map may still need its directory. For a session it has no directory of its own for, `getWorkspaceDirectory` falls back to that one, so Stop and the sub-agent viewer reach the backend instance that runs the session, including Agent Manager sessions in other worktrees. The map does not add them to `sessionDirectories`, which also decides which directories session history lists.
 
 ## Reverts
 

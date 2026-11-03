@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test"
 import type { BackgroundProcessInfo, KiloClient, Part } from "@kilocode/sdk/v2/client"
-import { build, starts, transcript, transcripts, type Facts } from "../../src/kilo-provider/agent-map"
+import { build, load, starts, transcript, transcripts, type Facts } from "../../src/kilo-provider/agent-map"
 import { REQUEST, SOURCE, stamp } from "../../src/agent-manager/prompt-attribution"
 import { active, count, elapsed, stoppable, total, tree } from "../../webview-ui/src/components/chat/agent-map"
 import type { AgentMap, AgentMapNode } from "../../webview-ui/src/types/messages"
@@ -440,6 +440,146 @@ describe("agent map transcripts", () => {
     // Without that call, the process left with the turn that started it.
     const empty = await transcripts(reader({}), sessions, [server], live, new Map())
     expect(empty.get("root")?.has("server")).toBe(false)
+  })
+})
+
+describe("agent map load", () => {
+  /**
+   * A backend holding one family. Agent Manager sessions live in a sibling
+   * worktree, and the family list also returns sessions of other families.
+   */
+  function backend() {
+    const calls: string[] = []
+    const root = item("root", { time: { created: 100, updated: 200 } })
+    const children: Record<string, Item[]> = {
+      root: [
+        item("child", { parentID: "root", time: { created: 110, updated: 150 } }),
+        // Its starting call was reverted.
+        item("old", { parentID: "root", time: { created: 105, updated: 130 } }),
+      ],
+      child: [item("grand", { parentID: "child", time: { created: 120, updated: 190 } })],
+    }
+    const family = [
+      item("am", {
+        directory: "/repo-wt",
+        metadata: { [SOURCE]: "root", [REQUEST]: "am-1" },
+        time: { created: 120, updated: 190 },
+      }),
+      item("am-kid", {
+        directory: "/repo-wt",
+        metadata: { [SOURCE]: "am", [REQUEST]: "am-2" },
+        time: { created: 130, updated: 160 },
+      }),
+      item("other", { directory: "/repo-wt", metadata: { [SOURCE]: "elsewhere" } }),
+      item("plain", { directory: "/repo-wt" }),
+    ]
+    const live: Record<
+      string,
+      { status: Record<string, { type: "busy" }>; permissions: object[]; processes: BackgroundProcessInfo[] }
+    > = {
+      "/repo": {
+        status: { root: { type: "busy" }, grand: { type: "busy" } },
+        permissions: [],
+        processes: [proc("stray", "stranger")],
+      },
+      "/repo-wt": {
+        status: {},
+        permissions: [{ sessionID: "am" }],
+        processes: [proc("proc-am", "am", { cwd: "/repo-wt", ports: [5173] })],
+      },
+    }
+    const transcripts: Record<string, ReturnType<typeof message>[]> = {
+      root: [message("msg_1", [tool("prt_1", "task", { sessionId: "child" })])],
+      am: [message("msg_1", [tool("prt_1", "agent_manager", { requestID: "am-2" })])],
+    }
+    const jobs: Record<string, object[]> = {
+      root: [
+        { status: "completed", started_at: 111, completed_at: 150, metadata: { sessionId: "child", background: true } },
+      ],
+    }
+    const client = {
+      session: {
+        get: async () => ({ data: root }),
+        children: async (input: { sessionID: string; directory: string }) => {
+          calls.push(`children:${input.sessionID}@${input.directory}`)
+          return { data: children[input.sessionID] ?? [] }
+        },
+        status: async (input: { directory: string }) => {
+          calls.push(`status:${input.directory}`)
+          return { data: live[input.directory]?.status }
+        },
+        messages: async (input: { sessionID: string; directory: string }) => {
+          calls.push(`messages:${input.sessionID}@${input.directory}`)
+          return { data: transcripts[input.sessionID] ?? [] }
+        },
+      },
+      experimental: {
+        session: {
+          list: async (input: Record<string, unknown>) => {
+            calls.push(`family:${JSON.stringify(input)}`)
+            return { data: family }
+          },
+        },
+      },
+      permission: { list: async (input: { directory: string }) => ({ data: live[input.directory]?.permissions }) },
+      question: { list: async () => ({ data: [] }) },
+      backgroundProcess: { list: async (input: { directory: string }) => ({ data: live[input.directory]?.processes }) },
+      kilocode: {
+        backgroundJobs: async (input: { sessionID: string }) => ({ data: jobs[input.sessionID] ?? [] }),
+      },
+    } as unknown as KiloClient
+    return { client, calls }
+  }
+
+  it("finds the Task subagents and the Agent Manager sessions the family started", async () => {
+    const api = backend()
+
+    const result = await load(api.client, "root", "/repo")
+
+    expect(result.map.nodes.map((entry) => [entry.id, entry.kind, entry.parent, entry.status])).toEqual([
+      ["root", "root", undefined, "running"],
+      ["child", "task", "root", "done"],
+      ["am", "session", "root", "waiting"],
+      ["grand", "task", "child", "running"],
+      ["am-kid", "session", "am", "done"],
+      ["proc-am", "process", "am", "running"],
+    ])
+    expect(node(result.map, "child")).toMatchObject({ background: true, started: 111, finished: 150 })
+    expect(Object.fromEntries(result.dirs)).toEqual({
+      root: "/repo",
+      child: "/repo",
+      am: "/repo-wt",
+      grand: "/repo",
+      "am-kid": "/repo-wt",
+      "proc-am": "/repo-wt",
+    })
+  })
+
+  it("asks each session in its own directory and each directory once", async () => {
+    const api = backend()
+
+    await load(api.client, "root", "/repo")
+
+    expect(api.calls.filter((call) => call.startsWith("family:"))).toEqual([
+      `family:${JSON.stringify({ worktrees: true, roots: true, directory: "/repo", start: 100, limit: 1000 })}`,
+    ])
+    expect(api.calls.filter((call) => call.startsWith("children:")).toSorted()).toEqual([
+      "children:am-kid@/repo-wt",
+      "children:am@/repo-wt",
+      "children:child@/repo",
+      "children:grand@/repo",
+      "children:old@/repo",
+      "children:root@/repo",
+    ])
+    expect(api.calls.filter((call) => call.startsWith("status:")).toSorted()).toEqual([
+      "status:/repo",
+      "status:/repo-wt",
+    ])
+    // Only the owners of nodes that stopped are read. `child` owns only the running `grand`.
+    expect(api.calls.filter((call) => call.startsWith("messages:")).toSorted()).toEqual([
+      "messages:am@/repo-wt",
+      "messages:root@/repo",
+    ])
   })
 })
 

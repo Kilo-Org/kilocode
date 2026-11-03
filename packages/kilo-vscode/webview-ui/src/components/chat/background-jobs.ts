@@ -52,7 +52,7 @@ export function pollBackgroundJobs() {
 }
 
 /**
- * The background agents of the current session that are not dismissed.
+ * The background agents of the current session.
  *
  * Job status is the source of truth. Child session status is the fallback
  * until a reply arrives or after a failed one, because a webview does not

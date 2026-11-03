@@ -31,6 +31,8 @@ import type {
 
 /** Nodes past this are left out, so a runaway fan-out cannot stall the host. */
 const LIMIT = 200
+/** Routing entries a provider keeps: those of its recent maps. */
+const KEEP = LIMIT * 10
 
 type Item = Pick<
   Session,
@@ -475,7 +477,16 @@ export function createAgentMap(ctx: Context) {
     }
     await load(client, sessionID, ctx.dir(sessionID), memo).then(
       (result) => {
-        for (const [id, dir] of result.dirs) dirs.set(id, dir)
+        // An entry seen again becomes the newest, and the oldest past KEEP go.
+        // An ID without an entry routes to the workspace root.
+        for (const [id, dir] of result.dirs) {
+          dirs.delete(id)
+          dirs.set(id, dir)
+        }
+        for (const id of dirs.keys()) {
+          if (dirs.size <= KEEP) break
+          dirs.delete(id)
+        }
         ctx.post({ ...base, map: result.map })
       },
       (err: unknown) => {
