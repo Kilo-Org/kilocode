@@ -32,7 +32,7 @@ describe("SetupScriptService", () => {
         kind: "posix",
       })
     } finally {
-      fs.rmSync(root, { recursive: true, force: true })
+      fs.rmSync(root, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 })
     }
   })
 
@@ -49,7 +49,7 @@ describe("SetupScriptService", () => {
         kind: "powershell",
       })
     } finally {
-      fs.rmSync(root, { recursive: true, force: true })
+      fs.rmSync(root, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 })
     }
   })
 
@@ -64,7 +64,7 @@ describe("SetupScriptService", () => {
         kind: "cmd",
       })
     } finally {
-      fs.rmSync(root, { recursive: true, force: true })
+      fs.rmSync(root, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 })
     }
   })
 
@@ -78,7 +78,7 @@ describe("SetupScriptService", () => {
       expect(resolved).toBeUndefined()
       expect(service.hasScript("win32")).toBe(false)
     } finally {
-      fs.rmSync(root, { recursive: true, force: true })
+      fs.rmSync(root, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 })
     }
   })
 
@@ -91,7 +91,7 @@ describe("SetupScriptService", () => {
       expect(fs.existsSync(file)).toBe(true)
       expect(service.hasScript("win32")).toBe(true)
     } finally {
-      fs.rmSync(root, { recursive: true, force: true })
+      fs.rmSync(root, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 })
     }
   })
 
@@ -104,7 +104,7 @@ describe("SetupScriptService", () => {
       expect(fs.existsSync(file)).toBe(true)
       expect(service.hasScript("darwin")).toBe(true)
     } finally {
-      fs.rmSync(root, { recursive: true, force: true })
+      fs.rmSync(root, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 })
     }
   })
 })

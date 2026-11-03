@@ -34,7 +34,7 @@ afterEach(() => {
     if (!(key in environment)) delete process.env[key]
   }
   Object.assign(process.env, environment)
-  for (const dir of directories.splice(0)) fs.rmSync(dir, { recursive: true, force: true })
+  for (const dir of directories.splice(0)) fs.rmSync(dir, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 })
 })
 
 function directory() {

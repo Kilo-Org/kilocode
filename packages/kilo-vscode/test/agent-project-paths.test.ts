@@ -21,8 +21,8 @@ describe("project-paths", () => {
       expect(canonicalizePath(alias)).toBe(canonicalizePath(target))
       expect(canonicalizePath(alias)).not.toBe(alias)
     } finally {
-      fs.rmSync(root, { recursive: true, force: true })
-      fs.rmSync(target, { recursive: true, force: true })
+      fs.rmSync(root, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 })
+      fs.rmSync(target, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 })
     }
   })
 
@@ -46,8 +46,8 @@ describe("project-paths", () => {
       expect(findTrackedBranch(tracked, alias)).toBe("branch-a")
       expect(findTrackedBranch(tracked, target)).toBe("branch-a")
     } finally {
-      fs.rmSync(root, { recursive: true, force: true })
-      fs.rmSync(target, { recursive: true, force: true })
+      fs.rmSync(root, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 })
+      fs.rmSync(target, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 })
     }
   })
 
@@ -62,8 +62,8 @@ describe("project-paths", () => {
       const tracked = new Map<string, string>([[alias, "branch-a"]])
       expect(findTrackedBranch(tracked, target)).toBe("branch-a")
     } finally {
-      fs.rmSync(root, { recursive: true, force: true })
-      fs.rmSync(target, { recursive: true, force: true })
+      fs.rmSync(root, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 })
+      fs.rmSync(target, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 })
     }
   })
 
@@ -75,7 +75,7 @@ describe("project-paths", () => {
       const tracked = new Map<string, string>([[canonicalizePath(root), "branch-a"]])
       expect(findTrackedBranch(tracked, other)).toBeUndefined()
     } finally {
-      fs.rmSync(root, { recursive: true, force: true })
+      fs.rmSync(root, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 })
     }
   })
 
@@ -166,7 +166,7 @@ describe("project-paths", () => {
       })
       expect(fallback).toBe(canonicalizePath(root))
     } finally {
-      fs.rmSync(dir, { recursive: true, force: true })
+      fs.rmSync(dir, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 })
     }
   })
 
@@ -185,7 +185,7 @@ describe("project-paths", () => {
       expect(checkoutRoot(path.join(linked, "src"))).toBe(linked)
       expect(checkoutRoot(path.join(dir, "plain"))).toBe(checkoutRoot(dir))
     } finally {
-      fs.rmSync(dir, { recursive: true, force: true })
+      fs.rmSync(dir, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 })
     }
   })
 })

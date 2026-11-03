@@ -70,7 +70,7 @@ describe("BranchNamingController", () => {
 
   afterEach(async () => {
     await state.flush()
-    fs.rmSync(root, { recursive: true, force: true })
+    fs.rmSync(root, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 })
   })
 
   it("skips the first prompt and names on the second", async () => {

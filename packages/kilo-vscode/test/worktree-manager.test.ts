@@ -23,7 +23,7 @@ const tempDirs: string[] = []
 afterEach(async () => {
   await Promise.all(
     tempDirs.splice(0, tempDirs.length).map(async (dir) => {
-      await fs.rm(dir, { recursive: true, force: true })
+      await fs.rm(dir, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 })
     }),
   )
 })
@@ -731,7 +731,7 @@ describe("WorktreeManager.removeWorktree", () => {
     const root = await createTempRepo()
     const mgr = createManager(root)
     const result = await mgr.createWorktree({ prompt: "detach-missing" })
-    await fs.rm(result.path, { recursive: true, force: true })
+    await fs.rm(result.path, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 })
 
     const detached = await mgr.detachWorktree(result.path, result.branch)
     await detached.done
@@ -1066,7 +1066,7 @@ describe("WorktreeManager.restoreWorktree", () => {
     await fs.writeFile(path.join(wt.path, "work.txt"), "committed work")
     gitExec(["git", "-C", wt.path, "add", "."])
     gitExec(["git", "-C", wt.path, "commit", "-m", "work"])
-    await fs.rm(wt.path, { recursive: true, force: true })
+    await fs.rm(wt.path, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 })
 
     await mgr.restoreWorktree(wt.path, wt.branch)
 

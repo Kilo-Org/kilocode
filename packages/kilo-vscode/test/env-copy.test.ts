@@ -16,7 +16,7 @@ describe("listEnvFiles", () => {
   })
 
   afterEach(() => {
-    fs.rmSync(dir, { recursive: true, force: true })
+    fs.rmSync(dir, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 })
   })
 
   it("returns empty array when no .env files exist", () => {
@@ -68,8 +68,8 @@ describe("copyEnvFiles", () => {
   })
 
   afterEach(() => {
-    fs.rmSync(repo, { recursive: true, force: true })
-    fs.rmSync(worktree, { recursive: true, force: true })
+    fs.rmSync(repo, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 })
+    fs.rmSync(worktree, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 })
   })
 
   function log(msg: string) {

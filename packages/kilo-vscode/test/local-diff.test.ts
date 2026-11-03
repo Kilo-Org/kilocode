@@ -65,7 +65,7 @@ async function withRepo(run: (dir: string, base: string) => Promise<void>): Prom
     runSync(dir, ["branch", "base-branch"])
     await run(dir, "base-branch")
   } finally {
-    await fs.rm(dir, { recursive: true, force: true })
+    await fs.rm(dir, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 })
   }
 }
 
@@ -1332,7 +1332,7 @@ describe("resolveLocalDiffTarget + revertFile", () => {
       expect(entries).toHaveLength(1)
       expect(entries[0]).toMatchObject({ file: "feature.txt", additions: 1, deletions: 0 })
     } finally {
-      await fs.rm(root, { recursive: true, force: true })
+      await fs.rm(root, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 })
     }
   })
 

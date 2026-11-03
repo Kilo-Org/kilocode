@@ -20,7 +20,7 @@ beforeEach(async () => {
 afterEach(async () => {
   await Promise.all(
     tempDirs.splice(0, tempDirs.length).map(async (dir) => {
-      await fs.rm(dir, { recursive: true, force: true })
+      await fs.rm(dir, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 })
     }),
   )
 })
@@ -269,7 +269,7 @@ describe("WorktreeManager pool stale slot", () => {
     manager.warmPool()
     const slot = await waitForPooledSlot(root)
 
-    await fs.rm(slot, { recursive: true, force: true })
+    await fs.rm(slot, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 })
     expect(existsSync(slot)).toBe(false)
 
     const result = await manager.createWorktree({})
@@ -304,7 +304,7 @@ describe("WorktreeManager pool stale slot", () => {
     const healthy = refilled.find((slot) => slot !== stale)
     expect(healthy).toBeDefined()
 
-    await fs.rm(stale, { recursive: true, force: true })
+    await fs.rm(stale, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 })
     expect(existsSync(stale)).toBe(false)
 
     const result = await manager.createWorktree({})

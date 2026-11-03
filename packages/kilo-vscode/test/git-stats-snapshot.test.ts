@@ -35,7 +35,7 @@ async function repo(test: (dir: string, base: string) => Promise<void>) {
     run(dir, ["branch", "base"])
     await test(dir, "base")
   } finally {
-    await fs.rm(dir, { recursive: true, force: true })
+    await fs.rm(dir, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 })
   }
 }
 
@@ -52,7 +52,7 @@ describe("GitStatsSnapshot", () => {
       expect(status.dirty).toBe(true)
       expect(status.fingerprint).toBeTruthy()
     } finally {
-      await fs.rm(dir, { recursive: true, force: true })
+      await fs.rm(dir, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 })
     }
   })
 
@@ -301,11 +301,11 @@ describe("GitStatsSnapshot", () => {
       expect(refs[1]!.worktreePaths?.get(paths[1]!)).toBe("feature")
       expect(refs[1]!.worktreePaths?.has(paths[0]!)).toBe(false)
     } finally {
-      await Promise.all(roots.map((root) => fs.rm(root, { recursive: true, force: true })))
+      await Promise.all(roots.map((root) => fs.rm(root, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 })))
     }
   })
 
-  it("parses a linked worktree path containing a newline", async () => {
+  it.skipIf(process.platform === "win32")("parses a linked worktree path containing a newline", async () => {
     await repo(async (dir) => {
       const worktree = path.join(dir, "linked\nworktree")
       run(dir, ["worktree", "add", "-b", "feature", worktree, "main"])

@@ -62,7 +62,7 @@ describe("Agent Manager orchestration domain", () => {
 
   afterEach(async () => {
     await state.flush()
-    fs.rmSync(root, { recursive: true, force: true })
+    fs.rmSync(root, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 })
   })
 
   it("returns sectioned, ungrouped, local, and multiple-session summaries compactly", async () => {
@@ -491,7 +491,7 @@ describe("Agent Manager orchestration domain", () => {
       code: "cross_workspace",
     } satisfies Partial<OrchestrationError>)
 
-    fs.rmSync(worktree, { recursive: true, force: true })
+    fs.rmSync(worktree, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 })
     await expect(prompt({ client, root, state, sessionID: "ses_target", text: "Continue" })).rejects.toMatchObject({
       code: "stale_session",
     } satisfies Partial<OrchestrationError>)

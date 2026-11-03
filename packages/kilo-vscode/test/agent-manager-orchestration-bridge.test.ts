@@ -64,7 +64,7 @@ describe("AgentManagerOrchestrationBridge", () => {
 
   afterEach(async () => {
     await state.flush()
-    fs.rmSync(root, { recursive: true, force: true })
+    fs.rmSync(root, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 })
   })
 
   function harness(overrides?: Overrides) {
@@ -851,7 +851,7 @@ describe("AgentManagerOrchestrationBridge", () => {
 
     test.bridge.dispose()
     await other.flush()
-    fs.rmSync(secondary, { recursive: true, force: true })
+    fs.rmSync(secondary, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 })
   })
 
   it("handles requests for secondary project directories in multi-project mode", async () => {
@@ -889,6 +889,6 @@ describe("AgentManagerOrchestrationBridge", () => {
     })
     test.bridge.dispose()
     await secondaryState.flush()
-    fs.rmSync(secondaryRoot, { recursive: true, force: true })
+    fs.rmSync(secondaryRoot, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 })
   })
 })

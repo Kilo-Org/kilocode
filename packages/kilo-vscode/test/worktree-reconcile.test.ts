@@ -10,7 +10,7 @@ import { broken, reconcileWorktrees, summarize, unhealthy } from "../src/agent-m
 const tempDirs: string[] = []
 
 afterEach(async () => {
-  await Promise.all(tempDirs.splice(0, tempDirs.length).map((dir) => fs.rm(dir, { recursive: true, force: true })))
+  await Promise.all(tempDirs.splice(0, tempDirs.length).map((dir) => fs.rm(dir, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 })))
 })
 
 function git(args: string[]) {
@@ -95,7 +95,7 @@ describe("reconcileWorktrees", () => {
     const h = await harness()
     const dir = await worktree(h.root, "restorable")
     const row = h.state.addWorktree({ branch: "restorable", path: dir, parentBranch: "main" })
-    await fs.rm(dir, { recursive: true, force: true })
+    await fs.rm(dir, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 })
 
     const report = await h.run()
 
@@ -111,7 +111,7 @@ describe("reconcileWorktrees", () => {
     const h = await harness()
     const dir = await worktree(h.root, "expendable")
     const row = h.state.addWorktree({ branch: "expendable", path: dir, parentBranch: "main" })
-    await fs.rm(dir, { recursive: true, force: true })
+    await fs.rm(dir, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 })
     git(["git", "-C", h.root, "worktree", "prune"])
     git(["git", "-C", h.root, "branch", "-D", "expendable"])
 
@@ -127,7 +127,7 @@ describe("reconcileWorktrees", () => {
     const dir = await worktree(h.root, "has-history")
     const row = h.state.addWorktree({ branch: "has-history", path: dir, parentBranch: "main" })
     h.state.addSession("ses_1", row.id)
-    await fs.rm(dir, { recursive: true, force: true })
+    await fs.rm(dir, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 })
     git(["git", "-C", h.root, "worktree", "prune"])
     git(["git", "-C", h.root, "branch", "-D", "has-history"])
 
@@ -146,7 +146,7 @@ describe("reconcileWorktrees", () => {
     const h = await harness()
     const dir = await worktree(h.root, "late-session")
     const row = h.state.addWorktree({ branch: "late-session", path: dir, parentBranch: "main" })
-    await fs.rm(dir, { recursive: true, force: true })
+    await fs.rm(dir, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 })
     git(["git", "-C", h.root, "worktree", "prune"])
     git(["git", "-C", h.root, "branch", "-D", "late-session"])
 
@@ -179,7 +179,7 @@ describe("reconcileWorktrees", () => {
     const dir = await worktree(h.root, "orphaned")
     h.state.addWorktree({ branch: "orphaned", path: dir, parentBranch: "main" })
     // Exactly what a hand-deleted registration looks like: directory intact, metadata gone.
-    await fs.rm(path.join(h.root, ".git", "worktrees", "orphaned"), { recursive: true, force: true })
+    await fs.rm(path.join(h.root, ".git", "worktrees", "orphaned"), { recursive: true, force: true, maxRetries: 20, retryDelay: 100 })
 
     const report = await h.run()
 
@@ -287,7 +287,7 @@ describe("reconcileWorktrees", () => {
     const h = await harness()
     const dir = await worktree(h.root, "unknown")
     const row = h.state.addWorktree({ branch: "unknown", path: dir, parentBranch: "main" })
-    await fs.rm(dir, { recursive: true, force: true })
+    await fs.rm(dir, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 })
     let pruned = false
 
     const report = await reconcileWorktrees({

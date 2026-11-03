@@ -13,7 +13,7 @@ import type { AgentManagerOutMessage } from "../src/agent-manager/types"
 const tempDirs: string[] = []
 
 afterEach(async () => {
-  await Promise.all(tempDirs.splice(0, tempDirs.length).map((dir) => fs.rm(dir, { recursive: true, force: true })))
+  await Promise.all(tempDirs.splice(0, tempDirs.length).map((dir) => fs.rm(dir, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 })))
 })
 
 describe("createWorktreeOnDisk", () => {

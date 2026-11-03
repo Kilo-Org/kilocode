@@ -153,7 +153,7 @@ describe("working-tree PR suggestions", () => {
 
   afterEach(async () => {
     actions.dispose()
-    await fs.rm(directory, { recursive: true, force: true })
+    await fs.rm(directory, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 })
   })
 
   it("previews actual local edits, then changes only the worktree and consumes the token", async () => {

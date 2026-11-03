@@ -30,7 +30,7 @@ afterEach(async () => {
     if (!(key in env)) delete process.env[key]
   }
   Object.assign(process.env, env)
-  await fs.rm(dir, { recursive: true, force: true })
+  await fs.rm(dir, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 })
 })
 
 async function run(root: string, ...args: string[]) {
@@ -231,11 +231,19 @@ describe("project preparation", () => {
     const other = await project()
     const index = path.join(dir, "ambient-index")
     await fs.writeFile(index, "do not touch")
-    process.env.GIT_DIR = path.join(other, ".git")
-    process.env.GIT_COMMON_DIR = path.join(other, ".git")
-    process.env.GIT_WORK_TREE = other
-    process.env.GIT_INDEX_FILE = index
-    const { root } = await create(dir, "intended", git)
+    const ambient = {
+      GIT_DIR: path.join(other, ".git"),
+      GIT_COMMON_DIR: path.join(other, ".git"),
+      GIT_WORK_TREE: other,
+      GIT_INDEX_FILE: index,
+    }
+    // Preparation must pass its own sanitized environment, so a caller that omits one must not leak
+    // the process-level overrides into Git.
+    const scoped = {
+      execGit: (args: string[], cwd: string, options?: Parameters<GitOps["execGit"]>[2]) =>
+        git.execGit(args, cwd, { ...options, env: options?.env ?? { ...process.env, ...ambient } }),
+    }
+    const { root } = await create(dir, "intended", scoped)
     await configure(root, git, { name: "Intended", email: "intended@example.invalid" })
     await commit(root, git)
     expect(await inspect(root, git)).toEqual({ root, empty: false })

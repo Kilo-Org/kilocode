@@ -33,7 +33,7 @@ describe("pruneSubagents", () => {
           .sort(),
       ).toEqual(["ses_live", "ses_offline"])
     } finally {
-      fs.rmSync(root, { recursive: true, force: true })
+      fs.rmSync(root, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 })
     }
   })
 

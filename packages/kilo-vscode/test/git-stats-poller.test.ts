@@ -192,7 +192,7 @@ describe("GitStatsPoller", () => {
         expect(git.commands.some((item) => item.cwd === roots[index])).toBe(true)
       }
     } finally {
-      await Promise.all(roots.map((root) => fs.promises.rm(root, { recursive: true, force: true })))
+      await Promise.all(roots.map((root) => fs.promises.rm(root, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 })))
     }
   })
 
@@ -233,7 +233,7 @@ describe("GitStatsPoller", () => {
       expect(git.worktreeCalls).toBe(1)
       expect(git.aheadCalls).toBeGreaterThan(0)
     } finally {
-      await fs.promises.rm(root, { recursive: true, force: true })
+      await fs.promises.rm(root, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 })
     }
   })
 
@@ -270,7 +270,7 @@ describe("GitStatsPoller", () => {
 
       expect(git.worktreeCalls).toBe(1)
     } finally {
-      await fs.promises.rm(root, { recursive: true, force: true })
+      await fs.promises.rm(root, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 })
     }
   })
 
@@ -330,7 +330,7 @@ describe("GitStatsPoller", () => {
       await poller.snapshot(true)
       expect(git.aheadCalls).toBe(ahead + 1)
     } finally {
-      await fs.promises.rm(root, { recursive: true, force: true })
+      await fs.promises.rm(root, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 })
     }
   })
 
@@ -396,7 +396,7 @@ describe("GitStatsPoller", () => {
       expect(counts.get(dirs[1]!)).toBeGreaterThan(2)
       expect(counts.get(dirs[2]!)).toBeGreaterThan(2)
     } finally {
-      await fs.promises.rm(root, { recursive: true, force: true })
+      await fs.promises.rm(root, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 })
     }
   })
 
@@ -661,7 +661,7 @@ describe("GitStatsPoller", () => {
     poller.setEnabled(true)
     await waitFor(() => presence.length >= 1)
     poller.stop()
-    fs.rmSync(root, { recursive: true, force: true })
+    fs.rmSync(root, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 })
 
     expect(presence[0]).toEqual({
       worktrees: [{ worktreeId: "a", missing: false, branch: "branch-a" }],
@@ -696,7 +696,7 @@ describe("GitStatsPoller", () => {
     poller.setEnabled(true)
     await waitFor(() => presence.length >= 1)
     poller.stop()
-    fs.rmSync(root, { recursive: true, force: true })
+    fs.rmSync(root, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 })
 
     expect(presence[0]).toEqual({ worktrees: [], degraded: true })
   })
@@ -739,7 +739,7 @@ describe("GitStatsPoller", () => {
     poller.setEnabled(true)
     await waitFor(() => calls.length >= 1)
     poller.stop()
-    fs.rmSync(root, { recursive: true, force: true })
+    fs.rmSync(root, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 })
 
     expect(calls.some((cwd) => cwd === wtBPath)).toBe(false)
     expect(presence[0]).toEqual({
@@ -793,8 +793,8 @@ describe("GitStatsPoller", () => {
     poller.setEnabled(true)
     await waitFor(() => presence.length >= 1 && emitted.length >= 1)
     poller.stop()
-    fs.rmSync(root, { recursive: true, force: true })
-    fs.rmSync(real, { recursive: true, force: true })
+    fs.rmSync(root, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 })
+    fs.rmSync(real, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 })
 
     expect(presence[0]).toEqual({
       worktrees: [{ worktreeId: "a", missing: false, branch: "branch-a" }],

@@ -422,7 +422,7 @@ describe("related", () => {
       // An object absent from the repository cannot be in HEAD's history either.
       expect(await related({ ...base, state: "merged", headRefOid: "f".repeat(40) }, git)).toBe(false)
     } finally {
-      rmSync(dir, { recursive: true, force: true })
+      rmSync(dir, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 })
     }
   })
 })

@@ -31,7 +31,7 @@ describe("git-transfer", () => {
   })
 
   afterEach(async () => {
-    await fs.rm(dir, { recursive: true, force: true })
+    await fs.rm(dir, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 })
   })
 
   describe("capture", () => {
@@ -118,7 +118,7 @@ describe("git-transfer", () => {
 
     afterEach(async () => {
       await git(["worktree", "remove", "--force", target], dir).catch(() => {})
-      await fs.rm(target, { recursive: true, force: true }).catch(() => {})
+      await fs.rm(target, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 }).catch(() => {})
     })
 
     it("applies unstaged changes", async () => {
@@ -294,7 +294,7 @@ describe("git-transfer", () => {
 
     afterEach(async () => {
       await git(["worktree", "remove", "--force", target], dir).catch(() => {})
-      await fs.rm(target, { recursive: true, force: true }).catch(() => {})
+      await fs.rm(target, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 }).catch(() => {})
     })
 
     it("preserves staged + unstaged + untracked in one round-trip", async () => {

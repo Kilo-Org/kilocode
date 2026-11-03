@@ -10,7 +10,7 @@ const contexts: ProjectContext[] = []
 afterEach(async () => {
   for (const ctx of contexts.splice(0)) {
     await ctx.dispose()
-    await fs.rm(ctx.root, { recursive: true, force: true })
+    await fs.rm(ctx.root, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 })
   }
 })
 

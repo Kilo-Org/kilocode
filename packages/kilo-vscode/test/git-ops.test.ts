@@ -36,7 +36,7 @@ async function withRepo(run: (cwd: string) => Promise<void>): Promise<void> {
     runGit(cwd, ["init"])
     await run(cwd)
   } finally {
-    await fs.rm(cwd, { recursive: true, force: true })
+    await fs.rm(cwd, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 })
   }
 }
 
@@ -85,7 +85,7 @@ describe("GitOps", () => {
         expect(git.path).toBe(binary)
         expect(await fs.realpath((await git.root(cwd))!)).toBe(await fs.realpath(cwd))
       } finally {
-        await fs.rm(dir, { recursive: true, force: true })
+        await fs.rm(dir, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 })
       }
     })
   })

@@ -17,7 +17,7 @@ describe("Agent Manager v2 state import", () => {
   })
 
   afterEach(() => {
-    fs.rmSync(root, { recursive: true, force: true })
+    fs.rmSync(root, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 })
   })
 
   it("imports the v1 state file once and leaves it untouched", async () => {

@@ -81,14 +81,14 @@ beforeEach(async () => {
 })
 
 afterEach(async () => {
-  await Promise.all(dirs.splice(0).map((dir) => fs.rm(dir, { recursive: true, force: true })))
+  await Promise.all(dirs.splice(0).map((dir) => fs.rm(dir, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 })))
 })
 
 describe("worktree pool sweep", () => {
   it("removes slots of a deleted repository and their empty project directory", async () => {
     const gone = await createRepo()
     const slot = await createSlot("orphan", { pooled: true, owner: process.pid }, gone)
-    await fs.rm(gone, { recursive: true, force: true })
+    await fs.rm(gone, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 })
 
     await run()
 

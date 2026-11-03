@@ -24,7 +24,7 @@ function setup() {
     error: () => undefined,
     log: () => undefined,
   })
-  return { root, configs, statuses, controller, cleanup: () => rmSync(root, { recursive: true, force: true }) }
+  return { root, configs, statuses, controller, cleanup: () => rmSync(root, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 }) }
 }
 
 describe("RunController local key scoping", () => {

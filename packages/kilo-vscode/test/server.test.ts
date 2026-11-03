@@ -125,7 +125,7 @@ test("manager keeps a failed start, reports it once and retries after a restart"
   expect(second).not.toBe(first)
   await expect(second).rejects.toThrow("exited during startup")
   expect(errors).toHaveLength(2)
-  await rm(root, { recursive: true, force: true })
+  await rm(root, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 })
 })
 
 test("manager reports every started and stopped server", async () => {
@@ -198,5 +198,5 @@ test("starts the real v2 server, passes the Kilo handshake and stops when stdin 
   const exited = new Promise((resolve) => server.process.once("exit", resolve))
   stop(server.process)
   await exited
-  await rm(root, { recursive: true, force: true })
+  await rm(root, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 })
 }, 90_000)

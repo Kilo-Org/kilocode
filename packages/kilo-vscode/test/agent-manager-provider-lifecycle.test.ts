@@ -102,7 +102,7 @@ describe("Agent Manager worktree lifecycle", () => {
 
   afterEach(async () => {
     await state.flush()
-    fs.rmSync(root, { recursive: true, force: true })
+    fs.rmSync(root, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 })
   })
 
   const deleteWorktree = async () => deleteLifecycleWorktree(ctx, host, state.getWorktrees()[0]!.id)

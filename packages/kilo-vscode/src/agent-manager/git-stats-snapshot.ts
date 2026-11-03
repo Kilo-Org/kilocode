@@ -6,6 +6,7 @@ import { probe } from "../diff/shared/binary"
 import { resolveInside } from "../diff/shared/path"
 import { serialize } from "../util/serialize"
 import type { GitOps } from "./GitOps"
+import { canonicalizePath } from "./project/paths"
 import { Semaphore } from "./semaphore"
 
 type Measurement = { stamp: string; count: number; binary: boolean }
@@ -71,7 +72,7 @@ function parse(raw: Buffer, linked: boolean): RefSnapshot {
     if (!ref || !oid) continue
     oids.set(ref, oid)
     if (upstream) upstreams.set(ref, upstream)
-    if (worktree && ref.startsWith("refs/heads/")) paths?.set(worktree, ref.slice(11))
+    if (worktree && ref.startsWith("refs/heads/")) paths?.set(canonicalizePath(worktree), ref.slice(11))
   }
 
   return { oids, upstreams, ...(paths ? { worktreePaths: paths } : {}) }

@@ -6,6 +6,7 @@ import { Marked } from "marked"
 import { exec } from "../../util/process"
 import type { PRReviewResult, PRTarget } from "../../shared/pr-comment-actions"
 import { execGhRead } from "../gh"
+import { samePath } from "../project/paths"
 import type { PRReviewContext, PRReviewHost } from "./review-context"
 
 const limit = 1024 * 1024
@@ -241,7 +242,7 @@ export class PRSuggestionActions {
         (await git(current.directory, ["symbolic-ref", "--short", "HEAD"])).trim() ===
           current.branch, "Local HEAD or branch changed")
       const latest = this.host.context(message)
-      require(fs.realpathSync(latest.directory) === current.directory &&
+      require(samePath(fs.realpathSync(latest.directory), current.directory) &&
         latest.branch === current.branch, "Worktree route changed")
       require(!this.disposed && saved.expires > Date.now(), "Suggestion preview expired or was disposed")
       opened(
@@ -319,8 +320,8 @@ export class PRSuggestionActions {
   private async snapshot(context: PRReviewContext, comment: string, index: number) {
     const { node, start, end, thread, body, block } = await this.source(context, comment, index)
     const directory = fs.realpathSync(context.directory)
-    require(fs.realpathSync((await git(directory, ["rev-parse", "--show-toplevel"])).trim()) ===
-      directory, "Worktree root changed")
+    require(samePath(fs.realpathSync((await git(directory, ["rev-parse", "--show-toplevel"])).trim()), directory),
+      "Worktree root changed")
     const head = (await git(directory, ["rev-parse", "HEAD"])).trim()
     const branch = (await git(directory, ["symbolic-ref", "--short", "HEAD"])).trim()
     require(branch === context.branch &&

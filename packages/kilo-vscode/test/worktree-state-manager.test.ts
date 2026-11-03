@@ -21,7 +21,7 @@ describe("WorktreeStateManager", () => {
 
   afterEach(async () => {
     await manager.flush()
-    fs.rmSync(root, { recursive: true, force: true })
+    fs.rmSync(root, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 })
   })
 
   describe("worktree CRUD", () => {
@@ -56,7 +56,7 @@ describe("WorktreeStateManager", () => {
       expect(manager.findWorktreeByPath(path.join(real, "feature-dir"))?.id).toBe(
         process.platform === "darwin" || process.platform === "win32" ? wt.id : undefined,
       )
-      fs.rmSync(real, { recursive: true, force: true })
+      fs.rmSync(real, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 })
     })
 
     it("removes worktree and deletes its sessions", () => {
@@ -772,7 +772,7 @@ describe("WorktreeStateManager", () => {
   describe("legacy .kilocode migration", () => {
     it("migrates and loads state from .kilocode when .kilo is absent", async () => {
       // Remove the .kilo dir created in beforeEach
-      fs.rmSync(path.join(root, ".kilo2"), { recursive: true, force: true })
+      fs.rmSync(path.join(root, ".kilo2"), { recursive: true, force: true, maxRetries: 20, retryDelay: 100 })
 
       // Write state to legacy .kilocode dir (migration will move it to .kilo)
       const legacyDir = path.join(root, ".kilocode")

@@ -19,7 +19,7 @@ describe("RunScriptService", () => {
   })
 
   afterEach(() => {
-    fs.rmSync(root, { recursive: true, force: true })
+    fs.rmSync(root, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 })
   })
 
   it("resolves posix run-script before run-script.sh", () => {
@@ -44,7 +44,7 @@ describe("RunScriptService", () => {
   })
 
   it("creates a platform default script", async () => {
-    fs.rmSync(dir, { recursive: true, force: true })
+    fs.rmSync(dir, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 })
 
     await new RunScriptService(root).createDefaultScript("win32")
 

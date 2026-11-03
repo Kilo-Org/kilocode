@@ -16,7 +16,7 @@ describe("WorktreeStateManager sections", () => {
 
   afterEach(async () => {
     await mgr.flush()
-    fs.rmSync(root, { recursive: true, force: true })
+    fs.rmSync(root, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 })
   })
 
   describe("addSection", () => {

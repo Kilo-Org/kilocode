@@ -308,8 +308,9 @@ describe("runWorktreeSetupScript", () => {
   function root(script: boolean): string {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), "kilo-setup-flow-"))
     if (!script) return dir
-    fs.mkdirSync(path.join(dir, ".kilo"), { recursive: true })
-    fs.writeFileSync(path.join(dir, ".kilo", "setup-script"), "#!/bin/sh\nexit 0\n")
+    const scriptPath = new SetupScriptService(dir).getScriptPath()
+    fs.mkdirSync(path.dirname(scriptPath), { recursive: true })
+    fs.writeFileSync(scriptPath, "#!/bin/sh\nexit 0\n")
     return dir
   }
 

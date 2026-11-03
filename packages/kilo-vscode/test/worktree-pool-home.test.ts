@@ -16,7 +16,7 @@ async function temp(): Promise<string> {
 afterEach(async () => {
   if (xdg === undefined) delete process.env.XDG_DATA_HOME
   else process.env.XDG_DATA_HOME = xdg
-  await Promise.all(dirs.splice(0).map((dir) => fs.rm(dir, { recursive: true, force: true })))
+  await Promise.all(dirs.splice(0).map((dir) => fs.rm(dir, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 })))
 })
 
 describe("worktree pool home", () => {
