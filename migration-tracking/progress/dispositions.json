@@ -326,8 +326,8 @@
   },
   "patch:unattributed:agent:461dc96586d3": {
     "state": "dropped",
-    "note": "Per-agent hardening after config: metadata lifting (no v2 schema fields), Explore shell limits (native Explore, U-E2-17), the Plan edit guard after per-agent rules (U-E2-13) and Scout reference agents (U-E11-05). Each part is a row of the differences table in #14999.",
-    "by": "agents-plugin"
+    "note": "Per-agent hardening after config, a bundled hunk whose parts land in different units. Explore shell limits are now ported: KiloAgentPlugin applies the read-only shell table (gh and find denied) to the native Explore agent in Plugin and reapplies it after global config in Ceiling (packages/kilo-plugin/src/agent/index.ts). Still deferred: metadata lifting (no v2 schema fields), the Plan edit guard after per-agent rules (U-E2-13) and Scout reference agents (U-E11-05). Each part is a row of the differences table in #14999.",
+    "by": "explore-readonly-bash"
   },
   "patch:unattributed:agent:51a770bdc581": {
     "state": "dropped",

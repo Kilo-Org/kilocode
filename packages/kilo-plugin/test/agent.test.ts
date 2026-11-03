@@ -193,6 +193,100 @@ describe("KiloAgentPlugin", () => {
     }),
   )
 
+  it.effect("limits Explore to read-only shell and denies gh and find", () =>
+    Effect.gen(function* () {
+      yield* setup()
+      const rules = yield* permissions("explore")
+      const effect = (action: string, resource: string) => Permission.evaluate(action, resource, rules).effect
+      // The 28 read-only commands in the shared allowlist.
+      for (const command of [
+        "cat a",
+        "head a",
+        "tail a",
+        "less a",
+        "ls -la",
+        "tree .",
+        "pwd",
+        "echo hi",
+        "wc -l a",
+        "which node",
+        "type cd",
+        "file a",
+        "diff a b",
+        "du -sh .",
+        "df -h",
+        "date",
+        "uname -a",
+        "whoami",
+        "printenv PATH",
+        "man ls",
+        "grep x a",
+        "rg x",
+        "ag x",
+        "sort a",
+        "uniq a",
+        "cut -f1 a",
+        "tr a b",
+        "jq . a",
+      ])
+        expect(effect("shell", command)).toBe("allow")
+      // The 20 read-only git subcommands.
+      for (const command of [
+        "git log -5",
+        "git show HEAD",
+        "git diff",
+        "git status",
+        "git blame a",
+        "git rev-parse HEAD",
+        "git rev-list HEAD",
+        "git ls-files",
+        "git ls-tree HEAD",
+        "git ls-remote origin",
+        "git shortlog",
+        "git describe",
+        "git cat-file -p HEAD",
+        "git name-rev HEAD",
+        "git stash list",
+        "git tag -l",
+        "git branch --list",
+        "git branch -a",
+        "git branch -r",
+        "git remote -v",
+      ])
+        expect(effect("shell", command)).toBe("allow")
+      // Mutating git and arbitrary commands still need approval or are denied.
+      expect(effect("shell", "git push")).toBe("deny")
+      expect(effect("shell", "rm -rf src")).toBe("deny")
+      expect(effect("shell", "cat a > b")).toBe("deny")
+      // Explore cannot answer a prompt, so gh is denied rather than asked, and find is denied outright.
+      expect(effect("shell", "gh pr view 1")).toBe("deny")
+      expect(effect("shell", "find . -name x")).toBe("deny")
+      // The rest of the Explore tool set is unchanged.
+      expect(effect("grep", "*")).toBe("allow")
+      expect(effect("glob", "*")).toBe("allow")
+      expect(effect("read", "src/index.ts")).toBe("allow")
+      expect(effect("read", ".env")).toBe("ask")
+      expect(effect("subagent", "general")).toBe("deny")
+      expect(effect("edit", "src/index.ts")).toBe("deny")
+    }),
+  )
+
+  it.effect("keeps Explore read-only when global config allows more shell", () =>
+    Effect.gen(function* () {
+      const { agents } = yield* configure({
+        permissions: [{ action: "shell", resource: "*", effect: "allow" }],
+      })
+      const explore = yield* agents.get(Agent.ID.make("explore"))
+      const effect = (action: string, resource: string) =>
+        Permission.evaluate(action, resource, explore?.permissions ?? []).effect
+      expect(effect("shell", "git log -5")).toBe("allow")
+      expect(effect("shell", "git push")).toBe("deny")
+      expect(effect("shell", "rm -rf src")).toBe("deny")
+      expect(effect("shell", "gh pr view 1")).toBe("deny")
+      expect(effect("shell", "find . -name x")).toBe("deny")
+    }),
+  )
+
   it.effect("limits Plan to read-only tools and the native Plan directory", () =>
     Effect.gen(function* () {
       yield* setup()
