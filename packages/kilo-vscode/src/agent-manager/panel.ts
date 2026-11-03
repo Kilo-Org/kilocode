@@ -72,6 +72,11 @@ export function createPanel(input: {
           if (typeof item.dismissed === "boolean") void input.context.globalState.update(INTRO, item.dismissed)
           return true
         }
+        // Project settings opens the shared Settings panel; the Agent Manager provider owns the routing.
+        if (item.type === "openSettingsPanel") {
+          onMessage(item)
+          return true
+        }
         if (item.type === "agentManagerFocusChanged") {
           sideTerminal(item.target === "sideTerminal")
           return true

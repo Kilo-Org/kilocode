@@ -1,6 +1,6 @@
 // One session laid out like main's ChatView: task header, transcript, docks and prompt. The sidebar shows one at a
 // time; the Agent Manager shows one per selected tab, each in the store of its directory.
-import type { FileDiffInfo } from "@opencode/client"
+import type { FileDiffInfo, ModelRef } from "@opencode/client"
 import type { ToolActions } from "@kilocode/kilo-ui/message-part"
 import { ToolChildSessionProvider, type ToolChildSession } from "@kilocode/kilo-ui/tool-child-session"
 import { createEffect, createMemo, on, onCleanup, Show, type JSX } from "solid-js"
@@ -37,6 +37,8 @@ export function SessionView(props: {
   onPreviewEdit?: (files: FileDiffInfo[], sessionID: string) => void
   /** Receives the composer append function, for example for review comments. */
   onAppendReady?: (append: (value: string, send: boolean) => void) => void
+  /** Receives each prompt the server admitted, with the model it runs on. */
+  onPrompted?: (sessionID: string, text: string, model: ModelRef | undefined) => void
 }) {
   const v2 = useV2()
   const session = () => props.session
@@ -152,9 +154,13 @@ export function SessionView(props: {
   const send = (text: string) => {
     const id = session() ?? selection.create()
     props.onSession(id)
+    const model = selection.model()
     return v2.data.session
       .prompt({ sessionID: id, text, gate: selection.gate(id) })
-      .then(() => true)
+      .then(() => {
+        props.onPrompted?.(id, text, model)
+        return true
+      })
       .catch((err: unknown) => {
         v2.report(err)
         return false

@@ -76,7 +76,7 @@ Clean up: `st stop-vscode --cleanup true; st stop; rm -rf /tmp/am-st-ws`.
 - App parity gaps reported: NewWorktreeDialog model mention removed, BYOK/data badges dropped in MultiModelSelector, `agentManager.promptSent` (auto branch naming) must be sent by the webview after the first prompt (host ready) - verify and wire.
 - `addSessionToWorktree` with `sessionId` (worktree session created from the composer): verify provider handles it (posted to provider agent; confirm in code).
 - Orchestration overview shows `retry` as `busy` (session.active has no retry); consider tracking `session.retry.scheduled`.
-- Saved wildcard `agent_manager` approval not hardened (needs a generic seam exposing matched rule) - list in PR.
+- DONE: `agent_manager` side-effect approvals follow v1 (exact Always allow sticks, wildcards ask again, unattended denies). See "Agent Manager permissions" below.
 - Edit preview: producers are permission dock (edit/write `metadata.files`) and tool card `openDiff/openDiffs`.
 - History cloud tab not ported (cloud sessions epic #15306).
 - `AgentManagerApp.tsx` 2244 lines (limit 3000 OK; target was ~1200) - acceptable unless reviewers object.
@@ -117,3 +117,27 @@ Clean up: `st stop-vscode --cleanup true; st stop; rm -rf /tmp/am-st-ws`.
 - Sidebar button order verified against v1 for every Agent Manager sidebar group (header icons, project row, worktree/session rows, footer, tab bar, side panel strip, terminal destination); AM components are order-identical to v1. Chat view title order guarded by test/chat-view-title-order.test.ts.
 - Verified all Agent Manager webview button groups against v1 source (sidebar header, project row, cards, footer, tab bar, inspector strip, session header, composer, dialogs, intro, PR and subagent panels): order matches v1. v1-only buttons that v2 lacks: transcript search in the session header, documents, browser, sandbox, indexing, marketplace.
 - Keyboard shortcuts: map extracted from the extension manifest, not hardcoded. `format-keybinding` now reads v2 command ids (`kilo-code.v2.agentManager.*`, cycle commands, settings search); the side-terminal `when` context key is v2's. Verified live: keybindings.json overrides change the popup rows, deleting the file restores defaults, no reload needed. Terminal destination setting key also corrected to `kilo-code.v2.agentManager.terminalButtonDestination`. Tests: test/agent-manager-keybindings.test.ts.
+
+## v1 parity review (2026-11-03, second pass)
+- Component footprint: every v1 agent-manager webview file exists in v2 and is byte-identical except deliberate diffs (see below). Tooltip, aria-label and title lines match v1 for all shared files.
+- i18n: all `agentManager.*` labels used by the port exist in en. Four v2-only AM strings (history title/back, sidebar/inspector resize) are translated in all 20 locales; test/agent-manager-i18n.test.ts keeps every locale at the same key set as en.
+- Live hover check: search, keyboard shortcuts, new worktree, advanced options, tab close, toggle diff, run script, terminal, terminal destination, compare models all show text and bindings. Buttons without tooltips in v2 (advanced chevron, history, settings, new-tab chevron, run options) also have only aria-labels in v1, so they match.
+- Deliberate diffs: sandbox button, documents/browser panels, data/BYOK model badges, sandbox tooltip. Excluded by scope or missing in the v2 model API.
+- Removed the unused `agentManagerKeybindings` export (v1 used it for the sidebar shortcut context, which v2 does not port).
+- Open gaps: `/goal` two-step composition in the New Worktree dialog needs the shared goal UI, which does not exist anywhere in v2 yet; after relaunch with a reused profile a lone New Session draft can stay selected while the previous transcript remains visible.
+
+## Button audit (2026-11-03)
+- Show History crashed: SessionList demanded a V2 scope the panel does not mount. Fix: useV2Optional in client.tsx, optional store/items guards in history.tsx. Verified: 5 rows, rename input, back.
+- Project settings gear: `openSettingsPanel` was dropped because panel.ts forwarded only `agentManager.*`. Routed to the provider. Verified: Settings panel opens.
+- Remaining gap: v2 Settings has no `agentManager` tab, so the gear lands on Models. Port v1 Agent Manager settings (autoBranchNaming, branchPrefix, worktreePool, terminalButtonDestination, pushFixes, default base branch).
+- Not rendered because their epics are excluded: browser and documents toggles (stubs pass false).
+- Copy response (clipboard), caffeination, shortcuts, search, sections create/rename/delete, new project dialog, new tab, tab options, terminal, diff toggle all verified live.
+- Full suite: 3047 pass, 2 fail in agent-manager-terminal-* source-text tests from the concurrent terminal socket change, unrelated to these edits.
+
+## Agent Manager permissions (fixed 2026-11-03)
+- v1 (`packages/opencode/src/permission/index.ts` resolve + `kilocode/permission/agent-manager.ts`) hardened configured and saved rules separately: `prompt`, `stop`, `move`, `answer` needed an exact allow; a broad, global or saved wildcard allow asked again; an exact Always allow stuck. Always rules went to global config; the composer auto-approve replied "once" to everything except sandbox escalation (v2 matches that).
+- v2 before the fix: the hook rebuilt agent + session rules only, so an exact Always allow for a side effect asked again every time, and unattended rules could settle a hardened ask.
+- Fix: rung 3 seam, `rules` + `unattended` on the permission evaluate hook (`packages/core/src/permission.ts`, `packages/plugin/src/effect/permission.ts`, `shared-patches.json`). `packages/kilo-plugin/src/agent-manager/permission.ts` hardens on the event rules (an exact allow after the last matching ask or deny decides), and denies an unapproved side effect in unattended work.
+- Tests: `packages/kilo-plugin/test/agent-manager-permission.test.ts`, the v1 cases plus integration through the core permission service; the three integration cases fail without the seam.
+- Cross-session behavior (v2 infra): permission rules are read live on every check. Config reloads agents (100 ms debounce). Saved rules are project scoped by git origin, so all worktrees and clones of the same remote share them. Always allow also settles requests of other sessions in the same location that the new rule now covers (v1 drained covered requests the same way). Pinned session models resolve against the live catalog each step; sessions without a model re-resolve the current agent or default model. Session permissions and model switches stay per session.
+- Differences kept by design: saved rules live in the project database, not global config, so they do not show in the settings permission editor.

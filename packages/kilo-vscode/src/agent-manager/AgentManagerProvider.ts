@@ -54,7 +54,7 @@ import { WorktreeDiffController } from "./worktree-diff-controller"
 import { DiffSourceCatalog } from "../diff/sources/catalog"
 import { createLocalDiff } from "./local-diff"
 import { sendDiffBranches as postDiffBranches } from "./project/diff-branches"
-import { pruneSubagents } from "./prune-subagents"
+import { pruneSubagents, sessionMissing } from "./prune-subagents"
 import { readTerminalFont, watchTerminalFont } from "./terminal-font"
 import { DestinationState, watchTerminalDestination } from "./terminal-destination"
 import { buildKeybindingMap } from "./format-keybinding"
@@ -455,15 +455,18 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
       this.log(`Migration fixed ${init.refsFixed} git worktree ref(s), refreshing git`)
       this.host.refreshGit()
     }
-    const client = this.connection.current()
-    const sessions = client
-      ? {
-          getSessionInfo: (id: string) => client.session.get({ sessionID: id }).catch(() => undefined),
-          clearSessionDirectory: () => undefined,
-        }
-      : undefined
-    await pruneSubagents(state, sessions, (message) => this.log(message))
     this.pushState()
+    // The state shows at once; sessions the server cannot open leave it once the server answers.
+    const client = await this.connection.client().catch(() => undefined)
+    if (!client) return
+    const sessions = {
+      getSessionInfo: (id: string) =>
+        client.session.get({ sessionID: id }).catch((error: unknown) => (sessionMissing(error) ? null : undefined)),
+      clearSessionDirectory: () => undefined,
+    }
+    const before = state.getSessions().length
+    await pruneSubagents(state, sessions, (message) => this.log(message))
+    if (state.getSessions().length !== before) this.pushState()
   }
 
   public initExpanded(ctx: ProjectContext): void {

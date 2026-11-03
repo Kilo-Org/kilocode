@@ -176,9 +176,18 @@ describe("Agent Manager side terminal controller", () => {
     expect(panelFirst.calls.openVscode).toBe(0)
   })
 
-  it("handles the platform terminal shortcut locally and dedupes the extension echo", () => {
+  it("handles the platform terminal shortcut locally", () => {
     const press = (opts: Partial<KeyboardEvent> = {}) =>
-      ({ key: "/", metaKey: false, ctrlKey: false, shiftKey: false, altKey: false, ...opts }) as KeyboardEvent
+      ({
+        key: "/",
+        metaKey: false,
+        ctrlKey: false,
+        shiftKey: false,
+        altKey: false,
+        preventDefault: () => undefined,
+        stopPropagation: () => undefined,
+        ...opts,
+      }) as KeyboardEvent
 
     // macOS: the workbench binding is Cmd+/, so only Cmd is accepted.
     const mac = scene({ destination: "agentManager", mac: true })
@@ -200,44 +209,30 @@ describe("Agent Manager side terminal controller", () => {
     expect(win.ctl.press(press({ ctrlKey: true, shiftKey: true }))).toBe(false)
     expect(win.ctl.press(press({ ctrlKey: true, altKey: true }))).toBe(false)
     expect(win.calls.requestSide).toBe(1)
-
-    // The extension echoes each locally handled keypress back as an action
-    // message; one echo is consumed per press, then invocations run again.
-    expect(mac.ctl.echo()).toBe(true)
-    expect(mac.ctl.echo()).toBe(false)
   })
 
-  it("consumes one echo per press, even for rapid repeated presses", () => {
+  it("stops a handled press so the workbench keybinding cannot toggle a second time", () => {
     const item = scene({ destination: "agentManager", mac: true })
-    const press = () => item.ctl.press({ key: "/", metaKey: true } as KeyboardEvent)
-    press()
-    press()
-    // Two presses toggled the panel open and closed again; both echoes
-    // must still be consumed so neither press toggles a third time.
+    const stopped: string[] = []
+    const press = (opts: Partial<KeyboardEvent>) =>
+      item.ctl.press({
+        key: "/",
+        metaKey: true,
+        preventDefault: () => stopped.push("default"),
+        stopPropagation: () => stopped.push("propagation"),
+        ...opts,
+      } as KeyboardEvent)
+
+    press({ key: "?" })
+    expect(stopped).toEqual([])
+    press({})
+    expect(stopped).toEqual(["default", "propagation"])
     expect(item.calls.requestSide).toBe(1)
-    expect(item.calls.hide).toBe(1)
-    expect(item.ctl.echo()).toBe(true)
-    expect(item.ctl.echo()).toBe(true)
-    expect(item.ctl.echo()).toBe(false)
-  })
-
-  it("drops a never-arriving echo after the timeout safety valve", async () => {
-    const item = scene({ destination: "agentManager", mac: true })
-    item.ctl.press({ key: "/", metaKey: true } as KeyboardEvent)
-    await new Promise((resolve) => setTimeout(resolve, 550))
-    expect(item.ctl.echo()).toBe(false)
-    expect(item.ctl.echo()).toBe(false)
-  })
-
-  it("expires a dropped echo's backlog at the next spaced press", async () => {
-    const item = scene({ destination: "agentManager", mac: true })
-    // First press's echo never arrives (dropped forwarding); its backlog
-    // must not outlive the echo window into the next press.
-    item.ctl.press({ key: "/", metaKey: true } as KeyboardEvent)
-    await new Promise((resolve) => setTimeout(resolve, 550))
-    item.ctl.press({ key: "/", metaKey: true } as KeyboardEvent)
-    expect(item.ctl.echo()).toBe(true)
-    expect(item.ctl.echo()).toBe(false)
+    // A held key repeats the keydown; it is stopped but toggles only once.
+    press({ repeat: true })
+    expect(stopped).toHaveLength(4)
+    expect(item.calls.requestSide).toBe(1)
+    expect(item.calls.hide).toBe(0)
   })
 
   it("persists the picked destination with a section-relative settings key", () => {

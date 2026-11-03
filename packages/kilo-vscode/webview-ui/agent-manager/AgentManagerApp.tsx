@@ -1053,7 +1053,9 @@ const AgentManagerContent: Component = () => {
     const sel = selection()
     if (sel && sel !== LOCAL) {
       appendToTabOrder(sel, id)
-      to({ type: "agentManager.addSessionToWorktree", worktreeId: sel, sessionId: id })
+      // Every send reports its session. Adopting a session the worktree already owns would end its branch auto-naming.
+      if (managedSessions().find((entry) => entry.id === id)?.worktreeId !== sel)
+        to({ type: "agentManager.addSessionToWorktree", worktreeId: sel, sessionId: id })
       sessions.selectSession(id)
       return
     }
@@ -1569,9 +1571,7 @@ const AgentManagerContent: Component = () => {
             requestAnimationFrame(() => sidebarSearchMenu?.open())
           }
         },
-        showTerminal: () => {
-          if (!sideCtl.echo()) sideCtl.openPreferred("keyboard_shortcut")
-        },
+        showTerminal: () => sideCtl.openPreferred("keyboard_shortcut"),
         toggleDiff: () => diffPanels.toggleCommand(),
         newTab: handleNewTabForCurrentSelection,
         closeTask: () => closeFocusedTask(visibleTabId(), tabLookup(), handleCloseTab),
@@ -1982,6 +1982,15 @@ const AgentManagerContent: Component = () => {
                   empty={intro.render}
                   onAppendReady={(append) => (promptAppend = append)}
                   onPreviewEdit={(files, sessionID) => previewEdit(files, sessionID)}
+                  onPrompted={(sessionId, text, model) =>
+                    to({
+                      type: "agentManager.promptSent",
+                      sessionId,
+                      text,
+                      providerID: model?.providerID,
+                      modelID: model?.id,
+                    })
+                  }
                 />
               </SpeechToTextStatusProvider>
             </V2Scope>

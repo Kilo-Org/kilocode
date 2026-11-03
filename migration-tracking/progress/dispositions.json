@@ -892,5 +892,15 @@
     "state": "ported",
     "note": "packages/kilo-plugin/test/review-command.test.ts carries every prompt assertion (scopes and precedence, metadata candidates, base order, commit and PR review, untrusted input, symlinks, no-edit contract, tracks, adaptive sub-agents) plus scope order, effort flags, the `subagent` adaptation and a decode of the post-review question example with `mode` through QuestionTool.Input; it also runs the built-in then the Kilo command plugin and checks the registered description and prompt. packages/kilo-cli/test/review-command.test.ts replaces the 'resolves the review command' case on the real host server, with the config override. Not carried: the parseReviewCommand cases (telemetry helper, #15303), `hints` (no v2 field), and the Review.getBaseBranch() reference (dropped from the prompt).",
     "by": "v2-review-cmd"
+  },
+  "module:packages/opencode/src/kilocode/permission/agent-manager.ts": {
+    "state": "ported",
+    "note": "packages/kilo-plugin/src/agent-manager/permission.ts harden plus the permission evaluate hook. `prompt`, `stop`, `move` and `answer` need an allow rule that names the exact action and pattern; a broad, global, or saved wildcard allow asks again, while `local`, `worktree` and `overview` keep broad allows. v1 hardened the configured and the saved rules separately in Permission.resolve; v2 core passes the configured plus project saved rules on the hook event (packages/core/src/permission.ts seam), so an exact Always allow decides and a later wildcard does not replace it. Unattended work denies an unapproved side effect instead of settling it, the counterpart of v1's headless deny. Saved rules are project scoped in the v2 database instead of v1's global config.",
+    "by": "agent-manager"
+  },
+  "module:packages/opencode/test/kilocode/permission/agent-manager-prompt.test.ts": {
+    "state": "ported",
+    "note": "packages/kilo-plugin/test/agent-manager-permission.test.ts carries every v1 case (broad Agent Manager allow, global allow, saved wildcard approval, explicit approvals) and adds a later wildcard and a later ask. Integration cases through the core permission service with the hook registered: Always allow keeps an exact approval for the next call and settles the same pattern pending in another session of the project but not another side effect; saved and configured wildcards ask again; unattended work denies with a message and honors an exact saved approval.",
+    "by": "agent-manager"
   }
 }

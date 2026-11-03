@@ -75,7 +75,7 @@ test("keeps raw PTY line endings and initializes Unicode widths before attaching
 test("fits and forces the initial PTY dimensions before socket attach", () => {
   expect(terminal).toContain("const syncSize = (force = false)")
   expect(terminal).toContain("if (props.active) syncSize(true)")
-  expect(terminal.indexOf("fitNow()\n      if (!ws) open()")).toBeGreaterThan(-1)
+  expect(terminal.indexOf("fitNow()\n      if (!ws && !props.pending) open()")).toBeGreaterThan(-1)
 })
 
 test("keeps terminal sockets mounted while history is open", () => {

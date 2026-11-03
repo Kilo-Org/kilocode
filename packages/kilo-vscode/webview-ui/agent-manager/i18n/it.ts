@@ -115,6 +115,14 @@ export const dict = {
   "agentManager.hoverCard.commits": "Commit",
 
   "agentManager.session.new": "Nuova sessione",
+
+  "agentManager.history.title": "Sessioni aperte",
+
+  "agentManager.history.back": "Indietro",
+
+  "agentManager.sidebar.resize": "Ridimensiona la barra laterale",
+
+  "agentManager.review.resize": "Ridimensiona la revisione",
   "agentManager.session.untitled": "Senza titolo",
   "agentManager.session.newSession": "Nuova sessione",
   "agentManager.session.openInWorktree": "Apri nel worktree",

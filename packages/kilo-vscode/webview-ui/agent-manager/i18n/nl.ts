@@ -114,6 +114,14 @@ export const dict = {
   "agentManager.hoverCard.commits": "Commits",
 
   "agentManager.session.new": "Nieuwe sessie",
+
+  "agentManager.history.title": "Geopende sessies",
+
+  "agentManager.history.back": "Terug",
+
+  "agentManager.sidebar.resize": "Formaat van de zijbalk wijzigen",
+
+  "agentManager.review.resize": "Formaat van de beoordeling wijzigen",
   "agentManager.session.untitled": "Naamloos",
   "agentManager.session.newSession": "Nieuwe sessie",
   "agentManager.session.openInWorktree": "Openen in worktree",

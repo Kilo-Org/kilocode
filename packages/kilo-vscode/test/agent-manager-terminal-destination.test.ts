@@ -23,7 +23,7 @@ describe("Agent Manager terminal destination", () => {
   })
 
   it("watches only the terminal button destination setting", () => {
-    expect(affectsTerminalDestination(event("kilo-code.new.agentManager.terminalButtonDestination"))).toBe(true)
+    expect(affectsTerminalDestination(event("kilo-code.v2.agentManager.terminalButtonDestination"))).toBe(true)
     expect(affectsTerminalDestination(event("terminal.integrated.fontFamily"))).toBe(false)
   })
 

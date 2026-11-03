@@ -41,7 +41,7 @@ v1 extract: /var/folders/6c/3j3r25ds6pd1dw3nlrfnvv280000gp/T/kilo/v1/packages/ki
   events rpc.kilocode.agent-manager.{start,requested,cancelled}; rpc.events.on(name, handler, {signal})
 - kilo-plugin/src/agent-manager/*: tools, service (60s), guard (tool execute.before), permission (evaluate hook)
 - metadata reaches projected user message (kilo-cli/test/agent-manager-metadata.test.ts)
-- gaps: saved wildcard approval hardening (tool saves exact pattern only); no sandbox token; tool result has no title
+- gaps: no sandbox token; tool result has no title
 - dispositions to add: see agent report (agent-manager 11 ported, branch-name 2, permission 2)
 - lockfile: friendly-words pulls ava/express (v1 same), accepted
 ### Phase A agents (launched 22:3x)

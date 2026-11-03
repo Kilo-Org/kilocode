@@ -157,7 +157,19 @@ async function live(input: OverviewInput, sessions: ManagedSession[]) {
 
   const active = await input.client.session.active().catch(() => undefined)
   if (!active) for (const dir of dirs) unavailable.add(dir)
-  for (const id of Object.keys(active ?? {})) statuses.set(id, "busy")
+  const managed = new Set(sessions.map((session) => session.id))
+  // A busy session waits for a model retry while its latest assistant message carries a scheduled retry.
+  await Promise.all(
+    Object.keys(active ?? {})
+      .filter((id) => managed.has(id))
+      .map(async (id) => {
+        const latest = await input.client.message
+          .list({ sessionID: id, type: "assistant", order: "desc", limit: 1 })
+          .catch(() => undefined)
+        const message = latest?.data[0]
+        statuses.set(id, message?.type === "assistant" && message.retry ? "retry" : "busy")
+      }),
+  )
 
   await Promise.all(
     dirs.map(async (dir) => {

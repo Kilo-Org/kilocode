@@ -93,7 +93,7 @@ describe("Agent Manager orchestration domain", () => {
     const client = {
       session: {
         get,
-        active: mock(async () => ({ ses_second_a: { type: "running" } })),
+        active: mock(async () => ({ ses_second_a: { type: "running" }, ses_first: { type: "running" } })),
       },
       permission: {
         request: {
@@ -107,6 +107,12 @@ describe("Agent Manager orchestration domain", () => {
         list: mock(async ({ location }: { location: { directory: string } }) => ({
           location,
           data: location.directory === sectioned ? [form("question", "ses_second_b", {})] : [],
+        })),
+      },
+      // ses_first waits for a scheduled model retry; ses_second_a streams normally.
+      message: {
+        list: mock(async ({ sessionID }: { sessionID: string }) => ({
+          data: [{ type: "assistant", retry: sessionID === "ses_first" ? { attempt: 1 } : undefined }],
         })),
       },
     } as unknown as OpenCodeClient
@@ -149,7 +155,7 @@ describe("Agent Manager orchestration domain", () => {
       expect.objectContaining({
         id: first.id,
         branch: "fix/first",
-        session: expect.objectContaining({ id: "ses_first", activity: "idle" }),
+        session: expect.objectContaining({ id: "ses_first", activity: "retry" }),
         git: { additions: 3, deletions: 1, ahead: 1, behind: 0 },
       }),
     ])

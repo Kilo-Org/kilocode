@@ -13,6 +13,7 @@ import {
 import { createAgentManagerConnection } from "./agent-manager/connection"
 import { AgentManagerProvider } from "./agent-manager/AgentManagerProvider"
 import { createPanel, PANEL_TYPE } from "./agent-manager/panel"
+import { ensureCommandsSkipShell } from "./agent-manager/terminal-host"
 import { VscodeHost } from "./agent-manager/vscode-host"
 import { chat } from "./chat"
 import { commitMessageCommand, commitMessageLanguage, connect, type GitExports } from "./commit-message"
@@ -120,6 +121,7 @@ export function activate(context: ExtensionContext) {
   const agentPanel = createPanel({ context, server, directory, trackCostSession: alerts.track })
   const agentManager = new AgentManagerProvider(agentHost, connection, agentPanel)
   const agentAction = (action: string) => agentManager.postMessage({ type: "action", action })
+  ensureCommandsSkipShell()
   // The cycle keybindings act on the focused composer: the Agent Manager panel when it is active, else the sidebar.
   const cycle = async (name: "cycleAgentMode" | "cyclePreviousAgentMode") => {
     if (agentManager.isActive()) return agentManager.postMessage({ type: "command", name })
