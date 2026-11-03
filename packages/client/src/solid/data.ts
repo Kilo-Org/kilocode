@@ -1817,6 +1817,11 @@ export function createData(config: CreateDataInput) {
           const position = messageIndex.get(sessionID)?.get(messageID)
           return position === undefined ? undefined : messages?.[position]
         },
+        /** Drop the cached messages of one session without touching its parent or children. */
+        evict(sessionID: string) {
+          // kilocode_change(agent-manager) - the inspector releases one subagent, not its family
+          evictSession(sessionID)
+        },
         sync(sessionID: string) {
           return sync.run(`session.message:${sessionID}`, async () => {
             const started = deletionEpoch

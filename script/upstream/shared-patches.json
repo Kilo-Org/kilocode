@@ -1,9 +1,9 @@
 {
   "$comment": "Shared-patch baseline (U-L3-01). Read by script/check-shared-patches.ts and script/check-opencode-annotations.ts. Each shared upstream file that Kilo adds or changes needs an entry: rung (3 = seam patch, 4 = feature patch) and the missing seam. `unmarked` allows lines without markers and states why. Raise a limit only in the PR that adds the patch, and lower it when a patch goes away.",
   "limits": {
-    "files": 78,
-    "markedLines": 1071,
-    "unmarkedLines": 225,
+    "files": 79,
+    "markedLines": 1072,
+    "unmarkedLines": 229,
     "deletedFiles": 0
   },
   "files": {
@@ -322,6 +322,10 @@
     "packages/server/src/handlers/pty.ts": {
       "rung": 3,
       "seam": "Pass `replayExited=1` from the PTY connect query to the `allowExited` attach input in packages/core/src/pty.ts. The connect route is the only path a client reaches `attach` through, and its handler has no extension point for query options. Without the query parameter the route behaves as upstream."
+    },
+    "packages/client/src/solid/data.ts": {
+      "rung": 3,
+      "seam": "Adds a per-session `session.message.evict(sessionID)` that drops one session's cached messages. The existing `session.evict` clears the root and every known descendant, so the Agent Manager inspector cannot release one subagent without blanking the parent transcript. Omitted calls behave as upstream."
     },
     "patches/virtua@0.49.1.patch": {
       "rung": 4,
