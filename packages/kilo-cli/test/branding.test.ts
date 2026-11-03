@@ -7,6 +7,7 @@ import { createSolidTransformPlugin } from "@opentui/solid/bun-plugin"
 import { RGBA, TextAttributes } from "@opentui/core"
 import { brandingPlugin } from "../src/branding/plugin"
 import { KiloBranding } from "../src/branding/text"
+import { KiloBrandingStructural } from "../src/branding/structural"
 import { KiloLogo } from "../src/branding/logo-art"
 import { logo, go } from "../../tui/src/logo"
 import { createPluginRuntimePlugin } from "../script/plugin-runtime"
@@ -14,6 +15,12 @@ import { compileDefine } from "./fixtures/compile-define"
 
 const repo = path.resolve(import.meta.dir, "../../..")
 const entry = path.join(import.meta.dir, "fixtures/branding.ts")
+
+test("every structural target is an intercepted file", () => {
+  // A structural transform only runs for files the loader intercepts, so each
+  // structural key must appear in the interception list or it silently no-ops.
+  for (const key of KiloBrandingStructural.keys) expect(KiloBranding.files).toContain(key)
+})
 
 for (const file of KiloBranding.files) {
   test(`rebrands ${file} without touching @opencode specifiers`, async () => {

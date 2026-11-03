@@ -10,7 +10,7 @@ import { KiloBrandingEngine } from "./engine"
 // few logic sites and the OAuth wordmark. This list only decides which files
 // are rebranded; the branding audit reports any user-visible OpenCode string
 // the rules leave behind at a sync.
-export const files = [
+export const files: readonly string[] = [
   "cli/src/commands/commands.ts",
   "cli/src/services/service-config.ts",
   "cli/src/server-process.ts",
@@ -46,7 +46,7 @@ export const files = [
   "tui/src/feature-plugins/sidebar/footer.tsx",
   "tui/src/config/index.tsx",
   "core/src/oauth/page.ts",
-] as const satisfies ReadonlyArray<string>
+]
 
 const intercepted: ReadonlySet<string> = new Set(files)
 

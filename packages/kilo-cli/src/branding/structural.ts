@@ -48,6 +48,13 @@ const logic: Record<string, ReadonlyArray<readonly [string, string]>> = {
   ],
 }
 
+const OAUTH_PAGE = "core/src/oauth/page.ts"
+
+// Every file the structural transforms touch. Must be a subset of the loader's
+// intercepted `files` (text.ts), or a structural transform would never run; a
+// test enforces that.
+export const keys: ReadonlyArray<string> = [...Object.keys(logic), OAUTH_PAGE]
+
 export function apply(key: string, source: string): string {
   const pairs = logic[key]
   const rewritten = pairs
@@ -56,7 +63,7 @@ export function apply(key: string, source: string): string {
         return text.replaceAll(from, to)
       }, source)
     : source
-  if (key !== "core/src/oauth/page.ts") return rewritten
+  if (key !== OAUTH_PAGE) return rewritten
   if (!/const WORDMARK = `<svg[\s\S]*?<\/svg>`/.test(rewritten))
     throw new Error("Kilo OAuth wordmark no longer matches the upstream page")
   return rewritten.replace(
