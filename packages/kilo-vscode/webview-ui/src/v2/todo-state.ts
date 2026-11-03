@@ -1,5 +1,5 @@
 // Read the current todo list of a session from its messages. This module stays free of UI imports so tests can use it.
-import type { ConfigEntry, SessionMessageInfo } from "@opencode/client"
+import type { SessionMessageInfo } from "@opencode/client"
 import type { TodoItem } from "../components/chat/todo/todo-dock"
 
 const STATUS = new Set<TodoItem["status"]>(["pending", "in_progress", "completed", "cancelled"])
@@ -58,17 +58,6 @@ export function hasTodoWrite(
     if (active(message, revert).some((part) => part.type === "tool" && part.name === "todowrite")) return true
   }
   return false
-}
-
-/** Whether the latest config document enables the experimental todo tool. */
-export function todoEnabled(entries: ReadonlyArray<ConfigEntry>) {
-  let enabled = false
-  for (const entry of entries) {
-    if (entry.type !== "document") continue
-    const value = entry.info.experimental?.todo
-    if (value !== undefined) enabled = value
-  }
-  return enabled
 }
 
 function visible(messageID: string, revert: { messageID: string } | undefined) {

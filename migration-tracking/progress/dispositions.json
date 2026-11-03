@@ -896,11 +896,16 @@
   "module:packages/kilo-vscode/webview-ui/src/context/todo-revert.ts": {
     "state": "ported",
     "note": "webview-ui/src/v2/todo-state.ts todoState applies the staged revert to the message parts before it selects the latest completed todowrite list: messages after the revert message are hidden, parts at or after the reverted part are hidden, and a message-level revert hides the message. The v2 part order is the content order, so the reverted part is found by id instead of comparing ids.",
-    "by": "spiral-answer"
+    "by": "composer-todos"
   },
   "module:packages/kilo-vscode/tests/unit/todo-revert.test.ts": {
     "state": "ported",
     "note": "packages/kilo-vscode/test/todo-dock.test.ts carries the revert assertions: a reverted write keeps the list before it, the latest state returns without a revert, and a reverted part inside one message keeps only the earlier todowrite parts.",
-    "by": "spiral-answer"
+    "by": "composer-todos"
+  },
+  "module:packages/opencode/test/kilocode/todowrite-description.test.ts": {
+    "state": "ported",
+    "note": "packages/kilo-plugin/test/todo-tool.test.ts asserts the v1 description phrases on the Kilo todowrite tool, and the Kilo host registers that tool unconditionally through KiloPlugins.",
+    "by": "composer-todos"
   }
 }
