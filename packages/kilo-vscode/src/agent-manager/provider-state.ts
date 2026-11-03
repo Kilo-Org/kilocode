@@ -158,6 +158,7 @@ function sessionCatalog(p: ProviderStateHost): SessionCatalogHost {
     list: async (directory) => (await (await p.client()).session.list({ directory, parentID: null })).data,
     get: async (sessionID) => (await p.client()).session.get({ sessionID }),
     post: (message) => p.postToWebview(message),
+    log: (...args) => p.log(...args),
   }
 }
 

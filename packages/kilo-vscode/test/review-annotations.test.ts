@@ -29,8 +29,10 @@ const original = {
 }
 
 let frames: FrameRequestCallback[] = []
+const views: Window[] = []
 
 afterEach(() => {
+  for (const view of views.splice(0)) view.close()
   globalThis.document = original.document
   globalThis.window = original.window
   globalThis.requestAnimationFrame = original.raf
@@ -40,6 +42,7 @@ afterEach(() => {
 
 function setup() {
   const view = new Window()
+  views.push(view)
   globalThis.document = view.document as unknown as typeof globalThis.document
   globalThis.window = view as unknown as typeof globalThis.window
   globalThis.requestAnimationFrame = ((callback: FrameRequestCallback) => {

@@ -132,6 +132,8 @@ export interface SessionCatalogHost {
   get(sessionID: string): Promise<SessionInfo | undefined>
   /** Post one message to the webview. */
   post(message: AgentManagerOutMessage): void
+  /** Report one catalog failure to the output channel. */
+  log(...args: unknown[]): void
 }
 
 const catalogs = new WeakMap<Set<string>, SessionCatalogHost>()

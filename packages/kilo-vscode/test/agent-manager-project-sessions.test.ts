@@ -53,7 +53,7 @@ function fakeState() {
   } as unknown as WorktreeStateManager
 }
 
-async function setup() {
+async function setup(options: { fail?: string; hold?: string } = {}) {
   const ctx = new ProjectContext("p1", ROOT, false, {
     log: () => {},
     exists: () => true,
@@ -67,11 +67,17 @@ async function setup() {
 
   const listed: string[] = []
   const created = new Map<string, SessionInfo>()
+  let release: () => void = () => {}
+  const held = new Promise<void>((resolve) => {
+    release = resolve
+  })
   const client = {
     session: {
       list: async (input: { directory?: string }) => {
         const directory = input.directory ?? ""
         listed.push(directory)
+        if (options.hold === directory) await held
+        if (options.fail === directory) throw new Error(`cannot list ${directory}`)
         const base =
           directory === WORKTREE ? [sessionInfo("wt-session", WORKTREE, 2)] : [sessionInfo("root-session", ROOT, 1)]
         return {
@@ -88,7 +94,7 @@ async function setup() {
   } as unknown as OpenCodeClient
 
   const posts: AgentManagerOutMessage[] = []
-  const host = {
+  const fields = {
     contexts: {
       active: () => ctx,
       byDirectory: (dir: string) => (dir === ROOT || dir === WORKTREE ? ctx : undefined),
@@ -115,15 +121,23 @@ async function setup() {
     context: ctx,
     state: ctx.peekState(),
     postToWebview: (message: AgentManagerOutMessage) => posts.push(message),
-    log: () => {},
     sendRepoInfo: async () => {},
     initializeState: async () => {},
     initExpanded: () => {},
     syncView: () => {},
     client: async () => client,
-  } as unknown as ProviderStateHost
+  }
+  // A prototype method that reads `this`, like AgentManagerProvider.log: passing `p.log` unbound
+  // throws here exactly as it throws against the real provider.
+  const logger = new (class {
+    readonly logs: unknown[][] = []
+    log(...args: unknown[]) {
+      this.logs.push(args)
+    }
+  })()
+  const host = Object.assign(logger, fields) as unknown as ProviderStateHost
 
-  return { ctx, host, posts, listed, created, busy: host.busySessions, client }
+  return { ctx, host, posts, listed, created, logs: logger.logs, release, busy: host.busySessions, client }
 }
 
 const catalog = (posts: AgentManagerOutMessage[]) =>
@@ -222,5 +236,57 @@ describe("Agent Manager project session catalog", () => {
     )
     await settle(() => false)
     expect(catalog(posts)).toHaveLength(1)
+  })
+
+  it("logs a failed directory listing through the bound host logger and keeps the other directories", async () => {
+    const { ctx, host, posts, logs } = await setup({ fail: WORKTREE })
+    pushState(host)
+    await settle(() => catalog(posts).length === 1)
+    expect(catalog(posts)[0]?.sessions.map((session) => session.id)).toEqual(["root-session"])
+    const messages = logs.flat().map((entry) => String(entry))
+    expect(messages.some((entry) => entry.includes(`listing sessions for ${WORKTREE} failed`))).toBe(true)
+    expect(ctx.hasLiveSession("wt-session")).toBe(false)
+  })
+
+  it("resolves a created session without an event location from the fetched session", async () => {
+    const { host, posts, created } = await setup()
+    pushState(host)
+    await settle(() => catalog(posts).length === 1)
+    created.set("new-session", sessionInfo("new-session", WORKTREE, 3))
+    handleSessionLifecycle(
+      { type: "session.created", data: { sessionID: "new-session" } },
+      { busy: host.busySessions, removed: new Set<string>() },
+    )
+    await settle(() => catalog(posts).length === 2)
+    expect(catalog(posts)[1]?.sessions.map((session) => [session.id, session.worktreeId])).toEqual([
+      ["new-session", "wt1"],
+      ["root-session", null],
+      ["wt-session", "wt1"],
+    ])
+  })
+
+  it("logs a failed session read from a create event and posts nothing", async () => {
+    const { host, posts, logs } = await setup()
+    pushState(host)
+    await settle(() => catalog(posts).length === 1)
+    handleSessionLifecycle(
+      { type: "session.created", data: { sessionID: "unknown-session" }, location: { directory: ROOT } },
+      { busy: host.busySessions, removed: new Set<string>() },
+    )
+    await settle(() =>
+      logs.some((entry) => String(entry[0]).includes("reading session unknown-session failed")),
+    )
+    const messages = logs.flat().map((entry) => String(entry))
+    expect(messages.some((entry) => entry.includes("reading session unknown-session failed"))).toBe(true)
+    expect(catalog(posts)).toHaveLength(1)
+  })
+
+  it("drops a collection that finished after the project was disposed", async () => {
+    const { ctx, host, posts, release } = await setup({ hold: ROOT })
+    pushState(host)
+    await ctx.dispose()
+    release()
+    await settle(() => false)
+    expect(catalog(posts)).toHaveLength(0)
   })
 })

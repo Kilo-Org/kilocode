@@ -1,4 +1,4 @@
-import { describe, expect, it } from "bun:test"
+import { afterEach, describe, expect, it } from "bun:test"
 import { Window } from "happy-dom"
 import { focusDiff, pageDiff } from "../webview-ui/diff-viewer/review-scroll"
 
@@ -13,9 +13,17 @@ interface Dom {
   MouseEvent: typeof MouseEvent
 }
 
+const windows: Window[] = []
+
+afterEach(() => {
+  for (const window of windows.splice(0)) window.close()
+})
+
 function setup() {
-  const window = new Window() as unknown as Dom
-  const doc = window.document
+  const window = new Window()
+  windows.push(window)
+  const dom = window as unknown as Dom
+  const doc = dom.document
   doc.body.innerHTML = '<div tabindex="0"><span>selected text</span><textarea></textarea></div><textarea></textarea>'
   const viewport = doc.querySelector("div")!
   Object.defineProperties(viewport, { clientHeight: { value: 500 }, scrollHeight: { value: 2000 } })
@@ -24,7 +32,7 @@ function setup() {
   )
   viewport.focus()
   const press = (opts: KeyboardEventInit = {}, target: Element = viewport) => {
-    const event = new window.KeyboardEvent("keydown", {
+    const event = new dom.KeyboardEvent("keydown", {
       key: "ArrowDown",
       shiftKey: true,
       bubbles: true,
@@ -40,11 +48,13 @@ function setup() {
 
 describe("diff viewport page scrolling", () => {
   it("claims shadow reading clicks without cancelling selection or control clicks", () => {
-    const window = new Window() as unknown as Dom
+    const window = new Window()
+    windows.push(window)
+    const dom = window as unknown as Dom
     const previous = Object.getOwnPropertyDescriptor(globalThis, "Element")
-    Object.defineProperty(globalThis, "Element", { value: window.Element, configurable: true })
+    Object.defineProperty(globalThis, "Element", { value: dom.Element, configurable: true })
     try {
-      const doc = window.document
+      const doc = dom.document
       doc.body.innerHTML = '<div tabindex="0"><div></div></div>'
       const viewport = doc.querySelector("div")!
       const shadow = viewport.firstElementChild!.attachShadow({ mode: "open" })
@@ -55,19 +65,19 @@ describe("diff viewport page scrolling", () => {
       )
       const pre = shadow.querySelector("pre")!
       pre.focus()
-      const click = new window.MouseEvent("click", { bubbles: true, composed: true, cancelable: true })
+      const click = new dom.MouseEvent("click", { bubbles: true, composed: true, cancelable: true })
       pre.firstElementChild!.dispatchEvent(click)
       expect(doc.activeElement).toBe(viewport)
       expect(click.defaultPrevented).toBe(false)
       for (const control of shadow.querySelectorAll<HTMLElement>("button, textarea, [contenteditable], [role]")) {
         control.focus()
-        control.dispatchEvent(new window.MouseEvent("click", { bubbles: true, composed: true }))
+        control.dispatchEvent(new dom.MouseEvent("click", { bubbles: true, composed: true }))
         expect(shadow.activeElement).toBe(control)
       }
       const range = doc.createRange()
       range.selectNodeContents(pre)
       doc.getSelection()!.addRange(range)
-      pre.dispatchEvent(new window.MouseEvent("click", { bubbles: true, composed: true, shiftKey: true }))
+      pre.dispatchEvent(new dom.MouseEvent("click", { bubbles: true, composed: true, shiftKey: true }))
       expect(doc.getSelection()!.toString()).toBe("reading")
       expect(doc.activeElement).toBe(viewport)
     } finally {

@@ -52,22 +52,25 @@ export function handleSessionLifecycle(event: Event, deps: Deps): void {
 /**
  * Add one created root session to its project's catalog and post it.
  *
- * The event carries no full record in v2, so the session is read back once. Events can arrive while
- * a project is suspended or before its state is ready; those are dropped because the next state push
+ * The event carries no full record in v2, so the session is read back once. When the event has no
+ * location, the project is resolved from the fetched session instead. Events can arrive while a
+ * project is suspended or before its state is ready; those are dropped because the next state push
  * re-lists the catalog anyway.
  */
 function remember(id: string, directory: string | undefined, deps: Deps): void {
   const host = sessionCatalogHost(deps.busy)
   if (!host) return
-  const ctx = (directory ? host.contextForDirectory(directory) : undefined) ?? host.contextForSession(id)
-  if (!ctx || ctx.lifecycle !== "ready") return
-  const generation = ctx.generation
+  const early = (directory ? host.contextForDirectory(directory) : undefined) ?? host.contextForSession(id)
+  if (early && early.lifecycle !== "ready") return
+  const generation = early?.generation
   void host
     .get(id)
     .then((session) => {
       if (!session || deps.removed.has(session.id)) return
       if (session.parentID !== undefined && session.parentID !== null) return
-      if (ctx.lifecycle !== "ready" || !ctx.isCurrent(generation)) return
+      const ctx = early ?? host.contextForDirectory(session.location.directory)
+      if (!ctx || ctx.lifecycle !== "ready") return
+      if (generation !== undefined && !ctx.isCurrent(generation)) return
       const state = ctx.peekState()
       const worktreeId =
         state?.getSession(session.id)?.worktreeId ??
@@ -77,7 +80,7 @@ function remember(id: string, directory: string | undefined, deps: Deps): void {
       ctx.invalidateSessions()
       host.post({ type: "agentManager.projectSessions", projectId: ctx.id, sessions: [...ctx.sessions()] })
     })
-    .catch(() => undefined)
+    .catch((err: unknown) => host.log(`Agent Manager: reading session ${id} failed:`, err))
 }
 
 /** Drop one deleted session from the catalog that still holds it and post the remainder. */

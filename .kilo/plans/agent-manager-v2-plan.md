@@ -155,3 +155,30 @@ Other confirmed gaps: continueInWorktree unreachable (panel drops the unprefixed
 Dead code to remove or wire: tool-project.ts, discardWorktree, closeTerminal, requestTerminalContext, clearSession/openFile/previewImage types, intro.fallback, model-picker global state, turn diff source, embedded terminal resolver.
 - Manifest audit delta: `kilo-code.v2.showTaskTimeline` default changed from true (v1) to false, so the task timeline is hidden for users who never set it. Settings rows table confirmed; i18n parity verified (21 locales, 513 keys).
 - Relaunch restore fixed (2026-11-03): the tab reconcile now moves the shown session to the next remaining tab when it drops the current one (no draft tab next to a foreign transcript), and SessionView hands a session the server does not have to `onMissing`, so the Agent Manager closes that tab instead of showing "Session not found". Self-tested: active session turned into a child session, and active sessions deleted from the database, then relaunch. Still as v1: onMount adds a "New Session" draft before the persisted local tabs arrive.
+
+## Blockers fixed (2026-11-03, 8 agents)
+All eight audit blockers are fixed on `am-v2-seam`, each with a before/after PR comment:
+- B1 project session catalog: https://github.com/Kilo-Org/kilocode/pull/15737#issuecomment-6600909685
+- B2 tool model/variant: https://github.com/Kilo-Org/kilocode/pull/15737#issuecomment-6600762353
+- B3 per-tab drafts: https://github.com/Kilo-Org/kilocode/pull/15737#issuecomment-6601076896
+- B4 review sends and terminal destination: https://github.com/Kilo-Org/kilocode/pull/15737#issuecomment-6600723450
+- B5 host-side auto-approve: https://github.com/Kilo-Org/kilocode/pull/15737#issuecomment-6600779677
+- B6 PR poller active worktree: https://github.com/Kilo-Org/kilocode/pull/15737#issuecomment-6600690956
+- B7 intro dismissed state: https://github.com/Kilo-Org/kilocode/pull/15737#issuecomment-6601007223
+- B8 Agent Manager settings tab: https://github.com/Kilo-Org/kilocode/pull/15737#issuecomment-6601005930
+Also fixed: unbound `p.log` in provider-state (failed session listing threw).
+Checks: package tests 3111 pass / 79 skip / 0 fail; typecheck and lint clean; `bun run check` 30/30 tasks.
+Remaining from the audit: the 22 serious gaps and the medium/low items (see agent-manager-v2-audit.md), plus dead-code cleanup.
+
+## Full retest on the self-test harness (2026-11-03)
+Built at HEAD plus B1's review fixes and ran session `am-v2-st` on `/tmp/am-st-ws`.
+- Restore after window reload and full relaunch: 5 project cards, session tabs and transcripts restored; no console errors.
+- B1: live `agentManager.projectSessions` pushes (10 sessions, v2 shape) on session create.
+- B3: two real tabs and two pending tabs in one worktree keep independent drafts; switching restores each.
+- B4: diff panel and review surface render; B4's own live run already covered one prompt block and one terminal paste.
+- B5: with the AM panel closed and auto-approve on, a sidebar shell permission was approved by the host and the command ran (`AUTO_APPROVE_CLOSED_OK`), no permission dock.
+- B7: dismiss shows welcome, RECENT, hints and reopen; reopen restores the intro; dismissal survived reload and relaunch.
+- B8: gear opens Agent Manager settings with rows and the project preselected; `autoBranchNaming=false` persisted to settings.json and survived a reload; restored to true.
+- History opens (9 rows), back works; New Worktree dialog opens and closes; side terminal opens; search opens with focus.
+- Watch item: the first intro dismiss followed by a reload showed the intro again; the repeat sequence persisted. Possible race in the intro global state write or restore.
+- Final checks: 3115 pass, 79 skip, 0 fail; typecheck and lint clean; `bun run check` 30/30.
