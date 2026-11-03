@@ -242,7 +242,7 @@ export class PRSuggestionActions {
         (await git(current.directory, ["symbolic-ref", "--short", "HEAD"])).trim() ===
           current.branch, "Local HEAD or branch changed")
       const latest = this.host.context(message)
-      require(samePath(fs.realpathSync(latest.directory), current.directory) &&
+      require(samePath(fs.realpathSync.native(latest.directory), current.directory) &&
         latest.branch === current.branch, "Worktree route changed")
       require(!this.disposed && saved.expires > Date.now(), "Suggestion preview expired or was disposed")
       opened(
@@ -319,8 +319,9 @@ export class PRSuggestionActions {
 
   private async snapshot(context: PRReviewContext, comment: string, index: number) {
     const { node, start, end, thread, body, block } = await this.source(context, comment, index)
-    const directory = fs.realpathSync(context.directory)
-    require(samePath(fs.realpathSync((await git(directory, ["rev-parse", "--show-toplevel"])).trim()), directory),
+    // Native realpath expands Windows 8.3 names, which `git rev-parse` reports in full.
+    const directory = fs.realpathSync.native(context.directory)
+    require(samePath(fs.realpathSync.native((await git(directory, ["rev-parse", "--show-toplevel"])).trim()), directory),
       "Worktree root changed")
     const head = (await git(directory, ["rev-parse", "HEAD"])).trim()
     const branch = (await git(directory, ["symbolic-ref", "--short", "HEAD"])).trim()

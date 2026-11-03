@@ -5,9 +5,11 @@ import fs from "node:fs/promises"
 import { existsSync, readFileSync } from "node:fs"
 import { simpleGit } from "simple-git"
 import { WorktreeManager } from "../src/agent-manager/WorktreeManager"
+import { pathKey } from "../src/agent-manager/project/paths"
 import { failure } from "./setup/failure"
 
 const tempDirs: string[] = []
+const managers: WorktreeManager[] = []
 // Pool home for the current test. Slots never live inside the test repository.
 let home = ""
 
@@ -18,6 +20,7 @@ beforeEach(async () => {
 })
 
 afterEach(async () => {
+  for (const manager of managers.splice(0)) await manager.disposePool().catch(() => undefined)
   await Promise.all(
     tempDirs.splice(0, tempDirs.length).map(async (dir) => {
       await fs.rm(dir, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 })
@@ -55,6 +58,7 @@ function createManager(root: string, poolSize = 1, rewarmDelay = 0, logs?: strin
     dir,
   )
   manager.rewarmDelay = rewarmDelay
+  managers.push(manager)
   return manager
 }
 
@@ -82,7 +86,7 @@ async function pooledSlots(root: string): Promise<string[]> {
     const lines = block.split("\n")
     const worktree = lines.find((line) => line.startsWith("worktree "))?.slice(9)
     const detached = lines.some((line) => line === "detached")
-    if (worktree && detached) slots.push(worktree)
+    if (worktree && detached) slots.push(path.resolve(worktree))
   }
   return slots
 }
@@ -131,7 +135,7 @@ describe("WorktreeManager pool warm-up", () => {
     const slot = await waitForPooledSlot(root)
 
     expect(await pooledSlots(root)).toEqual([slot])
-    expect(slot.startsWith(home + path.sep)).toBe(true)
+    expect(pathKey(slot).startsWith(pathKey(home) + path.sep)).toBe(true)
     expect(existsSync(path.join(root, ".kilo"))).toBe(false)
     expect(await clean(root)).toBe("")
     expect(await manager.discoverWorktrees()).toEqual([])
@@ -179,7 +183,7 @@ describe("WorktreeManager pool claim", () => {
     // A replacement slot is warmed in the pool home after the claim, off the click path.
     const next = await waitForPooledSlot(root)
     expect(next).not.toBe(slot)
-    expect(next.startsWith(home + path.sep)).toBe(true)
+    expect(pathKey(next).startsWith(pathKey(home) + path.sep)).toBe(true)
   })
 
   it("delays the replacement warm-up so it does not compete with the new session", async () => {
@@ -410,7 +414,7 @@ describe("WorktreeManager pool home", () => {
     expect(await pooledSlots(root)).toEqual([])
 
     manager.warmPool()
-    expect((await waitForPooledSlot(root)).startsWith(home + path.sep)).toBe(true)
+    expect(pathKey(await waitForPooledSlot(root)).startsWith(pathKey(home) + path.sep)).toBe(true)
     expect(existsSync(path.join(root, ".kilo"))).toBe(false)
   })
 

@@ -15,6 +15,8 @@ import { GitOps } from "../src/agent-manager/GitOps"
 import type { PRInfo } from "../src/agent-manager/git-import"
 import { BUDGET } from "../src/agent-manager/command-budget"
 import { simpleGit } from "simple-git"
+import { parseWorktreeList } from "../src/agent-manager/git-import"
+import { pathKey } from "../src/agent-manager/project/paths"
 import { failure } from "./setup/failure"
 
 // Each test gets its own temp directory -- no shared state, safe to run in parallel.
@@ -515,7 +517,8 @@ describe("WorktreeManager.createWorktree", () => {
     const result = await createManager(root).createWorktree({ branchName: "hook-failure" })
 
     expect(existsSync(result.path)).toBe(true)
-    expect((await simpleGit(root).raw(["worktree", "list", "--porcelain"])).includes(result.path)).toBe(true)
+    expect(parseWorktreeList(await simpleGit(root).raw(["worktree", "list", "--porcelain"]))
+      .some((entry) => pathKey(entry.path) === pathKey(result.path))).toBe(true)
   })
 })
 

@@ -184,6 +184,7 @@ describe("GitStatsPoller", () => {
       pollers.forEach((poller) => poller.setEnabled(true))
       await Promise.all(recorders.map((git) => waitFor(() => git.aheadCalls >= 2, 2_000)))
       pollers.forEach((poller) => poller.stop())
+      recorders.forEach((git) => git.dispose())
 
       for (const [index, git] of recorders.entries()) {
         expect(git.worktreeCalls).toBe(0)
@@ -228,6 +229,7 @@ describe("GitStatsPoller", () => {
       poller.setEnabled(true)
       await waitFor(() => git.worktreeCalls >= 1 && git.aheadCalls >= 2, 2_000)
       poller.stop()
+      git.dispose()
 
       expect(git.commands.filter((item) => item.args[0] === "for-each-ref")).toHaveLength(1)
       expect(git.worktreeCalls).toBe(1)
@@ -267,6 +269,7 @@ describe("GitStatsPoller", () => {
       poller.setEnabled(true)
       await waitFor(() => git.worktreeCalls >= 1, 2_000)
       poller.stop()
+      git.dispose()
 
       expect(git.worktreeCalls).toBe(1)
     } finally {
@@ -387,6 +390,7 @@ describe("GitStatsPoller", () => {
       poller.setEnabled(true)
       await waitFor(() => git.commands.filter((item) => item.args.includes("--porcelain=v2")).length >= 15, 3_000)
       poller.stop()
+      git.dispose()
       const counts = new Map<string, number>()
       for (const item of git.commands) {
         if (!item.args.includes("--porcelain=v2")) continue

@@ -4,6 +4,7 @@ import * as os from "os"
 import * as path from "path"
 import { GitOps, type ExecBufferResult } from "../src/agent-manager/GitOps"
 import { GitStatsSnapshot, lines, refOID } from "../src/agent-manager/git-stats-snapshot"
+import { canonicalizePath } from "../src/agent-manager/project/paths"
 import { diffSummary } from "../src/agent-manager/local-diff"
 
 function run(dir: string, args: string[]): string {
@@ -272,12 +273,12 @@ describe("GitStatsSnapshot", () => {
       const refs = await snapshots.refs(dir)
       expect(refOID(refs, "origin/main")).toBe(run(dir, ["rev-parse", "HEAD"]))
       expect(refs.upstreams.get("refs/heads/main")).toBe("refs/remotes/origin/main")
-      expect(refs.worktreePaths?.get(await fs.realpath(dir))).toBe("main")
+      expect(refs.worktreePaths?.get(canonicalizePath(dir))).toBe("main")
     })
   })
 
   it("keeps linked worktree maps isolated for repositories with the same branch names", async () => {
-    const roots = await Promise.all([
+    const roots: string[] = await Promise.all([
       fs.mkdtemp(path.join(os.tmpdir(), "git-stats-snapshot-one-")),
       fs.mkdtemp(path.join(os.tmpdir(), "git-stats-snapshot-two-")),
     ])
@@ -294,7 +295,7 @@ describe("GitStatsSnapshot", () => {
 
       const snapshots = roots.map(() => new GitStatsSnapshot(new GitOps({ log: () => undefined })))
       const refs = await Promise.all(roots.map((root, index) => snapshots[index]!.refs(root)))
-      const paths = await Promise.all(worktrees.map((worktree) => fs.realpath(worktree)))
+      const paths = worktrees.map(canonicalizePath)
 
       expect(refs[0]!.worktreePaths?.get(paths[0]!)).toBe("feature")
       expect(refs[0]!.worktreePaths?.has(paths[1]!)).toBe(false)
@@ -310,7 +311,7 @@ describe("GitStatsSnapshot", () => {
       const worktree = path.join(dir, "linked\nworktree")
       run(dir, ["worktree", "add", "-b", "feature", worktree, "main"])
       const refs = await new GitStatsSnapshot(new GitOps({ log: () => undefined })).refs(dir)
-      expect(refs.worktreePaths?.get(await fs.realpath(worktree))).toBe("feature")
+      expect(refs.worktreePaths?.get(canonicalizePath(worktree))).toBe("feature")
     })
   })
 
