@@ -5,10 +5,11 @@ import { existsSync } from "node:fs"
 import { copyFile, mkdir, rm } from "node:fs/promises"
 import path from "node:path"
 import { currentFfmpegTarget, ensureFfmpegForTarget, hasFfmpegPackage } from "./ffmpeg-helper"
-import { solid } from "./solid-cache"
+import { createSolidPlugin } from "./solid-cache"
 
 const root = path.resolve(import.meta.dir, "..")
 const dist = path.join(root, "dist")
+const solid = createSolidPlugin({ root })
 const production = Bun.argv.includes("--production")
 // `--meta` writes the bundled source files to dist/inputs.txt (used to keep only reachable copied v1 UI files).
 const meta = Bun.argv.includes("--meta")
