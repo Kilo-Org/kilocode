@@ -1069,7 +1069,11 @@ const AgentManagerContent: Component = () => {
   // One browser page per session, kept alive across worktree and session switches.
   const browser = createBrowserPanel({
     active: () => sidePanel() === SidePanel.Browser,
-    open: () => panels.open(SidePanel.Browser),
+    open: () => {
+      closeHistory()
+      setReviewActive(false)
+      panels.open(SidePanel.Browser)
+    },
     close: () => panels.close(SidePanel.Browser),
     sessionId: () => sessions.currentSessionID(),
     projectId: activeProjectId,
@@ -1697,6 +1701,7 @@ const AgentManagerContent: Component = () => {
       stateHandlers.projects(message)
       stateHandlers.browser(message)
       if (message.type === "agentManager.state") {
+        browser.bind().browser(message.browserAutomation === true)
         preserveSidebarScroll(() => stateHandlers.state(message))
         return
       }

@@ -13,6 +13,7 @@ export function createBrowserLifecycle(input: {
   contexts: () => ProjectContexts
   post: (message: AgentManagerOutMessage) => void
   openPanel: () => void
+  owns: (sessionId: string) => boolean
   log: (...args: unknown[]) => void
 }) {
   const browser = input.browser ?? new BrowserBroker({ log: input.log })
@@ -21,10 +22,12 @@ export function createBrowserLifecycle(input: {
       const directory = canonicalizePath(route.directory)
       const ctx = input.contexts().byDirectory(directory)
       if (!ctx || (route.projectId && route.projectId !== ctx.id)) return undefined
+      // The project session catalog also lists sidebar sessions rooted in this directory. Only sessions the Agent
+      // Manager itself shows here belong to the panel.
+      if (!input.owns(route.sessionId)) return undefined
       const state = ctx.peekState()
       const stored = state?.getSession(route.sessionId)
       const live = ctx.sessions().find((session) => session.id === route.sessionId)
-      if (!stored && !live) return undefined
       const worktree = stored?.worktreeId ?? live?.worktreeId
       const expected = worktree ? state?.getWorktree(worktree)?.path : ctx.root
       if (!expected || !samePath(canonicalizePath(expected), directory)) return undefined

@@ -236,7 +236,7 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
       push: () => this.pushProjects(),
       pushState: (ctx) => this.pushState(ctx),
       changed: () => this.onWorkspaceChanged(),
-      removed: () => undefined,
+      removed: (id) => this.browser.closeProject(id),
       selected: (target) => this.postToWebview({ type: "agentManager.selectionActivated", target }),
       post: (message) => this.postToWebview(message),
     })
@@ -248,6 +248,7 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
       contexts: () => this.contexts,
       post: (message) => this.postToWebview(message),
       openPanel: () => this.openPanel(true),
+      owns: (sessionId) => this.ownsBrowserSession(sessionId),
       log: (...args) => {
         this.log(...args)
         this.onBrowserDebug?.(...args)
@@ -401,6 +402,12 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
     this.outputChannel.appendLine(`${new Date().toISOString()} ${formatLog(args)}`)
   }
 
+  /** The Integrated Browser setting changed: close its pages when disabled and republish availability. */
+  public browserAutomationChanged(): void {
+    if (!this.host.browserAutomation()) void this.browser.closeAll().catch((error) => this.log(error))
+    if (this.context) this.pushState(this.context)
+  }
+
   public openPanel(preserveFocus?: boolean): void {
     if (this.panel) {
       const panel = this.panel
@@ -529,7 +536,7 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
   }
 
   public async handlePanelMessage(message: { type: string } & Record<string, unknown>): Promise<void> {
-    if (message.type === "open" && typeof message.url === "string") {
+    if (message.type === "agentManager.openWebLink" && typeof message.url === "string") {
       this.openWebLink(message.url)
       return
     }
@@ -999,6 +1006,8 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
   }
 
   public onWorkspaceChanged(): void {
+    // A workspace switch drops every page the old workspace could still show.
+    void this.browser.closeAll().catch((error) => this.log(error))
     onWorkspaceChanged(this.stateHost())
   }
 

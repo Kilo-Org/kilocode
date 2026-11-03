@@ -167,12 +167,9 @@ export function activate(context: ExtensionContext) {
   context.subscriptions.push({ dispose: autocomplete.dispose })
   registerAutocompleteProvider(context, autocomplete)
   const view = chat({ context, server, directory, trackCostSession: alerts.track, diff: diffs })
-  // The Agent Manager binds its browser owner first, so a session it owns resolves to its panel. The editor tab then
-  // serves the remaining sidebar sessions of the workspace directory.
-  const agentHost = new VscodeHost(context, { server, directory })
-  const agentPanel = createPanel({ context, server, directory, trackCostSession: alerts.track })
-  const agentManager = new AgentManagerProvider(agentHost, connection, agentPanel, undefined, broker)
-  agentManager.onBrowserDebug = (...args) => output.appendLine(`Browser AM: ${args.map((item) => String(item)).join(" ")}`)
+  // The editor-tab browser registers first, as the broker expects. It serves sidebar sessions of the workspace
+  // directory and leaves the sessions the Agent Manager owns to the panel.
+  let owned = (_sessionId: string) => false
   const browserTab = new BrowserTabProvider(
     context.extensionUri,
     { browser: broker, version: (context.extension.packageJSON as { version?: string }).version },
@@ -180,8 +177,7 @@ export function activate(context: ExtensionContext) {
       enabled: () => integratedBrowserEnabled() && workspace.isTrusted,
       trusted: () => workspace.isTrusted,
       resolve: (route) =>
-        !agentManager.ownsBrowserSession(route.sessionId) &&
-        samePath(canonicalizePath(route.directory), canonicalizePath(directory))
+        !owned(route.sessionId) && samePath(canonicalizePath(route.directory), canonicalizePath(directory))
           ? { sessionId: route.sessionId, directory: route.directory }
           : undefined,
       directory: () => directory,
@@ -201,6 +197,11 @@ export function activate(context: ExtensionContext) {
     },
   )
   context.subscriptions.push({ dispose: () => browserTab.dispose() })
+  const agentHost = new VscodeHost(context, { server, directory })
+  const agentPanel = createPanel({ context, server, directory, trackCostSession: alerts.track })
+  const agentManager = new AgentManagerProvider(agentHost, connection, agentPanel, undefined, broker)
+  agentManager.onBrowserDebug = (...args) => output.appendLine(`Browser AM: ${args.map((item) => String(item)).join(" ")}`)
+  owned = (sessionId) => agentManager.ownsBrowserSession(sessionId)
   // The Settings panel edits Agent Manager project settings through the provider's shared handler, so it is created
   // after the provider and receives a lazy getter.
   const panel = settings({
@@ -295,6 +296,7 @@ export function activate(context: ExtensionContext) {
         event.affectsConfiguration("kilo-code.v2.integratedBrowser")
       )
         void server.stop()
+      if (event.affectsConfiguration("kilo-code.v2.integratedBrowser")) agentManager.browserAutomationChanged()
     }),
     window.registerWebviewPanelSerializer(PANEL_TYPE, {
       deserializeWebviewPanel: async (restored) => agentManager.deserializePanel(restored),

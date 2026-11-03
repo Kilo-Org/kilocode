@@ -117,13 +117,16 @@ describe("browser inspection responses", () => {
       contexts: () => view.contexts,
       post: (message) => messages.push(message),
       openPanel: () => {},
+      owns: () => true,
       log: () => {},
     })
     const viewport = { width: 400, height: 300, revision: 1, active: true }
     await view.broker.viewport("session", "project", view.current.browserId, view.current.navigation, viewport)
-    // The reporter script carries the stream epoch when it is installed; the epoch starts at zero.
-    const source = view.scripts.at(-1) ?? ""
-    const epoch = source.match(/\)\("__kiloCursor", (\d+),/)?.at(1) ?? "0"
+    // The reporter installs with the viewport, and its script carries the stream epoch used in each report.
+    const source = view.scripts.at(-1)
+    if (!source) throw new Error("The cursor reporter was not installed")
+    const epoch = source.match(/\)\("__kiloCursor", (\d+),/)?.at(1)
+    if (!epoch) throw new Error("The cursor reporter script has no epoch")
     view.protocol.emit("Runtime.executionContextCreated", { context: { id: 7, name: "kilo-cursor" } })
     const report = (cursor: string) =>
       view.protocol.emit("Runtime.bindingCalled", {
@@ -193,6 +196,7 @@ describe("browser inspection responses", () => {
       contexts: () => view.contexts,
       post: () => {},
       openPanel: () => {},
+      owns: () => true,
       log: () => {},
     })
     const panel = () => {

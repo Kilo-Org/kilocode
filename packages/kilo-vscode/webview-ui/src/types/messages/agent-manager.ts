@@ -345,6 +345,7 @@ export interface AgentManagerStateMessage {
   terminalDestination?: TerminalDestination
   terminalFont?: TerminalFont
   restricted?: boolean
+  browserAutomation?: boolean
 }
 
 /** A registered project as shown in the sidebar. */

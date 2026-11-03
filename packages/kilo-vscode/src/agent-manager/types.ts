@@ -195,6 +195,7 @@ interface StateMessage {
   terminalDestination?: TerminalDestination
   terminalFont?: TerminalFont
   restricted?: boolean
+  browserAutomation?: boolean
 }
 
 /** Project catalog pushed to the webview after registry or context changes. */
@@ -1058,6 +1059,11 @@ interface OpenExternalIn {
   url: string
 }
 
+interface OpenWebLinkIn {
+  type: "agentManager.openWebLink"
+  url: string
+}
+
 interface CopyFilePathIn {
   type: "agentManager.copyFilePath"
   sessionId: string
@@ -1329,6 +1335,7 @@ interface BrowserRequestIn {
 export type AgentManagerInMessage =
   | BrowserRequestIn
   | OpenExternalIn
+  | OpenWebLinkIn
   | PRCommentRequest
   | CreateWorktreeIn
   | RequestProjectsIn
