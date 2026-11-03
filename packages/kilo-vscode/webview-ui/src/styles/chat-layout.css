@@ -578,10 +578,40 @@
 }
 
 .chat-view .chat-input > .startup-error-banner,
-.chat-view .chat-input > [data-component="permission-shortcuts"] {
+.chat-view .chat-input > [data-component="permission-shortcuts"],
+.chat-view .chat-input > [data-component="v2-error"] {
   box-sizing: border-box;
   width: min(calc(100% - var(--prompt-gutter) - var(--prompt-gutter)), var(--chat-readable-width));
+  max-width: calc(100% - var(--prompt-gutter) - var(--prompt-gutter));
   margin-inline: auto;
+}
+
+/* The inline error bar shares the prompt lane and wraps a long command error instead of widening past the panel. */
+.chat-view .chat-input > [data-component="v2-error"] {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 8px 12px;
+  border: 1px solid color-mix(in srgb, var(--border-critical-selected) 55%, var(--border-weaker-base));
+  border-radius: var(--radius-lg);
+  background-color: color-mix(in srgb, var(--surface-critical-strong) 10%, var(--surface-inset-base));
+}
+
+.chat-view .chat-input > [data-component="v2-error"] > span {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.chat-view .chat-input > [data-component="v2-error"] > .error-card-dismiss {
+  flex-shrink: 0;
+  margin: 0;
+  padding: 0 4px;
+  border: 0;
+  background: none;
+  color: var(--text-weak);
+  cursor: pointer;
 }
 
 .chat-view .chat-input > [data-component="permission-shortcuts"] > [data-component="dock-prompt"] {
