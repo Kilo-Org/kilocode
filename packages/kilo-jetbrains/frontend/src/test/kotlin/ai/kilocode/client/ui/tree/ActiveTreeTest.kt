@@ -299,9 +299,16 @@ class ActiveTreeTest : BasePlatformTestCase() {
             assertEquals(listOf("group"), tree.selectedKeys())
             assertTrue(view.isExpanded(path))
         }
-        val point = Point(frame.x + frame.width - 1, frame.y + frame.height / 2)
+        val point = Point(frame.x + frame.width / 2, frame.y + frame.height / 2)
+        val expanded = view.isExpanded(path)
+        for (id in listOf(MouseEvent.MOUSE_PRESSED, MouseEvent.MOUSE_RELEASED, MouseEvent.MOUSE_CLICKED)) {
+            view.dispatchEvent(MouseEvent(view, id, 0, 0, point.x, point.y, 1, false, MouseEvent.BUTTON1))
+        }
+        assertEquals("Clicking the group body toggles it", !expanded, view.isExpanded(path))
+        assertEquals(listOf("group"), tree.selectedKeys())
+        assertEmpty(calls)
         view.dispatchEvent(MouseEvent(view, MouseEvent.MOUSE_CLICKED, 0, 0, point.x, point.y, 2, false, MouseEvent.BUTTON1))
-        assertFalse("Double click on group body still collapses", view.isExpanded(path))
+        assertEquals("A double click does not toggle twice", !expanded, view.isExpanded(path))
         assertEmpty(calls)
     }
 

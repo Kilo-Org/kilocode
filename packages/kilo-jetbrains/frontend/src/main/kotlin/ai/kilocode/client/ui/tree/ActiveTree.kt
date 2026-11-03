@@ -317,7 +317,9 @@ internal class ActiveTreeView(
         isRootVisible = false
         showsRootHandles = true
         setRowHeight(0)
-        toggleClickCount = 2
+        // Group rows toggle from the pointer on a single body click. Leave the native double-click
+        // toggle disabled so a double-click cannot flip the branch twice.
+        toggleClickCount = Int.MAX_VALUE
         expandsSelectedPaths = false
         setExpandableItemsEnabled(false)
         selectionModel.selectionMode = TreeSelectionModel.SINGLE_TREE_SELECTION

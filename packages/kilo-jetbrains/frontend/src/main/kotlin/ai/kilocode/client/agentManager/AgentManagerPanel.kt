@@ -272,7 +272,7 @@ class AgentManagerPanel(
         return object : BorderLayoutPanel() {
             override fun getBackground(): Color = activeToolWindowBackground()
         }.apply {
-            border = JBUI.Borders.empty(0, UiStyle.Gap.XS, 0, UiStyle.Gap.XS)
+            border = JBUI.Borders.empty(UiStyle.Gap.XS, UiStyle.Gap.XS, 0, UiStyle.Gap.XS)
             addToCenter(tree)
         }
     }

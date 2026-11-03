@@ -65,13 +65,24 @@ internal class ActiveTreePointer(private val view: ActiveTreeView, private val a
         if (!UIUtil.isActionClick(event, MouseEvent.MOUSE_CLICKED, true) || hit == null) return false
         return if (hit.id == null) {
             val entry = hit.entry
-            val actionable = !entry.allowsChildren && entry.item.progress == null && event.clickCount in 1..2
-            if (actionable) {
-                view.selectionModel.selectionPath = TreePath(entry.path)
-                if (event.clickCount == 1 && !actions.openOnClick) actions.click?.invoke(entry.item)
-                else view.open(entry.item, event.clickCount == 2)
+            val path = TreePath(entry.path)
+            when {
+                entry.allowsChildren -> {
+                    if (view.regions.control(entry)?.contains(event.point) == true) return false
+                    view.selectionModel.selectionPath = path
+                    if (event.clickCount == 1) {
+                        if (view.isExpanded(path)) view.collapsePath(path) else view.expandPath(path)
+                    }
+                    true
+                }
+                entry.item.progress == null && event.clickCount in 1..2 -> {
+                    view.selectionModel.selectionPath = path
+                    if (event.clickCount == 1 && !actions.openOnClick) actions.click?.invoke(entry.item)
+                    else view.open(entry.item, event.clickCount == 2)
+                    true
+                }
+                else -> false
             }
-            actionable
         } else true
     }
 
@@ -85,12 +96,14 @@ internal class ActiveTreePointer(private val view: ActiveTreeView, private val a
                 disclosure = true
                 if (view.isExpanded(path)) view.collapsePath(path) else view.expandPath(path)
             }
-            event.id == MouseEvent.MOUSE_PRESSED ||
-                (event.id == MouseEvent.MOUSE_CLICKED && event.clickCount == 1) ->
+            event.id == MouseEvent.MOUSE_PRESSED ->
                 view.selectionModel.selectionPath = path
-            event.id == MouseEvent.MOUSE_CLICKED && event.clickCount == 2 && entry.allowsChildren -> {
+            event.id == MouseEvent.MOUSE_CLICKED && event.clickCount == 1 && entry.allowsChildren -> {
+                view.selectionModel.selectionPath = path
                 if (view.isExpanded(path)) view.collapsePath(path) else view.expandPath(path)
             }
+            event.id == MouseEvent.MOUSE_CLICKED && event.clickCount == 1 ->
+                view.selectionModel.selectionPath = path
         }
     }
 }
