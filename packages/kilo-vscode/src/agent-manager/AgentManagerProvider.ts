@@ -1075,10 +1075,10 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
     return shutdown(this.api())
   }
 
-  public dispose(): void {
+  public dispose(): Promise<void> {
     this.unsubAutoApprove()
     this.relay.dispose()
-    void this.shutdown()
+    return this.shutdown()
   }
 
   public syncWorktrees(): Promise<void> {
