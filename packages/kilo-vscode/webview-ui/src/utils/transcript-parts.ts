@@ -15,5 +15,7 @@ export function isRenderable(part: Part, message: AssistantMessage): boolean {
     return !snapshotProgress(part) && !!part.text?.trim() && !(part.synthetic && message?.time.completed)
   }
   if (part.type === "reasoning") return !!part.text?.replace("[REDACTED]", "").trim()
+  // Model-generated images arrive as assistant file parts.
+  if (part.type === "file") return part.mime.startsWith("image/") && !!part.url
   return !!PART_MAPPING[part.type]
 }
