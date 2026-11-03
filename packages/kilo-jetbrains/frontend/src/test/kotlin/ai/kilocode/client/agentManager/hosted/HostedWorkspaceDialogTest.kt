@@ -2,6 +2,7 @@ package ai.kilocode.client.agentManager.hosted
 
 import ai.kilocode.client.app.KiloAppService
 import ai.kilocode.client.app.KiloWorkspaceService
+import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.plugin.KiloPluginSettings
 import ai.kilocode.client.session.model.PromptAttachment
 import ai.kilocode.client.session.ui.prompt.PromptPanel
@@ -263,6 +264,11 @@ class HostedWorkspaceDialogTest : BasePlatformTestCase() {
         edt {
             prompt().setText(" \n\t ")
             assertFalse(prompt().isSendEnabled)
+            assertFalse(okButton().isEnabled)
+            assertEquals(
+                KiloBundle.message("hosted.workspace.dialog.prompt.required"),
+                requireNotNull(dialog).validationForTest()?.message,
+            )
             submit()
             rejected()
         }
@@ -273,6 +279,11 @@ class HostedWorkspaceDialogTest : BasePlatformTestCase() {
         ready()
 
         edt {
+            assertFalse(okButton().isEnabled)
+            assertEquals(
+                KiloBundle.message("hosted.workspace.dialog.profile.required"),
+                requireNotNull(dialog).validationForTest()?.message,
+            )
             submit()
             rejected()
         }
@@ -408,8 +419,10 @@ class HostedWorkspaceDialogTest : BasePlatformTestCase() {
         }
     }
 
-    private fun submit() = controls().filterIsInstance<JButton>()
-        .single { it.action?.getValue(DialogWrapper.DEFAULT_ACTION) == true }.doClick(0)
+    private fun submit() = okButton().doClick(0)
+
+    private fun okButton(): JButton = controls().filterIsInstance<JButton>()
+        .single { it.action?.getValue(DialogWrapper.DEFAULT_ACTION) == true }
 
     private fun rejected() {
         assertNull(requireNotNull(dialog).plan())

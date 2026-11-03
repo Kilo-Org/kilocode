@@ -14,8 +14,11 @@ import com.intellij.openapi.project.Project
 import com.intellij.ui.awt.RelativePoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -33,6 +36,8 @@ class HostedWorkspaceRemoval internal constructor(
 ) {
     private val _deleting = MutableStateFlow<Set<String>>(emptySet())
     val deleting: StateFlow<Set<String>> = _deleting.asStateFlow()
+    private val _removed = MutableSharedFlow<HostedWorkspaceRefDto>(extraBufferCapacity = 16)
+    val removed: SharedFlow<HostedWorkspaceRefDto> = _removed.asSharedFlow()
 
     fun isDeleting(ref: HostedWorkspaceRefDto): Boolean = ref.key in _deleting.value
 
@@ -68,6 +73,7 @@ class HostedWorkspaceRemoval internal constructor(
                     HostedWorkspaceEditorKind.ID,
                     hostedWorkspaceParams(HostedWorkspaceDto(ref)),
                 )
+                _removed.tryEmit(ref)
                 hosted.refresh(directory)
             }
         }

@@ -242,9 +242,11 @@ class AgentManagerPanel(
                         if (state.signedOut) {
                             if (!hostedState.signedOut) clearHostedOverlays(target)
                         } else if (!state.loading && state.error == null) {
-                            // Only a successful discovery is authoritative; a failed refresh keeps
-                            // the previous items and must not drop a just-created workspace.
-                            createdHosted.keys.removeAll { key -> state.items.none { it.ref.key == key } }
+                            // Retire the optimistic row only once discovery reports the workspace.
+                            // An omission cannot distinguish a stale run from eventual consistency,
+                            // and dropping the row would make a successful create disappear.
+                            val keys = state.items.mapTo(HashSet()) { it.ref.key }
+                            createdHosted.keys.removeAll(keys::contains)
                         }
                         hostedState = state
                         sync()
@@ -272,6 +274,14 @@ class AgentManagerPanel(
                     removal.deleting.collect { keys ->
                         edt({ !target.isDisposed && !Disposer.isDisposed(this@AgentManagerPanel) }) {
                             deletingHosted = keys
+                            sync()
+                        }
+                    }
+                }
+                hostedCs.launch {
+                    removal.removed.collect { ref ->
+                        edt({ !target.isDisposed && !Disposer.isDisposed(this@AgentManagerPanel) }) {
+                            createdHosted.remove(ref.key)
                             sync()
                         }
                     }

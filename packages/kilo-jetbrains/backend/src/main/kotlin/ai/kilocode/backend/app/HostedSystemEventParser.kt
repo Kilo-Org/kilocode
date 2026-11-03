@@ -36,6 +36,8 @@ internal object HostedSystemEventParser {
             "failed" -> "attempt_failed"
             else -> step?.string("status") ?: preparation?.string("action")
         }
+        val errors = sequenceOf(preparation?.string("safeError"), attempt?.string("safeError"),
+            step?.string("safeError")).filterNotNull().toList()
         return HostedSystemEventDto(
             sessionID = session,
             kind = kind,
@@ -58,10 +60,9 @@ internal object HostedSystemEventParser {
             attemptID = preparation?.string("attemptId") ?: attempt?.string("id"),
             revision = ((preparation?.get("revision") ?: step?.get("revision") ?: attempt?.get("revision"))
                 as? JsonPrimitive)?.longOrNull?.takeIf { it >= 0 },
-            failure = sequenceOf(preparation?.string("safeError"), attempt?.string("safeError"),
-                step?.string("safeError"))
-                .filterNotNull().firstOrNull { it.matches(Regex("[a-z][a-z0-9_]{0,63}")) },
-            detail = missingStepDetail(step),
+            failure = errors.firstOrNull { it.matches(Regex("[a-z][a-z0-9_]{0,63}")) },
+            detail = missingStepDetail(step)
+                ?: errors.firstOrNull { !it.matches(Regex("[a-z][a-z0-9_]{0,63}")) }?.take(300),
             triggerMessageID = (preparation?.string("triggerMessageId") ?: attempt?.string("triggerMessageId"))
                 ?.takeIf { it.matches(Regex("[A-Za-z0-9_-]{1,128}")) },
         )
@@ -77,6 +78,7 @@ internal object HostedSystemEventParser {
         return when {
             label != null && output != null -> "$label: $output"
             output != null -> output
+            label != null -> "$label failed"
             else -> step.string("safeError")
         }?.take(300)
     }

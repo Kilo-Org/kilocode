@@ -152,7 +152,11 @@ internal abstract class AgentManagerDialog @RequiresEdt constructor(
         model = current.key
         syncReasoning(current)
         prompt.setAttachmentEnabled(local && current.attachment)
+        syncValidation()
     }
+
+    /** Re-runs dialog validation after the prompt, agent, or model selection changes. */
+    protected open fun syncValidation() {}
 
     @RequiresEdt
     private fun syncReasoning(item: ModelPicker.Item) {

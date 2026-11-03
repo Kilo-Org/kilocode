@@ -240,7 +240,7 @@ data class HostedSystemEventDto(
     val revision: Long? = null,
     /** Explicit provider safe-error code only; never a raw server error or progress detail. */
     val failure: String? = null,
-    /** Failed step label plus its final setup output line, when Cloud provides one. */
+    /** Failed step label, final setup output line, or provider-safe error detail. */
     val detail: String? = null,
     val triggerMessageID: String? = null,
 )

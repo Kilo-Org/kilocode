@@ -184,6 +184,30 @@ class HostedSystemEventParserTest {
     }
 
     @Test
+    fun `failed setup command without output exposes its safe error detail`() {
+        val event = assertNotNull(HostedSystemEventParser.parse(session, native, null, """
+            {"type":"preparing","properties":{"preparation":{"version":2,"action":"step_snapshot",
+                "step":"setup_commands","attempt":{"status":"failed","safeError":"workspace_setup_failed"},
+                "stepSnapshot":{"key":"setup_commands","label":"Setup command 6","status":"failed",
+                    "safeError":"Setup command 6 failed"}}}}
+        """.trimIndent()))
+
+        assertEquals("workspace_setup_failed", event.failure)
+        assertEquals("Setup command 6 failed", event.detail)
+    }
+
+    @Test
+    fun `failed attempt without a failed step keeps its safe error detail`() {
+        val event = assertNotNull(HostedSystemEventParser.parse(session, native, null, """
+            {"type":"preparing","properties":{"preparation":{"version":2,"action":"attempt_snapshot",
+                "attempt":{"status":"failed","safeError":"Preparation did not complete"}}}}
+        """.trimIndent()))
+
+        assertNull(event.failure)
+        assertEquals("Preparation did not complete", event.detail)
+    }
+
+    @Test
     fun `absent preparation timestamps stay unknown and never borrow sandbox clock`() {
         val event = assertNotNull(HostedSystemEventParser.parse(session, native, null, """
             {"type":"preparing","properties":{"sandbox":{"observedAt":9999},"preparation":{

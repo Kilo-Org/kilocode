@@ -8,6 +8,7 @@ import ai.kilocode.rpc.dto.HostedWorkspaceProfileDto
 import com.intellij.openapi.components.service
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.ComboBox
+import com.intellij.openapi.ui.ValidationInfo
 import com.intellij.ui.SimpleListCellRenderer
 import com.intellij.ui.components.JBTextField
 import com.intellij.util.ui.FormBuilder
@@ -48,7 +49,25 @@ internal class HostedWorkspaceDialog @RequiresEdt constructor(
     init {
         title = KiloBundle.message(if (withWorkspace) "hosted.workspace.dialog.create.title" else "hosted.workspace.dialog.session.title")
         init()
+        initValidation()
+        prompt.onChange = { syncValidation() }
+        profile.addActionListener { syncValidation() }
+        syncValidation()
         setOKButtonText(KiloBundle.message(if (withWorkspace) "hosted.workspace.dialog.create" else "hosted.workspace.session.new"))
+    }
+
+    override fun syncValidation() {
+        setOKActionEnabled(doValidate() == null)
+    }
+
+    override fun doValidate(): ValidationInfo? = when {
+        prompt.text().isEmpty() -> ValidationInfo(KiloBundle.message("hosted.workspace.dialog.prompt.required"), prompt)
+        pending()?.let { it.agent == null || it.model == null || it.provider != "kilo" } ?: true ->
+            ValidationInfo(KiloBundle.message("hosted.workspace.create.noModel"), prompt)
+        !withWorkspace -> null
+        profile.selectedItem as? HostedWorkspaceProfileDto !in profiles ->
+            ValidationInfo(KiloBundle.message("hosted.workspace.dialog.profile.required"), profile)
+        else -> null
     }
 
     override fun createCenterPanel(): JComponent {
@@ -100,4 +119,6 @@ internal class HostedWorkspaceDialog @RequiresEdt constructor(
     }
 
     fun plan(): HostedCreatePlan? = result
+
+    internal fun validationForTest(): ValidationInfo? = doValidate()
 }
