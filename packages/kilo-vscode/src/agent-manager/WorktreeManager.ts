@@ -291,6 +291,11 @@ export class WorktreeManager {
     return this.pool.dispose()
   }
 
+  /** Resolves when no pool warm-up is in flight. */
+  poolIdle(): Promise<void> {
+    return this.pool.idle()
+  }
+
   private async poolStart(base?: string): Promise<PoolStart> {
     const branch = base || (await this.defaultBranch())
     const point = await this.resolveStartPoint(branch)
@@ -504,14 +509,20 @@ export class WorktreeManager {
     params.onProgress?.("creating", `Creating worktree for ${branch}...`)
 
     try {
-      await this.runWorktreeAdd(this.worktreeAddArgs(branch, worktreePath, startRef, params.existingBranch), worktreePath)
+      await this.runWorktreeAdd(
+        this.worktreeAddArgs(branch, worktreePath, startRef, params.existingBranch),
+        worktreePath,
+      )
     } catch (error) {
       const failure = this.classifyAddFailure(error, branch, params.existingBranch)
       if (!failure.retry) throw failure.error
       // Another process may create the branch after resolveBranch checks it.
       branch = await this.resolveBranch(params)
       worktreePath = path.join(this.dir, directory(branch))
-      await this.runWorktreeAdd(this.worktreeAddArgs(branch, worktreePath, startRef, params.existingBranch), worktreePath)
+      await this.runWorktreeAdd(
+        this.worktreeAddArgs(branch, worktreePath, startRef, params.existingBranch),
+        worktreePath,
+      )
     }
     return { branch, worktreePath }
   }

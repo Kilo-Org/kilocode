@@ -75,7 +75,11 @@ export class WorktreePool {
   /** Resolved directory for new slots, see {@link dir}. */
   private place: Promise<string | undefined> | undefined
   private slots: PoolSlot[] = []
-  private warming = false
+  private warming: Promise<void> | undefined
+  private sweeping: Promise<void> | undefined
+  private rewarm: ReturnType<typeof setTimeout> | undefined
+  /** Bumped by `dispose`, so a warm-up that started before it does not fill a slot after it. */
+  private generation = 0
 
   /** Current target size, read live when configured with a function. */
   private size(): number {
@@ -105,15 +109,23 @@ export class WorktreePool {
    */
   warm(base?: string): void {
     if (this.size() <= 0 || this.warming) return
-    this.warming = true
-    queueMicrotask(() => {
-      void this.resolve(base)
-        .then((start) => this.deps.lock(() => this.fill(start.point, start.oid)))
-        .catch((e) => this.deps.log(`worktree pool: warm failed: ${e}`))
-        .finally(() => {
-          this.warming = false
-        })
-    })
+    const generation = this.generation
+    this.warming = Promise.resolve()
+      .then(() => this.resolve(base))
+      .then((start) =>
+        this.deps.lock(async () => {
+          if (generation === this.generation) await this.fill(start.point, start.oid)
+        }),
+      )
+      .catch((e) => this.deps.log(`worktree pool: warm failed: ${e}`))
+      .finally(() => {
+        this.warming = undefined
+      })
+  }
+
+  /** Resolves when no warm-up is in flight. */
+  idle(): Promise<void> {
+    return this.warming ?? Promise.resolve()
   }
 
   /** Resolve the base ref and its commit outside the git lock. */
@@ -138,7 +150,8 @@ export class WorktreePool {
     if (!this.has()) return undefined
     const taken = await this.pick(branch, oid, auto)
     if (!taken) return undefined
-    setTimeout(() => this.warm(base), this.deps.rewarm())
+    clearTimeout(this.rewarm)
+    this.rewarm = setTimeout(() => this.warm(base), this.deps.rewarm())
     return this.move(taken)
   }
 
@@ -208,17 +221,25 @@ export class WorktreePool {
       await this.adopt()
       await this.tidy()
     })
-    this.sweep()
+    void this.sweep()
   }
 
-  /** Remove every idle slot, used when the feature is turned off in settings. */
+  /**
+   * Remove every idle slot, used when the feature is turned off in settings.
+   * Scheduled and running warm-ups are cancelled or awaited first, so no pool Git process
+   * runs after this resolves. A later `warm` starts the pool again.
+   */
   async dispose(): Promise<void> {
+    this.generation++
+    clearTimeout(this.rewarm)
+    this.rewarm = undefined
+    await this.warming
     await this.deps.lock(async () => {
       const slots = this.slots
       this.slots = []
       for (const slot of slots) await this.removePath(slot.path)
     })
-    this.sweep()
+    await this.sweep()
   }
 
   /** Forget a slot so the normal removal path can clean it up. */
@@ -227,16 +248,17 @@ export class WorktreePool {
   }
 
   /** Clean slots of every repository in the pool home, once per process and pool state. */
-  private sweep(): void {
+  private sweep(): Promise<void> {
     const home = this.deps.home
-    if (!home) return
+    if (!home) return Promise.resolve()
     const enabled = this.enabled()
     const key = `${home}\0${enabled}`
-    if (WorktreePool.swept.has(key)) return
+    if (WorktreePool.swept.has(key)) return this.sweeping ?? Promise.resolve()
     WorktreePool.swept.add(key)
-    void sweep(home, enabled, this.deps.client, this.deps.log).catch((err: unknown) =>
+    this.sweeping = sweep(home, enabled, this.deps.client, this.deps.log).catch((err: unknown) =>
       this.deps.log(`worktree pool: sweep failed: ${err}`),
     )
+    return this.sweeping
   }
 
   /**

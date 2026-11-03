@@ -126,6 +126,32 @@ async function waitForPooledSlots(root: string, count: number, timeout = 10000):
 }
 
 describe("WorktreeManager pool warm-up", () => {
+  it("does not fill a slot when dispose runs while a warm-up is starting", async () => {
+    const root = await createTempRepo()
+    const manager = createManager(root)
+
+    manager.warmPool()
+    await manager.disposePool()
+    await manager.poolIdle()
+
+    expect(await pooledSlots(root)).toEqual([])
+  })
+
+  it("cancels the replacement warm-up that a claim scheduled", async () => {
+    const root = await createTempRepo()
+    const manager = createManager(root, 1, 200)
+    manager.warmPool()
+    await waitForPooledSlot(root)
+    await manager.poolIdle()
+
+    await manager.createWorktree({})
+    await manager.disposePool()
+    await new Promise((resolve) => setTimeout(resolve, 400))
+    await manager.poolIdle()
+
+    expect(await pooledSlots(root)).toEqual([])
+  })
+
   it("warms a slot in the pool home without creating anything in the project", async () => {
     const root = await createTempRepo()
     const manager = createManager(root)
@@ -272,6 +298,9 @@ describe("WorktreeManager pool stale slot", () => {
 
     manager.warmPool()
     const slot = await waitForPooledSlot(root)
+    // The slot metadata is written before the warm-up's Git work finishes, and Windows cannot
+    // delete a directory that a running process still uses.
+    await manager.poolIdle()
 
     await fs.rm(slot, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 })
     expect(existsSync(slot)).toBe(false)

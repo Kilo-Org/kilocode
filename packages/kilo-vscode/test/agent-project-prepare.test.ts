@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it } from "bun:test"
+import { afterEach, beforeEach, describe, expect, it, setDefaultTimeout } from "bun:test"
 import * as fs from "node:fs/promises"
 import * as os from "node:os"
 import * as path from "node:path"
@@ -6,6 +6,9 @@ import { GitOps } from "../src/agent-manager/GitOps"
 import { canonicalizePath } from "../src/agent-manager/project/paths"
 import { commit, configure, create, identity, initialize, inspect } from "../src/agent-manager/project/prepare"
 import { validName } from "../src/agent-manager/project/validation"
+
+// Each case runs dozens of Git processes, which alone takes 3 to 7 seconds on the Windows runner.
+setDefaultTimeout(30_000)
 
 let dir: string
 let env: NodeJS.ProcessEnv
@@ -30,7 +33,7 @@ afterEach(async () => {
     if (!(key in env)) delete process.env[key]
   }
   Object.assign(process.env, env)
-  await fs.rm(dir, { recursive: true, force: true, maxRetries: 60, retryDelay: 100 })
+  await fs.rm(dir, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 })
 })
 
 async function run(root: string, ...args: string[]) {
@@ -227,7 +230,6 @@ describe("project preparation", () => {
     )
   })
 
-  // Two repositories and a bootstrap commit take more than the default 5 seconds of Git calls on Windows.
   it("ignores ambient Git directory, worktree and index overrides", async () => {
     const other = await project()
     const index = path.join(dir, "ambient-index")
@@ -243,7 +245,7 @@ describe("project preparation", () => {
     expect(await inspect(other, git)).toEqual({ root: other, empty: true })
     expect(await identity(other, git)).toBe(true)
     expect(await fs.readFile(index, "utf8")).toBe("do not touch")
-  }, 30_000)
+  })
 
   it.each(["hook", "signing"])("creates an unsigned bootstrap commit despite configured %s policy", async (policy) => {
     const root = await project()
