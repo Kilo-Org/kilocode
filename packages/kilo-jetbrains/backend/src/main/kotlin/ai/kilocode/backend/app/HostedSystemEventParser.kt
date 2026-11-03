@@ -11,6 +11,8 @@ import kotlinx.serialization.json.longOrNull
 
 /** Projects the provider's structured system feed onto the attached hosted identity. */
 internal object HostedSystemEventParser {
+    private val failureCode = Regex("[a-z][a-z0-9_]{0,63}")
+
     fun parse(session: String, native: String, type: String?, data: String): HostedSystemEventDto? {
         val obj = runCatching { Json.parseToJsonElement(data) as? JsonObject }.getOrNull() ?: return null
         val payload = if ("payload" in obj) obj["payload"] as? JsonObject ?: return null else obj
@@ -38,6 +40,10 @@ internal object HostedSystemEventParser {
         }
         val errors = sequenceOf(preparation?.string("safeError"), attempt?.string("safeError"),
             step?.string("safeError")).filterNotNull().toList()
+        val human = errors.firstOrNull { !it.matches(failureCode) }?.take(300)
+        val label = step?.takeIf { it.string("status") == "failed" }?.let {
+            it.string("label") ?: it.string("key")
+        }
         return HostedSystemEventDto(
             sessionID = session,
             kind = kind,
@@ -60,9 +66,8 @@ internal object HostedSystemEventParser {
             attemptID = preparation?.string("attemptId") ?: attempt?.string("id"),
             revision = ((preparation?.get("revision") ?: step?.get("revision") ?: attempt?.get("revision"))
                 as? JsonPrimitive)?.longOrNull?.takeIf { it >= 0 },
-            failure = errors.firstOrNull { it.matches(Regex("[a-z][a-z0-9_]{0,63}")) },
-            detail = missingStepDetail(step)
-                ?: errors.firstOrNull { !it.matches(Regex("[a-z][a-z0-9_]{0,63}")) }?.take(300),
+            failure = errors.firstOrNull { it.matches(failureCode) },
+            detail = missingStepDetail(step) ?: human ?: label?.let { "$it failed" }?.take(300),
             triggerMessageID = (preparation?.string("triggerMessageId") ?: attempt?.string("triggerMessageId"))
                 ?.takeIf { it.matches(Regex("[A-Za-z0-9_-]{1,128}")) },
         )
@@ -78,8 +83,7 @@ internal object HostedSystemEventParser {
         return when {
             label != null && output != null -> "$label: $output"
             output != null -> output
-            label != null -> "$label failed"
-            else -> step.string("safeError")
+            else -> null
         }?.take(300)
     }
 

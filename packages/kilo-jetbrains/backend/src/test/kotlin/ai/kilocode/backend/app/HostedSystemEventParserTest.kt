@@ -197,6 +197,31 @@ class HostedSystemEventParserTest {
     }
 
     @Test
+    fun `provider safe error detail takes precedence over the synthesized failed label`() {
+        val event = assertNotNull(HostedSystemEventParser.parse(session, native, null, """
+            {"type":"preparing","properties":{"preparation":{"version":2,"action":"step_snapshot",
+                "step":"setup_commands","attempt":{"status":"failed","safeError":"workspace_setup_failed"},
+                "stepSnapshot":{"key":"setup_commands","label":"Setup command 6","status":"failed",
+                    "safeError":"Permission denied"}}}}
+        """.trimIndent()))
+
+        assertEquals("workspace_setup_failed", event.failure)
+        assertEquals("Permission denied", event.detail)
+    }
+
+    @Test
+    fun `failed setup command without output or safe error falls back to its label`() {
+        val event = assertNotNull(HostedSystemEventParser.parse(session, native, null, """
+            {"type":"preparing","properties":{"preparation":{"version":2,"action":"step_snapshot",
+                "step":"setup_commands","attempt":{"status":"failed","safeError":"workspace_setup_failed"},
+                "stepSnapshot":{"key":"setup_commands","label":"Setup command 6","status":"failed"}}}}
+        """.trimIndent()))
+
+        assertEquals("workspace_setup_failed", event.failure)
+        assertEquals("Setup command 6 failed", event.detail)
+    }
+
+    @Test
     fun `failed attempt without a failed step keeps its safe error detail`() {
         val event = assertNotNull(HostedSystemEventParser.parse(session, native, null, """
             {"type":"preparing","properties":{"preparation":{"version":2,"action":"attempt_snapshot",

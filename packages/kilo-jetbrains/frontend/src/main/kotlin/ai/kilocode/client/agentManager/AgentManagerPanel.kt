@@ -136,6 +136,8 @@ import javax.swing.event.ListDataListener
 import javax.swing.JComponent
 import javax.swing.SwingUtilities
 
+internal const val HOSTED_MISS_LIMIT = 5
+
 /**
  * Agent Manager panel: a git-worktree list with search and a delete action revealed on selection,
  * plus a create prompt driven from the tool-window action.
@@ -161,6 +163,7 @@ class AgentManagerPanel(
     private val group = ActionManager.getInstance().getAction("Kilo.Worktree.RowMenu") as? ActionGroup ?: DefaultActionGroup()
     private val pendingHosted = linkedMapOf<String, HostedWorkspaceDto>()
     private val createdHosted = linkedMapOf<String, HostedWorkspaceDto>()
+    private val missedHosted = mutableMapOf<String, Int>()
     private var deletingHosted: Set<String> = emptySet()
     private val groupRow = LocalWorktreesRow()
     private val tree = ActiveTree(
@@ -242,11 +245,22 @@ class AgentManagerPanel(
                         if (state.signedOut) {
                             if (!hostedState.signedOut) clearHostedOverlays(target)
                         } else if (!state.loading && state.error == null) {
-                            // Retire the optimistic row only once discovery reports the workspace.
-                            // An omission cannot distinguish a stale run from eventual consistency,
-                            // and dropping the row would make a successful create disappear.
                             val keys = state.items.mapTo(HashSet()) { it.ref.key }
-                            createdHosted.keys.removeAll(keys::contains)
+                            createdHosted.keys.filter(keys::contains).forEach {
+                                createdHosted.remove(it)
+                                missedHosted.remove(it)
+                            }
+                            // A stale discovery or eventual consistency may omit a new workspace briefly.
+                            createdHosted.keys.toList().forEach { key ->
+                                val missed = (missedHosted[key] ?: 0) + 1
+                                if (missed < HOSTED_MISS_LIMIT) {
+                                    missedHosted[key] = missed
+                                    return@forEach
+                                }
+                                val workspace = createdHosted.remove(key)
+                                missedHosted.remove(key)
+                                if (workspace != null) closeHostedPending(target, workspace)
+                            }
                         }
                         hostedState = state
                         sync()
@@ -282,6 +296,7 @@ class AgentManagerPanel(
                     removal.removed.collect { ref ->
                         edt({ !target.isDisposed && !Disposer.isDisposed(this@AgentManagerPanel) }) {
                             createdHosted.remove(ref.key)
+                            missedHosted.remove(ref.key)
                             sync()
                         }
                     }
@@ -460,6 +475,7 @@ class AgentManagerPanel(
                     return@edt
                 }
                 createdHosted[workspace.ref.key] = workspace
+                missedHosted.remove(workspace.ref.key)
                 sync()
                 target.service<HostedManagementService>().select(workspace.ref, session.id)
                 tree.select(workspace.ref.key)
@@ -477,6 +493,7 @@ class AgentManagerPanel(
         pendingHosted.values.forEach { closeHostedPending(target, it) }
         pendingHosted.clear()
         createdHosted.clear()
+        missedHosted.clear()
     }
 
     @RequiresEdt
