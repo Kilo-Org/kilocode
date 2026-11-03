@@ -119,6 +119,8 @@ describe("WorktreeActivity", () => {
         permission: { request: { list: async () => ({ data: [] }) } },
         form: { list: async () => ({ data: [] }) },
       }),
+      state: () => "connected",
+      onState: () => () => undefined,
       onEvent: (fn: (event: unknown) => void) => {
         listener.fn = fn
         return () => undefined
@@ -139,6 +141,56 @@ describe("WorktreeActivity", () => {
 
     listener.fn?.({ type: "session.idle", data: { sessionID: "s1" }, location: { directory: WT } })
     expect(statuses).toContainEqual(["s1", false])
+    activity.dispose()
+  })
+
+  it("follows the connection: pause while connecting, clear when it drops, reload when it returns", async () => {
+    const stateListener: { fn?: (state: "connecting" | "connected" | "disconnected") => void } = {}
+    let current: "connecting" | "connected" | "disconnected" = "connected"
+    let loads = 0
+    const connection = {
+      client: async () => {
+        loads++
+        return {
+          session: { list: async () => ({ data: [] }), active: async () => ({}) },
+          permission: { request: { list: async () => ({ data: [] }) } },
+          form: { list: async () => ({ data: [] }) },
+        }
+      },
+      state: () => current,
+      onState: (fn: (state: "connecting" | "connected" | "disconnected") => void) => {
+        stateListener.fn = fn
+        return () => undefined
+      },
+      onEvent: () => () => undefined,
+    }
+    const posts: string[][] = []
+    const activity = createWorktreeActivity({
+      connection: connection as never,
+      paths: () => [WT],
+      post: (active) => posts.push(active),
+      status: () => {},
+      log: () => {},
+    })
+
+    await activity.sync()
+    expect(loads).toBe(1)
+
+    // A dropped connection loads nothing and clears the badges it had.
+    current = "disconnected"
+    await activity.sync()
+    stateListener.fn?.("disconnected")
+    expect(loads).toBe(1)
+    expect(posts.at(-1)).toEqual([])
+
+    // A returned connection reloads every directory instead of keeping the stale badges.
+    current = "connecting"
+    stateListener.fn?.("connecting")
+    current = "connected"
+    stateListener.fn?.("connected")
+    const deadline = Date.now() + 1000
+    while (loads < 2 && Date.now() < deadline) await Bun.sleep(5)
+    expect(loads).toBe(2)
     activity.dispose()
   })
 })

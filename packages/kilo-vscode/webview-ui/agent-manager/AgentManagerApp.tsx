@@ -104,6 +104,7 @@ import { reportFailure } from "./failure-toast"
 import { TabBar } from "./TabBar"
 import { createIntro } from "./intro/AgentManagerIntro"
 import { createShortcutHints } from "./ShortcutHints"
+import { baseUpdateTarget } from "./base-update-target"
 import { useBaseUpdate } from "./update-from-base"
 import { createWorktreeMentionReferences as createMentionRefs } from "./worktree-references"
 import { createSidebarCollapse } from "./sidebar-collapse"
@@ -1568,7 +1569,23 @@ const AgentManagerContent: Component = () => {
       </V2Scope>
     ))
   }
-  const update = () => updateBase(selection(), activeProjectId())
+  // The keyboard action updates the selected worktree in the session the user is reading, with its model and agent.
+  const update = () => {
+    const worktreeId = selection()
+    if (!worktreeId || worktreeId === LOCAL) return updateBase(worktreeId, activeProjectId())
+    const sessionId = sessions.currentSessionID()
+    updateBase(
+      worktreeId,
+      activeProjectId(),
+      baseUpdateTarget({
+        worktreeId,
+        session: sessionId ? sessions.get(sessionId) : undefined,
+        sessionWorktreeId: sessionId
+          ? managedSessions().find((entry) => entry.id === sessionId)?.worktreeId
+          : undefined,
+      }),
+    )
+  }
 
   onMount(() => {
     const drafts = createNewTaskDrafts()
@@ -1841,18 +1858,32 @@ const AgentManagerContent: Component = () => {
     if (localSessionIDs().length === 0) addPendingTab()
   })
 
-  const chatDirectory = createMemo(() => {
-    const sel = selection()
-    if (sel === null) {
-      const id = sessions.currentSessionID()
-      return id ? directories.directoryOf(id) : undefined
-    }
-    if (sel === LOCAL) return directories.root(currentProjectId())
-    return directories.worktreePath(sel)
-  })
+  // A worktree selection names its directory. Local, and a session opened outside the catalog, read the store that
+  // holds the session: the host does not tag every session with a worktree, and a session in another worktree
+  // directory keeps updating and sends into that directory only from its own store.
   const chatStore = createMemo(() => {
-    const directory = chatDirectory()
+    const sel = selection()
+    if (sel && sel !== LOCAL) {
+      const directory = directories.worktreePath(sel)
+      return directory ? panel.store(directory) : undefined
+    }
+    const id = sessions.currentSessionID()
+    const scoped = id && !isPending(id) ? sessions.scope(id) : undefined
+    if (scoped) return scoped
+    const directory = directories.root(currentProjectId())
     return directory ? panel.store(directory) : undefined
+  })
+  // The PR conflict fix runs in the visible session when it belongs to the PR's worktree, on that session's
+  // model and agent; otherwise the host picks the session and the default model.
+  const prBaseTarget = createMemo(() => {
+    const worktreeId = activePR()?.selected
+    if (!worktreeId) return undefined
+    const sessionId = sessions.currentSessionID()
+    return baseUpdateTarget({
+      worktreeId,
+      session: sessionId ? sessions.get(sessionId) : undefined,
+      sessionWorktreeId: sessionId ? managedSessions().find((entry) => entry.id === sessionId)?.worktreeId : undefined,
+    })
   })
 
   const renderSidebar = () => (
@@ -2002,6 +2033,7 @@ const AgentManagerContent: Component = () => {
                       : undefined
                   }
                   draftKey={sessions.currentSessionID() ?? activePendingId()}
+                  readOnly={readOnly()}
                   onSession={handleSessionCreated}
                   actions={toolActions}
                   onShowHistory={() => openHistory()}
@@ -2119,6 +2151,7 @@ const AgentManagerContent: Component = () => {
               worktreeId={activePR()!.selected}
               activeTerminalId={terms.activeId()}
               sessionId={activeDiffSession()}
+              baseTarget={prBaseTarget()}
               onOpenDiff={remote.open}
               jump={comments.jump()}
               onJump={comments.complete}

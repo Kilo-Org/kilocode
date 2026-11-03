@@ -38,8 +38,8 @@ export function SessionView(props: {
   readOnly?: boolean
   /** Opens the proposed changes of an edit permission request. */
   onPreviewEdit?: (files: FileDiffInfo[], sessionID: string) => void
-  /** Receives the composer append function, for example for review comments. */
-  onAppendReady?: (append: (value: string, send: boolean) => void) => void
+  /** Receives the composer append function for review comments, and undefined when that composer unmounts. */
+  onAppendReady?: (append: ((value: string, send: boolean) => void) | undefined) => void
   /** Receives each prompt the server admitted, with the model it runs on. */
   onPrompted?: (sessionID: string, text: string, model: ModelRef | undefined) => void
   /** Receives a session the server does not have (deleted, or from another database) instead of an error card. */
@@ -165,13 +165,15 @@ export function SessionView(props: {
 
   const send = (text: string) => {
     const id = session() ?? selection.create()
-    // Read the model before onSession changes the session identity and resets the draft selection.
-    const model = selection.model()
+    const gate = selection.gate(id)
+    // A prompt with a pending switch waits for it, so the attribution has to be read after that switch settles.
+    // Without one the selection is current, and it must be read before onSession changes the session identity.
+    const model = gate ? undefined : selection.model()
     props.onSession(id)
     return v2.data.session
-      .prompt({ sessionID: id, text, gate: selection.gate(id) })
+      .prompt({ sessionID: id, text, gate })
       .then(() => {
-        props.onPrompted?.(id, text, model)
+        props.onPrompted?.(id, text, gate ? selection.attributed(id) : model)
         return true
       })
       .catch((err: unknown) => {

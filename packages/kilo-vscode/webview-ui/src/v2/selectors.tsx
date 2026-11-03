@@ -27,6 +27,9 @@ export function createSelection(
   // The latest switch request per session, so a prompt waits for it. Prompts gate on session creation themselves.
   const commits = new Map<string, Promise<unknown>>()
   const creates = new Map<string, Promise<unknown>>()
+  // The last model an explicit switch asked for, until the store reports it. A prompt that waits for the switch
+  // settles before the store applies the change, and its attribution must name the model it runs on.
+  const switched = new Map<string, ModelRef>()
 
   createEffect(
     on(v2.connection.status, (status) => {
@@ -99,6 +102,7 @@ export function createSelection(
   const setModel = (next: ModelRef) => {
     const id = session()
     if (!id) return void setDraftModel(next)
+    switched.set(id, next)
     // An explicit "default" clears a previous variant: a model without the field would keep it in createData.
     commit(id, () =>
       v2.api.session.switchModel({ sessionID: id, model: { ...next, variant: next.variant ?? DEFAULT } }),
@@ -153,6 +157,20 @@ export function createSelection(
     /** The pending switch of a session; a failed switch fails the prompt instead of using another model. */
     gate(id: string) {
       return commits.get(id)
+    },
+    /**
+     * The model a prompt of this session runs on. A switch that settled but is not in the store yet keeps its
+     * requested value until the store reports it.
+     */
+    attributed(id: string) {
+      const next = switched.get(id)
+      if (!next) return model()
+      const current = v2.data.session.get(id)?.model
+      if (current?.id === next.id && current.providerID === next.providerID) {
+        switched.delete(id)
+        return model()
+      }
+      return next
     },
   }
 }
