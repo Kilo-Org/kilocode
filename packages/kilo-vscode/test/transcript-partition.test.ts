@@ -6,7 +6,7 @@ import type {
   SessionStructuredError,
 } from "@opencode/client"
 import { messageTurnRanges, turnMetadata } from "../webview-ui/src/v2/message-status"
-import { partitionTranscript, TRANSCRIPT_CHUNK_SIZE } from "../webview-ui/src/v2/transcript"
+import { partitionTranscript, retainTurn, TRANSCRIPT_CHUNK_SIZE, transcriptRows } from "../webview-ui/src/v2/transcript"
 
 const user = (id: string, created: number) =>
   ({ id, type: "user", text: id, time: { created } }) as unknown as SessionMessageInfo
@@ -95,7 +95,7 @@ test("keeps the footer on a prefix step when a later steer has no text", () => {
     idle("i1", 600),
   ]
   const range = messageTurnRanges(messages)[0]
-  const carrier = partitionTranscript(messages, [], false).rows.flatMap((row) =>
+  const carrier = transcriptRows(messages).flatMap((row) =>
     row.type === "assistant" && row.message.id === "a0" && row.metadata ? [row] : [],
   )[0]
 
@@ -107,8 +107,9 @@ describe("partitionTranscript", () => {
   test("chunks a large assistant message into rows with stable keys", () => {
     const message = assistant({ id: "a1", created: 1, parts: textParts(18) })
     const messages = [user("u1", 0), message]
-    const partition = partitionTranscript(messages, [], false)
-    const rows = partition.rows.flatMap((row) => (row.type === "assistant" ? [row] : []))
+    const all = transcriptRows(messages)
+    const partition = partitionTranscript(all, [], new Set())
+    const rows = all.flatMap((row) => (row.type === "assistant" ? [row] : []))
 
     expect(partition.virtualKeys).toEqual(["u1:user", "a1:assistant:0", "a1:assistant:8", "a1:assistant:16"])
     expect(rows.map((row) => row.start)).toEqual([0, TRANSCRIPT_CHUNK_SIZE, TRANSCRIPT_CHUNK_SIZE * 2])
@@ -121,12 +122,12 @@ describe("partitionTranscript", () => {
     const parts = textParts(9)
     const message = assistant({ id: "a1", created: 1, parts })
     const messages = [user("u1", 0), message]
-    const first = partitionTranscript(messages, [], false)
-    const before = first.rows.flatMap((row) => (row.type === "assistant" ? [row] : []))
+    const first = transcriptRows(messages)
+    const before = first.flatMap((row) => (row.type === "assistant" ? [row] : []))
 
     message.content.push({ type: "text", text: "later" })
-    const second = partitionTranscript(messages, [], false, first)
-    const after = second.rows.flatMap((row) => (row.type === "assistant" ? [row] : []))
+    const second = transcriptRows(messages, first)
+    const after = second.flatMap((row) => (row.type === "assistant" ? [row] : []))
 
     expect(after[0]).toBe(before[0])
     expect(after[1].key).toBe(before[1].key)
@@ -142,7 +143,7 @@ describe("partitionTranscript", () => {
       idle("i1", 700),
     ]
     const ranges = messageTurnRanges(messages)
-    const rows = partitionTranscript(messages, [], false).rows
+    const rows = transcriptRows(messages)
 
     expect(ranges).toHaveLength(1)
     expect(ranges[0].metadata?.carrierID).toBe("a1")
@@ -167,21 +168,22 @@ describe("partitionTranscript", () => {
     expect(ranges[1].metadata?.timing).toEqual({ completedAt: 700, durationMs: 200 })
   })
 
-  test("keeps the live turn direct and completed turns virtual", () => {
-    const messages = [
+  test("keeps only the latest direct turn out of the virtual window", () => {
+    const rows = transcriptRows([
       user("u1", 0),
       assistant({ id: "a1", created: 1, completed: 2, text: "done", finish: "stop" }),
       idle("i1", 3),
       user("u2", 4),
       assistant({ id: "a2", created: 5, streamed: 6, text: "live" }),
-    ]
-    const live = partitionTranscript(messages, [], true)
-    const settled = partitionTranscript(messages, [], false)
+    ])
+    const latest = partitionTranscript(rows, [], new Set(["u2"]))
+    const older = partitionTranscript(rows, [], new Set(["u1"]))
+    const none = partitionTranscript(rows, [], new Set())
 
-    expect(live.virtualKeys).toEqual(["u1:user", "a1:assistant:0"])
-    expect(live.directKeys).toEqual(["u2:user", "a2:assistant:0"])
-    expect(settled.directKeys).toEqual([])
-    expect(settled.virtualKeys).toEqual(["u1:user", "a1:assistant:0", "u2:user", "a2:assistant:0"])
+    expect(latest.virtualKeys).toEqual(["u1:user", "a1:assistant:0"])
+    expect(latest.directKeys).toEqual(["u2:user", "a2:assistant:0"])
+    expect(older.directKeys).toEqual([])
+    expect(none.virtualKeys).toEqual(["u1:user", "a1:assistant:0", "u2:user", "a2:assistant:0"])
   })
 
   test("keeps a live turn with no assistant row virtualized", () => {
@@ -191,7 +193,7 @@ describe("partitionTranscript", () => {
       idle("i1", 3),
       user("u2", 4),
     ]
-    const partition = partitionTranscript(messages, [], true)
+    const partition = partitionTranscript(transcriptRows(messages), [], new Set(["u2"]))
 
     expect(partition.directKeys).toEqual([])
     expect(partition.virtualKeys).toContain("u2:user")
@@ -200,26 +202,47 @@ describe("partitionTranscript", () => {
   test("keeps queued prompts outside the transcript rows", () => {
     const messages = [user("u1", 0), assistant({ id: "a1", created: 1, completed: 2, text: "done", finish: "stop" })]
     const queue = [queued("q1")]
-    const partition = partitionTranscript(messages, queue, false)
+    const rows = transcriptRows(messages)
+    const partition = partitionTranscript(rows, queue, new Set())
 
     expect(partition.queued).toEqual([{ key: "queued:q1", item: queue[0] }])
-    expect(partition.rows.some((row) => row.key === "queued:q1")).toBe(false)
+    expect(rows.some((row) => row.key === "queued:q1")).toBe(false)
 
-    const next = partitionTranscript([...messages, user("u2", 3)], queue, false, partition)
+    const next = partitionTranscript(transcriptRows([...messages, user("u2", 3)], rows), queue, new Set(), partition)
     expect(next.queued[0]).toBe(partition.queued[0])
   })
 
   test("shows an idle error only when no failed step already shows it", () => {
     const error: SessionStructuredError = { type: "unknown", message: "failed" }
-    const stepFailure = partitionTranscript(
-      [user("u1", 0), assistant({ id: "a1", created: 1, completed: 2, finish: "error", error }), idle("i1", 3, error)],
-      [],
-      false,
-    )
-    const runFailure = partitionTranscript([user("u1", 0), idle("i1", 1, error)], [], false)
+    const stepFailure = transcriptRows([
+      user("u1", 0),
+      assistant({ id: "a1", created: 1, completed: 2, finish: "error", error }),
+      idle("i1", 3, error),
+    ])
+    const runFailure = transcriptRows([user("u1", 0), idle("i1", 1, error)])
 
-    expect(stepFailure.rows.some((row) => row.type === "error")).toBe(false)
-    expect(runFailure.rows.filter((row) => row.type === "error")).toHaveLength(1)
-    expect(runFailure.rows.find((row) => row.type === "error")?.key).toBe("idle:i1")
+    expect(stepFailure.some((row) => row.type === "error")).toBe(false)
+    expect(runFailure.filter((row) => row.type === "error")).toHaveLength(1)
+    expect(runFailure.find((row) => row.type === "error")?.key).toBe("idle:i1")
+  })
+})
+
+describe("retainTurn", () => {
+  test("holds the last live turn after it completes until another turn is live", () => {
+    const live = retainTurn(undefined, "s", "u1", false)
+    const settled = retainTurn(live, "s", undefined, false)
+    const next = retainTurn(settled, "s", "u2", false)
+
+    expect(live).toEqual({ session: "s", turn: "u1" })
+    expect(settled).toBe(live)
+    expect(next).toEqual({ session: "s", turn: "u2" })
+  })
+
+  test("keeps the previous hold while scrolled away and drops it on a session switch", () => {
+    const held = retainTurn(undefined, "s", "u1", false)
+
+    expect(retainTurn(held, "s", "u2", true)).toBe(held)
+    expect(retainTurn(held, "other", undefined, false)).toBeUndefined()
+    expect(retainTurn(held, undefined, "u1", false)).toBeUndefined()
   })
 })

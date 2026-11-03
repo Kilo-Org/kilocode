@@ -104,19 +104,31 @@
   font-size: var(--kilo-font-size-13);
 }
 
+/* The loader replaces the button while a page loads. Both fill the same slot,
+   so the swap does not move the transcript below it. */
+.message-list-history {
+  display: flex;
+  flex: none;
+  align-items: flex-start;
+  justify-content: center;
+  height: 42px;
+}
+
 .message-list-page-loader {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
-  padding: 8px 0 12px;
+  height: 30px;
   color: var(--vscode-descriptionForeground);
   font-size: var(--kilo-font-size-12);
 }
 
 .message-list-load-older {
   display: block;
-  margin: 0 auto 12px;
+  box-sizing: border-box;
+  height: 30px;
+  margin: 0 auto;
   border: 1px solid var(--vscode-button-border, transparent);
   border-radius: 6px;
   background: var(--vscode-button-secondaryBackground);

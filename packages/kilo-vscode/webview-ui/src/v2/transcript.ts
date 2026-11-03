@@ -44,28 +44,42 @@ export interface TranscriptQueuedRow {
 }
 
 export interface TranscriptPartition {
-  rows: TranscriptRow[]
   virtualKeys: string[]
   directKeys: string[]
   queued: TranscriptQueuedRow[]
 }
 
+/** The turn kept out of the virtual window after it was live in this view. */
+export interface TranscriptHold {
+  session: string
+  turn: string
+}
+
 /**
  * Builds the transcript rows in one pass, computing each turn's metadata once.
- * The latest turn stays direct while it streams; completed history and large
- * finished messages are virtualized.
+ * Rows that did not change keep their previous object, so the list does not
+ * re-render them.
+ */
+export function transcriptRows(messages: readonly SessionMessageInfo[], previous?: readonly TranscriptRow[]) {
+  return reuseRows(buildRows(messages), previous)
+}
+
+/**
+ * Splits the rows into the virtual window and the direct tail. Only the latest
+ * turn can render directly, and only when it is in `direct` and has an
+ * assistant row. The whole turn stays direct: handing each finished step to
+ * the virtualizer mid-turn mounts it at the estimated size while the bottom
+ * pin follows the stream. One handoff happens when the next turn starts.
  */
 export function partitionTranscript(
-  messages: readonly SessionMessageInfo[],
+  rows: readonly TranscriptRow[],
   queued: readonly SessionInboxUser[],
-  live: boolean,
+  direct: ReadonlySet<string>,
   previous?: TranscriptPartition,
 ): TranscriptPartition {
-  const reused = reuseRows(transcriptRows(messages), previous)
-  const split = splitDirect(reused, live)
+  const split = splitDirect(rows, direct)
   const priorQueued = new Map((previous?.queued ?? []).map((row) => [row.key, row]))
   return {
-    rows: reused,
     virtualKeys: split.virtual.map((row) => row.key),
     directKeys: split.direct.map((row) => row.key),
     queued: queued.map((item) => {
@@ -76,7 +90,27 @@ export function partitionTranscript(
   }
 }
 
-function transcriptRows(messages: readonly SessionMessageInfo[]) {
+/**
+ * Keeps the last live turn direct until another turn becomes live or the
+ * session changes. While the user has scrolled away, a new live turn does not
+ * replace the hold, so it is handed to the virtualizer when it completes.
+ */
+export function retainTurn(
+  previous: TranscriptHold | undefined,
+  session: string | undefined,
+  turn: string | undefined,
+  paused: boolean,
+): TranscriptHold | undefined {
+  if (!session) return undefined
+  if (!turn || paused) {
+    if (previous?.session === session) return previous
+    return turn ? { session, turn } : undefined
+  }
+  if (previous?.session === session && previous.turn === turn) return previous
+  return { session, turn }
+}
+
+function buildRows(messages: readonly SessionMessageInfo[]) {
   const ranges = messageTurnRanges(messages)
   const rows: TranscriptRow[] = []
   let rangeIndex = 0
@@ -131,26 +165,23 @@ function assistantRows(message: SessionMessageAssistant, range: MessageTurnRange
   return rows
 }
 
-/**
- * The latest turn stays out of the virtual window while it streams, so growing
- * measurements never remount live rows. Completed history is virtualized.
- */
-function splitDirect(rows: TranscriptRow[], live: boolean) {
-  const turn = live ? rows.at(-1)?.turn : undefined
-  const boundary = turn ? rows.findIndex((row) => row.turn === turn) : -1
-  const direct = boundary >= 0 ? rows.slice(boundary) : []
-  // The live turn has no renderable assistant row yet, so keep it virtualized.
-  if (!direct.some((row) => row.type === "assistant")) return { virtual: rows, direct: [] }
-  return { virtual: rows.slice(0, boundary), direct }
+function splitDirect(rows: readonly TranscriptRow[], direct: ReadonlySet<string>) {
+  const turn = rows.at(-1)?.turn
+  if (!turn || !direct.has(turn)) return { virtual: rows, direct: [] }
+  const boundary = rows.findIndex((row) => row.turn === turn)
+  const tail = rows.slice(boundary)
+  // The turn has no renderable assistant row yet, so keep it virtualized.
+  if (!tail.some((row) => row.type === "assistant")) return { virtual: rows, direct: [] }
+  return { virtual: rows.slice(0, boundary), direct: tail }
 }
 
 function stepFailed(message: SessionMessageInfo | undefined) {
   return message?.type === "assistant" && !!message.error
 }
 
-function reuseRows(rows: TranscriptRow[], previous?: TranscriptPartition) {
-  if (!previous?.rows.length) return rows
-  const prior = new Map(previous.rows.map((row) => [row.key, row]))
+function reuseRows(rows: TranscriptRow[], previous?: readonly TranscriptRow[]) {
+  if (!previous?.length) return rows
+  const prior = new Map(previous.map((row) => [row.key, row]))
   return rows.map((row) => {
     const old = prior.get(row.key)
     return old && sameRow(old, row) ? old : row

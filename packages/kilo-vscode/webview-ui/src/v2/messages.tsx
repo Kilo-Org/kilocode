@@ -1,5 +1,6 @@
-// The v2 transcript: a virtualized, turn-based list with load-earlier, a live
-// direct tail, queued prompts outside the virtual window and scroll-to-bottom.
+// The v2 transcript: a virtualized, turn-based list with load-earlier, the last
+// live turn as a direct tail, queued prompts outside the virtual window and
+// scroll-to-bottom.
 import type { SessionInboxUser } from "@opencode/client"
 import { createAutoScroll } from "@kilocode/kilo-ui/hooks"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
@@ -11,7 +12,14 @@ import { useLanguage } from "../context/language"
 import { onTimelineHighlight, type TimelineHighlight } from "../utils/timeline/highlight"
 import { partKey } from "../utils/timeline/timeline-parts"
 import { useV2 } from "./client"
-import { partitionTranscript, type TranscriptPartition, type TranscriptRow } from "./transcript"
+import {
+  partitionTranscript,
+  retainTurn,
+  transcriptRows,
+  type TranscriptHold,
+  type TranscriptPartition,
+  type TranscriptRow,
+} from "./transcript"
 import {
   getMeasurement,
   getScroll,
@@ -87,13 +95,6 @@ export function MessageList(props: {
     return ids.size === 0 ? all : all.filter((message) => !ids.has(message.id))
   }
   const working = () => !!props.session && v2.data.session.status(props.session) === "running"
-  // A run that waits on a permission reports idle while its last step can still
-  // change. Keep that turn direct so streaming measurements never remount it.
-  const live = () => {
-    if (working()) return true
-    const last = messages().at(-1)
-    return last?.type === "assistant" && last.time.completed === undefined
-  }
   const loadingOlder = () => !!props.session && v2.data.session.message.loading(props.session)
   const more = () => !!props.session && v2.data.session.message.more(props.session)
   const empty = () => !props.session || (messages().length === 0 && queued().length === 0)
@@ -101,14 +102,43 @@ export function MessageList(props: {
   props.onScrollToBottomReady?.(() => autoScroll.resume())
   onCleanup(() => props.onScrollToBottomReady?.(undefined))
 
+  const rows = createMemo<TranscriptRow[]>((previous) => transcriptRows(messages(), previous))
+  // A run that waits on a permission reports idle while its last step can still
+  // change, so an unfinished last step also keeps its turn live.
+  const activeTurn = () => {
+    const last = messages().at(-1)
+    const live = working() || (last?.type === "assistant" && last.time.completed === undefined)
+    return live ? rows().at(-1)?.turn : undefined
+  }
+  const held = createMemo<TranscriptHold | undefined>((previous) =>
+    retainTurn(previous, props.session, activeTurn(), autoScroll.userScrolled()),
+  )
+  const direct = createMemo(() => {
+    const turns = new Set<string>()
+    const hold = held()
+    if (hold && hold.session === props.session) turns.add(hold.turn)
+    const active = activeTurn()
+    if (active) turns.add(active)
+    return turns
+  })
   const partition = createMemo<TranscriptPartition>((previous) =>
-    partitionTranscript(messages(), queued(), live(), previous),
+    partitionTranscript(rows(), queued(), direct(), previous),
   )
   const virtualKeys = createMemo(() => partition().virtualKeys, undefined, { equals: sameKeys })
   const directKeys = createMemo(() => partition().directKeys, undefined, { equals: sameKeys })
-  const lookup = createMemo(() => new Map(partition().rows.map((row) => [row.key, row])))
+  const lookup = createMemo(() => new Map(rows().map((row) => [row.key, row])))
   const indexes = createMemo(() => new Map(virtualKeys().map((key, index) => [key, index])))
   const fingerprint = createMemo(() => rowFingerprint(virtualKeys()))
+  // Virtua keeps the viewport on the same rows only when it knows that rows
+  // were added before them. Rows handed over at the end must not shift it.
+  const shift = createMemo<{ keys: readonly string[]; value: boolean }>((previous) => {
+    const keys = virtualKeys()
+    const first = previous?.keys[0]
+    const value = !!first && keys.length > (previous?.keys.length ?? 0) && keys.indexOf(first) > 0
+    return { keys, value }
+  })
+  // Virtua keeps measured sizes by index, not by key. Give each session its own
+  // instance so rows never inherit another session's sizes.
   const instance = () => (scrollEl() && virtualKeys().length > 0 ? props.session : undefined)
 
   const measurement = createMemo(() => {
@@ -140,7 +170,9 @@ export function MessageList(props: {
     const index = handle.findItemIndex(handle.scrollOffset)
     const key = saved.keys[index]
     if (!key) return
-    setScroll(id, { type: "anchor", key, offset: handle.scrollOffset - handle.getItemOffset(index) })
+    // `scrollToIndex` adds the start margin again on restore.
+    const offset = handle.scrollOffset - startMargin() - handle.getItemOffset(index)
+    setScroll(id, { type: "anchor", key, offset })
   }
 
   createEffect(
@@ -168,6 +200,9 @@ export function MessageList(props: {
       if (handle && state?.type === "anchor" && anchor) {
         handle.scrollToIndex(anchor.index, { offset: anchor.offset })
         autoScroll.pause()
+        // Virtua applies the scroll in a later frame. Page history only from
+        // the restored position.
+        requestAnimationFrame(maybeLoadOlder)
       } else {
         autoScroll.forceScrollToBottom()
       }
@@ -176,6 +211,44 @@ export function MessageList(props: {
   })
 
   onCleanup(() => save(props.session))
+
+  // Rows handed from the direct tail enter Virtua at the estimated size, so a
+  // tall turn can fall outside Virtua's range and remount. Keep them mounted in
+  // the same update so the handoff keeps their DOM, then release them one frame
+  // after they are measured.
+  const handed = createMemo<{ direct: readonly string[]; moved: readonly string[] }>((previous) => {
+    const map = indexes()
+    return { direct: directKeys(), moved: (previous?.direct ?? []).filter((key) => map.has(key)) }
+  })
+  const [released, setReleased] = createSignal<readonly string[]>()
+  const keepMounted = createMemo(() => {
+    const moved = handed().moved
+    if (moved.length === 0 || released() === moved) return undefined
+    const map = indexes()
+    return moved.flatMap((key) => map.get(key) ?? [])
+  })
+
+  // A handed row is measured only by Virtua's ResizeObserver, one frame later.
+  // The bottom pin follows the estimated layout until then, so one frame paints
+  // the transcript below the bottom. Measure the handed rows in the same task
+  // and re-pin before anything is painted.
+  createEffect(
+    on(
+      () => ({ session: props.session, keys: virtualKeys() }),
+      (now, previous) => {
+        if (!previous || previous.session !== now.session) return
+        if (now.keys.length <= previous.keys.length || now.keys.at(-1) === previous.keys.at(-1)) return
+        const moved = handed().moved
+        queueMicrotask(() => {
+          const handle = virtualizer()
+          if (!handle) return
+          handle.measure()
+          autoScroll.scrollToBottom()
+          requestAnimationFrame(() => setReleased(moved))
+        })
+      },
+    ),
+  )
 
   // A task-timeline bar click scrolls to the row that contains its part. Rows
   // outside the virtual window resolve through the virtualizer index.
@@ -227,9 +300,7 @@ export function MessageList(props: {
   const onScrollToMessage = (event: Event) => {
     const detail = (event as CustomEvent<{ id: string; partId?: string }>).detail
     if (!detail?.id) return
-    const matches = partition().rows.flatMap((row) =>
-      row.type === "assistant" && row.message.id === detail.id ? [row] : [],
-    )
+    const matches = rows().flatMap((row) => (row.type === "assistant" && row.message.id === detail.id ? [row] : []))
     const row =
       matches.find((candidate) =>
         detail.partId
@@ -250,15 +321,38 @@ export function MessageList(props: {
     void v2.data.session.message.loadMore(id).catch(v2.report)
   }
 
+  // Virtua measures row offsets from the top of the scroller, but the rows start
+  // below the history slot. Pass that offset as the start margin. When it
+  // changes, for example when the last page loads and the slot goes away, move
+  // the scroll position by the same amount so the rows the user reads stay put.
+  const history = () => more() || loadingOlder()
+  const [startMargin, setStartMargin] = createSignal(0)
+  let turnsEl: HTMLDivElement | undefined
+  const syncStart = () => {
+    const el = scrollEl()
+    if (!el || !turnsEl) return
+    const next = Math.round(el.scrollTop + turnsEl.getBoundingClientRect().top - el.getBoundingClientRect().top)
+    const delta = next - startMargin()
+    if (delta === 0) return
+    if (autoScroll.userScrolled()) el.scrollTop += delta
+    setStartMargin(next)
+  }
+  createEffect(on([history, () => props.session], syncStart))
+
+  // A session that opens is at offset 0 until its rows mount and the restore
+  // runs. That position must not page its history.
   const maybeLoadOlder = () => {
     const el = scrollEl()
-    if (!el || el.scrollTop > 600 || !more()) return
+    if (!el || pendingRestore() || el.scrollTop > 600 || !more()) return
     loadOlder()
   }
 
+  // A synthetic scroll only lets Virtua read the offset after a remount. It
+  // must not page history.
+  let syncing = false
   const handleScroll = () => {
     autoScroll.handleScroll()
-    maybeLoadOlder()
+    if (!syncing) maybeLoadOlder()
   }
 
   let resize: ResizeObserver | undefined
@@ -333,18 +427,28 @@ export function MessageList(props: {
           <Show when={!empty() && props.session}>
             {(id) => (
               <>
-                <Show when={loadingOlder()}>
-                  <div class="message-list-page-loader" role="status">
-                    <Spinner />
-                    <span>{language.t("session.messages.loadingEarlier")}</span>
+                <Show when={history()}>
+                  <div class="message-list-history">
+                    <Show
+                      when={loadingOlder()}
+                      fallback={
+                        <button class="message-list-load-older" onClick={loadOlder}>
+                          {language.t("session.messages.loadEarlier")}
+                        </button>
+                      }
+                    >
+                      <div class="message-list-page-loader" role="status">
+                        <Spinner />
+                        <span>{language.t("session.messages.loadingEarlier")}</span>
+                      </div>
+                    </Show>
                   </div>
                 </Show>
-                <Show when={more() && !loadingOlder()}>
-                  <button class="message-list-load-older" onClick={loadOlder}>
-                    {language.t("session.messages.loadEarlier")}
-                  </button>
-                </Show>
                 <div
+                  ref={(el) => {
+                    turnsEl = el
+                    queueMicrotask(syncStart)
+                  }}
                   class="message-list-turns"
                   data-loaded-messages={messages().length}
                   data-row-count={virtualKeys().length}
@@ -358,6 +462,17 @@ export function MessageList(props: {
                       const ref = (next?: VirtualizerHandle) => {
                         if (next) handle = next
                         setVirtualizer(next)
+                        const el = scrollEl()
+                        if (!next || !el) return
+                        // A new instance starts at offset 0. If the scroller is
+                        // already elsewhere and does not move again, no scroll
+                        // event syncs it, so report the position once.
+                        queueMicrotask(() => {
+                          if (virtualizer() !== next || Math.abs(el.scrollTop - next.scrollOffset) < 1) return
+                          syncing = true
+                          el.dispatchEvent(new Event("scroll"))
+                          syncing = false
+                        })
                       }
                       return (
                         <Virtualizer
@@ -365,7 +480,9 @@ export function MessageList(props: {
                           as={VirtualBox}
                           data={virtualKeys()}
                           scrollRef={scrollEl()}
-                          shift={loadingOlder()}
+                          shift={shift().value}
+                          startMargin={startMargin()}
+                          keepMounted={keepMounted()}
                           cache={measurement()}
                           bufferSize={520}
                           itemSize={260}
@@ -391,7 +508,7 @@ export function MessageList(props: {
           </Show>
         </div>
       </div>
-      <Show when={autoScroll.userScrolled()}>
+      <Show when={!empty() && autoScroll.userScrolled()}>
         <IconButton
           icon="arrow-down-to-line"
           variant="ghost"
