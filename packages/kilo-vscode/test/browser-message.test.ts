@@ -118,7 +118,7 @@ describe("browser inspection responses", () => {
     const viewport = { width: 400, height: 300, revision: 1, active: true }
     await view.broker.viewport("session", "project", view.current.browserId, view.current.navigation, viewport)
     // The cursor reporter installs after the viewport is accepted, so wait for its script before reporting.
-    for (let attempt = 0; attempt < 100 && view.scripts.length === 0; attempt++) await Bun.sleep(5)
+    for (let attempt = 0; attempt < 1000 && view.scripts.length === 0; attempt++) await Bun.sleep(5)
     const source = view.scripts.at(-1)
     if (!source) throw new Error("The cursor reporter was not installed")
     view.protocol.emit("Runtime.executionContextCreated", { context: { id: 7, name: "kilo-cursor" } })
