@@ -466,6 +466,11 @@
         "category": "Kilo Code"
       },
       {
+        "command": "kilo-code.new.showOpenTabs",
+        "title": "Show Open Tabs",
+        "category": "Kilo Code"
+      },
+      {
         "command": "kilo-code.new.cycleAgentMode",
         "title": "Cycle Agent Mode",
         "category": "Kilo Code"
@@ -1429,7 +1434,7 @@
     "js-tiktoken": "^1.0.18",
     "lru-cache": "^11.0.2",
     "marked": "catalog:",
-    "minimatch": "10.2.6",
+    "minimatch": "11.0.1",
     "playwright-core": "1.57.0",
     "quick-lru": "^7.0.0",
     "simple-git": "4.0.2",

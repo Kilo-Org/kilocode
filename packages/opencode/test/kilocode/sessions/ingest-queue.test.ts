@@ -1027,4 +1027,231 @@ describe("share ingest queue", () => {
     const payload = sent[0] as { data: { type: string }[] }
     expect(payload.data.map((d) => d.type).sort()).toEqual(["session", "session_close"])
   })
+
+  // Advance the fake clock to the next scheduled timer and fire due timers until
+  // the promise resolves. `settle` waits on the injected timer, so the fake
+  // scheduler must be pumped for it to progress. Yield first so continuation
+  // microtasks (fetch → requeue) register their timers before picking the next one.
+  async function pumpUntil(sched: ReturnType<typeof scheduler>, settled: Promise<unknown>, isDone: () => boolean) {
+    for (let guard = 0; guard < 500 && !isDone(); guard++) {
+      await Bun.sleep(0)
+      const at = sched.nextAt()
+      if (typeof at === "number" && at > clock.now) clock.now = at
+      sched.run()
+    }
+    await settled
+  }
+
+  test("settle waits out retry backoff instead of burning the retry budget", async () => {
+    const sched = scheduler(() => clock.now)
+    let attempts = 0
+
+    const q = IngestQueue.create({
+      now: () => clock.now,
+      setTimeout: sched.setTimeout,
+      clearTimeout: sched.clearTimeout,
+      log: { error: () => {} },
+      getShare: async () => ({ ingestPath: "/ingest" }),
+      getClient: async () => ({
+        url: "https://ingest.test",
+        fetch: async () => {
+          attempts += 1
+          return new Response("{}", { status: attempts < 4 ? 503 : 200 })
+        },
+      }),
+    })
+
+    await q.sync("s-settle", [{ type: "session", data: { id: "s-settle", v: 1 } as any }])
+
+    let done = false
+    const settled = q.settle(["s-settle"], 60000).then((result) => {
+      done = true
+      return result
+    })
+    await pumpUntil(sched, settled, () => done)
+
+    // Each 503 must be waited out: three retries then success, never six rapid
+    // attempts that would exhaust the budget inside the settle window.
+    expect(attempts).toBe(4)
+    expect(await settled).toEqual({ ok: true })
+    expect(sched.size()).toBe(0)
+  })
+
+  test("settle joins an in-flight flush before judging its outcome", async () => {
+    const sched = scheduler(() => clock.now)
+    let release!: () => void
+    const gate = new Promise<void>((resolve) => {
+      release = resolve
+    })
+    let started = false
+    let finished = false
+
+    const q = IngestQueue.create({
+      now: () => clock.now,
+      setTimeout: sched.setTimeout,
+      clearTimeout: sched.clearTimeout,
+      log: { error: () => {} },
+      getShare: async () => ({ ingestPath: "/ingest" }),
+      getClient: async () => ({
+        url: "https://ingest.test",
+        fetch: async () => {
+          started = true
+          await gate
+          finished = true
+          return new Response("{}", { status: 200 })
+        },
+      }),
+    })
+
+    await q.sync("s-join", [{ type: "session", data: { id: "s-join" } as any }])
+
+    let done = false
+    const settled = q.settle(["s-join"], 15000).then((result) => {
+      done = true
+      return result
+    })
+    await Bun.sleep(0)
+    // The flush started, but settle must not resolve before the flush settles.
+    expect(started).toBe(true)
+    expect(done).toBe(false)
+
+    release()
+    await settled
+    await Bun.sleep(0)
+
+    expect(finished).toBe(true)
+    expect(await settled).toEqual({ ok: true })
+  })
+
+  test("settle reports a permanent failure without waiting", async () => {
+    const sched = scheduler(() => clock.now)
+
+    const q = IngestQueue.create({
+      now: () => clock.now,
+      setTimeout: sched.setTimeout,
+      clearTimeout: sched.clearTimeout,
+      log: { error: () => {} },
+      getShare: async () => ({ ingestPath: "/ingest" }),
+      getClient: async () => ({
+        url: "https://ingest.test",
+        fetch: async () => new Response("{}", { status: 404 }),
+      }),
+    })
+
+    await q.sync("s-perm", [{ type: "session", data: { id: "s-perm" } as any }])
+
+    const settled = await q.settle(["s-perm"], 15000)
+    expect(settled).toEqual({ ok: false, reason: "failed" })
+    expect(sched.size()).toBe(0)
+  })
+
+  test("settle backs off through a persistent 503, times out, and keeps the queue", async () => {
+    const sched = scheduler(() => clock.now)
+    const times: number[] = []
+    const sent: unknown[] = []
+    let healthy = false
+
+    const q = IngestQueue.create({
+      now: () => clock.now,
+      setTimeout: sched.setTimeout,
+      clearTimeout: sched.clearTimeout,
+      log: { error: () => {} },
+      getShare: async () => ({ ingestPath: "/ingest" }),
+      getClient: async () => ({
+        url: "https://ingest.test",
+        fetch: async (_input, init) => {
+          times.push(clock.now)
+          if (!healthy) return new Response("{}", { status: 503 })
+          sent.push(JSON.parse((init?.body as string) ?? "{}"))
+          return new Response("{}", { status: 200 })
+        },
+      }),
+    })
+
+    await q.sync("s-503", [{ type: "session", data: { id: "s-503", v: 1 } as any }])
+
+    let done = false
+    const settled = q.settle(["s-503"], 15000).then((result) => {
+      done = true
+      return result
+    })
+    await pumpUntil(sched, settled, () => done)
+
+    // Each 503 waits out its backoff: 0, 1000, 3000, 7000. A settle that flushed
+    // a backed-off session would burn the retry budget within the window instead.
+    expect(times.slice(0, 4)).toEqual([0, 1000, 3000, 7000])
+    expect(times.length).toBeLessThanOrEqual(5)
+    // The deadline is a timeout, not a permanent failure, and the timer is cleared.
+    expect(await settled).toEqual({ ok: false, reason: "timeout" })
+
+    // The queue was retained: once healthy, the same item is delivered.
+    healthy = true
+    await q.flush("s-503")
+    await Bun.sleep(0)
+    expect(sent.length).toBe(1)
+    const payload = sent.at(0) as { data: { type: string }[] }
+    expect(payload.data.map((item) => item.type)).toEqual(["session"])
+  })
+})
+
+for (const missing of ["share", "client"] as const) {
+  test(`settle fails when ${missing} disappears after a successful upload and recovers on retry`, async () => {
+    let available = true
+    const sent: unknown[] = []
+    const q = IngestQueue.create({
+      log: { error: () => {} },
+      getShare: async () => (available || missing !== "share" ? { ingestPath: "/ingest" } : undefined),
+      getClient: async () =>
+        available || missing !== "client"
+          ? {
+              url: "https://ingest.test",
+              fetch: async (_input, init) => {
+                sent.push(JSON.parse(String(init?.body)))
+                return new Response("{}", { status: 200 })
+              },
+            }
+          : undefined,
+    })
+    const data = [{ type: "session_status" as const, data: { status: "idle" as const } }]
+    await q.sync("s1", data)
+    expect(await q.settle(["s1"])).toEqual({ ok: true })
+    available = false
+    await q.sync("s1", data)
+    expect(await q.settle(["s1"])).toEqual({ ok: false, reason: "failed" })
+    expect(sent).toHaveLength(1)
+    available = true
+    await q.sync("s1", data)
+    expect(await q.settle(["s1"])).toEqual({ ok: true })
+    expect(sent).toHaveLength(2)
+  })
+}
+
+test("settle does not wait for another session's in-flight flush", async () => {
+  const gate = Promise.withResolvers<Response>()
+  const started = Promise.withResolvers<void>()
+  const q = IngestQueue.create({
+    log: { error: () => {} },
+    getShare: async (id) => ({ ingestPath: `/ingest/${id}` }),
+    getClient: async () => ({
+      url: "https://ingest.test",
+      fetch: async (url) => {
+        if (String(url).includes("unrelated")) {
+          started.resolve()
+          return gate.promise
+        }
+        return new Response("{}", { status: 200 })
+      },
+    }),
+  })
+  const data = [{ type: "session_status" as const, data: { status: "idle" as const } }]
+  await q.sync("unrelated", data)
+  const pending = q.flush("unrelated")
+  await started.promise
+  try {
+    await q.sync("selected", data)
+    expect(await q.settle(["selected"], 50)).toEqual({ ok: true })
+  } finally {
+    gate.resolve(new Response("{}", { status: 200 }))
+    await pending
+  }
 })

@@ -961,6 +961,14 @@ export interface OpenWorktreeRequest {
   worktreeId: string
 }
 
+// Copy one worktree's sessions into a new hosted workspace in Cloud. The
+// extension host owns the open session selection and the active session.
+export interface ContinueInCloudRequest {
+  type: "agentManager.continueInCloud"
+  projectId?: string
+  worktreeId: string
+}
+
 export interface AgentManagerCopyToClipboardRequest {
   type: "agentManager.copyToClipboard"
   text: string
@@ -1901,6 +1909,7 @@ export type WebviewMessage =
   | ShowLocalTerminalRequest
   | ShowWorktreeTerminalRequest
   | OpenWorktreeRequest
+  | ContinueInCloudRequest
   | AgentManagerCopyToClipboardRequest
   | AgentManagerSetIntroDismissedRequest
   | CopyToClipboardRequest

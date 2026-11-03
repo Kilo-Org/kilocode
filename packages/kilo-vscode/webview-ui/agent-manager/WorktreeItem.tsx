@@ -191,6 +191,8 @@ interface WorktreeItemProps {
   onCopyPath: () => void
   onOpen: () => void
   onUpdateBase?: () => void
+  /** Copy this worktree's sessions into a new hosted workspace in Cloud. */
+  onContinueInCloud?: () => void
 }
 
 const MAX_SHORTCUT = 9
@@ -863,6 +865,12 @@ export const WorktreeItem: Component<WorktreeItemProps> = (props) => {
               <Icon name="copy" size="small" />
               <ContextMenu.ItemLabel>{t("agentManager.worktree.copyPath")}</ContextMenu.ItemLabel>
             </ContextMenu.Item>
+            <Show when={props.onContinueInCloud}>
+              <ContextMenu.Item onSelect={() => props.onContinueInCloud?.()}>
+                <Icon name="cloud-upload" size="small" />
+                <ContextMenu.ItemLabel>{t("agentManager.worktree.continueInCloud")}</ContextMenu.ItemLabel>
+              </ContextMenu.Item>
+            </Show>
             <ContextMenu.Separator />
             <ContextMenu.Item onSelect={() => props.onMoveToNewSection?.()}>
               <Icon name="plus" size="small" />

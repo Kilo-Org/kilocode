@@ -107,6 +107,9 @@ const SETUP_SCRIPT_RUNNER_FILE = path.join(ROOT, "src/agent-manager/SetupScriptR
 const RUN_MESSAGE_FILE = path.join(ROOT, "src/agent-manager/run/message.ts")
 const TAB_LAYOUT_FILE = path.join(ROOT, "src/agent-manager/tab-layout.ts")
 const TERMINAL_ROUTING_FILE = path.join(ROOT, "src/agent-manager/terminal-routing.ts")
+// State and UI in-message routing live in a vscode-free helper so the provider
+// stays under its cap; keep scanning it for the routed message types.
+const MESSAGE_ROUTING_FILE = path.join(ROOT, "src/agent-manager/message-routing.ts")
 const SCRIPT_TERMINAL_FILE = path.join(ROOT, "src/agent-manager/ScriptTerminalManager.ts")
 const SCRIPT_TERMINAL_RUNTIME_FILE = path.join(ROOT, "src/agent-manager/script-terminal-runtime.ts")
 const RUN_TASK_FILE = path.join(ROOT, "src/agent-manager/run/task.ts")
@@ -688,7 +691,8 @@ describe("Agent Manager Provider — onMessage routing", () => {
       provider() +
       fs.readFileSync(RUN_MESSAGE_FILE, "utf-8") +
       fs.readFileSync(TERMINAL_ROUTING_FILE, "utf-8") +
-      fs.readFileSync(TAB_LAYOUT_FILE, "utf-8")
+      fs.readFileSync(TAB_LAYOUT_FILE, "utf-8") +
+      fs.readFileSync(MESSAGE_ROUTING_FILE, "utf-8")
     const expected = [
       "agentManager.createWorktree",
       "agentManager.deleteWorktree",
