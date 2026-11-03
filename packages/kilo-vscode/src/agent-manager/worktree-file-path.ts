@@ -6,14 +6,18 @@ import type { WorktreeStateManager } from "./WorktreeStateManager"
 /** The directory a worktree id, session id, or `local` reads files from. */
 export function resolveWorktreeRoot(
   state: WorktreeStateManager | undefined,
-  id: string,
+  id: string | undefined,
   root: string | undefined,
 ): string | undefined {
-  if (id === "local") return root
+  // No id means the caller has no context and reads from the project root.
+  if (!id || id === "local") return root
   if (!state) return
   const worktree = state.getWorktree(id)
-  const session = worktree ? undefined : state.getSession(id)
-  return worktree?.path ?? (session?.worktreeId ? state.getWorktree(session.worktreeId)?.path : undefined)
+  if (worktree) return worktree.path
+  const session = state.getSession(id)
+  // A known session without a worktree is a local session, which reads from the project root.
+  if (!session) return undefined
+  return session.worktreeId ? state.getWorktree(session.worktreeId)?.path : root
 }
 
 /**
@@ -25,7 +29,7 @@ export function resolveWorktreeRoot(
  */
 export function resolveWorktreeFile(
   state: WorktreeStateManager | undefined,
-  id: string,
+  id: string | undefined,
   file: string,
   root: string | undefined,
 ): string | undefined {

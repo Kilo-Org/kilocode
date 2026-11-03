@@ -342,7 +342,12 @@ const AgentManagerContent: Component = () => {
   createEffect(
     on(projectList, (next, previous) => {
       const ids = new Set(next.map((project) => project.id))
-      previous?.filter((project) => !ids.has(project.id)).forEach((project) => composers.clearProject(project.id))
+      previous
+        ?.filter((project) => !ids.has(project.id))
+        .forEach((project) => {
+          composers.clearProject(project.id)
+          documentInspector.clearProject(project.id)
+        })
     }),
   )
   const reviewState = createReviewState()

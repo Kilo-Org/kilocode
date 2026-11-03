@@ -139,22 +139,23 @@ export function createDocuments(
     setTabs((prev) => ({ ...prev, [ctx]: next }))
   }
 
-  /** Drop everything held for scopes that are no longer reachable. */
-  const prune = (scopes: Iterable<string>) => {
-    const keep = new Set(scopes)
-    const prefixes = [...keep].map((scope) => `${scope}\0`)
-    setTabs((prev) => Object.fromEntries(Object.entries(prev).filter(([scope]) => keep.has(scope))))
-    setActive((prev) => Object.fromEntries(Object.entries(prev).filter(([scope]) => keep.has(scope))))
+  /** Drop everything held for scopes that `keep` rejects. */
+  const prune = (keep: (scope: string) => boolean) => {
+    setTabs((prev) => Object.fromEntries(Object.entries(prev).filter(([scope]) => keep(scope))))
+    setActive((prev) => Object.fromEntries(Object.entries(prev).filter(([scope]) => keep(scope))))
     setData((prev) =>
-      Object.fromEntries(Object.entries(prev).filter(([id]) => prefixes.some((prefix) => id.startsWith(prefix)))),
+      Object.fromEntries(
+        Object.entries(prev).filter(([id]) => keep(id.includes("\0") ? id.slice(0, id.indexOf("\0")) : id)),
+      ),
     )
   }
 
   const onMessage = (message: DocumentMessage) => {
     const ctx = message.contextKey ?? message.sessionId
-    // A pruned scope has no tab left; ignore a late response instead of caching it again.
-    if (!tabs()[ctx]?.length) return
-    const id = key(ctx, message.requestedFile ?? message.file)
+    const file = message.requestedFile ?? message.file
+    // A closed tab or a pruned scope no longer references the file; ignore its late response.
+    if (!tabs()[ctx]?.some((tab) => tab.file === file)) return
+    const id = key(ctx, file)
     setData((prev) => ({
       ...prev,
       [id]: {
@@ -186,9 +187,8 @@ export function createDocuments(
 
 export function createDocumentComments(context: Accessor<string | null>) {
   const [byContext, setByContext] = createSignal<Record<string, ReviewComment[]>>({})
-  const prune = (scopes: Iterable<string>) => {
-    const keep = new Set(scopes)
-    setByContext((prev) => Object.fromEntries(Object.entries(prev).filter(([scope]) => keep.has(scope))))
+  const prune = (keep: (scope: string) => boolean) => {
+    setByContext((prev) => Object.fromEntries(Object.entries(prev).filter(([scope]) => keep(scope))))
   }
   const comments = () => {
     const ctx = context()
@@ -252,9 +252,30 @@ export function createDocumentInspector(
   const toggle = () => (isOpen() ? closePanel() : open())
   /** Drop documents and comments for worktrees this project no longer has. */
   const prune = (project: string, ids: ReadonlySet<string>) => {
-    const keep = new Set([...ids].map((id) => `${project}:${id}`))
+    const prefix = `${project}:`
+    const keep = (scope: string) => !scope.startsWith(prefix) || ids.has(scope.slice(prefix.length))
     documents.prune(keep)
     comments.prune(keep)
   }
-  return { documents, comments, open, openFile, copyPath, toggle, available, isOpen, scope, subscribe, prune }
+  /** Drop documents and comments for a project that left the Agent Manager. */
+  const clearProject = (project: string) => {
+    const prefix = `${project}:`
+    const keep = (scope: string) => !scope.startsWith(prefix)
+    documents.prune(keep)
+    comments.prune(keep)
+  }
+  return {
+    documents,
+    comments,
+    open,
+    openFile,
+    copyPath,
+    toggle,
+    available,
+    isOpen,
+    scope,
+    subscribe,
+    prune,
+    clearProject,
+  }
 }

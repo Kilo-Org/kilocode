@@ -127,6 +127,46 @@ describe("document inspector", () => {
     expect(state.opened).toEqual([{ file: "src/index.ts", sessionId: "wt-a", line: 4, column: 2 }])
   })
 
+  it("ignores a late response for a tab that was closed", () => {
+    const state = setup()
+    state.inspector.subscribe((message) => state.inspector.documents.onMessage(message))
+    state.inspector.open("README.md", "ses-1")
+    state.inspector.open("plans/plan.md", "ses-1")
+    const handler = [...state.watched][0]
+    const closed = state.inspector.documents.tabs()[1]!
+    state.inspector.documents.close(closed.id)
+
+    handler?.({
+      type: "agentManager.document",
+      sessionId: "ses-1",
+      contextKey: "project-a:wt-a",
+      requestedFile: "plans/plan.md",
+      file: "plans/plan.md",
+      kind: "text",
+      content: "# Closed",
+    })
+
+    expect(state.inspector.documents.tabs()).toHaveLength(1)
+    expect(state.inspector.documents.document("plans/plan.md")).toBeUndefined()
+  })
+
+  it("keeps other projects when pruning removed worktrees, and clears a removed project", () => {
+    const state = setup()
+    state.inspector.open("README.md", "ses-a")
+
+    state.setProject("project-b")
+    state.inspector.open("README.md", "ses-b")
+
+    state.inspector.prune("project-b", new Set(["local"]))
+    expect(state.inspector.documents.tabs()).toEqual([])
+
+    state.setProject("project-a")
+    expect(state.inspector.documents.tabs()).toHaveLength(1)
+
+    state.inspector.clearProject("project-a")
+    expect(state.inspector.documents.tabs()).toEqual([])
+  })
+
   it("does not post copyFilePath or openFile requests without an active session", () => {
     const state = setup()
     state.setSelection(null)

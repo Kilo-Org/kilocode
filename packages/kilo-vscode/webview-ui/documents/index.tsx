@@ -33,8 +33,8 @@ const App: Component = () => {
     setScope(message.contextKey)
     setSession(message.sessionId ?? null)
     // The tab shows one context at a time, so documents from the context it replaced are unreachable.
-    docs.prune([message.contextKey])
-    comments.prune([message.contextKey])
+    docs.prune((scope) => scope === message.contextKey)
+    comments.prune((scope) => scope === message.contextKey)
     docs.open(message.file, message.sessionId ?? "", message.line, message.column)
     setVisible(true)
   }
