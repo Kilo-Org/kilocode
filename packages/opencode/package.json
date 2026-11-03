@@ -67,8 +67,8 @@
     "@types/babel__core": "7.20.5"
   },
   "dependencies": {
-    "@actions/core": "1.11.1",
-    "@actions/github": "6.0.1",
+    "@actions/core": "3.0.1",
+    "@actions/github": "9.1.1",
     "@agentclientprotocol/sdk": "0.21.0",
     "@ai-sdk/alibaba": "1.0.17",
     "@ai-sdk/amazon-bedrock": "4.0.166",
@@ -79,7 +79,7 @@
     "@ai-sdk/deepinfra": "2.0.41",
     "@ai-sdk/gateway": "3.0.157",
     "@ai-sdk/google": "3.0.73",
-    "@ai-sdk/google-vertex": "4.0.181",
+    "@ai-sdk/google-vertex": "4.0.223",
     "@ai-sdk/groq": "3.0.31",
     "@ai-sdk/mistral": "3.0.51",
     "@ai-sdk/openai": "3.0.88",
