@@ -207,7 +207,7 @@ class ActiveRendererTest : BasePlatformTestCase() {
         val tree = ActiveTree("", menu = menu)
         tree.update(listOf(ActiveTreeNode(group, listOf(ActiveTreeNode(row)))))
         val view = tree.preferredFocus() as ActiveTreeView
-        val renderer = ActiveRenderer(menu = menu)
+        val renderer = ActiveRenderer(ActiveConfig(leadInset = ai.kilocode.client.ui.UiStyle.Gap.LG), menu)
         fun render(entry: ActiveEntry): ActiveRenderer {
             renderer.render(view.state(entry, false, false, view.regions.cell(entry).width))
             renderer.setSize(view.regions.cell(entry).width, renderer.preferredSize.height)
@@ -229,7 +229,7 @@ class ActiveRendererTest : BasePlatformTestCase() {
                 val groupFrame = view.regions.frame(groupEntry) ?: error("Missing group frame")
                 val arrow = view.regions.control(groupEntry) ?: error("Missing disclosure")
                 val leafFrame = view.regions.frame(leafEntry) ?: error("Missing leaf frame")
-                val inset = JBUI.scale(ai.kilocode.client.ui.UiStyle.Gap.SM)
+                val inset = JBUI.scale(ai.kilocode.client.ui.UiStyle.Gap.LG)
                 assertEquals("Disclosure uses the standard content inset", inset, arrow.x - groupFrame.x)
                 assertEquals("Leaf cell starts at its selection edge", leafFrame.x, view.regions.cell(leafEntry).x)
 
@@ -312,8 +312,9 @@ class ActiveRendererTest : BasePlatformTestCase() {
                     cell.setSize(view.regions.cell(entry).size)
                     activeLayout(cell)
                     val mark = content(cell).filterIsInstance<JBLabel>().single()
-                    assertEquals("Row body starts its mark on the list lead for $key at $factor",
-                        lead, SwingUtilities.convertPoint(mark, 0, 0, cell).x)
+                    assertEquals("Tree row adds the optical lead inset for $key at $factor",
+                        lead + JBUI.scale(ai.kilocode.client.ui.UiStyle.Gap.SM),
+                        SwingUtilities.convertPoint(mark, 0, 0, cell).x)
                 }
                 for (key in listOf("group", "nested")) {
                     val entry = view.hierarchy.entries.getValue(key)
@@ -326,7 +327,8 @@ class ActiveRendererTest : BasePlatformTestCase() {
                     cell.setSize(view.regions.cell(entry).size)
                     activeLayout(cell)
                     val title = content(cell).filterIsInstance<ai.kilocode.client.ui.FadeText>().first()
-                    assertTrue("Body starts after the disclosure column", body.x >= arrow.x + arrow.width)
+                    assertTrue("Body content starts after the disclosure column",
+                        body.x + JBUI.scale(ai.kilocode.client.ui.UiStyle.Gap.LG) >= arrow.x + arrow.width)
                     assertTrue("Title follows the disclosure column",
                         SwingUtilities.convertPoint(title, 0, 0, cell).x >= arrow.x - body.x + arrow.width)
                 }

@@ -14,7 +14,7 @@ import java.awt.Graphics
  * added per child level.
  */
 object ActiveTreePainter : Control.Painter {
-    private fun contentInset() = JBUI.scale(UiStyle.Gap.SM)
+    private fun contentInset() = JBUI.scale(UiStyle.Gap.LG)
 
     private fun iconGap() = JBUI.scale(activeIconGap())
 

@@ -105,6 +105,8 @@ internal data class ActiveConfig(
      * [ActiveRowHeight.EQUAL] would still be capped to the shared row height.
      */
     val wrapDescription: Boolean = false,
+    /** Leading content inset; trees use a wider value to optically match the trailing menu glyph. */
+    val leadInset: Int = UiStyle.Gap.SM,
 ) {
     companion object {
         val Equal = ActiveConfig(ActiveRowHeight.EQUAL)

@@ -1037,7 +1037,7 @@ internal class ActiveTreeRenderer(
     private val menu: ActiveMenu<*>?,
     private val view: ActiveTreeView,
 ) : BorderLayoutPanel(), javax.swing.tree.TreeCellRenderer {
-    val active = ActiveRenderer(cfg, menu)
+    val active = ActiveRenderer(cfg.copy(leadInset = UiStyle.Gap.LG), menu)
     private var gap = false
 
 
