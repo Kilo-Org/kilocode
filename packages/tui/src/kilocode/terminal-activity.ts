@@ -78,12 +78,9 @@ export default Plugin.define({
       write: (packet) => process.stdout.write(packet),
     })
     const timer = setInterval(emitter.tick, TICK)
-    // Events reach the classifier data first, so report a change without waiting for the next tick.
-    const off = context.data.listen(() => emitter.tick())
     emitter.tick()
     return () => {
       clearInterval(timer)
-      off()
       emitter.stop()
     }
   },
