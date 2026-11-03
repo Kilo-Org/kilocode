@@ -8,6 +8,7 @@ import type { Agent } from "@/agent/agent"
 import type { MessageV2 } from "../message-v2"
 import type { Provider } from "@/provider/provider"
 import { ProviderTransform } from "@/provider/transform"
+import { isExplicitOllamaTemperature } from "./sampling-temperature"
 import { SystemPrompt } from "../system"
 import { USER_AGENT } from "@/installation" // kilocode_change
 import { Effect, Record } from "effect"
@@ -151,7 +152,7 @@ export const prepare = Effect.fn("LLMRequestPrep.prepare")(function* (input: Pre
       // incorrectly marks its model as not supporting sampling temperature.
       temperature:
         input.model.capabilities.temperature ||
-        (input.agent.temperature !== undefined && /^(?:ollama|ollama[_-]local)$/.test(input.model.providerID))
+        isExplicitOllamaTemperature(input.model.providerID, input.agent.temperature)
           ? (input.agent.temperature ?? ProviderTransform.temperature(input.model))
           : undefined,
       topP: input.agent.topP ?? ProviderTransform.topP(input.model),
