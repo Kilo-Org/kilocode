@@ -3,7 +3,7 @@
   "limits": {
     "files": 84,
     "markedLines": 1109,
-    "unmarkedLines": 229,
+    "unmarkedLines": 246,
     "deletedFiles": 0
   },
   "files": {
@@ -93,7 +93,7 @@
     },
     "packages/protocol/openapi.json": {
       "rung": 3,
-      "seam": "Generated OpenAPI document for the optional command template and model metadata exposed by the command list API. The document is generated from the public schema; editing it by hand is not supported.",
+      "seam": "Generated OpenAPI document for the optional command template and model metadata exposed by the command list API, and the optional PTY create size exposed by packages/schema/src/pty.ts. The document is generated from the public schema; editing it by hand is not supported.",
       "unmarked": "Generated JSON cannot carry marker comments; bun run generate in packages/protocol owns this file."
     },
     "packages/core/package.json": {
