@@ -10,6 +10,7 @@ import { useSpeechToText } from "../components/speech-to-text/useSpeechToText"
 import { useLanguage } from "../context/language"
 import { useVSCode } from "../context/vscode"
 import { isEnterKeyCommitNotIme } from "../utils/ime-enter"
+import { registerAppend, type AppendHandler } from "./append-ready"
 import { message, useV2 } from "./client"
 import { cleanEnhancedPrompt, enhancePromptRequest, normalizeEnhancePromptErrorMessage } from "./enhance-prompt"
 import { insertSpacedText } from "./prompt-speech"
@@ -48,7 +49,7 @@ export function PromptInput(props: {
   /** Prompt toolbar actions (auto-approve, and later indexing, sandbox and enhance as on main). */
   actions?: JSX.Element
   /** Receives a function that appends text to the draft and, when `send` is true, sends it; undefined on unmount. */
-  onAppendReady?: (append: ((value: string, send: boolean) => void) | undefined) => void
+  onAppendReady?: (append: AppendHandler | undefined) => void
 }) {
   const v2 = useV2()
   const language = useLanguage()
@@ -184,7 +185,7 @@ export function PromptInput(props: {
     submit()
   }
 
-  props.onAppendReady?.((value, shouldSend) => {
+  registerAppend(props.onAppendReady, (value, shouldSend) => {
     const current = text()
     enhanceToken++
     preEnhance = null
@@ -192,8 +193,6 @@ export function PromptInput(props: {
     if (shouldSend) send()
     else focus()
   })
-  // A caller that holds this function must not keep appending into the composer that just unmounted.
-  onCleanup(() => props.onAppendReady?.(undefined))
 
   const shortcut = createSpeechShortcut({
     speech,

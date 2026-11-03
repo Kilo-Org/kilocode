@@ -2,6 +2,7 @@
 // existing session commits each change with switchAgent/switchModel and shows the server's value. Before a session
 // exists, the choice is a local draft that `create` passes to session.create.
 import type { ModelRef } from "@opencode/client"
+import { createModelAttribution } from "./attribution"
 import { TooltipKeybind } from "@kilocode/kilo-ui/tooltip"
 import { createEffect, createSignal, on, onCleanup, onMount, type Accessor } from "solid-js"
 import { PromptSelectors } from "../components/chat/PromptSelectors"
@@ -27,9 +28,7 @@ export function createSelection(
   // The latest switch request per session, so a prompt waits for it. Prompts gate on session creation themselves.
   const commits = new Map<string, Promise<unknown>>()
   const creates = new Map<string, Promise<unknown>>()
-  // The last model an explicit switch asked for, until the store reports it. A prompt that waits for the switch
-  // settles before the store applies the change, and its attribution must name the model it runs on.
-  const switched = new Map<string, ModelRef>()
+  const attribution = createModelAttribution()
 
   createEffect(
     on(v2.connection.status, (status) => {
@@ -102,13 +101,13 @@ export function createSelection(
   const setModel = (next: ModelRef) => {
     const id = session()
     if (!id) return void setDraftModel(next)
-    switched.set(id, next)
+    attribution.request(id, next)
     // An explicit "default" clears a previous variant: a model without the field would keep it in createData.
     commit(id, () =>
       v2.api.session.switchModel({ sessionID: id, model: { ...next, variant: next.variant ?? DEFAULT } }).catch(
         (error: unknown) => {
           // A switch that did not apply must not name a later prompt.
-          if (switched.get(id) === next) switched.delete(id)
+          attribution.clear(id)
           throw error
         },
       ),
@@ -122,7 +121,7 @@ export function createSelection(
     if (!id) return void setDraftAgent(value)
     if (value === agent()?.id) return
     // The agent decides the model the prompt runs on, so it replaces a model request that the store already applied.
-    switched.delete(id)
+    attribution.clear(id)
     commit(id, () => v2.api.session.switchAgent({ sessionID: id, agent: value }))
   }
 
@@ -171,14 +170,7 @@ export function createSelection(
      * requested value until the store reports it.
      */
     attributed(id: string) {
-      const next = switched.get(id)
-      if (!next) return model()
-      const current = v2.data.session.get(id)?.model
-      if (current?.id === next.id && current.providerID === next.providerID) {
-        switched.delete(id)
-        return model()
-      }
-      return next
+      return attribution.read(id, v2.data.session.get(id)?.model)
     },
   }
 }

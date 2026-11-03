@@ -8,6 +8,7 @@ import type { ToHost } from "../../../src/protocol"
 import { getVSCodeAPI } from "../context/vscode"
 import { TaskHeader } from "../components/chat/TaskHeader"
 import { SessionDock } from "../components/chat/SessionDockWorking"
+import type { AppendHandler } from "./append-ready"
 import { useV2 } from "./client"
 import { sessionMissing } from "./scope"
 import { childTools, createChildSessions } from "./child-session"
@@ -39,7 +40,7 @@ export function SessionView(props: {
   /** Opens the proposed changes of an edit permission request. */
   onPreviewEdit?: (files: FileDiffInfo[], sessionID: string) => void
   /** Receives the composer append function for review comments, and undefined when that composer unmounts. */
-  onAppendReady?: (append: ((value: string, send: boolean) => void) | undefined) => void
+  onAppendReady?: (append: AppendHandler | undefined) => void
   /** Receives each prompt the server admitted, with the model it runs on. */
   onPrompted?: (sessionID: string, text: string, model: ModelRef | undefined) => void
   /** Receives a session the server does not have (deleted, or from another database) instead of an error card. */
