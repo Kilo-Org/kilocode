@@ -22,8 +22,10 @@ window.createOutputChannel ??= () => ({ appendLine: () => undefined, show: () =>
 
 const directories: string[] = []
 
-afterEach(() => {
-  for (const dir of directories.splice(0)) fs.rmSync(dir, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 })
+afterEach(async () => {
+  // Provider shutdown is asynchronous, and a Windows runner can still hold the temporary workspace for a moment.
+  await Bun.sleep(50)
+  for (const dir of directories.splice(0)) fs.rmSync(dir, { recursive: true, force: true, maxRetries: 100, retryDelay: 100 })
 })
 
 const tick = () => new Promise((resolve) => setTimeout(resolve, 0))

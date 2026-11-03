@@ -329,6 +329,51 @@ describe("BrowserBroker", () => {
     expect(await (await fetch(url, { headers })).json()).toEqual({ enabled: false })
   })
 
+  test("answers a malformed request target with 400 instead of hanging", async () => {
+    const broker = makeBroker({ log: () => {} })
+    brokers.push(broker)
+    const env = await broker.env()
+    const url = new URL(env.KILO_BROWSER_BROKER_URL)
+    const response = await new Promise<string>((resolve) => {
+      const socket = connect({ host: url.hostname, port: Number(url.port) }, () => {
+        // An absolute-form target with an unclosed IPv6 literal makes the URL parser throw.
+        socket.end("GET http://[ HTTP/1.1\r\nHost: 127.0.0.1\r\n\r\n")
+      })
+      const chunks: Buffer[] = []
+      socket.on("data", (chunk) => chunks.push(chunk))
+      socket.on("close", () => resolve(Buffer.concat(chunks).toString("utf8")))
+      socket.on("error", () => resolve(Buffer.concat(chunks).toString("utf8")))
+    })
+    const body = response.slice(response.indexOf("\r\n\r\n") + 4)
+    expect(response).toStartWith("HTTP/1.1 400")
+    expect(JSON.parse(body)).toEqual({ error: "Malformed request target" })
+  })
+
+  test("closes a developer tools client that buffers past the connect cap", async () => {
+    const upstream = createServer()
+    // Accept the upgrade and never answer, so the bridge stays in its connecting state.
+    upstream.on("upgrade", () => undefined)
+    await new Promise<void>((resolve) => upstream.listen(0, "127.0.0.1", resolve))
+    const server = createServer()
+    await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve))
+    const port = (server.address() as { port: number }).port
+    const target = (upstream.address() as { port: number }).port
+    const tools = new BrowserDevtools(server, port, () => {}, () => {})
+    const endpoint = new URL(`ws://${new URL(tools.open("browser", "page", target, "dark")).searchParams.get("ws")}`)
+    const client = new WebSocket(endpoint, { headers: { origin: `http://127.0.0.1:${port}` } })
+    await new Promise<void>((resolve, reject) => {
+      client.once("open", resolve)
+      client.once("error", reject)
+    })
+    const closed = new Promise<void>((resolve) => client.once("close", () => resolve()))
+    for (let index = 0; index < 300; index++) client.send("buffered")
+    await closed
+    expect(client.readyState).toBe(WebSocket.CLOSED)
+    tools.dispose()
+    upstream.close()
+    server.close()
+  })
+
   test("writes an explicit forbidden response before closing an untrusted upgrade", () => {
     const server = createServer()
     const tools = new BrowserDevtools(
