@@ -576,7 +576,9 @@ describe("WorktreeManager.removeWorktree", () => {
     }
   })
 
-  it.skipIf(process.platform !== "win32")(
+  // A process holding a directory lock makes git's failure timing host-dependent, and the locked handle
+  // can stall a CI run indefinitely. Keep this check on a real Windows desktop and out of CI.
+  it.skipIf(process.platform !== "win32" || !!process.env.CI)(
     "keeps a Windows worktree tracked while a live process locks its directory",
     async () => {
       const root = await createTempRepo()
