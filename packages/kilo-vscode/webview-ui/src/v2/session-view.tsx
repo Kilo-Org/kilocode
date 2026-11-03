@@ -33,8 +33,6 @@ export function SessionView(props: {
   empty?: () => JSX.Element
   /** Read-only sessions show the transcript without docks and prompt. */
   readOnly?: boolean
-  /** Shows the speech to text control; the Agent Manager has none. */
-  speech?: boolean
   /** Opens the proposed changes of an edit permission request. */
   onPreviewEdit?: (files: FileDiffInfo[], sessionID: string) => void
   /** Receives the composer append function, for example for review comments. */
@@ -136,10 +134,12 @@ export function SessionView(props: {
   const selection = createSelection(session)
   const autoApprove = createAutoApprove()
   // The host sends the cycle action for the cycleAgentMode/cyclePreviousAgentMode commands, as in main.
-  v2.onCommand((name) => {
-    if (name === "cycleAgentMode") selection.cycleAgent(1)
-    if (name === "cyclePreviousAgentMode") selection.cycleAgent(-1)
-  })
+  // A read-only view, for example an Agent Manager subagent, has no composer to cycle.
+  if (!props.readOnly)
+    v2.onCommand((name) => {
+      if (name === "cycleAgentMode") selection.cycleAgent(1)
+      if (name === "cyclePreviousAgentMode") selection.cycleAgent(-1)
+    })
   const working = createWorking(session)
   let scrollToBottom: (() => void) | undefined
   // Counts the in-flight first message too, so the dock reserves the same row on the very first send, as on main.
@@ -228,7 +228,6 @@ export function SessionView(props: {
             questioning={questioning()}
             onSend={send}
             onStop={stop}
-            speech={props.speech}
             onAppendReady={props.onAppendReady}
             selectors={<Selectors selection={selection} blocked={selectorsBlocked()} />}
             actions={<AutoApproveAction enabled={autoApprove.enabled()} onToggle={autoApprove.toggle} />}

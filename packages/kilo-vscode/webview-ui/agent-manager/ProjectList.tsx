@@ -13,7 +13,7 @@ import type {
 } from "../src/types/messages/agent-manager"
 import type { LanguageContextValue } from "../src/context/language"
 import { useDialog } from "@kilocode/kilo-ui/context/dialog"
-import { useVSCode } from "./v2/vscode"
+import { useBridge } from "./v2/vscode"
 import { ProjectsSection } from "./ProjectsSection"
 import { ProjectSidebarBody } from "./ProjectSidebarBody"
 import { SidebarSearchMenu, type SidebarSearchMenuRef } from "./SidebarSearchMenu"
@@ -71,7 +71,7 @@ interface Props {
 }
 
 export const ProjectList: Component<Props> = (props) => {
-  const vscode = useVSCode()
+  const vscode = useBridge()
   const dialog = useDialog()
   const select = (target: AgentManagerSidebarTarget, restore?: boolean) => {
     if (props.onSelect) return props.onSelect(target, restore)

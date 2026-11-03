@@ -59,8 +59,7 @@ export function chat(input: {
   }
   const syncState = () => {
     if (!state.view) return
-    void send({ type: "autoApproveStateLoaded", value: input.context.globalState.get(AUTO_APPROVE, false) })
-    void send({ type: "modelSelectorExpandedLoaded", value: input.context.globalState.get(EXPANDED, true) })
+    composerState(input.context).forEach((message) => void send(message))
   }
   // The cycle keybindings are active only while the webview has focus, as on v1 (`sidebarFocused`).
   const focus = (focused: boolean) => void commands.executeCommand("setContext", "kilo-code.v2.sidebarFocused", focused)
@@ -132,6 +131,10 @@ export function wire(input: {
     fetch: local,
   })
   const post = (message: ToWebview) => void webview.postMessage(message)
+  // The composer state is shared: a change in one open view shows in the others, for example the sidebar and the
+  // Agent Manager side by side.
+  const others = (message: ToWebview) => surfaces.forEach((target) => target !== post && target(message))
+  surfaces.add(post)
   // Voice input is host-side: the microphone, the custom endpoint key and the Gateway RPC never reach the webview.
   const speech = createSpeechToTextHost({
     server: input.server,
@@ -208,12 +211,14 @@ export function wire(input: {
         return true
       case "persistModelSelectorExpanded":
         void input.context.globalState.update(EXPANDED, message.value)
+        others({ type: "modelSelectorExpandedLoaded", value: message.value })
         return true
       case "requestAutoApproveState":
         post({ type: "autoApproveStateLoaded", value: input.context.globalState.get(AUTO_APPROVE, false) })
         return true
       case "persistAutoApproveState":
         void input.context.globalState.update(AUTO_APPROVE, message.value)
+        others({ type: "autoApproveStateLoaded", value: message.value })
         return true
       default:
         return false
@@ -285,11 +290,22 @@ export function wire(input: {
     dispose() {
       link.dispose()
       speech.dispose()
+      surfaces.delete(post)
       settings.dispose()
       settingsWatch?.dispose()
       subscription.dispose()
     },
   }
+}
+
+const surfaces = new Set<(message: ToWebview) => void>()
+
+/** The composer state every webview shares through globalState: auto-approve and the expanded model picker. */
+export function composerState(context: ExtensionContext): ToWebview[] {
+  return [
+    { type: "autoApproveStateLoaded", value: context.globalState.get(AUTO_APPROVE, false) },
+    { type: "modelSelectorExpandedLoaded", value: context.globalState.get(EXPANDED, true) },
+  ]
 }
 
 const EXPANDED = "kilo-code.v2.modelSelectorExpanded"

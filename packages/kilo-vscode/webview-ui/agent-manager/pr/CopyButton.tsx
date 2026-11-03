@@ -2,10 +2,10 @@
 import { createSignal } from "solid-js"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import type { IconProps } from "@kilocode/kilo-ui/icon"
-import { useVSCode } from "../v2/vscode"
+import { useBridge } from "../v2/vscode"
 
 export function CopyButton(props: { text: string; label?: string; class?: string; icon?: IconProps["name"] }) {
-  const vscode = useVSCode()
+  const vscode = useBridge()
   const [copied, setCopied] = createSignal(false)
   const copy = () => {
     vscode.postMessage({ type: "agentManager.copyToClipboard", text: props.text })

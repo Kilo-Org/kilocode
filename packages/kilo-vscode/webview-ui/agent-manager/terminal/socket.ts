@@ -9,7 +9,7 @@
 
 import type { InMessage, VSCodeContext } from "../v2/bridge"
 
-/** The Agent Manager channel of `useVSCode`, narrowed to what the socket needs. */
+/** The Agent Manager channel of `useBridge`, narrowed to what the socket needs. */
 export type TerminalSocketChannel = Pick<VSCodeContext, "postMessage" | "onMessage">
 
 export interface TerminalSocketMessageEvent {

@@ -16,7 +16,7 @@ import { WebLinksAddon } from "@xterm/addon-web-links"
 import { ClipboardAddon } from "@xterm/addon-clipboard"
 import { UnicodeGraphemesAddon } from "@xterm/addon-unicode-graphemes"
 import "@xterm/xterm/css/xterm.css"
-import { useVSCode } from "../v2/vscode"
+import { useBridge } from "../v2/vscode"
 import { useLanguage } from "../../src/context/language"
 import type { ScriptTerminalStatus, TerminalFont } from "./state"
 import { createInputBuffer, createReplayGate, createWriteBatcher } from "./replay"
@@ -142,7 +142,7 @@ function isAgentManagerShortcut(e: KeyboardEvent): boolean {
 }
 
 export const TerminalTab: Component<Props> = (props) => {
-  const vscode = useVSCode()
+  const vscode = useBridge()
   const { t } = useLanguage()
   let host!: HTMLDivElement
 

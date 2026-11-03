@@ -1,12 +1,12 @@
 import { createSignal, onCleanup, onMount, type Component } from "solid-js"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
-import { useVSCode } from "./v2/vscode"
+import { useBridge } from "./v2/vscode"
 import type { LanguageContextValue } from "../src/context/language"
 import type { CaffeinationState } from "../src/types/messages/agent-manager"
 
 export const CaffeinationButton: Component<{ t: LanguageContextValue["t"] }> = (props) => {
-  const vscode = useVSCode()
+  const vscode = useBridge()
   const [state, setState] = createSignal<CaffeinationState>({ enabled: false, active: false, available: false })
   onCleanup(
     vscode.onMessage((message) => {

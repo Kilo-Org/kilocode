@@ -3,9 +3,9 @@
 // The sidebar, the tabs and the history read the root sessions of every directory of the active project.
 import type { SessionInfo } from "@opencode/client"
 import { createMemo, createSignal } from "solid-js"
-import type { V2 } from "../../src/v2/client"
+import type { V2 } from "../../src/v2/scope"
 import { sessionActivity, type Activity } from "./activity"
-import type { PanelData } from "./panel-data"
+import { key, type PanelData } from "./panel-data"
 
 export function createSessions(input: {
   panel: PanelData
@@ -18,20 +18,33 @@ export function createSessions(input: {
   const connected = () => input.panel.connection.status() === "connected"
   const stores = createMemo(() => input.directories().map((directory) => input.panel.store(directory)))
 
-  // The store that has the session, else the store of its known directory, else the project root store.
+  // A store can also load a session of another directory, when an event about it reaches that store. The session
+  // belongs to the store of its own directory.
+  const owns = (item: V2, info: SessionInfo) => key(info.location.directory) === item.directory
+
+  // The store of the session's directory, else the store of its known directory, else the project root store.
   const scope = (sessionID: string): V2 | undefined => {
-    const found = stores().find((item) => item.data.session.get(sessionID))
+    const holders = stores().flatMap((item) => {
+      const info = item.data.session.get(sessionID)
+      return info ? [{ item, info }] : []
+    })
+    const found = (holders.find((entry) => owns(entry.item, entry.info)) ?? holders[0])?.item
     if (found) return found
     const directory = input.directoryOf(sessionID)
     if (directory) return input.panel.store(directory)
     return stores()[0]
   }
 
-  const sessions = createMemo(() =>
-    stores()
-      .flatMap((item) => item.data.session.list().filter((info) => !info.parentID))
-      .toSorted((a, b) => b.time.updated - a.time.updated),
-  )
+  // One entry per session: the copy of its own store, else the first store that has it.
+  const sessions = createMemo(() => {
+    const result = new Map<string, SessionInfo>()
+    for (const item of stores())
+      for (const info of item.data.session.list()) {
+        if (info.parentID) continue
+        if (!result.has(info.id) || owns(item, info)) result.set(info.id, info)
+      }
+    return [...result.values()].toSorted((a, b) => b.time.updated - a.time.updated)
+  })
 
   return {
     sessions,

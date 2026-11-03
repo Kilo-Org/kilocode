@@ -3,7 +3,7 @@
 import { type Component, Show, createSignal, onCleanup, onMount } from "solid-js"
 import { Dialog } from "@kilocode/kilo-ui/dialog"
 import { Button } from "@kilocode/kilo-ui/button"
-import { useVSCode } from "./v2/vscode"
+import { useBridge } from "./v2/vscode"
 import { useLanguage } from "../src/context/language"
 import { joinPath, repoName } from "./project-utils"
 import { ProjectParentField } from "./ProjectParentField"
@@ -17,7 +17,7 @@ interface CloneProjectDialogProps {
 
 /** Clone a repository: choose a URL and parent folder, then show the destination. */
 export const CloneProjectDialog: Component<CloneProjectDialogProps> = (props) => {
-  const vscode = useVSCode()
+  const vscode = useBridge()
   const { t } = useLanguage()
   const [parent, setParent] = createSignal("")
   const [url, setUrl] = createSignal("")

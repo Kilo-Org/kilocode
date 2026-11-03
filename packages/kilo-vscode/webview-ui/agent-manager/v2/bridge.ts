@@ -16,3 +16,9 @@ export type VSCodeContext = {
   getModelSelectorExpanded: () => boolean
   setModelSelectorExpanded: (value: boolean) => void
 }
+
+/** The shared webview context, for hooks typed with the sidebar messages (voice input). */
+export type SharedContext = {
+  postMessage: (message: ToHost) => void
+  onMessage: (handler: (message: ToWebview) => void) => () => void
+}

@@ -120,6 +120,12 @@ export function activate(context: ExtensionContext) {
   const agentPanel = createPanel({ context, server, directory, trackCostSession: alerts.track })
   const agentManager = new AgentManagerProvider(agentHost, connection, agentPanel)
   const agentAction = (action: string) => agentManager.postMessage({ type: "action", action })
+  // The cycle keybindings act on the focused composer: the Agent Manager panel when it is active, else the sidebar.
+  const cycle = async (name: "cycleAgentMode" | "cyclePreviousAgentMode") => {
+    if (agentManager.isActive()) return agentManager.postMessage({ type: "command", name })
+    await commands.executeCommand("kilo-code.v2.chat.focus")
+    await view.post({ type: "command", name })
+  }
   const agentCommands = [
     ["previousSession", "sessionPrevious"],
     ["nextSession", "sessionNext"],
@@ -168,14 +174,8 @@ export function activate(context: ExtensionContext) {
     panel,
     // The host sends the action and the webview decides the next agent, as in main: the agent list and
     // the selection live in the webview, and only the server owns the committed value.
-    commands.registerCommand("kilo-code.v2.cycleAgentMode", async () => {
-      await commands.executeCommand("kilo-code.v2.chat.focus")
-      await view.post({ type: "command", name: "cycleAgentMode" })
-    }),
-    commands.registerCommand("kilo-code.v2.cyclePreviousAgentMode", async () => {
-      await commands.executeCommand("kilo-code.v2.chat.focus")
-      await view.post({ type: "command", name: "cyclePreviousAgentMode" })
-    }),
+    commands.registerCommand("kilo-code.v2.cycleAgentMode", () => cycle("cycleAgentMode")),
+    commands.registerCommand("kilo-code.v2.cyclePreviousAgentMode", () => cycle("cyclePreviousAgentMode")),
     commands.registerCommand(
       "kilo-code.v2.generateCommitMessage",
       commitMessageCommand({

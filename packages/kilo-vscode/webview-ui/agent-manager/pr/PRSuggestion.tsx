@@ -5,7 +5,7 @@ import { Spinner } from "@kilocode/kilo-ui/spinner"
 import { normalizeHunk } from "@kilocode/kilo-ui/session-diff"
 import type { PRSuggestionPreview, PRTarget } from "../../../src/shared/pr-comment-actions"
 import { useLanguage } from "../../src/context/language"
-import { useVSCode } from "../v2/vscode"
+import { useBridge } from "../v2/vscode"
 import { reviewRequest } from "./pr-review-request"
 
 type State = { preview?: PRSuggestionPreview; pending?: boolean; error?: string; applied?: boolean }
@@ -13,7 +13,7 @@ const [states, setStates] = createSignal<Record<string, State>>({})
 
 export function PRSuggestion(props: PRTarget & { commentId: string; suggestion: number }) {
   const { t } = useLanguage()
-  const vscode = useVSCode()
+  const vscode = useBridge()
   const key = () =>
     JSON.stringify([props.projectId, props.worktreeId, props.prNumber, props.prUrl, props.commentId, props.suggestion])
   const state = () => states()[key()] ?? {}

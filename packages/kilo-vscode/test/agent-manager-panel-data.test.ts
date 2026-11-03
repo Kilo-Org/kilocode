@@ -6,6 +6,9 @@ import { OpenCode, type OpenCodeEvent } from "@opencode/client"
 // The package resolves the server build of Solid outside a renderer, where effects never run.
 const CLIENT_SOLID = "solid-js/dist/solid.js"
 mock.module("solid-js", () => import(CLIENT_SOLID))
+// The client build of the store, so store writes reach the memos of the client Solid build.
+const CLIENT_STORE = "solid-js/store/dist/store.js"
+mock.module("solid-js/store", () => import(CLIENT_STORE))
 const { createRoot } = (await import(CLIENT_SOLID)) as {
   createRoot: <T>(fn: (dispose: () => void) => T) => T
 }
@@ -15,6 +18,7 @@ Object.assign(globalThis, {
   document: Object.assign(new EventTarget(), { visibilityState: "visible" }),
 })
 const { createPanelData, key, targets } = await import("../webview-ui/agent-manager/v2/panel-data")
+const { createSessions } = await import("../webview-ui/agent-manager/v2/sessions")
 
 const ROOT = "/repo"
 const WORKTREE = "/repo/.kilo/worktrees/one"
@@ -143,6 +147,28 @@ describe("createPanelData", () => {
 
       panel.retain([ROOT])
       expect(panel.directories()).toEqual([ROOT])
+      dispose()
+    })
+  })
+
+  test("lists a session that two stores loaded once, in the store of its directory", async () => {
+    const api = OpenCode.make({ baseUrl: `http://127.0.0.1:${server.port}` })
+    await createRoot(async (dispose) => {
+      const panel = createPanelData({ post: () => {}, api })
+      const sessions = createSessions({ panel, directories: () => [ROOT, WORKTREE], directoryOf: () => undefined })
+      const info = {
+        id: "ses_shared",
+        projectID: "prj_1",
+        cost: 0,
+        tokens: { input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } },
+        time: { created: 1, updated: 1 },
+        location: { directory: WORKTREE },
+      }
+      panel.store(ROOT).data.session.remember(info)
+      panel.store(WORKTREE).data.session.remember(info)
+      await until(() => sessions.sessions().length > 0)
+      expect(sessions.sessions().map((item) => item.id)).toEqual(["ses_shared"])
+      expect(sessions.scope("ses_shared")).toBe(panel.store(WORKTREE))
       dispose()
     })
   })

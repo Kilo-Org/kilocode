@@ -8,7 +8,7 @@ import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { Spinner } from "@kilocode/kilo-ui/spinner"
 import { TextField } from "@kilocode/kilo-ui/text-field"
 import { useLanguage } from "../../src/context/language"
-import { useVSCode } from "../v2/vscode"
+import { useBridge } from "../v2/vscode"
 import { PRCommentMarkdown } from "./PRCommentMarkdown"
 import type { PRCommentRequest, PRTarget } from "../../../src/shared/pr-comment-actions"
 import { reviewRequest } from "./pr-review-request"
@@ -104,7 +104,7 @@ const decisions = [
 // eslint-disable-next-line complexity
 export function PRCommentForm(props: Props) {
   const { t } = useLanguage()
-  const vscode = useVSCode()
+  const vscode = useBridge()
   let editor: HTMLInputElement | undefined
   // The discriminated union does not narrow inside JSX callbacks, so read the
   // diff-only fields through accessors that keep TypeScript happy.

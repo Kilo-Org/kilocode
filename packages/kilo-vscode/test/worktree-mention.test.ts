@@ -50,7 +50,6 @@ function harness(worktrees: WorktreeReference[] = [WORKTREE], sessions: SessionS
   const mention = createRoot((root) => {
     dispose.fn = root
     return useWorktreeMention(
-      { postMessage: () => undefined, onMessage: () => () => undefined } as never,
       () => worktrees,
       () => sessions,
     )

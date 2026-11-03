@@ -9,7 +9,7 @@ import { ModelSelectorBase } from "../components/shared/ModelSelector"
 import { ModeSwitcherBase } from "../components/shared/ModeSwitcher"
 import { ThinkingSelectorBase } from "../components/shared/ThinkingSelector"
 import { useLanguage } from "../context/language"
-import { useV2 } from "./client"
+import { useV2, type V2 } from "./client"
 import { failureMessage } from "./kilo-catalog"
 import { shiftTabCyclesVariant } from "./kilo-settings"
 import { cycleVariant, preserveVariant } from "./variant"
@@ -20,7 +20,7 @@ export function createSelection(session: Accessor<string | undefined>) {
   const v2 = useV2()
   const [draftAgent, setDraftAgent] = createSignal<string>()
   const [draftModel, setDraftModel] = createSignal<ModelRef>()
-  const [fallback, setFallback] = createSignal<ModelRef>()
+  const fallback = createDefaultModel(v2)
   // The latest switch request per session, so a prompt waits for it. Prompts gate on session creation themselves.
   const commits = new Map<string, Promise<unknown>>()
   const creates = new Map<string, Promise<unknown>>()
@@ -41,16 +41,9 @@ export function createSelection(session: Accessor<string | undefined>) {
     on(
       () => v2.data.location.model.list(),
       (list) => {
-        if (!list) return
         const draft = draftModel()
-        if (draft && !list.some((item) => item.providerID === draft.providerID && item.id === draft.id))
+        if (list && draft && !list.some((item) => item.providerID === draft.providerID && item.id === draft.id))
           setDraftModel(undefined)
-        void v2.api.model
-          .default({ location: { directory: v2.directory } })
-          .then((response) => {
-            setFallback(response.data ? { id: response.data.id, providerID: response.data.providerID } : undefined)
-          })
-          .catch(v2.report)
       },
     ),
   )
@@ -150,6 +143,29 @@ export function createSelection(session: Accessor<string | undefined>) {
 }
 
 export type Selection = ReturnType<typeof createSelection>
+
+/**
+ * The server default model of the directory, the last fallback of every composer after its own choice and the agent
+ * model. Sign-in, sign-out and a team switch reload the catalog, so the default follows the catalog.
+ */
+export function createDefaultModel(v2: V2) {
+  const [model, setModel] = createSignal<ModelRef>()
+  createEffect(
+    on(
+      () => v2.data.location.model.list(),
+      (list) => {
+        if (!list) return
+        void v2.api.model
+          .default({ location: { directory: v2.directory } })
+          .then((response) =>
+            setModel(response.data ? { id: response.data.id, providerID: response.data.providerID } : undefined),
+          )
+          .catch(v2.report)
+      },
+    ),
+  )
+  return model
+}
 
 export function Selectors(props: { selection: Selection; blocked: boolean }) {
   const v2 = useV2()

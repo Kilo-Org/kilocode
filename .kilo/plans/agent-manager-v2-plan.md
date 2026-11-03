@@ -102,3 +102,6 @@ Clean up: `st stop-vscode --cleanup true; st stop; rm -rf /tmp/am-st-ws`.
   If a split cannot stand alone, merge PRs (one PR allowed). Splitting needs per-PR build + CI green.
 - Short branch names (<= 3 words, hyphens). No AI attribution, no em dashes, do not merge. Check CI once, then at most every 7 min (schedule_wakeup).
 - Final answer: PR URLs in order, parity checklist, test results, follow-ups for excluded epics.
+- server log: /tmp/am-st-user/User/globalStorage/kilocode.kilo-code-v2/profile/data/kilo2/log/opencode-local.log
+- FOLLOW-UP: tracked session missing on the server (state file from another profile/DB) shows raw "Session not found: ses_..." in the AM view and binds the composer to it. Check v1 handling (state-recovery / prune) and match.
+- FOLLOW-UP: reused user-dir restore: AM panel restored but not visible in main window after relaunch; verify "Reload window" flow explicitly.

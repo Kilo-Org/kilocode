@@ -7,7 +7,7 @@ import type { SelectedLineRange } from "@pierre/diffs"
 import type { PRDiffSnapshot, PRTarget } from "../../../src/shared/pr-comment-actions"
 import { parsePatch } from "../../../src/shared/pr-patch"
 import { useLanguage } from "../../src/context/language"
-import { useVSCode } from "../v2/vscode"
+import { useBridge } from "../v2/vscode"
 import { PRCommentForm } from "./PRCommentForm"
 import { reviewRequest } from "./pr-review-request"
 
@@ -28,7 +28,7 @@ function trim(next: Map<string, State>, active: string) {
 
 export function PRFiles(props: PRTarget & { own?: boolean; closed?: boolean; onRefresh: () => void }) {
   const { t } = useLanguage()
-  const vscode = useVSCode()
+  const vscode = useBridge()
   let composer: HTMLDivElement | undefined
   const key = () => JSON.stringify([props.projectId, props.worktreeId, props.prNumber, props.prUrl])
   const state = () => states().get(key()) ?? {}

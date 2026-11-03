@@ -4,7 +4,7 @@ import { Icon } from "@kilocode/kilo-ui/icon"
 import { Spinner } from "@kilocode/kilo-ui/spinner"
 import { Show, For, createEffect, createSignal, onCleanup } from "solid-js"
 import { useLanguage } from "../../src/context/language"
-import { useVSCode } from "../v2/vscode"
+import { useBridge } from "../v2/vscode"
 import type { PRMergeMethod, PRStatus } from "../../src/types/messages/agent-manager"
 import type { PRMergeRequest } from "../../../src/shared/pr-comment-actions"
 import { reviewRequest } from "./pr-review-request"
@@ -34,7 +34,7 @@ function autoEligible(value: PRStatus["merge"], current: string): boolean {
 
 export function PRMerge(props: Props) {
   const { t } = useLanguage()
-  const vscode = useVSCode()
+  const vscode = useBridge()
   const baseUpdate = useBaseUpdate()
   const [pending, setPending] = createSignal(false)
   const [error, setError] = createSignal<string>()

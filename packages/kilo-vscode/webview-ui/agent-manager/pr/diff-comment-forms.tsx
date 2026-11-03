@@ -1,7 +1,7 @@
 import { getOwner, runWithOwner, type Accessor } from "solid-js"
 import { render as mount } from "solid-js/web"
 import { PRCommentForm } from "./PRCommentForm"
-import { useVSCode } from "../v2/vscode"
+import { useBridge } from "../v2/vscode"
 import { extractLines } from "../../diff-viewer/review-comments"
 import { createCommentsGithub, resolveGithubContext, side } from "../../diff-viewer/comments-github"
 import { parsePatch } from "../../../src/shared/pr-patch"
@@ -20,7 +20,7 @@ interface Options {
 
 export function createDiffCommentForms(opts: Options) {
   const owner = getOwner()
-  const vscode = useVSCode()
+  const vscode = useBridge()
   const github = createCommentsGithub({
     target: opts.target,
     snapshot: opts.snapshot,

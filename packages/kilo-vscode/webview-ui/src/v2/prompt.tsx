@@ -30,8 +30,6 @@ export function PromptInput(props: {
   selectors?: JSX.Element
   /** Prompt toolbar actions (auto-approve, and later indexing, sandbox and enhance as on main). */
   actions?: JSX.Element
-  /** Shows the speech to text control. The Agent Manager has none, so it mounts no speech status provider. */
-  speech?: boolean
   /** Receives a function that appends text to the draft and, when `send` is true, sends it. */
   onAppendReady?: (append: (value: string, send: boolean) => void) => void
 }) {
@@ -52,8 +50,8 @@ export function PromptInput(props: {
     language,
     showToast,
   )
-  const speechStatus = props.speech === false ? undefined : useSpeechStatus()
-  const canUseSpeech = () => speechStatus?.status().enabled === true
+  const speechStatus = useSpeechStatus()
+  const canUseSpeech = () => speechStatus.status().enabled
   // Recording is enough to send: the transcript arrives first and the send continues from it. No other speech state
   // may send, or a draft would leave before the transcript is ready and the transcript would become a draft.
   const canSend = () =>
@@ -104,7 +102,6 @@ export function PromptInput(props: {
   }
 
   const startSpeech = () => {
-    if (!speechStatus) return
     speech.start({ model: speechStatus.status().model, insert: insertSpeechText })
   }
 

@@ -3,7 +3,7 @@
 import { type Component, Show, createSignal, onCleanup, onMount } from "solid-js"
 import { Dialog } from "@kilocode/kilo-ui/dialog"
 import { Button } from "@kilocode/kilo-ui/button"
-import { useVSCode } from "./v2/vscode"
+import { useBridge } from "./v2/vscode"
 import { useLanguage } from "../src/context/language"
 import { joinPath } from "./project-utils"
 import { ProjectParentField } from "./ProjectParentField"
@@ -15,7 +15,7 @@ interface NewProjectDialogProps {
 
 /** Create a new local project: choose a parent folder and name, then show the destination. */
 export const NewProjectDialog: Component<NewProjectDialogProps> = (props) => {
-  const vscode = useVSCode()
+  const vscode = useBridge()
   const { t } = useLanguage()
   const [parent, setParent] = createSignal("")
   const [name, setName] = createSignal("")

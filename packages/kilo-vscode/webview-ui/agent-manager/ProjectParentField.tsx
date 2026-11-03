@@ -2,7 +2,7 @@
 
 import type { Component } from "solid-js"
 import { Button } from "@kilocode/kilo-ui/button"
-import { useVSCode } from "./v2/vscode"
+import { useBridge } from "./v2/vscode"
 import { useLanguage } from "../src/context/language"
 
 interface ProjectParentFieldProps {
@@ -11,7 +11,7 @@ interface ProjectParentFieldProps {
 
 /** Read-only parent folder field with a native folder picker trigger. */
 export const ProjectParentField: Component<ProjectParentFieldProps> = (props) => {
-  const vscode = useVSCode()
+  const vscode = useBridge()
   const { t } = useLanguage()
   return (
     <div class="am-project-dialog-field">

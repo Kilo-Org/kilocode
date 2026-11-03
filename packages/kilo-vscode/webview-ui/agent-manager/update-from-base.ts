@@ -1,5 +1,5 @@
 import { showToast } from "@kilocode/kilo-ui/toast"
-import { useVSCode } from "./v2/vscode"
+import { useBridge } from "./v2/vscode"
 import { useLanguage } from "../src/context/language"
 
 /**
@@ -7,7 +7,7 @@ import { useLanguage } from "../src/context/language"
  * The host owns the model of the update session, so no selection travels from the composer.
  */
 export function useBaseUpdate() {
-  const vscode = useVSCode()
+  const vscode = useBridge()
   const { t } = useLanguage()
   return (worktreeId: string | null, projectId?: string) => {
     if (!worktreeId || worktreeId === "local") {

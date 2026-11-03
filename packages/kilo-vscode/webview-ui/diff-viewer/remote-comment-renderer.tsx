@@ -18,7 +18,7 @@ import { githubUrl, prPayload } from "../agent-manager/pr/pr-comment-payload"
 import type { ReactionController } from "../agent-manager/pr/pr-comment-state"
 import type { PRComment, PRReactionContent } from "../agent-manager/pr/pr-types"
 import type { PRTarget } from "../../src/shared/pr-comment-actions"
-import { useVSCode } from "../agent-manager/v2/vscode"
+import { useBridge } from "../agent-manager/v2/vscode"
 import { useLanguage } from "../src/context/language"
 import { sendReviewComments } from "./review-annotations"
 import type { AnnotationMeta } from "./review-annotations"
@@ -112,7 +112,7 @@ function findTarget(container: HTMLElement, id: string, place: "inline" | "outsi
 }
 
 export function createRemoteCommentController(options: Options): RemoteCommentController {
-  const vscode = useVSCode()
+  const vscode = useBridge()
   const { t } = useLanguage()
   const owner: Owner | null = getOwner()
   const entries = new Map<string, Entry>()

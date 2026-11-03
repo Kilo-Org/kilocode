@@ -1,6 +1,6 @@
 import { createEffect, createMemo, createSignal, onCleanup } from "solid-js"
 import type { WorktreeState } from "../src/types/messages/agent-manager"
-import { useVSCode } from "./v2/vscode"
+import { useBridge } from "./v2/vscode"
 
 /** Retain only acknowledged deletions for presentation, never in project state. */
 export function createWorktreeCompletion(
@@ -8,7 +8,7 @@ export function createWorktreeCompletion(
   project: () => string | undefined,
   label: (worktree: WorktreeState) => string,
 ) {
-  const vscode = useVSCode()
+  const vscode = useBridge()
   const [retained, setRetained] = createSignal(new Map<string, { worktree: WorktreeState; index: number }>())
   const known = new Map<string, { worktree: WorktreeState; index: number }>()
   const timers = new Map<string, ReturnType<typeof setTimeout>>()

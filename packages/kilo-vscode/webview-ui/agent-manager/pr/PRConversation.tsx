@@ -6,7 +6,7 @@ import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { PRCommentBody } from "./PRCommentBody"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { useLanguage } from "../../src/context/language"
-import { useVSCode } from "../v2/vscode"
+import { useBridge } from "../v2/vscode"
 import { CopyButton } from "./CopyButton"
 import { PRCommentTime } from "./PRCommentTime"
 import { SectionHeading } from "./SectionHeading"
@@ -320,7 +320,7 @@ interface Props {
 
 export function PRConversation(props: Props) {
   const { t } = useLanguage()
-  const vscode = useVSCode()
+  const vscode = useBridge()
   const reactions = createReactionController({
     worktree: () => props.worktreeId,
     project: () => props.projectId,

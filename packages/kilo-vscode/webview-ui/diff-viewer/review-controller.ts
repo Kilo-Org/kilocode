@@ -15,7 +15,7 @@ import type { DiffHandle } from "@kilocode/kilo-ui/pierre"
 import type { VirtualizerHandle } from "virtua/solid"
 import type { PRComment } from "../agent-manager/pr/pr-types"
 import { useLanguage } from "../src/context/language"
-import { useVSCode } from "../agent-manager/v2/vscode"
+import { useBridge } from "../agent-manager/v2/vscode"
 import type { WorktreeFileDiff } from "../src/types/messages/agent-manager"
 import { lineCount, sanitizeReviewComments, type ReviewComment } from "./review-comments"
 import {
@@ -376,7 +376,7 @@ export function createReviewView(
   overrides?: ReviewViewOverrides,
 ) {
   const { t } = useLanguage()
-  const vscode = useVSCode()
+  const vscode = useBridge()
   const local = createReviewComposer()
   const state = createReviewOpenState(
     () => props.diffs,

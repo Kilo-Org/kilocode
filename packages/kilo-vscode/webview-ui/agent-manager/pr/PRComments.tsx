@@ -2,7 +2,7 @@
 import { For, Show, createEffect, createMemo, onCleanup, onMount } from "solid-js"
 import { Button } from "@kilocode/kilo-ui/button"
 import { useLanguage } from "../../src/context/language"
-import { useVSCode } from "../v2/vscode"
+import { useBridge } from "../v2/vscode"
 import type { PRStatus } from "../../src/types/messages/agent-manager"
 import { PRCommentCard } from "./PRCommentCard"
 import { resolvedFor, sendThreads, unsentThreads } from "./pr-actions"
@@ -25,7 +25,7 @@ interface Props {
 
 export function PRComments(props: Props) {
   const { t } = useLanguage()
-  const vscode = useVSCode()
+  const vscode = useBridge()
   const reactions = createReactionController({
     worktree: () => props.worktreeId,
     project: () => props.projectId,

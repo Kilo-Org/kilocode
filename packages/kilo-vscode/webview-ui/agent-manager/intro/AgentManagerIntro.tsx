@@ -2,7 +2,7 @@ import { Show, createSignal, type JSX } from "solid-js"
 import { Button } from "@kilocode/kilo-ui/button"
 import { Popover } from "@kilocode/kilo-ui/popover"
 import { useLanguage } from "../../src/context/language"
-import { useVSCode } from "../v2/vscode"
+import { useBridge } from "../v2/vscode"
 import { KiloLogo, Welcome } from "../../src/v2/welcome"
 import { IntroGraph } from "./IntroGraph"
 import "./intro.css"
@@ -28,7 +28,7 @@ export function createIntro(opts: {
   focus: () => void
   hints?: () => JSX.Element
 }) {
-  const vscode = useVSCode()
+  const vscode = useBridge()
   const { t } = useLanguage()
   const [dismissed, setDismissed] = createSignal(
     (window as { KILO_AGENT_MANAGER_INTRO_DISMISSED?: boolean }).KILO_AGENT_MANAGER_INTRO_DISMISSED === true,
@@ -104,7 +104,7 @@ function AgentManagerIntro(props: IntroProps & { intro: IntroState }) {
 
 function Introduction(props: IntroProps) {
   const { t } = useLanguage()
-  const vscode = useVSCode()
+  const vscode = useBridge()
   return (
     <section class="am-intro">
       <header class="am-intro-heading">

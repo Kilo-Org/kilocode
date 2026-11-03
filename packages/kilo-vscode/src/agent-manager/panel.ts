@@ -2,7 +2,8 @@
 // same relay as the sidebar. Agent Manager messages go to the provider; the standard webview messages (clipboard,
 // tool files, display settings, cost alerts) are handled by the shared webview wiring.
 import { Uri, ViewColumn, window, type ExtensionContext, type WebviewPanel } from "vscode"
-import { wire } from "../chat"
+import { composerState, wire } from "../chat"
+import { promptKeybindings, watchKeybindings } from "../prompt-keybindings"
 import type { ToHost, ToWebview } from "../protocol"
 import type { Manager } from "../server"
 import type { Disposable, PanelContext } from "./host"
@@ -72,9 +73,25 @@ export function createPanel(input: {
         return true
       },
     })
+    // The composer gets the same pushed state as the sidebar composer: the cycle keybind, whether the panel shows,
+    // and the shared auto-approve and model picker state, which the sidebar may change while the panel is hidden.
+    const queue = (message: ToWebview) => {
+      if (!state.ready) return void state.queued.push(message)
+      void panel.webview.postMessage(message)
+    }
+    const keybindings = () => queue({ type: "keybindings", bindings: promptKeybindings(input.context) })
+    keybindings()
+    queue({ type: "webviewActiveChanged", active: panel.visible })
+    const watcher = watchKeybindings(input.context, keybindings)
+    const visibility = panel.onDidChangeViewState((event) => {
+      queue({ type: "webviewActiveChanged", active: event.webviewPanel.visible })
+      if (event.webviewPanel.visible) composerState(input.context).forEach(queue)
+    })
     const disposed: (() => void)[] = []
     panel.onDidDispose(() => {
       surface.dispose()
+      watcher.dispose()
+      visibility.dispose()
       disposed.forEach((callback) => callback())
     })
     return {
@@ -84,10 +101,7 @@ export function createPanel(input: {
       get visible() {
         return panel.visible
       },
-      postMessage(message: unknown) {
-        if (!state.ready) return void state.queued.push(message)
-        void panel.webview.postMessage(message as ToWebview)
-      },
+      postMessage: (message: unknown) => queue(message as ToWebview),
       waitForReady() {
         if (state.ready) return Promise.resolve()
         return new Promise<void>((resolve) => state.waiting.push(resolve))

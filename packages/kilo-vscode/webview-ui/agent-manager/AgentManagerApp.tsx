@@ -44,7 +44,7 @@ import { Spinner } from "@kilocode/kilo-ui/spinner"
 import { useLanguage } from "../src/context/language"
 import { fallbackFontSize } from "../src/v2/kilo-settings"
 import { LOCAL, canOpenRootSession, isKnownRootSession, adjacentHint, focusChatSearch } from "./navigate"
-import { useVSCode } from "./v2/vscode"
+import { useBridge } from "./v2/vscode"
 import { V2Scope } from "../src/v2/client"
 import { SessionView } from "../src/v2/session-view"
 import { createAppDirectories } from "./app-directories"
@@ -65,7 +65,13 @@ import {
 import { bindAppKeys } from "./app-keys"
 import { nextTabAfterClose, reconcileTrackedTabs, trackedSessionInventory } from "../src/utils/local-tabs"
 import { createLocalTabPlacement, closeSessionTab, newTabForSelection, selectSessionTab as selectTab } from "./app-tabs"
-import { createSessionRestore, createTabMemory, rememberSelectionTab, selectLocalAction, selectWorktreeAction } from "./selection-actions"
+import {
+  createSessionRestore,
+  createTabMemory,
+  rememberSelectionTab,
+  selectLocalAction,
+  selectWorktreeAction,
+} from "./selection-actions"
 import { createProjectRegistry, type PersistedProjectTabs } from "./project/registry"
 import { createProjectLive } from "./project/live"
 import { createProjectSessionsLive } from "./project/sessions-live"
@@ -172,6 +178,7 @@ import "./agent-manager-review.css"
 import { PENDING_PREFIX, REVIEW_TAB_ID } from "./tab-ids"
 import type { SidebarSearchMenuRef } from "./SidebarSearchMenu"
 import type { WorktreeDelete } from "./worktree-delete"
+import { SpeechToTextStatusProvider } from "../src/components/speech-to-text/status"
 
 type SidebarSelection = typeof LOCAL | string | null
 const isMac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.userAgent)
@@ -179,7 +186,7 @@ const isPending = (id: string) => id.startsWith(PENDING_PREFIX)
 
 const AgentManagerContent: Component = () => {
   const { t } = useLanguage()
-  const vscode = useVSCode()
+  const vscode = useBridge()
   const dialog = useDialog()
   const updateBase = useBaseUpdate()
   const mode = createModeRouter()
@@ -265,6 +272,11 @@ const AgentManagerContent: Component = () => {
   const rootDirectory = createMemo(() => directories.root(activeProjectId() ?? currentProjectId()))
   const appSession = createAppSession({ vscode, directories, rootDirectory })
   const panel = appSession.panel
+  // The sessions are loaded once the project root store listed them after connecting.
+  createEffect(() => {
+    const store = appSession.rootStore()
+    if (store?.connection.status() === "connected" && !store.loading()) setSessionsLoaded(true)
+  })
   const sessions = appSession.sessions
 
   const to = (msg: unknown) => vscode.postMessage(msg as never)
@@ -691,7 +703,12 @@ const AgentManagerContent: Component = () => {
     })
   })
   const worktreeSessionIds = createMemo(
-    () => new Set(managedSessions().filter((ms) => ms.worktreeId).map((ms) => ms.id)),
+    () =>
+      new Set(
+        managedSessions()
+          .filter((ms) => ms.worktreeId)
+          .map((ms) => ms.id),
+      ),
   )
   const localSet = createMemo(() => new Set(localSessionIDs()))
   const projectSessionsLive = createProjectSessionsLive({
@@ -891,7 +908,9 @@ const AgentManagerContent: Component = () => {
     requestChatFocus()
   }
   const selectWorktree = (worktreeId: string) => {
-    const ids = managedSessions().filter((item) => item.worktreeId === worktreeId).map((item) => item.id)
+    const ids = managedSessions()
+      .filter((item) => item.worktreeId === worktreeId)
+      .map((item) => item.id)
     selectWorktreeAction(selectionDeps, worktreeId, sessionsForWorktree(worktreeId), ids)
     requestChatFocus()
   }
@@ -962,9 +981,7 @@ const AgentManagerContent: Component = () => {
     routeState: router.routeState,
     font: (font) => font && setTerminalFont(font),
   })
-  const preserveSidebarScroll = createSidebarScrollPreserver(
-    () => selection() ?? sessions.currentSessionID(),
-  )
+  const preserveSidebarScroll = createSidebarScrollPreserver(() => selection() ?? sessions.currentSessionID())
   const applyActiveState = createProjectHydration({
     switch: (state) => applyProjectSwitch(state),
     restricted: setRestricted,
@@ -1082,9 +1099,7 @@ const AgentManagerContent: Component = () => {
       sessionId,
       notify,
       order: activeTabs().map((tab) => tab.id),
-      isActive: isPending(sessionId)
-        ? sessionId === activePendingId()
-        : sessions.currentSessionID() === sessionId,
+      isActive: isPending(sessionId) ? sessionId === activePendingId() : sessions.currentSessionID() === sessionId,
       next: nextTabAfterClose(
         activeTabs().map((tab) => tab.id),
         sessionId,
@@ -1112,7 +1127,8 @@ const AgentManagerContent: Component = () => {
       id,
       pending,
       selection,
-      remember: (sel, tab) => rememberSelectionTab((value, next) => registry.active().tabMemory.set(value, next), sel, tab),
+      remember: (sel, tab) =>
+        rememberSelectionTab((value, next) => registry.active().tabMemory.set(value, next), sel, tab),
       setActivePending: setActivePendingId,
       clearSession: () => sessions.clearCurrentSession(),
       selectSession: (sessionID) => sessions.selectSession(sessionID),
@@ -1282,7 +1298,8 @@ const AgentManagerContent: Component = () => {
       activateTerminal: termHandlers.activate,
       deactivateTerminal: termHandlers.deactivate,
       closeTerminal: (terminalID) => tabFocus.run(() => termHandlers.closeTerminal(terminalID)),
-      terminalMiddleClick: (terminalID, event) => tabFocus.middle(event, () => termHandlers.middleClick(terminalID, event)),
+      terminalMiddleClick: (terminalID, event) =>
+        tabFocus.middle(event, () => termHandlers.middleClick(terminalID, event)),
       closeReview: closeReviewTab,
       reviewMiddleClick: handleReviewTabMouseDown,
       selectReviewTab: () => setReviewActive(true),
@@ -1362,13 +1379,7 @@ const AgentManagerContent: Component = () => {
     onShowHistory: () => openHistory(),
     reveal: () => {
       const id = sessions.currentSessionID() ?? activePendingId()
-      if (
-        !id ||
-        sessions.messages(id).length ||
-        sessions.loading(id) ||
-        readOnly() ||
-        settingUpSelection()
-      ) {
+      if (!id || sessions.messages(id).length || sessions.loading(id) || readOnly() || settingUpSelection()) {
         selectLocal()
         addPendingTab()
       }
@@ -1517,29 +1528,29 @@ const AgentManagerContent: Component = () => {
     const store = directory ? panel.store(directory) : undefined
     if (!store) return
     dialog.show(() => (
-      <NewWorktreeDialog
-        mode={mode}
-        onClose={() => dialog.close()}
-        projectId={projectId}
-        projects={projectList}
-        activeProjectId={activeProjectId()}
-        defaultBase={defaultBase}
-        onCreate={creation.schedule}
-        worktrees={dialogRefs}
-        store={store}
-        models={appSession.models()}
-        providers={appSession.providers()}
-        agents={appSession.agents()}
-        commands={appSession.commands()}
-        sessions={appSession.mentionSessions()}
-      />
+      <V2Scope value={store}>
+        <SpeechToTextStatusProvider>
+          <NewWorktreeDialog
+            mode={mode}
+            onClose={() => dialog.close()}
+            projectId={projectId}
+            projects={projectList}
+            activeProjectId={activeProjectId()}
+            defaultBase={defaultBase}
+            onCreate={creation.schedule}
+            worktrees={dialogRefs}
+            store={store}
+            models={appSession.models()}
+            providers={appSession.providers()}
+            agents={appSession.agents()}
+            commands={appSession.commands()}
+            sessions={appSession.mentionSessions()}
+          />
+        </SpeechToTextStatusProvider>
+      </V2Scope>
     ))
   }
-  const update = () =>
-    updateBase(
-      selection(),
-      activeProjectId(),
-    )
+  const update = () => updateBase(selection(), activeProjectId())
 
   onMount(() => {
     const drafts = createNewTaskDrafts()
@@ -1577,7 +1588,11 @@ const AgentManagerContent: Component = () => {
         showShortcuts: handleShowKeyboardShortcuts,
         focusInput: focusCtl.focus,
         focusSearch: () =>
-          focusChatSearch({ history: setHistory, review: setReviewActive, terminal: () => terms.setActiveId(undefined) }),
+          focusChatSearch({
+            history: setHistory,
+            review: setReviewActive,
+            terminal: () => terms.setActiveId(undefined),
+          }),
         newTerminalTab: termHandlers.requestNew,
         newSideTerminal: termHandlers.addSide,
         cycleAgentMode: () => {
@@ -1606,8 +1621,7 @@ const AgentManagerContent: Component = () => {
     const subagent = (event: Event) => {
       const detail = (event as CustomEvent<{ sessionID?: unknown; title?: unknown; parentSessionID?: unknown }>).detail
       if (typeof detail?.sessionID !== "string") return
-      const parent =
-        typeof detail.parentSessionID === "string" ? detail.parentSessionID : sessions.currentSessionID()
+      const parent = typeof detail.parentSessionID === "string" ? detail.parentSessionID : sessions.currentSessionID()
       if (parent && !ownsParentSession(projectStates(), parent, currentProjectId())) return
       subagents.open(detail.sessionID, typeof detail.title === "string" ? detail.title : undefined, parent)
     }
@@ -1641,7 +1655,10 @@ const AgentManagerContent: Component = () => {
 
     const unsubscribe = vscode.onMessage((raw) => {
       const message = raw as unknown as ExtensionMessage
-      clearFailedDelete(message as unknown as { type: string; code?: string; worktreeId?: string; projectId?: string }, registry)
+      clearFailedDelete(
+        message as unknown as { type: string; code?: string; worktreeId?: string; projectId?: string },
+        registry,
+      )
       if (message.type === "agentManager.repoInfo") applyRepoInfo(message, setRepoBranches)
       if (message.type === "agentManager.terminal.fontChanged") setTerminalFont(message.font)
       terminalDispatch(message as unknown as Parameters<typeof terminalDispatch>[0])
@@ -1713,7 +1730,11 @@ const AgentManagerContent: Component = () => {
         return
       }
       if (message.type === "agentManager.revealSession") {
-        applyRevealSession(message, { currentProjectId, focusManaged: focusManagedSession, focusLocal: focusLocalSession })
+        applyRevealSession(message, {
+          currentProjectId,
+          focusManaged: focusManagedSession,
+          focusLocal: focusLocalSession,
+        })
         return
       }
       if (message.type === "agentManager.multiVersionProgress") {
@@ -1747,22 +1768,24 @@ const AgentManagerContent: Component = () => {
         return
       }
       applyRunStatus(message, { ensure: (id) => registry.ensure(id), active: () => registry.active() })
-      if (routeReview(message, currentProjectId, {
-        diff: diffs.onWorktreeDiff,
-        file: diffs.onWorktreeDiffFile,
-        loading: diffs.onWorktreeDiffLoading,
-        notice: diffs.onWorktreeDiffNotice,
-        branches: review.onBranches,
-        apply: apply.onApplyResult,
-        revert: revertCtl.onResult,
-      }) === "stale")
+      if (
+        routeReview(message, currentProjectId, {
+          diff: diffs.onWorktreeDiff,
+          file: diffs.onWorktreeDiffFile,
+          loading: diffs.onWorktreeDiffLoading,
+          notice: diffs.onWorktreeDiffNotice,
+          branches: review.onBranches,
+          apply: apply.onApplyResult,
+          revert: revertCtl.onResult,
+        }) === "stale"
+      )
         return
       applyProjectSelection(message, {
         active: (projectId) => activeProjectId() === projectId,
         applied: (projectId) => currentProjectId() === projectId,
         managed: (projectId) => projectStates()[projectId]?.sessions ?? projectLive.sessions()[projectId] ?? [],
-        local: selectLocal,
-        worktree: selectWorktree,
+        local: () => selectLocal(),
+        worktree: (projectId, worktreeId) => selectWorktree(worktreeId),
         focusLocal: focusLocalSession,
         managedSession: focusManagedSession,
       })
@@ -1816,430 +1839,425 @@ const AgentManagerContent: Component = () => {
   })
 
   const renderSidebar = () => (
-      <div
-        class="am-sidebar"
-        classList={{ "am-sidebar-collapsed": sidebarCollapsed(), "am-show-shortcuts": held() }}
-        style={{ width: sidebarCollapsed() ? "0px" : `${sidebarWidth()}px` }}
-        inert={sidebarCollapsed() || undefined}
-      >
-        <ResizeHandle
-          direction="horizontal"
-          size={sidebarWidth()}
-          min={MIN_SIDEBAR_WIDTH}
-          max={9999}
-          onResize={(width) => {
-            pendingSidebarWidth = Math.min(width, window.innerWidth * MAX_SIDEBAR_WIDTH_RATIO)
-            if (sidebarRaf === undefined) {
-              sidebarRaf = requestAnimationFrame(() => {
-                sidebarRaf = undefined
-                setSidebarWidth(pendingSidebarWidth ?? sidebarWidth())
-              })
-            }
-          }}
-        />
-        <ProjectList
-          projects={projectList()}
-          states={projectStates()}
-          store={(id) => registry.ensure(id)}
-          busy={(projectId, id) => registry.ensure(projectId).busy().has(id)}
-          blocked={(projectId, id) => activity.blocked(id, projectId)}
-          stats={projectLive.stats()}
-          local={projectLive.local()}
-          prs={projectLive.prs()}
-          sessions={projectSessionsLive()}
-          selectedProject={activeProjectId()}
-          selection={selection() ?? undefined}
-          currentSessionID={() => sessions.currentSessionID()}
-          mode={mode}
-          defaultBase={defaultBase}
-          onCreate={creation.schedule}
-          onSelect={activateSelection}
-          onOpenComments={(projectId, worktreeId) => comments.open({ projectId, worktreeId })}
-          onOpenPR={(projectId, worktreeId) => comments.open({ projectId, worktreeId })}
-          bindings={kb()}
-          t={t}
-          onSearchRef={(ref) => (sidebarSearchMenu = ref)}
-          onDeleteRef={(confirm) => (confirmDelete = confirm)}
-          onDelete={(projectId, worktreeId) => forgetContextFocus(`${projectId}:${worktreeId}`)}
-          onNewWorktree={showNewWorktreeDialog}
-          onShortcuts={handleShowKeyboardShortcuts}
-          onHistory={openHistory}
-          shortcutMap={projectShortcutMap}
-          activityFor={activity.project}
-          sessionActivity={sessions.activityFor}
-        />
-      </div>
+    <div
+      class="am-sidebar"
+      classList={{ "am-sidebar-collapsed": sidebarCollapsed(), "am-show-shortcuts": held() }}
+      style={{ width: sidebarCollapsed() ? "0px" : `${sidebarWidth()}px` }}
+      inert={sidebarCollapsed() || undefined}
+    >
+      <ResizeHandle
+        direction="horizontal"
+        size={sidebarWidth()}
+        min={MIN_SIDEBAR_WIDTH}
+        max={9999}
+        onResize={(width) => {
+          pendingSidebarWidth = Math.min(width, window.innerWidth * MAX_SIDEBAR_WIDTH_RATIO)
+          if (sidebarRaf === undefined) {
+            sidebarRaf = requestAnimationFrame(() => {
+              sidebarRaf = undefined
+              setSidebarWidth(pendingSidebarWidth ?? sidebarWidth())
+            })
+          }
+        }}
+      />
+      <ProjectList
+        projects={projectList()}
+        states={projectStates()}
+        store={(id) => registry.ensure(id)}
+        busy={(projectId, id) => registry.ensure(projectId).busy().has(id)}
+        blocked={(projectId, id) => activity.blocked(id, projectId)}
+        stats={projectLive.stats()}
+        local={projectLive.local()}
+        prs={projectLive.prs()}
+        sessions={projectSessionsLive()}
+        selectedProject={activeProjectId()}
+        selection={selection() ?? undefined}
+        currentSessionID={() => sessions.currentSessionID()}
+        mode={mode}
+        defaultBase={defaultBase}
+        onCreate={creation.schedule}
+        onSelect={activateSelection}
+        onOpenComments={(projectId, worktreeId) => comments.open({ projectId, worktreeId })}
+        onOpenPR={(projectId, worktreeId) => comments.open({ projectId, worktreeId })}
+        bindings={kb()}
+        t={t}
+        onSearchRef={(ref) => (sidebarSearchMenu = ref)}
+        onDeleteRef={(confirm) => (confirmDelete = confirm)}
+        onDelete={(projectId, worktreeId) => forgetContextFocus(`${projectId}:${worktreeId}`)}
+        onNewWorktree={showNewWorktreeDialog}
+        onShortcuts={handleShowKeyboardShortcuts}
+        onHistory={openHistory}
+        shortcutMap={projectShortcutMap}
+        activityFor={activity.project}
+        sessionActivity={sessions.activityFor}
+      />
+    </div>
   )
 
   const renderHistory = () => (
-        <Show when={!restricted() && history()}>
-          <HistoryView
-            sessions={historyList}
-            store={sessions.scope}
-            sessionIds={historySessionIds}
-            worktreeSessionIds={historyProject() ? undefined : activeWorktreeSessionIds}
-            onSelectSession={(id) => {
-              if (addSessionToCurrentWorktree(id)) return
-              closeHistory()
-              if (localSessionIDs().includes(id)) {
-                saveTabMemory()
-                sessions.selectSession(id)
-                setSelection(LOCAL)
-                requestChatFocus(true)
-                return true
-              }
-              const managed = worktreeSessionIds().has(id)
-                ? managedSessions().find((entry) => entry.id === id)
-                : undefined
-              if (managed?.worktreeId) {
-                selectWorktree(managed.worktreeId)
-                sessions.selectSession(id)
-                setReviewActive(false)
-                requestChatFocus()
-                return true
-              }
-              openLocally(id)
-              return true
-            }}
-            onBack={closeHistory}
-            rowActions={historyRowActions}
-          />
-        </Show>
+    <Show when={!restricted() && history()}>
+      <HistoryView
+        sessions={historyList}
+        store={sessions.scope}
+        sessionIds={historySessionIds}
+        worktreeSessionIds={historyProject() ? undefined : activeWorktreeSessionIds}
+        onSelectSession={(id) => {
+          if (addSessionToCurrentWorktree(id)) return
+          closeHistory()
+          if (localSessionIDs().includes(id)) {
+            saveTabMemory()
+            sessions.selectSession(id)
+            setSelection(LOCAL)
+            requestChatFocus(true)
+            return true
+          }
+          const managed = worktreeSessionIds().has(id) ? managedSessions().find((entry) => entry.id === id) : undefined
+          if (managed?.worktreeId) {
+            selectWorktree(managed.worktreeId)
+            sessions.selectSession(id)
+            setReviewActive(false)
+            requestChatFocus()
+            return true
+          }
+          openLocally(id)
+          return true
+        }}
+        onBack={closeHistory}
+        rowActions={historyRowActions}
+      />
+    </Show>
   )
 
   const renderMain = () => (
-              <div class={`am-main-pane ${terms.activeId() ? "am-main-pane-terminal-active" : ""}`}>
-                {renderTerminalLayer({ state: terms, onFocusPrompt: focusCtl.focus, onFocusChange: focusCtl.report })}
-                <Show when={contextEmpty()}>
-                  <div class="am-empty-state">
-                    <Show
-                      when={!settingUpSelection()}
-                      fallback={
-                        <>
-                          <Spinner class="am-setup-spinner" />
-                          <div class="am-empty-state-text">
-                            {settingUpSelection()?.message ?? t("agentManager.setup.settingUp")}
-                          </div>
-                        </>
-                      }
-                    >
-                      <div class="am-empty-state-icon">
-                        <Icon name="branch" size="large" />
-                      </div>
-                      <div class="am-empty-state-text">{t("agentManager.session.noSessions")}</div>
-                      <Button variant="primary" size="small" onClick={handleAddSession}>
-                        {t("agentManager.session.new")}
-                        <span class="am-shortcut-hint">{kb().newTab ?? ""}</span>
-                      </Button>
-                    </Show>
-                  </div>
-                </Show>
-                <div class="am-chat-wrapper" classList={{ "am-chat-wrapper-hidden": contextEmpty() }}>
-                  <Show when={chatStore()} keyed fallback={intro.render()}>
-                    {(store) => (
-                      <V2Scope value={store}>
-                        <SessionView
-                          session={
-                            sessions.currentSessionID() && !isPending(sessions.currentSessionID()!)
-                              ? sessions.currentSessionID()
-                              : undefined
-                          }
-                          onSession={handleSessionCreated}
-                          actions={toolActions}
-                          onShowHistory={() => openHistory()}
-                          empty={intro.render}
-                          speech={false}
-                          onAppendReady={(append) => (promptAppend = append)}
-                          onPreviewEdit={(files, sessionID) => previewEdit(files, sessionID)}
-                        />
-                      </V2Scope>
-                    )}
-                  </Show>
-                  <Show when={readOnly()}>
-                    <div class="am-readonly-banner">
-                      <Icon name="branch" size="small" />
-                      <span class="am-readonly-text">{t("agentManager.session.readonly")}</span>
-                      <Button
-                        variant="secondary"
-                        size="small"
-                        onClick={() => {
-                          const sid = sessions.currentSessionID()
-                          if (sid) openLocally(sid)
-                        }}
-                      >
-                        {t("agentManager.session.openLocally")}
-                      </Button>
-                      <Button
-                        variant="primary"
-                        size="small"
-                        onClick={() => {
-                          const sid = sessions.currentSessionID()
-                          if (sid) to({ type: "agentManager.promoteSession", sessionId: sid })
-                        }}
-                      >
-                        {t("agentManager.session.openInWorktree")}
-                      </Button>
-                    </div>
-                  </Show>
+    <div class={`am-main-pane ${terms.activeId() ? "am-main-pane-terminal-active" : ""}`}>
+      {renderTerminalLayer({ state: terms, onFocusPrompt: focusCtl.focus, onFocusChange: focusCtl.report })}
+      <Show when={contextEmpty()}>
+        <div class="am-empty-state">
+          <Show
+            when={!settingUpSelection()}
+            fallback={
+              <>
+                <Spinner class="am-setup-spinner" />
+                <div class="am-empty-state-text">
+                  {settingUpSelection()?.message ?? t("agentManager.setup.settingUp")}
                 </div>
-              </div>
+              </>
+            }
+          >
+            <div class="am-empty-state-icon">
+              <Icon name="branch" size="large" />
+            </div>
+            <div class="am-empty-state-text">{t("agentManager.session.noSessions")}</div>
+            <Button variant="primary" size="small" onClick={handleAddSession}>
+              {t("agentManager.session.new")}
+              <span class="am-shortcut-hint">{kb().newTab ?? ""}</span>
+            </Button>
+          </Show>
+        </div>
+      </Show>
+      <div class="am-chat-wrapper" classList={{ "am-chat-wrapper-hidden": contextEmpty() }}>
+        <Show when={chatStore()} keyed fallback={intro.render()}>
+          {(store) => (
+            <V2Scope value={store}>
+              <SpeechToTextStatusProvider>
+                <SessionView
+                  session={
+                    sessions.currentSessionID() && !isPending(sessions.currentSessionID()!)
+                      ? sessions.currentSessionID()
+                      : undefined
+                  }
+                  onSession={handleSessionCreated}
+                  actions={toolActions}
+                  onShowHistory={() => openHistory()}
+                  empty={intro.render}
+                  onAppendReady={(append) => (promptAppend = append)}
+                  onPreviewEdit={(files, sessionID) => previewEdit(files, sessionID)}
+                />
+              </SpeechToTextStatusProvider>
+            </V2Scope>
+          )}
+        </Show>
+        <Show when={readOnly()}>
+          <div class="am-readonly-banner">
+            <Icon name="branch" size="small" />
+            <span class="am-readonly-text">{t("agentManager.session.readonly")}</span>
+            <Button
+              variant="secondary"
+              size="small"
+              onClick={() => {
+                const sid = sessions.currentSessionID()
+                if (sid) openLocally(sid)
+              }}
+            >
+              {t("agentManager.session.openLocally")}
+            </Button>
+            <Button
+              variant="primary"
+              size="small"
+              onClick={() => {
+                const sid = sessions.currentSessionID()
+                if (sid) to({ type: "agentManager.promoteSession", sessionId: sid })
+              }}
+            >
+              {t("agentManager.session.openInWorktree")}
+            </Button>
+          </div>
+        </Show>
+      </div>
+    </div>
   )
 
   const renderSideHost = () => (
-              <Show when={sideHostVisible()}>
-                <div
-                  class={`am-diff-resize ${sidePanel() === null ? "am-side-host-hidden" : ""}`}
-                  style={{ width: `${panelWidth()}px` }}
-                  inert={sidePanel() === null}
-                >
-                  <Show when={sidePanel() !== null}>
-                    <ResizeHandle
-                      direction="horizontal"
-                      edge="start"
-                      size={panelWidth()}
-                      min={minPanelWidth(window.innerWidth)}
-                      max={maxPanelWidth(window.innerWidth)}
-                      onResize={resizeSide}
-                    />
-                  </Show>
-                  <div class="am-diff-panel-wrapper">
-                    <DiffPanelCache
-                      current={diffScopeId}
-                      context={diffCtx}
-                      project={activeProjectId}
-                      active={() => diffOpen() && !history() && !reviewActive()}
-                      data={diffDatas}
-                      loading={(key) => diffs.diffLoadingFor(() => key)}
-                      loadingFiles={(key) => diffs.diffFileLoadingFor(() => key)}
-                      notice={(key) => diffNotices()[diffDataKey(activeProjectId(), key)]}
-                      comments={(key) => readReviewComments(reviewCommentsByContext(), currentProjectId() ?? "single", key)}
-                      setComments={(key, value) =>
-                        setReviewCommentsByContext((prev) =>
-                          setReviewComments(prev, currentProjectId() ?? "single", key, value),
-                        )
-                      }
-                      remoteComments={remote.comments}
-                      remoteTarget={remote.target}
-                      prTarget={prDiffComments.target}
-                      prSnapshot={prDiffComments.snapshot}
-                      prLoading={prDiffComments.loading}
-                      prError={prDiffComments.error}
-                      focusedComment={remote.focus}
-                      composer={composers.get}
-                      lead={() => diffScopeControls(true)}
-                      canRevert={scopeCapabilities(review.scope()).revert}
-                      diffStyle={diffStyle()}
-                      onDiffStyleChange={setSharedDiffStyle}
-                      markdownRender={markdown.render()}
-                      onMarkdownRenderChange={markdown.update}
-                      onSendClick={() => appendToPrompt(formatReviewCommentsMarkdown(reviewComments()), true)}
-                      onClose={diffPanels.closePanel}
-                      onExpand={selection() !== null ? openReviewTab : undefined}
-                      onRequestDiff={diffs.requestDiffFile}
-                      onOpenFile={(ctx: string, file: string, line?: number) =>
-                        to({ type: "agentManager.openFile", sessionId: ctx, filePath: file, line })
-                      }
-                      onRevertFile={(key, ctx, file) => revertCtl.revertFor(key, ctx, review.scope(), file)}
-                      revertingFiles={revertCtl.revertingFor}
-                      activeTerminalId={terms.activeId()}
-                      contexts={() => new Set(worktrees().map((wt) => wt.id))}
-                      onEvict={(key) => composers.drop(key)}
-                    />
-                    <Show when={sidePanel() === SidePanel.PR && activePR()}>
-                      <PRPanelHost
-                        pr={activePR()!.pr}
-                        projectId={activeProjectId()}
-                        worktree={activePR()!.wt}
-                        worktreeId={activePR()!.selected}
-                        activeTerminalId={terms.activeId()}
-                        sessionId={activeDiffSession()}
-                        onOpenDiff={remote.open}
-                        jump={comments.jump()}
-                        onJump={comments.complete}
-                        onClose={() => panels.close(SidePanel.PR)}
-                      />
-                    </Show>
-                    <Show when={subagents.tabs().length > 0}>
-                      <SubagentPanel
-                        sessions={sessions}
-                        tabs={subagents.tabs}
-                        active={subagents.active}
-                        visible={() => sidePanel() === SidePanel.Subagents}
-                        nextKeybind={kb().nextTab ?? ""}
-                        closeKeybind={kb().closeTab ?? ""}
-                        actions={toolActions}
-                        onSelect={subagents.select}
-                        onClose={subagents.close}
-                        onCloseOthers={subagents.closeOthers}
-                        onReorder={subagents.reorder}
-                        onClosePanel={() => panels.close(SidePanel.Subagents)}
-                        onShowHistory={() => openHistory()}
-                      />
-                    </Show>
-                    <Show when={editPreview.preview()}>
-                      <EditPreviewPanel state={editPreview} visible={() => sidePanel() === SidePanel.EditPreview} />
-                    </Show>
-                    <SideTerminalPanel
-                      state={terms}
-                      contextKey={terms.sideKey}
-                      visible={() => sidePanel() === SidePanel.Terminal}
-                      nextKeybind={kb().nextTerminal ?? ""}
-                      closeKeybind={kb().closeTab ?? ""}
-                      onFocusPrompt={focusCtl.focus}
-                      onFocusChange={focusCtl.report}
-                      onSelect={(id) => termHandlers.selectSide(id)}
-                      onClose={(id) => {
-                        cancelAmbientSetup()
-                        termHandlers.closeSide(id)
-                      }}
-                      onCloseOthers={(id) => {
-                        cancelAmbientSetup()
-                        termHandlers.closeSideOthers(id)
-                      }}
-                      onStart={() => {
-                        cancelAmbientSetup()
-                        termHandlers.addSide()
-                      }}
-                      onStop={(id) => {
-                        cancelAmbientSetup()
-                        termHandlers.stopSide(id)
-                      }}
-                    />
-                  </div>
-                </div>
-              </Show>
+    <Show when={sideHostVisible()}>
+      <div
+        class={`am-diff-resize ${sidePanel() === null ? "am-side-host-hidden" : ""}`}
+        style={{ width: `${panelWidth()}px` }}
+        inert={sidePanel() === null}
+      >
+        <Show when={sidePanel() !== null}>
+          <ResizeHandle
+            direction="horizontal"
+            edge="start"
+            size={panelWidth()}
+            min={minPanelWidth(window.innerWidth)}
+            max={maxPanelWidth(window.innerWidth)}
+            onResize={resizeSide}
+          />
+        </Show>
+        <div class="am-diff-panel-wrapper">
+          <DiffPanelCache
+            current={diffScopeId}
+            context={diffCtx}
+            project={activeProjectId}
+            active={() => diffOpen() && !history() && !reviewActive()}
+            data={diffDatas}
+            loading={(key) => diffs.diffLoadingFor(() => key)}
+            loadingFiles={(key) => diffs.diffFileLoadingFor(() => key)}
+            notice={(key) => diffNotices()[diffDataKey(activeProjectId(), key)]}
+            comments={(key) => readReviewComments(reviewCommentsByContext(), currentProjectId() ?? "single", key)}
+            setComments={(key, value) =>
+              setReviewCommentsByContext((prev) => setReviewComments(prev, currentProjectId() ?? "single", key, value))
+            }
+            remoteComments={remote.comments}
+            remoteTarget={remote.target}
+            prTarget={prDiffComments.target}
+            prSnapshot={prDiffComments.snapshot}
+            prLoading={prDiffComments.loading}
+            prError={prDiffComments.error}
+            focusedComment={remote.focus}
+            composer={composers.get}
+            lead={() => diffScopeControls(true)}
+            canRevert={scopeCapabilities(review.scope()).revert}
+            diffStyle={diffStyle()}
+            onDiffStyleChange={setSharedDiffStyle}
+            markdownRender={markdown.render()}
+            onMarkdownRenderChange={markdown.update}
+            onSendClick={() => appendToPrompt(formatReviewCommentsMarkdown(reviewComments()), true)}
+            onClose={diffPanels.closePanel}
+            onExpand={selection() !== null ? openReviewTab : undefined}
+            onRequestDiff={diffs.requestDiffFile}
+            onOpenFile={(ctx: string, file: string, line?: number) =>
+              to({ type: "agentManager.openFile", sessionId: ctx, filePath: file, line })
+            }
+            onRevertFile={(key, ctx, file) => revertCtl.revertFor(key, ctx, review.scope(), file)}
+            revertingFiles={revertCtl.revertingFor}
+            activeTerminalId={terms.activeId()}
+            contexts={() => new Set(worktrees().map((wt) => wt.id))}
+            onEvict={(key) => composers.drop(key)}
+          />
+          <Show when={sidePanel() === SidePanel.PR && activePR()}>
+            <PRPanelHost
+              pr={activePR()!.pr}
+              projectId={activeProjectId()}
+              worktree={activePR()!.wt}
+              worktreeId={activePR()!.selected}
+              activeTerminalId={terms.activeId()}
+              sessionId={activeDiffSession()}
+              onOpenDiff={remote.open}
+              jump={comments.jump()}
+              onJump={comments.complete}
+              onClose={() => panels.close(SidePanel.PR)}
+            />
+          </Show>
+          <Show when={subagents.tabs().length > 0}>
+            <SubagentPanel
+              sessions={sessions}
+              tabs={subagents.tabs}
+              active={subagents.active}
+              visible={() => sidePanel() === SidePanel.Subagents}
+              nextKeybind={kb().nextTab ?? ""}
+              closeKeybind={kb().closeTab ?? ""}
+              actions={toolActions}
+              onSelect={subagents.select}
+              onClose={subagents.close}
+              onCloseOthers={subagents.closeOthers}
+              onReorder={subagents.reorder}
+              onClosePanel={() => panels.close(SidePanel.Subagents)}
+              onShowHistory={() => openHistory()}
+            />
+          </Show>
+          <Show when={editPreview.preview()}>
+            <EditPreviewPanel state={editPreview} visible={() => sidePanel() === SidePanel.EditPreview} />
+          </Show>
+          <SideTerminalPanel
+            state={terms}
+            contextKey={terms.sideKey}
+            visible={() => sidePanel() === SidePanel.Terminal}
+            nextKeybind={kb().nextTerminal ?? ""}
+            closeKeybind={kb().closeTab ?? ""}
+            onFocusPrompt={focusCtl.focus}
+            onFocusChange={focusCtl.report}
+            onSelect={(id) => termHandlers.selectSide(id)}
+            onClose={(id) => {
+              cancelAmbientSetup()
+              termHandlers.closeSide(id)
+            }}
+            onCloseOthers={(id) => {
+              cancelAmbientSetup()
+              termHandlers.closeSideOthers(id)
+            }}
+            onStart={() => {
+              cancelAmbientSetup()
+              termHandlers.addSide()
+            }}
+            onStop={(id) => {
+              cancelAmbientSetup()
+              termHandlers.stopSide(id)
+            }}
+          />
+        </div>
+      </div>
+    </Show>
   )
 
   const renderReview = () => (
-            <Show when={reviewOpen()}>
-              <div class="am-review-host" style={{ display: reviewActive() && !terms.activeId() ? undefined : "none" }}>
-                <FullScreenDiffView
-                  diffs={reviewDiffs()}
-                  loading={diffLoadingForCurrent()}
-                  loadingFiles={diffFileLoadingForCurrent()}
-                  sessionId={activeDiffSession()}
-                  sessionKey={`${activeProjectId() ?? "single"}\0${diffScopeId() ?? ""}`}
-                  projectId={activeProjectId()}
-                  worktreeId={diffCtx()}
-                  prTarget={prDiffComments.target(diffCtx())}
-                  prSnapshot={prDiffComments.snapshot(diffCtx())}
-                  prLoading={prDiffComments.loading(diffCtx())}
-                  prError={prDiffComments.error(diffCtx())}
-                  notice={diffNotice()}
-                  lead={diffScopeControls(false)}
-                  canRevert={scopeCapabilities(review.scope()).revert}
-                  canComment={scopeCapabilities(review.scope()).comments}
-                  comments={reviewComments()}
-                  remoteComments={remote.comments()}
-                  remoteTarget={(comment: PRComment) => remote.target(diffCtx(), comment)}
-                  focusedComment={reviewActive() ? remote.focus(diffScopeId()) : undefined}
-                  onCommentsChange={setReviewCommentsForSelection}
-                  composer={composers.get(`${activeProjectId() ?? "single"}\0${diffScopeId() ?? ""}`)}
-                  onSendAll={() => {
-                    appendToPrompt(formatReviewCommentsMarkdown(reviewComments()), true)
-                    closeReviewTab()
-                  }}
-                  onSendClick={() => appendToPrompt(formatReviewCommentsMarkdown(reviewComments()), true)}
-                  diffStyle={diffStyle()}
-                  onDiffStyleChange={setSharedDiffStyle}
-                  markdownRender={markdown.render()}
-                  onMarkdownRenderChange={markdown.update}
-                  onRequestDiff={requestDiffFile}
-                  onOpenFile={(file: string, line?: number) => {
-                    const id = diffCtx()
-                    if (id) to({ type: "agentManager.openFile", sessionId: id, filePath: file, line })
-                  }}
-                  onRevertFile={revertCtl.revert}
-                  revertingFiles={revertCtl.reverting()}
-                  activeTerminalId={terms.activeId()}
-                  onClose={() => closeReviewTab()}
-                />
-              </div>
-            </Show>
+    <Show when={reviewOpen()}>
+      <div class="am-review-host" style={{ display: reviewActive() && !terms.activeId() ? undefined : "none" }}>
+        <FullScreenDiffView
+          diffs={reviewDiffs()}
+          loading={diffLoadingForCurrent()}
+          loadingFiles={diffFileLoadingForCurrent()}
+          sessionId={activeDiffSession()}
+          sessionKey={`${activeProjectId() ?? "single"}\0${diffScopeId() ?? ""}`}
+          projectId={activeProjectId()}
+          worktreeId={diffCtx()}
+          prTarget={prDiffComments.target(diffCtx())}
+          prSnapshot={prDiffComments.snapshot(diffCtx())}
+          prLoading={prDiffComments.loading(diffCtx())}
+          prError={prDiffComments.error(diffCtx())}
+          notice={diffNotice()}
+          lead={diffScopeControls(false)}
+          canRevert={scopeCapabilities(review.scope()).revert}
+          canComment={scopeCapabilities(review.scope()).comments}
+          comments={reviewComments()}
+          remoteComments={remote.comments()}
+          remoteTarget={(comment: PRComment) => remote.target(diffCtx(), comment)}
+          focusedComment={reviewActive() ? remote.focus(diffScopeId()) : undefined}
+          onCommentsChange={setReviewCommentsForSelection}
+          composer={composers.get(`${activeProjectId() ?? "single"}\0${diffScopeId() ?? ""}`)}
+          onSendAll={() => {
+            appendToPrompt(formatReviewCommentsMarkdown(reviewComments()), true)
+            closeReviewTab()
+          }}
+          onSendClick={() => appendToPrompt(formatReviewCommentsMarkdown(reviewComments()), true)}
+          diffStyle={diffStyle()}
+          onDiffStyleChange={setSharedDiffStyle}
+          markdownRender={markdown.render()}
+          onMarkdownRenderChange={markdown.update}
+          onRequestDiff={requestDiffFile}
+          onOpenFile={(file: string, line?: number) => {
+            const id = diffCtx()
+            if (id) to({ type: "agentManager.openFile", sessionId: id, filePath: file, line })
+          }}
+          onRevertFile={revertCtl.revert}
+          revertingFiles={revertCtl.reverting()}
+          activeTerminalId={terms.activeId()}
+          onClose={() => closeReviewTab()}
+        />
+      </div>
+    </Show>
   )
 
   const renderDetail = () => (
     <div class="am-detail">
-        <TabBar
-          t={t}
-          bindings={kb}
-          selection={selection}
-          empty={() => restricted() || contextEmpty()}
-          collapsed={sidebarCollapsed()}
-          onToggleSidebar={toggleSidebar}
-          scroll={tabScroll}
-          ids={tabIds}
-          renderTab={renderTabById}
-          newTab={renderAddTab}
-          onDragStart={drag.start}
-          onDragEnd={drag.end}
-          onDragOver={drag.over}
-          onRelease={releaseTabs}
-          overlay={drag.overlay}
-          localStats={localStats}
-          worktreeStats={worktreeStats}
-          applyState={apply.applyStateForSelection}
-          reviewScope={review.scope}
-          onApply={openApplyDialog}
-          onOpen={openWorktreeDirectory}
-          runStatuses={runStatuses}
-          runConfigured={runScriptConfigured}
-          onRun={(id) => runWorktree(id, sideCtl.destination())}
-          onConfigureRun={configureRunScript}
-          diffOpen={diffOpen}
-          reviewActive={reviewActive}
-          onToggleDiff={diffPanels.toggleToolbar}
-          browserOpen={() => false}
-          browserAutomation={() => false}
-          onToggleBrowser={() => undefined}
-          prStatus={() => activePR()?.pr}
-          prOpen={prOpen}
-          onTogglePR={togglePRPanel}
-          documentsOpen={() => false}
-          documentsAvailable={() => false}
-          onToggleDocuments={() => undefined}
-          subagentsAvailable={() => subagentCtl.tabs.tabs().length > 0 || subagentCtl.toolbar.available().length > 0}
-          subagentsOpen={() => sidePanel() === SidePanel.Subagents}
-          onToggleSubagents={subagentCtl.toolbar.toggle}
-          terminalDestination={sideCtl.destination}
-          terminalDestinationActive={() => sidePanel() === SidePanel.Terminal}
-          terminalKeybind={() => kb().showTerminal ?? ""}
-          onTerminalDestinationOpen={() => {
-            cancelAmbientSetup()
-            sideCtl.openPreferred("tab_toolbar")
-          }}
-          onTerminalDestinationChoose={sideCtl.choose}
-        />
+      <TabBar
+        t={t}
+        bindings={kb}
+        selection={selection}
+        empty={() => restricted() || contextEmpty()}
+        collapsed={sidebarCollapsed()}
+        onToggleSidebar={toggleSidebar}
+        scroll={tabScroll}
+        ids={tabIds}
+        renderTab={renderTabById}
+        newTab={renderAddTab}
+        onDragStart={drag.start}
+        onDragEnd={drag.end}
+        onDragOver={drag.over}
+        onRelease={releaseTabs}
+        overlay={drag.overlay}
+        localStats={localStats}
+        worktreeStats={worktreeStats}
+        applyState={apply.applyStateForSelection}
+        reviewScope={review.scope}
+        onApply={openApplyDialog}
+        onOpen={openWorktreeDirectory}
+        runStatuses={runStatuses}
+        runConfigured={runScriptConfigured}
+        onRun={(id) => runWorktree(id, sideCtl.destination())}
+        onConfigureRun={configureRunScript}
+        diffOpen={diffOpen}
+        reviewActive={reviewActive}
+        onToggleDiff={diffPanels.toggleToolbar}
+        browserOpen={() => false}
+        browserAutomation={() => false}
+        onToggleBrowser={() => undefined}
+        prStatus={() => activePR()?.pr}
+        prOpen={prOpen}
+        onTogglePR={togglePRPanel}
+        documentsOpen={() => false}
+        documentsAvailable={() => false}
+        onToggleDocuments={() => undefined}
+        subagentsAvailable={() => subagentCtl.tabs.tabs().length > 0 || subagentCtl.toolbar.available().length > 0}
+        subagentsOpen={() => sidePanel() === SidePanel.Subagents}
+        onToggleSubagents={subagentCtl.toolbar.toggle}
+        terminalDestination={sideCtl.destination}
+        terminalDestinationActive={() => sidePanel() === SidePanel.Terminal}
+        terminalKeybind={() => kb().showTerminal ?? ""}
+        onTerminalDestinationOpen={() => {
+          cancelAmbientSetup()
+          sideCtl.openPreferred("tab_toolbar")
+        }}
+        onTerminalDestinationChoose={sideCtl.choose}
+      />
 
-        <Show when={restricted()}>
-          <div class="am-empty-state am-restricted-state" role="status">
-            <div class="am-empty-state-text">{t("agentManager.project.restricted")}</div>
-          </div>
-        </Show>
+      <Show when={restricted()}>
+        <div class="am-empty-state am-restricted-state" role="status">
+          <div class="am-empty-state-text">{t("agentManager.project.restricted")}</div>
+        </div>
+      </Show>
 
-        <Show when={overlay()}>
-          {(state) => (
-            <div class="am-setup-overlay">
-              <div class="am-setup-card">
-                <Icon name="branch" size="large" />
-                <div class="am-setup-title">
-                  {state().error ? t("agentManager.setup.failed") : t("agentManager.setup.settingUp")}
-                </div>
-                <Show when={state().branch}>
-                  <div class="am-setup-branch">{state().branch}</div>
+      <Show when={overlay()}>
+        {(state) => (
+          <div class="am-setup-overlay">
+            <div class="am-setup-card">
+              <Icon name="branch" size="large" />
+              <div class="am-setup-title">
+                {state().error ? t("agentManager.setup.failed") : t("agentManager.setup.settingUp")}
+              </div>
+              <Show when={state().branch}>
+                <div class="am-setup-branch">{state().branch}</div>
+              </Show>
+              <div class="am-setup-status">
+                <Show when={!state().error} fallback={<Icon name="circle-x" size="small" />}>
+                  <Spinner class="am-setup-spinner" />
                 </Show>
-                <div class="am-setup-status">
-                  <Show when={!state().error} fallback={<Icon name="circle-x" size="small" />}>
-                    <Spinner class="am-setup-spinner" />
-                  </Show>
-                  <span>
-                    {state().errorCode ? t(`agentManager.setup.error.${state().errorCode}`) : state().message}
-                  </span>
-                </div>
+                <span>{state().errorCode ? t(`agentManager.setup.error.${state().errorCode}`) : state().message}</span>
               </div>
             </div>
-          )}
-        </Show>
+          </div>
+        )}
+      </Show>
 
       {renderHistory()}
       <Show when={!restricted() && showDetailStack()}>

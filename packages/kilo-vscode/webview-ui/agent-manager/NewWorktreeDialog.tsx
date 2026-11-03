@@ -21,7 +21,7 @@ import { ModeSwitcherBase } from "../src/components/shared/ModeSwitcher"
 import { ThinkingSelectorBase } from "../src/components/shared/ThinkingSelector"
 import { PromptSelectors } from "../src/components/chat/PromptSelectors"
 import { useLanguage } from "../src/context/language"
-import { useVSCode } from "./v2/vscode"
+import { useBridge } from "./v2/vscode"
 import { convertToMentionPath, insertPathMentions } from "../src/utils/path-mentions"
 import { isEnterKeyCommitNotIme } from "../src/utils/ime-enter"
 import { BranchSelect, BranchSelectPopover } from "../src/components/shared/BranchSelect"
@@ -37,15 +37,16 @@ import { validBranch } from "./new-worktree-branch"
 import { sanitizeBranchName } from "../../src/shared/branch-slug"
 import { submitPayload, shouldComposeGoal } from "./new-worktree-command"
 import { MultiModelSelector } from "./MultiModelSelector"
-import {
-  type ModelAllocations,
-  MAX_MULTI_VERSIONS,
-  allocationsToArray,
-  totalAllocations,
-} from "./multi-model-utils"
+import { type ModelAllocations, MAX_MULTI_VERSIONS, allocationsToArray, totalAllocations } from "./multi-model-utils"
 import type { WorktreeReference } from "../src/utils/prompt-mention-drop"
 import { cleanEnhancedPrompt, enhancePromptRequest, normalizeEnhancePromptErrorMessage } from "../src/v2/enhance-prompt"
 import { message as errorMessage } from "../src/v2/scope"
+import { createDefaultModel } from "../src/v2/selectors"
+import { SpeechToTextButton } from "../src/components/speech-to-text/SpeechToTextButton"
+import { createSpeechShortcut } from "../src/components/speech-to-text/shortcut"
+import { useSpeechStatus } from "../src/components/speech-to-text/status"
+import { useSpeechToText } from "../src/components/speech-to-text/useSpeechToText"
+import { insertSpacedText } from "../src/v2/prompt-speech"
 
 type VersionCount = 1 | 2 | 3 | 4
 const VERSION_OPTIONS: VersionCount[] = [1, 2, 3, 4]
@@ -141,8 +142,18 @@ export const NewWorktreeDialog: Component<{
   /** Sessions the panel already loaded, offered as past-chat mentions. */
   sessions: SessionSearchItem[]
 }> = (props) => {
-  const { t } = useLanguage()
-  const vscode = useVSCode()
+  const language = useLanguage()
+  const { t } = language
+  const vscode = useBridge()
+  // Voice input works as in the sidebar composer: the same hook, status, shortcut and button.
+  const speech = useSpeechToText(
+    vscode.shared,
+    { goToLogin: () => vscode.postMessage({ type: "openProfile" }) },
+    language,
+    showToast,
+  )
+  const speechStatus = useSpeechStatus()
+  const canUseSpeech = () => speechStatus.status().enabled
 
   const [tab, setTab] = createSignal<DialogTab>("new")
   const [project, setProject] = createSignal(props.projectId ?? props.activeProjectId)
@@ -167,11 +178,13 @@ export const NewWorktreeDialog: Component<{
   const [versions, setVersions] = createSignal<VersionCount>(1)
   const [compareMode, setCompareMode] = createSignal(false)
   const initialAgent = restoreAgent(saved.agent, props.agents, props.agents[0]?.id ?? "")
+  const serverDefault = createDefaultModel(props.store)
   const preferences = createDialogPreferences({
     saved,
     agent: initialAgent,
+    // The same precedence as the sidebar composer: the agent model, then the server default.
     fallback: (agent) => {
-      const model = props.agents.find((item) => item.id === agent)?.model
+      const model = props.agents.find((item) => item.id === agent)?.model ?? serverDefault()
       return model ? { providerID: model.providerID, modelID: model.id } : null
     },
     effort: (agent) => props.agents.find((item) => item.id === agent)?.model?.variant,
@@ -301,9 +314,24 @@ export const NewWorktreeDialog: Component<{
       return hidden
     },
     extra: [
-      { name: "models", description: "Switch the AI model", action: () => window.dispatchEvent(new CustomEvent("openModelPicker", { detail: { source: WORKTREE_PROMPT_SCOPE } })) },
-      { name: "agents", description: "Switch the agent mode", action: () => window.dispatchEvent(new CustomEvent("openModePicker", { detail: { source: WORKTREE_PROMPT_SCOPE } })) },
-      { name: "variant", description: "Switch the reasoning effort", action: () => window.dispatchEvent(new CustomEvent("openVariantPicker", { detail: { source: WORKTREE_PROMPT_SCOPE } })) },
+      {
+        name: "models",
+        description: "Switch the AI model",
+        action: () =>
+          window.dispatchEvent(new CustomEvent("openModelPicker", { detail: { source: WORKTREE_PROMPT_SCOPE } })),
+      },
+      {
+        name: "agents",
+        description: "Switch the agent mode",
+        action: () =>
+          window.dispatchEvent(new CustomEvent("openModePicker", { detail: { source: WORKTREE_PROMPT_SCOPE } })),
+      },
+      {
+        name: "variant",
+        description: "Switch the reasoning effort",
+        action: () =>
+          window.dispatchEvent(new CustomEvent("openVariantPicker", { detail: { source: WORKTREE_PROMPT_SCOPE } })),
+      },
       { name: "project", description: t("agentManager.dialog.project.select"), action: () => setProjectOpen(true) },
     ],
   })
@@ -312,7 +340,10 @@ export const NewWorktreeDialog: Component<{
   window.addEventListener("focusPrompt", onFocusPrompt)
   onCleanup(() => window.removeEventListener("focusPrompt", onFocusPrompt))
 
-  const mention = useWorktreeMention(vscode, () => props.worktrees?.() ?? [], () => props.sessions)
+  const mention = useWorktreeMention(
+    () => props.worktrees?.() ?? [],
+    () => props.sessions,
+  )
   let highlightRef: HTMLDivElement | undefined
   const mentionSegments = createMemo(() => segmentMentionText(prompt(), mention.highlightTokens()))
   const syncHighlight = () => {
@@ -365,6 +396,7 @@ export const NewWorktreeDialog: Component<{
 
   const canSubmit = () => {
     if (starting()) return false
+    if (speech.active()) return false
     return selection.canSubmit(compareMode() ? modelAllocations() : undefined)
   }
   const total = () => (compareMode() ? totalAllocations(modelAllocations()) : versions())
@@ -448,6 +480,7 @@ export const NewWorktreeDialog: Component<{
   }
 
   const onKey = (e: KeyboardEvent) => {
+    if (speechDown(e)) return
     if (slash.onKeyDown(e, textareaRef, setPromptValue, restorePrompt)) {
       e.stopPropagation()
       return
@@ -486,7 +519,43 @@ export const NewWorktreeDialog: Component<{
     syncHighlight()
   }
 
-  const canEnhance = () => !starting() && !enhancing() && props.store.connection.status() === "connected"
+  const insertSpeechText = (value: string) => {
+    const ref = textareaRef
+    const current = prompt()
+    const start = ref?.selectionStart ?? current.length
+    const end = ref?.selectionEnd ?? start
+    const result = insertSpacedText(current, value, start, end)
+    finishEnhance()
+    setPrompt(result.text)
+    persistPrompt(result.text)
+    if (!ref) return
+    ref.value = result.text
+    ref.setSelectionRange(result.pos, result.pos)
+    ref.focus()
+    adjustHeight()
+  }
+  const startSpeech = () => speech.start({ model: speechStatus.status().model, insert: insertSpeechText })
+  const shortcut = createSpeechShortcut({
+    speech,
+    disabled: () => !canUseSpeech() || starting(),
+    start: startSpeech,
+    finish: (submit) => speech.stop(submit ? { done: handleSubmit } : undefined),
+  })
+  const speechDown = (e: KeyboardEvent) => {
+    if (!shortcut.down(e)) return false
+    e.preventDefault()
+    e.stopPropagation()
+    return true
+  }
+  const speechUp = (e: KeyboardEvent) => {
+    if (!shortcut.up(e)) return
+    e.preventDefault()
+    e.stopPropagation()
+  }
+  onCleanup(shortcut.reset)
+
+  const canEnhance = () =>
+    !starting() && !enhancing() && !speech.active() && props.store.connection.status() === "connected"
 
   const handleEnhance = () => {
     if (!canEnhance()) return
@@ -602,7 +671,9 @@ export const NewWorktreeDialog: Component<{
       base={effectiveBaseBranch()}
       fallback={defaultBranch()}
       onBase={pickBase}
-      onDefault={(value) => vscode.postMessage({ type: "agentManager.setDefaultBaseBranch", projectId: project(), branch: value })}
+      onDefault={(value) =>
+        vscode.postMessage({ type: "agentManager.setDefaultBaseBranch", projectId: project(), branch: value })
+      }
       disabled={starting() || isPending()}
     />
   )
@@ -833,6 +904,7 @@ export const NewWorktreeDialog: Component<{
                       mention.onInput(val, e.currentTarget.selectionStart ?? val.length)
                     }}
                     onKeyDown={onKey}
+                    onKeyUp={speechUp}
                     onPaste={(e) => imageAttach.handlePaste(e)}
                     onScroll={syncHighlight}
                     rows={3}
@@ -894,6 +966,9 @@ export const NewWorktreeDialog: Component<{
                       aria-label={t("prompt.action.enhance")}
                     />
                   </Tooltip>
+                  <Show when={canUseSpeech()}>
+                    <SpeechToTextButton speech={speech} disabled={starting()} start={startSpeech} label={t} />
+                  </Show>
                 </div>
               </div>
             </div>
@@ -904,7 +979,10 @@ export const NewWorktreeDialog: Component<{
               fallback={
                 <div class="am-nv-version-bar">
                   <span class="am-nv-config-label">{t("agentManager.dialog.versions")}</span>
-                  <div class="am-nv-pills" title={versions() > 1 ? t("agentManager.dialog.versionHint", { count: versions() }) : undefined}>
+                  <div
+                    class="am-nv-pills"
+                    title={versions() > 1 ? t("agentManager.dialog.versionHint", { count: versions() }) : undefined}
+                  >
                     {VERSION_OPTIONS.map((count) => (
                       <button
                         class="am-nv-pill"
@@ -915,7 +993,11 @@ export const NewWorktreeDialog: Component<{
                         {count}
                       </button>
                     ))}
-                    <Tooltip value={t("agentManager.dialog.compareModels.tooltip")} placement="top" contentClass="am-tooltip-wrap">
+                    <Tooltip
+                      value={t("agentManager.dialog.compareModels.tooltip")}
+                      placement="top"
+                      contentClass="am-tooltip-wrap"
+                    >
                       <button class="am-nv-pill am-nv-pill-compare" onClick={() => setCompareMode(true)} type="button">
                         <Icon name="layers" size="small" />
                         <span class="am-nv-pill-compare-label">{t("agentManager.dialog.compareModels")}</span>
@@ -990,13 +1072,7 @@ export const NewWorktreeDialog: Component<{
                 </DeferredPopover>
               </div>
             </Show>
-            <Button
-              variant="primary"
-              size="large"
-              class="am-nv-submit"
-              onClick={handleSubmit}
-              disabled={!canSubmit()}
-            >
+            <Button variant="primary" size="large" class="am-nv-submit" onClick={handleSubmit} disabled={!canSubmit()}>
               <Show
                 when={!starting()}
                 fallback={

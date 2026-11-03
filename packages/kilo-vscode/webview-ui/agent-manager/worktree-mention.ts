@@ -9,7 +9,6 @@
 import fuzzysort from "fuzzysort"
 import { createSignal, onCleanup, type Accessor } from "solid-js"
 import type { SessionSearchItem, WorktreeReference } from "../src/utils/prompt-mention-drop"
-import type { VSCodeContext } from "./v2/bridge"
 
 /** Past chats offered inline, bounded so sessions cannot flood the menu. */
 const SESSION_RESULT_LIMIT = 3
@@ -269,7 +268,6 @@ export interface WorktreeMention {
  * before the new worktree exists.
  */
 export function useWorktreeMention(
-  _vscode: VSCodeContext,
   worktrees: Accessor<WorktreeReference[]>,
   sessions: Accessor<SessionSearchItem[]> = () => [],
 ): WorktreeMention {
