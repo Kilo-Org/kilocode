@@ -2,7 +2,7 @@ import type { Context } from "@opencode/plugin/effect/plugin"
 import { Tool } from "@opencode/schema/tool"
 import { Patch } from "@opencode/util/patch"
 import { Effect, Result } from "effect"
-import path from "path"
+import { resolvePath } from "@opencode/core/file-access"
 import { assertMutablePath, MESSAGE } from "./protection"
 
 const MUTATION_TOOLS = new Set(["patch", "edit", "write"])
@@ -27,7 +27,7 @@ export function mutationTargets(tool: string, input: unknown, directory: string)
   if (!MUTATION_TOOLS.has(tool)) return []
   if (tool === "patch") return patchTargets(input, directory)
   if (!isRecord(input) || typeof input.path !== "string") return []
-  return [path.resolve(directory, input.path)]
+  return [resolvePath(directory, input.path)]
 }
 
 function patchTargets(input: unknown, directory: string) {
@@ -36,7 +36,7 @@ function patchTargets(input: unknown, directory: string) {
   if (Result.isFailure(parsed)) return []
   return parsed.success.flatMap((hunk) => {
     const written = hunk.type === "update" && hunk.movePath ? [hunk.path, hunk.movePath] : [hunk.path]
-    return written.map((target) => path.resolve(directory, target))
+    return written.map((target) => resolvePath(directory, target))
   })
 }
 

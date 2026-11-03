@@ -39,6 +39,7 @@ interface Entry {
   socket: WebSocket
 }
 
+const CLOSED = 1000
 const NOT_FOUND = 4404
 const UNAVAILABLE = 4500
 
@@ -118,7 +119,11 @@ export class PtyRelay {
         return undefined
       },
     )
-    if (this.tokens.get(socketId) !== token) return
+    if (this.tokens.get(socketId) !== token) {
+      // A close arrived while the ticket was being minted, so answer it with a normal close.
+      if (!this.disposed) this.closed(socketId, CLOSED, "closed")
+      return
+    }
     this.tokens.delete(socketId)
     if (this.disposed || !url) return this.closed(socketId, UNAVAILABLE, "Terminal socket could not start")
     this.connect(socketId, terminalId, url)

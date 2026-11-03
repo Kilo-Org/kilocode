@@ -87,7 +87,11 @@ export function createAppSession(opts: {
   }
 
   const sendInitial = (ev: AgentManagerSendInitialMessage) => {
-    const directory = ev.worktreeId ? opts.directories.worktreePath(ev.worktreeId) : undefined
+    const directory = ev.worktreeId
+      ? opts.directories.worktreePathIn(ev.projectId, ev.worktreeId)
+      : ev.projectId
+        ? opts.directories.root(ev.projectId)
+        : undefined
     const store = storeFor(directory ?? opts.directories.directoryOf(ev.sessionId))
     if (!store) return Promise.resolve()
     return dispatchInitialPrompt(store, ev).catch((error: unknown) => {

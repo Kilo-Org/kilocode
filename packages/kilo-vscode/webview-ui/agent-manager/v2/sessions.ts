@@ -80,9 +80,9 @@ export function createSessions(input: {
         () => undefined,
       )
     },
-    /** Drops the loaded messages of a session the inspector no longer shows. */
+    /** Drops the loaded session and its messages when the inspector no longer shows it. */
     release(sessionID: string) {
-      scope(sessionID)?.data.session.message.invalidate(sessionID)
+      scope(sessionID)?.data.session.evict(sessionID)
     },
     interrupt(sessionID: string) {
       const item = scope(sessionID)

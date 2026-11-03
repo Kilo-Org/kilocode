@@ -326,7 +326,12 @@ describe("Agent Manager worktree lifecycle", () => {
       "pty:release",
     ])
     expect(client.session.remove).not.toHaveBeenCalled()
-    expect(client.session.list).toHaveBeenCalledWith({ directory: worktree, archived: true, parentID: null })
+    expect(client.session.list).toHaveBeenCalledWith({
+      directory: worktree,
+      archived: true,
+      parentID: null,
+      limit: Number.MAX_SAFE_INTEGER,
+    })
     for (const session of [first, second]) {
       expect(client.session.move).toHaveBeenCalledWith({ sessionID: session.id, directory: ctx.root })
     }

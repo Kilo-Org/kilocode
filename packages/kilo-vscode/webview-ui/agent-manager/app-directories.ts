@@ -24,6 +24,12 @@ export function createAppDirectories(opts: {
   const worktreePath = (worktreeId: string) =>
     opts.store(opts.activeProjectId() ?? "").worktrees().find((worktree) => worktree.id === worktreeId)?.path
 
+  /** The worktree path in a named project, for a message that can arrive after the user switches projects. */
+  const worktreePathIn = (projectId: string | undefined, worktreeId: string) =>
+    projectId
+      ? opts.store(projectId).worktrees().find((worktree) => worktree.id === worktreeId)?.path
+      : worktreePath(worktreeId)
+
   /** Every directory whose sessions the active project shows: its root and every worktree. */
   const sessionDirectories = () => {
     const id = opts.activeProjectId()
@@ -56,7 +62,7 @@ export function createAppDirectories(opts: {
     return root(opts.currentProjectId())
   }
 
-  return { root, worktreePath, sessionDirectories, retained, directoryOf }
+  return { root, worktreePath, worktreePathIn, sessionDirectories, retained, directoryOf }
 }
 
 export type AppDirectories = ReturnType<typeof createAppDirectories>

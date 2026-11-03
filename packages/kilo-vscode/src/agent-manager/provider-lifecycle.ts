@@ -249,9 +249,12 @@ export async function deleteLifecycleWorktree(
       client.session.active(),
       client.permission.request.list({ location: { directory: worktree.path } }),
       client.form.list({ location: { directory: worktree.path } }),
-      client.session.list(
-        { directory: worktree.path, archived: true, parentID: null },
-      ),
+      client.session.list({
+        directory: worktree.path,
+        archived: true,
+        parentID: null,
+        limit: Number.MAX_SAFE_INTEGER,
+      }),
     ])
     sessions.data.forEach((session) => retained.add(session.id))
     const running = [...retained].some((id) => isRunningStatus(active[id]?.type))

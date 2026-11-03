@@ -5,6 +5,11 @@ import { assertMutablePath, MESSAGE } from "../src/agent-manager/protection"
 const workspace = "/workspace"
 
 describe("Agent Manager state protection", () => {
+  test("matches a differently cased state path on a case-insensitive filesystem", () => {
+    if (process.platform !== "win32" && process.platform !== "darwin") return
+    expect(() => assertMutablePath("/workspace/.KILO2/AGENT-MANAGER.JSON")).toThrow(MESSAGE)
+  })
+
   test("rejects direct edits to the current and legacy Agent Manager state", () => {
     expect(() => assertMutablePath("/workspace/.kilo2/agent-manager.json")).toThrow(MESSAGE)
     expect(() => assertMutablePath("/workspace/.kilo/agent-manager.json")).toThrow(MESSAGE)
@@ -23,6 +28,9 @@ describe("mutation tool targets", () => {
     expect(mutationTargets("write", { path: ".kilo2/agent-manager.json" }, workspace)).toEqual([
       resolve(workspace, ".kilo2/agent-manager.json"),
     ])
+    expect(mutationTargets("write", { path: "~/.kilo2/agent-manager.json" }, workspace)[0]).toEndWith(
+      resolve("/", ".kilo2", "agent-manager.json"),
+    )
     expect(mutationTargets("edit", { path: "/workspace/.kilo/agent-manager.json" }, workspace)).toEqual([
       resolve(workspace, "/workspace/.kilo/agent-manager.json"),
     ])

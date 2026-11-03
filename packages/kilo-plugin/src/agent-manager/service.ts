@@ -92,12 +92,16 @@ export const createService = Effect.fn("AgentManager.createService")(function* (
     const info = { ...input, id } as Request
     const entry: Entry = { info, deferred }
     pending.set(id, entry)
-    yield* emit.requested(info)
-    return yield* Deferred.await(deferred).pipe(
-      Effect.timeoutOrElse({
-        duration: timeout,
-        orElse: () => cancel(id, entry, "timeout").pipe(Effect.andThen(Deferred.await(deferred))),
-      }),
+    // The ensuring also covers a fiber interrupted while publishing the requested event.
+    return yield* emit.requested(info).pipe(
+      Effect.andThen(
+        Deferred.await(deferred).pipe(
+          Effect.timeoutOrElse({
+            duration: timeout,
+            orElse: () => cancel(id, entry, "timeout").pipe(Effect.andThen(Deferred.await(deferred))),
+          }),
+        ),
+      ),
       Effect.ensuring(cancel(id, entry, "cancelled")),
     )
   })

@@ -38,11 +38,22 @@ function apply(state: State, event: Event): void {
     state.running.add(id)
     return
   }
-  if (event.type === "session.status" && busy(statusType(event))) {
-    state.running.add(id)
+  if (event.type === "session.status") {
+    if (busy(statusType(event))) state.running.add(id)
+    else state.running.delete(id)
     return
   }
-  state.running.delete(id)
+  // Every other session event (text deltas, tool updates, steps) must not clear a running session.
+  if (
+    event.type === "session.idle" ||
+    event.type === "session.deleted" ||
+    event.type === "session.error" ||
+    event.type === "session.wakeup" ||
+    event.type === "session.execution.succeeded" ||
+    event.type === "session.execution.failed" ||
+    event.type === "session.execution.interrupted"
+  )
+    state.running.delete(id)
 }
 
 export function feed(opts: {

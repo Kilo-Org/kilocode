@@ -11,9 +11,12 @@ export const MESSAGE =
  * model-facing mutation tools must not touch it.
  */
 export function assertMutablePath(filepath: string) {
+  const normalize = (value: string) =>
+    process.platform === "win32" || process.platform === "darwin" ? value.toLowerCase() : value
   const parts = filepath.split(/[\\/]/)
   const file = parts.at(-1)
   const dir = parts.at(-2)
-  if (file !== STATE_FILE || !STATE_DIRECTORIES.includes(dir ?? "")) return
+  if (normalize(file ?? "") !== normalize(STATE_FILE)) return
+  if (!STATE_DIRECTORIES.some((name) => normalize(name) === normalize(dir ?? ""))) return
   throw new Error(MESSAGE)
 }
