@@ -68,7 +68,7 @@ export type ToolActions = {
   /** Opens several changed files at once, for a patch that changes more than one. */
   openDiffs?: (diffs: ToolActionDiff[]) => void
   openSession?: (sessionID: string) => void
-  /** Stops one session and anything it started, for the stop action of a running subagent. */
+  /** Stops the current execution of one session, for the stop action of a running subagent. */
   interruptSession?: (sessionID: string) => void
   /** Moves the open session's foreground tools into background observation, so a subagent keeps running. */
   continueInBackground?: () => void
@@ -375,8 +375,7 @@ function jsonRecord(text: string) {
   return value as Record<string, unknown>
 }
 
-function cardInput(raw: string) {
-  const parsed = partialInput(raw, STREAM_LIVE)
+function cardInput(parsed: Record<string, unknown> | undefined) {
   if (!parsed) return {}
   return Object.fromEntries(Object.entries(parsed).filter(([key]) => !STREAM_HIDDEN.has(key)))
 }
@@ -408,11 +407,9 @@ function provisionalChanges(tool: string, input: Record<string, unknown> | undef
 }
 
 const ERROR_HINTS = [
-  "before overwriting it. Use the Read tool first",
-  "has been modified since it was last read",
   "oldString and newString are identical",
   "must match exactly, including whitespace",
-  "Found multiple matches for oldString",
+  "matches for oldString, but expected exactly one",
 ]
 
 function cleanError(message: string) {
@@ -425,15 +422,17 @@ function errorHint(error: { message: string }) {
 }
 
 // The message title, as v1 showed it: the part before the first ": " when it
-// is short enough to read as a heading, with an HTTP code kept beside it.
+// is short enough to read as a heading. A long or empty message keeps the
+// error type as its heading so the code and type never disappear.
 function errorParts(error: { type: string; message: string; status?: number }) {
   const cleaned = cleanError(error.message)
-  if (!cleaned) return { title: error.type, message: "", code: error.status ? String(error.status) : undefined }
+  const code = error.status ? String(error.status) : undefined
+  if (!cleaned) return { title: error.type, message: "", code }
   const [title, ...rest] = cleaned.split(": ")
   const message = rest.join(": ")
-  const code = error.status ? String(error.status) : undefined
-  const detail = code && message.startsWith(code) ? message.slice(code.length).trimStart() : message
-  if (!title || title.length >= 30) return { title: undefined, message: cleaned, code }
+  const detail =
+    code && new RegExp(`^${code}(?=\\s|$)`).test(message) ? message.slice(code.length).trimStart() : message
+  if (!title || title.length >= 30) return { title: error.type, message: cleaned, code }
   return { title, message: detail, code }
 }
 
@@ -453,22 +452,23 @@ function ToolContent(props: {
     const value = state()
     return "metadata" in value ? (value.metadata ?? {}) : {}
   }
-  const streamed = () => {
+  const streamed = createMemo(() => {
     const value = state()
     if (value.status !== "streaming") return undefined
     return partialInput(value.input, STREAM_LIVE)
-  }
+  })
+  const cardValues = createMemo(() => cardInput(streamed()))
   const input = (): Record<string, unknown> => {
     const value = state()
     if (value.status !== "streaming") return value.input
-    return cardInput(value.input)
+    return cardValues()
   }
-  const provisional = () => {
+  const provisional = createMemo(() => {
     const value = state()
     if (value.status === "streaming") return provisionalChanges(props.item.name, streamed())
     if (value.status === "running") return provisionalChanges(props.item.name, value.input)
     return undefined
-  }
+  })
   const attachments = () => {
     const value = state()
     if (!("content" in value)) return []
@@ -535,16 +535,10 @@ function ToolErrorCard(props: {
       <div data-component="tool-error">
         <Icon name="circle-ban-sign" size="small" />
         <div data-slot="message-part-tool-error-content">
-          <Show when={parts().title}>
-            {(title) => (
-              <div data-slot="message-part-tool-error-heading">
-                <div data-slot="message-part-tool-error-title">{title()}</div>
-                <Show when={parts().code}>
-                  {(code) => <span data-slot="message-part-tool-error-code">{code()}</span>}
-                </Show>
-              </div>
-            )}
-          </Show>
+          <div data-slot="message-part-tool-error-heading">
+            <div data-slot="message-part-tool-error-title">{parts().title}</div>
+            <Show when={parts().code}>{(code) => <span data-slot="message-part-tool-error-code">{code()}</span>}</Show>
+          </div>
           <Show when={parts().message}>
             {(message) => <span data-slot="message-part-tool-error-message">{message()}</span>}
           </Show>
@@ -1069,20 +1063,28 @@ ToolRegistry.register({
     let viewport: HTMLDivElement | undefined
     let content: HTMLDivElement | undefined
     createEffect(() => {
+      if (!open()) {
+        autoScroll.scrollRef(undefined)
+        autoScroll.contentRef(undefined)
+        viewport = undefined
+        content = undefined
+        return
+      }
       autoScroll.scrollRef(active() ? viewport : undefined)
       autoScroll.contentRef(active() ? content : undefined)
       if (!active() && viewport) viewport.scrollTop = 0
     })
-    const stop = (event: MouseEvent) => {
+    const stop = (event: { stopPropagation(): void }) => {
       event.stopPropagation()
       const id = childID()
       if (id) props.actions?.interruptSession?.(id)
     }
-    const continueInBackground = (event: MouseEvent) => {
+    const continueInBackground = (event: { stopPropagation(): void }) => {
       event.stopPropagation()
       props.actions?.continueInBackground?.()
     }
-    // Stop only this subagent and anything it started. The parent keeps running.
+    // Stop the child's current execution. Its parent keeps running; background
+    // jobs the child started are separate work and are not cancelled here.
     const stoppable = () => !!childID() && avatar() === "running" && !!props.actions?.interruptSession
     // A running foreground child can move to background observation, matching the v1 task card.
     const promotable = () => !!childID() && !!props.actions?.continueInBackground && auto()
@@ -1105,28 +1107,28 @@ ToolRegistry.register({
         </div>
         <Show when={stoppable()}>
           <Tooltip value={i18n.t("task.stop")} placement="top" gutter={4}>
-            <IconButton
-              icon="stop"
-              size="small"
-              variant="ghost"
+            <span
               data-slot="task-tool-open"
-              aria-label={i18n.t("task.stop")}
+              data-action="stop"
+              title={i18n.t("task.stop")}
               onMouseDown={(event) => event.preventDefault()}
               onClick={stop}
-            />
+            >
+              <Icon name="stop" size="small" />
+            </span>
           </Tooltip>
         </Show>
         <Show when={promotable()}>
           <Tooltip value={i18n.t("task.backgroundAgents.continueInBackground")} placement="top" gutter={4}>
-            <IconButton
-              icon="arrow-down-to-line"
-              size="small"
-              variant="ghost"
+            <span
               data-slot="task-tool-open"
-              aria-label={i18n.t("task.backgroundAgents.continueInBackground")}
+              data-action="background"
+              title={i18n.t("task.backgroundAgents.continueInBackground")}
               onMouseDown={(event) => event.preventDefault()}
               onClick={continueInBackground}
-            />
+            >
+              <Icon name="arrow-down-to-line" size="small" />
+            </span>
           </Tooltip>
         </Show>
         <Show when={canOpen()}>
@@ -1559,12 +1561,19 @@ ToolRegistry.register({
         deletions: file.deletions,
       })
     }
-    // A multi-file patch opens every changed file in one diff view. Files without
-    // a parseable hunk are skipped, as the per-file action does for them.
+    // A multi-file patch opens every changed file in one diff view. Files that
+    // cannot be parsed are skipped, as the per-file action does for them.
+    const safeView = (file: FileDiffInfo) => {
+      try {
+        return view(file)
+      } catch {
+        return undefined
+      }
+    }
     const openAllDiffs = (event: MouseEvent) => {
       event.stopPropagation()
       const diffs = list().flatMap((file) => {
-        const diff = view(file)
+        const diff = safeView(file)
         if (!diff) return []
         return [
           {
@@ -1646,7 +1655,6 @@ ToolRegistry.register({
                   </Show>
                 </div>
               </div>
-              <ToolDiffAction when={canOpenAll()} onClick={openAllDiffs} />
             </div>
           }
         >
@@ -1654,6 +1662,11 @@ ToolRegistry.register({
             when={single()}
             fallback={
               <Show when={list().length} fallback={<Output text={string(props.input.patchText)} />}>
+                <Show when={canOpenAll()}>
+                  <div data-slot="apply-patch-open-all">
+                    <ToolDiffAction when={true} onClick={openAllDiffs} />
+                  </div>
+                </Show>
                 <Accordion
                   multiple
                   data-scope="apply-patch"

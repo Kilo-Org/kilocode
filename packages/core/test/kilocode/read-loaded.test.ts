@@ -59,7 +59,11 @@ const reader = Layer.succeed(
 
 const permission = permissionLayer({ assert: () => Effect.void })
 
-const readLayer = (directory: string, loaded: string[][]) => {
+const readLayer = (
+  directory: string,
+  loaded: string[][],
+  injected: (paths: string[]) => string[] = (paths) => paths,
+) => {
   const activeLocation = Layer.succeed(
     Location.Service,
     Location.Service.of(location({ directory: AbsolutePath.make(directory) })),
@@ -67,8 +71,9 @@ const readLayer = (directory: string, loaded: string[][]) => {
   const instructions = Layer.mock(SessionInstructions.Service, {
     load: (input) =>
       Effect.sync(() => {
-        loaded.push([...input.paths])
-        return [...input.paths]
+        const paths = [...input.paths]
+        loaded.push(paths)
+        return injected(paths)
       }),
   })
   const imageLayer = AppNodeBuilder.build(Image.node)
@@ -88,32 +93,53 @@ const readLayer = (directory: string, loaded: string[][]) => {
   )
 }
 
+const runRead = (tmp: { path: string }, injected?: (paths: string[]) => string[]) => {
+  const loaded: string[][] = []
+  return Effect.gen(function* () {
+    const repo = path.join(tmp.path, "repo")
+    const pkg = path.join(repo, "pkg")
+    yield* Effect.promise(() => fs.mkdir(pkg, { recursive: true }))
+    const agents = path.join(pkg, "AGENTS.md")
+    yield* Effect.promise(() => fs.writeFile(agents, "Follow the package rules.\n"))
+
+    const registry = yield* Tool.Service
+    const execution = yield* executeTool(registry, {
+      sessionID,
+      ...toolIdentity,
+      call: { type: "tool-call", id: "call-read-loaded", name: "read", input: { path: "pkg/file.txt" } },
+    })
+    return { execution, agents, loaded }
+  }).pipe(Effect.provide(readLayer(path.join(tmp.path, "repo"), loaded, injected)))
+}
+
 describe("read tool loaded instructions", () => {
-  testEffect(Layer.empty).live("reports the discovered instruction files in metadata", () => {
-    const loaded: string[][] = []
-    return Effect.acquireUseRelease(
+  testEffect(Layer.empty).live("reports the newly injected instruction files in metadata", () =>
+    Effect.acquireUseRelease(
       Effect.promise(() => tmpdir()),
       (tmp) =>
         Effect.gen(function* () {
-          const repo = path.join(tmp.path, "repo")
-          const pkg = path.join(repo, "pkg")
-          yield* Effect.promise(() => fs.mkdir(pkg, { recursive: true }))
-          const agents = path.join(pkg, "AGENTS.md")
-          yield* Effect.promise(() => fs.writeFile(agents, "Follow the package rules.\n"))
-
-          const registry = yield* Tool.Service
-          const execution = yield* executeTool(registry, {
-            sessionID,
-            ...toolIdentity,
-            call: { type: "tool-call", id: "call-read-loaded", name: "read", input: { path: "pkg/file.txt" } },
-          })
-
+          const { execution, agents, loaded } = yield* runRead(tmp)
           expect(execution.status).toBe("completed")
           if (execution.status !== "completed") return
           expect(execution.metadata).toEqual({ truncated: false, loaded: [agents] })
           expect(loaded).toEqual([[agents]])
-        }).pipe(Effect.provide(readLayer(path.join(tmp.path, "repo"), loaded))),
+        }),
       (tmp) => Effect.promise(() => tmp[Symbol.asyncDispose]()),
-    )
-  })
+    ),
+  )
+
+  testEffect(Layer.empty).live("omits loaded metadata when the instructions were already injected", () =>
+    Effect.acquireUseRelease(
+      Effect.promise(() => tmpdir()),
+      (tmp) =>
+        Effect.gen(function* () {
+          const { execution, agents, loaded } = yield* runRead(tmp, () => [])
+          expect(execution.status).toBe("completed")
+          if (execution.status !== "completed") return
+          expect(execution.metadata).toEqual({ truncated: false })
+          expect(loaded).toEqual([[agents]])
+        }),
+      (tmp) => Effect.promise(() => tmp[Symbol.asyncDispose]()),
+    ),
+  )
 })

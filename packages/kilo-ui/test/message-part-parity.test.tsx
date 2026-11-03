@@ -123,6 +123,61 @@ test("edit failures that need a read become a hint instead of an error card", as
   expect(card.host.querySelector('[data-component="tool-error"]')).toBeNull()
 })
 
+test("a long error message keeps the error type and HTTP status", async () => {
+  const card = mountPart(
+    tool("bash", {
+      status: "error",
+      input: {},
+      metadata: {},
+      error: {
+        type: "provider.error",
+        status: 401,
+        message: "The provider rejected the request because the key is invalid",
+      },
+    }),
+  )
+  await waitFor(() => card.host.querySelector('[data-slot="message-part-tool-error-title"]'))
+  expect(card.host.querySelector('[data-slot="message-part-tool-error-title"]')?.textContent).toBe("provider.error")
+  expect(card.host.querySelector('[data-slot="message-part-tool-error-code"]')?.textContent).toBe("401")
+  expect(card.host.querySelector('[data-slot="message-part-tool-error-message"]')?.textContent).toBe(
+    "The provider rejected the request because the key is invalid",
+  )
+})
+
+test("an HTTP code only strips at a token boundary", async () => {
+  const card = mountPart(
+    tool("bash", {
+      status: "error",
+      input: {},
+      metadata: {},
+      error: { type: "tool.execution", status: 500, message: "Timeout: 5000 ms timeout" },
+    }),
+  )
+  await waitFor(() => card.host.querySelector('[data-slot="message-part-tool-error-message"]'))
+  expect(card.host.querySelector('[data-slot="message-part-tool-error-title"]')?.textContent).toBe("Timeout")
+  expect(card.host.querySelector('[data-slot="message-part-tool-error-message"]')?.textContent).toBe("5000 ms timeout")
+})
+
+test("a multiple-match edit failure becomes a hint", async () => {
+  const card = mountPart(
+    tool("edit", {
+      status: "error",
+      input: { path: "src/app.ts" },
+      metadata: {},
+      error: {
+        type: "tool.execution",
+        message:
+          "Found 3 matches for oldString, but expected exactly one. Add more surrounding context to make oldString unique, or set replaceAll to true to replace every occurrence.",
+      },
+    }),
+  )
+  await waitFor(() => card.host.querySelector('[data-component="tool-hint"]'))
+  expect(card.host.querySelector('[data-component="tool-hint"]')?.textContent).toContain(
+    "matches for oldString, but expected exactly one",
+  )
+  expect(card.host.querySelector('[data-component="tool-error"]')).toBeNull()
+})
+
 test("a subagent failure shows its message as the error title", async () => {
   const card = mountPart(
     tool("subagent", {
@@ -242,13 +297,11 @@ test("running subagent card can stop the child or continue in the background", a
   mounted.push(card)
   await waitFor(() => card.host.querySelector('[data-slot="task-tool-open"]'))
 
-  const stop = await waitFor(() => card.host.querySelector<HTMLElement>('[aria-label="task.stop"]'))
+  const stop = await waitFor(() => card.host.querySelector<HTMLElement>('[data-action="stop"]'))
   stop.click()
   expect(stopped).toEqual(["child-1"])
 
-  const promote = await waitFor(() =>
-    card.host.querySelector<HTMLElement>('[aria-label="task.backgroundAgents.continueInBackground"]'),
-  )
+  const promote = await waitFor(() => card.host.querySelector<HTMLElement>('[data-action="background"]'))
   promote.click()
   expect(background).toBe(1)
 })
@@ -266,8 +319,10 @@ test("a multi-file patch opens every file with one diff action", async () => {
   mounted.push(card)
   await waitFor(() => card.host.querySelectorAll('[data-slot="apply-patch-filename"]').length === 2)
 
-  const action = card.host.querySelector<HTMLElement>(
-    '[data-component="write-trigger"] [aria-label="ui.messagePart.openInDiffViewer"]',
+  const action = await waitFor(() =>
+    card.host.querySelector<HTMLElement>(
+      '[data-slot="apply-patch-open-all"] [aria-label="ui.messagePart.openInDiffViewer"]',
+    ),
   )
   expect(action).not.toBeNull()
   action?.click()
