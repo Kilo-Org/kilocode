@@ -8,6 +8,15 @@ import { command, environment, manager, parse, settingsEnvironment, start, stop 
 
 const extension = path.resolve(import.meta.dir, "..")
 
+async function checkout() {
+  const dir = await mkdtemp(path.join(tmpdir(), "kilo-vscode-checkout-"))
+  const extension = path.join(dir, "packages", "kilo-vscode")
+  await mkdir(extension, { recursive: true })
+  await mkdir(path.join(dir, "script"), { recursive: true })
+  await Bun.write(path.join(dir, "script", "dev-isolated.ts"), "")
+  return { dir, extension }
+}
+
 describe("parse", () => {
   test("reads the URL from a complete JSON line", () => {
     expect(parse('kilo v2 dev profile: /tmp/x\n{"url":"http://127.0.0.1:4096"}\n')).toBe("http://127.0.0.1:4096")
@@ -23,16 +32,20 @@ describe("parse", () => {
 })
 
 describe("command", () => {
-  test("uses the repository dev entry with an isolated profile when bin/kilo2 is missing", () => {
+  test("uses the repository dev entry with an isolated profile when bin/kilo2 is missing", async () => {
+    const { dir, extension } = await checkout()
     const found = command({ extension, storage: "/storage", env: {} })
-    expect(found?.args).toEqual([path.resolve(extension, "../../script/dev-isolated.ts"), "serve", "--port", "0", "--stdio"])
+    expect(found?.args).toEqual([path.join(dir, "script", "dev-isolated.ts"), "serve", "--port", "0", "--stdio"])
     expect(found?.env).toEqual({ KILO_V2_PROFILE: path.join("/storage", "profile") })
+    await rm(dir, { recursive: true })
   })
 
-  test("keeps an explicit KILO_V2_PROFILE", () => {
+  test("keeps an explicit KILO_V2_PROFILE", async () => {
+    const { dir, extension } = await checkout()
     expect(command({ extension, storage: "/storage", env: { KILO_V2_PROFILE: "/p" } })?.env).toEqual({
       KILO_V2_PROFILE: "/p",
     })
+    await rm(dir, { recursive: true })
   })
 
   test("prefers a bundled bin/kilo2", async () => {

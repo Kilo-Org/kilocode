@@ -16,9 +16,10 @@ const meta = Bun.argv.includes("--meta")
 await rm(dist, { recursive: true, force: true })
 await mkdir(dist, { recursive: true })
 // A production package ships the build host's FFmpeg fallback, which Linux, Windows and a failed native macOS
-// capture need. Build each target's package on that target, as v1 did.
+// capture need. Build each target's package on that target. `KILO_VSCODE_TARGET` selects the helper for a
+// cross-target package.
 if (production) {
-  const target = currentFfmpegTarget()
+  const target = process.env.KILO_VSCODE_TARGET ?? currentFfmpegTarget()
   const bin = path.join(root, "bin")
   await mkdir(bin, { recursive: true })
   await ensureFfmpegForTarget(target, bin)
