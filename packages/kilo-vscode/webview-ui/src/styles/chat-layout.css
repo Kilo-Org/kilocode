@@ -87,7 +87,7 @@
 }
 
 /* Rows that overflow Virtua's container must not change the scroll height
-   before Virtua measures them. See VirtualBox in MessageList.tsx. `clip` does
+   before Virtua measures them. See VirtualBox in v2/messages.tsx. `clip` does
    not create a scroll container, so sticky content keeps working. */
 [data-slot="message-list-virtual"] {
   overflow: visible clip;
