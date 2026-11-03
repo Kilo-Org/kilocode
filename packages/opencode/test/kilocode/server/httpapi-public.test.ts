@@ -78,6 +78,7 @@ describe("Kilo PublicApi OpenAPI contract", () => {
         id: "sessionHost.listWorkspaceProfiles",
       },
       { method: "post" as const, path: SessionHostPaths.workspace, id: "sessionHost.createWorkspace" },
+      { method: "post" as const, path: SessionHostPaths.workspaceContinue, id: "sessionHost.continueWorkspace" },
       { method: "get" as const, path: SessionHostPaths.workspaceDetail, id: "sessionHost.getWorkspace" },
       { method: "get" as const, path: SessionHostPaths.workspaceStatus, id: "sessionHost.getWorkspaceStatus" },
       { method: "delete" as const, path: SessionHostPaths.workspaceDetail, id: "sessionHost.deleteWorkspace" },
@@ -382,4 +383,32 @@ describe("Kilo PublicApi OpenAPI contract", () => {
     expect(query).toEqual(["directory", "workspace"])
     expect(route?.responses?.["200"]?.content?.["application/json"]?.schema).toMatchObject({ type: "array" })
   })
+})
+
+test("types the continuation route with the 409 and 402 continuation errors", () => {
+  const spec = OpenApi.fromApi(PublicApi)
+  const entry = Object.entries(spec.paths).find(([, item]) =>
+    Object.values(item as Record<string, { operationId?: string }>).some(
+      (operation) => operation.operationId === "sessionHost.continueWorkspace",
+    ),
+  )
+  expect(entry).toBeDefined()
+  const operation = Object.values(
+    entry![1] as Record<string, { operationId?: string; responses?: Record<string, unknown> }>,
+  ).find((item) => item.operationId === "sessionHost.continueWorkspace")
+  const responses = operation?.responses ?? {}
+  expect(Object.keys(responses)).toContain("409")
+  expect(Object.keys(responses)).toContain("402")
+
+  const schemas = (spec.components?.schemas ?? {}) as Record<string, { properties?: Record<string, unknown> }>
+  expect(Object.keys(schemas["SessionHostContinuationError"]?.properties ?? {}).sort()).toEqual([
+    "code",
+    "message",
+    "retryable",
+  ])
+  expect(Object.keys(schemas["SessionHostInsufficientBalanceError"]?.properties ?? {}).sort()).toEqual([
+    "code",
+    "message",
+    "retryable",
+  ])
 })
