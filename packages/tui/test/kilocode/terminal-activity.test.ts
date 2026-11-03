@@ -107,6 +107,23 @@ describe("terminal activity", () => {
     expect(packets.at(-1)).toBe(format("idle", 12_000))
   })
 
+  test("reports done again for a different finished session", () => {
+    const packets: string[] = []
+    let session = "ses_1"
+    const emitter = createEmitter({
+      data: data({ outcome: { ses_1: "succeeded", ses_2: "succeeded" } }),
+      session: () => session,
+      write: (packet) => packets.push(packet),
+      now: () => 1_000,
+    })
+    emitter.tick()
+    expect(packets).toEqual([format("done", 1_000)])
+
+    session = "ses_2"
+    emitter.tick()
+    expect(packets).toEqual([format("done", 1_000), format("done", 1_000)])
+  })
+
   test("emits idle when no session is open", () => {
     const packets: string[] = []
     const emitter = createEmitter({

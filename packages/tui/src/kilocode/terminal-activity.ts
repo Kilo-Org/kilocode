@@ -56,15 +56,15 @@ export function createEmitter(input: {
   now?: () => number
 }) {
   const now = input.now ?? Date.now
-  let last: { state: State; at: number } | undefined
+  let last: { id: string | undefined; state: State; at: number } | undefined
   const emit = (state: State, at: number) => input.write(format(state, at))
   const tick = () => {
     const id = input.session()
     const state = id ? activity(input.data, id) : "idle"
     const at = now()
-    if (last?.state === state && (state === "done" || at - last.at < HEARTBEAT)) return
+    if (last && last.id === id && last.state === state && (state === "done" || at - last.at < HEARTBEAT)) return
     emit(state, at)
-    last = { state, at }
+    last = { id, state, at }
   }
   return { tick, stop: () => emit("idle", now()) }
 }
