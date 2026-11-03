@@ -498,6 +498,17 @@ export const dict = {
   "agentManager.intro.guide": "اقرأ الدليل",
   "agentManager.intro.dismiss": "تخطي المقدمة",
   "agentManager.intro.reopen": "كيف يعمل Agent Manager",
+  "agentManager.splash.eyebrow": "AGENT MANAGER",
+  "agentManager.splash.hide": "إخفاء",
+  "agentManager.splash.hideLabel": "إخفاء مقدمة Agent Manager",
+  "agentManager.splash.title": "شغّل أسطولًا من وكلاء Kilo.",
+  "agentManager.splash.subtitle":
+    "أنجز عدة مهام بالتوازي باستخدام worktrees، وفوّض العمل، وتابع تقدّم كل وكيل، وحافظ على تقدّم عدة مسارات عمل من مكان واحد.",
+  "agentManager.splash.hint": "أو",
+  "agentManager.splash.proceed": "تابع محليًا في مربع الرسائل أدناه",
+  "agentManager.splash.folded.title": "شغّل أسطولًا من وكلاء Kilo",
+  "agentManager.splash.folded.note": "ميزات عبر التقنيات، ومنسّق، وفريق عمليات، والمزيد",
+  "agentManager.splash.showExamples": "عرض الأمثلة",
   "agentManager.worktree.health.absent-restorable": "تم حذف المجلد",
   "agentManager.worktree.health.absent-restorableNote":
     "المجلد مفقود، لكن الفرع {{branch}} لا يزال موجودًا. استعده لمتابعة العمل هنا.",

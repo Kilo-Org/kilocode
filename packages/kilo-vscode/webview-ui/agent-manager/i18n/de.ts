@@ -516,6 +516,17 @@ export const dict = {
   "agentManager.intro.guide": "Anleitung lesen",
   "agentManager.intro.dismiss": "Einführung überspringen",
   "agentManager.intro.reopen": "So funktioniert Agent Manager",
+  "agentManager.splash.eyebrow": "AGENT MANAGER",
+  "agentManager.splash.hide": "Ausblenden",
+  "agentManager.splash.hideLabel": "Einführung zu Agent Manager ausblenden",
+  "agentManager.splash.title": "Setze eine Flotte von Kilo-Agenten ein.",
+  "agentManager.splash.subtitle":
+    "Erledige mehrere Aufgaben parallel mit Worktrees, delegiere Arbeit, verfolge den Fortschritt jedes Agenten und halte mehrere Arbeitsströme von einem Ort aus in Bewegung.",
+  "agentManager.splash.hint": "oder",
+  "agentManager.splash.proceed": "fahre lokal im Nachrichtenfeld unten fort",
+  "agentManager.splash.folded.title": "Setze eine Flotte von Kilo-Agenten ein",
+  "agentManager.splash.folded.note": "Stackübergreifende Features, ein Orchestrator, eine Ops-Crew und mehr",
+  "agentManager.splash.showExamples": "Beispiele anzeigen",
   "agentManager.worktree.health.absent-restorable": "Ordner gelöscht",
   "agentManager.worktree.health.absent-restorableNote":
     "Der Ordner fehlt, aber Branch {{branch}} existiert noch. Stelle ihn wieder her, um hier weiterzuarbeiten.",

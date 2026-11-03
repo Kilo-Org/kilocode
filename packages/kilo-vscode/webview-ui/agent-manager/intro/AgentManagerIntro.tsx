@@ -5,6 +5,8 @@ import { useLanguage } from "../../src/context/language"
 import { useVSCode } from "../../src/context/vscode"
 import type { SessionInfo } from "../../src/types/messages"
 import { WelcomeEmptyState, KiloLogo } from "../../src/components/chat/WelcomeEmptyState"
+import { createSplashIntro } from "../splash"
+import { splash } from "../splash/gate"
 import { IntroGraph } from "./IntroGraph"
 import "./intro.css"
 
@@ -15,7 +17,7 @@ interface IntroProps {
   onDismiss: () => void
 }
 
-export function createIntro(opts: {
+export interface IntroOptions {
   base: () => string
   git: () => boolean
   sessions?: () => SessionInfo[]
@@ -24,8 +26,21 @@ export function createIntro(opts: {
   onShowHistory?: () => void
   reveal: () => void
   focus: () => void
+  /** Focuses the local prompt. */
+  compose: () => void
   hints?: () => JSX.Element
-}) {
+}
+
+export interface Intro {
+  visible: () => boolean
+  dismiss: () => void
+  render: () => JSX.Element
+  /** Called when the first root session is accepted. */
+  started: () => void
+}
+
+export function createIntro(opts: IntroOptions): Intro {
+  if (splash) return createSplashIntro(opts)
   const vscode = useVSCode()
   const [dismissed, setDismissed] = createSignal(
     (window as { KILO_AGENT_MANAGER_INTRO_DISMISSED?: boolean }).KILO_AGENT_MANAGER_INTRO_DISMISSED === true,
@@ -48,6 +63,7 @@ export function createIntro(opts: {
   }
   return {
     ...state,
+    started: () => {},
     render: (): JSX.Element => (
       <AgentManagerEmptyState
         base={opts.base()}
@@ -64,7 +80,7 @@ export function createIntro(opts: {
 }
 
 interface EmptyProps extends Omit<IntroProps, "onDismiss"> {
-  intro: Pick<ReturnType<typeof createIntro>, "visible" | "open" | "dismiss">
+  intro: { visible: () => boolean; open: () => void; dismiss: () => void }
   sessions?: () => SessionInfo[]
   onSelectSession?: (id: string) => void
   onShowHistory?: () => void

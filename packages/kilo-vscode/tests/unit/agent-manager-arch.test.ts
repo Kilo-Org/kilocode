@@ -23,6 +23,7 @@ const CSS_FILES = [
   path.join(ROOT, "webview-ui/agent-manager/agent-manager.css"),
   path.join(ROOT, "webview-ui/agent-manager/agent-manager-review.css"),
   path.join(ROOT, "webview-ui/agent-manager/intro/intro.css"),
+  path.join(ROOT, "webview-ui/agent-manager/splash/splash.css"),
   path.join(ROOT, "webview-ui/browser/browser.css"),
 ]
 const TSX_FILES = [
@@ -31,6 +32,7 @@ const TSX_FILES = [
   path.join(ROOT, "webview-ui/agent-manager/ShortcutHints.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/intro/AgentManagerIntro.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/intro/IntroGraph.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/splash/Splash.tsx"),
   path.join(ROOT, "webview-ui/src/components/chat/MessageList.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/SubagentPanel.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/EditPreviewPanel.tsx"),

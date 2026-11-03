@@ -486,6 +486,17 @@ export const dict = {
   "agentManager.intro.guide": "閱讀指南",
   "agentManager.intro.dismiss": "略過介紹",
   "agentManager.intro.reopen": "Agent Manager 的運作方式",
+  "agentManager.splash.eyebrow": "AGENT MANAGER",
+  "agentManager.splash.hide": "隱藏",
+  "agentManager.splash.hideLabel": "隱藏 Agent Manager 簡介",
+  "agentManager.splash.title": "讓一隊 Kilo 代理程式為你工作。",
+  "agentManager.splash.subtitle":
+    "使用 worktree 並行處理多項任務、委派工作、追蹤每個代理程式的進度，並在同一個地方讓多條工作流程持續推進。",
+  "agentManager.splash.hint": "或",
+  "agentManager.splash.proceed": "在下方訊息框中繼續本機操作",
+  "agentManager.splash.folded.title": "讓一隊 Kilo 代理程式為你工作",
+  "agentManager.splash.folded.note": "跨技術堆疊功能、編排器、維運團隊等更多內容",
+  "agentManager.splash.showExamples": "查看範例",
   "agentManager.worktree.health.absent-restorable": "資料夾已刪除",
   "agentManager.worktree.health.absent-restorableNote":
     "資料夾已不存在，但分支 {{branch}} 仍在。還原後可繼續在此工作。",

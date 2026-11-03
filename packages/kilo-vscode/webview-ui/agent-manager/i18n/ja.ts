@@ -508,6 +508,17 @@ export const dict = {
   "agentManager.intro.guide": "ガイドを読む",
   "agentManager.intro.dismiss": "イントロダクションをスキップ",
   "agentManager.intro.reopen": "Agent Manager の仕組み",
+  "agentManager.splash.eyebrow": "AGENT MANAGER",
+  "agentManager.splash.hide": "非表示",
+  "agentManager.splash.hideLabel": "Agent Manager の紹介を非表示にする",
+  "agentManager.splash.title": "Kilo エージェントの艦隊を働かせよう。",
+  "agentManager.splash.subtitle":
+    "worktree を使って複数のタスクを並行して進め、作業を委任し、各エージェントの進捗を追い、複数の作業の流れを一か所から継続的に前進させましょう。",
+  "agentManager.splash.hint": "または",
+  "agentManager.splash.proceed": "下のメッセージ欄でローカルに作業を進める",
+  "agentManager.splash.folded.title": "Kilo エージェントの艦隊を働かせよう",
+  "agentManager.splash.folded.note": "クロススタック機能、オーケストレーター、運用チームなど",
+  "agentManager.splash.showExamples": "例を表示",
   "agentManager.worktree.health.absent-restorable": "フォルダーが削除されています",
   "agentManager.worktree.health.absent-restorableNote":
     "フォルダーはありませんが、ブランチ {{branch}} は残っています。復元すればここで作業を続けられます。",

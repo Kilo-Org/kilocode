@@ -487,6 +487,17 @@ export const dict = {
   "agentManager.intro.guide": "阅读指南",
   "agentManager.intro.dismiss": "跳过介绍",
   "agentManager.intro.reopen": "Agent Manager 的工作原理",
+  "agentManager.splash.eyebrow": "AGENT MANAGER",
+  "agentManager.splash.hide": "隐藏",
+  "agentManager.splash.hideLabel": "隐藏 Agent Manager 简介",
+  "agentManager.splash.title": "让一队 Kilo 智能体为你工作。",
+  "agentManager.splash.subtitle":
+    "使用 worktree 并行处理多项任务、委派工作、跟进每个智能体的进度，并在一个地方让多条工作流持续推进。",
+  "agentManager.splash.hint": "或",
+  "agentManager.splash.proceed": "在下方消息框中继续本地操作",
+  "agentManager.splash.folded.title": "让一队 Kilo 智能体为你工作",
+  "agentManager.splash.folded.note": "跨技术栈功能、编排器、运维团队等更多内容",
+  "agentManager.splash.showExamples": "查看示例",
   "agentManager.worktree.health.absent-restorable": "文件夹已删除",
   "agentManager.worktree.health.absent-restorableNote":
     "文件夹已不存在，但分支 {{branch}} 仍在。恢复后可继续在此工作。",

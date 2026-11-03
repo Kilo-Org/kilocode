@@ -521,6 +521,17 @@ export const dict = {
   "agentManager.intro.guide": "Leggi la guida",
   "agentManager.intro.dismiss": "Salta introduzione",
   "agentManager.intro.reopen": "Come funziona Agent Manager",
+  "agentManager.splash.eyebrow": "AGENT MANAGER",
+  "agentManager.splash.hide": "Nascondi",
+  "agentManager.splash.hideLabel": "Nascondi la presentazione di Agent Manager",
+  "agentManager.splash.title": "Metti al lavoro una flotta di agenti Kilo.",
+  "agentManager.splash.subtitle":
+    "Affronta più attività in parallelo con i worktree, delega il lavoro, segui i progressi di ogni agente e mantieni più flussi di lavoro in movimento da un unico posto.",
+  "agentManager.splash.hint": "oppure",
+  "agentManager.splash.proceed": "prosegui localmente nella casella del messaggio qui sotto",
+  "agentManager.splash.folded.title": "Metti al lavoro una flotta di agenti Kilo",
+  "agentManager.splash.folded.note": "Funzionalità tra stack, un orchestratore, un team ops e altro ancora",
+  "agentManager.splash.showExamples": "Mostra esempi",
   "agentManager.worktree.health.absent-restorable": "Cartella eliminata",
   "agentManager.worktree.health.absent-restorableNote":
     "La cartella non c'è più, ma il branch {{branch}} esiste ancora. Ripristinala per continuare a lavorare qui.",

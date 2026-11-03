@@ -500,6 +500,17 @@ export const dict = {
   "agentManager.intro.guide": "가이드 읽기",
   "agentManager.intro.dismiss": "소개 건너뛰기",
   "agentManager.intro.reopen": "Agent Manager 작동 방식",
+  "agentManager.splash.eyebrow": "AGENT MANAGER",
+  "agentManager.splash.hide": "숨기기",
+  "agentManager.splash.hideLabel": "Agent Manager 소개 숨기기",
+  "agentManager.splash.title": "Kilo 에이전트 함대를 일하게 하세요.",
+  "agentManager.splash.subtitle":
+    "worktree를 사용해 여러 작업을 병렬로 처리하고, 작업을 위임하고, 모든 에이전트의 진행 상황을 추적하며, 여러 작업 흐름을 한곳에서 계속 진행하세요.",
+  "agentManager.splash.hint": "또는",
+  "agentManager.splash.proceed": "아래 메시지 입력란에서 로컬로 진행하세요",
+  "agentManager.splash.folded.title": "Kilo 에이전트 함대를 일하게 하세요",
+  "agentManager.splash.folded.note": "크로스 스택 기능, 오케스트레이터, 운영 팀 등",
+  "agentManager.splash.showExamples": "예시 보기",
   "agentManager.worktree.health.absent-restorable": "폴더 삭제됨",
   "agentManager.worktree.health.absent-restorableNote":
     "폴더는 없지만 브랜치 {{branch}}는 남아 있습니다. 복원하면 계속 작업할 수 있습니다.",

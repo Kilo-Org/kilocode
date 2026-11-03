@@ -515,6 +515,17 @@ export const dict = {
   "agentManager.intro.guide": "Lire le guide",
   "agentManager.intro.dismiss": "Ignorer l'introduction",
   "agentManager.intro.reopen": "Fonctionnement d'Agent Manager",
+  "agentManager.splash.eyebrow": "AGENT MANAGER",
+  "agentManager.splash.hide": "Masquer",
+  "agentManager.splash.hideLabel": "Masquer la présentation d'Agent Manager",
+  "agentManager.splash.title": "Mettez une flotte d'agents Kilo au travail.",
+  "agentManager.splash.subtitle":
+    "Traitez plusieurs tâches en parallèle avec des worktrees, déléguez le travail, suivez la progression de chaque agent et faites avancer plusieurs flux de travail depuis un seul endroit.",
+  "agentManager.splash.hint": "ou",
+  "agentManager.splash.proceed": "continuez localement dans le champ de message ci-dessous",
+  "agentManager.splash.folded.title": "Mettez une flotte d'agents Kilo au travail",
+  "agentManager.splash.folded.note": "Fonctionnalités multi-stacks, un orchestrateur, une équipe ops et plus",
+  "agentManager.splash.showExamples": "Voir des exemples",
   "agentManager.worktree.health.absent-restorable": "Dossier supprimé",
   "agentManager.worktree.health.absent-restorableNote":
     "Le dossier a disparu, mais la branche {{branch}} existe toujours. Restaurez-le pour continuer à travailler ici.",

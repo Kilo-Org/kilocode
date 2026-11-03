@@ -509,6 +509,17 @@ export const dict = {
   "agentManager.intro.guide": "Читать руководство",
   "agentManager.intro.dismiss": "Пропустить введение",
   "agentManager.intro.reopen": "Как работает Agent Manager",
+  "agentManager.splash.eyebrow": "AGENT MANAGER",
+  "agentManager.splash.hide": "Скрыть",
+  "agentManager.splash.hideLabel": "Скрыть знакомство с Agent Manager",
+  "agentManager.splash.title": "Запустите в работу флот агентов Kilo.",
+  "agentManager.splash.subtitle":
+    "Решайте несколько задач параллельно с помощью worktree, делегируйте работу, следите за прогрессом каждого агента и поддерживайте продвижение нескольких рабочих потоков из одного места.",
+  "agentManager.splash.hint": "или",
+  "agentManager.splash.proceed": "продолжите локально в поле сообщения ниже",
+  "agentManager.splash.folded.title": "Запустите в работу флот агентов Kilo",
+  "agentManager.splash.folded.note": "Кросстековые функции, оркестратор, команда эксплуатации и многое другое",
+  "agentManager.splash.showExamples": "Показать примеры",
   "agentManager.worktree.health.absent-restorable": "Папка удалена",
   "agentManager.worktree.health.absent-restorableNote":
     "Папки нет, но ветка {{branch}} сохранилась. Восстановите её, чтобы продолжить работу здесь.",

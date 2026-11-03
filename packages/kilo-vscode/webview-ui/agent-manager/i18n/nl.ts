@@ -514,6 +514,17 @@ export const dict = {
   "agentManager.intro.guide": "Lees de handleiding",
   "agentManager.intro.dismiss": "Introductie overslaan",
   "agentManager.intro.reopen": "Hoe Agent Manager werkt",
+  "agentManager.splash.eyebrow": "AGENT MANAGER",
+  "agentManager.splash.hide": "Verbergen",
+  "agentManager.splash.hideLabel": "Introductie van Agent Manager verbergen",
+  "agentManager.splash.title": "Zet een vloot Kilo-agenten aan het werk.",
+  "agentManager.splash.subtitle":
+    "Pak meerdere taken parallel aan met worktrees, delegeer werk, volg de voortgang van elke agent en houd meerdere werkstromen vanuit één plek in beweging.",
+  "agentManager.splash.hint": "of",
+  "agentManager.splash.proceed": "ga lokaal verder in het berichtvak hieronder",
+  "agentManager.splash.folded.title": "Zet een vloot Kilo-agenten aan het werk",
+  "agentManager.splash.folded.note": "Functies over stacks heen, een orkestrator, een ops-team en meer",
+  "agentManager.splash.showExamples": "Voorbeelden bekijken",
   "agentManager.worktree.health.absent-restorable": "Map verwijderd",
   "agentManager.worktree.health.absent-restorableNote":
     "De map is weg, maar branch {{branch}} bestaat nog. Herstel hem om hier verder te werken.",

@@ -497,6 +497,17 @@ export const dict = {
   "agentManager.intro.guide": "อ่านคู่มือ",
   "agentManager.intro.dismiss": "ข้ามบทนำ",
   "agentManager.intro.reopen": "Agent Manager ทำงานอย่างไร",
+  "agentManager.splash.eyebrow": "AGENT MANAGER",
+  "agentManager.splash.hide": "ซ่อน",
+  "agentManager.splash.hideLabel": "ซ่อนคำแนะนำเบื้องต้นเกี่ยวกับ Agent Manager",
+  "agentManager.splash.title": "ให้กองทัพเอเจนต์ Kilo ลงมือทำงาน",
+  "agentManager.splash.subtitle":
+    "จัดการหลายงานพร้อมกันด้วย worktrees มอบหมายงาน ติดตามความคืบหน้าของทุกเอเจนต์ และขับเคลื่อนหลายสายงานให้เดินหน้าอย่างต่อเนื่องจากที่เดียว",
+  "agentManager.splash.hint": "หรือ",
+  "agentManager.splash.proceed": "ดำเนินการต่อในเครื่องผ่านช่องข้อความด้านล่าง",
+  "agentManager.splash.folded.title": "ให้กองทัพเอเจนต์ Kilo ลงมือทำงาน",
+  "agentManager.splash.folded.note": "ฟีเจอร์ข้ามสแตก ตัวประสานงาน ทีมปฏิบัติการ และอื่นๆ",
+  "agentManager.splash.showExamples": "ดูตัวอย่าง",
   "agentManager.worktree.health.absent-restorable": "โฟลเดอร์ถูกลบ",
   "agentManager.worktree.health.absent-restorableNote":
     "โฟลเดอร์หายไปแล้ว แต่แบรนช์ {{branch}} ยังอยู่ กู้คืนเพื่อทำงานต่อที่นี่",

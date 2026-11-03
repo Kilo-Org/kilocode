@@ -550,4 +550,15 @@ export const dict = {
   "agentManager.intro.guide": "Read the guide",
   "agentManager.intro.dismiss": "Skip introduction",
   "agentManager.intro.reopen": "How Agent Manager works",
+  "agentManager.splash.eyebrow": "AGENT MANAGER",
+  "agentManager.splash.hide": "Hide",
+  "agentManager.splash.hideLabel": "Hide Agent Manager introduction",
+  "agentManager.splash.title": "Put a fleet of Kilo agents to work.",
+  "agentManager.splash.subtitle":
+    "Tackle several tasks in parallel with worktrees, delegate work, follow every agent's progress, and keep multiple work streams moving from one place.",
+  "agentManager.splash.hint": "or",
+  "agentManager.splash.proceed": "proceed locally in the message box below",
+  "agentManager.splash.folded.title": "Put a fleet of Kilo agents to work",
+  "agentManager.splash.folded.note": "Cross-stack features, an orchestrator, an ops crew and more",
+  "agentManager.splash.showExamples": "Show examples",
 }
