@@ -3,6 +3,7 @@ package ai.kilocode.client.actions
 import ai.kilocode.client.agentManager.AgentManagerPanel
 import ai.kilocode.client.agentManager.SidePanelKeys
 import ai.kilocode.client.agentManager.hosted.HostedWorkspaceDataKeys
+import ai.kilocode.client.agentManager.hosted.HostedWorkspaceEditorKind
 import com.intellij.openapi.actionSystem.ActionUpdateThread
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
@@ -18,8 +19,9 @@ abstract class HostedWorkspaceAction : AnAction(), DumbAware {
 class HostedRemoveWorkspaceAction : HostedWorkspaceAction() {
     override fun update(e: AnActionEvent) {
         val item = e.getData(HostedWorkspaceDataKeys.WORKSPACE)
-        e.presentation.isVisible = item != null
-        e.presentation.isEnabled = item != null
+        val pending = item?.ref?.workspaceID?.startsWith(HostedWorkspaceEditorKind.PENDING_PREFIX) == true
+        e.presentation.isVisible = item != null && !pending
+        e.presentation.isEnabled = item != null && !pending
     }
 
     override fun actionPerformed(e: AnActionEvent) {
@@ -32,8 +34,9 @@ class HostedRemoveWorkspaceAction : HostedWorkspaceAction() {
 class HostedDeleteWorkspaceAction : HostedWorkspaceAction() {
     override fun update(e: AnActionEvent) {
         val item = e.getData(HostedWorkspaceDataKeys.WORKSPACE)
-        e.presentation.isVisible = item != null
-        e.presentation.isEnabled = item != null
+        val pending = item?.ref?.workspaceID?.startsWith(HostedWorkspaceEditorKind.PENDING_PREFIX) == true
+        e.presentation.isVisible = item != null && !pending
+        e.presentation.isEnabled = item != null && !pending
     }
 
     override fun actionPerformed(e: AnActionEvent) {
@@ -46,8 +49,10 @@ class HostedDeleteWorkspaceAction : HostedWorkspaceAction() {
 class HostedDismissWorkspaceAction : HostedWorkspaceAction() {
     override fun update(e: AnActionEvent) {
         val item = e.getData(HostedWorkspaceDataKeys.WORKSPACE)
-        e.presentation.isVisible = item?.deletionState == "deleted"
-        e.presentation.isEnabled = item?.deletionState == "deleted"
+        val pending = item?.ref?.workspaceID?.startsWith(HostedWorkspaceEditorKind.PENDING_PREFIX) == true
+        val deleted = item?.deletionState == "deleted" && !pending
+        e.presentation.isVisible = deleted
+        e.presentation.isEnabled = deleted
     }
 
     override fun actionPerformed(e: AnActionEvent) {

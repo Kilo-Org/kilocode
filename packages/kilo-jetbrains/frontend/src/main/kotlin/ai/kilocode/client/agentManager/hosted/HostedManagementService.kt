@@ -36,7 +36,6 @@ class HostedManagementService internal constructor(
         val closed: Map<String, Set<String>> = emptyMap(),
         val selected: Map<String, String> = emptyMap(),
         val visibleList: Set<String> = emptySet(),
-        val pendingDelete: Set<String> = emptySet(),
         val dismissed: Set<String> = emptySet(),
     )
 
@@ -109,16 +108,6 @@ class HostedManagementService internal constructor(
         write(current().copy(visibleList = keys))
     }
 
-    fun pendingDelete(ref: HostedWorkspaceRefDto): Boolean = ref.key in current().pendingDelete
-
-    fun markPendingDelete(ref: HostedWorkspaceRefDto) {
-        write(current().copy(pendingDelete = current().pendingDelete + ref.key))
-    }
-
-    fun clearDelete(ref: HostedWorkspaceRefDto) {
-        write(current().copy(pendingDelete = current().pendingDelete - ref.key, dismissed = current().dismissed - ref.key))
-    }
-
     fun dismissed(ref: HostedWorkspaceRefDto): Boolean = ref.key in current().dismissed
 
     fun dismiss(ref: HostedWorkspaceRefDto) {
@@ -126,7 +115,6 @@ class HostedManagementService internal constructor(
             current().copy(
                 dismissed = current().dismissed + ref.key,
                 excluded = current().excluded + ref.key,
-                pendingDelete = current().pendingDelete - ref.key,
             ),
         )
     }
@@ -141,7 +129,6 @@ class HostedManagementService internal constructor(
                 closed = closed,
                 selected = selected,
                 visibleList = current().visibleList - key,
-                pendingDelete = current().pendingDelete - key,
                 dismissed = current().dismissed - key,
             ),
         )

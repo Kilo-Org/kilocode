@@ -33,6 +33,7 @@ import ai.kilocode.client.agentManager.hosted.HostedWorkspaceEditorMatcher
 import ai.kilocode.client.agentManager.hosted.hostedMessageID
 import ai.kilocode.client.agentManager.hosted.hostedRepository
 import ai.kilocode.client.agentManager.hosted.hostedWorkspaceParams
+import ai.kilocode.client.agentManager.hosted.HostedWorkspaceRemoval
 import ai.kilocode.client.agentManager.hosted.HostedWorkspaceRow
 import ai.kilocode.client.agentManager.hosted.HostedWorkspaceRowData
 import ai.kilocode.client.agentManager.hosted.HostedWorkspaceDataKeys
@@ -44,6 +45,7 @@ import ai.kilocode.rpc.dto.HostedCreateWorkspaceDto
 import ai.kilocode.rpc.dto.HostedIDs
 import ai.kilocode.rpc.dto.HostedStartSessionDto
 import ai.kilocode.rpc.dto.HostedWorkspaceDto
+import ai.kilocode.rpc.dto.HostedWorkspaceRefDto
 import ai.kilocode.client.agentManager.worktree.normalizeWorktreePath
 import ai.kilocode.client.agentManager.worktree.worktreeSessionParams
 import ai.kilocode.client.session.ui.popup.HeaderPopupBody
@@ -155,6 +157,9 @@ class AgentManagerPanel(
     private val provider = WorktreeDeleteProvider()
     private val edit = RenameAction()
     private val group = ActionManager.getInstance().getAction("Kilo.Worktree.RowMenu") as? ActionGroup ?: DefaultActionGroup()
+    private val pendingHosted = linkedMapOf<String, HostedWorkspaceDto>()
+    private val createdHosted = linkedMapOf<String, HostedWorkspaceDto>()
+    private var deletingHosted: Set<String> = emptySet()
     private val list = ActiveList(
         KiloBundle.message("worktree.empty"),
         cfg = ActiveListConfig(
@@ -222,15 +227,25 @@ class AgentManagerPanel(
             target.service<KiloHostedService>().let { hosted ->
                 hosted.observe(this) { state ->
                     edt({ !target.isDisposed && !Disposer.isDisposed(this) }) {
+                        createdHosted.keys.removeAll { key -> state.items.any { it.ref.key == key } }
                         hostedState = state
                         sync()
                     }
                 }
                 hosted.refresh(controller.directory)
                 val management = target.service<HostedManagementService>()
+                val removal = target.service<HostedWorkspaceRemoval>()
                 hostedCs.launch {
                     management.preferences.collect {
                         edt({ !target.isDisposed && !Disposer.isDisposed(this@AgentManagerPanel) }) { sync() }
+                    }
+                }
+                hostedCs.launch {
+                    removal.deleting.collect { keys ->
+                        edt({ !target.isDisposed && !Disposer.isDisposed(this@AgentManagerPanel) }) {
+                            deletingHosted = keys
+                            sync()
+                        }
                     }
                 }
             }
@@ -365,14 +380,29 @@ class AgentManagerPanel(
     }
 
     @RequiresEdt
-    private fun createHosted(request: HostedCreateWorkspaceDto) {
+    internal fun createHosted(request: HostedCreateWorkspaceDto) {
         val target = project ?: return
+        val pending = HostedWorkspaceDto(
+            ref = HostedWorkspaceRefDto("cloud", HostedWorkspaceEditorKind.PENDING_PREFIX + request.operationKey),
+            name = KiloBundle.message("hosted.workspace.progress.creating"),
+            repositoryUrl = request.repository.repo ?: request.repository.url,
+            branch = request.repository.branch,
+            profileID = request.profileID,
+        )
+        pendingHosted[pending.ref.key] = pending
+        sync()
+        list.select(pending.ref.key)
+        list.focusList()
+        openHostedWorkspace(target, pending)
         hostedCs.launch {
             val result = target.service<KiloHostedService>().create(request)
             edt({ !target.isDisposed && !Disposer.isDisposed(this@AgentManagerPanel) }) {
+                pendingHosted.remove(pending.ref.key)
                 val workspace = result.workspace
                 val session = result.session
                 if (result.failure != null || workspace == null || session == null) {
+                    closeHostedPending(target, pending)
+                    sync()
                     val failure = result.failure
                     KiloNotifications.error(
                         target,
@@ -382,12 +412,22 @@ class AgentManagerPanel(
                     ) { createHosted(request) }
                     return@edt
                 }
-                target.service<HostedManagementService>().select(workspace.ref, session.id)
-                openHostedWorkspace(target, workspace)
+                createdHosted[workspace.ref.key] = workspace
                 sync()
+                target.service<HostedManagementService>().select(workspace.ref, session.id)
+                list.select(workspace.ref.key)
+                list.focusList()
+                openHostedWorkspace(target, workspace)
+                closeHostedPending(target, pending)
                 target.service<KiloHostedService>().refresh(controller.directory)
             }
         }
+    }
+
+    @RequiresEdt
+    private fun closeHostedPending(target: Project, pending: HostedWorkspaceDto) {
+        service<HostedWorkspaceCache>().remove(pending.ref)
+        target.service<KiloVfsManager>().close(HostedWorkspaceEditorKind.ID, hostedWorkspaceParams(pending))
     }
 
     @RequiresEdt
@@ -442,17 +482,16 @@ class AgentManagerPanel(
     @RequiresEdt
     internal fun removeHosted(item: HostedWorkspaceDto) {
         val target = project ?: return
-        val choice = Messages.showYesNoDialog(
-            target,
-            KiloBundle.message("hosted.workspace.remove.message"),
-            KiloBundle.message("hosted.workspace.remove.title"),
-            Messages.getQuestionIcon(),
+        val opts = ActiveListDeleteOptions(
+            message = KiloBundle.message("hosted.workspace.remove.message"),
+            button = KiloBundle.message("hosted.workspace.remove.button"),
         )
-        if (choice != Messages.YES) return
-        target.service<HostedManagementService>().remove(item.ref)
-        service<HostedWorkspaceCache>().remove(item.ref)
-        target.service<KiloVfsManager>().close(HostedWorkspaceEditorKind.ID, hostedWorkspaceParams(item))
-        sync()
+        list.confirmDelete(list.point(item.ref.key), opts) {
+            target.service<HostedManagementService>().remove(item.ref)
+            service<HostedWorkspaceCache>().remove(item.ref)
+            target.service<KiloVfsManager>().close(HostedWorkspaceEditorKind.ID, hostedWorkspaceParams(item))
+            sync()
+        }
     }
 
     @RequiresEdt
@@ -467,49 +506,8 @@ class AgentManagerPanel(
     @RequiresEdt
     internal fun deleteHosted(item: HostedWorkspaceDto) {
         val target = project ?: return
-        val choice = Messages.showYesNoDialog(
-            target,
-            KiloBundle.message("hosted.workspace.delete.message"),
-            KiloBundle.message("hosted.workspace.delete.title"),
-            Messages.getWarningIcon(),
-        )
-        if (choice != Messages.YES) return
-        target.service<HostedManagementService>().markPendingDelete(item.ref)
-        sync()
-        performDelete(item.ref)
-    }
-
-    @RequiresEdt
-    private fun performDelete(ref: ai.kilocode.rpc.dto.HostedWorkspaceRefDto) {
-        val target = project ?: return
-        hostedCs.launch {
-            val result = target.service<KiloHostedService>().delete(ref)
-            edt({ !target.isDisposed && !Disposer.isDisposed(this@AgentManagerPanel) }) {
-                val management = target.service<HostedManagementService>()
-                if (!result.success) {
-                    management.clearDelete(ref)
-                    KiloNotifications.error(
-                        target,
-                        KiloBundle.message("hosted.workspace.delete.failed"),
-                        result.failure?.message,
-                        KiloBundle.message("common.retry"),
-                    ) { performDelete(ref) }
-                    sync()
-                    return@edt
-                }
-                management.forget(ref)
-                service<HostedWorkspaceCache>().remove(ref)
-                target.service<KiloVfsManager>().close(
-                    HostedWorkspaceEditorKind.ID,
-                    mapOf(
-                        HostedWorkspaceEditorKind.PROVIDER to ref.providerID,
-                        HostedWorkspaceEditorKind.WORKSPACE to ref.workspaceID,
-                    ),
-                )
-                sync()
-                target.service<KiloHostedService>().refresh(controller.directory)
-            }
-        }
+        val removal = target.service<HostedWorkspaceRemoval>()
+        removal.confirm(list.point(item.ref.key), item.ref, controller.directory)
     }
 
     private fun remove(item: WorktreeDto, force: Boolean) {
@@ -818,26 +816,28 @@ class AgentManagerPanel(
                     running = running.contains(key),
                 )
             } + if (hostedState.enabled) {
-                val visible = project?.service<HostedManagementService>()?.visible(hostedState.items)
-                    ?: hostedState.items
                 val management = project?.service<HostedManagementService>()
-                visible.map { dto ->
+                val visible = management?.visible(hostedState.items) ?: hostedState.items
+                val keys = visible.mapTo(mutableSetOf()) { it.ref.key }
+                val pending = pendingHosted.values.map {
+                    HostedWorkspaceRowData(it, null, null, KiloBundle.message("hosted.workspace.progress.creating.short"))
+                }
+                val created = createdHosted.values
+                    .filterNot { it.ref.key in keys || management?.excluded(it.ref) == true }
+                    .map { HostedWorkspaceRowData(it, hostedState.presentation(it.ref)) }
+                (pending + created + visible.map { dto ->
                     val kinds = activity.filterKeys { id -> HostedIDs.parseSession(id)?.let {
                         it.first == dto.ref.providerID && it.second == dto.ref.workspaceID
                     } == true }.values
-                    val base = hostedState.presentation(dto.ref)
-                    val deleting = management?.pendingDelete(dto.ref) == true
-                    val status = if (deleting && (base == null || base.deletionState != "deleted")) {
-                        (base ?: ai.kilocode.rpc.dto.HostedWorkspaceStatusDto(dto.ref, "deleting", "unknown", "", 0.0))
-                            .copy(deletionState = "deleting")
-                    } else base
+                    val status = hostedState.presentation(dto.ref)
                     val known = dto.sessionCursor == null && dto.sessions.isNotEmpty() &&
                         dto.sessions.all { it.id in observed }
                     val kind = aggregateSessionActivity(kinds) ?: SessionActivityKind.RUNNING.takeIf {
                         !known && status?.hasActiveTurn == true
                     }
-                    HostedWorkspaceRow(HostedWorkspaceRowData(dto, status, kind))
-                }
+                    val progress = if (dto.ref.key in deletingHosted) KiloBundle.message("common.deleting") else null
+                    HostedWorkspaceRowData(dto, status, kind, progress)
+                }).distinctBy { it.dto.ref.key }.map(::HostedWorkspaceRow)
             } else {
                 emptyList()
             },

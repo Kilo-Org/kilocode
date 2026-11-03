@@ -32,9 +32,9 @@ import com.intellij.openapi.actionSystem.UiDataProvider
 import com.intellij.openapi.components.service
 import com.intellij.openapi.project.DumbAwareAction
 import com.intellij.openapi.project.Project
-import com.intellij.openapi.ui.Messages
 import com.intellij.openapi.util.Disposer
 import com.intellij.ui.components.JBLabel
+import com.intellij.ui.awt.RelativePoint
 import com.intellij.util.concurrency.annotations.RequiresEdt
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -45,6 +45,8 @@ import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.awt.Component
+import java.awt.Point
 
 /**
  * Cloud workspace editor: the workspace's root sessions on the left, the ordinary
@@ -366,40 +368,13 @@ class HostedWorkspaceEditorPanel @RequiresEdt constructor(
     }
 
     @RequiresEdt
-    private fun deleteWorkspace() {
-        val choice = Messages.showYesNoDialog(
-            project,
-            KiloBundle.message("hosted.workspace.delete.message"),
-            KiloBundle.message("hosted.workspace.delete.title"),
-            Messages.getWarningIcon(),
+    private fun deleteWorkspace(anchor: Component? = null) {
+        val target = anchor ?: this
+        project.service<HostedWorkspaceRemoval>().confirm(
+            RelativePoint(target, Point(target.width / 2, if (target === this) 0 else target.height)),
+            ref,
+            project.basePath.orEmpty(),
         )
-        if (choice != Messages.YES) return
-        management.markPendingDelete(ref)
-        deleteRemote()
-    }
-
-    @RequiresEdt
-    private fun deleteRemote() {
-        cs.launch {
-            val result = hosted.delete(ref)
-            withContext(Dispatchers.Main) {
-                if (Disposer.isDisposed(this@HostedWorkspaceEditorPanel)) return@withContext
-                if (!result.success) {
-                    management.clearDelete(ref)
-                    KiloNotifications.error(
-                        project,
-                        KiloBundle.message("hosted.workspace.delete.failed"),
-                        result.failure?.message,
-                        KiloBundle.message("common.retry"),
-                    ) { deleteRemote() }
-                    return@withContext
-                }
-                management.forget(ref)
-                service<HostedWorkspaceCache>().remove(ref)
-                project.service<KiloVfsManager>().close(HostedWorkspaceEditorKind.ID, hostedWorkspaceParams(dto))
-                hosted.refresh(project.basePath.orEmpty())
-            }
-        }
     }
 
     private inner class NewSessionAction : DumbAwareAction(
@@ -417,6 +392,7 @@ class HostedWorkspaceEditorPanel @RequiresEdt constructor(
         null,
     ) {
         @RequiresEdt
-        override fun actionPerformed(e: com.intellij.openapi.actionSystem.AnActionEvent) = deleteWorkspace()
+        override fun actionPerformed(e: com.intellij.openapi.actionSystem.AnActionEvent) =
+            deleteWorkspace(e.inputEvent?.component)
     }
 }

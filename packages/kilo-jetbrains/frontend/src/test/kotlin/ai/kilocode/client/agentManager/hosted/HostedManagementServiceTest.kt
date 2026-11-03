@@ -72,12 +72,6 @@ class HostedManagementServiceTest : BasePlatformTestCase() {
 
         assertEquals(setOf("ses_two"), management.closed(ref))
         assertEquals(two, management.selected(ref))
-        assertTrue(management.pendingDelete(ref) == false)
-
-        management.markPendingDelete(ref)
-        assertTrue(management.pendingDelete(ref))
-        management.clearDelete(ref)
-        assertFalse(management.pendingDelete(ref))
     }
 
     fun testClosingBackgroundChildKeepsTheSelectedSession() {

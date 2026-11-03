@@ -15,7 +15,7 @@ internal enum class HostedWorkspaceStatus(private val value: String, private val
     STARTING("starting", UiStyle.Badge.Secondary),
     STOPPING("stopping", UiStyle.Badge.Secondary),
     STOPPED("stopped", UiStyle.Badge.Secondary),
-    DELETING("deleting", UiStyle.Badge.ActivityError),
+    DELETING("deleting", UiStyle.Badge.Secondary),
     UNAVAILABLE("unavailable", UiStyle.Badge.ActivityError),
     UNKNOWN("unknown", UiStyle.Badge.Secondary),
     ;
