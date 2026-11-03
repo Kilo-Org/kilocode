@@ -14,7 +14,11 @@ import path from "node:path"
 import { KiloHost } from "../src/host"
 
 async function eventually<A>(read: () => Promise<A>, ready: (value: A) => boolean) {
-  const deadline = performance.now() + 10_000
+  // A native watcher converges in well under a second, but the CI runner shares four vCPUs with other test
+  // processes, so a loaded run can take several seconds to deliver the change event. The deadline only
+  // guards against a watcher that never converges, and stays below the suite's 30s timeout so a real
+  // failure reports this message instead of a bare test timeout.
+  const deadline = performance.now() + 20_000
   while (performance.now() < deadline) {
     const value = await read()
     if (ready(value)) return value
