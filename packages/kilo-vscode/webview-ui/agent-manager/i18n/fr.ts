@@ -526,6 +526,70 @@ export const dict = {
   "agentManager.splash.folded.title": "Mettez une flotte d'agents Kilo au travail",
   "agentManager.splash.folded.note": "Fonctionnalités multi-stacks, un orchestrateur, une équipe ops et plus",
   "agentManager.splash.showExamples": "Voir des exemples",
+  "agentManager.splash.examples.crossStack.tag": "Multi-dépôt",
+  "agentManager.splash.examples.crossStack.title": "Une fonction, trois dépôts",
+  "agentManager.splash.examples.crossStack.pitch":
+    "Un brief, un agent par dépôt et toute la fonctionnalité dans une seule vue.",
+  "agentManager.splash.examples.crossStack.feature1.name": "Projets multi-dépôts",
+  "agentManager.splash.examples.crossStack.feature1.text":
+    "Backend, frontend et infra côte à côte dans une seule barre latérale.",
+  "agentManager.splash.examples.crossStack.feature2.name": "État des sessions en direct",
+  "agentManager.splash.examples.crossStack.feature2.text":
+    "Voyez d’un coup d’œil ce qui travaille, ce qui est terminé ou ce qui vous attend.",
+  "agentManager.splash.examples.crossStack.feature3.name": "Badges de PR et compteurs de diff",
+  "agentManager.splash.examples.crossStack.feature3.text": "Sachez ce que chaque agent a modifié avant de l’ouvrir.",
+  "agentManager.splash.examples.orchestrator.tag": "Orchestrateur",
+  "agentManager.splash.examples.orchestrator.title": "Divisez une grande tâche",
+  "agentManager.splash.examples.orchestrator.pitch":
+    "Désignez n’importe quelle session comme orchestrateur, confiez-lui des tâches et laissez-la constituer l’équipe nécessaire.",
+  "agentManager.splash.examples.orchestrator.feature1.name": "Des sessions qui lancent des sessions",
+  "agentManager.splash.examples.orchestrator.feature1.text":
+    "Un orchestrateur peut créer des sections, des worktrees et de nouvelles sessions.",
+  "agentManager.splash.examples.orchestrator.feature2.name": "Worktrees isolés",
+  "agentManager.splash.examples.orchestrator.feature2.text":
+    "Chaque travail a sa propre copie, donc rien n’entre en collision.",
+  "agentManager.splash.examples.orchestrator.feature3.name": "Intervenez n’importe où",
+  "agentManager.splash.examples.orchestrator.feature3.text":
+    "Rejoignez une session lancée ou suivez tout le travail depuis le sommet.",
+  "agentManager.splash.examples.ops.tag": "Ops",
+  "agentManager.splash.examples.ops.title": "Formez une équipe ops fixe",
+  "agentManager.splash.examples.ops.pitch":
+    "Gardez des agents de longue durée en service à côté des sessions qui construisent.",
+  "agentManager.splash.examples.ops.feature1.name": "Instructions permanentes",
+  "agentManager.splash.examples.ops.feature1.text":
+    "Donnez à une session un rôle qui dure plus longtemps que n’importe quelle tâche.",
+  "agentManager.splash.examples.ops.feature2.name": "Sections",
+  "agentManager.splash.examples.ops.feature2.text":
+    "Regroupez Implement et Ops pour que chaque équipe reste facile à parcourir.",
+  "agentManager.splash.examples.ops.feature3.name": "Alertes « vous êtes attendu »",
+  "agentManager.splash.examples.ops.feature3.text":
+    "Les agents s’arrêtent et signalent les décisions risquées au lieu de forcer.",
+  "agentManager.splash.examples.versions.tag": "Versions",
+  "agentManager.splash.examples.versions.title": "Testez trois, gardez le meilleur",
+  "agentManager.splash.examples.versions.pitch":
+    "Envoyez un prompt à plusieurs agents ou modèles et gardez le meilleur résultat.",
+  "agentManager.splash.examples.versions.feature1.name": "Exécutions multi-versions",
+  "agentManager.splash.examples.versions.feature1.text": "Lancez la même tâche en plusieurs versions à la fois.",
+  "agentManager.splash.examples.versions.feature2.name": "Mélangez les modèles",
+  "agentManager.splash.examples.versions.feature2.text": "Comparez Kilo Auto, Claude et GPT sur un travail identique.",
+  "agentManager.splash.examples.versions.feature3.name": "Comparez et gardez",
+  "agentManager.splash.examples.versions.feature3.text":
+    "Examinez de vrais diffs côte à côte, gardez-en un et abandonnez le reste.",
+  "agentManager.splash.examples.beyondCode.tag": "Hors code",
+  "agentManager.splash.examples.beyondCode.title": "Créez vos visuels de marque",
+  "agentManager.splash.examples.beyondCode.pitch":
+    "Agent Manager exécute tout travail qu’un agent peut faire, pas seulement les changements de code.",
+  "agentManager.splash.examples.beyondCode.feature1.name": "Brouillons parallèles",
+  "agentManager.splash.examples.beyondCode.feature1.text": "Explorez plusieurs directions de logo en même temps.",
+  "agentManager.splash.examples.beyondCode.feature2.name": "Tous les fichiers",
+  "agentManager.splash.examples.beyondCode.feature2.text":
+    "SVG, tokens de design et modèles, pas seulement le code source.",
+  "agentManager.splash.examples.beyondCode.feature3.name": "Sessions de suivi",
+  "agentManager.splash.examples.beyondCode.feature3.text":
+    "Orientez de nouvelles sessions vers la version que vous décidez de garder.",
+  "agentManager.splash.carousel.previous": "Exemple précédent",
+  "agentManager.splash.carousel.next": "Exemple suivant",
+  "agentManager.splash.carousel.goTo": "Afficher l’exemple : {{title}}",
   "agentManager.worktree.health.absent-restorable": "Dossier supprimé",
   "agentManager.worktree.health.absent-restorableNote":
     "Le dossier a disparu, mais la branche {{branch}} existe toujours. Restaurez-le pour continuer à travailler ici.",

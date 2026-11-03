@@ -40,6 +40,7 @@ import { dict as amNl } from "../../webview-ui/agent-manager/i18n/nl"
 import { dict as amUk } from "../../webview-ui/agent-manager/i18n/uk"
 import { dict as amIt } from "../../webview-ui/agent-manager/i18n/it"
 import { dict as amFa } from "../../webview-ui/agent-manager/i18n/fa"
+import { examples } from "../../webview-ui/agent-manager/splash/examples"
 
 const PREFIX = "agentManager."
 
@@ -155,6 +156,29 @@ describe("Agent Manager i18n split", () => {
   it("references the base update command in every introduction locale", () => {
     for (const [locale, dict] of Object.entries(locales)) {
       expect(dict["agentManager.intro.updateText"], `${locale}: base update command`).toContain("/update-from-base")
+    }
+  })
+
+  it("resolves every splash example in every locale", () => {
+    for (const [locale, dict] of Object.entries(locales)) {
+      for (const example of examples) {
+        const keys = [
+          example.tag,
+          example.title,
+          example.pitch,
+          ...example.features.flatMap((feature) => [feature.name, feature.text]),
+        ]
+        for (const key of keys) {
+          expect((dict as Record<string, string>)[key], `locale ${locale} is missing ${key}`).toBeTruthy()
+        }
+      }
+      for (const key of [
+        "agentManager.splash.carousel.previous",
+        "agentManager.splash.carousel.next",
+        "agentManager.splash.carousel.goTo",
+      ]) {
+        expect((dict as Record<string, string>)[key], `locale ${locale} is missing ${key}`).toBeTruthy()
+      }
     }
   })
 

@@ -2,6 +2,7 @@ import { describe, expect, it } from "bun:test"
 import { createRoot } from "solid-js"
 import { createFold } from "../../webview-ui/agent-manager/splash/fold"
 import { splash } from "../../webview-ui/agent-manager/splash/gate"
+import { navigate, start, wrap } from "../../webview-ui/agent-manager/splash/carousel-logic"
 import { isKnownRootSession, LOCAL } from "../../webview-ui/agent-manager/navigate"
 import { backgroundCreated } from "../../webview-ui/agent-manager/project/local-tabs"
 import { createProjectStore } from "../../webview-ui/agent-manager/project/store"
@@ -153,5 +154,29 @@ describe("Agent Manager splash fold", () => {
       dispose()
     })
     expect(vscode.posted).toEqual([fold(true), fold(false)])
+  })
+})
+
+describe("Agent Manager splash example carousel", () => {
+  it("wraps arrow navigation around both ends", () => {
+    expect(wrap(0, -1, 5)).toBe(4)
+    expect(wrap(4, 1, 5)).toBe(0)
+    expect(wrap(2, -1, 5)).toBe(1)
+    expect(wrap(2, 1, 5)).toBe(3)
+  })
+
+  it("keeps three cards visible with the selected example in the window", () => {
+    expect([0, 1, 2, 3, 4].map((index) => start(index, 5))).toEqual([0, 0, 1, 2, 2])
+    expect(start(0, 2)).toBe(0)
+  })
+
+  it("moves with arrow keys in reading direction and jumps with Home and End", () => {
+    expect(navigate("ArrowRight", 4, 5, false)).toBe(0)
+    expect(navigate("ArrowLeft", 0, 5, false)).toBe(4)
+    expect(navigate("ArrowRight", 1, 5, true)).toBe(0)
+    expect(navigate("ArrowLeft", 4, 5, true)).toBe(0)
+    expect(navigate("Home", 3, 5, false)).toBe(0)
+    expect(navigate("End", 1, 5, true)).toBe(4)
+    expect(navigate("ArrowDown", 1, 5, false)).toBeUndefined()
   })
 })

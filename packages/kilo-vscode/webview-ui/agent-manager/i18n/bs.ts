@@ -516,6 +516,67 @@ export const dict = {
   "agentManager.splash.folded.title": "Stavi flotu Kilo agenata na posao",
   "agentManager.splash.folded.note": "Funkcije kroz više stekova, orkestrator, ops tim i još mnogo toga",
   "agentManager.splash.showExamples": "Prikaži primjere",
+  "agentManager.splash.examples.crossStack.tag": "Više repoa",
+  "agentManager.splash.examples.crossStack.title": "Isporučite funkciju kroz tri repozitorija",
+  "agentManager.splash.examples.crossStack.pitch":
+    "Jedan brief, jedan agent po repozitoriju i cijela funkcija u jednom pregledu.",
+  "agentManager.splash.examples.crossStack.feature1.name": "Projekti s više repozitorija",
+  "agentManager.splash.examples.crossStack.feature1.text":
+    "Backend, frontend i infrastruktura jedan uz drugi u jednom bočnom panelu.",
+  "agentManager.splash.examples.crossStack.feature2.name": "Status sesija uživo",
+  "agentManager.splash.examples.crossStack.feature2.text":
+    "Na prvi pogled vidite šta radi, šta je završeno ili čeka na vas.",
+  "agentManager.splash.examples.crossStack.feature3.name": "PR oznake i brojevi izmjena",
+  "agentManager.splash.examples.crossStack.feature3.text":
+    "Znajte šta je svaki agent promijenio prije nego što otvorite.",
+  "agentManager.splash.examples.orchestrator.tag": "Orkestrator",
+  "agentManager.splash.examples.orchestrator.title": "Neka orkestrator podijeli veliki posao",
+  "agentManager.splash.examples.orchestrator.pitch":
+    "Odredite bilo koju sesiju kao orkestratora, dajte joj skup zadataka i pustite je da izgradi tim koji posao traži.",
+  "agentManager.splash.examples.orchestrator.feature1.name": "Sesije koje pokreću sesije",
+  "agentManager.splash.examples.orchestrator.feature1.text":
+    "Orkestrator može kreirati sekcije, worktree i nove sesije.",
+  "agentManager.splash.examples.orchestrator.feature2.name": "Izolirani worktree",
+  "agentManager.splash.examples.orchestrator.feature2.text":
+    "Svaki posao dobija vlastitu kopiju, pa se ništa ne sudara.",
+  "agentManager.splash.examples.orchestrator.feature3.name": "Uskočite bilo gdje",
+  "agentManager.splash.examples.orchestrator.feature3.text":
+    "Uđite u bilo koju sesiju koju je pokrenuo ili pratite cijeli posao s vrha.",
+  "agentManager.splash.examples.ops.tag": "Operacije",
+  "agentManager.splash.examples.ops.title": "Postavite stalnu operativnu ekipu",
+  "agentManager.splash.examples.ops.pitch": "Držite dugotrajne agente na dužnosti pored sesija koje grade.",
+  "agentManager.splash.examples.ops.feature1.name": "Stalne instrukcije",
+  "agentManager.splash.examples.ops.feature1.text":
+    "Dajte sesiji ulogu koja traje duže od bilo kojeg pojedinačnog zadatka.",
+  "agentManager.splash.examples.ops.feature2.name": "Sekcije",
+  "agentManager.splash.examples.ops.feature2.text": "Grupirajte Implement i Ops da svaka ekipa ostane pregledna.",
+  "agentManager.splash.examples.ops.feature3.name": "Obavještenja da ste potrebni",
+  "agentManager.splash.examples.ops.feature3.text":
+    "Agenti se zaustavljaju i označavaju rizične odluke umjesto da ih proguraju.",
+  "agentManager.splash.examples.versions.tag": "Verzije",
+  "agentManager.splash.examples.versions.title": "Isprobajte tri pristupa, zadržite najbolji",
+  "agentManager.splash.examples.versions.pitch":
+    "Pošaljite jedan prompt većem broju agenata ili modela i zadržite najbolji rezultat.",
+  "agentManager.splash.examples.versions.feature1.name": "Pokretanja više verzija",
+  "agentManager.splash.examples.versions.feature1.text": "Pokrenite isti zadatak kao nekoliko verzija odjednom.",
+  "agentManager.splash.examples.versions.feature2.name": "Kombinirajte modele",
+  "agentManager.splash.examples.versions.feature2.text": "Uporedite Kilo Auto, Claude i GPT na identičnom poslu.",
+  "agentManager.splash.examples.versions.feature3.name": "Uporedite i zadržite",
+  "agentManager.splash.examples.versions.feature3.text":
+    "Pregledajte stvarne diffove jedan uz drugi, zadržite jedan i odbacite ostale.",
+  "agentManager.splash.examples.beyondCode.tag": "Više od koda",
+  "agentManager.splash.examples.beyondCode.title": "Pripremite set materijala brenda",
+  "agentManager.splash.examples.beyondCode.pitch":
+    "Agent Manager obavlja svaki posao koji agent može, ne samo izmjene koda.",
+  "agentManager.splash.examples.beyondCode.feature1.name": "Paralelni nacrti",
+  "agentManager.splash.examples.beyondCode.feature1.text": "Istražite nekoliko smjerova logotipa istovremeno.",
+  "agentManager.splash.examples.beyondCode.feature2.name": "Bilo koje datoteke",
+  "agentManager.splash.examples.beyondCode.feature2.text": "SVG-ovi, dizajn tokeni i šabloni, ne samo izvorni kod.",
+  "agentManager.splash.examples.beyondCode.feature3.name": "Nastavne sesije",
+  "agentManager.splash.examples.beyondCode.feature3.text": "Usmjerite nove sesije na verziju koju odlučite zadržati.",
+  "agentManager.splash.carousel.previous": "Prethodni primjer",
+  "agentManager.splash.carousel.next": "Sljedeći primjer",
+  "agentManager.splash.carousel.goTo": "Prikaži primjer: {{title}}",
   "agentManager.worktree.health.absent-restorable": "Folder izbrisan",
   "agentManager.worktree.health.absent-restorableNote":
     "Folder je nestao, ali grana {{branch}} još postoji. Vrati ga da nastaviš rad ovdje.",

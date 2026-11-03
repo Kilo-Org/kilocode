@@ -520,6 +520,68 @@ export const dict = {
   "agentManager.splash.folded.title": "Coloque uma frota de agentes do Kilo para trabalhar",
   "agentManager.splash.folded.note": "Recursos entre stacks, um orquestrador, uma equipe de operações e mais",
   "agentManager.splash.showExamples": "Ver exemplos",
+  "agentManager.splash.examples.crossStack.tag": "Multi-repo",
+  "agentManager.splash.examples.crossStack.title": "Um recurso em três repos",
+  "agentManager.splash.examples.crossStack.pitch":
+    "Um briefing, um agente por repositório e o recurso inteiro em uma única visão.",
+  "agentManager.splash.examples.crossStack.feature1.name": "Projetos multi-repo",
+  "agentManager.splash.examples.crossStack.feature1.text":
+    "Backend, frontend e infra lado a lado em uma única barra lateral.",
+  "agentManager.splash.examples.crossStack.feature2.name": "Status das sessões ao vivo",
+  "agentManager.splash.examples.crossStack.feature2.text":
+    "Veja de relance o que está trabalhando, concluído ou esperando por você.",
+  "agentManager.splash.examples.crossStack.feature3.name": "Distintivos de PR e contagens de diff",
+  "agentManager.splash.examples.crossStack.feature3.text": "Saiba o que cada agente alterou antes de abrir.",
+  "agentManager.splash.examples.orchestrator.tag": "Orquestrador",
+  "agentManager.splash.examples.orchestrator.title": "Divida uma grande tarefa",
+  "agentManager.splash.examples.orchestrator.pitch":
+    "Defina qualquer sessão como orquestrador, entregue um conjunto de tarefas e deixe que ela monte a equipe necessária.",
+  "agentManager.splash.examples.orchestrator.feature1.name": "Sessões que iniciam sessões",
+  "agentManager.splash.examples.orchestrator.feature1.text":
+    "Um orquestrador pode criar seções, worktrees e novas sessões.",
+  "agentManager.splash.examples.orchestrator.feature2.name": "Worktrees isolados",
+  "agentManager.splash.examples.orchestrator.feature2.text":
+    "Cada trabalho recebe sua própria cópia, então nada se choca.",
+  "agentManager.splash.examples.orchestrator.feature3.name": "Entre em qualquer lugar",
+  "agentManager.splash.examples.orchestrator.feature3.text":
+    "Entre em qualquer sessão iniciada ou acompanhe o trabalho inteiro do topo.",
+  "agentManager.splash.examples.ops.tag": "Operações",
+  "agentManager.splash.examples.ops.title": "Monte uma equipe fixa",
+  "agentManager.splash.examples.ops.pitch":
+    "Mantenha agentes de longa duração em serviço ao lado das sessões que estão construindo.",
+  "agentManager.splash.examples.ops.feature1.name": "Instruções permanentes",
+  "agentManager.splash.examples.ops.feature1.text":
+    "Dê a uma sessão um papel que dure mais que qualquer tarefa individual.",
+  "agentManager.splash.examples.ops.feature2.name": "Seções",
+  "agentManager.splash.examples.ops.feature2.text": "Agrupe Implement e Ops para manter cada equipe fácil de ver.",
+  "agentManager.splash.examples.ops.feature3.name": "Alertas de que precisam de você",
+  "agentManager.splash.examples.ops.feature3.text":
+    "Agentes param e sinalizam decisões arriscadas em vez de seguir em frente.",
+  "agentManager.splash.examples.versions.tag": "Versões",
+  "agentManager.splash.examples.versions.title": "Teste três, fique com a melhor",
+  "agentManager.splash.examples.versions.pitch":
+    "Envie um prompt para vários agentes ou modelos e mantenha o melhor resultado.",
+  "agentManager.splash.examples.versions.feature1.name": "Execuções multi-versão",
+  "agentManager.splash.examples.versions.feature1.text": "Execute a mesma tarefa como várias versões ao mesmo tempo.",
+  "agentManager.splash.examples.versions.feature2.name": "Misture modelos",
+  "agentManager.splash.examples.versions.feature2.text": "Compare Kilo Auto, Claude e GPT no mesmo trabalho.",
+  "agentManager.splash.examples.versions.feature3.name": "Compare e mantenha",
+  "agentManager.splash.examples.versions.feature3.text":
+    "Revise diffs reais lado a lado, mantenha um e descarte o resto.",
+  "agentManager.splash.examples.beyondCode.tag": "Além do código",
+  "agentManager.splash.examples.beyondCode.title": "Crie materiais de marca",
+  "agentManager.splash.examples.beyondCode.pitch":
+    "O Agent Manager executa qualquer trabalho que um agente possa fazer, não apenas mudanças de código.",
+  "agentManager.splash.examples.beyondCode.feature1.name": "Rascunhos paralelos",
+  "agentManager.splash.examples.beyondCode.feature1.text": "Explore várias direções de logotipo ao mesmo tempo.",
+  "agentManager.splash.examples.beyondCode.feature2.name": "Qualquer arquivo",
+  "agentManager.splash.examples.beyondCode.feature2.text": "SVGs, tokens de design e modelos, não apenas código-fonte.",
+  "agentManager.splash.examples.beyondCode.feature3.name": "Sessões de acompanhamento",
+  "agentManager.splash.examples.beyondCode.feature3.text":
+    "Direcione novas sessões para a versão que você decidir manter.",
+  "agentManager.splash.carousel.previous": "Exemplo anterior",
+  "agentManager.splash.carousel.next": "Próximo exemplo",
+  "agentManager.splash.carousel.goTo": "Mostrar exemplo: {{title}}",
   "agentManager.worktree.health.absent-restorable": "Pasta excluída",
   "agentManager.worktree.health.absent-restorableNote":
     "A pasta não existe mais, mas o branch {{branch}} continua lá. Restaure para continuar trabalhando aqui.",

@@ -14,6 +14,7 @@ import { FullScreenDiffView } from "../../diff-viewer/FullScreenDiffView"
 import { WorktreeItem } from "../../agent-manager/WorktreeItem"
 import { createIntro } from "../../agent-manager/intro/AgentManagerIntro"
 import { createSplashIntro } from "../../agent-manager/splash"
+import { SplashExpanded } from "../../agent-manager/splash/Splash"
 import { SessionTab } from "../components/chat/SessionTab"
 import { ChatView } from "../components/chat/ChatView"
 import { registerVscodeToolOverrides } from "../components/chat/VscodeToolOverrides"
@@ -215,6 +216,27 @@ export const IntroductionSkipped: Story = {
   ),
 }
 
+/** The expanded splash on one example, inside the intro host layout. */
+function SplashPreview(props: { example: number; dir?: "rtl" }) {
+  return (
+    <StoryProviders>
+      <div class="am-intro-layout" dir={props.dir} style={{ height: "1400px" }}>
+        <div data-slot="message-list" style={{ flex: "1", "min-height": "0" }}>
+          <div data-slot="message-list-content">
+            <SplashExpanded
+              git
+              onHide={() => {}}
+              onCompose={() => {}}
+              onCreateWorktree={() => {}}
+              initialExample={props.example}
+            />
+          </div>
+        </div>
+      </div>
+    </StoryProviders>
+  )
+}
+
 export const SplashExpandedStory: Story = {
   name: "Splash expanded",
   render: () => (
@@ -231,6 +253,36 @@ export const SplashNotGitStory: Story = {
       <IntroductionPreview folded={false} git={false} composer />
     </StoryProviders>
   ),
+}
+
+export const SplashCrossStackStory: Story = {
+  name: "Splash cross-stack",
+  render: () => <SplashPreview example={0} />,
+}
+
+export const SplashOrchestratorStory: Story = {
+  name: "Splash orchestrator",
+  render: () => <SplashPreview example={1} />,
+}
+
+export const SplashOpsStory: Story = {
+  name: "Splash ops",
+  render: () => <SplashPreview example={2} />,
+}
+
+export const SplashVersionsStory: Story = {
+  name: "Splash versions",
+  render: () => <SplashPreview example={3} />,
+}
+
+export const SplashBeyondCodeStory: Story = {
+  name: "Splash beyond code",
+  render: () => <SplashPreview example={4} />,
+}
+
+export const SplashRtlStory: Story = {
+  name: "Splash RTL",
+  render: () => <SplashPreview example={1} dir="rtl" />,
 }
 
 /** The folded splash inside the real chat host, which splash.css lays out around the welcome header. */

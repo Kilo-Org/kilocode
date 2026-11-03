@@ -1,10 +1,45 @@
-import { Show, createUniqueId, type JSX } from "solid-js"
+import { For, Show, createSignal, createUniqueId, type Accessor, type JSX } from "solid-js"
 import { Button } from "@kilocode/kilo-ui/button"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { WelcomeEmptyState, KiloLogo } from "../../src/components/chat/WelcomeEmptyState"
 import { useLanguage } from "../../src/context/language"
 import type { SessionInfo } from "../../src/types/messages"
+import { examples } from "./examples"
+import { Carousel } from "./Carousel"
 import "./splash.css"
+
+/** Every example's numbered features share one grid cell, so the height never changes. */
+function Features(props: { selected: Accessor<number> }) {
+  const { t } = useLanguage()
+  return (
+    <div class="am-splash-feature-stack">
+      <For each={examples}>
+        {(example, index) => (
+          <ul
+            class="am-splash-features"
+            classList={{ "am-splash-features-active": index() === props.selected() }}
+            data-tone={example.id}
+            aria-hidden={index() !== props.selected() ? "true" : undefined}
+          >
+            <For each={example.features}>
+              {(feature, position) => (
+                <li class="am-splash-feature">
+                  <span class="am-splash-feature-marker" aria-hidden="true">
+                    {position() + 1}
+                  </span>
+                  <span class="am-splash-feature-text">
+                    <strong>{t(feature.name)}</strong>
+                    <span class="am-splash-feature-description">{t(feature.text)}</span>
+                  </span>
+                </li>
+              )}
+            </For>
+          </ul>
+        )}
+      </For>
+    </div>
+  )
+}
 
 export function SplashExpanded(props: {
   /** Worktrees need git, so outside a repository the splash explains that instead of offering one. */
@@ -12,9 +47,12 @@ export function SplashExpanded(props: {
   onHide: () => void
   onCompose: () => void
   onCreateWorktree: () => void
+  initialExample?: number
 }) {
   const { t } = useLanguage()
   const title = createUniqueId()
+  const [selected, setSelected] = createSignal(props.initialExample ?? 0)
+  const example = () => examples.at(selected())!
   return (
     <section class="am-splash" aria-labelledby={title}>
       <article class="am-splash-hero">
@@ -37,6 +75,8 @@ export function SplashExpanded(props: {
           {t("agentManager.splash.title")}
         </h2>
         <p class="am-splash-subtitle">{t("agentManager.splash.subtitle")}</p>
+        <Carousel selected={selected} onSelect={setSelected} />
+        <Features selected={selected} />
         <div class="am-splash-actions">
           <Show when={props.git} fallback={<p>{t("agentManager.setup.error.not_git_repo")}</p>}>
             <Button variant="primary" onClick={props.onCreateWorktree}>
@@ -49,6 +89,9 @@ export function SplashExpanded(props: {
               {t("agentManager.splash.proceed")}
             </button>
           </span>
+        </div>
+        <div class="sr-only" role="status" aria-live="polite" aria-atomic="true">
+          {t(example().title)} — {t(example().pitch)}
         </div>
       </article>
     </section>
