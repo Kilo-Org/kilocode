@@ -33,29 +33,13 @@ export function terminalStep(message: SessionMessageAssistant): boolean {
   return !!message.finish && message.finish !== "tool-calls" && message.finish !== "unknown"
 }
 
-/** Finish time and, when the turn input is known, its duration in milliseconds. */
-export function turnTiming(
-  message: SessionMessageAssistant,
-  messages: readonly SessionMessageInfo[],
-): TurnTiming | undefined {
-  const index = messages.findIndex((item) => item.id === message.id)
-  return timingAt(messages, index, legacyTurns(messages), message)
-}
-
-/** Weighted text-generation rate across the turn's steps, output plus reasoning over streamed time. */
-export function turnTokensPerSecond(
-  message: SessionMessageAssistant,
-  messages: readonly SessionMessageInfo[],
-): number | undefined {
-  const index = messages.findIndex((item) => item.id === message.id)
-  return tokensAt(messages, index, legacyTurns(messages))
-}
-
 /**
- * The footer metadata of the turn that contains `message`: the turn's terminal
- * step drives the timing and rate, while the last text-bearing step carries them.
- * The clock survives an input outside the loaded page; the duration and rate do
- * not. Returns undefined until the terminal completes.
+ * Reference implementation of the per-turn footer rules. The transcript uses
+ * the single-pass `messageTurnRanges`; tests compare the two to keep the
+ * carrier, timing, and rate rules aligned. The terminal step drives the timing
+ * and rate, while the last text-bearing step carries them. The clock survives
+ * an input outside the loaded page; the duration and rate do not. Returns
+ * undefined until the terminal completes.
  */
 export function turnMetadata(
   message: SessionMessageAssistant,
@@ -83,7 +67,15 @@ export function messageTurnRanges(messages: readonly SessionMessageInfo[]): Mess
         start,
         end,
         turn: turnID(messages, start, end),
-        metadata: metadataAt(messages, lastAssistantIndex(messages, start, end), legacy),
+        // The carrier search covers the whole range, so a text row before the
+        // first page-visible input still carries the footer. Timing and rate
+        // stay anchored to the terminal step's own turn input.
+        metadata: metadataAt(
+          messages,
+          lastAssistantIndex(messages, start, end),
+          legacy,
+          isInput(messages[start]) ? start + 1 : start,
+        ),
       })
     }
     start = legacy ? end : end + 1
@@ -134,7 +126,12 @@ function tokensPerSecond(steps: readonly SessionMessageAssistant[]) {
   return output / (duration / 1_000)
 }
 
-function metadataAt(messages: readonly SessionMessageInfo[], index: number, legacy: boolean): TurnMetadata | undefined {
+function metadataAt(
+  messages: readonly SessionMessageInfo[],
+  index: number,
+  legacy: boolean,
+  carrierFrom?: number,
+): TurnMetadata | undefined {
   if (index < 0) return undefined
   const message = messages[index]
   if (!message || message.type !== "assistant") return undefined
@@ -155,13 +152,27 @@ function metadataAt(messages: readonly SessionMessageInfo[], index: number, lega
   if (!terminal || terminalIndex < 0) return undefined
   const completedAt = terminal.time.completed
   if (completedAt === undefined || !terminalStep(terminal)) return undefined
-  const carrier = steps.findLast((step) => step.content.some((part) => part.type === "text" && !!part.text.trim()))
-  if (!carrier) return undefined
+  const carrierIndex = carrierAt(messages, carrierFrom ?? lower, end)
+  if (carrierIndex < 0) return undefined
+  const carrier = messages[carrierIndex]
+  if (carrier.type !== "assistant") return undefined
+  // Suppress the rate when the carrier has no page-visible input, matching the
+  // per-row reference behavior even if a later steer exists in the same range.
+  const carrierInput = inputIndex(messages, carrierIndex + 1, legacy)
   return {
     carrierID: carrier.id,
     timing: timingAt(messages, terminalIndex, legacy, terminal) ?? { completedAt },
-    tokensPerSecond: start === -1 ? undefined : tokensAt(messages, terminalIndex, legacy),
+    tokensPerSecond: carrierInput === -1 ? undefined : tokensAt(messages, terminalIndex, legacy),
   }
+}
+
+function carrierAt(messages: readonly SessionMessageInfo[], start: number, end: number) {
+  for (let i = end - 1; i >= start; i--) {
+    const item = messages[i]
+    if (item.type !== "assistant") continue
+    if (item.content.some((part) => part.type === "text" && !!part.text.trim())) return i
+  }
+  return -1
 }
 
 function lastAssistantIndex(messages: readonly SessionMessageInfo[], start: number, end: number) {

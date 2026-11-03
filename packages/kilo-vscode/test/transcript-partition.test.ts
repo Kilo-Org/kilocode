@@ -78,6 +78,31 @@ test("range metadata matches turnMetadata for every step", () => {
   }
 })
 
+test("keeps the footer on a prefix step when a later steer has no text", () => {
+  const prefix = assistant({
+    id: "a0",
+    created: 100,
+    streamed: 150,
+    completed: 200,
+    output: 10,
+    text: "prefix",
+    finish: "tool-calls",
+  })
+  const messages = [
+    prefix,
+    user("u2", 300),
+    assistant({ id: "a2", created: 400, streamed: 450, completed: 500, output: 10, finish: "stop" }),
+    idle("i1", 600),
+  ]
+  const range = messageTurnRanges(messages)[0]
+  const carrier = partitionTranscript(messages, [], false).rows.flatMap((row) =>
+    row.type === "assistant" && row.message.id === "a0" && row.metadata ? [row] : [],
+  )[0]
+
+  expect(range.metadata?.carrierID).toBe("a0")
+  expect(carrier?.metadata).toEqual(turnMetadata(prefix, messages))
+})
+
 describe("partitionTranscript", () => {
   test("chunks a large assistant message into rows with stable keys", () => {
     const message = assistant({ id: "a1", created: 1, parts: textParts(18) })
