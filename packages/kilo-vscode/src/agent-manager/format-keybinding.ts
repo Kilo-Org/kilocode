@@ -41,16 +41,16 @@ export function formatKeybinding(raw: string, mac: boolean): string {
 }
 
 /** Agent Manager command prefix for keybinding extraction. */
-const AM_PREFIX = "kilo-code.new.agentManager."
+const AM_PREFIX = "kilo-code.v2.agentManager."
+
+/** Context key that reports focus inside the side terminal instead of the tab area. */
+const SIDE_TERMINAL_FOCUSED = "kilo-code.v2.agentManager.sideTerminalFocused"
 
 /** Global commands whose keybindings are forwarded to the webview. */
 const GLOBAL_KEYBINDINGS: Record<string, string> = {
-  "kilo-code.new.agentManagerOpen": "agentManagerOpen",
-  "kilo-code.new.cycleAgentMode": "cycleAgentMode",
-  "kilo-code.new.cyclePreviousAgentMode": "cyclePreviousAgentMode",
-  "kilo-code.new.focusChatInput": "focusChatInput",
-  "kilo-code.new.addToContext": "addToContext",
-  "kilo-code.new.settingsSearch": "settingsSearch",
+  "kilo-code.v2.cycleAgentMode": "cycleAgentMode",
+  "kilo-code.v2.cyclePreviousAgentMode": "cyclePreviousAgentMode",
+  "kilo-code.v2.settingsSearch": "settingsSearch",
 }
 
 /** [binding name, command suffix, key after the cmd/ctrl modifier] */
@@ -66,15 +66,15 @@ const FALLBACKS: Array<[string, string, string]> = [
 ]
 
 function addBinding(bindings: Record<string, string>, name: string, value: string, when?: string): void {
-  if (name === "newTerminalTab" && when?.includes("!kilo-code.new.agentManagerSideTerminalFocused")) {
+  if (name === "newTerminalTab" && when?.includes(`!${SIDE_TERMINAL_FOCUSED}`)) {
     bindings.newTerminalCenter = value
     return
   }
-  if (name === "newSideTerminal" && when?.includes("agentManagerSideTerminalFocused")) {
+  if (name === "newSideTerminal" && when?.includes(SIDE_TERMINAL_FOCUSED)) {
     bindings.newTerminalTerminal = value
     return
   }
-  if (name === "newTerminal" || name === "newTerminalTab" || name === "newSideTerminal") return
+  if (name === "newTerminalTab" || name === "newSideTerminal") return
   bindings[name] = value
 }
 
@@ -86,12 +86,19 @@ function addRawBinding(
   const raw = mac ? (kb.mac ?? kb.key) : kb.key
   if (!raw) return
   const value = formatKeybinding(raw, mac)
-  if (kb.command.startsWith(AM_PREFIX)) {
-    addBinding(bindings, kb.command.slice(AM_PREFIX.length), value, kb.when)
+  const name = GLOBAL_KEYBINDINGS[kb.command]
+  if (name) {
+    bindings[name] = value
     return
   }
-  const name = GLOBAL_KEYBINDINGS[kb.command]
-  if (name) bindings[name] = value
+  // `agentManager.open` is the panel toggle, not an action inside the panel.
+  if (kb.command === `${AM_PREFIX}open`) {
+    bindings.agentManagerOpen = value
+    return
+  }
+  if (kb.command.startsWith(AM_PREFIX)) {
+    addBinding(bindings, kb.command.slice(AM_PREFIX.length), value, kb.when)
+  }
 }
 
 /**

@@ -115,3 +115,4 @@ Clean up: `st stop-vscode --cleanup true; st stop; rm -rf /tmp/am-st-ws`.
 - Harness note: keypresses do not reach VS Code keybindings from webviews; use run-command.
 - Chat view title buttons follow v1 order: new session, history, Agent Manager, profile, settings.
 - Sidebar button order verified against v1 for every Agent Manager sidebar group (header icons, project row, worktree/session rows, footer, tab bar, side panel strip, terminal destination); AM components are order-identical to v1. Chat view title order guarded by test/chat-view-title-order.test.ts.
+- Verified all Agent Manager webview button groups against v1 source (sidebar header, project row, cards, footer, tab bar, inspector strip, session header, composer, dialogs, intro, PR and subagent panels): order matches v1. v1-only buttons that v2 lacks: transcript search in the session header, documents, browser, sandbox, indexing, marketplace.
