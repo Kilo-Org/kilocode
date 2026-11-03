@@ -42,4 +42,16 @@ describe("model attribution", () => {
 
     expect(attribution.read("ses_one", model("kilo-auto-free"))).toEqual(model("kilo-auto-free"))
   })
+
+  it("keeps a newer request when an earlier switch fails", () => {
+    const attribution = createModelAttribution()
+    const earlier = model("deepseek-v4.1-flash")
+    const later = model("kilo-auto-free")
+    attribution.request("ses_one", earlier)
+    attribution.request("ses_one", later)
+
+    attribution.clear("ses_one", earlier)
+
+    expect(attribution.read("ses_one", model("nemotron-3.5-lightning"))).toEqual(later)
+  })
 })

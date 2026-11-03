@@ -11,8 +11,12 @@ export function createModelAttribution() {
     request(sessionID: string, model: ModelRef) {
       requested.set(sessionID, model)
     },
-    /** Drops a request that no longer applies, such as a failed switch or an agent change that decides the model. */
-    clear(sessionID: string) {
+    /**
+     * Drops a request that no longer applies, such as a failed switch or an agent change that decides the model.
+     * Pass the failed model to keep a newer request that is still pending for the same session.
+     */
+    clear(sessionID: string, model?: ModelRef) {
+      if (model && requested.get(sessionID) !== model) return
       requested.delete(sessionID)
     },
     read(sessionID: string, current: ModelRef | undefined): ModelRef | undefined {

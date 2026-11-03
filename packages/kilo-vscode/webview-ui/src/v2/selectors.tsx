@@ -106,8 +106,8 @@ export function createSelection(
     commit(id, () =>
       v2.api.session.switchModel({ sessionID: id, model: { ...next, variant: next.variant ?? DEFAULT } }).catch(
         (error: unknown) => {
-          // A switch that did not apply must not name a later prompt.
-          attribution.clear(id)
+          // A switch that did not apply must not name a later prompt, unless a newer request replaced it.
+          attribution.clear(id, next)
           throw error
         },
       ),
