@@ -105,7 +105,13 @@ export function createSelection(
     switched.set(id, next)
     // An explicit "default" clears a previous variant: a model without the field would keep it in createData.
     commit(id, () =>
-      v2.api.session.switchModel({ sessionID: id, model: { ...next, variant: next.variant ?? DEFAULT } }),
+      v2.api.session.switchModel({ sessionID: id, model: { ...next, variant: next.variant ?? DEFAULT } }).catch(
+        (error: unknown) => {
+          // A switch that did not apply must not name a later prompt.
+          if (switched.get(id) === next) switched.delete(id)
+          throw error
+        },
+      ),
     )
   }
 
@@ -115,6 +121,8 @@ export function createSelection(
     const id = session()
     if (!id) return void setDraftAgent(value)
     if (value === agent()?.id) return
+    // The agent decides the model the prompt runs on, so it replaces a model request that the store already applied.
+    switched.delete(id)
     commit(id, () => v2.api.session.switchAgent({ sessionID: id, agent: value }))
   }
 
