@@ -19,16 +19,20 @@ function fixture(
   const live = new Set<string>()
   const removed: string[] = []
   const logs: unknown[][] = []
+  const creates: Array<Record<string, unknown>> = []
+  const updates: Array<Record<string, unknown>> = []
   let count = 0
   const client = {
     pty: {
-      create: async ({ title }: { title: string }) => {
+      create: async (input: Record<string, unknown> & { title: string }) => {
+        creates.push(input)
         const id = `pty-${++count}`
         await hooks.create?.(count)
         live.add(id)
-        return { location: { directory: "/workspace" }, data: { id, title } }
+        return { location: { directory: "/workspace" }, data: { id, title: input.title } }
       },
-      update: async () => {
+      update: async (input: Record<string, unknown>) => {
+        updates.push(input)
         await hooks.update?.()
         return { location: { directory: "/workspace" }, data: {} }
       },
@@ -58,8 +62,56 @@ function fixture(
     connection,
     log: (...args) => logs.push(args),
   })
-  return { manager, live, removed, logs, count: () => count, connection }
+  return { manager, live, removed, logs, creates, updates, count: () => count, connection }
 }
+
+describe("Agent Manager terminal initial size", () => {
+  it("spawns at the webview size without a follow-up resize", async () => {
+    const test = fixture()
+    await test.manager.create({ ...params, cols: 132, rows: 41 })
+    expect(test.creates[0]?.size).toEqual({ cols: 132, rows: 41 })
+    expect(test.updates).toEqual([])
+    await test.manager.dispose()
+  })
+
+  it("spawns without a size when the webview has not measured one", async () => {
+    const test = fixture()
+    await test.manager.create(params)
+    expect(test.creates[0]).not.toHaveProperty("size")
+    expect(test.updates).toEqual([])
+    await test.manager.dispose()
+  })
+
+  it("applies a size queued while the create was in flight", async () => {
+    const ready = Promise.withResolvers<void>()
+    const release = Promise.withResolvers<void>()
+    const test = fixture({
+      create: async (count) => {
+        if (count !== 1) return
+        ready.resolve()
+        await release.promise
+      },
+    })
+    const creating = test.manager.create({ ...params, cols: 80, rows: 24 })
+    await ready.promise
+    await test.manager.resize(params.terminalId, 100, 30)
+    release.resolve()
+    await creating
+    expect(test.creates[0]?.size).toEqual({ cols: 80, rows: 24 })
+    expect(test.updates).toEqual([{ ptyID: "pty-1", location: { directory: "/workspace" }, size: { cols: 100, rows: 30 } }])
+    await test.manager.dispose()
+  })
+})
+
+describe("Agent Manager terminal replacement size", () => {
+  it("spawns a replacement at the requested size", async () => {
+    const test = fixture()
+    await test.manager.create(params)
+    expect(await test.manager.restart(params.terminalId, 90, 25)).toBe(true)
+    expect(test.creates[1]?.size).toEqual({ cols: 90, rows: 25 })
+    await test.manager.dispose()
+  })
+})
 
 describe("Agent Manager terminal replacement ownership", () => {
   it("closes detached ownership only in the requested directory when a terminal ID is reused", async () => {

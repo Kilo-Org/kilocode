@@ -74,6 +74,7 @@ function ownership(failing = true) {
       messages.push(message)
       if (message.type === "agentManager.terminal.created") created.resolve()
     },
+    closed: () => undefined,
     getTerminalFont: () => font,
   })
   return { router, live, attempts, ready, release, created, messages }
@@ -193,6 +194,7 @@ describe("Agent Manager terminal routing", () => {
       getProjectId: () => "prj-1",
       log: () => undefined,
       post: () => undefined,
+      closed: () => undefined,
       getTerminalFont: () => font,
     })
     const manager = router["manager"]
@@ -229,6 +231,7 @@ describe("Agent Manager terminal routing", () => {
       getProjectId: () => "prj-1",
       log: () => undefined,
       post: (message) => messages.push(message),
+      closed: () => undefined,
       getTerminalFont: () => font,
     })
 
@@ -247,11 +250,11 @@ describe("Agent Manager terminal routing", () => {
       worktreeId: "wt-1",
       projectId: "prj-1",
     })
-    expect(envs[0]).toEqual({ KILO_UNICODE_LOGO: "0" })
+    expect(envs[0]).toEqual({ KILO_UNICODE_LOGO: "0", KILO_TERMINAL_ACTIVITY: "1" })
     expect(messages[0]).toMatchObject({ font })
     router.handle({ type: "agentManager.terminal.restart", terminalId: "side-1" })
     await wait()
-    expect(envs[1]).toEqual({ KILO_UNICODE_LOGO: "0" })
+    expect(envs[1]).toEqual({ KILO_UNICODE_LOGO: "0", KILO_TERMINAL_ACTIVITY: "1" })
 
     router.handle({
       type: "agentManager.terminal.create",
@@ -295,6 +298,7 @@ describe("Agent Manager terminal routing", () => {
       getProjectId: () => "prj-1",
       log: () => undefined,
       post: (message) => messages.push(message),
+      closed: () => undefined,
       getTerminalFont: () => font,
     })
 
@@ -345,6 +349,7 @@ describe("Agent Manager terminal routing", () => {
       getProjectId: () => "prj-1",
       log: () => undefined,
       post: (message) => messages.push(message),
+      closed: () => undefined,
       getTerminalFont: () => font,
     })
     const create = (createId: string) =>
@@ -389,6 +394,7 @@ describe("Agent Manager terminal routing", () => {
       getProjectId: () => "prj-1",
       log: () => undefined,
       post: (message) => messages.push(message),
+      closed: () => undefined,
       getTerminalFont: () => font,
     })
 
@@ -431,6 +437,7 @@ describe("Agent Manager terminal routing", () => {
       getProjectId: () => "prj-1",
       log: () => undefined,
       post: (message) => messages.push(message),
+      closed: () => undefined,
       getTerminalFont: () => font,
     })
 
@@ -470,6 +477,7 @@ describe("Agent Manager terminal routing", () => {
       getProjectId: () => "prj-1",
       log: () => undefined,
       post: () => undefined,
+      closed: () => undefined,
       getTerminalFont: () => font,
     })
 
@@ -511,6 +519,7 @@ describe("Agent Manager terminal routing", () => {
       getProjectId: () => "prj-1",
       log: () => undefined,
       post: (message) => messages.push(message),
+      closed: () => undefined,
       getTerminalFont: () => font,
     })
 
@@ -549,6 +558,7 @@ describe("Agent Manager terminal routing", () => {
       getProjectId: () => "prj-1",
       log: () => undefined,
       post: (message) => messages.push(message),
+      closed: () => undefined,
       getTerminalFont: () => font,
     })
 
@@ -585,6 +595,7 @@ describe("Agent Manager terminal routing", () => {
       getProjectId: () => "prj-1",
       log: () => undefined,
       post: (message) => messages.push(message),
+      closed: () => undefined,
       getTerminalFont: () => font,
     })
 
@@ -628,6 +639,7 @@ describe("Agent Manager terminal routing", () => {
       getProjectId: () => "prj-1",
       log: () => undefined,
       post: () => undefined,
+      closed: () => undefined,
       getTerminalFont: () => font,
     })
 
@@ -641,6 +653,7 @@ describe("Agent Manager terminal routing", () => {
     })
     await wait()
     expect(creates).toHaveLength(1)
+    expect(creates[0]?.size).toEqual({ cols: 60, rows: 20 })
 
     // Send a resize before pty.create settles (optimistic side terminal layout)
     router.handle({
@@ -655,7 +668,6 @@ describe("Agent Manager terminal routing", () => {
     createResolver?.({ data: { id: "pty-queued", title: "Terminal 1" } })
     await wait()
     expect(updates).toEqual([
-      { ptyID: "pty-queued", location: { directory: "/workspace" }, size: { cols: 60, rows: 20 } },
       { ptyID: "pty-queued", location: { directory: "/workspace" }, size: { cols: 55, rows: 18 } },
     ])
     await router.dispose()

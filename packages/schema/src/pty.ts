@@ -40,22 +40,25 @@ const Exited = ephemeral({ type: "pty.exited", schema: { id: ID, exitCode: NonNe
 const Deleted = ephemeral({ type: "pty.deleted", schema: { id: ID } })
 export const Event = { Created, Updated, Exited, Deleted, Definitions: inventory(Created, Updated, Exited, Deleted) }
 
+// kilocode_change start - pty: one size contract for create and update
+const Size = Schema.Struct({
+  rows: PositiveInt,
+  cols: PositiveInt,
+})
+// kilocode_change end
+
 export const CreateInput = Schema.Struct({
   command: optional(Schema.String),
   args: optional(Schema.Array(Schema.String)),
   cwd: optional(Schema.String),
   title: optional(Schema.String),
   env: optional(Schema.Record(Schema.String, Schema.String)),
+  size: optional(Size), // kilocode_change - pty: start the PTY at the client's dimensions
 })
 export interface CreateInput extends Schema.Schema.Type<typeof CreateInput> {}
 
 export const UpdateInput = Schema.Struct({
   title: optional(Schema.String),
-  size: optional(
-    Schema.Struct({
-      rows: PositiveInt,
-      cols: PositiveInt,
-    }),
-  ),
+  size: optional(Size), // kilocode_change - pty: shares the create size contract
 })
 export interface UpdateInput extends Schema.Schema.Type<typeof UpdateInput> {}
