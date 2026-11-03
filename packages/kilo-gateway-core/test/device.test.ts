@@ -83,11 +83,12 @@ test("stops polling when interrupted", async () => {
     Effect.gen(function* () {
       const code = yield* KiloDevice.start(backend.url)
       const fiber = yield* KiloDevice.login(backend.url, code, 1).pipe(Effect.forkScoped({ startImmediately: true }))
-      yield* Effect.sleep(30)
-      // With a 1 ms interval, a loop that survived the interruption would add requests below.
-      expect(backend.requests.length).toBeGreaterThan(3)
+      // Wait for real polling instead of a fixed time: a loaded CI runner can poll less often than the interval.
+      while (backend.requests.length <= 3) yield* Effect.sleep(5)
       yield* Fiber.interrupt(fiber)
-      yield* Effect.sleep(10)
+      // Let a request sent before the interruption arrive. With a 1 ms interval, a loop that survived the
+      // interruption would still add requests below.
+      yield* Effect.sleep(50)
       const count = backend.requests.length
       yield* Effect.sleep(50)
       expect(backend.requests).toHaveLength(count)
