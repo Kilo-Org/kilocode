@@ -100,6 +100,7 @@ export type Event =
   | EventSessionDrainInterrupted1
   | EventSessionWakeup1
   | EventSessionHostAvailability1
+  | EventSessionHostContinuation1
   | EventServerInstanceDisposed
   | EventSessionTurnOpen
   | EventSessionTurnClose
@@ -221,6 +222,7 @@ export type Event =
   | EventSessionDrainInterrupted
   | EventSessionWakeup
   | EventSessionHostAvailability
+  | EventSessionHostContinuation
 
 export type QuestionReplied = {
   sessionID: string
@@ -1272,6 +1274,7 @@ export type GlobalEvent = {
     | EventSessionDrainInterrupted
     | EventSessionWakeup
     | EventSessionHostAvailability
+    | EventSessionHostContinuation
     | {
         id: string
         type: "models-dev.refreshed"
@@ -2196,6 +2199,15 @@ export type GlobalEvent = {
           sessionID?: string
           state: "available" | "unavailable"
           reason?: string
+        }
+      }
+    | {
+        id: string
+        type: "session.host.continuation"
+        properties: {
+          operationKey: string
+          directory: string
+          stage: "checking" | "syncing" | "creating"
         }
       }
     | SyncEventSessionCreated
@@ -5054,6 +5066,46 @@ export type SessionHostCreateWorkspaceResult = {
   replayed: boolean
 }
 
+export type SessionHostContinueWorkspaceInput = {
+  operationKey: string
+  directory: string
+  sessionIDs: Array<string>
+  activeSessionID: string
+}
+
+export type SessionHostContinuationAgent = {
+  mode: string
+  model: string
+  variant?: string
+}
+
+export type SessionHostContinueWorkspaceSession = {
+  source: string
+  destination: SessionHostIdentity
+  agent: SessionHostContinuationAgent
+  modeFallback: boolean
+}
+
+export type SessionHostContinueWorkspaceResult = {
+  workspace: SessionHostWorkspaceIdentity
+  sessions: Array<SessionHostContinueWorkspaceSession>
+  active: SessionHostIdentity
+  url: string
+  replayed: boolean
+}
+
+export type SessionHostContinuationError = {
+  code: string
+  message: string
+  retryable: boolean
+}
+
+export type SessionHostInsufficientBalanceError = {
+  code: string
+  message: string
+  retryable: boolean
+}
+
 export type SessionHostWorkspaceProfileSummary = {
   id: string
   name: string
@@ -5456,6 +5508,7 @@ export type V2Event =
   | SessionDrainInterrupted
   | SessionWakeup
   | SessionHostAvailability2
+  | SessionHostContinuation
 
 export type V2EventStream = string
 
@@ -6944,6 +6997,16 @@ export type EventSessionHostAvailability = {
     sessionID?: string
     state: "available" | "unavailable"
     reason?: string
+  }
+}
+
+export type EventSessionHostContinuation = {
+  id: string
+  type: "session.host.continuation"
+  properties: {
+    operationKey: string
+    directory: string
+    stage: "checking" | "syncing" | "creating"
   }
 }
 
@@ -9992,6 +10055,25 @@ export type SessionWakeup = {
   }
 }
 
+export type SessionHostContinuation = {
+  id: string
+  metadata?: {
+    [key: string]: unknown
+  }
+  type: "session.host.continuation"
+  durable?: {
+    aggregateID: string
+    seq: number
+    version: number
+  }
+  location?: LocationRef
+  data: {
+    operationKey: string
+    directory: string
+    stage: "checking" | "syncing" | "creating"
+  }
+}
+
 export type QuestionV2Request = {
   id: string
   sessionID: string
@@ -11056,6 +11138,16 @@ export type EventSessionHostAvailability1 = {
     sessionID?: string
     state: "available" | "unavailable"
     reason?: string
+  }
+}
+
+export type EventSessionHostContinuation1 = {
+  id: string
+  type: "session.host.continuation"
+  properties: {
+    operationKey: string
+    directory: string
+    stage: "checking" | "syncing" | "creating"
   }
 }
 
@@ -19383,6 +19475,53 @@ export type SessionHostCreateWorkspaceResponses = {
 
 export type SessionHostCreateWorkspaceResponse =
   SessionHostCreateWorkspaceResponses[keyof SessionHostCreateWorkspaceResponses]
+
+export type SessionHostContinueWorkspaceData = {
+  body?: SessionHostContinueWorkspaceInput
+  path?: never
+  query?: never
+  url: "/kilocode/session-host/workspace/continue"
+}
+
+export type SessionHostContinueWorkspaceErrors = {
+  /**
+   * InvalidRequestError
+   */
+  400: InvalidRequestError
+  /**
+   * SessionHostPaymentRequiredError | SessionHostInsufficientBalanceError
+   */
+  402: SessionHostPaymentRequiredError | SessionHostInsufficientBalanceError
+  /**
+   * NotFoundError
+   */
+  404: NotFoundError
+  /**
+   * ConflictError | SessionHostContinuationError
+   */
+  409: ConflictError | SessionHostContinuationError
+  /**
+   * UpstreamError
+   */
+  502: UpstreamError
+  /**
+   * ServiceUnavailableError
+   */
+  503: ServiceUnavailableError
+}
+
+export type SessionHostContinueWorkspaceError =
+  SessionHostContinueWorkspaceErrors[keyof SessionHostContinueWorkspaceErrors]
+
+export type SessionHostContinueWorkspaceResponses = {
+  /**
+   * Local worktree continued in Cloud
+   */
+  200: SessionHostContinueWorkspaceResult
+}
+
+export type SessionHostContinueWorkspaceResponse =
+  SessionHostContinueWorkspaceResponses[keyof SessionHostContinueWorkspaceResponses]
 
 export type SessionHostListWorkspaceProfilesData = {
   body?: never

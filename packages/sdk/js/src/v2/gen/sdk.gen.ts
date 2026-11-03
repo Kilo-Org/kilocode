@@ -417,6 +417,9 @@ import type {
   SessionGetResponses,
   SessionHostAttachErrors,
   SessionHostAttachResponses,
+  SessionHostContinueWorkspaceErrors,
+  SessionHostContinueWorkspaceInput,
+  SessionHostContinueWorkspaceResponses,
   SessionHostCreateWorkspaceErrors,
   SessionHostCreateWorkspaceInput,
   SessionHostCreateWorkspaceResponses,
@@ -9831,6 +9834,37 @@ export class SessionHost extends HeyApiClient {
       ThrowOnError
     >({
       url: "/kilocode/session-host/workspace",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
+
+  /**
+   * Continue a local worktree in Cloud
+   *
+   * Copy the open root sessions of one local worktree into a new hosted workspace. The CLI validates Git, sessions, and sync and stores one durable request body; reuse the same operation key to retry safely.
+   */
+  public continueWorkspace<ThrowOnError extends boolean = false>(
+    parameters?: {
+      sessionHostContinueWorkspaceInput?: SessionHostContinueWorkspaceInput
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [{ args: [{ key: "sessionHostContinueWorkspaceInput", map: "body" }] }],
+    )
+    return (options?.client ?? this.client).post<
+      SessionHostContinueWorkspaceResponses,
+      SessionHostContinueWorkspaceErrors,
+      ThrowOnError
+    >({
+      url: "/kilocode/session-host/workspace/continue",
       ...options,
       ...params,
       headers: {

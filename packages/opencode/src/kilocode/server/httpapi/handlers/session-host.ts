@@ -1,10 +1,13 @@
 import { EventV2Bridge } from "@/event-v2-bridge"
+import { AppRuntime } from "@/effect/app-runtime"
 import * as Attachments from "@/kilocode/server/hosted-attachments"
 import { SessionHost } from "@/kilocode/session-hosting"
+import { Continuation } from "@/kilocode/session-hosting/continuation"
 import {
   HostedFailure,
   StartInput,
   deletionDispatched,
+  type ContinueWorkspaceInput,
   type CreateWorkspaceInput,
   type HostedWorkspaceID,
   type OrganizationID,
@@ -27,7 +30,12 @@ import { InstanceHttpApi } from "@/server/routes/instance/httpapi/api"
 import { Effect } from "effect"
 import * as Log from "@opencode-ai/core/util/log"
 import { HttpApiBuilder } from "effect/unstable/httpapi"
-import { SessionHostGoneError, SessionHostPaymentRequiredError } from "../groups/session-host"
+import {
+  SessionHostContinuationError,
+  SessionHostGoneError,
+  SessionHostInsufficientBalanceError,
+  SessionHostPaymentRequiredError,
+} from "../groups/session-host"
 
 const SERVICE = "kilo-cloud"
 const log = Log.create({ service: "session-host" })
@@ -262,6 +270,60 @@ export const sessionHostHandlers = HttpApiBuilder.group(InstanceHttpApi, "sessio
       return yield* provider.createWorkspace(ctx.payload).pipe(Effect.mapError(mapFailure))
     })
 
+    /**
+     * Continuation failures keep their `code`/`message`/`retryable` shape so the
+     * client can decide whether to retry the same operation key. Only the
+     * signed-out and unavailable classes reuse the existing HTTP meanings.
+     */
+    const continuationFailure = (error: HostedFailure) => {
+      if (error.code === "insufficient_balance") {
+        return new SessionHostInsufficientBalanceError({
+          code: error.code,
+          message: error.message,
+          retryable: error.retryable,
+        })
+      }
+      if (error.code === "signed_out" || error.code === "unauthorized") {
+        return new UnauthorizedError({ message: error.message })
+      }
+      if (error.code === "auth_unavailable" || error.code === "unavailable") {
+        return new ServiceUnavailableError({ message: error.message, service: SERVICE })
+      }
+      if (error.code === "invalid_response") {
+        return new UpstreamError({ message: error.message, service: SERVICE })
+      }
+      return new SessionHostContinuationError({
+        code: error.code,
+        message: error.message,
+        retryable: error.retryable,
+      })
+    }
+
+    const continueWorkspace = Effect.fn("SessionHostHttpApi.continueWorkspace")(function* (ctx: {
+      payload: ContinueWorkspaceInput
+    }) {
+      const provider = yield* resolveDefault.pipe(Effect.mapError(mapFailure))
+      // Continuation reads and writes Session, Database, Git, Question, and
+      // Permission. Run it on AppRuntime (which re-provides the request's
+      // InstanceRef) so this route does not widen the group's own requirements.
+      return yield* Effect.tryPromise({
+        try: () =>
+          AppRuntime.runPromise(
+            Continuation.run({
+              provider,
+              operationKey: ctx.payload.operationKey,
+              directory: ctx.payload.directory,
+              sessionIDs: ctx.payload.sessionIDs,
+              activeSessionID: ctx.payload.activeSessionID,
+            }),
+          ),
+        catch: (error) =>
+          error instanceof HostedFailure
+            ? continuationFailure(error)
+            : new ServiceUnavailableError({ message: "Continue in Cloud failed", service: SERVICE }),
+      })
+    })
+
     const getWorkspace = Effect.fn("SessionHostHttpApi.getWorkspace")(function* (ctx: {
       params: { providerID: ProviderID; workspaceID: WorkspaceID }
       query: { sessionLimit?: number; sessionCursor?: string; organizationID?: OrganizationID }
@@ -360,6 +422,7 @@ export const sessionHostHandlers = HttpApiBuilder.group(InstanceHttpApi, "sessio
       .handle("listWorkspaces", listWorkspaces)
       .handle("listWorkspaceProfiles", listWorkspaceProfiles)
       .handle("createWorkspace", createWorkspace)
+      .handle("continueWorkspace", continueWorkspace)
       .handle("getWorkspace", getWorkspace)
       .handle("getWorkspaceStatus", getWorkspaceStatus)
       .handle("listWorkspaceSessions", listWorkspaceSessions)
