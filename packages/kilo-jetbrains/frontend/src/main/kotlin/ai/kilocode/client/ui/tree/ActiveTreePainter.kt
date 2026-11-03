@@ -1,6 +1,7 @@
 package ai.kilocode.client.ui.tree
 
 import ai.kilocode.client.ui.UiStyle
+import ai.kilocode.client.ui.active.activeIconGap
 import com.intellij.ui.tree.ui.Control
 import com.intellij.ui.tree.ui.DefaultControl
 import com.intellij.util.ui.JBUI
@@ -15,7 +16,7 @@ import java.awt.Graphics
 object ActiveTreePainter : Control.Painter {
     private fun contentInset() = JBUI.scale(UiStyle.Gap.SM)
 
-    private fun iconGap() = JBUI.scale(maxOf(JBUI.getInt("ActionsList.icon.gap", 0), UiStyle.Gap.SM))
+    private fun iconGap() = JBUI.scale(activeIconGap())
 
     /** One compact step for every level above the root, relative to the tree content edge. */
     fun step(depth: Int): Int =

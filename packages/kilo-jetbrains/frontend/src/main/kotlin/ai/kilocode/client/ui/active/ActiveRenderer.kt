@@ -44,8 +44,6 @@ import javax.swing.SwingConstants
  * one value can feed both the layout gaps (which need pixels) and [JBUI.Borders] (which scales what it
  * is handed).
  */
-private fun activeIconGap() = JBUI.getInt("ActionsList.icon.gap", UiStyle.Gap.MD)
-
 /**
  * Whether row text that does not fit fades into the row background instead of stopping at a bare cut.
  *

@@ -214,6 +214,9 @@ internal fun activeVisibleCells(item: ActiveItem, active: Boolean): List<ActiveC
 
 internal fun activeCellGap() = JBUI.scale(CELL_GAP)
 
+/** Standard icon/text gap, left unscaled so Borders can scale it exactly once. */
+internal fun activeIconGap() = JBUI.getInt("ActionsList.icon.gap", UiStyle.Gap.MD)
+
 @RequiresEdt
 private fun activeAnimation(item: ActiveItem, time: Long, actions: Boolean): Int? {
     var delay = animationDelay(item.icon, time)

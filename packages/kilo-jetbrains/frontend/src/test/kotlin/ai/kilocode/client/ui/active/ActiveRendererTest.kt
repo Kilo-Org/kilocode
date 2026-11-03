@@ -219,6 +219,7 @@ class ActiveRendererTest : BasePlatformTestCase() {
                 com.intellij.ui.scale.JBUIScale.setUserScaleFactorForTest(scale * factor)
                 javax.swing.UIManager.put("ActionsList.icon.gap", 6)
                 view.updateUI()
+                renderer.updateUI()
                 view.setUI(com.intellij.ui.tree.ui.DefaultTreeUI())
                 view.setSize(JBUI.scale(400), JBUI.scale(200))
                 view.validate()
