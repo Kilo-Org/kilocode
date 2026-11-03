@@ -12,6 +12,7 @@ import { KiloProviderUsagePlugin } from "./provider-usage"
 import { KiloOpenAIPlugin } from "./openai"
 import { KiloMarketplacePlugin } from "./marketplace"
 import { KiloPrivacyPlugin } from "./privacy"
+import { KiloFlowPlugin } from "./flow"
 import { KiloSkillPlugin } from "./skill"
 import { KiloTodoPlugin } from "./todo"
 import { KiloWriteToolPlugin } from "./tool-write"
@@ -40,6 +41,7 @@ export const KiloPlugins = [
   KiloProviderUsagePlugin,
   KiloOpenAIPlugin,
   KiloMarketplacePlugin,
+  KiloFlowPlugin,
   KiloSkillPlugin,
   KiloTodoPlugin,
   KiloWriteToolPlugin,
