@@ -1,5 +1,5 @@
 // Read the current todo list of a session from its messages. This module stays free of UI imports so tests can use it.
-import type { SessionMessageInfo } from "@opencode/client"
+import type { ConfigEntry, SessionMessageInfo } from "@opencode/client"
 import type { TodoItem } from "../components/chat/todo/todo-dock"
 
 const STATUS = new Set<TodoItem["status"]>(["pending", "in_progress", "completed", "cancelled"])
@@ -29,20 +29,22 @@ export function todoState(
   messages: ReadonlyArray<SessionMessageInfo>,
   revert?: { messageID: string; partID?: string },
 ) {
-  let last: string | undefined
-  let todos: TodoItem[] = []
-  for (const message of messages) {
+  const user = messages.findLast((message) => message.type === "user" && visible(message.id, revert))?.id
+  // Walk from the newest message so a long transcript stops at the latest write
+  // instead of rescanning the whole history on every streaming update.
+  for (let index = messages.length - 1; index >= 0; index--) {
+    const message = messages[index]
     if (message.type !== "assistant") continue
-    for (const part of active(message, revert)) {
-      if (part.type !== "tool" || part.name !== "todowrite" || part.state.status !== "completed") continue
-      const next = items(part.state.metadata?.todos)
+    const parts = active(message, revert)
+    for (let part = parts.length - 1; part >= 0; part--) {
+      const item = parts[part]
+      if (item.type !== "tool" || item.name !== "todowrite" || item.state.status !== "completed") continue
+      const next = items(item.state.metadata?.todos)
       if (!next) continue
-      todos = next
-      last = message.id
+      return { items: next, last: message.id, user }
     }
   }
-  const user = messages.findLast((message) => message.type === "user" && visible(message.id, revert))?.id
-  return { items: todos, last, user }
+  return { items: [], last: undefined, user }
 }
 
 /** Whether the visible messages already hold a write, so paging older history cannot change the list. */
@@ -50,11 +52,23 @@ export function hasTodoWrite(
   messages: ReadonlyArray<SessionMessageInfo>,
   revert?: { messageID: string; partID?: string },
 ) {
-  return messages.some(
-    (message) =>
-      message.type === "assistant" &&
-      active(message, revert).some((part) => part.type === "tool" && part.name === "todowrite"),
-  )
+  for (let index = messages.length - 1; index >= 0; index--) {
+    const message = messages[index]
+    if (message.type !== "assistant") continue
+    if (active(message, revert).some((part) => part.type === "tool" && part.name === "todowrite")) return true
+  }
+  return false
+}
+
+/** Whether the latest config document enables the experimental todo tool. */
+export function todoEnabled(entries: ReadonlyArray<ConfigEntry>) {
+  let enabled = false
+  for (const entry of entries) {
+    if (entry.type !== "document") continue
+    const value = entry.info.experimental?.todo
+    if (value !== undefined) enabled = value
+  }
+  return enabled
 }
 
 function visible(messageID: string, revert: { messageID: string } | undefined) {

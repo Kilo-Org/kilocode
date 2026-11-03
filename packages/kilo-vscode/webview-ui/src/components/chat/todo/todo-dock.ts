@@ -18,7 +18,7 @@ export interface TodoItem {
 
 /** The session data the chip reads. A v2 source maps the session store into this shape. */
 export interface TodoDockSource {
-  /** The open session. A change remounts the chip's live state. */
+  /** The open session. A change resets the chip's live state. */
   id: Accessor<string | undefined>
   items: Accessor<TodoItem[]>
   /** Message of the latest todo write. */
@@ -69,6 +69,31 @@ export function todoFinished(prev: TodoStats, next: TodoStats) {
   if (prev.total === 0 || prev.all || !next.all) return false
   const open = new Set(prev.live.filter((item) => item.status !== "completed").map((item) => item.content))
   return next.live.some((item) => open.has(item.content))
+}
+
+/** The values the chip compares between two updates. */
+export interface TodoMoment {
+  id: string | undefined
+  stats: TodoStats
+  last: string | undefined
+  user: string | undefined
+}
+
+/**
+ * What one todo update changes in the chip. A new user message starts a run,
+ * so an all-done list that arrives after it is not a finish. A new write
+ * replaces the list, so it clears an older celebration before a real finish
+ * sets a new one.
+ */
+export function todoMoment(prev: TodoMoment | undefined, next: TodoMoment) {
+  const same = !!prev && prev.id === next.id
+  const boundary = !!prev && prev.user === next.user
+  const write = !!prev && prev.last === next.last
+  return {
+    clear: !same || !boundary || !write || !next.stats.all,
+    celebrate: same && boundary && todoFinished(prev.stats, next.stats),
+    live: same && prev.stats.total > 0,
+  }
 }
 
 /** Widest title the chip shows, so a long item does not take the whole row. */

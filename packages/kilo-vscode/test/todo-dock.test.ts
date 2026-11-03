@@ -4,6 +4,7 @@ import {
   TODO_TITLE_MAX,
   todoFinished,
   todoFit,
+  todoMoment,
   todoStats,
   todoVisible,
   type TodoItem,
@@ -74,6 +75,36 @@ describe("todoFinished", () => {
     const prev = todoStats([item("1", "completed"), item("2", "pending")])
     const next = todoStats([item("1", "completed"), item("b", "completed")])
     expect(todoFinished(prev, next)).toBe(false)
+  })
+})
+
+describe("todoMoment", () => {
+  const partial = {
+    id: "session",
+    stats: todoStats([item("1", "completed"), item("2", "completed"), item("3", "in_progress")]),
+    last: "msg_2",
+    user: "msg_1",
+  }
+  const done = {
+    ...partial,
+    stats: todoStats([item("1", "completed"), item("2", "completed"), item("3", "completed")]),
+    last: "msg_4",
+  }
+
+  it("celebrates when a later write completes the list", () => {
+    expect(todoMoment(partial, done)).toEqual({ clear: true, celebrate: true, live: true })
+  })
+
+  it("does not celebrate a complete list after a new user message", () => {
+    const moment = todoMoment({ ...done, user: "msg_3" }, { ...done, user: "msg_5" })
+    expect(moment.clear).toBe(true)
+    expect(moment.celebrate).toBe(false)
+  })
+
+  it("does not celebrate a complete list that replaces another complete list", () => {
+    const moment = todoMoment({ ...done, last: "msg_2" }, done)
+    expect(moment.clear).toBe(true)
+    expect(moment.celebrate).toBe(false)
   })
 })
 

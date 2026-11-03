@@ -34,7 +34,7 @@ import { Spinner } from "@kilocode/kilo-ui/spinner"
 import { useLanguage } from "../../../context/language"
 import {
   TODO_TITLE_MAX,
-  todoFinished,
+  todoMoment,
   todoStats,
   todoVisible,
   type TodoDockSource,
@@ -73,18 +73,17 @@ export function useTodoDock(source: TodoDockSource) {
   let timer: ReturnType<typeof setTimeout> | undefined
   createEffect(
     on(snap, (next, prev) => {
-      const same = !!prev && prev.id === next.id
-      const boundary = !!prev && prev.last === next.last && prev.user === next.user
-      if (!same || !boundary || !next.stats.all) {
+      const moment = todoMoment(prev, next)
+      if (moment.clear) {
         clearTimeout(timer)
         setCelebrate(false)
       }
-      if (same && boundary && todoFinished(prev.stats, next.stats)) {
+      if (moment.celebrate) {
         clearTimeout(timer)
         setCelebrate(true)
         timer = setTimeout(() => setCelebrate(false), CELEBRATE)
       }
-      setLive(same && prev.stats.total > 0)
+      setLive(moment.live)
     }),
   )
   onCleanup(() => clearTimeout(timer))

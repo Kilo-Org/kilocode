@@ -33,7 +33,7 @@ export const SessionDock: Component<SessionDockProps> = (props) => {
   const todo = useTodoDock(useTodoSource(() => props.session))
   const [fit, setFit] = createSignal<TodoFit>({ title: TODO_TITLE_MAX, count: true, compact: false })
 
-  // The chip trails the centered spinner out of flow, as the goal badge does. The lane reserves its width on both
+  // The chip trails the centered spinner out of flow. The lane reserves its width on both
   // sides, so the spinner stays centered and the label truncates before the chip leaves the row. Plan from natural
   // widths, never the painted ones, so a collapse cannot feed back into the next plan.
   const [dock, setDock] = createSignal<HTMLDivElement>()
@@ -81,9 +81,10 @@ export const SessionDock: Component<SessionDockProps> = (props) => {
     const mutate = new MutationObserver(schedule)
     resize.observe(el)
     resize.observe(box)
-    // The status label and the elapsed and retry counters are siblings of the
-    // trail. Their text sets the room, so any change must plan again.
-    mutate.observe(content, { childList: true, subtree: true, characterData: true })
+    mutate.observe(box, { childList: true, subtree: true, characterData: true })
+    // The status label is a sibling of the trail. Its width sets the room, so a new label must plan again.
+    const status = content.querySelector(".working-status")
+    if (status) mutate.observe(status, { childList: true, subtree: true, characterData: true })
     onCleanup(() => {
       cancelAnimationFrame(frame)
       resize.disconnect()
@@ -155,12 +156,7 @@ function core(lane: HTMLElement | undefined) {
       const line = el.querySelector<HTMLElement>(".working-status-line:not([data-old])")
       return Math.min(line ? text(line) : 0, LABEL_MAX)
     }
-    // The elapsed slot keeps its reserved min-width even before the first tick,
-    // so it still takes room in the centered cluster.
-    if (el instanceof HTMLElement && el.dataset.empty != null) {
-      const css = getComputedStyle(el)
-      return Math.max(Number.parseFloat(css.minWidth) || 0, el.getBoundingClientRect().width)
-    }
+    if (el instanceof HTMLElement && el.dataset.empty != null) return 0
     // The spinner has no text but a fixed size.
     if (!el.textContent) return el.getBoundingClientRect().width
     return Math.max(text(el), Number.parseFloat(getComputedStyle(el).minWidth) || 0)
