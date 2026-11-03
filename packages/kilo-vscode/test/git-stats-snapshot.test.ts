@@ -145,13 +145,11 @@ describe("GitStatsSnapshot", () => {
       const file = path.join(dir, "changing.txt")
       await fs.writeFile(file, "one\ntwo\n")
       const read = fs.readFile
-      const probe = spyOn(fs, "readFile").mockImplementationOnce(
-        (async (...args: Parameters<typeof read>) => {
-          const value = await read(...args)
-          await fs.writeFile(file, "replacement\n")
-          return value
-        }) as unknown as typeof fs.readFile,
-      )
+      const probe = spyOn(fs, "readFile").mockImplementationOnce((async (...args: Parameters<typeof read>) => {
+        const value = await read(...args)
+        await fs.writeFile(file, "replacement\n")
+        return value
+      }) as unknown as typeof fs.readFile)
       try {
         expect((await snapshots.diff(dir, base, ["changing.txt"])).additions).toBe(2)
         expect((await snapshots.diff(dir, base, ["changing.txt"])).additions).toBe(1)
@@ -302,10 +300,13 @@ describe("GitStatsSnapshot", () => {
       expect(refs[1]!.worktreePaths?.get(paths[1]!)).toBe("feature")
       expect(refs[1]!.worktreePaths?.has(paths[0]!)).toBe(false)
     } finally {
-      await Promise.all(roots.map((root) => fs.rm(root, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 })))
+      await Promise.all(
+        roots.map((root) => fs.rm(root, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 })),
+      )
     }
   })
 
+  // Windows does not allow a newline in a filename, so the linked worktree cannot be created there.
   it.skipIf(process.platform === "win32")("parses a linked worktree path containing a newline", async () => {
     await repo(async (dir) => {
       const worktree = path.join(dir, "linked\nworktree")

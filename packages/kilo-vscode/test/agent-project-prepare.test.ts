@@ -227,30 +227,23 @@ describe("project preparation", () => {
     )
   })
 
+  // Two repositories and a bootstrap commit take more than the default 5 seconds of Git calls on Windows.
   it("ignores ambient Git directory, worktree and index overrides", async () => {
     const other = await project()
     const index = path.join(dir, "ambient-index")
     await fs.writeFile(index, "do not touch")
-    const ambient = {
-      GIT_DIR: path.join(other, ".git"),
-      GIT_COMMON_DIR: path.join(other, ".git"),
-      GIT_WORK_TREE: other,
-      GIT_INDEX_FILE: index,
-    }
-    // Preparation must pass its own sanitized environment, so a caller that omits one must not leak
-    // the process-level overrides into Git.
-    const scoped = {
-      execGit: (args: string[], cwd: string, options?: Parameters<GitOps["execGit"]>[2]) =>
-        git.execGit(args, cwd, { ...options, env: options?.env ?? { ...process.env, ...ambient } }),
-    }
-    const { root } = await create(dir, "intended", scoped)
+    process.env.GIT_DIR = path.join(other, ".git")
+    process.env.GIT_COMMON_DIR = path.join(other, ".git")
+    process.env.GIT_WORK_TREE = other
+    process.env.GIT_INDEX_FILE = index
+    const { root } = await create(dir, "intended", git)
     await configure(root, git, { name: "Intended", email: "intended@example.invalid" })
     await commit(root, git)
     expect(await inspect(root, git)).toEqual({ root, empty: false })
     expect(await inspect(other, git)).toEqual({ root: other, empty: true })
     expect(await identity(other, git)).toBe(true)
     expect(await fs.readFile(index, "utf8")).toBe("do not touch")
-  })
+  }, 30_000)
 
   it.each(["hook", "signing"])("creates an unsigned bootstrap commit despite configured %s policy", async (policy) => {
     const root = await project()

@@ -261,13 +261,23 @@ describe("working-tree PR suggestions", () => {
     }
   })
 
-  it.skipIf(process.platform === "win32")("replaces the target atomically while old readers retain the original", async () => {
+  it("replaces the target atomically while old readers retain the original", async () => {
     const file = path.join(directory, "file.txt")
     const value = await token()
     const before = await fs.readFile(file, "utf8")
+    const entries = await fs.readdir(directory)
     const reader = await fs.open(file, "r")
     try {
-      expect((await apply(value)).success).toBe(true)
+      const result = await apply(value)
+      // Windows refuses to rename over a file that another handle holds open, so the apply must
+      // fail closed there: the original stays intact and no temporary file remains.
+      if (process.platform === "win32") {
+        expect(result.success).toBe(false)
+        expect(await fs.readFile(file, "utf8")).toBe(before)
+        expect(await fs.readdir(directory)).toEqual(entries)
+        return
+      }
+      expect(result.success).toBe(true)
       expect(await fs.readFile(file, "utf8")).toBe(before.replace("old", "new"))
       expect(await reader.readFile("utf8")).toBe(before)
     } finally {
@@ -307,46 +317,44 @@ describe("working-tree PR suggestions", () => {
     "unsaved",
     "symlink",
     "replacement",
+    // Windows has no POSIX mode bits: chmod only toggles read-only, so a mode change cannot be staged.
     ...(process.platform === "win32" ? [] : ["mode"]),
-  ])(
-    "rejects stale %s at apply without writing",
-    async (change) => {
-      const value = await token()
-      const file = path.join(directory, "file.txt")
-      if (change === "content") await fs.appendFile(file, "later edit\n")
-      if (change === "HEAD")
-        await git(
-          "-c",
-          "user.name=Test",
-          "-c",
-          "user.email=test@example.invalid",
-          "commit",
-          "--allow-empty",
-          "-m",
-          "new head",
-        )
-      if (change === "source") source.comments.nodes[1]!.body = "```suggestion\nchanged\n```"
-      if (change === "anchor") source.line = 3
-      if (change === "branch") await git("switch", "-c", "other")
-      if (change === "unsaved") dirty = [file]
-      if (change === "mode") await fs.chmod(file, 0o755)
-      if (change === "symlink") {
-        await fs.unlink(file)
-        await fs.symlink("other.txt", file)
-      }
-      if (change === "replacement") {
-        await fs.rename(file, path.join(directory, "saved.txt"))
-        await fs.copyFile(path.join(directory, "saved.txt"), file)
-      }
-      const before = await fs.readFile(file)
-      const result = await apply(value, change === "route" ? { projectId: "other", requestId: "wrong" } : {})
-      expect(result.success).toBe(false)
-      expect(result.projectId).toBe(change === "route" ? "other" : route.projectId)
-      expect(result.requestId).toBe(change === "route" ? "wrong" : "request")
-      expect(await fs.readFile(file)).toEqual(before)
-      expect((await apply(value)).success).toBe(false)
-    },
-  )
+  ])("rejects stale %s at apply without writing", async (change) => {
+    const value = await token()
+    const file = path.join(directory, "file.txt")
+    if (change === "content") await fs.appendFile(file, "later edit\n")
+    if (change === "HEAD")
+      await git(
+        "-c",
+        "user.name=Test",
+        "-c",
+        "user.email=test@example.invalid",
+        "commit",
+        "--allow-empty",
+        "-m",
+        "new head",
+      )
+    if (change === "source") source.comments.nodes[1]!.body = "```suggestion\nchanged\n```"
+    if (change === "anchor") source.line = 3
+    if (change === "branch") await git("switch", "-c", "other")
+    if (change === "unsaved") dirty = [file]
+    if (change === "mode") await fs.chmod(file, 0o755)
+    if (change === "symlink") {
+      await fs.unlink(file)
+      await fs.symlink("other.txt", file)
+    }
+    if (change === "replacement") {
+      await fs.rename(file, path.join(directory, "saved.txt"))
+      await fs.copyFile(path.join(directory, "saved.txt"), file)
+    }
+    const before = await fs.readFile(file)
+    const result = await apply(value, change === "route" ? { projectId: "other", requestId: "wrong" } : {})
+    expect(result.success).toBe(false)
+    expect(result.projectId).toBe(change === "route" ? "other" : route.projectId)
+    expect(result.requestId).toBe(change === "route" ? "wrong" : "request")
+    expect(await fs.readFile(file)).toEqual(before)
+    expect((await apply(value)).success).toBe(false)
+  })
 
   it.each([
     "left",
@@ -405,23 +413,27 @@ describe("working-tree PR suggestions", () => {
     expect((await apply(result.preview.token)).success).toBe(true)
   })
 
-  it.skipIf(process.platform === "win32")("treats Git path arguments literally and returns a bounded patch", async () => {
-    const file = path.join(directory, "file*.txt")
-    const content = Array.from({ length: 10_000 }, (_, index) => `line ${index}`).join("\n") + "\n"
-    await fs.writeFile(file, content)
-    await git("add", "--", "file*.txt")
-    await git("-c", "user.name=Test", "-c", "user.email=test@example.invalid", "commit", "-m", "literal path")
-    source.path = "file*.txt"
-    source.line = 5000
-    source.pullRequest.headRefOid = await git("rev-parse", "HEAD")
-    const result = await preview()
-    if (result.type !== "agentManager.previewPRSuggestionResult" || !result.preview) throw new Error(result.error)
-    expect(result.preview.patch.length).toBeLessThan(500)
-    expect(result.preview.patch).toContain("-line 4999\n+new")
-    expect((await apply(result.preview.token)).success).toBe(true)
-    expect(await fs.readFile(file, "utf8")).toBe(content.replace("line 4999\n", "new\n"))
-    expect(await fs.readFile(path.join(directory, "file.txt"), "utf8")).toContain("\nold\n")
-  })
+  // Windows does not allow `*` in a filename, so the literal pathspec fixture cannot exist there.
+  it.skipIf(process.platform === "win32")(
+    "treats Git path arguments literally and returns a bounded patch",
+    async () => {
+      const file = path.join(directory, "file*.txt")
+      const content = Array.from({ length: 10_000 }, (_, index) => `line ${index}`).join("\n") + "\n"
+      await fs.writeFile(file, content)
+      await git("add", "--", "file*.txt")
+      await git("-c", "user.name=Test", "-c", "user.email=test@example.invalid", "commit", "-m", "literal path")
+      source.path = "file*.txt"
+      source.line = 5000
+      source.pullRequest.headRefOid = await git("rev-parse", "HEAD")
+      const result = await preview()
+      if (result.type !== "agentManager.previewPRSuggestionResult" || !result.preview) throw new Error(result.error)
+      expect(result.preview.patch.length).toBeLessThan(500)
+      expect(result.preview.patch).toContain("-line 4999\n+new")
+      expect((await apply(result.preview.token)).success).toBe(true)
+      expect(await fs.readFile(file, "utf8")).toBe(content.replace("line 4999\n", "new\n"))
+      expect(await fs.readFile(path.join(directory, "file.txt"), "utf8")).toContain("\nold\n")
+    },
+  )
 
   it("applies multiline ranges and empty suggestions as deletions", async () => {
     source.startLine = 2
