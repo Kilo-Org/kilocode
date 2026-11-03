@@ -22,11 +22,26 @@ window.createOutputChannel ??= () => ({ appendLine: () => undefined, show: () =>
 
 const directories: string[] = []
 
-afterEach(() => {
-  for (const dir of directories.splice(0)) fs.rmSync(dir, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 })
+afterEach(async () => {
+  for (const dir of directories.splice(0)) await remove(dir)
 })
 
+// Provider shutdown continues after `dispose()` returns, and Windows keeps the directory locked until its
+// file handles close. Retry the removal so the cleanup does not race that teardown.
+async function remove(dir: string) {
+  for (let attempt = 0; ; attempt++) {
+    try {
+      await fs.promises.rm(dir, { recursive: true, force: true })
+      return
+    } catch (error) {
+      if (attempt === 50) throw error
+      await new Promise((resolve) => setTimeout(resolve, 100))
+    }
+  }
+}
+
 const tick = () => new Promise((resolve) => setTimeout(resolve, 0))
+const settle = () => new Promise((resolve) => setTimeout(resolve, 100))
 
 function request(id: string, metadata?: Record<string, unknown>) {
   return { id, sessionID: `ses_${id}`, action: "bash", resources: ["ls"], metadata } as never
@@ -221,5 +236,6 @@ describe("Agent Manager host wiring", () => {
     expect(replied).toEqual(["per_host"])
     expect(opened()).toBe(0)
     provider.dispose()
+    await settle()
   })
 })
