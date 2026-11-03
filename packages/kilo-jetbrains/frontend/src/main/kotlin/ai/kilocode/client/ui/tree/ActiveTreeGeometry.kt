@@ -13,12 +13,14 @@ import java.awt.Component
 import java.awt.Graphics
 import java.awt.Point
 import java.awt.Rectangle
+import javax.swing.CellRendererPane
 import javax.swing.JComponent
 import javax.swing.tree.TreePath
 
 /** Uses the native delegate's painted bounds for both renderer layout and hit regions. */
 internal class ActiveTreeGeometry(private val view: ActiveTreeView, private val renderer: ActiveTreeRenderer) {
     private val surface = PickerRow()
+    private val pane = CellRendererPane().also { view.add(it) }
 
     @RequiresEdt
     fun paint(g: Graphics) {
@@ -42,7 +44,7 @@ internal class ActiveTreeGeometry(private val view: ActiveTreeView, private val 
         if (frame == null || content == null || g.clipBounds?.intersects(frame) == false) return
         if (state.selectionColor != null) {
             surface.update(view.background, state.selectionColor, true, true)
-            paintLocal(g, surface, frame.x, frame.y, frame.width, frame.height)
+            paintLocal(g, surface, frame)
         }
         val path = TreePath(entry.path)
         ActiveTreePainter.paint(
@@ -53,28 +55,24 @@ internal class ActiveTreeGeometry(private val view: ActiveTreeView, private val 
         val stamp = renderer.getTreeCellRendererComponent(
             view, entry, state.selected, view.isExpanded(path), !entry.allowsChildren, row, view.hasFocus(),
         )
-        // The stamp is also reused for hit testing. Lay it out in local coordinates before painting.
-        // Do not use SwingUtilities.paintComponent here: it parents the stamp to a CellRendererPane
-        // that outlives this paint and keeps the renderer, tree, and host callbacks reachable.
+        // Hit testing shares this stamp, so lay out the current row before painting it.
         val cell = cell(entry)
         stamp.setBounds(0, 0, cell.width, cell.height)
         activeLayout(stamp)
-        paintLocal(g, stamp, cell.x, cell.y, cell.width, cell.height)
+        paintLocal(g, stamp, cell)
     }
 
-    private fun paintLocal(g: Graphics, component: Component, x: Int, y: Int, width: Int, height: Int) {
-        val buffered = component is JComponent && component.isDoubleBuffered
-        if (buffered) (component as JComponent).isDoubleBuffered = false
+    @RequiresEdt
+    private fun paintLocal(g: Graphics, component: Component, bounds: Rectangle) {
+        val stamp = component as? JComponent
+        val buffered = stamp?.isDoubleBuffered ?: false
         try {
-            component.setBounds(0, 0, width, height)
-            val local = g.create(x, y, width, height)
-            try {
-                component.paint(local)
-            } finally {
-                local.dispose()
-            }
+            // The attached pane propagates the tree's paint flags to buffered renderer children.
+            // Painting a detached stamp directly can corrupt the outer frame's buffer strategy.
+            pane.paintComponent(g, component, view, bounds.x, bounds.y, bounds.width, bounds.height, false)
         } finally {
-            if (buffered) (component as JComponent).isDoubleBuffered = true
+            stamp?.isDoubleBuffered = buffered
+            pane.removeAll()
         }
     }
 

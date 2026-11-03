@@ -11,8 +11,11 @@ import com.intellij.ui.tree.ui.DefaultTreeUI
 import com.intellij.util.ui.EmptyIcon
 import com.intellij.util.ui.UIUtil
 import java.awt.BorderLayout
+import java.awt.Component
+import java.awt.Graphics
 import java.awt.Rectangle
 import java.awt.image.BufferedImage
+import javax.swing.CellRendererPane
 import javax.swing.Icon
 import javax.swing.JComponent
 import javax.swing.JPanel
@@ -71,9 +74,17 @@ class ActiveTreeAnimationTest : BasePlatformTestCase() {
         assertEquals(1, timers.pending)
     }
 
-    fun `test overlay paint does not install the renderer in a cell renderer pane`() {
+    fun `test overlay paints row stamps in a tree owned renderer pane and releases them`() {
+        val panes = mutableListOf<CellRendererPane?>()
+        val icon = object : Icon {
+            override fun getIconWidth() = 16
+            override fun getIconHeight() = 16
+            override fun paintIcon(component: Component, graphics: Graphics, x: Int, y: Int) {
+                panes += generateSequence(component) { it.parent }.filterIsInstance<CellRendererPane>().firstOrNull()
+            }
+        }
         val tree = ActiveTree("")
-        tree.update(listOf(ActiveTreeNode(Row("row"))))
+        tree.update(listOf(ActiveTreeNode(Row("row", icon))))
         val view = attach(tree)
         val entry = view.hierarchy.entries.getValue("row")
         view.selectionModel.selectionPath = TreePath(entry.path)
@@ -81,11 +92,45 @@ class ActiveTreeAnimationTest : BasePlatformTestCase() {
         val image = BufferedImage(maxOf(view.width, 1), maxOf(view.height, 1), BufferedImage.TYPE_INT_ARGB)
         val graphics = image.createGraphics()
         try {
-            view.regions.paint(graphics)
+            repeat(3) { view.regions.paint(graphics) }
         } finally {
             graphics.dispose()
         }
+        assertEquals(3, panes.size)
+        panes.forEach { pane ->
+            assertNotNull("A detached renderer re-enters Swing's double-buffered paint manager", pane)
+            assertSame(view, pane!!.parent)
+            assertEquals("No renderer stamps may be retained after a paint", 0, pane.componentCount)
+        }
+        assertNull((view.cellRenderer as Component).parent)
         assertEquals(before, view.componentCount)
+    }
+
+    fun `test overlay releases renderer stamps when painting fails`() {
+        val icon = object : Icon {
+            override fun getIconWidth() = 16
+            override fun getIconHeight() = 16
+            override fun paintIcon(component: Component, graphics: Graphics, x: Int, y: Int) {
+                error("Renderer failed")
+            }
+        }
+        val tree = ActiveTree("")
+        tree.update(listOf(ActiveTreeNode(Row("row", icon))))
+        val view = attach(tree)
+        val stamp = view.cellRenderer as JComponent
+        val buffered = stamp.isDoubleBuffered
+        val image = BufferedImage(view.width, view.height, BufferedImage.TYPE_INT_ARGB)
+        val graphics = image.createGraphics()
+        try {
+            val error = runCatching { view.regions.paint(graphics) }.exceptionOrNull()
+            assertTrue(error is IllegalStateException)
+            assertEquals("Renderer failed", error?.message)
+            assertNull(stamp.parent)
+            assertEquals(buffered, stamp.isDoubleBuffered)
+            view.components.filterIsInstance<CellRendererPane>().forEach { assertEquals(0, it.componentCount) }
+        } finally {
+            graphics.dispose()
+        }
     }
 
     fun `test clipped tree overlay never visits unrelated rows`() {
