@@ -13,8 +13,11 @@ import { onTimelineHighlight, type TimelineHighlight } from "../utils/timeline/h
 import { partKey } from "../utils/timeline/timeline-parts"
 import { useV2 } from "./client"
 import {
+  anchorOffset,
+  handedRows,
   partitionTranscript,
   retainTurn,
+  shiftedScroll,
   transcriptRows,
   type TranscriptHold,
   type TranscriptPartition,
@@ -171,8 +174,11 @@ export function MessageList(props: {
     const key = saved.keys[index]
     if (!key) return
     // `scrollToIndex` adds the start margin again on restore.
-    const offset = handle.scrollOffset - startMargin() - handle.getItemOffset(index)
-    setScroll(id, { type: "anchor", key, offset })
+    setScroll(id, {
+      type: "anchor",
+      key,
+      offset: anchorOffset(handle.scrollOffset, startMargin(), handle.getItemOffset(index)),
+    })
   }
 
   createEffect(
@@ -218,7 +224,7 @@ export function MessageList(props: {
   // after they are measured.
   const handed = createMemo<{ direct: readonly string[]; moved: readonly string[] }>((previous) => {
     const map = indexes()
-    return { direct: directKeys(), moved: (previous?.direct ?? []).filter((key) => map.has(key)) }
+    return { direct: directKeys(), moved: handedRows(previous?.direct, map) }
   })
   const [released, setReleased] = createSignal<readonly string[]>()
   const keepMounted = createMemo(() => {
@@ -332,9 +338,8 @@ export function MessageList(props: {
     const el = scrollEl()
     if (!el || !turnsEl) return
     const next = Math.round(el.scrollTop + turnsEl.getBoundingClientRect().top - el.getBoundingClientRect().top)
-    const delta = next - startMargin()
-    if (delta === 0) return
-    if (autoScroll.userScrolled()) el.scrollTop += delta
+    if (next === startMargin()) return
+    if (autoScroll.userScrolled()) el.scrollTop = shiftedScroll(el.scrollTop, startMargin(), next)
     setStartMargin(next)
   }
   createEffect(on([history, () => props.session], syncStart))

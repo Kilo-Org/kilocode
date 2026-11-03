@@ -44,6 +44,8 @@ export function AssistantMessage(props: {
   )
   const parts = () => props.parts ?? props.message.content
   const offset = () => props.start ?? 0
+  // The error belongs to the whole message, so only its last row renders it.
+  const lastChunk = () => offset() + parts().length >= props.message.content.length
   const timing = () => props.metadata?.timing
   const throughputValue = () => (tokenThroughputVisible() ? props.metadata?.tokensPerSecond : undefined)
   const throughputEl = createMemo<JSX.Element | undefined>(() => {
@@ -163,7 +165,7 @@ export function AssistantMessage(props: {
             )
           }}
         </For>
-        <Show when={props.message.error}>{(error) => <ErrorCard error={error()} />}</Show>
+        <Show when={lastChunk() ? props.message.error : undefined}>{(error) => <ErrorCard error={error()} />}</Show>
       </div>
     </div>
   )

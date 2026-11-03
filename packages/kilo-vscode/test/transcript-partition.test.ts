@@ -6,7 +6,15 @@ import type {
   SessionStructuredError,
 } from "@opencode/client"
 import { messageTurnRanges, turnMetadata } from "../webview-ui/src/v2/message-status"
-import { partitionTranscript, retainTurn, TRANSCRIPT_CHUNK_SIZE, transcriptRows } from "../webview-ui/src/v2/transcript"
+import {
+  anchorOffset,
+  handedRows,
+  partitionTranscript,
+  retainTurn,
+  shiftedScroll,
+  TRANSCRIPT_CHUNK_SIZE,
+  transcriptRows,
+} from "../webview-ui/src/v2/transcript"
 
 const user = (id: string, created: number) =>
   ({ id, type: "user", text: id, time: { created } }) as unknown as SessionMessageInfo
@@ -244,5 +252,26 @@ describe("retainTurn", () => {
     expect(retainTurn(held, "s", "u2", true)).toBe(held)
     expect(retainTurn(held, "other", undefined, false)).toBeUndefined()
     expect(retainTurn(held, undefined, "u1", false)).toBeUndefined()
+  })
+})
+
+describe("scroll anchors", () => {
+  test("saves the row offset without the start margin", () => {
+    expect(anchorOffset(1000, 66, 240)).toBe(694)
+  })
+
+  test("keeps a row in place when the row area starts higher or lower", () => {
+    expect(shiftedScroll(800, 66, 12)).toBe(746)
+    expect(shiftedScroll(800, 12, 66)).toBe(854)
+  })
+
+  test("keeps the direct rows that are now mounted in the virtual window", () => {
+    const index = new Map([
+      ["u2:user", 10],
+      ["a2:assistant:0", 11],
+    ])
+
+    expect(handedRows(["u2:user", "a2:assistant:0", "older:user"], index)).toEqual(["u2:user", "a2:assistant:0"])
+    expect(handedRows(undefined, index)).toEqual([])
   })
 })

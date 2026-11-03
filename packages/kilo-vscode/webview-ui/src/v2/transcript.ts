@@ -165,6 +165,28 @@ function assistantRows(message: SessionMessageAssistant, range: MessageTurnRange
   return rows
 }
 
+/**
+ * Rows that were direct in the previous update and now belong to the virtual
+ * window. They must stay mounted for the handoff so a tall row is not remounted
+ * at the estimated size.
+ */
+export function handedRows(previous: readonly string[] | undefined, indexByKey: ReadonlyMap<string, number>) {
+  return (previous ?? []).filter((key) => indexByKey.has(key))
+}
+
+/**
+ * Offset of a row inside the virtual window. Virtua measures from the start
+ * margin and `scrollToIndex` adds it again, so the saved offset excludes it.
+ */
+export function anchorOffset(scrollOffset: number, startMargin: number, itemOffset: number) {
+  return scrollOffset - startMargin - itemOffset
+}
+
+/** Scroll position that keeps a row in place when the row area starts lower or higher. */
+export function shiftedScroll(scrollTop: number, previousStart: number, nextStart: number) {
+  return scrollTop + nextStart - previousStart
+}
+
 function splitDirect(rows: readonly TranscriptRow[], direct: ReadonlySet<string>) {
   const turn = rows.at(-1)?.turn
   if (!turn || !direct.has(turn)) return { virtual: rows, direct: [] }
