@@ -9,6 +9,14 @@ import { useSpeechStatus } from "../components/speech-to-text/status"
 import { useSpeechToText } from "../components/speech-to-text/useSpeechToText"
 import { useLanguage } from "../context/language"
 import { useVSCode } from "../context/vscode"
+import {
+  hasPopup,
+  hasQuestionOption,
+  hasTextSelection,
+  isTextControl,
+  ownsFocusRegion,
+  promptFocusAllowed,
+} from "../utils/focus"
 import { isEnterKeyCommitNotIme } from "../utils/ime-enter"
 import { message, useV2 } from "./client"
 import { cleanEnhancedPrompt, enhancePromptRequest, normalizeEnhancePromptErrorMessage } from "./enhance-prompt"
@@ -123,9 +131,43 @@ export function PromptInput(props: {
     scroll()
   })
 
-  const focus = () => refs.input?.focus({ preventScroll: true })
-  onMount(() => window.addEventListener("focusPrompt", focus))
-  onCleanup(() => window.removeEventListener("focusPrompt", focus))
+  const focusInput = () => refs.input?.focus({ preventScroll: true })
+  // A restore retries after the dialog, menu or question that owned focus closes, but never takes focus from
+  // another text control, a popup or a selection.
+  const onFocusPrompt = (event: Event) => {
+    const detail = event instanceof CustomEvent ? (event.detail as Record<string, unknown> | undefined) : undefined
+    const force = detail?.force === true
+    const allowed = () =>
+      promptFocusAllowed({
+        force,
+        deferToQuestion: detail?.deferFocusToQuestion === true,
+        questionOption: hasQuestionOption(),
+        ownsRegion: ownsFocusRegion(document.activeElement),
+        popup: hasPopup(),
+        textControl: document.activeElement !== refs.input && isTextControl(document.activeElement),
+        selection: hasTextSelection(),
+      })
+    const focus = () => {
+      if (!allowed()) return
+      focusInput()
+    }
+    focus()
+    if (detail?.restore !== true) return
+    const restore = () => {
+      if (!allowed()) return
+      window.focus()
+      focus()
+    }
+    queueMicrotask(restore)
+    requestAnimationFrame(() => {
+      restore()
+      requestAnimationFrame(restore)
+      setTimeout(restore, 0)
+      setTimeout(restore, 50)
+    })
+  }
+  onMount(() => window.addEventListener("focusPrompt", onFocusPrompt))
+  onCleanup(() => window.removeEventListener("focusPrompt", onFocusPrompt))
 
   const insertSpeechText = (value: string) => {
     const ref = refs.input
@@ -190,7 +232,7 @@ export function PromptInput(props: {
     preEnhance = null
     setText(current.trim() ? `${current}\n\n${value}` : value)
     if (shouldSend) send()
-    else focus()
+    else focusInput()
   })
 
   const shortcut = createSpeechShortcut({
@@ -228,7 +270,7 @@ export function PromptInput(props: {
     // An empty draft explains the action instead of rewriting nothing.
     if (!draft) {
       setText(language.t("prompt.action.enhanceDescription"))
-      focus()
+      focusInput()
       return
     }
     preEnhance = text()
@@ -239,7 +281,7 @@ export function PromptInput(props: {
       .then((response) => {
         if (token !== enhanceToken) return
         setText(cleanEnhancedPrompt(response.text))
-        focus()
+        focusInput()
       })
       .catch((err: unknown) => {
         if (token !== enhanceToken) return

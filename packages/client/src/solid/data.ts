@@ -409,6 +409,9 @@ export function createData(config: CreateDataInput) {
   // failure does not block the next.
   const sending = new Map<string, Promise<unknown>>()
   const messageLoads = new Map<string, Promise<unknown>>()
+  // kilocode_change start - session-history: sessions whose loaded page reached the start of the transcript
+  const messageStart = new Set<string>()
+  // kilocode_change end
   const compacting = new Map<string, { id: string; observed: Set<string>; request: Promise<SessionInboxCompaction> }>()
   onCleanup(() => compacting.clear())
 
@@ -623,6 +626,9 @@ export function createData(config: CreateDataInput) {
     sync.invalidate(`session.pending:${sessionID}`)
     sync.invalidate(`session.message:${sessionID}`)
     messageLoads.delete(sessionID)
+    // kilocode_change start - session-history
+    messageStart.delete(sessionID)
+    // kilocode_change end
     // Keep unacknowledged submissions until their echo or rollback settles them.
     const pending = store.session.pending[sessionID]?.filter((item) => outbox.has(item.id)) ?? []
     const messages = store.session.message[sessionID]?.filter((item) => outbox.has(item.id)) ?? []
@@ -675,6 +681,9 @@ export function createData(config: CreateDataInput) {
     activeUpdates?.set(sessionID, undefined)
     store.session.pending[sessionID]?.forEach((item) => outbox.delete(item.id))
     messageIndex.delete(sessionID)
+    // kilocode_change start - session-history
+    messageStart.delete(sessionID)
+    // kilocode_change end
     sync.invalidate(`session:${sessionID}`)
     sync.invalidate(`session.family:${sessionID}`)
     sync.invalidate(`session.pending:${sessionID}`)
@@ -1822,14 +1831,21 @@ export function createData(config: CreateDataInput) {
         evict(sessionID: string) {
           evictSession(sessionID)
         },
+        /** Whether the loaded transcript reaches the start of the session history. */
+        startLoaded(sessionID: string) {
+          return messageStart.has(sessionID)
+        },
         // kilocode_change end
         sync(sessionID: string) {
           return sync.run(`session.message:${sessionID}`, async () => {
             const started = deletionEpoch
+            // kilocode_change start - session-history: the limit also decides whether the page is the start
+            const limit = config.initialMessageLimit?.() ?? messagePageLimit
+            // kilocode_change end
             const response = await api()
               .message.list({
                 sessionID,
-                limit: config.initialMessageLimit?.() ?? messagePageLimit,
+                limit, // kilocode_change(session-history)
                 order: "desc",
               })
               .catch(evictMissing)
@@ -1848,6 +1864,11 @@ export function createData(config: CreateDataInput) {
             )
             const messages = local.length === 0 ? fetched : [...fetched, ...local]
             batch(() => {
+              // kilocode_change start - session-history
+              const complete = response.data.length < limit
+              if (complete) messageStart.add(sessionID)
+              else messageStart.delete(sessionID)
+              // kilocode_change end
               messageIndex.set(sessionID, new Map(messages.map((message, index) => [message.id, index])))
               setStore("session", "message", sessionID, reconcile(messages))
               setStore("session", "messageCursor", sessionID, response.cursor.next ?? undefined)
@@ -1892,16 +1913,27 @@ export function createData(config: CreateDataInput) {
           const request = (async () => {
             const fetched: SessionMessageInfo[] = []
             let next: string | undefined = cursor
+            // kilocode_change start - session-history
+            let lastPage = 0
+            let lastLimit = 0
+            // kilocode_change end
             do {
+              // kilocode_change start - session-history
+              const limit = options?.all ? 200 : messagePageLimit
+              lastLimit = limit
+              // kilocode_change end
               const response = await api().message.list(
                 {
                   sessionID,
-                  limit: options?.all ? 200 : messagePageLimit,
+                  limit, // kilocode_change(session-history)
                   cursor: next,
                 },
                 { signal },
               )
               if (signal?.aborted) return
+              // kilocode_change start - session-history
+              lastPage = response.data.length
+              // kilocode_change end
               fetched.push(...response.data.map(stored))
               next = response.cursor.next ?? undefined
               if (!options?.all) break
@@ -1911,6 +1943,11 @@ export function createData(config: CreateDataInput) {
             const ids = new Set(existing.map((item) => item.id))
             const messages = [...fetched.reverse().filter((item) => !ids.has(item.id)), ...existing]
             batch(() => {
+              // kilocode_change start - session-history
+              const complete = !next || lastPage < lastLimit
+              if (complete) messageStart.add(sessionID)
+              else messageStart.delete(sessionID)
+              // kilocode_change end
               options?.beforePublish?.()
               messageIndex.set(sessionID, new Map(messages.map((item, position) => [item.id, position])))
               setStore("session", "message", sessionID, reconcile(messages))

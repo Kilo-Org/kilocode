@@ -6,8 +6,9 @@ import { useLanguage } from "../src/context/language"
 import type { V2 } from "../src/v2/client"
 import { SessionList } from "../src/v2/history"
 import type { SessionInfo } from "../src/types/messages/agent-manager"
+import { historyTabTarget, type HistorySource } from "./history-tabs"
 
-type Source = "local" | "worktree"
+type Source = HistorySource
 
 export default function HistoryView(props: {
   sessions: () => SessionInfo[]
@@ -24,6 +25,14 @@ export default function HistoryView(props: {
   const language = useLanguage()
   const [tab, setTab] = createSignal<Source>(props.worktreeSessionIds?.() ? "worktree" : "local")
   const panels: Partial<Record<Source, HTMLDivElement>> = {}
+  const tabs: Partial<Record<Source, HTMLButtonElement>> = {}
+  const sources = (): Source[] => (props.worktreeSessionIds?.() ? ["local", "worktree"] : ["local"])
+  const move = (event: KeyboardEvent, current: Source) => {
+    const next = historyTabTarget(sources(), current, event.key)
+    if (!next) return
+    event.preventDefault()
+    tabs[next]?.focus()
+  }
   const within = (ids: ReadonlySet<string> | undefined) => () =>
     ids ? props.sessions().filter((item) => ids.has(item.id)) : props.sessions()
 
@@ -49,7 +58,9 @@ export default function HistoryView(props: {
       aria-selected={tab() === source}
       aria-controls={`history-panel-${source}`}
       tabIndex={tab() === source ? 0 : -1}
+      ref={(element) => (tabs[source] = element)}
       onClick={() => setTab(source)}
+      onKeyDown={(event) => move(event, source)}
     >
       {label}
     </button>
