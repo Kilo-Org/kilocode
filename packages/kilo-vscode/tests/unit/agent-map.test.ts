@@ -450,6 +450,7 @@ describe("agent map load", () => {
    */
   function backend() {
     const calls: string[] = []
+    const lists: Record<string, unknown>[] = []
     const root = item("root", { time: { created: 100, updated: 200 } })
     const children: Record<string, Item[]> = {
       root: [
@@ -516,7 +517,7 @@ describe("agent map load", () => {
       experimental: {
         session: {
           list: async (input: Record<string, unknown>) => {
-            calls.push(`family:${JSON.stringify(input)}`)
+            lists.push(input)
             return { data: family }
           },
         },
@@ -528,7 +529,7 @@ describe("agent map load", () => {
         backgroundJobs: async (input: { sessionID: string }) => ({ data: jobs[input.sessionID] ?? [] }),
       },
     } as unknown as KiloClient
-    return { client, calls }
+    return { client, calls, lists }
   }
 
   it("finds the Task subagents and the Agent Manager sessions the family started", async () => {
@@ -560,9 +561,7 @@ describe("agent map load", () => {
 
     await load(api.client, "root", "/repo")
 
-    expect(api.calls.filter((call) => call.startsWith("family:"))).toEqual([
-      `family:${JSON.stringify({ worktrees: true, roots: true, directory: "/repo", start: 100, limit: 1000 })}`,
-    ])
+    expect(api.lists).toMatchObject([{ worktrees: true, roots: true, directory: "/repo", start: 100, limit: 1000 }])
     expect(api.calls.filter((call) => call.startsWith("children:")).toSorted()).toEqual([
       "children:am-kid@/repo-wt",
       "children:am@/repo-wt",

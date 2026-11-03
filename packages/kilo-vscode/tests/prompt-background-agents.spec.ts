@@ -119,15 +119,21 @@ test("Agent map button counts this session's running agents and stops them from 
   await expect(scene.button.locator('[data-slot="agent-stack-count"]')).toHaveCount(0)
 })
 
-test("Agent map asks for no map while its view is hidden, and for one as it returns", async ({ page }) => {
+test("Agent map asks for no map while its view is hidden, and for one as soon as it returns", async ({ page }) => {
   const scene = await setup(page)
+  // The poll starts with the dialog, so from here on it fires only when the test moves the clock.
+  await page.clock.install({ time: new Date("2026-01-01T00:00:00Z") })
+  await page.clock.pauseAt(new Date("2026-01-01T00:00:01Z"))
   await scene.button.click()
   await expect(page.locator('.agent-map [data-slot="agent-map-node"]')).toHaveCount(4)
-  await active(page, false)
-  const count = await requests(page)
+  const start = await requests(page)
   // The map polls every two seconds while it shows.
-  await page.waitForTimeout(2_500)
-  expect(await requests(page)).toBe(count)
+  await page.clock.runFor(2_000)
+  expect(await requests(page)).toBe(start + 1)
+  await active(page, false)
+  await page.clock.runFor(10_000)
+  expect(await requests(page)).toBe(start + 1)
+  // The clock stands still, so only the view showing again can ask.
   await active(page, true)
-  await expect.poll(() => requests(page)).toBe(count + 1)
+  expect(await requests(page)).toBe(start + 2)
 })
