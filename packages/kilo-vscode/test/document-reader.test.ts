@@ -2,12 +2,7 @@ import { describe, expect, it } from "bun:test"
 import * as fs from "node:fs"
 import * as os from "node:os"
 import * as path from "node:path"
-import {
-  isInsideWorktree,
-  plansDir,
-  readDocument,
-  resolveDocumentPath,
-} from "../src/documents/document-reader"
+import { isInsideWorktree, plansDir, readDocument, resolveDocumentPath } from "../src/documents/document-reader"
 
 function workspace() {
   return fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "kilo-document-")))
@@ -25,6 +20,20 @@ function withHome<T>(run: () => T): T {
   }
 }
 
+const symlinks = (() => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "kilo-symlink-"))
+  try {
+    const target = path.join(dir, "target.md")
+    fs.writeFileSync(target, "target")
+    fs.symlinkSync(target, path.join(dir, "link.md"))
+    return true
+  } catch {
+    return false
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true })
+  }
+})()
+
 describe("readDocument", () => {
   it("reads text files inside the worktree", () => {
     const root = workspace()
@@ -39,6 +48,32 @@ describe("readDocument", () => {
     fs.writeFileSync(outside, "secret")
 
     expect(readDocument(root, "../outside.md")).toEqual({ error: "Document is outside the worktree." })
+  })
+
+  it.skipIf(!symlinks)("rejects a symlink inside the worktree that points outside", () => {
+    const root = workspace()
+    const outside = path.join(root, "..", "outside.md")
+    fs.writeFileSync(outside, "secret")
+    fs.symlinkSync(outside, path.join(root, "link.md"))
+
+    expect(readDocument(root, "link.md")).toEqual({ error: "Document is outside the worktree." })
+  })
+
+  it.skipIf(!symlinks)("previews a plan file through a symlink inside the worktree", () => {
+    withHome(() => {
+      const root = workspace()
+      const dir = plansDir()
+      fs.mkdirSync(dir, { recursive: true })
+      const plan = path.join(dir, "42-linked.md")
+      fs.writeFileSync(plan, "# Linked plan\n")
+      fs.symlinkSync(plan, path.join(root, "plan.md"))
+
+      expect(readDocument(root, "plan.md")).toEqual({
+        file: fs.realpathSync(plan),
+        kind: "text",
+        content: "# Linked plan\n",
+      })
+    })
   })
 
   it("rejects binary files", () => {

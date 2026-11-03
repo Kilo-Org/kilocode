@@ -33,7 +33,7 @@ export interface DocumentData {
 }
 
 function key(context: string, file: string): string {
-  return `${context}:${file}`
+  return `${context}\0${file}`
 }
 
 /** Tabs keep the path they were opened with (possibly absolute); loaded data carries the canonical relative path. */
@@ -58,6 +58,14 @@ export function createDocuments(
   const list = () => tabs()[current()] ?? []
   const selected = () => active()[current()]
   const document = (file: string) => data()[key(current(), file)]
+
+  const drop = (ctx: string, files: Iterable<string>) => {
+    setData((prev) => {
+      const next = { ...prev }
+      for (const file of files) delete next[key(ctx, file)]
+      return next
+    })
+  }
 
   const request = (file: string, sessionId = session() ?? "", contextKey = current()) => {
     const ctx = current()
@@ -98,6 +106,8 @@ export function createDocuments(
     const index = list.findIndex((tab) => tab.id === id)
     if (index < 0) return
     const next = list.filter((tab) => tab.id !== id)
+    const tab = list[index]!
+    drop(ctx, [tab.file])
     setTabs((prev) => ({ ...prev, [ctx]: next }))
     if (active()[ctx] !== id) return
     const target = next[Math.min(index, next.length - 1)]
@@ -106,8 +116,13 @@ export function createDocuments(
 
   const closeOthers = (id: string) => {
     const ctx = current()
-    const tab = (tabs()[ctx] ?? []).find((item) => item.id === id)
+    const list = tabs()[ctx] ?? []
+    const tab = list.find((item) => item.id === id)
     if (!tab) return
+    drop(
+      ctx,
+      list.filter((item) => item.id !== id).map((item) => item.file),
+    )
     setTabs((prev) => ({ ...prev, [ctx]: [tab] }))
     setActive((prev) => ({ ...prev, [ctx]: id }))
   }
@@ -124,8 +139,22 @@ export function createDocuments(
     setTabs((prev) => ({ ...prev, [ctx]: next }))
   }
 
+  /** Drop everything held for scopes that are no longer reachable. */
+  const prune = (scopes: Iterable<string>) => {
+    const keep = new Set(scopes)
+    const prefixes = [...keep].map((scope) => `${scope}\0`)
+    setTabs((prev) => Object.fromEntries(Object.entries(prev).filter(([scope]) => keep.has(scope))))
+    setActive((prev) => Object.fromEntries(Object.entries(prev).filter(([scope]) => keep.has(scope))))
+    setData((prev) =>
+      Object.fromEntries(Object.entries(prev).filter(([id]) => prefixes.some((prefix) => id.startsWith(prefix)))),
+    )
+  }
+
   const onMessage = (message: DocumentMessage) => {
-    const id = key(message.contextKey ?? message.sessionId, message.requestedFile ?? message.file)
+    const ctx = message.contextKey ?? message.sessionId
+    // A pruned scope has no tab left; ignore a late response instead of caching it again.
+    if (!tabs()[ctx]?.length) return
+    const id = key(ctx, message.requestedFile ?? message.file)
     setData((prev) => ({
       ...prev,
       [id]: {
@@ -140,11 +169,27 @@ export function createDocuments(
     }))
   }
 
-  return { tabs: list, active: selected, document, open, select, close, closeOthers, reorder, onMessage, request }
+  return {
+    tabs: list,
+    active: selected,
+    document,
+    open,
+    select,
+    close,
+    closeOthers,
+    reorder,
+    onMessage,
+    request,
+    prune,
+  }
 }
 
 export function createDocumentComments(context: Accessor<string | null>) {
   const [byContext, setByContext] = createSignal<Record<string, ReviewComment[]>>({})
+  const prune = (scopes: Iterable<string>) => {
+    const keep = new Set(scopes)
+    setByContext((prev) => Object.fromEntries(Object.entries(prev).filter(([scope]) => keep.has(scope))))
+  }
   const comments = () => {
     const ctx = context()
     return ctx ? (byContext()[ctx] ?? []) : []
@@ -154,7 +199,7 @@ export function createDocumentComments(context: Accessor<string | null>) {
     if (!ctx) return
     setByContext((prev) => ({ ...prev, [ctx]: value }))
   }
-  return { comments, setComments }
+  return { comments, setComments, prune }
 }
 
 /** The transport each surface provides for the panel: the Agent Manager panel and the editor tab answer differently. */
@@ -205,5 +250,11 @@ export function createDocumentInspector(
   // and stays visible while the panel is open so it can still be toggled shut.
   const available = () => documents.tabs().length > 0 || isOpen()
   const toggle = () => (isOpen() ? closePanel() : open())
-  return { documents, comments, open, openFile, copyPath, toggle, available, isOpen, scope, subscribe }
+  /** Drop documents and comments for worktrees this project no longer has. */
+  const prune = (project: string, ids: ReadonlySet<string>) => {
+    const keep = new Set([...ids].map((id) => `${project}:${id}`))
+    documents.prune(keep)
+    comments.prune(keep)
+  }
+  return { documents, comments, open, openFile, copyPath, toggle, available, isOpen, scope, subscribe, prune }
 }

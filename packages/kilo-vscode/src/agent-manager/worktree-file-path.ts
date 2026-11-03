@@ -9,10 +9,11 @@ export function resolveWorktreeRoot(
   id: string,
   root: string | undefined,
 ): string | undefined {
+  if (id === "local") return root
   if (!state) return
   const worktree = state.getWorktree(id)
   const session = worktree ? undefined : state.getSession(id)
-  return worktree?.path ?? (session?.worktreeId ? state.getWorktree(session.worktreeId)?.path : root)
+  return worktree?.path ?? (session?.worktreeId ? state.getWorktree(session.worktreeId)?.path : undefined)
 }
 
 /**

@@ -730,12 +730,17 @@ const AgentManagerContent: Component = () => {
     untrack(() => {
       const current = sessions.currentSessionID()
       if (selection() !== LOCAL || !current || !previous.includes(current) || next.ids.includes(current)) return
-      activateAfterRemoval(previous.filter((id) => id === current || next.ids.includes(id)), current)
+      activateAfterRemoval(
+        previous.filter((id) => id === current || next.ids.includes(id)),
+        current,
+      )
     })
   })
   createEffect(() => {
     const ids = new Set(worktrees().map((wt) => wt.id))
     composers.prune(ids)
+    const selected = selection()
+    documentInspector.prune(currentProjectId() ?? "single", new Set([...ids, "local", ...(selected ? [selected] : [])]))
     untrack(() => diffs.prune(ids))
     setReviewOpenByContext((prev) => {
       const next = pruneReviewState(prev, currentProjectId() ?? "single", ids)

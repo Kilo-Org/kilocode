@@ -41,6 +41,12 @@ describe("resolveWorktreeFile", () => {
     expect(resolveWorktreeFile(state({ id: "wt", path: root }), "wt", target, undefined)).toBeUndefined()
   })
 
+  it("does not fall back to the project root for an unknown id", () => {
+    const root = repo()
+
+    expect(resolveWorktreeFile(state({ id: "wt", path: root }), "ses-removed", "file.ts", root)).toBeUndefined()
+  })
+
   it("falls back to the project root for a local context", () => {
     const root = repo()
 

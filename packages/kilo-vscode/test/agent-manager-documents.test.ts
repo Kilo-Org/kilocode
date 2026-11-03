@@ -53,9 +53,7 @@ describe("document inspector", () => {
     expect(state.inspector.available()).toBe(true)
     expect(state.inspector.isOpen()).toBe(true)
     expect(state.inspector.documents.tabs().map((tab) => tab.file)).toEqual(["README.md"])
-    expect(state.sent).toEqual([
-      { sessionId: "ses-1", file: "README.md", contextKey: "project-a:wt-a" },
-    ])
+    expect(state.sent).toEqual([{ sessionId: "ses-1", file: "README.md", contextKey: "project-a:wt-a" }])
   })
 
   it("keeps tabs per worktree and hides the button on a worktree without documents", () => {
@@ -153,7 +151,9 @@ describe("document inspector", () => {
       kind: "text",
       content: "# Worktree A",
     })
-    state.inspector.comments.setComments([{ id: "a", file: "plans/plan.md", side: "additions", line: 1, comment: "A", selectedText: "" }])
+    state.inspector.comments.setComments([
+      { id: "a", file: "plans/plan.md", side: "additions", line: 1, comment: "A", selectedText: "" },
+    ])
 
     state.setOpen(false)
     state.setSelection("wt-b")
@@ -168,6 +168,59 @@ describe("document inspector", () => {
 
     state.setProject("project-b")
     expect(state.inspector.documents.tabs()).toEqual([])
+    expect(state.inspector.comments.comments()).toEqual([])
+  })
+
+  it("releases document data when a tab closes", () => {
+    const state = setup()
+    state.inspector.subscribe((message) => state.inspector.documents.onMessage(message))
+    state.inspector.open("README.md", "ses-1")
+    state.inspector.open("plans/plan.md", "ses-1")
+    const handler = [...state.watched][0]
+    for (const file of ["README.md", "plans/plan.md"]) {
+      handler?.({
+        type: "agentManager.document",
+        sessionId: "ses-1",
+        contextKey: "project-a:wt-a",
+        requestedFile: file,
+        file,
+        kind: "text",
+        content: "# Doc",
+      })
+    }
+    expect(state.inspector.documents.document("README.md")?.content).toBe("# Doc")
+
+    state.inspector.documents.close(state.inspector.documents.tabs()[1]!.id)
+
+    expect(state.inspector.documents.document("plans/plan.md")).toBeUndefined()
+    expect(state.inspector.documents.document("README.md")?.content).toBe("# Doc")
+
+    state.inspector.documents.closeOthers(state.inspector.documents.tabs()[0]!.id)
+    expect(state.inspector.documents.tabs()).toHaveLength(1)
+  })
+
+  it("drops documents and comments for worktrees this project no longer has", () => {
+    const state = setup()
+    state.inspector.subscribe((message) => state.inspector.documents.onMessage(message))
+    state.inspector.open("plans/plan.md", "ses-a")
+    state.inspector.comments.setComments([
+      { id: "a", file: "plans/plan.md", side: "additions", line: 1, comment: "A", selectedText: "" },
+    ])
+    const handler = [...state.watched][0]
+    handler?.({
+      type: "agentManager.document",
+      sessionId: "ses-a",
+      contextKey: "project-a:wt-a",
+      requestedFile: "plans/plan.md",
+      file: "plans/plan.md",
+      kind: "text",
+      content: "# Worktree A",
+    })
+
+    state.inspector.prune("project-a", new Set(["local"]))
+
+    expect(state.inspector.documents.tabs()).toEqual([])
+    expect(state.inspector.documents.document("plans/plan.md")).toBeUndefined()
     expect(state.inspector.comments.comments()).toEqual([])
   })
 

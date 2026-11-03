@@ -215,7 +215,13 @@ export function wire(input: {
       case "openToolFile": {
         const documents = input.documents?.()
         if (documents && isMarkdownPath(message.filePath)) {
-          documents.open({ file: message.filePath, sessionId: message.sessionID, directory: input.directory })
+          documents.open({
+            file: message.filePath,
+            sessionId: message.sessionID,
+            directory: input.directory,
+            line: message.line,
+            column: message.column,
+          })
           return
         }
         return openToolFile(input.directory, message)

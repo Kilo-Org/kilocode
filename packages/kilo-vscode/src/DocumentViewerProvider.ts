@@ -49,6 +49,8 @@ export class DocumentViewerProvider implements Disposable {
 
   open(input: { file: string; sessionId?: string; directory?: string; line?: number; column?: number }): void {
     const contextKey = this.contextKey(input.sessionId, input.directory)
+    // The tab previews one context at a time, so forget the replaced one and the files read for it.
+    this.contexts.clear()
     this.contexts.set(contextKey, { sessionId: input.sessionId, directory: input.directory })
     this.currentKey = contextKey
     const next = { ...input, contextKey }

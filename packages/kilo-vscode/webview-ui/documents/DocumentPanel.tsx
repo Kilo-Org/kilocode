@@ -159,10 +159,11 @@ export const DocumentPanel: Component<DocumentPanelProps> = (props) => {
     focusRoot()
   }
   const sendComment = (path: string, side: AnnotationSide, line: number, text: string, selectedText: string) => {
-    sendReviewComments(
+    const sent = sendReviewComments(
       [{ id: `doc-${++nextId}-${Date.now()}`, file: path, side, line, comment: text, selectedText }],
       props.activeTerminalId,
     )
+    if (!sent) return
     setDraft(null)
     draftMeta = null
     composer.draft = null
@@ -219,7 +220,7 @@ export const DocumentPanel: Component<DocumentPanelProps> = (props) => {
   }
   const sendAll = () => {
     if (props.comments.length === 0) return
-    sendReviewComments(props.comments, props.activeTerminalId)
+    if (!sendReviewComments(props.comments, props.activeTerminalId)) return
     updateComments([])
     if (props.onSendAll) props.onSendAll()
     else focusRoot()
