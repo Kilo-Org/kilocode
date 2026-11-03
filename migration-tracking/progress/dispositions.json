@@ -1220,7 +1220,7 @@
   "module:packages/kilo-vscode/tests/unit/agent-project-selection-webview.test.ts": {
     "state": "ported",
     "v2": "packages/kilo-vscode/test/agent-project-selection.test.ts",
-    "note": "Cross-project selection is carried by packages/kilo-vscode/webview-ui/agent-manager/project/selection.ts and packages/kilo-vscode/webview-ui/src/context/session-project.ts. packages/kilo-vscode/test/agent-project-selection.test.ts carries the selection acknowledgements, readiness and unavailable targets.",
+    "note": "Cross-project selection is carried by packages/kilo-vscode/webview-ui/agent-manager/project/selection.ts, which applies an acknowledgement only for the catalog-active project and ignores a delayed target from another project. packages/kilo-vscode/test/agent-project-selection.test.ts carries the host-side selection acknowledgements, readiness and unavailable targets.",
     "by": "am-progress-map"
   },
   "module:packages/kilo-vscode/tests/unit/agent-project-sessions.test.ts": {
