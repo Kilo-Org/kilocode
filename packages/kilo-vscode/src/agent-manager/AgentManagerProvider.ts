@@ -42,6 +42,9 @@ import { runningFromEvent } from "../session-status"
 import { WorktreeImporter } from "./worktree-importer"
 import { SessionTerminalManager } from "./SessionTerminalManager"
 import { createTerminalHost } from "./terminal-host"
+import { shouldOpenLinkInIntegratedBrowser } from "../browser-links"
+import { createBrowserLifecycle } from "./browser-lifecycle"
+import type { BrowserBroker } from "../services/browser-automation"
 import { TerminalRouter } from "./terminal-routing"
 import { acquirePtyCleanup } from "./pty-cleanup"
 import { PtyRelay } from "./pty-relay"
@@ -119,6 +122,8 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
   public readonly scripts: ReturnType<typeof createScriptTerminalRuntime>
   public readonly run: RunController
   public stateReady: Promise<void> | undefined
+  public readonly browser: ReturnType<typeof createBrowserLifecycle>
+  public onBrowserDebug?: (...args: unknown[]) => void
   public readonly statsPoller: GitStatsPoller
   public readonly projectPollers: ProjectPollers
   public readonly prBridge: ReturnType<typeof createPollers>["pr"]
@@ -159,6 +164,7 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
     public readonly connection: AgentManagerConnection,
     public readonly panelHost: ReturnType<typeof createPanel>,
     binary: GitExecutable | string = "git",
+    browser?: BrowserBroker,
   ) {
     this.outputChannel = host.createOutput("Kilo Agent Manager")
     this.terminalManager = new SessionTerminalManager(
@@ -235,6 +241,18 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
       post: (message) => this.postToWebview(message),
     })
     this.contexts = wiring.contexts
+    // One browser page per Agent Manager session. The sidebar editor tab uses the same broker instance.
+    this.browser = createBrowserLifecycle({
+      browser,
+      host,
+      contexts: () => this.contexts,
+      post: (message) => this.postToWebview(message),
+      openPanel: () => this.openPanel(true),
+      log: (...args) => {
+        this.log(...args)
+        this.onBrowserDebug?.(...args)
+      },
+    })
     this.settings = wiring.settings
     this.projects = wiring.messages
     this.unsubProjects = () => wiring.dispose()
@@ -416,6 +434,7 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
       previous.dispose()
     }
     this.panel = panel
+    this.browser.attach(panel)
     void this.statsPoller
     for (const poller of [this.statsPoller, this.projectPollers]) poller.setVisible(panel.visible)
     void this.diffs.setVisible(panel.visible)
@@ -510,9 +529,35 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
   }
 
   public async handlePanelMessage(message: { type: string } & Record<string, unknown>): Promise<void> {
+    if (message.type === "open" && typeof message.url === "string") {
+      this.openWebLink(message.url)
+      return
+    }
+    if (this.browser.handle(message as unknown as AgentManagerInMessage)) return
     if (this.prBridge.handleMessage(message)) return
     if (this.relay.handle(message as unknown as AgentManagerInMessage)) return
     await handleMessage(message as unknown as AgentManagerInMessage, this.messageHost)
+  }
+
+  /** True when the session belongs to any Agent Manager project, local or managed. */
+  public ownsBrowserSession(sessionId: string): boolean {
+    if (this.openSessions.includes(sessionId) || this.panelSessions.has(sessionId)) return true
+    for (const ctx of this.contexts.values()) {
+      if (ctx.peekState()?.getSession(sessionId)) return true
+      if (ctx.sessions().some((session) => session.id === sessionId)) return true
+    }
+    return false
+  }
+
+  /** Chat links open in the Integrated Browser for the visible session when it is enabled, else externally. */
+  private openWebLink(url: string): void {
+    const session = this.visibleSession
+    const project = this.projectScope.current()?.id ?? this.contexts.active()?.id
+    if (session && project && shouldOpenLinkInIntegratedBrowser(url)) {
+      void this.browser.handle({ type: "agentManager.browser.open", sessionId: session, projectId: project, url })
+      return
+    }
+    this.host.openExternal(url)
   }
 
   public hostSource(): ProviderHostsSource {
@@ -788,6 +833,7 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
   public async onCloseSession(sessionId: string): Promise<null> {
     const ctx = this.context
     if (!ctx) return null
+    this.browser.close(sessionId, ctx.id)
     return closeLifecycleSession(ctx, this.lifecycleHost, sessionId)
   }
 
@@ -978,6 +1024,7 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
   }
 
   public postToWebview(message: AgentManagerOutMessage): void {
+
     if (message.type !== "agentManager.worktreeSetup" || message.projectId) {
       this.panel?.postMessage(message)
       return
@@ -1073,6 +1120,7 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
   public dispose(): void {
     this.unsubAutoApprove()
     this.relay.dispose()
+    void this.browser.dispose()
     void this.shutdown()
   }
 

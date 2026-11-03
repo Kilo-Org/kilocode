@@ -360,7 +360,6 @@ export function html(input: {
     KILO_MARKDOWN_SHIKI_WORKER_URI: input.markdown,
     KILO_TOP_BAR: false,
     KILO_TOP_BAR_SURFACE: "sidebar_title",
-    KILO_BROWSER_AUTOMATION: false,
     KILO_AGENT_MANAGER_INTRO_DISMISSED: true,
     KILO_SETTINGS: input.settings,
     KILO_EXTENSION_VERSION: input.version,

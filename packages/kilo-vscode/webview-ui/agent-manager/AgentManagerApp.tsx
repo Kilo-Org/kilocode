@@ -102,6 +102,7 @@ import * as modifier from "./modifier"
 import { ProjectList } from "./ProjectList"
 import { reportFailure } from "./failure-toast"
 import { TabBar } from "./TabBar"
+import { createBrowserPanel } from "./BrowserPanel"
 import { createIntro } from "./intro/AgentManagerIntro"
 import { createShortcutHints } from "./ShortcutHints"
 import { useBaseUpdate } from "./update-from-base"
@@ -186,6 +187,7 @@ import { SpeechToTextStatusProvider } from "../src/components/speech-to-text/sta
 type SidebarSelection = typeof LOCAL | string | null
 const isMac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.userAgent)
 const isPending = (id: string) => id.startsWith(PENDING_PREFIX)
+
 
 const AgentManagerContent: Component = () => {
   const { t } = useLanguage()
@@ -813,7 +815,7 @@ const AgentManagerContent: Component = () => {
       keepTerminalStack(history(), selection(), contextEmpty(), terms.all().length + terms.sides().length),
   )
   const sideHostVisible = () =>
-    sideHostNeeded(sidePanel(), diffMounted(), terms.sides().length, subagents.tabs().length)
+    sideHostNeeded(sidePanel(), diffMounted(), terms.sides().length, subagents.tabs().length, browser.hasCache() ? 1 : 0)
   const overlay = createMemo((): SetupState | null => {
     if (restricted()) return null
     const state = setup()
@@ -996,6 +998,9 @@ const AgentManagerContent: Component = () => {
     routeCatalog: router.routeCatalog,
     routeState: router.routeState,
     font: (font) => font && setTerminalFont(font),
+    activeProject: activeProjectId,
+    currentSession: () => sessions.currentSessionID(),
+    revealBrowser: () => panels.open(SidePanel.Browser),
   })
   const preserveSidebarScroll = createSidebarScrollPreserver(() => selection() ?? sessions.currentSessionID())
   const applyActiveState = createProjectHydration({
@@ -1060,6 +1065,17 @@ const AgentManagerContent: Component = () => {
     promptAppend?.(text, autoSend)
     requestChatFocus(true)
   }
+
+  // One browser page per session, kept alive across worktree and session switches.
+  const browser = createBrowserPanel({
+    active: () => sidePanel() === SidePanel.Browser,
+    open: () => panels.open(SidePanel.Browser),
+    close: () => panels.close(SidePanel.Browser),
+    sessionId: () => sessions.currentSessionID(),
+    projectId: activeProjectId,
+    sessions: () => sessions.sessions(),
+    onReference: (text) => appendToPrompt(text, false),
+  })
 
   const handleSessionCreated = (id: string | undefined) => {
     if (!id) {
@@ -1679,6 +1695,7 @@ const AgentManagerContent: Component = () => {
       if (message.type === "agentManager.terminal.fontChanged") setTerminalFont(message.font)
       terminalDispatch(message as unknown as Parameters<typeof terminalDispatch>[0])
       stateHandlers.projects(message)
+      stateHandlers.browser(message)
       if (message.type === "agentManager.state") {
         preserveSidebarScroll(() => stateHandlers.state(message))
         return
@@ -2071,6 +2088,7 @@ const AgentManagerContent: Component = () => {
           />
         </Show>
         <div class="am-diff-panel-wrapper">
+          {browser.render()}
           <DiffPanelCache
             current={diffScopeId}
             context={diffCtx}
@@ -2251,9 +2269,9 @@ const AgentManagerContent: Component = () => {
         diffOpen={diffOpen}
         reviewActive={reviewActive}
         onToggleDiff={diffPanels.toggleToolbar}
-        browserOpen={() => false}
-        browserAutomation={() => false}
-        onToggleBrowser={() => undefined}
+        browserOpen={browser.tabs.browserOpen}
+        browserAutomation={browser.tabs.browserAutomation}
+        onToggleBrowser={browser.tabs.onToggleBrowser}
         prStatus={() => activePR()?.pr}
         prOpen={prOpen}
         onTogglePR={togglePRPanel}

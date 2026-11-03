@@ -1,6 +1,5 @@
 import type { UiI18nParams } from "@kilocode/kilo-ui/context"
 import { CURSORS, type BrowserCursor, type BrowserFrame } from "../../src/shared/browser-stream"
-import type { ExtensionMessage, WebviewMessage } from "../src/types/messages"
 import type {
   BrowserCommand,
   BrowserDevtools,
@@ -71,11 +70,11 @@ export function browserLabels(
 }
 
 /** Shared transport that frames browser commands and events for one surface. */
-export function browserTransport(
-  post: (message: WebviewMessage) => void,
-  onMessage: (handler: (message: ExtensionMessage) => void) => () => void,
-  command: (value: BrowserCommand) => WebviewMessage,
-  event: (message: ExtensionMessage) => BrowserEvent | undefined,
+export function browserTransport<Out, In>(
+  post: (message: Out) => void,
+  onMessage: (handler: (message: In) => void) => () => void,
+  command: (value: BrowserCommand) => Out,
+  event: (message: In) => BrowserEvent | undefined,
 ): BrowserTransport {
   return {
     send: (value) => post(command(value)),

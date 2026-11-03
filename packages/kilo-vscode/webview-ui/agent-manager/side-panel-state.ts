@@ -7,11 +7,18 @@ const ownership: Record<SidePanel, "worktree" | "session"> = {
   [SidePanel.Terminal]: "worktree",
   [SidePanel.Subagents]: "session",
   [SidePanel.EditPreview]: "session",
+  [SidePanel.Browser]: "session",
 }
 
 /** True when the side host must stay mounted. */
-export function sideHostNeeded(panel: SidePanel | null, diff: boolean, sides: number, subagents: number): boolean {
-  return panel !== null || diff || sides > 0 || subagents > 0
+export function sideHostNeeded(
+  panel: SidePanel | null,
+  diff: boolean,
+  sides: number,
+  subagents: number,
+  browsers = 0,
+): boolean {
+  return panel !== null || diff || sides > 0 || subagents > 0 || browsers > 0
 }
 
 export function createSidePanel(opts: {

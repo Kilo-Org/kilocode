@@ -167,8 +167,12 @@ export function activate(context: ExtensionContext) {
   context.subscriptions.push({ dispose: autocomplete.dispose })
   registerAutocompleteProvider(context, autocomplete)
   const view = chat({ context, server, directory, trackCostSession: alerts.track, diff: diffs })
-  // The editor-tab Integrated Browser serves sessions of the sidebar's directory. It registers before the Agent
-  // Manager, so a request without a project resolves here and a worktree request still resolves to the panel.
+  // The Agent Manager binds its browser owner first, so a session it owns resolves to its panel. The editor tab then
+  // serves the remaining sidebar sessions of the workspace directory.
+  const agentHost = new VscodeHost(context, { server, directory })
+  const agentPanel = createPanel({ context, server, directory, trackCostSession: alerts.track })
+  const agentManager = new AgentManagerProvider(agentHost, connection, agentPanel, undefined, broker)
+  agentManager.onBrowserDebug = (...args) => output.appendLine(`Browser AM: ${args.map((item) => String(item)).join(" ")}`)
   const browserTab = new BrowserTabProvider(
     context.extensionUri,
     { browser: broker, version: (context.extension.packageJSON as { version?: string }).version },
@@ -176,6 +180,7 @@ export function activate(context: ExtensionContext) {
       enabled: () => integratedBrowserEnabled() && workspace.isTrusted,
       trusted: () => workspace.isTrusted,
       resolve: (route) =>
+        !agentManager.ownsBrowserSession(route.sessionId) &&
         samePath(canonicalizePath(route.directory), canonicalizePath(directory))
           ? { sessionId: route.sessionId, directory: route.directory }
           : undefined,
@@ -196,9 +201,6 @@ export function activate(context: ExtensionContext) {
     },
   )
   context.subscriptions.push({ dispose: () => browserTab.dispose() })
-  const agentHost = new VscodeHost(context, { server, directory })
-  const agentPanel = createPanel({ context, server, directory, trackCostSession: alerts.track })
-  const agentManager = new AgentManagerProvider(agentHost, connection, agentPanel)
   // The Settings panel edits Agent Manager project settings through the provider's shared handler, so it is created
   // after the provider and receives a lazy getter.
   const panel = settings({
