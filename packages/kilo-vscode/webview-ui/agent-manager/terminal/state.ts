@@ -41,6 +41,8 @@ export interface TerminalTabState {
   placement: TerminalPlacement
   /** Provider-owned script terminal, never created through the webview create flow. */
   kind?: ScriptTerminalKind
+  /** An optimistic side terminal whose PTY the host has not created yet. */
+  pending?: boolean
 }
 
 /** Terminal row enriched with the sidebar context it belongs to. Used by
@@ -323,6 +325,7 @@ export function createTerminalState(selection: Accessor<string | null>): Termina
     // xterm that already owns focus and buffered input.
     term.title = input.title
     term.font = input.font
+    term.pending = undefined
     setTitle(terminalId, input.title)
     return true
   }
@@ -710,6 +713,7 @@ export function createTerminalHandlers(deps: TerminalHandlerDeps) {
       title: "Terminal",
       font,
       placement: "side",
+      pending: true,
     })
     deps.state.setSideActive(key, id)
     if (focus) deps.state.requestFocus(id)

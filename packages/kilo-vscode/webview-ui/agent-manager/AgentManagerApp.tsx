@@ -1894,37 +1894,47 @@ const AgentManagerContent: Component = () => {
     </div>
   )
 
+  const historyStore = () => {
+    const directory = directories.root(activeProjectId())
+    return directory ? panel.store(directory) : undefined
+  }
   const renderHistory = () => (
-    <Show when={!restricted() && history()}>
-      <HistoryView
-        sessions={historyList}
-        store={sessions.scope}
-        sessionIds={historySessionIds}
-        worktreeSessionIds={historyProject() ? undefined : activeWorktreeSessionIds}
-        onSelectSession={(id) => {
-          if (addSessionToCurrentWorktree(id)) return
-          closeHistory()
-          if (localSessionIDs().includes(id)) {
-            saveTabMemory()
-            sessions.selectSession(id)
-            setSelection(LOCAL)
-            requestChatFocus(true)
-            return true
-          }
-          const managed = worktreeSessionIds().has(id) ? managedSessions().find((entry) => entry.id === id) : undefined
-          if (managed?.worktreeId) {
-            selectWorktree(managed.worktreeId)
-            sessions.selectSession(id)
-            setReviewActive(false)
-            requestChatFocus()
-            return true
-          }
-          openLocally(id)
-          return true
-        }}
-        onBack={closeHistory}
-        rowActions={historyRowActions}
-      />
+    <Show when={!restricted() && history() && historyStore()} keyed>
+      {(store) => (
+        <V2Scope value={store}>
+          <HistoryView
+            sessions={historyList}
+            store={sessions.scope}
+            sessionIds={historySessionIds}
+            worktreeSessionIds={historyProject() ? undefined : activeWorktreeSessionIds}
+            onSelectSession={(id) => {
+              if (addSessionToCurrentWorktree(id)) return
+              closeHistory()
+              if (localSessionIDs().includes(id)) {
+                saveTabMemory()
+                sessions.selectSession(id)
+                setSelection(LOCAL)
+                requestChatFocus(true)
+                return true
+              }
+              const managed = worktreeSessionIds().has(id)
+                ? managedSessions().find((entry) => entry.id === id)
+                : undefined
+              if (managed?.worktreeId) {
+                selectWorktree(managed.worktreeId)
+                sessions.selectSession(id)
+                setReviewActive(false)
+                requestChatFocus()
+                return true
+              }
+              openLocally(id)
+              return true
+            }}
+            onBack={closeHistory}
+            rowActions={historyRowActions}
+          />
+        </V2Scope>
+      )}
     </Show>
   )
 

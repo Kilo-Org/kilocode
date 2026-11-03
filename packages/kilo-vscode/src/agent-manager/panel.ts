@@ -1,7 +1,7 @@
 // The Agent Manager editor panel: the webview loads the agent-manager bundle and talks to the server through the
 // same relay as the sidebar. Agent Manager messages go to the provider; the standard webview messages (clipboard,
 // tool files, display settings, cost alerts) are handled by the shared webview wiring.
-import { Uri, ViewColumn, window, type ExtensionContext, type WebviewPanel } from "vscode"
+import { Uri, ViewColumn, commands, window, type ExtensionContext, type WebviewPanel } from "vscode"
 import { composerState, wire } from "../chat"
 import { promptKeybindings, watchKeybindings } from "../prompt-keybindings"
 import type { ToHost, ToWebview } from "../protocol"
@@ -10,6 +10,8 @@ import type { Disposable, PanelContext } from "./host"
 
 export const PANEL_TYPE = "kilo-code.v2.agentManagerPanel"
 const INTRO = "kilo.agentManager.introDismissed"
+// The terminal shortcuts open a side terminal instead of a tab while focus is in the side terminal.
+const SIDE_TERMINAL_FOCUSED = "kilo-code.v2.agentManager.sideTerminalFocused"
 
 /** A message from the Agent Manager webview that the shared wiring does not handle. */
 export type PanelMessage = { type: string } & Record<string, unknown>
@@ -52,6 +54,8 @@ export function createPanel(input: {
       state.queued.splice(0).forEach((message) => void panel.webview.postMessage(message))
       state.waiting.splice(0).forEach((resolve) => resolve())
     }
+    const sideTerminal = (focused: boolean) =>
+      void commands.executeCommand("setContext", SIDE_TERMINAL_FOCUSED, focused)
     const surface = wire({
       context: input.context,
       server: input.server,
@@ -67,6 +71,16 @@ export function createPanel(input: {
         if (item.type === "agentManager.setIntroDismissed") {
           if (typeof item.dismissed === "boolean") void input.context.globalState.update(INTRO, item.dismissed)
           return true
+        }
+        if (item.type === "agentManagerFocusChanged") {
+          sideTerminal(item.target === "sideTerminal")
+          return true
+        }
+        // Focus can return straight to the side terminal, so the panel reports its current focus target again.
+        if (item.type === "webviewFocusChanged") {
+          if (item.focused === true) void panel.webview.postMessage({ type: "agentManager.focusContextRequested" })
+          else sideTerminal(false)
+          return false
         }
         if (!item.type.startsWith("agentManager.")) return false
         onMessage(item)
@@ -89,6 +103,7 @@ export function createPanel(input: {
     })
     const disposed: (() => void)[] = []
     panel.onDidDispose(() => {
+      sideTerminal(false)
       surface.dispose()
       watcher.dispose()
       visibility.dispose()

@@ -10,7 +10,7 @@ import { createMemo, createSignal, Show, type JSX } from "solid-js"
 import { SessionRenameEditor } from "../components/shared/SessionRenameEditor"
 import { useLanguage } from "../context/language"
 import { formatRelativeDate } from "../utils/date"
-import { useV2, type V2 } from "./client"
+import { useV2Optional, type V2 } from "./client"
 
 const groups = ["time.today", "time.yesterday", "time.thisWeek", "time.thisMonth", "time.older"] as const
 
@@ -33,7 +33,7 @@ export function SessionList(props: {
   /** Extra actions at the end of each row. */
   rowActions?: (item: SessionInfo) => JSX.Element
 }) {
-  const scope = useV2()
+  const scope = useV2Optional()
   const store = (id: string) => props.store?.(id) ?? scope
   const language = useLanguage()
   const dialog = useDialog()
@@ -45,7 +45,8 @@ export function SessionList(props: {
   const items = createMemo(() =>
     (
       props.sessions?.() ??
-      scope.data.session.list().filter((item) => !item.parentID && item.location.directory === scope.directory)
+      scope?.data.session.list().filter((item) => !item.parentID && item.location.directory === scope.directory) ??
+      []
     )
       .filter((item) => !removed().has(item.id))
       .toSorted((a, b) => b.time.updated - a.time.updated),
@@ -60,6 +61,7 @@ export function SessionList(props: {
     const id = renaming()
     if (!id || saving()) return
     const v2 = store(id)
+    if (!v2) return
     const item = v2.data.session.get(id)
     if (title === (item?.title ?? "")) {
       setRenaming(undefined)
@@ -97,6 +99,7 @@ export function SessionList(props: {
                     if (deleting()) return
                     setDeleting(true)
                     const v2 = store(item.id)
+                    if (!v2) return
                     void v2.api.session
                       .remove({ sessionID: item.id })
                       .then(() => {
@@ -204,7 +207,7 @@ export function SessionList(props: {
             <span data-slot="list-item-title" dir="auto">
               {name(item)}
             </span>
-            <Show when={store(item.id).data.session.status(item.id) === "running"}>
+            <Show when={store(item.id)?.data.session.status(item.id) === "running"}>
               <span data-slot="session-running" role="status" aria-label={language.t("session.status.working")}>
                 <Spinner />
               </span>

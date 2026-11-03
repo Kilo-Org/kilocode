@@ -1,7 +1,6 @@
 import * as vscode from "vscode"
 import * as path from "node:path"
 import { readFileSync } from "node:fs"
-import { buildKeybindingMap } from "../agent-manager/format-keybinding"
 import { mergeUserKeybindings, parseJsonc, userKeybindingFiles } from "../agent-manager/user-keybindings"
 
 const files = (ctx?: vscode.ExtensionContext) =>
@@ -39,9 +38,4 @@ export function watchKeybindings(ctx: vscode.ExtensionContext | undefined, cb: (
     watcher.onDidDelete(cb)
   }
   return vscode.Disposable.from(...watchers)
-}
-
-/** The keybinding map the Agent Manager webview shows in shortcut hints. */
-export function agentManagerKeybindings(ctx?: vscode.ExtensionContext) {
-  return buildKeybindingMap(keybindings(ctx), process.platform === "darwin")
 }

@@ -45,11 +45,16 @@ export async function ptySocketUrl(
     location: { directory },
     "x-opencode-ticket": "1",
   })
-  const base = server.url.replace(/^http/i, "ws").replace(/\/$/, "")
+  const url = new URL(`api/pty/${encodeURIComponent(ptyID)}/connect`, server.url.replace(/\/?$/, "/"))
+  url.protocol = url.protocol === "https:" ? "wss:" : "ws:"
+  // The ticket is bound to the directory it was minted for, so the socket must name the same one.
+  url.searchParams.set("location[directory]", directory)
   // A new terminal has one initial attachment. Replay its retained startup
   // bytes so xterm can answer shell capability queries emitted before the
   // WebSocket connected; tailing from -1 can make shells wait for a timeout.
-  return `${base}/api/pty/${encodeURIComponent(ptyID)}/connect?cursor=0&ticket=${encodeURIComponent(data.ticket)}`
+  url.searchParams.set("cursor", "0")
+  url.searchParams.set("ticket", data.ticket)
+  return url.toString()
 }
 
 /**

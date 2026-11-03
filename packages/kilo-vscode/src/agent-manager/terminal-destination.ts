@@ -11,7 +11,7 @@ import * as vscode from "vscode"
 
 export type TerminalDestination = "vscode" | "agentManager"
 
-const KEY = "kilo-code.new.agentManager.terminalButtonDestination"
+const KEY = "kilo-code.v2.agentManager.terminalButtonDestination"
 
 /** Unknown values fall back to the VS Code terminal so a stale or
  *  hand-edited setting never strands the user without a terminal. */
@@ -20,12 +20,12 @@ export function resolveTerminalDestination(value: unknown): TerminalDestination 
 }
 
 export function readTerminalDestination(): TerminalDestination {
-  const config = vscode.workspace.getConfiguration("kilo-code.new.agentManager")
+  const config = vscode.workspace.getConfiguration("kilo-code.v2.agentManager")
   return resolveTerminalDestination(config.get("terminalButtonDestination"))
 }
 
 async function writeTerminalDestination(destination: TerminalDestination): Promise<void> {
-  const config = vscode.workspace.getConfiguration("kilo-code.new.agentManager")
+  const config = vscode.workspace.getConfiguration("kilo-code.v2.agentManager")
   await config.update("terminalButtonDestination", destination, vscode.ConfigurationTarget.Global)
 }
 

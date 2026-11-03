@@ -61,3 +61,8 @@ export function useV2() {
   if (!value) throw new Error("useV2 must be used inside V2Provider")
   return value
 }
+
+/** The directory scope when one is provided; a list that spans directories reads each row store instead. */
+export function useV2Optional() {
+  return useContext(Context)
+}

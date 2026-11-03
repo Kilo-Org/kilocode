@@ -467,6 +467,26 @@ describe("Agent Manager terminal replacement ownership", () => {
     expect(test.manager.ptyFor(params.terminalId)).toBeUndefined()
   })
 
+  it("binds the socket URL to the directory of its ticket", async () => {
+    const url = new URL(
+      await ptySocketUrl(
+        {
+          client: async () =>
+            ({
+              pty: { connect: { token: async () => ({ data: { ticket: "t", expires_in: 30 } }) } },
+            }) as unknown as OpenCodeClient,
+          server: () => ({ url: "http://127.0.0.1:4096" }),
+        } as unknown as AgentManagerConnection,
+        "/repo/.kilo/worktrees/a b",
+        "pty-1",
+      ),
+    )
+    expect(url.origin + url.pathname).toBe("ws://127.0.0.1:4096/api/pty/pty-1/connect")
+    expect(url.searchParams.get("location[directory]")).toBe("/repo/.kilo/worktrees/a b")
+    expect(url.searchParams.get("ticket")).toBe("t")
+    expect(url.searchParams.get("cursor")).toBe("0")
+  })
+
   it("refuses a ticket URL without a running server", async () => {
     await expect(
       ptySocketUrl(

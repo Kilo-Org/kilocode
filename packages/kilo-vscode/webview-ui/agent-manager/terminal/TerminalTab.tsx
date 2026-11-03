@@ -63,6 +63,8 @@ interface Props {
    *  output when a script ends in failure. */
   status?: () => ScriptTerminalStatus | undefined
   restartable?: boolean
+  /** The PTY does not exist yet; the socket opens when the host reports it created. */
+  pending?: boolean
 }
 
 /** How long the ResizeObserver waits after the last size change before
@@ -472,7 +474,7 @@ export const TerminalTab: Component<Props> = (props) => {
       frame = undefined
       if (closed) return
       fitNow()
-      if (!ws) open()
+      if (!ws && !props.pending) open()
       deferred = requestAnimationFrame(loadAddons)
     })
 

@@ -179,6 +179,7 @@ export function renderSideTerminalLayer(props: {
                 font={term.font}
                 status={() => props.state.scriptStatus(term.id)}
                 restartable={term.kind === undefined}
+                pending={term.pending === true}
                 onFocusChange={focus(props.state, term.id, props.onFocusChange)}
                 onFocusPrompt={props.onFocusPrompt}
                 onTitleChange={(title) => props.state.setTitle(term.id, title)}

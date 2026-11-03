@@ -348,8 +348,11 @@ describe("Agent Manager terminal state", () => {
         worktreeId: "wt-1",
       })
       const createId = String(item.posted[0]!.createId)
+      // The optimistic xterm must not open its socket before the host has the PTY.
+      expect(item.state.sidesForContext("wt-1")[0]?.pending).toBe(true)
       expect(item.dispatch(createdSide(createId, createId, "Terminal 1", "wt-1"))).toBe(true)
       expect(item.state.sidesForContext("wt-1")[0]).toMatchObject({ id: createId, title: "Terminal 1" })
+      expect(item.state.sidesForContext("wt-1")[0]?.pending).toBeUndefined()
       dispose()
     })
   })
