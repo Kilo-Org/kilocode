@@ -287,6 +287,47 @@ describe("KiloAgentPlugin", () => {
     }),
   )
 
+  it.effect("keeps Explore read-only when a per-agent config allows more shell", () =>
+    Effect.gen(function* () {
+      const { agents } = yield* configure({
+        agents: { explore: { permissions: [{ action: "shell", resource: "*", effect: "allow" }] } },
+      })
+      const explore = yield* agents.get(Agent.ID.make("explore"))
+      const effect = (action: string, resource: string) =>
+        Permission.evaluate(action, resource, explore?.permissions ?? []).effect
+      expect(effect("shell", "git log -5")).toBe("allow")
+      expect(effect("shell", "git push")).toBe("deny")
+      expect(effect("shell", "rm -rf src")).toBe("deny")
+      expect(effect("shell", "gh pr view 1")).toBe("deny")
+      expect(effect("shell", "find . -name x")).toBe("deny")
+    }),
+  )
+
+  it.effect("keeps a global shell deny on a read-only command denied for Explore", () =>
+    Effect.gen(function* () {
+      const { agents } = yield* configure({
+        permissions: [{ action: "shell", resource: "git log *", effect: "deny" }],
+      })
+      const explore = yield* agents.get(Agent.ID.make("explore"))
+      const effect = (resource: string) => Permission.evaluate("shell", resource, explore?.permissions ?? []).effect
+      // A user deny on a command the table allows stays denied; other read-only commands still work.
+      expect(effect("git log -5")).toBe("deny")
+      expect(effect("cat a")).toBe("allow")
+    }),
+  )
+
+  it.effect("keeps a per-agent shell deny on a read-only command denied for Explore", () =>
+    Effect.gen(function* () {
+      const { agents } = yield* configure({
+        agents: { explore: { permissions: [{ action: "shell", resource: "cat *", effect: "deny" }] } },
+      })
+      const explore = yield* agents.get(Agent.ID.make("explore"))
+      const effect = (resource: string) => Permission.evaluate("shell", resource, explore?.permissions ?? []).effect
+      expect(effect("cat a")).toBe("deny")
+      expect(effect("git log -5")).toBe("allow")
+    }),
+  )
+
   it.effect("limits Plan to read-only tools and the native Plan directory", () =>
     Effect.gen(function* () {
       yield* setup()

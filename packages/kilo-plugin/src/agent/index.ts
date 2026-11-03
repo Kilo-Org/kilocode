@@ -346,9 +346,17 @@ export const Ceiling = define({
 
       // Explore is always delegated and cannot answer a prompt, so neither a broad global allow nor an
       // explicit per-agent shell allow may reopen its shell. Unlike the guarded primary agents above,
-      // this reapplies unconditionally: there is no opt-in for a writable Explore shell. A user-authored
-      // shell deny stays stricter because the table never allows what it already denied.
-      if (editor.get(explore)) editor.update(explore, (item) => item.permissions.push(...rules("shell", exploreShell)))
+      // this reapplies unconditionally: there is no opt-in for a writable Explore shell. Shell denies the
+      // user configured are kept after the table (as `seal` does), so a user can still tighten Explore
+      // further; the table's own structural denies are excluded so they are not duplicated.
+      const exploreInfo = editor.get(explore)
+      if (exploreInfo) {
+        const table = new Set(rules("shell", exploreShell).map((entry) => `${entry.resource}=${entry.effect}`))
+        const denies = exploreInfo.permissions.filter(
+          (entry) => entry.action === "shell" && entry.effect === "deny" && !table.has(`${entry.resource}=${entry.effect}`),
+        )
+        editor.update(explore, (item) => item.permissions.push(...rules("shell", exploreShell), ...denies))
+      }
     })
   }),
 })
