@@ -1,7 +1,7 @@
 import * as vscode from "vscode"
 import * as path from "node:path"
 import { readFileSync } from "node:fs"
-import { mergeUserKeybindings, parseJsonc, userKeybindingFiles } from "../agent-manager/user-keybindings"
+import { mergeUserKeybindings, parseJsonc, userKeybindingFiles } from "../keybinding-format"
 
 const files = (ctx?: vscode.ExtensionContext) =>
   ctx?.globalStorageUri ? userKeybindingFiles(ctx.globalStorageUri.fsPath) : []

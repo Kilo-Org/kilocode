@@ -36,6 +36,7 @@ export async function ptySocketUrl(
   connection: AgentManagerConnection,
   directory: string,
   ptyID: string,
+  replayExited = false,
 ): Promise<string> {
   const client = await connection.client()
   const server = connection.server()
@@ -54,6 +55,7 @@ export async function ptySocketUrl(
   // WebSocket connected; tailing from -1 can make shells wait for a timeout.
   url.searchParams.set("cursor", "0")
   url.searchParams.set("ticket", data.ticket)
+  if (replayExited) url.searchParams.set("replayExited", "1")
   return url.toString()
 }
 

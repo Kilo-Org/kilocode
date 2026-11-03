@@ -449,6 +449,7 @@
         "@typescript/native": "catalog:",
         "babel-preset-solid": "1.9.15",
         "esbuild": "0.27.2",
+        "happy-dom": "20.8.9",
         "qrcode": "^1.5.4",
       },
     },

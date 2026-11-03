@@ -238,9 +238,10 @@ export class ScriptTerminalManager {
   }
 
   /** The server PTY behind a script terminal, for the host socket relay. */
-  ptyFor(terminalId: string): { ptyID: string; directory: string } | undefined {
+  ptyFor(terminalId: string): { ptyID: string; directory: string; replayExited: boolean } | undefined {
     const entry = this.terminals.get(terminalId)
-    return entry ? { ptyID: entry.ptyID, directory: entry.cwd } : undefined
+    // A script can finish before its tab connects, so the tab replays the retained output of an exited PTY.
+    return entry ? { ptyID: entry.ptyID, directory: entry.cwd, replayExited: true } : undefined
   }
 
   owns(ptyID: string): boolean {

@@ -22,6 +22,8 @@ import type { AgentManagerInMessage, AgentManagerOutMessage } from "./types"
 export interface PtyTarget {
   ptyID: string
   directory: string
+  /** Replay the retained output when the PTY has already exited, instead of refusing the socket. */
+  replayExited?: boolean
 }
 
 export interface PtyRelayDeps {
@@ -110,10 +112,12 @@ export class PtyRelay {
     if (!target) return this.closed(socketId, NOT_FOUND, "Terminal is not available")
     const token = Symbol(socketId)
     this.tokens.set(socketId, token)
-    const url = await ptySocketUrl(this.deps.connection, target.directory, target.ptyID).catch((error: unknown) => {
-      this.deps.log(`PTY socket ${socketId} could not get a ticket: ${getErrorMessage(error)}`)
-      return undefined
-    })
+    const url = await ptySocketUrl(this.deps.connection, target.directory, target.ptyID, target.replayExited).catch(
+      (error: unknown) => {
+        this.deps.log(`PTY socket ${socketId} could not get a ticket: ${getErrorMessage(error)}`)
+        return undefined
+      },
+    )
     if (this.tokens.get(socketId) !== token) return
     this.tokens.delete(socketId)
     if (this.disposed || !url) return this.closed(socketId, UNAVAILABLE, "Terminal socket could not start")

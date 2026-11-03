@@ -1,5 +1,8 @@
 import { describe, expect, test } from "bun:test"
+import { resolve } from "node:path"
 import { assertMutablePath, MESSAGE } from "../src/agent-manager/protection"
+
+const workspace = "/workspace"
 
 describe("Agent Manager state protection", () => {
   test("rejects direct edits to the current and legacy Agent Manager state", () => {
@@ -17,11 +20,11 @@ describe("Agent Manager state protection", () => {
 describe("mutation tool targets", () => {
   test("resolves write and edit paths against the location", async () => {
     const { mutationTargets } = await import("../src/agent-manager/guard")
-    expect(mutationTargets("write", { path: ".kilo2/agent-manager.json" }, "/workspace")).toEqual([
-      "/workspace/.kilo2/agent-manager.json",
+    expect(mutationTargets("write", { path: ".kilo2/agent-manager.json" }, workspace)).toEqual([
+      resolve(workspace, ".kilo2/agent-manager.json"),
     ])
-    expect(mutationTargets("edit", { path: "/workspace/.kilo/agent-manager.json" }, "/workspace")).toEqual([
-      "/workspace/.kilo/agent-manager.json",
+    expect(mutationTargets("edit", { path: "/workspace/.kilo/agent-manager.json" }, workspace)).toEqual([
+      resolve(workspace, "/workspace/.kilo/agent-manager.json"),
     ])
   })
 
@@ -39,11 +42,11 @@ describe("mutation tool targets", () => {
       "*** Delete File: docs/old.md",
       "*** End Patch",
     ].join("\n")
-    expect(mutationTargets("patch", { patchText: patch }, "/workspace")).toEqual([
-      "/workspace/.kilo2/agent-manager.json",
-      "/workspace/src/a.ts",
-      "/workspace/.kilo/agent-manager.json",
-      "/workspace/docs/old.md",
+    expect(mutationTargets("patch", { patchText: patch }, workspace)).toEqual([
+      resolve(workspace, ".kilo2/agent-manager.json"),
+      resolve(workspace, "src/a.ts"),
+      resolve(workspace, ".kilo/agent-manager.json"),
+      resolve(workspace, "docs/old.md"),
     ])
   })
 

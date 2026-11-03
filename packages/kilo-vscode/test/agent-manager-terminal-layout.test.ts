@@ -8,12 +8,14 @@ import {
   minPanelWidth,
 } from "../webview-ui/agent-manager/side-panel-layout"
 
-const css = readFileSync(resolve(import.meta.dir, "../webview-ui/agent-manager/agent-manager.css"), "utf8")
-const terminal = readFileSync(
-  resolve(import.meta.dir, "../webview-ui/agent-manager/terminal/TerminalTab.tsx"),
-  "utf8",
+const normalize = (source: string) => source.replace(/\r\n/g, "\n")
+const css = normalize(
+  readFileSync(resolve(import.meta.dir, "../webview-ui/agent-manager/agent-manager.css"), "utf8"),
 )
-const pkg = readFileSync(resolve(import.meta.dir, "../package.json"), "utf8")
+const terminal = normalize(
+  readFileSync(resolve(import.meta.dir, "../webview-ui/agent-manager/terminal/TerminalTab.tsx"), "utf8"),
+)
+const pkg = normalize(readFileSync(resolve(import.meta.dir, "../package.json"), "utf8"))
 
 test("xterm owns the padding used by FitAddon", () => {
   const host = css.match(/\.am-terminal-host\s*\{([^}]*)\}/)?.[1]

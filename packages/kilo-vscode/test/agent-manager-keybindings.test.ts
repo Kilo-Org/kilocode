@@ -2,7 +2,7 @@ import { describe, expect, it } from "bun:test"
 import { readFileSync } from "node:fs"
 import { join } from "node:path"
 import { buildKeybindingMap } from "../src/agent-manager/format-keybinding"
-import { mergeUserKeybindings } from "../src/agent-manager/user-keybindings"
+import { mergeUserKeybindings } from "../src/keybinding-format"
 
 const ROOT = join(import.meta.dir, "..")
 

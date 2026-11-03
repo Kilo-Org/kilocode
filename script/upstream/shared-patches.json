@@ -1,8 +1,8 @@
 {
   "$comment": "Shared-patch baseline (U-L3-01). Read by script/check-shared-patches.ts and script/check-opencode-annotations.ts. Each shared upstream file that Kilo adds or changes needs an entry: rung (3 = seam patch, 4 = feature patch) and the missing seam. `unmarked` allows lines without markers and states why. Raise a limit only in the PR that adds the patch, and lower it when a patch goes away.",
   "limits": {
-    "files": 75,
-    "markedLines": 1066,
+    "files": 77,
+    "markedLines": 1070,
     "unmarkedLines": 91,
     "deletedFiles": 0
   },
@@ -314,6 +314,14 @@
     "packages/plugin/src/effect/permission.ts": {
       "rung": 3,
       "seam": "Optional read-only `rules` and `unattended` fields on PermissionEvaluation, the permission evaluate hook event that core fills. Hooks that ignore them see no change."
+    },
+    "packages/core/src/pty.ts": {
+      "rung": 3,
+      "seam": "Optional `allowExited` attach input: attach to an exited session to replay its retained output, then deliver the end event with the exit code. The Agent Manager shows the output of a setup or run script that finished before its tab connected. Upstream keeps exited sessions and their output (`pty.list` returns them), but `attach` refuses them and no plugin hook or layer reaches the attach path. Omitted input keeps upstream's `ExitedError`."
+    },
+    "packages/server/src/handlers/pty.ts": {
+      "rung": 3,
+      "seam": "Pass `replayExited=1` from the PTY connect query to the `allowExited` attach input in packages/core/src/pty.ts. The connect route is the only path a client reaches `attach` through, and its handler has no extension point for query options. Without the query parameter the route behaves as upstream."
     }
   }
 }

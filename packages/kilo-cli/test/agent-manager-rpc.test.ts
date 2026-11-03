@@ -192,7 +192,7 @@ test(
         const resolved = yield* projects.resolve(AbsolutePath.make(directory))
         const canonicalRoot = yield* Effect.promise(() => canonical(resolved.directory))
         const name = "removed-snapshot"
-        const worktree = path.join(directory, ".kilo", "worktrees", name)
+        const worktree = path.join(resolved.directory, ".kilo", "worktrees", name)
         const canonicalWorktree = path.join(canonicalRoot, ".kilo", "worktrees", name)
         const snapshot = path.join(global.data, "snapshot", resolved.id, Hash.fast(canonicalWorktree))
         yield* Effect.promise(() => mkdir(path.join(canonicalRoot, ".kilo", "worktrees"), { recursive: true }))

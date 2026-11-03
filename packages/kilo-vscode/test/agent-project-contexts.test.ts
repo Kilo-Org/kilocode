@@ -1,11 +1,12 @@
 import { describe, it, expect } from "bun:test"
 import { ProjectContexts } from "../src/agent-manager/project/contexts"
 import type { StoredProject } from "../src/agent-manager/project/registry"
-import { projectIdFor } from "../src/agent-manager/project/paths"
+import { canonicalizePath, projectIdFor } from "../src/agent-manager/project/paths"
 import type { WorktreeStateManager } from "../src/agent-manager/WorktreeStateManager"
 
 const WORKSPACE = "/repo/main"
-const PINNED = projectIdFor(WORKSPACE)
+const PINNED_ROOT = canonicalizePath(WORKSPACE)
+const PINNED = projectIdFor(PINNED_ROOT)
 
 function stored(id: string): StoredProject {
   return {
@@ -44,7 +45,7 @@ describe("ProjectContexts", () => {
     const { contexts } = setup({ workspace: WORKSPACE })
     const active = contexts.active()
     expect(active?.id).toBe(PINNED)
-    expect(active?.root).toBe(WORKSPACE)
+    expect(active?.root).toBe(PINNED_ROOT)
     expect(active?.pinned).toBe(true)
   })
 
@@ -155,7 +156,7 @@ describe("ProjectContexts", () => {
     const active = contexts.active()!
     active.stateManager()
     active.stateManager()
-    expect(created).toEqual([WORKSPACE])
+    expect(created).toEqual([PINNED_ROOT])
     expect(active.loaded).toBe(true)
   })
 
@@ -164,7 +165,7 @@ describe("ProjectContexts", () => {
     const { contexts, created } = setup({ workspace: WORKSPACE, projects: [extra] })
     contexts.active()!.stateManager()
     contexts.activate("prj-extra")!.stateManager()
-    expect(created).toEqual([WORKSPACE, "/repo/prj-extra"])
+    expect(created).toEqual([PINNED_ROOT, "/repo/prj-extra"])
   })
 
   it("re-derives the pinned project when the workspace changes", () => {
@@ -181,7 +182,7 @@ describe("ProjectContexts", () => {
     expect(dynamic.syncPinned()).toBe(false)
     ws.root = "/repo/other"
     expect(dynamic.syncPinned()).toBe(true)
-    expect(dynamic.active()?.root).toBe("/repo/other")
+    expect(dynamic.active()?.root).toBe(canonicalizePath("/repo/other"))
     ws.root = undefined
     expect(dynamic.syncPinned()).toBe(true)
     expect(dynamic.active()).toBeUndefined()

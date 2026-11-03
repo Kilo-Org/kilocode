@@ -62,13 +62,8 @@ export const KiloAgentManagerPlugin = define<FSUtil.Service | Global.Service | S
             fs,
           }).pipe(
             Effect.map((removed) => ({ removed })),
-            Effect.catch((error) =>
-              Effect.fail(
-                context.error(
-                  "invalid_worktree",
-                  error instanceof Error ? error.message : String(error),
-                ),
-              ),
+            Effect.mapError((error) =>
+              context.error("invalid_worktree", error instanceof Error ? error.message : String(error)),
             ),
           ),
       })

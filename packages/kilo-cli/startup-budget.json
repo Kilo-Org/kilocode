@@ -13,6 +13,8 @@
     "kilocode.tool-todo": 10,
     "kilocode.tool-write": 10,
     "kilocode.commit-message": 10,
+    "kilocode.branch-name": 10,
+    "kilocode.agent-manager": 10,
     "kilocode.review": 10,
     "kilocode.gateway.policy": 15,
     "kilo.agent": 50,

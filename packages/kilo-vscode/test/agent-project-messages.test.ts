@@ -7,7 +7,7 @@ import { GitOps } from "../src/agent-manager/GitOps"
 import { handleProjectMessage, type ProjectMessageDeps } from "../src/agent-manager/project/messages"
 import { ProjectRegistry, type RegistryStorage } from "../src/agent-manager/project/registry"
 import { ProjectContexts } from "../src/agent-manager/project/contexts"
-import { projectIdFor } from "../src/agent-manager/project/paths"
+import { canonicalizePath, projectIdFor } from "../src/agent-manager/project/paths"
 import type { AgentManagerInMessage } from "../src/agent-manager/types"
 
 const WORKSPACE = "/repo/main"
@@ -150,7 +150,7 @@ describe("handleProjectMessage", () => {
     const alias = path.join(parent, "alias")
     fs.symlinkSync(path.dirname(root), alias, process.platform === "win32" ? "junction" : "dir")
     const { deps, registry, calls } = setup()
-    const id = projectIdFor(root)
+    const id = projectIdFor(canonicalizePath(root))
     await registry.add({ id, root })
     await handleProjectMessage(
       msg("agentManager.cloneProject", {
@@ -187,7 +187,7 @@ describe("handleProjectMessage", () => {
     expect(calls.expand).toEqual([])
     expect(calls.error).toEqual(["The project is unavailable. Check that the repository still exists."])
     expect(registry.list()).toEqual([])
-    expect(contexts.active()?.root).toBe(WORKSPACE)
+    expect(contexts.active()?.root).toBe(canonicalizePath(WORKSPACE))
   })
 
   it("adds a picked git repository to the registry", async () => {
@@ -195,9 +195,9 @@ describe("handleProjectMessage", () => {
     const { deps, registry, calls, pick } = setup()
     pick(repo)
     await handleProjectMessage(msg("agentManager.addProject"), deps)
-    const id = projectIdFor(repo)
+    const id = projectIdFor(canonicalizePath(repo))
     const project = registry.get(id)
-    expect(project?.root).toBe(repo)
+    expect(project?.root).toBe(canonicalizePath(repo))
     expect(calls.push).toBe(2)
     expect(calls.selected).toEqual([id])
     expect(project?.expanded).toBe(true)
@@ -235,7 +235,7 @@ describe("handleProjectMessage", () => {
     pick(repo)
     await handleProjectMessage(msg("agentManager.addProject"), deps)
     expect(calls.error).toEqual([])
-    expect(calls.selected).toEqual([projectIdFor(repo)])
+    expect(calls.selected).toEqual([projectIdFor(canonicalizePath(repo))])
   })
 
   it("selects an existing registration without duplicating it", async () => {
@@ -245,7 +245,7 @@ describe("handleProjectMessage", () => {
     await handleProjectMessage(msg("agentManager.addProject"), deps)
     await handleProjectMessage(msg("agentManager.addProject"), deps)
     expect(calls.error).toEqual([])
-    expect(calls.selected).toEqual([projectIdFor(repo), projectIdFor(repo)])
+    expect(calls.selected).toEqual([projectIdFor(canonicalizePath(repo)), projectIdFor(canonicalizePath(repo))])
   })
 
   it("does nothing when the picker is cancelled", async () => {
@@ -265,10 +265,10 @@ describe("handleProjectMessage", () => {
     expect(calls.error).toEqual([])
     expect(calls.pick).toBe(0)
     expect(calls.folders).toEqual([])
-    expect(registry.list().map((entry) => entry.root)).toEqual([root])
-    expect(contexts.pinned()?.root).toBe(workspace)
-    expect(contexts.active()?.root).toBe(root)
-    expect(calls.selected).toEqual([projectIdFor(root)])
+    expect(registry.list().map((entry) => entry.root)).toEqual([canonicalizePath(root)])
+    expect(contexts.pinned()?.root).toBe(canonicalizePath(workspace))
+    expect(contexts.active()?.root).toBe(canonicalizePath(root))
+    expect(calls.selected).toEqual([projectIdFor(canonicalizePath(root))])
     expect(execFileSync("git", ["ls-tree", "HEAD"], { cwd: root, encoding: "utf8" })).toBe("")
     expect(execFileSync("git", ["remote"], { cwd: root, encoding: "utf8" })).toBe("")
   })
@@ -283,8 +283,8 @@ describe("handleProjectMessage", () => {
     await handleProjectMessage(msg("agentManager.createProject", { parent, name: "existing" }), deps)
     expect(calls.confirm).toEqual([])
     expect(calls.error).toEqual([])
-    expect(registry.list().map((entry) => entry.root)).toEqual([root])
-    expect(contexts.active()?.root).toBe(root)
+    expect(registry.list().map((entry) => entry.root)).toEqual([canonicalizePath(root)])
+    expect(contexts.active()?.root).toBe(canonicalizePath(root))
     calls.notifications.length = 0
     await handleProjectMessage(msg("agentManager.createProject", { parent, name: "existing" }), deps)
     expect(registry.list()).toHaveLength(1)
@@ -305,14 +305,16 @@ describe("handleProjectMessage", () => {
     expect(calls.clone).toEqual([])
     expect(calls.error).toEqual([])
     expect(registry.list()).toHaveLength(1)
-    expect(contexts.active()?.root).toBe(root)
+    expect(contexts.active()?.root).toBe(canonicalizePath(root))
   })
 
   it("posts the primary checkout parent for a new project", async () => {
     const workspace = gitRepo()
     const { deps, calls } = setup({ workspace })
     await handleProjectMessage(msg("agentManager.requestProjectParent"), deps)
-    expect(calls.posts).toEqual([{ type: "agentManager.projectParent", parent: path.dirname(workspace) }])
+    expect(calls.posts).toEqual([
+      { type: "agentManager.projectParent", parent: path.dirname(canonicalizePath(workspace)) },
+    ])
   })
 
   it("posts the picked parent and stays silent on cancel", async () => {
@@ -338,8 +340,8 @@ describe("handleProjectMessage", () => {
     )
     expect(calls.clone).toEqual([["git@company:team/project.git", checkout]])
     expect(calls.pick).toBe(0)
-    expect(contexts.pinned()?.root).toBe(workspace)
-    expect(contexts.active()?.root).toBe(checkout)
+    expect(contexts.pinned()?.root).toBe(canonicalizePath(workspace))
+    expect(contexts.active()?.root).toBe(canonicalizePath(checkout))
     expect(calls.error).toEqual([])
   })
 
@@ -351,7 +353,7 @@ describe("handleProjectMessage", () => {
     calls.answers.push(true)
     await handleProjectMessage(msg("agentManager.addProject"), deps)
     expect(calls.error).toEqual([])
-    expect(registry.get(projectIdFor(root))?.root).toBe(root)
+    expect(registry.get(projectIdFor(canonicalizePath(root)))?.root).toBe(canonicalizePath(root))
     expect(execFileSync("git", ["ls-tree", "HEAD"], { cwd: root, encoding: "utf8" })).toBe("")
     expect(fs.readFileSync(path.join(root, "secret.env"), "utf8")).toBe("keep outside Git")
   })
@@ -382,7 +384,7 @@ describe("handleProjectMessage", () => {
   it("selects a registered project without a separate trust step", async () => {
     const repo = gitRepo()
     const { deps, registry, calls } = setup()
-    const id = projectIdFor(repo)
+    const id = projectIdFor(canonicalizePath(repo))
     await registry.add({ id, root: repo })
     await handleProjectMessage(msg("agentManager.selectProject", { projectId: id }), deps)
     expect(calls.activate).toEqual([id])
@@ -391,7 +393,7 @@ describe("handleProjectMessage", () => {
   it("initializes projects on expand", async () => {
     const repo = gitRepo()
     const { deps, registry, calls } = setup()
-    const id = projectIdFor(repo)
+    const id = projectIdFor(canonicalizePath(repo))
     await registry.add({ id, root: repo })
     await handleProjectMessage(msg("agentManager.setProjectExpanded", { projectId: id, expanded: true }), deps)
     expect(calls.expand).toEqual([id])
@@ -402,7 +404,7 @@ describe("handleProjectMessage", () => {
   it("keeps expansion and UI updates when initialization rejects", async () => {
     const repo = gitRepo()
     const { deps, registry, calls } = setup()
-    const id = projectIdFor(repo)
+    const id = projectIdFor(canonicalizePath(repo))
     const err = new Error("State write failed")
     const logs: unknown[][] = []
     deps.ready = async (ctx, options) => {
@@ -426,7 +428,7 @@ describe("handleProjectMessage", () => {
   it("persists project expansion state across registry instances", async () => {
     const repo = gitRepo()
     const { deps, registry, storage, calls } = setup()
-    const id = projectIdFor(repo)
+    const id = projectIdFor(canonicalizePath(repo))
     await registry.add({ id, root: repo })
     await handleProjectMessage(msg("agentManager.setProjectExpanded", { projectId: id, expanded: true }), deps)
 
@@ -442,7 +444,7 @@ describe("handleProjectMessage", () => {
 
   it("persists the pinned project expansion state without adding it to the catalog", async () => {
     const { deps, registry, storage } = setup()
-    const id = projectIdFor(WORKSPACE)
+    const id = projectIdFor(canonicalizePath(WORKSPACE))
 
     await handleProjectMessage(msg("agentManager.setProjectExpanded", { projectId: id, expanded: false }), deps)
 
@@ -463,7 +465,13 @@ describe("handleProjectMessage", () => {
       ["b", 3],
       ["d", 4],
     ])
-    expect(contexts.snapshots().map((p) => p.id)).toEqual([projectIdFor(WORKSPACE), "c", "a", "b", "d"])
+    expect(contexts.snapshots().map((p) => p.id)).toEqual([
+      projectIdFor(canonicalizePath(WORKSPACE)),
+      "c",
+      "a",
+      "b",
+      "d",
+    ])
     expect(calls.push).toBe(1)
   })
 
@@ -483,7 +491,7 @@ describe("handleProjectMessage", () => {
   it("does not initialize missing projects on expand", async () => {
     const repo = gitRepo()
     const { deps, registry, calls } = setup()
-    const id = projectIdFor(repo)
+    const id = projectIdFor(canonicalizePath(repo))
     await registry.add({ id, root: repo })
     await handleProjectMessage(msg("agentManager.setProjectExpanded", { projectId: id, expanded: true }), deps)
     expect(calls.expand).toEqual([id])
@@ -492,14 +500,14 @@ describe("handleProjectMessage", () => {
   it("activates the pinned fallback when removing the active project", async () => {
     const repo = gitRepo()
     const { deps, registry, contexts, calls } = setup()
-    const id = projectIdFor(repo)
+    const id = projectIdFor(canonicalizePath(repo))
     await registry.add({ id, root: repo })
     await handleProjectMessage(msg("agentManager.selectProject", { projectId: id }), deps)
     await handleProjectMessage(msg("agentManager.removeProject", { projectId: id }), deps)
     expect(registry.get(id)).toBeUndefined()
     expect(contexts.get(id)).toBeUndefined()
-    expect(contexts.active()?.root).toBe(WORKSPACE)
-    expect(calls.activate).toEqual([id, projectIdFor(WORKSPACE)])
+    expect(contexts.active()?.root).toBe(canonicalizePath(WORKSPACE))
+    expect(calls.activate).toEqual([id, projectIdFor(canonicalizePath(WORKSPACE))])
   })
 
   it("clears applied state after removing the last project without a workspace", async () => {

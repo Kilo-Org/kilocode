@@ -396,7 +396,7 @@ describe("ScriptTerminalManager", () => {
     const terminalId = ctx.snapshots.at(-1)?.[0]?.terminalId
     if (!terminalId) throw new Error("missing Run terminal")
 
-    expect(ctx.manager.ptyFor(terminalId)).toEqual({ ptyID: "pty-1", directory: "/repo/worktree" })
+    expect(ctx.manager.ptyFor(terminalId)).toEqual({ ptyID: "pty-1", directory: "/repo/worktree", replayExited: true })
     expect(ctx.manager.ptyFor("other")).toBeUndefined()
   })
 })
