@@ -28,10 +28,12 @@ test("remounts the composer for each session or pending tab", () => {
   expect(sessionView).toContain("draftKey={key}")
 })
 
-test("resets the draft agent and model when the session changes", () => {
-  const reset = selectors.match(/on\(\s*session,\s*\(\) => \{([\s\S]*?)\},\s*\{ defer: true \}/)?.[1]
+test("resets the draft agent and model when the draft key changes", () => {
+  const reset = selectors.match(/on\(\s*draftKey,\s*\(\) => \{([\s\S]*?)\},\s*\{ defer: true \}/)?.[1]
 
   expect(reset).toBeDefined()
   expect(reset).toContain("setDraftAgent(undefined)")
   expect(reset).toContain("setDraftModel(undefined)")
+  expect(selectors).toContain("draftKey: Accessor<string | undefined> = session")
+  expect(sessionView).toContain("createSelection(session, draftKey)")
 })

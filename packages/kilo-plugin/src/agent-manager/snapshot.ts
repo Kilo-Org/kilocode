@@ -140,8 +140,12 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
  * path, and the repository is moved aside before removal so an interrupted cleanup can finish on the next call.
  */
 export const remove = Effect.fn("SnapshotCleanup.remove")(function* (input: Input) {
-  const root = path.resolve(input.data, "snapshot")
-  const directory = path.resolve(input.directory)
+  // Windows can spell the same directory with an 8.3 short name. Resolve the inputs first, so the
+  // symlink inspection below compares real paths instead of two spellings of the same directory.
+  const real = (value: string) =>
+    input.fs.realPath(value).pipe(Effect.catchReason("PlatformError", "NotFound", () => Effect.succeed(value)))
+  const root = path.resolve(yield* real(input.data), "snapshot")
+  const directory = path.resolve(yield* real(input.directory))
   const worktree = path.resolve(input.worktree)
   const managed = path.resolve(directory, ".kilo", "worktrees")
   if (!component(input.project)) return yield* invalid("project must be a safe path component")

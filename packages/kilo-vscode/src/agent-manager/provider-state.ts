@@ -196,7 +196,7 @@ export function pushState(p: ProviderStateHost, ctx?: ProjectContext): void {
   void p.activity.sync()
   const catalog = sessionCatalog(p)
   registerSessionCatalogHost(p.busySessions, catalog)
-  void pushProjectSessions(target, catalog.list, catalog.post, p.log)
+  void pushProjectSessions(target, catalog.list, catalog.post, (...args) => p.log(...args))
   if (!active) return
   syncPollerSkips(p)
   p.statsPoller.setEnabled(worktrees.length > 0 || p.panel !== undefined)

@@ -2001,6 +2001,7 @@ const AgentManagerContent: Component = () => {
                       ? sessions.currentSessionID()
                       : undefined
                   }
+                  draftKey={sessions.currentSessionID() ?? activePendingId()}
                   onSession={handleSessionCreated}
                   actions={toolActions}
                   onShowHistory={() => openHistory()}

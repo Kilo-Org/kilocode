@@ -16,7 +16,10 @@ import { cycleVariant, preserveVariant } from "./variant"
 
 const DEFAULT = "default"
 
-export function createSelection(session: Accessor<string | undefined>) {
+export function createSelection(
+  session: Accessor<string | undefined>,
+  draftKey: Accessor<string | undefined> = session,
+) {
   const v2 = useV2()
   const [draftAgent, setDraftAgent] = createSignal<string>()
   const [draftModel, setDraftModel] = createSignal<ModelRef>()
@@ -56,7 +59,7 @@ export function createSelection(session: Accessor<string | undefined>) {
   // session. An existing session keeps the server value, so resetting the local draft is safe.
   createEffect(
     on(
-      session,
+      draftKey,
       () => {
         setDraftAgent(undefined)
         setDraftModel(undefined)

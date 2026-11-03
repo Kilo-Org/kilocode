@@ -145,7 +145,7 @@ export function SessionView(props: {
   const selectorsBlocked = () => permissions().length > 0
   // Only a pending permission changes the Send label. A pending question leaves Send in place instead of Stop.
   const questioning = () => permissions().length === 0 && forms().length > 0
-  const selection = createSelection(session)
+  const selection = createSelection(session, draftKey)
   const autoApprove = createAutoApprove()
   // The host sends the cycle action for the cycleAgentMode/cyclePreviousAgentMode commands, as in main.
   // A read-only view, for example an Agent Manager subagent, has no composer to cycle.
