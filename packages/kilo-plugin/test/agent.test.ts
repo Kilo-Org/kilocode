@@ -328,6 +328,32 @@ describe("KiloAgentPlugin", () => {
     }),
   )
 
+  it.effect("keeps a broad global shell deny on Explore denied", () =>
+    Effect.gen(function* () {
+      const { agents } = yield* configure({ permissions: [{ action: "shell", resource: "*", effect: "deny" }] })
+      const explore = yield* agents.get(Agent.ID.make("explore"))
+      expect(Permission.evaluate("shell", "cat a", explore?.permissions ?? []).effect).toBe("deny")
+    }),
+  )
+
+  it.effect("keeps a broad global catch-all deny on Explore shell denied", () =>
+    Effect.gen(function* () {
+      const { agents } = yield* configure({ permissions: [{ action: "*", resource: "*", effect: "deny" }] })
+      const explore = yield* agents.get(Agent.ID.make("explore"))
+      expect(Permission.evaluate("shell", "cat a", explore?.permissions ?? []).effect).toBe("deny")
+    }),
+  )
+
+  it.effect("keeps a broad per-agent shell deny on Explore denied", () =>
+    Effect.gen(function* () {
+      const { agents } = yield* configure({
+        agents: { explore: { permissions: [{ action: "shell", resource: "*", effect: "deny" }] } },
+      })
+      const explore = yield* agents.get(Agent.ID.make("explore"))
+      expect(Permission.evaluate("shell", "cat a", explore?.permissions ?? []).effect).toBe("deny")
+    }),
+  )
+
   it.effect("limits Plan to read-only tools and the native Plan directory", () =>
     Effect.gen(function* () {
       yield* setup()

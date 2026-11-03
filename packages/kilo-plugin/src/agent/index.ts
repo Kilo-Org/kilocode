@@ -346,16 +346,19 @@ export const Ceiling = define({
 
       // Explore is always delegated and cannot answer a prompt, so neither a broad global allow nor an
       // explicit per-agent shell allow may reopen its shell. Unlike the guarded primary agents above,
-      // this reapplies unconditionally: there is no opt-in for a writable Explore shell. Shell denies the
-      // user configured are kept after the table (as `seal` does), so a user can still tighten Explore
-      // further; the table's own structural denies are excluded so they are not duplicated.
+      // this reapplies unconditionally: there is no opt-in for a writable Explore shell. Config denies
+      // that can reach shell are kept after the table (as `seal` does), so a user can still tighten
+      // Explore further. The config rules are the tail after the table the plugin phase appended, found
+      // by matching that sequence, so a user's own `shell "*"` or `"*"` deny is not confused with the
+      // table's identical entries.
       const exploreInfo = editor.get(explore)
-      if (exploreInfo) {
-        const table = new Set(rules("shell", exploreShell).map((entry) => `${entry.resource}=${entry.effect}`))
-        const denies = exploreInfo.permissions.filter(
-          (entry) => entry.action === "shell" && entry.effect === "deny" && !table.has(`${entry.resource}=${entry.effect}`),
-        )
-        editor.update(explore, (item) => item.permissions.push(...rules("shell", exploreShell), ...denies))
+      const table = rules("shell", exploreShell)
+      const tableEnd = exploreInfo && sequenceEnd(exploreInfo.permissions, table)
+      if (exploreInfo && tableEnd !== undefined) {
+        const denies = exploreInfo.permissions
+          .slice(tableEnd)
+          .filter((entry) => entry.effect === "deny" && Wildcard.match("shell", entry.action))
+        editor.update(explore, (item) => item.permissions.push(...table, ...denies))
       }
     })
   }),
@@ -443,6 +446,13 @@ function starts(rules: readonly Permission.Rule[], prefix: readonly Permission.R
       rules[index]?.resource === entry.resource &&
       rules[index]?.effect === entry.effect,
   )
+}
+
+/** The index just past the last occurrence of `block` in `rules`, or undefined when it is absent. */
+function sequenceEnd(rules: readonly Permission.Rule[], block: readonly Permission.Rule[]) {
+  for (let start = rules.length - block.length; start >= 0; start--)
+    if (starts(rules.slice(start), block)) return start + block.length
+  return undefined
 }
 
 function rule(action: string, resource: string, effect: Permission.Rule["effect"]) {
