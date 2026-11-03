@@ -178,6 +178,18 @@
     },
     "@opencode-ai/plugin": {
       "zod": "^4.6.6"
+    },
+    "ai-gateway-provider": {
+      "@ai-sdk/deepgram": "^2.0.69",
+      "@ai-sdk/elevenlabs": "^2.0.71",
+      "@ai-sdk/fireworks": "^2.0.98",
+      "@ai-sdk/google": "^3.0.140"
+    },
+    "@vscode/vsce": {
+      "@azure/identity": "^4.14.1"
+    },
+    "friendly-words": {
+      "express": "^4.22.3"
     }
   },
   "patchedDependencies": {
