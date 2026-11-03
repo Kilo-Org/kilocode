@@ -3,7 +3,7 @@ import { Button } from "@kilocode/kilo-ui/button"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import type { ToolActions } from "@kilocode/kilo-ui/message-part"
 import { ToolChildSessionProvider, type ToolChildSession } from "@kilocode/kilo-ui/tool-child-session"
-import { createEffect, createMemo, createSignal, Match, on, onCleanup, Show, Switch } from "solid-js"
+import { createEffect, createMemo, createSignal, type JSX, Match, on, onCleanup, Show, Switch } from "solid-js"
 import type { ToHost } from "../../../src/protocol"
 import { useLanguage } from "../context/language"
 import { getVSCodeAPI } from "../context/vscode"
@@ -173,7 +173,7 @@ export function Chat() {
   })
   // main's ChatView actions row. New Session and Changes have v2 counterparts: the worktree and fork actions need
   // the Agent Manager, and the changes view lists this session's files instead of the working tree.
-  const actions = (
+  const actions = (todos: JSX.Element) => (
     <Show when={hasMessages()}>
       <div class="new-task-button-wrapper">
         <div class="session-actions-row">
@@ -196,6 +196,7 @@ export function Chat() {
           >
             {language.t("sidebar.session.changes.title")}
           </Button>
+          {todos}
         </div>
       </div>
     </Show>
@@ -277,6 +278,7 @@ export function Chat() {
               {(form) => <QuestionDock form={form} />}
             </Show>
             <SessionDock
+              session={session()}
               blocked={blocked()}
               actions={actions}
               hasActions={hasMessages()}
