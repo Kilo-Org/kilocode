@@ -73,10 +73,6 @@ class HostedManagementService internal constructor(
 
     fun excluded(ref: HostedWorkspaceRefDto): Boolean = ref.key in current().excluded
 
-    fun restore(ref: HostedWorkspaceRefDto) {
-        write(current().copy(excluded = current().excluded - ref.key))
-    }
-
     fun remove(ref: HostedWorkspaceRefDto) {
         write(current().copy(excluded = current().excluded + ref.key))
     }

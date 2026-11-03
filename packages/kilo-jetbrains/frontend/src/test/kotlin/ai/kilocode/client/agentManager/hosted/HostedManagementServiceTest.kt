@@ -47,7 +47,7 @@ class HostedManagementServiceTest : BasePlatformTestCase() {
         }
     }
 
-    fun testRemoveHidesOnlyThatWorkspaceAndAddRestoresIt() {
+    fun testRemoveHidesOnlyThatWorkspaceUntilTheCredentialScopeChanges() {
         val management = project.service<HostedManagementService>()
         val items = listOf(
             HostedWorkspaceDto(ref, name = "One"),
@@ -57,8 +57,8 @@ class HostedManagementServiceTest : BasePlatformTestCase() {
         management.refreshScope()
         management.remove(ref)
         assertEquals(listOf("wrk_2"), management.visible(items).map { it.ref.workspaceID })
-        management.restore(ref)
-        assertEquals(2, management.visible(items).size)
+        management.refreshScope()
+        assertEquals(listOf("wrk_2"), management.visible(items).map { it.ref.workspaceID })
     }
 
     fun testClosedChildrenAndSelectionPersistIndependently() {
