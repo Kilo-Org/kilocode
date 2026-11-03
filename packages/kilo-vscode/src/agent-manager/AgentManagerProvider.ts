@@ -546,12 +546,14 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
     await handleMessage(message as unknown as AgentManagerInMessage, this.messageHost)
   }
 
-  /** True when the session belongs to any Agent Manager project, local or managed. */
+  /**
+   * True when the session is one this panel shows, in any project, local or managed. The project session catalog
+   * also lists sidebar sessions rooted in the same directory, so only Agent Manager state answers here.
+   */
   public ownsBrowserSession(sessionId: string): boolean {
     if (this.openSessions.includes(sessionId) || this.panelSessions.has(sessionId)) return true
     for (const ctx of this.contexts.values()) {
       if (ctx.peekState()?.getSession(sessionId)) return true
-      if (ctx.sessions().some((session) => session.id === sessionId)) return true
     }
     return false
   }
