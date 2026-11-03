@@ -33,8 +33,9 @@ const boot =
   async () => {
     using backend = fixture()
     const root = await mkdtemp(path.join(os.tmpdir(), "kilo-agent-manager-rpc-"))
-    const directory = path.join(root, "repo")
-    await Bun.write(path.join(directory, "placeholder.txt"), "hello")
+    await Bun.write(path.join(root, "repo", "placeholder.txt"), "hello")
+    // Use the canonical directory, so Windows short names do not look like a symlink to the snapshot check.
+    const directory = await realpath(path.join(root, "repo"))
     const previous = { KILO_API_URL: process.env.KILO_API_URL, KILO_API_KEY: process.env.KILO_API_KEY }
     process.env.KILO_API_URL = backend.url
     delete process.env.KILO_API_KEY
