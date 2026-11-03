@@ -261,7 +261,7 @@ describe("working-tree PR suggestions", () => {
     }
   })
 
-  it("replaces the target atomically while old readers retain the original", async () => {
+  it.skipIf(process.platform === "win32")("replaces the target atomically while old readers retain the original", async () => {
     const file = path.join(directory, "file.txt")
     const value = await token()
     const before = await fs.readFile(file, "utf8")
@@ -297,7 +297,18 @@ describe("working-tree PR suggestions", () => {
     }
   })
 
-  it.each(["content", "HEAD", "source", "anchor", "branch", "route", "unsaved", "symlink", "replacement", "mode"])(
+  it.each([
+    "content",
+    "HEAD",
+    "source",
+    "anchor",
+    "branch",
+    "route",
+    "unsaved",
+    "symlink",
+    "replacement",
+    ...(process.platform === "win32" ? [] : ["mode"]),
+  ])(
     "rejects stale %s at apply without writing",
     async (change) => {
       const value = await token()
@@ -394,7 +405,7 @@ describe("working-tree PR suggestions", () => {
     expect((await apply(result.preview.token)).success).toBe(true)
   })
 
-  it("treats Git path arguments literally and returns a bounded patch", async () => {
+  it.skipIf(process.platform === "win32")("treats Git path arguments literally and returns a bounded patch", async () => {
     const file = path.join(directory, "file*.txt")
     const content = Array.from({ length: 10_000 }, (_, index) => `line ${index}`).join("\n") + "\n"
     await fs.writeFile(file, content)

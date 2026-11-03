@@ -30,7 +30,7 @@ afterEach(async () => {
     if (!(key in env)) delete process.env[key]
   }
   Object.assign(process.env, env)
-  await fs.rm(dir, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 })
+  await fs.rm(dir, { recursive: true, force: true, maxRetries: 60, retryDelay: 100 })
 })
 
 async function run(root: string, ...args: string[]) {

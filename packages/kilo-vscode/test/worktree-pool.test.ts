@@ -135,7 +135,7 @@ describe("WorktreeManager pool warm-up", () => {
     const slot = await waitForPooledSlot(root)
 
     expect(await pooledSlots(root)).toEqual([slot])
-    expect(pathKey(slot).startsWith(pathKey(home) + path.sep)).toBe(true)
+    expect(pathKey(slot).startsWith(pathKey(home) + "/")).toBe(true)
     expect(existsSync(path.join(root, ".kilo"))).toBe(false)
     expect(await clean(root)).toBe("")
     expect(await manager.discoverWorktrees()).toEqual([])
@@ -183,7 +183,7 @@ describe("WorktreeManager pool claim", () => {
     // A replacement slot is warmed in the pool home after the claim, off the click path.
     const next = await waitForPooledSlot(root)
     expect(next).not.toBe(slot)
-    expect(pathKey(next).startsWith(pathKey(home) + path.sep)).toBe(true)
+    expect(pathKey(next).startsWith(pathKey(home) + "/")).toBe(true)
   })
 
   it("delays the replacement warm-up so it does not compete with the new session", async () => {
@@ -414,7 +414,7 @@ describe("WorktreeManager pool home", () => {
     expect(await pooledSlots(root)).toEqual([])
 
     manager.warmPool()
-    expect(pathKey(await waitForPooledSlot(root)).startsWith(pathKey(home) + path.sep)).toBe(true)
+    expect(pathKey(await waitForPooledSlot(root)).startsWith(pathKey(home) + "/")).toBe(true)
     expect(existsSync(path.join(root, ".kilo"))).toBe(false)
   })
 

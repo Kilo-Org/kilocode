@@ -75,14 +75,14 @@ function target(directory: string, file: string) {
     require(!stat.isSymbolicLink(), "Symbolic links are not supported")
     require(index === parts.length - 1 || stat.isDirectory(), "Invalid parent directory")
   }
-  require(fs.realpathSync(current) === current, "Suggestion path is not canonical")
+  require(fs.realpathSync.native(current) === current, "Suggestion path is not canonical")
   return current
 }
 
 function clean(host: PRReviewHost, file: string) {
   for (const dirty of host.dirtyFiles()) {
-    const canonical = fs.existsSync(dirty) ? fs.realpathSync(dirty) : path.resolve(dirty)
-    require(canonical !== file, "Save the affected editor before applying a suggestion")
+    const canonical = fs.existsSync(dirty) ? fs.realpathSync.native(dirty) : path.resolve(dirty)
+    require(!samePath(canonical, file), "Save the affected editor before applying a suggestion")
   }
 }
 
