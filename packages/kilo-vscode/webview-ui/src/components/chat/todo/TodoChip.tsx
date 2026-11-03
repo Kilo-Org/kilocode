@@ -13,7 +13,7 @@
  * through and the next one slides in, the count rolls, and the ring pulses. When
  * the last item finishes, the ring turns into a check with a short burst, then
  * settles. A session switch or a reload never replays any of this, because the
- * chip remounts per session and the hook only reports a finish it saw happen.
+ * hook tracks the session and only reports a finish it saw happen.
  */
 
 import {
@@ -62,18 +62,24 @@ export function useTodoDock(source: TodoDockSource) {
 
   // Live means this session already showed a list, so a change is one the
   // user can watch. The first list of a session only appears.
-  const snap = createMemo(() => ({ id: source.id(), stats: stats() }))
+  const snap = createMemo(() => ({
+    id: source.id(),
+    stats: stats(),
+    last: source.last(),
+    user: source.user(),
+  }))
   const [live, setLive] = createSignal(false)
   const [celebrate, setCelebrate] = createSignal(false)
   let timer: ReturnType<typeof setTimeout> | undefined
   createEffect(
     on(snap, (next, prev) => {
       const same = !!prev && prev.id === next.id
-      if (!same || !next.stats.all) {
+      const boundary = !!prev && prev.last === next.last && prev.user === next.user
+      if (!same || !boundary || !next.stats.all) {
         clearTimeout(timer)
         setCelebrate(false)
       }
-      if (same && todoFinished(prev.stats, next.stats)) {
+      if (same && boundary && todoFinished(prev.stats, next.stats)) {
         clearTimeout(timer)
         setCelebrate(true)
         timer = setTimeout(() => setCelebrate(false), CELEBRATE)
@@ -83,7 +89,7 @@ export function useTodoDock(source: TodoDockSource) {
   )
   onCleanup(() => clearTimeout(timer))
 
-  return { stats, shown, live, celebrate, items: source.items }
+  return { stats, shown, live, celebrate, items: source.items, id: source.id }
 }
 
 export type TodoDockState = ReturnType<typeof useTodoDock>
@@ -271,6 +277,9 @@ export const TodoChip: Component<TodoChipProps> = (props) => {
   const stats = () => props.state.stats()
   const celebrate = () => props.state.celebrate()
   const [open, setOpen] = createSignal(false)
+  // The dock keeps one chip while the user switches sessions, so close the
+  // portal rather than leaving it over the next session's list.
+  createEffect(on(() => props.state.id(), () => setOpen(false), { defer: true }))
 
   // Direction of the last change, so a step back rolls the other way.
   const [dir, setDir] = createSignal(1)

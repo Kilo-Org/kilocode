@@ -22,7 +22,8 @@ function items(value: unknown): TodoItem[] | undefined {
  * The current list of one session: the todos of its latest completed todowrite
  * call, the message of that call, and the latest real user message. A synthetic
  * message is not a new run, so it is not a boundary. A staged revert hides the
- * messages and parts it would remove.
+ * messages and parts it would remove. `last` is the write that produced
+ * `items`, so a running or reverted write cannot revive a finished list.
  */
 export function todoState(
   messages: ReadonlyArray<SessionMessageInfo>,
@@ -32,16 +33,32 @@ export function todoState(
   let todos: TodoItem[] = []
   for (const message of messages) {
     if (message.type !== "assistant") continue
-    for (const part of message.content) if (part.type === "tool" && part.name === "todowrite") last = message.id
     for (const part of active(message, revert)) {
       if (part.type !== "tool" || part.name !== "todowrite" || part.state.status !== "completed") continue
       const next = items(part.state.metadata?.todos)
       if (!next) continue
       todos = next
+      last = message.id
     }
   }
-  const user = messages.findLast((message) => message.type === "user")?.id
+  const user = messages.findLast((message) => message.type === "user" && visible(message.id, revert))?.id
   return { items: todos, last, user }
+}
+
+/** Whether the visible messages already hold a write, so paging older history cannot change the list. */
+export function hasTodoWrite(
+  messages: ReadonlyArray<SessionMessageInfo>,
+  revert?: { messageID: string; partID?: string },
+) {
+  return messages.some(
+    (message) =>
+      message.type === "assistant" &&
+      active(message, revert).some((part) => part.type === "tool" && part.name === "todowrite"),
+  )
+}
+
+function visible(messageID: string, revert: { messageID: string } | undefined) {
+  return !revert || messageID < revert.messageID
 }
 
 function active(

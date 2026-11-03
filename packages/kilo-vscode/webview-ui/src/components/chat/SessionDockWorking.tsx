@@ -81,10 +81,9 @@ export const SessionDock: Component<SessionDockProps> = (props) => {
     const mutate = new MutationObserver(schedule)
     resize.observe(el)
     resize.observe(box)
-    mutate.observe(box, { childList: true, subtree: true, characterData: true })
-    // The status label is a sibling of the trail. Its width sets the room, so a new label must plan again.
-    const status = content.querySelector(".working-status")
-    if (status) mutate.observe(status, { childList: true, subtree: true, characterData: true })
+    // The status label and the elapsed and retry counters are siblings of the
+    // trail. Their text sets the room, so any change must plan again.
+    mutate.observe(content, { childList: true, subtree: true, characterData: true })
     onCleanup(() => {
       cancelAnimationFrame(frame)
       resize.disconnect()
@@ -156,7 +155,12 @@ function core(lane: HTMLElement | undefined) {
       const line = el.querySelector<HTMLElement>(".working-status-line:not([data-old])")
       return Math.min(line ? text(line) : 0, LABEL_MAX)
     }
-    if (el instanceof HTMLElement && el.dataset.empty != null) return 0
+    // The elapsed slot keeps its reserved min-width even before the first tick,
+    // so it still takes room in the centered cluster.
+    if (el instanceof HTMLElement && el.dataset.empty != null) {
+      const css = getComputedStyle(el)
+      return Math.max(Number.parseFloat(css.minWidth) || 0, el.getBoundingClientRect().width)
+    }
     // The spinner has no text but a fixed size.
     if (!el.textContent) return el.getBoundingClientRect().width
     return Math.max(text(el), Number.parseFloat(getComputedStyle(el).minWidth) || 0)

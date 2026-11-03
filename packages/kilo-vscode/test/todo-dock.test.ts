@@ -8,7 +8,7 @@ import {
   todoVisible,
   type TodoItem,
 } from "../webview-ui/src/components/chat/todo/todo-dock"
-import { todoState } from "../webview-ui/src/v2/todo-state"
+import { hasTodoWrite, todoState } from "../webview-ui/src/v2/todo-state"
 
 // Same shape as the backend sends: no ID, the text is the identity.
 const item = (name: string, status: TodoItem["status"]): TodoItem => ({ content: `Item ${name}`, status })
@@ -145,7 +145,7 @@ describe("todoState", () => {
   it("ignores a write that has not completed", () => {
     const state = todoState([write("msg_1", [item("1", "pending")]), write("msg_2", [item("2", "pending")], "running")])
     expect(state.items).toEqual([item("1", "pending")])
-    expect(state.last).toBe("msg_2")
+    expect(state.last).toBe("msg_1")
   })
 
   it("clears the list with an empty write", () => {
@@ -158,7 +158,7 @@ describe("todoState", () => {
       write("msg_2", [{ content: 1, status: "pending" }, { content: "ok", status: "unknown" }]),
     ])
     expect(state.items).toEqual([item("1", "pending")])
-    expect(state.last).toBe("msg_2")
+    expect(state.last).toBe("msg_1")
   })
 
   it("drops a reverted write and keeps the list before it", () => {
@@ -166,6 +166,7 @@ describe("todoState", () => {
       messageID: "msg_2",
     })
     expect(state.items).toEqual([item("1", "pending")])
+    expect(state.last).toBe("msg_1")
   })
 
   it("keeps only the parts before a reverted part", () => {
@@ -191,11 +192,36 @@ describe("todoState", () => {
       ],
     } as unknown as SessionMessageInfo
     expect(todoState([message], { messageID: "msg_1", partID: "part-b" }).items).toEqual([item("a", "pending")])
+    expect(todoState([message], { messageID: "msg_1", partID: "part-b" }).last).toBe("msg_1")
     expect(todoState([message], { messageID: "msg_1" }).items).toEqual([])
+    expect(todoState([message], { messageID: "msg_1" }).last).toBeUndefined()
   })
 
   it("uses the latest user message as the run boundary, not a synthetic one", () => {
     const synthetic = { id: "msg_3", type: "synthetic", text: "result", time: { created: 1 } } as SessionMessageInfo
     expect(todoState([user("msg_1"), synthetic, write("msg_2", [item("1", "pending")])]).user).toBe("msg_1")
+  })
+
+  it("ignores a reverted user message for the run boundary", () => {
+    const state = todoState([user("msg_1"), write("msg_2", [item("1", "pending")]), user("msg_3")], {
+      messageID: "msg_3",
+    })
+    expect(state.user).toBe("msg_1")
+  })
+
+  it("keeps a finished list hidden while a newer write has not completed", () => {
+    const state = todoState([
+      user("msg_3"),
+      write("msg_2", [item("1", "completed"), item("2", "completed")]),
+      write("msg_4", [item("1", "completed"), item("2", "completed"), item("3", "pending")], "running"),
+    ])
+    expect(state.last).toBe("msg_2")
+    expect(todoVisible(todoStats(state.items), state.last, state.user)).toBe(false)
+  })
+
+  it("treats a reverted write as absent when deciding whether to page older history", () => {
+    const messages = [write("msg_1", [item("1", "pending")])]
+    expect(hasTodoWrite(messages)).toBe(true)
+    expect(hasTodoWrite(messages, { messageID: "msg_1" })).toBe(false)
   })
 })
