@@ -53,6 +53,22 @@ Do not silently substitute a released plugin for the user's local changes.
 
 ## Install And Run
 
+For a shell entry point, run from the current worktree root:
+
+```bash
+bash .kilo/skills/jetbrains-sandbox/script/setup.sh install --host 0.0.0.0
+bash .kilo/skills/jetbrains-sandbox/script/setup.sh run
+```
+
+With no command, the shell script installs only and exits, making it suitable for a
+cloud setup hook. Use `up` to install and then run the foreground supervisor in one
+invocation. Run `up` or `run` with `background_process.start`, not an install-only hook.
+The script requires Bun and this repository checkout, forwards options to `setup.ts`,
+and resolves relative paths from its own worktree root. It also supports `status`,
+`stop`, `mcp`, `screenshot`, and `serve`. Add `--with-kilo` to opt into the Kilo plugin.
+
+The underlying installer can also be invoked directly.
+
 Run from the current worktree root:
 
 ```bash
@@ -174,7 +190,7 @@ artifacts. Do not accept agreements just to complete a smoke test.
 
 ```bash
 # From .kilo/skills/jetbrains-sandbox/script, not the repository root:
-bun test ./desktop.test.ts ./mcp.test.ts
+bun test ./setup.test.ts ./desktop.test.ts ./mcp.test.ts
 ```
 
 Before handing off a running sandbox, verify the container's non-loopback viewer address
