@@ -10,6 +10,7 @@
     "kilocode.openai": 10,
     "kilocode.marketplace": 10,
     "kilocode.skill": 10,
+    "kilocode.tool-chart": 10,
     "kilocode.tool-write": 10,
     "kilocode.commit-message": 10,
     "kilocode.review": 10,

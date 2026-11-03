@@ -11,6 +11,7 @@ import { KiloProviderUsagePlugin } from "./provider-usage"
 import { KiloOpenAIPlugin } from "./openai"
 import { KiloMarketplacePlugin } from "./marketplace"
 import { KiloSkillPlugin } from "./skill"
+import { KiloChartToolPlugin } from "./tool-chart"
 import { KiloWriteToolPlugin } from "./tool-write"
 import { KiloReview } from "./review"
 
@@ -36,6 +37,8 @@ export const KiloPlugins = [
   KiloOpenAIPlugin,
   KiloMarketplacePlugin,
   KiloSkillPlugin,
+  // Serves the chart tool to the VS Code client, which owns the chart renderer.
+  KiloChartToolPlugin,
   KiloWriteToolPlugin,
   KiloCommitMessagePlugin,
   // The Kilo review command replaces the built-in `review`. kilo_port(review:efc710228c1f)
