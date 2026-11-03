@@ -73,13 +73,14 @@ internal class HostedWorkspaceDialog(
 
     override fun doOKAction() {
         val selected = if (withWorkspace) selectedProfileID() else ""
+        val chosenModel = chosen.text.trim()
         result = HostedCreatePlan(
             prompt = prompt.text.trim(),
             branch = branch.text.trim().takeIf { withWorkspace && it.isNotBlank() },
             profileID = selected,
             agent = mode.text.trim(),
-            model = chosen.text.trim(),
-            variant = variant,
+            model = chosenModel,
+            variant = variant.takeIf { chosenModel == model },
         )
         super.doOKAction()
     }

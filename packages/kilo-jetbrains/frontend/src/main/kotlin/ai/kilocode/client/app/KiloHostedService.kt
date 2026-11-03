@@ -294,6 +294,8 @@ class KiloHostedService internal constructor(
             } catch (e: Exception) {
                 if (run != generation) return@launch
                 _state.update { it.copy(loading = false, error = e.message ?: "Cloud workspaces unavailable") }
+            } finally {
+                if (run == generation) drain()
             }
         }
     }

@@ -4,6 +4,7 @@ import ai.kilocode.client.KiloNotifications
 import ai.kilocode.client.app.KiloHostedService
 import ai.kilocode.client.app.KiloSessionService
 import ai.kilocode.client.app.KiloAppService
+import ai.kilocode.client.app.KiloWorkspaceService
 import ai.kilocode.client.agentManager.WorkspaceSessionEditorPanel
 import ai.kilocode.client.agentManager.WorkspaceSessionHeader
 import ai.kilocode.client.agentManager.worktree.WorktreeEditorMatchers
@@ -321,7 +322,10 @@ class HostedWorkspaceEditorPanel @RequiresEdt constructor(
 
     @RequiresEdt
     private fun newHostedSession() {
-        val sel = hostedSelection(service<KiloAppService>()) ?: run {
+        val sel = hostedSelection(
+            service<KiloAppService>(),
+            service<KiloWorkspaceService>().workspace(project.basePath.orEmpty()).state.value.providers,
+        ) ?: run {
             KiloNotifications.error(project, KiloBundle.message("hosted.workspace.create.noModel"))
             return
         }
