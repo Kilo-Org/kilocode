@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test"
-import { resolve } from "node:path"
+import { basename, dirname, resolve } from "node:path"
 import { assertMutablePath, MESSAGE } from "../src/agent-manager/protection"
 
 const workspace = "/workspace"
@@ -28,9 +28,10 @@ describe("mutation tool targets", () => {
     expect(mutationTargets("write", { path: ".kilo2/agent-manager.json" }, workspace)).toEqual([
       resolve(workspace, ".kilo2/agent-manager.json"),
     ])
-    expect(mutationTargets("write", { path: "~/.kilo2/agent-manager.json" }, workspace)[0]).toEndWith(
-      resolve("/", ".kilo2", "agent-manager.json"),
-    )
+    const homeTarget = mutationTargets("write", { path: "~/.kilo2/agent-manager.json" }, workspace)[0]!
+    expect(basename(homeTarget)).toBe("agent-manager.json")
+    expect(basename(dirname(homeTarget))).toBe(".kilo2")
+    expect(homeTarget.startsWith(resolve(workspace))).toBe(false)
     expect(mutationTargets("edit", { path: "/workspace/.kilo/agent-manager.json" }, workspace)).toEqual([
       resolve(workspace, "/workspace/.kilo/agent-manager.json"),
     ])
