@@ -1,11 +1,15 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test"
 import * as vscode from "vscode"
+import { canonicalizePath } from "../src/agent-manager/project/paths"
 import type { Manager } from "../src/server"
 import { BrowserAutomationService } from "../src/services/browser-automation/browser-automation-service"
 
 // The service talks to the v2 server over HTTP, so this test serves the two MCP routes it uses and records the calls.
 // A fake server object is closer to production than a mocked client and still needs no running Kilo server.
 const NAME = "kilo-playwright"
+
+/** The service canonicalizes workspace paths, which resolves a drive letter and separators on Windows. */
+const dir = (value: string) => canonicalizePath(vscode.Uri.file(value).fsPath)
 
 type Recorded = { method: string; server: string; directory: string; command?: string[] }
 
@@ -108,12 +112,12 @@ describe("Playwright MCP lifecycle", () => {
     folders(["/repo", "/second"])
     await service.syncWithSettings()
     expect(recorded.map((item) => [item.method, item.directory])).toEqual([
-      ["add", "/repo"],
-      ["add", "/second"],
+      ["add", dir("/repo")],
+      ["add", dir("/second")],
     ])
     expect(recorded[0]!.server).toBe(NAME)
     expect(recorded[0]!.command?.slice(0, 2)).toEqual(["npx", "@playwright/mcp@latest"])
-    expect([...active].sort()).toEqual(["/repo", "/second"])
+    expect([...active].sort()).toEqual([dir("/repo"), dir("/second")].sort())
   })
 
   test("reconciles folders without re-registering retained directories", async () => {
@@ -122,12 +126,12 @@ describe("Playwright MCP lifecycle", () => {
     folders(["/repo", "/new"])
     await service.syncWithSettings()
     expect(recorded.map((item) => [item.method, item.directory])).toEqual([
-      ["add", "/repo"],
-      ["add", "/old"],
-      ["remove", "/old"],
-      ["add", "/new"],
+      ["add", dir("/repo")],
+      ["add", dir("/old")],
+      ["remove", dir("/old")],
+      ["add", dir("/new")],
     ])
-    expect([...active].sort()).toEqual(["/new", "/repo"])
+    expect([...active].sort()).toEqual([dir("/new"), dir("/repo")].sort())
   })
 
   test("a failed startup is recorded and the next sync retries it", async () => {
@@ -137,7 +141,7 @@ describe("Playwright MCP lifecycle", () => {
     startup = false
     await service.syncWithSettings()
     expect(recorded.length).toBe(2)
-    expect([...active]).toEqual(["/repo"])
+    expect([...active]).toEqual([dir("/repo")])
   })
 
   test("disabling removes the registration", async () => {
@@ -159,7 +163,7 @@ describe("Playwright MCP lifecycle", () => {
     active.clear()
     await service.started()
     expect(recorded.map((item) => item.method)).toEqual(["add", "add"])
-    expect([...active]).toEqual(["/repo"])
+    expect([...active]).toEqual([dir("/repo")])
   })
 
   test("a settings change starts one reconcile, and dispose stops it", async () => {
