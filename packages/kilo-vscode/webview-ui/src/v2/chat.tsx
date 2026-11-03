@@ -9,6 +9,7 @@ import { useLanguage } from "../context/language"
 import { getVSCodeAPI } from "../context/vscode"
 import { useV2 } from "./client"
 import { childTools, createChildSessions } from "./child-session"
+import { createGoal, GoalAction, GoalStatus } from "./goal"
 import { useDisplaySettings } from "./display-settings"
 import { SessionList } from "./history"
 import { TaskHeader } from "../components/chat/TaskHeader"
@@ -164,6 +165,7 @@ export function Chat() {
     if (name === "cyclePreviousAgentMode") selection.cycleAgent(-1)
   })
   const working = createWorking(session)
+  const goal = createGoal(session)
   let scrollToBottom: (() => void) | undefined
   // Counts the in-flight first message too, so the dock reserves the same row on the very first send, as on main.
   // A memo, so the actions row rebuilds only when this flips.
@@ -206,6 +208,19 @@ export function Chat() {
     setSession(id)
     return v2.data.session
       .prompt({ sessionID: id, text, gate: selection.gate(id) })
+      .then(() => true)
+      .catch((err: unknown) => {
+        v2.report(err)
+        return false
+      })
+  }
+
+  const sendCommand = (name: string, text: string) => {
+    const id = session() ?? selection.create()
+    setSession(id)
+    // A new session is created in the background; wait for it before the command targets the server directly.
+    return Promise.resolve(selection.ready(id))
+      .then(() => v2.api.session.command({ sessionID: id, name, text }))
       .then(() => true)
       .catch((err: unknown) => {
         v2.report(err)
@@ -287,6 +302,7 @@ export function Chat() {
               retry={working.retry()}
               onCancel={stop}
               onScrollToBottom={() => scrollToBottom?.()}
+              trail={goal() ? <GoalStatus goal={goal()} /> : undefined}
             />
             <PromptInput
               session={session()}
@@ -296,8 +312,18 @@ export function Chat() {
               questioning={questioning()}
               onSend={send}
               onStop={stop}
+              onCommand={sendCommand}
               selectors={<Selectors selection={selection} blocked={selectorsBlocked()} />}
-              actions={<AutoApproveAction enabled={autoApprove.enabled()} onToggle={autoApprove.toggle} />}
+              actions={
+                <>
+                  <GoalAction
+                    goal={goal()}
+                    disabled={v2.connection.status() !== "connected" || !!v2.handshake()}
+                    onCommand={(text) => void sendCommand("goal", text)}
+                  />
+                  <AutoApproveAction enabled={autoApprove.enabled()} onToggle={autoApprove.toggle} />
+                </>
+              }
             />
           </div>
         </div>

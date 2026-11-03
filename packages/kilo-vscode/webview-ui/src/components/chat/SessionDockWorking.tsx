@@ -19,6 +19,8 @@ type SessionDockProps = ComponentProps<typeof WorkingIndicator> & {
   hasActions?: boolean
   /** True while a permission or question owns the row. */
   blocked: boolean
+  /** Trailing content of the working row, such as the goal badge. */
+  trail?: JSX.Element
 }
 
 export const SessionDock: Component<SessionDockProps> = (props) => {
@@ -29,7 +31,7 @@ export const SessionDock: Component<SessionDockProps> = (props) => {
   return (
     <div class="session-dock" data-component="session-dock" data-active={active() ? "" : undefined}>
       <div class="session-dock-state" data-active={working() ? "" : undefined} aria-hidden={!working()}>
-        <div class="session-working">
+        <div class="session-working" data-goal={props.trail ? "" : undefined}>
           <WorkingIndicator
             status={props.status}
             submitting={props.submitting}
@@ -39,7 +41,7 @@ export const SessionDock: Component<SessionDockProps> = (props) => {
             onCancel={props.onCancel}
             onScrollToBottom={props.onScrollToBottom}
           />
-          <div class="session-working-trail" />
+          <div class="session-working-trail">{props.trail}</div>
         </div>
       </div>
       <div class="session-dock-state" data-active={actions() ? "" : undefined} aria-hidden={!actions()}>

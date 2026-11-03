@@ -12,6 +12,7 @@ import { useVSCode } from "../context/vscode"
 import { isEnterKeyCommitNotIme } from "../utils/ime-enter"
 import { message, useV2 } from "./client"
 import { cleanEnhancedPrompt, enhancePromptRequest, normalizeEnhancePromptErrorMessage } from "./enhance-prompt"
+import { GoalHeader } from "./goal"
 import { insertSpacedText } from "./prompt-speech"
 
 export function PromptInput(props: {
@@ -26,6 +27,8 @@ export function PromptInput(props: {
   questioning?: boolean
   onSend: (text: string) => Promise<boolean>
   onStop: () => void
+  /** Send a server command, such as the goal controls, instead of a model prompt. */
+  onCommand?: (name: string, text: string) => Promise<boolean>
   /** Agent, model and variant controls, before the actions as in main's PromptInput. */
   selectors?: JSX.Element
   /** Prompt toolbar actions (auto-approve, and later indexing, sandbox and enhance as on main). */
@@ -35,6 +38,8 @@ export function PromptInput(props: {
   const language = useLanguage()
   const [text, setText] = createSignal("")
   const [sending, setSending] = createSignal(false)
+  // Composing a goal: the draft is the objective and Send starts the goal instead of prompting the model.
+  const [goalMode, setGoalMode] = createSignal(false)
   const [enhancing, setEnhancing] = createSignal(false)
   // The draft Enhance replaced, so Ctrl/Cmd+Z restores it once.
   let preEnhance: string | null = null
@@ -56,6 +61,7 @@ export function PromptInput(props: {
     !props.disabled && !sending() && (speech.state() === "recording" || (!speech.active() && !!text().trim()))
   // The label is the pending-permission hint while blocked, otherwise Send.
   const sendLabel = () => {
+    if (goalMode()) return language.t("prompt.goal.start")
     if (props.blocked) return language.t("prompt.action.send.blocked")
     if (speech.state() === "recording") return language.t("prompt.action.send.recording")
     return language.t("prompt.action.send")
@@ -112,9 +118,37 @@ export function PromptInput(props: {
     })
   }
 
+  const sendGoal = (objective: string) => {
+    const command = props.onCommand
+    const value = objective.trim()
+    if (!command || !value) return
+    setText("")
+    setSending(true)
+    void command("goal", value)
+      .then((ok) => {
+        if (ok) {
+          preEnhance = null
+          setGoalMode(false)
+        } else if (!text().trim()) setText(objective)
+      })
+      .catch((err: unknown) => {
+        v2.report(err)
+        if (!text().trim()) setText(objective)
+      })
+      .finally(() => setSending(false))
+  }
+
   const submit = () => {
     if (!canSend()) return
     const draft = text()
+    if (goalMode()) return sendGoal(draft)
+    // `/goal` alone opens the goal composer; `/goal <objective>` starts it at once.
+    if (draft.trim() === "/goal") {
+      setText("")
+      setGoalMode(true)
+      return
+    }
+    if (draft.trim().startsWith("/goal ") && props.onCommand) return sendGoal(draft.trim().slice(6))
     // Clear the draft as soon as it is sent, so the composer is empty while the prompt is admitted. Restore it only
     // if the send fails and the user has not typed something new.
     setText("")
@@ -222,6 +256,9 @@ export function PromptInput(props: {
 
   return (
     <div class="prompt-input-container">
+      <Show when={goalMode()}>
+        <GoalHeader onCancel={() => setGoalMode(false)} />
+      </Show>
       <div class="prompt-input-wrapper">
         <div class="prompt-input-ghost-wrapper">
           <div class="prompt-input-highlight-overlay" ref={(el) => (refs.overlay = el)} aria-hidden="true" dir="auto">
@@ -235,9 +272,11 @@ export function PromptInput(props: {
             class="prompt-input"
             classList={{ "prompt-input--disabled": props.disabled }}
             placeholder={
-              v2.connection.status() === "connected"
-                ? language.t("prompt.placeholder.plain")
-                : language.t("prompt.placeholder.connecting")
+              goalMode()
+                ? language.t("prompt.goal.set")
+                : v2.connection.status() === "connected"
+                  ? language.t("prompt.placeholder.plain")
+                  : language.t("prompt.placeholder.connecting")
             }
             aria-label={language.t("prompt.placeholder.plain")}
             value={text()}

@@ -146,6 +146,10 @@ export function createSelection(session: Accessor<string | undefined>) {
     gate(id: string) {
       return commits.get(id)
     },
+    /** The pending creation of a session, for a caller that must target the server directly. */
+    ready(id: string) {
+      return creates.get(id)
+    },
   }
 }
 
