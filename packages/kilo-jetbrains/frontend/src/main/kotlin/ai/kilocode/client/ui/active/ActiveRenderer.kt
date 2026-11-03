@@ -252,9 +252,9 @@ internal class ActiveRenderer(
         pill.border = JBUI.Borders.empty(UiStyle.Gap.SM)
         // Keep the row close to the selection edge. The frame's own cap already provides the outer
         // separation; this is only the content inset inside it, shared by lists and trees.
-        (row.layout as BorderLayout).hgap = if (menu == null) UiStyle.Gap.md() else 0
+        (row.layout as BorderLayout).hgap = if (menu == null) iconGap else 0
         row.border = JBUI.Borders.empty(UiStyle.Gap.MD, UiStyle.Gap.SM, UiStyle.Gap.MD, UiStyle.Gap.SM)
-        mark.border = if (menu == null) JBUI.Borders.empty() else JBUI.Borders.emptyRight(UiStyle.Gap.SM)
+        mark.border = if (menu == null) JBUI.Borders.empty() else JBUI.Borders.emptyRight(activeIconGap())
     }
 
     override fun updateUI() {

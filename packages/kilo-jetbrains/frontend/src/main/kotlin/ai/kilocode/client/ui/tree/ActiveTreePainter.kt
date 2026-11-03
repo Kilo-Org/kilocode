@@ -13,23 +13,24 @@ import java.awt.Graphics
  * added per child level.
  */
 object ActiveTreePainter : Control.Painter {
+    private fun contentInset() = JBUI.scale(UiStyle.Gap.SM)
+
+    private fun iconGap() = JBUI.scale(maxOf(JBUI.getInt("ActionsList.icon.gap", 0), UiStyle.Gap.SM))
+
     /** One compact step for every level above the root, relative to the tree content edge. */
     fun step(depth: Int): Int =
         if (depth <= 0) 0
         else Control.Painter.COMPACT.getRendererOffset(DefaultControl(), depth, true) -
             Control.Painter.COMPACT.getRendererOffset(DefaultControl(), 1, true)
 
-    override fun getRendererOffset(control: Control, depth: Int, leaf: Boolean): Int {
-        val gap = maxOf(JBUI.getInt("ActionsList.icon.gap", 0), UiStyle.Gap.SM)
-        return when {
-            depth <= 0 -> 0
-            leaf -> step(depth)
-            else -> step(depth) + control.width + gap
-        }
+    override fun getRendererOffset(control: Control, depth: Int, leaf: Boolean): Int = when {
+        depth <= 0 -> 0
+        leaf -> step(depth)
+        else -> step(depth) + control.width + iconGap()
     }
 
     override fun getControlOffset(control: Control, depth: Int, leaf: Boolean): Int =
-        if (depth <= 0 || leaf) -1 else step(depth) + UiStyle.Gap.SM
+        if (depth <= 0 || leaf) -1 else step(depth) + contentInset()
 
     override fun paint(
         c: Component, g: Graphics, x: Int, y: Int, width: Int, height: Int,

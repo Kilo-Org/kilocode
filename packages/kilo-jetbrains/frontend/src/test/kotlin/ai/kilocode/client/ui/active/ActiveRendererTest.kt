@@ -196,6 +196,66 @@ class ActiveRendererTest : BasePlatformTestCase() {
         assertEquals("group", tree.selected()?.key)
     }
 
+    fun `test tree leaf icon inset and gap match disclosure at zoom`() {
+        val scale = com.intellij.ui.scale.JBUIScale.scale(1f)
+        val previous = javax.swing.UIManager.get("ActionsList.icon.gap")
+        val menu = ActiveMenu(DataKey.create<String>("renderer.align"), DefaultActionGroup(), { it.key })
+        val group = object : ActiveItem {
+            override val key = "group"
+            override val title = "Local worktrees"
+        }
+        val tree = ActiveTree("", menu = menu)
+        tree.update(listOf(ActiveTreeNode(group, listOf(ActiveTreeNode(row)))))
+        val view = tree.preferredFocus() as ActiveTreeView
+        val renderer = ActiveRenderer(menu = menu)
+        fun render(entry: ActiveEntry): ActiveRenderer {
+            renderer.render(view.state(entry, false, false, view.regions.cell(entry).width))
+            renderer.setSize(view.regions.cell(entry).width, renderer.preferredSize.height)
+            activeLayout(renderer)
+            return renderer
+        }
+        try {
+            for (factor in listOf(1f, 2f)) {
+                com.intellij.ui.scale.JBUIScale.setUserScaleFactorForTest(scale * factor)
+                javax.swing.UIManager.put("ActionsList.icon.gap", 6)
+                view.updateUI()
+                view.setUI(com.intellij.ui.tree.ui.DefaultTreeUI())
+                view.setSize(JBUI.scale(400), JBUI.scale(200))
+                view.validate()
+
+                val groupEntry = view.hierarchy.entries.getValue(group.key)
+                val leafEntry = view.hierarchy.entries.getValue(row.key)
+                val groupFrame = view.regions.frame(groupEntry) ?: error("Missing group frame")
+                val arrow = view.regions.control(groupEntry) ?: error("Missing disclosure")
+                val leafFrame = view.regions.frame(leafEntry) ?: error("Missing leaf frame")
+                val inset = JBUI.scale(ai.kilocode.client.ui.UiStyle.Gap.SM)
+                assertEquals("Disclosure uses the standard content inset", inset, arrow.x - groupFrame.x)
+                assertEquals("Leaf cell starts at its selection edge", leafFrame.x, view.regions.cell(leafEntry).x)
+
+                val groupCell = view.regions.cell(groupEntry)
+                val leafCell = view.regions.cell(leafEntry)
+                val groupBody = render(groupEntry)
+                val groupTitle = content(groupBody).filterIsInstance<ai.kilocode.client.ui.FadeText>().first()
+                val groupTitleX = SwingUtilities.convertPoint(groupTitle, 0, 0, groupBody).x +
+                    (groupCell.x - groupFrame.x)
+                val groupGap = groupTitleX - (arrow.x - groupFrame.x + arrow.width)
+                val leafBody = render(leafEntry)
+                val leafTitle = content(leafBody).filterIsInstance<ai.kilocode.client.ui.FadeText>().first()
+                val leafMark = content(leafBody).filterIsInstance<JBLabel>().single { it.icon === row.icon }
+                val leafMarkX = SwingUtilities.convertPoint(leafMark, 0, 0, leafBody).x +
+                    (leafCell.x - leafFrame.x)
+                val leafGap = SwingUtilities.convertPoint(leafTitle, 0, 0, leafBody).x +
+                    (leafCell.x - leafFrame.x) - (leafMarkX + leafMark.width)
+                assertEquals("Leaf icon uses the disclosure content inset", inset, leafMarkX)
+                assertEquals("Leaf icon-text gap matches disclosure-text gap", groupGap, leafGap)
+            }
+        } finally {
+            com.intellij.ui.scale.JBUIScale.setUserScaleFactorForTest(scale)
+            javax.swing.UIManager.put("ActionsList.icon.gap", previous)
+            view.updateUI()
+        }
+    }
+
     fun `test tree icons and disclosure use list lead and native levels across theme and zoom`() {
         val scale = com.intellij.ui.scale.JBUIScale.scale(1f)
         val keys = listOf("ActionsList.cellBorderInsets", "Popup.Selection.innerInsets", "Popup.Selection.leftRightInset",
