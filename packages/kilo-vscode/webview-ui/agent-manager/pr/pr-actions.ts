@@ -54,7 +54,7 @@ function send<T>(
     })
     .slice(0, SEND_LIMIT)
   if (batch.length === 0) return
-  sendReviewComments(batch.map(payload), terminal)
+  if (!sendReviewComments(batch.map(payload), terminal)) return
   patchCommentState(worktree, (prev) => {
     const sent = { ...prev.sent }
     for (const item of batch) sent[key(item)] = true
@@ -70,6 +70,16 @@ export function sendThreads(
   terminal?: string,
 ): void {
   send(worktree, comments, ids, state, (item) => item.threadId, prPayload, terminal)
+}
+
+/**
+ * Hands one PR comment to the prompt or a terminal and marks it sent only when
+ * a consumer took the batch.
+ */
+export function sendPRComment(comment: PRComment, terminal: string | undefined, markSent: () => void): boolean {
+  if (!sendReviewComments([prPayload(comment)], terminal)) return false
+  markSent()
+  return true
 }
 
 export function sendConversation(

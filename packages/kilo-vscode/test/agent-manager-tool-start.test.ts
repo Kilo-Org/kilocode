@@ -1,9 +1,20 @@
 import { afterEach, describe, expect, it, mock } from "bun:test"
+import * as vscode from "vscode"
 import type { OpenCodeClient, SessionInfo } from "@opencode/client"
 import { SessionID } from "@opencode/schema/session-id"
 import { parseToolRequest, startFromTool, type ToolDeps, type ToolRequest } from "../src/agent-manager/tool-start"
 import type { CreateWorktreeResult } from "../src/agent-manager/WorktreeManager"
 import { handleToolEvent } from "../src/agent-manager/tool-project"
+import { createSessionInWorktree } from "../src/agent-manager/provider-session"
+import { AgentManagerProvider } from "../src/agent-manager/AgentManagerProvider"
+import type { AgentManagerConnection } from "../src/agent-manager/connection"
+import type { Host, PanelContext } from "../src/agent-manager/host"
+
+const window = vscode.window as unknown as Record<string, unknown>
+window.onDidCloseTerminal ??= () => ({ dispose: () => undefined })
+window.onDidChangeActiveTerminal ??= () => ({ dispose: () => undefined })
+window.createTerminal ??= () => ({ show: () => undefined, dispose: () => undefined, exitStatus: undefined })
+window.createOutputChannel ??= () => ({ appendLine: () => undefined, show: () => undefined, dispose: () => undefined })
 
 const platform = Object.getOwnPropertyDescriptor(process, "platform")
 
@@ -426,6 +437,7 @@ describe("agent manager tool start", () => {
       { sessionID: "ses-parent" },
       expect.any(Object),
       expect.any(Object),
+      { providerID: "test", modelID: "reasoning/model", variant: "low" },
       undefined,
     )
     expect(c.registerWorktreeSession).toHaveBeenCalledWith("ses-wt", "/repo/.kilo/worktrees/wt-1")
@@ -655,6 +667,7 @@ describe("agent manager tool start", () => {
       expect.any(Object),
       expect.any(Object),
       expect.any(Object),
+      undefined,
       "candidate",
     )
   })
@@ -680,5 +693,145 @@ describe("agent manager tool start", () => {
 
     expect(client.session.create).not.toHaveBeenCalled()
     expect(c.error).toHaveBeenCalled()
+  })
+})
+
+describe("agent manager worktree session creation", () => {
+  it("applies the resolved model, variant, and agent to session.create", async () => {
+    const create = mock(async () => session("ses-wt"))
+    const client = {
+      mcp: { list: mock(async () => []) },
+      session: { create },
+    } as unknown as OpenCodeClient
+    const posts: unknown[] = []
+
+    const created = await createSessionInWorktree(
+      {
+        connection: { client: async () => client } as never,
+        postToWebview: (message) => posts.push(message),
+        log: () => {},
+      },
+      "/repo/.kilo/worktrees/wt-1",
+      "kilo/test",
+      "wt-1",
+      undefined,
+      { providerID: "test", modelID: "reasoning/model", variant: "high" },
+      "candidate",
+    )
+
+    expect(created?.id).toBe("ses-wt")
+    expect(create).toHaveBeenCalledWith({
+      location: { directory: "/repo/.kilo/worktrees/wt-1" },
+      metadata: { kilocode: { platform: "agent-manager" } },
+      agent: "candidate",
+      model: { id: "reasoning/model", providerID: "test", variant: "high" },
+    })
+    expect(posts).toContainEqual(expect.objectContaining({ type: "agentManager.worktreeSetup", status: "starting" }))
+  })
+})
+
+function fakePanel(): PanelContext {
+  return {
+    active: true,
+    visible: true,
+    postMessage: () => undefined,
+    waitForReady: async () => undefined,
+    waitForActive: async () => undefined,
+    reveal: () => undefined,
+    onDidChangeVisibility: () => ({ dispose: () => undefined }),
+    onDidDispose: () => ({ dispose: () => undefined }),
+    dispose: () => undefined,
+  }
+}
+
+describe("agent manager provider tool routing", () => {
+  it("passes the tool model, variant, and agent through startToolRequest to session.create", async () => {
+    const create = mock(async () => session("ses-wt"))
+    const client = {
+      config: { get: mock(async () => ({})) },
+      agent: { list: mock(async () => []) },
+      mcp: { list: mock(async () => []) },
+      session: { create, prompt: mock(async () => undefined) },
+    } as unknown as OpenCodeClient
+    const connection = {
+      client: async () => client,
+      current: () => client,
+      state: () => "connected",
+      onState: () => () => undefined,
+      onEvent: () => () => undefined,
+      server: () => undefined,
+      view: () => undefined,
+      started: () => undefined,
+      stopped: () => undefined,
+      dispose: () => undefined,
+    } as unknown as AgentManagerConnection
+    const output = { appendLine: () => undefined, show: () => undefined, dispose: () => undefined }
+    const hostBase = {
+      createOutput: () => output,
+      readProjects: () => undefined,
+      writeProjects: async () => undefined,
+      autoBranchNaming: () => ({ enabled: false, prefix: "" }),
+      extensionKeybindings: () => [],
+      onDidChangeKeybindings: () => ({ dispose: () => undefined }),
+      dirtyFiles: () => [],
+      isTrusted: () => true,
+      openDocument: async () => undefined,
+      showError: () => undefined,
+      notify: () => undefined,
+      openFile: () => undefined,
+      refreshGit: () => undefined,
+      dispose: () => undefined,
+      workspacePath: () => undefined,
+      onDidChangeWorkspaceFolders: () => ({ dispose: () => undefined }),
+    }
+    const host = new Proxy(hostBase, {
+      get(target, property) {
+        if (property in target) return target[property as keyof typeof target]
+        return () => ({ dispose: () => undefined })
+      },
+    }) as unknown as Host
+    const panel = fakePanel()
+    const provider = new AgentManagerProvider(host, connection, {
+      open: () => panel,
+      restore: () => panel,
+    } as never)
+
+    provider.getRoot = () => "/repo"
+    provider.getStateManager = () => ({ addSession: mock(() => {}) }) as never
+    provider.createWorktreeOnDisk = async () => ({
+      worktree: { id: "wt-1" } as never,
+      result: result("/repo/.kilo/worktrees/wt-1"),
+    })
+    provider.runSetupScriptForWorktree = async () => undefined
+    provider.getSetupScriptService = () => undefined
+    provider.pushState = () => undefined
+    provider.postToWebview = () => undefined
+    provider.registerWorktreeSession = () => undefined
+    provider.notifyWorktreeReady = () => undefined
+
+    try {
+      await provider.startToolRequest({
+        requestID: "am-provider",
+        mode: "worktree",
+        tasks: [
+          {
+            prompt: "Fix",
+            branchName: "fix/one",
+            model: { providerID: "test", modelID: "reasoning/model" },
+            variant: "high",
+            agent: "candidate",
+          },
+        ],
+      })
+    } finally {
+      await provider.dispose()
+    }
+
+    expect(create).toHaveBeenCalledWith({
+      location: { directory: "/repo/.kilo/worktrees/wt-1" },
+      metadata: { kilocode: { platform: "agent-manager" } },
+      agent: "candidate",
+      model: { id: "reasoning/model", providerID: "test", variant: "high" },
+    })
   })
 })

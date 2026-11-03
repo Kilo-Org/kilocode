@@ -3,6 +3,7 @@ import { Button } from "@kilocode/kilo-ui/button"
 import { Popover } from "@kilocode/kilo-ui/popover"
 import { useLanguage } from "../../src/context/language"
 import { useBridge } from "../v2/vscode"
+import { useV2Optional } from "../../src/v2/client"
 import { KiloLogo, Welcome } from "../../src/v2/welcome"
 import { IntroGraph } from "./IntroGraph"
 import "./intro.css"
@@ -29,7 +30,6 @@ export function createIntro(opts: {
   hints?: () => JSX.Element
 }) {
   const vscode = useBridge()
-  const { t } = useLanguage()
   const [dismissed, setDismissed] = createSignal(
     (window as { KILO_AGENT_MANAGER_INTRO_DISMISSED?: boolean }).KILO_AGENT_MANAGER_INTRO_DISMISSED === true,
   )
@@ -49,6 +49,19 @@ export function createIntro(opts: {
       opts.focus()
     },
   }
+  /** The dismissed state: the shared welcome, the shortcut hints and the way back to the intro. */
+  const fallback = (): JSX.Element => (
+    <Welcome
+      onSelectSession={(id) => opts.onSelectSession?.(id)}
+      onShowHistory={() => opts.onShowHistory?.()}
+      footer={
+        <>
+          {opts.hints?.()}
+          <Reopen onClick={state.open} />
+        </>
+      }
+    />
+  )
   return {
     ...state,
     render: (): JSX.Element => (
@@ -56,25 +69,12 @@ export function createIntro(opts: {
         base={opts.base()}
         git={opts.git()}
         intro={state}
+        fallback={fallback}
         onCreateWorktree={opts.onCreateWorktree}
         onDismiss={state.dismiss}
       />
     ),
-    /** The dismissed state: the shared welcome, the shortcut hints and the way back to the intro. */
-    fallback: (): JSX.Element => (
-      <div class="am-intro-fallback">
-        <Welcome
-          onSelectSession={(id) => opts.onSelectSession?.(id)}
-          onShowHistory={() => opts.onShowHistory?.()}
-        />
-        <div class="am-intro-fallback-footer">
-          {opts.hints?.()}
-          <Button variant="ghost" size="small" icon="help" data-action="agent-manager-intro" onClick={state.open}>
-            {t("agentManager.intro.reopen")}
-          </Button>
-        </div>
-      </div>
-    ),
+    fallback,
   }
 }
 
@@ -84,21 +84,28 @@ interface IntroState {
   dismiss: () => void
 }
 
-function AgentManagerIntro(props: IntroProps & { intro: IntroState }) {
-  const { t } = useLanguage()
+function AgentManagerIntro(props: IntroProps & { intro: IntroState; fallback: () => JSX.Element }) {
+  const scope = useV2Optional()
   return (
     <Show
       when={props.intro.visible()}
       fallback={
-        <div class="am-intro-dismissed">
-          <Button variant="ghost" size="small" icon="help" data-action="agent-manager-intro" onClick={props.intro.open}>
-            {t("agentManager.intro.reopen")}
-          </Button>
-        </div>
+        <Show when={scope} fallback={<Reopen onClick={props.intro.open} />}>
+          {props.fallback()}
+        </Show>
       }
     >
       <Introduction {...props} />
     </Show>
+  )
+}
+
+function Reopen(props: { onClick: () => void }) {
+  const { t } = useLanguage()
+  return (
+    <Button variant="ghost" size="small" icon="help" data-action="agent-manager-intro" onClick={() => props.onClick()}>
+      {t("agentManager.intro.reopen")}
+    </Button>
   )
 }
 

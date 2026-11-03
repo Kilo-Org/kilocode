@@ -52,6 +52,18 @@ export function createSelection(session: Accessor<string | undefined>) {
     const id = session()
     return id ? v2.data.session.get(id) : undefined
   }
+  // A new draft starts at the default selection instead of inheriting the agent and model of the previous tab or
+  // session. An existing session keeps the server value, so resetting the local draft is safe.
+  createEffect(
+    on(
+      session,
+      () => {
+        setDraftAgent(undefined)
+        setDraftModel(undefined)
+      },
+      { defer: true },
+    ),
+  )
   const agents = () =>
     (v2.data.location.agent.list() ?? []).filter((agent) => agent.mode !== "subagent" && !agent.hidden)
   const agent = () => {

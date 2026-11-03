@@ -24,6 +24,11 @@ import { TerminalSocket } from "./socket"
 import { registerTerminalOutput, unregisterTerminalOutput } from "./output"
 import { registerActivity } from "./activity"
 import type { Activity } from "../v2/activity"
+import {
+  APPEND_REVIEW_COMMENTS,
+  takeReviewCommentsForTerminal,
+  type AppendReviewCommentsDetail,
+} from "../../diff-viewer/review-annotations"
 
 interface Props {
   terminalId: string
@@ -275,6 +280,16 @@ export const TerminalTab: Component<Props> = (props) => {
         user = false
       })
     }
+    const appendReviewComments = (event: Event) => {
+      const text = takeReviewCommentsForTerminal(
+        (event as CustomEvent<AppendReviewCommentsDetail>).detail,
+        props.terminalId,
+      )
+      if (text === undefined) return
+      markUser()
+      term.paste(text)
+    }
+    window.addEventListener(APPEND_REVIEW_COMMENTS, appendReviewComments)
     const send = (data: string) => {
       const reply = replay.draining() && !user
       user = false
@@ -628,6 +643,7 @@ export const TerminalTab: Component<Props> = (props) => {
       if (deferred !== undefined) cancelAnimationFrame(deferred)
       document.removeEventListener("visibilitychange", onVisibilityChange)
       window.removeEventListener("focus", onWindowFocus)
+      window.removeEventListener(APPEND_REVIEW_COMMENTS, appendReviewComments)
       host.removeEventListener("focusin", onFocusIn)
       host.removeEventListener("focusout", onFocusOut)
       for (const event of ["input", "paste", "compositionend", "mousedown", "wheel"]) {

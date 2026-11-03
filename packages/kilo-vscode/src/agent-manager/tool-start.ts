@@ -65,6 +65,7 @@ export interface ToolDeps {
     source?: ToolSource,
     boot?: CreationBoot,
     timing?: Timing,
+    model?: { providerID: string; modelID: string; variant?: string },
     agent?: string,
   ) => Promise<SessionInfo | null>
   sessionMetadata: (client: OpenCodeClient, dir: string) => Promise<{ [key: string]: JsonValue }>
@@ -118,6 +119,12 @@ function versionedLabel(base: string | undefined, index: number, total: number):
   return base
 }
 
+// The plugin resolves the model and variant; the worktree and local paths must create the session with them.
+function sessionModel(task: ToolTask): { providerID: string; modelID: string; variant?: string } | undefined {
+  if (!task.model) return undefined
+  return task.variant ? { ...task.model, variant: task.variant } : task.model
+}
+
 async function prompt(client: OpenCodeClient, sid: string, task: ToolTask, source?: ToolSource) {
   const body = text(task)
   if (!body) return
@@ -158,12 +165,13 @@ async function local(
   }
   const target = wt?.path ?? root
   const metadata = await deps.sessionMetadata(client, target)
+  const selected = sessionModel(task)
   const session = await client.session.create(
     sessionCreateBody({
       directory: target,
       metadata,
       agent: task.agent,
-      ...(task.model ? { model: { ...task.model, ...(task.variant ? { variant: task.variant } : {}) } } : {}),
+      ...(selected ? { model: selected } : {}),
     }),
   )
   state.addSession(session.id, wt?.id ?? null)
@@ -215,6 +223,7 @@ async function worktree(
         source,
         boot,
         timing,
+        sessionModel(task),
         task.agent,
       )
     },

@@ -35,4 +35,12 @@ describe("parseSettingsTarget", () => {
   test("reads the first argument only", () => {
     expect(parseSettingsTarget([{ tab: "models" }, "agentBehaviour"])).toEqual({ tab: "models" })
   })
+
+  test("keeps the project a project-scoped tab opens for", () => {
+    expect(parseSettingsTarget([{ tab: "agentManager", projectId: "prj_1" }])).toEqual({
+      tab: "agentManager",
+      projectId: "prj_1",
+    })
+    expect(parseSettingsTarget([{ tab: "agentManager", projectId: " " }])).toEqual({ tab: "agentManager" })
+  })
 })

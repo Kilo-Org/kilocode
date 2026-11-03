@@ -116,10 +116,18 @@ export function activate(context: ExtensionContext) {
   context.subscriptions.push({ dispose: autocomplete.dispose })
   registerAutocompleteProvider(context, autocomplete)
   const view = chat({ context, server, directory, trackCostSession: alerts.track, diff: diffs })
-  const panel = settings({ context, server, directory, onReset: view.syncState })
   const agentHost = new VscodeHost(context, { server, directory })
   const agentPanel = createPanel({ context, server, directory, trackCostSession: alerts.track })
   const agentManager = new AgentManagerProvider(agentHost, connection, agentPanel)
+  // The Settings panel edits Agent Manager project settings through the provider's shared handler, so it is created
+  // after the provider and receives a lazy getter.
+  const panel = settings({
+    context,
+    server,
+    directory,
+    onReset: view.syncState,
+    agentManager: () => agentManager.settings,
+  })
   const agentAction = (action: string) => agentManager.postMessage({ type: "action", action })
   ensureCommandsSkipShell()
   // The cycle keybindings act on the focused composer: the Agent Manager panel when it is active, else the sidebar.

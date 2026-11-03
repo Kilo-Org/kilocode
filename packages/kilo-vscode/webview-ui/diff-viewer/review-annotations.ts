@@ -1,6 +1,6 @@
 import type { AnnotationSide, DiffLineAnnotation } from "@pierre/diffs"
 import type { ReviewCommentEntry, WorktreeFileDiff } from "../src/types/messages/agent-manager"
-import { extractLines, type ReviewComment } from "./review-comments"
+import { extractLines, formatReviewCommentsMarkdown, type ReviewComment } from "./review-comments"
 
 // The translation parameters of the kilo-ui i18n context, declared here so the host tests can load this module.
 type UiI18nParams = Record<string, string | number | boolean>
@@ -168,11 +168,36 @@ export interface AppendReviewCommentsDetail {
   comments: ReviewCommentEntry[]
   autoSend: boolean
   targetTerminalId?: string
+  /** Set by the consumer that took the batch, so exactly one consumer appends it. */
+  handled?: boolean
 }
 
-export function sendReviewComments(comments: ReviewCommentEntry[], activeTerminalId?: string): void {
+export function sendReviewComments(comments: ReviewCommentEntry[], activeTerminalId?: string): boolean {
   const detail: AppendReviewCommentsDetail = { comments, autoSend: true, targetTerminalId: activeTerminalId }
   window.dispatchEvent(new CustomEvent<AppendReviewCommentsDetail>(APPEND_REVIEW_COMMENTS, { detail }))
+  return detail.handled === true
+}
+
+/**
+ * Prompt composer side of the handoff. It takes only batches with no terminal
+ * target, so a targeted send never reaches the composer as well.
+ */
+export function takeReviewCommentsForPrompt(detail: AppendReviewCommentsDetail | undefined): string | undefined {
+  if (!detail || detail.handled || detail.targetTerminalId) return undefined
+  if (detail.comments.length === 0) return undefined
+  detail.handled = true
+  return formatReviewCommentsMarkdown(detail.comments)
+}
+
+/** Terminal side of the handoff. It takes only the batch addressed to `terminalId`. */
+export function takeReviewCommentsForTerminal(
+  detail: AppendReviewCommentsDetail | undefined,
+  terminalId: string,
+): string | undefined {
+  if (!detail || detail.handled || detail.targetTerminalId !== terminalId) return undefined
+  if (detail.comments.length === 0) return undefined
+  detail.handled = true
+  return `${formatReviewCommentsMarkdown(detail.comments)}\n`
 }
 
 export function buildFileAnnotations(
@@ -478,7 +503,7 @@ function buildSavedAnnotation(meta: AnnotationMeta, handlers: AnnotationHandlers
 
   actions.appendChild(
     makeActionButton(handlers.labels.sendToChat, makeIcon("M1 1l14 7-14 7V9l10-1L1 7z"), () => {
-      sendReviewComments([comment], handlers.activeTerminalId())
+      if (!sendReviewComments([comment], handlers.activeTerminalId())) return
       handlers.deleteComment(comment.id)
     }),
   )

@@ -1,6 +1,6 @@
 // main's sidebar empty state (components/chat/WelcomeEmptyState.tsx) on v2 sessions.
 import { Icon } from "@kilocode/kilo-ui/icon"
-import { createSignal, For, Show } from "solid-js"
+import { createSignal, For, Show, type JSX } from "solid-js"
 import { AnimatedKiloLogo, reduced } from "../components/brand/AnimatedKiloLogo"
 import { useLanguage } from "../context/language"
 import { formatRelativeDate } from "../utils/date"
@@ -44,7 +44,12 @@ export const KiloLogo = () => {
   )
 }
 
-export function Welcome(props: { onSelectSession: (id: string) => void; onShowHistory: () => void }) {
+export function Welcome(props: {
+  onSelectSession: (id: string) => void
+  onShowHistory: () => void
+  /** Extra content below the recent sessions, for example the Agent Manager shortcut hints and its reopen action. */
+  footer?: JSX.Element
+}) {
   const v2 = useV2()
   const language = useLanguage()
   const recent = () => v2.data.session.list().filter((item) => !item.parentID).slice(0, RECENT)
@@ -72,6 +77,7 @@ export function Welcome(props: { onSelectSession: (id: string) => void; onShowHi
           </button>
         </div>
       </Show>
+      {props.footer}
     </div>
   )
 }

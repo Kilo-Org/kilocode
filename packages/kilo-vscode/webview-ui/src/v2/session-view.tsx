@@ -21,6 +21,8 @@ import { createWorking } from "./working"
 
 export function SessionView(props: {
   session: string | undefined
+  /** Draft identity for the composer when the session is not enough, for example a pending Agent Manager tab. */
+  draftKey?: string
   /** Receives the session ID a first prompt creates, and undefined when the open session is gone. */
   onSession: (id: string | undefined) => void
   actions: ToolActions
@@ -45,6 +47,9 @@ export function SessionView(props: {
 }) {
   const v2 = useV2()
   const session = () => props.session
+  // Each session and pending tab has its own composer draft. The keyed mount below discards the previous composer
+  // state and the draft store restores the text of the target one.
+  const draftKey = () => props.draftKey ?? session() ?? "new"
 
   // Subagent cards read the child session's tools from the same store as the open session. Load a child's message
   // history when its card first asks for it; later tool events update the loaded messages in place. Leaving a session
@@ -160,8 +165,9 @@ export function SessionView(props: {
 
   const send = (text: string) => {
     const id = session() ?? selection.create()
-    props.onSession(id)
+    // Read the model before onSession changes the session identity and resets the draft selection.
     const model = selection.model()
+    props.onSession(id)
     return v2.data.session
       .prompt({ sessionID: id, text, gate: selection.gate(id) })
       .then(() => {
@@ -234,18 +240,23 @@ export function SessionView(props: {
             onCancel={stop}
             onScrollToBottom={() => scrollToBottom?.()}
           />
-          <PromptInput
-            session={session()}
-            running={running()}
-            disabled={v2.connection.status() !== "connected" || !!v2.handshake() || blocked()}
-            blocked={permissions().length > 0}
-            questioning={questioning()}
-            onSend={send}
-            onStop={stop}
-            onAppendReady={props.onAppendReady}
-            selectors={<Selectors selection={selection} blocked={selectorsBlocked()} />}
-            actions={<AutoApproveAction enabled={autoApprove.enabled()} onToggle={autoApprove.toggle} />}
-          />
+          <Show when={draftKey()} keyed>
+            {(key) => (
+              <PromptInput
+                draftKey={key}
+                session={session()}
+                running={running()}
+                disabled={v2.connection.status() !== "connected" || !!v2.handshake() || blocked()}
+                blocked={permissions().length > 0}
+                questioning={questioning()}
+                onSend={send}
+                onStop={stop}
+                onAppendReady={props.onAppendReady}
+                selectors={<Selectors selection={selection} blocked={selectorsBlocked()} />}
+                actions={<AutoApproveAction enabled={autoApprove.enabled()} onToggle={autoApprove.toggle} />}
+              />
+            )}
+          </Show>
         </div>
       </Show>
     </div>

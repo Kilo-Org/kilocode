@@ -1,5 +1,6 @@
 // State projection for the Agent Manager panel: state pushes, activity, poller skips, presence, run status,
 // project catalog, and project activation. Split out of AgentManagerProvider for its file-size cap.
+import type { OpenCodeClient } from "@opencode/client"
 import type { AgentManagerInMessage, AgentManagerOutMessage } from "./types"
 import type { ProjectContext } from "./project/context"
 import type { ProjectContexts } from "./project/contexts"
@@ -14,7 +15,12 @@ import type { TerminalRouter } from "./terminal-routing"
 import type { ScriptTerminalManager } from "./ScriptTerminalManager"
 import type { HealthScheduler } from "./worktree-health"
 import { applyPresence, healthPayload, needsReconcile, staleForState } from "./worktree-health"
-import { reactivateProject } from "./project/init"
+import {
+  pushProjectSessions,
+  reactivateProject,
+  registerSessionCatalogHost,
+  type SessionCatalogHost,
+} from "./project/init"
 import { hydrateExpanded } from "./project/hydrate"
 import { getReviewMarkdownRender } from "./provider-messages"
 import { readTerminalFont } from "./terminal-font"
@@ -44,6 +50,8 @@ export interface ProviderStateHost {
   state: WorktreeStateManager | undefined
   postToWebview(message: AgentManagerOutMessage): void
   log(...args: unknown[]): void
+  /** Backend client of the running server, for the session catalog listing. */
+  client(): Promise<OpenCodeClient>
   sendRepoInfo(): Promise<void>
   initializeState(): Promise<void>
   initExpanded(ctx: ProjectContext): void
@@ -142,6 +150,17 @@ export function syncPollerSkips(p: ProviderStateHost): void {
   p.postToWebview(message)
 }
 
+/** Catalog hooks backed by the provider's contexts, backend client, and webview channel. */
+function sessionCatalog(p: ProviderStateHost): SessionCatalogHost {
+  return {
+    contextForDirectory: (directory) => p.contexts.byDirectory(directory),
+    contextForSession: (sessionID) => p.contexts.byLiveSession(sessionID),
+    list: async (directory) => (await (await p.client()).session.list({ directory, parentID: null })).data,
+    get: async (sessionID) => (await p.client()).session.get({ sessionID }),
+    post: (message) => p.postToWebview(message),
+  }
+}
+
 export function pushState(p: ProviderStateHost, ctx?: ProjectContext): void {
   const target = ctx ?? p.context
   const state = target?.peekState()
@@ -175,6 +194,9 @@ export function pushState(p: ProviderStateHost, ctx?: ProjectContext): void {
     ...(active ? runStateFor(p, target) : {}),
   })
   void p.activity.sync()
+  const catalog = sessionCatalog(p)
+  registerSessionCatalogHost(p.busySessions, catalog)
+  void pushProjectSessions(target, catalog.list, catalog.post, p.log)
   if (!active) return
   syncPollerSkips(p)
   p.statsPoller.setEnabled(worktrees.length > 0 || p.panel !== undefined)

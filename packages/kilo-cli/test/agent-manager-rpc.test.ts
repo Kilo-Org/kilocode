@@ -32,10 +32,10 @@ const boot =
   ) =>
   async () => {
     using backend = fixture()
-    const root = await mkdtemp(path.join(os.tmpdir(), "kilo-agent-manager-rpc-"))
+    // Resolve the temp root once: Windows returns 8.3 short names, and the snapshot check compares real paths.
+    const root = await realpath(await mkdtemp(path.join(os.tmpdir(), "kilo-agent-manager-rpc-")))
     await Bun.write(path.join(root, "repo", "placeholder.txt"), "hello")
-    // Use the canonical directory, so Windows short names do not look like a symlink to the snapshot check.
-    const directory = await realpath(path.join(root, "repo"))
+    const directory = path.join(root, "repo")
     const previous = { KILO_API_URL: process.env.KILO_API_URL, KILO_API_KEY: process.env.KILO_API_KEY }
     process.env.KILO_API_URL = backend.url
     delete process.env.KILO_API_KEY

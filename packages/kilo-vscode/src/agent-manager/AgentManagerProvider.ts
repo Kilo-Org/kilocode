@@ -4,6 +4,7 @@ import type { OpenCodeClient, OpenCodeEvent, SessionInfo } from "@opencode/clien
 import type { WebviewPanel } from "vscode"
 import type { AgentManagerConnection } from "./connection"
 import { located } from "./connection"
+import { createHostAutoApprove, onHostAutoApproveChange } from "./provider-auto-approve"
 import { WorktreeManager } from "./WorktreeManager"
 import { WorktreeStateManager, type Worktree } from "./WorktreeStateManager"
 import { GitOps } from "./GitOps"
@@ -135,6 +136,8 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
   public readonly unsubProjects: () => void
   public readonly unsubDestination: () => void
   public readonly unsubEvents: () => void
+  public readonly autoApprove: ReturnType<typeof createHostAutoApprove>
+  public readonly unsubAutoApprove: () => void
   public readonly staleScratch = new Set<string>()
   public readonly healthScheduler = new HealthScheduler<ProjectContext>(async (ctx) => {
     await this.reconcileAndPush(ctx)
@@ -317,6 +320,33 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
         ]),
       ),
     )
+    this.autoApprove = createHostAutoApprove({
+      client: () => this.connection.client(),
+      directories: () => {
+        const workspace = this.host.workspacePath()
+        return [
+          ...(workspace ? [workspace] : []),
+          ...[...this.contexts.values()].flatMap((ctx) => [
+            ctx.root,
+            ...(ctx.peekState()?.getWorktrees().map((wt) => wt.path) ?? []),
+          ]),
+        ]
+      },
+      log: (message) => this.log(message),
+    })
+    const stopAutoApproveEvents = this.connection.onEvent(
+      (event) => this.autoApprove.event(event),
+      (event) => event.type === "permission.asked",
+    )
+    const stopAutoApproveState = onHostAutoApproveChange(() => this.autoApprove.sweep())
+    const stopAutoApproveConnection = this.connection.onState((status) => {
+      if (status === "connected") this.autoApprove.sweep()
+    })
+    this.unsubAutoApprove = () => {
+      stopAutoApproveEvents()
+      stopAutoApproveState()
+      stopAutoApproveConnection()
+    }
     this.caffeination = new CaffeinationService(this.connection, () =>
       [...this.contexts.values()].flatMap((ctx) => [
         ctx.root,
@@ -502,7 +532,18 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
   public trackVisibleSession(id: string | null): void {
     this.visibleSession = id
     if (id) this.panelSessions.add(id)
+    // The poller follows the visible session so its fast poll and immediate fetch target the
+    // worktree the user is reading. The PR poller belongs to the active project, so a session
+    // from another project, a local session, or an unknown one clears the target.
+    this.prBridge.poller.setActiveWorktreeId(this.visibleWorktreeId(id))
     this.syncView()
+  }
+
+  private visibleWorktreeId(id: string | null): string | undefined {
+    if (!id) return undefined
+    const ctx = this.context
+    if (!ctx || ctx.id !== this.contexts.active()?.id) return undefined
+    return ctx.peekState()?.getSession(id)?.worktreeId ?? undefined
   }
 
   public syncView(): void {
@@ -630,8 +671,8 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
         },
         hasScript: () => this.getSetupScriptService()?.hasScript() ?? false,
         setup: (dir, branch, id) => this.runSetupScriptForWorktree(dir, branch, id),
-        createSessionInWorktree: (dir, branch, id, _source, boot, timing, agent) =>
-          this.createSessionInWorktree(dir, branch, id, timing, undefined, agent, boot),
+        createSessionInWorktree: (dir, branch, id, _source, boot, timing, model, agent) =>
+          this.createSessionInWorktree(dir, branch, id, timing, model, agent, boot),
         sessionMetadata: async () => ({ kilocode: { platform: "agent-manager" } }),
         registerWorktreeSession: (sid, dir) => this.registerWorktreeSession(sid, dir),
         notifyReady: (sid, result, wid) => this.notifyWorktreeReady(sid, result, wid),
@@ -1030,6 +1071,7 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
   }
 
   public dispose(): void {
+    this.unsubAutoApprove()
     this.relay.dispose()
     void this.shutdown()
   }

@@ -178,7 +178,7 @@ export function createReviewController(props: Props) {
 
   const sendComment = (file: string, side: AnnotationSide, line: number, text: string, selectedText: string) => {
     const comment = { id: `c-${++nextId}-${Date.now()}`, file, side, line, comment: text, selectedText }
-    sendReviewComments([comment], props.activeTerminalId())
+    if (!sendReviewComments([comment], props.activeTerminalId())) return
     props.preserveScroll(() => {
       setDraft(null)
       draftMeta = null
@@ -270,7 +270,7 @@ export function createReviewController(props: Props) {
   const sendAllToChat = () => {
     const comments = props.comments()
     if (comments.length === 0) return
-    sendReviewComments(comments, props.activeTerminalId())
+    if (!sendReviewComments(comments, props.activeTerminalId())) return
     props.preserveScroll(() => props.setComments([]))
     props.onSendAll?.()
   }

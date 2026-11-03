@@ -17,6 +17,7 @@ import type { OrphanDirectory, WorktreeHealth } from "./worktree-reconcile"
 import type { RunStatus } from "./run/manager"
 import type { TerminalFont } from "./terminal-font"
 import type { ProjectSnapshot } from "./project/contexts"
+import type { ProjectSessionView } from "./project/session-view"
 import type { SidebarTarget } from "./project/route"
 import type { TerminalDestination } from "./terminal-destination"
 
@@ -215,16 +216,8 @@ interface ProjectParentMessage {
 interface ProjectSessionsMessage {
   type: "agentManager.projectSessions"
   projectId: string
-  sessions: Array<{
-    id: string
-    parentID?: string | null
-    title?: string
-    createdAt: string
-    updatedAt: string
-    worktreeId: string | null
-    revert?: unknown
-    summary?: unknown
-  }>
+  /** Root sessions for the project root and every worktree directory, in the v2 session shape. */
+  sessions: ProjectSessionView[]
 }
 
 // ---------------------------------------------------------------------------

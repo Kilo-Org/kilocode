@@ -151,8 +151,11 @@ import { createWorktreeDiffs, diffDataKey, wireDiffId } from "./worktree-diffs"
 import { createReviewComposers } from "./review-composers"
 import type { ReviewComment } from "../diff-viewer/review-comments"
 import type { PRComment } from "./pr/pr-types"
-import { APPEND_REVIEW_COMMENTS, type AppendReviewCommentsDetail } from "../diff-viewer/review-annotations"
-import { formatReviewCommentsMarkdown } from "../../src/shared/review-comments"
+import {
+  APPEND_REVIEW_COMMENTS,
+  takeReviewCommentsForPrompt,
+  type AppendReviewCommentsDetail,
+} from "../diff-viewer/review-annotations"
 import { createMarkdownRender } from "./review-preferences"
 import { buildShortcutCategories } from "./shortcuts"
 import { ShortcutsDialog } from "./ShortcutsDialog"
@@ -1816,8 +1819,9 @@ const AgentManagerContent: Component = () => {
 
     const reviewCommentsEvent = (event: Event) => {
       const detail = (event as CustomEvent<AppendReviewCommentsDetail>).detail
-      if (!detail || detail.targetTerminalId) return
-      appendToPrompt(formatReviewCommentsMarkdown(detail.comments), detail.autoSend)
+      const text = takeReviewCommentsForPrompt(detail)
+      if (text === undefined) return
+      appendToPrompt(text, detail.autoSend)
     }
     window.addEventListener(APPEND_REVIEW_COMMENTS, reviewCommentsEvent)
 
@@ -1979,7 +1983,15 @@ const AgentManagerContent: Component = () => {
         </div>
       </Show>
       <div class="am-chat-wrapper" classList={{ "am-chat-wrapper-hidden": contextEmpty() }}>
-        <Show when={chatStore()} keyed fallback={intro.render()}>
+        <Show
+          when={chatStore()}
+          keyed
+          fallback={
+            <Show when={appSession.rootStore()} keyed fallback={intro.render()}>
+              {(store) => <V2Scope value={store}>{intro.render()}</V2Scope>}
+            </Show>
+          }
+        >
           {(store) => (
             <V2Scope value={store}>
               <SpeechToTextStatusProvider>
@@ -2085,7 +2097,7 @@ const AgentManagerContent: Component = () => {
             onDiffStyleChange={setSharedDiffStyle}
             markdownRender={markdown.render()}
             onMarkdownRenderChange={markdown.update}
-            onSendClick={() => appendToPrompt(formatReviewCommentsMarkdown(reviewComments()), true)}
+            onSendClick={() => {}}
             onClose={diffPanels.closePanel}
             onExpand={selection() !== null ? openReviewTab : undefined}
             onRequestDiff={diffs.requestDiffFile}
@@ -2188,11 +2200,7 @@ const AgentManagerContent: Component = () => {
           focusedComment={reviewActive() ? remote.focus(diffScopeId()) : undefined}
           onCommentsChange={setReviewCommentsForSelection}
           composer={composers.get(`${activeProjectId() ?? "single"}\0${diffScopeId() ?? ""}`)}
-          onSendAll={() => {
-            appendToPrompt(formatReviewCommentsMarkdown(reviewComments()), true)
-            closeReviewTab()
-          }}
-          onSendClick={() => appendToPrompt(formatReviewCommentsMarkdown(reviewComments()), true)}
+          onSendAll={closeReviewTab}
           diffStyle={diffStyle()}
           onDiffStyleChange={setSharedDiffStyle}
           markdownRender={markdown.render()}

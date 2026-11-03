@@ -14,13 +14,13 @@ import { render as mount } from "solid-js/web"
 import { getOwner, runWithOwner } from "solid-js"
 import type { AnnotationSide, DiffLineAnnotation } from "@pierre/diffs"
 import { PRCommentCard } from "../agent-manager/pr/PRCommentCard"
-import { githubUrl, prPayload } from "../agent-manager/pr/pr-comment-payload"
+import { githubUrl } from "../agent-manager/pr/pr-comment-payload"
 import type { ReactionController } from "../agent-manager/pr/pr-comment-state"
 import type { PRComment, PRReactionContent } from "../agent-manager/pr/pr-types"
 import type { PRTarget } from "../../src/shared/pr-comment-actions"
 import { useBridge } from "../agent-manager/v2/vscode"
 import { useLanguage } from "../src/context/language"
-import { sendReviewComments } from "./review-annotations"
+import { sendPRComment } from "../agent-manager/pr/pr-actions"
 import type { AnnotationMeta } from "./review-annotations"
 import type { WorktreeFileDiff } from "../src/types/messages/agent-manager"
 import { mapRemoteComments, remoteLocation, type RemoteCommentMap } from "./remote-comments"
@@ -274,8 +274,7 @@ export function createRemoteCommentController(options: Options): RemoteCommentCo
         }
         onSend={() => {
           const value = comment()
-          sendReviewComments([prPayload(value)], options.activeTerminalId())
-          props.item.setSent(true)
+          if (!sendPRComment(value, options.activeTerminalId(), () => props.item.setSent(true))) return
           options.onSendClick?.()
         }}
         onOpenFile={

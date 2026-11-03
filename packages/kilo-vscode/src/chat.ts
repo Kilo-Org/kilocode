@@ -10,6 +10,8 @@ import {
   type WebviewView,
   type WebviewViewProvider,
 } from "vscode"
+import { notifyHostAutoApprove, setHostAutoApprove } from "./agent-manager/provider-auto-approve"
+import type { SettingsHandler } from "./agent-manager/project/settings"
 import { local } from "./local"
 import { DISPLAY_DEFAULTS, type ToHost, type ToWebview } from "./protocol"
 import { bridge } from "./relay"
@@ -42,6 +44,12 @@ export function chat(input: {
   trackCostSession: (sessionID: string) => void
   diff: ToolDiff
 }) {
+  // This host owns the persisted auto-approve flag, and the Agent Manager sweep reads it. Record it at activation, so
+  // the sweep works before any webview resolves.
+  setHostAutoApprove({
+    enabled: () => input.context.globalState.get(AUTO_APPROVE, false),
+    directory: input.directory,
+  })
   // Commands sent before the webview bundle listens are lost, and a resolved view is not yet loaded. Keep them until
   // the webview sends its first message, which it does on mount.
   const state: { view?: WebviewView; loaded: boolean; queued: ToWebview[] } = { loaded: false, queued: [] }
@@ -119,6 +127,8 @@ export function wire(input: {
   onReset?: () => void
   /** Extra window globals of the webview bundle. */
   globals?: Record<string, unknown>
+  /** The Agent Manager settings handler the Settings panel shares with the provider. */
+  agentManager?: () => SettingsHandler
 }) {
   const webview = input.webview
   const root = input.context.extensionUri
@@ -155,6 +165,7 @@ export function wire(input: {
           directory: input.directory,
           post,
           onReset: input.onReset,
+          agentManager: input.agentManager,
         })
       : {
           handle: (message: ToHost) => {
@@ -219,6 +230,8 @@ export function wire(input: {
       case "persistAutoApproveState":
         void input.context.globalState.update(AUTO_APPROVE, message.value)
         others({ type: "autoApproveStateLoaded", value: message.value })
+        // The host sweep is the only owner of the decision, so tell it to approve the requests already pending.
+        notifyHostAutoApprove()
         return true
       default:
         return false
@@ -347,7 +360,6 @@ export function html(input: {
     KILO_MARKDOWN_SHIKI_WORKER_URI: input.markdown,
     KILO_TOP_BAR: false,
     KILO_TOP_BAR_SURFACE: "sidebar_title",
-    KILO_AGENT_MANAGER_SETTINGS: false,
     KILO_BROWSER_AUTOMATION: false,
     KILO_AGENT_MANAGER_INTRO_DISMISSED: true,
     KILO_SETTINGS: input.settings,
