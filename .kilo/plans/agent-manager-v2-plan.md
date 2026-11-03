@@ -141,3 +141,16 @@ Clean up: `st stop-vscode --cleanup true; st stop; rm -rf /tmp/am-st-ws`.
 - Tests: `packages/kilo-plugin/test/agent-manager-permission.test.ts`, the v1 cases plus integration through the core permission service; the three integration cases fail without the seam.
 - Cross-session behavior (v2 infra): permission rules are read live on every check. Config reloads agents (100 ms debounce). Saved rules are project scoped by git origin, so all worktrees and clones of the same remote share them. Always allow also settles requests of other sessions in the same location that the new rule now covers (v1 drained covered requests the same way). Pinned session models resolve against the live catalog each step; sessions without a model re-resolve the current agent or default model. Session permissions and model switches stay per session.
 - Differences kept by design: saved rules live in the project database, not global config, so they do not show in the settings permission editor.
+
+## v2 parity audit (8 read-only agents, 2026-11-03)
+Blockers found:
+- Host never sends `agentManager.projectSessions`; project/worktree session lists, counts, mentions and orchestration live-session checks are empty.
+- `agent_manager` tool drops `model`/`variant` for worktree sessions; tool-started worktrees run the default model.
+- Composer draft text is one signal per `PromptInput` and `SessionView` is keyed by store, so drafts and stray sends follow the wrong tab.
+- Terminal-targeted review comments are dropped, and `onSendClick`/`onSendAll` append while the review controller also sends, so prompts are duplicated.
+- Auto-approve sweeps only the selected directory store; background worktrees stay blocked.
+- `PRStatusPoller.setActiveWorktreeId` has no caller, so PR data polls only every 2 minutes and not on worktree switch.
+- Intro dismissal loses the shared welcome, recent sessions and shortcut hints because `intro.fallback` is unused.
+Other confirmed gaps: continueInWorktree unreachable (panel drops the unprefixed message), fork/promotion handoff synthetic lacks `resume:false`, update-from-base and PR conflict fix lose the session, AM chat has no fork action, worktree mentions/drag unwired, display settings never requested in the panel, focusPrompt guards missing, unmanaged sessions read the root store, cycle agent hits the hidden session while the dialog is open, PTY relay sockets leak on reload, PTY initial size applied late, `kilo-code.v2.diff.renderMarkdown` unregistered, settings watcherExclude and Problems unbind missing, shortcutHints row missing, sidebar permission preview has no consumer, readOnly and openFile sessionId missing, Agent Manager settings tab not ported (issues #15734/#15735 cover documents/browser only).
+Dead code to remove or wire: tool-project.ts, discardWorktree, closeTerminal, requestTerminalContext, clearSession/openFile/previewImage types, intro.fallback, model-picker global state, turn diff source, embedded terminal resolver.
+- Manifest audit delta: `kilo-code.v2.showTaskTimeline` default changed from true (v1) to false, so the task timeline is hidden for users who never set it. Settings rows table confirmed; i18n parity verified (21 locales, 513 keys).

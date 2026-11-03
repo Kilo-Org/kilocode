@@ -112,13 +112,9 @@ export const dict = {
   "agentManager.hoverCard.commits": "کامیت‌ها",
 
   "agentManager.session.new": "جلسه جدید",
-
   "agentManager.history.title": "جلسات باز",
-
   "agentManager.history.back": "بازگشت",
-
   "agentManager.sidebar.resize": "تغییر اندازه نوار کناری",
-
   "agentManager.review.resize": "تغییر اندازه بررسی",
   "agentManager.session.untitled": "بدون عنوان",
   "agentManager.session.newSession": "جلسه جدید",
