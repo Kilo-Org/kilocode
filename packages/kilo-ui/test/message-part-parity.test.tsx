@@ -332,3 +332,32 @@ test("a multi-file patch opens every file with one diff action", async () => {
   expect(opened[0]?.[0]?.additions).toBe(1)
   expect(opened[0]?.[1]?.deletions).toBe(1)
 })
+
+test("a malformed patch file is skipped and reported", async () => {
+  const opened: ToolActionDiff[][] = []
+  const files = [
+    ...patchedFiles,
+    { ...patchedFiles[0], file: "src/broken.ts", patch: "@@ broken", additions: 0, deletions: 0 },
+  ]
+  const card = mountTool("patch", {
+    input: { patchText: files.map((entry) => entry.patch).join("") },
+    metadata: { files },
+    partID: "patch-open-all-broken",
+    directory: "/repo",
+    forceOpen: true,
+    actions: { openDiffs: (diffs) => opened.push(diffs) },
+  })
+  mounted.push(card)
+  await waitFor(() => card.host.querySelectorAll('[data-slot="apply-patch-filename"]').length === 3)
+
+  const action = await waitFor(() =>
+    card.host.querySelector<HTMLElement>(
+      '[data-slot="apply-patch-open-all"] [aria-label="ui.messagePart.openInDiffViewer"]',
+    ),
+  )
+  action?.click()
+
+  expect(opened).toHaveLength(1)
+  expect(opened[0]?.map((entry) => entry.file)).toEqual(["src/math.ts", "src/legacy.ts"])
+  expect(card.host.querySelector('[data-slot="apply-patch-open-all-invalid"]')?.textContent).toContain("src/broken.ts")
+})

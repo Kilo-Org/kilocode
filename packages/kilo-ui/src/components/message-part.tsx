@@ -190,9 +190,7 @@ function TextContent(props: {
                 />
               </Tooltip>
             </Show>
-            <Show when={props.throughput}>
-              {(el) => <span data-slot="assistant-throughput-inline">{el()}</span>}
-            </Show>
+            <Show when={props.throughput}>{(el) => <span data-slot="assistant-throughput-inline">{el()}</span>}</Show>
             <Show when={props.turnMeta}>
               {(el) => (
                 <span data-slot="assistant-turn-meta" class="cursor-default">
@@ -1531,6 +1529,7 @@ ToolRegistry.register({
     const single = () => (list().length === 1 ? list()[0] : undefined)
     const [expanded, setExpanded] = createSignal<string[]>([])
     const [seeded, setSeeded] = createSignal(false)
+    const [invalid, setInvalid] = createSignal<string[]>([])
     createEffect(() => {
       if (seeded() || !list().length) return
       setExpanded(
@@ -1572,9 +1571,13 @@ ToolRegistry.register({
     }
     const openAllDiffs = (event: MouseEvent) => {
       event.stopPropagation()
+      const skipped: string[] = []
       const diffs = list().flatMap((file) => {
         const diff = safeView(file)
-        if (!diff) return []
+        if (!diff) {
+          skipped.push(file.file)
+          return []
+        }
         return [
           {
             file: file.file,
@@ -1584,6 +1587,7 @@ ToolRegistry.register({
           },
         ]
       })
+      setInvalid(skipped)
       if (diffs.length) props.actions?.openDiffs?.(diffs)
     }
     const canOpenAll = () =>
@@ -1665,6 +1669,14 @@ ToolRegistry.register({
                 <Show when={canOpenAll()}>
                   <div data-slot="apply-patch-open-all">
                     <ToolDiffAction when={true} onClick={openAllDiffs} />
+                  </div>
+                </Show>
+                <Show when={invalid().length}>
+                  <div data-slot="apply-patch-open-all-invalid">
+                    {i18n.t(invalid().length === 1 ? "ui.patch.openAll.invalid" : "ui.patch.openAll.invalid.other", {
+                      count: invalid().length,
+                    })}
+                    : {invalid().join(", ")}
                   </div>
                 </Show>
                 <Accordion
@@ -1764,8 +1776,16 @@ function isTodoView(value: unknown): value is TodoView {
   return Array.isArray((value as TodoView).todos)
 }
 
-function hiddenTodos(direction: "earlier" | "later", count: number) {
-  return `${count} ${direction} ${count === 1 ? "to-do" : "to-dos"} hidden`
+function hiddenTodos(i18n: UiI18n, direction: "earlier" | "later", count: number) {
+  const key =
+    direction === "earlier"
+      ? count === 1
+        ? "ui.tool.todos.hiddenEarlier"
+        : "ui.tool.todos.hiddenEarlier.other"
+      : count === 1
+        ? "ui.tool.todos.hiddenLater"
+        : "ui.tool.todos.hiddenLater.other"
+  return i18n.t(key, { count })
 }
 
 function TodoCheckbox(props: { checked: boolean; done?: boolean; started?: boolean; children: JSX.Element }) {
@@ -1850,7 +1870,7 @@ ToolRegistry.register({
         <Show when={shown().length}>
           <div data-component="todos">
             <Show when={view()?.mode === "compact" && (view()?.hiddenBefore ?? 0) > 0}>
-              <div data-slot="message-part-todo-hidden">{hiddenTodos("earlier", view()?.hiddenBefore ?? 0)}</div>
+              <div data-slot="message-part-todo-hidden">{hiddenTodos(i18n, "earlier", view()?.hiddenBefore ?? 0)}</div>
             </Show>
             <For each={shown()}>
               {(todo) => (
@@ -1870,7 +1890,7 @@ ToolRegistry.register({
               )}
             </For>
             <Show when={view()?.mode === "compact" && (view()?.hiddenAfter ?? 0) > 0}>
-              <div data-slot="message-part-todo-hidden">{hiddenTodos("later", view()?.hiddenAfter ?? 0)}</div>
+              <div data-slot="message-part-todo-hidden">{hiddenTodos(i18n, "later", view()?.hiddenAfter ?? 0)}</div>
             </Show>
           </div>
         </Show>

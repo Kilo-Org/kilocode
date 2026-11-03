@@ -190,6 +190,10 @@ export const dict: Record<string, string> = {
   "ui.tool.patch": "Patch",
   "ui.tool.todos": "To-dos",
   "ui.tool.todos.read": "Read to-dos",
+  "ui.tool.todos.hiddenEarlier": "{{count}} earlier to-do hidden",
+  "ui.tool.todos.hiddenEarlier.other": "{{count}} earlier to-dos hidden",
+  "ui.tool.todos.hiddenLater": "{{count}} later to-do hidden",
+  "ui.tool.todos.hiddenLater.other": "{{count}} later to-dos hidden",
   "ui.tool.questions": "Questions",
   "ui.tool.questions.numbered": "Questions {{number}}",
   "ui.tool.agent": "{{type}} Agent",
@@ -241,6 +245,8 @@ export const dict: Record<string, string> = {
   "ui.patch.action.moved": "Moved",
   "ui.patch.action.patched": "Patched",
   "ui.patch.action.plan": "Plan", // kilocode_change
+  "ui.patch.openAll.invalid": "{{count}} changed file could not be opened",
+  "ui.patch.openAll.invalid.other": "{{count}} changed files could not be opened",
 
   "ui.question.subtitle.answered": "{{count}} answered",
   "ui.question.subtitle.dismissed": "{{count}} dismissed", // kilocode_change
