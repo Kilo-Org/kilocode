@@ -85,6 +85,7 @@ export const dict = {
   "agentManager.worktree.defaultBaseBranch": "預設基礎分支",
   "agentManager.worktree.defaultBaseBranchAuto": "自動偵測",
   "agentManager.worktree.copyPath": "複製路徑",
+  "agentManager.worktree.continueInCloud": "Continue in Cloud",
   "agentManager.worktree.openInVscode": "在 VS Code 中打開",
   "agentManager.worktree.rename": "重新命名",
   "agentManager.worktree.pin": "釘選",
