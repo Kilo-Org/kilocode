@@ -75,6 +75,17 @@ class ProgressPanelTest : BasePlatformTestCase() {
         assertTrue(clock.timer.isRunning())
     }
 
+    fun `test setup failure shows the safe failed command detail`() {
+        val error = HostedSystemEventDto("hosted:cloud:one:ses", "preparing", action = "attempt_failed",
+            failure = "workspace_setup_failed",
+            detail = "Setup command 6: fatal: '' is not a valid branch name")
+
+        panel.setPreparation(null, error)
+
+        assertTrue(panel.labelText().contains("Setup command 6: fatal: '' is not a valid branch name"))
+        assertFalse(panel.labelText().contains("provider"))
+    }
+
     fun `test persistent setup failure churn retains nodes and releases timer`() {
         val clock = FakeClock()
         replace(clock)

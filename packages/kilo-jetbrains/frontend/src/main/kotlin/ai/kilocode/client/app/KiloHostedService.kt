@@ -609,7 +609,7 @@ class KiloHostedService internal constructor(
         }
         if (preparation?.cloudStatus == "error" && preparation != old) {
             val code = preparation.failure?.takeIf { it.matches(Regex("[a-z][a-z0-9_]{0,63}")) } ?: "unknown"
-            log.warn("hosted preparation failed code=$code")
+            log.warn("hosted preparation failed code=$code step=${preparation.step} detail=${preparation.detail}")
         }
         retired[event.sessionID] = item.retired.toSet()
     }

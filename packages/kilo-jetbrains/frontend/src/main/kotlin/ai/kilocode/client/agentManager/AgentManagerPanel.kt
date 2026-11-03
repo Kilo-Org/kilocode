@@ -30,6 +30,7 @@ import ai.kilocode.client.agentManager.hosted.HostedWorkspaceCache
 import ai.kilocode.client.agentManager.hosted.HostedWorkspaceDialog
 import ai.kilocode.client.agentManager.hosted.HostedWorkspaceEditorKind
 import ai.kilocode.client.agentManager.hosted.HostedWorkspaceEditorMatcher
+import ai.kilocode.client.agentManager.hosted.hostedMessageID
 import ai.kilocode.client.agentManager.hosted.hostedRepository
 import ai.kilocode.client.agentManager.hosted.hostedWorkspaceParams
 import ai.kilocode.client.agentManager.hosted.HostedWorkspaceRow
@@ -347,7 +348,6 @@ class AgentManagerPanel(
                     repo,
                     profiles.items,
                     withWorkspace = true,
-                    branch = controller.defaultBranch,
                 )
                 if (!dialog.showAndGet()) return@edt
                 val plan = dialog.plan() ?: return@edt
@@ -357,7 +357,7 @@ class AgentManagerPanel(
                     prompt = plan.prompt,
                     agent = HostedAgentDto(plan.agent, plan.model, plan.variant),
                     operationKey = java.util.UUID.randomUUID().toString(),
-                    messageID = messageID(),
+                    messageID = hostedMessageID(),
                 )
                 createHosted(request)
             }
@@ -409,7 +409,7 @@ class AgentManagerPanel(
                 prompt = plan.prompt,
                 agent = HostedAgentDto(plan.agent, plan.model, plan.variant),
                 operationKey = java.util.UUID.randomUUID().toString(),
-                messageID = messageID(),
+                messageID = hostedMessageID(),
             ),
         )
     }
@@ -511,8 +511,6 @@ class AgentManagerPanel(
             }
         }
     }
-
-    private fun messageID(): String = "msg_" + java.util.UUID.randomUUID().toString().replace("-", "")
 
     private fun remove(item: WorktreeDto, force: Boolean) {
         controller.remove(item, force, onFailure = { result -> notifyFailed(item, result, force) })

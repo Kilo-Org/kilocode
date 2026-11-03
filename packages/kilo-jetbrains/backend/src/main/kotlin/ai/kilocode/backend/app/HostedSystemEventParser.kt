@@ -61,9 +61,24 @@ internal object HostedSystemEventParser {
             failure = sequenceOf(preparation?.string("safeError"), attempt?.string("safeError"),
                 step?.string("safeError"))
                 .filterNotNull().firstOrNull { it.matches(Regex("[a-z][a-z0-9_]{0,63}")) },
+            detail = missingStepDetail(step),
             triggerMessageID = (preparation?.string("triggerMessageId") ?: attempt?.string("triggerMessageId"))
                 ?.takeIf { it.matches(Regex("[A-Za-z0-9_-]{1,128}")) },
         )
+    }
+
+    private fun missingStepDetail(step: JsonObject?): String? {
+        if (step?.string("status") != "failed") return null
+        val label = step.string("label") ?: step.string("key")
+        val output = step.string("outputTail")
+            ?.lineSequence()
+            ?.map(String::trim)
+            ?.lastOrNull(String::isNotEmpty)
+        return when {
+            label != null && output != null -> "$label: $output"
+            output != null -> output
+            else -> step.string("safeError")
+        }?.take(300)
     }
 
     private fun JsonObject.string(name: String): String? =
