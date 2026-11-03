@@ -17,6 +17,7 @@ import ai.kilocode.client.agentManager.worktree.WorktreeStatusBinding
 import ai.kilocode.client.agentManager.worktree.WorktreeStatusService
 import ai.kilocode.client.agentManager.worktree.WorktreeNameCache
 import ai.kilocode.client.agentManager.worktree.runWorktreeSetupScript
+import ai.kilocode.client.app.KiloAppService
 import ai.kilocode.client.app.KiloHostedService
 import ai.kilocode.client.app.KiloWorkspaceService
 import ai.kilocode.client.agentManager.worktree.WorktreeEditorMatchers
@@ -202,6 +203,8 @@ class AgentManagerPanel(
     private var dirty: Map<String, WorktreeDirtyDto> = emptyMap()
     private var running: Set<String> = emptySet()
     private var hostedState = KiloHostedService.HostedState()
+    private var hostedIdentity: String? = null
+    private var hostedEpoch = 0L
     private val hostedCs = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private var activity = emptyMap<String, SessionActivityKind>()
     private var observed = emptySet<String>()
@@ -227,7 +230,13 @@ class AgentManagerPanel(
             target.service<KiloHostedService>().let { hosted ->
                 hosted.observe(this) { state ->
                     edt({ !target.isDisposed && !Disposer.isDisposed(this) }) {
-                        createdHosted.keys.removeAll { key -> state.items.any { it.ref.key == key } }
+                        if (state.signedOut) {
+                            if (!hostedState.signedOut) clearHostedOverlays(target)
+                        } else if (!state.loading) {
+                            // Discovery is authoritative once it settles; a stale optimistic row must
+                            // not outlive the account or organization that created it.
+                            createdHosted.keys.removeAll { key -> state.items.none { it.ref.key == key } }
+                        }
                         hostedState = state
                         sync()
                     }
@@ -235,6 +244,16 @@ class AgentManagerPanel(
                 hosted.refresh(controller.directory)
                 val management = target.service<HostedManagementService>()
                 val removal = target.service<HostedWorkspaceRemoval>()
+                hostedCs.launch {
+                    service<KiloAppService>().state.collect { app ->
+                        val key = "${app.profile?.email}\u0000${app.profile?.currentOrgId}"
+                        edt({ !target.isDisposed && !Disposer.isDisposed(this@AgentManagerPanel) }) {
+                            val previous = hostedIdentity
+                            hostedIdentity = key
+                            if (previous != null && previous != key) clearHostedOverlays(target)
+                        }
+                    }
+                }
                 hostedCs.launch {
                     management.preferences.collect {
                         edt({ !target.isDisposed && !Disposer.isDisposed(this@AgentManagerPanel) }) { sync() }
@@ -382,6 +401,11 @@ class AgentManagerPanel(
     @RequiresEdt
     internal fun createHosted(request: HostedCreateWorkspaceDto) {
         val target = project ?: return
+        if (hostedState.signedOut) {
+            KiloNotifications.info(target, KiloBundle.message("hosted.workspace.disabled"))
+            return
+        }
+        val epoch = hostedEpoch
         val pending = HostedWorkspaceDto(
             ref = HostedWorkspaceRefDto("cloud", HostedWorkspaceEditorKind.PENDING_PREFIX + request.operationKey),
             name = KiloBundle.message("hosted.workspace.progress.creating"),
@@ -398,6 +422,10 @@ class AgentManagerPanel(
             val result = target.service<KiloHostedService>().create(request)
             edt({ !target.isDisposed && !Disposer.isDisposed(this@AgentManagerPanel) }) {
                 pendingHosted.remove(pending.ref.key)
+                if (epoch != hostedEpoch) {
+                    closeHostedPending(target, pending)
+                    return@edt
+                }
                 val workspace = result.workspace
                 val session = result.session
                 if (result.failure != null || workspace == null || session == null) {
@@ -422,6 +450,14 @@ class AgentManagerPanel(
                 target.service<KiloHostedService>().refresh(controller.directory)
             }
         }
+    }
+
+    @RequiresEdt
+    private fun clearHostedOverlays(target: Project) {
+        hostedEpoch++
+        pendingHosted.values.forEach { closeHostedPending(target, it) }
+        pendingHosted.clear()
+        createdHosted.clear()
     }
 
     @RequiresEdt
@@ -819,10 +855,10 @@ class AgentManagerPanel(
                 val management = project?.service<HostedManagementService>()
                 val visible = management?.visible(hostedState.items) ?: hostedState.items
                 val keys = visible.mapTo(mutableSetOf()) { it.ref.key }
-                val pending = pendingHosted.values.map {
+                val pending = if (hostedState.signedOut) emptyList() else pendingHosted.values.map {
                     HostedWorkspaceRowData(it, null, null, KiloBundle.message("hosted.workspace.progress.creating.short"))
                 }
-                val created = createdHosted.values
+                val created = if (hostedState.signedOut) emptyList() else createdHosted.values
                     .filterNot { it.ref.key in keys || management?.excluded(it.ref) == true }
                     .map { HostedWorkspaceRowData(it, hostedState.presentation(it.ref)) }
                 (pending + created + visible.map { dto ->

@@ -13,6 +13,7 @@ import ai.kilocode.client.agentManager.worktree.WorktreeController
 import ai.kilocode.client.agentManager.worktree.WorktreeEditorMatcher
 import ai.kilocode.client.agentManager.worktree.WorktreeEditorMatchers
 import ai.kilocode.client.agentManager.worktree.WorktreeIcons
+import ai.kilocode.client.agentManager.hosted.HostedManagementService
 import ai.kilocode.client.agentManager.hosted.HostedWorkspaceEditorKind
 import ai.kilocode.client.agentManager.hosted.HostedWorkspaceRemoval
 import ai.kilocode.client.agentManager.hosted.HostedWorkspaceRow
@@ -1887,12 +1888,13 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         val createGate = CompletableDeferred<Unit>()
         val deleteGate = CompletableDeferred<Unit>()
         var createdOnce = false
+        var deleted = false
         val calls = java.util.concurrent.CopyOnWriteArrayList<String?>()
         val hosted = KiloHostedService(coroutines.scope, object : KiloHostedRpcApi {
             override suspend fun providers(): List<HostedProviderDto> = emptyList()
             override suspend fun workspaces(repositoryUrl: String?, cursor: String?, organizationID: String?): HostedWorkspaceListDto {
                 calls += repositoryUrl
-                return HostedWorkspaceListDto(if (createdOnce) listOf(created) else emptyList())
+                return HostedWorkspaceListDto(if (createdOnce && !deleted) listOf(created) else emptyList())
             }
             override suspend fun workspace(ref: HostedWorkspaceRefDto, sessionCursor: String?, organizationID: String?) = created
             override suspend fun workspaceStatus(ref: HostedWorkspaceRefDto, organizationID: String?) =
@@ -1909,6 +1911,7 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
                 HostedMutationResultDto()
             override suspend fun deleteWorkspace(ref: HostedWorkspaceRefDto, organizationID: String?): HostedDeleteResultDto {
                 deleteGate.await()
+                deleted = true
                 return HostedDeleteResultDto(ref, success = true)
             }
         }, gate = { true }, log = TestLog(), repo = { "https://github.com/kilo-org/example" })
@@ -1954,6 +1957,67 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         deleteGate.complete(Unit)
         waitUntil { rows(panel) == 1 }
         assertEquals(3, calls.size)
+        // Successful deletion forgets the workspace entirely instead of leaving it in the
+        // persisted exclusion set.
+        assertFalse(project.service<HostedManagementService>().excluded(createdRef))
+    }
+
+    fun `test signing out clears pending and created cloud rows`() {
+        val createdRef = HostedWorkspaceRefDto("cloud", "created")
+        val session = HostedWorkspaceSessionDto(
+            HostedIDs.session(createdRef.providerID, createdRef.workspaceID, "root"),
+            "root",
+        )
+        val created = HostedWorkspaceDto(createdRef, name = "Created", sessions = listOf(session))
+        val gate = CompletableDeferred<Unit>()
+        var signedOut = false
+        val hosted = KiloHostedService(coroutines.scope, object : KiloHostedRpcApi {
+            override suspend fun providers(): List<HostedProviderDto> = emptyList()
+            override suspend fun workspaces(repositoryUrl: String?, cursor: String?, organizationID: String?) =
+                HostedWorkspaceListDto(signedOut = signedOut)
+            override suspend fun workspace(ref: HostedWorkspaceRefDto, sessionCursor: String?, organizationID: String?) = created
+            override suspend fun workspaceStatus(ref: HostedWorkspaceRefDto, organizationID: String?) =
+                HostedWorkspaceStatusDto(ref, "active", "active", "sandbox_ready", 100.0)
+            override suspend fun systemEvents(ref: HostedWorkspaceRefDto, sessionID: String, organizationID: String?): Flow<HostedSystemEventDto> = emptyFlow()
+            override suspend fun workspaceProfiles(organizationID: String?) =
+                ai.kilocode.rpc.dto.HostedWorkspaceProfileListDto()
+            override suspend fun createWorkspace(request: HostedCreateWorkspaceDto): HostedMutationResultDto {
+                gate.await()
+                return HostedMutationResultDto(workspace = created, session = session)
+            }
+            override suspend fun startWorkspaceSession(ref: HostedWorkspaceRefDto, request: ai.kilocode.rpc.dto.HostedStartSessionDto) =
+                HostedMutationResultDto()
+            override suspend fun deleteWorkspace(ref: HostedWorkspaceRefDto, organizationID: String?) =
+                HostedDeleteResultDto(ref, success = true)
+        }, gate = { true }, log = TestLog(), repo = { "https://github.com/kilo-org/example" })
+        project.replaceService(KiloHostedService::class.java, hosted, testRootDisposable)
+        project.replaceService(KiloSessionService::class.java,
+            KiloSessionService(project, coroutines.scope, FakeSessionRpcApi()), testRootDisposable)
+        rpc.listed += main()
+        val controller = WorktreeController(service, project.basePath!!, coroutines.scope)
+        val panel = edt { AgentManagerPanel(testRootDisposable, controller, project) }
+        edt { controller.reload() }
+        waitUntil { rows(panel) == 1 }
+
+        val request = HostedCreateWorkspaceDto(
+            repository = HostedRepositoryDto("github", repo = "kilo-org/example"),
+            profileID = "profile",
+            prompt = "Build it",
+            agent = HostedAgentDto("code", "kilo/kilo-auto/free"),
+            operationKey = "00000000-0000-4000-8000-000000000002",
+            messageID = "msg_00000000000200000000000000",
+        )
+        edt { panel.createHosted(request) }
+        flush()
+        waitUntil { rows(panel) == 2 }
+
+        signedOut = true
+        edt { hosted.refresh(project.basePath!!) }
+        waitUntil { rows(panel) == 1 }
+
+        gate.complete(Unit)
+        flush()
+        edt { assertFalse(rows(panel) > 1) }
     }
 
     private fun context(panel: AgentManagerPanel): DataContext {

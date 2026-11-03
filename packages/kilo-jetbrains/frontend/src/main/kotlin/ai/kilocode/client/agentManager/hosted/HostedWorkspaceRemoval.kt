@@ -62,7 +62,7 @@ class HostedWorkspaceRemoval internal constructor(
                     hosted.refresh(directory)
                     return@withContext
                 }
-                project.service<HostedManagementService>().remove(ref)
+                project.service<HostedManagementService>().forget(ref)
                 service<HostedWorkspaceCache>().remove(ref)
                 project.service<KiloVfsManager>().close(
                     HostedWorkspaceEditorKind.ID,
