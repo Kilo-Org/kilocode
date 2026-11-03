@@ -531,7 +531,10 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
 
   /** Default directory for a file the visible session saves, for example a rendered diagram. */
   public imageDirectory(): string | undefined {
-    return sessionDirectory(this.state, this.visibleSession, this.getRoot())
+    const id = this.visibleSession
+    const session = id ? this.state?.getSession(id) : undefined
+    const direct = session ? sessionDirectory(this.state, id, this.getRoot()) : undefined
+    return direct ?? this.diffs.activeDirectory() ?? this.getRoot()
   }
 
   public trackVisibleSession(id: string | null): void {

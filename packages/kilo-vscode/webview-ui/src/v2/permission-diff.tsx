@@ -4,6 +4,7 @@ import { DiffChanges } from "@kilocode/kilo-ui/diff-changes"
 import { FileIcon } from "@kilocode/kilo-ui/file-icon"
 import { normalize } from "@kilocode/kilo-ui/session-diff"
 import { For, Show, createMemo } from "solid-js"
+import { useLanguage } from "../context/language"
 
 function splitPath(file: string) {
   const normalized = file.replaceAll("\\", "/")
@@ -14,6 +15,7 @@ function splitPath(file: string) {
 
 /** The proposed changes of an edit or write permission request, rendered beside the approval controls. */
 export function PermissionDiff(props: { files: FileDiffInfo[] }) {
+  const language = useLanguage()
   return (
     <div data-slot="permission-diffs" data-count={props.files.length}>
       <For each={props.files}>
@@ -39,7 +41,12 @@ export function PermissionDiff(props: { files: FileDiffInfo[] }) {
                 </div>
               </div>
               <div data-slot="permission-diff-content">
-                <Diff fileDiff={view().fileDiff} diffStyle="unified" hunkSeparators="simple" visible={true} />
+                <Show
+                  when={view().fileDiff.hunks.length > 0}
+                  fallback={<div data-slot="permission-diff-empty">{language.t("ui.permission.noChanges")}</div>}
+                >
+                  <Diff fileDiff={view().fileDiff} diffStyle="unified" hunkSeparators="simple" visible={true} />
+                </Show>
               </div>
             </div>
           )

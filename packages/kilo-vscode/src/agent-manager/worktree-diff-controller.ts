@@ -43,6 +43,20 @@ export class WorktreeDiffController {
   /** Ephemeral per-context base override, keyed by context id. */
   private baseOverrides = new Map<string, string>()
 
+  /** Directory of the active diff source: its session's worktree, or the context worktree. */
+  public activeDirectory(): string | undefined {
+    const id = this.controller.currentId
+    if (!id) return undefined
+    const { ctx, scope, sessionId } = parseDiffId(id)
+    const state = this.ctx.getState()
+    if (scope === "turn" || scope === "session") {
+      const session = sessionId ? state?.getSession(sessionId) : undefined
+      const worktree = session?.worktreeId ? state?.getWorktree(session.worktreeId) : undefined
+      if (worktree?.path) return worktree.path
+    }
+    return (ctx === LOCAL_DIFF_ID ? undefined : state?.getWorktree(ctx)?.path) ?? this.ctx.getRoot()
+  }
+
   constructor(private readonly ctx: WorktreeDiffControllerContext) {
     this.controller = new SourceController(
       (id, ctx) => this.source(id, ctx),

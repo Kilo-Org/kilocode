@@ -291,6 +291,30 @@ describe("WorktreeDiffController.setBase", () => {
   })
 })
 
+describe("WorktreeDiffController.activeDirectory", () => {
+  it("uses the worktree of the active context", async () => {
+    const { controller, builds } = make()
+    controller.start("w1#branch")
+    await waitFor(() => builds.length === 1)
+    expect(controller.activeDirectory()).toBe("/wt")
+    controller.start("w2#branch")
+    await waitFor(() => builds.length === 2)
+    expect(controller.activeDirectory()).toBe("/wt-2")
+    controller.stop()
+  })
+
+  it("uses the session's worktree for a turn or session source", async () => {
+    const { controller, builds } = make()
+    controller.start("w1#turn:s1:msg_1")
+    await waitFor(() => builds.length === 1)
+    expect(controller.activeDirectory()).toBe("/wt")
+    controller.start("w1#session:s1")
+    await waitFor(() => builds.length === 2)
+    expect(controller.activeDirectory()).toBe("/wt")
+    controller.stop()
+  })
+})
+
 describe("WorktreeDiffController turn scope", () => {
   it("builds the turn source of the active worktree and keeps the composite id", async () => {
     const { controller, builds, posted } = make({
@@ -301,6 +325,7 @@ describe("WorktreeDiffController turn scope", () => {
       await waitFor(() => builds.length === 1)
       expect(builds[0]!.id).toBe("turn:s1:msg_1")
       expect(builds[0]!.ctx.dir).toBe("/wt")
+      expect(controller.activeDirectory()).toBe("/wt")
       await waitFor(() => byType(posted, "agentManager.worktreeDiff").length === 1)
       expect(byType(posted, "agentManager.worktreeDiff")[0]).toMatchObject({
         sessionId: "w1#turn:s1:msg_1",

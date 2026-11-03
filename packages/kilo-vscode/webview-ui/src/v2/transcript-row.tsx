@@ -13,6 +13,11 @@ export function TranscriptRowView(props: {
   /** Opens the files changed by one turn. */
   onViewTurnChanges?: (sessionID: string, turnID: string) => void
 }) {
+  const viewTurnChanges = () => {
+    const turn = props.row.type === "assistant" ? props.row.userTurn : undefined
+    if (!turn || !props.onViewTurnChanges) return undefined
+    return () => props.onViewTurnChanges?.(props.session, turn)
+  }
   return (
     <div style={{ display: "contents" }}>
       <Switch>
@@ -30,11 +35,7 @@ export function TranscriptRowView(props: {
               start={row().start}
               metadata={row().metadata}
               rowKey={row().key}
-              onViewTurnChanges={
-                props.onViewTurnChanges
-                  ? () => props.onViewTurnChanges?.(props.session, row().turn)
-                  : undefined
-              }
+              onViewTurnChanges={viewTurnChanges()}
             />
           )}
         </Match>

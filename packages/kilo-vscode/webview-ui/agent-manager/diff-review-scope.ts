@@ -121,7 +121,7 @@ export function createDiffReviewScope(opts: DiffReviewScopeOptions) {
   // Fetch branch picker data whenever the Branch scope becomes active for the
   // current context. The extension owns override state, so ask each time.
   createEffect(() => {
-    if (scope.scope() !== "branch") return
+    if (activeScope() !== "branch") return
     const ctx = opts.ctx()
     if (!ctx) return
     if (!opts.panelOpen() && !opts.reviewActive()) return
@@ -130,7 +130,7 @@ export function createDiffReviewScope(opts: DiffReviewScopeOptions) {
       type: "agentManager.requestDiffBranches",
       projectId: opts.project(),
       sessionId: ctx,
-      scope: scope.scope(),
+      scope: activeScope(),
     })
   })
 
