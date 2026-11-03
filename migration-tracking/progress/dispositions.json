@@ -1154,13 +1154,13 @@
   "module:packages/kilo-vscode/webview-ui/src/utils/transcript-parts.ts": {
     "state": "native",
     "v2": "packages/kilo-ui/src/components/message-part.tsx",
-    "note": "v2 renders message parts natively through packages/kilo-ui/src/components/message-part.tsx (PART_MAPPING and ToolRegistry) and the shared SessionView. The Kilo render filter module is not carried because the native renderer owns part selection, including the tool registry entry for todowrite.",
+    "note": "v2 renders message parts natively through packages/kilo-ui/src/components/message-part.tsx (ContentPart and ToolRegistry) inside the shared session view at packages/kilo-vscode/webview-ui/src/v2/session-view.tsx. The Kilo render filter module is not carried because the native renderer owns part selection, including the tool registry entry for todowrite.",
     "by": "am-progress-map"
   },
   "module:packages/kilo-vscode/tests/unit/transcript-parts.test.ts": {
     "state": "native",
     "v2": "packages/kilo-ui/src/components/message-part.tsx",
-    "note": "The v1 test asserted the removed Kilo render filter (snapshot progress, suppressed todo tools, synthetic completed text). v2 renders those parts through packages/kilo-ui/src/components/message-part.tsx, so there is no filter module to test.",
+    "note": "The v1 test asserted the removed Kilo render filter (snapshot progress, suppressed todo tools, synthetic completed text). v2 renders those parts through packages/kilo-ui/src/components/message-part.tsx and packages/kilo-vscode/webview-ui/src/v2/session-view.tsx, so there is no filter module to test.",
     "by": "am-progress-map"
   },
   "module:packages/kilo-vscode/tests/unit/agent-project-clone.test.ts": {
@@ -1172,7 +1172,7 @@
   "module:packages/kilo-vscode/tests/unit/agent-project-events.test.ts": {
     "state": "ported",
     "v2": "packages/kilo-vscode/test/agent-project-messages.test.ts",
-    "note": "Project event ownership is carried by packages/kilo-vscode/src/agent-manager/project/{messages,contexts,hydrate}.ts and packages/kilo-vscode/test/agent-project-messages.test.ts plus agent-project-hydrate.test.ts.",
+    "note": "Project event ownership is carried by packages/kilo-vscode/src/agent-manager/project/{messages,contexts,hydrate}.ts and packages/kilo-vscode/webview-ui/agent-manager/project/message-ownership.ts. packages/kilo-vscode/test/agent-project-messages.test.ts and agent-project-hydrate.test.ts cover the ownership and background state cases.",
     "by": "am-progress-map"
   },
   "module:packages/kilo-vscode/tests/unit/agent-project-onboarding-contract.test.ts": {
@@ -1184,7 +1184,7 @@
   "module:packages/kilo-vscode/tests/unit/agent-project-progress.test.ts": {
     "state": "ported",
     "v2": "packages/kilo-vscode/test/agent-manager-orchestration-bridge.test.ts",
-    "note": "Project-scoped progress is carried by packages/kilo-vscode/src/agent-manager/project/{state,run-status}.ts and the project stamping asserted in packages/kilo-vscode/test/setup-script-task.test.ts and agent-manager-orchestration-bridge.test.ts.",
+    "note": "Project-scoped progress is carried by packages/kilo-vscode/webview-ui/agent-manager/project/{progress,state,run-status}.ts and the project stamping asserted in packages/kilo-vscode/test/setup-script-task.test.ts and agent-manager-orchestration-bridge.test.ts.",
     "by": "am-progress-map"
   },
   "module:packages/kilo-vscode/tests/unit/agent-project-reactivate.test.ts": {
@@ -1196,31 +1196,31 @@
   "module:packages/kilo-vscode/tests/unit/agent-project-registry.test.ts": {
     "state": "ported",
     "v2": "packages/kilo-vscode/test/agent-project-contexts.test.ts",
-    "note": "The v1 registry is the v2 project catalog: packages/kilo-vscode/src/agent-manager/project/contexts.ts and packages/kilo-vscode/test/agent-project-contexts.test.ts carry per-project tabs, the pinned project and fallback selection.",
+    "note": "The v1 tab registry is packages/kilo-vscode/webview-ui/agent-manager/project/registry.ts. Per-project tabs and persisted buckets are exercised by packages/kilo-vscode/test/local-tabs.test.ts, and project selection and the catalog by packages/kilo-vscode/test/agent-project-contexts.test.ts.",
     "by": "am-progress-map"
   },
   "module:packages/kilo-vscode/tests/unit/agent-project-restore.test.ts": {
     "state": "ported",
     "v2": "packages/kilo-vscode/test/agent-project-selection.test.ts",
-    "note": "Persisted target restore is carried by packages/kilo-vscode/src/agent-manager/project/{contexts,hydrate,selection}.ts and packages/kilo-vscode/test/agent-project-selection.test.ts, which restores a persisted target and falls back when it is gone.",
+    "note": "Persisted target restore is carried by packages/kilo-vscode/webview-ui/agent-manager/project/{restore,selection}.ts and the host context modules. packages/kilo-vscode/test/agent-project-selection.test.ts restores a persisted target and falls back when it is gone.",
     "by": "am-progress-map"
   },
   "module:packages/kilo-vscode/tests/unit/agent-project-run-status-webview.test.ts": {
     "state": "ported",
     "v2": "packages/kilo-vscode/test/agent-project-route.test.ts",
-    "note": "Project-stamped status routing is carried by packages/kilo-vscode/src/agent-manager/project/{route,state-gate}.ts and packages/kilo-vscode/test/agent-project-route.test.ts, which resolves and rejects ambiguous routes.",
+    "note": "The webview run status store is packages/kilo-vscode/webview-ui/agent-manager/project/{run-status,store}.ts, which route a project-stamped status to its own store. packages/kilo-vscode/test/agent-manager-project-sessions.test.ts covers the project-stamped session and run catalog.",
     "by": "am-progress-map"
   },
   "module:packages/kilo-vscode/tests/unit/agent-project-run-status.test.ts": {
     "state": "ported",
     "v2": "packages/kilo-vscode/test/agent-manager-project-sessions.test.ts",
-    "note": "The run status scoping is carried by packages/kilo-vscode/src/agent-manager/project/run-status.ts and the project-stamped assertions in packages/kilo-vscode/test/agent-manager-project-sessions.test.ts and agent-manager-orchestration-bridge.test.ts.",
+    "note": "The host run status scoping is carried by packages/kilo-vscode/src/agent-manager/run/{message,controller}.ts and provider-state.ts, which qualify the local run key with the owning project. The project session catalog is asserted in packages/kilo-vscode/test/agent-manager-project-sessions.test.ts.",
     "by": "am-progress-map"
   },
   "module:packages/kilo-vscode/tests/unit/agent-project-selection-webview.test.ts": {
     "state": "ported",
     "v2": "packages/kilo-vscode/test/agent-project-selection.test.ts",
-    "note": "packages/kilo-vscode/src/agent-manager/project/selection.ts and packages/kilo-vscode/test/agent-project-selection.test.ts carry cross-project selection acknowledgements, readiness and unavailable targets.",
+    "note": "Cross-project selection is carried by packages/kilo-vscode/webview-ui/agent-manager/project/selection.ts and packages/kilo-vscode/webview-ui/src/context/session-project.ts. packages/kilo-vscode/test/agent-project-selection.test.ts carries the selection acknowledgements, readiness and unavailable targets.",
     "by": "am-progress-map"
   },
   "module:packages/kilo-vscode/tests/unit/agent-project-sessions.test.ts": {
@@ -1232,7 +1232,7 @@
   "module:packages/kilo-vscode/tests/unit/agent-project-state-router.test.ts": {
     "state": "ported",
     "v2": "packages/kilo-vscode/test/agent-project-messages.test.ts",
-    "note": "The state router is carried by packages/kilo-vscode/src/agent-manager/project/{messages,state-gate}.ts and packages/kilo-vscode/test/agent-project-messages.test.ts, including deferred state, activation and legacy no-catalog mode.",
+    "note": "The state router is carried by packages/kilo-vscode/webview-ui/agent-manager/project/{state,state-handlers,store}.ts and the host project messages. packages/kilo-vscode/test/agent-project-messages.test.ts covers deferred state, activation and the no-catalog mode.",
     "by": "am-progress-map"
   }
 }
