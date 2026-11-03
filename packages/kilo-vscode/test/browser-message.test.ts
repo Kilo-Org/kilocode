@@ -31,8 +31,12 @@ afterEach(async () => {
 async function fixture() {
   let attempts = 0
   const state = { trusted: true, enabled: true }
+  // Capture the injected cursor script from the first send: attaching the listener later misses it on Windows.
+  const scripts: string[] = []
   const protocol = Object.assign(new EventEmitter(), {
     send: async (method: string, params?: Record<string, unknown>) => {
+      if (method === "Page.addScriptToEvaluateOnNewDocument" && typeof params?.source === "string")
+        scripts.push(params.source)
       protocol.emit(method, params)
       return {}
     },
@@ -84,7 +88,7 @@ async function fixture() {
     dispatch(message, result.resolve)
     return result.promise
   }
-  return { send, dispatch, state, broker, current, host, contexts, protocol, page }
+  return { send, dispatch, state, broker, current, host, contexts, protocol, page, scripts }
 }
 
 const request = (id: string): AgentManagerInMessage => ({
@@ -111,12 +115,12 @@ describe("browser inspection responses", () => {
       openPanel: () => {},
       log: () => {},
     })
-    let source = ""
-    view.protocol.on("Page.addScriptToEvaluateOnNewDocument", (params: { source: string }) => {
-      source = params.source
-    })
     const viewport = { width: 400, height: 300, revision: 1, active: true }
     await view.broker.viewport("session", "project", view.current.browserId, view.current.navigation, viewport)
+    // The cursor reporter installs after the viewport is accepted, so wait for its script before reporting.
+    for (let attempt = 0; attempt < 100 && view.scripts.length === 0; attempt++) await Bun.sleep(5)
+    const source = view.scripts.at(-1)
+    if (!source) throw new Error("The cursor reporter was not installed")
     view.protocol.emit("Runtime.executionContextCreated", { context: { id: 7, name: "kilo-cursor" } })
     const report = (cursor: string) =>
       view.protocol.emit("Runtime.bindingCalled", {
