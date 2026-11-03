@@ -338,7 +338,7 @@ class HostedWorkspaceEditorPanel @RequiresEdt constructor(
                 prompt = plan.prompt,
                 agent = HostedAgentDto(plan.agent, plan.model, plan.variant),
                 operationKey = java.util.UUID.randomUUID().toString(),
-                messageID = "msg_" + java.util.UUID.randomUUID().toString().replace("-", ""),
+                messageID = hostedMessageID(),
             ),
         )
     }
