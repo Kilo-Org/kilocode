@@ -8,6 +8,7 @@ import com.intellij.ui.tree.ui.DefaultTreeUI
 import com.intellij.util.concurrency.annotations.RequiresEdt
 import java.awt.Point
 import java.awt.event.MouseEvent
+import javax.swing.plaf.metal.MetalTreeUI
 import javax.swing.tree.TreePath
 
 class ActiveTreeInteractionTest : BasePlatformTestCase() {
@@ -85,6 +86,48 @@ class ActiveTreeInteractionTest : BasePlatformTestCase() {
 
     fun `test lower native disclosure boundary toggles once without selecting branch`() = boundary(false)
 
+    fun `test unsupported delegate owns disclosure and group body clicks`() {
+        var selections = 0
+        val actions = ActiveTreeActions(select = { selections++ })
+        val tree = ActiveTree("", actions = actions)
+        val view = tree.preferredFocus() as ActiveTreeView
+        val ui = Fallback()
+        view.setUI(ui)
+        tree.update(listOf(ActiveTreeNode(Row("main")), nodes().single()))
+        view.setSize(400, 300)
+        tree.select("main", false)
+        selections = 0
+        val entry = view.hierarchy.entries.getValue("group")
+        val path = TreePath(entry.path)
+        val bounds = view.getPathBounds(path)
+        val y = bounds.y + bounds.height / 2
+        val x = (0 until view.width).first { ui.contains(path, Point(it, y)) }
+        val point = Point(x, y)
+        val pointer = ActiveTreePointer(view, actions)
+        assertNull(view.regions.control(entry))
+        fun event(id: Int, point: Point, count: Int = 1) = MouseEvent(view, id, 0, 0,
+            point.x, point.y, count, false, MouseEvent.BUTTON1)
+
+        for (expanded in listOf(false, true)) {
+            assertFalse(pointer.process(event(MouseEvent.MOUSE_PRESSED, point)))
+            ui.press(path, point)
+            assertEquals(expanded, view.isExpanded(path))
+            for (id in listOf(MouseEvent.MOUSE_RELEASED, MouseEvent.MOUSE_CLICKED)) {
+                assertFalse(pointer.process(event(id, point)))
+                assertEquals("Native disclosure must not be toggled again", expanded, view.isExpanded(path))
+            }
+        }
+
+        val body = Point(bounds.x + bounds.width / 2, y)
+        assertFalse(ui.contains(path, body))
+        for (count in 1..2) {
+            assertFalse("Unknown delegate owns group body clicks", pointer.process(event(MouseEvent.MOUSE_CLICKED, body, count)))
+            assertTrue(view.isExpanded(path))
+        }
+        assertEquals(listOf("main"), tree.selectedKeys())
+        assertEquals(0, selections)
+    }
+
     @RequiresEdt
     private fun boundary(upper: Boolean) {
         var selections = 0
@@ -140,5 +183,13 @@ class ActiveTreeInteractionTest : BasePlatformTestCase() {
     private class Delegate : DefaultTreeUI() {
         @RequiresEdt
         fun contains(path: TreePath, point: Point): Boolean = isLocationInExpandControl(path, point.x, point.y)
+    }
+
+    private class Fallback : MetalTreeUI() {
+        @RequiresEdt
+        fun contains(path: TreePath, point: Point): Boolean = isLocationInExpandControl(path, point.x, point.y)
+
+        @RequiresEdt
+        fun press(path: TreePath, point: Point) = checkForClickInExpandControl(path, point.x, point.y)
     }
 }

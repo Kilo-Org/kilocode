@@ -68,7 +68,8 @@ internal class ActiveTreePointer(private val view: ActiveTreeView, private val a
             val path = TreePath(entry.path)
             when {
                 entry.allowsChildren -> {
-                    if (view.regions.control(entry)?.contains(event.point) == true) return false
+                    // Unknown disclosure bounds belong to the native delegate.
+                    if (view.regions.control(entry)?.contains(event.point) != false) return false
                     view.selectionModel.selectionPath = path
                     if (event.clickCount == 1) {
                         if (view.isExpanded(path)) view.collapsePath(path) else view.expandPath(path)
