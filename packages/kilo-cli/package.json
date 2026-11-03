@@ -13,6 +13,7 @@
     "build": "bun run script/build.ts",
     "startup": "bun run script/startup.ts",
     "test": "bun test --timeout 30000",
+    "test:ci": "bun ../../script/kilocode/test/test-runner.ts --ci",
     "typecheck": "tsc --noEmit",
     "typecheck:tsc": "tsc --noEmit"
   },
