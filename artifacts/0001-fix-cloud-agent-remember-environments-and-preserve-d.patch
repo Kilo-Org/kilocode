@@ -1,0 +1,906 @@
+From 7529dd0c9557161567a55f6b36edc87b5580b119 Mon Sep 17 00:00:00 2001
+From: eshurakov <54751+eshurakov@users.noreply.github.com>
+Date: Tue, 3 Nov 2026 14:48:05 +0000
+Subject: [PATCH] fix(cloud-agent): remember environments and preserve default
+ profiles
+
+---
+ .specs/cloud-agent-session.md                 |  18 +-
+ apps/web/package.json                         |   1 +
+ .../cloud-agent-next/NewSessionPanel.tsx      |  10 +-
+ .../cloud-agent/ProfilePickerPopover.test.ts  | 125 ++++++++--
+ .../cloud-agent/ProfilePickerPopover.tsx      |   2 +-
+ apps/web/src/hooks/useEnvironmentProfiles.ts  |  16 +-
+ .../src/hooks/useSessionEnvironment.test.ts   | 225 ++++++++++++++++++
+ apps/web/src/hooks/useSessionEnvironment.ts   |  33 +--
+ apps/web/src/hooks/useSessionProfileLayers.ts |  18 +-
+ .../profile-session-config.test.ts            |  41 +++-
+ packages/cloud-agent-profile/src/index.ts     |   2 +-
+ .../src/profile-resolution.test.ts            |  18 +-
+ .../src/profile-resolution.ts                 |  11 +-
+ .../src/profile-session-config.ts             |  19 +-
+ pnpm-lock.yaml                                |   3 +
+ 15 files changed, 447 insertions(+), 95 deletions(-)
+ create mode 100644 apps/web/src/hooks/useSessionEnvironment.test.ts
+
+diff --git a/.specs/cloud-agent-session.md b/.specs/cloud-agent-session.md
+index 8ff831f..ddb3b0e 100644
+--- a/.specs/cloud-agent-session.md
++++ b/.specs/cloud-agent-session.md
+@@ -119,8 +119,10 @@ repository.
+     16,000 characters.
+ 14. A repository matches every environment that contains it. When exactly one
+     matches, it MUST apply with no choice.
+-15. When several match, the new-session form in the web UI MUST require the user
+-    to choose one and MUST NOT start the session until they do. A request that
++15. When several match, the new-session form in the web UI MUST require a valid
++    choice and MUST NOT start the session without one. The form MUST
++    remember the last choice per repository and personal/organization scope and
++    restore it only while it still matches the repository. A request that
+     marks the choice as required and names no environment MUST fail with a
+     conflict that names the matching environments. A request that names an
+     environment that does not contain the repository MUST fail.
+@@ -131,9 +133,9 @@ repository.
+     names one is ignored, but a request that lists additional repositories MUST
+     fail.
+ 17. A session on a multi-repository environment MUST ignore the repository's
+-    profile binding and the implicit default profile. A profile the user
+-    selects explicitly MUST still apply. The new-session form MUST show the same
+-    profiles that will apply.
++    profile binding while applying the effective default profile. A profile the
++    user selects explicitly MUST replace the default. The new-session form MUST
++    show the same profiles that will apply.
+ 18. A session on a multi-repository environment MUST run in an isolated sandbox.
+     One repository MUST run at `/workspace/<name>`. Several MUST each be cloned
+     at `/workspace/<name>`, and the agent and setup MUST start at `/workspace`.
+@@ -661,6 +663,12 @@ The following use SHOULD and are not enforced today:
+ 
+ ## Changelog
+ 
++### 2026-11-03 -- Environment selection preferences
++
++- Remember the environment choice per repository and personal/organization scope.
++- Apply the effective default profile to multi-repository environments unless an
++  explicit profile replaces it. Repository bindings remain ignored.
++
+ ### 2026-11-03 -- Snapshot notice removal
+ 
+ - Removed the snapshot-reuse notice requirement to match the simplified
+diff --git a/apps/web/package.json b/apps/web/package.json
+index dd6d6c8..32af85a 100644
+--- a/apps/web/package.json
++++ b/apps/web/package.json
+@@ -200,6 +200,7 @@
+     "graphql": "16.14.2",
+     "jest": "30.3.0",
+     "knip": "6.39.0",
++    "linkedom": "0.18.12",
+     "postcss": "8.5.23",
+     "tailwindcss": "4.2.4",
+     "tsconfig-paths": "4.2.0",
+diff --git a/apps/web/src/components/cloud-agent-next/NewSessionPanel.tsx b/apps/web/src/components/cloud-agent-next/NewSessionPanel.tsx
+index 4293c48..13c6938 100644
+--- a/apps/web/src/components/cloud-agent-next/NewSessionPanel.tsx
++++ b/apps/web/src/components/cloud-agent-next/NewSessionPanel.tsx
+@@ -7,7 +7,6 @@ import { useRouter } from 'next/navigation';
+ import { useAtom, useSetAtom } from 'jotai';
+ import { toast } from 'sonner';
+ import { v4 as uuidv4 } from 'uuid';
+-import { appliesImplicitProfiles } from '@kilocode/cloud-agent-profile';
+ import {
+   AlertCircle,
+   Brain,
+@@ -538,14 +537,11 @@ export function NewSessionPanel({ organizationId }: NewSessionPanelProps) {
+   // Prefers an explicit selection; otherwise falls back to the effective
+   // default (personal default wins over org default). This mirrors the
+   // server-side resolution in mergeProfileConfiguration for a useful preview.
+-  // A V2 environment applies no implicit default, only an explicit selection.
+   const effectiveAgentProfileId =
+     selectedProfileId ??
+-    (!appliesImplicitProfiles(repositoryEnvironment)
+-      ? null
+-      : organizationId
+-        ? combinedProfilesData?.effectiveDefaultId
+-        : (personalProfiles?.find(p => p.isDefault)?.id ?? null)) ??
++    (organizationId
++      ? combinedProfilesData?.effectiveDefaultId
++      : (personalProfiles?.find(p => p.isDefault)?.id ?? null)) ??
+     null;
+   const effectiveAgentProfileOrg =
+     effectiveAgentProfileId && organizationId
+diff --git a/apps/web/src/components/cloud-agent/ProfilePickerPopover.test.ts b/apps/web/src/components/cloud-agent/ProfilePickerPopover.test.ts
+index fc85154..6bc46cb 100644
+--- a/apps/web/src/components/cloud-agent/ProfilePickerPopover.test.ts
++++ b/apps/web/src/components/cloud-agent/ProfilePickerPopover.test.ts
+@@ -50,20 +50,31 @@ const PROFILE = {
+   kiloCommandCount: 3,
+ };
+ 
+-function renderPicker(
+-  selectedOverrideProfileId: string | null = null,
+-  repoFullName?: string
+-): string {
++const SECOND_PROFILE = { ...PROFILE, id: 'profile-2', name: 'Development' };
++
++type RenderOptions = {
++  selectedOverrideProfileId?: string | null;
++  repoFullName?: string;
++  environment?: { repositories?: unknown } | null;
++  organizationId?: string;
++};
++
++function renderPicker(options: RenderOptions = {}): string {
+   return renderToStaticMarkup(
+     createElement(ProfilePickerPopover, {
+-      organizationId: 'org-1',
+-      selectedOverrideProfileId,
+-      repoFullName,
++      organizationId: 'organizationId' in options ? options.organizationId : 'org-1',
++      selectedOverrideProfileId: options.selectedOverrideProfileId ?? null,
++      repoFullName: options.repoFullName,
++      environment: options.environment,
+       onOverrideProfileSelect: jest.fn(),
+     })
+   );
+ }
+ 
++function triggerText(markup: string): string {
++  return markup.split('</button>')[0].replace(/<[^>]*>/g, '');
++}
++
+ describe('ProfilePickerPopover trigger', () => {
+   beforeEach(() => {
+     mockCombined = {
+@@ -84,10 +95,12 @@ describe('ProfilePickerPopover trigger', () => {
+     { selectedOverrideProfileId: 'profile-2', repoFullName: undefined, name: 'Development' },
+     { selectedOverrideProfileId: 'profile-2', repoFullName: 'acme/repo', name: 'Development' },
+   ])('shows only $name for override $selectedOverrideProfileId and repo $repoFullName', props => {
+-    const markup = renderPicker(props.selectedOverrideProfileId, props.repoFullName);
+-    const triggerText = markup.split('</button>')[0].replace(/<[^>]*>/g, '');
++    const markup = renderPicker({
++      selectedOverrideProfileId: props.selectedOverrideProfileId,
++      repoFullName: props.repoFullName,
++    });
+ 
+-    expect(triggerText).toBe(props.name);
++    expect(triggerText(markup)).toBe(props.name);
+     expect(markup).toContain('2 vars · 2 MCP · 6 skills · 3 cmds');
+   });
+ 
+@@ -99,11 +112,95 @@ describe('ProfilePickerPopover trigger', () => {
+       refetch: jest.fn(),
+     };
+ 
+-    const triggerText = renderPicker()
+-      .split('</button>')[0]
+-      .replace(/<[^>]*>/g, '');
++    expect(triggerText(renderPicker())).toBe('No profile');
++  });
++});
++
++describe('ProfilePickerPopover environment profiles', () => {
++  const v2WithOneRepository = { repositories: [{}] };
++  const v2WithSeveralRepositories = { repositories: [{}, {}] };
++
++  beforeEach(() => {
++    // The repo binding points at a different profile than the default, so a
++    // leaked binding would surface as a second active layer.
++    mockCombined = {
++      data: { allProfiles: [PROFILE, SECOND_PROFILE], effectiveDefaultId: SECOND_PROFILE.id },
++      isLoading: false,
++      error: undefined,
++      refetch: jest.fn(),
++    };
++    mockPersonal = { data: [], isLoading: false, error: undefined, refetch: jest.fn() };
++    mockRepoBindings = [{ repoFullName: 'acme/repo', platform: 'github', profileId: PROFILE.id }];
++  });
++
++  it.each([
++    { repositories: 'one repository', environment: v2WithOneRepository },
++    { repositories: 'several repositories', environment: v2WithSeveralRepositories },
++  ])(
++    'shows the default and no repository binding for a V2 environment with $repositories',
++    ({ environment }) => {
++      const markup = renderPicker({ environment, repoFullName: 'acme/repo' });
++
++      expect(triggerText(markup)).toBe('Development');
++      expect(markup).toContain('Active profile');
++      expect(markup).not.toContain('Production');
++      expect(markup).not.toContain('on top of');
++    }
++  );
++
++  it('lets an explicit profile replace the default', () => {
++    const markup = renderPicker({
++      environment: v2WithOneRepository,
++      repoFullName: 'acme/repo',
++      selectedOverrideProfileId: PROFILE.id,
++    });
++
++    expect(triggerText(markup)).toBe('Production');
++    expect(markup).not.toContain('Development');
++    expect(markup).not.toContain('on top of');
++  });
++
++  it('restores the default when the explicit profile is cleared', () => {
++    const markup = renderPicker({
++      environment: v2WithOneRepository,
++      repoFullName: 'acme/repo',
++      selectedOverrideProfileId: null,
++    });
++
++    expect(triggerText(markup)).toBe('Development');
++  });
++
++  it('shows no profile when there is no default and no explicit selection', () => {
++    mockCombined = {
++      data: { allProfiles: [PROFILE], effectiveDefaultId: null },
++      isLoading: false,
++      error: undefined,
++      refetch: jest.fn(),
++    };
++
++    const markup = renderPicker({ environment: v2WithOneRepository, repoFullName: 'acme/repo' });
++
++    expect(triggerText(markup)).toBe('No profile');
++    expect(markup).toContain('Pick a profile');
++    expect(markup).not.toContain('Active profile');
++  });
++
++  it('applies the personal default for a V2 environment', () => {
++    mockPersonal = {
++      data: [{ ...PROFILE, isDefault: true }],
++      isLoading: false,
++      error: undefined,
++      refetch: jest.fn(),
++    };
++
++    const markup = renderPicker({
++      environment: v2WithOneRepository,
++      repoFullName: 'acme/repo',
++      organizationId: undefined,
++    });
+ 
+-    expect(triggerText).toBe('No profile');
++    expect(triggerText(markup)).toBe('Production');
++    expect(markup).not.toContain('on top of');
+   });
+ });
+ 
+diff --git a/apps/web/src/components/cloud-agent/ProfilePickerPopover.tsx b/apps/web/src/components/cloud-agent/ProfilePickerPopover.tsx
+index a897297..66a430a 100644
+--- a/apps/web/src/components/cloud-agent/ProfilePickerPopover.tsx
++++ b/apps/web/src/components/cloud-agent/ProfilePickerPopover.tsx
+@@ -26,7 +26,7 @@ type ProfilePickerPopoverProps = {
+   onOverrideProfileSelect: (id: string | null) => void;
+   repoFullName?: string;
+   platform?: 'github' | 'gitlab';
+-  /** The session's environment. A V2 environment skips the binding and the implicit default. */
++  /** The session's environment. A V2 environment skips the repo binding; the effective default still applies. */
+   environment?: { repositories?: unknown } | null;
+ };
+ 
+diff --git a/apps/web/src/hooks/useEnvironmentProfiles.ts b/apps/web/src/hooks/useEnvironmentProfiles.ts
+index 24174fa..d7914f5 100644
+--- a/apps/web/src/hooks/useEnvironmentProfiles.ts
++++ b/apps/web/src/hooks/useEnvironmentProfiles.ts
+@@ -1,6 +1,6 @@
+ 'use client';
+ 
+-import { appliesImplicitProfiles, resolveProfileLayers } from '@kilocode/cloud-agent-profile';
++import { appliesRepoBindings, resolveProfileLayers } from '@kilocode/cloud-agent-profile';
+ import {
+   useCombinedProfiles,
+   useProfile,
+@@ -18,7 +18,7 @@ export function useEnvironmentProfiles({
+   organizationId?: string;
+   repository?: { platform: string; fullName: string };
+   selectedProfileId?: string | null;
+-  /** The environment being edited or used. A V2 environment skips the binding and the implicit default. */
++  /** The environment being edited or used. A V2 environment skips the repo binding; the effective default still applies. */
+   environment?: { repositories?: unknown } | null;
+ }) {
+   const personal = useProfiles({ enabled: !organizationId });
+@@ -28,9 +28,9 @@ export function useEnvironmentProfiles({
+   });
+   const bindings = useRepoBindings({ organizationId });
+   const summaries = organizationId ? combined.data?.allProfiles : personal.data;
+-  const implicitProfiles = appliesImplicitProfiles(environment);
++  const binds = appliesRepoBindings(environment);
+   const binding =
+-    !implicitProfiles || repository?.platform === 'bitbucket'
++    !binds || repository?.platform === 'bitbucket'
+       ? undefined
+       : bindings.data?.find(
+           candidate =>
+@@ -39,11 +39,9 @@ export function useEnvironmentProfiles({
+         );
+   const layers = resolveProfileLayers({
+     repoBindingProfileId: binding?.profileId ?? null,
+-    effectiveDefaultProfileId: !implicitProfiles
+-      ? null
+-      : organizationId
+-        ? (combined.data?.effectiveDefaultId ?? null)
+-        : (personal.data?.find(profile => profile.isDefault)?.id ?? null),
++    effectiveDefaultProfileId: organizationId
++      ? (combined.data?.effectiveDefaultId ?? null)
++      : (personal.data?.find(profile => profile.isDefault)?.id ?? null),
+     explicitOverrideProfileId: selectedProfileId ?? null,
+   });
+   const ownerFor = (id: string | undefined) =>
+diff --git a/apps/web/src/hooks/useSessionEnvironment.test.ts b/apps/web/src/hooks/useSessionEnvironment.test.ts
+new file mode 100644
+index 0000000..fb95d35
+--- /dev/null
++++ b/apps/web/src/hooks/useSessionEnvironment.test.ts
+@@ -0,0 +1,225 @@
++/* eslint-disable @typescript-eslint/no-require-imports, @typescript-eslint/no-var-requires -- DOM and storage must exist before loading the hook. */
++import { afterEach, beforeEach, describe, expect, it, jest } from '@jest/globals';
++import { createRequire } from 'node:module';
++import { act, createElement } from 'react';
++import { createRoot, type Root } from 'react-dom/client';
++import type * as Environments from './useCloudAgentEnvironments';
++import type { useSessionEnvironment as UseSessionEnvironment } from './useSessionEnvironment';
++
++const requireFromHere = createRequire(__filename);
++const { parseHTML } = requireFromHere('linkedom') as {
++  parseHTML: (html: string) => { window: typeof globalThis; document: Document };
++};
++const dom = parseHTML('<!doctype html><html><body><div id="root"></div></body></html>');
++const storage = new Map<string, string>();
++Object.assign(dom.window, {
++  localStorage: {
++    getItem: (key: string) => storage.get(key) ?? null,
++    setItem: (key: string, value: string) => storage.set(key, value),
++  },
++});
++Object.assign(globalThis, {
++  window: dom.window,
++  document: dom.document,
++  HTMLElement: dom.window.HTMLElement,
++  Element: dom.window.Element,
++  Node: dom.window.Node,
++  IS_REACT_ACT_ENVIRONMENT: true,
++});
++
++let mockMatches: Environments.EnvironmentSummary[] | undefined;
++let mockLoading = false;
++jest.mock('@/lib/trpc/utils', () => ({}));
++jest.mock('./useCloudAgentEnvironments', () => ({
++  ...jest.requireActual<typeof Environments>('./useCloudAgentEnvironments'),
++  useRepositoryEnvironments: () => ({ matches: mockMatches, isLoading: mockLoading }),
++}));
++const { useSessionEnvironment } = require('./useSessionEnvironment') as {
++  useSessionEnvironment: typeof UseSessionEnvironment;
++};
++
++const repository = { platform: 'github', fullName: 'Kilo-Org/kilocode' } as const;
++const environments: Environments.EnvironmentSummary[] = ['first', 'second'].map(id => ({
++  id,
++  name: id,
++  repositories: [{ platform: 'github', repoFullName: repository.fullName }],
++  createdAt: '2026-11-03T00:00:00.000Z',
++  updatedAt: '2026-11-03T00:00:00.000Z',
++  plainVarCount: 0,
++  secretCount: 0,
++  commandCount: 0,
++  sandboxAllocation: null,
++  configurationRevision: 1,
++}));
++type Input = Parameters<typeof UseSessionEnvironment>[0];
++let current: ReturnType<typeof UseSessionEnvironment> | undefined;
++
++function Probe(props: Input) {
++  current = useSessionEnvironment(props);
++  return null;
++}
++
++function session() {
++  if (!current) throw new Error('Session environment hook has not rendered');
++  return current;
++}
++
++describe('useSessionEnvironment', () => {
++  let root: Root;
++
++  function mount() {
++    const container = dom.document.getElementById('root');
++    if (!container) throw new Error('Missing session environment test root');
++    root = createRoot(container);
++  }
++
++  function render(props: Input = { repository }) {
++    act(() => root.render(createElement(Probe, props)));
++  }
++
++  function remount(props: Input = { repository }) {
++    act(() => root.unmount());
++    mount();
++    render(props);
++  }
++
++  beforeEach(() => {
++    storage.clear();
++    mockMatches = environments;
++    mockLoading = false;
++    current = undefined;
++    mount();
++  });
++
++  afterEach(() => {
++    act(() => root.unmount());
++    jest.restoreAllMocks();
++  });
++
++  it('requires a choice for multiple environments and sends the chosen ID', () => {
++    render();
++    expect(session().selection.status).toBe('choose');
++    act(() => session().chooseEnvironment('second'));
++    expect(session().environment?.id).toBe('second');
++    expect(session().requestedEnvironment).toEqual({ id: 'second' });
++  });
++
++  it('restores the last choice after remounting without choosing the first match', () => {
++    render();
++    act(() => session().chooseEnvironment('second'));
++    remount();
++    expect(session().environment?.id).toBe('second');
++    expect(session().requestedEnvironment).toEqual({ id: 'second' });
++    act(() => session().chooseEnvironment('first'));
++    remount();
++    expect(session().environment?.id).toBe('first');
++  });
++
++  it('remembers each repository independently when switching back and forth', () => {
++    const other: Input = { repository: { platform: 'github', fullName: 'Kilo-Org/cloud' } };
++    render();
++    act(() => session().chooseEnvironment('second'));
++    render(other);
++    expect(session().selection.status).toBe('choose');
++    act(() => session().chooseEnvironment('first'));
++    render();
++    expect(session().environment?.id).toBe('second');
++    render(other);
++    expect(session().environment?.id).toBe('first');
++  });
++
++  it('isolates personal and organization choices, including different organizations', () => {
++    render();
++    act(() => session().chooseEnvironment('second'));
++    render({ repository, organizationId: 'org-1' });
++    expect(session().selection.status).toBe('choose');
++    act(() => session().chooseEnvironment('first'));
++    render({ repository, organizationId: 'org-2' });
++    expect(session().selection.status).toBe('choose');
++    render();
++    expect(session().environment?.id).toBe('second');
++    render({ repository, organizationId: 'org-1' });
++    expect(session().environment?.id).toBe('first');
++  });
++
++  it('normalizes repository casing when restoring a choice', () => {
++    render();
++    act(() => session().chooseEnvironment('second'));
++    remount({ repository: { platform: 'github', fullName: 'kilo-org/KILOCODE' } });
++    expect(session().environment?.id).toBe('second');
++  });
++
++  it('does not reuse a choice for the same repository path on another provider', () => {
++    render();
++    act(() => session().chooseEnvironment('second'));
++    render({ repository: { platform: 'gitlab', projectPath: repository.fullName } });
++    expect(session().selection.status).toBe('choose');
++  });
++
++  it('uses stable Bitbucket UUIDs rather than the display name', () => {
++    const repo = {
++      platform: 'bitbucket',
++      fullName: 'team/repo',
++      workspaceUuid: '{ABC}',
++      repositoryUuid: '{DEF}',
++    } as const;
++    render({ repository: repo });
++    act(() => session().chooseEnvironment('second'));
++    remount({
++      repository: { ...repo, fullName: 'team/renamed', workspaceUuid: '{abc}' },
++    });
++    expect(session().environment?.id).toBe('second');
++    render({ repository: { ...repo, repositoryUuid: '{OTHER}' } });
++    expect(session().selection.status).toBe('choose');
++  });
++
++  it('requires another choice when the remembered environment no longer matches', () => {
++    render();
++    act(() => session().chooseEnvironment('second'));
++    mockMatches = environments.map(environment =>
++      environment.id === 'second' ? { ...environment, id: 'replacement' } : environment
++    );
++    remount();
++    expect(session().selection.status).toBe('choose');
++    expect(session().requestedEnvironment).toBeUndefined();
++    expect(session().environment).toBeUndefined();
++  });
++
++  it('preserves the choice through loading and failed queries', () => {
++    render();
++    act(() => session().chooseEnvironment('second'));
++    mockMatches = undefined;
++    mockLoading = true;
++    remount();
++    expect(session().selection.status).toBe('loading');
++    mockLoading = false;
++    render();
++    expect(session().selection.status).toBe('unknown');
++    mockMatches = environments;
++    render();
++    expect(session().environment?.id).toBe('second');
++  });
++
++  it('still automatically selects a single match and supports no matches', () => {
++    mockMatches = environments.slice(0, 1);
++    render();
++    expect(session().environment?.id).toBe('first');
++    expect(session().requestedEnvironment).toBeUndefined();
++    mockMatches = [];
++    render();
++    expect(session().environment).toBeNull();
++    expect(storage.size).toBe(0);
++  });
++
++  it('keeps selection usable when browser storage is unavailable', () => {
++    jest.spyOn(dom.window.localStorage, 'getItem').mockImplementation(() => {
++      throw new Error('Storage disabled');
++    });
++    jest.spyOn(dom.window.localStorage, 'setItem').mockImplementation(() => {
++      throw new Error('Storage disabled');
++    });
++    render();
++    act(() => session().chooseEnvironment('second'));
++    expect(session().environment?.id).toBe('second');
++  });
++});
+diff --git a/apps/web/src/hooks/useSessionEnvironment.ts b/apps/web/src/hooks/useSessionEnvironment.ts
+index cde1483..7fc91cf 100644
+--- a/apps/web/src/hooks/useSessionEnvironment.ts
++++ b/apps/web/src/hooks/useSessionEnvironment.ts
+@@ -1,6 +1,6 @@
+ 'use client';
+ 
+-import { useCallback, useState } from 'react';
++import { useCallback, useEffect, useState } from 'react';
+ import {
+   useRepositoryEnvironments,
+   type EnvironmentRepository,
+@@ -11,13 +11,14 @@ import {
+   selectEnvironment,
+   selectedEnvironment,
+ } from '@/components/cloud-agent-next/environment-selection';
++import { safeLocalStorage } from '@/lib/localStorage';
+ 
+-type Choice = { repositoryKey: string; environmentId: string | null };
++type Choice = { key: string; id: string | null };
+ 
+ /**
+  * The environment of a new session in the selected repository: the matches, the
+  * user's choice among several.
+- * The choice starts over when the repository changes.
++ * Remember the last choice for each repository and personal/organization scope.
+  */
+ export function useSessionEnvironment({
+   organizationId,
+@@ -27,21 +28,23 @@ export function useSessionEnvironment({
+   repository: EnvironmentRepository | undefined;
+ }) {
+   const { matches, isLoading } = useRepositoryEnvironments({ organizationId, repository });
+-  const currentKey = repository ? repositoryKey(repository) : '';
+-  const [stored, setStored] = useState<Choice>({
+-    repositoryKey: '',
+-    environmentId: null,
+-  });
+-  const choice: Choice =
+-    stored.repositoryKey === currentKey
+-      ? stored
+-      : { repositoryKey: currentKey, environmentId: null };
++  const key = repository
++    ? `cloud-agent:environment:${organizationId ?? 'personal'}:${repositoryKey(repository)}`
++    : '';
++  const [stored, setStored] = useState<Choice>({ key: '', id: null });
+ 
+-  const selection = selectEnvironment(matches, choice.environmentId, isLoading);
++  useEffect(() => {
++    setStored({ key, id: key ? safeLocalStorage.getItem(key) : null });
++  }, [key]);
++
++  const selection = selectEnvironment(matches, stored.key === key ? stored.id : null, isLoading);
+ 
+   const chooseEnvironment = useCallback(
+-    (environmentId: string) => setStored({ repositoryKey: currentKey, environmentId }),
+-    [currentKey]
++    (id: string) => {
++      setStored({ key, id });
++      if (key) safeLocalStorage.setItem(key, id);
++    },
++    [key]
+   );
+ 
+   return {
+diff --git a/apps/web/src/hooks/useSessionProfileLayers.ts b/apps/web/src/hooks/useSessionProfileLayers.ts
+index b330fd8..bb7afa5 100644
+--- a/apps/web/src/hooks/useSessionProfileLayers.ts
++++ b/apps/web/src/hooks/useSessionProfileLayers.ts
+@@ -2,7 +2,7 @@
+ 'use client';
+ 
+ import { useMemo } from 'react';
+-import { appliesImplicitProfiles, resolveProfileLayers } from '@kilocode/cloud-agent-profile';
++import { appliesRepoBindings, resolveProfileLayers } from '@kilocode/cloud-agent-profile';
+ import {
+   useCombinedProfiles,
+   useProfiles,
+@@ -15,7 +15,7 @@ type SessionProfileLayersInput = {
+   selectedOverrideProfileId: string | null;
+   repoFullName?: string;
+   platform?: 'github' | 'gitlab';
+-  /** The session's environment. A V2 environment skips the binding and the implicit default. */
++  /** The session's environment. A V2 environment skips the repo binding; the effective default still applies. */
+   environment?: { repositories?: unknown } | null;
+ };
+ 
+@@ -61,24 +61,22 @@ export function useSessionProfileLayers({
+     [organizationId, combinedData, personalProfilesData]
+   );
+ 
+-  const implicitProfiles = appliesImplicitProfiles(environment);
+-  const effectiveDefaultProfileId = !implicitProfiles
+-    ? null
+-    : organizationId
+-      ? (combinedData?.effectiveDefaultId ?? null)
+-      : (personalProfilesData?.find(p => p.isDefault)?.id ?? null);
++  const binds = appliesRepoBindings(environment);
++  const effectiveDefaultProfileId = organizationId
++    ? (combinedData?.effectiveDefaultId ?? null)
++    : (personalProfilesData?.find(p => p.isDefault)?.id ?? null);
+ 
+   const { data: repoBindings } = useRepoBindings({ organizationId });
+ 
+   const repoBindingProfileId = useMemo(() => {
+-    if (!implicitProfiles || !repoFullName || !repoBindings) return null;
++    if (!binds || !repoFullName || !repoBindings) return null;
+     const binding = repoBindings.find(
+       b =>
+         b.repoFullName.toLowerCase() === repoFullName.toLowerCase() &&
+         (!platform || b.platform === platform)
+     );
+     return binding?.profileId ?? null;
+-  }, [implicitProfiles, repoFullName, repoBindings, platform]);
++  }, [binds, repoFullName, repoBindings, platform]);
+ 
+   // Shared resolution logic — same rules as the server-side merge.
+   const layers = useMemo(
+diff --git a/apps/web/src/tests/cloud-agent-profile/profile-session-config.test.ts b/apps/web/src/tests/cloud-agent-profile/profile-session-config.test.ts
+index 09a0e38..db4a2b7 100644
+--- a/apps/web/src/tests/cloud-agent-profile/profile-session-config.test.ts
++++ b/apps/web/src/tests/cloud-agent-profile/profile-session-config.test.ts
+@@ -540,8 +540,8 @@ describe('mergeProfileConfiguration', () => {
+     });
+ 
+     describe('a V2 environment', () => {
+-      // One repository is enough: any V2 environment skips the binding and the
+-      // implicit default.
++      // Any V2 environment skips the repository binding, but the implicit
++      // default profile still applies.
+       const v2Environment = {
+         envVars: { FROM_ENV: 'env' },
+         setupCommands: ['env-cmd'],
+@@ -554,14 +554,16 @@ describe('mergeProfileConfiguration', () => {
+         ],
+       };
+ 
+-      test('ignores the repository binding and the implicit default profile', async () => {
++      test('keeps the implicit default but ignores the repository binding', async () => {
+         const user = await insertTestUser();
+         const owner: ProfileOwner = { type: 'user', id: user.id };
+         const repoProfileId = await createProfile(owner, 'repo-profile');
+         await addVar(repoProfileId, 'FROM_BINDING', 'bound');
++        await addCommands(repoProfileId, ['binding-cmd']);
+         await bindRepo(owner, 'org/repo', 'github', repoProfileId);
+         const defaultProfileId = await createProfile(owner, 'default', { isDefault: true });
+         await addVar(defaultProfileId, 'FROM_DEFAULT', 'default-val');
++        await addCommands(defaultProfileId, ['default-cmd']);
+ 
+         const result = await mergeProfileConfiguration(db, {
+           owner,
+@@ -570,12 +572,12 @@ describe('mergeProfileConfiguration', () => {
+           environment: v2Environment,
+         });
+ 
+-        expect(result.envVars).toEqual({ FROM_ENV: 'env' });
++        expect(result.envVars).toEqual({ FROM_ENV: 'env', FROM_DEFAULT: 'default-val' });
+         expect(result.setupCommands).toEqual(['env-cmd']);
+-        expect(result.resolvedProfileId).toBeUndefined();
++        expect(result.resolvedProfileId).toBe(defaultProfileId);
+       });
+ 
+-      test('ignores the organization and personal default profiles for an organization owner', async () => {
++      test('applies the personal default over the org default for an organization owner', async () => {
+         const user = await insertTestUser();
+         const org = await createTestOrganization('v2-org', user.id, 0);
+         const orgOwner: ProfileOwner = { type: 'organization', id: org.id };
+@@ -598,16 +600,37 @@ describe('mergeProfileConfiguration', () => {
+           environment: v2Environment,
+         });
+ 
+-        expect(result.envVars).toEqual({ FROM_ENV: 'env' });
+-        expect(result.resolvedProfileId).toBeUndefined();
++        expect(result.envVars).toEqual({ FROM_ENV: 'env', FROM_PERSONAL_DEFAULT: 'personal' });
++        expect(result.resolvedProfileId).toBe(personalDefaultId);
+       });
+ 
+-      test('applies an explicitly selected profile and the request overrides', async () => {
++      test('falls back to the org default when the user has no personal default', async () => {
++        const user = await insertTestUser();
++        const org = await createTestOrganization('v2-org', user.id, 0);
++        const orgOwner: ProfileOwner = { type: 'organization', id: org.id };
++        const orgDefaultId = await createProfile(orgOwner, 'org-default', { isDefault: true });
++        await addVar(orgDefaultId, 'FROM_ORG_DEFAULT', 'org');
++
++        const result = await mergeProfileConfiguration(db, {
++          owner: orgOwner,
++          userId: user.id,
++          repoFullName: 'org/repo',
++          platform: 'github',
++          environment: v2Environment,
++        });
++
++        expect(result.envVars).toEqual({ FROM_ENV: 'env', FROM_ORG_DEFAULT: 'org' });
++        expect(result.resolvedProfileId).toBe(orgDefaultId);
++      });
++
++      test('applies an explicitly selected profile over the default and keeps request overrides', async () => {
+         const user = await insertTestUser();
+         const owner: ProfileOwner = { type: 'user', id: user.id };
+         const repoProfileId = await createProfile(owner, 'repo-profile');
+         await addVar(repoProfileId, 'FROM_BINDING', 'bound');
+         await bindRepo(owner, 'org/repo', 'github', repoProfileId);
++        const defaultProfileId = await createProfile(owner, 'default', { isDefault: true });
++        await addVar(defaultProfileId, 'FROM_DEFAULT', 'default-val');
+         const pickedProfileId = await createProfile(owner, 'picked');
+         await addVar(pickedProfileId, 'FROM_PICKED', 'picked-val');
+         await addCommands(pickedProfileId, ['picked-cmd']);
+diff --git a/packages/cloud-agent-profile/src/index.ts b/packages/cloud-agent-profile/src/index.ts
+index cedb265..dcd70a8 100644
+--- a/packages/cloud-agent-profile/src/index.ts
++++ b/packages/cloud-agent-profile/src/index.ts
+@@ -22,7 +22,7 @@ export { MASKED_SECRET_VALUE } from './types';
+ 
+ // Pure resolution helpers
+ export {
+-  appliesImplicitProfiles,
++  appliesRepoBindings,
+   resolveProfileLayers,
+   type ProfileLayer,
+   type ProfileLayerSource,
+diff --git a/packages/cloud-agent-profile/src/profile-resolution.test.ts b/packages/cloud-agent-profile/src/profile-resolution.test.ts
+index d2fc5f1..b34da82 100644
+--- a/packages/cloud-agent-profile/src/profile-resolution.test.ts
++++ b/packages/cloud-agent-profile/src/profile-resolution.test.ts
+@@ -1,5 +1,5 @@
+ import { describe, test, expect } from 'vitest';
+-import { appliesImplicitProfiles, resolveProfileLayers } from './profile-resolution';
++import { appliesRepoBindings, resolveProfileLayers } from './profile-resolution';
+ 
+ // Short fake UUIDs, only identity matters in this pure-logic test.
+ const REPO_P = 'repo-profile';
+@@ -148,15 +148,15 @@ describe('resolveProfileLayers', () => {
+   });
+ });
+ 
+-describe('appliesImplicitProfiles', () => {
+-  test('applies with no environment and for a V1 environment', () => {
+-    expect(appliesImplicitProfiles(undefined)).toBe(true);
+-    expect(appliesImplicitProfiles(null)).toBe(true);
+-    expect(appliesImplicitProfiles({})).toBe(true);
++describe('appliesRepoBindings', () => {
++  test('repository bindings apply with no environment and for a V1 environment', () => {
++    expect(appliesRepoBindings(undefined)).toBe(true);
++    expect(appliesRepoBindings(null)).toBe(true);
++    expect(appliesRepoBindings({})).toBe(true);
+   });
+ 
+-  test('does not apply for a V2 environment, whatever its repository count', () => {
+-    expect(appliesImplicitProfiles({ repositories: [] })).toBe(false);
+-    expect(appliesImplicitProfiles({ repositories: [{}, {}] })).toBe(false);
++  test('repository bindings do not apply for a V2 environment, whatever its repository count', () => {
++    expect(appliesRepoBindings({ repositories: [] })).toBe(false);
++    expect(appliesRepoBindings({ repositories: [{}, {}] })).toBe(false);
+   });
+ });
+diff --git a/packages/cloud-agent-profile/src/profile-resolution.ts b/packages/cloud-agent-profile/src/profile-resolution.ts
+index 788ac50..305d444 100644
+--- a/packages/cloud-agent-profile/src/profile-resolution.ts
++++ b/packages/cloud-agent-profile/src/profile-resolution.ts
+@@ -79,12 +79,13 @@ export function resolveProfileLayers({
+ }
+ 
+ /**
+- * Whether the repository binding and the implicit default profile apply to a
+- * session. A multi-repository (V2) environment turns both off: it has no single
+- * repository to bind, and it applies only an explicitly selected profile. Only a
+- * V2 environment, in a session layer or an API response, carries `repositories`.
++ * Whether repository bindings apply to a session. A multi-repository (V2)
++ * environment has no single repository to bind, so bindings do not apply. Only
++ * a V2 environment, in a session layer or an API response, carries
++ * `repositories`. The implicit default profile is independent of the
++ * environment version.
+  */
+-export function appliesImplicitProfiles(
++export function appliesRepoBindings(
+   environment: { repositories?: unknown } | null | undefined
+ ): boolean {
+   return environment?.repositories === undefined;
+diff --git a/packages/cloud-agent-profile/src/profile-session-config.ts b/packages/cloud-agent-profile/src/profile-session-config.ts
+index 08a7b5b..964cd55 100644
+--- a/packages/cloud-agent-profile/src/profile-session-config.ts
++++ b/packages/cloud-agent-profile/src/profile-session-config.ts
+@@ -22,7 +22,7 @@ import {
+   getInstructionsForSession,
+   type InstructionForSession,
+ } from './profile-instructions-service';
+-import { appliesImplicitProfiles, resolveProfileLayers } from './profile-resolution';
++import { appliesRepoBindings, resolveProfileLayers } from './profile-resolution';
+ import { buildOwnershipCondition } from './profile-utils';
+ import { encryptedEnvelopeSchema, type EnvironmentSessionLayer } from './environment-contracts';
+ import type { ProfileOwner } from './types';
+@@ -352,13 +352,13 @@ export async function mergeProfileConfiguration(
+   args: MergeProfileConfigurationArgs
+ ): Promise<MergeProfileConfigurationResult> {
+   const { profileId, owner, userId, repoFullName, platform } = args;
+-  // A V2 environment applies only an explicitly selected profile; the repository
+-  // binding and the implicit default are not resolved.
+-  const resolvesImplicitProfiles = appliesImplicitProfiles(args.environment);
++  // A V2 environment has no single repository, so the repository binding does
++  // not apply. The implicit default still does.
++  const binds = appliesRepoBindings(args.environment);
+ 
+   // Look up the inputs to resolution.
+   const repoBindingProfileId =
+-    resolvesImplicitProfiles && repoFullName && platform
++    binds && repoFullName && platform
+       ? await getBindingForRepo(db, owner, repoFullName, platform)
+       : null;
+ 
+@@ -370,13 +370,12 @@ export async function mergeProfileConfiguration(
+ 
+   // Default fills the top slot when no explicit pick is made — even if a
+   // repo binding is also present, in which case the default layers on top.
++  // The environment version does not affect the default.
+   const effectiveDefaultProfileId = explicitOverrideProfileId
+     ? null
+-    : !resolvesImplicitProfiles
+-      ? null
+-      : owner.type === 'organization' && userId
+-        ? await getEffectiveDefaultProfileId(db, userId, owner.id)
+-        : ((await getDefaultProfile(db, owner))?.id ?? null);
++    : owner.type === 'organization' && userId
++      ? await getEffectiveDefaultProfileId(db, userId, owner.id)
++      : ((await getDefaultProfile(db, owner))?.id ?? null);
+ 
+   const { base, top } = resolveProfileLayers({
+     repoBindingProfileId,
+diff --git a/pnpm-lock.yaml b/pnpm-lock.yaml
+index 4ce8498..2335222 100644
+--- a/pnpm-lock.yaml
++++ b/pnpm-lock.yaml
+@@ -1492,6 +1492,9 @@ importers:
+       knip:
+         specifier: 6.39.0
+         version: 6.39.0
++      linkedom:
++        specifier: 0.18.12
++        version: 0.18.12
+       postcss:
+         specifier: 8.5.30
+         version: 8.5.30
+-- 
+2.47.3
+
