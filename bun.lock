@@ -16,6 +16,7 @@
         "@tsconfig/bun": "catalog:",
         "@types/bun": "catalog:",
         "@types/mime-types": "3.0.1",
+        "@types/node": "catalog:",
         "@types/react": "19.2.17",
         "@typescript/native": "catalog:",
         "glob": "13.0.5",
