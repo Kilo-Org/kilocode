@@ -34,8 +34,8 @@ const INCLUDE = [
 const EXCLUDE = [
   /\.test\.tsx?$/,
   /\.d\.ts$/,
-  /snapshot/i,
-  /__snapshots__/,
+  /\.snap$/,
+  /\/__snapshots__\//,
   /\/fixtures?\//,
   /\/kilocode\//,
   /\/storybook\//,
@@ -90,7 +90,7 @@ export interface AuditResult {
   scoped: number
   findings: Finding[]
   unexpected: Finding[]
-  unparseable: string[]
+  unparseable: { file: string; error: string }[]
   stale: string[]
 }
 
@@ -100,13 +100,13 @@ export async function run(): Promise<AuditResult> {
   const scoped = tracked.filter((file) => INCLUDE.some((re) => re.test(file)) && !EXCLUDE.some((re) => re.test(file)))
 
   const findings: Finding[] = []
-  const unparseable: string[] = []
+  const unparseable: { file: string; error: string }[] = []
   for (const file of scoped) {
     const key = file.slice("packages/".length)
     const source = await Bun.file(path.join(repo, file)).text()
     const result = safeAudit(key, source)
-    if (result === null) unparseable.push(key)
-    else findings.push(...result)
+    if (Array.isArray(result)) findings.push(...result)
+    else unparseable.push({ file: key, error: result.error })
   }
 
   return {
@@ -118,32 +118,37 @@ export async function run(): Promise<AuditResult> {
   }
 }
 
-function safeAudit(key: string, source: string): Finding[] | null {
+// A parse failure is not skipped silently: a user-facing file the audit cannot
+// read leaves its branding unchecked, which is the regression the audit exists
+// to prevent. The error is surfaced and fails the run.
+function safeAudit(key: string, source: string): Finding[] | { error: string } {
   try {
     return auditFile(key, source)
-  } catch {
-    return null
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : String(error) }
   }
 }
 
 async function main() {
   const { scoped, unexpected, unparseable, stale } = await run()
 
-  for (const file of unparseable) console.warn(`branding-audit: skipped unparseable ${file}`)
   for (const file of stale) console.warn(`branding-audit: stale allowlist entry (no findings): ${file}`)
 
-  if (unexpected.length === 0) {
-    console.log(`branding-audit: ok (${scoped} files, ${allow.size} allowlisted, ${unparseable.length} skipped)`)
+  if (unexpected.length === 0 && unparseable.length === 0) {
+    console.log(`branding-audit: ok (${scoped} files, ${allow.size} allowlisted)`)
     return
   }
 
-  console.error(`branding-audit: ${unexpected.length} unbranded user-visible OpenCode occurrence(s):\n`)
-  for (const f of unexpected)
-    console.error(`  [${f.kind}] packages/${f.file}:${f.line}:${f.column}  ${JSON.stringify(f.snippet)}`)
-  console.error(
-    `\nFix each: add the file to KiloBranding.files (missing-interception), extend the rules/PROTECTED (rule-gap),` +
-      ` or add a reviewed entry to branding-audit-allow.ts if the text is genuinely not Kilo branding.`,
-  )
+  for (const u of unparseable) console.error(`branding-audit: could not parse packages/${u.file}: ${u.error}`)
+  if (unexpected.length > 0) {
+    console.error(`\nbranding-audit: ${unexpected.length} unbranded user-visible OpenCode occurrence(s):\n`)
+    for (const f of unexpected)
+      console.error(`  [${f.kind}] packages/${f.file}:${f.line}:${f.column}  ${JSON.stringify(f.snippet)}`)
+    console.error(
+      `\nFix each: add the file to KiloBranding.files (missing-interception), extend the rules/PROTECTED (rule-gap),` +
+        ` or add a reviewed entry to branding-audit-allow.ts if the text is genuinely not Kilo branding.`,
+    )
+  }
   process.exit(1)
 }
 
