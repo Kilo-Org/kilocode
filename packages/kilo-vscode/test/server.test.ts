@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test"
 import { OpenCode } from "@opencode/client"
 import { KiloHandshakeRpc } from "@opencode/schema/kilocode/handshake"
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs"
 import { mkdtemp, mkdir, realpath, rm } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import path from "node:path"
@@ -8,12 +9,12 @@ import { command, environment, manager, parse, settingsEnvironment, start, stop 
 
 const extension = path.resolve(import.meta.dir, "..")
 
-async function checkout() {
-  const dir = await mkdtemp(path.join(tmpdir(), "kilo-vscode-checkout-"))
+function checkout() {
+  const dir = mkdtempSync(path.join(tmpdir(), "kilo-vscode-checkout-"))
   const extension = path.join(dir, "packages", "kilo-vscode")
-  await mkdir(extension, { recursive: true })
-  await mkdir(path.join(dir, "script"), { recursive: true })
-  await Bun.write(path.join(dir, "script", "dev-isolated.ts"), "")
+  mkdirSync(extension, { recursive: true })
+  mkdirSync(path.join(dir, "script"), { recursive: true })
+  writeFileSync(path.join(dir, "script", "dev-isolated.ts"), "")
   return { dir, extension }
 }
 
@@ -32,20 +33,20 @@ describe("parse", () => {
 })
 
 describe("command", () => {
-  test("uses the repository dev entry with an isolated profile when bin/kilo2 is missing", async () => {
-    const { dir, extension } = await checkout()
+  test("uses the repository dev entry with an isolated profile when bin/kilo2 is missing", () => {
+    const { dir, extension } = checkout()
     const found = command({ extension, storage: "/storage", env: {} })
     expect(found?.args).toEqual([path.join(dir, "script", "dev-isolated.ts"), "serve", "--port", "0", "--stdio"])
     expect(found?.env).toEqual({ KILO_V2_PROFILE: path.join("/storage", "profile") })
-    await rm(dir, { recursive: true })
+    rmSync(dir, { recursive: true })
   })
 
-  test("keeps an explicit KILO_V2_PROFILE", async () => {
-    const { dir, extension } = await checkout()
+  test("keeps an explicit KILO_V2_PROFILE", () => {
+    const { dir, extension } = checkout()
     expect(command({ extension, storage: "/storage", env: { KILO_V2_PROFILE: "/p" } })?.env).toEqual({
       KILO_V2_PROFILE: "/p",
     })
-    await rm(dir, { recursive: true })
+    rmSync(dir, { recursive: true })
   })
 
   test("prefers a bundled bin/kilo2", async () => {
