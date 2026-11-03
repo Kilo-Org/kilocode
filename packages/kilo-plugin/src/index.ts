@@ -12,6 +12,7 @@ import { KiloProviderUsagePlugin } from "./provider-usage"
 import { KiloOpenAIPlugin } from "./openai"
 import { KiloMarketplacePlugin } from "./marketplace"
 import { KiloSkillPlugin } from "./skill"
+import { KiloTodoPlugin } from "./todo"
 import { KiloWriteToolPlugin } from "./tool-write"
 import { KiloReview } from "./review"
 // kilo_port(agent-manager:648a508ad347) the protection guard now lives in the Agent Manager plugin.
@@ -39,6 +40,7 @@ export const KiloPlugins = [
   KiloOpenAIPlugin,
   KiloMarketplacePlugin,
   KiloSkillPlugin,
+  KiloTodoPlugin,
   KiloWriteToolPlugin,
   KiloCommitMessagePlugin,
   KiloBranchNamePlugin,

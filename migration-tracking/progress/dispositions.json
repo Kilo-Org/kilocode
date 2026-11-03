@@ -902,5 +902,20 @@
     "state": "ported",
     "note": "packages/kilo-plugin/test/agent-manager-permission.test.ts carries every v1 case (broad Agent Manager allow, global allow, saved wildcard approval, explicit approvals) and adds a later wildcard and a later ask. Integration cases through the core permission service with the hook registered: Always allow keeps an exact approval for the next call and settles the same pattern pending in another session of the project but not another side effect; saved and configured wildcards ask again; unattended work denies with a message and honors an exact saved approval.",
     "by": "agent-manager"
+  },
+  "module:packages/kilo-vscode/webview-ui/src/context/todo-revert.ts": {
+    "state": "ported",
+    "note": "webview-ui/src/v2/todo-state.ts todoState applies the staged revert to the message parts before it selects the latest completed todowrite list: messages after the revert message are hidden, parts at or after the reverted part are hidden, and a message-level revert hides the message. The v2 part order is the content order, so the reverted part is found by id instead of comparing ids.",
+    "by": "composer-todos"
+  },
+  "module:packages/kilo-vscode/tests/unit/todo-revert.test.ts": {
+    "state": "ported",
+    "note": "packages/kilo-vscode/test/todo-dock.test.ts carries the revert assertions: a reverted write keeps the list before it, the latest state returns without a revert, and a reverted part inside one message keeps only the earlier todowrite parts.",
+    "by": "composer-todos"
+  },
+  "module:packages/opencode/test/kilocode/todowrite-description.test.ts": {
+    "state": "ported",
+    "note": "packages/kilo-plugin/test/todo-tool.test.ts asserts the v1 description phrases on the Kilo todowrite tool, and the Kilo host registers that tool unconditionally through KiloPlugins.",
+    "by": "composer-todos"
   }
 }

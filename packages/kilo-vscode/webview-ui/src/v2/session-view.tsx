@@ -24,8 +24,8 @@ export function SessionView(props: {
   onSession: (id: string | undefined) => void
   actions: ToolActions
   onShowHistory: () => void
-  /** The row above the dock; receives whether the session has messages. */
-  row?: (hasMessages: boolean) => JSX.Element
+  /** The row above the dock; receives whether the session has messages and the todo element it trails. */
+  row?: (hasMessages: boolean, todos: JSX.Element) => JSX.Element
   /** Replaces the transcript with `replacement` while true, for example with the session changes. */
   replace?: boolean
   replacement?: JSX.Element
@@ -215,8 +215,9 @@ export function SessionView(props: {
             {(form) => <QuestionDock form={form} />}
           </Show>
           <SessionDock
+            session={session()}
             blocked={blocked()}
-            actions={props.row?.(hasMessages())}
+            actions={(todos) => props.row?.(hasMessages(), todos)}
             hasActions={hasMessages()}
             status={working.status()}
             submitting={working.submitting()}
