@@ -68,7 +68,7 @@ export type ToolActions = {
   /** Opens several changed files at once, for a patch that changes more than one. */
   openDiffs?: (diffs: ToolActionDiff[]) => void
   openSession?: (sessionID: string) => void
-  /** Stops the current execution of one session, for the stop action of a running subagent. */
+  /** Ends the child execution for the stop action of a running subagent. */
   interruptSession?: (sessionID: string) => void
   /** Moves the open session's foreground tools into background observation, so a subagent keeps running. */
   continueInBackground?: () => void
@@ -1081,8 +1081,8 @@ ToolRegistry.register({
       event.stopPropagation()
       props.actions?.continueInBackground?.()
     }
-    // Stop the child's current execution. Its parent keeps running; background
-    // jobs the child started are separate work and are not cancelled here.
+    // The card stop ends the child execution. Background jobs and background
+    // subagents the child started need the scoped cancel API in #15724.
     const stoppable = () => !!childID() && avatar() === "running" && !!props.actions?.interruptSession
     // A running foreground child can move to background observation, matching the v1 task card.
     const promotable = () => !!childID() && !!props.actions?.continueInBackground && auto()
