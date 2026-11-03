@@ -5,8 +5,9 @@ import { buildWebviewHtml } from "../../src/utils"
 import { Uri } from "vscode"
 
 describe("Agent Manager splash preference injection", () => {
-  for (const preference of [undefined, false, true]) {
-    it(`injects ${preference} instead of collapsing the unset preference`, () => {
+  for (const preference of [undefined, false, true, null, 0, 1, "false", "</script><script>bad()</script>", {}]) {
+    it(`injects a safe tri-state preference for ${JSON.stringify(preference)}`, () => {
+      const expected = typeof preference === "boolean" ? preference : undefined
       const uri = Uri.file("/extension/resource")
       const html = buildWebviewHtml({ cspSource: "vscode-resource://test" } as never, {
         scriptUri: uri,
@@ -14,15 +15,16 @@ describe("Agent Manager splash preference injection", () => {
         iconsBaseUri: uri,
         workerUri: uri,
         title: "Agent Manager",
-        splashFolded: preference,
+        splashFolded: preference as never,
       })
-      expect(html).toContain(`window.KILO_AGENT_MANAGER_SPLASH_FOLDED = ${JSON.stringify(preference)};`)
+      expect(html).toContain(`window.KILO_AGENT_MANAGER_SPLASH_FOLDED = ${expected};`)
+      expect(html).not.toContain("<script>bad()")
       // Run the injected globals script and read back what the webview sees.
       const script = html.match(/<script nonce="[^"]+">(window\.ICONS_BASE_URI[^<]*)<\/script>/)?.[1]
       const scope: Record<string, unknown> = {}
       new Function("window", script!)(scope)
       expect("KILO_AGENT_MANAGER_SPLASH_FOLDED" in scope).toBe(true)
-      expect(scope.KILO_AGENT_MANAGER_SPLASH_FOLDED).toBe(preference)
+      expect(scope.KILO_AGENT_MANAGER_SPLASH_FOLDED).toBe(expected)
     })
   }
 })

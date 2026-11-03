@@ -501,7 +501,10 @@ export const dict = {
   "agentManager.intro.dismiss": "소개 건너뛰기",
   "agentManager.intro.reopen": "Agent Manager 작동 방식",
   "agentManager.splash.preview.label": "Agent Manager 사이드바 미리보기",
+  "agentManager.splash.marker": "기능 {{number}}: {{name}}",
   "agentManager.splash.eyebrow": "AGENT MANAGER",
+  "agentManager.splash.compact.subtitle":
+    "worktree를 사용해 작업을 병렬로 실행하고, 업무를 위임하고, 모든 에이전트의 진행 상황을 한곳에서 확인하세요.",
   "agentManager.splash.hide": "숨기기",
   "agentManager.splash.hideLabel": "Agent Manager 소개 숨기기",
   "agentManager.splash.title": "Kilo 에이전트 함대를 일하게 하세요.",

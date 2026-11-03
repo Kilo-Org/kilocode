@@ -216,11 +216,15 @@ export const IntroductionSkipped: Story = {
   ),
 }
 
-/** The expanded splash on one example, inside the intro host layout. */
-function SplashPreview(props: { example: number; dir?: "rtl" }) {
+/** The expanded splash at a given content width, inside the intro host layout. */
+function SplashPreview(props: { example: number; width?: string; dir?: "rtl" }) {
   return (
     <StoryProviders>
-      <div class="am-intro-layout" dir={props.dir} style={{ height: "1400px" }}>
+      <div
+        class="am-intro-layout"
+        dir={props.dir}
+        style={{ height: "1400px", width: props.width, "max-width": "100%" }}
+      >
         <div data-slot="message-list" style={{ flex: "1", "min-height": "0" }}>
           <div data-slot="message-list-content">
             <SplashExpanded
@@ -278,6 +282,36 @@ export const SplashVersionsStory: Story = {
 export const SplashBeyondCodeStory: Story = {
   name: "Splash beyond code",
   render: () => <SplashPreview example={4} />,
+}
+
+export const SplashNarrowStory: Story = {
+  name: "Splash narrow",
+  render: () => <SplashPreview example={0} width="560px" />,
+}
+
+export const SplashNarrowOrchestratorStory: Story = {
+  name: "Splash narrow orchestrator",
+  render: () => <SplashPreview example={1} width="560px" />,
+}
+
+export const SplashNarrowOpsStory: Story = {
+  name: "Splash narrow ops",
+  render: () => <SplashPreview example={2} width="560px" />,
+}
+
+export const SplashNarrowVersionsStory: Story = {
+  name: "Splash narrow versions",
+  render: () => <SplashPreview example={3} width="560px" />,
+}
+
+export const SplashNarrowBeyondCodeStory: Story = {
+  name: "Splash narrow beyond code",
+  render: () => <SplashPreview example={4} width="560px" />,
+}
+
+export const SplashThinStory: Story = {
+  name: "Splash thin",
+  render: () => <SplashPreview example={0} width="340px" />,
 }
 
 export const SplashRtlStory: Story = {

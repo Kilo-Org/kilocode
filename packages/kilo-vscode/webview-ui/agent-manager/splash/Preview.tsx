@@ -102,14 +102,17 @@ function Legend() {
 }
 
 /** A decorative, inert copy of the real sidebar with each feature's row badged. */
-export function Preview(props: { selected: Accessor<number>; hover: Accessor<number | undefined> }) {
+export function Preview(props: {
+  selected: Accessor<number>
+  hover: Accessor<number | undefined>
+  step: Accessor<number>
+}) {
   const { t } = useLanguage()
   const example = () => examples.at(props.selected())!
   let card!: HTMLDivElement
   const reframe = () => {
     const list = card.querySelector<HTMLElement>(".am-projects-list")
-    // When the badged rows do not all fit, keep the topmost one in view.
-    const active = list?.querySelector(".am-splash-row-marker")
+    const active = list?.querySelector(".am-splash-row-marker-step")
     if (!list || !active) return
     const current = list.scrollTop
     // Measure from the top, where no sticky project header is stuck, so boxes are layout positions.
@@ -130,7 +133,7 @@ export function Preview(props: { selected: Accessor<number>; hover: Accessor<num
       current,
     })
   }
-  createEffect(on(props.selected, reframe))
+  createEffect(on([props.selected, props.step], reframe))
   onMount(() => {
     // Container queries change the card's height with the layout mode.
     const observer = new ResizeObserver(reframe)
@@ -143,7 +146,7 @@ export function Preview(props: { selected: Accessor<number>; hover: Accessor<num
         <Show when={example()} keyed>
           {(item) => (
             <div class="am-splash-preview-fleet" inert aria-hidden="true">
-              <Fleet example={item} marker={createMarkers(item, props.hover)} />
+              <Fleet example={item} marker={createMarkers(item, props.hover, props.step)} />
             </div>
           )}
         </Show>

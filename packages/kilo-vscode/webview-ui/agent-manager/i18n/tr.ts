@@ -515,7 +515,10 @@ export const dict = {
   "agentManager.intro.dismiss": "Tanıtımı atla",
   "agentManager.intro.reopen": "Agent Manager nasıl çalışır",
   "agentManager.splash.preview.label": "Agent Manager kenar çubuğu önizlemesi",
+  "agentManager.splash.marker": "Özellik {{number}}: {{name}}",
   "agentManager.splash.eyebrow": "AGENT MANAGER",
+  "agentManager.splash.compact.subtitle":
+    "Worktree'lerle görevleri paralel çalıştırın, işleri devredin ve tüm ajanları tek bir yerden takip edin.",
   "agentManager.splash.hide": "Gizle",
   "agentManager.splash.hideLabel": "Agent Manager tanıtımını gizle",
   "agentManager.splash.title": "Bir Kilo ajanı filosunu işe koşun.",

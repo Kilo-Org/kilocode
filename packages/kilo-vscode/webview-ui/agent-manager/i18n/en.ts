@@ -551,7 +551,10 @@ export const dict = {
   "agentManager.intro.dismiss": "Skip introduction",
   "agentManager.intro.reopen": "How Agent Manager works",
   "agentManager.splash.preview.label": "Agent Manager sidebar preview",
+  "agentManager.splash.marker": "Feature {{number}}: {{name}}",
   "agentManager.splash.eyebrow": "AGENT MANAGER",
+  "agentManager.splash.compact.subtitle":
+    "Run tasks in parallel with worktrees, delegate work and follow every agent from one place.",
   "agentManager.splash.hide": "Hide",
   "agentManager.splash.hideLabel": "Hide Agent Manager introduction",
   "agentManager.splash.title": "Put a fleet of Kilo agents to work.",
