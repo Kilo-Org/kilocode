@@ -207,7 +207,7 @@
   },
   "module:packages/opencode/src/kilocode/branch-name.ts": {
     "state": "ported",
-    "note": "packages/kilo-plugin/src/branch-name/generate.ts and index.ts: the same PROMPT, LIMIT 4, CHARS 1000, BRANCH_CHARS 50, 10 second timeout, message selection, reasoning-wrapper and punctuation parsing, null answers, and friendly-words fallback in the VS Code client. The stateless call keeps the instructions in the system prompt and the messages in the user prompt, at temperature 0.1, on the provider small model with the one-shot retry policy of Generate.text.",
+    "note": "packages/kilo-plugin/src/branch-name/generate.ts and index.ts: the same PROMPT, LIMIT 4, CHARS 1000, BRANCH_CHARS 50, message selection, reasoning-wrapper and punctuation parsing, null answers, and friendly-words fallback in the VS Code client. The stateless call keeps the instructions in the system prompt and the messages in the user prompt, at temperature 0.1, on the provider small model, with the one-shot retry policy of Generate.text. The 10 second timeout is a v2 addition so a stalled provider cannot hold the RPC.",
     "by": "am-branch-naming"
   },
   "module:packages/opencode/test/kilocode/branch-name.test.ts": {
