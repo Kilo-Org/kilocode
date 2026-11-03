@@ -1962,19 +1962,20 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         assertFalse(project.service<HostedManagementService>().excluded(createdRef))
     }
 
-    fun `test signing out clears pending and created cloud rows`() {
+    fun `test signing out clears created and pending cloud rows`() {
         val createdRef = HostedWorkspaceRefDto("cloud", "created")
         val session = HostedWorkspaceSessionDto(
             HostedIDs.session(createdRef.providerID, createdRef.workspaceID, "root"),
             "root",
         )
         val created = HostedWorkspaceDto(createdRef, name = "Created", sessions = listOf(session))
-        val gate = CompletableDeferred<Unit>()
+        var gate = CompletableDeferred<Unit>().apply { complete(Unit) }
+        var createdOnce = false
         var signedOut = false
         val hosted = KiloHostedService(coroutines.scope, object : KiloHostedRpcApi {
             override suspend fun providers(): List<HostedProviderDto> = emptyList()
             override suspend fun workspaces(repositoryUrl: String?, cursor: String?, organizationID: String?) =
-                HostedWorkspaceListDto(signedOut = signedOut)
+                HostedWorkspaceListDto(if (createdOnce && !signedOut) listOf(created) else emptyList(), signedOut = signedOut)
             override suspend fun workspace(ref: HostedWorkspaceRefDto, sessionCursor: String?, organizationID: String?) = created
             override suspend fun workspaceStatus(ref: HostedWorkspaceRefDto, organizationID: String?) =
                 HostedWorkspaceStatusDto(ref, "active", "active", "sandbox_ready", 100.0)
@@ -1983,6 +1984,7 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
                 ai.kilocode.rpc.dto.HostedWorkspaceProfileListDto()
             override suspend fun createWorkspace(request: HostedCreateWorkspaceDto): HostedMutationResultDto {
                 gate.await()
+                createdOnce = true
                 return HostedMutationResultDto(workspace = created, session = session)
             }
             override suspend fun startWorkspaceSession(ref: HostedWorkspaceRefDto, request: ai.kilocode.rpc.dto.HostedStartSessionDto) =
@@ -2008,16 +2010,22 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
             messageID = "msg_00000000000200000000000000",
         )
         edt { panel.createHosted(request) }
-        flush()
         waitUntil { rows(panel) == 2 }
 
         signedOut = true
         edt { hosted.refresh(project.basePath!!) }
         waitUntil { rows(panel) == 1 }
 
-        gate.complete(Unit)
-        flush()
-        edt { assertFalse(rows(panel) > 1) }
+        signedOut = false
+        edt { hosted.refresh(project.basePath!!) }
+        waitUntil { rows(panel) == 2 }
+
+        gate = CompletableDeferred()
+        edt { panel.createHosted(request.copy(operationKey = "00000000-0000-4000-8000-000000000003")) }
+        waitUntil { rows(panel) == 3 }
+        signedOut = true
+        edt { hosted.refresh(project.basePath!!) }
+        waitUntil { rows(panel) == 1 }
     }
 
     private fun context(panel: AgentManagerPanel): DataContext {

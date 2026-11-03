@@ -232,9 +232,9 @@ class AgentManagerPanel(
                     edt({ !target.isDisposed && !Disposer.isDisposed(this) }) {
                         if (state.signedOut) {
                             if (!hostedState.signedOut) clearHostedOverlays(target)
-                        } else if (!state.loading) {
-                            // Discovery is authoritative once it settles; a stale optimistic row must
-                            // not outlive the account or organization that created it.
+                        } else if (!state.loading && state.error == null) {
+                            // Only a successful discovery is authoritative; a failed refresh keeps
+                            // the previous items and must not drop a just-created workspace.
                             createdHosted.keys.removeAll { key -> state.items.none { it.ref.key == key } }
                         }
                         hostedState = state
@@ -402,7 +402,7 @@ class AgentManagerPanel(
     internal fun createHosted(request: HostedCreateWorkspaceDto) {
         val target = project ?: return
         if (hostedState.signedOut) {
-            KiloNotifications.info(target, KiloBundle.message("hosted.workspace.disabled"))
+            KiloNotifications.info(target, KiloBundle.message("hosted.workspace.signInRequired"))
             return
         }
         val epoch = hostedEpoch
