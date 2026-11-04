@@ -586,6 +586,11 @@ export const make = Effect.fn("SessionSync.make")(function* (
     passDeadline = Date.now() + 6 * 60_000,
   ) {
     yield* prune()
+    const enabled = yield* db.get("SELECT 1 FROM _kilo_sync_consent WHERE enabled=1 LIMIT 1").pipe(Effect.orDie)
+    if (!enabled) {
+      verified.clear()
+      return false
+    }
     const current = yield* credential().pipe(
       Effect.map(digest),
       Effect.orElseSucceed(() => "signed-out"),

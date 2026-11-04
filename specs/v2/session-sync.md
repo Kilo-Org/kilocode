@@ -42,6 +42,7 @@ kilo2 sync disable /absolute/workspace
 ```
 
 The destination is explicit; no production endpoint is assumed.
+The CLI rejects destination paths before connecting; provide only the service origin.
 For isolated verification, `--local` permits HTTP only on a loopback destination.
 The default account scope follows the active Kilo account and organization.
 `--organization` selects an explicit organization.
@@ -234,6 +235,7 @@ Enabling synchronization includes existing sessions in the selected workspace.
 A scan establishes initial state; transactional capture covers changes during the scan.
 Journal new sessions, local deletions, directory or workspace moves, and consent changes transactionally to request reconciliation.
 Idle passes skip directory scans until that journal changes or a sixty-second safety interval expires.
+With no enabled workspace, passes retain throttled global cleanup but skip credentials, reconciliation, and session selection.
 Startup and enable still reconcile before relying on incremental capture.
 Maintain a bounded pending packet rather than loading an entire workspace into memory.
 

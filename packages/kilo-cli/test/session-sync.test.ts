@@ -1,4 +1,4 @@
-import { expect } from "bun:test"
+import { expect, spyOn } from "bun:test"
 import { KiloSessionSync } from "@kilocode/kilo-plugin"
 import { Context, Effect, Fiber, Layer, Schedule, Schema } from "effect"
 import { eq, sql } from "drizzle-orm"
@@ -820,6 +820,58 @@ for (const rejection of [
       expect(f.backend.bodies.length).toBe(2)
       expect(yield* Store.packet(s.db, id)).toBeDefined()
     }),
+  )
+
+for (const consent of ["absent", "disabled"] as const)
+  it.live(`an idle pass with ${consent} consent does not read credentials or session state`, () =>
+    Effect.gen(function* () {
+      const f = yield* fixture
+      if (consent === "disabled")
+        yield* Effect.scoped(
+          Effect.gen(function* () {
+            const setup = yield* boot(f.root)
+            yield* Store.enable(setup.db, {
+              directory: f.directory,
+              destination: f.backend.url,
+              local: true,
+              organizationID: null,
+              tenant: { type: "user", id: "alice" },
+              userID: "alice",
+            })
+            yield* Store.disable(setup.db, f.directory)
+          }),
+        )
+      const s = yield* boot(f.root, { background: true })
+      const spies = yield* Effect.acquireRelease(
+        Effect.sync(() => ({
+          credentials: spyOn(s.credentials, "list"),
+          reads: spyOn(s.db, "get"),
+          rows: spyOn(s.db, "all"),
+          writes: spyOn(s.db, "run"),
+        })),
+        (spies) =>
+          Effect.sync(() => {
+            spies.credentials.mockRestore()
+            spies.reads.mockRestore()
+            spies.rows.mockRestore()
+            spies.writes.mockRestore()
+          }),
+      )
+      // Observe two scheduled checks so at least one full idle pass has completed.
+      yield* Effect.sync(() => spies.reads.mock.calls.length).pipe(
+        Effect.repeat({ while: (calls) => calls < 2, schedule: Schedule.spaced(10) }),
+        Effect.timeout(5000),
+      )
+      expect(spies.credentials).toHaveBeenCalledTimes(0)
+      expect(spies.rows).toHaveBeenCalledTimes(0)
+      expect(spies.writes).toHaveBeenCalledTimes(0)
+      expect(
+        spies.reads.mock.calls.every(
+          ([statement]) => statement === "SELECT 1 FROM _kilo_sync_consent WHERE enabled=1 LIMIT 1",
+        ),
+      ).toBe(true)
+    }),
+    7000,
   )
 
 it.live("idle passes skip reconciliation and a newly journaled directory still enrolls", () =>
