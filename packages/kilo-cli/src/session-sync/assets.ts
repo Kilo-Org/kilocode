@@ -152,7 +152,7 @@ const pendingPaths = Effect.fn("SessionSync.Assets.pendingPaths")(function* (db:
   while (true) {
     const rows = yield* db
       .all<{ session_id: string; kind: Dirty["kind"]; id: string; value: string }>(
-        sql`SELECT session_id,kind,id,value FROM _kilo_sync_dirty
+        sql`SELECT session_id,kind,id,value FROM _kilo_sync_dirty_current
         WHERE op='put' AND kind IN ('message','inbox') AND (session_id,kind,id)>(${cursor.session},${cursor.kind},${cursor.id})
         ORDER BY session_id,kind,id LIMIT 64`,
       )
@@ -668,12 +668,12 @@ const migrateLegacy = Effect.fn("SessionSync.Assets.migrateLegacy")(function* (d
           const rows = yield* db
             .all<{ key: string; id: string; kind: Dirty["kind"]; value: string }>(
               source === "message"
-                ? sql`SELECT id AS key,id,'message' AS kind,json_object('message',json_patch(data,json_object('type',type))) AS value
-                FROM session_message WHERE session_id=${session.session_id} AND id>${cursor} ORDER BY id LIMIT 64`
+                ? sql`SELECT m.id AS key,m.id,'message' AS kind,${sql.raw(Store.messageValue("m"))} AS value
+                FROM session_message m WHERE m.session_id=${session.session_id} AND m.id>${cursor} ORDER BY m.id LIMIT 64`
                 : source === "inbox"
                   ? sql`SELECT id AS key,id,'inbox' AS kind,json_object('type',type,'payload',json(payload)) AS value
                   FROM session_inbox WHERE session_id=${session.session_id} AND id>${cursor} ORDER BY id LIMIT 64`
-                  : sql`SELECT kind||':'||id AS key,id,kind,value FROM _kilo_sync_dirty
+                  : sql`SELECT kind||':'||id AS key,id,kind,value FROM _kilo_sync_dirty_current
                   WHERE session_id=${session.session_id} AND op='put' AND kind IN ('message','inbox')
                     AND kind||':'||id>${cursor} ORDER BY kind,id LIMIT 64`,
             )
@@ -718,7 +718,8 @@ export const prune = Effect.fn("SessionSync.Assets.prune")(function* (db: DB, gl
       yield* db
         .run(sql`DELETE FROM _kilo_sync_media_reference AS r WHERE NOT EXISTS (
           SELECT 1 FROM _kilo_sync_dirty d WHERE d.session_id=r.session_id AND d.id=r.entity_id
-            AND d.kind IN ('message','inbox') AND d.op='put' AND instr(d.value,'media:'||r.hash)>0)`)
+            AND d.kind IN ('message','inbox') AND d.op='put'
+            AND ((d.kind='message' AND d.value IS NULL) OR instr(d.value,'media:'||r.hash)>0))`)
         .pipe(Effect.orDie)
       yield* db
         .run(sql`DELETE FROM _kilo_sync_media AS m WHERE NOT EXISTS (
@@ -882,7 +883,7 @@ export const prune = Effect.fn("SessionSync.Assets.prune")(function* (db: DB, gl
                     )
                       return
                     if (
-                      yield* tx.get(sql`SELECT 1 FROM _kilo_sync_dirty WHERE op='put' AND kind IN ('message','inbox')
+                      yield* tx.get(sql`SELECT 1 FROM _kilo_sync_dirty_current WHERE op='put' AND kind IN ('message','inbox')
                 AND (instr(value,${allocation.path})>0 OR instr(value,${pathToFileURL(allocation.path).href})>0) LIMIT 1`)
                     )
                       return

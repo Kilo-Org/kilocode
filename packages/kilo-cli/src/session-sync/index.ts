@@ -475,7 +475,7 @@ export const make = Effect.fn("SessionSync.make")(function* (
       yield* db
         .run(
           sql`UPDATE _kilo_sync_session SET error_code=${error.code},error_message=${error.message},retry_at=${retryAt},attempts=attempts+1
-        WHERE id=${session.id} AND acknowledged=${session.acknowledged}
+        WHERE id=${session.id} AND position=${session.position} AND acknowledged=${session.acknowledged}
           AND ack_batch IS ${session.ack_batch} AND ack_digest IS ${session.ack_digest}`,
         )
         .pipe(Effect.orDie)

@@ -72,6 +72,9 @@ Do not require retention of the complete internal event log merely to synchroniz
 
 A coalescing dirty set records entity identity and source position.
 Unsent changes to the same entity can collapse to the newest value.
+Assistant-part writes journal identity and position without reserializing the growing message for each part.
+One snapshot read reconstructs ordered native parts with their captured position before packet preparation.
+Preserve that value before local deletion or the first mutation outside its consent boundary removes the native source.
 Freeze a bounded immutable packet before network transmission.
 Keep that packet and its acknowledgement state in durable local storage.
 Only clear work covered by the acknowledged packet.

@@ -732,6 +732,32 @@ it.live("a stale uploader cannot park the receipt acknowledged by another native
   }),
 )
 
+it.live("a stale upload failure cannot park a newer native capture", () =>
+  Effect.gen(function* () {
+    const f = yield* fixture
+    const s = yield* boot(f.root)
+    yield* signIn(s.credentials)
+    yield* seed(s.db, f.directory)
+    yield* writeMessage(s.db, "initial")
+    yield* s.sync.enable({ directory: f.directory, destination: f.backend.url, local: true, organizationID: null })
+    expect((yield* s.sync.flush({ directory: f.directory })).pending).toBe(0)
+    yield* writeMessage(s.db, "selected for upload")
+    f.backend.control.sourceConflict = true
+    f.backend.control.stateGate = true
+    const stale = yield* s.sync.flush({ directory: f.directory }).pipe(Effect.forkScoped)
+    yield* Effect.promise(() => f.backend.entered.promise)
+    yield* writeMessage(s.db, "a newer native capture")
+    f.backend.control.sourceConflict = false
+    f.backend.control.stateGate = false
+    f.backend.gate.resolve()
+    expect((yield* Fiber.join(stale)).error).toBeUndefined()
+    expect((yield* Store.sessions(s.db, f.directory))[0]).toMatchObject({ error_code: null, retry_at: 0 })
+    expect((yield* s.sync.flush({ directory: f.directory })).pending).toBe(0)
+    expect(f.backend.states.get(id)?.entities.get(`message/${messageID}`)).toMatchObject({
+      message: { text: "a newer native capture" },
+    })
+  }),
+)
 
 it.live("source conflicts and an actual stored credential switch pause pinned workspace uploads", () =>
   Effect.gen(function* () {

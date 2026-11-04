@@ -9,7 +9,7 @@ import { AppNodeBuilder } from "@opencode/core/effect/app-node-builder"
 import { Database } from "@opencode/core/database/database"
 import { ProjectTable } from "@opencode/core/project/sql"
 import { SessionBlob } from "@opencode/core/session/blob"
-import { SessionMessageTable, SessionInboxTable, SessionTable } from "@opencode/core/session/sql"
+import { SessionMessageTable, SessionInboxTable, SessionPartTable, SessionTable } from "@opencode/core/session/sql"
 import { Project } from "@opencode/schema/project"
 import { Session } from "@opencode/schema/session"
 import { SessionMessage } from "@opencode/schema/session-message"
@@ -322,7 +322,12 @@ for (const collected of [false, true])
             session_id: id, id: messageID, type: "user", seq: 0, data: user.data,
           }).run()
           yield* s.db.insert(SessionMessageTable).values({
-            session_id: id, id: toolID, type: "assistant", seq: 1, data: tool.data,
+            session_id: id, id: toolID, type: "assistant", seq: 1, data: { ...tool.data, content: [] },
+          }).run()
+          const part = tool.data.content[0]
+          if (!part) return yield* Effect.die("Expected native media tool part")
+          yield* s.db.insert(SessionPartTable).values({
+            session_id: id, message_id: toolID, ordinal: 0, type: part.type, data: part,
           }).run()
           yield* s.db.insert(SessionInboxTable).values({
             session_id: id, id: inboxID, type: "user", enqueued_seq: 2, delivery: "queue",
@@ -408,5 +413,47 @@ it.live("native cleanup never preserves media from a workspace that has not opte
     expect(yield* Store.dirty(s.db, id)).toEqual([])
     expect(yield* s.db.all(sql`SELECT hash FROM _kilo_sync_media`)).toEqual([])
     expect(yield* s.db.all(sql`SELECT hash FROM _kilo_sync_media_reference`)).toEqual([])
+  }),
+)
+
+it.live("legacy asset migration reconstructs acknowledged native split parts before pruning their only byte snapshot", () =>
+  Effect.gen(function* () {
+    const f = yield* fixture
+    const s = yield* boot(f.root)
+    yield* seed(s.db, f.directory)
+    yield* enable(s.db, f.directory)
+    const file = path.join(s.global.data, "tool-output", "legacy-split.bin")
+    const bytes = Buffer.from("split native output retained after source cleanup")
+    yield* Effect.promise(async () => {
+      await mkdir(path.dirname(file), { recursive: true })
+      await writeFile(file, bytes)
+    })
+    yield* Assets.owned(s.db, s.global, f.directory, file)
+    const data = toolData(pathToFileURL(file).href)
+    yield* s.db.insert(SessionMessageTable).values({
+      session_id: id, id: messageID, type: "assistant", seq: 0, data: { ...data, content: [] },
+    }).run()
+    const part = data.content[0]
+    if (!part) return yield* Effect.die("Expected native output part")
+    yield* s.db.insert(SessionPartTable).values({
+      session_id: id, message_id: messageID, ordinal: 0, type: part.type, data: part,
+    }).run()
+    const captured = yield* capture(s, f.directory, "message", messageID)
+    const packet = yield* freeze(
+      s.db,
+      captured.row,
+      [...captured.assets.changes, { op: "put", kind: "message", id: messageID, value: captured.value }],
+      captured.assets.blobs,
+    )
+    yield* acknowledge(s.db, packet)
+    expect(yield* Store.dirty(s.db, id)).toEqual([])
+    yield* Effect.promise(() => rm(file))
+    // A pre-reference-table journal has only the per-session locator/hash snapshot.
+    yield* s.db.run(sql`DELETE FROM _kilo_sync_asset_reference WHERE session_id=${id}`)
+    yield* Assets.prune(s.db, s.global)
+    expect(yield* s.db.all(sql`SELECT entity_id,hash FROM _kilo_sync_asset_reference WHERE session_id=${id}`)).toEqual([
+      { entity_id: messageID, hash: digest(bytes) },
+    ])
+    expect(Buffer.from(yield* Assets.read(s.global, id, { hash: digest(bytes), bytes: bytes.byteLength }))).toEqual(bytes)
   }),
 )

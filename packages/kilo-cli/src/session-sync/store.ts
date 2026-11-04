@@ -155,7 +155,7 @@ const sessionValue = (r: string) => `json_object(
   'origin',json_object('directory',${r}.directory,'subpath',${r}.path,'projectID',${r}.project_id))`
 // Match native history reads: ordered parts replace assistant content only while part rows exist.
 // Legacy inline messages, including their JSON values, remain unchanged.
-const messageValue = (r: string) =>
+export const messageValue = (r: string) =>
   `json_object('seq',${r}.seq,'message',json_patch(
     CASE WHEN ${r}.type='assistant' AND json_type(${r}.data,'$.content') IS NOT NULL
       THEN coalesce((SELECT json_set(${r}.data,'$.content',json_group_array(json(p.data)))
@@ -205,6 +205,15 @@ export const initialize = Effect.fn("SessionSync.Store.initialize")(function* (d
         if (!ownedColumns.some((column) => column.name === "captured"))
           yield* tx.run("ALTER TABLE _kilo_sync_owned_asset ADD COLUMN captured INTEGER NOT NULL DEFAULT 0")
         yield* tx.run("CREATE INDEX IF NOT EXISTS _kilo_sync_owned_observed ON _kilo_sync_owned_asset(observed_at)")
+        // Assistant writes journal only a position marker. Reconstruct once at the read boundary,
+        // atomically with that marker's position, rather than once per rewritten native part.
+        yield* tx.run(`DROP VIEW IF EXISTS _kilo_sync_dirty_current`)
+        yield* tx.run(`CREATE VIEW _kilo_sync_dirty_current AS
+      SELECT d.session_id,d.kind,d.id,d.position,d.op,
+        CASE WHEN d.kind='message' AND d.op='put' AND d.value IS NULL
+          THEN (SELECT ${messageValue("m")} FROM session_message m
+            WHERE m.session_id=d.session_id AND m.id=d.id)
+          ELSE d.value END AS value,d.cause FROM _kilo_sync_dirty d`)
         yield* tx.run(`DROP TRIGGER IF EXISTS _kilo_sync_reference_insert`)
         yield* tx.run(`CREATE TRIGGER _kilo_sync_reference_insert AFTER INSERT ON _kilo_sync_reference BEGIN
       ${capture("NEW.session_id", "instruction-blob", "NEW.hash", "(CASE WHEN EXISTS(SELECT 1 FROM instruction_blob WHERE hash=NEW.hash) THEN (SELECT coalesce(value,'null') FROM instruction_blob WHERE hash=NEW.hash) ELSE NULL END)")}
@@ -231,15 +240,39 @@ export const initialize = Effect.fn("SessionSync.Store.initialize")(function* (d
         }
         yield* tx.run(`DROP TRIGGER IF EXISTS _kilo_sync_local_delete`)
         yield* tx.run(`CREATE TRIGGER _kilo_sync_local_delete BEFORE DELETE ON session_v2 BEGIN
+      UPDATE _kilo_sync_dirty SET value=(
+        SELECT ${messageValue("m")} FROM session_message m
+        WHERE m.session_id=OLD.id AND m.id=_kilo_sync_dirty.id)
+      WHERE session_id=OLD.id AND kind='message' AND op='put' AND value IS NULL;
       UPDATE _kilo_sync_session SET local_deleted=1 WHERE id=OLD.id;
     END`)
+        yield* tx.run(`DROP TRIGGER IF EXISTS _kilo_sync_message_snapshot`)
+        yield* tx.run(`CREATE TRIGGER _kilo_sync_message_snapshot BEFORE DELETE ON session_message
+      WHEN EXISTS(SELECT 1 FROM _kilo_sync_dirty WHERE session_id=OLD.session_id
+        AND kind='message' AND id=OLD.id AND op='put' AND value IS NULL) BEGIN
+        UPDATE _kilo_sync_dirty SET value=${messageValue("OLD")}
+        WHERE session_id=OLD.session_id AND kind='message' AND id=OLD.id AND op='put' AND value IS NULL;
+      END`)
+        // A directory/alias transition can end capture without touching the message. Freeze its
+        // last authorized content before the first excluded write, not after it has changed.
+        yield* tx.run(`DROP TRIGGER IF EXISTS _kilo_sync_message_scope_snapshot`)
+        yield* tx.run(`CREATE TRIGGER _kilo_sync_message_scope_snapshot BEFORE UPDATE ON session_message
+      WHEN NOT ${active("OLD.session_id")} AND EXISTS(SELECT 1 FROM _kilo_sync_dirty
+        WHERE session_id=OLD.session_id AND kind='message' AND id=OLD.id AND op='put' AND value IS NULL) BEGIN
+        UPDATE _kilo_sync_dirty SET value=${messageValue("OLD")}
+        WHERE session_id=OLD.session_id AND kind='message' AND id=OLD.id AND op='put' AND value IS NULL;
+      END`)
         // Native deletion releases blob ownership before deleting the session. Preserve only an
         // already-consented pending entity's owned media, in the same transaction as that release.
         yield* tx.run(`DROP TRIGGER IF EXISTS _kilo_sync_media_release`)
         yield* tx.run(`CREATE TRIGGER _kilo_sync_media_release BEFORE DELETE ON blob_ref
       WHEN EXISTS(SELECT 1 FROM _kilo_sync_dirty d WHERE d.session_id=OLD.session_id
         AND d.id=OLD.message_id AND d.kind IN ('message','inbox') AND d.op='put'
-        AND instr(d.value,'media:'||OLD.hash)>0) BEGIN
+        AND (instr(d.value,'media:'||OLD.hash)>0 OR (d.kind='message' AND d.value IS NULL AND (
+          EXISTS(SELECT 1 FROM session_message m WHERE m.session_id=OLD.session_id
+            AND m.id=OLD.message_id AND instr(m.data,'media:'||OLD.hash)>0)
+          OR EXISTS(SELECT 1 FROM session_part p WHERE p.session_id=OLD.session_id
+            AND p.message_id=OLD.message_id AND instr(p.data,'media:'||OLD.hash)>0))))) BEGIN
         INSERT OR IGNORE INTO _kilo_sync_media(session_id,hash,bytes,data)
         SELECT OLD.session_id,b.hash,b.bytes,b.data FROM blob b WHERE b.hash=OLD.hash
           AND b.bytes BETWEEN 0 AND ${limits.blob} AND length(b.data)=b.bytes
@@ -261,8 +294,9 @@ export const initialize = Effect.fn("SessionSync.Store.initialize")(function* (d
           for (const event of ["INSERT", "UPDATE"] as const) {
             const name = `_kilo_sync_${entity.table}_${event.toLowerCase()}`
             yield* tx.run(`DROP TRIGGER IF EXISTS ${name}`)
-            yield* tx.run(`CREATE TRIGGER ${name} AFTER ${event} ON ${entity.table} BEGIN
-          ${capture("NEW.session_id", entity.kind, `NEW.${entity.id}`, entity.value("NEW"), entity.kind === "instruction-entry" ? "CASE WHEN NEW.removed THEN 'remove' ELSE 'put' END" : "'put'", entity.kind === "instruction-entry" ? "CASE WHEN NEW.removed THEN 'instruction-removed' ELSE NULL END" : "NULL")}
+            yield* tx.run(`CREATE TRIGGER ${name} AFTER ${event} ON ${entity.table}
+        WHEN ${active("NEW.session_id")} BEGIN
+          ${capture("NEW.session_id", entity.kind, `NEW.${entity.id}`, entity.kind === "message" ? `CASE WHEN NEW.type='assistant' THEN NULL ELSE ${entity.value("NEW")} END` : entity.value("NEW"), entity.kind === "instruction-entry" ? "CASE WHEN NEW.removed THEN 'remove' ELSE 'put' END" : "'put'", entity.kind === "instruction-entry" ? "CASE WHEN NEW.removed THEN 'instruction-removed' ELSE NULL END" : "NULL")}
           ${entity.kind === "instruction-state" ? references("NEW.session_id", "json_array(json(NEW.initial_values),json(NEW.current_values))") : ""}
         END`)
           }
@@ -272,15 +306,28 @@ export const initialize = Effect.fn("SessionSync.Store.initialize")(function* (d
         ${capture("OLD.session_id", entity.kind, `OLD.${entity.id}`, "NULL", "'remove'", `(SELECT cause FROM _kilo_sync_intent WHERE session_id=OLD.session_id AND ((cause='revert' AND '${entity.kind}' IN ('message','inbox','instruction-state')) OR ('${entity.kind}'='inbox' AND target_id=OLD.${entity.id})))`)}
       END`)
         }
-        // The native projector writes the envelope before its parts. Recapturing after each part
-        // mutation leaves the final reconstructed message in the same native transaction.
+        // Parts carry no independent cloud entity. Keep only the newest message position here;
+        // the read view and pre-delete snapshots own reconstruction of the complete native value.
         for (const event of ["INSERT", "UPDATE", "DELETE"] as const) {
           const row = event === "DELETE" ? "OLD" : "NEW"
+          const snapshot = `_kilo_sync_session_part_scope_${event.toLowerCase()}`
+          yield* tx.run(`DROP TRIGGER IF EXISTS ${snapshot}`)
+          yield* tx.run(`CREATE TRIGGER ${snapshot} BEFORE ${event} ON session_part
+        WHEN NOT ${active(`${row}.session_id`)} AND EXISTS(SELECT 1 FROM _kilo_sync_dirty d
+          JOIN session_message m ON m.session_id=d.session_id AND m.id=d.id
+          WHERE d.session_id=${row}.session_id AND d.kind='message' AND d.id=${row}.message_id
+            AND d.op='put' AND d.value IS NULL) BEGIN
+          UPDATE _kilo_sync_dirty SET value=(SELECT ${messageValue("m")} FROM session_message m
+            WHERE m.session_id=${row}.session_id AND m.id=${row}.message_id)
+          WHERE session_id=${row}.session_id AND kind='message' AND id=${row}.message_id
+            AND op='put' AND value IS NULL;
+        END`)
           const name = `_kilo_sync_session_part_${event.toLowerCase()}`
           yield* tx.run(`DROP TRIGGER IF EXISTS ${name}`)
           yield* tx.run(`CREATE TRIGGER ${name} AFTER ${event} ON session_part
-        WHEN EXISTS(SELECT 1 FROM session_message WHERE id=${row}.message_id) BEGIN
-          ${capture(`(SELECT session_id FROM session_message WHERE id=${row}.message_id)`, "message", `${row}.message_id`, `(SELECT ${messageValue("m")} FROM session_message m WHERE m.id=${row}.message_id)`)}
+        WHEN ${active(`${row}.session_id`)} AND EXISTS(SELECT 1 FROM session_message
+          WHERE id=${row}.message_id AND session_id=${row}.session_id) BEGIN
+          ${capture(`${row}.session_id`, "message", `${row}.message_id`, "NULL")}
         END`)
         }
         for (const event of ["INSERT", "UPDATE"] as const) {
@@ -349,7 +396,7 @@ export const packet = (db: SQL, id: string) =>
   db.get<Packet>(sql`SELECT * FROM _kilo_sync_packet WHERE session_id=${id}`).pipe(Effect.orDie)
 export const dirty = (db: DB, id: string) =>
   db
-    .all<Dirty>(sql`SELECT * FROM _kilo_sync_dirty WHERE session_id=${id} ORDER BY position,kind,id LIMIT 64`)
+    .all<Dirty>(sql`SELECT * FROM _kilo_sync_dirty_current WHERE session_id=${id} ORDER BY position,kind,id LIMIT 64`)
     .pipe(Effect.orDie)
 
 export const enable = Effect.fn("SessionSync.Store.enable")(function* (

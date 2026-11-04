@@ -1,6 +1,6 @@
 import { expect } from "bun:test"
 import { Context, Effect, Exit, Layer, Schema } from "effect"
-import { and, asc, eq } from "drizzle-orm"
+import { and, asc, eq, sql } from "drizzle-orm"
 import { mkdtemp, mkdir, realpath, rm } from "node:fs/promises"
 import os from "node:os"
 import path from "node:path"
@@ -364,6 +364,219 @@ it.live("split part insert, update and delete capture rolls back with native wri
       expect(yield* Store.dirty(f.db, sessionID)).toEqual(dirty)
       expect(yield* Store.sessions(f.db, f.directory)).toEqual(sessions)
       yield* captured(f)
+    }
+  }),
+)
+
+it.live("many native part rewrites retain one lazy position marker and reconstruct only when read", () =>
+  Effect.gen(function* () {
+    const f = yield* fixture
+    yield* f.db.insert(SessionMessageTable).values(assistantRow()).run()
+    const content = Array.from({ length: 80 }, (_, index) => ({
+      type: "text" as const,
+      text: `part ${index}: ${"original".repeat(32)}`,
+    }))
+    yield* parts(f.db, content.map((data, ordinal) => ({ ordinal, data })))
+    expect(yield* Store.dirty(f.db, sessionID)).toEqual([])
+    expect(yield* f.db.all(sql`SELECT * FROM _kilo_sync_dirty WHERE session_id=${sessionID}`)).toEqual([])
+    yield* allow(f)
+    const initial = yield* f.db.get<Store.Dirty>(
+      sql`SELECT * FROM _kilo_sync_dirty WHERE session_id=${sessionID} AND kind='message' AND id=${messageID}`,
+    )
+    if (!initial) return yield* Effect.die("Missing initial lazy marker")
+    expect(initial.value).toBeNull()
+    yield* f.bus.publish(SessionEvent.MessageContentUpdated, {
+      sessionID,
+      messageID,
+      content: content.map((part) => ({ ...part, text: part.text.replace("original", "rewritten") })),
+    })
+    const markers = yield* f.db.all<Store.Dirty>(
+      sql`SELECT * FROM _kilo_sync_dirty WHERE session_id=${sessionID} AND kind='message'`,
+    )
+    expect(markers).toHaveLength(1)
+    const marker = markers[0]
+    if (!marker) return yield* Effect.die("Missing rewritten lazy marker")
+    expect(marker.value).toBeNull()
+    expect(marker.position).toBeGreaterThan(initial.position)
+    const current = yield* captured(f)
+    expect(current.position).toBe(marker.position)
+    expect(Store.value(current)).toMatchObject({
+      message: { content: content.map((part) => ({ ...part, text: part.text.replace("original", "rewritten") })) },
+    })
+    expect(
+      yield* f.db.get(sql`SELECT value,position FROM _kilo_sync_dirty
+        WHERE session_id=${sessionID} AND kind='message' AND id=${messageID}`),
+    ).toEqual({ value: null, position: marker.position })
+    yield* f.bus.publish(SessionEvent.MessageContentUpdated, { sessionID, messageID, content: [] })
+    const empty = yield* captured(f)
+    expect(empty.position).toBeGreaterThan(current.position)
+    expect(Store.value(empty)).toMatchObject({ message: { content: [] } })
+  }),
+)
+
+it.live("local deletion freezes unread lazy split content before FK cascades without changing a frozen packet", () =>
+  Effect.gen(function* () {
+    const f = yield* fixture
+    yield* f.db.insert(SessionMessageTable).values(assistantRow()).run()
+    yield* parts(f.db, [{ ordinal: 0, data: { type: "text", text: "already frozen" } }])
+    yield* allow(f)
+    const before = yield* captured(f)
+    const session = (yield* Store.sessions(f.db, f.directory))[0]
+    if (!session) return yield* Effect.die("Missing lazy deletion enrollment")
+    const pending = yield* Store.freeze(
+      f.db,
+      session,
+      [{ op: "put", kind: "message", id: messageID, value: Store.value(before) }],
+      before.position,
+      [],
+    )
+    yield* f.bus.publish(SessionEvent.MessageContentUpdated, {
+      sessionID,
+      messageID,
+      content: [
+        { type: "text", text: "unread newest content" },
+        { type: "reasoning", text: "preserve ordered parts through both native foreign keys" },
+      ],
+    })
+    const marker = yield* f.db.get<Store.Dirty>(
+      sql`SELECT * FROM _kilo_sync_dirty WHERE session_id=${sessionID} AND kind='message' AND id=${messageID}`,
+    )
+    const native = (yield* f.store.messages({ sessionID, order: "asc" }))[0]
+    if (!marker || !native) return yield* Effect.die("Missing unread split content")
+    expect(marker.value).toBeNull()
+    expect(marker.position).toBeGreaterThan(pending.through)
+    yield* f.bus.publish(SessionEvent.Deleted, { sessionID })
+    expect(yield* partRows(f.db)).toEqual([])
+    expect(yield* f.store.messages({ sessionID, order: "asc" })).toEqual([])
+    const retained = (yield* Store.dirty(f.db, sessionID)).find((row) => row.kind === "message")
+    if (!retained) return yield* Effect.die("Local deletion erased unread split history")
+    expect(retained.position).toBe(marker.position)
+    expect(Store.value(retained)).toEqual(json({ seq: 0, message: encodeMessage(native) }))
+    expect(
+      yield* f.db.get(sql`SELECT value FROM _kilo_sync_dirty
+        WHERE session_id=${sessionID} AND kind='message' AND id=${messageID}`),
+    ).toEqual({ value: retained.value })
+    expect(yield* Store.packet(f.db, sessionID)).toEqual(pending)
+    yield* Store.acknowledge(f.db, pending, {
+      version: 1,
+      sessionID,
+      batchID: pending.batch_id,
+      after: pending.after,
+      through: pending.through,
+      digest: pending.digest,
+      revision: 1,
+      changes: 1,
+      committedAt: 30,
+    })
+    expect((yield* Store.dirty(f.db, sessionID)).find((row) => row.kind === "message")).toEqual(retained)
+    expect((yield* Store.sessions(f.db, f.directory))[0]).toMatchObject({ local_deleted: 1 })
+  }),
+)
+
+it.live("pre-delete lazy snapshots and native cascades roll back together after a late projector rejects deletion", () =>
+  Effect.gen(function* () {
+    const f = yield* fixture
+    yield* f.db.insert(SessionMessageTable).values(assistantRow()).run()
+    yield* parts(f.db, [
+      { ordinal: 0, data: { type: "text", text: "keep lazy content" } },
+      { ordinal: 1, data: { type: "reasoning", text: "keep lazy reasoning" } },
+    ])
+    yield* allow(f)
+    const marker = yield* f.db.get<Store.Dirty>(
+      sql`SELECT * FROM _kilo_sync_dirty WHERE session_id=${sessionID} AND kind='message' AND id=${messageID}`,
+    )
+    if (!marker) return yield* Effect.die("Missing rollback lazy marker")
+    expect(marker.value).toBeNull()
+    const originalParts = yield* partRows(f.db)
+    const sessions = yield* Store.sessions(f.db, f.directory)
+    yield* f.bus.project(SessionEvent.Deleted, () => Effect.die("late projector refuses local deletion"))
+    const deleted = yield* f.bus.publish(SessionEvent.Deleted, { sessionID }).pipe(Effect.exit)
+    expect(Exit.isFailure(deleted)).toBe(true)
+    expect(
+      yield* f.db.get<Store.Dirty>(
+        sql`SELECT * FROM _kilo_sync_dirty WHERE session_id=${sessionID} AND kind='message' AND id=${messageID}`,
+      ),
+    ).toEqual(marker)
+    expect(yield* partRows(f.db)).toEqual(originalParts)
+    expect(yield* Store.sessions(f.db, f.directory)).toEqual(sessions)
+    yield* captured(f)
+  }),
+)
+
+it.live("the first excluded envelope or part mutation freezes the last authorized lazy value and position", () =>
+  Effect.gen(function* () {
+    for (const [scope, mutation] of [
+      ["directory", "envelope"],
+      ["alias", "insert"],
+      ["directory", "update"],
+      ["alias", "delete"],
+    ] as const) {
+      const f = yield* fixture
+      yield* f.db.insert(SessionMessageTable).values(assistantRow()).run()
+      yield* parts(f.db, [
+        { ordinal: 0, data: { type: "text", text: "last authorized text" } },
+        { ordinal: 1, data: { type: "reasoning", text: "last authorized reasoning" } },
+      ])
+      yield* allow(f)
+      const marker = yield* f.db.get<Store.Dirty>(
+        sql`SELECT * FROM _kilo_sync_dirty WHERE session_id=${sessionID} AND kind='message' AND id=${messageID}`,
+      )
+      const native = (yield* f.store.messages({ sessionID, order: "asc" }))[0]
+      if (!marker || !native) return yield* Effect.die("Missing authorized lazy content")
+      expect(marker.value).toBeNull()
+      const excluded = path.join(path.dirname(f.directory), "excluded")
+      yield* Effect.promise(() => mkdir(excluded))
+      if (scope === "directory")
+        yield* f.db.update(SessionTable).set({ directory: excluded }).where(eq(SessionTable.id, sessionID)).run()
+      else {
+        yield* Store.enable(f.db, {
+          directory: excluded,
+          destination: "http://127.0.0.1:1",
+          local: true,
+          organizationID: null,
+          tenant: { type: "user", id: "other-fixture" },
+          userID: "other-fixture",
+        })
+        yield* f.db.run(sql`UPDATE _kilo_sync_directory SET directory=${excluded},canonical=${excluded}
+          WHERE alias=${f.directory}`)
+      }
+      if (mutation === "envelope")
+        yield* f.db
+          .update(SessionMessageTable)
+          .set({ data: { ...assistantRow().data, metadata: { excluded: true } } })
+          .where(eq(SessionMessageTable.id, messageID))
+          .run()
+      if (mutation === "insert")
+        yield* parts(f.db, [{ ordinal: 2, data: { type: "text", text: "excluded insert" } }])
+      if (mutation === "update")
+        yield* f.db
+          .update(SessionPartTable)
+          .set({ data: { type: "text", text: "excluded update" } })
+          .where(and(eq(SessionPartTable.message_id, messageID), eq(SessionPartTable.ordinal, 0)))
+          .run()
+      if (mutation === "delete")
+        yield* f.db
+          .delete(SessionPartTable)
+          .where(and(eq(SessionPartTable.message_id, messageID), eq(SessionPartTable.ordinal, 1)))
+          .run()
+      const frozen = yield* f.db.get<Store.Dirty>(
+        sql`SELECT * FROM _kilo_sync_dirty WHERE session_id=${sessionID} AND kind='message' AND id=${messageID}`,
+      )
+      if (!frozen) return yield* Effect.die("Excluded mutation erased authorized history")
+      expect(frozen.value).not.toBeNull()
+      expect(frozen.position).toBe(marker.position)
+      expect(Store.value(frozen)).toEqual(json({ seq: 0, message: encodeMessage(native) }))
+      yield* f.db
+        .update(SessionPartTable)
+        .set({ data: { type: "text", text: "another excluded mutation" } })
+        .where(and(eq(SessionPartTable.message_id, messageID), eq(SessionPartTable.ordinal, 0)))
+        .run()
+      expect(
+        yield* f.db.get<Store.Dirty>(
+          sql`SELECT * FROM _kilo_sync_dirty WHERE session_id=${sessionID} AND kind='message' AND id=${messageID}`,
+        ),
+      ).toEqual(frozen)
+      expect((yield* Store.dirty(f.db, sessionID)).find((row) => row.kind === "message")).toEqual(frozen)
     }
   }),
 )
