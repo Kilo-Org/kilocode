@@ -42,7 +42,7 @@ function connection() {
   } as unknown as AgentManagerConnection
 }
 
-function providerAt(root: string) {
+function providerAt(root: string, conn: AgentManagerConnection = connection()) {
   const output = { appendLine: () => undefined, show: () => undefined, dispose: () => undefined }
   const base = {
     createOutput: () => output,
@@ -82,7 +82,7 @@ function providerAt(root: string) {
     onDidDispose: () => ({ dispose: () => undefined }),
     dispose: () => undefined,
   }
-  return new AgentManagerProvider(host, connection(), {
+  return new AgentManagerProvider(host, conn, {
     open: () => panel,
     restore: () => panel,
   } as never)
@@ -110,6 +110,30 @@ function seed(provider: AgentManagerProvider, root: string) {
   }
   return { first: first!, second: second!, internal, fetched }
 }
+
+describe("Agent Manager viewed sessions", () => {
+  it("marks only the session the user is reading as viewed", () => {
+    const root = workspace()
+    const conn = connection()
+    const view = (conn as unknown as { view: ReturnType<typeof mock> }).view
+    const provider = providerAt(root, conn)
+    // Only the panel visibility matters here, so skip the panel lifecycle and its async state initialization.
+    const internals = provider as unknown as { panel: { visible: boolean } }
+    internals.panel = { visible: true }
+    seed(provider, root)
+
+    provider.trackOpenSessions(["ses-first", "ses-second"])
+    provider.trackVisibleSession("ses-first")
+    expect(view.mock.calls.at(-1)?.[0]).toEqual(["ses-first"])
+
+    // A background tab stays unread, so its idle transition does not clear the indicator.
+    provider.trackOpenSessions(["ses-first", "ses-second"])
+    expect(view.mock.calls.at(-1)?.[0]).toEqual(["ses-first"])
+
+    provider.trackVisibleSession(null)
+    expect(view.mock.calls.at(-1)?.[0]).toEqual([])
+  })
+})
 
 describe("Agent Manager visible session PR polling", () => {
   it("sets the poller's active worktree and fetches it immediately", () => {

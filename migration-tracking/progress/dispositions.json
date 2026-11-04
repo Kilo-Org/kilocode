@@ -17,6 +17,27 @@
     "note": "The resolveState suite plus ensureRealDir, markNoIndex and cleanEnv coverage are ported to packages/kilo-cli/test/global-resilience.test.ts.",
     "by": "global-resilience"
   },
+  "module:packages/opencode/src/kilocode/storage/json-migration.ts": {
+    "state": "dropped",
+    "note": "v1 lazily migrated the JSON file store (storage/**/*.json) into SQLite on first access. v2 replaced the JSON store with an event-sourced SQLite store, so there is no JSON tree to migrate. Legacy import is handled natively at the SQLite level by packages/core/src/database/v1-migration.bun.ts, and D-4 isolation (packages/kilo-cli/src/env.ts keeps CONFIG/CONFIG_DIR/DB out of the translated OPENCODE_* names) keeps v2 out of v1's store. The JSON migrator is obsolete.",
+    "by": "store-paths"
+  },
+  "module:packages/opencode/test/kilocode/storage/json-migration.test.ts": {
+    "state": "dropped",
+    "note": "Tested the dropped JSON->SQLite migrator (module:packages/opencode/src/kilocode/storage/json-migration.ts). The event-sourced store's legacy-import correctness is covered natively by packages/core/test/v1-migration.test.ts.",
+    "by": "store-paths"
+  },
+  "module:packages/opencode/test/kilocode/storage/db.test.ts": {
+    "state": "dropped",
+    "note": "Tested the v1 opencode-<channel>.db -> kilo-<channel>.db fallback that let a renamed binary reuse the old channel database. v2 keeps upstream's opencode*.db filenames inside the distinct kilo2 directory and fail-closes v1 KILO_DB (packages/kilo-cli/src/env.ts:34), so there is no cross-store fallback; channel-path selection is native at packages/cli/src/database-path.ts. The fallback is obsoleted by the D-4 distinct-dir design.",
+    "by": "store-paths"
+  },
+  "module:packages/opencode/test/kilocode/storage/storage-init.test.ts": {
+    "state": "native",
+    "v2": "packages/core/src/database/database.ts",
+    "note": "Checked init concurrency/interruption safety of the v1 JSON Storage service (layerFromDir, migrate-on-first-access). v2 has no JSON Storage service; the equivalent guarantee is the per-path database bootstrap lock (lockFor/locks) in packages/core/src/database/database.ts. packages/core/test/database-migration.test.ts covers that lock's concurrent-bootstrap serialization (one lock per path, distinct paths do not block each other) and rollback of a failed migration; interruption safety follows structurally from the same single-holder lock rather than from a dedicated interruption test.",
+    "by": "store-paths"
+  },
   "module:packages/core/src/kilocode/oauth/page.ts": {
     "state": "ported",
     "note": "packages/kilo-cli/src/branding/text.ts KiloBranding.transform applies the Kilo callback text and square SVG mark to the upstream page module through the host runtime/build loader. Success and error preserve upstream HTML escaping and autoClose behavior; the bootstrap page is also branded. packages/kilo-cli/test/branding.test.ts checks source and compiled exports. The separate oauth-branding test cell remains open because provider User-Agent/originator changes are deferred.",

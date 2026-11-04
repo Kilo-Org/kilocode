@@ -1088,13 +1088,6 @@ interface QuestionReplyIn {
   answers: string[][]
 }
 
-interface RequestTerminalContextIn {
-  type: "requestTerminalContext"
-  requestId: string
-  sessionID?: string
-  agentManagerContext?: string
-}
-
 interface ClearSessionIn {
   type: "clearSession"
 }
@@ -1317,7 +1310,6 @@ export type AgentManagerInMessage =
   | SendMessageIn
   | SendCommandIn
   | QuestionReplyIn
-  | RequestTerminalContextIn
   | ClearSessionIn
   | AbortIn
   | ContinueInWorktreeIn

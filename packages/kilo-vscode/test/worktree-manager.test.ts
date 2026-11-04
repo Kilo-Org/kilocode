@@ -22,12 +22,27 @@ import { failure } from "./setup/failure"
 // Each test gets its own temp directory -- no shared state, safe to run in parallel.
 const tempDirs: string[] = []
 
+const LOCKED = new Set(["EBUSY", "EPERM", "ENOTEMPTY"])
+
+/**
+ * Remove a temp directory, retrying while Windows still holds a fresh path. Bun's fs.rm does not retry on its own,
+ * and a path stays locked for a moment after the git processes that used it exit.
+ */
+async function removeTempDir(dir: string) {
+  for (let attempt = 0; ; attempt++) {
+    try {
+      await fs.rm(dir, { recursive: true, force: true })
+      return
+    } catch (error) {
+      const code = (error as NodeJS.ErrnoException).code
+      if (!code || !LOCKED.has(code) || attempt >= 40) throw error
+      await new Promise((resolve) => setTimeout(resolve, 100))
+    }
+  }
+}
+
 afterEach(async () => {
-  await Promise.all(
-    tempDirs.splice(0, tempDirs.length).map(async (dir) => {
-      await fs.rm(dir, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 })
-    }),
-  )
+  await Promise.all(tempDirs.splice(0, tempDirs.length).map(removeTempDir))
 })
 
 function gitExec(args: string[]) {
@@ -1007,11 +1022,15 @@ describe("WorktreeManager.discoverWorktrees", () => {
     const root = await createTempRepo()
     const mgr = createManager(root)
 
+    // A real partial migration: the worktree is registered under .kilocode/ and its copy already
+    // lives in .kilo/. Both checkouts have a .git file, so the registration stays valid before and
+    // after the repair, and a `git worktree prune` elsewhere in the process cannot drop it.
+    const legacy = path.join(root, ".kilocode", "worktrees", "partial")
     const worktree = path.join(root, ".kilo", "worktrees", "partial")
     const gitdir = path.join(root, ".git", "worktrees", "partial", "gitdir")
-    await fs.mkdir(worktree, { recursive: true })
-    await fs.mkdir(path.dirname(gitdir), { recursive: true })
-    await fs.writeFile(gitdir, path.join(root, ".kilocode", "worktrees", "partial", ".git"), "utf-8")
+    gitExec(["git", "-C", root, "worktree", "add", "--detach", legacy, "HEAD"])
+    await fs.cp(legacy, worktree, { recursive: true })
+    await fs.writeFile(gitdir, path.join(legacy, ".git"), "utf-8")
 
     await mgr.discoverWorktrees()
 

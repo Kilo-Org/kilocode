@@ -9,12 +9,14 @@ import type { PRMergeMethod, PRStatus } from "../../src/types/messages/agent-man
 import type { PRMergeRequest } from "../../../src/shared/pr-comment-actions"
 import { reviewRequest } from "./pr-review-request"
 import { conflictFailed, conflictFiles, setConflictFailed, setConflictFiles } from "./pr-conflict-state"
+import type { BaseUpdateTarget } from "../base-update-target"
 import { useBaseUpdate } from "../update-from-base"
 
 interface Props {
   pr: PRStatus
   worktreeId: string
   projectId?: string
+  baseTarget?: BaseUpdateTarget
   mode: "status" | "footer"
 }
 
@@ -132,7 +134,7 @@ export function PRMerge(props: Props) {
   const confirm = () => {
     setConfirming(true)
   }
-  const fix = () => baseUpdate(props.worktreeId, props.projectId)
+  const fix = () => baseUpdate(props.worktreeId, props.projectId, props.baseTarget)
   const statusLabel = () => {
     if (merge()?.mergeable === "conflicting") return t("agentManager.pr.merge.conflicts")
     if (state() === "behind") return t("agentManager.pr.merge.behind")
