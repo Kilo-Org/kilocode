@@ -123,7 +123,10 @@ const allow = (f: Fixture) =>
     organizationID: null,
     tenant: { type: "user", id: "fixture" },
     userID: "fixture",
-  }).pipe(Effect.andThen(Store.reconcile(f.db, f.directory, true)))
+  }).pipe(
+    Effect.andThen(f.db.run(sql`UPDATE session_v2 SET time_updated=time_updated WHERE directory=${f.directory} AND workspace_id IS NULL`)),
+    Effect.andThen(Store.reconcile(f.db, f.directory, true)),
+  )
 
 // SessionTransfer.export uses this native messages reader. Compare the complete encoded object,
 // not a hand-written content projection, so opaque transcript fields and the original shape survive.

@@ -135,16 +135,23 @@ const tables = [
     deadline INTEGER NOT NULL, PRIMARY KEY(token,namespace,hash))`,
 ]
 
-// Disabling pauses transport, not the already-consented local journal. This retains semantic
-// removals while disabled; re-enabling must not leave stale cloud entities behind.
-const active = (session: string) => `EXISTS (SELECT 1 FROM _kilo_sync_session s
-  JOIN _kilo_sync_consent c ON c.directory=s.directory
-  JOIN session_v2 native ON native.id=s.id AND native.workspace_id IS NULL
-  JOIN _kilo_sync_directory d ON d.alias=native.directory AND d.directory=s.directory
-  WHERE s.id=${session} AND s.local_deleted=0)`
+// Capture and transport pause together. Retain the existing journal and acknowledged history, but
+// never journal new content while the global setting is off or its pinned account is inactive.
+const active = (session: string) => `EXISTS (SELECT 1 FROM session_v2 native
+  JOIN _kilo_sync_directory d ON d.alias=native.directory
+  JOIN _kilo_sync_consent c ON c.directory=d.directory AND c.enabled=1
+  LEFT JOIN _kilo_sync_session s ON s.id=native.id
+  WHERE native.id=${session} AND native.workspace_id IS NULL
+    AND (s.id IS NULL OR s.directory=c.directory AND s.local_deleted=0))`
 
 function capture(session: string, kind: Kind, id: string, value: string, op = "'put'", cause = "NULL") {
-  return `UPDATE _kilo_sync_session SET position=position+1 WHERE id=${session} AND ${active(session)};
+  return `INSERT OR IGNORE INTO _kilo_sync_session(id,directory,source_id)
+    SELECT n.id,c.directory,c.source_id FROM session_v2 n
+    JOIN _kilo_sync_directory d ON d.alias=n.directory
+    JOIN _kilo_sync_consent c ON c.directory=d.directory AND c.enabled=1
+    WHERE n.id=${session} AND n.workspace_id IS NULL
+      AND NOT EXISTS(SELECT 1 FROM _kilo_sync_session WHERE id=${session});
+    UPDATE _kilo_sync_session SET position=position+1 WHERE id=${session} AND ${active(session)};
     INSERT INTO _kilo_sync_dirty(session_id,kind,id,position,op,value,cause)
     SELECT ${session},'${kind}',${id},s.position,${op},${value},${cause} FROM _kilo_sync_session s
     WHERE s.id=${session} AND ${active(session)}
@@ -242,6 +249,10 @@ export const initialize = Effect.fn("SessionSync.Store.initialize")(function* (d
         if (!ownedColumns.some((column) => column.name === "captured"))
           yield* tx.run("ALTER TABLE _kilo_sync_owned_asset ADD COLUMN captured INTEGER NOT NULL DEFAULT 0")
         yield* tx.run("CREATE INDEX IF NOT EXISTS _kilo_sync_owned_observed ON _kilo_sync_owned_asset(observed_at)")
+        yield* tx.run("DROP TRIGGER IF EXISTS _kilo_sync_capture_reconcile")
+        yield* tx.run(`CREATE TRIGGER _kilo_sync_capture_reconcile AFTER INSERT ON _kilo_sync_session BEGIN
+          UPDATE _kilo_sync_reconcile SET revision=revision+1 WHERE id=1;
+        END`)
         // Assistant writes journal only a position marker. Reconstruct once at the read boundary,
         // atomically with that marker's position, rather than once per rewritten native part.
         yield* tx.run(`DROP VIEW IF EXISTS _kilo_sync_dirty_current`)
@@ -279,9 +290,11 @@ export const initialize = Effect.fn("SessionSync.Store.initialize")(function* (d
           event === "INSERT"
             ? `UPDATE _kilo_sync_session SET position=position+1,error_code='identity_conflict',
           error_message='A locally deleted session identity was reimported; its cloud history cannot be implicitly replaced',
-          retry_at=9007199254740991 WHERE id=NEW.id AND local_deleted=1;
+          retry_at=9007199254740991 WHERE id=NEW.id AND local_deleted=1 AND EXISTS(
+            SELECT 1 FROM _kilo_sync_consent c WHERE c.directory=_kilo_sync_session.directory AND c.enabled=1);
           INSERT INTO _kilo_sync_dirty(session_id,kind,id,position,op,value,cause)
-          SELECT NEW.id,'session',NEW.id,position,'put',${sessionValue("NEW")},NULL FROM _kilo_sync_session WHERE id=NEW.id AND local_deleted=1
+          SELECT NEW.id,'session',NEW.id,position,'put',${sessionValue("NEW")},NULL FROM _kilo_sync_session WHERE id=NEW.id AND local_deleted=1 AND EXISTS(
+            SELECT 1 FROM _kilo_sync_consent c WHERE c.directory=_kilo_sync_session.directory AND c.enabled=1)
           ON CONFLICT(session_id,kind,id) DO UPDATE SET position=excluded.position,op='put',value=excluded.value,cause=NULL;`
             : ""
         }
@@ -576,7 +589,11 @@ export const reconcileRevision = (db: SQL) =>
 // Realpath, not project.worktree: two clones can share a project identity but never share consent.
 // Existing rows are bootstrapped inside one transaction after capture is installed. Later scans only
 // enroll newly discovered sessions/aliases; the SQL triggers own every subsequent version.
-export const reconcile = Effect.fn("SessionSync.Store.reconcile")(function* (db: DB, only?: string, bootstrap = false) {
+export const reconcile = Effect.fn("SessionSync.Store.reconcile")(function* (
+  db: DB,
+  only?: string,
+  bootstrap = false,
+) {
   const consents = yield* db
     .all<Consent>(sql`SELECT * FROM _kilo_sync_consent ORDER BY length(directory) DESC,directory`)
     .pipe(Effect.orDie)
@@ -605,7 +622,9 @@ export const reconcile = Effect.fn("SessionSync.Store.reconcile")(function* (db:
           sql`SELECT n.id FROM session_v2 n
         JOIN _kilo_sync_directory d ON d.alias=n.directory AND d.directory=${c.directory}
         LEFT JOIN _kilo_sync_session s ON s.id=n.id
-        WHERE n.workspace_id IS NULL AND n.id>${cursor} AND (s.id IS NULL OR s.local_deleted=0 AND (${Number(bootstrap)}=1 OR s.bootstrap_complete=0)) ORDER BY n.id LIMIT 32`,
+        WHERE n.workspace_id IS NULL AND n.id>${cursor}
+          AND s.local_deleted=0 AND (${Number(bootstrap)}=1 OR s.bootstrap_complete=0)
+        ORDER BY n.id LIMIT 32`,
         )
         .pipe(Effect.orDie)
       if (!rows.length) break

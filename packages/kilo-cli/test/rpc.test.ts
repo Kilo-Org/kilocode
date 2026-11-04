@@ -10,6 +10,14 @@ import { mkdtemp, rm } from "node:fs/promises"
 import os from "node:os"
 import path from "node:path"
 import { KiloHost } from "../src/host"
+import { KiloSessionSync } from "@kilocode/kilo-plugin"
+import { Database } from "@opencode/core/database/database"
+import { Bus } from "@opencode/core/bus"
+import { Credential } from "@opencode/core/credential"
+import { SessionProjector } from "@opencode/core/session/projector"
+import { Global } from "@opencode/util/global"
+import { makeGlobalNode } from "@opencode/util/effect/app-node"
+import { SessionSync } from "../src/session-sync"
 
 // The reference Kilo RPC end to end: the contract in @opencode/schema, the handlers in the Gateway plugin of
 // packages/kilo-plugin, the plugin registered by the host overrides, and the call through the generated client's
@@ -38,7 +46,14 @@ const boot =
                 config: { directory, project: false },
               },
               () => [],
-              KiloHost.overrides,
+              [
+                ...KiloHost.overrides,
+                SessionSync.node.replace(makeGlobalNode({
+                  service: KiloSessionSync.Service,
+                  layer: Layer.effect(KiloSessionSync.Service, SessionSync.make({ background: false, destination: backend.url })),
+                  deps: [Database.node, Bus.node, SessionProjector.node, Credential.node, Global.node],
+                })),
+              ],
             ).pipe(Layer.provide(HttpServer.layerServices)),
           )
           const handler = Context.get(context, HttpRouter.HttpRouter)
@@ -149,23 +164,9 @@ test(
 )
 
 test(
-  "sync RPC refuses an insecure destination without retaining workspace consent",
+  "signed-out sync RPC status and flush do not enroll a workspace",
   boot({}, async (gateway) => {
     const directory = gateway.options.location.directory
-    await expect(
-      gateway.sync.enable(
-        {
-          directory,
-          destination: "http://sync.example",
-          local: false,
-          organizationID: null,
-        },
-        gateway.options,
-      ),
-    ).rejects.toMatchObject({
-      type: "failed",
-      data: { code: "invalid_destination" },
-    })
     expect((await gateway.sync.status({ directory }, gateway.options)).enabled).toBe(false)
     await expect(gateway.sync.flush({ directory }, gateway.options)).rejects.toMatchObject({
       type: "failed",
@@ -183,8 +184,6 @@ test(
       gateway.sync.enable(
         {
           directory,
-          destination: "https://sync.example",
-          local: false,
           organizationID: null,
         },
         gateway.options,

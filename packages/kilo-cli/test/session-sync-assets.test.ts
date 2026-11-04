@@ -66,7 +66,10 @@ const enable = (
     db,
     { directory, destination: "http://127.0.0.1:8789", local: true, organizationID: null, tenant: { type: "user", id: userID }, userID },
     approvals,
-  ).pipe(Effect.andThen(Store.reconcile(db, directory, true)))
+  ).pipe(
+    Effect.andThen(db.run(sql`UPDATE session_v2 SET time_updated=time_updated WHERE directory=${directory} AND workspace_id IS NULL`)),
+    Effect.andThen(Store.reconcile(db, directory, true)),
+  )
 const seed = (db: Store.DB, directory: string, sessionID = id) =>
   Effect.gen(function* () {
     yield* db.insert(ProjectTable).values({ id: Project.ID.global, worktree: AbsolutePath.make(directory), sandboxes: [] }).onConflictDoNothing().run()

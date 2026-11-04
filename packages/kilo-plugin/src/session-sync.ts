@@ -6,8 +6,6 @@ import { Context, Effect, type Scope } from "effect"
 
 interface EnableInput {
   directory: string
-  destination: string
-  local: boolean
   organizationID: string | null
   assets?: readonly string[]
 }
@@ -29,6 +27,10 @@ export const plugin = define<Service | Scope.Scope>({
   id: "kilocode.session-sync",
   effect: Effect.fn(function* (ctx) {
     const sync = yield* Service
+    // Enroll this location before its first native write; untouched existing history stays local.
+    yield* sync.status({ directory: ctx.location.directory }).pipe(
+      Effect.catch((error) => Effect.logWarning("Session synchronization enrollment is paused", { code: error.code })),
+    )
     yield* ctx.rpc
       .register(KiloSessionSyncRpc.Definition, {
         enable: (input, context) =>
