@@ -193,7 +193,9 @@
     },
     "@effect/platform-node": {
       "undici": "^8.12.3"
-    }
+    },
+    "seroval": "~1.6.11",
+    "seroval-plugins": "~1.6.8"
   },
   "patchedDependencies": {
     "@npmcli/agent@4.0.2": "patches/@npmcli%2Fagent@4.0.2.patch",
