@@ -13,7 +13,8 @@ export function createBrowserLifecycle(input: {
   contexts: () => ProjectContexts
   post: (message: AgentManagerOutMessage) => void
   openPanel: () => void
-  sidebar: () => string | undefined
+  /** True when the editor tab serves the session, so a browser_open route for it is not claimed here. */
+  editorTab: (sessionId: string) => boolean
   log: (...args: unknown[]) => void
 }) {
   const browser = input.browser ?? new BrowserBroker({ log: input.log })
@@ -23,10 +24,9 @@ export function createBrowserLifecycle(input: {
       const ctx = input.contexts().byDirectory(directory)
       if (!ctx || (route.projectId && route.projectId !== ctx.id)) return undefined
       // A route without a project comes from the browser_open tool. The project catalog also lists the sidebar's
-      // sessions rooted in this directory, so the tool route for the session the sidebar shows belongs to the editor
-      // tab, and so does one whose tab stays open after the sidebar switched away. A route with a project comes from
-      // the panel itself and stays here.
-      if (!route.projectId && (route.sessionId === input.sidebar() || browser.ownedByOther(route.sessionId, owner)))
+      // sessions rooted in this directory, so the tool route for a session the editor tab serves (the one the sidebar
+      // shows, or one whose tab stays open) belongs to the tab. A route with a project comes from the panel itself.
+      if (!route.projectId && (input.editorTab(route.sessionId) || browser.ownedByOther(route.sessionId, owner)))
         return undefined
       const state = ctx.peekState()
       const stored = state?.getSession(route.sessionId)

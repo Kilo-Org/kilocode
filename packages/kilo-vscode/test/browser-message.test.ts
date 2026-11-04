@@ -120,7 +120,7 @@ describe("browser inspection responses", () => {
       contexts: () => view.contexts,
       post: (message) => messages.push(message),
       openPanel: () => {},
-      sidebar: () => undefined,
+      editorTab: () => false,
       log: () => {},
     })
     const viewport = { width: 400, height: 300, revision: 1, active: true }
@@ -199,7 +199,7 @@ describe("browser inspection responses", () => {
       contexts: () => view.contexts,
       post: () => {},
       openPanel: () => {},
-      sidebar: () => undefined,
+      editorTab: () => false,
       log: () => {},
     })
     const panel = () => {
@@ -241,25 +241,41 @@ describe("browser inspection responses", () => {
   test("leaves an open editor tab's session with the tab after the sidebar switches away", async () => {
     const view = await fixture()
     const shown = { sidebar: "tab-session" }
+    const tabs = new Set(["tab-session"])
+    const owns = (sessionId: string) => sessionId === shown.sidebar || tabs.has(sessionId)
     const lifecycle = createBrowserLifecycle({
       browser: view.broker,
       host: view.host,
       contexts: () => view.contexts,
       post: () => {},
       openPanel: () => {},
-      sidebar: () => shown.sidebar,
+      editorTab: owns,
       log: () => {},
     })
-    const tabs = new Set(["tab-session"])
-    view.broker.bind((route) =>
-      route.sessionId === shown.sidebar || tabs.has(route.sessionId)
-        ? { sessionId: route.sessionId, directory: route.directory }
-        : undefined,
-    )
+    view.broker.bind((route) => (owns(route.sessionId) ? { sessionId: route.sessionId, directory: route.directory } : undefined))
     const route = { sessionId: "tab-session", directory: "/fixture" }
     expect((await view.broker.open(route, "http://localhost:3000/")).projectId).toBeUndefined()
     shown.sidebar = "next-session"
     expect((await view.broker.open(route, "http://localhost:3000/")).projectId).toBeUndefined()
+    await lifecycle.dispose()
+  })
+
+  test("leaves a session with an open tab that has no page yet with the tab", async () => {
+    const view = await fixture()
+    // The tab is open for "empty-tab", but the sidebar shows another session and the broker has no entry for it.
+    const owns = (sessionId: string) => sessionId === "empty-tab"
+    const lifecycle = createBrowserLifecycle({
+      browser: view.broker,
+      host: view.host,
+      contexts: () => view.contexts,
+      post: () => {},
+      openPanel: () => {},
+      editorTab: owns,
+      log: () => {},
+    })
+    view.broker.bind((route) => (owns(route.sessionId) ? { sessionId: route.sessionId, directory: route.directory } : undefined))
+    const opened = await view.broker.open({ sessionId: "empty-tab", directory: "/fixture" }, "http://localhost:3000/")
+    expect(opened.projectId).toBeUndefined()
     await lifecycle.dispose()
   })
 
@@ -271,7 +287,7 @@ describe("browser inspection responses", () => {
       contexts: () => view.contexts,
       post: () => {},
       openPanel: () => {},
-      sidebar: () => "shown",
+      editorTab: (sessionId) => sessionId === "shown",
       log: () => {},
     })
     const route = { projectId: "project", sessionId: "shown", directory: "/fixture" }

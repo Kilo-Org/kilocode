@@ -18,7 +18,7 @@ import { createPanel, PANEL_TYPE } from "./agent-manager/panel"
 import { ensureCommandsSkipShell } from "./agent-manager/terminal-host"
 import { VscodeHost } from "./agent-manager/vscode-host"
 import { BrowserTabProvider } from "./browser-tab/BrowserTabProvider"
-import { sidebarSession } from "./browser-tab/sidebar-session"
+import { editorTabOwns, setEditorTabs, sidebarSession } from "./browser-tab/sidebar-session"
 import { chat } from "./chat"
 import { commitMessageCommand, commitMessageLanguage, connect, type GitExports } from "./commit-message"
 import { createCostAlerts } from "./cost-alert"
@@ -198,7 +198,7 @@ export function activate(context: ExtensionContext) {
       trusted: () => workspace.isTrusted,
       // The tab serves the session the sidebar shows, and keeps serving a session whose tab is still open.
       resolve: (route) =>
-        (route.sessionId === sidebarSession() || browserTab?.has(route.sessionId) === true) &&
+        editorTabOwns(route.sessionId) &&
         samePath(canonicalizePath(route.directory), canonicalizePath(directory))
           ? { sessionId: route.sessionId, directory: route.directory }
           : undefined,
@@ -218,6 +218,7 @@ export function activate(context: ExtensionContext) {
       log: (...args) => output.appendLine(`Browser tab: ${args.map((item) => String(item)).join(" ")}`),
     },
   )
+  setEditorTabs((sessionId) => browserTab?.has(sessionId) === true)
   context.subscriptions.push({ dispose: () => browserTab?.dispose() })
   // The Settings panel edits Agent Manager project settings through the provider's shared handler, so it is created
   // after the provider and receives a lazy getter.

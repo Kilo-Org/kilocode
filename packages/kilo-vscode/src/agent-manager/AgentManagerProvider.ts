@@ -44,7 +44,7 @@ import { SessionTerminalManager } from "./SessionTerminalManager"
 import { createTerminalHost } from "./terminal-host"
 import { shouldOpenLinkInIntegratedBrowser } from "../browser-links"
 import { createBrowserLifecycle } from "./browser-lifecycle"
-import { sidebarSession } from "../browser-tab/sidebar-session"
+import { editorTabOwns } from "../browser-tab/sidebar-session"
 import type { BrowserBroker } from "../services/browser-automation"
 import { TerminalRouter } from "./terminal-routing"
 import { acquirePtyCleanup } from "./pty-cleanup"
@@ -248,7 +248,7 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
       contexts: () => this.contexts,
       post: (message) => this.postToWebview(message),
       openPanel: () => this.openPanel(true),
-      sidebar: sidebarSession,
+      editorTab: editorTabOwns,
       log: (...args) => {
         this.log(...args)
         this.onBrowserDebug?.(...args)
