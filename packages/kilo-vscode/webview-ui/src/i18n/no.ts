@@ -315,6 +315,7 @@ export const dict = {
   "notification.permission.descriptionSandboxEscalation":
     "Dette kjører hele kommandoen uten begrensninger for filsystem og nettverk, kun for denne kommandoen. Git må skrive til .git, som er skrivebeskyttet i sandkassen og ligger utenfor arbeidstreet i et koblet worktree. Bash-tillatelsesregler og automatisk godkjenning godkjenner aldri denne forespørselen automatisk.",
   "ui.permission.manageAutoApprove": "Administrer regler for automatisk godkjenning",
+  "ui.permission.noChanges": "Ingen endringer.",
   "ui.permission.reject": "Avvis",
   "ui.permission.feedbackPlaceholder": "Fortell Kilo hva den skal gjøre annerledes",
   "ui.permission.feedbackHint": "Enter for å avvise, Esc for å avbryte",
@@ -357,6 +358,8 @@ export const dict = {
 
   "session.tab.review": "Gjennomgang",
   "session.review.filesChanged": "{{count}} filer endret",
+  "session.review.viewTurnChanges": "Vis endringer i turen",
+  "session.review.turnChangesEmpty": "Ingen endringer i denne turen.",
   "session.review.loadingChanges": "Laster endringer...",
   "session.review.noChanges": "Ingen endringer",
   "session.messages.loadingEarlier": "Laster inn tidligere meldinger...",
@@ -1444,6 +1447,8 @@ export const dict = {
   "diffViewer.source.unstaged.label": "Unstaged",
   "diffViewer.source.unstaged.tooltip": "Filer endret i arbeidstreet, men ikke staget ennå, pluss usporet (nye) filer.",
   "diffViewer.source.session.label": "Økt",
+  "diffViewer.source.turn.tooltip": "Filer endret av Kilo i løpet av en tur.",
+  "diffViewer.source.turn.label": "Tur",
   "diffViewer.source.session.tooltip":
     "Filer endret av Kilo i løpet av gjeldende økt, basert på øyeblikksbilder per tur. Tilbakestilles når du starter en ny økt.",
   "diffViewer.group.session": "Økt",
