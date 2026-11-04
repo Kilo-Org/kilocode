@@ -23,6 +23,7 @@ export const names = [
   "MODELS_URL",
   "SERVER_PASSWORD",
   "SHOW_TTFD",
+  "TEST_HOME", // kilo_port(global:b9f635c56864) - KILO_TEST_HOME overrides the home directory in tests
 ] as const
 
 /**

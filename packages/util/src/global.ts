@@ -14,7 +14,7 @@ const { data, cache, config, state, tmp } = roots(app)
 
 const paths = {
   get home() {
-    return process.env.OPENCODE_TEST_HOME ?? os.homedir()
+    return process.env.OPENCODE_TEST_HOME ?? process.env.OPENCODE_HOME_DIR ?? os.homedir() // kilocode_change(identity) seam - an embedding entry names the home directory
   },
   data,
   bin: path.join(cache, "bin"),

@@ -1,7 +1,45 @@
 const nonText = new Set(["button", "checkbox", "file", "hidden", "image", "radio", "range", "reset", "submit"])
+const QUESTION_OPTION = '[data-component="question-dock"] button[data-slot="question-option"]'
 
 export const hasPopup = (root: ParentNode = document): boolean =>
   root.querySelector(".popup-selector[data-expanded]") !== null
+
+/**
+ * Whether a focusPrompt request may move focus into the composer. A restore
+ * keeps focus in an open popup, question or another text control, and never
+ * drops a selection; `force` only overrides a keyboard focus region.
+ */
+export function promptFocusAllowed(input: {
+  force: boolean
+  deferToQuestion: boolean
+  questionOption: boolean
+  ownsRegion: boolean
+  popup: boolean
+  textControl: boolean
+  selection: boolean
+}): boolean {
+  if (input.deferToQuestion && input.questionOption) return false
+  return !((!input.force && input.ownsRegion) || input.popup || input.textControl || input.selection)
+}
+
+/** Return whether the visible question dock has an enabled option to focus. */
+export function hasQuestionOption(root: ParentNode = document): boolean {
+  for (const option of root.querySelectorAll<HTMLButtonElement>(QUESTION_OPTION)) {
+    if (!option.disabled && !option.closest("[inert]")) return true
+  }
+  return false
+}
+
+/** Focus the first enabled option in the visible question dock, if one exists. */
+export function focusQuestionOption(root: ParentNode = document): boolean {
+  const options = [...root.querySelectorAll<HTMLButtonElement>(QUESTION_OPTION)].filter(
+    (option) => !option.disabled && !option.closest("[inert]"),
+  )
+  const option = options.find((item) => item.dataset.picked === "true") ?? options.at(0)
+  if (!option) return false
+  option.focus({ preventScroll: true })
+  return true
+}
 
 /**
  * Marker for a scroll region that owns keyboard focus, such as the diff

@@ -16,13 +16,14 @@ const meta = Bun.argv.includes("--meta")
 await rm(dist, { recursive: true, force: true })
 await mkdir(dist, { recursive: true })
 // A production package ships the build host's FFmpeg fallback, which Linux, Windows and a failed native macOS
-// capture need. Build each target's package on that target, as v1 did.
+// capture need. Build each target's package on that target. `KILO_VSCODE_TARGET` selects the helper for a
+// cross-target package.
 if (production) {
-  const target = currentFfmpegTarget()
+  const target = process.env.KILO_VSCODE_TARGET ?? currentFfmpegTarget()
   const bin = path.join(root, "bin")
   await mkdir(bin, { recursive: true })
   await ensureFfmpegForTarget(target, bin)
-  const helper = path.join(bin, process.platform === "win32" ? "ffmpeg.exe" : "ffmpeg")
+  const helper = path.join(bin, target.startsWith("win32") ? "ffmpeg.exe" : "ffmpeg")
   if (!existsSync(helper)) {
     // win32-arm64 has no helper package. v1 shipped it without one, and capture falls back to a system FFmpeg.
     if (hasFfmpegPackage(target)) throw new Error(`FFmpeg helper was not bundled at ${helper}`)

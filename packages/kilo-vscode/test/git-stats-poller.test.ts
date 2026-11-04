@@ -8,6 +8,7 @@ import type { GitStatsSource } from "../src/agent-manager/git-stats-snapshot"
 import { Semaphore } from "../src/agent-manager/semaphore"
 import type { Worktree } from "../src/agent-manager/WorktreeStateManager"
 import type { WorktreeDiffEntry } from "../src/agent-manager/types"
+import { remove } from "./setup/remove"
 
 function run(dir: string, args: string[]): void {
   const result = Bun.spawnSync({
@@ -97,24 +98,60 @@ class RecordingGitOps extends GitOps {
   readonly commands: Array<{ args: string[]; cwd: string }> = []
   worktreeCalls = 0
   aheadCalls = 0
+  private pending = 0
 
   constructor() {
     super({ log: () => undefined })
   }
 
+  /**
+   * Stop the poller, wait for the git processes it already started, then dispose.
+   *
+   * Disposing first only signals those processes, and Windows keeps the repository directory
+   * locked until they exit, so removing it right after fails with EBUSY.
+   */
+  async settle(poller: GitStatsPoller): Promise<void> {
+    poller.stop()
+    await waitFor(() => this.pending === 0, 5_000)
+    this.dispose()
+  }
+
+  private track<T>(work: Promise<T>): Promise<T> {
+    this.pending++
+    return work.finally(() => {
+      this.pending--
+    })
+  }
+
   override execGitBuffer(args: string[], cwd: string): Promise<ExecBufferResult> {
     this.commands.push({ args, cwd })
-    return super.execGitBuffer(args, cwd)
+    return this.track(super.execGitBuffer(args, cwd))
+  }
+
+  override execGit(...input: Parameters<GitOps["execGit"]>): ReturnType<GitOps["execGit"]> {
+    return this.track(super.execGit(...input))
   }
 
   override listWorktreePaths(cwd: string): Promise<Map<string, string>> {
     this.worktreeCalls++
-    return super.listWorktreePaths(cwd)
+    return this.track(super.listWorktreePaths(cwd))
   }
 
   override aheadBehind(cwd: string, base: string): Promise<{ ahead: number; behind: number }> {
     this.aheadCalls++
-    return super.aheadBehind(cwd, base)
+    return this.track(super.aheadBehind(cwd, base))
+  }
+
+  override resolveTrackingBranch(cwd: string, branch: string): Promise<string | undefined> {
+    return this.track(super.resolveTrackingBranch(cwd, branch))
+  }
+
+  override resolveDefaultBranch(cwd: string, branch?: string): Promise<string | undefined> {
+    return this.track(super.resolveDefaultBranch(cwd, branch))
+  }
+
+  override workingTreeStats(cwd: string): Promise<{ files: number; additions: number; deletions: number }> {
+    return this.track(super.workingTreeStats(cwd))
   }
 }
 
@@ -183,8 +220,7 @@ describe("GitStatsPoller", () => {
 
       pollers.forEach((poller) => poller.setEnabled(true))
       await Promise.all(recorders.map((git) => waitFor(() => git.aheadCalls >= 2, 2_000)))
-      pollers.forEach((poller) => poller.stop())
-      recorders.forEach((git) => git.dispose())
+      await Promise.all(pollers.map((poller, index) => recorders[index]!.settle(poller)))
 
       for (const [index, git] of recorders.entries()) {
         expect(git.worktreeCalls).toBe(0)
@@ -193,7 +229,7 @@ describe("GitStatsPoller", () => {
         expect(git.commands.some((item) => item.cwd === roots[index])).toBe(true)
       }
     } finally {
-      await Promise.all(roots.map((root) => fs.promises.rm(root, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 })))
+      await Promise.all(roots.map((root) => remove(root)))
     }
   })
 
@@ -228,14 +264,13 @@ describe("GitStatsPoller", () => {
 
       poller.setEnabled(true)
       await waitFor(() => git.worktreeCalls >= 1 && git.aheadCalls >= 2, 2_000)
-      poller.stop()
-      git.dispose()
+      await git.settle(poller)
 
       expect(git.commands.filter((item) => item.args[0] === "for-each-ref")).toHaveLength(1)
       expect(git.worktreeCalls).toBe(1)
       expect(git.aheadCalls).toBeGreaterThan(0)
     } finally {
-      await fs.promises.rm(root, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 })
+      await remove(root)
     }
   })
 
@@ -268,12 +303,11 @@ describe("GitStatsPoller", () => {
 
       poller.setEnabled(true)
       await waitFor(() => git.worktreeCalls >= 1, 2_000)
-      poller.stop()
-      git.dispose()
+      await git.settle(poller)
 
       expect(git.worktreeCalls).toBe(1)
     } finally {
-      await fs.promises.rm(root, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 })
+      await remove(root)
     }
   })
 
@@ -332,8 +366,9 @@ describe("GitStatsPoller", () => {
       poller.stop()
       await poller.snapshot(true)
       expect(git.aheadCalls).toBe(ahead + 1)
+      await git.settle(poller)
     } finally {
-      await fs.promises.rm(root, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 })
+      await remove(root)
     }
   })
 
@@ -389,8 +424,7 @@ describe("GitStatsPoller", () => {
 
       poller.setEnabled(true)
       await waitFor(() => git.commands.filter((item) => item.args.includes("--porcelain=v2")).length >= 15, 3_000)
-      poller.stop()
-      git.dispose()
+      await git.settle(poller)
       const counts = new Map<string, number>()
       for (const item of git.commands) {
         if (!item.args.includes("--porcelain=v2")) continue
@@ -400,7 +434,7 @@ describe("GitStatsPoller", () => {
       expect(counts.get(dirs[1]!)).toBeGreaterThan(2)
       expect(counts.get(dirs[2]!)).toBeGreaterThan(2)
     } finally {
-      await fs.promises.rm(root, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 })
+      await remove(root)
     }
   })
 

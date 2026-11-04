@@ -19,7 +19,9 @@ import { getErrorMessage } from "./errors"
 import { block, ptyMissing } from "./pty-cleanup"
 import path from "node:path"
 
-const env = { KILO_UNICODE_LOGO: "0" }
+// A Kilo TUI running in one of these terminals reports its session activity as
+// OSC 777 packets, which the terminal tab reads for its activity indicator.
+const env = { KILO_UNICODE_LOGO: "0", KILO_TERMINAL_ACTIVITY: "1" }
 
 function key(directory: string) {
   const value = path.resolve(directory)
@@ -85,6 +87,8 @@ interface Entry {
   worktreeId: string | null
   cwd: string
   title: string
+  /** Last known dimensions, reused when a restart does not carry a new size. */
+  size?: { cols: number; rows: number }
 }
 
 export class TerminalManager {
@@ -171,6 +175,8 @@ export class TerminalManager {
         location: { directory: params.cwd },
         cwd: params.cwd,
         title: params.title,
+        // Spawn at the webview's size so the shell's first bytes are not wrapped for 80 columns.
+        ...(initial ? { size: initial } : {}),
         // xterm's DOM renderer cannot draw the Unicode sextant glyphs used by
         // Kilo's modern wordmark, so use the compatible logo in embedded tabs.
         env,
@@ -187,14 +193,10 @@ export class TerminalManager {
       worktreeId: params.worktreeId,
       cwd: params.cwd,
       title: data.title ?? params.title,
+      size: initial,
     }
     this.entries.set(params.terminalId, entry)
     this.owned.add(entry)
-    // `pty.create` carries no size, so the initial dimensions are applied here.
-    if (initial) {
-      const error = await this.resizePty(entry.cwd, entry.ptyID, initial)
-      if (error) this.deps.log(`Initial terminal resize failed (${params.terminalId}): ${error}`)
-    }
     // If a resize arrived while pty.create was in flight that differed from
     // `initial`, apply it now.
     const queued = this.pending.get(params.terminalId)
@@ -202,6 +204,7 @@ export class TerminalManager {
       this.pending.delete(params.terminalId)
       const error = await this.resizePty(entry.cwd, entry.ptyID, queued)
       if (error) this.deps.log(`Initial terminal resize failed (${params.terminalId}): ${error}`)
+      else entry.size = queued
     }
     this.deps.log(`Terminal created: ${params.terminalId} -> pty ${entry.ptyID} cwd=${entry.cwd}`)
     return { terminalId: params.terminalId, worktreeId: entry.worktreeId, title: entry.title }
@@ -237,6 +240,7 @@ export class TerminalManager {
     this.pending.delete(terminalId)
     const error = await this.resizePty(entry.cwd, entry.ptyID, { cols, rows })
     if (error) this.deps.log(`Terminal resize failed (${terminalId}): ${error}`)
+    else entry.size = { cols, rows }
   }
 
   /** Titles of every live terminal in a context, used by the router to pick
@@ -353,21 +357,20 @@ export class TerminalManager {
     try {
       const client = await this.deps.connection.client()
       const old = entry.ptyID
+      const size = cols !== undefined && rows !== undefined ? { cols, rows } : entry.size
       const created = await client.pty.create({
         location: { directory: entry.cwd },
         cwd: entry.cwd,
         title: entry.title,
+        // Spawn at the known size so the replacement shell's first bytes are not wrapped for 80 columns.
+        ...(size ? { size } : {}),
         env,
       })
       const info = created.data
       entry.ptys.add(info.id)
       try {
         if (entry.revision !== revision || this.entries.get(entry.terminalId) !== entry) return false
-        if (cols !== undefined && rows !== undefined) {
-          const error = await this.resizePty(entry.cwd, info.id, { cols, rows })
-          if (error) throw new Error(`Failed to resize replacement PTY: ${error}`)
-        }
-        if (entry.revision !== revision || this.entries.get(entry.terminalId) !== entry) return false
+        entry.size = size
         entry.ptyID = info.id
         await this.remove(entry, old)
         if (entry.revision !== revision || this.entries.get(entry.terminalId) !== entry) return false

@@ -26,6 +26,7 @@ import SectionHeader from "./SectionHeader"
 import { OrphanNotice } from "./orphans/OrphanNotice"
 import { OrphanDialog } from "./orphans/OrphanDialog"
 import { WorktreeItem, actionable } from "./WorktreeItem"
+import { baseUpdateTarget } from "./base-update-target"
 import { useBaseUpdate } from "./update-from-base"
 import { StatsSkeleton, WorktreeSkeleton } from "./Skeleton"
 import { applyTabOrder, firstOrderedTitle, reorderTabs } from "./tab-order"
@@ -328,7 +329,18 @@ export const ProjectSidebarBody: Component<Props> = (props) => {
             props.deletion.select(props.project.id, worktree.id)
           }}
           onRestore={() => post({ type: "agentManager.restoreWorktree", worktreeId: worktree.id })}
-          onUpdateBase={() => updateBase(worktree.id, props.project.id)}
+          onUpdateBase={() => {
+            const sessionId = active() ? props.currentSessionID?.() : undefined
+            updateBase(
+              worktree.id,
+              props.project.id,
+              baseUpdateTarget({
+                worktreeId: worktree.id,
+                session: sessionId ? props.sessions?.find((item) => item.id === sessionId) : undefined,
+                managedSessions: store.managedSessions(),
+              }),
+            )
+          }}
           onCopyPath={() => navigator.clipboard.writeText(worktree.path)}
           onOpen={() => post({ type: "agentManager.openWorktree", worktreeId: worktree.id })}
           onOpenComments={() => props.onOpenComments?.(props.project.id, worktree.id)}

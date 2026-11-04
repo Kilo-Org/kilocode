@@ -134,6 +134,7 @@ const validate = Effect.fnUntraced(function* (
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
+// kilo_port(snapshot:80d332891272)
 /**
  * Removes the snapshot repository of a managed worktree that is already gone. The worktree path is checked
  * lexically and against symlinks, the repository path is derived from the project and the canonical worktree

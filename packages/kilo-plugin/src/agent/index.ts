@@ -26,6 +26,7 @@ import PROMPT_ORCHESTRATOR from "./orchestrator.txt"
 
 const build = Agent.ID.make("build")
 const code = Agent.ID.make("code")
+const explore = Agent.ID.make("explore")
 const general = Agent.ID.make("general")
 const plan = Agent.ID.make("plan")
 
@@ -144,6 +145,18 @@ const readOnlyShell: Table = {
   "man *-H*": "deny",
 }
 
+// Explore runs as a delegated subagent, so it cannot answer a permission prompt: an `ask` would stall
+// it. `gh` drops from ask to deny for that reason, and `find` is denied because it can mutate through
+// `-delete` and `-exec` (glob and list cover the read-only need). Evaluation takes the last matching
+// rule, so the `gh` denies must come after the inherited `gh <subcommand>` allows; the inherited `gh`
+// commands are dropped and a single trailing deny replaces them. Table keys are `<command> <args>`
+// patterns, so match the `gh ` command token (not the `gh` prefix, which would also catch a `ghq`).
+const exploreShell: Table = {
+  ...Object.fromEntries(Object.entries(readOnlyShell).filter(([resource]) => !resource.startsWith("gh "))),
+  "gh *": "deny",
+  "find *": "deny",
+}
+
 // Collects the global config rules: config appends them to every agent, and no config names this
 // agent. The ceiling plugin reads it after config and removes it.
 const probe = Agent.ID.make("kilo-config-permissions")
@@ -180,6 +193,11 @@ export const Plugin = define({
       })
 
       if (editor.get(general)) editor.update(general, (item) => item.permissions.push(...rules("shell", shell)))
+
+      // Native Explore allows a broad shell. Append the read-only shell table so the later rules win
+      // (evaluation takes the last match) and Explore keeps the read-only bash allowlist. The ceiling
+      // reapplies it after config; this copy keeps Explore read-only even when the ceiling does not run.
+      if (editor.get(explore)) editor.update(explore, (item) => item.permissions.push(...rules("shell", exploreShell)))
 
       editor.update(Agent.ID.make("ask"), (item) => {
         item.name = Agent.Name.make("Ask")
@@ -326,6 +344,23 @@ export const Ceiling = define({
           ])
         })
       }
+
+      // Explore is always delegated and cannot answer a prompt, so neither a broad global allow nor an
+      // explicit per-agent shell allow may reopen its shell. Unlike the guarded primary agents above,
+      // this reapplies unconditionally: there is no opt-in for a writable Explore shell. Config denies
+      // that can reach shell are kept after the table (as `seal` does), so a user can still tighten
+      // Explore further. The config rules are the tail after the table the plugin phase appended, found
+      // by matching that sequence, so a user's own `shell "*"` or `"*"` deny is not confused with the
+      // table's identical entries.
+      const exploreInfo = editor.get(explore)
+      const table = rules("shell", exploreShell)
+      const tableEnd = exploreInfo && sequenceEnd(exploreInfo.permissions, table)
+      if (exploreInfo && tableEnd !== undefined) {
+        const denies = exploreInfo.permissions
+          .slice(tableEnd)
+          .filter((entry) => entry.effect === "deny" && Wildcard.match("shell", entry.action))
+        editor.update(explore, (item) => item.permissions.push(...table, ...denies))
+      }
     })
   }),
 })
@@ -412,6 +447,13 @@ function starts(rules: readonly Permission.Rule[], prefix: readonly Permission.R
       rules[index]?.resource === entry.resource &&
       rules[index]?.effect === entry.effect,
   )
+}
+
+/** The index just past the last occurrence of `block` in `rules`, or undefined when it is absent. */
+function sequenceEnd(rules: readonly Permission.Rule[], block: readonly Permission.Rule[]) {
+  for (let start = rules.length - block.length; start >= 0; start--)
+    if (starts(rules.slice(start), block)) return start + block.length
+  return undefined
 }
 
 function rule(action: string, resource: string, effect: Permission.Rule["effect"]) {

@@ -1,6 +1,4 @@
-import { hasPopup, isTextControl, ownsFocusRegion } from "../src/utils/focus"
-
-const OPTION = '[data-component="question-dock"] button[data-slot="question-option"]'
+import { focusQuestionOption, hasPopup, hasQuestionOption, isTextControl, ownsFocusRegion } from "../src/utils/focus"
 
 export type AgentManagerFocusTarget = "prompt" | "mainTerminal" | "sideTerminal" | "other"
 
@@ -98,21 +96,3 @@ export function createPromptFocus(
   }
 }
 
-/** Return whether the visible question dock has an enabled option to focus. */
-export function hasQuestionOption(root: ParentNode = document): boolean {
-  for (const option of root.querySelectorAll<HTMLButtonElement>(OPTION)) {
-    if (!option.disabled && !option.closest("[inert]")) return true
-  }
-  return false
-}
-
-/** Focus the first enabled option in the visible question dock, if one exists. */
-export function focusQuestionOption(root: ParentNode = document): boolean {
-  const options = [...root.querySelectorAll<HTMLButtonElement>(OPTION)].filter(
-    (option) => !option.disabled && !option.closest("[inert]"),
-  )
-  const option = options.find((option) => option.dataset.picked === "true") ?? options.at(0)
-  if (!option) return false
-  option.focus({ preventScroll: true })
-  return true
-}
