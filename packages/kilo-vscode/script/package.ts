@@ -6,7 +6,7 @@ import { chmodSync, existsSync } from "node:fs"
 import { copyFile, mkdir, rm } from "node:fs/promises"
 import path from "node:path"
 
-const root = path.resolve(import.meta.dir, "..")
+export const root = path.resolve(import.meta.dir, "..")
 const cli = path.resolve(root, "..", "kilo-cli", "dist")
 const out = path.join(root, "out")
 const bin = path.join(root, "bin")
@@ -22,46 +22,65 @@ const targets = {
   "win32-arm64": { dist: "cli-windows-arm64", binary: "kilo2.exe" },
 }
 
-type Target = keyof typeof targets
+export type Target = keyof typeof targets
 
-const requested = Bun.argv.find((arg) => arg.startsWith("--target="))?.slice("--target=".length)
-const target = (requested ?? `${process.platform}-${process.arch}`) as Target
-const config = targets[target]
-if (!config) throw new Error(`Unknown target ${target}. Use one of: ${Object.keys(targets).join(", ")}`)
+export function resolveTarget(requested?: string): Target {
+  const target = (requested ?? `${process.platform}-${process.arch}`) as Target
+  if (!targets[target]) throw new Error(`Unknown target ${target}. Use one of: ${Object.keys(targets).join(", ")}`)
+  return target
+}
 
-const source = path.join(cli, config.dist, "bin", config.binary)
-if (!existsSync(source))
-  throw new Error(
-    `The ${target} CLI binary is missing at ${source}. Build it first: bun run --cwd packages/kilo-cli script/build.ts --target=${config.dist.replace(/^cli-/, "opencode-")}`,
+/** Builds the production extension and places the matching CLI binary in `bin/`. */
+export async function prepare(target: Target): Promise<void> {
+  const config = targets[target]
+  const source = path.join(cli, config.dist, "bin", config.binary)
+  if (!existsSync(source))
+    throw new Error(
+      `The ${target} CLI binary is missing at ${source}. Build it first: bun run --cwd packages/kilo-cli script/build.ts --target=${config.dist.replace(/^cli-/, "opencode-")}`,
+    )
+
+  await rm(bin, { recursive: true, force: true })
+  await mkdir(bin, { recursive: true })
+
+  console.log(`Building the ${target} extension`)
+  const build = Bun.spawn([process.execPath, path.join(root, "script", "build.ts"), "--production"], {
+    cwd: root,
+    env: { ...process.env, KILO_VSCODE_TARGET: target },
+    stdout: "inherit",
+    stderr: "inherit",
+  })
+  if ((await build.exited) !== 0) throw new Error("Extension build failed")
+
+  const bundled = path.join(bin, config.binary)
+  await copyFile(source, bundled)
+  if (config.binary !== "kilo2.exe") chmodSync(bundled, 0o755)
+}
+
+/** Packages the prepared build for one VS Code target. */
+export async function packageTarget(target: Target): Promise<string> {
+  const name = process.platform === "win32" ? "vsce.cmd" : "vsce"
+  const vsce = [
+    path.join(root, "node_modules", ".bin", name),
+    path.resolve(root, "..", "..", "node_modules", ".bin", name),
+  ].find((file) => existsSync(file))
+  if (!vsce) throw new Error("vsce is missing. Run bun install first.")
+
+  await mkdir(out, { recursive: true })
+  const output = path.join(out, `kilo-vscode-${target}.vsix`)
+  console.log(`Packaging ${output}`)
+  const pack = Bun.spawn(
+    [vsce, "package", "--target", target, "--no-dependencies", "--skip-license", "--out", output],
+    { cwd: root, env: { ...process.env, npm_config_ignore_scripts: "true" }, stdout: "inherit", stderr: "inherit" },
   )
+  if ((await pack.exited) !== 0) throw new Error("vsce package failed")
+  return output
+}
 
-await rm(bin, { recursive: true, force: true })
-await mkdir(bin, { recursive: true })
+async function main() {
+  const requested = Bun.argv.find((arg) => arg.startsWith("--target="))?.slice("--target=".length)
+  const target = resolveTarget(requested)
+  await prepare(target)
+  await packageTarget(target)
+}
 
-console.log(`Building the ${target} extension`)
-const build = Bun.spawn([process.execPath, path.join(root, "script", "build.ts"), "--production"], {
-  cwd: root,
-  env: { ...process.env, KILO_VSCODE_TARGET: target },
-  stdout: "inherit",
-  stderr: "inherit",
-})
-if ((await build.exited) !== 0) throw new Error("Extension build failed")
-
-const bundled = path.join(bin, config.binary)
-await copyFile(source, bundled)
-if (config.binary !== "kilo2.exe") chmodSync(bundled, 0o755)
-
-const name = process.platform === "win32" ? "vsce.cmd" : "vsce"
-const vsce = [path.join(root, "node_modules", ".bin", name), path.resolve(root, "..", "..", "node_modules", ".bin", name)].find(
-  (file) => existsSync(file),
-)
-if (!vsce) throw new Error("vsce is missing. Run bun install first.")
-
-await mkdir(out, { recursive: true })
-const output = path.join(out, `kilo-vscode-${target}.vsix`)
-console.log(`Packaging ${output}`)
-const pack = Bun.spawn(
-  [vsce, "package", "--target", target, "--no-dependencies", "--skip-license", "--out", output],
-  { cwd: root, env: { ...process.env, npm_config_ignore_scripts: "true" }, stdout: "inherit", stderr: "inherit" },
-)
-if ((await pack.exited) !== 0) throw new Error("vsce package failed")
+if (import.meta.main) await main()
