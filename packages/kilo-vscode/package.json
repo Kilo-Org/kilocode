@@ -1388,7 +1388,7 @@
     "@vscode/test-electron": "^2.5.2",
     "@vscode/vsce": "^4.0.0",
     "babel-preset-solid": "^1.9.9",
-    "esbuild": "^0.27.2",
+    "esbuild": "^0.28.1",
     "esbuild-plugin-solid": "^0.6.0",
     "eslint": "^9.39.2",
     "eslint-config-prettier": "^10.1.8",

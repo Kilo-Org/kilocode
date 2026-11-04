@@ -37,7 +37,7 @@
     "@kilocode/plugin": "workspace:*",
     "@ai-sdk/anthropic": "3.0.82",
     "@ai-sdk/openai": "3.0.88",
-    "@ai-sdk/openai-compatible": "2.0.48",
+    "@ai-sdk/openai-compatible": "2.0.54",
     "@openrouter/ai-sdk-provider": "2.9.0",
     "@clack/prompts": "1.0.0-alpha.1",
     "ai": "catalog:",

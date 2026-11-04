@@ -1,5 +1,5 @@
 diff --git a/dist/index.d.mts b/dist/index.d.mts
-index 8b23996dcce6c1ad5b17ef59f92196fb97312d79..80be2e52a347042b89da8e502834afd92120877a 100644
+index d24d69f87b01a70394822a1a66a16ee45ae69d2f..628e8824e2bce2249b8797dfe08d0c07a985d12c 100644
 --- a/dist/index.d.mts
 +++ b/dist/index.d.mts
 @@ -10,13 +10,7 @@ declare const groqLanguageModelOptions: z.ZodObject<{
@@ -18,7 +18,7 @@ index 8b23996dcce6c1ad5b17ef59f92196fb97312d79..80be2e52a347042b89da8e502834afd9
      user: z.ZodOptional<z.ZodString>;
      structuredOutputs: z.ZodOptional<z.ZodBoolean>;
 diff --git a/dist/index.d.ts b/dist/index.d.ts
-index 8b23996dcce6c1ad5b17ef59f92196fb97312d79..80be2e52a347042b89da8e502834afd92120877a 100644
+index d24d69f87b01a70394822a1a66a16ee45ae69d2f..628e8824e2bce2249b8797dfe08d0c07a985d12c 100644
 --- a/dist/index.d.ts
 +++ b/dist/index.d.ts
 @@ -10,13 +10,7 @@ declare const groqLanguageModelOptions: z.ZodObject<{
@@ -37,7 +37,7 @@ index 8b23996dcce6c1ad5b17ef59f92196fb97312d79..80be2e52a347042b89da8e502834afd9
      user: z.ZodOptional<z.ZodString>;
      structuredOutputs: z.ZodOptional<z.ZodBoolean>;
 diff --git a/dist/index.js b/dist/index.js
-index 45a104f2e0775761858eac2a82ced64bceba1f5e..f60ac36f4a064d527e8f8881b1d6c58ff69286a3 100644
+index e29d165bee5dcf8d46a39847f22638c8367212cd..4d1a5b2618851451a285b0d858d8de8dba16d262 100644
 --- a/dist/index.js
 +++ b/dist/index.js
 @@ -214,7 +214,7 @@ var groqLanguageModelOptions = import_v4.z.object({
@@ -50,7 +50,7 @@ index 45a104f2e0775761858eac2a82ced64bceba1f5e..f60ac36f4a064d527e8f8881b1d6c58f
     * Whether to enable parallel function calling during tool use. Default to true.
     */
 diff --git a/dist/index.mjs b/dist/index.mjs
-index c644c32235d8fa88c51c0fc6958feb1da4877c96..2c2f81869673eb4633e843d93ff5376abf1e67d0 100644
+index b303766ac21449e2b3e4c2b9711623018c855c83..1478f5c6a6e9ea618d58f323907b1f6ffdce3119 100644
 --- a/dist/index.mjs
 +++ b/dist/index.mjs
 @@ -203,7 +203,7 @@ var groqLanguageModelOptions = z.object({
@@ -63,10 +63,10 @@ index c644c32235d8fa88c51c0fc6958feb1da4877c96..2c2f81869673eb4633e843d93ff5376a
     * Whether to enable parallel function calling during tool use. Default to true.
     */
 diff --git a/src/groq-chat-options.ts b/src/groq-chat-options.ts
-index 3812cdf53308709f166f05c58c5d46a5d8189c8b..af520c5459bd752b3cce03c3b4afbeed31157d90 100644
+index 8049f566c01fb9cf48e4d0a165e26ea0b253bafb..959a46c7eff9f79502c14dc179b9de5232262e51 100644
 --- a/src/groq-chat-options.ts
 +++ b/src/groq-chat-options.ts
-@@ -33,6 +33,4 @@ export const groqLanguageModelOptions = z.object({
+@@ -33,9 +33,7 @@ export const groqLanguageModelOptions = z.object({
     * Specifies the reasoning effort level for model inference.
     * @see https://console.groq.com/docs/reasoning#reasoning-effort
     */
@@ -74,3 +74,6 @@ index 3812cdf53308709f166f05c58c5d46a5d8189c8b..af520c5459bd752b3cce03c3b4afbeed
 -    .enum(['none', 'default', 'low', 'medium', 'high'])
 -    .optional(),
 +  reasoningEffort: z.string().optional(),
+ 
+   /**
+    * Whether to enable parallel function calling during tool use. Default to true.
