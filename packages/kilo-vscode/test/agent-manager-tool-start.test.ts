@@ -476,6 +476,25 @@ describe("agent manager tool start", () => {
     expect(c.createSessionInWorktree).toHaveBeenCalledTimes(1)
   })
 
+  it("tags tool-triggered multi-version progress with the owning project", async () => {
+    const posts: Array<{ type: string; projectId?: string; status?: string }> = []
+    const c = deps({
+      getProjectId: () => "prj-owner",
+      post: mock((message: unknown) => posts.push(message as never)),
+    })
+
+    await startFromTool(c, {
+      requestID: "am-progress",
+      mode: "worktree",
+      versions: true,
+      tasks: [{ prompt: "first" }, { prompt: "second" }],
+    })
+
+    const progress = posts.filter((message) => message.type === "agentManager.multiVersionProgress")
+    expect(progress.length).toBeGreaterThan(0)
+    expect(progress.every((message) => message.projectId === "prj-owner")).toBe(true)
+  })
+
   it("starts each task from separate tool calls even when their branch seeds match", async () => {
     const requests = new Set<string>()
     const c = deps({

@@ -2,7 +2,7 @@ import { describe, expect, it } from "bun:test"
 import * as fs from "fs"
 import * as os from "os"
 import * as path from "path"
-import { resolveWorktreeFile } from "../src/agent-manager/worktree-file-path"
+import { resolveWorktreeFile, sessionDirectory } from "../src/agent-manager/worktree-file-path"
 import type { WorktreeStateManager } from "../src/agent-manager/WorktreeStateManager"
 
 function state(worktree: { id: string; path: string }, session?: { id: string; worktreeId: string | null }) {
@@ -66,5 +66,22 @@ describe("resolveWorktreeFile", () => {
     expect(resolveWorktreeFile(state({ id: "wt", path: root }), "local", "file.ts", root)).toBe(
       path.join(root, "file.ts"),
     )
+  })
+})
+
+describe("sessionDirectory", () => {
+  const manager = {
+    getWorktree: (id: string) => (id === "wt" ? { id: "wt", path: "/worktrees/wt" } : undefined),
+    getSession: (id: string) =>
+      id === "ses_worktree" ? { id, worktreeId: "wt" } : id === "ses_local" ? { id } : undefined,
+  } as unknown as WorktreeStateManager
+
+  it("uses the worktree of a managed session", () => {
+    expect(sessionDirectory(manager, "ses_worktree", "/repo")).toBe("/worktrees/wt")
+  })
+
+  it("falls back to the project root for a local session and no session", () => {
+    expect(sessionDirectory(manager, "ses_local", "/repo")).toBe("/repo")
+    expect(sessionDirectory(manager, null, "/repo")).toBe("/repo")
   })
 })

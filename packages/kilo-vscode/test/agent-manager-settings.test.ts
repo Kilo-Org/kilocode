@@ -36,6 +36,12 @@ describe("Agent Manager settings", () => {
     }
   })
 
+  it("declares the diff markdown rendering setting", () => {
+    const manifest = JSON.parse(readFileSync(join(ROOT, "package.json"), "utf8"))
+    const property = manifest.contributes.configuration.properties["kilo-code.v2.diff.renderMarkdown"]
+    expect(property).toMatchObject({ type: "boolean", default: false })
+  })
+
   it("declares the naming, pool, and push-fixes settings", () => {
     const manifest = JSON.parse(readFileSync(join(ROOT, "package.json"), "utf8"))
     const properties = manifest.contributes.configuration.properties

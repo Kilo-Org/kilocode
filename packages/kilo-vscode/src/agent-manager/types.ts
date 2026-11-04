@@ -896,6 +896,10 @@ interface RequestWorktreeDiffIn {
   projectId?: string
   sessionId: string
   scope?: string
+  /** Active session for the session scope (ctx alone is a worktree/local id). */
+  diffSessionId?: string
+  /** User message of the turn for the turn scope. */
+  turnId?: string
 }
 
 interface ApplyWorktreeDiffIn {
@@ -913,6 +917,8 @@ interface RequestWorktreeDiffFileIn {
   scope?: string
   /** Active session for the session scope (ctx alone is a worktree/local id). */
   diffSessionId?: string
+  /** User message of the turn for the turn scope. */
+  turnId?: string
 }
 
 interface StartDiffWatchIn {
@@ -922,6 +928,8 @@ interface StartDiffWatchIn {
   scope?: string
   /** Active session for the session scope (ctx alone is a worktree/local id). */
   diffSessionId?: string
+  /** User message of the turn for the turn scope. */
+  turnId?: string
 }
 
 interface StopDiffWatchIn {

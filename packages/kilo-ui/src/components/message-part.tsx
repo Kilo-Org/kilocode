@@ -1717,7 +1717,12 @@ ToolRegistry.register({
   },
 })
 
-export function UserMessageDisplay(props: { message: SessionMessageUser; copyLabel?: string }) {
+export function UserMessageDisplay(props: {
+  message: SessionMessageUser
+  copyLabel?: string
+  /** Shows a fork action beside Copy, for surfaces that can fork the session from this message. */
+  onFork?: () => void
+}) {
   const i18n = useI18n()
   const clipboard = useClipboard()
   const dialog = useDialog()
@@ -1783,6 +1788,21 @@ export function UserMessageDisplay(props: { message: SessionMessageUser; copyLab
               {stamp()}
             </span>
           </span>
+          <Show when={props.onFork}>
+            <Tooltip value={i18n.t("ui.message.forkMessage")} placement="right" gutter={4}>
+              <IconButton
+                icon="fork"
+                size="normal"
+                variant="ghost"
+                onMouseDown={(event) => event.preventDefault()}
+                onClick={(event) => {
+                  event.stopPropagation()
+                  props.onFork?.()
+                }}
+                aria-label={i18n.t("ui.message.forkMessage")}
+              />
+            </Tooltip>
+          </Show>
           <Tooltip
             value={copied() ? i18n.t("ui.message.copied") : (props.copyLabel ?? i18n.t("ui.message.copyMessage"))}
             placement="right"

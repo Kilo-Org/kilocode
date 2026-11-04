@@ -1176,6 +1176,10 @@ export interface RequestWorktreeDiffMessage {
   projectId?: string
   sessionId: string
   scope?: string
+  /** Active session for the session scope (ctx alone is a worktree/local id). */
+  diffSessionId?: string
+  /** User message of the turn for the turn scope. */
+  turnId?: string
 }
 
 export interface RequestWorktreeDiffFileMessage {
@@ -1184,6 +1188,10 @@ export interface RequestWorktreeDiffFileMessage {
   sessionId: string
   file: string
   scope?: string
+  /** Active session for the session scope (ctx alone is a worktree/local id). */
+  diffSessionId?: string
+  /** User message of the turn for the turn scope. */
+  turnId?: string
 }
 
 /** Start polling for live diff updates. */
@@ -1192,6 +1200,10 @@ export interface StartDiffWatchMessage {
   projectId?: string
   sessionId: string
   scope?: string
+  /** Active session for the session scope (ctx alone is a worktree/local id). */
+  diffSessionId?: string
+  /** User message of the turn for the turn scope. */
+  turnId?: string
 }
 
 /** Stop polling for diff updates. */

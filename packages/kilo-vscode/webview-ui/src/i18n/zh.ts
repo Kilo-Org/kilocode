@@ -293,6 +293,7 @@ export const dict = {
   "notification.permission.descriptionSandboxEscalation":
     "这会移除文件系统和网络限制，运行整条命令，且仅限此命令。Git 必须写入 .git，该路径在沙盒中为只读，且在链接的 worktree 中位于该 worktree 之外。Bash 允许规则和自动审批永远不会自动批准此提示。",
   "ui.permission.manageAutoApprove": "管理自动审批规则",
+  "ui.permission.noChanges": "无更改。",
   "ui.permission.reject": "拒绝",
   "ui.permission.feedbackPlaceholder": "告诉 Kilo 应该如何修改",
   "ui.permission.feedbackHint": "按 Enter 拒绝，按 Esc 取消",
@@ -335,6 +336,8 @@ export const dict = {
 
   "session.tab.review": "审查",
   "session.review.filesChanged": "{{count}} 个文件变更",
+  "session.review.viewTurnChanges": "查看轮次更改",
+  "session.review.turnChangesEmpty": "本轮次无更改。",
   "session.review.loadingChanges": "正在加载更改...",
   "session.review.noChanges": "无更改",
   "session.messages.loadingEarlier": "正在加载更早的消息...",
@@ -1367,6 +1370,8 @@ export const dict = {
   "diffViewer.source.unstaged.label": "未暂存",
   "diffViewer.source.unstaged.tooltip": "在工作树中已修改但尚未暂存的文件，以及未跟踪（新）的文件。",
   "diffViewer.source.session.label": "会话",
+  "diffViewer.source.turn.tooltip": "Kilo 在一个轮次中更改的文件。",
+  "diffViewer.source.turn.label": "轮次",
   "diffViewer.source.session.tooltip": "Kilo 在当前会话中更改的文件，基于每轮快照。开始新会话时重置。",
   "diffViewer.group.session": "会话",
   "diffViewer.group.git": "Git",

@@ -1,8 +1,8 @@
 {
   "$comment": "Shared-patch baseline (U-L3-01). Read by script/check-shared-patches.ts and script/check-opencode-annotations.ts. Each shared upstream file that Kilo adds or changes needs an entry: rung (3 = seam patch, 4 = feature patch) and the missing seam. `unmarked` allows lines without markers and states why. Raise a limit only in the PR that adds the patch, and lower it when a patch goes away.",
   "limits": {
-    "files": 81,
-    "markedLines": 1104,
+    "files": 82,
+    "markedLines": 1202,
     "unmarkedLines": 225,
     "deletedFiles": 0
   },
@@ -329,11 +329,15 @@
     },
     "packages/client/src/solid/data.ts": {
       "rung": 3,
-      "seam": "Adds a per-session `session.message.evict(sessionID)` that drops one session's cached messages. The existing `session.evict` clears the root and every known descendant, so the Agent Manager inspector cannot release one subagent without blanking the parent transcript. Omitted calls behave as upstream."
+      "seam": "Adds a per-session `session.message.evict(sessionID)` that drops one session's cached messages. The existing `session.evict` clears the root and every known descendant, so the Agent Manager inspector cannot release one subagent without blanking the parent transcript. Also adds `session.message.startLoaded(sessionID)`, which reports whether the last fetched page was shorter than the requested limit. The server returns a next cursor for the last non-empty page even when nothing is older, so a transcript cannot otherwise know that its loaded window reaches the start. Omitted calls behave as upstream."
     },
     "packages/client/test/solid-eviction.test.ts": {
       "rung": 4,
       "seam": "Covers the per-session message evict added in packages/client/src/solid/data.ts, so closing an inspector subagent does not clear its parent transcript."
+    },
+    "packages/client/test/solid-message-start.test.ts": {
+      "rung": 4,
+      "seam": "Covers the page-completeness signal added in packages/client/src/solid/data.ts, so the VS Code transcript hides Load earlier when the loaded page reaches the start of the session history."
     },
     "patches/virtua@0.49.1.patch": {
       "rung": 4,

@@ -237,6 +237,7 @@ describe("Agent Manager host wiring", () => {
 
     expect(replied).toEqual(["per_host"])
     expect(opened()).toBe(0)
-    provider.dispose()
+    // Wait for the state flush so the temp directory is not removed while Windows still holds it.
+    await provider.dispose()
   })
 })

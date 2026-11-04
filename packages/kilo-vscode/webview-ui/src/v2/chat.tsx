@@ -1,5 +1,6 @@
 // The sidebar: history, profile, or one session laid out like main's ChatView (transcript, docks, prompt).
 import { Button } from "@kilocode/kilo-ui/button"
+import { showToast } from "@kilocode/kilo-ui/toast"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import type { ToolActions } from "@kilocode/kilo-ui/message-part"
 import { createEffect, createSignal, type JSX, Match, on, onCleanup, onMount, Show, Switch } from "solid-js"
@@ -84,6 +85,28 @@ export function Chat() {
         reject(new Error("validateFiles timed out"))
       }, 3000)
     })
+  // A turn shows its own changes: `from` is the user message that opened it, and the
+  // server ends the range at the next idle marker.
+  const openTurnChanges = (sessionID: string, turnID: string) => {
+    void v2.api.session
+      .diff({ sessionID, from: turnID })
+      .then((files) => {
+        if (files.length === 0) {
+          showToast(language.t("session.review.turnChangesEmpty"))
+          return
+        }
+        getVSCodeAPI().postMessage({
+          type: "openDiffsVirtual",
+          diffs: files.map((file) => ({
+            file: file.file,
+            patch: file.patch,
+            additions: file.additions,
+            deletions: file.deletions,
+          })),
+        } satisfies ToHost as never)
+      })
+      .catch(v2.report)
+  }
 
   // What a tool renderer may ask the host to open. The host owns the editor and the diff surfaces.
   const toolActions: ToolActions = {
@@ -150,6 +173,7 @@ export function Chat() {
           onSession={setSession}
           actions={toolActions}
           onShowHistory={() => setView("history")}
+          onViewTurnChanges={openTurnChanges}
           row={row}
           onAppendReady={reviewQueue.ready}
           replace={changes() && !!session()}
