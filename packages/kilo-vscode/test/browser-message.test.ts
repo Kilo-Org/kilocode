@@ -2,6 +2,7 @@ import { afterEach, describe, expect, spyOn, test } from "bun:test"
 import { EventEmitter } from "node:events"
 import { browserMessage, handleBrowserMessage } from "../src/agent-manager/browser-message"
 import { createBrowserLifecycle } from "../src/agent-manager/browser-lifecycle"
+import { canonicalizePath, samePath } from "../src/agent-manager/project/paths"
 import type { Host } from "../src/agent-manager/host"
 import type { ProjectContexts } from "../src/agent-manager/project/contexts"
 import type { AgentManagerInMessage, AgentManagerOutMessage } from "../src/agent-manager/types"
@@ -76,7 +77,9 @@ async function fixture() {
   const context = { id: "project", root: "/fixture", peekState: () => undefined, sessions: () => [{ id: "session" }] }
   const contexts = {
     resolve: (id: string) => (id === "project" ? context : undefined),
-    byDirectory: (directory: string) => (directory === "/fixture" ? context : undefined),
+    // The lifecycle canonicalizes route directories, which changes "/fixture" on Windows.
+    byDirectory: (directory: string) =>
+      samePath(canonicalizePath(directory), canonicalizePath("/fixture")) ? context : undefined,
     active: () => context,
   } as unknown as ProjectContexts
   const host = { isTrusted: () => state.trusted, browserAutomation: () => state.enabled } as unknown as Host
