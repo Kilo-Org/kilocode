@@ -1022,11 +1022,15 @@ describe("WorktreeManager.discoverWorktrees", () => {
     const root = await createTempRepo()
     const mgr = createManager(root)
 
+    // A real partial migration: the worktree is registered under .kilocode/ and its copy already
+    // lives in .kilo/. Both checkouts have a .git file, so the registration stays valid before and
+    // after the repair, and a `git worktree prune` elsewhere in the process cannot drop it.
+    const legacy = path.join(root, ".kilocode", "worktrees", "partial")
     const worktree = path.join(root, ".kilo", "worktrees", "partial")
     const gitdir = path.join(root, ".git", "worktrees", "partial", "gitdir")
-    await fs.mkdir(worktree, { recursive: true })
-    await fs.mkdir(path.dirname(gitdir), { recursive: true })
-    await fs.writeFile(gitdir, path.join(root, ".kilocode", "worktrees", "partial", ".git"), "utf-8")
+    gitExec(["git", "-C", root, "worktree", "add", "--detach", legacy, "HEAD"])
+    await fs.cp(legacy, worktree, { recursive: true })
+    await fs.writeFile(gitdir, path.join(legacy, ".git"), "utf-8")
 
     await mgr.discoverWorktrees()
 
