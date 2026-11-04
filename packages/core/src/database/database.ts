@@ -9,6 +9,7 @@ import { closeSync, existsSync, openSync } from "node:fs"
 import { chmod } from "node:fs/promises"
 import { isAbsolute, join } from "path"
 import { DatabaseMigration } from "./migration.js"
+import { DbPreflight } from "../kilocode/db-preflight.js" // kilocode_change(db-preflight:7186ff6558e9)
 import { makeGlobalNode } from "@opencode/util/effect/app-node"
 
 const makeDatabase = EffectDrizzleSqlite.makeWithDefaults()
@@ -74,6 +75,7 @@ export function layer(options: Options = { path: ":memory:" }) {
       const filename = options.path ?? ":memory:"
       if (filename === ":memory:") return provide(filename)
       const file = isAbsolute(filename) ? filename : join((yield* Global.Service).data, filename)
+      yield* Effect.sync(() => DbPreflight.assertWritable(file)) // kilocode_change(db-preflight:7186ff6558e9) - actionable error + self-heal before wal_checkpoint instead of an opaque readonly-database crash
       yield* Effect.promise(() => restrictToOwner(file))
       return provide(file)
     }),

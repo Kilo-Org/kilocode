@@ -1,8 +1,8 @@
 {
   "$comment": "Shared-patch baseline (U-L3-01). Read by script/check-shared-patches.ts and script/check-opencode-annotations.ts. Each shared upstream file that Kilo adds or changes needs an entry: rung (3 = seam patch, 4 = feature patch) and the missing seam. `unmarked` allows lines without markers and states why. Raise a limit only in the PR that adds the patch, and lower it when a patch goes away.",
   "limits": {
-    "files": 82,
-    "markedLines": 1202,
+    "files": 83,
+    "markedLines": 1204,
     "unmarkedLines": 225,
     "deletedFiles": 0
   },
@@ -100,6 +100,10 @@
       "rung": 3,
       "seam": "Add a `test:ci` script that runs the Kilo test runner (script/kilocode/test/test-runner.ts) in balanced shards for CI. Turborepo runs only package.json scripts, so the sharded task needs a script in each sharded package (core, tui, cli); the package's own `test` script stays as it is and the runner calls it with file arguments.",
       "unmarked": "JSON has no comments."
+    },
+    "packages/core/src/database/database.ts": {
+      "rung": 4,
+      "seam": "Feature `db-preflight`: before the database layer opens the file and runs `PRAGMA wal_checkpoint(PASSIVE)` (which must write the db and its WAL sidecars), call `DbPreflight.assertWritable(file)` so a read-only db/`-wal`/`-shm` file gives an actionable error (and self-heals a Kilo-owned file) instead of an opaque 'attempt to write a readonly database' crash deep inside Effect. One import plus one call into the Kilo-owned `packages/core/src/kilocode/db-preflight.ts`; `restrictToOwner` only tightens POSIX modes and dies opaquely on a non-owned file or an unwritable directory. Rung 3 cannot supply it: the resolved path is computed inside `layer()` and the actionable message and owned-file repair scope are Kilo policy, so a generic pre-open knob would carry no value; rung 2 would have to mirror the whole layer to see the path."
     },
     "packages/core/src/config.ts": {
       "rung": 3,
