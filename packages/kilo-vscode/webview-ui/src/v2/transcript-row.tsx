@@ -10,9 +10,16 @@ export function TranscriptRowView(props: {
   session: string
   actions?: ToolActions
   highlight?: () => TimelineHighlight | undefined
+  /** Opens the files changed by one turn. */
+  onViewTurnChanges?: (sessionID: string, turnID: string) => void
   /** Forks the session before the user message, when the surface can fork. */
   onForkMessage?: (sessionID: string, messageID: string) => void
 }) {
+  const viewTurnChanges = () => {
+    const turn = props.row.type === "assistant" ? props.row.userTurn : undefined
+    if (!turn || !props.onViewTurnChanges) return undefined
+    return () => props.onViewTurnChanges?.(props.session, turn)
+  }
   return (
     <div style={{ display: "contents" }}>
       <Switch>
@@ -40,6 +47,7 @@ export function TranscriptRowView(props: {
               start={row().start}
               metadata={row().metadata}
               rowKey={row().key}
+              onViewTurnChanges={viewTurnChanges()}
             />
           )}
         </Match>

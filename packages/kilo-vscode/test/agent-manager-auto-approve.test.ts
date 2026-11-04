@@ -220,6 +220,6 @@ describe("Agent Manager host wiring", () => {
 
     expect(replied).toEqual(["per_host"])
     expect(opened()).toBe(0)
-    provider.dispose()
+    await provider.dispose()
   })
 })

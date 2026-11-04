@@ -75,6 +75,8 @@ export function MessageList(props: {
   empty?: () => JSX.Element
   /** Receives the handler the session dock calls to scroll to the bottom. */
   onScrollToBottomReady?: (handler: (() => void) | undefined) => void
+  /** Opens the files changed by one turn. */
+  onViewTurnChanges?: (sessionID: string, turnID: string) => void
 }) {
   const v2 = useV2()
   const language = useLanguage()
@@ -413,6 +415,7 @@ export function MessageList(props: {
           session={props.session ?? ""}
           actions={props.actions}
           highlight={() => highlight()}
+          onViewTurnChanges={props.onViewTurnChanges}
           onForkMessage={props.onForkMessage}
         />
       ) as HTMLElement
