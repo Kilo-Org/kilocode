@@ -44,6 +44,8 @@ interface WorktreeCreated {
 export interface ToolDeps {
   getClient: () => OpenCodeClient
   getRoot: () => string | undefined
+  /** The project that owns the request, when the caller pinned one. */
+  getProjectId?: () => string | undefined
   getState: () => WorktreeStateManager | undefined
   getPanel: () => PanelContext | undefined
   openPanel: (preserveFocus?: boolean) => void
@@ -279,9 +281,11 @@ export async function startFromTool(deps: ToolDeps, req: ToolRequest): Promise<v
   const groupId = versions ? `grp-${Date.now()}` : undefined
   const state = { ok: 0 }
   const source = { sessionID: req.sessionID }
+  const projectId = deps.getProjectId?.()
 
   deps.post({
     type: "agentManager.multiVersionProgress",
+    projectId,
     status: "creating",
     total,
     completed: 0,
@@ -302,6 +306,7 @@ export async function startFromTool(deps: ToolDeps, req: ToolRequest): Promise<v
     }
     deps.post({
       type: "agentManager.multiVersionProgress",
+      projectId,
       status: "creating",
       total,
       completed: state.ok,
@@ -311,6 +316,7 @@ export async function startFromTool(deps: ToolDeps, req: ToolRequest): Promise<v
 
   deps.post({
     type: "agentManager.multiVersionProgress",
+    projectId,
     status: "done",
     total,
     completed: state.ok,

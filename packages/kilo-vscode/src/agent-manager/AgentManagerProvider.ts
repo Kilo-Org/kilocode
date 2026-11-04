@@ -149,7 +149,6 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
   public readonly panelSessions = new Set<string>()
   public readonly busySessions = new Set<string>()
   public readonly removedSessions = new Set<string>()
-  public openSessions: string[] = []
   public visibleSession: string | null = null
   public readonly caffeination: CaffeinationService
   readonly settings: ProjectWiring["settings"]
@@ -446,7 +445,6 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
       this.prBridge.poller.stop()
       this.diffs.stop()
       this.visibleSession = null
-      this.openSessions = []
       this.connection.view([])
       this.panel = undefined
       void this.terminalRouter.dispose()
@@ -524,7 +522,6 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
   }
 
   public trackOpenSessions(ids: string[]): void {
-    this.openSessions = ids
     for (const id of ids) this.panelSessions.add(id)
     this.syncView()
   }
@@ -559,7 +556,9 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
       this.connection.view([])
       return
     }
-    this.connection.view([...(this.visibleSession ? [this.visibleSession] : []), ...this.openSessions])
+    // Only the session the user is reading is viewed. Background tabs stay unread until they are opened, so their
+    // indicators do not clear on idle for conversations nobody saw.
+    this.connection.view(this.visibleSession ? [this.visibleSession] : [])
   }
 
   public async setCaffeination(enabled: boolean): Promise<void> {
@@ -660,6 +659,8 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
           return client
         },
         getRoot: () => this.getRoot(),
+        // The request runs inside its owning project's scope when the caller directory matched one.
+        getProjectId: () => this.projectScope.current()?.id ?? this.contexts.active()?.id,
         getState: () => this.getStateManager(),
         getPanel: () => this.panel,
         openPanel: (preserveFocus) => this.openPanel(preserveFocus),
