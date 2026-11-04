@@ -30,10 +30,16 @@ export function resolveTarget(requested?: string): Target {
   return target
 }
 
+/** The built CLI executable the package copies into `bin/`. */
+export function binary(target: Target): string {
+  const config = targets[target]
+  return path.join(cli, config.dist, "bin", config.binary)
+}
+
 /** Builds the production extension and places the matching CLI binary in `bin/`. */
 export async function prepare(target: Target): Promise<void> {
   const config = targets[target]
-  const source = path.join(cli, config.dist, "bin", config.binary)
+  const source = binary(target)
   if (!existsSync(source))
     throw new Error(
       `The ${target} CLI binary is missing at ${source}. Build it first: bun run --cwd packages/kilo-cli script/build.ts --target=${config.dist.replace(/^cli-/, "opencode-")}`,

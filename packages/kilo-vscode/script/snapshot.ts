@@ -3,9 +3,10 @@
 // Usage: bun run snapshot:build | bun run snapshot:install
 import { $ } from "bun"
 import { existsSync, mkdirSync } from "node:fs"
+import { createRequire } from "node:module"
 import { tmpdir } from "node:os"
 import path from "node:path"
-import { prepare, resolveTarget, root } from "./package"
+import { binary, prepare, resolveTarget, root } from "./package"
 
 const mode = Bun.argv[2] ?? "install"
 if (mode !== "build" && mode !== "install") throw new Error(`Unknown mode ${mode}. Use build or install.`)
@@ -26,9 +27,39 @@ console.log(`Snapshot version: ${version}`)
 console.log(`Commit: ${sha}`)
 console.log(`Mode: ${mode}\n`)
 
+const cli = path.resolve(root, "..", "kilo-cli")
+if (!existsSync(binary(target))) {
+  console.log("Building the Kilo host CLI")
+  const build = Bun.spawn([process.execPath, path.join(cli, "script", "build.ts"), "--single", "--skip-web-ui"], {
+    cwd: cli,
+    stdout: "inherit",
+    stderr: "inherit",
+  })
+  if ((await build.exited) !== 0) throw new Error("CLI build failed")
+}
+
 await prepare(target)
 mkdirSync(out, { recursive: true })
 const vsix = path.join(out, `kilo-vscode-snapshot-${sha}-${user}.vsix`)
+
+if (mode === "install") {
+  // Local installs favor fast packaging and extraction over archive size.
+  const vsce = createRequire(createRequire(import.meta.url).resolve("@vscode/vsce"))
+  type Options = Record<string, unknown>
+  type Zip = {
+    addFile(path: string, name: string, options?: Options): void
+    addBuffer(data: Uint8Array, name: string, options?: Options): void
+  }
+  const zip = (vsce("yazl") as { ZipFile: { prototype: Zip } }).ZipFile.prototype
+  const file = zip.addFile
+  const buffer = zip.addBuffer
+  zip.addFile = function (this: Zip, filePath, name, options) {
+    return file.call(this, filePath, name, { ...options, compress: false })
+  }
+  zip.addBuffer = function (this: Zip, data, name, options) {
+    return buffer.call(this, data, name, { ...options, compress: false })
+  }
+}
 
 const { createVSIX } = await import("@vscode/vsce")
 await createVSIX({
