@@ -808,6 +808,7 @@ export class WorktreeManager {
     })
   }
 
+  // kilo_port(worktree:34f2839b6fa6)
   /**
    * Remove a worktree directory and its git bookkeeping.
    *
