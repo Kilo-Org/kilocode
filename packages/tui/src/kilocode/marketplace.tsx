@@ -507,7 +507,6 @@ function entryDetails(entry: Entry, records: readonly Installed[]) {
       ...(record.project ? [`Project: ${record.project}`] : []),
       ...resourceLabels(record).map((label) => `${label.kind}: ${label.id}`),
       ...(record.config ? [`Config: ${record.config}`] : []),
-      ...(record.server ? [`MCP server: ${record.server}`] : []),
       ...recordNotes(record),
       ...(record.status === "modified"
         ? ["Local changes are retained. Reinstall and removal refuse modified resources."]

@@ -239,14 +239,19 @@ function same(left: Resource, right: Resource) {
 }
 
 function active(record: Written & { id: string }): readonly Resource[] {
-  // An agent is located from its stored id, so its recorded path stays authoritative across a project move.
-  const agents = (record.resources ?? []).flatMap((owned) =>
-    "agent" in owned ? [{ agent: owned.agent, path: path.join(path.dirname(owned.path), `${owned.agent}.md`) }] : [],
+  // `paths` carries every resource path, agent documents included. Deducing agents from their id here as well would
+  // yield each one twice, so a rerun would inspect it twice and uninstall would remove it twice.
+  const agentPaths = new Set(
+    (record.resources ?? []).flatMap((owned) => ("agent" in owned ? [owned.path] : [])),
   )
   // Legacy paths without fingerprints never authorize destroying existing content.
   return [
-    ...record.paths.map((path) => ({ path })),
-    ...agents,
+    ...record.paths.filter((path) => !agentPaths.has(path)).map((path) => ({ path })),
+    ...(record.resources ?? []).flatMap((owned) =>
+      "agent" in owned
+        ? [{ agent: owned.agent, path: path.join(path.dirname(owned.path), `${owned.agent}.md`) }]
+        : [],
+    ),
     ...(record.config
       ? [{ config: record.config, server: record.server ?? MarketplaceMcp.serverName(record.id) }]
       : []),

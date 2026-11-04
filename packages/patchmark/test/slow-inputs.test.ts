@@ -75,11 +75,13 @@ describe("slow-input linear-time bounds", () => {
   })
 
   test(
+    // kilocode_change start - 256 KB instead of 1 MB: the work bound below is unchanged, but the smaller input
+    // keeps the 15 s upstream default timeout out of reach on capped CI runners.
     "a long reply streamed 1 char at a time bounds scanning to the active line",
     () => {
       const unit =
         "## Section Heading\n\nParagraph with **bold**, *italic*, `code`, and [link](https://example.com).\n\n- item one\n- item two\n\n```ts\nconst x = 1;\n```\n\n"
-      const full = unit.repeat(Math.ceil(262_144 / unit.length)).slice(0, 262_144)
+      const full = unit.repeat(Math.ceil(262_144 / unit.length)).slice(0, 262_144) // kilocode_change
       const stream = createMarkdownStream({ renderHtml: false })
       let scanned = 0
 
@@ -88,13 +90,13 @@ describe("slow-input linear-time bounds", () => {
       }
 
       const done = stream.finalize()
-      expect(done.blocks.length).toBeGreaterThan(5_000)
-      // Count work rather than machine load; the timeout only catches catastrophic regressions. A capped
-      // runner crosses a wall-clock ceiling long before a per-input-character bound does, so keep the
-      // ceiling generous: 23 scanned chars per input char is 4x slower per character than a quadratic
-      // scan, which this bound already rejects on every platform.
+      expect(done.blocks.length).toBeGreaterThan(5_000) // kilocode_change
+      // Count work rather than machine load; the timeout only catches catastrophic regressions on slow runners.
+      // Scanning must stay proportional to input length: the bound allows a constant amount of work per input
+      // character, which a rescan of the whole reply on every append would exceed by orders of magnitude.
       expect(scanned).toBeLessThan(full.length * unit.length)
     },
-    60_000,
+    60_000, // kilocode_change
+    // kilocode_change end
   )
 })

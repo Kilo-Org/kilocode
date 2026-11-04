@@ -196,6 +196,21 @@ describe("agent catalog entries", () => {
     )
     expect(entries.map((entry) => entry.item.id)).toEqual(["ok"])
   })
+
+  test("content with no field v2 understands is skipped, not installed as an empty agent", () => {
+    const entries = KiloMarketplaceRegistry.parse(
+      "agent",
+      Bun.YAML.stringify({
+        items: [
+          { id: "empty", content: {} },
+          { id: "v1-only", content: { options: { temperature: 1 }, requirements: { skills: ["x"] } } },
+          { id: "scalar", content: 42 },
+          { id: "ok", content: { prompt: "Body" } },
+        ],
+      }),
+    )
+    expect(entries.map((entry) => entry.item.id)).toEqual(["ok"])
+  })
 })
 
 describe("agent installation", () => {
@@ -232,7 +247,10 @@ describe("agent installation", () => {
     const config = path.join(directory, "kilo2.json")
     const written = await Installer.install({ entry: agentEntry(), skills, agents, config })
     await fs.appendFile(path.join(agents, "reviewer.md"), "\nlocal edit")
-    expect(await Installer.inspect({ id: "reviewer", ...written })).toMatchObject({ status: "modified" })
+    // An agent is one resource: it must be reported and acted on once, not once through `paths` and once by id.
+    const inspected = await Installer.inspect({ id: "reviewer", ...written })
+    expect(inspected).toMatchObject({ status: "modified" })
+    expect(inspected.warnings).toHaveLength(1)
     await expect(Installer.uninstall({ id: "reviewer", ...written })).rejects.toThrow(/modified or not owned/)
     await expect(
       Installer.install({ entry: agentEntry(), skills, agents, config, previous: { id: "reviewer", ...written } }),
@@ -273,5 +291,24 @@ describe("agent installation", () => {
     expect(resource).toMatchObject({ agent: "reviewer", fingerprints: [expect.any(String)] })
     expect(Object.keys(resource).toSorted()).toEqual(["agent", "fingerprints", "path"])
     expect(written.paths).toEqual([])
+  })
+})
+
+describe("agent recovery through stored paths", () => {
+  test("a record whose paths and agent resource name one document is inspected and removed once", async () => {
+    const directory = await tmp()
+    const agents = path.join(directory, "agents")
+    const skills = path.join(directory, "skills")
+    const config = path.join(directory, "kilo2.json")
+    const written = await Installer.install({ entry: agentEntry(), skills, agents, config })
+    const file = path.join(agents, "reviewer.md")
+    const resource = written.resources![0]!
+    // The stored-path shape the RPC restore produces: the agent document appears in `paths` and as a resource.
+    const restored = { id: "reviewer", paths: [file], resources: [resource] }
+    await fs.appendFile(file, "\nlocal edit")
+    const inspected = await Installer.inspect(restored)
+    expect(inspected).toMatchObject({ status: "modified" })
+    expect(inspected.warnings).toHaveLength(1)
+    await expect(Installer.uninstall(restored)).rejects.toThrow(/modified or not owned/)
   })
 })

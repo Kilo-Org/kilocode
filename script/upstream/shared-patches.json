@@ -1,8 +1,8 @@
 {
   "$comment": "Shared-patch baseline (U-L3-01). Read by script/check-shared-patches.ts and script/check-opencode-annotations.ts. Each shared upstream file that Kilo adds or changes needs an entry: rung (3 = seam patch, 4 = feature patch) and the missing seam. `unmarked` allows lines without markers and states why. Raise a limit only in the PR that adds the patch, and lower it when a patch goes away.",
   "limits": {
-    "files": 86,
-    "markedLines": 1219,
+    "files": 87,
+    "markedLines": 1229,
     "unmarkedLines": 246,
     "deletedFiles": 0
   },
@@ -362,6 +362,10 @@
       "rung": 3,
       "seam": "Generated promise client operations for the optional PTY create size exposed by packages/schema/src/pty.ts. The client must be regenerated from the public schema.",
       "unmarked": "Generated TypeScript cannot retain manual marker comments; bun run generate owns this file."
+    },
+    "packages/patchmark/test/slow-inputs.test.ts": {
+      "rung": 4,
+      "seam": "Kilo CI stability: the 1 MB one-char-at-a-time streaming test keeps its deterministic scan-work assertion, but the wall-clock timeout in the same test is upstream's default, and Windows CI runners crossed it at ~18 s against a 15 s ceiling. The input is reduced to 256 KB, which keeps the identical constant-work-per-character bound, and the timeout is raised to 60 s as a guard for catastrophic regressions only. No seam: bun's per-test timeout and the payload size are inside an upstream test file, and the test suite belongs to the upstream package that Kilo cannot replace (inline patch, option 4)."
     }
   }
 }

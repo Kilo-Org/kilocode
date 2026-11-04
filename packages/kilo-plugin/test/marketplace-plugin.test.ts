@@ -453,6 +453,41 @@ it.live("installs an agent as a native document the agent loader accepts, owned 
     expect(yield* test.host.storage.get("installed:kilo:agent:reviewer:global:")).toBeUndefined()
   }),
 )
+;(process.platform === "win32" ? it.live.skip : it.live)(
+  "an agent install does not depend on a usable MCP config in the same project",
+  () =>
+    Effect.gen(function* () {
+      const test = yield* fixture(false, false)
+      const project = path.join(test.directory, "project")
+      yield* Effect.promise(() => fs.mkdir(project))
+      yield* test.start({
+        ...test.host,
+        location: {
+          ...test.host.location,
+          directory: AbsolutePath.make(project),
+          project: { ...test.host.location.project, directory: AbsolutePath.make(project) },
+        },
+      })
+      // An agent never reads an MCP config, so a config that would refuse an MCP install must not block it. The
+      // first write candidate is the one an MCP install would resolve and reject.
+      const outside = path.join(test.directory, "outside.json")
+      const first = path.join(project, ".kilo2", "kilo2.jsonc")
+      yield* Effect.promise(async () => {
+        await fs.mkdir(path.dirname(first), { recursive: true })
+        await Bun.write(outside, "{}")
+        await fs.symlink(outside, first)
+      })
+      const installed = decode(
+        yield* test.rpc.call("kilocode.marketplace", "install", {
+          ...input,
+          kind: "agent",
+          id: "reviewer",
+          scope: "project",
+        }),
+      )
+      expect(installed).toMatchObject({ kind: "agent", id: "reviewer", scope: "project", status: "ready" })
+    }),
+)
 it.live("retains the database record after removal defects and retries cleanup", () =>
   Effect.gen(function* () {
     const test = yield* fixture()

@@ -365,10 +365,13 @@ export const KiloMarketplacePlugin = define<Global.Service | Scope.Scope>({
                     skills: path.join(roots(input.scope), "skills"),
                     // The config agent plugin discovers `{agent,agents}/**/*.md` under each config directory.
                     agents: path.join(roots(input.scope), "agents"),
+                    // Only skills and MCPs read this, and resolving it can reject an unrelated MCP config.
                     config:
                       input.kind === "skill"
                         ? path.join(directory(input.scope), KiloConfigFiles.newFile)
-                        : await configFile(directory(input.scope), input.scope === "global"),
+                        : input.kind === "mcp"
+                          ? await configFile(directory(input.scope), input.scope === "global")
+                          : "",
                     option: input.option,
                     params: input.params,
                     previous,

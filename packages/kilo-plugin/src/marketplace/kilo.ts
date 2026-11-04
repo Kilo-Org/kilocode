@@ -143,7 +143,11 @@ function yaml(content: string) {
 function agent(raw: Record<string, unknown>) {
   const chosen = Object.fromEntries(Object.entries(raw).filter(([key, value]) => agentKeys.has(key) && value !== undefined))
   const decoded = decodeAgent({ ...chosen, system: chosen.system })
-  return Option.getOrUndefined(decoded)
+  if (Option.isNone(decoded)) return undefined
+  // Every AgentContent field is optional, so content with no field v2 understands decodes to `{}`. Installing it
+  // would write a frontmatter-only document with no instructions, so it is treated like any other unusable entry.
+  if (!chosen.system && Object.keys(decoded.value).length === 0) return undefined
+  return decoded.value
 }
 
 function mcpOptions(content: unknown) {
