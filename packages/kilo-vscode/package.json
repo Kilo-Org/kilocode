@@ -15,7 +15,8 @@
   "activationEvents": [
     "onStartupFinished",
     "onWebviewPanel:kilo-code.v2.settingsPanel",
-    "onWebviewPanel:kilo-code.v2.agentManagerPanel"
+    "onWebviewPanel:kilo-code.v2.agentManagerPanel",
+    "onWebviewPanel:kilo-code.v2.documentsPanel"
   ],
   "contributes": {
     "icons": {

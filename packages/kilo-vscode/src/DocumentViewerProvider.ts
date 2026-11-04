@@ -40,6 +40,7 @@ export interface DocumentViewerOptions {
 export class DocumentViewerProvider implements Disposable {
   public static readonly viewType = "kilo-code.v2.documentsPanel"
   private panel: WebviewPanel | undefined
+  private ready = false
   private pending: Pending | undefined
   private readonly contexts = new Map<string, Context>()
   private currentKey = ""
@@ -54,13 +55,15 @@ export class DocumentViewerProvider implements Disposable {
     this.contexts.set(contextKey, { sessionId: input.sessionId, directory: input.directory })
     this.currentKey = contextKey
     const next = { ...input, contextKey }
-    if (this.panel) {
+    // Before the webview reports ready it cannot receive messages, so keep only the newest request.
+    if (this.panel && this.ready) {
       this.panel.reveal(this.panel.viewColumn ?? ViewColumn.One)
       void this.panel.webview.postMessage({ type: "document.open", ...next })
       return
     }
     this.pending = input
-    this.createPanel()
+    if (this.panel) this.panel.reveal(this.panel.viewColumn ?? ViewColumn.One)
+    else this.createPanel()
   }
 
   dispose(): void {
@@ -91,6 +94,7 @@ export class DocumentViewerProvider implements Disposable {
       panel.webview.onDidReceiveMessage((message) => this.message(message as Record<string, unknown>)),
       panel.onDidDispose(() => {
         this.panel = undefined
+        this.ready = false
         this.pending = undefined
         this.currentKey = ""
       }),
@@ -98,7 +102,11 @@ export class DocumentViewerProvider implements Disposable {
   }
 
   private message(message: Record<string, unknown>): void {
-    if (message.type === "webviewReady") return this.ready()
+    if (message.type === "webviewReady") {
+      this.ready = true
+      this.flush()
+      return
+    }
     if (message.type === "document.request") return this.request(message)
     if (message.type === "document.sendComments" && Array.isArray(message.comments)) {
       this.options.onComments(message.comments as ReviewCommentData[], message.autoSend === true)
@@ -126,7 +134,7 @@ export class DocumentViewerProvider implements Disposable {
     if (message.type === "document.close") this.panel?.dispose()
   }
 
-  private ready(): void {
+  private flush(): void {
     if (!this.pending || !this.panel) return
     const input = this.pending
     this.pending = undefined

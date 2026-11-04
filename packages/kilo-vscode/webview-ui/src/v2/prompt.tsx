@@ -47,8 +47,9 @@ export function PromptInput(props: {
   selectors?: JSX.Element
   /** Prompt toolbar actions (auto-approve, and later indexing, sandbox and enhance as on main). */
   actions?: JSX.Element
-  /** Receives a function that appends text to the draft and, when `send` is true, sends it. */
-  onAppendReady?: (append: (value: string, send: boolean) => void) => void
+  /** Receives a function that appends text to the draft and, when `send` is true, sends it. Called with no
+   * function when the prompt unmounts, so the owner can stop routing text into a disposed draft. */
+  onAppendReady?: (append?: (value: string, send: boolean) => void) => void
 }) {
   const v2 = useV2()
   const language = useLanguage()
@@ -192,6 +193,7 @@ export function PromptInput(props: {
     if (shouldSend) send()
     else focus()
   })
+  onCleanup(() => props.onAppendReady?.())
 
   const shortcut = createSpeechShortcut({
     speech,

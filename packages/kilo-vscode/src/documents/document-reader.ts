@@ -59,6 +59,8 @@ export function resolveDocumentPath(
   file: string,
 ): { file: string; resolved: string; size: number } | { error: string } {
   if (!file) return { error: "Invalid document path." }
+  // Resolving a UNC path opens an outbound SMB connection on Windows, so reject it before any filesystem call.
+  if (file.startsWith("\\\\") || file.startsWith("//")) return { error: "Document is outside the worktree." }
 
   try {
     const base = fs.realpathSync(root)

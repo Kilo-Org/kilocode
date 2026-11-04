@@ -39,7 +39,7 @@ export function SessionView(props: {
   /** Opens the proposed changes of an edit permission request. */
   onPreviewEdit?: (files: FileDiffInfo[], sessionID: string) => void
   /** Receives the composer append function, for example for review comments. */
-  onAppendReady?: (append: (value: string, send: boolean) => void) => void
+  onAppendReady?: (append?: (value: string, send: boolean) => void) => void
   /** Receives each prompt the server admitted, with the model it runs on. */
   onPrompted?: (sessionID: string, text: string, model: ModelRef | undefined) => void
   /** Receives a session the server does not have (deleted, or from another database) instead of an error card. */

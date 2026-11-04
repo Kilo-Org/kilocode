@@ -42,6 +42,17 @@ describe("readDocument", () => {
     expect(readDocument(root, "plan.md")).toEqual({ file: "plan.md", kind: "text", content: "# Plan\n" })
   })
 
+  it("rejects UNC paths before any filesystem call", () => {
+    const root = workspace()
+
+    expect(readDocument(root, "\\\\attacker.example\\share\\plan.md")).toEqual({
+      error: "Document is outside the worktree.",
+    })
+    expect(resolveDocumentPath(root, "//attacker.example/share/plan.md")).toEqual({
+      error: "Document is outside the worktree.",
+    })
+  })
+
   it("rejects paths outside the worktree", () => {
     const root = workspace()
     const outside = path.join(root, "..", "outside.md")
