@@ -150,6 +150,32 @@ class WorktreeSessionEditorManagerTest : BasePlatformTestCase() {
         assertEquals(1, requested.size)
     }
 
+    fun `test submit prompt sends into the session already on screen`() {
+        val session = session("ses_1", updated = 1.0)
+        val manager = manager()
+        edt { manager.openSession(SessionRef.Local(session)) }
+        flush()
+
+        edt { manager.submitPrompt("update from base") }
+        waitUntil { rpc.prompts.any { it.first == "ses_1" } }
+
+        val sent = rpc.prompts.single { it.first == "ses_1" }
+        assertEquals(DIR, sent.second)
+        assertTrue("prompt parts should carry the action text", sent.third.parts.any { it.text == "update from base" })
+    }
+
+    fun `test submit prompt while the editor starts is sent once the session opens`() {
+        rpc.listed += session("ses_1", updated = 1.0)
+        val manager = manager()
+
+        edt { manager.submitPrompt("update from base") }
+        edt { manager.start() }
+        flush()
+
+        waitUntil { rpc.prompts.any { it.first == "ses_1" } }
+        assertTrue(rpc.prompts.single { it.first == "ses_1" }.third.parts.any { it.text == "update from base" })
+    }
+
     fun `test start opens most recent listed session`() {
         rpc.listed += session("ses_old", updated = 1.0)
         rpc.listed += session("ses_new", updated = 3.0)

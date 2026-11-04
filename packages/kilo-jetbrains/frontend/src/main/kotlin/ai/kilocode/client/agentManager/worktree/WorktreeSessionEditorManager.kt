@@ -105,6 +105,7 @@ open class WorktreeSessionEditorManager(
     private val deleting = linkedSetOf<String>()
     private var last: String? = null
     private var pending = false
+    private var queuedPrompt: String? = null
     // Fork requests in flight, keyed by source session. A hover icon or menu item is easy to hit twice
     // before the RPC answers, and each answer opens its session over the last one.
     private val forking = linkedSetOf<String>()
@@ -115,6 +116,7 @@ open class WorktreeSessionEditorManager(
     private var migrationJob: Job? = null
     init {
         Disposer.register(parent, this)
+        service<WorktreeBaseUpdatePrompts>().register(worktree.directory, this)
         bindMigration()
     }
 
@@ -160,10 +162,16 @@ open class WorktreeSessionEditorManager(
             val target = session
             if (target != null) {
                 openSession(SessionRef.Local(target), false)
+                consumeStartupPrompts()
                 return@reload
             }
             val dto = latest()
-            if (dto != null) openSession(SessionRef.Local(dto), false) else newSession(false)
+            if (dto != null) {
+                openSession(SessionRef.Local(dto), false)
+                consumeStartupPrompts()
+            } else {
+                newSession(false)
+            }
         }
     }
 
@@ -191,6 +199,7 @@ open class WorktreeSessionEditorManager(
 
     @RequiresEdt
     override fun dispose() {
+        service<WorktreeBaseUpdatePrompts>().unregister(worktree.directory, this)
         migrationJob?.cancel()
         super.dispose()
     }
@@ -225,7 +234,7 @@ open class WorktreeSessionEditorManager(
             pending = false
             if (session != null) {
                 openSession(SessionRef.Local(session), focus)
-                consumePendingPrompt()
+                consumeStartupPrompts()
             } else {
                 // The backend could not create a session yet (e.g. it is paused for legacy
                 // migration). Show the empty session panel so the worktree editor mirrors the tool
@@ -269,6 +278,23 @@ open class WorktreeSessionEditorManager(
         }
     }
 
+    /**
+     * Sends a prompt queued by the worktree row action. When this editor is already open, the action
+     * calls this directly; otherwise the action opens the editor and [consumeQueuedPrompt] sends it.
+     */
+    @RequiresEdt
+    fun submitPrompt(text: String) {
+        val ui = currentUi()
+        if (ui != null) ui.submitPrompt(text, clearDraft = false) else queuedPrompt = text
+    }
+
+    /** Sends anything queued for this worktree once its session is on screen. */
+    @RequiresEdt
+    private fun consumeStartupPrompts() {
+        consumePendingPrompt()
+        consumeQueuedPrompt()
+    }
+
     /** Sends the New Worktree dialog's queued prompt into this worktree's first session, once. */
     @RequiresEdt
     private fun consumePendingPrompt() {
@@ -277,6 +303,13 @@ open class WorktreeSessionEditorManager(
             prompt.text,
             PromptSelection(prompt.agent, prompt.provider, prompt.model, prompt.variant),
         )
+    }
+
+    @RequiresEdt
+    private fun consumeQueuedPrompt() {
+        val text = queuedPrompt ?: return
+        queuedPrompt = null
+        currentUi()?.submitPrompt(text, clearDraft = false)
     }
 
     @RequiresEdt

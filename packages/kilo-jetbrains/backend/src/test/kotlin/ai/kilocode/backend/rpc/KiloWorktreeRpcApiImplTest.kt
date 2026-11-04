@@ -1632,6 +1632,33 @@ class KiloWorktreeRpcApiImplTest {
     }
 
     @Test
+    fun `list exposes the saved base branch recorded for a worktree`() = runBlocking {
+        initRepo()
+        val main = output(repo, "branch", "--show-current").trim()
+        val created = assertNotNull(api.create(repo.toString(), CreateWorktreeRequestDto("feature/base", main)).worktree)
+        val file = metadata(Path.of(created.path), "kilo-agent-manager-metadata.json")
+        Files.writeString(file, """{"parentBranch":"release","remote":"upstream"}""")
+
+        val listed = api.list(repo.toString()).worktrees.first { it.path == created.path }
+
+        assertEquals("release", listed.parentBranch)
+        assertEquals("upstream", listed.remote)
+    }
+
+    @Test
+    fun `create records the base branch for later updates`() = runBlocking {
+        initRepo()
+        val main = output(repo, "branch", "--show-current").trim()
+        val created = assertNotNull(api.create(repo.toString(), CreateWorktreeRequestDto("feature/base", main)).worktree)
+        val file = metadata(Path.of(created.path), "kilo-agent-manager-metadata.json")
+
+        assertTrue(Files.exists(file), "create should record the saved base")
+        assertEquals(main, created.parentBranch)
+        val listed = api.list(repo.toString()).worktrees.first { it.path == created.path }
+        assertEquals(main, listed.parentBranch)
+    }
+
+    @Test
     fun `fetchPrBranch tracks the head branch for a same-repo pull request`() {
         initRepo()
         val origin = originWith(pull = 7, head = "feature/login")
