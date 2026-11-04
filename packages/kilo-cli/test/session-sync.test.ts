@@ -851,6 +851,91 @@ it.live("idle passes skip reconciliation and a newly journaled directory still e
   }),
 )
 
+for (const move of ["directory", "workspace"] as const)
+  it.live(`${move} moves journal reconciliation and enforce the live capture boundary`, () =>
+    Effect.gen(function* () {
+      const f = yield* fixture
+      const s = yield* boot(f.root)
+      yield* signIn(s.credentials)
+      const child = path.join(f.directory, "moved-session")
+      yield* Effect.promise(() => mkdir(child))
+      yield* seed(s.db, f.directory, Session.ID.make("ses_move_anchor"))
+      yield* seed(s.db, move === "directory" ? f.excluded : f.directory)
+      if (move === "workspace")
+        yield* s.db.update(SessionTable).set({ workspace_id: Workspace.ID.make("wrk_remote") }).where(eq(SessionTable.id, id)).run()
+      yield* writeMessage(s.db, "persisted before entering consent")
+      yield* s.sync.enable({ directory: f.directory, destination: f.backend.url, local: true, organizationID: null })
+      expect((yield* s.sync.flush({ directory: f.directory })).pending).toBe(0)
+      expect(f.backend.states.has(id)).toBe(false)
+      const before = yield* Store.reconcileRevision(s.db)
+      yield* s.db.update(SessionTable)
+        .set(move === "directory" ? { directory: child } : { workspace_id: null })
+        .where(eq(SessionTable.id, id)).run()
+      expect(yield* Store.reconcileRevision(s.db)).toBeGreaterThan(before)
+      expect((yield* s.sync.flush({ directory: f.directory })).pending).toBe(0)
+      expect(f.backend.states.get(id)?.entities.get(`message/${messageID}`)).toMatchObject({
+        message: { text: "persisted before entering consent" },
+      })
+      expect((yield* Store.sessions(s.db, f.directory)).find((row) => row.id === id)?.bootstrap_complete).toBe(1)
+      yield* s.db.run("CREATE TABLE _test_move_scan(value INTEGER NOT NULL)")
+      yield* s.db.run("INSERT INTO _test_move_scan VALUES(0)")
+      yield* s.db.run(`CREATE TRIGGER _test_move_scan AFTER INSERT ON _kilo_sync_directory BEGIN
+        UPDATE _test_move_scan SET value=value+1;
+      END`)
+      const enrolled = yield* Store.reconcileRevision(s.db)
+      yield* s.db.update(SessionTable)
+        .set(move === "directory" ? { directory: f.excluded } : { workspace_id: Workspace.ID.make("wrk_remote") })
+        .where(eq(SessionTable.id, id)).run()
+      expect(yield* Store.reconcileRevision(s.db)).toBeGreaterThan(enrolled)
+      const requests = f.backend.control.sessionRequests
+      expect((yield* s.sync.flush({ directory: f.directory })).pending).toBe(0)
+      expect((yield* s.db.get<{ value: number }>("SELECT value FROM _test_move_scan"))!.value).toBeGreaterThan(0)
+      yield* writeMessage(s.db, "outside the capture boundary")
+      expect(yield* Store.dirty(s.db, id)).toEqual([])
+      expect((yield* s.sync.flush({ directory: f.directory })).pending).toBe(0)
+      expect(f.backend.control.sessionRequests).toBe(requests)
+    }),
+  )
+
+it.live("verification is capped at 256 sessions and idle local deletion releases its cache entry", () =>
+  Effect.gen(function* () {
+    const f = yield* fixture
+    const s = yield* boot(f.root)
+    yield* signIn(s.credentials)
+    yield* s.sync.enable({ directory: f.directory, destination: f.backend.url, local: true, organizationID: null })
+    const ids = Array.from({ length: 258 }, (_, index) =>
+      Session.ID.make(`ses_verified_${index.toString().padStart(3, "0")}`),
+    )
+    for (const sessionID of ids.slice(0, 256)) {
+      yield* seed(s.db, f.directory, sessionID)
+      expect((yield* s.sync.flush({ directory: f.directory })).pending).toBe(0)
+    }
+    expect(f.backend.control.stateReads).toBe(256)
+    const beforeDelete = yield* Store.reconcileRevision(s.db)
+    yield* s.db.delete(SessionTable).where(eq(SessionTable.id, ids[255]!)).run()
+    expect(yield* Store.reconcileRevision(s.db)).toBeGreaterThan(beforeDelete)
+    expect((yield* s.sync.flush({ directory: f.directory })).pending).toBe(0)
+    yield* seed(s.db, f.directory, ids[256]!)
+    expect((yield* s.sync.flush({ directory: f.directory })).pending).toBe(0)
+    expect(f.backend.control.stateReads).toBe(257)
+    // Removing the newest entry leaves room without evicting the oldest live session.
+    yield* writeMessage(s.db, "oldest retained after deletion", ids[0]!, 0, SessionMessage.ID.make("msg_verified_oldest"))
+    expect((yield* s.sync.flush({ directory: f.directory })).pending).toBe(0)
+    expect(f.backend.control.stateReads).toBe(257)
+    yield* seed(s.db, f.directory, ids[257]!)
+    expect((yield* s.sync.flush({ directory: f.directory })).pending).toBe(0)
+    expect(f.backend.control.stateReads).toBe(258)
+    // One more live session evicts the oldest remaining verification.
+    yield* writeMessage(s.db, "evicted session checks state again", ids[1]!, 0, SessionMessage.ID.make("msg_verified_evicted"))
+    expect((yield* s.sync.flush({ directory: f.directory })).pending).toBe(0)
+    expect(f.backend.control.stateReads).toBe(259)
+    yield* writeMessage(s.db, "newest remains verified", ids[257]!, 0, SessionMessage.ID.make("msg_verified_newest"))
+    expect((yield* s.sync.flush({ directory: f.directory })).pending).toBe(0)
+    expect(f.backend.control.stateReads).toBe(259)
+  }),
+  20_000,
+)
+
 it.live("mutation during actual HTTP upload survives ACK and subsequently reaches the cloud peer", () =>
   Effect.gen(function* () {
     const f = yield* fixture

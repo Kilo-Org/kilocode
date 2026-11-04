@@ -124,6 +124,8 @@ A socket write or scheduled background task is not success.
 Recover the pending packet after process death and retry with the same identity and payload.
 Read cloud state before the first packet in each process and after errors or acknowledgement-history changes.
 Successful receipts verify subsequent packets for the same session, destination, account, source, and local predecessor.
+Keep at most 256 process-local verifications, evicting the least recently acknowledged session first.
+Reconciliation drops verifications for deleted or out-of-scope sessions; eviction only requires another state read.
 Steady-state packets post directly; the service still checks ownership, deletion, source, predecessor, and exact-body replay.
 Batch conflicts and superseded packets return to state recovery without replacing retained packet bytes.
 Retry network failures and retryable service responses with capped exponential full jitter.
@@ -230,7 +232,7 @@ The source identity persists across normal restarts.
 Consent changes take effect without requiring an unrelated session mutation.
 Enabling synchronization includes existing sessions in the selected workspace.
 A scan establishes initial state; transactional capture covers changes during the scan.
-Journal new sessions, directory changes, and consent changes transactionally to request another reconciliation.
+Journal new sessions, local deletions, directory or workspace moves, and consent changes transactionally to request reconciliation.
 Idle passes skip directory scans until that journal changes or a sixty-second safety interval expires.
 Startup and enable still reconcile before relying on incremental capture.
 Maintain a bounded pending packet rather than loading an entire workspace into memory.

@@ -290,6 +290,7 @@ export const initialize = Effect.fn("SessionSync.Store.initialize")(function* (d
         }
         yield* tx.run(`DROP TRIGGER IF EXISTS _kilo_sync_local_delete`)
         yield* tx.run(`CREATE TRIGGER _kilo_sync_local_delete BEFORE DELETE ON session_v2 BEGIN
+      UPDATE _kilo_sync_reconcile SET revision=revision+1 WHERE id=1;
       UPDATE _kilo_sync_dirty SET value=(
         SELECT ${messageValue("m")} FROM session_message m
         WHERE m.session_id=OLD.id AND m.id=_kilo_sync_dirty.id)

@@ -145,6 +145,20 @@ export const make = Effect.fn("SessionSync.make")(function* (
     const revision = yield* Store.reconcileRevision(db)
     if (!force && revision === reconciledRevision && Date.now() - reconciledAt < 60_000) return
     yield* Store.reconcile(db)
+    if (verified.size) {
+      const retained = yield* db
+        .all<{ id: string }>(
+          sql`SELECT s.id FROM _kilo_sync_session s
+            JOIN _kilo_sync_consent c ON c.directory=s.directory
+            JOIN session_v2 n ON n.id=s.id AND n.workspace_id IS NULL
+            JOIN _kilo_sync_directory d ON d.alias=n.directory AND d.directory=s.directory
+            WHERE c.enabled=1 AND s.local_deleted=0
+              AND s.id IN (${sql.join([...verified.keys()].map((id) => sql`${id}`), sql`,`)})`,
+        )
+        .pipe(Effect.orDie)
+      const live = new Set(retained.map((row) => row.id))
+      for (const id of verified.keys()) if (!live.has(id)) verified.delete(id)
+    }
     reconciledRevision = revision
     reconciledAt = Date.now()
   })
@@ -471,15 +485,19 @@ export const make = Effect.fn("SessionSync.make")(function* (
     const acknowledge = (receipt: Receipt) =>
       Store.acknowledge(db, pending, receipt).pipe(
         Effect.andThen(
-          Effect.sync(() =>
+          Effect.sync(() => {
+            verified.delete(session.id)
+            if (session.local_deleted) return
             verified.set(
               session.id,
               stateKey(
                 { ...session, acknowledged: pending.through, ack_batch: pending.batch_id, ack_digest: pending.digest },
                 c,
               ),
-            ),
-          ),
+            )
+            // Evict the oldest verification; its next packet only needs another state read.
+            if (verified.size > 256) verified.delete(verified.keys().next().value!)
+          }),
         ),
         Effect.andThen(Assets.prune(db, global, session.id)),
         Effect.as(true),
