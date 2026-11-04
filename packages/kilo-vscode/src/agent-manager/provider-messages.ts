@@ -294,7 +294,12 @@ function handleState(m: AgentManagerInMessage, host: MessageHost): boolean {
     return true
   }
   if (m.type === "agentManager.setReviewMarkdownRender") {
-    void host.setReviewMarkdownRender(m.render).then(() => host.pushState())
+    void host
+      .setReviewMarkdownRender(m.render)
+      .catch((err: unknown) =>
+        host.log("Failed to set diff markdown rendering:", err instanceof Error ? err.message : String(err)),
+      )
+      .then(() => host.pushState())
     return true
   }
   if (m.type === "agentManager.setDefaultBaseBranch") {
@@ -324,11 +329,14 @@ async function handleImport(m: AgentManagerInMessage, host: MessageHost): Promis
 async function handleDiff(m: AgentManagerInMessage, host: MessageHost): Promise<boolean> {
   const projectId = host.context()?.id
   if (m.type === "agentManager.requestWorktreeDiff") {
-    void host.diffs.request(composeDiffId(m.sessionId, normalizeScope(m.scope)))
+    void host.diffs.request(composeDiffId(m.sessionId, normalizeScope(m.scope), m.diffSessionId, m.turnId))
     return true
   }
   if (m.type === "agentManager.requestWorktreeDiffFile") {
-    void host.diffs.requestFile(composeDiffId(m.sessionId, normalizeScope(m.scope), m.diffSessionId), m.file)
+    void host.diffs.requestFile(
+      composeDiffId(m.sessionId, normalizeScope(m.scope), m.diffSessionId, m.turnId),
+      m.file,
+    )
     return true
   }
   if (m.type === "agentManager.applyWorktreeDiff") {
@@ -340,7 +348,7 @@ async function handleDiff(m: AgentManagerInMessage, host: MessageHost): Promise<
     return true
   }
   if (m.type === "agentManager.startDiffWatch") {
-    host.diffs.start(composeDiffId(m.sessionId, normalizeScope(m.scope), m.diffSessionId))
+    host.diffs.start(composeDiffId(m.sessionId, normalizeScope(m.scope), m.diffSessionId, m.turnId))
     return true
   }
   if (m.type === "agentManager.stopDiffWatch") {
@@ -370,7 +378,7 @@ async function handleDiff(m: AgentManagerInMessage, host: MessageHost): Promise<
   return false
 }
 
-/** Set the shared diff markdown preference, keeping the v1 setting name. */
+/** Set the shared diff markdown preference. */
 export async function setReviewMarkdownRender(value: boolean): Promise<void> {
   await vscode.workspace
     .getConfiguration("kilo-code.v2")
