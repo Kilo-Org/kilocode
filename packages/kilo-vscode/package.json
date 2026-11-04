@@ -287,9 +287,9 @@
         },
         "kilo-code.v2.integratedBrowser": {
           "type": "boolean",
-          "default": false,
+          "default": true,
           "scope": "application",
-          "markdownDescription": "Enable the Integrated Browser tab and the Agent Manager browser panel, and expose the `browser_open` tool to sessions."
+          "markdownDescription": "Enable the Integrated Browser tab and the Agent Manager browser panel, and expose the `browser_open` tool to sessions. Enabled by default."
         },
         "kilo-code.v2.agentManager.browser.useSystemChrome": {
           "type": "boolean",

@@ -122,7 +122,7 @@ const BrowserTab: Component = () => {
             tag={() => language.t("settings.config.scope.global")}
           >
             <Switch
-              checked={setting("integratedBrowser", false)}
+              checked={setting("integratedBrowser", true)}
               onChange={(checked) => config.setSetting("integratedBrowser", checked)}
               hideLabel
             >

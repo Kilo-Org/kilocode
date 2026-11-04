@@ -4,9 +4,9 @@ const INTEGRATED_BROWSER = "kilo-code.v2.agentManager.browser"
 const BROWSER_AUTOMATION = "kilo-code.v2.browserAutomation"
 const INTEGRATED_BROWSER_FLAG = "kilo-code.v2"
 
-/** The Integrated Browser is an application-wide opt-in, off by default. */
+/** The Integrated Browser is on by default and can be turned off per application. */
 export function integratedBrowserEnabled(): boolean {
-  return workspace.getConfiguration(INTEGRATED_BROWSER_FLAG).get<boolean>("integratedBrowser", false) === true
+  return workspace.getConfiguration(INTEGRATED_BROWSER_FLAG).get<boolean>("integratedBrowser", true) !== false
 }
 
 /**
