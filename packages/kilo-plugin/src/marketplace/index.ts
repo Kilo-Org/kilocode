@@ -7,6 +7,7 @@ import { Global } from "@opencode/util/global"
 import path from "node:path"
 import { Effect, Exit, Option, Result, Schema, Scope } from "effect"
 import { KiloMarketplaceRegistry } from "./kilo"
+import { Agent, AgentError } from "./agent"
 import { Installer } from "./installer"
 import { MarketplaceMcp, McpError, configFile } from "./mcp"
 import { catalogKey, type Entry } from "./registry"
@@ -71,11 +72,14 @@ export const KiloMarketplacePlugin = define<Global.Service | Scope.Scope>({
         "Couldn't save marketplace installation. Retry install or uninstall",
       )
 
-    // Absolute resources exist only in memory; stored records keep skill ids, server names and a scope-relative config.
+    // Absolute resources exist only in memory; stored records keep skill ids, agent ids, server names and a
+    // scope-relative config.
     const store = (resource: Installer.Resource): KiloMarketplaceRpc.Resource =>
-      "path" in resource
-        ? { id: path.basename(resource.path), fingerprints: resource.fingerprints }
-        : { server: resource.server, fingerprints: resource.fingerprints }
+      "agent" in resource
+        ? { agent: resource.agent, fingerprints: resource.fingerprints }
+        : "path" in resource
+          ? { id: path.basename(resource.path), fingerprints: resource.fingerprints }
+          : { server: resource.server, fingerprints: resource.fingerprints }
 
     const configs = (scope: KiloMarketplaceRpc.Scope) =>
       KiloConfigFiles.writeCandidates(directory(scope), scope === "global")
@@ -106,6 +110,13 @@ export const KiloMarketplacePlugin = define<Global.Service | Scope.Scope>({
       const owned = async (resource: KiloMarketplaceRpc.Resource, preferred?: string): Promise<Installer.Resource> => {
         if ("id" in resource)
           return { path: path.join(roots(record.scope), "skills", resource.id), fingerprints: resource.fingerprints }
+        // An agent document is named by its id and located from the current scope, so a project move is safe.
+        if ("agent" in resource)
+          return {
+            agent: resource.agent,
+            path: Agent.target(path.join(roots(record.scope), "agents"), resource.agent),
+            fingerprints: resource.fingerprints,
+          }
         const hinted =
           preferred &&
           (await MarketplaceMcp.fingerprint(preferred, resource.server).catch(() => undefined)) !== undefined
@@ -232,7 +243,9 @@ export const KiloMarketplacePlugin = define<Global.Service | Scope.Scope>({
           (inside(record.config) &&
             configs(record.scope).includes(path.join(directory(record.scope), record.config)))) &&
         [...(record.resources ?? []), ...(record.pending ?? [])].every(
-          (resource) => !("id" in resource) || safe(resource.id),
+          (resource) =>
+            !("id" in resource || "agent" in resource) ||
+            safe("id" in resource ? resource.id : resource.agent),
         )
       )
     }
@@ -350,6 +363,8 @@ export const KiloMarketplacePlugin = define<Global.Service | Scope.Scope>({
                   Installer.install({
                     entry,
                     skills: path.join(roots(input.scope), "skills"),
+                    // The config agent plugin discovers `{agent,agents}/**/*.md` under each config directory.
+                    agents: path.join(roots(input.scope), "agents"),
                     config:
                       input.kind === "skill"
                         ? path.join(directory(input.scope), KiloConfigFiles.newFile)
@@ -432,6 +447,8 @@ function reason(cause: unknown): readonly [keyof typeof KiloMarketplaceRpc.Defin
   if (cause instanceof AggregateError) return [reason(cause.cause ?? cause.errors[0])[0], cause.message]
   if (cause instanceof StorageError) return [cause.reason, cause.message] as const
   if (cause instanceof SkillError)
+    return [cause.reason === "conflict" ? "conflict" : "invalid_params", cause.message] as const
+  if (cause instanceof AgentError)
     return [cause.reason === "conflict" ? "conflict" : "invalid_params", cause.message] as const
   if (cause instanceof McpError) return [cause.reason, cause.message] as const
   if (cause instanceof Installer.FetchError) return ["fetch_failed", cause.message] as const

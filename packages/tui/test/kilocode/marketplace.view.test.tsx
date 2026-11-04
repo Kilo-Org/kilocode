@@ -36,6 +36,9 @@ test.each(["light", "dark"] as const)(
                   prerequisites: [],
                   parameters: [],
                   options: [],
+                  ...(body.input.kind === "agent"
+                    ? { agent: { mode: "subagent", description: "agent description", system: "Body." } }
+                    : {}),
                 },
               ],
               failures: [],
@@ -76,16 +79,25 @@ test.each(["light", "dark"] as const)(
       { width: 120, height: 30, kittyKeyboard: true },
     )
     try {
-      await app.waitForFrame((frame) => frame.includes("skill entry") && frame.includes("mcp entry"))
+      await app.waitForFrame(
+        (frame) => frame.includes("agent entry") && frame.includes("skill entry") && frame.includes("mcp entry"),
+      )
       const count = () => (app.renderer as unknown as { listenerCount(event: string): number }).listenerCount("resize")
       const before = count()
-      app.mockInput.pressArrow("down")
+      // The first row is already selected; each extra press moves one row.
       app.mockInput.pressArrow("down")
       await app.waitForFrame((frame) => frame.includes("skill author"))
       app.mockInput.pressArrow("down")
       await app.waitForFrame((frame) => frame.includes("mcp author"))
       expect(app.captureCharFrame()).not.toContain("● Installed")
       expect(count()).toBe(before)
+      app.resize(70, 30)
+      await app.waitForFrame((frame) => frame.includes("mcp entry") && !frame.includes("mcp author"))
+      app.resize(120, 30)
+      await app.waitForFrame((frame) => frame.includes("mcp author"))
+      expect(app.captureCharFrame()).not.toContain("● Installed")
+      expect(count()).toBe(before)
+      // The details pane starts at 108 columns, so a narrow terminal shows the list only.
       app.resize(70, 30)
       await app.waitForFrame((frame) => frame.includes("mcp entry") && !frame.includes("mcp author"))
       app.resize(120, 30)

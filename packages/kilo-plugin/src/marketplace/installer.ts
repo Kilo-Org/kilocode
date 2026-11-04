@@ -1,15 +1,18 @@
 export * as Installer from "./installer"
 
+import path from "node:path"
+import { Agent, AgentError } from "./agent"
 import { MarketplaceMcp, McpError } from "./mcp"
 import type { Entry } from "./registry"
 import { Skill, SkillError } from "./skill"
 
 export class FetchError extends Error {}
-export type Failure = SkillError | McpError | FetchError
+export type Failure = SkillError | McpError | AgentError | FetchError
 
 /** An owned resource at its current absolute location; the stored record keeps only ids and server names. */
 export type Resource =
   | { readonly path: string; readonly fingerprints?: readonly string[] }
+  | { readonly agent: string; readonly path: string; readonly fingerprints?: readonly string[] }
   | {
       readonly config: string
       readonly server: string
@@ -19,6 +22,8 @@ export type Resource =
 
 export interface Written {
   readonly paths: readonly string[]
+  /** Agent documents the install wrote; each is also present in `resources`. */
+  readonly agents?: readonly string[]
   readonly config?: string
   readonly server?: string
   readonly resources?: readonly Resource[]
@@ -28,6 +33,7 @@ export interface Written {
 export async function install(input: {
   entry: Entry
   skills: string
+  agents: string
   config: string
   option?: string
   params?: Readonly<Record<string, string>>
@@ -35,6 +41,7 @@ export async function install(input: {
   beforeWrite?: (intent: Written) => Promise<void>
 }): Promise<Written> {
   const item = input.entry.item
+  if (item.kind === "agent") return agent(input, item)
   const configuration = item.kind === "mcp" ? mcp(input.entry, input.option, input.params ?? {}) : undefined
   const server = configuration?.server
   if (item.kind === "skill" && !input.entry.archive) throw new SkillError("invalid", `Skill ${item.id} has no archive`)
@@ -128,8 +135,65 @@ export async function install(input: {
   return written
 }
 
+/**
+ * An agent is one markdown document. Ownership, conflicts and rollback use the shared resource helpers below, so an
+ * agent gets the same recovery and modification protection as a skill tree.
+ */
+async function agent(
+  input: {
+    entry: Entry
+    agents: string
+    previous?: Written & { readonly id: string; readonly recovering?: boolean }
+    beforeWrite?: (intent: Written) => Promise<void>
+  },
+  item: Entry["item"],
+): Promise<Written> {
+  if (!item.agent) throw new AgentError("invalid", `Agent ${item.id} has no content`)
+  const prepared = await Agent.prepare({ root: input.agents, id: item.id, content: item.agent })
+  const resource: Resource = {
+    agent: path.basename(prepared.target, ".md"),
+    path: prepared.target,
+    fingerprints: [prepared.fingerprint],
+  }
+  const prior = input.previous ? [...active(input.previous), ...(input.previous.pending ?? [])] : []
+  const allowed = prior.filter((old) => same(old, resource)).flatMap((old) => old.fingerprints ?? [])
+  const accepted = [...new Set([...allowed, ...(resource.fingerprints ?? [])])]
+  await Agent.preflight(prepared.target, accepted)
+  const pending = prior.filter((old) => !same(old, resource))
+  const written: Written = {
+    paths: [],
+    agents: [resource.agent],
+    resources: [resource],
+    ...(pending.length ? { pending } : {}),
+  }
+  await input.beforeWrite?.({
+    ...written,
+    resources: [{ ...resource, fingerprints: accepted }],
+    ...(pending.length ? { pending } : {}),
+  })
+  const existed = (await resourceFingerprint(resource)) !== undefined
+  try {
+    await Agent.write(prepared, accepted)
+  } catch (error) {
+    // Never roll back another concurrent install's document merely because its fingerprint matches.
+    if (existed) throw error
+    const results = await Promise.allSettled([cleanup(resource)])
+    const failures = results.flatMap((result) => (result.status === "rejected" ? [result.reason] : []))
+    if (failures.length)
+      throw new AggregateError(
+        [error, ...failures],
+        `Agent install failed: ${message(error)}; rollback failed: ${failures.map(message).join("; ")}`,
+        { cause: error },
+      )
+    throw error
+  }
+  return written
+}
+
 /** Redact before interpolation, so secrets cannot reach the rendered configuration preview. */
 export function preview(input: { entry: Entry; option?: string; params?: Readonly<Record<string, string>> }) {
+  if (input.entry.item.kind === "agent")
+    throw new McpError("invalid_params", "Only MCP servers have a configuration preview")
   const index =
     input.option === undefined ? 0 : input.entry.item.options.findIndex((option) => option.name === input.option)
   const parameters = MarketplaceMcp.parameters(input.entry.item, input.entry.item.options[index])
@@ -157,6 +221,7 @@ function mcp(entry: Entry, option: string | undefined, params: Readonly<Record<s
 }
 
 function key(resource: Resource) {
+  if ("agent" in resource) return JSON.stringify(["agent", resource.path])
   return JSON.stringify(
     "path" in resource ? ["path", resource.path] : ["config", resource.target ?? resource.config, resource.server],
   )
@@ -174,24 +239,32 @@ function same(left: Resource, right: Resource) {
 }
 
 function active(record: Written & { id: string }): readonly Resource[] {
+  // An agent is located from its stored id, so its recorded path stays authoritative across a project move.
+  const agents = (record.resources ?? []).flatMap((owned) =>
+    "agent" in owned ? [{ agent: owned.agent, path: path.join(path.dirname(owned.path), `${owned.agent}.md`) }] : [],
+  )
   // Legacy paths without fingerprints never authorize destroying existing content.
   return [
     ...record.paths.map((path) => ({ path })),
+    ...agents,
     ...(record.config
       ? [{ config: record.config, server: record.server ?? MarketplaceMcp.serverName(record.id) }]
       : []),
   ].map(
     (resource) =>
       record.resources?.find((owned) =>
-        "path" in resource
-          ? "path" in owned && owned.path === resource.path
-          : "config" in owned && owned.config === resource.config && owned.server === resource.server,
+        "agent" in resource
+          ? "agent" in owned && owned.agent === resource.agent
+          : "path" in resource
+            ? "path" in owned && owned.path === resource.path
+            : "config" in owned && owned.config === resource.config && owned.server === resource.server,
       ) ?? resource,
   )
 }
 
 export async function resourceFingerprint(resource: Resource): Promise<string | undefined> {
   await checkTarget(resource)
+  if ("agent" in resource) return Agent.fingerprint(resource.path)
   return "path" in resource
     ? Skill.fingerprint(resource.path)
     : MarketplaceMcp.fingerprint(resource.config, resource.server)
@@ -199,6 +272,7 @@ export async function resourceFingerprint(resource: Resource): Promise<string | 
 
 export async function cleanup(resource: Resource) {
   await checkTarget(resource)
+  if ("agent" in resource) return Agent.remove(resource.path, resource.fingerprints)
   if ("path" in resource) return Skill.remove(resource.path, resource.fingerprints)
   await MarketplaceMcp.remove({ file: resource.config, name: resource.server, fingerprints: resource.fingerprints })
 }
