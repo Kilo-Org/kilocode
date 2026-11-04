@@ -38,7 +38,7 @@ type Options = {
 }
 
 type FactoryOptions = {
-  connection: Pick<AgentManagerConnection, "client" | "onEvent">
+  connection: Pick<AgentManagerConnection, "client" | "state" | "onState" | "onEvent">
   paths: () => string[]
   post: (active: string[]) => void
   status: (sessionID: string, running: boolean) => void
@@ -416,15 +416,25 @@ export function createWorktreeActivity(opts: FactoryOptions) {
     )
       opts.status(String(event.data.sessionID), false)
   })
+  const sync = (force = false) => {
+    if (force) activity.replay()
+    // Without a connection the load would fail for every directory and leave stale badges.
+    if (opts.connection.state() !== "connected") return Promise.resolve()
+    return activity.sync(force)
+  }
+  const unsubState = opts.connection.onState((state) => {
+    if (state === "connecting") return activity.pause()
+    if (state !== "connected") return activity.clear()
+    // A restart may have lost or changed the busy and blocked sessions, so reload every directory.
+    void sync(true)
+  })
   return {
-    sync: (force = false) => {
-      if (force) activity.replay()
-      return activity.sync(force)
-    },
+    sync,
     pause: () => activity.pause(),
     clear: () => activity.clear(),
     dispose: () => {
       unsubEvent()
+      unsubState()
       activity.dispose()
     },
   }

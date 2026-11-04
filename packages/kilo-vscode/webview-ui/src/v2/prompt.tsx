@@ -18,6 +18,7 @@ import {
   promptFocusAllowed,
 } from "../utils/focus"
 import { isEnterKeyCommitNotIme } from "../utils/ime-enter"
+import { registerAppend, type AppendHandler } from "./append-ready"
 import { message, useV2 } from "./client"
 import { cleanEnhancedPrompt, enhancePromptRequest, normalizeEnhancePromptErrorMessage } from "./enhance-prompt"
 import { insertSpacedText } from "./prompt-speech"
@@ -55,8 +56,8 @@ export function PromptInput(props: {
   selectors?: JSX.Element
   /** Prompt toolbar actions (auto-approve, and later indexing, sandbox and enhance as on main). */
   actions?: JSX.Element
-  /** Receives a function that appends text to the draft and, when `send` is true, sends it. */
-  onAppendReady?: (append: (value: string, send: boolean) => void) => void
+  /** Receives a function that appends text to the draft and, when `send` is true, sends it; undefined on unmount. */
+  onAppendReady?: (append: AppendHandler | undefined) => void
 }) {
   const v2 = useV2()
   const language = useLanguage()
@@ -253,7 +254,7 @@ export function PromptInput(props: {
     submit()
   }
 
-  props.onAppendReady?.((value, shouldSend) => {
+  registerAppend(props.onAppendReady, (value, shouldSend) => {
     const current = text()
     enhanceToken++
     preEnhance = null
