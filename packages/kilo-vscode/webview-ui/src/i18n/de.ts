@@ -317,6 +317,7 @@ export const dict = {
   "notification.permission.descriptionSandboxEscalation":
     "Dies führt den gesamten Befehl mit entfernten Dateisystem- und Netzwerkeinschränkungen aus, nur für diesen Befehl. Git muss in .git schreiben, das in der Sandbox schreibgeschützt ist und bei einem verknüpften Worktree außerhalb des Worktrees liegt. Bash-Erlaubnisregeln und die automatische Genehmigung genehmigen diese Anfrage nie automatisch.",
   "ui.permission.manageAutoApprove": "Regeln für automatische Genehmigung verwalten",
+  "ui.permission.noChanges": "Keine Änderungen.",
   "ui.permission.reject": "Ablehnen",
   "ui.permission.feedbackPlaceholder": "Teile Kilo mit, was es anders machen soll",
   "ui.permission.feedbackHint": "Enter zum Ablehnen, Esc zum Abbrechen",
@@ -359,6 +360,8 @@ export const dict = {
 
   "session.tab.review": "Überprüfung",
   "session.review.filesChanged": "{{count}} Dateien geändert",
+  "session.review.viewTurnChanges": "Turn-Änderungen anzeigen",
+  "session.review.turnChangesEmpty": "Keine Änderungen in diesem Turn.",
   "session.review.loadingChanges": "Lade Änderungen...",
   "session.review.noChanges": "Keine Änderungen",
   "session.messages.loadingEarlier": "Lade frühere Nachrichten...",
@@ -1479,6 +1482,8 @@ export const dict = {
   "diffViewer.source.unstaged.tooltip":
     "Dateien, die in deinem Arbeitsbaum geändert, aber noch nicht gestaged wurden, plus nicht verfolgte (neue) Dateien.",
   "diffViewer.source.session.label": "Sitzung",
+  "diffViewer.source.turn.tooltip": "Von Kilo während eines Turns geänderte Dateien.",
+  "diffViewer.source.turn.label": "Turn",
   "diffViewer.source.session.tooltip":
     "Von Kilo während der aktuellen Sitzung geänderte Dateien, basierend auf Snapshots pro Runde. Wird beim Start einer neuen Sitzung zurückgesetzt.",
   "diffViewer.group.session": "Sitzung",
