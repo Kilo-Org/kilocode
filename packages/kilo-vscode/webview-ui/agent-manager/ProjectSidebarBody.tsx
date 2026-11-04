@@ -331,14 +331,13 @@ export const ProjectSidebarBody: Component<Props> = (props) => {
           onRestore={() => post({ type: "agentManager.restoreWorktree", worktreeId: worktree.id })}
           onUpdateBase={() => {
             const sessionId = active() ? props.currentSessionID?.() : undefined
-            const session = sessionId ? props.sessions?.find((item) => item.id === sessionId) : undefined
             updateBase(
               worktree.id,
               props.project.id,
               baseUpdateTarget({
                 worktreeId: worktree.id,
-                session,
-                sessionWorktreeId: session?.worktreeId,
+                session: sessionId ? props.sessions?.find((item) => item.id === sessionId) : undefined,
+                managedSessions: store.managedSessions(),
               }),
             )
           }}

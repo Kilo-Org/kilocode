@@ -14,6 +14,8 @@ function session(overrides: Partial<SessionInfo> = {}): SessionInfo {
   }
 }
 
+const managed = [{ id: "ses_one", worktreeId: "wt-first" }]
+
 describe("baseUpdateTarget", () => {
   it("targets the visible session with its model, variant and agent", () => {
     const info = session({
@@ -21,9 +23,7 @@ describe("baseUpdateTarget", () => {
       agent: "code",
     })
 
-    expect(
-      baseUpdateTarget({ worktreeId: "wt-first", session: info, sessionWorktreeId: "wt-first" }),
-    ).toEqual({
+    expect(baseUpdateTarget({ worktreeId: "wt-first", session: info, managedSessions: managed })).toEqual({
       sessionId: "ses_one",
       model: { providerID: "kilo", modelID: "deepseek-v4.1-flash" },
       variant: "high",
@@ -34,30 +34,48 @@ describe("baseUpdateTarget", () => {
   it("omits a model that has no effort and a session that has no agent", () => {
     const info = session({ model: { id: "kilo-auto-free", providerID: "kilo" } })
 
-    expect(baseUpdateTarget({ worktreeId: "wt-first", session: info, sessionWorktreeId: "wt-first" })).toEqual({
+    expect(baseUpdateTarget({ worktreeId: "wt-first", session: info, managedSessions: managed })).toEqual({
       sessionId: "ses_one",
       model: { providerID: "kilo", modelID: "kilo-auto-free" },
     })
   })
 
   it("omits the server default effort marker so the host does not send it back as an effort", () => {
-    const info = session({
-      model: { id: "kilo-auto-free", providerID: "kilo", variant: "default" },
-    })
+    const info = session({ model: { id: "kilo-auto-free", providerID: "kilo", variant: "default" } })
 
-    expect(
-      baseUpdateTarget({ worktreeId: "wt-first", session: info, sessionWorktreeId: "wt-first" }),
-    ).toEqual({ sessionId: "ses_one", model: { providerID: "kilo", modelID: "kilo-auto-free" } })
+    expect(baseUpdateTarget({ worktreeId: "wt-first", session: info, managedSessions: managed })).toEqual({
+      sessionId: "ses_one",
+      model: { providerID: "kilo", modelID: "kilo-auto-free" },
+    })
   })
 
-  it("leaves the host to choose when the session belongs to another worktree", () => {
+  it("leaves the host to choose when the managed state places the session in another worktree", () => {
     const info = session()
 
-    expect(baseUpdateTarget({ worktreeId: "wt-first", session: info, sessionWorktreeId: "wt-second" })).toEqual({})
-    expect(baseUpdateTarget({ worktreeId: "wt-first", session: info, sessionWorktreeId: null })).toEqual({})
+    expect(
+      baseUpdateTarget({
+        worktreeId: "wt-first",
+        session: info,
+        managedSessions: [{ id: "ses_one", worktreeId: "wt-second" }],
+      }),
+    ).toEqual({})
+  })
+
+  it("leaves the host to choose for a session only the catalog tagged with this worktree", () => {
+    const info = session()
+
+    // A session in the worktree directory that the managed state does not know is rejected by the host, so it
+    // must not travel as a target.
+    expect(
+      baseUpdateTarget({
+        worktreeId: "wt-first",
+        session: info,
+        managedSessions: [{ id: "ses_other", worktreeId: "wt-first" }],
+      }),
+    ).toEqual({})
   })
 
   it("leaves the host to choose when no session is visible", () => {
-    expect(baseUpdateTarget({ worktreeId: "wt-first", session: undefined, sessionWorktreeId: undefined })).toEqual({})
+    expect(baseUpdateTarget({ worktreeId: "wt-first", session: undefined, managedSessions: managed })).toEqual({})
   })
 })

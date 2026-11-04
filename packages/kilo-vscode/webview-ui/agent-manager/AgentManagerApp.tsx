@@ -1580,9 +1580,7 @@ const AgentManagerContent: Component = () => {
       baseUpdateTarget({
         worktreeId,
         session: sessionId ? sessions.get(sessionId) : undefined,
-        sessionWorktreeId: sessionId
-          ? managedSessions().find((entry) => entry.id === sessionId)?.worktreeId
-          : undefined,
+        managedSessions: managedSessions(),
       }),
     )
   }
@@ -1882,7 +1880,7 @@ const AgentManagerContent: Component = () => {
     return baseUpdateTarget({
       worktreeId,
       session: sessionId ? sessions.get(sessionId) : undefined,
-      sessionWorktreeId: sessionId ? managedSessions().find((entry) => entry.id === sessionId)?.worktreeId : undefined,
+      managedSessions: managedSessions(),
     })
   })
 
