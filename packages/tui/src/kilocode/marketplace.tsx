@@ -905,6 +905,5 @@ function resourceDescriptions(record: Pick<Installed, "resources">) {
 
 function agentModel(model: NonNullable<Item["agent"]>["model"]) {
   if (model === undefined) return ""
-  if (typeof model === "string") return model
   return [model.providerID, model.model].filter(Boolean).join("/") + (model.variant ? `#${model.variant}` : "")
 }

@@ -203,6 +203,8 @@ describe("agent catalog entries", () => {
       Bun.YAML.stringify({
         items: [
           { id: "empty", content: {} },
+          { id: "blank", content: { system: "" } },
+          { id: "blank-prompt", content: "---\nprompt: \"  \"\n---\n" },
           { id: "v1-only", content: { options: { temperature: 1 }, requirements: { skills: ["x"] } } },
           { id: "scalar", content: 42 },
           { id: "ok", content: { prompt: "Body" } },
@@ -220,7 +222,9 @@ describe("agent installation", () => {
     const config = path.join(directory, "kilo2.json")
     const skills = path.join(directory, "skills")
     const first = await Installer.install({ entry: agentEntry(), skills, agents, config })
-    expect(first.agents).toEqual(["reviewer"])
+    expect(first.resources).toEqual([
+      { agent: "reviewer", path: path.join(agents, "reviewer.md"), fingerprints: [expect.any(String)] },
+    ])
     expect(first.config).toBeUndefined()
     expect(first.paths).toEqual([])
     const file = path.join(agents, "reviewer.md")
@@ -275,6 +279,31 @@ describe("agent installation", () => {
       }),
     ).rejects.toThrow("checkpoint failed")
     expect(await fs.readdir(agents).catch(() => [])).toEqual([])
+  })
+
+  test("a reinstall keeps prior resources of another kind instead of queueing them for cleanup", async () => {
+    const directory = await tmp()
+    const agents = path.join(directory, "agents")
+    const skills = path.join(directory, "skills")
+    const config = path.join(directory, "kilo2.json")
+    const skill = path.join(skills, "companion")
+    await fs.mkdir(skill, { recursive: true })
+    // A prior record that also owns a companion skill tree, as an MCP install with companions does.
+    const previous = { id: "reviewer", paths: [skill], resources: [{ path: skill, fingerprints: ["skill"] }] }
+    const written = await Installer.install({ entry: agentEntry(), skills, agents, config, previous })
+    expect(written.pending).toBeUndefined()
+    expect(written.resources).toContainEqual(previous.resources[0])
+    expect(written.resources).toContainEqual(expect.objectContaining({ agent: "reviewer" }))
+  })
+
+  test("uninstall keeps the shared agents directory for a concurrent install", async () => {
+    const directory = await tmp()
+    const agents = path.join(directory, "agents")
+    const skills = path.join(directory, "skills")
+    const config = path.join(directory, "kilo2.json")
+    const written = await Installer.install({ entry: agentEntry(), skills, agents, config })
+    await Installer.uninstall({ id: "reviewer", ...written })
+    expect(await fs.stat(agents).then((info) => info.isDirectory())).toBe(true)
   })
 
   test("preview rejects agents because they have no interpolated configuration", async () => {

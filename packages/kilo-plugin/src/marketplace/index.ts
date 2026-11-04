@@ -15,7 +15,14 @@ import { SkillError, safe } from "./skill"
 
 const CATALOG_TTL = 10 * 60 * 1000
 
-const decodeInstalled = Schema.decodeUnknownOption(Schema.fromJsonString(KiloMarketplaceRpc.Installed))
+// Resources are decoded one at a time: a resource kind this build does not know (an agent written by a newer
+// build, say) is dropped instead of failing the record and orphaning the files it names.
+const Stored = Schema.Struct({
+  ...KiloMarketplaceRpc.Installed.fields,
+  resources: Schema.optional(Schema.Array(Schema.Unknown)),
+  pending: Schema.optional(Schema.Array(Schema.Unknown)),
+})
+const decodeStored = Schema.decodeUnknownOption(Schema.fromJsonString(Stored))
 const decodeSnapshot = Schema.decodeUnknownOption(
   Schema.fromJsonString(
     Schema.Array(
@@ -250,12 +257,24 @@ export const KiloMarketplacePlugin = define<Global.Service | Scope.Scope>({
       )
     }
 
+    // A resource this build cannot decode is dropped, not fatal: the rest of the record stays owned and removable.
+    // Without that, one unknown member would hide every resource the record owns and leave its files behind.
+    const known = (stored: typeof Stored.Type): KiloMarketplaceRpc.Installed => ({
+      ...stored,
+      resources: stored.resources && resources(stored.resources),
+      pending: stored.pending && resources(stored.pending),
+    })
+
+    const resources = (values: readonly unknown[]) =>
+      values.flatMap((value) => Option.toArray(Schema.decodeUnknownOption(KiloMarketplaceRpc.Resource)(value)))
+
     // Unreadable or untrustworthy rows are skipped so one bad record cannot hide the others; installs stay
     // protected by fingerprints and conflict checks.
     const decode = (value: unknown, key: string) =>
       Effect.gen(function* () {
-        const decoded = typeof value === "string" ? decodeInstalled(value) : Option.none()
-        if (Option.isSome(decoded) && valid(decoded.value)) return decoded.value
+        const decoded = typeof value === "string" ? decodeStored(value) : Option.none()
+        const record = Option.isSome(decoded) ? known(decoded.value) : undefined
+        if (record && valid(record)) return record
         yield* Effect.logWarning(`Skipping invalid marketplace record ${key}; no files were removed`)
         return undefined
       })

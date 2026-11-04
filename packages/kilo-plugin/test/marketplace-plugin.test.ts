@@ -328,6 +328,30 @@ for (const fault of ["installed scan", "installation read"] as const) {
     }),
   )
 }
+it.live("keeps a record that carries a resource this build does not understand", () =>
+  Effect.gen(function* () {
+    const test = yield* fixture()
+    yield* test.start()
+    const skill = { ...input, scope: "project", kind: "skill", id: "guide" } as const
+    const installed = decode(yield* test.rpc.call("kilocode.marketplace", "install", skill))
+    const key = `installed:kilo:skill:guide:project:${test.directory}`
+    // A newer build wrote an unknown resource member next to the skill the record owns.
+    yield* test.host.storage.set(
+      key,
+      JSON.stringify({ ...installed, resources: [...(installed.resources ?? []), { widget: "future" }] }),
+    )
+    // The unknown member is dropped; the skill the record owns stays listed and removable.
+    const listed = decodeList(yield* test.rpc.call("kilocode.marketplace", "installed", {})).find(
+      (record) => record.id === "guide",
+    )
+    expect(listed).toMatchObject({ kind: "skill", status: "ready", resources: [{ id: "guide" }] })
+    yield* test.rpc.call("kilocode.marketplace", "uninstall", skill)
+    expect(
+      yield* Effect.promise(() => Bun.file(path.join(test.directory, "skills", "guide", "SKILL.md")).exists()),
+    ).toBe(false)
+  }),
+)
+
 it.live("skips an invalid stored record instead of failing, leaving files untouched", () =>
   Effect.gen(function* () {
     const test = yield* fixture()

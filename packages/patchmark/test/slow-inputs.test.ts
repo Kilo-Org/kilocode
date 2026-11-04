@@ -92,8 +92,9 @@ describe("slow-input linear-time bounds", () => {
       const done = stream.finalize()
       expect(done.blocks.length).toBeGreaterThan(5_000) // kilocode_change
       // Count work rather than machine load; the timeout only catches catastrophic regressions on slow runners.
-      // Scanning must stay proportional to input length: the bound allows a constant amount of work per input
-      // character, which a rescan of the whole reply on every append would exceed by orders of magnitude.
+      // The enforced ceiling is `unit.length` (about 139) scanned characters per input character, roughly 6x the
+      // measured ~23.4. It is a constant, so scanning must stay linear: rescanning the whole reply on every append
+      // grows with input length and exceeds it by orders of magnitude.
       expect(scanned).toBeLessThan(full.length * unit.length)
     },
     60_000, // kilocode_change

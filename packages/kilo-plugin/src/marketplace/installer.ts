@@ -22,8 +22,6 @@ export type Resource =
 
 export interface Written {
   readonly paths: readonly string[]
-  /** Agent documents the install wrote; each is also present in `resources`. */
-  readonly agents?: readonly string[]
   readonly config?: string
   readonly server?: string
   readonly resources?: readonly Resource[]
@@ -159,17 +157,13 @@ async function agent(
   const allowed = prior.filter((old) => same(old, resource)).flatMap((old) => old.fingerprints ?? [])
   const accepted = [...new Set([...allowed, ...(resource.fingerprints ?? [])])]
   await Agent.preflight(prepared.target, accepted)
-  const pending = prior.filter((old) => !same(old, resource))
-  const written: Written = {
-    paths: [],
-    agents: [resource.agent],
-    resources: [resource],
-    ...(pending.length ? { pending } : {}),
-  }
+  // This install writes one document, so it replaces nothing else. Every other prior resource (a companion
+  // skill tree, an MCP entry) stays owned instead of being queued for cleanup, which would delete it.
+  const retained = prior.filter((old) => key(old) !== key(resource))
+  const written: Written = { paths: [], resources: [resource, ...retained] }
   await input.beforeWrite?.({
     ...written,
-    resources: [{ ...resource, fingerprints: accepted }],
-    ...(pending.length ? { pending } : {}),
+    resources: [{ ...resource, fingerprints: accepted }, ...retained],
   })
   const existed = (await resourceFingerprint(resource)) !== undefined
   try {

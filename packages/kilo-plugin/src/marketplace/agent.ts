@@ -19,7 +19,8 @@ export class AgentError extends Error {
 }
 
 // The document is `<id>.md` and the loader strips that suffix from the file name, so an id ending in a dot
-// would install under a different agent name than the one the record owns.
+// would install under a different agent name than the one the record owns. `Skill.safe` also rejects a trailing
+// dot today; the check is repeated here so the agent loader contract does not depend on the skill id rules.
 export function safe(id: string) {
   return Skill.safe(id) && !id.endsWith(".")
 }
@@ -111,7 +112,8 @@ export async function remove(file: string, fingerprints: readonly string[] = [])
     await fs.mkdir(path.dirname(destination), { recursive: true })
     await fs.rename(file, destination)
     await fs.rm(destination, { force: true })
-    await fs.rmdir(path.dirname(file)).catch(() => undefined)
+    // Keep the shared `agents` parent: another agent install may be between its mkdir and staging write, and
+    // removing it would fail that operation with ENOENT. `Skill.remove` keeps `skills` for the same reason.
   })
 }
 
