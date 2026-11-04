@@ -90,6 +90,8 @@ test("a trailing newline on HOME is stripped before the directories resolve", as
     const paths = parse(await cli(env, "debug", "paths"))
     expect(paths.data).toBe(path.join(root, ".local/share/kilo2"))
     expect(paths.state).toBe(path.join(root, ".local/state/kilo2"))
+    // The reported home is the cleaned value, so `~` expansion and provider credential paths resolve cleanly.
+    expect(paths.home).toBe(root)
   } finally {
     await rm(root, { recursive: true, force: true })
   }

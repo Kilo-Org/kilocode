@@ -21,6 +21,11 @@ const hadStateHome = (process.env.XDG_STATE_HOME ?? "") !== ""
 // read, so pin each unset XDG base to the cleaned home here. roots() then reads these clean values from the
 // environment via `||` and never reaches its cached os.homedir() default, keeping util/global pristine.
 const home = KiloGlobalResilience.resolveHome(process.env, os.homedir())
+// util/global's `home` getter reads OPENCODE_HOME_DIR before falling back to the cached (and possibly
+// newline-dirty) os.homedir(), so pin it to the cleaned home. This is what resolvePath's `~` expansion
+// (file-access.ts) and the provider credential paths (bedrock/vertex) read, matching v1's trimmed getter.
+// OPENCODE_TEST_HOME still wins, so a test home override is unaffected.
+process.env.OPENCODE_HOME_DIR = process.env.OPENCODE_HOME_DIR || home
 process.env.XDG_DATA_HOME = process.env.XDG_DATA_HOME || path.join(home, ".local", "share")
 process.env.XDG_CACHE_HOME = process.env.XDG_CACHE_HOME || path.join(home, ".cache")
 process.env.XDG_CONFIG_HOME = process.env.XDG_CONFIG_HOME || path.join(home, ".config")
