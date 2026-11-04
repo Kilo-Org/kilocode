@@ -71,8 +71,8 @@ describe("branch name generation helpers", () => {
     expect(BranchNameGenerate.messages([big], big)).toEqual(["x".repeat(1_000)])
   })
 
-  test("generates from the numbered messages with the selected model", async () => {
-    const calls: Array<{ prompt: string; model?: Model.Ref }> = []
+  test("keeps the instructions in the system prompt and the messages in the user prompt", async () => {
+    const calls: Array<{ prompt: string; system: string; temperature: number; model?: Model.Ref }> = []
     const branch = await Effect.runPromise(
       BranchNameGenerate.generate(
         { messages: ["Fix auth", "Add a test"], providerID: "test", modelID: "test-small" },
@@ -90,8 +90,11 @@ describe("branch name generation helpers", () => {
     expect(branch).toBe("fix-auth-flow")
     expect(calls).toHaveLength(1)
     expect(calls[0]!.model).toEqual(ref)
-    expect(calls[0]!.prompt).toContain("1. Fix auth\n\n2. Add a test")
-    expect(calls[0]!.prompt).toContain("Generate a Git branch name")
+    expect(calls[0]!.system).toContain("Generate a Git branch name")
+    expect(calls[0]!.system).toContain("Return exactly one line")
+    expect(calls[0]!.prompt).toBe("User messages, oldest to newest:\n\n1. Fix auth\n\n2. Add a test")
+    expect(calls[0]!.prompt).not.toContain("Generate a Git branch name")
+    expect(calls[0]!.temperature).toBe(0.1)
   })
 
   test("returns null without a model call when there is no user message", async () => {

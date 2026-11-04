@@ -312,6 +312,7 @@ export const dict = {
   "notification.permission.descriptionSandboxEscalation":
     "Isto executa todo o comando sem as restrições de sistema de arquivos e rede, apenas para este comando. O Git precisa gravar em .git, que é somente leitura na sandbox e fica fora da árvore de trabalho em um worktree vinculado. Regras de permissão do Bash e a aprovação automática nunca aprovam esta solicitação automaticamente.",
   "ui.permission.manageAutoApprove": "Gerenciar regras de aprovação automática",
+  "ui.permission.noChanges": "Sem alterações.",
   "ui.permission.reject": "Rejeitar",
   "ui.permission.feedbackPlaceholder": "Diga ao Kilo o que fazer de forma diferente",
   "ui.permission.feedbackHint": "Enter para rejeitar, Esc para cancelar",
@@ -354,6 +355,8 @@ export const dict = {
 
   "session.tab.review": "Revisão",
   "session.review.filesChanged": "{{count}} Arquivos Alterados",
+  "session.review.viewTurnChanges": "Ver alterações do turno",
+  "session.review.turnChangesEmpty": "Nenhuma alteração neste turno.",
   "session.review.loadingChanges": "Carregando alterações...",
   "session.review.noChanges": "Sem alterações",
   "session.messages.loadingEarlier": "Carregando mensagens anteriores...",
@@ -1465,6 +1468,8 @@ export const dict = {
   "diffViewer.source.unstaged.tooltip":
     "Arquivos modificados na sua árvore de trabalho mas ainda não preparados, mais arquivos não rastreados (novos).",
   "diffViewer.source.session.label": "Sessão",
+  "diffViewer.source.turn.tooltip": "Arquivos alterados pelo Kilo durante um turno.",
+  "diffViewer.source.turn.label": "Turno",
   "diffViewer.source.session.tooltip":
     "Arquivos modificados pelo Kilo durante a sessão atual, com base em snapshots por turno. Reinicia ao começar uma nova sessão.",
   "diffViewer.group.session": "Sessão",

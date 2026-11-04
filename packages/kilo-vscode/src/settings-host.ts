@@ -25,6 +25,7 @@ export const KILO_SETTING_KEYS = [
   "language",
   "chat.shiftTabCyclesVariant",
   "showTokenThroughput",
+  "diff.renderMarkdown",
   "showTaskTimeline",
   "showShortcutHints",
   "maxCost",

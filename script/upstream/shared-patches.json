@@ -1,8 +1,8 @@
 {
   "$comment": "Shared-patch baseline (U-L3-01). Read by script/check-shared-patches.ts and script/check-opencode-annotations.ts. Each shared upstream file that Kilo adds or changes needs an entry: rung (3 = seam patch, 4 = feature patch) and the missing seam. `unmarked` allows lines without markers and states why. Raise a limit only in the PR that adds the patch, and lower it when a patch goes away.",
   "limits": {
-    "files": 80,
-    "markedLines": 1093,
+    "files": 82,
+    "markedLines": 1202,
     "unmarkedLines": 225,
     "deletedFiles": 0
   },
@@ -204,7 +204,7 @@
     },
     "packages/tui/src/plugin/builtins.ts": {
       "rung": 4,
-      "seam": "Register the Kilo built-in TUI plugins, including `KiloMarketplace` (`/marketplace`, partial U-E2-23). The TUI loads its built-in list in its own process, which server-side host/plugin registration cannot reach. Config-driven plugins load npm packages or local files, unavailable in compiled binaries. A generic registration API would require more shared lines for this single list. Marketplace behavior stays in tui/src/kilocode/marketplace.tsx; its only shared changes are one import and one list entry."
+      "seam": "Register the Kilo built-in TUI plugins, including `KiloMarketplace` (`/marketplace`, partial U-E2-23) and `KiloCopySession` (`/copy-session`). The TUI loads its built-in list in its own process, which server-side host/plugin registration cannot reach. Config-driven plugins load npm packages or local files, unavailable in compiled binaries. A generic registration API would require more shared lines for this single list. The behavior stays in tui/src/kilocode/marketplace.tsx and tui/src/kilocode/copy-session.tsx; each adds one import and one list entry."
     },
     "packages/tui/test/fixture/local.tsx": {
       "rung": 3,
@@ -287,6 +287,10 @@
       "rung": 3,
       "seam": "Trigger the session `route` hook at the start of `SessionModelRequest.prepare` and resolve its `target` with `ModelResolver.resolveModel` (optional service), so the rest of the request uses the target's settings, credentials and provider hooks. Durable records keep the selected model, because the runner records `loaded.model`. Without a `route` hook the request is unchanged and upstream's tests pass unchanged. Rungs 1 and 2 cannot supply it: the model is resolved before any session hook runs, and replacing SessionModelRequest in the host would mirror the whole request builder."
     },
+    "packages/core/src/generate.ts": {
+      "rung": 3,
+      "seam": "Optional `system` and `generation` on the stateless `Generate.TextInput`, passed to the existing `ai.request` call. The branch-name plugin needs the naming instructions as a system prompt and temperature 0.1 for the stateless text call. Rung 1 cannot supply it: `experimental.generate.text` accepts only a prompt and a model, and no hook wraps a stateless generation request. Rung 2 cannot supply it: the plugin already receives `Generate.Service`, but the service input has no fields for a system prompt or generation settings. Omitted fields keep the upstream request unchanged and upstream tests pass unchanged."
+    },
     "packages/core/src/app.ts": {
       "rung": 3,
       "seam": "Optional App.Info.product (id, display name, callback-page wordmark) that make() passes through. The Kilo host sets it in KiloApp; no Kilo value in the file. Issue #15409. Rung 1 cannot supply it: the integration editor lists OAuth methods but cannot wrap a registered method's authorize, and no hook reaches the authorize URL or the loopback callback page. Rung 2 cannot supply it: App.Info had no product identity, and replacing the OpenAI plugin would mirror about 440 lines. Without a product, upstream values stay unchanged and upstream tests pass unchanged."
@@ -325,11 +329,15 @@
     },
     "packages/client/src/solid/data.ts": {
       "rung": 3,
-      "seam": "Adds a per-session `session.message.evict(sessionID)` that drops one session's cached messages. The existing `session.evict` clears the root and every known descendant, so the Agent Manager inspector cannot release one subagent without blanking the parent transcript. Omitted calls behave as upstream."
+      "seam": "Adds a per-session `session.message.evict(sessionID)` that drops one session's cached messages. The existing `session.evict` clears the root and every known descendant, so the Agent Manager inspector cannot release one subagent without blanking the parent transcript. Also adds `session.message.startLoaded(sessionID)`, which reports whether the last fetched page was shorter than the requested limit. The server returns a next cursor for the last non-empty page even when nothing is older, so a transcript cannot otherwise know that its loaded window reaches the start. Omitted calls behave as upstream."
     },
     "packages/client/test/solid-eviction.test.ts": {
       "rung": 4,
       "seam": "Covers the per-session message evict added in packages/client/src/solid/data.ts, so closing an inspector subagent does not clear its parent transcript."
+    },
+    "packages/client/test/solid-message-start.test.ts": {
+      "rung": 4,
+      "seam": "Covers the page-completeness signal added in packages/client/src/solid/data.ts, so the VS Code transcript hides Load earlier when the loaded page reaches the start of the session history."
     },
     "patches/virtua@0.49.1.patch": {
       "rung": 4,

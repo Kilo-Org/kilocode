@@ -310,6 +310,7 @@ export const dict = {
   "notification.permission.descriptionSandboxEscalation":
     "Spowoduje to uruchomienie całego polecenia bez ograniczeń systemu plików i sieci, tylko dla tego polecenia. Git musi zapisywać w .git, który jest tylko do odczytu w sandboxie i znajduje się poza drzewem roboczym w połączonym worktree. Reguły zezwoleń Bash i automatyczne zatwierdzanie nigdy nie zatwierdzają tego żądania automatycznie.",
   "ui.permission.manageAutoApprove": "Zarządzaj regułami automatycznego zatwierdzania",
+  "ui.permission.noChanges": "Brak zmian.",
   "ui.permission.reject": "Odrzuć",
   "ui.permission.feedbackPlaceholder": "Powiedz Kilo, co zrobić inaczej",
   "ui.permission.feedbackHint": "Enter, aby odrzucić, Esc, aby anulować",
@@ -352,6 +353,8 @@ export const dict = {
 
   "session.tab.review": "Przegląd",
   "session.review.filesChanged": "Zmieniono {{count}} plików",
+  "session.review.viewTurnChanges": "Pokaż zmiany w turze",
+  "session.review.turnChangesEmpty": "Brak zmian w tej turze.",
   "session.review.loadingChanges": "Ładowanie zmian...",
   "session.review.noChanges": "Brak zmian",
   "session.messages.loadingEarlier": "Ładowanie wcześniejszych wiadomości...",
@@ -1455,6 +1458,8 @@ export const dict = {
   "diffViewer.source.unstaged.tooltip":
     "Pliki zmodyfikowane w drzewie roboczym, ale jeszcze nieprzygotowane, plus nieśledzone (nowe) pliki.",
   "diffViewer.source.session.label": "Sesja",
+  "diffViewer.source.turn.tooltip": "Pliki zmienione przez Kilo w trakcie jednej tury.",
+  "diffViewer.source.turn.label": "Tura",
   "diffViewer.source.session.tooltip":
     "Pliki zmienione przez Kilo w trakcie bieżącej sesji, na podstawie snapshotów na turę. Resetowane przy rozpoczęciu nowej sesji.",
   "diffViewer.group.session": "Sesja",
