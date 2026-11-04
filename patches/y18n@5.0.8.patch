@@ -1,0 +1,36 @@
+diff --git a/build/index.cjs b/build/index.cjs
+index b2731e1a53de43288b7c0705ee9c2b5d96a9f44e..586bd684c4b58b2863b754e70014c583b1fc9045 100644
+--- a/build/index.cjs
++++ b/build/index.cjs
+@@ -144,11 +144,9 @@ class Y18N {
+         catch (err) {
+             if (err instanceof SyntaxError) {
+                 err.message = 'syntax error in ' + languageFile;
+-            }
+-            if (err.code === 'ENOENT')
+-                localeLookup = {};
+-            else
+                 throw err;
++            }
++            localeLookup = {};
+         }
+         this.cache[this.locale] = localeLookup;
+     }
+diff --git a/build/lib/index.js b/build/lib/index.js
+index e38f33594c158b6335ef049f35a0ed18abf7d2d0..e3bfb1d05283e60e7f89c928b9bfe0e80f93ce8c 100644
+--- a/build/lib/index.js
++++ b/build/lib/index.js
+@@ -138,11 +138,9 @@ class Y18N {
+         catch (err) {
+             if (err instanceof SyntaxError) {
+                 err.message = 'syntax error in ' + languageFile;
+-            }
+-            if (err.code === 'ENOENT')
+-                localeLookup = {};
+-            else
+                 throw err;
++            }
++            localeLookup = {};
+         }
+         this.cache[this.locale] = localeLookup;
+     }
