@@ -409,7 +409,8 @@ tasks {
 }
 
 // Compile-only typecheck: verifies Kotlin compiles (including generated API client)
-// without running buildPlugin.
+// without running buildPlugin. compileUiTestKotlin keeps the headful Starter/Driver adapter
+// covered in CI without launching an IDE.
 tasks.register("typecheck") {
     dependsOn(
         ":shared:compileKotlin",
@@ -417,6 +418,7 @@ tasks.register("typecheck") {
         ":backend:compileKotlin",
         ":frontend:compileTestKotlin",
         ":backend:compileTestKotlin",
+        "compileUiTestKotlin",
     )
 }
 

@@ -73,6 +73,7 @@ class DriverEvidence(
     fun hasFailure(): Boolean = assertions.any { it.status == "failed" }
 
     fun write(resultPath: Path) {
+        val exercised = request.scenario.requires.filter { it in SUPPORTED_CAPABILITIES }.distinct()
         writeDriverLog()
         val result = DriverResult(
             runId = request.runId,
@@ -84,7 +85,7 @@ class DriverEvidence(
                 clientHash = hash(System.getProperty("kilo.e2e.pluginArchive")),
                 cliHash = hash(System.getProperty("kilo.e2e.cliArchive")),
             ),
-            capabilities = listOf("transcript.read"),
+            capabilities = exercised,
             outcome = if (canPass()) "passed" else "failed",
             startedAt = startedAt,
             endedAt = Instant.now().toString(),
@@ -98,6 +99,12 @@ class DriverEvidence(
         )
         DriverProtocol.write(resultPath, result)
         log("wrote driver result outcome=${result.outcome}")
+    }
+
+    companion object {
+        // Only list capabilities this adapter actually exercises so the K1 capability gate cannot pass
+        // a scenario the driver does not implement. J2 adds "transcript.read" when it reads transcripts.
+        private val SUPPORTED_CAPABILITIES = emptySet<String>()
     }
 
     fun copyIdeLogs(backend: Path?, frontend: Path?) {

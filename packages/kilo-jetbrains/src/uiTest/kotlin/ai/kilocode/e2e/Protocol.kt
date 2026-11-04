@@ -1,5 +1,6 @@
 package ai.kilocode.e2e
 
+import kotlinx.serialization.EncodeDefault
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -12,9 +13,10 @@ import java.nio.file.Path
 object DriverProtocol {
     const val VERSION = 1
 
+    // K1 requires provenance.clientHash/cliHash to be present even when null, so nulls are encoded
+    // for those fields. Assertion.detail must stay absent when null, hence @EncodeDefault(NEVER).
     val json = Json {
         ignoreUnknownKeys = true
-        explicitNulls = false
         encodeDefaults = true
     }
 
@@ -160,7 +162,12 @@ data class DriverResult(
 
 @Serializable data class Provenance(val clientHash: String? = null, val cliHash: String? = null)
 
-@Serializable data class Assertion(val name: String, val status: String, val detail: String? = null)
+@Serializable
+data class Assertion(
+    val name: String,
+    val status: String,
+    @EncodeDefault(EncodeDefault.Mode.NEVER) val detail: String? = null,
+)
 
 @Serializable
 data class Artifacts(

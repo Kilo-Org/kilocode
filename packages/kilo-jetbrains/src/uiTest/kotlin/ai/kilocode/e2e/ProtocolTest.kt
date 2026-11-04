@@ -69,6 +69,27 @@ class ProtocolTest {
     }
 
     @Test
+    fun keepsProvenanceKeysAndOmitsUnimplementedCapabilities() {
+        val dir = Files.createTempDirectory("k1-contract")
+        val artifacts = dir.resolve("artifacts")
+        Files.createDirectories(artifacts)
+        val request = request(dir, artifacts).let {
+            it.copy(scenario = it.scenario.copy(requires = listOf("transcript.read")))
+        }
+        val evidence = DriverEvidence(request, descriptor(dir))
+        evidence.pass("transcript.visible")
+        evidence.pass("session.ready")
+        val resultPath = dir.resolve("driver-result.json")
+        evidence.write(resultPath)
+
+        val text = resultPath.readText()
+        assertTrue(text.contains("\"clientHash\":null"), text)
+        assertTrue(text.contains("\"cliHash\":null"), text)
+        assertTrue(text.contains("\"capabilities\":[]"), text)
+        assertFalse(text.contains("\"detail\":null"), text)
+    }
+
+    @Test
     fun missingExpectedAssertionFailsTheResult() {
         val dir = Files.createTempDirectory("k1-fail")
         val artifacts = dir.resolve("artifacts")

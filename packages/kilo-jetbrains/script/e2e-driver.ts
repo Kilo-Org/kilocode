@@ -13,6 +13,10 @@
  * The adapter always tries to leave a K1 DriverResult behind. If Gradle fails before the test
  * can write one (for example a pinned/released CLI build), this wrapper writes a failed result
  * with the actionable Gradle output so the coordinator reports driver_failed, not driver_crash.
+ *
+ * The wrapper owns the whole Gradle tree rather than just its direct child: with --no-daemon
+ * nothing else notices a wrapper timeout, so a timeout or signal kills forked test JVMs and the
+ * headful IDE before exiting instead of leaving them orphaned.
  */
 
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs"
@@ -20,10 +24,13 @@ import { dirname, join, resolve } from "node:path"
 
 const root = resolve(import.meta.dir, "..")
 const gradlew = process.platform === "win32" ? "gradlew.bat" : "./gradlew"
+const DEFAULT_BUDGET = 45 * 60_000
+const MIN_BUDGET = 120_000
+const TERM_GRACE = 10_000
 
 type Request = {
   runId: string
-  scenario: { id: string; lane: string; requires?: string[] }
+  scenario: { id: string; lane: string; requires?: string[]; timeoutMs?: number }
   descriptorPath?: string
 }
 
@@ -66,7 +73,7 @@ function redact(input: string, request: Request) {
   return text
 }
 
-function writeFallback(request: Request, resultPath: string, output: string) {
+function writeFallback(request: Request, resultPath: string, output: string, name = "driver.exit") {
   const now = new Date().toISOString()
   const tail = redact(output.trim(), request).slice(-1200)
   const result = {
@@ -77,17 +84,39 @@ function writeFallback(request: Request, resultPath: string, output: string) {
     driver: { id: "jetbrains-starter", version: "1" },
     ide: { name: "unknown", version: "unknown" },
     provenance: { clientHash: null, cliHash: null },
-    capabilities: request.scenario.requires ?? [],
+    capabilities: [],
     outcome: "failed",
     startedAt: now,
     endedAt: new Date().toISOString(),
-    assertions: [{ name: "driver.exit", status: "failed", detail: tail || "uiTest failed without output" }],
+    assertions: [{ name, status: "failed", detail: tail || "uiTest failed without output" }],
     lastState: {},
     artifacts: { logs: [], screenshots: [], snapshots: [] },
   }
   mkdirSync(dirname(resultPath), { recursive: true })
   writeFileSync(resultPath, JSON.stringify(result))
   console.error(`[jetbrains-e2e] wrote failed driver result for ${request.runId}`)
+}
+
+function children(pid: number): number[] {
+  const result = Bun.spawnSync(["pgrep", "-P", String(pid)], { stdout: "pipe", stderr: "ignore" })
+  if (result.exitCode !== 0) return []
+  return new TextDecoder()
+    .decode(result.stdout)
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0)
+    .map(Number)
+    .filter((value) => Number.isFinite(value) && value > 0)
+}
+
+function killTree(pid: number, signal: "SIGTERM" | "SIGKILL" = "SIGTERM") {
+  if (process.platform === "win32") return
+  for (const child of children(pid)) killTree(child, signal)
+  try {
+    process.kill(pid, signal)
+  } catch {
+    // The process may already be gone; killing the rest of the tree is still useful.
+  }
 }
 
 let args: Record<string, string>
@@ -118,18 +147,59 @@ const command = [
   `-Pkilo.e2e.result=${result}`,
 ]
 
-const child = Bun.spawnSync(command, {
+const override = Number(process.env.KILO_E2E_DRIVER_TIMEOUT_MS)
+const budget =
+  Number.isFinite(override) && override > 0
+    ? override
+    : Math.max(MIN_BUDGET, (payload.scenario.timeoutMs ?? DEFAULT_BUDGET) - 60_000)
+
+const child = Bun.spawn(command, {
   cwd: root,
   env: process.env,
-  stdio: ["inherit", "pipe", "pipe"],
+  stdout: "pipe",
+  stderr: "pipe",
 })
-const output = `${new TextDecoder().decode(child.stdout)}${new TextDecoder().decode(child.stderr)}`
-process.stdout.write(output)
+let output = ""
+let finished = false
+let timedOut = false
 
-if (child.exitCode !== 0) {
-  if (!existsSync(result)) writeFallback(payload, result, output)
-  else console.error(`[jetbrains-e2e] uiTest exited with code ${child.exitCode}; using the driver result`)
-  process.exit(0)
+async function pump(stream: ReadableStream<Uint8Array>) {
+  const reader = stream.getReader()
+  const decoder = new TextDecoder()
+  while (true) {
+    const { done, value } = await reader.read()
+    if (done) break
+    const text = decoder.decode(value, { stream: true })
+    output += text
+    process.stdout.write(text)
+  }
+}
+
+const pumps = [pump(child.stdout), pump(child.stderr)]
+
+const timer = setTimeout(() => {
+  if (finished) return
+  timedOut = true
+  console.error(`[jetbrains-e2e] uiTest exceeded ${budget}ms; terminating the Gradle/IDE process tree`)
+  killTree(child.pid)
+  setTimeout(() => killTree(child.pid, "SIGKILL"), TERM_GRACE)
+}, budget)
+
+for (const signal of ["SIGTERM", "SIGINT"] as const) {
+  process.on(signal, () => {
+    killTree(child.pid, signal === "SIGINT" ? "SIGKILL" : "SIGTERM")
+    process.exit(1)
+  })
+}
+
+const code = await child.exited
+clearTimeout(timer)
+await Promise.allSettled(pumps)
+finished = true
+
+if (code !== 0) {
+  if (!existsSync(result)) writeFallback(payload, result, output, timedOut ? "driver.timeout" : "driver.exit")
+  else console.error(`[jetbrains-e2e] uiTest exited with code ${code}; using the driver result`)
 }
 
 process.exit(0)
