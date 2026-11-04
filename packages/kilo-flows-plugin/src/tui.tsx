@@ -4,12 +4,18 @@ import { TextAttributes, type ScrollBoxRenderable } from "@opentui/core"
 import { createEffect, createMemo, createSignal, For, onCleanup, onMount, Show } from "solid-js"
 
 type Load = (signal: AbortSignal) => Promise<KiloFlowRpc.ListOutput>
+type Control = (
+  method: "pause" | "resume" | "remove",
+  flowID: KiloFlowRpc.ID,
+  signal: AbortSignal,
+) => Promise<KiloFlowRpc.Info | undefined>
 type PageContext = Pick<Plugin.Context, "client" | "data" | "keymap" | "renderer" | "ui">
 
 export function FlowsPage(props: {
   context: PageContext
   onClose: () => void
   load?: Load
+  control?: Control
   pollMilliseconds?: number
 }) {
   const [result, setResult] = createSignal<KiloFlowRpc.ListOutput>()
@@ -17,9 +23,11 @@ export function FlowsPage(props: {
   const [error, setError] = createSignal("")
   const [notice, setNotice] = createSignal("")
   const [stale, setStale] = createSignal(false)
+  const [changing, setChanging] = createSignal(false)
   const [selected, setSelected] = createSignal(0)
   const mounted = new AbortController()
   let active: AbortController | undefined
+  let mutation: AbortController | undefined
   let timer: ReturnType<typeof setInterval> | undefined
   let scroll: ScrollBoxRenderable | undefined
   const load =
@@ -36,6 +44,22 @@ export function FlowsPage(props: {
       )
       // SAFETY: The Kilo server validates this method's output with KiloFlowRpc.Definition before returning it.
       return response.output as KiloFlowRpc.ListOutput
+    })
+  const control =
+    props.control ??
+    (async (method, flowID, signal) => {
+      const response = await props.context.client.rpc.call(
+        {
+          rpcID: "kilocode.flow",
+          method,
+          input: { flowID },
+          location: props.context.data.location.default(),
+        },
+        { signal },
+      )
+      if (method === "remove") return
+      // SAFETY: The Kilo server validates these method outputs with KiloFlowRpc.Definition.
+      return response.output as KiloFlowRpc.Info
     })
   const flows = createMemo(() => [...(result()?.flows ?? [])].sort(compare))
   const warning = createMemo(() => (!stale() ? result()?.warnings[0] : undefined))
@@ -66,6 +90,49 @@ export function FlowsPage(props: {
     }
     setNotice("")
     props.context.ui.router.navigate({ type: "session", sessionID })
+  }
+
+  async function change(method: "pause" | "resume" | "remove", flow: KiloFlowRpc.Info | undefined) {
+    if (!flow || flow.reference.type !== "managed" || mutation) return
+    const flowID = flow.reference.flowID
+    if (method === "remove") {
+      const confirmed = await props.context.ui.dialog.confirm({
+        title: `Remove ${flow.name}?`,
+        message: "This stops future runs, interrupts an active run, and removes the local Flow definition.",
+        label: { confirm: "Remove" },
+      })
+      if (!confirmed || mounted.signal.aborted) return
+    }
+    const request = new AbortController()
+    mutation = request
+    setChanging(true)
+    setNotice("")
+    const signal = AbortSignal.any([mounted.signal, request.signal])
+    try {
+      const updated = await control(method, flowID, signal)
+      if (signal.aborted) return
+      const current = result()
+      if (!current) return
+      setResult({
+        ...current,
+        flows:
+          method === "remove"
+            ? current.flows.filter(
+                (item) => item.reference.type !== "managed" || item.reference.flowID !== flowID,
+              )
+            : current.flows.map((item) =>
+                item.reference.type === "managed" && item.reference.flowID === flowID && updated
+                  ? updated
+                  : item,
+              ),
+      })
+      setNotice(method === "remove" ? `Removed ${flow.name}.` : `${method === "pause" ? "Paused" : "Resumed"} ${flow.name}.`)
+    } catch (cause) {
+      if (!signal.aborted) setNotice(`${method === "remove" ? "Remove" : "Update"} failed: ${cause instanceof Error ? cause.message : String(cause)}`)
+    } finally {
+      if (mutation === request) mutation = undefined
+      if (!signal.aborted) setChanging(false)
+    }
   }
 
   async function refresh() {
@@ -103,6 +170,31 @@ export function FlowsPage(props: {
         enabled: () => flows()[selected()]?.latestRun?.sessionID !== undefined,
         run: () => open(flows()[selected()]),
       },
+      {
+        bind: "p",
+        title: "Pause or resume Flow",
+        group: "Flows",
+        enabled: () => {
+          const flow = flows()[selected()]
+          return (
+            !changing() &&
+            flow?.reference.type === "managed" &&
+            (flow.status === "active" || flow.status === "paused")
+          )
+        },
+        run: () => {
+          const flow = flows()[selected()]
+          if (!flow) return
+          void change(flow.status === "paused" ? "resume" : "pause", flow)
+        },
+      },
+      {
+        bind: "d",
+        title: "Remove Flow",
+        group: "Flows",
+        enabled: () => !changing() && flows()[selected()]?.reference.type === "managed",
+        run: () => void change("remove", flows()[selected()]),
+      },
     ],
   }))
 
@@ -118,6 +210,7 @@ export function FlowsPage(props: {
   onCleanup(() => {
     mounted.abort()
     active?.abort()
+    mutation?.abort()
     if (timer) clearInterval(timer)
   })
 
@@ -125,7 +218,7 @@ export function FlowsPage(props: {
     <box width="100%" height="100%" flexDirection="column" padding={1} gap={1}>
       <box flexDirection="row" justifyContent="space-between">
         <text attributes={TextAttributes.BOLD}>Flows</text>
-        <text>↑/↓ select · enter open run · r refresh · esc back</text>
+        <text>↑/↓ select · enter open · p pause/resume · d remove · r refresh · esc back</text>
       </box>
       <Show when={stale()}>
         <text>Stale · refresh failed: {error()}</text>

@@ -6,7 +6,7 @@ import { Session } from "@opencode/schema/session"
 import { createRoutes } from "@opencode/server/routes"
 import { Context, Effect, Layer, References } from "effect"
 import { HttpEffect, HttpRouter, HttpServer } from "effect/http"
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises"
+import { mkdir, mkdtemp, realpath, rm, writeFile } from "node:fs/promises"
 import os from "node:os"
 import path from "node:path"
 import { KiloHost } from "../src/host"
@@ -22,18 +22,18 @@ async function eventually<A>(read: () => Promise<A>, ready: (value: A) => boolea
 }
 
 test("lists local schedules and creates managed definitions through the Kilo Flow RPC", async () => {
-  const root = await mkdtemp(path.join(os.tmpdir(), "kilo-flow-rpc-"))
+  const root = await realpath(await mkdtemp(path.join(os.tmpdir(), "kilo-flow-rpc-")))
   const global = path.join(root, "global")
-  const projects = [path.join(root, "first"), path.join(root, "second")]
+  const projects = [path.join(root, "first"), path.join(root, "second"), path.join(root, "disabled")]
   const nested = path.join(projects[0]!, "packages", "app")
   try {
     await Promise.all([global, ...projects, nested].map((directory) => mkdir(directory, { recursive: true })))
     await Promise.all(
-      projects.map((directory, index) =>
+      projects.map((directory) =>
         writeFile(
           path.join(directory, "kilo2.json"),
           JSON.stringify({
-            experimental: { schedules: index === 1 },
+            experimental: { schedules: directory !== projects[2] },
             permission: { execute: "allow" },
             worktree: { directory: "../worktrees" },
           }),
@@ -104,6 +104,13 @@ test("lists local schedules and creates managed definitions through the Kilo Flo
               title: "Second automation",
               location: { directory: projects[1]! },
               agent: "plan",
+              model: { providerID: "kilo", id: "kilo-auto/free" },
+              permissions: [{ action: "execute", resource: "*", effect: "allow" }],
+            })
+            const disabled = await client.session.create({
+              title: "Disabled automation",
+              location: { directory: projects[2]! },
+              agent: "build",
               model: { providerID: "kilo", id: "kilo-auto/free" },
               permissions: [{ action: "execute", resource: "*", effect: "allow" }],
             })
@@ -304,6 +311,7 @@ test("lists local schedules and creates managed definitions through the Kilo Flo
             ).toBeFalse()
 
             if (created.reference.type !== "managed") throw new Error("Expected a managed Flow")
+            const flowID = created.reference.flowID
             await expect(
               rpc.run({ flowID: created.reference.flowID }, { location: { directory: projects[1]! } }),
             ).rejects.toThrow(`Flow ${created.reference.flowID} does not exist`)
@@ -338,6 +346,56 @@ test("lists local schedules and creates managed definitions through the Kilo Flo
                   sessionID: execution.sessionID,
                 }),
               }),
+            )
+            expect(
+              await rpc.pause({ flowID: created.reference.flowID }, { location: { directory: nested } }),
+            ).toMatchObject({ status: "paused" })
+            expect(
+              await rpc.resume({ flowID: created.reference.flowID }, { location: { directory: nested } }),
+            ).toMatchObject({ status: "active" })
+            await rpc.remove({ flowID: created.reference.flowID }, { location: { directory: nested } })
+            expect(
+              (await rpc.list({}, { location: { directory: nested } })).flows.some(
+                (flow) => flow.reference.type === "managed" && flow.reference.flowID === flowID,
+              ),
+            ).toBeFalse()
+            expect((await Effect.runPromise(schedules.list())).some((item) => item.id === created.reference.scheduleID)).toBeFalse()
+
+            const disabledCreation = rpc.create(
+              {
+                sourceSessionID: disabled.id,
+                name: "Disabled reminder",
+                when: { in: "10 millis" },
+                prompt: "This must not run while schedules are disabled",
+                worktree: "reuse",
+                permissions: [],
+              },
+              { location: { directory: projects[2]! } },
+            )
+            const disabledApproval = await eventually(
+              () => client.permission.request.list({ location: { directory: projects[2]! } }),
+              (result) => result.data.some((request) => request.action === "flow"),
+            ).then((result) => result.data.find((request) => request.action === "flow"))
+            if (!disabledApproval) throw new Error("Expected a disabled Flow permission request")
+            await client.permission.reply({
+              sessionID: disabledApproval.sessionID,
+              requestID: disabledApproval.id,
+              decision: "once",
+            })
+            const disabledFlow = await disabledCreation
+            if (disabledFlow.reference.type !== "managed") throw new Error("Expected a managed disabled Flow")
+            const disabledFlowID = disabledFlow.reference.flowID
+            await Bun.sleep(20)
+            await Effect.runPromise(schedules.tick)
+            expect((await client.message.list({ sessionID: disabled.id })).data).toEqual([])
+            const disabledListed = (await rpc.list({}, { location: { directory: projects[2]! } })).flows.find(
+              (flow) => flow.reference.type === "managed" && flow.reference.flowID === disabledFlowID,
+            )
+            expect(disabledListed).toMatchObject({ name: "Disabled reminder", lastOutcome: "disabled" })
+            expect(disabledListed?.latestRun).toBeUndefined()
+            await rpc.remove(
+              { flowID: disabledFlowID },
+              { location: { directory: projects[2]! } },
             )
           })
         }),

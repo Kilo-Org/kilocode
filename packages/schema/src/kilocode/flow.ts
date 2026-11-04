@@ -219,6 +219,9 @@ export type CreateInput = typeof CreateInput.Type
 export const RunInput = Schema.Struct({ flowID: ID }).annotate({ identifier: "KiloFlow.RunInput" })
 export type RunInput = typeof RunInput.Type
 
+export const ControlInput = Schema.Struct({ flowID: ID }).annotate({ identifier: "KiloFlow.ControlInput" })
+export type ControlInput = typeof ControlInput.Type
+
 export const Warning = Schema.Struct({
   source: Schema.Literals(["managed", "managed-run", "native-schedule"]),
   reference: Schema.String.pipe(optional),
@@ -256,6 +259,27 @@ export const Definition = Rpc.define({
       errors: { failed: portable(Schema.Undefined) },
       description:
         "Experimental: may change without compatibility guarantees. Starts one fresh local execution of a managed Flow.",
+    },
+    pause: {
+      input: portable(ControlInput),
+      output: portable(Info),
+      errors: { failed: portable(Schema.Undefined) },
+      description:
+        "Experimental: may change without compatibility guarantees. Pauses future scheduled executions of a managed Flow.",
+    },
+    resume: {
+      input: portable(ControlInput),
+      output: portable(Info),
+      errors: { failed: portable(Schema.Undefined) },
+      description:
+        "Experimental: may change without compatibility guarantees. Resumes future scheduled executions of a managed Flow.",
+    },
+    remove: {
+      input: portable(ControlInput),
+      output: portable(Schema.Struct({})),
+      errors: { failed: portable(Schema.Undefined) },
+      description:
+        "Experimental: may change without compatibility guarantees. Stops and removes a managed Flow and its retained run records.",
     },
   },
   events: {},

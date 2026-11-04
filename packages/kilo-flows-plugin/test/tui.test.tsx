@@ -17,6 +17,7 @@ function context(commands: KeymapCommand[], destinations: unknown[] = [], focuse
       },
     },
     ui: {
+      dialog: { confirm: () => Promise.resolve(true) },
       router: { navigate: (destination: unknown) => destinations.push(destination) },
       tabs: {
         focus(sessionID: string) {
@@ -114,7 +115,7 @@ test("shows loading, empty, populated, and sorted states", async () => {
     await app.waitForFrame((frame) => frame.includes("Loading local flows"))
     pending.resolve(output())
     await app.waitForFrame((frame) => frame.includes("No local flows"))
-    expect(commands.map((command) => command.bind)).toEqual(["escape", "r", "up,k", "down,j", "return"])
+    expect(commands.map((command) => command.bind)).toEqual(["escape", "r", "up,k", "down,j", "return", "p", "d"])
   } finally {
     app.renderer.destroy()
   }
@@ -212,6 +213,40 @@ test("keeps the last successful result visible and marks it stale after refresh 
     commands.find((command) => command.bind === "r")!.run()
     await app.waitForFrame((frame) => frame.includes("Stale") && frame.includes("server unavailable"))
     expect(app.captureCharFrame()).toContain("Kept flow")
+  } finally {
+    app.renderer.destroy()
+  }
+})
+
+test("pauses, resumes, and removes managed flows", async () => {
+  const commands: KeymapCommand[] = []
+  const calls: string[] = []
+  const active = flow({ id: "flw_control", name: "Controlled", status: "active", run: "running" })
+  const app = await testRender(
+    () => (
+      <FlowsPage
+        context={context(commands)}
+        onClose={() => {}}
+        load={() => Promise.resolve(output([active]))}
+        control={(method) => {
+          calls.push(method)
+          if (method === "remove") return Promise.resolve(undefined)
+          return Promise.resolve({ ...active, status: method === "pause" ? "paused" : "active" })
+        }}
+      />
+    ),
+    { width: 120, height: 20 },
+  )
+  try {
+    app.renderer.start()
+    await app.waitForFrame((frame) => frame.includes("Controlled"))
+    commands.find((command) => command.bind === "p")!.run()
+    await app.waitForFrame((frame) => frame.includes("Paused Controlled"))
+    commands.find((command) => command.bind === "p")!.run()
+    await app.waitForFrame((frame) => frame.includes("Resumed Controlled"))
+    commands.find((command) => command.bind === "d")!.run()
+    await app.waitForFrame((frame) => frame.includes("Removed Controlled"))
+    expect(calls).toEqual(["pause", "resume", "remove"])
   } finally {
     app.renderer.destroy()
   }

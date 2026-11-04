@@ -186,6 +186,39 @@ test("managed definitions without a scheduler remain visible as paused and execu
   ])
 })
 
+test("a skipped occurrence does not hide the latest executable run", () => {
+  const managed = record("flw_latest", Schedule.ID.make("sch_latest"))
+  const backing = schedule({ id: "sch_latest", sessionID: session.id })
+  const running = Schema.decodeUnknownSync(KiloFlowRpc.Run)({
+    version: 1,
+    id: "flr_running",
+    flowID: managed.id,
+    status: "running",
+    worktree: "reuse",
+    sessionID: "ses_running",
+    directory: "/workspace",
+    time: { created: 10, updated: 10, started: 10 },
+  })
+  const skipped = Schema.decodeUnknownSync(KiloFlowRpc.Run)({
+    version: 1,
+    id: "flr_skipped",
+    flowID: managed.id,
+    status: "skipped",
+    worktree: "reuse",
+    time: { created: 20, updated: 20, completed: 20 },
+  })
+  const output = assemble({
+    records: [managed],
+    runs: [running, skipped],
+    schedules: [backing],
+    sessions: new Map([[backing.id, session]]),
+    warnings: [],
+    observedAt: 100,
+  })
+
+  expect(output.flows[0]?.latestRun).toEqual(running)
+})
+
 test("describes the exact unattended permission contract to a Flow executor", () => {
   expect(
     permissionInstructions([
@@ -248,7 +281,23 @@ it.live("registers and executes the managed Flow creation and run tools", () =>
     const plugins = yield* Plugin.Service
     const context = yield* PluginHost.make(plugins)
     const schedules = yield* Schedule.Service
+    const abandoned = record("flw_abandoned")
+    const abandonedRun = Schema.decodeUnknownSync(KiloFlowRpc.Run)({
+      version: 1,
+      id: "flr_abandoned",
+      flowID: abandoned.id,
+      status: "starting",
+      worktree: "reuse",
+      time: { created: 1, updated: 1 },
+    })
+    yield* context.storage.set(`flow:v1:${abandoned.id}`, JSON.stringify(abandoned))
+    yield* context.storage.set(`flow-run:v1:${abandoned.id}:${abandonedRun.id}`, JSON.stringify(abandonedRun))
+    yield* context.storage.set(`flow-active:v1:${abandoned.id}`, abandonedRun.id)
     yield* KiloFlowPlugin.effect(context)
+    expect(yield* context.storage.get(`flow-run:v1:${abandoned.id}:${abandonedRun.id}`)).toContain('"status":"failed"')
+    expect(yield* context.storage.get(`flow-active:v1:${abandoned.id}`)).toBeUndefined()
+    yield* context.storage.remove(`flow:v1:${abandoned.id}`)
+    yield* context.storage.remove(`flow-run:v1:${abandoned.id}:${abandonedRun.id}`)
     const tools = yield* Tool.Service
     const flowCreate = (yield* tools.list()).find((tool) => tool.id === "flow_create")
     const flowRun = (yield* tools.list()).find((tool) => tool.id === "flow_run")
@@ -270,7 +319,7 @@ it.live("registers and executes the managed Flow creation and run tools", () =>
           when: { every: "1 day", tz: "UTC" },
           prompt: "Write outside the project",
           worktree: "reuse",
-          permissions: [{ action: "external_directory", resource: "/*" }],
+          permissions: [{ action: "external_directory", resource: "*" }],
         },
         {
           sessionID: source.id,
@@ -281,7 +330,26 @@ it.live("registers and executes the managed Flow creation and run tools", () =>
         },
       )
       .pipe(Effect.flip)
-    expect(invalid.message).toContain("must use a bounded wildcard")
+    expect(invalid.message).toContain("must use a bounded absolute wildcard")
+    const wildcardAction = yield* flowCreate
+      .execute(
+        {
+          name: "Invalid wildcard action",
+          when: { every: "1 day", tz: "UTC" },
+          prompt: "Use arbitrary tools",
+          worktree: "reuse",
+          permissions: [{ action: "*", resource: "*" }],
+        },
+        {
+          sessionID: source.id,
+          agent: Agent.ID.make("build"),
+          messageID: SessionMessage.ID.create(),
+          id: Tool.CallID.make("call_invalid_flow_action"),
+          progress: () => Effect.void,
+        },
+      )
+      .pipe(Effect.flip)
+    expect(wildcardAction.message).toContain("must name one concrete capability")
     const created = yield* flowCreate.execute(
       {
         name: "Nightly check",
@@ -312,6 +380,12 @@ it.live("registers and executes the managed Flow creation and run tools", () =>
     })
     const backing = (yield* schedules.list())[0]
     if (!backing?.nextDueAt) return yield* Effect.die("Expected a due backing schedule")
+    expect(yield* context.storage.get(`flow-schedule:v1:${backing.id}`)).toBe(created.output.reference.flowID)
+    const mimic = yield* (yield* PluginHooks.Service).trigger("session", "experimental.schedule", {
+      sessionID: source.id,
+      schedule: { ...backing, id: Schedule.ID.make("sch_mimic") },
+    })
+    expect(mimic.claimed).toBeUndefined()
     const activeID = KiloFlowRpc.RunID.make("flr_active")
     const active: KiloFlowRpc.Run = {
       version: 1,
@@ -324,6 +398,7 @@ it.live("registers and executes the managed Flow creation and run tools", () =>
       time: { created: Date.now(), updated: Date.now(), started: Date.now() },
     }
     yield* context.storage.set(`flow-run:v1:${active.flowID}:${active.id}`, JSON.stringify(active))
+    yield* context.storage.set(`flow-active:v1:${active.flowID}`, active.id)
     const claimed = yield* (yield* PluginHooks.Service).trigger("session", "experimental.schedule", {
       sessionID: source.id,
       schedule: backing,
@@ -341,17 +416,46 @@ it.live("registers and executes the managed Flow creation and run tools", () =>
         prefix: `flow-run:v1:${created.output.reference.flowID}:`,
       })).entries,
     ).toHaveLength(2)
-    yield* context.storage.remove(`flow-run:v1:${active.flowID}:${active.id}`)
-    const execution = yield* flowRun.execute(
-      { flowID: created.output.reference.flowID },
-      {
-        sessionID: source.id,
-        agent: Agent.ID.make("build"),
-        messageID: SessionMessage.ID.create(),
-        id: Tool.CallID.make("call_flow_run"),
-        progress: () => Effect.void,
-      },
+    yield* Effect.forEach(
+      Array.from({ length: 25 }, (_, index) => index),
+      (index) =>
+        flowRun.execute(
+          { flowID: created.output.reference.flowID },
+          {
+            sessionID: source.id,
+            agent: Agent.ID.make("build"),
+            messageID: SessionMessage.ID.create(),
+            id: Tool.CallID.make(`call_flow_skip_${index}`),
+            progress: () => Effect.void,
+          },
+        ),
+      { discard: true },
     )
+    expect(
+      (yield* context.storage.scan({
+        prefix: `flow-run:v1:${created.output.reference.flowID}:`,
+      })).entries,
+    ).toHaveLength(20)
+    expect(yield* context.storage.get(`flow-run:v1:${active.flowID}:${active.id}`)).toBeDefined()
+    yield* context.storage.remove(`flow-run:v1:${active.flowID}:${active.id}`)
+    const attempts = yield* Effect.all(
+      ["first", "second"].map((name) =>
+        flowRun.execute(
+          { flowID: created.output.reference.flowID },
+          {
+            sessionID: source.id,
+            agent: Agent.ID.make("build"),
+            messageID: SessionMessage.ID.create(),
+            id: Tool.CallID.make(`call_flow_run_${name}`),
+            progress: () => Effect.void,
+          },
+        ),
+      ),
+      { concurrency: "unbounded" },
+    )
+    expect(attempts.map((attempt) => attempt.output?.status).toSorted()).toEqual(["running", "skipped"])
+    const execution = attempts.find((attempt) => attempt.output?.status === "running")
+    if (!execution) return yield* Effect.die("Expected one concurrent Flow run to start")
     expect(execution.output).toMatchObject({
       flowID: created.output.reference.flowID,
       status: "running",
@@ -407,12 +511,12 @@ it.live("registers and executes the managed Flow creation and run tools", () =>
       ],
       warnings: [],
     })
-    yield* context.storage.set("flow-run:v1:bad", "not json")
+    yield* context.storage.set(`flow-run:v1:${created.output.reference.flowID}:bad`, "not json")
     expect(yield* list(context, schedules)).toMatchObject({
       warnings: [
         {
           source: "managed-run",
-          reference: "flow-run:v1:bad",
+          reference: `flow-run:v1:${created.output.reference.flowID}:bad`,
           message: "Stored Flow run record is malformed or stale",
         },
       ],
