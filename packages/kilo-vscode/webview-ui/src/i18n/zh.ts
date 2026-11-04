@@ -1174,7 +1174,7 @@ export const dict = {
   "settings.agentBehaviour.hooks.matcher.kind.tool":
     "留空则匹配所有工具。用 | 分隔工具名称（edit|write）。其他内容均视为正则表达式。Kilo 和 Claude Code 的名称均可使用（bash 或 Bash）；MCP 工具的名称形如 github_create_issue。",
   "settings.agentBehaviour.hooks.matcher.kind.file":
-    "要监视的项目文件夹中的文件名，用 | 分隔（.envrc|.env）。每个名称均按字面处理。",
+    "要监视的文件，可写为相对于项目文件夹的名称或路径，用 | 分隔（.envrc|config/app.yml）。每一项均按字面处理。",
   "settings.agentBehaviour.hooks.matcher.kind.model":
     "用 | 分隔的模型名称，或正则表达式。规范名称（claude-sonnet-4-5）、模型 ID 和 提供商/模型 均可匹配。",
   "settings.agentBehaviour.hooks.matcher.kind.name":

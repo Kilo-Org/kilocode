@@ -1187,7 +1187,7 @@ export const dict = {
   "settings.agentBehaviour.hooks.matcher.kind.tool":
     "Laat leeg om elke tool te matchen. Scheid toolnamen met | (edit|write). Al het andere is een reguliere expressie. Namen van zowel Kilo als Claude Code werken (bash of Bash); MCP-tools zien eruit als github_create_issue.",
   "settings.agentBehaviour.hooks.matcher.kind.file":
-    "Bestandsnamen in de projectmap om te bewaken, gescheiden door | (.envrc|.env). Elke naam wordt letterlijk genomen.",
+    "Te bewaken bestanden, als namen of paden relatief aan de projectmap, gescheiden door | (.envrc|config/app.yml). Elke invoer wordt letterlijk genomen.",
   "settings.agentBehaviour.hooks.matcher.kind.model":
     "Modelnamen gescheiden door |, of een reguliere expressie. De canonieke naam (claude-sonnet-4-5), de model-id en provider/model matchen allemaal.",
   "settings.agentBehaviour.hooks.matcher.kind.name":

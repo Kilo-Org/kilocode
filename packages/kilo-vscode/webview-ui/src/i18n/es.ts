@@ -1265,7 +1265,7 @@ export const dict = {
   "settings.agentBehaviour.hooks.matcher.kind.tool":
     "Déjalo vacío para que coincida con todas las herramientas. Separa los nombres de herramientas con | (edit|write). Cualquier otro valor es una expresión regular. Funcionan tanto los nombres de Kilo como los de Claude Code (bash o Bash); las herramientas MCP tienen nombres como github_create_issue.",
   "settings.agentBehaviour.hooks.matcher.kind.file":
-    "Nombres de archivos de la carpeta del proyecto que se vigilan, separados por | (.envrc|.env). Cada nombre se toma literalmente.",
+    "Archivos que se vigilan, como nombres o rutas relativas a la carpeta del proyecto, separados por | (.envrc|config/app.yml). Cada entrada se toma literalmente.",
   "settings.agentBehaviour.hooks.matcher.kind.model":
     "Nombres de modelos separados por |, o una expresión regular. Coinciden el nombre canónico (claude-sonnet-4-5), el id del modelo y proveedor/modelo.",
   "settings.agentBehaviour.hooks.matcher.kind.name":

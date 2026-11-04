@@ -60,7 +60,7 @@ This page lists, for each [hook](/docs/customize/hooks) event, what Kilo Code se
 | `PreCompact`, `PostCompact` | `trigger` | `manual`, `auto` |
 | `Notification` | `notification_type` | `permission_prompt`, `agent_needs_input`, `idle_prompt` |
 | `ConfigChange` | `source` | `user_settings`, `project_settings` |
-| `FileChanged` | File name | The file names to watch in the project folder, separated by `\|`, each taken literally. Without a matcher, the hook watches no file by itself and runs for the paths other hooks add with `watchPaths`. |
+| `FileChanged` | File name or path | The files to watch, as names or paths relative to the project folder, separated by `\|`, each taken literally (`.envrc\|config/app.yml`). Without a matcher, the hook watches no file by itself and runs for the paths other hooks add with `watchPaths`. |
 | `GoalReport` | `reported_status` | `complete`, `blocked` |
 | `WakeupFire` | `kind` | `once`, `cron` |
 | `WorktreeSetup` | `origin` | `create`, `promote`, `import`, `multi_version`, `tool`, `continue`, `cli` |
@@ -150,7 +150,7 @@ Fields each event adds to the [common fields](/docs/customize/hooks#hook-input):
 
 - `Notification` fires once a permission prompt or a question stays unanswered for 6 seconds, and once the session is idle for 60 seconds after a turn. Answering earlier cancels it.
 - `ConfigChange` runs after the VS Code settings or another Kilo Code client changed the global config (`user_settings`) or the project config (`project_settings`) through Kilo Code. A global change runs the hook once, even with several projects open.
-- `FileChanged` watches the file names in its matchers in the project folder, plus the absolute paths hooks return in `watchPaths`. A group without a matcher adds nothing to the watch list and runs only for the paths hooks add with `watchPaths`, so use one to handle those paths. Changes are debounced by 100 ms.
+- `FileChanged` watches the files its matchers list, as names or paths relative to the project folder, plus the absolute paths hooks return in `watchPaths`. The folder of a watched file must exist when the watch list is built: when the project opens, when Kilo Code changes its config, when the `/sandbox` setting changes, and when a hook returns `watchPaths`. A group without a matcher adds nothing to the watch list and runs only for the paths hooks add with `watchPaths`, so use one to handle those paths. Changes are debounced by 100 ms.
 - `CwdChanged` compares the `workdir` of each shell command with the previous one in the session, starting from the session folder.
 
 ### Kilo only

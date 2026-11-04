@@ -1246,7 +1246,7 @@ export const dict = {
   "settings.agentBehaviour.hooks.matcher.kind.tool":
     "Lad feltet være tomt for at matche alle værktøjer. Adskil værktøjsnavne med | (edit|write). Alt andet er et regulært udtryk. Både Kilo- og Claude Code-navne virker (bash eller Bash); MCP-værktøjer ser ud som github_create_issue.",
   "settings.agentBehaviour.hooks.matcher.kind.file":
-    "Filnavne i projektmappen, der skal overvåges, adskilt af | (.envrc|.env). Hvert navn tages bogstaveligt.",
+    "Filer, der skal overvåges, som navne eller stier relative til projektmappen, adskilt af | (.envrc|config/app.yml). Hver post tages bogstaveligt.",
   "settings.agentBehaviour.hooks.matcher.kind.model":
     "Modelnavne adskilt af |, eller et regulært udtryk. Det kanoniske navn (claude-sonnet-4-5), model-id'et og udbyder/model matcher alle.",
   "settings.agentBehaviour.hooks.matcher.kind.name":

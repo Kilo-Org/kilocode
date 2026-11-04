@@ -307,7 +307,7 @@ Events (30), with what the matcher is tested against:
 | Sessions | `SessionStart` (`startup\|resume\|fork\|compact`), `SessionEnd` (`other\|prompt_input_exit`), `InstructionsLoaded` (`session_start\|nested_traversal\|compact`) |
 | Agent loop | `Stop` (no matcher), `SubagentStop`, `SubagentStart` (agent type: `explore`/`Explore`, `general`/`general-purpose`), `StopFailure` (`rate_limit`, `overloaded`, ...) |
 | Compaction | `PreCompact`, `PostCompact` (`manual\|auto`) |
-| Environment | `Notification` (`permission_prompt\|agent_needs_input\|idle_prompt`), `ConfigChange` (`user_settings\|project_settings`), `FileChanged` (file names to watch; omitted: only paths hooks add with `watchPaths`), `CwdChanged` (no matcher) |
+| Environment | `Notification` (`permission_prompt\|agent_needs_input\|idle_prompt`), `ConfigChange` (`user_settings\|project_settings`), `FileChanged` (files to watch, as names or paths relative to the project folder; omitted: only paths hooks add with `watchPaths`), `CwdChanged` (no matcher) |
 | Kilo only | `GoalReport` (`complete\|blocked`), `WakeupFire` (`once\|cron`), `WorktreeSetup` (origin), `WorktreeTeardown`, `CommitMessage`, `BranchName` (no matcher) |
 
 - `matcher` is `*`/omitted (all; on `FileChanged`, `*` is a literal file name), an exact list like `edit|write` (Claude Code names such as `Edit`/`Bash` also match tools), or a regular expression. Events without a matcher ignore it. MCP tools are named `<server>_<tool>` (`mcp__<server>__<tool>` also matches).

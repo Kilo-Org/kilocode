@@ -1223,7 +1223,7 @@ export const dict = {
   "settings.agentBehaviour.hooks.matcher.kind.tool":
     "เว้นว่างไว้เพื่อให้ตรงกับเครื่องมือทั้งหมด คั่นชื่อเครื่องมือด้วย | (edit|write) ค่าอื่นจะถือเป็นนิพจน์ทั่วไป ใช้ได้ทั้งชื่อของ Kilo และ Claude Code (bash หรือ Bash) ส่วนเครื่องมือ MCP จะมีชื่อลักษณะ github_create_issue",
   "settings.agentBehaviour.hooks.matcher.kind.file":
-    "ชื่อไฟล์ในโฟลเดอร์โปรเจกต์ที่จะเฝ้าดู คั่นด้วย | (.envrc|.env) แต่ละชื่อถือตามตัวอักษร",
+    "ไฟล์ที่จะเฝ้าดู ระบุเป็นชื่อหรือพาธที่สัมพันธ์กับโฟลเดอร์โปรเจกต์ คั่นด้วย | (.envrc|config/app.yml) แต่ละรายการถือตามตัวอักษร",
   "settings.agentBehaviour.hooks.matcher.kind.model":
     "ชื่อโมเดลที่คั่นด้วย | หรือนิพจน์ทั่วไป ตรงกับชื่อมาตรฐาน (claude-sonnet-4-5), ID ของโมเดล และ ผู้ให้บริการ/โมเดล",
   "settings.agentBehaviour.hooks.matcher.kind.name":

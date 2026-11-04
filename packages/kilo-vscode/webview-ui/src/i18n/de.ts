@@ -1274,7 +1274,7 @@ export const dict = {
   "settings.agentBehaviour.hooks.matcher.kind.tool":
     "Leer lassen, um jedes Tool abzudecken. Trennen Sie Tool-Namen mit | (edit|write). Alles andere ist ein regulärer Ausdruck. Kilo- und Claude Code-Namen funktionieren beide (bash oder Bash); MCP-Tools heißen z. B. github_create_issue.",
   "settings.agentBehaviour.hooks.matcher.kind.file":
-    "Dateinamen im Projektordner, die überwacht werden, getrennt durch | (.envrc|.env). Jeder Name wird wörtlich genommen.",
+    "Dateien, die überwacht werden, als Namen oder Pfade relativ zum Projektordner, getrennt durch | (.envrc|config/app.yml). Jeder Eintrag wird wörtlich genommen.",
   "settings.agentBehaviour.hooks.matcher.kind.model":
     "Modellnamen getrennt durch | oder ein regulärer Ausdruck. Der kanonische Name (claude-sonnet-4-5), die Modell-ID und Anbieter/Modell passen alle.",
   "settings.agentBehaviour.hooks.matcher.kind.name":

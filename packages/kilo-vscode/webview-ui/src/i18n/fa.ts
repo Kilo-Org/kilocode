@@ -1160,7 +1160,7 @@ export const dict = {
   "settings.agentBehaviour.hooks.matcher.kind.tool":
     "برای تطبیق با همه ابزارها خالی بگذارید. نام ابزارها را با | جدا کنید (edit|write). هر چیز دیگری عبارت منظم در نظر گرفته می‌شود. نام‌های Kilo و Claude Code هر دو کار می‌کنند (bash یا Bash)؛ ابزارهای MCP شبیه github_create_issue هستند.",
   "settings.agentBehaviour.hooks.matcher.kind.file":
-    "نام فایل‌هایی در پوشه پروژه که باید زیر نظر باشند، جداشده با | (.envrc|.env). هر نام به‌صورت حرفی در نظر گرفته می‌شود.",
+    "فایل‌هایی که باید زیر نظر باشند، به‌صورت نام یا مسیر نسبی به پوشه پروژه، جداشده با | (.envrc|config/app.yml). هر ورودی به‌صورت حرفی در نظر گرفته می‌شود.",
   "settings.agentBehaviour.hooks.matcher.kind.model":
     "نام مدل‌ها جداشده با | یا یک عبارت منظم. نام استاندارد (claude-sonnet-4-5)، شناسه مدل و ارائه‌دهنده/مدل همگی تطبیق دارند.",
   "settings.agentBehaviour.hooks.matcher.kind.name":

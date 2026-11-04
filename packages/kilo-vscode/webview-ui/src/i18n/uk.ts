@@ -1177,7 +1177,7 @@ export const dict = {
   "settings.agentBehaviour.hooks.matcher.kind.tool":
     "Залиште порожнім, щоб спрацьовувати для всіх інструментів. Розділяйте назви інструментів символом | (edit|write). Усе інше вважається регулярним виразом. Підходять назви як Kilo, так і Claude Code (bash або Bash); інструменти MCP мають вигляд github_create_issue.",
   "settings.agentBehaviour.hooks.matcher.kind.file":
-    "Назви файлів у каталозі проєкту для відстеження, через | (.envrc|.env). Кожна назва береться буквально.",
+    "Файли для відстеження: назви або шляхи відносно каталогу проєкту, через | (.envrc|config/app.yml). Кожен запис береться буквально.",
   "settings.agentBehaviour.hooks.matcher.kind.model":
     "Назви моделей через | або регулярний вираз. Підходять канонічна назва (claude-sonnet-4-5), id моделі та провайдер/модель.",
   "settings.agentBehaviour.hooks.matcher.kind.name":

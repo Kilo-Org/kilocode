@@ -379,8 +379,8 @@ export function from(value: unknown): Hooks | undefined {
 /**
  * Claude Code matcher semantics: "*", "" or omitted match everything; a value made only of
  * letters, digits, "_", "-", spaces, "," and "|" is an exact name or list; anything else is an
- * unanchored regular expression. Strict events (StopFailure, FileChanged) only allow letters,
- * digits, "_" and "|" in an exact list.
+ * unanchored regular expression. StopFailure (`strict`) only allows letters, digits, "_" and "|" in
+ * an exact list. FileChanged matchers go through lifecycle `applies`, which does not use `strict`.
  */
 export function matches(matcher: string | undefined, names: readonly string[], strict = false): boolean {
   if (!matcher || matcher === "*") return true

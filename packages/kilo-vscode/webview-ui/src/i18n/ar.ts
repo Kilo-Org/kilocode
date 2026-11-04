@@ -1212,7 +1212,7 @@ export const dict = {
   "settings.agentBehaviour.hooks.matcher.kind.tool":
     "اتركه فارغًا ليطابق كل الأدوات. افصل أسماء الأدوات بـ | (edit|write). أي شيء آخر يُعامل كتعبير عادي. تعمل أسماء Kilo وClaude Code كلاهما (bash أو Bash)؛ وتبدو أدوات MCP مثل github_create_issue.",
   "settings.agentBehaviour.hooks.matcher.kind.file":
-    "أسماء الملفات المراد مراقبتها في مجلد المشروع، مفصولة بـ | (.envrc|.env). يُؤخذ كل اسم حرفيًا.",
+    "الملفات المراد مراقبتها، كأسماء أو مسارات نسبية إلى مجلد المشروع، مفصولة بـ | (.envrc|config/app.yml). يُؤخذ كل إدخال حرفيًا.",
   "settings.agentBehaviour.hooks.matcher.kind.model":
     "أسماء نماذج مفصولة بـ | أو تعبير عادي. يطابق الاسم القياسي (claude-sonnet-4-5) ومعرّف النموذج والمزوّد/النموذج.",
   "settings.agentBehaviour.hooks.matcher.kind.name":

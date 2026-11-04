@@ -35,7 +35,6 @@ const DELAYS = { permission: 6_000, question: 6_000, idle: 60_000 }
 const DEBOUNCE = 100
 // FileChanged: a path's events are dropped while its hook runs and this long after (loop guard).
 const QUIET = 500
-const STRICT = /^[\w|]+$/
 
 type Instance = {
   directory: string
@@ -122,18 +121,19 @@ function names(matcher: string | undefined) {
 }
 
 /**
- * Whether a FileChanged group runs for a path: a file its matcher names literally in the
- * instance directory, or a `watchPaths` entry its matcher accepts (an exact name list in the
- * strict charset, else a regular expression on the file name).
+ * Whether a FileChanged group runs for a file. Either one of its matcher entries is that file,
+ * taken literally as a name or a path relative to the instance directory and joined to it as the
+ * watch list is (`rebuild`); or the file is a `watchPaths` entry its matcher accepts, tested on the
+ * file name with the usual rules (`KiloHooks.matches`): no matcher or `*` accepts every one, names of
+ * letters, digits, `_`, `-` and spaces separated by `|` or `,` are an exact list, anything else is a
+ * regular expression.
  */
 export function applies(group: KiloHooks.Group, file: string, directory: string, extra: ReadonlySet<string>) {
-  const base = path.basename(file)
-  if (path.dirname(file) === directory && names(group.matcher).includes(base)) return true
+  if (names(group.matcher).some((name) => path.join(directory, name) === path.normalize(file))) return true
   if (!extra.has(file)) return false
   const matcher = group.matcher?.trim()
   if (!matcher || matcher === "*") return true
-  if (STRICT.test(matcher)) return names(matcher).includes(base)
-  return KiloHooks.matches(matcher, [base])
+  return KiloHooks.matches(matcher, [path.basename(file)])
 }
 
 /** Adds absolute paths to the instance's FileChanged watch list (`watchPaths`); `[]` clears it. */

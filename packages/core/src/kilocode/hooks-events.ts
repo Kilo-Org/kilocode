@@ -301,12 +301,12 @@ export const EVENTS = {
     failure: false,
   },
   FileChanged: {
-    description: "When a watched file changes. Matcher: file names to watch, separated by |.",
+    description:
+      "When a watched file changes. Matcher: files to watch, relative to the project folder, separated by |.",
     kilo: false,
     claude: true,
     group: "environment",
     matcher: "file",
-    strict: true,
     timeout: 600,
     exit2: "user",
     context: "none",

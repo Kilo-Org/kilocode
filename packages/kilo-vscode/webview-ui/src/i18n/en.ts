@@ -1159,7 +1159,7 @@ export const dict = {
   "settings.agentBehaviour.hooks.matcher.kind.tool":
     "Leave empty to match every tool. Separate tool names with | (edit|write). Anything else is a regular expression. Kilo and Claude Code names both work (bash or Bash); MCP tools look like github_create_issue.",
   "settings.agentBehaviour.hooks.matcher.kind.file":
-    "File names in the project folder to watch, separated by | (.envrc|.env). Each name is taken literally.",
+    "Files to watch, as names or paths relative to the project folder, separated by | (.envrc|config/app.yml). Each entry is taken literally.",
   "settings.agentBehaviour.hooks.matcher.kind.model":
     "Model names separated by |, or a regular expression. The canonical name (claude-sonnet-4-5), the model id and provider/model all match.",
   "settings.agentBehaviour.hooks.matcher.kind.name":

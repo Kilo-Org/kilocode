@@ -1137,7 +1137,7 @@ export const dict = {
   "settings.agentBehaviour.hooks.matcher.kind.tool":
     "留空則比對所有工具。以 | 分隔工具名稱（edit|write）。其他內容皆視為正規表示式。Kilo 與 Claude Code 的名稱皆可使用（bash 或 Bash）；MCP 工具的名稱形如 github_create_issue。",
   "settings.agentBehaviour.hooks.matcher.kind.file":
-    "要監看的專案資料夾中的檔案名稱，以 | 分隔（.envrc|.env）。每個名稱皆按字面處理。",
+    "要監看的檔案，可寫為相對於專案資料夾的名稱或路徑，以 | 分隔（.envrc|config/app.yml）。每一項皆按字面處理。",
   "settings.agentBehaviour.hooks.matcher.kind.model":
     "以 | 分隔的模型名稱，或正規表示式。標準名稱（claude-sonnet-4-5）、模型 ID 與 提供者/模型 皆可比對。",
   "settings.agentBehaviour.hooks.matcher.kind.name":

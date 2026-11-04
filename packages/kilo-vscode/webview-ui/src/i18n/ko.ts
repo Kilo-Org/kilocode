@@ -1227,7 +1227,7 @@ export const dict = {
   "settings.agentBehaviour.hooks.matcher.kind.tool":
     "비워 두면 모든 도구와 일치합니다. 도구 이름은 |로 구분합니다(edit|write). 그 외의 값은 정규식으로 처리됩니다. Kilo와 Claude Code 이름 모두 사용할 수 있으며(bash 또는 Bash), MCP 도구 이름은 github_create_issue와 같은 형식입니다.",
   "settings.agentBehaviour.hooks.matcher.kind.file":
-    "감시할 프로젝트 폴더의 파일 이름을 |로 구분합니다(.envrc|.env). 각 이름은 그대로 사용됩니다.",
+    "감시할 파일을 프로젝트 폴더 기준의 이름 또는 상대 경로로 |로 구분합니다(.envrc|config/app.yml). 각 항목은 그대로 사용됩니다.",
   "settings.agentBehaviour.hooks.matcher.kind.model":
     "|로 구분한 모델 이름 또는 정규식. 표준 이름(claude-sonnet-4-5), 모델 ID, 제공자/모델 모두와 일치합니다.",
   "settings.agentBehaviour.hooks.matcher.kind.name":

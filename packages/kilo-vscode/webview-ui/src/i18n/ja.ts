@@ -1244,7 +1244,7 @@ export const dict = {
   "settings.agentBehaviour.hooks.matcher.kind.tool":
     "空欄にするとすべてのツールに一致します。ツール名は | で区切ります（edit|write）。それ以外は正規表現として扱われます。Kilo と Claude Code のどちらの名前も使用できます（bash または Bash）。MCP ツールは github_create_issue のような名前です。",
   "settings.agentBehaviour.hooks.matcher.kind.file":
-    "監視するプロジェクトフォルダー内のファイル名を | で区切って指定します（.envrc|.env）。各名前はそのまま扱われます。",
+    "監視するファイルを、プロジェクトフォルダーからの相対的な名前またはパスで | で区切って指定します（.envrc|config/app.yml）。各項目はそのまま扱われます。",
   "settings.agentBehaviour.hooks.matcher.kind.model":
     "| で区切ったモデル名、または正規表現。正規名（claude-sonnet-4-5）、モデル ID、プロバイダー/モデルのいずれにも一致します。",
   "settings.agentBehaviour.hooks.matcher.kind.name":

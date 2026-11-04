@@ -1246,7 +1246,7 @@ export const dict = {
   "settings.agentBehaviour.hooks.matcher.kind.tool":
     "Ostavite prazno da odgovara svakom alatu. Odvojite nazive alata znakom | (edit|write). Sve ostalo je regularni izraz. Rade i Kilo i Claude Code nazivi (bash ili Bash); MCP alati izgledaju kao github_create_issue.",
   "settings.agentBehaviour.hooks.matcher.kind.file":
-    "Nazivi datoteka u direktoriju projekta koje treba pratiti, odvojeni znakom | (.envrc|.env). Svaki naziv se uzima doslovno.",
+    "Datoteke koje treba pratiti, kao nazivi ili putanje u odnosu na direktorij projekta, odvojene znakom | (.envrc|config/app.yml). Svaki unos se uzima doslovno.",
   "settings.agentBehaviour.hooks.matcher.kind.model":
     "Nazivi modela odvojeni znakom | ili regularni izraz. Odgovaraju kanonski naziv (claude-sonnet-4-5), ID modela i provider/model.",
   "settings.agentBehaviour.hooks.matcher.kind.name":

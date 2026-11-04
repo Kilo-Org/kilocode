@@ -462,6 +462,37 @@ describe("FileChanged", () => {
     }),
   )
 
+  it.instance("a matcher entry with a path fires for that file, not for a same-named one elsewhere", () =>
+    Effect.gen(function* () {
+      const { directory } = yield* boot()
+      const file = marker()
+      const top = marker()
+      const target = path.join(directory, "src", "app.ts")
+      const other = path.join(directory, "app.ts")
+      fs.mkdirSync(path.dirname(target))
+      fs.writeFileSync(target, "1\n")
+      fs.writeFileSync(other, "1\n")
+      yield* hooks({
+        FileChanged: [
+          { matcher: "src/app.ts", hooks: [record(file)] },
+          { matcher: "app.ts", hooks: [record(top)] },
+        ],
+      })
+      yield* subscribe()
+      yield* settle(400)
+      // The top folder is watched too (the app.ts group), so the top-level file reaches applies():
+      // only the app.ts group runs for it, the src/app.ts group runs for the one in src.
+      fs.appendFileSync(other, "2\n")
+      fs.appendFileSync(target, "2\n")
+      yield* until(() => lines(file).length === 1 && lines(top).length === 1)
+      yield* settle()
+      expect(lines(file)).toHaveLength(1)
+      expect(lines(file)[0]).toMatchObject({ file_path: target, event: "change" })
+      expect(lines(top)).toHaveLength(1)
+      expect(lines(top)[0]).toMatchObject({ file_path: other, event: "change" })
+    }),
+  )
+
   it.instance("a hook that rewrites its own file runs at most twice", () =>
     Effect.gen(function* () {
       const { directory } = yield* boot()
@@ -720,7 +751,7 @@ describe("FileChanged", () => {
     }),
   )
 
-  test("a group runs for a file its matcher names in the project, or a watched path it accepts", () => {
+  test("a group runs for a file its matcher names or locates in the project, or a watched path it accepts", () => {
     const dir = "/repo"
     const extra = new Set(["/elsewhere/config.yml", "/elsewhere/a_b"])
     const group = (matcher?: string) => ({ ...(matcher === undefined ? {} : { matcher }), hooks: [] })
@@ -728,6 +759,11 @@ describe("FileChanged", () => {
     // Names are literal in the project: ".env" is not a pattern that also matches ".envrc".
     expect(KiloHookLifecycle.applies(group(".env"), "/repo/.envrc", dir, extra)).toBe(false)
     expect(KiloHookLifecycle.applies(group(".env"), "/repo/sub/.env", dir, extra)).toBe(false)
+    // An entry with a path is relative to the project folder, as the watch list builds it.
+    expect(KiloHookLifecycle.applies(group("src/foo-bar.ts"), "/repo/src/foo-bar.ts", dir, extra)).toBe(true)
+    expect(KiloHookLifecycle.applies(group("foo-bar.ts"), "/repo/src/foo-bar.ts", dir, extra)).toBe(false)
+    expect(KiloHookLifecycle.applies(group("src/foo-bar.ts"), "/repo/foo-bar.ts", dir, extra)).toBe(false)
+    expect(KiloHookLifecycle.applies(group("./.env"), "/repo/.env", dir, extra)).toBe(true)
     expect(KiloHookLifecycle.applies(group(undefined), "/elsewhere/config.yml", dir, extra)).toBe(true)
     expect(KiloHookLifecycle.applies(group("a_b|c"), "/elsewhere/a_b", dir, extra)).toBe(true)
     expect(KiloHookLifecycle.applies(group("config\\.yml"), "/elsewhere/config.yml", dir, extra)).toBe(true)

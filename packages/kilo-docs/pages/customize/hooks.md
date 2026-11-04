@@ -69,7 +69,7 @@ Kilo Code runs 30 hook events. The [hooks reference](/docs/customize/hooks-refer
 |---|---|---|---|
 | `Notification` | When Kilo Code waits for you: a permission prompt or a question unanswered for 6 seconds, or idle 60 seconds after a turn | Notification type | No |
 | `ConfigChange` | After Kilo Code writes its global or project config | Config source | No |
-| `FileChanged` | When a watched file in the project folder changes | File names | No |
+| `FileChanged` | When a watched file in the project folder changes | File names or paths | No |
 | `CwdChanged` | When a shell command runs in a different folder than the previous one | None | No |
 
 ### Kilo only
@@ -147,7 +147,7 @@ Hooks are only read from your global config, managed config, and organization co
 | Names separated by `\|` or `,`, e.g. `"edit\|write"` | Exactly those names |
 | Anything else, e.g. `"^github_.*"` | Values that match the regular expression |
 
-On `StopFailure`, only letters, digits, `_` and `|` count as an exact list. On `FileChanged`, the matcher is the list of file names to watch, each taken literally (`".envrc|.env"`; `"*"` is a file named `*`). A `FileChanged` hook without a matcher watches no file by itself: it runs for the paths other hooks add with `watchPaths`. Events without a matcher run every hook every time. The [hooks reference](/docs/customize/hooks-reference#matcher-values) lists the values each event matches against.
+On `StopFailure`, only letters, digits, `_` and `|` count as an exact list. On `FileChanged`, the matcher is the list of files to watch, as names or paths relative to the project folder, each taken literally (`".envrc|config/app.yml"`; `"*"` is a file named `*`). A `FileChanged` hook without a matcher watches no file by itself: it runs for the paths other hooks add with `watchPaths`. Events without a matcher run every hook every time. The [hooks reference](/docs/customize/hooks-reference#matcher-values) lists the values each event matches against.
 
 For tool events, Kilo Code tool ids and their Claude Code names both match, so `"edit|write"` and `"Edit|Write"` are equivalent:
 

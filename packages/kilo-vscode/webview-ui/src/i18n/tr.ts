@@ -1173,7 +1173,7 @@ export const dict = {
   "settings.agentBehaviour.hooks.matcher.kind.tool":
     "Tüm araçlarla eşleşmesi için boş bırakın. Araç adlarını | ile ayırın (edit|write). Bunun dışındaki her şey normal ifade olarak değerlendirilir. Hem Kilo hem Claude Code adları çalışır (bash veya Bash); MCP araçları github_create_issue gibi görünür.",
   "settings.agentBehaviour.hooks.matcher.kind.file":
-    "Proje klasöründe izlenecek dosya adları, | ile ayrılmış (.envrc|.env). Her ad olduğu gibi alınır.",
+    "İzlenecek dosyalar; proje klasörüne göre ad veya yol olarak, | ile ayrılmış (.envrc|config/app.yml). Her girdi olduğu gibi alınır.",
   "settings.agentBehaviour.hooks.matcher.kind.model":
     "| ile ayrılmış model adları veya bir normal ifade. Kanonik ad (claude-sonnet-4-5), model kimliği ve sağlayıcı/model eşleşir.",
   "settings.agentBehaviour.hooks.matcher.kind.name":

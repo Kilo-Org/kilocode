@@ -35,7 +35,7 @@ const Group = Schema.Struct({
   matcher: Schema.optional(
     Schema.String.annotate({
       description:
-        'What it matches depends on the event (tool name, source, trigger, ...): "*" or omitted matches everything, "a|b" matches exact names, anything else is a regular expression. On StopFailure only letters, digits, "_" and "|" make exact names. On FileChanged it lists file names in the project folder, each taken literally ("*" is a file named *); without a matcher, the hook runs only for paths added with watchPaths. Ignored on events without a matcher.',
+        'What it matches depends on the event (tool name, source, trigger, ...): "*" or omitted matches everything, "a|b" matches exact names, anything else is a regular expression. On StopFailure only letters, digits, "_" and "|" make exact names. On FileChanged it lists the files to watch, as names or paths relative to the project folder, each taken literally ("*" is a file named *); without a matcher, the hook runs only for paths added with watchPaths. Ignored on events without a matcher.',
     }),
   ),
   hooks: Schema.mutable(Schema.Array(Handler)),

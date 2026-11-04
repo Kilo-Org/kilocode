@@ -1244,7 +1244,7 @@ export const dict = {
   "settings.agentBehaviour.hooks.matcher.kind.tool":
     "Pozostaw puste, aby dopasować każde narzędzie. Oddziel nazwy narzędzi znakiem | (edit|write). Wszystko inne jest wyrażeniem regularnym. Działają nazwy zarówno z Kilo, jak i z Claude Code (bash lub Bash); narzędzia MCP wyglądają jak github_create_issue.",
   "settings.agentBehaviour.hooks.matcher.kind.file":
-    "Nazwy plików w katalogu projektu do obserwowania, oddzielone znakiem | (.envrc|.env). Każda nazwa jest brana dosłownie.",
+    "Pliki do obserwowania, jako nazwy lub ścieżki względem katalogu projektu, oddzielone znakiem | (.envrc|config/app.yml). Każdy wpis jest brany dosłownie.",
   "settings.agentBehaviour.hooks.matcher.kind.model":
     "Nazwy modeli oddzielone znakiem | lub wyrażenie regularne. Pasują nazwa kanoniczna (claude-sonnet-4-5), id modelu oraz dostawca/model.",
   "settings.agentBehaviour.hooks.matcher.kind.name":

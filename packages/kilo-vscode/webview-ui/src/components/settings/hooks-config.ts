@@ -239,7 +239,6 @@ export const HOOK_INFO = {
   FileChanged: {
     group: "environment",
     matcher: "file",
-    strict: true,
     failure: false,
     decides: false,
     timeout: 600,
@@ -549,9 +548,9 @@ const split = (value: string, separator: RegExp) =>
 export function matcherKind(value: string | undefined, event: HookEvent): MatcherKind {
   const info = meta(event)
   if (!info.matcher) return { kind: "none" }
-  // FileChanged: every entry is a literal file name to watch, whatever its characters. Without one it
-  // adds nothing to the watch list and only runs for paths that hooks add with `watchPaths`. The CLI
-  // trims these entries (lifecycle `names` and `applies`).
+  // FileChanged: every entry is a literal file to watch, a name or a path relative to the project
+  // folder, whatever its characters. Without one it adds nothing to the watch list and only runs for
+  // paths that hooks add with `watchPaths`. The CLI trims these entries (lifecycle `names` and `applies`).
   if (info.matcher === "file") {
     const text = value?.trim()
     return text ? { kind: "files", names: split(text, /\|/) } : { kind: "dynamic" }
