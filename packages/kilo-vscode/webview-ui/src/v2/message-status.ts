@@ -24,6 +24,8 @@ export interface MessageTurnRange {
   end: number
   /** Stable identity of the turn: its first input, or its first message when the input is outside the loaded page. */
   turn: string
+  /** The turn's first user message, when it is on the loaded page. Turn diffs require a user anchor. */
+  userTurn?: string
   metadata?: TurnMetadata
 }
 
@@ -67,6 +69,7 @@ export function messageTurnRanges(messages: readonly SessionMessageInfo[]): Mess
         start,
         end,
         turn: turnID(messages, start, end),
+        userTurn: userTurnID(messages, start, end),
         // The carrier search covers the whole range, so a text row before the
         // first page-visible input still carries the footer. Timing and rate
         // stay anchored to the terminal step's own turn input.
@@ -187,6 +190,15 @@ function turnID(messages: readonly SessionMessageInfo[], start: number, end: num
     if (isInput(messages[index])) return messages[index].id
   }
   return messages[start].id
+}
+
+// A turn diff starts at a user message; synthetic inputs and a page that starts
+// inside a turn have no usable anchor.
+function userTurnID(messages: readonly SessionMessageInfo[], start: number, end: number) {
+  for (let index = start; index < end; index++) {
+    if (messages[index].type === "user") return messages[index].id
+  }
+  return undefined
 }
 
 function isInput(message: SessionMessageInfo) {

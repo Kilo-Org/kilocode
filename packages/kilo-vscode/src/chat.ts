@@ -10,6 +10,8 @@ import {
   type WebviewView,
   type WebviewViewProvider,
 } from "vscode"
+import { notifyHostAutoApprove, setHostAutoApprove } from "./agent-manager/provider-auto-approve"
+import type { SettingsHandler } from "./agent-manager/project/settings"
 import { local } from "./local"
 import { DISPLAY_DEFAULTS, type ToHost, type ToWebview } from "./protocol"
 import { bridge } from "./relay"
@@ -29,7 +31,11 @@ import { createSpeechToTextHost } from "./speech-to-text/host"
 import { openToolFile, type ToolDiff } from "./tool-diff"
 
 // The sidebar may only write the settings its own UI owns. Other views keep their own write path.
-const CHAT_SETTING_KEYS: ReadonlySet<string> = new Set(["showTaskTimeline"])
+// The settings each webview may write; the Settings panel writes every Kilo setting through its own handler.
+const VIEW_SETTING_KEYS: Record<"chat" | "agentManager", ReadonlySet<string>> = {
+  chat: new Set(["showTaskTimeline"]),
+  agentManager: new Set(["showTaskTimeline", "agentManager.pushFixes"]),
+}
 
 export function chat(input: {
   context: ExtensionContext
@@ -38,6 +44,12 @@ export function chat(input: {
   trackCostSession: (sessionID: string) => void
   diff: ToolDiff
 }) {
+  // This host owns the persisted auto-approve flag, and the Agent Manager sweep reads it. Record it at activation, so
+  // the sweep works before any webview resolves.
+  setHostAutoApprove({
+    enabled: () => input.context.globalState.get(AUTO_APPROVE, false),
+    directory: input.directory,
+  })
   // Commands sent before the webview bundle listens are lost, and a resolved view is not yet loaded. Keep them until
   // the webview sends its first message, which it does on mount.
   const state: { view?: WebviewView; loaded: boolean; queued: ToWebview[] } = { loaded: false, queued: [] }
@@ -55,8 +67,7 @@ export function chat(input: {
   }
   const syncState = () => {
     if (!state.view) return
-    void send({ type: "autoApproveStateLoaded", value: input.context.globalState.get(AUTO_APPROVE, false) })
-    void send({ type: "modelSelectorExpandedLoaded", value: input.context.globalState.get(EXPANDED, true) })
+    composerState(input.context).forEach((message) => void send(message))
   }
   // The cycle keybindings are active only while the webview has focus, as on v1 (`sidebarFocused`).
   const focus = (focused: boolean) => void commands.executeCommand("setContext", "kilo-code.v2.sidebarFocused", focused)
@@ -105,8 +116,10 @@ export function wire(input: {
   server: Manager
   directory: string
   webview: Webview
-  view: "chat" | "settings"
+  view: View
   trackCostSession?: (sessionID: string) => void
+  /** Directory for a saved image, when the view follows a session in another directory. */
+  saveImageDirectory?: () => string | undefined
   /** The tool diff surfaces of the chat view. Settings has none. */
   diff?: ToolDiff
   /** Called on every message from the webview, before it is handled. */
@@ -114,6 +127,10 @@ export function wire(input: {
   /** Handles a view-specific message before the standard set. Returns true when it did. */
   handle?: (message: ToHost) => boolean
   onReset?: () => void
+  /** Extra window globals of the webview bundle. */
+  globals?: Record<string, unknown>
+  /** The Agent Manager settings handler the Settings panel shares with the provider. */
+  agentManager?: () => SettingsHandler
 }) {
   const webview = input.webview
   const root = input.context.extensionUri
@@ -126,6 +143,10 @@ export function wire(input: {
     fetch: local,
   })
   const post = (message: ToWebview) => void webview.postMessage(message)
+  // The composer state is shared: a change in one open view shows in the others, for example the sidebar and the
+  // Agent Manager side by side.
+  const others = (message: ToWebview) => surfaces.forEach((target) => target !== post && target(message))
+  surfaces.add(post)
   // Voice input is host-side: the microphone, the custom endpoint key and the Gateway RPC never reach the webview.
   const speech = createSpeechToTextHost({
     server: input.server,
@@ -137,33 +158,33 @@ export function wire(input: {
   })
   // Config read and write are host-side: the Settings panel uses the full host, and the sidebar writes the
   // `kilo-code.v2.*` settings it owns, such as the task header graph toggle.
+  const view = input.view
   const settings =
-    input.view === "settings"
+    view === "settings"
       ? settingsHost({
           context: input.context,
           server: input.server,
           directory: input.directory,
           post,
           onReset: input.onReset,
+          agentManager: input.agentManager,
         })
-      : input.view === "chat"
-        ? {
-            handle: (message: ToHost) => {
-              if (message.type !== "updateVSCodeSettings") return false
-              const values = Object.fromEntries(
-                Object.entries(message.values).filter(([key]) => CHAT_SETTING_KEYS.has(key)),
-              )
-              void writeKiloSettings(values).catch((error: unknown) => {
-                console.error("Failed to write Kilo settings", error)
-              })
-              return true
-            },
-            dispose() {},
-          }
-        : undefined
+      : {
+          handle: (message: ToHost) => {
+            if (message.type !== "updateVSCodeSettings") return false
+            const values = Object.fromEntries(
+              Object.entries(message.values).filter(([key]) => VIEW_SETTING_KEYS[view].has(key)),
+            )
+            void writeKiloSettings(values).catch((error: unknown) => {
+              console.error("Failed to write Kilo settings", error)
+            })
+            return true
+          },
+          dispose() {},
+        }
   // The sidebar carries the live Kilo settings: push a fresh value when any of them changes.
   const settingsWatch =
-    input.view === "chat"
+    input.view !== "settings"
       ? workspace.onDidChangeConfiguration((event) => {
           if (KILO_SETTING_KEYS.some((key) => event.affectsConfiguration(`${NAMESPACE}.${key}`)))
             post({ type: "vscodeSettingsLoaded", values: readKiloSettings() })
@@ -203,12 +224,16 @@ export function wire(input: {
         return true
       case "persistModelSelectorExpanded":
         void input.context.globalState.update(EXPANDED, message.value)
+        others({ type: "modelSelectorExpandedLoaded", value: message.value })
         return true
       case "requestAutoApproveState":
         post({ type: "autoApproveStateLoaded", value: input.context.globalState.get(AUTO_APPROVE, false) })
         return true
       case "persistAutoApproveState":
         void input.context.globalState.update(AUTO_APPROVE, message.value)
+        others({ type: "autoApproveStateLoaded", value: message.value })
+        // The host sweep is the only owner of the decision, so tell it to approve the requests already pending.
+        notifyHostAutoApprove()
         return true
       default:
         return false
@@ -217,7 +242,7 @@ export function wire(input: {
   // Leaf host actions that carry no state, kept together so the main handler stays within the complexity limit.
   const handleLeafMessage = (message: ToHost): boolean => {
     if (message.type === "saveImage") {
-      void saveImage(input.directory, message)
+      void saveImage(input.saveImageDirectory?.() ?? input.directory, message)
       return true
     }
     // The Language tab applies at once: write `kilo-code.v2.language` and let the change event push it to every view.
@@ -247,7 +272,7 @@ export function wire(input: {
         focus: message.focus,
         titleKey: message.titleKey,
       })
-    if (settings?.handle(message)) return
+    if (settings.handle(message)) return
     // Only the sidebar carries the cycle keybindings; the Settings panel must not change their context.
     if (message.type === "webviewFocusChanged" && input.view === "chat")
       return void commands.executeCommand("setContext", "kilo-code.v2.sidebarFocused", message.focused === true)
@@ -262,8 +287,8 @@ export function wire(input: {
   const uri = (...parts: string[]) => webview.asWebviewUri(Uri.joinPath(root, ...parts)).toString()
   webview.html = html({
     csp: webview.cspSource,
-    script: uri("dist", "webview.js"),
-    style: uri("dist", "webview.css"),
+    script: uri("dist", `${ENTRY[input.view]}.js`),
+    style: uri("dist", `${ENTRY[input.view]}.css`),
     icons: uri("assets", "icons"),
     worker: uri("dist", "shiki-worker.js"),
     markdown: uri("dist", "markdown-shiki-worker.js"),
@@ -273,22 +298,36 @@ export function wire(input: {
     version: (input.context.extension.packageJSON as { version?: string }).version ?? "",
     view: input.view,
     settings: readKiloSettings(),
+    globals: input.globals,
   })
   return {
     post,
     dispose() {
       link.dispose()
       speech.dispose()
-      settings?.dispose()
+      surfaces.delete(post)
+      settings.dispose()
       settingsWatch?.dispose()
       subscription.dispose()
     },
   }
 }
 
+const surfaces = new Set<(message: ToWebview) => void>()
+
+/** The composer state every webview shares through globalState: auto-approve and the expanded model picker. */
+export function composerState(context: ExtensionContext): ToWebview[] {
+  return [
+    { type: "autoApproveStateLoaded", value: context.globalState.get(AUTO_APPROVE, false) },
+    { type: "modelSelectorExpandedLoaded", value: context.globalState.get(EXPANDED, true) },
+  ]
+}
+
 const EXPANDED = "kilo-code.v2.modelSelectorExpanded"
 const AUTO_APPROVE = "kilo-code.v2.autoApprove"
 const NAMESPACE = "kilo-code.v2"
+// The Agent Manager panel loads its own bundle; the sidebar and the Settings panel share one.
+const ENTRY = { chat: "webview", settings: "webview", agentManager: "agent-manager" } as const
 const SIZES = [10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24]
 
 export function html(input: {
@@ -302,8 +341,9 @@ export function html(input: {
   size: number
   language: string
   version: string
-  view?: "chat" | "settings"
+  view?: View
   settings: Record<string, unknown>
+  globals?: Record<string, unknown>
 }) {
   const nonce = randomBytes(16).toString("hex")
   const policy = [
@@ -322,11 +362,11 @@ export function html(input: {
     KILO_MARKDOWN_SHIKI_WORKER_URI: input.markdown,
     KILO_TOP_BAR: false,
     KILO_TOP_BAR_SURFACE: "sidebar_title",
-    KILO_AGENT_MANAGER_SETTINGS: false,
     KILO_BROWSER_AUTOMATION: false,
     KILO_AGENT_MANAGER_INTRO_DISMISSED: true,
     KILO_SETTINGS: input.settings,
     KILO_EXTENSION_VERSION: input.version,
+    ...input.globals,
   }
   const script = Object.entries(globals)
     .map(([key, value]) => `window.${key} = ${JSON.stringify(value).replace(/</g, "\\u003c")};`)
@@ -338,7 +378,7 @@ export function html(input: {
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta http-equiv="Content-Security-Policy" content="${policy}">
 <link rel="stylesheet" href="${input.style}">
-<title>Kilo Code</title>
+<title>${input.view === "agentManager" ? "Agent Manager" : "Kilo Code"}</title>
 <style>
   :root { ${vars} --kilo-font-scale: ${input.size / 13}; --font-size-x-small: var(--kilo-font-size-10); --font-size-small: var(--kilo-font-size-11); --font-size-base: var(--kilo-font-size-13); --font-size-large: var(--kilo-font-size-16); }
   html {
@@ -366,6 +406,8 @@ export function html(input: {
 function escape(text: string) {
   return text.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
 }
+
+type View = "chat" | "settings" | "agentManager"
 
 type Surface = Extract<
   ToHost,

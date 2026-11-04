@@ -1,28 +1,19 @@
 // The sidebar: history, profile, or one session laid out like main's ChatView (transcript, docks, prompt).
 import { Button } from "@kilocode/kilo-ui/button"
+import { showToast } from "@kilocode/kilo-ui/toast"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import type { ToolActions } from "@kilocode/kilo-ui/message-part"
-import { ToolChildSessionProvider, type ToolChildSession } from "@kilocode/kilo-ui/tool-child-session"
-import { createEffect, createMemo, createSignal, type JSX, Match, on, onCleanup, Show, Switch } from "solid-js"
+import { createEffect, createSignal, type JSX, Match, on, onCleanup, Show, Switch } from "solid-js"
 import type { ToHost } from "../../../src/protocol"
 import { useLanguage } from "../context/language"
 import { getVSCodeAPI } from "../context/vscode"
 import { useV2 } from "./client"
-import { childTools, createChildSessions } from "./child-session"
 import { useDisplaySettings } from "./display-settings"
 import { SessionList } from "./history"
-import { TaskHeader } from "../components/chat/TaskHeader"
 import ProfileView from "../components/profile/ProfileView"
-import { MessageList } from "./messages"
-import { PermissionDock } from "./permission"
-import { PromptInput } from "./prompt"
-import { QuestionDock } from "./question"
 import { createProfile } from "./profile"
-import { createSelection, Selectors } from "./selectors"
 import { SessionChanges } from "./session-changes"
-import { AutoApproveAction, createAutoApprove } from "./auto-approve"
-import { SessionDock } from "../components/chat/SessionDockWorking"
-import { createWorking } from "./working"
+import { SessionView } from "./session-view"
 
 export function Chat() {
   const v2 = useV2()
@@ -57,6 +48,29 @@ export function Chat() {
     setChanges(false)
   }
 
+  // A turn shows its own changes: `from` is the user message that opened it, and the
+  // server ends the range at the next idle marker.
+  const openTurnChanges = (sessionID: string, turnID: string) => {
+    void v2.api.session
+      .diff({ sessionID, from: turnID })
+      .then((files) => {
+        if (files.length === 0) {
+          showToast(language.t("session.review.turnChangesEmpty"))
+          return
+        }
+        getVSCodeAPI().postMessage({
+          type: "openDiffsVirtual",
+          diffs: files.map((file) => ({
+            file: file.file,
+            patch: file.patch,
+            additions: file.additions,
+            deletions: file.deletions,
+          })),
+        } satisfies ToHost as never)
+      })
+      .catch(v2.report)
+  }
+
   // What a tool renderer may ask the host to open. The host owns the editor and the diff surfaces.
   const toolActions: ToolActions = {
     openFile: (filePath, line) =>
@@ -66,115 +80,10 @@ export function Chat() {
     openSession: open,
   }
 
-  // Subagent cards read the child session's tools from the same store as the open session. Load a child's message
-  // history when its card first asks for it; later tool events update the loaded messages in place. Leaving a session
-  // tree releases every child loaded from it, so a long-lived sidebar does not keep every expanded child transcript.
-  const children = createChildSessions({ data: v2.data, report: v2.report })
-  const childSessions: ToolChildSession = {
-    tools: (sessionID) => childTools(v2.data.session.message.list(sessionID)),
-    running: (sessionID) => v2.data.session.status(sessionID) === "running",
-    load: children.load,
-  }
-  let previousSession: string | undefined
-  createEffect(
-    on(
-      session,
-      (id) => {
-        const previous = previousSession
-        previousSession = id
-        children.switchTo(id, previous)
-      },
-      { defer: true },
-    ),
-  )
-  createEffect(
-    on(
-      v2.connection.status,
-      (status) => {
-        if (status === "connected") void children.resync()
-      },
-      { defer: true },
-    ),
-  )
-  onCleanup(() => children.release(session()))
-  createEffect(
-    on(session, (id) => {
-      if (id) getVSCodeAPI().postMessage({ type: "trackCostSession", sessionID: id } satisfies ToHost as never)
-    }),
-  )
-
-  // The open session and its subagents. Subagent permissions and forms carry the subagent's session ID.
-  const family = createMemo(() => {
-    const id = session()
-    if (!id) return []
-    return [id, ...v2.data.session.family(id).filter((item) => item !== id)]
-  })
-  const permissions = () => family().flatMap((id) => v2.data.session.permission.list(id) ?? [])
-  const forms = () => family().flatMap((id) => v2.data.session.form.list(id) ?? [])
-
-  // Load again after a reconnect too: createData drops its loaded state while disconnected. Same as the TUI session
-  // route (packages/tui/src/routes/session/index.tsx).
-  createEffect(
-    on([session, v2.connection.status] as const, ([id, status]) => {
-      if (!id || status !== "connected") return
-      void Promise.all([
-        v2.data.session.sync(id, { children: true }),
-        v2.data.session.message.sync(id),
-        v2.data.session.pending.sync(id),
-      ]).catch(v2.report)
-    }),
-  )
-  // A new session is not on the server until its create request settles, so these reads can fail. Events add
-  // requests that arrive later.
-  createEffect(
-    on([family, v2.connection.status] as const, ([ids, status]) => {
-      if (status !== "connected") return
-      void Promise.allSettled(ids.flatMap((id) => [v2.data.session.permission.sync(id), v2.data.session.form.sync(id)]))
-    }),
-  )
-  // Deletion and a failed create remove the session from createData. Do not send to it again.
-  createEffect(
-    on(
-      () => {
-        const id = session()
-        return [id, !!id && !!v2.data.session.get(id)] as const
-      },
-      ([id, known], previous) => {
-        if (id && !known && previous?.[0] === id && previous[1]) setSession(undefined)
-      },
-    ),
-  )
-
-  const running = () => {
-    const id = session()
-    return !!id && v2.data.session.status(id) === "running"
-  }
-
-  // A pending permission or question blocks new prompts.
-  const blocked = () => permissions().length > 0 || forms().length > 0
-  // The prompt selectors block only while a permission owns the prompt, as v1; a pending question does not.
-  const selectorsBlocked = () => permissions().length > 0
-  // Only a pending permission changes the Send label. A pending question leaves Send in place instead of Stop.
-  const questioning = () => permissions().length === 0 && forms().length > 0
-  const selection = createSelection(session)
-  const autoApprove = createAutoApprove()
-  // The host sends the cycle action for the cycleAgentMode/cyclePreviousAgentMode commands, as in main.
-  v2.onCommand((name) => {
-    if (name === "cycleAgentMode") selection.cycleAgent(1)
-    if (name === "cyclePreviousAgentMode") selection.cycleAgent(-1)
-  })
-  const working = createWorking(session)
-  let scrollToBottom: (() => void) | undefined
-  // Counts the in-flight first message too, so the dock reserves the same row on the very first send, as on main.
-  // A memo, so the actions row rebuilds only when this flips.
-  const hasMessages = createMemo(() => {
-    const id = session()
-    return !!id && (v2.data.session.message.list(id).length > 0 || working.submitting())
-  })
   // main's ChatView actions row. New Session and Changes have v2 counterparts: the worktree and fork actions need
   // the Agent Manager, and the changes view lists this session's files instead of the working tree.
-  const actions = (todos: JSX.Element) => (
-    <Show when={hasMessages()}>
+  const row = (hasMessages: boolean, todos: JSX.Element) => (
+    <Show when={hasMessages}>
       <div class="new-task-button-wrapper">
         <div class="session-actions-row">
           <Tooltip value={language.t("sidebar.session.newSession.tooltip")} placement="top">
@@ -202,23 +111,6 @@ export function Chat() {
     </Show>
   )
 
-  const send = (text: string) => {
-    const id = session() ?? selection.create()
-    setSession(id)
-    return v2.data.session
-      .prompt({ sessionID: id, text, gate: selection.gate(id) })
-      .then(() => true)
-      .catch((err: unknown) => {
-        v2.report(err)
-        return false
-      })
-  }
-
-  const stop = () => {
-    const id = session()
-    if (id) void v2.api.session.interrupt({ sessionID: id }).catch(v2.report)
-  }
-
   return (
     <Switch>
       <Match when={view() === "history"}>
@@ -237,72 +129,20 @@ export function Chat() {
         <ProfileView profile={profile} />
       </Match>
       <Match when={view() === "chat"}>
-        <div class="chat-view">
-          <Show when={session()} keyed>
-            {(id) => <TaskHeader sessionID={id} />}
-          </Show>
-          <div class="chat-messages-wrapper">
-            <ToolChildSessionProvider value={childSessions}>
-              <div class="chat-messages">
-                <Show
-                  when={changes() ? session() : undefined}
-                  keyed
-                  fallback={
-                    <MessageList
-                      session={session()}
-                      actions={toolActions}
-                      onSelectSession={open}
-                      onShowHistory={() => setView("history")}
-                      onScrollToBottomReady={(fn) => (scrollToBottom = fn)}
-                    />
-                  }
-                >
-                  {(id) => <SessionChanges sessionID={id} onClose={() => setChanges(false)} />}
-                </Show>
-              </div>
-            </ToolChildSessionProvider>
-          </div>
-          <div class="chat-input">
-            <Show when={v2.handshake() || v2.error()}>
-              <div class="error-card" role="alert" data-component="v2-error">
-                <span>{v2.handshake() || v2.error()}</span>
-                <button class="error-card-dismiss" onClick={() => v2.setError("")}>
-                  x
-                </button>
-              </div>
+        <SessionView
+          session={session()}
+          onSession={setSession}
+          actions={toolActions}
+          onShowHistory={() => setView("history")}
+          onViewTurnChanges={openTurnChanges}
+          row={row}
+          replace={changes() && !!session()}
+          replacement={
+            <Show when={changes() ? session() : undefined} keyed>
+              {(id) => <SessionChanges sessionID={id} onClose={() => setChanges(false)} />}
             </Show>
-            <Show when={permissions()[0]} keyed>
-              {(request) => <PermissionDock request={request} />}
-            </Show>
-            <Show when={forms()[0]} keyed>
-              {(form) => <QuestionDock form={form} />}
-            </Show>
-            <SessionDock
-              session={session()}
-              blocked={blocked()}
-              actions={actions}
-              hasActions={hasMessages()}
-              status={working.status()}
-              submitting={working.submitting()}
-              timing={working.timing()}
-              text={working.text()}
-              retry={working.retry()}
-              onCancel={stop}
-              onScrollToBottom={() => scrollToBottom?.()}
-            />
-            <PromptInput
-              session={session()}
-              running={running()}
-              disabled={v2.connection.status() !== "connected" || !!v2.handshake() || blocked()}
-              blocked={permissions().length > 0}
-              questioning={questioning()}
-              onSend={send}
-              onStop={stop}
-              selectors={<Selectors selection={selection} blocked={selectorsBlocked()} />}
-              actions={<AutoApproveAction enabled={autoApprove.enabled()} onToggle={autoApprove.toggle} />}
-            />
-          </div>
-        </div>
+          }
+        />
       </Match>
     </Switch>
   )

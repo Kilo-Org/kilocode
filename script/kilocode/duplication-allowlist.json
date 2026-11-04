@@ -133,6 +133,33 @@
       "kind": "legacy",
       "owner": "kilo-ui-base",
       "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."
+    },
+    {
+      "files": ["packages/kilo-plugin/src/branch-name/index.ts", "packages/kilo-plugin/src/commit-message/index.ts"],
+      "fingerprint": "dbd36e8bac0eb84e",
+      "maxMatches": 1,
+      "maxTokens": 151,
+      "kind": "intentional",
+      "owner": "kilo-plugin",
+      "reason": "Two independent RPC plugins keep the title-agent, primary and small model fallback policy visible in each option scope. Extract when a third caller needs the same policy."
+    },
+    {
+      "files": ["packages/kilo-vscode/webview-ui/agent-manager/DiffPanel.tsx", "packages/kilo-vscode/webview-ui/diff-viewer/FullScreenDiffView.tsx"],
+      "fingerprint": "9de31f014b4dcb04",
+      "maxMatches": 1,
+      "maxTokens": 143,
+      "kind": "intentional",
+      "owner": "agent-manager",
+      "reason": "The same file entry renders inside the panel and the full-screen diff with different containers and scroll models. A shared component would couple the panel to the diff viewer internals."
+    },
+    {
+      "files": ["packages/kilo-vscode/webview-ui/agent-manager/pr/PRComments.tsx", "packages/kilo-vscode/webview-ui/agent-manager/pr/PRConversation.tsx"],
+      "fingerprint": "e0308b3819e11865",
+      "maxMatches": 1,
+      "maxTokens": 105,
+      "kind": "intentional",
+      "owner": "agent-manager",
+      "reason": "Both PR views build the same reaction controller for one worktree. Kept in each view because the message scope follows the view that renders the comments."
     }
   ]
 }
