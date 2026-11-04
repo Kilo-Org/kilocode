@@ -17,7 +17,7 @@
   "module:packages/opencode/test/kilocode/storage/storage-init.test.ts": {
     "state": "native",
     "v2": "packages/core/src/database/database.ts",
-    "note": "Checked init concurrency/interruption safety of the v1 JSON Storage service (layerFromDir, migrate-on-first-access). v2 has no JSON Storage service; the equivalent guarantee is the per-path database bootstrap lock (lockFor/locks) in packages/core/src/database/database.ts, covered by packages/core/test/database-migration.test.ts.",
+    "note": "Checked init concurrency/interruption safety of the v1 JSON Storage service (layerFromDir, migrate-on-first-access). v2 has no JSON Storage service; the equivalent guarantee is the per-path database bootstrap lock (lockFor/locks) in packages/core/src/database/database.ts. packages/core/test/database-migration.test.ts covers that lock's concurrent-bootstrap serialization (one lock per path, distinct paths do not block each other) and rollback of a failed migration; interruption safety follows structurally from the same single-holder lock rather than from a dedicated interruption test.",
     "by": "store-paths"
   },
   "module:packages/core/src/kilocode/oauth/page.ts": {
