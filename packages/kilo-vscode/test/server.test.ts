@@ -1,12 +1,22 @@
 import { describe, expect, test } from "bun:test"
 import { OpenCode } from "@opencode/client"
 import { KiloHandshakeRpc } from "@opencode/schema/kilocode/handshake"
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs"
 import { mkdtemp, mkdir, realpath, rm } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import path from "node:path"
 import { command, environment, manager, parse, settingsEnvironment, start, stop } from "../src/server"
 
 const extension = path.resolve(import.meta.dir, "..")
+
+function checkout() {
+  const dir = mkdtempSync(path.join(tmpdir(), "kilo-vscode-checkout-"))
+  const extension = path.join(dir, "packages", "kilo-vscode")
+  mkdirSync(extension, { recursive: true })
+  mkdirSync(path.join(dir, "script"), { recursive: true })
+  writeFileSync(path.join(dir, "script", "dev-isolated.ts"), "")
+  return { dir, extension }
+}
 
 describe("parse", () => {
   test("reads the URL from a complete JSON line", () => {
@@ -24,15 +34,19 @@ describe("parse", () => {
 
 describe("command", () => {
   test("uses the repository dev entry with an isolated profile when bin/kilo2 is missing", () => {
+    const { dir, extension } = checkout()
     const found = command({ extension, storage: "/storage", env: {} })
-    expect(found?.args).toEqual([path.resolve(extension, "../../script/dev-isolated.ts"), "serve", "--port", "0", "--stdio"])
+    expect(found?.args).toEqual([path.join(dir, "script", "dev-isolated.ts"), "serve", "--port", "0", "--stdio"])
     expect(found?.env).toEqual({ KILO_V2_PROFILE: path.join("/storage", "profile") })
+    rmSync(dir, { recursive: true })
   })
 
   test("keeps an explicit KILO_V2_PROFILE", () => {
+    const { dir, extension } = checkout()
     expect(command({ extension, storage: "/storage", env: { KILO_V2_PROFILE: "/p" } })?.env).toEqual({
       KILO_V2_PROFILE: "/p",
     })
+    rmSync(dir, { recursive: true })
   })
 
   test("prefers a bundled bin/kilo2", async () => {
@@ -125,7 +139,7 @@ test("manager keeps a failed start, reports it once and retries after a restart"
   expect(second).not.toBe(first)
   await expect(second).rejects.toThrow("exited during startup")
   expect(errors).toHaveLength(2)
-  await rm(root, { recursive: true, force: true })
+  await rm(root, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 })
 })
 
 test("manager reports every started and stopped server", async () => {
@@ -198,5 +212,5 @@ test("starts the real v2 server, passes the Kilo handshake and stops when stdin 
   const exited = new Promise((resolve) => server.process.once("exit", resolve))
   stop(server.process)
   await exited
-  await rm(root, { recursive: true, force: true })
+  await rm(root, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 })
 }, 90_000)

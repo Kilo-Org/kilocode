@@ -9,6 +9,7 @@ import { useLanguage } from "../../../context/language"
 import { useV2 } from "../../../v2/client"
 import { useSettingsConfig } from "../../../v2/settings-config"
 import SettingsRow from "../SettingsRow"
+import Switch from "../Switch"
 import {
   agentConfig,
   agentPath,
@@ -198,7 +199,6 @@ const AgentsSubtab: Component<{ navigation?: number }> = (props) => {
           <SettingsRow
             title={language.t("settings.agentBehaviour.defaultAgent.title")}
             description={language.t("settings.agentBehaviour.defaultAgent.description")}
-            last
           >
             <Select
               options={defaultOptions()}
@@ -212,6 +212,19 @@ const AgentsSubtab: Component<{ navigation?: number }> = (props) => {
               size="small"
               triggerVariant="settings"
             />
+          </SettingsRow>
+          <SettingsRow
+            title={language.t("settings.agentBehaviour.pushFixes.title")}
+            description={language.t("settings.agentBehaviour.pushFixes.description")}
+            last
+          >
+            <Switch
+              checked={config.setting("agentManager.pushFixes") !== false}
+              onChange={(checked) => config.setSetting("agentManager.pushFixes", checked)}
+              hideLabel
+            >
+              {language.t("settings.agentBehaviour.pushFixes.title")}
+            </Switch>
           </SettingsRow>
         </Card>
 

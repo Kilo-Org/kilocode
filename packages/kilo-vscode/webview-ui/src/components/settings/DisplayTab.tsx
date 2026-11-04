@@ -114,6 +114,19 @@ const DisplayTab: Component = () => {
         </SettingsRow>
 
         <SettingsRow
+          title={language.t("settings.display.shortcutHints.title")}
+          description={language.t("settings.display.shortcutHints.description")}
+        >
+          <Switch
+            checked={config.setting("showShortcutHints") !== false}
+            onChange={(checked) => config.setSetting("showShortcutHints", checked)}
+            hideLabel
+          >
+            {language.t("settings.display.shortcutHints.title")}
+          </Switch>
+        </SettingsRow>
+
+        <SettingsRow
           title={language.t("settings.display.terminalCommand.title")}
           description={language.t("settings.display.terminalCommand.description")}
         >

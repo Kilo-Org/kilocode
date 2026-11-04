@@ -1,9 +1,9 @@
 {
   "$comment": "Shared-patch baseline (U-L3-01). Read by script/check-shared-patches.ts and script/check-opencode-annotations.ts. Each shared upstream file that Kilo adds or changes needs an entry: rung (3 = seam patch, 4 = feature patch) and the missing seam. `unmarked` allows lines without markers and states why. Raise a limit only in the PR that adds the patch, and lower it when a patch goes away.",
   "limits": {
-    "files": 73,
-    "markedLines": 1029,
-    "unmarkedLines": 83,
+    "files": 86,
+    "markedLines": 1219,
+    "unmarkedLines": 246,
     "deletedFiles": 0
   },
   "files": {
@@ -29,7 +29,7 @@
     },
     ".github/workflows/check-test.yml": {
       "rung": 3,
-      "seam": "Upstream renamed `test.yml` to `check-test.yml` in v2.2. CI triggers: run the unit and e2e matrix on push to Kilo's `v2` integration branch (upstream's v2 line is `dev`). Skip the `affected` job, and with it the `e2e-suite` jobs that need it and the `e2e` result check that requires `affected` to succeed: they test only `packages/app` and `packages/session-ui`, which Kilo removed (`skipFiles` in script/upstream/utils/config.ts). Job-level lines, so upstream changes to the e2e steps still merge cleanly. `Build workspace libraries` in upstream's `build` job filters only on `@opencode/cli^...`, because turbo fails on the `@opencode/app^...` filter when the package does not exist. CI speed: `Verify packed workerd SDK` runs in its own `sdk` job (at the end of the file), so it no longer waits for the unit tests in `unit`. The Turbo cache step (upstream removed its broken one in v2.0.31) uses `.turbo/cache` (where Turborepo 2.x writes), keys on turbo.json and bun.lock, and carries the shard. Test shards: a `shard` matrix dimension in `unit` (2 Linux, 3 Windows) sets `KILO_TEST_SHARD` and `KILO_TEST_CONCURRENCY`; core, tui and cli run `test:ci` (the Kilo runner, script/kilocode/test/test-runner.ts), the other packages run `test` once, in shard 1; failing cases from the runner's JUnit reports become annotations, and the reports are an artifact that refreshes the shard weights. No seam: workflow triggers, job conditions, jobs, steps, matrix dimensions and cache keys cannot be extended from outside the file. Upstream has no cache key input or test shard option. Action pins track current releases (`actions/checkout` v7.0.1, `actions/setup-node` v7.1.0, `actions/cache` v6.1.0, `actions/upload-artifact` v7.0.2, `mikepenz/action-junit-report` v6.6.1) and the generated protocol client is checked next to the generated client. Required-check barriers: `unit-required` (name `unit (linux)`) and `required` (name `test (linux)`) aggregate the `unit` matrix, `build` and `sdk`, so a branch ruleset has stable check names; `--affected` now applies to pull requests only, so pushes and manual runs test the full suite; `test:lint-rules` runs next to the Effect rule tests. No seam: a matrix job cannot publish one stable check name, a ruleset cannot require a job that does not exist, and the test invocation is a run step inside the job."
+      "seam": "Upstream renamed `test.yml` to `check-test.yml` in v2.2. CI triggers: run the unit and e2e matrix on push to Kilo's `v2` integration branch (upstream's v2 line is `dev`). Skip the `affected` job, and with it the `e2e-suite` jobs that need it and the `e2e` result check that requires `affected` to succeed: they test only `packages/app` and `packages/session-ui`, which Kilo removed (`skipFiles` in script/upstream/utils/config.ts). Job-level lines, so upstream changes to the e2e steps still merge cleanly. `Build workspace libraries` in upstream's `build` job filters only on `@opencode/cli^...`, because turbo fails on the `@opencode/app^...` filter when the package does not exist. CI speed: `Verify packed workerd SDK` runs in its own `sdk` job (at the end of the file), so it no longer waits for the unit tests in `unit`. The Turbo cache step (upstream removed its broken one in v2.0.31) uses `.turbo/cache` (where Turborepo 2.x writes), keys on turbo.json and bun.lock, and carries the shard. Test shards: a `shard` matrix dimension in `unit` (2 Linux, 4 Windows) sets `KILO_TEST_SHARD` and `KILO_TEST_CONCURRENCY`; core, tui and cli run `test:ci` (the Kilo runner, script/kilocode/test/test-runner.ts) at turbo concurrency 3, and the `packages` leg runs the other packages with `test` alongside the Kilo host suite: that suite uses `test:ci` unsplit at concurrency 4 because its one heavy file would be a long pole inside a shard job; failing cases from the runner's JUnit reports become annotations, and the reports are an artifact from every leg that refreshes the shard weights. No seam: workflow triggers, job conditions, jobs, steps, matrix dimensions and cache keys cannot be extended from outside the file. Upstream has no cache key input or test shard option. Action pins track current releases (`actions/checkout` v7.0.1, `actions/setup-node` v7.1.0, `actions/cache` v6.1.0, `actions/upload-artifact` v7.0.2, `mikepenz/action-junit-report` v6.6.1) and the generated protocol client is checked next to the generated client. Required-check barriers: `unit-required` (name `unit (linux)`) and `required` (name `test (linux)`) aggregate the `unit` matrix, `build` and `sdk`, so a branch ruleset has stable check names; a draft pull request and a quarantine dispatch skip the matrix and the build on purpose, so both barriers accept `skipped` for exactly those two cases and still fail on any other skip; `--affected` now applies to pull requests only, so pushes and manual runs test the full suite; `test:lint-rules` runs next to the Effect rule tests. No seam: a matrix job cannot publish one stable check name, a ruleset cannot require a job that does not exist, and the test invocation is a run step inside the job."
     },
     ".gitignore": {
       "rung": 3,
@@ -54,7 +54,7 @@
     },
     "package.json": {
       "rung": 3,
-      "seam": "Root `dev` script runs script/dev-isolated.ts, which starts the Kilo host entry (packages/kilo-cli) with an isolated profile, so `bun dev` never uses the installed OpenCode or Kilo data. Stays after U-E0-01: `bun dev` from the root reads the upstream root package.json, and upstream's script runs the upstream CLI with the real data. Root `extension` script runs packages/kilo-vscode/script/launch.ts (Kilo-owned), which builds the v2 VS Code extension and opens it in a separate VS Code instance with an isolated profile, as `bun run extension` does on v1. Root `lint` script runs only `oxlint`: its ast-grep and `script/sdk-docs.ts` steps check upstream's GUI plugin package (`packages/gui-extensions`, renamed to `packages/gui-plugins` in v2.2), which Kilo removed (`skipFiles`). Root `install:alpha` script runs script/kilocode/install-alpha.ts (Kilo-owned), which installs the host executable built by the `kilo-v2` workflow; it goes away when v2 is mainline.",
+      "seam": "Root `dev` script runs script/dev-isolated.ts, which starts the Kilo host entry (packages/kilo-cli) with an isolated profile, so `bun dev` never uses the installed OpenCode or Kilo data. Stays after U-E0-01: `bun dev` from the root reads the upstream root package.json, and upstream's script runs the upstream CLI with the real data. Root `extension` script runs packages/kilo-vscode/script/launch.ts (Kilo-owned), which builds the v2 VS Code extension and opens it in a separate VS Code instance with an isolated profile, as `bun run extension` does on v1. Root `lint` script runs only `oxlint`: its ast-grep and `script/sdk-docs.ts` steps check upstream's GUI plugin package (`packages/gui-extensions`, renamed to `packages/gui-plugins` in v2.2), which Kilo removed (`skipFiles`). Root `install:alpha` script runs script/kilocode/install-alpha.ts (Kilo-owned), which installs the host executable built by the `kilo-v2` workflow; it goes away when v2 is mainline. Root devDependency `@types/node` (catalog version): TypeScript searches `node_modules/@types` in every parent directory before it follows a package's own dependencies, and Agent Manager worktrees live inside another checkout (`.kilo/worktrees/<name>`). Without a root copy, packages that do not declare `@types/node` (ai, cli, tui, server and others) load the parent checkout's version, so a worktree's typecheck depends on what another checkout installed. No lower rung: the root manifest decides what the root `node_modules/@types` contains, and `bunfig.toml` and the package tsconfigs are upstream files too. `patchedDependencies` registers `patches/virtua@0.49.1.patch` (Kilo-owned, the same patch as v1), which adds `VirtualizerHandle.measure()` and clamps the rendered range to the data length; the v2 VS Code transcript (packages/kilo-vscode/webview-ui/src/v2/messages.tsx) uses `measure()` to re-pin the bottom when the live turn is handed to the virtualizer. No seam: bun reads patches only from the root package.json.",
       "unmarked": "JSON has no comments."
     },
     "packages/cli/package.json": {
@@ -88,12 +88,12 @@
     },
     "packages/client/src/promise/generated/types.ts": {
       "rung": 3,
-      "seam": "Generated client types for the optional command template and model metadata exposed by the command list API. The client must be regenerated from the public schema.",
+      "seam": "Generated client types for schema additions Kilo exposes: the optional command template and model metadata on the command list API, and the optional PTY create size. The client must be regenerated from the public schema.",
       "unmarked": "Generated TypeScript cannot retain manual marker comments; bun run generate owns this file."
     },
     "packages/protocol/openapi.json": {
       "rung": 3,
-      "seam": "Generated OpenAPI document for the optional command template and model metadata exposed by the command list API. The document is generated from the public schema; editing it by hand is not supported.",
+      "seam": "Generated OpenAPI document for the optional command template and model metadata exposed by the command list API, and the optional PTY create size exposed by packages/schema/src/pty.ts. The document is generated from the public schema; editing it by hand is not supported.",
       "unmarked": "Generated JSON cannot carry marker comments; bun run generate in packages/protocol owns this file."
     },
     "packages/core/package.json": {
@@ -204,7 +204,7 @@
     },
     "packages/tui/src/plugin/builtins.ts": {
       "rung": 4,
-      "seam": "Register the Kilo built-in TUI plugins, including `KiloMarketplace` (`/marketplace`, partial U-E2-23). The TUI loads its built-in list in its own process, which server-side host/plugin registration cannot reach. Config-driven plugins load npm packages or local files, unavailable in compiled binaries. A generic registration API would require more shared lines for this single list. Marketplace behavior stays in tui/src/kilocode/marketplace.tsx; its only shared changes are one import and one list entry."
+      "seam": "Register the Kilo built-in TUI plugins, including `KiloMarketplace` (`/marketplace`, partial U-E2-23), `KiloCopySession` (`/copy-session`) and `KiloTerminalActivity` (OSC 777 session activity for terminals that set KILO_TERMINAL_ACTIVITY). The TUI loads its built-in list in its own process, which server-side host/plugin registration cannot reach. Config-driven plugins load npm packages or local files, unavailable in compiled binaries. A generic registration API would require more shared lines for this single list. The behavior stays in tui/src/kilocode/; each plugin adds one import and one list entry."
     },
     "packages/tui/test/fixture/local.tsx": {
       "rung": 3,
@@ -216,11 +216,11 @@
     },
     "packages/util/src/global.ts": {
       "rung": 3,
-      "seam": "The app directory name under the XDG bases (`const app`) reads `OPENCODE_APP_DIR_NAME` and defaults to `opencode`, so an embedding entry can name its own config, data, cache, state and tmp directories. The Kilo host sets `kilo2` in packages/kilo-cli/src/env.ts before any upstream module loads (U-E1-01 part 1, D-4). One line, no Kilo value. Rung 2 cannot supply it: `Global.layerWith` replaces only the service in one graph, while `Global.Path` and `Flock.setGlobal({ state })` are computed when this module loads and read statically by the log file (util/observability/logging.ts), the server tmp (server/src/process.ts) and the TUI themes (tui/src/mini/theme.ts); `cli/src/server-process.ts` and `cli/src/commands/handlers/default.ts` compile their own `Global` node from those defaults, so the background service and the database stayed under `opencode` with host composition alone (measured: the service read its port from `~/.config/opencode` and logged to `~/.local/share/opencode/log`)."
+      "seam": "Two generic identity knobs with upstream defaults, so an embedding entry can name its own directories. (1) The app directory name under the XDG bases (`const app`) reads `OPENCODE_APP_DIR_NAME` and defaults to `opencode`, naming config, data, cache, state and tmp; the Kilo host sets `kilo2` in packages/kilo-cli/src/env.ts before any upstream module loads (U-E1-01 part 1, D-4). (2) The `home` getter reads `OPENCODE_HOME_DIR` before falling back to os.homedir(), so the host can supply a cleaned home; os.homedir() caches $HOME as read at process start, so a shell newline on HOME survives there and cannot be repaired from the host, and `home` feeds resolvePath's `~` expansion (core/src/file-access.ts) and provider credential paths. The Kilo host sets the cleaned home in packages/kilo-cli/src/global-boot.ts (U-E1-01), matching v1's trimmed getter; OPENCODE_TEST_HOME still wins. No Kilo value in either line. Rung 2 cannot supply them: `Global.layerWith` replaces only the service in one graph, while `Global.Path` and `Flock.setGlobal({ state })` are computed when this module loads and read statically by the log file (util/observability/logging.ts), the server tmp (server/src/process.ts) and the TUI themes (tui/src/mini/theme.ts); `cli/src/server-process.ts` and `cli/src/commands/handlers/default.ts` compile their own `Global` node from those defaults, so the background service and the database stayed under `opencode` with host composition alone (measured: the service read its port from `~/.config/opencode` and logged to `~/.local/share/opencode/log`)."
     },
     "turbo.json": {
       "rung": 3,
-      "seam": "Define `@opencode/core#test:ci`, `@opencode/tui#test:ci` and `@opencode/cli#test:ci` (a generic `test:ci` task adds a no-op node to every package): `dependsOn: [\"transit\"]` like upstream's generic `test`, `env: [\"KILO_TEST_SHARD\"]` gives each shard its own cache key, `passThroughEnv` hands the runner its concurrency and deadline, and `inputs` add the runner and its durations from script/kilocode/test/. Upstream has no sharded test task. The `transit` task and the `@kilocode/gateway-core#test` entry that Kilo carried are upstream since v2.0.32 (generic `test` on `transit`, anomalyco/opencode#55866 and anomalyco/opencode#56117).",
+      "seam": "Define `@opencode/core#test:ci`, `@opencode/tui#test:ci`, `@opencode/cli#test:ci` and `@kilocode/kilo-cli#test:ci` (a generic `test:ci` task adds a no-op node to every package): `dependsOn: [\"transit\"]` like upstream's generic `test`, `env: [\"KILO_TEST_SHARD\"]` gives each shard its own cache key, `passThroughEnv` hands the runner its concurrency and deadline, and `inputs` add the runner and its durations from script/kilocode/test/. Upstream has no sharded test task. The `transit` task and the `@kilocode/gateway-core#test` entry that Kilo carried are upstream since v2.0.32 (generic `test` on `transit`, anomalyco/opencode#55866 and anomalyco/opencode#56117).",
       "unmarked": "JSON has no comments."
     },
     "packages/cli/src/services/updater.ts": {
@@ -287,6 +287,10 @@
       "rung": 3,
       "seam": "Trigger the session `route` hook at the start of `SessionModelRequest.prepare` and resolve its `target` with `ModelResolver.resolveModel` (optional service), so the rest of the request uses the target's settings, credentials and provider hooks. Durable records keep the selected model, because the runner records `loaded.model`. Without a `route` hook the request is unchanged and upstream's tests pass unchanged. Rungs 1 and 2 cannot supply it: the model is resolved before any session hook runs, and replacing SessionModelRequest in the host would mirror the whole request builder."
     },
+    "packages/core/src/generate.ts": {
+      "rung": 3,
+      "seam": "Optional `system` and `generation` on the stateless `Generate.TextInput`, passed to the existing `ai.request` call. The branch-name plugin needs the naming instructions as a system prompt and temperature 0.1 for the stateless text call. Rung 1 cannot supply it: `experimental.generate.text` accepts only a prompt and a model, and no hook wraps a stateless generation request. Rung 2 cannot supply it: the plugin already receives `Generate.Service`, but the service input has no fields for a system prompt or generation settings. Omitted fields keep the upstream request unchanged and upstream tests pass unchanged."
+    },
     "packages/core/src/app.ts": {
       "rung": 3,
       "seam": "Optional App.Info.product (id, display name, callback-page wordmark) that make() passes through. The Kilo host sets it in KiloApp; no Kilo value in the file. Issue #15409. Rung 1 cannot supply it: the integration editor lists OAuth methods but cannot wrap a registered method's authorize, and no hook reaches the authorize URL or the loopback callback page. Rung 2 cannot supply it: App.Info had no product identity, and replacing the OpenAI plugin would mirror about 440 lines. Without a product, upstream values stay unchanged and upstream tests pass unchanged."
@@ -306,6 +310,58 @@
     "packages/tui/test/usage-limits.test.tsx": {
       "rung": 4,
       "seam": "Skips upstream's new `usage-limits` test (v2.2). It expects upstream's row pricing in the model picker and the OpenCode Console `/usage` dialog. The Kilo model picker (dialog-model.tsx patch) shows prices in its info panel, and the Kilo usage plugin (`tui/src/kilocode/usage.tsx`) shadows upstream's `usage.show` command on purpose. Remove the skip when the Kilo picker keeps upstream row content and the test no longer needs the Console dialog."
+    },
+    "packages/core/src/permission.ts": {
+      "rung": 3,
+      "seam": "Passes the rules the effect was evaluated against (configured plus project saved rules) and the active unattended rules to the existing permission evaluate hook. The hook event carries only the computed effect, and the plugin API cannot read saved rules or the unattended state, so a hook cannot tell an exact saved approval from a wildcard one. Replacing Permission.node would mirror the whole service for two read-only fields. Upstream behavior does not change."
+    },
+    "packages/plugin/src/effect/permission.ts": {
+      "rung": 3,
+      "seam": "Optional read-only `rules` and `unattended` fields on PermissionEvaluation, the permission evaluate hook event that core fills. Hooks that ignore them see no change."
+    },
+    "packages/core/src/pty.ts": {
+      "rung": 3,
+      "seam": "Optional `allowExited` attach input and optional `size` on create. `allowExited` attaches to an exited session to replay its retained output, then delivers the end event with the exit code; the Agent Manager shows the output of a setup or run script that finished before its tab connected. `size` spawns the PTY at the client's dimensions, as `PersistentPty.CreateInput` already does, so the shell's first bytes are not wrapped for 80 columns before the client resizes it. Upstream keeps exited sessions and their output (`pty.list` returns them), but `attach` refuses them, and no plugin hook or layer reaches the create or attach path. Omitted input keeps upstream behavior and node-pty's default size."
+    },
+    "packages/server/src/handlers/pty.ts": {
+      "rung": 3,
+      "seam": "Pass `replayExited=1` from the PTY connect query to the `allowExited` attach input in packages/core/src/pty.ts. The connect route is the only path a client reaches `attach` through, and its handler has no extension point for query options. Without the query parameter the route behaves as upstream."
+    },
+    "packages/client/src/solid/data.ts": {
+      "rung": 3,
+      "seam": "Adds a per-session `session.message.evict(sessionID)` that drops one session's cached messages. The existing `session.evict` clears the root and every known descendant, so the Agent Manager inspector cannot release one subagent without blanking the parent transcript. Also adds `session.message.startLoaded(sessionID)`, which reports whether the last fetched page was shorter than the requested limit. The server returns a next cursor for the last non-empty page even when nothing is older, so a transcript cannot otherwise know that its loaded window reaches the start. Omitted calls behave as upstream."
+    },
+    "packages/client/test/solid-eviction.test.ts": {
+      "rung": 4,
+      "seam": "Covers the per-session message evict added in packages/client/src/solid/data.ts, so closing an inspector subagent does not clear its parent transcript."
+    },
+    "packages/client/test/solid-message-start.test.ts": {
+      "rung": 4,
+      "seam": "Covers the page-completeness signal added in packages/client/src/solid/data.ts, so the VS Code transcript hides Load earlier when the loaded page reaches the start of the session history."
+    },
+    "patches/virtua@0.49.1.patch": {
+      "rung": 4,
+      "seam": "Add `VirtualizerHandle.measure()` and clamp the rendered range to the data length in `virtua`. The v2 VS Code transcript uses `measure()` to re-pin the bottom in the same task when the last live turn is handed to the virtualizer, and the clamp prevents an out-of-range row when the virtual list shrinks. Set through `patchedDependencies` in the root package.json, so the patch applies from the root install. The same patch is on v1. No lower rung: the API lives inside the package and the transcript cannot re-pin before paint without it.",
+      "unmarked": "Patch files are applied verbatim; a marker inside the diff would change the patched source. The same patch ships on v1."
+    },
+    "packages/schema/src/pty.ts": {
+      "rung": 3,
+      "seam": "Optional `size` on `Pty.CreateInput`, sharing the size contract with `UpdateInput`. It matches `PersistentPty.CreateInput`, which already carries a size, and lets any client spawn a terminal at its own dimensions. Omitted keeps upstream behavior."
+    },
+    "packages/client/src/effect/api/api.ts": {
+      "rung": 3,
+      "seam": "Generated Effect client types for the optional PTY create size exposed by packages/schema/src/pty.ts. The client must be regenerated from the public schema.",
+      "unmarked": "Generated TypeScript cannot retain manual marker comments; bun run generate owns this file."
+    },
+    "packages/client/src/effect/generated/client.ts": {
+      "rung": 3,
+      "seam": "Generated Effect client operations for the optional PTY create size exposed by packages/schema/src/pty.ts. The client must be regenerated from the public schema.",
+      "unmarked": "Generated TypeScript cannot retain manual marker comments; bun run generate owns this file."
+    },
+    "packages/client/src/promise/generated/client.ts": {
+      "rung": 3,
+      "seam": "Generated promise client operations for the optional PTY create size exposed by packages/schema/src/pty.ts. The client must be regenerated from the public schema.",
+      "unmarked": "Generated TypeScript cannot retain manual marker comments; bun run generate owns this file."
     }
   }
 }

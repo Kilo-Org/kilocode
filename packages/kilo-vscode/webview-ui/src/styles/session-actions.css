@@ -306,7 +306,7 @@
   .session-actions-row {
     gap: 4px;
     flex-wrap: wrap;
-    justify-content: flex-start;
+    justify-content: center;
   }
 
   .session-actions-row > *,

@@ -33,6 +33,12 @@ test("labels balance scope", () => {
   expect(creditLabel(scope("org_1", [{ id: "org_1", name: "Acme" }]))).toBe("Acme team")
 })
 
+test("privacy mode keeps the personal label and collapses the team name", () => {
+  expect(creditLabel(scope(null), true)).toBe("Personal credits")
+  expect(creditLabel(scope("org_1", [{ id: "org_1", name: "Acme" }]), true)).toBe("Team credits")
+  expect(creditLabel(scope("org_1"), true)).toBe("Team credits")
+})
+
 test("shows pass period usage and reset date", () => {
   expect(passLine(kiloPass)).toBe("$73 / $199")
   expect(resetLabel(kiloPass.nextBillingAt)).toBe("Jul 1")

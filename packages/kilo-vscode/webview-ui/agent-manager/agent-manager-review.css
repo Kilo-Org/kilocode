@@ -1,0 +1,11 @@
+.am-review-toolbar [data-component="radio-group"] {
+  font-size: var(--font-size-small);
+}
+
+.am-review-toolbar-left {
+  gap: 10px;
+}
+
+.am-review-toolbar-stats {
+  flex: 0 100 auto;
+}

@@ -281,7 +281,9 @@ jobs:
             fi
             git commit -m "chore(progress): regenerate the map for $base_sha"
             if ! git push --force-with-lease origin HEAD:refs/heads/progress-map-update; then
-              echo "Progress map branch changed; retry $attempt/3"
+              # A changed branch or a transient GitHub error (HTTP 500) rejects the push. Wait before retrying.
+              echo "Push of the progress map branch failed; retry $attempt/3"
+              if [ "$attempt" -lt 3 ]; then sleep $((attempt * 30)); fi
               continue
             fi
             {
@@ -411,9 +413,8 @@ jobs:
         working-directory: packages/kilo-plugin
         run: bun test
 
-      - name: Test the Kilo host
-        working-directory: packages/kilo-cli
-        run: bun test
+      # The Kilo host suite is the slowest one in CI. `check-test` shards it on Linux and Windows through its
+      # `test:ci` task, so this job no longer runs it a second time.
 
       - name: Typecheck the VS Code extension
         working-directory: packages/kilo-vscode

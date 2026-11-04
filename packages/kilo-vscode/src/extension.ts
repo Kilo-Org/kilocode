@@ -10,6 +10,11 @@ import {
   workspace,
   type ExtensionContext,
 } from "vscode"
+import { createAgentManagerConnection } from "./agent-manager/connection"
+import { AgentManagerProvider } from "./agent-manager/AgentManagerProvider"
+import { createPanel, PANEL_TYPE } from "./agent-manager/panel"
+import { ensureCommandsSkipShell } from "./agent-manager/terminal-host"
+import { VscodeHost } from "./agent-manager/vscode-host"
 import { chat } from "./chat"
 import { commitMessageCommand, commitMessageLanguage, connect, type GitExports } from "./commit-message"
 import { createCostAlerts } from "./cost-alert"
@@ -18,7 +23,10 @@ import { readKiloSettings } from "./settings-host"
 import { registerAutocompleteProvider } from "./services/autocomplete"
 import { createConnection } from "./services/autocomplete/connection"
 import { settings } from "./settings-panel"
+import { createShutdown } from "./shutdown"
 import { toolDiff } from "./tool-diff"
+
+let shutdownExtension: (() => Promise<void>) | undefined
 
 export function activate(context: ExtensionContext) {
   const output = window.createOutputChannel("Kilo Code (v2)")
@@ -75,6 +83,7 @@ export function activate(context: ExtensionContext) {
       extraCaCerts: typeof values.extraCaCerts === "string" ? values.extraCaCerts : "",
     })
   }
+  const shutdown = createShutdown({ log: (text) => output.appendLine(text) })
   const server = manager({
     command: () => command({ extension: context.extensionPath, storage, env: process.env }),
     cwd: directory,
@@ -83,10 +92,14 @@ export function activate(context: ExtensionContext) {
     log: (text) => output.append(text),
     // The autocomplete connection is declared below; the server starts only after activation returns.
     onStart: (started) => {
+      shutdown.started(started)
+      connection.started(started)
       alerts.start(started)
       autocomplete.started()
     },
     onStop: () => {
+      shutdown.stopped()
+      connection.stopped()
       alerts.stop()
       autocomplete.stopped()
     },
@@ -98,11 +111,63 @@ export function activate(context: ExtensionContext) {
     },
   })
   const diffs = toolDiff()
+  const connection = createAgentManagerConnection({ server })
   const autocomplete = createConnection({ server, directory })
   context.subscriptions.push({ dispose: autocomplete.dispose })
   registerAutocompleteProvider(context, autocomplete)
   const view = chat({ context, server, directory, trackCostSession: alerts.track, diff: diffs })
-  const panel = settings({ context, server, directory, onReset: view.syncState })
+  const agentHost = new VscodeHost(context, { server, directory })
+  let agentManagerRef: AgentManagerProvider | undefined
+  const agentPanel = createPanel({
+    context,
+    server,
+    directory,
+    trackCostSession: alerts.track,
+    saveImageDirectory: () => agentManagerRef?.imageDirectory(),
+  })
+  const agentManager = new AgentManagerProvider(agentHost, connection, agentPanel)
+  agentManagerRef = agentManager
+  // The Settings panel edits Agent Manager project settings through the provider's shared handler, so it is created
+  // after the provider and receives a lazy getter.
+  const panel = settings({
+    context,
+    server,
+    directory,
+    onReset: view.syncState,
+    agentManager: () => agentManager.settings,
+  })
+  const agentAction = (action: string) => agentManager.postMessage({ type: "action", action })
+  ensureCommandsSkipShell()
+  // The cycle keybindings act on the focused composer: the Agent Manager panel when it is active, else the sidebar.
+  // The panel receives an action, so an open dialog handles it before the session behind the dialog.
+  const cycle = async (name: "cycleAgentMode" | "cyclePreviousAgentMode") => {
+    if (agentManager.isActive()) return agentManager.postMessage({ type: "action", action: name })
+    await commands.executeCommand("kilo-code.v2.chat.focus")
+    await view.post({ type: "command", name })
+  }
+  const agentCommands = [
+    ["previousSession", "sessionPrevious"],
+    ["nextSession", "sessionNext"],
+    ["previousTab", "tabPrevious"],
+    ["nextTab", "tabNext"],
+    ["previousTerminal", "terminalPrevious"],
+    ["nextTerminal", "terminalNext"],
+    ["search", "search"],
+    ["showTerminal", "showTerminal"],
+    ["runScript", "runScript"],
+    ["toggleDiff", "toggleDiff"],
+    ["showShortcuts", "showShortcuts"],
+    ["newTab", "newTab"],
+    ["newTerminalTab", "newTerminalTab"],
+    ["newSideTerminal", "newSideTerminal"],
+    ["closeTab", "closeTab"],
+    ["newWorktree", "newWorktree"],
+    ["quickWorktree", "quickWorktree"],
+    ["openWorktree", "openWorktree"],
+    ["updateFromBase", "updateFromBase"],
+    ["openPR", "openPR"],
+    ["closeWorktree", "closeWorktree"],
+  ] as const
 
   context.subscriptions.push(
     output,
@@ -128,14 +193,8 @@ export function activate(context: ExtensionContext) {
     panel,
     // The host sends the action and the webview decides the next agent, as in main: the agent list and
     // the selection live in the webview, and only the server owns the committed value.
-    commands.registerCommand("kilo-code.v2.cycleAgentMode", async () => {
-      await commands.executeCommand("kilo-code.v2.chat.focus")
-      await view.post({ type: "command", name: "cycleAgentMode" })
-    }),
-    commands.registerCommand("kilo-code.v2.cyclePreviousAgentMode", async () => {
-      await commands.executeCommand("kilo-code.v2.chat.focus")
-      await view.post({ type: "command", name: "cyclePreviousAgentMode" })
-    }),
+    commands.registerCommand("kilo-code.v2.cycleAgentMode", () => cycle("cycleAgentMode")),
+    commands.registerCommand("kilo-code.v2.cyclePreviousAgentMode", () => cycle("cyclePreviousAgentMode")),
     commands.registerCommand(
       "kilo-code.v2.generateCommitMessage",
       commitMessageCommand({
@@ -162,12 +221,39 @@ export function activate(context: ExtensionContext) {
       )
         void server.stop()
     }),
-    { dispose: () => void server.stop() },
+    window.registerWebviewPanelSerializer(PANEL_TYPE, {
+      deserializeWebviewPanel: async (restored) => agentManager.deserializePanel(restored),
+    }),
+    commands.registerCommand("kilo-code.v2.agentManager.open", () => agentManager.openPanel()),
+    commands.registerCommand("kilo-code.v2.agentManager.openInNewWindow", async () => {
+      agentManager.openPanel()
+      await commands.executeCommand("workbench.action.moveEditorToNewWindow")
+    }),
+    ...agentCommands.map(([command, action]) =>
+      commands.registerCommand(`kilo-code.v2.agentManager.${command}`, () => agentAction(action)),
+    ),
+    ...Array.from({ length: 9 }, (_, index) =>
+      commands.registerCommand(`kilo-code.v2.agentManager.jumpTo${index + 1}`, () =>
+        agentAction(`jumpTo${index + 1}`),
+      ),
+    ),
+    commands.registerCommand("kilo-code.v2.agentManager.advancedWorktree", () => agentManager.openAdvancedWorktree()),
+    commands.registerCommand("kilo-code.v2.agentManager.diagnostics", () => {
+      void agentManager.diagnose().catch((error: unknown) => {
+        output.appendLine(`Agent Manager diagnostics failed: ${String(error)}`)
+      })
+    }),
+    agentManager,
+    { dispose: () => connection.dispose() },
+    { dispose: () => void shutdown.run(() => server.stop()) },
     { dispose: alerts.dispose },
   )
+  shutdownExtension = () => shutdown.run(() => server.stop())
 
   // `bun run extension` opens a development host: show the chat right away.
   if (context.extensionMode === ExtensionMode.Development) void commands.executeCommand("kilo-code.v2.chat.focus")
 }
 
-export function deactivate() {}
+export function deactivate() {
+  return shutdownExtension?.()
+}

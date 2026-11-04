@@ -301,6 +301,7 @@ export const dict = {
   "notification.permission.descriptionSandboxEscalation":
     "يُشغّل هذا الأمر بالكامل مع إزالة قيود نظام الملفات والشبكة، لهذا الأمر فقط. يجب أن يكتب Git في .git، وهو للقراءة فقط داخل البيئة المعزولة ويقع خارج شجرة العمل في worktree مرتبط. لا توافق قواعد سماح Bash والموافقة التلقائية على هذا الطلب تلقائياً أبداً.",
   "ui.permission.manageAutoApprove": "إدارة قواعد الموافقة التلقائية",
+  "ui.permission.noChanges": "لا توجد تغييرات.",
   "ui.permission.reject": "رفض",
   "ui.permission.feedbackPlaceholder": "أخبر Kilo بما يجب فعله بشكل مختلف",
   "ui.permission.feedbackHint": "Enter للرفض، Esc للإلغاء",
@@ -343,6 +344,8 @@ export const dict = {
 
   "session.tab.review": "مراجعة",
   "session.review.filesChanged": "تم تغيير {{count}} ملفات",
+  "session.review.viewTurnChanges": "عرض تغييرات الدور",
+  "session.review.turnChangesEmpty": "لا توجد تغييرات في هذا الدور.",
   "session.review.loadingChanges": "جارٍ تحميل التغييرات...",
   "session.review.noChanges": "لا توجد تغييرات",
   "session.messages.loadingEarlier": "جارٍ تحميل الرسائل السابقة...",
@@ -1415,6 +1418,8 @@ export const dict = {
   "diffViewer.source.unstaged.tooltip":
     "الملفات المعدّلة في شجرة العمل ولكن لم يتم تهيئتها بعد، بالإضافة إلى الملفات غير المتتبعة (الجديدة).",
   "diffViewer.source.session.label": "الجلسة",
+  "diffViewer.source.turn.tooltip": "الملفات التي غيّرها Kilo خلال دور واحد.",
+  "diffViewer.source.turn.label": "الدور",
   "diffViewer.source.session.tooltip":
     "الملفات التي غيّرها Kilo خلال الجلسة الحالية، بناءً على لقطات لكل دور. يُعاد ضبطها عند بدء جلسة جديدة.",
   "diffViewer.group.session": "الجلسة",

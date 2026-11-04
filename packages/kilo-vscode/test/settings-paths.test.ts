@@ -58,7 +58,7 @@ describe("resolveKiloProfile", () => {
       const context = { extensionPath: path.join(base, "ext"), globalStorageUri: { fsPath: "/storage" } }
       expect(resolveKiloProfile(context, { KILO_V2_PROFILE: "/prof" }, "linux")).toBe("")
     } finally {
-      await rm(base, { recursive: true, force: true })
+      await rm(base, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 })
     }
   })
 })
@@ -84,7 +84,7 @@ describe("canonicalPath", () => {
       expect(await matchConfigDocument([path.join(real, "kilo2.json")], entries)).toBe(document)
       expect(await matchConfigDocument([path.join(real, "missing.json")], entries)).toBeUndefined()
     } finally {
-      await rm(base, { recursive: true, force: true })
+      await rm(base, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 })
     }
   })
 })
