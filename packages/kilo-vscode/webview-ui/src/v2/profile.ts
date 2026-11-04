@@ -37,22 +37,59 @@ export function createProfile() {
   const [usage, setUsage] = createSignal<ProviderUsage.Info>()
   const [usageLoading, setUsageLoading] = createSignal(false)
   const [usageError, setUsageError] = createSignal<string>()
-  const state: { attempt?: string; timer?: ReturnType<typeof setTimeout>; usage: number } = { usage: 0 }
+  const state: { attempt?: string; timer?: ReturnType<typeof setTimeout>; usage: number; profile: number } = {
+    usage: 0,
+    profile: 0,
+  }
 
-  const refresh = async () => {
-    // Only the contract's `unauthorized` error means signed out; other failures are real errors.
-    const status = await rpc.authStatus({}, { location }).catch((error: { type?: string }) => {
+  // Only the contract's `unauthorized` error means signed out; other failures are real errors.
+  const status = () =>
+    rpc.authStatus({}, { location }).catch((error: { type?: string }) => {
       if (error?.type === "unauthorized") return undefined
       throw error
     })
-    if (!status?.authenticated) return void setData(null)
+
+  const account = async (): Promise<ProfileData | null> => {
+    if (!(await status())?.authenticated) return null
     const [profile, balance, kiloPass] = await Promise.all([
       rpc.profile({}, { location }),
       rpc.balance({}, { location }).catch(() => null),
       rpc.kiloPass({}, { location }).catch(() => null),
     ])
-    setData({ profile, balance, kiloPass })
+    return { profile, balance, kiloPass }
   }
+
+  const refresh = async () => {
+    // As usage: only the latest read writes, so an answer for an earlier account cannot replace a newer one.
+    const read = ++state.profile
+    const next = await account()
+    if (read !== state.profile) return
+    setData(next)
+    // A completed sign-in shows its success state until the account loads (see the `provider.updated` handler).
+    if (next && auth().status === "success") setAuth({ status: "idle" })
+  }
+
+  // The OAuth attempt completes when the credential is saved, but the Gateway loads the new account after that, and
+  // reports it as signed out until the load ends with `provider.updated`. Other clients can also sign in or out or
+  // switch the team. So after each `provider.updated` of this directory, read the account again when it changed.
+  onCleanup(
+    v2.data.on("provider.updated", (event) => {
+      // `undefined`: the profile was never read, so the next view reads it.
+      if (event.location?.directory !== v2.directory || data() === undefined) return
+      void status()
+        .then((current) => {
+          const shown = data()
+          const same = current?.authenticated
+            ? shown?.profile.organizationID === current.organizationID
+            : shown === null
+          if (same) return
+          // As v1: a new account invalidates the cached usage.
+          loadUsage(true)
+          return refresh()
+        })
+        .catch(v2.report)
+    }),
+  )
 
   const stop = () => {
     clearTimeout(state.timer)
@@ -80,9 +117,7 @@ export function createProfile() {
         loadUsage(true)
         // The attempt stays set until the refresh settles, so a failed refresh reaches the error state below.
         return refresh().then(() => {
-          if (state.attempt !== attempt) return
-          state.attempt = undefined
-          setAuth({ status: "idle" })
+          if (state.attempt === attempt) state.attempt = undefined
         })
       })
       .catch((error: unknown) => {
