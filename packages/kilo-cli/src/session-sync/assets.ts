@@ -515,13 +515,17 @@ export const collect = Effect.fn("SessionSync.Assets.collect")(function* (
         if (candidate.reference.startsWith("media:")) {
           // Native cleanup snapshots transfer to the fsynced spool; retain no second byte copy.
           yield* db
-            .run(sql`DELETE FROM _kilo_sync_media_reference
-              WHERE session_id=${row.session_id} AND entity_id=${row.id} AND hash=${blob.hash}`)
+            .run(
+              sql`DELETE FROM _kilo_sync_media_reference
+              WHERE session_id=${row.session_id} AND entity_id=${row.id} AND hash=${blob.hash}`,
+            )
             .pipe(Effect.orDie)
           yield* db
-            .run(sql`DELETE FROM _kilo_sync_media AS m WHERE m.session_id=${row.session_id} AND m.hash=${blob.hash}
+            .run(
+              sql`DELETE FROM _kilo_sync_media AS m WHERE m.session_id=${row.session_id} AND m.hash=${blob.hash}
               AND NOT EXISTS (SELECT 1 FROM _kilo_sync_media_reference r
-                WHERE r.session_id=m.session_id AND r.hash=m.hash)`)
+                WHERE r.session_id=m.session_id AND r.hash=m.hash)`,
+            )
             .pipe(Effect.orDie)
         }
         if (
@@ -608,7 +612,8 @@ export const remove = Effect.fn("SessionSync.Assets.remove")(function* (db: DB, 
 const withinBudget = Effect.fn("SessionSync.Assets.withinBudget")(function* (db: DB, sessionID: string, blob: BlobRef) {
   // Native-cleanup snapshots and spool reservations share one logical session budget.
   const retained = yield* db
-    .get<{ bytes: number }>(sql`SELECT coalesce(sum(bytes),0) AS bytes FROM (
+    .get<{ bytes: number }>(
+      sql`SELECT coalesce(sum(bytes),0) AS bytes FROM (
       SELECT hash,max(bytes) AS bytes FROM (
         SELECT hash,bytes FROM _kilo_sync_media WHERE session_id=${sessionID}
         UNION ALL SELECT hash,bytes FROM _kilo_sync_asset_reference WHERE session_id=${sessionID}
@@ -617,7 +622,8 @@ const withinBudget = Effect.fn("SessionSync.Assets.withinBudget")(function* (db:
           FROM _kilo_sync_packet p,json_each(p.blobs) b WHERE p.session_id=${sessionID}
         UNION ALL SELECT ${blob.hash},${blob.bytes}
       ) GROUP BY hash
-    )`)
+    )`,
+    )
     .pipe(Effect.orDie)
   if ((retained?.bytes ?? 0) > limits.session)
     return yield* fail("asset_error", "The retained session assets exceed the 256 MiB session budget")
@@ -710,20 +716,32 @@ const migrateLegacy = Effect.fn("SessionSync.Assets.migrateLegacy")(function* (d
 // Run only between packet preparations, never between collect/spool and Store.freeze. Current
 // native/dirty locators retain asset snapshots; immutable packets independently retain both assets
 // and large entity bodies. ACKed entity bodies are reconstructible and do not occupy the spool.
-export const prune = Effect.fn("SessionSync.Assets.prune")(function* (db: DB, global: Global.Interface) {
+export const prune = Effect.fn("SessionSync.Assets.prune")(function* (
+  db: DB,
+  global: Global.Interface,
+  session?: string,
+) {
   yield* retention.withPermit(
     Effect.gen(function* () {
-      yield* migrateLegacy(db)
-      yield* trimProvenance(db)
+      if (session === undefined) {
+        yield* migrateLegacy(db)
+        yield* trimProvenance(db)
+      }
       yield* db
-        .run(sql`DELETE FROM _kilo_sync_media_reference AS r WHERE NOT EXISTS (
+        .run(
+          sql`DELETE FROM _kilo_sync_media_reference AS r
+          WHERE ${session === undefined ? sql`1` : sql`r.session_id=${session}`} AND NOT EXISTS (
           SELECT 1 FROM _kilo_sync_dirty d WHERE d.session_id=r.session_id AND d.id=r.entity_id
             AND d.kind IN ('message','inbox') AND d.op='put'
-            AND ((d.kind='message' AND d.value IS NULL) OR instr(d.value,'media:'||r.hash)>0))`)
+            AND ((d.kind='message' AND d.value IS NULL) OR instr(d.value,'media:'||r.hash)>0))`,
+        )
         .pipe(Effect.orDie)
       yield* db
-        .run(sql`DELETE FROM _kilo_sync_media AS m WHERE NOT EXISTS (
-          SELECT 1 FROM _kilo_sync_media_reference r WHERE r.session_id=m.session_id AND r.hash=m.hash)`)
+        .run(
+          sql`DELETE FROM _kilo_sync_media AS m
+          WHERE ${session === undefined ? sql`1` : sql`m.session_id=${session}`} AND NOT EXISTS (
+          SELECT 1 FROM _kilo_sync_media_reference r WHERE r.session_id=m.session_id AND r.hash=m.hash)`,
+        )
         .pipe(Effect.orDie)
       const keep = new Map<string, Set<string>>()
       const retain = (namespace: string, hash: string) => {
@@ -734,48 +752,59 @@ export const prune = Effect.fn("SessionSync.Assets.prune")(function* (db: DB, gl
       }
       yield* db
         .run(
-          sql`DELETE FROM _kilo_sync_asset_reference AS r WHERE
+          sql`DELETE FROM _kilo_sync_asset_reference AS r
+      WHERE ${session === undefined ? sql`1` : sql`r.session_id=${session}`} AND (
       (r.locator='@body' AND NOT EXISTS (SELECT 1 FROM _kilo_sync_dirty d
         WHERE d.session_id=r.session_id AND d.kind=r.kind AND d.id=r.entity_id AND d.op='put'))
       OR (r.locator<>'@body' AND NOT EXISTS (SELECT 1 FROM _kilo_sync_dirty d
         WHERE d.session_id=r.session_id AND d.kind=r.kind AND d.id=r.entity_id AND d.op='put')
         AND ((r.kind='message' AND NOT EXISTS (SELECT 1 FROM session_message n WHERE n.session_id=r.session_id AND n.id=r.entity_id))
-          OR (r.kind='inbox' AND NOT EXISTS (SELECT 1 FROM session_inbox n WHERE n.session_id=r.session_id AND n.id=r.entity_id))))`,
+          OR (r.kind='inbox' AND NOT EXISTS (SELECT 1 FROM session_inbox n WHERE n.session_id=r.session_id AND n.id=r.entity_id)))))`,
         )
         .pipe(Effect.orDie)
       yield* db
         .run(
-          sql`DELETE FROM _kilo_sync_asset AS a WHERE NOT EXISTS (
+          sql`DELETE FROM _kilo_sync_asset AS a
+      WHERE ${session === undefined ? sql`1` : sql`a.session_id=${session}`} AND NOT EXISTS (
       SELECT 1 FROM _kilo_sync_asset_reference r WHERE r.session_id=a.session_id AND r.locator=a.locator AND r.hash=a.hash)`,
         )
         .pipe(Effect.orDie)
       const assets = yield* db
         .all<{ session_id: string; locator: string; hash: string }>(
-          sql`SELECT session_id,locator,hash FROM _kilo_sync_asset_reference
-        UNION SELECT session_id,locator,hash FROM _kilo_sync_asset`,
+          sql`SELECT session_id,locator,hash FROM _kilo_sync_asset_reference WHERE ${session === undefined ? sql`1` : sql`session_id=${session}`}
+        UNION SELECT session_id,locator,hash FROM _kilo_sync_asset WHERE ${session === undefined ? sql`1` : sql`session_id=${session}`}`,
         )
         .pipe(Effect.orDie)
       for (const asset of assets) retain(asset.session_id, asset.hash)
       const packets = yield* db
-        .all<{ session_id: string; blobs: string }>(sql`SELECT session_id,blobs FROM _kilo_sync_packet`)
+        .all<{ session_id: string; blobs: string }>(
+          sql`SELECT session_id,blobs FROM _kilo_sync_packet
+          WHERE ${session === undefined ? sql`1` : sql`session_id=${session}`}`,
+        )
         .pipe(Effect.orDie)
       const decodeBlobs = Schema.decodeUnknownSync(
         Schema.fromJsonString(Schema.Array(Schema.Struct({ hash: Schema.String, bytes: Schema.Number }))),
       )
       for (const packet of packets) for (const blob of decodeBlobs(packet.blobs)) retain(packet.session_id, blob.hash)
-      const allowed = yield* db
-        .all<{ directory: string; hash: string }>(sql`SELECT directory,hash FROM _kilo_sync_allowed_asset`)
-        .pipe(Effect.orDie)
+      const allowed =
+        session === undefined
+          ? yield* db
+              .all<{ directory: string; hash: string }>(sql`SELECT directory,hash FROM _kilo_sync_allowed_asset`)
+              .pipe(Effect.orDie)
+          : []
       for (const asset of allowed) retain(pool(asset.directory), asset.hash)
-      const owned = yield* db
-        .all<{
-          path: string
-          directory: string
-          hash: string | null
-          observed_at: number
-          captured: number
-        }>(sql`SELECT path,directory,hash,observed_at,captured FROM _kilo_sync_owned_asset`)
-        .pipe(Effect.orDie)
+      const owned =
+        session === undefined
+          ? yield* db
+              .all<{
+                path: string
+                directory: string
+                hash: string | null
+                observed_at: number
+                captured: number
+              }>(sql`SELECT path,directory,hash,observed_at,captured FROM _kilo_sync_owned_asset`)
+              .pipe(Effect.orDie)
+          : []
       const pending = owned.some((asset) => asset.hash !== null) ? yield* pendingPaths(db) : new Set<string>()
       const locators = new Set(assets.map((asset) => asset.locator))
       for (const asset of owned)
@@ -787,41 +816,59 @@ export const prune = Effect.fn("SessionSync.Assets.prune")(function* (db: DB, gl
             (asset.captured === 0 && asset.observed_at >= Date.now() - 60_000))
         )
           retain(pool(asset.directory), asset.hash)
-      yield* db.run(sql`DELETE FROM _kilo_sync_preparation WHERE deadline<=${Date.now()}`).pipe(Effect.orDie)
+      yield* db
+        .run(
+          sql`DELETE FROM _kilo_sync_preparation
+        WHERE deadline<=${Date.now()} AND ${session === undefined ? sql`1` : sql`namespace=${digest(session)}`}`,
+        )
+        .pipe(Effect.orDie)
       const preparations = yield* db
-        .all<{ namespace: string; hash: string }>(sql`SELECT namespace,hash FROM _kilo_sync_preparation`)
+        .all<{ namespace: string; hash: string }>(
+          sql`SELECT namespace,hash FROM _kilo_sync_preparation
+          WHERE ${session === undefined ? sql`1` : sql`namespace=${digest(session)}`}`,
+        )
         .pipe(Effect.orDie)
       for (const preparation of preparations) {
         const hashes = keep.get(preparation.namespace) ?? new Set<string>()
         hashes.add(preparation.hash)
         keep.set(preparation.namespace, hashes)
       }
-      const names = yield* db
-        .all<{ namespace: string }>(
-          sql`
+      const names =
+        session === undefined
+          ? yield* db
+              .all<{ namespace: string }>(
+                sql`
       SELECT id AS namespace FROM _kilo_sync_session
       UNION SELECT session_id FROM _kilo_sync_asset_reference
       UNION SELECT session_id FROM _kilo_sync_packet
       UNION SELECT 'workspace:'||directory FROM _kilo_sync_owned_asset
       UNION SELECT 'workspace:'||directory FROM _kilo_sync_allowed_asset
     `,
-        )
-        .pipe(Effect.orDie)
+              )
+              .pipe(Effect.orDie)
+          : [{ namespace: session }]
       const namespacesByHash = new Map(names.map((name) => [digest(name.namespace), name.namespace]))
       const root = path.join(global.data, "session-sync", "spool")
-      const namespaces = yield* Effect.tryPromise({
-        try: () =>
-          readdir(root, { withFileTypes: true }).catch((error: NodeJS.ErrnoException) => {
-            if (error.code === "ENOENT") return []
-            throw error
-          }),
-        catch: () => fail("asset_error", "Cannot enumerate obsolete session asset snapshots"),
-      })
+      const namespaces =
+        session === undefined
+          ? yield* Effect.tryPromise({
+              try: () =>
+                readdir(root, { withFileTypes: true }).catch((error: NodeJS.ErrnoException) => {
+                  if (error.code === "ENOENT") return []
+                  throw error
+                }),
+              catch: () => fail("asset_error", "Cannot enumerate obsolete session asset snapshots"),
+            })
+          : [{ name: digest(session), isDirectory: () => true }]
       for (const namespace of namespaces) {
         if (!namespace.isDirectory() || !/^[0-9a-f]{64}$/.test(namespace.name)) continue
         const directory = path.join(root, namespace.name)
         const files = yield* Effect.tryPromise({
-          try: () => readdir(directory),
+          try: () =>
+            readdir(directory).catch((error: NodeJS.ErrnoException) => {
+              if (error.code === "ENOENT") return []
+              throw error
+            }),
           catch: () => fail("asset_error", "Cannot enumerate obsolete session asset snapshots"),
         })
         for (const file of files) {
@@ -848,7 +895,8 @@ export const prune = Effect.fn("SessionSync.Assets.prune")(function* (db: DB, gl
           const trash = yield* db
             .transaction((tx) =>
               Effect.gen(function* () {
-                yield* tx.run(sql`DELETE FROM _kilo_sync_preparation WHERE deadline<=${Date.now()}`)
+                yield* tx.run(sql`DELETE FROM _kilo_sync_preparation WHERE deadline<=${Date.now()}
+                  AND namespace=${namespace.name}`)
                 if (
                   yield* tx.get(sql`SELECT 1 FROM _kilo_sync_preparation
             WHERE namespace=${namespace.name} AND hash=${hash} AND deadline>${Date.now()} LIMIT 1`)

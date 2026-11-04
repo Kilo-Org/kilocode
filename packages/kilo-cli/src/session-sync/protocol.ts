@@ -72,10 +72,27 @@ export class Failure extends Schema.TaggedError<Failure>()("SessionSyncFailure",
   message: Schema.String,
   retryable: Schema.Boolean,
   retryAt: Schema.optional(Schema.Number),
+  hash: Schema.optional(Schema.String),
 }) {}
 
-export const fail = (code: string, message: string, retryable = false, retryAt?: number) =>
-  new Failure({ code, message, retryable, ...(retryAt === undefined ? {} : { retryAt }) })
+export const fail = (code: string, message: string, retryable = false, retryAt?: number, hash?: string) =>
+  new Failure({
+    code,
+    message,
+    retryable,
+    ...(retryAt === undefined ? {} : { retryAt }),
+    ...(hash === undefined ? {} : { hash }),
+  })
+
+export const retryTime = (attempts: number, retryAt = 0, now = Date.now(), random = Math.random()) =>
+  Math.max(now, retryAt) + Math.floor(random * Math.min(60_000, 1000 * 2 ** Math.min(attempts, 6)))
+
+const retryHeader = (value: string | null, now: number) => {
+  if (value === null) return 0
+  if (/^\d+$/.test(value.trim())) return now + Number(value) * 1000
+  const date = Date.parse(value)
+  return Number.isFinite(date) ? date : 0
+}
 export const digest = (bytes: string | Uint8Array) => createHash("sha256").update(bytes).digest("hex")
 export const json = Schema.decodeUnknownSync(Schema.Json)
 export const parse = Schema.decodeUnknownSync(Schema.fromJsonString(Schema.Json))
@@ -110,7 +127,11 @@ export const destination = Effect.fn("SessionSync.destination")(function* (input
 })
 
 const ErrorBody = Schema.Struct({
-  error: Schema.Struct({ code: Schema.String, retryAt: Schema.optional(Schema.Number) }),
+  error: Schema.Struct({
+    code: Schema.String,
+    retryAt: Schema.optional(Schema.Number),
+    details: Schema.optional(Schema.Struct({ hash: Schema.optional(Schema.String) })),
+  }),
 })
 const decodeError = Schema.decodeUnknownOption(ErrorBody)
 
@@ -135,6 +156,8 @@ const errorCodes: Record<string, true> = {
   length_required: true,
   request_too_large: true,
   storage_budget_exceeded: true,
+  tenant_budget_exceeded: true,
+  rate_limited: true,
   internal_error: true,
   invalid_credential: true,
   unsupported_credential: true,
@@ -173,7 +196,11 @@ export const request = Effect.fn("SessionSync.request")(function* (
         },
         body,
       })
-      if (!response.body) return { ok: response.ok, status: response.status, text: "" }
+      const retryAt =
+        response.status === 429 || response.status === 503
+          ? retryHeader(response.headers.get("retry-after"), Date.now())
+          : 0
+      if (!response.body) return { ok: response.ok, status: response.status, text: "", retryAt }
       const reader = response.body.getReader()
       const cancel = () => {
         void reader.cancel().catch(() => undefined)
@@ -191,6 +218,7 @@ export const request = Effect.fn("SessionSync.request")(function* (
             return {
               ok: response.ok,
               status: response.status,
+              retryAt,
               text: new TextDecoder().decode(buffer.subarray(0, length)),
             }
           if (chunk.value.byteLength > buffer.byteLength - length) {
@@ -199,6 +227,7 @@ export const request = Effect.fn("SessionSync.request")(function* (
               "response_too_large",
               "The sync service returned an oversized response; pending changes are retained",
               response.status >= 500 || response.status === 408 || response.status === 429,
+              retryAt || undefined,
             )
           }
           buffer.set(chunk.value, length)
@@ -222,8 +251,15 @@ export const request = Effect.fn("SessionSync.request")(function* (
     return yield* fail(
       code,
       `Sync service rejected the request (${code})`,
-      response.status >= 500 || response.status === 408 || response.status === 429 || code === "upload_in_progress",
-      error?._tag === "Some" ? error.value.error.retryAt : undefined,
+      code !== "tenant_budget_exceeded" &&
+        (response.status >= 500 ||
+          response.status === 408 ||
+          response.status === 429 ||
+          code === "upload_in_progress" ||
+          code === "blob_missing" ||
+          code === "rate_limited"),
+      Math.max(response.retryAt, error?._tag === "Some" ? (error.value.error.retryAt ?? 0) : 0) || undefined,
+      error?._tag === "Some" ? error.value.error.details?.hash : undefined,
     )
   }
   if (decoded._tag === "None") return yield* fail("invalid_response", "The sync service returned an invalid response")

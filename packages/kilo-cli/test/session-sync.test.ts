@@ -86,6 +86,11 @@ const peer = () => {
     mode: "online" as "online" | "offline" | "lost-ack" | "gate" | "hang",
     sourceConflict: false,
     hangExchange: false,
+    exchangeFailures: false,
+    exchanges: 0,
+    quota: false,
+    retryAfter: false,
+    gatedReads: 0,
     blobGateAt: 0,
     blobDelay: 0,
     stateGate: false,
@@ -97,9 +102,21 @@ const peer = () => {
     fetch: async (request) => {
       const url = new URL(request.url)
       const error = (code: string, status: number) =>
-        Response.json({ error: { code, message: "fixture failure" } }, { status })
+        Response.json(
+          { error: { code, message: "fixture failure" } },
+          {
+            status,
+            headers: status === 503 && control.retryAfter ? { "Retry-After": "120" } : {},
+          },
+        )
       const token = request.headers.get("authorization")?.replace("Bearer ", "") ?? ""
       if (url.pathname === "/v1/auth/exchange") {
+        control.exchanges++
+        if (control.exchangeFailures)
+          return Response.json(
+            { error: { code: "auth_unavailable" } },
+            { status: 503, headers: { "Retry-After": "120" } },
+          )
         if (!token.startsWith("fixture:")) return error("invalid_credential", 401)
         if (control.hangExchange) {
           entered.resolve()
@@ -127,6 +144,7 @@ const peer = () => {
         const body = await request.text()
         bodies.push(body)
         if (control.mode === "offline") return error("internal_error", 503)
+        if (control.quota) return error("tenant_budget_exceeded", 413)
         const packet = readPacket(body)
         const state = states.get(sessionID)
         if (!state) return error("session_not_found", 404)
@@ -138,7 +156,11 @@ const peer = () => {
           if (change.op === "remove") state.entities.delete(key)
           else if (change.blob) {
             const bytes = blobs.get(`${sessionID}/${change.blob.hash}`)
-            if (!bytes || bytes.byteLength !== change.blob.bytes) return error("blob_missing", 409)
+            if (!bytes || bytes.byteLength !== change.blob.bytes)
+              return Response.json(
+                { error: { code: "blob_missing", details: { hash: change.blob.hash } } },
+                { status: 409 },
+              )
             state.entities.set(key, parse(Buffer.from(bytes).toString("utf8")))
           } else if (change.value !== undefined) state.entities.set(key, change.value)
         }
@@ -200,6 +222,7 @@ const peer = () => {
       })
       if (request.method === "GET" && control.stateGate) {
         entered.resolve()
+        control.gatedReads++
         await gate.promise
       }
       return response
@@ -574,8 +597,7 @@ it.live("fork copies and direct instruction removal enter the same native captur
     yield* s.bus.publish(SessionEvent.Forked, {
       sessionID: fork,
       parentID: id,
-      boundary: { type: "through", messageID },
-    })
+      boundary: { type: "through", messageID },    })
     const copied = yield* Store.dirty(s.db, fork)
     expect(copied.find((row) => row.kind === "message")?.value).toContain("parent history")
     expect(copied.find((row) => row.kind === "session")?.value).toContain(id)
@@ -1174,8 +1196,7 @@ it.live("the flush deadline aborts a hanging HTTP pass without changing its froz
   Effect.gen(function* () {
     const f = yield* fixture
     const s = yield* boot(f.root, { flushTimeout: 200 })
-    yield* signIn(s.credentials)
-    yield* seed(s.db, f.directory)
+    yield* signIn(s.credentials)    yield* seed(s.db, f.directory)
     yield* s.sync.enable({ directory: f.directory, destination: f.backend.url, local: true, organizationID: null })
     f.backend.control.mode = "offline"
     yield* s.sync.flush({ directory: f.directory })
@@ -1774,8 +1795,7 @@ it.live(
         ).toString(),
       ).toBe(approvedBytes.toString())
       expect(yield* Effect.promise(() => readdir(path.dirname(temporary)))).toEqual([])
-      expect(yield* Store.packet(s.db, id)).toEqual(pending)
-      f.backend.control.mode = "online"
+      expect(yield* Store.packet(s.db, id)).toEqual(pending)      f.backend.control.mode = "online"
       expect((yield* s.sync.flush({ directory: f.directory })).pending).toBe(0)
       expect(yield* Assets.read(s.global, id, replacement).pipe(Effect.result)).toMatchObject({ _tag: "Failure" })
     }),
@@ -2051,4 +2071,173 @@ it.live(
       expect(total).toBeGreaterThan(256 * 1024 * 1024)
     }),
   90_000,
+)
+
+it.live("shares one exchange outage cooldown across sessions and explicit flushes", () =>
+  Effect.gen(function* () {
+    const f = yield* fixture
+    const s = yield* boot(f.root)
+    yield* signIn(s.credentials)
+    for (let n = 0; n < 40; n++)
+      yield* seed(s.db, f.directory, Session.ID.make(`ses_outage_${String(n).padStart(2, "0")}`))
+    yield* allow(s.db, f.directory, f.backend)
+    f.backend.control.exchangeFailures = true
+    expect((yield* s.sync.flush({ directory: f.directory })).pending).toBeGreaterThan(0)
+    expect(f.backend.control.exchanges).toBe(1)
+    const sessions = yield* Store.sessions(s.db, f.directory)
+    expect(sessions.filter((row) => row.retry_at > Date.now())).toHaveLength(32)
+    yield* s.sync.flush({ directory: f.directory })
+    yield* s.sync.flush({ directory: f.directory })
+    expect(f.backend.control.exchanges).toBe(1)
+    expect((yield* Store.sessions(s.db, f.directory)).every((row) => row.retry_at > Date.now())).toBe(true)
+  }),
+)
+
+it.live("rotates session 33 ahead of continuously dirty sessions", () =>
+  Effect.gen(function* () {
+    const f = yield* fixture
+    const s = yield* boot(f.root)
+    yield* signIn(s.credentials)
+    const last = Session.ID.make("ses_fair_32")
+    for (let n = 0; n < 33; n++)
+      yield* seed(s.db, f.directory, Session.ID.make(`ses_fair_${String(n).padStart(2, "0")}`))
+    yield* allow(s.db, f.directory, f.backend)
+    yield* s.db.run(`CREATE TRIGGER _test_keep_dirty AFTER DELETE ON _kilo_sync_dirty
+      WHEN OLD.session_id<>'ses_fair_32' BEGIN
+      UPDATE session_v2 SET time_updated=time_updated+1 WHERE id=OLD.session_id; END`)
+    const flushing = yield* s.sync.flush({ directory: f.directory }).pipe(Effect.result, Effect.forkScoped)
+    yield* Effect.sync(() => f.backend.states.get(last)?.position ?? 0).pipe(
+      Effect.repeat({ while: (position) => position === 0, schedule: Schedule.spaced(10) }),
+      Effect.timeout(5000),
+    )
+    yield* Fiber.interrupt(flushing)
+    expect(f.backend.states.get(last)?.position).toBeGreaterThan(0)
+    expect((yield* Store.sessions(s.db, f.directory)).every((row) => row.last_attempt > 0)).toBe(true)
+  }),
+)
+
+it.live("reuses acknowledged blob knowledge across packets and reuploads an expired hint", () =>
+  Effect.gen(function* () {
+    const f = yield* fixture
+    const s = yield* boot(f.root)
+    yield* signIn(s.credentials)
+    yield* seed(s.db, f.directory)
+    yield* allow(s.db, f.directory, f.backend)
+    const output = yield* s.output(f.directory)
+    const file = yield* output.save(Buffer.from("immutable attachment"), ".txt")
+    yield* writeTool(s.db, {}, pathToFileURL(file).href)
+    expect((yield* s.sync.flush({ directory: f.directory })).pending).toBe(0)
+    const hash = digest("immutable attachment")
+    expect(f.backend.blobRequests.filter((item) => item === hash)).toHaveLength(1)
+    yield* s.db.update(SessionMessageTable).set({ time_updated: 21 }).where(eq(SessionMessageTable.id, messageID)).run()
+    expect((yield* s.sync.flush({ directory: f.directory })).pending).toBe(0)
+    expect(f.backend.blobRequests.filter((item) => item === hash)).toHaveLength(1)
+    // Lose a server-side body hint after ACK, then reference identical bytes again.
+    const text = "large immutable body ".repeat(5000)
+    const bodyID = SessionMessage.ID.make("msg_known_body")
+    yield* writeMessage(s.db, text, id, 1, bodyID)
+    expect((yield* s.sync.flush({ directory: f.directory })).pending).toBe(0)
+    const bodyHash = f.backend.blobRequests.at(-1)!
+    f.backend.blobs.delete(`${id}/${bodyHash}`)
+    yield* s.db.update(SessionMessageTable).set({ time_updated: 22 }).where(eq(SessionMessageTable.id, bodyID)).run()
+    expect((yield* s.sync.flush({ directory: f.directory })).error?.code).toBe("blob_missing")
+    expect((yield* s.sync.flush({ directory: f.directory })).pending).toBe(0)
+    expect(f.backend.blobRequests.filter((item) => item === bodyHash)).toHaveLength(2)
+  }),
+)
+
+it.live("dirty materialization stops at its byte budget and permits one externalized entity", () =>
+  Effect.gen(function* () {
+    const f = yield* fixture
+    const s = yield* boot(f.root)
+    yield* seed(s.db, f.directory)
+    yield* allow(s.db, f.directory, f.backend)
+    yield* s.db.run(sql`DELETE FROM _kilo_sync_dirty WHERE session_id=${id}`)
+    for (let n = 0; n < 64; n++)
+      yield* writeMessage(s.db, "x".repeat(1024), id, n, SessionMessage.ID.make(`msg_budget_${n}`))
+    const rows = yield* Store.dirty(s.db, id, 2300)
+    expect(rows).toHaveLength(2)
+    expect(rows.reduce((bytes, row) => bytes + Buffer.byteLength(row.value ?? ""), 0)).toBeLessThanOrEqual(2300)
+    expect(yield* Store.dirty(s.db, id, 1)).toHaveLength(1)
+    expect(yield* s.db.all(sql`SELECT id FROM _kilo_sync_dirty WHERE session_id=${id}`)).toHaveLength(64)
+  }),
+)
+
+it.live("tenant quota pauses until an explicit retry", () =>
+  Effect.gen(function* () {
+    const f = yield* fixture
+    const s = yield* boot(f.root)
+    yield* signIn(s.credentials)
+    yield* seed(s.db, f.directory)
+    yield* allow(s.db, f.directory, f.backend)
+    f.backend.control.quota = true
+    expect((yield* s.sync.flush({ directory: f.directory })).error?.code).toBe("tenant_budget_exceeded")
+    expect((yield* Store.sessions(s.db, f.directory))[0]?.retry_at).toBe(Number.MAX_SAFE_INTEGER)
+    f.backend.control.quota = false
+    expect((yield* s.sync.flush({ directory: f.directory })).pending).toBe(0)
+  }),
+)
+
+it.live("ACK cleanup visits only its session namespace and preserves current preparation pins", () =>
+  Effect.gen(function* () {
+    const f = yield* fixture
+    const s = yield* boot(f.root)
+    yield* seed(s.db, f.directory)
+    yield* allow(s.db, f.directory, f.backend)
+    const obsolete = yield* Assets.spool(s.global, id, Buffer.from("obsolete acknowledged body"))
+    const pinned = yield* Assets.spool(s.global, id, Buffer.from("active preparation"))
+    const other = yield* Assets.spool(s.global, "other-session", Buffer.from("another session"))
+    const approval = yield* Assets.spool(s.global, `workspace:${f.directory}`, Buffer.from("exact approval"))
+    yield* s.db.run(sql`INSERT INTO _kilo_sync_preparation(token,namespace,hash,bytes,deadline)
+      VALUES('test-pin',${digest(id)},${pinned.hash},${pinned.bytes},${Date.now() + 60_000})`)
+    yield* Assets.prune(s.db, s.global, id)
+    expect(yield* Assets.read(s.global, id, obsolete).pipe(Effect.result)).toMatchObject({ _tag: "Failure" })
+    expect(yield* Assets.read(s.global, id, pinned).pipe(Effect.result)).toMatchObject({ _tag: "Success" })
+    expect(yield* Assets.read(s.global, "other-session", other).pipe(Effect.result)).toMatchObject({ _tag: "Success" })
+    expect(yield* Assets.read(s.global, `workspace:${f.directory}`, approval).pipe(Effect.result)).toMatchObject({
+      _tag: "Success",
+    })
+  }),
+)
+
+it.live("four sessions progress concurrently while each retains one immutable packet", () =>
+  Effect.gen(function* () {
+    const f = yield* fixture
+    const s = yield* boot(f.root)
+    yield* signIn(s.credentials)
+    const sessions = Array.from({ length: 8 }, (_, n) => Session.ID.make(`ses_parallel_${n}`))
+    for (const session of sessions) yield* seed(s.db, f.directory, session)
+    yield* allow(s.db, f.directory, f.backend)
+    expect((yield* s.sync.flush({ directory: f.directory })).pending).toBe(0)
+    yield* s.db.run(sql`UPDATE session_v2 SET time_updated=time_updated+1`)
+    f.backend.control.stateGate = true
+    const flushing = yield* s.sync.flush({ directory: f.directory }).pipe(Effect.forkScoped)
+    yield* Effect.sync(() => f.backend.control.gatedReads).pipe(
+      Effect.repeat({ while: (reads) => reads < 4, schedule: Schedule.spaced(10) }),
+      Effect.timeout(5000),
+    )
+    expect(f.backend.control.gatedReads).toBe(4)
+    expect(yield* s.db.all(sql`SELECT session_id FROM _kilo_sync_packet`)).toHaveLength(4)
+    f.backend.gate.resolve()
+    expect((yield* Fiber.join(flushing)).pending).toBe(0)
+  }),
+)
+
+it.live("flush and enable cannot bypass a session's server-imposed retry deadline", () =>
+  Effect.gen(function* () {
+    const f = yield* fixture
+    const s = yield* boot(f.root)
+    yield* signIn(s.credentials)
+    yield* seed(s.db, f.directory)
+    yield* allow(s.db, f.directory, f.backend)
+    f.backend.control.mode = "offline"
+    f.backend.control.retryAfter = true
+    expect((yield* s.sync.flush({ directory: f.directory })).pending).toBeGreaterThan(0)
+    expect((yield* Store.sessions(s.db, f.directory))[0]?.server_retry_at).toBeGreaterThan(Date.now() + 119_000)
+    f.backend.control.mode = "online"
+    yield* writeMessage(s.db, "newer capture cannot bypass the server deadline")
+    yield* s.sync.enable({ directory: f.directory, destination: f.backend.url, local: true, organizationID: null })
+    expect((yield* s.sync.flush({ directory: f.directory })).pending).toBeGreaterThan(0)
+    expect(f.backend.states.size).toBe(0)
+  }),
 )

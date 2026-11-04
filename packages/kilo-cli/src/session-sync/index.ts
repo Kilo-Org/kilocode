@@ -30,6 +30,7 @@ import {
   limits,
   sameTenant,
   request,
+  retryTime,
 } from "./protocol"
 
 const BlobRefs = Schema.fromJsonString(Schema.Array(Schema.Struct({ hash: Schema.String, bytes: Schema.Number })))
@@ -102,10 +103,26 @@ export const make = Effect.fn("SessionSync.make")(function* (
   let consentIntent = 0
   let backgroundError: { code: string; message: string } | undefined
   const grants = new Map<string, { credential: string; value: Grant }>()
+  const exchangeLock = Semaphore.makeUnsafe(1)
+  const cooldowns = new Map<string, { retryAt: number; attempts: number; error: Failure }>()
+  let prunedAt = 0
+  const prune = (force = false) =>
+    Effect.gen(function* () {
+      if (!force && Date.now() - prunedAt < 60_000) return
+      prunedAt = Date.now()
+      yield* Assets.prune(db, global)
+    })
   let observedCredential: string | undefined
 
   yield* Store.initialize(db)
   yield* Store.reconcile(db)
+  yield* prune(true).pipe(
+    Effect.catch((error) =>
+      Effect.sync(() => {
+        backgroundError = error
+      }),
+    ),
+  )
   for (const definition of [
     SessionEvent.InboxDelivered,
     SessionEvent.InboxCancelled,
@@ -128,36 +145,49 @@ export const make = Effect.fn("SessionSync.make")(function* (
     return saved.type === "oauth" ? saved.access : saved.key
   })
 
-  const exchange = Effect.fn("SessionSync.exchange")(function* (input: {
-    destination: string
-    local: boolean
-    organizationID: string | null
-  }) {
-    const origin = yield* destination(input.destination, input.local)
-    const token = yield* credential()
-    const key = `${origin}:${input.organizationID ?? "personal"}`
-    const cached = grants.get(key)
-    if (cached?.credential === digest(token) && Date.parse(cached.value.expiresAt) > Date.now() + 5000)
-      return cached.value
-    const grant = yield* request(
-      `${origin}/v1/auth/exchange`,
-      token,
-      "POST",
-      JSON.stringify({ version: 1, ...(input.organizationID ? { organizationID: input.organizationID } : {}) }),
-    ).pipe(Effect.flatMap((value) => decode(Grant, value)))
-    if (
-      !Number.isFinite(Date.parse(grant.expiresAt)) ||
-      Date.parse(grant.expiresAt) <= Date.now() ||
-      !grant.token ||
-      !grant.userID ||
-      (input.organizationID === null
-        ? grant.tenant.type !== "user" || grant.tenant.id !== grant.userID
-        : grant.tenant.type !== "organization" || grant.tenant.id !== input.organizationID)
+  const exchange = (input: { destination: string; local: boolean; organizationID: string | null }) =>
+    exchangeLock.withPermit(
+      Effect.gen(function* () {
+        const origin = yield* destination(input.destination, input.local)
+        const token = yield* credential()
+        observedCredential ??= digest(token)
+        const key = `${origin}:${input.organizationID ?? "personal"}`
+        const cooldown = cooldowns.get(key)
+        if (cooldown && cooldown.retryAt > Date.now()) return yield* Effect.fail(cooldown.error)
+        const cached = grants.get(key)
+        if (cached?.credential === digest(token) && Date.parse(cached.value.expiresAt) > Date.now() + 5000)
+          return cached.value
+        const grant = yield* request(
+          `${origin}/v1/auth/exchange`,
+          token,
+          "POST",
+          JSON.stringify({ version: 1, ...(input.organizationID ? { organizationID: input.organizationID } : {}) }),
+        ).pipe(
+          Effect.flatMap((value) => decode(Grant, value)),
+          Effect.catch((error) => {
+            if (!error.retryable) return Effect.fail(error)
+            const attempts = cooldown?.attempts ?? 0
+            const retryAt = retryTime(attempts, error.retryAt)
+            const delayed = fail(error.code, error.message, true, retryAt, error.hash)
+            cooldowns.set(key, { retryAt, attempts: attempts + 1, error: delayed })
+            return Effect.fail(delayed)
+          }),
+        )
+        if (
+          !Number.isFinite(Date.parse(grant.expiresAt)) ||
+          Date.parse(grant.expiresAt) <= Date.now() ||
+          !grant.token ||
+          !grant.userID ||
+          (input.organizationID === null
+            ? grant.tenant.type !== "user" || grant.tenant.id !== grant.userID
+            : grant.tenant.type !== "organization" || grant.tenant.id !== input.organizationID)
+        )
+          return yield* fail("invalid_response", "The sync grant does not identify the requested account scope")
+        grants.set(key, { credential: digest(token), value: grant })
+        cooldowns.delete(key)
+        return grant
+      }),
     )
-      return yield* fail("invalid_response", "The sync grant does not identify the requested account scope")
-    grants.set(key, { credential: digest(token), value: grant })
-    return grant
-  })
 
   const authenticated = Effect.fn("SessionSync.authenticated")(function* (
     c: Store.Consent,
@@ -211,6 +241,7 @@ export const make = Effect.fn("SessionSync.make")(function* (
       )
     const rows = yield* Store.dirty(db, session.id)
     if (!rows.length) return
+    let changeBytes = 2
     const changes: Change[] = []
     const blobs = new Map<string, BlobRef>()
     let through = session.acknowledged
@@ -233,12 +264,12 @@ export const make = Effect.fn("SessionSync.make")(function* (
           ...(yield* Assets.remove(db, row)),
           { op: "remove", kind: row.kind, id: row.id, cause: row.cause },
         ]
-        const bytes = Buffer.byteLength(JSON.stringify([...changes, ...removals]))
-        if (changes.length && (changes.length + removals.length > limits.changes || bytes > limits.batch - 4096))
-          break
+        const bytes = changeBytes + Buffer.byteLength(JSON.stringify(removals)) - 2 + (changes.length ? 1 : 0)
+        if (changes.length && (changes.length + removals.length > limits.changes || bytes > limits.batch - 4096)) break
         if (removals.length > limits.changes || bytes > limits.batch - 4096)
           return yield* fail("packet_too_large", "One portable removal exceeds the service packet limit")
         changes.push(...removals)
+        changeBytes = bytes
         through = row.position
         continue
       }
@@ -260,7 +291,7 @@ export const make = Effect.fn("SessionSync.make")(function* (
       if (addition.length > limits.changes)
         return yield* fail("asset_limit", "One native entity requires more assets than the service packet limit")
       // Leave room for envelope/identities; an oversized next entity starts the next immutable packet.
-      const bytes = Buffer.byteLength(JSON.stringify([...changes, ...addition]))
+      const bytes = changeBytes + Buffer.byteLength(JSON.stringify(addition)) - 2 + (changes.length ? 1 : 0)
       if (changes.length && (changes.length + addition.length > limits.changes || bytes > limits.batch - 4096)) break
       if (bytes > limits.batch - 4096)
         return yield* fail(
@@ -268,6 +299,7 @@ export const make = Effect.fn("SessionSync.make")(function* (
           "One portable entity and its asset mappings exceed the service packet limit",
         )
       changes.push(...addition)
+      changeBytes = bytes
       for (const ref of [...assets.blobs, ...(blob ? [blob] : [])]) blobs.set(ref.hash, ref)
       through = row.position
     }
@@ -316,7 +348,11 @@ export const make = Effect.fn("SessionSync.make")(function* (
     // its session row, then frozen the next one. Refresh on the next pass rather
     // than comparing that packet with the stale predecessor.
     if (pending.after !== session.acknowledged)
-      return yield* fail("capture_changed", "Another uploader advanced the local session; prepare its current state", true)
+      return yield* fail(
+        "capture_changed",
+        "Another uploader advanced the local session; prepare its current state",
+        true,
+      )
     const url = `${c.destination}/v1/sessions/${encodeURIComponent(session.id)}`
     const state = yield* authenticated(c, url).pipe(
       Effect.flatMap((value) => decode(State, value)),
@@ -345,7 +381,7 @@ export const make = Effect.fn("SessionSync.make")(function* (
       last.digest === pending.digest
     ) {
       yield* Store.acknowledge(db, pending, last)
-      yield* Assets.prune(db, global)
+      yield* Assets.prune(db, global, session.id)
       return true
     }
     if (
@@ -372,9 +408,14 @@ export const make = Effect.fn("SessionSync.make")(function* (
     }
     const receipt = yield* authenticated(c, `${url}/batches`, "POST", pending.body).pipe(
       Effect.flatMap((value) => decode(Receipt, value)),
+      Effect.catch((error) =>
+        error.code === "blob_missing" && error.hash
+          ? Store.forgetBlob(db, session.id, error.hash).pipe(Effect.andThen(Effect.fail(error)))
+          : Effect.fail(error),
+      ),
     )
     yield* Store.acknowledge(db, pending, receipt)
-    yield* Assets.prune(db, global)
+    yield* Assets.prune(db, global, session.id)
     return true
   })
 
@@ -419,13 +460,14 @@ export const make = Effect.fn("SessionSync.make")(function* (
     force = false,
     passDeadline = Date.now() + 6 * 60_000,
   ) {
-    yield* Assets.prune(db, global)
+    yield* prune()
     const current = yield* credential().pipe(
       Effect.map(digest),
       Effect.orElseSucceed(() => "signed-out"),
     )
     if (observedCredential === undefined || current !== observedCredential) {
       grants.clear()
+      cooldowns.clear()
       for (const code of authenticationErrors)
         yield* db
           .run(
@@ -438,48 +480,78 @@ export const make = Effect.fn("SessionSync.make")(function* (
     const rows = yield* db
       .all<Store.SessionRow>(
         sql`SELECT s.* FROM _kilo_sync_session s JOIN _kilo_sync_consent c ON c.directory=s.directory
-      WHERE c.enabled=1 AND (${only ?? null} IS NULL OR s.directory=${only ?? null}) AND (${Number(force)}=1 OR s.retry_at<=${Date.now()})
+      WHERE c.enabled=1 AND (${only ?? null} IS NULL OR s.directory=${only ?? null})
+      AND s.server_retry_at<=${Date.now()} AND (${Number(force)}=1 OR s.retry_at<=${Date.now()})
       AND (EXISTS(SELECT 1 FROM _kilo_sync_dirty d WHERE d.session_id=s.id) OR EXISTS(SELECT 1 FROM _kilo_sync_packet p WHERE p.session_id=s.id))
-      ORDER BY s.retry_at,s.id LIMIT 32`,
+      ORDER BY s.last_attempt,s.id LIMIT 32`,
       )
       .pipe(Effect.orDie)
     let progressed = false
-    for (const session of rows) {
-      const remaining = passDeadline - Date.now()
-      if (remaining <= 0) break
-      const c = yield* Store.consent(db, session.directory)
-      if (!c?.enabled) continue
-      const result = yield* upload(session, c).pipe(
-        Effect.timeoutOption(remaining),
-        Effect.flatMap((result) =>
-          result._tag === "Some"
-            ? Effect.succeed(result.value)
-            : Effect.fail(
-                fail("network_error", "The sync upload pass timed out; its immutable pending packet is retained", true),
-              ),
-        ),
-        Effect.result,
-      )
-      if (result._tag === "Success") {
-        progressed = result.success || progressed
-        continue
-      }
-      const error = result.failure
-      if (error.code === "capture_changed") {
-        progressed = true
-        continue
-      }
-      const retryAt = error.retryable
-        ? Math.max(error.retryAt ?? 0, Date.now() + Math.min(60_000, 1000 * 2 ** Math.min(session.attempts, 6)))
-        : Number.MAX_SAFE_INTEGER
-      yield* db
-        .run(
-          sql`UPDATE _kilo_sync_session SET error_code=${error.code},error_message=${error.message},retry_at=${retryAt},attempts=attempts+1
+    yield* Effect.forEach(
+      rows,
+      (session) =>
+        Effect.gen(function* () {
+          const remaining = passDeadline - Date.now()
+          if (remaining <= 0) return
+          const c = yield* Store.consent(db, session.directory)
+          if (!c?.enabled) return
+          const cooldown = cooldowns.get(`${c.destination}:${c.organization_id ?? "personal"}`)
+          if (cooldown && cooldown.retryAt > Date.now()) {
+            yield* db
+              .run(
+                sql`UPDATE _kilo_sync_session
+          SET retry_at=max(retry_at,${cooldown.retryAt}),server_retry_at=max(server_retry_at,${cooldown.retryAt})
+          WHERE id=${session.id}`,
+              )
+              .pipe(Effect.orDie)
+            return
+          }
+          yield* db
+            .run(sql`UPDATE _kilo_sync_session SET last_attempt=${Date.now()} WHERE id=${session.id}`)
+            .pipe(Effect.orDie)
+          const result = yield* upload(session, c).pipe(
+            Effect.timeoutOption(remaining),
+            Effect.flatMap((result) =>
+              result._tag === "Some"
+                ? Effect.succeed(result.value)
+                : Effect.fail(
+                    fail(
+                      "network_error",
+                      "The sync upload pass timed out; its immutable pending packet is retained",
+                      true,
+                    ),
+                  ),
+            ),
+            Effect.result,
+          )
+          if (result._tag === "Success") {
+            progressed = result.success || progressed
+            return
+          }
+          const error = result.failure
+          if (error.code === "capture_changed") {
+            progressed = true
+            return
+          }
+          if (error.retryAt !== undefined)
+            yield* db
+              .run(
+                sql`UPDATE _kilo_sync_session SET server_retry_at=max(server_retry_at,${error.retryAt})
+          WHERE id=${session.id}`,
+              )
+              .pipe(Effect.orDie)
+          const retryAt = error.retryable ? retryTime(session.attempts, error.retryAt) : Number.MAX_SAFE_INTEGER
+          yield* db
+            .run(
+              sql`UPDATE _kilo_sync_session SET error_code=${error.code},error_message=${error.message},retry_at=${retryAt},
+            attempts=attempts+1
         WHERE id=${session.id} AND position=${session.position} AND acknowledged=${session.acknowledged}
           AND ack_batch IS ${session.ack_batch} AND ack_digest IS ${session.ack_digest}`,
-        )
-        .pipe(Effect.orDie)
-    }
+            )
+            .pipe(Effect.orDie)
+        }),
+      { concurrency: 4, discard: true },
+    )
     return progressed
   })
 
@@ -547,6 +619,7 @@ export const make = Effect.fn("SessionSync.make")(function* (
                 return Effect.logError("Session synchronization initial capture failed", cause)
               }),
             )
+            yield* prune(true)
             return yield* status({ directory })
           }).pipe(Effect.scoped),
         )

@@ -1,7 +1,7 @@
 import { expect, spyOn } from "bun:test"
 import { Effect, Fiber, Layer } from "effect"
 import { testEffect } from "../../core/test/lib/effect"
-import { digest, request } from "../src/session-sync/protocol"
+import { digest, request, retryTime } from "../src/session-sync/protocol"
 
 const it = testEffect(Layer.empty)
 const token = "isolated-protocol-fixture-credential"
@@ -183,19 +183,22 @@ it.live("cancels an open response body when interrupted after HTTP headers", () 
     yield* Effect.acquireRelease(
       Effect.sync(() =>
         spyOn(globalThis, "fetch").mockImplementation(
-          Object.assign(async (...args: Parameters<typeof fetch>) => {
-            const response = await nativeFetch(...args)
-            if (response.body) {
-              const getReader = response.body.getReader.bind(response.body)
-              Object.defineProperty(response.body, "getReader", {
-                value() {
-                  entered.resolve()
-                  return getReader()
-                },
-              })
-            }
-            return response
-          }, { preconnect: nativeFetch.preconnect }),
+          Object.assign(
+            async (...args: Parameters<typeof fetch>) => {
+              const response = await nativeFetch(...args)
+              if (response.body) {
+                const getReader = response.body.getReader.bind(response.body)
+                Object.defineProperty(response.body, "getReader", {
+                  value() {
+                    entered.resolve()
+                    return getReader()
+                  },
+                })
+              }
+              return response
+            },
+            { preconnect: nativeFetch.preconnect },
+          ),
         ),
       ),
       (fetch) => Effect.sync(() => fetch.mockRestore()),
@@ -231,5 +234,88 @@ it.live("cancels an open response body when interrupted after HTTP headers", () 
     yield* Effect.promise(() => entered.promise)
     yield* Fiber.interrupt(reading)
     expect((yield* Effect.promise(() => cancelled.promise).pipe(Effect.timeoutOption(1000)))._tag).toBe("Some")
+  }),
+)
+
+it.live("full jitter spans the backoff window after the server retry floor", () =>
+  Effect.sync(() => {
+    for (const attempts of [0, 1, 5, 6, 30]) {
+      const cap = Math.min(60_000, 1000 * 2 ** Math.min(attempts, 6))
+      expect(retryTime(attempts, 200_000, 100_000, 0)).toBe(200_000)
+      expect(retryTime(attempts, 200_000, 100_000, 0.5)).toBe(200_000 + cap / 2)
+      expect(retryTime(attempts, 200_000, 100_000, 0.99999)).toBeLessThan(200_000 + cap)
+      expect(retryTime(attempts, 0, 100_000, 0)).toBe(100_000)
+    }
+  }),
+)
+
+for (const status of [429, 503]) {
+  for (const format of ["seconds", "date", "body"] as const) {
+    it.live(`honors ${format} Retry-After and JSON retryAt on HTTP ${status}`, () =>
+      Effect.gen(function* () {
+        const now = Date.now()
+        const floor = Math.ceil((now + 120_000) / 1000) * 1000
+        const server = yield* Effect.acquireRelease(
+          Effect.sync(() =>
+            Bun.serve({
+              hostname: "127.0.0.1",
+              port: 0,
+              fetch: () =>
+                Response.json(
+                  {
+                    error: { code: "rate_limited", retryAt: format === "body" ? floor + 60_000 : now + 10_000 },
+                  },
+                  {
+                    status,
+                    headers: { "Retry-After": format === "seconds" ? "120" : new Date(floor).toUTCString() },
+                  },
+                ),
+            }),
+          ),
+          (server) =>
+            Effect.sync(() => {
+              server.stop(true)
+            }),
+        )
+        const result = yield* request(`${server.url}limited`, token).pipe(Effect.result)
+        if (result._tag !== "Failure") return yield* Effect.die("Expected a rate limit")
+        expect(result.failure.code).toBe("rate_limited")
+        expect(result.failure.retryable).toBe(true)
+        expect(result.failure.retryAt).toBeGreaterThanOrEqual(format === "body" ? floor + 60_000 : now + 120_000)
+      }),
+    )
+  }
+}
+
+it.live("tenant quota pauses and blob_missing preserves its recoverable hash", () =>
+  Effect.gen(function* () {
+    const hash = digest("missing")
+    const server = yield* Effect.acquireRelease(
+      Effect.sync(() =>
+        Bun.serve({
+          hostname: "127.0.0.1",
+          port: 0,
+          fetch: (request) =>
+            new URL(request.url).pathname === "/quota"
+              ? Response.json(
+                  { error: { code: "tenant_budget_exceeded", details: { sessions: 1, bytes: 2 } } },
+                  { status: 413 },
+                )
+              : Response.json({ error: { code: "blob_missing", details: { hash } } }, { status: 409 }),
+        }),
+      ),
+      (server) =>
+        Effect.sync(() => {
+          server.stop(true)
+        }),
+    )
+    expect(yield* request(`${server.url}quota`, token).pipe(Effect.result)).toMatchObject({
+      _tag: "Failure",
+      failure: { code: "tenant_budget_exceeded", retryable: false },
+    })
+    expect(yield* request(`${server.url}missing`, token).pipe(Effect.result)).toMatchObject({
+      _tag: "Failure",
+      failure: { code: "blob_missing", retryable: true, hash },
+    })
   }),
 )

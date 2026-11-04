@@ -52,6 +52,8 @@ export type SessionRow = {
   error_code: string | null
   error_message: string | null
   retry_at: number
+  server_retry_at: number
+  last_attempt: number
   attempts: number
 }
 export type Dirty = {
@@ -94,9 +96,9 @@ const tables = [
   `CREATE TABLE IF NOT EXISTS _kilo_sync_packet (
     session_id TEXT PRIMARY KEY, batch_id TEXT NOT NULL, after INTEGER NOT NULL, through INTEGER NOT NULL,
     body TEXT NOT NULL, digest TEXT NOT NULL, blobs TEXT NOT NULL)`,
-  `CREATE TABLE IF NOT EXISTS _kilo_sync_blob_ack (
-    session_id TEXT NOT NULL, batch_id TEXT NOT NULL, hash TEXT NOT NULL, bytes INTEGER NOT NULL,
-    PRIMARY KEY(session_id,batch_id,hash))`,
+  `CREATE TABLE IF NOT EXISTS _kilo_sync_known_blob (
+    session_id TEXT NOT NULL, hash TEXT NOT NULL, bytes INTEGER NOT NULL,
+    PRIMARY KEY(session_id,hash))`,
   `CREATE TABLE IF NOT EXISTS _kilo_sync_reference (session_id TEXT NOT NULL, hash TEXT NOT NULL, PRIMARY KEY(session_id,hash))`,
   `CREATE TABLE IF NOT EXISTS _kilo_sync_intent (session_id TEXT PRIMARY KEY, cause TEXT NOT NULL, target_id TEXT)`,
   `CREATE TABLE IF NOT EXISTS _kilo_sync_asset (
@@ -194,6 +196,15 @@ export const initialize = Effect.fn("SessionSync.Store.initialize")(function* (d
         const columns = yield* tx.all<{ name: string }>("PRAGMA table_info(_kilo_sync_session)")
         if (!columns.some((column) => column.name === "bootstrap_complete"))
           yield* tx.run("ALTER TABLE _kilo_sync_session ADD COLUMN bootstrap_complete INTEGER NOT NULL DEFAULT 0")
+        for (const name of ["last_attempt", "server_retry_at"])
+          if (!columns.some((column) => column.name === name))
+            yield* tx.run(`ALTER TABLE _kilo_sync_session ADD COLUMN ${name} INTEGER NOT NULL DEFAULT 0`)
+        yield* tx.run("CREATE INDEX IF NOT EXISTS _kilo_sync_session_attempt ON _kilo_sync_session(last_attempt,id)")
+        if (yield* tx.get("SELECT 1 FROM sqlite_master WHERE type='table' AND name='_kilo_sync_blob_ack'")) {
+          yield* tx.run(`INSERT OR IGNORE INTO _kilo_sync_known_blob(session_id,hash,bytes)
+            SELECT session_id,hash,bytes FROM _kilo_sync_blob_ack`)
+          yield* tx.run("DROP TABLE _kilo_sync_blob_ack")
+        }
         const directories = yield* tx.all<{ name: string }>("PRAGMA table_info(_kilo_sync_directory)")
         if (!directories.some((column) => column.name === "canonical"))
           yield* tx.run("ALTER TABLE _kilo_sync_directory ADD COLUMN canonical TEXT")
@@ -394,10 +405,35 @@ export const sessions = (db: DB, directory?: string) =>
     .pipe(Effect.orDie)
 export const packet = (db: SQL, id: string) =>
   db.get<Packet>(sql`SELECT * FROM _kilo_sync_packet WHERE session_id=${id}`).pipe(Effect.orDie)
-export const dirty = (db: DB, id: string) =>
-  db
-    .all<Dirty>(sql`SELECT * FROM _kilo_sync_dirty_current WHERE session_id=${id} ORDER BY position,kind,id LIMIT 64`)
+export const dirty = Effect.fn("SessionSync.Store.dirty")(function* (db: DB, id: string, budget = limits.batch) {
+  const identities = yield* db
+    .all<
+      Pick<Dirty, "kind" | "id" | "position">
+    >(sql`SELECT kind,id,position FROM _kilo_sync_dirty WHERE session_id=${id} ORDER BY position,kind,id LIMIT 64`)
     .pipe(Effect.orDie)
+  const rows: Dirty[] = []
+  let bytes = 0
+  for (const identity of identities) {
+    if (bytes >= budget) break
+    // Read the value and its position in one statement; a newer capture stays pending.
+    const row = yield* db
+      .get<Dirty & { bytes: number }>(
+        sql`WITH current AS MATERIALIZED (
+      SELECT * FROM _kilo_sync_dirty_current
+      WHERE session_id=${id} AND kind=${identity.kind} AND id=${identity.id} AND position=${identity.position}
+    ) SELECT session_id,kind,id,position,op,cause,length(cast(value AS blob)) AS bytes,
+      CASE WHEN ${Number(rows.length === 0)}=1 OR length(cast(value AS blob))<=${budget - bytes} THEN value END AS value
+      FROM current`,
+      )
+      .pipe(Effect.orDie)
+    if (!row) continue
+    const { bytes: size = 0, ...value } = row
+    if (rows.length && size > budget - bytes) break
+    rows.push(value)
+    bytes += size
+  }
+  return rows
+})
 
 export const enable = Effect.fn("SessionSync.Store.enable")(function* (
   db: DB,
@@ -586,13 +622,10 @@ export const freeze = Effect.fn("SessionSync.Store.freeze")(function* (
         for (const change of changes) {
           if (change.kind !== "asset") continue
           if (change.op === "remove") {
-            yield* tx.run(
-              sql`DELETE FROM _kilo_sync_asset_mapping WHERE session_id=${session.id} AND id=${change.id}`,
-            )
+            yield* tx.run(sql`DELETE FROM _kilo_sync_asset_mapping WHERE session_id=${session.id} AND id=${change.id}`)
             continue
           }
-          if (!("value" in change))
-            return yield* fail("invalid_state", "Portable asset mappings must be stored inline")
+          if (!("value" in change)) return yield* fail("invalid_state", "Portable asset mappings must be stored inline")
           const encoded = JSON.stringify(change.value)
           yield* tx.run(sql`INSERT OR REPLACE INTO _kilo_sync_asset_mapping(session_id,id,kind,entity_id)
         VALUES(${session.id},${change.id},json_extract(${encoded},'$.entity.kind'),json_extract(${encoded},'$.entity.id'))`)
@@ -617,21 +650,24 @@ export const freeze = Effect.fn("SessionSync.Store.freeze")(function* (
 export const blobAcknowledged = (db: DB, pending: Packet, blob: BlobRef) =>
   db
     .get(
-      sql`SELECT 1 FROM _kilo_sync_blob_ack a JOIN _kilo_sync_packet p
-    ON p.session_id=a.session_id AND p.batch_id=a.batch_id
-    WHERE a.session_id=${pending.session_id} AND a.batch_id=${pending.batch_id}
-    AND p.digest=${pending.digest} AND a.hash=${blob.hash} AND a.bytes=${blob.bytes}`,
+      sql`SELECT 1 FROM _kilo_sync_known_blob a
+    WHERE a.session_id=${pending.session_id} AND a.hash=${blob.hash} AND a.bytes=${blob.bytes}`,
     )
     .pipe(Effect.orDie, Effect.map(Boolean))
 
 export const acknowledgeBlob = (db: DB, pending: Packet, blob: BlobRef) =>
   db
     .run(
-      sql`INSERT OR REPLACE INTO _kilo_sync_blob_ack(session_id,batch_id,hash,bytes)
-    SELECT ${pending.session_id},${pending.batch_id},${blob.hash},${blob.bytes}
+      sql`INSERT OR REPLACE INTO _kilo_sync_known_blob(session_id,hash,bytes)
+    SELECT ${pending.session_id},${blob.hash},${blob.bytes}
     WHERE EXISTS(SELECT 1 FROM _kilo_sync_packet WHERE session_id=${pending.session_id}
       AND batch_id=${pending.batch_id} AND digest=${pending.digest})`,
     )
+    .pipe(Effect.orDie, Effect.asVoid)
+
+export const forgetBlob = (db: DB, session: string, hash: string) =>
+  db
+    .run(sql`DELETE FROM _kilo_sync_known_blob WHERE session_id=${session} AND hash=${hash}`)
     .pipe(Effect.orDie, Effect.asVoid)
 
 export const acknowledge = Effect.fn("SessionSync.Store.acknowledge")(function* (
@@ -658,14 +694,13 @@ export const acknowledge = Effect.fn("SessionSync.Store.acknowledge")(function* 
           sql`DELETE FROM _kilo_sync_dirty WHERE session_id=${pending.session_id} AND position<=${pending.through}`,
         )
         yield* tx.run(sql`UPDATE _kilo_sync_session SET acknowledged=${pending.through},ack_batch=${pending.batch_id},ack_digest=${pending.digest},
+      server_retry_at=0,
       error_code=CASE WHEN error_code='identity_conflict' THEN error_code ELSE NULL END,
       error_message=CASE WHEN error_code='identity_conflict' THEN error_message ELSE NULL END,
       retry_at=CASE WHEN error_code='identity_conflict' THEN retry_at ELSE 0 END,attempts=0 WHERE id=${pending.session_id}`)
         yield* tx.run(
           sql`UPDATE _kilo_sync_consent SET last_success=${Date.now()} WHERE directory=(SELECT directory FROM _kilo_sync_session WHERE id=${pending.session_id})`,
         )
-        yield* tx.run(sql`DELETE FROM _kilo_sync_blob_ack
-          WHERE session_id=${pending.session_id} AND batch_id=${pending.batch_id}`)
         yield* tx.run(
           sql`DELETE FROM _kilo_sync_packet WHERE session_id=${pending.session_id} AND batch_id=${pending.batch_id}`,
         )

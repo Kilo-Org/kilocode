@@ -74,6 +74,8 @@ A coalescing dirty set records entity identity and source position.
 Unsent changes to the same entity can collapse to the newest value.
 Assistant-part writes journal identity and position without reserializing the growing message for each part.
 One snapshot read reconstructs ordered native parts with their captured position before packet preparation.
+Read identities first and materialize values incrementally within the packet byte budget.
+One oversized entity can be read alone for externalization; do not stage a page of oversized values.
 Preserve that value before local deletion or the first mutation outside its consent boundary removes the native source.
 Freeze a bounded immutable packet before network transmission.
 Keep that packet and its acknowledgement state in durable local storage.
@@ -89,15 +91,15 @@ A restored database must not reuse an acknowledged position for different conten
 
 ## Portable entity set
 
-| Kind | Captured state |
-|---|---|
-| `session` | Encoded native session metadata and settings, excluding active machine bindings. |
-| `message` | Native transcript messages with stable identity and ordering, reconstructing ordered persisted assistant parts when present. |
-| `inbox` | Pending input needed to reconstruct the session. |
-| `instruction-entry` | API-managed instruction values and observed removals. |
-| `instruction-state` | Current and epoch-initial instruction state. |
-| `instruction-blob` | Referenced immutable instruction values. |
-| `asset` | Durable references and metadata for required attachment and tool-output bytes. |
+| Kind                | Captured state                                                                                                               |
+| ------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| `session`           | Encoded native session metadata and settings, excluding active machine bindings.                                             |
+| `message`           | Native transcript messages with stable identity and ordering, reconstructing ordered persisted assistant parts when present. |
+| `inbox`             | Pending input needed to reconstruct the session.                                                                             |
+| `instruction-entry` | API-managed instruction values and observed removals.                                                                        |
+| `instruction-state` | Current and epoch-initial instruction state.                                                                                 |
+| `instruction-blob`  | Referenced immutable instruction values.                                                                                     |
+| `asset`             | Durable references and metadata for required attachment and tool-output bytes.                                               |
 
 Normalize local references through an explicit asset mapping.
 Recorded paths are display information, not authority to read another machine's files.
@@ -120,7 +122,13 @@ A successful response means the batch is durably committed.
 A socket write or scheduled background task is not success.
 
 Recover the pending packet after process death and retry with the same identity and payload.
-Retry network failures and retryable service responses with bounded backoff.
+Retry network failures and retryable service responses with capped exponential full jitter.
+Treat JSON `retryAt` and HTTP 429/503 `Retry-After` seconds or dates as lower bounds, then add jitter.
+Exchange failures share a destination and organization cooldown across sessions.
+Explicit flush does not bypass server retry deadlines.
+`rate_limited` is retryable HTTP 429 with an integer-seconds `Retry-After` header and JSON `error.retryAt`.
+`tenant_budget_exceeded` is HTTP 413 with `error.details` containing the `sessions` and `bytes` limits.
+It pauses the session until enable or flush retries it.
 Do not discard work after a fixed number of attempts.
 Refresh expired grants without changing packet identity.
 Surface invalid credentials, rejected ownership, deletion, and quota errors distinctly.
@@ -145,7 +153,12 @@ If an asset is already unavailable, report it; never claim full portability.
 Native message JSON remains unchanged.
 Separate asset entities map a native JSON pointer to verified portable bytes.
 Removing an attachment or its owning portable entity removes the obsolete asset mappings in the same packet.
-Ready cloud blobs remain subject to the service's retention policy rather than an implicit content deletion.
+Cloud blobs move through `pending`, `unreferenced`, `ready`, and `cleaning`.
+Verified uploads and hashes that lose their last entity reference remain unreferenced for fifteen minutes.
+References make them ready; expired unreferenced bytes are reclaimed.
+A reference to an absent, pending, or cleaning hash returns HTTP 409 `blob_missing` with `error.details.hash`.
+Beginning an unreferenced upload refreshes its deadline and returns ready without another upload.
+Reads serve both ready and unreferenced blobs.
 Inline native attachments carry their own bytes.
 Database-backed native `media:` attachments require session-owned native blob references.
 Their verified bytes receive durable asset mappings without rewriting the original message JSON.
@@ -167,13 +180,18 @@ The command does not silently upload an incomplete portable entity.
 Local spooling retains only bytes that a pending packet, current portable entity, exact approval, or active preparation pin requires.
 Bytes for superseded acknowledged generations become reclaimable.
 Cleanup rechecks every durable pin inside a short database transaction before moving a candidate aside; deletion happens after commit.
+Global cleanup runs at startup, enable, and at most once per minute during background passes.
+Acknowledgement cleanup visits only the acknowledged session and retains its packets and preparation pins.
 Before the first enable, native output records metadata only and does not read file contents.
 Unreferenced provenance metadata is bounded by a seven-day age and a 4096-path cap.
 After that metadata expires, an earlier output requires explicit exact-file approval.
 
 Each request deadline scales with body size and has a five-minute cap.
 A background pass can run for six minutes; an explicit flush keeps its shorter command deadline.
-Packet-scoped blob acknowledgements let an interrupted large packet resume without retransmitting uploaded blobs.
+Persist session/hash/length blob acknowledgements across packets and process restarts.
+This knowledge is a hint: `blob_missing` with `details.hash` drops that hint and retries the upload.
+Persist last-attempt ordering so continuously dirty sessions cannot starve waiting sessions.
+A pass uploads at most four different sessions concurrently, with one immutable packet per session.
 Consent changes use a durable epoch, so a concurrent disable in another local process fences an enable that has not committed.
 
 Keep live text, controls, and metadata separate from bulk transfer scheduling.
