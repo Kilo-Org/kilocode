@@ -7,6 +7,7 @@ const LIMIT = 4
 const CHARS = 1_000
 const BRANCH_CHARS = 50
 const TIMEOUT_SECONDS = 10
+const TEMPERATURE = 0.1
 
 const PROMPT = `Generate a Git branch name for the coherent engineering workstream described by the user's messages.
 
@@ -24,7 +25,12 @@ Do not include a prefix, ticket number, explanation, quotes, markdown, or punctu
 /** The model request, so tests can run generation without a provider. */
 export interface Runtime {
   readonly model: (input: { providerID?: string; modelID?: string }) => Effect.Effect<Model.Ref | undefined>
-  readonly text: (input: { prompt: string; model?: Model.Ref }) => Effect.Effect<string, unknown>
+  readonly text: (input: {
+    prompt: string
+    system: string
+    temperature: number
+    model?: Model.Ref
+  }) => Effect.Effect<string, unknown>
 }
 
 export interface Request {
@@ -38,7 +44,12 @@ export const generate = Effect.fn("BranchName.generate")(function* (request: Req
   const model = yield* runtime.model({ providerID: request.providerID, modelID: request.modelID })
   const body = request.messages.map((message, index) => `${index + 1}. ${message}`).join("\n\n")
   const result = yield* runtime
-    .text({ prompt: `${PROMPT}\n\nUser messages, oldest to newest:\n\n${body}`, ...(model ? { model } : {}) })
+    .text({
+      prompt: `User messages, oldest to newest:\n\n${body}`,
+      system: PROMPT,
+      temperature: TEMPERATURE,
+      ...(model ? { model } : {}),
+    })
     .pipe(
       Effect.timeoutOption(`${TIMEOUT_SECONDS} seconds`),
       Effect.map(Option.getOrUndefined),
