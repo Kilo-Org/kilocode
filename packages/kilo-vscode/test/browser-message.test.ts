@@ -271,10 +271,10 @@ describe("browser inspection responses", () => {
       contexts: () => view.contexts,
       post: () => {},
       openPanel: () => {},
-      sidebar: () => "session",
+      sidebar: () => "shown",
       log: () => {},
     })
-    const route = { projectId: "project", sessionId: "session", directory: "/fixture" }
+    const route = { projectId: "project", sessionId: "shown", directory: "/fixture" }
     expect((await view.broker.open(route, "http://localhost:3000/")).projectId).toBe("project")
     await lifecycle.dispose()
   })
