@@ -88,6 +88,7 @@ const peer = () => {
     hangExchange: false,
     blobGateAt: 0,
     blobDelay: 0,
+    stateGate: false,
   }
   const server = Bun.serve({
     hostname: "127.0.0.1",
@@ -187,7 +188,7 @@ const peer = () => {
         states.set(sessionID, state)
       }
       if (!state) return error("session_not_found", 404)
-      return Response.json({
+      const response = Response.json({
         version: 1,
         sessionID,
         deleted: false,
@@ -197,6 +198,11 @@ const peer = () => {
         position: state.position,
         lastReceipt: state.lastReceipt,
       })
+      if (request.method === "GET" && control.stateGate) {
+        entered.resolve()
+        await gate.promise
+      }
+      return response
     },
   })
   return {
@@ -694,6 +700,38 @@ it.live("mutation during actual HTTP upload survives ACK and subsequently reache
     })
   }),
 )
+it.live("a stale uploader cannot park the receipt acknowledged by another native producer", () =>
+  Effect.gen(function* () {
+    const f = yield* fixture
+    const first = yield* boot(f.root)
+    yield* signIn(first.credentials)
+    yield* seed(first.db, f.directory)
+    yield* writeMessage(first.db, "initial")
+    yield* first.sync.enable({ directory: f.directory, destination: f.backend.url, local: true, organizationID: null })
+    expect((yield* first.sync.flush({ directory: f.directory })).pending).toBe(0)
+    const second = yield* boot(f.root)
+    yield* writeMessage(first.db, "pending while first producer reads cloud state")
+    f.backend.control.stateGate = true
+    const stale = yield* first.sync.flush({ directory: f.directory }).pipe(Effect.forkScoped)
+    yield* Effect.promise(() => f.backend.entered.promise)
+    f.backend.control.stateGate = false
+    expect((yield* second.sync.flush({ directory: f.directory })).pending).toBe(0)
+    yield* writeMessage(second.db, "a newer receipt")
+    expect((yield* second.sync.flush({ directory: f.directory })).pending).toBe(0)
+    f.backend.gate.resolve()
+    expect((yield* Fiber.join(stale)).error).toBeUndefined()
+    expect((yield* Store.sessions(first.db, f.directory))[0]).toMatchObject({
+      error_code: null,
+      retry_at: 0,
+    })
+    yield* writeMessage(first.db, "continues after concurrent acknowledgement")
+    expect((yield* first.sync.flush({ directory: f.directory })).pending).toBe(0)
+    expect(f.backend.states.get(id)?.entities.get(`message/${messageID}`)).toMatchObject({
+      message: { text: "continues after concurrent acknowledgement" },
+    })
+  }),
+)
+
 
 it.live("source conflicts and an actual stored credential switch pause pinned workspace uploads", () =>
   Effect.gen(function* () {

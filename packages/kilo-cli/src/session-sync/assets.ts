@@ -296,12 +296,18 @@ function findCandidates(kind: Dirty["kind"], value: Schema.Json) {
   const attachments = (files: Schema.Json | undefined, pointer: string) => {
     if (!Array.isArray(files)) return
     files.forEach((file, index) => {
-      if (!record(file) || typeof file.data !== "string" || typeof file.mime !== "string" || !record(file.source))
-        return
+      if (!record(file) || typeof file.mime !== "string" || !record(file.source)) return
+      const reference =
+        typeof file.data === "string"
+          ? `inline:${digest(file.data)}`
+          : typeof file.uri === "string" && file.uri.startsWith("media:")
+            ? file.uri
+            : undefined
+      if (reference === undefined) return
       candidates.push({
         pointer: `${pointer}/${index}`,
-        reference: `inline:${digest(file.data)}`,
-        data: file.data,
+        reference,
+        ...(typeof file.data === "string" ? { data: file.data } : {}),
         mime: file.mime,
         ...(typeof file.name === "string" ? { name: file.name } : {}),
       })
@@ -376,6 +382,39 @@ export const collect = Effect.fn("SessionSync.Assets.collect")(function* (
               catch: (error) =>
                 error instanceof Failure ? error : fail("asset_error", "A native file content data URI is invalid"),
             })
+          if (candidate.reference.startsWith("media:")) {
+            const hash = candidate.reference.slice("media:".length)
+            if (!/^[0-9a-f]{64}$/.test(hash))
+              return yield* fail("asset_error", "A native media reference has an invalid content address")
+            const preserved = yield* db
+              .get<BlobRef>(
+                sql`SELECT hash,bytes FROM _kilo_sync_asset_reference
+              WHERE session_id=${row.session_id} AND kind=${row.kind} AND entity_id=${row.id}
+                AND locator=${locator} AND hash=${hash}`,
+              )
+              .pipe(Effect.orDie)
+            if (preserved) {
+              const snapshot = yield* read(global, row.session_id, preserved).pipe(Effect.option)
+              if (snapshot._tag === "Some") return snapshot.value
+            }
+            const media = yield* db
+              .get<{ data: Uint8Array; bytes: number }>(
+                sql`SELECT b.data,b.bytes FROM blob b JOIN blob_ref r ON r.hash=b.hash
+              WHERE r.session_id=${row.session_id} AND r.message_id=${row.id} AND r.hash=${hash}
+                AND b.bytes BETWEEN 0 AND ${limits.blob} AND length(b.data)=b.bytes
+              UNION ALL SELECT m.data,m.bytes FROM _kilo_sync_media m
+              JOIN _kilo_sync_media_reference r ON r.session_id=m.session_id AND r.hash=m.hash
+              WHERE r.session_id=${row.session_id} AND r.entity_id=${row.id} AND r.hash=${hash}
+                AND m.bytes BETWEEN 0 AND ${limits.blob} AND length(m.data)=m.bytes LIMIT 1`,
+              )
+              .pipe(Effect.orDie)
+            if (!media || media.data.byteLength !== media.bytes || digest(media.data) !== hash)
+              return yield* fail(
+                "asset_error",
+                "A required native media blob is unavailable or is not owned by this message or inbox item",
+              )
+            return media.data
+          }
           const file = yield* Effect.try({
             try: () =>
               candidate.reference.startsWith("file:") ? fileURLToPath(candidate.reference) : candidate.reference,
@@ -410,7 +449,21 @@ export const collect = Effect.fn("SessionSync.Assets.collect")(function* (
           // A previously admitted session snapshot remains portable after native cleanup/provenance
           // expiry. A new authoritative allocation at the same path must still replace it explicitly.
           if (!owner && previous) return yield* read(global, row.session_id, previous)
-          if (!owner || !Store.contains(directory, owner.directory) || owner.identity === null)
+          const consents = owner
+            ? yield* db
+                .all<{ directory: string; enabled: number }>(sql`SELECT directory,enabled FROM _kilo_sync_consent`)
+                .pipe(Effect.orDie)
+            : []
+          const consent = consents
+            .filter((consent) => owner && Store.contains(consent.directory, owner.directory))
+            .sort((a, b) => b.directory.length - a.directory.length)[0]
+          if (
+            !owner ||
+            !Store.contains(directory, owner.directory) ||
+            consent?.directory !== directory ||
+            !consent.enabled ||
+            owner.identity === null
+          )
             return yield* fail(
               "asset_error",
               "A required file has no native workspace provenance; approve that exact file with --allow-asset",
@@ -444,6 +497,7 @@ export const collect = Effect.fn("SessionSync.Assets.collect")(function* (
           return bytes
         })
         const blob = { hash: digest(bytes), bytes: bytes.byteLength }
+        yield* withinBudget(db, row.session_id, blob)
         yield* db
           .run(
             sql`INSERT INTO _kilo_sync_asset_reference(session_id,kind,entity_id,locator,hash,bytes)
@@ -458,7 +512,23 @@ export const collect = Effect.fn("SessionSync.Assets.collect")(function* (
       ON CONFLICT(session_id,locator) DO UPDATE SET hash=excluded.hash,bytes=excluded.bytes`,
           )
           .pipe(Effect.orDie)
-        if (candidate.data === undefined && !candidate.reference.startsWith("data:")) {
+        if (candidate.reference.startsWith("media:")) {
+          // Native cleanup snapshots transfer to the fsynced spool; retain no second byte copy.
+          yield* db
+            .run(sql`DELETE FROM _kilo_sync_media_reference
+              WHERE session_id=${row.session_id} AND entity_id=${row.id} AND hash=${blob.hash}`)
+            .pipe(Effect.orDie)
+          yield* db
+            .run(sql`DELETE FROM _kilo_sync_media AS m WHERE m.session_id=${row.session_id} AND m.hash=${blob.hash}
+              AND NOT EXISTS (SELECT 1 FROM _kilo_sync_media_reference r
+                WHERE r.session_id=m.session_id AND r.hash=m.hash)`)
+            .pipe(Effect.orDie)
+        }
+        if (
+          candidate.data === undefined &&
+          !candidate.reference.startsWith("data:") &&
+          !candidate.reference.startsWith("media:")
+        ) {
           const file = candidate.reference.startsWith("file:")
             ? fileURLToPath(candidate.reference)
             : candidate.reference
@@ -506,9 +576,51 @@ export const collect = Effect.fn("SessionSync.Assets.collect")(function* (
         id: digest(`${row.kind}:${row.id}:${mapping.pointer}`),
         value: json({ entity: { kind: row.kind, id: row.id }, ...mapping }),
       }))
+      const current = new Set(changes.map((change) => change.id))
+      changes.unshift(...(yield* remove(db, row)).filter((change) => !current.has(change.id)))
       return { changes, blobs: mappings.map((mapping) => mapping.blob) }
     }),
   )
+})
+
+// Inventory describes the last frozen packet, not a speculative collect. A failed preparation or
+// an immutable packet retry must not forget the removals still owed to the cloud.
+export const remove = Effect.fn("SessionSync.Assets.remove")(function* (db: DB, row: Dirty) {
+  const mappings = yield* db
+    .all<{ id: string }>(
+      sql`SELECT id FROM _kilo_sync_asset_mapping
+    WHERE session_id=${row.session_id} AND kind=${row.kind} AND entity_id=${row.id} ORDER BY id`,
+    )
+    .pipe(Effect.orDie)
+  return mappings.map(
+    (mapping): Change => ({
+      op: "remove",
+      kind: "asset",
+      id: mapping.id,
+      cause:
+        row.cause === "revert" || row.cause === "cancel" || row.cause === "instruction-removed"
+          ? row.cause
+          : "consumed",
+    }),
+  )
+})
+
+const withinBudget = Effect.fn("SessionSync.Assets.withinBudget")(function* (db: DB, sessionID: string, blob: BlobRef) {
+  // Native-cleanup snapshots and spool reservations share one logical session budget.
+  const retained = yield* db
+    .get<{ bytes: number }>(sql`SELECT coalesce(sum(bytes),0) AS bytes FROM (
+      SELECT hash,max(bytes) AS bytes FROM (
+        SELECT hash,bytes FROM _kilo_sync_media WHERE session_id=${sessionID}
+        UNION ALL SELECT hash,bytes FROM _kilo_sync_asset_reference WHERE session_id=${sessionID}
+        UNION ALL SELECT hash,bytes FROM _kilo_sync_asset WHERE session_id=${sessionID}
+        UNION ALL SELECT json_extract(b.value,'$.hash'),json_extract(b.value,'$.bytes')
+          FROM _kilo_sync_packet p,json_each(p.blobs) b WHERE p.session_id=${sessionID}
+        UNION ALL SELECT ${blob.hash},${blob.bytes}
+      ) GROUP BY hash
+    )`)
+    .pipe(Effect.orDie)
+  if ((retained?.bytes ?? 0) > limits.session)
+    return yield* fail("asset_error", "The retained session assets exceed the 256 MiB session budget")
 })
 
 export const body = Effect.fn("SessionSync.Assets.body")(function* (
@@ -518,6 +630,7 @@ export const body = Effect.fn("SessionSync.Assets.body")(function* (
   bytes: Uint8Array,
 ) {
   const blob = { hash: digest(bytes), bytes: bytes.byteLength }
+  yield* withinBudget(db, row.session_id, blob)
   yield* db
     .run(
       sql`INSERT INTO _kilo_sync_asset_reference(session_id,kind,entity_id,locator,hash,bytes)
@@ -602,6 +715,15 @@ export const prune = Effect.fn("SessionSync.Assets.prune")(function* (db: DB, gl
     Effect.gen(function* () {
       yield* migrateLegacy(db)
       yield* trimProvenance(db)
+      yield* db
+        .run(sql`DELETE FROM _kilo_sync_media_reference AS r WHERE NOT EXISTS (
+          SELECT 1 FROM _kilo_sync_dirty d WHERE d.session_id=r.session_id AND d.id=r.entity_id
+            AND d.kind IN ('message','inbox') AND d.op='put' AND instr(d.value,'media:'||r.hash)>0)`)
+        .pipe(Effect.orDie)
+      yield* db
+        .run(sql`DELETE FROM _kilo_sync_media AS m WHERE NOT EXISTS (
+          SELECT 1 FROM _kilo_sync_media_reference r WHERE r.session_id=m.session_id AND r.hash=m.hash)`)
+        .pipe(Effect.orDie)
       const keep = new Map<string, Set<string>>()
       const retain = (namespace: string, hash: string) => {
         const key = digest(namespace)

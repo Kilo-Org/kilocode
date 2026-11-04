@@ -106,6 +106,15 @@ const tables = [
     session_id TEXT NOT NULL, kind TEXT NOT NULL, entity_id TEXT NOT NULL,
     locator TEXT NOT NULL, hash TEXT NOT NULL, bytes INTEGER NOT NULL,
     PRIMARY KEY(session_id,kind,entity_id,locator))`,
+  `CREATE TABLE IF NOT EXISTS _kilo_sync_asset_mapping (
+    session_id TEXT NOT NULL, id TEXT NOT NULL, kind TEXT NOT NULL, entity_id TEXT NOT NULL,
+    PRIMARY KEY(session_id,id))`,
+  `CREATE TABLE IF NOT EXISTS _kilo_sync_media (
+    session_id TEXT NOT NULL, hash TEXT NOT NULL, bytes INTEGER NOT NULL, data BLOB NOT NULL,
+    PRIMARY KEY(session_id,hash))`,
+  `CREATE TABLE IF NOT EXISTS _kilo_sync_media_reference (
+    session_id TEXT NOT NULL, entity_id TEXT NOT NULL, hash TEXT NOT NULL,
+    PRIMARY KEY(session_id,entity_id,hash))`,
   `CREATE TABLE IF NOT EXISTS _kilo_sync_owned_asset (
     path TEXT PRIMARY KEY, directory TEXT NOT NULL, hash TEXT, bytes INTEGER, identity TEXT,
     error_message TEXT, observed_at INTEGER NOT NULL DEFAULT 0, captured INTEGER NOT NULL DEFAULT 0)`,
@@ -144,8 +153,16 @@ const sessionValue = (r: string) => `json_object(
     'cache',json_object('read',${r}.tokens_cache_read,'write',${r}.tokens_cache_write)),
   'time',json_object('created',${r}.time_created,'updated',${r}.time_updated,'idle',${r}.time_idle,'viewed',${r}.time_viewed,'archived',${r}.time_archived),
   'origin',json_object('directory',${r}.directory,'subpath',${r}.path,'projectID',${r}.project_id))`
+// Match native history reads: ordered parts replace assistant content only while part rows exist.
+// Legacy inline messages, including their JSON values, remain unchanged.
 const messageValue = (r: string) =>
-  `json_object('seq',${r}.seq,'message',json_patch(${r}.data,json_object('id',${r}.id,'type',${r}.type)))`
+  `json_object('seq',${r}.seq,'message',json_patch(
+    CASE WHEN ${r}.type='assistant' AND json_type(${r}.data,'$.content') IS NOT NULL
+      THEN coalesce((SELECT json_set(${r}.data,'$.content',json_group_array(json(p.data)))
+        FROM (SELECT data FROM session_part WHERE message_id=${r}.id ORDER BY ordinal) p
+        HAVING count(*)>0),${r}.data)
+      ELSE ${r}.data END,
+    json_object('id',${r}.id,'type',${r}.type)))`
 const inboxValue = (r: string) =>
   `json_object('id',${r}.id,'type',${r}.type,'payload',json(${r}.payload),'delivery',${r}.delivery,'enqueuedSeq',${r}.enqueued_seq,'time',json_object('created',${r}.time_created))`
 const entryValue = (r: string) =>
@@ -216,6 +233,30 @@ export const initialize = Effect.fn("SessionSync.Store.initialize")(function* (d
         yield* tx.run(`CREATE TRIGGER _kilo_sync_local_delete BEFORE DELETE ON session_v2 BEGIN
       UPDATE _kilo_sync_session SET local_deleted=1 WHERE id=OLD.id;
     END`)
+        // Native deletion releases blob ownership before deleting the session. Preserve only an
+        // already-consented pending entity's owned media, in the same transaction as that release.
+        yield* tx.run(`DROP TRIGGER IF EXISTS _kilo_sync_media_release`)
+        yield* tx.run(`CREATE TRIGGER _kilo_sync_media_release BEFORE DELETE ON blob_ref
+      WHEN EXISTS(SELECT 1 FROM _kilo_sync_dirty d WHERE d.session_id=OLD.session_id
+        AND d.id=OLD.message_id AND d.kind IN ('message','inbox') AND d.op='put'
+        AND instr(d.value,'media:'||OLD.hash)>0) BEGIN
+        INSERT OR IGNORE INTO _kilo_sync_media(session_id,hash,bytes,data)
+        SELECT OLD.session_id,b.hash,b.bytes,b.data FROM blob b WHERE b.hash=OLD.hash
+          AND b.bytes BETWEEN 0 AND ${limits.blob} AND length(b.data)=b.bytes
+          AND NOT EXISTS(SELECT 1 FROM _kilo_sync_media
+            WHERE session_id=OLD.session_id AND hash=OLD.hash)
+          AND b.bytes+coalesce((SELECT sum(bytes) FROM (
+            SELECT hash,max(bytes) AS bytes FROM (
+              SELECT hash,bytes FROM _kilo_sync_media WHERE session_id=OLD.session_id
+              UNION ALL SELECT hash,bytes FROM _kilo_sync_asset_reference WHERE session_id=OLD.session_id
+              UNION ALL SELECT json_extract(b.value,'$.hash'),json_extract(b.value,'$.bytes')
+                FROM _kilo_sync_packet p,json_each(p.blobs) b WHERE p.session_id=OLD.session_id
+            ) WHERE hash<>OLD.hash GROUP BY hash
+          )),0)<=${limits.session};
+        INSERT OR IGNORE INTO _kilo_sync_media_reference(session_id,entity_id,hash)
+        SELECT OLD.session_id,OLD.message_id,OLD.hash WHERE EXISTS(
+          SELECT 1 FROM _kilo_sync_media WHERE session_id=OLD.session_id AND hash=OLD.hash);
+      END`)
         for (const entity of entities) {
           for (const event of ["INSERT", "UPDATE"] as const) {
             const name = `_kilo_sync_${entity.table}_${event.toLowerCase()}`
@@ -230,6 +271,17 @@ export const initialize = Effect.fn("SessionSync.Store.initialize")(function* (d
           yield* tx.run(`CREATE TRIGGER ${name} AFTER DELETE ON ${entity.table} BEGIN
         ${capture("OLD.session_id", entity.kind, `OLD.${entity.id}`, "NULL", "'remove'", `(SELECT cause FROM _kilo_sync_intent WHERE session_id=OLD.session_id AND ((cause='revert' AND '${entity.kind}' IN ('message','inbox','instruction-state')) OR ('${entity.kind}'='inbox' AND target_id=OLD.${entity.id})))`)}
       END`)
+        }
+        // The native projector writes the envelope before its parts. Recapturing after each part
+        // mutation leaves the final reconstructed message in the same native transaction.
+        for (const event of ["INSERT", "UPDATE", "DELETE"] as const) {
+          const row = event === "DELETE" ? "OLD" : "NEW"
+          const name = `_kilo_sync_session_part_${event.toLowerCase()}`
+          yield* tx.run(`DROP TRIGGER IF EXISTS ${name}`)
+          yield* tx.run(`CREATE TRIGGER ${name} AFTER ${event} ON session_part
+        WHEN EXISTS(SELECT 1 FROM session_message WHERE id=${row}.message_id) BEGIN
+          ${capture(`(SELECT session_id FROM session_message WHERE id=${row}.message_id)`, "message", `${row}.message_id`, `(SELECT ${messageValue("m")} FROM session_message m WHERE m.id=${row}.message_id)`)}
+        END`)
         }
         for (const event of ["INSERT", "UPDATE"] as const) {
           const name = `_kilo_sync_instruction_blob_${event.toLowerCase()}`
@@ -481,6 +533,22 @@ export const freeze = Effect.fn("SessionSync.Store.freeze")(function* (
               "Prepared bytes no longer have a current reservation; prepare the current state",
               true,
             )
+        }
+        // Inventory follows only the bytes that actually freeze. A competing preparation must not
+        // replace the mapping owners of an existing immutable packet.
+        for (const change of changes) {
+          if (change.kind !== "asset") continue
+          if (change.op === "remove") {
+            yield* tx.run(
+              sql`DELETE FROM _kilo_sync_asset_mapping WHERE session_id=${session.id} AND id=${change.id}`,
+            )
+            continue
+          }
+          if (!("value" in change))
+            return yield* fail("invalid_state", "Portable asset mappings must be stored inline")
+          const encoded = JSON.stringify(change.value)
+          yield* tx.run(sql`INSERT OR REPLACE INTO _kilo_sync_asset_mapping(session_id,id,kind,entity_id)
+        VALUES(${session.id},${change.id},json_extract(${encoded},'$.entity.kind'),json_extract(${encoded},'$.entity.id'))`)
         }
         const frozen = {
           session_id: session.id,

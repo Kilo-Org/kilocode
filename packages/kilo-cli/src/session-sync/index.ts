@@ -229,14 +229,16 @@ export const make = Effect.fn("SessionSync.make")(function* (
             "unclassified_removal",
             "A native entity was removed without a portable semantic cause; synchronization is paused",
           )
-        const removal: Change = { op: "remove", kind: row.kind, id: row.id, cause: row.cause }
-        if (
-          changes.length &&
-          (changes.length >= limits.changes ||
-            Buffer.byteLength(JSON.stringify([...changes, removal])) > limits.batch - 4096)
-        )
+        const removals: Change[] = [
+          ...(yield* Assets.remove(db, row)),
+          { op: "remove", kind: row.kind, id: row.id, cause: row.cause },
+        ]
+        const bytes = Buffer.byteLength(JSON.stringify([...changes, ...removals]))
+        if (changes.length && (changes.length + removals.length > limits.changes || bytes > limits.batch - 4096))
           break
-        changes.push(removal)
+        if (removals.length > limits.changes || bytes > limits.batch - 4096)
+          return yield* fail("packet_too_large", "One portable removal exceeds the service packet limit")
+        changes.push(...removals)
         through = row.position
         continue
       }
@@ -310,6 +312,11 @@ export const make = Effect.fn("SessionSync.make")(function* (
       )
     const pending = yield* prepare(session, c)
     if (!pending) return false
+    // Another producer may have acknowledged a packet after this pass selected
+    // its session row, then frozen the next one. Refresh on the next pass rather
+    // than comparing that packet with the stale predecessor.
+    if (pending.after !== session.acknowledged)
+      return yield* fail("capture_changed", "Another uploader advanced the local session; prepare its current state", true)
     const url = `${c.destination}/v1/sessions/${encodeURIComponent(session.id)}`
     const state = yield* authenticated(c, url).pipe(
       Effect.flatMap((value) => decode(State, value)),
@@ -467,7 +474,9 @@ export const make = Effect.fn("SessionSync.make")(function* (
         : Number.MAX_SAFE_INTEGER
       yield* db
         .run(
-          sql`UPDATE _kilo_sync_session SET error_code=${error.code},error_message=${error.message},retry_at=${retryAt},attempts=attempts+1 WHERE id=${session.id}`,
+          sql`UPDATE _kilo_sync_session SET error_code=${error.code},error_message=${error.message},retry_at=${retryAt},attempts=attempts+1
+        WHERE id=${session.id} AND acknowledged=${session.acknowledged}
+          AND ack_batch IS ${session.ack_batch} AND ack_digest IS ${session.ack_digest}`,
         )
         .pipe(Effect.orDie)
     }

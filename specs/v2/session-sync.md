@@ -47,6 +47,8 @@ The default account scope follows the active Kilo account and organization.
 `--organization` selects an explicit organization.
 
 Consent covers the canonical workspace and local descendant directories, not sibling clones or remote workspace drivers.
+A descendant's more-specific consent, including a disabled consent, remains its own boundary.
+Native asset provenance cannot cross that boundary through a parent session; an external file requires exact-file approval.
 The producer pins the destination, tenant, account, and source identity.
 An account change pauses uploads rather than transferring consent.
 Status reports pending changes and a structured error.
@@ -74,6 +76,8 @@ Freeze a bounded immutable packet before network transmission.
 Keep that packet and its acknowledgement state in durable local storage.
 Only clear work covered by the acknowledged packet.
 A concurrent newer change must remain dirty.
+Concurrent local producers may advance that acknowledgement while another upload is in flight.
+A stale pass cannot park the newer receipt or reinterpret its next immutable packet as a conflicting predecessor.
 
 Do not attach the outbox lifetime to a session-row cascade.
 Local deletion, schema maintenance, or event-log cleanup must not silently erase unacknowledged synchronization intent.
@@ -85,7 +89,7 @@ A restored database must not reuse an acknowledged position for different conten
 | Kind | Captured state |
 |---|---|
 | `session` | Encoded native session metadata and settings, excluding active machine bindings. |
-| `message` | Native transcript messages with stable identity and ordering. |
+| `message` | Native transcript messages with stable identity and ordering, reconstructing ordered persisted assistant parts when present. |
 | `inbox` | Pending input needed to reconstruct the session. |
 | `instruction-entry` | API-managed instruction values and observed removals. |
 | `instruction-state` | Current and epoch-initial instruction state. |
@@ -137,7 +141,11 @@ If an asset is already unavailable, report it; never claim full portability.
 
 Native message JSON remains unchanged.
 Separate asset entities map a native JSON pointer to verified portable bytes.
+Removing an attachment or its owning portable entity removes the obsolete asset mappings in the same packet.
+Ready cloud blobs remain subject to the service's retention policy rather than an implicit content deletion.
 Inline native attachments carry their own bytes.
+Database-backed native `media:` attachments require session-owned native blob references.
+Their verified bytes receive durable asset mappings without rewriting the original message JSON.
 The host records provenance for files allocated by native tool-output handling.
 A transcript path alone never authorizes a filesystem read, even inside an opted-in workspace.
 
