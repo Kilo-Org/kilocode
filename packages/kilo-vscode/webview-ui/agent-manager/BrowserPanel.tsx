@@ -24,7 +24,7 @@ export function createBrowserPanel(input: {
   sessionId: Accessor<string | undefined>
   projectId: Accessor<string | undefined>
   sessions: Accessor<{ id: string }[]>
-  onReference: (text: string) => void
+  onReference: (text: string, sessionId: string) => void
 }) {
   const [enabled, configure] = createSignal(
     (globalThis as typeof globalThis & { KILO_BROWSER_AUTOMATION?: boolean }).KILO_BROWSER_AUTOMATION === true,
@@ -90,13 +90,16 @@ function command(command: BrowserCommand): WebviewMessage {
       sequence: command.sequence,
     }
   }
-  return {
-    type: "agentManager.browser.inspect",
-    ...command.scope,
-    ...command.position,
-    hover: command.hover,
-    requestId: command.requestId,
+  if (command.type === "inspect") {
+    return {
+      type: "agentManager.browser.inspect",
+      ...command.scope,
+      ...command.position,
+      hover: command.hover,
+      requestId: command.requestId,
+    }
   }
+  throw new Error(`Unhandled browser command: ${JSON.stringify(command)}`)
 }
 
 function event(message: ExtensionMessage): BrowserEvent | undefined {
@@ -119,7 +122,7 @@ function event(message: ExtensionMessage): BrowserEvent | undefined {
 function BrowserAdapter(props: {
   sessionId: Accessor<string | undefined>
   projectId: Accessor<string | undefined>
-  onReference: (text: string) => void
+  onReference: (text: string, sessionId: string) => void
   onClose: () => void
 }) {
   const language = useLanguage()
@@ -131,7 +134,8 @@ function BrowserAdapter(props: {
     event,
   )
   const labels = createMemo(() => browserLabels(language.t))
-  const reference = (value: BrowserReference) => props.onReference(formatBrowserFeedback([value]))
+  const reference = (value: BrowserReference) =>
+    props.onReference(formatBrowserFeedback([value]), value.sessionId)
   const theme = () =>
     document.body.classList.contains("vscode-light") || document.body.classList.contains("vscode-high-contrast-light")
       ? "light"
@@ -172,7 +176,7 @@ function BrowserPanelCache(props: {
   sessionId: Accessor<string | undefined>
   projectId: Accessor<string | undefined>
   sessions: Accessor<{ id: string }[]>
-  onReference: (text: string) => void
+  onReference: (text: string, sessionId: string) => void
   onClose: () => void
   onChange: (value: boolean) => void
 }) {

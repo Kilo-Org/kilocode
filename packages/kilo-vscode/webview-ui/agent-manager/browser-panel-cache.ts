@@ -20,8 +20,7 @@ export function browserScopeParts(entry: string): { project: string; session: st
 
 /** Append a scope, keeping the most recently used entries within `max`. */
 export function rememberBrowserScope(entries: string[], entry: string, max: number = BROWSER_CACHE_SIZE): string[] {
-  if (entries.includes(entry)) return entries
-  const next = [...entries, entry]
+  const next = [...entries.filter((value) => value !== entry), entry]
   return next.length > max ? next.slice(next.length - max) : next
 }
 

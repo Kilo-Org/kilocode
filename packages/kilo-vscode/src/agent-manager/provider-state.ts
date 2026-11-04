@@ -14,8 +14,6 @@ import type { RunController } from "./run/controller"
 import type { TerminalRouter } from "./terminal-routing"
 import type { ScriptTerminalManager } from "./ScriptTerminalManager"
 import type { HealthScheduler } from "./worktree-health"
-import { workspace } from "vscode"
-import { integratedBrowserEnabled } from "../services/browser-automation/chrome-setting"
 import { applyPresence, healthPayload, needsReconcile, staleForState } from "./worktree-health"
 import {
   pushProjectSessions,
@@ -50,6 +48,8 @@ export interface ProviderStateHost {
   stateReady: Promise<void> | undefined
   context: ProjectContext | undefined
   state: WorktreeStateManager | undefined
+  /** Whether the Integrated Browser is enabled and trusted for this workspace. */
+  browserAutomation(): boolean
   postToWebview(message: AgentManagerOutMessage): void
   log(...args: unknown[]): void
   /** Backend client of the running server, for the session catalog listing. */
@@ -192,7 +192,7 @@ export function pushState(p: ProviderStateHost, ctx?: ProjectContext): void {
     terminalFont: readTerminalFont(),
     isGitRepo: true,
     restricted: isRestrictedRoot(target.root),
-    browserAutomation: workspace.isTrusted && integratedBrowserEnabled(),
+    browserAutomation: p.browserAutomation(),
     defaultBaseBranch: state.getDefaultBaseBranch(),
     activeTarget: state.getActiveTarget(),
     ...(active ? runStateFor(p, target) : {}),
@@ -221,7 +221,7 @@ export function pushEmptyState(p: ProviderStateHost): void {
     terminalFont: readTerminalFont(),
     isGitRepo: false,
     restricted: isRestrictedRoot(p.contexts.active()?.root),
-    browserAutomation: workspace.isTrusted && integratedBrowserEnabled(),
+    browserAutomation: p.browserAutomation(),
     runStatuses: [],
     runScriptConfigured: false,
   })

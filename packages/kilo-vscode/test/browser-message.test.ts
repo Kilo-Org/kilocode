@@ -117,7 +117,7 @@ describe("browser inspection responses", () => {
       contexts: () => view.contexts,
       post: (message) => messages.push(message),
       openPanel: () => {},
-      owns: () => true,
+      sidebar: () => undefined,
       log: () => {},
     })
     const viewport = { width: 400, height: 300, revision: 1, active: true }
@@ -196,7 +196,7 @@ describe("browser inspection responses", () => {
       contexts: () => view.contexts,
       post: () => {},
       openPanel: () => {},
-      owns: () => true,
+      sidebar: () => undefined,
       log: () => {},
     })
     const panel = () => {

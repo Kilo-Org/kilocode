@@ -13,7 +13,7 @@ export function createBrowserLifecycle(input: {
   contexts: () => ProjectContexts
   post: (message: AgentManagerOutMessage) => void
   openPanel: () => void
-  owns: (sessionId: string) => boolean
+  sidebar: () => string | undefined
   log: (...args: unknown[]) => void
 }) {
   const browser = input.browser ?? new BrowserBroker({ log: input.log })
@@ -22,9 +22,9 @@ export function createBrowserLifecycle(input: {
       const directory = canonicalizePath(route.directory)
       const ctx = input.contexts().byDirectory(directory)
       if (!ctx || (route.projectId && route.projectId !== ctx.id)) return undefined
-      // The project session catalog also lists sidebar sessions rooted in this directory. Only sessions the Agent
-      // Manager itself shows here belong to the panel.
-      if (!input.owns(route.sessionId)) return undefined
+      // The project catalog also lists the sidebar's sessions rooted in this directory. The sidebar reports the
+      // session it shows, and that one belongs to the editor tab instead.
+      if (route.sessionId === input.sidebar()) return undefined
       const state = ctx.peekState()
       const stored = state?.getSession(route.sessionId)
       const live = ctx.sessions().find((session) => session.id === route.sessionId)
@@ -81,9 +81,6 @@ export function createBrowserLifecycle(input: {
         post: input.post,
         log: input.log,
       })
-    },
-    replay(): void {
-      browser.replay(post)
     },
     close(sessionId: string, projectId?: string): void {
       void browser.close(sessionId, projectId).catch((error) => input.log("Failed to close browser session:", error))

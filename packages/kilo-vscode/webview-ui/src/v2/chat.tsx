@@ -24,6 +24,11 @@ export function Chat() {
   const display = useDisplaySettings()
   // An element reference picked in the Integrated Browser arrives from the host as text for the composer.
   const vscode = useVSCode()
+  // The editor-tab browser and the Agent Manager share one broker; report which session this sidebar shows.
+  createEffect(() => {
+    const id = session()
+    vscode.postMessage({ type: "sidebar.session", sessionId: id })
+  })
   let append: ((value: string, send: boolean) => void) | undefined
   onCleanup(
     vscode.onMessage((message) => {

@@ -1000,7 +1000,11 @@ const AgentManagerContent: Component = () => {
     font: (font) => font && setTerminalFont(font),
     activeProject: activeProjectId,
     currentSession: () => sessions.currentSessionID(),
-    revealBrowser: () => panels.open(SidePanel.Browser),
+    revealBrowser: () => {
+      closeHistory()
+      setReviewActive(false)
+      panels.open(SidePanel.Browser)
+    },
   })
   const preserveSidebarScroll = createSidebarScrollPreserver(() => selection() ?? sessions.currentSessionID())
   const applyActiveState = createProjectHydration({
@@ -1078,7 +1082,10 @@ const AgentManagerContent: Component = () => {
     sessionId: () => sessions.currentSessionID(),
     projectId: activeProjectId,
     sessions: () => sessions.sessions(),
-    onReference: (text) => appendToPrompt(text, false),
+    onReference: (text, sessionId) => {
+      if (sessionId !== sessions.currentSessionID()) return
+      appendToPrompt(text, false)
+    },
   })
 
   const handleSessionCreated = (id: string | undefined) => {

@@ -18,6 +18,7 @@ import { createPanel, PANEL_TYPE } from "./agent-manager/panel"
 import { ensureCommandsSkipShell } from "./agent-manager/terminal-host"
 import { VscodeHost } from "./agent-manager/vscode-host"
 import { BrowserTabProvider } from "./browser-tab/BrowserTabProvider"
+import { sidebarSession } from "./browser-tab/sidebar-session"
 import { chat } from "./chat"
 import { commitMessageCommand, commitMessageLanguage, connect, type GitExports } from "./commit-message"
 import { createCostAlerts } from "./cost-alert"
@@ -166,18 +167,30 @@ export function activate(context: ExtensionContext) {
   const autocomplete = createConnection({ server, directory })
   context.subscriptions.push({ dispose: autocomplete.dispose })
   registerAutocompleteProvider(context, autocomplete)
-  const view = chat({ context, server, directory, trackCostSession: alerts.track, diff: diffs })
-  // The editor-tab browser registers first, as the broker expects. It serves sidebar sessions of the workspace
-  // directory and leaves the sessions the Agent Manager owns to the panel.
-  let owned = (_sessionId: string) => false
-  const browserTab = new BrowserTabProvider(
+  let browserTab: BrowserTabProvider | undefined
+  const view = chat({
+    context,
+    server,
+    directory,
+    trackCostSession: alerts.track,
+    diff: diffs,
+    openBrowser: (sessionId, url) => browserTab?.openUrl(sessionId, url) ?? false,
+  })
+  // The Agent Manager binds first and skips the session the sidebar is showing, so a sidebar session opens the
+  // editor tab even when the panel has the same directory open.
+  const agentHost = new VscodeHost(context, { server, directory })
+  const agentPanel = createPanel({ context, server, directory, trackCostSession: alerts.track })
+  const agentManager = new AgentManagerProvider(agentHost, connection, agentPanel, undefined, broker)
+  agentManager.onBrowserDebug = (...args) => output.appendLine(`Browser AM: ${args.map((item) => String(item)).join(" ")}`)
+  browserTab = new BrowserTabProvider(
     context.extensionUri,
     { browser: broker, version: (context.extension.packageJSON as { version?: string }).version },
     {
       enabled: () => integratedBrowserEnabled() && workspace.isTrusted,
       trusted: () => workspace.isTrusted,
       resolve: (route) =>
-        !owned(route.sessionId) && samePath(canonicalizePath(route.directory), canonicalizePath(directory))
+        route.sessionId === sidebarSession() &&
+        samePath(canonicalizePath(route.directory), canonicalizePath(directory))
           ? { sessionId: route.sessionId, directory: route.directory }
           : undefined,
       directory: () => directory,
@@ -196,12 +209,7 @@ export function activate(context: ExtensionContext) {
       log: (...args) => output.appendLine(`Browser tab: ${args.map((item) => String(item)).join(" ")}`),
     },
   )
-  context.subscriptions.push({ dispose: () => browserTab.dispose() })
-  const agentHost = new VscodeHost(context, { server, directory })
-  const agentPanel = createPanel({ context, server, directory, trackCostSession: alerts.track })
-  const agentManager = new AgentManagerProvider(agentHost, connection, agentPanel, undefined, broker)
-  agentManager.onBrowserDebug = (...args) => output.appendLine(`Browser AM: ${args.map((item) => String(item)).join(" ")}`)
-  owned = (sessionId) => agentManager.ownsBrowserSession(sessionId)
+  context.subscriptions.push({ dispose: () => browserTab?.dispose() })
   // The Settings panel edits Agent Manager project settings through the provider's shared handler, so it is created
   // after the provider and receives a lazy getter.
   const panel = settings({

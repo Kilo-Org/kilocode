@@ -28,6 +28,8 @@ import { resolveKiloProfile } from "./settings-paths"
 import { promptKeybindings, watchKeybindings } from "./prompt-keybindings"
 import { readDisplaySettings } from "./display-settings"
 import { createSpeechToTextHost } from "./speech-to-text/host"
+import { setSidebarSession, sidebarSession } from "./browser-tab/sidebar-session"
+import { openBrowserLink } from "./browser-links"
 import { openToolFile, type ToolDiff } from "./tool-diff"
 
 // The sidebar may only write the settings its own UI owns. Other views keep their own write path.
@@ -43,6 +45,8 @@ export function chat(input: {
   directory: string
   trackCostSession: (sessionID: string) => void
   diff: ToolDiff
+  /** Opens a chat web link in the Integrated Browser. Returns false when the tab cannot take it. */
+  openBrowser?: (sessionId: string, url: string) => boolean
 }) {
   // This host owns the persisted auto-approve flag, and the Agent Manager sweep reads it. Record it at activation, so
   // the sweep works before any webview resolves.
@@ -129,6 +133,8 @@ export function wire(input: {
   globals?: Record<string, unknown>
   /** The Agent Manager settings handler the Settings panel shares with the provider. */
   agentManager?: () => SettingsHandler
+  /** Opens a chat web link in the Integrated Browser. Returns false when the tab cannot take it. */
+  openBrowser?: (sessionId: string, url: string) => boolean
 }) {
   const webview = input.webview
   const root = input.context.extensionUri
@@ -137,7 +143,10 @@ export function wire(input: {
   const link = bridge({
     target: () => input.server.get(),
     post: (message) => void webview.postMessage(message),
-    open: (url) => void env.openExternal(Uri.parse(url)),
+    open: (url) => {
+      const session = sidebarSession()
+      void openBrowserLink(url, () => (session ? (input.openBrowser?.(session, url) ?? false) : false))
+    },
     fetch: local,
   })
   const post = (message: ToWebview) => void webview.postMessage(message)
@@ -260,6 +269,7 @@ export function wire(input: {
     input.onMessage?.()
     if (input.handle?.(message) || speech.handle(message)) return
     if (message.type === "fetch" || message.type === "abort" || message.type === "open") return link.receive(message)
+    if (message.type === "sidebar.session") return setSidebarSession(message.sessionId)
     if (message.type === "trackCostSession") return input.trackCostSession?.(message.sessionID)
     if (isSurface(message)) return handleSurface(message)
     // A chat recovery link opens the Settings panel at the row that owns the problem.

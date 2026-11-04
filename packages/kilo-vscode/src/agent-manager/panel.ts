@@ -1,13 +1,12 @@
 // The Agent Manager editor panel: the webview loads the agent-manager bundle and talks to the server through the
 // same relay as the sidebar. Agent Manager messages go to the provider; the standard webview messages (clipboard,
 // tool files, display settings, cost alerts) are handled by the shared webview wiring.
-import { Uri, ViewColumn, commands, window, workspace, type ExtensionContext, type WebviewPanel } from "vscode"
+import { Uri, ViewColumn, commands, window, type ExtensionContext, type WebviewPanel } from "vscode"
 import { composerState, wire } from "../chat"
 import { promptKeybindings, watchKeybindings } from "../prompt-keybindings"
 import type { ToHost, ToWebview } from "../protocol"
 import type { Manager } from "../server"
 import type { Disposable, PanelContext } from "./host"
-import { integratedBrowserEnabled } from "../services/browser-automation/chrome-setting"
 
 export const PANEL_TYPE = "kilo-code.v2.agentManagerPanel"
 const INTRO = "kilo.agentManager.introDismissed"
@@ -65,10 +64,7 @@ export function createPanel(input: {
       view: "agentManager",
       trackCostSession: input.trackCostSession,
       onMessage: ready,
-      globals: {
-        KILO_AGENT_MANAGER_INTRO_DISMISSED: input.context.globalState.get<boolean>(INTRO) === true,
-        KILO_BROWSER_AUTOMATION: workspace.isTrusted && integratedBrowserEnabled(),
-      },
+      globals: { KILO_AGENT_MANAGER_INTRO_DISMISSED: input.context.globalState.get<boolean>(INTRO) === true },
       handle: (message: ToHost) => {
         const item = message as unknown as PanelMessage
         if (item.type === "webviewReady") return true

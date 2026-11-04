@@ -104,10 +104,6 @@ export class BrowserTabProvider {
     this.options.log?.(...args)
   }
 
-  has(sessionId: string): boolean {
-    return this.panels.has(sessionId)
-  }
-
   /** Reveal the tab of the session that last used the browser, or explain why there is none. */
   openLast(): void {
     if (!this.last) {

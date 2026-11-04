@@ -102,6 +102,7 @@ export type SpeechToTextStatus = {
 export type ToHost =
   | Request
   | BrowserTab
+  | { type: "sidebar.session"; sessionId?: string }
   | { type: "abort"; id: number }
   | { type: "open"; url: string }
   | Ui

@@ -3,14 +3,7 @@ import { createServer, type IncomingMessage, type Server, type ServerResponse } 
 import type { Socket } from "node:net"
 import { URL } from "node:url"
 import { stripVTControlCharacters } from "node:util"
-import {
-  chromium,
-  type BrowserContext,
-  type BrowserContextOptions,
-  type CDPSession,
-  type LaunchOptions,
-  type Page,
-} from "playwright-core"
+import type { BrowserContext, BrowserContextOptions, CDPSession, LaunchOptions, Page } from "playwright-core"
 import { BrowserDevtools } from "./browser-devtools"
 import { capture as element, locate } from "./browser-element"
 import { options } from "./browser-runtime"
@@ -125,7 +118,12 @@ interface Entry {
   dead?: boolean
   unreachable?: boolean
   history?: Promise<CDPSession | undefined>
+  validated?: { browserId: string; navigation: number }
 }
+
+// Loaded on demand: the package carries the Chromium launcher and adds activation cost when the browser is off.
+let playwright: Promise<typeof import("playwright-core")> | undefined
+const engine = () => (playwright ??= import("playwright-core"))
 
 export class BrowserLaunchError extends Error {
   constructor(
@@ -352,6 +350,7 @@ export class BrowserBroker {
   ): BrowserOwner {
     const owner: BrowserOwner = { resolve, approve }
     this.owners.push(owner)
+    for (const entry of this.entries.values()) entry.validated = undefined
     return owner
   }
 
@@ -359,6 +358,8 @@ export class BrowserBroker {
   unbind(owner: BrowserOwner): void {
     const index = this.owners.indexOf(owner)
     if (index >= 0) this.owners.splice(index, 1)
+    // A removed owner may not resolve its sessions anymore, so their next view call must revalidate.
+    for (const entry of this.entries.values()) if (entry.owner === owner) entry.validated = undefined
   }
 
   private resolve(route: BrowserRoute): { scope: BrowserRoute; owner?: BrowserOwner } | undefined {
@@ -427,7 +428,7 @@ export class BrowserBroker {
       entry.page,
       () => ({ browserId: entry.browserId, navigation: entry.state.navigation }),
       (frame) => {
-        if (!this.view(route.sessionId, route.projectId, frame) || entry.viewport?.active !== true) return
+        if (!this.view(route.sessionId, route.projectId, frame, true) || entry.viewport?.active !== true) return
         for (const viewer of this.viewers) viewer({ ...frame, projectId: route.projectId, sessionId: route.sessionId })
       },
       this.opts.log,
@@ -487,6 +488,7 @@ export class BrowserBroker {
     sessionId: string,
     projectId: string | undefined,
     identity: Pick<BrowserViewIdentity, "browserId" | "navigation">,
+    cache = false,
   ): Entry | undefined {
     if (this.closed || this.opts.enabled?.() === false || this.opts.trusted?.() === false) return
     const entry = this.entries.get(this.key(sessionId, projectId))
@@ -497,8 +499,14 @@ export class BrowserBroker {
       entry.state.navigation !== identity.navigation
     )
       return
+    // Frames arrive at screen rate, and their route only changes on navigation or an owner update. Cursor, inspection
+    // and input keep revalidating per call, so a revoked owner takes effect immediately.
+    if (cache && entry.validated?.browserId === identity.browserId && entry.validated.navigation === identity.navigation)
+      return entry
     const scope = this.revalid(entry.route, entry.owner)
-    return scope?.directory === entry.route.directory && scope.projectId === entry.route.projectId ? entry : undefined
+    if (scope?.directory !== entry.route.directory || scope.projectId !== entry.route.projectId) return
+    if (cache) entry.validated = { browserId: identity.browserId, navigation: identity.navigation }
+    return entry
   }
 
   get(sessionId: string, projectId?: string): BrowserState | undefined {
@@ -866,8 +874,8 @@ export class BrowserBroker {
           "--force-webrtc-ip-handling-policy=disable_non_proxied_udp",
         ],
       }
-      const launch = (config: LaunchOptions): Promise<BrowserContextFactory> =>
-        this.opts.launch?.(config) ?? chromium.launch(config)
+      const launch = async (config: LaunchOptions): Promise<BrowserContextFactory> =>
+        this.opts.launch?.(config) ?? (await engine()).chromium.launch(config)
       const browser = await launch(config).catch((error: unknown) => {
         const detail = error instanceof Error ? error.message : String(error)
         if (!system || !this.opts.fallback?.() || !MISSING.test(detail)) throw error

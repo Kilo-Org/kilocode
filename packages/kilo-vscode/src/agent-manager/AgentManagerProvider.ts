@@ -44,6 +44,7 @@ import { SessionTerminalManager } from "./SessionTerminalManager"
 import { createTerminalHost } from "./terminal-host"
 import { shouldOpenLinkInIntegratedBrowser } from "../browser-links"
 import { createBrowserLifecycle } from "./browser-lifecycle"
+import { sidebarSession } from "../browser-tab/sidebar-session"
 import type { BrowserBroker } from "../services/browser-automation"
 import { TerminalRouter } from "./terminal-routing"
 import { acquirePtyCleanup } from "./pty-cleanup"
@@ -248,7 +249,7 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
       contexts: () => this.contexts,
       post: (message) => this.postToWebview(message),
       openPanel: () => this.openPanel(true),
-      owns: (sessionId) => this.ownsBrowserSession(sessionId),
+      sidebar: sidebarSession,
       log: (...args) => {
         this.log(...args)
         this.onBrowserDebug?.(...args)
@@ -402,6 +403,10 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
     this.outputChannel.appendLine(`${new Date().toISOString()} ${formatLog(args)}`)
   }
 
+  public browserAutomation(): boolean {
+    return this.host.browserAutomation()
+  }
+
   /** The Integrated Browser setting changed: close its pages when disabled and republish availability. */
   public browserAutomationChanged(): void {
     if (!this.host.browserAutomation()) void this.browser.closeAll().catch((error) => this.log(error))
@@ -544,18 +549,6 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
     if (this.prBridge.handleMessage(message)) return
     if (this.relay.handle(message as unknown as AgentManagerInMessage)) return
     await handleMessage(message as unknown as AgentManagerInMessage, this.messageHost)
-  }
-
-  /**
-   * True when the session is one this panel shows, in any project, local or managed. The project session catalog
-   * also lists sidebar sessions rooted in the same directory, so only Agent Manager state answers here.
-   */
-  public ownsBrowserSession(sessionId: string): boolean {
-    if (this.openSessions.includes(sessionId) || this.panelSessions.has(sessionId)) return true
-    for (const ctx of this.contexts.values()) {
-      if (ctx.peekState()?.getSession(sessionId)) return true
-    }
-    return false
   }
 
   /** Chat links open in the Integrated Browser for the visible session when it is enabled, else externally. */
