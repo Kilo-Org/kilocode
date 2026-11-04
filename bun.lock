@@ -1113,7 +1113,7 @@
     "path-to-regexp": ">=8.4.0",
     "picomatch": ">=2.3.2",
     "seroval": "~1.6.11",
-    "seroval-plugins": "~1.6.8",
+    "seroval-plugins": "~1.6.11",
     "smol-toml": ">=1.6.1",
     "solid-js": "catalog:",
     "vite": "7.3.7",
