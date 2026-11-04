@@ -30,10 +30,11 @@ const write = (value: unknown) => `console.log(${JSON.stringify(JSON.stringify(v
 const deny = (message: string, extra: Record<string, unknown> = {}) => ({
   hookSpecificOutput: { hookEventName: "PermissionRequest", decision: { behavior: "deny", message, ...extra } },
 })
-// A hook that writes its pid to `file`, waits `ms`, then prints `value`.
+// A hook that writes its pid to `file`, waits `ms`, then prints `value`. The pid goes to a temp file
+// that is renamed into place, so `file` never exists while empty and a reader always sees a whole pid.
 const slow = (file: string, ms: number, value: unknown) =>
   exec(
-    `require('fs').writeFileSync(${JSON.stringify(file)}, String(process.pid)); setTimeout(() => { ${write(value)} }, ${ms})`,
+    `const fs = require('fs'); fs.writeFileSync(${JSON.stringify(file + ".tmp")}, String(process.pid)); fs.renameSync(${JSON.stringify(file + ".tmp")}, ${JSON.stringify(file)}); setTimeout(() => { ${write(value)} }, ${ms})`,
   )
 
 const scratch = () =>
