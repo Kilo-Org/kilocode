@@ -58,6 +58,7 @@ The legacy sync branding passes exist but are disabled by default and process co
 - Do not edit the main checkout, `~/.config/kilo`, `~/.local/share/kilo` or OpenCode directories.
 - Models: `kilo/kilo-auto/free` by default. Use `kilo/deepseek/deepseek-v4.1-flash` only when a paid model is needed.
 - Isolate tests too. Upstream tests can write into the real home and leave servers running. Run them with `T=$(mktemp -d)` and `env OPENCODE_TEST_HOME=$T XDG_DATA_HOME=$T/data XDG_CONFIG_HOME=$T/config XDG_STATE_HOME=$T/state XDG_CACHE_HOME=$T/cache bun test ...`. After the run, stop any of your processes that `pgrep -fl 'opencode-test-|opencode-service-lifecycle'` lists.
+- `OPENCODE_TEST_HOME` overrides the home directory `Global.Path.home` reports, so tests can point it at a scratch directory. When you run the Kilo host entry (`bun dev`, `packages/kilo-cli`), set `KILO_TEST_HOME` instead: the host translates `KILO_<NAME>` to `OPENCODE_<NAME>` at boot (`packages/kilo-cli/src/env.ts`, `names`), so `KILO_TEST_HOME` becomes `OPENCODE_TEST_HOME` before `@opencode/util/global` loads. Use the `OPENCODE_` name only when driving an upstream package directly (not the host).
 
 ## Self-test the CLI
 
@@ -118,16 +119,16 @@ The TUI is ready when the last command prints the home screen (about 15 seconds)
 
 Start every later shell call with `source /tmp/kilo-v2-st-<ID>/env.sh`. Then act, read `screen`, and check for the expected text.
 
-| Command | Use |
-|---|---|
-| `st type --value "<text>" >/dev/null` | Type a prompt, a slash command (`/connect`) or a mention (`@math`) |
-| `st press --keys <keys> >/dev/null` | `Enter`, `Escape`, `Shift+Tab` (agent), `Control+p` (commands). Chords are two calls: `Control+x`, then `n` (new tab) or `m` (model) |
-| `idle` | Wait until the answer is complete (at most 4 minutes; reports a failure if the session does not become idle). Use after sending a prompt |
-| `screen` | Print the terminal text |
-| `tclick "<text>"` | Click visible TUI text, for example a tab title. Use a short unique part |
-| `st wait --text "<text>"` | Wait until text appears. Default 10 seconds, `--timeout-ms` at most 60000. Check `isError` in the JSON |
-| `logs` | Print CLI log errors. `logs "<pattern>" <lines>` for other lines |
-| `st screenshot` | Only with `HEADLESS=false`. Read the PNG |
+| Command                               | Use                                                                                                                                      |
+| ------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| `st type --value "<text>" >/dev/null` | Type a prompt, a slash command (`/connect`) or a mention (`@math`)                                                                       |
+| `st press --keys <keys> >/dev/null`   | `Enter`, `Escape`, `Shift+Tab` (agent), `Control+p` (commands). Chords are two calls: `Control+x`, then `n` (new tab) or `m` (model)     |
+| `idle`                                | Wait until the answer is complete (at most 4 minutes; reports a failure if the session does not become idle). Use after sending a prompt |
+| `screen`                              | Print the terminal text                                                                                                                  |
+| `tclick "<text>"`                     | Click visible TUI text, for example a tab title. Use a short unique part                                                                 |
+| `st wait --text "<text>"`             | Wait until text appears. Default 10 seconds, `--timeout-ms` at most 60000. Check `isError` in the JSON                                   |
+| `logs`                                | Print CLI log errors. `logs "<pattern>" <lines>` for other lines                                                                         |
+| `st screenshot`                       | Only with `HEADLESS=false`. Read the PNG                                                                                                 |
 
 Example: check that an `@` mention attaches a file and the agent reads it.
 
@@ -197,6 +198,7 @@ Grow the test surface with each PR.
   5. The behavior is not carried: a `dropped` disposition with the evidence (see below).
 
   Dispositions go in `migration-tracking/progress/dispositions.json` with `state`, `note` and `by` (your branch name). Without a proof the cell stays open. An unknown ID, or a proof in the wrong kind of file, fails the run. The map records the rung where the cell landed.
+
 - Verify before you close a cell. A proof or a disposition says that v2 has the behavior, not that a file exists:
   - Compare the v1 hunk or file with the v2 code you name, behavior by behavior: defaults, precedence, retries, error paths and tests.
   - Find the v1 callers: `git grep -n <symbol> <v1Target> -- packages`. Code with no caller on v1 is `dropped` (write that in the note), not `ported`.
