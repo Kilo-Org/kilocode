@@ -2,45 +2,64 @@ import { Show } from "solid-js"
 import { useVSCode } from "../../src/context/vscode"
 import type { Intro, IntroOptions } from "../intro/AgentManagerIntro"
 import { createFold } from "./fold"
-import { SplashExpanded, SplashFolded } from "./Splash"
+import { Reopen, SplashExpanded, SplashFolded } from "./Splash"
 
-/** The experimental splash intro. Hide folds it; the first accepted session folds it once. */
+/** The experimental splash intro. Hide dismisses it; the first accepted session folds it once. */
 export function createSplashIntro(
   opts: IntroOptions,
   folded = (window as { KILO_AGENT_MANAGER_SPLASH_FOLDED?: boolean }).KILO_AGENT_MANAGER_SPLASH_FOLDED,
+  dismissed = (window as { KILO_AGENT_MANAGER_INTRO_DISMISSED?: boolean }).KILO_AGENT_MANAGER_INTRO_DISMISSED,
 ): Intro {
-  const fold = createFold(useVSCode(), folded)
+  const fold = createFold(useVSCode(), folded, dismissed)
   const hide = () => {
-    fold.fold()
+    fold.hide()
     opts.focus()
   }
   const show = () => {
-    fold.unfold()
+    fold.show()
     opts.focus()
   }
+  // Like the legacy intro's reopen, bring the empty chat forward first.
+  const reopen = () => {
+    opts.reveal()
+    show()
+  }
   return {
-    visible: () => !fold.folded(),
+    visible: () => !fold.hidden() && !fold.folded(),
     dismiss: hide,
     started: fold.started,
     render: () => (
       <Show
-        when={!fold.folded()}
+        when={!fold.hidden()}
         fallback={
-          <SplashFolded
+          <Reopen
             sessions={opts.sessions}
             onSelectSession={opts.onSelectSession}
             onShowHistory={opts.onShowHistory}
             hints={opts.hints}
-            onShowExamples={show}
+            onOpen={reopen}
           />
         }
       >
-        <SplashExpanded
-          git={opts.git()}
-          onHide={hide}
-          onCompose={opts.compose}
-          onCreateWorktree={opts.onCreateWorktree}
-        />
+        <Show
+          when={!fold.folded()}
+          fallback={
+            <SplashFolded
+              sessions={opts.sessions}
+              onSelectSession={opts.onSelectSession}
+              onShowHistory={opts.onShowHistory}
+              hints={opts.hints}
+              onShowExamples={show}
+            />
+          }
+        >
+          <SplashExpanded
+            git={opts.git()}
+            onHide={hide}
+            onCompose={opts.compose}
+            onCreateWorktree={opts.onCreateWorktree}
+          />
+        </Show>
       </Show>
     ),
   }

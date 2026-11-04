@@ -77,7 +77,8 @@ for (const dismissed of [false, true]) {
     const release = render()
     try {
       await wait()
-      const selector = folded ? ".am-splash-folded" : ".am-splash"
+      // A saved dismissal hides the splash behind the shared reopen button, ahead of any fold.
+      const selector = dismissed ? '[data-action="agent-manager-intro"]' : folded ? ".am-splash-folded" : ".am-splash"
       assert.ok(root.querySelector(selector), "bootstrap restores the opt-in before config loads")
       config.updateSetting("showTokenThroughput", true)
       config.discardConfig()
@@ -91,7 +92,7 @@ for (const dismissed of [false, true]) {
       assert.equal(Boolean(root.querySelector('[data-action="agent-manager-intro"]')), dismissed)
       setting(true)
       await wait()
-      assert.ok(root.querySelector(selector), "persisted fold preference survives a live round-trip")
+      assert.ok(root.querySelector(selector), "persisted dismissal and fold preferences survive a live round-trip")
       assert.deepEqual(messages, [], "restoring and toggling preferences never overwrites them")
     } finally {
       release()

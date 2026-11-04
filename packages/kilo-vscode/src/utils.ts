@@ -69,7 +69,7 @@ export function buildWebviewHtml(
     browserAutomation?: boolean
     agentManagerSplash?: boolean
     introDismissed?: boolean
-    /** Unset until Hide, Show examples, or the first accepted session chooses a preference. */
+    /** Unset until Show examples or the first accepted session chooses a fold; Hide uses introDismissed. */
     splashFolded?: boolean
     frameSrc?: string
     sidebar?: "left" | "right"

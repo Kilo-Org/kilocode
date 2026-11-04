@@ -1,5 +1,20 @@
 import { expect, test } from "@playwright/test"
 
+test("a legacy Skip hides the folded splash behind the intro's reopen button", async ({ page }) => {
+  await page.addInitScript(() => {
+    Object.defineProperty(window, "KILO_AGENT_MANAGER_INTRO_DISMISSED", { value: true })
+  })
+  await page.setViewportSize({ width: 900, height: 700 })
+  await page.goto("/iframe.html?id=agentmanager--splash-folded-story-1280&viewMode=story")
+  const host = page.locator('.am-chat-wrapper [data-slot="message-list"]').locator("..")
+  const reopen = page.getByRole("button", { name: "How Agent Manager works" })
+  await expect(reopen).toBeVisible()
+  await expect(page.locator(".am-splash, .am-splash-folded")).toHaveCount(0)
+  await expect(host).not.toHaveClass(/am-intro-layout/)
+  await reopen.click()
+  await expect(page.locator(".am-splash-hero")).toBeVisible()
+})
+
 test("splash primary CTA requests a worktree", async ({ page }) => {
   await page.goto("/iframe.html?id=agentmanager--splash-expanded-story-1280&viewMode=story")
   await page.locator(".am-splash-actions").getByRole("button", { name: "Create Worktree", exact: true }).click()
@@ -38,6 +53,7 @@ test("folded bar takes the welcome header's place in the chat host", async ({ pa
   const list = page.locator('.am-chat-wrapper [data-slot="message-list"]')
   const bar = page.locator(".am-splash-folded")
   await expect(bar).toBeVisible()
+  await expect(list.locator("..")).not.toHaveClass(/am-intro-layout/)
   await expect(header).toHaveCSS("position", "static")
   await expect(header).toHaveCSS("padding-top", "12px")
   await expect(list.locator("..")).toHaveCSS("flex-direction", "column")
@@ -52,7 +68,13 @@ test("folded bar takes the welcome header's place in the chat host", async ({ pa
   await expect(page.locator(".am-splash-hero")).toBeVisible()
   await expect(list.locator("..")).toHaveClass(/am-intro-layout/)
   await page.locator(".am-splash-hide").click()
-  await expect(bar).toBeVisible()
+  await expect(bar).toBeHidden()
+  await expect(page.locator(".am-splash-hero")).toBeHidden()
+  await expect(list.locator("..")).not.toHaveClass(/am-intro-layout/)
+  const reopen = page.getByRole("button", { name: "How Agent Manager works" })
+  await expect(reopen).toBeVisible()
+  await reopen.click()
+  await expect(page.locator(".am-splash-hero")).toBeVisible()
   await expect(header).toHaveCSS("position", "static")
 })
 
