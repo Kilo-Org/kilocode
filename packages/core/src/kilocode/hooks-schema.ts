@@ -2,6 +2,8 @@ import { Record, Schema } from "effect"
 import { PositiveInt } from "../schema"
 import { EVENTS } from "./hooks-events"
 
+// Changing a field or a description here also needs apps/web/src/app/config.json/extras.ts in
+// Kilo-Org/cloud, which mirrors it by hand.
 const Handler = Schema.Struct({
   type: Schema.Literal("command"),
   command: Schema.String.annotate({
@@ -20,7 +22,7 @@ const Handler = Schema.Struct({
   }),
   timeout: Schema.optional(PositiveInt).annotate({
     description:
-      'Timeout in seconds. Default: 600; 30 for UserPromptSubmit and the model-switch events; 10 for BranchName; see the docs for the rest. SessionEnd hooks share one 1.5 s budget per exit or deleted session, raised to the largest SessionEnd timeout (at most 60 s, or 3 s when kilo serve or the TUI exits; kilo --mini keeps the full budget). A hook that times out does not block unless onFailure is "block"; on PreModelSwitch a timeout always blocks.',
+      'Timeout in seconds. Default: 600; 30 for UserPromptSubmit and the model-switch events; 10 for BranchName; see the docs for the rest. Values above 86400 are capped at 24 hours. SessionEnd hooks share one 1.5 s budget per exit or deleted session, raised to the largest SessionEnd timeout (at most 60 s, or 3 s when kilo serve or the TUI exits; kilo --mini keeps the full budget). A hook that times out does not block unless onFailure is "block"; on PreModelSwitch a timeout always blocks.',
   }),
   onFailure: Schema.optional(Schema.Literals(["continue", "block"])).annotate({
     description:
