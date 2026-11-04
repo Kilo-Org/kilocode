@@ -60,6 +60,15 @@ export type KiloProviderOptions = {
   hideTopBar?: boolean
   /** Reports "Open in Tab" as the top bar's telemetry surface instead of the sidebar default. */
   topBarSurface?: "tab"
+  /**
+   * Opens sessions as editor tabs for the sidebar session list (sessionOpenLocation
+   * "editorTab"). Only the sidebar provider sets it.
+   */
+  sessionTabs?: {
+    open: (sessionID: string) => void
+    cloud: (sessionID: string) => void
+    create: () => void
+  }
   /** Project-aware settings used by the standalone Agent Manager settings tab. */
   agentManagerSettings?: AgentManagerSettingsHandler
   /** Dedicated Settings entry and its current route, including webview reloads. */
