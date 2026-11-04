@@ -132,6 +132,8 @@ export function Chat() {
         <SessionView
           session={session()}
           onSession={setSession}
+          // A session the server does not have (deleted, or in another database) opens a new session instead.
+          onMissing={startSession}
           actions={toolActions}
           onShowHistory={() => setView("history")}
           onViewTurnChanges={openTurnChanges}
