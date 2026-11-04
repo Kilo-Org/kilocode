@@ -1136,13 +1136,39 @@ const AgentManagerContent: Component = () => {
           }
     editPreview.open(diff, sessionID, diffStyle())
   }
+  // Inline file candidates are validated by the host, which owns filesystem access and the worktree boundary.
+  const fileChecks = new Map<string, (existing: string[]) => void>()
+  let fileCheckCount = 0
+  const stopFileChecks = onHostMessage((message) => {
+    if (message.type !== "agentManager.validateFilesResult") return
+    const resolve = fileChecks.get(message.id)
+    if (!resolve) return
+    fileChecks.delete(message.id)
+    resolve(message.existing)
+  })
+  onCleanup(() => {
+    stopFileChecks()
+    for (const resolve of fileChecks.values()) resolve([])
+    fileChecks.clear()
+  })
+  const validateFiles = (sessionID: string, paths: string[]) =>
+    new Promise<string[]>((resolve, reject) => {
+      const id = `vf-${++fileCheckCount}`
+      fileChecks.set(id, resolve)
+      to({ type: "agentManager.validateFiles", id, sessionId: sessionID, paths })
+      setTimeout(() => {
+        if (!fileChecks.delete(id)) return
+        reject(new Error("validateFiles timed out"))
+      }, 3000)
+    })
   const toolActions: ToolActions = {
-    openFile: (filePath, line) => {
+    openFile: (filePath, line, column, sessionID) => {
       // Tool paths are raw model strings, so the resolver needs the session to pick the worktree or local root.
-      const sessionId = sessions.currentSessionID() ?? selection() ?? LOCAL
-      if (isMarkdownPath(filePath) && documentInspector.open(filePath, sessionId, line)) return
-      to({ type: "agentManager.openFile", sessionId, filePath, line })
+      const sessionId = sessionID ?? sessions.currentSessionID() ?? selection() ?? LOCAL
+      if (isMarkdownPath(filePath) && documentInspector.open(filePath, sessionId, line, column)) return
+      to({ type: "agentManager.openFile", sessionId, filePath, line, column })
     },
+    validateFiles,
     openDiff: (diff) => previewEdit([diff]),
     openDiffs: (diffs) => previewEdit(diffs),
     openSession: (id) => {

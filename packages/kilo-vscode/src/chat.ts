@@ -29,7 +29,7 @@ import { resolveKiloProfile } from "./settings-paths"
 import { promptKeybindings, watchKeybindings } from "./prompt-keybindings"
 import { readDisplaySettings } from "./display-settings"
 import { createSpeechToTextHost } from "./speech-to-text/host"
-import { isMarkdownPath } from "./documents/document-reader"
+import { isMarkdownPath, resolveDocumentPath } from "./documents/document-reader"
 import { openToolFile, type ToolDiff } from "./tool-diff"
 
 // The sidebar may only write the settings its own UI owns. Other views keep their own write path.
@@ -232,6 +232,10 @@ export function wire(input: {
         return input.diff?.openMany(message.diffs, message.initialDiffStyle)
       case "requestDisplaySettings":
         return postDisplaySettings()
+      case "validateFiles": {
+        const existing = message.paths.filter((file) => !("error" in resolveDocumentPath(input.directory, file)))
+        return post({ type: "validateFilesResult", id: message.id, existing })
+      }
     }
   }
   const handleGlobalState = (message: ToHost) => {
@@ -428,7 +432,7 @@ type View = "chat" | "settings" | "agentManager" | "documents"
 
 type Surface = Extract<
   ToHost,
-  { type: "openToolFile" | "openDiffVirtual" | "openDiffsVirtual" | "requestDisplaySettings" }
+  { type: "openToolFile" | "openDiffVirtual" | "openDiffsVirtual" | "requestDisplaySettings" | "validateFiles" }
 >
 
 function isSurface(message: ToHost): message is Surface {
@@ -436,6 +440,7 @@ function isSurface(message: ToHost): message is Surface {
     message.type === "openToolFile" ||
     message.type === "openDiffVirtual" ||
     message.type === "openDiffsVirtual" ||
-    message.type === "requestDisplaySettings"
+    message.type === "requestDisplaySettings" ||
+    message.type === "validateFiles"
   )
 }

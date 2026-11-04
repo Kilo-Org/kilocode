@@ -61,11 +61,7 @@ export interface ProviderHostsSource {
     agent?: string,
     boot?: CreationBoot,
   ): Promise<SessionInfo | null>
-  notifyWorktreeReady(
-    sessionId: string,
-    result: CreateWorktreeResult,
-    worktreeId?: string,
-  ): void
+  notifyWorktreeReady(sessionId: string, result: CreateWorktreeResult, worktreeId?: string): void
   interrupt(ids: readonly string[]): Promise<void>
   pushState(ctx?: ProjectContext): void
   registerWorktreeSession(sessionId: string, directory: string): void
@@ -96,6 +92,7 @@ export interface ProviderHostsSource {
   openWorktreeDirectory(id: string): void
   openWorktreeFile(id: string, file: string, line?: number, column?: number): void
   readDocument(sessionId: string, file: string, contextKey?: string): void
+  validateFiles(id: string, sessionId: string, paths: string[]): void
   runKey(id: string): string
   trackOpenSessions(ids: string[]): void
   trackVisibleSession(id: string | null): void
@@ -149,6 +146,7 @@ export function messageHost(p: ProviderHostsSource): MessageHost {
     openWorktreeDirectory: (id) => p.openWorktreeDirectory(id),
     openWorktreeFile: (id, file, line, column) => p.openWorktreeFile(id, file, line, column),
     readDocument: (sessionId, file, contextKey) => p.readDocument(sessionId, file, contextKey),
+    validateFiles: (id, sessionId, paths) => p.validateFiles(id, sessionId, paths),
     runKey: (id) => p.runKey(id),
     view: (ids) => p.connection.view(ids),
     trackOpenSessions: (ids) => p.trackOpenSessions(ids),

@@ -53,23 +53,49 @@ export function Chat() {
 
   // A document tab in the editor posts review comments here, because this view owns the prompt they belong to.
   const vscode = useVSCode()
+  // File candidates are validated by the host, which owns filesystem access and the worktree boundary.
+  const fileChecks = new Map<string, (existing: string[]) => void>()
+  let fileCheckCount = 0
   onMount(() => {
     const message = vscode.onMessage((item) => {
+      if (item.type === "validateFilesResult") {
+        const resolve = fileChecks.get(item.id)
+        if (!resolve) return
+        fileChecks.delete(item.id)
+        resolve(item.existing)
+        return
+      }
       if (item.type !== "appendReviewComments") return
       reviewQueue.push(formatReviewCommentsMarkdown(item.comments), item.autoSend)
     })
-    onCleanup(message)
+    onCleanup(() => {
+      message()
+      for (const resolve of fileChecks.values()) resolve([])
+      fileChecks.clear()
+    })
   })
+  const validateFiles = (sessionID: string, paths: string[]) =>
+    new Promise<string[]>((resolve, reject) => {
+      const id = `vf-${++fileCheckCount}`
+      fileChecks.set(id, resolve)
+      getVSCodeAPI().postMessage({ type: "validateFiles", id, sessionID, paths } satisfies ToHost as never)
+      setTimeout(() => {
+        if (!fileChecks.delete(id)) return
+        reject(new Error("validateFiles timed out"))
+      }, 3000)
+    })
 
   // What a tool renderer may ask the host to open. The host owns the editor and the diff surfaces.
   const toolActions: ToolActions = {
-    openFile: (filePath, line) =>
+    openFile: (filePath, line, column, sessionID) =>
       getVSCodeAPI().postMessage({
         type: "openToolFile",
         filePath,
         line,
-        sessionID: session(),
+        column,
+        sessionID: sessionID ?? session(),
       } satisfies ToHost as never),
+    validateFiles,
     openDiff: (diff) => getVSCodeAPI().postMessage({ type: "openDiffVirtual", diff } satisfies ToHost as never),
     openDiffs: (diffs) => getVSCodeAPI().postMessage({ type: "openDiffsVirtual", diffs } satisfies ToHost as never),
     openSession: open,

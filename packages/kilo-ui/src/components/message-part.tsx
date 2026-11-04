@@ -6,6 +6,7 @@ import {
   For,
   Match,
   on,
+  onCleanup,
   Show,
   Switch,
   type Component,
@@ -21,6 +22,8 @@ import type {
 } from "@opencode/client"
 import { getDirectory, getFilename } from "@opencode/util/path"
 import { checksum } from "@opencode/util/encode"
+import { extractFilePathFromHref } from "@opencode-ai/ui/file-path"
+import { checkFile, type ValidateFilesFn } from "../file-link-validator"
 import { useClipboard } from "../context/clipboard"
 import { useDialog } from "../context/dialog"
 import { useFileComponent } from "../context/file"
@@ -62,7 +65,9 @@ export type ToolActionDiff = {
 
 /** Host actions a tool renderer may call. Every action is optional: a client without one renders without it. */
 export type ToolActions = {
-  openFile?: (path: string, line?: number) => void
+  openFile?: (path: string, line?: number, column?: number, sessionID?: string) => void
+  /** Which of `paths` exist for the session, so inline code spans can become file links. */
+  validateFiles?: ValidateFilesFn
   openDiff?: (diff: ToolActionDiff) => void
   /** Opens several changed files at once, for a patch that changes more than one. */
   openDiffs?: (diffs: ToolActionDiff[]) => void
@@ -73,6 +78,7 @@ export type ContentPartProps = {
   item: SessionMessageAssistant["content"][number]
   message: SessionMessageAssistant
   index: number
+  session?: string
   directory?: string
   open?: (uri: string) => void
   copy?: boolean
@@ -102,6 +108,8 @@ export function ContentPart(props: ContentPartProps) {
             throughput={props.throughput}
             turnMeta={props.turnMeta}
             open={props.open}
+            actions={props.actions}
+            session={props.session}
           />
         )}
       </Match>
@@ -140,10 +148,128 @@ function TextContent(props: {
   throughput?: JSX.Element
   turnMeta?: JSX.Element
   open?: (uri: string) => void
+  actions?: ToolActions
+  session?: string
 }) {
   const i18n = useI18n()
   const clipboard = useClipboard()
   const [copied, setCopied] = createSignal(false)
+  const [body, setBody] = createSignal<HTMLDivElement>()
+
+  // Post-render promotion of inline-code file candidates. The Markdown component writes candidates asynchronously,
+  // so a MutationObserver drives validation; a settled path is probed once, and validation is shared across rows.
+  const promote = (el: HTMLElement, path: string, exists: boolean) => {
+    if (!exists) {
+      el.classList.remove("file-link-candidate", "file-link", "plan-document-link")
+      el.removeAttribute("data-file-candidate")
+      el.removeAttribute("data-file-path")
+      el.removeAttribute("data-file-kind")
+      el.removeAttribute("data-file-line")
+      el.removeAttribute("data-file-col")
+      el.removeAttribute("title")
+      return
+    }
+    const clean = path.startsWith("./") ? path.slice(2) : path
+    el.classList.remove("file-link-candidate")
+    el.classList.add("file-link")
+    el.setAttribute("data-file-path", clean)
+    el.removeAttribute("data-file-candidate")
+    el.classList.remove("plan-document-link")
+    el.removeAttribute("data-file-kind")
+    el.removeAttribute("title")
+    if (/(?:^|\/)(?:plans?|\.plans?)\/.*\.md$/i.test(clean)) {
+      el.classList.add("plan-document-link")
+      el.setAttribute("data-file-kind", "plan")
+      el.setAttribute("title", i18n.t("ui.patch.action.plan"))
+    }
+  }
+
+  const dispatch = (el: HTMLElement, path: string) => {
+    const session = props.session
+    const validateFiles = props.actions?.validateFiles
+    if (!session || !validateFiles) return
+    void checkFile(session, path, validateFiles).then((exists) => {
+      if (exists === undefined || !el.isConnected) return
+      if (!el.classList.contains("file-link-candidate")) return
+      if (el.getAttribute("data-file-candidate") !== path) return
+      promote(el, path, exists)
+    })
+  }
+
+  let flush = () => {}
+  createEffect(
+    on(body, (root) => {
+      if (!root) return
+      const SETTLE_MS = 400
+      const pending = new Map<HTMLElement, { path: string; timer: ReturnType<typeof setTimeout> }>()
+      const arm = (el: HTMLElement, path: string, immediate: boolean) => {
+        const prior = pending.get(el)
+        if (immediate) {
+          if (prior) clearTimeout(prior.timer)
+          pending.delete(el)
+          dispatch(el, path)
+          return
+        }
+        if (prior && prior.path === path) return
+        if (prior) clearTimeout(prior.timer)
+        pending.set(el, {
+          path,
+          timer: setTimeout(() => {
+            pending.delete(el)
+            dispatch(el, path)
+          }, SETTLE_MS),
+        })
+      }
+      const scan = (immediate: boolean) => {
+        if (!props.actions?.validateFiles || !props.session) return
+        for (const el of root.querySelectorAll<HTMLElement>("code.file-link-candidate")) {
+          const path = el.getAttribute("data-file-candidate") ?? ""
+          if (path) arm(el, path, immediate)
+        }
+      }
+      let scheduled = false
+      let frame: number | undefined
+      const schedule = () => {
+        if (scheduled) return
+        scheduled = true
+        frame = requestAnimationFrame(() => {
+          scheduled = false
+          frame = undefined
+          scan(!props.streaming)
+        })
+      }
+      const observer = new MutationObserver((records) => {
+        const relevant = records.some(
+          (record) =>
+            record.type !== "attributes" ||
+            (record.target instanceof HTMLElement && record.target.classList.contains("file-link-candidate")),
+        )
+        if (relevant) schedule()
+      })
+      observer.observe(root, {
+        attributes: true,
+        attributeFilter: ["class", "data-file-candidate", "data-file-line", "data-file-col"],
+        characterData: true,
+        childList: true,
+        subtree: true,
+      })
+      flush = () => scan(!props.streaming)
+      schedule()
+      onCleanup(() => {
+        observer.disconnect()
+        if (frame !== undefined) cancelAnimationFrame(frame)
+        for (const entry of pending.values()) clearTimeout(entry.timer)
+        pending.clear()
+        flush = () => {}
+      })
+    }),
+  )
+  createEffect(
+    on(
+      () => props.streaming,
+      () => flush(),
+    ),
+  )
   const text = createThrottledValue(
     () => props.text.trim(),
     () => (props.streaming ? STREAMING_TEXT_RENDER_THROTTLE_MS : TEXT_RENDER_THROTTLE_MS),
@@ -154,17 +280,39 @@ function TextContent(props: {
     setTimeout(() => setCopied(false), 2000)
   }
   const click = (event: MouseEvent) => {
-    if (!props.open || !(event.target instanceof Element)) return
+    if (!(event.target instanceof Element)) return
+    const fileLink = event.target.closest(".file-link[data-file-path]")
+    if (fileLink) {
+      const path = fileLink.getAttribute("data-file-path")
+      if (!path) return
+      const line = Number.parseInt(fileLink.getAttribute("data-file-line") ?? "", 10)
+      const column = Number.parseInt(fileLink.getAttribute("data-file-col") ?? "", 10)
+      event.preventDefault()
+      props.actions?.openFile?.(
+        path,
+        Number.isFinite(line) ? line : undefined,
+        Number.isFinite(column) ? column : undefined,
+        props.session,
+      )
+      return
+    }
     const anchor = event.target.closest("a[href]")
     const href = anchor?.getAttribute("href")
-    if (!href || !/^https?:\/\//i.test(href)) return
+    if (!href) return
+    const file = extractFilePathFromHref(href)
+    if (file) {
+      event.preventDefault()
+      props.actions?.openFile?.(file.path, file.line, file.column, props.session)
+      return
+    }
+    if (!props.open || !/^https?:\/\//i.test(href)) return
     event.preventDefault()
     props.open(href)
   }
   return (
     <Show when={text()}>
       <div data-component="text-part">
-        <div data-slot="text-part-body">
+        <div data-slot="text-part-body" ref={setBody}>
           <Markdown text={text()} cacheKey={props.id} streaming={props.streaming} onClick={click} />
         </div>
         <Show when={props.copy || props.throughput || props.turnMeta}>

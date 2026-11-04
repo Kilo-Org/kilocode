@@ -20,7 +20,11 @@ import { initContextState, reconcileProject } from "./project/init"
 import { createPollers, type ProjectPollers } from "./project/pollers"
 import { Semaphore } from "./semaphore"
 import { BranchNamingController } from "./branch-naming"
-import { createWorktreeOnDisk, type CreateWorktreeOnDiskOptions, type CreateWorktreeOnDiskResult } from "./worktree-create"
+import {
+  createWorktreeOnDisk,
+  type CreateWorktreeOnDiskOptions,
+  type CreateWorktreeOnDiskResult,
+} from "./worktree-create"
 import {
   addSessionToLifecycleWorktree,
   closeLifecycleSession,
@@ -59,7 +63,7 @@ import { pruneSubagents, sessionMissing } from "./prune-subagents"
 import { readTerminalFont, watchTerminalFont } from "./terminal-font"
 import { DestinationState, watchTerminalDestination } from "./terminal-destination"
 import { buildKeybindingMap } from "./format-keybinding"
-import { readDocument } from "../documents/document-reader"
+import { readDocument, resolveDocumentPath } from "../documents/document-reader"
 import { resolveWorktreeFile, resolveWorktreeRoot } from "./worktree-file-path"
 import { focusPanelPrompt, revealPanel } from "./focus-panel"
 import { formatLog } from "./log-format"
@@ -317,7 +321,10 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
       located(() =>
         [...this.contexts.values()].flatMap((ctx) => [
           ctx.root,
-          ...(ctx.peekState()?.getWorktrees().map((wt) => wt.path) ?? []),
+          ...(ctx
+            .peekState()
+            ?.getWorktrees()
+            .map((wt) => wt.path) ?? []),
         ]),
       ),
     )
@@ -329,7 +336,10 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
           ...(workspace ? [workspace] : []),
           ...[...this.contexts.values()].flatMap((ctx) => [
             ctx.root,
-            ...(ctx.peekState()?.getWorktrees().map((wt) => wt.path) ?? []),
+            ...(ctx
+              .peekState()
+              ?.getWorktrees()
+              .map((wt) => wt.path) ?? []),
           ]),
         ]
       },
@@ -351,7 +361,10 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
     this.caffeination = new CaffeinationService(this.connection, () =>
       [...this.contexts.values()].flatMap((ctx) => [
         ctx.root,
-        ...(ctx.peekState()?.getWorktrees().map((wt) => wt.path) ?? []),
+        ...(ctx
+          .peekState()
+          ?.getWorktrees()
+          .map((wt) => wt.path) ?? []),
       ]),
     )
     this.caffeination.onChange((state) => this.postToWebview({ type: "agentManager.caffeination", ...state }))
@@ -592,7 +605,16 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
     agent?: string,
     boot?: CreationBoot,
   ): Promise<SessionInfo | null> {
-    return createSessionInWorktree(this as unknown as ProviderSessionHost, worktreePath, branch, worktreeId, timing, model, agent, boot)
+    return createSessionInWorktree(
+      this as unknown as ProviderSessionHost,
+      worktreePath,
+      branch,
+      worktreeId,
+      timing,
+      model,
+      agent,
+      boot,
+    )
   }
 
   public async acquirePtyCleanup(directory: string): Promise<() => void> {
@@ -604,11 +626,7 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
     })
   }
 
-  public notifyWorktreeReady(
-    sessionId: string,
-    result: CreateWorktreeResult,
-    worktreeId?: string,
-  ): void {
+  public notifyWorktreeReady(sessionId: string, result: CreateWorktreeResult, worktreeId?: string): void {
     this.pushState()
     this.postToWebview({
       type: "agentManager.worktreeSetup",
@@ -736,10 +754,9 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
       },
       removeSnapshot: async (root, target) => {
         const client = await this.connection.client()
-        const result = await client.rpc(KiloAgentManagerRpc.Definition).removeSnapshot(
-          { worktree: target },
-          { location: { directory: root } },
-        )
+        const result = await client
+          .rpc(KiloAgentManagerRpc.Definition)
+          .removeSnapshot({ worktree: target }, { location: { directory: root } })
         return result.removed
       },
       withProgress: (title, task) => this.host.withProgress(title, task),
@@ -978,6 +995,12 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
     if (target) this.host.openFile(target, line, column)
   }
 
+  public validateFiles(id: string, sessionId: string, paths: string[]): void {
+    const root = resolveWorktreeRoot(this.getStateManager(), sessionId, this.getRoot())
+    const existing = root ? paths.filter((file) => !("error" in resolveDocumentPath(root, file))) : []
+    this.postToWebview({ type: "agentManager.validateFilesResult", id, existing })
+  }
+
   public readDocument(sessionId: string, file: string, contextKey?: string): void {
     const root = resolveWorktreeRoot(this.getStateManager(), sessionId, this.getRoot())
     const result = root ? readDocument(root, file) : { error: "The document context is no longer available." }
@@ -1101,5 +1124,4 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
   public async setReviewMarkdownRender(value: boolean): Promise<void> {
     await setReviewMarkdownRender(value)
   }
-
 }

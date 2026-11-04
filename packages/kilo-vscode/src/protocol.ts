@@ -127,6 +127,7 @@ export type Ui =
   | { type: "openDiffVirtual"; diff: ToolActionDiff; initialDiffStyle?: "unified" | "split" }
   | { type: "openDiffsVirtual"; diffs: ToolActionDiff[]; initialDiffStyle?: "unified" | "split" }
   | { type: "requestDisplaySettings" }
+  | { type: "validateFiles"; id: string; sessionID?: string; paths: string[] }
 
 /** Settings panel messages the host handles directly (it reads and writes the config files). */
 export type Settings =
@@ -209,12 +210,28 @@ export type ToWebview =
   | { type: "modelSelectorExpandedLoaded"; value: boolean }
   | { type: "autoApproveStateLoaded"; value: boolean }
   | { type: "webviewActiveChanged"; active: boolean }
+  | { type: "validateFilesResult"; id: string; existing: string[] }
   | { type: "appendReviewComments"; comments: ReviewCommentData[]; autoSend: boolean }
-  | { type: "configLoaded"; global: ConfigFileContent; project: ConfigFileContent; policy?: ConfigPolicy; error?: string }
+  | {
+      type: "configLoaded"
+      global: ConfigFileContent
+      project: ConfigFileContent
+      policy?: ConfigPolicy
+      error?: string
+    }
   | { type: "configWritten"; id: number; ok: boolean; error?: string }
   | { type: "vscodeSettingsLoaded"; values: Record<string, unknown> }
-  | { type: "agentManagerSettingsLoaded"; requestId: string; projectId?: string; projects: AgentManagerSettingsProject[] }
-  | ({ type: "agentManagerSettingsBranchesLoaded"; requestId: string; error?: string } & AgentManagerSettingsBranchPayload)
+  | {
+      type: "agentManagerSettingsLoaded"
+      requestId: string
+      projectId?: string
+      projects: AgentManagerSettingsProject[]
+    }
+  | ({
+      type: "agentManagerSettingsBranchesLoaded"
+      requestId: string
+      error?: string
+    } & AgentManagerSettingsBranchPayload)
   | { type: "displaySettingsLoaded"; values: DisplaySettings; error?: string }
   | { type: "speechToTextConfigLoaded"; status: SpeechToTextStatus }
   | { type: "speechToTextStarted"; requestId: string }

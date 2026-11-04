@@ -515,6 +515,13 @@ export interface AgentManagerWorktreeDiffMessage {
   diffs: WorktreeFileDiff[]
 }
 
+/** Which requested paths exist for a session, used to turn inline code spans into file links. */
+export interface AgentManagerValidateFilesResultMessage {
+  type: "agentManager.validateFilesResult"
+  id: string
+  existing: string[]
+}
+
 /** One document preview for the Documents panel: the canonical path plus the content, or the read error. */
 export interface AgentManagerDocumentMessage {
   type: "agentManager.document"
@@ -696,6 +703,7 @@ export type AgentManagerExtensionMessage =
   | AgentManagerWorktreeDiffMessage
   | AgentManagerWorktreeDiffFileMessage
   | AgentManagerDocumentMessage
+  | AgentManagerValidateFilesResultMessage
   | AgentManagerWorktreeDiffLoadingMessage
   | AgentManagerWorktreeDiffNoticeMessage
   | AgentManagerApplyWorktreeDiffResultMessage
@@ -1046,6 +1054,14 @@ export interface AgentManagerOpenFileRequest {
   column?: number
 }
 
+/** Ask which paths exist for a session. */
+export interface AgentManagerValidateFilesRequest {
+  type: "agentManager.validateFiles"
+  id: string
+  sessionId: string
+  paths: string[]
+}
+
 /** Read a file from the selected worktree for the Documents panel. */
 export interface AgentManagerRequestDocumentRequest {
   type: "agentManager.requestDocument"
@@ -1389,6 +1405,7 @@ export type AgentManagerWebviewMessage =
   | AgentManagerTerminalSocketCloseRequest
   | AgentManagerOpenFileRequest
   | AgentManagerRequestDocumentRequest
+  | AgentManagerValidateFilesRequest
   | AgentManagerCopyFilePathRequest
   | CreateMultiVersionRequest
   | SetTabOrderRequest
