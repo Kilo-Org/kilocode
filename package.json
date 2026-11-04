@@ -206,9 +206,17 @@
       "undici": "^8.12.3"
     },
     "seroval": "~1.6.11",
-    "seroval-plugins": "~1.6.8",
+    "seroval-plugins": "~1.6.11",
     "@modelcontextprotocol/sdk": {
+      "express": "^5.3.0",
       "@hono/node-server": "^2.1.5"
+    },
+    "friendly-words": {
+      "express": "^4.22.3",
+      "proxy-addr": "^2.0.8"
+    },
+    "find-exec": {
+      "shell-quote": "^1.12.0"
     }
   },
   "patchedDependencies": {
