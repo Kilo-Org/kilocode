@@ -84,7 +84,10 @@ function writeFallback(request: Request, resultPath: string, output: string, nam
     driver: { id: "jetbrains-starter", version: "1" },
     ide: { name: "unknown", version: "unknown" },
     provenance: { clientHash: null, cliHash: null },
-    capabilities: [],
+    // Echo the scenario requirements on a synthetic failure: K1 checks capabilities before
+    // outcome, so an empty list would replace the driver.exit/driver.timeout diagnostic with a
+    // capability error.
+    capabilities: request.scenario.requires ?? [],
     outcome: "failed",
     startedAt: now,
     endedAt: new Date().toISOString(),
@@ -110,7 +113,12 @@ function children(pid: number): number[] {
 }
 
 function killTree(pid: number, signal: "SIGTERM" | "SIGKILL" = "SIGTERM") {
-  if (process.platform === "win32") return
+  if (process.platform === "win32") {
+    // Windows has no process groups here; /T kills the whole tree and /F is required for the
+    // forked JVMs. Signal escalation is unnecessary because taskkill is already forceful.
+    Bun.spawnSync(["taskkill", "/PID", String(pid), "/T", "/F"], { stdout: "ignore", stderr: "ignore" })
+    return
+  }
   for (const child of children(pid)) killTree(child, signal)
   try {
     process.kill(pid, signal)

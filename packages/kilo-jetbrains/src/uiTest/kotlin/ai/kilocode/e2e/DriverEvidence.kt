@@ -73,7 +73,15 @@ class DriverEvidence(
     fun hasFailure(): Boolean = assertions.any { it.status == "failed" }
 
     fun write(resultPath: Path) {
-        val exercised = request.scenario.requires.filter { it in SUPPORTED_CAPABILITIES }.distinct()
+        val passed = canPass()
+        // On a passing run only claim capabilities the adapter exercises. On a failed run echo the
+        // requirements: K1 checks capabilities before outcome, so an empty list would hide the real
+        // diagnostic assertion behind a capability error.
+        val capabilities = if (passed) {
+            request.scenario.requires.filter { it in SUPPORTED_CAPABILITIES }.distinct()
+        } else {
+            request.scenario.requires.distinct()
+        }
         writeDriverLog()
         val result = DriverResult(
             runId = request.runId,
@@ -85,8 +93,8 @@ class DriverEvidence(
                 clientHash = hash(System.getProperty("kilo.e2e.pluginArchive")),
                 cliHash = hash(System.getProperty("kilo.e2e.cliArchive")),
             ),
-            capabilities = exercised,
-            outcome = if (canPass()) "passed" else "failed",
+            capabilities = capabilities,
+            outcome = if (passed) "passed" else "failed",
             startedAt = startedAt,
             endedAt = Instant.now().toString(),
             assertions = assertions.map { it.copy(detail = redactor.text(it.detail)) },

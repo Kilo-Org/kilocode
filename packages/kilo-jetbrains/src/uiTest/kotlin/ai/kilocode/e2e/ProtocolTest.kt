@@ -98,7 +98,11 @@ class ProtocolTest {
         evidence.pass("transcript.visible")
         val resultPath = dir.resolve("driver-result.json")
         evidence.write(resultPath)
-        assertTrue(resultPath.readText().contains("\"outcome\":\"failed\""))
+        val text = resultPath.readText()
+        assertTrue(text.contains("\"outcome\":\"failed\""))
+        // K1 gates capabilities before outcome; a failed result must echo requirements so the
+        // missing-assertion diagnostic is not replaced by a capability error.
+        assertTrue(text.contains("\"capabilities\":[\"transcript.read\"]"), text)
     }
 
     private fun request(dir: Path, artifacts: Path) = DriverRequest(
