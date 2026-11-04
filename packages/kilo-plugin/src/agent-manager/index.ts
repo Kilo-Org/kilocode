@@ -53,6 +53,7 @@ export const KiloAgentManagerPlugin = define<FSUtil.Service | Global.Service | S
               Effect.fail(context.error("not_found", "Unknown Agent Manager request")),
             ),
           ),
+        // kilo_port(snapshot:8579451b046f)
         removeSnapshot: (input, context) =>
           SnapshotCleanup.remove({
             data: global.data,
