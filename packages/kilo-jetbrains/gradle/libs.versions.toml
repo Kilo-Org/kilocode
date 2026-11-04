@@ -4,9 +4,9 @@ intellij-gradle-plugin = "2.19.0"
 # intellij-rpc-plugin is a Kotlin compiler plugin: its Kotlin minor (2.3 in 2.3.21-RC2-0.1) must match
 # kotlin-jvm-plugin and kotlin-serialization-plugin. Bump all three together; build.gradle.kts enforces it.
 intellij-rpc-plugin = "2.3.21-RC2-0.1"
-kotlin-jvm-plugin = "2.3.20"
-kotlin-serialization-plugin = "2.3.20"
-kotlin-serialization = "1.11.0"
+kotlin-jvm-plugin = "2.4.21"
+kotlin-serialization-plugin = "2.4.21"
+kotlin-serialization = "1.12.0"
 kotlinx-coroutines = "1.11.0"
 junit = "4.13.2"
 junit-vintage = "6.1.3"
