@@ -187,16 +187,17 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: calc(var(--spacing) * 0.5);
+  gap: 0;
 }
 
 .am-splash .am-splash-dot[data-component="button"] {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: calc(var(--spacing) * 4);
-  min-width: 0;
-  height: calc(var(--spacing) * 4);
+  width: calc(var(--spacing) * 6);
+  min-width: 24px;
+  height: calc(var(--spacing) * 6);
+  min-height: 24px;
   padding: 0;
   border: 0;
   background: transparent;

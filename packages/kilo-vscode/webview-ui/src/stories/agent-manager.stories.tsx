@@ -151,20 +151,18 @@ const meta: Meta = {
 export default meta
 type Story = StoryObj
 
-function IntroductionPreview(props: { skipped?: boolean; folded?: boolean; composer?: boolean; git?: boolean }) {
-  const [created, setCreated] = createSignal(false)
-  let composer: HTMLTextAreaElement | undefined
+function IntroductionPreview(props: { skipped?: boolean; folded?: boolean }) {
   const opts = {
     base: () => "main",
-    git: () => props.git ?? true,
-    onCreateWorktree: () => setCreated(true),
+    git: () => true,
+    onCreateWorktree: () => {},
     onSelectSession: () => {},
     onShowHistory: () => {},
     reveal: () => {},
     focus: () => {},
-    compose: () => composer?.focus(),
+    compose: () => {},
   }
-  // A fold state renders the splash directly, whatever the gate says.
+  // Stories force the splash through its own controller, independent of the setting.
   const intro = props.folded === undefined ? createIntro(opts) : createSplashIntro(opts, props.folded)
   if (props.skipped) intro.dismiss()
   const ago = (minutes: number) => new Date(Date.now() - minutes * 60_000).toISOString()
@@ -185,17 +183,7 @@ function IntroductionPreview(props: { skipped?: boolean; folded?: boolean; compo
       },
     ],
   }
-  return (
-    <SessionContext.Provider value={session}>
-      {intro.render()}
-      <output data-testid="splash-created" hidden={!created()}>
-        {created() ? "Worktree requested" : ""}
-      </output>
-      <Show when={props.composer}>
-        <textarea ref={composer} aria-label="Local prompt" />
-      </Show>
-    </SessionContext.Provider>
-  )
+  return <SessionContext.Provider value={session}>{intro.render()}</SessionContext.Provider>
 }
 
 export const Introduction: Story = {
@@ -239,24 +227,6 @@ function SplashPreview(props: { example: number; width?: string; dir?: "rtl" }) 
       </div>
     </StoryProviders>
   )
-}
-
-export const SplashExpandedStory1280: Story = {
-  name: "Splash expanded",
-  render: () => (
-    <StoryProviders>
-      <IntroductionPreview folded={false} composer />
-    </StoryProviders>
-  ),
-}
-
-export const SplashNotGitStory1280: Story = {
-  name: "Splash not git",
-  render: () => (
-    <StoryProviders>
-      <IntroductionPreview folded={false} git={false} composer />
-    </StoryProviders>
-  ),
 }
 
 export const SplashCrossStackStory1280: Story = {
@@ -318,19 +288,6 @@ function FoldedChat() {
   )
 }
 
-/** The folded splash alone at a given width. */
-function FoldedPreview(props: { width: string }) {
-  return (
-    <div style={{ width: props.width }}>
-      <StoryProviders noPadding>
-        <div style={{ height: "640px" }}>
-          <IntroductionPreview folded />
-        </div>
-      </StoryProviders>
-    </div>
-  )
-}
-
 export const SplashFoldedStory1280: Story = {
   name: "Splash folded",
   parameters: { layout: "fullscreen" },
@@ -343,17 +300,15 @@ export const SplashFoldedStory1280: Story = {
 
 export const SplashFoldedThin1280: Story = {
   name: "Splash folded thin",
-  render: () => <FoldedPreview width="440px" />,
-}
-
-export const SplashFoldedNarrow1280: Story = {
-  name: "Splash folded narrow",
-  render: () => <FoldedPreview width="720px" />,
-}
-
-export const SplashFoldedWide1280: Story = {
-  name: "Splash folded wide",
-  render: () => <FoldedPreview width="1010px" />,
+  render: () => (
+    <div style={{ width: "440px" }}>
+      <StoryProviders noPadding>
+        <div style={{ height: "640px" }}>
+          <IntroductionPreview folded />
+        </div>
+      </StoryProviders>
+    </div>
+  ),
 }
 
 // ---------------------------------------------------------------------------

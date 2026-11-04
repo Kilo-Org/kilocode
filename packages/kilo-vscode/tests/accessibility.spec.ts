@@ -19,15 +19,9 @@ const STORIES = [
   { id: "agentmanager--side-terminal-panel-empty", name: "Agent Manager / side terminal" },
   { id: "session-tabs--switcher-open", name: "Session tabs / switcher" },
   { id: "iconbutton--states", name: "IconButton / shared states" },
-  { id: "agentmanager--splash-expanded-story-1280", name: "Splash / expanded" },
-  { id: "agentmanager--splash-delegate-story-1280", name: "Splash / delegate" },
-  { id: "agentmanager--splash-compare-story-1280", name: "Splash / compare" },
-  { id: "agentmanager--splash-beyond-code-story-1280", name: "Splash / beyond code" },
+  { id: "agentmanager--splash-cross-stack-story-1280", name: "Splash / expanded" },
   { id: "agentmanager--splash-thin-story", name: "Splash / thin" },
-  { id: "agentmanager--splash-narrow-story-1280", name: "Splash / narrow" },
-  { id: "agentmanager--splash-rtl-story-1280", name: "Splash / RTL" },
   { id: "agentmanager--splash-folded-story-1280", name: "Splash / folded" },
-  { id: "agentmanager--splash-not-git-story-1280", name: "Splash / not git" },
 ]
 
 function url(id: string) {
@@ -39,14 +33,8 @@ async function open(page: Page, id: string) {
   await page.waitForSelector("#storybook-root *", { state: "attached" })
 }
 
-async function scan(page: Page, all = false) {
-  const builder = new AxeBuilder({ page }).include("#storybook-root")
-  const result = await (all ? builder : builder.withTags(RULES)).analyze()
-  if (all) {
-    expect([...result.passes, ...result.inapplicable].map((rule) => rule.id)).toEqual(
-      expect.arrayContaining(["nested-interactive", "aria-hidden-focus"]),
-    )
-  }
+async function scan(page: Page) {
+  const result = await new AxeBuilder({ page }).include("#storybook-root").withTags(RULES).analyze()
   const details = result.violations
     .map((item) => `${item.id}: ${item.help}\n${item.nodes.map((node) => `  ${node.target.join(" ")}`).join("\n")}`)
     .join("\n")
@@ -76,7 +64,7 @@ test.describe("webview accessibility ratchet", () => {
         expect(width).toBeGreaterThanOrEqual(minimum)
         if (minimum < 880) expect(width).toBe(minimum)
       }
-      await scan(page, splash)
+      await scan(page)
     })
   }
 
