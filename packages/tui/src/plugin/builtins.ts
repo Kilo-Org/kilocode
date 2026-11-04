@@ -21,6 +21,7 @@ import KiloAbout from "../kilocode/dialog-about" // kilocode_change(cli) - Kilo 
 import KiloSidebarPr from "../kilocode/plugins/sidebar-pr" // kilocode_change(plugin) - Kilo sidebar PR panel
 import KiloSidebarFooter from "../kilocode/plugins/sidebar-footer" // kilocode_change(plugin) - Kilo sidebar balance
 import KiloSidebarUsage from "../kilocode/plugins/sidebar-usage" // kilocode_change(plugin) - Kilo sidebar usage panel
+import KiloCopySession from "../kilocode/copy-session" // kilocode_change - Kilo /copy-session command
 
 export const builtins = [
   HomeFooter,
@@ -48,4 +49,5 @@ export const builtins = [
   KiloSidebarPr, // kilocode_change(plugin)
   KiloSidebarFooter, // kilocode_change(plugin)
   KiloSidebarUsage, // kilocode_change(plugin)
+  KiloCopySession, // kilocode_change
 ]
