@@ -6,7 +6,7 @@ sidebar_label: SinoGate
 
 # Using SinoGate With Kilo Code
 
-[SinoGate](https://sinogate.ai/) is an OpenAI-compatible API gateway for Chinese model families, including DeepSeek, Qwen, GLM, Kimi, and MiniMax. It provides one endpoint and one API key, automatic failover across upstreams, and USD billing. SinoGate is not a built-in provider, so you add it as a custom [OpenAI Compatible](/docs/ai-providers/openai-compatible) provider.
+[SinoGate](https://sinogate.ai/) is an OpenAI-compatible API gateway for Chinese model families, including DeepSeek, Qwen, GLM, Kimi, and MiniMax. You connect with one base URL and one API key. SinoGate is not a built-in provider, so you add it as a custom [OpenAI Compatible](/docs/ai-providers/openai-compatible) provider.
 
 **Website:** [https://sinogate.ai/](https://sinogate.ai/)
 
@@ -21,27 +21,39 @@ sidebar_label: SinoGate
 {% tab label="VSCode" %}
 
 1. Open **Settings** (gear icon) and go to the **Providers** tab.
-2. Add a custom **OpenAI Compatible** provider.
-3. Set **Base URL** to `https://api.sinogate.ai/v1` and paste your SinoGate API key.
+2. Scroll to the bottom and click **Custom provider**.
+3. Fill in the custom provider dialog:
+   - **Provider ID** — for example `sinogate`
+   - **Display name** — for example `SinoGate`
+   - **Provider API** — **OpenAI Compatible**
+   - **Base URL** — `https://api.sinogate.ai/v1`
+   - **API key** — your SinoGate API key
 4. Click **Fetch models** and select the models you want, or enter model IDs manually.
+5. Click **Submit** to save.
+
+The provider credentials are stored in Kilo's `auth.json` store.
 
 {% /tab %}
 {% tab label="CLI" %}
 
-Define SinoGate as a custom provider in `~/.config/kilo/kilo.json` or `./kilo.json`:
+Keep the API key out of any project-level config file. Set it in the environment, then declare SinoGate as a custom provider in `~/.config/kilo/kilo.json` or `./kilo.json`:
+
+```bash
+export SINOGATE_API_KEY="your-api-key"
+```
 
 ```jsonc
 {
   "provider": {
     "sinogate": {
       "npm": "@ai-sdk/openai-compatible",
+      "env": ["SINOGATE_API_KEY"],
       "models": {
         "deepseek-v4-pro": { "name": "DeepSeek V4 Pro" },
         "qwen3.7-max": { "name": "Qwen 3.7 Max" },
         "kimi-k3": { "name": "Kimi K3" },
       },
       "options": {
-        "apiKey": "your-sinogate-api-key",
         "baseURL": "https://api.sinogate.ai/v1",
       },
     },
