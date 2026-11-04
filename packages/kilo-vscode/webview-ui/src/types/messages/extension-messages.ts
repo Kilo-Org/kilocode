@@ -55,6 +55,7 @@ import type {
   BrowserSettings,
   Config,
   ConfigCollections,
+  ConfigField,
   FeatureFlags,
   IndexingStatus,
   KiloEmbeddingModelCatalog,
@@ -777,6 +778,7 @@ export interface ConfigLoadedMessage {
   projectConfig?: Config
   bindings?: { global?: SettingsConfigBinding; project?: SettingsConfigBinding }
   collections?: ConfigCollections
+  fields?: Record<string, ConfigField>
   settings?: ExtensionSettings
   features: FeatureFlags
 }
@@ -788,6 +790,7 @@ export interface ConfigUpdatedMessage {
   projectConfig?: Config
   bindings?: { global?: SettingsConfigBinding; project?: SettingsConfigBinding }
   collections?: ConfigCollections
+  fields?: Record<string, ConfigField>
   settings?: ExtensionSettings
   features: FeatureFlags
 }

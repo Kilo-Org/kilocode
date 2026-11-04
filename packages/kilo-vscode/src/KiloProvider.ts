@@ -274,9 +274,22 @@ type SandboxSupportClient = {
     options: { throwOnError: true },
   ) => Promise<{ data: { available: boolean; reason?: string } }>
 }
+type ConfigSnapshotField = {
+  key: string
+  path: string[]
+  value?: unknown
+  global?: unknown
+  local?: unknown
+  source: "project" | "global" | "system" | "default"
+  inherited: boolean
+  overridden: boolean
+  editable: boolean
+  reason?: string
+}
 type ConfigSnapshot = {
   effective: Config
   targets: { global: ConfigTarget; project: ConfigTarget }
+  fields?: Record<string, ConfigSnapshotField>
 }
 
 function sandboxClient(client: KiloClient | null) {
@@ -4133,6 +4146,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         globalConfig: global,
         projectConfig,
         bindings,
+        fields: snapshot.fields,
         settings: this.configSettings(),
         features,
       }
@@ -4143,6 +4157,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         globalConfig: global,
         projectConfig,
         bindings,
+        fields: snapshot.fields,
         settings: this.configSettings(),
         features,
       })
@@ -4177,6 +4192,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       projectConfig,
       bindings,
       collections: snapshot.collections,
+      fields: snapshot.fields,
       settings: snapshot.settings,
       features: snapshot.features,
     }
@@ -4188,6 +4204,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       projectConfig,
       bindings,
       collections: snapshot.collections,
+      fields: snapshot.fields,
       settings: snapshot.settings,
       features: snapshot.features,
     })

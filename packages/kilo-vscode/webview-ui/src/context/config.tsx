@@ -14,6 +14,8 @@ import { useVSCode } from "./vscode"
 import type {
   Config,
   ConfigCollections,
+  ConfigField,
+  ConfigUpdatedMessage,
   ExtensionMessage,
   FeatureFlags,
   SettingsConfigBinding,
@@ -46,6 +48,8 @@ interface ConfigContextValue {
   globalDraft: Accessor<Partial<Config>>
   projectConfig: Accessor<Config>
   collections: Accessor<ConfigCollections>
+  /** Per-field provenance from the config overlay; empty until the extension sends it. */
+  configFields: Accessor<Record<string, ConfigField>>
   settings: Accessor<Record<string, unknown>>
   /** Shortcut labels and editor state for prompt shortcut hints. */
   shortcuts: Accessor<{ bindings: Record<string, string>; selection: boolean }>
@@ -99,6 +103,7 @@ export const ConfigProvider: ParentComponent = (props) => {
   const [globalConfig, setGlobalConfig] = createSignal<Config>({})
   const [projectConfig, setProjectConfig] = createSignal<Config>({})
   const [collections, setCollections] = createSignal<ConfigCollections>({})
+  const [configFields, setConfigFields] = createSignal<Record<string, ConfigField>>({})
   const [settings, setSettings] = createSignal<Record<string, unknown>>({})
   const [shortcuts, setShortcuts] = createSignal({ bindings: {} as Record<string, string>, selection: false })
   const [features, setFeatures] = createSignal<FeatureFlags>({
@@ -169,6 +174,58 @@ export const ConfigProvider: ParentComponent = (props) => {
     if (message.type !== "shortcutContext") return
     setShortcuts({ bindings: message.bindings, selection: message.selection })
   })
+  const applyConfigUpdated = (message: ConfigUpdatedMessage) => {
+    if (saving()) {
+      // This configUpdated is the confirmation of our saveConfig() write.
+      // Clear the draft now that the server has confirmed the write.
+      setSaving(false)
+      setDraft({})
+      setGlobalDraft({})
+      setProjectDraft({})
+      setSaveError(null)
+      setConfig(hideRemovedMcp(message.config, removedMcp()))
+      if (message.globalConfig !== undefined) {
+        const global = hideRemovedMcp(message.globalConfig, removedMcp())
+        setGlobalConfig(global)
+        setSavedGlobal(global)
+      }
+      if (message.projectConfig !== undefined) {
+        const project = hideRemovedMcp(message.projectConfig, removedMcp())
+        setProjectConfig(project)
+        setSavedProject(project)
+      }
+      updateCollections(message.collections)
+      if (message.fields) setConfigFields(message.fields)
+      setFeatures(message.features)
+      setBindings(message.bindings ?? bindings())
+    } else {
+      // configUpdated from a different source (e.g. PermissionDock save).
+      // Re-apply the draft on top so pending settings changes are preserved.
+      setConfig(
+        resolveConfig(
+          hideRemovedMcp(message.config, removedMcp()),
+          hideRemovedMcp(draft() as Config, removedMcp()),
+          has(draft() as Record<string, unknown>),
+        ),
+      )
+      if (message.globalConfig !== undefined) {
+        const global = hideRemovedMcp(message.globalConfig, removedMcp())
+        setGlobalConfig(mergeScopedConfig(global, hideRemovedMcp(globalDraft() as Config, removedMcp())))
+        setSavedGlobal(global)
+      }
+      if (message.projectConfig !== undefined) {
+        const project = hideRemovedMcp(message.projectConfig, removedMcp())
+        setProjectConfig(mergeScopedConfig(project, hideRemovedMcp(projectDraft() as Config, removedMcp())))
+        setSavedProject(project)
+      }
+      updateCollections(message.collections)
+      if (message.fields) setConfigFields(message.fields)
+      setFeatures(message.features)
+      setBindings(message.bindings ?? bindings())
+    }
+    if (message.settings) mergeSettings(message.settings)
+    setSaved(hideRemovedMcp(message.config, removedMcp()))
+  }
   const unsubscribe = vscode.onMessage((message: ExtensionMessage) => {
     if (message.type === "configLoaded") {
       // Skip if a save is in-flight — a stale configLoaded must not overwrite
@@ -197,6 +254,7 @@ export const ConfigProvider: ParentComponent = (props) => {
       }
       setRemovedMcp((current) => retainUnconfirmedMcpRemovals(current, message.config))
       updateCollections(message.collections)
+      if (message.fields) setConfigFields(message.fields)
       setLoading(false)
       return
     }
@@ -208,54 +266,7 @@ export const ConfigProvider: ParentComponent = (props) => {
       return
     }
     if (message.type === "configUpdated") {
-      if (saving()) {
-        // This configUpdated is the confirmation of our saveConfig() write.
-        // Clear the draft now that the server has confirmed the write.
-        setSaving(false)
-        setDraft({})
-        setGlobalDraft({})
-        setProjectDraft({})
-        setSaveError(null)
-        setConfig(hideRemovedMcp(message.config, removedMcp()))
-        if (message.globalConfig !== undefined) {
-          const global = hideRemovedMcp(message.globalConfig, removedMcp())
-          setGlobalConfig(global)
-          setSavedGlobal(global)
-        }
-        if (message.projectConfig !== undefined) {
-          const project = hideRemovedMcp(message.projectConfig, removedMcp())
-          setProjectConfig(project)
-          setSavedProject(project)
-        }
-        updateCollections(message.collections)
-        setFeatures(message.features)
-        setBindings(message.bindings ?? bindings())
-      } else {
-        // configUpdated from a different source (e.g. PermissionDock save).
-        // Re-apply the draft on top so pending settings changes are preserved.
-        setConfig(
-          resolveConfig(
-            hideRemovedMcp(message.config, removedMcp()),
-            hideRemovedMcp(draft() as Config, removedMcp()),
-            has(draft() as Record<string, unknown>),
-          ),
-        )
-        if (message.globalConfig !== undefined) {
-          const global = hideRemovedMcp(message.globalConfig, removedMcp())
-          setGlobalConfig(mergeScopedConfig(global, hideRemovedMcp(globalDraft() as Config, removedMcp())))
-          setSavedGlobal(global)
-        }
-        if (message.projectConfig !== undefined) {
-          const project = hideRemovedMcp(message.projectConfig, removedMcp())
-          setProjectConfig(mergeScopedConfig(project, hideRemovedMcp(projectDraft() as Config, removedMcp())))
-          setSavedProject(project)
-        }
-        updateCollections(message.collections)
-        setFeatures(message.features)
-        setBindings(message.bindings ?? bindings())
-      }
-      if (message.settings) mergeSettings(message.settings)
-      setSaved(hideRemovedMcp(message.config, removedMcp()))
+      applyConfigUpdated(message)
       return
     }
   })
@@ -471,6 +482,7 @@ export const ConfigProvider: ParentComponent = (props) => {
     globalDraft,
     projectConfig,
     collections,
+    configFields,
     settings,
     shortcuts,
     features,
