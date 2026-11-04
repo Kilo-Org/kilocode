@@ -2,7 +2,10 @@ import { describe, expect, test } from "bun:test"
 import { Database } from "bun:sqlite"
 import { accessSync, chmodSync, constants } from "node:fs"
 import path from "node:path"
+import { Cause, Effect, Exit, Layer } from "effect"
 import { DbPreflight } from "@opencode/core/kilocode/db-preflight"
+import { Database as KiloDatabase } from "@opencode/core/database/database"
+import { Global } from "@opencode/util/global"
 import { tmpdir } from "../fixture/tmpdir"
 
 const writable = (file: string) => {
@@ -110,5 +113,22 @@ describe("DbPreflight.assertWritable", () => {
     db.run("PRAGMA wal_checkpoint(PASSIVE)")
     expect(db.query("SELECT x FROM t").all()).toEqual([{ x: 1 }])
     db.close()
+  })
+
+  test.skipIf(skip)("Database.layer surfaces the actionable error before opening the file", async () => {
+    await using tmp = await tmpdir()
+    const file = path.join(tmp.path, "kilo.db")
+    await createWalDbWithPendingFrames(file)
+    chmodSync(`${file}-wal`, 0o444)
+    // The active data dir (so the repair scope) is elsewhere, so the read-only sidecar stays untrusted.
+    const exit = await Effect.runPromiseExit(
+      Layer.build(KiloDatabase.layer({ path: file })).pipe(
+        Effect.scoped,
+        Effect.provideService(Global.Service, Global.make({ data: path.join(tmp.path, "elsewhere") })),
+      ),
+    )
+    chmodSync(`${file}-wal`, 0o644)
+    expect(Exit.isFailure(exit)).toBe(true)
+    if (Exit.isFailure(exit)) expect(Cause.pretty(exit.cause)).toContain(`Database file is not writable: ${file}-wal`)
   })
 })

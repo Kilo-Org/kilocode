@@ -4,9 +4,9 @@ import { accessSync, chmodSync, constants, statSync } from "node:fs"
 import path from "node:path"
 import { Global } from "@opencode/util/global"
 
-function writable(target: string) {
+function accessible(target: string, mode: number) {
   try {
-    accessSync(target, constants.W_OK)
+    accessSync(target, mode)
     return true
   } catch {
     return false
@@ -40,7 +40,7 @@ export function assertWritable(filename: string, trusted: string = Global.Path.d
       missing = true
       continue
     }
-    if (writable(file)) continue
+    if (accessible(file, constants.W_OK)) continue
     let cause: unknown
     if (owned) {
       // chmod only succeeds for files the current user owns, which is exactly the safe repair scope.
@@ -49,7 +49,7 @@ export function assertWritable(filename: string, trusted: string = Global.Path.d
       } catch (err) {
         cause = err
       }
-      if (writable(file)) {
+      if (accessible(file, constants.W_OK)) {
         // A visible trail: if files keep losing their write bit, something outside Kilo is doing it.
         process.emitWarning(`[kilo] repaired read-only database file: ${file}`)
         continue
@@ -60,7 +60,8 @@ export function assertWritable(filename: string, trusted: string = Global.Path.d
       cause === undefined ? undefined : { cause },
     )
   }
-  if (missing && !writable(dir)) {
+  // SQLite must create the WAL sidecars in the directory, which needs both write and traverse (execute).
+  if (missing && !accessible(dir, constants.W_OK | constants.X_OK)) {
     if (!exists(dir))
       throw new Error(`Database directory does not exist: ${dir}. Create it or point KILO2_DB at an existing location.`)
     throw new Error(
