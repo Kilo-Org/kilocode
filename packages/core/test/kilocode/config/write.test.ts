@@ -199,6 +199,45 @@ describe("KiloConfigWriter", () => {
     }).pipe(Effect.provide(layer())),
   )
 
+  it.effect("creates only when absent with a null expectedRevision", () =>
+    Effect.gen(function* () {
+      const tmp = yield* tmpdirScoped()
+      const writer = yield* KiloConfigWriter.Service
+      const first = yield* writer.write({
+        target: { directory: tmp.path, global: true },
+        path: ["privacy_mode"],
+        value: true,
+        expectedRevision: null,
+      })
+      expect(first.created).toBe(true)
+      const error = yield* Effect.flip(
+        writer.write({
+          target: { directory: tmp.path, global: true },
+          path: ["shell"],
+          value: "zsh",
+          expectedRevision: null,
+        }),
+      )
+      expect(error.reason).toBe("conflict")
+      expect(JSON.parse(yield* read(first.file))).toEqual({ privacy_mode: true })
+    }).pipe(Effect.provide(layer())),
+  )
+
+  it.effect("fails instead of overwriting a config it cannot read", () =>
+    Effect.gen(function* () {
+      const tmp = yield* tmpdirScoped()
+      const file = path.join(tmp.path, "kilo2.json")
+      // A directory at the target path makes the read fail with something other than NotFound.
+      yield* Effect.promise(() => fs.mkdir(file))
+      const writer = yield* KiloConfigWriter.Service
+      const error = yield* Effect.flip(
+        writer.write({ target: { directory: tmp.path, global: true }, path: ["privacy_mode"], value: true }),
+      )
+      expect(error.reason).toBe("io")
+      expect((yield* Effect.promise(() => fs.stat(file))).isDirectory()).toBe(true)
+    }).pipe(Effect.provide(layer())),
+  )
+
   it.effect("runs the reload hook after a successful write", () => {
     let calls = 0
     return Effect.gen(function* () {

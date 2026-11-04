@@ -1,9 +1,9 @@
 export * as KiloConfigWriter from "./write.js"
 
-import { createHash } from "node:crypto"
+import { createHash, randomUUID } from "node:crypto"
 import path from "node:path"
 import { applyEdits, modify, parse, printParseErrorCode, type ParseError } from "jsonc-parser"
-import { Context, Effect, Layer, Schema } from "effect"
+import { Context, Effect, Layer, Schema, Semaphore } from "effect"
 import { FSUtil } from "@opencode/util/fs-util"
 import { KiloConfigFiles } from "@opencode/util/kilocode/config/files"
 
@@ -42,8 +42,12 @@ export interface WriteInput {
   /** JSON path of the value to set, or to remove when `value` is undefined. */
   readonly path: readonly string[]
   readonly value: unknown
-  /** When set, the write fails with reason `conflict` unless the current revision matches. */
-  readonly expectedRevision?: string
+  /**
+   * Optimistic-concurrency guard checked under the writer's lock. A string fails with reason `conflict` unless the
+   * current revision matches; `null` requires the target to be absent, for a create-if-absent write; omitted writes
+   * unconditionally.
+   */
+  readonly expectedRevision?: string | null
 }
 
 export interface WriteResult {
@@ -82,10 +86,22 @@ export const layer = (options?: Options) =>
     Service,
     Effect.gen(function* () {
       const fs = yield* FSUtil.Service
+      // Serializes read-check-write within this process, like Config.update's updateLock. Cross-process writers are
+      // not covered: the revision guard detects a conflicting external write, it does not prevent one.
+      const lock = Semaphore.makeUnsafe(1)
 
+      const mapIO = (method: string, file: string) => (cause: FSUtil.Error) =>
+        new WriteError({ method, reason: "io", file, cause })
+
+      // Only NotFound means the file is absent. An unreadable file is an error, not an empty one, so a denied
+      // read never overwrites the existing file with defaults.
       const read = (file: string) =>
-        fs.readFileStringSafe(file).pipe(
-          Effect.mapError((cause) => new WriteError({ method: "read", reason: "io", file, cause })),
+        fs.readFileString(file).pipe(
+          Effect.catchIf(
+            (error) => error.reason._tag === "NotFound",
+            () => Effect.undefined,
+          ),
+          Effect.mapError(mapIO("read", file)),
         )
 
       const target = Effect.fn("KiloConfigWriter.target")(function* (input: Target) {
@@ -100,30 +116,46 @@ export const layer = (options?: Options) =>
         return text === undefined ? undefined : { file, hash: hash(text) }
       })
 
-      const write = Effect.fn("KiloConfigWriter.write")(function* (input: WriteInput) {
-        const file = yield* target(input.target)
-        const current = yield* read(file)
-        const text = current ?? "{}\n"
-        const errors: ParseError[] = []
-        parse(text, errors, { allowTrailingComma: true })
-        if (errors.length > 0)
-          return yield* new WriteError({
-            method: "write",
-            reason: "invalid",
-            file,
-            cause: `${printParseErrorCode(errors[0]!.error)} at offset ${errors[0]!.offset}`,
-          })
-        const before = hash(text)
-        if (input.expectedRevision !== undefined && input.expectedRevision !== before)
-          return yield* new WriteError({ method: "write", reason: "conflict", file })
-        const updated = applyEdits(text, modify(text, [...input.path], input.value, { formattingOptions: formatting }))
-        const content = updated.endsWith("\n") ? updated : `${updated}\n`
-        yield* fs.writeWithDirs(file, content, 0o600).pipe(
-          Effect.mapError((cause) => new WriteError({ method: "write", reason: "io", file, cause })),
-        )
-        yield* options?.reload ?? Effect.void
-        return { file, revision: hash(content), created: current === undefined }
+      // Create the temporary file with 0600 and rename it over the target: the target is never briefly
+      // umask-readable, and a crash leaves the old file intact rather than a partial one.
+      const writeAtomic = Effect.fnUntraced(function* (file: string, content: string) {
+        yield* fs.ensureDir(path.dirname(file))
+        const temporary = `${file}.${randomUUID()}.tmp`
+        const discard = fs.remove(temporary, { force: true }).pipe(Effect.orDie)
+        yield* fs
+          .writeFileString(temporary, content, { mode: 0o600, flag: "wx" })
+          .pipe(Effect.tapError(() => discard))
+        yield* fs.rename(temporary, file).pipe(Effect.tapError(() => discard))
       })
+
+      const write = Effect.fn("KiloConfigWriter.write")(
+        function* (input: WriteInput) {
+          const file = yield* target(input.target)
+          const current = yield* read(file)
+          const text = current ?? "{}\n"
+          const errors: ParseError[] = []
+          parse(text, errors, { allowTrailingComma: true })
+          if (errors.length > 0)
+            return yield* new WriteError({
+              method: "write",
+              reason: "invalid",
+              file,
+              cause: `${printParseErrorCode(errors[0]!.error)} at offset ${errors[0]!.offset}`,
+            })
+          const expected = input.expectedRevision
+          if (expected !== undefined) {
+            const before = hash(text)
+            const matched = expected === null ? current === undefined : current !== undefined && expected === before
+            if (!matched) return yield* new WriteError({ method: "write", reason: "conflict", file })
+          }
+          const updated = applyEdits(text, modify(text, [...input.path], input.value, { formattingOptions: formatting }))
+          const content = updated.endsWith("\n") ? updated : `${updated}\n`
+          yield* writeAtomic(file, content).pipe(Effect.mapError(mapIO("write", file)))
+          yield* options?.reload ?? Effect.void
+          return { file, revision: hash(content), created: current === undefined }
+        },
+        (effect) => lock.withPermit(effect),
+      )
 
       return Service.of({ target, revision, write })
     }),
