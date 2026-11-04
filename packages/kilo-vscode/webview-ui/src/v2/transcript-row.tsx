@@ -12,6 +12,8 @@ export function TranscriptRowView(props: {
   highlight?: () => TimelineHighlight | undefined
   /** Opens the files changed by one turn. */
   onViewTurnChanges?: (sessionID: string, turnID: string) => void
+  /** Forks the session before the user message, when the surface can fork. */
+  onForkMessage?: (sessionID: string, messageID: string) => void
 }) {
   const viewTurnChanges = () => {
     const turn = props.row.type === "assistant" ? props.row.userTurn : undefined
@@ -22,7 +24,17 @@ export function TranscriptRowView(props: {
     <div style={{ display: "contents" }}>
       <Switch>
         <Match when={props.row.type === "user" && props.row}>
-          {(row) => <UserMessage message={row().message} rowKey={row().key} />}
+          {(row) => (
+            <UserMessage
+              message={row().message}
+              rowKey={row().key}
+              onFork={
+                props.onForkMessage
+                  ? () => props.onForkMessage?.(props.session, row().message.id)
+                  : undefined
+              }
+            />
+          )}
         </Match>
         <Match when={props.row.type === "assistant" && props.row}>
           {(row) => (

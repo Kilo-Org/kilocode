@@ -69,6 +69,8 @@ export function MessageList(props: {
   actions?: ToolActions
   onSelectSession: (id: string) => void
   onShowHistory: () => void
+  /** Forks the session before a user message, when the surface can fork. */
+  onForkMessage?: (sessionID: string, messageID: string) => void
   /** Replaces the welcome screen of an empty session, for example with the Agent Manager introduction. */
   empty?: () => JSX.Element
   /** Receives the handler the session dock calls to scroll to the bottom. */
@@ -103,7 +105,11 @@ export function MessageList(props: {
   }
   const working = () => !!props.session && v2.data.session.status(props.session) === "running"
   const loadingOlder = () => !!props.session && v2.data.session.message.loading(props.session)
-  const more = () => !!props.session && v2.data.session.message.more(props.session)
+  // The server always returns a next cursor, so a page shorter than the limit is what proves the start is loaded.
+  const more = () =>
+    !!props.session &&
+    v2.data.session.message.more(props.session) &&
+    !v2.data.session.message.startLoaded(props.session)
   const empty = () => !props.session || (messages().length === 0 && queued().length === 0)
   const autoScroll = createAutoScroll({ working })
   props.onScrollToBottomReady?.(() => autoScroll.resume())
@@ -410,6 +416,7 @@ export function MessageList(props: {
           actions={props.actions}
           highlight={() => highlight()}
           onViewTurnChanges={props.onViewTurnChanges}
+          onForkMessage={props.onForkMessage}
         />
       ) as HTMLElement
     })

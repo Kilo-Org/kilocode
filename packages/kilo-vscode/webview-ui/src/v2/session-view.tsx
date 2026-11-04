@@ -42,6 +42,10 @@ export function SessionView(props: {
   onAppendReady?: (append: (value: string, send: boolean) => void) => void
   /** Receives each prompt the server admitted, with the model it runs on. */
   onPrompted?: (sessionID: string, text: string, model: ModelRef | undefined) => void
+  /** Forks the open session; the header shows the action when set. */
+  onForkSession?: (sessionID: string) => void
+  /** Forks the session before a user message; each message shows the action when set. */
+  onForkMessage?: (sessionID: string, messageID: string) => void
   /** Receives a session the server does not have (deleted, or from another database) instead of an error card. */
   onMissing?: (sessionID: string) => void
   /** Opens the files changed by one turn. */
@@ -190,7 +194,12 @@ export function SessionView(props: {
   return (
     <div class="chat-view">
       <Show when={session()} keyed>
-        {(id) => <TaskHeader sessionID={id} />}
+        {(id) => (
+          <TaskHeader
+            sessionID={id}
+            onFork={props.onForkSession ? () => props.onForkSession?.(id) : undefined}
+          />
+        )}
       </Show>
       <div class="chat-messages-wrapper">
         <ToolChildSessionProvider value={childSessions}>
@@ -203,6 +212,7 @@ export function SessionView(props: {
                   actions={props.actions}
                   onSelectSession={(id) => props.actions.openSession?.(id)}
                   onShowHistory={props.onShowHistory}
+                  onForkMessage={running() ? undefined : props.onForkMessage}
                   empty={props.empty}
                   onScrollToBottomReady={(fn) => (scrollToBottom = fn)}
                   onViewTurnChanges={props.onViewTurnChanges}
@@ -234,7 +244,7 @@ export function SessionView(props: {
             session={session()}
             blocked={blocked()}
             actions={(todos) => props.row?.(hasMessages(), todos)}
-            hasActions={hasMessages()}
+            hasActions={hasMessages() && !!props.row}
             status={working.status()}
             submitting={working.submitting()}
             timing={working.timing()}
