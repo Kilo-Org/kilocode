@@ -20,11 +20,11 @@ import ai.kilocode.client.settings.base.SettingsMessageException
 import ai.kilocode.client.settings.marketplace.marketplaceAction
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.layout.Stack
-import ai.kilocode.client.ui.list.ActiveListBadge
-import ai.kilocode.client.ui.list.ActiveListCell
-import ai.kilocode.client.ui.list.ActiveListConfig
-import ai.kilocode.client.ui.list.ActiveListItem
-import ai.kilocode.client.ui.list.ActiveListSelection
+import ai.kilocode.client.ui.active.ActiveBadge
+import ai.kilocode.client.ui.active.ActiveCell
+import ai.kilocode.client.ui.active.ActiveConfig
+import ai.kilocode.client.ui.active.ActiveItem
+import ai.kilocode.client.ui.active.ActiveSelection
 import ai.kilocode.rpc.dto.AgentDetailDto
 import com.intellij.icons.AllIcons
 import com.intellij.openapi.actionSystem.ActionUpdateThread
@@ -111,7 +111,7 @@ internal class AgentsSettingsUi(
     private val edit: (AgentEditDraft, List<ModelPicker.Item>) -> AgentEditDialogHandle = { agent, items ->
         AgentEditDialog(agent, service<KiloAppService>(), items)
     },
-) : SettingsListPanel(cs, ActiveListConfig.Equal), SettingsDraftPage {
+) : SettingsListPanel(cs, ActiveConfig.Equal), SettingsDraftPage {
     private val app get() = service<KiloAppService>()
     private val state = SettingsDraftState(agentsDraft(app.state.value.config, emptyList()), ::savedMatches)
     private var draft: AgentsDraft
@@ -136,7 +136,7 @@ internal class AgentsSettingsUi(
         reload()
     }
 
-    override suspend fun fetch(): List<ActiveListItem> {
+    override suspend fun fetch(): List<ActiveItem> {
         val agents = service<KiloAgentBehaviorService>().agents(dir)
         models = modelItems(service<KiloWorkspaceService>().models(dir).providers)
         val next = agentsDraft(service<KiloAppService>().state.value.config, agents)
@@ -217,7 +217,7 @@ internal class AgentsSettingsUi(
         state.update { updateAgent(this, agent) }
         syncNames()
         syncPicker()
-        view.update(rows(), ActiveListSelection.Key(agent.name))
+        view.update(rows(), ActiveSelection.Key(agent.name))
     }
 
     override fun searchPlaceholder() = KiloBundle.message("settings.agentBehavior.agents.search")
@@ -310,32 +310,32 @@ internal class AgentsSettingsUi(
         view.update(rows())
     }
 
-    private fun rows(): List<ActiveListItem> = displayRows(base, draft).map { row ->
+    private fun rows(): List<ActiveItem> = displayRows(base, draft).map { row ->
         val item = row.agent
-        object : ActiveListItem {
+        object : ActiveItem {
             override val key = item.name
             override val title = item.displayName ?: item.name
             override val description = item.description
             override val badges = listOfNotNull(
-                ActiveListBadge(
+                ActiveBadge(
                     KiloBundle.message("settings.agentBehavior.badge.notApplied"),
                     UiStyle.Badge.Secondary,
                 ).takeIf { row.intent == AgentIntent.Modified || row.intent == AgentIntent.New },
-                ActiveListBadge(
+                ActiveBadge(
                     KiloBundle.message("settings.agentBehavior.badge.willRemove"),
                     UiStyle.Badge.Alert,
                 ).takeIf { row.intent == AgentIntent.PendingDelete },
-                ActiveListBadge(
+                ActiveBadge(
                     KiloBundle.message("settings.agentBehavior.badge.subagent"),
                     UiStyle.Badge.Highlight,
                 ).takeIf { KiloCliParser.isSubagent(item.mode) },
-                ActiveListBadge(
+                ActiveBadge(
                     KiloBundle.message("settings.agentBehavior.badge.custom"),
                     UiStyle.Badge.Primary,
                 ).takeIf { canDelete(item) },
-                ActiveListBadge(KiloBundle.message("settings.agentBehavior.badge.hidden")).takeIf { item.hidden },
-                ActiveListBadge(KiloBundle.message("settings.agentBehavior.badge.disabled")).takeIf { item.disable },
-                ActiveListBadge(
+                ActiveBadge(KiloBundle.message("settings.agentBehavior.badge.hidden")).takeIf { item.hidden },
+                ActiveBadge(KiloBundle.message("settings.agentBehavior.badge.disabled")).takeIf { item.disable },
+                ActiveBadge(
                     KiloBundle.message("settings.agentBehavior.badge.deprecated"),
                     UiStyle.Badge.Alert,
                 ).takeIf { item.deprecated },
@@ -344,12 +344,12 @@ internal class AgentsSettingsUi(
             override val cells = when (row.intent) {
                 AgentIntent.New,
                 AgentIntent.PendingDelete,
-                -> listOf(ActiveListCell(UNDO_CELL, KiloBundle.message("settings.agentBehavior.undo"), primary = true))
+                -> listOf(ActiveCell(UNDO_CELL, KiloBundle.message("settings.agentBehavior.undo"), primary = true))
                 AgentIntent.Unchanged,
                 AgentIntent.Modified,
                 -> listOfNotNull(
-                    ActiveListCell(EDIT_CELL, KiloBundle.message("settings.agentBehavior.edit")),
-                    ActiveListCell(
+                    ActiveCell(EDIT_CELL, KiloBundle.message("settings.agentBehavior.edit")),
+                    ActiveCell(
                     DELETE_CELL,
                     KiloBundle.message("common.delete"),
                     icon = AllIcons.Actions.GC,
@@ -358,7 +358,7 @@ internal class AgentsSettingsUi(
                     // Last so it stays pinned to the right edge: this is the only cell an unselected
                     // row shows, so anything after it would shift it sideways once selecting the row
                     // revealed Edit and Delete.
-                    ActiveListCell(
+                    ActiveCell(
                         MODEL_CELL,
                         modelLabel(item.model),
                         alwaysVisible = true,
@@ -388,7 +388,7 @@ internal class AgentsSettingsUi(
         }
         syncNames()
         syncPicker()
-        view.update(rows(), ActiveListSelection.Key(agent.name))
+        view.update(rows(), ActiveSelection.Key(agent.name))
     }
 
     private fun undo(name: String) {
@@ -402,7 +402,7 @@ internal class AgentsSettingsUi(
         }
         syncNames()
         syncPicker()
-        view.update(rows(), ActiveListSelection.Key(name))
+        view.update(rows(), ActiveSelection.Key(name))
     }
 
     private fun syncNames() {
@@ -448,7 +448,7 @@ internal class AgentsSettingsUi(
             }
             syncNames()
             syncPicker()
-            view.update(rows(), ActiveListSelection.Key(input.name))
+            view.update(rows(), ActiveSelection.Key(input.name))
         }
     }
 
@@ -467,7 +467,7 @@ internal class AgentsSettingsUi(
                     this@AgentsSettingsUi.state.update { copy(imported = imported + (input.name to input.patch)) }
                     syncNames()
                     syncPicker()
-                    view.update(rows(), ActiveListSelection.Key(input.name))
+                    view.update(rows(), ActiveSelection.Key(input.name))
                     setBusy(false)
                     clearProgress()
                 }

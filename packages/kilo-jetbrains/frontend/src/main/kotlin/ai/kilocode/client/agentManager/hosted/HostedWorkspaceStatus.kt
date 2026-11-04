@@ -2,7 +2,7 @@ package ai.kilocode.client.agentManager.hosted
 
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.ui.UiStyle
-import ai.kilocode.client.ui.list.ActiveListBadge
+import ai.kilocode.client.ui.active.ActiveBadge
 import ai.kilocode.rpc.dto.HostedWorkspaceStatusDto
 
 /** The row and editor header use the same compute status labels and themed pills. */
@@ -19,7 +19,7 @@ internal enum class HostedWorkspaceStatus(private val value: String, private val
     UNKNOWN("unknown", UiStyle.Badge.Secondary),
     ;
 
-    fun badge(): ActiveListBadge = ActiveListBadge(
+    fun badge(): ActiveBadge = ActiveBadge(
         text = KiloBundle.message("hosted.workspace.status.$value"),
         style = style,
         id = "cloud-compute",

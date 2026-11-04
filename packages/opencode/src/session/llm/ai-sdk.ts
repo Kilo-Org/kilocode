@@ -4,6 +4,7 @@ import { type streamText } from "ai"
 import { errorMessage } from "@/util/error"
 import { KiloRoutedModel } from "@/kilocode/session/routed-model" // kilocode_change
 import { KiloResponseMetadata } from "@/kilocode/session/response-metadata" // kilocode_change
+import { KiloGeneratedFile } from "@/kilocode/session/generated-file" // kilocode_change
 import { ProviderError } from "@/provider/error"
 
 type Result = Awaited<ReturnType<typeof streamText>>
@@ -18,6 +19,7 @@ export function adapterState() {
     currentReasoningID: undefined as string | undefined,
     toolNames: {} as Record<string, string>,
     copilotTotalNanoAiu: undefined as number | undefined,
+    files: [] as KiloGeneratedFile.File[], // kilocode_change - model-generated images for the current step
   }
 }
 
@@ -105,15 +107,22 @@ export function toLLMEvents(
                 },
               }
         state.copilotTotalNanoAiu = undefined
+        // kilocode_change start
+        const files = state.files
+        state.files = []
+        // kilocode_change end
         return [
           LLMEvent.stepFinish({
             index: state.step++,
             reason: finishReason(event.finishReason),
             usage: usage(event.usage),
             // kilocode_change start
-            providerMetadata: KiloResponseMetadata.write(
-              KiloRoutedModel.write(metadata, event.response?.modelId),
-              event.response?.headers,
+            providerMetadata: KiloGeneratedFile.write(
+              KiloResponseMetadata.write(
+                KiloRoutedModel.write(metadata, event.response?.modelId),
+                event.response?.headers,
+              ),
+              files,
             ),
             // kilocode_change end
           }),
@@ -276,9 +285,17 @@ export function toLLMEvents(
     case "error":
       return Effect.fail(event.error)
 
+    // kilocode_change start - keep model-generated images; step-finish carries them to the processor
+    case "file":
+      return Effect.sync(() => {
+        const file = KiloGeneratedFile.from(event.file)
+        if (file) state.files.push(file)
+        return []
+      })
+    // kilocode_change end
+
     case "abort":
     case "source":
-    case "file":
     case "tool-output-denied":
     case "tool-approval-request":
       return Effect.succeed([])
