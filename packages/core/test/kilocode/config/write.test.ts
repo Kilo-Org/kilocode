@@ -125,12 +125,17 @@ describe("KiloConfigWriter", () => {
       yield* Effect.promise(() => fs.chmod(file, 0o644))
       const writer = yield* KiloConfigWriter.Service
       yield* writer.write({ target: { directory: tmp.path, global: true }, path: ["privacy_mode"], value: true })
-      expect(yield* mode(file)).toBe(0o600)
 
       const fresh = path.join((yield* tmpdirScoped()).path, "kilo2.json")
       const result = yield* writer.write({ target: { directory: path.dirname(fresh), global: true }, path: ["privacy_mode"], value: true })
       expect(result.file).toBe(fresh)
-      expect(yield* mode(fresh)).toBe(0o600)
+      // POSIX permission bits; Windows has no mode bits to assert, so check the file was written instead.
+      if (process.platform === "win32") {
+        expect(valid(yield* read(fresh))).toBe(true)
+      } else {
+        expect(yield* mode(file)).toBe(0o600)
+        expect(yield* mode(fresh)).toBe(0o600)
+      }
     }).pipe(Effect.provide(layer())),
   )
 
