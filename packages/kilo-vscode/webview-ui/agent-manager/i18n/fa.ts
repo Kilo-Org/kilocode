@@ -508,7 +508,6 @@ export const dict = {
   "agentManager.intro.dismiss": "رد کردن مقدمه",
   "agentManager.intro.reopen": "Agent Manager چگونه کار می‌کند",
   "agentManager.splash.preview.label": "پیش‌نمایش نوار کناری Agent Manager",
-  "agentManager.splash.marker": "قابلیت {{number}}: {{name}}",
   "agentManager.splash.eyebrow": "AGENT MANAGER",
   "agentManager.splash.compact.subtitle":
     "کارها را با استفاده از worktreeها به‌صورت موازی اجرا کنید، کار را واگذار کنید و همهٔ عامل‌ها را از یک‌جا دنبال کنید.",
@@ -520,7 +519,7 @@ export const dict = {
   "agentManager.splash.hint": "یا",
   "agentManager.splash.proceed": "به‌صورت محلی در کادر پیام زیر ادامه دهید",
   "agentManager.splash.folded.title": "یک ناوگان از عامل‌های Kilo را به کار بگیرید",
-  "agentManager.splash.folded.note": "قابلیت‌های چندپشته‌ای، یک هماهنگ‌کننده، یک تیم عملیات و بیشتر",
+  "agentManager.splash.folded.note": "قابلیت‌های چندپشته‌ای، واگذاری کار، مقایسهٔ مدل‌ها و بیشتر",
   "agentManager.splash.showExamples": "نمایش نمونه‌ها",
   "agentManager.splash.examples.crossStack.tag": "چند مخزن",
   "agentManager.splash.examples.crossStack.title": "یک قابلیت در سه مخزن",
@@ -532,39 +531,27 @@ export const dict = {
     "در یک نگاه ببینید چه چیزی در حال کار، تمام‌شده یا منتظر شماست.",
   "agentManager.splash.examples.crossStack.feature3.name": "نشان‌های PR و شمارش تغییرات",
   "agentManager.splash.examples.crossStack.feature3.text": "پیش از باز کردن بدانید هر عامل چه چیزی را تغییر داده است.",
-  "agentManager.splash.examples.orchestrator.tag": "هماهنگ‌کننده",
-  "agentManager.splash.examples.orchestrator.title": "تقسیم یک کار بزرگ",
-  "agentManager.splash.examples.orchestrator.pitch":
-    "هر نشستی را به‌عنوان هماهنگ‌کننده تعیین کنید، مجموعه‌ای از وظایف به آن بدهید و بگذارید تیم موردنیاز کار را بسازد.",
-  "agentManager.splash.examples.orchestrator.feature1.name": "نشست‌هایی که نشست می‌سازند",
-  "agentManager.splash.examples.orchestrator.feature1.text":
-    "هماهنگ‌کننده می‌تواند بخش‌ها، worktreeها و نشست‌های جدید ایجاد کند.",
-  "agentManager.splash.examples.orchestrator.feature2.name": "worktreeهای جدا",
-  "agentManager.splash.examples.orchestrator.feature2.text": "هر کار نسخهٔ خودش را دارد، پس چیزی با هم تداخل نمی‌کند.",
-  "agentManager.splash.examples.orchestrator.feature3.name": "از هر جا وارد شوید",
-  "agentManager.splash.examples.orchestrator.feature3.text":
+  "agentManager.splash.examples.delegate.tag": "واگذاری",
+  "agentManager.splash.examples.delegate.title": "سپردن یک کار بزرگ به یک نشست",
+  "agentManager.splash.examples.delegate.pitch":
+    "از یک نشست بخواهید یک کار بزرگ را به نشست‌های موازی تقسیم کند، سپس وارد هر کدام که خواستید شوید.",
+  "agentManager.splash.examples.delegate.feature1.name": "نشست‌هایی که نشست می‌سازند",
+  "agentManager.splash.examples.delegate.feature1.text":
+    "یک نشست می‌تواند نشست‌های جدیدی را هر کدام در worktree خودش شروع کند.",
+  "agentManager.splash.examples.delegate.feature2.name": "worktreeهای جدا",
+  "agentManager.splash.examples.delegate.feature2.text": "هر کار نسخهٔ خودش را دارد، پس چیزی با هم تداخل نمی‌کند.",
+  "agentManager.splash.examples.delegate.feature3.name": "از هر جا وارد شوید",
+  "agentManager.splash.examples.delegate.feature3.text":
     "به هر نشستی که شروع کرده بپیوندید یا کل کار را از بالا دنبال کنید.",
-  "agentManager.splash.examples.ops.tag": "عملیات",
-  "agentManager.splash.examples.ops.title": "تشکیل تیم عملیات ثابت",
-  "agentManager.splash.examples.ops.pitch":
-    "عامل‌های بلندمدت را کنار نشست‌هایی که در حال ساختن‌اند در حال آماده‌باش نگه دارید.",
-  "agentManager.splash.examples.ops.feature1.name": "دستورالعمل‌های ثابت",
-  "agentManager.splash.examples.ops.feature1.text": "به یک نشست نقشی بدهید که بیش از هر وظیفهٔ واحدی دوام بیاورد.",
-  "agentManager.splash.examples.ops.feature2.name": "بخش‌ها",
-  "agentManager.splash.examples.ops.feature2.text": "Implement و Ops را گروه‌بندی کنید تا هر تیم آسان مرور شود.",
-  "agentManager.splash.examples.ops.feature3.name": "هشدار نیاز به شما",
-  "agentManager.splash.examples.ops.feature3.text":
-    "عامل‌ها می‌ایستند و تصمیم‌های پرخطر را علامت می‌زنند به‌جای اینکه از آن عبور کنند.",
-  "agentManager.splash.examples.versions.tag": "نسخه‌ها",
-  "agentManager.splash.examples.versions.title": "آزمودن سه راه، حفظ بهترین",
-  "agentManager.splash.examples.versions.pitch":
-    "یک درخواست را به چند عامل یا مدل بفرستید و بهترین نتیجه را نگه دارید.",
-  "agentManager.splash.examples.versions.feature1.name": "اجراهای چندنسخه‌ای",
-  "agentManager.splash.examples.versions.feature1.text": "همان وظیفه را هم‌زمان در چند نسخه اجرا کنید.",
-  "agentManager.splash.examples.versions.feature2.name": "ترکیب مدل‌ها",
-  "agentManager.splash.examples.versions.feature2.text": "Kilo Auto، Claude و GPT را روی کار یکسان مقایسه کنید.",
-  "agentManager.splash.examples.versions.feature3.name": "مقایسه و نگه‌داشتن",
-  "agentManager.splash.examples.versions.feature3.text":
+  "agentManager.splash.examples.compare.tag": "مقایسهٔ مدل‌ها",
+  "agentManager.splash.examples.compare.title": "آزمودن سه راه، حفظ بهترین",
+  "agentManager.splash.examples.compare.pitch": "یک درخواست را به چند عامل یا مدل بفرستید و بهترین نتیجه را نگه دارید.",
+  "agentManager.splash.examples.compare.feature1.name": "اجراهای چندنسخه‌ای",
+  "agentManager.splash.examples.compare.feature1.text": "همان وظیفه را هم‌زمان در چند نسخه اجرا کنید.",
+  "agentManager.splash.examples.compare.feature2.name": "ترکیب مدل‌ها",
+  "agentManager.splash.examples.compare.feature2.text": "Kilo Auto، Claude و GPT را روی کار یکسان مقایسه کنید.",
+  "agentManager.splash.examples.compare.feature3.name": "نگه‌داشتن بهترین",
+  "agentManager.splash.examples.compare.feature3.text":
     "تفاوت‌های واقعی را کنار هم ببینید، یکی را نگه دارید و بقیه را کنار بگذارید.",
   "agentManager.splash.examples.beyondCode.tag": "فراتر از کد",
   "agentManager.splash.examples.beyondCode.title": "ساخت محتوای برند",

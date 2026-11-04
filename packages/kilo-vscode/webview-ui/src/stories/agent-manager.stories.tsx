@@ -264,24 +264,19 @@ export const SplashCrossStackStory1280: Story = {
   render: () => <SplashPreview example={0} />,
 }
 
-export const SplashOrchestratorStory1280: Story = {
-  name: "Splash orchestrator",
+export const SplashDelegateStory1280: Story = {
+  name: "Splash delegate",
   render: () => <SplashPreview example={1} />,
 }
 
-export const SplashOpsStory1280: Story = {
-  name: "Splash ops",
+export const SplashCompareStory1280: Story = {
+  name: "Splash compare",
   render: () => <SplashPreview example={2} />,
-}
-
-export const SplashVersionsStory1280: Story = {
-  name: "Splash versions",
-  render: () => <SplashPreview example={3} />,
 }
 
 export const SplashBeyondCodeStory1280: Story = {
   name: "Splash beyond code",
-  render: () => <SplashPreview example={4} />,
+  render: () => <SplashPreview example={3} />,
 }
 
 export const SplashNarrowStory1280: Story = {

@@ -212,9 +212,6 @@ describe("Agent Manager splash markers", () => {
 
 describe("Agent Manager splash feature rows", () => {
   it("resolves every feature row to exactly one fixture row", () => {
-    expect(new Set(examples.flatMap((example) => example.features.map((feature) => feature.row.kind)))).toEqual(
-      new Set(["project", "section", "group", "session"]),
-    )
     for (const example of examples) {
       expect(example.features).toHaveLength(3)
       const resolve = (target: Row) => {

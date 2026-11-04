@@ -515,7 +515,6 @@ export const dict = {
   "agentManager.intro.dismiss": "Introductie overslaan",
   "agentManager.intro.reopen": "Hoe Agent Manager werkt",
   "agentManager.splash.preview.label": "Voorbeeld van Agent Manager-zijbalk",
-  "agentManager.splash.marker": "Functie {{number}}: {{name}}",
   "agentManager.splash.eyebrow": "AGENT MANAGER",
   "agentManager.splash.compact.subtitle":
     "Voer taken parallel uit met worktrees, delegeer werk en volg elke agent vanuit één plek.",
@@ -527,7 +526,7 @@ export const dict = {
   "agentManager.splash.hint": "of",
   "agentManager.splash.proceed": "ga lokaal verder in het berichtvak hieronder",
   "agentManager.splash.folded.title": "Zet een vloot Kilo-agenten aan het werk",
-  "agentManager.splash.folded.note": "Functies over stacks heen, een orkestrator, een ops-team en meer",
+  "agentManager.splash.folded.note": "Functies over stacks heen, delegeren, modelvergelijkingen en meer",
   "agentManager.splash.showExamples": "Voorbeelden bekijken",
   "agentManager.splash.examples.crossStack.tag": "Multi-repo",
   "agentManager.splash.examples.crossStack.title": "Eén functie, drie repo's",
@@ -540,38 +539,28 @@ export const dict = {
     "Zie in één oogopslag wat er werkt, klaar is of op je wacht.",
   "agentManager.splash.examples.crossStack.feature3.name": "PR-badges en diff-tellingen",
   "agentManager.splash.examples.crossStack.feature3.text": "Weet wat elke agent heeft gewijzigd voordat je het opent.",
-  "agentManager.splash.examples.orchestrator.tag": "Orkestrator",
-  "agentManager.splash.examples.orchestrator.title": "Deel een grote klus op",
-  "agentManager.splash.examples.orchestrator.pitch":
-    "Wijs elke sessie aan als orkestrator, geef hem taken en laat hem het team samenstellen dat de klus nodig heeft.",
-  "agentManager.splash.examples.orchestrator.feature1.name": "Sessies die sessies starten",
-  "agentManager.splash.examples.orchestrator.feature1.text":
-    "Een orkestrator kan secties, worktrees en nieuwe sessies maken.",
-  "agentManager.splash.examples.orchestrator.feature2.name": "Geïsoleerde worktrees",
-  "agentManager.splash.examples.orchestrator.feature2.text": "Elk werk krijgt een eigen kopie, zodat niets botst.",
-  "agentManager.splash.examples.orchestrator.feature3.name": "Stap overal in",
-  "agentManager.splash.examples.orchestrator.feature3.text":
+  "agentManager.splash.examples.delegate.tag": "Delegeren",
+  "agentManager.splash.examples.delegate.title": "Geef één sessie een grote klus",
+  "agentManager.splash.examples.delegate.pitch":
+    "Vraag één sessie om een grote klus op te delen in parallelle sessies en stap daarna in welke je maar wilt.",
+  "agentManager.splash.examples.delegate.feature1.name": "Sessies die sessies starten",
+  "agentManager.splash.examples.delegate.feature1.text":
+    "Een sessie kan nieuwe sessies starten, elk in een eigen worktree.",
+  "agentManager.splash.examples.delegate.feature2.name": "Geïsoleerde worktrees",
+  "agentManager.splash.examples.delegate.feature2.text": "Elk werk krijgt een eigen kopie, zodat niets botst.",
+  "agentManager.splash.examples.delegate.feature3.name": "Stap overal in",
+  "agentManager.splash.examples.delegate.feature3.text":
     "Spring in elke gestarte sessie of volg de hele klus van bovenaf.",
-  "agentManager.splash.examples.ops.tag": "Operations",
-  "agentManager.splash.examples.ops.title": "Stel een vast ops-team samen",
-  "agentManager.splash.examples.ops.pitch": "Houd langlopende agents aan het werk naast de sessies die bouwen.",
-  "agentManager.splash.examples.ops.feature1.name": "Vaste instructies",
-  "agentManager.splash.examples.ops.feature1.text": "Geef een sessie een rol die langer meegaat dan één taak.",
-  "agentManager.splash.examples.ops.feature2.name": "Secties",
-  "agentManager.splash.examples.ops.feature2.text": "Groepeer Implement en Ops zodat elke ploeg overzichtelijk blijft.",
-  "agentManager.splash.examples.ops.feature3.name": "Meldingen dat je nodig bent",
-  "agentManager.splash.examples.ops.feature3.text":
-    "Agents stoppen en markeren riskante keuzes in plaats van door te duwen.",
-  "agentManager.splash.examples.versions.tag": "Versies",
-  "agentManager.splash.examples.versions.title": "Kies de beste van drie",
-  "agentManager.splash.examples.versions.pitch":
+  "agentManager.splash.examples.compare.tag": "Modellen vergelijken",
+  "agentManager.splash.examples.compare.title": "Kies de beste van drie",
+  "agentManager.splash.examples.compare.pitch":
     "Stuur één prompt naar meerdere agents of modellen en houd het beste resultaat.",
-  "agentManager.splash.examples.versions.feature1.name": "Multi-versie-runs",
-  "agentManager.splash.examples.versions.feature1.text": "Voer dezelfde taak tegelijk als meerdere versies uit.",
-  "agentManager.splash.examples.versions.feature2.name": "Mix modellen",
-  "agentManager.splash.examples.versions.feature2.text": "Vergelijk Kilo Auto, Claude en GPT op identiek werk.",
-  "agentManager.splash.examples.versions.feature3.name": "Vergelijk en houd",
-  "agentManager.splash.examples.versions.feature3.text":
+  "agentManager.splash.examples.compare.feature1.name": "Multi-versie-runs",
+  "agentManager.splash.examples.compare.feature1.text": "Voer dezelfde taak tegelijk als meerdere versies uit.",
+  "agentManager.splash.examples.compare.feature2.name": "Mix modellen",
+  "agentManager.splash.examples.compare.feature2.text": "Vergelijk Kilo Auto, Claude en GPT op identiek werk.",
+  "agentManager.splash.examples.compare.feature3.name": "Houd de beste",
+  "agentManager.splash.examples.compare.feature3.text":
     "Bekijk echte diffs naast elkaar, houd er één en gooi de rest weg.",
   "agentManager.splash.examples.beyondCode.tag": "Meer dan code",
   "agentManager.splash.examples.beyondCode.title": "Maak een merkset",

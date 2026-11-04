@@ -515,7 +515,6 @@ export const dict = {
   "agentManager.intro.dismiss": "Tanıtımı atla",
   "agentManager.intro.reopen": "Agent Manager nasıl çalışır",
   "agentManager.splash.preview.label": "Agent Manager kenar çubuğu önizlemesi",
-  "agentManager.splash.marker": "Özellik {{number}}: {{name}}",
   "agentManager.splash.eyebrow": "AGENT MANAGER",
   "agentManager.splash.compact.subtitle":
     "Worktree'lerle görevleri paralel çalıştırın, işleri devredin ve tüm ajanları tek bir yerden takip edin.",
@@ -527,7 +526,7 @@ export const dict = {
   "agentManager.splash.hint": "veya",
   "agentManager.splash.proceed": "aşağıdaki mesaj kutusunda yerel olarak devam edin",
   "agentManager.splash.folded.title": "Bir Kilo ajanı filosunu işe koşun",
-  "agentManager.splash.folded.note": "Stack'ler arası özellikler, bir orkestratör, bir operasyon ekibi ve daha fazlası",
+  "agentManager.splash.folded.note": "Stack'ler arası özellikler, görev devri, model karşılaştırmaları ve daha fazlası",
   "agentManager.splash.showExamples": "Örnekleri göster",
   "agentManager.splash.examples.crossStack.tag": "Çok depo",
   "agentManager.splash.examples.crossStack.title": "Bir özelliği üç depoda yayınlayın",
@@ -541,40 +540,28 @@ export const dict = {
     "Neyin çalıştığını, bittiğini veya sizi beklediğini bir bakışta görün.",
   "agentManager.splash.examples.crossStack.feature3.name": "PR rozetleri ve diff sayıları",
   "agentManager.splash.examples.crossStack.feature3.text": "Açmadan önce her ajanın neyi değiştirdiğini bilin.",
-  "agentManager.splash.examples.orchestrator.tag": "Orkestratör",
-  "agentManager.splash.examples.orchestrator.title": "Bir orkestratör büyük bir işi bölüşsün",
-  "agentManager.splash.examples.orchestrator.pitch":
-    "Herhangi bir oturumu orkestratör olarak atayın, ona bir dizi görev verin ve işin gerektirdiği ekibi kurmasına izin verin.",
-  "agentManager.splash.examples.orchestrator.feature1.name": "Oturum başlatan oturumlar",
-  "agentManager.splash.examples.orchestrator.feature1.text":
-    "Bir orkestratör bölümler, worktree'ler ve yeni oturumlar oluşturabilir.",
-  "agentManager.splash.examples.orchestrator.feature2.name": "Yalıtılmış worktree'ler",
-  "agentManager.splash.examples.orchestrator.feature2.text":
-    "Her iş kendi kopyasını alır, böylece hiçbir şey çakışmaz.",
-  "agentManager.splash.examples.orchestrator.feature3.name": "Her yerden katılın",
-  "agentManager.splash.examples.orchestrator.feature3.text":
+  "agentManager.splash.examples.delegate.tag": "Görev devri",
+  "agentManager.splash.examples.delegate.title": "Büyük bir işi tek bir oturuma verin",
+  "agentManager.splash.examples.delegate.pitch":
+    "Bir oturumdan büyük bir işi paralel oturumlara bölmesini isteyin, ardından istediğiniz oturuma girin.",
+  "agentManager.splash.examples.delegate.feature1.name": "Oturum başlatan oturumlar",
+  "agentManager.splash.examples.delegate.feature1.text":
+    "Bir oturum, kendi worktree'lerinde yeni oturumlar başlatabilir.",
+  "agentManager.splash.examples.delegate.feature2.name": "Yalıtılmış worktree'ler",
+  "agentManager.splash.examples.delegate.feature2.text": "Her iş kendi kopyasını alır, böylece hiçbir şey çakışmaz.",
+  "agentManager.splash.examples.delegate.feature3.name": "Her yerden katılın",
+  "agentManager.splash.examples.delegate.feature3.text":
     "Başlattığı herhangi bir oturuma girin veya tüm işi baştan izleyin.",
-  "agentManager.splash.examples.ops.tag": "Operasyon",
-  "agentManager.splash.examples.ops.title": "Kalıcı bir operasyon ekibi kurun",
-  "agentManager.splash.examples.ops.pitch": "Uzun süre çalışan ajanları, inşa eden oturumların yanında görevde tutun.",
-  "agentManager.splash.examples.ops.feature1.name": "Kalıcı talimatlar",
-  "agentManager.splash.examples.ops.feature1.text": "Bir oturuma tek bir görevden daha uzun süren bir rol verin.",
-  "agentManager.splash.examples.ops.feature2.name": "Bölümler",
-  "agentManager.splash.examples.ops.feature2.text":
-    "Implement ve Ops'u gruplayarak her ekibin kolayca taranmasını sağlayın.",
-  "agentManager.splash.examples.ops.feature3.name": "Sizi bekliyor uyarıları",
-  "agentManager.splash.examples.ops.feature3.text":
-    "Ajanlar riskli kararları zorla geçirmek yerine durur ve işaretler.",
-  "agentManager.splash.examples.versions.tag": "Sürümler",
-  "agentManager.splash.examples.versions.title": "Üç yaklaşımı deneyin, en iyisini saklayın",
-  "agentManager.splash.examples.versions.pitch":
+  "agentManager.splash.examples.compare.tag": "Model karşılaştırma",
+  "agentManager.splash.examples.compare.title": "Üç yaklaşımı deneyin, en iyisini saklayın",
+  "agentManager.splash.examples.compare.pitch":
     "Tek bir istemi birkaç ajana veya modele gönderin ve en iyi sonucu saklayın.",
-  "agentManager.splash.examples.versions.feature1.name": "Çok sürümlü çalıştırmalar",
-  "agentManager.splash.examples.versions.feature1.text": "Aynı görevi aynı anda birkaç sürüm olarak çalıştırın.",
-  "agentManager.splash.examples.versions.feature2.name": "Modelleri karıştırın",
-  "agentManager.splash.examples.versions.feature2.text": "Kilo Auto, Claude ve GPT'yi aynı işte karşılaştırın.",
-  "agentManager.splash.examples.versions.feature3.name": "Karşılaştırın ve saklayın",
-  "agentManager.splash.examples.versions.feature3.text":
+  "agentManager.splash.examples.compare.feature1.name": "Çok sürümlü çalıştırmalar",
+  "agentManager.splash.examples.compare.feature1.text": "Aynı görevi aynı anda birkaç sürüm olarak çalıştırın.",
+  "agentManager.splash.examples.compare.feature2.name": "Modelleri karıştırın",
+  "agentManager.splash.examples.compare.feature2.text": "Kilo Auto, Claude ve GPT'yi aynı işte karşılaştırın.",
+  "agentManager.splash.examples.compare.feature3.name": "En iyisini saklayın",
+  "agentManager.splash.examples.compare.feature3.text":
     "Gerçek diff'leri yan yana inceleyin, birini saklayın, gerisini bırakın.",
   "agentManager.splash.examples.beyondCode.tag": "Kodun ötesinde",
   "agentManager.splash.examples.beyondCode.title": "Bir marka varlıkları seti hazırlayın",

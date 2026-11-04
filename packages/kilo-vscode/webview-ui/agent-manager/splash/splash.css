@@ -547,15 +547,11 @@
   --am-splash-accent: var(--vscode-charts-orange, var(--text-base));
 }
 
-.am-splash [data-tone="orchestrator"] {
+.am-splash [data-tone="delegate"] {
   --am-splash-accent: var(--vscode-charts-purple, var(--text-base));
 }
 
-.am-splash [data-tone="ops"] {
-  --am-splash-accent: var(--vscode-charts-green, var(--text-base));
-}
-
-.am-splash [data-tone="versions"] {
+.am-splash [data-tone="compare"] {
   --am-splash-accent: var(--vscode-charts-blue, var(--text-base));
 }
 

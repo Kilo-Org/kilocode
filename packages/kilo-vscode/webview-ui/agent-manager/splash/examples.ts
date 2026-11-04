@@ -52,7 +52,7 @@ interface Feature {
 }
 
 export interface Example {
-  id: "crossStack" | "orchestrator" | "ops" | "versions" | "beyondCode"
+  id: "crossStack" | "delegate" | "compare" | "beyondCode"
   tag: string
   title: string
   pitch: string
@@ -138,24 +138,24 @@ export const examples: readonly Example[] = [
     },
   },
   {
-    id: "orchestrator",
-    tag: "agentManager.splash.examples.orchestrator.tag",
-    title: "agentManager.splash.examples.orchestrator.title",
-    pitch: "agentManager.splash.examples.orchestrator.pitch",
+    id: "delegate",
+    tag: "agentManager.splash.examples.delegate.tag",
+    title: "agentManager.splash.examples.delegate.title",
+    pitch: "agentManager.splash.examples.delegate.pitch",
     features: [
       {
-        name: "agentManager.splash.examples.orchestrator.feature1.name",
-        text: "agentManager.splash.examples.orchestrator.feature1.text",
-        row: { kind: "session", project: "kernel-sched", session: "orchestrator" },
+        name: "agentManager.splash.examples.delegate.feature1.name",
+        text: "agentManager.splash.examples.delegate.feature1.text",
+        row: { kind: "session", project: "kernel-sched", session: "lead" },
       },
       {
-        name: "agentManager.splash.examples.orchestrator.feature2.name",
-        text: "agentManager.splash.examples.orchestrator.feature2.text",
+        name: "agentManager.splash.examples.delegate.feature2.name",
+        text: "agentManager.splash.examples.delegate.feature2.text",
         row: { kind: "session", project: "kernel-sched", session: "rq-lock" },
       },
       {
-        name: "agentManager.splash.examples.orchestrator.feature3.name",
-        text: "agentManager.splash.examples.orchestrator.feature3.text",
+        name: "agentManager.splash.examples.delegate.feature3.name",
+        text: "agentManager.splash.examples.delegate.feature3.text",
         row: { kind: "session", project: "kernel-sched", session: "kthread-pin" },
       },
     ],
@@ -169,13 +169,13 @@ export const examples: readonly Example[] = [
             {
               kind: "section",
               section: {
-                name: "ORCHESTRATE",
-                id: "orchestrate",
+                name: "SCHEDULER",
+                id: "scheduler",
                 color: "Purple",
                 sessions: [
                   {
-                    title: "Orchestrator · scheduler latency pass",
-                    id: "orchestrator",
+                    title: "Lead · scheduler latency pass",
+                    id: "lead",
                     note: "started 3 sessions · 1 done",
                     status: "working",
                     selected: true,
@@ -219,110 +219,24 @@ export const examples: readonly Example[] = [
     },
   },
   {
-    id: "ops",
-    tag: "agentManager.splash.examples.ops.tag",
-    title: "agentManager.splash.examples.ops.title",
-    pitch: "agentManager.splash.examples.ops.pitch",
+    id: "compare",
+    tag: "agentManager.splash.examples.compare.tag",
+    title: "agentManager.splash.examples.compare.title",
+    pitch: "agentManager.splash.examples.compare.pitch",
     features: [
       {
-        name: "agentManager.splash.examples.ops.feature1.name",
-        text: "agentManager.splash.examples.ops.feature1.text",
-        row: { kind: "session", project: "api", session: "merge-captain" },
-      },
-      {
-        name: "agentManager.splash.examples.ops.feature2.name",
-        text: "agentManager.splash.examples.ops.feature2.text",
-        row: { kind: "section", project: "api", section: "implement" },
-      },
-      {
-        name: "agentManager.splash.examples.ops.feature3.name",
-        text: "agentManager.splash.examples.ops.feature3.text",
-        row: { kind: "session", project: "api", session: "adversarial-reviewer" },
-      },
-    ],
-    fixture: {
-      projects: [
-        {
-          name: "api",
-          id: "api",
-          rows: [
-            {
-              kind: "section",
-              section: {
-                name: "IMPLEMENT",
-                id: "implement",
-                color: "Blue",
-                sessions: [
-                  {
-                    title: "Rate-limit the login endpoint",
-                    id: "rate-limit-login",
-                    branch: "rate-limit-login",
-                    status: "finished",
-                    pr: 412,
-                  },
-                  {
-                    title: "Paginate the audit log",
-                    id: "audit-pagination",
-                    branch: "audit-pagination",
-                    status: "working",
-                    diff: { additions: 88, deletions: 12 },
-                  },
-                ],
-              },
-            },
-            {
-              kind: "section",
-              section: {
-                name: "OPS",
-                id: "ops",
-                color: "Green",
-                sessions: [
-                  {
-                    title: "Merge Captain",
-                    id: "merge-captain",
-                    note: "queue: #412, #414",
-                    status: "working",
-                  },
-                  {
-                    title: "Issue Delegator",
-                    id: "issue-delegator",
-                    note: "triaged 6 issues",
-                    status: "finished",
-                  },
-                  {
-                    title: "Adversarial Reviewer",
-                    id: "adversarial-reviewer",
-                    note: "objection on #414",
-                    status: "needs-you",
-                    selected: true,
-                  },
-                ],
-              },
-            },
-          ],
-        },
-      ],
-    },
-  },
-  {
-    id: "versions",
-    tag: "agentManager.splash.examples.versions.tag",
-    title: "agentManager.splash.examples.versions.title",
-    pitch: "agentManager.splash.examples.versions.pitch",
-    features: [
-      {
-        name: "agentManager.splash.examples.versions.feature1.name",
-        text: "agentManager.splash.examples.versions.feature1.text",
+        name: "agentManager.splash.examples.compare.feature1.name",
+        text: "agentManager.splash.examples.compare.feature1.text",
         row: { kind: "group", project: "storefront", group: "cold-start" },
       },
       {
-        name: "agentManager.splash.examples.versions.feature2.name",
-        text: "agentManager.splash.examples.versions.feature2.text",
+        name: "agentManager.splash.examples.compare.feature2.name",
+        text: "agentManager.splash.examples.compare.feature2.text",
         row: { kind: "session", project: "storefront", session: "cold-start-a" },
       },
       {
-        name: "agentManager.splash.examples.versions.feature3.name",
-        text: "agentManager.splash.examples.versions.feature3.text",
+        name: "agentManager.splash.examples.compare.feature3.name",
+        text: "agentManager.splash.examples.compare.feature3.text",
         row: { kind: "session", project: "storefront", session: "cold-start-b" },
       },
     ],

@@ -89,7 +89,7 @@ test("expanded splash preserves copy, stacked previews and content-box breakpoin
         await control.click()
         await expect(page.locator(".am-splash-example-panel-active:visible")).toHaveCount(1)
         await expect.poll(() => card.evaluate((node) => node.getBoundingClientRect().height)).toBe(height)
-        await expect(card.locator(".am-splash-preview-fleet")).toHaveCount(5)
+        await expect(card.locator(".am-splash-preview-fleet")).toHaveCount(4)
         await expect(card.locator(".am-splash-preview-fleet-active .am-splash-row-marker")).toHaveCount(3)
         await expect(card.locator(".am-splash-row-marker:visible")).toHaveCount(width < 560 ? 0 : 3)
         await expect(page.locator(".am-splash-example-panel-active .am-splash-pitch:visible")).toHaveCount(1)
@@ -108,7 +108,7 @@ test("expanded splash preserves copy, stacked previews and content-box breakpoin
           expect(description.y).toBeGreaterThanOrEqual(title.y + title.height - 1)
         }
       }
-      expect(heights).toHaveLength(5)
+      expect(heights).toHaveLength(4)
       expect(Math.max(...heights) - Math.min(...heights)).toBe(0)
     })
   }
@@ -232,7 +232,7 @@ test("compact tabs rove focus, link panels and keep the chosen tab in view", asy
   for (const [key, index] of [
     ["ArrowRight", 1],
     ["ArrowLeft", 0],
-    ["End", 4],
+    ["End", 3],
     ["Home", 0],
   ] as const) {
     await page.keyboard.press(key)
@@ -252,16 +252,16 @@ test("compact tabs rove focus, link panels and keep the chosen tab in view", asy
       )
       .toBe(true)
   }
-  // Clicking a tab that is mostly scrolled out of view brings it fully into view.
+  // Clicking a tab that is partly scrolled out of view brings it fully into view.
   const list = page.getByRole("tablist")
   const edge = (await list.boundingBox())!
   await list.evaluate((node) => node.scrollTo({ left: 0 }))
-  const last = (await tabs.nth(3).boundingBox())!
+  const last = (await tabs.nth(2).boundingBox())!
   await page.mouse.click(Math.min(last.x + 2, edge.x + edge.width - 2), last.y + last.height / 2)
-  await expect(tabs.nth(3)).toHaveAttribute("aria-selected", "true")
+  await expect(tabs.nth(2)).toHaveAttribute("aria-selected", "true")
   await expect
     .poll(() =>
-      tabs.nth(3).evaluate((node) => {
+      tabs.nth(2).evaluate((node) => {
         const tab = node.getBoundingClientRect()
         const box = node.closest('[role="tablist"]')!.getBoundingClientRect()
         return tab.left >= box.left - 1 && tab.right <= box.right + 1

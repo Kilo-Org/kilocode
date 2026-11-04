@@ -510,7 +510,6 @@ export const dict = {
   "agentManager.intro.dismiss": "Пропустить введение",
   "agentManager.intro.reopen": "Как работает Agent Manager",
   "agentManager.splash.preview.label": "Предпросмотр боковой панели Agent Manager",
-  "agentManager.splash.marker": "Функция {{number}}: {{name}}",
   "agentManager.splash.eyebrow": "AGENT MANAGER",
   "agentManager.splash.compact.subtitle":
     "Запускайте задачи параллельно с помощью worktree, делегируйте работу и следите за каждым агентом из одного места.",
@@ -522,7 +521,7 @@ export const dict = {
   "agentManager.splash.hint": "или",
   "agentManager.splash.proceed": "продолжите локально в поле сообщения ниже",
   "agentManager.splash.folded.title": "Запустите в работу флот агентов Kilo",
-  "agentManager.splash.folded.note": "Кросстековые функции, оркестратор, команда эксплуатации и многое другое",
+  "agentManager.splash.folded.note": "Кросстековые функции, делегирование, сравнение моделей и многое другое",
   "agentManager.splash.showExamples": "Показать примеры",
   "agentManager.splash.examples.crossStack.tag": "Мультирепо",
   "agentManager.splash.examples.crossStack.title": "Одна функция, три репо",
@@ -535,41 +534,29 @@ export const dict = {
   "agentManager.splash.examples.crossStack.feature2.text": "Сразу видно, что работает, что завершено и что ждёт вас.",
   "agentManager.splash.examples.crossStack.feature3.name": "Значки PR и счётчики изменений",
   "agentManager.splash.examples.crossStack.feature3.text": "Узнайте, что изменил каждый агент, прежде чем открыть.",
-  "agentManager.splash.examples.orchestrator.tag": "Оркестратор",
-  "agentManager.splash.examples.orchestrator.title": "Разбейте большую задачу",
-  "agentManager.splash.examples.orchestrator.pitch":
-    "Назначьте любой сеанс оркестратором, передайте ему задачи, и пусть он соберёт нужную для работы команду.",
-  "agentManager.splash.examples.orchestrator.feature1.name": "Сеансы, запускающие сеансы",
-  "agentManager.splash.examples.orchestrator.feature1.text":
-    "Оркестратор может создавать разделы, worktree и новые сеансы.",
-  "agentManager.splash.examples.orchestrator.feature2.name": "Изолированные worktree",
-  "agentManager.splash.examples.orchestrator.feature2.text":
+  "agentManager.splash.examples.delegate.tag": "Делегирование",
+  "agentManager.splash.examples.delegate.title": "Поручите одному сеансу большую задачу",
+  "agentManager.splash.examples.delegate.pitch":
+    "Попросите один сеанс разбить большую задачу на параллельные сеансы, а затем зайдите в любой из них.",
+  "agentManager.splash.examples.delegate.feature1.name": "Сеансы, запускающие сеансы",
+  "agentManager.splash.examples.delegate.feature1.text":
+    "Сеанс может запускать новые сеансы, каждый в собственном worktree.",
+  "agentManager.splash.examples.delegate.feature2.name": "Изолированные worktree",
+  "agentManager.splash.examples.delegate.feature2.text":
     "Каждая работа получает собственную копию, поэтому ничего не пересекается.",
-  "agentManager.splash.examples.orchestrator.feature3.name": "Подключайтесь где угодно",
-  "agentManager.splash.examples.orchestrator.feature3.text":
+  "agentManager.splash.examples.delegate.feature3.name": "Подключайтесь где угодно",
+  "agentManager.splash.examples.delegate.feature3.text":
     "Зайдите в любой запущенный сеанс или следите за всей задачей сверху.",
-  "agentManager.splash.examples.ops.tag": "Операции",
-  "agentManager.splash.examples.ops.title": "Постоянная ops-команда",
-  "agentManager.splash.examples.ops.pitch":
-    "Держите долгоживущих агентов на дежурстве рядом с сеансами, которые создают код.",
-  "agentManager.splash.examples.ops.feature1.name": "Постоянные инструкции",
-  "agentManager.splash.examples.ops.feature1.text": "Дайте сеансу роль, которая переживёт любую отдельную задачу.",
-  "agentManager.splash.examples.ops.feature2.name": "Разделы",
-  "agentManager.splash.examples.ops.feature2.text":
-    "Сгруппируйте Implement и Ops, чтобы команды было легко просматривать.",
-  "agentManager.splash.examples.ops.feature3.name": "Сигналы «нужен ваш ответ»",
-  "agentManager.splash.examples.ops.feature3.text":
-    "Агенты останавливаются и отмечают рискованные решения, а не продавливают их.",
-  "agentManager.splash.examples.versions.tag": "Версии",
-  "agentManager.splash.examples.versions.title": "Из трёх выберите лучший",
-  "agentManager.splash.examples.versions.pitch":
+  "agentManager.splash.examples.compare.tag": "Сравнение моделей",
+  "agentManager.splash.examples.compare.title": "Из трёх выберите лучший",
+  "agentManager.splash.examples.compare.pitch":
     "Отправьте один запрос нескольким агентам или моделям и сохраните лучший результат.",
-  "agentManager.splash.examples.versions.feature1.name": "Запуски нескольких версий",
-  "agentManager.splash.examples.versions.feature1.text": "Запустите одну задачу сразу как несколько версий.",
-  "agentManager.splash.examples.versions.feature2.name": "Смешивайте модели",
-  "agentManager.splash.examples.versions.feature2.text": "Сравните Kilo Auto, Claude и GPT на одинаковой работе.",
-  "agentManager.splash.examples.versions.feature3.name": "Сравните и оставьте",
-  "agentManager.splash.examples.versions.feature3.text":
+  "agentManager.splash.examples.compare.feature1.name": "Запуски нескольких версий",
+  "agentManager.splash.examples.compare.feature1.text": "Запустите одну задачу сразу как несколько версий.",
+  "agentManager.splash.examples.compare.feature2.name": "Смешивайте модели",
+  "agentManager.splash.examples.compare.feature2.text": "Сравните Kilo Auto, Claude и GPT на одинаковой работе.",
+  "agentManager.splash.examples.compare.feature3.name": "Оставьте лучший",
+  "agentManager.splash.examples.compare.feature3.text":
     "Просмотрите настоящие diff рядом, оставьте один и отбросьте остальные.",
   "agentManager.splash.examples.beyondCode.tag": "Вне кода",
   "agentManager.splash.examples.beyondCode.title": "Создайте материалы бренда",

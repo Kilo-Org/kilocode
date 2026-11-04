@@ -509,7 +509,6 @@ export const dict = {
   "agentManager.intro.dismiss": "Spring introduktion over",
   "agentManager.intro.reopen": "Sådan fungerer Agent Manager",
   "agentManager.splash.preview.label": "Forhåndsvisning af Agent Manager-sidepanelet",
-  "agentManager.splash.marker": "Funktion {{number}}: {{name}}",
   "agentManager.splash.eyebrow": "AGENT MANAGER",
   "agentManager.splash.compact.subtitle":
     "Kør opgaver parallelt med worktrees, uddelegér arbejde og følg hver agent fra ét sted.",
@@ -521,7 +520,7 @@ export const dict = {
   "agentManager.splash.hint": "eller",
   "agentManager.splash.proceed": "fortsæt lokalt i beskedfeltet nedenfor",
   "agentManager.splash.folded.title": "Sæt en flåde af Kilo-agenter i arbejde",
-  "agentManager.splash.folded.note": "Funktioner på tværs af stacks, en orkestrator, et driftsteam og mere",
+  "agentManager.splash.folded.note": "Funktioner på tværs af stacks, uddelegering, modelsammenligninger og mere",
   "agentManager.splash.showExamples": "Vis eksempler",
   "agentManager.splash.examples.crossStack.tag": "Flere repos",
   "agentManager.splash.examples.crossStack.title": "Én funktion, tre repos",
@@ -533,39 +532,27 @@ export const dict = {
     "Se med ét blik, hvad der arbejder, er færdigt eller venter på dig.",
   "agentManager.splash.examples.crossStack.feature3.name": "PR-mærker og diff-tællinger",
   "agentManager.splash.examples.crossStack.feature3.text": "Vid, hvad hver agent har ændret, før du åbner det.",
-  "agentManager.splash.examples.orchestrator.tag": "Orkestrator",
-  "agentManager.splash.examples.orchestrator.title": "Del en stor opgave op",
-  "agentManager.splash.examples.orchestrator.pitch":
-    "Udnævn en vilkårlig session til orkestrator, giv den en række opgaver, og lad den bygge det hold, opgaven kræver.",
-  "agentManager.splash.examples.orchestrator.feature1.name": "Sessioner, der starter sessioner",
-  "agentManager.splash.examples.orchestrator.feature1.text":
-    "En orkestrator kan oprette sektioner, worktrees og nye sessioner.",
-  "agentManager.splash.examples.orchestrator.feature2.name": "Isolerede worktrees",
-  "agentManager.splash.examples.orchestrator.feature2.text":
-    "Hvert stykke arbejde får sin egen kopi, så intet kolliderer.",
-  "agentManager.splash.examples.orchestrator.feature3.name": "Træd ind hvor som helst",
-  "agentManager.splash.examples.orchestrator.feature3.text":
+  "agentManager.splash.examples.delegate.tag": "Uddelegér",
+  "agentManager.splash.examples.delegate.title": "Giv én session en stor opgave",
+  "agentManager.splash.examples.delegate.pitch":
+    "Bed én session om at dele en stor opgave op i parallelle sessioner, og træd derefter ind i en hvilken som helst af dem.",
+  "agentManager.splash.examples.delegate.feature1.name": "Sessioner, der starter sessioner",
+  "agentManager.splash.examples.delegate.feature1.text": "En session kan starte nye sessioner i deres egne worktrees.",
+  "agentManager.splash.examples.delegate.feature2.name": "Isolerede worktrees",
+  "agentManager.splash.examples.delegate.feature2.text": "Hvert stykke arbejde får sin egen kopi, så intet kolliderer.",
+  "agentManager.splash.examples.delegate.feature3.name": "Træd ind hvor som helst",
+  "agentManager.splash.examples.delegate.feature3.text":
     "Spring ind i en session, den startede, eller følg hele opgaven fra toppen.",
-  "agentManager.splash.examples.ops.tag": "Drift",
-  "agentManager.splash.examples.ops.title": "Saml et fast driftsteam",
-  "agentManager.splash.examples.ops.pitch": "Hold langvarige agenter på vagt ved siden af de sessioner, der bygger.",
-  "agentManager.splash.examples.ops.feature1.name": "Faste instruktioner",
-  "agentManager.splash.examples.ops.feature1.text": "Giv en session en rolle, der varer længere end en enkelt opgave.",
-  "agentManager.splash.examples.ops.feature2.name": "Sektioner",
-  "agentManager.splash.examples.ops.feature2.text": "Gruppér Implement og Ops, så hvert hold er nemt at overskue.",
-  "agentManager.splash.examples.ops.feature3.name": "Varsler når du behøves",
-  "agentManager.splash.examples.ops.feature3.text":
-    "Agenter stopper og markerer risikable beslutninger i stedet for at presse igennem.",
-  "agentManager.splash.examples.versions.tag": "Versioner",
-  "agentManager.splash.examples.versions.title": "Prøv tre, vælg den bedste",
-  "agentManager.splash.examples.versions.pitch":
+  "agentManager.splash.examples.compare.tag": "Sammenlign modeller",
+  "agentManager.splash.examples.compare.title": "Prøv tre, vælg den bedste",
+  "agentManager.splash.examples.compare.pitch":
     "Send én prompt til flere agenter eller modeller, og behold det bedste resultat.",
-  "agentManager.splash.examples.versions.feature1.name": "Kørsler med flere versioner",
-  "agentManager.splash.examples.versions.feature1.text": "Kør den samme opgave som flere versioner på én gang.",
-  "agentManager.splash.examples.versions.feature2.name": "Bland modeller",
-  "agentManager.splash.examples.versions.feature2.text": "Sammenlign Kilo Auto, Claude og GPT på identisk arbejde.",
-  "agentManager.splash.examples.versions.feature3.name": "Sammenlign og behold",
-  "agentManager.splash.examples.versions.feature3.text":
+  "agentManager.splash.examples.compare.feature1.name": "Kørsler med flere versioner",
+  "agentManager.splash.examples.compare.feature1.text": "Kør den samme opgave som flere versioner på én gang.",
+  "agentManager.splash.examples.compare.feature2.name": "Bland modeller",
+  "agentManager.splash.examples.compare.feature2.text": "Sammenlign Kilo Auto, Claude og GPT på identisk arbejde.",
+  "agentManager.splash.examples.compare.feature3.name": "Behold den bedste",
+  "agentManager.splash.examples.compare.feature3.text":
     "Gennemgå rigtige diffs side om side, behold én, og smid resten væk.",
   "agentManager.splash.examples.beyondCode.tag": "Mere end kode",
   "agentManager.splash.examples.beyondCode.title": "Skab en brandpakke",

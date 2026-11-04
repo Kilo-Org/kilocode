@@ -6,21 +6,21 @@ test("splash carousel selects, windows and focuses cards without scrolling", asy
   const cards = page.locator(".am-splash-card")
   const track = page.locator(".am-splash-cards")
   const dots = page.locator(".am-splash-dot")
-  await expect(cards).toHaveCount(5)
-  await expect(dots).toHaveCount(5)
+  await expect(cards).toHaveCount(4)
+  await expect(dots).toHaveCount(4)
   const heights = await cards.evaluateAll((nodes) => nodes.map((node) => node.getBoundingClientRect().height))
   expect(Math.max(...heights) - Math.min(...heights)).toBeLessThan(1)
   const expected = ((await track.boundingBox())!.width - 20) / 3
   expect(Math.abs((await cards.first().boundingBox())!.width - expected)).toBeLessThan(1)
 
-  for (const index of [0, 1, 2, 3, 4]) {
+  for (const index of [0, 1, 2, 3]) {
     await dots.nth(index).click()
     await expect(cards.nth(index)).toHaveAttribute("aria-current", "true")
     // The three-card window keeps the selected card in the middle where possible.
     await expect
       .poll(() =>
         track.evaluate((node, index) => {
-          const card = node.children.item(Math.max(0, Math.min(index - 1, 2)))!
+          const card = node.children.item(Math.max(0, Math.min(index - 1, 1)))!
           return Math.abs(card.getBoundingClientRect().left - node.getBoundingClientRect().left)
         }, index),
       )
@@ -48,14 +48,14 @@ test("splash carousel mirrors arrows, keys, the window and the selection inset i
   const cards = page.locator(".am-splash-card")
   const dots = page.locator(".am-splash-dot")
   const track = page.locator(".am-splash-cards")
-  await expect(cards).toHaveCount(5)
-  for (const index of [0, 1, 2, 3, 4]) {
+  await expect(cards).toHaveCount(4)
+  for (const index of [0, 1, 2, 3]) {
     await dots.nth(index).click()
     await expect(cards.nth(index)).toHaveAttribute("aria-current", "true")
     await expect
       .poll(() =>
         track.evaluate((node, index) => {
-          const card = node.children.item(Math.max(0, Math.min(index - 1, 2)))!
+          const card = node.children.item(Math.max(0, Math.min(index - 1, 1)))!
           return Math.abs(card.getBoundingClientRect().right - node.getBoundingClientRect().right)
         }, index),
       )

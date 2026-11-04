@@ -522,7 +522,6 @@ export const dict = {
   "agentManager.intro.dismiss": "Salta introduzione",
   "agentManager.intro.reopen": "Come funziona Agent Manager",
   "agentManager.splash.preview.label": "Anteprima della barra laterale di Agent Manager",
-  "agentManager.splash.marker": "Funzionalità {{number}}: {{name}}",
   "agentManager.splash.eyebrow": "AGENT MANAGER",
   "agentManager.splash.compact.subtitle":
     "Esegui attività in parallelo con i worktree, delega il lavoro e segui ogni agente da un unico posto.",
@@ -534,7 +533,7 @@ export const dict = {
   "agentManager.splash.hint": "oppure",
   "agentManager.splash.proceed": "prosegui localmente nella casella del messaggio qui sotto",
   "agentManager.splash.folded.title": "Metti al lavoro una flotta di agenti Kilo",
-  "agentManager.splash.folded.note": "Funzionalità tra stack, un orchestratore, un team ops e altro ancora",
+  "agentManager.splash.folded.note": "Funzionalità tra stack, delega, confronto tra modelli e altro ancora",
   "agentManager.splash.showExamples": "Mostra esempi",
   "agentManager.splash.examples.crossStack.tag": "Multi-repo",
   "agentManager.splash.examples.crossStack.title": "Una funzione su tre repo",
@@ -548,42 +547,29 @@ export const dict = {
     "Vedi a colpo d’occhio cosa sta lavorando, cosa è finito o cosa ti aspetta.",
   "agentManager.splash.examples.crossStack.feature3.name": "Badge PR e conteggi diff",
   "agentManager.splash.examples.crossStack.feature3.text": "Scopri cosa ha cambiato ogni agente prima di aprirlo.",
-  "agentManager.splash.examples.orchestrator.tag": "Orchestratore",
-  "agentManager.splash.examples.orchestrator.title": "Dividi un grande lavoro",
-  "agentManager.splash.examples.orchestrator.pitch":
-    "Designa qualsiasi sessione come orchestratore, affidale un insieme di attività e lascia che costruisca la squadra necessaria.",
-  "agentManager.splash.examples.orchestrator.feature1.name": "Sessioni che avviano sessioni",
-  "agentManager.splash.examples.orchestrator.feature1.text":
-    "Un orchestratore può creare sezioni, worktree e nuove sessioni.",
-  "agentManager.splash.examples.orchestrator.feature2.name": "Worktree isolati",
-  "agentManager.splash.examples.orchestrator.feature2.text": "Ogni lavoro ha la sua copia, così nulla si sovrappone.",
-  "agentManager.splash.examples.orchestrator.feature3.name": "Intervieni ovunque",
-  "agentManager.splash.examples.orchestrator.feature3.text":
+  "agentManager.splash.examples.delegate.tag": "Delegare",
+  "agentManager.splash.examples.delegate.title": "Affida un grande lavoro a una sessione",
+  "agentManager.splash.examples.delegate.pitch":
+    "Chiedi a una sessione di dividere un grande lavoro in sessioni parallele, poi entra in una qualsiasi.",
+  "agentManager.splash.examples.delegate.feature1.name": "Sessioni che avviano sessioni",
+  "agentManager.splash.examples.delegate.feature1.text":
+    "Una sessione può avviare nuove sessioni, ognuna nel proprio worktree.",
+  "agentManager.splash.examples.delegate.feature2.name": "Worktree isolati",
+  "agentManager.splash.examples.delegate.feature2.text": "Ogni lavoro ha la sua copia, così nulla si sovrappone.",
+  "agentManager.splash.examples.delegate.feature3.name": "Intervieni ovunque",
+  "agentManager.splash.examples.delegate.feature3.text":
     "Entra in qualsiasi sessione avviata o segui l’intero lavoro dall’alto.",
-  "agentManager.splash.examples.ops.tag": "Operazioni",
-  "agentManager.splash.examples.ops.title": "Crea un team operativo fisso",
-  "agentManager.splash.examples.ops.pitch":
-    "Tieni gli agenti di lunga durata in servizio accanto alle sessioni che costruiscono.",
-  "agentManager.splash.examples.ops.feature1.name": "Istruzioni permanenti",
-  "agentManager.splash.examples.ops.feature1.text":
-    "Assegna a una sessione un ruolo che dura più di qualsiasi singola attività.",
-  "agentManager.splash.examples.ops.feature2.name": "Sezioni",
-  "agentManager.splash.examples.ops.feature2.text":
-    "Raggruppa Implement e Ops per mantenere ogni squadra facile da scorrere.",
-  "agentManager.splash.examples.ops.feature3.name": "Avvisi quando serve il tuo intervento",
-  "agentManager.splash.examples.ops.feature3.text":
-    "Gli agenti si fermano e segnalano le scelte rischiose invece di andare avanti.",
-  "agentManager.splash.examples.versions.tag": "Versioni",
-  "agentManager.splash.examples.versions.title": "Prova tre, scegli il meglio",
-  "agentManager.splash.examples.versions.pitch":
+  "agentManager.splash.examples.compare.tag": "Confrontare modelli",
+  "agentManager.splash.examples.compare.title": "Prova tre, scegli il meglio",
+  "agentManager.splash.examples.compare.pitch":
     "Invia un prompt a più agenti o modelli e conserva il risultato migliore.",
-  "agentManager.splash.examples.versions.feature1.name": "Esecuzioni multi-versione",
-  "agentManager.splash.examples.versions.feature1.text":
+  "agentManager.splash.examples.compare.feature1.name": "Esecuzioni multi-versione",
+  "agentManager.splash.examples.compare.feature1.text":
     "Esegui la stessa attività come più versioni contemporaneamente.",
-  "agentManager.splash.examples.versions.feature2.name": "Mescola i modelli",
-  "agentManager.splash.examples.versions.feature2.text": "Confronta Kilo Auto, Claude e GPT sullo stesso lavoro.",
-  "agentManager.splash.examples.versions.feature3.name": "Confronta e conserva",
-  "agentManager.splash.examples.versions.feature3.text":
+  "agentManager.splash.examples.compare.feature2.name": "Mescola i modelli",
+  "agentManager.splash.examples.compare.feature2.text": "Confronta Kilo Auto, Claude e GPT sullo stesso lavoro.",
+  "agentManager.splash.examples.compare.feature3.name": "Tieni il migliore",
+  "agentManager.splash.examples.compare.feature3.text":
     "Esamina diff reali fianco a fianco, tienine uno e scarta il resto.",
   "agentManager.splash.examples.beyondCode.tag": "Oltre il codice",
   "agentManager.splash.examples.beyondCode.title": "Crea materiali per il brand",

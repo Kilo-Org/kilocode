@@ -7,7 +7,7 @@ const { examples } =
 const { rowId } =
   require("../webview-ui/agent-manager/splash/fleet") as typeof import("../webview-ui/agent-manager/splash/fleet")
 
-const stories = ["cross-stack", "orchestrator", "ops", "versions", "beyond-code"]
+const stories = ["cross-stack", "delegate", "compare", "beyond-code"]
 
 async function open(page: Page, story: string) {
   await page.setViewportSize({ width: 1010, height: 1400 })
@@ -31,7 +31,7 @@ for (const [index, example] of examples.entries()) {
     page,
   }) => {
     await open(page, stories[index]!)
-    await expect(page.locator(".am-splash-preview-fleet")).toHaveCount(5)
+    await expect(page.locator(".am-splash-preview-fleet")).toHaveCount(4)
     expect(
       await page.locator(".am-splash-preview-fleet").evaluateAll((nodes) =>
         nodes.map((node) => ({
