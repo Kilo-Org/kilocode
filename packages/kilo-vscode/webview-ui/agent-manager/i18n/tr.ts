@@ -563,21 +563,6 @@ export const dict = {
   "agentManager.splash.examples.compare.feature3.name": "En iyisini saklayın",
   "agentManager.splash.examples.compare.feature3.text":
     "Gerçek diff'leri yan yana inceleyin, birini saklayın, gerisini bırakın.",
-  "agentManager.splash.examples.beyondCode.tag": "Kodun ötesinde",
-  "agentManager.splash.examples.beyondCode.title": "Bir marka varlıkları seti hazırlayın",
-  "agentManager.splash.examples.beyondCode.pitch":
-    "Agent Manager bir ajanın yapabileceği her işi yürütür, yalnızca kod değişikliklerini değil.",
-  "agentManager.splash.examples.beyondCode.feature1.name": "Paralel taslaklar",
-  "agentManager.splash.examples.beyondCode.feature1.text": "Aynı anda birkaç logo yönünü keşfedin.",
-  "agentManager.splash.examples.beyondCode.feature2.name": "Her dosya",
-  "agentManager.splash.examples.beyondCode.feature2.text":
-    "SVG'ler, tasarım token'ları ve şablonlar, yalnızca kaynak kodu değil.",
-  "agentManager.splash.examples.beyondCode.feature3.name": "Takip oturumları",
-  "agentManager.splash.examples.beyondCode.feature3.text":
-    "Yeni oturumları saklamaya karar verdiğiniz sürüme yönlendirin.",
-  "agentManager.splash.carousel.previous": "Önceki örnek",
-  "agentManager.splash.carousel.next": "Sonraki örnek",
-  "agentManager.splash.carousel.goTo": "Örneği göster: {{title}}",
   "agentManager.worktree.health.absent-restorable": "Klasör silindi",
   "agentManager.worktree.health.absent-restorableNote":
     "Klasör yok, ancak {{branch}} dalı hâlâ duruyor. Buradan devam etmek için geri yükleyin.",

@@ -543,18 +543,6 @@ export const dict = {
   "agentManager.splash.examples.compare.feature3.name": "احتفظ بالأفضل",
   "agentManager.splash.examples.compare.feature3.text":
     "راجع الفروقات الحقيقية جنبًا إلى جنب، واحتفظ بواحد وأهمل الباقي.",
-  "agentManager.splash.examples.beyondCode.tag": "ما بعد الكود",
-  "agentManager.splash.examples.beyondCode.title": "أعدّ مجموعة من أصول العلامة",
-  "agentManager.splash.examples.beyondCode.pitch": "ينفّذ Agent Manager أي عمل يستطيعه الوكيل، وليس تغييرات الكود فقط.",
-  "agentManager.splash.examples.beyondCode.feature1.name": "مسودات متوازية",
-  "agentManager.splash.examples.beyondCode.feature1.text": "استكشف عدة اتجاهات للشعار في الوقت نفسه.",
-  "agentManager.splash.examples.beyondCode.feature2.name": "أي ملفات",
-  "agentManager.splash.examples.beyondCode.feature2.text": "ملفات SVG ورموز التصميم والقوالب، وليس الكود المصدري فقط.",
-  "agentManager.splash.examples.beyondCode.feature3.name": "جلسات متابعة",
-  "agentManager.splash.examples.beyondCode.feature3.text": "وجّه الجلسات الجديدة إلى الإصدار الذي تقرر الاحتفاظ به.",
-  "agentManager.splash.carousel.previous": "المثال السابق",
-  "agentManager.splash.carousel.next": "المثال التالي",
-  "agentManager.splash.carousel.goTo": "عرض المثال: {{title}}",
   "agentManager.worktree.health.absent-restorable": "تم حذف المجلد",
   "agentManager.worktree.health.absent-restorableNote":
     "المجلد مفقود، لكن الفرع {{branch}} لا يزال موجودًا. استعده لمتابعة العمل هنا.",

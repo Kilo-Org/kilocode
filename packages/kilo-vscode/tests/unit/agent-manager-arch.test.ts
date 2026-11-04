@@ -33,7 +33,7 @@ const TSX_FILES = [
   path.join(ROOT, "webview-ui/agent-manager/intro/AgentManagerIntro.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/intro/IntroGraph.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/splash/Splash.tsx"),
-  path.join(ROOT, "webview-ui/agent-manager/splash/Carousel.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/splash/Cards.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/splash/Compact.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/splash/Preview.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/splash/markers.tsx"),

@@ -244,11 +244,6 @@ export const SplashCompareStory1280: Story = {
   render: () => <SplashPreview example={2} />,
 }
 
-export const SplashBeyondCodeStory1280: Story = {
-  name: "Splash beyond code",
-  render: () => <SplashPreview example={3} />,
-}
-
 export const SplashNarrowStory1280: Story = {
   name: "Splash narrow",
   render: () => <SplashPreview example={0} width="560px" />,

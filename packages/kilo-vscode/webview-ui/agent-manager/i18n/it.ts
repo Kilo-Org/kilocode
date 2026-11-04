@@ -571,20 +571,6 @@ export const dict = {
   "agentManager.splash.examples.compare.feature3.name": "Tieni il migliore",
   "agentManager.splash.examples.compare.feature3.text":
     "Esamina diff reali fianco a fianco, tienine uno e scarta il resto.",
-  "agentManager.splash.examples.beyondCode.tag": "Oltre il codice",
-  "agentManager.splash.examples.beyondCode.title": "Crea materiali per il brand",
-  "agentManager.splash.examples.beyondCode.pitch":
-    "Agent Manager esegue qualsiasi lavoro possa fare un agente, non solo modifiche al codice.",
-  "agentManager.splash.examples.beyondCode.feature1.name": "Bozze parallele",
-  "agentManager.splash.examples.beyondCode.feature1.text": "Esplora più direzioni di logo contemporaneamente.",
-  "agentManager.splash.examples.beyondCode.feature2.name": "Qualsiasi file",
-  "agentManager.splash.examples.beyondCode.feature2.text": "SVG, token di design e modelli, non solo codice sorgente.",
-  "agentManager.splash.examples.beyondCode.feature3.name": "Sessioni di seguito",
-  "agentManager.splash.examples.beyondCode.feature3.text":
-    "Indirizza le nuove sessioni verso la versione che decidi di tenere.",
-  "agentManager.splash.carousel.previous": "Esempio precedente",
-  "agentManager.splash.carousel.next": "Esempio successivo",
-  "agentManager.splash.carousel.goTo": "Mostra esempio: {{title}}",
   "agentManager.worktree.health.absent-restorable": "Cartella eliminata",
   "agentManager.worktree.health.absent-restorableNote":
     "La cartella non c'è più, ma il branch {{branch}} esiste ancora. Ripristinala per continuare a lavorare qui.",

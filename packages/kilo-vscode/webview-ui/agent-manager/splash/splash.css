@@ -86,9 +86,9 @@
   color: var(--text-weak);
 }
 
-/* Wide carousel */
+/* Wide cards */
 
-.am-splash-carousel-view {
+.am-splash-wide {
   display: contents;
 }
 
@@ -100,36 +100,12 @@
   min-width: 0;
 }
 
-.am-splash-carousel {
-  display: grid;
-  grid-template-columns: calc(var(--spacing) * 7) minmax(0, 1fr) calc(var(--spacing) * 7);
-  /* Icon buttons have an aspect ratio, so they only fill the row when stretched explicitly. */
-  align-items: stretch;
-  gap: calc(var(--spacing) * 2.5);
-}
-
-.am-splash-carousel .am-splash-arrow[data-component="icon-button"] {
-  width: 100%;
-  height: auto;
-  border: calc(var(--spacing) * 0.25) solid var(--border-weak-base);
-  border-radius: var(--radius-sm);
-  background: var(--surface-base);
-  color: var(--text-weak);
-}
-
-.am-splash-carousel .am-splash-arrow[data-component="icon-button"]:hover {
-  background: var(--surface-base-hover, var(--surface-inset-base));
-  color: var(--text-base);
-}
-
-/* Three cards show at a time; --am-splash-start (set inline) slides the window. */
+/* Every example is visible, so the three cards share the row equally. */
 .am-splash-cards {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: var(--am-splash-card-gap);
   min-width: 0;
-  /* Unlike hidden, clip is not a scroll container, so focusing a card cannot shift the track. */
-  overflow: clip;
-  overflow-clip-margin: calc(var(--spacing) * 0.5);
 }
 
 .am-splash .am-splash-card[data-component="button"] {
@@ -138,7 +114,6 @@
   gap: calc(var(--spacing) * 1.25);
   align-items: stretch;
   justify-content: flex-start;
-  flex: 0 0 calc((100% - 2 * var(--am-splash-card-gap)) / 3);
   height: auto;
   min-width: 0;
   padding: calc(var(--spacing) * 3);
@@ -146,11 +121,6 @@
   border-radius: var(--radius-sm);
   text-align: start;
   white-space: normal;
-  translate: calc(var(--am-splash-start) * (-100% - var(--am-splash-card-gap)));
-}
-
-.am-splash .am-splash-card[data-component="button"]:dir(rtl) {
-  translate: calc(var(--am-splash-start) * (100% + var(--am-splash-card-gap)));
 }
 
 .am-splash-card:not(.am-splash-card-selected):hover {
@@ -181,38 +151,6 @@
   font-weight: var(--font-weight-medium);
   line-height: var(--line-height-normal);
   overflow-wrap: break-word;
-}
-
-.am-splash-dots {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0;
-}
-
-.am-splash .am-splash-dot[data-component="button"] {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: calc(var(--spacing) * 6);
-  min-width: 24px;
-  height: calc(var(--spacing) * 6);
-  min-height: 24px;
-  padding: 0;
-  border: 0;
-  background: transparent;
-}
-
-.am-splash-dot-mark {
-  width: calc(var(--spacing) * 1.5);
-  height: calc(var(--spacing) * 1.5);
-  border-radius: var(--radius-xl);
-  background: var(--text-weak);
-}
-
-.am-splash-dot-selected .am-splash-dot-mark {
-  width: calc(var(--spacing) * 3.5);
-  background: var(--text-base);
 }
 
 /* Compact tabs */
@@ -469,7 +407,6 @@
 }
 
 .am-splash-card:focus-visible,
-.am-splash-dot:focus-visible,
 .am-splash-tab:focus-visible,
 .am-splash-compact-panel:focus-visible,
 .am-splash-proceed:focus-visible,
@@ -556,10 +493,6 @@
   --am-splash-accent: var(--vscode-charts-blue, var(--text-base));
 }
 
-.am-splash [data-tone="beyondCode"] {
-  --am-splash-accent: var(--vscode-charts-yellow, var(--text-base));
-}
-
 @container am-splash (width < 560px) {
   .am-splash-row-marker {
     display: none;
@@ -584,7 +517,7 @@
 }
 
 @container am-splash (width < 880px) {
-  .am-splash-carousel-view,
+  .am-splash-wide,
   .am-splash-subtitle-wide {
     display: none;
   }

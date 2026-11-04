@@ -167,9 +167,6 @@ describe("Agent Manager i18n split", () => {
         example.pitch,
         ...example.features.flatMap((feature) => [feature.name, feature.text]),
       ]),
-      "agentManager.splash.carousel.previous",
-      "agentManager.splash.carousel.next",
-      "agentManager.splash.carousel.goTo",
     ]
     for (const key of keys) expect((amEn as Record<string, string>)[key], `missing English key ${key}`).toBeTruthy()
   })

@@ -551,20 +551,6 @@ export const dict = {
   "agentManager.splash.examples.compare.feature3.name": "Behold den beste",
   "agentManager.splash.examples.compare.feature3.text":
     "Se gjennom ekte differ side om side, behold én og forkast resten.",
-  "agentManager.splash.examples.beyondCode.tag": "Mer enn kode",
-  "agentManager.splash.examples.beyondCode.title": "Lag materiell for merkevaren",
-  "agentManager.splash.examples.beyondCode.pitch":
-    "Agent Manager utfører alt arbeid en agent kan gjøre, ikke bare kodeendringer.",
-  "agentManager.splash.examples.beyondCode.feature1.name": "Parallelle utkast",
-  "agentManager.splash.examples.beyondCode.feature1.text": "Utforsk flere logoretninger samtidig.",
-  "agentManager.splash.examples.beyondCode.feature2.name": "Alle filer",
-  "agentManager.splash.examples.beyondCode.feature2.text": "SVG-er, design-tokens og maler, ikke bare kildekode.",
-  "agentManager.splash.examples.beyondCode.feature3.name": "Oppfølgingsøkter",
-  "agentManager.splash.examples.beyondCode.feature3.text":
-    "Pek nye økter mot versjonen du bestemmer deg for å beholde.",
-  "agentManager.splash.carousel.previous": "Forrige eksempel",
-  "agentManager.splash.carousel.next": "Neste eksempel",
-  "agentManager.splash.carousel.goTo": "Vis eksempel: {{title}}",
   "agentManager.worktree.health.absent-restorable": "Mappe slettet",
   "agentManager.worktree.health.absent-restorableNote":
     "Mappen er borte, men grenen {{branch}} finnes fortsatt. Gjenopprett den for å jobbe videre her.",

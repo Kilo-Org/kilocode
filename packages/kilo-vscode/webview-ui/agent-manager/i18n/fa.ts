@@ -553,20 +553,6 @@ export const dict = {
   "agentManager.splash.examples.compare.feature3.name": "نگه‌داشتن بهترین",
   "agentManager.splash.examples.compare.feature3.text":
     "تفاوت‌های واقعی را کنار هم ببینید، یکی را نگه دارید و بقیه را کنار بگذارید.",
-  "agentManager.splash.examples.beyondCode.tag": "فراتر از کد",
-  "agentManager.splash.examples.beyondCode.title": "ساخت محتوای برند",
-  "agentManager.splash.examples.beyondCode.pitch":
-    "Agent Manager هر کاری را که یک عامل می‌تواند انجام دهد اجرا می‌کند، نه فقط تغییرات کد.",
-  "agentManager.splash.examples.beyondCode.feature1.name": "پیش‌نویس‌های موازی",
-  "agentManager.splash.examples.beyondCode.feature1.text": "چند جهت لوگو را هم‌زمان بررسی کنید.",
-  "agentManager.splash.examples.beyondCode.feature2.name": "هر فایلی",
-  "agentManager.splash.examples.beyondCode.feature2.text": "SVGها، توکن‌های طراحی و قالب‌ها، نه فقط کد منبع.",
-  "agentManager.splash.examples.beyondCode.feature3.name": "نشست‌های پیگیری",
-  "agentManager.splash.examples.beyondCode.feature3.text":
-    "نشست‌های جدید را به نسخه‌ای که تصمیم دارید نگه دارید هدایت کنید.",
-  "agentManager.splash.carousel.previous": "نمونهٔ قبلی",
-  "agentManager.splash.carousel.next": "نمونهٔ بعدی",
-  "agentManager.splash.carousel.goTo": "نمایش نمونه: {{title}}",
   "agentManager.worktree.health.absent-restorable": "پوشه حذف شده است",
   "agentManager.worktree.health.absent-restorableNote":
     "پوشه نیست، اما شاخه {{branch}} هنوز وجود دارد. آن را بازیابی کنید تا کار در اینجا ادامه یابد.",

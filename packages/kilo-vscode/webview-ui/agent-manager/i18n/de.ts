@@ -567,20 +567,6 @@ export const dict = {
   "agentManager.splash.examples.compare.feature3.name": "Den besten behalten",
   "agentManager.splash.examples.compare.feature3.text":
     "Prüfe echte Diffs nebeneinander, behalte eine und verwirf den Rest.",
-  "agentManager.splash.examples.beyondCode.tag": "Mehr als Code",
-  "agentManager.splash.examples.beyondCode.title": "Ein Set an Markenassets entwerfen",
-  "agentManager.splash.examples.beyondCode.pitch":
-    "Agent Manager erledigt jede Arbeit, die ein Agent kann, nicht nur Codeänderungen.",
-  "agentManager.splash.examples.beyondCode.feature1.name": "Parallele Entwürfe",
-  "agentManager.splash.examples.beyondCode.feature1.text": "Erkunde mehrere Logo-Richtungen gleichzeitig.",
-  "agentManager.splash.examples.beyondCode.feature2.name": "Beliebige Dateien",
-  "agentManager.splash.examples.beyondCode.feature2.text": "SVGs, Design-Tokens und Vorlagen, nicht nur Quellcode.",
-  "agentManager.splash.examples.beyondCode.feature3.name": "Folgesitzungen",
-  "agentManager.splash.examples.beyondCode.feature3.text":
-    "Richte neue Sitzungen auf die Version aus, die du behalten willst.",
-  "agentManager.splash.carousel.previous": "Vorheriges Beispiel",
-  "agentManager.splash.carousel.next": "Nächstes Beispiel",
-  "agentManager.splash.carousel.goTo": "Beispiel anzeigen: {{title}}",
   "agentManager.worktree.health.absent-restorable": "Ordner gelöscht",
   "agentManager.worktree.health.absent-restorableNote":
     "Der Ordner fehlt, aber Branch {{branch}} existiert noch. Stelle ihn wieder her, um hier weiterzuarbeiten.",

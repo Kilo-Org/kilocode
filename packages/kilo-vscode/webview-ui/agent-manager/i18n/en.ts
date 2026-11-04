@@ -595,17 +595,4 @@ export const dict = {
   "agentManager.splash.examples.compare.feature2.text": "Compare Kilo Auto, Claude and GPT on identical work.",
   "agentManager.splash.examples.compare.feature3.name": "Keep the best",
   "agentManager.splash.examples.compare.feature3.text": "Review real diffs side by side, keep one, discard the rest.",
-  "agentManager.splash.examples.beyondCode.tag": "Beyond code",
-  "agentManager.splash.examples.beyondCode.title": "Draft a set of brand assets",
-  "agentManager.splash.examples.beyondCode.pitch":
-    "Agent Manager runs any work an agent can do, not only code changes.",
-  "agentManager.splash.examples.beyondCode.feature1.name": "Parallel drafts",
-  "agentManager.splash.examples.beyondCode.feature1.text": "Explore several logo directions at the same time.",
-  "agentManager.splash.examples.beyondCode.feature2.name": "Any files",
-  "agentManager.splash.examples.beyondCode.feature2.text": "SVGs, design tokens and templates, not just source code.",
-  "agentManager.splash.examples.beyondCode.feature3.name": "Follow-up sessions",
-  "agentManager.splash.examples.beyondCode.feature3.text": "Point new sessions at the version you decide to keep.",
-  "agentManager.splash.carousel.previous": "Previous example",
-  "agentManager.splash.carousel.next": "Next example",
-  "agentManager.splash.carousel.goTo": "Show example: {{title}}",
 }

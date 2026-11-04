@@ -52,7 +52,7 @@ interface Feature {
 }
 
 export interface Example {
-  id: "crossStack" | "delegate" | "compare" | "beyondCode"
+  id: "crossStack" | "delegate" | "compare"
   tag: string
   title: string
   pitch: string
@@ -274,82 +274,6 @@ export const examples: readonly Example[] = [
                   diff: { additions: 21, deletions: 9 },
                 },
               ],
-            },
-          ],
-        },
-      ],
-    },
-  },
-  {
-    id: "beyondCode",
-    tag: "agentManager.splash.examples.beyondCode.tag",
-    title: "agentManager.splash.examples.beyondCode.title",
-    pitch: "agentManager.splash.examples.beyondCode.pitch",
-    features: [
-      {
-        name: "agentManager.splash.examples.beyondCode.feature1.name",
-        text: "agentManager.splash.examples.beyondCode.feature1.text",
-        row: { kind: "group", project: "brand-kit", group: "logo" },
-      },
-      {
-        name: "agentManager.splash.examples.beyondCode.feature2.name",
-        text: "agentManager.splash.examples.beyondCode.feature2.text",
-        row: { kind: "session", project: "brand-kit", session: "tokens" },
-      },
-      {
-        name: "agentManager.splash.examples.beyondCode.feature3.name",
-        text: "agentManager.splash.examples.beyondCode.feature3.text",
-        row: { kind: "session", project: "brand-kit", session: "social-cards" },
-      },
-    ],
-    fixture: {
-      projects: [
-        {
-          name: "brand-kit",
-          id: "brand-kit",
-          rows: [
-            { kind: "local", branch: "main" },
-            {
-              kind: "versions",
-              id: "logo",
-              sessions: [
-                {
-                  title: "Logo direction · geometric",
-                  id: "logo-geo",
-                  branch: "logo-geo",
-                  status: "finished",
-                },
-                {
-                  title: "Logo direction · wordmark",
-                  id: "logo-word",
-                  branch: "logo-word",
-                  status: "finished",
-                  selected: true,
-                },
-                {
-                  title: "Logo direction · monogram",
-                  id: "logo-mono",
-                  branch: "logo-mono",
-                  status: "needs-you",
-                },
-              ],
-            },
-            {
-              kind: "session",
-              session: {
-                title: "Color and type tokens",
-                id: "tokens",
-                branch: "tokens",
-                status: "working",
-              },
-            },
-            {
-              kind: "session",
-              session: {
-                title: "Social card templates",
-                id: "social-cards",
-                branch: "social-cards",
-              },
             },
           ],
         },

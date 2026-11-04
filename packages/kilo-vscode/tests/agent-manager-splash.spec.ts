@@ -15,10 +15,10 @@ async function resize(page: Page, width: number) {
     root.style.flex = "none"
   }, width)
   await expect(page.locator(".am-splash-tabs")).toBeVisible({ visible: width < 880 })
-  await expect(page.locator(".am-splash-dots")).toBeVisible({ visible: width >= 880 })
+  await expect(page.locator(".am-splash-cards")).toBeVisible({ visible: width >= 880 })
 }
 
-const controls = (page: Page, width: number) => page.locator(width < 880 ? ".am-splash-tab" : ".am-splash-dot")
+const controls = (page: Page, width: number) => page.locator(width < 880 ? ".am-splash-tab" : ".am-splash-card")
 
 /** Every fixture row fits without scrolling, cropping or a mask, even without badges. */
 async function framed(page: Page) {
@@ -53,7 +53,6 @@ test("content width picks the layout and every example stays readable", async ({
       await resize(page, width)
       await expect(page.locator(".am-splash-feature-stack")).toBeVisible({ visible: width >= 560 })
       await expect(page.locator(".am-splash-legend")).toBeVisible({ visible: width >= 880 })
-      await expect(page.locator(".am-splash-stepper")).toHaveCount(0)
       const height = await card.evaluate((node) => node.getBoundingClientRect().height)
       const hero = await page.locator(".am-splash-hero").evaluate((node) => node.getBoundingClientRect().height)
       for (const control of await controls(page, width).all()) {
@@ -72,21 +71,17 @@ test("content width picks the layout and every example stays readable", async ({
   }
 })
 
-test("example selection works with dots, arrows and tabs, including RTL", async ({ page }) => {
+test("example selection works with cards and tabs, including RTL", async ({ page }) => {
   await page.setViewportSize({ width: 1500, height: 1600 })
   await open(page)
   const cards = page.locator(".am-splash-card")
-  const last = (await cards.count()) - 1
-  const dots = page.locator(".am-splash-dot")
-  await dots.last().click()
+  await cards.last().click()
   await expect(cards.last()).toHaveAttribute("aria-current", "true")
-  await page.getByRole("button", { name: "Next example" }).click()
+  await expect(cards.first()).not.toHaveAttribute("aria-current", "true")
+  await cards.first().focus()
+  await page.keyboard.press("Enter")
   await expect(cards.first()).toHaveAttribute("aria-current", "true")
-  await cards.last().focus()
-  await page.keyboard.press("ArrowRight")
   await expect(cards.first()).toBeFocused()
-  await expect(cards.first()).toHaveAttribute("aria-current", "true")
-  expect(await page.locator(".am-splash-cards").evaluate((node) => node.scrollLeft)).toBe(0)
 
   await resize(page, 879)
   const tabs = page.locator(".am-splash-tab")
@@ -98,15 +93,17 @@ test("example selection works with dots, arrows and tabs, including RTL", async 
   await expect(page.locator(".am-splash-compact-panel:visible")).toHaveCount(1)
   await page.goto("/iframe.html?id=agentmanager--splash-rtl-story-1280&viewMode=story")
   const rtl = page.locator(".am-splash-card")
-  await rtl.last().focus()
-  await page.keyboard.press("ArrowLeft")
+  const order = await rtl.evaluateAll((nodes) => nodes.map((node) => node.getBoundingClientRect().x))
+  expect(order[0]).toBeGreaterThan(order[1]!)
+  await rtl.first().focus()
+  await page.keyboard.press("Enter")
   await expect(rtl.first()).toHaveAttribute("aria-current", "true")
 })
 
 test("preview fleets are inert and only the active one is reachable", async ({ page }) => {
   await page.setViewportSize({ width: 1500, height: 1600 })
   await open(page)
-  for (const control of await page.locator(".am-splash-dot").all()) {
+  for (const control of await page.locator(".am-splash-card").all()) {
     await control.click()
     const fleets = page.locator(".am-splash-preview-fleet")
     const count = await fleets.count()

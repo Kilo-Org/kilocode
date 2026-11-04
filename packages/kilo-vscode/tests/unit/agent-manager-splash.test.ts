@@ -1,7 +1,6 @@
 import { describe, expect, it } from "bun:test"
 import { createRoot } from "solid-js"
 import { createFold } from "../../webview-ui/agent-manager/splash/fold"
-import { navigate, start, wrap } from "../../webview-ui/agent-manager/splash/carousel-logic"
 import { examples } from "../../webview-ui/agent-manager/splash/examples"
 import { fleet, rowId } from "../../webview-ui/agent-manager/splash/fleet"
 import { fixture } from "../fixtures/run"
@@ -70,21 +69,6 @@ describe("Agent Manager splash fold", () => {
       dispose()
     })
     expect(vscode.posted).toEqual([intro(true), fold(false), intro(false)])
-  })
-})
-
-describe("Agent Manager splash carousel logic", () => {
-  it("navigates with arrows in reading direction, wrapping and Home/End", () => {
-    expect(wrap(0, -1, 4)).toBe(3)
-    expect(wrap(3, 1, 4)).toBe(0)
-    expect([0, 1, 2, 3].map((index) => start(index, 4))).toEqual([0, 0, 1, 1])
-    expect(navigate("ArrowRight", 3, 4, false)).toBe(0)
-    expect(navigate("ArrowLeft", 0, 4, false)).toBe(3)
-    expect(navigate("ArrowRight", 1, 4, true)).toBe(0)
-    expect(navigate("ArrowLeft", 3, 4, true)).toBe(0)
-    expect(navigate("Home", 2, 4, false)).toBe(0)
-    expect(navigate("End", 1, 4, true)).toBe(3)
-    expect(navigate("ArrowDown", 1, 4, false)).toBeUndefined()
   })
 })
 

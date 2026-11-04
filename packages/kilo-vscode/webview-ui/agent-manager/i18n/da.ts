@@ -554,19 +554,6 @@ export const dict = {
   "agentManager.splash.examples.compare.feature3.name": "Behold den bedste",
   "agentManager.splash.examples.compare.feature3.text":
     "Gennemgå rigtige diffs side om side, behold én, og smid resten væk.",
-  "agentManager.splash.examples.beyondCode.tag": "Mere end kode",
-  "agentManager.splash.examples.beyondCode.title": "Skab en brandpakke",
-  "agentManager.splash.examples.beyondCode.pitch":
-    "Agent Manager udfører alt arbejde, en agent kan, ikke kun kodeændringer.",
-  "agentManager.splash.examples.beyondCode.feature1.name": "Parallelle udkast",
-  "agentManager.splash.examples.beyondCode.feature1.text": "Udforsk flere logoretninger på samme tid.",
-  "agentManager.splash.examples.beyondCode.feature2.name": "Alle filer",
-  "agentManager.splash.examples.beyondCode.feature2.text": "SVG'er, design-tokens og skabeloner, ikke kun kildekode.",
-  "agentManager.splash.examples.beyondCode.feature3.name": "Opfølgningssessioner",
-  "agentManager.splash.examples.beyondCode.feature3.text": "Ret nye sessioner mod den version, du vælger at beholde.",
-  "agentManager.splash.carousel.previous": "Forrige eksempel",
-  "agentManager.splash.carousel.next": "Næste eksempel",
-  "agentManager.splash.carousel.goTo": "Vis eksempel: {{title}}",
   "agentManager.worktree.health.absent-restorable": "Mappe slettet",
   "agentManager.worktree.health.absent-restorableNote":
     "Mappen er væk, men branchen {{branch}} findes stadig. Gendan den for at arbejde videre her.",

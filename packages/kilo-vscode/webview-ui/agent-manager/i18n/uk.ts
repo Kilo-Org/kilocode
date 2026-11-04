@@ -564,19 +564,6 @@ export const dict = {
   "agentManager.splash.examples.compare.feature3.name": "Залиште найкращий",
   "agentManager.splash.examples.compare.feature3.text":
     "Перегляньте справжні diff поруч, залиште один і відкиньте решту.",
-  "agentManager.splash.examples.beyondCode.tag": "Поза кодом",
-  "agentManager.splash.examples.beyondCode.title": "Створіть матеріали бренду",
-  "agentManager.splash.examples.beyondCode.pitch":
-    "Agent Manager виконує будь-яку роботу, доступну агенту, а не лише зміни коду.",
-  "agentManager.splash.examples.beyondCode.feature1.name": "Паралельні чернетки",
-  "agentManager.splash.examples.beyondCode.feature1.text": "Досліджуйте кілька напрямів логотипа одночасно.",
-  "agentManager.splash.examples.beyondCode.feature2.name": "Будь-які файли",
-  "agentManager.splash.examples.beyondCode.feature2.text": "SVG, дизайн-токени й шаблони, а не лише вихідний код.",
-  "agentManager.splash.examples.beyondCode.feature3.name": "Наступні сесії",
-  "agentManager.splash.examples.beyondCode.feature3.text": "Спрямовуйте нові сесії на версію, яку вирішите залишити.",
-  "agentManager.splash.carousel.previous": "Попередній приклад",
-  "agentManager.splash.carousel.next": "Наступний приклад",
-  "agentManager.splash.carousel.goTo": "Показати приклад: {{title}}",
   "agentManager.worktree.health.absent-restorable": "Теку видалено",
   "agentManager.worktree.health.absent-restorableNote":
     "Теки немає, але гілка {{branch}} збереглася. Відновіть її, щоб продовжити роботу тут.",

@@ -563,19 +563,6 @@ export const dict = {
   "agentManager.splash.examples.compare.feature3.name": "Conserva el mejor",
   "agentManager.splash.examples.compare.feature3.text":
     "Revisa diffs reales lado a lado, conserva uno y descarta el resto.",
-  "agentManager.splash.examples.beyondCode.tag": "Más que código",
-  "agentManager.splash.examples.beyondCode.title": "Crea recursos de marca",
-  "agentManager.splash.examples.beyondCode.pitch":
-    "Agent Manager realiza cualquier trabajo que pueda hacer un agente, no solo cambios de código.",
-  "agentManager.splash.examples.beyondCode.feature1.name": "Borradores paralelos",
-  "agentManager.splash.examples.beyondCode.feature1.text": "Explora varias direcciones de logotipo al mismo tiempo.",
-  "agentManager.splash.examples.beyondCode.feature2.name": "Cualquier archivo",
-  "agentManager.splash.examples.beyondCode.feature2.text": "SVG, tokens de diseño y plantillas, no solo código fuente.",
-  "agentManager.splash.examples.beyondCode.feature3.name": "Sesiones de seguimiento",
-  "agentManager.splash.examples.beyondCode.feature3.text": "Dirige nuevas sesiones a la versión que decidas conservar.",
-  "agentManager.splash.carousel.previous": "Ejemplo anterior",
-  "agentManager.splash.carousel.next": "Ejemplo siguiente",
-  "agentManager.splash.carousel.goTo": "Mostrar ejemplo: {{title}}",
   "agentManager.worktree.health.absent-restorable": "Carpeta eliminada",
   "agentManager.worktree.health.absent-restorableNote":
     "La carpeta no está, pero la rama {{branch}} sigue existiendo. Restáurala para seguir trabajando aquí.",

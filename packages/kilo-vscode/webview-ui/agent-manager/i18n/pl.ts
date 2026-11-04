@@ -555,20 +555,6 @@ export const dict = {
   "agentManager.splash.examples.compare.feature3.name": "Zachowaj najlepsze",
   "agentManager.splash.examples.compare.feature3.text":
     "Przejrzyj prawdziwe diffy obok siebie, zachowaj jeden, a resztę odrzuć.",
-  "agentManager.splash.examples.beyondCode.tag": "Poza kodem",
-  "agentManager.splash.examples.beyondCode.title": "Stwórz materiały marki",
-  "agentManager.splash.examples.beyondCode.pitch":
-    "Agent Manager wykonuje każdą pracę, którą może wykonać agent, nie tylko zmiany w kodzie.",
-  "agentManager.splash.examples.beyondCode.feature1.name": "Równoległe projekty",
-  "agentManager.splash.examples.beyondCode.feature1.text": "Badaj kilka kierunków logo jednocześnie.",
-  "agentManager.splash.examples.beyondCode.feature2.name": "Dowolne pliki",
-  "agentManager.splash.examples.beyondCode.feature2.text": "SVG, tokeny projektowe i szablony, nie tylko kod źródłowy.",
-  "agentManager.splash.examples.beyondCode.feature3.name": "Sesje kontynuacyjne",
-  "agentManager.splash.examples.beyondCode.feature3.text":
-    "Kieruj nowe sesje do wersji, którą zdecydujesz się zachować.",
-  "agentManager.splash.carousel.previous": "Poprzedni przykład",
-  "agentManager.splash.carousel.next": "Następny przykład",
-  "agentManager.splash.carousel.goTo": "Pokaż przykład: {{title}}",
   "agentManager.worktree.health.absent-restorable": "Folder usunięty",
   "agentManager.worktree.health.absent-restorableNote":
     "Folder zniknął, ale gałąź {{branch}} nadal istnieje. Przywróć go, aby dalej tu pracować.",

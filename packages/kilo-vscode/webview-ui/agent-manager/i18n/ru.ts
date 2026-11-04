@@ -558,20 +558,6 @@ export const dict = {
   "agentManager.splash.examples.compare.feature3.name": "Оставьте лучший",
   "agentManager.splash.examples.compare.feature3.text":
     "Просмотрите настоящие diff рядом, оставьте один и отбросьте остальные.",
-  "agentManager.splash.examples.beyondCode.tag": "Вне кода",
-  "agentManager.splash.examples.beyondCode.title": "Создайте материалы бренда",
-  "agentManager.splash.examples.beyondCode.pitch":
-    "Agent Manager выполняет любую работу, доступную агенту, а не только изменения кода.",
-  "agentManager.splash.examples.beyondCode.feature1.name": "Параллельные черновики",
-  "agentManager.splash.examples.beyondCode.feature1.text": "Исследуйте несколько направлений логотипа одновременно.",
-  "agentManager.splash.examples.beyondCode.feature2.name": "Любые файлы",
-  "agentManager.splash.examples.beyondCode.feature2.text": "SVG, дизайн-токены и шаблоны, а не только исходный код.",
-  "agentManager.splash.examples.beyondCode.feature3.name": "Последующие сеансы",
-  "agentManager.splash.examples.beyondCode.feature3.text":
-    "Направляйте новые сеансы на версию, которую решите оставить.",
-  "agentManager.splash.carousel.previous": "Предыдущий пример",
-  "agentManager.splash.carousel.next": "Следующий пример",
-  "agentManager.splash.carousel.goTo": "Показать пример: {{title}}",
   "agentManager.worktree.health.absent-restorable": "Папка удалена",
   "agentManager.worktree.health.absent-restorableNote":
     "Папки нет, но ветка {{branch}} сохранилась. Восстановите её, чтобы продолжить работу здесь.",

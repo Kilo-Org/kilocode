@@ -555,19 +555,6 @@ export const dict = {
   "agentManager.splash.examples.compare.feature3.name": "Zadržite najbolji",
   "agentManager.splash.examples.compare.feature3.text":
     "Pregledajte stvarne diffove jedan uz drugi, zadržite jedan i odbacite ostale.",
-  "agentManager.splash.examples.beyondCode.tag": "Više od koda",
-  "agentManager.splash.examples.beyondCode.title": "Pripremite set materijala brenda",
-  "agentManager.splash.examples.beyondCode.pitch":
-    "Agent Manager obavlja svaki posao koji agent može, ne samo izmjene koda.",
-  "agentManager.splash.examples.beyondCode.feature1.name": "Paralelni nacrti",
-  "agentManager.splash.examples.beyondCode.feature1.text": "Istražite nekoliko smjerova logotipa istovremeno.",
-  "agentManager.splash.examples.beyondCode.feature2.name": "Bilo koje datoteke",
-  "agentManager.splash.examples.beyondCode.feature2.text": "SVG-ovi, dizajn tokeni i šabloni, ne samo izvorni kod.",
-  "agentManager.splash.examples.beyondCode.feature3.name": "Nastavne sesije",
-  "agentManager.splash.examples.beyondCode.feature3.text": "Usmjerite nove sesije na verziju koju odlučite zadržati.",
-  "agentManager.splash.carousel.previous": "Prethodni primjer",
-  "agentManager.splash.carousel.next": "Sljedeći primjer",
-  "agentManager.splash.carousel.goTo": "Prikaži primjer: {{title}}",
   "agentManager.worktree.health.absent-restorable": "Folder izbrisan",
   "agentManager.worktree.health.absent-restorableNote":
     "Folder je nestao, ali grana {{branch}} još postoji. Vrati ga da nastaviš rad ovdje.",

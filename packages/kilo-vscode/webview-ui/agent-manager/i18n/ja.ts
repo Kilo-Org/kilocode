@@ -554,20 +554,6 @@ export const dict = {
   "agentManager.splash.examples.compare.feature2.text": "同じ作業で Kilo Auto、Claude、GPT を比較します。",
   "agentManager.splash.examples.compare.feature3.name": "最良を残す",
   "agentManager.splash.examples.compare.feature3.text": "実際の差分を並べて確認し、1つを残して他は破棄します。",
-  "agentManager.splash.examples.beyondCode.tag": "コードの枠を超えて",
-  "agentManager.splash.examples.beyondCode.title": "ブランド素材一式を下書きする",
-  "agentManager.splash.examples.beyondCode.pitch":
-    "Agent Manager はコード変更だけでなく、エージェントにできるあらゆる作業を実行します。",
-  "agentManager.splash.examples.beyondCode.feature1.name": "並行して下書き",
-  "agentManager.splash.examples.beyondCode.feature1.text": "複数のロゴ案を同時に探れます。",
-  "agentManager.splash.examples.beyondCode.feature2.name": "あらゆるファイル",
-  "agentManager.splash.examples.beyondCode.feature2.text":
-    "SVG、デザイントークン、テンプレートなど、ソースコード以外も扱えます。",
-  "agentManager.splash.examples.beyondCode.feature3.name": "フォローアップセッション",
-  "agentManager.splash.examples.beyondCode.feature3.text": "残すと決めたバージョンに新しいセッションを向けられます。",
-  "agentManager.splash.carousel.previous": "前の例",
-  "agentManager.splash.carousel.next": "次の例",
-  "agentManager.splash.carousel.goTo": "例を表示: {{title}}",
   "agentManager.worktree.health.absent-restorable": "フォルダーが削除されています",
   "agentManager.worktree.health.absent-restorableNote":
     "フォルダーはありませんが、ブランチ {{branch}} は残っています。復元すればここで作業を続けられます。",

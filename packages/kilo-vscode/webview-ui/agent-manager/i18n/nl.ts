@@ -562,19 +562,6 @@ export const dict = {
   "agentManager.splash.examples.compare.feature3.name": "Houd de beste",
   "agentManager.splash.examples.compare.feature3.text":
     "Bekijk echte diffs naast elkaar, houd er één en gooi de rest weg.",
-  "agentManager.splash.examples.beyondCode.tag": "Meer dan code",
-  "agentManager.splash.examples.beyondCode.title": "Maak een merkset",
-  "agentManager.splash.examples.beyondCode.pitch":
-    "Agent Manager voert elk werk uit dat een agent kan doen, niet alleen codewijzigingen.",
-  "agentManager.splash.examples.beyondCode.feature1.name": "Parallelle schetsen",
-  "agentManager.splash.examples.beyondCode.feature1.text": "Verken meerdere logorichtingen tegelijk.",
-  "agentManager.splash.examples.beyondCode.feature2.name": "Elk bestand",
-  "agentManager.splash.examples.beyondCode.feature2.text": "SVG's, design tokens en sjablonen, niet alleen broncode.",
-  "agentManager.splash.examples.beyondCode.feature3.name": "Vervolgsessies",
-  "agentManager.splash.examples.beyondCode.feature3.text": "Richt nieuwe sessies op de versie die je wilt houden.",
-  "agentManager.splash.carousel.previous": "Vorig voorbeeld",
-  "agentManager.splash.carousel.next": "Volgend voorbeeld",
-  "agentManager.splash.carousel.goTo": "Voorbeeld tonen: {{title}}",
   "agentManager.worktree.health.absent-restorable": "Map verwijderd",
   "agentManager.worktree.health.absent-restorableNote":
     "De map is weg, maar branch {{branch}} bestaat nog. Herstel hem om hier verder te werken.",

@@ -545,20 +545,6 @@ export const dict = {
   "agentManager.splash.examples.compare.feature2.text": "동일한 작업에서 Kilo Auto, Claude, GPT를 비교합니다.",
   "agentManager.splash.examples.compare.feature3.name": "최선을 남기기",
   "agentManager.splash.examples.compare.feature3.text": "실제 diff를 나란히 보고 하나를 남기고 나머지는 버립니다.",
-  "agentManager.splash.examples.beyondCode.tag": "코드 그 이상",
-  "agentManager.splash.examples.beyondCode.title": "브랜드 자산 세트를 초안으로 만드세요",
-  "agentManager.splash.examples.beyondCode.pitch":
-    "Agent Manager는 코드 변경뿐 아니라 에이전트가 할 수 있는 모든 작업을 실행합니다.",
-  "agentManager.splash.examples.beyondCode.feature1.name": "병렬 초안",
-  "agentManager.splash.examples.beyondCode.feature1.text": "여러 로고 방향을 동시에 탐색합니다.",
-  "agentManager.splash.examples.beyondCode.feature2.name": "모든 파일",
-  "agentManager.splash.examples.beyondCode.feature2.text":
-    "SVG, 디자인 토큰, 템플릿까지 소스 코드에 국한되지 않습니다.",
-  "agentManager.splash.examples.beyondCode.feature3.name": "후속 세션",
-  "agentManager.splash.examples.beyondCode.feature3.text": "남기기로 한 버전으로 새 세션을 연결합니다.",
-  "agentManager.splash.carousel.previous": "이전 예시",
-  "agentManager.splash.carousel.next": "다음 예시",
-  "agentManager.splash.carousel.goTo": "예시 보기: {{title}}",
   "agentManager.worktree.health.absent-restorable": "폴더 삭제됨",
   "agentManager.worktree.health.absent-restorableNote":
     "폴더는 없지만 브랜치 {{branch}}는 남아 있습니다. 복원하면 계속 작업할 수 있습니다.",

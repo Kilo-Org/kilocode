@@ -558,20 +558,6 @@ export const dict = {
   "agentManager.splash.examples.compare.feature3.name": "Fique com a melhor",
   "agentManager.splash.examples.compare.feature3.text":
     "Revise diffs reais lado a lado, mantenha um e descarte o resto.",
-  "agentManager.splash.examples.beyondCode.tag": "Além do código",
-  "agentManager.splash.examples.beyondCode.title": "Crie materiais de marca",
-  "agentManager.splash.examples.beyondCode.pitch":
-    "O Agent Manager executa qualquer trabalho que um agente possa fazer, não apenas mudanças de código.",
-  "agentManager.splash.examples.beyondCode.feature1.name": "Rascunhos paralelos",
-  "agentManager.splash.examples.beyondCode.feature1.text": "Explore várias direções de logotipo ao mesmo tempo.",
-  "agentManager.splash.examples.beyondCode.feature2.name": "Qualquer arquivo",
-  "agentManager.splash.examples.beyondCode.feature2.text": "SVGs, tokens de design e modelos, não apenas código-fonte.",
-  "agentManager.splash.examples.beyondCode.feature3.name": "Sessões de acompanhamento",
-  "agentManager.splash.examples.beyondCode.feature3.text":
-    "Direcione novas sessões para a versão que você decidir manter.",
-  "agentManager.splash.carousel.previous": "Exemplo anterior",
-  "agentManager.splash.carousel.next": "Próximo exemplo",
-  "agentManager.splash.carousel.goTo": "Mostrar exemplo: {{title}}",
   "agentManager.worktree.health.absent-restorable": "Pasta excluída",
   "agentManager.worktree.health.absent-restorableNote":
     "A pasta não existe mais, mas o branch {{branch}} continua lá. Restaure para continuar trabalhando aqui.",

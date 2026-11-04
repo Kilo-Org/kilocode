@@ -5,7 +5,7 @@ import { WelcomeEmptyState, KiloLogo } from "../../src/components/chat/WelcomeEm
 import { useLanguage } from "../../src/context/language"
 import type { SessionInfo } from "../../src/types/messages"
 import { examples } from "./examples"
-import { Carousel } from "./Carousel"
+import { Cards } from "./Cards"
 import { Compact } from "./Compact"
 import { Preview } from "./Preview"
 import "./splash.css"
@@ -88,7 +88,7 @@ export function SplashExpanded(props: {
         {/* Container queries show one subtitle and one picker for the layout mode. */}
         <p class="am-splash-subtitle am-splash-subtitle-wide">{t("agentManager.splash.subtitle")}</p>
         <p class="am-splash-subtitle am-splash-subtitle-compact">{t("agentManager.splash.compact.subtitle")}</p>
-        <Carousel selected={selected} onSelect={select} />
+        <Cards selected={selected} onSelect={select} />
         <Compact selected={selected} onSelect={select} />
         <Features selected={selected} onHover={setHover} />
         <div class="am-splash-actions">
