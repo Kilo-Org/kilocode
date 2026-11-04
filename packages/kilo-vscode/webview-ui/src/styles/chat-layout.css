@@ -512,7 +512,8 @@
   font-variant-numeric: tabular-nums;
 }
 
-.vscode-session-turn-diffs {
+.vscode-session-turn-diffs,
+.vscode-session-turn-changes {
   width: 100%;
 }
 
@@ -520,6 +521,7 @@
    prose, tool calls, diffs, and the composer all share one centered lane. */
 .chat-view .vscode-session-turn-user,
 .chat-view .vscode-session-turn-diffs,
+.chat-view .vscode-session-turn-changes,
 .chat-view .error-card,
 .chat-view [data-component="tool-part-wrapper"] {
   width: 100%;

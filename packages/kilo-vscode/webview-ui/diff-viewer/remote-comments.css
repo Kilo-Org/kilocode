@@ -1,0 +1,60 @@
+.am-diff-panel [data-component="diff"],
+.am-review-layout [data-component="diff"] {
+  inline-size: 100%;
+  min-inline-size: 0;
+  contain: inline-size;
+  container-type: inline-size;
+}
+
+.am-remote-comment-annotations {
+  min-width: 0;
+  width: var(--diffs-column-content-width, 100%);
+}
+
+.am-diff-panel [data-component="diff"] .am-remote-comment-annotations,
+.am-review-layout [data-component="diff"] .am-remote-comment-annotations {
+  width: var(--diffs-column-content-width, calc(50cqw - var(--diffs-column-number-width, 0px)));
+}
+
+.am-remote-comment-annotations .am-pr-comment,
+.am-remote-comment-outside .am-pr-comment {
+  margin: 4px 8px;
+  border-color: var(--border-weak-base);
+  background: var(--surface-base);
+}
+
+.am-remote-comment-annotations .am-pr-comment-head,
+.am-remote-comment-outside .am-pr-comment-head {
+  cursor: pointer;
+}
+
+.am-remote-comment-annotations .am-pr-comment-actions,
+.am-remote-comment-outside .am-pr-comment-actions {
+  padding-bottom: 6px;
+}
+
+.am-remote-comments-outside {
+  margin: 12px 0 0;
+  padding: 12px;
+  border-top: 1px solid var(--border-weak-base);
+  background: var(--surface-inset-base);
+}
+
+.am-remote-comments-outside-title {
+  color: var(--text-base);
+  font-size: var(--font-size-base);
+  font-weight: 600;
+}
+
+.am-remote-comments-outside-hint {
+  margin-top: 4px;
+  color: var(--text-weak);
+  font-size: var(--font-size-small);
+}
+
+.am-remote-comments-outside-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 10px;
+}

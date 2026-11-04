@@ -18,6 +18,8 @@ export function parseSettingsTarget(args: unknown[]): SettingsNavigation {
   if (focus) target.focus = focus
   const titleKey = text(value.titleKey)
   if (titleKey) target.titleKey = titleKey
+  const projectId = text(value.projectId)
+  if (projectId) target.projectId = projectId
   if (value.search === true) target.search = true
   return target
 }

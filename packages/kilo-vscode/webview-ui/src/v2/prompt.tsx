@@ -2,20 +2,45 @@ import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { showToast } from "@kilocode/kilo-ui/toast"
 import type { ModelRef } from "@opencode/client"
-import { createEffect, createSignal, onCleanup, onMount, Show, type JSX } from "solid-js"
+import { createEffect, createSignal, on, onCleanup, onMount, Show, untrack, type JSX } from "solid-js"
 import { SpeechToTextButton } from "../components/speech-to-text/SpeechToTextButton"
 import { createSpeechShortcut } from "../components/speech-to-text/shortcut"
 import { useSpeechStatus } from "../components/speech-to-text/status"
 import { useSpeechToText } from "../components/speech-to-text/useSpeechToText"
 import { useLanguage } from "../context/language"
 import { useVSCode } from "../context/vscode"
+import {
+  hasPopup,
+  hasQuestionOption,
+  hasTextSelection,
+  isTextControl,
+  ownsFocusRegion,
+  promptFocusAllowed,
+} from "../utils/focus"
 import { isEnterKeyCommitNotIme } from "../utils/ime-enter"
 import { message, useV2 } from "./client"
 import { cleanEnhancedPrompt, enhancePromptRequest, normalizeEnhancePromptErrorMessage } from "./enhance-prompt"
 import { insertSpacedText } from "./prompt-speech"
 
+// Drafts live outside the component so a composer remounted for another session restores its own text, as v1 did.
+// The key is the session id, or the pending tab id before a first prompt creates the session.
+const drafts = new Map<string, string>()
+
+export const promptDrafts = {
+  get(key: string | undefined) {
+    return key ? (drafts.get(key) ?? "") : ""
+  },
+  set(key: string | undefined, value: string) {
+    if (!key) return
+    if (value) drafts.set(key, value)
+    else drafts.delete(key)
+  },
+}
+
 export function PromptInput(props: {
   session?: string
+  /** Draft identity: the session id, or the pending tab id before a session exists. */
+  draftKey?: string
   running: boolean
   disabled: boolean
   /** The model the composer shows; Enhance uses it so the rewrite never depends on another provider. */
@@ -30,10 +55,12 @@ export function PromptInput(props: {
   selectors?: JSX.Element
   /** Prompt toolbar actions (auto-approve, and later indexing, sandbox and enhance as on main). */
   actions?: JSX.Element
+  /** Receives a function that appends text to the draft and, when `send` is true, sends it. */
+  onAppendReady?: (append: (value: string, send: boolean) => void) => void
 }) {
   const v2 = useV2()
   const language = useLanguage()
-  const [text, setText] = createSignal("")
+  const [text, setText] = createSignal(promptDrafts.get(props.draftKey))
   const [sending, setSending] = createSignal(false)
   const [enhancing, setEnhancing] = createSignal(false)
   // The draft Enhance replaced, so Ctrl/Cmd+Z restores it once.
@@ -71,6 +98,30 @@ export function PromptInput(props: {
     refs.overlay.scrollLeft = refs.input.scrollLeft
   }
 
+  // Switching drafts saves the text of the draft being left and restores the target draft. SessionView normally
+  // remounts this component for another key; this also covers a key change without a remount.
+  let draft = props.draftKey
+  createEffect(
+    on(
+      () => props.draftKey,
+      (key) => {
+        if (key === draft) return
+        promptDrafts.set(draft, untrack(text))
+        draft = key
+        const value = promptDrafts.get(key)
+        enhanceToken++
+        preEnhance = null
+        setText(value)
+        if (refs.input) {
+          refs.input.value = value
+          refs.input.scrollTop = 0
+        }
+        scroll()
+      },
+    ),
+  )
+  onCleanup(() => promptDrafts.set(draft, text()))
+
   createEffect(() => {
     text()
     if (!refs.input) return
@@ -80,9 +131,70 @@ export function PromptInput(props: {
     scroll()
   })
 
-  const focus = () => refs.input?.focus({ preventScroll: true })
-  onMount(() => window.addEventListener("focusPrompt", focus))
-  onCleanup(() => window.removeEventListener("focusPrompt", focus))
+  const focusInput = () => refs.input?.focus({ preventScroll: true })
+  // The restore chain outlives the event that started it, so every handle is tracked and dropped on unmount.
+  const frames = new Set<number>()
+  const timers = new Set<ReturnType<typeof setTimeout>>()
+  let disposed = false
+  const frame = (run: () => void) => {
+    const id = requestAnimationFrame(() => {
+      frames.delete(id)
+      if (!disposed) run()
+    })
+    frames.add(id)
+  }
+  const timer = (run: () => void, delay: number) => {
+    const id = setTimeout(() => {
+      timers.delete(id)
+      if (!disposed) run()
+    }, delay)
+    timers.add(id)
+  }
+  // A restore retries after the dialog, menu or question that owned focus closes, but never takes focus from
+  // another text control, a popup or a selection.
+  const onFocusPrompt = (event: Event) => {
+    const detail = event instanceof CustomEvent ? (event.detail as Record<string, unknown> | undefined) : undefined
+    const force = detail?.force === true
+    const allowed = () =>
+      !disposed &&
+      !!refs.input?.isConnected &&
+      promptFocusAllowed({
+        force,
+        deferToQuestion: detail?.deferFocusToQuestion === true,
+        questionOption: hasQuestionOption(),
+        ownsRegion: ownsFocusRegion(document.activeElement),
+        popup: hasPopup(),
+        textControl: document.activeElement !== refs.input && isTextControl(document.activeElement),
+        selection: hasTextSelection(),
+      })
+    const focus = () => {
+      if (!allowed()) return
+      focusInput()
+    }
+    focus()
+    if (detail?.restore !== true) return
+    const restore = () => {
+      if (!allowed()) return
+      window.focus()
+      focus()
+    }
+    queueMicrotask(restore)
+    frame(() => {
+      restore()
+      frame(restore)
+      timer(restore, 0)
+      timer(restore, 50)
+    })
+  }
+  onMount(() => window.addEventListener("focusPrompt", onFocusPrompt))
+  onCleanup(() => {
+    disposed = true
+    for (const id of frames) cancelAnimationFrame(id)
+    for (const id of timers) clearTimeout(id)
+    frames.clear()
+    timers.clear()
+    window.removeEventListener("focusPrompt", onFocusPrompt)
+  })
 
   const insertSpeechText = (value: string) => {
     const ref = refs.input
@@ -141,6 +253,15 @@ export function PromptInput(props: {
     submit()
   }
 
+  props.onAppendReady?.((value, shouldSend) => {
+    const current = text()
+    enhanceToken++
+    preEnhance = null
+    setText(current.trim() ? `${current}\n\n${value}` : value)
+    if (shouldSend) send()
+    else focusInput()
+  })
+
   const shortcut = createSpeechShortcut({
     speech,
     disabled: () => !canUseSpeech() || props.disabled,
@@ -176,7 +297,7 @@ export function PromptInput(props: {
     // An empty draft explains the action instead of rewriting nothing.
     if (!draft) {
       setText(language.t("prompt.action.enhanceDescription"))
-      focus()
+      focusInput()
       return
     }
     preEnhance = text()
@@ -187,7 +308,7 @@ export function PromptInput(props: {
       .then((response) => {
         if (token !== enhanceToken) return
         setText(cleanEnhancedPrompt(response.text))
-        focus()
+        focusInput()
       })
       .catch((err: unknown) => {
         if (token !== enhanceToken) return

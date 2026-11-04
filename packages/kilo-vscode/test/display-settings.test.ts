@@ -22,7 +22,7 @@ async function directory() {
 
 afterEach(async () => {
   entries = []
-  await Promise.all(directories.splice(0).map((path) => rm(path, { recursive: true, force: true })))
+  await Promise.all(directories.splice(0).map((path) => rm(path, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 })))
 })
 
 afterAll(() => server.stop(true))

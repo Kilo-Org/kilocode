@@ -136,14 +136,21 @@ const host = Bun.build({
 })
 
 const results = await Promise.all([
-  host.then((result) => {
-    if (result.success) return
-    result.logs.forEach((log) => console.error(log))
-    throw new Error("extension host build failed")
+  host.then(async (result) => {
+    if (!result.success) {
+      result.logs.forEach((log) => console.error(log))
+      throw new Error("extension host build failed")
+    }
+    // A CommonJS host cannot parse `import.meta`; it reaches the bundle when a dynamic import wraps an ESM graph.
+    if ((await Bun.file(path.join(dist, "extension.js")).text()).includes("import.meta"))
+      throw new Error("extension host bundle contains import.meta and would fail to activate")
   }),
   build({
     ...common,
-    entryPoints: { webview: path.join(root, "webview-ui/src/index.tsx") },
+    entryPoints: {
+      webview: path.join(root, "webview-ui/src/index.tsx"),
+      "agent-manager": path.join(root, "webview-ui/agent-manager/index.tsx"),
+    },
     outdir: dist,
     format: "iife",
     platform: "browser",

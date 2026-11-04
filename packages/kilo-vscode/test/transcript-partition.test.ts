@@ -86,6 +86,44 @@ test("range metadata matches turnMetadata for every step", () => {
   }
 })
 
+test("marks the first user input as the turn diff anchor", () => {
+  const ranges = messageTurnRanges([
+    user("u1", 100),
+    assistant({ id: "a1", created: 200, completed: 300, text: "done", finish: "stop" }),
+    idle("i1", 400),
+  ])
+  expect(ranges[0].turn).toBe("u1")
+  expect(ranges[0].userTurn).toBe("u1")
+})
+
+test("leaves the turn diff anchor empty when the opener is outside the page", () => {
+  const ranges = messageTurnRanges([
+    assistant({ id: "a0", created: 100, completed: 200, text: "prefix", finish: "stop" }),
+    idle("i1", 300),
+  ])
+  expect(ranges[0].turn).toBe("a0")
+  expect(ranges[0].userTurn).toBeUndefined()
+})
+
+test("leaves the turn diff anchor empty for a synthetic input", () => {
+  const synthetic = { id: "s1", type: "synthetic", time: { created: 100 } } as unknown as SessionMessageInfo
+  const ranges = messageTurnRanges([
+    synthetic,
+    assistant({ id: "a1", created: 200, completed: 300, text: "done", finish: "stop" }),
+    idle("i1", 400),
+  ])
+  expect(ranges[0].turn).toBe("s1")
+  expect(ranges[0].userTurn).toBeUndefined()
+})
+
+test("carries the user anchor on assistant rows", () => {
+  const rows = transcriptRows([
+    user("u1", 100),
+    assistant({ id: "a1", created: 200, completed: 300, text: "done", finish: "stop" }),
+  ])
+  expect(rows.flatMap((row) => (row.type === "assistant" ? [row.userTurn] : []))).toEqual(["u1"])
+})
+
 test("keeps the footer on a prefix step when a later steer has no text", () => {
   const prefix = assistant({
     id: "a0",

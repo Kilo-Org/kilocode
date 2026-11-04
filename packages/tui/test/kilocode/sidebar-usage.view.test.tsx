@@ -88,6 +88,8 @@ test("sidebar shows the Kilo panels in v1 order, with family usage per routed mo
         output: { email: "fixture@example.test", organizations: [], hasPersonalAccount: true, organizationID: null },
       })
     if (url.pathname === "/api/rpc/kilocode.gateway/balance") return json({ output: { balance: 1.5 } })
+    // Privacy mode off; an unreadable privacy mode masks the balance.
+    if (url.pathname === "/api/rpc/kilocode.privacy/get") return json({ output: { enabled: false } })
     if (url.pathname === "/api/rpc/kilocode.gateway/models")
       return json({
         output: [

@@ -158,7 +158,8 @@ jobs:
             KILO_TEST_CONCURRENCY=4 GITHUB_ACTIONS=false bun turbo test:ci --concurrency=1 "${affected[@]}" --filter='@kilocode/kilo-cli' &
             host=$!
             other=0
-            GITHUB_ACTIONS=false bun turbo test --concurrency=3 "${affected[@]}" --filter='!@opencode/core' --filter='!@opencode/tui' --filter='!@opencode/cli' --filter='!@kilocode/kilo-cli' || other=$?
+            # kilocode_change - stream task logs so a stalled task names itself instead of hiding until it finishes
+            GITHUB_ACTIONS=false bun turbo test --concurrency=3 --log-order=stream "${affected[@]}" --filter='!@opencode/core' --filter='!@opencode/tui' --filter='!@opencode/cli' --filter='!@kilocode/kilo-cli' || other=$?
             hoststatus=0
             wait "$host" || hoststatus=$?
             test "$other" -eq 0 && test "$hoststatus" -eq 0

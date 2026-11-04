@@ -69,8 +69,14 @@ export function MessageList(props: {
   actions?: ToolActions
   onSelectSession: (id: string) => void
   onShowHistory: () => void
+  /** Forks the session before a user message, when the surface can fork. */
+  onForkMessage?: (sessionID: string, messageID: string) => void
+  /** Replaces the welcome screen of an empty session, for example with the Agent Manager introduction. */
+  empty?: () => JSX.Element
   /** Receives the handler the session dock calls to scroll to the bottom. */
   onScrollToBottomReady?: (handler: (() => void) | undefined) => void
+  /** Opens the files changed by one turn. */
+  onViewTurnChanges?: (sessionID: string, turnID: string) => void
 }) {
   const v2 = useV2()
   const language = useLanguage()
@@ -99,7 +105,11 @@ export function MessageList(props: {
   }
   const working = () => !!props.session && v2.data.session.status(props.session) === "running"
   const loadingOlder = () => !!props.session && v2.data.session.message.loading(props.session)
-  const more = () => !!props.session && v2.data.session.message.more(props.session)
+  // The server always returns a next cursor, so a page shorter than the limit is what proves the start is loaded.
+  const more = () =>
+    !!props.session &&
+    v2.data.session.message.more(props.session) &&
+    !v2.data.session.message.startLoaded(props.session)
   const empty = () => !props.session || (messages().length === 0 && queued().length === 0)
   const autoScroll = createAutoScroll({ working })
   props.onScrollToBottomReady?.(() => autoScroll.resume())
@@ -405,6 +415,8 @@ export function MessageList(props: {
           session={props.session ?? ""}
           actions={props.actions}
           highlight={() => highlight()}
+          onViewTurnChanges={props.onViewTurnChanges}
+          onForkMessage={props.onForkMessage}
         />
       ) as HTMLElement
     })
@@ -427,7 +439,11 @@ export function MessageList(props: {
           class={empty() ? "message-list-content-empty" : "message-list-content"}
         >
           <Show when={empty()}>
-            <Welcome onSelectSession={props.onSelectSession} onShowHistory={props.onShowHistory} />
+            {props.empty ? (
+              props.empty()
+            ) : (
+              <Welcome onSelectSession={props.onSelectSession} onShowHistory={props.onShowHistory} />
+            )}
           </Show>
           <Show when={!empty() && props.session}>
             {(id) => (

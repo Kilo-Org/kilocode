@@ -59,6 +59,8 @@ export type SettingsNavigation = {
   focus?: string
   titleKey?: string
   search?: boolean
+  /** Agent Manager project a project-scoped tab opens for, so the gear preselects it. */
+  projectId?: string
 }
 
 export type SpeechToTextModel = {
@@ -134,7 +136,48 @@ export type Settings =
   | { type: "openFile"; path: string }
   | { type: "openVSCodeSettings"; query: string }
   | { type: "resetAllSettings" }
+  | AgentManagerSettings
   | FetchCustomProviderModels
+
+/**
+ * The Agent Manager rows of the Settings panel. The project is explicit, because the panel edits a project the
+ * Agent Manager provider owns, not the panel's own directory. `requestId` guards out-of-order replies.
+ */
+export type AgentManagerSettings =
+  | { type: "agentManagerSettings"; projectId?: string; requestId: string }
+  | { type: "agentManagerSettingsBranches"; projectId: string; requestId: string }
+  | { type: "agentManagerSetDefaultBaseBranch"; projectId: string; branch?: string; requestId: string }
+  | { type: "agentManagerConfigureSetupScript"; projectId: string; requestId: string }
+
+/** One Agent Manager project the project-scoped Settings tab can edit. */
+export type AgentManagerSettingsProject = {
+  id: string
+  root: string
+  label: string
+  pinned: boolean
+  missing: boolean
+  defaultBaseBranch?: string
+  setupScriptPath?: string
+}
+
+/** A branch row of the default base branch picker. */
+export type AgentManagerSettingsBranch = {
+  name: string
+  isLocal: boolean
+  isRemote: boolean
+  isDefault: boolean
+  lastCommitDate?: string
+  isCheckedOut?: boolean
+}
+
+/** The branch and script data of one Agent Manager project. `branches` is absent when the read failed. */
+export type AgentManagerSettingsBranchPayload = {
+  projectId: string
+  branches?: AgentManagerSettingsBranch[]
+  defaultBranch?: string
+  configuredBaseBranch?: string
+  setupScriptPath?: string
+}
 
 /**
  * Lists the models of a custom provider's OpenAI-compatible base URL. The key is one of: `apiKey` (typed in the
@@ -168,6 +211,8 @@ export type ToWebview =
   | { type: "configLoaded"; global: ConfigFileContent; project: ConfigFileContent; policy?: ConfigPolicy; error?: string }
   | { type: "configWritten"; id: number; ok: boolean; error?: string }
   | { type: "vscodeSettingsLoaded"; values: Record<string, unknown> }
+  | { type: "agentManagerSettingsLoaded"; requestId: string; projectId?: string; projects: AgentManagerSettingsProject[] }
+  | ({ type: "agentManagerSettingsBranchesLoaded"; requestId: string; error?: string } & AgentManagerSettingsBranchPayload)
   | { type: "displaySettingsLoaded"; values: DisplaySettings; error?: string }
   | { type: "speechToTextConfigLoaded"; status: SpeechToTextStatus }
   | { type: "speechToTextStarted"; requestId: string }

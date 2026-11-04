@@ -11,6 +11,7 @@ import { DialogHeader, DialogLayout, useDialog } from "../ui/dialog"
 import { DialogSelect } from "../ui/dialog-select"
 import { Link } from "../ui/link"
 import { useToast } from "../ui/toast"
+import { privacyMode } from "./pii"
 
 type Profile = typeof KiloGatewayRpc.Definition.methods.profile.output.Type
 type Balance = typeof KiloGatewayRpc.Definition.methods.balance.output.Type
@@ -164,13 +165,26 @@ export default Plugin.define({
 
 async function accountStatus(context: Plugin.Context) {
   const rpc = context.client.rpc(KiloGatewayRpc.Definition)
-  const options = { location: { directory: (context.location ?? context.data.location.default()).directory } }
-  const status = await rpc.authStatus({}, options).catch(() => undefined)
+  const location = context.location ?? context.data.location.default()
+  const options = { location: { directory: location.directory } }
+  const [status, privacy] = await Promise.all([
+    rpc.authStatus({}, options).catch(() => undefined),
+    privacyMode(context.client, location),
+  ])
   if (!status?.authenticated) {
     return context.ui.dialog.alert({
       title: "Kilo Gateway (Signed Out)",
       message: `Server: ${status?.server ?? "https://api.kilo.ai"}\nUse /connect to sign in to Kilo Gateway.`,
     })
+  }
+  // In privacy mode the profile loads only after the user agrees to show it.
+  if (privacy) {
+    const confirmed = await context.ui.dialog.confirm({
+      title: "Privacy Mode Enabled",
+      message:
+        "Privacy mode is on. Revealing your profile will display your email, name, balance, and team on screen.",
+    })
+    if (confirmed !== true) return
   }
   const [profile, balance, pass, modes] = await Promise.all([
     rpc.profile({}, options).catch(() => undefined),
