@@ -343,7 +343,8 @@ function remove(
 ) {
   return Effect.gen(function* () {
     const record = yield* requireRecord(ctx, input.flowID, authorizedProjectID)
-    yield* flowLock(runtime, record.id).withPermit(
+    const lock = flowLock(runtime, record.id)
+    yield* lock.withPermit(
       Effect.gen(function* () {
         const active = yield* reconcileFlowActive(ctx, record.id)
         if (active?.sessionID) yield* ctx.session.interrupt({ sessionID: active.sessionID }).pipe(Effect.ignore)
@@ -362,6 +363,7 @@ function remove(
         )
       }),
     )
+    if (runtime.locks.get(record.id) === lock) runtime.locks.delete(record.id)
   })
 }
 

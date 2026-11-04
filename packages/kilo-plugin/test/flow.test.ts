@@ -9,6 +9,7 @@ import { Schedule } from "@opencode/core/schedule"
 import { Tool } from "@opencode/core/tool"
 import { assemble, flowPermissions, list, permissionInstructions, storedRecord } from "../src/flow"
 import { KiloFlowPlugin } from "../src/flow"
+import { validatePermissions } from "../src/flow/permissions"
 import { KiloFlowRpc } from "@opencode/schema/kilocode/flow"
 import { Session } from "@opencode/schema/session"
 import { SessionMessage } from "@opencode/schema/session-message"
@@ -257,6 +258,22 @@ test("expands requested permissions into reviewed capabilities", () => {
     { action: "external_directory", resource: "/home/user/*" },
   ])
 })
+
+test.each(["/home/user/*", "C:\\Users\\me\\*", "\\\\server\\share\\*"])(
+  "accepts bounded external directory permission %s",
+  (resource) => {
+    expect(validatePermissions([{ action: "external_directory", resource }])).toBeUndefined()
+  },
+)
+
+test.each(["*", "/*", "home/user/*", "../home/user/*", "/home/user/../*"])(
+  "rejects unbounded external directory permission %s",
+  (resource) => {
+    expect(validatePermissions([{ action: "external_directory", resource }])).toContain(
+      "must use a bounded absolute wildcard below a directory",
+    )
+  },
+)
 
 test("missing Sessions and malformed stored records are isolated", () => {
   const missing = schedule({ id: "sch_orphan", sessionID: "ses_missing" })
