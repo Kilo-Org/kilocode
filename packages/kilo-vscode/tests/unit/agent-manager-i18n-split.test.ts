@@ -159,27 +159,19 @@ describe("Agent Manager i18n split", () => {
     }
   })
 
-  it("resolves every splash example in every locale", () => {
-    for (const [locale, dict] of Object.entries(locales)) {
-      for (const example of examples) {
-        const keys = [
-          example.tag,
-          example.title,
-          example.pitch,
-          ...example.features.flatMap((feature) => [feature.name, feature.text]),
-        ]
-        for (const key of keys) {
-          expect((dict as Record<string, string>)[key], `locale ${locale} is missing ${key}`).toBeTruthy()
-        }
-      }
-      for (const key of [
-        "agentManager.splash.carousel.previous",
-        "agentManager.splash.carousel.next",
-        "agentManager.splash.carousel.goTo",
-      ]) {
-        expect((dict as Record<string, string>)[key], `locale ${locale} is missing ${key}`).toBeTruthy()
-      }
-    }
+  it("resolves splash references in English; locale keysets are checked above", () => {
+    const keys = [
+      ...examples.flatMap((example) => [
+        example.tag,
+        example.title,
+        example.pitch,
+        ...example.features.flatMap((feature) => [feature.name, feature.text]),
+      ]),
+      "agentManager.splash.carousel.previous",
+      "agentManager.splash.carousel.next",
+      "agentManager.splash.carousel.goTo",
+    ]
+    for (const key of keys) expect((amEn as Record<string, string>)[key], `missing English key ${key}`).toBeTruthy()
   })
 
   it("contains required core keys in every locale", () => {

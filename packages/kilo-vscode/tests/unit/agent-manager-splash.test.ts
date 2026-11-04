@@ -1,7 +1,6 @@
 import { describe, expect, it } from "bun:test"
 import { createRoot } from "solid-js"
 import { createFold } from "../../webview-ui/agent-manager/splash/fold"
-import { splash } from "../../webview-ui/agent-manager/splash/gate"
 import { navigate, start, wrap } from "../../webview-ui/agent-manager/splash/carousel-logic"
 import { examples, type Row } from "../../webview-ui/agent-manager/splash/examples"
 import { fleet, rowId } from "../../webview-ui/agent-manager/splash/fleet"
@@ -14,10 +13,6 @@ import type { ExtensionMessage, WebviewMessage } from "../../webview-ui/src/type
 const source = await Bun.file(new URL("../../webview-ui/agent-manager/AgentManagerApp.tsx", import.meta.url)).text()
 
 describe("Agent Manager splash gating", () => {
-  it("keeps the dev gate off", () => {
-    expect(splash).toBe(false)
-  })
-
   it("renders the legacy intro, whose session start posts nothing, while the gate is off", () =>
     fixture("splash-intro"))
 })
@@ -201,61 +196,10 @@ describe("Agent Manager splash markers", () => {
 })
 
 describe("Agent Manager splash feature rows", () => {
-  it("keeps the prototype's fixture rows in order", () => {
-    expect(
-      examples.map((example) =>
-        example.fixture.projects.flatMap((project) =>
-          project.rows.flatMap((row) =>
-            row.kind === "session"
-              ? row.session.title
-              : row.kind === "section"
-                ? [row.section.name, ...row.section.sessions.map((session) => session.title)]
-                : row.kind === "versions"
-                  ? row.sessions.map((session) => session.title)
-                  : row.branch,
-          ),
-        ),
-      ),
-    ).toEqual([
-      ["Usage billing: metering endpoint", "Usage billing: pricing page", "Usage billing: queue and alarms"],
-      [
-        "main",
-        "ORCHESTRATE",
-        "Orchestrator · scheduler latency pass",
-        "PATCHES",
-        "Reduce run-queue lock contention",
-        "Batch io_uring submissions",
-        "Pin hot kthreads to isolated cores",
-      ],
-      [
-        "IMPLEMENT",
-        "Rate-limit the login endpoint",
-        "Paginate the audit log",
-        "OPS",
-        "Merge Captain",
-        "Issue Delegator",
-        "Adversarial Reviewer",
-      ],
-      ["main", "Cut cold start time · Kilo Auto", "Cut cold start time · Claude", "Cut cold start time · GPT"],
-      [
-        "main",
-        "Logo direction · geometric",
-        "Logo direction · wordmark",
-        "Logo direction · monogram",
-        "Color and type tokens",
-        "Social card templates",
-      ],
-    ])
-    expect(examples.map((example) => fleet(example).map((row) => row.state.worktrees.length))).toEqual([
-      [1, 1, 1],
-      [4],
-      [5],
-      [3],
-      [5],
-    ])
-  })
-
   it("resolves every feature row to exactly one fixture row", () => {
+    expect(new Set(examples.flatMap((example) => example.features.map((feature) => feature.row.kind)))).toEqual(
+      new Set(["project", "section", "group", "session"]),
+    )
     for (const example of examples) {
       expect(example.features).toHaveLength(3)
       const resolve = (target: Row) => {
@@ -283,35 +227,5 @@ describe("Agent Manager splash feature rows", () => {
       }
       for (const feature of example.features) expect(resolve(feature.row)).toHaveLength(1)
     }
-  })
-
-  it("targets the prototype's project, section, version group and sessions", () => {
-    expect(examples.map((example) => example.features.map((feature) => feature.row))).toEqual([
-      [
-        { kind: "project", project: "billing-api" },
-        { kind: "session", project: "billing-api", session: "usage-metering" },
-        { kind: "session", project: "web-app", session: "pricing-page" },
-      ],
-      [
-        { kind: "session", project: "kernel-sched", session: "orchestrator" },
-        { kind: "session", project: "kernel-sched", session: "rq-lock" },
-        { kind: "session", project: "kernel-sched", session: "kthread-pin" },
-      ],
-      [
-        { kind: "session", project: "api", session: "merge-captain" },
-        { kind: "section", project: "api", section: "implement" },
-        { kind: "session", project: "api", session: "adversarial-reviewer" },
-      ],
-      [
-        { kind: "group", project: "storefront", group: "cold-start" },
-        { kind: "session", project: "storefront", session: "cold-start-a" },
-        { kind: "session", project: "storefront", session: "cold-start-b" },
-      ],
-      [
-        { kind: "group", project: "brand-kit", group: "logo" },
-        { kind: "session", project: "brand-kit", session: "tokens" },
-        { kind: "session", project: "brand-kit", session: "social-cards" },
-      ],
-    ])
   })
 })

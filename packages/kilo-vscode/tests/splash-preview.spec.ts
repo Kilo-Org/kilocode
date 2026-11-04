@@ -22,7 +22,7 @@ async function open(page: Page, story: string) {
       }),
     })
   })
-  await page.goto(`/iframe.html?id=agentmanager--splash-${story}-story&viewMode=story`)
+  await page.goto(`/iframe.html?id=agentmanager--splash-${story}-story-1280&viewMode=story`)
   await expect(page.locator(".am-splash-preview-fleet-active .am-project-item").first()).toBeVisible()
 }
 
@@ -113,18 +113,3 @@ for (const [index, example] of examples.entries()) {
     expect(await page.evaluate(() => document.activeElement?.closest(".am-splash-preview-card") ?? null)).toBeNull()
   })
 }
-
-test("hovering a feature rings its badge in the preview", async ({ page }) => {
-  await open(page, "ops")
-  const badge = (number: string) =>
-    page.locator(".am-splash-preview-fleet-active .am-splash-row-marker").filter({ hasText: number })
-  const ring = (number: string) => badge(number).evaluate((node) => getComputedStyle(node).boxShadow)
-  await page.mouse.move(0, 0)
-  expect(await ring("2")).toBe("none")
-  await page.locator(".am-splash-features-active .am-splash-feature").nth(1).hover()
-  await expect(badge("2")).toHaveClass(/am-splash-row-marker-hover/)
-  await expect.poll(() => ring("2")).not.toBe("none")
-  expect(await ring("1")).toBe("none")
-  await page.mouse.move(0, 0)
-  await expect(badge("2")).not.toHaveClass(/am-splash-row-marker-hover/)
-})

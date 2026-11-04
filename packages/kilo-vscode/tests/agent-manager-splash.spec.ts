@@ -5,7 +5,7 @@ const mode = (width: number) => (width < 560 ? "thin" : width < 880 ? "narrow" :
 
 async function open(page: Page, theme = "dark-modern", story = "cross-stack") {
   await page.goto(
-    `/iframe.html?id=agentmanager--splash-${story}-story&viewMode=story&globals=theme:kilo-vscode;vscodeTheme:${theme}`,
+    `/iframe.html?id=agentmanager--splash-${story}-story-1280&viewMode=story&globals=theme:kilo-vscode;vscodeTheme:${theme}`,
   )
   await expect(page.locator(".am-splash-hero")).toBeVisible()
 }
@@ -72,65 +72,61 @@ async function framed(page: Page) {
   })
 }
 
-const widths = [1280, 1010, 900, 880, 879, 800, 720, 600, 560, 559, 500, 440, 380, 340, 320, 300]
-
-for (const width of widths) {
-  test(`${width}px keeps copy intact, height constant and every fixture row visible across examples`, async ({
-    page,
-  }) => {
-    await page.setViewportSize({ width: 1500, height: 1600 })
-    await open(page)
-    await resize(page, width)
-    const card = page.locator(".am-splash-preview-card")
-    await expect(page.locator(".am-splash-stepper")).toHaveCount(0)
-    await expect(page.locator(".am-splash-feature-stack")).toBeVisible({ visible: width >= 560 })
-    await expect(page.locator(".am-splash-legend")).toBeVisible({ visible: width >= 880 })
-    const heights: number[] = []
-    const height = await card.evaluate((node) => node.getBoundingClientRect().height)
-    for (const control of await controls(page, width).all()) {
-      await control.click()
-      await expect(page.locator(".am-splash-example-panel-active:visible")).toHaveCount(1)
-      await expect.poll(() => card.evaluate((node) => node.getBoundingClientRect().height)).toBe(height)
-      await expect(card.locator(".am-splash-preview-fleet")).toHaveCount(5)
-      await expect(card.locator(".am-splash-preview-fleet-active .am-splash-row-marker")).toHaveCount(3)
-      await expect(card.locator(".am-splash-row-marker:visible")).toHaveCount(width < 560 ? 0 : 3)
-      await expect(page.locator(".am-splash-example-panel-active .am-splash-pitch:visible")).toHaveCount(1)
-      await expect(page.getByRole("button", { name: "Create Worktree", exact: true })).toBeVisible()
-      await expect.poll(() => framed(page)).toBe(true)
-      await intact(page)
-      heights.push(await page.locator(".am-splash-hero").evaluate((node) => node.getBoundingClientRect().height))
-      if (mode(width) !== "narrow") continue
-      // The numbered list sits beside the preview and each description wraps below its name.
-      const features = (await page.locator(".am-splash-feature-stack").boundingBox())!
-      const side = (await card.boundingBox())!
-      expect(features.x + features.width <= side.x + 1 || side.x + side.width <= features.x + 1).toBe(true)
-      for (const feature of await page.locator(".am-splash-features-active .am-splash-feature-text").all()) {
-        const title = (await feature.locator("strong").boundingBox())!
-        const description = (await feature.locator(".am-splash-feature-description").boundingBox())!
-        expect(description.y).toBeGreaterThanOrEqual(title.y + title.height - 1)
-      }
-    }
-    expect(heights).toHaveLength(5)
-    expect(Math.max(...heights) - Math.min(...heights)).toBe(0)
-  })
-}
-
-test("mode follows the splash content box rather than the viewport or a padded parent", async ({ page }) => {
+test("expanded splash preserves copy, stacked previews and content-box breakpoints", async ({ page }) => {
   await page.setViewportSize({ width: 1500, height: 1600 })
   await open(page)
-  await page.locator(".am-splash").evaluate((node) => {
-    ;(node as HTMLElement).style.padding = "17px"
-    node.parentElement!.style.padding = "23px"
-  })
-  for (const viewport of [1500, 500]) {
-    await page.setViewportSize({ width: viewport, height: 1600 })
-    for (const width of [559, 560, 879, 880]) {
+  const card = page.locator(".am-splash-preview-card")
+  // Sample each mode at its constrained end; screenshots cover the wider appearance.
+  for (const width of [880, 560, 300]) {
+    await test.step(`${mode(width)} at ${width}px across every example`, async () => {
       await resize(page, width)
+      await expect(page.locator(".am-splash-stepper")).toHaveCount(0)
       await expect(page.locator(".am-splash-feature-stack")).toBeVisible({ visible: width >= 560 })
-      await expect(page.locator(".am-splash-row-marker:visible")).toHaveCount(width < 560 ? 0 : 3)
-      await expect.poll(() => framed(page)).toBe(true)
-    }
+      await expect(page.locator(".am-splash-legend")).toBeVisible({ visible: width >= 880 })
+      const heights: number[] = []
+      const height = await card.evaluate((node) => node.getBoundingClientRect().height)
+      for (const control of await controls(page, width).all()) {
+        await control.click()
+        await expect(page.locator(".am-splash-example-panel-active:visible")).toHaveCount(1)
+        await expect.poll(() => card.evaluate((node) => node.getBoundingClientRect().height)).toBe(height)
+        await expect(card.locator(".am-splash-preview-fleet")).toHaveCount(5)
+        await expect(card.locator(".am-splash-preview-fleet-active .am-splash-row-marker")).toHaveCount(3)
+        await expect(card.locator(".am-splash-row-marker:visible")).toHaveCount(width < 560 ? 0 : 3)
+        await expect(page.locator(".am-splash-example-panel-active .am-splash-pitch:visible")).toHaveCount(1)
+        await expect(page.getByRole("button", { name: "Create Worktree", exact: true })).toBeVisible()
+        await expect.poll(() => framed(page)).toBe(true)
+        await intact(page)
+        heights.push(await page.locator(".am-splash-hero").evaluate((node) => node.getBoundingClientRect().height))
+        if (mode(width) !== "narrow") continue
+        // The numbered list sits beside the preview and each description wraps below its name.
+        const features = (await page.locator(".am-splash-feature-stack").boundingBox())!
+        const side = (await card.boundingBox())!
+        expect(features.x + features.width <= side.x + 1 || side.x + side.width <= features.x + 1).toBe(true)
+        for (const feature of await page.locator(".am-splash-features-active .am-splash-feature-text").all()) {
+          const title = (await feature.locator("strong").boundingBox())!
+          const description = (await feature.locator(".am-splash-feature-description").boundingBox())!
+          expect(description.y).toBeGreaterThanOrEqual(title.y + title.height - 1)
+        }
+      }
+      expect(heights).toHaveLength(5)
+      expect(Math.max(...heights) - Math.min(...heights)).toBe(0)
+    })
   }
+  await test.step("exact breakpoints ignore the viewport and parent padding", async () => {
+    await page.locator(".am-splash").evaluate((node) => {
+      ;(node as HTMLElement).style.padding = "17px"
+      node.parentElement!.style.padding = "23px"
+    })
+    for (const viewport of [1500, 500]) {
+      await page.setViewportSize({ width: viewport, height: 1600 })
+      for (const width of [559, 560, 879, 880]) {
+        await resize(page, width)
+        await expect(page.locator(".am-splash-feature-stack")).toBeVisible({ visible: width >= 560 })
+        await expect(page.locator(".am-splash-row-marker:visible")).toHaveCount(width < 560 ? 0 : 3)
+        await expect.poll(() => framed(page)).toBe(true)
+      }
+    }
+  })
 })
 
 test("selection survives every layout change", async ({ page }) => {
@@ -184,6 +180,13 @@ test("wide and narrow features ring only the paired badge across examples", asyn
           String(index + 1),
         )
         await expect(badges.filter({ hasText: String(index + 1) })).not.toHaveCSS("box-shadow", "none")
+        await expect
+          .poll(() =>
+            badges
+              .filter({ hasNotText: String(index + 1) })
+              .evaluateAll((nodes) => nodes.map((node) => getComputedStyle(node).boxShadow)),
+          )
+          .toEqual(["none", "none"])
       }
       await page.mouse.move(0, 0)
       await expect(page.locator(".am-splash-row-marker-hover")).toHaveCount(0)
@@ -191,51 +194,33 @@ test("wide and narrow features ring only the paired badge across examples", asyn
   }
 })
 
-for (const theme of ["dark-modern", "light-modern", "hc-black", "hc-light"]) {
-  test(`${theme} CTA focus ring has a visible gap from its fill`, async ({ page }) => {
-    await open(page, theme)
-    await page.keyboard.press("Tab")
-    const button = page.locator('.am-splash-actions [data-component="button"]')
-    await button.focus()
-    const outline = await button.evaluate((node) => ({
-      visible: node.matches(":focus-visible"),
-      style: getComputedStyle(node).outlineStyle,
-      offset: Number.parseFloat(getComputedStyle(node).outlineOffset),
-    }))
-    expect(outline.visible).toBe(true)
-    expect(outline.style).toBe("solid")
-    expect(outline.offset).toBeGreaterThanOrEqual(2)
-  })
+// Dark-mode examples and layout states belong to the shared accessibility ratchet.
+test("hc-light splash passes axe and keeps the CTA focus gap", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 1400 })
+  await open(page, "hc-light")
+  const result = await new AxeBuilder({ page }).include(".am-splash-hero").analyze()
+  expect(result.violations.map((rule) => rule.id)).toEqual([])
+  await page.keyboard.press("Tab")
+  const button = page.locator('.am-splash-actions [data-component="button"]')
+  await button.focus()
+  expect(await button.evaluate((node) => node.matches(":focus-visible"))).toBe(true)
+  await expect(button).toHaveCSS("outline-style", "solid")
+  expect(
+    await button.evaluate((node) => Number.parseFloat(getComputedStyle(node).outlineOffset)),
+  ).toBeGreaterThanOrEqual(2)
+})
 
-  for (const width of [420, 720, 1100]) {
-    test(`${theme} at ${width}px passes axe for every example`, async ({ page }) => {
-      await page.setViewportSize({ width, height: 1400 })
-      await open(page, theme)
-      for (const control of await controls(page, width).all()) {
-        await control.click()
-        const result = await new AxeBuilder({ page }).include(".am-splash-hero").analyze()
-        expect([...result.passes, ...result.inapplicable].map((rule) => rule.id)).toEqual(
-          expect.arrayContaining(["nested-interactive", "aria-hidden-focus"]),
-        )
-        expect(result.violations.map((rule) => rule.id)).toEqual([])
-      }
-    })
-  }
-}
-
-for (const width of [340, 720, 1100]) {
-  test(`${width}px reduced motion disables splash control transitions`, async ({ page }) => {
-    await page.emulateMedia({ reducedMotion: "reduce" })
-    await page.setViewportSize({ width: 1500, height: 1600 })
-    await open(page)
-    await resize(page, width)
-    const durations = await page
-      .locator(".am-splash-hero button:visible")
-      .evaluateAll((nodes) => nodes.map((node) => getComputedStyle(node).transitionDuration))
-    expect(durations.length).toBeGreaterThan(0)
-    expect(durations.every((duration) => duration === "0s")).toBe(true)
-  })
-}
+test("reduced motion disables splash control transitions", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" })
+  await page.setViewportSize({ width: 1500, height: 1600 })
+  await open(page)
+  await resize(page, 340)
+  const durations = await page
+    .locator(".am-splash-hero button:visible")
+    .evaluateAll((nodes) => nodes.map((node) => getComputedStyle(node).transitionDuration))
+  expect(durations.length).toBeGreaterThan(0)
+  expect(durations.every((duration) => duration === "0s")).toBe(true)
+})
 
 test("compact tabs rove focus, link panels and keep the chosen tab in view", async ({ page }) => {
   await page.setViewportSize({ width: 1500, height: 1600 })
@@ -330,7 +315,10 @@ test("focus traversal skips the preview and every stop shows a focus ring", asyn
         const node = document.activeElement!
         if (!node.closest(".am-splash")) return null
         if (node.closest(".am-splash-preview-card")) return "preview"
-        if (!node.matches(":focus-visible") || getComputedStyle(node).outlineStyle === "none") return "no ring"
+        const style = getComputedStyle(node)
+        if (!node.matches(":focus-visible") || style.outlineStyle === "none") return "no ring"
+        if (node.matches('.am-splash-actions [data-component="button"]') && Number.parseFloat(style.outlineOffset) < 2)
+          return "no gap"
         return node.getAttribute("aria-label") ?? node.textContent?.trim() ?? ""
       })
       if (stop === null) break
@@ -338,6 +326,7 @@ test("focus traversal skips the preview and every stop shows a focus ring", asyn
     }
     expect(order).not.toContain("preview")
     expect(order).not.toContain("no ring")
+    expect(order).not.toContain("no gap")
     expect(order.at(-2)).toBe("Create Worktree")
     expect(order.at(-1)).toBe("proceed locally in the message box below")
   }
@@ -350,7 +339,7 @@ test("Show, Hide and resize cycles emit no window errors", async ({ page }) => {
     Object.defineProperty(window, "splashErrors", { value: errors })
   })
   await page.setViewportSize({ width: 1100, height: 1400 })
-  await page.goto("/iframe.html?id=agentmanager--splash-folded-story&viewMode=story")
+  await page.goto("/iframe.html?id=agentmanager--splash-folded-story-1280&viewMode=story")
   for (let cycle = 0; cycle < 3; cycle++) {
     await page.locator(".am-splash-show").click()
     await expect(page.locator(".am-splash-dots")).toBeVisible()

@@ -241,7 +241,7 @@ function SplashPreview(props: { example: number; width?: string; dir?: "rtl" }) 
   )
 }
 
-export const SplashExpandedStory: Story = {
+export const SplashExpandedStory1280: Story = {
   name: "Splash expanded",
   render: () => (
     <StoryProviders>
@@ -250,7 +250,7 @@ export const SplashExpandedStory: Story = {
   ),
 }
 
-export const SplashNotGitStory: Story = {
+export const SplashNotGitStory1280: Story = {
   name: "Splash not git",
   render: () => (
     <StoryProviders>
@@ -259,54 +259,34 @@ export const SplashNotGitStory: Story = {
   ),
 }
 
-export const SplashCrossStackStory: Story = {
+export const SplashCrossStackStory1280: Story = {
   name: "Splash cross-stack",
   render: () => <SplashPreview example={0} />,
 }
 
-export const SplashOrchestratorStory: Story = {
+export const SplashOrchestratorStory1280: Story = {
   name: "Splash orchestrator",
   render: () => <SplashPreview example={1} />,
 }
 
-export const SplashOpsStory: Story = {
+export const SplashOpsStory1280: Story = {
   name: "Splash ops",
   render: () => <SplashPreview example={2} />,
 }
 
-export const SplashVersionsStory: Story = {
+export const SplashVersionsStory1280: Story = {
   name: "Splash versions",
   render: () => <SplashPreview example={3} />,
 }
 
-export const SplashBeyondCodeStory: Story = {
+export const SplashBeyondCodeStory1280: Story = {
   name: "Splash beyond code",
   render: () => <SplashPreview example={4} />,
 }
 
-export const SplashNarrowStory: Story = {
+export const SplashNarrowStory1280: Story = {
   name: "Splash narrow",
   render: () => <SplashPreview example={0} width="560px" />,
-}
-
-export const SplashNarrowOrchestratorStory: Story = {
-  name: "Splash narrow orchestrator",
-  render: () => <SplashPreview example={1} width="560px" />,
-}
-
-export const SplashNarrowOpsStory: Story = {
-  name: "Splash narrow ops",
-  render: () => <SplashPreview example={2} width="560px" />,
-}
-
-export const SplashNarrowVersionsStory: Story = {
-  name: "Splash narrow versions",
-  render: () => <SplashPreview example={3} width="560px" />,
-}
-
-export const SplashNarrowBeyondCodeStory: Story = {
-  name: "Splash narrow beyond code",
-  render: () => <SplashPreview example={4} width="560px" />,
 }
 
 export const SplashThinStory: Story = {
@@ -314,7 +294,7 @@ export const SplashThinStory: Story = {
   render: () => <SplashPreview example={0} width="340px" />,
 }
 
-export const SplashRtlStory: Story = {
+export const SplashRtlStory1280: Story = {
   name: "Splash RTL",
   render: () => <SplashPreview example={1} dir="rtl" />,
 }
@@ -347,7 +327,7 @@ function FoldedChat() {
 function FoldedPreview(props: { width: string }) {
   return (
     <div style={{ width: props.width }}>
-      <StoryProviders>
+      <StoryProviders noPadding>
         <div style={{ height: "640px" }}>
           <IntroductionPreview folded />
         </div>
@@ -356,7 +336,7 @@ function FoldedPreview(props: { width: string }) {
   )
 }
 
-export const SplashFoldedStory: Story = {
+export const SplashFoldedStory1280: Story = {
   name: "Splash folded",
   parameters: { layout: "fullscreen" },
   render: () => (
@@ -366,17 +346,17 @@ export const SplashFoldedStory: Story = {
   ),
 }
 
-export const SplashFoldedThin: Story = {
+export const SplashFoldedThin1280: Story = {
   name: "Splash folded thin",
   render: () => <FoldedPreview width="440px" />,
 }
 
-export const SplashFoldedNarrow: Story = {
+export const SplashFoldedNarrow1280: Story = {
   name: "Splash folded narrow",
   render: () => <FoldedPreview width="720px" />,
 }
 
-export const SplashFoldedWide: Story = {
+export const SplashFoldedWide1280: Story = {
   name: "Splash folded wide",
   render: () => <FoldedPreview width="1010px" />,
 }
