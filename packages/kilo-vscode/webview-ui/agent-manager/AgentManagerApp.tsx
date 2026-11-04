@@ -160,7 +160,7 @@ import { createMarkdownRender } from "./review-preferences"
 import { buildShortcutCategories } from "./shortcuts"
 import { ShortcutsDialog } from "./ShortcutsDialog"
 import { defaultBindings } from "./keybind-defaults"
-import { createChatFocus, createFocusBridge, createPromptFocus, forgetTerminalFocus, hasQuestionOption } from "./focus"
+import { createChatFocus, createFocusBridge, createPromptFocus, forgetTerminalFocus } from "./focus"
 import { createAppDiffPanelFocus } from "./diff-panel-focus"
 import { clampPanelWidth, createPanelResize, maxPanelWidth, minPanelWidth, SidePanel } from "./side-panel-layout"
 import { createSidePanel, sideHostNeeded } from "./side-panel-state"
@@ -182,6 +182,7 @@ import { PENDING_PREFIX, REVIEW_TAB_ID } from "./tab-ids"
 import type { SidebarSearchMenuRef } from "./SidebarSearchMenu"
 import type { WorktreeDelete } from "./worktree-delete"
 import { SpeechToTextStatusProvider } from "../src/components/speech-to-text/status"
+import { useDisplaySettings } from "../src/v2/display-settings"
 
 type SidebarSelection = typeof LOCAL | string | null
 const isMac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.userAgent)
@@ -275,6 +276,21 @@ const AgentManagerContent: Component = () => {
   const rootDirectory = createMemo(() => directories.root(activeProjectId() ?? currentProjectId()))
   const appSession = createAppSession({ vscode, directories, rootDirectory })
   const panel = appSession.panel
+  // Display layouts are Kilo-only config keys, so the host reads them. Ask on connect and after every config change.
+  const display = useDisplaySettings()
+  createEffect(
+    on(
+      () => panel.connection.status(),
+      (status) => {
+        if (status === "connected") display.request()
+      },
+    ),
+  )
+  createEffect(() => {
+    const store = appSession.rootStore()
+    if (!store) return
+    onCleanup(store.data.on("config.updated", () => display.request()))
+  })
   // The sessions are loaded once the project root store listed them after connecting.
   createEffect(() => {
     const store = appSession.rootStore()
@@ -1911,49 +1927,41 @@ const AgentManagerContent: Component = () => {
     </div>
   )
 
-  const historyStore = () => {
-    const directory = directories.root(activeProjectId())
-    return directory ? panel.store(directory) : undefined
-  }
-  const renderHistory = () => (
-    <Show when={!restricted() && history() && historyStore()} keyed>
-      {(store) => (
-        <V2Scope value={store}>
-          <HistoryView
-            sessions={historyList}
-            store={sessions.scope}
-            sessionIds={historySessionIds}
-            worktreeSessionIds={historyProject() ? undefined : activeWorktreeSessionIds}
-            onSelectSession={(id) => {
-              if (addSessionToCurrentWorktree(id)) return
-              closeHistory()
-              if (localSessionIDs().includes(id)) {
-                saveTabMemory()
-                sessions.selectSession(id)
-                setSelection(LOCAL)
-                requestChatFocus(true)
-                return true
-              }
-              const managed = worktreeSessionIds().has(id)
-                ? managedSessions().find((entry) => entry.id === id)
-                : undefined
-              if (managed?.worktreeId) {
-                selectWorktree(managed.worktreeId)
-                sessions.selectSession(id)
-                setReviewActive(false)
-                requestChatFocus()
-                return true
-              }
-              openLocally(id)
-              return true
-            }}
-            onBack={closeHistory}
-            rowActions={historyRowActions}
-          />
-        </V2Scope>
-      )}
-    </Show>
+  const historyView = () => (
+    <HistoryView
+      sessions={historyList}
+      store={sessions.scope}
+      sessionIds={historySessionIds}
+      worktreeSessionIds={historyProject() ? undefined : activeWorktreeSessionIds}
+      onSelectSession={(id) => {
+        if (addSessionToCurrentWorktree(id)) return
+        closeHistory()
+        if (localSessionIDs().includes(id)) {
+          saveTabMemory()
+          sessions.selectSession(id)
+          setSelection(LOCAL)
+          requestChatFocus(true)
+          return true
+        }
+        const managed = worktreeSessionIds().has(id)
+          ? managedSessions().find((entry) => entry.id === id)
+          : undefined
+        if (managed?.worktreeId) {
+          selectWorktree(managed.worktreeId)
+          sessions.selectSession(id)
+          setReviewActive(false)
+          requestChatFocus()
+          return true
+        }
+        openLocally(id)
+        return true
+      }}
+      onBack={closeHistory}
+      rowActions={historyRowActions}
+    />
   )
+  // The list reads the host catalog, not the project root store, so history opens before that store resolves.
+  const renderHistory = () => <Show when={!restricted() && history()}>{historyView()}</Show>
 
   const renderMain = () => (
     <div class={`am-main-pane ${terms.activeId() ? "am-main-pane-terminal-active" : ""}`}>
@@ -2008,6 +2016,8 @@ const AgentManagerContent: Component = () => {
                   empty={intro.render}
                   onAppendReady={(append) => (promptAppend = append)}
                   onPreviewEdit={(files, sessionID) => previewEdit(files, sessionID)}
+                  onForkSession={handleForkSession}
+                  onForkMessage={handleForkSession}
                   onMissing={(id) => handleCloseTab(id)}
                   onPrompted={(sessionId, text, model) =>
                     to({
