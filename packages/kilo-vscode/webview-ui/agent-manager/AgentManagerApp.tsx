@@ -167,6 +167,7 @@ import { createAppDiffPanelFocus } from "./diff-panel-focus"
 import { clampPanelWidth, createPanelResize, maxPanelWidth, minPanelWidth, SidePanel } from "./side-panel-layout"
 import { createSidePanel, sideHostNeeded } from "./side-panel-state"
 import { createDocumentInspector, isMarkdownPath } from "../documents/state"
+import { chunkPaths } from "../src/v2/validate-paths"
 import { DocumentPanelHost } from "./documents/DocumentPanelHost"
 import { SubagentPanel } from "./SubagentPanel"
 import { attachSubagentEvent, createSubagentController } from "./subagent-tabs"
@@ -1171,18 +1172,27 @@ const AgentManagerContent: Component = () => {
     for (const pending of fileChecks.values()) pending.reject(new Error("validateFiles cancelled"))
     fileChecks.clear()
   })
-  const validateFiles = (sessionID: string, paths: string[]) =>
-    new Promise<string[]>((resolve, reject) => {
-      const id = `${fileCheckPrefix}-${++fileCheckCount}`
-      fileChecks.set(id, { resolve, reject })
-      to({ type: "agentManager.validateFiles", id, sessionId: sessionID, paths })
-      setTimeout(() => {
-        const pending = fileChecks.get(id)
-        if (!pending) return
-        fileChecks.delete(id)
-        pending.reject(new Error("validateFiles timed out"))
-      }, 3000)
-    })
+  // Keep each host request small so one frame with many candidates stays responsive; every path is still checked.
+  const FILE_CHECK_CHUNK = 64
+  const validateFiles = (sessionID: string, paths: string[]) => {
+    const chunks = chunkPaths(paths, FILE_CHECK_CHUNK)
+    return Promise.all(
+      chunks.map(
+        (chunk) =>
+          new Promise<string[]>((resolve, reject) => {
+            const id = `${fileCheckPrefix}-${++fileCheckCount}`
+            fileChecks.set(id, { resolve, reject })
+            to({ type: "agentManager.validateFiles", id, sessionId: sessionID, paths: chunk })
+            setTimeout(() => {
+              const pending = fileChecks.get(id)
+              if (!pending) return
+              fileChecks.delete(id)
+              pending.reject(new Error("validateFiles timed out"))
+            }, 3000)
+          }),
+      ),
+    ).then((results) => results.flat())
+  }
   const toolActions: ToolActions = {
     openFile: (filePath, line, column, sessionID) => {
       // Tool paths are raw model strings, so the resolver needs the session to pick the worktree or local root.

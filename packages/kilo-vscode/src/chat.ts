@@ -29,7 +29,7 @@ import { resolveKiloProfile } from "./settings-paths"
 import { promptKeybindings, watchKeybindings } from "./prompt-keybindings"
 import { readDisplaySettings } from "./display-settings"
 import { createSpeechToTextHost } from "./speech-to-text/host"
-import { MAX_VALIDATE_PATHS, documentExists, isMarkdownPath } from "./documents/document-reader"
+import { documentExists, isMarkdownPath } from "./documents/document-reader"
 import { openToolFile, type ToolDiff } from "./tool-diff"
 
 // The sidebar may only write the settings its own UI owns. Other views keep their own write path.
@@ -235,9 +235,7 @@ export function wire(input: {
       case "requestDisplaySettings":
         return postDisplaySettings()
       case "validateFiles": {
-        const existing = message.paths
-          .slice(0, MAX_VALIDATE_PATHS)
-          .filter((file) => documentExists(input.directory, file))
+        const existing = message.paths.filter((file) => documentExists(input.directory, file))
         return post({ type: "validateFilesResult", id: message.id, existing })
       }
     }

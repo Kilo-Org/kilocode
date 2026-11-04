@@ -4,8 +4,6 @@ import * as path from "node:path"
 
 const MAX_TEXT_BYTES = 2_000_000
 const MAX_IMAGE_BYTES = 5_000_000
-/** Inline-code candidates arrive in bursts; probing more than this per request adds no useful link. */
-export const MAX_VALIDATE_PATHS = 64
 
 export type DocumentResult =
   | { file: string; kind: "text"; content: string }

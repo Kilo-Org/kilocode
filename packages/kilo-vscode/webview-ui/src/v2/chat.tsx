@@ -26,6 +26,7 @@ import { createProfile } from "./profile"
 import { SessionChanges } from "./session-changes"
 import { SessionView } from "./session-view"
 import { formatReviewCommentsMarkdown } from "../utils/review-comment-markdown"
+import { chunkPaths } from "./validate-paths"
 import { createReviewAppendQueue } from "./review-queue"
 
 export function Chat() {
@@ -88,18 +89,27 @@ export function Chat() {
       fileChecks.clear()
     })
   })
-  const validateFiles = (sessionID: string, paths: string[]) =>
-    new Promise<string[]>((resolve, reject) => {
-      const id = `${fileCheckPrefix}-${++fileCheckCount}`
-      fileChecks.set(id, { resolve, reject })
-      getVSCodeAPI().postMessage({ type: "validateFiles", id, sessionID, paths } satisfies ToHost as never)
-      setTimeout(() => {
-        const pending = fileChecks.get(id)
-        if (!pending) return
-        fileChecks.delete(id)
-        pending.reject(new Error("validateFiles timed out"))
-      }, 3000)
-    })
+  // Keep each host request small so one frame with many candidates stays responsive; every path is still checked.
+  const FILE_CHECK_CHUNK = 64
+  const validateFiles = (sessionID: string, paths: string[]) => {
+    const chunks = chunkPaths(paths, FILE_CHECK_CHUNK)
+    return Promise.all(
+      chunks.map(
+        (chunk) =>
+          new Promise<string[]>((resolve, reject) => {
+            const id = `${fileCheckPrefix}-${++fileCheckCount}`
+            fileChecks.set(id, { resolve, reject })
+            getVSCodeAPI().postMessage({ type: "validateFiles", id, sessionID, paths: chunk } satisfies ToHost as never)
+            setTimeout(() => {
+              const pending = fileChecks.get(id)
+              if (!pending) return
+              fileChecks.delete(id)
+              pending.reject(new Error("validateFiles timed out"))
+            }, 3000)
+          }),
+      ),
+    ).then((results) => results.flat())
+  }
   // A turn shows its own changes: `from` is the user message that opened it, and the
   // server ends the range at the next idle marker.
   const openTurnChanges = (sessionID: string, turnID: string) => {
