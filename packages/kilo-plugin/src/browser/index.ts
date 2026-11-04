@@ -54,6 +54,18 @@ export function broker(): { url: URL; token: string } | undefined {
 }
 
 /**
+ * Read the broker endpoint once and remove it from the process environment. Tools and MCP servers inherit this
+ * environment, so leaving the token there would let a shell command drive the browser without the permission prompt.
+ */
+export function takeBroker() {
+  const endpoint = broker()
+  if (!endpoint) return
+  delete process.env.KILO_BROWSER_BROKER_URL
+  delete process.env.KILO_BROWSER_BROKER_TOKEN
+  return endpoint
+}
+
+/**
  * The destination policy here is the cheap shape check only. The browser broker re-validates the URL against the
  * public and loopback rules, with DNS resolution, before it navigates.
  */
@@ -104,7 +116,7 @@ export async function openPage(input: {
 export const KiloBrowserToolPlugin = define({
   id: "kilocode.tool-browser",
   effect: Effect.fn("KiloBrowserTool.Plugin")(function* (ctx) {
-    const endpoint = broker()
+    const endpoint = takeBroker()
     if (!endpoint) return
     const directory = ctx.location.directory
 

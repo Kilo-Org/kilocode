@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test"
-import { broker, destination, openPage } from "../src/browser"
+import { broker, destination, openPage, takeBroker } from "../src/browser"
 
 // The tool's only host is the extension-owned browser broker, so this test serves the two routes it uses instead of
 // mocking the client. That keeps the request shape, the bearer token and the decoded state under test.
@@ -23,6 +23,14 @@ describe("browser_open broker endpoint", () => {
   test("accepts the loopback origin the host serves", () => {
     configure("http://127.0.0.1:41234")
     expect(broker()).toEqual({ url: new URL("http://127.0.0.1:41234"), token: "secret" })
+  })
+
+  test("removes the capability from the process environment once it is read", () => {
+    configure("http://127.0.0.1:41234")
+    expect(takeBroker()).toEqual({ url: new URL("http://127.0.0.1:41234"), token: "secret" })
+    expect(process.env.KILO_BROWSER_BROKER_URL).toBeUndefined()
+    expect(process.env.KILO_BROWSER_BROKER_TOKEN).toBeUndefined()
+    expect(broker()).toBeUndefined()
   })
 
   test("is absent without both values", () => {
