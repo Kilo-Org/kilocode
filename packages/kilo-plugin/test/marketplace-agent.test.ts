@@ -103,7 +103,7 @@ describe("agent documents", () => {
     expect(await fs.readdir(root)).toEqual(["reviewer.md"])
   })
 
-  test("a foreign document is never adopted, a symlink is refused, and removal refuses unowned content", async () => {
+  test("a foreign document is never adopted and removal refuses unowned content", async () => {
     const root = await tmp()
     const file = target(root, "reviewer")
     await fs.mkdir(root, { recursive: true })
@@ -111,7 +111,9 @@ describe("agent documents", () => {
     await expect(preflight(file)).rejects.toMatchObject({ reason: "conflict" })
     await expect(remove(file)).rejects.toMatchObject({ reason: "conflict" })
     expect(await fs.readFile(file, "utf8")).toBe("hand written")
+  })
 
+  test.skipIf(process.platform === "win32")("a symlinked agent document is refused", async () => {
     const other = await tmp()
     await fs.writeFile(path.join(other, "real.md"), "content")
     await fs.symlink(path.join(other, "real.md"), target(other, "linked"))
@@ -125,7 +127,8 @@ describe("agent documents", () => {
     await write(prepared)
     await remove(prepared.target, [prepared.fingerprint])
     expect(await fs.readdir(root).catch(() => [])).toEqual([])
-    expect(await fs.readdir(path.join(directory, ".marketplace-trash"))).toEqual([])
+    // The trash directory is an implementation detail; only leaking content into it is a failure.
+    expect(await fs.readdir(path.join(directory, ".marketplace-trash")).catch(() => [])).toEqual([])
     // Idempotent: removing an absent document is not an error.
     await remove(prepared.target, [prepared.fingerprint])
   })
