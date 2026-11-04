@@ -19,6 +19,9 @@ const STORIES = [
   { id: "agentmanager--side-terminal-panel-empty", name: "Agent Manager / side terminal" },
   { id: "session-tabs--switcher-open", name: "Session tabs / switcher" },
   { id: "iconbutton--states", name: "IconButton / shared states" },
+  { id: "agentmanager--splash-cross-stack-story-1280", name: "Splash / expanded" },
+  { id: "agentmanager--splash-thin-story", name: "Splash / thin" },
+  { id: "agentmanager--splash-folded-story-1280", name: "Splash / folded" },
 ]
 
 function url(id: string) {
@@ -49,7 +52,18 @@ async function reach(page: Page, target: Locator) {
 test.describe("webview accessibility ratchet", () => {
   for (const story of STORIES) {
     test(`${story.name} passes automated WCAG checks`, async ({ page }) => {
+      if (story.id.endsWith("-1280")) await page.setViewportSize({ width: 1280, height: 1400 })
       await open(page, story.id)
+      const splash = story.id.startsWith("agentmanager--splash-")
+      if (splash) {
+        // Guard the capture harness: a wide story in the default sidebar viewport silently tests thin mode.
+        const width = await page
+          .locator(".am-splash, .am-splash-folded")
+          .evaluate((node) => node.getBoundingClientRect().width)
+        const minimum = story.id.includes("-thin-") ? 340 : story.id.includes("-narrow-") ? 560 : 880
+        expect(width).toBeGreaterThanOrEqual(minimum)
+        if (minimum < 880) expect(width).toBe(minimum)
+      }
       await scan(page)
     })
   }
