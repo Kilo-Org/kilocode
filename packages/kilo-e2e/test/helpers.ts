@@ -69,6 +69,25 @@ export async function sandbox<T>(fn: (dir: string) => Promise<T>): Promise<T> {
   }
 }
 
+// Abort once the coordinator has handed off to the driver (it writes driver-request.json right
+// before spawning it), so cancellation always lands after the provider prepared its resources
+// instead of racing a fixed timer on slow runners. The watchdog only bounds a stuck run.
+export function abortWhenDriverStarts(dir: string, controller: AbortController, runId = "run") {
+  const file = Bun.file(join(dir, runId, "driver-request.json"))
+  const watchdog = setTimeout(() => controller.abort(), 10_000)
+  const poll = setInterval(async () => {
+    if (!(await file.exists())) return
+    clearInterval(poll)
+    clearTimeout(watchdog)
+    // Give the driver process a moment to start so cancellation exercises the child signal path.
+    setTimeout(() => controller.abort(), 100)
+  }, 10)
+  return () => {
+    clearInterval(poll)
+    clearTimeout(watchdog)
+  }
+}
+
 export async function readEvidence(dir: string, runId = "run"): Promise<EvidenceReport> {
   const runDir = join(dir, runId)
   const raw = JSON.parse(await Bun.file(join(runDir, "evidence.json")).text())
