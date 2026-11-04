@@ -205,6 +205,7 @@ describe("agent catalog entries", () => {
           { id: "empty", content: {} },
           { id: "blank", content: { system: "" } },
           { id: "blank-prompt", content: "---\nprompt: \"  \"\n---\n" },
+          { id: "frontmatter-only", content: { description: "Reviews changes" } },
           { id: "v1-only", content: { options: { temperature: 1 }, requirements: { skills: ["x"] } } },
           { id: "scalar", content: 42 },
           { id: "ok", content: { prompt: "Body" } },

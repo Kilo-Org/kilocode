@@ -144,11 +144,10 @@ function agent(raw: Record<string, unknown>) {
   const chosen = Object.fromEntries(Object.entries(raw).filter(([key, value]) => agentKeys.has(key) && value !== undefined))
   const decoded = decodeAgent({ ...chosen, system: chosen.system })
   if (Option.isNone(decoded)) return undefined
-  // Every AgentContent field is optional, so content with no field v2 understands decodes to `{}`. Installing it
-  // would write a frontmatter-only document with no instructions, so it is treated like any other unusable entry.
-  // A blank prompt is the same case: `{ system: "" }` is present but leaves the document without instructions.
-  const prompt = typeof decoded.value.system === "string" && decoded.value.system.trim()
-  if (!prompt && Object.keys(decoded.value).every((field) => field === "system")) return undefined
+  // The prompt is the agent document body, so content without one installs no instructions at all. That covers
+  // `{}`, `{ system: "" }` and frontmatter-only content such as `{ description }`, which is why any other field
+  // does not make the entry usable.
+  if (!(typeof decoded.value.system === "string" && decoded.value.system.trim())) return undefined
   return decoded.value
 }
 
