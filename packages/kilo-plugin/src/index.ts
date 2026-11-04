@@ -11,6 +11,9 @@ import { KiloHandshakePlugin } from "./handshake"
 import { KiloProviderUsagePlugin } from "./provider-usage"
 import { KiloOpenAIPlugin } from "./openai"
 import { KiloMarketplacePlugin } from "./marketplace"
+import { KiloSessionSync } from "./session-sync"
+
+export { KiloSessionSync }
 import { KiloPrivacyPlugin } from "./privacy"
 import { KiloFlowPlugin } from "./flow"
 import { KiloSkillPlugin } from "./skill"
@@ -42,6 +45,7 @@ export const KiloPlugins = [
   KiloOpenAIPlugin,
   KiloMarketplacePlugin,
   KiloFlowPlugin,
+  KiloSessionSync.plugin,
   KiloSkillPlugin,
   KiloTodoPlugin,
   KiloWriteToolPlugin,
