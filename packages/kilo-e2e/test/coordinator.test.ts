@@ -149,6 +149,9 @@ describe("coordinator cleanup guarantees", () => {
       const evidence = await readEvidence(dir)
       expect(evidence.outcome).toBe("cancelled")
       expect(evidence.cleanup.removed).toHaveLength(2)
+      // The driver ignored a delivered SIGTERM yet the run finished, so SIGKILL ended it.
+      // Windows has no catchable SIGTERM: kill() terminates the process directly.
+      if (process.platform !== "win32") expect(await Bun.file(join(dir, "run", "driver-sigterm")).exists()).toBe(true)
     })
   })
 

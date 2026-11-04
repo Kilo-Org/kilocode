@@ -69,20 +69,23 @@ export async function sandbox<T>(fn: (dir: string) => Promise<T>): Promise<T> {
   }
 }
 
-// Abort once the coordinator has handed off to the driver (it writes driver-request.json right
-// before spawning it), so cancellation always lands after the provider prepared its resources
-// instead of racing a fixed timer on slow runners. The watchdog only bounds a stuck run.
+// Abort once the slow driver fixtures report they are running (they write driver-started after
+// installing their signal handlers), so cancellation always reaches a live child after the provider
+// prepared its resources, instead of racing a fixed timer on slow runners. The watchdog only
+// bounds a stuck run.
 export function abortWhenDriverStarts(dir: string, controller: AbortController, runId = "run") {
-  const file = Bun.file(join(dir, runId, "driver-request.json"))
+  const file = Bun.file(join(dir, runId, "driver-started"))
+  const state = { stopped: false }
   const watchdog = setTimeout(() => controller.abort(), 10_000)
   const poll = setInterval(async () => {
-    if (!(await file.exists())) return
+    if (state.stopped || !(await file.exists()) || state.stopped) return
+    state.stopped = true
     clearInterval(poll)
     clearTimeout(watchdog)
-    // Give the driver process a moment to start so cancellation exercises the child signal path.
-    setTimeout(() => controller.abort(), 100)
+    controller.abort()
   }, 10)
   return () => {
+    state.stopped = true
     clearInterval(poll)
     clearTimeout(watchdog)
   }
