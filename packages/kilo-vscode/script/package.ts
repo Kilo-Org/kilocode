@@ -75,7 +75,7 @@ export async function packageTarget(target: Target): Promise<string> {
   const output = path.join(out, `kilo-vscode-${target}.vsix`)
   console.log(`Packaging ${output}`)
   const pack = Bun.spawn(
-    [vsce, "package", "--target", target, "--no-dependencies", "--skip-license", "--allow-missing-repository", "--out", output],
+    [vsce, "package", "--target", target, "--no-dependencies", "--skip-license", "--out", output],
     { cwd: root, env: { ...process.env, npm_config_ignore_scripts: "true" }, stdout: "inherit", stderr: "inherit" },
   )
   if ((await pack.exited) !== 0) throw new Error("vsce package failed")

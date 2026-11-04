@@ -13,6 +13,7 @@ type Contribution = {
 }
 type Manifest = {
   scripts: Record<string, string>
+  repository: { type: string; url: string; directory: string }
   contributes: {
     configurationDefaults: Record<string, Record<string, boolean>>
     taskDefinitions: Contribution[]
@@ -112,5 +113,13 @@ describe("extension manifest", () => {
     expect(ignore).toContain("!bin/**")
     expect(ignore).toContain("!assets/**")
     expect(manifest.scripts.package).toBe("bun script/package.ts")
+  })
+
+  it("declares the repository the VSIX links to", () => {
+    expect(manifest.repository).toEqual({
+      type: "git",
+      url: "https://github.com/Kilo-Org/kilocode.git",
+      directory: "packages/kilo-vscode",
+    })
   })
 })
