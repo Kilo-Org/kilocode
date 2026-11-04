@@ -261,6 +261,7 @@ export const dict = {
   "prompt.toast.promptSendFailed.title": "Failed to send prompt",
 
   "mcp.status.connected": "connected",
+  "mcp.status.pending": "connecting",
   "mcp.status.failed": "failed",
   "mcp.status.needs_auth": "needs auth",
   "mcp.status.needs_registration": "needs client registration",
@@ -291,6 +292,9 @@ export const dict = {
   "provider.failure.http": "Provider error (HTTP {{status}}).",
   "provider.failure.httpNoStatus": "Provider error.",
   "provider.failure.schema": "Unexpected response from the provider.",
+  "provider.failure.organizationMissing": "The selected team is no longer available. Select another team.",
+  "provider.failure.scopeConflict": "The selected team conflicts with the team of your Kilo token.",
+  "provider.failure.personalUnavailable": "This account has no personal account. Select a team.",
 
   "notification.permission.title": "Permission required",
   "notification.permission.titleSubagent": "Permission required (subagent)",
@@ -299,6 +303,7 @@ export const dict = {
   "notification.permission.descriptionSandboxEscalation":
     "This runs the whole command with filesystem and network restrictions removed, for this command only. Git must write to .git, which is read-only in the sandbox and outside the worktree in a linked worktree. Bash allow rules and auto-approve never approve this prompt automatically.",
   "ui.permission.manageAutoApprove": "Manage Auto-Approve Rules",
+  "ui.permission.noChanges": "No changes.",
   "ui.permission.reject": "Reject",
   "ui.permission.feedbackPlaceholder": "Tell Kilo what to do differently",
   "ui.permission.feedbackHint": "Enter to reject, Esc to cancel",
@@ -341,6 +346,8 @@ export const dict = {
 
   "session.tab.review": "Review",
   "session.review.filesChanged": "{{count}} Files Changed",
+  "session.review.viewTurnChanges": "View turn changes",
+  "session.review.turnChangesEmpty": "No changes in this turn.",
   "session.review.loadingChanges": "Loading changes...",
   "session.review.noChanges": "No changes",
 
@@ -658,7 +665,7 @@ export const dict = {
   "settings.agentBehaviour.title": "Agent Behaviour",
   "settings.autoApprove.title": "Auto-Approve",
   "settings.webTools.title": "Web Tools",
-  "settings.webTools.description": "Configure web search and browser automation.",
+  "settings.webTools.description": "Configure web search.",
   "settings.webTools.webSearch.enable": "Enable for All Providers",
   "settings.webTools.browserAutomation": "Browser Automation",
   "settings.webTools.webSearch.title": "Web Search",
@@ -763,6 +770,8 @@ export const dict = {
   "sidebar.topBar.profile": "Profile",
   "sidebar.topBar.settings": "Settings",
   "sidebar.session.newSession": "New Session",
+  "sidebar.session.changes.title": "Changes",
+  "sidebar.session.changes.openAll": "Open All",
   "sidebar.session.newSession.tooltip": "Start a fresh conversation while keeping the current session intact.",
   "sidebar.session.newWorktree": "New Worktree",
   "sidebar.session.newWorktree.tooltip":
@@ -818,6 +827,7 @@ export const dict = {
   "settings.aboutKiloCode.port.label": "Port:",
   "settings.aboutKiloCode.versionInfo": "Version Information",
   "settings.aboutKiloCode.version.label": "Version:",
+  "settings.aboutKiloCode.serverVersion.label": "Server Version:",
   "settings.aboutKiloCode.community": "Community & Support",
   "settings.aboutKiloCode.feedback.prefix": "If you have any questions or feedback, feel free to open an issue on",
   "settings.aboutKiloCode.feedback.or": "or",
@@ -838,6 +848,7 @@ export const dict = {
   "settings.aboutKiloCode.importSettings.newerVersion":
     "This file was exported from a newer version of Kilo. Some settings may be ignored.",
   "settings.aboutKiloCode.importSettings.success": "Settings imported. Review the changes above, then click Save.",
+  "settings.aboutKiloCode.importSettings.applied": "Settings imported and applied.",
 
   "settings.aboutKiloCode.telemetry.title": "Telemetry",
   "settings.aboutKiloCode.telemetry.description":
@@ -1085,11 +1096,14 @@ export const dict = {
   "settings.agentBehaviour.addMcp.url.placeholder": "e.g. http://localhost:3000/sse",
   "settings.agentBehaviour.mcpBrowseMarketplace": "Browse Marketplace",
   "settings.agentBehaviour.mcpEmpty":
-    "No MCP servers configured. Add MCP servers in kilo.jsonc, or ask the agent to add them for you.",
+    "No MCP servers configured. Add MCP servers in kilo2.json, or ask the agent to add them for you.",
+  "settings.agentBehaviour.mcp.timeout.startup.title": "Startup timeout (ms)",
+  "settings.agentBehaviour.mcp.timeout.catalog.title": "Catalog timeout (ms)",
+  "settings.agentBehaviour.mcp.timeout.execution.title": "Execution timeout (ms)",
   "settings.agentBehaviour.workflows.description":
-    "Workflows are custom slash commands defined in your config. Type /command-name in the chat to invoke them. Commands are configured in opencode.json under the 'command' section.",
+    "Workflows are custom commands defined in your config or command Markdown files. You can set a model and reasoning variant for each workflow.",
   "settings.agentBehaviour.workflows.empty":
-    "No custom commands configured. Add commands to your opencode.json to see them here.",
+    "No custom commands found. Add commands to kilo2.json or a .kilo2/command Markdown file.",
   "settings.agentBehaviour.workflows.detail.description": "Description",
   "settings.agentBehaviour.workflows.detail.template": "Template",
   "settings.agentBehaviour.workflows.model": "model",
@@ -1130,6 +1144,9 @@ export const dict = {
     "This is a built-in mode. Its base definition cannot be changed, but you can configure overrides below.",
   "settings.agentBehaviour.editMode.promptOverride": "Custom prompt override for this built-in mode",
   "settings.agentBehaviour.badge.subagent": "subagent",
+  "settings.agentBehaviour.perAgentPermissions.title": "Per-Agent Permissions",
+  "settings.agentBehaviour.perAgentPermissions.description":
+    "These settings only apply to this custom agent. Change a dropdown from Default to create an override, or use Add path/Add command for tool-specific exceptions.",
   "settings.agentBehaviour.permissions.title": "Calculated Permissions",
   "settings.agentBehaviour.permissions.count": "{{count}} rules",
   "settings.agentBehaviour.permissions.effective": "Effective (wildcard):",
@@ -1141,10 +1158,12 @@ export const dict = {
     "Rules are evaluated in order — last matching rule wins. This is the resolved ruleset from the CLI backend.",
 
   "settings.autoApprove.description":
-    "Define how tools are allowed to run. Most tools default to Allow. doom_loop and external_directory default to Ask.",
+    "Define how tools are allowed to run. Most tools default to Allow. Bash defaults to Ask.",
   "settings.autoApprove.maxCost.title": "Session Cost Alert",
   "settings.autoApprove.maxCost.description":
     "Show a non-blocking alert when a session exceeds this USD amount. Use whole dollars; leave empty to disable.",
+  "settings.autoApprove.maxCost.v2Description":
+    "Show a non-blocking alert when a session reaches this USD amount. Leave empty to disable.",
   "settings.autoApprove.level.allow": "Allow",
   "settings.autoApprove.level.ask": "Ask",
   "settings.autoApprove.level.deny": "Deny",
@@ -1216,6 +1235,12 @@ export const dict = {
   "settings.context.compactionLimit.title": "Auto Compaction Limit",
   "settings.context.compactionLimit.description":
     "Compact when context reaches this percentage of the model window. Leave blank to use the safety buffer only.",
+  "settings.context.compactionKeep.title": "Keep Recent Tokens",
+  "settings.context.compactionKeep.description":
+    "Recent tokens kept verbatim when the context is compacted. Leave blank to keep 15,000.",
+  "settings.context.compactionBuffer.title": "Compaction Buffer",
+  "settings.context.compactionBuffer.description":
+    "Tokens kept free below the model context limit before compacting. Leave blank to keep 15% free, at least 16,000.",
   "settings.context.prune.title": "Prune Old Outputs",
   "settings.context.prune.description": "Remove old tool outputs during compaction",
   "settings.context.watcherPatterns": "File Watcher Ignore Patterns",
@@ -1294,7 +1319,7 @@ export const dict = {
     "Show the keyboard shortcut that fits what you do now in the empty prompt, for example how to add selected code or return to the prompt.",
   "settings.display.tokenThroughput.title": "Show Token Throughput",
   "settings.display.tokenThroughput.description":
-    "Display the text-generation rate (tokens/sec) on the latest assistant message and in the task header. Shown by default; disable this setting to hide it when needed.",
+    "Display the text-generation rate (tokens/sec) on the latest assistant message footer. Shown by default; disable this setting to hide it when needed.",
   "settings.display.autoApprovalReason.title": "Show Auto-Approval Reason",
   "settings.display.autoApprovalReason.description":
     "Show why a tool call was auto-approved, such as a matching permission rule or an agent default.",
@@ -1314,6 +1339,8 @@ export const dict = {
   "settings.models.hidePromptTraining.title": "Hide Prompt-Training Models",
   "settings.models.hidePromptTraining.description":
     "Hide Kilo Gateway models whose providers may use your prompts for training.",
+  "settings.models.hidePromptTraining.managed":
+    "This value comes from a configuration file that this panel cannot change, such as a managed or enterprise file.",
   "settings.providers.modeModels": "Model per Mode",
   "settings.providers.modeModels.description":
     "Override the default model for specific modes. If not set, the global default model is used.",
@@ -1428,6 +1455,8 @@ export const dict = {
   "diffViewer.source.session.label": "Session",
   "diffViewer.source.session.tooltip":
     "Files changed by Kilo during the current session, based on per-turn snapshots. Resets when you start a new session.",
+  "diffViewer.source.turn.label": "Turn",
+  "diffViewer.source.turn.tooltip": "Files changed by Kilo during one turn.",
   "diffViewer.group.session": "Session",
   "diffViewer.group.git": "Git",
   "diffViewer.notice.snapshotsDisabled":

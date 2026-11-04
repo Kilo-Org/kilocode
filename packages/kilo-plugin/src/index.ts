@@ -1,4 +1,6 @@
 import { KiloAgentPlugin } from "./agent"
+import { KiloBranchNamePlugin } from "./branch-name"
+import { KiloCommitMessagePlugin } from "./commit-message"
 // kilo_port(gateway:17e39e074eaf) v1 registered the Gateway auth plugin in the upstream plugin list.
 import { KiloGatewayPlugin } from "./gateway"
 import { OpencodeFreeTier } from "./gateway/opencode"
@@ -12,6 +14,13 @@ import { KiloMarketplacePlugin } from "./marketplace"
 import { KiloSessionSync } from "./session-sync"
 
 export { KiloSessionSync }
+import { KiloPrivacyPlugin } from "./privacy"
+import { KiloSkillPlugin } from "./skill"
+import { KiloTodoPlugin } from "./todo"
+import { KiloWriteToolPlugin } from "./tool-write"
+import { KiloReview } from "./review"
+// kilo_port(agent-manager:648a508ad347) the protection guard now lives in the Agent Manager plugin.
+import { KiloAgentManagerPlugin } from "./agent-manager"
 
 /**
  * The Kilo plugins on the public plugin API (plugin-first rung 1), in registration order. The Kilo host
@@ -35,6 +44,15 @@ export const KiloPlugins = [
   KiloOpenAIPlugin,
   KiloMarketplacePlugin,
   KiloSessionSync.plugin,
+  KiloSkillPlugin,
+  KiloTodoPlugin,
+  KiloWriteToolPlugin,
+  KiloCommitMessagePlugin,
+  KiloPrivacyPlugin,
+  KiloBranchNamePlugin,
+  KiloAgentManagerPlugin,
+  // The Kilo review command replaces the built-in `review`. kilo_port(review:efc710228c1f)
+  KiloReview.Plugin,
 ] as const
 
 /** Kilo plugins that run after the config plugins: the host registers them with phase `post`. */

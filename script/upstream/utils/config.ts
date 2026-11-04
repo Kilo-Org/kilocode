@@ -115,10 +115,13 @@ export const defaultConfig: MergeConfig = {
     "packages/desktop/**",
     "packages/app/**",
     "packages/gui-extensions/**",
+    "packages/gui-plugins/**", // upstream v2.2 name of packages/gui-extensions
     "packages/session-ui/**",
     "packages/storybook/**",
+    "packages/stories/**", // upstream v2.2 name of packages/storybook
     "script/sdk-docs.ts",
     "script/ast-grep/gui-extensions/**",
+    "script/ast-grep/gui-plugins/**", // upstream v2.2 name of script/ast-grep/gui-extensions
     // Hosted opencode.ai platform
     "packages/console/**",
     "packages/enterprise/**",
@@ -132,8 +135,8 @@ export const defaultConfig: MergeConfig = {
     // Upstream VS Code extension (Kilo ships its own)
     "sdks/vscode/**",
     // Upstream's own project config for developing OpenCode: contributor agents, commands, skills, glossaries,
-    // triage tools and sample themes. Kilo reads `.kilo` (migration-context.md decision 12) and keeps its
-    // project config there.
+    // triage tools and sample themes. Kilo keeps its own contributor config in `.kilo` (runtime config names:
+    // migration-tracking/principles.md, section 4).
     ".opencode/**",
   ],
 

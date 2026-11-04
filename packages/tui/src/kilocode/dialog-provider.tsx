@@ -22,12 +22,15 @@ export const KILO_PROVIDER_TITLES: Record<string, string> = {
 
 type Failure = typeof KiloGatewayRpc.CatalogFailure.Type
 
-// v1 failureMessage, keyed by the failure kind of the Kilo catalog. `organization_missing` is new on v2.
+// v1 failureMessage, keyed by the failure kind of the Kilo catalog. `organization_missing`, `scope_conflict` and
+// `personal_unavailable` are new on v2.
 export function failureMessage(failure: Failure) {
   const status = failure.status ? ` (HTTP ${failure.status})` : ""
   switch (failure.kind) {
     case "unauthorized":
       return `Credentials rejected${status} - sign in again`
+    case "unauthenticated":
+      return "Not signed in - sign in to continue"
     case "network":
       return "Couldn't reach the provider - check your connection"
     case "http":
@@ -36,6 +39,10 @@ export function failureMessage(failure: Failure) {
       return "Unexpected response from the provider"
     case "organization_missing":
       return "Selected team is no longer available - use /teams"
+    case "scope_conflict":
+      return "Selected team conflicts with the Kilo token - use /teams"
+    case "personal_unavailable":
+      return "No personal account - select a team with /teams"
   }
 }
 

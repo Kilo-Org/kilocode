@@ -4,13 +4,14 @@
 This checkout is Kilo-Org/kilocode, a fork of OpenCode. The rules in this section override any upstream rule further down that contradicts them.
 
 - **Branches.** The integration branch is `origin/v2`. Base worktrees and branches on `origin/v2`, target PRs at `v2` and diff against `origin/v2`. Never target `main` (Kilo v1) or upstream's `dev`. `upstream/dev` is the sync source; `upstream/v2` is frozen. Use `gh -R Kilo-Org/kilocode`: without it, `gh` resolves to upstream.
-- **Base.** The upstream base moves with every sync. Read it from `pinned()` in `script/upstream/utils/upstream.ts` or from `migration-tracking/plans/migration-context.md`; do not copy the SHA.
+- **Base.** The upstream base moves with every sync. Read it from `pinned()` in `script/upstream/utils/upstream.ts`; do not copy the SHA.
 - **Names.** Branch names stay short and hyphenated, at most three words, no slashes or prefixes. Commits and PR titles use `type(scope): summary`. No Changesets.
 - **Running the CLI.** Only through `bun dev` (`script/dev-isolated.ts`, isolated profile; `KILO_V2_PROFILE=$(mktemp -d)` for a fresh one). Never `bun run dev:live`, `opencode` or `bun run --cwd packages/cli`: they use the installed OpenCode data and service. This replaces "Live TUI Testing" below, including `dev:live` for TUI stories.
-- **Placement.** Plugin first, then host. Kilo server plugins go into `KiloPlugins` (`packages/kilo-plugin/src/index.ts`); the host (`packages/kilo-cli`) registers them. An edit in a shared upstream file carries a `kilocode_change(<feature>)` marker and an entry in `script/upstream/shared-patches.json`. Load the `v2-migration` and `v2-feature-placement` skills (`.kilo/skills/`) before any migration change. Source of truth: `migration-tracking/plans/v2-host-strategy.md` section 5.
-- **Direction.** Kilo is the host, OpenCode is a library. Code moves from upstream files into Kilo-owned files, never the reverse: a Kilo-owned mirror beats a seam, and a patch never changes an upstream default. Rules and reasons: `migration-tracking/plans/v2-host-strategy.md` section 5.
+- **Placement.** Plugin first, then host. Kilo server plugins go into `KiloPlugins` (`packages/kilo-plugin/src/index.ts`); the host (`packages/kilo-cli`) registers them. An edit in a shared upstream file carries a `kilocode_change(<feature>)` marker and an entry in `script/upstream/shared-patches.json`. Load the `v2-migration` and `v2-feature-placement` skills (`.kilo/skills/`) before any migration change.
+- **Direction.** Kilo is the host, OpenCode is a library. Code moves from upstream files into Kilo-owned files, never the reverse: a Kilo-owned mirror beats a seam, and a patch never changes an upstream default.
 - **Checks.** `bun run check` from the root; `bun typecheck` and `bun test` from package directories. Never run tests from the root.
-- **References.** Context and decisions: `migration-tracking/plans/migration-context.md`. Plan: `migration-tracking/plans/kilo-v2-migration-plan.md`. Fork rules: `migration-tracking/technical-notes/v2-fork-conventions.md`. Known upstream failures: `migration-tracking/technical-notes/baseline/pinned-v2-baseline.md`.
+- **Principles.** Before any v2 change, read `migration-tracking/principles.md`; it overrides any other doc.
+- **References.** Plan: `migration-tracking/plan.md`. Live state: issue #15297 and its epics. Procedure: the skills in `.kilo/skills/`. Known upstream failures: `migration-tracking/technical-notes/baseline/pinned-v2-baseline.md`.
 <!-- kilocode_change end - agents-md -->
 
 - After changing the public Protocol or Server `HttpApi`, run `bun run generate` from `packages/client`. Do not edit generated client files directly.
@@ -24,6 +25,12 @@ This checkout is Kilo-Org/kilocode, a fork of OpenCode. The rules in this sectio
 - Pass a directory after the script when needed, for example `bun run dev:live /path/to/project`.
 - The script discovers the server with `opencode service status`, injects its private local credential from `opencode service get password`, and uses the `dev` TUI storage channel so tabs and other client-local state match the installed client.
 - Prefer `dev:live` over plain `bun run dev` for this workflow. An implicit managed-service connection may replace the live server when the worktree client version differs; explicit `--server` warns and continues without replacing it.
+
+## Live Desktop Diagnostics
+
+- When attaching Playwright to a running desktop app, use `chromium.connectOverCDP(endpoint, { noDefaults: true })`.
+- Without `noDefaults`, Playwright applies light-mode media emulation during attachment. An app following the system theme then flashes light until the connection closes. The option also preserves the existing focus and other media preferences.
+- Do not emulate a color scheme or reduced-motion preference on the user's live window unless explicitly requested; use an isolated test context for those scenarios.
 
 ## TUI Stories
 
@@ -52,6 +59,8 @@ Use conventional commit-style messages and PR titles: `type(scope): summary`.
 Valid types are `feat`, `fix`, `docs`, `chore`, `refactor`, and `test`. Scopes are optional; use the affected package or area when helpful, e.g. `core`, `opencode`, `tui`, `app`, `desktop`, `sdk`, or `plugin`.
 
 Examples: `fix(tui): simplify thinking toggle styling`, `docs: update contributing guide`, `chore(sdk): regenerate types`.
+
+For user-facing `feat`, `fix` and `perf` PRs, add a small looping animated SVG of the change under `### Visual` in the PR body (a `svg` code block, 240×72, for example a dock growing out of the composer or spinners turning in step). Draw with `currentColor` and opacity so it works in light and dark, make the unanimated state a good still (it is shown under reduced motion), animate with CSS or SMIL only, and keep it under 8 KB with no scripts or external references. The desktop beta's "What's new" dialog shows it.
 
 ## Style Guide
 
@@ -176,12 +185,23 @@ const table = sqliteTable("session", {
 })
 ```
 
+### Experimental API
+
+- An experimental endpoint lives at `/api/experimental/<group>/...`, its OpenAPI identifier is `experimental.<group>.<method>`, and it lands in the SDK as `client.experimental.<group>.<method>`. Its description says "Experimental: may change without compatibility guarantees."
+- `packages/protocol/test/experimental-identifiers.test.ts` enforces the path and identifier match in both directions; the SDK namespace follows from the path.
+- An experimental field or parameter on a stable endpoint goes under an `experimental` key (`experimental.<name>`), the same way config does (`config.experimental.*`).
+- New endpoints and new default behaviors start experimental.
+- To graduate one, move the route out of `/api/experimental`, drop the `experimental.` prefix, and note it in `CHANGELOG.md`.
+- Experimental HTTP routes change without aliases: rename or remove the route, then update the callers.
+- A breaking move of shipped SDK or plugin API (including moving it under `experimental`) keeps the old path and type names as deprecated aliases of the new ones until the next minor, each marked `@deprecated` with the replacement and "Removed in the next minor". Generated SDK moves get them from the codegen (`compile(..., { aliases: true })` in `packages/client/script/generate.ts`), not by hand.
+- Experimental plugin hooks are named `experimental.*` (`experimental.ws.handshake`).
+
 ## Testing
 
 - Avoid mocks as much as possible, you shouldn't be using globalThis.\* at all unless it's the only option.
 - Test actual implementation, do not duplicate logic into tests
 - Tests cannot run from repo root (guard: `do-not-run-tests-from-root`); run from package directories such as `packages/core`.
-- Before writing or changing tests, read the matching skill in `.opencode/skills`: `unit-tests` (bun test), `tui-tests` (OpenTUI renderer tests), `app-e2e-tests` (Playwright in `packages/app/e2e`) or `component-tests` (Storybook Playwright). They cover what has made tests slow or flaky in CI.
+- Before writing or changing tests, read the matching skill in `.opencode/skills`: `unit-tests` (bun test), `tui-tests` (OpenTUI renderer tests), `app-e2e-tests` (Playwright in `packages/app/e2e`) or `component-tests` (Playwright on stories, `packages/stories`). They cover what has made tests slow or flaky in CI.
 
 ## Checks
 

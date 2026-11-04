@@ -1,25 +1,7 @@
-export type Locale =
-  | "en"
-  | "zh"
-  | "zht"
-  | "ko"
-  | "de"
-  | "es"
-  | "fr"
-  | "da"
-  | "ja"
-  | "pl"
-  | "ru"
-  | "ar"
-  | "no"
-  | "br"
-  | "th"
-  | "bs"
-  | "tr"
-  | "nl"
-  | "uk"
-  | "it"
-  | "fa"
+export type { Locale } from "../../../src/shared/locale"
+import { normalizeLocale, type Locale } from "../../../src/shared/locale"
+
+export { LOCALES } from "../../../src/shared/locale"
 
 /** Locales that use right-to-left script. */
 export const RTL_LOCALES = new Set<Locale>(["ar", "fa"])
@@ -35,58 +17,8 @@ export function localeToBcp47(locale: Locale): string {
   return LOCALE_BCP47[locale] ?? locale
 }
 
-export const LOCALES: readonly Locale[] = [
-  "en",
-  "zh",
-  "zht",
-  "ko",
-  "de",
-  "es",
-  "fr",
-  "da",
-  "ja",
-  "pl",
-  "ru",
-  "ar",
-  "no",
-  "br",
-  "th",
-  "bs",
-  "tr",
-  "nl",
-  "uk",
-  "it",
-  "fa",
-]
 
-/**
- * Normalize a BCP 47 language tag to one of the supported Locale values.
- * Falls back to "en" for unrecognized locales.
- */
-export function normalizeLocale(lang: string): Locale {
-  const lower = lang.toLowerCase()
-  if (lower.startsWith("zh")) {
-    if (lower === "zht") return "zht"
-    const traditional =
-      lower.includes("hant") || lower.includes("-tw") || lower.includes("-hk") || lower.includes("-mo")
-    return traditional ? "zht" : "zh"
-  }
-  for (const loc of LOCALES) {
-    if (lower.startsWith(loc)) {
-      return loc
-    }
-  }
-  if (lower.startsWith("nb") || lower.startsWith("nn")) {
-    return "no"
-  }
-  if (lower.startsWith("nl")) {
-    return "nl"
-  }
-  if (lower.startsWith("pt")) {
-    return "br"
-  }
-  return "en"
-}
+export { normalizeLocale }
 
 /**
  * Perform {{key}} template interpolation against a params record.

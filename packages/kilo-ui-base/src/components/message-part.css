@@ -1326,6 +1326,12 @@
   }
 }
 
+[data-slot="apply-patch-open-diff"] {
+  display: flex;
+  justify-content: flex-end;
+  padding: 4px 8px 0;
+}
+
 [data-component="tool-loaded-file"] {
   display: flex;
   align-items: center;

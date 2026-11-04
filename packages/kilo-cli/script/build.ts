@@ -2,7 +2,7 @@
 
 // Builds the Kilo host (packages/kilo-cli/src/index.ts) into a standalone `kilo2` executable for internal releases.
 //
-// Mirror of packages/cli/script/build.ts (v2.1.0). That script compiles the upstream entry as `opencode` and takes
+// Mirror of packages/cli/script/build.ts (v2.2.5). That script compiles the upstream entry as `opencode` and takes
 // no entry option, and changing it would put a Kilo edit into an upstream file. This one keeps the same plugins,
 // defines and checks and differs only where marked "Kilo:". Everything that does not depend on the entry (the web
 // UI archive, the embedded PTY binary, the artifact scan, the architecture check) is imported from upstream's
@@ -15,6 +15,7 @@
 // `@opencode/script`, which reads the OPENCODE_ names when it loads.
 import "../../../script/kilocode/release-env"
 import { $ } from "bun"
+import { createHash } from "node:crypto"
 import { mkdir, rm } from "fs/promises"
 import path from "path"
 import { Script } from "@opencode/script"
@@ -26,13 +27,16 @@ import { buildAppArchive } from "../../cli/script/app-assets"
 import { verifyArtifact, verifySimulationGraph } from "../../cli/script/verify-artifact"
 import { resolveOpencodePty } from "../../cli/script/opencode-pty"
 import { NativeArch } from "../../../script/native-arch"
+import { bundledModelsSnapshot, modelsSnapshotPlugin } from "../../core/script/models-snapshot"
 import { directory } from "../src/env"
 import { brandingPlugin } from "../src/branding/plugin"
+import { hostMirrorsPlugin } from "../src/mirrors"
+import { KiloBinary } from "../src/binary"
 import { createPluginRuntimePlugin } from "./plugin-runtime"
 
 const dir = path.resolve(import.meta.dirname, "..")
 // Kilo: internal releases use `kilo2`, separate from v1. The upstream target names stay the build's internal names.
-const binary = "kilo2"
+const binary = KiloBinary
 const upstreamBinary = "opencode"
 const outdir = path.resolve(
   dir,
@@ -51,6 +55,7 @@ const skipWebUi = process.argv.includes("--skip-web-ui")
 const solidPlugin = createSolidTransformPlugin()
 const highlights = Script.preview ? undefined : embed(process.env.OPENCODE_RELEASE_NOTES)
 const releaseAssets = new Map<string, Promise<Map<string, string>>>()
+const modelsSnapshot = modelsSnapshotPlugin(await bundledModelsSnapshot())
 
 const allTargets: {
   os: string
@@ -85,7 +90,7 @@ const targets =
 if (!targets.length) throw new Error(`Unknown build target: ${requestedTarget}`)
 
 if (!skipInstall)
-  await $`bun install --os="*" --cpu="*" --libc="*" @opentui/core@${cliPackage.dependencies["@opentui/core"]} @opencode-ai/pty@${cliPackage.dependencies["@opencode-ai/pty"]}`
+  await $`bun install --os="*" --cpu="*" --libc="*" @opentui/core@${cliPackage.dependencies["@opentui/core"]} @opencode/pty@${cliPackage.dependencies["@opencode/pty"]}`
 const appArchive = path.join(dir, ".cache", "bun-app-archive.bin")
 await Bun.write(appArchive, await buildAppArchive(Script.channel, { skipBuild: skipWebUi }))
 const appAssetsPlugin: BunPlugin = {
@@ -150,9 +155,11 @@ export default { path: file, version: ${JSON.stringify(opencodePty.version)}, sh
   console.log(`building ${name}`)
   const result = await Bun.build({
     // Kilo: the host entry instead of the upstream CLI entry. It imports the upstream commands and handlers.
-    entrypoints: ["./src/index.ts"],
+    // Upstream's second entrypoint lands next to index.js, where Image.Photon resolves "./photon-worker.js".
+    entrypoints: ["./src/index.ts", "./src/photon-worker.ts"],
     tsconfig: "./tsconfig.json",
     plugins: [
+      hostMirrorsPlugin,
       brandingPlugin,
       appAssetsPlugin,
       solidPlugin,
@@ -160,6 +167,7 @@ export default { path: file, version: ${JSON.stringify(opencodePty.version)}, sh
       opencodePtyPlugin,
       pluginRuntimePlugin,
       simulationGraphPlugin,
+      modelsSnapshot,
     ],
     external: ["node-gyp"],
     format: "esm",
@@ -254,16 +262,31 @@ async function compileExecutable(item: (typeof allTargets)[number]) {
   const assets = await compileReleaseAssets(release)
   const url = assets.get(`${name}.zip`)
   if (!url) throw new Error(`Bun release ${release} does not include ${name}.zip`)
+  const sumsUrl = assets.get("SHASUMS256.txt")
+  if (!sumsUrl) throw new Error(`Bun release ${release} does not include SHASUMS256.txt`)
   const token = process.env.GH_TOKEN ?? process.env.GITHUB_TOKEN
-  const response = await fetch(url, {
-    headers: { Accept: "application/octet-stream", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-  })
+  const headers = { Accept: "application/octet-stream", ...(token ? { Authorization: `Bearer ${token}` } : {}) }
+  const [response, sums] = await Promise.all([fetch(url, { headers }), fetch(sumsUrl, { headers })])
   if (!response.ok) throw new Error(`Failed to download ${name} from Bun release ${release}: ${response.status}`)
+  if (!sums.ok) throw new Error(`Failed to download Bun release ${release} checksums: ${sums.status}`)
+  const expected = (await sums.text())
+    .split("\n")
+    .find((line) => line.trimEnd().endsWith(`  ${name}.zip`))
+    ?.split(/\s+/)[0]
+  if (!expected) throw new Error(`Missing checksum for ${name}.zip in Bun release ${release}`)
   // Stream to disk instead of `Bun.write(archive, response)`: passing the Response object
   // hangs forever if it gets GC'd mid-download (https://github.com/oven-sh/bun/issues/40278).
+  const hash = createHash("sha256")
   const sink = Bun.file(archive).writer()
-  for await (const chunk of response.body!) await sink.write(chunk)
+  for await (const chunk of response.body!) {
+    hash.update(chunk)
+    await sink.write(chunk)
+  }
   await sink.end()
+  if (hash.digest("hex") !== expected) {
+    await rm(archive)
+    throw new Error(`Checksum mismatch for ${name}.zip in Bun release ${release}`)
+  }
   await $`unzip -oq ${archive} -d ${cache}`
   await rm(archive)
   return executable
@@ -272,7 +295,11 @@ async function compileExecutable(item: (typeof allTargets)[number]) {
 function compileReleaseAssets(release: string) {
   const existing = releaseAssets.get(release)
   if (existing) return existing
-  const pending = fetch(`https://api.github.com/repos/oven-sh/bun/releases/tags/${release}?cache=${Date.now()}`)
+  const token = process.env.GH_TOKEN ?? process.env.GITHUB_TOKEN
+  // Beta builds each CLI in its own job; authenticated requests avoid the per-IP limit on shared runners.
+  const pending = fetch(`https://api.github.com/repos/oven-sh/bun/releases/tags/${release}?cache=${Date.now()}`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  })
     .then(async (response) => {
       if (!response.ok) throw new Error(`Failed to resolve Bun release ${release}: ${response.status}`)
       const data: unknown = await response.json()

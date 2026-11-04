@@ -259,6 +259,7 @@ export const dict = {
   "prompt.toast.promptSendFailed.title": "فشل إرسال الموجه",
 
   "mcp.status.connected": "متصل",
+  "mcp.status.pending": "جارٍ الاتصال",
   "mcp.status.failed": "فشل",
   "mcp.status.needs_auth": "يحتاج إلى مصادقة",
   "mcp.status.needs_registration": "يحتاج إلى تسجيل العميل",
@@ -289,6 +290,9 @@ export const dict = {
   "provider.failure.http": "خطأ في الموفر (HTTP {{status}}).",
   "provider.failure.httpNoStatus": "خطأ في الموفر.",
   "provider.failure.schema": "استجابة غير متوقعة من الموفر.",
+  "provider.failure.organizationMissing": "الفريق المحدد لم يعد متاحًا. اختر فريقًا آخر.",
+  "provider.failure.scopeConflict": "الفريق المحدد يتعارض مع فريق رمز Kilo الخاص بك.",
+  "provider.failure.personalUnavailable": "لا يحتوي هذا الحساب على حساب شخصي. اختر فريقًا.",
 
   "notification.permission.title": "مطلوب إذن",
   "notification.permission.titleSubagent": "مطلوب إذن (وكيل فرعي)",
@@ -297,6 +301,7 @@ export const dict = {
   "notification.permission.descriptionSandboxEscalation":
     "يُشغّل هذا الأمر بالكامل مع إزالة قيود نظام الملفات والشبكة، لهذا الأمر فقط. يجب أن يكتب Git في .git، وهو للقراءة فقط داخل البيئة المعزولة ويقع خارج شجرة العمل في worktree مرتبط. لا توافق قواعد سماح Bash والموافقة التلقائية على هذا الطلب تلقائياً أبداً.",
   "ui.permission.manageAutoApprove": "إدارة قواعد الموافقة التلقائية",
+  "ui.permission.noChanges": "لا توجد تغييرات.",
   "ui.permission.reject": "رفض",
   "ui.permission.feedbackPlaceholder": "أخبر Kilo بما يجب فعله بشكل مختلف",
   "ui.permission.feedbackHint": "Enter للرفض، Esc للإلغاء",
@@ -339,6 +344,8 @@ export const dict = {
 
   "session.tab.review": "مراجعة",
   "session.review.filesChanged": "تم تغيير {{count}} ملفات",
+  "session.review.viewTurnChanges": "عرض تغييرات الدور",
+  "session.review.turnChangesEmpty": "لا توجد تغييرات في هذا الدور.",
   "session.review.loadingChanges": "جارٍ تحميل التغييرات...",
   "session.review.noChanges": "لا توجد تغييرات",
   "session.messages.loadingEarlier": "جارٍ تحميل الرسائل السابقة...",
@@ -696,7 +703,7 @@ export const dict = {
   "settings.agentBehaviour.title": "سلوك الوكيل",
   "settings.autoApprove.title": "الموافقة التلقائية",
   "settings.webTools.title": "أدوات الويب",
-  "settings.webTools.description": "اضبط البحث على الويب وأتمتة المتصفح.",
+  "settings.webTools.description": "اضبط البحث على الويب.",
   "settings.webTools.webSearch.enable": "تمكين لجميع المزوّدين",
   "settings.webTools.browserAutomation": "أتمتة المتصفح",
   "settings.webTools.webSearch.title": "البحث على الويب",
@@ -844,6 +851,7 @@ export const dict = {
   "settings.aboutKiloCode.importSettings.newerVersion":
     "تم تصدير هذا الملف من إصدار أحدث من Kilo. قد يتم تجاهل بعض الإعدادات.",
   "settings.aboutKiloCode.importSettings.success": "تم استيراد الإعدادات. راجع التغييرات أعلاه، ثم انقر على حفظ.",
+  "settings.aboutKiloCode.importSettings.applied": "Settings imported and applied.",
 
   "settings.aboutKiloCode.telemetry.title": "Telemetry",
   "settings.aboutKiloCode.telemetry.description":
@@ -1029,6 +1037,9 @@ export const dict = {
     "هذا وضع مضمن. لا يمكن تغيير تعريفه الأساسي، ولكن يمكنك تكوين التجاوزات أدناه.",
   "settings.agentBehaviour.editMode.promptOverride": "تجاوز موجه مخصص لهذا الوضع المدمج",
   "settings.agentBehaviour.badge.subagent": "وكيل فرعي",
+  "settings.agentBehaviour.perAgentPermissions.title": "أذونات لكل وكيل",
+  "settings.agentBehaviour.perAgentPermissions.description":
+    "تنطبق هذه الإعدادات على هذا الوكيل المخصص فقط. غيّر قيمة إحدى القوائم المنسدلة من 'افتراضي' لإنشاء تجاوز، أو استخدم 'إضافة مسار' أو 'إضافة أمر' للاستثناءات الخاصة بالأدوات.",
   "settings.agentBehaviour.permissions.title": "الأذونات المحسوبة",
   "settings.agentBehaviour.permissions.count": "{{count}} قواعد",
   "settings.agentBehaviour.permissions.effective": "الفعال (حرف بدل):",
@@ -1106,11 +1117,14 @@ export const dict = {
   "settings.agentBehaviour.mcpResetAuth.confirm":
     'مسح تسجيل الدخول المحفوظ لـ "{{name}}"؟ ستحتاج إلى تسجيل الدخول مرة أخرى.',
   "settings.agentBehaviour.mcpBrowseMarketplace": "تصفح Marketplace",
+  "settings.agentBehaviour.mcp.timeout.startup.title": "مهلة بدء التشغيل (مللي ثانية)",
+  "settings.agentBehaviour.mcp.timeout.catalog.title": "مهلة الكتالوج (مللي ثانية)",
+  "settings.agentBehaviour.mcp.timeout.execution.title": "مهلة التنفيذ (مللي ثانية)",
   "settings.agentBehaviour.mcpEmpty":
-    "لم يتم تهيئة خوادم MCP. أضف خوادم MCP في kilo.jsonc، أو اطلب من الوكيل إضافتها لك.",
+    "لم يتم تهيئة خوادم MCP. أضف خوادم MCP في kilo2.json، أو اطلب من الوكيل إضافتها لك.",
   "settings.agentBehaviour.workflows.description":
-    "سير العمل هي أوامر شرطة مائلة مخصصة محددة في التهيئة الخاصة بك. اكتب /command-name في الدردشة لتشغيلها. يتم تهيئة الأوامر في opencode.json ضمن قسم 'command'.",
-  "settings.agentBehaviour.workflows.empty": "لم يتم تهيئة أوامر مخصصة. أضف أوامر إلى opencode.json لرؤيتها هنا.",
+    "سير العمل هي أوامر مخصصة محددة في التهيئة الخاصة بك أو في ملفات Markdown للأوامر. يمكنك تعيين نموذج ومتغير استدلال لكل سير عمل.",
+  "settings.agentBehaviour.workflows.empty": "لم يتم العثور على أوامر مخصصة. أضف أوامر إلى kilo2.json أو إلى ملف Markdown في .kilo2/command.",
   "settings.agentBehaviour.workflows.detail.description": "الوصف",
   "settings.agentBehaviour.workflows.detail.template": "القالب",
   "settings.agentBehaviour.workflows.model": "النموذج",
@@ -1124,10 +1138,12 @@ export const dict = {
     "تشغيل أوامر shell الخاصة بالوكيل داخل sandbox على مستوى نظام التشغيل يقيّد الكتابة على مجلدات حالة المشروع و Kilo",
 
   "settings.autoApprove.description":
-    "تحديد كيفية السماح بتشغيل الأدوات. معظم الأدوات معينة افتراضياً على السماح. doom_loop و external_directory معينة افتراضياً على السؤال.",
+    "تحديد كيفية السماح بتشغيل الأدوات. معظم الأدوات معينة افتراضياً على السماح. Bash معينة افتراضياً على السؤال.",
   "settings.autoApprove.maxCost.title": "تنبيه تكلفة الجلسة",
   "settings.autoApprove.maxCost.description":
     "نبّه قبل متابعة الجلسة بعد أن يتجاوز إنفاقها هذا المبلغ بالدولار الأمريكي. استخدم أرقامًا صحيحة بالدولار؛ اتركه فارغًا للتعطيل.",
+  "settings.autoApprove.maxCost.v2Description":
+    "اعرض تنبيهًا غير حاجب عند وصول تكلفة الجلسة إلى هذا المبلغ بالدولار الأمريكي. اتركه فارغًا للتعطيل.",
   "settings.autoApprove.level.allow": "سماح",
   "settings.autoApprove.level.ask": "سؤال",
   "settings.autoApprove.level.deny": "رفض",
@@ -1195,6 +1211,12 @@ export const dict = {
   "settings.context.compactionLimit.title": "حد الضغط التلقائي",
   "settings.context.compactionLimit.description":
     "اضغط عندما يصل السياق إلى هذه النسبة المئوية من نافذة النموذج. اتركه فارغاً لاستخدام هامش الأمان فقط.",
+  "settings.context.compactionKeep.title": "الاحتفاظ بالرموز الأخيرة",
+  "settings.context.compactionKeep.description":
+    "الرموز الأخيرة التي تُحفظ نصًا أثناء ضغط السياق. اتركه فارغًا للاحتفاظ بـ 15,000.",
+  "settings.context.compactionBuffer.title": "مخزن الضغط المؤقت",
+  "settings.context.compactionBuffer.description":
+    "الرموز التي تُترك فارغة تحت حد سياق النموذج قبل الضغط. اتركه فارغًا لإبقاء 15% فارغة، على الأقل 16,000.",
   "settings.context.prune.title": "تقليم المخرجات القديمة",
   "settings.context.prune.description": "إزالة مخرجات الأدوات القديمة أثناء الضغط",
   "settings.context.watcherPatterns": "أنماط تجاهل مراقب الملفات",
@@ -1276,7 +1298,7 @@ export const dict = {
     "إظهار اختصار لوحة المفاتيح الذي يناسب ما تفعله الآن في الموجّه الفارغ، مثل كيفية إضافة الكود المحدد أو العودة إلى الموجّه.",
   "settings.display.tokenThroughput.title": "إظهار إنتاجية الرموز",
   "settings.display.tokenThroughput.description":
-    "عرض معدل توليد النص (tokens/sec) في أحدث رسالة للمساعد وفي رأس المهمة. يظهر افتراضيًا؛ عطّل هذا الإعداد لإخفائه عند الحاجة.",
+    "Display the text-generation rate (tokens/sec) on the latest assistant message footer. Shown by default; disable this setting to hide it when needed.",
   "settings.display.autoApprovalReason.title": "إظهار سبب الموافقة التلقائية",
   "settings.display.autoApprovalReason.description":
     "يظهر سبب الموافقة التلقائية على استدعاء أداة، مثل قاعدة إذن مطابقة أو إعداد افتراضي للوكيل.",
@@ -1396,6 +1418,8 @@ export const dict = {
   "diffViewer.source.unstaged.tooltip":
     "الملفات المعدّلة في شجرة العمل ولكن لم يتم تهيئتها بعد، بالإضافة إلى الملفات غير المتتبعة (الجديدة).",
   "diffViewer.source.session.label": "الجلسة",
+  "diffViewer.source.turn.tooltip": "الملفات التي غيّرها Kilo خلال دور واحد.",
+  "diffViewer.source.turn.label": "الدور",
   "diffViewer.source.session.tooltip":
     "الملفات التي غيّرها Kilo خلال الجلسة الحالية، بناءً على لقطات لكل دور. يُعاد ضبطها عند بدء جلسة جديدة.",
   "diffViewer.group.session": "الجلسة",

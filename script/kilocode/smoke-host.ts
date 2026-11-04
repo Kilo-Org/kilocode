@@ -13,6 +13,7 @@ import { mkdtemp, readdir, realpath, rm } from "node:fs/promises"
 import net from "node:net"
 import os from "node:os"
 import path from "node:path"
+import { runThemeSmoke } from "../../packages/kilo-cli/script/theme-smoke"
 
 const binary = process.argv[2]
 if (!binary) throw new Error("Usage: bun script/kilocode/smoke-host.ts <path to the kilo2 executable>")
@@ -60,7 +61,8 @@ function freePort() {
 let failure: unknown
 try {
   const version = await ok(["--version"])
-  if (!version.startsWith("kilo2 ")) throw new Error(`Expected the version line to start with "kilo2 ", got: ${version}`)
+  if (!version.startsWith("kilo2 "))
+    throw new Error(`Expected the version line to start with "kilo2 ", got: ${version}`)
 
   // A private port, so a service that is already running on this machine (the default port) cannot interfere.
   await ok(["service", "set", "port", String(await freePort())])
@@ -72,6 +74,8 @@ try {
   const directories = await readdir(path.join(root, "data"))
   if (!directories.includes("kilo2")) throw new Error(`No kilo2 data directory. Found: ${directories.join(", ")}`)
   if (directories.includes("opencode")) throw new Error("The host wrote to the upstream opencode data directory")
+  if (process.platform === "win32") console.log("skip: theme smoke requires POSIX process groups")
+  if (process.platform !== "win32") await runThemeSmoke(path.resolve(binary))
   console.log(`ok: ${version}, service ${url}, data in kilo2`)
 } catch (error) {
   failure = error

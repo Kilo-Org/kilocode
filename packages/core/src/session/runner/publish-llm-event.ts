@@ -1,5 +1,5 @@
-import { type LLMEvent, type ProviderMetadata, type ToolResultValue } from "@opencode/ai"
-import { isRecord } from "@opencode/ai/utils/record"
+import { type LLMEvent, type ProviderMetadata, type ToolResultValue } from "@opencode/ai/effect"
+import { isRecord } from "@opencode/util/record"
 import type { Agent } from "@opencode/schema/agent"
 import type { Model } from "@opencode/schema/model"
 import type { RelativePath } from "@opencode/schema/schema"
@@ -13,7 +13,6 @@ import { SessionMessage } from "../message.js"
 import { SessionSchema } from "../schema.js"
 import { SessionError } from "@opencode/schema/session-error"
 import { Money } from "@opencode/schema/money"
-import { SessionUsage } from "../usage.js"
 import { contentFilterError } from "../to-session-error.js"
 import type { Tool } from "../../tool.js"
 import { KiloSessionUsage } from "../../kilocode/session/usage.js" // kilocode_change(gateway)
@@ -70,7 +69,7 @@ export interface StepRecord {
     readonly finish: Extract<LLMEvent, { type: "step-finish" }>["reason"]["normalized"]
     readonly rawFinish?: string
     readonly native?: SessionMessage.Native
-    readonly tokens: TokenUsage.Info
+    readonly usage: Extract<LLMEvent, { type: "step-finish" }>["usage"]
     readonly providerCost?: Money.USD // kilocode_change(gateway)
   }
   readonly needsContinuation: boolean
@@ -576,7 +575,7 @@ export const createLLMEventPublisher = (bus: Pick<Bus.Interface, "publish">, inp
           finish: event.reason.normalized,
           rawFinish: event.reason.raw,
           native: KiloSessionUsage.native(event.usage, input.model.providerID, native(event.providerMetadata)), // kilocode_change(gateway)
-          tokens: SessionUsage.tokens(event.usage),
+          usage: event.usage,
           providerCost: KiloSessionUsage.providerCost(event.usage, input.model.providerID, event.providerMetadata), // kilocode_change(gateway)
         }
         if (event.reason.normalized === "content-filter") {

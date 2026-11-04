@@ -109,18 +109,19 @@ silent list shrinkage during a refactor as suspicious until proven intentional.
 
 A conflict in a shared upstream file means a Kilo patch (option 3 or 4 below)
 met an upstream change. Before you re-apply the patch, check whether a higher
-option can replace it. Use the order from `.kilo/skills/v2-migration/SKILL.md`:
+option can replace it. Use the order from `migration-tracking/principles.md`,
+section 2:
 
 1. A Kilo plugin on the public plugin API (`@opencode/plugin`).
-2. The Kilo host (U-E0-01): `SdkPlugins.register`, Effect layer overrides such
-   as `Global.layerWith`, environment translation at the entry. It does not
-   exist yet.
+2. The Kilo host (`packages/kilo-cli`): `SdkPlugins.register`, Effect layer
+   overrides such as `Global.layerWith`, environment translation at the entry.
 3. A small, generic seam patch in a shared file, marked `kilocode_change`, in a
    file that changes rarely.
 4. A feature patch in a shared file, marked, last resort, with the reason in
    the PR.
-5. Branding and product strings: the rename script (`script/upstream`
-   codemods), never hand edits.
+5. Branding and product strings: automated renaming in Kilo-owned code (the
+   interim adapter from #15417, mapping reviewed at every sync), never hand
+   edits.
 
 Record the result for each conflicting patch in the sync PR: "kept as option
 3, seam X is missing", or "moved to a plugin in #NNNN". Do not move Kilo code

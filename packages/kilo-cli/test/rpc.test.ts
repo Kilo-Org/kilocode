@@ -15,7 +15,9 @@ import { KiloHost } from "../src/host"
 // packages/kilo-plugin, the plugin registered by the host overrides, and the call through the generated client's
 // `rpc` entry point (`POST /api/rpc/:rpcID/:method`), as the TUI and the IDE clients make it. A local stand-in for
 // the Kilo API answers the Gateway.
-const boot = (env: Record<string, string>, body: (rpc: ReturnType<typeof gateway>) => Promise<void>) => async () => {
+const boot =
+  (env: Record<string, string>, body: (rpc: ReturnType<typeof gateway>, backend: ReturnType<typeof fixture>) => Promise<void>) =>
+  async () => {
   using backend = fixture()
   const directory = await mkdtemp(path.join(os.tmpdir(), "kilo-rpc-"))
   // Keep a developer's Kilo login out of the test.
@@ -52,7 +54,7 @@ const boot = (env: Record<string, string>, body: (rpc: ReturnType<typeof gateway
               { preconnect: fetch.preconnect },
             ),
           })
-          yield* Effect.promise(() => body(gateway(client, directory, backend.url)))
+          yield* Effect.promise(() => body(gateway(client, directory, backend.url), backend))
         }),
       ).pipe(Effect.provideService(References.MinimumLogLevel, "Warn")),
     )
@@ -121,6 +123,9 @@ test(
       hasPersonalAccount: true,
       organizationID: null,
     })
+    const personal = await gateway.rpc.authStatus({}, gateway.options)
+    expect(personal).toMatchObject({ authenticated: true, organizationID: null, server: gateway.server })
+    expect(personal.identity).toMatch(/^catalog:personal:[0-9a-f]{64}$/)
     expect(await gateway.rpc["organization.set"]({ organizationID: "first" }, gateway.options)).toEqual({})
     expect(await gateway.rpc.authStatus({}, gateway.options)).toEqual({
       authenticated: true,
@@ -192,3 +197,58 @@ test(
   }),
   30_000,
 )
+
+test(
+  "an autocomplete request crosses the generated client, and a client abort cancels the provider request",
+  boot({ KILO_API_KEY: "fixture-token" }, async (gateway, backend) => {
+    expect(await gateway.rpc["autocomplete.fim"]({ prefix: "const a = ", suffix: "" }, gateway.options)).toEqual({
+      text: "fixture completion",
+      cost: 0.0001,
+      inputTokens: 5,
+      outputTokens: 2,
+    })
+    expect(await gateway.rpc["autocomplete.edit"]({ ...edit }, gateway.options)).toEqual({
+      content: "fixture edit",
+      usage: { prompt_tokens: 7, completion_tokens: 3 },
+    })
+    backend.state.fimHang = true
+    const abort = new AbortController()
+    const pending = gateway.rpc["autocomplete.fim"]({ prefix: "", suffix: "" }, { ...gateway.options, signal: abort.signal })
+    await until(() => backend.state.autocompleteRequests.length >= 3, "the hung FIM request reached the fixture")
+    abort.abort()
+    expect(await pending.then(() => false, () => true)).toBe(true)
+    await until(() => backend.state.fimAborted === 1, "the fixture saw the aborted FIM request")
+  }),
+  30_000,
+)
+
+test(
+  "an autocomplete failure keeps its status through the generated client",
+  boot({}, async (gateway, backend) => {
+    await expect(gateway.rpc["autocomplete.fim"]({ prefix: "", suffix: "" }, gateway.options)).rejects.toMatchObject({
+      type: "unauthorized",
+      message: "Not authenticated with Kilo Gateway",
+    })
+    expect(backend.state.autocompleteRequests).toEqual([])
+  }),
+  30_000,
+)
+
+/** Waits for a condition, so a missing signal fails the test instead of passing every assertion. */
+async function until(condition: () => boolean, what: string, timeout = 5_000) {
+  for (const start = Date.now(); Date.now() - start < timeout; await Bun.sleep(5)) {
+    if (condition()) return
+  }
+  throw new Error(`Timed out waiting until ${what}`)
+}
+
+const edit = {
+  currentFilePath: "src/index.ts",
+  currentFileContent: "export const value = 1\n",
+  cursorLine: 0,
+  cursorCharacter: 0,
+  editableRegionStartLine: 0,
+  editableRegionEndLine: 0,
+  recentlyViewedSnippets: [],
+  editDiffHistory: [],
+}

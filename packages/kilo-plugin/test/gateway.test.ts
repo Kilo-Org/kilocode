@@ -2,11 +2,9 @@ import { describe, expect } from "bun:test"
 import { KiloErrors } from "@kilocode/gateway-core"
 import { EmbeddingCatalog } from "@kilocode/gateway-core/embedding-catalog"
 import { fixture } from "@kilocode/gateway-core/testing"
-import { isRetryable, LLM, LLMClient } from "@opencode/ai"
-import { RequestExecutor } from "@opencode/ai/route"
-import { compileRequest } from "@opencode/ai/route/client"
-import { httpFailure } from "@opencode/ai/route/executor"
-import type { HttpPrepared } from "@opencode/ai/route/transport/http"
+import { ai, isRetryable, LLMClient } from "@opencode/ai/effect"
+import { HttpTransport, httpFailure, RequestExecutor } from "@opencode/ai/route"
+import { compileRequest } from "@opencode/ai/testing"
 import { Cause, Deferred, Effect, Exit, Fiber, Layer, Schema } from "effect"
 import { HttpClientRequest } from "effect/http"
 import { TestClock } from "effect/testing"
@@ -1104,7 +1102,7 @@ describe("KiloGatewayPlugin", () => {
                         tools: {},
                         options: {},
                       })
-                      const input = LLM.request({
+                      const input = ai.request({
                         model: resolved!.model,
                         prompt: "Hello",
                         providerOptions: context.options,
@@ -1112,7 +1110,9 @@ describe("KiloGatewayPlugin", () => {
                       const request = yield* compileRequest(input)
                       expect(request.route).toBe(dialect.route)
                       expect(request.body).toMatchObject({ model: dialect.model, ...variant.body })
-                      const prepared: HttpPrepared<string> | { readonly http: HttpPrepared<string> } =
+                      const prepared:
+                        | HttpTransport.HttpPrepared<string>
+                        | { readonly http: HttpTransport.HttpPrepared<string> } =
                         yield* resolved!.model.route.prepareTransport(request.body, input)
                       const outgoing = yield* hooks.trigger("session", "http.request", {
                         sessionID: session.id,
@@ -1215,7 +1215,7 @@ describe("KiloGatewayPlugin", () => {
                   expect(context.options).toMatchObject({ reasoning: { effort } })
                   const resolved = yield* resolver.resolve(model)
                   const request = yield* compileRequest(
-                    LLM.request({ model: resolved!.model, prompt: "Hello", providerOptions: context.options }),
+                    ai.request({ model: resolved!.model, prompt: "Hello", providerOptions: context.options }),
                   )
                   expect(request.body).toMatchObject(
                     provider === "openrouter" ? { reasoning: { effort } } : { reasoning_effort: effort },
@@ -1293,7 +1293,7 @@ describe("KiloGatewayPlugin", () => {
                   expect(context.options).not.toHaveProperty("apiKey")
                   expect(context.options).not.toHaveProperty("baseURL")
                   const request = yield* compileRequest(
-                    LLM.request({ model: resolved!.model, prompt: "Hello", providerOptions: context.options }),
+                    ai.request({ model: resolved!.model, prompt: "Hello", providerOptions: context.options }),
                   )
                   expect(request.body).toMatchObject(dialect.body)
                   const override = yield* hooks.trigger("session", hook, {
@@ -1438,7 +1438,7 @@ describe("KiloGatewayPlugin", () => {
                   })
                   expect(event.options.textVerbosity).toBe(selection.expected)
                   const request = yield* compileRequest(
-                    LLM.request({
+                    ai.request({
                       model: resolved!.model,
                       prompt: "Hello",
                       providerOptions: event.options,
@@ -1793,7 +1793,7 @@ describe("KiloGatewayPlugin", () => {
           const providers = yield* Provider.Service
           expect(yield* rpc.call("kilocode.gateway", "authStatus", {})).toMatchObject({ authenticated: false, organizationID: "selected" })
           expect((yield* providers.available()).some((provider) => provider.id === kilo)).toBe(false)
-          expect(yield* rpc.client(KiloGatewayRpc.Definition).models({}).pipe(Effect.flip)).toMatchObject({ type: "failed", data: { kind: "unauthorized" } })
+          expect(yield* rpc.client(KiloGatewayRpc.Definition).models({}).pipe(Effect.flip)).toMatchObject({ type: "failed", data: { kind: "unauthenticated" } })
           expect(yield* rpc.client(KiloGatewayRpc.Definition)["models.images"]({}).pipe(Effect.flip)).toMatchObject({ type: "unauthorized" })
           const session = yield* host.session.create({ title: "no token" })
           const hooks = yield* PluginHooks.Service
@@ -1884,7 +1884,7 @@ describe("KiloGatewayPlugin", () => {
             if (!resolved) throw new Error("Missing empty-token model")
             const prepared = yield* requests.primary({ session, agent: Agent.ID.make("code"), model: resolved, system: [], messages: [] })
             yield* llm.generate(prepared.request, prepared.options)
-            yield* llm.generate(LLM.request({ model: resolved.model, prompt: "Stateless empty token" }))
+            yield* llm.generate(ai.request({ model: resolved.model, prompt: "Stateless empty token" }))
           }
           expect(sent.map((request) => ({ path: request.path, authorization: request.authorization, apiKey: request.apiKey }))).toEqual([
             { path: "/api/v1/chat/completions", authorization: "Bearer", apiKey: null },
@@ -1907,7 +1907,7 @@ describe("KiloGatewayPlugin", () => {
           yield* eventually(modelService.get(kilo, Model.ID.make("kilo-auto/free")), Boolean)
           const restored = yield* resolver.resolve(Model.Ref.make({ providerID: kilo, id: Model.ID.make("kilo-auto/free") }))
           if (!restored) throw new Error("Missing restored OAuth model")
-          yield* llm.generate(LLM.request({ model: restored.model, prompt: "Restored OAuth" }))
+          yield* llm.generate(ai.request({ model: restored.model, prompt: "Restored OAuth" }))
           expect(sent.at(-1)?.authorization).toBe("Bearer token")
           expect(sent.at(-1)?.body.includes("kiloEmptyToken")).toBe(false)
         }))
@@ -2557,6 +2557,13 @@ describe("KiloGatewayPlugin", () => {
                 expect(yield* rpc.call("kilocode.gateway", "models.transcriptions", {})).toEqual([
                   { id: "openai/gpt-4o-mini-transcribe", name: "GPT-4o Mini Transcribe" },
                 ])
+                expect(
+                  yield* rpc.call("kilocode.gateway", "audio.transcriptions", {
+                    model: "openai/gpt-4o-mini-transcribe",
+                    input_audio: { data: "AAAA", format: "m4a" },
+                    language: "en",
+                  }),
+                ).toEqual({ text: "Make the header sticky" })
                 expect(yield* rpc.call("kilocode.gateway", "models.embeddings", {})).toMatchObject({
                   defaultModel: "mistralai/mistral-embed-2312",
                   models: [{ id: "mistralai/codestral-embed-2505", dimension: 1536, note: "code" }, { dimension: 1024 }],

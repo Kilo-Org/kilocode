@@ -125,6 +125,9 @@ test("/usage shows the session family, provider plans and BYOK keys, and refresh
     await setup.waitForFrame((frame) => frame.includes("Check usage"), wait)
     await setup.mockInput.typeText("/usage")
     await setup.waitForFrame((frame) => frame.includes("View session usage"), wait)
+    // Upstream's `/usage` (OpenCode Console limits) is shadowed, so the menu lists only the Kilo command.
+    expect(setup.captureCharFrame().match(/\/usage\s/g)?.length).toBe(2) // the menu row and the prompt text
+    expect(setup.captureCharFrame()).not.toMatch(/\/usage\s+View usage/)
     setup.mockInput.pressKey("RETURN")
     await setup.waitForFrame(
       (frame) => frame.includes("Kilo Coding Plan Pro") && frame.includes("BYOK keys") && frame.includes("100 t/s"),

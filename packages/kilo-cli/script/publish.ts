@@ -2,9 +2,10 @@
 
 // Publishes the Kilo host that script/build.ts built to npm as `@kilocode/cli` with the `kilo-v2` dist-tag.
 //
-// Mirror of the npm part of packages/cli/script/publish.ts (upstream). It publishes one platform package per target
-// (`@kilocode/cli-<os>-<arch>`, written by script/build.ts) and then the `@kilocode/cli` launcher package. The launcher
-// has the platform packages as optional dependencies, and its postinstall script copies the matching binary into place.
+// Mirror of the npm part of upstream's publish script (packages/cli/script/publish.ts, replaced by pack.ts in v2.2).
+// It publishes one platform package per target (`@kilocode/cli-<os>-<arch>`, written by script/build.ts) and then the
+// `@kilocode/cli` launcher package. The launcher has the platform packages as optional dependencies, and its
+// postinstall script copies the matching binary into place.
 // Upstream's update artifacts, Docker image, AUR and Homebrew steps are not part of this script.
 //
 // v1 publishes the same package names under the `latest` and `rc` dist-tags. This script uses only its own dist-tag,
@@ -106,9 +107,9 @@ await Bun.write(
       version,
       license: "MIT",
       repository,
-      // The postinstall script uses the first command as the binary name in the platform packages. `kilo` keeps the
-      // v1 command working, because a global install of this package replaces v1.
-      bin: { kilo2: "./bin/kilo2.exe", kilo: "./bin/kilo2.exe" },
+      // The postinstall script uses the first command as the binary name in the platform packages. Only `kilo2`: a
+      // `kilo` alias would make a v1 user's `kilo` start v2, which keeps its logins and config apart from v1 (D-4).
+      bin: { kilo2: "./bin/kilo2.exe" },
       scripts: { postinstall: "node ./postinstall.mjs" },
       os: ["darwin", "linux", "win32"],
       cpu: ["arm64", "x64"],

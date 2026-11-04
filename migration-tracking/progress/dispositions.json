@@ -1,4 +1,25 @@
 {
+  "module:packages/opencode/src/kilocode/storage/json-migration.ts": {
+    "state": "dropped",
+    "note": "v1 lazily migrated the JSON file store (storage/**/*.json) into SQLite on first access. v2 replaced the JSON store with an event-sourced SQLite store, so there is no JSON tree to migrate. Legacy import is handled natively at the SQLite level by packages/core/src/database/v1-migration.bun.ts, and D-4 isolation (packages/kilo-cli/src/env.ts keeps CONFIG/CONFIG_DIR/DB out of the translated OPENCODE_* names) keeps v2 out of v1's store. The JSON migrator is obsolete.",
+    "by": "store-paths"
+  },
+  "module:packages/opencode/test/kilocode/storage/json-migration.test.ts": {
+    "state": "dropped",
+    "note": "Tested the dropped JSON->SQLite migrator (module:packages/opencode/src/kilocode/storage/json-migration.ts). The event-sourced store's legacy-import correctness is covered natively by packages/core/test/v1-migration.test.ts.",
+    "by": "store-paths"
+  },
+  "module:packages/opencode/test/kilocode/storage/db.test.ts": {
+    "state": "dropped",
+    "note": "Tested the v1 opencode-<channel>.db -> kilo-<channel>.db fallback that let a renamed binary reuse the old channel database. v2 keeps upstream's opencode*.db filenames inside the distinct kilo2 directory and fail-closes v1 KILO_DB (packages/kilo-cli/src/env.ts:34), so there is no cross-store fallback; channel-path selection is native at packages/cli/src/database-path.ts. The fallback is obsoleted by the D-4 distinct-dir design.",
+    "by": "store-paths"
+  },
+  "module:packages/opencode/test/kilocode/storage/storage-init.test.ts": {
+    "state": "native",
+    "v2": "packages/core/src/database/database.ts",
+    "note": "Checked init concurrency/interruption safety of the v1 JSON Storage service (layerFromDir, migrate-on-first-access). v2 has no JSON Storage service; the equivalent guarantee is the per-path database bootstrap lock (lockFor/locks) in packages/core/src/database/database.ts. packages/core/test/database-migration.test.ts covers that lock's concurrent-bootstrap serialization (one lock per path, distinct paths do not block each other) and rollback of a failed migration; interruption safety follows structurally from the same single-holder lock rather than from a dedicated interruption test.",
+    "by": "store-paths"
+  },
   "module:packages/core/src/kilocode/oauth/page.ts": {
     "state": "ported",
     "note": "packages/kilo-cli/src/branding/text.ts KiloBranding.transform applies the Kilo callback text and square SVG mark to the upstream page module through the host runtime/build loader. Success and error preserve upstream HTML escaping and autoClose behavior; the bootstrap page is also branded. packages/kilo-cli/test/branding.test.ts checks source and compiled exports. The separate oauth-branding test cell remains open because provider User-Agent/originator changes are deferred.",
@@ -205,6 +226,16 @@
     "note": "The organization event of the kilocode.gateway RPC (packages/core/src/kilocode/gateway-rpc.ts, published by organization.set in packages/core/src/kilocode/gateway.ts) tells clients to read the balance again; the balance comes from KiloProfile.balance in packages/kilo-gateway-core/src/profile.ts.",
     "by": "gateway-finish"
   },
+  "module:packages/opencode/src/kilocode/branch-name.ts": {
+    "state": "ported",
+    "note": "packages/kilo-plugin/src/branch-name/generate.ts and index.ts: the same PROMPT, LIMIT 4, CHARS 1000, BRANCH_CHARS 50, message selection, reasoning-wrapper and punctuation parsing, null answers, and friendly-words fallback in the VS Code client. The stateless call keeps the instructions in the system prompt and the messages in the user prompt, at temperature 0.1, on the provider small model, with the one-shot retry policy of Generate.text. The 10 second timeout is a v2 addition so a stalled provider cannot hold the RPC.",
+    "by": "am-branch-naming"
+  },
+  "module:packages/opencode/test/kilocode/branch-name.test.ts": {
+    "state": "ported",
+    "note": "packages/kilo-plugin/test/branch-name.test.ts carries the parse, reasoning-wrapper, synthetic-message filtering, pending-prompt deduplication, latest-four and truncation assertions, and checks that the instructions stay in the system prompt while the user prompt carries only the messages, at temperature 0.1.",
+    "by": "am-branch-naming"
+  },
   "module:packages/opencode/src/kilocode/kilo-errors.ts": {
     "state": "ported",
     "note": "packages/kilo-gateway-core/src/errors.ts preserves numeric/string codes, billing metadata, outer error precedence and messages; stream.ts shares its error serializer. packages/kilo-cli/src/gateway-errors.ts decorates the existing LLMClient node for Kilo-only terminal/top-up overrides across streamed, buffered and native trigger-compaction calls. Generic validation/quota/unknown errors retain v2 native retry classification rather than v1 prose heuristics. The session shows the message instead of a v1 toast.",
@@ -326,8 +357,8 @@
   },
   "patch:unattributed:agent:461dc96586d3": {
     "state": "dropped",
-    "note": "Per-agent hardening after config: metadata lifting (no v2 schema fields), Explore shell limits (native Explore, U-E2-17), the Plan edit guard after per-agent rules (U-E2-13) and Scout reference agents (U-E11-05). Each part is a row of the differences table in #14999.",
-    "by": "agents-plugin"
+    "note": "Per-agent hardening after config, a bundled hunk whose parts land in different units. Explore shell limits are now ported: KiloAgentPlugin applies the read-only shell table (gh and find denied) to the native Explore agent in Plugin and reapplies it after global config in Ceiling (packages/kilo-plugin/src/agent/index.ts). Still deferred: metadata lifting (no v2 schema fields), the Plan edit guard after per-agent rules (U-E2-13) and Scout reference agents (U-E11-05). Each part is a row of the differences table in #14999.",
+    "by": "explore-readonly-bash"
   },
   "patch:unattributed:agent:51a770bdc581": {
     "state": "dropped",
@@ -478,22 +509,22 @@
   },
   "module:packages/opencode/src/kilocode/marketplace/detection.ts": {
     "state": "dropped",
-    "note": "Runtime detection of installed marketplace items (skill/MCP/agent/plugin scans) is intentionally replaced: v2 lists only marketplace-managed records from the server database (the `kv` table) and reports their status by comparing content fingerprints with the files on disk (packages/kilo-plugin/src/marketplace/index.ts installed/restore, installer.ts inspect). Native/manual items are not adopted, and agent/plugin detection re-lands with their content units. Decision recorded in kilo-v2-migration-plan.md U-E2-23.",
+    "note": "Runtime detection of installed marketplace items (skill/MCP/agent/plugin scans) is intentionally replaced: v2 lists only marketplace-managed records from the server database (the `kv` table) and reports their status by comparing content fingerprints with the files on disk (packages/kilo-plugin/src/marketplace/index.ts installed/restore, installer.ts inspect). Native/manual items are not adopted, and agent/plugin detection re-lands with their content units. Decision recorded under U-E2-23 in the former plan (`e39551c9b0:migration-tracking/plans/kilo-v2-migration-plan.md`); marketplace epic #15307.",
     "by": "kilo-new-marketplace"
   },
   "module:packages/opencode/src/kilocode/marketplace/plugin-config.ts": {
     "state": "dropped",
-    "note": "Plugin config patching (patchPlugin) is not carried on v2: plugin/bundle marketplace content is out of scope for the default skills/MCP unit and re-lands with the plugin content unit. Decision recorded in kilo-v2-migration-plan.md U-E2-23.",
+    "note": "Plugin config patching (patchPlugin) is not carried on v2: plugin/bundle marketplace content is out of scope for the default skills/MCP unit and re-lands with the plugin content unit. Decision recorded under U-E2-23 in the former plan (`e39551c9b0:migration-tracking/plans/kilo-v2-migration-plan.md`); marketplace epic #15307.",
     "by": "kilo-new-marketplace"
   },
   "module:packages/opencode/src/kilocode/marketplace/plugin-spec.ts": {
     "state": "dropped",
-    "note": "Plugin identity resolution (pluginIdentity) is not carried on v2: plugin/bundle marketplace content is out of scope for the default skills/MCP unit and re-lands with the plugin content unit. Decision recorded in kilo-v2-migration-plan.md U-E2-23.",
+    "note": "Plugin identity resolution (pluginIdentity) is not carried on v2: plugin/bundle marketplace content is out of scope for the default skills/MCP unit and re-lands with the plugin content unit. Decision recorded under U-E2-23 in the former plan (`e39551c9b0:migration-tracking/plans/kilo-v2-migration-plan.md`); marketplace epic #15307.",
     "by": "kilo-new-marketplace"
   },
   "module:packages/opencode/src/kilocode/marketplace/relevance.ts": {
     "state": "dropped",
-    "note": "Workspace suggest_for.filename relevance scanning (ripgrep budget/skip rules) is not carried on v2: browse/search filter the catalog client-side by text match; relevance ranking re-lands with its own unit if wanted. Decision recorded in kilo-v2-migration-plan.md U-E2-23.",
+    "note": "Workspace suggest_for.filename relevance scanning (ripgrep budget/skip rules) is not carried on v2: browse/search filter the catalog client-side by text match; relevance ranking re-lands with its own unit if wanted. Decision recorded under U-E2-23 in the former plan (`e39551c9b0:migration-tracking/plans/kilo-v2-migration-plan.md`); marketplace epic #15307.",
     "by": "kilo-new-marketplace"
   },
   "patch:marketplace:5fc326e8ea39": {
@@ -508,7 +539,7 @@
   },
   "module:packages/opencode/test/kilocode/marketplace-plugin-http.test.ts": {
     "state": "dropped",
-    "note": "v1 tested the plugin HTTP install endpoints (refresh-cached config, partial removal, malformed config kept). Plugin marketplace content and the HTTP surface are not carried on v2; the skills/MCP API is covered by the kilocode.marketplace RPC round trips in packages/kilo-cli/test/marketplace.test.ts and the OAuth flow in packages/kilo-cli/test/marketplace-oauth.test.ts. Decision recorded in kilo-v2-migration-plan.md U-E2-23.",
+    "note": "v1 tested the plugin HTTP install endpoints (refresh-cached config, partial removal, malformed config kept). Plugin marketplace content and the HTTP surface are not carried on v2; the skills/MCP API is covered by the kilocode.marketplace RPC round trips in packages/kilo-cli/test/marketplace.test.ts and the OAuth flow in packages/kilo-cli/test/marketplace-oauth.test.ts. Decision recorded under U-E2-23 in the former plan (`e39551c9b0:migration-tracking/plans/kilo-v2-migration-plan.md`); marketplace epic #15307.",
     "by": "kilo-new-marketplace"
   },
   "module:packages/opencode/test/kilocode/marketplace-plugin.test.ts": {
@@ -570,5 +601,669 @@
     "state": "ported",
     "note": "packages/kilo-vscode/test/enhance-prompt.test.ts carries the instruction assertions (question-shaped and instruction-shaped drafts, draft labelling), the cleaner cases (whitespace, fences, matching quotes, internal and mismatched quotes) and the provider quota error message.",
     "by": "v2-enhance-prompt"
+  },
+  "module:packages/kilo-vscode/src/commands/toggle-auto-approve.ts": {
+    "state": "ported",
+    "note": "webview-ui/src/v2/auto-approve.tsx createAutoApprove and webview-ui/src/v2/auto-approve-policy.ts createAutoApproveController replace the host toggle controller: while active they reply \"once\" to each permission request, dedupe across the permission store and the pending sweep, retry a failed reply, and skip sandboxEscalation. src/chat.ts and src/protocol.ts persist the toggle in context.globalState with a default of off. Differences: persistence is global rather than the closest v1 config scope; the sweep covers the current location while new requests arrive on the server-global event stream; the controller runs in the retained webview instead of the extension host before the view is first opened. Window-independent auto-approve is a scoped follow-up.",
+    "by": "v2-auto-approve"
+  },
+  "module:packages/kilo-vscode/src/kilo-provider/auto-approve.ts": {
+    "state": "ported",
+    "note": "webview-ui/src/v2/auto-approve.tsx replaces the v1 bridge: it requests the persisted state, listens for autoApproveStateLoaded, and persists toggles through the requestAutoApproveState/persistAutoApproveState messages in src/protocol.ts, handled by src/chat.ts. Replies use permission.reply({sessionID, requestID, decision: \"once\"}), so v1's SSE/session directory resolution is not needed.",
+    "by": "v2-auto-approve"
+  },
+  "module:packages/kilo-vscode/src/services/mcp-auth/index.ts": {
+    "state": "ported",
+    "note": "v1 exported McpAuthService and its sign-in state. v2 authenticates MCP OAuth server-side: packages/kilo-vscode/webview-ui/src/v2/mcp.ts starts api.integration.oauth.connect for a server integrationID, opens the authorization URL through the host open message, and polls api.integration.oauth.status; the server emits mcp.status.changed and createData resyncs api.mcp.list.",
+    "by": "settings-mcp"
+  },
+  "module:packages/kilo-vscode/src/services/mcp-auth/service.ts": {
+    "state": "ported",
+    "note": "v1 host service ran the CLI mcp auth commands and tracked the OAuth URL. v2 keeps no host auth service: the webview calls the server directly in packages/kilo-vscode/webview-ui/src/v2/mcp.ts (integration.oauth.connect/status/cancel, mcp.connect/disconnect, credential.remove for reset), and opens the URL through the existing open host message.",
+    "by": "settings-mcp"
+  },
+  "module:packages/kilo-vscode/src/services/mcp-auth/status.ts": {
+    "state": "ported",
+    "note": "v1 derived needs_auth/needs_client_registration/error text from MCP auth events. v2 reads the server McpServer.status (connected, pending, disabled, failed, needs_auth) and maps the label and error in packages/kilo-vscode/webview-ui/src/components/settings/agent-behaviour/McpSubtab.tsx.",
+    "by": "settings-mcp"
+  },
+  "module:packages/kilo-vscode/src/shared/custom-provider.ts": {
+    "state": "ported",
+    "note": "webview-ui/src/components/settings/CustomProviderValidation.ts carries the {env:VAR} key spelling (parseEnvKey) and the config value builder; CustomProviderDialog.tsx carries MASKED_CUSTOM_PROVIDER_KEY and stores the key as a v2 credential through settings.connectKey (the config provider registers a key method). The v1 deep-merge null sentinels are not needed: the host writes providers.<id> with jsonc-parser modify and removes the v1 provider.<id> alias in the same pass.",
+    "by": "settings-custom-provider"
+  },
+  "module:packages/kilo-vscode/tests/unit/custom-provider-dialog-validate.test.ts": {
+    "state": "ported",
+    "note": "packages/kilo-vscode/test/custom-provider.test.ts carries the assertions: provider ID format, duplicate model ids, base URL format, model capability mapping (reasoning and image), header completeness and the {env:VAR} key spelling, plus the providers.<id> write and the provider alias removal.",
+    "by": "settings-custom-provider"
+  },
+  "module:packages/kilo-vscode/tests/unit/provider-visibility.test.ts": {
+    "state": "ported",
+    "note": "webview-ui/src/components/settings/provider-visibility.ts carries disabledProviderOptions and the custom provider package set, and packages/kilo-vscode/test/custom-provider.test.ts asserts both. canChangeProviderKey, visibleConnectedIds and providersWithKiloFallback are not needed on v2: integrations and credentials answer directly (credentials(integration), integration.connections) and the Kilo fallback provider does not exist.",
+    "by": "settings-custom-provider"
+  },
+  "module:packages/kilo-vscode/webview-ui/src/components/settings/ModeCreateView.tsx": {
+    "state": "ported",
+    "note": "webview-ui/src/components/settings/agent-behaviour/ModeCreateView.tsx on the v2 agent contract: the name becomes the agents.<id> config key with the same slug and uniqueness validation, and Create writes mode \"primary\" with the description and system prompt through useSettingsConfig as one immediate host write.",
+    "by": "settings-agents"
+  },
+  "module:packages/kilo-vscode/webview-ui/src/components/settings/ModeEditView.tsx": {
+    "state": "ported",
+    "note": "webview-ui/src/components/settings/agent-behaviour/ModeEditView.tsx on the v2 agent contract: description, system prompt (agents.<id>.system), model and variant (agents.<id>.model through ModelPicker), temperature and top_p (agents.<id>.request.body), steps, hidden and disabled, clearing default_agent when the default becomes hidden or disabled, export, remove for a config-defined agent, the PermissionEditor mount for a custom agent and the read-only calculated permissions from api.agent.get.",
+    "by": "settings-agents"
+  },
+  "module:packages/kilo-vscode/webview-ui/src/components/settings/mode-io.ts": {
+    "state": "ported",
+    "note": "webview-ui/src/components/settings/agent-behaviour/mode-io.ts in the v2 agents.<id> shape: the 1 MB cap tag, the name, model, steps, permission and JSON validation and the export payload, with focused tests in packages/kilo-vscode/test/agent-behaviour.test.ts.",
+    "by": "settings-agents"
+  },
+  "module:packages/kilo-vscode/webview-ui/src/components/settings/mode-model.ts": {
+    "state": "ported",
+    "note": "The v1 modelPatch helper is replaced by webview-ui/src/components/settings/agent-behaviour/agent-list.ts (parseModelSelection and modelSelection) with the shared ModelPicker at agents.<id>.model; the variant is part of the same selection.",
+    "by": "settings-agents"
+  },
+  "module:packages/kilo-vscode/webview-ui/src/components/settings/agent-behaviour/WorkflowsTab.tsx": {
+    "state": "ported",
+    "v2": "packages/kilo-vscode/webview-ui/src/components/settings/agent-behaviour/WorkflowsSubtab.tsx",
+    "note": "WorkflowsSubtab lists discovered commands, shows their effective description and template, and writes or clears a model and variant in the existing config scope or the global scope for file-only workflows. KiloConfigPolicy applies a model-only commands entry after discovery without copying the Markdown template, and ModelPicker preserves a supported or nearest reasoning variant. Writes are immediate under the settings-config disposition. The help text is translated in all locales.",
+    "by": "workflow-file-model"
+  },
+  "module:packages/kilo-vscode/webview-ui/src/context/mcp-auth.ts": {
+    "state": "ported",
+    "note": "The v1 context exposed mcpStatus/mcpAuth/mcpRemoving signals and signIn/cancel/reset actions. v2 derives them from the MCP client in packages/kilo-vscode/webview-ui/src/v2/mcp.ts (servers from api.mcp.list, busy/removing signals, OAuth sign-in), and the subtab writes mcp.servers through useSettingsConfig.",
+    "by": "settings-mcp"
+  },
+  "module:packages/kilo-vscode/webview-ui/src/context/config.tsx": {
+    "state": "ported",
+    "v2": "packages/kilo-vscode/webview-ui/src/v2/settings-config.tsx",
+    "note": "webview-ui/src/v2/settings-config.tsx (createSettingsConfig, useSettingsConfig) replaces ConfigProvider: it reads the merged config and the global and project documents from the host, reports the owning scope per path (source), and writes each set or unset through the host at once. Deliberate difference: v2 has no draft, dirty state, save or discard; external edits hot-reload through config.updated.",
+    "by": "settings-foundation"
+  },
+  "module:packages/kilo-vscode/webview-ui/src/utils/config-scope.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-vscode/src/config-aliases.ts",
+    "note": "splitConfigByScope is replaced by a scope per write: src/config-aliases.ts scopeOf reports the scope that owns a path or its v1 alias, and every settings write names its scope. The v1 global-only rules for indexing, speech-to-text and the agent board are gone with those settings.",
+    "by": "settings-foundation"
+  },
+  "module:packages/kilo-vscode/tests/unit/config-scope.test.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-vscode/test/config-aliases.test.ts",
+    "note": "packages/kilo-vscode/test/config-aliases.test.ts carries the scope assertions (project wins, global only, legacy alias owner, no owner). The indexing, speech-to-text and agent board cases are not carried because v2 has no such settings.",
+    "by": "settings-foundation"
+  },
+  "module:packages/kilo-vscode/webview-ui/src/utils/config-utils.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-vscode/webview-ui/src/v2/settings-merge.ts",
+    "note": "The draft merge helpers (deepMerge, mergeScopedConfig, stripNulls, resolveConfig, ConfigState) are not needed without a draft. webview-ui/src/v2/settings-merge.ts mergeConfigDocuments merges the server config documents, and MCP removal is an unset of mcp.servers.<name> in McpSubtab.tsx, so removeMcpConfig and the removal retention helpers are not needed.",
+    "by": "settings-foundation"
+  },
+  "module:packages/kilo-vscode/tests/unit/config-utils.test.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-vscode/test/settings-merge.test.ts",
+    "note": "packages/kilo-vscode/test/settings-merge.test.ts carries the merge order assertions and packages/kilo-vscode/test/config-file-edit.test.ts the write and unset assertions. The null-sentinel and draft cases are not carried because v2 writes JSONC edits directly.",
+    "by": "settings-foundation"
+  },
+  "module:packages/kilo-vscode/src/kilo-provider/config-file.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-vscode/src/settings-host.ts",
+    "note": "src/settings-host.ts resolves the global and project target files from the server config documents, src/settings-paths.ts gives the global directory fallback and canonical paths, and src/config-file-edit.ts isKiloConfigFile limits writes to the Kilo config file names.",
+    "by": "settings-foundation"
+  },
+  "module:packages/kilo-vscode/src/kilo-provider/remove-config-item.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-vscode/webview-ui/src/components/settings/agent-behaviour/McpSubtab.tsx",
+    "note": "MCP removal is config.unset([\"mcp\", \"servers\", name], scope) in webview-ui/src/components/settings/agent-behaviour/McpSubtab.tsx, written by src/settings-host.ts, which also removes the v1 direct MCP alias (src/config-file-edit.ts). The settings refresh comes from config.updated.",
+    "by": "settings-foundation"
+  },
+  "module:packages/kilo-vscode/tests/unit/remove-config-item.test.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-vscode/test/config-file-edit.test.ts",
+    "note": "packages/kilo-vscode/test/config-file-edit.test.ts asserts the unset path removal and the v1 direct MCP alias removal. The refresh-after-removal case is not needed because the host does not refresh by hand.",
+    "by": "settings-foundation"
+  },
+  "module:packages/kilo-vscode/webview-ui/src/font-size.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-vscode/webview-ui/src/v2/kilo-settings.ts",
+    "note": "webview-ui/src/v2/kilo-settings.ts carries clampFontSize (same 10 to 24 range), the boot size read from --kilo-font-size-13 and applyFontSize over the --kilo-font-size-* variables; DisplayTab.tsx applies it.",
+    "by": "settings-general"
+  },
+  "module:packages/kilo-vscode/src/kilo-provider/font-size.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-vscode/src/settings-host.ts",
+    "note": "src/settings-host.ts listens to onDidChangeConfiguration for the kilo-code.v2.* settings, including fontSize, and posts vscodeSettingsLoaded with the clamped value.",
+    "by": "settings-general"
+  },
+  "module:packages/kilo-vscode/src/kilo-provider/mcp-oauth.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-vscode/webview-ui/src/v2/mcp.ts",
+    "note": "The host MCP sign-in and connect helpers are replaced by server calls in webview-ui/src/v2/mcp.ts (integration.oauth.connect/status/cancel, mcp.connect/disconnect); the authorization URL opens through the existing open host message and the result shows in the MCP subtab.",
+    "by": "settings-mcp"
+  },
+  "module:packages/kilo-vscode/webview-ui/src/components/settings/agent-behaviour-patches.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-vscode/webview-ui/src/components/settings/agent-behaviour/McpSubtab.tsx",
+    "note": "The patch helpers became direct scoped writes: McpSubtab.tsx sets and unsets mcp.servers.<name> fields in the scope from config.source, AgentsSubtab.tsx writes and clears default_agent, ModeEditView.tsx clears default_agent when that agent becomes hidden or disabled, and agent-list.ts agentRows computes removable for config-defined agents. mcpStatusError maps to the McpSubtab status label.",
+    "by": "settings-agents"
+  },
+  "module:packages/kilo-vscode/tests/unit/mode-io.test.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-vscode/test/agent-behaviour.test.ts",
+    "note": "packages/kilo-vscode/test/agent-behaviour.test.ts parseImport and buildExport carry the JSON, name, duplicate, mode default, permission, model and steps validation and the export prefix.",
+    "by": "settings-agents"
+  },
+  "module:packages/kilo-vscode/tests/unit/mode-model.test.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-vscode/test/agent-behaviour.test.ts",
+    "note": "packages/kilo-vscode/test/agent-behaviour.test.ts parseModelSelection and modelSelection carry the model and variant round trip. The variant carry-over cases are not carried: the v2 ModelPicker picks the model and variant as one selection.",
+    "by": "settings-agents"
+  },
+  "module:packages/kilo-vscode/tests/unit/permission-editor.test.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-vscode/test/permission-rules.test.ts",
+    "note": "packages/kilo-vscode/test/permission-rules.test.ts carries effectiveRuleLevel, the config rule order and the patch generation for simple, grouped and granular tools. The onboarding cases are not carried because v2 has no permission onboarding step.",
+    "by": "settings-permissions"
+  },
+  "module:packages/kilo-vscode/tests/unit/mcp-auth-service.test.ts": {
+    "state": "dropped",
+    "note": "Tests the v1 host McpAuthService, which v2 removes: the server owns MCP OAuth state (integration.oauth.*) and the webview calls it directly in webview-ui/src/v2/mcp.ts.",
+    "by": "settings-mcp"
+  },
+  "module:packages/kilo-vscode/tests/unit/mcp-auth-status.test.ts": {
+    "state": "dropped",
+    "note": "Tests needsAuthNames from the removed v1 host service; v2 reads McpServer.status from the server.",
+    "by": "settings-mcp"
+  },
+  "module:packages/opencode/src/kilocode/skill-remove.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-plugin/src/skill/remove.ts",
+    "note": "SkillRemove.roots/target/targets keep the v1 target checks: an absolute registered manifest, not built-in, not a URL cache entry, and a manifest file only. The v2 rule also requires a configured skill directory, so plugin and embedded skills cannot be deleted. The kilocode.skill RPC in packages/kilo-plugin/src/skill/index.ts deletes the manifest, publishes config.updated, and waits for the config skill plugin to rescan.",
+    "by": "skill-removal"
+  },
+  "module:packages/opencode/test/kilocode/skill-remove.test.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-plugin/test/skill-remove.test.ts",
+    "note": "The v2 tests cover the v1 cases (built-in, unregistered, relative, non-manifest, URL cache, accepted registered manifest) plus configured roots, flat skills, nested non-manifest files, traversal, the root itself, non-markdown files, and the removable list.",
+    "by": "skill-removal"
+  },
+  "api:POST /kilocode/skill/remove": {
+    "state": "ported",
+    "v2": "packages/schema/src/kilocode/skill.ts",
+    "note": "The Kilo plugin RPC kilocode.skill remove replaces the v1 POST /kilocode/skill/remove route. The generic server route POST /api/rpc/:rpcID/:method serves it, and the VS Code Skills subtab calls remove with a confirm step.",
+    "by": "skill-removal"
+  },
+  "module:packages/kilo-vscode/src/kilo-provider/open-config.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-vscode/src/open-config.ts",
+    "note": "packages/kilo-vscode/src/open-config.ts lists the config candidates of one scope from the server directory entries and documents, marks an existing file loaded only when it is a document, and lets chooseConfigFile open the only candidate directly or show a quick pick. src/settings-host.ts openConfigFile applies it to the resolved global or project target and creates the chosen missing file. v1 legacy and recommended sources have no v2 equivalent because Kilo v2 has no legacy fallback and one newFile name.",
+    "by": "open-config-picker"
+  },
+  "module:packages/kilo-vscode/tests/unit/open-config.test.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-vscode/test/open-config.test.ts",
+    "note": "packages/kilo-vscode/test/open-config.test.ts carries the candidate list, the loaded and create status, the direct open for one candidate, the quick pick for several with the chosen file, and dismissal. The v1 no-workspace warning, legacy status, recommended create and localized-error assertions have no v2 equivalent: v2 always has a directory, has no legacy file, and the host shows the error directly.",
+    "by": "open-config-picker"
+  },
+  "module:packages/kilo-vscode/webview-ui/src/utils/open-config.ts": {
+    "state": "dropped",
+    "note": "The v1 helper built the localized openConfigFile message: scope, loaded status, create entry and all source labels. v2 has no such message: the webview posts openFile with the host-resolved target and the host quick pick uses fixed English labels like the other host-side confirmations, so configMessage is not carried. The picker behavior is the separate kilo-provider/open-config.ts cell ported to packages/kilo-vscode/src/open-config.ts.",
+    "by": "fix-progress-map"
+  },
+  "module:packages/kilo-vscode/tests/unit/open-config-message.test.ts": {
+    "state": "dropped",
+    "note": "Tests configMessage, the v1 webview helper that built the openConfigFile message and its localized labels. v2 has no such message: the webview posts openFile and the host builds the quick pick, so the label assertions are not carried.",
+    "by": "open-config-picker"
+  },
+  "module:packages/kilo-vscode/src/kilo-provider/config-bindings.ts": {
+    "state": "dropped",
+    "note": "ConfigBindings guarded v1 config.overlayUpdate with a connection generation, project generation and target revision, and expired a binding after reconnect, trust revocation, removal or save. v2 writes the config files in the extension host (src/settings-host.ts configWrite with the serialize chain) and the webview has no revision-bound target, so the class has no v2 caller. src/settings-host.ts owns the file target and the write order instead.",
+    "by": "open-config-picker"
+  },
+  "module:packages/kilo-vscode/tests/unit/config-bindings.test.ts": {
+    "state": "dropped",
+    "note": "Tests the removed v1 ConfigBindings class (immutable read target, expiry on reconnect, trust, removal and save, and publication after a concurrent refresh). v2 host writes through src/settings-host.ts with the serialize chain and has no bindings.",
+    "by": "open-config-picker"
+  },
+  "module:packages/kilo-vscode/webview-ui/src/context/cost-alert.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-vscode/src/cost-alert.ts",
+    "note": "src/cost-alert.ts createCostAlert and createCostAlerts, with src/extension.ts, replace the synthetic webview question with a non-blocking VS Code notification. Continue acknowledges the session and threshold, Stop interrupts that session, and a dismissed alert rearms on its next execution. Unlike the webview question, another prompt does not implicitly dismiss the native notification, which cannot be closed programmatically. The limit accepts fractional USD and uses v2 recorded session cost. test/cost-alert.test.ts covers the policy and event stream.",
+    "by": "session-cost-alert"
+  },
+  "module:packages/opencode/src/kilocode/commit-message/index.ts": {
+    "state": "ported",
+    "note": "packages/kilo-plugin/src/commit-message/index.ts KiloCommitMessagePlugin: the barrel is replaced by the plugin that registers the kilocode.commit-message RPC and reads the custom prompt from commit_message.prompt (KiloConfigPolicy.commitMessagePrompt).",
+    "by": "commit-message-port"
+  },
+  "module:packages/opencode/src/kilocode/commit-message/generate.ts": {
+    "state": "ported",
+    "note": "packages/kilo-plugin/src/commit-message/generate.ts CommitMessageGenerate.generate: same SYSTEM_PROMPT, custom prompt replacement, language requirement (none for en), previous-message instruction, code fence and quote cleanup, NoChangesError before any model call, 30 second timeout, provider error text through errorMessage (Error, tagged value, data.message). One generate.text call through the plugin context replaces the session LLM stream; the model is the available small_model (title agent model), else the host small model of the default provider (KiloSmallModel gates kilo-auto/small on Kilo credentials, so local-only setups use their own model), else the default model, at the lowest reasoning variant.",
+    "by": "commit-message-port"
+  },
+  "module:packages/opencode/src/kilocode/commit-message/git-context.ts": {
+    "state": "ported",
+    "note": "packages/kilo-plugin/src/commit-message/git-context.ts CommitMessageGit.getGitContext: staged first, else porcelain status with untracked placeholders, lock file filter, selectedFiles filter, binary placeholder, 4000 character truncation, last 5 commits, windowsHide on every git spawn.",
+    "by": "commit-message-port"
+  },
+  "module:packages/opencode/src/kilocode/commit-message/types.ts": {
+    "state": "ported",
+    "note": "Request and response types: packages/schema/src/kilocode/commit-message.ts KiloCommitMessageRpc.Input and the generate output; GitContext and FileChange moved into packages/kilo-plugin/src/commit-message/git-context.ts.",
+    "by": "commit-message-port"
+  },
+  "module:packages/opencode/test/kilocode/commit-message/generate.test.ts": {
+    "state": "ported",
+    "note": "packages/kilo-plugin/test/commit-message-generate.test.ts carries the model, prompt, previous message, cleanup, no-changes, error-message, custom prompt and language assertions, plus the 30 second timeout. packages/kilo-cli/test/commit-message.test.ts checks small_model selection, the configured prompt and the language through the real host.",
+    "by": "commit-message-port"
+  },
+  "module:packages/opencode/test/kilocode/commit-message/git-context.test.ts": {
+    "state": "ported",
+    "note": "packages/kilo-plugin/test/commit-message-git-context.test.ts carries the parser, status mapping, lock file, staged versus unstaged, binary, truncation, selectedFiles, branch and recent commit assertions against real temporary repositories.",
+    "by": "commit-message-port"
+  },
+  "module:packages/opencode/test/kilocode/commit-message-windows.test.ts": {
+    "state": "ported",
+    "note": "packages/kilo-plugin/test/commit-message-windows.test.ts checks that every git spawn of getGitContext passes windowsHide: true.",
+    "by": "commit-message-port"
+  },
+  "module:packages/opencode/src/kilocode/server/httpapi/groups/commit-message.ts": {
+    "state": "ported",
+    "note": "The /commit-message HttpApi group is replaced by the kilocode.commit-message Kilo RPC contract packages/schema/src/kilocode/commit-message.ts (generate, errors no_changes and failed), served by the generic POST /api/rpc/:rpcID/:method route.",
+    "by": "commit-message-port"
+  },
+  "module:packages/opencode/src/kilocode/server/httpapi/handlers/commit-message.ts": {
+    "state": "ported",
+    "note": "packages/kilo-plugin/src/commit-message/index.ts registers the generate handler with ctx.rpc.register; NoChangesError maps to the no_changes error and every other failure to failed with its message, as the typed 422 errors did.",
+    "by": "commit-message-port"
+  },
+  "module:packages/opencode/test/kilocode/server/commit-message-no-changes.test.ts": {
+    "state": "ported",
+    "note": "packages/kilo-cli/test/commit-message.test.ts calls the RPC through the real host and generated client: a clean repository fails with no_changes and no model call, a model failure and a streamed provider error from a local OpenAI-compatible server keep their message, an unavailable small_model falls back to the default model.",
+    "by": "commit-message-port"
+  },
+  "module:packages/kilo-vscode/src/services/commit-message/index.ts": {
+    "state": "ported",
+    "note": "packages/kilo-vscode/src/commit-message.ts commitMessageCommand, registered as kilo-code.v2.generateCommitMessage in src/extension.ts with scm/title and scm/input entries for git: git extension activation, repository of the clicked view, cancellable source control progress, 35 second client timeout, previous message per repository, language from kilo-code.v2.languageCommitMessage, server errors in an error message.",
+    "by": "commit-message-port"
+  },
+  "module:packages/kilo-vscode/src/services/commit-message/__tests__/index.spec.ts": {
+    "state": "ported",
+    "note": "packages/kilo-vscode/test/commit-message.test.ts carries the missing git extension, no repository, connection failure, input box write, progress options, previous message, multi-repository selection, server error and cancellation assertions, plus the language resolution.",
+    "by": "commit-message-port"
+  },
+  "module:packages/opencode/test/kilocode/server/httpapi-kilo-edit.test.ts": {
+    "state": "ported",
+    "note": "packages/kilo-gateway-core/test/autocomplete-request.test.ts (Kilo headers and body, fenced body and usage, direct Inception BYOK, unreadable error body status passthrough, 504 timeout, 499 cancel) and packages/kilo-plugin/test/gateway-autocomplete.test.ts (401 as unauthorized without Kilo auth, 400 for a FIM model, team header and feature header on the Gateway request) carry the assertions for the kilocode.gateway autocomplete.edit RPC, which replaces the v1 /kilo/edit route.",
+    "by": "autocomplete-server"
+  },
+  "module:packages/kilo-vscode/src/services/autocomplete/migrate-default.ts": {
+    "state": "dropped",
+    "note": "One-time migration of stored kilo-code.new.autocomplete provider/model values to the unset default. The v2 extension reads new keys (kilo-code.v2.autocomplete.*), which have no stored v1 values to migrate; unset already resolves to the default model (packages/kilo-vscode/src/services/autocomplete/settings.ts readAutocompleteSettings).",
+    "by": "autocomplete-inline"
+  },
+  "module:packages/kilo-vscode/tests/unit/autocomplete-migrate-default.test.ts": {
+    "state": "dropped",
+    "note": "Tests the dropped migrate-default.ts migration of kilo-code.new.autocomplete values; v2 reads kilo-code.v2.autocomplete.* keys with no v1 values to migrate.",
+    "by": "autocomplete-inline"
+  },
+  "module:packages/kilo-vscode/docs/error-handling/autocomplete-settings-link.md": {
+    "state": "dropped",
+    "note": "Work note for v1 issue #6284 (status bar settings link), not runtime code. The v2 status bar tooltip links to kilo-code.v2.settings with the autocomplete tab (packages/kilo-vscode/src/services/autocomplete/AutocompleteStatusBar.ts).",
+    "by": "autocomplete-inline"
+  },
+  "module:packages/opencode/src/kilocode/review/review.txt": {
+    "state": "ported",
+    "note": "packages/kilo-plugin/src/review/review.txt, the v1 prompt with two adaptations: the sub-agent tool is named `subagent` instead of Task, and the sentence tying the default base list to Review.getBaseBranch() in review.ts is dropped (no base-branch helper on v2; review.ts stays open under #15315/#14394). Scope order, effort flags, base order, target validation, worktree metadata candidates (unchanged: Agent Manager metadata, not runtime config), tracks, output format, no-edit rule and the post-review question with `mode` are unchanged. packages/kilo-plugin/test/review-command.test.ts checks them.",
+    "by": "v2-review-cmd"
+  },
+  "module:packages/opencode/src/kilocode/review/command.ts": {
+    "state": "ported",
+    "note": "packages/kilo-plugin/src/review/index.ts KiloReview.Plugin registers `review` with the v1 description through ctx.command.transform and prompts the invoking session with the prompt, `$ARGUMENTS` replaced by the trimmed input. It is in KiloPlugins, after the built-in plugins (replaces the built-in review) and before the config plugins (a config `review` still wins); packages/kilo-cli/test/review-command.test.ts proves both on the host server. v2 Command.Info has no `hints` field. isReviewCommand/reviewCommandName/parseReviewCommand serve review telemetry (session/processor.ts, #15303) and the suggest tool (suggestion/index.ts, #15332); their consumers are open cells and port the helper with them. The command-display.ts use is a no-op special case (name === \"review\").",
+    "by": "v2-review-cmd"
+  },
+  "module:packages/opencode/test/kilocode/review-command.test.ts": {
+    "state": "ported",
+    "note": "packages/kilo-plugin/test/review-command.test.ts carries every prompt assertion (scopes and precedence, metadata candidates, base order, commit and PR review, untrusted input, symlinks, no-edit contract, tracks, adaptive sub-agents) plus scope order, effort flags, the `subagent` adaptation and a decode of the post-review question example with `mode` through QuestionTool.Input; it also runs the built-in then the Kilo command plugin and checks the registered description and prompt. packages/kilo-cli/test/review-command.test.ts replaces the 'resolves the review command' case on the real host server, with the config override. Not carried: the parseReviewCommand cases (telemetry helper, #15303), `hints` (no v2 field), and the Review.getBaseBranch() reference (dropped from the prompt).",
+    "by": "v2-review-cmd"
+  },
+  "module:packages/opencode/src/kilocode/permission/agent-manager.ts": {
+    "state": "ported",
+    "note": "packages/kilo-plugin/src/agent-manager/permission.ts harden plus the permission evaluate hook. `prompt`, `stop`, `move` and `answer` need an allow rule that names the exact action and pattern; a broad, global, or saved wildcard allow asks again, while `local`, `worktree` and `overview` keep broad allows. v1 hardened the configured and the saved rules separately in Permission.resolve; v2 core passes the configured plus project saved rules on the hook event (packages/core/src/permission.ts seam), so an exact Always allow decides and a later wildcard does not replace it. Unattended work denies an unapproved side effect instead of settling it, the counterpart of v1's headless deny. Saved rules are project scoped in the v2 database instead of v1's global config.",
+    "by": "agent-manager"
+  },
+  "module:packages/opencode/test/kilocode/permission/agent-manager-prompt.test.ts": {
+    "state": "ported",
+    "note": "packages/kilo-plugin/test/agent-manager-permission.test.ts carries every v1 case (broad Agent Manager allow, global allow, saved wildcard approval, explicit approvals) and adds a later wildcard and a later ask. Integration cases through the core permission service with the hook registered: Always allow keeps an exact approval for the next call and settles the same pattern pending in another session of the project but not another side effect; saved and configured wildcards ask again; unattended work denies with a message and honors an exact saved approval.",
+    "by": "agent-manager"
+  },
+  "module:packages/kilo-vscode/webview-ui/src/context/todo-revert.ts": {
+    "state": "ported",
+    "note": "webview-ui/src/v2/todo-state.ts todoState applies the staged revert to the message parts before it selects the latest completed todowrite list: messages after the revert message are hidden, parts at or after the reverted part are hidden, and a message-level revert hides the message. The v2 part order is the content order, so the reverted part is found by id instead of comparing ids.",
+    "by": "composer-todos"
+  },
+  "module:packages/kilo-vscode/tests/unit/todo-revert.test.ts": {
+    "state": "ported",
+    "note": "packages/kilo-vscode/test/todo-dock.test.ts carries the revert assertions: a reverted write keeps the list before it, the latest state returns without a revert, and a reverted part inside one message keeps only the earlier todowrite parts.",
+    "by": "composer-todos"
+  },
+  "module:packages/opencode/test/kilocode/todowrite-description.test.ts": {
+    "state": "ported",
+    "note": "packages/kilo-plugin/test/todo-tool.test.ts asserts the v1 description phrases on the Kilo todowrite tool, and the Kilo host registers that tool unconditionally through KiloPlugins.",
+    "by": "composer-todos"
+  },
+  "module:packages/opencode/src/kilocode/agent-manager/protocol.ts": {
+    "state": "ported",
+    "v2": "packages/schema/src/kilocode/agent-manager.ts",
+    "note": "packages/schema/src/kilocode/agent-manager.ts carries the request and result schemas as the kilocode.agent-manager RPC contract: overview, prompt, stop, move, answer, list, reply, reject, removeSnapshot and the start, requested and cancelled events. The sandboxInheritanceToken field is not carried (excluded sandbox epic).",
+    "by": "am-progress-map"
+  },
+  "module:packages/opencode/src/kilocode/agent-manager/service.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-plugin/src/agent-manager/service.ts",
+    "note": "packages/kilo-plugin/src/agent-manager/service.ts createService: pending request table, list with the optional overview filter, reply with the result match check, reject, and dispose that ends pending requests. The plugin index wires requested and cancelled emissions to the RPC events.",
+    "by": "am-progress-map"
+  },
+  "module:packages/opencode/src/kilocode/agent-manager/protection.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-plugin/src/agent-manager/protection.ts",
+    "note": "packages/kilo-plugin/src/agent-manager/protection.ts assertMutablePath rejects a direct edit of agent-manager.json in .kilo2 and .kilo, and packages/kilo-plugin/src/agent-manager/guard.ts applies it to the mutation tools. The .kilocode directory is not in the v2 state directory list; the PR records that as a known gap.",
+    "by": "am-progress-map"
+  },
+  "module:packages/opencode/src/kilocode/agent-manager/event.ts": {
+    "state": "ported",
+    "v2": "packages/schema/src/kilocode/agent-manager.ts",
+    "note": "packages/schema/src/kilocode/agent-manager.ts Task, Mode and Start, plus the start event, carry the v1 task input schema; packages/kilo-plugin/src/agent-manager/tool.ts validates and emits the start event through the runtime.",
+    "by": "am-progress-map"
+  },
+  "module:packages/opencode/test/kilocode/agent-manager-tool.test.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-plugin/test/agent-manager-tool.test.ts",
+    "note": "packages/kilo-plugin/test/agent-manager-tool.test.ts carries the agent_manager tool schema, input validation, worktree and local modes, and the error paths against the plugin runtime.",
+    "by": "am-progress-map"
+  },
+  "module:packages/opencode/test/kilocode/agent-manager-models-tool.test.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-plugin/test/agent-manager-models-tool.test.ts",
+    "note": "packages/kilo-plugin/test/agent-manager-models-tool.test.ts carries the agent_manager_models tool agent, model and variant listing and matching behavior.",
+    "by": "am-progress-map"
+  },
+  "module:packages/opencode/test/kilocode/agent-manager-service.test.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-plugin/test/agent-manager-service.test.ts",
+    "note": "packages/kilo-plugin/test/agent-manager-service.test.ts carries pending request matching, reply and reject errors, filtered list, emission and disposal.",
+    "by": "am-progress-map"
+  },
+  "module:packages/opencode/test/kilocode/agent-manager-protection.test.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-plugin/test/agent-manager-protection.test.ts",
+    "note": "packages/kilo-plugin/test/agent-manager-protection.test.ts carries the state file guard for the mutation tools, including unrelated paths.",
+    "by": "am-progress-map"
+  },
+  "api:GET /kilocode/agent-manager": {
+    "state": "native",
+    "v2": "packages/schema/src/kilocode/agent-manager.ts",
+    "note": "The pending request list is the list method of the native kilocode.agent-manager RPC (packages/schema/src/kilocode/agent-manager.ts Definition, packages/kilo-plugin/src/agent-manager/index.ts), served by the native rpc.call route.",
+    "by": "am-progress-map"
+  },
+  "api:POST /kilocode/agent-manager/{requestID}/reply": {
+    "state": "native",
+    "v2": "packages/schema/src/kilocode/agent-manager.ts",
+    "note": "The reply route is the reply method of the native kilocode.agent-manager RPC, with the native not_found and invalid_reply errors served by rpc.call.",
+    "by": "am-progress-map"
+  },
+  "api:POST /kilocode/agent-manager/{requestID}/reject": {
+    "state": "native",
+    "v2": "packages/schema/src/kilocode/agent-manager.ts",
+    "note": "The reject route is the reject method of the native kilocode.agent-manager RPC, with the native not_found error served by rpc.call.",
+    "by": "am-progress-map"
+  },
+  "module:packages/opencode/test/kilocode/branch-name.test.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-plugin/test/branch-name.test.ts",
+    "note": "packages/kilo-plugin/test/branch-name.test.ts carries branch name generation, prompt and model handling, and the failure paths of the kilocode.branch-name RPC.",
+    "by": "am-progress-map"
+  },
+  "module:packages/opencode/src/kilocode/snapshot/cleanup.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-plugin/src/agent-manager/snapshot.ts",
+    "note": "packages/kilo-plugin/src/agent-manager/snapshot.ts SnapshotCleanup.remove keeps the v1 lexical and symlink trusted path checks, the managed worktree containment checks, the macOS /private and 8.3 alias handling and the canary ordering for a worktree that is already gone. It is served by the removeSnapshot method of the kilocode.agent-manager RPC.",
+    "by": "am-progress-map"
+  },
+  "module:packages/opencode/test/kilocode/snapshot-repository-cleanup.test.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-plugin/test/agent-manager-snapshot.test.ts",
+    "note": "packages/kilo-plugin/test/agent-manager-snapshot.test.ts carries the removeSnapshot cases: missing worktree, unmanaged path, symlink, repository containment, aliases and the removed flag.",
+    "by": "am-progress-map"
+  },
+  "api:POST /kilocode/snapshot/remove": {
+    "state": "native",
+    "v2": "packages/schema/src/kilocode/agent-manager.ts",
+    "note": "The remove route is the removeSnapshot method of the native kilocode.agent-manager RPC, served by rpc.call; the handler calls SnapshotCleanup.remove.",
+    "by": "am-progress-map"
+  },
+  "module:packages/core/src/kilocode/caffeination.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-vscode/src/services/caffeination",
+    "note": "packages/kilo-vscode/src/services/caffeination (service, inhibitor, feed, confirm) ports the driver, availability probe, start and stop timeouts, ready marker and state projection. The panel and sidebar header use it; packages/kilo-vscode/test/caffeination-feed.test.ts and the caffeination driver tests cover the state flow.",
+    "by": "am-progress-map"
+  },
+  "module:packages/opencode/src/kilocode/primary-worktree.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-vscode/src/agent-manager/project/paths.ts",
+    "note": "packages/kilo-vscode/src/agent-manager/project/paths.ts resolveProjectRoot maps a linked worktree to the primary checkout with rev-parse and worktree list --porcelain, and checkoutRoot finds the checkout that contains a subfolder. The extension owns that resolution; the v1 primaryPaths config and skill mirror is replaced by the v2 config walk to the project root.",
+    "by": "am-progress-map"
+  },
+  "module:packages/opencode/src/kilocode/worktree-cleanup.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-vscode/src/agent-manager/WorktreeManager.ts",
+    "note": "packages/kilo-vscode/src/agent-manager/WorktreeManager.ts removeWorktree and detach keep the Kilo removal policy: rename away first, fs.rm with retry options for locked Windows handles, git worktree remove --force as the fallback, prune of the git metadata, and branch deletion. The server no longer removes extension-created worktrees.",
+    "by": "am-progress-map"
+  },
+  "module:packages/opencode/src/kilocode/worktree-family.ts": {
+    "state": "native",
+    "v2": "packages/core/src/worktree.ts",
+    "note": "Worktree inventory and discovery are native: packages/core/src/worktree.ts Worktree.list and Worktree.refresh return the recorded project worktrees and rediscover them across checkout roots, and packages/core/src/worktree/git.ts uses git worktree list through Git.repo.discover. packages/core/test/worktree.test.ts covers linked worktrees and recorded strategies.",
+    "by": "am-progress-map"
+  },
+  "module:packages/opencode/src/kilocode/worktree/pty-cleanup.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-vscode/src/agent-manager/pty-cleanup.ts",
+    "note": "packages/kilo-vscode/src/agent-manager/pty-cleanup.ts teardown evicts the worktree location through client.debug.location.evict, which disposes the directory services, including its PTYs. acquirePtyCleanup closes the embedded terminals first; packages/kilo-vscode/test/pty-cleanup.test.ts covers eviction, failure propagation and close ordering.",
+    "by": "am-progress-map"
+  },
+  "module:packages/opencode/test/kilocode/primary-worktree.test.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-vscode/test/agent-project-paths.test.ts",
+    "note": "packages/kilo-vscode/test/agent-project-paths.test.ts carries the linked worktree to primary checkout resolution, the plain repository case, subfolders and malformed rev-parse output.",
+    "by": "am-progress-map"
+  },
+  "module:packages/opencode/test/kilocode/worktree-diff.test.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-vscode/test/local-diff.test.ts",
+    "note": "packages/kilo-vscode/test/local-diff.test.ts and the diff sources packages/kilo-vscode/src/diff/sources/{worktree,staged,unstaged}.ts carry the tracked, staged and untracked worktree diff behavior, including synthetic patches for untracked files.",
+    "by": "am-progress-map"
+  },
+  "module:packages/opencode/test/kilocode/worktree-family-submodule.test.ts": {
+    "state": "native",
+    "v2": "packages/core/src/git.ts",
+    "note": "Git.repo.discover in packages/core/src/git.ts resolves the repository with rev-parse --show-toplevel, so a submodule yields its working tree and not the gitdir; packages/core/test/worktree.test.ts covers linked worktree tracking from that resolution.",
+    "by": "am-progress-map"
+  },
+  "module:packages/opencode/test/kilocode/worktree-family.test.ts": {
+    "state": "native",
+    "v2": "packages/core/test/worktree.test.ts",
+    "note": "packages/core/test/worktree.test.ts covers the native worktree inventory: a resolved project records canonical and linked worktrees, and stored rows survive when discovery cannot list a strategy.",
+    "by": "am-progress-map"
+  },
+  "module:packages/opencode/test/kilocode/worktree-project-skills.test.ts": {
+    "state": "ported",
+    "v2": "packages/core/test/kilocode/config/discovery.test.ts",
+    "note": "packages/core/src/kilocode/config/discovery.ts walks from the location to the project checkout root, so a session in a managed worktree reads the primary kilo2.json and .kilo config; packages/core/test/kilocode/config/discovery.test.ts covers the walk bound. Nested primary package directories are not mirrored as separate roots.",
+    "by": "am-progress-map"
+  },
+  "module:packages/opencode/test/kilocode/worktree-remove-lock.test.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-vscode/test/worktree-manager.test.ts",
+    "note": "packages/kilo-vscode/test/worktree-manager.test.ts carries the locked worktree removal cases, including an EBUSY directory and a live process lock, and keeps the branch when the directory stays locked.",
+    "by": "am-progress-map"
+  },
+  "api:POST /kilocode/worktree/teardown": {
+    "state": "native",
+    "v2": "packages/protocol/src/groups/debug.ts",
+    "note": "Teardown is the native debug.location.evict endpoint (packages/protocol/src/groups/debug.ts, packages/server/src/handlers/debug.ts); packages/kilo-vscode/src/agent-manager/pty-cleanup.ts calls it through client.debug.location.evict.",
+    "by": "am-progress-map"
+  },
+  "module:packages/opencode/src/kilocode/presence/context.ts": {
+    "state": "dropped",
+    "note": "The presence context and route prefixes. Attached-session presence is an excluded epic: .kilo/plans/agent-manager-v2-conventions.md lists it as excluded, and PR #15737 has no presence module, /presence route or import. Visible presence uses session.view, which is tracked by its own agent-manager work.",
+    "by": "am-progress-map"
+  },
+  "module:packages/opencode/src/kilocode/presence/policy.ts": {
+    "state": "dropped",
+    "note": "The presence policy. Attached-session presence is an excluded epic: .kilo/plans/agent-manager-v2-conventions.md lists it as excluded, and PR #15737 has no presence module, /presence route or import. Visible presence uses session.view, which is tracked by its own agent-manager work.",
+    "by": "am-progress-map"
+  },
+  "module:packages/opencode/src/kilocode/presence/service.ts": {
+    "state": "dropped",
+    "note": "The presence service and its event-service connection. Attached-session presence is an excluded epic: .kilo/plans/agent-manager-v2-conventions.md lists it as excluded, and PR #15737 has no presence module, /presence route or import. Visible presence uses session.view, which is tracked by its own agent-manager work.",
+    "by": "am-progress-map"
+  },
+  "module:packages/opencode/test/kilocode/presence/policy.test.ts": {
+    "state": "dropped",
+    "note": "The presence policy test. Attached-session presence is an excluded epic: .kilo/plans/agent-manager-v2-conventions.md lists it as excluded, and PR #15737 has no presence module, /presence route or import. Visible presence uses session.view, which is tracked by its own agent-manager work.",
+    "by": "am-progress-map"
+  },
+  "module:packages/opencode/test/kilocode/presence/service-presence.test.ts": {
+    "state": "dropped",
+    "note": "The presence service event test. Attached-session presence is an excluded epic: .kilo/plans/agent-manager-v2-conventions.md lists it as excluded, and PR #15737 has no presence module, /presence route or import. Visible presence uses session.view, which is tracked by its own agent-manager work.",
+    "by": "am-progress-map"
+  },
+  "module:packages/opencode/test/kilocode/presence/service.test.ts": {
+    "state": "dropped",
+    "note": "The presence service test. Attached-session presence is an excluded epic: .kilo/plans/agent-manager-v2-conventions.md lists it as excluded, and PR #15737 has no presence module, /presence route or import. Visible presence uses session.view, which is tracked by its own agent-manager work.",
+    "by": "am-progress-map"
+  },
+  "patch:presence:391f36cf44c5": {
+    "state": "dropped",
+    "note": "The server route hook for the attached-session presence service. Attached-session presence is an excluded epic: .kilo/plans/agent-manager-v2-conventions.md lists it as excluded, and PR #15737 has no presence module, /presence route or import. Visible presence uses session.view, which is tracked by its own agent-manager work.",
+    "by": "am-progress-map"
+  },
+  "module:packages/kilo-vscode/src/agent-manager/am-visible-presence.ts": {
+    "state": "dropped",
+    "note": "Attached-session presence is an excluded epic (.kilo/plans/agent-manager-v2-conventions.md). The v2 panel shows visible presence from session.view; there is no presence module, registration call or /presence route.",
+    "by": "am-progress-map"
+  },
+  "module:packages/kilo-vscode/src/agent-manager/am-visible-presence.test.ts": {
+    "state": "dropped",
+    "note": "The test covered the dropped attached-session presence module. Visible presence uses session.view and is covered by the agent manager session tests; there is no v2 presence module to test.",
+    "by": "am-progress-map"
+  },
+  "module:packages/kilo-vscode/src/agent-manager/sandbox-bootstrap.ts": {
+    "state": "dropped",
+    "note": "Sandbox metadata and the inheritance token are excluded (#15309): the v2 orchestration request carries no sandbox token and the Agent Manager has no sandbox bootstrap. .kilo/plans/agent-manager-v2-conventions.md lists the feature as excluded.",
+    "by": "am-progress-map"
+  },
+  "module:packages/kilo-vscode/tests/unit/agent-manager-memory-commands.test.ts": {
+    "state": "dropped",
+    "note": "The Memory and Feedback providers are excluded (.kilo/plans/agent-manager-v2-conventions.md). v2 has no memory command, provider or resource, so the command test has no carrier.",
+    "by": "am-progress-map"
+  },
+  "module:packages/kilo-vscode/webview-ui/agent-manager/telemetry.ts": {
+    "state": "dropped",
+    "note": "Telemetry is excluded (.kilo/plans/agent-manager-v2-conventions.md): the ported Agent Manager has no telemetry module or event, and the wrapped user-visible behavior is unchanged.",
+    "by": "am-progress-map"
+  },
+  "module:packages/kilo-vscode/tests/unit/agent-manager-telemetry.test.ts": {
+    "state": "dropped",
+    "note": "The test covered the dropped Agent Manager telemetry module. Telemetry is excluded and no v2 telemetry module or event exists.",
+    "by": "am-progress-map"
+  },
+  "module:packages/kilo-vscode/src/agent-manager/script-terminal-url.ts": {
+    "state": "native",
+    "v2": "packages/protocol/src/groups/pty.ts",
+    "note": "The v1 builder assembled a credential-bearing URL. v2 mints a single-use ticket with the native pty.connect.token endpoint and opens the native /api/pty/:ptyID/connect route (packages/protocol/src/groups/pty.ts); packages/kilo-vscode/src/agent-manager/terminal-manager.ts ptySocketUrl only assembles that native URL, and packages/kilo-vscode/test/agent-manager-terminal-state.test.ts and pty-cleanup.test.ts cover the terminal lifecycle.",
+    "by": "am-progress-map"
+  },
+  "module:packages/kilo-vscode/webview-ui/src/utils/transcript-parts.ts": {
+    "state": "native",
+    "v2": "packages/kilo-ui/src/components/message-part.tsx",
+    "note": "v2 renders message parts natively through packages/kilo-ui/src/components/message-part.tsx (ContentPart and ToolRegistry) inside the shared session view at packages/kilo-vscode/webview-ui/src/v2/session-view.tsx. The Kilo render filter module is not carried because the native renderer owns part selection, including the tool registry entry for todowrite.",
+    "by": "am-progress-map"
+  },
+  "module:packages/kilo-vscode/tests/unit/transcript-parts.test.ts": {
+    "state": "native",
+    "v2": "packages/kilo-ui/src/components/message-part.tsx",
+    "note": "The v1 test asserted the removed Kilo render filter (snapshot progress, suppressed todo tools, synthetic completed text). v2 renders those parts through packages/kilo-ui/src/components/message-part.tsx and packages/kilo-vscode/webview-ui/src/v2/session-view.tsx, so there is no filter module to test.",
+    "by": "am-progress-map"
+  },
+  "module:packages/kilo-vscode/tests/unit/agent-project-clone.test.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-vscode/test/agent-project-messages.test.ts",
+    "note": "The v2 project layer packages/kilo-vscode/src/agent-manager/project/{clone,validation,messages}.ts and packages/kilo-vscode/test/agent-project-messages.test.ts carry clone URL validation, symlink parents, occupied destinations and the host clone adapter.",
+    "by": "am-progress-map"
+  },
+  "module:packages/kilo-vscode/tests/unit/agent-project-events.test.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-vscode/test/agent-project-messages.test.ts",
+    "note": "Project event ownership is carried by packages/kilo-vscode/src/agent-manager/project/{messages,contexts,hydrate}.ts and packages/kilo-vscode/webview-ui/agent-manager/project/message-ownership.ts. packages/kilo-vscode/test/agent-project-messages.test.ts and agent-project-hydrate.test.ts cover the ownership and background state cases.",
+    "by": "am-progress-map"
+  },
+  "module:packages/kilo-vscode/tests/unit/agent-project-onboarding-contract.test.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-vscode/test/agent-project-prepare.test.ts",
+    "note": "packages/kilo-vscode/src/agent-manager/project/{prepare,onboarding,validation}.ts and packages/kilo-vscode/test/agent-project-prepare.test.ts carry the onboarding contract: explicit identity, approved values stored locally, occupied and nested destinations, and untrusted window handling.",
+    "by": "am-progress-map"
+  },
+  "module:packages/kilo-vscode/tests/unit/agent-project-progress.test.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-vscode/test/agent-manager-orchestration-bridge.test.ts",
+    "note": "Project-scoped progress is carried by packages/kilo-vscode/webview-ui/agent-manager/project/{progress,state,run-status}.ts and the project stamping asserted in packages/kilo-vscode/test/setup-script-task.test.ts and agent-manager-orchestration-bridge.test.ts.",
+    "by": "am-progress-map"
+  },
+  "module:packages/kilo-vscode/tests/unit/agent-project-reactivate.test.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-vscode/test/agent-project-hydrate.test.ts",
+    "note": "packages/kilo-vscode/src/agent-manager/project/{contexts,hydrate}.ts reactivate a project through the context catalog; packages/kilo-vscode/test/agent-project-hydrate.test.ts covers cold, already-loaded and disposed projects.",
+    "by": "am-progress-map"
+  },
+  "module:packages/kilo-vscode/tests/unit/agent-project-registry.test.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-vscode/test/agent-project-contexts.test.ts",
+    "note": "The v1 tab registry is packages/kilo-vscode/webview-ui/agent-manager/project/registry.ts. Per-project tabs and persisted buckets are exercised by packages/kilo-vscode/test/local-tabs.test.ts, and project selection and the catalog by packages/kilo-vscode/test/agent-project-contexts.test.ts.",
+    "by": "am-progress-map"
+  },
+  "module:packages/kilo-vscode/tests/unit/agent-project-restore.test.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-vscode/test/agent-project-selection.test.ts",
+    "note": "Persisted target restore is carried by packages/kilo-vscode/webview-ui/agent-manager/project/{restore,selection}.ts and the host context modules. packages/kilo-vscode/test/agent-project-selection.test.ts restores a persisted target and falls back when it is gone.",
+    "by": "am-progress-map"
+  },
+  "module:packages/kilo-vscode/tests/unit/agent-project-run-status-webview.test.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-vscode/test/agent-project-route.test.ts",
+    "note": "The webview run status store is packages/kilo-vscode/webview-ui/agent-manager/project/{run-status,store}.ts, which route a project-stamped status to its own store. packages/kilo-vscode/test/agent-manager-project-sessions.test.ts covers the project-stamped session and run catalog.",
+    "by": "am-progress-map"
+  },
+  "module:packages/kilo-vscode/tests/unit/agent-project-run-status.test.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-vscode/test/agent-manager-project-sessions.test.ts",
+    "note": "The host run status scoping is carried by packages/kilo-vscode/src/agent-manager/run/{message,controller}.ts and provider-state.ts, which qualify the local run key with the owning project. The project session catalog is asserted in packages/kilo-vscode/test/agent-manager-project-sessions.test.ts.",
+    "by": "am-progress-map"
+  },
+  "module:packages/kilo-vscode/tests/unit/agent-project-selection-webview.test.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-vscode/test/agent-project-selection.test.ts",
+    "note": "Cross-project selection is carried by packages/kilo-vscode/webview-ui/agent-manager/project/selection.ts, which applies an acknowledgement only for the catalog-active project and ignores a delayed target from another project. packages/kilo-vscode/test/agent-project-selection.test.ts carries the host-side selection acknowledgements, readiness and unavailable targets.",
+    "by": "am-progress-map"
+  },
+  "module:packages/kilo-vscode/tests/unit/agent-project-sessions.test.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-vscode/test/agent-manager-project-sessions.test.ts",
+    "note": "Per-project session discovery is carried by packages/kilo-vscode/src/agent-manager/project/{session-view,route}.ts and packages/kilo-vscode/test/agent-manager-project-sessions.test.ts.",
+    "by": "am-progress-map"
+  },
+  "module:packages/kilo-vscode/tests/unit/agent-project-state-router.test.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-vscode/test/agent-project-messages.test.ts",
+    "note": "The state router is carried by packages/kilo-vscode/webview-ui/agent-manager/project/{state,state-handlers,store}.ts and the host project messages. packages/kilo-vscode/test/agent-project-messages.test.ts covers deferred state, activation and the no-catalog mode.",
+    "by": "am-progress-map"
   }
 }

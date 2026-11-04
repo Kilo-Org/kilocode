@@ -1,6 +1,3 @@
-// Main's provider catalog dialog on v2 integrations. It lists providers that are not connected, so a connection
-// failure never shows here. Not rendered, no v2 contract: the Custom provider entry
-// (it writes `provider.<id>`, and `api.config.update` patches only `shell`).
 import { useDialog } from "@kilocode/kilo-ui/context/dialog"
 import { Dialog } from "@kilocode/kilo-ui/dialog"
 import { List } from "@kilocode/kilo-ui/list"
@@ -8,11 +5,16 @@ import { ProviderIcon } from "@kilocode/kilo-ui/provider-icon"
 import { Tag } from "@kilocode/kilo-ui/tag"
 import { Show, createMemo } from "solid-js"
 import { useLanguage } from "../../context/language"
+import { failureMessage } from "../../v2/kilo-catalog"
 import type { SettingsData } from "../../v2/settings"
+import { useSettingsConfig } from "../../v2/settings-config"
+import CustomProviderDialog from "./CustomProviderDialog"
 import ProviderConnectDialog from "./ProviderConnectDialog"
 import { KILO_PROVIDER_ID, isPopularProvider, popularProviderIndex, providerIcon } from "./provider-catalog"
+import { connectableProviders } from "./provider-visibility"
 
 type ProviderItem = {
+  kind: "custom" | "provider"
   id: string
   name: string
 }
@@ -20,6 +22,8 @@ type ProviderItem = {
 const ProviderSelectDialog = (props: { settings: SettingsData; onLogin: () => void }) => {
   const dialog = useDialog()
   const language = useLanguage()
+  const kiloFailure = createMemo(() => failureMessage(language.t, props.settings.kiloFailure()))
+  const config = useSettingsConfig()
 
   const items = createMemo<ProviderItem[]>(() => {
     language.locale()
@@ -28,12 +32,25 @@ const ProviderSelectDialog = (props: { settings: SettingsData; onLogin: () => vo
     const withKilo = all.some((item) => item.id === KILO_PROVIDER_ID)
       ? all
       : [{ id: KILO_PROVIDER_ID, name: "Kilo Gateway", connections: [] }, ...all]
-    const available = withKilo.filter((item) => item.connections.length === 0)
+    const available = connectableProviders(withKilo, config.value(["policies"]))
 
-    return available.map((item) => ({ id: item.id, name: item.name }))
+    return [
+      { kind: "custom", id: "custom", name: language.t("settings.providers.tag.customProvider") },
+      ...available.map<ProviderItem>((item) => ({ kind: "provider", id: item.id, name: item.name })),
+    ]
   })
 
   function open(item: ProviderItem) {
+    if (item.kind === "custom") {
+      dialog.show(() => (
+        <CustomProviderDialog
+          settings={props.settings}
+          onBack={() => dialog.show(() => <ProviderSelectDialog settings={props.settings} onLogin={props.onLogin} />)}
+        />
+      ))
+      return
+    }
+
     if (item.id === KILO_PROVIDER_ID) {
       dialog.close()
       // Navigate to the Profile view so the full device-auth UI is visible.
@@ -50,15 +67,16 @@ const ProviderSelectDialog = (props: { settings: SettingsData; onLogin: () => vo
         search={{ placeholder: language.t("dialog.provider.search.placeholder"), autofocus: true }}
         emptyMessage={language.t("dialog.provider.empty")}
         activeIcon="plus-small"
-        key={(item) => item.id}
+        key={(item) => `${item.kind}:${item.id}`}
         items={items()}
         filterKeys={["id", "name"]}
         groupBy={(item) =>
-          isPopularProvider(item.id)
+          item.kind === "provider" && isPopularProvider(item.id)
             ? language.t("settings.providers.group.recommended")
             : language.t("dialog.provider.group.other")
         }
         sortBy={(a, b) => {
+          if (a.kind !== b.kind) return a.kind === "custom" ? -1 : 1
           const rank = popularProviderIndex(a.id) - popularProviderIndex(b.id)
           if (rank !== 0) return rank
           return a.name.localeCompare(b.name)
@@ -99,7 +117,23 @@ const ProviderSelectDialog = (props: { settings: SettingsData; onLogin: () => vo
                 <Show when={item.id === KILO_PROVIDER_ID}>
                   <Tag>{language.t("dialog.provider.tag.recommended")}</Tag>
                 </Show>
+                <Show when={item.kind === "custom"}>
+                  <Tag>{language.t("settings.providers.tag.custom")}</Tag>
+                </Show>
               </div>
+              <Show when={item.id === KILO_PROVIDER_ID && kiloFailure()}>
+                {(failure) => (
+                  <span
+                    style={{
+                      "font-size": "var(--kilo-font-size-12)",
+                      color: "var(--vscode-errorForeground)",
+                      "text-align": "start",
+                    }}
+                  >
+                    {failure()}
+                  </span>
+                )}
+              </Show>
             </div>
           </div>
         )}

@@ -1,5 +1,5 @@
-// Pure keybinding helpers, ported from main's `agent-manager/format-keybinding.ts` and
-// `agent-manager/user-keybindings.ts`. They keep no VS Code import so a unit test can call them.
+// Pure keybinding helpers shared by the sidebar and the Agent Manager.
+// They keep no VS Code import so a unit test can call them.
 import path from "node:path"
 
 export type Binding = { command: string; key?: string; mac?: string; when?: string }

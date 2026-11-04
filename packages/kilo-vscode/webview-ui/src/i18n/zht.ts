@@ -252,6 +252,7 @@ export const dict = {
   "prompt.toast.promptSendFailed.title": "傳送提示失敗",
 
   "mcp.status.connected": "已連線",
+  "mcp.status.pending": "正在連線",
   "mcp.status.failed": "失敗",
   "mcp.status.needs_auth": "需要授權",
   "mcp.status.needs_registration": "需要客戶端註冊",
@@ -279,6 +280,9 @@ export const dict = {
   "provider.failure.http": "供應商錯誤（HTTP {{status}}）。",
   "provider.failure.httpNoStatus": "供應商錯誤。",
   "provider.failure.schema": "供應商回傳非預期的回應。",
+  "provider.failure.organizationMissing": "所選團隊已無法使用。請選擇其他團隊。",
+  "provider.failure.scopeConflict": "所選團隊與你的 Kilo 權杖所屬團隊衝突。",
+  "provider.failure.personalUnavailable": "此帳戶沒有個人帳戶。請選擇一個團隊。",
 
   "notification.permission.title": "需要權限",
   "notification.permission.titleSubagent": "需要權限（子代理）",
@@ -287,6 +291,7 @@ export const dict = {
   "notification.permission.descriptionSandboxEscalation":
     "這會移除檔案系統和網路限制，執行整條命令，且僅限此命令。Git 必須寫入 .git，該路徑在沙盒中為唯讀，且在連結的 worktree 中位於該 worktree 之外。Bash 允許規則和自動核准永遠不會自動核准此提示。",
   "ui.permission.manageAutoApprove": "管理自動核准規則",
+  "ui.permission.noChanges": "無變更。",
   "ui.permission.reject": "拒絕",
   "ui.permission.feedbackPlaceholder": "告訴 Kilo 應該如何修改",
   "ui.permission.feedbackHint": "按 Enter 拒絕，按 Esc 取消",
@@ -329,6 +334,8 @@ export const dict = {
 
   "session.tab.review": "審查",
   "session.review.filesChanged": "{{count}} 個檔案變更",
+  "session.review.viewTurnChanges": "查看輪次變更",
+  "session.review.turnChangesEmpty": "本輪次無變更。",
   "session.review.loadingChanges": "正在載入變更...",
   "session.review.noChanges": "沒有變更",
   "session.messages.loadingEarlier": "正在載入更早的訊息...",
@@ -682,7 +689,7 @@ export const dict = {
   "settings.agentBehaviour.title": "Agent 行為",
   "settings.autoApprove.title": "自動核准",
   "settings.webTools.title": "網路工具",
-  "settings.webTools.description": "設定網頁搜尋和瀏覽器自動化。",
+  "settings.webTools.description": "設定網頁搜尋。",
   "settings.webTools.webSearch.enable": "為所有供應商啟用",
   "settings.webTools.browserAutomation": "瀏覽器自動化",
   "settings.webTools.webSearch.title": "網頁搜尋",
@@ -788,6 +795,7 @@ export const dict = {
   "settings.aboutKiloCode.importSettings.tooLarge": "檔案過大。設定檔必須小於 1 MB。",
   "settings.aboutKiloCode.importSettings.newerVersion": "此檔案由較新版本的 Kilo 匯出。部分設定可能會被忽略。",
   "settings.aboutKiloCode.importSettings.success": "設定已匯入。請檢視上方的變更，然後點擊儲存。",
+  "settings.aboutKiloCode.importSettings.applied": "Settings imported and applied.",
 
   "settings.aboutKiloCode.telemetry.title": "遙測",
   "settings.aboutKiloCode.telemetry.description":
@@ -966,6 +974,9 @@ export const dict = {
   "settings.agentBehaviour.editMode.native": "這是一個內建模式。它的基礎定義無法更改，但您可以在下方設定覆寫項。",
   "settings.agentBehaviour.editMode.promptOverride": "此內建模式的自訂提示覆寫",
   "settings.agentBehaviour.badge.subagent": "子代理",
+  "settings.agentBehaviour.perAgentPermissions.title": "各 Agent 的權限",
+  "settings.agentBehaviour.perAgentPermissions.description":
+    "這些設定只適用於此自訂 Agent。將下拉選單的值從「預設」改為其他選項以建立覆寫，或使用「新增路徑」或「新增命令」設定工具專屬的例外。",
   "settings.agentBehaviour.permissions.title": "已計算的權限",
   "settings.agentBehaviour.permissions.count": "{{count}} 條規則",
   "settings.agentBehaviour.permissions.effective": "生效（萬用字元）：",
@@ -1039,10 +1050,13 @@ export const dict = {
   "settings.agentBehaviour.mcpResetAuth.title": "重設 MCP 登入",
   "settings.agentBehaviour.mcpResetAuth.confirm": '要清除 "{{name}}" 的已儲存登入資訊嗎？您需要重新登入。',
   "settings.agentBehaviour.mcpBrowseMarketplace": "瀏覽市場",
-  "settings.agentBehaviour.mcpEmpty": "未設定 MCP 伺服器。在 kilo.jsonc 中新增 MCP 伺服器，或請代理為您新增。",
+  "settings.agentBehaviour.mcp.timeout.startup.title": "啟動逾時 (毫秒)",
+  "settings.agentBehaviour.mcp.timeout.catalog.title": "目錄逾時 (毫秒)",
+  "settings.agentBehaviour.mcp.timeout.execution.title": "執行逾時 (毫秒)",
+  "settings.agentBehaviour.mcpEmpty": "未設定 MCP 伺服器。在 kilo2.json 中新增 MCP 伺服器，或請代理為您新增。",
   "settings.agentBehaviour.workflows.description":
-    "工作流程是在設定中定義的自訂斜線命令。在聊天中輸入 /command-name 來呼叫它們。命令在 opencode.json 的 'command' 區段中設定。",
-  "settings.agentBehaviour.workflows.empty": "未設定自訂命令。將命令新增至 opencode.json 即可在此處看到。",
+    "工作流程是在您的設定或命令 Markdown 檔案中定義的自訂命令。您可以為每個工作流程設定模型與推理變體。",
+  "settings.agentBehaviour.workflows.empty": "找不到自訂命令。請將命令新增至 kilo2.json 或 .kilo2/command 中的 Markdown 檔案。",
   "settings.agentBehaviour.workflows.detail.description": "描述",
   "settings.agentBehaviour.workflows.detail.template": "範本",
   "settings.agentBehaviour.workflows.model": "模型",
@@ -1056,10 +1070,12 @@ export const dict = {
     "在作業系統層級沙盒中執行代理 shell 指令，將寫入限制在專案和 Kilo 狀態目錄內",
 
   "settings.autoApprove.description":
-    "定義工具的執行權限。大多數工具預設為允許。doom_loop 與 external_directory 預設為詢問。",
+    "定義工具的執行權限。大多數工具預設為允許。Bash 預設為詢問。",
   "settings.autoApprove.maxCost.title": "工作階段費用提醒",
   "settings.autoApprove.maxCost.description":
     "當工作階段花費超過此美元金額後，在繼續前提醒。請使用整數美元；留空則停用。",
+  "settings.autoApprove.maxCost.v2Description":
+    "當工作階段費用達到此美元金額時顯示非封鎖提醒。留空則停用。",
   "settings.autoApprove.level.allow": "允許",
   "settings.autoApprove.level.ask": "詢問",
   "settings.autoApprove.level.deny": "拒絕",
@@ -1119,6 +1135,12 @@ export const dict = {
   "settings.context.compactionModel.hint": "若要選擇用於壓縮的模型，請參閱模型設定。",
   "settings.context.compactionLimit.title": "自動壓縮限制",
   "settings.context.compactionLimit.description": "當上下文達到模型視窗的此百分比時進行壓縮。留空則僅使用安全緩衝區。",
+  "settings.context.compactionKeep.title": "保留最近 Token",
+  "settings.context.compactionKeep.description":
+    "壓縮上下文時依原樣保留的最近 Token 數量。留空則保留 15,000 個。",
+  "settings.context.compactionBuffer.title": "壓縮緩衝區",
+  "settings.context.compactionBuffer.description":
+    "壓縮前在模型上下文上限以下保留的 Token 數量。留空則保留 15%（至少 16,000 個）。",
   "settings.context.prune.title": "修剪舊輸出",
   "settings.context.prune.description": "壓縮期間移除舊的工具輸出",
   "settings.context.watcherPatterns": "檔案監視器忽略模式",
@@ -1198,7 +1220,7 @@ export const dict = {
     "在空白輸入框中顯示符合目前操作的鍵盤快捷鍵，例如如何新增所選程式碼或返回輸入框。",
   "settings.display.tokenThroughput.title": "顯示權杖吞吐量",
   "settings.display.tokenThroughput.description":
-    "在最新的助理訊息和任務標題中顯示文字生成速率（tokens/sec）。預設顯示；需要時停用此設定即可隱藏。",
+    "Display the text-generation rate (tokens/sec) on the latest assistant message footer. Shown by default; disable this setting to hide it when needed.",
   "settings.display.autoApprovalReason.title": "顯示自動核准原因",
   "settings.display.autoApprovalReason.description": "顯示工具呼叫被自動核准的原因，例如符合的權限規則或代理預設值。",
 
@@ -1353,6 +1375,8 @@ export const dict = {
   "diffViewer.source.unstaged.label": "未暫存",
   "diffViewer.source.unstaged.tooltip": "在工作樹中已修改但尚未暫存的檔案，以及未追蹤（新）的檔案。",
   "diffViewer.source.session.label": "工作階段",
+  "diffViewer.source.turn.tooltip": "Kilo 在一個輪次中變更的檔案。",
+  "diffViewer.source.turn.label": "輪次",
   "diffViewer.source.session.tooltip": "Kilo 在目前工作階段中變更的檔案，依據每輪快照。開始新工作階段時重置。",
   "diffViewer.group.session": "工作階段",
   "diffViewer.group.git": "Git",

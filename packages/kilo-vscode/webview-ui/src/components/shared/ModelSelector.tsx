@@ -16,6 +16,7 @@ import { Tag } from "@kilocode/kilo-ui/tag"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { useLanguage } from "../../context/language"
 import { isEnterKeyCommitNotIme } from "../../utils/ime-enter"
+import { pickerModels } from "./model-selector-filter"
 import { PopupSelector } from "./PopupSelector"
 
 const KILO_GATEWAY_ID = "kilo"
@@ -59,6 +60,14 @@ export interface ModelSelectorBaseProps {
   onSelect: (providerID: string, modelID: string) => void
   /** Disable this prompt-scoped selector while a permission owns the prompt. */
   blocked?: boolean
+  /** Trigger text when nothing is selected. Defaults to the "Select model" prompt label. */
+  placeholder?: string
+  /** Accessible name for the selector trigger. */
+  label?: string
+  /** Why the Kilo Gateway catalog failed to load, shown when no model is usable. */
+  failure?: string
+  /** Offer the Gateway small model. Only the small model row sets this, as on v1. */
+  includeAutoSmall?: boolean
 }
 
 export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
@@ -76,9 +85,7 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
   let searchRef: HTMLInputElement | undefined
 
   const hasSearch = () => search().trim().length > 0
-  const usable = createMemo(() =>
-    (props.models ?? []).filter((model) => model.enabled && model.status !== "deprecated"),
-  )
+  const usable = createMemo(() => pickerModels(props.models ?? [], props.includeAutoSmall))
   const active = createMemo(() =>
     (props.models ?? []).find(
       (model) => model.providerID === props.value?.providerID && model.id === props.value?.modelID,
@@ -212,12 +219,15 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
     setSelectedKey(key)
   }
 
+  // With no usable model, the catalog reason explains more than a selection that cannot resolve.
+  const failure = () => (!active() && props.models && usable().length === 0 ? props.failure : undefined)
   const triggerLabel = () => {
     const model = active()
     if (model) return triggerName(model)
+    if (failure()) return failure()
     if (props.value) return `${props.value.providerID} / ${props.value.modelID}`
     if (props.models && usable().length === 0) return language.t("dialog.model.noProviders")
-    return language.t("dialog.model.select.title")
+    return props.placeholder ?? language.t("dialog.model.select.title")
   }
   const label = () => `${language.t("dialog.model.select.title")}: ${triggerLabel()}`
 
@@ -244,14 +254,19 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
             return props.blocked || usable().length === 0
           },
           get ["aria-label"]() {
-            return label()
+            return props.label ?? label()
           },
         }}
         trigger={
           <>
             {/* Keyed so the label remounts on change and the prompt pill can animate it. */}
             <Show when={triggerLabel()} keyed>
-              {(text) => <span class="model-selector-trigger-label">{text}</span>}
+              {(text) => (
+                // The trigger truncates a long reason; the native title shows all of it.
+                <span class="model-selector-trigger-label" title={failure()}>
+                  {text}
+                </span>
+              )}
             </Show>
             <svg class="model-selector-trigger-chevron" width="10" height="10" viewBox="0 0 16 16" fill="currentColor">
               <path d="M8 4l4 5H4l4-5z" />

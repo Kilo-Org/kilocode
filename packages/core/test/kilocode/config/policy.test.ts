@@ -2,7 +2,7 @@ import { expect, test } from "bun:test"
 import { Config } from "@opencode/core/config"
 import { ConfigNormalize } from "@opencode/core/config/normalize"
 import { KiloConfigPolicy } from "@opencode/core/kilocode/config/policy"
-import { Document } from "@opencode/schema/config"
+import { Document, Info } from "@opencode/schema/config"
 import { Effect, Option, Schema } from "effect"
 import { it } from "../../lib/effect"
 
@@ -60,3 +60,88 @@ it.effect("reads fresh effective entries without filesystem, global paths or plu
     expect(yield* KiloConfigPolicy.get(config)).toEqual({ hide_prompt_training_models: false })
   }).pipe(Effect.provide(Config.testLayer())),
 )
+
+test("commit_message.prompt is a Kilo setting, and an invalid value keeps the other settings", () => {
+  const valid = { commit_message: { prompt: "Write a haiku." }, shell: "valid" }
+  const normalized = ConfigNormalize.normalize(valid)
+  if (normalized.type !== "normalized") throw new Error("expected canonical normalization")
+  expect(KiloConfigPolicy.parse(valid, normalized.encoded)?.commit_message).toEqual({ prompt: "Write a haiku." })
+
+  const invalid = { commit_message: { prompt: 1 }, shell: "valid" }
+  const diagnostics: ConfigNormalize.Diagnostic[] = []
+  const parsed = KiloConfigPolicy.parse(invalid, { shell: "valid" }, (diagnostic) => diagnostics.push(diagnostic))
+  expect(parsed?.shell).toBe("valid")
+  expect(parsed?.commit_message).toBeUndefined()
+  expect(diagnostics).toEqual([{ kind: "invalid", path: ["commit_message"], message: expect.any(String) }])
+})
+
+test("the last document that sets the commit message prompt wins, and an empty prompt means none", () => {
+  const document = (prompt?: string) =>
+    new Document({
+      type: "document",
+      info: new KiloConfigPolicy.Info({ commit_message: prompt === undefined ? undefined : { prompt } }),
+    })
+  expect(KiloConfigPolicy.commitMessagePrompt([])).toBeUndefined()
+  expect(KiloConfigPolicy.commitMessagePrompt([document("global"), document()])).toBe("global")
+  expect(KiloConfigPolicy.commitMessagePrompt([document("global"), document("project")])).toBe("project")
+  expect(KiloConfigPolicy.commitMessagePrompt([document("global"), document("")])).toBeUndefined()
+})
+
+test("privacy_mode is a boolean Kilo setting kept beside the canonical settings", () => {
+  const input = { privacy_mode: true, shell: "valid" }
+  const normalized = ConfigNormalize.normalize(input)
+  if (normalized.type !== "normalized") throw new Error("expected canonical normalization")
+  expect(normalized.diagnostics).toEqual([])
+  const diagnostics: ConfigNormalize.Diagnostic[] = []
+  const parsed = KiloConfigPolicy.parse(input, normalized.encoded, (diagnostic) => diagnostics.push(diagnostic))
+  expect(parsed).toMatchObject({ privacy_mode: true, shell: "valid" })
+  expect(diagnostics).toEqual([])
+  expect(KiloConfigPolicy.parse({ privacy_mode: false }, {})?.privacy_mode).toBe(false)
+})
+
+test.each(["true", "yes", 1, null, {}])("an invalid privacy_mode %p is reported and not applied", (value) => {
+  const input = { privacy_mode: value, hide_prompt_training_models: true, shell: "valid" }
+  const diagnostics: ConfigNormalize.Diagnostic[] = []
+  const parsed = KiloConfigPolicy.parse(input, { shell: "valid" }, (diagnostic) => diagnostics.push(diagnostic))
+  expect(parsed?.privacy_mode).toBeUndefined()
+  expect(parsed).toMatchObject({ hide_prompt_training_models: true, shell: "valid" })
+  expect(diagnostics).toEqual([
+    { kind: "invalid", path: ["privacy_mode"], message: expect.stringContaining("expected a boolean") },
+  ])
+  expect(KiloConfigPolicy.privacyMode(parsed ? [new Document({ type: "document", info: parsed })] : [])).toBe(false)
+})
+
+test("privacy mode is on when any effective document sets privacy_mode to true", () => {
+  const document = (privacy_mode?: boolean) =>
+    new Document({ type: "document", info: new KiloConfigPolicy.Info({ privacy_mode }) })
+  expect(KiloConfigPolicy.privacyMode([])).toBe(false)
+  expect(KiloConfigPolicy.privacyMode([document(), document(false)])).toBe(false)
+  // global true, project unset or false
+  expect(KiloConfigPolicy.privacyMode([document(true), document()])).toBe(true)
+  expect(KiloConfigPolicy.privacyMode([document(true), document(false)])).toBe(true)
+  // global false or unset, project true
+  expect(KiloConfigPolicy.privacyMode([document(false), document(true)])).toBe(true)
+  expect(KiloConfigPolicy.privacyMode([new Document({ type: "document", info: new Info({}) })])).toBe(false)
+})
+
+test("the display layouts are Kilo settings, and an invalid layout is ignored", () => {
+  const valid = {
+    terminal_command_display: "collapsed",
+    code_edit_display: "expanded",
+    mcp_tool_display: "collapsed",
+    shell: "valid",
+  }
+  const normalized = ConfigNormalize.normalize(valid)
+  if (normalized.type !== "normalized") throw new Error("expected canonical normalization")
+  expect(KiloConfigPolicy.parse(valid, normalized.encoded)).toMatchObject({
+    terminal_command_display: "collapsed",
+    code_edit_display: "expanded",
+    mcp_tool_display: "collapsed",
+  })
+
+  const invalid = { terminal_command_display: "hidden", code_edit_display: "expanded", shell: "valid" }
+  const parsed = KiloConfigPolicy.parse(invalid, { shell: "valid" })
+  expect(parsed?.terminal_command_display).toBeUndefined()
+  expect(parsed?.code_edit_display).toBe("expanded")
+  expect(parsed?.shell).toBe("valid")
+})

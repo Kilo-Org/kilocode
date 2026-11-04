@@ -59,17 +59,52 @@ test("a boot with XDG variables keeps everything under the kilo2 directories of 
   }
 }, 120_000)
 
-test("KILO_CONFIG_DIR still overrides the config directory", async () => {
+test("KILO2_CONFIG_DIR overrides the config directory", async () => {
   const root = await realpath(await mkdtemp(path.join(os.tmpdir(), "kilo-app-dirs-config-")))
   try {
     const config = path.join(root, "custom-config")
-    const result = await cli(environment(root, { KILO_CONFIG_DIR: config }), "debug", "paths")
+    const result = await cli(environment(root, { KILO2_CONFIG_DIR: config }), "debug", "paths")
     expect(parse(result).config).toBe(config)
     expect(parse(result).data).toBe(path.join(root, ".local/share/kilo2"))
   } finally {
     await rm(root, { recursive: true, force: true })
   }
 }, 60_000)
+
+// A v1 user can have KILO_DB, KILO_CONFIG and KILO_CONFIG_DIR set to v1's own storage. v2 ignores them: it keeps its
+// database and config under kilo2, and v1's files stay byte for byte as they were.
+test("v1 storage variables leave v1's database, config and credentials untouched", async () => {
+  const root = await realpath(await mkdtemp(path.join(os.tmpdir(), "kilo-app-dirs-v1-")))
+  try {
+    const data = path.join(root, ".local/share/kilo")
+    const config = path.join(root, ".config/kilo")
+    await mkdir(data, { recursive: true })
+    await mkdir(config, { recursive: true })
+    const v1 = {
+      [path.join(data, "kilo.db")]: "v1 database",
+      [path.join(data, "auth.json")]: JSON.stringify({ kilo: { type: "api", key: "v1-key" } }),
+      [path.join(config, "kilo.json")]: JSON.stringify({ model: "kilo/v1" }),
+    }
+    await Promise.all(Object.entries(v1).map(([file, content]) => Bun.write(file, content)))
+    const listing = async () => [...(await readdir(data)), ...(await readdir(config))].toSorted()
+    const before = await listing()
+
+    const paths = await boot(root, {
+      KILO_DB: path.join(data, "kilo.db"),
+      KILO_CONFIG: path.join(config, "kilo.json"),
+      KILO_CONFIG_DIR: config,
+    })
+
+    expect(paths).toMatchObject({
+      config: path.join(root, ".config/kilo2"),
+      db: path.join(root, ".local/share/kilo2/opencode-local.db"),
+    })
+    expect(await listing()).toEqual(before)
+    for (const [file, content] of Object.entries(v1)) expect(await Bun.file(file).text()).toBe(content)
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+}, 120_000)
 
 // Runs `debug paths`, a background service lifecycle with one Location boot, and a `serve --stdio` server with one
 // Location boot. Returns the paths the CLI reports.
@@ -94,7 +129,7 @@ async function boot(root: string, xdg: Record<string, string>) {
 function environment(root: string, extra: Record<string, string>) {
   // The test preload isolates XDG for in-process tests; a host boot must not inherit it, or any directory override.
   const inherited = Object.fromEntries(
-    Object.entries(process.env).filter(([key]) => !key.startsWith("XDG_") && !/^(OPENCODE|KILO)_/.test(key)),
+    Object.entries(process.env).filter(([key]) => !key.startsWith("XDG_") && !/^(OPENCODE|KILO2?)_/.test(key)),
   )
   return {
     ...inherited,

@@ -74,21 +74,39 @@ export function balance(
   }).pipe(Effect.orElseSucceed(() => null))
 }
 
-export function get(server: string, token: string): Effect.Effect<Info, Error> {
+// A failed profile request. `reason` classifies the failure as the catalog failure kinds do, so a caller can report
+// why the request failed without parsing the message.
+export class ProfileError extends Error {
+  constructor(
+    message: string,
+    readonly reason: { readonly kind: "unauthorized" | "network" | "http" | "schema"; readonly status?: number },
+  ) {
+    super(message)
+  }
+}
+
+export function get(server: string, token: string): Effect.Effect<Info, ProfileError> {
   return Effect.gen(function* () {
     const response = yield* request(
       KiloServer.apiUrl(server, "profile"),
       { headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" } },
       "Profile fetch failed",
-    )
+    ).pipe(Effect.mapError((error) => new ProfileError(error.message, { kind: "network" })))
     if (response.status === 401 || response.status === 403) {
-      return yield* Effect.fail(new Error("Invalid token"))
+      return yield* Effect.fail(new ProfileError("Invalid token", { kind: "unauthorized", status: response.status }))
     }
     if (!response.ok) {
-      return yield* Effect.fail(new Error(`Profile fetch failed with status ${response.status}`))
+      return yield* Effect.fail(
+        new ProfileError(`Profile fetch failed with status ${response.status}`, { kind: "http", status: response.status }),
+      )
     }
-    const parsed = decode(yield* json(response, "Profile fetch failed"))
-    if (Option.isNone(parsed)) return yield* Effect.fail(new Error("Invalid Kilo profile response"))
+    const parsed = decode(
+      yield* json(response, "Profile fetch failed").pipe(
+        Effect.mapError((error) => new ProfileError(error.message, { kind: "schema" })),
+      ),
+    )
+    if (Option.isNone(parsed))
+      return yield* Effect.fail(new ProfileError("Invalid Kilo profile response", { kind: "schema" }))
     const body = parsed.value
     const name = body.user?.name ?? body.name ?? undefined
     return {

@@ -102,7 +102,8 @@ jobs:
           prefix="$(mktemp -d)"
           npm install --prefix "$prefix" --no-audit --no-fund packages/kilo-cli/dist/cli-linux-x64/*.tgz packages/kilo-cli/dist/cli/*.tgz
           test "$("$prefix/node_modules/.bin/kilo2" --version)" = "kilo2 v$KILO_VERSION"
-          test "$("$prefix/node_modules/.bin/kilo" --version)" = "kilo2 v$KILO_VERSION"
+          # v2 must not install a `kilo` command, which would start v2 for v1 users.
+          test ! -e "$prefix/node_modules/.bin/kilo"
         env:
           KILO_VERSION: ${{ steps.version.outputs.version }}
 

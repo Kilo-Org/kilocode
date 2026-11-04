@@ -72,7 +72,10 @@ function tight(root: HTMLElement) {
   const gaps = (parseFloat(box.columnGap) || 0) * Math.max(0, hint.children.length - 1)
   const width = root.getBoundingClientRect().width
   const free = Math.max(0, inner - gaps - others - width)
-  const folded = !!hint.querySelector(".prompt-input-hint-actions > .prompt-action:first-child:not([data-folded])")
+  // A fold is active only when an action other than the first-child overflow wrapper is folded.
+  // Reading the first child's marker instead would cap the room for a plain action row (v2 has no
+  // overflow wrapper), the way v1's overflow wrapper uses `data-folded` when nothing is hidden.
+  const folded = !!hint.querySelector(".prompt-input-hint-actions > .prompt-action:not(:first-child)[data-folded]")
   const room = folded ? Math.min(width + free, reserve(hint)) : width + free
   const labels =
     cut(root.querySelector(".mode-switcher-trigger-label")) + cut(root.querySelector(".model-selector-trigger-label"))

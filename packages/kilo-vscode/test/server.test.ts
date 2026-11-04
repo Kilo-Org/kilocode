@@ -1,12 +1,22 @@
 import { describe, expect, test } from "bun:test"
 import { OpenCode } from "@opencode/client"
 import { KiloHandshakeRpc } from "@opencode/schema/kilocode/handshake"
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs"
 import { mkdtemp, mkdir, realpath, rm } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import path from "node:path"
-import { command, environment, manager, parse, start, stop } from "../src/server"
+import { command, environment, manager, parse, settingsEnvironment, start, stop } from "../src/server"
 
 const extension = path.resolve(import.meta.dir, "..")
+
+function checkout() {
+  const dir = mkdtempSync(path.join(tmpdir(), "kilo-vscode-checkout-"))
+  const extension = path.join(dir, "packages", "kilo-vscode")
+  mkdirSync(extension, { recursive: true })
+  mkdirSync(path.join(dir, "script"), { recursive: true })
+  writeFileSync(path.join(dir, "script", "dev-isolated.ts"), "")
+  return { dir, extension }
+}
 
 describe("parse", () => {
   test("reads the URL from a complete JSON line", () => {
@@ -24,15 +34,19 @@ describe("parse", () => {
 
 describe("command", () => {
   test("uses the repository dev entry with an isolated profile when bin/kilo2 is missing", () => {
+    const { dir, extension } = checkout()
     const found = command({ extension, storage: "/storage", env: {} })
-    expect(found?.args).toEqual([path.resolve(extension, "../../script/dev-isolated.ts"), "serve", "--port", "0", "--stdio"])
+    expect(found?.args).toEqual([path.join(dir, "script", "dev-isolated.ts"), "serve", "--port", "0", "--stdio"])
     expect(found?.env).toEqual({ KILO_V2_PROFILE: path.join("/storage", "profile") })
+    rmSync(dir, { recursive: true })
   })
 
   test("keeps an explicit KILO_V2_PROFILE", () => {
+    const { dir, extension } = checkout()
     expect(command({ extension, storage: "/storage", env: { KILO_V2_PROFILE: "/p" } })?.env).toEqual({
       KILO_V2_PROFILE: "/p",
     })
+    rmSync(dir, { recursive: true })
   })
 
   test("prefers a bundled bin/kilo2", async () => {
@@ -68,6 +82,44 @@ test("environment drops inherited server passwords", () => {
   expect(env.KILO_SERVER_PASSWORD).toBeUndefined()
 })
 
+describe("settingsEnvironment", () => {
+  test("disables Claude Code loading by default", () => {
+    expect(settingsEnvironment({ claudeCodeCompat: false, extraCaCerts: "" })).toEqual({
+      KILO_DISABLE_CLAUDE_CODE: "true",
+    })
+  })
+
+  test("leaves Claude Code loading on when compatibility is enabled", () => {
+    expect(settingsEnvironment({ claudeCodeCompat: true, extraCaCerts: "" })).toEqual({})
+  })
+
+  test("sets the extra CA certificates path, trimmed", () => {
+    expect(settingsEnvironment({ claudeCodeCompat: true, extraCaCerts: "/certs/ca.pem " })).toEqual({
+      NODE_EXTRA_CA_CERTS: "/certs/ca.pem",
+    })
+  })
+
+  test("ignores a blank CA certificates value", () => {
+    expect(settingsEnvironment({ claudeCodeCompat: true, extraCaCerts: "   " })).toEqual({})
+  })
+})
+
+test("environment drops an inherited owned setting but keeps the rest", () => {
+  const env = environment(
+    {
+      KILO_DISABLE_CLAUDE_CODE: "true",
+      OPENCODE_DISABLE_CLAUDE_CODE: "true",
+      KILO_DISABLE_CLAUDE_CODE_SKILLS: "true",
+      NODE_EXTRA_CA_CERTS: "/old.pem",
+    },
+    {},
+  )
+  expect(env.KILO_DISABLE_CLAUDE_CODE).toBeUndefined()
+  expect(env.OPENCODE_DISABLE_CLAUDE_CODE).toBeUndefined()
+  expect(env.KILO_DISABLE_CLAUDE_CODE_SKILLS).toBe("true")
+  expect(env.NODE_EXTRA_CA_CERTS).toBe("/old.pem")
+})
+
 test("manager keeps a failed start, reports it once and retries after a restart", async () => {
   const root = await mkdtemp(path.join(tmpdir(), "kilo-vscode-manager-"))
   const errors: string[] = []
@@ -87,8 +139,57 @@ test("manager keeps a failed start, reports it once and retries after a restart"
   expect(second).not.toBe(first)
   await expect(second).rejects.toThrow("exited during startup")
   expect(errors).toHaveLength(2)
-  await rm(root, { recursive: true, force: true })
+  await rm(root, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 })
 })
+
+test("manager reports every started and stopped server", async () => {
+  const root = await mkdtemp(path.join(tmpdir(), "kilo-vscode-manager-lifecycle-"))
+  const firstStop = Promise.withResolvers<void>()
+  const secondStop = Promise.withResolvers<void>()
+  const script = `
+    const http = require("node:http")
+    const server = http.createServer((request, response) => {
+      if (request.url === "/exit") return response.end("bye", () => setImmediate(() => process.exit(0)))
+      response.end("ok")
+    })
+    server.listen(0, "127.0.0.1", () => {
+      console.log(JSON.stringify({ url: "http://127.0.0.1:" + server.address().port }))
+    })
+    process.stdin.resume()
+    process.stdin.on("end", () => server.close())
+  `
+  let starts = 0
+  let stops = 0
+  let started: string | undefined
+  const server = manager({
+    command: () => ({ cmd: process.execPath, args: ["-e", script], env: {} }),
+    cwd: root,
+    env: process.env,
+    onStart: (value) => {
+      starts++
+      started = value.url
+    },
+    onStop: () => {
+      stops++
+      if (stops === 1) firstStop.resolve()
+      if (stops === 2) secondStop.resolve()
+    },
+  })
+  const first = await server.get()
+  expect(starts).toBe(1)
+  expect(started).toBe(first.url)
+  expect((await fetch(`${first.url}/exit`)).status).toBe(200)
+  await firstStop.promise
+  const second = await server.get()
+  expect(starts).toBe(2)
+  expect(second.url).not.toBe(first.url)
+  const exited = new Promise<void>((resolve) => second.process.once("exit", () => resolve()))
+  await server.stop()
+  await secondStop.promise
+  await exited
+  expect(stops).toBe(2)
+  await rm(root, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 })
+}, 10_000)
 
 test("starts the real v2 server, passes the Kilo handshake and stops when stdin closes", async () => {
   const root = await mkdtemp(path.join(tmpdir(), "kilo-vscode-server-"))
@@ -111,5 +212,5 @@ test("starts the real v2 server, passes the Kilo handshake and stops when stdin 
   const exited = new Promise((resolve) => server.process.once("exit", resolve))
   stop(server.process)
   await exited
-  await rm(root, { recursive: true, force: true })
+  await rm(root, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 })
 }, 90_000)

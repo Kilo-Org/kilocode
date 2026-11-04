@@ -8,7 +8,6 @@ const title = ["`OC | ", "`Kilo | "] as const
 
 export const replacements = {
   "cli/src/commands/commands.ts": [
-    ['"opencode"', '"kilo2"'],
     ["OpenCode command line interface", "Kilo command line interface"],
     ["Directory to start OpenCode in", "Directory to start Kilo in"],
     ["Upgrade OpenCode to the latest or a specific version", "Show manual Kilo update instructions"],
@@ -26,11 +25,9 @@ export const replacements = {
   "cli/src/acp/service.ts": [
     commands,
     ["Login with opencode", "Login with Kilo"],
-    ['command: "opencode"', 'command: "kilo2"'],
     ["OpenCode Login", "Kilo Login"],
     product,
   ],
-  "cli/src/acp/agent.ts": [['name: "opencode"', 'name: "kilo2"']],
   "cli/src/acp/translate.ts": [["OpenCode prompt failed", "Kilo prompt failed"]],
   "cli/src/acp/error.ts": [["OpenCode server is unavailable", "Kilo server is unavailable"]],
   "cli/src/commands/handlers/acp.ts": [["opencode acp:", "kilo2 acp:"]],

@@ -1,10 +1,47 @@
 # Pinned upstream v2 baseline
 
-Status: living. Refreshed 2026-10-27 on the `v2.1.4` sync branch `upstream-merge-2-1-4` (#15500). This capture describes the proposed sync, not a merge into `origin/v2`. It includes `v2.1.4` only, not `2.2`. The base moves with every upstream sync (plan A4), so re-measure after each sync. The earlier captures remain below. The 2026-08-13 capture at `76dbaf20` (old branch `johnnyeric/v2-baseline`) survives in git history only.
+Status: living. Refreshed 2026-11-02 on the `v2.2.5` sync branch `sync-v2-2-5`. This capture describes the proposed sync, not a merge into `origin/v2`. It includes `v2.2.0` to `v2.2.5`. The base moves with every upstream sync, so re-measure after each sync. The earlier captures remain below. The 2026-08-13 capture at `76dbaf20` (old branch `johnnyeric/v2-baseline`) survives in git history only.
 
-This file records the upstream release `origin/v2` is synced to, the validation commands that this tree defines, and the result of running them. Compare any failing check against this file, and against `origin/v2` before your change, before you attribute it to a change (`migration-context.md`, Conventions).
+This file records the upstream release `origin/v2` is synced to, the validation commands that this tree defines, and the result of running them. Compare any failing check against this file, and against `origin/v2` before your change, before you attribute it to a change.
 
-## Current capture: `v2.1.4` (2026-10-27)
+## Current capture: `v2.2.5` (2026-11-02)
+
+### Refs and method
+
+| Ref | SHA | Note |
+|---|---|---|
+| Pre-sync Kilo base | `f6363dc897c` | `origin/v2` when the sync started; `origin/v2` `32761461b17` was merged in later (VS Code settings PRs only) |
+| Previous upstream base | `74f8d4860f49c563909e6b039b0cc8b454ebce72` | Parent of `v2.1.4` |
+| New upstream base | `958f965d35ed44d32b018fd55b02a5357a7748fd` | Parent of `v2.2.5`; one sync for `v2.2.0` to `v2.2.5` (`--allow-skip`) |
+
+Local runs used Bun 1.4.4 (`packageManager`) on macOS arm64 with isolated `OPENCODE_TEST_HOME`, `XDG_*` and `SHELL=/bin/zsh`. The same commands ran on a detached `origin/v2` worktree (`f6f6b25b86f`, upstream `v2.1.4`) for comparison. Type checks ran in a detached worktree outside the repository. The full `v2-baseline.ts --checks` script was not rerun.
+
+### Results
+
+| Check | Result | Detail |
+|---|---|---|
+| `bun run check` | pass | 30 turbo tasks; oxlint 181 warnings, 0 errors |
+| `bun run typecheck:tsc` | pass | 28 tasks |
+| `core` tests | pass | 7,205 pass, 35 skip (`origin/v2`: 6,816 pass, 43 skip) |
+| `tui` tests | pass | 1,718 pass, 3 skip, after the `/usage` fix (`origin/v2`: 1,669 pass, 2 skip). One new upstream test skipped, see below |
+| `cli` tests | **3 fail** | 355 pass, 10 skip. `debug-paths` fails as on `origin/v2` (`OPENCODE_TEST_HOME`). Two new or changed `service.test.ts` port-owner tests fail on this host: `lsof` takes 0.8 to 1.1 s here and `PortOwner.describe` allows 1 s. One new upstream test skipped, see below |
+| `ai`, `codemode`, `util`, `schema`, `client`, `protocol`, `server`, `plugin` tests | pass | ai 1,990 (28 upstream skips), codemode 1,498, util 140, schema 90, client 257, protocol 10, server 115, plugin 37 |
+| Kilo package tests | pass | gateway-core 124, kilo-plugin 320, kilo-cli 318, kilo-vscode 300 |
+| Sync tooling tests | pass | 100 |
+| `client`, `protocol` `check:generated` | pass | No drift. Upstream removed `services/www` `check:generated` |
+| VS Code extension build | pass | `bun run build` in `packages/kilo-vscode` |
+| Native Kilo build | pass, local | `--single --skip-install`; the compiled `kilo2` answered a Gateway prompt with and without an image attachment |
+| CLI and TUI self-test | pass, local | `bun dev run --standalone`, TUI prompt, model picker, `/connect` and Kilo `/usage` |
+| Workflow allowlist, annotations, shared patches, progress map | pass | Shared patches: 68 files, 534 marked and 76 unmarked lines against `958f965d35e` |
+
+### Skipped upstream tests
+
+Both are new in `v2.2` and fail only because of existing Kilo patches. Each skip is marked and listed in `script/upstream/shared-patches.json`; remove it when the patch moves.
+
+1. `packages/cli/test/server-connection.test.ts`, `local config commands do not start or require a server`: `mcp add` writes `kilo2.json` through the Kilo patch in `handlers/mcp/add.ts`.
+2. `packages/tui/test/usage-limits.test.tsx`: expects upstream's model picker row pricing and the OpenCode Console `/usage` dialog.
+
+## Previous capture: `v2.1.4` (2026-10-27)
 
 ### Refs and method
 
@@ -168,7 +205,7 @@ None is attributable to a Kilo change. The failing tests do not exercise the 14 
 
 ## Validation commands defined by this tree
 
-Derived from the root `package.json`, `.github/workflows/check.yml`, `.github/workflows/test.yml` and per-package scripts. The local/official compiler distinction below was refreshed for `v2.1.4`; result coverage is stated in the current capture.
+Derived from the root `package.json`, `.github/workflows/check.yml`, `.github/workflows/check-test.yml` and per-package scripts. The local/official compiler distinction below was refreshed for `v2.1.4`; result coverage is stated in the current capture.
 
 | Purpose | Command | Working dir | Run by upstream CI |
 |---|---|---|---|
@@ -191,7 +228,7 @@ Constraints:
 - Tests cannot run from the root (`bunfig.toml` test root `do-not-run-tests-from-root`). Run them from a package directory or through turbo.
 - Use package scripts, not direct compiler invocations. `bun typecheck` uses Bun's checker in upstream packages and official TypeScript in Kilo packages. `bun run typecheck:tsc` uses official TypeScript; it is the source of truth when the compilers disagree.
 - `.husky/pre-push` checks the bun version, then runs `bun run check`.
-- `check.yml` and `test.yml` run on pushes to branches named `dev` or `v2`, and on every pull request. Upstream's `check.yml` filters pushes and pull requests by branch (`[dev, v2]` at the initial base, `[dev]` at `v2.0.30`). Kilo changed it on 2026-10-13 (#15016; `.github/workflows/check.yml:5-7`, marked): `v2` is in the push branches and the pull-request trigger is unfiltered, so a PR into `v2` or into a stacked PR branch is checked. `test.yml` already runs on every pull request upstream; Kilo added `v2` to its push branches. **Verified 2026-10-16:** `typecheck` (`check.yml`), `unit (linux)` and `unit (windows)` (`test.yml`) and the `kilo-v2.yml` jobs run on the fork; `typecheck` ran and passed on #15192, whose base is `fold-plan-delta`. `e2e` is skipped on the fork since #15151 (`affected` in `test.yml` is `if: false`); it still ran on #15136, where Windows failed and Linux passed. The 2026-10-11 capture had found no pull request targeting the integration branch or `kilo-v2-clean-bootstrap` (`gh pr list`).
+- `check.yml` and `check-test.yml` (upstream's `test.yml` before v2.2) run on pushes to branches named `dev` or `v2`, and on every pull request. Upstream's `check.yml` filters pushes and pull requests by branch (`[dev, v2]` at the initial base, `[dev]` at `v2.0.30`). Kilo changed it on 2026-10-13 (#15016; `.github/workflows/check.yml:5-7`, marked): `v2` is in the push branches and the pull-request trigger is unfiltered, so a PR into `v2` or into a stacked PR branch is checked. `test.yml` already runs on every pull request upstream; Kilo added `v2` to its push branches (the same trigger now lives in `check-test.yml`). **Verified 2026-10-16:** `typecheck` (`check.yml`), `unit (linux)` and `unit (windows)` (`test.yml`, now `check-test.yml`) and the `kilo-v2.yml` jobs run on the fork; `typecheck` ran and passed on #15192, whose base is `fold-plan-delta`. `e2e` is skipped on the fork since #15151 (`affected` in `test.yml` is `if: false`); it still ran on #15136, where Windows failed and Linux passed. The 2026-10-11 capture had found no pull request targeting the integration branch or `kilo-v2-clean-bootstrap` (`gh pr list`).
 - `packages/www` no longer exists. Generated docs live in `services/www`, and `typecheck.yml` was replaced by `check.yml`.
 
 ## Previous capture: initial base (2026-10-11)
@@ -277,7 +314,7 @@ Use these only as deltas against this table.
 ## Out of scope for this baseline
 
 - **Kilo packages beyond the table above.** Kilo package checks (`kilo-vscode` typecheck, JetBrains Gradle build) start once each package lands. Each landing adds its row to "Kilo packages" in the current capture.
-- **Fork CI settings.** `kilo-v2.yml` runs the Kilo jobs; repo and Actions settings stay an admin task (`migration-context.md`, Deferred admin tasks).
+- **Fork CI settings.** `kilo-v2.yml` runs the Kilo jobs; repo and Actions settings stay an admin task.
 
 ## Reproducer
 

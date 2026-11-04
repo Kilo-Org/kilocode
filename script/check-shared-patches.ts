@@ -100,5 +100,5 @@ if (errors.length === 0) {
 
 for (const error of errors) console.error(error)
 console.error("")
-console.error("Before you patch a shared file, try the plugin-first order (.kilo/skills/v2-migration/SKILL.md).")
+console.error("Before you patch a shared file, try the plugin-first order (migration-tracking/principles.md, section 2).")
 process.exit(1)

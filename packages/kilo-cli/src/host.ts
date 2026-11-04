@@ -15,6 +15,7 @@ import { ToolOutput } from "@opencode/core/tool-output"
 import type { Plugin } from "@opencode/plugin/effect/plugin"
 import { makeGlobalNode } from "@opencode/util/effect/app-node"
 import type { LayerNode } from "@opencode/util/effect/layer-node"
+import { FSUtil } from "@opencode/util/fs-util"
 import { Global } from "@opencode/util/global"
 import { Context, Duration, Effect, Layer, type Scope } from "effect"
 import { KiloApp } from "./app"
@@ -39,13 +40,11 @@ const plugins = makeGlobalNode({
   layer: Layer.effectDiscard(
     Effect.gen(function* () {
       const sdk = yield* SdkPlugins.Service
-      const services = Context.pick(
-        Bus.Service,
-        Global.Service,
-        KiloSessionSync.Service,
-      )(yield* Effect.context<Bus.Service | Global.Service | KiloSessionSync.Service>())
+      const services = Context.pick(Bus.Service, FSUtil.Service, Global.Service, KiloSessionSync.Service)(
+        yield* Effect.context<Bus.Service | FSUtil.Service | Global.Service | KiloSessionSync.Service>(),
+      )
       const register = (
-        plugin: Plugin<Bus.Service | Global.Service | KiloSessionSync.Service | Scope.Scope>,
+        plugin: Plugin<Bus.Service | FSUtil.Service | Global.Service | KiloSessionSync.Service | Scope.Scope>,
         phase?: "post",
       ) =>
         sdk.register(
@@ -66,7 +65,7 @@ const plugins = makeGlobalNode({
       yield* Effect.forEach(KiloPostPlugins, (plugin) => register(plugin, "post"))
     }),
   ).pipe(Layer.provideMerge(SdkPlugins.layer)),
-  deps: [Bus.node, Global.node, SessionSync.node],
+  deps: [Bus.node, FSUtil.node, Global.node, SessionSync.node],
 })
 
 /**

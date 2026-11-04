@@ -270,6 +270,7 @@ export const dict = {
   "prompt.toast.promptSendFailed.title": "Falha ao enviar prompt",
 
   "mcp.status.connected": "conectado",
+  "mcp.status.pending": "conectando",
   "mcp.status.failed": "falhou",
   "mcp.status.needs_auth": "precisa de autenticação",
   "mcp.status.needs_registration": "precisa de registro do cliente",
@@ -300,6 +301,9 @@ export const dict = {
   "provider.failure.http": "Erro do provedor (HTTP {{status}}).",
   "provider.failure.httpNoStatus": "Erro do provedor.",
   "provider.failure.schema": "Resposta inesperada do provedor.",
+  "provider.failure.organizationMissing": "A equipe selecionada não está mais disponível. Selecione outra equipe.",
+  "provider.failure.scopeConflict": "A equipe selecionada entra em conflito com a equipe do seu token Kilo.",
+  "provider.failure.personalUnavailable": "Esta conta não tem uma conta pessoal. Selecione uma equipe.",
 
   "notification.permission.title": "Permissão necessária",
   "notification.permission.titleSubagent": "Permissão necessária (subagente)",
@@ -308,6 +312,7 @@ export const dict = {
   "notification.permission.descriptionSandboxEscalation":
     "Isto executa todo o comando sem as restrições de sistema de arquivos e rede, apenas para este comando. O Git precisa gravar em .git, que é somente leitura na sandbox e fica fora da árvore de trabalho em um worktree vinculado. Regras de permissão do Bash e a aprovação automática nunca aprovam esta solicitação automaticamente.",
   "ui.permission.manageAutoApprove": "Gerenciar regras de aprovação automática",
+  "ui.permission.noChanges": "Sem alterações.",
   "ui.permission.reject": "Rejeitar",
   "ui.permission.feedbackPlaceholder": "Diga ao Kilo o que fazer de forma diferente",
   "ui.permission.feedbackHint": "Enter para rejeitar, Esc para cancelar",
@@ -350,6 +355,8 @@ export const dict = {
 
   "session.tab.review": "Revisão",
   "session.review.filesChanged": "{{count}} Arquivos Alterados",
+  "session.review.viewTurnChanges": "Ver alterações do turno",
+  "session.review.turnChangesEmpty": "Nenhuma alteração neste turno.",
   "session.review.loadingChanges": "Carregando alterações...",
   "session.review.noChanges": "Sem alterações",
   "session.messages.loadingEarlier": "Carregando mensagens anteriores...",
@@ -713,7 +720,7 @@ export const dict = {
   "settings.agentBehaviour.title": "Comportamento do Agente",
   "settings.autoApprove.title": "Aprovação Automática",
   "settings.webTools.title": "Ferramentas da Web",
-  "settings.webTools.description": "Configure a pesquisa na web e a automação do navegador.",
+  "settings.webTools.description": "Configure a pesquisa na web.",
   "settings.webTools.webSearch.enable": "Ativar para todos os provedores",
   "settings.webTools.browserAutomation": "Automação do navegador",
   "settings.webTools.webSearch.title": "Pesquisa na Web",
@@ -870,6 +877,7 @@ export const dict = {
     "Este arquivo foi exportado de uma versão mais recente do Kilo. Algumas configurações podem ser ignoradas.",
   "settings.aboutKiloCode.importSettings.success":
     "Configurações importadas. Revise as alterações acima e clique em Salvar.",
+  "settings.aboutKiloCode.importSettings.applied": "Settings imported and applied.",
 
   "settings.aboutKiloCode.telemetry.title": "Telemetria",
   "settings.aboutKiloCode.telemetry.description":
@@ -1064,6 +1072,9 @@ export const dict = {
     "Este é um modo embutido. Sua definição base não pode ser alterada, mas você pode configurar as sobrescritas abaixo.",
   "settings.agentBehaviour.editMode.promptOverride": "Substituição de prompt personalizado para este modo integrado",
   "settings.agentBehaviour.badge.subagent": "subagente",
+  "settings.agentBehaviour.perAgentPermissions.title": "Permissões por Agente",
+  "settings.agentBehaviour.perAgentPermissions.description":
+    "Estas configurações se aplicam somente a este agente personalizado. Altere o valor 'Padrão' de um menu suspenso para criar uma substituição ou use 'Adicionar caminho' ou 'Adicionar comando' para exceções específicas de cada ferramenta.",
   "settings.agentBehaviour.permissions.title": "Permissões Calculadas",
   "settings.agentBehaviour.permissions.count": "{{count}} regras",
   "settings.agentBehaviour.permissions.effective": "Efetiva (curinga):",
@@ -1143,12 +1154,15 @@ export const dict = {
   "settings.agentBehaviour.mcpResetAuth.confirm":
     "Skarzhañ ar c'hennaskañ kadaviet evit \"{{name}}\"? Ret e vo deoc'h kennaskañ en-dro.",
   "settings.agentBehaviour.mcpBrowseMarketplace": "Explorar Marketplace",
+  "settings.agentBehaviour.mcp.timeout.startup.title": "Tempo limite de inicialização (ms)",
+  "settings.agentBehaviour.mcp.timeout.catalog.title": "Tempo limite do catálogo (ms)",
+  "settings.agentBehaviour.mcp.timeout.execution.title": "Tempo limite de execução (ms)",
   "settings.agentBehaviour.mcpEmpty":
-    "Nenhum servidor MCP configurado. Adicione servidores MCP em kilo.jsonc ou peça ao agente para adicioná-los.",
+    "Nenhum servidor MCP configurado. Adicione servidores MCP em kilo2.json ou peça ao agente para adicioná-los.",
   "settings.agentBehaviour.workflows.description":
-    "Fluxos de trabalho são comandos de barra personalizados definidos na sua configuração. Digite /command-name no chat para invocá-los. Os comandos são configurados no opencode.json na seção 'command'.",
+    "Os fluxos de trabalho são comandos personalizados definidos na sua configuração ou em arquivos Markdown de comandos. Você pode definir um modelo e uma variante de raciocínio para cada fluxo de trabalho.",
   "settings.agentBehaviour.workflows.empty":
-    "Nenhum comando personalizado configurado. Adicione comandos ao opencode.json para vê-los aqui.",
+    "Nenhum comando personalizado encontrado. Adicione comandos ao kilo2.json ou a um arquivo Markdown em .kilo2/command.",
   "settings.agentBehaviour.workflows.detail.description": "Descrição",
   "settings.agentBehaviour.workflows.detail.template": "Modelo",
   "settings.agentBehaviour.workflows.model": "modelo",
@@ -1162,10 +1176,12 @@ export const dict = {
     "Executar os comandos shell do agente dentro de um sandbox a nível de sistema operacional que restringe escritas aos diretórios de estado do projeto e do Kilo",
 
   "settings.autoApprove.description":
-    "Defina como as ferramentas têm permissão para serem executadas. A maioria das ferramentas tem o padrão Permitir. doom_loop e external_directory têm o padrão Perguntar.",
+    "Defina como as ferramentas têm permissão para serem executadas. A maioria das ferramentas tem o padrão Permitir. Bash tem o padrão Perguntar.",
   "settings.autoApprove.maxCost.title": "Alerta de custo da sessão",
   "settings.autoApprove.maxCost.description":
     "Alerte antes de continuar uma sessão depois que o gasto exceder este valor em USD. Use valores inteiros em dólares; deixe em branco para desativar.",
+  "settings.autoApprove.maxCost.v2Description":
+    "Mostre um alerta não bloqueante quando o custo de uma sessão atingir este valor em USD. Deixe vazio para desativar.",
   "settings.autoApprove.level.allow": "Permitir",
   "settings.autoApprove.level.ask": "Perguntar",
   "settings.autoApprove.level.deny": "Negar",
@@ -1242,6 +1258,12 @@ export const dict = {
   "settings.context.compactionLimit.title": "Limite de compactação automática",
   "settings.context.compactionLimit.description":
     "Compacte quando o contexto atingir esta porcentagem da janela do modelo. Deixe em branco para usar apenas a margem de segurança.",
+  "settings.context.compactionKeep.title": "Manter tokens recentes",
+  "settings.context.compactionKeep.description":
+    "Tokens recentes mantidos literalmente quando o contexto é compactado. Deixe em branco para manter 15.000.",
+  "settings.context.compactionBuffer.title": "Buffer de compactação",
+  "settings.context.compactionBuffer.description":
+    "Tokens mantidos livres abaixo do limite de contexto antes da compactação. Deixe em branco para manter 15% livre, no mínimo 16.000.",
   "settings.context.prune.title": "Remover saídas antigas",
   "settings.context.prune.description": "Remover saídas antigas de ferramentas durante a compactação",
   "settings.context.watcherPatterns": "Padrões de ignorar do observador",
@@ -1326,7 +1348,7 @@ export const dict = {
     "Mostra no prompt vazio o atalho de teclado adequado ao que você faz agora, por exemplo como adicionar o código selecionado ou voltar ao prompt.",
   "settings.display.tokenThroughput.title": "Mostrar taxa de tokens",
   "settings.display.tokenThroughput.description":
-    "Exibir a taxa de geração de texto (tokens/sec) na mensagem mais recente do assistente e no cabeçalho da tarefa. Exibida por padrão; desative esta configuração para ocultá-la quando necessário.",
+    "Display the text-generation rate (tokens/sec) on the latest assistant message footer. Shown by default; disable this setting to hide it when needed.",
   "settings.display.autoApprovalReason.title": "Mostrar motivo da aprovação automática",
   "settings.display.autoApprovalReason.description":
     "Mostra por que uma chamada de ferramenta foi aprovada automaticamente, como uma regra de permissão correspondente ou um padrão do agente.",
@@ -1446,6 +1468,8 @@ export const dict = {
   "diffViewer.source.unstaged.tooltip":
     "Arquivos modificados na sua árvore de trabalho mas ainda não preparados, mais arquivos não rastreados (novos).",
   "diffViewer.source.session.label": "Sessão",
+  "diffViewer.source.turn.tooltip": "Arquivos alterados pelo Kilo durante um turno.",
+  "diffViewer.source.turn.label": "Turno",
   "diffViewer.source.session.tooltip":
     "Arquivos modificados pelo Kilo durante a sessão atual, com base em snapshots por turno. Reinicia ao começar uma nova sessão.",
   "diffViewer.group.session": "Sessão",

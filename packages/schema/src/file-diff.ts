@@ -9,6 +9,9 @@ export const Info = Schema.Struct({
   additions: NonNegativeInt,
   deletions: NonNegativeInt,
   status: Schema.Literals(["added", "deleted", "modified"]),
+  moved: Schema.Boolean.pipe(optional), // kilocode_change(patch) - a patch tool reports a renamed file
+  /** Marks the entry a folder listing adds for itself when it stopped before showing or checking every entry. */
+  more: Schema.Literal(true).pipe(optional),
 }).annotate({ identifier: "FileDiff.Info" })
 export interface Info extends Schema.Schema.Type<typeof Info> {}
 

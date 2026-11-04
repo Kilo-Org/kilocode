@@ -196,6 +196,44 @@ describe("Kilo config discovery", () => {
     },
   )
 
+  it.live("privacy_mode in the global or the project kilo2.json turns privacy mode on, and an invalid value is logged", () => {
+    const messages: unknown[] = []
+    const logger = Logger.map(Logger.formatStructured, (entry) => messages.push(entry.message))
+    return Effect.gen(function* () {
+      const tmp = yield* tmpdirScoped()
+      const project = path.join(tmp.path, "repo")
+      const global = path.join(tmp.path, "global")
+      const read = Effect.gen(function* () {
+        const config = yield* Config.Service
+        return KiloConfigPolicy.privacyMode(yield* config.entries())
+      }).pipe(Effect.provide(configLayer({ directory: project, global })))
+
+      yield* write(path.join(global, "kilo2.json"), { privacy_mode: true })
+      yield* write(path.join(project, "kilo2.json"), { privacy_mode: false })
+      expect(yield* read).toBe(true)
+
+      yield* write(path.join(global, "kilo2.json"), {})
+      yield* write(path.join(project, "kilo2.json"), { privacy_mode: true })
+      expect(yield* read).toBe(true)
+
+      yield* write(path.join(project, "kilo2.json"), {})
+      expect(yield* read).toBe(false)
+
+      const file = path.join(project, "kilo2.json")
+      yield* write(file, { privacy_mode: "yes", shell: "project" })
+      expect(yield* read).toBe(false)
+      expect(messages).toContainEqual([
+        "configuration normalization diagnostic",
+        expect.objectContaining({
+          source: file,
+          path: "$.privacy_mode",
+          kind: "invalid",
+          action: expect.stringContaining("expected a boolean"),
+        }),
+      ])
+    }).pipe(Effect.provide(Logger.layer([logger])))
+  })
+
   const mac = process.platform === "darwin" ? it.live : it.live.skip
   mac("MDM preferences stay above the managed directory with an injected discovery layout", () =>
     Effect.gen(function* () {

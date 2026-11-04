@@ -22,6 +22,8 @@ export interface Invocation {
 export interface Definition {
   readonly name: string
   readonly description?: string
+  readonly template?: string // kilocode_change(workflow-model) seam - command template metadata
+  readonly model?: Info["model"] // kilocode_change(workflow-model) seam - command model metadata
   readonly execute: (input: Invocation) => Effect.Effect<void, unknown>
 }
 
@@ -54,19 +56,26 @@ export const layer = Layer.effect(
   Service,
   Effect.gen(function* () {
     const bus = yield* Bus.Service
+    const info = (definition: Definition) =>
+      Info.make({
+        name: definition.name,
+        description: definition.description,
+        // kilocode_change start - workflow-model seam: expose registered command metadata
+        ...(definition.template === undefined ? {} : { template: definition.template }),
+        ...(definition.model === undefined ? {} : { model: definition.model }),
+        // kilocode_change end
+      })
     const state = State.create<Map<string, Definition>, Editor>({
       name: "command",
       initial: () => new Map(),
       editor: (editor) => ({
         add: (definition) => editor.set(definition.name, definition),
       }),
-      notify: () => bus.publish(Command.Event.Updated, {}).pipe(Effect.asVoid),
+      notify: State.changes(
+        (commands) => Array.from(commands.values(), info),
+        () => bus.publish(Command.Event.Updated, {}).pipe(Effect.asVoid),
+      ),
     })
-    const info = (definition: Definition) =>
-      Info.make({
-        name: definition.name,
-        description: definition.description,
-      })
 
     return Service.of({
       reload: state.reload,
