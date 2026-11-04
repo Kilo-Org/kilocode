@@ -431,8 +431,12 @@ export const toModelMessagesEffect = Effect.fnUntraced(function* (
             // kilocode_change end
             // kilocode_change start — do not replay send_file delivery attachments to the model;
             // they are mobile delivery artifacts (up to 4 MiB base64), not model context.
+            // generate_image attachments are display copies of the saved file, not model context.
             const attachments =
-              part.state.time.compacted || options?.stripMedia || part.tool === "send_file"
+              part.state.time.compacted ||
+              options?.stripMedia ||
+              part.tool === "send_file" ||
+              part.tool === "generate_image"
                 ? []
                 : (part.state.attachments ?? [])
             // kilocode_change end

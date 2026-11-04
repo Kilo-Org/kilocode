@@ -1,4 +1,4 @@
-package ai.kilocode.client.ui.list
+package ai.kilocode.client.ui.active
 
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.layout.Stack
@@ -27,7 +27,7 @@ internal class ActiveListPopup(
     }
 }
 
-internal fun activeListPopup(
+internal fun activePopup(
     body: JComponent,
     button: String,
     enabled: () -> Boolean = { true },
@@ -52,7 +52,7 @@ internal fun activeListPopup(
     return popup
 }
 
-internal fun showActiveListPopup(anchor: RelativePoint, popup: ActiveListPopup): Balloon {
+internal fun showActivePopup(anchor: RelativePoint, popup: ActiveListPopup): Balloon {
     val balloon = JBPopupFactory.getInstance()
         .createBalloonBuilder(popup.component)
         .setFillColor(UIUtil.getToolTipBackground())
