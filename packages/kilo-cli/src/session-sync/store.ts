@@ -53,6 +53,7 @@ export type SessionRow = {
   error_message: string | null
   retry_at: number
   server_retry_at: number
+  retry_credential: string | null
   last_attempt: number
   attempts: number
 }
@@ -203,6 +204,12 @@ export const initialize = Effect.fn("SessionSync.Store.initialize")(function* (d
         for (const name of ["last_attempt", "server_retry_at"])
           if (!columns.some((column) => column.name === name))
             yield* tx.run(`ALTER TABLE _kilo_sync_session ADD COLUMN ${name} INTEGER NOT NULL DEFAULT 0`)
+        if (!columns.some((column) => column.name === "retry_credential")) {
+          yield* tx.run("ALTER TABLE _kilo_sync_session ADD COLUMN retry_credential TEXT")
+          // Older session deadlines have no credential identity; the durable exchange
+          // cooldown still fences their original credential after this one-time upgrade.
+          yield* tx.run("UPDATE _kilo_sync_session SET server_retry_at=0")
+        }
         yield* tx.run("CREATE INDEX IF NOT EXISTS _kilo_sync_session_attempt ON _kilo_sync_session(last_attempt,id)")
         if (yield* tx.get("SELECT 1 FROM sqlite_master WHERE type='table' AND name='_kilo_sync_blob_ack'")) {
           yield* tx.run(`INSERT OR IGNORE INTO _kilo_sync_known_blob(session_id,hash,bytes)
@@ -725,7 +732,7 @@ export const acknowledge = Effect.fn("SessionSync.Store.acknowledge")(function* 
           sql`DELETE FROM _kilo_sync_dirty WHERE session_id=${pending.session_id} AND position<=${pending.through}`,
         )
         yield* tx.run(sql`UPDATE _kilo_sync_session SET acknowledged=${pending.through},ack_batch=${pending.batch_id},ack_digest=${pending.digest},
-      server_retry_at=0,
+      server_retry_at=0,retry_credential=NULL,
       error_code=CASE WHEN error_code='identity_conflict' THEN error_code ELSE NULL END,
       error_message=CASE WHEN error_code='identity_conflict' THEN error_message ELSE NULL END,
       retry_at=CASE WHEN error_code='identity_conflict' THEN retry_at ELSE 0 END,attempts=0 WHERE id=${pending.session_id}`)

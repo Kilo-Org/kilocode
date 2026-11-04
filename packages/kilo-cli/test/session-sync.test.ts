@@ -94,6 +94,7 @@ const peer = () => {
     blobGateAt: 0,
     blobDelay: 0,
     stateGate: false,
+    stateRetryAfter: false,
     abortBody: false,
     sessionRequests: 0,
   }
@@ -124,7 +125,7 @@ const peer = () => {
           entered.resolve()
           await gate.promise
         }
-        const userID = token.slice("fixture:".length)
+        const userID = token.slice("fixture:".length).split("#")[0] ?? ""
         return Response.json({
           version: 1,
           token: `grant:${userID}`,
@@ -223,7 +224,12 @@ const peer = () => {
         states.set(sessionID, state)
       }
       if (!state) return error("session_not_found", 404)
-      const response = Response.json({
+      const response = control.stateRetryAfter
+        ? Response.json(
+            { error: { code: "internal_error" } },
+            { status: 503, headers: { "Retry-After": "120" } },
+          )
+        : Response.json({
         version: 1,
         sessionID,
         deleted: false,
@@ -748,9 +754,11 @@ it.live("a stale uploader cannot park the receipt acknowledged by another native
     const second = yield* boot(f.root)
     yield* writeMessage(first.db, "pending while first producer reads cloud state")
     f.backend.control.stateGate = true
+    f.backend.control.stateRetryAfter = true
     const stale = yield* first.sync.flush({ directory: f.directory }).pipe(Effect.forkScoped)
     yield* Effect.promise(() => f.backend.entered.promise)
     f.backend.control.stateGate = false
+    f.backend.control.stateRetryAfter = false
     expect((yield* second.sync.flush({ directory: f.directory })).pending).toBe(0)
     yield* writeMessage(second.db, "a newer receipt")
     expect((yield* second.sync.flush({ directory: f.directory })).pending).toBe(0)
@@ -759,6 +767,7 @@ it.live("a stale uploader cannot park the receipt acknowledged by another native
     expect((yield* Store.sessions(first.db, f.directory))[0]).toMatchObject({
       error_code: null,
       retry_at: 0,
+      server_retry_at: 0,
     })
     yield* writeMessage(first.db, "continues after concurrent acknowledgement")
     expect((yield* first.sync.flush({ directory: f.directory })).pending).toBe(0)
@@ -2121,17 +2130,19 @@ it.live("persists one exchange outage cooldown across sessions, restart, flush a
     yield* s.sync.flush({ directory: f.directory })
     expect(f.backend.control.exchanges).toBe(1)
     expect((yield* Store.sessions(s.db, f.directory)).every((row) => row.retry_at > Date.now())).toBe(true)
-    // A different credential cannot inherit another account's exchange failure.
-    yield* signIn(s.credentials, "bob")
-    yield* s.sync
-      .enable({
-        directory: f.directory,
-        destination: f.backend.url,
-        local: true,
-        organizationID: null,
-      })
-      .pipe(Effect.result)
+    // A refreshed token for the same account must both exchange and drain old sessions.
+    yield* signIn(s.credentials, "alice#refreshed")
+    f.backend.control.exchangeFailures = false
+    const enabled = yield* s.sync.enable({
+      directory: f.directory,
+      destination: f.backend.url,
+      local: true,
+      organizationID: null,
+    })
+    expect(enabled.enabled).toBe(true)
     expect(f.backend.control.exchanges).toBe(2)
+    expect((yield* s.sync.flush({ directory: f.directory })).pending).toBe(0)
+    expect((yield* Store.sessions(s.db, f.directory)).every(row => row.server_retry_at === 0)).toBe(true)
   }),
 )
 
@@ -2361,5 +2372,126 @@ it.live("upgrades an unbounded hint table to its newest per-session entries", ()
     expect(
       yield* s.db.get(sql`SELECT hash FROM _kilo_sync_known_blob WHERE session_id='legacy-session' AND bytes=300`),
     ).toBeDefined()
+  }),
+)
+
+it.live("a restarted producer preserves the same credential deadline but accepts a refreshed credential", () =>
+  Effect.gen(function* () {
+    const f = yield* fixture
+    yield* Effect.scoped(Effect.gen(function* () {
+      const s = yield* boot(f.root)
+      yield* signIn(s.credentials)
+      yield* seed(s.db, f.directory)
+      yield* allow(s.db, f.directory, f.backend)
+      f.backend.control.mode = "offline"
+      f.backend.control.retryAfter = true
+      expect((yield* s.sync.flush({ directory: f.directory })).pending).toBeGreaterThan(0)
+      expect((yield* Store.sessions(s.db, f.directory))[0]?.retry_credential).toBe(digest("fixture:alice"))
+    }))
+    const s = yield* boot(f.root)
+    f.backend.control.mode = "online"
+    const requests = f.backend.control.sessionRequests
+    expect((yield* s.sync.flush({ directory: f.directory })).pending).toBeGreaterThan(0)
+    expect(f.backend.control.sessionRequests).toBe(requests)
+    yield* signIn(s.credentials, "alice#refreshed")
+    expect((yield* s.sync.flush({ directory: f.directory })).pending).toBe(0)
+    expect((yield* Store.sessions(s.db, f.directory))[0]).toMatchObject({
+      server_retry_at: 0,
+      retry_credential: null,
+    })
+  }),
+)
+
+it.live("an expired exchange cooldown permits a request and is removed after success", () =>
+  Effect.gen(function* () {
+    const f = yield* fixture
+    const s = yield* boot(f.root)
+    yield* signIn(s.credentials)
+    yield* seed(s.db, f.directory)
+    yield* allow(s.db, f.directory, f.backend)
+    yield* s.db.run(sql`INSERT INTO _kilo_sync_exchange_cooldown
+      (destination,organization_id,credential_digest,retry_at,attempts,error_code)
+      VALUES(${f.backend.url},'',${digest("fixture:alice")},${Date.now() - 1},3,'auth_unavailable')`)
+    expect((yield* s.sync.flush({ directory: f.directory })).pending).toBe(0)
+    expect(f.backend.control.exchanges).toBe(1)
+    expect(yield* Store.exchangeCooldown(s.db, f.backend.url, null, digest("fixture:alice"))).toBeUndefined()
+  }),
+)
+
+it.live("post-consent cleanup failure reports enabled state and retries cleanup on the next pass", () =>
+  Effect.gen(function* () {
+    const f = yield* fixture
+    const s = yield* boot(f.root)
+    yield* signIn(s.credentials)
+    yield* seed(s.db, f.directory)
+    yield* s.db.run(`INSERT INTO _kilo_sync_preparation(token,namespace,hash,bytes,deadline)
+      VALUES('expired-cleanup','cleanup-proof','unused',1,0)`)
+    yield* s.db.run(`CREATE TRIGGER fail_cleanup BEFORE DELETE ON _kilo_sync_preparation
+      BEGIN SELECT RAISE(FAIL,'synthetic cleanup failure'); END`)
+    const enabled = yield* s.sync.enable({
+      directory: f.directory,
+      destination: f.backend.url,
+      local: true,
+      organizationID: null,
+    })
+    expect(enabled).toMatchObject({ enabled: true, error: { code: "background_error" } })
+    expect((yield* Store.consent(s.db, f.directory))?.enabled).toBe(1)
+    yield* s.db.run("DROP TRIGGER fail_cleanup")
+    const flushed = yield* s.sync.flush({ directory: f.directory })
+    expect(flushed.pending).toBe(0)
+    expect(flushed.error).toBeUndefined()
+    expect(yield* s.db.all(sql`SELECT token FROM _kilo_sync_preparation`)).toEqual([])
+  }),
+)
+
+it.live("startup cleanup defects preserve native service availability and retry after repair", () =>
+  Effect.gen(function* () {
+    const f = yield* fixture
+    yield* Effect.scoped(Effect.gen(function* () {
+      const s = yield* boot(f.root)
+      yield* signIn(s.credentials)
+      yield* seed(s.db, f.directory)
+      yield* allow(s.db, f.directory, f.backend)
+      yield* s.db.run(`INSERT INTO _kilo_sync_preparation(token,namespace,hash,bytes,deadline)
+        VALUES('startup-cleanup','cleanup-proof','unused',1,0)`)
+      yield* s.db.run(`CREATE TRIGGER fail_cleanup BEFORE DELETE ON _kilo_sync_preparation
+        BEGIN SELECT RAISE(FAIL,'synthetic startup cleanup failure'); END`)
+    }))
+    const s = yield* boot(f.root)
+    expect(yield* s.sync.status({ directory: f.directory })).toMatchObject({
+      enabled: true,
+      error: { code: "background_error" },
+    })
+    yield* s.db.run("DROP TRIGGER fail_cleanup")
+    expect((yield* s.sync.flush({ directory: f.directory })).pending).toBe(0)
+    expect(yield* s.db.all(sql`SELECT token FROM _kilo_sync_preparation`)).toEqual([])
+  }),
+)
+
+it.live("a server deadline still covers a native capture made while its response was in flight", () =>
+  Effect.gen(function* () {
+    const f = yield* fixture
+    const s = yield* boot(f.root)
+    yield* signIn(s.credentials)
+    yield* seed(s.db, f.directory)
+    yield* writeMessage(s.db, "initial")
+    yield* s.sync.enable({ directory: f.directory, destination: f.backend.url, local: true, organizationID: null })
+    expect((yield* s.sync.flush({ directory: f.directory })).pending).toBe(0)
+    yield* writeMessage(s.db, "selected capture")
+    f.backend.control.stateGate = true
+    f.backend.control.stateRetryAfter = true
+    const response = yield* s.sync.flush({ directory: f.directory }).pipe(Effect.forkScoped)
+    yield* Effect.promise(() => f.backend.entered.promise)
+    yield* writeMessage(s.db, "newer capture still honors the service deadline")
+    f.backend.control.stateGate = false
+    f.backend.control.stateRetryAfter = false
+    f.backend.gate.resolve()
+    expect((yield* Fiber.join(response)).pending).toBeGreaterThan(0)
+    expect((yield* Store.sessions(s.db, f.directory))[0]?.server_retry_at).toBeGreaterThan(Date.now() + 119_000)
+    const requests = f.backend.control.sessionRequests
+    expect((yield* s.sync.flush({ directory: f.directory })).pending).toBeGreaterThan(0)
+    expect(f.backend.control.sessionRequests).toBe(requests)
+    yield* s.db.run(sql`UPDATE _kilo_sync_session SET server_retry_at=0 WHERE id=${id}`)
+    expect((yield* s.sync.flush({ directory: f.directory })).pending).toBe(0)
   }),
 )

@@ -108,20 +108,27 @@ export const make = Effect.fn("SessionSync.make")(function* (
   const prune = (force = false) =>
     Effect.gen(function* () {
       if (!force && Date.now() - prunedAt < 60_000) return
-      prunedAt = Date.now()
+      prunedAt = 0
       yield* Assets.prune(db, global)
+      prunedAt = Date.now()
     })
   let observedCredential: string | undefined
+  const reportPrune = (force = false) =>
+    prune(force).pipe(
+      Effect.catchCause((cause) => {
+        if (Cause.hasInterrupts(cause)) return Effect.failCause(cause).pipe(Effect.orDie)
+        backgroundError = fail(
+          "background_error",
+          "Synchronization cleanup is incomplete; pending work is retained and will be retried",
+          true,
+        )
+        return Effect.logError("Session synchronization cleanup failed", cause)
+      }),
+    )
 
   yield* Store.initialize(db)
   yield* Store.reconcile(db)
-  yield* prune(true).pipe(
-    Effect.catch((error) =>
-      Effect.sync(() => {
-        backgroundError = error
-      }),
-    ),
-  )
+  yield* reportPrune(true)
   for (const definition of [
     SessionEvent.InboxDelivered,
     SessionEvent.InboxCancelled,
@@ -132,6 +139,26 @@ export const make = Effect.fn("SessionSync.make")(function* (
         .run(sql`DELETE FROM _kilo_sync_intent WHERE session_id=${event.data.sessionID}`)
         .pipe(Effect.orDie, Effect.asVoid),
     )
+  const observeCredential = Effect.fn("SessionSync.observeCredential")(function* (current: string) {
+    if (observedCredential === current) return
+    grants.clear()
+    yield* db
+      .run(
+        sql`UPDATE _kilo_sync_session SET server_retry_at=0,retry_at=0,retry_credential=NULL,
+          error_code=NULL,error_message=NULL,attempts=0
+        WHERE retry_credential IS NOT NULL AND retry_credential<>${current}
+          AND (error_code IS NULL OR error_code NOT IN ('unclassified_removal','identity_conflict'))`,
+      )
+      .pipe(Effect.orDie)
+    for (const code of authenticationErrors)
+      yield* db
+        .run(
+          sql`UPDATE _kilo_sync_session SET error_code=NULL,error_message=NULL,retry_at=0,
+            server_retry_at=0,retry_credential=NULL,attempts=0 WHERE error_code=${code}`,
+        )
+        .pipe(Effect.orDie)
+    observedCredential = current
+  })
 
   const credential = Effect.fn("SessionSync.credential")(function* () {
     const override = KiloAccount.envToken() ?? KiloAccount.authContent()
@@ -150,7 +177,7 @@ export const make = Effect.fn("SessionSync.make")(function* (
         const origin = yield* destination(input.destination, input.local)
         const token = yield* credential()
         const credentialID = digest(token)
-        observedCredential ??= credentialID
+        yield* observeCredential(credentialID)
         const key = `${origin}:${input.organizationID ?? "personal"}`
         const cooldown = yield* Store.exchangeCooldown(db, origin, input.organizationID, credentialID)
         if (cooldown && cooldown.retry_at > Date.now())
@@ -488,16 +515,7 @@ export const make = Effect.fn("SessionSync.make")(function* (
       Effect.map(digest),
       Effect.orElseSucceed(() => "signed-out"),
     )
-    if (observedCredential === undefined || current !== observedCredential) {
-      grants.clear()
-      for (const code of authenticationErrors)
-        yield* db
-          .run(
-            sql`UPDATE _kilo_sync_session SET error_code=NULL,error_message=NULL,retry_at=0,attempts=0 WHERE error_code=${code}`,
-          )
-          .pipe(Effect.orDie)
-    }
-    observedCredential = current
+    yield* observeCredential(current)
     yield* Store.reconcile(db, only)
     const rows = yield* db
       .all<Store.SessionRow>(
@@ -522,8 +540,10 @@ export const make = Effect.fn("SessionSync.make")(function* (
             yield* db
               .run(
                 sql`UPDATE _kilo_sync_session
-          SET retry_at=max(retry_at,${cooldown.retry_at}),server_retry_at=max(server_retry_at,${cooldown.retry_at})
-          WHERE id=${session.id}`,
+          SET retry_at=max(retry_at,${cooldown.retry_at}),server_retry_at=max(server_retry_at,${cooldown.retry_at}),
+            retry_credential=${current}
+          WHERE id=${session.id} AND acknowledged=${session.acknowledged}
+            AND ack_batch IS ${session.ack_batch} AND ack_digest IS ${session.ack_digest}`,
               )
               .pipe(Effect.orDie)
             return
@@ -555,18 +575,23 @@ export const make = Effect.fn("SessionSync.make")(function* (
             progressed = true
             return
           }
-          if (error.retryAt !== undefined)
+          // A server deadline still applies to newer native captures, but not to
+          // a receipt another producer has already advanced.
+          if (error.retryable && error.retryAt !== undefined)
             yield* db
               .run(
-                sql`UPDATE _kilo_sync_session SET server_retry_at=max(server_retry_at,${error.retryAt})
-          WHERE id=${session.id}`,
+                sql`UPDATE _kilo_sync_session SET server_retry_at=max(server_retry_at,${error.retryAt}),
+                  retry_credential=${current}
+                WHERE id=${session.id} AND acknowledged=${session.acknowledged}
+                  AND ack_batch IS ${session.ack_batch} AND ack_digest IS ${session.ack_digest}`,
               )
               .pipe(Effect.orDie)
           const retryAt = error.retryable ? retryTime(session.attempts, error.retryAt) : Number.MAX_SAFE_INTEGER
           yield* db
             .run(
               sql`UPDATE _kilo_sync_session SET error_code=${error.code},error_message=${error.message},retry_at=${retryAt},
-            attempts=attempts+1
+            server_retry_at=${error.retryable ? sql`server_retry_at` : sql`0`},
+            retry_credential=${error.retryable ? current : null},attempts=attempts+1
         WHERE id=${session.id} AND position=${session.position} AND acknowledged=${session.acknowledged}
           AND ack_batch IS ${session.ack_batch} AND ack_digest IS ${session.ack_digest}`,
             )
@@ -641,7 +666,7 @@ export const make = Effect.fn("SessionSync.make")(function* (
                 return Effect.logError("Session synchronization initial capture failed", cause)
               }),
             )
-            yield* prune(true)
+            yield* reportPrune(true)
             return yield* status({ directory })
           }).pipe(Effect.scoped),
         )

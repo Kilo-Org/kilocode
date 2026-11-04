@@ -126,6 +126,7 @@ Retry network failures and retryable service responses with capped exponential f
 Treat JSON `retryAt` and HTTP 429/503 `Retry-After` seconds or dates as lower bounds, then add jitter.
 Exchange failures share a durable destination, organization, and credential-fingerprint cooldown across sessions and restarts.
 Enable and sessions outside the failed pass consult the same cooldown; a different credential has its own identity.
+Session retry deadlines carry their credential fingerprint, so a refreshed credential does not inherit another credential's outage.
 Keep a received retry deadline even when the response body fails.
 Explicit flush does not bypass server retry deadlines.
 `rate_limited` is retryable HTTP 429 with an integer-seconds `Retry-After` header and JSON `error.retryAt`.
@@ -188,6 +189,7 @@ Bytes for superseded acknowledged generations become reclaimable.
 Cleanup rechecks every durable pin inside a short database transaction before moving a candidate aside; deletion happens after commit.
 Global cleanup runs at startup, enable, and at most once per minute during background passes.
 Acknowledgement cleanup visits only the acknowledged session and retains its packets and preparation pins.
+Only successful cleanup advances its throttle; a cleanup failure preserves enabled consent and reports a retryable background error.
 Before the first enable, native output records metadata only and does not read file contents.
 Unreferenced provenance metadata is bounded by a seven-day age and a 4096-path cap.
 After that metadata expires, an earlier output requires explicit exact-file approval.
