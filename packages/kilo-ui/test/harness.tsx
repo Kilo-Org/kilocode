@@ -2,6 +2,7 @@ import type { JSX } from "solid-js"
 import { render } from "solid-js/web"
 import { File } from "../src/components/file"
 import { ToolRegistry, type ToolProps } from "../src/components/message-part"
+import { DialogProvider } from "../src/context/dialog"
 import { FileComponentProvider } from "../src/context/file"
 
 export type Mounted = {
@@ -37,9 +38,11 @@ export function mountTool(name: string, props: Partial<ToolProps> = {}) {
   if (!Renderer) throw new Error(`No renderer registered for ${name}`)
   const merged = { ...defaults, ...props, tool: name }
   return mount(() => (
-    <FileComponentProvider component={File}>
-      <Renderer {...merged} />
-    </FileComponentProvider>
+    <DialogProvider>
+      <FileComponentProvider component={File}>
+        <Renderer {...merged} />
+      </FileComponentProvider>
+    </DialogProvider>
   ))
 }
 

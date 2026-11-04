@@ -185,9 +185,7 @@ function TextContent(props: {
                 />
               </Tooltip>
             </Show>
-            <Show when={props.throughput}>
-              {(el) => <span data-slot="assistant-throughput-inline">{el()}</span>}
-            </Show>
+            <Show when={props.throughput}>{(el) => <span data-slot="assistant-throughput-inline">{el()}</span>}</Show>
             <Show when={props.turnMeta}>
               {(el) => (
                 <span data-slot="assistant-turn-meta" class="cursor-default">
@@ -328,6 +326,7 @@ function ToolTriggerRow(props: {
   pending: boolean
   subtitle?: string
   args?: string[]
+  action?: JSX.Element
   onClick?: (event: MouseEvent) => void
 }) {
   const detail = () => [props.subtitle, ...(props.args ?? [])].filter(Boolean).join(" ")
@@ -349,6 +348,7 @@ function ToolTriggerRow(props: {
           )}
         </Show>
       </div>
+      <Show when={props.action}>{props.action}</Show>
     </div>
   )
 }
@@ -415,6 +415,16 @@ ToolRegistry.register({
                       props.actions?.openFile?.(path(), line())
                     }
                   : undefined
+              }
+              action={
+                <ToolFileOpenAction
+                  when={!!props.actions?.openFile && !!path()}
+                  onClick={(event) => {
+                    event.preventDefault()
+                    event.stopPropagation()
+                    props.actions?.openFile?.(path(), line())
+                  }}
+                />
               }
             />
           }
@@ -866,7 +876,13 @@ ToolRegistry.register({
   },
 })
 
-function ToolFileAccordion(props: { path: string; directory?: string; actions?: JSX.Element; children: JSX.Element }) {
+function ToolFileAccordion(props: {
+  path: string
+  directory?: string
+  actions?: JSX.Element
+  onOpen?: (event: MouseEvent) => void
+  children: JSX.Element
+}) {
   return (
     <Accordion
       multiple
@@ -878,7 +894,7 @@ function ToolFileAccordion(props: { path: string; directory?: string; actions?: 
         <StickyAccordionHeader>
           <Accordion.Trigger>
             <div data-slot="apply-patch-trigger-content">
-              <div data-slot="apply-patch-file-info">
+              <div data-slot="apply-patch-file-info" classList={{ clickable: !!props.onOpen }} onClick={props.onOpen}>
                 <FileIcon node={{ path: props.path, type: "file" }} />
                 <div data-slot="apply-patch-file-name-container">
                   <Show when={props.path.includes("/")}>
@@ -902,17 +918,44 @@ function ToolFileAccordion(props: { path: string; directory?: string; actions?: 
   )
 }
 
-function ToolFileMeta(props: { path: string; directory?: string; changes?: FileDiffInfo }) {
+function ToolFileMeta(props: {
+  path: string
+  directory?: string
+  changes?: FileDiffInfo
+  onOpen?: (event: MouseEvent) => void
+}) {
   return (
     <Show when={props.path}>
       <span data-slot="message-part-meta-line" title={props.path}>
-        <span data-slot="message-part-title-filename">{getFilename(props.path)}</span>
+        <span data-slot="message-part-title-filename" classList={{ clickable: !!props.onOpen }} onClick={props.onOpen}>
+          {getFilename(props.path)}
+        </span>
         <Show when={props.path.includes("/")}>
           <span data-slot="message-part-directory-inline">
             {relativizeProjectPath(getDirectory(props.path), props.directory)}
           </span>
         </Show>
         <Show when={props.changes}>{(changes) => <DiffChanges changes={changes()} />}</Show>
+      </span>
+    </Show>
+  )
+}
+
+function ToolFileOpenAction(props: { when: boolean; onClick: (event: MouseEvent) => void }) {
+  const i18n = useI18n()
+  return (
+    <Show when={props.when}>
+      <span data-slot="tool-trigger-actions">
+        <Tooltip value={i18n.t("ui.messagePart.openInEditor")} placement="top" gutter={4}>
+          <IconButton
+            icon="go-to-file"
+            size="small"
+            variant="ghost"
+            onMouseDown={(event) => event.preventDefault()}
+            onClick={props.onClick}
+            aria-label={i18n.t("ui.messagePart.openInEditor")}
+          />
+        </Tooltip>
       </span>
     </Show>
   )
@@ -974,6 +1017,11 @@ ToolRegistry.register({
         deletions: value.deletions,
       })
     }
+    const openFile = (event: MouseEvent) => {
+      event.preventDefault()
+      event.stopPropagation()
+      if (path()) props.actions?.openFile?.(path())
+    }
     return (
       <div data-component="edit-tool">
         <BasicTool
@@ -989,9 +1037,15 @@ ToolRegistry.register({
                   <span data-slot="message-part-title-text">
                     <TextShimmer text={i18n.t("ui.messagePart.title.edit")} active={busy(props.status)} />
                   </span>
-                  <ToolFileMeta path={path()} directory={props.directory} changes={diff()} />
+                  <ToolFileMeta
+                    path={path()}
+                    directory={props.directory}
+                    changes={diff()}
+                    onOpen={props.actions?.openFile ? openFile : undefined}
+                  />
                 </div>
               </div>
+              <ToolFileOpenAction when={!!props.actions?.openFile && !!path()} onClick={openFile} />
               <ToolDiffAction when={canOpenDiff()} onClick={openDiff} />
             </div>
           }
@@ -1001,6 +1055,7 @@ ToolRegistry.register({
               path={path()}
               directory={props.directory}
               actions={<Show when={diff()}>{(file) => <DiffChanges changes={file()} />}</Show>}
+              onOpen={props.actions?.openFile ? openFile : undefined}
             >
               <div data-component="edit-content">
                 <Show when={view()}>
@@ -1051,6 +1106,11 @@ ToolRegistry.register({
       event.stopPropagation()
       openDiff()
     }
+    const openFile = (event: MouseEvent) => {
+      event.preventDefault()
+      event.stopPropagation()
+      if (path()) props.actions?.openFile?.(path())
+    }
     return (
       <div data-component="write-tool">
         <BasicTool
@@ -1067,9 +1127,15 @@ ToolRegistry.register({
                   <span data-slot="message-part-title-text">
                     <TextShimmer text={i18n.t("ui.messagePart.title.write")} active={busy(props.status)} />
                   </span>
-                  <ToolFileMeta path={path()} directory={props.directory} changes={diff()} />
+                  <ToolFileMeta
+                    path={path()}
+                    directory={props.directory}
+                    changes={diff()}
+                    onOpen={props.actions?.openFile ? openFile : undefined}
+                  />
                 </div>
               </div>
+              <ToolFileOpenAction when={!!props.actions?.openFile && !!path()} onClick={openFile} />
               <ToolDiffAction when={canOpenDiff()} onClick={handleOpenDiffClick} />
             </div>
           }
@@ -1079,6 +1145,7 @@ ToolRegistry.register({
               path={path()}
               directory={props.directory}
               actions={<Show when={diff()}>{(file) => <DiffChanges changes={file()} />}</Show>}
+              onOpen={props.actions?.openFile ? openFile : undefined}
             >
               <div data-component="write-content">
                 <Show
@@ -1141,6 +1208,11 @@ ToolRegistry.register({
       if (!file.patch) return
       const value = normalize(file)
       return value.fileDiff.hunks.length ? value : undefined
+    }
+    const openFile = (file: FileDiffInfo) => (event: MouseEvent) => {
+      event.preventDefault()
+      event.stopPropagation()
+      props.actions?.openFile?.(file.file)
     }
     const openDiff = (file: FileDiffInfo) => {
       const diff = view(file)
@@ -1207,7 +1279,14 @@ ToolRegistry.register({
                     <TextShimmer text={i18n.t("ui.tool.patch")} active={busy(props.status)} />
                   </span>
                   <Show when={single()}>
-                    {(file) => <ToolFileMeta path={file().file} directory={props.directory} changes={file()} />}
+                    {(file) => (
+                      <ToolFileMeta
+                        path={file().file}
+                        directory={props.directory}
+                        changes={file()}
+                        onOpen={props.actions?.openFile ? openFile(file()) : undefined}
+                      />
+                    )}
                   </Show>
                   <Show when={!single() && list().length}>
                     <span data-slot="basic-tool-tool-subtitle">
@@ -1250,7 +1329,11 @@ ToolRegistry.register({
                         <StickyAccordionHeader>
                           <Accordion.Trigger>
                             <div data-slot="apply-patch-trigger-content">
-                              <div data-slot="apply-patch-file-info">
+                              <div
+                                data-slot="apply-patch-file-info"
+                                classList={{ clickable: !!props.actions?.openFile }}
+                                onClick={props.actions?.openFile ? openFile(file) : undefined}
+                              >
                                 <FileIcon node={{ path: file.file, type: "file" }} />
                                 <div data-slot="apply-patch-file-name-container">
                                   <Show when={file.file.includes("/")}>
@@ -1291,7 +1374,12 @@ ToolRegistry.register({
             }
           >
             {(file) => (
-              <ToolFileAccordion path={file().file} directory={props.directory} actions={changes(file())}>
+              <ToolFileAccordion
+                path={file().file}
+                directory={props.directory}
+                actions={changes(file())}
+                onOpen={props.actions?.openFile ? openFile(file()) : undefined}
+              >
                 <Show when={view(file())}>
                   {(diff) => (
                     <div data-component="apply-patch-file-diff">
