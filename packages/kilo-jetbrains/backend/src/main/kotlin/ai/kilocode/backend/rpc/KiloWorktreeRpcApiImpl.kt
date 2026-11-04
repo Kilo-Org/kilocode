@@ -330,12 +330,13 @@ class KiloWorktreeRpcApiImpl(
     }
 
     /**
-     * Adds the saved base branch recorded by the Agent Manager metadata. A worktree without that
-     * metadata has no reliable base, so the action that consumes it stays hidden rather than guessing
-     * from the main worktree's current branch.
+     * Adds the saved base branch recorded by the Agent Manager metadata. Worktrees created before
+     * that metadata existed get the current main branch as an unconfirmed candidate; the update
+     * prompt asks the user to confirm it before merging instead of treating it as the saved base.
      */
     private fun withWorktreeBases(items: List<WorktreeDto>): List<WorktreeDto> {
         val root = items.firstOrNull()?.path?.let { Path.of(it) } ?: return items
+        val fallback = baseBranch(items)
         var known: Set<String>? = null
         val remotes = {
             known ?: runGit(root, "remote").stdout.lines()
@@ -346,8 +347,16 @@ class KiloWorktreeRpcApiImpl(
         }
         return items.map { item ->
             if (item.main) return@map item
-            val meta = readWorktreeMeta(Path.of(item.path), remotes) ?: return@map item
-            item.copy(parentBranch = meta.parentBranch, remote = meta.remote)
+            val meta = readWorktreeMeta(Path.of(item.path), remotes)
+            when {
+                meta != null -> item.copy(
+                    parentBranch = meta.parentBranch,
+                    remote = meta.remote,
+                    parentBranchRecorded = true,
+                )
+                fallback != null -> item.copy(parentBranch = fallback, parentBranchRecorded = false)
+                else -> item
+            }
         }
     }
 
@@ -856,6 +865,7 @@ class KiloWorktreeRpcApiImpl(
                 path,
                 parentBranch = parent,
                 remote = remote,
+                parentBranchRecorded = !existing && parent != null,
             ),
         )
     }

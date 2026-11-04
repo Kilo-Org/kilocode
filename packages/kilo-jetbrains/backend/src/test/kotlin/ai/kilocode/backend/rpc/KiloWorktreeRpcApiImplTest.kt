@@ -1643,6 +1643,7 @@ class KiloWorktreeRpcApiImplTest {
 
         assertEquals("release", listed.parentBranch)
         assertEquals("upstream", listed.remote)
+        assertTrue(listed.parentBranchRecorded)
     }
 
     @Test
@@ -1657,6 +1658,7 @@ class KiloWorktreeRpcApiImplTest {
         val prefixed = api.list(repo.toString()).worktrees.first { it.path == created.path }
         assertEquals("main", prefixed.parentBranch)
         assertEquals("origin", prefixed.remote)
+        assertTrue(prefixed.parentBranchRecorded)
 
         Files.writeString(file, """{"parentBranch":"release/1.0"}""")
         val branch = api.list(repo.toString()).worktrees.first { it.path == created.path }
@@ -1665,7 +1667,7 @@ class KiloWorktreeRpcApiImplTest {
     }
 
     @Test
-    fun `list does not guess a base when no metadata was recorded`() = runBlocking {
+    fun `list marks the main branch as unconfirmed when no metadata was recorded`() = runBlocking {
         initRepo()
         val main = output(repo, "branch", "--show-current").trim()
         val created = assertNotNull(api.create(repo.toString(), CreateWorktreeRequestDto("feature/base", main)).worktree)
@@ -1673,8 +1675,9 @@ class KiloWorktreeRpcApiImplTest {
 
         val listed = api.list(repo.toString()).worktrees.first { it.path == created.path }
 
-        assertNull(listed.parentBranch)
+        assertEquals(main, listed.parentBranch)
         assertNull(listed.remote)
+        assertFalse(listed.parentBranchRecorded)
     }
 
     @Test
@@ -1686,6 +1689,7 @@ class KiloWorktreeRpcApiImplTest {
 
         assertTrue(Files.exists(file), "create should record the saved base")
         assertEquals(main, created.parentBranch)
+        assertTrue(created.parentBranchRecorded)
         val listed = api.list(repo.toString()).worktrees.first { it.path == created.path }
         assertEquals(main, listed.parentBranch)
     }

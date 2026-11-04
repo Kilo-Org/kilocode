@@ -17,6 +17,8 @@ data class WorktreeDto(
     val parentBranch: String? = null,
     /** Remote recorded for [parentBranch], e.g. `origin`. Null means resolve the base's upstream. */
     val remote: String? = null,
+    /** False when [parentBranch] is only the current main branch, not a recorded base. */
+    val parentBranchRecorded: Boolean = false,
 )
 
 @Serializable

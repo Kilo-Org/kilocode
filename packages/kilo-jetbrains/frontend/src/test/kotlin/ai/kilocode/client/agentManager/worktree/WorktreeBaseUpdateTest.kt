@@ -8,7 +8,7 @@ import kotlin.test.assertTrue
 class WorktreeBaseUpdateTest {
     @Test
     fun `prompt uses the saved base and recorded remote`() {
-        val text = worktreeBaseUpdatePrompt("/repo/.kilo/worktrees/feature", "release", "upstream")
+        val text = worktreeBaseUpdatePrompt("/repo/.kilo/worktrees/feature", "release", "upstream", recorded = true)
 
         assertContains(text, "saved base branch \"release\"")
         assertContains(text, "recorded remote \"upstream\"")
@@ -18,15 +18,15 @@ class WorktreeBaseUpdateTest {
 
     @Test
     fun `prompt asks to resolve the base upstream when no remote was recorded`() {
-        val text = worktreeBaseUpdatePrompt("/repo/.kilo/worktrees/feature", "release", null)
+        val text = worktreeBaseUpdatePrompt("/repo/.kilo/worktrees/feature", "release", null, recorded = true)
 
-        assertContains(text, "Resolve the upstream of the saved base branch \"release\"")
+        assertContains(text, "Resolve the upstream of the base branch \"release\"")
         assertContains(text, "local-only or cannot be resolved, stop and ask")
     }
 
     @Test
     fun `prompt keeps the merge safeguards and never pushes`() {
-        val text = worktreeBaseUpdatePrompt("/repo/.kilo/worktrees/feature", "main", "origin")
+        val text = worktreeBaseUpdatePrompt("/repo/.kilo/worktrees/feature", "main", "origin", recorded = true)
 
         for (safeguard in listOf(
             "FETCH_HEAD^{commit}",
@@ -43,8 +43,18 @@ class WorktreeBaseUpdateTest {
     }
 
     @Test
+    fun `prompt asks to confirm a candidate when no base was recorded`() {
+        val text = worktreeBaseUpdatePrompt("/repo/.kilo/worktrees/feature", "main", null, recorded = false)
+
+        assertContains(text, "No saved base branch was recorded")
+        assertContains(text, "candidate \"main\"")
+        assertContains(text, "confirm with me that this candidate is the intended base")
+        assertContains(text, "Never merge an unconfirmed base")
+    }
+
+    @Test
     fun `quotes embedded path and branch characters`() {
-        val text = worktreeBaseUpdatePrompt("/repo/a\"b", "rel\"ease", null)
+        val text = worktreeBaseUpdatePrompt("/repo/a\"b", "rel\"ease", null, recorded = true)
 
         assertTrue(text.contains("/repo/a\\\"b"))
         assertTrue(text.contains("rel\\\"ease"))
