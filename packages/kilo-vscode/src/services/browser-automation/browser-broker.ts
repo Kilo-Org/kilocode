@@ -122,8 +122,9 @@ interface Entry {
 }
 
 // Loaded on demand: the package carries the Chromium launcher and adds activation cost when the browser is off.
-let playwright: Promise<typeof import("playwright-core")> | undefined
-const engine = () => (playwright ??= import("playwright-core"))
+const load = () => import("playwright-core")
+let playwright: Promise<Awaited<ReturnType<typeof load>>> | undefined
+const engine = () => (playwright ??= load())
 
 export class BrowserLaunchError extends Error {
   constructor(
