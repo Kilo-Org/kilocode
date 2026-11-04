@@ -1,4 +1,22 @@
 {
+  "module:packages/core/src/kilocode/global.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-cli/src/global-resilience.ts",
+    "note": "ensureRealDir, writable, ready and resolveState are ported into packages/kilo-cli/src/global-resilience.ts and wired by packages/kilo-cli/src/global-boot.ts (a host boot step that runs before @opencode/util/global loads), keeping the upstream util/global.ts pristine. The state-dir fallback is <data>/<app> rather than v1's literal <data>/state because roots() always appends the app name.",
+    "by": "global-resilience"
+  },
+  "module:packages/core/src/kilocode/spotlight.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-cli/src/global-resilience.ts",
+    "note": "markNoIndex (macOS .metadata_never_index Spotlight exclusion) is ported into packages/kilo-cli/src/global-resilience.ts and applied to the data, cache and state directories by packages/kilo-cli/src/global-boot.ts.",
+    "by": "global-resilience"
+  },
+  "module:packages/core/test/kilocode/global.test.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-cli/test/global-resilience.test.ts",
+    "note": "The resolveState suite plus ensureRealDir, markNoIndex and cleanEnv coverage are ported to packages/kilo-cli/test/global-resilience.test.ts.",
+    "by": "global-resilience"
+  },
   "module:packages/core/src/kilocode/oauth/page.ts": {
     "state": "ported",
     "note": "packages/kilo-cli/src/branding/text.ts KiloBranding.transform applies the Kilo callback text and square SVG mark to the upstream page module through the host runtime/build loader. Success and error preserve upstream HTML escaping and autoClose behavior; the bootstrap page is also branded. packages/kilo-cli/test/branding.test.ts checks source and compiled exports. The separate oauth-branding test cell remains open because provider User-Agent/originator changes are deferred.",
