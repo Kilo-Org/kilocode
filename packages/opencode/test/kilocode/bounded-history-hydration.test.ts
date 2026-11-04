@@ -120,7 +120,7 @@ function observedDatabase(database: Database.Interface) {
           return new Proxy(builder, {
             get(target, key) {
               const value = Reflect.get(target, key, target)
-              if (key === "all") return (...args: unknown[]) => value.apply(target, args).pipe(
+              if (key === "all") return (...args: unknown[]) => (value.apply(target, args) as Effect.Effect<unknown[]>).pipe(
                 Effect.tap((rows: unknown[]) => Effect.sync(() => {
                   reads.push({ table, rows: rows.length, bytes: Buffer.byteLength(JSON.stringify(rows)) })
                 })),
@@ -177,6 +177,7 @@ describe("bounded history hydration", () => {
       assistant.parts.push({
         ...base, id: PartID.make("prt_reasoning"), type: "reasoning", text: "reasoning",
         metadata: { anthropic: { signature: "synthetic-signature" } },
+        time: { start: 0, end: 1 },
       })
       assistant.parts.push({
         ...base, id: PartID.make("prt_running"), type: "tool", callID: "running", tool: "read",
@@ -215,11 +216,12 @@ describe("bounded history hydration", () => {
       }
       if (shape === "queue") {
         expect(later!.info.id > user.info.id).toBe(true)
+        const database = yield* Database.Service
         yield* KiloSessionPromptQueue.enqueue(sessionID, user.info.id, Effect.gen(function* () {
           const result = yield* compare(sessionID)
           expect(result.bounded.some((message) => message.info.id === later!.info.id)).toBe(false)
           expect(result.bounded.some((message) => message.info.id === user.info.id)).toBe(true)
-        }), Effect.die("unexpected cancellation"))
+        }).pipe(Effect.provideService(Database.Service, database)), Effect.die("unexpected cancellation"))
         yield* (yield* Database.Service).db.delete(SessionTable).where(eq(SessionTable.id, sessionID))
         return
       }
@@ -302,7 +304,7 @@ describe("bounded history hydration", () => {
             return new Proxy(builder, {
               get(target, key) {
                 const value = Reflect.get(target, key, target)
-                if (key === "all") return (...args: unknown[]) => value.apply(target, args).pipe(Effect.tap((rows: unknown[]) => Effect.sync(() => {
+                if (key === "all") return (...args: unknown[]) => (value.apply(target, args) as Effect.Effect<unknown[]>).pipe(Effect.tap((rows: unknown[]) => Effect.sync(() => {
                   counts.rows += rows.length
                   counts.bytes += Buffer.byteLength(JSON.stringify(rows))
                 })))
@@ -343,7 +345,9 @@ describe("bounded history hydration", () => {
           type: "compaction", auto: true,
         }]
         const reply = f.assistant(request, { summary })
-        reply.parts[0] = { ...reply.parts[0], type: "text", text: "y".repeat(2048) }
+        const text = reply.parts[0]
+        if (text.type !== "text") throw new Error("Expected assistant text fixture")
+        text.text = "y".repeat(2048)
         reply.parts.push({
           id: PartID.make(`prt_${reply.info.id}_tool`), messageID: reply.info.id, sessionID,
           type: "tool", tool: "read", callID: `call_${i}`,
