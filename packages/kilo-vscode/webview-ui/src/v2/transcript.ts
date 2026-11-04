@@ -14,6 +14,8 @@ export const TRANSCRIPT_CHUNK_SIZE = 8
 interface TranscriptRowBase {
   key: string
   turn: string
+  /** The turn's first user message, when one is on the page. */
+  userTurn?: string
 }
 
 export interface TranscriptUserRow extends TranscriptRowBase {
@@ -124,7 +126,7 @@ function buildRows(messages: readonly SessionMessageInfo[]) {
     if (range) turn = range.turn
 
     if (message.type === "user" && range) {
-      rows.push({ type: "user", key: `${message.id}:user`, turn: range.turn, message })
+      rows.push({ type: "user", key: `${message.id}:user`, turn: range.turn, userTurn: range.userTurn, message })
     } else if (message.type === "assistant" && range) {
       rows.push(...assistantRows(message, range))
     } else if (message.type === "idle" && message.error && !stepFailed(messages[index - 1])) {
@@ -147,7 +149,16 @@ function assistantRows(message: SessionMessageAssistant, range: MessageTurnRange
   const metadata = range.metadata?.carrierID === message.id ? range.metadata : undefined
   if (message.content.length === 0) {
     return [
-      { type: "assistant", key: `${message.id}:assistant:0`, turn: range.turn, message, start: 0, parts: [], metadata },
+      {
+        type: "assistant",
+        key: `${message.id}:assistant:0`,
+        turn: range.turn,
+        userTurn: range.userTurn,
+        message,
+        start: 0,
+        parts: [],
+        metadata,
+      },
     ]
   }
   const rows: TranscriptAssistantRow[] = []
@@ -156,6 +167,7 @@ function assistantRows(message: SessionMessageAssistant, range: MessageTurnRange
       type: "assistant",
       key: `${message.id}:assistant:${start}`,
       turn: range.turn,
+      userTurn: range.userTurn,
       message,
       start,
       parts: message.content.slice(start, start + TRANSCRIPT_CHUNK_SIZE),
@@ -211,7 +223,7 @@ function reuseRows(rows: TranscriptRow[], previous?: readonly TranscriptRow[]) {
 }
 
 function sameRow(left: TranscriptRow, right: TranscriptRow) {
-  if (left.type !== right.type || left.turn !== right.turn) return false
+  if (left.type !== right.type || left.turn !== right.turn || left.userTurn !== right.userTurn) return false
   if (left.type === "user" && right.type === "user") return left.message === right.message
   if (left.type === "assistant" && right.type === "assistant") {
     return (

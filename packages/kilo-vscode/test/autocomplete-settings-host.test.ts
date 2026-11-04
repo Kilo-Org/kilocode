@@ -21,6 +21,10 @@ describe("KILO_SETTING_KEYS", () => {
     }
   })
 
+  it("contains the diff markdown key so Reset All Settings clears it", () => {
+    expect(KILO_SETTING_KEYS as readonly string[]).toContain("diff.renderMarkdown")
+  })
+
   it("declares every key in package.json contributes.configuration.properties", () => {
     for (const key of KILO_SETTING_KEYS) {
       expect(properties[`kilo-code.v2.${key}`]).toBeDefined()

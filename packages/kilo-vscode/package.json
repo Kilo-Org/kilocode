@@ -140,6 +140,11 @@
           "default": true,
           "markdownDescription": "Show the text-generation rate on the latest assistant message."
         },
+        "kilo-code.v2.diff.renderMarkdown": {
+          "type": "boolean",
+          "default": false,
+          "markdownDescription": "Render Markdown files in Kilo diff viewers by default. Toggle this from a Markdown file header in the diff viewer."
+        },
         "kilo-code.v2.showTaskTimeline": {
           "type": "boolean",
           "default": true,

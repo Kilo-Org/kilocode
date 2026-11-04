@@ -1,4 +1,4 @@
-export function tabForKey(ids: readonly string[], id: string, key: string): string | undefined {
+export function tabForKey<const T extends string>(ids: readonly T[], id: T, key: string): T | undefined {
   const index = ids.indexOf(id)
   if (index === -1 || ids.length === 0) return undefined
   if (key === "ArrowLeft") return ids[(index - 1 + ids.length) % ids.length]

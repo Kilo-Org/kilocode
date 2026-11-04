@@ -33,3 +33,15 @@ export function resolveWorktreeFile(
     return
   }
 }
+
+/** The directory a session works in: its worktree, or the project root for a local session. */
+export function sessionDirectory(
+  state: WorktreeStateManager | undefined,
+  id: string | null,
+  root: string | undefined,
+): string | undefined {
+  if (!id) return root
+  const session = state?.getSession(id)
+  const worktree = session?.worktreeId ? state?.getWorktree(session.worktreeId) : undefined
+  return worktree?.path ?? root
+}

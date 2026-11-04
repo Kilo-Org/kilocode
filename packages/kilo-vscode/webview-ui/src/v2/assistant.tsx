@@ -34,6 +34,8 @@ export function AssistantMessage(props: {
   /** The turn footer metadata, attached to the turn's carrier row by the transcript partition. */
   metadata?: TurnMetadata
   rowKey?: string
+  /** Opens the files changed by this turn. */
+  onViewTurnChanges?: () => void
 }) {
   const v2 = useV2()
   const language = useLanguage()
@@ -165,6 +167,13 @@ export function AssistantMessage(props: {
             )
           }}
         </For>
+        <Show when={props.onViewTurnChanges && lastChunk() && props.metadata}>
+          <div class="vscode-session-turn-changes">
+            <Button variant="ghost" size="small" onClick={() => props.onViewTurnChanges?.()}>
+              {language.t("session.review.viewTurnChanges")}
+            </Button>
+          </div>
+        </Show>
         <Show when={lastChunk() ? props.message.error : undefined}>{(error) => <ErrorCard error={error()} />}</Show>
       </div>
     </div>
