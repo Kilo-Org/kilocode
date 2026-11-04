@@ -82,6 +82,18 @@ test("a markdown file link opens only after worktree validation", async () => {
   expect(links[1]!.classList.contains("document-link")).toBe(false)
 })
 
+test("a file URL link opens although the sanitizer drops its href", async () => {
+  const { card, opened } = part("[plan](file:///repo/plan.md#L3)", async (_session, paths) => paths)
+
+  const link = await waitFor(() => card.host.querySelector<HTMLAnchorElement>("a.file-path-link"))
+  // The browser sanitizer drops `file:` hrefs; the test DOM keeps them, so drop it here.
+  link.removeAttribute("href")
+  link.click()
+  await waitFor(() => opened.length === 1)
+
+  expect(opened).toEqual([{ path: "/repo/plan.md", line: undefined, sessionID: "ses_links" }])
+})
+
 test("a plan document gets the document glyph class", async () => {
   const { card } = part("Review `./plan/42-plan.md`.", async (_session, paths) => paths)
 

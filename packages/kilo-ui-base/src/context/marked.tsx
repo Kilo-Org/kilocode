@@ -727,7 +727,12 @@ export const createMarkedParser = (props: { nativeParser?: NativeMarkdownParser 
             const kind = documentKind(isFile.path)
             const documentClass = kind ? " document-link" : ""
             const documentKindAttr = kind ? ` data-file-kind="${kind}"` : ""
-            return `<a href="${safeHref}"${titleAttr} class="external-link file-path-link${documentClass}"${documentKindAttr} target="_blank" rel="noopener noreferrer">${text}</a>`
+            // The sanitizer drops `file:` hrefs, so the parsed path also goes into data attributes for the click handler.
+            const fileAttrs =
+              ` data-file-path="${escapeAttribute(isFile.path)}"` +
+              (isFile.line ? ` data-file-line="${isFile.line}"` : "") +
+              (isFile.column ? ` data-file-col="${isFile.column}"` : "")
+            return `<a href="${safeHref}"${titleAttr} class="external-link file-path-link${documentClass}"${documentKindAttr}${fileAttrs} target="_blank" rel="noopener noreferrer">${text}</a>`
           }
           return `<a href="${safeHref}"${titleAttr} class="external-link" target="_blank" rel="noopener noreferrer">${text}</a>`
           // kilocode_change end

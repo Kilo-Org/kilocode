@@ -300,21 +300,32 @@ function TextContent(props: {
     })
   }
 
+  const position = (el: Element, name: string) => {
+    const value = Number.parseInt(el.getAttribute(name) ?? "", 10)
+    return Number.isFinite(value) ? value : undefined
+  }
+
   const click = (event: MouseEvent) => {
     if (!(event.target instanceof Element)) return
     const fileLink = event.target.closest(".file-link[data-file-path]")
     if (fileLink) {
       const path = fileLink.getAttribute("data-file-path")
       if (!path) return
-      const line = Number.parseInt(fileLink.getAttribute("data-file-line") ?? "", 10)
-      const column = Number.parseInt(fileLink.getAttribute("data-file-col") ?? "", 10)
       event.preventDefault()
       props.actions?.openFile?.(
         path,
-        Number.isFinite(line) ? line : undefined,
-        Number.isFinite(column) ? column : undefined,
+        position(fileLink, "data-file-line"),
+        position(fileLink, "data-file-col"),
         props.session,
       )
+      return
+    }
+    // The renderer keeps the parsed path of a file link in data attributes, because the sanitizer drops `file:` hrefs.
+    const pathLink = event.target.closest("a.file-path-link[data-file-path]")
+    const linked = pathLink?.getAttribute("data-file-path")
+    if (pathLink && linked) {
+      event.preventDefault()
+      openValidated(linked, position(pathLink, "data-file-line"), position(pathLink, "data-file-col"))
       return
     }
     const anchor = event.target.closest("a[href]")
