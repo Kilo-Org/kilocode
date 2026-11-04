@@ -46,7 +46,8 @@ export function createSidePanel(opts: {
   const open = (value: SidePanel) => {
     const id = session()
     if (ownership[value] === "session") {
-      if (id) setSessions((prev) => ({ ...prev, [owner()]: value }))
+      // The browser opens on a draft too, so it can tell the user to start a session instead of doing nothing.
+      if (id || value === SidePanel.Browser) setSessions((prev) => ({ ...prev, [owner()]: value }))
       return
     }
     const key = worktree()
