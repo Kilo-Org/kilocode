@@ -1,6 +1,6 @@
 import { expect } from "bun:test"
 import { Context, Effect, Layer, Schema } from "effect"
-import { eq, sql } from "drizzle-orm"
+import { and, eq, isNull, sql } from "drizzle-orm"
 import { mkdir, mkdtemp, readFile, realpath, rm, writeFile } from "node:fs/promises"
 import os from "node:os"
 import path from "node:path"
@@ -67,7 +67,10 @@ const enable = (
     { directory, destination: "http://127.0.0.1:8789", local: true, organizationID: null, tenant: { type: "user", id: userID }, userID },
     approvals,
   ).pipe(
-    Effect.andThen(db.run(sql`UPDATE session_v2 SET time_updated=time_updated WHERE directory=${directory} AND workspace_id IS NULL`)),
+    Effect.andThen(db.update(SessionTable)
+      .set({ time_updated: sql`time_updated` })
+      .where(and(eq(SessionTable.directory, directory), isNull(SessionTable.workspace_id)))
+      .run()),
     Effect.andThen(Store.reconcile(db, directory, true)),
   )
 const seed = (db: Store.DB, directory: string, sessionID = id) =>

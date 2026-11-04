@@ -1,6 +1,6 @@
 import { expect } from "bun:test"
 import { Context, Effect, Exit, Layer, Schema } from "effect"
-import { and, asc, eq, sql } from "drizzle-orm"
+import { and, asc, eq, isNull, sql } from "drizzle-orm"
 import { mkdtemp, mkdir, realpath, rm } from "node:fs/promises"
 import os from "node:os"
 import path from "node:path"
@@ -124,7 +124,12 @@ const allow = (f: Fixture) =>
     tenant: { type: "user", id: "fixture" },
     userID: "fixture",
   }).pipe(
-    Effect.andThen(f.db.run(sql`UPDATE session_v2 SET time_updated=time_updated WHERE directory=${f.directory} AND workspace_id IS NULL`)),
+    Effect.andThen(f.db.update(SessionTable)
+      .set({ time_updated: sql`time_updated` })
+      .where(and(eq(SessionTable.directory, f.directory), isNull(SessionTable.workspace_id)))
+      .run()),
+    Effect.andThen(Store.sessions(f.db, f.directory)),
+    Effect.tap((sessions) => Effect.sync(() => expect(sessions.map((session) => session.id)).toContain(sessionID))),
     Effect.andThen(Store.reconcile(f.db, f.directory, true)),
   )
 
