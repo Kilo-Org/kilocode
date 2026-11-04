@@ -511,6 +511,7 @@ it.live("the first excluded envelope or part mutation freezes the last authorize
       ["alias", "insert"],
       ["directory", "update"],
       ["alias", "delete"],
+      ["alias", "message-delete"],
     ] as const) {
       const f = yield* fixture
       yield* f.db.insert(SessionMessageTable).values(assistantRow()).run()
@@ -565,6 +566,8 @@ it.live("the first excluded envelope or part mutation freezes the last authorize
           .delete(SessionPartTable)
           .where(and(eq(SessionPartTable.message_id, messageID), eq(SessionPartTable.ordinal, 1)))
           .run()
+      if (mutation === "message-delete")
+        yield* f.db.delete(SessionMessageTable).where(eq(SessionMessageTable.id, messageID)).run()
       const frozen = yield* f.db.get<Store.Dirty>(
         sql`SELECT * FROM _kilo_sync_dirty WHERE session_id=${sessionID} AND kind='message' AND id=${messageID}`,
       )
@@ -584,5 +587,24 @@ it.live("the first excluded envelope or part mutation freezes the last authorize
       ).toEqual(frozen)
       expect((yield* Store.dirty(f.db, sessionID)).find((row) => row.kind === "message")).toEqual(frozen)
     }
+  }),
+)
+
+it.live("active message removal does not materialize the lazy value it immediately discards", () =>
+  Effect.gen(function* () {
+    const f = yield* fixture
+    yield* f.db.insert(SessionMessageTable).values(assistantRow()).run()
+    yield* parts(f.db, [{ ordinal: 0, data: { type: "text", text: "removed without serialization" } }])
+    yield* allow(f)
+    yield* f.db.run("CREATE TABLE snapshot_observation(value TEXT)")
+    yield* f.db.run(`CREATE TRIGGER observe_materialized_message AFTER UPDATE ON _kilo_sync_dirty
+      WHEN OLD.kind='message' AND OLD.value IS NULL AND NEW.value IS NOT NULL BEGIN
+        INSERT INTO snapshot_observation(value) VALUES(NEW.value);
+      END`)
+    yield* f.db.delete(SessionMessageTable).where(eq(SessionMessageTable.id, messageID)).run()
+    expect(yield* f.db.all(sql`SELECT * FROM snapshot_observation`)).toEqual([])
+    expect(
+      (yield* Store.dirty(f.db, sessionID)).find(row => row.kind === "message" && row.id === messageID),
+    ).toMatchObject({ op: "remove", value: null })
   }),
 )

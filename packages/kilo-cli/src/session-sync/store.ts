@@ -248,7 +248,7 @@ export const initialize = Effect.fn("SessionSync.Store.initialize")(function* (d
     END`)
         yield* tx.run(`DROP TRIGGER IF EXISTS _kilo_sync_message_snapshot`)
         yield* tx.run(`CREATE TRIGGER _kilo_sync_message_snapshot BEFORE DELETE ON session_message
-      WHEN EXISTS(SELECT 1 FROM _kilo_sync_dirty WHERE session_id=OLD.session_id
+      WHEN NOT ${active("OLD.session_id")} AND EXISTS(SELECT 1 FROM _kilo_sync_dirty WHERE session_id=OLD.session_id
         AND kind='message' AND id=OLD.id AND op='put' AND value IS NULL) BEGIN
         UPDATE _kilo_sync_dirty SET value=${messageValue("OLD")}
         WHERE session_id=OLD.session_id AND kind='message' AND id=OLD.id AND op='put' AND value IS NULL;
