@@ -4,6 +4,7 @@ import type { KiloMarketplaceRpc } from "@opencode/schema/kilocode/marketplace"
 import { createHash, randomUUID } from "node:crypto"
 import fs from "node:fs/promises"
 import path from "node:path"
+import { serialized } from "./queue"
 import { Skill } from "./skill"
 
 // Agents install as one native markdown document, so the config agent plugin discovers them like any hand-written
@@ -61,25 +62,6 @@ export async function preflight(file: string, fingerprints: readonly string[] = 
     throw new AgentError("conflict", `Agent at ${file} is modified or not owned by this install`)
   }
   return current
-}
-
-// Cleanup must not delete another operation's live rollback backup. Aliases share a process-local queue.
-const queues = new Map<string, Promise<unknown>>()
-async function serialized<A>(file: string, task: (file: string) => Promise<A>) {
-  const absolute = path.resolve(file)
-  const canonical = path.join(await resolveDirectory(path.dirname(absolute)), path.basename(absolute))
-  const run = (queues.get(canonical) ?? Promise.resolve()).catch(() => undefined).then(() => task(canonical))
-  queues.set(canonical, run)
-  return run.finally(() => {
-    if (queues.get(canonical) === run) queues.delete(canonical)
-  })
-}
-
-async function resolveDirectory(directory: string): Promise<string> {
-  return fs.realpath(directory).catch(async (error: NodeJS.ErrnoException) => {
-    if (error.code !== "ENOENT") throw error
-    return path.join(await resolveDirectory(path.dirname(directory)), path.basename(directory))
-  })
 }
 
 /** Stage beside the target so the promotion is one rename; the previous owned file is retained until it succeeds. */
