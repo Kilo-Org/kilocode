@@ -59,6 +59,55 @@ test("a boot with XDG variables keeps everything under the kilo2 directories of 
   }
 }, 120_000)
 
+// The boot step strips shell newlines from HOME and the XDG bases (cleanEnv) before util/global loads. An
+// XDG_STATE_HOME that is only a newline becomes empty and must be treated as unset: the state directory falls
+// back to the default under HOME, like roots()'s `||`, instead of a relative `kilo2` in the process CWD.
+test("a newline-only XDG_STATE_HOME falls back to the default state directory", async () => {
+  const root = await realpath(await mkdtemp(path.join(os.tmpdir(), "kilo-app-dirs-nl-")))
+  const cwd = await realpath(await mkdtemp(path.join(os.tmpdir(), "kilo-app-dirs-cwd-")))
+  try {
+    const env = environment(root, { XDG_STATE_HOME: "\n" })
+    await mkdir(env.TMPDIR, { recursive: true })
+    const paths = parse(await cliIn(cwd, env, "debug", "paths"))
+    expect(paths.state).toBe(path.join(root, ".local/state/kilo2"))
+    // No stray relative `kilo2` directory created in the process working directory.
+    expect(await readdir(cwd)).toEqual([])
+  } finally {
+    await rm(root, { recursive: true, force: true })
+    await rm(cwd, { recursive: true, force: true })
+  }
+}, 60_000)
+
+// A trailing newline on HOME (e.g. `export HOME=$(cmd)`) is stripped before the paths resolve, so they sit under
+// the cleaned HOME instead of a "<home>\n" directory that fails at startup.
+test("a trailing newline on HOME is stripped before the directories resolve", async () => {
+  const root = await realpath(await mkdtemp(path.join(os.tmpdir(), "kilo-app-dirs-home-nl-")))
+  try {
+    const env = environment(root, {})
+    env.HOME = root + "\n"
+    env.USERPROFILE = root + "\n"
+    await mkdir(env.TMPDIR, { recursive: true })
+    const paths = parse(await cli(env, "debug", "paths"))
+    expect(paths.data).toBe(path.join(root, ".local/share/kilo2"))
+    expect(paths.state).toBe(path.join(root, ".local/state/kilo2"))
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+}, 60_000)
+
+// KILO_TEST_HOME is translated to OPENCODE_TEST_HOME (trimmed), which overrides the reported home directory.
+test("KILO_TEST_HOME overrides the reported home directory", async () => {
+  const root = await realpath(await mkdtemp(path.join(os.tmpdir(), "kilo-app-dirs-testhome-")))
+  const testHome = await realpath(await mkdtemp(path.join(os.tmpdir(), "kilo-app-dirs-th-")))
+  try {
+    const paths = parse(await cli(environment(root, { KILO_TEST_HOME: `  ${testHome}  ` }), "debug", "paths"))
+    expect(paths.home).toBe(testHome)
+  } finally {
+    await rm(root, { recursive: true, force: true })
+    await rm(testHome, { recursive: true, force: true })
+  }
+}, 60_000)
+
 test("KILO2_CONFIG_DIR overrides the config directory", async () => {
   const root = await realpath(await mkdtemp(path.join(os.tmpdir(), "kilo-app-dirs-config-")))
   try {
@@ -144,11 +193,15 @@ function environment(root: string, extra: Record<string, string>) {
   }
 }
 
+// The package directory, so its bunfig.toml preload compiles the TUI modules the CLI imports. The service
+// inherits it.
 async function cli(env: Record<string, string | undefined>, ...args: string[]) {
-  // The package directory, so its bunfig.toml preload compiles the TUI modules the CLI imports. The service
-  // inherits it.
+  return cliIn(path.dirname(import.meta.dir), env, ...args)
+}
+
+async function cliIn(cwd: string, env: Record<string, string | undefined>, ...args: string[]) {
   const child = Bun.spawn([process.execPath, entry, ...args], {
-    cwd: path.dirname(import.meta.dir),
+    cwd,
     env,
     stdout: "pipe",
     stderr: "pipe",

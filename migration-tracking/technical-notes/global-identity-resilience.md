@@ -37,7 +37,11 @@ Wiring:
    - add `TEST_HOME` to `names` so `KILO_TEST_HOME → OPENCODE_TEST_HOME`;
    - call `cleanEnv(process.env)`;
    - compute `preferred = <clean XDG_STATE_HOME or ~/.local/state>/kilo2` and (only when `XDG_STATE_HOME` is unset) a fallback under the data dir, run `resolveState`, and set `process.env.XDG_STATE_HOME` to the chosen parent so `roots("kilo2")` yields the resolved state dir.
-2. **Early boot step (dirs, before the `acquire` layer builds):** a module imported right after `env.ts` (top-level await, like the entry already uses) that reads `Global.Path`, runs `ensureRealDir` on `data/config/state/cache` and `markNoIndex` on `data/cache/state`. `acquire`'s later `mkdir -p` is then a healthy no-op. This runs in every host-started process (they all import `env`/boot first), matching v1 coverage.
+2. **Early boot step (dirs, before the `acquire` layer builds):** a module imported right after `env.ts` (top-level await, like the entry already uses) that reads `Global.Path`, runs `ensureRealDir` on every leaf `acquire` later mkdirs/realpaths (`data/config/state/cache/tmp/log/bin/repos`, matching v1's repaired set) and `markNoIndex` on `data/cache/state`. `acquire`'s later `mkdir -p` is then a healthy no-op. This runs in every host-started process (they all import `env`/boot first), matching v1 coverage.
+
+### `os.homedir()` is cached, so cleaning `HOME` is not enough
+
+`roots()` defaults its XDG bases from `os.homedir()`, and `os.homedir()` caches `$HOME` as read at **process start** — a trailing shell newline on `HOME` survives in `os.homedir()` even after `cleanEnv` strips `process.env.HOME`, which `roots()` never reads. So the boot step resolves the home once via `resolveHome` (cleaned `process.env.HOME`/`USERPROFILE`, falling back to a stripped `os.homedir()`) and **pins each unset `XDG_{DATA,CACHE,CONFIG}_HOME`** to a clean base under it before `util/global` loads. `roots()` then reads these clean values from the environment via its `||` and never reaches its cached `os.homedir()` default. This is also why the boot step uses `||` (not `??`) and treats a now-empty `XDG_STATE_HOME` as unset: an empty base matches `roots()` and avoids a relative `kilo2` directory in the process CWD.
 
 ### Known deviation (accepted, documented)
 
@@ -49,6 +53,8 @@ Wiring:
 - `ensureRealDir`: repairs a dangling symlink/junction (POSIX symlink test; Windows-gated where applicable).
 - `markNoIndex`: writes the marker on darwin, is a no-op elsewhere, ignores EEXIST.
 - `cleanEnv`: newline stripping + `OPENCODE_TEST_HOME` trim; `KILO_TEST_HOME` translation (extend `env.test.ts`/`app-dirs.test.ts`).
+- `resolveHome`: strips a newline from the home env var; falls back to a stripped `os.homedir()` when unset/empty.
+- Boot wiring (`app-dirs.test.ts`, end to end through the real entry): a newline-only `XDG_STATE_HOME` falls back to the default state dir with no stray CWD `kilo2`; a trailing newline on `HOME` still resolves the directories under the clean home; `KILO_TEST_HOME` overrides the reported home.
 
 Close the `global.test.ts` cell with a `kilo_port(global:…)` on the ported test.
 

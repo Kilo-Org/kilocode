@@ -4,7 +4,7 @@ import path from "node:path"
 import { describe, expect, test } from "bun:test"
 import { KiloGlobalResilience } from "../src/global-resilience"
 
-const { resolveState, ensureRealDir, markNoIndex, cleanEnv } = KiloGlobalResilience
+const { resolveState, ensureRealDir, markNoIndex, cleanEnv, resolveHome } = KiloGlobalResilience
 
 const skip = process.platform === "win32" || process.getuid?.() === 0
 
@@ -131,6 +131,19 @@ describe("ensureRealDir", () => {
     await ensureRealDir(link)
     expect((await fs.stat(link)).isDirectory()).toBe(true)
     await fs.writeFile(path.join(link, "probe"), "ok")
+  })
+})
+
+describe("resolveHome", () => {
+  const homeVar = process.platform === "win32" ? "USERPROFILE" : "HOME"
+
+  test("strips a shell newline from the home environment variable", () => {
+    expect(resolveHome({ [homeVar]: "/Users/me\n" }, "/cached/home")).toBe("/Users/me")
+  })
+
+  test("falls back to a stripped os.homedir() when the variable is unset or empty", () => {
+    expect(resolveHome({ [homeVar]: undefined }, "/cached/home\n")).toBe("/cached/home")
+    expect(resolveHome({ [homeVar]: "" }, "/cached/home\n")).toBe("/cached/home")
   })
 })
 

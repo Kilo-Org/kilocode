@@ -20,6 +20,16 @@ export function cleanEnv(env: Record<string, string | undefined>) {
   if (env.OPENCODE_TEST_HOME !== undefined) env.OPENCODE_TEST_HOME = env.OPENCODE_TEST_HOME.trim()
 }
 
+// kilo_port(global:b9f635c56864) - the home directory the XDG bases root under, with any shell newline
+// stripped. os.homedir() caches $HOME as read at process start, so a trailing newline on HOME survives in
+// os.homedir() even after cleanEnv strips process.env.HOME; util/global's roots() then reads that dirty value.
+// Prefer the cleaned process.env.HOME (Windows: USERPROFILE), falling back to a stripped os.homedir().
+export function resolveHome(env: Record<string, string | undefined>, homedir: string) {
+  const strip = (value: string) => value.replace(/[\r\n]+/g, "")
+  const fromEnv = process.platform === "win32" ? env.USERPROFILE : env.HOME
+  return fromEnv !== undefined && fromEnv !== "" ? strip(fromEnv) : strip(homedir)
+}
+
 // kilo_port(global:2886e1a24503) - like fs.mkdir({ recursive: true }) but also repairs a broken
 // symlink/junction whose target no longer exists (a Windows edge where a junction points at a deleted
 // directory), which otherwise leaves later writes failing ENOENT. A dangling link is an lstat that is a
