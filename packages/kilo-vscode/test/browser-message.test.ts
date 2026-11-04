@@ -260,6 +260,22 @@ describe("browser inspection responses", () => {
     await lifecycle.dispose()
   })
 
+  test("keeps a panel route for the session the sidebar shows with the Agent Manager", async () => {
+    const view = await fixture()
+    const lifecycle = createBrowserLifecycle({
+      browser: view.broker,
+      host: view.host,
+      contexts: () => view.contexts,
+      post: () => {},
+      openPanel: () => {},
+      sidebar: () => "session",
+      log: () => {},
+    })
+    const route = { projectId: "project", sessionId: "session", directory: "/fixture" }
+    expect((await view.broker.open(route, "http://localhost:3000/")).projectId).toBe("project")
+    await lifecycle.dispose()
+  })
+
   test("returns correlated failures and continues processing later hover requests", async () => {
     const test = await fixture()
     expect(await test.send(request("first"))).toEqual({

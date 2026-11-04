@@ -17,25 +17,38 @@ describe("browser panel cache bookkeeping", () => {
     })
   })
 
-  test("remembers a scope once and keeps the most recent entries", () => {
+  test("remembers a scope once and evicts the least recently used entry", () => {
     const first = browserScopeKey("prj-1", "ses-1")
     const fresh = browserScopeKey("prj-1", "ses-new")
-    expect(rememberBrowserScope([], first)).toEqual([first])
-    expect(rememberBrowserScope([first], first)).toEqual([first])
+    const empty = { entries: [], recent: [] }
+    expect(rememberBrowserScope(empty, first)).toEqual({ entries: [first], recent: [first] })
+    const once = rememberBrowserScope(empty, first)
+    expect(rememberBrowserScope(once, first)).toBe(once)
     const full = Array.from({ length: BROWSER_CACHE_SIZE }, (_, index) => browserScopeKey("prj-1", `ses-${index}`))
-    const next = rememberBrowserScope(full, fresh)
-    expect(next.length).toBe(BROWSER_CACHE_SIZE)
-    expect(next.at(-1)).toBe(fresh)
-    expect(next.includes(full[0]!)).toBe(false)
+    // ses-0 was used last, so ses-1 is the least recently used entry.
+    const used = rememberBrowserScope({ entries: full, recent: [...full.slice(1), full[0]!] }, fresh)
+    expect(used.entries).toEqual([full[0]!, ...full.slice(2), fresh])
+    expect(used.recent.at(-1)).toBe(fresh)
+  })
+
+  test("keeps the render order when a known scope is used again", () => {
+    const a = browserScopeKey("prj-1", "ses-a")
+    const b = browserScopeKey("prj-1", "ses-b")
+    const next = rememberBrowserScope({ entries: [a, b], recent: [a, b] }, a)
+    expect(next.entries).toEqual([a, b])
+    expect(next.recent).toEqual([b, a])
   })
 
   test("retires missing sessions only within the active project", () => {
     const kept = browserScopeKey("prj-1", "ses-keep")
     const gone = browserScopeKey("prj-1", "ses-gone")
     const other = browserScopeKey("prj-2", "ses-other")
-    const entries = [kept, gone, other]
-    expect(evictBrowserScopes(entries, new Set(["ses-keep"]), "prj-1", kept)).toEqual([kept, other])
-    expect(evictBrowserScopes(entries, new Set(), "prj-1", gone)).toEqual([gone, other])
-    expect(evictBrowserScopes(entries, new Set(), "prj-2")).toEqual([kept, gone])
+    const scopes = { entries: [kept, gone, other], recent: [other, gone, kept] }
+    expect(evictBrowserScopes(scopes, new Set(["ses-keep"]), "prj-1", kept)).toEqual({
+      entries: [kept, other],
+      recent: [other, kept],
+    })
+    expect(evictBrowserScopes(scopes, new Set(), "prj-1", gone).entries).toEqual([gone, other])
+    expect(evictBrowserScopes(scopes, new Set(), "prj-2").entries).toEqual([kept, gone])
   })
 })

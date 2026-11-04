@@ -102,6 +102,8 @@ export function chat(input: {
         if (state.view !== view) return
         state.view = undefined
         state.loaded = false
+        // A closed sidebar shows no session, so the Agent Manager may claim it again.
+        setSidebarSession(undefined)
       })
     },
   }

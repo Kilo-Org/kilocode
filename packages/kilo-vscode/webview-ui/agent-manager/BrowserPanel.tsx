@@ -15,7 +15,13 @@ import {
   browserTransport,
 } from "../browser"
 import type { BrowserCommand, BrowserEvent } from "../browser"
-import { browserScopeKey, browserScopeParts, evictBrowserScopes, rememberBrowserScope } from "./browser-panel-cache"
+import {
+  browserScopeKey,
+  browserScopeParts,
+  evictBrowserScopes,
+  rememberBrowserScope,
+  type BrowserScopes,
+} from "./browser-panel-cache"
 
 export function createBrowserPanel(input: {
   active: Accessor<boolean>
@@ -180,23 +186,23 @@ function BrowserPanelCache(props: {
   onClose: () => void
   onChange: (value: boolean) => void
 }) {
-  const [entries, setEntries] = createSignal<string[]>([])
+  const [scopes, setScopes] = createSignal<BrowserScopes>({ entries: [], recent: [] })
   const current = () => {
     const session = props.sessionId()
     return session ? browserScopeKey(props.projectId(), session) : undefined
   }
   const list = createMemo(() => {
     const entry = props.active() ? current() : undefined
-    return entry ? rememberBrowserScope(entries(), entry) : entries()
+    return (entry ? rememberBrowserScope(scopes(), entry) : scopes()).entries
   })
   createEffect(() => {
     const entry = props.active() ? current() : undefined
     if (!entry) return
-    setEntries((prev) => rememberBrowserScope(prev, entry))
+    setScopes((prev) => rememberBrowserScope(prev, entry))
   })
   createEffect(() => {
     const known = new Set(props.sessions().map((item) => item.id))
-    setEntries((prev) => evictBrowserScopes(prev, known, props.projectId(), current()))
+    setScopes((prev) => evictBrowserScopes(prev, known, props.projectId(), current()))
   })
   createEffect(() => props.onChange(list().length > 0))
   onCleanup(() => props.onChange(false))
@@ -213,7 +219,10 @@ function BrowserPanelCache(props: {
                 projectId={() => (parts.project === "single" ? undefined : parts.project)}
                 onReference={props.onReference}
                 onClose={() => {
-                  setEntries((prev) => prev.filter((item) => item !== entry))
+                  setScopes((prev) => ({
+                    entries: prev.entries.filter((item) => item !== entry),
+                    recent: prev.recent.filter((item) => item !== entry),
+                  }))
                   props.onClose()
                 }}
               />

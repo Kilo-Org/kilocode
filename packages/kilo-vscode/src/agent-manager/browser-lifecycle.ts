@@ -22,9 +22,12 @@ export function createBrowserLifecycle(input: {
       const directory = canonicalizePath(route.directory)
       const ctx = input.contexts().byDirectory(directory)
       if (!ctx || (route.projectId && route.projectId !== ctx.id)) return undefined
-      // The project catalog also lists the sidebar's sessions rooted in this directory. The session the sidebar shows
-      // belongs to the editor tab, and so does a session whose tab stays open after the sidebar switched away.
-      if (route.sessionId === input.sidebar() || browser.ownedByOther(route.sessionId, owner)) return undefined
+      // A route without a project comes from the browser_open tool. The project catalog also lists the sidebar's
+      // sessions rooted in this directory, so the tool route for the session the sidebar shows belongs to the editor
+      // tab, and so does one whose tab stays open after the sidebar switched away. A route with a project comes from
+      // the panel itself and stays here.
+      if (!route.projectId && (route.sessionId === input.sidebar() || browser.ownedByOther(route.sessionId, owner)))
+        return undefined
       const state = ctx.peekState()
       const stored = state?.getSession(route.sessionId)
       const live = ctx.sessions().find((session) => session.id === route.sessionId)
