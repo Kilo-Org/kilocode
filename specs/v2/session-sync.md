@@ -124,9 +124,12 @@ A socket write or scheduled background task is not success.
 Recover the pending packet after process death and retry with the same identity and payload.
 Retry network failures and retryable service responses with capped exponential full jitter.
 Treat JSON `retryAt` and HTTP 429/503 `Retry-After` seconds or dates as lower bounds, then add jitter.
-Exchange failures share a destination and organization cooldown across sessions.
+Exchange failures share a durable destination, organization, and credential-fingerprint cooldown across sessions and restarts.
+Enable and sessions outside the failed pass consult the same cooldown; a different credential has its own identity.
+Keep a received retry deadline even when the response body fails.
 Explicit flush does not bypass server retry deadlines.
 `rate_limited` is retryable HTTP 429 with an integer-seconds `Retry-After` header and JSON `error.retryAt`.
+`tenant_unavailable` is retryable HTTP 503 with `Retry-After` and JSON `error.retryAt`.
 `tenant_budget_exceeded` is HTTP 413 with `error.details` containing the `sessions` and `bytes` limits.
 It pauses the session until enable or flush retries it.
 Do not discard work after a fixed number of attempts.
@@ -192,6 +195,8 @@ After that metadata expires, an earlier output requires explicit exact-file appr
 Each request deadline scales with body size and has a five-minute cap.
 A background pass can run for six minutes; an explicit flush keeps its shorter command deadline.
 Persist session/hash/length blob acknowledgements across packets and process restarts.
+Keep only the newest 256 hints per session; eviction is safe because a missing hint causes another upload.
+Disabling a workspace or deleting its local session clears its hints without discarding pending packet bytes.
 This knowledge is a hint: `blob_missing` with `details.hash` drops that hint and retries the upload.
 Persist last-attempt ordering so continuously dirty sessions cannot starve waiting sessions.
 A pass uploads at most four different sessions concurrently, with one immutable packet per session.

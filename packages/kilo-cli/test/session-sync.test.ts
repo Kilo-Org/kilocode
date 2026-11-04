@@ -94,6 +94,8 @@ const peer = () => {
     blobGateAt: 0,
     blobDelay: 0,
     stateGate: false,
+    abortBody: false,
+    sessionRequests: 0,
   }
   const server = Bun.serve({
     hostname: "127.0.0.1",
@@ -131,6 +133,17 @@ const peer = () => {
           userID,
         })
       }
+      control.sessionRequests++
+      if (control.abortBody)
+        return new Response(
+          new ReadableStream<Uint8Array>({
+            start(controller) {
+              controller.enqueue(new TextEncoder().encode('{"error":'))
+              setTimeout(() => controller.error(new Error("fixture body abort")), 20)
+            },
+          }),
+          { status: 503, headers: { "Retry-After": "120" } },
+        )
       if (!token.startsWith("grant:")) return error("invalid_grant", 401)
       if (control.mode === "hang") {
         entered.resolve()
@@ -2076,23 +2089,49 @@ it.live(
   90_000,
 )
 
-it.live("shares one exchange outage cooldown across sessions and explicit flushes", () =>
+it.live("persists one exchange outage cooldown across sessions, restart, flush and enable", () =>
   Effect.gen(function* () {
     const f = yield* fixture
+    yield* Effect.scoped(
+      Effect.gen(function* () {
+        const s = yield* boot(f.root)
+        yield* signIn(s.credentials)
+        for (let n = 0; n < 40; n++)
+          yield* seed(s.db, f.directory, Session.ID.make(`ses_outage_${String(n).padStart(2, "0")}`))
+        yield* allow(s.db, f.directory, f.backend)
+        f.backend.control.exchangeFailures = true
+        expect((yield* s.sync.flush({ directory: f.directory })).pending).toBeGreaterThan(0)
+        expect(f.backend.control.exchanges).toBe(1)
+        const sessions = yield* Store.sessions(s.db, f.directory)
+        expect(sessions.filter((row) => row.retry_at > Date.now())).toHaveLength(32)
+      }),
+    )
     const s = yield* boot(f.root)
-    yield* signIn(s.credentials)
-    for (let n = 0; n < 40; n++)
-      yield* seed(s.db, f.directory, Session.ID.make(`ses_outage_${String(n).padStart(2, "0")}`))
-    yield* allow(s.db, f.directory, f.backend)
-    f.backend.control.exchangeFailures = true
-    expect((yield* s.sync.flush({ directory: f.directory })).pending).toBeGreaterThan(0)
-    expect(f.backend.control.exchanges).toBe(1)
-    const sessions = yield* Store.sessions(s.db, f.directory)
-    expect(sessions.filter((row) => row.retry_at > Date.now())).toHaveLength(32)
     yield* s.sync.flush({ directory: f.directory })
+    expect(
+      yield* s.sync
+        .enable({
+          directory: f.directory,
+          destination: f.backend.url,
+          local: true,
+          organizationID: null,
+        })
+        .pipe(Effect.result),
+    ).toMatchObject({ _tag: "Failure", failure: { code: "auth_unavailable", retryable: true } })
     yield* s.sync.flush({ directory: f.directory })
     expect(f.backend.control.exchanges).toBe(1)
     expect((yield* Store.sessions(s.db, f.directory)).every((row) => row.retry_at > Date.now())).toBe(true)
+    // A different credential cannot inherit another account's exchange failure.
+    yield* signIn(s.credentials, "bob")
+    yield* s.sync
+      .enable({
+        directory: f.directory,
+        destination: f.backend.url,
+        local: true,
+        organizationID: null,
+      })
+      .pipe(Effect.result)
+    expect(f.backend.control.exchanges).toBe(2)
   }),
 )
 
@@ -2242,5 +2281,85 @@ it.live("flush and enable cannot bypass a session's server-imposed retry deadlin
     yield* s.sync.enable({ directory: f.directory, destination: f.backend.url, local: true, organizationID: null })
     expect((yield* s.sync.flush({ directory: f.directory })).pending).toBeGreaterThan(0)
     expect(f.backend.states.size).toBe(0)
+  }),
+)
+
+it.live("an aborted retry response retains its deadline and prevents the next flush request", () =>
+  Effect.gen(function* () {
+    const f = yield* fixture
+    const s = yield* boot(f.root)
+    yield* signIn(s.credentials)
+    yield* seed(s.db, f.directory)
+    yield* allow(s.db, f.directory, f.backend)
+    f.backend.control.abortBody = true
+    expect((yield* s.sync.flush({ directory: f.directory })).error?.code).toBe("network_error")
+    expect((yield* Store.sessions(s.db, f.directory))[0]?.server_retry_at).toBeGreaterThan(Date.now() + 119_000)
+    const requests = f.backend.control.sessionRequests
+    yield* s.sync.flush({ directory: f.directory })
+    expect(f.backend.control.sessionRequests).toBe(requests)
+  }),
+)
+
+it.live("bounds distinct externalized revision hints and clears them on disable and local deletion", () =>
+  Effect.gen(function* () {
+    const f = yield* fixture
+    const s = yield* boot(f.root)
+    yield* signIn(s.credentials)
+    yield* seed(s.db, f.directory)
+    yield* allow(s.db, f.directory, f.backend)
+    const text = "x".repeat(65 * 1024)
+    for (let revision = 0; revision < 260; revision++) {
+      yield* writeMessage(s.db, `${revision}:${text}`)
+      expect((yield* s.sync.flush({ directory: f.directory })).pending).toBe(0)
+      expect(
+        (yield* s.db.get<{ count: number }>(
+          sql`SELECT count(*) AS count FROM _kilo_sync_known_blob WHERE session_id=${id}`,
+        ))?.count,
+      ).toBeLessThanOrEqual(256)
+    }
+    expect(
+      (yield* s.db.get<{ count: number }>(
+        sql`SELECT count(*) AS count FROM _kilo_sync_known_blob WHERE session_id=${id}`,
+      ))?.count,
+    ).toBe(256)
+    const oldest = f.backend.blobRequests[0]!
+    const newest = f.backend.blobRequests.at(-1)!
+    expect(
+      yield* s.db.get(sql`SELECT hash FROM _kilo_sync_known_blob WHERE session_id=${id} AND hash=${oldest}`),
+    ).toBeUndefined()
+    expect(
+      yield* s.db.get(sql`SELECT hash FROM _kilo_sync_known_blob WHERE session_id=${id} AND hash=${newest}`),
+    ).toBeDefined()
+    yield* s.sync.disable({ directory: f.directory })
+    expect(yield* s.db.all(sql`SELECT hash FROM _kilo_sync_known_blob WHERE session_id=${id}`)).toEqual([])
+    yield* s.sync.enable({ directory: f.directory, destination: f.backend.url, local: true, organizationID: null })
+    yield* writeMessage(s.db, `after-enable:${text}`)
+    expect((yield* s.sync.flush({ directory: f.directory })).pending).toBe(0)
+    expect(yield* s.db.all(sql`SELECT hash FROM _kilo_sync_known_blob WHERE session_id=${id}`)).toHaveLength(1)
+    yield* s.bus.publish(SessionEvent.Deleted, { sessionID: id })
+    expect(yield* s.db.all(sql`SELECT hash FROM _kilo_sync_known_blob WHERE session_id=${id}`)).toEqual([])
+  }),
+)
+
+it.live("upgrades an unbounded hint table to its newest per-session entries", () =>
+  Effect.gen(function* () {
+    const f = yield* fixture
+    const s = yield* boot(f.root)
+    yield* s.db.run("DROP TRIGGER _kilo_sync_hint_limit")
+    yield* s.db.run(`WITH RECURSIVE sequence(n) AS (VALUES(1) UNION ALL SELECT n+1 FROM sequence WHERE n<300)
+      INSERT INTO _kilo_sync_known_blob(session_id,hash,bytes)
+      SELECT 'legacy-session',printf('%064x',n),n FROM sequence`)
+    yield* Store.initialize(s.db)
+    expect(
+      (yield* s.db.get<{ count: number }>(
+        sql`SELECT count(*) AS count FROM _kilo_sync_known_blob WHERE session_id='legacy-session'`,
+      ))?.count,
+    ).toBe(256)
+    expect(
+      yield* s.db.get(sql`SELECT hash FROM _kilo_sync_known_blob WHERE session_id='legacy-session' AND bytes=1`),
+    ).toBeUndefined()
+    expect(
+      yield* s.db.get(sql`SELECT hash FROM _kilo_sync_known_blob WHERE session_id='legacy-session' AND bytes=300`),
+    ).toBeDefined()
   }),
 )

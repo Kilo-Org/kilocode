@@ -319,3 +319,63 @@ it.live("tenant quota pauses and blob_missing preserves its recoverable hash", (
     })
   }),
 )
+
+for (const status of [429, 503]) {
+  it.live(`retains HTTP ${status} Retry-After when the response body fails`, () =>
+    Effect.gen(function* () {
+      const now = Date.now()
+      const nativeFetch = globalThis.fetch
+      yield* Effect.acquireRelease(
+        Effect.sync(() =>
+          spyOn(globalThis, "fetch").mockImplementation(
+            Object.assign(
+              async () =>
+                new Response(
+                  new ReadableStream<Uint8Array>({
+                    pull(controller) {
+                      controller.error(new TypeError("fixture body read failed"))
+                    },
+                  }),
+                  { status, headers: { "Retry-After": "120" } },
+                ),
+              { preconnect: nativeFetch.preconnect },
+            ),
+          ),
+        ),
+        (mock) => Effect.sync(() => mock.mockRestore()),
+      )
+      const result = yield* request("http://127.0.0.1:1/body-failure", token).pipe(Effect.result)
+      if (result._tag !== "Failure") return yield* Effect.die("Expected a body read failure")
+      expect(result.failure.code).toBe("network_error")
+      expect(result.failure.retryable).toBe(true)
+      expect(result.failure.retryAt).toBeGreaterThanOrEqual(now + 120_000)
+    }),
+  )
+}
+
+it.live("preserves retryable tenant unavailability and its retry deadline", () =>
+  Effect.gen(function* () {
+    const floor = Date.now() + 120_000
+    const server = yield* Effect.acquireRelease(
+      Effect.sync(() =>
+        Bun.serve({
+          hostname: "127.0.0.1",
+          port: 0,
+          fetch: () =>
+            Response.json(
+              { error: { code: "tenant_unavailable", retryAt: floor } },
+              { status: 503, headers: { "Retry-After": "60" } },
+            ),
+        }),
+      ),
+      (server) =>
+        Effect.sync(() => {
+          server.stop(true)
+        }),
+    )
+    expect(yield* request(`${server.url}unavailable`, token).pipe(Effect.result)).toMatchObject({
+      _tag: "Failure",
+      failure: { code: "tenant_unavailable", retryable: true, retryAt: floor },
+    })
+  }),
+)

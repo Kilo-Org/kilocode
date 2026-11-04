@@ -83,6 +83,10 @@ const tables = [
     organization_id TEXT, tenant_type TEXT NOT NULL, tenant_id TEXT NOT NULL, user_id TEXT NOT NULL,
     source_id TEXT NOT NULL, last_success INTEGER)`,
   `CREATE TABLE IF NOT EXISTS _kilo_sync_consent_epoch (directory TEXT PRIMARY KEY, epoch INTEGER NOT NULL)`,
+  `CREATE TABLE IF NOT EXISTS _kilo_sync_exchange_cooldown (
+    destination TEXT NOT NULL, organization_id TEXT NOT NULL, credential_digest TEXT NOT NULL,
+    retry_at INTEGER NOT NULL, attempts INTEGER NOT NULL, error_code TEXT NOT NULL,
+    PRIMARY KEY(destination,organization_id,credential_digest))`,
   `CREATE TABLE IF NOT EXISTS _kilo_sync_directory (alias TEXT PRIMARY KEY, directory TEXT NOT NULL, canonical TEXT)`,
   `CREATE TABLE IF NOT EXISTS _kilo_sync_session (
     id TEXT PRIMARY KEY, directory TEXT NOT NULL, source_id TEXT NOT NULL, position INTEGER NOT NULL DEFAULT 0,
@@ -205,6 +209,19 @@ export const initialize = Effect.fn("SessionSync.Store.initialize")(function* (d
             SELECT session_id,hash,bytes FROM _kilo_sync_blob_ack`)
           yield* tx.run("DROP TABLE _kilo_sync_blob_ack")
         }
+        if (!(yield* tx.get("SELECT 1 FROM sqlite_master WHERE type='trigger' AND name='_kilo_sync_hint_limit'"))) {
+          yield* tx.run(`DELETE FROM _kilo_sync_known_blob WHERE session_id IN (
+            SELECT s.id FROM _kilo_sync_session s JOIN _kilo_sync_consent c ON c.directory=s.directory
+            WHERE s.local_deleted=1 OR c.enabled=0)`)
+          yield* tx.run(`DELETE FROM _kilo_sync_known_blob WHERE rowid IN (
+            SELECT id FROM (SELECT rowid AS id,row_number() OVER (PARTITION BY session_id ORDER BY rowid DESC) AS n
+              FROM _kilo_sync_known_blob) WHERE n>256)`)
+          yield* tx.run(`CREATE TRIGGER _kilo_sync_hint_limit AFTER INSERT ON _kilo_sync_known_blob BEGIN
+            DELETE FROM _kilo_sync_known_blob WHERE rowid IN (
+              SELECT rowid FROM _kilo_sync_known_blob WHERE session_id=NEW.session_id
+              ORDER BY rowid DESC LIMIT -1 OFFSET 256);
+          END`)
+        }
         const directories = yield* tx.all<{ name: string }>("PRAGMA table_info(_kilo_sync_directory)")
         if (!directories.some((column) => column.name === "canonical"))
           yield* tx.run("ALTER TABLE _kilo_sync_directory ADD COLUMN canonical TEXT")
@@ -256,6 +273,7 @@ export const initialize = Effect.fn("SessionSync.Store.initialize")(function* (d
         WHERE m.session_id=OLD.id AND m.id=_kilo_sync_dirty.id)
       WHERE session_id=OLD.id AND kind='message' AND op='put' AND value IS NULL;
       UPDATE _kilo_sync_session SET local_deleted=1 WHERE id=OLD.id;
+      DELETE FROM _kilo_sync_known_blob WHERE session_id=OLD.id;
     END`)
         yield* tx.run(`DROP TRIGGER IF EXISTS _kilo_sync_message_snapshot`)
         yield* tx.run(`CREATE TRIGGER _kilo_sync_message_snapshot BEFORE DELETE ON session_message
@@ -392,6 +410,8 @@ export const disable = (db: DB, directory: string) =>
         yield* tx.run(sql`INSERT INTO _kilo_sync_consent_epoch(directory,epoch) VALUES(${directory},1)
       ON CONFLICT(directory) DO UPDATE SET epoch=epoch+1`)
         yield* tx.run(sql`UPDATE _kilo_sync_consent SET enabled=0 WHERE directory=${directory}`)
+        yield* tx.run(sql`DELETE FROM _kilo_sync_known_blob
+          WHERE session_id IN (SELECT id FROM _kilo_sync_session WHERE directory=${directory})`)
       }),
     )
     .pipe(Effect.orDie)
@@ -405,6 +425,14 @@ export const sessions = (db: DB, directory?: string) =>
     .pipe(Effect.orDie)
 export const packet = (db: SQL, id: string) =>
   db.get<Packet>(sql`SELECT * FROM _kilo_sync_packet WHERE session_id=${id}`).pipe(Effect.orDie)
+
+export const exchangeCooldown = (db: SQL, destination: string, organization: string | null, credential: string) =>
+  db
+    .get<{ retry_at: number; attempts: number; error_code: string }>(
+      sql`SELECT retry_at,attempts,error_code FROM _kilo_sync_exchange_cooldown
+      WHERE destination=${destination} AND organization_id=${organization ?? ""} AND credential_digest=${credential}`,
+    )
+    .pipe(Effect.orDie)
 export const dirty = Effect.fn("SessionSync.Store.dirty")(function* (db: DB, id: string, budget = limits.batch) {
   const identities = yield* db
     .all<
@@ -662,7 +690,9 @@ export const acknowledgeBlob = (db: DB, pending: Packet, blob: BlobRef) =>
       sql`INSERT OR REPLACE INTO _kilo_sync_known_blob(session_id,hash,bytes)
     SELECT ${pending.session_id},${blob.hash},${blob.bytes}
     WHERE EXISTS(SELECT 1 FROM _kilo_sync_packet WHERE session_id=${pending.session_id}
-      AND batch_id=${pending.batch_id} AND digest=${pending.digest})`,
+      AND batch_id=${pending.batch_id} AND digest=${pending.digest})
+    AND EXISTS(SELECT 1 FROM _kilo_sync_session s JOIN _kilo_sync_consent c ON c.directory=s.directory
+      WHERE s.id=${pending.session_id} AND s.local_deleted=0 AND c.enabled=1)`,
     )
     .pipe(Effect.orDie, Effect.asVoid)
 

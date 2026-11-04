@@ -156,6 +156,7 @@ const errorCodes: Record<string, true> = {
   length_required: true,
   request_too_large: true,
   storage_budget_exceeded: true,
+  tenant_unavailable: true,
   tenant_budget_exceeded: true,
   rate_limited: true,
   internal_error: true,
@@ -178,6 +179,7 @@ export const request = Effect.fn("SessionSync.request")(function* (
   const bytes = body === undefined ? 0 : typeof body === "string" ? Buffer.byteLength(body) : body.byteLength
   // Allow 32 KiB/s plus handshake time, bounded by the service's five-minute blob lease.
   const timeout = Math.min(300_000, 30_000 + Math.ceil(bytes / (32 * 1024)) * 1000)
+  let receivedRetryAt = 0
   const response = yield* Effect.tryPromise({
     try: async (signal) => {
       const deadline = AbortSignal.any([signal, AbortSignal.timeout(timeout)])
@@ -200,6 +202,7 @@ export const request = Effect.fn("SessionSync.request")(function* (
         response.status === 429 || response.status === 503
           ? retryHeader(response.headers.get("retry-after"), Date.now())
           : 0
+      receivedRetryAt = retryAt
       if (!response.body) return { ok: response.ok, status: response.status, text: "", retryAt }
       const reader = response.body.getReader()
       const cancel = () => {
@@ -241,7 +244,12 @@ export const request = Effect.fn("SessionSync.request")(function* (
     catch: (cause) =>
       cause instanceof Failure
         ? cause
-        : fail("network_error", "The sync service is unreachable; pending changes are retained", true),
+        : fail(
+            "network_error",
+            "The sync service is unreachable; pending changes are retained",
+            true,
+            receivedRetryAt || undefined,
+          ),
   })
   const decoded = Schema.decodeUnknownOption(Schema.fromJsonString(Schema.Unknown))(response.text)
   if (!response.ok) {

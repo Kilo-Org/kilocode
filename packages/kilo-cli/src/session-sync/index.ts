@@ -104,7 +104,6 @@ export const make = Effect.fn("SessionSync.make")(function* (
   let backgroundError: { code: string; message: string } | undefined
   const grants = new Map<string, { credential: string; value: Grant }>()
   const exchangeLock = Semaphore.makeUnsafe(1)
-  const cooldowns = new Map<string, { retryAt: number; attempts: number; error: Failure }>()
   let prunedAt = 0
   const prune = (force = false) =>
     Effect.gen(function* () {
@@ -150,12 +149,19 @@ export const make = Effect.fn("SessionSync.make")(function* (
       Effect.gen(function* () {
         const origin = yield* destination(input.destination, input.local)
         const token = yield* credential()
-        observedCredential ??= digest(token)
+        const credentialID = digest(token)
+        observedCredential ??= credentialID
         const key = `${origin}:${input.organizationID ?? "personal"}`
-        const cooldown = cooldowns.get(key)
-        if (cooldown && cooldown.retryAt > Date.now()) return yield* Effect.fail(cooldown.error)
+        const cooldown = yield* Store.exchangeCooldown(db, origin, input.organizationID, credentialID)
+        if (cooldown && cooldown.retry_at > Date.now())
+          return yield* fail(
+            cooldown.error_code,
+            "The sync exchange is cooling down; pending changes are retained",
+            true,
+            cooldown.retry_at,
+          )
         const cached = grants.get(key)
-        if (cached?.credential === digest(token) && Date.parse(cached.value.expiresAt) > Date.now() + 5000)
+        if (cached?.credential === credentialID && Date.parse(cached.value.expiresAt) > Date.now() + 5000)
           return cached.value
         const grant = yield* request(
           `${origin}/v1/auth/exchange`,
@@ -164,14 +170,26 @@ export const make = Effect.fn("SessionSync.make")(function* (
           JSON.stringify({ version: 1, ...(input.organizationID ? { organizationID: input.organizationID } : {}) }),
         ).pipe(
           Effect.flatMap((value) => decode(Grant, value)),
-          Effect.catch((error) => {
-            if (!error.retryable) return Effect.fail(error)
-            const attempts = cooldown?.attempts ?? 0
-            const retryAt = retryTime(attempts, error.retryAt)
-            const delayed = fail(error.code, error.message, true, retryAt, error.hash)
-            cooldowns.set(key, { retryAt, attempts: attempts + 1, error: delayed })
-            return Effect.fail(delayed)
-          }),
+          Effect.catch((error) =>
+            Effect.gen(function* () {
+              if (!error.retryable) return yield* Effect.fail(error)
+              const attempts = cooldown?.attempts ?? 0
+              const retryAt = retryTime(attempts, error.retryAt)
+              yield* db
+                .transaction((tx) =>
+                  Effect.gen(function* () {
+                    yield* tx.run(sql`DELETE FROM _kilo_sync_exchange_cooldown WHERE retry_at<=${Date.now()}`)
+                    yield* tx.run(sql`INSERT INTO _kilo_sync_exchange_cooldown
+                (destination,organization_id,credential_digest,retry_at,attempts,error_code)
+                VALUES(${origin},${input.organizationID ?? ""},${credentialID},${retryAt},${attempts + 1},${error.code})
+                ON CONFLICT(destination,organization_id,credential_digest) DO UPDATE
+                  SET retry_at=excluded.retry_at,attempts=excluded.attempts,error_code=excluded.error_code`)
+                  }),
+                )
+                .pipe(Effect.orDie)
+              return yield* fail(error.code, error.message, true, retryAt, error.hash)
+            }),
+          ),
         )
         if (
           !Number.isFinite(Date.parse(grant.expiresAt)) ||
@@ -183,8 +201,13 @@ export const make = Effect.fn("SessionSync.make")(function* (
             : grant.tenant.type !== "organization" || grant.tenant.id !== input.organizationID)
         )
           return yield* fail("invalid_response", "The sync grant does not identify the requested account scope")
-        grants.set(key, { credential: digest(token), value: grant })
-        cooldowns.delete(key)
+        grants.set(key, { credential: credentialID, value: grant })
+        yield* db
+          .run(
+            sql`DELETE FROM _kilo_sync_exchange_cooldown WHERE destination=${origin}
+          AND organization_id=${input.organizationID ?? ""} AND credential_digest=${credentialID}`,
+          )
+          .pipe(Effect.orDie)
         return grant
       }),
     )
@@ -467,7 +490,6 @@ export const make = Effect.fn("SessionSync.make")(function* (
     )
     if (observedCredential === undefined || current !== observedCredential) {
       grants.clear()
-      cooldowns.clear()
       for (const code of authenticationErrors)
         yield* db
           .run(
@@ -495,12 +517,12 @@ export const make = Effect.fn("SessionSync.make")(function* (
           if (remaining <= 0) return
           const c = yield* Store.consent(db, session.directory)
           if (!c?.enabled) return
-          const cooldown = cooldowns.get(`${c.destination}:${c.organization_id ?? "personal"}`)
-          if (cooldown && cooldown.retryAt > Date.now()) {
+          const cooldown = yield* Store.exchangeCooldown(db, c.destination, c.organization_id, current)
+          if (cooldown && cooldown.retry_at > Date.now()) {
             yield* db
               .run(
                 sql`UPDATE _kilo_sync_session
-          SET retry_at=max(retry_at,${cooldown.retryAt}),server_retry_at=max(server_retry_at,${cooldown.retryAt})
+          SET retry_at=max(retry_at,${cooldown.retry_at}),server_retry_at=max(server_retry_at,${cooldown.retry_at})
           WHERE id=${session.id}`,
               )
               .pipe(Effect.orDie)
