@@ -4404,6 +4404,7 @@ export type PtyCreateInput = {
   readonly cwd?: string | undefined
   readonly title?: string | undefined
   readonly env?: { readonly [x: string]: string } | undefined
+  readonly size?: { readonly rows: number; readonly cols: number } | undefined
 }
 
 export type PtyCreateOutput = { location: LocationPublicRef; data: Pty }

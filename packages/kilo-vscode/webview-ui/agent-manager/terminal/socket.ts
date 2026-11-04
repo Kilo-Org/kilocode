@@ -36,6 +36,7 @@ export class TerminalSocket {
 
   private readonly socketId = `socket:${crypto.randomUUID()}`
   private unsubscribe: (() => void) | undefined
+  private requested = false
 
   constructor(
     private readonly channel: TerminalSocketChannel,
@@ -53,6 +54,7 @@ export class TerminalSocket {
   close(code?: number, reason?: string): void {
     if (this.readyState === TerminalSocket.CLOSED || this.readyState === TerminalSocket.CLOSING) return
     this.readyState = TerminalSocket.CLOSING
+    this.requested = true
     this.channel.postMessage({ type: "agentManager.terminal.socket.close", socketId: this.socketId, code, reason })
   }
 
@@ -80,10 +82,18 @@ export class TerminalSocket {
     this.unsubscribe?.()
     this.unsubscribe = undefined
     // An abnormal close is a failed connection, matching the browser's
-    // error-then-close order. A normal close just ends the stream.
-    if (code !== 1000 && code !== 1005) this.onerror?.()
+    // error-then-close order. A close this client asked for, and a relay close
+    // that ends a stream on purpose such as PTY_GONE, are not connection errors.
+    if (!this.requested && abnormal(code)) this.onerror?.()
     this.onclose?.({ code, reason })
   }
+}
+
+/** Close codes that mean the stream ended on purpose rather than because the connection failed. */
+const PTY_GONE = 4404
+
+function abnormal(code: number) {
+  return code !== 1000 && code !== 1005 && code !== PTY_GONE
 }
 
 /** Binary frames stay raw bytes so the caller can feed them to the parser. */

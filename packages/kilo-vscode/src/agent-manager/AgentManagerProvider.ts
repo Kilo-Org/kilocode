@@ -171,6 +171,7 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
       getProjectId: () => this.projectScope.current()?.id ?? this.contexts.active()?.id,
       log: (...args) => this.log("[XTerm]", ...args),
       post: (message) => this.postToWebview(message),
+      closed: (terminalId) => this.relay.closeTerminal(terminalId),
       getTerminalFont: () => readTerminalFont(),
     })
     this.relay = new PtyRelay({
@@ -183,6 +184,7 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
       connection: this.connection,
       output: this.outputChannel,
       post: (message) => this.postToWebview(message),
+      closed: (terminalId) => this.relay.closeTerminal(terminalId),
     })
     this.unsubFont = watchTerminalFont((font) => {
       this.postToWebview({ type: "agentManager.terminal.fontChanged", font })
@@ -414,6 +416,8 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
       this.panel = undefined
       previous.dispose()
     }
+    // Sockets of the previous webview instance cannot be reached by this one.
+    this.relay.reset()
     this.panel = panel
     void this.statsPoller
     for (const poller of [this.statsPoller, this.projectPollers]) poller.setVisible(panel.visible)
@@ -448,6 +452,7 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
       this.connection.view([])
       this.panel = undefined
       void this.terminalRouter.dispose()
+      this.relay.reset()
       this.onVisibilityChange?.(false)
     })
     this.postCaffeination()
@@ -536,7 +541,11 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
 
   public trackVisibleSession(id: string | null): void {
     this.visibleSession = id
-    if (id) this.panelSessions.add(id)
+    if (id) {
+      this.panelSessions.add(id)
+      // Follow the session with its integrated terminal while the terminal panel is open.
+      this.terminalManager.syncOnSessionSwitch(id)
+    }
     // The poller follows the visible session so its fast poll and immediate fetch target the
     // worktree the user is reading. The PR poller belongs to the active project, so a session
     // from another project, a local session, or an unknown one clears the target.
