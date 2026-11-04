@@ -2,7 +2,7 @@ import path from "node:path"
 import fs from "node:fs/promises"
 import { describe, expect } from "bun:test"
 import { NodeFileSystem } from "@effect/platform-node"
-import { Effect, Layer } from "effect"
+import { Effect, Exit, Layer } from "effect"
 import { parse, type ParseError } from "jsonc-parser"
 import { KiloConfigWriter } from "@opencode/core/kilocode/config/write"
 import { FSUtil } from "@opencode/util/fs-util"
@@ -220,6 +220,33 @@ describe("KiloConfigWriter", () => {
       )
       expect(error.reason).toBe("conflict")
       expect(JSON.parse(yield* read(first.file))).toEqual({ privacy_mode: true })
+    }).pipe(Effect.provide(layer())),
+  )
+
+  it.effect("serializes concurrent writes so only one passes the revision guard", () =>
+    Effect.gen(function* () {
+      const tmp = yield* tmpdirScoped()
+      const writer = yield* KiloConfigWriter.Service
+      const seed = yield* writer.write({
+        target: { directory: tmp.path, global: true },
+        path: ["seed"],
+        value: true,
+      })
+      const results = yield* Effect.forEach(
+        [0, 1, 2, 3],
+        (n) =>
+          Effect.exit(
+            writer.write({
+              target: { directory: tmp.path, global: true },
+              path: [`key_${n}`],
+              value: n,
+              expectedRevision: seed.revision,
+            }),
+          ),
+        { concurrency: "unbounded" },
+      )
+      expect(results.filter(Exit.isSuccess).length).toBe(1)
+      expect(results.filter(Exit.isFailure).length).toBe(3)
     }).pipe(Effect.provide(layer())),
   )
 

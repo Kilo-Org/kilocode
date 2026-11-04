@@ -3,7 +3,8 @@ export * as KiloConfigWriter from "./write.js"
 import { createHash, randomUUID } from "node:crypto"
 import path from "node:path"
 import { applyEdits, modify, parse, printParseErrorCode, type ParseError } from "jsonc-parser"
-import { Context, Effect, Layer, Schema, Semaphore } from "effect"
+import { Cause, Context, Effect, Exit, Layer, Option, Schema, Semaphore } from "effect"
+import type { PlatformError } from "effect/PlatformError"
 import { FSUtil } from "@opencode/util/fs-util"
 import { KiloConfigFiles } from "@opencode/util/kilocode/config/files"
 
@@ -81,6 +82,11 @@ const hash = (text: string) => createHash("sha256").update(text).digest("hex")
 
 const formatting = { tabSize: 2, insertSpaces: true } as const
 
+// Windows can fail the rename while Defender, an indexer or a concurrent writer briefly holds the temporary file.
+// POSIX renames are atomic, so the retry only fires under contention and never changes success semantics.
+const isLocked = (error: PlatformError) =>
+  error.reason._tag === "Busy" || error.reason._tag === "PermissionDenied"
+
 export const layer = (options?: Options) =>
   Layer.effect(
     Service,
@@ -116,16 +122,30 @@ export const layer = (options?: Options) =>
         return text === undefined ? undefined : { file, hash: hash(text) }
       })
 
+      const renameWithRetry = Effect.fnUntraced(function* (temporary: string, file: string) {
+        const attempts = process.platform === "win32" ? 8 : 1
+        for (let attempt = 1; ; attempt++) {
+          const result = yield* Effect.exit(fs.rename(temporary, file))
+          if (Exit.isSuccess(result)) return
+          const error = Cause.findErrorOption(result.cause)
+          if (Option.isSome(error) && isLocked(error.value) && attempt < attempts) {
+            yield* Effect.sleep(`${50 * attempt} millis`)
+            continue
+          }
+          return yield* Effect.failCause(result.cause)
+        }
+      })
+
       // Create the temporary file with 0600 and rename it over the target: the target is never briefly
       // umask-readable, and a crash leaves the old file intact rather than a partial one.
       const writeAtomic = Effect.fnUntraced(function* (file: string, content: string) {
         yield* fs.ensureDir(path.dirname(file))
         const temporary = `${file}.${randomUUID()}.tmp`
         const discard = fs.remove(temporary, { force: true }).pipe(Effect.orDie)
-        yield* fs
-          .writeFileString(temporary, content, { mode: 0o600, flag: "wx" })
-          .pipe(Effect.tapError(() => discard))
-        yield* fs.rename(temporary, file).pipe(Effect.tapError(() => discard))
+        yield* Effect.gen(function* () {
+          yield* fs.writeFileString(temporary, content, { mode: 0o600, flag: "wx" })
+          yield* renameWithRetry(temporary, file)
+        }).pipe(Effect.ensuring(discard))
       })
 
       const write = Effect.fn("KiloConfigWriter.write")(
