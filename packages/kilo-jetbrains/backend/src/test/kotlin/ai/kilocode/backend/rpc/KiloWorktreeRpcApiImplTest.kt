@@ -1646,6 +1646,38 @@ class KiloWorktreeRpcApiImplTest {
     }
 
     @Test
+    fun `list splits a legacy remote-prefixed base only for a known remote`() = runBlocking {
+        initRepo()
+        git(repo, "remote", "add", "origin", remote.toString())
+        val main = output(repo, "branch", "--show-current").trim()
+        val created = assertNotNull(api.create(repo.toString(), CreateWorktreeRequestDto("feature/base", main)).worktree)
+        val file = metadata(Path.of(created.path), "kilo-agent-manager-metadata.json")
+
+        Files.writeString(file, """{"parentBranch":"origin/main"}""")
+        val prefixed = api.list(repo.toString()).worktrees.first { it.path == created.path }
+        assertEquals("main", prefixed.parentBranch)
+        assertEquals("origin", prefixed.remote)
+
+        Files.writeString(file, """{"parentBranch":"release/1.0"}""")
+        val branch = api.list(repo.toString()).worktrees.first { it.path == created.path }
+        assertEquals("release/1.0", branch.parentBranch)
+        assertNull(branch.remote)
+    }
+
+    @Test
+    fun `list does not guess a base when no metadata was recorded`() = runBlocking {
+        initRepo()
+        val main = output(repo, "branch", "--show-current").trim()
+        val created = assertNotNull(api.create(repo.toString(), CreateWorktreeRequestDto("feature/base", main)).worktree)
+        Files.deleteIfExists(metadata(Path.of(created.path), "kilo-agent-manager-metadata.json"))
+
+        val listed = api.list(repo.toString()).worktrees.first { it.path == created.path }
+
+        assertNull(listed.parentBranch)
+        assertNull(listed.remote)
+    }
+
+    @Test
     fun `create records the base branch for later updates`() = runBlocking {
         initRepo()
         val main = output(repo, "branch", "--show-current").trim()
@@ -2736,6 +2768,8 @@ class KiloWorktreeRpcApiImplTest {
         val worktree = assertNotNull(result.worktree, result.error)
         assertEquals("latest\n", Files.readString(Path.of(worktree.path).resolve("latest.txt")))
         assertEquals(head(remote, base), head(Path.of(worktree.path), "HEAD"))
+        assertEquals(base, worktree.parentBranch)
+        assertEquals("origin", worktree.remote)
     }
 
     @Test
@@ -2753,6 +2787,8 @@ class KiloWorktreeRpcApiImplTest {
 
         val worktree = assertNotNull(result.worktree, result.error)
         assertEquals(head(remote, "feature/remote"), head(Path.of(worktree.path), "HEAD"))
+        assertEquals("feature/remote", worktree.parentBranch)
+        assertEquals("origin", worktree.remote)
     }
 
     @Test
@@ -2764,6 +2800,8 @@ class KiloWorktreeRpcApiImplTest {
 
         val worktree = assertNotNull(result.worktree, result.error)
         assertEquals(head(repo, "local-only"), head(Path.of(worktree.path), "HEAD"))
+        assertEquals("local-only", worktree.parentBranch)
+        assertNull(worktree.remote)
     }
 
     private fun metadata(dir: Path, name: String): Path =

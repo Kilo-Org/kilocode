@@ -176,6 +176,19 @@ class WorktreeSessionEditorManagerTest : BasePlatformTestCase() {
         assertTrue(rpc.prompts.single { it.first == "ses_1" }.third.parts.any { it.text == "update from base" })
     }
 
+    fun `test the project base update service finds the open worktree editor`() {
+        val session = session("ses_1", updated = 1.0)
+        val manager = manager()
+        edt { manager.openSession(SessionRef.Local(session)) }
+        flush()
+
+        val sent = edt { project.service<WorktreeBaseUpdatePrompts>().submit(DIR, "update from base") }
+        waitUntil { rpc.prompts.any { it.first == "ses_1" } }
+
+        assertTrue("the project service must see the editor's registration", sent)
+        assertTrue(rpc.prompts.single { it.first == "ses_1" }.third.parts.any { it.text == "update from base" })
+    }
+
     fun `test start opens most recent listed session`() {
         rpc.listed += session("ses_old", updated = 1.0)
         rpc.listed += session("ses_new", updated = 3.0)

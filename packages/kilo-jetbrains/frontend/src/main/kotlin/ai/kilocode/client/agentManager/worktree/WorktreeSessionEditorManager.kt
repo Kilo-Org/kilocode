@@ -116,7 +116,7 @@ open class WorktreeSessionEditorManager(
     private var migrationJob: Job? = null
     init {
         Disposer.register(parent, this)
-        service<WorktreeBaseUpdatePrompts>().register(worktree.directory, this)
+        project.service<WorktreeBaseUpdatePrompts>().register(worktree.directory, this)
         bindMigration()
     }
 
@@ -199,7 +199,7 @@ open class WorktreeSessionEditorManager(
 
     @RequiresEdt
     override fun dispose() {
-        service<WorktreeBaseUpdatePrompts>().unregister(worktree.directory, this)
+        project.service<WorktreeBaseUpdatePrompts>().unregister(worktree.directory, this)
         migrationJob?.cancel()
         super.dispose()
     }

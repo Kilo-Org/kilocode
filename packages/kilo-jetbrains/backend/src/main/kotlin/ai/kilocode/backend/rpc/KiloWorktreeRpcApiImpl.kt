@@ -330,28 +330,47 @@ class KiloWorktreeRpcApiImpl(
     }
 
     /**
-     * Adds the saved base branch recorded by the Agent Manager metadata, falling back to the main
-     * worktree's branch for worktrees created before that metadata existed (and for worktrees created
-     * by clients that do not record one).
+     * Adds the saved base branch recorded by the Agent Manager metadata. A worktree without that
+     * metadata has no reliable base, so the action that consumes it stays hidden rather than guessing
+     * from the main worktree's current branch.
      */
     private fun withWorktreeBases(items: List<WorktreeDto>): List<WorktreeDto> {
-        val fallback = baseBranch(items)
+        val root = items.firstOrNull()?.path?.let { Path.of(it) } ?: return items
+        var known: Set<String>? = null
+        val remotes = {
+            known ?: runGit(root, "remote").stdout.lines()
+                .map { it.trim() }
+                .filter { it.isNotEmpty() }
+                .toSet()
+                .also { known = it }
+        }
         return items.map { item ->
             if (item.main) return@map item
-            val meta = readWorktreeMeta(Path.of(item.path))
-            val branch = meta?.parentBranch ?: fallback ?: return@map item
-            item.copy(parentBranch = branch, remote = meta?.remote)
+            val meta = readWorktreeMeta(Path.of(item.path), remotes) ?: return@map item
+            item.copy(parentBranch = meta.parentBranch, remote = meta.remote)
         }
     }
 
     private data class WorktreeMeta(val parentBranch: String, val remote: String?)
 
-    private fun readWorktreeMeta(path: Path): WorktreeMeta? {
+    private fun readWorktreeMeta(path: Path, remotes: () -> Set<String>): WorktreeMeta? {
         val file = worktreeGitDir(path)?.resolve(GIT_METADATA_FILE) ?: return null
         if (!Files.isRegularFile(file)) return null
         val obj = runCatching { Json.parseToJsonElement(Files.readString(file)) as? JsonObject }.getOrNull() ?: return null
-        val branch = obj["parentBranch"]?.jsonPrimitive?.contentOrNull?.trim()?.takeIf { it.isNotEmpty() } ?: return null
-        val remote = obj["remote"]?.jsonPrimitive?.contentOrNull?.trim()?.takeIf { it.isNotEmpty() }
+        var branch = obj["parentBranch"]?.jsonPrimitive?.contentOrNull?.trim()?.takeIf { it.isNotEmpty() } ?: return null
+        var remote = obj["remote"]?.jsonPrimitive?.contentOrNull?.trim()?.takeIf { it.isNotEmpty() }
+        if (remote == null) {
+            // Older VS Code metadata stored "origin/main" in parentBranch without a remote field.
+            // Split only when the prefix is a real remote, so "release/1.0" stays a branch name.
+            val slash = branch.indexOf('/')
+            if (slash > 0) {
+                val prefix = branch.substring(0, slash)
+                if (prefix in remotes()) {
+                    remote = prefix
+                    branch = branch.substring(slash + 1)
+                }
+            }
+        }
         return WorktreeMeta(branch, remote)
     }
 
@@ -692,30 +711,33 @@ class KiloWorktreeRpcApiImpl(
             val branch = request.branch.trim()
             if (branch.isEmpty()) return@withContext CreateWorktreeResultDto(error = "Branch name is required")
             lock(base, "create") {
+                var parent = if (request.existingBranch) null else request.baseBranch?.trim()?.takeIf { it.isNotEmpty() }
+                var parentRemote: String? = null
                 val ref = if (request.fetchBase && !request.existingBranch) {
                     val target = request.baseBranch?.trim()?.takeIf { it.isNotEmpty() }
                         ?: return@lock CreateWorktreeResultDto(error = "Base branch is required to fetch latest")
-                    val remote = runGit(base, "config", "--get", "branch.$target.remote").stdout.trim()
+                    val upstreamRemote = runGit(base, "config", "--get", "branch.$target.remote").stdout.trim()
                     val merge = runGit(base, "config", "--get", "branch.$target.merge").stdout.trim()
-                    if (remote.isEmpty() || remote == "." || !merge.startsWith("refs/heads/")) {
-                        return@lock addWorktree(base, branch, false, target)
+                    if (upstreamRemote.isEmpty() || upstreamRemote == "." || !merge.startsWith("refs/heads/")) {
+                        return@lock addWorktree(base, branch, false, target, target)
                     }
                     val tracked = merge.removePrefix("refs/heads/")
                     val fetched = runGit(
                         base,
-                        listOf("fetch", "--quiet", "--no-tags", remote, "+$merge:refs/remotes/$remote/$tracked"),
+                        listOf("fetch", "--quiet", "--no-tags", upstreamRemote, "+$merge:refs/remotes/$upstreamRemote/$tracked"),
                         GIT_WRITE_TIMEOUT_MS,
                     )
                     if (!fetched.ok) {
-                        LOG.warn("base fetch failed: branch=$target upstream=$remote/$tracked exit=${fetched.exit} stderr=${fetched.stderr.trim()}")
-                        return@lock CreateWorktreeResultDto(error = reason(fetched, "Could not fetch $remote/$tracked"))
+                        LOG.warn("base fetch failed: branch=$target upstream=$upstreamRemote/$tracked exit=${fetched.exit} stderr=${fetched.stderr.trim()}")
+                        return@lock CreateWorktreeResultDto(error = reason(fetched, "Could not fetch $upstreamRemote/$tracked"))
                     }
-                    "$remote/$tracked"
+                    parent = tracked
+                    parentRemote = upstreamRemote
+                    "$upstreamRemote/$tracked"
                 } else {
                     request.baseBranch
                 }
-                val parent = if (request.existingBranch) null else request.baseBranch?.trim()?.takeIf { it.isNotEmpty() }
-                addWorktree(base, branch, request.existingBranch, ref, parent)
+                addWorktree(base, branch, request.existingBranch, ref, parent, parentRemote)
             }
         }
 
@@ -788,6 +810,7 @@ class KiloWorktreeRpcApiImpl(
         existing: Boolean,
         baseRef: String?,
         parentBranch: String? = null,
+        parentRemote: String? = null,
     ): CreateWorktreeResultDto {
         val root = mainWorktree(base)
         val storage = root.resolve(".kilo").resolve("worktrees").normalize()
@@ -819,8 +842,8 @@ class KiloWorktreeRpcApiImpl(
         val path = dir.toRealPath().toString()
         val list = runGit(base, "worktree", "list", "--porcelain")
         val items = if (list.ok) managedWorktrees(parseWorktreeList(list.stdout)) else emptyList()
-        val parent = parentBranch ?: baseBranch(items)
-        val remote = parent?.let { branchRemote(base, it) }
+        val parent = if (existing) null else parentBranch ?: baseBranch(items)
+        val remote = parentRemote ?: parent?.let { branchRemote(base, it) }
         if (!existing && parent != null) writeWorktreeMeta(Path.of(path), parent, remote)
         val store = worktreeNameStore(items) ?: base.resolve(".kilo").resolve(WORKTREE_NAMES_FILE)
         val paths = worktreePaths(items).ifEmpty { listOf(path) }
