@@ -1,4 +1,4 @@
-// kilocode_change start
+// kilocode_change - new file
 import { expect, test } from "bun:test"
 import { createRoot } from "solid-js"
 import { createData, type CreateDataInput } from "../src/solid"
@@ -60,4 +60,3 @@ function fixture(pages: Array<{ data: ReturnType<typeof message>[]; next?: strin
     return { data, dispose }
   })
 }
-// kilocode_change end
