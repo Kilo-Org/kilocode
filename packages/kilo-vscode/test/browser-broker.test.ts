@@ -1651,6 +1651,53 @@ describe("BrowserBroker", () => {
     })
   })
 
+  test("revalidates a cached frame route after its owner is unbound", async () => {
+    const frames: BrowserFrame[] = []
+    const protocol = Object.assign(new EventEmitter(), {
+      send: async () => ({}),
+      detach: async () => undefined,
+    })
+    const page = Object.assign(new EventEmitter(), {
+      url: () => "http://localhost:3000/",
+      title: async () => "Application",
+      screenshot: async () => Buffer.from("jpeg"),
+      context: () => ({ newCDPSession: async () => protocol }),
+      mainFrame: () => page,
+      goto: async () => undefined,
+      reload: async () => undefined,
+      setViewportSize: async () => undefined,
+      evaluate: async () => undefined,
+    })
+    const broker = fixture(page)
+    let live = true
+    const owner = broker.bind((route) => (live ? { ...route } : undefined))
+    // A second owner keeps the broker restricted after the first unbinds, so its revoked resolver decides.
+    broker.bind(() => undefined)
+    const route = { projectId: "project", sessionId: "session", directory: "/tmp/project" }
+    const opened = await broker.open(route, "http://localhost:3000/")
+    broker.frames((frame) => frames.push(frame))
+    const viewport = { width: 640, height: 480, revision: 1, active: true }
+    const identity = { browserId: opened.browserId, navigation: opened.navigation, revision: viewport.revision }
+    const jpeg = Buffer.from([255, 216, 255, 192, 0, 11, 8, 0, 0, 0, 0, 1, 1, 17, 0, 255, 217])
+    jpeg.writeUInt16BE(viewport.height, 7)
+    jpeg.writeUInt16BE(viewport.width, 9)
+    const frame = (id: number) =>
+      protocol.emit("Page.screencastFrame", {
+        sessionId: id,
+        data: jpeg.toString("base64"),
+        metadata: { deviceWidth: viewport.width, deviceHeight: viewport.height },
+      })
+    await broker.viewport(route.sessionId, route.projectId, identity.browserId, identity.navigation, viewport)
+    frame(1)
+    // A second owner keeps the broker restricted, so the revoked resolver decides the cached route.
+    broker.acknowledge(route.sessionId, route.projectId, identity, frames.at(0)!.sequence)
+    live = false
+    broker.unbind(owner)
+    frame(2)
+    expect(frames).toHaveLength(1)
+    await broker.close(route.sessionId, route.projectId)
+  })
+
   test("rejects stale browser, navigation, and revision identities for streams", async () => {
     const calls: Array<{ method: string; params?: Record<string, unknown> }> = []
     const frames: BrowserFrame[] = []
