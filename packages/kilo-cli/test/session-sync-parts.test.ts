@@ -6,6 +6,7 @@ import os from "node:os"
 import path from "node:path"
 import { AppNodeBuilder } from "@opencode/core/effect/app-node-builder"
 import { Database } from "@opencode/core/database/database"
+import { storedAbsolutePath } from "@opencode/core/database/path"
 import { Bus } from "@opencode/core/bus"
 import { ProjectTable } from "@opencode/core/project/sql"
 import { SessionProjector } from "@opencode/core/session/projector"
@@ -538,7 +539,12 @@ it.live("the first excluded envelope or part mutation freezes the last authorize
           userID: "other-fixture",
         })
         yield* f.db.run(sql`UPDATE _kilo_sync_directory SET directory=${excluded},canonical=${excluded}
-          WHERE alias=${f.directory}`)
+          WHERE alias=${storedAbsolutePath(f.directory)}`)
+        expect(
+          yield* f.db.get<{ directory: string }>(
+            sql`SELECT directory FROM _kilo_sync_directory WHERE alias=${storedAbsolutePath(f.directory)}`,
+          ),
+        ).toEqual({ directory: excluded })
       }
       if (mutation === "envelope")
         yield* f.db
