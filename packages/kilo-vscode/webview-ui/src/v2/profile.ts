@@ -6,6 +6,7 @@ import { KiloGatewayRpc } from "@opencode/schema/kilocode/gateway"
 import { ProviderUsage } from "@opencode/schema/kilocode/provider-usage"
 import { createSignal, onCleanup } from "solid-js"
 import { useV2 } from "./client"
+import { accountAction } from "./profile-account"
 
 const KILO = "kilo"
 const POLL = 1000
@@ -26,6 +27,8 @@ export type DeviceAuthState = {
   error?: string
 }
 
+
+
 export function createProfile() {
   const v2 = useV2()
   const location = { directory: v2.directory }
@@ -37,10 +40,13 @@ export function createProfile() {
   const [usage, setUsage] = createSignal<ProviderUsage.Info>()
   const [usageLoading, setUsageLoading] = createSignal(false)
   const [usageError, setUsageError] = createSignal<string>()
-  const state: { attempt?: string; timer?: ReturnType<typeof setTimeout>; usage: number; profile: number } = {
-    usage: 0,
-    profile: 0,
-  }
+  const state: {
+    attempt?: string
+    timer?: ReturnType<typeof setTimeout>
+    usage: number
+    profile: number
+    held: boolean
+  } = { usage: 0, profile: 0, held: false }
 
   // Only the contract's `unauthorized` error means signed out; other failures are real errors.
   const status = () =>
@@ -74,15 +80,12 @@ export function createProfile() {
   // switch the team. So after each `provider.updated` of this directory, read the account again when it changed.
   onCleanup(
     v2.data.on("provider.updated", (event) => {
-      // `undefined`: the profile was never read, so the next view reads it.
-      if (event.location?.directory !== v2.directory || data() === undefined) return
+      if (event.location?.directory !== v2.directory) return
       void status()
         .then((current) => {
-          const shown = data()
-          const same = current?.authenticated
-            ? shown?.profile.organizationID === current.organizationID
-            : shown === null
-          if (same) return
+          const action = accountAction(data(), current, state.held)
+          state.held = action === "hold"
+          if (action !== "refresh" && action !== "clear") return
           // As v1: a new account invalidates the cached usage.
           loadUsage(true)
           return refresh()
