@@ -22,9 +22,9 @@ export function createBrowserLifecycle(input: {
       const directory = canonicalizePath(route.directory)
       const ctx = input.contexts().byDirectory(directory)
       if (!ctx || (route.projectId && route.projectId !== ctx.id)) return undefined
-      // The project catalog also lists the sidebar's sessions rooted in this directory. The sidebar reports the
-      // session it shows, and that one belongs to the editor tab instead.
-      if (route.sessionId === input.sidebar()) return undefined
+      // The project catalog also lists the sidebar's sessions rooted in this directory. The session the sidebar shows
+      // belongs to the editor tab, and so does a session whose tab stays open after the sidebar switched away.
+      if (route.sessionId === input.sidebar() || browser.ownedByOther(route.sessionId, owner)) return undefined
       const state = ctx.peekState()
       const stored = state?.getSession(route.sessionId)
       const live = ctx.sessions().find((session) => session.id === route.sessionId)

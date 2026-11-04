@@ -78,6 +78,26 @@ describe("Chat link destination", () => {
     },
   )
 
+  test.each(["http://example.com/", "http://192.168.1.5:3000/", "https://10.0.0.2/"])(
+    "opens %s externally because the browser refuses it",
+    async (url) => {
+      const external = setup()
+      await openBrowserLink(url, () => true)
+      expect(external).toEqual([url])
+    },
+  )
+
+  test("opens loopback HTTP in the Integrated Browser", async () => {
+    const external = setup()
+    const opened: string[] = []
+    await openBrowserLink("http://localhost:3000/", () => {
+      opened.push("yes")
+      return true
+    })
+    expect(opened).toEqual(["yes"])
+    expect(external).toEqual([])
+  })
+
   test("leaves non-web schemes with VS Code's external opener", async () => {
     const external = setup()
     await openBrowserLink("mailto:test@example.com", () => true)

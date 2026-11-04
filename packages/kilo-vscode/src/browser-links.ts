@@ -1,29 +1,31 @@
 import * as vscode from "vscode"
+import { parse } from "./services/browser-automation/browser-policy"
 import {
   integratedBrowserEnabled,
   integratedBrowserLinkDestination,
 } from "./services/browser-automation/chrome-setting"
 
-/** True when the URL is an http(s) web link, which is all the browser handles. */
-export function isWebLink(url: string): boolean {
+/** True when the browser can open the URL: public HTTPS or loopback HTTP. */
+function browsable(url: string): boolean {
   try {
-    const protocol = new URL(url).protocol
-    return protocol === "http:" || protocol === "https:"
+    parse(url)
+    return true
   } catch {
     return false
   }
 }
 
 /**
- * In-app routing needs a trusted workspace, the Integrated Browser
- * flag, the "integrated" destination, and an http(s) URL. Everything else stays
- * external so a link is never swallowed when the browser is unavailable.
+ * In-app routing needs a trusted workspace, the Integrated Browser flag, the
+ * "integrated" destination, and a URL the browser accepts. Everything else
+ * stays external, so a link such as plain HTTP to a LAN host is never
+ * swallowed by a browser that refuses it.
  */
 export function shouldOpenLinkInIntegratedBrowser(url: string): boolean {
   if (!vscode.workspace.isTrusted) return false
   if (!integratedBrowserEnabled()) return false
   if (integratedBrowserLinkDestination() !== "integrated") return false
-  return isWebLink(url)
+  return browsable(url)
 }
 
 /**

@@ -104,15 +104,19 @@ export class BrowserTabProvider {
     this.options.log?.(...args)
   }
 
-  /** Reveal the tab of the session that last used the browser, or explain why there is none. */
-  openLast(): void {
-    if (!this.last) {
-      void vscode.window.showWarningMessage(
-        l10n.t("Open a page in the Integrated Browser from a session first."),
-      )
+  /** True while an editor tab is open for the session, so it keeps the session's browser after a session switch. */
+  has(sessionId: string): boolean {
+    return this.panels.has(sessionId)
+  }
+
+  /** Open the tab for the given session, else for the session that last used the browser. */
+  openFor(sessionId: string | undefined): void {
+    const target = sessionId ?? this.last
+    if (!target) {
+      void vscode.window.showWarningMessage(l10n.t("Start a session before opening the Integrated Browser."))
       return
     }
-    this.open(this.last)
+    this.open(target)
   }
 
   open(sessionId: string): void {

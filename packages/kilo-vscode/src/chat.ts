@@ -30,6 +30,7 @@ import { readDisplaySettings } from "./display-settings"
 import { createSpeechToTextHost } from "./speech-to-text/host"
 import { setSidebarSession, sidebarSession } from "./browser-tab/sidebar-session"
 import { openBrowserLink } from "./browser-links"
+import { DEVTOOLS } from "./browser-tab/html"
 import { openToolFile, type ToolDiff } from "./tool-diff"
 
 // The sidebar may only write the settings its own UI owns. Other views keep their own write path.
@@ -364,6 +365,8 @@ export function html(input: {
     `font-src ${input.csp}`,
     `connect-src ${input.csp}`,
     `img-src ${input.csp} data: https:`,
+    // The Agent Manager browser panel embeds DevTools for the open page.
+    ...(input.view === "agentManager" ? [`frame-src ${DEVTOOLS}`] : []),
   ].join("; ")
   const vars = SIZES.map((size) => `--kilo-font-size-${size}: ${(input.size * size) / 13}px;`).join(" ")
   const globals = {

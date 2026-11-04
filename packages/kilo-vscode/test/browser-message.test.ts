@@ -235,6 +235,31 @@ describe("browser inspection responses", () => {
     suspend.mockRestore()
   })
 
+  test("leaves an open editor tab's session with the tab after the sidebar switches away", async () => {
+    const view = await fixture()
+    const shown = { sidebar: "tab-session" }
+    const lifecycle = createBrowserLifecycle({
+      browser: view.broker,
+      host: view.host,
+      contexts: () => view.contexts,
+      post: () => {},
+      openPanel: () => {},
+      sidebar: () => shown.sidebar,
+      log: () => {},
+    })
+    const tabs = new Set(["tab-session"])
+    view.broker.bind((route) =>
+      route.sessionId === shown.sidebar || tabs.has(route.sessionId)
+        ? { sessionId: route.sessionId, directory: route.directory }
+        : undefined,
+    )
+    const route = { sessionId: "tab-session", directory: "/fixture" }
+    expect((await view.broker.open(route, "http://localhost:3000/")).projectId).toBeUndefined()
+    shown.sidebar = "next-session"
+    expect((await view.broker.open(route, "http://localhost:3000/")).projectId).toBeUndefined()
+    await lifecycle.dispose()
+  })
+
   test("returns correlated failures and continues processing later hover requests", async () => {
     const test = await fixture()
     expect(await test.send(request("first"))).toEqual({

@@ -176,8 +176,8 @@ export function activate(context: ExtensionContext) {
     diff: diffs,
     openBrowser: (sessionId, url) => browserTab?.openUrl(sessionId, url) ?? false,
   })
-  // The Agent Manager binds first and skips the session the sidebar is showing, so a sidebar session opens the
-  // editor tab even when the panel has the same directory open.
+  // The Agent Manager binds first and skips the session the sidebar is showing and sessions with an open editor tab,
+  // so a sidebar session opens the editor tab even when the panel has the same directory open.
   const agentHost = new VscodeHost(context, { server, directory })
   let agentManagerRef: AgentManagerProvider | undefined
   const agentPanel = createPanel({
@@ -196,8 +196,9 @@ export function activate(context: ExtensionContext) {
     {
       enabled: () => integratedBrowserEnabled() && workspace.isTrusted,
       trusted: () => workspace.isTrusted,
+      // The tab serves the session the sidebar shows, and keeps serving a session whose tab is still open.
       resolve: (route) =>
-        route.sessionId === sidebarSession() &&
+        (route.sessionId === sidebarSession() || browserTab?.has(route.sessionId) === true) &&
         samePath(canonicalizePath(route.directory), canonicalizePath(directory))
           ? { sessionId: route.sessionId, directory: route.directory }
           : undefined,
@@ -302,7 +303,7 @@ export function activate(context: ExtensionContext) {
     ),
     // The webview reconnects on its own: its event stream fails, and the next request starts a new server.
     commands.registerCommand("kilo-code.v2.restartServer", () => server.stop()),
-    commands.registerCommand("kilo-code.v2.openBrowser", () => browserTab.openLast()),
+    commands.registerCommand("kilo-code.v2.openBrowser", () => browserTab?.openFor(sidebarSession())),
     // Claude Code compatibility and the extra CA certificates are server start environment, so a change needs a new
     // server. The next request starts one with the current settings.
     workspace.onDidChangeConfiguration((event) => {
