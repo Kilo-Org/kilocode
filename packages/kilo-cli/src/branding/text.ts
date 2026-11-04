@@ -125,6 +125,21 @@ export const replacements = {
   ],
   "tui/src/feature-plugins/sidebar/footer.tsx": [["OpenCode includes free models", "Kilo includes free models"]],
   "tui/src/config/index.tsx": [["after OpenCode updates", "after Kilo updates"]],
+  "core/src/session/runner/prompt/system.txt": [
+    ["running in OpenCode, a coding agent harness", "running in Kilo, a coding agent harness"],
+  ],
+  "core/src/plugin/system-prompt/gpt.txt": [
+    ["running in OpenCode, a coding agent harness", "running in Kilo, a coding agent harness"],
+  ],
+  "core/src/plugin/system-prompt/gpt-astra.txt": [
+    ["running in OpenCode, a coding agent harness", "running in Kilo, a coding agent harness"],
+  ],
+  "core/src/plugin/system-prompt/kimi.txt": [["You are OpenCode, an interactive", "You are Kilo, an interactive"]],
+  "core/src/plugin/system-prompt/trinity.txt": [["You are opencode, an interactive", "You are Kilo, an interactive"]],
+  "core/src/plugin/system-prompt/meta.txt": [
+    ["You are OpenCode, a coding agent", "You are Kilo, a coding agent"],
+    ["# Tool Use - OpenCode Specifics", "# Tool Use - Kilo Specifics"],
+  ],
   "core/src/oauth/page.ts": [
     ["OpenCode is now", "Kilo is now"],
     ["OpenCode couldn't", "Kilo couldn't"],

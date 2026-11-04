@@ -30,6 +30,23 @@ test("does not rewrite the upstream theme registry", async () => {
   expect(KiloBranding.transform(filename, original)).toBe(original)
 })
 
+test("rebrands the agent self-identity in every prompt template", async () => {
+  for (const file of [
+    "core/src/session/runner/prompt/system.txt",
+    "core/src/plugin/system-prompt/gpt.txt",
+    "core/src/plugin/system-prompt/gpt-astra.txt",
+    "core/src/plugin/system-prompt/kimi.txt",
+    "core/src/plugin/system-prompt/trinity.txt",
+    "core/src/plugin/system-prompt/meta.txt",
+  ]) {
+    const filename = path.join(repo, "packages", file)
+    const branded = KiloBranding.transform(filename, await Bun.file(filename).text())
+    // The ${OPENCODE_TOOL_GUIDANCE} token is replaced by SessionSystemPrompt.render, not prose.
+    expect(branded.replaceAll("${OPENCODE_TOOL_GUIDANCE}", "")).not.toMatch(/opencode/i)
+    expect(branded).toContain("Kilo")
+  }
+})
+
 test("does not rewrite CLI or ACP executable selection", async () => {
   for (const [file, anchor] of [
     ["cli/src/commands/commands.ts", 'typeof OPENCODE_CLI_NAME === "string" ? OPENCODE_CLI_NAME : "opencode"'],
