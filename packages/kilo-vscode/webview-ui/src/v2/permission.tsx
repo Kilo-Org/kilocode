@@ -6,6 +6,7 @@ import { createSignal, For, Show } from "solid-js"
 import { PermissionCommand } from "../components/chat/PermissionCommand"
 import { useLanguage } from "../context/language"
 import { useV2 } from "./client"
+import { PermissionDiff } from "./permission-diff"
 
 /** v2 permission actions whose existing label key has another name. */
 const LABELS: Record<string, string> = {
@@ -17,6 +18,7 @@ const LABELS: Record<string, string> = {
   subagent: "task",
   todowrite: "todoWrite",
   external_directory: "externalDirectory",
+  browser_open: "browserOpen",
 }
 
 export function PermissionDock(props: {
@@ -107,6 +109,9 @@ export function PermissionDock(props: {
                 {(resource) => <code data-slot="permission-pattern">{resource}</code>}
               </For>
             </div>
+            <Show when={files().length > 0}>
+              <PermissionDiff files={files()} />
+            </Show>
           </div>
         </div>
         <div data-slot="permission-actions">

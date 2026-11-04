@@ -22,6 +22,15 @@ describe("agent-manager webview diff scope descriptors", () => {
     expect(descriptors[3]!.id).toBe("local#session:ses_abc")
   })
 
+  it("adds the turn scope after the session scope", () => {
+    const descriptors = scopeDescriptors("wt_1", "ses_abc", "msg_1")
+    expect(descriptors.map((d) => d.type)).toEqual(["workspace", "staged", "unstaged", "session", "turn"])
+    const turn = descriptors[4]!
+    expect(turn.id).toBe("wt_1#turn:ses_abc:msg_1")
+    expect(turn.group).toBe("Session")
+    expect(turn.capabilities.revert).toBe(false)
+  })
+
   it("preserves legacy and malformed ids and parses the final separator", () => {
     expect(parseDiffId("local")).toEqual({ ctx: "local", scope: "branch" })
     expect(parseDiffId("wt_1#bogus")).toEqual({ ctx: "wt_1#bogus", scope: "branch" })

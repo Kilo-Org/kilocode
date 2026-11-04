@@ -122,6 +122,8 @@ export function wire(input: {
   webview: Webview
   view: View
   trackCostSession?: (sessionID: string) => void
+  /** Directory for a saved image, when the view follows a session in another directory. */
+  saveImageDirectory?: () => string | undefined
   /** The tool diff surfaces of the chat view. Settings has none. */
   diff?: ToolDiff
   /** Called on every message from the webview, before it is handled. */
@@ -249,7 +251,7 @@ export function wire(input: {
   // Leaf host actions that carry no state, kept together so the main handler stays within the complexity limit.
   const handleLeafMessage = (message: ToHost): boolean => {
     if (message.type === "saveImage") {
-      void saveImage(input.directory, message)
+      void saveImage(input.saveImageDirectory?.() ?? input.directory, message)
       return true
     }
     // The Language tab applies at once: write `kilo-code.v2.language` and let the change event push it to every view.

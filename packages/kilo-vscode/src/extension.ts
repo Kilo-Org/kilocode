@@ -179,8 +179,16 @@ export function activate(context: ExtensionContext) {
   // The Agent Manager binds first and skips the session the sidebar is showing, so a sidebar session opens the
   // editor tab even when the panel has the same directory open.
   const agentHost = new VscodeHost(context, { server, directory })
-  const agentPanel = createPanel({ context, server, directory, trackCostSession: alerts.track })
+  let agentManagerRef: AgentManagerProvider | undefined
+  const agentPanel = createPanel({
+    context,
+    server,
+    directory,
+    trackCostSession: alerts.track,
+    saveImageDirectory: () => agentManagerRef?.imageDirectory(),
+  })
   const agentManager = new AgentManagerProvider(agentHost, connection, agentPanel, undefined, broker)
+  agentManagerRef = agentManager
   agentManager.onBrowserDebug = (...args) => output.appendLine(`Browser AM: ${args.map((item) => String(item)).join(" ")}`)
   browserTab = new BrowserTabProvider(
     context.extensionUri,
@@ -222,8 +230,9 @@ export function activate(context: ExtensionContext) {
   const agentAction = (action: string) => agentManager.postMessage({ type: "action", action })
   ensureCommandsSkipShell()
   // The cycle keybindings act on the focused composer: the Agent Manager panel when it is active, else the sidebar.
+  // The panel receives an action, so an open dialog handles it before the session behind the dialog.
   const cycle = async (name: "cycleAgentMode" | "cyclePreviousAgentMode") => {
-    if (agentManager.isActive()) return agentManager.postMessage({ type: "command", name })
+    if (agentManager.isActive()) return agentManager.postMessage({ type: "action", action: name })
     await commands.executeCommand("kilo-code.v2.chat.focus")
     await view.post({ type: "command", name })
   }

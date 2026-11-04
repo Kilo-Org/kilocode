@@ -14,6 +14,7 @@ import type { PRComment } from "./pr-types"
 import type { JumpTarget } from "./pr-actions"
 import { pushFixes, setPushFixes } from "./pr-push-fixes"
 import { commentScroll, patchCommentState, setCommentScroll } from "./pr-comment-state"
+import type { BaseUpdateTarget } from "../base-update-target"
 import { PRSummary } from "./PRSummary"
 import { PRFiles } from "./PRFiles"
 import { CopyButton } from "./CopyButton"
@@ -25,6 +26,7 @@ interface PRPanelProps {
   projectId?: string
   worktreeId: string
   activeTerminalId?: string
+  baseTarget?: BaseUpdateTarget
   jump?: number
   onJump?: (id: number) => void
   onClose: () => void
@@ -282,6 +284,7 @@ export const PRPanel: Component<PRPanelProps> = (props) => {
             worktreeId={props.worktreeId}
             projectId={props.projectId}
             activeTerminalId={props.activeTerminalId}
+            baseTarget={props.baseTarget}
             onJump={jumpTo}
           />
           <PROverview pr={props.pr} worktree={props.worktree} />

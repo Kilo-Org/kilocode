@@ -306,6 +306,7 @@ export const dict = {
   "notification.permission.descriptionSandboxEscalation":
     "Команда целиком выполняется без ограничений файловой системы и сети, только для этой команды. Git должен записывать в .git, который доступен только для чтения в песочнице и находится вне рабочего дерева в связанном worktree. Правила разрешений Bash и автоодобрение никогда не одобряют этот запрос автоматически.",
   "ui.permission.manageAutoApprove": "Управление правилами автоодобрения",
+  "ui.permission.noChanges": "Изменений нет.",
   "ui.permission.reject": "Отклонить",
   "ui.permission.feedbackPlaceholder": "Скажите Kilo, что сделать иначе",
   "ui.permission.feedbackHint": "Enter для отклонения, Esc для отмены",
@@ -349,6 +350,8 @@ export const dict = {
 
   "session.tab.review": "Обзор",
   "session.review.filesChanged": "{{count}} файлов изменено",
+  "session.review.viewTurnChanges": "Показать изменения за ход",
+  "session.review.turnChangesEmpty": "В этом ходе нет изменений.",
   "session.review.loadingChanges": "Загрузка изменений...",
   "session.review.noChanges": "Нет изменений",
   "session.messages.loadingEarlier": "Загрузка предыдущих сообщений...",
@@ -1447,6 +1450,8 @@ export const dict = {
   "diffViewer.source.unstaged.tooltip":
     "Файлы, изменённые в рабочем дереве, но ещё не проиндексированные, плюс неотслеживаемые (новые) файлы.",
   "diffViewer.source.session.label": "Сессия",
+  "diffViewer.source.turn.tooltip": "Файлы, изменённые Kilo за один ход.",
+  "diffViewer.source.turn.label": "Ход",
   "diffViewer.source.session.tooltip":
     "Файлы, изменённые Kilo в текущей сессии, на основе снимков по ходу. Сбрасывается при начале новой сессии.",
   "diffViewer.group.session": "Сессия",

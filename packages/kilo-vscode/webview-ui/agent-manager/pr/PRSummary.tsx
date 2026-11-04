@@ -22,12 +22,14 @@ import {
   unsentThreads,
 } from "./pr-actions"
 import { pushFixes } from "./pr-push-fixes"
+import type { BaseUpdateTarget } from "../base-update-target"
 
 interface PRSummaryProps {
   pr: PRStatus
   worktreeId: string
   projectId?: string
   activeTerminalId?: string
+  baseTarget?: BaseUpdateTarget
   onJump?: (target: JumpTarget) => void
 }
 
@@ -190,6 +192,7 @@ export function PRSummary(props: PRSummaryProps) {
             pr={props.pr}
             worktreeId={props.worktreeId}
             projectId={props.projectId}
+            baseTarget={props.baseTarget}
             mode="status"
           />
           <For each={rows()}>
@@ -248,6 +251,7 @@ export function PRSummary(props: PRSummaryProps) {
           pr={props.pr}
           worktreeId={props.worktreeId}
           projectId={props.projectId}
+          baseTarget={props.baseTarget}
           mode="footer"
         />
       </div>

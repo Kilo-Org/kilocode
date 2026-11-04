@@ -63,7 +63,7 @@ import { pruneSubagents, sessionMissing } from "./prune-subagents"
 import { readTerminalFont, watchTerminalFont } from "./terminal-font"
 import { DestinationState, watchTerminalDestination } from "./terminal-destination"
 import { buildKeybindingMap } from "./format-keybinding"
-import { resolveWorktreeFile } from "./worktree-file-path"
+import { resolveWorktreeFile, sessionDirectory } from "./worktree-file-path"
 import { focusPanelPrompt, revealPanel } from "./focus-panel"
 import { formatLog } from "./log-format"
 import { HealthScheduler } from "./worktree-health"
@@ -155,7 +155,6 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
   public readonly panelSessions = new Set<string>()
   public readonly busySessions = new Set<string>()
   public readonly removedSessions = new Set<string>()
-  public openSessions: string[] = []
   public visibleSession: string | null = null
   public readonly caffeination: CaffeinationService
   readonly settings: ProjectWiring["settings"]
@@ -477,7 +476,6 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
       this.prBridge.poller.stop()
       this.diffs.stop()
       this.visibleSession = null
-      this.openSessions = []
       this.connection.view([])
       this.panel = undefined
       void this.terminalRouter.dispose()
@@ -571,9 +569,16 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
   }
 
   public trackOpenSessions(ids: string[]): void {
-    this.openSessions = ids
     for (const id of ids) this.panelSessions.add(id)
     this.syncView()
+  }
+
+  /** Default directory for a file the visible session saves, for example a rendered diagram. */
+  public imageDirectory(): string | undefined {
+    const id = this.visibleSession
+    const session = id ? this.state?.getSession(id) : undefined
+    const direct = session ? sessionDirectory(this.state, id, this.getRoot()) : undefined
+    return direct ?? this.diffs.activeDirectory() ?? this.getRoot()
   }
 
   public trackVisibleSession(id: string | null): void {
@@ -598,7 +603,9 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
       this.connection.view([])
       return
     }
-    this.connection.view([...(this.visibleSession ? [this.visibleSession] : []), ...this.openSessions])
+    // Only the session the user is reading is viewed. Background tabs stay unread until they are opened, so their
+    // indicators do not clear on idle for conversations nobody saw.
+    this.connection.view(this.visibleSession ? [this.visibleSession] : [])
   }
 
   public async setCaffeination(enabled: boolean): Promise<void> {
@@ -699,6 +706,8 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
           return client
         },
         getRoot: () => this.getRoot(),
+        // The request runs inside its owning project's scope when the caller directory matched one.
+        getProjectId: () => this.projectScope.current()?.id ?? this.contexts.active()?.id,
         getState: () => this.getStateManager(),
         getPanel: () => this.panel,
         openPanel: (preserveFocus) => this.openPanel(preserveFocus),
@@ -1121,11 +1130,10 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
     return shutdown(this.api())
   }
 
-  public dispose(): void {
+  public async dispose(): Promise<void> {
     this.unsubAutoApprove()
     this.relay.dispose()
-    void this.browser.dispose()
-    void this.shutdown()
+    await Promise.all([this.browser.dispose(), this.shutdown()])
   }
 
   public syncWorktrees(): Promise<void> {

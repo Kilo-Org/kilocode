@@ -7,6 +7,11 @@
   "version": "0.0.1",
   "private": true,
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Kilo-Org/kilocode.git",
+    "directory": "packages/kilo-vscode"
+  },
   "type": "commonjs",
   "engines": {
     "vscode": "^1.95.0"
@@ -18,6 +23,27 @@
     "onWebviewPanel:kilo-code.v2.agentManagerPanel"
   ],
   "contributes": {
+    "configurationDefaults": {
+      "files.watcherExclude": {
+        "**/.kilo/worktrees/**": true,
+        "**/.kilocode/worktrees/**": true
+      }
+    },
+    "taskDefinitions": [
+      {
+        "type": "kilo-worktree-setup",
+        "properties": {
+          "script": {
+            "type": "string",
+            "description": "The setup script command to execute"
+          },
+          "worktree": {
+            "type": "string",
+            "description": "The worktree directory the setup script runs in"
+          }
+        }
+      }
+    ],
     "icons": {
       "kilo-v2-logo": {
         "description": "Kilo Code (v2) logo",
@@ -119,9 +145,14 @@
           "default": true,
           "markdownDescription": "Show the text-generation rate on the latest assistant message."
         },
-        "kilo-code.v2.showTaskTimeline": {
+        "kilo-code.v2.diff.renderMarkdown": {
           "type": "boolean",
           "default": false,
+          "markdownDescription": "Render Markdown files in Kilo diff viewers by default. Toggle this from a Markdown file header in the diff viewer."
+        },
+        "kilo-code.v2.showTaskTimeline": {
+          "type": "boolean",
+          "default": true,
           "markdownDescription": "Show the task timeline graph in the chat header."
         },
         "kilo-code.v2.showShortcutHints": {
@@ -614,6 +645,11 @@
         "when": "editorTextFocus && !editorTabMovesFocus && !inSnippetMode && kilo-code.v2.autocomplete.enableSmartInlineTaskKeybinding && github.copilot.completions.enabled"
       },
       {
+        "command": "-workbench.actions.view.problems",
+        "key": "ctrl+shift+m",
+        "mac": "cmd+shift+m"
+      },
+      {
         "command": "kilo-code.v2.agentManager.open",
         "key": "ctrl+shift+m",
         "mac": "cmd+shift+m"
@@ -845,7 +881,9 @@
   },
   "scripts": {
     "build": "bun script/build.ts",
-    "package": "bun script/build.ts --production",
+    "package": "bun script/package.ts",
+    "snapshot:build": "bun script/snapshot.ts build",
+    "snapshot:install": "bun script/snapshot.ts install",
     "extension": "bun script/launch.ts",
     "typecheck": "tsc --noEmit && tsc --noEmit -p webview-ui",
     "lint": "cd ../.. && oxlint --config .oxlintrc.json packages/kilo-vscode/src packages/kilo-vscode/webview-ui/src packages/kilo-vscode/webview-ui/agent-manager packages/kilo-vscode/webview-ui/diff-viewer packages/kilo-vscode/script packages/kilo-vscode/test",
@@ -899,6 +937,7 @@
     "@playwright/test": "catalog:",
     "@types/ws": "8.18.1",
     "@typescript/native": "catalog:",
+    "@vscode/vsce": "^4.0.0",
     "babel-preset-solid": "1.9.15",
     "esbuild": "0.27.2",
     "happy-dom": "20.8.9",

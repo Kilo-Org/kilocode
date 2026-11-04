@@ -27,6 +27,12 @@ describe("diff-scope composite ids", () => {
     })
   })
 
+  it("embeds the visible session and user message in the turn scope", () => {
+    const id = composeDiffId("wt_abc", "turn", "ses_xyz", "msg_1")
+    expect(id).toBe("wt_abc#turn:ses_xyz:msg_1")
+    expect(parseDiffId(id)).toEqual({ ctx: "wt_abc", scope: "turn", sessionId: "ses_xyz", turnId: "msg_1" })
+  })
+
   it("parses context ids containing no separator as default branch scope", () => {
     expect(parseDiffId("wt_abc")).toEqual({ ctx: "wt_abc", scope: DEFAULT_DIFF_SCOPE })
   })
@@ -43,7 +49,7 @@ describe("diff-scope composite ids", () => {
     expect(isDiffScope("unstaged")).toBe(true)
     expect(isDiffScope("session")).toBe(true)
     expect(isDiffScope("session:ses_xyz")).toBe(false)
-    expect(isDiffScope("turn")).toBe(false)
+    expect(isDiffScope("turn")).toBe(true)
     expect(isDiffScope("")).toBe(false)
   })
 
@@ -60,6 +66,7 @@ describe("diff-scope composite ids", () => {
     expect(scopeToSourceId("unstaged", "wt_abc")).toBe("unstaged")
     expect(scopeToSourceId("session", "wt_abc", "ses_xyz")).toBe("session:ses_xyz")
     expect(scopeToSourceId("session", "local", "ses_xyz")).toBe("session:ses_xyz")
+    expect(scopeToSourceId("turn", "wt_abc", "ses_xyz", "msg_1")).toBe("turn:ses_xyz:msg_1")
     expect(scopeToSourceId("branch", "local")).toBe("workspace")
   })
 
