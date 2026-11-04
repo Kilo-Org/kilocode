@@ -154,11 +154,14 @@ Native message JSON remains unchanged.
 Separate asset entities map a native JSON pointer to verified portable bytes.
 Removing an attachment or its owning portable entity removes the obsolete asset mappings in the same packet.
 Cloud blobs move through `pending`, `unreferenced`, `ready`, and `cleaning`.
-Verified uploads and hashes that lose their last entity reference remain unreferenced for fifteen minutes.
-References make them ready; expired unreferenced bytes are reclaimed.
+Verified uploads that have never been referenced remain unreferenced for fifteen minutes.
+A hash that loses its last entity reference after a batch becomes unreferenced with a deadline of now.
+The sweep can reclaim it after its safety margin; a reference in the same batch keeps it ready.
+References make unreferenced blobs ready.
 A reference to an absent, pending, or cleaning hash returns HTTP 409 `blob_missing` with `error.details.hash`.
 Beginning an unreferenced upload refreshes its deadline and returns ready without another upload.
 Reads serve both ready and unreferenced blobs.
+Readers that receive `blob_not_found` for a superseded hash re-read session state before retrying.
 Inline native attachments carry their own bytes.
 Database-backed native `media:` attachments require session-owned native blob references.
 Their verified bytes receive durable asset mappings without rewriting the original message JSON.
