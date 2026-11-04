@@ -11,12 +11,11 @@
 }
 
 .am-splash-hero {
-  --am-splash-preview-height: 340px;
   max-width: 1120px;
   margin: 0 auto;
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  grid-template-areas: "head" "title" "sub" "nav" "pitch" "sidebar" "steps" "cta";
+  grid-template-areas: "head" "title" "sub" "nav" "pitch" "sidebar" "cta";
   gap: 12px;
   padding: 16px;
   border: calc(var(--spacing) * 0.25) solid var(--border-weak-base);
@@ -357,7 +356,7 @@
   overflow-wrap: break-word;
 }
 
-/* Numbered features: a list beside the preview, or a stepper below it in thin */
+/* Numbered features pair with preview badges in narrow and wide layouts. */
 
 .am-splash-feature-stack {
   grid-area: features;
@@ -397,15 +396,13 @@
   overflow-wrap: break-word;
 }
 
-.am-splash-feature strong,
-.am-splash-stepper strong {
+.am-splash-feature strong {
   display: block;
   color: var(--text-base);
   font-weight: var(--font-weight-medium);
 }
 
-.am-splash-feature-description,
-.am-splash-stepper-text > * > span {
+.am-splash-feature-description {
   display: block;
   margin-top: 2px;
   font-size: calc((var(--kilo-font-size-11) + var(--kilo-font-size-12)) / 2);
@@ -430,42 +427,6 @@
 
 .am-splash-feature-marker {
   margin-top: 1px;
-}
-
-.am-splash-stepper {
-  grid-area: steps;
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  align-items: start;
-  gap: calc(var(--spacing) * 2);
-  color: var(--text-weak);
-  font-size: var(--kilo-font-size-12);
-}
-
-/* Every feature's copy shares one grid cell, so the height never changes. */
-.am-splash-stepper-text {
-  display: grid;
-  min-width: 0;
-  overflow-wrap: break-word;
-}
-
-.am-splash-stepper-text > * {
-  grid-area: 1 / 1;
-}
-
-.am-splash-stepper-size {
-  visibility: hidden;
-}
-
-.am-splash-stepper-nav {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-  font-size: calc((var(--kilo-font-size-10) + var(--kilo-font-size-11)) / 2);
-}
-
-.am-splash-stepper-nav > span {
-  margin-inline-end: 2px;
 }
 
 /* Actions */
@@ -523,7 +484,7 @@
   outline-offset: 2px;
 }
 
-/* Preview: the real sidebar, inert, cropped to a fixed height with a bottom fade */
+/* All inert fleets share one grid cell, sizing the preview to the tallest fixture. */
 
 .am-splash-preview {
   grid-area: sidebar;
@@ -532,30 +493,32 @@
 }
 
 .am-splash-preview-card {
-  height: var(--am-splash-preview-height);
+  display: grid;
+  height: auto;
   padding: calc(var(--spacing) * 2);
   border: calc(var(--spacing) * 0.25) solid var(--border-weak-base);
   border-radius: var(--radius-md);
   background: var(--surface-base);
   font-size: var(--font-size-base);
   box-shadow: var(--shadow-lg);
-  overflow: hidden;
 }
 
-.am-splash-preview-fleet,
-.am-splash-preview-card .am-projects {
-  height: 100%;
+.am-splash-preview-fleet {
+  grid-area: 1 / 1;
+  min-width: 0;
+  visibility: hidden;
+}
+
+.am-splash-preview-fleet-active {
+  visibility: visible;
 }
 
 .am-splash-preview-card .am-projects-footer {
   display: none;
 }
 
-/* The bottom padding lets framing lift the last rows above the fade. */
 .am-splash-preview-card .am-projects-list {
-  padding-bottom: var(--am-splash-fade);
-  scrollbar-width: none;
-  mask-image: linear-gradient(to bottom, black calc(100% - var(--am-splash-fade)), transparent);
+  overflow: visible;
 }
 
 .am-splash-legend {
@@ -601,14 +564,13 @@
 }
 
 @container am-splash (width < 560px) {
-  .am-splash-row-marker-step {
-    box-shadow: var(--am-splash-ring);
+  .am-splash-row-marker {
+    display: none;
   }
 }
 
 @container am-splash (width >= 560px) {
   .am-splash-hero {
-    --am-splash-preview-height: 360px;
     grid-template-columns: minmax(260px, 1fr) minmax(150px, 210px);
     grid-template-areas: "head head" "title title" "sub sub" "nav nav" "pitch pitch" "sidebar features" "cta cta";
     column-gap: 14px;
@@ -617,10 +579,6 @@
 
   .am-splash-feature-stack {
     display: grid;
-  }
-
-  .am-splash-stepper {
-    display: none;
   }
 
   .am-splash-row-marker-hover {
@@ -641,7 +599,6 @@
 
 @container am-splash (width >= 880px) {
   .am-splash-hero {
-    --am-splash-preview-height: 428px;
     grid-template-columns: minmax(0, 1fr) 360px;
     grid-template-areas: "head sidebar" "title sidebar" "sub sidebar" "nav sidebar" "pitch sidebar" "features sidebar" "fill sidebar" "cta sidebar";
     grid-template-rows: auto auto auto auto auto auto 1fr auto;

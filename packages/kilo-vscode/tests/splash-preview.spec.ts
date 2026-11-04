@@ -23,7 +23,7 @@ async function open(page: Page, story: string) {
     })
   })
   await page.goto(`/iframe.html?id=agentmanager--splash-${story}-story&viewMode=story`)
-  await expect(page.locator(".am-splash-preview-fleet .am-project-item").first()).toBeVisible()
+  await expect(page.locator(".am-splash-preview-fleet-active .am-project-item").first()).toBeVisible()
 }
 
 for (const [index, example] of examples.entries()) {
@@ -31,7 +31,23 @@ for (const [index, example] of examples.entries()) {
     page,
   }) => {
     await open(page, stories[index]!)
-    const fleet = page.locator(".am-splash-preview-fleet")
+    await expect(page.locator(".am-splash-preview-fleet")).toHaveCount(5)
+    expect(
+      await page.locator(".am-splash-preview-fleet").evaluateAll((nodes) =>
+        nodes.map((node) => ({
+          inert: node.hasAttribute("inert"),
+          hidden: node.getAttribute("aria-hidden"),
+          visibility: getComputedStyle(node).visibility,
+        })),
+      ),
+    ).toEqual(
+      examples.map((_, position) => ({
+        inert: true,
+        hidden: "true",
+        visibility: position === index ? "visible" : "hidden",
+      })),
+    )
+    const fleet = page.locator(".am-splash-preview-fleet-active")
     await expect(fleet).toHaveAttribute("inert", "")
     await expect(fleet).toHaveAttribute("aria-hidden", "true")
     await expect(page.locator(".am-splash-preview-card")).toHaveAttribute("role", "figure")
@@ -101,7 +117,7 @@ for (const [index, example] of examples.entries()) {
 test("hovering a feature rings its badge in the preview", async ({ page }) => {
   await open(page, "ops")
   const badge = (number: string) =>
-    page.locator(".am-splash-preview-fleet .am-splash-row-marker").filter({ hasText: number })
+    page.locator(".am-splash-preview-fleet-active .am-splash-row-marker").filter({ hasText: number })
   const ring = (number: string) => badge(number).evaluate((node) => getComputedStyle(node).boxShadow)
   await page.mouse.move(0, 0)
   expect(await ring("2")).toBe("none")

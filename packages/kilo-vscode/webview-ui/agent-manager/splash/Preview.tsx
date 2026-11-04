@@ -1,4 +1,4 @@
-import { For, Show, createEffect, on, onCleanup, onMount, type Accessor, type JSX } from "solid-js"
+import { For, type Accessor, type JSX } from "solid-js"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { ActivityIcon } from "../../src/components/shared/ActivityIcon"
 import { label } from "../../src/utils/session-activity"
@@ -11,7 +11,6 @@ import { buildShortcutMap } from "../section-helpers"
 import type { WorktreeDelete } from "../worktree-delete"
 import { examples, type Example } from "./examples"
 import { fleet } from "./fleet"
-import { frame } from "./frame"
 import { createMarkers } from "./markers"
 
 const noop = () => undefined
@@ -102,54 +101,24 @@ function Legend() {
 }
 
 /** A decorative, inert copy of the real sidebar with each feature's row badged. */
-export function Preview(props: {
-  selected: Accessor<number>
-  hover: Accessor<number | undefined>
-  step: Accessor<number>
-}) {
+export function Preview(props: { selected: Accessor<number>; hover: Accessor<number | undefined> }) {
   const { t } = useLanguage()
   const example = () => examples.at(props.selected())!
-  let card!: HTMLDivElement
-  const reframe = () => {
-    const list = card.querySelector<HTMLElement>(".am-projects-list")
-    const active = list?.querySelector(".am-splash-row-marker-step")
-    if (!list || !active) return
-    const current = list.scrollTop
-    // Measure from the top, where no sticky project header is stuck, so boxes are layout positions.
-    list.scrollTop = 0
-    const origin = list.getBoundingClientRect().top
-    const box = (badge: Element) => {
-      const rect = badge.closest(".am-worktree-item, .am-sidebar-header, .am-wt-group-header")!.getBoundingClientRect()
-      return { top: rect.top - origin, bottom: rect.bottom - origin }
-    }
-    const boxes = [...list.querySelectorAll(".am-splash-row-marker")].map(box)
-    list.scrollTop = frame({
-      top: Math.min(...boxes.map((item) => item.top)),
-      bottom: Math.max(...boxes.map((item) => item.bottom)),
-      active: box(active),
-      height: list.clientHeight,
-      fade: parseFloat(getComputedStyle(list).getPropertyValue("--am-splash-fade")),
-      header: list.querySelector(".am-project-item")?.getBoundingClientRect().height ?? 0,
-      current,
-    })
-  }
-  createEffect(on([props.selected, props.step], reframe))
-  onMount(() => {
-    // Container queries change the card's height with the layout mode.
-    const observer = new ResizeObserver(reframe)
-    observer.observe(card)
-    onCleanup(() => observer.disconnect())
-  })
   return (
     <div class="am-splash-preview" data-tone={example().id}>
-      <div ref={card} class="am-splash-preview-card" role="figure" aria-label={t("agentManager.splash.preview.label")}>
-        <Show when={example()} keyed>
+      <div class="am-splash-preview-card" role="figure" aria-label={t("agentManager.splash.preview.label")}>
+        <For each={examples}>
           {(item) => (
-            <div class="am-splash-preview-fleet" inert aria-hidden="true">
-              <Fleet example={item} marker={createMarkers(item, props.hover, props.step)} />
+            <div
+              class="am-splash-preview-fleet"
+              classList={{ "am-splash-preview-fleet-active": item === example() }}
+              inert
+              aria-hidden="true"
+            >
+              <Fleet example={item} marker={createMarkers(item, props.hover)} />
             </div>
           )}
-        </Show>
+        </For>
       </div>
       <Legend />
     </div>

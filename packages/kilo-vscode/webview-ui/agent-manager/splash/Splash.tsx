@@ -8,7 +8,6 @@ import { examples } from "./examples"
 import { Carousel } from "./Carousel"
 import { Compact } from "./Compact"
 import { Preview } from "./Preview"
-import { Stepper } from "./Stepper"
 import "./splash.css"
 
 /** Every example's numbered features share one grid cell, so the height never changes. */
@@ -60,12 +59,10 @@ export function SplashExpanded(props: {
   const title = createUniqueId()
   const [selected, setSelected] = createSignal(props.initialExample ?? 0)
   const [hover, setHover] = createSignal<number>()
-  const [step, setStep] = createSignal(0)
   const example = () => examples.at(selected())!
   const select = (index: number) => {
     setSelected(index)
     setHover(undefined)
-    setStep(0)
   }
   return (
     <section class="am-splash" aria-labelledby={title}>
@@ -94,7 +91,6 @@ export function SplashExpanded(props: {
         <Carousel selected={selected} onSelect={select} />
         <Compact selected={selected} onSelect={select} />
         <Features selected={selected} onHover={setHover} />
-        <Stepper selected={selected} step={step} onStep={setStep} />
         <div class="am-splash-actions">
           <Show when={props.git} fallback={<p>{t("agentManager.setup.error.not_git_repo")}</p>}>
             <Button variant="primary" onClick={props.onCreateWorktree}>
@@ -108,7 +104,7 @@ export function SplashExpanded(props: {
             </button>
           </span>
         </div>
-        <Preview selected={selected} hover={hover} step={step} />
+        <Preview selected={selected} hover={hover} />
         <div class="sr-only" role="status" aria-live="polite" aria-atomic="true">
           {t(example().title)} — {t(example().pitch)}
         </div>

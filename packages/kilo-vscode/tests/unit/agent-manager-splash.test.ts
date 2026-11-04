@@ -3,7 +3,6 @@ import { createRoot } from "solid-js"
 import { createFold } from "../../webview-ui/agent-manager/splash/fold"
 import { splash } from "../../webview-ui/agent-manager/splash/gate"
 import { navigate, start, wrap } from "../../webview-ui/agent-manager/splash/carousel-logic"
-import { frame } from "../../webview-ui/agent-manager/splash/frame"
 import { examples, type Row } from "../../webview-ui/agent-manager/splash/examples"
 import { fleet, rowId } from "../../webview-ui/agent-manager/splash/fleet"
 import { isKnownRootSession, LOCAL } from "../../webview-ui/agent-manager/navigate"
@@ -181,30 +180,6 @@ describe("Agent Manager splash example carousel", () => {
     expect(navigate("Home", 3, 5, false)).toBe(0)
     expect(navigate("End", 1, 5, true)).toBe(4)
     expect(navigate("ArrowDown", 1, 5, false)).toBeUndefined()
-  })
-})
-
-describe("Agent Manager splash preview framing", () => {
-  // A 300px list with a 40px sticky project header and a 28px fade leaves rows 40..272 readable.
-  const view = { height: 300, fade: 28, header: 40 }
-
-  it("keeps the current scroll when every marked row is already readable", () => {
-    expect(frame({ ...view, top: 60, bottom: 200, active: { top: 60, bottom: 100 }, current: 0 })).toBe(0)
-  })
-
-  it("scrolls the least distance that shows every marked row", () => {
-    expect(frame({ ...view, top: 120, bottom: 340, active: { top: 120, bottom: 160 }, current: 0 })).toBe(68)
-    expect(frame({ ...view, top: 60, bottom: 200, active: { top: 60, bottom: 100 }, current: 100 })).toBe(20)
-  })
-
-  it("reveals only the active row when the marked rows do not fit", () => {
-    const rows = { ...view, top: 0, bottom: 600 }
-    expect(frame({ ...rows, active: { top: 500, bottom: 540 }, current: 0 })).toBe(268)
-    expect(frame({ ...rows, active: { top: 100, bottom: 140 }, current: 268 })).toBe(60)
-  })
-
-  it("never scrolls above the top", () => {
-    expect(frame({ ...view, top: 10, bottom: 50, active: { top: 10, bottom: 50 }, current: 30 })).toBe(0)
   })
 })
 

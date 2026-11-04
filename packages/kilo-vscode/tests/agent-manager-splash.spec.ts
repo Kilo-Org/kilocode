@@ -1,7 +1,6 @@
 import AxeBuilder from "@axe-core/playwright"
 import { expect, test, type Page } from "@playwright/test"
 
-const preview = { thin: 340, narrow: 360, wide: 428 }
 const mode = (width: number) => (width < 560 ? "thin" : width < 880 ? "narrow" : "wide")
 
 async function open(page: Page, theme = "dark-modern", story = "cross-stack") {
@@ -33,7 +32,7 @@ async function intact(page: Page) {
     const issues: string[] = []
     if (hero.scrollWidth > hero.clientWidth + 1) issues.push("hero horizontal overflow")
     for (const node of hero.querySelectorAll<HTMLElement>(
-      ".am-splash-eyebrow,.am-splash-hide,.am-splash-title,.am-splash-subtitle,.am-splash-card-title,.am-splash-card-tag,.am-splash-pitch,.am-splash-feature strong,.am-splash-feature-description,.am-splash-stepper strong,.am-splash-stepper-text span,.am-splash-tab,.am-splash-hint,.am-splash-actions [data-component=button]",
+      ".am-splash-eyebrow,.am-splash-hide,.am-splash-title,.am-splash-subtitle,.am-splash-card-title,.am-splash-card-tag,.am-splash-pitch,.am-splash-feature strong,.am-splash-feature-description,.am-splash-tab,.am-splash-hint,.am-splash-actions [data-component=button]",
     )) {
       const style = getComputedStyle(node)
       if (style.visibility === "hidden" || !node.checkVisibility()) continue
@@ -53,38 +52,50 @@ async function intact(page: Page) {
   expect(issues).toEqual([])
 }
 
-/** The stepped row is readable: below its sticky project header and above the bottom fade. */
+/** Every fixture row fits without scrolling, cropping or a mask, even without badges. */
 async function framed(page: Page) {
   return page.locator(".am-splash-preview-card").evaluate((card) => {
-    const list = card.querySelector<HTMLElement>(".am-projects-list")!
-    const fade = Number.parseFloat(getComputedStyle(list).getPropertyValue("--am-splash-fade"))
-    const badge = card.querySelector(".am-splash-row-marker-step")!
-    const row = badge.closest(".am-worktree-item, .am-sidebar-header, .am-wt-group-header")!
-    const rect = row.getBoundingClientRect()
-    const box = list.getBoundingClientRect()
-    const header = row.closest(".am-project")!.querySelector(".am-project-item")!
-    const top = header.contains(row) ? box.top : header.getBoundingClientRect().bottom
-    return rect.top >= top - 1 && rect.bottom <= box.bottom - fade + 1
+    const fleet = card.querySelector(".am-splash-preview-fleet-active")!
+    const list = fleet.querySelector<HTMLElement>(".am-projects-list")!
+    const box = card.getBoundingClientRect()
+    return (
+      list.scrollTop === 0 &&
+      list.scrollHeight <= list.clientHeight + 1 &&
+      getComputedStyle(list).maskImage === "none" &&
+      [
+        ...fleet.querySelectorAll(".am-project-item, .am-worktree-item, .am-section-group-header, .am-wt-group-header"),
+      ].every((row) => {
+        const rect = row.getBoundingClientRect()
+        return rect.top >= box.top && rect.bottom <= box.bottom
+      })
+    )
   })
 }
 
 const widths = [1280, 1010, 900, 880, 879, 800, 720, 600, 560, 559, 500, 440, 380, 340, 320, 300]
 
 for (const width of widths) {
-  test(`${width}px keeps copy intact, height constant and the stepped row framed across examples`, async ({ page }) => {
+  test(`${width}px keeps copy intact, height constant and every fixture row visible across examples`, async ({
+    page,
+  }) => {
     await page.setViewportSize({ width: 1500, height: 1600 })
     await open(page)
     await resize(page, width)
     const card = page.locator(".am-splash-preview-card")
-    await expect(page.locator(".am-splash-stepper")).toBeVisible({ visible: width < 560 })
+    await expect(page.locator(".am-splash-stepper")).toHaveCount(0)
     await expect(page.locator(".am-splash-feature-stack")).toBeVisible({ visible: width >= 560 })
     await expect(page.locator(".am-splash-legend")).toBeVisible({ visible: width >= 880 })
     const heights: number[] = []
+    const height = await card.evaluate((node) => node.getBoundingClientRect().height)
     for (const control of await controls(page, width).all()) {
       await control.click()
       await expect(page.locator(".am-splash-example-panel-active:visible")).toHaveCount(1)
-      await expect.poll(() => card.evaluate((node) => node.getBoundingClientRect().height)).toBe(preview[mode(width)])
-      await expect(card.locator(".am-splash-row-marker")).toHaveCount(3)
+      await expect.poll(() => card.evaluate((node) => node.getBoundingClientRect().height)).toBe(height)
+      await expect(card.locator(".am-splash-preview-fleet")).toHaveCount(5)
+      await expect(card.locator(".am-splash-preview-fleet-active .am-splash-row-marker")).toHaveCount(3)
+      await expect(card.locator(".am-splash-row-marker:visible")).toHaveCount(width < 560 ? 0 : 3)
+      await expect(page.locator(".am-splash-example-panel-active .am-splash-pitch:visible")).toHaveCount(1)
+      await expect(page.getByRole("button", { name: "Create Worktree", exact: true })).toBeVisible()
       await expect.poll(() => framed(page)).toBe(true)
       await intact(page)
       heights.push(await page.locator(".am-splash-hero").evaluate((node) => node.getBoundingClientRect().height))
@@ -116,9 +127,8 @@ test("mode follows the splash content box rather than the viewport or a padded p
     for (const width of [559, 560, 879, 880]) {
       await resize(page, width)
       await expect(page.locator(".am-splash-feature-stack")).toBeVisible({ visible: width >= 560 })
-      await expect
-        .poll(() => page.locator(".am-splash-preview-card").evaluate((node) => node.getBoundingClientRect().height))
-        .toBe(preview[mode(width)])
+      await expect(page.locator(".am-splash-row-marker:visible")).toHaveCount(width < 560 ? 0 : 3)
+      await expect.poll(() => framed(page)).toBe(true)
     }
   }
 })
@@ -135,60 +145,49 @@ test("selection survives every layout change", async ({ page }) => {
   await expect(page.locator(".am-splash-tab").nth(1)).toHaveAttribute("aria-selected", "true")
 })
 
-test("thin stepper walks the features with its badge and resets on example changes", async ({ page }) => {
+test("stacked previews adapt to changed font metrics and stay stable when switching examples", async ({ page }) => {
   await page.setViewportSize({ width: 1500, height: 1600 })
-  await open(page, "dark-modern", "orchestrator")
-  await resize(page, 340)
-  const stepper = page.locator(".am-splash-stepper")
-  const live = stepper.locator('[aria-live="polite"]')
-  const step = async (index: number, name: string) => {
-    await expect(stepper.locator(".am-splash-stepper-nav > span")).toHaveText(`${index + 1}/3`)
-    await expect(stepper.locator(".am-splash-feature-marker")).toHaveText(String(index + 1))
-    await expect(live.locator("strong")).toHaveText(name)
-    const stepped = page.locator(".am-splash-preview-card .am-splash-row-marker-step")
-    await expect(stepped).toHaveCount(1)
-    await expect(stepped).toHaveText(String(index + 1))
-    expect(await stepped.evaluate((node) => getComputedStyle(node).boxShadow)).not.toBe("none")
-    await expect.poll(() => framed(page)).toBe(true)
+  await open(page)
+  const card = page.locator(".am-splash-preview-card")
+  const before = await card.evaluate((node) => node.getBoundingClientRect().height)
+  await page.addStyleTag({
+    content: ".am-splash-preview-card { --font-size-base: 24px; font-family: monospace; line-height: 2; }",
+  })
+  await page.evaluate(() => document.fonts.ready.then(() => undefined))
+  await expect.poll(() => card.evaluate((node) => node.getBoundingClientRect().height)).toBeGreaterThan(before)
+  for (const width of [340, 720, 1010, 559, 560]) {
+    await resize(page, width)
+    const height = await card.evaluate((node) => node.getBoundingClientRect().height)
+    for (const control of await controls(page, width).all()) {
+      await control.click()
+      await expect.poll(() => card.evaluate((node) => node.getBoundingClientRect().height)).toBe(height)
+      await expect.poll(() => framed(page)).toBe(true)
+    }
   }
-  const names = await page.locator(".am-splash-features-active .am-splash-feature strong").allTextContents()
-  expect(names).toHaveLength(3)
-  const height = (await stepper.boundingBox())!.height
-  await step(0, names[0]!)
-  const next = stepper.getByRole("button", { name: `Feature 2: ${names[1]}`, exact: true })
-  await expect(next).toBeVisible()
-  await next.click()
-  await step(1, names[1]!)
-  await stepper.getByRole("button", { name: `Feature 3: ${names[2]}`, exact: true }).click()
-  await step(2, names[2]!)
-  // Next wraps to the first feature and previous wraps to the last.
-  await stepper
-    .getByRole("button", { name: `Feature 1: ${names[0]}`, exact: true })
-    .last()
-    .click()
-  await step(0, names[0]!)
-  await stepper
-    .getByRole("button", { name: `Feature 3: ${names[2]}`, exact: true })
-    .first()
-    .click()
-  await step(2, names[2]!)
-  expect((await stepper.boundingBox())!.height).toBe(height)
-  await page.locator(".am-splash-tab").nth(2).click()
-  await expect(stepper.locator(".am-splash-stepper-nav > span")).toHaveText("1/3")
-  expect((await stepper.boundingBox())!.height).toBe(height)
 })
 
-test("the step ring stays out of wide and narrow, where hovering a feature rings its badge", async ({ page }) => {
+test("wide and narrow features ring only the paired badge across examples", async ({ page }) => {
   await page.setViewportSize({ width: 1500, height: 1600 })
   await open(page)
   for (const width of [720, 1010]) {
     await resize(page, width)
-    await expect(page.locator(".am-splash-row-marker-step")).toHaveCSS("box-shadow", "none")
-    await page.locator(".am-splash-features-active .am-splash-feature").nth(2).hover()
-    await expect(page.locator(".am-splash-row-marker-hover")).toHaveText("3")
-    await expect(page.locator(".am-splash-row-marker-hover")).not.toHaveCSS("box-shadow", "none")
-    await page.mouse.move(0, 0)
-    await expect(page.locator(".am-splash-row-marker-hover")).toHaveCount(0)
+    for (const control of await controls(page, width).all()) {
+      await control.click()
+      const badges = page.locator(".am-splash-preview-fleet-active .am-splash-row-marker")
+      await expect(badges).toHaveCount(3)
+      await expect(page.locator(".am-splash-preview-fleet-active .am-splash-row-marker-hover")).toHaveCount(0)
+      for (const [index, feature] of (
+        await page.locator(".am-splash-features-active .am-splash-feature").all()
+      ).entries()) {
+        await feature.hover()
+        await expect(page.locator(".am-splash-preview-fleet-active .am-splash-row-marker-hover")).toHaveText(
+          String(index + 1),
+        )
+        await expect(badges.filter({ hasText: String(index + 1) })).not.toHaveCSS("box-shadow", "none")
+      }
+      await page.mouse.move(0, 0)
+      await expect(page.locator(".am-splash-row-marker-hover")).toHaveCount(0)
+    }
   }
 })
 
