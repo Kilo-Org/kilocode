@@ -69,6 +69,7 @@ await createVSIX({
   updatePackageJson: false,
   dependencies: false,
   skipLicense: true,
+  allowMissingRepository: true,
 })
 console.log(`Packaged ${vsix}`)
 
