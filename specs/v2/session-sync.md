@@ -36,6 +36,8 @@ Kilo config directory's `kilo2.jsonc` (normally `~/.config/kilo2/kilo2.jsonc`):
 
 Global `kilo2.json` is read first, then `kilo2.jsonc`; the last setting wins.
 Workspace config cannot enable or disable sync.
+Atomic setting replacement makes up to eight attempts for transient file-sharing errors, with at most 700 ms of backoff.
+If a reader still denies replacement, the command returns a retryable `settings_unavailable` error and leaves the original file intact; it never truncates the file in place.
 Setting false or signing out pauses journal capture and network activity, keeping the cloud copy and pending local work.
 Set it back to true (or use `sync enable`) to resume; completed history from the pause is not recaptured.
 Transport and grant-refresh outages retain enrolled workspace capture and pending changes.

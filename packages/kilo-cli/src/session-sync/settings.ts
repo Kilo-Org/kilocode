@@ -4,6 +4,7 @@ import { randomUUID } from "node:crypto"
 import type { BigIntStats } from "node:fs"
 import fs from "node:fs/promises"
 import path from "node:path"
+import { setTimeout } from "node:timers/promises"
 import { KiloConfigFiles } from "@opencode/util/kilocode/config/files"
 import { Flock } from "@opencode/util/flock"
 import { fail } from "./protocol"
@@ -11,6 +12,7 @@ import { fail } from "./protocol"
 // Sync is a global background service: project configuration must not silently opt a user back in.
 // Use the same global filenames, precedence and JSONC editing convention as Config.update.
 type Document = { file: string; text: string; revision: BigIntStats; enabled?: boolean }
+const replacementErrors: Record<string, true | undefined> = { EPERM: true, EBUSY: true, EACCES: true }
 
 export const settings = (directory: string) => {
   const documents = async () => {
@@ -84,7 +86,15 @@ export const settings = (directory: string) => {
                 })
               ) continue
               signal.throwIfAborted()
-              await fs.rename(temporary, target.file)
+              try {
+                await fs.rename(temporary, target.file)
+              } catch (error) {
+                if (replacementErrors[(error as NodeJS.ErrnoException).code ?? ""] !== true || attempt === 7) throw error
+                // Windows readers may temporarily deny replacement. Re-read/rebase on every retry;
+                // never unlink or truncate the original just to make the rename succeed.
+                await setTimeout(25 * (attempt + 1), undefined, { signal })
+                continue
+              }
               return
             } finally {
               await fs.rm(temporary, { force: true })
@@ -95,7 +105,11 @@ export const settings = (directory: string) => {
           await lock.release()
         }
       },
-      catch: () => fail("settings_unavailable", "Cannot update the global session_sync setting"),
+      catch: (error) => fail(
+        "settings_unavailable",
+        "Cannot update the global session_sync setting",
+        replacementErrors[(error as NodeJS.ErrnoException).code ?? ""] === true,
+      ),
     }),
   }
 }

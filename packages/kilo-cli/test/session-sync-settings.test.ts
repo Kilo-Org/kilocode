@@ -18,6 +18,7 @@ const directory = async (body: (root: string) => Promise<void>) => {
 }
 
 const open = fs.open
+const rename = fs.rename
 
 for (const name of KiloConfigFiles.names) {
   test.each(["", " \n\t", "// global configuration", "/* global configuration */", "// first\n/* second */\n"])(
@@ -85,21 +86,89 @@ test("an empty higher-precedence document leaves the lower setting in force", as
   expect(await fs.readFile(path.join(root, "kilo2.jsonc"), "utf8")).toContain("// no override")
 }))
 
-test("a write atomically replaces the config without truncating readers of the old inode", async () => directory(async (root) => {
+test("a write atomically replaces the config without exposing partially written content", async () => directory(async (root) => {
   const file = path.join(root, "kilo2.jsonc")
   const text = '{"session_sync": true, "shell": "zsh"}\n'
   await fs.writeFile(file, text)
   const reader = await open(file, "r")
+  const blocked = Promise.withResolvers<void>()
+  const replacing = spyOn(fs, "rename").mockImplementation(async (...args) => {
+    try {
+      return await rename(...args)
+    } catch (error) {
+      blocked.resolve()
+      throw error
+    }
+  })
+  let closed = false
+  const changed = Effect.runPromise(settings(root).set(false))
   try {
-    await Effect.runPromise(settings(root).set(false))
-    expect(await reader.readFile("utf8")).toBe(text)
+    if (process.platform === "win32") {
+      // A Windows reader can deny replacement. Release it after observing the first attempt,
+      // allowing the bounded retry to finish; either complete version is valid for a reader.
+      await Promise.race([blocked.promise, changed])
+      expect([text, text.replace("true", "false")]).toContain(await reader.readFile("utf8"))
+      await reader.close()
+      closed = true
+      await changed
+    } else {
+      await changed
+      expect(await reader.readFile("utf8")).toBe(text)
+      expect((await fs.stat(file)).mode & 0o777).toBe(0o600)
+    }
     expect(parse(await fs.readFile(file, "utf8"))).toEqual({ session_sync: false, shell: "zsh" })
-    if (process.platform !== "win32") expect((await fs.stat(file)).mode & 0o777).toBe(0o600)
     expect((await fs.readdir(root)).sort()).toEqual([".locks", "kilo2.jsonc"])
   } finally {
-    await reader.close()
+    if (!closed) await reader.close()
+    await changed.catch(() => undefined)
+    replacing.mockRestore()
   }
 }))
+
+for (const code of ["EPERM", "EBUSY", "EACCES"]) {
+  test(`temporary ${code} replacement failures retry without truncating the config`, async () => directory(async (root) => {
+    const file = path.join(root, "kilo2.jsonc")
+    const text = '{"session_sync": true, "shell": "zsh"}\n'
+    await fs.writeFile(file, text)
+    let attempts = 0
+    const replacing = spyOn(fs, "rename").mockImplementation(async (...args) => {
+      attempts++
+      expect(await fs.readFile(file, "utf8")).toBe(text)
+      if (attempts < 4) throw Object.assign(new Error("Fixture sharing violation"), { code })
+      return rename(...args)
+    })
+    try {
+      await Effect.runPromise(settings(root).set(false))
+    } finally {
+      replacing.mockRestore()
+    }
+    expect(attempts).toBe(4)
+    expect(parse(await fs.readFile(file, "utf8"))).toEqual({ session_sync: false, shell: "zsh" })
+    expect((await fs.readdir(root)).sort()).toEqual([".locks", "kilo2.jsonc"])
+  }))
+
+  test(`persistent ${code} replacement failures are bounded and retryable`, async () => directory(async (root) => {
+    const file = path.join(root, "kilo2.jsonc")
+    const text = '{"session_sync": true, "shell": "zsh"}\n'
+    await fs.writeFile(file, text)
+    let attempts = 0
+    const replacing = spyOn(fs, "rename").mockImplementation(async () => {
+      attempts++
+      throw Object.assign(new Error("Fixture sharing violation"), { code })
+    })
+    try {
+      expect(await Effect.runPromise(Effect.flip(settings(root).set(false)))).toMatchObject({
+        code: "settings_unavailable",
+        retryable: true,
+      })
+    } finally {
+      replacing.mockRestore()
+    }
+    expect(attempts).toBe(8)
+    expect(await fs.readFile(file, "utf8")).toBe(text)
+    expect((await fs.readdir(root)).sort()).toEqual([".locks", "kilo2.jsonc"])
+  }))
+}
 
 test("concurrent settings instances serialize their actual filesystem writes", async () => directory(async (root) => {
   const file = path.join(root, "kilo2.jsonc")
