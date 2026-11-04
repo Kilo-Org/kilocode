@@ -2,7 +2,7 @@
   "$comment": "Shared-patch baseline (U-L3-01). Read by script/check-shared-patches.ts and script/check-opencode-annotations.ts. Each shared upstream file that Kilo adds or changes needs an entry: rung (3 = seam patch, 4 = feature patch) and the missing seam. `unmarked` allows lines without markers and states why. Raise a limit only in the PR that adds the patch, and lower it when a patch goes away.",
   "limits": {
     "files": 88,
-    "markedLines": 1402,
+    "markedLines": 1403,
     "unmarkedLines": 246,
     "deletedFiles": 0
   },
@@ -224,7 +224,7 @@
     },
     "packages/util/src/global.ts": {
       "rung": 3,
-      "seam": "The app directory name under the XDG bases (`const app`) reads `OPENCODE_APP_DIR_NAME` and defaults to `opencode`, so an embedding entry can name its own config, data, cache, state and tmp directories. The Kilo host sets `kilo2` in packages/kilo-cli/src/env.ts before any upstream module loads (U-E1-01 part 1, D-4). One line, no Kilo value. Rung 2 cannot supply it: `Global.layerWith` replaces only the service in one graph, while `Global.Path` and `Flock.setGlobal({ state })` are computed when this module loads and read statically by the log file (util/observability/logging.ts), the server tmp (server/src/process.ts) and the TUI themes (tui/src/mini/theme.ts); `cli/src/server-process.ts` and `cli/src/commands/handlers/default.ts` compile their own `Global` node from those defaults, so the background service and the database stayed under `opencode` with host composition alone (measured: the service read its port from `~/.config/opencode` and logged to `~/.local/share/opencode/log`)."
+      "seam": "Two generic identity knobs with upstream defaults, so an embedding entry can name its own directories. (1) The app directory name under the XDG bases (`const app`) reads `OPENCODE_APP_DIR_NAME` and defaults to `opencode`, naming config, data, cache, state and tmp; the Kilo host sets `kilo2` in packages/kilo-cli/src/env.ts before any upstream module loads (U-E1-01 part 1, D-4). (2) The `home` getter reads `OPENCODE_HOME_DIR` before falling back to os.homedir(), so the host can supply a cleaned home; os.homedir() caches $HOME as read at process start, so a shell newline on HOME survives there and cannot be repaired from the host, and `home` feeds resolvePath's `~` expansion (core/src/file-access.ts) and provider credential paths. The Kilo host sets the cleaned home in packages/kilo-cli/src/global-boot.ts (U-E1-01), matching v1's trimmed getter; OPENCODE_TEST_HOME still wins. No Kilo value in either line. Rung 2 cannot supply them: `Global.layerWith` replaces only the service in one graph, while `Global.Path` and `Flock.setGlobal({ state })` are computed when this module loads and read statically by the log file (util/observability/logging.ts), the server tmp (server/src/process.ts) and the TUI themes (tui/src/mini/theme.ts); `cli/src/server-process.ts` and `cli/src/commands/handlers/default.ts` compile their own `Global` node from those defaults, so the background service and the database stayed under `opencode` with host composition alone (measured: the service read its port from `~/.config/opencode` and logged to `~/.local/share/opencode/log`)."
     },
     "turbo.json": {
       "rung": 3,
