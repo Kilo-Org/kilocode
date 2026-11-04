@@ -16,10 +16,12 @@ const prefix = "flow:v1:"
 const runPrefix = "flow-run:v1:"
 const metadataKey = "kilocode.flow"
 const permissionAction = "flow"
+const scheduledPromptPrefix = "[Kilo managed Flow "
 const decodeRecord = Schema.decodeUnknownOption(
   Schema.Union([KiloFlowRpc.Record, Schema.fromJsonString(KiloFlowRpc.Record)]),
 )
 const decodeRun = Schema.decodeUnknownOption(Schema.Union([KiloFlowRpc.Run, Schema.fromJsonString(KiloFlowRpc.Run)]))
+const decodeFlowID = Schema.decodeUnknownOption(KiloFlowRpc.ID)
 const decodeMetadata = Schema.decodeUnknownOption(Schema.Struct({ flowID: KiloFlowRpc.ID, runID: KiloFlowRpc.RunID }))
 const decodeBlockedPermission = Schema.decodeUnknownOption(
   Schema.Struct({ _tag: Schema.Literal("Permission.BlockedError") }),
@@ -31,6 +33,15 @@ export const KiloFlowPlugin = define({
     const schedules = yield* Schedule.Service
     const selections = new Map<Session.ID, { readonly model: Model.Ref; readonly agent: Agent.ID }>()
     const background = new Set<Session.ID>()
+    yield* ctx.session.hook("experimental.schedule", (event) =>
+      scheduled(ctx, event.schedule).pipe(
+        Effect.tap((outcome) =>
+          Effect.sync(() => {
+            if (outcome !== undefined) event.claimed = true
+          }),
+        ),
+      ),
+    )
     yield* ctx.session.hook("context", (event) =>
       Effect.gen(function* () {
         selections.set(event.sessionID, { model: event.model, agent: event.agent })
@@ -81,7 +92,7 @@ export const KiloFlowPlugin = define({
       .register(KiloFlowRpc.Definition, {
         list: () => list(ctx, schedules),
         create: (input, context) =>
-          create(ctx, input, ctx.location.project.id).pipe(
+          create(ctx, schedules, input, ctx.location.project.id).pipe(
             Effect.mapError((error) => context.error("failed", error.message)),
           ),
         run: (input, context) =>
@@ -95,7 +106,7 @@ export const KiloFlowPlugin = define({
         editor.add({
           name: "flow_create",
           description:
-            "Create a managed local Flow definition from this Session. Before calling, derive the complete minimum unattended permission allowlist from the Flow prompt. Resources are wildcard patterns matched against actual tool requests, not descriptions of intent. Shell grants must cover each possible parsed command and stable invocation form: prefer a bounded executable family such as `git *` when flags or working-directory arguments may vary, and include helper commands such as `date *` or `echo *` when needed. File writes use edit. Paths outside the Flow directory also need external_directory with a directory wildcard such as `/home/user/*`; an exact directory path does not cover its contents. Avoid unrestricted `shell: *`. Use an empty list only when the prompt needs no tools. The user reviews the exact allowlist before the Flow is stored. The executor receives this same allowlist as a constraint. The Flow appears in /periodic and can be started manually with flow_run.",
+            "Create a scheduled managed local Flow from this Session. Before calling, derive the complete minimum unattended permission allowlist from the Flow prompt. Resources are wildcard patterns matched against actual tool requests, not descriptions of intent. Shell grants must cover each possible parsed command and stable invocation form: prefer a bounded executable family such as `git *` when flags or working-directory arguments may vary, and include helper commands such as `date *` or `echo *` when needed. File writes use edit. Paths outside the Flow directory also need external_directory with a directory wildcard such as `/home/user/*`; an exact directory path does not cover its contents. Avoid unrestricted `shell: *`. Use an empty list only when the prompt needs no tools. The user reviews the exact allowlist before the Flow is stored. The executor receives this same allowlist as a constraint. The Flow appears in /periodic, runs automatically on its schedule, and can also be started manually with flow_run.",
           input: KiloFlowRpc.CreateRequest,
           output: KiloFlowRpc.Info,
           options: { codemode: true },
@@ -103,6 +114,7 @@ export const KiloFlowPlugin = define({
             const selection = selections.get(context.sessionID)
             return create(
               ctx,
+              schedules,
               {
                 ...input,
                 sourceSessionID: context.sessionID,
@@ -113,7 +125,7 @@ export const KiloFlowPlugin = define({
             ).pipe(
               Effect.map((flow) => ({
                 output: flow,
-                content: `Created Flow ${flow.name} with ${permissionSummary(input.permissions)}. Start it manually with flow_run using Flow ID ${flow.reference.type === "managed" ? flow.reference.flowID : "unknown"}.`,
+                content: `Created scheduled Flow ${flow.name} with ${permissionSummary(input.permissions)}. Start an extra run manually with flow_run using Flow ID ${flow.reference.type === "managed" ? flow.reference.flowID : "unknown"}.`,
               })),
               Effect.mapError(
                 (error) => new Tool.Error({ message: error instanceof Error ? error.message : String(error), error }),
@@ -136,7 +148,9 @@ export const KiloFlowPlugin = define({
                 content:
                   execution.status === "failed"
                     ? `Flow ${execution.flowID} failed to start: ${execution.error ?? "unknown error"}`
-                    : `Started Flow ${execution.flowID} in Session ${execution.sessionID}.`,
+                    : execution.status === "skipped"
+                      ? `Skipped Flow ${execution.flowID} because another execution is active.`
+                      : `Started Flow ${execution.flowID} in Session ${execution.sessionID}.`,
               })),
               Effect.mapError(
                 (error) => new Tool.Error({ message: error instanceof Error ? error.message : String(error), error }),
@@ -150,6 +164,7 @@ export const KiloFlowPlugin = define({
 
 export function create(
   ctx: Plugin.Context,
+  schedules: Pick<Schedule.Interface, "create" | "remove">,
   input: KiloFlowRpc.CreateInput,
   projectID: Session.Info["projectID"] | undefined,
 ): Effect.Effect<KiloFlowRpc.Info, Error> {
@@ -172,9 +187,7 @@ export function create(
     )
     if (external)
       return yield* Effect.fail(
-        new Error(
-          `external_directory permission ${external.resource} must use a bounded wildcard below a directory`,
-        ),
+        new Error(`external_directory permission ${external.resource} must use a bounded wildcard below a directory`),
       )
     const now = Date.now()
     const record: KiloFlowRpc.Record = {
@@ -221,10 +234,36 @@ export function create(
         },
       },
     })
+    const key = `${prefix}${record.id}`
     yield* ctx.storage
-      .set(`${prefix}${record.id}`, JSON.stringify(record))
+      .set(key, JSON.stringify(record))
       .pipe(Effect.mapError(() => new Error(`Couldn't save Flow ${record.id}`)))
-    return managed(record, undefined)
+    const schedule = yield* schedules
+      .create(
+        {
+          sessionID: session.id,
+          name: `Flow: ${record.name}`,
+          when: record.trigger.when,
+          action: { type: "prompt", prompt: scheduledPrompt(record.id) },
+        },
+        { requireEnabled: false },
+      )
+      .pipe(
+        Effect.mapError((error) => new Error(`Couldn't schedule Flow ${record.id}: ${error.message}`)),
+        Effect.onError(() => ctx.storage.remove(key).pipe(Effect.ignore)),
+      )
+    const configured: KiloFlowRpc.Record = {
+      ...record,
+      scheduleID: schedule.id,
+      time: { ...record.time, updated: Date.now() },
+    }
+    yield* ctx.storage.set(key, JSON.stringify(configured)).pipe(
+      Effect.mapError(() => new Error(`Couldn't save backing schedule for Flow ${record.id}`)),
+      Effect.onError(() =>
+        schedules.remove(schedule.id).pipe(Effect.ignore, Effect.andThen(ctx.storage.remove(key).pipe(Effect.ignore))),
+      ),
+    )
+    return managed(configured, schedule)
   })
 }
 
@@ -238,6 +277,46 @@ export function run(
     const record = Option.getOrUndefined(decodeRecord(value))
     if (!record || record.id !== input.flowID || record.context.projectID !== authorizedProjectID)
       return yield* Effect.fail(new Error(`Flow ${input.flowID} does not exist`))
+    return yield* start(ctx, record, KiloFlowRpc.RunID.create())
+  })
+}
+
+export function scheduled(
+  ctx: Plugin.Context,
+  schedule: Schedule.Info,
+): Effect.Effect<"fired" | "skipped" | "failed" | undefined> {
+  const flowID = scheduledFlowID(schedule)
+  if (flowID === undefined) return Effect.succeed(undefined)
+  return Effect.gen(function* () {
+    const record = Option.getOrUndefined(decodeRecord(yield* ctx.storage.get(`${prefix}${flowID}`)))
+    if (!record || record.id !== flowID || (record.scheduleID !== undefined && record.scheduleID !== schedule.id))
+      return yield* Effect.fail(new Error(`Backing schedule ${schedule.id} has no matching Flow ${flowID}`))
+    if (schedule.nextDueAt === undefined)
+      return yield* Effect.fail(new Error(`Backing schedule ${schedule.id} has no due time`))
+    const dueAt = DateTime.toEpochMillis(schedule.nextDueAt)
+    const execution = yield* start(ctx, record, KiloFlowRpc.RunID.make(`flr_${record.id.slice(4)}_${dueAt}`), {
+      scheduleID: schedule.id,
+      dueAt,
+    })
+    if (execution.status === "skipped") return "skipped"
+    if (execution.status === "failed") return "failed"
+    return "fired"
+  }).pipe(
+    Effect.catchCause((cause) =>
+      Effect.logError("scheduled Flow failed to dispatch", { scheduleID: schedule.id, flowID, cause }).pipe(
+        Effect.as("failed" as const),
+      ),
+    ),
+  )
+}
+
+function start(
+  ctx: Plugin.Context,
+  record: KiloFlowRpc.Record,
+  runID: KiloFlowRpc.RunID,
+  scheduled?: KiloFlowRpc.ScheduledOccurrence,
+): Effect.Effect<KiloFlowRpc.Run, Error> {
+  return Effect.gen(function* () {
     const directory = record.context.directory
     const projectID = record.context.projectID
     const model = record.context.model
@@ -245,16 +324,36 @@ export function run(
     if (!directory || !projectID || !model || !agent)
       return yield* Effect.fail(new Error(`Flow ${record.id} is missing execution context`))
 
+    const key = runKey({ flowID: record.id, id: runID })
+    const existing = Option.getOrUndefined(decodeRun(yield* ctx.storage.get(key)))
+    if (existing?.flowID === record.id && existing.id === runID) return existing
+
     const now = Date.now()
+    const active = (yield* runs(ctx)).runs.find(
+      (run) => run.flowID === record.id && (run.status === "starting" || run.status === "running"),
+    )
+    if (active) {
+      const skipped: KiloFlowRpc.Run = {
+        version: 1,
+        id: runID,
+        flowID: record.id,
+        status: "skipped",
+        worktree: record.execution.worktree,
+        ...(scheduled ? { scheduled } : {}),
+        time: { created: now, updated: now, completed: now },
+      }
+      yield* ctx.storage.set(key, JSON.stringify(skipped))
+      return skipped
+    }
     const initial: KiloFlowRpc.Run = {
       version: 1,
-      id: KiloFlowRpc.RunID.create(),
+      id: runID,
       flowID: record.id,
       status: "starting",
       worktree: record.execution.worktree,
+      ...(scheduled ? { scheduled } : {}),
       time: { created: now, updated: now },
     }
-    const key = runKey(initial)
     yield* ctx.storage.set(key, JSON.stringify(initial))
 
     const targetResult = yield* (
@@ -291,7 +390,9 @@ export function run(
         ],
       })
       .pipe(
-        Effect.onInterrupt(() => failRun(ctx, initial, key, new Error("Flow start was interrupted")).pipe(Effect.asVoid)),
+        Effect.onInterrupt(() =>
+          failRun(ctx, initial, key, new Error("Flow start was interrupted")).pipe(Effect.asVoid),
+        ),
         Effect.result,
       )
     if (sessionResult._tag === "Failure") return yield* failRun(ctx, initial, key, sessionResult.failure)
@@ -305,12 +406,10 @@ export function run(
       time: { ...initial.time, updated: started, started },
     }
     yield* ctx.storage.set(key, JSON.stringify(running))
-    const prompted = yield* ctx.session
-      .prompt({ sessionID: sessionResult.success.id, text: record.prompt })
-      .pipe(
-        Effect.onInterrupt(() => failRun(ctx, running, key, new Error("Flow start was interrupted")).pipe(Effect.asVoid)),
-        Effect.result,
-      )
+    const prompted = yield* ctx.session.prompt({ sessionID: sessionResult.success.id, text: record.prompt }).pipe(
+      Effect.onInterrupt(() => failRun(ctx, running, key, new Error("Flow start was interrupted")).pipe(Effect.asVoid)),
+      Effect.result,
+    )
     if (prompted._tag === "Failure") return yield* failRun(ctx, running, key, prompted.failure)
     return running
   })
@@ -457,8 +556,8 @@ function managed(
     permissions: record.permissions ?? [],
     status: status(schedule.status),
     nextRunAt: instant(schedule.nextDueAt),
-    lastRunAt: instant(schedule.lastFiredAt),
-    lastOutcome: schedule.lastOutcome,
+    lastRunAt: run?.time.started ?? run?.time.created ?? instant(schedule.lastFiredAt),
+    lastOutcome: (run && outcome(run)) ?? schedule.lastOutcome,
     ...(run ? { latestRun: run } : {}),
     health: { status: "healthy" },
     time: record.time,
@@ -466,8 +565,21 @@ function managed(
 }
 
 function outcome(run: KiloFlowRpc.Run): KiloFlowRpc.Outcome | undefined {
-  if (run.status === "succeeded" || run.status === "failed" || run.status === "interrupted") return run.status
+  if (run.status === "succeeded" || run.status === "failed" || run.status === "interrupted" || run.status === "skipped")
+    return run.status
   return undefined
+}
+
+function scheduledPrompt(flowID: KiloFlowRpc.ID) {
+  return `${scheduledPromptPrefix}${flowID}]`
+}
+
+function scheduledFlowID(schedule: Schedule.Info) {
+  if (schedule.action.type !== "prompt") return
+  if (!schedule.action.prompt.startsWith(scheduledPromptPrefix) || !schedule.action.prompt.endsWith("]")) return
+  return Option.getOrUndefined(
+    decodeFlowID(schedule.action.prompt.slice(scheduledPromptPrefix.length, schedule.action.prompt.length - 1)),
+  )
 }
 
 function time(input: KiloFlowRpc.CreateInput["when"]): Schedule.When {
@@ -608,9 +720,7 @@ function complete(
     const updated: KiloFlowRpc.Run = {
       ...stored,
       status,
-      ...(event.type === "session.execution.failed"
-        ? { error: event.data.error.message }
-        : {}),
+      ...(event.type === "session.execution.failed" ? { error: event.data.error.message } : {}),
       time: { ...stored.time, updated: completed, completed },
     }
     yield* ctx.storage.set(key, JSON.stringify(updated))

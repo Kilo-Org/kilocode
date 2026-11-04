@@ -1,6 +1,8 @@
 import { expect, test } from "bun:test"
 import { OpenCode } from "@opencode/client"
+import { Schedule } from "@opencode/core/schedule"
 import { KiloFlowRpc } from "@opencode/schema/kilocode/flow"
+import { Session } from "@opencode/schema/session"
 import { createRoutes } from "@opencode/server/routes"
 import { Context, Effect, Layer, References } from "effect"
 import { HttpEffect, HttpRouter, HttpServer } from "effect/http"
@@ -27,11 +29,11 @@ test("lists local schedules and creates managed definitions through the Kilo Flo
   try {
     await Promise.all([global, ...projects, nested].map((directory) => mkdir(directory, { recursive: true })))
     await Promise.all(
-      projects.map((directory) =>
+      projects.map((directory, index) =>
         writeFile(
           path.join(directory, "kilo2.json"),
           JSON.stringify({
-            experimental: { schedules: true },
+            experimental: { schedules: index === 1 },
             permission: { execute: "allow" },
             worktree: { directory: "../worktrees" },
           }),
@@ -79,6 +81,7 @@ test("lists local schedules and creates managed definitions through the Kilo Flo
           const handler = Context.get(context, HttpRouter.HttpRouter)
             .asHttpEffect()
             .pipe(HttpEffect.toWebHandlerWith(context))
+          const schedules = Context.get(context, Schedule.Service)
           const client = OpenCode.make({
             baseUrl: "http://kilo.local",
             headers: { authorization: `Basic ${btoa("opencode:secret")}` },
@@ -104,12 +107,17 @@ test("lists local schedules and creates managed definitions through the Kilo Flo
               model: { providerID: "kilo", id: "kilo-auto/free" },
               permissions: [{ action: "execute", resource: "*", effect: "allow" }],
             })
-            const time = await client.experimental.schedule.create({
-              sessionID: first.id,
-              name: "Daily cleanup",
-              when: { cron: "0 9 * * *", tz: "America/Detroit" },
-              prompt: "Clean the project",
-            })
+            const time = await Effect.runPromise(
+              schedules.create(
+                {
+                  sessionID: Session.ID.make(first.id),
+                  name: "Daily cleanup",
+                  when: { type: "cron", cron: "0 9 * * *", tz: "America/Detroit" },
+                  action: { type: "prompt", prompt: "Clean the project" },
+                },
+                { requireEnabled: false },
+              ),
+            )
             const poll = await client.experimental.schedule.create({
               sessionID: second.id,
               name: "Wait for release",
@@ -183,7 +191,7 @@ test("lists local schedules and creates managed definitions through the Kilo Flo
             })
             const created = await creating
             expect(created).toMatchObject({
-              reference: { type: "managed" },
+              reference: { type: "managed", scheduleID: expect.any(String) },
               name: "Weekly maintenance",
               trigger: { type: "time", when: { type: "cron", cron: "0 10 * * 1" } },
               execution: { type: "local", mode: "fresh", sourceSessionID: first.id, worktree: "new" },
@@ -196,14 +204,15 @@ test("lists local schedules and creates managed definitions through the Kilo Flo
               },
               prompt: "Review and update dependencies",
               permissions,
-              status: "paused",
+              status: "active",
+              nextRunAt: expect.any(Number),
               health: { status: "healthy" },
             })
             const creatingToolFree = rpc.create(
               {
                 sourceSessionID: first.id,
                 name: "Tool-free reminder",
-                when: { every: "1 day" },
+                when: { in: "10 millis" },
                 prompt: "Summarize the existing context without tools",
                 worktree: "reuse",
                 permissions: [],
@@ -222,7 +231,22 @@ test("lists local schedules and creates managed definitions through the Kilo Flo
               requestID: toolFreeApproval.id,
               decision: "once",
             })
-            expect(await creatingToolFree).toMatchObject({ name: "Tool-free reminder", permissions: [] })
+            const toolFree = await creatingToolFree
+            expect(toolFree).toMatchObject({ name: "Tool-free reminder", permissions: [], status: "active" })
+            await Bun.sleep(20)
+            await Effect.runPromise(schedules.tick)
+            expect((await client.message.list({ sessionID: first.id })).data).toEqual([])
+            expect((await rpc.list({}, { location: { directory: nested } })).flows).toContainEqual(
+              expect.objectContaining({
+                name: "Tool-free reminder",
+                status: "completed",
+                lastOutcome: expect.stringMatching(/^(fired|succeeded|failed)$/),
+                latestRun: expect.objectContaining({
+                  status: expect.stringMatching(/^(running|succeeded|failed)$/),
+                  scheduled: expect.objectContaining({ scheduleID: toolFree.reference.scheduleID }),
+                }),
+              }),
+            )
             const refreshed = await rpc.list({}, { location: { directory: nested } })
             expect(refreshed.flows).toContainEqual(created)
 
@@ -258,10 +282,7 @@ test("lists local schedules and creates managed definitions through the Kilo Flo
             await expect(
               rpc.run({ flowID: created.reference.flowID }, { location: { directory: projects[1]! } }),
             ).rejects.toThrow(`Flow ${created.reference.flowID} does not exist`)
-            const execution = await rpc.run(
-              { flowID: created.reference.flowID },
-              { location: { directory: nested } },
-            )
+            const execution = await rpc.run({ flowID: created.reference.flowID }, { location: { directory: nested } })
             expect(execution.flowID).toBe(created.reference.flowID)
             expect(execution.status).toBe("running")
             expect(execution.worktree).toBe("new")
@@ -285,7 +306,7 @@ test("lists local schedules and creates managed definitions through the Kilo Flo
             const withRun = await rpc.list({}, { location: { directory: nested } })
             expect(withRun.flows).toContainEqual(
               expect.objectContaining({
-                reference: { type: "managed", flowID: created.reference.flowID },
+                reference: expect.objectContaining({ type: "managed", flowID: created.reference.flowID }),
                 lastRunAt: execution.time.started,
                 latestRun: expect.objectContaining({
                   id: execution.id,

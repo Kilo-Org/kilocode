@@ -1,8 +1,8 @@
 {
   "$comment": "Shared-patch baseline (U-L3-01). Read by script/check-shared-patches.ts and script/check-opencode-annotations.ts. Each shared upstream file that Kilo adds or changes needs an entry: rung (3 = seam patch, 4 = feature patch) and the missing seam. `unmarked` allows lines without markers and states why. Raise a limit only in the PR that adds the patch, and lower it when a patch goes away.",
   "limits": {
-    "files": 87,
-    "markedLines": 1222,
+    "files": 88,
+    "markedLines": 1280,
     "unmarkedLines": 246,
     "deletedFiles": 0
   },
@@ -104,6 +104,10 @@
     "packages/core/src/config.ts": {
       "rung": 3,
       "seam": "Config discovery layout (feature `config`): `ConfigDiscovery.LayoutService`, a global node with upstream defaults (`opencode.json`, `opencode.jsonc`, `.opencode`, no walk bound) that discovery and `Config` read for the root file names, the project directory names, the file order inside those directories, the upward-walk bound and the global write target (the last existing name). Optional systemFiles and parse hooks let a host select managed file order and decode its own config schema from raw and normalized fields; the decoder also preserves host fields when managed policies split from settings. Optional input normalization and command document composition let the host apply model-only overrides after file discovery. Upstream's integration reloads (v2.2) run discovery with a captured layer context, so that context also carries the layout service. Without the hooks, the default graph and canonical schema behave as upstream. The Kilo host supplies kilo2 names, file orders, a worktree boundary and Kilo-owned config policy. Rungs 1 and 2 cannot do it alone: config parsing precedes plugins, the command editor cannot update captured definitions, and replacing Config.node would lose the server's configured options."
+    },
+    "packages/core/src/schedule.ts": {
+      "rung": 3,
+      "seam": "Generic due-schedule claim seam for location plugins. An experimental session hook receives a due time schedule before native prompt admission; claiming it suppresses that prompt while preserving the scheduler's existing leader election, advancement, retry and outcome bookkeeping. Schedule.create accepts an internal optional requireEnabled flag so a host plugin can own a backing schedule without enabling OpenCode's native schedule UI; the default remains true. Kilo managed Flows use the hook and option, but no Kilo value lives here. Rungs 1 and 2 cannot reach the scheduler between its due-time claim and prompt admission, and a second plugin-owned timing loop would duplicate leader election and advancement behavior."
     },
     "packages/core/src/config/discovery.ts": {
       "rung": 3,
@@ -285,7 +289,7 @@
     },
     "packages/plugin/src/effect/session.ts": {
       "rung": 3,
-      "seam": "Session `route` hook: a plugin may send one model request to another catalog model (`target`) before the request is built. Kilo custom auto routers (ADR 0005, v1 #15183) need it: the routing worker picks a client model or a Gateway model per request from the request messages and tools. No existing hook reaches the model of a request: `context` and `model.request` see a readonly model ref and run after the model is resolved, and the model, provider and AI SDK editors change the catalog, not one request. Type-only: the hook interface and its `SessionHooks` entry."
+      "seam": "Session hooks for host-owned behavior. The `route` hook lets a plugin select another catalog model before a request is built; no existing hook reaches the request model early enough. The experimental `schedule` hook carries a due time schedule and a mutable claimed flag so a location plugin can take ownership before native prompt admission; no existing hook runs between scheduler leader election and admission. Both are generic type-only hooks with no Kilo values."
     },
     "packages/core/src/session/model-request.ts": {
       "rung": 3,

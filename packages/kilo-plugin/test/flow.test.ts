@@ -12,15 +12,37 @@ import { KiloFlowPlugin } from "../src/flow"
 import { KiloFlowRpc } from "@opencode/schema/kilocode/flow"
 import { Session } from "@opencode/schema/session"
 import { SessionMessage } from "@opencode/schema/session-message"
-import { Effect, Layer, Schema } from "effect"
+import { DateTime, Effect, Layer, Schema } from "effect"
 import { testEffect } from "../../core/test/lib/effect"
 import { PluginTestLayer } from "../../core/test/plugin/fixture"
+
+const backingSchedules = new Map<Schedule.ID, Schedule.Info>()
+let scheduleCounter = 0
 
 const it = testEffect(
   Layer.merge(
     PluginTestLayer,
     Layer.mock(Schedule.Service, {
-      list: () => Effect.succeed([]),
+      list: () => Effect.succeed([...backingSchedules.values()]),
+      create: (input) =>
+        Effect.sync(() => {
+          const now = Date.now()
+          const schedule = Schema.decodeUnknownSync(Schedule.Info)({
+            id: `sch_flow_${++scheduleCounter}`,
+            sessionID: input.sessionID,
+            name: input.name,
+            when: input.when,
+            tz: input.when?.tz ?? "UTC",
+            action: input.action,
+            status: "active",
+            nextDueAt: now + 60_000,
+            runCount: 0,
+            time: { created: now, updated: now },
+          })
+          backingSchedules.set(schedule.id, schedule)
+          return schedule
+        }),
+      remove: (scheduleID) => Effect.sync(() => backingSchedules.delete(scheduleID)).pipe(Effect.asVoid),
     }),
   ),
 )
@@ -203,6 +225,8 @@ test("missing Sessions and malformed stored records are isolated", () => {
 
 it.live("registers and executes the managed Flow creation and run tools", () =>
   Effect.gen(function* () {
+    backingSchedules.clear()
+    scheduleCounter = 0
     const plugins = yield* Plugin.Service
     const context = yield* PluginHost.make(plugins)
     const schedules = yield* Schedule.Service
@@ -258,6 +282,43 @@ it.live("registers and executes the managed Flow creation and run tools", () =>
     )
     if (!created.output || created.output.reference.type !== "managed")
       return yield* Effect.die("Expected flow_create to return a managed Flow")
+    expect(created.output).toMatchObject({
+      reference: { type: "managed", scheduleID: expect.any(String) },
+      status: "active",
+      nextRunAt: expect.any(Number),
+    })
+    const backing = (yield* schedules.list())[0]
+    if (!backing?.nextDueAt) return yield* Effect.die("Expected a due backing schedule")
+    const activeID = KiloFlowRpc.RunID.make("flr_active")
+    const active: KiloFlowRpc.Run = {
+      version: 1,
+      id: activeID,
+      flowID: created.output.reference.flowID,
+      status: "running",
+      worktree: "reuse",
+      sessionID: Session.ID.make("ses_active_flow"),
+      directory: source.location.directory,
+      time: { created: Date.now(), updated: Date.now(), started: Date.now() },
+    }
+    yield* context.storage.set(`flow-run:v1:${active.flowID}:${active.id}`, JSON.stringify(active))
+    const claimed = yield* (yield* PluginHooks.Service).trigger("session", "experimental.schedule", {
+      sessionID: source.id,
+      schedule: backing,
+    })
+    expect(claimed.claimed).toBeTrue()
+    const dueAt = DateTime.toEpochMillis(backing.nextDueAt)
+    const skippedID = KiloFlowRpc.RunID.make(`flr_${created.output.reference.flowID.slice(4)}_${dueAt}`)
+    expect(yield* context.storage.get(`flow-run:v1:${active.flowID}:${skippedID}`)).toContain('"status":"skipped"')
+    yield* (yield* PluginHooks.Service).trigger("session", "experimental.schedule", {
+      sessionID: source.id,
+      schedule: backing,
+    })
+    expect(
+      (yield* context.storage.scan({
+        prefix: `flow-run:v1:${created.output.reference.flowID}:`,
+      })).entries,
+    ).toHaveLength(2)
+    yield* context.storage.remove(`flow-run:v1:${active.flowID}:${active.id}`)
     const execution = yield* flowRun.execute(
       { flowID: created.output.reference.flowID },
       {
@@ -310,7 +371,7 @@ it.live("registers and executes the managed Flow creation and run tools", () =>
         {
           name: "Nightly check",
           reference: { type: "managed" },
-          status: "paused",
+          status: "active",
           lastRunAt: expect.any(Number),
           lastOutcome: "failed",
           latestRun: {

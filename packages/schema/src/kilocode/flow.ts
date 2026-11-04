@@ -113,10 +113,21 @@ export const Status = Schema.Literals(["active", "paused", "completed", "error"]
 })
 export type Status = typeof Status.Type
 
-export const RunStatus = Schema.Literals(["starting", "running", "succeeded", "failed", "interrupted"]).annotate({
-  identifier: "KiloFlow.RunStatus",
-})
+export const RunStatus = Schema.Literals([
+  "starting",
+  "running",
+  "succeeded",
+  "failed",
+  "interrupted",
+  "skipped",
+]).annotate({ identifier: "KiloFlow.RunStatus" })
 export type RunStatus = typeof RunStatus.Type
+
+export const ScheduledOccurrence = Schema.Struct({
+  scheduleID: Schedule.ID,
+  dueAt: Schema.Finite,
+}).annotate({ identifier: "KiloFlow.ScheduledOccurrence" })
+export type ScheduledOccurrence = typeof ScheduledOccurrence.Type
 
 /** Durable execution record stored under `flow-run:v1:<flowID>:<runID>`. */
 export const Run = Schema.Struct({
@@ -127,6 +138,7 @@ export const Run = Schema.Struct({
   worktree: Schema.Literals(["reuse", "new"]),
   sessionID: SessionID.pipe(optional),
   directory: AbsolutePath.pipe(optional),
+  scheduled: ScheduledOccurrence.pipe(optional),
   error: Schema.String.pipe(optional),
   time: Schema.Struct({
     created: Schema.Finite,
