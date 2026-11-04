@@ -61,7 +61,7 @@
       "effect": "4.0.0-beta.83",
       "ai": "6.0.235",
       "cross-spawn": "7.0.6",
-      "hono": "4.12.12",
+      "hono": "4.13.14",
       "hono-openapi": "1.1.2",
       "ipaddr.js": "2.4.0",
       "fuzzysort": "3.1.0",
@@ -206,7 +206,10 @@
       "undici": "^8.12.3"
     },
     "seroval": "~1.6.11",
-    "seroval-plugins": "~1.6.8"
+    "seroval-plugins": "~1.6.8",
+    "@modelcontextprotocol/sdk": {
+      "@hono/node-server": "^2.1.5"
+    }
   },
   "patchedDependencies": {
     "@npmcli/agent@4.0.2": "patches/@npmcli%2Fagent@4.0.2.patch",
