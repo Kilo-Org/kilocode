@@ -56,6 +56,10 @@ export function color(part: Part): TimelineColor {
     case "step-finish":
       return palette.success
 
+    // Model-generated images
+    case "file":
+      return palette.write
+
     default:
       return palette.fallback
   }
@@ -81,6 +85,8 @@ export function label(part: Part, msg?: Message): string {
       return "Step start"
     case "step-finish":
       return auto(msg) && part.model?.modelID ? `Step finish · ${part.model.modelID}` : "Step finish"
+    case "file":
+      return "Image"
     default:
       return "Unknown"
   }

@@ -8,7 +8,7 @@ import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.layout.Stack
 import ai.kilocode.client.ui.list.ActiveList
-import ai.kilocode.client.ui.list.ActiveListItem
+import ai.kilocode.client.ui.active.ActiveItem
 import com.intellij.ide.ui.laf.darcula.ui.DarculaButtonUI
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.EDT
@@ -63,7 +63,7 @@ internal class OnboardingDialog(
     private data class StepRow(
         override val key: String,
         override val title: String,
-    ) : ActiveListItem
+    ) : ActiveItem
 
     // internal (not private): lets tests simulate real clicks/selection on the same live
     // components the dialog wires up, instead of adding test-only accessor methods.
