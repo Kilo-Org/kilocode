@@ -18,6 +18,7 @@ import {
   findModel,
   groupModelsByProvider,
   latestModel,
+  memberUsage,
   mergeModelUsage,
   modelLabel,
   modelUsage,
@@ -540,5 +541,37 @@ describe("fetchSessionMessages", () => {
       },
     }
     expect((await fetchSessionMessages(client, "s1", controller.signal)).map((message) => message.id)).toEqual(["m1"])
+  })
+})
+
+describe("memberUsage", () => {
+  test("skips a session that is still being created instead of reading its missing history", async () => {
+    const calls: string[] = []
+    const client = {
+      message: {
+        list: async (input: { sessionID: string }) => {
+          calls.push(input.sessionID)
+          // The server answers 404 for a session whose create request has not settled.
+          if (input.sessionID === "ses_new") throw new Error("Session not found: ses_new")
+          return { data: [assistant({ id: "a", model: "m", cost: 0.1, tokens: tokens(10) })], cursor: {} }
+        },
+      },
+    }
+    const usage = await memberUsage(client, [{ id: "ses_root" }, { id: "ses_new" }], (id) => id === "ses_new")
+    expect(calls).toEqual(["ses_root"])
+    expect(usage?.map((row) => [row.modelID, row.steps])).toEqual([["m", 1]])
+  })
+
+  test("returns nothing once the signal aborts", async () => {
+    const controller = new AbortController()
+    const client = {
+      message: {
+        list: async () => {
+          controller.abort()
+          return { data: [], cursor: {} }
+        },
+      },
+    }
+    expect(await memberUsage(client, [{ id: "a" }, { id: "b" }], () => false, controller.signal)).toBeUndefined()
   })
 })

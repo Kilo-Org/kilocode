@@ -48,8 +48,8 @@ function legacy(data: string, channel: string, shared: boolean) {
 /**
  * Copies the database of an earlier build to `file` once, so its sessions stay. A copy through SQLite includes the
  * pages that are still in the WAL. The copy is written next to `file` and linked into place, so a process that starts
- * at the same time never opens a half-written file. If the copy fails, the server starts with a new database and
- * the old file stays as it is.
+ * at the same time never opens a half-written file. If the copy fails, the server starts with a new database, the
+ * old file stays as it is, and stderr names both files so the sessions can be restored by hand.
  */
 async function adopt(file: string, source: string) {
   if (existsSync(file) || !existsSync(source)) return
@@ -62,10 +62,11 @@ async function adopt(file: string, source: string) {
     } finally {
       db.close()
     }
-    // Fails when another process linked its copy first. That copy is the same database.
     linkSync(temp, file)
-  } catch {
-    return
+  } catch (error) {
+    // Another process linked its copy first. That copy is the same database.
+    if (existsSync(file)) return
+    console.error(`kilo2: could not copy the sessions of ${source} to ${file}, starting with a new database:`, error)
   } finally {
     rmSync(temp, { force: true })
   }

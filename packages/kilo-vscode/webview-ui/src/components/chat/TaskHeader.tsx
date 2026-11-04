@@ -20,11 +20,9 @@ import {
   childLabels,
   collapseCostBreakdown,
   costBreakdown,
-  fetchSessionMessages,
   latestModel,
-  mergeModelUsage,
+  memberUsage,
   modelLabel,
-  modelUsage,
   sessionSubtree,
   sessionUsage,
   sumCost,
@@ -218,18 +216,15 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
         void (async () => {
           await syncFamily(version)
           if (next.signal.aborted || version !== run) return
-          const rows: ModelUsage[][] = []
-          for (const member of untrack(members)) {
-            if (next.signal.aborted || version !== run) return
-            // A session created here is not on the server until its create request settles, so it has no history
-            // to read yet. The idle status at the end of its first turn loads the usage again.
-            if (v2.data.session.creating(member.id)) continue
-            const messages = await fetchSessionMessages(v2.api, member.id, next.signal)
-            if (next.signal.aborted || version !== run) return
-            rows.push(modelUsage(messages).models)
-          }
-          if (version !== run) return
-          setDetailModels(mergeModelUsage(rows))
+          // A new session joins once its create request settles: the idle status of its first turn loads again.
+          const models = await memberUsage(
+            v2.api,
+            untrack(members),
+            (id) => v2.data.session.creating(id),
+            next.signal,
+          )
+          if (!models || version !== run) return
+          setDetailModels(models)
         })().catch((error: unknown) => {
           if (next.signal.aborted || version !== run) return
           v2.report(error)

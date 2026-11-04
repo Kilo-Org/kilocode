@@ -65,7 +65,13 @@ test("the database of an earlier build is copied once, with the pages still in i
   } finally {
     old.close()
   }
-  expect(new Database(legacy, { readonly: true }).query("SELECT count(*) AS n FROM session").get()).toEqual({ n: 2 })
+  // Windows keeps an open file locked, so every connection closes before the directory is removed.
+  const source = new Database(legacy, { readonly: true })
+  try {
+    expect(source.query("SELECT count(*) AS n FROM session").get()).toEqual({ n: 2 })
+  } finally {
+    source.close()
+  }
 })
 
 test("release channels and KILO_DISABLE_CHANNEL_DB copy the earlier shared file", async () => {
