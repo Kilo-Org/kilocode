@@ -941,6 +941,26 @@ function ToolFileMeta(props: {
   )
 }
 
+function FileTitle(props: {
+  title: string
+  pending: boolean
+  path: string
+  directory?: string
+  changes?: FileDiffInfo
+  onOpen?: (event: MouseEvent) => void
+}) {
+  return (
+    <div data-slot="message-part-title-area">
+      <div data-slot="message-part-title">
+        <span data-slot="message-part-title-text">
+          <TextShimmer text={props.title} active={props.pending} />
+        </span>
+        <ToolFileMeta path={props.path} directory={props.directory} changes={props.changes} onOpen={props.onOpen} />
+      </div>
+    </div>
+  )
+}
+
 function ToolFileOpenAction(props: { when: boolean; onClick: (event: MouseEvent) => void }) {
   const i18n = useI18n()
   return (
@@ -1032,19 +1052,14 @@ ToolRegistry.register({
           hasDetails
           trigger={
             <div data-component="edit-trigger">
-              <div data-slot="message-part-title-area">
-                <div data-slot="message-part-title">
-                  <span data-slot="message-part-title-text">
-                    <TextShimmer text={i18n.t("ui.messagePart.title.edit")} active={busy(props.status)} />
-                  </span>
-                  <ToolFileMeta
-                    path={path()}
-                    directory={props.directory}
-                    changes={diff()}
-                    onOpen={props.actions?.openFile ? openFile : undefined}
-                  />
-                </div>
-              </div>
+              <FileTitle
+                title={i18n.t("ui.messagePart.title.edit")}
+                pending={busy(props.status)}
+                path={path()}
+                directory={props.directory}
+                changes={diff()}
+                onOpen={props.actions?.openFile ? openFile : undefined}
+              />
               <ToolFileOpenAction when={!!props.actions?.openFile && !!path()} onClick={openFile} />
               <ToolDiffAction when={canOpenDiff()} onClick={openDiff} />
             </div>
@@ -1122,19 +1137,14 @@ ToolRegistry.register({
           hideDetails={props.hideDetails || unchanged()}
           trigger={
             <div data-component="write-trigger">
-              <div data-slot="message-part-title-area">
-                <div data-slot="message-part-title">
-                  <span data-slot="message-part-title-text">
-                    <TextShimmer text={i18n.t("ui.messagePart.title.write")} active={busy(props.status)} />
-                  </span>
-                  <ToolFileMeta
-                    path={path()}
-                    directory={props.directory}
-                    changes={diff()}
-                    onOpen={props.actions?.openFile ? openFile : undefined}
-                  />
-                </div>
-              </div>
+              <FileTitle
+                title={i18n.t("ui.messagePart.title.write")}
+                pending={busy(props.status)}
+                path={path()}
+                directory={props.directory}
+                changes={diff()}
+                onOpen={props.actions?.openFile ? openFile : undefined}
+              />
               <ToolFileOpenAction when={!!props.actions?.openFile && !!path()} onClick={openFile} />
               <ToolDiffAction when={canOpenDiff()} onClick={handleOpenDiffClick} />
             </div>
