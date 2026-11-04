@@ -4,6 +4,8 @@ import * as path from "node:path"
 
 const MAX_TEXT_BYTES = 2_000_000
 const MAX_IMAGE_BYTES = 5_000_000
+/** Inline-code candidates arrive in bursts; probing more than this per request adds no useful link. */
+export const MAX_VALIDATE_PATHS = 64
 
 export type DocumentResult =
   | { file: string; kind: "text"; content: string }
@@ -57,6 +59,7 @@ function mime(file: string): string | undefined {
 export function resolveDocumentPath(
   root: string,
   file: string,
+  options?: { quiet?: boolean },
 ): { file: string; resolved: string; size: number } | { error: string } {
   if (!file) return { error: "Invalid document path." }
   // Resolving a UNC path opens an outbound SMB connection on Windows, so reject it before any filesystem call.
@@ -75,9 +78,14 @@ export function resolveDocumentPath(
     const canonical = inside ? path.relative(base, resolved).split(path.sep).join("/") : resolved
     return { file: canonical, resolved, size: stat.size }
   } catch (error) {
-    console.error("Cannot resolve document path:", error)
+    if (!options?.quiet) console.error("Cannot resolve document path:", error)
     return { error: "Document could not be read." }
   }
+}
+
+/** Whether `file` is a document this session may open, without logging a miss. */
+export function documentExists(root: string, file: string): boolean {
+  return !("error" in resolveDocumentPath(root, file, { quiet: true }))
 }
 
 export function readDocument(root: string, file: string): DocumentResult {

@@ -61,6 +61,23 @@ test("a missing inline file stays plain code and never opens", async () => {
   expect(opened).toEqual([])
 })
 
+test("a markdown file link opens only after worktree validation", async () => {
+  const { card, opened } = part("[README.md](README.md) and [secret](../../.env)", async (_session, paths) =>
+    paths.filter((path) => path.endsWith("README.md")),
+  )
+
+  const links = await waitFor(() => {
+    const found = [...card.host.querySelectorAll<HTMLAnchorElement>("a.file-path-link")]
+    return found.length === 2 ? found : undefined
+  })
+  links[0]!.click()
+  await waitFor(() => opened.length === 1)
+  links[1]!.click()
+  await new Promise((resolve) => setTimeout(resolve, 50))
+
+  expect(opened).toEqual([{ path: "README.md", line: undefined, sessionID: "ses_links" }])
+})
+
 test("a plan document gets the document glyph class", async () => {
   const { card } = part("Review `./plan/42-plan.md`.", async (_session, paths) => paths)
 

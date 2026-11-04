@@ -63,7 +63,7 @@ import { pruneSubagents, sessionMissing } from "./prune-subagents"
 import { readTerminalFont, watchTerminalFont } from "./terminal-font"
 import { DestinationState, watchTerminalDestination } from "./terminal-destination"
 import { buildKeybindingMap } from "./format-keybinding"
-import { readDocument, resolveDocumentPath } from "../documents/document-reader"
+import { MAX_VALIDATE_PATHS, documentExists, readDocument } from "../documents/document-reader"
 import { resolveWorktreeFile, resolveWorktreeRoot, sessionDirectory } from "./worktree-file-path"
 import { focusPanelPrompt, revealPanel } from "./focus-panel"
 import { formatLog } from "./log-format"
@@ -1006,7 +1006,9 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
 
   public validateFiles(id: string, sessionId: string, paths: string[]): void {
     const root = resolveWorktreeRoot(this.getStateManager(), sessionId, this.getRoot())
-    const existing = root ? paths.filter((file) => !("error" in resolveDocumentPath(root, file))) : []
+    // An unresolved session is not "every path missing": let the client timeout treat it as unknown.
+    if (!root) return
+    const existing = paths.slice(0, MAX_VALIDATE_PATHS).filter((file) => documentExists(root, file))
     this.postToWebview({ type: "agentManager.validateFilesResult", id, existing })
   }
 

@@ -13,6 +13,7 @@ import {
   Show,
   createSignal,
   createMemo,
+  createUniqueId,
   createEffect,
   on,
   untrack,
@@ -1154,28 +1155,32 @@ const AgentManagerContent: Component = () => {
     editPreview.open(diff, sessionID, diffStyle())
   }
   // Inline file candidates are validated by the host, which owns filesystem access and the worktree boundary.
-  const fileChecks = new Map<string, (existing: string[]) => void>()
+  const fileChecks = new Map<string, { resolve: (existing: string[]) => void; reject: (error: Error) => void }>()
+  const fileCheckPrefix = createUniqueId()
   let fileCheckCount = 0
   const stopFileChecks = onHostMessage((message) => {
     if (message.type !== "agentManager.validateFilesResult") return
-    const resolve = fileChecks.get(message.id)
-    if (!resolve) return
+    const pending = fileChecks.get(message.id)
+    if (!pending) return
     fileChecks.delete(message.id)
-    resolve(message.existing)
+    pending.resolve(message.existing)
   })
   onCleanup(() => {
     stopFileChecks()
-    for (const resolve of fileChecks.values()) resolve([])
+    // Reject on dispose so the shared cache keeps these paths unknown instead of caching them as missing.
+    for (const pending of fileChecks.values()) pending.reject(new Error("validateFiles cancelled"))
     fileChecks.clear()
   })
   const validateFiles = (sessionID: string, paths: string[]) =>
     new Promise<string[]>((resolve, reject) => {
-      const id = `vf-${++fileCheckCount}`
-      fileChecks.set(id, resolve)
+      const id = `${fileCheckPrefix}-${++fileCheckCount}`
+      fileChecks.set(id, { resolve, reject })
       to({ type: "agentManager.validateFiles", id, sessionId: sessionID, paths })
       setTimeout(() => {
-        if (!fileChecks.delete(id)) return
-        reject(new Error("validateFiles timed out"))
+        const pending = fileChecks.get(id)
+        if (!pending) return
+        fileChecks.delete(id)
+        pending.reject(new Error("validateFiles timed out"))
       }, 3000)
     })
   const toolActions: ToolActions = {
@@ -2052,9 +2057,7 @@ const AgentManagerContent: Component = () => {
           requestChatFocus(true)
           return true
         }
-        const managed = worktreeSessionIds().has(id)
-          ? managedSessions().find((entry) => entry.id === id)
-          : undefined
+        const managed = worktreeSessionIds().has(id) ? managedSessions().find((entry) => entry.id === id) : undefined
         if (managed?.worktreeId) {
           selectWorktree(managed.worktreeId)
           sessions.selectSession(id)

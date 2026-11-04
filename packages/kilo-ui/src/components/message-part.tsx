@@ -189,7 +189,12 @@ function TextContent(props: {
     const validateFiles = props.actions?.validateFiles
     if (!session || !validateFiles) return
     void checkFile(session, path, validateFiles).then((exists) => {
-      if (exists === undefined || !el.isConnected) return
+      if (!el.isConnected) return
+      // A transient unknown result must not keep re-arming the same candidate on every mutation.
+      if (exists === undefined) {
+        el.removeAttribute("data-file-candidate")
+        return
+      }
       if (!el.classList.contains("file-link-candidate")) return
       if (el.getAttribute("data-file-candidate") !== path) return
       promote(el, path, exists)
@@ -279,6 +284,17 @@ function TextContent(props: {
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
   }
+  // Link hrefs are model-authored, so they take the same worktree validation as inline code before opening.
+  const openValidated = (path: string, line?: number, column?: number) => {
+    const session = props.session
+    const validateFiles = props.actions?.validateFiles
+    if (!session || !validateFiles) return
+    void checkFile(session, path, validateFiles).then((exists) => {
+      if (exists !== true) return
+      props.actions?.openFile?.(path, line, column, session)
+    })
+  }
+
   const click = (event: MouseEvent) => {
     if (!(event.target instanceof Element)) return
     const fileLink = event.target.closest(".file-link[data-file-path]")
@@ -302,7 +318,7 @@ function TextContent(props: {
     const file = extractFilePathFromHref(href)
     if (file) {
       event.preventDefault()
-      props.actions?.openFile?.(file.path, file.line, file.column, props.session)
+      openValidated(file.path, file.line, file.column)
       return
     }
     if (!props.open || !/^https?:\/\//i.test(href)) return

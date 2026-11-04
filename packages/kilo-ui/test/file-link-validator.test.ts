@@ -1,4 +1,4 @@
-import { describe, expect, it } from "bun:test"
+import { describe, expect, it, setSystemTime } from "bun:test"
 import { checkFile } from "../src/file-link-validator"
 
 // A fake validateFiles that records its calls and returns the given existing
@@ -41,14 +41,20 @@ describe("checkFile", () => {
 
   it("re-validates a negative result after its TTL expires", async () => {
     const v = fake([])
-    expect(await checkFile("ses_neg", "./missing.ts", v.fn, { negativeTtlMs: 10 })).toBe(false)
-    // Within TTL: served from cache, no new call.
-    expect(await checkFile("ses_neg", "./missing.ts", v.fn, { negativeTtlMs: 10 })).toBe(false)
-    expect(v.calls.length).toBe(1)
-    await new Promise((r) => setTimeout(r, 20))
-    // After TTL: re-checked.
-    expect(await checkFile("ses_neg", "./missing.ts", v.fn, { negativeTtlMs: 10 })).toBe(false)
-    expect(v.calls.length).toBe(2)
+    const start = new Date("2026-01-01T00:00:00.000Z")
+    setSystemTime(start)
+    try {
+      expect(await checkFile("ses_neg", "./missing.ts", v.fn, { negativeTtlMs: 10 })).toBe(false)
+      // Within TTL: served from cache, no new call.
+      expect(await checkFile("ses_neg", "./missing.ts", v.fn, { negativeTtlMs: 10 })).toBe(false)
+      expect(v.calls.length).toBe(1)
+      setSystemTime(new Date(start.getTime() + 20))
+      // After TTL: re-checked.
+      expect(await checkFile("ses_neg", "./missing.ts", v.fn, { negativeTtlMs: 10 })).toBe(false)
+      expect(v.calls.length).toBe(2)
+    } finally {
+      setSystemTime()
+    }
   })
 
   it("resolves undefined (never false) when validation keeps failing", async () => {

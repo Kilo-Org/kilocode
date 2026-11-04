@@ -3,7 +3,18 @@ import { Button } from "@kilocode/kilo-ui/button"
 import { showToast } from "@kilocode/kilo-ui/toast"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import type { ToolActions } from "@kilocode/kilo-ui/message-part"
-import { createEffect, createSignal, type JSX, Match, on, onCleanup, onMount, Show, Switch } from "solid-js"
+import {
+  createEffect,
+  createSignal,
+  createUniqueId,
+  type JSX,
+  Match,
+  on,
+  onCleanup,
+  onMount,
+  Show,
+  Switch,
+} from "solid-js"
 import type { ToHost } from "../../../src/protocol"
 import { useLanguage } from "../context/language"
 import { getVSCodeAPI, useVSCode } from "../context/vscode"
@@ -55,15 +66,16 @@ export function Chat() {
   // A document tab in the editor posts review comments here, because this view owns the prompt they belong to.
   const vscode = useVSCode()
   // File candidates are validated by the host, which owns filesystem access and the worktree boundary.
-  const fileChecks = new Map<string, (existing: string[]) => void>()
+  const fileChecks = new Map<string, { resolve: (existing: string[]) => void; reject: (error: Error) => void }>()
+  const fileCheckPrefix = createUniqueId()
   let fileCheckCount = 0
   onMount(() => {
     const message = vscode.onMessage((item) => {
       if (item.type === "validateFilesResult") {
-        const resolve = fileChecks.get(item.id)
-        if (!resolve) return
+        const pending = fileChecks.get(item.id)
+        if (!pending) return
         fileChecks.delete(item.id)
-        resolve(item.existing)
+        pending.resolve(item.existing)
         return
       }
       if (item.type !== "appendReviewComments") return
@@ -71,18 +83,21 @@ export function Chat() {
     })
     onCleanup(() => {
       message()
-      for (const resolve of fileChecks.values()) resolve([])
+      // Reject on unmount so the shared cache keeps these paths unknown instead of caching them as missing.
+      for (const pending of fileChecks.values()) pending.reject(new Error("validateFiles cancelled"))
       fileChecks.clear()
     })
   })
   const validateFiles = (sessionID: string, paths: string[]) =>
     new Promise<string[]>((resolve, reject) => {
-      const id = `vf-${++fileCheckCount}`
-      fileChecks.set(id, resolve)
+      const id = `${fileCheckPrefix}-${++fileCheckCount}`
+      fileChecks.set(id, { resolve, reject })
       getVSCodeAPI().postMessage({ type: "validateFiles", id, sessionID, paths } satisfies ToHost as never)
       setTimeout(() => {
-        if (!fileChecks.delete(id)) return
-        reject(new Error("validateFiles timed out"))
+        const pending = fileChecks.get(id)
+        if (!pending) return
+        fileChecks.delete(id)
+        pending.reject(new Error("validateFiles timed out"))
       }, 3000)
     })
   // A turn shows its own changes: `from` is the user message that opened it, and the

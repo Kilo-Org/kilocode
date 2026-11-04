@@ -2,7 +2,13 @@ import { describe, expect, it } from "bun:test"
 import * as fs from "node:fs"
 import * as os from "node:os"
 import * as path from "node:path"
-import { isInsideWorktree, plansDir, readDocument, resolveDocumentPath } from "../src/documents/document-reader"
+import {
+  documentExists,
+  isInsideWorktree,
+  plansDir,
+  readDocument,
+  resolveDocumentPath,
+} from "../src/documents/document-reader"
 
 function workspace() {
   return fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "kilo-document-")))
@@ -118,6 +124,19 @@ describe("readDocument", () => {
 
       expect(readDocument(root, outside)).toEqual({ error: "Document is outside the worktree." })
     })
+  })
+})
+
+describe("documentExists", () => {
+  it("reports a worktree file without reading it and rejects escapes", () => {
+    const root = workspace()
+    fs.writeFileSync(path.join(root, "README.md"), "# Read me\n")
+    const outside = path.join(root, "..", "outside.md")
+    fs.writeFileSync(outside, "secret")
+
+    expect(documentExists(root, "README.md")).toBe(true)
+    expect(documentExists(root, "missing.md")).toBe(false)
+    expect(documentExists(root, outside)).toBe(false)
   })
 })
 
