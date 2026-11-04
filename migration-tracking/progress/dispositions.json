@@ -1,4 +1,22 @@
 {
+  "module:packages/core/src/kilocode/global.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-cli/src/global-resilience.ts",
+    "note": "ensureRealDir, writable, ready and resolveState are ported into packages/kilo-cli/src/global-resilience.ts and wired by packages/kilo-cli/src/global-boot.ts (a host boot step that runs before @opencode/util/global loads), keeping the upstream util/global.ts pristine. The state-dir fallback is <data>/<app> rather than v1's literal <data>/state because roots() always appends the app name.",
+    "by": "global-resilience"
+  },
+  "module:packages/core/src/kilocode/spotlight.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-cli/src/global-resilience.ts",
+    "note": "markNoIndex (macOS .metadata_never_index Spotlight exclusion) is ported into packages/kilo-cli/src/global-resilience.ts and applied to the data, cache and state directories by packages/kilo-cli/src/global-boot.ts.",
+    "by": "global-resilience"
+  },
+  "module:packages/core/test/kilocode/global.test.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-cli/test/global-resilience.test.ts",
+    "note": "The resolveState suite plus ensureRealDir, markNoIndex and cleanEnv coverage are ported to packages/kilo-cli/test/global-resilience.test.ts.",
+    "by": "global-resilience"
+  },
   "module:packages/opencode/src/kilocode/storage/json-migration.ts": {
     "state": "dropped",
     "note": "v1 lazily migrated the JSON file store (storage/**/*.json) into SQLite on first access. v2 replaced the JSON store with an event-sourced SQLite store, so there is no JSON tree to migrate. Legacy import is handled natively at the SQLite level by packages/core/src/database/v1-migration.bun.ts, and D-4 isolation (packages/kilo-cli/src/env.ts keeps CONFIG/CONFIG_DIR/DB out of the translated OPENCODE_* names) keeps v2 out of v1's store. The JSON migrator is obsolete.",

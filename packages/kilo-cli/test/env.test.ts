@@ -14,6 +14,12 @@ test("KILO_ variables reach their OPENCODE_ name, and the Kilo name wins", () =>
   expect(env.OPENCODE_MODELS_URL).toBe("https://models.example.test")
 })
 
+test("KILO_TEST_HOME overrides the home directory as OPENCODE_TEST_HOME", () => {
+  const env: Record<string, string | undefined> = { KILO_TEST_HOME: "/tmp/kilo-home" }
+  translate(env)
+  expect(env.OPENCODE_TEST_HOME).toBe("/tmp/kilo-home")
+})
+
 test("the Kilo Gateway token does not become the OpenCode Zen key", () => {
   const env: Record<string, string | undefined> = { KILO_API_KEY: "kilo-token" }
   translate(env)
