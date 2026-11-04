@@ -347,6 +347,7 @@ export const dict = {
   "session.tab.review": "Review",
   "session.review.filesChanged": "{{count}} Files Changed",
   "session.review.viewTurnChanges": "View turn changes",
+  "session.review.turnChangesEmpty": "No changes in this turn.",
   "session.review.loadingChanges": "Loading changes...",
   "session.review.noChanges": "No changes",
 

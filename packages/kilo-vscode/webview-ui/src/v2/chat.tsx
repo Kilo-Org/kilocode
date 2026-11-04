@@ -1,5 +1,6 @@
 // The sidebar: history, profile, or one session laid out like main's ChatView (transcript, docks, prompt).
 import { Button } from "@kilocode/kilo-ui/button"
+import { showToast } from "@kilocode/kilo-ui/toast"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import type { ToolActions } from "@kilocode/kilo-ui/message-part"
 import { createEffect, createSignal, type JSX, Match, on, onCleanup, Show, Switch } from "solid-js"
@@ -53,7 +54,10 @@ export function Chat() {
     void v2.api.session
       .diff({ sessionID, from: turnID })
       .then((files) => {
-        if (files.length === 0) return
+        if (files.length === 0) {
+          showToast(language.t("session.review.turnChangesEmpty"))
+          return
+        }
         getVSCodeAPI().postMessage({
           type: "openDiffsVirtual",
           diffs: files.map((file) => ({
