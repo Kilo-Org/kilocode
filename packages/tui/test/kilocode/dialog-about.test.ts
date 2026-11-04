@@ -55,6 +55,16 @@ test("maskPath hides the path when privacy mode is on", () => {
   expect(maskPath("/home/user/code/project", true, "/home/user")).toBe("\u2022\u2022\u2022")
 })
 
+test("maskPath reports an unknown path instead of the process cwd", () => {
+  expect(maskPath(undefined, false, "/home/user")).toBe("(unknown)")
+  expect(maskPath("", false, "/home/user")).toBe("(unknown)")
+  expect(maskPath(undefined, true, "/home/user")).toBe("\u2022\u2022\u2022")
+})
+
+test("diagnostics marks an unresolved config path as unknown", () => {
+  expect(diagnostics({ ...base, configPath: undefined })).toContain("Config: (unknown)")
+})
+
 test("runtime reports the Bun version when available", () => {
   expect(runtime()).toMatch(/^(Bun|Node) \d+\.\d+\.\d+/)
 })

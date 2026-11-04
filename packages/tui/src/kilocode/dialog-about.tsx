@@ -31,8 +31,9 @@ export function runtime() {
 }
 
 /** Home-abbreviated and truncated to 60 characters, or the redaction marker in privacy mode. */
-export function maskPath(raw: string, privacy: boolean, home: string) {
+export function maskPath(raw: string | undefined, privacy: boolean, home: string) {
   if (privacy) return REDACTED_PATH
+  if (raw === undefined || raw === "") return "(unknown)"
   const abbreviated = abbreviateHome(raw, home)
   return abbreviated.length > PATH_MAX ? `${abbreviated.slice(0, PATH_MAX - 1)}\u2026` : abbreviated
 }
@@ -50,7 +51,7 @@ export type DiagnosticsInput = {
   runtime: string
   platform: string
   arch: string
-  configPath: string
+  configPath: string | undefined
   projectPath: string
   providers: string
   defaultModel: string
@@ -85,7 +86,8 @@ export function DialogAbout(props: { context: Plugin.Context }) {
   const location = (): LocationRef => context.location ?? context.data.location.default()
   const gatewayDefault = createGatewayDefaultModel()
   const [configPath, setConfigPath] = createSignal<string>()
-  const [privacy, setPrivacy] = createSignal(false)
+  // Fail closed: mask until privacyMode() resolves, matching pii.ts where a failed read counts as on.
+  const [privacy, setPrivacy] = createSignal(true)
 
   const providers = createMemo(() => {
     const connected = (context.data.location.integration.list(location()) ?? []).filter(
@@ -125,7 +127,7 @@ export function DialogAbout(props: { context: Plugin.Context }) {
     runtime: runtime(),
     platform: process.platform,
     arch: process.arch,
-    configPath: configPath() ?? "",
+    configPath: configPath(),
     projectPath: context.data.location.default().directory,
     providers: providers(),
     defaultModel: defaultModel(),
@@ -165,10 +167,7 @@ export function DialogAbout(props: { context: Plugin.Context }) {
     </Show>
   )
 
-  const configValue = () => {
-    const path = configPath()
-    return path === undefined ? "\u2026" : maskPath(path, privacy(), paths.home)
-  }
+  const configValue = () => maskPath(configPath(), privacy(), paths.home)
 
   return (
     <DialogLayout

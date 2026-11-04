@@ -27,7 +27,10 @@ test("/about opens from the slash menu and shows the diagnostics, masking paths 
   await app.mockInput.typeText("/about")
   await app.waitForFrame((frame) => frame.includes("Show version, environment, and diagnostic info"))
   app.mockInput.pressEnter()
-  await app.waitForFrame((frame) => frame.includes("About Kilo CLI"))
+  // Wait for privacyMode() to resolve (paths visible means it resolved to off).
+  await app.waitForFrame(
+    (frame) => frame.includes("About Kilo CLI") && frame.includes(configPath) && !frame.includes("\u2022\u2022\u2022"),
+  )
 
   const frame = app.captureCharFrame()
   expect(frame).toMatch(/Version\s+test/)
