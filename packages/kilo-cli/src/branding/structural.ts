@@ -6,44 +6,54 @@ import { parseSync } from "@babel/core"
 // so the upstream TUI uses Kilo's logo art, and swap the OAuth wordmark SVG.
 // Unlike the rule engine they are exact, few, and fail loudly when upstream
 // moves the code, so a human re-inspects the new implementation during a sync.
+//
+// Each transform is `[from, to, count]`: `apply` rewrites `from` to `to` and
+// throws unless `from` appears exactly `count` times. The count makes an
+// `apply` fail loud not only when upstream removes an anchor, but also when it
+// adds a new occurrence a bare `replaceAll` would have rewritten silently.
 
-const logic: Record<string, ReadonlyArray<readonly [string, string]>> = {
+const logic: Record<string, ReadonlyArray<readonly [string, string, number]>> = {
   "cli/src/services/update-preflight.tsx": [
-    ['import { go } from "@opencode/tui/logo"', 'import { compact, palette } from "@opencode/tui/logo"'],
-    ["const monogram = go.right.slice(1)", "const monogram = compact"],
-    ["const monogramRamp = ramp(colors.muted, colors.accent)", "const monogramColor = RGBA.fromHex(palette.ink)"],
+    ['import { go } from "@opencode/tui/logo"', 'import { compact, palette } from "@opencode/tui/logo"', 1],
+    ["const monogram = go.right.slice(1)", "const monogram = compact", 1],
+    ["const monogramRamp = ramp(colors.muted, colors.accent)", "const monogramColor = RGBA.fromHex(palette.ink)", 1],
     [
       'const monogramInk = createMemo(() =>\n    props.outcome() === "success" ? shade(monogramRamp, smoothstep(headerFade.progress())) : colors.muted,\n  )',
       "const monogramInk = () => monogramColor",
+      1,
     ],
     [
       '<box flexDirection="column">\n      <For each={monogram}>',
       '<box flexDirection="column" flexShrink={0} width={Math.max(...monogram.map((line) => Bun.stringWidth(line)))}>\n      <For each={monogram}>',
+      1,
     ],
   ],
   "tui/src/component/logo.tsx": [
-    ['import { go, logo } from "../logo"', 'import { compact, logo, widths, palette } from "../logo"'],
-    ['import { useTheme } from "../context/theme"', 'import { useTheme, useThemes } from "../context/theme"'],
+    ['import { go, logo } from "../logo"', 'import { compact, logo, widths, palette } from "../logo"', 1],
+    ['import { useTheme } from "../context/theme"', 'import { useTheme, useThemes } from "../context/theme"', 1],
     [
       "const theme = useTheme()",
       'const theme = useTheme()\n  const themes = useThemes()\n  const ink = () => RGBA.fromHex(themes.mode() === "light" ? palette.dim : palette.ink)',
+      1,
     ],
     [
       "const shadow = tint(theme.background.base, fg, 0.25)",
       'const shadow = tint(theme.background.base, fg, themes.mode() === "light" ? 0.75 : 0.25)',
+      1,
     ],
-    ["theme.text.muted, false", "ink(), false"],
-    ["theme.text.base, true", "ink(), false"],
-    ["dimensions().width < 22", "dimensions().width < widths.split + 2"],
-    ["dimensions().width < 44", "dimensions().width < widths.full + 4"],
-    ["go.right.slice(1)", "compact"],
-    ["logo.left.slice(1)", "logo.left"],
+    ["theme.text.muted, false", "ink(), false", 2],
+    ["theme.text.base, true", "ink(), false", 3],
+    ["dimensions().width < 22", "dimensions().width < widths.split + 2", 1],
+    ["dimensions().width < 44", "dimensions().width < widths.full + 4", 1],
+    ["go.right.slice(1)", "compact", 1],
+    ["logo.left.slice(1)", "logo.left", 1],
   ],
   "tui/src/util/presentation.ts": [
-    ['import { logo } from "../logo"', 'import { compact, logo, widths } from "../logo"'],
+    ['import { logo } from "../logo"', 'import { compact, logo, widths } from "../logo"', 1],
     [
       "  return logo.left.map((line, index) => {\n    const left",
       '  if ((process.stdout.columns ?? widths.full + pad.length) < widths.full + pad.length)\n    return compact.map((line) => `${pad}${draw(line, dim, "\\x1b[38;5;235m", "\\x1b[48;5;235m")}`)\n\n  return logo.left.map((line, index) => {\n    const left',
+      1,
     ],
   ],
 }
@@ -58,8 +68,10 @@ export const keys: ReadonlyArray<string> = [...Object.keys(logic), OAUTH_PAGE]
 export function apply(key: string, source: string): string {
   const pairs = logic[key]
   const rewritten = pairs
-    ? pairs.reduce((text, [from, to]) => {
-        if (!text.includes(from)) throw new Error(`Kilo branding no longer matches ${key}: ${from}`)
+    ? pairs.reduce((text, [from, to, count]) => {
+        const found = text.split(from).length - 1
+        if (found !== count)
+          throw new Error(`Kilo branding no longer matches ${key}: expected ${count}x, found ${found}x: ${from}`)
         return text.replaceAll(from, to)
       }, source)
     : source

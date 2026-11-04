@@ -101,6 +101,18 @@ test("fails loudly when a structural anchor drifts", () => {
   )
 })
 
+test("fails loudly when upstream adds an occurrence a structural anchor would over-match", async () => {
+  // The guard is a count, not just presence: a newly introduced occurrence of a
+  // repeated anchor (here the 3x `theme.text.base, true` in logo.tsx) must throw
+  // rather than be rewritten silently by replaceAll.
+  const filename = path.join(repo, "packages/tui/src/component/logo.tsx")
+  const source = (await Bun.file(filename).text()).replace(
+    "theme.text.base, true",
+    "theme.text.base, true\n      renderLine(line, theme.text.base, true)",
+  )
+  expect(() => KiloBranding.transform(filename, source)).toThrow("Kilo branding no longer matches")
+})
+
 test("fails loudly when a semantic override anchor drifts", () => {
   // acp/service.ts is an override file but not a structural one, so this hits the
   // override presence guard, not structural.apply.
