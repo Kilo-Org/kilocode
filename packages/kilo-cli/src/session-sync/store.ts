@@ -89,6 +89,8 @@ const tables = [
     retry_at INTEGER NOT NULL, attempts INTEGER NOT NULL, error_code TEXT NOT NULL,
     PRIMARY KEY(destination,organization_id,credential_digest))`,
   `CREATE TABLE IF NOT EXISTS _kilo_sync_directory (alias TEXT PRIMARY KEY, directory TEXT NOT NULL, canonical TEXT)`,
+  `CREATE TABLE IF NOT EXISTS _kilo_sync_reconcile (id INTEGER PRIMARY KEY CHECK(id=1), revision INTEGER NOT NULL)`,
+  `INSERT OR IGNORE INTO _kilo_sync_reconcile(id,revision) VALUES(1,0)`,
   `CREATE TABLE IF NOT EXISTS _kilo_sync_session (
     id TEXT PRIMARY KEY, directory TEXT NOT NULL, source_id TEXT NOT NULL, position INTEGER NOT NULL DEFAULT 0,
     acknowledged INTEGER NOT NULL DEFAULT 0, ack_batch TEXT, ack_digest TEXT, local_deleted INTEGER NOT NULL DEFAULT 0,
@@ -249,6 +251,18 @@ export const initialize = Effect.fn("SessionSync.Store.initialize")(function* (d
           THEN (SELECT ${messageValue("m")} FROM session_message m
             WHERE m.session_id=d.session_id AND m.id=d.id)
           ELSE d.value END AS value,d.cause FROM _kilo_sync_dirty d`)
+        for (const event of ["INSERT", "UPDATE", "DELETE"]) {
+          const name = `_kilo_sync_consent_reconcile_${event.toLowerCase()}`
+          yield* tx.run(`DROP TRIGGER IF EXISTS ${name}`)
+          yield* tx.run(`CREATE TRIGGER ${name} AFTER ${event === "UPDATE" ? "UPDATE OF enabled,destination,local,organization_id,tenant_type,tenant_id,user_id,source_id" : event} ON _kilo_sync_consent BEGIN
+            UPDATE _kilo_sync_reconcile SET revision=revision+1 WHERE id=1;
+          END`)
+        }
+        yield* tx.run(`DROP TRIGGER IF EXISTS _kilo_sync_directory_reconcile`)
+        yield* tx.run(`CREATE TRIGGER _kilo_sync_directory_reconcile AFTER UPDATE OF directory,workspace_id ON session_v2
+          WHEN OLD.directory IS NOT NEW.directory OR OLD.workspace_id IS NOT NEW.workspace_id BEGIN
+            UPDATE _kilo_sync_reconcile SET revision=revision+1 WHERE id=1;
+          END`)
         yield* tx.run(`DROP TRIGGER IF EXISTS _kilo_sync_reference_insert`)
         yield* tx.run(`CREATE TRIGGER _kilo_sync_reference_insert AFTER INSERT ON _kilo_sync_reference BEGIN
       ${capture("NEW.session_id", "instruction-blob", "NEW.hash", "(CASE WHEN EXISTS(SELECT 1 FROM instruction_blob WHERE hash=NEW.hash) THEN (SELECT coalesce(value,'null') FROM instruction_blob WHERE hash=NEW.hash) ELSE NULL END)")}
@@ -257,6 +271,7 @@ export const initialize = Effect.fn("SessionSync.Store.initialize")(function* (d
           const name = `_kilo_sync_session_${event.toLowerCase()}`
           yield* tx.run(`DROP TRIGGER IF EXISTS ${name}`)
           yield* tx.run(`CREATE TRIGGER ${name} AFTER ${event} ON session_v2 BEGIN
+        ${event === "INSERT" ? "UPDATE _kilo_sync_reconcile SET revision=revision+1 WHERE id=1;" : ""}
         INSERT OR IGNORE INTO _kilo_sync_session(id,directory,source_id)
         SELECT NEW.id,c.directory,c.source_id FROM _kilo_sync_consent c JOIN _kilo_sync_directory d ON d.directory=c.directory
         WHERE d.alias=NEW.directory AND c.enabled=1 AND NEW.workspace_id IS NULL;
@@ -550,6 +565,12 @@ export const enable = Effect.fn("SessionSync.Store.enable")(function* (
     )
     .pipe(Effect.catch((error) => (error instanceof Failure ? Effect.fail(error) : Effect.die(error))))
 })
+
+export const reconcileRevision = (db: SQL) =>
+  db.get<{ revision: number }>("SELECT revision FROM _kilo_sync_reconcile WHERE id=1").pipe(
+    Effect.orDie,
+    Effect.map((row) => row?.revision ?? 0),
+  )
 
 // Realpath, not project.worktree: two clones can share a project identity but never share consent.
 // Existing rows are bootstrapped inside one transaction after capture is installed. Later scans only

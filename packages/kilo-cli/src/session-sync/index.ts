@@ -103,6 +103,19 @@ export const make = Effect.fn("SessionSync.make")(function* (
   let consentIntent = 0
   let backgroundError: { code: string; message: string } | undefined
   const grants = new Map<string, { credential: string; value: Grant }>()
+  const verified = new Map<string, string>()
+  const stateKey = (session: Store.SessionRow, c: Store.Consent) =>
+    JSON.stringify([
+      c.destination,
+      c.user_id,
+      c.tenant_type,
+      c.tenant_id,
+      session.source_id,
+      observedCredential,
+      session.acknowledged,
+      session.ack_batch,
+      session.ack_digest,
+    ])
   const exchangeLock = Semaphore.makeUnsafe(1)
   let prunedAt = 0
   const prune = (force = false) =>
@@ -126,8 +139,17 @@ export const make = Effect.fn("SessionSync.make")(function* (
       }),
     )
 
+  let reconciledRevision = -1
+  let reconciledAt = 0
+  const reconcile = Effect.fn("SessionSync.reconcile")(function* (force = false) {
+    const revision = yield* Store.reconcileRevision(db)
+    if (!force && revision === reconciledRevision && Date.now() - reconciledAt < 60_000) return
+    yield* Store.reconcile(db)
+    reconciledRevision = revision
+    reconciledAt = Date.now()
+  })
   yield* Store.initialize(db)
-  yield* Store.reconcile(db)
+  yield* reconcile(true)
   yield* reportPrune(true)
   for (const definition of [
     SessionEvent.InboxDelivered,
@@ -142,6 +164,7 @@ export const make = Effect.fn("SessionSync.make")(function* (
   const observeCredential = Effect.fn("SessionSync.observeCredential")(function* (current: string) {
     if (observedCredential === current) return
     grants.clear()
+    verified.clear()
     yield* db
       .run(
         sql`UPDATE _kilo_sync_session SET server_retry_at=0,retry_at=0,retry_credential=NULL,
@@ -266,6 +289,7 @@ export const make = Effect.fn("SessionSync.make")(function* (
       Effect.catch((error) => {
         if (error.code !== "invalid_grant") return Effect.fail(error)
         grants.delete(`${c.destination}:${c.organization_id ?? "personal"}`)
+        verified.clear()
         return send
       }),
     )
@@ -404,46 +428,66 @@ export const make = Effect.fn("SessionSync.make")(function* (
         true,
       )
     const url = `${c.destination}/v1/sessions/${encodeURIComponent(session.id)}`
-    const state = yield* authenticated(c, url).pipe(
-      Effect.flatMap((value) => decode(State, value)),
-      Effect.catch((error) =>
-        error.code === "session_not_found"
-          ? authenticated(c, url, "PUT", JSON.stringify({ version: 1, sourceID: session.source_id })).pipe(
-              Effect.flatMap((value) => decode(State, value)),
-            )
-          : Effect.fail(error),
-      ),
-    )
-    if (state.sessionID !== session.id)
-      return yield* fail("invalid_response", "The sync service returned another session")
-    if (state.deleted) return yield* fail("session_deleted", "The cloud session was deleted; synchronization is paused")
-    if (
-      state.sourceID !== session.source_id ||
-      state.creatorID !== c.user_id ||
-      !sameTenant(state.tenant, { type: c.tenant_type, id: c.tenant_id })
-    )
-      return yield* fail("source_conflict", "The cloud session belongs to another producer or account")
-    const last = state.lastReceipt
-    if (
-      state.position === pending.through &&
-      last !== null &&
-      last.batchID === pending.batch_id &&
-      last.digest === pending.digest
-    ) {
-      yield* Store.acknowledge(db, pending, last)
-      yield* Assets.prune(db, global, session.id)
-      return true
-    }
-    if (
-      state.position !== session.acknowledged ||
-      (session.acknowledged === 0
-        ? last !== null
-        : last === null || last.batchID !== session.ack_batch || last.digest !== session.ack_digest)
-    )
-      return yield* fail(
-        "position_conflict",
-        "Cloud and local acknowledgement history disagree; synchronization is paused instead of overwriting cloud state",
+    const recover = Effect.fn("SessionSync.recover")(function* () {
+      verified.delete(session.id)
+      const state = yield* authenticated(c, url).pipe(
+        Effect.flatMap((value) => decode(State, value)),
+        Effect.catch((error) =>
+          error.code === "session_not_found"
+            ? authenticated(c, url, "PUT", JSON.stringify({ version: 1, sourceID: session.source_id })).pipe(
+                Effect.flatMap((value) => decode(State, value)),
+              )
+            : Effect.fail(error),
+        ),
       )
+      if (state.sessionID !== session.id)
+        return yield* fail("invalid_response", "The sync service returned another session")
+      if (state.deleted) return yield* fail("session_deleted", "The cloud session was deleted; synchronization is paused")
+      if (
+        state.sourceID !== session.source_id ||
+        state.creatorID !== c.user_id ||
+        !sameTenant(state.tenant, { type: c.tenant_type, id: c.tenant_id })
+      )
+        return yield* fail("source_conflict", "The cloud session belongs to another producer or account")
+      const last = state.lastReceipt
+      if (
+        state.position === pending.through &&
+        last !== null &&
+        last.batchID === pending.batch_id &&
+        last.digest === pending.digest
+      )
+        return last
+      if (
+        state.position !== session.acknowledged ||
+        (session.acknowledged === 0
+          ? last !== null
+          : last === null || last.batchID !== session.ack_batch || last.digest !== session.ack_digest)
+      )
+        return yield* fail(
+          "position_conflict",
+          "Cloud and local acknowledgement history disagree; synchronization is paused instead of overwriting cloud state",
+        )
+    })
+    const acknowledge = (receipt: Receipt) =>
+      Store.acknowledge(db, pending, receipt).pipe(
+        Effect.andThen(
+          Effect.sync(() =>
+            verified.set(
+              session.id,
+              stateKey(
+                { ...session, acknowledged: pending.through, ack_batch: pending.batch_id, ack_digest: pending.digest },
+                c,
+              ),
+            ),
+          ),
+        ),
+        Effect.andThen(Assets.prune(db, global, session.id)),
+        Effect.as(true),
+      )
+    if (session.error_code || verified.get(session.id) !== stateKey(session, c)) {
+      const receipt = yield* recover()
+      if (receipt) return yield* acknowledge(receipt)
+    }
     for (const blob of decodeBlobs(pending.blobs)) {
       if (yield* Store.blobAcknowledged(db, pending, blob)) continue
       const bytes = yield* Assets.read(global, session.id, blob)
@@ -456,17 +500,30 @@ export const make = Effect.fn("SessionSync.make")(function* (
         return yield* fail("asset_error", "The service did not acknowledge the required asset hash and length")
       yield* Store.acknowledgeBlob(db, pending, blob)
     }
-    const receipt = yield* authenticated(c, `${url}/batches`, "POST", pending.body).pipe(
+    const post = authenticated(c, `${url}/batches`, "POST", pending.body).pipe(
       Effect.flatMap((value) => decode(Receipt, value)),
-      Effect.catch((error) =>
-        error.code === "blob_missing" && error.hash
-          ? Store.forgetBlob(db, session.id, error.hash).pipe(Effect.andThen(Effect.fail(error)))
-          : Effect.fail(error),
-      ),
     )
-    yield* Store.acknowledge(db, pending, receipt)
-    yield* Assets.prune(db, global, session.id)
-    return true
+    const receipt = yield* post.pipe(
+      Effect.catch((error) => {
+        verified.delete(session.id)
+        if (error.code === "blob_missing" && error.hash)
+          return Store.forgetBlob(db, session.id, error.hash).pipe(Effect.andThen(Effect.fail(error)))
+        if (
+          ![
+            "batch_superseded",
+            "batch_conflict",
+            "position_conflict",
+            "session_not_found",
+            "session_deleted",
+            "source_conflict",
+            "creator_mismatch",
+          ].includes(error.code)
+        )
+          return Effect.fail(error)
+        return recover().pipe(Effect.flatMap((receipt) => (receipt ? Effect.succeed(receipt) : post)))
+      }),
+    )
+    return yield* acknowledge(receipt)
   })
 
   const status = Effect.fn("SessionSync.status")(function* (input: { directory: string }) {
@@ -516,7 +573,7 @@ export const make = Effect.fn("SessionSync.make")(function* (
       Effect.orElseSucceed(() => "signed-out"),
     )
     yield* observeCredential(current)
-    yield* Store.reconcile(db, only)
+    yield* reconcile()
     const rows = yield* db
       .all<Store.SessionRow>(
         sql`SELECT s.* FROM _kilo_sync_session s JOIN _kilo_sync_consent c ON c.directory=s.directory
@@ -571,6 +628,7 @@ export const make = Effect.fn("SessionSync.make")(function* (
             return
           }
           const error = result.failure
+          verified.delete(session.id)
           if (error.code === "capture_changed") {
             progressed = true
             return
@@ -610,6 +668,7 @@ export const make = Effect.fn("SessionSync.make")(function* (
         }),
       ),
       Effect.catchCause((cause) => {
+        verified.clear()
         if (Cause.hasInterrupts(cause)) return Effect.failCause(cause)
         const error = fail(
           "background_error",
@@ -636,6 +695,7 @@ export const make = Effect.fn("SessionSync.make")(function* (
               Effect.gen(function* () {
                 if ((disabledAt.get(directory) ?? 0) > intent)
                   return yield* fail("sync_disabled", "Synchronization was disabled while enable was in progress")
+                verified.clear()
                 yield* Store.enable(
                   db,
                   {
@@ -678,6 +738,7 @@ export const make = Effect.fn("SessionSync.make")(function* (
         return yield* consentLock.withPermit(
           Effect.gen(function* () {
             disabledAt.set(current.directory, Math.max(intent, disabledAt.get(current.directory) ?? 0))
+            verified.clear()
             yield* Store.disable(db, current.directory)
             return yield* status({ directory: current.directory })
           }),

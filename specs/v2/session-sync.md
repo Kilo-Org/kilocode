@@ -122,6 +122,10 @@ A successful response means the batch is durably committed.
 A socket write or scheduled background task is not success.
 
 Recover the pending packet after process death and retry with the same identity and payload.
+Read cloud state before the first packet in each process and after errors or acknowledgement-history changes.
+Successful receipts verify subsequent packets for the same session, destination, account, source, and local predecessor.
+Steady-state packets post directly; the service still checks ownership, deletion, source, predecessor, and exact-body replay.
+Batch conflicts and superseded packets return to state recovery without replacing retained packet bytes.
 Retry network failures and retryable service responses with capped exponential full jitter.
 Treat JSON `retryAt` and HTTP 429/503 `Retry-After` seconds or dates as lower bounds, then add jitter.
 Exchange failures share a durable destination, organization, and credential-fingerprint cooldown across sessions and restarts.
@@ -133,6 +137,11 @@ Explicit flush does not bypass server retry deadlines.
 `tenant_unavailable` is retryable HTTP 503 with `Retry-After` and JSON `error.retryAt`.
 `tenant_budget_exceeded` is HTTP 413 with `error.details` containing the `sessions` and `bytes` limits.
 It pauses the session until enable or flush retries it.
+State, entity, blob-read, and batch requests use a per-session in-memory budget of 1200 requests per minute.
+A user-level binding grants ten prepaid request credits per call, with 120 blocks per minute.
+Credits expire at the end of the current minute window; registration, blob PUT, and deletion keep direct binding admission.
+Metrics use declared content lengths without wrapping known-length bodies.
+Known-length responses record service latency when ready; unknown-length streams record transferred bytes on completion or cancellation.
 Do not discard work after a fixed number of attempts.
 Refresh expired grants without changing packet identity.
 Surface invalid credentials, rejected ownership, deletion, and quota errors distinctly.
@@ -221,6 +230,9 @@ The source identity persists across normal restarts.
 Consent changes take effect without requiring an unrelated session mutation.
 Enabling synchronization includes existing sessions in the selected workspace.
 A scan establishes initial state; transactional capture covers changes during the scan.
+Journal new sessions, directory changes, and consent changes transactionally to request another reconciliation.
+Idle passes skip directory scans until that journal changes or a sixty-second safety interval expires.
+Startup and enable still reconcile before relying on incremental capture.
 Maintain a bounded pending packet rather than loading an entire workspace into memory.
 
 A graceful exit attempts a bounded drain but correctness does not depend on shutdown hooks.

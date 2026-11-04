@@ -40,7 +40,7 @@ import { SessionSync } from "../src/session-sync"
 import { Store } from "../src/session-sync/store"
 import { Assets } from "../src/session-sync/assets"
 import { SessionSyncOutput } from "../src/session-sync/tool-output"
-import { type Receipt, Kind, digest, parse } from "../src/session-sync/protocol"
+import { type Receipt, Kind, digest, limits, parse } from "../src/session-sync/protocol"
 
 const it = testEffect(Layer.empty)
 const id = Session.ID.make("ses_sync_consumer")
@@ -85,18 +85,23 @@ const peer = () => {
   const control = {
     mode: "online" as "online" | "offline" | "lost-ack" | "gate" | "hang",
     sourceConflict: false,
+    deleted: false,
     hangExchange: false,
     exchangeFailures: false,
     exchanges: 0,
     quota: false,
     retryAfter: false,
     gatedReads: 0,
+    gatedBatches: 0,
+    batchGate: false,
+    batchRetryAfter: false,
     blobGateAt: 0,
     blobDelay: 0,
     stateGate: false,
     stateRetryAfter: false,
     abortBody: false,
     sessionRequests: 0,
+    stateReads: 0,
   }
   const server = Bun.serve({
     hostname: "127.0.0.1",
@@ -153,18 +158,32 @@ const peer = () => {
       const match = /^\/v1\/sessions\/([^/]+)(?:\/(batches|blobs)(?:\/([0-9a-f]{64}))?)?$/.exec(url.pathname)
       if (!match?.[1]) return error("not_found", 404)
       const sessionID = decodeURIComponent(match[1])
+      if (request.method === "GET" && !match[2]) control.stateReads++
       const userID = token.slice("grant:".length)
       if (match[2] === "batches") {
         const body = await request.text()
         bodies.push(body)
+        const retry = control.batchRetryAfter
+        if (control.batchGate) {
+          entered.resolve()
+          control.gatedBatches++
+          await gate.promise
+        }
+        if (retry)
+          return Response.json(
+            { error: { code: "internal_error" } },
+            { status: 503, headers: { "Retry-After": "120" } },
+          )
         if (control.mode === "offline") return error("internal_error", 503)
         if (control.quota) return error("tenant_budget_exceeded", 413)
         const packet = readPacket(body)
         const state = states.get(sessionID)
         if (!state) return error("session_not_found", 404)
+        if (control.deleted) return error("session_deleted", 410)
         if (state.creatorID !== userID) return error("creator_mismatch", 403)
-        if (state.sourceID !== packet.sourceID) return error("source_conflict", 409)
-        if (state.position !== packet.after) return error("position_conflict", 409)
+        if (control.sourceConflict || state.sourceID !== packet.sourceID) return error("source_conflict", 409)
+        if (state.position !== packet.after)
+          return error(packet.through <= state.position ? "batch_superseded" : "position_conflict", 409)
         for (const change of packet.changes) {
           const key = `${change.kind}/${change.id}`
           if (change.op === "remove") state.entities.delete(key)
@@ -224,6 +243,14 @@ const peer = () => {
         states.set(sessionID, state)
       }
       if (!state) return error("session_not_found", 404)
+      if (control.deleted)
+        return Response.json({
+          version: 1,
+          sessionID,
+          deleted: true,
+          tenant: { type: "user", id: state.creatorID },
+          deletedAt: Date.now(),
+        })
       const response = control.stateRetryAfter
         ? Response.json(
             { error: { code: "internal_error" } },
@@ -717,6 +744,113 @@ it.live(
     }),
 )
 
+it.live("steady-state packets post directly after one verified state read", () =>
+  Effect.gen(function* () {
+    const f = yield* fixture
+    const s = yield* boot(f.root)
+    yield* signIn(s.credentials)
+    yield* seed(s.db, f.directory)
+    yield* s.sync.enable({ directory: f.directory, destination: f.backend.url, local: true, organizationID: null })
+    for (let index = 0; index < limits.changes * 2; index++)
+      yield* writeMessage(s.db, `packet ${index}`, id, index, SessionMessage.ID.make(`msg_many_${index}`))
+    expect((yield* s.sync.flush({ directory: f.directory })).pending).toBe(0)
+    expect(f.backend.bodies.length).toBe(3)
+    yield* writeMessage(s.db, "later flush", id, limits.changes * 2)
+    expect((yield* s.sync.flush({ directory: f.directory })).pending).toBe(0)
+    expect(f.backend.bodies.length).toBe(4)
+    expect(f.backend.control.stateReads).toBe(1)
+  }),
+)
+
+it.live("a lost acknowledgement on the direct POST path recovers through state without double apply", () =>
+  Effect.gen(function* () {
+    const f = yield* fixture
+    const s = yield* boot(f.root)
+    yield* signIn(s.credentials)
+    yield* seed(s.db, f.directory)
+    yield* s.sync.enable({ directory: f.directory, destination: f.backend.url, local: true, organizationID: null })
+    expect((yield* s.sync.flush({ directory: f.directory })).pending).toBe(0)
+    yield* writeMessage(s.db, "lost direct acknowledgement")
+    f.backend.control.mode = "lost-ack"
+    expect((yield* s.sync.flush({ directory: f.directory })).pending).toBeGreaterThan(0)
+    const committed = f.backend.states.get(id)?.lastReceipt
+    expect(f.backend.bodies.length).toBe(2)
+    expect(f.backend.control.stateReads).toBe(1)
+    expect((yield* s.sync.flush({ directory: f.directory })).pending).toBe(0)
+    expect(f.backend.bodies.length).toBe(2)
+    expect(f.backend.control.stateReads).toBe(2)
+    expect(f.backend.states.get(id)?.lastReceipt).toEqual(committed)
+  }),
+)
+
+for (const rejection of [
+  "session_deleted",
+  "session_not_found",
+  "creator_mismatch",
+  "source_conflict",
+  "position_conflict",
+  "batch_superseded",
+] as const)
+  it.live(`direct POST recovers ${rejection} through state and retains the pending packet`, () =>
+    Effect.gen(function* () {
+      const f = yield* fixture
+      const s = yield* boot(f.root)
+      yield* signIn(s.credentials)
+      yield* seed(s.db, f.directory)
+      yield* s.sync.enable({ directory: f.directory, destination: f.backend.url, local: true, organizationID: null })
+      expect((yield* s.sync.flush({ directory: f.directory })).pending).toBe(0)
+      const state = f.backend.states.get(id)!
+      if (rejection === "session_deleted") f.backend.control.deleted = true
+      if (rejection === "creator_mismatch") state.creatorID = "bob"
+      if (rejection === "source_conflict") state.sourceID = "another-producer"
+      if (rejection === "position_conflict") state.position = 0
+      if (rejection === "batch_superseded") state.position++
+      if (rejection === "session_not_found") f.backend.states.delete(id)
+      yield* writeMessage(s.db, "must not replace cloud history")
+      const result = yield* s.sync.flush({ directory: f.directory })
+      expect(result.pending).toBeGreaterThan(0)
+      expect(result.error?.code).toBe(
+        rejection === "creator_mismatch"
+          ? "source_conflict"
+          : rejection === "batch_superseded" || rejection === "session_not_found"
+            ? "position_conflict"
+            : rejection,
+      )
+      expect(f.backend.control.stateReads).toBe(2)
+      expect(f.backend.bodies.length).toBe(2)
+      expect(yield* Store.packet(s.db, id)).toBeDefined()
+    }),
+  )
+
+it.live("idle passes skip reconciliation and a newly journaled directory still enrolls", () =>
+  Effect.gen(function* () {
+    const f = yield* fixture
+    const s = yield* boot(f.root)
+    yield* signIn(s.credentials)
+    yield* seed(s.db, f.directory)
+    yield* s.sync.enable({ directory: f.directory, destination: f.backend.url, local: true, organizationID: null })
+    expect((yield* s.sync.flush({ directory: f.directory })).pending).toBe(0)
+    yield* s.db.run("CREATE TABLE _test_reconcile_count(value INTEGER NOT NULL)")
+    yield* s.db.run("INSERT INTO _test_reconcile_count VALUES(0)")
+    yield* s.db.run(`CREATE TRIGGER _test_reconcile_count AFTER INSERT ON _kilo_sync_directory BEGIN
+      UPDATE _test_reconcile_count SET value=value+1;
+    END`)
+    for (let index = 0; index < 5; index++)
+      expect((yield* s.sync.flush({ directory: f.directory })).pending).toBe(0)
+    expect(yield* s.db.get("SELECT value FROM _test_reconcile_count")).toEqual({ value: 0 })
+    const child = path.join(f.directory, "new-directory")
+    yield* Effect.promise(() => mkdir(child))
+    const added = Session.ID.make("ses_journaled_new_directory")
+    yield* seed(s.db, child, added)
+    yield* writeMessage(s.db, "new directory is included", added, 0, SessionMessage.ID.make("msg_new_directory"))
+    expect((yield* s.sync.flush({ directory: f.directory })).pending).toBe(0)
+    expect(f.backend.states.get(added)?.entities.get("message/msg_new_directory")).toMatchObject({
+      message: { text: "new directory is included" },
+    })
+    expect((yield* s.db.get<{ value: number }>("SELECT value FROM _test_reconcile_count"))!.value).toBeGreaterThan(0)
+  }),
+)
+
 it.live("mutation during actual HTTP upload survives ACK and subsequently reaches the cloud peer", () =>
   Effect.gen(function* () {
     const f = yield* fixture
@@ -752,13 +886,13 @@ it.live("a stale uploader cannot park the receipt acknowledged by another native
     yield* first.sync.enable({ directory: f.directory, destination: f.backend.url, local: true, organizationID: null })
     expect((yield* first.sync.flush({ directory: f.directory })).pending).toBe(0)
     const second = yield* boot(f.root)
-    yield* writeMessage(first.db, "pending while first producer reads cloud state")
-    f.backend.control.stateGate = true
-    f.backend.control.stateRetryAfter = true
+    yield* writeMessage(first.db, "pending while first producer posts its packet")
+    f.backend.control.batchGate = true
+    f.backend.control.batchRetryAfter = true
     const stale = yield* first.sync.flush({ directory: f.directory }).pipe(Effect.forkScoped)
     yield* Effect.promise(() => f.backend.entered.promise)
-    f.backend.control.stateGate = false
-    f.backend.control.stateRetryAfter = false
+    f.backend.control.batchGate = false
+    f.backend.control.batchRetryAfter = false
     expect((yield* second.sync.flush({ directory: f.directory })).pending).toBe(0)
     yield* writeMessage(second.db, "a newer receipt")
     expect((yield* second.sync.flush({ directory: f.directory })).pending).toBe(0)
@@ -1516,6 +1650,7 @@ it.live(
       yield* s.sync.enable({ directory: f.directory, destination: f.backend.url, local: true, organizationID: null })
       yield* s.db.run(`CREATE TRIGGER _test_sync_alias_abort BEFORE INSERT ON _kilo_sync_directory
       BEGIN SELECT RAISE(ABORT,'transient background defect'); END`)
+      yield* seed(s.db, f.directory, Session.ID.make("ses_background_reconcile_trigger"))
       const unhealthy = yield* s.sync.status({ directory: f.directory }).pipe(
         Effect.repeat({
           while: (status) => status.error?.code !== "background_error",
@@ -2263,13 +2398,13 @@ it.live("four sessions progress concurrently while each retains one immutable pa
     yield* allow(s.db, f.directory, f.backend)
     expect((yield* s.sync.flush({ directory: f.directory })).pending).toBe(0)
     yield* s.db.run(sql`UPDATE session_v2 SET time_updated=time_updated+1`)
-    f.backend.control.stateGate = true
+    f.backend.control.batchGate = true
     const flushing = yield* s.sync.flush({ directory: f.directory }).pipe(Effect.forkScoped)
-    yield* Effect.sync(() => f.backend.control.gatedReads).pipe(
+    yield* Effect.sync(() => f.backend.control.gatedBatches).pipe(
       Effect.repeat({ while: (reads) => reads < 4, schedule: Schedule.spaced(10) }),
       Effect.timeout(5000),
     )
-    expect(f.backend.control.gatedReads).toBe(4)
+    expect(f.backend.control.gatedBatches).toBe(4)
     expect(yield* s.db.all(sql`SELECT session_id FROM _kilo_sync_packet`)).toHaveLength(4)
     f.backend.gate.resolve()
     expect((yield* Fiber.join(flushing)).pending).toBe(0)
@@ -2478,13 +2613,13 @@ it.live("a server deadline still covers a native capture made while its response
     yield* s.sync.enable({ directory: f.directory, destination: f.backend.url, local: true, organizationID: null })
     expect((yield* s.sync.flush({ directory: f.directory })).pending).toBe(0)
     yield* writeMessage(s.db, "selected capture")
-    f.backend.control.stateGate = true
-    f.backend.control.stateRetryAfter = true
+    f.backend.control.batchGate = true
+    f.backend.control.batchRetryAfter = true
     const response = yield* s.sync.flush({ directory: f.directory }).pipe(Effect.forkScoped)
     yield* Effect.promise(() => f.backend.entered.promise)
     yield* writeMessage(s.db, "newer capture still honors the service deadline")
-    f.backend.control.stateGate = false
-    f.backend.control.stateRetryAfter = false
+    f.backend.control.batchGate = false
+    f.backend.control.batchRetryAfter = false
     f.backend.gate.resolve()
     expect((yield* Fiber.join(response)).pending).toBeGreaterThan(0)
     expect((yield* Store.sessions(s.db, f.directory))[0]?.server_retry_at).toBeGreaterThan(Date.now() + 119_000)
