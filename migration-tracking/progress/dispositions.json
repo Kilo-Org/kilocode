@@ -205,6 +205,16 @@
     "note": "The organization event of the kilocode.gateway RPC (packages/core/src/kilocode/gateway-rpc.ts, published by organization.set in packages/core/src/kilocode/gateway.ts) tells clients to read the balance again; the balance comes from KiloProfile.balance in packages/kilo-gateway-core/src/profile.ts.",
     "by": "gateway-finish"
   },
+  "module:packages/opencode/src/kilocode/branch-name.ts": {
+    "state": "ported",
+    "note": "packages/kilo-plugin/src/branch-name/generate.ts and index.ts: the same PROMPT, LIMIT 4, CHARS 1000, BRANCH_CHARS 50, message selection, reasoning-wrapper and punctuation parsing, null answers, and friendly-words fallback in the VS Code client. The stateless call keeps the instructions in the system prompt and the messages in the user prompt, at temperature 0.1, on the provider small model, with the one-shot retry policy of Generate.text. The 10 second timeout is a v2 addition so a stalled provider cannot hold the RPC.",
+    "by": "am-branch-naming"
+  },
+  "module:packages/opencode/test/kilocode/branch-name.test.ts": {
+    "state": "ported",
+    "note": "packages/kilo-plugin/test/branch-name.test.ts carries the parse, reasoning-wrapper, synthetic-message filtering, pending-prompt deduplication, latest-four and truncation assertions, and checks that the instructions stay in the system prompt while the user prompt carries only the messages, at temperature 0.1.",
+    "by": "am-branch-naming"
+  },
   "module:packages/opencode/src/kilocode/kilo-errors.ts": {
     "state": "ported",
     "note": "packages/kilo-gateway-core/src/errors.ts preserves numeric/string codes, billing metadata, outer error precedence and messages; stream.ts shares its error serializer. packages/kilo-cli/src/gateway-errors.ts decorates the existing LLMClient node for Kilo-only terminal/top-up overrides across streamed, buffered and native trigger-compaction calls. Generic validation/quota/unknown errors retain v2 native retry classification rather than v1 prose heuristics. The session shows the message instead of a v1 toast.",
