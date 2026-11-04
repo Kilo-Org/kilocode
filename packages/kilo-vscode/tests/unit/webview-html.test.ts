@@ -15,6 +15,7 @@ describe("Agent Manager splash preference injection", () => {
         iconsBaseUri: uri,
         workerUri: uri,
         title: "Agent Manager",
+        agentManagerSplash: preference as never,
         splashFolded: preference as never,
       })
       expect(html).toContain(`window.KILO_AGENT_MANAGER_SPLASH_FOLDED = ${expected};`)
@@ -25,6 +26,7 @@ describe("Agent Manager splash preference injection", () => {
       new Function("window", script!)(scope)
       expect("KILO_AGENT_MANAGER_SPLASH_FOLDED" in scope).toBe(true)
       expect(scope.KILO_AGENT_MANAGER_SPLASH_FOLDED).toBe(expected)
+      expect(scope.KILO_AGENT_MANAGER_SPLASH).toBe(preference === true)
     })
   }
 })

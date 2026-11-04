@@ -57,7 +57,12 @@ describe("buildChatSettingsMessage", () => {
     expect(buildChatSettingsMessage().settings.shiftTabCyclesVariant).toBe(false)
   })
 
-  it("broadcasts browser preference changes to all open chat viewers", () => {
+  it.each([undefined, false, true, "true", 1])("enables the splash only for an explicit true setting (%s)", (value) => {
+    stubConfig(new Map([["agentManagerSplash", value]]), "kilo-code.new.experimental")
+    expect(buildChatSettingsMessage().settings.agentManagerSplash).toBe(value === true)
+  })
+
+  it("broadcasts browser and splash preference changes to all open chat viewers", () => {
     Object.defineProperty(vscode.workspace, "isTrusted", { configurable: true, value: true })
     const workspace = vscode.workspace as unknown as Stub
     const prefs = new Map<string, unknown>([
@@ -84,12 +89,19 @@ describe("buildChatSettingsMessage", () => {
         type: "chatSettingsLoaded",
         settings: {
           shiftTabCyclesVariant: true,
+          agentManagerSplash: false,
           browserAutomation: true,
           agentManagerBrowserOpenLinksIn: "external",
           workspaceTrusted: true,
         },
       },
     ])
+    const splash = "kilo-code.new.experimental.agentManagerSplash"
+    for (const enabled of [true, false]) {
+      prefs.set(splash, enabled)
+      for (const listener of listeners) listener({ affectsConfiguration: (name) => name === splash })
+      expect(parent.at(-1)).toMatchObject({ settings: { agentManagerSplash: enabled } })
+    }
     expect(child).toEqual(parent)
     main.dispose()
     viewer.dispose()

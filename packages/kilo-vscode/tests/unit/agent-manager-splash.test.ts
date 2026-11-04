@@ -13,7 +13,7 @@ import type { ExtensionMessage, WebviewMessage } from "../../webview-ui/src/type
 const source = await Bun.file(new URL("../../webview-ui/agent-manager/AgentManagerApp.tsx", import.meta.url)).text()
 
 describe("Agent Manager splash gating", () => {
-  it("renders the legacy intro, whose session start posts nothing, while the gate is off", () =>
+  it("defaults to legacy and switches live without changing dismissal or fold preferences", () =>
     fixture("splash-intro"))
 })
 

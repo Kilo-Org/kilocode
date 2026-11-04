@@ -164,3 +164,44 @@ describe("Claude migration application setting", () => {
     }
   })
 })
+
+describe("Agent Manager splash application setting", () => {
+  it("declares an opt-in application setting", () => {
+    expect(PACKAGE.contributes.configuration.properties["kilo-code.new.experimental.agentManagerSplash"]).toEqual({
+      type: "boolean",
+      default: false,
+      scope: "application",
+      description: expect.any(String),
+    })
+  })
+
+  it("saves the opt-in globally", async () => {
+    const vscode = await import("vscode")
+    const { KiloProvider } = await import("../../src/KiloProvider")
+    const original = vscode.workspace.getConfiguration
+    const writes: unknown[] = []
+    vscode.workspace.getConfiguration = ((section?: string) => ({
+      get: (_key: string, fallback: unknown) => fallback,
+      update: async (key: string, value: unknown, target: unknown) => {
+        writes.push({ section, key, value, target })
+      },
+    })) as typeof original
+    try {
+      const provider = new KiloProvider({} as never, {} as never) as unknown as {
+        handleUpdateSetting(key: string, value: unknown): Promise<void>
+      }
+      await provider.handleUpdateSetting("experimental.agentManagerSplash", true)
+      await provider.handleUpdateSetting("experimental.agentManagerSplash", false)
+      expect(writes).toEqual(
+        [true, false].map((value) => ({
+          section: "kilo-code.new.experimental",
+          key: "agentManagerSplash",
+          value,
+          target: vscode.ConfigurationTarget.Global,
+        })),
+      )
+    } finally {
+      vscode.workspace.getConfiguration = original
+    }
+  })
+})

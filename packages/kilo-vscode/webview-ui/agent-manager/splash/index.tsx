@@ -4,7 +4,7 @@ import type { Intro, IntroOptions } from "../intro/AgentManagerIntro"
 import { createFold } from "./fold"
 import { SplashExpanded, SplashFolded } from "./Splash"
 
-/** The splash intro, behind `gate.ts`. Hide folds it; the first accepted session folds it once. */
+/** The experimental splash intro. Hide folds it; the first accepted session folds it once. */
 export function createSplashIntro(
   opts: IntroOptions,
   folded = (window as { KILO_AGENT_MANAGER_SPLASH_FOLDED?: boolean }).KILO_AGENT_MANAGER_SPLASH_FOLDED,

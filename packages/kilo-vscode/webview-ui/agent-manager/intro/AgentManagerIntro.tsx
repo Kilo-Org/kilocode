@@ -3,10 +3,10 @@ import { Button } from "@kilocode/kilo-ui/button"
 import { Popover } from "@kilocode/kilo-ui/popover"
 import { useLanguage } from "../../src/context/language"
 import { useVSCode } from "../../src/context/vscode"
+import { useConfig } from "../../src/context/config"
 import type { SessionInfo } from "../../src/types/messages"
 import { WelcomeEmptyState, KiloLogo } from "../../src/components/chat/WelcomeEmptyState"
 import { createSplashIntro } from "../splash"
-import { splash } from "../splash/gate"
 import { IntroGraph } from "./IntroGraph"
 import "./intro.css"
 
@@ -40,7 +40,9 @@ export interface Intro {
 }
 
 export function createIntro(opts: IntroOptions): Intro {
-  if (splash) return createSplashIntro(opts)
+  const config = useConfig()
+  const splash = createSplashIntro(opts)
+  const enabled = () => config.settings().agentManagerSplash === true
   const vscode = useVSCode()
   const [dismissed, setDismissed] = createSignal(
     (window as { KILO_AGENT_MANAGER_INTRO_DISMISSED?: boolean }).KILO_AGENT_MANAGER_INTRO_DISMISSED === true,
@@ -61,7 +63,7 @@ export function createIntro(opts: IntroOptions): Intro {
       opts.focus()
     },
   }
-  return {
+  const legacy: Intro = {
     ...state,
     started: () => {},
     render: (): JSX.Element => (
@@ -75,6 +77,17 @@ export function createIntro(opts: IntroOptions): Intro {
         onShowHistory={opts.onShowHistory}
         hints={opts.hints}
       />
+    ),
+  }
+  const current = () => (enabled() ? splash : legacy)
+  return {
+    visible: () => current().visible(),
+    dismiss: () => current().dismiss(),
+    started: () => current().started(),
+    render: () => (
+      <Show when={enabled()} fallback={legacy.render()}>
+        {splash.render()}
+      </Show>
     ),
   }
 }

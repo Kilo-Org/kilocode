@@ -976,6 +976,9 @@ export const dict = {
   "settings.experimental.conversationPromptHistory.title": "История промптов для каждого разговора",
   "settings.experimental.conversationPromptHistory.description":
     "Хранить историю промптов (ArrowUp/ArrowDown) отдельно для каждого разговора вместо одной общей истории для всех.",
+  "settings.experimental.agentManagerSplash.title": "Экран приветствия Agent Manager",
+  "settings.experimental.agentManagerSplash.description":
+    "Попробуйте новое знакомство с Agent Manager с примерами рабочих процессов. Применяется сразу.",
   "settings.experimental.claudeMigration.title": "Миграция Claude Code",
   "settings.experimental.claudeMigration.description":
     "Однократно импортируйте поддерживаемые глобальные инструкции CLAUDE.md, простые навыки и отключённые определения MCP. Исходные файлы Claude не изменяются; после включения перезапустите backend.",
