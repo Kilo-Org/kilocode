@@ -11,8 +11,8 @@ interface EnableInput {
 }
 
 interface Interface {
-  /** Publish the gateway's locally resolved active tenant without waiting for sync transport. */
-  readonly organization: (input: { directory: string; organizationID: string | null }) => Effect.Effect<void>
+  /** Undefined suspends enrollment/transport until the Gateway has resolved its effective tenant. */
+  readonly organization: (input: { directory: string; organizationID: string | null | undefined }) => Effect.Effect<void>
   readonly enable: (input: EnableInput) => Effect.Effect<KiloSessionSyncRpc.Status, KiloSessionSyncRpc.Failure>
   readonly disable: (input: {
     directory: string

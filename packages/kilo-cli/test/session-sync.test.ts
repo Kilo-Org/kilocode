@@ -1070,6 +1070,40 @@ it.live("automatic enrollment follows the active organization and switching it p
   }),
 )
 
+it.live("an unresolved organization cannot enroll while existing capture waits safely for confirmation", () =>
+  Effect.gen(function* () {
+    const f = yield* fixture
+    const s = yield* boot(f)
+    yield* signIn(s.credentials)
+    yield* seed(s.db, f.directory)
+    yield* s.sync.organization({ directory: f.directory, organizationID: undefined })
+    expect((yield* s.sync.status({ directory: f.directory })).enabled).toBe(false)
+    expect(yield* Store.consent(s.db, f.directory)).toBeUndefined()
+    expect(yield* s.sync.enable({ directory: f.directory, organizationID: null }).pipe(Effect.result)).toMatchObject({
+      _tag: "Failure", failure: { code: "scope_unavailable", retryable: true },
+    })
+    expect(f.backend.control.exchanges).toBe(0)
+    yield* s.sync.organization({ directory: f.directory, organizationID: "org-resolved" })
+    expect(yield* s.sync.status({ directory: f.directory })).toMatchObject({
+      enabled: true, tenant: { type: "organization", id: "org-resolved" },
+    })
+    yield* writeMessage(s.db, "confirmed organization")
+    expect((yield* s.sync.flush({ directory: f.directory })).pending).toBe(0)
+    const requests = f.backend.control.sessionRequests
+    const exchanges = f.backend.control.exchanges
+    yield* s.sync.organization({ directory: f.directory, organizationID: undefined })
+    yield* writeMessage(s.db, "capture retained while the organization resolves")
+    expect((yield* s.sync.flush({ directory: f.directory })).pending).toBeGreaterThan(0)
+    expect(f.backend.control.sessionRequests).toBe(requests)
+    expect(f.backend.control.exchanges).toBe(exchanges)
+    yield* s.sync.organization({ directory: f.directory, organizationID: "org-resolved" })
+    expect((yield* s.sync.flush({ directory: f.directory })).pending).toBe(0)
+    expect(f.backend.states.get(id)?.entities.get(`message/${messageID}`)).toMatchObject({
+      message: { text: "capture retained while the organization resolves" },
+    })
+  }),
+)
+
 it.live("startup automatically enrolls every native local workspace for persisted sign in", () =>
   Effect.gen(function* () {
     const f = yield* fixture

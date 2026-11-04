@@ -24,10 +24,15 @@ import { SessionSync } from "../src/session-sync"
 // `rpc` entry point (`POST /api/rpc/:rpcID/:method`), as the TUI and the IDE clients make it. A local stand-in for
 // the Kilo API answers the Gateway.
 const boot =
-  (env: Record<string, string>, body: (rpc: ReturnType<typeof gateway>, backend: ReturnType<typeof fixture>) => Promise<void>) =>
+  (
+    env: Record<string, string>,
+    body: (rpc: ReturnType<typeof gateway>, backend: ReturnType<typeof fixture>) => Promise<void>,
+    options: { syncBackground?: boolean } = {},
+  ) =>
   async () => {
   using backend = fixture()
   const syncOrganizations: (string | null)[] = []
+  const syncScopes: (string | null | undefined)[] = []
   const syncPeer = Bun.serve({
     hostname: "127.0.0.1",
     port: 0,
@@ -68,7 +73,19 @@ const boot =
                 ...KiloHost.overrides,
                 SessionSync.node.replace(makeGlobalNode({
                   service: KiloSessionSync.Service,
-                  layer: Layer.effect(KiloSessionSync.Service, SessionSync.make({ background: false, destination: syncPeer.url.origin, organizationID: null })),
+                  layer: Layer.effect(KiloSessionSync.Service, Effect.gen(function* () {
+                    const sync = yield* SessionSync.make({
+                      background: options.syncBackground ?? false,
+                      destination: syncPeer.url.origin,
+                    })
+                    return KiloSessionSync.Service.of({
+                      ...sync,
+                      organization: (input) => Effect.gen(function* () {
+                        syncScopes.push(input.organizationID)
+                        yield* sync.organization(input)
+                      }),
+                    })
+                  })),
                   deps: [Database.node, Bus.node, SessionProjector.node, Credential.node, Global.node],
                 })),
               ],
@@ -87,7 +104,7 @@ const boot =
               { preconnect: fetch.preconnect },
             ),
           })
-          yield* Effect.promise(() => body(gateway(client, directory, backend.url, syncOrganizations), backend))
+          yield* Effect.promise(() => body(gateway(client, directory, backend.url, syncOrganizations, syncScopes), backend))
         }),
       ).pipe(Effect.provideService(References.MinimumLogLevel, "Warn")),
     )
@@ -113,13 +130,20 @@ function apply(variables: Record<string, string | undefined>) {
   })
 }
 
-function gateway(client: ReturnType<typeof OpenCode.make>, directory: string, server: string, syncOrganizations: (string | null)[]) {
+function gateway(
+  client: ReturnType<typeof OpenCode.make>,
+  directory: string,
+  server: string,
+  syncOrganizations: (string | null)[],
+  syncScopes: (string | null | undefined)[],
+) {
   return {
     rpc: client.rpc(KiloGatewayRpc.Definition),
     sync: client.rpc(KiloSessionSyncRpc.Definition),
     options: { location: { directory } },
     server,
     syncOrganizations,
+    syncScopes,
   }
 }
 
@@ -193,6 +217,40 @@ test(
     expect(resumed.enabled).toBe(true)
     expect(resumed.error).toBeUndefined()
   }),
+  30_000,
+)
+
+test(
+  "a team-only login never enrolls provisionally as Personal while its default organization resolves",
+  boot({ KILO_API_KEY: "fixture-token" }, async (gateway, backend) => {
+    const profileReady = Promise.withResolvers<void>()
+    backend.state.profilePending = profileReady.promise
+    backend.state.profile = {
+      user: { email: "team-only@example.test", name: "Team fixture" },
+      organizations: [{ id: "selected", name: "Selected", role: "owner" }],
+      selectedOrganizationId: "selected",
+      hasPersonalAccount: false,
+    }
+    const starting = gateway.rpc.authStatus({}, gateway.options)
+    try {
+      await until(() => backend.requests.some((request) => request.path === "/api/profile"), "the unresolved profile request reaches the peer")
+      expect(gateway.syncScopes.length).toBeGreaterThan(0)
+      expect(gateway.syncScopes.every((scope) => scope === undefined)).toBe(true)
+      expect(gateway.syncOrganizations).toEqual([])
+      profileReady.resolve()
+      expect(await starting).toMatchObject({ authenticated: true, organizationID: "selected" })
+      await until(() => gateway.syncOrganizations.includes("selected"), "automatic organization enrollment reaches the peer")
+      const directory = gateway.options.location.directory
+      const status = await gateway.sync.status({ directory }, gateway.options)
+      expect(status).toMatchObject({ enabled: true, tenant: { type: "organization", id: "selected" } })
+      expect(status.error).toBeUndefined()
+      expect(gateway.syncOrganizations.every((scope) => scope === "selected")).toBe(true)
+      expect(gateway.syncScopes.filter((scope) => scope !== undefined)).toEqual(["selected"])
+    } finally {
+      profileReady.resolve()
+      await starting.catch(() => undefined)
+    }
+  }, { syncBackground: true }),
   30_000,
 )
 

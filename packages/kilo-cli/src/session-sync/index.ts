@@ -381,6 +381,8 @@ export const make = Effect.fn("SessionSync.make")(function* (
     method = "GET",
     body?: string | Uint8Array<ArrayBuffer>,
   ) {
+    if (activeOrganization === undefined)
+      return yield* fail("scope_unavailable", "The Gateway is resolving the active organization; pending work is retained", true)
     if (activeOrganization !== c.organization_id)
       return yield* fail("account_changed", "Synchronization is paused: select the organization pinned at enrollment")
     if (c.destination !== origin)
@@ -398,6 +400,8 @@ export const make = Effect.fn("SessionSync.make")(function* (
           "account_changed",
           "Synchronization is paused: sign in to the account pinned when this workspace was enabled",
         )
+      if (activeOrganization === undefined)
+        return yield* fail("scope_unavailable", "The Gateway is resolving the active organization; pending work is retained", true)
       if (activeOrganization !== c.organization_id)
         return yield* fail("account_changed", "Synchronization is paused: select the organization pinned at enrollment")
       if (!(yield* Store.consent(db, c.directory))?.enabled)
@@ -815,6 +819,7 @@ export const make = Effect.fn("SessionSync.make")(function* (
     organization: (input) => Effect.gen(function* () {
       activeOrganization = input.organizationID
       verified.clear()
+      if (input.organizationID === undefined) return
       yield* db.run(sql`UPDATE _kilo_sync_consent SET enabled=0
         WHERE enabled=1 AND organization_id IS NOT ${input.organizationID}`).pipe(Effect.orDie)
       if (options.background !== false)
@@ -827,7 +832,11 @@ export const make = Effect.fn("SessionSync.make")(function* (
           Effect.gen(function* () {
             const directory = yield* Store.canonical(input.directory)
             const epoch = yield* Store.epoch(db, directory)
-            if (activeOrganization !== undefined && input.organizationID !== activeOrganization)
+            if (activeOrganization === undefined) {
+              yield* credential()
+              return yield* fail("scope_unavailable", "Wait for the Gateway to resolve the active organization before enabling synchronization", true)
+            }
+            if (input.organizationID !== activeOrganization)
               return yield* fail("account_changed", "Select the active gateway organization before enabling synchronization")
             const grant = yield* exchange({ ...input, destination: origin, local })
             const approvals = yield* Assets.prepareApproval(db, global, directory, input.assets ?? [])
@@ -835,7 +844,9 @@ export const make = Effect.fn("SessionSync.make")(function* (
               Effect.gen(function* () {
                 if (consentIntent !== intent)
                   return yield* fail("sync_disabled", "Synchronization was disabled while enable was in progress")
-                if (activeOrganization !== undefined && input.organizationID !== activeOrganization)
+                if (activeOrganization === undefined)
+                  return yield* fail("scope_unavailable", "The Gateway is resolving the active organization; retry enabling synchronization", true)
+                if (input.organizationID !== activeOrganization)
                   return yield* fail("account_changed", "The active gateway organization changed while enabling synchronization")
                 verified.clear()
                 yield* Store.enable(

@@ -111,6 +111,7 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
     const global = yield* Global.Service
     const sessionSync = yield* Effect.serviceOption(KiloSessionSync.Service)
     let reportedOrganization: string | null | undefined
+    let reportedToken: string | undefined
     const configService = yield* Effect.serviceOption(Config.Service)
     if (Option.isNone(configService)) return yield* Effect.die(new Error("Kilo Gateway requires location config"))
     const config = configService.value
@@ -225,9 +226,11 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
       const activeOrganization = account
         ? account.organizationID
         : process.env.KILO_ORG_ID || organizationID || KiloServer.organizationFromUrl(base) || null
-      if (activeOrganization !== reportedOrganization && Option.isSome(sessionSync)) {
-        reportedOrganization = activeOrganization
-        yield* sessionSync.value.organization({ directory: ctx.location.directory, organizationID: activeOrganization })
+      if (activeOrganization !== reportedOrganization || account?.token !== reportedToken) {
+        reportedOrganization = undefined
+        reportedToken = undefined
+        if (Option.isSome(sessionSync))
+          yield* sessionSync.value.organization({ directory: ctx.location.directory, organizationID: undefined })
       }
       return {
         server: KiloServer.apiBase(configuredServer),
@@ -404,10 +407,6 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
         }
         current = { ...current, organizationID }
         if (resolved.selectionKey) yield* ctx.storage.set(resolved.selectionKey, { organizationID })
-        if (Option.isSome(sessionSync)) {
-          reportedOrganization = organizationID
-          yield* sessionSync.value.organization({ directory: ctx.location.directory, organizationID })
-        }
         if (targetEpoch !== epoch) return
       }
       // Membership in another team does not permit a catalog from this selected scope.
@@ -421,6 +420,17 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
         yield* ctx.agent.reload()
         catalog = { account: current, connection, envActive, models: [], failed: true, failure: { kind: "organization_missing" }, anonymous: false }
         return
+      }
+
+      // A null local selection is provisional until the profile confirms Personal is available or
+      // resolves the default team. Never enroll under Personal before this decision is complete.
+      if (
+        current && Option.isSome(profile) && Option.isSome(sessionSync) &&
+        (organizationID !== reportedOrganization || current.token !== reportedToken)
+      ) {
+        reportedOrganization = organizationID
+        reportedToken = current.token
+        yield* sessionSync.value.organization({ directory: ctx.location.directory, organizationID })
       }
 
       // Organization agents share the same resolved account as the catalog. Errors and empty responses

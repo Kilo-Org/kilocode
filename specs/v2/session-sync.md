@@ -66,6 +66,7 @@ kilo2 sync disable /absolute/workspace
 Their optional directory selects the workspace whose status is returned; it does not narrow the setting.
 `status` and `flush` remain workspace operations.
 New enrollment follows the active Kilo account and organization resolved by the Gateway.
+A provisional Personal selection never enrolls a workspace: sync waits for the profile to confirm Personal or resolve the default organization.
 `enable --organization` must match that active selection; select a different organization in the Gateway first.
 An account or organization switch pauses existing pinned workspaces instead of reassigning their history.
 `enable --allow-asset` records explicit exact-file legacy approvals for the selected workspace.
