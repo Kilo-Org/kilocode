@@ -1070,6 +1070,8 @@ interface OpenExternalIn {
 interface OpenWebLinkIn {
   type: "agentManager.openWebLink"
   url: string
+  /** Shift-click: open in the system browser even when links route into the Integrated Browser. */
+  external?: boolean
 }
 
 interface CopyFilePathIn {

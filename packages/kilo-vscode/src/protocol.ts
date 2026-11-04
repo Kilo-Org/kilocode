@@ -104,7 +104,7 @@ export type ToHost =
   | BrowserTab
   | { type: "sidebar.session"; sessionId?: string }
   | { type: "abort"; id: number }
-  | { type: "open"; url: string }
+  | { type: "open"; url: string; external?: boolean }
   | Ui
   | Settings
   | Speech
@@ -224,7 +224,7 @@ export type BrowserOut =
   | BrowserCursorPayload
   | BrowserInspectionPayload
   | BrowserDevtoolsPayload
-  | { type: "browserReference"; text: string; reference: BrowserReference }
+  | { type: "browserReference"; reference: BrowserReference }
 
 /** Settings panel messages the host handles directly (it reads and writes the config files). */
 export type Settings =

@@ -81,7 +81,7 @@ export function createPanel(input: {
         }
         // Chat links arrive as the shared client's `open`; the provider decides between the panel and the browser.
         if (item.type === "open" && typeof item.url === "string") {
-          onMessage({ type: "agentManager.openWebLink", url: item.url } as PanelMessage)
+          onMessage({ type: "agentManager.openWebLink", url: item.url, external: item.external === true } as PanelMessage)
           return true
         }
         if (item.type === "agentManagerFocusChanged") {

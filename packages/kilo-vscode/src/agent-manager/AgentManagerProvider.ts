@@ -540,7 +540,7 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
 
   public async handlePanelMessage(message: { type: string } & Record<string, unknown>): Promise<void> {
     if (message.type === "agentManager.openWebLink" && typeof message.url === "string") {
-      this.openWebLink(message.url)
+      this.openWebLink(message.url, message.external === true)
       return
     }
     if (this.browser.handle(message as unknown as AgentManagerInMessage)) return
@@ -549,11 +549,14 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
     await handleMessage(message as unknown as AgentManagerInMessage, this.messageHost)
   }
 
-  /** Chat links open in the Integrated Browser for the visible session when it is enabled, else externally. */
-  private openWebLink(url: string): void {
+  /**
+   * Chat links open in the Integrated Browser for the visible session when it is enabled, else externally.
+   * Shift-click (`external`) always opens the system browser.
+   */
+  private openWebLink(url: string, external: boolean): void {
     const session = this.visibleSession
     const project = this.projectScope.current()?.id ?? this.contexts.active()?.id
-    if (session && project && shouldOpenLinkInIntegratedBrowser(url)) {
+    if (!external && session && project && shouldOpenLinkInIntegratedBrowser(url)) {
       void this.browser.handle({ type: "agentManager.browser.open", sessionId: session, projectId: project, url })
       return
     }

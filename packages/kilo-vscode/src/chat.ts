@@ -148,9 +148,13 @@ export function wire(input: {
   const link = bridge({
     target: () => input.server.get(),
     post: (message) => void webview.postMessage(message),
-    open: (url) => {
+    open: (url, external) => {
       const session = sidebarSession()
-      void openBrowserLink(url, () => (session ? (input.openBrowser?.(session, url) ?? false) : false))
+      // Without an in-app opener the link goes to the system browser, which is what shift-click asks for.
+      void openBrowserLink(
+        url,
+        external ? undefined : () => (session ? (input.openBrowser?.(session, url) ?? false) : false),
+      )
     },
     fetch: local,
   })
