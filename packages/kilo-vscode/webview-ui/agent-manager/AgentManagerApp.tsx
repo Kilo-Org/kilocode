@@ -47,6 +47,7 @@ import { LOCAL, canOpenRootSession, isKnownRootSession, adjacentHint, focusChatS
 import { useBridge } from "./v2/vscode"
 import { V2Scope } from "../src/v2/client"
 import { SessionView } from "../src/v2/session-view"
+import type { ReferenceHandler } from "../src/v2/append-ready"
 import { createAppDirectories } from "./app-directories"
 import { createAppSession } from "./app-session"
 import {
@@ -1082,6 +1083,8 @@ const AgentManagerContent: Component = () => {
 
   // The composer of the visible session; review comments and Fix with Kilo append to it.
   let promptAppend: ((value: string, send: boolean) => void) | undefined
+  // The same composer's browser reference list; an element picked in the browser panel joins it.
+  let promptReference: ReferenceHandler | undefined
   const appendToPrompt = (text: string, autoSend: boolean) => {
     promptAppend?.(text, autoSend)
     requestChatFocus(true)
@@ -1099,9 +1102,10 @@ const AgentManagerContent: Component = () => {
     sessionId: () => sessions.currentSessionID(),
     projectId: activeProjectId,
     sessions: () => sessions.sessions(),
-    onReference: (text, sessionId) => {
-      if (sessionId !== sessions.currentSessionID()) return
-      appendToPrompt(text, false)
+    onReference: (reference) => {
+      if (reference.sessionId !== sessions.currentSessionID()) return
+      promptReference?.(reference)
+      requestChatFocus(true)
     },
   })
 
@@ -2085,6 +2089,7 @@ const AgentManagerContent: Component = () => {
                   onShowHistory={() => openHistory()}
                   empty={intro.render}
                   onAppendReady={(append) => (promptAppend = append)}
+                  onReferenceReady={(add) => (promptReference = add)}
                   onPreviewEdit={(files, sessionID) => previewEdit(files, sessionID)}
                   onViewTurnChanges={openTurnChanges}
                   onForkSession={handleForkSession}

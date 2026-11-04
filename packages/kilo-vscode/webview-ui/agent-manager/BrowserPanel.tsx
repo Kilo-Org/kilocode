@@ -2,7 +2,7 @@ import { For, Show, createEffect, createMemo, createSignal, onCleanup, type Acce
 import { useLanguage } from "../src/context/language"
 import { useVSCode } from "../src/context/vscode"
 import type { ExtensionMessage, WebviewMessage } from "../src/types/messages/agent-manager"
-import { formatBrowserFeedback, type BrowserReference } from "../../src/shared/browser-feedback"
+import type { BrowserReference } from "../../src/shared/browser-feedback"
 import { BrowserPanel as BrowserPanelView } from "../browser"
 import {
   browserCursorEvent,
@@ -30,7 +30,7 @@ export function createBrowserPanel(input: {
   sessionId: Accessor<string | undefined>
   projectId: Accessor<string | undefined>
   sessions: Accessor<{ id: string }[]>
-  onReference: (text: string, sessionId: string) => void
+  onReference: (reference: BrowserReference) => void
 }) {
   const [enabled, configure] = createSignal(
     (globalThis as typeof globalThis & { KILO_BROWSER_AUTOMATION?: boolean }).KILO_BROWSER_AUTOMATION === true,
@@ -128,7 +128,7 @@ function event(message: ExtensionMessage): BrowserEvent | undefined {
 function BrowserAdapter(props: {
   sessionId: Accessor<string | undefined>
   projectId: Accessor<string | undefined>
-  onReference: (text: string, sessionId: string) => void
+  onReference: (reference: BrowserReference) => void
   onClose: () => void
 }) {
   const language = useLanguage()
@@ -140,8 +140,6 @@ function BrowserAdapter(props: {
     event,
   )
   const labels = createMemo(() => browserLabels(language.t))
-  const reference = (value: BrowserReference) =>
-    props.onReference(formatBrowserFeedback([value]), value.sessionId)
   const theme = () =>
     document.body.classList.contains("vscode-light") || document.body.classList.contains("vscode-high-contrast-light")
       ? "light"
@@ -162,7 +160,7 @@ function BrowserAdapter(props: {
         vscode.postMessage({ type: "openSettingsPanel", tab: "browser", projectId: props.projectId() } as never)
       }
       openExternal={(url) => vscode.postMessage({ type: "agentManager.openExternal", url } as never)}
-      onReference={reference}
+      onReference={props.onReference}
       onClose={props.onClose}
     />
   )
@@ -182,7 +180,7 @@ function BrowserPanelCache(props: {
   sessionId: Accessor<string | undefined>
   projectId: Accessor<string | undefined>
   sessions: Accessor<{ id: string }[]>
-  onReference: (text: string, sessionId: string) => void
+  onReference: (reference: BrowserReference) => void
   onClose: () => void
   onChange: (value: boolean) => void
 }) {

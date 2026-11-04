@@ -35,7 +35,7 @@ import {
 import { createConnection } from "./services/autocomplete/connection"
 import { settings } from "./settings-panel"
 import { createShutdown } from "./shutdown"
-import { formatBrowserFeedback, type BrowserReference } from "./shared/browser-feedback"
+import type { BrowserReference } from "./shared/browser-feedback"
 import { toolDiff } from "./tool-diff"
 
 let shutdownExtension: (() => Promise<void>) | undefined
@@ -214,7 +214,7 @@ export function activate(context: ExtensionContext) {
         return answer === allow
       },
       reference: (_sessionId, value: BrowserReference) =>
-        void view.post({ type: "browserReference", text: formatBrowserFeedback([value]), reference: value }),
+        void view.post({ type: "browserReference", reference: value }),
       log: (...args) => output.appendLine(`Browser tab: ${args.map((item) => String(item)).join(" ")}`),
     },
   )

@@ -7,6 +7,7 @@ import { createEffect, createSignal, type JSX, Match, on, onCleanup, Show, Switc
 import type { ToHost } from "../../../src/protocol"
 import { useLanguage } from "../context/language"
 import { getVSCodeAPI, useVSCode } from "../context/vscode"
+import type { ReferenceHandler } from "./append-ready"
 import { useV2 } from "./client"
 import { useDisplaySettings } from "./display-settings"
 import { SessionList } from "./history"
@@ -23,20 +24,20 @@ export function Chat() {
   const [changes, setChanges] = createSignal(false)
   // Display layouts are Kilo-only config keys, so the host reads them. Ask on connect and after every config change.
   const display = useDisplaySettings()
-  // An element reference picked in the Integrated Browser arrives from the host as text for the composer.
+  // An element picked in the Integrated Browser arrives from the host and joins the composer's reference list.
   const vscode = useVSCode()
   // The editor-tab browser and the Agent Manager share one broker; report which session this sidebar shows.
   createEffect(() => {
     const id = session()
     vscode.postMessage({ type: "sidebar.session", sessionId: id })
   })
-  let append: ((value: string, send: boolean) => void) | undefined
+  let reference: ReferenceHandler | undefined
   onCleanup(
     vscode.onMessage((message) => {
       if (message.type !== "browserReference") return
       // A tab outlives a session switch, so a reference can arrive for a session the composer no longer shows.
       if (message.reference.sessionId !== session()) return
-      append?.(message.text, false)
+      reference?.(message.reference)
     }),
   )
   createEffect(
@@ -148,7 +149,7 @@ export function Chat() {
         <SessionView
           session={session()}
           onSession={setSession}
-          onAppendReady={(value) => (append = value)}
+          onReferenceReady={(value) => (reference = value)}
           actions={toolActions}
           onShowHistory={() => setView("history")}
           onViewTurnChanges={openTurnChanges}
