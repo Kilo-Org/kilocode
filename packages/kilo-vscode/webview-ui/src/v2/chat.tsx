@@ -14,22 +14,15 @@ import { createProfile } from "./profile"
 import { SessionChanges } from "./session-changes"
 import { SessionView } from "./session-view"
 import { formatReviewCommentsMarkdown } from "../utils/review-comment-markdown"
+import { createReviewAppendQueue } from "./review-queue"
 
 export function Chat() {
   const v2 = useV2()
   const language = useLanguage()
   const [session, setSession] = createSignal<string>()
   const [view, setView] = createSignal<"chat" | "history" | "profile">("chat")
-  let appendReview: ((value: string, send: boolean) => void) | undefined
   // Comments can arrive while the chat composer is unmounted (History or Profile), so hold them until it returns.
-  let pendingReview: Array<{ value: string; send: boolean }> = []
-  const deliverReview = () => {
-    if (!appendReview || pendingReview.length === 0) return
-    const value = pendingReview.map((item) => item.value).join("\n\n")
-    const send = pendingReview.some((item) => item.send)
-    pendingReview = []
-    appendReview(value, send)
-  }
+  const reviewQueue = createReviewAppendQueue()
   const [changes, setChanges] = createSignal(false)
   // Display layouts are Kilo-only config keys, so the host reads them. Ask on connect and after every config change.
   const display = useDisplaySettings()
@@ -63,12 +56,7 @@ export function Chat() {
   onMount(() => {
     const message = vscode.onMessage((item) => {
       if (item.type !== "appendReviewComments") return
-      const value = formatReviewCommentsMarkdown(item.comments)
-      if (!appendReview) {
-        pendingReview.push({ value, send: item.autoSend })
-        return
-      }
-      appendReview(value, item.autoSend)
+      reviewQueue.push(formatReviewCommentsMarkdown(item.comments), item.autoSend)
     })
     onCleanup(message)
   })
@@ -137,10 +125,7 @@ export function Chat() {
           actions={toolActions}
           onShowHistory={() => setView("history")}
           row={row}
-          onAppendReady={(append) => {
-            appendReview = append
-            deliverReview()
-          }}
+          onAppendReady={reviewQueue.ready}
           replace={changes() && !!session()}
           replacement={
             <Show when={changes() ? session() : undefined} keyed>
