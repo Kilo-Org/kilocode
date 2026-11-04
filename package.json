@@ -155,7 +155,7 @@
     "picomatch": ">=2.3.2",
     "defu": "6.1.6",
     "lodash": "4.18.1",
-    "@xmldom/xmldom": ">=0.8.12",
+    "@xmldom/xmldom": ">=0.9.12 <0.10.0",
     "smol-toml": ">=1.6.1",
     "fastify": "^5.12.7",
     "vite": "7.3.7",
