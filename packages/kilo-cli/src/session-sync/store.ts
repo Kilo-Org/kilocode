@@ -417,7 +417,7 @@ export const dirty = Effect.fn("SessionSync.Store.dirty")(function* (db: DB, id:
     if (bytes >= budget) break
     // Read the value and its position in one statement; a newer capture stays pending.
     const row = yield* db
-      .get<Dirty & { bytes: number }>(
+      .get<Dirty & { bytes?: number | null }>(
         sql`WITH current AS MATERIALIZED (
       SELECT * FROM _kilo_sync_dirty_current
       WHERE session_id=${id} AND kind=${identity.kind} AND id=${identity.id} AND position=${identity.position}
@@ -427,9 +427,10 @@ export const dirty = Effect.fn("SessionSync.Store.dirty")(function* (db: DB, id:
       )
       .pipe(Effect.orDie)
     if (!row) continue
-    const { bytes: size = 0, ...value } = row
+    const size = row.bytes ?? 0
     if (rows.length && size > budget - bytes) break
-    rows.push(value)
+    delete row.bytes
+    rows.push(row)
     bytes += size
   }
   return rows

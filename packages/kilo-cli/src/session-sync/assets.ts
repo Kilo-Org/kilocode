@@ -713,8 +713,8 @@ const migrateLegacy = Effect.fn("SessionSync.Assets.migrateLegacy")(function* (d
   }
 })
 
-// Run only between packet preparations, never between collect/spool and Store.freeze. Current
-// native/dirty locators retain asset snapshots; immutable packets independently retain both assets
+// Global cleanup runs between passes; scoped cleanup runs only after its own session freezes.
+// Native/dirty locators retain asset snapshots; immutable packets independently retain both assets
 // and large entity bodies. ACKed entity bodies are reconstructible and do not occupy the spool.
 export const prune = Effect.fn("SessionSync.Assets.prune")(function* (
   db: DB,

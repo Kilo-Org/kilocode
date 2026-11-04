@@ -597,7 +597,8 @@ it.live("fork copies and direct instruction removal enter the same native captur
     yield* s.bus.publish(SessionEvent.Forked, {
       sessionID: fork,
       parentID: id,
-      boundary: { type: "through", messageID },    })
+      boundary: { type: "through", messageID },
+    })
     const copied = yield* Store.dirty(s.db, fork)
     expect(copied.find((row) => row.kind === "message")?.value).toContain("parent history")
     expect(copied.find((row) => row.kind === "session")?.value).toContain(id)
@@ -1196,7 +1197,8 @@ it.live("the flush deadline aborts a hanging HTTP pass without changing its froz
   Effect.gen(function* () {
     const f = yield* fixture
     const s = yield* boot(f.root, { flushTimeout: 200 })
-    yield* signIn(s.credentials)    yield* seed(s.db, f.directory)
+    yield* signIn(s.credentials)
+    yield* seed(s.db, f.directory)
     yield* s.sync.enable({ directory: f.directory, destination: f.backend.url, local: true, organizationID: null })
     f.backend.control.mode = "offline"
     yield* s.sync.flush({ directory: f.directory })
@@ -1795,7 +1797,8 @@ it.live(
         ).toString(),
       ).toBe(approvedBytes.toString())
       expect(yield* Effect.promise(() => readdir(path.dirname(temporary)))).toEqual([])
-      expect(yield* Store.packet(s.db, id)).toEqual(pending)      f.backend.control.mode = "online"
+      expect(yield* Store.packet(s.db, id)).toEqual(pending)
+      f.backend.control.mode = "online"
       expect((yield* s.sync.flush({ directory: f.directory })).pending).toBe(0)
       expect(yield* Assets.read(s.global, id, replacement).pipe(Effect.result)).toMatchObject({ _tag: "Failure" })
     }),
