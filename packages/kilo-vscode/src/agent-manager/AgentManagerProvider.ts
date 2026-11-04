@@ -59,7 +59,7 @@ import { pruneSubagents, sessionMissing } from "./prune-subagents"
 import { readTerminalFont, watchTerminalFont } from "./terminal-font"
 import { DestinationState, watchTerminalDestination } from "./terminal-destination"
 import { buildKeybindingMap } from "./format-keybinding"
-import { resolveWorktreeFile } from "./worktree-file-path"
+import { resolveWorktreeFile, sessionDirectory } from "./worktree-file-path"
 import { focusPanelPrompt, revealPanel } from "./focus-panel"
 import { formatLog } from "./log-format"
 import { HealthScheduler } from "./worktree-health"
@@ -149,7 +149,6 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
   public readonly panelSessions = new Set<string>()
   public readonly busySessions = new Set<string>()
   public readonly removedSessions = new Set<string>()
-  public openSessions: string[] = []
   public visibleSession: string | null = null
   public readonly caffeination: CaffeinationService
   readonly settings: ProjectWiring["settings"]
@@ -172,6 +171,7 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
       getProjectId: () => this.projectScope.current()?.id ?? this.contexts.active()?.id,
       log: (...args) => this.log("[XTerm]", ...args),
       post: (message) => this.postToWebview(message),
+      closed: (terminalId) => this.relay.closeTerminal(terminalId),
       getTerminalFont: () => readTerminalFont(),
     })
     this.relay = new PtyRelay({
@@ -184,6 +184,7 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
       connection: this.connection,
       output: this.outputChannel,
       post: (message) => this.postToWebview(message),
+      closed: (terminalId) => this.relay.closeTerminal(terminalId),
     })
     this.unsubFont = watchTerminalFont((font) => {
       this.postToWebview({ type: "agentManager.terminal.fontChanged", font })
@@ -415,6 +416,8 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
       this.panel = undefined
       previous.dispose()
     }
+    // Sockets of the previous webview instance cannot be reached by this one.
+    this.relay.reset()
     this.panel = panel
     void this.statsPoller
     for (const poller of [this.statsPoller, this.projectPollers]) poller.setVisible(panel.visible)
@@ -446,10 +449,10 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
       this.prBridge.poller.stop()
       this.diffs.stop()
       this.visibleSession = null
-      this.openSessions = []
       this.connection.view([])
       this.panel = undefined
       void this.terminalRouter.dispose()
+      this.relay.reset()
       this.onVisibilityChange?.(false)
     })
     this.postCaffeination()
@@ -524,14 +527,25 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
   }
 
   public trackOpenSessions(ids: string[]): void {
-    this.openSessions = ids
     for (const id of ids) this.panelSessions.add(id)
     this.syncView()
   }
 
+  /** Default directory for a file the visible session saves, for example a rendered diagram. */
+  public imageDirectory(): string | undefined {
+    const id = this.visibleSession
+    const session = id ? this.state?.getSession(id) : undefined
+    const direct = session ? sessionDirectory(this.state, id, this.getRoot()) : undefined
+    return direct ?? this.diffs.activeDirectory() ?? this.getRoot()
+  }
+
   public trackVisibleSession(id: string | null): void {
     this.visibleSession = id
-    if (id) this.panelSessions.add(id)
+    if (id) {
+      this.panelSessions.add(id)
+      // Follow the session with its integrated terminal while the terminal panel is open.
+      this.terminalManager.syncOnSessionSwitch(id)
+    }
     // The poller follows the visible session so its fast poll and immediate fetch target the
     // worktree the user is reading. The PR poller belongs to the active project, so a session
     // from another project, a local session, or an unknown one clears the target.
@@ -551,7 +565,9 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
       this.connection.view([])
       return
     }
-    this.connection.view([...(this.visibleSession ? [this.visibleSession] : []), ...this.openSessions])
+    // Only the session the user is reading is viewed. Background tabs stay unread until they are opened, so their
+    // indicators do not clear on idle for conversations nobody saw.
+    this.connection.view(this.visibleSession ? [this.visibleSession] : [])
   }
 
   public async setCaffeination(enabled: boolean): Promise<void> {
@@ -652,6 +668,8 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
           return client
         },
         getRoot: () => this.getRoot(),
+        // The request runs inside its owning project's scope when the caller directory matched one.
+        getProjectId: () => this.projectScope.current()?.id ?? this.contexts.active()?.id,
         getState: () => this.getStateManager(),
         getPanel: () => this.panel,
         openPanel: (preserveFocus) => this.openPanel(preserveFocus),
@@ -1070,10 +1088,10 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
     return shutdown(this.api())
   }
 
-  public dispose(): void {
+  public dispose(): Promise<void> {
     this.unsubAutoApprove()
     this.relay.dispose()
-    void this.shutdown()
+    return this.shutdown()
   }
 
   public syncWorktrees(): Promise<void> {

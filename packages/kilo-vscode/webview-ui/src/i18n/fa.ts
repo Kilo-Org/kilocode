@@ -307,6 +307,7 @@ export const dict = {
   "notification.permission.descriptionSandboxEscalation":
     "این کل فرمان را با حذف محدودیت‌های فایل‌سیستم و شبکه، فقط برای همین فرمان اجرا می‌کند. Git باید در .git بنویسد؛ این مسیر در sandbox فقط‌خواندنی است و در یک worktree مرتبط خارج از worktree قرار دارد. قواعد اجازه Bash و تأیید خودکار هرگز این درخواست را به‌صورت خودکار تأیید نمی‌کنند.",
   "ui.permission.manageAutoApprove": "مدیریت قوانین تأیید خودکار",
+  "ui.permission.noChanges": "تغییری وجود ندارد.",
   "ui.permission.reject": "رد",
   "ui.permission.feedbackPlaceholder": "به Kilo بگویید چه کاری را متفاوت انجام دهد",
   "ui.permission.feedbackHint": "Enter برای رد، Esc برای لغو",
@@ -349,6 +350,8 @@ export const dict = {
 
   "session.tab.review": "بررسی",
   "session.review.filesChanged": "{{count}} فایل تغییر یافته",
+  "session.review.viewTurnChanges": "مشاهده تغییرات نوبت",
+  "session.review.turnChangesEmpty": "در این نوبت تغییری وجود ندارد.",
   "session.review.change.other": "تغییرات",
   "session.review.loadingChanges": "در حال بارگذاری تغییرات...",
   "session.review.noChanges": "بدون تغییر",
@@ -1445,6 +1448,8 @@ export const dict = {
   "diffViewer.source.unstaged.tooltip":
     "فایل‌های تغییر یافته در working tree شما که هنوز stage نشده‌اند، به علاوه فایل‌های ردیابی‌نشده (جدید).",
   "diffViewer.source.session.label": "جلسه",
+  "diffViewer.source.turn.tooltip": "فایل‌های تغییر یافته توسط Kilo در یک نوبت.",
+  "diffViewer.source.turn.label": "نوبت",
   "diffViewer.source.session.tooltip":
     "فایل‌هایی که توسط Kilo در جلسه جاری تغییر کرده‌اند، بر اساس عکس‌های فوری هر نوبت. با شروع جلسه جدید بازنشانی می‌شود.",
   "diffViewer.group.session": "جلسه",

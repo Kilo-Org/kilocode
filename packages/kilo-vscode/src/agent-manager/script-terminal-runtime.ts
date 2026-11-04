@@ -12,6 +12,7 @@ interface Input {
   connection: AgentManagerConnection
   output: OutputHandle
   post(message: AgentManagerOutMessage): void
+  closed(terminalId: string): void
 }
 
 export function createScriptTerminalRuntime(input: Input) {
@@ -19,7 +20,10 @@ export function createScriptTerminalRuntime(input: Input) {
     connection: input.connection,
     getTerminalFont: () => readTerminalFont(),
     emit: (terminals) => input.post({ type: "agentManager.scriptTerminals", terminals }),
-    closed: (terminalId) => input.post({ type: "agentManager.terminal.closed", terminalId }),
+    closed: (terminalId) => {
+      input.closed(terminalId)
+      input.post({ type: "agentManager.terminal.closed", terminalId })
+    },
     log: (msg) => input.output.appendLine(`[RunScript] ${msg}`),
   })
   const event = input.connection.onEvent(

@@ -21,6 +21,7 @@ export function createPanel(input: {
   server: Manager
   directory: string
   trackCostSession?: (sessionID: string) => void
+  saveImageDirectory?: () => string | undefined
 }) {
   return {
     /** A new panel in the active editor column. */
@@ -63,6 +64,7 @@ export function createPanel(input: {
       webview: panel.webview,
       view: "agentManager",
       trackCostSession: input.trackCostSession,
+      saveImageDirectory: input.saveImageDirectory,
       onMessage: ready,
       globals: { KILO_AGENT_MANAGER_INTRO_DISMISSED: input.context.globalState.get<boolean>(INTRO) === true },
       handle: (message: ToHost) => {

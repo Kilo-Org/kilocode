@@ -1,3 +1,4 @@
+import { Generate } from "@opencode/core/generate"
 import { Service, type Info } from "@opencode/core/model"
 import { define } from "@opencode/plugin/effect/plugin"
 import { Agent } from "@opencode/schema/agent"
@@ -7,14 +8,17 @@ import { Provider } from "@opencode/schema/provider"
 import { Effect, Option } from "effect"
 import { BranchNameGenerate } from "./generate"
 
-// The `kilocode.branch-name` RPC: the recent user messages of a session, then one `generate.text` call with the branch
-// naming instructions. The model is the provider's small model when the invoking provider is known, else the title
-// agent model, else the small model of the default provider, else the default model.
+// The `kilocode.branch-name` RPC: the recent user messages of a session, then one stateless call that keeps the branch
+// naming instructions in the system prompt and the messages in the user prompt. The model is the provider's small model
+// when the invoking provider is known, else the title agent model, else the small model of the default provider, else
+// the default model.
 export const KiloBranchNamePlugin = define({
   id: "kilocode.branch-name",
   effect: Effect.fn("KiloBranchNamePlugin")(function* (ctx) {
     const models = yield* Effect.serviceOption(Service)
     if (Option.isNone(models)) return yield* Effect.die(new Error("Kilo branch names require location models"))
+    const generate = yield* Effect.serviceOption(Generate.Service)
+    if (Option.isNone(generate)) return yield* Effect.die(new Error("Kilo branch names require stateless generation"))
 
     const model = Effect.fn("KiloBranchNamePlugin.model")(function* (input: {
       providerID?: string
@@ -45,7 +49,13 @@ export const KiloBranchNamePlugin = define({
 
     const runtime: BranchNameGenerate.Runtime = {
       model,
-      text: (input) => ctx.generate.text(input).pipe(Effect.map((result) => result.text)),
+      text: (input) =>
+        generate.value.text({
+          prompt: input.prompt,
+          system: input.system,
+          generation: { temperature: input.temperature },
+          ...(input.model ? { model: input.model } : {}),
+        }),
     }
 
     yield* ctx.rpc

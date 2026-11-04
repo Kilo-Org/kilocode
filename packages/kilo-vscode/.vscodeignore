@@ -1,0 +1,22 @@
+# Source, tests and build tooling are not part of the extension package.
+.vscode/**
+.github/**
+node_modules/**
+src/**
+test/**
+webview-ui/**
+script/**
+out/**
+**/tsconfig.json
+**/*.ts
+**/*.tsx
+**/*.map
+.gitignore
+.vscodeignore
+bunfig.toml
+
+# The package ships the bundled host and webview, the CLI binary and the assets both need.
+!dist/**
+!bin/**
+!assets/**
+!THIRD_PARTY_LICENSES/**
