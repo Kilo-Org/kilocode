@@ -29,7 +29,9 @@ type Node = {
   dependencies: Set<string>
 }
 
-type Task = { from: string; names: string[]; owner?: string; scope: Scope }
+// `direct` marks a workspace's own dependency list. `owner` is the purl of the
+// package being expanded, unset for workspaces and non-registry packages.
+type Task = { from: string; names: string[]; owner?: string; direct?: boolean; scope: Scope }
 
 function names(...deps: (Record<string, string> | undefined)[]) {
   return [...new Set(deps.flatMap((dep) => Object.keys(dep ?? {})))]
@@ -39,8 +41,9 @@ function names(...deps: (Record<string, string> | undefined)[]) {
 // Packages reachable from any workspace's dependencies, optionalDependencies
 // or peerDependencies are `runtime`; packages reachable only through
 // devDependencies are `development`. Workspace links are walked as their own
-// roots, and non-registry packages (git, tarball URLs) are returned in
-// `skipped` because they have no npm purl to match advisories against.
+// roots. Non-registry packages (git, tarball URLs) have no npm purl to match
+// advisories against, so they are left out and returned in `skipped`, but
+// their dependencies are still walked.
 export function graph(lock: Lock) {
   const nodes = new Map<string, Node>()
   const seen = new Set<string>()
@@ -55,20 +58,21 @@ export function graph(lock: Lock) {
         const key = resolve(lock, task.from, name)
         const item = key ? entry(lock, key) : undefined
         if (!key || !item || item.kind === "workspace") continue
-        if (item.kind !== "npm") {
-          skipped.add(`${item.name}@${item.version}`)
-          continue
+        // A non-registry package has no purl, but its own dependencies can
+        // still be registry packages, so it is walked like any other.
+        if (item.kind !== "npm") skipped.add(`${item.name}@${item.version}`)
+        const id = item.kind === "npm" ? purl(item.name, item.version) : undefined
+        if (id) {
+          const node = nodes.get(id) ?? {
+            package_url: id,
+            relationship: "indirect",
+            scope: task.scope,
+            dependencies: new Set<string>(),
+          }
+          nodes.set(id, node)
+          if (task.direct) node.relationship = "direct"
+          if (task.owner) nodes.get(task.owner)?.dependencies.add(id)
         }
-        const id = purl(item.name, item.version)
-        const node = nodes.get(id) ?? {
-          package_url: id,
-          relationship: "indirect",
-          scope: task.scope,
-          dependencies: new Set<string>(),
-        }
-        nodes.set(id, node)
-        if (task.owner == null) node.relationship = "direct"
-        if (task.owner != null) nodes.get(task.owner)?.dependencies.add(id)
         if (seen.has(key)) continue
         seen.add(key)
         const info = item.info
@@ -87,10 +91,18 @@ export function graph(lock: Lock) {
     roots.map((root) => ({
       from: root.from,
       names: names(root.ws.dependencies, root.ws.optionalDependencies, root.ws.peerDependencies),
+      direct: true,
       scope: "runtime",
     })),
   )
-  walk(roots.map((root) => ({ from: root.from, names: names(root.ws.devDependencies), scope: "development" })))
+  walk(
+    roots.map((root) => ({
+      from: root.from,
+      names: names(root.ws.devDependencies),
+      direct: true,
+      scope: "development",
+    })),
+  )
 
   return { nodes, skipped: [...skipped].sort() }
 }
@@ -141,8 +153,18 @@ export function snapshot(input: {
 if (import.meta.main) {
   const file = process.argv[2] ?? "bun.lock"
   const env = process.env
-  const sha = env.GITHUB_SHA ?? (await Bun.$`git rev-parse HEAD`.text()).trim()
-  const ref = env.GITHUB_REF ?? (await Bun.$`git symbolic-ref HEAD`.text()).trim()
+  // `--symbolic-full-name` prints `HEAD` (exit 0) on a detached HEAD, where
+  // `symbolic-ref` would exit non-zero. The API needs a real `refs/...` ref.
+  const sha = env.GITHUB_SHA ?? (await Bun.$`git rev-parse HEAD`.nothrow().text()).trim()
+  const head = (await Bun.$`git rev-parse --symbolic-full-name HEAD`.nothrow().text()).trim()
+  const ref = env.GITHUB_REF ?? (head.startsWith("refs/") ? head : "")
+  if (!/^[0-9a-f]{40}$/.test(sha) || !ref) {
+    console.error(
+      "dependency-snapshot: cannot read the commit or branch from git (detached HEAD or not a repository). " +
+        "Set GITHUB_SHA and GITHUB_REF, e.g. GITHUB_REF=refs/heads/main.",
+    )
+    process.exit(1)
+  }
   const url =
     env.GITHUB_SERVER_URL && env.GITHUB_REPOSITORY && env.GITHUB_RUN_ID
       ? `${env.GITHUB_SERVER_URL}/${env.GITHUB_REPOSITORY}/actions/runs/${env.GITHUB_RUN_ID}`

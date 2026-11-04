@@ -26,7 +26,9 @@ const lock: Lock = {
     shared: ["shared@1.0.0", "", {}, "sha512-e"],
     lint: ["lint@1.0.0", "", { dependencies: { chalk: "^5.0.0" } }, "sha512-f"],
     chalk: ["chalk@5.3.0", "", {}, "sha512-g"],
-    sheet: ["sheet@https://example.com/sheet.tgz", {}],
+    sheet: ["sheet@https://example.com/sheet.tgz", { dependencies: { cfb: "^1.0.0" } }],
+    // Only reachable through the tarball package above.
+    cfb: ["cfb@1.2.2", "", {}, "sha512-h"],
   },
 }
 
@@ -61,6 +63,10 @@ describe("dependency-snapshot graph", () => {
   test("skips workspace links and reports non-registry packages", () => {
     expect([...result.nodes.keys()].some((key) => key.includes("workspace"))).toBe(false)
     expect(result.skipped).toEqual(["sheet@https://example.com/sheet.tgz"])
+  })
+
+  test("still walks the dependencies of a non-registry package", () => {
+    expect(node("cfb", "1.2.2")).toMatchObject({ relationship: "indirect", scope: "runtime" })
   })
 })
 
