@@ -11,6 +11,7 @@ import { DialogHeader, DialogLayout, useDialog } from "../ui/dialog"
 import { DialogSelect } from "../ui/dialog-select"
 import { Link } from "../ui/link"
 import { useToast } from "../ui/toast"
+import { aboutCommand } from "./dialog-about"
 import { privacyMode } from "./pii"
 
 type Profile = typeof KiloGatewayRpc.Definition.methods.profile.output.Type
@@ -155,6 +156,7 @@ export default Plugin.define({
               slash: { name: "profile", aliases: ["me", "whoami", "kilo-account", "balance", "kilo-pass"] },
               run: () => accountStatus(context),
             },
+            aboutCommand(context),
           ],
         }))
         return null

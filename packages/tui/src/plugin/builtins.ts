@@ -17,7 +17,6 @@ import KiloTeams from "../kilocode/gateway" // kilocode_change - Kilo /teams com
 import KiloMarketplace from "../kilocode/marketplace" // kilocode_change(marketplace) - Kilo /marketplace command
 import KiloNews from "../kilocode/kilo-news" // kilocode_change - Kilo Gateway news on the home screen
 import KiloUsage from "../kilocode/usage" // kilocode_change(provider-usage) - Kilo /usage command
-import KiloAbout from "../kilocode/dialog-about" // kilocode_change(cli) - Kilo /about command
 import KiloSidebarPr from "../kilocode/plugins/sidebar-pr" // kilocode_change(plugin) - Kilo sidebar PR panel
 import KiloSidebarFooter from "../kilocode/plugins/sidebar-footer" // kilocode_change(plugin) - Kilo sidebar balance
 import KiloSidebarUsage from "../kilocode/plugins/sidebar-usage" // kilocode_change(plugin) - Kilo sidebar usage panel
@@ -46,7 +45,6 @@ export const builtins = [
   KiloMarketplace, // kilocode_change(marketplace)
   KiloNews, // kilocode_change
   KiloUsage, // kilocode_change(provider-usage)
-  KiloAbout, // kilocode_change(cli)
   KiloSidebarPr, // kilocode_change(plugin)
   KiloSidebarFooter, // kilocode_change(plugin)
   KiloSidebarUsage, // kilocode_change(plugin)

@@ -1,11 +1,11 @@
 // Kilo `/about`: version, channel, runtime, config and project paths, connected providers, the default model and
 // links, with a `c` action that copies the diagnostics block. Paths are masked while privacy mode is on.
 import type { ConfigEntry, LocationRef } from "@opencode/client"
-import { Plugin } from "@opencode/plugin/tui"
+import type { Plugin } from "@opencode/plugin/tui"
 import { TextAttributes } from "@opentui/core"
 import { createMemo, createSignal, For, onCleanup, onMount, Show } from "solid-js"
 import { useClipboard } from "../context/clipboard"
-import { Keymap } from "../context/keymap"
+import { Keymap, type KeymapCommand } from "../context/keymap"
 import { useTuiPaths } from "../context/runtime"
 import { useTheme } from "../context/theme"
 import { DialogHeader, DialogLayout, useDialog } from "../ui/dialog"
@@ -228,28 +228,17 @@ export function DialogAbout(props: { context: Plugin.Context }) {
   )
 }
 
-export default Plugin.define({
-  id: "kilocode.about",
-  setup(context) {
-    context.ui.slot({
-      append: "app",
-      render() {
-        context.keymap.layer(() => ({
-          mode: "global",
-          commands: [
-            {
-              id: "kilo.about",
-              title: "About",
-              description: "Show version, environment, and diagnostic info",
-              group: "Kilo",
-              palette: true,
-              slash: { name: "about" },
-              run: () => context.ui.dialog.show(() => <DialogAbout context={context} />),
-            },
-          ],
-        }))
-        return null
-      },
-    })
-  },
-})
+// Registered by the Kilo command host (`kilocode.teams`) so `/about` shares that plugin's row. A separate
+// builtin row would sort before `opencode.diffs` in the plugin list and push it out of the /plugins viewport,
+// breaking the upstream session-panel test.
+export function aboutCommand(context: Plugin.Context): KeymapCommand {
+  return {
+    id: "kilo.about",
+    title: "About",
+    description: "Show version, environment, and diagnostic info",
+    group: "Kilo",
+    palette: true,
+    slash: { name: "about" },
+    run: () => context.ui.dialog.show(() => <DialogAbout context={context} />),
+  }
+}
