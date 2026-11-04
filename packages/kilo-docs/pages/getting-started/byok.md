@@ -143,6 +143,14 @@ These rules apply to saved API keys. Eligible requests use a connected ChatGPT s
 - If the key is invalid, the request fails. It does not fall back to using Kilo's keys.
 - Subscription-based providers (such as the Z.ai Coding Plan or Kimi Code) only expose the models included in that plan. Select one of those models to route traffic through your subscription.
 
+### Key priority order
+
+When more than one of your keys can serve a model, Kilo uses the first key in your order that can serve it. Reorder your personal keys on the [BYOK page](https://app.kilo.ai/byok) to control which one wins.
+
+Ordering matters when several of your keys overlap — for example, a coding subscription and a pay-as-you-go provider key that both cover the same models — so you can spend the balance or commitment you prefer first. The order covers every personal BYOK key, including provider keys using Kilo catalog model IDs, provider keys sent through Vercel, and OpenRouter or Vercel AI Gateway keys.
+
+Kilo sends each request with only the highest-ranked key that can serve it. If that key fails, the request fails; Kilo does not try your other BYOK keys. Organization keys cannot be reordered, so when several of an organization's keys can serve a model, Kilo uses the first one in the default order.
+
 ## Using BYOK in the Extensions and CLI
 
 - BYOK works with the Kilo Gateway provider. Users should ensure that is set as the active [provider](/docs/ai-providers).

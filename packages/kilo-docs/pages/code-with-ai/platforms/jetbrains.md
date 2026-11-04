@@ -25,7 +25,8 @@ Use **Chat** for the current workspace and **Agents** to manage parallel tasks i
 
 - **New Worktree** creates a new branch, imports a GitHub pull request with **From PR**, or uses an available local branch with **From Branch**. Leave **Fetch latest base branch before creating** enabled (the default) to fetch the selected base branch from its configured remote before the worktree is created, so the new worktree branches from the latest commit instead of a stale local ref. Kilo remembers the choice across projects and IDEs.
 - **Move to Worktree** moves the conversation and uncommitted changes into a new worktree while the session is idle. This action is also available from the main checkout's session list.
-- Open a worktree to see its sessions in an editor tab. Its session list is scoped to that worktree; use the list toggle to hide or show it and drag worktree rows to reorder them.
+- In the **Agents** list, the main workspace appears as its own row and local worktrees are nested under an always-visible **Local worktrees** group. Collapse or expand the group to hide or show local worktrees, and drag local worktree rows to reorder them. The main workspace stays at the top and rows cannot move between groups.
+- Open a worktree to see its sessions in an editor tab. Its session list is scoped to that worktree; use the list toggle to hide or show it.
 - Worktree rows show session activity, pull request checks and reviews, unresolved review conversations, merge conflicts, and active build/run processes. Use the row menu to copy the branch name, directory, or pull request reference.
 
 ### Worktree setup scripts
