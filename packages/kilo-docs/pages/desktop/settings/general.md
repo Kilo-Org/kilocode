@@ -1,20 +1,22 @@
 ---
 title: "General settings"
-description: "Manage the app version, your account, appearance, notifications, conda environments, notebooks, and privacy in Kilo Desktop."
+description: "Manage the app version, your account, appearance, notifications, conda environments, notebooks, privacy, and keyboard shortcuts in Kilo Desktop."
 ---
 
 # General settings
 
-Open settings from the gear at the bottom of the sidebar, and use the search box at the top to filter them. The **General** settings cover the app version and logs, your account, appearance, notifications, conda environments, notebooks, and privacy.
+Open settings from the gear at the bottom of the sidebar, and use the search box at the top to filter them. The **General** settings cover the app version and logs, your account, appearance, notifications, conda environments, notebooks, privacy, and keyboard shortcuts.
 
 ## About
 
 The **About** section shows the app's version and manages updates:
 
 - **Version** — the build you're running, marked **Beta**, with its update status. When a newer build has downloaded it reads *Version X is ready to install*; otherwise use **Check for updates** to look for one.
-- **Application logs** — select **Show in Finder** (macOS), **Show in File Explorer** (Windows), or **Show in File Manager** (Linux) to find the app's log file. Attach it when you report an issue.
+- **Support** — information to include when you contact support:
+  - **Application logs** — shows the path to the app's log file. Select **Show in Finder** (macOS), **Show in File Explorer** (Windows), or **Show in File Manager** (Linux) to find it.
+  - **Kilo config** — shows the path to your global Kilo config file (for example `~/.config/kilo/kilo.json`), with the same button. If you haven't created one, it reads *No global config file has been created yet.*
 
-When an update is ready, select **Restart to update** to relaunch and apply it.
+When an update is ready, select **Restart to update** to relaunch and apply it. When release notes are available, the **About** section also shows a **What's changed** section for the update.
 
 ## Account
 
@@ -35,10 +37,10 @@ The **Appearance** section controls how the app looks:
 
 The **Notifications** section controls when Kilo plays a sound to get your attention. While Kilo is in the background, it also shows a system notification. Set each of these:
 
-- **When a chat finishes** — the chat finishes its turn.
+- **When Kilo finishes** — Kilo completed its turn.
 - **When Kilo needs you** — an approval, a question, or an error.
 
-For each, choose **Never**, **When I'm not looking** (skips the chat you have open), or **Always**. Select the speaker button to preview the sound. To silence the system notifications entirely, use your operating system's notification settings.
+For each, choose **Never**, **When I'm not looking** (skips the session you have open), or **Always**. Select the speaker button to preview the sound. To silence the system notifications entirely, use your operating system's notification settings.
 
 ## Conda Environments
 
@@ -58,3 +60,13 @@ See [Notebooks](/docs/desktop/features/notebooks) for working with notebooks in 
 The **Privacy** section has a single **Share usage analytics and crash reports** toggle. When on, it shares usage analytics and crash reports with Kilo — including from the embedded Kilo service and conda environment manager. 
 
 It also explains data handling for **free models**: because they may route your requests to providers that log prompts and outputs, don't submit personal or confidential data when using them. See [Using Kilo for Free](/docs/getting-started/using-kilo-for-free) for details, and use the chat model picker's filter to exclude free models.
+
+## Shortcuts
+
+The **Shortcuts** section lets you see, change, or turn off the app's keyboard shortcuts.
+
+- **App Navigation** — numbered shortcuts for jumping to tabs (⌘1–9 / Ctrl+1–9) and sessions (⌃1–9 / Alt+1–9). Turn either set off, or choose which modifier key it uses.
+- **All shortcuts** — select a shortcut and press the new keys to change it (Esc cancels). Hover a shortcut and select × to turn it off. A new shortcut must include ⌘, ⌃, or ⌥ (Ctrl or Alt on Windows/Linux). Kilo tells you if a shortcut is reserved by the system or already used by another action.
+- **Reset all** restores every default.
+
+Press ⌘/ (macOS) or Ctrl+/ (Windows/Linux) anywhere to open the searchable **Keyboard shortcuts** reference.

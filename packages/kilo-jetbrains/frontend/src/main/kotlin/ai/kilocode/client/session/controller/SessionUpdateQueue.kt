@@ -90,6 +90,10 @@ internal class SessionUpdateQueue(
             pending.size
         }
         LOG.debug { "${ChatLogSummary.sid(sid())} enqueue pending=$size visible=${visible.get()}" }
+        if (event is ChatEventDto.Resnapshot) {
+            requestFlush(true, "snapshot")
+            return
+        }
         if (!visible.get()) return
         requestFlush(false, "enqueue")
     }

@@ -247,6 +247,7 @@ export interface LifecycleHost {
   metadata: (client: KiloClient, dir: string) => Promise<Record<string, unknown>>
   post: (message: AgentManagerOutMessage) => void
   notify: (message: string) => void
+  openUrl: (url: string) => void
   log: (...args: unknown[]) => void
 }
 

@@ -4,7 +4,7 @@
   "description": "AI-powered development tool",
   "private": true,
   "type": "module",
-  "packageManager": "bun@1.4.2",
+  "packageManager": "bun@1.4.4",
   "scripts": {
     "dev": "KILO_CLIENT=cli bun run --cwd packages/opencode --conditions=node src/index.ts",
     "dev:stats": "bun sst shell --stage=production -- bun run --cwd packages/stats/app dev",
@@ -22,6 +22,7 @@
     "extension": "bun --cwd packages/kilo-vscode script/launch.ts",
     "extension:isolated": "bun --cwd packages/kilo-vscode script/launch.ts --isolated",
     "extension:isolated:clean": "bun --cwd packages/kilo-vscode script/launch.ts --isolated --clean",
+    "e2e:demo": "bun run --cwd packages/kilo-e2e demo",
     "dev-setup": "bun run --cwd packages/opencode --conditions=browser src/index.ts dev-setup",
     "dev:local": "bun run packages/opencode/script/dev-local.ts",
     "test:script:ci": "mkdir -p .artifacts/unit && bun test ./script --timeout 30000 --reporter=junit --reporter-outfile=.artifacts/unit/junit.xml"
@@ -54,7 +55,7 @@
       "@solid-primitives/storage": "4.3.3",
       "@tailwindcss/vite": "4.1.11",
       "diff": "8.0.4",
-      "dompurify": "3.4.16",
+      "dompurify": "3.4.17",
       "drizzle-kit": "1.0.0-rc.2",
       "drizzle-orm": "1.0.0-rc.2",
       "effect": "4.0.0-beta.83",
@@ -68,7 +69,7 @@
       "marked": "18.0.7",
       "marked-shiki": "1.2.1",
       "remend": "1.3.0",
-      "@playwright/test": "1.59.1",
+      "@playwright/test": "1.64.1",
       "semver": "7.7.4",
       "typescript": "5.8.2",
       "@typescript/native-preview": "7.0.0-dev.20260316.1",
@@ -78,7 +79,7 @@
       "solid-list": "0.3.0",
       "tailwindcss": "4.1.11",
       "virtua": "0.49.1",
-      "vite": "7.3.5",
+      "vite": "7.3.7",
       "@solidjs/meta": "0.29.4",
       "@solidjs/router": "0.15.4",
       "@solidjs/start": "https://pkg.pr.new/@solidjs/start@dfb2020",
@@ -100,7 +101,7 @@
     "@tsconfig/bun": "catalog:",
     "@types/mime-types": "3.0.1",
     "@typescript/native-preview": "catalog:",
-    "glob": "13.0.5",
+    "glob": "14.0.2",
     "husky": "9.1.7",
     "oxlint": "1.60.0",
     "oxlint-tsgolint": "0.21.0",
@@ -110,7 +111,7 @@
     "@types/bun": "catalog:",
     "@changesets/changelog-github": "^0.5.1",
     "@changesets/cli": "^2.27.10",
-    "@actions/artifact": "5.0.1",
+    "@actions/artifact": "6.3.1",
     "@cyclonedx/cyclonedx-library": "10.3.0",
     "@types/spdx-expression-parse": "4.0.0",
     "ajv": "8.20.0",
@@ -124,7 +125,7 @@
     "@opencode-ai/script": "workspace:*",
     "@kilocode/sdk": "workspace:*",
     "typescript": "catalog:",
-    "@aws-sdk/client-s3": "3.933.0",
+    "@aws-sdk/client-s3": "3.1160.0",
     "heap-snapshot-toolkit": "1.1.3"
   },
   "repository": {
@@ -154,19 +155,58 @@
     "picomatch": ">=2.3.2",
     "defu": "6.1.6",
     "lodash": "4.18.1",
-    "@xmldom/xmldom": ">=0.8.12",
+    "@xmldom/xmldom": ">=0.9.12 <0.10.0",
     "smol-toml": ">=1.6.1",
-    "fastify": ">=5.8.3",
-    "vite": "7.3.5",
+    "fastify": "^5.12.7",
+    "vite": "7.3.7",
     "diff": "8.0.4",
-    "dompurify": "3.4.16",
+    "dompurify": "3.4.17",
     "katex": "0.19.0",
-    "happy-dom": ">=20.8.9",
+    "happy-dom": ">=21.0.4",
     "@opentui/core": "catalog:",
     "@opentui/solid": "catalog:",
     "solid-js": "catalog:",
     "@opentui/keymap": "catalog:",
-    "@ai-sdk/anthropic": "3.0.111"
+    "@ai-sdk/anthropic": "3.0.111",
+    "open": "11.0.4",
+    "axios": "^1.21.0",
+    "@fastify/ajv-compiler": {
+      ".": "^4.0.7",
+      "fast-uri": "^4.2.3"
+    },
+    "fast-json-stringify": {
+      ".": "^7.2.0",
+      "fast-uri": "^4.2.3"
+    },
+    "ajv": {
+      "fast-uri": "^3.1.9"
+    },
+    "ai-gateway-provider": {
+      "@ai-sdk/deepgram": "^2.0.69",
+      "@ai-sdk/elevenlabs": "^2.0.71",
+      "@ai-sdk/fireworks": "^2.0.98",
+      "@ai-sdk/google": "^3.0.140"
+    },
+    "@ai-sdk/provider-utils": {
+      "undici": "^6.29.1"
+    },
+    "@actions/http-client": {
+      "undici": "^6.29.1"
+    },
+    "@actions/github": {
+      "undici": "^6.29.1"
+    },
+    "@qdrant/js-client-rest": {
+      "undici": "^6.29.1"
+    },
+    "node-gyp": {
+      "undici": "^6.29.1"
+    },
+    "@effect/platform-node": {
+      "undici": "^8.12.3"
+    },
+    "seroval": "~1.6.11",
+    "seroval-plugins": "~1.6.8"
   },
   "patchedDependencies": {
     "@npmcli/agent@4.0.2": "patches/@npmcli%2Fagent@4.0.2.patch",
@@ -177,7 +217,7 @@
     "gcp-metadata@8.1.2": "patches/gcp-metadata@8.1.2.patch",
     "@ai-sdk/google@3.0.73": "patches/@ai-sdk%2Fgoogle@3.0.73.patch",
     "@pierre/trees@1.0.0-beta.4": "patches/@pierre%2Ftrees@1.0.0-beta.4.patch",
-    "@modelcontextprotocol/sdk@1.31.0": "patches/@modelcontextprotocol%2Fsdk@1.31.0.patch",
+    "@modelcontextprotocol/sdk@1.32.1": "patches/@modelcontextprotocol%2Fsdk@1.32.1.patch",
     "effect@4.0.0-beta.83": "patches/effect@4.0.0-beta.83.patch",
     "@tanstack/virtual-core@3.17.3": "patches/@tanstack%2Fvirtual-core@3.17.3.patch",
     "@ai-sdk/openai-compatible@2.0.41": "patches/@ai-sdk%2Fopenai-compatible@2.0.41.patch",
@@ -192,6 +232,6 @@
     "@ai-sdk/openai-compatible@2.0.48": "patches/@ai-sdk%2Fopenai-compatible@2.0.48.patch",
     "bun-pty@0.4.8": "patches/bun-pty@0.4.8.patch"
   },
-  "version": "7.8.15",
+  "version": "7.8.25",
   "peerDependencies": {}
 }

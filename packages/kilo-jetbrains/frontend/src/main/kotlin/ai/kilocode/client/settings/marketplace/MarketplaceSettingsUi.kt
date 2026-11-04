@@ -14,11 +14,11 @@ import ai.kilocode.client.ui.layout.HAlign
 import ai.kilocode.client.ui.layout.Stack
 import ai.kilocode.client.ui.layout.VAlign
 import ai.kilocode.client.ui.layout.align
-import ai.kilocode.client.ui.list.ActiveListBadge
-import ai.kilocode.client.ui.list.ActiveListCell
-import ai.kilocode.client.ui.list.ActiveListConfig
-import ai.kilocode.client.ui.list.ActiveListItem
-import ai.kilocode.client.ui.list.ActiveListSelection
+import ai.kilocode.client.ui.active.ActiveBadge
+import ai.kilocode.client.ui.active.ActiveCell
+import ai.kilocode.client.ui.active.ActiveConfig
+import ai.kilocode.client.ui.active.ActiveItem
+import ai.kilocode.client.ui.active.ActiveSelection
 import ai.kilocode.rpc.dto.MarketplaceItemDto
 import com.intellij.ide.BrowserUtil
 import com.intellij.openapi.actionSystem.ActionManager
@@ -55,7 +55,7 @@ internal class MarketplaceSettingsUi(
     dir: String,
     private val create: (MarketplaceItemDto, Boolean) -> MarketplaceInstallDialogHandle = ::MarketplaceInstallDialog,
     private val browse: (String) -> Unit = { BrowserUtil.browse(it) },
-) : SettingsListPanel(cs, ActiveListConfig.Preferred) {
+) : SettingsListPanel(cs, ActiveConfig.Preferred) {
     private var dir = dir
     private var items: List<MarketplaceItemDto> = emptyList()
     private val selectedTypes = ALL_TYPES.toMutableSet()
@@ -99,7 +99,7 @@ internal class MarketplaceSettingsUi(
     /** Installed state changes when MCP or Skills Settings removes a bundle this page listed. */
     override fun refreshOnFocus(): Boolean = true
 
-    override suspend fun fetch(): List<ActiveListItem> {
+    override suspend fun fetch(): List<ActiveItem> {
         val result = service<KiloMarketplaceService>().list(dir)
         items = result.items
         return withContext(edt) {
@@ -169,7 +169,7 @@ internal class MarketplaceSettingsUi(
         skillChip.selected = "skill" in selectedTypes
     }
 
-    private fun rows(): List<ActiveListItem> = items
+    private fun rows(): List<ActiveItem> = items
         .asSequence()
         .filter { it.type in selectedTypes }
         .filter { !installedOnly || it.installedProject || it.installedGlobal }
@@ -178,7 +178,7 @@ internal class MarketplaceSettingsUi(
         .map { row(it) }
         .toList()
 
-    private fun row(item: MarketplaceItemDto): ActiveListItem = object : ActiveListItem {
+    private fun row(item: MarketplaceItemDto): ActiveItem = object : ai.kilocode.client.ui.list.ActiveSection {
         override val key = rowKey(item)
         override val section = sectionLabel(item.type)
         override val title = item.name
@@ -193,22 +193,22 @@ internal class MarketplaceSettingsUi(
         override val cells = if (progress != null) emptyList() else cells(item)
     }
 
-    private fun badges(item: MarketplaceItemDto): List<ActiveListBadge> = listOfNotNull(
+    private fun badges(item: MarketplaceItemDto): List<ActiveBadge> = listOfNotNull(
         typeBadge(item),
-        ActiveListBadge(KiloBundle.message("settings.marketplace.badge.installedProject"), UiStyle.Badge.Highlight)
+        ActiveBadge(KiloBundle.message("settings.marketplace.badge.installedProject"), UiStyle.Badge.Highlight)
             .takeIf { item.installedProject },
-        ActiveListBadge(KiloBundle.message("settings.marketplace.badge.installedGlobal"), UiStyle.Badge.Highlight)
+        ActiveBadge(KiloBundle.message("settings.marketplace.badge.installedGlobal"), UiStyle.Badge.Highlight)
             .takeIf { item.installedGlobal },
-        ActiveListBadge(item.category, UiStyle.Badge.Secondary).takeIf { item.category.isNotBlank() },
+        ActiveBadge(item.category, UiStyle.Badge.Secondary).takeIf { item.category.isNotBlank() },
     )
 
-    private fun typeBadge(item: MarketplaceItemDto): ActiveListBadge {
+    private fun typeBadge(item: MarketplaceItemDto): ActiveBadge {
         if (item.type != "mcp" || item.skills.isEmpty()) {
-            return ActiveListBadge(typeLabel(item.type), typeStyle(item.type))
+            return ActiveBadge(typeLabel(item.type), typeStyle(item.type))
         }
         val mcp = KiloBundle.message("settings.marketplace.tag.mcpShort")
         val skill = typeLabel("skill")
-        return ActiveListBadge(
+        return ActiveBadge(
             "$mcp|$skill",
             typeStyle(item.type),
             segments = listOf(
@@ -218,14 +218,14 @@ internal class MarketplaceSettingsUi(
         )
     }
 
-    private fun cells(item: MarketplaceItemDto): List<ActiveListCell> = listOfNotNull(
-        ActiveListCell(INSTALL_CELL, KiloBundle.message("settings.marketplace.install"), primary = true)
+    private fun cells(item: MarketplaceItemDto): List<ActiveCell> = listOfNotNull(
+        ActiveCell(INSTALL_CELL, KiloBundle.message("settings.marketplace.install"), primary = true)
             .takeIf { !installHidden(item) },
-        ActiveListCell(REMOVE_PROJECT_CELL, KiloBundle.message("settings.marketplace.remove.project"))
+        ActiveCell(REMOVE_PROJECT_CELL, KiloBundle.message("settings.marketplace.remove.project"))
             .takeIf { item.installedProject },
-        ActiveListCell(REMOVE_GLOBAL_CELL, KiloBundle.message("settings.marketplace.remove.global"))
+        ActiveCell(REMOVE_GLOBAL_CELL, KiloBundle.message("settings.marketplace.remove.global"))
             .takeIf { item.installedGlobal },
-        docsUrl(item)?.let { ActiveListCell(DOCS_CELL, KiloBundle.message("settings.marketplace.docs")) },
+        docsUrl(item)?.let { ActiveCell(DOCS_CELL, KiloBundle.message("settings.marketplace.docs")) },
     )
 
     private fun installHidden(item: MarketplaceItemDto): Boolean =
@@ -262,8 +262,8 @@ internal class MarketplaceSettingsUi(
             ),
         )
         refocus = true
-        view.update(rows(), ActiveListSelection.Key(key))
-        mutateAndReload(ActiveListSelection.Key(key), overlay = false) {
+        view.update(rows(), ActiveSelection.Key(key))
+        mutateAndReload(ActiveSelection.Key(key), overlay = false) {
             var ok = false
             try {
                 val svc = service<KiloMarketplaceService>()
@@ -294,7 +294,7 @@ internal class MarketplaceSettingsUi(
                     // mutation, not the reload that mutateAndReload runs afterwards, so if that reload
                     // throws the row would otherwise stay on the progress text painted before it with
                     // no action cells. On success apply() simply repaints again with the fetched rows.
-                    view.update(rows(), ActiveListSelection.Key(key))
+                    view.update(rows(), ActiveSelection.Key(key))
                     if (!ok) {
                         // afterApply never runs for a failed mutation, so hand focus back here instead
                         // and clear the flag, or the next unrelated reload would steal it.

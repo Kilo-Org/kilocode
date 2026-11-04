@@ -1,11 +1,11 @@
 ---
 title: "Git integration"
-description: "Review your uncommitted changes, switch branches, and run sessions in an isolated worktree, without leaving the chat in Kilo Desktop."
+description: "Review your uncommitted changes, switch branches, and run sessions in a new or existing worktree, without leaving the chat in Kilo Desktop."
 ---
 
 # Git integration
 
-Review your changes and manage branches for the chat's workspace without leaving the conversation. Git integration uses your system `git`, so make sure git is installed and on your `PATH`.
+Review your changes and manage branches for the chat's workspace without leaving the conversation. Git integration uses your system `git`, so make sure Git 2.17 or newer is installed and on your `PATH`.
 
 ## Review changes
 
@@ -27,11 +27,13 @@ The tab also handles the cases where there's nothing to show:
 
 ## Commit, push, and open a pull request
 
-The commit control in the top toolbar turns your reviewed changes into commits and shares them. Its main button is a **quick action** that adapts to your branch's state, so it always offers the next sensible step. Open its dropdown to choose an action directly:
+The commit control in the top toolbar turns your changes into commits and shares them. Its main button adapts to your branch's state and offers the next step: **Commit**, **Commit & push**, **Commit, push & PR**, **Push**, **Pull**, **Create PR**, or **View PR**. Open its dropdown to choose **Commit**, **Push**, or **Create PR** directly.
 
-- **Commit** — commit your current changes. Unavailable when the working tree is clean.
-- **Push** — push your commits to the remote. Needs a checked-out branch with an `origin` remote and local commits to send.
-- **Create PR** — open a pull request for the current branch. Needs committed work on a feature branch (not the default branch) with a GitHub `origin` remote. When a pull request already exists, the menu links to it as **PR #N**, color-coded by its state.
+- **Commit** — stages all your changes and commits them. Kilo writes a one-line commit message using the model selected in the chat, matching your repository's recent commit style. Unavailable when the working tree is clean.
+- **Push** — pushes your commits to the remote. It needs a checked-out branch with an `origin` remote and local commits to send.
+- **Create PR** — writes a pull request title and description with the selected model, creates a **draft** pull request, and opens it in your browser. If your repository has a PR template, Kilo fills it in. It needs the GitHub CLI (`gh`), committed work on a feature branch, and a GitHub `origin` remote. When a pull request already exists, the menu links to it as **PR #N**, colored by its state.
+
+While an action runs, the button shows its progress (for example *Generating commit message...* or *Creating draft PR...*). If the button is disabled, hover it to see why (for example *Branch is behind its upstream. Pull or rebase first.*). Select a model in the chat before committing.
 
 If a push fails, the error opens in a dialog where you can read the full git output. Select **Fix in chat** to add the error to your chat draft so the agent can help.
 
@@ -39,16 +41,21 @@ If a push fails, the error opens in a dialog where you can read the full git out
 
 A branch switcher in the chat lets you move between branches for the workspace. The list is grouped into your **default**, **recent**, and **other** branches, and you can search it. Selecting a branch checks it out; choosing a remote branch creates a local tracking branch for it.
 
+If the branch you pick is already checked out in another worktree, Kilo Desktop switches the session to that worktree instead of checking the branch out again; if it's checked out in your main repository, the session switches to **Local**.
+
+When the session uses an existing worktree that other sessions also use, Kilo Desktop asks **Switch branch in this worktree?** before changing its branch, because the change affects those sessions too. Select **Switch anyway** to continue, or **Cancel**.
+
 To start new work, create a branch from the switcher. You can base the new branch on your current branch or on the repository's default branch, and it's checked out as soon as it's created.
 
-## Work locally or in a new worktree
+## Work locally or in a worktree
 
 Beside the workspace in the chat, a mode control sets where a session's changes go:
 
 - **Local repository** — work in the repository already on your machine, on whatever branch is checked out. This is the default.
-- **New worktree** — create a separate copy for the session, based on a branch you pick, so your main checkout stays untouched while the agent works.
+- **New worktree** — create a separate copy for the session, based on a branch you pick, so your main checkout stays untouched while the agent works. It's unavailable until the repository has at least one commit.
+- **Existing worktrees** — run the session in a worktree that's already there, such as one an earlier session created. Search the list by worktree name or branch. This submenu appears only when the workspace has other worktrees.
 
-Kilo Desktop remembers your choice per workspace. Worktree sessions created in Kilo Desktop also appear in the [VS Code extension](/docs/code-with-ai/platforms/vscode)'s Agent Manager.
+The control shows **Local**, **New worktree**, or the name of the worktree you picked. Kilo Desktop remembers whether you last chose **Local repository** or **New worktree** and uses that choice for new sessions in every workspace, including after a restart. An existing worktree applies only to the session you're starting. Worktree sessions created in Kilo Desktop also appear in the [VS Code extension](/docs/code-with-ai/platforms/vscode)'s Agent Manager.
 
 ## Set up git for a folder
 

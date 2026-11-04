@@ -2,6 +2,7 @@ package ai.kilocode.client.agentManager.worktree
 
 import ai.kilocode.client.KiloNotifications
 import ai.kilocode.client.agentManager.AgentManagerHost
+import ai.kilocode.client.agentManager.WorkspaceSessionEditorManager
 import ai.kilocode.client.app.KiloSessionService
 import ai.kilocode.client.app.KiloWorkspaceService
 import ai.kilocode.client.app.Workspace
@@ -10,7 +11,6 @@ import ai.kilocode.client.onboarding.providers.v5migration.MigrationUiController
 import ai.kilocode.client.onboarding.providers.v5migration.MigrationUiState
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.session.SessionActivityKind
-import ai.kilocode.client.session.SessionHost
 import ai.kilocode.client.session.SessionManager
 import ai.kilocode.client.session.SessionRef
 import ai.kilocode.client.session.SessionUi
@@ -39,9 +39,7 @@ import com.intellij.util.concurrency.annotations.RequiresEdt
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
-import java.awt.BorderLayout
 import javax.swing.JComponent
-import javax.swing.JPanel
 
 open class WorktreeSessionEditorManager(
     parent: Disposable,
@@ -88,7 +86,7 @@ open class WorktreeSessionEditorManager(
     private val newWorktreeHost: () -> Unit = {
         project.service<AgentManagerHost>().newWorktree()
     },
-) : SessionHost(project, worktree, create, resolve, status, timers, request) {
+) : WorkspaceSessionEditorManager(project, worktree, create, resolve, status, timers, request) {
     // Both the branch dock and the New Worktree / Move to Worktree flows only make sense from the
     // base checkout -- a linked worktree's own editor tab keeps today's plain session view. Resolved
     // once in start(), before the first session opens; see resolveBase().
@@ -104,8 +102,6 @@ open class WorktreeSessionEditorManager(
     // Unlike the worktree flows above, forking is a plain session copy: it works from a linked
     // worktree's own tab as well as the base checkout's.
     override val supportsFork: Boolean get() = true
-    override val hostedInEditorTab: Boolean get() = true
-    private val right = JPanel(BorderLayout())
     private val deleting = linkedSetOf<String>()
     private var last: String? = null
     private var pending = false
@@ -117,11 +113,6 @@ open class WorktreeSessionEditorManager(
     private var startedOnce = false
     private var migrationActive = false
     private var migrationJob: Job? = null
-    var onPresent: ((String?) -> Unit)? = null
-    var onListChanged: (() -> Unit)? = null
-
-    val component: JPanel get() = right
-
     init {
         Disposer.register(parent, this)
         bindMigration()
@@ -390,12 +381,8 @@ open class WorktreeSessionEditorManager(
 
     @RequiresEdt
     override fun present(ui: SessionUi?) {
-        right.removeAll()
-        if (ui != null) right.add(ui, BorderLayout.CENTER)
-        right.revalidate()
-        right.repaint()
         last = ui?.id
-        onPresent?.invoke(currentKey())
+        super.present(ui)
     }
 
     @RequiresEdt

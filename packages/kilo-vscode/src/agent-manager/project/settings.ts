@@ -1,5 +1,6 @@
 import type { BranchListItem } from "../git-import"
 import { normalizeBaseBranch } from "../base-branch"
+import { openSetupScript } from "../provider-lifecycle"
 import { initContextState } from "./init"
 import type { ProjectContext } from "./context"
 import type { ProjectContexts, ProjectSnapshot } from "./contexts"
@@ -156,13 +157,5 @@ export async function configureSettingsSetupScript(
 ): Promise<void> {
   const ctx = contexts.resolve(projectId)
   if (!ctx || ctx.missing()) return
-  const service = ctx.setupService()
-  try {
-    if (!service.hasScript()) await service.createDefaultScript()
-    const script = service.resolveScript()
-    if (!script) return
-    await open(script.path)
-  } catch (err) {
-    log(`Failed to open setup script for ${projectId}:`, err)
-  }
+  await openSetupScript(ctx.setupService(), open, (msg) => log(`${msg} (project ${projectId})`))
 }

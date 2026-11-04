@@ -227,6 +227,8 @@ internal open class MdViewHybrid(
 
     override fun markdown(): String = source.toString()
 
+    override fun markdown(limit: Int): String = source.substring(0, limit.coerceIn(0, source.length))
+
     override fun html(): String {
         if (stale) {
             val out = projector.project(source.toString())

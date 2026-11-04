@@ -51,6 +51,22 @@ export function matchLegacyKiloOpenApi(input: Record<string, unknown>) {
   )
   if (limit) limit.schema = { type: "integer", minimum: 1, maximum: 50 }
 
+  const profileSummary = spec.components?.schemas?.SessionHostWorkspaceProfileSummary?.properties
+  if (profileSummary?.description) profileSummary.description = nullable(profileSummary.description)
+
+  const workspaceStatus = spec.components?.schemas?.SessionHostWorkspaceStatus?.properties
+  const compute = workspaceStatus?.compute?.properties
+  if (compute?.estimatedSleepAt) compute.estimatedSleepAt = nullable(compute.estimatedSleepAt)
+  const wake = workspaceStatus?.wakeOnInput?.properties
+  if (wake?.blockedReason) wake.blockedReason = nullable(wake.blockedReason)
+  const billing = workspaceStatus?.billing?.properties
+  for (const field of ["payer", "sku", "blocked", "intervalStartedAt", "rate"] as const) {
+    const value = billing?.[field]
+    if (billing && value) billing[field] = nullable(value)
+  }
+  const deletion = workspaceStatus?.deletion?.properties
+  if (deletion?.startedAt) deletion.startedAt = nullable(deletion.startedAt)
+
   const body = spec.paths?.["/kilo/organization"]?.post?.requestBody?.content?.["application/json"]?.schema
   const ref = body?.$ref?.replace("#/components/schemas/", "")
   const props = ref ? spec.components?.schemas?.[ref]?.properties : body?.properties

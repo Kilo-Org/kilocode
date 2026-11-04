@@ -1,4 +1,5 @@
 package ai.kilocode.client.settings.marketplace
+import ai.kilocode.client.ui.list.section
 
 import ai.kilocode.client.app.KiloAgentBehaviorService
 import ai.kilocode.client.app.KiloAppService
@@ -10,7 +11,7 @@ import ai.kilocode.client.testing.FakeAgentBehaviorRpcApi
 import ai.kilocode.client.testing.FakeAppRpcApi
 import ai.kilocode.client.testing.FakeMarketplaceRpcApi
 import ai.kilocode.client.ui.FilledBadgeIcon
-import ai.kilocode.client.ui.list.ActiveListItem
+import ai.kilocode.client.ui.active.ActiveItem
 import ai.kilocode.client.util.edtWait
 import ai.kilocode.client.ui.list.activeListCellBounds
 import ai.kilocode.rpc.dto.ConfigDto
@@ -804,12 +805,12 @@ class MarketplaceSettingsUiTest : BasePlatformTestCase() {
         }
     }
 
-    private fun rows(panel: MarketplaceSettingsUi): List<ActiveListItem> {
+    private fun rows(panel: MarketplaceSettingsUi): List<ActiveItem> {
         val model = list(panel).model
         return (0 until model.size).map { model.getElementAt(it) }
     }
 
-    private fun list(panel: MarketplaceSettingsUi) = components(panel).filterIsInstance<JBList<ActiveListItem>>().single()
+    private fun list(panel: MarketplaceSettingsUi) = components(panel).filterIsInstance<JBList<ActiveItem>>().single()
 
     private fun chip(panel: MarketplaceSettingsUi, label: String) =
         components(panel).filterIsInstance<FilterChip>().single { it.label == label }
@@ -875,7 +876,7 @@ class MarketplaceSettingsUiTest : BasePlatformTestCase() {
 
     private fun center(rect: java.awt.Rectangle) = Point(rect.x + rect.width / 2, rect.y + rect.height / 2)
 
-    private fun click(list: JBList<ActiveListItem>, point: Point) {
+    private fun click(list: JBList<ActiveItem>, point: Point) {
         fire(list, mouse(list, MouseEvent.MOUSE_PRESSED, point))
         fire(list, mouse(list, MouseEvent.MOUSE_RELEASED, point))
     }

@@ -189,6 +189,48 @@ class PromptRailLayoutTest : SessionUiTestBase() {
         assertTrue("a click on a tick must still navigate", jumped)
     }
 
+    fun `test hovering between ticks keeps the navigator active across the whole band`() {
+        showMessages()
+        fillTranscript(12)
+        ui.setSize(900, 600)
+        layoutAll(ui)
+        ui.promptRail.refresh()
+        find<SessionRootPanel>(ui).overlay.doLayout()
+        drainScroll()
+        val rail = find<PromptRail>(ui)
+        val got = mutableListOf<PromptRailEntry?>()
+        rail.onHover = { got.add(it) }
+
+        val first = rail.tickCenterY(0)
+        val last = rail.tickCenterY(rail.entries().lastIndex)
+        for (y in first..last) {
+            assertTrue(rail.contains(rail.width / 2, y))
+            rail.dispatchEvent(java.awt.event.MouseEvent(
+                rail,
+                java.awt.event.MouseEvent.MOUSE_MOVED,
+                0L,
+                0,
+                rail.width / 2,
+                y,
+                0,
+                false,
+            ))
+        }
+
+        assertEquals("every tick must be hovered without an exit in the gaps", rail.entries(), got)
+        rail.dispatchEvent(java.awt.event.MouseEvent(
+            rail,
+            java.awt.event.MouseEvent.MOUSE_EXITED,
+            0L,
+            0,
+            -1,
+            last,
+            0,
+            false,
+        ))
+        assertNull("leaving the rail must still dismiss the navigator", got.last())
+    }
+
     private fun pressAt(rail: PromptRail, y: Int) = java.awt.event.MouseEvent(
         rail,
         java.awt.event.MouseEvent.MOUSE_PRESSED,

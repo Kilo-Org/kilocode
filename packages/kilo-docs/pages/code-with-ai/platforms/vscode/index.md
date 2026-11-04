@@ -68,6 +68,10 @@ Send a message while Kilo is working to queue it for processing in order. To rev
 
 After stopping a response, leave the input empty and click **Continue** to resume the interrupted turn with its original model and agent, without adding another user message. Continue starts a new model request; it does not undo tool actions already performed and is not available for completed responses.
 
+## Multi-root workspaces
+
+Kilo chat uses only the first folder in your VS Code workspace. When a window has more than one folder, the empty chat shows a dismissible hint naming the folder that chat uses, so a multi-root Explorer does not suggest the other folders are in scope. Dismissing the hint is remembered until the first folder changes. To work in a different folder, open it in its own VS Code window or add it as a project in [Agent Manager](/docs/automate/agent-manager-projects). Explicit project hosts, including Agent Manager, do not show the hint.
+
 ## Shared Settings
 
 Settings apply across extension surfaces, including the sidebar and Agent Manager. The standalone CLI uses the same `~/.config/kilo/kilo.jsonc` (global) and `./kilo.jsonc` (project) files when used directly.

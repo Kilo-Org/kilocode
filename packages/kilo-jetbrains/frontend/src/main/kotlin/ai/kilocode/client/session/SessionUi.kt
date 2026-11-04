@@ -48,6 +48,7 @@ import ai.kilocode.client.session.ui.prompt.SessionIssue
 import ai.kilocode.client.session.ui.prompt.SessionIssueAction
 import ai.kilocode.client.session.ui.prompt.SlashAction
 import ai.kilocode.client.session.ui.prompt.mentionParts as promptMentionParts
+import ai.kilocode.client.session.ui.prompt.fileMentions
 import ai.kilocode.client.session.ui.rail.PromptRailController
 import ai.kilocode.client.session.settings.ApprovalReasonVisibilityListener
 import ai.kilocode.client.session.settings.TranscriptDisplayListener
@@ -100,6 +101,7 @@ import ai.kilocode.rpc.dto.GhAvailability
 import ai.kilocode.rpc.dto.ModelLimitDto
 import ai.kilocode.rpc.dto.DiffFileDto
 import ai.kilocode.rpc.dto.PromptDto
+import ai.kilocode.rpc.dto.HostedSystemEventDto
 import ai.kilocode.rpc.dto.PromptPartDto
 import ai.kilocode.rpc.dto.SessionRevertDto
 import ai.kilocode.rpc.dto.WorktreePrDto
@@ -178,6 +180,8 @@ class SessionUi(
     private val workspace = workspace
     private var opening = ref != null
     private var pending = false
+    private var preparation: String? = null
+    private var preparationFailure: HostedSystemEventDto? = null
     private var loaded: Boolean? = null
     private var revertDraft: Pair<String, List<PromptAttachment>>? = null
     private var pendingRollback: String? = null
@@ -318,11 +322,13 @@ class SessionUi(
 
     internal fun currentStyle() = style
 
-    override val pr: WorktreePrDto? get() = branch?.pr
+    private val hosted: Boolean get() = manager?.hosted == true
 
-    override val share: String? get() = controller.model.session?.share?.url
+    override val pr: WorktreePrDto? get() = if (hosted) null else branch?.pr
 
-    override val git: Boolean get() = branch.let { it != null && it.availability != GhAvailability.GIT_MISSING }
+    override val share: String? get() = if (hosted) null else controller.model.session?.share?.url
+
+    override val git: Boolean get() = !hosted && branch.let { it != null && it.availability != GhAvailability.GIT_MISSING }
 
     override val auto: Boolean get() = controller.autoApprove
 
@@ -344,6 +350,7 @@ class SessionUi(
     private val boardSurface: Boolean
         get() {
             if (readonly) return false
+            if (manager?.supportsBoard == false) return false
             if (controller.id == null) return false
             // Defensive: a still-unimported cloud ref already fails the id check above, because
             // controller.id only resolves for a local ref. Once imported the session *is* local and
@@ -381,16 +388,19 @@ class SessionUi(
 
     @RequiresEdt
     override fun compare() {
+        if (manager?.hosted == true) return
         openBranchChanges()
     }
 
     @RequiresEdt
     override fun startShare() {
+        if (manager?.supportsShare == false) return
         controller.setShare(true) { url, err -> onShareResult(url, err, on = true) }
     }
 
     @RequiresEdt
     override fun stopShare() {
+        if (manager?.supportsShare == false) return
         controller.setShare(false) { _, err -> onShareResult(null, err, on = false) }
     }
 
@@ -488,6 +498,20 @@ class SessionUi(
                 IdeFocusManager.getInstance(project).requestFocusInProject(target, project)
             }
         }, ModalityState.defaultModalityState())
+    }
+
+    @RequiresEdt
+    internal fun setHostedPreparation(event: HostedSystemEventDto?) {
+        if (!hosted) return
+        val failure = event?.takeIf { it.cloudStatus == "error" || it.action == "attempt_failed" || it.failure != null }
+        val text = if (failure != null) null else event?.message?.takeIf { it.isNotBlank() }
+            ?: event?.let { KiloBundle.message("hosted.workspace.preparing") }
+        if (preparation == text && preparationFailure == failure) return
+        preparation = text
+        preparationFailure = failure
+        messageBody.progress.setPreparation(text, failure)
+        scroll.show(body(controller.model.state))
+        messageBody.revalidate()
     }
 
     internal fun setModalContent(content: JComponent?, maxW: (() -> Int)? = null, focus: (() -> JComponent)? = null) {
@@ -597,6 +621,7 @@ class SessionUi(
             controller,
             this,
             readonly,
+            compactVisible = { manager?.supportsCompact != false },
             boardVisible = { board },
             onShowBoard = ::showBoard,
             onOpenSubagent = ::openSubagent,
@@ -645,6 +670,7 @@ class SessionUi(
             actions = slashActions(),
             mentions = mentionActions(),
             scope = cs,
+            files = !hosted,
         )
         prompt = PromptPanel(
             project = project,
@@ -656,6 +682,7 @@ class SessionUi(
             completion = completion,
             cs = cs,
             hostedInEditorTab = manager?.hostedInEditorTab == true,
+            files = !hosted,
         )
         connection = ConnectionPanel(this, controller)
         // The banner reports a broken session, so it owns the pointer where it sits: the transcript
@@ -822,7 +849,7 @@ class SessionUi(
 
                 is SessionControllerEvent.ViewChanged.ShowProgress -> {
                     empty = null
-                    scroll.show(progressBody)
+                    scroll.show(if (preparation != null || preparationFailure != null) messageBody else progressBody)
                 }
 
                 is SessionControllerEvent.ViewChanged.ShowEmpty -> {
@@ -830,7 +857,7 @@ class SessionUi(
                         ?: EmptySessionPanel(this, controller, controller.recents(), timers = timers)
                     empty = panel
                     panel.setBranch(branch)
-                    scroll.show(panel.view)
+                    scroll.show(if (preparation != null || preparationFailure != null) messageBody else panel.view)
                 }
 
                 is SessionControllerEvent.ViewChanged.ShowSession -> {
@@ -887,6 +914,9 @@ class SessionUi(
                     // Covers opening a session with an existing board, and this session's own first
                     // board post; a subagent's post is caught by the busy->idle probe instead.
                     refreshBoardIfEmpty()
+                    if (event is SessionModelEvent.HistoryLoaded || event is SessionModelEvent.Cleared) {
+                        onStateChanged(controller.model.state)
+                    }
                 }
 
                 is SessionModelEvent.QueueChanged -> Unit
@@ -1016,6 +1046,7 @@ class SessionUi(
     }
 
     private fun body(state: SessionState): JPanel {
+        if (preparation != null || preparationFailure != null) return messageBody
         if (controller.model.showSession) return messageBody
         if (state is SessionState.Retry || state is SessionState.Offline) return progressBody
         if (state is SessionState.Loading) return progressBody
@@ -1051,27 +1082,38 @@ class SessionUi(
     private fun sendPrompt(text: String, files: List<PromptPartDto>, select: PromptSelection? = null) {
         if (readonly) return
         if (text.isBlank() && files.isEmpty()) return
-        prompt.clear()
         val follow = scroll.following()
         val action = completion.clientAction(text)
         if (action != null) {
+            prompt.clear()
             action.action()
             scroll.followBottom(follow)
             return
         }
         val command = completion.serverCommand(text)
         if (command != null) {
+            prompt.clear()
             controller.command(command.first, command.second, files)
             scroll.followBottom(follow)
             return
         }
         cs.launch(Dispatchers.Main) {
+            val mentioned = hosted && files.isEmpty() && withContext(Dispatchers.IO) { hostedFileMentions(text) }
+            if (hosted && (files.isNotEmpty() || mentioned)) {
+                com.intellij.notification.Notification(
+                    "Kilo Code",
+                    KiloBundle.message("hosted.prompt.textOnly"),
+                    com.intellij.notification.NotificationType.WARNING,
+                ).notify(project)
+                return@launch
+            }
+            prompt.clear()
             // Only the prompt path uses editor context; gather after the command branches so slash
             // commands and client actions don't pay the editor-context cost or hit its failure modes.
             // Ignore-file VFS reads suspend on Dispatchers.IO before returning to the EDT.
-            val editor = EditorContextGatherer.gather(project, workspace.directory)
+            val editor = if (hosted) null else EditorContextGatherer.gather(project, workspace.directory)
             if (disposed || project.isDisposed) return@launch
-            val allFiles = files + editor.selection
+            val allFiles = files + editor?.selection.orEmpty()
             LOG.debug {
                 val parts = buildList {
                     text.takeIf { it.isNotBlank() }?.let { add(PromptPartDto(type = "text", text = it)) }
@@ -1079,7 +1121,7 @@ class SessionUi(
                 }
                 val agent = controller.model.agent ?: "none"
                 val model = controller.model.model ?: "none"
-                "${ChatLogSummary.prompt(PromptDto(parts = parts, editorContext = editor.context))} agent=$agent model=$model ready=${controller.ready}"
+                "${ChatLogSummary.prompt(PromptDto(parts = parts, editorContext = editor?.context))} agent=$agent model=$model ready=${controller.ready}"
             }
             // Baseline the user-message ids for this send. onStateChanged uses it to tell a prompt
             // that failed before the server ever created its message (restore the draft) apart from a
@@ -1087,7 +1129,7 @@ class SessionUi(
             // the transcript already). A queued send baselines the in-flight turn's message, so that
             // turn cannot be mistaken for confirmation of this one.
             pendingSend = userMessageIds()
-            controller.prompt(text, allFiles, editor.context, select)
+            controller.prompt(text, allFiles, editor?.context, select)
             scroll.followBottom(follow)
         }
     }
@@ -1114,6 +1156,7 @@ class SessionUi(
 
     @RequiresEdt
     private fun revert(id: String) {
+        if (manager?.supportsRevert == false) return
         pendingRollback = id
         pendingRedo = null
         controller.revert(id)
@@ -1121,6 +1164,7 @@ class SessionUi(
 
     @RequiresEdt
     private fun redo() {
+        if (manager?.supportsRevert == false) return
         pendingRedo = controller.model.revert()?.messageID
         pendingRollback = null
         controller.redo()
@@ -1196,12 +1240,14 @@ class SessionUi(
             SlashAction.MODELS to { prompt.model.open() },
             SlashAction.AGENTS to { prompt.mode.open() },
             SlashAction.VARIANT to { prompt.reasoning.open() },
-            SlashAction.COMPACT to { controller.compact() },
+            SlashAction.COMPACT to { if (manager?.supportsCompact != false) controller.compact() },
             SlashAction.RELOAD to { reloadCoreSettings(workspaces, workspace.directory, project, "slash_command") },
             SlashAction.SETTINGS to { openKiloSettings() },
             SlashAction.HELP to { BrowserUtil.browse(KiloDocs.BASE) },
         )
-        return SlashAction.ALL.map { spec -> bind(spec, fns.getValue(spec)) }
+        return SlashAction.ALL
+            .filter { !hosted || it != SlashAction.VARIANT && it != SlashAction.COMPACT }
+            .map { spec -> bind(spec, fns.getValue(spec)) }
     }
 
     private fun bind(spec: SlashAction.Spec, action: () -> Unit) = SlashAction(
@@ -1214,7 +1260,7 @@ class SessionUi(
         },
     )
 
-    private fun mentionActions(): List<MentionAction> = MentionAction.ALL.map(::bind)
+    private fun mentionActions(): List<MentionAction> = if (hosted) emptyList() else MentionAction.ALL.map(::bind)
 
     private fun bind(spec: MentionAction.Spec) = MentionAction(
         spec.name,
@@ -1224,6 +1270,7 @@ class SessionUi(
     )
 
     private suspend fun mentionParts(text: String): List<PromptPartDto> {
+        if (hosted) return emptyList()
         val names = MentionAction.ALL.mapTo(mutableSetOf()) { it.name }
         return promptMentionParts(
             text = text,
@@ -1234,11 +1281,20 @@ class SessionUi(
         )
     }
 
+    private suspend fun hostedFileMentions(text: String): Boolean {
+        val reserved = MentionAction.ALL.mapTo(mutableSetOf()) { it.name }
+        val mentions = fileMentions(text, emptySet())
+        if (mentions.any { it.value in reserved }) return true
+        return mentions.filter { it.value !in reserved }
+            .any { workspaces.files(workspace.directory, it.value).isNotEmpty() }
+    }
+
     private fun openUrl(url: String) {
         BrowserUtil.browse(url)
     }
 
     private fun openInlineDiff(files: List<DiffFileDto>, title: String, key: String) {
+        if (manager?.localFiles == false) return
         val dir = controller.sessionDirectory
         cs.launch {
             val branch = workspaces.branchName(dir)
@@ -1364,7 +1420,7 @@ class SessionUi(
      */
     @RequiresEdt
     private fun openBranchChanges() {
-        if (disposed || project.isDisposed) return
+        if (hosted || disposed || project.isDisposed) return
         refreshBranchChanges()
         openBranchDiff()
     }
@@ -1396,7 +1452,7 @@ class SessionUi(
      * null PR, so the dock keeps working while no `gh` process is spawned.
      */
     private fun refreshBranch() {
-        if (readonly) return
+        if (readonly || hosted) return
         branchJob?.cancel()
         val github = KiloPluginSettings.getGithub()
         branchJob = cs.launch {
@@ -1468,6 +1524,7 @@ class SessionUi(
     }
 
     private fun openAttachment(messageId: String, item: FileAttachment) {
+        if (manager?.localFiles == false) return
         val url = item.url.takeIf { it.isNotBlank() } ?: run {
             LOG.info("kind=attachment-open skipped=true reason=blank-url message=$messageId part=${item.id} name=${attachmentName(item)} mime=${item.mime}")
             return

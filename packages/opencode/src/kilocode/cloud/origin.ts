@@ -2,6 +2,7 @@ import { CloudError } from "./errors"
 
 export const DEFAULT_CLOUD_AGENT_ORIGIN = "https://cloud-agent-next.kilosessions.ai"
 export const DEFAULT_WEB_APP_ORIGIN = "https://kilo.ai"
+export const DEFAULT_KILO_API_ORIGIN = "https://api.kilo.ai"
 
 export type ServiceOrigin = string
 export type CloudEnvironment = Readonly<Record<string, string | undefined>>
@@ -46,6 +47,17 @@ export function resolveCloudAgentOrigin(env: CloudEnvironment = process.env) {
 export function resolveWebAppOrigin(env: CloudEnvironment = process.env) {
   const value = env.KILO_WEB_APP_URL
   return parseServiceOrigin(value ?? DEFAULT_WEB_APP_ORIGIN, {
+    allowHttpLoopback: value !== undefined,
+  })
+}
+
+/**
+ * Kilo API base used for authenticated account surfaces such as profile
+ * summaries. Kept separate from the Cloud Agent worker origin.
+ */
+export function resolveKiloApiOrigin(env: CloudEnvironment = process.env) {
+  const value = env.KILO_API_URL
+  return parseServiceOrigin(value ?? DEFAULT_KILO_API_ORIGIN, {
     allowHttpLoopback: value !== undefined,
   })
 }

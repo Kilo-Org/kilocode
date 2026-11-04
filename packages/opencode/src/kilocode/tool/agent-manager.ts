@@ -25,6 +25,10 @@ const Task = Schema.Struct({
   branchName: Schema.optional(Schema.NullOr(Schema.String)).annotate({
     description: "Git branch name seed for worktree mode",
   }),
+  baseBranch: Schema.optional(Schema.NullOr(Schema.String)).annotate({
+    description:
+      "Existing branch that the new worktree starts from, like the base branch in the New Worktree dialog. Use the branch name without a remote prefix, for example 'main' or 'release/1.0'. Worktree mode only. Omit to use the configured default base branch or the repository default branch.",
+  }),
   agent: Schema.optional(Schema.NullOr(Schema.String)).annotate({
     description:
       "Optional agent name to run the new session as (e.g. a custom agent configured with mode 'all'). Must be a selectable primary agent: not a mode: 'subagent' agent and not an internal/hidden one. Omit to use the workspace default agent; prefer the name the user asked for. A rejected name lists the selectable agents.",
@@ -156,11 +160,16 @@ export const Params = Schema.Union([
     tasks: Schema.Union([StartParams.fields.tasks, Schema.fromJsonString(StartParams.fields.tasks)]),
   }).check(
     Schema.makeFilter((params) => {
-      if (params.worktreeID == null) return undefined
+      if (params.worktreeID == null) {
+        if (params.mode !== "worktree" && params.tasks.some((task) => task.baseBranch != null))
+          return "baseBranch requires mode worktree. Local sessions start in an existing directory and cannot choose a base branch."
+        return undefined
+      }
       if (params.mode !== "local")
         return `worktreeID ${JSON.stringify(params.worktreeID)} requires mode local. To start a new worktree, omit worktreeID or send JSON null`
       if (params.versions === true) return "worktreeID cannot be combined with versions true"
       if (params.tasks.some((task) => task.branchName != null)) return "worktreeID cannot be combined with branchName"
+      if (params.tasks.some((task) => task.baseBranch != null)) return "worktreeID cannot be combined with baseBranch"
       return undefined
     }),
   ),
@@ -230,6 +239,7 @@ function select(
     ...(task.prompt != null ? { prompt: task.prompt } : {}),
     ...(task.name != null ? { name: task.name } : {}),
     ...(task.branchName != null ? { branchName: task.branchName } : {}),
+    ...(task.baseBranch != null ? { baseBranch: task.baseBranch } : {}),
     ...(task.agent?.trim() ? { agent: task.agent.trim() } : {}),
   }
   if (!task.model?.trim() && !task.variant?.trim()) {
