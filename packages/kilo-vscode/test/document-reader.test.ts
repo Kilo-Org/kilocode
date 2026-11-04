@@ -116,6 +116,38 @@ describe("readDocument", () => {
     })
   })
 
+  it("resolves a bare plan file name from the plan directory", () => {
+    withHome(() => {
+      const root = workspace()
+      const dir = plansDir()
+      fs.mkdirSync(dir, { recursive: true })
+      const plan = path.join(dir, "42-bare.md")
+      fs.writeFileSync(plan, "# Bare plan\n")
+
+      expect(readDocument(root, "42-bare.md")).toEqual({
+        file: fs.realpathSync(plan),
+        kind: "text",
+        content: "# Bare plan\n",
+      })
+    })
+  })
+
+  it("prefers a worktree file over a plan file with the same name", () => {
+    withHome(() => {
+      const root = workspace()
+      const dir = plansDir()
+      fs.mkdirSync(dir, { recursive: true })
+      fs.writeFileSync(path.join(dir, "42-same.md"), "# Plan copy\n")
+      fs.writeFileSync(path.join(root, "42-same.md"), "# Worktree copy\n")
+
+      expect(readDocument(root, "42-same.md")).toEqual({
+        file: "42-same.md",
+        kind: "text",
+        content: "# Worktree copy\n",
+      })
+    })
+  })
+
   it("keeps rejecting files outside both the worktree and the plan directory", () => {
     withHome(() => {
       const root = workspace()

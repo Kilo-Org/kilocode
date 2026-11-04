@@ -45,6 +45,7 @@ test("an existing inline file becomes a link and opens for its session", async (
   const link = await waitFor(() => card.host.querySelector<HTMLElement>("code.file-link[data-file-path]"))
 
   expect(link.getAttribute("data-file-path")).toBe("README.md")
+  expect(link.classList.contains("document-link")).toBe(true)
   expect(card.host.querySelector("code.file-link-candidate")).toBeNull()
   link.click()
   expect(opened).toEqual([{ path: "README.md", line: undefined, sessionID: "ses_links" }])
@@ -70,12 +71,15 @@ test("a markdown file link opens only after worktree validation", async () => {
     const found = [...card.host.querySelectorAll<HTMLAnchorElement>("a.file-path-link")]
     return found.length === 2 ? found : undefined
   })
+  await waitFor(() => links[0]!.classList.contains("document-link"))
   links[0]!.click()
   await waitFor(() => opened.length === 1)
   links[1]!.click()
   await new Promise((resolve) => setTimeout(resolve, 50))
 
   expect(opened).toEqual([{ path: "README.md", line: undefined, sessionID: "ses_links" }])
+  expect(links[0]!.classList.contains("document-link")).toBe(true)
+  expect(links[1]!.classList.contains("document-link")).toBe(false)
 })
 
 test("a plan document gets the document glyph class", async () => {

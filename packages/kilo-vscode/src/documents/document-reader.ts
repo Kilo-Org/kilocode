@@ -66,7 +66,21 @@ export function resolveDocumentPath(
   try {
     const base = fs.realpathSync(root)
     const target = path.isAbsolute(file) ? file : path.resolve(root, file)
-    const resolved = fs.realpathSync(target)
+    // A bare plan name belongs to the plan directory when the worktree has no such file, because the model
+    // often links the plan by its file name after writing it there.
+    const candidates =
+      !path.isAbsolute(file) && !file.includes("/") && !file.includes("\\")
+        ? [target, path.join(plansDir(), file)]
+        : [target]
+    const resolved = candidates.reduce<string | undefined>((found, candidate) => {
+      if (found) return found
+      try {
+        return fs.realpathSync(candidate)
+      } catch {
+        return undefined
+      }
+    }, undefined)
+    if (!resolved) return { error: "Document could not be read." }
     const inside = isInsideWorktree(base, resolved)
     if (!inside && !isPlan(resolved)) return { error: "Document is outside the worktree." }
 

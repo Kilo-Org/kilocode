@@ -22,7 +22,7 @@ import type {
 } from "@opencode/client"
 import { getDirectory, getFilename } from "@opencode/util/path"
 import { checksum } from "@opencode/util/encode"
-import { extractFilePathFromHref } from "@opencode-ai/ui/file-path"
+import { documentKind, extractFilePathFromHref } from "@opencode-ai/ui/file-path"
 import { checkFile, type ValidateFilesFn } from "../file-link-validator"
 import { useClipboard } from "../context/clipboard"
 import { useDialog } from "../context/dialog"
@@ -160,7 +160,7 @@ function TextContent(props: {
   // so a MutationObserver drives validation; a settled path is probed once, and validation is shared across rows.
   const promote = (el: HTMLElement, path: string, exists: boolean) => {
     if (!exists) {
-      el.classList.remove("file-link-candidate", "file-link", "plan-document-link")
+      el.classList.remove("file-link-candidate", "file-link", "document-link", "plan-document-link")
       el.removeAttribute("data-file-candidate")
       el.removeAttribute("data-file-path")
       el.removeAttribute("data-file-kind")
@@ -174,14 +174,19 @@ function TextContent(props: {
     el.classList.add("file-link")
     el.setAttribute("data-file-path", clean)
     el.removeAttribute("data-file-candidate")
-    el.classList.remove("plan-document-link")
+    el.classList.remove("document-link", "plan-document-link")
     el.removeAttribute("data-file-kind")
     el.removeAttribute("title")
-    if (/(?:^|\/)(?:plans?|\.plans?)\/.*\.md$/i.test(clean)) {
-      el.classList.add("plan-document-link")
-      el.setAttribute("data-file-kind", "plan")
-      el.setAttribute("title", i18n.t("ui.patch.action.plan"))
-    }
+    markDocument(el, clean)
+  }
+
+  // A Markdown file reference reads as a document; a plan reference also gets the localized kind hint.
+  const markDocument = (el: HTMLElement, clean: string) => {
+    const kind = documentKind(clean)
+    if (!kind) return
+    el.classList.add(kind === "plan" ? "plan-document-link" : "document-link")
+    el.setAttribute("data-file-kind", kind)
+    if (kind === "plan") el.setAttribute("title", i18n.t("ui.patch.action.plan"))
   }
 
   const dispatch = (el: HTMLElement, path: string) => {
