@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test"
-import { broker, destination, openPage, takeBroker } from "../src/browser"
+import { broker, destination, granted, openPage, takeBroker } from "../src/browser"
 
 // The tool's only host is the extension-owned browser broker, so this test serves the two routes it uses instead of
 // mocking the client. That keeps the request shape, the bearer token and the decoded state under test.
@@ -31,6 +31,7 @@ describe("browser_open broker endpoint", () => {
     expect(process.env.KILO_BROWSER_BROKER_URL).toBeUndefined()
     expect(process.env.KILO_BROWSER_BROKER_TOKEN).toBeUndefined()
     expect(broker()).toBeUndefined()
+    expect(takeBroker()).toEqual({ url: new URL("http://127.0.0.1:41234"), token: "secret" })
   })
 
   test("is absent without both values", () => {
@@ -51,6 +52,24 @@ describe("browser_open broker endpoint", () => {
   ])("rejects %s", (value) => {
     configure(value)
     expect(broker()).toBeUndefined()
+  })
+})
+
+describe("browser_open permission", () => {
+  const origin = ["navigate:https://example.com"]
+
+  test("asks despite the built-in allow-all rule", () => {
+    expect(granted(origin, [{ action: "*", resource: "*", effect: "allow" }])).toBe(false)
+  })
+
+  test("allows a configured level or a saved origin approval", () => {
+    expect(granted(origin, [{ action: "browser_open", resource: "*", effect: "allow" }])).toBe(true)
+    expect(granted(origin, [{ action: "browser_open", resource: origin[0], effect: "allow" }])).toBe(true)
+  })
+
+  test("asks for an origin the saved approval does not name", () => {
+    const saved = [{ action: "browser_open", resource: "navigate:https://kilo.ai", effect: "allow" as const }]
+    expect(granted(origin, saved)).toBe(false)
   })
 })
 

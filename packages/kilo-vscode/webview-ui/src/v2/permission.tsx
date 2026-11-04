@@ -17,6 +17,7 @@ const LABELS: Record<string, string> = {
   subagent: "task",
   todowrite: "todoWrite",
   external_directory: "externalDirectory",
+  browser_open: "browserOpen",
 }
 
 export function PermissionDock(props: {

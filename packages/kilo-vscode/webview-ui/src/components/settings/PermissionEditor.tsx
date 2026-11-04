@@ -128,11 +128,12 @@ const GROUPED_TOOLS: GroupedToolDef[] = [
   },
 ]
 
-// There is no browser_open or doom_loop action. These rows have no exception editor, so changing a level replaces
-// every rule for the action, including any per-resource rules the user added elsewhere.
+// There is no doom_loop action. These rows have no exception editor, so changing a level replaces every rule for the
+// action, including any per-origin approvals saved for browser_open.
 const TRAILING_TOOLS: ToolDef[] = [
   { action: "websearch", title: "Websearch", descriptionKey: "settings.autoApprove.tool.websearch" },
   { action: "webfetch", title: "Webfetch", descriptionKey: "settings.autoApprove.tool.webfetch" },
+  { action: "browser_open", title: "Integrated Browser", descriptionKey: "settings.autoApprove.tool.browser_open" },
 ]
 
 /** Controlled editor over a ruleset. The v2 config layer is in the default export below. */

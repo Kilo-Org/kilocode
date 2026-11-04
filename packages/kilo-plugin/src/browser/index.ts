@@ -1,7 +1,9 @@
 // The `browser_open` tool. The Integrated Browser is an extension-host feature: the host runs one Chromium for the
 // sidebar tab and the Agent Manager panel, and serves the open operation on loopback with a per-run token. The host
 // passes the endpoint to the server through the environment, so the tool exists only while the feature is enabled.
+import { Wildcard } from "@opencode/core/util/wildcard"
 import { define } from "@opencode/plugin/effect/plugin"
+import type { Permission } from "@opencode/schema/permission"
 import { Tool } from "@opencode/schema/tool"
 import { Effect, Schema } from "effect"
 import DESCRIPTION from "./browser-open.txt"
@@ -53,16 +55,34 @@ export function broker(): { url: URL; token: string } | undefined {
   return { url, token }
 }
 
+const captured: { endpoint?: { url: URL; token: string } } = {}
+
 /**
  * Read the broker endpoint once and remove it from the process environment. Tools and MCP servers inherit this
  * environment, so leaving the token there would let a shell command drive the browser without the permission prompt.
+ * The plugin effect runs again for each Location and after each plugin reload, so later calls return the captured
+ * endpoint.
  */
 export function takeBroker() {
   const endpoint = broker()
-  if (!endpoint) return
+  if (!endpoint) return captured.endpoint
+  captured.endpoint = endpoint
   delete process.env.KILO_BROWSER_BROKER_URL
   delete process.env.KILO_BROWSER_BROKER_TOKEN
   return endpoint
+}
+
+/**
+ * Opening a page asks by default. The built-in policy allows every tool, so only an allow rule that names
+ * `browser_open` (a config level or a saved "Always allow" for an origin) grants it without a prompt.
+ */
+export function granted(resources: ReadonlyArray<string>, rules: Permission.Ruleset): boolean {
+  return resources.every((resource) => {
+    const rule = rules.findLast(
+      (item) => Wildcard.match("browser_open", item.action) && Wildcard.match(resource, item.resource),
+    )
+    return rule?.action === "browser_open" && rule.effect === "allow"
+  })
 }
 
 /**
@@ -119,6 +139,14 @@ export const KiloBrowserToolPlugin = define({
     const endpoint = takeBroker()
     if (!endpoint) return
     const directory = ctx.location.directory
+
+    yield* ctx.permission.hook("evaluate", (event) =>
+      Effect.sync(() => {
+        if (event.action !== "browser_open" || event.effect !== "allow") return
+        // Unattended work settles this ask with its own rules.
+        if (!granted(event.resources, event.rules ?? [])) event.effect = "ask"
+      }),
+    )
 
     yield* ctx.tool.transform((editor) =>
       editor.add({
