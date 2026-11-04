@@ -7,7 +7,7 @@ import { PluginHooks } from "@opencode/core/plugin/hooks"
 import { Provider } from "@opencode/core/provider"
 import { Schedule } from "@opencode/core/schedule"
 import { Tool } from "@opencode/core/tool"
-import { assemble, list, permissionInstructions, storedRecord } from "../src/flow"
+import { assemble, flowPermissions, list, permissionInstructions, storedRecord } from "../src/flow"
 import { KiloFlowPlugin } from "../src/flow"
 import { KiloFlowRpc } from "@opencode/schema/kilocode/flow"
 import { Session } from "@opencode/schema/session"
@@ -207,6 +207,24 @@ test("describes the exact unattended permission contract to a Flow executor", ()
   )
 })
 
+test("expands requested permissions into reviewed capabilities", () => {
+  expect(
+    flowPermissions([
+      { action: "shell", resource: "git status *" },
+      { action: "edit", resource: "/workspace/status.txt" },
+      { action: "edit", resource: "/workspace/report.txt" },
+      { action: "external_directory", resource: "/home/user/*" },
+    ]),
+  ).toEqual([
+    { action: "read", resource: "*" },
+    { action: "glob", resource: "*" },
+    { action: "grep", resource: "*" },
+    { action: "shell", resource: "*" },
+    { action: "edit", resource: "*" },
+    { action: "external_directory", resource: "/home/user/*" },
+  ])
+})
+
 test("missing Sessions and malformed stored records are isolated", () => {
   const missing = schedule({ id: "sch_orphan", sessionID: "ses_missing" })
   const output = assemble({ records: [], schedules: [missing], sessions: new Map(), warnings: [], observedAt: 100 })
@@ -284,6 +302,11 @@ it.live("registers and executes the managed Flow creation and run tools", () =>
       return yield* Effect.die("Expected flow_create to return a managed Flow")
     expect(created.output).toMatchObject({
       reference: { type: "managed", scheduleID: expect.any(String) },
+      permissions: [
+        { action: "read", resource: "*" },
+        { action: "glob", resource: "*" },
+        { action: "grep", resource: "*" },
+      ],
       status: "active",
       nextRunAt: expect.any(Number),
     })

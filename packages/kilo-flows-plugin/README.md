@@ -10,6 +10,11 @@ user to approve the Flow's explicit unattended permission allowlist. Runs deny e
 allowlist instead of waiting for an interactive response. If a scheduled occurrence arrives while the same Flow has a
 starting or running execution, the occurrence is recorded as skipped and is not queued.
 
+New Flows automatically include repository-local `read`, `glob`, and `grep` access. Creation asks for any additional
+tool capabilities and shows the combined allowlist for approval. Additional actions are capability-scoped with resource
+`*`; `external_directory` remains a bounded path grant. Existing Flow records keep their previously approved
+permissions and can be recreated to adopt the broader policy.
+
 The scheduler runs inside Kilo's managed background service. It survives closing the TUI, but this prototype does not
 install an operating-system startup service: after a reboot, a Kilo client must start or discover the background
 service before scheduled Flows can fire. A standalone development process schedules only while that process is open.

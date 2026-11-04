@@ -151,7 +151,13 @@ test("lists local schedules and creates managed definitions through the Kilo Flo
             )
             expect(new Set(output.flows.map((flow) => flow.context.projectID)).size).toBe(2)
 
-            const permissions = [{ action: "shell", resource: "git status *" }]
+            const requestedPermissions = [{ action: "shell", resource: "git status *" }]
+            const permissions = [
+              { action: "read", resource: "*" },
+              { action: "glob", resource: "*" },
+              { action: "grep", resource: "*" },
+              { action: "shell", resource: "*" },
+            ]
             const creating = rpc.create(
               {
                 sourceSessionID: first.id,
@@ -159,7 +165,7 @@ test("lists local schedules and creates managed definitions through the Kilo Flo
                 when: { cron: "0 10 * * 1", tz: "America/Detroit" },
                 prompt: "Review and update dependencies",
                 worktree: "new",
-                permissions,
+                permissions: requestedPermissions,
               },
               { location: { directory: nested } },
             )
@@ -171,8 +177,9 @@ test("lists local schedules and creates managed definitions through the Kilo Flo
               expect.objectContaining({
                 sessionID: first.id,
                 action: "flow",
-                resources: ["shell: git status *"],
-                message: "Approve this Flow's unattended permissions:\n- shell: git status *",
+                resources: ["read: *", "glob: *", "grep: *", "shell: *"],
+                message:
+                  "Approve this Flow's unattended permissions:\n- read: *\n- glob: *\n- grep: *\n- shell: *",
                 metadata: {
                   "kilocode.flow": expect.objectContaining({
                     name: "Weekly maintenance",
@@ -208,10 +215,11 @@ test("lists local schedules and creates managed definitions through the Kilo Flo
               nextRunAt: expect.any(Number),
               health: { status: "healthy" },
             })
-            const creatingToolFree = rpc.create(
+            const baselinePermissions = permissions.slice(0, 3)
+            const creatingReadOnly = rpc.create(
               {
                 sourceSessionID: first.id,
-                name: "Tool-free reminder",
+                name: "Read-only reminder",
                 when: { in: "10 millis" },
                 prompt: "Summarize the existing context without tools",
                 worktree: "reuse",
@@ -219,31 +227,48 @@ test("lists local schedules and creates managed definitions through the Kilo Flo
               },
               { location: { directory: nested } },
             )
-            const toolFreeApproval = await eventually(
+            const readOnlyApproval = await eventually(
               () => client.permission.request.list({ location: { directory: nested } }),
-              (result) => result.data.some((request) => request.resources.includes("no unattended tool permissions")),
+              (result) =>
+                result.data.some(
+                  (request) =>
+                    request.resources.length === baselinePermissions.length &&
+                    baselinePermissions.every((permission) =>
+                      request.resources.includes(`${permission.action}: ${permission.resource}`),
+                    ),
+                ),
             ).then((result) =>
-              result.data.find((request) => request.resources.includes("no unattended tool permissions")),
+              result.data.find(
+                (request) =>
+                  request.resources.length === baselinePermissions.length &&
+                  baselinePermissions.every((permission) =>
+                    request.resources.includes(`${permission.action}: ${permission.resource}`),
+                  ),
+              ),
             )
-            if (!toolFreeApproval) throw new Error("Expected a tool-free Flow permission request")
+            if (!readOnlyApproval) throw new Error("Expected a read-only Flow permission request")
             await client.permission.reply({
-              sessionID: toolFreeApproval.sessionID,
-              requestID: toolFreeApproval.id,
+              sessionID: readOnlyApproval.sessionID,
+              requestID: readOnlyApproval.id,
               decision: "once",
             })
-            const toolFree = await creatingToolFree
-            expect(toolFree).toMatchObject({ name: "Tool-free reminder", permissions: [], status: "active" })
+            const readOnly = await creatingReadOnly
+            expect(readOnly).toMatchObject({
+              name: "Read-only reminder",
+              permissions: baselinePermissions,
+              status: "active",
+            })
             await Bun.sleep(20)
             await Effect.runPromise(schedules.tick)
             expect((await client.message.list({ sessionID: first.id })).data).toEqual([])
             expect((await rpc.list({}, { location: { directory: nested } })).flows).toContainEqual(
               expect.objectContaining({
-                name: "Tool-free reminder",
+                name: "Read-only reminder",
                 status: "completed",
                 lastOutcome: expect.stringMatching(/^(fired|succeeded|failed)$/),
                 latestRun: expect.objectContaining({
                   status: expect.stringMatching(/^(running|succeeded|failed)$/),
-                  scheduled: expect.objectContaining({ scheduleID: toolFree.reference.scheduleID }),
+                  scheduled: expect.objectContaining({ scheduleID: readOnly.reference.scheduleID }),
                 }),
               }),
             )
@@ -263,8 +288,8 @@ test("lists local schedules and creates managed definitions through the Kilo Flo
             )
             const rejection = await eventually(
               () => client.permission.request.list({ location: { directory: nested } }),
-              (result) => result.data.some((request) => request.resources.includes("shell: rm *")),
-            ).then((result) => result.data.find((request) => request.resources.includes("shell: rm *")))
+              (result) => result.data.some((request) => request.resources.includes("shell: *")),
+            ).then((result) => result.data.find((request) => request.resources.includes("shell: *")))
             if (!rejection) throw new Error("Expected a rejectable Flow permission request")
             await client.permission.reply({
               sessionID: rejection.sessionID,
@@ -300,7 +325,7 @@ test("lists local schedules and creates managed definitions through the Kilo Flo
               },
               permissions: [
                 { action: "*", resource: "*", effect: "deny" },
-                { action: "shell", resource: "git status *", effect: "allow" },
+                ...permissions.map((permission) => ({ ...permission, effect: "allow" })),
               ],
             })
             const withRun = await rpc.list({}, { location: { directory: nested } })

@@ -17,6 +17,11 @@ const runPrefix = "flow-run:v1:"
 const metadataKey = "kilocode.flow"
 const permissionAction = "flow"
 const scheduledPromptPrefix = "[Kilo managed Flow "
+const baselinePermissions = [
+  { action: "read", resource: "*" },
+  { action: "glob", resource: "*" },
+  { action: "grep", resource: "*" },
+] satisfies KiloFlowRpc.PermissionGrant[]
 const decodeRecord = Schema.decodeUnknownOption(
   Schema.Union([KiloFlowRpc.Record, Schema.fromJsonString(KiloFlowRpc.Record)]),
 )
@@ -106,7 +111,7 @@ export const KiloFlowPlugin = define({
         editor.add({
           name: "flow_create",
           description:
-            "Create a scheduled managed local Flow from this Session. Before calling, derive the complete minimum unattended permission allowlist from the Flow prompt. Resources are wildcard patterns matched against actual tool requests, not descriptions of intent. Shell grants must cover each possible parsed command and stable invocation form: prefer a bounded executable family such as `git *` when flags or working-directory arguments may vary, and include helper commands such as `date *` or `echo *` when needed. File writes use edit. Paths outside the Flow directory also need external_directory with a directory wildcard such as `/home/user/*`; an exact directory path does not cover its contents. Avoid unrestricted `shell: *`. Use an empty list only when the prompt needs no tools. The user reviews the exact allowlist before the Flow is stored. The executor receives this same allowlist as a constraint. The Flow appears in /periodic, runs automatically on its schedule, and can also be started manually with flow_run.",
+            "Create a scheduled managed local Flow from this Session. Every new Flow receives repository-local read, glob, and grep access. Before calling, identify every additional tool action the Flow may need, such as edit, shell, webfetch, or an MCP tool. Additional grants are capability-scoped: each requested action is approved with resource `*`, so the run is not coupled to inputs predicted during creation. external_directory is the exception and must remain a bounded directory wildcard such as `/home/user/*`. The user reviews the final baseline plus additional capabilities before the Flow is stored. The executor receives this same allowlist as a constraint. Use an empty list when the baseline is sufficient. The Flow appears in /periodic, runs automatically on its schedule, and can also be started manually with flow_run.",
           input: KiloFlowRpc.CreateRequest,
           output: KiloFlowRpc.Info,
           options: { codemode: true },
@@ -125,7 +130,7 @@ export const KiloFlowPlugin = define({
             ).pipe(
               Effect.map((flow) => ({
                 output: flow,
-                content: `Created scheduled Flow ${flow.name} with ${permissionSummary(input.permissions)}. Start an extra run manually with flow_run using Flow ID ${flow.reference.type === "managed" ? flow.reference.flowID : "unknown"}.`,
+                content: `Created scheduled Flow ${flow.name} with ${permissionSummary(flow.permissions ?? [])}. Start an extra run manually with flow_run using Flow ID ${flow.reference.type === "managed" ? flow.reference.flowID : "unknown"}.`,
               })),
               Effect.mapError(
                 (error) => new Tool.Error({ message: error instanceof Error ? error.message : String(error), error }),
@@ -190,6 +195,7 @@ export function create(
         new Error(`external_directory permission ${external.resource} must use a bounded wildcard below a directory`),
       )
     const now = Date.now()
+    const permissions = flowPermissions(input.permissions)
     const record: KiloFlowRpc.Record = {
       version: 1,
       id: KiloFlowRpc.ID.create(),
@@ -214,22 +220,20 @@ export function create(
         agent,
       },
       prompt: input.prompt,
-      permissions: input.permissions,
+      permissions,
       time: { created: now, updated: now },
     }
     yield* ctx.permission.assert({
       action: permissionAction,
       resources:
-        input.permissions.length === 0
-          ? ["no unattended tool permissions"]
-          : input.permissions.map((permission) => `${permission.action}: ${permission.resource}`),
+        permissions.map((permission) => `${permission.action}: ${permission.resource}`),
       sessionID: session.id,
       agent,
       metadata: {
         [metadataKey]: {
           flowID: record.id,
           name: record.name,
-          permissions: input.permissions,
+          permissions,
           unattended: true,
         },
       },
@@ -764,6 +768,18 @@ function runKey(run: Pick<KiloFlowRpc.Run, "flowID" | "id">) {
 function permissionSummary(permissions: readonly KiloFlowRpc.PermissionGrant[]) {
   if (permissions.length === 0) return "no unattended permissions"
   return `unattended permissions ${permissions.map((permission) => `${permission.action}: ${permission.resource}`).join(", ")}`
+}
+
+export function flowPermissions(permissions: readonly KiloFlowRpc.PermissionGrant[]) {
+  return [
+    ...baselinePermissions,
+    ...permissions.map((permission) =>
+      permission.action === "external_directory" ? permission : { ...permission, resource: "*" },
+    ),
+  ].filter(
+    (permission, index, all) =>
+      all.findIndex((item) => item.action === permission.action && item.resource === permission.resource) === index,
+  )
 }
 
 export function permissionInstructions(permissions: readonly KiloFlowRpc.PermissionGrant[]) {
