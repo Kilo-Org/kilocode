@@ -70,6 +70,13 @@ describe("browser_open destination", () => {
     },
   )
 
+  test("rejects the loopback URLs the broker refuses", () => {
+    expect(destination("https://localhost/")).toHaveProperty("error")
+    expect(destination("https://127.0.0.1/")).toHaveProperty("error")
+    expect(destination("https://app.localhost/")).toHaveProperty("error")
+    expect(destination("http://localhost:0/")).toHaveProperty("error")
+  })
+
   test("rejects credentials", () => {
     expect(destination("https://user:pass@example.com/")).toHaveProperty("error")
     expect(destination("http://user:pass@localhost:3000/")).toHaveProperty("error")

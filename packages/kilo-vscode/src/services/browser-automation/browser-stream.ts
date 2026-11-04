@@ -64,7 +64,15 @@ function text(value: string, limit: number): boolean {
 }
 
 function dimensions(value: string): { width: number; height: number } | undefined {
-  const data = Buffer.from(value, "base64")
+  // The JPEG frame header is near the start of a Chromium screencast frame. Decode a prefix first so a frame does not
+  // allocate its full payload on this thread, and fall back to the whole frame when the header is not in the prefix.
+  const prefix = value.length > 65536 ? value.slice(0, 65536) : value
+  const size = scan(Buffer.from(prefix, "base64"))
+  if (size || prefix.length === value.length) return size
+  return scan(Buffer.from(value, "base64"))
+}
+
+function scan(data: Buffer): { width: number; height: number } | undefined {
   if (data.length < 4 || data.readUInt16BE(0) !== 0xffd8) return
   for (let offset = 2; offset + 4 <= data.length; ) {
     const marker = data.readUInt16BE(offset)

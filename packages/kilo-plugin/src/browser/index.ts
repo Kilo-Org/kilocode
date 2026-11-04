@@ -63,10 +63,14 @@ export function destination(value: string): { url: URL } | { error: string } {
   // Dev servers print 0.0.0.0 when they listen on every interface. It is not a destination, so use localhost,
   // the origin that dev tools usually configure.
   if (url.protocol === "http:" && url.hostname === "0.0.0.0") url.hostname = "localhost"
+  if (url.port === "0") return { error: "Browser URLs must not use port 0." }
   if (url.username || url.password) return { error: "Browser URLs must not contain credentials." }
   const local = url.protocol === "http:" && ["localhost", "127.0.0.1"].includes(url.hostname)
   if (!local && url.protocol !== "https:") {
     return { error: "Use public HTTPS or HTTP localhost without credentials." }
+  }
+  if (url.protocol === "https:" && (url.hostname === "localhost" || url.hostname.endsWith(".localhost") || url.hostname === "127.0.0.1" || url.hostname === "[::1]")) {
+    return { error: "Use HTTP for loopback pages; HTTPS destinations must be public." }
   }
   return { url }
 }

@@ -1,4 +1,3 @@
-import { lookup } from "node:dns/promises"
 import { isIP } from "node:net"
 import { domainToASCII } from "node:url"
 import ipaddr from "ipaddr.js"
@@ -57,12 +56,4 @@ export function isPublicAddress(input: string) {
   // Unknown network-specific NAT64 prefixes are indistinguishable from ordinary global IPv6 addresses.
   // Identifying them requires trusted prefix configuration; range() rejects the recognized transition ranges.
   return address.range() === "unicast"
-}
-
-export async function resolveDestination(dest: Destination) {
-  const addresses = await lookup(dest.host, { all: true, verbatim: true })
-  if (addresses.length === 0 || addresses.some((entry) => !isPublicAddress(entry.address))) {
-    throw new Error(`Browser denied a non-public address for ${dest.authority}`)
-  }
-  return addresses[0]
 }
