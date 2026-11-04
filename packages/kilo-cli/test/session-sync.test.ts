@@ -1,4 +1,4 @@
-import { expect } from "bun:test"
+import { expect, spyOn } from "bun:test"
 import { KiloSessionSync } from "@kilocode/kilo-plugin"
 import { Context, Effect, Fiber, Layer, Schedule, Schema } from "effect"
 import { eq, sql } from "drizzle-orm"
@@ -40,7 +40,7 @@ import { SessionSync } from "../src/session-sync"
 import { Store } from "../src/session-sync/store"
 import { Assets } from "../src/session-sync/assets"
 import { SessionSyncOutput } from "../src/session-sync/tool-output"
-import { type Receipt, Kind, digest, limits, parse } from "../src/session-sync/protocol"
+import { type Receipt, type Tenant, Kind, digest, limits, parse } from "../src/session-sync/protocol"
 
 const it = testEffect(Layer.empty)
 const id = Session.ID.make("ses_sync_consumer")
@@ -72,11 +72,13 @@ const peer = () => {
     {
       sourceID: string
       creatorID: string
+      tenant: Tenant
       position: number
       lastReceipt: Receipt | null
       entities: Map<string, Schema.Json>
     }
   >()
+  const grants = new Map<string, { userID: string; tenant: Tenant }>()
   const blobs = new Map<string, Uint8Array>()
   const bodies: string[] = []
   const blobRequests: string[] = []
@@ -131,11 +133,15 @@ const peer = () => {
           await gate.promise
         }
         const userID = token.slice("fixture:".length).split("#")[0] ?? ""
+        const { organizationID } = await request.json() as { organizationID?: string }
+        const tenant: Tenant = organizationID ? { type: "organization", id: organizationID } : { type: "user", id: userID }
+        const grantToken = `grant:${userID}:${organizationID ?? "personal"}`
+        grants.set(grantToken, { userID, tenant })
         return Response.json({
           version: 1,
-          token: `grant:${userID}`,
+          token: grantToken,
           expiresAt: new Date(Date.now() + 600_000).toISOString(),
-          tenant: { type: "user", id: userID },
+          tenant,
           userID,
         })
       }
@@ -150,7 +156,8 @@ const peer = () => {
           }),
           { status: 503, headers: { "Retry-After": "120" } },
         )
-      if (!token.startsWith("grant:")) return error("invalid_grant", 401)
+      const grant = grants.get(token)
+      if (!grant) return error("invalid_grant", 401)
       if (control.mode === "hang") {
         entered.resolve()
         await gate.promise
@@ -159,7 +166,7 @@ const peer = () => {
       if (!match?.[1]) return error("not_found", 404)
       const sessionID = decodeURIComponent(match[1])
       if (request.method === "GET" && !match[2]) control.stateReads++
-      const userID = token.slice("grant:".length)
+      const userID = grant.userID
       if (match[2] === "batches") {
         const body = await request.text()
         bodies.push(body)
@@ -239,7 +246,7 @@ const peer = () => {
         const value = Schema.decodeUnknownSync(Schema.Struct({ version: Schema.Literal(1), sourceID: Schema.String }))(
           await request.json(),
         )
-        state = { sourceID: value.sourceID, creatorID: userID, position: 0, lastReceipt: null, entities: new Map() }
+        state = { sourceID: value.sourceID, creatorID: userID, tenant: grant.tenant, position: 0, lastReceipt: null, entities: new Map() }
         states.set(sessionID, state)
       }
       if (!state) return error("session_not_found", 404)
@@ -248,7 +255,7 @@ const peer = () => {
           version: 1,
           sessionID,
           deleted: true,
-          tenant: { type: "user", id: state.creatorID },
+          tenant: state.tenant,
           deletedAt: Date.now(),
         })
       const response = control.stateRetryAfter
@@ -260,7 +267,7 @@ const peer = () => {
         version: 1,
         sessionID,
         deleted: false,
-        tenant: { type: "user", id: state.creatorID },
+        tenant: state.tenant,
         creatorID: state.creatorID,
         sourceID: control.sourceConflict ? randomUUID() : state.sourceID,
         position: state.position,
@@ -325,7 +332,10 @@ const fixture = Effect.gen(function* () {
   return { root, backend, directory: path.join(root, "workspace"), excluded: path.join(root, "excluded") }
 })
 
-const boot = (f: { root: string; backend: { url: string } }, options: { background?: boolean; flushTimeout?: number } = {}) =>
+const boot = (
+  f: { root: string; backend: { url: string } },
+  options: { background?: boolean; flushTimeout?: number; organizationID?: string | null } = {},
+) =>
   Effect.gen(function* () {
     const { root } = f
     const context = yield* Layer.build(
@@ -345,7 +355,7 @@ const boot = (f: { root: string; backend: { url: string } }, options: { backgrou
         SessionSync.node.replace(
           makeGlobalNode({
             service: KiloSessionSync.Service,
-            layer: Layer.effect(KiloSessionSync.Service, SessionSync.make({ background: false, destination: f.backend.url, ...options })),
+            layer: Layer.effect(KiloSessionSync.Service, SessionSync.make({ background: false, destination: f.backend.url, organizationID: null, ...options })),
             deps: [Database.node, Bus.node, SessionProjector.node, Credential.node, Global.node],
           }),
         ),
@@ -853,6 +863,7 @@ for (const setting of ["signed-out", "off"] as const)
         _tag: "Failure", failure: { code: "sync_disabled" },
       })
       expect(f.backend.control.sessionRequests).toBe(0)
+      expect(f.backend.control.exchanges).toBe(0)
       expect(f.backend.states.size).toBe(0)
     }),
   )
@@ -922,6 +933,143 @@ it.live("global jsonc session_sync overrides json and workspace settings cannot 
   }),
 )
 
+it.live("construction returns while persisted sign-in exchange is hanging and local work can continue", () =>
+  Effect.gen(function* () {
+    const f = yield* fixture
+    yield* Effect.scoped(Effect.gen(function* () {
+      const s = yield* boot(f)
+      yield* seed(s.db, f.directory)
+      yield* signIn(s.credentials)
+    }))
+    yield* Effect.acquireRelease(
+      Effect.sync(() => { f.backend.control.hangExchange = true }),
+      () => Effect.sync(() => {
+        f.backend.control.hangExchange = false
+        f.backend.gate.resolve()
+      }),
+    )
+    const constructed = yield* boot(f, { background: true }).pipe(Effect.timeoutOption(3000))
+    expect(constructed._tag).toBe("Some")
+    if (constructed._tag === "None") return yield* Effect.die("Construction waited for credential exchange")
+    const s = constructed.value
+    expect(yield* Effect.promise(() => f.backend.entered.promise).pipe(Effect.timeoutOption(3000))).toMatchObject({
+      _tag: "Some",
+    })
+    yield* writeMessage(s.db, "local execution is not waiting for the destination")
+    expect(yield* s.db.get(sql`SELECT id FROM session_message WHERE id=${messageID}`)).toEqual({ id: messageID })
+    expect(f.backend.control.sessionRequests).toBe(0)
+    f.backend.control.hangExchange = false
+    f.backend.gate.resolve()
+    expect(yield* s.sync.status({ directory: f.directory })).toMatchObject({ enabled: true, userID: "alice" })
+  }),
+)
+
+it.live("retryable enrollment exchange preserves pinned capture and drains writes after recovery", () =>
+  Effect.gen(function* () {
+    const f = yield* fixture
+    const s = yield* boot(f)
+    yield* signIn(s.credentials)
+    yield* seed(s.db, f.directory)
+    yield* enableAfterNativeWrite(s, { directory: f.directory, organizationID: null })
+    expect((yield* s.sync.flush({ directory: f.directory })).pending).toBe(0)
+    const pinned = yield* Store.consent(s.db, f.directory)
+    yield* writeMessage(s.db, "frozen before exchange outage")
+    f.backend.control.mode = "offline"
+    yield* s.sync.flush({ directory: f.directory })
+    const packet = yield* Store.packet(s.db, id)
+    expect(packet).toBeDefined()
+    const requests = f.backend.control.sessionRequests
+    f.backend.control.mode = "online"
+    f.backend.control.exchangeFailures = true
+    yield* signIn(s.credentials, "alice#outage")
+    expect(yield* s.sync.status({ directory: f.directory })).toMatchObject({
+      enabled: true, error: { code: "auth_unavailable" },
+    })
+    yield* writeMessage(s.db, "captured while credential exchange is unavailable")
+    expect((yield* Store.dirty(s.db, id)).find((row) => row.kind === "message" && row.id === messageID)?.position)
+      .toBeGreaterThan(packet!.through)
+    expect(yield* Store.packet(s.db, id)).toEqual(packet)
+    expect(yield* Store.consent(s.db, f.directory)).toMatchObject({
+      enabled: 1, source_id: pinned!.source_id, user_id: pinned!.user_id,
+      destination: pinned!.destination, tenant_type: pinned!.tenant_type, tenant_id: pinned!.tenant_id,
+    })
+    expect(f.backend.control.sessionRequests).toBe(requests)
+    f.backend.control.exchangeFailures = false
+    yield* signIn(s.credentials, "alice#recovered")
+    expect(yield* s.sync.flush({ directory: f.directory })).toMatchObject({ enabled: true, pending: 0 })
+    expect(f.backend.states.get(id)?.entities.get(`message/${messageID}`)).toMatchObject({
+      message: { text: "captured while credential exchange is unavailable" },
+    })
+    expect(yield* Store.packet(s.db, id)).toBeUndefined()
+  }),
+)
+
+it.live("a workspace enrollment failure does not pollute a healthy workspace status or flush", () =>
+  Effect.gen(function* () {
+    const f = yield* fixture
+    const s = yield* boot(f)
+    yield* signIn(s.credentials)
+    yield* seed(s.db, f.directory)
+    const other = Session.ID.make("ses_bad_workspace")
+    yield* seed(s.db, f.excluded, other)
+    yield* s.sync.status({ directory: f.directory })
+    yield* s.db.run(sql`UPDATE _kilo_sync_consent SET user_id='bob',tenant_id='bob' WHERE directory=${f.excluded}`)
+    expect(yield* s.sync.status({ directory: f.excluded })).toMatchObject({
+      enabled: false, error: { code: "account_changed" },
+    })
+    const healthy = yield* s.sync.status({ directory: f.directory })
+    expect(healthy.enabled).toBe(true)
+    expect(healthy.error).toBeUndefined()
+    yield* writeMessage(s.db, "healthy workspace still uploads")
+    yield* writeMessage(s.db, "bad workspace remains paused", other, 0, SessionMessage.ID.make("msg_bad_workspace"))
+    expect(yield* Store.dirty(s.db, other)).toEqual([])
+    const flushed = yield* s.sync.flush({ directory: f.directory })
+    expect(flushed).toMatchObject({ enabled: true, pending: 0 })
+    expect(flushed.error).toBeUndefined()
+    expect(f.backend.states.get(id)?.entities.get(`message/${messageID}`)).toMatchObject({
+      message: { text: "healthy workspace still uploads" },
+    })
+    expect(f.backend.states.has(other)).toBe(false)
+  }),
+)
+
+it.live("automatic enrollment follows the active organization and switching it pauses the pinned workspace", () =>
+  Effect.gen(function* () {
+    const f = yield* fixture
+    const s = yield* boot(f, { organizationID: "org-first" })
+    yield* signIn(s.credentials)
+    yield* seed(s.db, f.directory)
+    expect(yield* s.sync.status({ directory: f.directory })).toMatchObject({
+      enabled: true, tenant: { type: "organization", id: "org-first" }, userID: "alice",
+    })
+    yield* writeMessage(s.db, "organization history")
+    expect((yield* s.sync.flush({ directory: f.directory })).pending).toBe(0)
+    const pinned = yield* Store.consent(s.db, f.directory)
+    expect(pinned?.organization_id).toBe("org-first")
+    const requests = f.backend.control.sessionRequests
+    yield* s.sync.organization({ directory: f.directory, organizationID: "org-second" })
+    expect(yield* s.sync.status({ directory: f.directory })).toMatchObject({
+      enabled: false, tenant: { type: "organization", id: "org-first" }, error: { code: "account_changed" },
+    })
+    yield* writeMessage(s.db, "must not capture under a different organization")
+    expect(yield* Store.dirty(s.db, id)).toEqual([])
+    expect(yield* s.sync.flush({ directory: f.directory })).toMatchObject({ error: { code: "account_changed" } })
+    expect(f.backend.control.sessionRequests).toBe(requests)
+    expect(yield* Store.consent(s.db, f.directory)).toMatchObject({
+      source_id: pinned!.source_id, organization_id: "org-first", tenant_id: "org-first",
+    })
+    yield* s.sync.organization({ directory: f.directory, organizationID: "org-first" })
+    expect(yield* s.sync.status({ directory: f.directory })).toMatchObject({
+      enabled: true, tenant: { type: "organization", id: "org-first" },
+    })
+    yield* writeMessage(s.db, "organization capture resumes")
+    expect((yield* s.sync.flush({ directory: f.directory })).pending).toBe(0)
+    expect(f.backend.states.get(id)?.entities.get(`message/${messageID}`)).toMatchObject({
+      message: { text: "organization capture resumes" },
+    })
+  }),
+)
+
 it.live("startup automatically enrolls every native local workspace for persisted sign in", () =>
   Effect.gen(function* () {
     const f = yield* fixture
@@ -932,6 +1080,7 @@ it.live("startup automatically enrolls every native local workspace for persiste
       yield* signIn(s.credentials)
     }))
     const s = yield* boot(f)
+    yield* s.sync.status({ directory: f.directory })
     for (const directory of [f.directory, f.excluded])
       expect(yield* Store.consent(s.db, directory)).toMatchObject({
         enabled: 1, destination: f.backend.url, user_id: "alice",
@@ -960,13 +1109,41 @@ it.live("idle passes skip reconciliation and a newly journaled directory still e
     yield* Effect.promise(() => mkdir(child))
     const added = Session.ID.make("ses_journaled_new_directory")
     yield* seed(s.db, child, added)
-    yield* Store.reconcile(s.db, f.directory, true)
+    yield* s.sync.status({ directory: f.directory })
+    expect((yield* s.db.get<{ value: number }>("SELECT value FROM _test_reconcile_count"))!.value).toBeGreaterThan(0)
+    expect(f.backend.states.has(added)).toBe(false)
     yield* writeMessage(s.db, "new directory is included", added, 0, SessionMessage.ID.make("msg_new_directory"))
     expect((yield* s.sync.flush({ directory: f.directory })).pending).toBe(0)
     expect(f.backend.states.get(added)?.entities.get("message/msg_new_directory")).toMatchObject({
       message: { text: "new directory is included" },
     })
     expect((yield* s.db.get<{ value: number }>("SELECT value FROM _test_reconcile_count"))!.value).toBeGreaterThan(0)
+  }),
+)
+
+it.live("idle discovery skips other workspace realpaths until the native journal changes", () =>
+  Effect.gen(function* () {
+    const f = yield* fixture
+    const s = yield* boot(f)
+    yield* signIn(s.credentials)
+    yield* seed(s.db, f.directory)
+    yield* seed(s.db, f.excluded, Session.ID.make("ses_discovery_other"))
+    yield* s.sync.status({ directory: f.directory })
+    yield* s.sync.status({ directory: f.directory })
+    const canonical = Store.canonical
+    let scans = 0
+    yield* Effect.acquireRelease(
+      Effect.sync(() => spyOn(Store, "canonical").mockImplementation((directory) => {
+        if (directory === (storedAbsolutePath(f.excluded) ?? f.excluded)) scans++
+        return canonical(directory)
+      })),
+      (probe) => Effect.sync(() => probe.mockRestore()),
+    )
+    for (let index = 0; index < 3; index++) yield* s.sync.flush({ directory: f.directory })
+    expect(scans).toBe(0)
+    yield* seed(s.db, f.excluded, Session.ID.make("ses_discovery_added"))
+    yield* s.sync.status({ directory: f.directory })
+    expect(scans).toBeGreaterThan(0)
   }),
 )
 
@@ -1412,6 +1589,7 @@ it.live("restart completes an enrolled-but-incomplete bootstrap and commits its 
       }),
     )
     const s = yield* boot(f)
+    yield* s.sync.status({ directory: f.directory })
     expect((yield* Store.sessions(s.db, f.directory))[0]?.bootstrap_complete).toBe(1)
     expect((yield* Store.dirty(s.db, id)).find((row) => row.kind === "message")?.value).toContain(
       "history predating consent",
@@ -1474,6 +1652,42 @@ it.live("reimport of a locally deleted identity pauses visibly and preserves the
     expect(f.backend.bodies.length).toBe(requests)
     expect(f.backend.states.get(id)?.entities.get(`message/${messageID}`)).toMatchObject({
       message: { text: "original cloud history" },
+    })
+  }),
+)
+
+it.live("identity reuse while paused stays visible without journaling paused changes", () =>
+  Effect.gen(function* () {
+    const f = yield* fixture
+    const s = yield* boot(f)
+    yield* signIn(s.credentials)
+    yield* seed(s.db, f.directory)
+    yield* enableAfterNativeWrite(s, { directory: f.directory, organizationID: null })
+    yield* writeMessage(s.db, "acknowledged original identity")
+    expect((yield* s.sync.flush({ directory: f.directory })).pending).toBe(0)
+    const original = (yield* Store.sessions(s.db, f.directory))[0]
+    const requests = f.backend.control.sessionRequests
+    yield* s.sync.disable({ directory: f.directory })
+    yield* s.bus.publish(SessionEvent.Deleted, { sessionID: id })
+    expect(yield* Store.dirty(s.db, id)).toEqual([])
+    yield* seed(s.db, f.directory)
+    yield* writeMessage(s.db, "reimported while capture is paused")
+    yield* s.db.update(SessionTable).set({ title: "paused identity reuse" }).where(eq(SessionTable.id, id)).run()
+    expect(yield* Store.dirty(s.db, id)).toEqual([])
+    expect(yield* s.sync.status({ directory: f.directory })).toMatchObject({
+      enabled: false, pending: 0, error: { code: "identity_conflict" },
+    })
+    expect(yield* s.sync.enable({ directory: f.directory, organizationID: null })).toMatchObject({
+      enabled: true, error: { code: "identity_conflict" },
+    })
+    expect(yield* s.sync.flush({ directory: f.directory })).toMatchObject({ error: { code: "identity_conflict" } })
+    expect(yield* Store.dirty(s.db, id)).toEqual([])
+    expect((yield* Store.sessions(s.db, f.directory))[0]).toMatchObject({
+      acknowledged: original!.acknowledged, local_deleted: 1, error_code: "identity_conflict",
+    })
+    expect(f.backend.control.sessionRequests).toBe(requests)
+    expect(f.backend.states.get(id)?.entities.get(`message/${messageID}`)).toMatchObject({
+      message: { text: "acknowledged original identity" },
     })
   }),
 )
@@ -1759,6 +1973,68 @@ it.live(
       expect((yield* Store.sessions(s.db, f.directory))[0]?.source_id).toBe(enabled.sourceID)
       expect(f.backend.states.get(id)?.creatorID).toBe("bob")
     }),
+)
+
+it.live("concurrent enables for separate workspaces both succeed without a disable", () =>
+  Effect.gen(function* () {
+    const f = yield* fixture
+    const s = yield* boot(f)
+    yield* signIn(s.credentials)
+    yield* seed(s.db, f.directory)
+    const other = Session.ID.make("ses_concurrent_enable")
+    yield* seed(s.db, f.excluded, other)
+    yield* Effect.acquireRelease(
+      Effect.sync(() => { f.backend.control.hangExchange = true }),
+      () => Effect.sync(() => {
+        f.backend.control.hangExchange = false
+        f.backend.gate.resolve()
+      }),
+    )
+    const enabling = yield* Effect.all(
+      [f.directory, f.excluded].map((directory) =>
+        s.sync.enable({ directory, organizationID: null }).pipe(Effect.result),
+      ),
+      { concurrency: "unbounded" },
+    ).pipe(Effect.forkScoped)
+    yield* Effect.promise(() => f.backend.entered.promise)
+    f.backend.control.hangExchange = false
+    f.backend.gate.resolve()
+    const results = yield* Fiber.join(enabling)
+    expect(results).toHaveLength(2)
+    for (const result of results)
+      expect(result).toMatchObject({ _tag: "Success", success: { enabled: true, userID: "alice" } })
+    for (const directory of [f.directory, f.excluded])
+      expect(yield* Store.consent(s.db, directory)).toMatchObject({ enabled: 1, user_id: "alice" })
+    yield* writeMessage(s.db, "first concurrent workspace")
+    yield* writeMessage(s.db, "second concurrent workspace", other, 0, SessionMessage.ID.make("msg_concurrent_enable"))
+    for (const directory of [f.directory, f.excluded])
+      expect((yield* s.sync.flush({ directory })).pending).toBe(0)
+    expect(f.backend.states.has(id)).toBe(true)
+    expect(f.backend.states.has(other)).toBe(true)
+  }),
+)
+
+it.live("disable from a nonexistent directory still pauses all capture and uploads globally", () =>
+  Effect.gen(function* () {
+    const f = yield* fixture
+    const s = yield* boot(f)
+    yield* signIn(s.credentials)
+    yield* seed(s.db, f.directory)
+    yield* enableAfterNativeWrite(s, { directory: f.directory, organizationID: null })
+    expect((yield* s.sync.flush({ directory: f.directory })).pending).toBe(0)
+    const requests = f.backend.control.sessionRequests
+    const exchanges = f.backend.control.exchanges
+    const missing = path.join(f.root, "deleted-workspace")
+    expect(yield* s.sync.disable({ directory: missing })).toMatchObject({ directory: missing, enabled: false })
+    yield* writeMessage(s.db, "must stay local after global disable from a deleted cwd")
+    expect(yield* Store.dirty(s.db, id)).toEqual([])
+    expect((yield* s.sync.status({ directory: f.directory })).enabled).toBe(false)
+    expect(yield* s.sync.flush({ directory: f.directory }).pipe(Effect.result)).toMatchObject({
+      _tag: "Failure", failure: { code: "sync_disabled" },
+    })
+    expect(f.backend.control.sessionRequests).toBe(requests)
+    expect(f.backend.control.exchanges).toBe(exchanges)
+  }),
 )
 
 it.live("disable fences an earlier enable awaiting first account exchange without waiting for the network", () =>

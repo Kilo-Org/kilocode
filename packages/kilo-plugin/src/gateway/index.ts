@@ -42,6 +42,7 @@ import { Clock, Duration, Effect, Fiber, Option, Schedule, Schema, Scope, Semaph
 import { GatewayOptions } from "./options.js"
 import { GatewayPrompt } from "./prompt.js"
 import { GatewayRouters } from "./routers.js"
+import { KiloSessionSync } from "../session-sync"
 
 // v2 adapter for the Kilo Gateway (issue #14991, PRs 1-3: login, teams, catalog authority, requests, and errors).
 // Kilo logic lives in @kilocode/gateway-core; this file maps it onto the v2 plugin API. The `kilocode.gateway` RPC
@@ -108,6 +109,8 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
   effect: Effect.fn(function* (ctx) {
     const bus = yield* Bus.Service
     const global = yield* Global.Service
+    const sessionSync = yield* Effect.serviceOption(KiloSessionSync.Service)
+    let reportedOrganization: string | null | undefined
     const configService = yield* Effect.serviceOption(Config.Service)
     if (Option.isNone(configService)) return yield* Effect.die(new Error("Kilo Gateway requires location config"))
     const config = configService.value
@@ -218,6 +221,13 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
       if (key && Option.isSome(legacy) && account && KiloAccount.compatible(account)) {
         if (Option.isNone(storedSelection)) yield* ctx.storage.set(key, legacy.value)
         yield* ctx.storage.remove("organization:env")
+      }
+      const activeOrganization = account
+        ? account.organizationID
+        : process.env.KILO_ORG_ID || organizationID || KiloServer.organizationFromUrl(base) || null
+      if (activeOrganization !== reportedOrganization && Option.isSome(sessionSync)) {
+        reportedOrganization = activeOrganization
+        yield* sessionSync.value.organization({ directory: ctx.location.directory, organizationID: activeOrganization })
       }
       return {
         server: KiloServer.apiBase(configuredServer),
@@ -394,6 +404,10 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
         }
         current = { ...current, organizationID }
         if (resolved.selectionKey) yield* ctx.storage.set(resolved.selectionKey, { organizationID })
+        if (Option.isSome(sessionSync)) {
+          reportedOrganization = organizationID
+          yield* sessionSync.value.organization({ directory: ctx.location.directory, organizationID })
+        }
         if (targetEpoch !== epoch) return
       }
       // Membership in another team does not permit a catalog from this selected scope.

@@ -11,6 +11,8 @@ interface EnableInput {
 }
 
 interface Interface {
+  /** Publish the gateway's locally resolved active tenant without waiting for sync transport. */
+  readonly organization: (input: { directory: string; organizationID: string | null }) => Effect.Effect<void>
   readonly enable: (input: EnableInput) => Effect.Effect<KiloSessionSyncRpc.Status, KiloSessionSyncRpc.Failure>
   readonly disable: (input: {
     directory: string
@@ -27,10 +29,6 @@ export const plugin = define<Service | Scope.Scope>({
   id: "kilocode.session-sync",
   effect: Effect.fn(function* (ctx) {
     const sync = yield* Service
-    // Enroll this location before its first native write; untouched existing history stays local.
-    yield* sync.status({ directory: ctx.location.directory }).pipe(
-      Effect.catch((error) => Effect.logWarning("Session synchronization enrollment is paused", { code: error.code })),
-    )
     yield* ctx.rpc
       .register(KiloSessionSyncRpc.Definition, {
         enable: (input, context) =>

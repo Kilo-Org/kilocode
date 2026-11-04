@@ -27,6 +27,24 @@ const boot =
   (env: Record<string, string>, body: (rpc: ReturnType<typeof gateway>, backend: ReturnType<typeof fixture>) => Promise<void>) =>
   async () => {
   using backend = fixture()
+  const syncOrganizations: (string | null)[] = []
+  const syncPeer = Bun.serve({
+    hostname: "127.0.0.1",
+    port: 0,
+    async fetch(request) {
+      if (new URL(request.url).pathname !== "/v1/auth/exchange") return new Response(null, { status: 404 })
+      const input = await request.json() as { organizationID?: string }
+      const organizationID = input.organizationID ?? null
+      syncOrganizations.push(organizationID)
+      return Response.json({
+        version: 1,
+        token: "sync-fixture-grant",
+        expiresAt: new Date(Date.now() + 300_000).toISOString(),
+        userID: "fixture",
+        tenant: organizationID ? { type: "organization", id: organizationID } : { type: "user", id: "fixture" },
+      })
+    },
+  })
   const directory = await mkdtemp(path.join(os.tmpdir(), "kilo-rpc-"))
   // Keep a developer's Kilo login out of the test.
   const variables = { ...signedOut, KILO_API_URL: backend.url, ...env }
@@ -50,7 +68,7 @@ const boot =
                 ...KiloHost.overrides,
                 SessionSync.node.replace(makeGlobalNode({
                   service: KiloSessionSync.Service,
-                  layer: Layer.effect(KiloSessionSync.Service, SessionSync.make({ background: false, destination: backend.url })),
+                  layer: Layer.effect(KiloSessionSync.Service, SessionSync.make({ background: false, destination: syncPeer.url.origin, organizationID: null })),
                   deps: [Database.node, Bus.node, SessionProjector.node, Credential.node, Global.node],
                 })),
               ],
@@ -69,11 +87,12 @@ const boot =
               { preconnect: fetch.preconnect },
             ),
           })
-          yield* Effect.promise(() => body(gateway(client, directory, backend.url), backend))
+          yield* Effect.promise(() => body(gateway(client, directory, backend.url, syncOrganizations), backend))
         }),
       ).pipe(Effect.provideService(References.MinimumLogLevel, "Warn")),
     )
   } finally {
+    syncPeer.stop(true)
     apply(previous)
     await rm(directory, { recursive: true, force: true })
   }
@@ -94,12 +113,13 @@ function apply(variables: Record<string, string | undefined>) {
   })
 }
 
-function gateway(client: ReturnType<typeof OpenCode.make>, directory: string, server: string) {
+function gateway(client: ReturnType<typeof OpenCode.make>, directory: string, server: string, syncOrganizations: (string | null)[]) {
   return {
     rpc: client.rpc(KiloGatewayRpc.Definition),
     sync: client.rpc(KiloSessionSyncRpc.Definition),
     options: { location: { directory } },
     server,
+    syncOrganizations,
   }
 }
 
@@ -147,6 +167,31 @@ test(
       organizationID: "first",
       server: gateway.server,
     })
+  }),
+  30_000,
+)
+
+test(
+  "automatic sync enrollment follows the Gateway selection and pauses on an organization switch",
+  boot({ KILO_API_KEY: "fixture-token" }, async (gateway) => {
+    const directory = gateway.options.location.directory
+    await gateway.rpc["organization.set"]({ organizationID: "first" }, gateway.options)
+    expect(await gateway.sync.status({ directory }, gateway.options)).toMatchObject({
+      enabled: true,
+      tenant: { type: "organization", id: "first" },
+    })
+    expect(gateway.syncOrganizations).toEqual(["first"])
+    await gateway.rpc["organization.set"]({ organizationID: "selected" }, gateway.options)
+    expect(await gateway.sync.status({ directory }, gateway.options)).toMatchObject({
+      enabled: false,
+      tenant: { type: "organization", id: "first" },
+      error: { code: "account_changed" },
+    })
+    expect(gateway.syncOrganizations).toEqual(["first"])
+    await gateway.rpc["organization.set"]({ organizationID: "first" }, gateway.options)
+    const resumed = await gateway.sync.status({ directory }, gateway.options)
+    expect(resumed.enabled).toBe(true)
+    expect(resumed.error).toBeUndefined()
   }),
   30_000,
 )

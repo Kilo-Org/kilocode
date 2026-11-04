@@ -38,6 +38,8 @@ Global `kilo2.json` is read first, then `kilo2.jsonc`; the last setting wins.
 Workspace config cannot enable or disable sync.
 Setting false or signing out pauses journal capture and network activity, keeping the cloud copy and pending local work.
 Set it back to true (or use `sync enable`) to resume; completed history from the pause is not recaptured.
+Transport and grant-refresh outages retain enrolled workspace capture and pending changes.
+Enrollment runs in the host background scope; starting the CLI never waits for the sync destination.
 Sync includes sessions you create or continue after sync is on; it does not bootstrap untouched existing history.
 The first native write to an existing session after enrollment enrolls that session and uploads its snapshot, including historical content.
 Untouched history stays local; there is no history-backfill command.
@@ -61,9 +63,9 @@ kilo2 sync disable /absolute/workspace
 `enable` and `disable` persist the global setting for all workspaces without deleting cloud state.
 Their optional directory selects the workspace whose status is returned; it does not narrow the setting.
 `status` and `flush` remain workspace operations.
-`enable --organization` selects an explicit organization for workspace enrollment;
-otherwise a new enrollment follows the active Kilo account and organization.
-Existing pinned enrollments are not reassigned by an account change.
+New enrollment follows the active Kilo account and organization resolved by the Gateway.
+`enable --organization` must match that active selection; select a different organization in the Gateway first.
+An account or organization switch pauses existing pinned workspaces instead of reassigning their history.
 `enable --allow-asset` records explicit exact-file legacy approvals for the selected workspace.
 
 Enrollment covers the canonical workspace and local descendant directories, not sibling clones or remote workspace drivers.

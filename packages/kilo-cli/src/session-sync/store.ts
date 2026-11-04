@@ -288,10 +288,11 @@ export const initialize = Effect.fn("SessionSync.Store.initialize")(function* (d
         WHERE d.alias=NEW.directory AND c.enabled=1 AND NEW.workspace_id IS NULL;
         ${
           event === "INSERT"
-            ? `UPDATE _kilo_sync_session SET position=position+1,error_code='identity_conflict',
+            ? `UPDATE _kilo_sync_session SET position=position+CASE WHEN EXISTS(
+            SELECT 1 FROM _kilo_sync_consent c WHERE c.directory=_kilo_sync_session.directory AND c.enabled=1)
+            THEN 1 ELSE 0 END,error_code='identity_conflict',
           error_message='A locally deleted session identity was reimported; its cloud history cannot be implicitly replaced',
-          retry_at=9007199254740991 WHERE id=NEW.id AND local_deleted=1 AND EXISTS(
-            SELECT 1 FROM _kilo_sync_consent c WHERE c.directory=_kilo_sync_session.directory AND c.enabled=1);
+          retry_at=9007199254740991 WHERE id=NEW.id AND local_deleted=1;
           INSERT INTO _kilo_sync_dirty(session_id,kind,id,position,op,value,cause)
           SELECT NEW.id,'session',NEW.id,position,'put',${sessionValue("NEW")},NULL FROM _kilo_sync_session WHERE id=NEW.id AND local_deleted=1 AND EXISTS(
             SELECT 1 FROM _kilo_sync_consent c WHERE c.directory=_kilo_sync_session.directory AND c.enabled=1)
