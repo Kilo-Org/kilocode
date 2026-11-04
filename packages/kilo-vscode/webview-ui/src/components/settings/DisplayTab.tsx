@@ -121,6 +121,19 @@ const DisplayTab: Component = () => {
         </SettingsRow>
 
         <SettingsRow
+          title={language.t("settings.display.sessionActions.title")}
+          description={language.t("settings.display.sessionActions.description")}
+        >
+          <Switch
+            checked={settings().showSessionActions !== false}
+            onChange={(checked: boolean) => updateSetting("showSessionActions", checked)}
+            hideLabel
+          >
+            {language.t("settings.display.sessionActions.title")}
+          </Switch>
+        </SettingsRow>
+
+        <SettingsRow
           title={language.t("settings.display.shortcutHints.title")}
           description={language.t("settings.display.shortcutHints.description")}
         >
