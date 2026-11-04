@@ -307,6 +307,7 @@ export const dict = {
   "notification.permission.descriptionSandboxEscalation":
     "Bu, tüm komutu dosya sistemi ve ağ kısıtlamaları kaldırılmış olarak yalnızca bu komut için çalıştırır. Git, korumalı alanda salt okunur olan ve bağlı bir worktree'de worktree dışında kalan .git dosyasına yazmalıdır. Bash izin kuralları ve otomatik onay bu istemi hiçbir zaman otomatik olarak onaylamaz.",
   "ui.permission.manageAutoApprove": "Otomatik Onay Kurallarını Yönet",
+  "ui.permission.noChanges": "Değişiklik yok.",
   "ui.permission.reject": "Reddet",
   "ui.permission.feedbackPlaceholder": "Kilo'ya farklı ne yapması gerektiğini söyleyin",
   "ui.permission.feedbackHint": "Reddetmek için Enter, iptal için Esc",
@@ -349,6 +350,8 @@ export const dict = {
 
   "session.tab.review": "İnceleme",
   "session.review.filesChanged": "{{count}} Dosya Değişti",
+  "session.review.viewTurnChanges": "Tur değişikliklerini görüntüle",
+  "session.review.turnChangesEmpty": "Bu turda değişiklik yok.",
   "session.review.loadingChanges": "Değişiklikler yükleniyor...",
   "session.review.noChanges": "Değişiklik yok",
 
@@ -1465,6 +1468,8 @@ export const dict = {
   "diffViewer.source.unstaged.tooltip":
     "Çalışma ağacında değiştirilmiş ancak henüz staged edilmemiş dosyalar, artı takip edilmeyen (yeni) dosyalar.",
   "diffViewer.source.session.label": "Oturum",
+  "diffViewer.source.turn.tooltip": "Kilo tarafından bir turda değiştirilen dosyalar.",
+  "diffViewer.source.turn.label": "Tur",
   "diffViewer.source.session.tooltip":
     "Geçerli oturum sırasında Kilo tarafından değiştirilen dosyalar, tur başı anlık görüntülere dayanır. Yeni bir oturum başlatıldığında sıfırlanır.",
   "diffViewer.group.session": "Oturum",

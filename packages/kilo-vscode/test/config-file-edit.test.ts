@@ -205,7 +205,7 @@ describe("serialize", () => {
       await Promise.all([write("a", 1), write("b", 2)])
       expect(parse(await readFile(file, "utf8"))).toEqual({ a: 1, b: 2 })
     } finally {
-      await rm(dir, { recursive: true, force: true })
+      await rm(dir, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 })
     }
   })
 

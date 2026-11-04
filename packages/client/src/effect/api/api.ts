@@ -2165,6 +2165,7 @@ export type PtyCreateInput = {
   readonly cwd?: string | undefined
   readonly title?: string | undefined
   readonly env?: { readonly [x: string]: string } | undefined
+  readonly size?: { readonly rows: number; readonly cols: number } | undefined
 }
 export type PtyCreateOutput = { readonly location: Location.PublicRef; readonly data: Pty.Info }
 export type PtyCreateOperation<E = never> = (input?: PtyCreateInput) => Effect.Effect<PtyCreateOutput, E>

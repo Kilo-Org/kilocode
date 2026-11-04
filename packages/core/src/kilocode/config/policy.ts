@@ -12,6 +12,10 @@ export class Info extends Config.Info.extend<Info>("KiloConfigPolicy.Info")({
   hide_prompt_training_models: Schema.Boolean.pipe(optional).annotate({
     description: "Hide Kilo models that can use prompts for training and deny provider data collection",
   }),
+  privacy_mode: Schema.Boolean.pipe(optional).annotate({
+    description:
+      "Blur personally identifiable information (account email, balance, team name, etc.) in the TUI and require confirmation before showing profile details",
+  }),
   workflow_models: Schema.Record(Schema.String, ConfigModel.Selection).pipe(optional),
   terminal_command_display: Schema.Literals(["expanded", "collapsed"]).pipe(optional).annotate({
     description: "Controls whether terminal command blocks are expanded or collapsed by default in the VS Code chat UI",
@@ -37,6 +41,7 @@ export class Info extends Config.Info.extend<Info>("KiloConfigPolicy.Info")({
 
 const decode = Schema.decodeUnknownOption(Info, { errors: "all", onExcessProperty: "ignore" })
 const policy = Schema.Struct({ hide_prompt_training_models: Schema.optional(Schema.Boolean) })
+const privacy = Schema.Struct({ privacy_mode: Schema.optional(Schema.Boolean) })
 const commit = Schema.Struct({ commit_message: Schema.optional(Schema.Struct({ prompt: Schema.optional(Schema.String) })) })
 const decodeModel = Schema.decodeUnknownOption(ConfigModel.Selection)
 
@@ -84,6 +89,14 @@ export function parse(
         "ignored invalid hide_prompt_training_models; expected a boolean (true or false), so prompt-training protection was not applied from this field",
     })
   const raw = Option.getOrElse(decoded, () => ({}))
+  const privacyField = Schema.decodeUnknownOption(privacy)(input)
+  if (Option.isNone(privacyField))
+    report?.({
+      path: ["privacy_mode"],
+      kind: "invalid",
+      message:
+        "ignored invalid privacy_mode; expected a boolean (true or false), so privacy mode was not changed by this field",
+    })
   const message = Schema.decodeUnknownOption(commit)(input)
   if (Option.isNone(message))
     report?.({
@@ -99,6 +112,7 @@ export function parse(
         Object.entries({
           ...normalized,
           ...raw,
+          ...Option.getOrElse(privacyField, () => ({})),
           ...Option.getOrElse(message, () => ({})),
           ...displaySettings(input),
           workflow_models: models && Object.keys(models).length ? models : undefined,
@@ -161,6 +175,14 @@ export function fromEntries(entries: readonly Config.Entry[]) {
       false,
     ),
   }
+}
+
+/**
+ * Privacy mode of the effective entries: on when any document sets `privacy_mode: true`. A nearer `false` does not
+ * turn off a `true` elsewhere (a global `true` stays on under a project `false`), so disabling clears every `true`.
+ */
+export function privacyMode(entries: readonly Config.Entry[]) {
+  return entries.some((entry) => entry.type === "document" && entry.info instanceof Info && entry.info.privacy_mode === true)
 }
 
 /** The custom commit message prompt of the effective entries: the last document that sets one wins, and empty means none. */

@@ -291,6 +291,7 @@ export const dict = {
   "notification.permission.descriptionSandboxEscalation":
     "這會移除檔案系統和網路限制，執行整條命令，且僅限此命令。Git 必須寫入 .git，該路徑在沙盒中為唯讀，且在連結的 worktree 中位於該 worktree 之外。Bash 允許規則和自動核准永遠不會自動核准此提示。",
   "ui.permission.manageAutoApprove": "管理自動核准規則",
+  "ui.permission.noChanges": "無變更。",
   "ui.permission.reject": "拒絕",
   "ui.permission.feedbackPlaceholder": "告訴 Kilo 應該如何修改",
   "ui.permission.feedbackHint": "按 Enter 拒絕，按 Esc 取消",
@@ -333,6 +334,8 @@ export const dict = {
 
   "session.tab.review": "審查",
   "session.review.filesChanged": "{{count}} 個檔案變更",
+  "session.review.viewTurnChanges": "查看輪次變更",
+  "session.review.turnChangesEmpty": "本輪次無變更。",
   "session.review.loadingChanges": "正在載入變更...",
   "session.review.noChanges": "沒有變更",
   "session.messages.loadingEarlier": "正在載入更早的訊息...",
@@ -1372,6 +1375,8 @@ export const dict = {
   "diffViewer.source.unstaged.label": "未暫存",
   "diffViewer.source.unstaged.tooltip": "在工作樹中已修改但尚未暫存的檔案，以及未追蹤（新）的檔案。",
   "diffViewer.source.session.label": "工作階段",
+  "diffViewer.source.turn.tooltip": "Kilo 在一個輪次中變更的檔案。",
+  "diffViewer.source.turn.label": "輪次",
   "diffViewer.source.session.tooltip": "Kilo 在目前工作階段中變更的檔案，依據每輪快照。開始新工作階段時重置。",
   "diffViewer.group.session": "工作階段",
   "diffViewer.group.git": "Git",

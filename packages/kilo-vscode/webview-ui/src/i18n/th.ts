@@ -306,6 +306,7 @@ export const dict = {
   "notification.permission.descriptionSandboxEscalation":
     "การดำเนินการนี้จะรันคำสั่งทั้งหมดโดยไม่มีการจำกัดระบบไฟล์และเครือข่าย สำหรับคำสั่งนี้เท่านั้น Git ต้องเขียนลงใน .git ซึ่งเป็นแบบอ่านอย่างเดียวในแซนด์บ็อกซ์ และอยู่นอก worktree สำหรับ worktree ที่เชื่อมโยง กฎอนุญาตของ Bash และการอนุมัติอัตโนมัติจะไม่อนุมัติพร้อมท์นี้โดยอัตโนมัติ",
   "ui.permission.manageAutoApprove": "จัดการกฎการอนุมัติอัตโนมัติ",
+  "ui.permission.noChanges": "ไม่มีการเปลี่ยนแปลง",
   "ui.permission.reject": "ปฏิเสธ",
   "ui.permission.feedbackPlaceholder": "บอก Kilo ว่าควรทำต่างออกไปอย่างไร",
   "ui.permission.feedbackHint": "Enter เพื่อปฏิเสธ, Esc เพื่อยกเลิก",
@@ -348,6 +349,8 @@ export const dict = {
 
   "session.tab.review": "ตรวจสอบ",
   "session.review.filesChanged": "{{count}} ไฟล์ที่เปลี่ยนแปลง",
+  "session.review.viewTurnChanges": "ดูการเปลี่ยนแปลงในเทิร์น",
+  "session.review.turnChangesEmpty": "ไม่มีการเปลี่ยนแปลงในเทิร์นนี้",
   "session.review.loadingChanges": "กำลังโหลดการเปลี่ยนแปลง...",
   "session.review.noChanges": "ไม่มีการเปลี่ยนแปลง",
 
@@ -1421,6 +1424,8 @@ export const dict = {
   "diffViewer.source.unstaged.tooltip":
     "ไฟล์ที่ถูกแก้ไขในแผนผังการทำงานแต่ยังไม่ได้ staged และไฟล์ที่ไม่ได้ติดตาม (ใหม่)",
   "diffViewer.source.session.label": "เซสชัน",
+  "diffViewer.source.turn.tooltip": "ไฟล์ที่ Kilo เปลี่ยนแปลงในหนึ่งเทิร์น",
+  "diffViewer.source.turn.label": "เทิร์น",
   "diffViewer.source.session.tooltip":
     "ไฟล์ที่ Kilo แก้ไขในช่วงเซสชันปัจจุบัน โดยอิงจากสแน็ปช็อตต่อเทิร์น จะรีเซ็ตเมื่อเริ่มเซสชันใหม่",
   "diffViewer.group.session": "เซสชัน",

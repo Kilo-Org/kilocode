@@ -14,6 +14,8 @@ export interface SettingsTabProps {
   focus?: string
   /** Increments on each search navigation so a subtab can reset its editor without remounting. */
   navigation: number
+  /** Agent Manager project a project-scoped tab opens for, as the project gear selected it. */
+  projectId?: string
   onSubtabChange: (subtab: string) => void
   onNavigate: (target: SettingsNavigationTarget) => void
 }
@@ -54,6 +56,13 @@ export const SETTINGS_TABS_V2: SettingsTabV2[] = [
     title: "settings.autoApprove.title",
     ready: true,
     component: lazy(() => import("./AutoApproveTab")),
+  },
+  {
+    id: "agentManager",
+    icon: "settings-gear",
+    title: "agentManager.settings.title",
+    ready: true,
+    component: lazy(() => import("./AgentManagerTab")),
   },
   {
     id: "browser",

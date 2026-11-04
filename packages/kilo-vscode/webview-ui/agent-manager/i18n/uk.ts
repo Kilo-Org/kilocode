@@ -115,6 +115,14 @@ export const dict = {
   "agentManager.hoverCard.commits": "Коміти",
 
   "agentManager.session.new": "Нова сесія",
+
+  "agentManager.history.title": "Відкриті сесії",
+
+  "agentManager.history.back": "Назад",
+
+  "agentManager.sidebar.resize": "Змінити розмір бічної панелі",
+
+  "agentManager.review.resize": "Змінити розмір огляду",
   "agentManager.session.untitled": "Без назви",
   "agentManager.session.newSession": "Нова сесія",
   "agentManager.session.openInWorktree": "Відкрити у робочому дереві",

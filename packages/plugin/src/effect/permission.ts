@@ -16,6 +16,12 @@ export interface PermissionEvaluation {
   readonly source?: Permission.Source
   effect: Permission.Effect
   message?: string
+  // kilocode_change start - permission seam: the evaluated rules, so a hook can see which rule decided
+  /** Configured and saved rules in evaluation order; the last matching rule decides `effect`. */
+  readonly rules?: Permission.Ruleset
+  /** Rules that settle an `ask` when nobody is present to answer it; undefined for attended work. */
+  readonly unattended?: Permission.Ruleset
+  // kilocode_change end
 }
 
 export interface PermissionHooks {

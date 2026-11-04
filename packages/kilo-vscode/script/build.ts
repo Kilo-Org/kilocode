@@ -1,45 +1,34 @@
 // Builds the extension host (Node, CommonJS) and the webview (browser, Solid, with the kilo-ui styles, fonts and
 // Shiki workers) into dist/. The webview config follows main's esbuild.js for the v1 UI packages.
-import { transformAsync } from "@babel/core"
 import { build, type Plugin } from "esbuild"
 import { existsSync } from "node:fs"
 import { copyFile, mkdir, rm } from "node:fs/promises"
 import path from "node:path"
 import { currentFfmpegTarget, ensureFfmpegForTarget, hasFfmpegPackage } from "./ffmpeg-helper"
+import { createSolidPlugin } from "./solid-cache"
 
 const root = path.resolve(import.meta.dir, "..")
 const dist = path.join(root, "dist")
+const solid = createSolidPlugin({ root })
 const production = Bun.argv.includes("--production")
 // `--meta` writes the bundled source files to dist/inputs.txt (used to keep only reachable copied v1 UI files).
 const meta = Bun.argv.includes("--meta")
 await rm(dist, { recursive: true, force: true })
 await mkdir(dist, { recursive: true })
 // A production package ships the build host's FFmpeg fallback, which Linux, Windows and a failed native macOS
-// capture need. Build each target's package on that target, as v1 did.
+// capture need. Build each target's package on that target. `KILO_VSCODE_TARGET` selects the helper for a
+// cross-target package.
 if (production) {
-  const target = currentFfmpegTarget()
+  const target = process.env.KILO_VSCODE_TARGET ?? currentFfmpegTarget()
   const bin = path.join(root, "bin")
   await mkdir(bin, { recursive: true })
   await ensureFfmpegForTarget(target, bin)
-  const helper = path.join(bin, process.platform === "win32" ? "ffmpeg.exe" : "ffmpeg")
+  const helper = path.join(bin, target.startsWith("win32") ? "ffmpeg.exe" : "ffmpeg")
   if (!existsSync(helper)) {
     // win32-arm64 has no helper package. v1 shipped it without one, and capture falls back to a system FFmpeg.
     if (hasFfmpegPackage(target)) throw new Error(`FFmpeg helper was not bundled at ${helper}`)
     console.warn(`No bundled FFmpeg for ${target}; voice input needs a system FFmpeg on that host.`)
   }
-}
-
-const solid: Plugin = {
-  name: "solid",
-  setup(build) {
-    build.onLoad({ filter: /\.(t|j)sx$/ }, async (args) => {
-      const result = await transformAsync(await Bun.file(args.path).text(), {
-        filename: args.path,
-        presets: [["babel-preset-solid", { generate: "dom" }], "@babel/preset-typescript"],
-      })
-      return { contents: result?.code ?? "", loader: "js" }
-    })
-  },
 }
 
 // One solid-js copy for kilo-ui, the v1 UI base and the webview, so their contexts see each other.
@@ -148,14 +137,21 @@ const host = Bun.build({
 })
 
 const results = await Promise.all([
-  host.then((result) => {
-    if (result.success) return
-    result.logs.forEach((log) => console.error(log))
-    throw new Error("extension host build failed")
+  host.then(async (result) => {
+    if (!result.success) {
+      result.logs.forEach((log) => console.error(log))
+      throw new Error("extension host build failed")
+    }
+    // A CommonJS host cannot parse `import.meta`; it reaches the bundle when a dynamic import wraps an ESM graph.
+    if ((await Bun.file(path.join(dist, "extension.js")).text()).includes("import.meta"))
+      throw new Error("extension host bundle contains import.meta and would fail to activate")
   }),
   build({
     ...common,
-    entryPoints: { webview: path.join(root, "webview-ui/src/index.tsx") },
+    entryPoints: {
+      webview: path.join(root, "webview-ui/src/index.tsx"),
+      "agent-manager": path.join(root, "webview-ui/agent-manager/index.tsx"),
+    },
     outdir: dist,
     format: "iife",
     platform: "browser",
