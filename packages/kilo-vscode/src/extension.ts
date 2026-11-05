@@ -186,15 +186,15 @@ export function activate(context: ExtensionContext) {
       await commands.executeCommand("kilo-code.v2.chat.focus")
       await view.post({ type: "command", name: "profile" })
     }),
-    // One shortcut pair serves the sidebar and the Agent Manager. Send it to the active surface only, so a tab
-    // command cannot queue for a sidebar that has never mounted.
+    // One shortcut pair serves the sidebar and the Agent Manager. The sidebar focus state is more precise than
+    // `isActive`, which stays true while the panel is the selected editor tab but the sidebar has focus.
     commands.registerCommand("kilo-code.v2.agentManager.previousTab", () => {
+      if (view.focused()) return void view.post({ type: "command", name: "tabPrevious" })
       if (agentManager.isActive()) return agentAction("tabPrevious")
-      void view.post({ type: "command", name: "tabPrevious" })
     }),
     commands.registerCommand("kilo-code.v2.agentManager.nextTab", () => {
+      if (view.focused()) return void view.post({ type: "command", name: "tabNext" })
       if (agentManager.isActive()) return agentAction("tabNext")
-      void view.post({ type: "command", name: "tabNext" })
     }),
     // The switcher only exists in the sidebar, so the command always opens it there.
     commands.registerCommand("kilo-code.v2.showOpenTabs", async () => {
