@@ -271,6 +271,11 @@ describe("partitionTranscript", () => {
     expect(runFailure.filter((row) => row.type === "error")).toHaveLength(1)
     expect(runFailure.find((row) => row.type === "error")?.key).toBe("idle:i1")
   })
+
+  test("shows no error for a run the user stopped", () => {
+    const stopped = transcriptRows([user("u1", 0), idle("i1", 1, { type: "aborted", message: "Step interrupted" })])
+    expect(stopped.some((row) => row.type === "error")).toBe(false)
+  })
 })
 
 describe("retainTurn", () => {

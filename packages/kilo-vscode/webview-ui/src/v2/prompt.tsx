@@ -27,7 +27,7 @@ import { cleanEnhancedPrompt, enhancePromptRequest, normalizeEnhancePromptErrorM
 import { insertSpacedText } from "./prompt-speech"
 import { PromptOverflow, type OverflowItem } from "./prompt-overflow"
 import { sendMode, sendShortcuts, type SendMode } from "./pending-actions"
-import { RunningHint } from "./running-hint"
+import { PromptHint } from "./prompt-hint"
 
 // Drafts live outside the component so a composer remounted for another session restores its own text, as v1 did.
 // The key is the session id, or the pending tab id before a first prompt creates the session.
@@ -127,7 +127,8 @@ export function PromptInput(props: {
     window.removeEventListener("keyup", hold)
     window.removeEventListener("blur", release)
   })
-  // An empty composer during a run shows the send shortcuts as keycaps in place of the placeholder.
+  // An empty composer during a run suggests one shortcut in its placeholder: queueing, the one Enter cannot do. The
+  // Send tooltip and the modifier preview cover the others.
   const runningHint = () =>
     !!props.running &&
     !props.questioning &&
@@ -135,6 +136,14 @@ export function PromptInput(props: {
     !browsers().length &&
     speech.state() !== "recording" &&
     v2.connection.status() === "connected"
+  const hintText = (key: string) =>
+    language.t("prompt.placeholder.plainHint", { key, action: language.t("prompt.shortcutHint.queue") })
+  // The placeholder template split around the key, so the key renders as keycaps.
+  const keycaps = () => {
+    const mark = "\u0001"
+    const parts = hintText(mark).split(mark)
+    return { before: parts.at(0) ?? "", after: parts.at(1) ?? "", binding: sendShortcuts().queue }
+  }
   const busySend = () => props.running && !props.blocked && speech.state() !== "recording"
   const sendAction = (): SendMode => (busySend() ? held() : "steer")
   const sendIcon = () => ({ steer: "send", queue: "clock", now: "arrow-right" } as const)[sendAction()]
@@ -515,7 +524,7 @@ export function PromptInput(props: {
             </Show>
           </div>
           <Show when={runningHint()}>
-            <RunningHint />
+            <PromptHint {...keycaps()} />
           </Show>
           <textarea
             ref={(el) => (refs.input = el)}
@@ -525,7 +534,7 @@ export function PromptInput(props: {
               v2.connection.status() !== "connected"
                 ? language.t("prompt.placeholder.connecting")
                 : runningHint()
-                  ? language.t("prompt.placeholder.running", sendShortcuts())
+                  ? hintText(sendShortcuts().queue)
                   : language.t("prompt.placeholder.plain")
             }
             aria-label={language.t("prompt.placeholder.plain")}
