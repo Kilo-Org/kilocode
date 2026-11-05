@@ -15,6 +15,7 @@ import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { useLanguage } from "../../context/language"
 import { SessionRenameEditor } from "../shared/SessionRenameEditor"
 import { useV2 } from "../../v2/client"
+import { sessionMissing } from "../../v2/scope"
 import { setTaskTimelineVisible, taskTimelineVisible } from "../../v2/kilo-settings"
 import {
   childLabels,
@@ -229,6 +230,9 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
           setDetailModels(mergeModelUsage(rows))
         })().catch((error: unknown) => {
           if (next.signal.aborted || version !== run) return
+          // A session created here is not on the server until its create request settles. The next idle revision
+          // loads the usage again, so this is not an error to show.
+          if (sessionMissing(error) && v2.data.session.get(props.sessionID)) return
           v2.report(error)
         })
       },
