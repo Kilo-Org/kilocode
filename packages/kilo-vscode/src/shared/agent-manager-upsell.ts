@@ -8,20 +8,21 @@ export type UpsellState = {
   snoozeCount?: number
 }
 
-export function apply(
-  state: UpsellState,
-  action: Exclude<UpsellAction, "shown"> | "observed",
-  now: number,
-): UpsellState {
-  return {
-    ...state,
-    ...(action === "observed" ? { opened: true } : {}),
-    ...(action === "opened" ? { converted: true } : {}),
-    ...(action === "not_now" && (state.snoozeCount ?? 0) < 3
-      ? { snoozedAt: Math.max(state.snoozedAt ?? now, now), snoozeCount: (state.snoozeCount ?? 0) + 1 }
-      : {}),
-    ...(action === "dont_show_again" ? { optedOut: true } : {}),
-    ...(action === "undo" ? { optedOut: false } : {}),
+export function apply(state: UpsellState, action: Exclude<UpsellAction, "shown">, now: number): UpsellState {
+  switch (action) {
+    case "opened":
+      return { ...state, converted: true }
+    case "not_now":
+      if ((state.snoozeCount ?? 0) >= 3) return state
+      return {
+        ...state,
+        snoozedAt: Math.max(state.snoozedAt ?? now, now),
+        snoozeCount: (state.snoozeCount ?? 0) + 1,
+      }
+    case "dont_show_again":
+      return { ...state, optedOut: true }
+    case "undo":
+      return { ...state, optedOut: false }
   }
 }
 
