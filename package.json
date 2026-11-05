@@ -189,6 +189,7 @@
     "@pierre/trees@1.0.0-beta.6": "patches/@pierre%2Ftrees@1.0.0-beta.6.patch",
     "@brendonovich/vite-plugin-opencode@0.1.3": "patches/@brendonovich%2Fvite-plugin-opencode@0.1.3.patch",
     "virtua@0.49.1": "patches/virtua@0.49.1.patch",
-    "mammoth@1.12.0": "patches/mammoth@1.12.0.patch"
+    "mammoth@1.12.0": "patches/mammoth@1.12.0.patch",
+    "zod@4.6.7": "patches/zod@4.6.7.patch"
   }
 }
