@@ -1,5 +1,5 @@
 import { describe, test, expect } from "bun:test"
-import { mkdtemp, mkdir, rename, rm, writeFile } from "fs/promises"
+import { mkdtemp, mkdir, rename, rm, symlink, writeFile } from "fs/promises"
 import { tmpdir } from "os"
 import path from "path"
 import { createHash } from "crypto"
@@ -501,6 +501,34 @@ describe("FileWatcher subscription", () => {
     expect(store.points).toEqual([])
     expect(store.deletions).toEqual([])
     await watcher.shutdown()
+  })
+
+  test("clears the chunks of an indexed file that became a link outside the workspace", async () => {
+    const backend = createFakeBackend()
+    const { root, watcher, cache, store, drain } = await makeWatcher(backend.subscribe)
+    const outside = await mkdtemp(path.join(tmpdir(), "file-watcher-outside-"))
+    const secret = path.join(outside, "secret.md")
+    const file = path.join(root, "linked.md")
+    try {
+      await writeFile(secret, "outside content ".repeat(30))
+      await writeFile(file, "original content ".repeat(30))
+      await watcher.initialize()
+      backend.emit([{ path: file, type: "create" }])
+      await drain()
+      expect(cache.getHash(file)).toBeDefined()
+      expect(store.points.length).toBeGreaterThan(0)
+
+      await rm(file)
+      await symlink(secret, file)
+      backend.emit([{ path: file, type: "change" }])
+      await drain()
+      expect(store.deletions).toEqual([[file]])
+      expect(cache.getHash(file)).toBeUndefined()
+    } finally {
+      await watcher.shutdown()
+      await rm(root, { recursive: true, force: true })
+      await rm(outside, { recursive: true, force: true })
+    }
   })
 
   test("clears old chunks when an atomic save is reported as create", async () => {

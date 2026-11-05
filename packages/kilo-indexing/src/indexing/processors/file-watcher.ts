@@ -735,6 +735,11 @@ export class FileWatcher implements IFileWatcher {
 
       // Check before the hash read: a symlink may point outside the workspace or to an unbounded file.
       if (!(await withinWorkspace(this.workspacePath, event.path))) {
+        // A path that was indexed before it became such a link keeps its points unless it is cleared here.
+        if (this.cacheManager.getHash(event.path)) {
+          pathsToExplicitlyDelete.push(event.path)
+          continue
+        }
         batchResults.push({ path: event.path, status: "skipped", reason: "File path is outside workspace" })
         processedCountInBatch++
         continue
