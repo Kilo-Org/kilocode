@@ -1000,6 +1000,9 @@ export const dict = {
   "settings.experimental.conversationPromptHistory.title": "Prompt-Verlauf pro Unterhaltung",
   "settings.experimental.conversationPromptHistory.description":
     "Den Prompt-Verlauf (ArrowUp/ArrowDown) für jede Unterhaltung getrennt halten, statt einen gemeinsamen Verlauf für alle Unterhaltungen zu nutzen.",
+  "settings.experimental.agentManagerSplash.title": "Agent Manager-Startbildschirm",
+  "settings.experimental.agentManagerSplash.description":
+    "Die neue Agent Manager-Einführung mit Workflow-Beispielen ausprobieren. Wird sofort angewendet.",
   "settings.experimental.claudeMigration.title": "Claude-Code-Migration",
   "settings.experimental.claudeMigration.description":
     "Unterstützte globale CLAUDE.md-Anweisungen, einfache Skills und deaktivierte MCP-Definitionen einmalig importieren. Originale Claude-Dateien bleiben unverändert; Backend nach dem Aktivieren neu starten.",

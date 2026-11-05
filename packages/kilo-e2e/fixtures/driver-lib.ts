@@ -21,7 +21,10 @@ async function artifact(dir: string, name: string, content: string) {
 export async function driver(mode: DriverMode) {
   const { request: requestPath, result: resultPath } = args()
   if (mode === "crash") process.exit(42)
-  if (mode === "slow") await Bun.sleep(60_000)
+  if (mode === "slow") {
+    await Bun.write(join(dirname(requestPath), "driver-started"), "")
+    await Bun.sleep(60_000)
+  }
 
   const request = await readJsonAs(requestPath, DriverRequest)
   if (mode === "invalid") {

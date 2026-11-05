@@ -507,6 +507,54 @@ export const dict = {
   "agentManager.intro.guide": "Przeczytaj przewodnik",
   "agentManager.intro.dismiss": "Pomiń wprowadzenie",
   "agentManager.intro.reopen": "Jak działa Agent Manager",
+  "agentManager.splash.preview.label": "Podgląd paska bocznego Agent Manager",
+  "agentManager.splash.eyebrow": "AGENT MANAGER",
+  "agentManager.splash.compact.subtitle":
+    "Uruchamiaj zadania równolegle za pomocą worktree, deleguj pracę i śledź każdego agenta z jednego miejsca.",
+  "agentManager.splash.hide": "Ukryj",
+  "agentManager.splash.hideLabel": "Ukryj wprowadzenie do Agent Manager",
+  "agentManager.splash.title": "Postaw do pracy flotę agentów Kilo.",
+  "agentManager.splash.subtitle":
+    "Realizuj wiele zadań równolegle za pomocą worktree, deleguj pracę, śledź postępy każdego agenta i utrzymuj wiele strumieni pracy w ruchu z jednego miejsca.",
+  "agentManager.splash.hint": "lub",
+  "agentManager.splash.proceed": "kontynuuj lokalnie w polu wiadomości poniżej",
+  "agentManager.splash.folded.title": "Postaw do pracy flotę agentów Kilo",
+  "agentManager.splash.folded.note": "Funkcje między stosami, delegowanie, porównywanie modeli i więcej",
+  "agentManager.splash.showExamples": "Pokaż przykłady",
+  "agentManager.splash.examples.crossStack.tag": "Wielorepo",
+  "agentManager.splash.examples.crossStack.title": "Jedna funkcja w trzech repo",
+  "agentManager.splash.examples.crossStack.pitch":
+    "Jedno zlecenie, jeden agent na repozytorium i cała funkcja w jednym widoku.",
+  "agentManager.splash.examples.crossStack.feature1.name": "Projekty wielorepozytoryjne",
+  "agentManager.splash.examples.crossStack.feature1.text":
+    "Backend, frontend i infrastruktura obok siebie w jednym pasku bocznym.",
+  "agentManager.splash.examples.crossStack.feature2.name": "Status sesji na żywo",
+  "agentManager.splash.examples.crossStack.feature2.text":
+    "Zobacz od razu, co pracuje, co jest gotowe, a co czeka na Ciebie.",
+  "agentManager.splash.examples.crossStack.feature3.name": "Odznaki PR i liczniki zmian",
+  "agentManager.splash.examples.crossStack.feature3.text": "Wiedz, co zmienił każdy agent, zanim to otworzysz.",
+  "agentManager.splash.examples.delegate.tag": "Delegowanie",
+  "agentManager.splash.examples.delegate.title": "Powierz jednej sesji duże zadanie",
+  "agentManager.splash.examples.delegate.pitch":
+    "Poproś jedną sesję o podzielenie dużego zadania na równoległe sesje, a potem dołącz do dowolnej z nich.",
+  "agentManager.splash.examples.delegate.feature1.name": "Sesje, które uruchamiają sesje",
+  "agentManager.splash.examples.delegate.feature1.text": "Sesja może uruchamiać nowe sesje we własnych worktree.",
+  "agentManager.splash.examples.delegate.feature2.name": "Izolowane worktree",
+  "agentManager.splash.examples.delegate.feature2.text": "Każda praca ma własną kopię, więc nic się nie zderza.",
+  "agentManager.splash.examples.delegate.feature3.name": "Wejdź w dowolnym miejscu",
+  "agentManager.splash.examples.delegate.feature3.text":
+    "Dołącz do dowolnej uruchomionej sesji lub śledź całe zadanie z góry.",
+  "agentManager.splash.examples.compare.tag": "Porównanie modeli",
+  "agentManager.splash.examples.compare.title": "Testuj trzy, wybierz najlepsze",
+  "agentManager.splash.examples.compare.pitch":
+    "Wyślij jeden prompt do kilku agentów lub modeli i zachowaj najlepszy wynik.",
+  "agentManager.splash.examples.compare.feature1.name": "Uruchomienia wielu wersji",
+  "agentManager.splash.examples.compare.feature1.text": "Uruchom to samo zadanie jako kilka wersji naraz.",
+  "agentManager.splash.examples.compare.feature2.name": "Łącz modele",
+  "agentManager.splash.examples.compare.feature2.text": "Porównaj Kilo Auto, Claude i GPT na identycznej pracy.",
+  "agentManager.splash.examples.compare.feature3.name": "Zachowaj najlepsze",
+  "agentManager.splash.examples.compare.feature3.text":
+    "Przejrzyj prawdziwe diffy obok siebie, zachowaj jeden, a resztę odrzuć.",
   "agentManager.worktree.health.absent-restorable": "Folder usunięty",
   "agentManager.worktree.health.absent-restorableNote":
     "Folder zniknął, ale gałąź {{branch}} nadal istnieje. Przywróć go, aby dalej tu pracować.",

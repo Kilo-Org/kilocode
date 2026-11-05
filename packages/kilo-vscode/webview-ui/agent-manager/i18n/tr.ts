@@ -514,6 +514,55 @@ export const dict = {
   "agentManager.intro.guide": "Kılavuzu okuyun",
   "agentManager.intro.dismiss": "Tanıtımı atla",
   "agentManager.intro.reopen": "Agent Manager nasıl çalışır",
+  "agentManager.splash.preview.label": "Agent Manager kenar çubuğu önizlemesi",
+  "agentManager.splash.eyebrow": "AGENT MANAGER",
+  "agentManager.splash.compact.subtitle":
+    "Worktree'lerle görevleri paralel çalıştırın, işleri devredin ve tüm ajanları tek bir yerden takip edin.",
+  "agentManager.splash.hide": "Gizle",
+  "agentManager.splash.hideLabel": "Agent Manager tanıtımını gizle",
+  "agentManager.splash.title": "Bir Kilo ajanı filosunu işe koşun.",
+  "agentManager.splash.subtitle":
+    "Worktree'lerle birden çok görevi paralel olarak ele alın, işi devredin, her ajanın ilerlemesini izleyin ve birden çok iş akışını tek yerden sürdürün.",
+  "agentManager.splash.hint": "veya",
+  "agentManager.splash.proceed": "aşağıdaki mesaj kutusunda yerel olarak devam edin",
+  "agentManager.splash.folded.title": "Bir Kilo ajanı filosunu işe koşun",
+  "agentManager.splash.folded.note": "Stack'ler arası özellikler, görev devri, model karşılaştırmaları ve daha fazlası",
+  "agentManager.splash.showExamples": "Örnekleri göster",
+  "agentManager.splash.examples.crossStack.tag": "Çok depo",
+  "agentManager.splash.examples.crossStack.title": "Bir özelliği üç depoda yayınlayın",
+  "agentManager.splash.examples.crossStack.pitch":
+    "Tek bir brief, her depo için bir ajan ve tüm özellik tek bir görünümde.",
+  "agentManager.splash.examples.crossStack.feature1.name": "Çok depolu projeler",
+  "agentManager.splash.examples.crossStack.feature1.text":
+    "Backend, frontend ve altyapı tek bir kenar çubuğunda yan yana.",
+  "agentManager.splash.examples.crossStack.feature2.name": "Canlı oturum durumu",
+  "agentManager.splash.examples.crossStack.feature2.text":
+    "Neyin çalıştığını, bittiğini veya sizi beklediğini bir bakışta görün.",
+  "agentManager.splash.examples.crossStack.feature3.name": "PR rozetleri ve diff sayıları",
+  "agentManager.splash.examples.crossStack.feature3.text": "Açmadan önce her ajanın neyi değiştirdiğini bilin.",
+  "agentManager.splash.examples.delegate.tag": "Görev devri",
+  "agentManager.splash.examples.delegate.title": "Büyük bir işi tek bir oturuma verin",
+  "agentManager.splash.examples.delegate.pitch":
+    "Bir oturumdan büyük bir işi paralel oturumlara bölmesini isteyin, ardından istediğiniz oturuma girin.",
+  "agentManager.splash.examples.delegate.feature1.name": "Oturum başlatan oturumlar",
+  "agentManager.splash.examples.delegate.feature1.text":
+    "Bir oturum, kendi worktree'lerinde yeni oturumlar başlatabilir.",
+  "agentManager.splash.examples.delegate.feature2.name": "Yalıtılmış worktree'ler",
+  "agentManager.splash.examples.delegate.feature2.text": "Her iş kendi kopyasını alır, böylece hiçbir şey çakışmaz.",
+  "agentManager.splash.examples.delegate.feature3.name": "Her yerden katılın",
+  "agentManager.splash.examples.delegate.feature3.text":
+    "Başlattığı herhangi bir oturuma girin veya tüm işi baştan izleyin.",
+  "agentManager.splash.examples.compare.tag": "Model karşılaştırma",
+  "agentManager.splash.examples.compare.title": "Üç yaklaşımı deneyin, en iyisini saklayın",
+  "agentManager.splash.examples.compare.pitch":
+    "Tek bir istemi birkaç ajana veya modele gönderin ve en iyi sonucu saklayın.",
+  "agentManager.splash.examples.compare.feature1.name": "Çok sürümlü çalıştırmalar",
+  "agentManager.splash.examples.compare.feature1.text": "Aynı görevi aynı anda birkaç sürüm olarak çalıştırın.",
+  "agentManager.splash.examples.compare.feature2.name": "Modelleri karıştırın",
+  "agentManager.splash.examples.compare.feature2.text": "Kilo Auto, Claude ve GPT'yi aynı işte karşılaştırın.",
+  "agentManager.splash.examples.compare.feature3.name": "En iyisini saklayın",
+  "agentManager.splash.examples.compare.feature3.text":
+    "Gerçek diff'leri yan yana inceleyin, birini saklayın, gerisini bırakın.",
   "agentManager.worktree.health.absent-restorable": "Klasör silindi",
   "agentManager.worktree.health.absent-restorableNote":
     "Klasör yok, ancak {{branch}} dalı hâlâ duruyor. Buradan devam etmek için geri yükleyin.",

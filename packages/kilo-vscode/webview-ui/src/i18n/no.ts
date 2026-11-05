@@ -941,6 +941,9 @@ export const dict = {
   "settings.experimental.conversationPromptHistory.title": "Promptlogg per samtale",
   "settings.experimental.conversationPromptHistory.description":
     "Hold promptloggen (ArrowUp/ArrowDown) adskilt for hver samtale i stedet for å dele én logg på tvers av alle samtaler.",
+  "settings.experimental.agentManagerSplash.title": "Agent Manager-velkomstskjerm",
+  "settings.experimental.agentManagerSplash.description":
+    "Prøv den nye introduksjonen til Agent Manager med eksempler på arbeidsflyter. Tas i bruk umiddelbart.",
   "settings.experimental.claudeMigration.title": "Claude Code-migrering",
   "settings.experimental.claudeMigration.description":
     "Importer støttede globale CLAUDE.md-instruksjoner, enkle ferdigheter og deaktiverte MCP-definisjoner én gang. Originale Claude-filer forblir uendret; start backend på nytt etter aktivering.",
