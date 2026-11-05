@@ -16,8 +16,9 @@ import type { Readable } from "stream"
 // read-extract.ts; the tool must not pay for mammoth and SheetJS on every start.
 const ACCEPTED = new Set([".docx", ".xlsx", ".ods", ".ipynb"])
 const accepts = (file: string) => ACCEPTED.has(extname(file).toLowerCase())
-let extract: Promise<typeof import("./read-extract")> | undefined
-const extractor = () => (extract ??= import("./read-extract"))
+const loadExtract = () => import("./read-extract")
+let extract: ReturnType<typeof loadExtract> | undefined
+const extractor = () => (extract ??= loadExtract())
 
 const MAX_LINE_LENGTH = 2_000
 const MAX_LINE_SUFFIX = `... (line truncated to ${MAX_LINE_LENGTH} chars)`
@@ -89,6 +90,20 @@ async function page(
 
 const message = (error: unknown) => (error instanceof Error ? error.message : String(error))
 
+// Content operations follow a final symlink, but stat reports the link. Ask for zero bytes to get the
+// target's size without reading it.
+const follow = (files: Files, path: AbsolutePath) =>
+  files.stat(path).pipe(
+    Effect.catchTag("Environment.NotFound", () => Effect.succeed(undefined)),
+    Effect.flatMap((info) => {
+      if (info === undefined || info.type !== "symlink") return Effect.succeed(info)
+      return files.read(path, { offset: 0, length: 0 }).pipe(
+        Effect.map((result) => result.info),
+        Effect.catchTag("Environment.WrongKind", () => Effect.succeed(info)),
+      )
+    }),
+  )
+
 // kilo_port(unattributed:tool:d6a5d2974993)
 export const read = (files: Files, input: AbsolutePath, resource: string, value: ReadToolFileSystem.PageInput = {}) => {
   const native = ReadToolFileSystem.read(files, input, resource, value)
@@ -96,13 +111,13 @@ export const read = (files: Files, input: AbsolutePath, resource: string, value:
   return Effect.gen(function* () {
     const Extract = yield* Effect.promise(extractor)
     if (!Extract.accepts(input)) return yield* native
-    const type = yield* Environment.typeFollowing(files, input).pipe(
-      Effect.catchTag("Environment.NotFound", () => Effect.succeed(undefined)),
-    )
-    if (type !== "file") return yield* native
+    const info = yield* follow(files, input)
+    if (info?.type !== "file") return yield* native
     const limit = Extract.limit(input)
+    // A ranged read allocates its whole length, so take the file size. The format limit still caps a
+    // spreadsheet that is larger than the parser accepts.
     const { bytes } = yield* files
-      .read(input, limit === undefined ? undefined : { offset: 0, length: limit })
+      .read(input, { offset: 0, length: Math.min(info.size + 1, limit ?? Infinity) })
       .pipe(
         Effect.catchTag("Environment.WrongKind", () =>
           Effect.fail(new ReadToolFileSystem.PathKindError({ resource, expected: "a file" })),

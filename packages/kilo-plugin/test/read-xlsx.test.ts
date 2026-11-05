@@ -242,6 +242,27 @@ describe("kilo XLSX reads", () => {
     ),
   )
 
+  it.live("reads only the file size instead of reserving the spreadsheet limit", () =>
+    withTempDir((tmp) =>
+      Effect.gen(function* () {
+        const file = path.join(tmp.path, "small.xlsx")
+        yield* put(file, bytes(book(utils.aoa_to_sheet([["small"]]))))
+        const environment = yield* Environment.Service
+        const ranges: Array<{ offset: number; length: number } | undefined> = []
+        const files = {
+          ...environment.files,
+          read: (value: string, range?: { offset: number; length: number }) => {
+            ranges.push(range)
+            return environment.files.read(value, range)
+          },
+        }
+        yield* read(files, AbsolutePath.make(file), path.basename(file))
+
+        expect(ranges[0]?.length).toBe((yield* environment.files.stat(file)).size + 1)
+      }),
+    ),
+  )
+
   it.live("fails clearly for invalid spreadsheet input", () =>
     withTempDir((tmp) =>
       Effect.gen(function* () {

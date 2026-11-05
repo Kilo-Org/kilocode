@@ -140,6 +140,44 @@ describe("kilo DOCX reads", () => {
     ),
   )
 
+  it.live("clamps a long extracted line and stops a page at the byte cap", () =>
+    withTempDir((tmp) =>
+      Effect.gen(function* () {
+        const line = path.join(tmp.path, "long-line.docx")
+        yield* Effect.promise(async () => Bun.write(line, await document(["a".repeat(2_100)])))
+        const clamped = text(yield* run(line))
+
+        expect(clamped.content.split("\n")).toEqual([
+          "a".repeat(2_000) + "... (line truncated to 2000 chars)",
+          "",
+        ])
+
+        const many = path.join(tmp.path, "many-lines.docx")
+        yield* Effect.promise(async () =>
+          Bun.write(many, await document(Array.from({ length: 80 }, () => "b".repeat(1_000)))),
+        )
+        const capped = text(yield* run(many))
+
+        expect(capped.truncated).toBe(true)
+        expect(capped.next).toBeDefined()
+        expect(Buffer.byteLength(capped.content, "utf-8")).toBeLessThanOrEqual(ReadToolFileSystem.MAX_READ_BYTES)
+      }),
+    ),
+  )
+
+  it.live("reports an out-of-range offset for extracted text", () =>
+    withTempDir((tmp) =>
+      Effect.gen(function* () {
+        const filepath = path.join(tmp.path, "short.docx")
+        yield* Effect.promise(async () => Bun.write(filepath, await document(["one", "two", "three"])))
+
+        const error = yield* run(filepath, { offset: 50 }).pipe(Effect.flip)
+
+        expect(error.message).toContain("Offset 50 is out of range")
+      }),
+    ),
+  )
+
   it.live("preserves PDF attachments and rejects unsupported binary files", () =>
     withTempDir((tmp) =>
       Effect.gen(function* () {

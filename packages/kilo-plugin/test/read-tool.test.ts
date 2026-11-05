@@ -156,6 +156,23 @@ describe("kilo read tool", () => {
     }),
   )
 
+  it.live("returns the extraction failure message to the model", () =>
+    withTempDir((tmp) => {
+      return Effect.promise(() =>
+        Bun.write(path.join(tmp.path, "broken.docx"), new Uint8Array([0x50, 0x4b, 0x03, 0x04])),
+      ).pipe(
+        Effect.andThen(withTool(tmp.path, (registry) => executeTool(registry, read({ path: "broken.docx" })))),
+        Effect.tap((execution) =>
+          Effect.sync(() => {
+            expect(execution.status).toBe("error")
+            expect(execution.error?.message).toContain("Failed to extract text from DOCX file")
+            expect(execution.error?.message).not.toBe("Unable to read broken.docx")
+          }),
+        ),
+      )
+    }),
+  )
+
   it.live("keeps ordinary text reads unchanged", () =>
     withTempDir((tmp) => {
       return Effect.promise(() => Bun.write(path.join(tmp.path, "notes.txt"), "plain text")).pipe(
