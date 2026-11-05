@@ -9,6 +9,7 @@ import { GatewayOptions } from "./gateway/options"
 import { KiloHandshakePlugin } from "./handshake"
 // kilo_port(provider-usage:ce8e021f1ef6) v1 imported the ProviderUsage Location service into location-services.ts.
 import { KiloProviderUsagePlugin } from "./provider-usage"
+import { KiloReadPlugin } from "./read"
 import { KiloOpenAIPlugin } from "./openai"
 import { KiloMarketplacePlugin } from "./marketplace"
 import { KiloSessionSync } from "./session-sync"
@@ -46,6 +47,9 @@ export const KiloPlugins = [
   KiloMarketplacePlugin,
   KiloSessionSync.plugin,
   KiloSkillPlugin,
+  // Rung 1: names the extracted formats in the native read tool description. The host swaps the
+  // reader behind it for the filesystem service (rung 2).
+  KiloReadPlugin,
   KiloTodoPlugin,
   KiloWriteToolPlugin,
   KiloBrowserToolPlugin,
