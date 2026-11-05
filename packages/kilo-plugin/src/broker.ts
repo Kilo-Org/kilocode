@@ -28,10 +28,11 @@ export function readEndpoint(prefix: string): Endpoint | undefined {
 }
 
 /**
- * Read the endpoint once and remove it from the process environment. Tools and MCP servers inherit this
- * environment, so leaving the token there would let a shell command use the capability without the permission
- * prompt. The plugin effect runs again for each Location and after each plugin reload, so later calls return the
- * captured endpoint.
+ * Read the endpoint once and remove it from the process environment, so tools and MCP servers started afterwards do
+ * not inherit the capability. Removing it from the in-process environment does not erase the environment block the
+ * server started with: a process that can read that block can still recover the token, so the tool permission stays
+ * the guard for the capability. The plugin effect runs again for each Location and after each plugin reload, so
+ * later calls return the captured endpoint.
  */
 export function takeEndpoint(prefix: string, captured: { endpoint?: Endpoint }): Endpoint | undefined {
   const endpoint = readEndpoint(prefix)
