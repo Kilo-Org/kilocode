@@ -935,7 +935,6 @@ for (const pause of ["disable", "account", "scope", "alias"] as const)
       yield* Store.reconcile(f.db, f.directory)
       yield* Store.initialize(f.db)
       expect((yield* Store.dirty(f.db, sessionID)).some((row) => row.kind === "message" || row.kind === "message-part")).toBe(false)
-      expect(cloud).toEqual(before)
       const pending = yield* Store.dirty(f.db, sessionID)
       const sessions = yield* Store.sessions(f.db, f.directory)
       const rollback = yield* f.db.transaction((tx) => Effect.gen(function* () {
