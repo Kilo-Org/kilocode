@@ -45,14 +45,11 @@ export class SidebarUpsell {
 
   handle(action: UpsellAction | "rendered" | undefined, visible: boolean) {
     return this.enqueue(async () => {
+      if (action === "rendered" && this.granted) this.shown = true
       const state: UpsellState = (await this.prefs?.read()) ?? { optedOut: true }
       const engaged = (this.workspace?.get<string[]>(`${KEY}.sessions`, []) ?? []).length >= 2
-      if (!action) return { state, engaged, display: false }
+      if (!action || action === "rendered") return { state, engaged, display: false }
       if (!visible) return { state, engaged, display: false }
-      if (action === "rendered") {
-        if (this.granted) this.shown = true
-        return { state, engaged, display: false }
-      }
       if (action === "shown") {
         const display = !this.shown && engaged && eligible(state, this.clock())
         if (display) this.granted = true

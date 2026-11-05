@@ -18,6 +18,9 @@ export function AgentManagerUpsell(props: { enabled: boolean; sidebar: boolean; 
   let sequence = 0
   let request = ""
   let pending = false
+  let stale = false
+  let checking = false
+  let room = false
   let action: UpsellAction | "rendered" | undefined
   let timer: ReturnType<typeof setTimeout> | undefined
   const cancel = () => clearTimeout(timer)
@@ -28,21 +31,48 @@ export function AgentManagerUpsell(props: { enabled: boolean; sidebar: boolean; 
     request = `${token}:${++sequence}`
     vscode.postMessage({ type: "agentManagerUpsell", request, action: next })
   }
+  const reveal = () => {
+    setExposed(true)
+    if (impressed()) return
+    setImpressed(true)
+    send("rendered")
+    track("shown")
+  }
   onCleanup(cancel)
   onCleanup(
     vscode.onMessage((message) => {
       if (message.type !== "agentManagerUpsellLoaded" || message.request !== request) return
+      if (action === "shown") {
+        if (!visible() || !props.eligible) return
+        if (!message.display) {
+          checking = false
+          setView("hidden")
+          return
+        }
+        if (checking) {
+          checking = false
+          stale = !room
+          if (room) reveal()
+          return
+        }
+      }
       if (message.display) setView("shown")
       if (action === "undo" && !message.display) setView("hidden")
       if (message.state.converted || message.state.opened) setView("hidden")
     }),
   )
   createEffect(() => {
+    if (!props.enabled && view() === "shown") setView("hidden")
     if (!visible() || !props.eligible) {
       pending = false
+      if (!impressed()) {
+        request = ""
+        checking = false
+        setView("hidden")
+      }
       return
     }
-    if (pending || view() !== "hidden") return
+    if (impressed() || pending || view() !== "hidden") return
     pending = true
     send("shown")
   })
@@ -59,13 +89,27 @@ export function AgentManagerUpsell(props: { enabled: boolean; sidebar: boolean; 
       <div
         ref={(node) => {
           setExposed(false)
+          room = false
+          stale = false
           const observer = new IntersectionObserver(
             (entries) => {
-              setExposed(entries.some((entry) => entry.intersectionRatio >= 0.01))
-              if (impressed() || !visible() || view() !== "shown" || !exposed()) return
-              setImpressed(true)
-              send("rendered")
-              track("shown")
+              if (!node.isConnected) return
+              room = entries.some((entry) => entry.intersectionRatio >= 0.01)
+              if (!room) {
+                setExposed(false)
+                if (!impressed()) stale = true
+                return
+              }
+              if (!visible() || view() === "hidden") return
+              // A clipped candidate can outlive its authorization; recheck before exposing it.
+              if (!impressed() && stale) {
+                if (!checking) {
+                  checking = true
+                  send("shown")
+                }
+                return
+              }
+              reveal()
             },
             { threshold: 0.01 },
           )
@@ -78,6 +122,7 @@ export function AgentManagerUpsell(props: { enabled: boolean; sidebar: boolean; 
         aria-live="polite"
         aria-hidden={!exposed()}
         inert={!exposed()}
+        style={{ visibility: exposed() ? undefined : "hidden" }}
         onKeyDown={(event) => {
           if (event.key !== "Escape") return
           event.preventDefault()

@@ -127,6 +127,7 @@ describe("KiloProvider Agent Manager upsell host routing", () => {
 
     host.provider.setStreamVisibility(true)
     await host.receive({ type: "agentManagerUpsell", action: "shown", request: "visible" })
+    host.provider.setStreamVisibility(false)
     await host.receive({ type: "agentManagerUpsell", action: "rendered", request: "rendered" })
     await host.receive({ type: "agentManagerUpsell", request: "state" })
     host.provider.setStreamVisibility(false)
@@ -140,6 +141,19 @@ describe("KiloProvider Agent Manager upsell host routing", () => {
       { type: "agentManagerUpsellLoaded", request: "state", state: {}, engaged: true, display: false },
       { type: "agentManagerUpsellLoaded", request: "repeated", state: {}, engaged: true, display: false },
     ])
+  })
+
+  it("rejects foreign-source render ACKs even when that host has an unused grant", async () => {
+    for (const kind of ["panel", "embedded"] as const) {
+      const host = await attach(kind)
+      await host.internal.upsell.started("first")
+      await host.internal.upsell.started("second")
+      expect((await host.internal.upsell.handle("shown", true)).display).toBe(true)
+      if (kind === "panel") host.internal.view = { visible: true }
+      await host.receive({ type: "agentManagerUpsell", action: "rendered", request: "foreign" })
+      expect(host.sent).toEqual([])
+      expect((await host.internal.upsell.handle("shown", true)).display).toBe(true)
+    }
   })
 
   it("counts own session creations but not generic inbound session-created events", async () => {
