@@ -44,6 +44,8 @@ interface ProjectsSectionProps {
   baseBranch: (id: string) => string
   tools?: JSX.Element
   body: (project: AgentProjectSnapshot) => JSX.Element
+  /** Decorative badge for a project id, used by the splash preview. */
+  marker?: (id: string) => JSX.Element | undefined
 }
 
 const ProjectBodySlot: Component<{
@@ -172,6 +174,7 @@ export const ProjectsSection: Component<ProjectsSectionProps> = (props) => {
                         </Show>
                       </>
                     }
+                    marker={props.marker?.(project().id)}
                     actions={
                       <ProjectRowActions
                         branch={props.baseBranch(project().id)}

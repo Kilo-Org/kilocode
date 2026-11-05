@@ -85,7 +85,7 @@ describe("Build Script Dependency Declarations", () => {
       const files = await listFiles({ cwd: staging, packageManager: PackageManager.None })
       for (const file of [
         "dist/node_modules/playwright-core/browsers.json",
-        "dist/node_modules/playwright-core/lib/generated/utilityScriptSource.js",
+        "dist/node_modules/playwright-core/lib/coreBundle.js",
         "dist/node_modules/chromium-bidi/node_modules/zod/package.json",
       ]) {
         expect(files).toContain(file)

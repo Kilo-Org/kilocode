@@ -3,6 +3,7 @@
  * Extracted from AgentManagerApp for reuse and visual-regression testing via Storybook.
  */
 import { Component, For, Match, Show, Switch, createEffect, createSignal, onCleanup, type ParentProps } from "solid-js"
+import type { JSX } from "solid-js"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { Tooltip, TooltipKeybind } from "@kilocode/kilo-ui/tooltip"
@@ -179,6 +180,8 @@ interface WorktreeItemProps {
   pinned?: boolean
   /** Toggle the pin. Shift+click on the row calls it too. */
   onTogglePin?: () => void
+  /** Decorative badge for a worktree or version group id, used by the splash preview. */
+  marker?: (id: string) => JSX.Element | undefined
 
   onClick: () => void
   onDelete: (e: MouseEvent) => void
@@ -191,6 +194,8 @@ interface WorktreeItemProps {
   onCopyPath: () => void
   onOpen: () => void
   onUpdateBase?: () => void
+  /** Copy this worktree's sessions into a new hosted workspace in Cloud. */
+  onContinueInCloud?: () => void
 }
 
 const MAX_SHORTCUT = 9
@@ -418,6 +423,7 @@ export const WorktreeItem: Component<WorktreeItemProps> = (props) => {
         <div class="am-wt-group-header">
           <Icon name="layers" size="small" />
           <span class="am-wt-group-label">{t("agentManager.worktree.versions", { count: props.groupSize })}</span>
+          {props.marker?.(props.worktree.groupId!)}
         </div>
       </Show>
       <ContextMenu>
@@ -512,6 +518,7 @@ export const WorktreeItem: Component<WorktreeItemProps> = (props) => {
                         }
                       />
                     </Show>
+                    {props.marker?.(props.worktree.id)}
                     {/* Grid cell: stats visible by default, hover actions on top */}
                     <div class="am-wt-actions-cell">
                       <Show when={props.stats === undefined}>
@@ -863,6 +870,12 @@ export const WorktreeItem: Component<WorktreeItemProps> = (props) => {
               <Icon name="copy" size="small" />
               <ContextMenu.ItemLabel>{t("agentManager.worktree.copyPath")}</ContextMenu.ItemLabel>
             </ContextMenu.Item>
+            <Show when={props.onContinueInCloud}>
+              <ContextMenu.Item onSelect={() => props.onContinueInCloud?.()}>
+                <Icon name="cloud-upload" size="small" />
+                <ContextMenu.ItemLabel>{t("agentManager.worktree.continueInCloud")}</ContextMenu.ItemLabel>
+              </ContextMenu.Item>
+            </Show>
             <ContextMenu.Separator />
             <ContextMenu.Item onSelect={() => props.onMoveToNewSection?.()}>
               <Icon name="plus" size="small" />

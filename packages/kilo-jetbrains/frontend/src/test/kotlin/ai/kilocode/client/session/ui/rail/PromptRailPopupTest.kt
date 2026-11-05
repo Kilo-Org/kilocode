@@ -2,9 +2,9 @@ package ai.kilocode.client.session.ui.rail
 
 import ai.kilocode.client.ui.HoverIcon
 import ai.kilocode.client.ui.list.ActiveList
-import ai.kilocode.client.ui.list.ActiveListConfig
-import ai.kilocode.client.ui.list.ActiveListItem
-import ai.kilocode.client.ui.list.ActiveListRowHeight
+import ai.kilocode.client.ui.active.ActiveConfig
+import ai.kilocode.client.ui.active.ActiveItem
+import ai.kilocode.client.ui.active.ActiveRowHeight
 import com.intellij.openapi.options.advanced.AdvancedSettings
 import com.intellij.openapi.util.Disposer
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
@@ -356,7 +356,7 @@ class PromptRailPopupTest : BasePlatformTestCase() {
     fun `test a row tooltip is served when the config leaves it on`() {
         val rows = ActiveList(
             emptyText = "",
-            cfg = ActiveListConfig(height = ActiveListRowHeight.PREFERRED, wrapDescription = true),
+            cfg = ActiveConfig(height = ActiveRowHeight.PREFERRED, wrapDescription = true),
             showSearch = false,
             onCell = { _, _ -> },
         )
@@ -470,7 +470,7 @@ class PromptRailPopupTest : BasePlatformTestCase() {
         override val key: String,
         override val title: String,
         override val description: String?,
-    ) : ActiveListItem
+    ) : ActiveItem
 
     /**
      * The header buttons have to drive the same navigation the ticks do. Scrolling the transcript alone
