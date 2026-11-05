@@ -1300,6 +1300,23 @@
     "note": "The state router is carried by packages/kilo-vscode/webview-ui/agent-manager/project/{state,state-handlers,store}.ts and the host project messages. packages/kilo-vscode/test/agent-project-messages.test.ts covers deferred state, activation and the no-catalog mode.",
     "by": "am-progress-map"
   },
+  "patch:unattributed:core/v1:efe2b3136dab": {
+    "state": "native",
+    "v2": "packages/core/src/config/normalize.ts",
+    "note": "The v1 `small_model` (NullOr(string)) maps natively: normalize.ts migrates a string to the title agent model `agents.title.model` through ConfigMigrateV1.modelSelection (packages/core/src/v1/config/migrate.ts). A v1 `null` is not carried: v2 decodes `small_model` as a plain string, so `small_model: null` is skipped with an `invalid` (`skipped malformed recognized value`) normalization diagnostic, the same v1-null/v2-string mismatch as `model` and `default_agent`. packages/core/test/kilocode/config/mapping.test.ts pins the string mapping and all three null diagnostics.",
+    "by": "v2-config-keys"
+  },
+  "patch:unattributed:core/v1:eef8153da721": {
+    "state": "native",
+    "v2": "packages/core/src/config/normalize.ts",
+    "note": "The hunk only updates the `command` schema description (the customization docs URL). v1 `command` is mapped natively: normalize.ts migrates the map to `commands` with ConfigMigrateV1.migrateCommand. The description text on v2 is upstream's.",
+    "by": "v2-config-keys"
+  },
+  "patch:unattributed:core/v1:803d6139aabf": {
+    "state": "dropped",
+    "note": "The v1 experimental sandbox keys (`experimental.sandbox`, `experimental.sandbox_restrict_network`, `experimental.sandbox_writable_paths`) have no v1 runtime caller (git grep over packages/*/src finds only the schema and the generated SDK types). The live v1 key is the top-level `sandbox` struct, read by packages/opencode/src/kilocode/sandbox/config.ts and folded by KiloConfigPolicy. The experimental aliases are dead fields.",
+    "by": "v2-config-keys"
+  },
   "module:packages/kilo-vscode/src/shared/code-context.ts": {
     "state": "ported",
     "v2": "packages/kilo-vscode/webview-ui/src/v2/prompt-attachments.ts",
