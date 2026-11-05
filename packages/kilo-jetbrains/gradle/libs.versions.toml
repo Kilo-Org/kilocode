@@ -24,6 +24,17 @@ autolink = "0.12.0"
 zxing = "3.5.4"
 changelog = "2.5.0"
 commons-compress = "1.28.0"
+# Security floors for transitive build and test dependencies that never ship in the plugin: the
+# Gradle plugin classpath and the IntelliJ test framework / ide-starter. build.gradle.kts applies
+# them as BOMs and constraints, so Gradle only ever raises a version to meet them.
+security-netty = "4.2.19.Final"
+security-jackson = "2.22.4"
+security-opentelemetry = "1.67.0"
+security-bouncycastle = "1.86"
+security-guava = "33.7.2-jre"
+security-handlebars = "4.5.8"
+security-jsoup = "1.23.2"
+security-lz4 = "1.12.1"
 
 [libraries]
 commonmark = { module = "org.commonmark:commonmark", version.ref = "commonmark" }
@@ -44,6 +55,16 @@ junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher
 kodein-di = { module = "org.kodein.di:kodein-di-jvm", version.ref = "kodein" }
 zxing-core = { module = "com.google.zxing:core", version.ref = "zxing" }
 commons-compress = { module = "org.apache.commons:commons-compress", version.ref = "commons-compress" }
+security-netty-bom = { module = "io.netty:netty-bom", version.ref = "security-netty" }
+security-jackson-bom = { module = "com.fasterxml.jackson:jackson-bom", version.ref = "security-jackson" }
+security-opentelemetry-bom = { module = "io.opentelemetry:opentelemetry-bom", version.ref = "security-opentelemetry" }
+security-bcprov = { module = "org.bouncycastle:bcprov-jdk18on", version.ref = "security-bouncycastle" }
+security-bcpkix = { module = "org.bouncycastle:bcpkix-jdk18on", version.ref = "security-bouncycastle" }
+security-guava = { module = "com.google.guava:guava", version.ref = "security-guava" }
+security-handlebars = { module = "com.github.jknack:handlebars", version.ref = "security-handlebars" }
+security-jsoup = { module = "org.jsoup:jsoup", version.ref = "security-jsoup" }
+# Maintained fork of the abandoned org.lz4:lz4-java (same net.jpountz API).
+security-lz4 = { module = "at.yawk.lz4:lz4-java", version.ref = "security-lz4" }
 
 [plugins]
 detekt = { id = "io.gitlab.arturbosch.detekt", version.ref = "detekt" }

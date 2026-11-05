@@ -17,7 +17,7 @@ name: Dependency submission
 # fix them with root overrides, catalog pins or parent upgrades. For Gradle,
 # Dependabot can open security update PRs for direct dependencies in
 # libs.versions.toml; transitive ones are fixed by hand with the security
-# floors in packages/kilo-jetbrains/settings.gradle.kts. The graph keeps the
+# floors in packages/kilo-jetbrains/gradle/libs.versions.toml. The graph keeps the
 # latest snapshot per job, so each job only needs to rerun when its inputs
 # change; the weekly run is a safety net.
 
