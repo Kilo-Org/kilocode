@@ -715,14 +715,14 @@ const layer = Layer.effect(
 
       // kilocode_change start - compaction already invalidates cache, so collapse stale tool outputs too
       if (processor.message.error) {
-        // Empty or truncated summaries need a visible retryable failure:
-        // a retryable failure with no rendered part is dropped by clients, so
+        // Empty or truncated summaries and content-filtered ones need a visible
+        // failure: a failure with no rendered part is dropped by clients, so
         // surface it as a real text part before stopping. Other provider
         // failures must keep their own error.
         const error = processor.message.error
         const produced = yield* MessageV2.parts(msg.id).pipe(Effect.provideService(Database.Service, database))
         const visible = produced.some((part) => part.type === "text" && part.text.trim().length > 0)
-        const incomplete = KiloCompactionChunks.incomplete(error)
+        const incomplete = KiloCompactionChunks.reported(error)
         if (incomplete && !visible) {
           yield* session.updatePart({
             id: PartID.ascending(),

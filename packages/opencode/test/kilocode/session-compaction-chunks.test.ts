@@ -172,7 +172,13 @@ function reply(text: string, capture?: (input: LLM.StreamInput) => void) {
   }
 }
 
-function fakeRuntime(outputTokenMax?: number, error?: MessageV2.Assistant["error"], empty = false, truncated = false) {
+function fakeRuntime(
+  outputTokenMax?: number,
+  error?: MessageV2.Assistant["error"],
+  empty = false,
+  truncated = false,
+  filtered = false,
+) {
   const calls: string[] = []
   const bus = Bus.layer
   const processor = Layer.effect(
@@ -204,7 +210,7 @@ function fakeRuntime(outputTokenMax?: number, error?: MessageV2.Assistant["error
                   : calls.length === 1
                     ? "chunk one"
                     : "chunk two"
-                if (!empty)
+                if (!empty && !filtered)
                   yield* sessions.updatePart({
                     id: PartID.ascending(),
                     messageID: input.assistantMessage.id,
@@ -212,7 +218,7 @@ function fakeRuntime(outputTokenMax?: number, error?: MessageV2.Assistant["error
                     type: "text",
                     text,
                   })
-                input.assistantMessage.finish = truncated ? "length" : "stop"
+                input.assistantMessage.finish = truncated ? "length" : filtered ? "content-filter" : "stop"
                 return truncated ? ("stop" as const) : ("continue" as const)
               }),
             ),
@@ -250,7 +256,7 @@ function fakeRuntime(outputTokenMax?: number, error?: MessageV2.Assistant["error
   }
 }
 
-async function failure(error?: MessageV2.Assistant["error"], empty = false, truncated = false) {
+async function failure(error?: MessageV2.Assistant["error"], empty = false, truncated = false, filtered = false) {
   await using tmp = await tmpdir()
   return provideTestInstance({
     directory: tmp.path,
@@ -267,7 +273,7 @@ async function failure(error?: MessageV2.Assistant["error"], empty = false, trun
         }),
       )
 
-      const { rt } = fakeRuntime(undefined, error, empty, truncated)
+      const { rt } = fakeRuntime(undefined, error, empty, truncated, filtered)
       try {
         const errors: Array<typeof SessionNs.Event.Error.data.Type> = []
         const off = await rt.runPromise(
@@ -464,6 +470,23 @@ describe("KiloCompactionChunks", () => {
         (part) => part.type === "text" && part.text.includes(KiloCompactionChunks.EMPTY_SUMMARY),
       ),
     ).toBe(true)
+  })
+
+  test("reports a content-filtered summary without asking for a retry", async () => {
+    const result = await failure(undefined, false, false, true)
+
+    expect(result.errors).toHaveLength(1)
+    expect(result.result).toBe("stop")
+    expect(result.summary?.info.role).toBe("assistant")
+    if (result.summary?.info.role !== "assistant") return
+    expect(result.summary.info.finish).toBe("error")
+    expect(result.summary.info.error?.name).toBe("ContentFilterError")
+    if (result.summary.info.error?.name !== "ContentFilterError") return
+    expect(result.summary.info.error.data.message).toBe(KiloCompactionChunks.CONTENT_FILTERED)
+    const rendered = result.summary.parts.filter((part) => part.type === "text").map((part) => part.text)
+    expect(rendered).toEqual([KiloCompactionChunks.CONTENT_FILTERED])
+    expect(rendered.some((text) => text.includes(KiloCompactionChunks.EMPTY_SUMMARY))).toBe(false)
+    expect(result.errors[0].error?.name).toBe("ContentFilterError")
   })
 
   test("falls back to chunk workers after the first compaction overflows", async () => {
