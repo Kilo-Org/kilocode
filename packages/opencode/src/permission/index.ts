@@ -11,6 +11,7 @@ import { zod } from "@opencode-ai/core/effect-zod" // kilocode_change
 import { PermissionV1 } from "@opencode-ai/core/v1/permission"
 import { Database } from "@opencode-ai/core/database/database" // kilocode_change
 import { EventV2Bridge } from "@/event-v2-bridge"
+import { SessionStatus } from "@/session/status" // kilocode_change - report waiting status when blocked on a permission prompt (#33)
 import { SessionID } from "@/session/schema" // kilocode_change - used by AllowEverythingInput
 // kilocode_change start
 import { ConfigProtection } from "@/kilocode/permission/config-paths"
@@ -80,6 +81,9 @@ export interface Interface {
   readonly saveAlwaysRules: (input: z.infer<typeof SaveAlwaysRulesInput>) => Effect.Effect<void, NotFoundError>
   readonly allowEverything: (input: z.infer<typeof AllowEverythingInput>) => Effect.Effect<void>
   readonly pending: (id: string) => Effect.Effect<Request | undefined>
+  // kilocode_change - reject all pending permission requests for a session so
+  // abort/interrupt unblocks detached tool fibers blocked on Deferred.await (#33)
+  readonly rejectForSession: (sessionID: SessionID) => Effect.Effect<void>
   // kilocode_change end
 }
 
@@ -162,6 +166,7 @@ const layer = Layer.effect(
     const events = yield* EventV2Bridge.Service
     const config = yield* Config.Service // kilocode_change
     const database = yield* Database.Service // kilocode_change
+    const sessionStatus = yield* SessionStatus.Service // kilocode_change - for waiting status on permission block (#33)
     const state = yield* InstanceState.make<State>(
       Effect.fn("Permission.state")(function* (ctx) {
         void ctx
@@ -272,11 +277,23 @@ const layer = Layer.effect(
       const deferred = yield* Deferred.make<void, RejectedError | CorrectedError>()
       pending.set(id, { info, ruleset, hardRuleset, deferred }) // kilocode_change
       yield* events.publish(Event.Asked, info) // kilocode_change - was bus.publish
+      // kilocode_change start - report the session as waiting on a permission prompt so
+      // unattended consumers can distinguish it from real work (#33)
+      yield* sessionStatus.set(request.sessionID, { type: "waiting", reason: "permission", requestID: id })
+      // kilocode_change end
       // kilocode_change start - was `return yield* Effect.ensuring(...)`; report the manual decision to callers
       yield* Effect.ensuring(
         Deferred.await(deferred),
-        Effect.sync(() => {
+        Effect.gen(function* () {
           pending.delete(id)
+          // kilocode_change start - restore busy status when the permission prompt
+          // resolves so the session doesn't stay "waiting" during continued work.
+          // Only restore if still waiting: a cancel may have already set idle.
+          const current = yield* sessionStatus.get(request.sessionID)
+          if (current.type === "waiting") {
+            yield* sessionStatus.set(request.sessionID, { type: "busy" })
+          }
+          // kilocode_change end
         }),
       )
       return { manual: true } // the user was prompted and replied
@@ -463,7 +480,33 @@ const layer = Layer.effect(
     })
     // kilocode_change end
 
-    return Service.of({ ask, reply, list, saveAlwaysRules, allowEverything, pending }) // kilocode_change
+    // kilocode_change start - reject all pending permission requests for a session.
+    // Used by cancel/abort so detached tool fibers blocked on Deferred.await
+    // unblock instead of staying pending forever (#33).
+    const rejectForSession = Effect.fn("Permission.rejectForSession")(function* (sessionID: SessionID) {
+      const s = yield* InstanceState.get(state)
+      // Collect first, then mutate: deleting during Map iteration is safe but
+      // collecting makes the intent explicit and avoids any ordering surprise.
+      const matches: Array<{ id: PermissionV1.ID; item: PendingEntry }> = []
+      for (const [id, item] of s.pending) {
+        if (item.info.sessionID !== sessionID) continue
+        matches.push({ id, item })
+      }
+      for (const { id, item } of matches) {
+        // kilocode_change - skip entries already handled by a concurrent reply()
+        if (!s.pending.has(id)) continue
+        s.pending.delete(id)
+        yield* events.publish(Event.Replied, {
+          sessionID,
+          requestID: item.info.id,
+          reply: "reject",
+        })
+        yield* Deferred.fail(item.deferred, new PermissionV1.RejectedError())
+      }
+    })
+    // kilocode_change end
+
+    return Service.of({ ask, reply, list, saveAlwaysRules, allowEverything, pending, rejectForSession }) // kilocode_change
   }),
 )
 
@@ -551,7 +594,7 @@ export function visibleTools<T>(tools: Record<string, T>, ruleset: PermissionV1.
 export const node = LayerNode.make({
   service: Service,
   layer,
-  deps: [EventV2Bridge.node, Config.node, Database.node], // kilocode_change
+  deps: [EventV2Bridge.node, Config.node, Database.node, SessionStatus.node], // kilocode_change
 })
 
 export * as Permission from "."

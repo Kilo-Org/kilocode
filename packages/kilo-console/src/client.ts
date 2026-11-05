@@ -580,7 +580,7 @@ export type ProjectLiveStatus = {
 
 /** A session asleep on a pending wakeup reports `scheduled`; it is not a running turn. */
 export function running(status: SessionStatus) {
-  return status.type === "busy" || status.type === "retry" || status.type === "offline"
+  return status.type === "busy" || status.type === "retry" || status.type === "offline" || status.type === "waiting" // a session blocked on a permission prompt is still a running turn
 }
 
 export async function loadProjectLiveStatus(input: ProjectQuery, dir: string): Promise<ProjectLiveStatus> {

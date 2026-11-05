@@ -7,7 +7,7 @@ type Session = {
 }
 
 type Status = {
-  type: "idle" | "retry" | "busy" | "offline" | "scheduled"
+  type: "idle" | "retry" | "busy" | "offline" | "scheduled" | "waiting" // kilocode_change - added "waiting" for sessions blocked on a permission prompt (#33)
 }
 
 type Message = {
@@ -115,7 +115,7 @@ export namespace KiloTerminalTitle {
   }
 
   function working(status: Status | undefined) {
-    return status?.type === "busy" || status?.type === "retry"
+    return status?.type === "busy" || status?.type === "retry" || status?.type === "waiting" // kilocode_change - a session waiting for permission is still working (#33)
   }
 
   export function attention(data: Data, id: string) {
