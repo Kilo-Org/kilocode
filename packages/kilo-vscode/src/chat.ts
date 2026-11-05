@@ -13,6 +13,7 @@ import {
 import { notifyHostAutoApprove, setHostAutoApprove } from "./agent-manager/provider-auto-approve"
 import type { SettingsHandler } from "./agent-manager/project/settings"
 import { local } from "./local"
+import { dismissNotification, dismissedNotifications, syncDismissedNotifications } from "./notifications"
 import { DISPLAY_DEFAULTS, type ToHost, type ToWebview } from "./protocol"
 import { bridge } from "./relay"
 import { saveImage } from "./save-image"
@@ -165,6 +166,10 @@ export function wire(input: {
   // The composer state is shared: a change in one open view shows in the others, for example the sidebar and the
   // Agent Manager side by side.
   const others = (message: ToWebview) => surfaces.forEach((target) => target !== post && target(message))
+  const broadcast = (message: ToWebview) => {
+    post(message)
+    others(message)
+  }
   surfaces.add(post)
   // Voice input is host-side: the microphone, the custom endpoint key and the Gateway RPC never reach the webview.
   const speech = createSpeechToTextHost({
@@ -269,6 +274,21 @@ export function wire(input: {
         others({ type: "autoApproveStateLoaded", value: message.value })
         // The host sweep is the only owner of the decision, so tell it to approve the requests already pending.
         notifyHostAutoApprove()
+        return true
+      case "requestDismissedNotifications":
+        post({ type: "dismissedNotificationsLoaded", ids: dismissedNotifications(input.context) })
+        return true
+      case "dismissNotification":
+        broadcast({
+          type: "dismissedNotificationsLoaded",
+          ids: dismissNotification(input.context, message.notificationId),
+        })
+        return true
+      case "syncDismissedNotifications":
+        broadcast({
+          type: "dismissedNotificationsLoaded",
+          ids: syncDismissedNotifications(input.context, message.ids),
+        })
         return true
       default:
         return false
