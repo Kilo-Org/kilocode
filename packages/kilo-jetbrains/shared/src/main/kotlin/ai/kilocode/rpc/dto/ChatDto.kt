@@ -20,6 +20,10 @@ data class MessageDto(
     val finish: String? = null,
     val error: MessageErrorDto? = null,
     val summary: MessageSummaryDto? = null,
+    /** Reasoning effort on an assistant message; user messages carry it under [model]. */
+    val variant: String? = null,
+    /** Model selection on a user message; assistant messages carry provider/model at the top level. */
+    val model: ModelSelectionDto? = null,
 )
 
 @Serializable
