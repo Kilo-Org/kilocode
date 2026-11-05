@@ -503,9 +503,12 @@ export const make = Effect.fn("RemoteCommands.make")(function* (options: Options
         }
     const current = sessionID ? yield* identity(sessionID).pipe(Effect.orElseSucceed(() => undefined)) : undefined
     if (current) outcome.identity = current
+    // Capacity is transient and checked before any creation, so the same command ID must be retryable.
     yield* database.db
       .run(
-        sql`UPDATE _kilo_remote_command SET outcome=${JSON.stringify(outcome)} WHERE scope=${scope} AND command_id=${commandID}`,
+        outcome.error?.code === "remote_capacity"
+          ? sql`DELETE FROM _kilo_remote_command WHERE scope=${scope} AND command_id=${commandID}`
+          : sql`UPDATE _kilo_remote_command SET outcome=${JSON.stringify(outcome)} WHERE scope=${scope} AND command_id=${commandID}`,
       )
       .pipe(Effect.orDie)
     return outcome

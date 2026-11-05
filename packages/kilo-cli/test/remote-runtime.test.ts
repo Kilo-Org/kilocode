@@ -41,6 +41,11 @@ test("remote status is idempotent and live native events are gated by watches, n
   let advertisement: { sessions: string[] } | undefined
   let observed: readonly string[] = []
   let identity = "fixture"
+  let offline = false
+  let stateFailure = false
+  let stateReads = 0
+  let presenceOpens = 0
+  let heartbeats = 0
   const acknowledgements = new Set<string>()
   const peer = Bun.serve<{ presence: boolean; path: string }>({
     port: 0,
@@ -54,7 +59,10 @@ test("remote status is idempotent and live native events are gated by watches, n
     websocket: {
       open(socket) {
         sockets.add(socket)
-        if (socket.data.presence) presence = socket
+        if (socket.data.presence) {
+          presence = socket
+          presenceOpens++
+        }
         socket.send(
           JSON.stringify({
             v: 1,
@@ -74,7 +82,10 @@ test("remote status is idempotent and live native events are gated by watches, n
       message(_socket, message) {
         const frame = JSON.parse(String(message))
         if (frame.channel === "events") events.push(frame)
-        if (frame.type === "heartbeat") advertisement = frame.advertisement
+        if (frame.type === "heartbeat") {
+          advertisement = frame.advertisement
+          heartbeats++
+        }
         if (frame.type === "ack") acknowledgements.add(frame.commandID)
       },
       close(socket) {
@@ -87,6 +98,7 @@ test("remote status is idempotent and live native events are gated by watches, n
   const sync = KiloSessionSync.Service.of({
     live: (_workspace, sessionIDs) =>
       Effect.sync(() => {
+        if (offline) return undefined
         observed = sessionIDs ?? []
         return {
           destination: peer.url.origin,
@@ -109,7 +121,13 @@ test("remote status is idempotent and live native events are gated by watches, n
   // Exercise transport/state orchestration without booting unrelated model catalogs,
   // filesystem watchers and workspace tools. The real-host E2E covers those services.
   const pending = Layer.mergeAll(
-    Layer.succeed(Permission.Service, { forSession: () => Effect.succeed([]) } as unknown as Permission.Interface),
+    Layer.succeed(Permission.Service, {
+      forSession: () =>
+        Effect.suspend(() => {
+          stateReads++
+          return stateFailure ? Effect.die(new Error("fixture state failure")) : Effect.succeed([])
+        }),
+    } as unknown as Permission.Interface),
     Layer.succeed(Form.Service, { list: () => Effect.succeed([]) } as unknown as Form.Interface),
   )
   const instances: Instance.Interface = {
@@ -194,6 +212,18 @@ test("remote status is idempotent and live native events are gated by watches, n
         yield* Effect.promise(() =>
           until(() => events.filter((event) => event.type === "remote.state").length > stateCount),
         )
+        // A failing snapshot is skipped; it must not tear down the process-wide presence socket.
+        stateFailure = true
+        const opens = presenceOpens
+        const reads = stateReads
+        watch(true)
+        yield* Effect.promise(() => until(() => stateReads > reads))
+        const failureBarrier = yield* sessions.create({ location: session.location })
+        synced.push({ sessionID: failureBarrier.id, directory: root, sourceID: "fixture-source", position: 18 })
+        yield* Effect.promise(() => until(() => !!advertisement?.sessions.includes(failureBarrier.id)))
+        expect(presenceOpens).toBe(opens)
+        expect(sockets.size).toBe(2)
+        stateFailure = false
         yield* sessions.rename({ sessionID: session.id, title: "Watched, control disabled" })
         yield* Effect.promise(() => until(() => events.some((event) => event.type === "session.renamed")))
         expect(events.find((event) => event.type === "session.renamed")!.body.syncPosition).toBe(17)
@@ -211,7 +241,7 @@ test("remote status is idempotent and live native events are gated by watches, n
         yield* remote.disable()
         expect((yield* remote.status()).connected).toBe(true)
         yield* remote.enable()
-        yield* Effect.promise(() => until(() => sockets.size === 4))
+        yield* Effect.promise(() => until(() => sockets.size === 5))
         const relay = [...sockets].find((socket) => socket.data.path === `/v1/sessions/${session.id}/live`)!
         relay.send(
           JSON.stringify({
@@ -229,11 +259,25 @@ test("remote status is idempotent and live native events are gated by watches, n
             },
           }),
         )
-        yield* Effect.promise(() => until(() => acknowledgements.has("detach-runtime") && sockets.size === 3))
+        yield* Effect.promise(() => until(() => acknowledgements.has("detach-runtime") && sockets.size === 4))
         yield* sessions.rename({ sessionID: session.id, title: "Still detached" })
         const detachBarrier = yield* sessions.create({ location: session.location })
         synced.push({ sessionID: detachBarrier.id, directory: root, sourceID: "fixture-source", position: 20 })
         yield* Effect.promise(() => until(() => !!advertisement?.sessions.includes(detachBarrier.id)))
+        expect(advertisement?.sessions).not.toContain(session.id)
+        // A transient sync miss stops transport but keeps ownership and the detach fence.
+        offline = true
+        yield* Effect.promise(() => until(() => sockets.size === 0))
+        const beats = heartbeats
+        offline = false
+        yield* Effect.promise(() =>
+          until(() => heartbeats > beats && !!advertisement?.sessions.includes(detachBarrier.id)),
+        )
+        expect(observed).toContain(detachBarrier.id)
+        yield* sessions.rename({ sessionID: session.id, title: "Detached after reconnect" })
+        const reconnectBarrier = yield* sessions.create({ location: session.location })
+        synced.push({ sessionID: reconnectBarrier.id, directory: root, sourceID: "fixture-source", position: 21 })
+        yield* Effect.promise(() => until(() => !!advertisement?.sessions.includes(reconnectBarrier.id)))
         expect(advertisement?.sessions).not.toContain(session.id)
         for (let index = 0; index < 100; index++) {
           const added = yield* sessions.create({ location: session.location })

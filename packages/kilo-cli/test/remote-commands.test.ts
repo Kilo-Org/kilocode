@@ -561,6 +561,15 @@ it("host capacity admission rejects both instance creation and safe /new before 
       "remote_capacity",
     )
     expect(f.calls.create).toBe(0)
+    // Capacity is transient: once a slot frees, retrying the same command IDs executes rather than replaying the rejection.
+    f.control.canCreate = true
+    const instance = yield* f.commands.instance("create_session", {}, "full-instance")
+    expect(instance.status).toBe("succeeded")
+    expect(instance.duplicate).toBeUndefined()
+    expect((yield* f.commands.session(id, "send_command", { command: "/new" }, false, "full-new")).status).toBe(
+      "succeeded",
+    )
+    expect(f.calls.create).toBe(2)
   }))
 
 it("durable lifecycle order distinguishes a terminal and restart sharing one millisecond", () =>

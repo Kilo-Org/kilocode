@@ -36,6 +36,8 @@ export const make = Effect.fn("Remote.make")(function* (options: Options = {}) {
   const watched = new Set<string>()
   const detached = new Set<string>()
   const states = new Map<string, string>()
+  const stateQueue = new Map<string, Promise<void>>()
+  let account: string | undefined
   let current: KiloSessionSync.LiveContext | undefined
   let presence: RemoteSocket | undefined
   let heartbeatAt = 0
@@ -78,7 +80,7 @@ export const make = Effect.fn("Remote.make")(function* (options: Options = {}) {
       body: { version: 1, syncPosition: position.position, sourceID: position.sourceID, ...identity, data },
     })
   }
-  const publishState = async (sessionID: string, force = false) => {
+  const emitState = async (sessionID: string, force: boolean) => {
     if (!watched.has(sessionID) || !sessions.get(sessionID)?.connected) return
     const snapshot = await run(commands.state(sessionID))
     const fingerprint = JSON.stringify(snapshot)
@@ -93,6 +95,18 @@ export const make = Effect.fn("Remote.make")(function* (options: Options = {}) {
       })
     )
       states.set(sessionID, fingerprint)
+  }
+  // Serialized per session so snapshots are emitted in read order. A failed snapshot
+  // (for example a session deleted mid-read) is skipped rather than closing a socket.
+  const publishState = (sessionID: string, force = false) => {
+    const next = (stateQueue.get(sessionID) ?? Promise.resolve())
+      .then(() => emitState(sessionID, force))
+      .catch(() => {})
+    stateQueue.set(sessionID, next)
+    void next.then(() => {
+      if (stateQueue.get(sessionID) === next) stateQueue.delete(sessionID)
+    })
+    return next
   }
   const sessionFrame = async (sessionID: string, frame: RemoteEnvelope) => {
     if (frame.channel === "control" && frame.type === "hello") {
@@ -215,13 +229,13 @@ export const make = Effect.fn("Remote.make")(function* (options: Options = {}) {
       }
       const next = await context()
       if (closed) return
-      if (next?.identity !== current?.identity) {
-        stop()
-        if (current) {
-          owned.clear()
-          detached.clear()
-        }
+      if (next?.identity !== current?.identity) stop()
+      // A transient sync miss keeps ownership and detach fences; only an actual account change clears them.
+      if (next && account !== undefined && next.identity !== account) {
+        owned.clear()
+        detached.clear()
       }
+      if (next) account = next.identity
       current = next
       if (!current) {
         stop()
