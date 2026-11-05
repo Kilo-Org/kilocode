@@ -8,6 +8,28 @@ import { Effect, Option, Schema } from "effect"
 import type { Interface } from "../../config.js"
 import type { ConfigNormalize } from "../../config/normalize.js"
 
+const Sandbox = Schema.Struct({
+  enabled: Schema.Boolean.pipe(optional).annotate({ description: "Enable sandbox confinement for new sessions" }),
+  network: Schema.Literals(["allow", "deny"]).pipe(optional).annotate({
+    description: "Control outbound network access from sandboxed tools",
+  }),
+  writable_paths: Schema.Array(Schema.String).pipe(optional).annotate({
+    description: "Additional filesystem paths that sandboxed tools may write to",
+  }),
+  allowed_hosts: Schema.Array(Schema.String).pipe(optional).annotate({
+    description: "Exact network destinations sandboxed tools may access while network restriction is enabled",
+  }),
+})
+
+const Retention = Schema.Struct({
+  enabled: Schema.Boolean.pipe(optional).annotate({
+    description: "Delete old sessions across all projects and every Kilo client on this machine",
+  }),
+  maxAgeDays: Schema.Number.pipe(optional).annotate({ description: "Days a session is kept before deletion" }),
+})
+
+const ReasoningDisplay = Schema.Literals(["expanded", "preview", "headline"])
+
 export class Info extends Config.Info.extend<Info>("KiloConfigPolicy.Info")({
   hide_prompt_training_models: Schema.Boolean.pipe(optional).annotate({
     description: "Hide Kilo models that can use prompts for training and deny provider data collection",
@@ -28,6 +50,41 @@ export class Info extends Config.Info.extend<Info>("KiloConfigPolicy.Info")({
     description:
       "Controls whether MCP and generic tool blocks are expanded or collapsed by default in the VS Code chat UI",
   }),
+  // kilo_port(unattributed:core/v1:159079a2d8a3)
+  remote_control: Schema.Boolean.pipe(optional).annotate({
+    description: "Enable remote control of sessions via Kilo Cloud",
+  }),
+  auto_collapse_reasoning: Schema.Boolean.pipe(optional).annotate({
+    description: "@deprecated Use reasoning_display instead. Collapse reasoning blocks once the agent finishes them",
+  }),
+  reasoning_display: ReasoningDisplay.pipe(optional).annotate({
+    description: "How reasoning blocks are displayed",
+  }),
+  shared_agent_board: Schema.Boolean.pipe(optional).annotate({
+    description: "Share a board between a main session and its task subagents, including nested subagents",
+  }),
+  sandbox: Sandbox.pipe(optional).annotate({ description: "Sandbox configuration for agent tools" }),
+  // kilo_port(unattributed:core/v1:a4a32558d64b)
+  subagent_model: Schema.NullOr(Schema.String).pipe(optional).annotate({
+    description: "Default model for task-tool subagents",
+  }),
+  subagent_variant: Schema.NullOr(Schema.String).pipe(optional).annotate({
+    description: "Default model variant for task-tool subagents when subagent_model is configured",
+  }),
+  subagent_variant_overrides: Schema.NullOr(Schema.Record(Schema.String, Schema.NullOr(Schema.String)))
+    .pipe(optional)
+    .annotate({ description: "Model-specific variant overrides for task-tool subagents, keyed by provider/model" }),
+  memory_model: Schema.NullOr(Schema.String).pipe(optional).annotate({
+    description: "Model for automatic project memory saves",
+  }),
+  // kilo_port(unattributed:core/v1:a177a3c0a84c)
+  web_search: Schema.Boolean.pipe(optional).annotate({
+    description: "Make web search available to models from all providers",
+  }),
+  // kilo_port(unattributed:core/v1:2e351a955982)
+  retention: Retention.pipe(optional).annotate({
+    description: "Machine-wide session retention across every Kilo client on this machine",
+  }),
   // kilo_port(unattributed:core/v1:fb80dc4c3dd4)
   commit_message: Schema.Struct({
     prompt: Schema.String.pipe(optional).annotate({
@@ -47,6 +104,60 @@ const decodeModel = Schema.decodeUnknownOption(ConfigModel.Selection)
 
 function record(value: unknown): value is Record<string, unknown> {
   return !!value && typeof value === "object" && !Array.isArray(value)
+}
+
+const settings = {
+  remote_control: { schema: Schema.Boolean, expected: "a boolean" },
+  auto_collapse_reasoning: { schema: Schema.Boolean, expected: "a boolean" },
+  reasoning_display: { schema: ReasoningDisplay, expected: 'one of "expanded", "preview", "headline"' },
+  shared_agent_board: { schema: Schema.Boolean, expected: "a boolean" },
+  sandbox: { schema: Sandbox, expected: "an object with optional enabled, network, writable_paths and allowed_hosts" },
+  subagent_model: { schema: Schema.NullOr(Schema.String), expected: "a model string or null" },
+  subagent_variant: { schema: Schema.NullOr(Schema.String), expected: "a variant string or null" },
+  subagent_variant_overrides: {
+    schema: Schema.NullOr(Schema.Record(Schema.String, Schema.NullOr(Schema.String))),
+    expected: "a map of provider/model to a variant string or null",
+  },
+  memory_model: { schema: Schema.NullOr(Schema.String), expected: "a model string or null" },
+  web_search: { schema: Schema.Boolean, expected: "a boolean" },
+  retention: { schema: Retention, expected: "an object with optional enabled and maxAgeDays" },
+} as const
+
+/** Decode each Kilo-only setting on its own, so one invalid field does not drop the others. */
+function kiloSettings(input: unknown, report?: (diagnostic: ConfigNormalize.Diagnostic) => void) {
+  if (!record(input)) return {}
+  return Object.fromEntries(
+    Object.entries(settings).flatMap(([key, { schema, expected }]) => {
+      const raw = (input as Record<string, unknown>)[key]
+      if (raw === undefined) return []
+      const value = Option.getOrUndefined(Schema.decodeUnknownOption(schema)(raw))
+      if (value === undefined) {
+        report?.({ path: [key], kind: "invalid", message: `ignored invalid ${key}; expected ${expected}` })
+        return []
+      }
+      return [[key, value]]
+    }),
+  )
+}
+
+const refused = {
+  console: "ignored console; Kilo Console settings are not carried on this build",
+} as const
+
+const refusedExperimental = {
+  semantic_indexing: "ignored retired experimental.semantic_indexing; use indexing.enabled instead",
+  codebase_search: "ignored retired experimental.codebase_search",
+  shared_agent_board: "ignored retired experimental.shared_agent_board; use the top-level shared_agent_board key instead",
+} as const
+
+/** Report the v1 keys this build accepts from neither the canonical nor the Kilo schema. */
+function refusedSettings(input: unknown, report?: (diagnostic: ConfigNormalize.Diagnostic) => void) {
+  if (!record(input)) return
+  for (const [key, message] of Object.entries(refused))
+    if (key in input) report?.({ path: [key], kind: "unsupported", message })
+  if (!record(input.experimental)) return
+  for (const [key, message] of Object.entries(refusedExperimental))
+    if (key in input.experimental) report?.({ path: ["experimental", key], kind: "unsupported", message })
 }
 
 function modelOnly(value: unknown) {
@@ -105,6 +216,8 @@ export function parse(
       message: "ignored invalid commit_message; expected an object with an optional string prompt",
     })
   const models = input instanceof Info ? input.workflow_models : record(input) ? workflowModels(input) : undefined
+  refusedSettings(input, report)
+  const decodedSettings = kiloSettings(input, report)
   // Managed policy splitting clears optional fields with undefined; the encoded schema requires omitted keys.
   return Option.getOrUndefined(
     decode(
@@ -115,6 +228,7 @@ export function parse(
           ...Option.getOrElse(privacyField, () => ({})),
           ...Option.getOrElse(message, () => ({})),
           ...displaySettings(input),
+          ...decodedSettings,
           workflow_models: models && Object.keys(models).length ? models : undefined,
         }).filter(([, value]) => value !== undefined),
       ),

@@ -1288,5 +1288,22 @@
     "v2": "packages/kilo-vscode/test/agent-project-messages.test.ts",
     "note": "The state router is carried by packages/kilo-vscode/webview-ui/agent-manager/project/{state,state-handlers,store}.ts and the host project messages. packages/kilo-vscode/test/agent-project-messages.test.ts covers deferred state, activation and the no-catalog mode.",
     "by": "am-progress-map"
+  },
+  "patch:unattributed:core/v1:efe2b3136dab": {
+    "state": "native",
+    "v2": "packages/core/src/config/normalize.ts",
+    "note": "The v1 `small_model` (NullOr(string)) is mapped natively. normalize.ts migrates it to the title agent model `agents.title.model` through ConfigMigrateV1.modelSelection (packages/core/src/v1/config/migrate.ts); a null value is omitted. packages/core/test/kilocode/config/mapping.test.ts pins both the string and the null outcome.",
+    "by": "v2-config-keys"
+  },
+  "patch:unattributed:core/v1:eef8153da721": {
+    "state": "native",
+    "v2": "packages/core/src/config/normalize.ts",
+    "note": "The hunk only updates the `command` schema description (the customization docs URL). v1 `command` is mapped natively: normalize.ts migrates the map to `commands` with ConfigMigrateV1.migrateCommand. The description text on v2 is upstream's.",
+    "by": "v2-config-keys"
+  },
+  "patch:unattributed:core/v1:803d6139aabf": {
+    "state": "dropped",
+    "note": "The v1 experimental sandbox keys (`experimental.sandbox`, `experimental.sandbox_restrict_network`, `experimental.sandbox_writable_paths`) have no v1 runtime caller (git grep over packages/*/src finds only the schema and the generated SDK types). The live v1 key is the top-level `sandbox` struct, read by packages/opencode/src/kilocode/sandbox/config.ts and folded by KiloConfigPolicy. The experimental aliases are dead fields.",
+    "by": "v2-config-keys"
   }
 }
