@@ -25,6 +25,8 @@ type Paths = FilePaths & {
 }
 type Options = {
   filewatcher?: boolean
+  /** Skip `git init` so the location is outside version control and the reader walks to the filesystem root. */
+  git?: boolean
   /** Run the server in this subdirectory of the git root, so ancestor project config is in scope. */
   subdirectory?: string
   /** Extra setup after the config files are written, for example a symlinked config directory. */
@@ -39,7 +41,8 @@ const boot =
     const repoRoot = path.join(root, "repo")
     const directory = options.subdirectory ? path.join(repoRoot, options.subdirectory) : repoRoot
     const global = path.join(root, "global")
-    await $`git init -q -b main ${repoRoot}`.quiet()
+    if (options.git ?? true) await $`git init -q -b main ${repoRoot}`.quiet()
+    else await mkdir(repoRoot, { recursive: true })
     if (files.global !== undefined) {
       await mkdir(global, { recursive: true })
       await Bun.write(path.join(global, "kilo2.json"), JSON.stringify(files.global))
@@ -248,6 +251,22 @@ test(
       expect(JSON.parse(await Bun.file(winner).text())).toEqual({ privacy_mode: true, shell: "zsh" })
     },
     { subdirectory: "packages/app" },
+  ),
+  30_000,
+)
+
+test(
+  "outside version control a project write reaches ancestor config",
+  boot(
+    { project: { privacy_mode: true } },
+    async (client, { directory, repoRoot }) => {
+      const winner = path.join(repoRoot, "kilo2.json")
+      expect(await settingsTarget(client, directory, "project")).toMatchObject({ path: winner })
+      const result = await settingsWrite(client, directory, { scope: "project", set: { shell: "zsh" } })
+      expect(result.target.path).toBe(winner)
+      expect(JSON.parse(await Bun.file(winner).text())).toEqual({ privacy_mode: true, shell: "zsh" })
+    },
+    { subdirectory: "sub", git: false },
   ),
   30_000,
 )
