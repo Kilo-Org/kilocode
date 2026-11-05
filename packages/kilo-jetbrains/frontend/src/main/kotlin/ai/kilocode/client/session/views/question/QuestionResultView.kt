@@ -1,8 +1,12 @@
 package ai.kilocode.client.session.views.question
 
 import ai.kilocode.client.plugin.KiloBundle
+import ai.kilocode.client.plugin.KiloPluginSettings
 import ai.kilocode.client.session.model.Content
 import ai.kilocode.client.session.model.Tool
+import ai.kilocode.client.session.settings.BlockDisplay
+import ai.kilocode.client.session.settings.TranscriptDisplay
+import ai.kilocode.client.session.settings.TranscriptDisplayTarget
 import ai.kilocode.client.session.ui.selection.SessionSelection
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionUiStyle
@@ -32,7 +36,13 @@ class QuestionResultView(
     selection: SessionSelection? = null,
     private val parts: QuestionParts = questionParts(selection),
     private val footer: ToolApprovalFooter = ToolApprovalFooter(),
-) : AbstractSessionPartView(parts.header, { parts.body }, { footer }), ApprovalReasonTarget {
+    private var display: BlockDisplay = KiloPluginSettings.getQuestionDisplay(),
+) : AbstractSessionPartView(
+    parts.header,
+    { parts.body },
+    { footer },
+    expanded = display == BlockDisplay.EXPANDED,
+), ApprovalReasonTarget, TranscriptDisplayTarget {
 
     override val contentId: String = tool.id
 
@@ -43,6 +53,7 @@ class QuestionResultView(
     init {
         applyStyle(style)
         syncLabels()
+        if (isExpanded()) parts.body.set(result.questions, result.answers)
         syncApprovalReason(approvalReasonsVisible())
     }
 
@@ -81,6 +92,20 @@ class QuestionResultView(
         val changed = footer.update(item, visible)
         if (changed) refresh()
         return changed
+    }
+
+    /**
+     * Applies the transcript's question-block default. A manual toggle wins over later setting changes
+     * unless the caller forces a reapply, matching the other transcript cards.
+     */
+    override fun syncTranscriptDisplay(display: TranscriptDisplay, force: Boolean): Boolean {
+        if (!force && touched) return false
+        val next = display.question
+        if (!force && this.display == next) return false
+        this.display = next
+        if (next == BlockDisplay.EXPANDED) expand() else collapse()
+        refresh()
+        return true
     }
 
     fun labelText(): String = listOf(parts.title.text, parts.sub.text).filter { it.isNotBlank() }.joinToString(" ")

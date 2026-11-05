@@ -29,6 +29,8 @@ import java.awt.Color
 import java.awt.Cursor
 import java.awt.Rectangle
 import java.awt.event.KeyEvent
+import java.awt.event.MouseAdapter
+import java.awt.event.MouseEvent
 import javax.swing.JComponent
 import javax.swing.JViewport
 import javax.swing.KeyStroke
@@ -74,15 +76,30 @@ internal class ActiveList(
     }
 
     /**
-     * Called when the list scrolls. A popup anchored to a row has to close then: the row moves out from
-     * under it, and the balloon would otherwise sit pointing at whatever slid into its place.
+     * Called when the user scrolls the list — a wheel turn, a scrollbar drag, or a click on the track.
+     * A popup anchored to a row has to close then: the row moves out from under it, and the balloon
+     * would otherwise sit pointing at whatever slid into its place.
+     *
+     * Deliberately not the scrollbar's every adjustment: a viewport laying out moves the same model,
+     * and an owner that follows a row must keep doing so through a resize.
      */
     var onScroll: (() -> Unit)? = null
 
     init {
         view.onSelect = onSelect
-        // Any movement, including mid-drag: the row a popup points at has already left that position.
-        scroll.verticalScrollBar.addAdjustmentListener { onScroll?.invoke() }
+        // Only real user gestures count as scrolling. A viewport laying out — a balloon resizing, a
+        // relayout — updates the scrollbar model too, and an owner such as the prompt navigator must
+        // not mistake that for the user taking over the list and drop its pending reveal.
+        scroll.verticalScrollBar.addAdjustmentListener { event ->
+            if (event.valueIsAdjusting) onScroll?.invoke()
+        }
+        scroll.addMouseWheelListener { onScroll?.invoke() }
+        view.list.addMouseWheelListener { onScroll?.invoke() }
+        scroll.verticalScrollBar.addMouseListener(object : MouseAdapter() {
+            override fun mousePressed(e: MouseEvent) {
+                onScroll?.invoke()
+            }
+        })
         // Center the scroll pane so the list fills the panel vertically and horizontally, with the
         // search field pinned above it.
         if (surface == ActiveSurface.ToolWindow) isOpaque = true
