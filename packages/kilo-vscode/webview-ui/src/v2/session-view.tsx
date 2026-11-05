@@ -5,6 +5,7 @@ import type { ToolActions } from "@kilocode/kilo-ui/message-part"
 import { ToolChildSessionProvider, type ToolChildSession } from "@kilocode/kilo-ui/tool-child-session"
 import { createEffect, createMemo, on, onCleanup, onMount, Show, type JSX } from "solid-js"
 import type { PromptAttachment, ToHost } from "../../../src/protocol"
+import { useModelPreferences } from "../context/model-preferences"
 import { getVSCodeAPI } from "../context/vscode"
 import { TaskHeader } from "../components/chat/TaskHeader"
 import { SessionDock } from "../components/chat/SessionDockWorking"
@@ -166,6 +167,7 @@ export function SessionView(props: {
   // Only a pending permission changes the Send label. A pending question leaves Send in place instead of Stop.
   const questioning = () => !blocked() && forms().length > 0
   const selection = createSelection(session, draftKey)
+  const preferences = useModelPreferences()
   const autoApprove = createAutoApprove()
   // The host sends the cycle action for the cycleAgentMode/cyclePreviousAgentMode commands, as in main.
   // A read-only view, for example an Agent Manager subagent, has no composer to cycle.
@@ -208,7 +210,10 @@ export function SessionView(props: {
         files: input?.items?.length ? toPromptFiles(input.items) : undefined,
       })
       .then(() => {
-        props.onPrompted?.(id, text, gate ? selection.attributed(id) : model)
+        const used = gate ? selection.attributed(id) : model
+        // The Most used group counts sent prompts per model, as v1.
+        if (used) preferences?.recordUsage(used.providerID, used.id)
+        props.onPrompted?.(id, text, used)
         return true
       })
       .catch((err: unknown) => {
