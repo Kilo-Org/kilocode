@@ -1,0 +1,2 @@
+Execute one explicit code cell in a live VS Code notebook.
+Use a request-directory-relative path or a safe absolute path inside the request directory. Pass the latest opaque content revision unchanged. Execution requires a kernel already selected by the user; the tool never reveals the notebook or opens a kernel picker.
