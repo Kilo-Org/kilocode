@@ -1,6 +1,7 @@
 package ai.kilocode.e2e
 
 import com.intellij.driver.sdk.application.fullProductName
+import com.intellij.driver.sdk.ui.components.UiComponent
 import com.intellij.ide.starter.driver.runIdeTest
 import com.intellij.ide.starter.ide.IDERemDevTestContext
 import com.intellij.ide.starter.ide.IDETestContext
@@ -10,6 +11,10 @@ import com.intellij.ide.starter.models.TestCase
 import com.intellij.ide.starter.plugins.PluginConfigurator
 import com.intellij.ide.starter.project.LocalProjectInfo
 import com.intellij.ide.starter.runner.Starter
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.jsonObject
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Timeout
 import org.junit.jupiter.api.extension.ExtendWith
@@ -43,13 +48,14 @@ class JetBrainsDriverTest {
         val evidence = DriverEvidence(request, descriptor)
         evidence.log("run=${request.runId} scenario=${request.scenario.id} lane=${request.scenario.lane}")
 
+        seedModel(descriptor, evidence)
         val preflight = preflight(request, evidence)
         if (!preflight) {
             evidence.write(resultPath)
             return
         }
 
-        if (isTranscriptSessionOpen(request) && request.scenario.lane == "cloud") {
+        if (isTranscriptScenario(request) && request.scenario.lane == "cloud") {
             if (!setOrigin(request.project.path, descriptor.project.gitUrl, evidence)) {
                 evidence.write(resultPath)
                 return
@@ -175,6 +181,8 @@ class JetBrainsDriverTest {
 
                 if (isTranscriptSessionOpen(request)) {
                     openSession(request, descriptor, ide, toolWindow, window, evidence)
+                } else if (isPromptStream(request)) {
+                    promptStream(request, descriptor, ide, toolWindow, window, evidence)
                 }
             }
         } catch (error: Throwable) {
@@ -191,6 +199,16 @@ class JetBrainsDriverTest {
         request.scenario.id == "session.open" &&
             "transcript.visible" in request.scenario.expected.ui &&
             "session.ready" in request.scenario.expected.model
+
+    private fun isPromptStream(request: DriverRequest): Boolean =
+        request.scenario.id == "prompt.stream" &&
+            "assistant.streaming" in request.scenario.expected.ui &&
+            "assistant.complete" in request.scenario.expected.ui &&
+            "prompt.completed" in request.scenario.expected.model &&
+            "transcript.token" in request.scenario.expected.model
+
+    private fun isTranscriptScenario(request: DriverRequest): Boolean =
+        isTranscriptSessionOpen(request) || isPromptStream(request)
 
     private fun setOrigin(project: String, url: String, evidence: DriverEvidence): Boolean {
         val existing = git(project, "remote", "get-url", "origin")
@@ -310,6 +328,209 @@ class JetBrainsDriverTest {
         runCatching { ide.screenshot("session-open-$lane") }
     }
 
+    private fun promptStream(
+        request: DriverRequest,
+        descriptor: FixtureDescriptor,
+        ide: KiloIdePage,
+        toolWindow: KiloToolWindowPage,
+        window: ToolWindow,
+        evidence: DriverEvidence,
+    ) {
+        val lane = request.scenario.lane
+        val token = request.scenario.prompt.token
+        if (token.isBlank()) {
+            failStream(evidence, "scenario has no prompt token")
+            return
+        }
+        val fake = FakeLlm.create(descriptor.origins.fakeLlm)
+        if (fake == null) {
+            failStream(evidence, "descriptor has no loopback fakeLlm origin")
+            return
+        }
+
+        val page = SessionOpenPage(ide, watchdog)
+        val scope = descriptor.fakeLlmScope.ifBlank { "kilo-e2e-${request.runId}" }
+        val tag = "$scope-stream"
+        val prompt = "__e2e_scope__:$scope\n__fake__:gate:$tag:$token"
+
+        val hosted = if (lane == "cloud") {
+            openCloud(request, descriptor, ide, toolWindow, window, page, evidence, label = "prompt.hosted") ?: run {
+                failStream(evidence, "hosted session did not open")
+                return
+            }
+        } else {
+            ""
+        }
+        val root = if (lane == "cloud") page.hostedEditor() else null
+        if (lane == "cloud" && root == null) {
+            failStream(evidence, "hosted workspace editor is not visible")
+            return
+        }
+        if (root != null) {
+            val loaded = runCatching { page.awaitLoaded(root) }.getOrElse { error ->
+                failStream(evidence, "hosted transcript did not load before the prompt: ${actionable(error)}")
+                return
+            }
+            evidence.state("prompt.loaded.turns", loaded.turns)
+        }
+
+        evidence.state("prompt.directive", prompt)
+        evidence.state("prompt.scope", scope)
+        evidence.state("prompt.gate", tag)
+        val before = runCatching { fake.scenarioRequests(tag) }.getOrNull()
+        val scopedBefore = runCatching { fake.requests(scope) }.getOrNull()
+        evidence.state("stream.observations.before", before)
+        evidence.state("stream.observations.scope.before", scopedBefore)
+
+        runCatching { page.submit(prompt, root) }.onFailure { error ->
+            capture(ide, window, page, root, lane, "submit-failed")
+            evidence.fail("stream.gate", "could not submit the stream prompt: ${actionable(error)}")
+            failStream(evidence, "could not submit the stream prompt: ${actionable(error)}")
+            return
+        }
+        runCatching { watchdog.await("fake LLM gate '$tag' engaged") { fake.gateEngaged(tag) == true } }
+            .onFailure { error ->
+                capture(ide, window, page, root, lane, "gate-failed")
+                evidence.fail("stream.gate", "gate '$tag' did not engage: ${actionable(error)}")
+                failStream(evidence, "gate '$tag' did not engage: ${actionable(error)}")
+                return
+            }
+        evidence.pass("stream.gate", "the scoped fake-LLM gate is holding the turn")
+
+        val streaming = runCatching { page.awaitStreaming(token, root) }.getOrElse { error ->
+            capture(ide, window, page, root, lane, "streaming-failed")
+            failStream(evidence, "the turn did not reach the streaming state: ${actionable(error)}")
+            return
+        }
+        evidence.pass("assistant.streaming", "turn is busy while the gate holds the stream")
+        evidence.state("stream.state", streaming.state)
+        evidence.state("stream.assistant.during", streaming.assistant.take(2000))
+        evidence.state("stream.ui.occurrences", page.occurrences(streaming, token))
+        streaming.message?.let { evidence.state("stream.state.message", it) }
+
+        if (streaming.user.contains(prompt)) {
+            evidence.pass("prompt.user", "authoritative user message contains the submitted directive")
+        } else {
+            evidence.fail("prompt.user", "user message '${streaming.user.take(400)}' does not contain the submitted directive")
+        }
+        if (page.occurrences(streaming, token) >= 1) {
+            evidence.pass("prompt.user.visible", "the submitted prompt is rendered before the gate is released")
+        } else {
+            evidence.fail("prompt.user.visible", "the submitted prompt is not rendered in the transcript")
+        }
+        if (streaming.assistant.contains(token)) {
+            evidence.fail("stream.held", "assistant text completed before the gate was released")
+        } else {
+            evidence.pass("stream.held", "assistant text is still empty while the gate holds")
+        }
+
+        capture(ide, window, page, root, lane, "streaming")
+
+        val status = runCatching { fake.release(tag) }.getOrNull()
+        if (status == null || status !in 200..299) {
+            evidence.fail("stream.release", "gate release returned ${status ?: "no response"}")
+            failStream(evidence, "the fake-LLM gate was not released")
+            return
+        }
+        evidence.pass("stream.release", "HTTP $status")
+
+        val complete = runCatching { page.awaitComplete(token, root) }.getOrElse { error ->
+            capture(ide, window, page, root, lane, "complete-failed")
+            failStream(evidence, "the turn did not settle with the assistant token: ${actionable(error)}")
+            return
+        }
+
+        evidence.pass("assistant.complete", "the transcript renders the completed assistant token")
+        evidence.state("stream.state", complete.state)
+        evidence.state("stream.assistant.final", complete.assistant.take(4000))
+        evidence.state("stream.ui.occurrences", page.occurrences(complete, token))
+        evidence.state("stream.turns", complete.turns)
+        evidence.state("transcript.dump", complete.dump.take(4000))
+        evidence.state("transcript.detailed", complete.detailed.take(4000))
+
+        if (complete.assistant.contains(token)) {
+            evidence.pass("transcript.token", "assistant text contains '$token'")
+        } else {
+            evidence.fail("transcript.token", "assistant text '${complete.assistant.take(400)}' does not contain '$token'")
+        }
+        if (complete.state == "Idle") {
+            evidence.pass("prompt.completed", "state=Idle after the turn completed")
+        } else {
+            evidence.fail(
+                "prompt.completed",
+                "state=${complete.state}${complete.message?.let { ": $it" } ?: ""}",
+            )
+        }
+        if (complete.errors.isBlank() && complete.state != "Error") {
+            evidence.pass("prompt.no-error", "no assistant error and no error state")
+        } else {
+            evidence.fail("prompt.no-error", "assistant errors '${complete.errors.take(400)}' state=${complete.state}")
+        }
+
+        val after = runCatching { fake.scenarioRequests(tag) }.getOrNull()
+        val scopedAfter = runCatching { fake.requests(scope) }.getOrNull()
+        evidence.state("stream.observations.after", after)
+        evidence.state("stream.observations.scope.after", scopedAfter)
+        if (after != null && (before == null || after > before)) {
+            evidence.pass("stream.observe", "fake-LLM scenario requests $before -> $after")
+        } else {
+            evidence.fail("stream.observe", "fake-LLM scenario request count did not increase (before=$before after=$after)")
+        }
+
+        val selected = runCatching { page.hostedSelection() }.getOrNull()
+        if (lane == "cloud") {
+            if (selected == hosted) evidence.pass("session.hosted", selected) else {
+                evidence.fail("session.hosted", "selected '${selected ?: "none"}' instead of '$hosted'")
+            }
+            if (page.hostedEditorVisible()) evidence.pass("session.hosted.editor", "Cloud workspace editor visible")
+            else evidence.fail("session.hosted.editor", "Cloud workspace editor is not visible")
+            val native = descriptor.resources.nativeSessionId
+            if (complete.session == hosted) {
+                evidence.pass("session.hosted.session", "loaded hosted composite '$hosted'")
+            } else {
+                evidence.fail("session.hosted.session", "loaded '${complete.session ?: "none"}' instead of '$hosted'")
+            }
+            evidence.state("session.native", native.orEmpty())
+            evidence.state("session.hosted", true)
+            evidence.state("session.key", selected.orEmpty())
+        } else {
+            if (!page.hostedEditorVisible() && selected == null) {
+                evidence.pass("session.local", "no hosted editor or selected hosted session")
+            } else {
+                evidence.fail("session.local", "hosted attachment leaked into the local lane: ${selected ?: "editor"}")
+            }
+            evidence.state("session.hosted", false)
+        }
+
+        capture(ide, window, page, root, lane, "complete")
+    }
+
+    private fun capture(
+        ide: KiloIdePage,
+        window: ToolWindow,
+        page: SessionOpenPage,
+        root: UiComponent?,
+        lane: String,
+        phase: String,
+    ) {
+        runCatching { ide.snapshot("prompt-stream-$lane-$phase", window) }
+        runCatching {
+            page.transcriptComponent(root)?.let { ide.snapshotComponent("prompt-stream-$lane-$phase-transcript", it) }
+        }
+        runCatching { ide.screenshot("prompt-stream-$lane-$phase") }
+    }
+
+    private fun failStream(evidence: DriverEvidence, message: String) {
+        val names = listOf(
+            "assistant.streaming",
+            "assistant.complete",
+            "prompt.completed",
+            "transcript.token",
+            "prompt.no-error",
+        )
+        for (name in names.filterNot(evidence::passed)) evidence.fail(name, message)
+    }
+
     private fun openLocal(request: DriverRequest, page: SessionOpenPage, evidence: DriverEvidence): String? =
         runCatching {
             page.submitLocal(request.scenario.prompt.token)
@@ -330,11 +551,12 @@ class JetBrainsDriverTest {
         window: ToolWindow,
         page: SessionOpenPage,
         evidence: DriverEvidence,
+        label: String = "session.open",
     ): String? {
         val workspace = descriptor.resources.workspaceId
         val session = descriptor.resources.nativeSessionId
         if (workspace == null || session == null) {
-            evidence.fail("session.open", "Cloud descriptor has no workspaceId/nativeSessionId")
+            evidence.fail(label, "Cloud descriptor has no workspaceId/nativeSessionId")
             evidence.fail("transcript.visible", "Cloud descriptor has no hosted identity")
             evidence.fail("session.ready", "Cloud descriptor has no hosted identity")
             return null
@@ -359,12 +581,12 @@ class JetBrainsDriverTest {
                 evidence.fail("hosted.discovery", "row tooltip '$reported' does not match raw origin '$remote'")
             }
             page.awaitHostedSession(workspace, session)
-            evidence.pass("session.open", "hosted workspace and root session opened")
+            evidence.pass(label, "hosted workspace and root session opened")
             val expected = "hosted:$KILO_CLOUD_PROVIDER_ID:$workspace:$session"
             evidence.state("hosted.session", expected)
             expected
         }.getOrElse { error ->
-            evidence.fail("session.open", actionable(error))
+            evidence.fail(label, actionable(error))
             evidence.fail("transcript.visible", "Cloud session did not open: ${actionable(error)}")
             evidence.fail("session.ready", "Cloud session did not open: ${actionable(error)}")
             null
@@ -374,6 +596,24 @@ class JetBrainsDriverTest {
     private fun sameRemote(a: String?, b: String): Boolean {
         fun normalize(value: String) = value.trim().removeSuffix("/").removeSuffix(".git").lowercase()
         return a != null && normalize(a) == normalize(b)
+    }
+
+    private fun seedModel(descriptor: FixtureDescriptor, evidence: DriverEvidence) {
+        val model = descriptor.project.model.takeIf { it.isNotBlank() } ?: return
+        val file = Path.of(descriptor.state.config, "kilo", "kilo.jsonc")
+        runCatching {
+            Files.createDirectories(file.parent)
+            val existing = if (Files.exists(file)) Files.readString(file) else "{}"
+            val fields = runCatching { Json.parseToJsonElement(existing).jsonObject.toMutableMap() }
+                .getOrElse { mutableMapOf() }
+            fields["model"] = JsonPrimitive(model)
+            fields["small_model"] = JsonPrimitive(model)
+            Files.writeString(file, JsonObject(fields).toString())
+        }.onSuccess {
+            evidence.state("model.seeded", model)
+        }.onFailure { error ->
+            evidence.fail("model.seeded", actionable(error))
+        }
     }
 
     private fun preflight(request: DriverRequest, evidence: DriverEvidence): Boolean {

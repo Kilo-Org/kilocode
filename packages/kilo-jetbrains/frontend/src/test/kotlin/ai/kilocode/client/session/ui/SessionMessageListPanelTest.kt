@@ -127,6 +127,30 @@ class SessionMessageListPanelTest : BasePlatformTestCase() {
         assertEquals("", panel.dump())
     }
 
+    fun `test exposes authoritative prompt stream state`() {
+        model.upsertMessage(msg("u1", "user"))
+        model.updateContent("u1", part("p1", "u1", "text", "hello from prompt"))
+        model.upsertMessage(msg("a1", "assistant"))
+        model.updateContent("a1", part("p2", "a1", "text", "K1-PROMPT-STREAM"))
+        model.setState(SessionState.Idle)
+
+        assertEquals("hello from prompt", panel.messageText("user"))
+        assertEquals("K1-PROMPT-STREAM", panel.messageText("assistant"))
+        assertEquals("", panel.assistantErrors())
+        assertEquals("Idle", panel.stateName())
+        assertNull(panel.stateMessage())
+        assertNull(panel.sessionId())
+    }
+
+    fun `test reports assistant errors and error state detail`() {
+        model.upsertMessage(msg("a1", "assistant").copy(error = failure("boom")))
+        model.setState(SessionState.Error("boom", "APIError"))
+
+        assertTrue(panel.assistantErrors().contains("boom"))
+        assertEquals("Error", panel.stateName())
+        assertEquals("boom", panel.stateMessage())
+    }
+
     fun `test modified files card follows turn anchor summary`() {
         model.upsertMessage(msg("u1", "user").copy(summary = summary("src/A.kt")))
 
