@@ -121,7 +121,7 @@ export async function handlePermissionResponse(
   const action = async (): Promise<PermissionResponseResult> => {
     if (!dir) return { kind: "error" }
 
-    const { error, saved } = await respondToPermission(client, {
+    const { error } = await respondToPermission(client, {
       requestID: permissionId,
       directory: dir,
       reply: response,
@@ -135,10 +135,13 @@ export async function handlePermissionResponse(
         void fetchAndSendPendingPermissions(ctx)
         return { kind: "stale" }
       }
-      // An aborted rule save may still complete on the server. If the request
-      // is no longer pending it was applied, so report stale instead of
-      // letting the user retry with a decision that could conflict with it.
-      if (saved && (await permissionSettled(client, dir, permissionId))) {
+      // A failed reply may have landed anyway (retry replay, resolution by
+      // another surface while transport was down, serve restart). Rules saved
+      // earlier may also still complete. If the request is no longer pending
+      // the outcome is decided either way, so report stale instead of letting
+      // the user retry through a popup the server can no longer resolve —
+      // that retry dead-ends in this toast while the popup stays stranded.
+      if (await permissionSettled(client, dir, permissionId)) {
         ctx.clearPermissionDirectory(permissionId)
         void fetchAndSendPendingPermissions(ctx)
         return { kind: "stale" }
