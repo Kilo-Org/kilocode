@@ -21,6 +21,7 @@ function denied(exit: Exit.Exit<unknown, unknown>) {
 }
 
 describe("sandbox tool network classification", () => {
+  // kilo_port(sandbox:fd6329a01ac1)
   test("recognizes the built-in tools and treats every other id as custom", () => {
     expect(Network.isBuiltin("read")).toBe(true)
     expect(Network.isBuiltin("webfetch")).toBe(true)
@@ -51,6 +52,7 @@ describe("sandbox tool network classification", () => {
     }
   })
 
+  // kilo_port(sandbox:d1999e0669a5) kilo_port(sandbox:859933ff55db)
   test("rejects MCP delegated authority without invoking it in deny mode", async () => {
     let called = false
     const exit = await Effect.runPromise(

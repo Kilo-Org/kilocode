@@ -67,10 +67,13 @@ function failed(path: string) {
   return (cause: unknown) => new Environment.Failed({ path, cause })
 }
 
+/** A spawner that prepares every command in the current fiber's sandbox profile before the base spawner runs it. */
+export function confine(base: Pick<Environment.Interface["spawner"], "spawn">) {
+  return make((command) => prepare(command).pipe(Effect.flatMap((next) => base.spawn(next))))
+}
+
 function decorate(base: Environment.Interface): Environment.Interface {
-  const spawner = make((command) =>
-    prepare(command).pipe(Effect.flatMap((next) => base.spawner.spawn(next))),
-  )
+  const spawner = confine(base.spawner)
   // Writes from a sandboxed tool call go through the sandbox mutation worker, which runs inside the profile.
   const confined = <A, E>(path: string, fallback: Effect.Effect<A, E>, mutation: (fs: FileSystem.FileSystem) => Effect.Effect<A, PlatformError.PlatformError>) =>
     Effect.flatMap(enabled, (active): Effect.Effect<A, E | Environment.Failed> => {
