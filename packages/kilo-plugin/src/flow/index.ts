@@ -26,7 +26,6 @@ const activePrefix = "flow-active:v1:"
 const schedulePrefix = "flow-schedule:v1:"
 const metadataKey = "kilocode.flow"
 const permissionAction = "flow"
-const scheduledPromptPrefix = "[Kilo managed Flow "
 const retainedRuns = 20
 const decodeRecord = Schema.decodeUnknownOption(
   Schema.Union([KiloFlowRpc.Record, Schema.fromJsonString(KiloFlowRpc.Record)]),
@@ -267,7 +266,7 @@ export function create(
           sessionID: session.id,
           name: `Flow: ${record.name}`,
           when: record.trigger.when,
-          action: { type: "prompt", prompt: scheduledPrompt(record.id) },
+          action: { type: "hook", prompt: "" },
         },
         { requireEnabled: false },
       )
@@ -690,10 +689,6 @@ function outcome(run: KiloFlowRpc.Run): KiloFlowRpc.Outcome | undefined {
   if (run.status === "succeeded" || run.status === "failed" || run.status === "interrupted" || run.status === "skipped")
     return run.status
   return undefined
-}
-
-function scheduledPrompt(flowID: KiloFlowRpc.ID) {
-  return `${scheduledPromptPrefix}${flowID}]`
 }
 
 function time(input: KiloFlowRpc.CreateInput["when"]): Schedule.When {

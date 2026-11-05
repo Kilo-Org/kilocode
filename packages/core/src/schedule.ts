@@ -441,7 +441,7 @@ const layer = Layer.effect(
 
       const run = row.run_count + 1
       // kilocode_change start - flows seam: preserve the deterministic native message identity without admitting it
-      const id = claimed
+      const id = claimed || row.action.type === "hook"
         ? SessionMessage.ID.make(`msg_${row.id}_${run}`)
         : yield* admitWake(row, session.id, run, due, late, row.action.prompt)
       // kilocode_change end
@@ -739,6 +739,8 @@ const layer = Layer.effect(
       create: Effect.fn("Schedule.create")(function* (input, options) {
         // kilocode_change end
         const session = yield* sessions.get(input.sessionID)
+        if (input.action.type === "hook" && (input.if !== undefined || input.until !== undefined)) // kilocode_change(flows) seam - hook actions never use native conditions
+          return yield* new InvalidError({ reason: "Hook-owned schedule actions do not support conditions" }) // kilocode_change(flows) seam - a hook action must never reach native conditional admission
         const config = yield* settings(session).pipe(
           Effect.catchTag("FileSystem.DirectoryNotFoundError", () =>
             Effect.fail(new InvalidError({ reason: `Session directory does not exist: ${session.location.directory}` })),

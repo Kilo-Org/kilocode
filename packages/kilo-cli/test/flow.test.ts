@@ -265,6 +265,12 @@ test("lists local schedules and creates managed definitions through the Kilo Flo
               permissions: baselinePermissions,
               status: "active",
             })
+            if (readOnly.reference.type !== "managed" || !readOnly.reference.scheduleID)
+              throw new Error("Expected a managed read-only Flow with a schedule")
+            expect((await Effect.runPromise(schedules.get(readOnly.reference.scheduleID))).action).toEqual({
+              type: "hook",
+              prompt: "",
+            })
             await Bun.sleep(20)
             await Effect.runPromise(schedules.tick)
             expect((await client.message.list({ sessionID: first.id })).data).toEqual([])
@@ -279,6 +285,44 @@ test("lists local schedules and creates managed definitions through the Kilo Flo
                 }),
               }),
             )
+            await expect(
+              Effect.runPromise(
+                schedules.create(
+                  {
+                    sessionID: Session.ID.make(first.id),
+                    if: { type: "code", code: "return true" },
+                    action: { type: "hook", prompt: "" },
+                  },
+                  { requireEnabled: false },
+                ),
+              ),
+            ).rejects.toThrow("Hook-owned schedule actions do not support conditions")
+            const orphan = await Effect.runPromise(
+              schedules.create(
+                {
+                  sessionID: Session.ID.make(first.id),
+                  name: "Missing Flow owner",
+                  when: { type: "in", in: "10 millis" },
+                  action: { type: "hook", prompt: "" },
+                },
+                { requireEnabled: false },
+              ),
+            )
+            await Bun.sleep(20)
+            await Effect.runPromise(schedules.tick)
+            expect((await client.message.list({ sessionID: first.id })).data).toEqual([])
+            expect(await Effect.runPromise(schedules.get(orphan.id))).toMatchObject({
+              action: { type: "hook", prompt: "" },
+              status: "done",
+              lastOutcome: expect.stringMatching(/^(fired|late)$/),
+            })
+            expect((await rpc.list({}, { location: { directory: nested } })).flows).toContainEqual(
+              expect.objectContaining({
+                reference: { type: "native-schedule", scheduleID: orphan.id },
+                prompt: "",
+              }),
+            )
+            await Effect.runPromise(schedules.remove(orphan.id))
             const refreshed = await rpc.list({}, { location: { directory: nested } })
             expect(refreshed.flows).toContainEqual(created)
 
