@@ -224,7 +224,18 @@ export type ToWebview =
   | { type: "chunk"; id: number; data: Uint8Array }
   | { type: "end"; id: number }
   | { type: "error"; id: number; message: string }
-  | { type: "command"; name: "newSession" | "history" | "cycleAgentMode" | "cyclePreviousAgentMode" | "focusPrompt" }
+  | {
+      type: "command"
+      name:
+        | "newSession"
+        | "history"
+        | "cycleAgentMode"
+        | "cyclePreviousAgentMode"
+        | "showOpenTabs"
+        | "tabPrevious"
+        | "tabNext"
+        | "focusPrompt"
+    }
   /** Adds context chips to the composer and focuses it. */
   | { type: "appendContext"; items: PromptAttachment[] }
   /** Sends a prompt in the open session at once, without touching the draft. */

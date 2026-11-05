@@ -35,6 +35,7 @@ import { profile } from "./profile-panel"
 import { settings } from "./settings-panel"
 import { createShutdown } from "./shutdown"
 import { toolDiff } from "./tool-diff"
+import { tabShortcutTarget } from "./tab-shortcuts"
 
 let shutdownExtension: (() => Promise<void>) | undefined
 
@@ -184,8 +185,6 @@ export function activate(context: ExtensionContext) {
   const agentCommands = [
     ["previousSession", "sessionPrevious"],
     ["nextSession", "sessionNext"],
-    ["previousTab", "tabPrevious"],
-    ["nextTab", "tabNext"],
     ["previousTerminal", "terminalPrevious"],
     ["nextTerminal", "terminalNext"],
     ["search", "search"],
@@ -221,6 +220,23 @@ export function activate(context: ExtensionContext) {
       await view.post({ type: "command", name: "history" })
     }),
     commands.registerCommand("kilo-code.v2.profile", () => profilePanel.open()),
+    // One shortcut pair serves the sidebar and the Agent Manager. The sidebar focus state is more precise than
+    // `isActive`, which stays true while the panel is the selected editor tab but the sidebar has focus.
+    commands.registerCommand("kilo-code.v2.agentManager.previousTab", () => {
+      const target = tabShortcutTarget(view.focused(), agentManager.isActive())
+      if (target === "sidebar") return void view.post({ type: "command", name: "tabPrevious" })
+      if (target === "agentManager") return agentAction("tabPrevious")
+    }),
+    commands.registerCommand("kilo-code.v2.agentManager.nextTab", () => {
+      const target = tabShortcutTarget(view.focused(), agentManager.isActive())
+      if (target === "sidebar") return void view.post({ type: "command", name: "tabNext" })
+      if (target === "agentManager") return agentAction("tabNext")
+    }),
+    // The switcher only exists in the sidebar, so the command always opens it there.
+    commands.registerCommand("kilo-code.v2.showOpenTabs", async () => {
+      await commands.executeCommand("kilo-code.v2.chat.focus")
+      await view.post({ type: "command", name: "showOpenTabs" })
+    }),
     commands.registerCommand("kilo-code.v2.settings", (...args: unknown[]) => panel.open(args)),
     commands.registerCommand("kilo-code.v2.settingsSearch", () => panel.open([{ search: true }])),
     panel,
