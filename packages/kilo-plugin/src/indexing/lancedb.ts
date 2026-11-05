@@ -25,6 +25,16 @@ export const ensure = Effect.fn("LanceDBRuntime.ensure")(function* (
   }
   if (bundled()) return
   if (!npm) return yield* Effect.fail(new Error("LanceDB is unavailable: the npm installer is not available."))
+  // Locations that start together share one install; a failed install is retried by the next call.
+  const install = (inflight ??= Effect.runPromise(add(npm)).finally(() => {
+    inflight = undefined
+  }))
+  yield* Effect.tryPromise({ try: () => install, catch: (error) => error })
+})
+
+let inflight: Promise<void> | undefined
+
+const add = Effect.fnUntraced(function* (npm: Npm.Interface) {
   const installed = yield* npm.add(`${pkg}@${version}`)
   const manifest = yield* Effect.promise(() =>
     Bun.file(path.join(installed.directory, "package.json"))

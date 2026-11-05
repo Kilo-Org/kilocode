@@ -158,6 +158,7 @@ export default { path: file, version: ${JSON.stringify(opencodePty.version)}, sh
     // Kilo: the host entry instead of the upstream CLI entry. It imports the upstream commands and handlers.
     // Upstream's second entrypoint lands next to index.js, where Image.Photon resolves "./photon-worker.js".
     // Kilo: the codebase indexing worker is the third, resolved the same way as "./indexing-worker.js".
+    // kilo_port(indexing:d76a31906cd4)
     entrypoints: ["./src/index.ts", "./src/photon-worker.ts", "./src/indexing-worker.ts"],
     tsconfig: "./tsconfig.json",
     plugins: [

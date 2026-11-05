@@ -17,6 +17,7 @@ import { primaryWorktree } from "./primary-worktree"
 import { IndexingRuntime } from "./runtime"
 import { hint, semanticSearch } from "./semantic-search"
 import { make as settingsFiles } from "./settings"
+import { wasmDirectory } from "./tree-sitter"
 
 // The codebase indexing plugin: one engine per Location in the indexing worker, the
 // `kilocode.indexing` RPC (status, warnings, VS Code consent, status and warning events) and the `semantic_search`
@@ -64,6 +65,10 @@ export const KiloIndexingPlugin = define<FSUtil.Service | Global.Service | Scope
       state.visible = next
       run(ctx.tool.reload())
     }
+
+    // The indexing worker reads the grammar directory from the environment when it starts.
+    const wasm = wasmDirectory()
+    if (wasm) process.env.KILO_TREE_SITTER_WASM_DIR = wasm
 
     const files = yield* settingsFiles({ global: global.config, project: directory })
     const accountAuth = (current: Awaited<ReturnType<typeof account>>) =>

@@ -173,6 +173,7 @@ export const Definition = Rpc.define({
       errors: { write_failed: portable(Schema.Undefined) },
     },
   },
+  // kilo_port(indexing:9e6d17f27b30) The status event, served through the generic RPC event stream.
   events: {
     /** The indexing status of the location changed. */
     status: { schema: portable(Schema.Struct({ status: Status })) },

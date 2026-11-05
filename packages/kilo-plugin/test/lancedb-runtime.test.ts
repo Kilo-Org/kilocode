@@ -81,6 +81,14 @@ describe("LanceDBRuntime", () => {
     expect(process.env[env]).toBe("/already/set.js")
   })
 
+  test("dedupes concurrent ensure calls", async () => {
+    delete process.env[env]
+    const installer = npm()
+    await Promise.all([run("lancedb", installer), run("lancedb", installer), run("lancedb", installer)])
+    expect(installed).toEqual(["@lancedb/lancedb@0.26.2"])
+    expect(process.env[env]).toBeDefined()
+  })
+
   test("surfaces install failures and retries on the next call", async () => {
     delete process.env[env]
     const error = await run("lancedb", npm(new Error("registry unavailable"))).catch((err) => err)

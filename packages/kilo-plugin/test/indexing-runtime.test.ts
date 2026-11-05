@@ -370,4 +370,15 @@ describe("indexing runtime", () => {
     await settled(plain.runtime)
     expect(state.inits[1]?.baseline).toBeUndefined()
   })
+
+  test("does not classify an ordinary directory from its pathname", async () => {
+    const state = engine()
+    const directory = path.join(await tmp(), ".kilo", "worktrees", "feature")
+    await mkdir(directory, { recursive: true })
+    const primary = (dir: string) => Effect.runPromise(primaryWorktree(dir))
+    expect(await primary(directory)).toBeUndefined()
+    const { runtime } = host({ directory, indexing: { enabled: true, provider: "ollama" }, primary })
+    await settled(runtime)
+    expect(state.inits[0]?.baseline).toBeUndefined()
+  })
 })
