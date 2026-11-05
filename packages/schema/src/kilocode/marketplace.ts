@@ -1,6 +1,8 @@
 export * as KiloMarketplaceRpc from "./marketplace.js"
 
 import { Schema } from "effect"
+import { ConfigModel } from "../config/model.js"
+import { Permission } from "../permission.js"
 import { Rpc } from "../rpc.js"
 import { optional } from "../schema.js"
 
@@ -15,7 +17,7 @@ const Failure = {
   unsupported: portable(Schema.Undefined),
 }
 
-export const Kind = Schema.Literals(["skill", "mcp"])
+export const Kind = Schema.Literals(["skill", "mcp", "agent"])
 export type Kind = typeof Kind.Type
 
 /** Install into the global config directory or the opened project. */
@@ -40,6 +42,24 @@ export const InstallOption = Schema.Struct({
 })
 export type InstallOption = typeof InstallOption.Type
 
+/**
+ * A catalog agent as v2 writes it: the frontmatter fields of a native agent document and the body that becomes
+ * its system prompt. `Config.Info.fields` decides what the agent loader understands, so a field this build does
+ * not know is never emitted.
+ */
+export const AgentContent = Schema.Struct({
+  mode: optional(Schema.Literals(["primary", "subagent", "all"])),
+  description: optional(Schema.String),
+  /** Markdown body of the agent document, the agent's system prompt. */
+  system: optional(Schema.String),
+  model: optional(ConfigModel.Selection),
+  color: optional(Schema.String),
+  steps: optional(Schema.Int.check(Schema.isGreaterThan(0))),
+  hidden: optional(Schema.Boolean),
+  permissions: optional(Permission.Ruleset),
+})
+export type AgentContent = typeof AgentContent.Type
+
 export const Item = Schema.Struct({
   registry: Schema.String,
   kind: Kind,
@@ -54,17 +74,20 @@ export const Item = Schema.Struct({
   /** Parameters shared by every install option. */
   parameters: Schema.Array(Parameter),
   options: Schema.Array(InstallOption),
+  /** Present only for `kind: "agent"`; what an install writes. */
+  agent: optional(AgentContent),
 })
 export type Item = typeof Item.Type
 
 /**
  * Owned resources are located from the current scope, never from stored paths: a skill tree is
- * `<skills root>/<id>` and an MCP entry is found by server name in the scope's native config files.
- * During recovery both previous and planned contents may be owned.
+ * `<skills root>/<id>`, an agent is `<agents root>/<id>.md`, and an MCP entry is found by server name in the
+ * scope's native config files. During recovery both previous and planned contents may be owned.
  */
 export const Resource = Schema.Union([
   Schema.Struct({ id: Schema.String, fingerprints: optional(Schema.Array(Schema.String)) }),
   Schema.Struct({ server: Schema.String, fingerprints: optional(Schema.Array(Schema.String)) }),
+  Schema.Struct({ agent: Schema.String, fingerprints: optional(Schema.Array(Schema.String)) }),
 ])
 export type Resource = typeof Resource.Type
 
