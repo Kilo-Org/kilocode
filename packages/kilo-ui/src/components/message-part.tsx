@@ -231,10 +231,25 @@ function TextContent(props: {
         })
       }
       const scan = (immediate: boolean) => {
-        if (!props.actions?.validateFiles || !props.session) return
+        const session = props.session
+        const validateFiles = props.actions?.validateFiles
+        if (!validateFiles || !session) return
         for (const el of root.querySelectorAll<HTMLElement>("code.file-link-candidate")) {
           const path = el.getAttribute("data-file-candidate") ?? ""
           if (path) arm(el, path, immediate)
+        }
+        // A link renders with the document glyph; drop it when the target is not a document this session can open.
+        for (const el of root.querySelectorAll<HTMLElement>(
+          "a[data-file-kind][data-file-path]:not([data-file-checked])",
+        )) {
+          const path = el.getAttribute("data-file-path") ?? ""
+          el.setAttribute("data-file-checked", "")
+          void checkFile(session, path, validateFiles).then((exists) => {
+            if (exists === undefined) return el.removeAttribute("data-file-checked")
+            if (exists) return
+            el.classList.remove("document-link", "plan-document-link")
+            el.removeAttribute("data-file-kind")
+          })
         }
       }
       let scheduled = false
@@ -305,6 +320,20 @@ function TextContent(props: {
     return Number.isFinite(value) ? value : undefined
   }
 
+  const openPathLink = (link: Element) => {
+    const path = link.getAttribute("data-file-path")
+    if (path) openValidated(path, position(link, "data-file-line"), position(link, "data-file-col"))
+  }
+
+  // A link with an href activates through click on Enter; a file link without one needs the key itself.
+  const keydown = (event: KeyboardEvent) => {
+    if (event.key !== "Enter" || !(event.target instanceof Element)) return
+    const link = event.target.closest("a.file-path-link[data-file-path]:not([href])")
+    if (!link) return
+    event.preventDefault()
+    openPathLink(link)
+  }
+
   const click = (event: MouseEvent) => {
     if (!(event.target instanceof Element)) return
     const fileLink = event.target.closest(".file-link[data-file-path]")
@@ -322,10 +351,9 @@ function TextContent(props: {
     }
     // The renderer keeps the parsed path of a file link in data attributes, because the sanitizer drops `file:` hrefs.
     const pathLink = event.target.closest("a.file-path-link[data-file-path]")
-    const linked = pathLink?.getAttribute("data-file-path")
-    if (pathLink && linked) {
+    if (pathLink) {
       event.preventDefault()
-      openValidated(linked, position(pathLink, "data-file-line"), position(pathLink, "data-file-col"))
+      openPathLink(pathLink)
       return
     }
     const anchor = event.target.closest("a[href]")
@@ -344,7 +372,7 @@ function TextContent(props: {
   return (
     <Show when={text()}>
       <div data-component="text-part">
-        <div data-slot="text-part-body" ref={setBody}>
+        <div data-slot="text-part-body" ref={setBody} onKeyDown={keydown}>
           <Markdown text={text()} cacheKey={props.id} streaming={props.streaming} onClick={click} />
         </div>
         <Show when={props.copy || props.throughput || props.turnMeta}>

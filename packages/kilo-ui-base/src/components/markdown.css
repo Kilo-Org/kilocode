@@ -267,7 +267,7 @@
     /* kilocode_change end */
   }
 
-  /* A validated document reference reads as a document: a small glyph before the path. */
+  /* A document reference reads as a document: a small glyph before the path. A link loses it when its check fails. */
   .document-link::before,
   .plan-document-link::before {
     content: "";

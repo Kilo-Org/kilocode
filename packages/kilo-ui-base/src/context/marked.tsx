@@ -725,13 +725,15 @@ export const createMarkedParser = (props: { nativeParser?: NativeMarkdownParser 
           const isFile = href ? extractFilePathFromHref(href) : undefined
           if (isFile) {
             const kind = documentKind(isFile.path)
-            const documentClass = kind ? " document-link" : ""
+            const documentClass = kind === "plan" ? " plan-document-link" : kind ? " document-link" : ""
             const documentKindAttr = kind ? ` data-file-kind="${kind}"` : ""
             // The sanitizer drops `file:` hrefs, so the parsed path also goes into data attributes for the click handler.
             const fileAttrs =
               ` data-file-path="${escapeAttribute(isFile.path)}"` +
               (isFile.line ? ` data-file-line="${isFile.line}"` : "") +
-              (isFile.column ? ` data-file-col="${isFile.column}"` : "")
+              (isFile.column ? ` data-file-col="${isFile.column}"` : "") +
+              // Without its href the link is not focusable, so keep it in the tab order and announced as a link.
+              (href?.startsWith("file:") ? ` tabindex="0" role="link"` : "")
             return `<a href="${safeHref}"${titleAttr} class="external-link file-path-link${documentClass}"${documentKindAttr}${fileAttrs} target="_blank" rel="noopener noreferrer">${text}</a>`
           }
           return `<a href="${safeHref}"${titleAttr} class="external-link" target="_blank" rel="noopener noreferrer">${text}</a>`

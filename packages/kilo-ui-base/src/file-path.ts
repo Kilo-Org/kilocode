@@ -31,6 +31,15 @@ export function normalizeCandidatePath(path: string): string {
 const SCHEME_RE = /^[a-zA-Z][a-zA-Z0-9+.-]+:/
 const EXTENSIONLESS_FILES = new Set(["Dockerfile", "LICENSE", "Makefile"])
 
+export type DocumentKind = "plan" | "document"
+
+/** Markdown file references read as documents; plan documents also get their own kind. */
+export function documentKind(path: string): DocumentKind | undefined {
+  if (!/\.(?:md|mdx|markdown)$/i.test(path)) return undefined
+  const normalized = path.replace(/\\/g, "/")
+  return /(?:^|\/)(?:plans?|\.plans?)\/.*\.md$/i.test(normalized) ? "plan" : "document"
+}
+
 /**
  * Strict heuristic for a markdown-link href (`[text](href)`). Link hrefs are
  * decided at render time and get NO filesystem check, so a false positive would
@@ -38,14 +47,6 @@ const EXTENSIONLESS_FILES = new Set(["Dockerfile", "LICENSE", "Makefile"])
  * try to open a nonexistent file. Keep this conservative: only a basename with
  * an extension or a known extensionless filename qualifies.
  */
-export type DocumentKind = "plan" | "document"
-
-/** Markdown file references read as documents; plan documents also get their own kind. */
-export function documentKind(path: string): DocumentKind | undefined {
-  if (!/\.(?:md|mdx|markdown)$/i.test(path)) return undefined
-  return /(?:^|\/)(?:plans?|\.plans?)\/.*\.md$/i.test(path) ? "plan" : "document"
-}
-
 export function looksLikeFilePath(path: string): boolean {
   const name = path.split(/[\\/]/).pop() ?? path
   return name.includes(".") || EXTENSIONLESS_FILES.has(name)

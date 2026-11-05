@@ -1,5 +1,6 @@
 import { afterEach, expect, test } from "bun:test"
 import type { SessionMessageAssistant } from "@opencode/client"
+import { documentKind } from "@opencode-ai/ui/file-path"
 import { ContentPart } from "../src/components/message-part"
 import { mountRich, waitFor, type Mounted } from "./harness"
 
@@ -63,21 +64,22 @@ test("a missing inline file stays plain code and never opens", async () => {
 })
 
 test("a markdown file link opens only after worktree validation", async () => {
-  const { card, opened } = part("[README.md](README.md) and [secret](../../.env)", async (_session, paths) =>
-    paths.filter((path) => path.endsWith("README.md")),
+  const { card, opened } = part(
+    "[README.md](docs/README.md:12) and [secret](../../.env) and [missing](missing.md)",
+    async (_session, paths) => paths.filter((path) => path.endsWith("README.md")),
   )
 
   const links = await waitFor(() => {
     const found = [...card.host.querySelectorAll<HTMLAnchorElement>("a.file-path-link")]
-    return found.length === 2 ? found : undefined
+    return found.length === 3 ? found : undefined
   })
-  await waitFor(() => links[0]!.classList.contains("document-link"))
   links[0]!.click()
   await waitFor(() => opened.length === 1)
   links[1]!.click()
-  await new Promise((resolve) => setTimeout(resolve, 50))
+  links[2]!.click()
+  await waitFor(() => !links[2]!.classList.contains("document-link"))
 
-  expect(opened).toEqual([{ path: "README.md", line: undefined, sessionID: "ses_links" }])
+  expect(opened).toEqual([{ path: "docs/README.md", line: 12, sessionID: "ses_links" }])
   expect(links[0]!.classList.contains("document-link")).toBe(true)
   expect(links[1]!.classList.contains("document-link")).toBe(false)
 })
@@ -90,14 +92,30 @@ test("a file URL link opens although the sanitizer drops its href", async () => 
   link.removeAttribute("href")
   link.click()
   await waitFor(() => opened.length === 1)
+  link.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }))
+  await waitFor(() => opened.length === 2)
 
-  expect(opened).toEqual([{ path: "/repo/plan.md", line: undefined, sessionID: "ses_links" }])
+  expect(link.getAttribute("tabindex")).toBe("0")
+  expect(link.getAttribute("role")).toBe("link")
+  expect(opened).toEqual([
+    { path: "/repo/plan.md", line: undefined, sessionID: "ses_links" },
+    { path: "/repo/plan.md", line: undefined, sessionID: "ses_links" },
+  ])
 })
 
-test("a plan document gets the document glyph class", async () => {
-  const { card } = part("Review `./plan/42-plan.md`.", async (_session, paths) => paths)
+test("a plan document gets the plan glyph class in code and links", async () => {
+  const { card } = part("Review `./plan/42-plan.md` or [it](plan/42-plan.md).", async (_session, paths) => paths)
 
-  const link = await waitFor(() => card.host.querySelector<HTMLElement>("code.plan-document-link"))
+  const code = await waitFor(() => card.host.querySelector<HTMLElement>("code.plan-document-link"))
+  const link = card.host.querySelector<HTMLElement>("a.plan-document-link")
 
-  expect(link.getAttribute("data-file-kind")).toBe("plan")
+  expect(code.getAttribute("data-file-kind")).toBe("plan")
+  expect(link?.getAttribute("data-file-kind")).toBe("plan")
+})
+
+test("plan detection accepts Windows separators", () => {
+  expect(documentKind("plan\\42.md")).toBe("plan")
+  expect(documentKind("C:\\Users\\me\\.opencode\\plan\\42.md")).toBe("plan")
+  expect(documentKind("docs\\guide.md")).toBe("document")
+  expect(documentKind("src\\index.ts")).toBeUndefined()
 })
