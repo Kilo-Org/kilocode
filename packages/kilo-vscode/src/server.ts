@@ -46,6 +46,12 @@ const PASSWORDS = ["OPENCODE_PASSWORD", "OPENCODE_SERVER_PASSWORD", "KILO_SERVER
 const MANAGED = ["KILO_DISABLE_CLAUDE_CODE", "OPENCODE_DISABLE_CLAUDE_CODE"]
 
 /**
+ * The Integrated Browser endpoint is this host's private broker. An inherited value would point tools at another
+ * host's broker, or leave them enabled when the feature is off here.
+ */
+const BROWSER = ["KILO_BROWSER_BROKER_URL", "KILO_BROWSER_BROKER_TOKEN"]
+
+/**
  * The bundled `bin/kilo2` when it exists. Otherwise, in a repository checkout, the isolated dev entry
  * `script/dev-isolated.ts` with its own profile: `KILO_V2_PROFILE`, or a `profile` directory in the extension storage.
  */
@@ -67,11 +73,18 @@ export function command(input: {
   }
 }
 
+/** The home directory the server reads (`Global.home`). The isolated dev profile moves it into the profile. */
+export function serverHome(cmd: Command | undefined, env: NodeJS.ProcessEnv): string {
+  const profile = cmd?.env.KILO_V2_PROFILE
+  if (profile) return path.join(path.resolve(profile), "home")
+  return env.OPENCODE_TEST_HOME ?? homedir()
+}
+
 export function environment(base: NodeJS.ProcessEnv, extra: Record<string, string>): NodeJS.ProcessEnv {
   return {
     ...Object.fromEntries(
       Object.entries(base).filter(
-        ([key]) => !V1_ONLY.includes(key) && !PASSWORDS.includes(key) && !MANAGED.includes(key),
+        ([key]) => !V1_ONLY.includes(key) && !PASSWORDS.includes(key) && !MANAGED.includes(key) && !BROWSER.includes(key),
       ),
     ),
     // The server trusts the OS certificate store, as VS Code does by default.
@@ -86,7 +99,10 @@ export function environment(base: NodeJS.ProcessEnv, extra: Record<string, strin
  * to the `OPENCODE_` names the runtime reads, so the server starts with Claude Code loading off by default. A changed
  * value applies on the next start, which the extension host triggers by stopping the server.
  */
-export function settingsEnvironment(values: { claudeCodeCompat: boolean; extraCaCerts: string }): Record<string, string> {
+export function settingsEnvironment(values: {
+  claudeCodeCompat: boolean
+  extraCaCerts: string
+}): Record<string, string> {
   const extraCaCerts = values.extraCaCerts.trim()
   return {
     ...(values.claudeCodeCompat ? {} : { KILO_DISABLE_CLAUDE_CODE: "true" }),
@@ -192,7 +208,7 @@ export function manager(input: {
   command: () => Command | undefined
   cwd: string
   env: NodeJS.ProcessEnv
-  settings?: Record<string, string> | (() => Record<string, string>)
+  settings?: Record<string, string> | (() => Record<string, string> | Promise<Record<string, string>>)
   log?: (text: string) => void
   onError?: (error: Error) => void
   onStart?: (server: Server) => void
@@ -201,23 +217,25 @@ export function manager(input: {
 }) {
   const state: { current?: Promise<Server>; failed: boolean } = { failed: false }
   const boot = () => {
-    const found = input.command()
-    const promise = found
-      ? start({
-          command: found,
-          cwd: input.cwd,
-          env: input.env,
-          settings: typeof input.settings === "function" ? input.settings() : input.settings,
-          log: input.log,
-          onExit: () => {
-            if (state.current !== promise) return
-            state.current = undefined
-            input.onStop?.()
-          },
-        })
-      : Promise.reject(
-          new Error("No Kilo v2 server found. Put a kilo2 binary in bin/ or run the extension from the repository."),
-        )
+    const promise = (async () => {
+      const found = input.command()
+      if (!found)
+        throw new Error("No Kilo v2 server found. Put a kilo2 binary in bin/ or run the extension from the repository.")
+      // Settings may await host work, such as the Integrated Browser broker endpoint.
+      const settings = typeof input.settings === "function" ? await input.settings() : input.settings
+      return start({
+        command: found,
+        cwd: input.cwd,
+        env: input.env,
+        settings,
+        log: input.log,
+        onExit: () => {
+          if (state.current !== promise) return
+          state.current = undefined
+          input.onStop?.()
+        },
+      })
+    })()
     promise.then(
       (server) => {
         state.failed = false
@@ -276,6 +294,10 @@ function signal(child: ChildProcess, name: NodeJS.Signals) {
 }
 
 function bun(env: NodeJS.ProcessEnv, platform: NodeJS.Platform) {
-  const file = path.join(env.BUN_INSTALL ?? path.join(homedir(), ".bun"), "bin", platform === "win32" ? "bun.exe" : "bun")
+  const file = path.join(
+    env.BUN_INSTALL ?? path.join(homedir(), ".bun"),
+    "bin",
+    platform === "win32" ? "bun.exe" : "bun",
+  )
   return existsSync(file) ? file : "bun"
 }

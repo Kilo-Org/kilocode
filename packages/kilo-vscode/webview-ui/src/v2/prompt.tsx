@@ -1,8 +1,9 @@
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { showToast } from "@kilocode/kilo-ui/toast"
-import type { ModelRef } from "@opencode/client"
-import { createEffect, createSignal, on, onCleanup, onMount, Show, untrack, type JSX } from "solid-js"
+import type { JsonValue, ModelRef } from "@opencode/client"
+import { createEffect, createMemo, createSignal, For, on, onCleanup, onMount, Show, untrack, type JSX } from "solid-js"
+import { fold, reserve } from "../components/chat/prompt-fold"
 import { SpeechToTextButton } from "../components/speech-to-text/SpeechToTextButton"
 import { createSpeechShortcut } from "../components/speech-to-text/shortcut"
 import { useSpeechStatus } from "../components/speech-to-text/status"
@@ -18,14 +19,27 @@ import {
   promptFocusAllowed,
 } from "../utils/focus"
 import { isEnterKeyCommitNotIme } from "../utils/ime-enter"
-import { registerAppend, type AppendHandler } from "./append-ready"
+import { browserPrompt, mergeBrowserReferences, type BrowserReference } from "../../../src/shared/browser-feedback"
+import { registerAppend, type AppendHandler, type ReferenceHandler } from "./append-ready"
+import { BrowserReferences } from "./browser-references"
+import type { PromptAttachment } from "../../../src/protocol"
+import { CodeContextChips } from "../components/chat/CodeContextChips"
+import { useImageAttachments } from "../hooks/useImageAttachments"
+import { usePasteCollapse } from "../hooks/usePasteCollapse"
+import { expandPastes } from "../components/chat/prompt-input-utils"
 import { message, useV2 } from "./client"
+import { registerComposer, type ComposerHandle } from "./composer"
+import { attachmentDrafts, fileAttachments, imageAttachment, mergeAttachments, pasteDrafts } from "./prompt-attachments"
 import { cleanEnhancedPrompt, enhancePromptRequest, normalizeEnhancePromptErrorMessage } from "./enhance-prompt"
 import { insertSpacedText } from "./prompt-speech"
+import { PromptOverflow, type OverflowItem } from "./prompt-overflow"
 
 // Drafts live outside the component so a composer remounted for another session restores its own text, as v1 did.
 // The key is the session id, or the pending tab id before a first prompt creates the session.
 const drafts = new Map<string, string>()
+
+// Browser references picked for each draft, kept with the same key as the draft text.
+const references = new Map<string, BrowserReference[]>()
 
 export const promptDrafts = {
   get(key: string | undefined) {
@@ -50,22 +64,55 @@ export function PromptInput(props: {
   blocked?: boolean
   /** A pending question tool call. The composer waits for an answer, so Send replaces Stop. */
   questioning?: boolean
-  onSend: (text: string) => Promise<boolean>
+  /** Sends the composed text. `items` are editor and terminal attachments; `metadata` carries browser references. */
+  onSend: (
+    text: string,
+    input?: { items?: PromptAttachment[]; metadata?: { [key: string]: JsonValue } },
+  ) => Promise<boolean>
   onStop: () => void
   /** Agent, model and variant controls, before the actions as in main's PromptInput. */
   selectors?: JSX.Element
-  /** Prompt toolbar actions (auto-approve, and later indexing, sandbox and enhance as on main). */
-  actions?: JSX.Element
+  /** Auto-approve for permission requests. The toggle folds into the overflow menu like edge actions. */
+  autoApprove?: { enabled: boolean; onToggle: () => void }
   /** Receives a function that appends text to the draft and, when `send` is true, sends it; undefined on unmount. */
   onAppendReady?: (append: AppendHandler | undefined) => void
+  /** Receives a function that adds a browser reference to this draft; undefined on unmount. */
+  onReferenceReady?: (add: ReferenceHandler | undefined) => void
+  /** Receives the context actions handle of this composer; undefined on unmount. */
+  onComposerReady?: (composer: ComposerHandle | undefined) => void
 }) {
   const v2 = useV2()
   const language = useLanguage()
   const [text, setText] = createSignal(promptDrafts.get(props.draftKey))
+  const [browsers, setBrowsers] = createSignal(props.draftKey ? (references.get(props.draftKey) ?? []) : [])
+  const keep = (key: string | undefined, list: BrowserReference[]) => {
+    if (!key) return
+    if (list.length) references.set(key, list)
+    else references.delete(key)
+  }
   const [sending, setSending] = createSignal(false)
   const [enhancing, setEnhancing] = createSignal(false)
+  // Editor selections, files, terminal output and images sent with the next prompt, per draft like the text.
+  const [attachments, setAttachments] = createSignal<PromptAttachment[]>(attachmentDrafts.get(props.draftKey))
+  const paste = usePasteCollapse({ enabled: () => !props.disabled, text })
+  paste.load(untrack(text), pasteDrafts.get(props.draftKey))
+  const images = useImageAttachments()
+  // The hook reads files; the composer keeps one list, so a finished read moves into it.
+  createEffect(() => {
+    const read = images.images()
+    if (read.length === 0) return
+    setAttachments((current) => mergeAttachments(current, read.map(imageAttachment)))
+    images.clear()
+  })
+  images.setFilePathDropHandler((paths) =>
+    setAttachments((current) => mergeAttachments(current, fileAttachments(paths, v2.directory))),
+  )
+  const removeAttachment = (id: string) => setAttachments((current) => current.filter((item) => item.id !== id))
+  const pictures = () => attachments().filter((item) => item.kind === "image")
+  const contexts = () => attachments().filter((item) => item.kind !== "image")
   // The draft Enhance replaced, so Ctrl/Cmd+Z restores it once.
   let preEnhance: string | null = null
+  let preEnhancePastes: string[] = []
   // Ignores a late result after a newer Enhance or a newer edit.
   let enhanceToken = 0
   const refs = { input: undefined as HTMLTextAreaElement | undefined, overlay: undefined as HTMLDivElement | undefined }
@@ -80,8 +127,11 @@ export function PromptInput(props: {
   const canUseSpeech = () => speechStatus.status().enabled
   // Recording is enough to send: the transcript arrives first and the send continues from it. No other speech state
   // may send, or a draft would leave before the transcript is ready and the transcript would become a draft.
+  const ready = () => !props.disabled && !props.blocked && !sending() && images.pending() === 0
   const canSend = () =>
-    !props.disabled && !sending() && (speech.state() === "recording" || (!speech.active() && !!text().trim()))
+    ready() &&
+    (speech.state() === "recording" ||
+      (!speech.active() && (!!text().trim() || attachments().length > 0 || browsers().length > 0)))
   // The label is the pending-permission hint while blocked, otherwise Send.
   const sendLabel = () => {
     if (props.blocked) return language.t("prompt.action.send.blocked")
@@ -91,7 +141,13 @@ export function PromptInput(props: {
   // Stop replaces Send while the agent runs and the draft is empty. Typing during a run turns it back into Send,
   // whose prompt queues behind the running turn. A pending question is not running work. Stop is not shown while the
   // prompt is still being admitted, because an unadmitted prompt has no execution for Stop to interrupt.
-  const showStop = () => props.running && !text().trim() && !props.questioning && speech.state() !== "recording"
+  const showStop = () =>
+    props.running &&
+    !text().trim() &&
+    !browsers().length &&
+    attachments().length === 0 &&
+    !props.questioning &&
+    speech.state() !== "recording"
 
   const scroll = () => {
     if (!refs.input || !refs.overlay) return
@@ -108,11 +164,20 @@ export function PromptInput(props: {
       (key) => {
         if (key === draft) return
         promptDrafts.set(draft, untrack(text))
+        attachmentDrafts.set(draft, untrack(attachments))
+        pasteDrafts.set(
+          draft,
+          untrack(paste.pastes).map((item) => item.text),
+        )
+        keep(draft, untrack(browsers))
         draft = key
+        setBrowsers(key ? (references.get(key) ?? []) : [])
         const value = promptDrafts.get(key)
         enhanceToken++
         preEnhance = null
         setText(value)
+        paste.load(value, pasteDrafts.get(key))
+        setAttachments(attachmentDrafts.get(key))
         if (refs.input) {
           refs.input.value = value
           refs.input.scrollTop = 0
@@ -121,7 +186,15 @@ export function PromptInput(props: {
       },
     ),
   )
-  onCleanup(() => promptDrafts.set(draft, text()))
+  onCleanup(() => {
+    promptDrafts.set(draft, text())
+    attachmentDrafts.set(draft, attachments())
+    pasteDrafts.set(
+      draft,
+      paste.pastes().map((item) => item.text),
+    )
+    keep(draft, browsers())
+  })
 
   createEffect(() => {
     text()
@@ -225,22 +298,59 @@ export function PromptInput(props: {
     })
   }
 
-  const submit = () => {
-    if (!canSend()) return
+  // A context action sends its own prompt. It keeps the composer guards and returns its text and chips to the
+  // draft when the composer cannot send or the send fails, so the request is never lost.
+  const putInDraft = (value: string, items: PromptAttachment[]) => {
+    const current = text()
+    setText(current.trim() ? `${current}\n\n${value}` : value)
+    setAttachments((list) => mergeAttachments(list, items))
+    window.dispatchEvent(new CustomEvent("focusPrompt", { detail: { force: true, restore: true } }))
+  }
+
+  const submit = (external?: { text: string; items: PromptAttachment[] }) => {
+    if (!ready() || (speech.active() && speech.state() !== "recording")) {
+      if (external) putInDraft(external.text, external.items)
+      return
+    }
+    if (!external && !canSend()) return
     const draft = text()
+    // Capture the paste ranges before the draft is cleared, so a mismatched placeholder count still expands the
+    // blocks that have backing text.
+    const pastes = paste.pastes()
+    const backing = pastes.map((item) => item.text)
+    const items = external ? external.items : attachments()
+    const picked = external ? [] : browsers()
+    const prompt = browserPrompt(draft, picked)
     // Clear the draft as soon as it is sent, so the composer is empty while the prompt is admitted. Restore it only
-    // if the send fails and the user has not typed something new.
-    setText("")
+    // if the send fails and the user has not typed, attached or picked something new.
+    const restore = () => {
+      if (external) return putInDraft(external.text, external.items)
+      if (text().trim() || attachments().length > 0 || browsers().length > 0) return
+      setText(draft)
+      paste.load(draft, backing)
+      setAttachments(items)
+      setBrowsers(picked)
+    }
+    if (!external) {
+      setText("")
+      paste.load("", [])
+      setAttachments([])
+      setBrowsers([])
+    }
     setSending(true)
     void props
-      .onSend(draft.trim())
+      // The references hold only strings, numbers and arrays, so they are the JSON the prompt metadata requires.
+      .onSend(external ? external.text : expandPastes(draft, pastes).trim(), {
+        items,
+        metadata: prompt.metadata as { [key: string]: JsonValue } | undefined,
+      })
       .then((ok) => {
         if (ok) preEnhance = null
-        else if (!text().trim()) setText(draft)
+        else restore()
       })
       .catch((err: unknown) => {
         v2.report(err)
-        if (!text().trim()) setText(draft)
+        restore()
       })
       .finally(() => setSending(false))
   }
@@ -254,6 +364,15 @@ export function PromptInput(props: {
     submit()
   }
 
+  registerComposer(props.onComposerReady, {
+    attach: (items) => {
+      setAttachments((current) => mergeAttachments(current, items))
+      window.dispatchEvent(new CustomEvent("focusPrompt", { detail: { force: true, restore: true } }))
+    },
+    // A context action sends on its own and leaves the draft and its chips for the user's next prompt.
+    submit: (value, items) => submit({ text: value, items }),
+  })
+
   registerAppend(props.onAppendReady, (value, shouldSend) => {
     const current = text()
     enhanceToken++
@@ -261,6 +380,13 @@ export function PromptInput(props: {
     setText(current.trim() ? `${current}\n\n${value}` : value)
     if (shouldSend) send()
     else focusInput()
+  })
+
+  // A reference for another session is dropped: the browser tab can outlive the session the composer shows.
+  registerAppend<ReferenceHandler>(props.onReferenceReady, (reference) => {
+    if (props.session && reference.sessionId !== props.session) return
+    setBrowsers((current) => mergeBrowserReferences(current, reference))
+    focusInput()
   })
 
   const shortcut = createSpeechShortcut({
@@ -294,7 +420,7 @@ export function PromptInput(props: {
 
   const enhance = () => {
     if (!canEnhance()) return
-    const draft = text().trim()
+    const draft = paste.plainText(text()).trim()
     // An empty draft explains the action instead of rewriting nothing.
     if (!draft) {
       setText(language.t("prompt.action.enhanceDescription"))
@@ -302,13 +428,16 @@ export function PromptInput(props: {
       return
     }
     preEnhance = text()
+    preEnhancePastes = paste.pastes().map((item) => item.text)
     const token = ++enhanceToken
     setEnhancing(true)
     void v2.api.generate
       .text({ prompt: enhancePromptRequest(draft), model: props.model })
       .then((response) => {
         if (token !== enhanceToken) return
-        setText(cleanEnhancedPrompt(response.text))
+        const next = cleanEnhancedPrompt(response.text)
+        setText(next)
+        paste.load(next, [])
         focusInput()
       })
       .catch((err: unknown) => {
@@ -339,15 +468,157 @@ export function PromptInput(props: {
     const restored = preEnhance
     preEnhance = null
     setText(restored)
+    paste.load(restored, preEnhancePastes)
     return true
   }
 
+  // Progressive toolbar fold, driven by the toolbar width and font size only.
+  // The list goes from low to high priority, so low priority actions fold first
+  // and the actions next to voice and send stay in place. All sizes are read
+  // from the DOM, so a larger font scales the fold steps.
+  let hintRef: HTMLDivElement | undefined
+  let pinnedRef: HTMLDivElement | undefined
+  const [metrics, setMetrics] = createSignal({ width: Number.POSITIVE_INFINITY, pinned: 0, slot: 26, reserve: 210 })
+  onMount(() => {
+    const measure = () => {
+      const hint = hintRef
+      const pinned = pinnedRef
+      if (!hint || !pinned) return
+      const box = getComputedStyle(hint)
+      const actions = pinned.parentElement
+      const button = actions?.querySelector<HTMLElement>(".prompt-action [data-component='icon-button']")
+      const gap = actions ? parseFloat(getComputedStyle(actions).columnGap) || 0 : 0
+      setMetrics({
+        width:
+          hint.clientWidth -
+          parseFloat(box.paddingLeft) -
+          parseFloat(box.paddingRight) -
+          (parseFloat(box.columnGap) || 0),
+        pinned: pinned.getBoundingClientRect().width,
+        slot: (button?.getBoundingClientRect().width ?? 22) + gap,
+        reserve: reserve(hint),
+      })
+    }
+    const observer = new ResizeObserver(measure)
+    if (hintRef) observer.observe(hintRef)
+    if (pinnedRef) observer.observe(pinnedRef)
+    onCleanup(() => observer.disconnect())
+  })
+  const foldable = createMemo<OverflowItem[]>(() => {
+    const list: OverflowItem[] = [
+      {
+        key: "enhance",
+        icon: "wand-sparkles",
+        label: language.t("prompt.action.enhance"),
+        disabled: !canEnhance(),
+        busy: enhancing(),
+        run: enhance,
+      },
+    ]
+    const autoApprove = props.autoApprove
+    if (autoApprove)
+      list.push({
+        key: "approve",
+        icon: "shield",
+        label: language.t(
+          autoApprove.enabled ? "prompt.action.autoApprove.disable" : "prompt.action.autoApprove.enable",
+        ),
+        description: language.t("prompt.action.autoApprove.sandboxExcluded"),
+        tone: autoApprove.enabled ? "success" : undefined,
+        dot: autoApprove.enabled ? "success" : undefined,
+        run: autoApprove.onToggle,
+      })
+    return list
+  })
+  const shown = createMemo(() => fold({ ...metrics(), count: foldable().length }))
+  const hidden = createMemo(() => foldable().slice(0, foldable().length - shown()))
+  const folded = (key: string) => hidden().some((item) => item.key === key)
+  const approveTooltip = () => {
+    const autoApprove = props.autoApprove
+    if (!autoApprove) return ""
+    return `${language.t(
+      autoApprove.enabled ? "prompt.action.autoApprove.enabled" : "prompt.action.autoApprove.disabled",
+    )} ${language.t("prompt.action.autoApprove.sandboxExcluded")}`
+  }
+
   return (
-    <div class="prompt-input-container">
+    <div
+      class="prompt-input-container"
+      classList={{ "prompt-input-container--dragging": images.dragging() }}
+      onDragOver={images.handleDragOver}
+      onDragLeave={images.handleDragLeave}
+      onDrop={images.handleDrop}
+    >
+      <Show when={browsers().length > 0}>
+        <div data-component="browser-references">
+          <BrowserReferences
+            references={browsers()}
+            onRemove={(id) => {
+              if (!props.disabled) setBrowsers((current) => current.filter((item) => item.id !== id))
+            }}
+            onClear={() => {
+              if (!props.disabled) setBrowsers([])
+            }}
+          />
+        </div>
+      </Show>
+      <Show when={contexts().length > 0}>
+        <CodeContextChips
+          items={contexts()}
+          disabled={props.disabled}
+          onRemove={removeAttachment}
+          onClear={() => setAttachments(pictures())}
+        />
+      </Show>
+      <Show when={pictures().length > 0}>
+        <div class="image-attachments">
+          <For each={pictures()}>
+            {(img) => (
+              <div class="image-attachment">
+                <img
+                  src={img.uri}
+                  alt={img.name}
+                  title={img.name}
+                  onClick={() => vscode.postMessage({ type: "previewImage", dataUrl: img.uri, filename: img.name })}
+                />
+                <IconButton
+                  icon="close-small"
+                  variant="ghost"
+                  size="small"
+                  class="image-attachment-remove"
+                  disabled={props.disabled}
+                  onClick={() => removeAttachment(img.id)}
+                  aria-label={language.t("ui.promptInput.removeAttachment")}
+                />
+              </div>
+            )}
+          </For>
+        </div>
+      </Show>
       <div class="prompt-input-wrapper">
         <div class="prompt-input-ghost-wrapper">
           <div class="prompt-input-highlight-overlay" ref={(el) => (refs.overlay = el)} aria-hidden="true" dir="auto">
-            <span>{text()}</span>
+            <For each={paste.segments(text())}>
+              {(seg) => (
+                <Show when={seg.kind === "paste"} fallback={<span>{seg.text}</span>}>
+                  <span
+                    class="prompt-input-paste"
+                    title={language.t("prompt.paste.expand")}
+                    onClick={(e) => {
+                      if (props.disabled || !refs.input || seg.paste === undefined) return
+                      e.preventDefault()
+                      e.stopPropagation()
+                      paste.expand(seg.paste, refs.input, setText, () => {
+                        enhanceToken++
+                        preEnhance = null
+                      })
+                    }}
+                  >
+                    {seg.text}
+                  </span>
+                </Show>
+              )}
+            </For>
             <Show when={text().endsWith("\n")}>
               <br />
             </Show>
@@ -363,15 +634,29 @@ export function PromptInput(props: {
             }
             aria-label={language.t("prompt.placeholder.plain")}
             value={text()}
+            onBeforeInput={(e) => paste.beforeInput(e, refs.input)}
             onInput={(e) => {
               // An edit invalidates an in-flight Enhance, so its late result cannot overwrite the new text.
               enhanceToken++
               preEnhance = null
               setText(e.currentTarget.value)
+              paste.afterInput()
             }}
+            onPaste={(e) => {
+              if (props.disabled || !refs.input) return
+              images.handlePaste(e)
+              paste.paste(e, refs.input, setText, () => {
+                enhanceToken++
+                preEnhance = null
+              })
+            }}
+            onCopy={(e) => paste.clipboard(e, refs.input, setText)}
+            onCut={(e) => paste.clipboard(e, refs.input, setText, true)}
             onKeyDown={(e) => {
               if (speechDown(e)) return
               if (undoEnhance(e)) return
+              if (paste.backspace(e, refs.input, setText)) return
+              paste.arrow(e, refs.input)
               if (!isEnterKeyCommitNotIme(e) || e.shiftKey) return
               e.preventDefault()
               send()
@@ -387,10 +672,13 @@ export function PromptInput(props: {
           />
         </div>
       </div>
-      <div class="prompt-input-hint">
+      <div class="prompt-input-hint" ref={(el) => (hintRef = el)}>
         {props.selectors}
         <div class="prompt-input-hint-actions">
-          <div class="prompt-action">
+          <div class="prompt-action" data-folded={hidden().length === 0 ? "" : undefined}>
+            <PromptOverflow items={hidden()} />
+          </div>
+          <div class="prompt-action" data-folded={folded("enhance") ? "" : undefined}>
             <Tooltip value={language.t("prompt.action.enhance")} placement="top" openDelay={0}>
               <IconButton
                 icon="wand-sparkles"
@@ -403,8 +691,27 @@ export function PromptInput(props: {
               />
             </Tooltip>
           </div>
-          {props.actions}
-          <div class="prompt-input-hint-pinned">
+          <Show when={props.autoApprove}>
+            {(autoApprove) => (
+              <div class="prompt-action" data-folded={folded("approve") ? "" : undefined}>
+                <Tooltip value={approveTooltip()} placement="top" openDelay={0}>
+                  <IconButton
+                    icon="shield"
+                    variant="ghost"
+                    size="small"
+                    onClick={autoApprove().onToggle}
+                    aria-label={language.t(
+                      autoApprove().enabled ? "prompt.action.autoApprove.disable" : "prompt.action.autoApprove.enable",
+                    )}
+                    aria-pressed={autoApprove().enabled}
+                    class="prompt-status-button"
+                    classList={{ "prompt-status-button--active": autoApprove().enabled }}
+                  />
+                </Tooltip>
+              </div>
+            )}
+          </Show>
+          <div class="prompt-input-hint-pinned" ref={(el) => (pinnedRef = el)}>
             <Show when={canUseSpeech()}>
               <SpeechToTextButton speech={speech} disabled={props.disabled} start={startSpeech} label={language.t} />
             </Show>

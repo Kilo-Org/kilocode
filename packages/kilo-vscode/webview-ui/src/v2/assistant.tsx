@@ -41,8 +41,11 @@ export function AssistantMessage(props: {
   const language = useLanguage()
   const vscode = useVSCode()
   const done = () => props.message.time.completed !== undefined
+  // Each step is its own message, so only the turn's carrier step gets the copy row, which keeps it to one per turn.
   const copy = createMemo(() =>
-    done() ? props.message.content.findLastIndex((item) => item.type === "text" && !!item.text.trim()) : -1,
+    done() && props.metadata
+      ? props.message.content.findLastIndex((item) => item.type === "text" && !!item.text.trim())
+      : -1,
   )
   const parts = () => props.parts ?? props.message.content
   const offset = () => props.start ?? 0
@@ -152,6 +155,7 @@ export function AssistantMessage(props: {
                     item={item}
                     message={props.message}
                     index={at()}
+                    session={props.session}
                     directory={v2.directory}
                     open={v2.open}
                     copy={at() === copy()}

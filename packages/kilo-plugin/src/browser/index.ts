@@ -1,0 +1,220 @@
+// The `browser_open` tool. The Integrated Browser is an extension-host feature: the host runs one Chromium for the
+// sidebar tab and the Agent Manager panel, and serves the open operation on loopback with a per-run token. The host
+// passes the endpoint to the server through the environment, so the tool exists only while the feature is enabled.
+import { Wildcard } from "@opencode/core/util/wildcard"
+import { define } from "@opencode/plugin/effect/plugin"
+import type { Permission } from "@opencode/schema/permission"
+import { Tool } from "@opencode/schema/tool"
+import { Effect, Schema } from "effect"
+import DESCRIPTION from "./browser-open.txt"
+
+const Parameters = Schema.Struct({
+  url: Schema.String.annotate({
+    description: "Public HTTPS URL or HTTP loopback URL for a local application, for example http://localhost:3000.",
+  }),
+})
+
+const State = Schema.Struct({
+  browserId: Schema.String,
+  sessionId: Schema.String,
+  status: Schema.Literals(["starting", "ready", "loading", "error", "closed"]),
+  url: Schema.optional(Schema.String),
+  title: Schema.optional(Schema.String),
+  errors: Schema.Number,
+  logs: Schema.optional(Schema.Array(Schema.String.check(Schema.isMaxLength(1000)))),
+  error: Schema.optional(Schema.String),
+})
+
+type Meta = {
+  browserId?: string
+  status: Schema.Schema.Type<typeof State>["status"]
+  url?: string
+  title?: string
+  errors: number
+}
+
+const TIMEOUT = 60_000
+
+export function broker(): { url: URL; token: string } | undefined {
+  const base = process.env.KILO_BROWSER_BROKER_URL
+  const token = process.env.KILO_BROWSER_BROKER_TOKEN
+  if (!base || !token || !URL.canParse(base)) return undefined
+  const url = new URL(base)
+  if (
+    url.protocol !== "http:" ||
+    url.hostname !== "127.0.0.1" ||
+    !url.port ||
+    url.username ||
+    url.password ||
+    url.pathname !== "/" ||
+    url.search ||
+    url.hash
+  ) {
+    return undefined
+  }
+  return { url, token }
+}
+
+const captured: { endpoint?: { url: URL; token: string } } = {}
+
+/**
+ * Read the broker endpoint once and remove it from the process environment. Tools and MCP servers inherit this
+ * environment, so leaving the token there would let a shell command drive the browser without the permission prompt.
+ * The plugin effect runs again for each Location and after each plugin reload, so later calls return the captured
+ * endpoint.
+ */
+export function takeBroker() {
+  const endpoint = broker()
+  if (!endpoint) return captured.endpoint
+  captured.endpoint = endpoint
+  delete process.env.KILO_BROWSER_BROKER_URL
+  delete process.env.KILO_BROWSER_BROKER_TOKEN
+  return endpoint
+}
+
+/**
+ * Opening a page asks by default. The built-in policy allows every tool, so only an allow rule that names
+ * `browser_open` (a config level or a saved "Always allow" for an origin) grants it without a prompt.
+ */
+export function granted(resources: ReadonlyArray<string>, rules: Permission.Ruleset): boolean {
+  return resources.every((resource) => {
+    const rule = rules.findLast(
+      (item) => Wildcard.match("browser_open", item.action) && Wildcard.match(resource, item.resource),
+    )
+    return rule?.action === "browser_open" && rule.effect === "allow"
+  })
+}
+
+/**
+ * The destination policy here is the cheap shape check only. The browser broker re-validates the URL against the
+ * public and loopback rules, with DNS resolution, before it navigates.
+ */
+export function destination(value: string): { url: URL } | { error: string } {
+  if (!URL.canParse(value)) return { error: "Use a public HTTPS URL or an HTTP localhost URL." }
+  const url = new URL(value)
+  // Dev servers print 0.0.0.0 when they listen on every interface. It is not a destination, so use localhost,
+  // the origin that dev tools usually configure.
+  if (url.protocol === "http:" && url.hostname === "0.0.0.0") url.hostname = "localhost"
+  if (url.port === "0") return { error: "Browser URLs must not use port 0." }
+  if (url.username || url.password) return { error: "Browser URLs must not contain credentials." }
+  const local = url.protocol === "http:" && ["localhost", "127.0.0.1"].includes(url.hostname)
+  if (!local && url.protocol !== "https:") {
+    return { error: "Use public HTTPS or HTTP localhost without credentials." }
+  }
+  if (url.protocol === "https:" && (url.hostname === "localhost" || url.hostname.endsWith(".localhost") || url.hostname === "127.0.0.1" || url.hostname === "[::1]")) {
+    return { error: "Use HTTP for loopback pages; HTTPS destinations must be public." }
+  }
+  return { url }
+}
+
+export async function openPage(input: {
+  broker: { url: URL; token: string }
+  directory: string
+  sessionID: string
+  url: URL
+}) {
+  const response = await fetch(new URL("/browser/open", input.broker.url), {
+    method: "POST",
+    headers: { authorization: `Bearer ${input.broker.token}`, "content-type": "application/json" },
+    body: JSON.stringify({
+      sessionID: input.sessionID,
+      directory: input.directory,
+      url: input.url.href,
+      capture: false,
+    }),
+    signal: AbortSignal.timeout(TIMEOUT),
+  })
+  const body: unknown = await response.json().catch(() => undefined)
+  const error =
+    typeof body === "object" && body !== null && "error" in body && typeof body.error === "string"
+      ? body.error
+      : undefined
+  if (response.status < 200 || response.status >= 300) throw new Error(error ?? `HTTP ${response.status}`)
+  return Schema.decodeUnknownSync(State)(body)
+}
+
+export const KiloBrowserToolPlugin = define({
+  id: "kilocode.tool-browser",
+  effect: Effect.fn("KiloBrowserTool.Plugin")(function* (ctx) {
+    const endpoint = takeBroker()
+    if (!endpoint) return
+    const directory = ctx.location.directory
+
+    yield* ctx.permission.hook("evaluate", (event) =>
+      Effect.sync(() => {
+        if (event.action !== "browser_open" || event.effect !== "allow") return
+        // Unattended work settles this ask with its own rules.
+        if (!granted(event.resources, event.rules ?? [])) event.effect = "ask"
+      }),
+    )
+
+    yield* ctx.tool.transform((editor) =>
+      editor.add({
+        name: "browser_open",
+        options: { codemode: false },
+        description: DESCRIPTION,
+        input: Parameters,
+        output: Schema.String,
+        execute: (params, context) =>
+          Effect.gen(function* () {
+            const target = destination(params.url)
+            if ("error" in target) {
+              return {
+                output: target.error,
+                metadata: { status: "error", errors: 0 } satisfies Meta,
+              }
+            }
+            yield* ctx.permission.assert({
+              action: "browser_open",
+              resources: [`navigate:${target.url.origin}`],
+              save: [`navigate:${target.url.origin}`],
+              sessionID: context.sessionID,
+              agent: context.agent,
+              metadata: {
+                operation: "open",
+                url: target.url.href,
+                rules: [`navigate:${target.url.origin}`, "navigate:*"],
+              },
+              source: { type: "tool", messageID: context.messageID, id: context.id },
+            })
+
+            const state = yield* Effect.tryPromise({
+              try: () =>
+                openPage({ broker: endpoint, directory, sessionID: String(context.sessionID), url: target.url }),
+              catch: (cause) => new Tool.Error({ message: cause instanceof Error ? cause.message : String(cause) }),
+            }).pipe(
+              Effect.catch((error) =>
+                Effect.succeed({
+                  output: `The browser could not open the page: ${error.message.slice(0, 500)}`,
+                  metadata: { status: "error", errors: 0 } satisfies Meta,
+                }),
+              ),
+            )
+            if (!("browserId" in state)) return state
+
+            return {
+              output: [
+                `Browser status: ${state.status}.`,
+                state.url ? `URL: ${state.url}.` : undefined,
+                state.title ? `Title: ${state.title}.` : undefined,
+                state.errors > 0 ? `Console errors: ${state.errors}.` : undefined,
+                state.logs?.length
+                  ? `Console diagnostics:\n${state.logs.map((line) => `- ${line}`).join("\n")}`
+                  : undefined,
+                "The user sees this page in the Integrated Browser.",
+              ]
+                .filter(Boolean)
+                .join("\n"),
+              metadata: {
+                browserId: state.browserId,
+                status: state.status,
+                url: state.url,
+                title: state.title,
+                errors: state.errors,
+              } satisfies Meta,
+            }
+          }),
+      }),
+    )
+  }),
+})
