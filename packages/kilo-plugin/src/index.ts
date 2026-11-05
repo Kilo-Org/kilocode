@@ -25,6 +25,7 @@ import { KiloNotebookPlugin } from "./notebook"
 import { KiloReview } from "./review"
 // kilo_port(agent-manager:648a508ad347) the protection guard now lives in the Agent Manager plugin.
 import { KiloAgentManagerPlugin } from "./agent-manager"
+import { KiloRecallPlugin } from "./recall"
 
 /**
  * The Kilo plugins on the public plugin API (plugin-first rung 1), in registration order. The Kilo host
@@ -60,6 +61,7 @@ export const KiloPlugins = [
   KiloPrivacyPlugin,
   KiloBranchNamePlugin,
   KiloAgentManagerPlugin,
+  KiloRecallPlugin,
   // The Kilo review command replaces the built-in `review`. kilo_port(review:efc710228c1f)
   KiloReview.Plugin,
 ] as const
