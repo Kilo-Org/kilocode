@@ -178,6 +178,23 @@ describe("kilo DOCX reads", () => {
     ),
   )
 
+  // Creating a symlink needs privileges on Windows.
+  const symlinkRead = process.platform === "win32" ? it.live.skip : it.live
+  symlinkRead("reads a symlinked document through the target size", () =>
+    withTempDir((tmp) =>
+      Effect.gen(function* () {
+        const target = path.join(tmp.path, "target.docx")
+        const link = path.join(tmp.path, "link.docx")
+        yield* Effect.promise(async () => Bun.write(target, await document(["Linked paragraph"])))
+        yield* Effect.promise(() => fs.symlink(target, link))
+
+        const value = text(yield* run(link))
+
+        expect(value.content).toContain("Linked paragraph")
+      }),
+    ),
+  )
+
   it.live("preserves PDF attachments and rejects unsupported binary files", () =>
     withTempDir((tmp) =>
       Effect.gen(function* () {
