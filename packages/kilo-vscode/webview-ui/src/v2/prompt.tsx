@@ -3,7 +3,6 @@ import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { showToast } from "@kilocode/kilo-ui/toast"
 import type { ModelRef, JsonValue } from "@opencode/client"
 import { createEffect, createMemo, createSignal, on, onCleanup, onMount, Show, untrack, type JSX } from "solid-js"
-import type { ToWebview } from "../../../src/protocol"
 import type { ReviewCommentEntry } from "../../../src/shared/review-comments"
 import { pushFixes } from "../../agent-manager/pr/pr-push-fixes"
 import { fold, reserve } from "../components/chat/prompt-fold"
@@ -316,16 +315,6 @@ export function PromptInput(props: {
   })
 
   registerReviewAppend(props.onReviewAppendReady, appendComments)
-
-  // The Changes tab posts comments to its own view, so only the open composer takes them, as in v1. The Agent Manager
-  // delivers the same batch through its window event instead.
-  const receive = (event: MessageEvent<ToWebview>) => {
-    const data = event.data
-    if (!data || typeof data !== "object" || data.type !== "appendReviewComments") return
-    appendComments(data.comments, data.autoSend)
-  }
-  onMount(() => window.addEventListener("message", receive))
-  onCleanup(() => window.removeEventListener("message", receive))
 
   const shortcut = createSpeechShortcut({
     speech,

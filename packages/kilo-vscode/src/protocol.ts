@@ -1,6 +1,6 @@
 // Messages between the webview and the extension host. The webview has no server credentials: it sends HTTP
 // requests through the host (`fetch`), and the host streams each response back in order.
-import type { ReviewCommentEntry } from "./shared/review-comments"
+import type { ReviewCommentData, ReviewCommentEntry } from "./shared/review-comments"
 
 export type Request = {
   type: "fetch"
@@ -17,7 +17,7 @@ export type ConfigEdit = { path: string[]; value?: unknown; preserveAliases?: bo
 
 export type ConfigScope = "global" | "project"
 
-export type { ReviewCommentEntry }
+export type { ReviewCommentData, ReviewCommentEntry }
 
 /** Working tree change counts against the base, as the v1 Changes button showed them. */
 export type GitChangesStats = { files: number; additions: number; deletions: number }
@@ -132,6 +132,7 @@ export type Ui =
   | { type: "openDiffVirtual"; diff: ToolActionDiff; initialDiffStyle?: "unified" | "split" }
   | { type: "openDiffsVirtual"; diffs: ToolActionDiff[]; initialDiffStyle?: "unified" | "split" }
   | { type: "requestDisplaySettings" }
+  | { type: "validateFiles"; id: string; sessionID?: string; paths: string[] }
   /** Opens the Changes editor tab. `turnID` opens the turn scope of that user message instead of the picker. */
   | { type: "openChanges"; sessionID?: string; turnID?: string }
   /** Asks for the working tree change counts of the Changes button. The host answers with `gitChangesStats`. */
@@ -211,21 +212,37 @@ export type ToWebview =
   | { type: "chunk"; id: number; data: Uint8Array }
   | { type: "end"; id: number }
   | { type: "error"; id: number; message: string }
-  | { type: "command"; name: "newSession" | "history" | "profile" | "cycleAgentMode" | "cyclePreviousAgentMode" }
+  | { type: "command"; name: "newSession" | "history" | "cycleAgentMode" | "cyclePreviousAgentMode" }
   | ({ type: "navigate" } & SettingsNavigation)
   | { type: "keybindings"; bindings: Record<string, string> }
   | { type: "clipboardWriteResult"; id: string; ok: boolean; error?: string }
   | { type: "modelSelectorExpandedLoaded"; value: boolean }
   | { type: "autoApproveStateLoaded"; value: boolean }
   | { type: "webviewActiveChanged"; active: boolean }
-  | { type: "configLoaded"; global: ConfigFileContent; project: ConfigFileContent; policy?: ConfigPolicy; error?: string }
+  | { type: "validateFilesResult"; id: string; existing: string[] }
+  | { type: "appendReviewComments"; comments: ReviewCommentEntry[]; autoSend: boolean }
+  | {
+      type: "configLoaded"
+      global: ConfigFileContent
+      project: ConfigFileContent
+      policy?: ConfigPolicy
+      error?: string
+    }
   | { type: "configWritten"; id: number; ok: boolean; error?: string }
   | { type: "vscodeSettingsLoaded"; values: Record<string, unknown> }
-  | { type: "agentManagerSettingsLoaded"; requestId: string; projectId?: string; projects: AgentManagerSettingsProject[] }
-  | ({ type: "agentManagerSettingsBranchesLoaded"; requestId: string; error?: string } & AgentManagerSettingsBranchPayload)
+  | {
+      type: "agentManagerSettingsLoaded"
+      requestId: string
+      projectId?: string
+      projects: AgentManagerSettingsProject[]
+    }
+  | ({
+      type: "agentManagerSettingsBranchesLoaded"
+      requestId: string
+      error?: string
+    } & AgentManagerSettingsBranchPayload)
   | { type: "displaySettingsLoaded"; values: DisplaySettings; error?: string }
   /** Review comments from the Changes tab. The composer shows them, and sends them at once when `autoSend` is set. */
-  | { type: "appendReviewComments"; comments: ReviewCommentEntry[]; autoSend: boolean }
   /** The working tree change counts of the Changes button; absent when the directory is not a git repository. */
   | { type: "gitChangesStats"; stats?: GitChangesStats }
   | { type: "speechToTextConfigLoaded"; status: SpeechToTextStatus }

@@ -11,6 +11,7 @@ import {
   type ExtensionContext,
 } from "vscode"
 import { createAgentManagerConnection } from "./agent-manager/connection"
+import { DocumentViewerProvider } from "./DocumentViewerProvider"
 import { AgentManagerProvider } from "./agent-manager/AgentManagerProvider"
 import { createPanel, PANEL_TYPE } from "./agent-manager/panel"
 import { ensureCommandsSkipShell } from "./agent-manager/terminal-host"
@@ -20,10 +21,12 @@ import { DiffViewerProvider } from "./diff/DiffViewerProvider"
 import { DiffSourceCatalog } from "./diff/sources/catalog"
 import { commitMessageCommand, commitMessageLanguage, connect, type GitExports } from "./commit-message"
 import { createCostAlerts } from "./cost-alert"
-import { command, manager, settingsEnvironment } from "./server"
+import { command, manager, serverHome, settingsEnvironment } from "./server"
+import { usePlanHome } from "./documents/document-reader"
 import { readKiloSettings } from "./settings-host"
 import { registerAutocompleteProvider } from "./services/autocomplete"
 import { createConnection } from "./services/autocomplete/connection"
+import { profile } from "./profile-panel"
 import { settings } from "./settings-panel"
 import { createShutdown } from "./shutdown"
 import { DiffVirtualProvider } from "./DiffVirtualProvider"
@@ -39,9 +42,7 @@ export function activate(context: ExtensionContext) {
     notify: async (alert) => {
       // This package ships no l10n bundles, so these strings remain English in every VS Code locale.
       const money = (value: number) =>
-        value > 0 && value < 0.00000001
-          ? `$${value}`
-          : `$${value.toFixed(value < 0.0001 ? 8 : value < 1 ? 4 : 2)}`
+        value > 0 && value < 0.00000001 ? `$${value}` : `$${value.toFixed(value < 0.0001 ? 8 : value < 1 ? 4 : 2)}`
       const title = alert.title?.trim() || l10n.t("Session {0}", alert.sessionID.slice(-6))
       const keepGoing = l10n.t("Continue")
       const stop = l10n.t("Stop")
@@ -87,8 +88,11 @@ export function activate(context: ExtensionContext) {
     })
   }
   const shutdown = createShutdown({ log: (text) => output.appendLine(text) })
+  const serverCommand = () => command({ extension: context.extensionPath, storage, env: process.env })
+  // Plan mode writes plans under the server's home, so plan links resolve there too.
+  usePlanHome(serverHome(serverCommand(), process.env))
   const server = manager({
-    command: () => command({ extension: context.extensionPath, storage, env: process.env }),
+    command: serverCommand,
     cwd: directory,
     env: process.env,
     settings: serverSettings,
@@ -122,6 +126,8 @@ export function activate(context: ExtensionContext) {
   // reads server session diffs through the same connection as the Agent Manager.
   const diffCatalog = new DiffSourceCatalog(connection)
   const changes = new DiffViewerProvider({ context, server, directory, catalog: diffCatalog })
+  // The Documents panel is an editor tab created after this view, so the view receives it through a lazy getter.
+  const documentsRef: { current?: DocumentViewerProvider } = {}
   const view = chat({
     context,
     server,
@@ -130,7 +136,14 @@ export function activate(context: ExtensionContext) {
     diff: diffs,
     changes,
     gitStats: (onStats) => gitChanges({ directory, onStats }),
+    documents: () => documentsRef.current,
   })
+  const documents = new DocumentViewerProvider({
+    extension: context,
+    directory,
+    onComments: (comments, autoSend) => void view.post({ type: "appendReviewComments", comments, autoSend }),
+  })
+  documentsRef.current = documents
   const agentHost = new VscodeHost(context, { server, directory })
   let agentManagerRef: AgentManagerProvider | undefined
   const agentPanel = createPanel({
@@ -151,6 +164,7 @@ export function activate(context: ExtensionContext) {
     onReset: view.syncState,
     agentManager: () => agentManager.settings,
   })
+  const profilePanel = profile({ context, server, directory })
   const agentAction = (action: string) => agentManager.postMessage({ type: "action", action })
   ensureCommandsSkipShell()
   // The cycle keybindings act on the focused composer: the Agent Manager panel when it is active, else the sidebar.
@@ -207,13 +221,11 @@ export function activate(context: ExtensionContext) {
       await commands.executeCommand("kilo-code.v2.chat.focus")
       await view.post({ type: "command", name: "history" })
     }),
-    commands.registerCommand("kilo-code.v2.profile", async () => {
-      await commands.executeCommand("kilo-code.v2.chat.focus")
-      await view.post({ type: "command", name: "profile" })
-    }),
+    commands.registerCommand("kilo-code.v2.profile", () => profilePanel.open()),
     commands.registerCommand("kilo-code.v2.settings", (...args: unknown[]) => panel.open(args)),
     commands.registerCommand("kilo-code.v2.settingsSearch", () => panel.open([{ search: true }])),
     panel,
+    profilePanel,
     // The host sends the action and the webview decides the next agent, as in main: the agent list and
     // the selection live in the webview, and only the server owns the committed value.
     commands.registerCommand("kilo-code.v2.cycleAgentMode", () => cycle("cycleAgentMode")),
@@ -247,6 +259,11 @@ export function activate(context: ExtensionContext) {
     window.registerWebviewPanelSerializer(PANEL_TYPE, {
       deserializeWebviewPanel: async (restored) => agentManager.deserializePanel(restored),
     }),
+    documents,
+    // A restored document tab reloads its own tabs from the messages it missed, so start it empty instead.
+    window.registerWebviewPanelSerializer(DocumentViewerProvider.viewType, {
+      deserializeWebviewPanel: async (restored) => restored.dispose(),
+    }),
     commands.registerCommand("kilo-code.v2.agentManager.open", () => agentManager.openPanel()),
     commands.registerCommand("kilo-code.v2.agentManager.openInNewWindow", async () => {
       agentManager.openPanel()
@@ -256,9 +273,7 @@ export function activate(context: ExtensionContext) {
       commands.registerCommand(`kilo-code.v2.agentManager.${command}`, () => agentAction(action)),
     ),
     ...Array.from({ length: 9 }, (_, index) =>
-      commands.registerCommand(`kilo-code.v2.agentManager.jumpTo${index + 1}`, () =>
-        agentAction(`jumpTo${index + 1}`),
-      ),
+      commands.registerCommand(`kilo-code.v2.agentManager.jumpTo${index + 1}`, () => agentAction(`jumpTo${index + 1}`)),
     ),
     commands.registerCommand("kilo-code.v2.agentManager.advancedWorktree", () => agentManager.openAdvancedWorktree()),
     commands.registerCommand("kilo-code.v2.agentManager.diagnostics", () => {

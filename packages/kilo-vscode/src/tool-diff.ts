@@ -2,7 +2,8 @@
 // (`DiffVirtualProvider`), which implements `ToolDiff`.
 import { Range, Uri, window, workspace } from "vscode"
 import type { ToolActionDiff } from "./protocol"
-import { filePosition, resolveToolFilePath } from "./tool-diff-path"
+import { filePosition } from "./tool-diff-patch"
+import { resolveToolFilePath } from "./tool-diff-path"
 
 /** The tool diff surfaces the chat view opens: a diff of one call or of several, and their lifetime. */
 export type ToolDiff = {

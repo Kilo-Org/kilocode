@@ -65,6 +65,68 @@ test("write card renders the written file and its diff", async () => {
   expect(card.host.querySelector('[data-component="write-content"] [data-component="file"]')).not.toBeNull()
 })
 
+test("read, edit and write cards open their file from the header action", async () => {
+  const opened: string[] = []
+  const action = (path: string) => opened.push(path)
+
+  const read = mountTool("read", {
+    input: { path: "README.md" },
+    partID: "read-open",
+    directory: "/repo",
+    actions: { openFile: action },
+  })
+  mounted.push(read)
+  const readButton = await waitFor(() =>
+    read.host.querySelector<HTMLElement>('[aria-label="ui.messagePart.openInEditor"]'),
+  )
+  readButton.click()
+
+  const edit = mountTool("edit", {
+    input: { path: "src/math.ts" },
+    metadata: { files: [editedFile] },
+    partID: "edit-open",
+    directory: "/repo",
+    actions: { openFile: action },
+  })
+  mounted.push(edit)
+  const editButton = await waitFor(() =>
+    edit.host.querySelector<HTMLElement>('[aria-label="ui.messagePart.openInEditor"]'),
+  )
+  editButton.click()
+
+  const write = mountTool("write", {
+    input: { path: "src/notes.md", content: "# Notes\n" },
+    metadata: { files: [writtenFile] },
+    partID: "write-open",
+    directory: "/repo",
+    actions: { openFile: action },
+  })
+  mounted.push(write)
+  const writeButton = await waitFor(() =>
+    write.host.querySelector<HTMLElement>('[aria-label="ui.messagePart.openInEditor"]'),
+  )
+  writeButton.click()
+
+  expect(opened).toEqual(["README.md", "src/math.ts", "src/notes.md"])
+})
+
+test("clicking a patch file name opens that file", async () => {
+  const opened: string[] = []
+  const card = mountTool("patch", {
+    input: { patchText: editedFile.patch },
+    metadata: { files: [editedFile] },
+    partID: "patch-open",
+    directory: "/repo",
+    actions: { openFile: (path: string) => opened.push(path) },
+    forceOpen: true,
+  })
+  mounted.push(card)
+  const name = await waitFor(() => card.host.querySelector<HTMLElement>('[data-slot="message-part-title-filename"]'))
+  name.click()
+
+  expect(opened).toEqual(["src/math.ts"])
+})
+
 test("an unchanged write hides its details", async () => {
   const card = mountTool("write", {
     input: { path: "src/notes.md", content: "# Notes\nFixture content.\n" },
@@ -74,7 +136,9 @@ test("an unchanged write hides its details", async () => {
     forceOpen: true,
   })
   mounted.push(card)
-  await waitFor(() => card.host.querySelector('[data-component="tool-trigger"]')?.getAttribute("data-hide-details") === "true")
+  await waitFor(
+    () => card.host.querySelector('[data-component="tool-trigger"]')?.getAttribute("data-hide-details") === "true",
+  )
 
   expect(card.host.querySelector('[data-component="write-content"]')).toBeNull()
   expect(card.host.querySelector('[data-component="tool-trigger"]')?.getAttribute("data-hide-details")).toBe("true")
