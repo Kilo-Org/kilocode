@@ -292,7 +292,7 @@ describe("kilo_local_recall tool", () => {
   test("scopes a session through a symlinked workspace path", async () => {
     const root = await realpath(await mkdtemp(path.join(os.tmpdir(), "kilo-recall-link-")))
     const link = `${root}-link`
-    await symlink(root, link)
+    await symlink(root, link, process.platform === "win32" ? "junction" : "dir")
     try {
       const linked = info("ses_linked", "linked workspace", link)
       const { runtime: value } = runtime({
