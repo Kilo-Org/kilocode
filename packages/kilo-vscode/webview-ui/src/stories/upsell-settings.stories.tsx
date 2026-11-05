@@ -8,7 +8,6 @@ import { SessionContext } from "../context/session"
 import { getVSCodeAPI } from "../context/vscode"
 import { WorktreeModeProvider } from "../context/worktree-mode"
 import { SidebarUpsell } from "../../../src/kilo-provider/upsell"
-import { apply, type UpsellState } from "../../../src/shared/agent-manager-upsell"
 import type { SessionContextValue } from "../context/session-types"
 
 const meta: Meta = { title: "Upsell Settings", parameters: { layout: "fullscreen" } }
@@ -24,12 +23,11 @@ function Preview(props: { surface?: "editor" | "manager" }) {
   const values = new Map<string, unknown>()
   const host = new SidebarUpsell(
     {
-      read: async () => JSON.parse(localStorage.getItem("upsell.policy") ?? "{}") as UpsellState,
-      update: async (action, now) => {
-        const next = apply(JSON.parse(localStorage.getItem("upsell.policy") ?? "{}") as UpsellState, action, now)
-        localStorage.setItem("upsell.policy", JSON.stringify(next))
-        return next
+      get: <T,>(_key: string, fallback: T) => {
+        const value = localStorage.getItem("upsell.policy")
+        return value === null ? fallback : (JSON.parse(value) as T)
       },
+      update: async (_key, value) => localStorage.setItem("upsell.policy", JSON.stringify(value)),
     },
     {
       get: <T,>(key: string, fallback: T) => (values.get(key) as T | undefined) ?? fallback,
