@@ -707,7 +707,9 @@ type MessageInfo = {
 }
 
 type AssistantError = NonNullable<AssistantMessage["error"]>
-type AssistantInfo = (UsageService.AssistantTokenCost & Pick<AssistantMessage, "error">) | undefined
+// kilocode_change start - auth_required names the provider of the failed message
+type AssistantInfo = (UsageService.AssistantTokenCost & Pick<AssistantMessage, "error" | "providerID">) | undefined
+// kilocode_change end
 
 function request<T>(fn: () => Promise<T | SdkResponse<T>>, service?: string) {
   return Effect.tryPromise({
@@ -866,6 +868,12 @@ const promptResponse = Effect.fn("ACP.promptResponse")(function* (
   if (info.error.name === "ProviderAuthError") {
     return yield* new ACPError.AuthRequiredError({ providerId: info.error.data.providerID })
   }
+
+  // kilocode_change start - a provider that rejects missing credentials (e.g. Kilo Gateway) needs sign-in
+  if (info.error.name === "APIError" && info.error.data.statusCode === 401) {
+    return yield* new ACPError.AuthRequiredError({ providerId: info.providerID })
+  }
+  // kilocode_change end
 
   return yield* new ACPError.ServiceFailureError({
     service: "session",
