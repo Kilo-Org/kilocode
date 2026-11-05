@@ -3,6 +3,9 @@ import { KiloRemote, KiloSessionSync } from "@kilocode/kilo-plugin"
 import { Bus } from "@opencode/core/bus"
 import { Database } from "@opencode/core/database/database"
 import { AppNodeBuilder } from "@opencode/core/effect/app-node-builder"
+import { Form } from "@opencode/core/form"
+import { Instance } from "@opencode/core/instance/service"
+import { Permission } from "@opencode/core/permission"
 import { Session } from "@opencode/core/session"
 import { Location } from "@opencode/schema/location"
 import { AbsolutePath } from "@opencode/schema/schema"
@@ -11,7 +14,7 @@ import { Global } from "@opencode/util/global"
 import { LayerNode } from "@opencode/util/effect/layer-node"
 import { makeGlobalNode } from "@opencode/util/effect/app-node"
 import { Context, Effect, Layer } from "effect"
-import { mkdtemp, rm } from "node:fs/promises"
+import { mkdtemp, realpath, rm } from "node:fs/promises"
 import path from "node:path"
 import os from "node:os"
 import { Remote } from "../src/remote"
@@ -28,7 +31,7 @@ const until = async (predicate: () => boolean) => {
 }
 
 test("remote status is idempotent and live native events are gated by watches, not control", async () => {
-  const root = await mkdtemp(path.join(os.tmpdir(), "kilo-remote-runtime-"))
+  const root = await realpath(await mkdtemp(path.join(os.tmpdir(), "kilo-remote-runtime-")))
   const events: {
     type: string
     body: { syncPosition: number; data: unknown; running?: boolean; runID?: string | null; pending?: unknown }
@@ -103,6 +106,18 @@ test("remote status is idempotent and live native events are gated by watches, n
     disable: () => Effect.succeed(status),
     flush: () => Effect.succeed(status),
   })
+  // Exercise transport/state orchestration without booting unrelated model catalogs,
+  // filesystem watchers and workspace tools. The real-host E2E covers those services.
+  const pending = Layer.mergeAll(
+    Layer.succeed(Permission.Service, { forSession: () => Effect.succeed([]) } as unknown as Permission.Interface),
+    Layer.succeed(Form.Service, { list: () => Effect.succeed([]) } as unknown as Form.Interface),
+  )
+  const instances: Instance.Interface = {
+    provide:
+      () =>
+      <A, E, R>(effect: Effect.Effect<A, E, R>) =>
+        effect.pipe(Effect.provide(pending)) as Effect.Effect<A, E, Exclude<R, Instance.Services>>,
+  }
   try {
     await Effect.runPromise(
       Effect.gen(function* () {
@@ -119,6 +134,7 @@ test("remote status is idempotent and live native events are gated by watches, n
               ),
             ),
             Database.node.replace(Database.configured({ path: path.join(root, "native.sqlite") })),
+            Instance.node.replace(Layer.succeed(Instance.Service, instances)),
             SessionSync.node.replace(
               makeGlobalNode({
                 service: KiloSessionSync.Service,
