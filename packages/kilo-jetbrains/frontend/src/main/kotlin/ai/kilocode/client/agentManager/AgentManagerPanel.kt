@@ -363,9 +363,10 @@ class AgentManagerPanel(
         if (!canUpdateFromBase(item)) return
         val parent = item.parentBranch?.takeIf { it.isNotBlank() } ?: return
         Telemetry.send("Worktree Action", mapOf("action" to "update_from_base"))
+        val title = "Update from $parent"
         val text = worktreeBaseUpdatePrompt(item.path, parent, item.remote, item.parentBranchRecorded)
-        if (!target.service<WorktreeBaseUpdatePrompts>().submit(item.path, text)) {
-            target.service<PendingWorktreePrompt>().put(item.path, PendingPrompt(text))
+        if (!target.service<WorktreeBaseUpdatePrompts>().submit(item.path, text, title)) {
+            target.service<PendingWorktreePrompt>().put(item.path, PendingPrompt(text, injectedTitle = title))
         }
         open(item, focus = true)
     }

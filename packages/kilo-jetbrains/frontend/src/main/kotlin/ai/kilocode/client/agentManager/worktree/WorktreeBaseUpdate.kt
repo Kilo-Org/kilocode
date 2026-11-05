@@ -55,9 +55,9 @@ class WorktreeBaseUpdatePrompts {
      * caller can queue the prompt and open one.
      */
     @RequiresEdt
-    fun submit(path: String, text: String): Boolean {
+    fun submit(path: String, text: String, title: String): Boolean {
         val manager = managers[normalizeWorktreePath(path)] ?: return false
-        manager.submitPrompt(text)
+        manager.submitPrompt(text, title)
         return true
     }
 }

@@ -481,13 +481,18 @@ class SessionUi(
      * turn runs with them even before this session's own model state has loaded.
      */
     @RequiresEdt
-    internal fun submitPrompt(text: String, select: PromptSelection? = null, clearDraft: Boolean = true) {
+    internal fun submitPrompt(
+        text: String,
+        select: PromptSelection? = null,
+        clearDraft: Boolean = true,
+        injectedTitle: String? = null,
+    ) {
         if (readonly) return
         if (text.isBlank()) return
         // Seed the session's agent/model/reasoning so the pickers and later turns reflect the pick,
         // then send the first turn carrying it too (so it applies before workspace-ready resolves).
         select?.let { controller.applySelection(it) }
-        sendPrompt(text, emptyList(), select, clearDraft)
+        sendPrompt(text, emptyList(), select, clearDraft, injectedTitle)
     }
 
     @RequiresEdt
@@ -1084,6 +1089,7 @@ class SessionUi(
         files: List<PromptPartDto>,
         select: PromptSelection? = null,
         clearDraft: Boolean = true,
+        injectedTitle: String? = null,
     ) {
         if (readonly) return
         if (text.isBlank() && files.isEmpty()) return
@@ -1134,7 +1140,7 @@ class SessionUi(
             // the transcript already). A queued send baselines the in-flight turn's message, so that
             // turn cannot be mistaken for confirmation of this one.
             pendingSend = userMessageIds()
-            controller.prompt(text, allFiles, editor?.context, select)
+            controller.prompt(text, allFiles, editor?.context, select, injectedTitle)
             scroll.followBottom(follow)
         }
     }

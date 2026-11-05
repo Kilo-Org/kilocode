@@ -42,6 +42,7 @@ import com.intellij.ui.components.JBLabel
 import com.intellij.util.concurrency.annotations.RequiresEdt
 import com.intellij.util.ui.JBUI
 import java.awt.BorderLayout
+import java.awt.CardLayout
 import java.awt.Point
 import java.awt.Graphics
 import java.awt.Graphics2D
@@ -274,6 +275,7 @@ class MessageView(
                 return false
             }
             existing.update(content)
+            if (content is Text && existing === prompt) wrap?.syncInjected()
             syncPromptToolbar()
             refresh()
             return true
@@ -409,6 +411,7 @@ class MessageView(
         removeView(view)
         Disposer.dispose(view)
         if (view === prompt) prompt = null
+        if (view is PromptView) wrap?.syncInjected()
         syncPromptSouth()
         syncBorder()
         syncPromptWrap()
@@ -442,7 +445,10 @@ class MessageView(
             removeView(it)
             Disposer.dispose(it)
         }
-        wrap?.let { remove(it) }
+        wrap?.let {
+            it.release()
+            remove(it)
+        }
         parts.clear()
         contents.clear()
         aliases.clear()
@@ -571,6 +577,7 @@ class MessageView(
         this.style = style
         if (msg.info.role == SessionUiStyle.View.Message.USER_ROLE) background = SessionUiStyle.View.Prompt.bgColor(style)
         for (view in parts.values) view.applyStyle(style)
+        wrap?.applyStyle(style)
         failure?.applyStyle(style)
         refresh()
     }
@@ -581,7 +588,10 @@ class MessageView(
             removeView(it)
             Disposer.dispose(it)
         }
-        wrap?.let { remove(it) }
+        wrap?.let {
+            it.release()
+            remove(it)
+        }
         failure?.let { remove(it) }
         failure = null
         parts.clear()
@@ -737,8 +747,7 @@ class MessageView(
         if (view !is PromptView) return view
         prompt = view
         val node = ensurePromptWrap()
-        val box = promptBox ?: return node
-        if (view.parent !== box) box.add(view, BorderLayout.CENTER)
+        node.setPrompt(view)
         node.bar.setActive(true)
         return node.takeIf { it.parent == null }
     }
@@ -779,8 +788,8 @@ class MessageView(
     @RequiresEdt
     private fun syncPromptWrap() {
         val node = wrap ?: return
-        val box = promptBox ?: return
-        if (box.componentCount > 0) return
+        if (prompt != null || promptSouth != null) return
+        node.release()
         node.parent?.remove(node)
         wrap = null
         promptBox = null
@@ -790,6 +799,7 @@ class MessageView(
         private val box: JPanel,
     ) : JPanel(BorderLayout()), SessionCopyTarget {
         private val footer = JPanel(BorderLayout()).also { it.isOpaque = false }
+        private val cards = JPanel(CardLayout())
         val bar = MessageToolbar(
             { prompt?.copyMarkdown(trim = false) },
             revert?.let { fn -> { fn(msg.info.id) } },
@@ -800,12 +810,18 @@ class MessageView(
         private var progress: RevertProgress? = null
         private var queuedRow: JPanel? = null
         private var queued = false
+        private var header: InjectedPromptHeader? = null
+        private var preview: TextView? = null
+        private var collapsed = false
+        private var hasPreview = false
 
         override val copyAnchor: JComponent get() = placeholder
         override val copyToolbar: JComponent? get() = if (reverting || queued) null else bar
 
         init {
             isOpaque = false
+            cards.isOpaque = false
+            box.add(cards, BorderLayout.CENTER)
             add(box, BorderLayout.CENTER)
             footer.border = JBUI.Borders.emptyTop(UiStyle.Gap.xs())
             footer.add(placeholder.align(HAlign.RIGHT, VAlign.TOP), BorderLayout.CENTER)
@@ -813,6 +829,106 @@ class MessageView(
         }
 
         override fun copyText(): String? = prompt?.copyMarkdown(trim = false)
+
+        fun setPrompt(view: PromptView) {
+            if (view.parent !== cards) cards.add(view, FULL)
+            showCard(if (collapsed) PREVIEW else FULL)
+            syncInjected()
+        }
+
+        fun syncInjected() {
+            val text = prompt?.let { contents[it.contentId] as? Text }
+            val title = text?.injectedTitle
+            if (text == null || title == null) {
+                header?.let {
+                    box.remove(it)
+                    header = null
+                }
+                clearPreview()
+                collapsed = false
+                hasPreview = false
+                showCard(FULL)
+                revalidate()
+                repaint()
+                return
+            }
+            val body = text.content.toString()
+            val next = injectedPreview(body)
+            hasPreview = next != null
+            val fresh = header == null
+            if (fresh && next != null) collapsed = true
+            if (!hasPreview) {
+                collapsed = false
+                clearPreview()
+            }
+            val node = header ?: InjectedPromptHeader { open ->
+                setCollapsed(!open)
+            }.also {
+                it.applyStyle(style)
+                box.add(it, BorderLayout.NORTH)
+                header = it
+            }
+            node.update(title, hasPreview, !collapsed)
+            if (next != null) ensurePreview(next)
+            showCard(if (collapsed) PREVIEW else FULL)
+            revalidate()
+            repaint()
+        }
+
+        fun setCollapsed(value: Boolean) {
+            collapsed = value && hasPreview
+            showCard(if (collapsed) PREVIEW else FULL)
+            header?.update(
+                prompt?.let { contents[it.contentId] as? Text }?.injectedTitle.orEmpty(),
+                hasPreview,
+                !collapsed,
+            )
+            revalidate()
+            repaint()
+        }
+
+        fun applyStyle(style: SessionEditorStyle) {
+            header?.applyStyle(style)
+            preview?.applyStyle(style)
+        }
+
+        fun release() {
+            clearPreview()
+            header?.let { box.remove(it) }
+            header = null
+        }
+
+        private fun clearPreview() {
+            preview?.let {
+                cards.remove(it)
+                Disposer.dispose(it)
+            }
+            preview = null
+        }
+
+        private fun showCard(name: String) {
+            (cards.layout as CardLayout).show(cards, name)
+        }
+
+        private fun ensurePreview(text: String) {
+            val node = preview
+            if (node != null) {
+                node.update(Text(node.contentId).apply { content.append(text) })
+                return
+            }
+            val view = TextView(
+                Text("injected-preview-${prompt?.contentId}").apply { content.append(text) },
+                transparent = true,
+            ).also {
+                it.applyStyle(style)
+                it.border = JBUI.Borders.empty(
+                    JBUI.scale(SessionUiStyle.View.Prompt.SHELL_VERTICAL_PADDING),
+                    JBUI.scale(SessionUiStyle.View.Prompt.SHELL_HORIZONTAL_PADDING),
+                )
+            }
+            preview = view
+            cards.add(view, PREVIEW)
+        }
 
         @RequiresEdt
         fun setReverting(active: Boolean, text: String, onCancel: () -> Unit) {
@@ -878,6 +994,8 @@ class MessageView(
 
     private companion object {
         const val ACCESSIBILITY_SUMMARY_LIMIT = 160
+        private const val FULL = "prompt"
+        private const val PREVIEW = "preview"
         private const val ACCESSIBILITY_SCAN_LIMIT = ACCESSIBILITY_SUMMARY_LIMIT * 4
 
         private val FENCE = Regex("```[\\w+#.-]*")

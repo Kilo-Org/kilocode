@@ -106,6 +106,7 @@ open class WorktreeSessionEditorManager(
     private var last: String? = null
     private var pending = false
     private var queuedPrompt: String? = null
+    private var queuedTitle: String? = null
     // Fork requests in flight, keyed by source session. A hover icon or menu item is easy to hit twice
     // before the RPC answers, and each answer opens its session over the last one.
     private val forking = linkedSetOf<String>()
@@ -283,9 +284,14 @@ open class WorktreeSessionEditorManager(
      * calls this directly; otherwise the action opens the editor and [consumeQueuedPrompt] sends it.
      */
     @RequiresEdt
-    fun submitPrompt(text: String) {
+    fun submitPrompt(text: String, title: String) {
         val ui = currentUi()
-        if (ui != null) ui.submitPrompt(text, clearDraft = false) else queuedPrompt = text
+        if (ui != null) {
+            ui.submitPrompt(text, clearDraft = false, injectedTitle = title)
+        } else {
+            queuedPrompt = text
+            queuedTitle = title
+        }
     }
 
     /** Sends anything queued for this worktree once its session is on screen. */
@@ -302,14 +308,17 @@ open class WorktreeSessionEditorManager(
         currentUi()?.submitPrompt(
             prompt.text,
             PromptSelection(prompt.agent, prompt.provider, prompt.model, prompt.variant),
+            injectedTitle = prompt.injectedTitle,
         )
     }
 
     @RequiresEdt
     private fun consumeQueuedPrompt() {
         val text = queuedPrompt ?: return
+        val title = queuedTitle
         queuedPrompt = null
-        currentUi()?.submitPrompt(text, clearDraft = false)
+        queuedTitle = null
+        currentUi()?.submitPrompt(text, clearDraft = false, injectedTitle = title)
     }
 
     @RequiresEdt

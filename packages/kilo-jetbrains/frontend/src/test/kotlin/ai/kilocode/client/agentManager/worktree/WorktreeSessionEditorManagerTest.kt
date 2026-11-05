@@ -156,19 +156,20 @@ class WorktreeSessionEditorManagerTest : BasePlatformTestCase() {
         edt { manager.openSession(SessionRef.Local(session)) }
         flush()
 
-        edt { manager.submitPrompt("update from base") }
+        edt { manager.submitPrompt("update from base", "Update from main") }
         waitUntil { rpc.prompts.any { it.first == "ses_1" } }
 
         val sent = rpc.prompts.single { it.first == "ses_1" }
         assertEquals(DIR, sent.second)
-        assertTrue("prompt parts should carry the action text", sent.third.parts.any { it.text == "update from base" })
+        val part = sent.third.parts.single { it.text == "update from base" }
+        assertEquals("Update from main", part.injectedTitle)
     }
 
     fun `test submit prompt while the editor starts is sent once the session opens`() {
         rpc.listed += session("ses_1", updated = 1.0)
         val manager = manager()
 
-        edt { manager.submitPrompt("update from base") }
+        edt { manager.submitPrompt("update from base", "Update from main") }
         edt { manager.start() }
         flush()
 
@@ -182,7 +183,7 @@ class WorktreeSessionEditorManagerTest : BasePlatformTestCase() {
         edt { manager.openSession(SessionRef.Local(session)) }
         flush()
 
-        val sent = edt { project.service<WorktreeBaseUpdatePrompts>().submit(DIR, "update from base") }
+        val sent = edt { project.service<WorktreeBaseUpdatePrompts>().submit(DIR, "update from base", "Update from main") }
         waitUntil { rpc.prompts.any { it.first == "ses_1" } }
 
         assertTrue("the project service must see the editor's registration", sent)
