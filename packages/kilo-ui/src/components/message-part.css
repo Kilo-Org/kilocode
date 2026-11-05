@@ -414,6 +414,26 @@ html[data-theme="kilo-vscode"] [data-component="bash-output"] {
     }
   }
 
+  /* A pending message shows three lines; the toggle below the bubble shows the rest. */
+  [data-slot="user-message-clamp"] {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+    overflow: hidden;
+  }
+
+  [data-slot="user-message-expand"] {
+    display: block;
+    margin-left: auto;
+    padding: 2px 0 0;
+    border: 0;
+    background: none;
+    color: var(--text-interactive-base, var(--vscode-textLink-foreground));
+    font: inherit;
+    font-size: var(--font-size-small);
+    cursor: pointer;
+  }
+
   [data-slot="user-message-queued-indicator"] {
     display: inline-flex;
     align-items: center;

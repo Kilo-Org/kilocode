@@ -41,7 +41,7 @@ function create(directory: string) {
       commands.add(handler)
       onCleanup(() => commands.delete(handler))
     },
-    open: (url) => vscode.postMessage({ type: "open", url } as never),
+    open: (url, external) => vscode.postMessage({ type: "open", url, external } as never),
   })
 }
 

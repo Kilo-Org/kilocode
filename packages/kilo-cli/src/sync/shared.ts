@@ -52,23 +52,6 @@ export function call<A>(run: () => Promise<A>) {
   })
 }
 
-export function destination(value: string, local: boolean) {
-  return Effect.try({
-    try: () => {
-      const url = new URL(value)
-      const loopback =
-        url.hostname === "localhost" || url.hostname === "[::1]" || /^127\.(?:\d{1,3}\.){2}\d{1,3}$/.test(url.hostname)
-      if (url.username || url.password || url.search || url.hash || value.includes("?") || value.includes("#"))
-        throw new SyncError("Destination URL cannot contain credentials, a query, or a fragment.")
-      if (url.pathname !== "/") throw new SyncError("Destination URL must be an origin without a path.")
-      if (url.protocol !== "https:" && !(local && url.protocol === "http:" && loopback))
-        throw new SyncError("Use an HTTPS destination, or --local with an HTTP loopback destination.")
-      return url.toString().replace(/\/$/, "")
-    },
-    catch: (cause) => (cause instanceof SyncError ? cause : new SyncError("Invalid destination URL.")),
-  })
-}
-
 export function sanitize(value: string) {
   return value
     .replace(/[\u0000-\u001f\u007f-\u009f]/g, " ")

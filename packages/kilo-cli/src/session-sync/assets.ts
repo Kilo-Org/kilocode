@@ -152,8 +152,8 @@ const pendingPaths = Effect.fn("SessionSync.Assets.pendingPaths")(function* (db:
   while (true) {
     const rows = yield* db
       .all<{ session_id: string; kind: Dirty["kind"]; id: string; value: string }>(
-        sql`SELECT session_id,kind,id,value FROM _kilo_sync_dirty_current
-        WHERE op='put' AND kind IN ('message','inbox') AND (session_id,kind,id)>(${cursor.session},${cursor.kind},${cursor.id})
+        sql`SELECT session_id,kind,id,value FROM _kilo_sync_dirty
+        WHERE op='put' AND kind IN ('message','message-part','inbox') AND (session_id,kind,id)>(${cursor.session},${cursor.kind},${cursor.id})
         ORDER BY session_id,kind,id LIMIT 64`,
       )
       .pipe(Effect.orDie)
@@ -315,34 +315,38 @@ function findCandidates(kind: Dirty["kind"], value: Schema.Json) {
   }
   if (record(value) && kind === "inbox" && value.type === "user" && record(value.payload))
     attachments(value.payload.files, "/payload/files")
+  const parts: { part: Schema.Json; pointer: string }[] = []
   if (record(value) && kind === "message" && record(value.message)) {
     const message = value.message
     if (message.type === "user") attachments(message.files, "/message/files")
     if (message.type === "assistant" && Array.isArray(message.content))
-      message.content.forEach((part, index) => {
-        if (
-          !record(part) ||
-          part.type !== "tool" ||
-          !record(part.state) ||
-          (part.state.status !== "completed" && part.state.status !== "error")
-        )
+      message.content.forEach((part, index) => parts.push({ part, pointer: `/message/content/${index}` }))
+  }
+  if (record(value) && kind === "message-part" && value.part !== undefined)
+    parts.push({ part: value.part, pointer: "/part" })
+  for (const { part, pointer } of parts) {
+    if (
+      !record(part) ||
+      part.type !== "tool" ||
+      !record(part.state) ||
+      (part.state.status !== "completed" && part.state.status !== "error")
+    )
+      continue
+    const base = `${pointer}/state`
+    if (Array.isArray(part.state.content))
+      part.state.content.forEach((item, position) => {
+        if (!record(item) || item.type !== "file" || typeof item.uri !== "string" || typeof item.mime !== "string")
           return
-        const base = `/message/content/${index}/state`
-        if (Array.isArray(part.state.content))
-          part.state.content.forEach((item, position) => {
-            if (!record(item) || item.type !== "file" || typeof item.uri !== "string" || typeof item.mime !== "string")
-              return
-            candidates.push({
-              pointer: `${base}/content/${position}`,
-              reference: item.uri,
-              mime: item.mime,
-              ...(typeof item.name === "string" ? { name: item.name } : {}),
-            })
-          })
-        const metadata = part.state.metadata
-        if (record(metadata) && metadata.truncated === true && typeof metadata.outputPath === "string")
-          candidates.push({ pointer: `${base}/metadata/outputPath`, reference: metadata.outputPath })
+        candidates.push({
+          pointer: `${base}/content/${position}`,
+          reference: item.uri,
+          mime: item.mime,
+          ...(typeof item.name === "string" ? { name: item.name } : {}),
+        })
       })
+    const metadata = part.state.metadata
+    if (record(metadata) && metadata.truncated === true && typeof metadata.outputPath === "string")
+      candidates.push({ pointer: `${base}/metadata/outputPath`, reference: metadata.outputPath })
   }
   return candidates
 }
@@ -357,6 +361,8 @@ export const collect = Effect.fn("SessionSync.Assets.collect")(function* (
   return yield* retention.withPermit(
     Effect.gen(function* () {
       const mappings: Mapping[] = []
+      const entityOwner =
+        row.kind === "message-part" && record(value) && typeof value.messageID === "string" ? value.messageID : row.id
       const retained = new Set<string>()
       for (const candidate of findCandidates(row.kind, value)) {
         const locator = digest(candidate.reference)
@@ -400,11 +406,11 @@ export const collect = Effect.fn("SessionSync.Assets.collect")(function* (
             const media = yield* db
               .get<{ data: Uint8Array; bytes: number }>(
                 sql`SELECT b.data,b.bytes FROM blob b JOIN blob_ref r ON r.hash=b.hash
-              WHERE r.session_id=${row.session_id} AND r.message_id=${row.id} AND r.hash=${hash}
+              WHERE r.session_id=${row.session_id} AND r.message_id=${entityOwner} AND r.hash=${hash}
                 AND b.bytes BETWEEN 0 AND ${limits.blob} AND length(b.data)=b.bytes
               UNION ALL SELECT m.data,m.bytes FROM _kilo_sync_media m
               JOIN _kilo_sync_media_reference r ON r.session_id=m.session_id AND r.hash=m.hash
-              WHERE r.session_id=${row.session_id} AND r.entity_id=${row.id} AND r.hash=${hash}
+              WHERE r.session_id=${row.session_id} AND r.entity_id=${entityOwner} AND r.hash=${hash}
                 AND m.bytes BETWEEN 0 AND ${limits.blob} AND length(m.data)=m.bytes LIMIT 1`,
               )
               .pipe(Effect.orDie)
@@ -517,7 +523,15 @@ export const collect = Effect.fn("SessionSync.Assets.collect")(function* (
           yield* db
             .run(
               sql`DELETE FROM _kilo_sync_media_reference
-              WHERE session_id=${row.session_id} AND entity_id=${row.id} AND hash=${blob.hash}`,
+              WHERE session_id=${row.session_id} AND entity_id=${entityOwner} AND hash=${blob.hash}
+              AND NOT EXISTS (SELECT 1 FROM _kilo_sync_dirty d
+                WHERE d.session_id=${row.session_id} AND d.op='put'
+                  AND (d.kind IN ('message','inbox') AND d.id=${entityOwner}
+                    OR d.kind='message-part' AND json_extract(d.value,'$.messageID')=${entityOwner})
+                  AND instr(d.value,'media:'||${blob.hash})>0
+                  AND NOT EXISTS (SELECT 1 FROM _kilo_sync_asset_reference a
+                    WHERE a.session_id=d.session_id AND a.kind=d.kind AND a.entity_id=d.id
+                      AND a.hash=${blob.hash}))`,
             )
             .pipe(Effect.orDie)
           yield* db
@@ -602,7 +616,10 @@ export const remove = Effect.fn("SessionSync.Assets.remove")(function* (db: DB, 
       kind: "asset",
       id: mapping.id,
       cause:
-        row.cause === "revert" || row.cause === "cancel" || row.cause === "instruction-removed"
+        row.cause === "revert" ||
+        row.cause === "cancel" ||
+        row.cause === "instruction-removed" ||
+        row.cause === "part-removed"
           ? row.cause
           : "consumed",
     }),
@@ -668,19 +685,25 @@ const migrateLegacy = Effect.fn("SessionSync.Assets.migrateLegacy")(function* (d
         }>(sql`SELECT locator,hash,bytes FROM _kilo_sync_asset WHERE session_id=${session.session_id}`)
         .pipe(Effect.orDie)
       const assets = new Map(old.map((asset) => [asset.locator, asset]))
-      for (const source of ["message", "inbox", "dirty"] as const) {
+      for (const source of ["message", "part", "inbox", "dirty"] as const) {
         let cursor = ""
         while (true) {
           const rows = yield* db
             .all<{ key: string; id: string; kind: Dirty["kind"]; value: string }>(
               source === "message"
                 ? sql`SELECT m.id AS key,m.id,'message' AS kind,${sql.raw(Store.messageValue("m"))} AS value
-                FROM session_message m WHERE m.session_id=${session.session_id} AND m.id>${cursor} ORDER BY m.id LIMIT 64`
-                : source === "inbox"
-                  ? sql`SELECT id AS key,id,'inbox' AS kind,json_object('type',type,'payload',json(payload)) AS value
+                FROM session_message m JOIN _kilo_sync_session s ON s.id=m.session_id
+                WHERE m.session_id=${session.session_id} AND m.id>${cursor} ORDER BY m.id LIMIT 64`
+                : source === "part"
+                  ? sql`SELECT message_id||'/'||ordinal AS key,message_id||'/'||ordinal AS id,'message-part' AS kind,
+                    json_object('messageID',message_id,'part',json(data)) AS value
+                    FROM session_part WHERE session_id=${session.session_id}
+                    AND message_id||'/'||ordinal>${cursor} ORDER BY key LIMIT 64`
+                  : source === "inbox"
+                    ? sql`SELECT id AS key,id,'inbox' AS kind,json_object('type',type,'payload',json(payload)) AS value
                   FROM session_inbox WHERE session_id=${session.session_id} AND id>${cursor} ORDER BY id LIMIT 64`
-                  : sql`SELECT kind||':'||id AS key,id,kind,value FROM _kilo_sync_dirty_current
-                  WHERE session_id=${session.session_id} AND op='put' AND kind IN ('message','inbox')
+                    : sql`SELECT kind||':'||id AS key,id,kind,value FROM _kilo_sync_dirty
+                  WHERE session_id=${session.session_id} AND op='put' AND kind IN ('message','message-part','inbox')
                     AND kind||':'||id>${cursor} ORDER BY kind,id LIMIT 64`,
             )
             .pipe(Effect.orDie)
@@ -731,9 +754,10 @@ export const prune = Effect.fn("SessionSync.Assets.prune")(function* (
         .run(
           sql`DELETE FROM _kilo_sync_media_reference AS r
           WHERE ${session === undefined ? sql`1` : sql`r.session_id=${session}`} AND NOT EXISTS (
-          SELECT 1 FROM _kilo_sync_dirty d WHERE d.session_id=r.session_id AND d.id=r.entity_id
-            AND d.kind IN ('message','inbox') AND d.op='put'
-            AND ((d.kind='message' AND d.value IS NULL) OR instr(d.value,'media:'||r.hash)>0))`,
+          SELECT 1 FROM _kilo_sync_dirty d WHERE d.session_id=r.session_id
+            AND (d.id=r.entity_id AND d.kind IN ('message','inbox')
+              OR d.kind='message-part' AND json_extract(d.value,'$.messageID')=r.entity_id)
+            AND d.op='put' AND instr(d.value,'media:'||r.hash)>0)`,
         )
         .pipe(Effect.orDie)
       yield* db
@@ -759,7 +783,8 @@ export const prune = Effect.fn("SessionSync.Assets.prune")(function* (
       OR (r.locator<>'@body' AND NOT EXISTS (SELECT 1 FROM _kilo_sync_dirty d
         WHERE d.session_id=r.session_id AND d.kind=r.kind AND d.id=r.entity_id AND d.op='put')
         AND ((r.kind='message' AND NOT EXISTS (SELECT 1 FROM session_message n WHERE n.session_id=r.session_id AND n.id=r.entity_id))
-          OR (r.kind='inbox' AND NOT EXISTS (SELECT 1 FROM session_inbox n WHERE n.session_id=r.session_id AND n.id=r.entity_id)))))`,
+          OR (r.kind='inbox' AND NOT EXISTS (SELECT 1 FROM session_inbox n WHERE n.session_id=r.session_id AND n.id=r.entity_id))
+          OR (r.kind='message-part' AND NOT EXISTS (SELECT 1 FROM session_part n WHERE n.session_id=r.session_id AND n.message_id||'/'||n.ordinal=r.entity_id)))))`,
         )
         .pipe(Effect.orDie)
       yield* db
@@ -931,7 +956,7 @@ export const prune = Effect.fn("SessionSync.Assets.prune")(function* (
                     )
                       return
                     if (
-                      yield* tx.get(sql`SELECT 1 FROM _kilo_sync_dirty_current WHERE op='put' AND kind IN ('message','inbox')
+                      yield* tx.get(sql`SELECT 1 FROM _kilo_sync_dirty WHERE op='put' AND kind IN ('message','message-part','inbox')
                 AND (instr(value,${allocation.path})>0 OR instr(value,${pathToFileURL(allocation.path).href})>0) LIMIT 1`)
                     )
                       return

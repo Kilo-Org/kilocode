@@ -162,6 +162,7 @@ describe("skill installation safety", () => {
     const directory = await tmp()
     try {
       const skills = path.join(directory, "skills")
+      const agents = path.join(directory, "agents")
       const config = path.join(directory, "kilo2.json")
       const archives = new Map<string, Uint8Array<ArrayBuffer>>(
         await Promise.all(
@@ -190,7 +191,7 @@ describe("skill installation safety", () => {
           ],
         }),
       )
-      const first = await Installer.install({ entry, skills, config })
+      const first = await Installer.install({ entry, skills, agents, config })
       expect(first.paths).toEqual([path.join(skills, "guide"), path.join(skills, "invalid")])
       expect(first.resources).toHaveLength(3)
       for (const resource of first.resources!)
@@ -207,6 +208,7 @@ describe("skill installation safety", () => {
       const second = await Installer.install({
         entry,
         skills,
+        agents,
         config,
         previous: { id: "demo", ...first },
       })

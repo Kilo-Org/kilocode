@@ -119,9 +119,11 @@ export async function analyzeSync(
 ): Promise<Analysis> {
   const mergeBase = (await $`git merge-base ${base} ${target}`.quiet().text()).trim()
   // quotePath off, so non-ASCII paths come out as they are and match the classifiers.
-  const tree = await $`git -c core.quotePath=false merge-tree --write-tree --name-only --messages ${base} ${target}`
-    .quiet()
-    .nothrow()
+  // Directory renames off, the same as merge() in git.ts, so the report shows the conflicts the merge gets.
+  const tree =
+    await $`git -c core.quotePath=false -c merge.directoryRenames=false merge-tree --write-tree --name-only --messages ${base} ${target}`
+      .quiet()
+      .nothrow()
   if (tree.exitCode > 1) throw new Error(`git merge-tree failed: ${tree.stderr.toString()}`)
   const [head = "", ...messages] = tree.stdout.toString().split("\n\n")
   const names = head.split("\n").slice(1).filter(Boolean)

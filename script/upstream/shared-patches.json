@@ -1,9 +1,9 @@
 {
   "$comment": "Shared-patch baseline (U-L3-01). Read by script/check-shared-patches.ts and script/check-opencode-annotations.ts. Each shared upstream file that Kilo adds or changes needs an entry: rung (3 = seam patch, 4 = feature patch) and the missing seam. `unmarked` allows lines without markers and states why. Raise a limit only in the PR that adds the patch, and lower it when a patch goes away.",
   "limits": {
-    "files": 88,
-    "markedLines": 1450,
-    "unmarkedLines": 246,
+    "files": 92,
+    "markedLines": 1537,
+    "unmarkedLines": 277,
     "deletedFiles": 0
   },
   "files": {
@@ -62,7 +62,7 @@
     },
     "package.json": {
       "rung": 3,
-      "seam": "Root `dev` script runs script/dev-isolated.ts, which starts the Kilo host entry (packages/kilo-cli) with an isolated profile, so `bun dev` never uses the installed OpenCode or Kilo data. Stays after U-E0-01: `bun dev` from the root reads the upstream root package.json, and upstream's script runs the upstream CLI with the real data. Root `extension` script runs packages/kilo-vscode/script/launch.ts (Kilo-owned), which builds the v2 VS Code extension and opens it in a separate VS Code instance with an isolated profile, as `bun run extension` does on v1. Root `lint` script runs only `oxlint`: its ast-grep and `script/sdk-docs.ts` steps check upstream's GUI plugin package (`packages/gui-extensions`, renamed to `packages/gui-plugins` in v2.2), which Kilo removed (`skipFiles`). Root `install:alpha` script runs script/kilocode/install-alpha.ts (Kilo-owned), which installs the host executable built by the `kilo-v2` workflow; it goes away when v2 is mainline. Root devDependency `@types/node` (catalog version): TypeScript searches `node_modules/@types` in every parent directory before it follows a package's own dependencies, and Agent Manager worktrees live inside another checkout (`.kilo/worktrees/<name>`). Without a root copy, packages that do not declare `@types/node` (ai, cli, tui, server and others) load the parent checkout's version, so a worktree's typecheck depends on what another checkout installed. No lower rung: the root manifest decides what the root `node_modules/@types` contains, and `bunfig.toml` and the package tsconfigs are upstream files too. `patchedDependencies` registers `patches/virtua@0.49.1.patch` (Kilo-owned, the same patch as v1), which adds `VirtualizerHandle.measure()` and clamps the rendered range to the data length; the v2 VS Code transcript (packages/kilo-vscode/webview-ui/src/v2/messages.tsx) uses `measure()` to re-pin the bottom when the live turn is handed to the virtualizer. No seam: bun reads patches only from the root package.json.",
+      "seam": "Root `dev` script runs script/dev-isolated.ts, which starts the Kilo host entry (packages/kilo-cli) with an isolated profile, so `bun dev` never uses the installed OpenCode or Kilo data. Stays after U-E0-01: `bun dev` from the root reads the upstream root package.json, and upstream's script runs the upstream CLI with the real data. Root `extension` script runs packages/kilo-vscode/script/launch.ts (Kilo-owned), which builds the v2 VS Code extension and opens it in a separate VS Code instance with an isolated profile, as `bun run extension` does on v1. Root `lint` script runs only `oxlint`: its ast-grep and `script/sdk-docs.ts` steps check upstream's GUI plugin package (`packages/gui-extensions`, renamed to `packages/gui-plugins` in v2.2), which Kilo removed (`skipFiles`). Root `install:alpha` script runs script/kilocode/install-alpha.ts (Kilo-owned), which installs the host executable built by the `kilo-v2` workflow; it goes away when v2 is mainline. Root devDependency `@types/node` (catalog version): TypeScript searches `node_modules/@types` in every parent directory before it follows a package's own dependencies, and Agent Manager worktrees live inside another checkout (`.kilo/worktrees/<name>`). Without a root copy, packages that do not declare `@types/node` (ai, cli, tui, server and others) load the parent checkout's version, so a worktree's typecheck depends on what another checkout installed. No lower rung: the root manifest decides what the root `node_modules/@types` contains, and `bunfig.toml` and the package tsconfigs are upstream files too. `patchedDependencies` registers `patches/virtua@0.49.1.patch` (Kilo-owned, the same patch as v1), which adds `VirtualizerHandle.measure()` and clamps the rendered range to the data length; the v2 VS Code transcript (packages/kilo-vscode/webview-ui/src/v2/messages.tsx) uses `measure()` to re-pin the bottom when the live turn is handed to the virtualizer. No seam: bun reads patches only from the root package.json. `overrides` raises `@xmldom/xmldom` to the patched 0.9 line for the DOCX reader, and `patchedDependencies` registers `patches/mammoth@1.12.0.patch`, which adapts mammoth to the 0.9 API. Both are the v1 dependency decisions; bun reads overrides and patches only from the root manifest.",
       "unmarked": "JSON has no comments."
     },
     "packages/cli/package.json": {
@@ -167,7 +167,7 @@
     },
     "packages/core/test/plugin/supervisor-reload.test.ts": {
       "rung": 3,
-      "seam": "Test timing only: the organization integration test waits up to 5 s (500 retries of 10 ms) for each plugin reload instead of 2 s, the same budget as the other reload wait in the file (200 retries of 25 ms). The 2 s budget ran out on loaded CI runners. No product code changes. No seam: the retry budget is a literal inside the upstream test."
+      "seam": "Test timing only: the organization integration test waits up to 15 s (1500 retries of 10 ms) for each plugin reload instead of 2 s. The 2 s budget and a 5 s budget both ran out on loaded Linux CI runners, where the plugin supervisor restart outran the window. No product code changes. No seam: the retry budget is a literal inside the upstream test."
     },
     "packages/core/test/filesystem/watcher.test.ts": {
       "rung": 4,
@@ -370,6 +370,23 @@
       "rung": 3,
       "seam": "Generated promise client operations for the optional PTY create size exposed by packages/schema/src/pty.ts. The client must be regenerated from the public schema.",
       "unmarked": "Generated TypeScript cannot retain manual marker comments; bun run generate owns this file."
+    },
+    "packages/core/src/tool/read-filesystem.ts": {
+      "rung": 3,
+      "seam": "Generic ReaderError (a resource, a caller-supplied message and that message as .message) in the ReadError union, so a host-provided reader implementation can report why it could not extract a file. The reader service is the rung-2 replacement; this is only the typed failure it needs because the read tool passes known errors through and maps every other error to a bare \"Unable to read <path>\". No Kilo path, identifier, value or default; without a reader that raises it, upstream behavior is identical."
+    },
+    "packages/core/src/tool/plugin/read.ts": {
+      "rung": 3,
+      "seam": "One condition in the existing typed-message list so the generic ReadToolFileSystem.ReaderError reaches the model instead of the fallback message. The read tool, its schema, codemode setting, bounding and instruction loading are unchanged; no Kilo identifier or value."
+    },
+    "patches/mammoth@1.12.0.patch": {
+      "rung": 4,
+      "seam": "Mammoth 1.12.0 is written for the @xmldom/xmldom 0.8 errorHandler API. Kilo raises xmldom to the patched 0.9 line for the XML injection and resource-consumption fixes, so mammoth's xml reader must use the 0.9 onError API and pass text/xml. Set through patchedDependencies in the root package.json, so the patch applies from the root install. The same patch and override ship on v1. No lower rung: the parser call is inside mammoth's shipped lib/xml/xmldom.js and no host or plugin hook replaces that module.",
+      "unmarked": "A patch file is applied verbatim; a marker inside the diff would change the patched source. The same patch ships on v1."
+    },
+    "packages/patchmark/test/slow-inputs.test.ts": {
+      "rung": 4,
+      "seam": "Kilo CI stability: the 1 MB one-char-at-a-time streaming test keeps its deterministic scan-work assertion, but the wall-clock timeout in the same test is upstream's default, and Windows CI runners crossed it at ~18 s against a 15 s ceiling. The input is reduced to 256 KB, which keeps the identical constant-work-per-character bound, and the timeout is raised to 60 s as a guard for catastrophic regressions only. No seam: bun's per-test timeout and the payload size are inside an upstream test file, and the test suite belongs to the upstream package that Kilo cannot replace (inline patch, option 4)."
     }
   }
 }
