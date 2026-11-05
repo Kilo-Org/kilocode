@@ -3,7 +3,9 @@ package ai.kilocode.e2e
 import com.intellij.driver.client.Driver
 import com.intellij.driver.model.OnDispatcher
 import com.intellij.driver.sdk.Project
+import com.intellij.driver.sdk.ui.components.UiComponent
 import com.intellij.driver.sdk.ui.components.common.ideFrame
+import com.intellij.driver.sdk.ui.remote.Component
 import com.intellij.driver.sdk.ui.remote.SwingHierarchyService
 import com.intellij.driver.sdk.ui.ui
 import java.nio.file.Files
@@ -36,12 +38,23 @@ class KiloIdePage(val driver: Driver, val watchdog: Watchdog, val evidence: Driv
             runCatching { it.isShowing() }.getOrDefault(false)
         }
 
+    fun components(javaClass: String): List<UiComponent> =
+        runCatching { ui.xx("//div[@javaclass='$javaClass']").list() }.getOrDefault(emptyList())
+
+    fun showing(javaClass: String): UiComponent? =
+        components(javaClass).firstOrNull {
+            runCatching { it.component.isShowing() }.getOrDefault(false)
+        }
+
     fun awaitAny(name: String, vararg classes: String) {
         watchdog.await(name) { classes.any(::shows) }
     }
 
     fun snapshot(name: String, window: ToolWindow? = null) {
-        val component = window?.getComponent()
+        snapshotComponent(name, window?.getComponent())
+    }
+
+    fun snapshotComponent(name: String, component: Component?) {
         val xml = driver.service(SwingHierarchyService::class).getSwingHierarchyAsDOM(component, false)
         val file = evidence.artifactsDir.resolve("snapshots").resolve("$name.xml")
         Files.createDirectories(file.parent)
@@ -156,4 +169,193 @@ private fun texts(ide: KiloIdePage, javaClass: String): String {
             .getAllTexts()
             .joinToString("\n") { it.text }
     }.getOrDefault("")
+}
+
+data class TranscriptState(
+    val text: String,
+    val accessibleNames: List<String>,
+    val turns: Int,
+    val dump: String,
+    val detailed: String,
+)
+
+data class HostedRowState(
+    val key: String,
+    val selectedKey: String,
+    val tooltip: String,
+)
+
+/**
+ * `session.open` page object for both lanes. It only uses the real prompt, transcript, and Agent
+ * Manager components plus the loaded transcript model's public dump helpers.
+ */
+class SessionOpenPage(private val ide: KiloIdePage, private val watchdog: Watchdog) {
+    fun submitLocal(token: String) {
+        val panel = watchdog.value("Chat prompt panel visible") {
+            ide.showing(PROMPT_PANEL)?.let { ide.driver.cast(it.component, PromptPanel::class) }
+        }
+        ide.driver.withContext(OnDispatcher.EDT) { panel.setText(token) }
+        try {
+            watchdog.await("Chat prompt accepts the K1 token") {
+                ide.driver.withContext(OnDispatcher.EDT) { panel.isSendEnabled() }
+            }
+        } catch (error: Throwable) {
+            ide.driver.withContext(OnDispatcher.EDT) { panel.setText("") }
+            throw error
+        }
+        ide.driver.withContext(OnDispatcher.EDT) { panel.send() }
+    }
+
+    fun awaitModel(): TranscriptState =
+        watchdog.value("transcript model loaded") { readModel() }
+
+    fun awaitRender(token: String): TranscriptState =
+        watchdog.value("transcript renders '$token'") { readRender(token) }
+
+    fun transcriptComponent(): Component? = ide.showing(SESSION_MESSAGE_LIST)?.component
+
+    fun discoverHosted(workspaceId: String): HostedRowState {
+        val key = hostedKey(workspaceId)
+        val treeComponent = watchdog.value("Agent Manager tree visible") {
+            ide.showing(ACTIVE_TREE)
+        }
+        val tree = ide.driver.cast(treeComponent.component, ActiveTree::class)
+        watchdog.await("hosted workspace row '$key' discovered from the raw origin") {
+            ide.driver.withContext(OnDispatcher.EDT) { tree.select(key, false) }
+        }
+        val item = watchdog.value("hosted workspace row selected") {
+            ide.driver.withContext(OnDispatcher.EDT) { tree.selected() }
+        }
+        val selectedKey = runCatching { item.key }.getOrDefault("")
+        val tooltip = runCatching { item.tooltip }.getOrNull().orEmpty()
+        val view = ide.driver.cast(
+            (ide.showing(ACTIVE_TREE_VIEW) ?: treeComponent).component,
+            ActiveTreeView::class,
+        )
+        ide.driver.withContext(OnDispatcher.EDT) { view.`open$frontend`(item, true) }
+        watchdog.await("hosted workspace editor opened") { ide.shows(HOSTED_EDITOR) }
+        return HostedRowState(key, selectedKey, tooltip)
+    }
+
+    fun awaitHostedSession(workspaceId: String, nativeSessionId: String): String {
+        val expected = "${hostedKey(workspaceId)}:$nativeSessionId"
+        val panel = watchdog.value("hosted workspace editor visible") {
+            ide.showing(HOSTED_EDITOR)
+        }
+        runCatching { ide.snapshotComponent("hosted-workspace-editor", panel.component) }
+        val ref = runCatching {
+            ide.driver.cast(panel.component, WorkspaceSessionEditorPanel::class)
+        }.getOrNull()
+        val list = watchdog.value("hosted root session list visible") {
+            val own = ref?.let { runCatching { it.`getList$frontend`() }.getOrNull() }
+            own ?: showingHostedList(expected)
+        }
+        val selected = ide.driver.withContext(OnDispatcher.EDT) { list.selected()?.key }
+        if (selected != expected) {
+            ide.driver.withContext(OnDispatcher.EDT) { list.select(expected, false) }
+            ide.driver.withContext(OnDispatcher.EDT) { list.focusList() }
+            ide.driver.ui.keyboard { enter() }
+        }
+        watchdog.await("hosted root session '$expected' selected") {
+            ide.driver.withContext(OnDispatcher.EDT) { list.selected()?.key } == expected
+        }
+        return expected
+    }
+
+    fun hostedEditorVisible(): Boolean = ide.shows(HOSTED_EDITOR)
+
+    fun hostedSelection(): String? {
+        val panel = ide.showing(HOSTED_EDITOR) ?: return null
+        val ref = runCatching {
+            ide.driver.cast(panel.component, WorkspaceSessionEditorPanel::class)
+        }.getOrNull()
+        val list = ref?.let { runCatching { it.`getList$frontend`() }.getOrNull() }
+        if (list != null) {
+            val key = runCatching {
+                ide.driver.withContext(OnDispatcher.EDT) { list.selected()?.key }
+            }.getOrNull()
+            if (key != null && key.startsWith("hosted:")) return key
+        }
+        for (component in ide.components(ACTIVE_LIST)) {
+            if (!runCatching { component.component.isShowing() }.getOrDefault(false)) continue
+            val candidate = runCatching {
+                ide.driver.cast(component.component, ActiveList::class)
+            }.getOrNull() ?: continue
+            val key = runCatching {
+                ide.driver.withContext(OnDispatcher.EDT) { candidate.selected()?.key }
+            }.getOrNull()?.takeIf { it.startsWith("hosted:") } ?: continue
+            return key
+        }
+        return null
+    }
+
+    private fun readModel(): TranscriptState? {
+        val state = readState() ?: return null
+        if (state.turns <= 0 || state.dump.isBlank()) return null
+        if (!state.dump.contains("user#")) return null
+        if (!state.detailed.contains("PromptView#")) return null
+        return state
+    }
+
+    private fun readRender(token: String): TranscriptState? {
+        val state = readState() ?: return null
+        val visible = state.text.contains(token) || state.accessibleNames.any { it.contains(token) }
+        return state.takeIf { visible }
+    }
+
+    private fun readState(): TranscriptState? {
+        val component = ide.showing(SESSION_MESSAGE_LIST) ?: return null
+        val panel = runCatching {
+            ide.driver.cast(component.component, SessionMessageListPanel::class)
+        }.getOrNull() ?: return null
+        return TranscriptState(
+            text = runCatching { component.getAllTexts().joinToString("\n") { it.text } }.getOrDefault(""),
+            accessibleNames = accessibleNames(component),
+            turns = runCatching {
+                ide.driver.withContext(OnDispatcher.EDT) { panel.turnCount() }
+            }.getOrDefault(0),
+            dump = runCatching {
+                ide.driver.withContext(OnDispatcher.EDT) { panel.dump() }
+            }.getOrDefault(""),
+            detailed = runCatching {
+                ide.driver.withContext(OnDispatcher.EDT) { panel.dumpDetailed() }
+            }.getOrDefault(""),
+        )
+    }
+
+    private fun accessibleNames(component: UiComponent): List<String> = runCatching {
+        component.searchContext.findAll("//div[@accessiblename]").mapNotNull {
+            runCatching { it.getAccessibleContext()?.getAccessibleName() }.getOrNull()
+                ?.takeIf(String::isNotBlank)
+        }
+    }.getOrDefault(emptyList())
+
+    private fun showingHostedList(expected: String): ActiveList? {
+        for (component in ide.components(ACTIVE_LIST)) {
+            if (!runCatching { component.component.isShowing() }.getOrDefault(false)) continue
+            val list = runCatching {
+                ide.driver.cast(component.component, ActiveList::class)
+            }.getOrNull() ?: continue
+            val selected = runCatching {
+                ide.driver.withContext(OnDispatcher.EDT) { list.selected()?.key }
+            }.getOrNull()
+            if (selected == expected) return list
+            val picked = runCatching {
+                ide.driver.withContext(OnDispatcher.EDT) { list.select(expected, false) }
+            }.getOrDefault(false)
+            if (picked) return list
+        }
+        return null
+    }
+
+    private fun hostedKey(workspaceId: String): String = "hosted:$KILO_CLOUD_PROVIDER_ID:$workspaceId"
+
+    companion object {
+        const val SESSION_MESSAGE_LIST = "ai.kilocode.client.session.ui.SessionMessageListPanel"
+        const val PROMPT_PANEL = "ai.kilocode.client.session.ui.prompt.PromptPanel"
+        const val ACTIVE_TREE = "ai.kilocode.client.ui.tree.ActiveTree"
+        const val ACTIVE_TREE_VIEW = "ai.kilocode.client.ui.tree.ActiveTreeView"
+        const val ACTIVE_LIST = "ai.kilocode.client.ui.list.ActiveList"
+        const val HOSTED_EDITOR = "ai.kilocode.client.agentManager.hosted.HostedWorkspaceEditorPanel"
+    }
 }

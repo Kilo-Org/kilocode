@@ -111,8 +111,8 @@ class DriverEvidence(
 
     companion object {
         // Only list capabilities this adapter actually exercises so the K1 capability gate cannot pass
-        // a scenario the driver does not implement. J2 adds "transcript.read" when it reads transcripts.
-        private val SUPPORTED_CAPABILITIES = emptySet<String>()
+        // a scenario the driver does not implement.
+        private val SUPPORTED_CAPABILITIES = setOf("transcript.read")
     }
 
     fun copyIdeLogs(backend: Path?, frontend: Path?) {
