@@ -48,7 +48,7 @@ export namespace SandboxConfig {
   /**
    * The effective `sandbox` setting of the location's config entries, in precedence order. Only global documents (the
    * kilo2 config directory, or a document without a file such as inline config content) can widen the sandbox; a
-   * project document can only enable it or restrict the network. Arrays concatenate across documents.
+   * project document can only enable it or restrict the network.
    */
   export function fromEntries(entries: readonly Config.Entry[], global: string): { sandbox?: Info } {
     return entries.reduce<{ sandbox?: Info }>((result, entry) => {
@@ -57,19 +57,8 @@ export namespace SandboxConfig {
       const source = !entry.path || inside(global, entry.path) ? "global" : "local"
       const next = scope({ sandbox: copy(entry.info.sandbox) }, source).sandbox
       if (!next) return result
-      const current = result.sandbox ?? {}
-      return {
-        sandbox: {
-          ...current,
-          ...next,
-          ...(current.writable_paths || next.writable_paths
-            ? { writable_paths: [...(current.writable_paths ?? []), ...(next.writable_paths ?? [])] }
-            : {}),
-          ...(current.allowed_hosts || next.allowed_hosts
-            ? { allowed_hosts: [...(current.allowed_hosts ?? []), ...(next.allowed_hosts ?? [])] }
-            : {}),
-        },
-      }
+      // A later document replaces each field it sets, arrays included.
+      return { sandbox: { ...result.sandbox, ...next } }
     }, {})
   }
 

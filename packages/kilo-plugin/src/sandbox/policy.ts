@@ -353,7 +353,13 @@ function current(
 export const configuredSupport = Effect.fn("SandboxPolicy.configuredSupport")(function* () {
   const cfg = yield* (yield* Runtime).config
   const state = SandboxConfig.resolve(cfg)
-  return backendSupport({ mode: state.mode, allowedHosts: state.allowedHosts })
+  const support = backendSupport({ mode: state.mode, allowedHosts: state.allowedHosts })
+  return {
+    available: support.available,
+    ...(support.reason ? { reason: support.reason } : {}),
+    enabled: state.enabled,
+    network: state.mode !== "allow",
+  }
 })
 
 export const status = Effect.fn("SandboxPolicy.status")(function* (sessionID: SessionID) {

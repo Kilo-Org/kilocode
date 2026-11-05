@@ -10,10 +10,14 @@ import { SessionID } from "../session-id.js"
 // `@opencode/schema/kilocode/sandbox`. The configured defaults (`sandbox` config key) stay in the config documents.
 const portable = Schema.toStandardSchemaV1
 
-/** Whether the operating system sandbox backend can run the configured network policy. */
+/** The configured sandbox defaults of a location, and whether the operating system backend can run them. */
 export const Support = Schema.Struct({
   available: Schema.Boolean,
   reason: optional(Schema.String),
+  /** The effective `sandbox.enabled` config value: the default for new sessions. */
+  enabled: Schema.Boolean,
+  /** True when the config restricts outbound network access (deny or an allowed-host proxy). */
+  network: Schema.Boolean,
 }).annotate({ identifier: "SandboxSupport" })
 export type Support = typeof Support.Type
 
