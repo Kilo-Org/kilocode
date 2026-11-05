@@ -72,7 +72,11 @@ export async function writeKiloSettings(values: Record<string, unknown>) {
 }
 
 /** webview globalState keys that are not configuration, cleared by Reset All Settings. */
-const GLOBAL_STATE_KEYS = ["kilo-code.v2.modelSelectorExpanded", "kilo-code.v2.autoApprove"]
+const GLOBAL_STATE_KEYS = [
+  "kilo-code.v2.modelSelectorExpanded",
+  "kilo-code.v2.autoApprove",
+  "kilo-code.v2.sandbox.newSessionDefault",
+]
 
 interface ConfigEntry {
   type: "document" | "directory"

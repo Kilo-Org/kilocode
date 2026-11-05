@@ -8,7 +8,8 @@ export const RESPONDED_LIMIT = 1000
 
 /**
  * True when auto-approve should reply to this request. v1 replied once per request, only while active, and never
- * auto-approved sandbox-escalation prompts (packages/kilo-vscode/src/commands/toggle-auto-approve.ts on main).
+ * auto-approved sandbox-escalation prompts (packages/kilo-vscode/src/commands/toggle-auto-approve.ts on main). The v2
+ * permission carries the escalation as its action, and the older metadata marker stays excluded too.
  */
 export function shouldApprove(
   request: PermissionRequest,
@@ -17,6 +18,7 @@ export function shouldApprove(
 ): boolean {
   if (!enabled) return false
   if (responded.has(request.id)) return false
+  if (request.action === "sandbox_escalation") return false
   return request.metadata?.["sandboxEscalation"] !== true
 }
 

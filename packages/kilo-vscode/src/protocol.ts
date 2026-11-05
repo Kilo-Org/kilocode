@@ -118,6 +118,8 @@ export type Ui =
   | { type: "persistModelSelectorExpanded"; value: boolean }
   | { type: "requestAutoApproveState" }
   | { type: "persistAutoApproveState"; value: boolean }
+  | { type: "requestSandboxDefault" }
+  | { type: "persistSandboxDefault"; enabled: boolean }
   | { type: "trackCostSession"; sessionID: string }
   | { type: "webviewFocusChanged"; focused: boolean }
   | { type: "setLanguage"; locale: string }
@@ -209,6 +211,11 @@ export type ToWebview =
   | { type: "clipboardWriteResult"; id: string; ok: boolean; error?: string }
   | { type: "modelSelectorExpandedLoaded"; value: boolean }
   | { type: "autoApproveStateLoaded"; value: boolean }
+  | {
+      type: "sandboxDefaultLoaded"
+      /** The stored preference for new sessions, absent when the user has not chosen a default. */
+      explicit?: boolean
+    }
   | { type: "webviewActiveChanged"; active: boolean }
   | { type: "validateFilesResult"; id: string; existing: string[] }
   | { type: "appendReviewComments"; comments: ReviewCommentData[]; autoSend: boolean }

@@ -18,6 +18,7 @@ import { PromptInput } from "./prompt"
 import { QuestionDock } from "./question"
 import { createSelection, Selectors } from "./selectors"
 import { createAutoApprove } from "./auto-approve"
+import { createSandbox } from "./sandbox"
 import { createWorking } from "./working"
 
 export function SessionView(props: {
@@ -156,6 +157,17 @@ export function SessionView(props: {
   const questioning = () => !blocked() && forms().length > 0
   const selection = createSelection(session, draftKey)
   const autoApprove = createAutoApprove()
+  const sandbox = createSandbox({ session, gate: selection.gate })
+  const sandboxControl = {
+    visible: sandbox.visible,
+    ready: sandbox.ready,
+    enabled: sandbox.enabled,
+    available: sandbox.available,
+    reason: sandbox.reason,
+    network: sandbox.network,
+    disabled: sandbox.disabled,
+    onToggle: sandbox.toggle,
+  }
   // The host sends the cycle action for the cycleAgentMode/cyclePreviousAgentMode commands, as in main.
   // A read-only view, for example an Agent Manager subagent, has no composer to cycle.
   if (!props.readOnly)
@@ -172,8 +184,10 @@ export function SessionView(props: {
     return !!id && (v2.data.session.message.list(id).length > 0 || working.submitting())
   })
 
-  const send = (text: string) => {
-    const id = session() ?? selection.create()
+  const send = async (text: string) => {
+    // A created session is seeded with the resolved sandbox default before the first prompt.
+    const metadata = session() ? undefined : await sandbox.metadata()
+    const id = session() ?? selection.create(metadata)
     const gate = selection.gate(id)
     // A prompt with a pending switch waits for it, so the attribution has to be read after that switch settles.
     // Without one the selection is current, and it must be read before onSession changes the session identity.
@@ -277,6 +291,7 @@ export function SessionView(props: {
                 onAppendReady={props.onAppendReady}
                 selectors={<Selectors selection={selection} blocked={selectorsBlocked()} />}
                 autoApprove={{ enabled: autoApprove.enabled(), onToggle: autoApprove.toggle }}
+                sandbox={sandboxControl}
               />
             )}
           </Show>

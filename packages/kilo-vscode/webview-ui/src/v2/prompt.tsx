@@ -4,6 +4,7 @@ import { showToast } from "@kilocode/kilo-ui/toast"
 import type { ModelRef } from "@opencode/client"
 import { createEffect, createMemo, createSignal, on, onCleanup, onMount, Show, untrack, type JSX } from "solid-js"
 import { fold, reserve } from "../components/chat/prompt-fold"
+import { SandboxButtonBase, SandboxTooltipContent } from "../components/shared/SandboxButton"
 import { SpeechToTextButton } from "../components/speech-to-text/SpeechToTextButton"
 import { createSpeechShortcut } from "../components/speech-to-text/shortcut"
 import { useSpeechStatus } from "../components/speech-to-text/status"
@@ -58,6 +59,17 @@ export function PromptInput(props: {
   selectors?: JSX.Element
   /** Auto-approve for permission requests. The toggle folds into the overflow menu like edge actions. */
   autoApprove?: { enabled: boolean; onToggle: () => void }
+  /** Per-session sandbox confinement, or the new-session default while this composer is a draft. */
+  sandbox?: {
+    visible: () => boolean
+    ready: () => boolean
+    enabled: () => boolean
+    available: () => boolean | undefined
+    reason: () => string | undefined
+    network: () => boolean
+    disabled: () => boolean
+    onToggle: () => void
+  }
   /** Receives a function that appends text to the draft and, when `send` is true, sends it; undefined on unmount. */
   onAppendReady?: (append: AppendHandler | undefined) => void
 }) {
@@ -380,16 +392,30 @@ export function PromptInput(props: {
     onCleanup(() => observer.disconnect())
   })
   const foldable = createMemo<OverflowItem[]>(() => {
-    const list: OverflowItem[] = [
-      {
-        key: "enhance",
-        icon: "wand-sparkles",
-        label: language.t("prompt.action.enhance"),
-        disabled: !canEnhance(),
-        busy: enhancing(),
-        run: enhance,
-      },
-    ]
+    const list: OverflowItem[] = []
+    const sandbox = props.sandbox
+    if (sandbox?.visible())
+      list.push({
+        key: "sandbox",
+        icon: "lock",
+        label: language.t(sandbox.enabled() ? "prompt.action.sandbox.disable" : "prompt.action.sandbox.enable"),
+        description:
+          sandbox.ready() && sandbox.available() === false
+            ? (sandbox.reason() ?? language.t("common.requestFailed"))
+            : undefined,
+        disabled: sandbox.disabled(),
+        tone: sandbox.enabled() ? "success" : undefined,
+        dot: sandbox.enabled() ? "success" : undefined,
+        run: sandbox.onToggle,
+      })
+    list.push({
+      key: "enhance",
+      icon: "wand-sparkles",
+      label: language.t("prompt.action.enhance"),
+      disabled: !canEnhance(),
+      busy: enhancing(),
+      run: enhance,
+    })
     const autoApprove = props.autoApprove
     if (autoApprove)
       list.push({
@@ -467,6 +493,21 @@ export function PromptInput(props: {
           <div class="prompt-action" data-folded={hidden().length === 0 ? "" : undefined}>
             <PromptOverflow items={hidden()} />
           </div>
+          <Show when={props.sandbox?.visible() ? props.sandbox : undefined}>
+            {(sandbox) => (
+              <div class="prompt-action" data-folded={folded("sandbox") ? "" : undefined}>
+                <SandboxButtonBase
+                  enabled={sandbox().enabled()}
+                  available={sandbox().ready() ? sandbox().available() : undefined}
+                  reason={sandbox().reason()}
+                  disabled={sandbox().disabled()}
+                  tooltip={<SandboxTooltipContent enabled={sandbox().enabled()} network={sandbox().network()} />}
+                  tooltipClass="prompt-sandbox-tooltip-content"
+                  onToggle={sandbox().onToggle}
+                />
+              </div>
+            )}
+          </Show>
           <div class="prompt-action" data-folded={folded("enhance") ? "" : undefined}>
             <Tooltip value={language.t("prompt.action.enhance")} placement="top" openDelay={0}>
               <IconButton

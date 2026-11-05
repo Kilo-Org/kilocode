@@ -1,7 +1,7 @@
 // Agent, model and reasoning variant for the prompt, on native v2 data. The server session owns the selection: an
 // existing session commits each change with switchAgent/switchModel and shows the server's value. Before a session
 // exists, the choice is a local draft that `create` passes to session.create.
-import type { ModelRef } from "@opencode/client"
+import type { JsonValue, ModelRef } from "@opencode/client"
 import { createModelAttribution } from "./attribution"
 import { TooltipKeybind } from "@kilocode/kilo-ui/tooltip"
 import { createEffect, createSignal, on, onCleanup, onMount, type Accessor } from "solid-js"
@@ -154,11 +154,16 @@ export function createSelection(
       const current = model()
       if (current) setModel({ id: current.id, providerID: current.providerID, ...(variant ? { variant } : {}) })
     },
-    /** Creates a session with the current selection. */
-    create() {
+    /** Creates a session with the current selection, then writes the metadata the caller passes. */
+    create(metadata?: Record<string, JsonValue>) {
       const created = v2.data.session.create({ agent: agent()?.id, model: model() })
-      creates.set(created.id, created.request)
-      void created.request.catch(() => undefined).finally(() => creates.delete(created.id))
+      // The server reads the sandbox metadata when it first resolves the session state, so write it before the first
+      // prompt or status call, which both wait for this request.
+      const request = metadata
+        ? created.request.then(() => v2.api.session.update({ sessionID: created.id, metadata }))
+        : created.request
+      creates.set(created.id, request)
+      void request.catch(() => undefined).finally(() => creates.delete(created.id))
       return created.id
     },
     /** The pending switch of a session; a failed switch fails the prompt instead of using another model. */

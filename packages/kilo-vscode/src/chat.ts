@@ -28,6 +28,7 @@ import {
 import { resolveKiloProfile } from "./settings-paths"
 import { promptKeybindings, watchKeybindings } from "./prompt-keybindings"
 import { readDisplaySettings } from "./display-settings"
+import { SandboxPreference } from "./services/sandbox-preference"
 import { createSpeechToTextHost } from "./speech-to-text/host"
 import { documentExists, isMarkdownPath } from "./documents/document-reader"
 import { openToolFile, type ToolDiff } from "./tool-diff"
@@ -242,6 +243,12 @@ export function wire(input: {
       }
     }
   }
+  const sandboxPreference = new SandboxPreference(input.context.globalState)
+  // The configured default comes from the `kilocode.sandbox` RPC; the host only keeps the user's draft preference.
+  const sandboxDefaultMessage = async (): Promise<ToWebview> => ({
+    type: "sandboxDefaultLoaded",
+    explicit: sandboxPreference.explicit(),
+  })
   const handleGlobalState = (message: ToHost) => {
     switch (message.type) {
       case "requestModelSelectorExpanded":
@@ -259,6 +266,24 @@ export function wire(input: {
         others({ type: "autoApproveStateLoaded", value: message.value })
         // The host sweep is the only owner of the decision, so tell it to approve the requests already pending.
         notifyHostAutoApprove()
+        return true
+      case "requestSandboxDefault":
+        void sandboxDefaultMessage().then((reply) => post(reply))
+        return true
+      case "persistSandboxDefault":
+        void sandboxPreference
+          .set(message.enabled)
+          .then(async () => {
+            const reply = await sandboxDefaultMessage()
+            post(reply)
+            others(reply)
+          })
+          .catch(async () => {
+            // A failed write keeps the stored value; send it back so the composer does not show the guess.
+            const reply = await sandboxDefaultMessage()
+            post(reply)
+            others(reply)
+          })
         return true
       default:
         return false
@@ -394,6 +419,7 @@ export function html(input: {
     KILO_TOP_BAR: false,
     KILO_TOP_BAR_SURFACE: "sidebar_title",
     KILO_BROWSER_AUTOMATION: false,
+    KILO_SANDBOX_CONTROLS: process.platform !== "win32",
     KILO_AGENT_MANAGER_INTRO_DISMISSED: true,
     KILO_SETTINGS: input.settings,
     KILO_EXTENSION_VERSION: input.version,
