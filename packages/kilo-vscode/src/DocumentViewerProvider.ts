@@ -1,13 +1,12 @@
 // The Documents editor tab of the sidebar. It is a real webview panel with its own tab strip, so a user can read,
 // copy and comment on a file without leaving the chat. The Agent Manager shows the same component inside its side host.
 import {
-  Position,
   Range,
+  commands,
   Uri,
   ViewColumn,
   env,
   window,
-  workspace,
   type Disposable,
   type ExtensionContext,
   type Webview,
@@ -16,6 +15,7 @@ import {
 import { html } from "./chat"
 import { readDocument, resolveDocumentPath } from "./documents/document-reader"
 import { effectiveFontSize, readKiloSettings } from "./settings-host"
+import { filePosition } from "./tool-diff-patch"
 import type { ReviewCommentData } from "./shared/review-comments"
 
 interface Context {
@@ -50,8 +50,7 @@ export class DocumentViewerProvider implements Disposable {
 
   open(input: { file: string; sessionId?: string; directory?: string; line?: number; column?: number }): void {
     const contextKey = this.contextKey(input.sessionId, input.directory)
-    // The tab previews one context at a time, so forget the replaced one and the files read for it.
-    this.contexts.clear()
+    // Keep the other contexts: returning to a session shows its open tabs and unsent comments again.
     this.contexts.set(contextKey, { sessionId: input.sessionId, directory: input.directory })
     this.currentKey = contextKey
     const next = { ...input, contextKey }
@@ -166,17 +165,16 @@ export class DocumentViewerProvider implements Disposable {
     if (!directory) return
     const target = resolveDocumentPath(directory, file)
     if ("error" in target) return
-    void workspace.openTextDocument(target.resolved).then(
-      (document) => {
-        const position = new Position(Math.max(0, (line ?? 1) - 1), Math.max(0, (column ?? 1) - 1))
-        return window.showTextDocument(document, {
-          viewColumn: ViewColumn.Beside,
-          preview: true,
-          selection: new Range(position, position),
-        })
-      },
-      (error: unknown) => console.error("Failed to open the document:", error),
-    )
+    const position = filePosition(line === undefined ? undefined : Math.floor(line), column)
+    const selection = position && new Range(position.line, position.column, position.line, position.column)
+    // `vscode.open` picks the default editor, so an image document opens in the image preview, not as binary text.
+    void commands
+      .executeCommand("vscode.open", Uri.file(target.resolved), {
+        viewColumn: ViewColumn.Beside,
+        preview: true,
+        selection,
+      })
+      .then(undefined, (error: unknown) => console.error("Failed to open the document:", error))
   }
 
   private html(webview: Webview): string {

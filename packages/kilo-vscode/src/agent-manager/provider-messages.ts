@@ -76,8 +76,8 @@ export interface MessageHost {
   sendDiffBranches: (sessionId: string, scope?: string, projectId?: string) => Promise<void>
   openWorktreeDirectory: (worktreeId: string) => void
   openWorktreeFile: (id: string, filePath: string, line?: number, column?: number) => void
-  readDocument: (sessionId: string, file: string, contextKey?: string) => void
-  validateFiles: (id: string, sessionId: string, paths: string[]) => void
+  readDocument: (sessionId: string, file: string, contextKey?: string) => Promise<void>
+  validateFiles: (id: string, sessionId: string, paths: string[]) => Promise<void>
   runKey: (worktreeId: string) => string
   view: (sessionIds: string[]) => void
   trackOpenSessions: (sessionIds: string[]) => void
@@ -339,10 +339,7 @@ async function handleDiff(m: AgentManagerInMessage, host: MessageHost): Promise<
     return true
   }
   if (m.type === "agentManager.requestWorktreeDiffFile") {
-    void host.diffs.requestFile(
-      composeDiffId(m.sessionId, normalizeScope(m.scope), m.diffSessionId, m.turnId),
-      m.file,
-    )
+    void host.diffs.requestFile(composeDiffId(m.sessionId, normalizeScope(m.scope), m.diffSessionId, m.turnId), m.file)
     return true
   }
   if (m.type === "agentManager.applyWorktreeDiff") {
@@ -377,11 +374,11 @@ async function handleDiff(m: AgentManagerInMessage, host: MessageHost): Promise<
     return true
   }
   if (m.type === "agentManager.validateFiles") {
-    host.validateFiles(m.id, m.sessionId, m.paths)
+    void host.validateFiles(m.id, m.sessionId, m.paths)
     return true
   }
   if (m.type === "agentManager.requestDocument") {
-    host.readDocument(m.sessionId, m.file, m.contextKey)
+    void host.readDocument(m.sessionId, m.file, m.contextKey)
     return true
   }
   if (m.type === "agentManager.copyFilePath") {

@@ -91,8 +91,8 @@ export interface ProviderHostsSource {
   sendDiffBranches(sessionId: string, scope?: string, projectId?: string): Promise<void>
   openWorktreeDirectory(id: string): void
   openWorktreeFile(id: string, file: string, line?: number, column?: number): void
-  readDocument(sessionId: string, file: string, contextKey?: string): void
-  validateFiles(id: string, sessionId: string, paths: string[]): void
+  readDocument(sessionId: string, file: string, contextKey?: string): Promise<void>
+  validateFiles(id: string, sessionId: string, paths: string[]): Promise<void>
   runKey(id: string): string
   trackOpenSessions(ids: string[]): void
   trackVisibleSession(id: string | null): void

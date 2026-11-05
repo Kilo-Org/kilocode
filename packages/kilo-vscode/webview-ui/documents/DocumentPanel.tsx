@@ -127,6 +127,11 @@ export const DocumentPanel: Component<DocumentPanelProps> = (props) => {
   const isImage = () => data()?.kind === "image"
   const canCopy = () => !isImage() && !data()?.loading && !data()?.error
   const file = () => selected()?.file ?? ""
+  // A bare plan name resolves to the plan directory, so open the loaded path, not the name the tab was opened with.
+  const openPath = () => {
+    const tab = selected()
+    return tab ? documentPath(tab, props.getData) : ""
+  }
   const content = () => data()?.content ?? ""
   const diff = () => virtualDiff(file(), content())
 
@@ -301,7 +306,7 @@ export const DocumentPanel: Component<DocumentPanelProps> = (props) => {
                 size="small"
                 variant="ghost"
                 label={t("agentManager.diff.openFile")}
-                onClick={() => props.onOpenFile(file(), selected()?.line, selected()?.column)}
+                onClick={() => props.onOpenFile(openPath(), selected()?.line, selected()?.column)}
               />
             </Tooltip>
             <Show when={canCopy()}>
@@ -375,7 +380,9 @@ export const DocumentPanel: Component<DocumentPanelProps> = (props) => {
                     <Icon name="copy" size="small" />
                     <ContextMenu.ItemLabel>{t("agentManager.documents.copyFileName")}</ContextMenu.ItemLabel>
                   </ContextMenu.Item>
-                  <ContextMenu.Item onSelect={() => props.onOpenFile(tab.file, tab.line, tab.column)}>
+                  <ContextMenu.Item
+                    onSelect={() => props.onOpenFile(documentPath(tab, props.getData), tab.line, tab.column)}
+                  >
                     <Icon name="go-to-file" size="small" />
                     <ContextMenu.ItemLabel>{t("agentManager.diff.openFile")}</ContextMenu.ItemLabel>
                   </ContextMenu.Item>
@@ -411,7 +418,7 @@ export const DocumentPanel: Component<DocumentPanelProps> = (props) => {
                 renderAnnotation={renderAnnotation}
                 enableGutterUtility={true}
                 onGutterUtilityClick={gutter}
-                onLineNumberClick={(event) => props.onOpenFile(file(), event.lineNumber)}
+                onLineNumberClick={(event) => props.onOpenFile(openPath(), event.lineNumber)}
               />
             </Show>
           </div>

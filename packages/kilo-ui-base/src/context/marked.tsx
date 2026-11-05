@@ -732,8 +732,8 @@ export const createMarkedParser = (props: { nativeParser?: NativeMarkdownParser 
               ` data-file-path="${escapeAttribute(isFile.path)}"` +
               (isFile.line ? ` data-file-line="${isFile.line}"` : "") +
               (isFile.column ? ` data-file-col="${isFile.column}"` : "") +
-              // Without its href the link is not focusable, so keep it in the tab order and announced as a link.
-              (href?.startsWith("file:") ? ` tabindex="0" role="link"` : "")
+              // The sanitizer drops `file:` and drive-letter hrefs, so keep every file link focusable and announced.
+              ` tabindex="0" role="link"`
             return `<a href="${safeHref}"${titleAttr} class="external-link file-path-link${documentClass}"${documentKindAttr}${fileAttrs} target="_blank" rel="noopener noreferrer">${text}</a>`
           }
           return `<a href="${safeHref}"${titleAttr} class="external-link" target="_blank" rel="noopener noreferrer">${text}</a>`

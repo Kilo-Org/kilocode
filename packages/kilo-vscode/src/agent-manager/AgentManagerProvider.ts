@@ -1004,7 +1004,9 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
     if (target) this.host.openFile(target, line, column)
   }
 
-  public validateFiles(id: string, sessionId: string, paths: string[]): void {
+  public async validateFiles(id: string, sessionId: string, paths: string[]): Promise<void> {
+    // Session roots come from the recovered worktree state, so wait for it as the other session lookups do.
+    await this.waitForStateReady("validateFiles")
     const root = resolveWorktreeRoot(this.getStateManager(), sessionId, this.getRoot())
     // An unresolved session is not "every path missing": let the client timeout treat it as unknown.
     if (!root) return
@@ -1012,7 +1014,8 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
     this.postToWebview({ type: "agentManager.validateFilesResult", id, existing })
   }
 
-  public readDocument(sessionId: string, file: string, contextKey?: string): void {
+  public async readDocument(sessionId: string, file: string, contextKey?: string): Promise<void> {
+    await this.waitForStateReady("readDocument")
     const root = resolveWorktreeRoot(this.getStateManager(), sessionId, this.getRoot())
     const result = root ? readDocument(root, file) : { error: "The document context is no longer available." }
     this.postToWebview({ type: "agentManager.document", sessionId, file, requestedFile: file, contextKey, ...result })

@@ -195,11 +195,8 @@ function TextContent(props: {
     if (!session || !validateFiles) return
     void checkFile(session, path, validateFiles).then((exists) => {
       if (!el.isConnected) return
-      // A transient unknown result must not keep re-arming the same candidate on every mutation.
-      if (exists === undefined) {
-        el.removeAttribute("data-file-candidate")
-        return
-      }
+      // An unknown result leaves the candidate as is, so a later scan can check it again.
+      if (exists === undefined) return
       if (!el.classList.contains("file-link-candidate")) return
       if (el.getAttribute("data-file-candidate") !== path) return
       promote(el, path, exists)
