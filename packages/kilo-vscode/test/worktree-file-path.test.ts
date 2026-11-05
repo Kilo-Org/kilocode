@@ -5,10 +5,10 @@ import * as path from "path"
 import { resolveWorktreeFile, sessionDirectory } from "../src/agent-manager/worktree-file-path"
 import type { WorktreeStateManager } from "../src/agent-manager/WorktreeStateManager"
 
-function state(worktree: { id: string; path: string }) {
+function state(worktree: { id: string; path: string }, session?: { id: string; worktreeId: string | null }) {
   return {
     getWorktree: (id: string) => (id === worktree.id ? worktree : undefined),
-    getSession: () => undefined,
+    getSession: (id: string) => (session && id === session.id ? session : undefined),
   } as unknown as WorktreeStateManager
 }
 
@@ -39,6 +39,25 @@ describe("resolveWorktreeFile", () => {
     const target = path.relative(root, path.join(outside, "file.ts"))
 
     expect(resolveWorktreeFile(state({ id: "wt", path: root }), "wt", target, undefined)).toBeUndefined()
+  })
+
+  it("resolves a known local session to the project root", () => {
+    const root = repo()
+
+    expect(
+      resolveWorktreeFile(
+        state({ id: "wt", path: root }, { id: "ses-local", worktreeId: null }),
+        "ses-local",
+        "file.ts",
+        root,
+      ),
+    ).toBe(path.join(root, "file.ts"))
+  })
+
+  it("does not fall back to the project root for an unknown id", () => {
+    const root = repo()
+
+    expect(resolveWorktreeFile(state({ id: "wt", path: root }), "ses-removed", "file.ts", root)).toBeUndefined()
   })
 
   it("falls back to the project root for a local context", () => {

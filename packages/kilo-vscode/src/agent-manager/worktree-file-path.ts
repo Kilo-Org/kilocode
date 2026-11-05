@@ -3,6 +3,22 @@ import * as path from "path"
 import { isAbsolutePath } from "../path-utils"
 import type { WorktreeStateManager } from "./WorktreeStateManager"
 
+/** The directory a worktree id, session id, or `local` reads files from. */
+export function resolveWorktreeRoot(
+  state: WorktreeStateManager | undefined,
+  id: string,
+  root: string | undefined,
+): string | undefined {
+  if (id === "local") return root
+  if (!state) return
+  const worktree = state.getWorktree(id)
+  if (worktree) return worktree.path
+  const session = state.getSession(id)
+  // A known session without a worktree is a local session, which reads from the project root.
+  if (!session) return undefined
+  return session.worktreeId ? state.getWorktree(session.worktreeId)?.path : root
+}
+
 /**
  * Resolve a file reference from a worktree or local session to an absolute
  * path. Absolute inputs pass through; relative inputs resolve against the
@@ -18,9 +34,7 @@ export function resolveWorktreeFile(
 ): string | undefined {
   if (isAbsolutePath(file)) return file
   if (!state) return
-  const worktree = state.getWorktree(id)
-  const session = worktree ? undefined : state.getSession(id)
-  const base = worktree?.path ?? (session?.worktreeId ? state.getWorktree(session.worktreeId)?.path : root)
+  const base = resolveWorktreeRoot(state, id, root)
   if (!base) return
   try {
     const dir = fs.realpathSync(base)

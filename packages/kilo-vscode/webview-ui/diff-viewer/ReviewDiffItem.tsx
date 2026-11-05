@@ -38,6 +38,7 @@ type Props = {
   scrollTo?: (offset: number) => void
   onGutterUtilityClick: (range: SelectedLineRange) => void
   onOpenFile?: (file: string, line?: number) => void
+  onOpenDocument?: (file: string) => void
   onRevertFile?: (file: string) => void
   reverting: Accessor<boolean>
   onMarkdownRenderChange?: (render: boolean) => void
@@ -123,6 +124,20 @@ export const ReviewDiffItem: Component<Props> = (props) => {
                     onClick={(event: MouseEvent) => {
                       event.stopPropagation()
                       props.onOpenFile?.(props.diff.file)
+                    }}
+                  />
+                </Tooltip>
+              </Show>
+              <Show when={isMarkdownFile(props.diff.file) && props.onOpenDocument && !isDeleted()}>
+                <Tooltip value={t("agentManager.documents.preview")} placement="top">
+                  <IconButton
+                    icon="book-open-check"
+                    size="small"
+                    variant="ghost"
+                    label={t("agentManager.documents.preview")}
+                    onClick={(event: MouseEvent) => {
+                      event.stopPropagation()
+                      props.onOpenDocument?.(props.diff.file)
                     }}
                   />
                 </Tooltip>

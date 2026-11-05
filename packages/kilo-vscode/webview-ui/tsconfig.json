@@ -13,5 +13,5 @@
     "skipLibCheck": true,
     "types": []
   },
-  "files": ["src/index.tsx", "agent-manager/index.tsx", "src/assets.d.ts"]
+  "files": ["src/index.tsx", "agent-manager/index.tsx", "documents/index.tsx", "src/assets.d.ts"]
 }

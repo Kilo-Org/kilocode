@@ -20,7 +20,9 @@
   "activationEvents": [
     "onStartupFinished",
     "onWebviewPanel:kilo-code.v2.settingsPanel",
-    "onWebviewPanel:kilo-code.v2.agentManagerPanel"
+    "onWebviewPanel:kilo-code.v2.profilePanel",
+    "onWebviewPanel:kilo-code.v2.agentManagerPanel",
+    "onWebviewPanel:kilo-code.v2.documentsPanel"
   ],
   "contributes": {
     "configurationDefaults": {
@@ -839,7 +841,7 @@
     "snapshot:install": "bun script/snapshot.ts install",
     "extension": "bun script/launch.ts",
     "typecheck": "tsc --noEmit && tsc --noEmit -p webview-ui",
-    "lint": "cd ../.. && oxlint --config .oxlintrc.json packages/kilo-vscode/src packages/kilo-vscode/webview-ui/src packages/kilo-vscode/webview-ui/agent-manager packages/kilo-vscode/webview-ui/diff-viewer packages/kilo-vscode/script packages/kilo-vscode/test",
+    "lint": "cd ../.. && oxlint --config .oxlintrc.json packages/kilo-vscode/src packages/kilo-vscode/webview-ui/src packages/kilo-vscode/webview-ui/agent-manager packages/kilo-vscode/webview-ui/diff-viewer packages/kilo-vscode/webview-ui/documents packages/kilo-vscode/script packages/kilo-vscode/test",
     "test": "bun test"
   },
   "dependencies": {
