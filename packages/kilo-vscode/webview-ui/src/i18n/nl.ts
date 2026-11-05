@@ -1503,6 +1503,9 @@ export const dict = {
   "chat.search.close": "Zoeken sluiten",
   "chat.search.invalidRegex": "Ongeldige reguliere expressie",
   "chat.search.noResults": "Geen resultaten",
+  "settings.experimental.agentManagerUpsell.title": "Uitnodiging voor Agent Manager in de zijbalk",
+  "settings.experimental.agentManagerUpsell.description":
+    "Toon na programmeertaken een optionele uitnodiging om Agent Manager te proberen in de Kilo-zijbalk. Standaard uitgeschakeld.",
   "settings.experimental.browserAutomation.title": "Geïntegreerde browser",
   "settings.experimental.browserAutomation.description":
     "Toon voorbeelden van lokale applicaties in Agent Manager en stel de tool browser_open beschikbaar aan Agent Manager-sessies.",

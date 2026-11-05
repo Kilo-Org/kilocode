@@ -1392,6 +1392,9 @@ export const dict = {
   "chat.search.close": "关闭搜索",
   "chat.search.invalidRegex": "正则表达式无效",
   "chat.search.noResults": "无结果",
+  "settings.experimental.agentManagerUpsell.title": "侧边栏 Agent Manager 邀请",
+  "settings.experimental.agentManagerUpsell.description":
+    "在编码任务完成后，在 Kilo 侧边栏显示可选的 Agent Manager 试用邀请。默认禁用。",
   "settings.experimental.browserAutomation.title": "集成浏览器",
   "settings.experimental.browserAutomation.description":
     "在 Agent Manager 中显示本地应用预览，并向 Agent Manager 会话公开 browser_open 工具。",

@@ -21,12 +21,13 @@ import type { ManagerContext } from "../../utils/shortcut-hint"
 import { PermissionDock } from "./PermissionDock"
 import { SessionDock } from "./SessionDock"
 import { AgentManagerUpsell } from "./AgentManagerUpsell"
-import { AGENT_MANAGER_UPSELL, sidebarTurns } from "./agent-manager-upsell"
+import { sidebarTurns } from "./agent-manager-upsell"
 import { StartupErrorBanner } from "./StartupErrorBanner"
 import { SessionTabStrip } from "./SessionTabStrip"
 import { useSession } from "../../context/session"
 import { useLocalTabs } from "../../context/local-tabs"
 import { useVSCode } from "../../context/vscode"
+import { useConfig } from "../../context/config"
 import { useLanguage } from "../../context/language"
 import { useWorktreeMode } from "../../context/worktree-mode"
 import { useServer } from "../../context/server"
@@ -64,7 +65,7 @@ interface ChatViewProps {
   resolveEmbeddedTerminal?: (context?: string) => Promise<string | undefined>
   /** Agent Manager state for the prompt shortcut hint. */
   manager?: () => ManagerContext | undefined
-  /** Explicit preview override; ordinary sidebar usage keeps the development gate. */
+  /** Explicit preview override; ordinary sidebar usage follows the Experimental setting. */
   upsell?: boolean
 }
 
@@ -72,6 +73,7 @@ export const ChatView: Component<ChatViewProps> = (props) => {
   const session = useSession()
   const data = useData()
   const vscode = useVSCode()
+  const config = useConfig()
   const language = useLanguage()
   const worktreeMode = useWorktreeMode()
   const server = useServer()
@@ -463,7 +465,7 @@ export const ChatView: Component<ChatViewProps> = (props) => {
           <Show when={dock()}>
             <div class="agent-manager-upsell-slot">
               <AgentManagerUpsell
-                enabled={props.upsell ?? AGENT_MANAGER_UPSELL}
+                enabled={props.upsell ?? config.settings().agentManagerUpsell === true}
                 sidebar={isSidebar() && !props.readonly && !!vscode.sidebarSide()}
                 eligible={upsell()}
                 idle={session.status() === "idle" && !session.submitting() && !dockBlocked() && !session.loading()}

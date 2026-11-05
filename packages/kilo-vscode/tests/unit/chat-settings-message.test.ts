@@ -57,6 +57,67 @@ describe("buildChatSettingsMessage", () => {
     expect(buildChatSettingsMessage().settings.shiftTabCyclesVariant).toBe(false)
   })
 
+  it.each([undefined, true, false])("loads the Agent Manager upsell preference %s", (enabled) => {
+    if (enabled !== undefined) state.set("agentManagerUpsell", enabled)
+    stubConfig(state, "kilo-code.new.experimental")
+
+    expect(buildChatSettingsMessage().settings.agentManagerUpsell).toBe(enabled ?? false)
+  })
+
+  it("broadcasts upsell opt-in and opt-out and reloads the saved preference", () => {
+    stubConfig(state, "kilo-code.new.experimental")
+    const listeners = new Set<(event: vscode.ConfigurationChangeEvent) => void>()
+    const workspace = vscode.workspace as unknown as Stub
+    workspace.onDidChangeConfiguration = (listener) => {
+      listeners.add(listener)
+      return new vscode.Disposable(() => listeners.delete(listener))
+    }
+    const parent: unknown[] = []
+    const child: unknown[] = []
+    const main = watchChatConfig((message) => parent.push(message))
+    const viewer = watchChatConfig((message) => child.push(message))
+    const emit = (key: string) => {
+      for (const listener of listeners) listener({ affectsConfiguration: (name) => name === key })
+    }
+    const initial = buildChatSettingsMessage()
+    expect(initial.settings.agentManagerUpsell).toBe(false)
+
+    emit("kilo-code.new.experimental.unrelated")
+    expect(parent).toEqual([])
+    expect(child).toEqual([])
+
+    for (const enabled of [true, false]) {
+      state.set("agentManagerUpsell", enabled)
+      emit("kilo-code.new.experimental.agentManagerUpsell")
+      expect(parent.at(-1)).toEqual({
+        ...initial,
+        settings: { ...initial.settings, agentManagerUpsell: enabled },
+      })
+      expect(child).toEqual(parent)
+      expect(buildChatSettingsMessage()).toEqual(parent.at(-1))
+    }
+    expect(parent).toHaveLength(2)
+
+    viewer.dispose()
+    state.set("agentManagerUpsell", true)
+    emit("kilo-code.new.experimental.agentManagerUpsell")
+    expect(parent).toHaveLength(3)
+    expect(child).toHaveLength(2)
+    main.dispose()
+    expect(listeners.size).toBe(0)
+
+    const reloaded: unknown[] = []
+    const reload = watchChatConfig((message) => reloaded.push(message))
+    expect(buildChatSettingsMessage().settings.agentManagerUpsell).toBe(true)
+    state.set("agentManagerUpsell", false)
+    emit("kilo-code.new.experimental.agentManagerUpsell")
+    expect(reloaded).toEqual([buildChatSettingsMessage()])
+    expect(parent).toHaveLength(3)
+    expect(child).toHaveLength(2)
+    reload.dispose()
+    expect(listeners.size).toBe(0)
+  })
+
   it("broadcasts browser preference changes to all open chat viewers", () => {
     Object.defineProperty(vscode.workspace, "isTrusted", { configurable: true, value: true })
     const workspace = vscode.workspace as unknown as Stub
@@ -84,6 +145,7 @@ describe("buildChatSettingsMessage", () => {
         type: "chatSettingsLoaded",
         settings: {
           shiftTabCyclesVariant: true,
+          agentManagerUpsell: false,
           browserAutomation: true,
           agentManagerBrowserOpenLinksIn: "external",
           workspaceTrusted: true,

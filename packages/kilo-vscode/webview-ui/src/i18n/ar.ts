@@ -1441,6 +1441,9 @@ export const dict = {
   "chat.search.close": "إغلاق البحث",
   "chat.search.invalidRegex": "تعبير عادي غير صالح",
   "chat.search.noResults": "لا توجد نتائج",
+  "settings.experimental.agentManagerUpsell.title": "دعوة لتجربة Agent Manager في الشريط الجانبي",
+  "settings.experimental.agentManagerUpsell.description":
+    "عرض دعوة اختيارية لتجربة Agent Manager في الشريط الجانبي لـ Kilo بعد مهام البرمجة. معطّل افتراضيًا.",
   "settings.experimental.browserAutomation.title": "المتصفح المدمج",
   "settings.experimental.browserAutomation.description":
     "عرض معاينات التطبيقات المحلية في Agent Manager وإتاحة أداة browser_open لجلسات Agent Manager.",

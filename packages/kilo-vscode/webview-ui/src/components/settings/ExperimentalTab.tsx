@@ -252,6 +252,19 @@ const ExperimentalTab: Component = () => {
         </SettingsRow>
 
         <SettingsRow
+          title={language.t("settings.experimental.agentManagerUpsell.title")}
+          description={language.t("settings.experimental.agentManagerUpsell.description")}
+        >
+          <Switch
+            checked={settings().agentManagerUpsell === true}
+            onChange={(checked) => applySetting("agentManagerUpsell", checked, "experimental.agentManagerUpsell")}
+            hideLabel
+          >
+            {language.t("settings.experimental.agentManagerUpsell.title")}
+          </Switch>
+        </SettingsRow>
+
+        <SettingsRow
           title={language.t("settings.experimental.browserAutomation.title")}
           description={language.t("settings.experimental.browserAutomation.description")}
         >

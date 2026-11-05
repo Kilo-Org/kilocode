@@ -1491,6 +1491,9 @@ export const dict = {
   "chat.search.close": "Закрити пошук",
   "chat.search.invalidRegex": "Недійсний регулярний вираз",
   "chat.search.noResults": "Немає результатів",
+  "settings.experimental.agentManagerUpsell.title": "Запрошення до Agent Manager на бічній панелі",
+  "settings.experimental.agentManagerUpsell.description":
+    "Показувати необов'язкове запрошення спробувати Agent Manager на бічній панелі Kilo після завдань із програмування. Типово вимкнено.",
   "settings.experimental.browserAutomation.title": "Вбудований браузер",
   "settings.experimental.browserAutomation.description":
     "Показуйте попередній перегляд локальних застосунків в Agent Manager і надавайте інструмент browser_open сесіям Agent Manager.",

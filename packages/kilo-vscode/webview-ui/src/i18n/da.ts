@@ -1473,6 +1473,9 @@ export const dict = {
   "chat.search.close": "Luk søgning",
   "chat.search.invalidRegex": "Ugyldigt regulært udtryk",
   "chat.search.noResults": "Ingen resultater",
+  "settings.experimental.agentManagerUpsell.title": "Invitation til Agent Manager i sidepanelet",
+  "settings.experimental.agentManagerUpsell.description":
+    "Vis en valgfri invitation til at prøve Agent Manager i Kilos sidepanel efter programmeringsopgaver. Deaktiveret som standard.",
   "settings.experimental.browserAutomation.title": "Integreret browser",
   "settings.experimental.browserAutomation.description":
     "Vis forhåndsvisninger af lokale applikationer i Agent Manager, og gør værktøjet browser_open tilgængeligt for Agent Manager-sessioner.",

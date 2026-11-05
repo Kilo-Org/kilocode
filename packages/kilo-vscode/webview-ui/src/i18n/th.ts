@@ -1447,6 +1447,9 @@ export const dict = {
   "chat.search.close": "ปิดการค้นหา",
   "chat.search.invalidRegex": "นิพจน์ทั่วไปไม่ถูกต้อง",
   "chat.search.noResults": "ไม่มีผลลัพธ์",
+  "settings.experimental.agentManagerUpsell.title": "คำเชิญให้ลองใช้ Agent Manager ในแถบด้านข้าง",
+  "settings.experimental.agentManagerUpsell.description":
+    "แสดงคำเชิญที่เลือกได้ให้ลองใช้ Agent Manager ในแถบด้านข้างของ Kilo หลังจากงานเขียนโค้ด ปิดใช้งานตามค่าเริ่มต้น",
   "settings.experimental.browserAutomation.title": "เบราว์เซอร์ในตัว",
   "settings.experimental.browserAutomation.description":
     "แสดงตัวอย่างแอปพลิเคชันในเครื่องใน Agent Manager และเปิดเผยเครื่องมือ browser_open ให้กับเซสชัน Agent Manager",

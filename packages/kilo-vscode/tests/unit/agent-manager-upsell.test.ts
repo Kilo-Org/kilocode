@@ -5,7 +5,7 @@ import { join } from "node:path"
 import { SidebarUpsell } from "../../src/kilo-provider/upsell"
 import { UpsellPreferences } from "../../src/kilo-provider/upsell-preferences"
 import { eligible, type UpsellState } from "../../src/shared/agent-manager-upsell"
-import { AGENT_MANAGER_UPSELL, sidebarTurns } from "../../webview-ui/src/components/chat/agent-manager-upsell"
+import { sidebarTurns } from "../../webview-ui/src/components/chat/agent-manager-upsell"
 
 const KEY = "upsell.agentManager"
 const WEEK = 7 * 24 * 60 * 60 * 1000
@@ -68,10 +68,6 @@ function fixture(state: UpsellState = {}, ids = ["first", "second"]) {
 }
 
 describe("Agent Manager upsell eligibility", () => {
-  it("keeps the development gate disabled", () => {
-    expect(AGENT_MANAGER_UPSELL).toBe(false)
-  })
-
   it("allows a fresh profile and explicitly cleared suppression flags", () => {
     expect(eligible({}, NOW)).toBe(true)
     expect(eligible({ converted: false, opened: false, optedOut: false, snoozeCount: 0 }, NOW)).toBe(true)

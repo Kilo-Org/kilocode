@@ -1,6 +1,3 @@
-// Temporary development gate; the separate opt-in PR adds the Experimental setting.
-export const AGENT_MANAGER_UPSELL = false
-
 /** Track only turns observed running on this sidebar, never restored conversation summaries. */
 export function sidebarTurns() {
   const running = new Map<string, string>()

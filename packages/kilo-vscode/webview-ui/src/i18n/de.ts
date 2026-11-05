@@ -1505,6 +1505,9 @@ export const dict = {
   "chat.search.close": "Suche schließen",
   "chat.search.invalidRegex": "Ungültiger regulärer Ausdruck",
   "chat.search.noResults": "Keine Ergebnisse",
+  "settings.experimental.agentManagerUpsell.title": "Einladung zu Agent Manager in der Seitenleiste",
+  "settings.experimental.agentManagerUpsell.description":
+    "Nach Programmieraufgaben eine optionale Einladung zum Ausprobieren von Agent Manager in der Kilo-Seitenleiste anzeigen. Standardmäßig deaktiviert.",
   "settings.experimental.browserAutomation.title": "Integrierter Browser",
   "settings.experimental.browserAutomation.description":
     "Lokale Anwendungsvorschauen im Agent Manager anzeigen und das Tool browser_open für Agent Manager-Sitzungen bereitstellen.",

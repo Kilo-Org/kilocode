@@ -1481,6 +1481,9 @@ export const dict = {
   "chat.search.close": "Zamknij wyszukiwanie",
   "chat.search.invalidRegex": "Nieprawidłowe wyrażenie regularne",
   "chat.search.noResults": "Brak wyników",
+  "settings.experimental.agentManagerUpsell.title": "Zaproszenie do Agent Manager na pasku bocznym",
+  "settings.experimental.agentManagerUpsell.description":
+    "Wyświetlaj opcjonalne zaproszenie do wypróbowania Agent Manager na pasku bocznym Kilo po zadaniach programistycznych. Domyślnie wyłączone.",
   "settings.experimental.browserAutomation.title": "Zintegrowana przeglądarka",
   "settings.experimental.browserAutomation.description":
     "Wyświetlaj podglądy lokalnych aplikacji w Agent Manager i udostępniaj narzędzie browser_open sesjom Agent Manager.",

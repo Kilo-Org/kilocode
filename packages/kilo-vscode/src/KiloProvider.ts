@@ -4528,6 +4528,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       maxCost: this.maxCostSetting(),
       languageCommitMessage: this.commitMessageLanguageSetting(),
       claudeMigration: this.claudeMigrationSetting(),
+      agentManagerUpsell: vscode.workspace
+        .getConfiguration("kilo-code.new.experimental")
+        .get<boolean>("agentManagerUpsell", false),
       browserAutomation: this.browserAutomationSetting(),
       conversationPromptHistory: this.conversationPromptHistorySetting(),
       agentManagerBrowserUseSystemChrome: integratedBrowserUseSystemChrome(),

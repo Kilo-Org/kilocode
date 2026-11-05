@@ -1450,6 +1450,9 @@ export const dict = {
   "chat.search.close": "검색 닫기",
   "chat.search.invalidRegex": "정규식이 잘못되었습니다",
   "chat.search.noResults": "검색 결과 없음",
+  "settings.experimental.agentManagerUpsell.title": "사이드바의 Agent Manager 초대",
+  "settings.experimental.agentManagerUpsell.description":
+    "코딩 작업 후 Kilo 사이드바에 Agent Manager를 사용해 보도록 권하는 선택적 초대를 표시합니다. 기본적으로 비활성화되어 있습니다.",
   "settings.experimental.browserAutomation.title": "통합 브라우저",
   "settings.experimental.browserAutomation.description":
     "Agent Manager에서 로컬 애플리케이션 미리보기를 표시하고 browser_open 도구를 Agent Manager 세션에 노출합니다.",

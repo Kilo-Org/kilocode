@@ -1491,6 +1491,9 @@ export const dict = {
   "chat.search.close": "Aramayı kapat",
   "chat.search.invalidRegex": "Geçersiz normal ifade",
   "chat.search.noResults": "Sonuç yok",
+  "settings.experimental.agentManagerUpsell.title": "Kenar Çubuğunda Agent Manager Daveti",
+  "settings.experimental.agentManagerUpsell.description":
+    "Kodlama görevlerinden sonra Kilo kenar çubuğunda Agent Manager'ı denemek için isteğe bağlı bir davet gösterin. Varsayılan olarak devre dışıdır.",
   "settings.experimental.browserAutomation.title": "Entegre Tarayıcı",
   "settings.experimental.browserAutomation.description":
     "Agent Manager'da yerel uygulama önizlemelerini gösterin ve browser_open aracını Agent Manager oturumlarına sunun.",

@@ -1472,6 +1472,9 @@ export const dict = {
   "chat.search.close": "بستن جستجو",
   "chat.search.invalidRegex": "عبارت منظم نامعتبر",
   "chat.search.noResults": "نتیجه‌ای یافت نشد",
+  "settings.experimental.agentManagerUpsell.title": "دعوت به استفاده از Agent Manager در نوار کناری",
+  "settings.experimental.agentManagerUpsell.description":
+    "پس از کارهای برنامه‌نویسی، یک دعوت اختیاری برای امتحان کردن Agent Manager در نوار کناری Kilo نمایش دهید. به‌طور پیش‌فرض غیرفعال است.",
   "settings.experimental.browserAutomation.title": "مرورگر یکپارچه",
   "settings.experimental.browserAutomation.description":
     "پیش‌نمایش برنامه‌های محلی را در Agent Manager نشان دهید و ابزار browser_open را در اختیار جلسات Agent Manager قرار دهید.",
