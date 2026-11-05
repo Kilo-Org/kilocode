@@ -1,6 +1,7 @@
 import { Component, Show, For, createMemo, createSignal } from "solid-js"
 import { TextField } from "@kilocode/kilo-ui/text-field"
 import { Switch } from "@kilocode/kilo-ui/switch"
+import { Select } from "@kilocode/kilo-ui/select"
 import { Card } from "@kilocode/kilo-ui/card"
 import { Button } from "@kilocode/kilo-ui/button"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
@@ -11,6 +12,7 @@ import { useSession } from "../../context/session"
 import { useLanguage } from "../../context/language"
 import type { AgentConfig, AgentInfo, PermissionConfig, PermissionRuleItem } from "../../types/messages"
 import { removable } from "./agent-behaviour-patches"
+import { agentMode, editable, modeOptions, pin } from "./agent-mode"
 import { parseModelString } from "../../../../src/shared/provider-model"
 import SettingsRow from "./SettingsRow"
 import { buildExport } from "./mode-io"
@@ -27,7 +29,7 @@ interface Props {
 
 const ModeEditView: Component<Props> = (props) => {
   const language = useLanguage()
-  const { config, updateConfig } = useConfig()
+  const { config, projectConfig, updateConfig } = useConfig()
   const provider = useProvider()
   const session = useSession()
 
@@ -39,6 +41,9 @@ const ModeEditView: Component<Props> = (props) => {
   const [expanded, setExpanded] = createSignal(false)
 
   const cfg = createMemo<AgentConfig>(() => config().agent?.[props.name] ?? {})
+  const mode = createMemo(() => agentMode(cfg(), agent()))
+  const pinned = createMemo(() => pin(props.name, config().default_agent, projectConfig().default_agent))
+  const modes = createMemo(() => modeOptions(pinned() !== undefined, mode()))
   const model = createMemo(() => parseModelString(cfg().model ?? undefined))
   const variants = createMemo(() => {
     const sel = model()
@@ -153,6 +158,36 @@ const ModeEditView: Component<Props> = (props) => {
             placeholder={language.t("settings.agentBehaviour.createMode.description.placeholder")}
             onChange={(val) => update({ description: val || undefined })}
           />
+        </Card>
+      </Show>
+
+      {/* Mode (custom agents only — changing a built-in agent's mode breaks its role) */}
+      <Show when={editable(props.name, cfg(), agent())}>
+        <Card data-variant="wide-input" style={{ "margin-bottom": "12px" }}>
+          <SettingsRow
+            title={language.t("settings.agentBehaviour.mode.title")}
+            description={
+              pinned() === "project"
+                ? language.t("settings.agentBehaviour.mode.defaultAgentProject")
+                : pinned()
+                  ? language.t("settings.agentBehaviour.mode.defaultAgent")
+                  : language.t("settings.agentBehaviour.mode.description")
+            }
+            last
+          >
+            <Select
+              options={modes()}
+              current={modes().find((o) => o.value === mode())}
+              value={(o) => o.value}
+              label={(o) => language.t(o.labelKey)}
+              onSelect={(o) => {
+                if (o) updateConfig({ agent: { [props.name]: { mode: o.value } } })
+              }}
+              variant="secondary"
+              size="small"
+              triggerVariant="settings"
+            />
+          </SettingsRow>
         </Card>
       </Show>
 
