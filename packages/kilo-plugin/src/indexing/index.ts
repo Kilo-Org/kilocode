@@ -70,11 +70,17 @@ export const KiloIndexingPlugin = define<FSUtil.Service | Global.Service | Scope
     const wasm = wasmDirectory()
     if (wasm) process.env.KILO_TREE_SITTER_WASM_DIR = wasm
 
+    // A save re-reads the config, also when no config watcher runs; the `config.updated` subscriber below then
+    // restarts the engine when the effective `indexing` key changed.
     const holder: { runtime?: IndexingRuntime.Runtime } = {}
     const files = yield* settingsFiles({
       global: global.config,
       project: directory,
-      reload: () => holder.runtime?.restart() ?? Promise.resolve(),
+      reload: () => {
+        const reload = Option.getOrUndefined(config)?.reload
+        if (reload) return Effect.runPromise(reload())
+        return holder.runtime?.restart() ?? Promise.resolve()
+      },
     })
     const accountAuth = (current: Awaited<ReturnType<typeof account>>) =>
       current ? { type: "oauth", access: current.token, accountId: current.organizationID ?? undefined } : undefined

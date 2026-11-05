@@ -139,19 +139,26 @@ export function createIndexingHost(input: {
       }
     },
     async sync() {
-      // A fresh server starts with no consent, so re-send it for every stored project, not only the first.
-      const list = await projects()
-      const project = list[0]
-      if (!project) return
-      state.projectId = project.id
-      const client = await connection()
-      await Promise.all(
-        list.map((item) =>
-          client
-            .consent(store.enabled(item.id), item.directory)
-            .catch((error) => input.log?.(`Failed to sync indexing consent for ${item.label}`, error)),
-        ),
-      )
+      // A fresh server starts with no consent: send it for the workspace project and re-send it for every other
+      // project that has it. A project without consent needs no call, which would only start an idle engine.
+      try {
+        const list = await projects()
+        const project = list[0]
+        if (!project) return
+        state.projectId = project.id
+        const client = await connection()
+        await Promise.all(
+          list
+            .filter((item, index) => index === 0 || store.enabled(item.id))
+            .map((item) =>
+              client
+                .consent(store.enabled(item.id), item.directory)
+                .catch((error) => input.log?.(`Failed to sync indexing consent for ${item.label}`, error)),
+            ),
+        )
+      } catch (error) {
+        input.log?.("Failed to sync indexing consent", error)
+      }
     },
     dispose() {
       state.disposed = true

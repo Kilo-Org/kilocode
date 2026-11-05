@@ -431,6 +431,34 @@ describe("DirectoryScanner", () => {
     expect(retry?.error).toContain("[REDACTED_PATH]")
   })
 
+  test("keeps a capitalized source folder on every filesystem", async () => {
+    // The parents differ, so this layout exists also on case-insensitive volumes. There the glob default is
+    // nocase, and only the scanner's `nocase: false` keeps src/Build from the **/build/** ignore glob.
+    const root = await mkdtemp(join(tmpdir(), "scanner-test-"))
+    const cacheDir = await mkdtemp(join(tmpdir(), "scanner-cache-"))
+    try {
+      const kept = join(root, "src", "Build", "Main.ts")
+      const pruned = join(root, "lib", "build", "gen.ts")
+      await mkdir(join(root, "src", "Build"), { recursive: true })
+      await mkdir(join(root, "lib", "build"), { recursive: true })
+      await Bun.write(kept, "export const kept = 1\n")
+      await Bun.write(pruned, "export const pruned = 1\n")
+
+      const cache = new CacheManager(cacheDir, root)
+      await cache.initialize()
+
+      const scan = new DirectoryScanner(new Emb(), new Store(), new Parser(), cache, ignore(), 1, 1)
+      const result = await scan.scanDirectory(root)
+
+      expect(result.stats.processed).toBe(1)
+      expect(cache.getHash(kept)).toBeDefined()
+      expect(cache.getHash(pruned)).toBeUndefined()
+    } finally {
+      await rm(root, { recursive: true, force: true })
+      await rm(cacheDir, { recursive: true, force: true })
+    }
+  })
+
   test("keeps capitalized source folders that only differ in case from ignored dirs", async () => {
     // The anchored ignore globs (e.g. **/build/**) must match case-sensitively
     // like FileIgnore.match() does: on glob platforms with a nocase default, this

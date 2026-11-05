@@ -9,7 +9,7 @@ import { parse } from "jsonc-parser"
 export interface Targets {
   readonly global: string
   readonly project: string
-  /** Runs after each successful write, so the engine starts again from the saved settings. */
+  /** Runs after each successful write, so the saved settings apply. */
   readonly reload?: () => Promise<void>
 }
 
@@ -27,11 +27,8 @@ export const make = Effect.fn("IndexingSettings.make")(function* (targets: Targe
   const target = (scope: KiloIndexingRpc.Scope) =>
     writer.target(scope === "global" ? { directory: targets.global, global: true } : { directory: targets.project })
 
-  const fields: Record<string, Schema.Top> = (KiloIndexingRpc.Config as unknown as { fields: Record<string, Schema.Top> })
-    .fields
-
-  // Each field is decoded on its own: a hand-edited value with the wrong type or range is left out of the answer
-  // instead of failing the whole `config` call, which is what the engine does with that field.
+  // The key is decoded as one object, like the config policy does for the engine: when one field is invalid, the
+  // answer is empty, the same settings the engine uses, instead of failing the whole `config` call.
   const read = Effect.fn("IndexingSettings.read")(function* (scope: KiloIndexingRpc.Scope) {
     const file = yield* target(scope)
     const text = yield* Effect.promise(() =>
@@ -42,18 +39,11 @@ export const make = Effect.fn("IndexingSettings.make")(function* (targets: Targe
     const document: unknown = parse(text, [], { allowTrailingComma: true })
     if (!document || typeof document !== "object" || Array.isArray(document)) return {}
     const indexing = (document as Record<string, unknown>).indexing
-    if (!indexing || typeof indexing !== "object" || Array.isArray(indexing)) return {}
-    const decoded = Object.entries(indexing).flatMap(([key, value]) => {
-      const field = fields[key]
-      if (!field) return []
-      const result = Schema.decodeUnknownOption(field as never)(value)
-      if (Option.isNone(result)) {
-        Effect.runFork(Effect.logWarning("ignored invalid indexing setting", { file, field: key }))
-        return []
-      }
-      return [[key, result.value] as const]
-    })
-    return Object.fromEntries(decoded) as KiloIndexingRpc.Config
+    if (indexing === undefined) return {}
+    const decoded = Schema.decodeUnknownOption(KiloIndexingRpc.Config)(indexing)
+    if (Option.isSome(decoded)) return decoded.value
+    yield* Effect.logWarning("ignored invalid indexing settings", { file })
+    return {}
   })
 
   const write = Effect.fn("IndexingSettings.write")(function* (

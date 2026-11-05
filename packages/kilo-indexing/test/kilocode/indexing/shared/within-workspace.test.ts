@@ -35,6 +35,13 @@ describe("withinWorkspace", () => {
     expect(await withinWorkspace(workspace, path.join(workspace, "src", "escape.ts"))).toBe(false)
   })
 
+  test("rejects a regular file reached through a symlinked parent directory", async () => {
+    const root = await layout()
+    const workspace = path.join(root, "workspace")
+    await symlink(path.join(root, "outside"), path.join(workspace, "link"), "junction")
+    expect(await withinWorkspace(workspace, path.join(workspace, "link", "secret.ts"))).toBe(false)
+  })
+
   test("rejects an absolute symlink and a missing file", async () => {
     const root = await layout()
     const workspace = path.join(root, "workspace")

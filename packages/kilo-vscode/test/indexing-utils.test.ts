@@ -5,6 +5,7 @@ import {
   applyIndexingStatusMessage,
   formatIndexingLabel,
   indexingButtonVisible,
+  indexingEventSelected,
   indexingTone,
 } from "../webview-ui/src/context/indexing-utils"
 
@@ -72,6 +73,23 @@ describe("indexing formatting", () => {
     expect(indexingTone(makeStatus({ state: "In Progress" }))).toBe("warning")
     expect(indexingTone(makeStatus({ state: "Complete" }))).toBe("success")
     expect(indexingTone(makeStatus({ state: "Error" }))).toBe("error")
+  })
+})
+
+describe("indexing status event selection", () => {
+  const projects = [
+    { id: "a", root: "/main", label: "main" },
+    { id: "b", root: "/other", directory: "/other", label: "other" },
+  ]
+
+  it("keeps the events of a selected project with a directory only", () => {
+    expect(indexingEventSelected("/other/", "/other", projects)).toBe(true)
+    expect(indexingEventSelected("/workspace", "/other", projects)).toBe(false)
+  })
+
+  it("keeps the primary events and drops the ones of other listed projects", () => {
+    expect(indexingEventSelected("/workspace/sub", undefined, projects)).toBe(true)
+    expect(indexingEventSelected("/other", undefined, projects)).toBe(false)
   })
 })
 

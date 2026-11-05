@@ -105,10 +105,30 @@ test(
 )
 
 test(
-  "an invalid field is left out of the config answer instead of failing the read",
-  boot({ project: { indexing: { provider: "ollama", searchMinScore: 2, searchMaxResults: 12 } } }, async (client, directory) => {
+  "an invalid field empties the config answer like the engine instead of failing the read",
+  boot({ project: { indexing: { enabled: true, provider: "ollama", searchMinScore: 2 } } }, async (client, directory) => {
     const settings = await rpc(client).config({}, { location: { directory } })
-    expect(settings.project).toEqual({ provider: "ollama", searchMaxResults: 12 })
+    expect(settings.project).toEqual({})
+    const status = await waitFor(() => rpc(client).status({}, { location: { directory } }), (value) => value.state !== "In Progress")
+    expect(status.state).toBe("Disabled")
+  }),
+  30_000,
+)
+
+test(
+  "config.update applies the saved settings without a config watcher",
+  boot({ project: { privacy_mode: false } }, async (client, directory) => {
+    const disabled = await waitFor(() => rpc(client).status({}, { location: { directory } }), (value) => value.state !== "In Progress")
+    expect(disabled.state).toBe("Disabled")
+    await rpc(client)["config.update"](
+      {
+        scope: "project",
+        config: { enabled: true, provider: "ollama", vectorStore: "qdrant", ollama: { baseUrl: "http://127.0.0.1:1" }, qdrant: { url: "http://127.0.0.1:1" } },
+      },
+      { location: { directory } },
+    )
+    const status = await waitFor(() => rpc(client).status({}, { location: { directory } }), (value) => value.state === "Error")
+    expect(status.state).toBe("Error")
   }),
   30_000,
 )

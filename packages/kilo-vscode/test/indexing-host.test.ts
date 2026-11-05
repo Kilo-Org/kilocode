@@ -97,6 +97,40 @@ describe("indexing host consent", () => {
     expect(fixture.calls).toEqual([{ enabled: false, directory: undefined }])
   })
 
+  it("re-sends consent only for the other projects that have it", async () => {
+    const fixture = setup({
+      extras: [{ root: "/granted" }, { root: "/idle" }],
+      stored: { [projectId("/granted")]: true },
+    })
+
+    await fixture.host.sync()
+
+    expect(fixture.calls).toEqual([
+      { enabled: false, directory: undefined },
+      { enabled: true, directory: "/granted" },
+    ])
+  })
+
+  it("logs instead of rejecting when the server is not reachable during sync", async () => {
+    const errors: string[] = []
+    const store = new IndexingConsentStore({ read: () => undefined, write: () => {} }, async (dir) => dir)
+    const host = createIndexingHost({
+      context: {} as never,
+      server: {} as never,
+      directory: () => "/repo",
+      connect: async () => {
+        throw new Error("offline")
+      },
+      store,
+      extras: () => [],
+      log: (message) => errors.push(message),
+    })
+
+    await host.sync()
+
+    expect(errors).toEqual(["Failed to sync indexing consent"])
+  })
+
   it("writes consent for a registered project with its exact root", async () => {
     const root = "/repo/100%/%2F/桌面/project"
     const fixture = setup({ extras: [{ root }] })

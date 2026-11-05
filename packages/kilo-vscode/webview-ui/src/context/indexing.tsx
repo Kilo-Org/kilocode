@@ -5,7 +5,7 @@ import { KiloIndexingRpc } from "@opencode/schema/kilocode/indexing"
 import { createContext, createEffect, createMemo, createSignal, on, onCleanup, onMount, useContext, type ParentComponent, type Accessor } from "solid-js"
 import type { IndexingProject, IndexingSettings, ToHost, ToWebview } from "../../../src/protocol"
 import { getVSCodeAPI, useVSCode } from "./vscode"
-import { formatIndexingLabel, indexingButtonVisible, indexingTone } from "./indexing-utils"
+import { formatIndexingLabel, indexingButtonVisible, indexingEventSelected, indexingTone } from "./indexing-utils"
 import { useV2 } from "../v2/client"
 import { kiloSettings } from "../v2/kilo-settings"
 import { indexingUpdate, type IndexingScope } from "../components/settings/indexing-tab-state"
@@ -107,11 +107,6 @@ export const IndexingProvider: ParentComponent = (props) => {
     return Promise.all([readStatus(), readConfig()])
   }
 
-  const sameDirectory = (a: string | undefined, b: string | undefined) => {
-    if (!a || !b) return false
-    return a.replace(/[\\/]+$/, "").toLowerCase() === b.replace(/[\\/]+$/, "").toLowerCase()
-  }
-
   const unsubscribe = vscode.onMessage((raw) => {
     const message = raw as ToWebview
     if (message.type === "indexingSettingsLoaded") {
@@ -144,8 +139,7 @@ export const IndexingProvider: ParentComponent = (props) => {
       void refresh()
       const stop = rpc().events.on("status", (event) => {
         const location = event.location?.directory
-        // The primary project uses the server's own Location, so its events have no selected directory to match.
-        if (location && directory() && !sameDirectory(location, directory())) return
+        if (location && !indexingEventSelected(location, directory(), host().projects)) return
         setStatus(event.data.status)
         setLoading(false)
       })

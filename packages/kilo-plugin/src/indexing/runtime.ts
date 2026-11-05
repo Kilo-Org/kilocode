@@ -246,8 +246,7 @@ export class Runtime {
       return this.track(hit, await this.inert(() => disabledIndexingStatus()))
     }
 
-    const project = (await host.primary(dir).catch(() => undefined)) ?? dir
-    this.project = project
+    const project = await this.resolveProject()
     if (this.env["KILO_PLATFORM"] === "vscode" && !consent.get(project)) {
       return this.track(hit, await this.inert(() => noConsent()))
     }

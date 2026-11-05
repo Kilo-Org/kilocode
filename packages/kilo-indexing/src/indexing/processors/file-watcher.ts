@@ -733,6 +733,13 @@ export class FileWatcher implements IFileWatcher {
         continue
       }
 
+      // Check before the hash read: a symlink may point outside the workspace or to an unbounded file.
+      if (!(await withinWorkspace(this.workspacePath, event.path))) {
+        batchResults.push({ path: event.path, status: "skipped", reason: "File path is outside workspace" })
+        processedCountInBatch++
+        continue
+      }
+
       const cached = this.cacheManager.getHash(event.path)
       const hash = await readFile(event.path, "utf-8")
         .then((content) => createHash("sha256").update(content).digest("hex"))

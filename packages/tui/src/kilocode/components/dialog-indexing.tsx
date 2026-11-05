@@ -111,7 +111,7 @@ async function saveScopedIndexing(
   scope: IndexingScope,
   before: IndexingConfig,
   indexing: IndexingConfig,
-  toast: ReturnType<typeof useToast>,
+  toast: Pick<ReturnType<typeof useToast>, "show">,
 ): Promise<boolean> {
   const patch = indexingPatch(before, indexing)
   const saved = await rpc["config.update"](
@@ -428,6 +428,20 @@ export function tuningProblem(key: TuningKey, text: string, value: number | unde
   return Number.isInteger(value) && value > 0 ? undefined : "Enter a positive whole number"
 }
 
+/** Saves one tuning value and answers the settings to show: the old ones when the server rejects the save. */
+export async function saveTuning(
+  rpc: RpcClient<typeof KiloIndexingRpc.Definition>,
+  location: LocationRef,
+  scope: IndexingScope,
+  raw: IndexingConfig,
+  key: TuningKey,
+  value: number | undefined,
+  toast: Pick<ReturnType<typeof useToast>, "show">,
+) {
+  const updated = { ...raw, [key]: value }
+  return (await saveScopedIndexing(rpc, location, scope, raw, updated, toast)) ? updated : raw
+}
+
 const TUNING_PARAMS: TuningParam[] = [
   { key: "searchMinScore", label: "Search Min Score", defaultValue: 0.4 },
   { key: "searchMaxResults", label: "Search Max Results", defaultValue: 50 },
@@ -491,10 +505,7 @@ function TuningMenu(props: SubDialogProps) {
           restore(props.raw)
           return
         }
-        const updated = { ...props.raw, [param.key]: num }
-        // Keep the old value on a rejected save: the server validates the same bounds.
-        if (await saveScopedIndexing(rpc, props.location, props.scope, props.raw, updated, toast)) restore(updated)
-        else restore(props.raw)
+        restore(await saveTuning(rpc, props.location, props.scope, props.raw, param.key, num, toast))
       }}
     />
   )

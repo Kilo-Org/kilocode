@@ -1,5 +1,5 @@
 import type { KiloIndexingRpc } from "@opencode/schema/kilocode/indexing"
-import type { ToWebview } from "../../../src/protocol"
+import type { IndexingProject, ToWebview } from "../../../src/protocol"
 
 type IndexingStatus = KiloIndexingRpc.Status
 type IndexingConfig = KiloIndexingRpc.Config
@@ -33,6 +33,21 @@ export function indexingTone(status: IndexingStatus): "muted" | "warning" | "suc
   if (status.state === "In Progress") return "warning"
   if (status.state === "Standby") return "muted"
   return "muted"
+}
+
+/**
+ * True when a status event from `location` belongs to the selected project. The primary project uses the server's
+ * own Location, which can differ from its root, so it takes every event except the ones of the other listed
+ * projects: the server also runs engines for them when they have consent.
+ */
+export function indexingEventSelected(location: string, selected: string | undefined, projects: IndexingProject[]) {
+  if (selected) return sameDirectory(location, selected)
+  return !projects.some((item) => sameDirectory(location, item.directory))
+}
+
+function sameDirectory(a: string, b: string | undefined) {
+  if (!b) return false
+  return a.replace(/[\\/]+$/, "").toLowerCase() === b.replace(/[\\/]+$/, "").toLowerCase()
 }
 
 export function applyIndexingStatusMessage(
