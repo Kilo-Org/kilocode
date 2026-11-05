@@ -46,9 +46,10 @@ const PASSWORDS = ["OPENCODE_PASSWORD", "OPENCODE_SERVER_PASSWORD", "KILO_SERVER
 const MANAGED = ["KILO_DISABLE_CLAUDE_CODE", "OPENCODE_DISABLE_CLAUDE_CODE"]
 
 /**
- * The notebook endpoint is this host's private broker. An inherited value would point tools at another host's
- * broker, or leave them enabled when this host serves none.
+ * The Integrated Browser and notebook endpoints are this host's private brokers. An inherited value would point
+ * tools at another host's broker, or leave them enabled when the feature is off here.
  */
+const BROWSER = ["KILO_BROWSER_BROKER_URL", "KILO_BROWSER_BROKER_TOKEN"]
 const NOTEBOOK = ["KILO_NOTEBOOK_BROKER_URL", "KILO_NOTEBOOK_BROKER_TOKEN"]
 
 /**
@@ -88,6 +89,7 @@ export function environment(base: NodeJS.ProcessEnv, extra: Record<string, strin
           !V1_ONLY.includes(key) &&
           !PASSWORDS.includes(key) &&
           !MANAGED.includes(key) &&
+          !BROWSER.includes(key) &&
           !NOTEBOOK.includes(key),
       ),
     ),
@@ -225,7 +227,7 @@ export function manager(input: {
       const found = input.command()
       if (!found)
         throw new Error("No Kilo v2 server found. Put a kilo2 binary in bin/ or run the extension from the repository.")
-      // Settings may await host work, such as the loopback notebook broker endpoint.
+      // Settings may await host work, such as the loopback notebook and Integrated Browser broker endpoints.
       const settings = typeof input.settings === "function" ? await input.settings() : input.settings
       return start({
         command: found,

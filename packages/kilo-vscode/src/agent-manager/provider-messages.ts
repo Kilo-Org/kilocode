@@ -373,6 +373,10 @@ async function handleDiff(m: AgentManagerInMessage, host: MessageHost): Promise<
     host.openWorktreeFile(m.sessionId, m.filePath, m.line, m.column)
     return true
   }
+  if (m.type === "agentManager.openExternal") {
+    if (URL.canParse(m.url) && ["http:", "https:"].includes(new URL(m.url).protocol)) host.host.openExternal(m.url)
+    return true
+  }
   if (m.type === "agentManager.validateFiles") {
     void host.validateFiles(m.id, m.sessionId, m.paths)
     return true

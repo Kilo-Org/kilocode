@@ -17,6 +17,7 @@ export { KiloSessionSync }
 import { KiloPrivacyPlugin } from "./privacy"
 import { KiloSkillPlugin } from "./skill"
 import { KiloTodoPlugin } from "./todo"
+import { KiloBrowserToolPlugin } from "./browser"
 import { KiloWriteToolPlugin } from "./tool-write"
 // kilo_port(notebook:91a426486dc8) v1 registered the notebook tools and service from the shared server.
 import { KiloNotebookPlugin } from "./notebook"
@@ -49,6 +50,7 @@ export const KiloPlugins = [
   KiloSkillPlugin,
   KiloTodoPlugin,
   KiloWriteToolPlugin,
+  KiloBrowserToolPlugin,
   KiloNotebookPlugin,
   KiloCommitMessagePlugin,
   KiloPrivacyPlugin,

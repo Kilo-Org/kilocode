@@ -22,25 +22,7 @@
 }
 
 /* Generated separators become accessibility text nodes. Keep them out of
-   concurrently updating Agent Manager tool rows while preserving sidebar UI. */
-html[data-theme="kilo-vscode"]
-  .am-layout
-  [data-component="tool-part-wrapper"][data-part-type="tool"]
-  [data-component="collapsible"]
-  [data-slot="basic-tool-tool-title"]
-  + :is(
-    [data-slot="basic-tool-tool-subtitle"],
-    [data-slot="basic-tool-tool-arg"],
-    [data-slot="message-part-meta-line"],
-    [data-slot="webfetch-meta"],
-    [data-component="shell-submessage"]
-  )::before,
-html[data-theme="kilo-vscode"]
-  .am-layout
-  [data-component="tool-part-wrapper"][data-part-type="tool"]
-  [data-component="collapsible"]
-  [data-slot="message-part-title-text"]
-  + :is([data-slot="message-part-meta-line"], [data-slot="basic-tool-tool-subtitle"])::before,
+   concurrently updating Agent Manager tool rows. */
 html[data-theme="kilo-vscode"]
   .am-layout
   [data-component="tool-part-wrapper"][data-part-type="tool"]

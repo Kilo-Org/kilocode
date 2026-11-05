@@ -978,6 +978,16 @@
     "note": "packages/kilo-plugin/test/todo-tool.test.ts asserts the v1 description phrases on the Kilo todowrite tool, and the Kilo host registers that tool unconditionally through KiloPlugins.",
     "by": "composer-todos"
   },
+  "module:packages/opencode/src/kilocode/tool/browser-open.ts": {
+    "state": "ported",
+    "note": "packages/kilo-plugin/src/browser/index.ts KiloBrowserToolPlugin registers the browser_open tool on the ToolEditor when the extension host passes KILO_BROWSER_BROKER_URL and KILO_BROWSER_BROKER_TOKEN to the v2 server. The tool keeps the v1 URL policy (public HTTPS, loopback HTTP, 0.0.0.0 as localhost, no credentials), asks the browser_open permission with navigate:<origin> resources, and POSTs to the host broker at /browser/open. packages/kilo-plugin/test/browser.test.ts covers the endpoint guard, destination policy, request shape and broker error text.",
+    "by": "am-browser"
+  },
+  "module:packages/opencode/src/kilocode/tool/browser-open.txt": {
+    "state": "ported",
+    "note": "packages/kilo-plugin/src/browser/browser-open.txt, loaded by the browser_open tool description. The panel wording now names the sidebar Integrated Browser as well as the Agent Manager panel, and states that the tool shows a page instead of clicking.",
+    "by": "am-browser"
+  },
   "module:packages/opencode/src/kilocode/agent-manager/protocol.ts": {
     "state": "ported",
     "v2": "packages/schema/src/kilocode/agent-manager.ts",
