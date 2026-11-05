@@ -78,7 +78,10 @@ export function groupModelUsage(models: SessionModelUsage["models"], providers: 
   return [...groups.values()]
 }
 
-export function modelUsageName(model: SessionModelUsage["models"][number], providers: Record<string, Provider>) {
+export function modelUsageName(
+  model: Pick<SessionModelUsage["models"][number], "providerID" | "modelID">,
+  providers: Record<string, Provider>,
+) {
   const provider = providers[model.providerID]
   const id = model.modelID.replace(DATE_SUFFIX, "")
   const name = provider?.models[model.modelID]?.name ?? provider?.models[id]?.name ?? id
@@ -87,4 +90,20 @@ export function modelUsageName(model: SessionModelUsage["models"][number], provi
     .replace(/^[^/]+\//, "")
     .replace(/\s*\([^)]*%\s*off[^)]*\)\s*$/i, "")
     .replace(/^qwen(?=\d)/i, "Qwen ")
+}
+
+/**
+ * Display label for the model a delegated sub-agent stage ran. The observed
+ * model of the child's own transcript wins; when nothing streamed yet, the
+ * session's effective selection stands in. Returns undefined when neither is
+ * resolvable, and the header omits the suffix.
+ */
+export function taskModelLabel(
+  observed: Pick<SessionModelUsage["models"][number], "providerID" | "modelID"> | undefined,
+  selected: Pick<SessionModelUsage["models"][number], "providerID" | "modelID"> | null | undefined,
+  providers: Record<string, Provider>,
+): string | undefined {
+  const model = observed ?? selected ?? undefined
+  if (!model) return undefined
+  return modelUsageName(model, providers)
 }
