@@ -1,4 +1,4 @@
-// The sidebar: history, profile, or one session laid out like main's ChatView (transcript, docks, prompt).
+// The sidebar: history or one session laid out like main's ChatView (transcript, docks, prompt).
 import { Button } from "@kilocode/kilo-ui/button"
 import { showToast } from "@kilocode/kilo-ui/toast"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
@@ -10,10 +10,8 @@ import { getVSCodeAPI } from "../context/vscode"
 import { useV2 } from "./client"
 import { useDisplaySettings } from "./display-settings"
 import { SessionList } from "./history"
-import ProfileView from "../components/profile/ProfileView"
 import { forkText } from "../../../src/agent-manager/fork-handoff"
 import { createLocalTabs } from "./local-tabs"
-import { createProfile } from "./profile"
 import { SessionChanges } from "./session-changes"
 import { SessionTabStrip } from "./session-tabs"
 import { SessionView } from "./session-view"
@@ -24,7 +22,7 @@ export function Chat() {
   const v2 = useV2()
   const language = useLanguage()
   const tabs = createLocalTabs()
-  const [view, setView] = createSignal<"chat" | "history" | "profile">("chat")
+  const [view, setView] = createSignal<"chat" | "history">("chat")
   const [changes, setChanges] = createSignal(false)
   // Display layouts are Kilo-only config keys, so the host reads them. Ask on connect and after every config change.
   const display = useDisplaySettings()
@@ -34,8 +32,6 @@ export function Chat() {
     }),
   )
   onCleanup(v2.data.on("config.updated", () => display.request()))
-  // Owned here, so a running sign-in survives switching views.
-  const profile = createProfile()
   // A turn's changes belong to its tab, so switching tabs returns to that tab's chat.
   createEffect(on(tabs.active, () => setChanges(false), { defer: true }))
   const startSession = () => {
@@ -57,7 +53,6 @@ export function Chat() {
   v2.onCommand((name) => {
     if (name === "newSession") startSession()
     if (name === "history") setView("history")
-    if (name === "profile") setView("profile")
     if (name === "showOpenTabs") {
       setView("chat")
       window.dispatchEvent(new Event("showOpenTabs"))
@@ -161,9 +156,6 @@ export function Chat() {
             <SessionList onOpen={open} />
           </div>
         </div>
-      </Match>
-      <Match when={view() === "profile"}>
-        <ProfileView profile={profile} />
       </Match>
       <Match when={view() === "chat"}>
         <SessionView

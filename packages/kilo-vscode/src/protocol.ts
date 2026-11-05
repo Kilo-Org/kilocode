@@ -206,7 +206,6 @@ export type ToWebview =
       name:
         | "newSession"
         | "history"
-        | "profile"
         | "cycleAgentMode"
         | "cyclePreviousAgentMode"
         | "showOpenTabs"
