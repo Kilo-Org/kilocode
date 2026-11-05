@@ -22,11 +22,12 @@ function denied(exit: Exit.Exit<unknown, unknown>) {
 
 describe("sandbox tool network classification", () => {
   // kilo_port(sandbox:fd6329a01ac1)
-  test("treats a namespaced tool as MCP even when its name matches a built-in tool", () => {
+  test("treats a namespaced tool as MCP unless it is a built-in in the opencode namespace", () => {
     expect(Network.isMcp("session_move", "session")).toBe(true)
-    expect(Network.isMcp("probe_touch", "probe")).toBe(true)
-    expect(Network.isMcp("opencode_custom", "opencode")).toBe(true)
+    expect(Network.isMcp("touch", "probe")).toBe(true)
+    expect(Network.isMcp("custom", "opencode")).toBe(true)
     expect(Network.isMcp("artifact_create", "opencode")).toBe(false)
+    expect(Network.isMcp("list_mcp_resources", "opencode")).toBe(false)
     expect(Network.isMcp("session_move", undefined)).toBe(false)
   })
 
@@ -44,6 +45,20 @@ describe("sandbox tool network classification", () => {
       run(
         profile("deny"),
         Network.tool({ id: "read" }, Effect.sync(() => void (called = true))),
+      ),
+    )
+    expect(called).toBe(true)
+  })
+
+  test("runs an opencode-namespaced built-in under the sandbox profile in deny mode", async () => {
+    let called = false
+    await Effect.runPromise(
+      run(
+        profile("deny"),
+        Network.tool(
+          { id: "opencode_artifact_create", name: "artifact_create" },
+          Effect.sync(() => void (called = true)),
+        ),
       ),
     )
     expect(called).toBe(true)

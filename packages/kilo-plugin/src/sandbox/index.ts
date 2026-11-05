@@ -148,11 +148,12 @@ export const Plugin = define({
           editor.update(item.id, (tool) => {
             const execute = tool.execute
             const id = item.id
-            const mcp = isMcp(id, item.options?.namespace) // kilo_port(sandbox:b534aff3ebec)
+            const name = item.name
+            const mcp = isMcp(name, item.options?.namespace) // kilo_port(sandbox:b534aff3ebec)
             if (mcp) delegated.add(id)
             tool.execute = (input, context) => {
               const launches = new Set<string>()
-              return SandboxPolicy.executeTool(context.sessionID, { id, mcp }, execute(input, context)).pipe(
+              return SandboxPolicy.executeTool(context.sessionID, { id, name, mcp }, execute(input, context)).pipe(
                 Effect.provideService(CurrentCall, context),
                 Effect.provideService(CurrentLaunches, launches),
                 Effect.provideService(CurrentProxyFactory, proxy),
@@ -255,7 +256,8 @@ export const Plugin = define({
   }),
 })
 
-const hidden = new Set(["list_mcp_resources", "read_mcp_resource", "execute"])
+// Effective ids: the registry prefixes a namespaced tool with its namespace.
+const hidden = new Set(["opencode_list_mcp_resources", "opencode_read_mcp_resource", "execute"])
 
 function describe(error: unknown) {
   if (typeof error === "object" && error !== null && "description" in error && typeof error.description === "string")

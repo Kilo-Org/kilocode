@@ -663,6 +663,10 @@ function execute<A, E, R>(sessionID: SessionID, effect: Effect.Effect<A, E, R>) 
   })
 }
 
-export function executeTool<A, E, R>(sessionID: SessionID, tool: { id: string; mcp?: boolean }, effect: Effect.Effect<A, E, R>) {
+export function executeTool<A, E, R>(
+  sessionID: SessionID,
+  tool: { id: string; name?: string; mcp?: boolean },
+  effect: Effect.Effect<A, E, R>,
+) {
   return execute(sessionID, Network.tool(tool, effect))
 }
