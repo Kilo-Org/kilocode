@@ -1,5 +1,6 @@
 import { SessionV1 } from "@opencode-ai/core/v1/session"
-import { Effect, Schema } from "effect"
+import { Effect, Redacted, Schema } from "effect"
+import path from "node:path"
 
 /**
  * Provider-neutral Session Host contract. These types are the boundary the
@@ -82,6 +83,22 @@ export const FailureCode = Schema.Literals([
   "rejected",
   "unavailable",
   "unknown_provider",
+  // Continue-in-Cloud local preconditions and Cloud continuation outcomes.
+  "worktree_dirty",
+  "branch_detached",
+  "branch_no_upstream",
+  "branch_not_pushed",
+  "remote_unsupported",
+  "session_not_in_worktree",
+  "session_busy",
+  "session_changed",
+  "sync_unavailable",
+  "sync_failed",
+  "organization_mismatch",
+  "insufficient_balance",
+  "continuation_incomplete",
+  "creation_in_progress",
+  "operation_key_reuse_mismatch",
 ]).annotate({ identifier: "SessionHostFailureCode" })
 export type FailureCode = Schema.Schema.Type<typeof FailureCode>
 
@@ -306,6 +323,21 @@ export const Agent = Schema.Struct({
 }).annotate({ identifier: "SessionHostAgent" })
 export type Agent = Schema.Schema.Type<typeof Agent>
 
+/**
+ * Continuation agent settings. Unlike `Agent`, the variant may be an empty
+ * string: a local `""` and an absent variant are distinct and must survive the
+ * round trip to Cloud and back.
+ */
+export const ContinuationAgent = Schema.Struct({
+  mode: Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(50)),
+  model: Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(255)),
+  variant: Schema.optional(Schema.String.check(Schema.isMaxLength(50))),
+}).annotate({ identifier: "SessionHostContinuationAgent" })
+export type ContinuationAgent = Schema.Schema.Type<typeof ContinuationAgent>
+
+/** The number of local root sessions one continuation may copy. */
+export const MAX_CONTINUE_SESSIONS = 10
+
 export const ProfileOverrides = Schema.Struct({
   envVars: Schema.optional(Schema.Record(Schema.String, Schema.String)),
   setupCommands: Schema.optional(Schema.Array(Schema.String)),
@@ -404,6 +436,76 @@ export const CreateWorkspaceResult = Schema.Struct({
   replayed: Schema.Boolean,
 }).annotate({ identifier: "SessionHostCreateWorkspaceResult" })
 export type CreateWorkspaceResult = Schema.Schema.Type<typeof CreateWorkspaceResult>
+
+/**
+ * Copy the open root sessions of one local worktree into one hosted workspace.
+ * The CLI owns Git and session validation, mode/model capture, ingest sync,
+ * and the web URL; Cloud owns workspace and destination creation.
+ */
+export const ContinueWorkspaceInput = Schema.Struct({
+  operationKey: Schema.String.check(Schema.isUUID()),
+  directory: Schema.String.check(Schema.isMinLength(1)),
+  sessionIDs: Schema.Array(Schema.String.check(Schema.isMinLength(1))).check(
+    Schema.isMinLength(1),
+    Schema.isMaxLength(MAX_CONTINUE_SESSIONS),
+  ),
+  activeSessionID: Schema.String.check(Schema.isMinLength(1)),
+})
+  .check(
+    Schema.makeFilter((input) => {
+      const unique = new Set(input.sessionIDs)
+      if (unique.size !== input.sessionIDs.length) return "sessionIDs must be unique"
+      if (!unique.has(input.activeSessionID)) return "activeSessionID must be in sessionIDs"
+      if (!path.isAbsolute(input.directory)) return "directory must be an absolute path"
+      return undefined
+    }),
+  )
+  .annotate({ identifier: "SessionHostContinueWorkspaceInput" })
+export type ContinueWorkspaceInput = Schema.Schema.Type<typeof ContinueWorkspaceInput>
+
+export const ContinueWorkspaceSession = Schema.Struct({
+  source: Schema.String,
+  destination: HostedSessionID,
+  agent: ContinuationAgent,
+  modeFallback: Schema.Boolean,
+}).annotate({ identifier: "SessionHostContinueWorkspaceSession" })
+export type ContinueWorkspaceSession = Schema.Schema.Type<typeof ContinueWorkspaceSession>
+
+export const ContinueWorkspaceResult = Schema.Struct({
+  workspace: HostedWorkspaceID,
+  sessions: Schema.Array(ContinueWorkspaceSession),
+  active: HostedSessionID,
+  url: Schema.String,
+  replayed: Schema.Boolean,
+}).annotate({ identifier: "SessionHostContinueWorkspaceResult" })
+export type ContinueWorkspaceResult = Schema.Schema.Type<typeof ContinueWorkspaceResult>
+
+/**
+ * The exact Cloud request body (`continueHostedWorkspace`) that the CLI stores
+ * as `prepared_json` before any dispatch. It is validated once and posted
+ * verbatim on every retry.
+ */
+export const ProviderContinueWorkspaceInput = Schema.Struct({
+  operationKey: Schema.String.check(Schema.isUUID()),
+  clientProvenance: Schema.Literal("agent-manager"),
+  repository: Repository,
+  activeSourceKiloSessionId: Schema.String.check(Schema.isMinLength(1)),
+  sessions: Schema.Array(
+    Schema.Struct({
+      sourceKiloSessionId: Schema.String.check(Schema.isMinLength(1)),
+      agent: ContinuationAgent,
+    }),
+  ).check(Schema.isMinLength(1), Schema.isMaxLength(MAX_CONTINUE_SESSIONS)),
+}).annotate({ identifier: "SessionHostProviderContinueWorkspaceInput" })
+export type ProviderContinueWorkspaceInput = Schema.Schema.Type<typeof ProviderContinueWorkspaceInput>
+
+export const ProviderContinueWorkspaceResult = Schema.Struct({
+  workspace: HostedWorkspaceID,
+  sessions: Schema.Array(ContinueWorkspaceSession),
+  active: HostedSessionID,
+  replayed: Schema.Boolean,
+}).annotate({ identifier: "SessionHostProviderContinueWorkspaceResult" })
+export type ProviderContinueWorkspaceResult = Schema.Schema.Type<typeof ProviderContinueWorkspaceResult>
 
 export const WorkspaceSessionStartBody = Schema.Struct({
   prompt: Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(100_000)),
@@ -524,6 +626,17 @@ export interface Provider {
   readonly getWorkspaceStatus: (input: WorkspaceStatusInput) => Effect.Effect<HostedWorkspaceStatus, HostedFailure>
   readonly deleteWorkspace: (input: WorkspaceDeleteInput) => Effect.Effect<DeleteWorkspaceResult, HostedFailure>
   readonly createWorkspace: (input: CreateWorkspaceInput) => Effect.Effect<CreateWorkspaceResult, HostedFailure>
+  /**
+   * Copy local root sessions into one hosted workspace. The input is the exact
+   * Cloud body; the provider validates it, resolves auth without an
+   * organization, posts it unchanged, and maps the response source order.
+   * `opts.token` pins the dispatch bearer to the credential that already read
+   * the principal, so identity and dispatch never resolve different tokens.
+   */
+  readonly continueWorkspace: (
+    input: ProviderContinueWorkspaceInput,
+    opts?: { readonly token?: Redacted.Redacted },
+  ) => Effect.Effect<ProviderContinueWorkspaceResult, HostedFailure>
   readonly startWorkspaceSession: (
     input: WorkspaceSessionStartInput,
   ) => Effect.Effect<WorkspaceSessionStartResult, HostedFailure>

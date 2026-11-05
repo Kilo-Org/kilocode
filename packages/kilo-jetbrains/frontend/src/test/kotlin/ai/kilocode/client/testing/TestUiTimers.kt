@@ -9,6 +9,8 @@ class TestUiTimers : UiTimerSource {
     private val timers = linkedSetOf<TestTimer>()
     private var time = 0L
 
+    val pending: Int get() = timers.size
+
     override fun now(): Long = time
 
     override fun timer(ms: Int, repeats: Boolean, action: () -> Unit): UiTimer {

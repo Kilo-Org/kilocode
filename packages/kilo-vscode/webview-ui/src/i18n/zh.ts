@@ -937,6 +937,8 @@ export const dict = {
   "settings.experimental.conversationPromptHistory.title": "按对话区分的提示历史",
   "settings.experimental.conversationPromptHistory.description":
     "为每个对话单独保存提示历史(ArrowUp/ArrowDown),而不是在所有对话间共享同一份。",
+  "settings.experimental.agentManagerSplash.title": "Agent Manager 欢迎页",
+  "settings.experimental.agentManagerSplash.description": "试用带有工作流示例的新版 Agent Manager 介绍页。立即生效。",
   "settings.experimental.claudeMigration.title": "Claude Code 迁移",
   "settings.experimental.claudeMigration.description":
     "一次性导入受支持的全局 CLAUDE.md 指令、简单技能和已禁用的 MCP 定义。不会修改原始 Claude 文件；启用后请重启后端。",

@@ -10,6 +10,7 @@ export async function harness<T extends { type: string }>() {
     "document",
     "navigator",
     "Node",
+    "NodeFilter",
     "Element",
     "HTMLElement",
     "HTMLHeadElement",

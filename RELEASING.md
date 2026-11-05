@@ -64,6 +64,7 @@ Downloads all build artifacts and publishes to every distribution channel:
 - Publishes platform-specific binary packages to **npm** (e.g. `@kilocode/cli-linux-x64`, `@kilocode/cli-darwin-arm64`, etc.).
 - Publishes the main `@kilocode/cli` package to **npm** with optional dependencies on the binary packages.
 - Builds and pushes a multi-arch **Docker image** (`ghcr.io/kilo-org/kilocode`) to GitHub Container Registry (linux/amd64 + linux/arm64).
+- Builds and pushes the image's **OpenShell variant** (`ghcr.io/kilo-org/kilocode:<version>-openshell` and `:latest-openshell`) from the Dockerfile's `openshell` stage, for the same platforms.
 
 #### SDK (`@kilocode/sdk`)
 
