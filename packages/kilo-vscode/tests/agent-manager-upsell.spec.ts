@@ -6,6 +6,13 @@ async function scene(page: Page, detail: Record<string, boolean>) {
 }
 
 const card = (page: Page) => page.locator(".agent-manager-upsell")
+async function arrow(page: Page) {
+  const button = card(page).locator(".agent-manager-upsell-primary")
+  const color = await button.evaluate((node) => getComputedStyle(node).color)
+  expect(color).toBe("rgb(22, 23, 26)")
+  await expect(button.locator('[data-component="icon"]')).toHaveCSS("color", color)
+  await expect(button.locator('[data-slot="icon-svg"]')).toHaveCSS("color", color)
+}
 const actions = (page: Page) =>
   page.evaluate(() =>
     (window as Window & { upsell: WebviewMessage[] }).upsell
@@ -312,6 +319,7 @@ for (const theme of ["light-modern", "hc-black", "hc-light"]) {
     }))
     expect(colors.background).toContain("gradient")
     expect(colors.text).not.toBe("rgba(0, 0, 0, 0)")
+    await arrow(page)
     await page.screenshot({ path: info.outputPath(`final-${theme}.png`) })
   })
 }
@@ -323,6 +331,7 @@ for (const width of [200, 297, 430]) {
     await page.goto("/iframe.html?id=chat--chat-agent-manager-upsell&viewMode=story")
     await expect(card(page)).toBeVisible()
     await expect(card(page)).toHaveCSS("animation-name", "none")
+    await arrow(page)
     const bounds = await card(page).evaluate((node) => ({
       width: node.clientWidth,
       scroll: node.scrollWidth,

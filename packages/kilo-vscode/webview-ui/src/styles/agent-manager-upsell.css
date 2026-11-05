@@ -126,6 +126,7 @@
   background: #efd35a;
   color: #16171a;
 }
+.agent-manager-upsell .agent-manager-upsell-primary [data-component="icon"],
 .agent-manager-upsell .agent-manager-upsell-primary [data-slot="icon-svg"] {
   color: inherit;
 }
