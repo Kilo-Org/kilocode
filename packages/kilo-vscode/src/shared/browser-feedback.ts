@@ -275,6 +275,18 @@ export function feedbackMetadata(
   }
 }
 
+/**
+ * The prompt for a message with browser references: the feedback Markdown first and the user's text last, with the
+ * structured references in metadata so the transcript can show them as cards again (see `partFeedback`).
+ */
+export function browserPrompt(text: string, references: BrowserReference[]) {
+  const data = browserFeedbackData(references)
+  return {
+    text: [data ? formatBrowserFeedback(data.references) : "", text.trim()].filter(Boolean).join("\n\n"),
+    metadata: feedbackMetadata(undefined, data),
+  }
+}
+
 export function partFeedback(metadata: unknown, content: string): FeedbackView | undefined {
   const root = record(metadata)
   const kilo = record(root?.kilo)

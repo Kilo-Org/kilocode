@@ -18,6 +18,7 @@ import { createPanel, PANEL_TYPE } from "./agent-manager/panel"
 import { ensureCommandsSkipShell } from "./agent-manager/terminal-host"
 import { VscodeHost } from "./agent-manager/vscode-host"
 import { BrowserTabProvider } from "./browser-tab/BrowserTabProvider"
+import { editorTabOwns, setEditorTabs, sidebarSession } from "./browser-tab/sidebar-session"
 import { chat } from "./chat"
 import { commitMessageCommand, commitMessageLanguage, connect, type GitExports } from "./commit-message"
 import { createCostAlerts } from "./cost-alert"
@@ -34,7 +35,7 @@ import {
 import { createConnection } from "./services/autocomplete/connection"
 import { settings } from "./settings-panel"
 import { createShutdown } from "./shutdown"
-import { formatBrowserFeedback, type BrowserReference } from "./shared/browser-feedback"
+import type { BrowserReference } from "./shared/browser-feedback"
 import { toolDiff } from "./tool-diff"
 
 let shutdownExtension: (() => Promise<void>) | undefined
@@ -166,16 +167,38 @@ export function activate(context: ExtensionContext) {
   const autocomplete = createConnection({ server, directory })
   context.subscriptions.push({ dispose: autocomplete.dispose })
   registerAutocompleteProvider(context, autocomplete)
-  const view = chat({ context, server, directory, trackCostSession: alerts.track, diff: diffs })
-  // The editor-tab Integrated Browser serves sessions of the sidebar's directory. It registers before the Agent
-  // Manager, so a request without a project resolves here and a worktree request still resolves to the panel.
-  const browserTab = new BrowserTabProvider(
+  let browserTab: BrowserTabProvider | undefined
+  const view = chat({
+    context,
+    server,
+    directory,
+    trackCostSession: alerts.track,
+    diff: diffs,
+    openBrowser: (sessionId, url) => browserTab?.openUrl(sessionId, url) ?? false,
+  })
+  // The Agent Manager binds first and skips the session the sidebar is showing and sessions with an open editor tab,
+  // so a sidebar session opens the editor tab even when the panel has the same directory open.
+  const agentHost = new VscodeHost(context, { server, directory })
+  let agentManagerRef: AgentManagerProvider | undefined
+  const agentPanel = createPanel({
+    context,
+    server,
+    directory,
+    trackCostSession: alerts.track,
+    saveImageDirectory: () => agentManagerRef?.imageDirectory(),
+  })
+  const agentManager = new AgentManagerProvider(agentHost, connection, agentPanel, undefined, broker)
+  agentManagerRef = agentManager
+  agentManager.onBrowserDebug = (...args) => output.appendLine(`Browser AM: ${args.map((item) => String(item)).join(" ")}`)
+  browserTab = new BrowserTabProvider(
     context.extensionUri,
     { browser: broker, version: (context.extension.packageJSON as { version?: string }).version },
     {
       enabled: () => integratedBrowserEnabled() && workspace.isTrusted,
       trusted: () => workspace.isTrusted,
+      // The tab serves the session the sidebar shows, and keeps serving a session whose tab is still open.
       resolve: (route) =>
+        editorTabOwns(route.sessionId) &&
         samePath(canonicalizePath(route.directory), canonicalizePath(directory))
           ? { sessionId: route.sessionId, directory: route.directory }
           : undefined,
@@ -191,22 +214,12 @@ export function activate(context: ExtensionContext) {
         return answer === allow
       },
       reference: (_sessionId, value: BrowserReference) =>
-        void view.post({ type: "browserReference", text: formatBrowserFeedback([value]), reference: value }),
+        void view.post({ type: "browserReference", reference: value }),
       log: (...args) => output.appendLine(`Browser tab: ${args.map((item) => String(item)).join(" ")}`),
     },
   )
-  context.subscriptions.push({ dispose: () => browserTab.dispose() })
-  const agentHost = new VscodeHost(context, { server, directory })
-  let agentManagerRef: AgentManagerProvider | undefined
-  const agentPanel = createPanel({
-    context,
-    server,
-    directory,
-    trackCostSession: alerts.track,
-    saveImageDirectory: () => agentManagerRef?.imageDirectory(),
-  })
-  const agentManager = new AgentManagerProvider(agentHost, connection, agentPanel)
-  agentManagerRef = agentManager
+  setEditorTabs((sessionId) => browserTab?.has(sessionId) === true)
+  context.subscriptions.push({ dispose: () => browserTab?.dispose() })
   // The Settings panel edits Agent Manager project settings through the provider's shared handler, so it is created
   // after the provider and receives a lazy getter.
   const panel = settings({
@@ -291,7 +304,7 @@ export function activate(context: ExtensionContext) {
     ),
     // The webview reconnects on its own: its event stream fails, and the next request starts a new server.
     commands.registerCommand("kilo-code.v2.restartServer", () => server.stop()),
-    commands.registerCommand("kilo-code.v2.openBrowser", () => browserTab.openLast()),
+    commands.registerCommand("kilo-code.v2.openBrowser", () => browserTab?.openFor(sidebarSession())),
     // Claude Code compatibility and the extra CA certificates are server start environment, so a change needs a new
     // server. The next request starts one with the current settings.
     workspace.onDidChangeConfiguration((event) => {
@@ -302,6 +315,7 @@ export function activate(context: ExtensionContext) {
         event.affectsConfiguration("kilo-code.v2.integratedBrowser")
       )
         void server.stop()
+      if (event.affectsConfiguration("kilo-code.v2.integratedBrowser")) agentManager.browserAutomationChanged()
     }),
     window.registerWebviewPanelSerializer(PANEL_TYPE, {
       deserializeWebviewPanel: async (restored) => agentManager.deserializePanel(restored),

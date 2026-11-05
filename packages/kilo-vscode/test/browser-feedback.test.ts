@@ -1,6 +1,7 @@
 import { describe, expect, it } from "bun:test"
 import {
   browserFeedbackData,
+  browserPrompt,
   formatBrowserFeedback,
   mergeBrowserReferences,
   partFeedback,
@@ -102,5 +103,25 @@ describe("browser feedback metadata", () => {
       browserFeedback: browser,
       body: "Do both",
     })
+  })
+})
+
+describe("browser prompt", () => {
+  it("sends the references first and the user's text last, and the transcript splits them again", () => {
+    const prompt = browserPrompt("  Make this button blue  ", [reference()])
+    expect(prompt.text.startsWith("## Browser Feedback")).toBe(true)
+    expect(prompt.text.endsWith("\n\nMake this button blue")).toBe(true)
+    const view = partFeedback(prompt.metadata, prompt.text)
+    expect(view?.browserFeedback?.references.map((item) => item.selector)).toEqual(["main > button.save"])
+    expect(view?.body).toBe("Make this button blue")
+  })
+
+  it("sends references alone with an empty body", () => {
+    const prompt = browserPrompt("", [reference()])
+    expect(partFeedback(prompt.metadata, prompt.text)?.body).toBe("")
+  })
+
+  it("sends plain text without metadata when there are no references", () => {
+    expect(browserPrompt(" hello ", [])).toEqual({ text: "hello", metadata: undefined })
   })
 })

@@ -42,6 +42,10 @@ import { runningFromEvent } from "../session-status"
 import { WorktreeImporter } from "./worktree-importer"
 import { SessionTerminalManager } from "./SessionTerminalManager"
 import { createTerminalHost } from "./terminal-host"
+import { shouldOpenLinkInIntegratedBrowser } from "../browser-links"
+import { createBrowserLifecycle } from "./browser-lifecycle"
+import { editorTabOwns } from "../browser-tab/sidebar-session"
+import type { BrowserBroker } from "../services/browser-automation"
 import { TerminalRouter } from "./terminal-routing"
 import { acquirePtyCleanup } from "./pty-cleanup"
 import { PtyRelay } from "./pty-relay"
@@ -119,6 +123,8 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
   public readonly scripts: ReturnType<typeof createScriptTerminalRuntime>
   public readonly run: RunController
   public stateReady: Promise<void> | undefined
+  public readonly browser: ReturnType<typeof createBrowserLifecycle>
+  public onBrowserDebug?: (...args: unknown[]) => void
   public readonly statsPoller: GitStatsPoller
   public readonly projectPollers: ProjectPollers
   public readonly prBridge: ReturnType<typeof createPollers>["pr"]
@@ -158,6 +164,7 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
     public readonly connection: AgentManagerConnection,
     public readonly panelHost: ReturnType<typeof createPanel>,
     binary: GitExecutable | string = "git",
+    browser?: BrowserBroker,
   ) {
     this.outputChannel = host.createOutput("Kilo Agent Manager")
     this.terminalManager = new SessionTerminalManager(
@@ -229,11 +236,24 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
       push: () => this.pushProjects(),
       pushState: (ctx) => this.pushState(ctx),
       changed: () => this.onWorkspaceChanged(),
-      removed: () => undefined,
+      removed: (id) => this.browser.closeProject(id),
       selected: (target) => this.postToWebview({ type: "agentManager.selectionActivated", target }),
       post: (message) => this.postToWebview(message),
     })
     this.contexts = wiring.contexts
+    // One browser page per Agent Manager session. The sidebar editor tab uses the same broker instance.
+    this.browser = createBrowserLifecycle({
+      browser,
+      host,
+      contexts: () => this.contexts,
+      post: (message) => this.postToWebview(message),
+      openPanel: () => this.openPanel(true),
+      editorTab: editorTabOwns,
+      log: (...args) => {
+        this.log(...args)
+        this.onBrowserDebug?.(...args)
+      },
+    })
     this.settings = wiring.settings
     this.projects = wiring.messages
     this.unsubProjects = () => wiring.dispose()
@@ -382,6 +402,16 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
     this.outputChannel.appendLine(`${new Date().toISOString()} ${formatLog(args)}`)
   }
 
+  public browserAutomation(): boolean {
+    return this.host.browserAutomation()
+  }
+
+  /** The Integrated Browser setting changed: close its pages when disabled and republish availability. */
+  public browserAutomationChanged(): void {
+    if (!this.host.browserAutomation()) void this.browser.closeAll().catch((error) => this.log(error))
+    if (this.context) this.pushState(this.context)
+  }
+
   public openPanel(preserveFocus?: boolean): void {
     if (this.panel) {
       const panel = this.panel
@@ -415,6 +445,7 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
       previous.dispose()
     }
     this.panel = panel
+    this.browser.attach(panel)
     void this.statsPoller
     for (const poller of [this.statsPoller, this.projectPollers]) poller.setVisible(panel.visible)
     void this.diffs.setVisible(panel.visible)
@@ -508,9 +539,28 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
   }
 
   public async handlePanelMessage(message: { type: string } & Record<string, unknown>): Promise<void> {
+    if (message.type === "agentManager.openWebLink" && typeof message.url === "string") {
+      this.openWebLink(message.url, message.external === true)
+      return
+    }
+    if (this.browser.handle(message as unknown as AgentManagerInMessage)) return
     if (this.prBridge.handleMessage(message)) return
     if (this.relay.handle(message as unknown as AgentManagerInMessage)) return
     await handleMessage(message as unknown as AgentManagerInMessage, this.messageHost)
+  }
+
+  /**
+   * Chat links open in the Integrated Browser for the visible session when it is enabled, else externally.
+   * Shift-click (`external`) always opens the system browser.
+   */
+  private openWebLink(url: string, external: boolean): void {
+    const session = this.visibleSession
+    const project = this.projectScope.current()?.id ?? this.contexts.active()?.id
+    if (!external && session && project && shouldOpenLinkInIntegratedBrowser(url)) {
+      void this.browser.handle({ type: "agentManager.browser.open", sessionId: session, projectId: project, url })
+      return
+    }
+    this.host.openExternal(url)
   }
 
   public hostSource(): ProviderHostsSource {
@@ -797,6 +847,7 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
   public async onCloseSession(sessionId: string): Promise<null> {
     const ctx = this.context
     if (!ctx) return null
+    this.browser.close(sessionId, ctx.id)
     return closeLifecycleSession(ctx, this.lifecycleHost, sessionId)
   }
 
@@ -962,6 +1013,8 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
   }
 
   public onWorkspaceChanged(): void {
+    // A workspace switch drops every page the old workspace could still show.
+    void this.browser.closeAll().catch((error) => this.log(error))
     onWorkspaceChanged(this.stateHost())
   }
 
@@ -987,6 +1040,7 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
   }
 
   public postToWebview(message: AgentManagerOutMessage): void {
+
     if (message.type !== "agentManager.worktreeSetup" || message.projectId) {
       this.panel?.postMessage(message)
       return
@@ -1079,10 +1133,10 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
     return shutdown(this.api())
   }
 
-  public dispose(): Promise<void> {
+  public async dispose(): Promise<void> {
     this.unsubAutoApprove()
     this.relay.dispose()
-    return this.shutdown()
+    await Promise.all([this.browser.dispose(), this.shutdown()])
   }
 
   public syncWorktrees(): Promise<void> {

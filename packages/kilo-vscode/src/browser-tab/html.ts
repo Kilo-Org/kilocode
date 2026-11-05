@@ -5,7 +5,8 @@ import type { Uri, Webview } from "vscode"
 
 const SIZES = [10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24]
 
-const DEVTOOLS = ["http://127.0.0.1:*", "http://localhost:*"].join(" ")
+/** The loopback origins the browser broker serves DevTools from. */
+export const DEVTOOLS = ["http://127.0.0.1:*", "http://localhost:*"].join(" ")
 
 function escaped(text: string): string {
   return text.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;")

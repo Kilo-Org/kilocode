@@ -74,7 +74,7 @@ export type ContentPartProps = {
   message: SessionMessageAssistant
   index: number
   directory?: string
-  open?: (uri: string) => void
+  open?: (uri: string, external?: boolean) => void
   copy?: boolean
   settled?: boolean
   defaultOpen?: boolean
@@ -139,7 +139,7 @@ function TextContent(props: {
   copy?: boolean
   throughput?: JSX.Element
   turnMeta?: JSX.Element
-  open?: (uri: string) => void
+  open?: (uri: string, external?: boolean) => void
 }) {
   const i18n = useI18n()
   const clipboard = useClipboard()
@@ -159,7 +159,8 @@ function TextContent(props: {
     const href = anchor?.getAttribute("href")
     if (!href || !/^https?:\/\//i.test(href)) return
     event.preventDefault()
-    props.open(href)
+    // Shift-click asks for the system browser even when the host routes links into the Integrated Browser.
+    props.open(href, event.shiftKey)
   }
   return (
     <Show when={text()}>
@@ -233,7 +234,7 @@ export const ToolRegistry = {
 function ToolContent(props: {
   item: SessionMessageAssistantTool
   directory?: string
-  open?: (uri: string) => void
+  open?: (uri: string, external?: boolean) => void
   defaultOpen?: boolean
   actions?: ToolActions
   hideDetails?: boolean
@@ -492,12 +493,12 @@ ToolRegistry.register({
   },
 })
 
-function WebfetchMeta(props: { url: string; open?: (uri: string) => void }) {
+function WebfetchMeta(props: { url: string; open?: (uri: string, external?: boolean) => void }) {
   const open = (event: MouseEvent) => {
     event.stopPropagation()
     if (!props.open) return
     event.preventDefault()
-    props.open(props.url)
+    props.open(props.url, event.shiftKey)
   }
   return (
     <span data-slot="webfetch-meta">
@@ -1474,6 +1475,10 @@ ToolRegistry.register({
 export function UserMessageDisplay(props: {
   message: SessionMessageUser
   copyLabel?: string
+  /** Text Copy writes when the bubble shows less than the message holds, for example structured references. */
+  copyText?: string
+  /** Content shown in the bubble above the text, for example Integrated Browser element references. */
+  header?: JSX.Element
   /** Shows a fork action beside Copy, for surfaces that can fork the session from this message. */
   onFork?: () => void
 }) {
@@ -1485,7 +1490,7 @@ export function UserMessageDisplay(props: {
   const stamp = () =>
     new Intl.DateTimeFormat(i18n.locale(), { timeStyle: "short" }).format(new Date(props.message.time.created))
   const copy = async () => {
-    await clipboard.write(props.message.text)
+    await clipboard.write(props.copyText ?? props.message.text)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
   }
@@ -1528,8 +1533,9 @@ export function UserMessageDisplay(props: {
           </For>
         </div>
       </Show>
-      <Show when={props.message.text}>
+      <Show when={props.message.text || props.header}>
         <div data-slot="user-message-body">
+          {props.header}
           <Show when={props.message.text}>
             <div data-slot="user-message-text" dir="auto">
               {props.message.text}

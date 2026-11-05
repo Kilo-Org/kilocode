@@ -5,6 +5,14 @@
  * the webview reads sessions from the v2 server through the relay.
  */
 
+import type { BrowserElement } from "../../../../src/services/browser-automation"
+import type {
+  BrowserCursor,
+  BrowserFrame,
+  BrowserInteraction,
+  BrowserViewIdentity,
+  BrowserViewport,
+} from "../../../../src/shared/browser-stream"
 import type { SessionInfo } from "@opencode/client"
 import type {
   PRCommentRequest,
@@ -337,6 +345,7 @@ export interface AgentManagerStateMessage {
   terminalDestination?: TerminalDestination
   terminalFont?: TerminalFont
   restricted?: boolean
+  browserAutomation?: boolean
 }
 
 /** A registered project as shown in the sidebar. */
@@ -535,6 +544,91 @@ export interface AgentManagerWorktreeDiffLoadingMessage {
 /** Source-level diff notice. */
 export type DiffViewerNotice = "snapshots-disabled"
 
+export interface BrowserStateMessage {
+  type: "agentManager.browserState"
+  browserId: string
+  projectId?: string
+  sessionId: string
+  navigation?: number
+  status: "starting" | "ready" | "loading" | "error" | "closed"
+  inspecting?: boolean
+  url?: string
+  title?: string
+  errors: number
+  logs?: string[]
+  error?: string
+  missing?: "chrome" | "chromium"
+  frameError?: string
+  back?: boolean
+  forward?: boolean
+}
+
+export interface BrowserInspectionMessage {
+  type: "agentManager.browserInspection"
+  error?: string
+  requestId: string
+  projectId?: string
+  sessionId: string
+  url?: string
+  title?: string
+  element?: BrowserElement
+  logs: string[]
+  hover?: boolean
+}
+
+export interface BrowserFrameMessage extends BrowserFrame {
+  type: "agentManager.browserFrame"
+  projectId?: string
+  sessionId: string
+}
+
+export interface BrowserCursorMessage extends BrowserCursor {
+  type: "agentManager.browserCursor"
+  projectId?: string
+  sessionId: string
+}
+
+export interface BrowserDevtoolsMessage {
+  type: "agentManager.browserDevtools"
+  browserId: string
+  projectId?: string
+  sessionId: string
+  url: string
+}
+
+export interface BrowserRequestMessage {
+  type:
+    | "agentManager.browser.open"
+    | "agentManager.browser.refresh"
+    | "agentManager.browser.back"
+    | "agentManager.browser.forward"
+    | "agentManager.browser.close"
+    | "agentManager.browser.state"
+    | "agentManager.browser.inspect"
+    | "agentManager.browser.input"
+    | "agentManager.browser.devtools"
+    | "agentManager.browser.viewport"
+    | "agentManager.browser.interact"
+    | "agentManager.browser.acknowledge"
+  sessionId: string
+  requestId?: string
+  projectId?: string
+  browserId?: string
+  navigation?: number
+  viewport?: BrowserViewport
+  identity?: BrowserViewIdentity
+  event?: BrowserInteraction
+  sequence?: number
+  url?: string
+  x?: number
+  y?: number
+  width?: number
+  height?: number
+  hover?: boolean
+  click?: boolean
+  theme?: "dark" | "light"
+}
+
 export interface AgentManagerWorktreeDiffNoticeMessage {
   type: "agentManager.worktreeDiffNotice"
   projectId?: string
@@ -651,6 +745,11 @@ export interface AgentManagerFocusContextRequestedMessage {
 }
 
 export type AgentManagerExtensionMessage =
+  | BrowserStateMessage
+  | BrowserInspectionMessage
+  | BrowserFrameMessage
+  | BrowserCursorMessage
+  | BrowserDevtoolsMessage
   | AgentManagerRepoInfoMessage
   | AgentManagerWorktreeSetupMessage
   | AgentManagerSessionAddedMessage
@@ -1031,6 +1130,12 @@ export interface AgentManagerOpenFileRequest {
   column?: number
 }
 
+/** Open a URL in the user's default browser. */
+export interface AgentManagerOpenExternalRequest {
+  type: "agentManager.openExternal"
+  url: string
+}
+
 /** Copy a file's absolute path to the clipboard for a specific session. */
 export interface AgentManagerCopyFilePathRequest {
   type: "agentManager.copyFilePath"
@@ -1325,6 +1430,8 @@ export interface MoveSectionRequest {
 }
 
 export type AgentManagerWebviewMessage =
+  | BrowserRequestMessage
+  | AgentManagerOpenExternalRequest
   | BaseUpdateRequest
   | PRMergeRequest
   | CreateWorktreeRequest
