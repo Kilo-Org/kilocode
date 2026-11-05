@@ -6,6 +6,7 @@ import { define } from "@opencode/plugin/effect/plugin"
 import type { Permission } from "@opencode/schema/permission"
 import { Tool } from "@opencode/schema/tool"
 import { Effect, Schema } from "effect"
+import { readEndpoint, takeEndpoint, type Endpoint } from "../broker"
 import DESCRIPTION from "./browser-open.txt"
 
 const Parameters = Schema.Struct({
@@ -35,41 +36,14 @@ type Meta = {
 
 const TIMEOUT = 60_000
 
-export function broker(): { url: URL; token: string } | undefined {
-  const base = process.env.KILO_BROWSER_BROKER_URL
-  const token = process.env.KILO_BROWSER_BROKER_TOKEN
-  if (!base || !token || !URL.canParse(base)) return undefined
-  const url = new URL(base)
-  if (
-    url.protocol !== "http:" ||
-    url.hostname !== "127.0.0.1" ||
-    !url.port ||
-    url.username ||
-    url.password ||
-    url.pathname !== "/" ||
-    url.search ||
-    url.hash
-  ) {
-    return undefined
-  }
-  return { url, token }
+const captured: { endpoint?: Endpoint } = {}
+
+export function broker(): Endpoint | undefined {
+  return readEndpoint("KILO_BROWSER_BROKER")
 }
 
-const captured: { endpoint?: { url: URL; token: string } } = {}
-
-/**
- * Read the broker endpoint once and remove it from the process environment. Tools and MCP servers inherit this
- * environment, so leaving the token there would let a shell command drive the browser without the permission prompt.
- * The plugin effect runs again for each Location and after each plugin reload, so later calls return the captured
- * endpoint.
- */
 export function takeBroker() {
-  const endpoint = broker()
-  if (!endpoint) return captured.endpoint
-  captured.endpoint = endpoint
-  delete process.env.KILO_BROWSER_BROKER_URL
-  delete process.env.KILO_BROWSER_BROKER_TOKEN
-  return endpoint
+  return takeEndpoint("KILO_BROWSER_BROKER", captured)
 }
 
 /**

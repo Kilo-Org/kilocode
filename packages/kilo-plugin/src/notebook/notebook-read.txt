@@ -1,0 +1,2 @@
+Read a live VS Code notebook and return an opaque revision for later edits.
+Use a request-directory-relative path or a safe absolute path inside that directory. Outputs are omitted unless include_outputs is true. Use notebook_edit to create a notebook or change its cells, and notebook_execute to run a cell and generate its outputs.
