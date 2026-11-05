@@ -441,7 +441,7 @@ export class Runtime {
   /** VS Code supplies machine-local project consent before indexing can start. */
   async consent(enabled: boolean) {
     if (this.env["KILO_PLATFORM"] !== "vscode") return
-    const project = this.project ?? (await this.host.primary(this.host.directory).catch(() => undefined)) ?? this.host.directory
+    const project = await this.resolveProject()
     if (consent.get(project) === enabled) return
     consent.set(project, enabled)
     await Promise.all(
@@ -449,6 +449,12 @@ export class Runtime {
         .filter((runtime) => (runtime.project ?? runtime.host.directory) === project || runtime === this)
         .map((runtime) => runtime.restart()),
     )
+  }
+
+  /** The primary checkout that keys VS Code consent: a linked worktree shares the consent of its main checkout. */
+  async resolveProject() {
+    this.project ??= (await this.host.primary(this.host.directory).catch(() => undefined)) ?? this.host.directory
+    return this.project
   }
 
   /** True when VS Code has supplied consent for the project of this Location. */

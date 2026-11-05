@@ -6,12 +6,15 @@ import { FSUtil } from "@opencode/util/fs-util"
 import { Global } from "@opencode/util/global"
 import { LayerNode } from "@opencode/util/effect/layer-node"
 import { Effect, Stream } from "effect"
+import { $ } from "bun"
 import { mkdtemp, realpath, rm } from "node:fs/promises"
 import os from "node:os"
 import path from "node:path"
 import { KiloGatewayAccounts } from "../src/gateway/accounts"
 import { KiloIndexingPlugin } from "../src/indexing"
 import { IndexingWorker } from "../src/indexing/indexing-worker-client"
+import { primaryWorktree } from "../src/indexing/primary-worktree"
+import { IndexingRuntime } from "../src/indexing/runtime"
 
 const dirs: string[] = []
 // A shell inside VS Code exports KILO_PLATFORM=vscode, which gates indexing on consent.
@@ -21,6 +24,8 @@ afterAll(() => {
   if (platform !== undefined) process.env.KILO_PLATFORM = platform
 })
 afterEach(async () => {
+  delete process.env.KILO_PLATFORM
+  IndexingRuntime.resetConsent()
   IndexingWorker.override()
   await Promise.all(dirs.splice(0).map((dir) => rm(dir, { recursive: true, force: true })))
 })
@@ -32,8 +37,8 @@ type Editor = {
 
 // The plugin against a stand-in plugin context: one config document, a fake engine, and a tool editor that records
 // what the tool transform adds and how it changes glob and grep.
-async function run(indexing: KiloConfigPolicy.Info["indexing"]) {
-  const directory = await realpath(await mkdtemp(path.join(os.tmpdir(), "kilo-indexing-plugin-")))
+async function run(indexing: KiloConfigPolicy.Info["indexing"], location?: string) {
+  const directory = location ?? (await realpath(await mkdtemp(path.join(os.tmpdir(), "kilo-indexing-plugin-"))))
   dirs.push(directory)
   IndexingWorker.override(() => ({
     init: async () => ({ state: "Complete", message: "Index up-to-date.", processedFiles: 0, totalFiles: 0, percent: 100 }),
@@ -98,4 +103,36 @@ test("offers semantic_search from the indexing config before the index is ready"
 test("does not offer semantic_search while indexing is disabled", async () => {
   expect(await run({ provider: "ollama" })).toEqual({ added: [], updated: {} })
   expect(await run(undefined)).toEqual({ added: [], updated: {} })
+})
+
+test("a new worktree session in VS Code gets semantic_search from the consent of its main checkout", async () => {
+  const root = await realpath(await mkdtemp(path.join(os.tmpdir(), "kilo-indexing-plugin-wt-")))
+  dirs.push(root)
+  const main = path.join(root, "main")
+  const linked = path.join(root, "linked")
+  await $`git init -q -b main ${main}`.quiet()
+  await Bun.write(path.join(main, "file.ts"), "export const value = 1\n")
+  await $`git -C ${main} add -A && git -C ${main} -c user.name=t -c user.email=t@t commit -qm init`.quiet()
+  await $`git -C ${main} worktree add -q ${linked}`.quiet()
+  process.env.KILO_PLATFORM = "vscode"
+  // Consent is granted once, for the main checkout, as the extension does.
+  const granting = new IndexingRuntime.Runtime({
+    directory: main,
+    home: "/nonexistent-home",
+    root: path.join(root, ".index"),
+    config: async () => undefined,
+    auth: async () => ({}),
+    catalog: async () => ({ defaultModel: "", models: [], aliases: {} }),
+    lancedb: async () => {},
+    primary: (dir) => Effect.runPromise(primaryWorktree(dir)),
+    publish: async () => {},
+    warning: () => {},
+    log: () => {},
+    env: { KILO_PLATFORM: "vscode" },
+  })
+  await granting.consent(true)
+  await granting.dispose()
+
+  const state = await run({ provider: "ollama" }, linked)
+  expect(state.added).toEqual(["semantic_search"])
 })

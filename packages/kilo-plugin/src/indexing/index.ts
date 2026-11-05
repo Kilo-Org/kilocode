@@ -153,6 +153,8 @@ export const KiloIndexingPlugin = define<FSUtil.Service | Global.Service | Scope
     const initial = yield* indexing()
     state.key = JSON.stringify(initial)
     state.enabled = initial?.enabled
+    // A new worktree session plans its first step at once, so resolve the checkout that keys consent first.
+    if (platform === "vscode") yield* Effect.promise(() => runtime.resolveProject())
     state.visible = visible()
     // The tool is offered while indexing is enabled for the Location (VS Code: while
     // the project has consent), and glob and grep then point to it.
