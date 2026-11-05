@@ -69,6 +69,15 @@ export function textDiff(prev: string, next: string): { start: number; oldEnd: n
     oldEnd--
     newEnd--
   }
+  // A repeated character pulls the common prefix forward when the user types at a paste chip's edge. Move a pure
+  // insertion back over the run, so the edited span starts before the chip and the chip keeps its backing text.
+  if (oldEnd === start) {
+    while (start > 0 && prev.charCodeAt(start - 1) === next.charCodeAt(newEnd - 1)) {
+      start--
+      newEnd--
+    }
+    oldEnd = start
+  }
   return { start, oldEnd, newEnd, delta: newEnd - oldEnd }
 }
 

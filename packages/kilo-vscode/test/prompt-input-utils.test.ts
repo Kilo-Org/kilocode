@@ -85,6 +85,15 @@ describe("textDiff", () => {
   it("locates a replacement", () => {
     expect(textDiff("abcd", "abXYd")).toEqual({ start: 2, oldEnd: 3, newEnd: 4, delta: 1 })
   })
+
+  it("moves an insertion before a repeated character", () => {
+    expect(textDiff("[Pasted ~5 lines]", "[[Pasted ~5 lines]")).toEqual({
+      start: 0,
+      oldEnd: 0,
+      newEnd: 1,
+      delta: 1,
+    })
+  })
 })
 
 describe("shiftPastes", () => {
@@ -100,6 +109,13 @@ describe("shiftPastes", () => {
     const next = "[Pasted ~5 lines] tail more"
     const [moved] = shiftPastes([paste(1, 0, "body")], prev, next)
     expect(moved).toEqual(paste(1, 0, "body"))
+  })
+
+  it("keeps the backing when the user types at the chip start", () => {
+    const prev = "[Pasted ~5 lines]"
+    const next = "[[Pasted ~5 lines]"
+    const [moved] = shiftPastes([paste(1, 0, "body")], prev, next)
+    expect(moved).toEqual(paste(1, 1, "body"))
   })
 
   it("moves a block after an insertion", () => {
@@ -299,6 +315,11 @@ describe("expandPastes", () => {
 
   it("leaves placeholder-looking text with no backing unchanged", () => {
     expect(expandPastes("typed [Pasted ~5 lines]", [])).toBe("typed [Pasted ~5 lines]")
+  })
+
+  it("expands a backed block and leaves an extra literal placeholder alone", () => {
+    const text = "[Pasted ~5 lines] and [Pasted ~5 lines]"
+    expect(expandPastes(text, [paste(1, 0, "body")])).toBe("body and [Pasted ~5 lines]")
   })
 })
 

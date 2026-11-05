@@ -26,6 +26,7 @@ import type { PromptAttachment } from "../../../src/protocol"
 import { CodeContextChips } from "../components/chat/CodeContextChips"
 import { useImageAttachments } from "../hooks/useImageAttachments"
 import { usePasteCollapse } from "../hooks/usePasteCollapse"
+import { expandPastes } from "../components/chat/prompt-input-utils"
 import { message, useV2 } from "./client"
 import { registerComposer, type ComposerHandle } from "./composer"
 import { attachmentDrafts, fileAttachments, imageAttachment, mergeAttachments, pasteDrafts } from "./prompt-attachments"
@@ -126,11 +127,9 @@ export function PromptInput(props: {
   const canUseSpeech = () => speechStatus.status().enabled
   // Recording is enough to send: the transcript arrives first and the send continues from it. No other speech state
   // may send, or a draft would leave before the transcript is ready and the transcript would become a draft.
+  const ready = () => !props.disabled && !props.blocked && !sending() && images.pending() === 0
   const canSend = () =>
-    !props.disabled &&
-    !props.blocked &&
-    !sending() &&
-    images.pending() === 0 &&
+    ready() &&
     (speech.state() === "recording" ||
       (!speech.active() && (!!text().trim() || attachments().length > 0 || browsers().length > 0)))
   // The label is the pending-permission hint while blocked, otherwise Send.
@@ -299,30 +298,49 @@ export function PromptInput(props: {
     })
   }
 
-  const submit = () => {
-    if (!canSend()) return
+  // A context action sends its own prompt. It keeps the composer guards and returns its text and chips to the
+  // draft when the composer cannot send or the send fails, so the request is never lost.
+  const putInDraft = (value: string, items: PromptAttachment[]) => {
+    const current = text()
+    setText(current.trim() ? `${current}\n\n${value}` : value)
+    setAttachments((list) => mergeAttachments(list, items))
+    window.dispatchEvent(new CustomEvent("focusPrompt", { detail: { force: true, restore: true } }))
+  }
+
+  const submit = (external?: { text: string; items: PromptAttachment[] }) => {
+    if (!ready() || (speech.active() && speech.state() !== "recording")) {
+      if (external) putInDraft(external.text, external.items)
+      return
+    }
+    if (!external && !canSend()) return
     const draft = text()
-    const backing = paste.pastes().map((item) => item.text)
-    const items = attachments()
-    const picked = browsers()
+    // Capture the paste ranges before the draft is cleared, so a mismatched placeholder count still expands the
+    // blocks that have backing text.
+    const pastes = paste.pastes()
+    const backing = pastes.map((item) => item.text)
+    const items = external ? external.items : attachments()
+    const picked = external ? [] : browsers()
     const prompt = browserPrompt(draft, picked)
     // Clear the draft as soon as it is sent, so the composer is empty while the prompt is admitted. Restore it only
     // if the send fails and the user has not typed, attached or picked something new.
     const restore = () => {
+      if (external) return putInDraft(external.text, external.items)
       if (text().trim() || attachments().length > 0 || browsers().length > 0) return
       setText(draft)
       paste.load(draft, backing)
       setAttachments(items)
       setBrowsers(picked)
     }
-    setText("")
-    paste.load("", [])
-    setAttachments([])
-    setBrowsers([])
+    if (!external) {
+      setText("")
+      paste.load("", [])
+      setAttachments([])
+      setBrowsers([])
+    }
     setSending(true)
     void props
       // The references hold only strings, numbers and arrays, so they are the JSON the prompt metadata requires.
-      .onSend(paste.plainTextFor(draft, backing).trim(), {
+      .onSend(external ? external.text : expandPastes(draft, pastes).trim(), {
         items,
         metadata: prompt.metadata as { [key: string]: JsonValue } | undefined,
       })
@@ -352,9 +370,7 @@ export function PromptInput(props: {
       window.dispatchEvent(new CustomEvent("focusPrompt", { detail: { force: true, restore: true } }))
     },
     // A context action sends on its own and leaves the draft and its chips for the user's next prompt.
-    submit: (value, items) => {
-      void props.onSend(value, { items }).catch((err: unknown) => v2.report(err))
-    },
+    submit: (value, items) => submit({ text: value, items }),
   })
 
   registerAppend(props.onAppendReady, (value, shouldSend) => {

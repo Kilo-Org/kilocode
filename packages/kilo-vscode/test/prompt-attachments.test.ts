@@ -21,9 +21,21 @@ describe("mergeAttachments", () => {
     expect(mergeAttachments([first], [second])).toEqual([first, second])
   })
 
-  it("drops an attachment with the same kind, uri, and name", () => {
-    const first = attachment("selection", "file:///a.ts?start=1&end=2", "a.ts:1-2")
+  it("drops an attachment with the same kind, uri, name and source", () => {
+    const first = attachment("selection", "data:text/plain;base64,eA==", "a.ts:1-2")
     expect(mergeAttachments([first], [first])).toEqual([first])
+  })
+
+  it("keeps selections that share a basename and range in different files", () => {
+    const first: PromptAttachment = {
+      ...attachment("selection", "data:text/plain;base64,eA==", "index.ts:1-2"),
+      path: "src/index.ts",
+    }
+    const second: PromptAttachment = {
+      ...attachment("selection", "data:text/plain;base64,eA==", "index.ts:1-2"),
+      path: "test/index.ts",
+    }
+    expect(mergeAttachments([first], [second])).toEqual([first, second])
   })
 
   it("keeps attachments that share a uri but differ in kind or name", () => {

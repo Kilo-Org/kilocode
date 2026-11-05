@@ -1308,7 +1308,7 @@
   "module:packages/kilo-vscode/src/shared/code-context.ts": {
     "state": "ported",
     "v2": "packages/kilo-vscode/webview-ui/src/v2/prompt-attachments.ts",
-    "note": "Editor selections are now prompt file attachments (PromptAttachment in src/protocol.ts). mergeAttachments replaces mergeCodeContexts with the same dedupe; codeContextLabel becomes the attachment name built by src/services/code-actions/attachments.ts; formatCodeContexts is not needed because the server reads the attachment and sends it to the model as an attached file.",
+    "note": "Editor selections are now prompt file attachments (PromptAttachment in src/protocol.ts). mergeAttachments replaces mergeCodeContexts with dedupe on kind, uri, name and source path; codeContextLabel becomes the attachment name built by src/services/code-actions/attachments.ts; formatCodeContexts is not needed because the server reads the attachment and sends it to the model as an attached file.",
     "by": "context-actions"
   },
   "module:packages/kilo-vscode/tests/unit/code-context.test.ts": {

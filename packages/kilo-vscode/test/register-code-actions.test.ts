@@ -168,6 +168,17 @@ describe("registerCodeActions", () => {
     expect(state.agentPosts.map((post) => (post as { type: string }).type)).toEqual(["appendContext", "action"])
   })
 
+  it("sends the explain prompt to the sidebar focused last while the Agent Manager is active", async () => {
+    const state = setup({ agentActive: true })
+    chatFocus.gained("sidebar")
+    selectCode()
+
+    await state.handlers.get("kilo-code.v2.explainCode")?.()
+
+    expect(state.agentPosts).toEqual([])
+    expect((state.posts[0] as { type: string }).type).toBe("startPrompt")
+  })
+
   it("adds the selection to the sidebar focused last, even while the Agent Manager is active", async () => {
     const state = setup({ agentActive: true })
     chatFocus.gained("sidebar")
@@ -243,7 +254,7 @@ describe("registerCodeActions", () => {
 
     await state.handlers.get("kilo-code.v2.improveCode")?.()
 
-    expect(state.waits).toEqual(["agent"])
+    expect(state.waits).toEqual(["reveal", "agent"])
     expect(state.executed).toEqual([])
     expect((state.agentPosts[0] as { type: string }).type).toBe("startPrompt")
   })

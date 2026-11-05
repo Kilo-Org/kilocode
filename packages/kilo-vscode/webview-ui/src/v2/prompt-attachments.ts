@@ -13,14 +13,18 @@ export type DraftAttachmentInput = {
 }
 
 /** Add the incoming attachments that are not already present, keeping their order. */
+const attachmentKey = (item: PromptAttachment) =>
+  `${item.kind}\u0000${item.uri}\u0000${item.name}\u0000${item.path ?? item.source ?? ""}`
+
+/** Add the incoming attachments that are not already present, keeping their order. */
 export function mergeAttachments(
   current: readonly PromptAttachment[],
   incoming: readonly PromptAttachment[],
 ): PromptAttachment[] {
-  const seen = new Set(current.map((item) => `${item.kind}\u0000${item.uri}\u0000${item.name}`))
+  const seen = new Set(current.map(attachmentKey))
   const merged = [...current]
   for (const item of incoming) {
-    const key = `${item.kind}\u0000${item.uri}\u0000${item.name}`
+    const key = attachmentKey(item)
     if (seen.has(key)) continue
     seen.add(key)
     merged.push(item)

@@ -54,7 +54,8 @@ export function createChatTarget(input: { view: ChatView; agentManager: AgentPan
 
   const prompt = async (text: string, items?: PromptAttachment[]) => {
     const message: ToWebview = items ? { type: "startPrompt", text, items } : { type: "startPrompt", text }
-    if (input.agentManager.isActive()) {
+    if (preferAgentManager()) {
+      input.agentManager.focusPanel()
       if (!(await input.agentManager.waitForReady())) return
       input.agentManager.postMessage(message)
       return
