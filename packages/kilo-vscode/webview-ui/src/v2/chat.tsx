@@ -35,6 +35,8 @@ export function Chat() {
   onCleanup(v2.data.on("config.updated", () => display.request()))
   // Owned here, so a running sign-in survives switching views.
   const profile = createProfile()
+  // A turn's changes belong to its tab, so switching tabs returns to that tab's chat.
+  createEffect(on(tabs.active, () => setChanges(false), { defer: true }))
   const startSession = () => {
     tabs.add()
     setView("chat")
