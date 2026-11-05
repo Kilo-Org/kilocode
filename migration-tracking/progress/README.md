@@ -8,20 +8,20 @@ Measures Kilo's v1 delta: Kilo `main` pinned at `fb7e96eda540` (the v1 target) c
 
 ## Summary
 
-**1594 / 9789 cells done (16.3%)**, 65 dropped. `███░░░░░░░░░░░░░`
+**1609 / 9786 cells done (16.4%)**, 68 dropped. `███░░░░░░░░░░░░░`
 
 | Kind | Done | Total | % |
 |---|---:|---:|---:|
-| module | 1216 | 3532 | 34.4% |
+| module | 1224 | 3529 | 34.7% |
 | api | 11 | 36 | 30.6% |
 | patch | 86 | 3441 | 2.5% |
-| test | 281 | 2780 | 10.1% |
+| test | 288 | 2780 | 10.4% |
 
 Not counted: 1428 branding-only hunks (rename script territory), 561 marker-only hunks (block boundaries), generated files. Patch attribution: 0 by tag, 261 by import, 97 by identifier, 4163 unattributed (see below).
 
 Landed by rung, for patch cells closed by a done-proof: 54 plugin, 8 host, 3 seam, 6 patch.
 
-Ratchets: 40 core-internal upstream modules imported by Kilo packages and adapters (`@opencode/core/app`, `@opencode/core/bus`, `@opencode/core/config`, `@opencode/core/config/discovery`, `@opencode/core/config/normalize`, `@opencode/core/config/plugin/skill-file`, `@opencode/core/credential`, `@opencode/core/database/database`, `@opencode/core/database/path`, `@opencode/core/effect/app-node-platform`, `@opencode/core/environment`, `@opencode/core/file-access`, `@opencode/core/generate`, `@opencode/core/location`, `@opencode/core/model`, `@opencode/core/model-resolver`, `@opencode/core/permission`, `@opencode/core/plugin/provider/openai`, `@opencode/core/plugin/sdk`, `@opencode/core/plugin/system-prompt/anthropic.txt`, `@opencode/core/plugin/system-prompt/gpt-astra.txt`, `@opencode/core/plugin/system-prompt/gpt.txt`, `@opencode/core/plugin/system-prompt/kimi.txt`, `@opencode/core/plugin/system-prompt/trinity.txt`, `@opencode/core/provider`, `@opencode/core/rpc`, `@opencode/core/schema`, `@opencode/core/session/event`, `@opencode/core/session/projector`, `@opencode/core/session/runner/model`, `@opencode/core/session/runner/prompt/system.txt`, `@opencode/core/session/system-prompt`, `@opencode/core/shell`, `@opencode/core/tool`, `@opencode/core/tool-output`, `@opencode/core/tool/plugin/file-diff`, `@opencode/core/tool/plugin/todo`, `@opencode/core/tool/read-filesystem`, `@opencode/core/util/wildcard`, `@opencode/core/variant`); 91 shared patches by rung: 55 seam, 36 patch (`script/upstream/shared-patches.json`).
+Ratchets: 41 core-internal upstream modules imported by Kilo packages and adapters (`@opencode/core/app`, `@opencode/core/bus`, `@opencode/core/config`, `@opencode/core/config/discovery`, `@opencode/core/config/normalize`, `@opencode/core/config/plugin/skill-file`, `@opencode/core/credential`, `@opencode/core/database/database`, `@opencode/core/database/path`, `@opencode/core/effect/app-node-platform`, `@opencode/core/environment`, `@opencode/core/file-access`, `@opencode/core/generate`, `@opencode/core/location`, `@opencode/core/model`, `@opencode/core/model-resolver`, `@opencode/core/permission`, `@opencode/core/plugin/provider/openai`, `@opencode/core/plugin/sdk`, `@opencode/core/plugin/system-prompt/anthropic.txt`, `@opencode/core/plugin/system-prompt/gpt-astra.txt`, `@opencode/core/plugin/system-prompt/gpt.txt`, `@opencode/core/plugin/system-prompt/kimi.txt`, `@opencode/core/plugin/system-prompt/trinity.txt`, `@opencode/core/provider`, `@opencode/core/rpc`, `@opencode/core/schema`, `@opencode/core/session/event`, `@opencode/core/session/projector`, `@opencode/core/session/runner/model`, `@opencode/core/session/runner/prompt/system.txt`, `@opencode/core/session/store`, `@opencode/core/session/system-prompt`, `@opencode/core/shell`, `@opencode/core/tool`, `@opencode/core/tool-output`, `@opencode/core/tool/plugin/file-diff`, `@opencode/core/tool/plugin/todo`, `@opencode/core/tool/read-filesystem`, `@opencode/core/util/wildcard`, `@opencode/core/variant`); 91 shared patches by rung: 55 seam, 36 patch (`script/upstream/shared-patches.json`).
 
 ## History
 
@@ -41,7 +41,8 @@ One point per day from the committed `progress.json` on v2's first-parent histor
 | 2026-10-28 | 594 | 9819 | 6% |
 | 2026-10-29 | 597 | 9819 | 6.1% |
 | 2026-10-30 | 646 | 9817 | 6.6% |
-| now | 1594 | 9789 | 16.3% |
+| 2026-11-05 | 1594 | 9789 | 16.3% |
+| now | 1609 | 9786 | 16.4% |
 
 ## Features
 
@@ -120,7 +121,7 @@ Cells per kind as done/total. A cell is done when it exists on v2 by the rules b
 | search-target | 0/1 |  | 0/17 | 0/1 | 0/19 | 0% | `░░░░░░░░░░░░░░░░` |  |
 | security | 0/1 |  | 0/1 | 0/1 | 0/3 | 0% | `░░░░░░░░░░░░░░░░` |  |
 | server | 2/51 |  | 1/10 | 2/35 | 5/96 | 5.2% | `█░░░░░░░░░░░░░░░` | 1 plugin |
-| session | 0/25 | 0/4 | 0/17 | 0/69 | 0/115 | 0% | `░░░░░░░░░░░░░░░░` |  |
+| session | 1/23 | 0/4 | 0/17 | 1/69 | 2/113 | 1.8% | `░░░░░░░░░░░░░░░░` |  |
 | session-export | 0/27 |  | 0/1 | 0/25 | 0/53 | 0% | `░░░░░░░░░░░░░░░░` |  |
 | session-fork | 0/2 |  |  | 0/1 | 0/3 | 0% | `░░░░░░░░░░░░░░░░` |  |
 | session-import | 0/2 | 0/6 |  | 0/1 | 0/9 | 0% | `░░░░░░░░░░░░░░░░` |  |
@@ -144,7 +145,7 @@ Cells per kind as done/total. A cell is done when it exists on v2 by the rules b
 | ui | 145/248 |  | 0/1 | 1/18 | 146/267 | 54.7% | `█████████░░░░░░░` |  |
 | usage-cost | 0/4 |  |  | 0/5 | 0/9 | 0% | `░░░░░░░░░░░░░░░░` |  |
 | util | 0/8 |  | 0/4 | 0/8 | 0/20 | 0% | `░░░░░░░░░░░░░░░░` |  |
-| vscode | 957/1432 |  |  | 218/610 | 1175/2042 | 57.5% | `█████████░░░░░░░` |  |
+| vscode | 964/1431 |  |  | 224/610 | 1188/2041 | 58.2% | `█████████░░░░░░░` |  |
 | wakeup | 0/5 | 0/1 | 0/1 | 0/4 | 0/11 | 0% | `░░░░░░░░░░░░░░░░` |  |
 | web-ui | 0/154 |  |  |  | 0/154 | 0% | `░░░░░░░░░░░░░░░░` |  |
 | worktree | 4/4 | 1/1 | 1/1 | 6/6 | 12/12 | 100% | `████████████████` | 1 plugin |
@@ -314,6 +315,8 @@ Hunks in shared upstream files with no `kilocode_change(<feature>)` tag, no Kilo
 - `api:GET /kilocode/notebook`: v1 listed server-initiated notebook requests for the extension to answer; v2 has no server notebook API because the extension owns the workspace over a loopback broker, so there is no pending request to list. (notebook-tools)
 - `api:POST /kilocode/notebook/{requestID}/reject`: v1 rejected a server-initiated notebook request through this route; on v2 the server calls the extension broker and the response is the reply, so no reject route exists. (notebook-tools)
 - `api:POST /kilocode/notebook/{requestID}/reply`: v1 replied to a server-initiated notebook request through this route; on v2 the server calls the extension broker and receives the result in the same HTTP response. (notebook-tools)
+- `module:packages/core/src/kilocode/session/recall-message-index.ts`: The v1 message FTS index and its triggers existed to make SQL recall search fast. v2 recall ranks in memory over SessionStore.messagesWithRefs in packages/kilo-plugin/src/recall/search.ts and creates no store objects, so the index has no v2 counterpart. (transcript-recall)
+- `module:packages/core/src/kilocode/session/recall-part-index.ts`: The v1 part FTS index and its triggers existed only for SQL recall search. The v2 recall plugin reads decoded session messages through SessionStore and ranks them in memory, so no part index is built or maintained. (transcript-recall)
 - `module:packages/kilo-gateway/src/auth/device-auth.ts`: v1 marked it as a legacy console flow that is not used (spinner, team prompt). The live device flow, auth/device.ts, is ported to packages/kilo-gateway-core/src/device.ts. (gateway-finish)
 - `module:packages/kilo-gateway/src/auth/legacy-migration.ts`: Import of the pre-v1 Kilo CLI login (~/.kilocode/cli/config.json) at CLI start. v1 ran it at each start; v2 signs in with the device method and imports v1 data through U-E3-01. (gateway-finish)
 - `module:packages/kilo-gateway/src/loader.ts`: kiloCustomLoader had no caller on v1 (packages/opencode used its own kiloCustomLoaders). Activation and the anonymous key are in packages/core/src/kilocode/gateway.ts. (gateway-finish)
@@ -325,6 +328,7 @@ Hunks in shared upstream files with no `kilocode_change(<feature>)` tag, no Kilo
 - `module:packages/kilo-gateway/src/types/tui.d.ts`: Type shim for TUI runtime modules that let the v1 package compile TUI code outside the TUI package. The v2 TUI code is in packages/tui. (gateway-finish)
 - `module:packages/kilo-gateway/test/provider.test.ts`: It tested v1 buildRequestHeaders, where request headers replace the defaults. v2 merges the Kilo headers last on purpose, so that they replace the OpenCode referer and title of the upstream KiloPlugin; packages/core/test/kilocode/gateway.test.ts checks the result. (gateway-finish)
 - `module:packages/kilo-vscode/docs/error-handling/autocomplete-settings-link.md`: Work note for v1 issue #6284 (status bar settings link), not runtime code. The v2 status bar tooltip links to kilo-code.v2.settings with the autocomplete tab (packages/kilo-vscode/src/services/autocomplete/AutocompleteStatusBar.ts). (autocomplete-inline)
+- `module:packages/kilo-vscode/docs/features/remember-last-model.md`: Stale v1 design note: it describes an in-memory model and a globalState lastModel key that never shipped. The shipped behavior (persisted recents, config precedence) is ported in v2/model-default.ts and src/model-preferences.ts. (model-picker-parity)
 - `module:packages/kilo-vscode/src/agent-manager/am-visible-presence.test.ts`: The test covered the dropped attached-session presence module. Visible presence uses session.view and is covered by the agent manager session tests; there is no v2 presence module to test. (am-progress-map)
 - `module:packages/kilo-vscode/src/agent-manager/am-visible-presence.ts`: Attached-session presence is an excluded epic (.kilo/plans/agent-manager-v2-conventions.md). The v2 panel shows visible presence from session.view; there is no presence module, registration call or /presence route. (am-progress-map)
 - `module:packages/kilo-vscode/src/agent-manager/sandbox-bootstrap.ts`: Sandbox metadata and the inheritance token are excluded (#15309): the v2 orchestration request carries no sandbox token and the Agent Manager has no sandbox bootstrap. .kilo/plans/agent-manager-v2-conventions.md lists the feature as excluded. (am-progress-map)

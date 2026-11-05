@@ -1451,6 +1451,28 @@
     "note": "v1 registered Notebook.node in the server app runtime. v2 needs no server-side notebook service: the extension broker holds the request state and the plugin only makes loopback calls.",
     "by": "notebook-tools"
   },
+  "module:packages/core/src/kilocode/session/recall-message-index.ts": {
+      "state": "dropped",
+      "note": "The v1 message FTS index and its triggers existed to make SQL recall search fast. v2 recall ranks in memory over SessionStore.messagesWithRefs in packages/kilo-plugin/src/recall/search.ts and creates no store objects, so the index has no v2 counterpart.",
+      "by": "transcript-recall"
+    },
+    "module:packages/core/src/kilocode/session/recall-part-index.ts": {
+      "state": "dropped",
+      "note": "The v1 part FTS index and its triggers existed only for SQL recall search. The v2 recall plugin reads decoded session messages through SessionStore and ranks them in memory, so no part index is built or maintained.",
+      "by": "transcript-recall"
+    },
+    "module:packages/opencode/src/kilocode/session/recall-search.ts": {
+      "state": "ported",
+      "v2": "packages/kilo-plugin/src/recall/search.ts",
+      "note": "RecallSearch query parsing, folding, whole-word ranking, title typo tolerance, partial fallback, snippets and inert escaping are ported unchanged in behavior. The storage boundary is rewritten natively: v2 loads SessionStore messagesWithRefs and filters the project worktree family instead of querying v1 tables.",
+      "by": "transcript-recall"
+    },
+    "module:packages/opencode/test/kilocode/recall-search.test.ts": {
+      "state": "ported",
+      "v2": "packages/kilo-plugin/test/recall-search.test.ts",
+      "note": "The ranking, typo, partial-match, active-turn, reference/error and cancellation assertions are ported to in-memory SearchSession fixtures. Index maintenance, SQL candidate counting and store-specific paging tests do not apply because v2 does not create recall indexes.",
+      "by": "transcript-recall"
+    },
   "module:packages/kilo-indexing/src/detect.ts": {
     "state": "dropped",
     "note": "Plugin-name detection for the v1 config plugin list (callers: plugin/loader.ts and indexing-feature.ts). v2 registers KiloIndexingPlugin in KiloPlugins (packages/kilo-plugin/src/index.ts) for every location; indexing.enabled decides whether it indexes, so there is no plugin entry to detect.",
