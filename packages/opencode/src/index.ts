@@ -127,18 +127,20 @@ cli = KiloCli.register(cli)
 await waitForLazyCommands() // kilocode_change - yargs completion invokes builders synchronously
 cli = cli
   // kilocode_change end
+  // kilocode_change start - a usage error must say something, in every locale
+  // yargs localises its own messages from the environment, so matching English prefixes decided
+  // whether the user saw anything at all: under LANG=ru_RU the message reads "Неизвестный аргумент",
+  // no prefix matched, and `kilo run --project DIR ...` exited 1 with nothing on either stream.
+  // A usage error is exactly the case where yargs hands back `msg` and no `err`, so that — not the
+  // wording — is what selects the help. The message itself is printed either way; without it even
+  // the English path showed help without ever naming the offending argument.
   .fail((msg, err) => {
-    if (
-      msg?.startsWith("Unknown argument") ||
-      msg?.startsWith("Not enough non-option arguments") ||
-      msg?.startsWith("Invalid values:")
-    ) {
-      if (err) throw err
-      cli.showHelp(show)
-    }
     if (err) throw err
+    if (msg) process.stderr.write(msg + EOL)
+    cli.showHelp(show)
     process.exit(1)
   })
+  // kilocode_change end
   .strict()
 
 try {
