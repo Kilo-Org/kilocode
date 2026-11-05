@@ -37,6 +37,9 @@ internal fun activeListHits(
     val comp = renderer.getListCellRendererComponent(list, model.getElementAt(index), index, selected, true)
     comp.setBounds(0, 0, cell.width, cell.height)
     activeLayout(comp)
+    // The row renderer owns its button regions; fall back to the generic hit walk for a foreign
+    // renderer installed by a host or a test.
+    (renderer as? ActiveListRenderer)?.let { return it.buttons(cell.x, cell.y) }
     return activeHitCells(comp, cell.x, cell.y)
 }
 
