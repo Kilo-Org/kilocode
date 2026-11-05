@@ -12,7 +12,6 @@ export const names = [
   "CLIENT",
   "CONFIG_CONTENT",
   "DISABLE_AUTOUPDATE",
-  "DISABLE_CHANNEL_DB",
   "DISABLE_CLAUDE_CODE",
   "DISABLE_CLAUDE_CODE_SKILLS",
   "DISABLE_FFF",
@@ -54,7 +53,8 @@ export function translate(env: Record<string, string | undefined>) {
  * upstream's `opencode` and v1 Kilo's `kilo` directories during internal releases. Release migration to `kilo`
  * is explicit (U-E3-03, U-E8-02); v1 storage remains separate while v1 clients ship. The upstream
  * global paths read it when their module loads (`packages/util/src/global.ts`), so every path follows it: the
- * `Global` service, logs, locks, tmp and the database. Every process the host starts runs this module first.
+ * `Global` service, logs, locks, tmp and the database. Every process the host starts runs this module first. The
+ * database file name is Kilo's too (./database).
  */
 export const directory = "kilo2"
 
