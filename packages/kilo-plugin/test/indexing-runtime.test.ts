@@ -350,6 +350,23 @@ describe("indexing runtime", () => {
     expect(record.warnings).toEqual([warning])
   })
 
+  test("retries the primary checkout lookup instead of caching a failure", async () => {
+    const directory = await tmp()
+    const main = await tmp()
+    let calls = 0
+    const { runtime } = host({
+      directory,
+      indexing: { enabled: true, provider: "ollama" },
+      env: { KILO_PLATFORM: "vscode" },
+      primary: async () => {
+        calls++
+        return calls === 1 ? undefined : main
+      },
+    })
+    expect(await runtime.resolveProject()).toBe(directory)
+    expect(await runtime.resolveProject()).toBe(main)
+  })
+
   test("indexes a linked worktree against the primary checkout", async () => {
     const state = engine()
     const root = await tmp()

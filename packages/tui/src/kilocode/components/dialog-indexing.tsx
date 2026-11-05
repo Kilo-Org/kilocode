@@ -407,13 +407,25 @@ async function showQdrantSettings(
   dialog.replace(() => <DialogIndexing client={props.client} location={props.location} scope={props.scope} />)
 }
 
+type TuningKey = keyof Pick<
+  IndexingConfig,
+  "searchMinScore" | "searchMaxResults" | "embeddingBatchSize" | "scannerMaxBatchRetries"
+>
+
 interface TuningParam {
-  key: keyof Pick<
-    IndexingConfig,
-    "searchMinScore" | "searchMaxResults" | "embeddingBatchSize" | "scannerMaxBatchRetries"
-  >
+  key: TuningKey
   label: string
   defaultValue: number
+}
+
+/** The server bounds: a similarity in 0..1, and a positive whole number for the rest. */
+export function tuningProblem(key: TuningKey, text: string, value: number | undefined) {
+  if (!text) return undefined
+  if (value === undefined || !Number.isFinite(value)) return `Invalid number: "${text}"`
+  if (key === "searchMinScore") {
+    return value < 0 || value > 1 ? "Search Min Score must be between 0 and 1" : undefined
+  }
+  return Number.isInteger(value) && value > 0 ? undefined : "Enter a positive whole number"
 }
 
 const TUNING_PARAMS: TuningParam[] = [
@@ -473,14 +485,16 @@ function TuningMenu(props: SubDialogProps) {
         }
         const trimmed = result.trim()
         const num = trimmed ? Number(trimmed) : undefined
-        if (trimmed && isNaN(num!)) {
-          toast.show({ message: `Invalid number: "${trimmed}"`, variant: "error" })
+        const problem = tuningProblem(param.key, trimmed, num)
+        if (problem) {
+          toast.show({ message: problem, variant: "error" })
           restore(props.raw)
           return
         }
         const updated = { ...props.raw, [param.key]: num }
-        await saveScopedIndexing(rpc, props.location, props.scope, props.raw, updated, toast)
-        restore(updated)
+        // Keep the old value on a rejected save: the server validates the same bounds.
+        if (await saveScopedIndexing(rpc, props.location, props.scope, props.raw, updated, toast)) restore(updated)
+        else restore(props.raw)
       }}
     />
   )

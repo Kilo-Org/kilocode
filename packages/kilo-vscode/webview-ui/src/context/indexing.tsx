@@ -63,6 +63,9 @@ export const IndexingProvider: ParentComponent = (props) => {
   const [settings, setSettings] = createSignal<Settings>(empty)
   const [host, setHost] = createSignal<IndexingSettings>(emptySettings)
   const [showButton, setShowButton] = createSignal<boolean | undefined>(undefined)
+  // A failed read leaves the last known values in place, and an edit waits for a successful read because
+  // `config.update` replaces the whole `indexing` key.
+  const state = { loaded: false }
 
   const project = createMemo(() => host().projects.find((item) => item.id === host().projectId))
   const directory = () => project()?.directory
@@ -92,13 +95,14 @@ export const IndexingProvider: ParentComponent = (props) => {
   const readConfig = async () => {
     try {
       setSettings(await rpc().config({}, location()))
+      state.loaded = true
     } catch (error) {
       console.error("Indexing config read failed", error)
-      setSettings(empty)
     }
   }
 
   const refresh = () => {
+    state.loaded = false
     setLoading(true)
     return Promise.all([readStatus(), readConfig()])
   }
@@ -167,6 +171,10 @@ export const IndexingProvider: ParentComponent = (props) => {
   )
 
   const update = async (scope: IndexingScope, patch: Config) => {
+    if (!state.loaded) {
+      await readConfig()
+      if (!state.loaded) return
+    }
     const current = scope === "global" ? settings().global : settings().project
     const next = indexingUpdate(scope, settings().global, settings().project, patch) as Config
     setSettings((prev) => ({ ...prev, [scope]: next }))
@@ -209,10 +217,28 @@ export const IndexingProvider: ParentComponent = (props) => {
   return <IndexingContext.Provider value={value}>{props.children}</IndexingContext.Provider>
 }
 
+// The Agent Manager mounts the shared session view without the indexing provider, so the hook answers an inert
+// context there: the indexing action stays hidden instead of failing the whole webview.
+const detached: IndexingContextValue = {
+  status: () => initial,
+  loading: () => false,
+  label: () => formatIndexingLabel(initial),
+  tone: () => indexingTone(initial),
+  settings: () => empty,
+  host: () => emptySettings,
+  globalConfig: () => empty.global,
+  projectConfig: () => empty.project,
+  project: () => undefined,
+  projects: () => [],
+  kiloAvailable: () => false,
+  showButtonWhenDisabled: () => false,
+  buttonVisible: () => false,
+  selectProject: () => {},
+  setShowButtonWhenDisabled: () => {},
+  setConsent: () => {},
+  update: async () => {},
+}
+
 export function useIndexing(): IndexingContextValue {
-  const context = useContext(IndexingContext)
-  if (!context) {
-    throw new Error("useIndexing must be used within an IndexingProvider")
-  }
-  return context
+  return useContext(IndexingContext) ?? detached
 }

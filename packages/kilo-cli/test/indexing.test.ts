@@ -105,6 +105,15 @@ test(
 )
 
 test(
+  "an invalid field is left out of the config answer instead of failing the read",
+  boot({ project: { indexing: { provider: "ollama", searchMinScore: 2, searchMaxResults: 12 } } }, async (client, directory) => {
+    const settings = await rpc(client).config({}, { location: { directory } })
+    expect(settings.project).toEqual({ provider: "ollama", searchMaxResults: 12 })
+  }),
+  30_000,
+)
+
+test(
   "config.update writes the indexing key in place and removes it when empty",
   boot({ project: { privacy_mode: false } }, async (client, directory, global) => {
     await rpc(client)["config.update"]({ scope: "project", config: { enabled: false, vectorStore: "qdrant" } }, { location: { directory } })

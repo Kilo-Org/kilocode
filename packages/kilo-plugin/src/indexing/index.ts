@@ -70,7 +70,12 @@ export const KiloIndexingPlugin = define<FSUtil.Service | Global.Service | Scope
     const wasm = wasmDirectory()
     if (wasm) process.env.KILO_TREE_SITTER_WASM_DIR = wasm
 
-    const files = yield* settingsFiles({ global: global.config, project: directory })
+    const holder: { runtime?: IndexingRuntime.Runtime } = {}
+    const files = yield* settingsFiles({
+      global: global.config,
+      project: directory,
+      reload: () => holder.runtime?.restart() ?? Promise.resolve(),
+    })
     const accountAuth = (current: Awaited<ReturnType<typeof account>>) =>
       current ? { type: "oauth", access: current.token, accountId: current.organizationID ?? undefined } : undefined
 
@@ -111,6 +116,7 @@ export const KiloIndexingPlugin = define<FSUtil.Service | Global.Service | Scope
       warning: (item) => emit.warning?.(item),
       log,
     })
+    holder.runtime = runtime
 
     const registration = yield* ctx.rpc
       .register(KiloIndexingRpc.Definition, {

@@ -115,6 +115,12 @@ test("a new worktree session in VS Code gets semantic_search from the consent of
   await $`git -C ${main} add -A && git -C ${main} -c user.name=t -c user.email=t@t commit -qm init`.quiet()
   await $`git -C ${main} worktree add -q ${linked}`.quiet()
   process.env.KILO_PLATFORM = "vscode"
+  // Only consent resolution is under test here, so no engine starts.
+  IndexingWorker.override(() => ({
+    init: async () => ({ state: "Complete", message: "", processedFiles: 0, totalFiles: 0, percent: 100 }),
+    search: async () => [],
+    dispose: async () => {},
+  }))
   // Consent is granted once, for the main checkout, as the extension does.
   const granting = new IndexingRuntime.Runtime({
     directory: main,

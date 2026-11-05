@@ -453,8 +453,11 @@ export class Runtime {
 
   /** The primary checkout that keys VS Code consent: a linked worktree shares the consent of its main checkout. */
   async resolveProject() {
-    this.project ??= (await this.host.primary(this.host.directory).catch(() => undefined)) ?? this.host.directory
-    return this.project
+    if (this.project) return this.project
+    // Only a successful lookup is remembered: a transient Git failure must not pin consent to the fallback directory.
+    const primary = await this.host.primary(this.host.directory).catch(() => undefined)
+    if (primary) this.project = primary
+    return primary ?? this.host.directory
   }
 
   /** True when VS Code has supplied consent for the project of this Location. */

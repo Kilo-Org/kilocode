@@ -1,7 +1,7 @@
 import { KiloConfigWriter } from "@opencode/core/kilocode/config/write"
-import type { KiloIndexingRpc } from "@opencode/schema/kilocode/indexing"
+import { KiloIndexingRpc } from "@opencode/schema/kilocode/indexing"
 import { FSUtil } from "@opencode/util/fs-util"
-import { Effect, Layer } from "effect"
+import { Effect, Layer, Option, Schema } from "effect"
 import { parse } from "jsonc-parser"
 
 // The `indexing` key of the global and the project config file, read and written in place. The project file is the
@@ -9,16 +9,29 @@ import { parse } from "jsonc-parser"
 export interface Targets {
   readonly global: string
   readonly project: string
+  /** Runs after each successful write, so the engine starts again from the saved settings. */
+  readonly reload?: () => Promise<void>
 }
 
 export const make = Effect.fn("IndexingSettings.make")(function* (targets: Targets) {
   const fs = yield* FSUtil.Service
   const writer = yield* Effect.gen(function* () {
     return yield* KiloConfigWriter.Service
-  }).pipe(Effect.provide(KiloConfigWriter.layer().pipe(Layer.provide(Layer.succeed(FSUtil.Service, fs)))))
+  }).pipe(
+    Effect.provide(
+      KiloConfigWriter.layer({
+        reload: Effect.suspend(() => Effect.promise(() => targets.reload?.() ?? Promise.resolve())),
+      }).pipe(Layer.provide(Layer.succeed(FSUtil.Service, fs))),
+    ),
+  )
   const target = (scope: KiloIndexingRpc.Scope) =>
     writer.target(scope === "global" ? { directory: targets.global, global: true } : { directory: targets.project })
 
+  const fields: Record<string, Schema.Top> = (KiloIndexingRpc.Config as unknown as { fields: Record<string, Schema.Top> })
+    .fields
+
+  // Each field is decoded on its own: a hand-edited value with the wrong type or range is left out of the answer
+  // instead of failing the whole `config` call, which is what the engine does with that field.
   const read = Effect.fn("IndexingSettings.read")(function* (scope: KiloIndexingRpc.Scope) {
     const file = yield* target(scope)
     const text = yield* Effect.promise(() =>
@@ -30,7 +43,17 @@ export const make = Effect.fn("IndexingSettings.make")(function* (targets: Targe
     if (!document || typeof document !== "object" || Array.isArray(document)) return {}
     const indexing = (document as Record<string, unknown>).indexing
     if (!indexing || typeof indexing !== "object" || Array.isArray(indexing)) return {}
-    return indexing as KiloIndexingRpc.Config
+    const decoded = Object.entries(indexing).flatMap(([key, value]) => {
+      const field = fields[key]
+      if (!field) return []
+      const result = Schema.decodeUnknownOption(field as never)(value)
+      if (Option.isNone(result)) {
+        Effect.runFork(Effect.logWarning("ignored invalid indexing setting", { file, field: key }))
+        return []
+      }
+      return [[key, result.value] as const]
+    })
+    return Object.fromEntries(decoded) as KiloIndexingRpc.Config
   })
 
   const write = Effect.fn("IndexingSettings.write")(function* (
