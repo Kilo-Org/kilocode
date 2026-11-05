@@ -6,6 +6,7 @@ import os from "node:os"
 import path from "node:path"
 import { AppNodeBuilder } from "@opencode/core/effect/app-node-builder"
 import { Agent } from "@opencode/core/agent"
+import { Bus } from "@opencode/core/bus"
 import { Model } from "@opencode/core/model"
 import { Skill } from "@opencode/core/skill"
 import { Provider } from "@opencode/schema/provider"
@@ -15,10 +16,13 @@ import { Instance } from "@opencode/core/instance/service"
 import { LocationServiceMap } from "@opencode/core/location-service-map"
 import { Permission } from "@opencode/core/permission"
 import { Session } from "@opencode/core/session"
+import { Event } from "@opencode/schema/event"
+import { SessionEvent } from "@opencode/schema/session-event"
 import { AbsolutePath } from "@opencode/schema/schema"
 import { Location } from "@opencode/schema/location"
 import { Project } from "@opencode/schema/project"
 import { Global } from "@opencode/util/global"
+import { LayerNode } from "@opencode/util/effect/layer-node"
 import { testEffect } from "../../core/test/lib/effect"
 import { RemoteCommands } from "../src/remote/command-executor"
 
@@ -32,7 +36,7 @@ const fixture = Effect.fn("remote command fixture")(function* () {
   const root = path.join(profile, "launch")
   yield* Effect.promise(() => mkdir(path.join(root, "workspace"), { recursive: true }))
   const context = yield* Layer.build(
-    AppNodeBuilder.build(Database.node, [
+    AppNodeBuilder.build(LayerNode.group([Database.node, Bus.node]), [
       Global.node.replace(
         Global.layerWith(
           Object.fromEntries(
@@ -46,6 +50,7 @@ const fixture = Effect.fn("remote command fixture")(function* () {
     ]),
   )
   const database = Context.get(context, Database.Service)
+  const bus = Context.get(context, Bus.Service)
   const calls = {
     create: 0,
     prompt: 0,
@@ -74,29 +79,77 @@ const fixture = Effect.fn("remote command fixture")(function* () {
     questionPending: true,
     userID: "user-first",
     organizationID: "org-test" as string | null,
+    canCreate: true,
+    rolloverOnSessionGet: false,
+    rolloverOnPermissionFetch: false,
+    rolloverOnFormState: false,
+    questionKeys: ["q0", "q1"],
   }
+  let runSequence = 0
+  const rotateRun = Effect.fn("remote fixture rotate run")(function* (terminal = false) {
+    const options = { id: Event.ID.make(`evt_remote_run_${++runSequence}`) }
+    if (terminal) yield* bus.publish(SessionEvent.Execution.Succeeded, { sessionID: id }, options)
+    else yield* bus.publish(SessionEvent.Execution.Started, { sessionID: id }, options)
+  })
   const permissions = {
-    get: () => Effect.succeed({ id: Permission.ID.make("per_remote"), sessionID: control.permissionSession }),
+    forSession: () =>
+      Effect.succeed([
+        {
+          id: Permission.ID.make("per_remote"),
+          sessionID: id,
+          action: "shell",
+          resources: ["printf fixture"],
+          message: "Run fixture",
+        },
+      ]),
+    get: () =>
+      Effect.gen(function* () {
+        if (control.rolloverOnPermissionFetch) {
+          control.rolloverOnPermissionFetch = false
+          yield* rotateRun()
+        }
+        return { id: Permission.ID.make("per_remote"), sessionID: control.permissionSession }
+      }),
     reply: () =>
       Effect.sync(() => {
         calls.permission++
       }),
   } as unknown as Permission.Interface
   const forms = {
+    list: () =>
+      Effect.succeed(
+        control.questionPending
+          ? [
+              {
+                id: Form.ID.make("frm_remote"),
+                sessionID: id,
+                metadata: { kind: "question" },
+                fields: [{ key: control.questionKeys[0]!, type: "string", title: "Decision" }],
+              },
+            ]
+          : [],
+      ),
     get: () =>
       Effect.succeed({
         id: Form.ID.make("frm_remote"),
         sessionID: control.questionSession,
         metadata: { kind: "question" },
         fields: [
-          { key: "q0", type: "string" },
-          { key: "q1", type: "multiselect" },
+          { key: control.questionKeys[0]!, type: "string" },
+          { key: control.questionKeys[1]!, type: "multiselect" },
         ],
       }),
-    state: () => Effect.succeed({ status: control.questionPending ? "pending" : "answered" }),
+    state: () =>
+      Effect.gen(function* () {
+        if (control.rolloverOnFormState) {
+          control.rolloverOnFormState = false
+          yield* rotateRun()
+        }
+        return { status: control.questionPending ? "pending" : "answered" }
+      }),
     reply: (input: Form.ReplyInput) =>
       Effect.sync(() => {
-        expect(input.answer).toEqual({ q0: "yes", q1: ["one", "two"] })
+        expect(input.answer).toEqual({ [control.questionKeys[0]!]: "yes", [control.questionKeys[1]!]: ["one", "two"] })
         calls.reply++
       }),
     cancel: () =>
@@ -123,7 +176,15 @@ const fixture = Effect.fn("remote command fixture")(function* () {
     Layer.succeed(Form.Service, forms),
   )
   const sessions = {
-    get: () => Effect.succeed(session),
+    get: () =>
+      Effect.gen(function* () {
+        const snapshot = { ...session, time: { ...session.time } }
+        if (control.rolloverOnSessionGet) {
+          control.rolloverOnSessionGet = false
+          yield* rotateRun()
+        }
+        return snapshot
+      }),
     create: (input: Parameters<Session.Interface["create"]>[0]) =>
       Effect.sync(() => {
         calls.create++
@@ -178,17 +239,21 @@ const fixture = Effect.fn("remote command fixture")(function* () {
       launchDirectory: root,
       userID: () => control.userID,
       organizationID: () => control.organizationID,
+      canCreate: () => control.canCreate,
       detach: () =>
         Effect.sync(() => {
           calls.detach++
         }),
     }).pipe(
       Effect.provideService(Database.Service, database),
+      Effect.provideService(Bus.Service, bus),
       Effect.provideService(Session.Service, sessions),
       Effect.provideService(Instance.Service, instances),
       Effect.provideService(LocationServiceMap.Service, locations),
     )
-  return { root, database, session, calls, control, boot, commands: yield* boot() }
+  const commands = yield* boot()
+  yield* rotateRun()
+  return { root, database, session, calls, control, boot, rotateRun, commands }
 })
 
 it("create_session contains directories and never traverses an escaping symlink", () =>
@@ -261,7 +326,7 @@ it("queued prompts work while live-only commands require current run and incarna
   Effect.gen(function* () {
     const f = yield* fixture()
     const live = yield* f.commands.identity(id)
-    expect(live.runID).toBe("42")
+    expect(live.runID).toBe("evt_remote_run_1")
     expect((yield* f.commands.session(id, "interrupt", live, false, "not-live")).error?.code).toBe("live_only_required")
     expect(
       (yield* f.commands.session(id, "interrupt", { ...live, incarnation: "old" }, true, "old-incarnation")).error
@@ -442,4 +507,91 @@ it("instance receipts and created session IDs are isolated between signed-in use
     const replay = yield* f.commands.instance("create_session", { directory: "workspace" }, "shared-command")
     expect(replay).toMatchObject({ duplicate: true, result: first.result })
     expect(f.calls.create).toBe(2)
+  }))
+
+it("run fences reject same-millisecond run replacements after command and request reads", () =>
+  Effect.gen(function* () {
+    for (const type of ["interrupt", "permission_respond", "question_reply", "question_reject"]) {
+      const f = yield* fixture()
+      const live = yield* f.commands.identity(id)
+      if (type === "interrupt") f.control.rolloverOnSessionGet = true
+      if (type === "permission_respond") f.control.rolloverOnPermissionFetch = true
+      if (type === "question_reply" || type === "question_reject") f.control.rolloverOnFormState = true
+      const payload =
+        type === "interrupt"
+          ? live
+          : type === "permission_respond"
+            ? { ...live, requestID: "per_remote", reply: "once" }
+            : type === "question_reply"
+              ? { ...live, requestID: "frm_remote", answers: [["yes"], ["one", "two"]] }
+              : { ...live, requestID: "frm_remote" }
+      const outcome = yield* f.commands.session(id, type, payload, true, `race-${type}`)
+      expect(outcome.error?.code).toBe("stale_run")
+      expect((yield* f.commands.identity(id)).runID).not.toBe(live.runID)
+      expect(f.calls).toMatchObject({ interrupt: 0, permission: 0, reply: 0, reject: 0 })
+    }
+  }))
+
+it("question replies preserve native form field keys", () =>
+  Effect.gen(function* () {
+    const f = yield* fixture()
+    f.control.questionKeys = ["decision", "features"]
+    const live = yield* f.commands.identity(id)
+    const outcome = yield* f.commands.session(
+      id,
+      "question_reply",
+      {
+        ...live,
+        requestID: "frm_remote",
+        answers: [["yes"], ["one", "two"]],
+      },
+      true,
+      "field-keys",
+    )
+    expect(outcome.status).toBe("succeeded")
+    expect(f.calls.reply).toBe(1)
+  }))
+
+it("host capacity admission rejects both instance creation and safe /new before native creation", () =>
+  Effect.gen(function* () {
+    const f = yield* fixture()
+    f.control.canCreate = false
+    expect((yield* f.commands.instance("create_session", {}, "full-instance")).error?.code).toBe("remote_capacity")
+    expect((yield* f.commands.session(id, "send_command", { command: "/new" }, false, "full-new")).error?.code).toBe(
+      "remote_capacity",
+    )
+    expect(f.calls.create).toBe(0)
+  }))
+
+it("durable lifecycle order distinguishes a terminal and restart sharing one millisecond", () =>
+  Effect.gen(function* () {
+    const f = yield* fixture()
+    const first = yield* f.commands.identity(id)
+    yield* f.rotateRun(true)
+    expect((yield* f.commands.identity(id)).runID).toBeUndefined()
+    yield* f.rotateRun()
+    const next = yield* f.commands.identity(id)
+    expect(next.runID).toBe("evt_remote_run_3")
+    expect((yield* f.commands.session(id, "interrupt", first, true, "old-same-ms")).error?.code).toBe("stale_run")
+    expect((yield* f.commands.session(id, "interrupt", next, true, "new-same-ms")).status).toBe("succeeded")
+    expect(f.calls.interrupt).toBe(1)
+  }))
+
+it("remote state includes requests already pending and preserves their native keys", () =>
+  Effect.gen(function* () {
+    const f = yield* fixture()
+    f.control.questionKeys = ["decision", "features"]
+    const state = yield* f.commands.state(id)
+    expect(state).toMatchObject({
+      incarnation: f.commands.incarnation,
+      runID: "evt_remote_run_1",
+      running: true,
+      pending: {
+        permissions: [{ requestID: "per_remote", tool: "shell", summary: "Run fixture" }],
+        questions: [{ requestID: "frm_remote", fields: [{ key: "decision", type: "string" }] }],
+      },
+    })
+    f.control.questionPending = false
+    yield* f.rotateRun(true)
+    expect(yield* f.commands.state(id)).toMatchObject({ runID: null, running: false, pending: { questions: [] } })
   }))

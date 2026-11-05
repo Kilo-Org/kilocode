@@ -838,13 +838,22 @@ export const make = Effect.fn("SessionSync.make")(function* (
         return Effect.logError("Session synchronization pass failed", cause).pipe(Effect.andThen(Effect.fail(error)))
       }),
     )
-  const livePosition = (sessionID: string) =>
-    db.get<{ sourceID: string; position: number }>(
+  const livePosition = Effect.fn("SessionSync.livePosition")(function* (sessionID: string) {
+    if (activeOrganization === undefined) return
+    const token = yield* credential().pipe(Effect.option)
+    const cached = grants.get(`${origin}:${activeOrganization ?? "personal"}`)
+    if (token._tag === "None" || !cached || cached.credential !== digest(token.value) ||
+      Date.parse(cached.value.expiresAt) <= Date.now()) return
+    const grant = cached.value
+    return yield* db.get<{ sourceID: string; position: number }>(
       sql`SELECT s.source_id AS sourceID,s.position FROM _kilo_sync_session s
         JOIN _kilo_sync_consent c ON c.directory=s.directory
-        WHERE s.id=${sessionID} AND s.local_deleted=0 AND c.enabled=1`,
+        WHERE s.id=${sessionID} AND s.local_deleted=0 AND c.enabled=1
+          AND c.organization_id IS ${activeOrganization} AND c.user_id=${grant.userID}
+          AND c.tenant_type=${grant.tenant.type} AND c.tenant_id=${grant.tenant.id}`,
     ).pipe(Effect.orDie)
-  const live = Effect.fn("SessionSync.live")(function* (workspace?: string) {
+  })
+  const live = Effect.fn("SessionSync.live")(function* (workspace?: string, sessionIDs?: readonly string[]) {
     if (!(yield* ready(workspace)) || activeOrganization === undefined) return
     const grant = yield* exchange({ destination: origin, local, organizationID: activeOrganization })
     if (workspace) {
@@ -853,13 +862,16 @@ export const make = Effect.fn("SessionSync.make")(function* (
       if (!consent?.enabled || consent.user_id !== grant.userID ||
         !sameTenant({ type: consent.tenant_type, id: consent.tenant_id }, grant.tenant)) return
     }
+    const selected = sessionIDs === undefined ? sql`` : sessionIDs.length
+      ? sql`AND s.id IN (${sql.join(sessionIDs.slice(0, 128).map((id) => sql`${id}`), sql`,`)})`
+      : sql`AND 0`
     const sessions = yield* db.all<{
       sessionID: string; directory: string; sourceID: string; position: number
     }>(sql`SELECT s.id AS sessionID,s.directory,s.source_id AS sourceID,s.position
       FROM _kilo_sync_session s JOIN _kilo_sync_consent c ON c.directory=s.directory
       WHERE c.enabled=1 AND s.local_deleted=0 AND s.bootstrap_complete=1 AND s.acknowledged>0
         AND c.user_id=${grant.userID} AND c.tenant_type=${grant.tenant.type} AND c.tenant_id=${grant.tenant.id}
-      ORDER BY s.id`).pipe(Effect.orDie)
+        ${selected} ORDER BY s.id LIMIT 128`).pipe(Effect.orDie)
     return {
       destination: origin,
       identity: `${observedCredential}:${grant.tenant.type}:${grant.tenant.id}:${grant.userID}`,
@@ -870,7 +882,7 @@ export const make = Effect.fn("SessionSync.make")(function* (
     }
   })
   const liveTicket = Effect.fn("SessionSync.liveTicket")(function* (sessionID?: string) {
-    const current = yield* live()
+    const current = yield* live(undefined, sessionID ? [sessionID] : [])
     if (!current) return yield* fail("sync_disabled", "Sign in and enable synchronization before connecting remotely")
     if (sessionID && !current.sessions.some((session) => session.sessionID === sessionID))
       return yield* fail("session_unavailable", "This session is not synchronized under the active account")

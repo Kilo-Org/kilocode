@@ -1,11 +1,12 @@
 export * as RemoteCommands from "./command-executor"
 
-import { Cause, DateTime, Effect, Exit, Schema, Semaphore } from "effect"
+import { Cause, Effect, Exit, Schema, Semaphore } from "effect"
 import { sql } from "drizzle-orm"
 import { createHash, randomUUID } from "node:crypto"
 import { readdir, realpath, stat } from "node:fs/promises"
 import path from "node:path"
 import { Agent } from "@opencode/core/agent"
+import { Bus } from "@opencode/core/bus"
 import { Database } from "@opencode/core/database/database"
 import { Form } from "@opencode/core/form"
 import { Instance } from "@opencode/core/instance/service"
@@ -14,6 +15,7 @@ import { Model } from "@opencode/core/model"
 import { Permission } from "@opencode/core/permission"
 import { Session } from "@opencode/core/session"
 import { Skill } from "@opencode/core/skill"
+import { SessionEvent } from "@opencode/schema/session-event"
 import { Location } from "@opencode/schema/location"
 import { AbsolutePath } from "@opencode/schema/schema"
 import { SessionMessage } from "@opencode/schema/session-message"
@@ -67,6 +69,7 @@ export type Options = {
   launchDirectory: string
   userID: () => string | undefined
   organizationID: () => string | null | undefined
+  canCreate?: () => boolean
   detach: (sessionID: string) => Effect.Effect<void>
 }
 type Owner = { userID: string; organizationID: string | null | undefined }
@@ -110,6 +113,7 @@ const directory = Effect.fn("RemoteCommands.directory")(function* (root: string,
 
 export const make = Effect.fn("RemoteCommands.make")(function* (options: Options) {
   const database = yield* Database.Service
+  const bus = yield* Bus.Service
   const sessions = yield* Session.Service
   const instances = yield* Instance.Service
   const locations = yield* LocationServiceMap.Service
@@ -126,18 +130,78 @@ export const make = Effect.fn("RemoteCommands.make")(function* (options: Options
     outcome TEXT, PRIMARY KEY(scope, command_id))`,
     )
     .pipe(Effect.orDie)
+  yield* database.db
+    .run(
+      sql`CREATE TABLE IF NOT EXISTS _kilo_remote_run (
+    session_id TEXT PRIMARY KEY, run_id TEXT NOT NULL)`,
+    )
+    .pipe(Effect.orDie)
+  // Native event history is optional. Project the execution token in the same
+  // transaction as its lifecycle instead of relying on the retained event log.
+  yield* bus.project(SessionEvent.Execution.Started, (event) =>
+    database.db
+      .run(
+        sql`INSERT INTO _kilo_remote_run(session_id,run_id)
+      VALUES(${event.data.sessionID},${event.id})
+      ON CONFLICT(session_id) DO UPDATE SET run_id=excluded.run_id`,
+      )
+      .pipe(Effect.orDie),
+  )
+  for (const definition of [
+    SessionEvent.Execution.Succeeded,
+    SessionEvent.Execution.Failed,
+    SessionEvent.Execution.Interrupted,
+  ])
+    yield* bus.project(definition, (event) =>
+      database.db.run(sql`DELETE FROM _kilo_remote_run WHERE session_id=${event.data.sessionID}`).pipe(Effect.orDie),
+    )
 
   const identity = Effect.fn("RemoteCommands.identity")(function* (
     sessionID: string,
   ): Effect.fn.Return<Identity, Session.NotFoundError> {
-    const session = yield* sessions.get(Session.ID.make(sessionID))
-    const busy = session.time.busy && DateTime.toEpochMillis(session.time.busy)
-    const running =
-      busy !== undefined && (session.time.idle === undefined || busy > DateTime.toEpochMillis(session.time.idle))
-    return { incarnation, ...(running ? { runID: String(busy) } : {}) }
+    yield* sessions.get(Session.ID.make(sessionID))
+    const run = yield* database.db
+      .get<{ id: string }>(sql`SELECT run_id AS id FROM _kilo_remote_run WHERE session_id=${sessionID}`)
+      .pipe(Effect.orDie)
+    return { incarnation, ...(run ? { runID: run.id } : {}) }
+  })
+  const requireRun = Effect.fn("RemoteCommands.requireRun")(function* (
+    sessionID: string,
+    input: { incarnation: string; runID: string },
+  ) {
+    const current = yield* identity(sessionID)
+    if (
+      input.incarnation !== current.incarnation ||
+      input.runID !== current.runID ||
+      !(yield* sessions.active).has(Session.ID.make(sessionID))
+    )
+      return yield* failure("stale_run", "Command does not address the active runner and run")
   })
   const scoped = <A, E, R>(ref: Location.Ref, effect: Effect.Effect<A, E, R>) =>
     Effect.scoped(effect.pipe(Effect.provide(locations.get(ref))))
+  const state = Effect.fn("RemoteCommands.state")(function* (sessionID: string) {
+    const session = yield* sessions.get(Session.ID.make(sessionID))
+    const pending = yield* Effect.gen(function* () {
+      const permissions = yield* Permission.Service
+      const forms = yield* Form.Service
+      return {
+        permissions: (yield* permissions.forSession(session.id)).map((request) => ({
+          requestID: request.id,
+          tool: request.action,
+          summary: request.message ?? request.resources.join(", "),
+        })),
+        questions: (yield* forms.list({ sessionID }))
+          .filter((form) => form.metadata?.kind === "question")
+          .map((form) => ({
+            requestID: form.id,
+            fields: form.fields,
+          })),
+      }
+    }).pipe(instances.provide(session))
+    const current = yield* identity(sessionID)
+    const running = current.runID !== undefined && (yield* sessions.active).has(session.id)
+    return { incarnation: current.incarnation, runID: running ? current.runID! : null, running, pending }
+  })
   const select = Effect.fn("RemoteCommands.select")(function* (input: { agent?: Agent.ID; model?: Model.Ref }) {
     if (input.agent) {
       const agents = yield* Agent.Service
@@ -185,6 +249,7 @@ export const make = Effect.fn("RemoteCommands.make")(function* (options: Options
     const location = Location.Ref.make({ directory: AbsolutePath.make(target) })
     const model = input.model && { ...input.model, ...(input.variant ? { variant: input.variant } : {}) }
     yield* scoped(location, select({ agent: input.agent, model }))
+    if (options.canCreate?.() === false) return yield* failure("remote_capacity", "Remote session capacity is full")
     const session = yield* sessions.create({
       id: Session.ID.make(
         `ses_${hash(JSON.stringify([root, owner.userID, owner.organizationID ?? null, commandID])).slice(0, 32)}`,
@@ -254,12 +319,7 @@ export const make = Effect.fn("RemoteCommands.make")(function* (options: Options
               : { type: "question_reject" as const, input: yield* decode(Payload.question_reject, payload) }
       const input = command.input
       if (!liveOnly) return yield* failure("live_only_required", "This command must be live-only")
-      if (
-        input.incarnation !== incarnation ||
-        input.runID !== (session.time.busy && String(DateTime.toEpochMillis(session.time.busy))) ||
-        !(yield* sessions.active).has(id)
-      )
-        return yield* failure("stale_run", "Command does not address the active runner and run")
+      yield* requireRun(sessionID, input)
       if (command.type === "interrupt") return { interrupted: yield* sessions.interrupt(id) }
       return yield* Effect.gen(function* () {
         if (command.type === "permission_respond") {
@@ -268,6 +328,7 @@ export const make = Effect.fn("RemoteCommands.make")(function* (options: Options
           const request = yield* permissions.get(input.requestID)
           if (!request || request.sessionID !== id)
             return yield* failure("stale_request", "Permission request is not pending for this session")
+          yield* requireRun(sessionID, input)
           yield* permissions.reply({ requestID: input.requestID, reply: input.reply, message: input.message })
           return { requestID: input.requestID }
         }
@@ -286,16 +347,20 @@ export const make = Effect.fn("RemoteCommands.make")(function* (options: Options
             return yield* failure("invalid_payload", "Answer count must match the pending question")
           if (input.answers.some((answer, index) => form.fields[index]!.type !== "multiselect" && answer.length > 1))
             return yield* failure("invalid_payload", "Single-choice questions accept at most one answer")
+          yield* requireRun(sessionID, input)
           yield* forms.reply({
             id: input.requestID,
             answer: Object.fromEntries(
               input.answers.map((answer, index) => [
-                `q${index}`,
+                form.fields[index]!.key,
                 form.fields[index]!.type === "multiselect" ? answer : (answer[0] ?? ""),
               ]),
             ),
           })
-        } else yield* forms.cancel(command.input.requestID, { message: command.input.message })
+        } else {
+          yield* requireRun(sessionID, command.input)
+          yield* forms.cancel(command.input.requestID, { message: command.input.message })
+        }
         return { requestID: input.requestID }
       }).pipe(instances.provide(session))
     }
@@ -353,6 +418,7 @@ export const make = Effect.fn("RemoteCommands.make")(function* (options: Options
         return { messageID }
       }
       if (command === "new" && !args) {
+        if (options.canCreate?.() === false) return yield* failure("remote_capacity", "Remote session capacity is full")
         const created = yield* sessions.create({
           id: Session.ID.make(`ses_${hash(`${sessionID}:${commandID}`).slice(0, 32)}`),
           location: session.location,
@@ -435,9 +501,7 @@ export const make = Effect.fn("RemoteCommands.make")(function* (options: Options
               ? { code: error.code, message: error.message }
               : { code: "execution_failed", message: "Remote command failed" },
         }
-    const current = sessionID
-      ? yield* identity(sessionID).pipe(Effect.orElseSucceed(() => undefined))
-      : undefined
+    const current = sessionID ? yield* identity(sessionID).pipe(Effect.orElseSucceed(() => undefined)) : undefined
     if (current) outcome.identity = current
     yield* database.db
       .run(
@@ -449,6 +513,7 @@ export const make = Effect.fn("RemoteCommands.make")(function* (options: Options
   return {
     incarnation,
     identity,
+    state,
     instance: (type: string, payload: unknown, commandID: string) =>
       lock.withPermit(
         Effect.suspend(() => {

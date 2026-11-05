@@ -14,6 +14,7 @@ for (const [method, operation] of [
       expect(request.method).toBe("POST")
       expect(new URL(request.url, "http://localhost").pathname).toBe(`/api/rpc/kilocode.remote/${operation}`)
       expect(request.headers.authorization).toBe("Basic fixture")
+      expect(new URL(request.url, "http://localhost").searchParams.get("location[directory]")).toBe("/fixture")
       expect(yield* request.json).toEqual({ input: {} })
       return HttpServerResponse.jsonUnsafe({ output: { enabled: operation !== "disable", connected: true } })
     })
@@ -22,7 +23,7 @@ for (const [method, operation] of [
         Effect.provideService(
           HttpServerRequest.HttpServerRequest,
           HttpServerRequest.fromWeb(
-            new Request(`http://localhost/remote/${operation}`, {
+            new Request(`http://localhost/remote/${operation}?location%5Bdirectory%5D=%2Ffixture`, {
               method,
               headers: { authorization: "Basic fixture" },
             }),

@@ -20,7 +20,7 @@ export interface LiveContext {
 }
 
 interface Interface {
-  readonly live: (directory?: string) => Effect.Effect<LiveContext | undefined, KiloSessionSyncRpc.Failure>
+  readonly live: (directory?: string, sessionIDs?: readonly string[]) => Effect.Effect<LiveContext | undefined, KiloSessionSyncRpc.Failure>
   readonly liveTicket: (sessionID?: string) => Effect.Effect<{
     ticket: string
     expiresAt: string

@@ -1,5 +1,5 @@
 // Kilo-owned mirror of @opencode/cli/server-process: adds authenticated remote HTTP aliases.
-export * as ServerProcess from "@opencode/cli/server-process"
+export * as ServerProcess from "./server-process"
 
 import { NodeServices } from "@effect/platform-node"
 import { Service } from "@opencode/client/effect/service"

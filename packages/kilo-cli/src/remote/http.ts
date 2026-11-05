@@ -20,7 +20,8 @@ export const transform: ServerProcess.Transform = (app) =>
             : undefined
     if (!method) return yield* app
     url.pathname = `/api/rpc/kilocode.remote/${method}`
-    if (!url.searchParams.has("directory")) url.searchParams.set("directory", process.cwd())
+    if (!url.searchParams.has("location[directory]") && !request.headers["x-opencode-directory"])
+      url.searchParams.set("location[directory]", process.cwd())
     const headers = new Headers(request.headers)
     headers.set("content-type", "application/json")
     headers.delete("content-length")

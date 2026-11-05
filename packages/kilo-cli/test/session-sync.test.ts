@@ -3510,3 +3510,23 @@ it.live("remote discovery waits for the initial cloud snapshot acknowledgement",
     expect((yield* s.sync.live(f.directory))?.sessions.map((session) => session.sessionID)).toContain(id)
   }),
 )
+
+it.live("remote discovery is ownership-scoped and live positions reject foreign consent and credentials", () =>
+  Effect.gen(function* () {
+    const f = yield* fixture
+    const s = yield* boot(f)
+    yield* signIn(s.credentials)
+    yield* s.sync.live(f.directory)
+    yield* seed(s.db, f.directory)
+    yield* s.sync.flush({ directory: f.directory })
+    expect((yield* s.sync.live(f.directory, []))?.sessions).toHaveLength(0)
+    expect((yield* s.sync.live(f.directory, [id]))?.sessions.map((session) => session.sessionID)).toEqual([id])
+    expect(yield* s.sync.livePosition(id)).toMatchObject({ position: expect.any(Number) })
+    yield* s.db.run(sql`UPDATE _kilo_sync_consent SET user_id='foreign-user' WHERE directory=${f.directory}`)
+    expect(yield* s.sync.livePosition(id)).toBeUndefined()
+    yield* s.db.run(sql`UPDATE _kilo_sync_consent SET user_id='alice',tenant_id='foreign-tenant' WHERE directory=${f.directory}`)
+    expect(yield* s.sync.livePosition(id)).toBeUndefined()
+    yield* signIn(s.credentials, "bob")
+    expect(yield* s.sync.livePosition(id)).toBeUndefined()
+  }),
+)

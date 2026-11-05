@@ -324,11 +324,18 @@ Each returns `{enabled, connected}`; repeated enable/disable calls are idempoten
 
 Signed-in processes with sync on keep one presence socket, independently of control acceptance.
 Only sessions created or continued in this process are advertised as live; untouched synchronized history is not.
+Ownership and relay sockets are bounded to the 100-session presence advertisement limit.
+New activity evicts the least-recently active unwatched session; identity changes clear process ownership.
 Native text/reasoning deltas, part/tool updates, permission/question requests and execution lifecycle events
 are published only while a viewer watches the session, including when remote control is disabled.
 Runner event bodies are `{version:1,syncPosition,sourceID,incarnation,runID?,data}`.
 `data` is the native bus envelope, or the command outcome for `command.outcome`.
 The sync position identifies the local durable capture boundary, not the relay sequence or server receipt.
+On each watch/re-watch and runner reconnect, and whenever run or pending-request state changes, the runner emits
+`remote.state` with `{version:1,syncPosition,sourceID,incarnation,runID:null|string,running:boolean,pending:{permissions:[{requestID,tool,summary}],questions:[{requestID,fields}]}}`.
+This inventory replaces the viewer's pending state; `fields` retain native form keys and schemas.
+`runID` is the opaque durable execution-start event ID, never a timestamp; idle state uses null.
+The initial state follows relay hello even if the watch arrived before the session socket connected.
 
 Instance commands are `create_session`, `list_directories`, `list_models` and `list_agents`.
 Session commands are `send_message`, `interrupt`, `drop_queued_message`, `permission_respond`,

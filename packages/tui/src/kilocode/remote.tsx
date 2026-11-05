@@ -1,6 +1,7 @@
 import { Plugin } from "@opencode/plugin/tui"
 import { KiloRemoteRpc } from "@opencode/schema/kilocode/remote"
 import { createSignal, onCleanup, onMount, Show } from "solid-js"
+import { errorMessage } from "../util/error"
 
 export default Plugin.define({
   id: "kilocode.remote",
@@ -11,22 +12,32 @@ export default Plugin.define({
     const options = () => ({ location: { directory: (context.location ?? context.data.location.default()).directory } })
     // A status read started before a toggle must not replace the toggle's newer result.
     let generation = 0
+    let inflight: AbortController | undefined
     const refresh = async () => {
-      if (pending()) return
+      if (pending() || inflight) return
+      const controller = new AbortController()
+      inflight = controller
       const current = ++generation
-      await rpc.status({}, options()).then(
-        (value) => {
-          if (current === generation) setStatus(value)
-        },
-        () => {
-          if (current === generation) setStatus((value) => value && { ...value, connected: false })
-        },
-      )
+      try {
+        const value = await rpc.status(
+          {},
+          {
+            ...options(),
+            signal: AbortSignal.any([controller.signal, AbortSignal.timeout(30_000)]),
+          },
+        )
+        if (current === generation) setStatus(value)
+      } catch {
+        if (current === generation) setStatus((value) => value && { ...value, connected: false })
+      } finally {
+        if (inflight === controller) inflight = undefined
+      }
     }
     const toggle = async () => {
       if (pending()) return
       setPending(true)
       generation++
+      inflight?.abort()
       try {
         const current = await rpc.status({}, options())
         const next = await (current.enabled ? rpc.disable({}, options()) : rpc.enable({}, options()))
@@ -43,7 +54,7 @@ export default Plugin.define({
         context.ui.toast.show({
           variant: "error",
           title: "Remote control",
-          message: error instanceof Error ? error.message : String(error),
+          message: errorMessage(error),
         })
       } finally {
         setPending(false)
@@ -73,6 +84,7 @@ export default Plugin.define({
         onCleanup(() => {
           clearInterval(timer)
           generation++
+          inflight?.abort()
         })
         return null
       },

@@ -51,5 +51,5 @@ export const builtins = [
   KiloSidebarUsage, // kilocode_change(plugin)
   KiloCopySession, // kilocode_change
   KiloTerminalActivity, // kilocode_change(terminal-activity)
-  KiloRemote, // kilocode_change(remote)
+  ...(process.env.OPENCODE_APP_DIR_NAME === "kilo2" ? [KiloRemote] : []), // kilocode_change(remote)
 ]

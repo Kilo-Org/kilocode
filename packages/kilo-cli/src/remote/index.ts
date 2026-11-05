@@ -21,6 +21,9 @@ import { RemoteSocket, type RemoteEnvelope } from "./socket"
 
 export type Options = { launchDirectory?: string; kind?: "cli" | "remote"; enabled?: boolean; background?: boolean }
 
+// Presence advertisements accept at most 100 sessions per process.
+const capacity = 100
+
 export const make = Effect.fn("Remote.make")(function* (options: Options = {}) {
   const sync = yield* KiloSessionSync.Service
   const bus = yield* Bus.Service
@@ -32,6 +35,7 @@ export const make = Effect.fn("Remote.make")(function* (options: Options = {}) {
   const owned = new Set<string>()
   const watched = new Set<string>()
   const detached = new Set<string>()
+  const states = new Map<string, string>()
   let current: KiloSessionSync.LiveContext | undefined
   let presence: RemoteSocket | undefined
   let heartbeatAt = 0
@@ -40,17 +44,17 @@ export const make = Effect.fn("Remote.make")(function* (options: Options = {}) {
   let initialized = options.enabled !== undefined || process.env.KILO_REMOTE === "1"
   let closed = false
   const run = Effect.runPromiseWith(yield* Effect.context<never>())
-  const context = () => run(sync.live(launchDirectory))
+  const context = () => run(sync.live(launchDirectory, [...owned]))
   const commands = yield* RemoteCommands.make({
     launchDirectory,
     organizationID: () => current?.organizationID,
     userID: () => current?.userID,
+    canCreate: () => owned.size < capacity || [...owned].some((sessionID) => !watched.has(sessionID)),
     detach: (sessionID) =>
       Effect.sync(() => {
+        if (detached.size === capacity) detached.delete(detached.values().next().value!)
         detached.add(sessionID)
-        watched.delete(sessionID)
-        sessions.get(sessionID)?.stop()
-        sessions.delete(sessionID)
+        owned.delete(sessionID)
         heartbeatAt = 0
       }),
   })
@@ -60,6 +64,7 @@ export const make = Effect.fn("Remote.make")(function* (options: Options = {}) {
     for (const socket of sessions.values()) socket.stop()
     sessions.clear()
     watched.clear()
+    states.clear()
     heartbeatAt = 0
   }
   const publish = async (sessionID: string, type: string, data: unknown) => {
@@ -73,7 +78,27 @@ export const make = Effect.fn("Remote.make")(function* (options: Options = {}) {
       body: { version: 1, syncPosition: position.position, sourceID: position.sourceID, ...identity, data },
     })
   }
+  const publishState = async (sessionID: string, force = false) => {
+    if (!watched.has(sessionID) || !sessions.get(sessionID)?.connected) return
+    const snapshot = await run(commands.state(sessionID))
+    const fingerprint = JSON.stringify(snapshot)
+    if (!force && states.get(sessionID) === fingerprint) return
+    const position = await run(sync.livePosition(sessionID))
+    if (!position || !watched.has(sessionID)) return
+    if (
+      sessions.get(sessionID)?.send({
+        channel: "events",
+        type: "remote.state",
+        body: { version: 1, syncPosition: position.position, sourceID: position.sourceID, ...snapshot },
+      })
+    )
+      states.set(sessionID, fingerprint)
+  }
   const sessionFrame = async (sessionID: string, frame: RemoteEnvelope) => {
+    if (frame.channel === "control" && frame.type === "hello") {
+      await publishState(sessionID, true)
+      return
+    }
     if (frame.channel !== "commands") return
     const body = frame.body as { commandID?: unknown; payload?: unknown; liveOnly?: unknown; expiresAt?: unknown }
     if (!body || typeof body.commandID !== "string") return
@@ -102,6 +127,13 @@ export const make = Effect.fn("Remote.make")(function* (options: Options = {}) {
     )
     sessions.get(sessionID)?.send({ type: "ack", commandID: body.commandID })
     await publish(sessionID, "command.outcome", outcome)
+    if (detached.has(sessionID)) {
+      watched.delete(sessionID)
+      sessions.get(sessionID)?.stop()
+      sessions.delete(sessionID)
+      states.delete(sessionID)
+      heartbeatAt = 0
+    }
   }
   const presenceFrame = async (frame: RemoteEnvelope) => {
     if (frame.type === "watch" && frame.channel === "control") {
@@ -119,6 +151,7 @@ export const make = Effect.fn("Remote.make")(function* (options: Options = {}) {
       if (body.watching === true) watched.add(body.sessionID)
       else watched.delete(body.sessionID)
       await reconcileSessions()
+      if (body.watching === true) await publishState(body.sessionID, true)
       return
     }
     if (frame.channel !== "commands") return
@@ -149,6 +182,7 @@ export const make = Effect.fn("Remote.make")(function* (options: Options = {}) {
       if (eligible.has(id)) continue
       socket.stop()
       sessions.delete(id)
+      states.delete(id)
     }
     for (const sessionID of eligible) {
       if (sessions.has(sessionID) || !current) continue
@@ -181,7 +215,13 @@ export const make = Effect.fn("Remote.make")(function* (options: Options = {}) {
       }
       const next = await context()
       if (closed) return
-      if (next?.identity !== current?.identity) stop()
+      if (next?.identity !== current?.identity) {
+        stop()
+        if (current) {
+          owned.clear()
+          detached.clear()
+        }
+      }
       current = next
       if (!current) {
         stop()
@@ -203,7 +243,7 @@ export const make = Effect.fn("Remote.make")(function* (options: Options = {}) {
       await reconcileSessions()
       const liveSessions = current.sessions
         .filter((session) => owned.has(session.sessionID) && !detached.has(session.sessionID))
-        .slice(0, 128)
+        .slice(0, capacity)
         .map((session) => session.sessionID)
       const membership = liveSessions.join("\0")
       if (membership !== advertised) heartbeatAt = 0
@@ -237,9 +277,35 @@ export const make = Effect.fn("Remote.make")(function* (options: Options = {}) {
         const form = data.form as { sessionID?: unknown } | undefined
         const sessionID = typeof data.sessionID === "string" ? data.sessionID : form?.sessionID
         if (typeof sessionID !== "string") return
+        if (event.type === "session.deleted") {
+          detached.delete(sessionID)
+          owned.delete(sessionID)
+          watched.delete(sessionID)
+          sessions.get(sessionID)?.stop()
+          sessions.delete(sessionID)
+          states.delete(sessionID)
+          heartbeatAt = 0
+          return
+        }
+        if (detached.has(sessionID)) return
+        if (!owned.has(sessionID) && owned.size === capacity) {
+          const oldest = [...owned].find((id) => !watched.has(id))
+          if (!oldest) return
+          owned.delete(oldest)
+          sessions.get(oldest)?.stop()
+          sessions.delete(oldest)
+          states.delete(oldest)
+        }
+        owned.delete(sessionID)
         owned.add(sessionID)
         if (!watched.has(sessionID)) return
         await publish(sessionID, event.type, event)
+        if (
+          event.type.startsWith("session.execution.") ||
+          event.type.startsWith("permission.") ||
+          event.type.startsWith("form.")
+        )
+          await publishState(sessionID)
       }).pipe(Effect.catch(() => Effect.void)),
     ),
     Effect.forkScoped,
