@@ -11,6 +11,7 @@ import { useV2 } from "./client"
 import { useDisplaySettings } from "./display-settings"
 import { SessionList } from "./history"
 import ProfileView from "../components/profile/ProfileView"
+import { forkText } from "../../../src/agent-manager/fork-handoff"
 import { createLocalTabs } from "./local-tabs"
 import { createProfile } from "./profile"
 import { SessionChanges } from "./session-changes"
@@ -68,7 +69,10 @@ export function Chat() {
   const forkSession = (id: string) => {
     void v2.api.session
       .fork({ sessionID: id })
-      .then((info) => {
+      .then(async (info) => {
+        await v2.api.session
+          .synthetic({ sessionID: info.id, text: forkText({ directory: v2.directory }) })
+          .catch(v2.report)
         v2.data.session.remember(info)
         tabs.openAfter(id, info.id)
       })

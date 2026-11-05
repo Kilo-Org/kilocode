@@ -186,14 +186,14 @@ export function activate(context: ExtensionContext) {
       await commands.executeCommand("kilo-code.v2.chat.focus")
       await view.post({ type: "command", name: "profile" })
     }),
-    // One shortcut pair serves the sidebar and the Agent Manager. Both surfaces receive the action and act only
-    // while they have focus, matching cycleAgentMode.
+    // One shortcut pair serves the sidebar and the Agent Manager. Send it to the active surface only, so a tab
+    // command cannot queue for a sidebar that has never mounted.
     commands.registerCommand("kilo-code.v2.agentManager.previousTab", () => {
-      agentAction("tabPrevious")
+      if (agentManager.isActive()) return agentAction("tabPrevious")
       void view.post({ type: "command", name: "tabPrevious" })
     }),
     commands.registerCommand("kilo-code.v2.agentManager.nextTab", () => {
-      agentAction("tabNext")
+      if (agentManager.isActive()) return agentAction("tabNext")
       void view.post({ type: "command", name: "tabNext" })
     }),
     // The switcher only exists in the sidebar, so the command always opens it there.

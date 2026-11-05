@@ -31,7 +31,6 @@ export interface LocalTabsValue {
   display: Accessor<string[]>
   active: Accessor<string>
   session: Accessor<string | undefined>
-  pending: Accessor<string | undefined>
   add: () => string
   open: (id: string) => void
   openAfter: (source: string, id: string) => void
@@ -86,11 +85,6 @@ export function createLocalTabs(): LocalTabsValue {
     const id = active()
     return isPendingTab(id) ? undefined : id
   }
-  const pendingID = () => {
-    const id = active()
-    return isPendingTab(id) ? id : undefined
-  }
-
   const select = (id: string) => {
     if (!ids().includes(id)) return
     setActive(id)
@@ -239,7 +233,6 @@ export function createLocalTabs(): LocalTabsValue {
     display,
     active,
     session,
-    pending: pendingID,
     add,
     open,
     openAfter,
