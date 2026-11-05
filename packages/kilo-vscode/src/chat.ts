@@ -146,6 +146,10 @@ export function wire(input: {
   // The composer state is shared: a change in one open view shows in the others, for example the sidebar and the
   // Agent Manager side by side.
   const others = (message: ToWebview) => surfaces.forEach((target) => target !== post && target(message))
+  const broadcast = (message: ToWebview) => {
+    post(message)
+    others(message)
+  }
   surfaces.add(post)
   // Voice input is host-side: the microphone, the custom endpoint key and the Gateway RPC never reach the webview.
   const speech = createSpeechToTextHost({
@@ -235,6 +239,17 @@ export function wire(input: {
         // The host sweep is the only owner of the decision, so tell it to approve the requests already pending.
         notifyHostAutoApprove()
         return true
+      case "requestDismissedNotifications":
+        post({ type: "dismissedNotificationsLoaded", ids: dismissedNotifications(input.context) })
+        return true
+      case "dismissNotification": {
+        const ids = dismissedNotifications(input.context)
+        if (ids.includes(message.notificationId)) return true
+        const next = [...ids, message.notificationId]
+        void input.context.globalState.update(DISMISSED, next)
+        broadcast({ type: "dismissedNotificationsLoaded", ids: next })
+        return true
+      }
       default:
         return false
     }
@@ -323,8 +338,14 @@ export function composerState(context: ExtensionContext): ToWebview[] {
   ]
 }
 
+/** The notification IDs this window already dismissed, shared by every view. */
+function dismissedNotifications(context: ExtensionContext): string[] {
+  return context.globalState.get<string[]>(DISMISSED, [])
+}
+
 const EXPANDED = "kilo-code.v2.modelSelectorExpanded"
 const AUTO_APPROVE = "kilo-code.v2.autoApprove"
+const DISMISSED = "kilo-code.v2.dismissedNotificationIds"
 const NAMESPACE = "kilo-code.v2"
 // The Agent Manager panel loads its own bundle; the sidebar and the Settings panel share one.
 const ENTRY = { chat: "webview", settings: "webview", agentManager: "agent-manager" } as const

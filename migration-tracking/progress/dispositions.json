@@ -1288,5 +1288,17 @@
     "v2": "packages/kilo-vscode/test/agent-project-messages.test.ts",
     "note": "The state router is carried by packages/kilo-vscode/webview-ui/agent-manager/project/{state,state-handlers,store}.ts and the host project messages. packages/kilo-vscode/test/agent-project-messages.test.ts covers deferred state, activation and the no-catalog mode.",
     "by": "am-progress-map"
+  },
+  "module:packages/kilo-vscode/src/kilo-provider/notifications.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-vscode/webview-ui/src/context/notifications.tsx",
+    "note": "The list now comes from the kilocode.gateway notifications RPC in the webview provider (packages/kilo-vscode/webview-ui/src/context/notifications.tsx) and the showIn filter is packages/kilo-vscode/webview-ui/src/v2/notification-list.ts. The host keeps the dismissed IDs in global state and broadcasts them from packages/kilo-vscode/src/chat.ts (DISMISSED, requestDismissedNotifications, dismissNotification), so every window hides the same items. The v1 synthetic local notices (opencode config migration and Claude migration) are separate features and are not part of this cell.",
+    "by": "better-promise"
+  },
+  "module:packages/kilo-vscode/tests/unit/kilo-provider-notifications.test.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-vscode/test/notifications.test.ts",
+    "note": "Covers the showIn filter with dismissed IDs and the Gateway model name shown by the Try model action. The host-side pass-through of synthetic local notices is not carried with this cell; those notices belong to the config and Claude migration features.",
+    "by": "better-promise"
   }
 }

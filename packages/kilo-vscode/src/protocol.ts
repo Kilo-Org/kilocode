@@ -117,6 +117,8 @@ export type Ui =
   | { type: "persistModelSelectorExpanded"; value: boolean }
   | { type: "requestAutoApproveState" }
   | { type: "persistAutoApproveState"; value: boolean }
+  | { type: "requestDismissedNotifications" }
+  | { type: "dismissNotification"; notificationId: string }
   | { type: "trackCostSession"; sessionID: string }
   | { type: "webviewFocusChanged"; focused: boolean }
   | { type: "setLanguage"; locale: string }
@@ -207,6 +209,7 @@ export type ToWebview =
   | { type: "clipboardWriteResult"; id: string; ok: boolean; error?: string }
   | { type: "modelSelectorExpandedLoaded"; value: boolean }
   | { type: "autoApproveStateLoaded"; value: boolean }
+  | { type: "dismissedNotificationsLoaded"; ids: string[] }
   | { type: "webviewActiveChanged"; active: boolean }
   | { type: "configLoaded"; global: ConfigFileContent; project: ConfigFileContent; policy?: ConfigPolicy; error?: string }
   | { type: "configWritten"; id: number; ok: boolean; error?: string }

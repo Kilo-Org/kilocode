@@ -213,6 +213,7 @@ export function SessionView(props: {
                 <MessageList
                   session={session()}
                   actions={props.actions}
+                  selection={selection}
                   onSelectSession={(id) => props.actions.openSession?.(id)}
                   onShowHistory={props.onShowHistory}
                   onForkMessage={running() ? undefined : props.onForkMessage}

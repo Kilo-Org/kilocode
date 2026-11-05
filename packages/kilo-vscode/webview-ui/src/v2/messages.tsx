@@ -8,10 +8,13 @@ import type { ToolActions } from "@kilocode/kilo-ui/message-part"
 import { Spinner } from "@kilocode/kilo-ui/spinner"
 import { type Component, createEffect, createMemo, createSignal, For, on, onCleanup, Show, type JSX } from "solid-js"
 import { Virtualizer, type VirtualizerHandle } from "virtua/solid"
+import { KiloNotifications } from "../components/chat/KiloNotifications"
 import { useLanguage } from "../context/language"
+import { useNotificationsOptional } from "../context/notifications"
 import { onTimelineHighlight, type TimelineHighlight } from "../utils/timeline/highlight"
 import { partKey } from "../utils/timeline/timeline-parts"
 import { useV2 } from "./client"
+import type { Selection } from "./selectors"
 import {
   anchorOffset,
   handedRows,
@@ -73,6 +76,8 @@ export function MessageList(props: {
   onForkMessage?: (sessionID: string, messageID: string) => void
   /** Replaces the welcome screen of an empty session, for example with the Agent Manager introduction. */
   empty?: () => JSX.Element
+  /** Selects the model a notification offers; without it the header shows no model action. */
+  selection?: Selection
   /** Receives the handler the session dock calls to scroll to the bottom. */
   onScrollToBottomReady?: (handler: (() => void) | undefined) => void
   /** Opens the files changed by one turn. */
@@ -80,6 +85,7 @@ export function MessageList(props: {
 }) {
   const v2 = useV2()
   const language = useLanguage()
+  const notifications = useNotificationsOptional()
   const [highlight, setHighlight] = createSignal<TimelineHighlight>()
   onCleanup(onTimelineHighlight(setHighlight))
 
@@ -424,6 +430,17 @@ export function MessageList(props: {
 
   return (
     <div class="message-list-container">
+      <Show when={!props.empty && empty() ? notifications : undefined}>
+        {(value) => (
+          <Show when={props.selection}>
+            {(selection) => (
+              <div class="welcome-header" data-slot="welcome-header">
+                <KiloNotifications notifications={value()} selection={selection()} />
+              </div>
+            )}
+          </Show>
+        )}
+      </Show>
       <div
         ref={setScrollRef}
         onScroll={handleScroll}
