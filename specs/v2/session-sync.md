@@ -4,7 +4,7 @@
 
 ## Scope
 
-The first delivery continuously synchronizes opted-in native v2 CLI sessions to the new cloud service.
+Native v2 CLI sessions synchronize to Kilo by default while the user is signed in.
 It includes persistent change capture, incremental uploads, private assets, retry, and restart recovery.
 The CLI remains usable offline.
 
@@ -15,43 +15,65 @@ The cloud repository owns service routes, admission, and storage semantics in
 [`services/session-sync/README.md`](https://github.com/Kilo-Org/cloud/blob/main/services/session-sync/README.md).
 This document owns local capture, lifecycle, portability, and CLI behavior.
 
-## Workspace consent
+## Global setting and workspace enrollment
 
-Synchronization is disabled until the user enables it for a workspace.
-Store consent in user-owned local state rather than a repository file that can enable uploads after cloning.
-Bind consent to the workspace and selected personal or organization account.
-A workspace enable action must identify the destination service and disclose the uploaded content categories.
+Session sync defaults to on and uses the fixed Kilo service at `https://session-sync.kiloapps.io`.
+There is no user-facing destination flag, configuration setting, or environment override.
+Signed-in users' native local workspaces enroll automatically at startup, status, and background passes.
+Remote workspace drivers are not enrolled.
+Each enrollment pins the service destination, personal or organization tenant, user, and source identity.
+An account switch pauses a pinned workspace instead of transferring its enrollment or uploading under the new account.
 Organization policy can prohibit synchronization.
 
-Provide commands to enable, disable, inspect, and flush workspace synchronization.
-Disabling stops future uploads without deleting the cloud copy.
-A local removal and delete-everywhere are separate operations.
-Do not overload the existing local delete command with undisclosed remote deletion.
+To turn sync off for all workspaces, set the global-only `session_sync` setting in the global
+Kilo config directory's `kilo2.jsonc` (normally `~/.config/kilo2/kilo2.jsonc`):
 
-Reuse Kilo's existing credential storage and authentication flow.
-Never place credentials in workspace configuration or upload entities.
-A local endpoint override supports isolated verification; production transport requires HTTPS.
+```jsonc
+{
+  "session_sync": false
+}
+```
+
+Global `kilo2.json` is read first, then `kilo2.jsonc`; the last setting wins.
+Workspace config cannot enable or disable sync.
+Atomic setting replacement makes up to eight attempts for transient file-sharing errors, with at most 700 ms of backoff.
+If a reader still denies replacement, the command returns a retryable `settings_unavailable` error and leaves the original file intact; it never truncates the file in place.
+Setting false or signing out pauses journal capture and network activity, keeping the cloud copy and pending local work.
+Set it back to true (or use `sync enable`) to resume; completed history from the pause is not recaptured.
+Transport and grant-refresh outages retain enrolled workspace capture and pending changes.
+Enrollment runs in the host background scope; starting the CLI never waits for the sync destination.
+Sync includes sessions you create or continue after sync is on; it does not bootstrap untouched existing history.
+The first native write to an existing session after enrollment enrolls that session and uploads its snapshot, including historical content.
+Untouched history stays local; there is no history-backfill command.
+
+Sync uploads persisted transcripts, pending input, API-managed instructions, and required attachment and tool-output assets.
+Credentials, environment variables, execution claims, and process-local handles are excluded.
+Native owned assets are included; legacy external files require explicit exact-file approval.
+Local removal and delete-everywhere remain separate operations.
+Reuse Kilo's existing credential storage and authentication flow; never upload credentials.
+Tests inject an isolated peer through the service constructor, not a CLI flag, config, or environment variable.
 
 ## Current commands
 
 ```sh
-kilo2 sync enable --url https://sync.example /absolute/workspace
+kilo2 sync enable /absolute/workspace
 kilo2 sync status --json /absolute/workspace
 kilo2 sync flush --json /absolute/workspace
 kilo2 sync disable /absolute/workspace
 ```
 
-The destination is explicit; no production endpoint is assumed.
-The CLI rejects destination paths before connecting; provide only the service origin.
-For isolated verification, `--local` permits HTTP only on a loopback destination.
-The default account scope follows the active Kilo account and organization.
-`--organization` selects an explicit organization.
+`enable` and `disable` persist the global setting for all workspaces without deleting cloud state.
+Their optional directory selects the workspace whose status is returned; it does not narrow the setting.
+`status` and `flush` remain workspace operations.
+New enrollment follows the active Kilo account and organization resolved by the Gateway.
+A provisional Personal selection never enrolls a workspace: sync waits for the profile to confirm Personal or resolve the default organization.
+`enable --organization` must match that active selection; select a different organization in the Gateway first.
+An account or organization switch pauses existing pinned workspaces instead of reassigning their history.
+`enable --allow-asset` records explicit exact-file legacy approvals for the selected workspace.
 
-Consent covers the canonical workspace and local descendant directories, not sibling clones or remote workspace drivers.
-A descendant's more-specific consent, including a disabled consent, remains its own boundary.
+Enrollment covers the canonical workspace and local descendant directories, not sibling clones or remote workspace drivers.
+A descendant's more-specific enrollment remains its own boundary.
 Native asset provenance cannot cross that boundary through a parent session; an external file requires exact-file approval.
-The producer pins the destination, tenant, account, and source identity.
-An account change pauses uploads rather than transferring consent.
 Status reports pending changes and a structured error.
 Flush exits unsuccessfully if pending work or an error remains.
 An unavailable destination does not stop local agent execution.
@@ -187,7 +209,7 @@ A transcript path alone never authorizes a filesystem read, even inside an opted
 For a legacy file without native provenance, approve that exact regular file explicitly:
 
 ```sh
-kilo2 sync enable --url https://sync.example --allow-asset /absolute/legacy-output.txt /absolute/workspace
+kilo2 sync enable --allow-asset /absolute/legacy-output.txt /absolute/workspace
 ```
 
 Repeat `--allow-asset` for each file.
@@ -202,7 +224,7 @@ Cleanup rechecks every durable pin inside a short database transaction before mo
 Global cleanup runs at startup, enable, and at most once per minute during background passes.
 Acknowledgement cleanup visits only the acknowledged session and retains its packets and preparation pins.
 Only successful cleanup advances its throttle; a cleanup failure preserves enabled consent and reports a retryable background error.
-Before the first enable, native output records metadata only and does not read file contents.
+While sync is off or signed out, native output records metadata only and does not read file contents for sync.
 Unreferenced provenance metadata is bounded by a seven-day age and a 4096-path cap.
 After that metadata expires, an earlier output requires explicit exact-file approval.
 
@@ -210,7 +232,7 @@ Each request deadline scales with body size and has a five-minute cap.
 A background pass can run for six minutes; an explicit flush keeps its shorter command deadline.
 Persist session/hash/length blob acknowledgements across packets and process restarts.
 Keep only the newest 256 hints per session; eviction is safe because a missing hint causes another upload.
-Disabling a workspace or deleting its local session clears its hints without discarding pending packet bytes.
+Disabling sync or deleting a local session clears its hints without discarding pending packet bytes.
 This knowledge is a hint: `blob_missing` with `details.hash` drops that hint and retries the upload.
 Persist last-attempt ordering so continuously dirty sessions cannot starve waiting sessions.
 A pass uploads at most four different sessions concurrently, with one immutable packet per session.
@@ -231,12 +253,15 @@ Minimize changes to shared upstream services.
 
 The source identity persists across normal restarts.
 Consent changes take effect without requiring an unrelated session mutation.
-Enabling synchronization includes existing sessions in the selected workspace.
-A scan establishes initial state; transactional capture covers changes during the scan.
+Default workspace enrollment records the capture boundary without scanning existing sessions into the journal.
+Sessions created or first written after enrollment enter incremental synchronization.
+For an existing session, that first native write enrolls its full snapshot, including earlier historical content.
+Re-enabling preserves the journal cursor and does not recapture completed history from the pause.
 Journal new sessions, local deletions, directory or workspace moves, and consent changes transactionally to request reconciliation.
 Idle passes skip directory scans until that journal changes or a sixty-second safety interval expires.
-With no enabled workspace, passes retain throttled global cleanup but skip credentials, reconciliation, and session selection.
-Startup and enable still reconcile before relying on incremental capture.
+While the global setting is off or the user is signed out, passes skip journal capture, reconciliation, and network activity.
+Startup, status, and background passes enroll eligible native local workspaces for the signed-in user.
+Startup and enable reconcile enrolled workspaces before relying on incremental capture.
 Maintain a bounded pending packet rather than loading an entire workspace into memory.
 
 A graceful exit attempts a bounded drain but correctness does not depend on shutdown hooks.

@@ -6,13 +6,13 @@ import { Context, Effect, type Scope } from "effect"
 
 interface EnableInput {
   directory: string
-  destination: string
-  local: boolean
   organizationID: string | null
   assets?: readonly string[]
 }
 
 interface Interface {
+  /** Undefined suspends enrollment/transport until the Gateway has resolved its effective tenant. */
+  readonly organization: (input: { directory: string; organizationID: string | null | undefined }) => Effect.Effect<void>
   readonly enable: (input: EnableInput) => Effect.Effect<KiloSessionSyncRpc.Status, KiloSessionSyncRpc.Failure>
   readonly disable: (input: {
     directory: string
