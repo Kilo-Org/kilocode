@@ -11,12 +11,13 @@ export function isBuiltin(id: string) {
 }
 
 /**
- * An MCP tool: delegated authority that needs unrestricted network. MCP tools carry their server's namespace. The only
- * namespaced built-in tools are in the `opencode` namespace, so an MCP tool whose name matches a built-in name is
- * still MCP. The declared tool name is unprefixed; the registry id adds the namespace.
+ * An MCP tool: delegated authority that needs unrestricted network. The MCP registration marks its tools, because a
+ * server named `opencode` with a tool named `read` produces the same namespace and declared name as a namespaced
+ * built-in. Without the mark, a namespaced tool is MCP unless it is one of the `opencode`-namespaced built-ins.
  */
-export function isMcp(name: string, namespace: string | undefined) {
-  return namespace !== undefined && !(namespace === "opencode" && known.has(name))
+export function isMcp(value: { name: string; namespace?: string; mcp?: true }) {
+  if (value.mcp) return true
+  return value.namespace !== undefined && !(value.namespace === "opencode" && known.has(value.name))
 }
 
 export function tool<A, E, R>(value: { id: string; name?: string; mcp?: boolean }, effect: Effect.Effect<A, E, R>) {

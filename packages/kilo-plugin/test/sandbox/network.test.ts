@@ -23,12 +23,17 @@ function denied(exit: Exit.Exit<unknown, unknown>) {
 describe("sandbox tool network classification", () => {
   // kilo_port(sandbox:fd6329a01ac1)
   test("treats a namespaced tool as MCP unless it is a built-in in the opencode namespace", () => {
-    expect(Network.isMcp("session_move", "session")).toBe(true)
-    expect(Network.isMcp("touch", "probe")).toBe(true)
-    expect(Network.isMcp("custom", "opencode")).toBe(true)
-    expect(Network.isMcp("artifact_create", "opencode")).toBe(false)
-    expect(Network.isMcp("list_mcp_resources", "opencode")).toBe(false)
-    expect(Network.isMcp("session_move", undefined)).toBe(false)
+    expect(Network.isMcp({ name: "session_move", namespace: "session" })).toBe(true)
+    expect(Network.isMcp({ name: "touch", namespace: "probe" })).toBe(true)
+    expect(Network.isMcp({ name: "custom", namespace: "opencode" })).toBe(true)
+    expect(Network.isMcp({ name: "artifact_create", namespace: "opencode" })).toBe(false)
+    expect(Network.isMcp({ name: "list_mcp_resources", namespace: "opencode" })).toBe(false)
+    expect(Network.isMcp({ name: "session_move", namespace: undefined })).toBe(false)
+  })
+
+  test("keeps the MCP mark over a namespace and name that match a built-in", () => {
+    expect(Network.isMcp({ name: "read", namespace: "opencode", mcp: true })).toBe(true)
+    expect(Network.isMcp({ name: "webfetch", namespace: "opencode", mcp: true })).toBe(true)
   })
 
   test("recognizes the built-in tools and treats every other id as custom", () => {
