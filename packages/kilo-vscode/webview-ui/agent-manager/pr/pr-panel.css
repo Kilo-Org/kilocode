@@ -717,25 +717,41 @@
 }
 
 .am-pr-reactions {
-  gap: 3px;
+  gap: 4px;
   flex-wrap: wrap;
 }
 
-.am-pr-reaction {
+/* A pill is a kilo-ui Button, and its size and variant rules set padding, gap,
+   line-height and border-color through attribute selectors. Match that
+   specificity here, or the compact pill metrics never apply and the emoji
+   floats away from its count behind an invisible border. */
+[data-component="button"][data-size="small"].am-pr-reaction {
   min-width: 34px;
-  padding: 2px 6px;
+  min-height: 22px;
+  padding: 0 8px;
+  gap: 5px;
   border: 1px solid var(--border-base);
   border-radius: 999px;
-  gap: 3px;
+  font-size: var(--kilo-font-size-12);
   line-height: 1;
   transition:
     background 80ms ease-out,
     border-color 80ms ease-out;
 }
 
-.am-pr-reaction.am-pr-reaction-active {
+[data-component="button"][data-size="small"].am-pr-reaction:hover:not(:disabled) {
+  background: var(--surface-base-hover);
+}
+
+[data-component="button"][data-size="small"].am-pr-reaction.am-pr-reaction-active,
+[data-component="button"][data-size="small"].am-pr-reaction.am-pr-reaction-active:hover:not(:disabled) {
   border-color: var(--border-focus, var(--border-base));
-  background: var(--surface-interactive-base);
+  background: var(--surface-interactive-weak);
+}
+
+.am-pr-reaction-emoji {
+  font-size: var(--kilo-font-size-14);
+  line-height: 1;
 }
 
 /* Fixed width, so swapping the count for the spinner cannot move the pill,
@@ -744,7 +760,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 12px;
+  min-width: 10px;
   font-variant-numeric: tabular-nums;
 }
 
@@ -755,16 +771,26 @@
 
 .am-pr-reaction-picker {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(4, 30px);
   gap: 2px;
   padding: 4px;
 }
 
-.am-pr-reaction-option {
-  min-width: 28px;
-  min-height: 28px;
-  padding: 2px;
-  font-size: var(--font-size-base);
+/* The shared popover keeps a 200px floor, which leaves the eight emoji
+   floating in a mostly empty panel. Let this picker shrink to its grid. */
+[data-component="popover-content"].am-pr-reaction-popover {
+  min-width: 0;
+}
+
+[data-component="button"][data-size="small"].am-pr-reaction-option {
+  min-width: 30px;
+  min-height: 30px;
+  padding: 0;
+  border-radius: 4px;
+}
+
+.am-pr-reaction-option .am-pr-reaction-emoji {
+  font-size: var(--kilo-font-size-16);
 }
 
 /* Same bordered treatment the local review comment actions use, because the
