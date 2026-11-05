@@ -103,6 +103,9 @@ const GROUP_TABS: Record<string, string> = {
 const KEY_TAB_OVERRIDES: Record<string, string> = {
   "settings.context.compactionModel.title": "models",
   "settings.autocomplete.model.title": "models",
+  "settings.experimental.browserAutomation.title": "browser",
+  "settings.experimental.browserAutomation.systemChrome.title": "browser",
+  "settings.experimental.browserLinks.title": "browser",
 }
 
 /** Agent Behaviour rows rendered without opening a separate editor or dialog. */
@@ -122,13 +125,7 @@ const EXCLUDED_KEYS = new Set([
   "settings.autoCleanup.lastRun.title",
   "settings.autoApprove.maxCost.title",
   "settings.webTools.webSearch.title",
-  "settings.browser.enable.title",
-  "settings.browser.headless.title",
-  "settings.browser.systemChrome.title",
   "settings.experimental.batch.title",
-  "settings.experimental.browserAutomation.title",
-  "settings.experimental.browserAutomation.systemChrome.title",
-  "settings.experimental.browserLinks.title",
   "settings.experimental.claudeMigration.title",
   "settings.experimental.codeMode.title",
   "settings.experimental.continueOnDeny.title",

@@ -14,6 +14,9 @@ export function createProjectStateHandlers(opts: {
   routeCatalog: (projects: AgentManagerProjectsMessage["projects"]) => void
   routeState: (state: AgentManagerStateMessage) => void
   font: (font: AgentManagerStateMessage["terminalFont"]) => void
+  activeProject: () => string | undefined
+  currentSession: () => string | undefined
+  revealBrowser: () => void
 }) {
   const projects = (msg: ExtensionMessage) => {
     if (msg.type !== "agentManager.projects") return
@@ -36,5 +39,14 @@ export function createProjectStateHandlers(opts: {
     opts.routeState(msg)
   }
 
-  return { projects, state }
+  /** A browser action in the shown session of the active project reveals the side panel. */
+  const browser = (msg: ExtensionMessage) => {
+    if (msg.type !== "agentManager.browserState") return
+    if (msg.status === "closed" || msg.status === "error") return
+    if (msg.projectId !== undefined && msg.projectId !== opts.activeProject()) return
+    if (msg.sessionId !== opts.currentSession()) return
+    opts.revealBrowser()
+  }
+
+  return { projects, state, browser }
 }

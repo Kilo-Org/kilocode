@@ -1,7 +1,7 @@
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { showToast } from "@kilocode/kilo-ui/toast"
-import type { ModelRef } from "@opencode/client"
+import type { JsonValue, ModelRef } from "@opencode/client"
 import { createEffect, createMemo, createSignal, on, onCleanup, onMount, Show, untrack, type JSX } from "solid-js"
 import { fold, reserve } from "../components/chat/prompt-fold"
 import { SpeechToTextButton } from "../components/speech-to-text/SpeechToTextButton"
@@ -19,7 +19,9 @@ import {
   promptFocusAllowed,
 } from "../utils/focus"
 import { isEnterKeyCommitNotIme } from "../utils/ime-enter"
-import { registerAppend, type AppendHandler } from "./append-ready"
+import { browserPrompt, mergeBrowserReferences, type BrowserReference } from "../../../src/shared/browser-feedback"
+import { registerAppend, type AppendHandler, type ReferenceHandler } from "./append-ready"
+import { BrowserReferences } from "./browser-references"
 import { message, useV2 } from "./client"
 import { cleanEnhancedPrompt, enhancePromptRequest, normalizeEnhancePromptErrorMessage } from "./enhance-prompt"
 import { insertSpacedText } from "./prompt-speech"
@@ -28,6 +30,9 @@ import { PromptOverflow, type OverflowItem } from "./prompt-overflow"
 // Drafts live outside the component so a composer remounted for another session restores its own text, as v1 did.
 // The key is the session id, or the pending tab id before a first prompt creates the session.
 const drafts = new Map<string, string>()
+
+// Browser references picked for each draft, kept with the same key as the draft text.
+const references = new Map<string, BrowserReference[]>()
 
 export const promptDrafts = {
   get(key: string | undefined) {
@@ -52,7 +57,8 @@ export function PromptInput(props: {
   blocked?: boolean
   /** A pending question tool call. The composer waits for an answer, so Send replaces Stop. */
   questioning?: boolean
-  onSend: (text: string) => Promise<boolean>
+  /** Sends the composed text. `metadata` carries the structured browser references the text also describes. */
+  onSend: (text: string, metadata?: { [key: string]: JsonValue }) => Promise<boolean>
   onStop: () => void
   /** Agent, model and variant controls, before the actions as in main's PromptInput. */
   selectors?: JSX.Element
@@ -60,10 +66,18 @@ export function PromptInput(props: {
   autoApprove?: { enabled: boolean; onToggle: () => void }
   /** Receives a function that appends text to the draft and, when `send` is true, sends it; undefined on unmount. */
   onAppendReady?: (append: AppendHandler | undefined) => void
+  /** Receives a function that adds a browser reference to this draft; undefined on unmount. */
+  onReferenceReady?: (add: ReferenceHandler | undefined) => void
 }) {
   const v2 = useV2()
   const language = useLanguage()
   const [text, setText] = createSignal(promptDrafts.get(props.draftKey))
+  const [browsers, setBrowsers] = createSignal(props.draftKey ? (references.get(props.draftKey) ?? []) : [])
+  const keep = (key: string | undefined, list: BrowserReference[]) => {
+    if (!key) return
+    if (list.length) references.set(key, list)
+    else references.delete(key)
+  }
   const [sending, setSending] = createSignal(false)
   const [enhancing, setEnhancing] = createSignal(false)
   // The draft Enhance replaced, so Ctrl/Cmd+Z restores it once.
@@ -86,7 +100,7 @@ export function PromptInput(props: {
     !props.disabled &&
     !props.blocked &&
     !sending() &&
-    (speech.state() === "recording" || (!speech.active() && !!text().trim()))
+    (speech.state() === "recording" || (!speech.active() && (!!text().trim() || browsers().length > 0)))
   // The label is the pending-permission hint while blocked, otherwise Send.
   const sendLabel = () => {
     if (props.blocked) return language.t("prompt.action.send.blocked")
@@ -96,7 +110,8 @@ export function PromptInput(props: {
   // Stop replaces Send while the agent runs and the draft is empty. Typing during a run turns it back into Send,
   // whose prompt queues behind the running turn. A pending question is not running work. Stop is not shown while the
   // prompt is still being admitted, because an unadmitted prompt has no execution for Stop to interrupt.
-  const showStop = () => props.running && !text().trim() && !props.questioning && speech.state() !== "recording"
+  const showStop = () =>
+    props.running && !text().trim() && !browsers().length && !props.questioning && speech.state() !== "recording"
 
   const scroll = () => {
     if (!refs.input || !refs.overlay) return
@@ -113,7 +128,9 @@ export function PromptInput(props: {
       (key) => {
         if (key === draft) return
         promptDrafts.set(draft, untrack(text))
+        keep(draft, untrack(browsers))
         draft = key
+        setBrowsers(key ? (references.get(key) ?? []) : [])
         const value = promptDrafts.get(key)
         enhanceToken++
         preEnhance = null
@@ -126,7 +143,10 @@ export function PromptInput(props: {
       },
     ),
   )
-  onCleanup(() => promptDrafts.set(draft, text()))
+  onCleanup(() => {
+    promptDrafts.set(draft, text())
+    keep(draft, browsers())
+  })
 
   createEffect(() => {
     text()
@@ -233,19 +253,28 @@ export function PromptInput(props: {
   const submit = () => {
     if (!canSend()) return
     const draft = text()
+    const picked = browsers()
+    const prompt = browserPrompt(draft, picked)
     // Clear the draft as soon as it is sent, so the composer is empty while the prompt is admitted. Restore it only
     // if the send fails and the user has not typed something new.
+    const restore = () => {
+      if (text().trim() || browsers().length) return
+      setText(draft)
+      setBrowsers(picked)
+    }
     setText("")
+    setBrowsers([])
     setSending(true)
     void props
-      .onSend(draft.trim())
+      // The references hold only strings, numbers and arrays, so they are the JSON the prompt metadata requires.
+      .onSend(prompt.text, prompt.metadata as { [key: string]: JsonValue } | undefined)
       .then((ok) => {
         if (ok) preEnhance = null
-        else if (!text().trim()) setText(draft)
+        else restore()
       })
       .catch((err: unknown) => {
         v2.report(err)
-        if (!text().trim()) setText(draft)
+        restore()
       })
       .finally(() => setSending(false))
   }
@@ -266,6 +295,13 @@ export function PromptInput(props: {
     setText(current.trim() ? `${current}\n\n${value}` : value)
     if (shouldSend) send()
     else focusInput()
+  })
+
+  // A reference for another session is dropped: the browser tab can outlive the session the composer shows.
+  registerAppend<ReferenceHandler>(props.onReferenceReady, (reference) => {
+    if (props.session && reference.sessionId !== props.session) return
+    setBrowsers((current) => mergeBrowserReferences(current, reference))
+    focusInput()
   })
 
   const shortcut = createSpeechShortcut({
@@ -418,6 +454,19 @@ export function PromptInput(props: {
 
   return (
     <div class="prompt-input-container">
+      <Show when={browsers().length > 0}>
+        <div data-component="browser-references">
+          <BrowserReferences
+            references={browsers()}
+            onRemove={(id) => {
+              if (!props.disabled) setBrowsers((current) => current.filter((item) => item.id !== id))
+            }}
+            onClear={() => {
+              if (!props.disabled) setBrowsers([])
+            }}
+          />
+        </div>
+      </Show>
       <div class="prompt-input-wrapper">
         <div class="prompt-input-ghost-wrapper">
           <div class="prompt-input-highlight-overlay" ref={(el) => (refs.overlay = el)} aria-hidden="true" dir="auto">
