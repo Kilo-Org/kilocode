@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, spyOn } from "bun:test"
+import * as path from "node:path"
 import * as vscode from "vscode"
 import { openFileInEditor, openRelativeFile } from "../src/review-utils"
 
@@ -15,7 +16,7 @@ describe("openFileInEditor", () => {
     expect(execute).toHaveBeenCalledTimes(1)
     const [command, uri, options] = execute.mock.calls[0]!
     expect(command).toBe("vscode.open")
-    expect((uri as vscode.Uri).fsPath).toBe("/repo/assets/banner.png")
+    expect((uri as vscode.Uri).fsPath).toBe(vscode.Uri.file("/repo/assets/banner.png").fsPath)
     expect(options).toEqual({ viewColumn: vscode.ViewColumn.One, preview: true })
   })
 
@@ -32,7 +33,8 @@ describe("openRelativeFile", () => {
   it("resolves diff paths from the selected repository", () => {
     openRelativeFile("/repo/app_alpha", "README.md")
 
-    expect((execute.mock.calls[0]?.[1] as vscode.Uri).fsPath).toBe("/repo/app_alpha/README.md")
+    const root = vscode.Uri.file("/repo/app_alpha").fsPath
+    expect((execute.mock.calls[0]?.[1] as vscode.Uri).fsPath).toBe(path.join(root, "README.md"))
   })
 
   it("rejects paths outside the selected repository", () => {
@@ -44,12 +46,15 @@ describe("openRelativeFile", () => {
   it("opens absolute paths directly, even without a root", () => {
     openRelativeFile(undefined, "/repo/app_alpha/README.md")
 
-    expect((execute.mock.calls[0]?.[1] as vscode.Uri).fsPath).toBe("/repo/app_alpha/README.md")
+    const root = vscode.Uri.file("/repo/app_alpha").fsPath
+    expect((execute.mock.calls[0]?.[1] as vscode.Uri).fsPath).toBe(path.join(root, "README.md"))
   })
 
   it("opens absolute paths that fall outside the selected repository", () => {
     openRelativeFile("/repo/app_alpha", "/repo/app_beta/README.md")
 
-    expect((execute.mock.calls[0]?.[1] as vscode.Uri).fsPath).toBe("/repo/app_beta/README.md")
+    expect((execute.mock.calls[0]?.[1] as vscode.Uri).fsPath).toBe(
+      vscode.Uri.file("/repo/app_beta/README.md").fsPath,
+    )
   })
 })
