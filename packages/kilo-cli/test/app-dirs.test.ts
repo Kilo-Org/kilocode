@@ -1,3 +1,4 @@
+import { Database } from "bun:sqlite"
 import { expect, test } from "bun:test"
 import { fixture } from "@kilocode/gateway-core/testing"
 import { mkdir, mkdtemp, readdir, realpath, rm } from "node:fs/promises"
@@ -25,8 +26,8 @@ test("a boot without XDG variables keeps everything under the kilo2 directories 
       bin: path.join(expected.cache, "bin"),
       log: path.join(expected.data, "log"),
       repos: path.join(expected.data, "repos"),
-      // Part 1 changes directories only: upstream's file names stay.
-      db: path.join(expected.data, "opencode-local.db"),
+      // The Kilo file name of a run from source (channel `local`), not upstream's.
+      db: path.join(expected.data, "kilo2-local.db"),
     })
     await created(expected)
     expect(await strays(root)).toEqual([])
@@ -51,7 +52,7 @@ test("a boot with XDG variables keeps everything under the kilo2 directories of 
       state: path.join(root, "xdg/state/kilo2"),
       tmp: path.join(root, "tmp/kilo2"),
     }
-    expect(paths).toMatchObject({ ...expected, db: path.join(expected.data, "opencode-local.db") })
+    expect(paths).toMatchObject({ ...expected, db: path.join(expected.data, "kilo2-local.db") })
     await created(expected)
     expect(await strays(root)).toEqual([])
   } finally {
@@ -122,6 +123,31 @@ test("KILO2_CONFIG_DIR overrides the config directory", async () => {
   }
 }, 60_000)
 
+// A build before the Kilo file names let the upstream server name the database. The first boot copies it to the
+// Kilo file. KILO2_DB still wins.
+test("the first boot copies the database of an earlier build to the Kilo file", async () => {
+  const root = await realpath(await mkdtemp(path.join(os.tmpdir(), "kilo-app-dirs-legacy-")))
+  try {
+    const data = path.join(root, ".local/share/kilo2")
+    await mkdir(data, { recursive: true })
+    const old = new Database(path.join(data, "opencode-local.db"))
+    old.run("CREATE TABLE marker (id TEXT)")
+    old.run("INSERT INTO marker VALUES ('earlier build')")
+    old.close()
+
+    const env = environment(root, {})
+    expect(parse(await cli(env, "debug", "paths")).db).toBe(path.join(data, "kilo2-local.db"))
+    const copy = new Database(path.join(data, "kilo2-local.db"), { readonly: true })
+    expect(copy.query("SELECT id FROM marker").all()).toEqual([{ id: "earlier build" }])
+    copy.close()
+
+    const custom = path.join(root, "custom.db")
+    expect(parse(await cli(environment(root, { KILO2_DB: custom }), "debug", "paths")).db).toBe(custom)
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+}, 60_000)
+
 // A v1 user can have KILO_DB, KILO_CONFIG and KILO_CONFIG_DIR set to v1's own storage. v2 ignores them: it keeps its
 // database and config under kilo2, and v1's files stay byte for byte as they were.
 test("v1 storage variables leave v1's database, config and credentials untouched", async () => {
@@ -148,7 +174,7 @@ test("v1 storage variables leave v1's database, config and credentials untouched
 
     expect(paths).toMatchObject({
       config: path.join(root, ".config/kilo2"),
-      db: path.join(root, ".local/share/kilo2/opencode-local.db"),
+      db: path.join(root, ".local/share/kilo2/kilo2-local.db"),
     })
     expect(await listing()).toEqual(before)
     for (const [file, content] of Object.entries(v1)) expect(await Bun.file(file).text()).toBe(content)
@@ -275,7 +301,7 @@ async function created(expected: Record<string, string>) {
   )
   expect(listed.every((entries) => entries !== undefined)).toBe(true)
   // The boot wrote the database and the log into the kilo2 data directory.
-  expect(await readdir(expected.data)).toEqual(expect.arrayContaining(["opencode-local.db", "log"]))
+  expect(await readdir(expected.data)).toEqual(expect.arrayContaining(["kilo2-local.db", "log"]))
   expect((await readdir(path.join(expected.data, "log"))).some((name) => name.endsWith(".log"))).toBe(true)
 }
 
