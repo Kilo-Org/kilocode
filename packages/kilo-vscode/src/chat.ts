@@ -59,7 +59,11 @@ export function chat(input: {
   })
   // Commands sent before the webview bundle listens are lost, and a resolved view is not yet loaded. Keep them until
   // the webview sends its first message, which it does on mount.
-  const state: { view?: WebviewView; loaded: boolean; queued: ToWebview[] } = { loaded: false, queued: [] }
+  const state: { view?: WebviewView; loaded: boolean; focused: boolean; queued: ToWebview[] } = {
+    loaded: false,
+    focused: false,
+    queued: [],
+  }
   const send = (message: ToWebview) => {
     if (!state.view || !state.loaded) {
       state.queued.push(message)
@@ -77,12 +81,15 @@ export function chat(input: {
     composerState(input.context).forEach((message) => void send(message))
   }
   // The cycle keybindings are active only while the webview has focus, as on v1 (`sidebarFocused`).
-  const focus = (focused: boolean) => void commands.executeCommand("setContext", "kilo-code.v2.sidebarFocused", focused)
+  const focus = (focused: boolean) => {
+    state.focused = focused
+    void commands.executeCommand("setContext", "kilo-code.v2.sidebarFocused", focused)
+  }
   const provider: WebviewViewProvider = {
     resolveWebviewView(view) {
       state.view = view
       state.loaded = false
-      const surface = wire({ ...input, webview: view.webview, view: "chat", onMessage: flush })
+      const surface = wire({ ...input, webview: view.webview, view: "chat", onMessage: flush, onFocusChanged: focus })
       const visibility = view.onDidChangeVisibility(() => {
         if (!view.visible) focus(false)
         surface.post({ type: "webviewActiveChanged", active: view.visible })
@@ -111,6 +118,7 @@ export function chat(input: {
     provider,
     post: send,
     syncState,
+    focused: () => state.focused,
   }
 }
 
@@ -131,6 +139,8 @@ export function wire(input: {
   diff?: ToolDiff
   /** Called on every message from the webview, before it is handled. */
   onMessage?: () => void
+  /** Receives focus changes of the chat sidebar webview. */
+  onFocusChanged?: (focused: boolean) => void
   /** Handles a view-specific message before the standard set. Returns true when it did. */
   handle?: (message: ToHost) => boolean
   onReset?: () => void
@@ -299,8 +309,10 @@ export function wire(input: {
       })
     if (settings.handle(message)) return
     // Only the sidebar carries the cycle keybindings; the Settings panel must not change their context.
-    if (message.type === "webviewFocusChanged" && input.view === "chat")
+    if (message.type === "webviewFocusChanged" && input.view === "chat") {
+      if (input.onFocusChanged) return input.onFocusChanged(message.focused === true)
       return void commands.executeCommand("setContext", "kilo-code.v2.sidebarFocused", message.focused === true)
+    }
     if (message.type === "copyToClipboard")
       return void env.clipboard.writeText(message.text).then(
         () => post({ type: "clipboardWriteResult", id: message.id, ok: true }),
