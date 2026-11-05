@@ -152,6 +152,7 @@ export function AssistantMessage(props: {
                     item={item}
                     message={props.message}
                     index={at()}
+                    session={props.session}
                     directory={v2.directory}
                     open={v2.open}
                     copy={at() === copy()}

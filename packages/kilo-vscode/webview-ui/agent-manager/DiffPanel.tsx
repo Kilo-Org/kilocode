@@ -223,6 +223,7 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
                       renderAnnotation={render}
                       onGutterUtilityClick={(result) => handleGutterClick(diff.file, result)}
                       onOpenFile={props.onOpenFile}
+                      onOpenDocument={props.onOpenDocument}
                       onRevertFile={props.canRevert !== false ? props.onRevertFile : undefined}
                       reverting={() => props.revertingFiles?.has(diff.file) ?? false}
                       onMarkdownRenderChange={props.onMarkdownRenderChange}

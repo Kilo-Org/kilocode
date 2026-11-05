@@ -67,6 +67,13 @@ export function command(input: {
   }
 }
 
+/** The home directory the server reads (`Global.home`). The isolated dev profile moves it into the profile. */
+export function serverHome(cmd: Command | undefined, env: NodeJS.ProcessEnv): string {
+  const profile = cmd?.env.KILO_V2_PROFILE
+  if (profile) return path.join(path.resolve(profile), "home")
+  return env.OPENCODE_TEST_HOME ?? homedir()
+}
+
 export function environment(base: NodeJS.ProcessEnv, extra: Record<string, string>): NodeJS.ProcessEnv {
   return {
     ...Object.fromEntries(
@@ -86,7 +93,10 @@ export function environment(base: NodeJS.ProcessEnv, extra: Record<string, strin
  * to the `OPENCODE_` names the runtime reads, so the server starts with Claude Code loading off by default. A changed
  * value applies on the next start, which the extension host triggers by stopping the server.
  */
-export function settingsEnvironment(values: { claudeCodeCompat: boolean; extraCaCerts: string }): Record<string, string> {
+export function settingsEnvironment(values: {
+  claudeCodeCompat: boolean
+  extraCaCerts: string
+}): Record<string, string> {
   const extraCaCerts = values.extraCaCerts.trim()
   return {
     ...(values.claudeCodeCompat ? {} : { KILO_DISABLE_CLAUDE_CODE: "true" }),
@@ -276,6 +286,10 @@ function signal(child: ChildProcess, name: NodeJS.Signals) {
 }
 
 function bun(env: NodeJS.ProcessEnv, platform: NodeJS.Platform) {
-  const file = path.join(env.BUN_INSTALL ?? path.join(homedir(), ".bun"), "bin", platform === "win32" ? "bun.exe" : "bun")
+  const file = path.join(
+    env.BUN_INSTALL ?? path.join(homedir(), ".bun"),
+    "bin",
+    platform === "win32" ? "bun.exe" : "bun",
+  )
   return existsSync(file) ? file : "bun"
 }

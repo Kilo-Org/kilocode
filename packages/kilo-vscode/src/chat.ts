@@ -17,6 +17,7 @@ import { DISPLAY_DEFAULTS, type ToHost, type ToWebview } from "./protocol"
 import { bridge } from "./relay"
 import { saveImage } from "./save-image"
 import type { Manager } from "./server"
+import type { DocumentViewerProvider } from "./DocumentViewerProvider"
 import {
   effectiveFontSize,
   KILO_SETTING_KEYS,
@@ -28,13 +29,17 @@ import { resolveKiloProfile } from "./settings-paths"
 import { promptKeybindings, watchKeybindings } from "./prompt-keybindings"
 import { readDisplaySettings } from "./display-settings"
 import { createSpeechToTextHost } from "./speech-to-text/host"
+import { documentExists, isMarkdownPath } from "./documents/document-reader"
 import { openToolFile, type ToolDiff } from "./tool-diff"
 
 // The sidebar may only write the settings its own UI owns. Other views keep their own write path.
 // The settings each webview may write; the Settings panel writes every Kilo setting through its own handler.
-const VIEW_SETTING_KEYS: Record<"chat" | "agentManager", ReadonlySet<string>> = {
+const VIEW_SETTING_KEYS: Record<View, ReadonlySet<string>> = {
   chat: new Set(["showTaskTimeline"]),
+  settings: new Set(),
+  profile: new Set(),
   agentManager: new Set(["showTaskTimeline", "agentManager.pushFixes"]),
+  documents: new Set(),
 }
 
 export function chat(input: {
@@ -43,6 +48,8 @@ export function chat(input: {
   directory: string
   trackCostSession: (sessionID: string) => void
   diff: ToolDiff
+  /** The editor tab of the Documents panel, created after this view so it can post comments here. */
+  documents?: () => DocumentViewerProvider | undefined
 }) {
   // This host owns the persisted auto-approve flag, and the Agent Manager sweep reads it. Record it at activation, so
   // the sweep works before any webview resolves.
@@ -52,7 +59,11 @@ export function chat(input: {
   })
   // Commands sent before the webview bundle listens are lost, and a resolved view is not yet loaded. Keep them until
   // the webview sends its first message, which it does on mount.
-  const state: { view?: WebviewView; loaded: boolean; queued: ToWebview[] } = { loaded: false, queued: [] }
+  const state: { view?: WebviewView; loaded: boolean; focused: boolean; queued: ToWebview[] } = {
+    loaded: false,
+    focused: false,
+    queued: [],
+  }
   const send = (message: ToWebview) => {
     if (!state.view || !state.loaded) {
       state.queued.push(message)
@@ -70,12 +81,15 @@ export function chat(input: {
     composerState(input.context).forEach((message) => void send(message))
   }
   // The cycle keybindings are active only while the webview has focus, as on v1 (`sidebarFocused`).
-  const focus = (focused: boolean) => void commands.executeCommand("setContext", "kilo-code.v2.sidebarFocused", focused)
+  const focus = (focused: boolean) => {
+    state.focused = focused
+    void commands.executeCommand("setContext", "kilo-code.v2.sidebarFocused", focused)
+  }
   const provider: WebviewViewProvider = {
     resolveWebviewView(view) {
       state.view = view
       state.loaded = false
-      const surface = wire({ ...input, webview: view.webview, view: "chat", onMessage: flush })
+      const surface = wire({ ...input, webview: view.webview, view: "chat", onMessage: flush, onFocusChanged: focus })
       const visibility = view.onDidChangeVisibility(() => {
         if (!view.visible) focus(false)
         surface.post({ type: "webviewActiveChanged", active: view.visible })
@@ -104,6 +118,7 @@ export function chat(input: {
     provider,
     post: send,
     syncState,
+    focused: () => state.focused,
   }
 }
 
@@ -124,6 +139,8 @@ export function wire(input: {
   diff?: ToolDiff
   /** Called on every message from the webview, before it is handled. */
   onMessage?: () => void
+  /** Receives focus changes of the chat sidebar webview. */
+  onFocusChanged?: (focused: boolean) => void
   /** Handles a view-specific message before the standard set. Returns true when it did. */
   handle?: (message: ToHost) => boolean
   onReset?: () => void
@@ -131,6 +148,8 @@ export function wire(input: {
   globals?: Record<string, unknown>
   /** The Agent Manager settings handler the Settings panel shares with the provider. */
   agentManager?: () => SettingsHandler
+  /** The editor tab that previews Markdown files, when this view has one. */
+  documents?: () => DocumentViewerProvider | undefined
 }) {
   const webview = input.webview
   const root = input.context.extensionUri
@@ -207,14 +226,30 @@ export function wire(input: {
   }
   const handleSurface = (message: Surface) => {
     switch (message.type) {
-      case "openToolFile":
+      case "openToolFile": {
+        const documents = input.documents?.()
+        if (documents && isMarkdownPath(message.filePath)) {
+          documents.open({
+            file: message.filePath,
+            sessionId: message.sessionID,
+            directory: input.directory,
+            line: message.line,
+            column: message.column,
+          })
+          return
+        }
         return openToolFile(input.directory, message)
+      }
       case "openDiffVirtual":
         return input.diff?.open(message.diff, message.initialDiffStyle)
       case "openDiffsVirtual":
         return input.diff?.openMany(message.diffs, message.initialDiffStyle)
       case "requestDisplaySettings":
         return postDisplaySettings()
+      case "validateFiles": {
+        const existing = message.paths.filter((file) => documentExists(input.directory, file))
+        return post({ type: "validateFilesResult", id: message.id, existing })
+      }
     }
   }
   const handleGlobalState = (message: ToHost) => {
@@ -250,7 +285,7 @@ export function wire(input: {
       void workspace.getConfiguration(NAMESPACE).update("language", message.locale || undefined, true)
       return true
     }
-    // The Kilo Gateway sign-in runs in the Profile view of the sidebar, as main opens its Profile panel.
+    // The Kilo Gateway sign-in runs in the Profile panel, as main opens its Profile tab.
     if (message.type === "openProfile") {
       void commands.executeCommand("kilo-code.v2.profile")
       return true
@@ -274,8 +309,10 @@ export function wire(input: {
       })
     if (settings.handle(message)) return
     // Only the sidebar carries the cycle keybindings; the Settings panel must not change their context.
-    if (message.type === "webviewFocusChanged" && input.view === "chat")
+    if (message.type === "webviewFocusChanged" && input.view === "chat") {
+      if (input.onFocusChanged) return input.onFocusChanged(message.focused === true)
       return void commands.executeCommand("setContext", "kilo-code.v2.sidebarFocused", message.focused === true)
+    }
     if (message.type === "copyToClipboard")
       return void env.clipboard.writeText(message.text).then(
         () => post({ type: "clipboardWriteResult", id: message.id, ok: true }),
@@ -326,8 +363,14 @@ export function composerState(context: ExtensionContext): ToWebview[] {
 const EXPANDED = "kilo-code.v2.modelSelectorExpanded"
 const AUTO_APPROVE = "kilo-code.v2.autoApprove"
 const NAMESPACE = "kilo-code.v2"
-// The Agent Manager panel loads its own bundle; the sidebar and the Settings panel share one.
-const ENTRY = { chat: "webview", settings: "webview", agentManager: "agent-manager" } as const
+// The Agent Manager panel loads its own bundle; the sidebar, the Settings and Profile panels, and Documents share one.
+const ENTRY = {
+  chat: "webview",
+  settings: "webview",
+  profile: "webview",
+  agentManager: "agent-manager",
+  documents: "documents",
+} as const
 const SIZES = [10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24]
 
 export function html(input: {
@@ -378,7 +421,7 @@ export function html(input: {
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta http-equiv="Content-Security-Policy" content="${policy}">
 <link rel="stylesheet" href="${input.style}">
-<title>${input.view === "agentManager" ? "Agent Manager" : "Kilo Code"}</title>
+<title>${input.view === "agentManager" ? "Agent Manager" : input.view === "documents" ? "Documents" : "Kilo Code"}</title>
 <style>
   :root { ${vars} --kilo-font-scale: ${input.size / 13}; --font-size-x-small: var(--kilo-font-size-10); --font-size-small: var(--kilo-font-size-11); --font-size-base: var(--kilo-font-size-13); --font-size-large: var(--kilo-font-size-16); }
   html {
@@ -390,7 +433,7 @@ export function html(input: {
     }
   }
   html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; }
-  body { background-color: ${input.view === "settings" ? "var(--vscode-editor-background)" : "var(--vscode-sideBar-background, var(--vscode-editor-background))"}; color: var(--vscode-foreground); font-family: var(--vscode-font-family); }
+  body { background-color: ${input.view === "settings" || input.view === "profile" || input.view === "documents" ? "var(--vscode-editor-background)" : "var(--vscode-sideBar-background, var(--vscode-editor-background))"}; color: var(--vscode-foreground); font-family: var(--vscode-font-family); }
   #root { height: 100%; }
   .container { height: 100vh; }
 </style>
@@ -407,11 +450,11 @@ function escape(text: string) {
   return text.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
 }
 
-type View = "chat" | "settings" | "agentManager"
+type View = "chat" | "settings" | "profile" | "agentManager" | "documents"
 
 type Surface = Extract<
   ToHost,
-  { type: "openToolFile" | "openDiffVirtual" | "openDiffsVirtual" | "requestDisplaySettings" }
+  { type: "openToolFile" | "openDiffVirtual" | "openDiffsVirtual" | "requestDisplaySettings" | "validateFiles" }
 >
 
 function isSurface(message: ToHost): message is Surface {
@@ -419,6 +462,7 @@ function isSurface(message: ToHost): message is Surface {
     message.type === "openToolFile" ||
     message.type === "openDiffVirtual" ||
     message.type === "openDiffsVirtual" ||
-    message.type === "requestDisplaySettings"
+    message.type === "requestDisplaySettings" ||
+    message.type === "validateFiles"
   )
 }
