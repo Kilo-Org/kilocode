@@ -39,7 +39,7 @@ Workspace config cannot enable or disable sync.
 Atomic setting replacement makes up to eight attempts for transient file-sharing errors, with at most 700 ms of backoff.
 If a reader still denies replacement, the command returns a retryable `settings_unavailable` error and leaves the original file intact; it never truncates the file in place.
 Setting false or signing out pauses journal capture and network activity, keeping the cloud copy and pending local work.
-Set it back to true (or use `sync enable`) to resume; completed history from the pause is not recaptured.
+Set it back to true (or use `sync enable`) to resume; untouched messages, including completed history from the pause, are not recaptured.
 Transport and grant-refresh outages retain enrolled workspace capture and pending changes.
 Enrollment runs in the host background scope; starting the CLI never waits for the sync destination.
 Sync includes sessions you create or continue after sync is on; it does not bootstrap untouched existing history.
@@ -97,10 +97,10 @@ A coalescing dirty set records entity identity and source position.
 Unsent changes to the same entity can collapse to the newest value.
 Assistant messages with persisted native parts use a body-free message envelope and independent `message-part` entities.
 Every value is materialized with its source position in the native write transaction; no lazy full-message read can
-accidentally include a later out-of-scope write. Part updates never read or serialize all other part bodies.
+accidentally include a later out-of-scope write. Ordinary part updates never read or serialize all other part bodies.
 Read dirty identities first and materialize values incrementally within the packet byte budget.
 One oversized released part can be read alone for externalization; do not stage a page of oversized values.
-Local deletion and excluded mutations retain the already-captured value snapshots unchanged.
+Local deletion and excluded mutations retain captured snapshots. A resumed message's first write reconciles its current parts and missing IDs once; body-free identity inventory survives ACK/restart, and re-enabling alone never recaptures history.
 Freeze a bounded immutable packet before network transmission.
 Keep that packet and its acknowledgement state in durable local storage.
 Only clear work covered by the acknowledged packet.

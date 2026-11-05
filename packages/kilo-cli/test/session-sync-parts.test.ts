@@ -21,7 +21,7 @@ import { Global } from "@opencode/util/global"
 import { LayerNode } from "@opencode/util/effect/layer-node"
 import { testEffect } from "../../core/test/lib/effect"
 import { Store } from "../src/session-sync/store"
-import { digest, json, jsonNodes, reconstructMessage } from "../src/session-sync/protocol"
+import { type Change, digest, json, jsonNodes, reconstructMessage } from "../src/session-sync/protocol"
 
 const it = testEffect(Layer.empty)
 const sessionID = Session.ID.make("ses_sync_parts")
@@ -855,3 +855,175 @@ it.live("initialization removes obsolete lazy snapshot triggers and view", () =>
     ).toEqual([])
   }),
 )
+
+for (const pause of ["disable", "account", "scope", "alias"] as const)
+  it.live(`a continued message reconciles paused part edits once after ${pause}, ACK and capture restart`, () =>
+    Effect.gen(function* () {
+      const f = yield* fixture
+      const untouchedID = SessionMessage.ID.make("msg_paused_untouched")
+      yield* f.db.insert(SessionMessageTable).values([assistantRow(), assistantRow(untouchedID, 1)]).run()
+      yield* parts(f.db, [
+        { ordinal: 0, data: { type: "text", text: "before update" } },
+        { ordinal: 2, data: { type: "text", text: "unchanged part" } },
+        { ordinal: 5, data: { type: "text", text: "before deletion" } },
+        { ordinal: 10, data: { type: "text", text: "before reorder" } },
+      ])
+      yield* f.db.insert(SessionPartTable).values({
+        session_id: sessionID, message_id: untouchedID, ordinal: 0, type: "text",
+        data: { type: "text", text: "untouched cloud snapshot" },
+      }).run()
+      yield* allow(f)
+      const cloud = new Map<string, Schema.Json>()
+      const settle = () => Effect.gen(function* () {
+        const session = (yield* Store.sessions(f.db, f.directory))[0]
+        if (!session) return yield* Effect.die("Expected an enrolled resumed session")
+        const changes: Change[] = []
+        for (const row of yield* Store.dirty(f.db, sessionID)) {
+          if (row.op === "put") {
+            changes.push({ op: "put", kind: row.kind, id: row.id, value: Store.value(row) })
+            continue
+          }
+          if (row.kind === "session" || row.cause !== "part-removed")
+            return yield* Effect.die("Expected ordinary native part reconciliation")
+          changes.push({ op: "remove", kind: row.kind, id: row.id, cause: row.cause })
+        }
+        const pending = yield* Store.freeze(f.db, session, changes, session.position, [])
+        for (const change of changes)
+          if (change.op === "remove") cloud.delete(`${change.kind}/${change.id}`)
+          else if ("value" in change) cloud.set(`${change.kind}/${change.id}`, change.value)
+        yield* Store.acknowledge(f.db, pending, {
+          version: 1, sessionID, batchID: pending.batch_id, after: pending.after, through: pending.through,
+          digest: pending.digest, revision: session.position, changes: changes.length, committedAt: 30,
+        })
+      })
+      yield* settle()
+      expect(yield* Store.dirty(f.db, sessionID)).toEqual([])
+      const before = new Map(cloud)
+      const inventory = yield* f.db.all(sql`SELECT * FROM _kilo_sync_part ORDER BY session_id,id`)
+      const excluded = path.join(path.dirname(f.directory), "paused-scope")
+      if (pause === "disable") yield* Store.disable(f.db, f.directory)
+      if (pause === "account") yield* f.db.run(sql`UPDATE _kilo_sync_consent SET enabled=0 WHERE directory=${f.directory}`)
+      if (pause === "scope") {
+        yield* Effect.promise(() => mkdir(excluded))
+        yield* f.db.update(SessionTable).set({ directory: excluded }).where(eq(SessionTable.id, sessionID)).run()
+      }
+      if (pause === "alias")
+        yield* f.db.run(sql`UPDATE _kilo_sync_directory SET directory=${excluded}
+          WHERE alias=${storedAbsolutePath(f.directory)}`)
+      yield* f.db.update(SessionPartTable).set({ data: { type: "text", text: "updated during pause" } })
+        .where(and(eq(SessionPartTable.message_id, messageID), eq(SessionPartTable.ordinal, 0))).run()
+      yield* f.db.delete(SessionPartTable)
+        .where(and(eq(SessionPartTable.message_id, messageID), eq(SessionPartTable.ordinal, 5))).run()
+      yield* f.db.update(SessionPartTable).set({ ordinal: 17, data: { type: "text", text: "reordered during pause" } })
+        .where(and(eq(SessionPartTable.message_id, messageID), eq(SessionPartTable.ordinal, 10))).run()
+      yield* parts(f.db, [{ ordinal: 20, data: { type: "text", text: "inserted during pause" } }])
+      yield* f.db.insert(SessionPartTable).values({
+        session_id: sessionID, message_id: untouchedID, ordinal: 9, type: "text",
+        data: { type: "text", text: "completed while paused; stays local" },
+      }).run()
+      yield* f.db.update(SessionMessageTable).set({
+        data: { ...assistantRow(untouchedID, 1).data, time: { created: 10, completed: 30 } },
+      }).where(eq(SessionMessageTable.id, untouchedID)).run()
+      expect(yield* Store.dirty(f.db, sessionID)).toEqual([])
+      expect(yield* f.db.all(sql`SELECT * FROM _kilo_sync_part ORDER BY session_id,id`)).toEqual(inventory)
+      yield* Store.enable(f.db, {
+        directory: f.directory, destination: "http://127.0.0.1:1", local: true, organizationID: null,
+        tenant: { type: "user", id: "fixture" }, userID: "fixture",
+      })
+      if (pause === "scope")
+        yield* f.db.update(SessionTable).set({ directory: f.directory }).where(eq(SessionTable.id, sessionID)).run()
+      yield* Store.reconcile(f.db, f.directory)
+      yield* Store.initialize(f.db)
+      expect((yield* Store.dirty(f.db, sessionID)).some((row) => row.kind === "message" || row.kind === "message-part")).toBe(false)
+      expect(cloud).toEqual(before)
+      const pending = yield* Store.dirty(f.db, sessionID)
+      const sessions = yield* Store.sessions(f.db, f.directory)
+      const rollback = yield* f.db.transaction((tx) => Effect.gen(function* () {
+        yield* tx.update(SessionPartTable).set({ data: { type: "text", text: "rolled-back continuation" } })
+          .where(and(eq(SessionPartTable.message_id, messageID), eq(SessionPartTable.ordinal, 20))).run()
+        return yield* Effect.fail("rollback resumed snapshot")
+      })).pipe(Effect.exit)
+      expect(Exit.isFailure(rollback)).toBe(true)
+      expect(yield* Store.dirty(f.db, sessionID)).toEqual(pending)
+      expect(yield* Store.sessions(f.db, f.directory)).toEqual(sessions)
+      expect(yield* f.db.all(sql`SELECT * FROM _kilo_sync_part ORDER BY session_id,id`)).toEqual(inventory)
+      expect(yield* f.db.get(sql`SELECT needs_snapshot FROM _kilo_sync_message
+        WHERE session_id=${sessionID} AND id=${messageID}`)).toEqual({ needs_snapshot: 1 })
+      yield* f.db.update(SessionPartTable).set({ data: { type: "text", text: "authorized continuation" } })
+        .where(and(eq(SessionPartTable.message_id, messageID), eq(SessionPartTable.ordinal, 20))).run()
+      const restored = yield* captured(f)
+      const resumed = yield* Store.dirty(f.db, sessionID)
+      for (const ordinal of [5, 10])
+        expect(resumed.find((row) => row.kind === "message-part" && row.id === `${messageID}/${ordinal}`))
+          .toMatchObject({ op: "remove", cause: "part-removed" })
+      const current = resumed.filter((row) => row.kind === "message-part" && row.op === "put")
+      expect(current).toHaveLength(4)
+      expect(current.every((row) => row.position < restored.position)).toBe(true)
+      expect(resumed.some((row) => row.id === untouchedID || row.id.startsWith(`${untouchedID}/`))).toBe(false)
+      yield* settle()
+      expect(reconstructMessage(cloud.get(`message/${messageID}`)!,
+        [...cloud.entries()].filter(([key]) => key.startsWith("message-part/")).map(([, value]) => value),
+        (yield* Store.sessions(f.db, f.directory))[0]!.position)).toEqual({ complete: true, value: restored.reconstructed })
+      expect(cloud.get(`message/${untouchedID}`)).toEqual(before.get(`message/${untouchedID}`))
+      expect(cloud.get(`message-part/${untouchedID}/0`)).toEqual(before.get(`message-part/${untouchedID}/0`))
+      expect(cloud.has(`message-part/${untouchedID}/9`)).toBe(false)
+      yield* f.db.update(SessionPartTable).set({ data: { type: "text", text: "ordinary next revision" } })
+        .where(and(eq(SessionPartTable.message_id, messageID), eq(SessionPartTable.ordinal, 20))).run()
+      expect((yield* Store.dirty(f.db, sessionID)).filter((row) => row.kind === "message-part").map((row) => row.id))
+        .toEqual([`${messageID}/20`])
+    }),
+  )
+
+for (const inactive of ["old", "new", "both"] as const)
+  it.live(`part moves capture either authorized session when ${inactive} scope is inactive`, () =>
+    Effect.gen(function* () {
+      const f = yield* fixture
+      const otherSession = Session.ID.make("ses_sync_parts_other")
+      const otherMessage = SessionMessage.ID.make("msg_sync_parts_other")
+      const otherDirectory = path.join(path.dirname(f.directory), "other-workspace")
+      yield* Effect.promise(() => mkdir(otherDirectory))
+      yield* f.db.insert(SessionTable).values({
+        id: otherSession, project_id: Project.ID.global, directory: otherDirectory,
+        slug: "other-parts", version: "test", time_created: 10, time_updated: 20,
+      }).run()
+      yield* f.db.insert(SessionMessageTable).values([
+        assistantRow(), { ...assistantRow(otherMessage), session_id: otherSession },
+      ]).run()
+      yield* parts(f.db, [{ ordinal: 0, data: { type: "text", text: "moving part" } }])
+      yield* allow(f)
+      yield* Store.enable(f.db, {
+        directory: otherDirectory, destination: "http://127.0.0.1:1", local: true, organizationID: null,
+        tenant: { type: "user", id: "fixture" }, userID: "fixture",
+      })
+      yield* f.db.update(SessionTable).set({ time_updated: sql`time_updated` })
+        .where(eq(SessionTable.id, otherSession)).run()
+      yield* Store.reconcile(f.db, otherDirectory, true)
+      for (const session of yield* Store.sessions(f.db)) {
+        const changes = (yield* Store.dirty(f.db, session.id))
+          .filter((row) => row.op === "put").map((row) => ({
+            op: "put" as const, kind: row.kind, id: row.id, value: Store.value(row),
+          }))
+        const pending = yield* Store.freeze(f.db, session, changes, session.position, [])
+        yield* Store.acknowledge(f.db, pending, {
+          version: 1, sessionID: session.id, batchID: pending.batch_id, after: pending.after,
+          through: pending.through, digest: pending.digest, revision: 1, changes: changes.length, committedAt: 30,
+        })
+      }
+      if (inactive !== "new") yield* Store.disable(f.db, f.directory)
+      if (inactive !== "old") yield* Store.disable(f.db, otherDirectory)
+      yield* f.db.update(SessionPartTable).set({ session_id: otherSession, message_id: otherMessage })
+        .where(eq(SessionPartTable.message_id, messageID)).run()
+      const old = yield* Store.dirty(f.db, sessionID)
+      const next = yield* Store.dirty(f.db, otherSession)
+      if (inactive === "new")
+        expect(old.find((row) => row.kind === "message-part")).toMatchObject({
+          id: `${messageID}/0`, op: "remove", cause: "part-removed",
+        })
+      else expect(old).toEqual([])
+      if (inactive === "old")
+        expect(next.find((row) => row.kind === "message-part")).toMatchObject({
+          id: `${otherMessage}/0`, op: "put", value: expect.stringContaining("moving part"),
+        })
+      else expect(next).toEqual([])
+    }),
+  )

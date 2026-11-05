@@ -1,7 +1,7 @@
 import { expect, spyOn } from "bun:test"
 import { KiloSessionSync } from "@kilocode/kilo-plugin"
 import { Context, Effect, Fiber, Layer, Schedule, Schema } from "effect"
-import { eq, sql } from "drizzle-orm"
+import { and, eq, sql } from "drizzle-orm"
 import { mkdtemp, mkdir, readFile, readdir, realpath, rm, symlink, unlink, utimes, writeFile } from "node:fs/promises"
 import os from "node:os"
 import path from "node:path"
@@ -1145,7 +1145,7 @@ it.live("idle passes skip reconciliation and a newly journaled directory still e
     expect((yield* s.sync.flush({ directory: f.directory })).pending).toBe(0)
     yield* s.db.run("CREATE TABLE _test_reconcile_count(value INTEGER NOT NULL)")
     yield* s.db.run("INSERT INTO _test_reconcile_count VALUES(0)")
-    yield* s.db.run(`CREATE TRIGGER _test_reconcile_count AFTER INSERT ON _kilo_sync_directory BEGIN
+    yield* s.db.run(`CREATE TRIGGER _test_reconcile_count BEFORE INSERT ON _kilo_sync_directory BEGIN
       UPDATE _test_reconcile_count SET value=value+1;
     END`)
     for (let index = 0; index < 5; index++)
@@ -1223,7 +1223,7 @@ for (const move of ["directory", "workspace"] as const)
       expect((yield* Store.sessions(s.db, f.directory)).find((row) => row.id === id)?.bootstrap_complete).toBe(1)
       yield* s.db.run("CREATE TABLE _test_move_scan(value INTEGER NOT NULL)")
       yield* s.db.run("INSERT INTO _test_move_scan VALUES(0)")
-      yield* s.db.run(`CREATE TRIGGER _test_move_scan AFTER INSERT ON _kilo_sync_directory BEGIN
+      yield* s.db.run(`CREATE TRIGGER _test_move_scan BEFORE INSERT ON _kilo_sync_directory BEGIN
         UPDATE _test_move_scan SET value=value+1;
       END`)
       const enrolled = yield* Store.reconcileRevision(s.db)
@@ -3384,5 +3384,82 @@ it.live("semantic revert removes independent native parts with the same cause as
     expect(f.backend.states.get(id)?.entities.has(`message/${assistantID}`)).toBe(false)
     expect(f.backend.states.get(id)?.entities.has(`message-part/${assistantID}/3`)).toBe(false)
     expect(f.backend.states.get(id)?.entities.has(`message/${messageID}`)).toBe(true)
+  }),
+)
+
+it.live("organization-paused native parts reconcile only their continued message after an acknowledged restart", () =>
+  Effect.gen(function* () {
+    const f = yield* fixture
+    const untouchedID = SessionMessage.ID.make("msg_org_paused_untouched")
+    const { id: _, type, ...data } = Schema.decodeUnknownSync(Schema.toEncoded(SessionMessage.Assistant))({
+      id: messageID, type: "assistant", agent: "build",
+      model: { providerID: "fixture", id: "model", variant: "default" },
+      native: { signature: "preserved across organization pause" },
+      content: [], time: { created: 10 },
+    })
+    const first: SessionPartData = { type: "text", text: "captured before organization switch" }
+    const removed: SessionPartData = { type: "text", text: "removed during organization pause" }
+    const privatePart: SessionPartData = { type: "text", text: "completed during pause without continuation" }
+    yield* Effect.scoped(Effect.gen(function* () {
+      const s = yield* boot(f, { organizationID: "org-first" })
+      yield* signIn(s.credentials)
+      yield* seed(s.db, f.directory)
+      yield* s.sync.status({ directory: f.directory })
+      yield* s.db.insert(SessionMessageTable).values([
+        { session_id: id, id: messageID, type, seq: 0, data },
+        { session_id: id, id: untouchedID, type, seq: 1, data },
+      ]).run()
+      yield* s.db.insert(SessionPartTable).values([
+        { session_id: id, message_id: messageID, ordinal: 0, type: first.type, data: first },
+        { session_id: id, message_id: messageID, ordinal: 5, type: removed.type, data: removed },
+        { session_id: id, message_id: untouchedID, ordinal: 0, type: first.type, data: first },
+      ]).run()
+      expect((yield* s.sync.flush({ directory: f.directory })).pending).toBe(0)
+      const before = new Map(f.backend.states.get(id)!.entities)
+      yield* s.sync.organization({ directory: f.directory, organizationID: "org-second" })
+      expect((yield* Store.consent(s.db, f.directory))?.enabled).toBe(0)
+      yield* s.db.update(SessionPartTable).set({ data: { type: "text", text: "updated during pause" } })
+        .where(and(eq(SessionPartTable.message_id, messageID), eq(SessionPartTable.ordinal, 0))).run()
+      yield* s.db.delete(SessionPartTable)
+        .where(and(eq(SessionPartTable.message_id, messageID), eq(SessionPartTable.ordinal, 5))).run()
+      yield* s.db.insert(SessionPartTable).values([
+        { session_id: id, message_id: messageID, ordinal: 10, type: privatePart.type, data: privatePart },
+        { session_id: id, message_id: untouchedID, ordinal: 9, type: privatePart.type, data: privatePart },
+      ]).run()
+      yield* s.db.update(SessionMessageTable).set({ data: { ...data, time: { created: 10, completed: 30 } } })
+        .where(eq(SessionMessageTable.id, untouchedID)).run()
+      expect(yield* Store.dirty(s.db, id)).toEqual([])
+      yield* s.sync.organization({ directory: f.directory, organizationID: "org-first" })
+      expect((yield* s.sync.flush({ directory: f.directory })).pending).toBe(0)
+      expect(f.backend.states.get(id)!.entities).toEqual(before)
+    }))
+    const before = new Map(f.backend.states.get(id)!.entities)
+    const s = yield* boot(f, { organizationID: "org-first" })
+    expect((yield* s.sync.flush({ directory: f.directory })).pending).toBe(0)
+    expect(f.backend.states.get(id)!.entities).toEqual(before)
+    const continued: SessionPartData = { type: "text", text: "authorized continuation after restart", native: { nil: null } }
+    yield* s.db.insert(SessionPartTable).values({
+      session_id: id, message_id: messageID, ordinal: 20, type: continued.type, data: continued,
+    }).run()
+    expect((yield* s.sync.flush({ directory: f.directory })).pending).toBe(0)
+    const incomplete = f.backend.states.get(id)!
+    expect(reconstructMessage(incomplete.entities.get(`message/${messageID}`)!,
+      [...incomplete.entities.entries()].filter(([key]) => key.startsWith("message-part/")).map(([, value]) => value),
+      incomplete.position)).toEqual({ complete: false })
+    yield* s.db.update(SessionMessageTable).set({ data: { ...data, time: { created: 10, completed: 40 } } })
+      .where(eq(SessionMessageTable.id, messageID)).run()
+    expect((yield* s.sync.flush({ directory: f.directory })).pending).toBe(0)
+    const state = f.backend.states.get(id)!
+    expect(reconstructMessage(state.entities.get(`message/${messageID}`)!,
+      [...state.entities.entries()].filter(([key]) => key.startsWith("message-part/")).map(([, value]) => value),
+      state.position)).toEqual({ complete: true, value: json({
+        seq: 0, message: { ...data, id: messageID, type, content: [
+          { type: "text", text: "updated during pause" }, privatePart, continued,
+        ], time: { created: 10, completed: 40 } },
+      }) })
+    expect(state.entities.has(`message-part/${messageID}/5`)).toBe(false)
+    expect(state.entities.get(`message/${untouchedID}`)).toEqual(before.get(`message/${untouchedID}`))
+    expect(state.entities.get(`message-part/${untouchedID}/0`)).toEqual(before.get(`message-part/${untouchedID}/0`))
+    expect(state.entities.has(`message-part/${untouchedID}/9`)).toBe(false)
   }),
 )
