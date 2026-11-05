@@ -436,7 +436,7 @@ export const make = Effect.fn("RemoteCommands.make")(function* (options: Options
               : { code: "execution_failed", message: "Remote command failed" },
         }
     const current = sessionID
-      ? yield* identity(sessionID).pipe(Effect.catch(() => Effect.succeed(undefined)))
+      ? yield* identity(sessionID).pipe(Effect.orElseSucceed(() => undefined))
       : undefined
     if (current) outcome.identity = current
     yield* database.db
