@@ -127,7 +127,19 @@ export const make = Effect.fn("RemoteCommands.make")(function* (options: Options
     .run(
       sql`CREATE TABLE IF NOT EXISTS _kilo_remote_command (
     scope TEXT NOT NULL, command_id TEXT NOT NULL, fingerprint TEXT NOT NULL,
-    outcome TEXT, PRIMARY KEY(scope, command_id))`,
+    outcome TEXT, created_at INTEGER NOT NULL DEFAULT 0, PRIMARY KEY(scope, command_id))`,
+    )
+    .pipe(Effect.orDie)
+  // Discovery outcomes (directories, models, agents) can be large, so keep only the
+  // recent settled receipts. Unsettled rows fence a retry and must never be pruned.
+  yield* database.db
+    .run(
+      sql`DELETE FROM _kilo_remote_command WHERE outcome IS NOT NULL AND rowid IN (
+      SELECT rowid FROM (
+        SELECT rowid, row_number() OVER (PARTITION BY scope ORDER BY created_at DESC, rowid DESC) AS n
+        FROM _kilo_remote_command WHERE outcome IS NOT NULL
+      ) WHERE n > 256 OR created_at < ${Date.now()} - 86_400_000
+    )`,
     )
     .pipe(Effect.orDie)
   yield* database.db
@@ -466,8 +478,8 @@ export const make = Effect.fn("RemoteCommands.make")(function* (options: Options
     const fingerprint = hash(canonical({ type, payload: Schema.decodeUnknownSync(Schema.Json)(payload ?? null) }))
     const inserted = yield* database.db
       .get<{ command_id: string }>(
-        sql`INSERT INTO _kilo_remote_command(scope,command_id,fingerprint)
-      VALUES(${scope},${commandID},${fingerprint}) ON CONFLICT DO NOTHING RETURNING command_id`,
+        sql`INSERT INTO _kilo_remote_command(scope,command_id,fingerprint,created_at)
+      VALUES(${scope},${commandID},${fingerprint},${Date.now()}) ON CONFLICT DO NOTHING RETURNING command_id`,
       )
       .pipe(Effect.orDie)
     if (!inserted) {
