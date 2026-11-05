@@ -22,12 +22,18 @@ export const directories = [".kilo2"]
 export const newFile = "kilo2.json"
 
 /**
- * Files the CLI write commands look for, in order; the first that exists is written. A project directory checks
- * `.kilo2` before its root files, `.jsonc` before `.json`. The global directory checks only its root files, like
- * Kilo v1.
+ * Files the CLI write commands look for, in order; the first that exists is written. The order is the reverse of the
+ * read order in each directory, so a write lands on the file the reader actually resolves. A project directory checks
+ * `.kilo2` before its root files; inside `.kilo2` the later read file (`directoryFiles`: `.json` wins) comes first,
+ * while in the root the later read file (`names`: `.jsonc` wins) comes first. The global directory checks only its
+ * root files, like Kilo v1.
  */
 export function writeCandidates(directory: string, global: boolean) {
-  const files = names.toReversed()
-  if (global) return files.map((name) => path.join(directory, name))
-  return [...directories, "."].flatMap((parent) => files.map((name) => path.join(directory, parent, name)))
+  const root = names.toReversed()
+  if (global) return root.map((name) => path.join(directory, name))
+  const nested = directoryFiles.toReversed()
+  return [
+    ...directories.flatMap((parent) => nested.map((name) => path.join(directory, parent, name))),
+    ...root.map((name) => path.join(directory, name)),
+  ]
 }

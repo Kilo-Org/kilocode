@@ -18,6 +18,7 @@ import { KiloRemote } from "./remote"
 export { KiloSessionSync }
 export { KiloRemote }
 import { KiloPrivacyPlugin } from "./privacy"
+import { KiloSettingsPlugin } from "./settings"
 import { KiloSkillPlugin } from "./skill"
 import { KiloTodoPlugin } from "./todo"
 import { KiloBrowserToolPlugin } from "./browser"
@@ -62,6 +63,7 @@ export const KiloPlugins = [
   KiloNotebookPlugin,
   KiloCommitMessagePlugin,
   KiloPrivacyPlugin,
+  KiloSettingsPlugin,
   KiloBranchNamePlugin,
   KiloAgentManagerPlugin,
   KiloRecallPlugin,
