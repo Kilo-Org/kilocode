@@ -12,14 +12,13 @@
  */
 
 import { getShellEnvironment } from "./shell-env"
+import { SETUP_TIMEOUT_MS } from "../shared/worktree-readiness"
 import { SetupScriptRunner, type RunTask } from "./SetupScriptRunner"
 import type { SetupScriptService } from "./SetupScriptService"
 import type { RunHandle } from "./run/manager"
 import type { ScriptTerminalManager } from "./ScriptTerminalManager"
 import type { TerminalDestination } from "./terminal-destination"
 import type { AgentManagerOutMessage } from "./types"
-
-const TIMEOUT_MS = 5 * 60 * 1000
 
 /** Reconcile cadence while a script runs: a lost exit event otherwise
  *  stalls the awaited setup (and its tab) until the full timeout. */
@@ -104,7 +103,7 @@ export function createSetupScriptTask(input: Input): RunTask {
   return async (config) => {
     if (!input.trusted()) throw new Error("Trust the workspace before running setup scripts")
     const env = { ...(await (input.env ?? getShellEnvironment)()), ...config.env }
-    const ms = input.timeoutMs ?? TIMEOUT_MS
+    const ms = input.timeoutMs ?? SETUP_TIMEOUT_MS
     return new Promise<number | undefined>((resolve, reject) => {
       let handle: RunHandle | undefined
       let settled = false

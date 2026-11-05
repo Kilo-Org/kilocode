@@ -9,3 +9,11 @@ export const NO_GIT_REPO = "Open a folder that contains a git repository to use 
 export function missingDeveloperTools(text: string): boolean {
   return /xcrun: error: invalid active developer path|xcode-select: note: no developer tools were found/i.test(text)
 }
+
+export { errorText, stderrText } from "../shared/worktree-readiness"
+
+/** Whether a probe failure confirms the tool is absent rather than failing for another reason. */
+export function toolAbsent(error: unknown, detail: string): boolean {
+  if (error && typeof error === "object" && (error as NodeJS.ErrnoException).code === "ENOENT") return true
+  return missingDeveloperTools(detail)
+}

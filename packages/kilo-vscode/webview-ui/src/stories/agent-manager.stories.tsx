@@ -2589,6 +2589,7 @@ function ReadinessPreview(props: { state: ReadinessState; form?: boolean }) {
           onProject={() => {}}
           onFolder={() => {}}
           onCheck={() => {}}
+          onReload={() => {}}
         />
       </div>
     </StoryProviders>
@@ -2601,6 +2602,24 @@ const readinessPlain = {
   name: "scratch",
   trusted: true,
   identity: true,
+} as const
+
+const readinessGit = {
+  status: "blocked",
+  code: "git_not_found",
+  name: "orbit",
+  trusted: true,
+  platform: "darwin",
+  installer: "apple",
+} as const
+
+const readinessLfs = {
+  status: "blocked",
+  code: "lfs_missing",
+  name: "orbit",
+  trusted: true,
+  platform: "darwin",
+  installer: "brew",
 } as const
 
 export const ReadinessProjects: Story = {
@@ -2722,4 +2741,62 @@ export const ReadinessFixError: Story = {
       }}
     />
   ),
+}
+
+export const ReadinessGitMissing: Story = {
+  name: "Readiness — Git missing",
+  render: () => <ReadinessPreview state={{ status: "blocked", project: "orbit", result: readinessGit }} />,
+}
+
+export const ReadinessGitInstalling: Story = {
+  name: "Readiness — Git installer open",
+  render: () => (
+    <ReadinessPreview
+      state={{ status: "installing", project: "orbit", result: readinessGit, fix: "installGit", mode: "apple" }}
+    />
+  ),
+}
+
+export const ReadinessGitInstalled: Story = {
+  name: "Readiness — Git installed",
+  render: () => <ReadinessPreview state={{ status: "ready", project: "orbit", fixed: "installGit" }} />,
+}
+
+export const ReadinessLfsMissing: Story = {
+  name: "Readiness — Git LFS missing",
+  render: () => <ReadinessPreview state={{ status: "blocked", project: "orbit", result: readinessLfs }} />,
+}
+
+export const ReadinessLfsSetup: Story = {
+  name: "Readiness — Git LFS not set up",
+  render: () => (
+    <ReadinessPreview
+      state={{
+        status: "blocked",
+        project: "orbit",
+        result: { status: "blocked", code: "lfs_not_setup", name: "orbit", trusted: true },
+      }}
+    />
+  ),
+}
+
+export const ReadinessLfsInstalling: Story = {
+  name: "Readiness — installing Git LFS",
+  render: () => (
+    <ReadinessPreview
+      state={{ status: "installing", project: "orbit", result: readinessLfs, fix: "installLfs", mode: "pending" }}
+    />
+  ),
+}
+
+export const ReadinessLfsStale: Story = {
+  name: "Readiness — Git LFS installed, not visible",
+  render: () => (
+    <ReadinessPreview state={{ status: "stale", project: "orbit", result: readinessLfs, fix: "installLfs" }} />
+  ),
+}
+
+export const ReadinessLfsReady: Story = {
+  name: "Readiness — Git LFS installed",
+  render: () => <ReadinessPreview state={{ status: "ready", project: "orbit", fixed: "installLfs" }} />,
 }

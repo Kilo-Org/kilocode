@@ -1,14 +1,17 @@
-// Draft persistence for the New Worktree dialog. The draft lives in webview
-// state, which the Agent Manager serializer keeps across a Reload window.
+// Draft persistence and the one-shot reopen flag for the New Worktree dialog.
+// Both live in webview state, which the Agent Manager serializer keeps across a Reload window.
 
+import { createEffect, on, type Accessor } from "solid-js"
+import { z } from "zod"
 import {
   MAX_MULTI_VERSIONS,
   allocationKey,
   type ModelAllocationEntry,
   type ModelAllocations,
 } from "./multi-model-utils"
+import { VERSION_OPTIONS, type VersionCount } from "../../src/shared/worktree-readiness"
 
-export type VersionCount = 1 | 2 | 3 | 4
+export type { VersionCount } from "../../src/shared/worktree-readiness"
 
 export interface WorktreeDraft {
   project?: string
@@ -20,15 +23,32 @@ export interface WorktreeDraft {
   goal?: boolean
 }
 
-function text(value: unknown): string | undefined {
-  return typeof value === "string" && value.length > 0 ? value : undefined
-}
+const allocationSchema = z.object({
+  providerID: z.string(),
+  modelID: z.string(),
+  name: z.string(),
+  count: z.number().int().min(1).max(MAX_MULTI_VERSIONS),
+  variant: z.string().min(1).optional().catch(undefined),
+})
 
-function version(value: unknown): VersionCount | undefined {
-  return value === 1 || value === 2 || value === 3 || value === 4 ? value : undefined
-}
+const draftSchema = z.object({
+  project: z.string().min(1).optional().catch(undefined),
+  name: z.string().min(1).optional().catch(undefined),
+  branch: z.string().min(1).optional().catch(undefined),
+  versions: z
+    .number()
+    .int()
+    .min(1)
+    .max(MAX_MULTI_VERSIONS)
+    .refine((value) => VERSION_OPTIONS.some((item) => item === value))
+    .optional()
+    .catch(undefined),
+  compare: z.literal(true).optional().catch(undefined),
+  allocations: z.array(z.unknown()).optional().catch(undefined),
+  goal: z.literal(true).optional().catch(undefined),
+})
 
-function copy(data: ModelAllocationEntry): ModelAllocationEntry {
+function copyAllocation(data: ModelAllocationEntry): ModelAllocationEntry {
   const item: ModelAllocationEntry = {
     providerID: data.providerID,
     modelID: data.modelID,
@@ -39,25 +59,20 @@ function copy(data: ModelAllocationEntry): ModelAllocationEntry {
   return item
 }
 
-function allocation(value: unknown): ModelAllocationEntry | undefined {
-  if (!value || typeof value !== "object" || Array.isArray(value)) return undefined
-  const data = value as Record<string, unknown>
-  if (typeof data.providerID !== "string" || typeof data.modelID !== "string" || typeof data.name !== "string")
-    return undefined
-  if (
-    typeof data.count !== "number" ||
-    !Number.isInteger(data.count) ||
-    data.count < 1 ||
-    data.count > MAX_MULTI_VERSIONS
-  )
-    return undefined
-  return copy({ ...data, variant: text(data.variant) } as ModelAllocationEntry)
+function validAllocations(values: unknown[] | undefined): ModelAllocationEntry[] {
+  if (!values) return []
+  const items: ModelAllocationEntry[] = []
+  for (const value of values) {
+    const parsed = allocationSchema.safeParse(value)
+    if (parsed.success) items.push(parsed.data)
+  }
+  return items
 }
 
-/** Initial signal values for a restored draft. */
 export function draftValues(draft: WorktreeDraft) {
   const allocations: ModelAllocations = new Map()
-  for (const item of draft.allocations ?? []) allocations.set(allocationKey(item.providerID, item.modelID), copy(item))
+  for (const item of draft.allocations ?? [])
+    allocations.set(allocationKey(item.providerID, item.modelID), copyAllocation(item))
   return {
     name: draft.name ?? "",
     branch: draft.branch ?? "",
@@ -84,22 +99,26 @@ export function initialProject(
   return explicit ?? active
 }
 
-/** Read the draft from cached webview state. */
+const DRAFT_KEY = "advancedDialogDraft"
+
+/** Write the draft into the persisted webview state. */
+export function saveDraft(state: Record<string, unknown>, draft: WorktreeDraft): Record<string, unknown> {
+  return { ...state, [DRAFT_KEY]: writeDraft(draft) }
+}
+
 export function readCached(state: Record<string, unknown> | undefined): WorktreeDraft {
-  const value = state?.advancedDialogDraft
-  if (!value || typeof value !== "object" || Array.isArray(value)) return {}
-  const data = value as Record<string, unknown>
-  const list = Array.isArray(data.allocations)
-    ? data.allocations.map(allocation).filter((item): item is ModelAllocationEntry => item !== undefined)
-    : []
+  const parsed = draftSchema.safeParse(state?.[DRAFT_KEY])
+  if (!parsed.success) return {}
+  const data = parsed.data
+  const allocations = validAllocations(data.allocations)
   return {
-    project: text(data.project),
-    name: text(data.name),
-    branch: text(data.branch),
-    versions: version(data.versions),
-    compare: data.compare === true ? true : undefined,
-    allocations: list.length > 0 ? list : undefined,
-    goal: data.goal === true ? true : undefined,
+    project: data.project,
+    name: data.name,
+    branch: data.branch,
+    versions: VERSION_OPTIONS.find((value) => value === data.versions),
+    compare: data.compare,
+    allocations: allocations.length > 0 ? allocations : undefined,
+    goal: data.goal,
   }
 }
 
@@ -118,5 +137,48 @@ export function writeDraft(draft: WorktreeDraft): WorktreeDraft | undefined {
 
 export function writeAllocations(map: ModelAllocations): ModelAllocationEntry[] | undefined {
   if (map.size === 0) return undefined
-  return [...map.values()].map(copy)
+  return [...map.values()].map(copyAllocation)
+}
+
+const REOPEN_KEY = "advancedDialogReopen"
+
+export function markReopen(state: Record<string, unknown>): Record<string, unknown> {
+  return { ...state, [REOPEN_KEY]: true }
+}
+
+function readReopen(state: Record<string, unknown> | undefined): boolean {
+  return state?.[REOPEN_KEY] === true
+}
+
+function takeReopen(state: Record<string, unknown> | undefined): {
+  reopen: boolean
+  state: Record<string, unknown>
+} {
+  const next = { ...(state ?? {}) }
+  const reopen = readReopen(next)
+  delete next[REOPEN_KEY]
+  return { reopen, state: next }
+}
+
+interface ReopenOptions {
+  loaded: Accessor<boolean>
+  arrived: Accessor<boolean>
+  state: () => Record<string, unknown> | undefined
+  save: (state: Record<string, unknown>) => void
+  open: () => void
+}
+
+export function createReopen(opts: ReopenOptions) {
+  let done = false
+  const run = () => {
+    if (done || !opts.loaded() || !opts.arrived()) return
+    // The first eligible run is this page's only chance. A Reload clicked after
+    // it must not reopen the dialog on the page that is about to be replaced.
+    done = true
+    const next = takeReopen(opts.state())
+    if (!next.reopen) return
+    opts.save(next.state)
+    opts.open()
+  }
+  createEffect(on([opts.loaded, opts.arrived], () => run()))
 }

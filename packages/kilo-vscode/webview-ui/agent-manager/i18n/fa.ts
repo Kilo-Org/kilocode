@@ -637,4 +637,35 @@ export const dict = {
   "agentManager.readiness.working.initialCommit": "در حال ایجاد اولین commit…",
   "agentManager.readiness.working.project": "در حال باز کردن پروژه…",
   "agentManager.readiness.blocked": "برای ایجاد worktree، مشکل بالا را برطرف کنید.",
+  "agentManager.readiness.blockedGit": "ابتدا Git را نصب کنید. می‌توانید نوشتن وظیفه را ادامه دهید.",
+  "agentManager.readiness.blockedLfs": "ابتدا Git LFS را نصب کنید. می‌توانید نوشتن وظیفه را ادامه دهید.",
+  "agentManager.readiness.git.title": "Kilo برای ساخت worktree به Git نیاز دارد",
+  "agentManager.readiness.git.body":
+    "Git هنوز روی این رایانه نصب نشده است. آن را نصب کنید و به این پنجره بازگردید. وظیفه شما اینجا می‌ماند.",
+  "agentManager.readiness.git.bodyMac":
+    "Git هنوز روی این Mac نصب نشده است. آن را نصب کنید و به این پنجره بازگردید. وظیفه شما اینجا می‌ماند.",
+  "agentManager.readiness.lfs.title": "{{name}} به Git LFS نیاز دارد",
+  "agentManager.readiness.lfs.body":
+    "این پروژه برخی فایل‌های بزرگ را در Git LFS نگه می‌دارد که هنوز نصب نشده است. آن را نصب کنید و به این پنجره بازگردید. وظیفه شما اینجا می‌ماند.",
+  "agentManager.readiness.tool.install": "نصب {{tool}}",
+  "agentManager.readiness.tool.get": "دریافت {{tool}}",
+  "agentManager.readiness.tool.other": "راه‌های دیگر نصب",
+  "agentManager.readiness.install.apple.title": "نصب را در پنجره Apple کامل کنید",
+  "agentManager.readiness.install.apple.body": "Kilo وقتی به این پنجره بازگردید دوباره بررسی می‌کند.",
+  "agentManager.readiness.install.terminal.title": "در حال نصب {{tool}}…",
+  "agentManager.readiness.install.terminal.body": "در ترمینال زیر در حال اجراست. Kilo پس از پایان دوباره بررسی می‌کند.",
+  "agentManager.readiness.install.stale.title": "{{tool}} نصب شده است، اما VS Code هنوز آن را نمی‌بیند",
+  "agentManager.readiness.install.stale.body":
+    "بارگذاری مجدد پنجره معمولاً این را برطرف می‌کند. وظیفه شما پس از بارگذاری مجدد برمی‌گردد.",
+  "agentManager.readiness.install.reload": "بارگذاری مجدد پنجره",
+  "agentManager.readiness.ready.git": "Git آماده است.",
+  "agentManager.readiness.ready.lfs": "Git LFS آماده است.",
+  "agentManager.readiness.install.failed": "نصب با کد {{code}} پایان یافت. خروجی ترمینال را ببینید.",
+  "agentManager.readiness.install.stopped": "نصب متوقف شد. خروجی ترمینال را ببینید.",
+  "agentManager.readiness.lfsSetup.title": "{{name}} به راه‌اندازی Git LFS نیاز دارد",
+  "agentManager.readiness.lfsSetup.body":
+    "Git LFS نصب شده است، اما هنوز برای کاربر Git شما راه‌اندازی نشده است. برای ساخت worktree آن را راه‌اندازی کنید.",
+  "agentManager.readiness.lfsSetup.action": "راه‌اندازی Git LFS",
+  "agentManager.readiness.blockedLfsSetup": "ابتدا Git LFS را راه‌اندازی کنید. می‌توانید نوشتن وظیفه را ادامه دهید.",
+  "agentManager.readiness.working.setupLfs": "در حال راه‌اندازی Git LFS…",
 }

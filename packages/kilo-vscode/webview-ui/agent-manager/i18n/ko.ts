@@ -629,4 +629,35 @@ export const dict = {
   "agentManager.readiness.working.initialCommit": "첫 커밋 만드는 중…",
   "agentManager.readiness.working.project": "프로젝트 여는 중…",
   "agentManager.readiness.blocked": "worktree를 만들려면 위의 문제를 해결하세요.",
+  "agentManager.readiness.blockedGit": "먼저 Git을 설치하세요. 작업 내용은 계속 작성할 수 있습니다.",
+  "agentManager.readiness.blockedLfs": "먼저 Git LFS를 설치하세요. 작업 내용은 계속 작성할 수 있습니다.",
+  "agentManager.readiness.git.title": "Kilo가 worktree를 만들려면 Git이 필요합니다",
+  "agentManager.readiness.git.body":
+    "이 컴퓨터에 아직 Git이 설치되어 있지 않습니다. 설치한 후 이 창으로 돌아오세요. 작업 내용은 여기에 유지됩니다.",
+  "agentManager.readiness.git.bodyMac":
+    "이 Mac에 아직 Git이 설치되어 있지 않습니다. 설치한 후 이 창으로 돌아오세요. 작업 내용은 여기에 유지됩니다.",
+  "agentManager.readiness.lfs.title": "{{name}}에 Git LFS가 필요합니다",
+  "agentManager.readiness.lfs.body":
+    "이 프로젝트는 일부 큰 파일을 아직 설치되지 않은 Git LFS에 보관합니다. 설치한 후 이 창으로 돌아오세요. 작업 내용은 여기에 유지됩니다.",
+  "agentManager.readiness.tool.install": "{{tool}} 설치",
+  "agentManager.readiness.tool.get": "{{tool}} 받기",
+  "agentManager.readiness.tool.other": "다른 설치 방법",
+  "agentManager.readiness.install.apple.title": "Apple 창에서 설치를 완료하세요",
+  "agentManager.readiness.install.apple.body": "이 창으로 돌아오면 Kilo가 다시 확인합니다.",
+  "agentManager.readiness.install.terminal.title": "{{tool}} 설치 중…",
+  "agentManager.readiness.install.terminal.body": "아래 터미널에서 실행 중입니다. 완료되면 Kilo가 다시 확인합니다.",
+  "agentManager.readiness.install.stale.title": "{{tool}}이(가) 설치되었지만 VS Code에서 아직 보이지 않습니다",
+  "agentManager.readiness.install.stale.body":
+    "창을 다시 로드하면 보통 해결됩니다. 다시 로드한 후 작업 내용이 돌아옵니다.",
+  "agentManager.readiness.install.reload": "창 다시 로드",
+  "agentManager.readiness.ready.git": "Git이 준비되었습니다.",
+  "agentManager.readiness.ready.lfs": "Git LFS가 준비되었습니다.",
+  "agentManager.readiness.install.failed": "설치가 코드 {{code}}으로 종료되었습니다. 터미널 출력을 확인하세요.",
+  "agentManager.readiness.install.stopped": "설치가 중지되었습니다. 터미널 출력을 확인하세요.",
+  "agentManager.readiness.lfsSetup.title": "{{name}}에 Git LFS 설정이 필요합니다",
+  "agentManager.readiness.lfsSetup.body":
+    "Git LFS가 설치되어 있지만 Git 사용자에 대해 아직 설정되지 않았습니다. worktree를 만들려면 설정하세요.",
+  "agentManager.readiness.lfsSetup.action": "Git LFS 설정",
+  "agentManager.readiness.blockedLfsSetup": "먼저 Git LFS를 설정하세요. 작업 내용은 계속 작성할 수 있습니다.",
+  "agentManager.readiness.working.setupLfs": "Git LFS 설정 중…",
 }

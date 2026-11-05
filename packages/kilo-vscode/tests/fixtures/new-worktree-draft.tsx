@@ -24,8 +24,8 @@ if (scenario === "catalog") {
     compare: true,
     versions: 3,
     allocations: [
-      { providerID: "kilo", modelID: "m1", name: "Gateway Alpha", count: 2 },
-      { providerID: "kilo", modelID: "m2", name: "Gateway Beta", count: 1 },
+      { providerID: "kilo", modelID: "m1", name: "Gateway Alpha", count: 2, variant: "max" },
+      { providerID: "kilo", modelID: "m2", name: "Gateway Beta", count: 1, variant: "max" },
     ],
   }
 }
@@ -37,8 +37,8 @@ const { window, sent, settle, checks, creates, submit, prompt, reply, close, mou
     providers: scenario !== "catalog",
     projectIds: ["p1", "p2", "p3"],
     models: {
-      m1: { id: "m1", name: "Gateway Alpha" },
-      m2: { id: "m2", name: "Gateway Beta" },
+      m1: { id: "m1", name: "Gateway Alpha", variants: { max: {} } },
+      m2: { id: "m2", name: "Gateway Beta", variants: { max: {} } },
     },
   })
 
@@ -109,9 +109,13 @@ if (scenario === "roundtrip") {
   const id = await mount()
   await reply("p1", id, { status: "ready" })
 
-  // Enter goal composition without dispatching.
+  // Enter goal composition without dispatching; Create still re-probes first.
   fill(".am-prompt-input", "/goal")
   submit().click()
+  await settle()
+  const goal = checks().at(-1)!
+  assert.equal(goal.verify, true)
+  await reply("p1", goal.requestID, { status: "ready" })
   await settle()
   assert.equal(creates().length, 0)
   assert.ok(document.querySelector(".prompt-goal-header"), "goal mode must be on")
@@ -185,6 +189,10 @@ if (scenario === "missing") {
   await pickVersions(2)
   submit().click()
   await settle()
+  const verify = checks().at(-1)!
+  assert.equal(verify.verify, true)
+  await reply("p2", verify.requestID, { status: "ready" })
+  await settle()
   assert.equal(creates().length, 1)
   assert.equal(state.advancedDialogDraft, undefined, "a dispatch must clear the persisted draft")
 
@@ -235,8 +243,8 @@ if (scenario === "catalog") {
   )
   assert.deepEqual(checked, ["Gateway Alpha", "Gateway Beta"])
   assert.deepEqual((state.advancedDialogDraft as { allocations?: unknown }).allocations, [
-    { providerID: "kilo", modelID: "m1", name: "Gateway Alpha", count: 2 },
-    { providerID: "kilo", modelID: "m2", name: "Gateway Beta", count: 1 },
+    { providerID: "kilo", modelID: "m1", name: "Gateway Alpha", count: 2, variant: "max" },
+    { providerID: "kilo", modelID: "m2", name: "Gateway Beta", count: 1, variant: "max" },
   ])
   await openCompare()
 

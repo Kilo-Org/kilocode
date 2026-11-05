@@ -638,4 +638,36 @@ export const dict = {
   "agentManager.readiness.working.initialCommit": "最初のコミットを作成しています…",
   "agentManager.readiness.working.project": "プロジェクトを開いています…",
   "agentManager.readiness.blocked": "worktree を作成するには、上の問題を解決してください。",
+  "agentManager.readiness.blockedGit": "先に Git をインストールしてください。タスクの入力は続けられます。",
+  "agentManager.readiness.blockedLfs": "先に Git LFS をインストールしてください。タスクの入力は続けられます。",
+  "agentManager.readiness.git.title": "Kilo が worktree を作るには Git が必要です",
+  "agentManager.readiness.git.body":
+    "このコンピューターにはまだ Git がインストールされていません。インストールしてからこのウィンドウに戻ってください。タスクはここに残ります。",
+  "agentManager.readiness.git.bodyMac":
+    "この Mac にはまだ Git がインストールされていません。インストールしてからこのウィンドウに戻ってください。タスクはここに残ります。",
+  "agentManager.readiness.lfs.title": "{{name}} には Git LFS が必要です",
+  "agentManager.readiness.lfs.body":
+    "このプロジェクトは一部の大きなファイルを Git LFS に保存していますが、まだインストールされていません。インストールしてからこのウィンドウに戻ってください。タスクはここに残ります。",
+  "agentManager.readiness.tool.install": "{{tool}} をインストール",
+  "agentManager.readiness.tool.get": "{{tool}} を入手",
+  "agentManager.readiness.tool.other": "その他のインストール方法",
+  "agentManager.readiness.install.apple.title": "Apple のウィンドウでインストールを完了してください",
+  "agentManager.readiness.install.apple.body": "このウィンドウに戻ると Kilo が再確認します。",
+  "agentManager.readiness.install.terminal.title": "{{tool}} をインストールしています…",
+  "agentManager.readiness.install.terminal.body": "下のターミナルで実行中です。完了すると Kilo が再確認します。",
+  "agentManager.readiness.install.stale.title": "{{tool}} はインストールされていますが、VS Code からまだ見えません",
+  "agentManager.readiness.install.stale.body":
+    "通常はウィンドウを再読み込みすると解決します。タスクは再読み込み後に戻ります。",
+  "agentManager.readiness.install.reload": "ウィンドウを再読み込み",
+  "agentManager.readiness.ready.git": "Git の準備ができました。",
+  "agentManager.readiness.ready.lfs": "Git LFS の準備ができました。",
+  "agentManager.readiness.install.failed":
+    "インストールはコード {{code}} で終了しました。ターミナルの出力を確認してください。",
+  "agentManager.readiness.install.stopped": "インストールは停止されました。ターミナルの出力を確認してください。",
+  "agentManager.readiness.lfsSetup.title": "{{name}} には Git LFS のセットアップが必要です",
+  "agentManager.readiness.lfsSetup.body":
+    "Git LFS はインストールされていますが、Git ユーザーに対してまだセットアップされていません。worktree を作成するにはセットアップしてください。",
+  "agentManager.readiness.lfsSetup.action": "Git LFS をセットアップ",
+  "agentManager.readiness.blockedLfsSetup": "先に Git LFS をセットアップしてください。タスクの入力は続けられます。",
+  "agentManager.readiness.working.setupLfs": "Git LFS をセットアップしています…",
 }

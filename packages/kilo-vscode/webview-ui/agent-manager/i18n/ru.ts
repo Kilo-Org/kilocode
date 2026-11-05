@@ -642,4 +642,36 @@ export const dict = {
   "agentManager.readiness.working.initialCommit": "Создание первого коммита…",
   "agentManager.readiness.working.project": "Открытие проекта…",
   "agentManager.readiness.blocked": "Исправьте проблему выше, чтобы создать worktree.",
+  "agentManager.readiness.blockedGit": "Сначала установите Git. Вы можете продолжать писать задачу.",
+  "agentManager.readiness.blockedLfs": "Сначала установите Git LFS. Вы можете продолжать писать задачу.",
+  "agentManager.readiness.git.title": "Kilo нужен Git для создания worktree",
+  "agentManager.readiness.git.body":
+    "Git ещё не установлен на этом компьютере. Установите его и вернитесь в это окно. Ваша задача останется здесь.",
+  "agentManager.readiness.git.bodyMac":
+    "Git ещё не установлен на этом Mac. Установите его и вернитесь в это окно. Ваша задача останется здесь.",
+  "agentManager.readiness.lfs.title": "{{name}} требует Git LFS",
+  "agentManager.readiness.lfs.body":
+    "Этот проект хранит некоторые большие файлы в Git LFS, который ещё не установлен. Установите его и вернитесь в это окно. Ваша задача останется здесь.",
+  "agentManager.readiness.tool.install": "Установить {{tool}}",
+  "agentManager.readiness.tool.get": "Скачать {{tool}}",
+  "agentManager.readiness.tool.other": "Другие способы установки",
+  "agentManager.readiness.install.apple.title": "Завершите установку в окне Apple",
+  "agentManager.readiness.install.apple.body": "Kilo проверит снова, когда вы вернётесь в это окно.",
+  "agentManager.readiness.install.terminal.title": "Установка {{tool}}…",
+  "agentManager.readiness.install.terminal.body":
+    "Установка выполняется в терминале ниже. Kilo проверит снова, когда она завершится.",
+  "agentManager.readiness.install.stale.title": "{{tool}} установлен, но VS Code пока его не видит",
+  "agentManager.readiness.install.stale.body":
+    "Обычно помогает перезагрузка окна. Ваша задача вернётся после перезагрузки.",
+  "agentManager.readiness.install.reload": "Перезагрузить окно",
+  "agentManager.readiness.ready.git": "Git готов.",
+  "agentManager.readiness.ready.lfs": "Git LFS готов.",
+  "agentManager.readiness.install.failed": "Установка завершилась с кодом {{code}}. См. вывод терминала.",
+  "agentManager.readiness.install.stopped": "Установка была остановлена. См. вывод терминала.",
+  "agentManager.readiness.lfsSetup.title": "{{name}} требует настройки Git LFS",
+  "agentManager.readiness.lfsSetup.body":
+    "Git LFS установлен, но ещё не настроен для вашего пользователя Git. Настройте его для создания worktree.",
+  "agentManager.readiness.lfsSetup.action": "Настроить Git LFS",
+  "agentManager.readiness.blockedLfsSetup": "Сначала настройте Git LFS. Вы можете продолжать писать задачу.",
+  "agentManager.readiness.working.setupLfs": "Настройка Git LFS…",
 }

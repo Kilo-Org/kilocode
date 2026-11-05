@@ -647,4 +647,35 @@ export const dict = {
   "agentManager.readiness.working.initialCommit": "İlk commit oluşturuluyor…",
   "agentManager.readiness.working.project": "Proje açılıyor…",
   "agentManager.readiness.blocked": "Worktree oluşturmak için yukarıdaki sorunu düzeltin.",
+  "agentManager.readiness.blockedGit": "Önce Git'i yükleyin. Görevinizi yazmaya devam edebilirsiniz.",
+  "agentManager.readiness.blockedLfs": "Önce Git LFS'i yükleyin. Görevinizi yazmaya devam edebilirsiniz.",
+  "agentManager.readiness.git.title": "Kilo'nun worktree oluşturmak için Git'e ihtiyacı var",
+  "agentManager.readiness.git.body":
+    "Git bu bilgisayarda henüz yüklü değil. Yükleyin, sonra bu pencereye dönün. Göreviniz burada kalır.",
+  "agentManager.readiness.git.bodyMac":
+    "Git bu Mac'te henüz yüklü değil. Yükleyin, sonra bu pencereye dönün. Göreviniz burada kalır.",
+  "agentManager.readiness.lfs.title": "{{name}} Git LFS gerektiriyor",
+  "agentManager.readiness.lfs.body":
+    "Bu proje bazı büyük dosyaları henüz yüklü olmayan Git LFS'te saklıyor. Yükleyin, sonra bu pencereye dönün. Göreviniz burada kalır.",
+  "agentManager.readiness.tool.install": "{{tool}} yükle",
+  "agentManager.readiness.tool.get": "{{tool}} edin",
+  "agentManager.readiness.tool.other": "Diğer yükleme yolları",
+  "agentManager.readiness.install.apple.title": "Yüklemeyi Apple penceresinde tamamlayın",
+  "agentManager.readiness.install.apple.body": "Bu pencereye döndüğünüzde Kilo yeniden denetler.",
+  "agentManager.readiness.install.terminal.title": "{{tool}} yükleniyor…",
+  "agentManager.readiness.install.terminal.body": "Aşağıdaki terminalde çalışıyor. Bittiğinde Kilo yeniden denetler.",
+  "agentManager.readiness.install.stale.title": "{{tool}} yüklü, ancak VS Code henüz göremiyor",
+  "agentManager.readiness.install.stale.body":
+    "Pencereyi yeniden yüklemek genellikle bunu düzeltir. Göreviniz yeniden yüklemeden sonra geri gelir.",
+  "agentManager.readiness.install.reload": "Pencereyi yeniden yükle",
+  "agentManager.readiness.ready.git": "Git hazır.",
+  "agentManager.readiness.ready.lfs": "Git LFS hazır.",
+  "agentManager.readiness.install.failed": "Kurulum {{code}} koduyla sona erdi. Terminal çıktısına bakın.",
+  "agentManager.readiness.install.stopped": "Kurulum durduruldu. Terminal çıktısına bakın.",
+  "agentManager.readiness.lfsSetup.title": "{{name}} için Git LFS kurulumu gerekiyor",
+  "agentManager.readiness.lfsSetup.body":
+    "Git LFS yüklü, ancak henüz Git kullanıcınız için ayarlanmadı. Worktree oluşturmak için ayarlayın.",
+  "agentManager.readiness.lfsSetup.action": "Git LFS'i ayarla",
+  "agentManager.readiness.blockedLfsSetup": "Önce Git LFS'i ayarlayın. Görevinizi yazmaya devam edebilirsiniz.",
+  "agentManager.readiness.working.setupLfs": "Git LFS ayarlanıyor…",
 }

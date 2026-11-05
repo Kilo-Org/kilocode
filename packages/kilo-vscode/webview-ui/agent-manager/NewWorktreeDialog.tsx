@@ -64,14 +64,15 @@ import { createDialogPreferences } from "./new-worktree-models"
 import { validBranch } from "./new-worktree-branch"
 import { sanitizeBranchName } from "../../src/shared/branch-slug"
 import { shouldComposeGoal, submitPayload } from "./new-worktree-command"
-import { createReadiness } from "./worktree-readiness"
+import { createReadiness, tooltip } from "./worktree-readiness"
 import { ReadinessCard } from "./ReadinessCard"
 import {
   draftValues,
   readCached,
   initialProject,
+  markReopen,
   writeAllocations,
-  writeDraft,
+  saveDraft,
   type VersionCount,
   type WorktreeDraft,
 } from "./new-worktree-draft"
@@ -223,13 +224,30 @@ export const NewWorktreeDialog: Component<{
     const id = project()
     return id ? props.defaultBase?.(id) : undefined
   }
-  const readiness = createReadiness({ project, entry: "modal" })
+  let createButton: HTMLButtonElement | undefined
+  let card: HTMLDivElement | undefined
+  /** Move focus to Create unless the user is already focused outside the readiness card. */
+  const focusCreate = () => {
+    const active = document.activeElement
+    if (active && active !== document.body && !card?.contains(active)) return
+    createButton?.focus()
+  }
+  const readiness = createReadiness({
+    project,
+    entry: "modal",
+    onRecovered: () => queueMicrotask(focusCreate),
+  })
   // A readiness fix changes the project on disk: hold the project choice still until it finishes.
-  const busy = () => readiness.state().status === "fixing"
+  const busy = () => {
+    const status = readiness.state().status
+    return status === "fixing" || status === "installing"
+  }
+  const blockedTooltip = () => {
+    const info = tooltip(readiness.state())
+    return t(info.key, info.params)
+  }
   // Create stays focusable while blocked so its tooltip works on hover and keyboard focus.
   const blocked = () => (readiness.blocked() ? true : undefined)
-  let card: HTMLDivElement | undefined
-  let button: HTMLButtonElement | undefined
   /** Move focus to the readiness card's action, or its title when it has none. */
   const focusCard = () => {
     if (closed || props.closing()) return
@@ -400,7 +418,7 @@ export const NewWorktreeDialog: Component<{
   // state so the other persisted keys are never overwritten.
   const persistDraft = (value: WorktreeDraft) => {
     const state = vscode.getState<Record<string, unknown>>() ?? {}
-    vscode.setState({ ...state, advancedDialogDraft: writeDraft(value) })
+    vscode.setState(saveDraft(state, value))
   }
 
   createEffect(() => {
@@ -577,14 +595,14 @@ export const NewWorktreeDialog: Component<{
       return
     }
     const target = project()
-    const state = readiness.state()
-    if (!target || (state.status !== "checking" && state.project === target)) {
+    if (!target) {
       create()
       return
     }
     gate = true
     const version = readiness.revision()
-    void readiness.check().then(() => {
+    // Creation must re-probe the tools now, even when the dialog already looks ready.
+    void readiness.check(false, false, true).then(() => {
       gate = false
       if (closed || props.closing() || project() !== target || readiness.revision() !== version) return
       if (readiness.blocked()) {
@@ -593,13 +611,6 @@ export const NewWorktreeDialog: Component<{
       }
       if (canSubmit()) create()
     })
-  }
-
-  /** Move focus to Create unless the user is already focused outside the readiness card. */
-  const focusCreate = () => {
-    const active = document.activeElement
-    if (active && active !== document.body && !card?.contains(active)) return
-    button?.focus()
   }
 
   /** After a fix: follow a project switch, and offer Create once the project is ready. Never submits. */
@@ -1259,7 +1270,11 @@ export const NewWorktreeDialog: Component<{
               onFix={(fix, identity) => void recover(readiness.fix(fix, identity ? { identity } : {}))}
               onProject={(root) => void recover(readiness.fix("useProject", { target: root }))}
               onFolder={() => void recover(readiness.fix("pickFolder"))}
-              onCheck={() => void readiness.check()}
+              onCheck={readiness.recheck}
+              onReload={() => {
+                vscode.setState(markReopen(vscode.getState<Record<string, unknown>>() ?? {}))
+                vscode.postMessage({ type: "agentManager.reloadWindow" })
+              }}
             />
           </div>
           {/* Footer: run options on the left, the action on the right. Always visible. */}
@@ -1367,9 +1382,9 @@ export const NewWorktreeDialog: Component<{
                 </DeferredPopover>
               </div>
             </Show>
-            <Tooltip value={t("agentManager.readiness.blocked")} inactive={!readiness.blocked()} placement="top">
+            <Tooltip value={blockedTooltip()} inactive={!readiness.blocked()} placement="top">
               <Button
-                ref={button}
+                ref={createButton}
                 variant="primary"
                 size="large"
                 class="am-nv-submit"

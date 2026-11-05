@@ -646,4 +646,36 @@ export const dict = {
   "agentManager.readiness.working.initialCommit": "Eerste commit wordt gemaakt…",
   "agentManager.readiness.working.project": "Project wordt geopend…",
   "agentManager.readiness.blocked": "Los het probleem hierboven op om een worktree te maken.",
+  "agentManager.readiness.blockedGit": "Installeer eerst Git. Je kunt je taak blijven schrijven.",
+  "agentManager.readiness.blockedLfs": "Installeer eerst Git LFS. Je kunt je taak blijven schrijven.",
+  "agentManager.readiness.git.title": "Kilo heeft Git nodig om worktrees te maken",
+  "agentManager.readiness.git.body":
+    "Git is nog niet geïnstalleerd op deze computer. Installeer het en kom terug naar dit venster. Je taak blijft hier.",
+  "agentManager.readiness.git.bodyMac":
+    "Git is nog niet geïnstalleerd op deze Mac. Installeer het en kom terug naar dit venster. Je taak blijft hier.",
+  "agentManager.readiness.lfs.title": "{{name}} heeft Git LFS nodig",
+  "agentManager.readiness.lfs.body":
+    "Dit project bewaart sommige grote bestanden in Git LFS, dat nog niet is geïnstalleerd. Installeer het en kom terug naar dit venster. Je taak blijft hier.",
+  "agentManager.readiness.tool.install": "{{tool}} installeren",
+  "agentManager.readiness.tool.get": "{{tool}} downloaden",
+  "agentManager.readiness.tool.other": "Andere installatiemethoden",
+  "agentManager.readiness.install.apple.title": "Voltooi de installatie in het venster van Apple",
+  "agentManager.readiness.install.apple.body": "Kilo controleert opnieuw wanneer je terugkeert naar dit venster.",
+  "agentManager.readiness.install.terminal.title": "{{tool}} wordt geïnstalleerd…",
+  "agentManager.readiness.install.terminal.body":
+    "Het draait in de terminal hieronder. Kilo controleert opnieuw wanneer het klaar is.",
+  "agentManager.readiness.install.stale.title": "{{tool}} is geïnstalleerd, maar VS Code ziet het nog niet",
+  "agentManager.readiness.install.stale.body":
+    "Het venster opnieuw laden lost dit meestal op. Je taak komt terug na het herladen.",
+  "agentManager.readiness.install.reload": "Venster opnieuw laden",
+  "agentManager.readiness.ready.git": "Git is klaar.",
+  "agentManager.readiness.ready.lfs": "Git LFS is klaar.",
+  "agentManager.readiness.install.failed": "De installatie is beëindigd met code {{code}}. Bekijk de terminaluitvoer.",
+  "agentManager.readiness.install.stopped": "De installatie is gestopt. Bekijk de terminaluitvoer.",
+  "agentManager.readiness.lfsSetup.title": "{{name}} vereist ingesteld Git LFS",
+  "agentManager.readiness.lfsSetup.body":
+    "Git LFS is geïnstalleerd, maar nog niet ingesteld voor je Git-gebruiker. Stel het in om worktrees te maken.",
+  "agentManager.readiness.lfsSetup.action": "Git LFS instellen",
+  "agentManager.readiness.blockedLfsSetup": "Stel eerst Git LFS in. Je kunt je taak blijven schrijven.",
+  "agentManager.readiness.working.setupLfs": "Git LFS wordt ingesteld…",
 }

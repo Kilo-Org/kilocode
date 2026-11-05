@@ -3,11 +3,18 @@ import os from "node:os"
 import path from "node:path"
 import fs from "node:fs/promises"
 import { GitOps } from "../../src/agent-manager/GitOps"
-import { check, fix, type FixDeps } from "../../src/agent-manager/worktree-readiness"
+import { clearShellEnvCache, toolEnvironment } from "../../src/agent-manager/shell-env"
+import {
+  applyWorktreeFix,
+  checkWorktreeReadiness,
+  type FixDeps,
+  type ReadinessTools,
+} from "../../src/agent-manager/worktree-readiness"
 import { createProjectWiring } from "../../src/agent-manager/project/wiring"
 import { handleProjectMessage } from "../../src/agent-manager/project/messages"
 import { canonicalizePath, projectIdFor } from "../../src/agent-manager/project/paths"
 import type { Host } from "../../src/agent-manager/host"
+import type { ProjectMessageDeps } from "../../src/agent-manager/project/messages"
 import type { AgentManagerOutMessage } from "../../src/agent-manager/types"
 
 const dirs: string[] = []
@@ -101,9 +108,11 @@ function wire(root: string, trusted: boolean | (() => boolean) = true) {
   const calls = {
     refresh: 0,
     opened: [] as string[],
+    reloads: 0,
     picks: [] as Array<string | undefined>,
     pickResults: [] as Array<string | undefined>,
   }
+  const focus: Array<() => void> = []
   let stored: unknown
   const none = { dispose: () => {} }
   const host = {
@@ -116,6 +125,13 @@ function wire(root: string, trusted: boolean | (() => boolean) = true) {
     worktreePool: () => false,
     onDidChangeWorkspaceFolders: () => none,
     onDidChangeWorktreePool: () => none,
+    onWindowFocus: (cb: () => void) => {
+      focus.push(cb)
+      return none
+    },
+    reloadWindow: () => {
+      calls.reloads++
+    },
     pickFolder: async (opts?: { defaultPath?: string }) => {
       calls.picks.push(opts?.defaultPath)
       return calls.pickResults.shift()
@@ -158,10 +174,251 @@ function wire(root: string, trusted: boolean | (() => boolean) = true) {
       { type: "agentManager.fixReadiness", projectId: id, requestID: "r1", fix, ...extra } as never,
       wiring.messages,
     )
-  return { posts, calls, wiring, id, send, sendRaw }
+  return { posts, calls, focus, wiring, id, send, sendRaw }
+}
+
+const present: ReadinessTools = {
+  env: async () => undefined,
+  git: async () => ({ ok: true }),
+  usesLfs: async () => false,
+  lfs: async () => ({ ok: true }),
+  lfsSetup: async () => true,
+  setupLfs: async () => 0,
+  installer: async () => undefined,
+  install: async () => ({ kind: "git", mode: "external", ok: false }),
+  download: () => {},
 }
 
 const identity = { name: "Ada Lovelace", email: "ada@example.com" }
+
+describe("worktree readiness tool checks", () => {
+  const fake = (overrides: Partial<ReadinessTools> = {}) => {
+    const calls: string[] = []
+    const tools: ReadinessTools = {
+      env: async () => undefined,
+      git: async (fresh) => {
+        calls.push(`git:${fresh}`)
+        return { ok: true }
+      },
+      usesLfs: async (root) => {
+        calls.push(`uses:${path.basename(root)}`)
+        return false
+      },
+      lfs: async (_root, fresh) => {
+        calls.push(`lfs:${fresh}`)
+        return { ok: true }
+      },
+      lfsSetup: async () => true,
+      setupLfs: async () => 0,
+      installer: async (kind) => {
+        calls.push(`installer:${kind}`)
+        return "apt"
+      },
+      install: async (kind) => ({ kind, mode: "terminal", ok: true }),
+      download: () => {},
+      ...overrides,
+    }
+    return { calls, tools }
+  }
+
+  it("reports missing Git before touching the repository", async () => {
+    const root = await temp("kilo-ready-git-")
+    const probe = fake({ git: async () => ({ ok: false, code: "missing", detail: "spawn git ENOENT" }) })
+    const result = await checkWorktreeReadiness(root, {
+      git: ops,
+      trusted: () => true,
+      tools: probe.tools,
+      platform: "linux",
+    })
+    expect(result).toEqual({
+      status: "blocked",
+      code: "git_not_found",
+      name: path.basename(root),
+      trusted: true,
+      platform: "linux",
+      installer: "apt",
+    })
+    expect(probe.calls).toEqual(["installer:git"])
+  })
+
+  it("keeps an ambiguous Git failure advisory", async () => {
+    const root = await temp("kilo-ready-git-unknown-")
+    const probe = fake({ git: async () => ({ ok: false, code: "unknown", detail: "permission denied" }) })
+    const result = await checkWorktreeReadiness(root, { git: ops, trusted: () => true, tools: probe.tools })
+    expect(result).toEqual({ status: "unknown", detail: "permission denied" })
+    expect(probe.calls).toEqual([])
+  })
+
+  it("checks Git LFS last and only when the repository uses it", async () => {
+    const lfsRepo = await repo(await temp("kilo-ready-lfs-"), true)
+    const used = fake({
+      usesLfs: async (root) => {
+        calls.push(`uses:${path.basename(root)}`)
+        return true
+      },
+      lfs: async (_root, fresh) => {
+        calls.push(`lfs:${fresh}`)
+        return { ok: false, code: "missing", detail: "git: 'lfs' is not a git command." }
+      },
+    })
+    const calls: string[] = used.calls
+    const blocked = await checkWorktreeReadiness(lfsRepo, {
+      git: ops,
+      trusted: () => true,
+      tools: used.tools,
+      platform: "darwin",
+    })
+    expect(blocked).toEqual({
+      status: "blocked",
+      code: "lfs_missing",
+      name: path.basename(lfsRepo),
+      trusted: true,
+      platform: "darwin",
+      installer: "apt",
+    })
+    expect(calls[0]).toBe("git:false")
+    expect(calls.at(-1)).toBe("installer:lfs")
+
+    const plainRepo = await repo(await temp("kilo-ready-no-lfs-"), true)
+    const plain = fake()
+    expect(await checkWorktreeReadiness(plainRepo, { git: ops, trusted: () => true, tools: plain.tools })).toEqual({
+      status: "ready",
+    })
+    expect(plain.calls).toEqual(["git:false", `uses:${path.basename(plainRepo)}`])
+  })
+
+  it("refuses an install without workspace trust and never runs it", async () => {
+    const root = await temp("kilo-ready-untrusted-")
+    let called = 0
+    const tools: ReadinessTools = {
+      ...fake().tools,
+      install: async (kind) => {
+        called++
+        return { kind, mode: "terminal", ok: true }
+      },
+    }
+    const deps: FixDeps = {
+      git: ops,
+      trusted: () => false,
+      tools,
+      exclude: async () => {},
+      openRepository: () => {},
+      branches: async () => {},
+      attach: async () => "p",
+      pick: async () => undefined,
+    }
+    const outcome = await applyWorktreeFix(root, { fix: "installGit" }, deps)
+    expect(called).toBe(0)
+    expect(outcome.error).toBe("Trust this VS Code window before Kilo changes the project.")
+    expect(outcome.result.status).toBe("blocked")
+  })
+
+  it("refreshes the shell environment once per fresh check", async () => {
+    const root = await repo(await temp("kilo-ready-env-"), true)
+    const envs: Array<NodeJS.ProcessEnv | undefined> = []
+    const shared: NodeJS.ProcessEnv = { PATH: "/fake" }
+    const tools: ReadinessTools = {
+      ...fake().tools,
+      env: async (fresh) => {
+        expect(fresh).toBe(true)
+        return shared
+      },
+      git: async (_fresh, _verify, env) => {
+        envs.push(env)
+        return { ok: true }
+      },
+      usesLfs: async () => true,
+      lfs: async (_root, _fresh, _verify, env) => {
+        envs.push(env)
+        return { ok: true }
+      },
+    }
+    await checkWorktreeReadiness(root, { git: ops, trusted: () => true, tools }, true)
+    expect(envs).toHaveLength(2)
+    expect(envs[0]).toBe(shared)
+    expect(envs[1]).toBe(shared)
+  })
+
+  it("refuses to register a restricted root", async () => {
+    let attached = 0
+    const deps: FixDeps = {
+      git: ops,
+      trusted: () => true,
+      tools: present,
+      exclude: async () => {},
+      openRepository: () => {},
+      branches: async () => {},
+      attach: async () => {
+        attached++
+        return "p"
+      },
+      pick: async () => home,
+    }
+    const outcome = await applyWorktreeFix(home, { fix: "pickFolder" }, deps)
+    expect(outcome.error).toContain("home folder")
+    expect(attached).toBe(0)
+  })
+
+  it("re-checks fresh after an install so a visible tool goes straight to ready", async () => {
+    const root = await repo(await temp("kilo-ready-installed-"), true)
+    const probes: boolean[] = []
+    const tools: ReadinessTools = {
+      ...fake().tools,
+      git: async () => ({ ok: true }),
+      usesLfs: async () => true,
+      lfs: async (_root, fresh) => {
+        probes.push(fresh)
+        return fresh ? { ok: true } : { ok: false, code: "missing", detail: "cached" }
+      },
+      install: async (kind) => ({ kind, mode: "terminal", ok: true }),
+    }
+    const deps: FixDeps = {
+      git: ops,
+      trusted: () => true,
+      tools,
+      exclude: async () => {},
+      openRepository: () => {},
+      branches: async () => {},
+      attach: async () => "p",
+      pick: async () => undefined,
+    }
+    const outcome = await applyWorktreeFix(root, { fix: "installLfs" }, deps)
+    expect(outcome.result).toEqual({ status: "ready" })
+    expect(probes.at(-1)).toBe(true)
+  })
+
+  it("routes install and download fixes before inspecting the repository", async () => {
+    const root = await temp("kilo-ready-install-")
+    const calls: string[] = []
+    const probe = fake()
+    const tools: ReadinessTools = {
+      ...probe.tools,
+      install: async (kind, dir) => {
+        calls.push(`install:${kind}:${dir}`)
+        return { kind, mode: "terminal", ok: true }
+      },
+      download: (kind) => calls.push(`download:${kind}`),
+    }
+    const deps: FixDeps = {
+      git: ops,
+      trusted: () => true,
+      tools,
+      exclude: async () => {
+        throw new Error("install must not touch excludes")
+      },
+      openRepository: () => {},
+      branches: async () => {},
+      attach: async () => "p",
+      pick: async () => undefined,
+    }
+
+    const installed = await applyWorktreeFix(root, { fix: "installGit" }, deps)
+    expect(installed.install).toEqual({ kind: "git", mode: "terminal", ok: true })
+    expect(installed.result).toMatchObject({ status: "blocked", code: "not_git_repo" })
+    await applyWorktreeFix(root, { fix: "downloadLfs" }, deps)
+    expect(calls).toEqual([`install:git:${root}`, "download:lfs"])
+  })
+})
 
 describe("worktree readiness check", () => {
   it("classifies each folder state from real repositories", async () => {
@@ -175,15 +432,15 @@ describe("worktree readiness check", () => {
     const broken = await temp("kilo-ready-broken-")
     await fs.mkdir(path.join(broken, ".git"))
 
-    const deps = { git: ops, trusted: () => true }
-    expect(await check(plain, deps)).toEqual({
+    const deps = { git: ops, trusted: () => true, tools: present }
+    expect(await checkWorktreeReadiness(plain, deps)).toEqual({
       status: "blocked",
       code: "not_git_repo",
       name: path.basename(plain),
       trusted: true,
       identity: false,
     })
-    expect(await check(parent, deps)).toEqual({
+    expect(await checkWorktreeReadiness(parent, deps)).toEqual({
       status: "blocked",
       code: "not_git_repo",
       name: path.basename(parent),
@@ -192,22 +449,22 @@ describe("worktree readiness check", () => {
       more: true,
     })
     const root = path.parse(plain).root
-    expect(await check(root, deps)).toEqual({
+    expect(await checkWorktreeReadiness(root, deps)).toEqual({
       status: "blocked",
       code: "not_git_repo",
       name: path.basename(root),
       trusted: true,
       restricted: true,
     })
-    expect(await check(empty, deps)).toEqual({
+    expect(await checkWorktreeReadiness(empty, deps)).toEqual({
       status: "blocked",
       code: "no_commits",
       name: path.basename(empty),
       trusted: true,
       identity: false,
     })
-    expect(await check(healthy, deps)).toEqual({ status: "ready" })
-    const result = await check(broken, deps)
+    expect(await checkWorktreeReadiness(healthy, deps)).toEqual({ status: "ready" })
+    const result = await checkWorktreeReadiness(broken, deps)
     expect(result.status).toBe("unknown")
     expect(result.status === "unknown" && result.detail).toContain(broken)
   })
@@ -216,7 +473,7 @@ describe("worktree readiness check", () => {
 describe("worktree readiness scan", () => {
   it("finds a child repo after more than 2000 files", async () => {
     const parent = await temp("kilo-ready-scan-files-")
-    const deps = { git: ops, trusted: () => true }
+    const deps = { git: ops, trusted: () => true, tools: present }
     await Promise.all(
       Array.from({ length: 2_100 }, (_, index) =>
         fs.writeFile(path.join(parent, `f${String(index).padStart(4, "0")}`), ""),
@@ -224,7 +481,7 @@ describe("worktree readiness scan", () => {
     )
     await repo(path.join(parent, "zrepo"), true)
 
-    const result = await check(parent, deps)
+    const result = await checkWorktreeReadiness(parent, deps)
 
     expect(result).toMatchObject({ status: "blocked", code: "not_git_repo", projects: [{ label: "zrepo" }] })
     expect(result.status === "blocked" ? result.more : undefined).toBeUndefined()
@@ -232,7 +489,7 @@ describe("worktree readiness scan", () => {
 
   it("reports more when the directory scan is truncated", async () => {
     const parent = await temp("kilo-ready-scan-dirs-")
-    const deps = { git: ops, trusted: () => true }
+    const deps = { git: ops, trusted: () => true, tools: present }
     await Promise.all(
       Array.from({ length: 2_001 }, (_, index) =>
         fs.mkdir(path.join(parent, `d${String(index).padStart(4, "0")}`), { recursive: true }),
@@ -240,7 +497,7 @@ describe("worktree readiness scan", () => {
     )
     await repo(path.join(parent, "d0000"), true)
 
-    const result = await check(parent, deps)
+    const result = await checkWorktreeReadiness(parent, deps)
 
     expect(result).toMatchObject({ status: "blocked", code: "not_git_repo", more: true })
     expect(result.status === "blocked" ? result.projects?.map((project) => project.label) : []).toEqual(["d0000"])
@@ -250,12 +507,12 @@ describe("worktree readiness scan", () => {
 describe("worktree readiness flight", () => {
   it("coalesces concurrent checks for the same folder", async () => {
     const root = await repo(await temp("kilo-ready-flight-"), true)
-    const deps = { git: ops, trusted: () => true }
-    const first = check(root, deps)
-    const second = check(root, deps)
+    const deps = { git: ops, trusted: () => true, tools: present }
+    const first = checkWorktreeReadiness(root, deps)
+    const second = checkWorktreeReadiness(root, deps)
     expect(second).toBe(first)
     await first
-    const third = check(root, deps)
+    const third = checkWorktreeReadiness(root, deps)
     expect(third).not.toBe(first)
     await third
   })
@@ -271,7 +528,7 @@ describe("worktree readiness fixes", () => {
     const setup = wire(child)
     await setup.send("initialCommit", { identity })
     expect(Buffer.compare(await fs.readFile(file), before)).toBe(0)
-    expect(await check(child, { git: ops, trusted: () => true })).toMatchObject({
+    expect(await checkWorktreeReadiness(child, { git: ops, trusted: () => true, tools: present })).toMatchObject({
       status: "blocked",
       code: "not_git_repo",
       restricted: true,
@@ -299,7 +556,7 @@ describe("worktree readiness fixes", () => {
           return root
         },
       })
-      const outcome = await fix(
+      const outcome = await applyWorktreeFix(
         root,
         mutation === "identity" ? { fix: "initialCommit", identity } : { fix: "pickFolder" },
         deps,
@@ -572,6 +829,246 @@ describe("worktree readiness fixes", () => {
         error: expect.stringContaining("Trust"),
       },
     ])
+  })
+
+  it("routes a verify check through the real handler without a cached positive", async () => {
+    const root = await repo(await temp("kilo-ready-route-"), true)
+    const calls: string[] = []
+    const manager = {
+      probeGit: async (fresh: boolean, verify: boolean) => {
+        calls.push(`git:${fresh}:${verify}`)
+        return { ok: true }
+      },
+      probeLfs: async (fresh: boolean, verify: boolean) => {
+        calls.push(`lfs:${fresh}:${verify}`)
+        return { ok: true }
+      },
+      repoUsesLfs: async () => true,
+      binary: "custom-git",
+      checkLfsFilters: async () => true,
+    }
+    const posts: AgentManagerOutMessage[] = []
+    const commands: InstallCommand[] = []
+    const deps = {
+      contexts: {
+        resolve: () => ({
+          id: projectIdFor(root),
+          root,
+          worktreeManager: () => manager,
+        }),
+      },
+      onboarding: { isTrusted: () => true },
+      install: async (_name: string, command: InstallCommand) => {
+        commands.push(command)
+        return 0
+      },
+      openExternal: () => {},
+      reloadWindow: () => {},
+      post: (message: AgentManagerOutMessage) => posts.push(message),
+      log: () => {},
+    } as unknown as ProjectMessageDeps
+
+    await handleProjectMessage(
+      { type: "agentManager.checkReadiness", projectId: projectIdFor(root), requestID: "r1", verify: true },
+      deps,
+    )
+    expect(calls).toEqual(["git:false:true", "lfs:false:true"])
+    expect(posts).toEqual([
+      { type: "agentManager.readiness", projectId: projectIdFor(root), requestID: "r1", result: { status: "ready" } },
+    ])
+
+    await handleProjectMessage(
+      { type: "agentManager.checkReadiness", projectId: projectIdFor(root), requestID: "r2" },
+      deps,
+    )
+    expect(calls).toEqual(["git:false:true", "lfs:false:true", "git:false:false", "lfs:false:false"])
+
+    await handleProjectMessage(
+      { type: "agentManager.checkReadiness", projectId: projectIdFor(root), requestID: "r3", fresh: true },
+      deps,
+    )
+    expect(calls).toEqual([
+      "git:false:true",
+      "lfs:false:true",
+      "git:false:false",
+      "lfs:false:false",
+      "git:true:false",
+      "lfs:true:false",
+    ])
+
+    await handleProjectMessage(
+      { type: "agentManager.fixReadiness", projectId: projectIdFor(root), requestID: "f1", fix: "setupLfs" },
+      deps,
+    )
+    expect(commands).toHaveLength(1)
+    expect(commands[0]).toMatchObject({ command: "custom-git", args: ["lfs", "install"], cwd: os.tmpdir() })
+  })
+
+  it("reports unregistered LFS filters and sets them up", async () => {
+    const root = await repo(await temp("kilo-ready-lfs-setup-"), true)
+    let registered = false
+    const calls: string[] = []
+    const tools: ReadinessTools = {
+      env: async () => undefined,
+      git: async () => ({ ok: true }),
+      usesLfs: async () => true,
+      lfs: async () => ({ ok: true }),
+      lfsSetup: async () => registered,
+      setupLfs: async () => {
+        registered = true
+        calls.push("setup")
+        return 0
+      },
+      installer: async () => undefined,
+      install: async (kind) => ({ kind, mode: "external", ok: false }),
+      download: () => {},
+    }
+    const blocked = await checkWorktreeReadiness(root, { git: ops, trusted: () => true, tools })
+    expect(blocked).toEqual({
+      status: "blocked",
+      code: "lfs_not_setup",
+      name: path.basename(root),
+      trusted: true,
+    })
+    const outcome = await applyWorktreeFix(root, { fix: "setupLfs" }, fixDeps(ops, { tools }))
+    expect(calls).toEqual(["setup"])
+    expect(outcome.result).toEqual({ status: "ready" })
+  })
+
+  it("refuses an untrusted pick before opening the picker", async () => {
+    const root = await temp("kilo-ready-untrusted-pick-")
+    const setup = wire(root, false)
+    await setup.send("pickFolder")
+    expect(setup.calls.picks).toHaveLength(0)
+    const reply = setup.posts.at(-1)
+    expect(reply).toMatchObject({ result: { status: "blocked" } })
+    expect(reply && "error" in reply ? reply.error : "").toContain("Trust")
+  })
+
+  it("reports a failed Set up Git LFS task", async () => {
+    const root = await repo(await temp("kilo-ready-lfs-fail-"), true)
+    const tools: ReadinessTools = {
+      env: async () => undefined,
+      git: async () => ({ ok: true }),
+      usesLfs: async () => true,
+      lfs: async () => ({ ok: true }),
+      lfsSetup: async () => false,
+      setupLfs: async () => 1,
+      installer: async () => undefined,
+      install: async (kind) => ({ kind, mode: "external", ok: false }),
+      download: () => {},
+    }
+    const outcome = await applyWorktreeFix(root, { fix: "setupLfs" }, fixDeps(ops, { tools }))
+    expect(outcome.error).toContain("exited with code 1")
+    expect(outcome.result).toMatchObject({ status: "blocked", code: "lfs_not_setup" })
+  })
+
+  it("leaves an install whose tool was not visible yet to the LFS setup blocker", async () => {
+    const root = await repo(await temp("kilo-ready-lfs-late-"), true)
+    const calls: string[] = []
+    const tools: ReadinessTools = {
+      env: async () => undefined,
+      git: async () => ({ ok: true }),
+      usesLfs: async () => true,
+      lfs: async () => ({ ok: true }),
+      lfsSetup: async () => false,
+      setupLfs: async () => {
+        calls.push("setup")
+        return 0
+      },
+      installer: async () => "brew",
+      install: async (kind) => {
+        calls.push(`install:${kind}`)
+        return { kind, mode: "terminal", ok: true }
+      },
+      download: () => {},
+    }
+    const outcome = await applyWorktreeFix(root, { fix: "installLfs" }, fixDeps(ops, { tools }))
+    expect(calls).toEqual(["install:lfs"])
+    expect(outcome.result).toEqual({
+      status: "blocked",
+      code: "lfs_not_setup",
+      name: path.basename(root),
+      trusted: true,
+    })
+  })
+
+  it("passes a fresh probe and the fresh env to install deps", async () => {
+    const root = await repo(await temp("kilo-ready-install-route-"), true)
+    const dir = await temp("kilo-ready-install-env-")
+    const bin = path.join(dir, "bin")
+    await fs.mkdir(bin)
+    for (const name of ["brew", "apt-get", "dnf"]) {
+      await fs.writeFile(path.join(bin, name), "#!/bin/sh\nexit 0\n")
+      await fs.chmod(path.join(bin, name), 0o755)
+    }
+    const old = path.join(dir, "old")
+    await fs.mkdir(old)
+    const current = path.join(dir, "path")
+    await fs.writeFile(current, old)
+    const shell = path.join(dir, "shell")
+    await fs.writeFile(shell, `#!/bin/sh\nprintf "PATH=%s" "$(/bin/cat ${current})"\n`)
+    await fs.chmod(shell, 0o755)
+
+    const previous = { PATH: process.env.PATH, SHELL: process.env.SHELL }
+    process.env.PATH = bin
+    process.env.SHELL = shell
+    clearShellEnvCache()
+    // Warm the login-env cache without the managers, then refresh it to `bin`.
+    await toolEnvironment(true)
+    await fs.writeFile(current, bin)
+    const probes: string[] = []
+    const commands: import("../../src/agent-manager/worktree-install").InstallCommand[] = []
+    const manager = {
+      binary: "git",
+      probeGit: async (fresh: boolean, verify: boolean) => {
+        probes.push(`git:${fresh}:${verify}`)
+        return { ok: true }
+      },
+      probeLfs: async (fresh: boolean, verify: boolean) => {
+        probes.push(`lfs:${fresh}:${verify}`)
+        return { ok: true }
+      },
+      repoUsesLfs: async () => false,
+    }
+    const deps = {
+      contexts: { resolve: () => ({ id: projectIdFor(root), root, worktreeManager: () => manager }) },
+      onboarding: { isTrusted: () => true },
+      install: async (_name: string, command: (typeof commands)[number]) => {
+        commands.push(command)
+        return 0
+      },
+      openExternal: () => {},
+      reloadWindow: () => {},
+      post: () => {},
+      log: () => {},
+      openRepository: () => {},
+      branches: async () => {},
+      pickFolder: async () => undefined,
+    } as unknown as ProjectMessageDeps
+
+    try {
+      await handleProjectMessage(
+        { type: "agentManager.fixReadiness", projectId: projectIdFor(root), requestID: "i1", fix: "installLfs" },
+        deps,
+      )
+    } finally {
+      process.env.PATH = previous.PATH
+      process.env.SHELL = previous.SHELL
+      clearShellEnvCache()
+    }
+    expect(probes).toContain("lfs:true:undefined")
+    expect(commands.length).toBeGreaterThan(0)
+    expect(commands[0]?.env.PATH).toBe(bin)
+  })
+
+  it("posts a window-focus trigger and reloads the window when asked", async () => {
+    const root = await temp("kilo-ready-focus-")
+    const setup = wire(root)
+    for (const cb of setup.focus) cb()
+    expect(setup.posts).toContainEqual({ type: "agentManager.readinessFocus" })
+    await handleProjectMessage({ type: "agentManager.reloadWindow" }, setup.wiring.messages)
+    expect(setup.calls.reloads).toBe(1)
   })
 
   it("switches to a project inside the folder and refuses one outside it", async () => {

@@ -636,4 +636,36 @@ export const dict = {
   "agentManager.readiness.working.initialCommit": "Creating the first commit…",
   "agentManager.readiness.working.project": "Opening the project…",
   "agentManager.readiness.blocked": "Fix the problem above to create a worktree.",
+  "agentManager.readiness.blockedGit": "Install Git first. You can keep writing your task.",
+  "agentManager.readiness.blockedLfs": "Install Git LFS first. You can keep writing your task.",
+  "agentManager.readiness.git.title": "Kilo needs Git to make worktrees",
+  "agentManager.readiness.git.body":
+    "Git isn't installed on this computer yet. Install it, then come back to this window. Your task stays here.",
+  "agentManager.readiness.git.bodyMac":
+    "Git isn't installed on this Mac yet. Install it, then come back to this window. Your task stays here.",
+  "agentManager.readiness.lfs.title": "{{name}} needs Git LFS",
+  "agentManager.readiness.lfsSetup.title": "{{name}} needs Git LFS set up",
+  "agentManager.readiness.lfsSetup.body":
+    "Git LFS is installed, but it isn't set up for your Git user yet. Set it up to create worktrees.",
+  "agentManager.readiness.lfsSetup.action": "Set up Git LFS",
+  "agentManager.readiness.blockedLfsSetup": "Set up Git LFS first. You can keep writing your task.",
+  "agentManager.readiness.working.setupLfs": "Setting up Git LFS…",
+  "agentManager.readiness.lfs.body":
+    "This project keeps some large files in Git LFS, which isn't installed yet. Install it, then come back to this window. Your task stays here.",
+  "agentManager.readiness.tool.install": "Install {{tool}}",
+  "agentManager.readiness.tool.get": "Get {{tool}}",
+  "agentManager.readiness.tool.other": "Other ways to install",
+  "agentManager.readiness.install.apple.title": "Finish installing in Apple's window",
+  "agentManager.readiness.install.apple.body": "Kilo checks again when you come back to this window.",
+  "agentManager.readiness.install.terminal.title": "Installing {{tool}}…",
+  "agentManager.readiness.install.terminal.body":
+    "It's running in the terminal below. Kilo checks again when it finishes.",
+  "agentManager.readiness.install.stale.title": "{{tool}} is installed, but VS Code can't see it yet",
+  "agentManager.readiness.install.stale.body":
+    "Reloading the window usually fixes this. Your task comes back after the reload.",
+  "agentManager.readiness.install.reload": "Reload window",
+  "agentManager.readiness.install.failed": "Install exited with code {{code}} — see the terminal output.",
+  "agentManager.readiness.install.stopped": "Install was stopped — see the terminal output.",
+  "agentManager.readiness.ready.git": "Git is ready.",
+  "agentManager.readiness.ready.lfs": "Git LFS is ready.",
 }

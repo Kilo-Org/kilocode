@@ -615,7 +615,7 @@ export const dict = {
   "agentManager.readiness.plain.other": "Escolher uma pasta diferente",
   "agentManager.readiness.identity.title": "Qual nome deve aparecer nas suas alterações?",
   "agentManager.readiness.identity.body":
-    "O Git marca cada alteração com um nome e um e-mail. O Kilo os salva para o seu utilizador Git.",
+    "O Git marca cada alteração com um nome e um e-mail. O Kilo os salva para o seu usuário Git.",
   "agentManager.readiness.identity.name": "Nome",
   "agentManager.readiness.identity.email": "E-mail",
   "agentManager.readiness.identity.saveInit": "Salvar e configurar Git",
@@ -642,4 +642,35 @@ export const dict = {
   "agentManager.readiness.working.initialCommit": "Criando o primeiro commit…",
   "agentManager.readiness.working.project": "Abrindo o projeto…",
   "agentManager.readiness.blocked": "Corrija o problema acima para criar um worktree.",
+  "agentManager.readiness.blockedGit": "Instale o Git primeiro. Você pode continuar escrevendo sua tarefa.",
+  "agentManager.readiness.blockedLfs": "Instale o Git LFS primeiro. Você pode continuar escrevendo sua tarefa.",
+  "agentManager.readiness.git.title": "O Kilo precisa do Git para criar worktrees",
+  "agentManager.readiness.git.body":
+    "O Git ainda não está instalado neste computador. Instale-o e volte a esta janela. Sua tarefa continua aqui.",
+  "agentManager.readiness.git.bodyMac":
+    "O Git ainda não está instalado neste Mac. Instale-o e volte a esta janela. Sua tarefa continua aqui.",
+  "agentManager.readiness.lfs.title": "{{name}} precisa do Git LFS",
+  "agentManager.readiness.lfs.body":
+    "Este projeto guarda alguns arquivos grandes no Git LFS, que ainda não está instalado. Instale-o e volte a esta janela. Sua tarefa continua aqui.",
+  "agentManager.readiness.tool.install": "Instalar {{tool}}",
+  "agentManager.readiness.tool.get": "Obter {{tool}}",
+  "agentManager.readiness.tool.other": "Outras formas de instalar",
+  "agentManager.readiness.install.apple.title": "Conclua a instalação na janela da Apple",
+  "agentManager.readiness.install.apple.body": "O Kilo verifica novamente quando você voltar a esta janela.",
+  "agentManager.readiness.install.terminal.title": "Instalando {{tool}}…",
+  "agentManager.readiness.install.terminal.body":
+    "Está sendo executado no terminal abaixo. O Kilo verifica novamente quando terminar.",
+  "agentManager.readiness.install.stale.title": "{{tool}} está instalado, mas o VS Code ainda não o encontra",
+  "agentManager.readiness.install.stale.body": "Recarregar a janela costuma resolver. Sua tarefa volta após a recarga.",
+  "agentManager.readiness.install.reload": "Recarregar janela",
+  "agentManager.readiness.ready.git": "O Git está pronto.",
+  "agentManager.readiness.ready.lfs": "O Git LFS está pronto.",
+  "agentManager.readiness.install.failed": "A instalação terminou com o código {{code}}. Consulte a saída do terminal.",
+  "agentManager.readiness.install.stopped": "A instalação foi interrompida. Consulte a saída do terminal.",
+  "agentManager.readiness.lfsSetup.title": "{{name}} precisa do Git LFS configurado",
+  "agentManager.readiness.lfsSetup.body":
+    "O Git LFS está instalado, mas ainda não está configurado para o seu usuário Git. Configure-o para criar worktrees.",
+  "agentManager.readiness.lfsSetup.action": "Configurar Git LFS",
+  "agentManager.readiness.blockedLfsSetup": "Configure o Git LFS primeiro. Você pode continuar escrevendo sua tarefa.",
+  "agentManager.readiness.working.setupLfs": "Configurando o Git LFS…",
 }

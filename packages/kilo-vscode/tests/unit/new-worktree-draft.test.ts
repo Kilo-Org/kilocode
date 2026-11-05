@@ -1,4 +1,5 @@
-import { it } from "bun:test"
+import { expect, it } from "bun:test"
+import { readCached } from "../../webview-ui/agent-manager/new-worktree-draft"
 import { fixture } from "../fixtures/run"
 
 it(
@@ -24,3 +25,15 @@ it(
   () => fixture("new-worktree-draft", { DRAFT_CASE: "catalog" }),
   60_000,
 )
+
+it("drops an allocation count above the maximum", () => {
+  const draft = readCached({
+    advancedDialogDraft: {
+      allocations: [
+        { providerID: "kilo", modelID: "m1", name: "Kept", count: 2 },
+        { providerID: "kilo", modelID: "m2", name: "Too Many", count: 5 },
+      ],
+    },
+  })
+  expect(draft.allocations?.map((item) => item.name)).toEqual(["Kept"])
+})

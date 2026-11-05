@@ -651,4 +651,37 @@ export const dict = {
   "agentManager.readiness.working.initialCommit": "Erster Commit wird erstellt…",
   "agentManager.readiness.working.project": "Projekt wird geöffnet…",
   "agentManager.readiness.blocked": "Behebe das Problem oben, um einen Worktree zu erstellen.",
+  "agentManager.readiness.blockedGit": "Installiere zuerst Git. Du kannst deine Aufgabe weiter schreiben.",
+  "agentManager.readiness.blockedLfs": "Installiere zuerst Git LFS. Du kannst deine Aufgabe weiter schreiben.",
+  "agentManager.readiness.git.title": "Kilo braucht Git, um Worktrees zu erstellen",
+  "agentManager.readiness.git.body":
+    "Git ist auf diesem Computer noch nicht installiert. Installiere es und kehre dann zu diesem Fenster zurück. Deine Aufgabe bleibt hier.",
+  "agentManager.readiness.git.bodyMac":
+    "Git ist auf diesem Mac noch nicht installiert. Installiere es und kehre dann zu diesem Fenster zurück. Deine Aufgabe bleibt hier.",
+  "agentManager.readiness.lfs.title": "{{name}} benötigt Git LFS",
+  "agentManager.readiness.lfs.body":
+    "Dieses Projekt speichert einige große Dateien in Git LFS, das noch nicht installiert ist. Installiere es und kehre dann zu diesem Fenster zurück. Deine Aufgabe bleibt hier.",
+  "agentManager.readiness.tool.install": "{{tool}} installieren",
+  "agentManager.readiness.tool.get": "{{tool}} herunterladen",
+  "agentManager.readiness.tool.other": "Andere Installationswege",
+  "agentManager.readiness.install.apple.title": "Installation im Apple-Fenster abschließen",
+  "agentManager.readiness.install.apple.body": "Kilo prüft erneut, wenn du zu diesem Fenster zurückkehrst.",
+  "agentManager.readiness.install.terminal.title": "{{tool}} wird installiert…",
+  "agentManager.readiness.install.terminal.body":
+    "Die Installation läuft im Terminal unten. Kilo prüft erneut, wenn sie abgeschlossen ist.",
+  "agentManager.readiness.install.stale.title": "{{tool}} ist installiert, aber VS Code erkennt es noch nicht",
+  "agentManager.readiness.install.stale.body":
+    "Ein Neuladen des Fensters behebt das meistens. Deine Aufgabe kehrt nach dem Neuladen zurück.",
+  "agentManager.readiness.install.reload": "Fenster neu laden",
+  "agentManager.readiness.ready.git": "Git ist bereit.",
+  "agentManager.readiness.ready.lfs": "Git LFS ist bereit.",
+  "agentManager.readiness.install.failed":
+    "Die Installation wurde mit Code {{code}} beendet – sieh dir die Terminalausgabe an.",
+  "agentManager.readiness.install.stopped": "Die Installation wurde gestoppt – sieh dir die Terminalausgabe an.",
+  "agentManager.readiness.lfsSetup.title": "{{name}} benötigt eingerichtetes Git LFS",
+  "agentManager.readiness.lfsSetup.body":
+    "Git LFS ist installiert, aber noch nicht für deinen Git-Benutzer eingerichtet. Richte es ein, um Worktrees zu erstellen.",
+  "agentManager.readiness.lfsSetup.action": "Git LFS einrichten",
+  "agentManager.readiness.blockedLfsSetup": "Richte zuerst Git LFS ein. Du kannst deine Aufgabe weiter schreiben.",
+  "agentManager.readiness.working.setupLfs": "Git LFS wird eingerichtet…",
 }

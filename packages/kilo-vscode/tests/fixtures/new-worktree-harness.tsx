@@ -12,7 +12,7 @@ type Options = {
   state?: Record<string, unknown>
   persist?: boolean
   providers?: boolean
-  models?: Record<string, { id: string; name: string }>
+  models?: Record<string, { id: string; name: string; variants?: Record<string, unknown> }>
 }
 
 const project = (id: string): AgentProjectSnapshot => ({
@@ -46,7 +46,9 @@ export async function newWorktreeHarness(options: Options = {}) {
           for (const key of Object.keys(saved)) delete saved[key]
           Object.assign(saved, structuredClone(next))
         }
-      : () => {},
+      : (next: Record<string, unknown>) => {
+          if ("advancedDialogReopen" in next) saved.advancedDialogReopen = next.advancedDialogReopen
+        },
   }
 
   Object.assign(globalThis, {
@@ -264,6 +266,7 @@ export async function newWorktreeHarness(options: Options = {}) {
 
   return {
     window,
+    saved,
     sent,
     features,
     setFeatures,

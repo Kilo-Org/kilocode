@@ -639,4 +639,35 @@ export const dict = {
   "agentManager.readiness.working.initialCommit": "Kreiranje prvog commita…",
   "agentManager.readiness.working.project": "Otvaranje projekta…",
   "agentManager.readiness.blocked": "Riješite problem iznad da biste kreirali worktree.",
+  "agentManager.readiness.blockedGit": "Prvo instalirajte Git. Možete nastaviti pisati zadatak.",
+  "agentManager.readiness.blockedLfs": "Prvo instalirajte Git LFS. Možete nastaviti pisati zadatak.",
+  "agentManager.readiness.git.title": "Kilo treba Git za pravljenje worktreea",
+  "agentManager.readiness.git.body":
+    "Git još nije instaliran na ovom računaru. Instalirajte ga, pa se vratite u ovaj prozor. Vaš zadatak ostaje ovdje.",
+  "agentManager.readiness.git.bodyMac":
+    "Git još nije instaliran na ovom Macu. Instalirajte ga, pa se vratite u ovaj prozor. Vaš zadatak ostaje ovdje.",
+  "agentManager.readiness.lfs.title": "{{name}} treba Git LFS",
+  "agentManager.readiness.lfs.body":
+    "Ovaj projekat čuva neke velike datoteke u Git LFS-u, koji još nije instaliran. Instalirajte ga, pa se vratite u ovaj prozor. Vaš zadatak ostaje ovdje.",
+  "agentManager.readiness.tool.install": "Instaliraj {{tool}}",
+  "agentManager.readiness.tool.get": "Preuzmi {{tool}}",
+  "agentManager.readiness.tool.other": "Drugi načini instalacije",
+  "agentManager.readiness.install.apple.title": "Završite instalaciju u Appleovom prozoru",
+  "agentManager.readiness.install.apple.body": "Kilo će ponovo provjeriti kada se vratite u ovaj prozor.",
+  "agentManager.readiness.install.terminal.title": "Instaliranje {{tool}}…",
+  "agentManager.readiness.install.terminal.body": "Radi u terminalu ispod. Kilo će ponovo provjeriti kada završi.",
+  "agentManager.readiness.install.stale.title": "{{tool}} je instaliran, ali VS Code ga još ne vidi",
+  "agentManager.readiness.install.stale.body":
+    "Ponovno učitavanje prozora to obično rješava. Vaš zadatak se vraća nakon učitavanja.",
+  "agentManager.readiness.install.reload": "Ponovo učitaj prozor",
+  "agentManager.readiness.ready.git": "Git je spreman.",
+  "agentManager.readiness.ready.lfs": "Git LFS je spreman.",
+  "agentManager.readiness.install.failed": "Instalacija je završena s kodom {{code}}. Pogledajte izlaz terminala.",
+  "agentManager.readiness.install.stopped": "Instalacija je zaustavljena. Pogledajte izlaz terminala.",
+  "agentManager.readiness.lfsSetup.title": "{{name}} treba podešen Git LFS",
+  "agentManager.readiness.lfsSetup.body":
+    "Git LFS je instaliran, ali još nije podešen za vašeg Git korisnika. Podesite ga da biste pravili worktree.",
+  "agentManager.readiness.lfsSetup.action": "Podesi Git LFS",
+  "agentManager.readiness.blockedLfsSetup": "Prvo podesite Git LFS. Možete nastaviti pisati zadatak.",
+  "agentManager.readiness.working.setupLfs": "Podešavanje Git LFS…",
 }
