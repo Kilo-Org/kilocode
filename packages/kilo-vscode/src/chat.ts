@@ -14,17 +14,7 @@ import { notifyHostAutoApprove, setHostAutoApprove } from "./agent-manager/provi
 import type { SettingsHandler } from "./agent-manager/project/settings"
 import { local } from "./local"
 import { dismissNotification, dismissedNotifications, syncDismissedNotifications } from "./notifications"
-import {
-  FAVORITES_KEY,
-  readModelPreferences,
-  RECENTS_KEY,
-  recordUsage,
-  toggleFavorite,
-  USAGE_KEY,
-  validateRecents,
-  validateVariants,
-  VARIANTS_KEY,
-} from "./model-preferences"
+import { applyModelPreference, readModelPreferences } from "./model-preferences"
 import { DISPLAY_DEFAULTS, type ModelPreferenceMessage, type ToHost, type ToWebview } from "./protocol"
 import { bridge } from "./relay"
 import { saveImage } from "./save-image"
@@ -217,7 +207,11 @@ export function wire(input: {
           server: input.server,
           directory: input.directory,
           post,
-          onReset: input.onReset,
+          // A reset clears the recents, usage and efforts; every open webview must drop its copy of them.
+          onReset: () => {
+            input.onReset?.()
+            broadcast({ type: "modelPreferencesLoaded", value: readModelPreferences(input.context.globalState) })
+          },
           agentManager: input.agentManager,
         })
       : {
@@ -286,17 +280,10 @@ export function wire(input: {
   }
   // Every write broadcasts the new state, so a pick in the sidebar shows in the Agent Manager and Settings at once.
   const handleModelPreferences = async (message: ModelPreferenceMessage) => {
-    const state = input.context.globalState
-    if (message.type === "toggleFavorite")
-      await state.update(FAVORITES_KEY, toggleFavorite(state.get(FAVORITES_KEY), message.action, message))
-    if (message.type === "persistRecents") await state.update(RECENTS_KEY, validateRecents(message.recents))
-    if (message.type === "recordModelUsage") await state.update(USAGE_KEY, recordUsage(state.get(USAGE_KEY), message))
-    if (message.type === "persistVariant")
-      await state.update(VARIANTS_KEY, {
-        ...validateVariants(state.get(VARIANTS_KEY)),
-        [message.key]: message.value,
-      })
-    const loaded = { type: "modelPreferencesLoaded", value: readModelPreferences(state) } as const
+    const loaded = {
+      type: "modelPreferencesLoaded",
+      value: await applyModelPreference(input.context.globalState, message),
+    } as const
     post(loaded)
     if (message.type !== "requestModelPreferences") others(loaded)
   }

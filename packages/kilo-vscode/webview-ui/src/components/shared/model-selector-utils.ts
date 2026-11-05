@@ -41,7 +41,7 @@ interface Choice {
 
 /**
  * The picker rows of a v2 catalog. Kilo Gateway models take their badges, order and description from the Gateway
- * metadata (by catalog id, then by Gateway model id, as the TUI). Other providers have no Gateway metadata, so as on
+ * metadata (by Gateway model id, then by catalog id, as the TUI). Other providers have no Gateway metadata, so as on
  * v1 they show no free, BYOK or training badge.
  */
 export function toPickerModels(
@@ -52,7 +52,7 @@ export function toPickerModels(
   const names = new Map((providers ?? []).map((provider) => [provider.id, provider.name]))
   return models.map((model) => {
     const entry =
-      model.providerID === KILO_GATEWAY_ID ? (gateway?.get(model.id) ?? gateway?.get(model.modelID)) : undefined
+      model.providerID === KILO_GATEWAY_ID ? (gateway?.get(model.modelID) ?? gateway?.get(model.id)) : undefined
     return { ...catalogFields(model, names.get(model.providerID), entry), ...gatewayFields(model, entry) }
   })
 }

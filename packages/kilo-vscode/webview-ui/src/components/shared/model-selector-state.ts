@@ -280,6 +280,8 @@ export function createModelTree(env: {
   }
 
   function setRow(key: string) {
+    // A click or star wins over a keyboard preview that is still pending.
+    clearTimeout(timers.preview)
     setSelectedKey(key)
     setPreActiveKey(key)
   }
@@ -375,7 +377,8 @@ export function createModelTree(env: {
     env.toggleFavorite(model.providerID, model.id)
   }
 
-  // Home, End, Left and Right act only after the user moved through the tree, as v1.
+  // Home, End, Left and Right act only after the user moved through the tree, as v1. A focused button (expand, star,
+  // Select) keeps its own Enter and arrow keys.
   function handleKeyDown(e: KeyboardEvent) {
     const list = nodes()
     if (e.key === "Escape") {
@@ -384,6 +387,7 @@ export function createModelTree(env: {
       return
     }
     if (list.length === 0) return
+    if (e.target instanceof HTMLButtonElement) return
     const step = { ArrowDown: 1, ArrowUp: -1 }[e.key]
     const side = navigating() ? { ArrowLeft: -1 as const, ArrowRight: 1 as const }[e.key] : undefined
     const end = navigating() ? { Home: 0, End: list.length - 1 }[e.key] : undefined
@@ -460,23 +464,29 @@ export function createModelTree(env: {
 
 export type ModelTree = ReturnType<typeof createModelTree>
 
-/** Drags the expanded preview height between 80px and `max` (the list always keeps 80px). */
+/**
+ * Drags the expanded preview height between 80px and `max` (the list always keeps 80px). Pointer capture keeps the
+ * release on the splitter even outside the webview, and `lostpointercapture` ends the drag when the picker closes.
+ */
 export function dragSplitter(
-  e: MouseEvent,
+  e: PointerEvent,
   start: number,
   set: (height: number) => void,
   max: () => number | undefined,
 ) {
   e.preventDefault()
+  const target = e.currentTarget
+  if (!(target instanceof HTMLElement)) return
   const startY = e.clientY
-  const onMove = (move: MouseEvent) => {
-    const limit = max()
-    if (limit !== undefined) set(Math.max(80, Math.min(limit, start + move.clientY - startY)))
-  }
-  const onUp = () => {
-    window.removeEventListener("mousemove", onMove)
-    window.removeEventListener("mouseup", onUp)
-  }
-  window.addEventListener("mousemove", onMove)
-  window.addEventListener("mouseup", onUp)
+  const abort = new AbortController()
+  target.setPointerCapture(e.pointerId)
+  target.addEventListener(
+    "pointermove",
+    (move) => {
+      const limit = max()
+      if (limit !== undefined) set(Math.max(80, Math.min(limit, start + move.clientY - startY)))
+    },
+    { signal: abort.signal },
+  )
+  target.addEventListener("lostpointercapture", () => abort.abort(), { signal: abort.signal })
 }

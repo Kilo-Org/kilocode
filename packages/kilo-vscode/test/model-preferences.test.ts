@@ -1,6 +1,7 @@
 // The host storage rules of the model picker preferences, as v1 `provider-actions.ts` and `model-usage.ts`.
 import { describe, expect, test } from "bun:test"
 import {
+  applyModelPreference,
   FAVORITES_KEY,
   readModelPreferences,
   RECENTS_KEY,
@@ -64,5 +65,31 @@ describe("readModelPreferences", () => {
       usage: {},
       variants: { "agent/code/kilo/a": "high" },
     })
+  })
+})
+
+describe("applyModelPreference", () => {
+  test("serializes fast writes so no change is lost", async () => {
+    const state = new Map<string, unknown>()
+    // A slow store: each update resolves later, as the real globalState can.
+    const store = {
+      get: (key: string) => state.get(key),
+      update: (key: string, value: unknown) =>
+        new Promise<void>((resolve) =>
+          setTimeout(() => {
+            state.set(key, value)
+            resolve()
+          }, 5),
+        ),
+    }
+    await Promise.all([
+      applyModelPreference(store, { type: "toggleFavorite", action: "add", ...ref("kilo", "a") }),
+      applyModelPreference(store, { type: "toggleFavorite", action: "add", ...ref("kilo", "b") }),
+      applyModelPreference(store, { type: "persistVariant", key: "agent/code/kilo/a", value: "high" }),
+      applyModelPreference(store, { type: "persistVariant", key: "agent/code/kilo/b", value: "low" }),
+    ])
+    const prefs = readModelPreferences(store)
+    expect(prefs.favorites).toEqual([ref("kilo", "a"), ref("kilo", "b")])
+    expect(prefs.variants).toEqual({ "agent/code/kilo/a": "high", "agent/code/kilo/b": "low" })
   })
 })

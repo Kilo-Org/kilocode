@@ -43,17 +43,21 @@ export function createKiloModels(input: {
     on(input.models, (models) => {
       const read = ++state.read
       if (!models) return
+      // Without Kilo models there is no team default to prefer (the server default is not a team model), so the
+      // recents may win. A team switch reload keeps the team it had before.
       if (!models.some((model) => model.providerID === "kilo")) return setValue((prev) => ({ ...prev, ready: true }))
       void Promise.all([
         rpc.models({}, location).catch(() => []),
         rpc.authStatus({}, location).catch(() => undefined),
       ]).then(([entries, auth]) => {
         if (read !== state.read) return
-        setValue({
+        // A failed account read keeps the account unknown (or the team known before), so a recent pick cannot
+        // replace the team default of a team account.
+        setValue((prev) => ({
           entries: new Map(entries.map((entry) => [entry.id, entry])),
-          organizationID: auth?.authenticated ? auth.organizationID : undefined,
-          ready: true,
-        })
+          organizationID: auth ? (auth.authenticated ? auth.organizationID : undefined) : prev.organizationID,
+          ready: auth ? true : prev.ready,
+        }))
       })
     }),
   )

@@ -1,7 +1,7 @@
 // The model picker preferences of v1, kept in the extension globalState so that every webview (sidebar, Settings,
 // Agent Manager) shares them: favorites, the 5 most recent picks, the usage count per model and the remembered
 // reasoning effort per agent and model. The webview owns the rules; the host only validates and stores.
-import type { ModelPreferences, ModelPreferenceRef, ModelUsageMap } from "./protocol"
+import type { ModelPreferenceMessage, ModelPreferences, ModelPreferenceRef, ModelUsageMap } from "./protocol"
 
 export const FAVORITES_KEY = "kilo-code.v2.favoriteModels"
 export const RECENTS_KEY = "kilo-code.v2.recentModels"
@@ -15,6 +15,25 @@ const RECENT_LIMIT = 5
 const USAGE_LIMIT = 200
 
 type State = { get: (key: string) => unknown; update: (key: string, value: unknown) => Thenable<void> }
+
+// One write chain for every webview: each update reads the value the previous one wrote, so two fast star clicks or
+// effort picks never drop a change (as notifications.ts).
+const queue = { tail: Promise.resolve() as Promise<unknown> }
+
+/** Applies one preference message after the writes before it, then returns the stored preferences. */
+export function applyModelPreference(state: State, message: ModelPreferenceMessage): Promise<ModelPreferences> {
+  const next = queue.tail.then(async () => {
+    if (message.type === "toggleFavorite")
+      await state.update(FAVORITES_KEY, toggleFavorite(state.get(FAVORITES_KEY), message.action, message))
+    if (message.type === "persistRecents") await state.update(RECENTS_KEY, validateRecents(message.recents))
+    if (message.type === "recordModelUsage") await state.update(USAGE_KEY, recordUsage(state.get(USAGE_KEY), message))
+    if (message.type === "persistVariant")
+      await state.update(VARIANTS_KEY, { ...validateVariants(state.get(VARIANTS_KEY)), [message.key]: message.value })
+    return readModelPreferences(state)
+  })
+  queue.tail = next.catch(() => undefined)
+  return next
+}
 
 export function readModelPreferences(state: State): ModelPreferences {
   return {

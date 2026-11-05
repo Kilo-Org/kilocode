@@ -372,7 +372,7 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
                   <div
                     class="model-selector-splitter"
                     ref={(el) => (refs.splitter = el)}
-                    onMouseDown={(e) =>
+                    onPointerDown={(e) =>
                       dragSplitter(e, previewHeight(), setPreviewHeight, () =>
                         refs.body ? refs.body.offsetHeight - chrome() - 80 : undefined,
                       )

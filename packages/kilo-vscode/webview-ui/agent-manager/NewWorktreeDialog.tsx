@@ -184,24 +184,34 @@ export const NewWorktreeDialog: Component<{
   const serverDefault = createDefaultModel(props.store)
   const modelPreferences = useModelPreferences()
   void props.store.data.location.config.sync().catch(() => undefined)
+  // The same precedence as the sidebar composer (v1 resolveModelSelection): agent model, configured model, team
+  // default, the most recent pick, then the server default.
+  const defaultFor = (agent: string) =>
+    initialModel({
+      agent: props.agents.find((item) => item.id === agent)?.model ?? undefined,
+      configured: configuredModel(props.store.data.location.config.list()),
+      team: kiloTeam(props.store.kiloModels()),
+      recents: modelPreferences?.recents() ?? [],
+      valid: (ref) =>
+        props.models.some((item) => item.enabled && item.providerID === ref.providerID && item.id === ref.id),
+      fallback: serverDefault(),
+    })
   const preferences = createDialogPreferences({
     saved,
     agent: initialAgent,
-    // The same precedence as the sidebar composer (v1 resolveModelSelection): agent model, configured model, team
-    // default, the most recent pick, then the server default.
     fallback: (agent) => {
-      const model = initialModel({
-        agent: props.agents.find((item) => item.id === agent)?.model ?? undefined,
-        configured: configuredModel(props.store.data.location.config.list()),
-        team: kiloTeam(props.store.kiloModels()),
-        recents: modelPreferences?.recents() ?? [],
-        valid: (ref) =>
-          props.models.some((item) => item.enabled && item.providerID === ref.providerID && item.id === ref.id),
-        fallback: serverDefault(),
-      })
+      const model = defaultFor(agent)
       return model ? { providerID: model.providerID, modelID: model.id } : null
     },
-    effort: (agent) => props.agents.find((item) => item.id === agent)?.model?.variant,
+    // The effort of the chosen default (agent or configured), else the effort the agent last chose for this model,
+    // as the sidebar. createDialogPreferences moves it to the nearest effort the model has.
+    effort: (agent, model) => {
+      if (!model) return undefined
+      const chosen = defaultFor(agent)
+      if (chosen?.variant && chosen.providerID === model.providerID && chosen.id === model.modelID)
+        return chosen.variant
+      return modelPreferences?.variant(agent, model.providerID, model.modelID) || undefined
+    },
     valid: (value) =>
       props.models.some(
         (model) => model.enabled && model.providerID === value.providerID && model.id === value.modelID,

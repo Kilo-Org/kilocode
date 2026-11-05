@@ -376,6 +376,26 @@ describe("toPickerModels", () => {
     })
   })
 
+  it("prefers the Gateway model id over the catalog id, as the TUI", () => {
+    const aliased = info("kilo", "my-alias", { modelID: "anthropic/claude" })
+    const real: KiloGatewayRpc.ModelEntry = {
+      id: "anthropic/claude",
+      name: "Claude",
+      isFree: false,
+      recommendedIndex: 1,
+    }
+    const other: KiloGatewayRpc.ModelEntry = { id: "my-alias", name: "Other", isFree: true }
+    const [model] = toPickerModels(
+      [aliased],
+      providers,
+      new Map([
+        [real.id, real],
+        [other.id, other],
+      ]),
+    )
+    expect(model).toMatchObject({ isFree: false, recommendedIndex: 1 })
+  })
+
   it("shows no Gateway badges on other providers, as v1", () => {
     const zero = { input: 0, output: 0, cache: { read: 0, write: 0 } }
     const [model] = toPickerModels([info("anthropic", "claude", { cost: [zero] })], providers, new Map())
