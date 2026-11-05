@@ -1,4 +1,5 @@
 import type { ProjectContexts } from "./project/contexts"
+import { canonicalizePath } from "./project/paths"
 import type { RevealDeps } from "./reveal-session"
 
 export type UpsellDeps = Omit<RevealDeps, "post"> & {
@@ -7,7 +8,7 @@ export type UpsellDeps = Omit<RevealDeps, "post"> & {
 }
 
 export async function openUpsellTab(directory: string | undefined, contexts: ProjectContexts, deps: UpsellDeps) {
-  const target = directory ? contexts.byDirectory(directory) : undefined
+  const target = directory ? contexts.byDirectory(canonicalizePath(directory)) : undefined
   if (!target) {
     deps.open()
     deps.error("Agent Manager could not find this chat's project. Add the project in Agent Manager and try again.")

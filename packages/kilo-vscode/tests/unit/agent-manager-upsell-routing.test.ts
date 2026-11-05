@@ -1,5 +1,8 @@
 import { describe, expect, it } from "bun:test"
-import type { ProjectContexts } from "../../src/agent-manager/project/contexts"
+import { mkdir, mkdtemp, rm, symlink } from "node:fs/promises"
+import { tmpdir } from "node:os"
+import path from "node:path"
+import { ProjectContexts } from "../../src/agent-manager/project/contexts"
 import { openUpsellTab, type UpsellDeps } from "../../src/agent-manager/upsell"
 import { handleSidebarWorktreeMessage } from "../../src/kilo-provider/sidebar-worktree"
 
@@ -38,6 +41,30 @@ function host(active = "project-b") {
 }
 
 describe("Agent Manager upsell routing", () => {
+  it("resolves a symlinked chat directory to the real project's canonical root", async () => {
+    const dir = await mkdtemp(path.join(tmpdir(), "kilo-upsell-"))
+    try {
+      const root = path.join(dir, "repo")
+      const alias = path.join(dir, "alias")
+      await mkdir(root)
+      await symlink(root, alias, "junction")
+      const contexts = new ProjectContexts({
+        workspaceRoot: () => alias,
+        registry: { list: () => [], get: () => undefined },
+        deps: { log: () => {} },
+      })
+      const project = contexts.active()!
+      const fake = host()
+
+      expect(project.root).not.toBe(alias)
+      expect(await openUpsellTab(alias, contexts, fake.deps)).toBe(true)
+      expect(fake.messages).toEqual([{ type: "agentManager.openUpsellTab", projectId: project.id }])
+      expect(fake.errors).toEqual([])
+    } finally {
+      await rm(dir, { recursive: true, force: true })
+    }
+  })
+
   it("activates and publishes the chat's project before opening a project-qualified tab", async () => {
     const fake = host()
 

@@ -1,4 +1,4 @@
-import { onMount } from "solid-js"
+import { createEffect } from "solid-js"
 import { Card, CardTitle, CardDescription, CardActions } from "@kilocode/kilo-ui/card"
 import { Button } from "@kilocode/kilo-ui/button"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
@@ -17,7 +17,12 @@ export function AgentManagerUpsell(props: { onDismiss: () => void }) {
     track(action)
     if (action === "open") vscode.postMessage({ type: "openAgentManagerUpsell" })
   }
-  onMount(() => track("shown"))
+  let shown = false
+  createEffect(() => {
+    if (shown || !vscode.active()) return
+    shown = true
+    track("shown")
+  })
   return (
     <Card class="agent-manager-upsell">
       <div class="agent-manager-upsell-heading">
