@@ -160,7 +160,8 @@ updates:
 # come from the graph that dependency-submission.yml submits for
 # packages/kilo-jetbrains. That submitted graph is also what lets Dependabot
 # open security update PRs for direct Gradle dependencies; transitive ones
-# are alert-only and fixed by hand.
+# are alert-only and fixed by hand with the security floors in
+# packages/kilo-jetbrains/gradle/libs.versions.toml.
 #
 # Deliberately not covered: docker (packages/opencode/Dockerfile) and
 # github-actions (.github/workflows/**). Both paths are shared/upstream code
