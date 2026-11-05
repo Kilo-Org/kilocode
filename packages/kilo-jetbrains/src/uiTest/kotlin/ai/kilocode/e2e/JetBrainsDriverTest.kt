@@ -49,6 +49,13 @@ class JetBrainsDriverTest {
             return
         }
 
+        if (isTranscriptSessionOpen(request) && request.scenario.lane == "cloud") {
+            if (!setOrigin(request.project.path, descriptor.project.gitUrl, evidence)) {
+                evidence.write(resultPath)
+                return
+            }
+        }
+
         val testName = "kilo-${request.runId}"
         var context: IDETestContext? = null
         try {
@@ -165,6 +172,10 @@ class JetBrainsDriverTest {
 
                 evidence.state("scenario.id", request.scenario.id)
                 evidence.state("scenario.lane", request.scenario.lane)
+
+                if (isTranscriptSessionOpen(request)) {
+                    openSession(request, descriptor, ide, toolWindow, window, evidence)
+                }
             }
         } catch (error: Throwable) {
             evidence.fail("driver.error", actionable(error))
@@ -174,6 +185,190 @@ class JetBrainsDriverTest {
         }
 
         evidence.write(resultPath)
+    }
+
+    private fun isTranscriptSessionOpen(request: DriverRequest): Boolean =
+        request.scenario.id == "session.open" &&
+            "transcript.visible" in request.scenario.expected.ui &&
+            "session.ready" in request.scenario.expected.model
+
+    private fun setOrigin(project: String, url: String, evidence: DriverEvidence): Boolean {
+        val existing = git(project, "remote", "get-url", "origin")
+        val changed = when {
+            existing == null -> gitRun(project, "remote", "add", "origin", url)
+            existing != url -> gitRun(project, "remote", "set-url", "origin", url)
+            else -> true
+        }
+        if (!changed) {
+            evidence.fail("git.origin", "could not set origin to the descriptor gitUrl")
+            return false
+        }
+        val actual = git(project, "remote", "get-url", "origin")
+        if (actual != url) {
+            evidence.fail("git.origin", "origin is '$actual' instead of '$url'")
+            return false
+        }
+        evidence.pass("git.origin", actual)
+        evidence.state("git.origin", actual)
+        return true
+    }
+
+    private fun git(dir: String, vararg args: String): String? = runCatching {
+        val proc = ProcessBuilder(listOf("git", *args))
+            .directory(Path.of(dir).toFile())
+            .redirectErrorStream(true)
+            .start()
+        if (!proc.waitFor(10, TimeUnit.SECONDS)) {
+            proc.destroyForcibly()
+            return@runCatching null
+        }
+        val output = proc.inputStream.bufferedReader().use { it.readText() }.trim()
+        output.takeIf { proc.exitValue() == 0 && it.isNotEmpty() }
+    }.getOrNull()
+
+    private fun gitRun(dir: String, vararg args: String): Boolean = runCatching {
+        val proc = ProcessBuilder(listOf("git", *args))
+            .directory(Path.of(dir).toFile())
+            .redirectErrorStream(true)
+            .start()
+        proc.inputStream.close()
+        proc.waitFor(10, TimeUnit.SECONDS) && proc.exitValue() == 0
+    }.getOrDefault(false)
+
+    private fun openSession(
+        request: DriverRequest,
+        descriptor: FixtureDescriptor,
+        ide: KiloIdePage,
+        toolWindow: KiloToolWindowPage,
+        window: ToolWindow,
+        evidence: DriverEvidence,
+    ) {
+        val page = SessionOpenPage(ide, watchdog)
+        val lane = request.scenario.lane
+        val token = if (lane == "cloud") descriptor.fakeLlmScope else request.scenario.prompt.token
+        if (token.isBlank()) {
+            evidence.fail("transcript.visible", "scenario or descriptor has no transcript token")
+            evidence.fail("session.ready", "scenario or descriptor has no transcript token")
+            return
+        }
+        val hosted = if (lane == "cloud") {
+            openCloud(request, descriptor, ide, toolWindow, window, page, evidence)
+        } else {
+            openLocal(request, page, evidence)
+        }
+        if (hosted == null) return
+
+        val model = runCatching { page.awaitModel() }.getOrElse { error ->
+            evidence.fail("session.ready", actionable(error))
+            null
+        }
+        if (model != null) {
+            evidence.pass("session.ready", "turnCount=${model.turns}, model dump present")
+            evidence.state("transcript.turns", model.turns)
+            evidence.state("transcript.dump", model.dump.take(4000))
+            evidence.state("transcript.detailed", model.detailed.take(4000))
+        }
+
+        val render = runCatching { page.awaitRender(token) }.getOrElse { error ->
+            evidence.fail("transcript.visible", actionable(error))
+            null
+        }
+        if (render != null) {
+            evidence.pass("transcript.visible", "component text or accessible name contains '$token'")
+            evidence.state("transcript.expected", token)
+            evidence.state("transcript.text", render.text.take(4000))
+            evidence.state("transcript.accessibleNames", render.accessibleNames.take(20).joinToString(" | ").take(2000))
+        }
+
+        val selected = runCatching { page.hostedSelection() }.getOrNull()
+        if (lane == "cloud") {
+            if (selected == hosted) evidence.pass("session.hosted", selected) else {
+                evidence.fail("session.hosted", "selected '${selected ?: "none"}' instead of '$hosted'")
+            }
+            if (page.hostedEditorVisible()) evidence.pass("session.hosted.editor", "Cloud workspace editor visible")
+            else evidence.fail("session.hosted.editor", "Cloud workspace editor is not visible")
+            evidence.state("session.hosted", true)
+            evidence.state("session.key", selected.orEmpty())
+        } else {
+            if (!page.hostedEditorVisible() && selected == null) {
+                evidence.pass("session.local", "no hosted editor or selected hosted session")
+            } else {
+                evidence.fail("session.local", "hosted attachment leaked into the local lane: ${selected ?: "editor"}")
+            }
+            evidence.state("session.hosted", false)
+        }
+
+        runCatching { ide.snapshot("session-open-$lane", window) }
+        runCatching {
+            page.transcriptComponent()?.let { ide.snapshotComponent("session-open-$lane-transcript", it) }
+        }
+        runCatching { ide.screenshot("session-open-$lane") }
+    }
+
+    private fun openLocal(request: DriverRequest, page: SessionOpenPage, evidence: DriverEvidence): String? =
+        runCatching {
+            page.submitLocal(request.scenario.prompt.token)
+            evidence.pass("session.open", "local prompt submitted through Chat")
+            ""
+        }.getOrElse { error ->
+            evidence.fail("session.open", actionable(error))
+            evidence.fail("transcript.visible", "local session did not open: ${actionable(error)}")
+            evidence.fail("session.ready", "local session did not open: ${actionable(error)}")
+            null
+        }
+
+    private fun openCloud(
+        request: DriverRequest,
+        descriptor: FixtureDescriptor,
+        ide: KiloIdePage,
+        toolWindow: KiloToolWindowPage,
+        window: ToolWindow,
+        page: SessionOpenPage,
+        evidence: DriverEvidence,
+    ): String? {
+        val workspace = descriptor.resources.workspaceId
+        val session = descriptor.resources.nativeSessionId
+        if (workspace == null || session == null) {
+            evidence.fail("session.open", "Cloud descriptor has no workspaceId/nativeSessionId")
+            evidence.fail("transcript.visible", "Cloud descriptor has no hosted identity")
+            evidence.fail("session.ready", "Cloud descriptor has no hosted identity")
+            return null
+        }
+        return runCatching {
+            toolWindow.select(window, "Agents")
+            AgentManagerPage(ide, watchdog).awaitVisible()
+            val row = page.discoverHosted(workspace)
+            val remote = git(request.project.path, "remote", "get-url", "origin")
+            evidence.state("hosted.remote", remote)
+            evidence.state("hosted.key", row.key)
+            evidence.state("hosted.row.key", row.selectedKey)
+            evidence.state("hosted.row.tooltip", row.tooltip)
+            if (row.selectedKey == row.key) evidence.pass("hosted.identity", row.key)
+            else evidence.fail("hosted.identity", "selected '${row.selectedKey}' instead of '${row.key}'")
+            val reported = row.tooltip.lineSequence().map(String::trim).firstOrNull {
+                it.startsWith("http://") || it.startsWith("https://") || it.startsWith("git@") || it.startsWith("file:")
+            }
+            if (remote != null && sameRemote(reported, remote)) {
+                evidence.pass("hosted.discovery", "row tooltip reports the raw origin '$remote'")
+            } else {
+                evidence.fail("hosted.discovery", "row tooltip '$reported' does not match raw origin '$remote'")
+            }
+            page.awaitHostedSession(workspace, session)
+            evidence.pass("session.open", "hosted workspace and root session opened")
+            val expected = "hosted:$KILO_CLOUD_PROVIDER_ID:$workspace:$session"
+            evidence.state("hosted.session", expected)
+            expected
+        }.getOrElse { error ->
+            evidence.fail("session.open", actionable(error))
+            evidence.fail("transcript.visible", "Cloud session did not open: ${actionable(error)}")
+            evidence.fail("session.ready", "Cloud session did not open: ${actionable(error)}")
+            null
+        }
+    }
+
+    private fun sameRemote(a: String?, b: String): Boolean {
+        fun normalize(value: String) = value.trim().removeSuffix("/").removeSuffix(".git").lowercase()
+        return a != null && normalize(a) == normalize(b)
     }
 
     private fun preflight(request: DriverRequest, evidence: DriverEvidence): Boolean {
