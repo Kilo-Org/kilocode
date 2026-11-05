@@ -170,16 +170,23 @@ export class CodeIndexManager {
     const attempt = this._lockAttempt
     this._lockAttempt += 1
     const delay = Math.min(this._lockDelay * Math.pow(2, attempt), this._lockMaxDelay)
+    // Bind the retry to the orchestrator that reported the contention. A
+    // recovery or settings change replaces the orchestrator, and starting a
+    // run on the replaced (shut down) instance would write nothing while
+    // hiding the new instance from the retry.
+    const orchestrator = this._orchestrator
+    if (!orchestrator) return
     this._lockTimer = setTimeout(() => {
       this._lockTimer = undefined
-      if (this._disposed || !this.isFeatureEnabled || !this.isFeatureConfigured) return
+      if (this._disposed || orchestrator !== this._orchestrator) return
+      if (!this.isFeatureEnabled || !this.isFeatureConfigured) return
       if (this._retryTask || this._isRecoveringFromError) return
       log.info("retrying indexing after writer lock contention", {
         workspacePath: this.workspacePath,
         attempt,
         delay,
       })
-      void this._orchestrator?.startIndexing(trigger).catch((err) => {
+      void orchestrator.startIndexing(trigger).catch((err) => {
         log.error("indexing contention retry failed", { err, workspacePath: this.workspacePath })
       })
     }, delay)
@@ -198,20 +205,33 @@ export class CodeIndexManager {
   }
 
   private handleTelemetry(event: IndexingTelemetryEvent): void {
-    const contention = event.type === "error" && event.error.includes(WRITER_CONTENTION_MESSAGE)
-
-    // Report the first contention of an episode, not every backoff retry: the
-    // retry loop is expected to see the same lock until its holder releases.
-    if (!contention || !this._lockReported) this._telemetry.fire(event)
-
     if (event.type === "completed") {
+      this._telemetry.fire(event)
       this.resetRetryState()
       this.clearLockRetry()
       return
     }
 
-    if (event.type !== "error") return
-    if (event.location !== "orchestrator:startIndexing" && event.location !== "orchestrator:watcher") return
+    if (event.type !== "error") {
+      this._telemetry.fire(event)
+      return
+    }
+
+    const fromStart =
+      event.location === "orchestrator:startIndexing" || event.location === "orchestrator:watcher"
+    const contention = event.error.includes(WRITER_CONTENTION_MESSAGE)
+
+    // Report the first contention of an episode, not every backoff retry: the
+    // retry loop is expected to see the same lock until its holder releases.
+    // Only the retryable locations are deduplicated, and only while the latch
+    // stands. A clear contention is terminal (the manager never retries it),
+    // so it is always reported rather than swallowed by a latch left over
+    // from a start, and any other failure ends the episode, so the next
+    // contention is reported again.
+    if (!contention) this._lockReported = false
+    if (!(contention && fromStart && this._lockReported)) this._telemetry.fire(event)
+
+    if (!fromStart) return
     if (!this.isFeatureEnabled || !this.isFeatureConfigured) return
     if (this._retryTask || this._isRecoveringFromError) return
 
@@ -473,11 +493,15 @@ export class CodeIndexManager {
 
   public stopWatcher(): void {
     if (!this.isFeatureEnabled) return
+    // A stop is a decision to stop indexing, so a queued contention retry
+    // must not undo it by starting a fresh run seconds later.
+    this.clearLockRetry()
     this._orchestrator?.stopWatcher()
   }
 
   public cancelIndexing(): void {
     if (!this.isFeatureEnabled) return
+    this.clearLockRetry()
     this._orchestrator?.cancelIndexing()
   }
 
@@ -525,6 +549,9 @@ export class CodeIndexManager {
 
   public async clearIndexData(): Promise<void> {
     if (!this.isFeatureEnabled) return
+    // A successful clear must stay cleared: drop any queued contention retry
+    // first, or it would rebuild the index seconds after the delete.
+    this.clearLockRetry()
     this.assertInitialized()
     await this._orchestrator!.clearIndexData()
     await this._cacheManager!.clearCacheFile()
@@ -629,6 +656,9 @@ export class CodeIndexManager {
   }
 
   private async _recreateServices(prepared?: Baseline): Promise<void> {
+    // The orchestrator is about to be replaced; a retry queued against the old
+    // one is dead work, and its timer must not fire mid-recreation.
+    this.clearLockRetry()
     log.info("starting indexing service recreation", { workspacePath: this.workspacePath })
     const factory = new CodeIndexServiceFactory(
       this._configManager!,
