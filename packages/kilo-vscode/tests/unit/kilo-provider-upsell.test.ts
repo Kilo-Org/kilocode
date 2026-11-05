@@ -71,6 +71,19 @@ async function attach(kind: "sidebar" | "panel" | "embedded" = "sidebar") {
 }
 
 describe("KiloProvider Agent Manager upsell host routing", () => {
+  it("ignores an unknown runtime action without clearing or writing preferences", async () => {
+    const host = await attach()
+    await host.global.update("upsell.agentManager", { optedOut: true })
+    const update = spyOn(host.global, "update")
+    try {
+      await host.receive({ type: "agentManagerUpsell", action: "unexpected", request: "unknown" })
+      expect(host.global.get("upsell.agentManager", {})).toEqual({ optedOut: true })
+      expect(update).not.toHaveBeenCalled()
+    } finally {
+      update.mockRestore()
+    }
+  })
+
   it("persists sidebar preferences through the supplied extension globalState", async () => {
     const host = await attach()
     for (const action of ["not_now", "dont_show_again", "undo", "opened"]) {

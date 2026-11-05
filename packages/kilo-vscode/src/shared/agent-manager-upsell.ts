@@ -24,6 +24,7 @@ export function apply(state: UpsellState, action: Exclude<UpsellAction, "shown">
     case "undo":
       return { ...state, optedOut: false }
   }
+  return state
 }
 
 export function eligible(state: UpsellState, now: number) {
