@@ -165,19 +165,22 @@ it.instance(
   },
 )
 it.instance(
-  "getSmallModel keeps the session model for a local server reached over the LAN",
+  "getSmallModel keeps the session model for a private host under an unknown provider id",
   Effect.gen(function* () {
     for (const key of ["KILO_API_KEY", "KILO_AUTH_CONTENT", "KILO_CONFIG_CONTENT"]) {
       yield* clearEnv(key)
     }
-    const model = yield* Provider.use.getSmallModel(ProviderV2.ID.make("lmstudio"))
+    // Not one of LOCAL_SERVER_IDS: the private address is the only thing that
+    // can classify this provider as local, so the test covers that path end to
+    // end rather than the provider-id shortcut.
+    const model = yield* Provider.use.getSmallModel(ProviderV2.ID.make("my-local-server"))
     expect(model).toBeUndefined()
   }),
   {
     config: {
       provider: {
-        lmstudio: {
-          name: "LM Studio",
+        "my-local-server": {
+          name: "Local model server",
           npm: "@ai-sdk/openai-compatible",
           models: {
             // The catalog still lists uninstalled models; a LAN host does not
