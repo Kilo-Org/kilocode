@@ -1,8 +1,8 @@
 {
   "$comment": "Shared-patch baseline (U-L3-01). Read by script/check-shared-patches.ts and script/check-opencode-annotations.ts. Each shared upstream file that Kilo adds or changes needs an entry: rung (3 = seam patch, 4 = feature patch) and the missing seam. `unmarked` allows lines without markers and states why. Raise a limit only in the PR that adds the patch, and lower it when a patch goes away.",
   "limits": {
-    "files": 88,
-    "markedLines": 1510,
+    "files": 90,
+    "markedLines": 1522,
     "unmarkedLines": 246,
     "deletedFiles": 0
   },
@@ -370,6 +370,14 @@
       "rung": 3,
       "seam": "Generated promise client operations for the optional PTY create size exposed by packages/schema/src/pty.ts. The client must be regenerated from the public schema.",
       "unmarked": "Generated TypeScript cannot retain manual marker comments; bun run generate owns this file."
+    },
+    "packages/core/src/tool/read-filesystem.ts": {
+      "rung": 3,
+      "seam": "Generic ReaderError (a resource, a caller-supplied message and that message as .message) in the ReadError union, so a host-provided reader implementation can report why it could not extract a file. The reader service is the rung-2 replacement; this is only the typed failure it needs because the read tool passes known errors through and maps every other error to a bare \"Unable to read <path>\". No Kilo path, identifier, value or default; without a reader that raises it, upstream behavior is identical."
+    },
+    "packages/core/src/tool/plugin/read.ts": {
+      "rung": 3,
+      "seam": "One condition in the existing typed-message list so the generic ReadToolFileSystem.ReaderError reaches the model instead of the fallback message. The read tool, its schema, codemode setting, bounding and instruction loading are unchanged; no Kilo identifier or value."
     }
   }
 }
