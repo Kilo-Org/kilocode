@@ -10,6 +10,7 @@
     "kilocode.openai": 10,
     "kilocode.marketplace": 10,
     "kilocode.session-sync": 10,
+    "kilocode.remote": 10,
     "kilocode.skill": 10,
     "kilocode.tool-todo": 10,
     "kilocode.tool-write": 10,
