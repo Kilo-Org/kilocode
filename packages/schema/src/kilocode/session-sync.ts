@@ -36,8 +36,6 @@ export const Definition = Rpc.define({
       input: portable(
         Schema.Struct({
           directory: Schema.String,
-          destination: Schema.String,
-          local: Schema.Boolean,
           organizationID: Schema.NullOr(Schema.String),
           assets: optional(Schema.Array(Schema.String)),
         }),

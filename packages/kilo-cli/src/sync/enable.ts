@@ -1,12 +1,11 @@
 import { Runtime } from "@opencode/cli/framework/runtime"
 import { Effect, Option } from "effect"
 import { SyncCommand } from "./sync"
-import { call, connect, destination, printStatus, report, SyncError } from "./shared"
+import { call, connect, printStatus, report, SyncError } from "./shared"
 
 export default Runtime.handler(
   SyncCommand.commands.enable,
   Effect.fn("kilo.sync.enable")(function* (input) {
-    const url = yield* destination(input.url, input.local)
     const connection = yield* connect(input)
     const organizationID = Option.isSome(input.organization)
       ? input.organization.value
@@ -17,8 +16,6 @@ export default Runtime.handler(
       connection.rpc.enable(
         {
           directory: connection.directory,
-          destination: url,
-          local: input.local,
           organizationID,
           assets: input.assets,
         },
