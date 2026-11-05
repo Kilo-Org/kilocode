@@ -51,8 +51,19 @@ export const KiloSettingsPlugin = define<FSUtil.Service | Global.Service | Effec
     const writer = Context.get(yield* Layer.build(KiloConfigWriter.layer()), KiloConfigWriter.Service)
 
     const directory = ctx.location.directory
-    const globalDirectory = global.config
-    const systemDir = systemDirectory()
+    // Canonicalize the roots once: entry paths are canonicalized, so a symlinked config root must compare equal.
+    const globalDirectory = yield* fs.resolve(global.config)
+    const systemDir = yield* fs.resolve(systemDirectory())
+    const projectRoot = yield* fs.resolve(ctx.location.project.directory)
+    const locationRoot = yield* fs.resolve(directory)
+    // The reader walks ancestors up to the worktree root inside VCS, or to the filesystem root outside it. A project
+    // write must stay inside that same boundary, so a repository-controlled symlink cannot redirect it to any external
+    // file. `project.directory` equals the location outside VCS, where a VCS marker decides between the two cases.
+    const vcs =
+      projectRoot !== locationRoot ||
+      (yield* fs.existsSafe(path.join(locationRoot, ".git"))) ||
+      (yield* fs.existsSafe(path.join(locationRoot, ".hg")))
+    const projectBoundary = vcs ? projectRoot : path.parse(locationRoot).root
 
     const writeTarget = (scope: KiloSettingsRpc.Scope) => ({
       directory: scope === "global" ? globalDirectory : directory,
@@ -62,8 +73,9 @@ export const KiloSettingsPlugin = define<FSUtil.Service | Global.Service | Effec
     const isConfigFile = (file: string) => KiloConfigFiles.names.includes(path.basename(file))
     const inGlobal = (file: string) => FSUtil.contains(globalDirectory, file)
     const inSystem = (file: string) => FSUtil.contains(systemDir, file)
+    const inProject = (file: string) => FSUtil.contains(projectBoundary, file) && !inGlobal(file) && !inSystem(file)
     const inScope = (scope: KiloSettingsRpc.Scope, file: string) =>
-      scope === "global" ? inGlobal(file) : !inGlobal(file) && !inSystem(file)
+      scope === "global" ? inGlobal(file) : inProject(file)
 
     // The config documents the reader loads for the scope, lowest priority first. Paths are canonicalized so a
     // repository-controlled symlink cannot move a project write outside the project (for example into the global

@@ -23,7 +23,7 @@ export type Scope = typeof Scope.Type
 
 export const Target = Schema.Struct({
   scope: Scope,
-  /** The file a write to this scope resolves to: the first existing write candidate, else the created `newFile`. */
+  /** The config document a write to this scope resolves to: the reader's highest-precedence document, else a new file. */
   path: Schema.String,
   /** sha256 of the file content; omitted while the file does not exist, when a write creates it. */
   revision: optional(Schema.String),

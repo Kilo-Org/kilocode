@@ -255,16 +255,24 @@ test(
 test.skipIf(process.platform === "win32")(
   "a symlinked config directory cannot redirect a project write outside the project",
   boot(
-    { global: { privacy_mode: true } },
-    async (client, { directory, global }) => {
+    {},
+    async (client, { directory, repoRoot }) => {
+      const external = path.join(path.dirname(repoRoot), "external")
       const failure = await settingsWrite(client, directory, { scope: "project", unset: [["privacy_mode"]] }).then(
         () => undefined,
         (error: unknown) => error as { type: string },
       )
       expect(failure?.type).toBe("failed")
-      expect(JSON.parse(await Bun.file(path.join(global, "kilo2.json")).text())).toEqual({ privacy_mode: true })
+      expect(JSON.parse(await Bun.file(path.join(external, "kilo2.json")).text())).toEqual({ privacy_mode: true })
     },
-    { setup: async ({ repoRoot, global }) => void (await symlink(global, path.join(repoRoot, ".kilo2"), "dir")) },
+    {
+      setup: async ({ repoRoot }) => {
+        const external = path.join(path.dirname(repoRoot), "external")
+        await mkdir(external, { recursive: true })
+        await Bun.write(path.join(external, "kilo2.json"), JSON.stringify({ privacy_mode: true }))
+        await symlink(external, path.join(repoRoot, ".kilo2"), "dir")
+      },
+    },
   ),
   30_000,
 )
