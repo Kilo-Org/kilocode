@@ -990,6 +990,9 @@ export const dict = {
   "settings.experimental.conversationPromptHistory.title": "Historial de prompts por conversación",
   "settings.experimental.conversationPromptHistory.description":
     "Mantén el historial de prompts (ArrowUp/ArrowDown) separado para cada conversación en lugar de compartir un único historial entre todas.",
+  "settings.experimental.agentManagerSplash.title": "Pantalla de bienvenida de Agent Manager",
+  "settings.experimental.agentManagerSplash.description":
+    "Prueba la nueva introducción de Agent Manager con ejemplos de flujos de trabajo. Se aplica al instante.",
   "settings.experimental.claudeMigration.title": "Migración de Claude Code",
   "settings.experimental.claudeMigration.description":
     "Importar una vez las instrucciones globales CLAUDE.md compatibles, habilidades simples y definiciones MCP desactivadas. Los archivos originales de Claude no se modifican; reinicia el backend después de activar.",

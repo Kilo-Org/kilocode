@@ -1,6 +1,6 @@
 ---
 title: "Files"
-description: "Browse and edit your workspace files, mention them in chat, and open file links from the agent's responses in Kilo Desktop."
+description: "Browse and edit your workspace files — including rendered Markdown, Mermaid, and data tables — mention them in chat, and open file links from the agent's responses in Kilo Desktop."
 ---
 
 # Files
@@ -20,7 +20,9 @@ The file tree shows the files in your workspace. You can:
 Select a file to open it in the editor with syntax highlighting.
 
 - Notebook (`.ipynb`) files open in a [Notebook](/docs/desktop/features/notebooks) tab (requires sign-in).
-- Markdown (`.md`) files can be viewed in a {% svgIcon src="/docs/img/desktop/eye.svg" /%} rendered preview or {% svgIcon src="/docs/img/desktop/code.svg" /%} as source code, with links to other workspace files clickable inline.
+- Markdown (`.md`) files can be viewed in a {% svgIcon src="/docs/img/desktop/eye.svg" /%} rendered preview or {% svgIcon src="/docs/img/desktop/code.svg" /%} as source code, with links to other workspace files clickable inline. In the rendered preview, press **⌘F** / **Ctrl+F** to find text (see [Find text](/docs/desktop/quickstart#find-text)).
+- Mermaid (`.mmd`, `.mermaid`) files open as a rendered diagram; switch to {% svgIcon src="/docs/img/desktop/code.svg" /%} source to edit them. A file opened at a specific line, such as from a link like `flow.mmd:12`, opens in the source view. Mermaid code blocks in Markdown files render as diagrams in the preview.
+- HTML (`.html`, `.htm`) files open rendered in a [Browser](/docs/desktop/features/browser) tab.
 - Images open in a preview.
 - **CSV** (`.csv`), **TSV** (`.tsv`), and **Parquet** (`.parquet`) files open as interactive tables. You can scroll, sort, and filter the data.
   - For CSV and TSV, select **Edit source** to edit the text and **Show as table** to switch back. Save as usual.
@@ -36,7 +38,7 @@ Type `@` in the chat to search your workspace files and insert a mention. The me
 
 ## Open file links from responses
 
-When the agent references a file in its response — including a specific location, like `src/api.py:42` — it renders as a clickable link rather than plain text. Click it to open that file at that line in the Files tab.
+When the agent references a file in its response — including a specific location, like `src/api.py:42` — it renders as a clickable link rather than plain text. Click it to open that file at that line in the Files tab. If the link isn't an exact path from the workspace root, Kilo Desktop looks for workspace files whose path ends with it: a single match opens directly, and several matches open a **Choose a file** picker. If nothing matches, Kilo Desktop shows *File not found* instead of opening the Files tab.
 
 The agent can also open a file for you directly, jumping to the relevant line.
 

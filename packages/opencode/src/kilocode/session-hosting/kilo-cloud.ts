@@ -19,6 +19,7 @@ import {
   HostedWorkspaceID,
   ListInput,
   ProviderID,
+  ProviderContinueWorkspaceInput,
   StartInput,
   TranscriptInput,
   WorkspaceDeleteInput,
@@ -30,6 +31,7 @@ import {
   markDeletionDispatched,
   type Attachment,
   type Availability,
+  type ContinueWorkspaceSession,
   type CreateWorkspaceResult,
   type DeleteWorkspaceResult,
   type HostedSession,
@@ -40,6 +42,7 @@ import {
   type HostedWorkspaceStatus,
   type NativeRequest,
   type Provider,
+  type ProviderContinueWorkspaceResult,
   type Repository,
   type Agent,
   type Profile,
@@ -49,7 +52,7 @@ import {
   type WorkspaceSessionStartResult,
 } from "./types"
 import { classify } from "./native-routes"
-import { errorCode } from "./response"
+import { errorCandidates, errorCode } from "./response"
 
 export const PROVIDER = Schema.decodeUnknownSync(ProviderID)("kilo-cloud")
 export const ATTACHMENT_TTL_MS = 60_000
@@ -165,6 +168,40 @@ const WorkspaceDelete = z.object({
   deletedSessionIds: z.array(z.string()),
 })
 
+const ContinuationOutput = z.object({
+  workspaceId: z.string().min(1),
+  sessions: z.array(
+    z.object({
+      sourceKiloSessionId: z.string().min(1),
+      kiloSessionId: z.string().min(1),
+      cloudAgentSessionId: z.string().min(1),
+      agent: z.object({
+        mode: z.string().min(1),
+        model: z.string().min(1),
+        variant: z.string().max(50).optional(),
+      }),
+      modeFallback: z.boolean(),
+    }),
+  ),
+  activeKiloSessionId: z.string().min(1),
+  replayed: z.literal(true).optional(),
+})
+
+const CONTINUATION_CODES = [
+  "organization_mismatch",
+  "operation_key_reuse_mismatch",
+  "creation_in_progress",
+  "continuation_incomplete",
+  "insufficient_balance",
+] as const
+
+function continuationCode(body: unknown) {
+  // A real tRPC failure carries a generic transport code beside the actionable
+  // Kilo code, so match any nested code or message, not just `errorCode`'s pick.
+  const candidates = errorCandidates(body)
+  return CONTINUATION_CODES.find((code) => candidates.some((raw) => raw === code || raw.includes(code)))
+}
+
 const CloudProfile = z.object({
   id: z.string().min(1),
   name: z.string().min(1),
@@ -194,25 +231,24 @@ export function provider(options: Options): Provider {
 
   const resolveRaw = (orgID?: string) => provided(CloudAuth.resolve({ orgID, env }))
 
-  const resolve = (orgID?: string) =>
-    resolveRaw(orgID).pipe(
-      Effect.mapError((error) => {
-        if (error._tag !== "CloudAuthResolutionError") {
-          return new HostedFailure({
-            code: "unavailable",
-            message: "Kilo credentials could not be read",
-            retryable: true,
-          })
-        }
-        if (error.kind === "missing") {
-          return new HostedFailure({ code: "signed_out", message: error.message, retryable: false })
-        }
-        if (error.kind === "unavailable") {
-          return new HostedFailure({ code: "auth_unavailable", message: error.message, retryable: true })
-        }
-        return new HostedFailure({ code: "rejected", message: error.message, retryable: false })
-      }),
-    )
+  const authFailure = (error: CloudAuth.ResolutionError) => {
+    if (error.kind === "missing") {
+      return new HostedFailure({ code: "signed_out", message: error.message, retryable: false })
+    }
+    if (error.kind === "unavailable") {
+      return new HostedFailure({ code: "auth_unavailable", message: error.message, retryable: true })
+    }
+    return new HostedFailure({ code: "rejected", message: error.message, retryable: false })
+  }
+
+  const resolve = (orgID?: string) => resolveRaw(orgID).pipe(Effect.mapError(authFailure))
+
+  // Continuation resolves the bearer only: Cloud takes the organization from the
+  // source sessions' ingest rows, so no organization is attached here.
+  const resolveToken: Effect.Effect<CloudAuth.Resolved, HostedFailure> = provided(CloudAuth.token(env)).pipe(
+    Effect.map((token) => ({ token }) satisfies CloudAuth.Resolved),
+    Effect.mapError(authFailure),
+  )
 
   const availability: Effect.Effect<Availability> = Effect.suspend(() => resolveRaw()).pipe(
     Effect.as({ state: "available" } as Availability),
@@ -395,6 +431,62 @@ export function provider(options: Options): Provider {
       return yield* Effect.fail(failure(response, body))
     })
 
+  /**
+   * Continuation failures are typed: the endpoint surfaces `code`, `message`,
+   * and `retryable` so the client can decide whether to keep the operation key.
+   */
+  const continuationFailure = (response: Response, body: unknown) => {
+    const code = continuationCode(body)
+    if (response.status === 402) {
+      return new HostedFailure({
+        code: "insufficient_balance",
+        message: "Kilo Cloud requires additional balance to continue this worktree",
+        retryable: false,
+      })
+    }
+    if (code === "organization_mismatch") {
+      return new HostedFailure({ code, message: "Selected sessions belong to different accounts", retryable: false })
+    }
+    if (response.status === 401 || response.status === 403) {
+      return new HostedFailure({
+        code: "unauthorized",
+        message: "Kilo Cloud rejected these credentials",
+        retryable: false,
+      })
+    }
+    if (code === "operation_key_reuse_mismatch") {
+      return new HostedFailure({ code, message: "This operation key was used for a different request", retryable: false })
+    }
+    if (code === "creation_in_progress") {
+      return new HostedFailure({ code, message: "Kilo Cloud is still completing this workspace", retryable: true })
+    }
+    if (code === "continuation_incomplete") {
+      return new HostedFailure({ code, message: "Kilo Cloud created part of this workspace", retryable: true })
+    }
+    if (response.status === 409) {
+      return new HostedFailure({
+        code: "continuation_incomplete",
+        message: "Kilo Cloud created part of this workspace",
+        retryable: true,
+      })
+    }
+    if (response.status === 503 || response.status >= 500) {
+      return new HostedFailure({
+        code: "unavailable",
+        message: "Kilo Cloud is temporarily unavailable",
+        retryable: true,
+      })
+    }
+    return new HostedFailure({ code: "rejected", message: "Kilo Cloud rejected the request", retryable: false })
+  }
+
+  const consumeContinuation = (response: Response) =>
+    Effect.gen(function* () {
+      if (response.ok) return yield* decodeBody(response)
+      const body = yield* decodeBody(response).pipe(Effect.catch(() => Effect.succeed(undefined)))
+      return yield* Effect.fail(continuationFailure(response, body))
+    })
+
   const codec = (schema: Schema.Top) => schema as Schema.Codec<unknown, unknown>
 
   const decode = <S extends Schema.Top>(schema: S, value: unknown, message: string) =>
@@ -574,6 +666,14 @@ export function provider(options: Options): Provider {
       headers: { ...headers(auth), "content-type": "application/json" },
       body: JSON.stringify(input),
     }).pipe(Effect.flatMap(consume), Effect.flatMap(data))
+
+  const continuationMutation = (auth: CloudAuth.Resolved, input: unknown) =>
+    request(auth, {
+      method: "POST",
+      path: "/trpc/continueHostedWorkspace",
+      headers: { ...headers(auth), "content-type": "application/json" },
+      body: JSON.stringify(input),
+    }).pipe(Effect.flatMap(consumeContinuation), Effect.flatMap(data))
 
   const consistent = (raw: z.infer<typeof WorkspaceSummary>) =>
     raw.sessions.every((session) => session.workspaceId === raw.workspaceId)
@@ -834,6 +934,66 @@ export function provider(options: Options): Provider {
       }
     })
 
+  const continueWorkspace = (
+    raw: ProviderContinueWorkspaceInput,
+    opts?: { readonly token?: Redacted.Redacted },
+  ): Effect.Effect<ProviderContinueWorkspaceResult, HostedFailure> =>
+    Effect.gen(function* () {
+      const input = yield* check(ProviderContinueWorkspaceInput, raw)
+      // Pin the bearer: the caller may pass the same credential it used to read
+      // the principal, so identity and dispatch cannot resolve different tokens.
+      const auth = opts?.token ? ({ token: opts.token } satisfies CloudAuth.Resolved) : yield* resolveToken
+      const body = yield* continuationMutation(auth, input)
+      const parsed = ContinuationOutput.safeParse(body)
+      if (!parsed.success) {
+        return yield* Effect.fail(invalid("Kilo Cloud returned an unsupported continuation result"))
+      }
+      if (parsed.data.sessions.length !== input.sessions.length) {
+        return yield* Effect.fail(invalid("Kilo Cloud returned a different number of sessions"))
+      }
+      for (const [index, session] of parsed.data.sessions.entries()) {
+        const expected = input.sessions.at(index)
+        if (!expected || session.sourceKiloSessionId !== expected.sourceKiloSessionId) {
+          return yield* Effect.fail(invalid("Kilo Cloud returned sessions in a different order"))
+        }
+      }
+      const destinations = parsed.data.sessions.map((session) => session.kiloSessionId)
+      if (new Set(destinations).size !== destinations.length) {
+        return yield* Effect.fail(invalid("Kilo Cloud returned duplicate destination sessions"))
+      }
+      const activeIndex = input.sessions.findIndex(
+        (session) => session.sourceKiloSessionId === input.activeSourceKiloSessionId,
+      )
+      const expectedActive = activeIndex < 0 ? undefined : destinations.at(activeIndex)
+      if (expectedActive === undefined || parsed.data.activeKiloSessionId !== expectedActive) {
+        return yield* Effect.fail(
+          invalid("Kilo Cloud returned an active session that does not match the active source"),
+        )
+      }
+      const sessions = yield* Effect.forEach(
+        parsed.data.sessions,
+        (session): Effect.Effect<ContinueWorkspaceSession, HostedFailure> =>
+          identity(session.kiloSessionId).pipe(
+            Effect.map((destination) => ({
+              source: session.sourceKiloSessionId,
+              destination,
+              agent: {
+                mode: session.agent.mode,
+                model: session.agent.model,
+                ...(session.agent.variant === undefined ? {} : { variant: session.agent.variant }),
+              },
+              modeFallback: session.modeFallback,
+            })),
+          ),
+      )
+      return {
+        workspace: yield* workspaceIdentity(parsed.data.workspaceId),
+        sessions,
+        active: yield* identity(parsed.data.activeKiloSessionId),
+        replayed: parsed.data.replayed === true,
+      }
+    })
+
   const startWorkspaceSession = (
     raw: WorkspaceSessionStartInput,
   ): Effect.Effect<WorkspaceSessionStartResult, HostedFailure> =>
@@ -958,6 +1118,7 @@ export function provider(options: Options): Provider {
     getWorkspaceStatus,
     deleteWorkspace,
     createWorkspace,
+    continueWorkspace,
     startWorkspaceSession,
     listWorkspaceProfiles,
     route: native,

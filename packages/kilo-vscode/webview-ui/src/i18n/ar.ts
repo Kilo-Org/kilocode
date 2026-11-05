@@ -955,6 +955,9 @@ export const dict = {
   "settings.experimental.conversationPromptHistory.title": "سجل مطالبات لكل محادثة",
   "settings.experimental.conversationPromptHistory.description":
     "إبقاء سجل مطالبات الإدخال (استدعاء بالسهمين لأعلى/لأسفل) منفصلاً لكل محادثة بدلاً من مشاركة سجل واحد بين جميع المحادثات.",
+  "settings.experimental.agentManagerSplash.title": "شاشة ترحيب Agent Manager",
+  "settings.experimental.agentManagerSplash.description":
+    "جرّب المقدمة الجديدة لـ Agent Manager مع أمثلة لسير العمل. تُطبّق فورًا.",
   "settings.experimental.claudeMigration.title": "ترحيل Claude Code",
   "settings.experimental.claudeMigration.description":
     "استورد مرة واحدة تعليمات CLAUDE.md العامة المدعومة والمهارات البسيطة وتعريفات MCP المعطلة. تبقى ملفات Claude الأصلية دون تغيير؛ أعد تشغيل الخلفية بعد التفعيل.",

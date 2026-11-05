@@ -15,6 +15,10 @@ The agent can open a page for you — a local dev server it just started, or doc
 
 Selecting an `http(s)` link in a chat message opens it in a browser tab of that chat, rather than sending you to a separate app. To use your system browser instead, hold **⌘** (macOS) or **Ctrl** (Windows/Linux) as you click. Right-click any link to choose **Open Link in Default Browser**.
 
+## Workspace HTML files
+
+HTML files you open from [Files](/docs/desktop/features/files) — including pages you save from a chat — open rendered in a browser tab.
+
 ## Browse on your own
 
 Type a URL and press Enter to load a page; the tab has the controls you'd expect.

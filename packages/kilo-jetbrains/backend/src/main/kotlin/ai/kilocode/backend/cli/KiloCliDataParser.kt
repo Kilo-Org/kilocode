@@ -1039,6 +1039,10 @@ object KiloCliDataParser {
         }
         fields += "\"text\":${escape(part.text.orEmpty())}"
         if (part.synthetic == true) fields += "\"synthetic\":true"
+        val injected = part.injectedTitle?.trim()?.takeIf { it.isNotEmpty() }
+        if (injected != null) {
+            fields += "\"metadata\":{\"kilo\":{\"injected\":{\"title\":${escape(injected)}}}}"
+        }
         return "{${fields.joinToString(",")}}"
     }
 
@@ -1394,6 +1398,7 @@ object KiloCliDataParser {
             filename = obj.str("filename"),
             synthetic = obj.flagOrNull("synthetic"),
             source = parseSource(obj["source"]),
+            injectedTitle = injectedTitle(topMeta),
             tool = obj.str("tool"),
             callID = obj.str("callID"),
             state = state?.str("status"),
@@ -2148,6 +2153,11 @@ private fun JsonObject?.map(key: String): Map<String, String> {
         val text = value.scalar() ?: return@mapNotNull null
         name to text
     }.toMap()
+}
+
+private fun injectedTitle(meta: JsonObject?): String? {
+    val injected = meta?.get("kilo")?.obj()?.get("injected")?.obj() ?: return null
+    return injected.str("title")?.trim()?.takeIf { it.isNotEmpty() }?.take(200)
 }
 
 private fun JsonObject?.time(key: String): PartTimeDto? {

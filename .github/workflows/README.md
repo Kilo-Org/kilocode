@@ -9,6 +9,7 @@ Workflows that automate dependency remediation and give the team Slack visibilit
 | `outdated-kilo-deps.yml` | `schedule`: monthly on the 1st at 09:23 UTC, plus `workflow_dispatch` | Actions tab → "Outdated Kilo dependencies" → Run workflow, or `gh workflow run outdated-kilo-deps.yml` |
 | `stale-bot-pr-notify.yml` | `schedule`: daily at 13:00 UTC, plus `workflow_dispatch` | Actions tab → "Stale bot PR notify" → Run workflow, or `gh workflow run stale-bot-pr-notify.yml` |
 | `stale-alerts-report.yml` | `schedule`: weekly on Mondays at 08:41 UTC, plus `workflow_dispatch` | Actions tab → "Stale alerts report" → Run workflow, or `gh workflow run stale-alerts-report.yml` |
+| `dependency-submission.yml` | `push` to `main` touching `bun.lock` or the JetBrains Gradle build, `schedule`: weekly on Mondays at 04:43 UTC, plus `workflow_dispatch` | Actions tab → "Dependency submission" → Run workflow, or `gh workflow run dependency-submission.yml` |
 | `../dependabot.yml` | Not a workflow — read directly by GitHub's Dependabot service | No manual run; check **Insights → Dependency graph → Dependabot** |
 
 ## Setup
@@ -21,13 +22,17 @@ Workflows that automate dependency remediation and give the team Slack visibilit
 
 ### PRs are opened by Dependabot's own service, not by any workflow here
 
-`dependabot.yml` is not a workflow — it's a config file that GitHub's Dependabot backend reads directly. None of the workflow files in this directory ever open a PR; they only act on PRs or alerts that already exist, or report on dependencies.
+`dependabot.yml` is not a workflow — it's a config file that GitHub's Dependabot backend reads directly. None of the workflow files in this directory ever open a PR; they only act on PRs or alerts that already exist, report on dependencies, or (`dependency-submission.yml`) feed the dependency graph that alerts are computed from.
 
-Dependabot re-scans on the `schedule: interval` set per ecosystem block, and once immediately whenever `dependabot.yml` itself changes on the default branch. Per ecosystem (`npm` for kilo-docs, `gradle` for kilo-jetbrains), it checks each dependency for updates, bundles minor and patch bumps into `groups: *-minor-patch` PRs (related packages share a group, so they move together), and ignores every major bump. Majors are bumped by hand. The `bun` block has `open-pull-requests-limit: 0`, so it opens no version-update PRs, only security-alert PRs, which a `security-updates` group bundles into one PR. These are normal PRs from that point on — required CI and branch protection apply like any other PR.
+Dependabot re-scans on the `schedule: interval` set per ecosystem block, and once immediately whenever `dependabot.yml` itself changes on the default branch. Per ecosystem (`npm` for kilo-docs, `gradle` for kilo-jetbrains), it checks each dependency for updates, bundles minor and patch bumps into `groups: *-minor-patch` PRs (related packages share a group, so they move together), and ignores every major bump. Majors are bumped by hand. The `bun` block has `open-pull-requests-limit: 0`, so it opens no version-update PRs, and Dependabot has no security updates for the bun ecosystem, so it opens no security PRs either. The occasional security PR on a workspace `package.json` (an `npm_and_yarn` branch) comes from GitHub's package.json-only alerts. These are normal PRs from that point on — required CI and branch protection apply like any other PR.
 
-### The 5 workflows each poll independently on their own schedule
+### Where alerts come from
 
-They don't call each other or trigger off PR creation. Each one wakes up on its own cron and reads whatever state currently exists on GitHub:
+Dependabot alerts are computed from GitHub's dependency graph, which cannot read `bun.lock` or Gradle builds on its own. For the Bun workspace it would only see each `package.json` (direct dependencies by range, `catalog:` ones not at all), and the JetBrains plugin not at all. `dependency-submission.yml` closes that gap: it submits every package resolved in `bun.lock` (`script/kilocode/dependency-snapshot.ts`, one `bun.lock` manifest, `runtime` or `development` scope) and the `packages/kilo-jetbrains` Gradle graph through the Dependency Submission API. Alerts on `bun.lock` never get a Dependabot PR: fix them with a root `overrides` entry, a catalog pin or a parent upgrade (`bun why <package>` shows who pulls it in). For Gradle, Dependabot can open security PRs for direct dependencies; transitive ones are fixed by hand.
+
+### The 5 reporting workflows each poll independently on their own schedule
+
+They don't call each other or trigger off PR creation. Each one wakes up on its own cron and reads whatever state currently exists on GitHub (`dependency-submission.yml` is covered above):
 
 | Workflow | Wakes up | Reads | Does |
 |---|---|---|---|
@@ -46,7 +51,7 @@ They don't call each other or trigger off PR creation. Each one wakes up on its 
 | Secret scanning alerts | `security-findings-notify.yml` | The default `GITHUB_TOKEN` cannot read these on every plan. If the API returns an error, the run logs a warning and continues. To enable this source, add the repo secret `SECURITY_SCAN_TOKEN` (a token with the `secret_scanning_alerts` scope). The workflow uses it for this one call only. |
 | Findings of the Kilo Security Agent (the "Unreachable" and "Exploitable" labels) | None | They live in the private `Kilo-Org/cloud` stack. A repo workflow cannot read them. |
 
-The helper scripts are `script/kilocode/bot-prs.ts` (duplicate grouping) and `script/kilocode/stale-alerts.ts` (stale alert check). Both have tests next to them. Run `bun test bot-prs.test.ts stale-alerts.test.ts` from `script/kilocode/`.
+The helper scripts are `script/kilocode/bot-prs.ts` (duplicate grouping), `script/kilocode/stale-alerts.ts` (stale alert check) and `script/kilocode/dependency-snapshot.ts` (`bun.lock` dependency submission). All have tests next to them. Run `bun test bot-prs.test.ts stale-alerts.test.ts dependency-snapshot.test.ts` from `script/kilocode/`.
 
 ### Enabling auto-merge isn't the same as merging
 
@@ -54,11 +59,12 @@ The helper scripts are `script/kilocode/bot-prs.ts` (duplicate grouping) and `sc
 
 ## Slack posts
 
-Four of the five workflows post to Slack. All of them use the `SECURITY_ALERTS_SLACK_WEBHOOK` secret, so every post lands in the one channel that webhook was created for. A run that has nothing to report posts nothing.
+Four of the six workflows post to Slack. All of them use the `SECURITY_ALERTS_SLACK_WEBHOOK` secret, so every post lands in the one channel that webhook was created for. A run that has nothing to report posts nothing.
 
 | Workflow | Posts? | What a post contains | When it posts |
 |---|---|---|---|
 | `dependabot-auto-merge.yml` | No | Nothing. Its results are only in the Actions log, including a warning when it skips a PR that touches shared code. | Never. |
+| `dependency-submission.yml` | No | Nothing. The alerts it makes possible are posted by `security-findings-notify.yml`. | Never. |
 | `security-findings-notify.yml` | Yes | One message per alert (critical and high by default): a label (`New finding`, `SLA at risk` or `SLA breached`), the source (`Dependabot`, `code scanning` or `secret scanning`), the severity, days open, a link to the alert with its GHSA ID or rule ID, and the summary. A critical alert that breaches its SLA starts with `@here`. | Checked every 6 hours. Each alert posts once per status (new, then at risk, then breached). A breached alert repeats once a day while it stays open. |
 | `stale-bot-pr-notify.yml` | Yes | One combined message, "Bot PRs needing attention". Each line has the PR number and title as a link, the author, the age in days, and a reason: `conflicting`, `CI failing` (a required check failed) or `unreviewed`. PRs that upgrade the same package are one line that lists every PR and says to keep one. | Checked daily at 13:00 UTC. Posts only if at least one PR is flagged. A PR repeats every day until it is fixed. |
 | `stale-alerts-report.yml` | Yes | One message, "Open Dependabot alerts that look stale: N". Each line has the alert link, the package, the manifest and the reason. The full list is in the job summary. | Checked weekly. Posts only if at least one alert looks stale. |
@@ -70,4 +76,4 @@ kilocode is a fork of opencode sharing one `bun.lock` with upstream-owned `@open
 
 - `dependabot-auto-merge.yml` only auto-merges a PR if every changed file (besides the shared `bun.lock`) lives under a `kilo`-named path. Anything touching shared/upstream code is left for a human.
 - The root `bun` block has version updates turned off. It scans ~17 upstream-owned packages and cannot be scoped by path, so its PRs almost always touched upstream files. Those dependencies come in with upstream merges.
-- `dependabot.yml` deliberately does **not** cover `packages/opencode/Dockerfile` or `.github/workflows/**`: both are shared/upstream paths that the auto-merge guard above would never approve anyway, and `.github/workflows/**` changes routinely fail this repo's `kilocode_change` annotation check unless they land inside an existing marker block. Those paths are covered by `security-findings-notify.yml` instead, which only reads GitHub's alerts, it never proposes a PR.
+- `dependabot.yml` deliberately does **not** cover `packages/opencode/Dockerfile` or `.github/workflows/**`: both are shared/upstream paths that the auto-merge guard above would never approve anyway, and `.github/workflows/**` changes routinely fail this repo's `kilocode_change` annotation check unless they land inside an existing marker block. GitHub Actions in `.github/workflows/**` still get Dependabot alerts (the dependency graph reads workflow files), which `security-findings-notify.yml` reports. The Dockerfile has no alert coverage: the dependency graph does not read Dockerfiles.

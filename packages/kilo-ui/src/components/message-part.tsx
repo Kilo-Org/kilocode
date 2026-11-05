@@ -402,6 +402,7 @@ function renderable(part: PartType, showReasoningSummaries = true) {
   }
   if (part.type === "text") return !!part.text?.trim()
   if (part.type === "reasoning") return showReasoningSummaries && !!part.text?.trim()
+  if (part.type === "file") return viewable(part)
   return !!PART_MAPPING[part.type]
 }
 
@@ -1528,11 +1529,22 @@ PART_MAPPING["tool"] = function ToolPartDisplay(props) {
                 readonly={props.readonly}
               />
             </ToolApprovalProvider>
+            {/* Tools without a dedicated card (generate_image, MCP tools) show returned images even when collapsed.
+                send_file attachments are unnormalized mobile deliveries, so they stay out of the transcript. */}
+            <Show
+              when={!ToolRegistry.render(part.tool) && part.tool !== "send_file" && part.state.status === "completed"}
+            >
+              <ImageList files={part.state.status === "completed" ? part.state.attachments : undefined} />
+            </Show>
           </Match>
         </Switch>
       </div>
     </Show>
   )
+}
+
+PART_MAPPING["file"] = function FilePartDisplay(props) {
+  return <ImageList files={[props.part as FilePart]} />
 }
 
 PART_MAPPING["compaction"] = function CompactionPartDisplay() {
@@ -2279,6 +2291,47 @@ function ToolDiffAction(props: { when: boolean; onClick: (e: MouseEvent) => void
   )
 }
 
+// Webviews only load inline and https images; older generate_image parts carry blocked file:// URLs.
+export function viewable(file: FilePart) {
+  // MIME types and URL schemes are case-insensitive.
+  const url = file.url.slice(0, 11).toLowerCase()
+  return file.mime.toLowerCase().startsWith("image/") && (url.startsWith("data:image/") || url.startsWith("https://"))
+}
+
+/** Image thumbnails for tool attachments and model-generated images; click opens a preview. */
+function ImageList(props: { files?: FilePart[] }) {
+  const images = createMemo(() => (props.files ?? []).filter(viewable))
+  return (
+    <Show when={images().length > 0}>
+      <ImageThumbs files={images()} />
+    </Show>
+  )
+}
+
+// Split from ImageList so the dialog context is only required when there is an image to preview.
+function ImageThumbs(props: { files: FilePart[] }) {
+  const i18n = useI18n()
+  const dialog = useDialog()
+  const preview = (url: string, alt?: string) => dialog.show(() => <ImagePreview src={url} alt={alt} />)
+  return (
+    <div data-slot="tool-read-images">
+      <For each={props.files}>
+        {(file) => (
+          <div data-slot="tool-read-image" onClick={() => preview(file.url, file.filename)}>
+            <img
+              data-slot="tool-read-image-img"
+              src={file.url}
+              alt={file.filename ?? i18n.t("ui.message.attachment.alt")}
+              loading="lazy"
+              decoding="async"
+            />
+          </div>
+        )}
+      </For>
+    </div>
+  )
+}
+
 function ShellText(props: { text: string }) {
   return (
     <span data-component="shell-submessage">
@@ -2294,7 +2347,6 @@ ToolRegistry.register({
   render(props) {
     const data = useData()
     const i18n = useI18n()
-    const dialog = useDialog()
     const args: string[] = []
     if (props.input.offset) args.push("offset=" + props.input.offset)
     if (props.input.limit) args.push("limit=" + props.input.limit)
@@ -2304,8 +2356,6 @@ ToolRegistry.register({
       return value.filter((p): p is string => typeof p === "string")
     })
     const pending = createMemo(() => busy(props.status))
-    const images = createMemo(() => (props.attachments ?? []).filter((f) => f.mime.startsWith("image/") && f.url))
-    const preview = (url: string, alt?: string) => dialog.show(() => <ImagePreview src={url} alt={alt} />)
     // Read is high-frequency and low-risk, so details stay hidden unless the target was outside
     // the workspace, in which case the approval reason explains what looks like an "agent escape".
     const approval = useToolApproval()
@@ -2340,23 +2390,7 @@ ToolRegistry.register({
             />
           )}
         </For>
-        <Show when={images().length > 0}>
-          <div data-slot="tool-read-images">
-            <For each={images()}>
-              {(file) => (
-                <div data-slot="tool-read-image" onClick={() => preview(file.url, file.filename)}>
-                  <img
-                    data-slot="tool-read-image-img"
-                    src={file.url}
-                    alt={file.filename ?? i18n.t("ui.message.attachment.alt")}
-                    loading="lazy"
-                    decoding="async"
-                  />
-                </div>
-              )}
-            </For>
-          </div>
-        </Show>
+        <ImageList files={props.attachments} />
       </>
     )
   },

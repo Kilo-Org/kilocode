@@ -8,6 +8,7 @@ import { kiloProviderOptions } from "@/kilocode/provider-options"
 import { isLing } from "@/kilocode/model-match" // kilocode_change
 import { reasoningSummary } from "@/kilocode/provider/reasoning-summary" // kilocode_change
 import { gpt5FamilyReasoningTiers, isFirstPartyOpenAIEndpoint } from "@/kilocode/provider/transform" // kilocode_change
+import { imageModalities } from "@/kilocode/provider/image-output" // kilocode_change
 
 type Modality = NonNullable<ModelsDev.Model["modalities"]>["input"][number]
 
@@ -1559,6 +1560,10 @@ export function options(input: {
     if (input.model.api.id.includes("gemini-3")) {
       result["reasoning"] = { effort: "high" }
     }
+    // kilocode_change start - image models only return images when the image modality is requested
+    const modalities = imageModalities(input.model)
+    if (modalities) result["modalities"] = modalities
+    // kilocode_change end
   }
 
   if (

@@ -481,13 +481,18 @@ class SessionUi(
      * turn runs with them even before this session's own model state has loaded.
      */
     @RequiresEdt
-    internal fun submitPrompt(text: String, select: PromptSelection? = null) {
+    internal fun submitPrompt(
+        text: String,
+        select: PromptSelection? = null,
+        clearDraft: Boolean = true,
+        injectedTitle: String? = null,
+    ) {
         if (readonly) return
         if (text.isBlank()) return
         // Seed the session's agent/model/reasoning so the pickers and later turns reflect the pick,
         // then send the first turn carrying it too (so it applies before workspace-ready resolves).
         select?.let { controller.applySelection(it) }
-        sendPrompt(text, emptyList(), select)
+        sendPrompt(text, emptyList(), select, clearDraft, injectedTitle)
     }
 
     @RequiresEdt
@@ -1079,20 +1084,26 @@ class SessionUi(
         }
     }
 
-    private fun sendPrompt(text: String, files: List<PromptPartDto>, select: PromptSelection? = null) {
+    private fun sendPrompt(
+        text: String,
+        files: List<PromptPartDto>,
+        select: PromptSelection? = null,
+        clearDraft: Boolean = true,
+        injectedTitle: String? = null,
+    ) {
         if (readonly) return
         if (text.isBlank() && files.isEmpty()) return
         val follow = scroll.following()
         val action = completion.clientAction(text)
         if (action != null) {
-            prompt.clear()
+            if (clearDraft) prompt.clear()
             action.action()
             scroll.followBottom(follow)
             return
         }
         val command = completion.serverCommand(text)
         if (command != null) {
-            prompt.clear()
+            if (clearDraft) prompt.clear()
             controller.command(command.first, command.second, files)
             scroll.followBottom(follow)
             return
@@ -1107,7 +1118,7 @@ class SessionUi(
                 ).notify(project)
                 return@launch
             }
-            prompt.clear()
+            if (clearDraft) prompt.clear()
             // Only the prompt path uses editor context; gather after the command branches so slash
             // commands and client actions don't pay the editor-context cost or hit its failure modes.
             // Ignore-file VFS reads suspend on Dispatchers.IO before returning to the EDT.
@@ -1129,7 +1140,7 @@ class SessionUi(
             // the transcript already). A queued send baselines the in-flight turn's message, so that
             // turn cannot be mistaken for confirmation of this one.
             pendingSend = userMessageIds()
-            controller.prompt(text, allFiles, editor?.context, select)
+            controller.prompt(text, allFiles, editor?.context, select, injectedTitle)
             scroll.followBottom(follow)
         }
     }
