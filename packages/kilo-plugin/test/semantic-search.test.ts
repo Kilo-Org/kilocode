@@ -243,10 +243,13 @@ describe("semantic_search over a real index", () => {
     await runtime.restart()
     expect((await done()).state).toBe("Complete")
 
+    // Indexed paths keep the platform separator.
+    const added = (hit: VectorStoreSearchResult | undefined) =>
+      typeof hit?.payload?.filePath === "string" && hit.payload.filePath.replaceAll("\\", "/") === "src/upload.ts"
     let seen: VectorStoreSearchResult[] = []
     for (const _ of Array.from({ length: 40 })) {
       seen = await runtime.search("retry delay for an upload attempt")
-      if (seen[0]?.payload?.filePath === "src/upload.ts") return
+      if (added(seen[0])) return
       await Bun.sleep(250)
     }
     throw new Error(
