@@ -56,6 +56,8 @@ export function createPending(input: {
   const label = (action: PendingAction) => {
     if (action === "now")
       return language.t(input.running() ? "session.pending.action.stopAndSend" : "session.pending.action.send")
+    // A queued prompt outlives a stopped run. Steering it then starts a new run at once.
+    if (action === "steer" && !input.running()) return language.t("session.pending.action.send")
     return language.t(`session.pending.action.${action}`)
   }
 
@@ -71,10 +73,13 @@ export function createPending(input: {
     const editable = !item.payload.files?.length && !partFeedback(item.payload.metadata, item.payload.text)
     const actions = input.readOnly() ? [] : pendingActions(status, editable)
     return {
-      status: language.t(`session.pending.status.${status}`),
+      // A stopped run leaves its queue parked until the user sends this prompt or another one.
+      status: language.t(
+        status === "queued" && !input.running() ? "session.pending.status.paused" : `session.pending.status.${status}`,
+      ),
       actions: actions.map((action) => ({
         key: action,
-        icon: ICONS[action],
+        icon: action === "steer" && !input.running() ? ICONS.now : ICONS[action],
         label: label(action),
         disabled: busy().has(item.id),
         onClick: () => run(item.id, () => request(sessionID, item.id, item.payload.text, action)),

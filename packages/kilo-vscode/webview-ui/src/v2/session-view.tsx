@@ -20,7 +20,6 @@ import { createSelection, Selectors } from "./selectors"
 import { createAutoApprove } from "./auto-approve"
 import { createWorking } from "./working"
 import { createPending } from "./pending"
-import { QueuedDock } from "./queued-dock"
 import { steerInterrupts, type SendMode } from "./pending-actions"
 
 export function SessionView(props: {
@@ -308,7 +307,6 @@ export function SessionView(props: {
             onCancel={stop}
             onScrollToBottom={() => scrollToBottom?.()}
           />
-          <QueuedDock session={session()} pending={pending} />
           <Show when={draftKey()} keyed>
             {(key) => (
               <PromptInput
