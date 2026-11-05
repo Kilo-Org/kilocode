@@ -74,10 +74,25 @@ Vercel sandboxes are offered for GitHub repositories only. If your account canno
 Each repository can have one saved environment that applies automatically when a session starts, so you do not set up the same workspace for every chat. A repository environment holds:
 
 - A sandbox size
+- Network access
 - One setup script
 - Variables, including secrets (encrypted at rest)
 
 Open **Env** beside a repository to create or edit its environment. In an organization, owners and admins can manage repository environments. Other members can open an environment from the **Env** chip or Cloud Agent settings to view its scripts and variables read-only; editing, save, delete, and upload controls, and sandbox selection, are unavailable to them.
+
+### Network access
+
+Each repository environment sets how much of the internet a session can reach:
+
+| Mode | What the session can reach |
+|---|---|
+| **Full** | Any host. |
+| **Limited** | The Kilo, Git, and repository-host baseline, plus the hostnames you add. |
+| **None** | The Kilo, Git, and repository-host baseline only. |
+
+The baseline is always allowed, so **Limited** and **None** still clone, push, and reach Kilo. In **Limited**, add each extra hostname the setup script or agent needs; a hostname that is too long is rejected.
+
+Network access applies when the environment is prepared. A child session started from another session inherits the parent environment's policy; if the inherited policy cannot be validated, the child does not start instead of running with broader access.
 
 When a repository environment applies, its setup script replaces the setup commands from the selected [agent environment profile](#agent-environment-profiles). The profile's variables and agent settings still apply. A warning beside the profile picker explains when a profile's setup is replaced.
 
@@ -139,6 +154,8 @@ A session cannot launch child sessions when any of these apply:
 - **It was started by a bot.** Sessions created by code reviews, security reviews, and triggers never get this capability.
 
 Sessions created before this capability became available keep it disabled. Start a new session to launch child sessions.
+
+A child session links back to the session that started it. A muted **Started from parent** link sits under the session title, and on narrow screens it appears as a compact **View parent** label. The overflow menu also lists **Open parent session**. These links follow the session across its sibling chats, terminals, and file views. The link is hidden when the parent session is missing, deleted, or not accessible to you.
 
 ## Worktrees and chats
 

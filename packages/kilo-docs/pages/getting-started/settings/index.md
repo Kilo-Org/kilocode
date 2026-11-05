@@ -276,6 +276,7 @@ Available experimental settings include:
 - **Batch tool** - allow the agent to batch multiple tool calls in one step
 - **Search Ignored Paths** - list folders or files the agent's `glob` tool should search even when `.gitignore` or other ignore files exclude them, such as `packages/*/dist` (`experimental.glob_include_ignored`, empty by default). Patterns are gitignore-style and relative to the workspace: a pattern without a slash matches folders at any depth, and a single file inside an ignored folder is listed by its path (for example `build/report.json`). Ignored or hidden folders inside a listed folder stay skipped, and `.git` is never searched
 - **Claude Code Migration** - import supported global Claude Code configuration once (off by default)
+- **Agent Manager splash** - preview the new Agent Manager introduction, which shows three example fleets: **Cross-stack**, **Delegate**, and **Compare models**. Off by default; turning it on replaces the current introduction immediately, and turning it back off restores it without clearing saved Hide or Skip choices
 - **OpenTelemetry** - enable Kilo telemetry and optional OTLP export when configured
 
 Advanced options not exposed in the UI can be configured via the `experimental` key in `kilo.jsonc`:
