@@ -1057,11 +1057,12 @@ ToolRegistry.register({
               <span data-slot="basic-tool-tool-title">
                 <TextShimmer text={i18n.t("ui.tool.shell")} active={busy(props.status)} />
               </span>
-              <Show when={string(props.input.workdir)}>
-                {(workdir) => (
+              {/* The shell tool has no description input, so its first command line is the visible summary. */}
+              <Show when={string(props.input.command).trim().split("\n")[0]}>
+                {(command) => (
                   <span data-component="shell-submessage">
                     <span data-slot="basic-tool-tool-subtitle">
-                      <span data-slot="shell-submessage-value">{workdir()}</span>
+                      <span data-slot="shell-submessage-value">{command()}</span>
                     </span>
                   </span>
                 )}

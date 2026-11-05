@@ -283,27 +283,6 @@ export function mergeModelUsage(rows: Iterable<readonly ModelUsage[]>): ModelUsa
   )
 }
 
-/**
- * The merged model usage of the members, or undefined when the signal aborts. A session that is still being created
- * is not on the server yet and has no history, so it is skipped instead of failing the whole detail.
- */
-export async function memberUsage(
-  client: Parameters<typeof fetchSessionMessages>[0],
-  members: readonly { id: string }[],
-  creating: (sessionID: string) => boolean,
-  signal?: AbortSignal,
-): Promise<ModelUsage[] | undefined> {
-  const rows: ModelUsage[][] = []
-  for (const member of members) {
-    if (signal?.aborted) return undefined
-    if (creating(member.id)) continue
-    const messages = await fetchSessionMessages(client, member.id, signal)
-    if (signal?.aborted) return undefined
-    rows.push(modelUsage(messages).models)
-  }
-  return mergeModelUsage(rows)
-}
-
 function emptyTokens(): UsageTokens {
   return { input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } }
 }
