@@ -151,6 +151,8 @@ const results = await Promise.all([
     entryPoints: {
       webview: path.join(root, "webview-ui/src/index.tsx"),
       "agent-manager": path.join(root, "webview-ui/agent-manager/index.tsx"),
+      "diff-viewer": path.join(root, "webview-ui/diff-viewer/index.tsx"),
+      "diff-virtual": path.join(root, "webview-ui/diff-virtual/index.tsx"),
     },
     outdir: dist,
     format: "iife",

@@ -1,9 +1,13 @@
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { showToast } from "@kilocode/kilo-ui/toast"
-import type { ModelRef } from "@opencode/client"
+import type { ModelRef, JsonValue } from "@opencode/client"
 import { createEffect, createMemo, createSignal, on, onCleanup, onMount, Show, untrack, type JSX } from "solid-js"
+import type { ToWebview } from "../../../src/protocol"
+import type { ReviewCommentEntry } from "../../../src/shared/review-comments"
+import { pushFixes } from "../../agent-manager/pr/pr-push-fixes"
 import { fold, reserve } from "../components/chat/prompt-fold"
+import { ReviewComments } from "../components/chat/ReviewComments"
 import { SpeechToTextButton } from "../components/speech-to-text/SpeechToTextButton"
 import { createSpeechShortcut } from "../components/speech-to-text/shortcut"
 import { useSpeechStatus } from "../components/speech-to-text/status"
@@ -19,11 +23,12 @@ import {
   promptFocusAllowed,
 } from "../utils/focus"
 import { isEnterKeyCommitNotIme } from "../utils/ime-enter"
-import { registerAppend, type AppendHandler } from "./append-ready"
+import { registerAppend, registerReviewAppend, type AppendHandler, type ReviewAppendHandler } from "./append-ready"
 import { message, useV2 } from "./client"
 import { cleanEnhancedPrompt, enhancePromptRequest, normalizeEnhancePromptErrorMessage } from "./enhance-prompt"
 import { insertSpacedText } from "./prompt-speech"
 import { PromptOverflow, type OverflowItem } from "./prompt-overflow"
+import { composeReviewPrompt, mergeReviewComments } from "./review-drafts"
 
 // Drafts live outside the component so a composer remounted for another session restores its own text, as v1 did.
 // The key is the session id, or the pending tab id before a first prompt creates the session.
@@ -40,6 +45,15 @@ export const promptDrafts = {
   },
 }
 
+// Pending review comments follow the same key as the text, so switching sessions neither loses nor mixes them.
+const reviewDrafts = new Map<string, ReviewCommentEntry[]>()
+
+function saveReviewDraft(key: string | undefined, comments: ReviewCommentEntry[]) {
+  if (!key) return
+  if (comments.length === 0) reviewDrafts.delete(key)
+  else reviewDrafts.set(key, comments)
+}
+
 export function PromptInput(props: {
   session?: string
   /** Draft identity: the session id, or the pending tab id before a session exists. */
@@ -52,7 +66,7 @@ export function PromptInput(props: {
   blocked?: boolean
   /** A pending question tool call. The composer waits for an answer, so Send replaces Stop. */
   questioning?: boolean
-  onSend: (text: string) => Promise<boolean>
+  onSend: (text: string, metadata?: Record<string, JsonValue>) => Promise<boolean>
   onStop: () => void
   /** Agent, model and variant controls, before the actions as in main's PromptInput. */
   selectors?: JSX.Element
@@ -60,10 +74,15 @@ export function PromptInput(props: {
   autoApprove?: { enabled: boolean; onToggle: () => void }
   /** Receives a function that appends text to the draft and, when `send` is true, sends it; undefined on unmount. */
   onAppendReady?: (append: AppendHandler | undefined) => void
+  /** Receives a function that adds review comments to the draft; undefined on unmount. */
+  onReviewAppendReady?: (append: ReviewAppendHandler | undefined) => void
 }) {
   const v2 = useV2()
   const language = useLanguage()
   const [text, setText] = createSignal(promptDrafts.get(props.draftKey))
+  const [comments, setComments] = createSignal(
+    props.draftKey ? (reviewDrafts.get(props.draftKey) ?? []) : ([] as ReviewCommentEntry[]),
+  )
   const [sending, setSending] = createSignal(false)
   const [enhancing, setEnhancing] = createSignal(false)
   // The draft Enhance replaced, so Ctrl/Cmd+Z restores it once.
@@ -80,13 +99,15 @@ export function PromptInput(props: {
   )
   const speechStatus = useSpeechStatus()
   const canUseSpeech = () => speechStatus.status().enabled
+  // Review comments are input too: they can be sent without any typed text.
+  const hasDraft = () => !!text().trim() || comments().length > 0
   // Recording is enough to send: the transcript arrives first and the send continues from it. No other speech state
   // may send, or a draft would leave before the transcript is ready and the transcript would become a draft.
   const canSend = () =>
     !props.disabled &&
     !props.blocked &&
     !sending() &&
-    (speech.state() === "recording" || (!speech.active() && !!text().trim()))
+    (speech.state() === "recording" || (!speech.active() && hasDraft()))
   // The label is the pending-permission hint while blocked, otherwise Send.
   const sendLabel = () => {
     if (props.blocked) return language.t("prompt.action.send.blocked")
@@ -96,7 +117,7 @@ export function PromptInput(props: {
   // Stop replaces Send while the agent runs and the draft is empty. Typing during a run turns it back into Send,
   // whose prompt queues behind the running turn. A pending question is not running work. Stop is not shown while the
   // prompt is still being admitted, because an unadmitted prompt has no execution for Stop to interrupt.
-  const showStop = () => props.running && !text().trim() && !props.questioning && speech.state() !== "recording"
+  const showStop = () => props.running && !hasDraft() && !props.questioning && speech.state() !== "recording"
 
   const scroll = () => {
     if (!refs.input || !refs.overlay) return
@@ -104,20 +125,28 @@ export function PromptInput(props: {
     refs.overlay.scrollLeft = refs.input.scrollLeft
   }
 
+  // The key the composer is editing, so a comment change lands in the right draft entry.
+  let draft = props.draftKey
+  const replaceComments = (next: ReviewCommentEntry[]) => {
+    setComments(next)
+    saveReviewDraft(draft, next)
+  }
+
   // Switching drafts saves the text of the draft being left and restores the target draft. SessionView normally
   // remounts this component for another key; this also covers a key change without a remount.
-  let draft = props.draftKey
   createEffect(
     on(
       () => props.draftKey,
       (key) => {
         if (key === draft) return
         promptDrafts.set(draft, untrack(text))
+        saveReviewDraft(draft, untrack(comments))
         draft = key
         const value = promptDrafts.get(key)
         enhanceToken++
         preEnhance = null
         setText(value)
+        setComments((key ? reviewDrafts.get(key) : undefined) ?? [])
         if (refs.input) {
           refs.input.value = value
           refs.input.scrollTop = 0
@@ -126,7 +155,10 @@ export function PromptInput(props: {
       },
     ),
   )
-  onCleanup(() => promptDrafts.set(draft, text()))
+  onCleanup(() => {
+    promptDrafts.set(draft, text())
+    saveReviewDraft(draft, comments())
+  })
 
   createEffect(() => {
     text()
@@ -232,20 +264,27 @@ export function PromptInput(props: {
 
   const submit = () => {
     if (!canSend()) return
-    const draft = text()
+    const body = text()
+    const pending = comments()
+    const prompt = composeReviewPrompt(pending, body, pushFixes())
     // Clear the draft as soon as it is sent, so the composer is empty while the prompt is admitted. Restore it only
     // if the send fails and the user has not typed something new.
     setText("")
+    replaceComments([])
+    const restore = () => {
+      if (!text().trim()) setText(body)
+      if (comments().length === 0) replaceComments(pending)
+    }
     setSending(true)
     void props
-      .onSend(draft.trim())
+      .onSend(prompt.text, prompt.metadata)
       .then((ok) => {
         if (ok) preEnhance = null
-        else if (!text().trim()) setText(draft)
+        else restore()
       })
       .catch((err: unknown) => {
         v2.report(err)
-        if (!text().trim()) setText(draft)
+        restore()
       })
       .finally(() => setSending(false))
   }
@@ -259,6 +298,14 @@ export function PromptInput(props: {
     submit()
   }
 
+  // Merges comments into the current draft and sends them at once when the composer was otherwise empty, as v1 did.
+  const appendComments = (incoming: ReviewCommentEntry[], shouldSend: boolean) => {
+    if (incoming.length === 0) return
+    const empty = !text().trim() && comments().length === 0
+    replaceComments(mergeReviewComments(comments(), incoming))
+    if (shouldSend && empty) submit()
+  }
+
   registerAppend(props.onAppendReady, (value, shouldSend) => {
     const current = text()
     enhanceToken++
@@ -267,6 +314,18 @@ export function PromptInput(props: {
     if (shouldSend) send()
     else focusInput()
   })
+
+  registerReviewAppend(props.onReviewAppendReady, appendComments)
+
+  // The Changes tab posts comments to its own view, so only the open composer takes them, as in v1. The Agent Manager
+  // delivers the same batch through its window event instead.
+  const receive = (event: MessageEvent<ToWebview>) => {
+    const data = event.data
+    if (!data || typeof data !== "object" || data.type !== "appendReviewComments") return
+    appendComments(data.comments, data.autoSend)
+  }
+  onMount(() => window.addEventListener("message", receive))
+  onCleanup(() => window.removeEventListener("message", receive))
 
   const shortcut = createSpeechShortcut({
     speech,
@@ -418,6 +477,18 @@ export function PromptInput(props: {
 
   return (
     <div class="prompt-input-container">
+      <Show when={comments().length > 0}>
+        <ReviewComments
+          comments={comments()}
+          sessionID={props.session}
+          onRemove={(id) => {
+            if (!props.disabled) replaceComments(comments().filter((item) => item.id !== id))
+          }}
+          onClear={(ids) => {
+            if (!props.disabled) replaceComments(comments().filter((item) => !ids.includes(item.id)))
+          }}
+        />
+      </Show>
       <div class="prompt-input-wrapper">
         <div class="prompt-input-ghost-wrapper">
           <div class="prompt-input-highlight-overlay" ref={(el) => (refs.overlay = el)} aria-hidden="true" dir="auto">

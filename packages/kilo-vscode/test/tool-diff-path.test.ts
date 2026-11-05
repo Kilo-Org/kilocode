@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test"
 import path from "node:path"
-import { resolveToolFilePath, virtualDiffPath } from "../src/tool-diff-path"
+import { filePosition, resolveToolFilePath } from "../src/tool-diff-path"
 
 // `path.resolve` qualifies every path with a drive on Windows, matching the source helper. `path.join` does not.
 const root = path.resolve("/", "repo")
@@ -21,14 +21,18 @@ describe("resolveToolFilePath", () => {
   })
 })
 
-describe("virtualDiffPath", () => {
-  test("keeps a nested path after the diff id and side", () => {
-    expect(virtualDiffPath("3", "before", "src/components/a.tsx")).toBe("/3/before/src/components/a.tsx")
-    expect(virtualDiffPath("3", "after", "src/components/a.tsx")).toBe("/3/after/src/components/a.tsx")
+describe("filePosition", () => {
+  test("converts a 1-based line and column to zero-based values", () => {
+    expect(filePosition(3, 5)).toEqual({ line: 2, column: 4 })
   })
 
-  test("drops leading slashes so the id stays the first segment", () => {
-    expect(virtualDiffPath("4", "before", "/abs/path/f.ts")).toBe("/4/before/abs/path/f.ts")
-    expect(virtualDiffPath("4", "after", "//abs/path/f.ts")).toBe("/4/after/abs/path/f.ts")
+  test("defaults the column to the start of the line", () => {
+    expect(filePosition(1)).toEqual({ line: 0, column: 0 })
+    expect(filePosition(2, 0)).toEqual({ line: 1, column: 0 })
+  })
+
+  test("has no position without a positive line", () => {
+    expect(filePosition()).toBeUndefined()
+    expect(filePosition(0, 3)).toBeUndefined()
   })
 })

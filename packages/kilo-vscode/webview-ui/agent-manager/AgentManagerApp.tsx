@@ -154,9 +154,13 @@ import type { ReviewComment } from "../diff-viewer/review-comments"
 import type { PRComment } from "./pr/pr-types"
 import {
   APPEND_REVIEW_COMMENTS,
-  takeReviewCommentsForPrompt,
+  takeReviewCommentsForPromptBatch,
   type AppendReviewCommentsDetail,
 } from "../diff-viewer/review-annotations"
+import { ReviewCommentActionsContext, type ReviewCommentActions } from "../src/components/chat/review-actions"
+import { openPRComment } from "../src/utils/pr-review"
+import type { ReviewAppendHandler } from "../src/v2/append-ready"
+import { formatReviewCommentsMarkdown, type ReviewCommentEntry } from "../../src/shared/review-comments"
 import { createMarkdownRender } from "./review-preferences"
 import { buildShortcutCategories } from "./shortcuts"
 import { ShortcutsDialog } from "./ShortcutsDialog"
@@ -1073,9 +1077,25 @@ const AgentManagerContent: Component = () => {
 
   // The composer of the visible session; review comments and Fix with Kilo append to it.
   let promptAppend: ((value: string, send: boolean) => void) | undefined
+  let promptReviewAppend: ReviewAppendHandler | undefined
   const appendToPrompt = (text: string, autoSend: boolean) => {
     promptAppend?.(text, autoSend)
     requestChatFocus(true)
+  }
+  const appendCommentsToPrompt = (comments: ReviewCommentEntry[], autoSend: boolean) => {
+    // A composer without review-comment support still gets the batch as markdown text.
+    if (promptReviewAppend) promptReviewAppend(comments, autoSend)
+    else appendToPrompt(formatReviewCommentsMarkdown(comments), autoSend)
+    requestChatFocus(true)
+  }
+  // Review comment rows open files and PR threads through the surface that owns those panels.
+  const reviewCommentActions: ReviewCommentActions = {
+    showInDiff: (comment, sessionID) => openPRComment(comment, sessionID ?? sessions.currentSessionID()),
+    openFile: (filePath, line, sessionID) => {
+      const sessionId = sessionID ?? sessions.currentSessionID()
+      if (!sessionId) return
+      to({ type: "agentManager.openFile", sessionId, filePath, line })
+    },
   }
 
   const handleSessionCreated = (id: string | undefined) => {
@@ -1861,9 +1881,9 @@ const AgentManagerContent: Component = () => {
 
     const reviewCommentsEvent = (event: Event) => {
       const detail = (event as CustomEvent<AppendReviewCommentsDetail>).detail
-      const text = takeReviewCommentsForPrompt(detail)
-      if (text === undefined) return
-      appendToPrompt(text, detail.autoSend)
+      const comments = takeReviewCommentsForPromptBatch(detail)
+      if (!comments) return
+      appendCommentsToPrompt(comments, detail.autoSend)
     }
     window.addEventListener(APPEND_REVIEW_COMMENTS, reviewCommentsEvent)
 
@@ -2042,36 +2062,39 @@ const AgentManagerContent: Component = () => {
         >
           {(store) => (
             <V2Scope value={store}>
-              <SpeechToTextStatusProvider>
-                <SessionView
-                  session={
-                    sessions.currentSessionID() && !isPending(sessions.currentSessionID()!)
-                      ? sessions.currentSessionID()
-                      : undefined
-                  }
-                  draftKey={sessions.currentSessionID() ?? activePendingId()}
-                  readOnly={readOnly()}
-                  onSession={handleSessionCreated}
-                  actions={toolActions}
-                  onShowHistory={() => openHistory()}
-                  empty={intro.render}
-                  onAppendReady={(append) => (promptAppend = append)}
-                  onPreviewEdit={(files, sessionID) => previewEdit(files, sessionID)}
-                  onViewTurnChanges={openTurnChanges}
-                  onForkSession={handleForkSession}
-                  onForkMessage={handleForkSession}
-                  onMissing={(id) => handleCloseTab(id)}
-                  onPrompted={(sessionId, text, model) =>
-                    to({
-                      type: "agentManager.promptSent",
-                      sessionId,
-                      text,
-                      providerID: model?.providerID,
-                      modelID: model?.id,
-                    })
-                  }
-                />
-              </SpeechToTextStatusProvider>
+              <ReviewCommentActionsContext.Provider value={reviewCommentActions}>
+                <SpeechToTextStatusProvider>
+                  <SessionView
+                    session={
+                      sessions.currentSessionID() && !isPending(sessions.currentSessionID()!)
+                        ? sessions.currentSessionID()
+                        : undefined
+                    }
+                    draftKey={sessions.currentSessionID() ?? activePendingId()}
+                    readOnly={readOnly()}
+                    onSession={handleSessionCreated}
+                    actions={toolActions}
+                    onShowHistory={() => openHistory()}
+                    empty={intro.render}
+                    onAppendReady={(append) => (promptAppend = append)}
+                    onReviewAppendReady={(append) => (promptReviewAppend = append)}
+                    onPreviewEdit={(files, sessionID) => previewEdit(files, sessionID)}
+                    onViewTurnChanges={openTurnChanges}
+                    onForkSession={handleForkSession}
+                    onForkMessage={handleForkSession}
+                    onMissing={(id) => handleCloseTab(id)}
+                    onPrompted={(sessionId, text, model) =>
+                      to({
+                        type: "agentManager.promptSent",
+                        sessionId,
+                        text,
+                        providerID: model?.providerID,
+                        modelID: model?.id,
+                      })
+                    }
+                  />
+                </SpeechToTextStatusProvider>
+              </ReviewCommentActionsContext.Provider>
             </V2Scope>
           )}
         </Show>

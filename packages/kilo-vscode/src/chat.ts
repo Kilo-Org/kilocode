@@ -12,8 +12,9 @@ import {
 } from "vscode"
 import { notifyHostAutoApprove, setHostAutoApprove } from "./agent-manager/provider-auto-approve"
 import type { SettingsHandler } from "./agent-manager/project/settings"
+import type { GitChanges } from "./git-changes"
 import { local } from "./local"
-import { DISPLAY_DEFAULTS, type ToHost, type ToWebview } from "./protocol"
+import { DISPLAY_DEFAULTS, type GitChangesStats, type ReviewCommentEntry, type ToHost, type ToWebview } from "./protocol"
 import { bridge } from "./relay"
 import { saveImage } from "./save-image"
 import type { Manager } from "./server"
@@ -32,9 +33,10 @@ import { openToolFile, type ToolDiff } from "./tool-diff"
 
 // The sidebar may only write the settings its own UI owns. Other views keep their own write path.
 // The settings each webview may write; the Settings panel writes every Kilo setting through its own handler.
-const VIEW_SETTING_KEYS: Record<"chat" | "agentManager", ReadonlySet<string>> = {
+const VIEW_SETTING_KEYS: Record<"chat" | "agentManager" | "diffViewer", ReadonlySet<string>> = {
   chat: new Set(["showTaskTimeline"]),
   agentManager: new Set(["showTaskTimeline", "agentManager.pushFixes"]),
+  diffViewer: new Set(),
 }
 
 export function chat(input: {
@@ -43,6 +45,9 @@ export function chat(input: {
   directory: string
   trackCostSession: (sessionID: string) => void
   diff: ToolDiff
+  changes?: ChangesTab
+  /** Creates the working tree stats source of this view, pushing each change to `onStats`. */
+  gitStats?: (onStats: (stats?: GitChangesStats) => void) => GitChanges
 }) {
   // This host owns the persisted auto-approve flag, and the Agent Manager sweep reads it. Record it at activation, so
   // the sweep works before any webview resolves.
@@ -75,9 +80,20 @@ export function chat(input: {
     resolveWebviewView(view) {
       state.view = view
       state.loaded = false
-      const surface = wire({ ...input, webview: view.webview, view: "chat", onMessage: flush })
+      // The button follows the working tree while the sidebar is visible. Hidden views stop polling and read the
+      // current value only after they show again.
+      const stats = input.gitStats?.((value) => void send({ type: "gitChangesStats", stats: value }))
+      const surface = wire({
+        ...input,
+        webview: view.webview,
+        view: "chat",
+        onMessage: flush,
+        gitStats: () => stats?.read() ?? Promise.resolve(undefined),
+      })
+      stats?.setVisible(view.visible)
       const visibility = view.onDidChangeVisibility(() => {
         if (!view.visible) focus(false)
+        stats?.setVisible(view.visible)
         surface.post({ type: "webviewActiveChanged", active: view.visible })
         // A hidden webview may not receive the reset notification.
         if (view.visible) syncState()
@@ -91,6 +107,7 @@ export function chat(input: {
       void send({ type: "keybindings", bindings: promptKeybindings(input.context) })
       view.onDidDispose(() => {
         surface.dispose()
+        stats?.dispose()
         visibility.dispose()
         keybindings.dispose()
         focus(false)
@@ -122,6 +139,10 @@ export function wire(input: {
   saveImageDirectory?: () => string | undefined
   /** The tool diff surfaces of the chat view. Settings has none. */
   diff?: ToolDiff
+  /** The Changes editor tab the chat view opens. Settings has none. */
+  changes?: ChangesTab
+  /** Reads the working tree change counts of the Changes button. */
+  gitStats?: () => Promise<GitChangesStats | undefined>
   /** Called on every message from the webview, before it is handled. */
   onMessage?: () => void
   /** Handles a view-specific message before the standard set. Returns true when it did. */
@@ -250,6 +271,21 @@ export function wire(input: {
       void workspace.getConfiguration(NAMESPACE).update("language", message.locale || undefined, true)
       return true
     }
+    // The Changes tab sends its review comments back to the composer of the view that opened it.
+    if (message.type === "openChanges") {
+      input.changes?.open({
+        sessionId: message.sessionID,
+        turnId: message.turnID,
+        onComments: (comments, autoSend) => post({ type: "appendReviewComments", comments, autoSend }),
+      })
+      return true
+    }
+    if (message.type === "requestGitChangesStats") {
+      void (input.gitStats?.() ?? Promise.resolve(undefined))
+        .catch(() => undefined)
+        .then((stats) => post({ type: "gitChangesStats", stats }))
+      return true
+    }
     // The Kilo Gateway sign-in runs in the Profile view of the sidebar, as main opens its Profile panel.
     if (message.type === "openProfile") {
       void commands.executeCommand("kilo-code.v2.profile")
@@ -327,7 +363,12 @@ const EXPANDED = "kilo-code.v2.modelSelectorExpanded"
 const AUTO_APPROVE = "kilo-code.v2.autoApprove"
 const NAMESPACE = "kilo-code.v2"
 // The Agent Manager panel loads its own bundle; the sidebar and the Settings panel share one.
-const ENTRY = { chat: "webview", settings: "webview", agentManager: "agent-manager" } as const
+const ENTRY = {
+  chat: "webview",
+  settings: "webview",
+  agentManager: "agent-manager",
+  diffViewer: "diff-viewer",
+} as const
 const SIZES = [10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24]
 
 export function html(input: {
@@ -378,7 +419,7 @@ export function html(input: {
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta http-equiv="Content-Security-Policy" content="${policy}">
 <link rel="stylesheet" href="${input.style}">
-<title>${input.view === "agentManager" ? "Agent Manager" : "Kilo Code"}</title>
+<title>${input.view === "agentManager" ? "Agent Manager" : input.view === "diffViewer" ? "Changes" : "Kilo Code"}</title>
 <style>
   :root { ${vars} --kilo-font-scale: ${input.size / 13}; --font-size-x-small: var(--kilo-font-size-10); --font-size-small: var(--kilo-font-size-11); --font-size-base: var(--kilo-font-size-13); --font-size-large: var(--kilo-font-size-16); }
   html {
@@ -407,7 +448,16 @@ function escape(text: string) {
   return text.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
 }
 
-type View = "chat" | "settings" | "agentManager"
+type View = "chat" | "settings" | "agentManager" | "diffViewer"
+
+/** The Changes editor tab: the session, working tree and turn diffs with review comments. */
+export type ChangesTab = {
+  open(input: {
+    sessionId?: string
+    turnId?: string
+    onComments: (comments: ReviewCommentEntry[], autoSend: boolean) => void
+  }): void
+}
 
 type Surface = Extract<
   ToHost,

@@ -1,4 +1,4 @@
-// Pure path helpers for the tool diff surface. They do not import `vscode`, so tests can cover the host paths
+// Pure path helpers for tool file links. They do not import `vscode`, so tests can cover the host paths
 // without a running editor.
 import path from "node:path"
 
@@ -7,7 +7,8 @@ export function resolveToolFilePath(directory: string, filePath: string) {
   return path.resolve(directory, filePath)
 }
 
-/** The virtual document path for one side of a diff. `id` keeps every open diff unique; `file` is display-only. */
-export function virtualDiffPath(id: string, side: "before" | "after", file: string) {
-  return `/${id}/${side}/${file.replace(/^\/+/, "")}`
+/** Zero-based position for a 1-based line and column. Undefined without a positive line. */
+export function filePosition(line?: number, column?: number) {
+  if (line === undefined || line <= 0) return undefined
+  return { line: line - 1, column: Math.max((column ?? 1) - 1, 0) }
 }

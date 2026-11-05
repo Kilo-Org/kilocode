@@ -1,5 +1,6 @@
 // Messages between the webview and the extension host. The webview has no server credentials: it sends HTTP
 // requests through the host (`fetch`), and the host streams each response back in order.
+import type { ReviewCommentEntry } from "./shared/review-comments"
 
 export type Request = {
   type: "fetch"
@@ -15,6 +16,11 @@ export type Request = {
 export type ConfigEdit = { path: string[]; value?: unknown; preserveAliases?: boolean }
 
 export type ConfigScope = "global" | "project"
+
+export type { ReviewCommentEntry }
+
+/** Working tree change counts against the base, as the v1 Changes button showed them. */
+export type GitChangesStats = { files: number; additions: number; deletions: number }
 
 export type ConfigFileContent = { path: string; text: string }
 
@@ -126,6 +132,10 @@ export type Ui =
   | { type: "openDiffVirtual"; diff: ToolActionDiff; initialDiffStyle?: "unified" | "split" }
   | { type: "openDiffsVirtual"; diffs: ToolActionDiff[]; initialDiffStyle?: "unified" | "split" }
   | { type: "requestDisplaySettings" }
+  /** Opens the Changes editor tab. `turnID` opens the turn scope of that user message instead of the picker. */
+  | { type: "openChanges"; sessionID?: string; turnID?: string }
+  /** Asks for the working tree change counts of the Changes button. The host answers with `gitChangesStats`. */
+  | { type: "requestGitChangesStats" }
 
 /** Settings panel messages the host handles directly (it reads and writes the config files). */
 export type Settings =
@@ -214,6 +224,10 @@ export type ToWebview =
   | { type: "agentManagerSettingsLoaded"; requestId: string; projectId?: string; projects: AgentManagerSettingsProject[] }
   | ({ type: "agentManagerSettingsBranchesLoaded"; requestId: string; error?: string } & AgentManagerSettingsBranchPayload)
   | { type: "displaySettingsLoaded"; values: DisplaySettings; error?: string }
+  /** Review comments from the Changes tab. The composer shows them, and sends them at once when `autoSend` is set. */
+  | { type: "appendReviewComments"; comments: ReviewCommentEntry[]; autoSend: boolean }
+  /** The working tree change counts of the Changes button; absent when the directory is not a git repository. */
+  | { type: "gitChangesStats"; stats?: GitChangesStats }
   | { type: "speechToTextConfigLoaded"; status: SpeechToTextStatus }
   | { type: "speechToTextStarted"; requestId: string }
   | { type: "speechToTextResult"; requestId: string; text: string }

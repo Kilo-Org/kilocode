@@ -16,6 +16,8 @@ import { createPanel, PANEL_TYPE } from "./agent-manager/panel"
 import { ensureCommandsSkipShell } from "./agent-manager/terminal-host"
 import { VscodeHost } from "./agent-manager/vscode-host"
 import { chat } from "./chat"
+import { DiffViewerProvider } from "./diff/DiffViewerProvider"
+import { DiffSourceCatalog } from "./diff/sources/catalog"
 import { commitMessageCommand, commitMessageLanguage, connect, type GitExports } from "./commit-message"
 import { createCostAlerts } from "./cost-alert"
 import { command, manager, settingsEnvironment } from "./server"
@@ -24,7 +26,8 @@ import { registerAutocompleteProvider } from "./services/autocomplete"
 import { createConnection } from "./services/autocomplete/connection"
 import { settings } from "./settings-panel"
 import { createShutdown } from "./shutdown"
-import { toolDiff } from "./tool-diff"
+import { DiffVirtualProvider } from "./DiffVirtualProvider"
+import { gitChanges } from "./git-changes"
 
 let shutdownExtension: (() => Promise<void>) | undefined
 
@@ -110,12 +113,24 @@ export function activate(context: ExtensionContext) {
       })
     },
   })
-  const diffs = toolDiff()
+  const diffs = new DiffVirtualProvider(context.extensionUri)
   const connection = createAgentManagerConnection({ server })
   const autocomplete = createConnection({ server, directory })
   context.subscriptions.push({ dispose: autocomplete.dispose })
   registerAutocompleteProvider(context, autocomplete)
-  const view = chat({ context, server, directory, trackCostSession: alerts.track, diff: diffs })
+  // The Changes editor tab diffs the workspace, the staged and unstaged tree, a session, or one turn. Its catalog
+  // reads server session diffs through the same connection as the Agent Manager.
+  const diffCatalog = new DiffSourceCatalog(connection)
+  const changes = new DiffViewerProvider({ context, server, directory, catalog: diffCatalog })
+  const view = chat({
+    context,
+    server,
+    directory,
+    trackCostSession: alerts.track,
+    diff: diffs,
+    changes,
+    gitStats: (onStats) => gitChanges({ directory, onStats }),
+  })
   const agentHost = new VscodeHost(context, { server, directory })
   let agentManagerRef: AgentManagerProvider | undefined
   const agentPanel = createPanel({
@@ -172,7 +187,15 @@ export function activate(context: ExtensionContext) {
   context.subscriptions.push(
     output,
     { dispose: () => diffs.dispose() },
-    workspace.registerTextDocumentContentProvider(diffs.scheme, diffs.provider),
+    diffCatalog,
+    changes,
+    commands.registerCommand(
+      "kilo-code.v2.showChanges",
+      (arg?: Parameters<DiffViewerProvider["openFromCommand"]>[0]) => changes.openFromCommand(arg),
+    ),
+    window.registerWebviewPanelSerializer(DiffViewerProvider.viewType, {
+      deserializeWebviewPanel: async (panel) => changes.deserializePanel(panel),
+    }),
     window.registerWebviewViewProvider("kilo-code.v2.chat", view.provider, {
       webviewOptions: { retainContextWhenHidden: true },
     }),

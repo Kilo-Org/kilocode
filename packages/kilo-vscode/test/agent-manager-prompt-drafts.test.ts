@@ -11,7 +11,8 @@ const selectors = source("../webview-ui/src/v2/selectors.tsx")
 test("restores the composer text from the draft key and saves it on unmount", () => {
   expect(prompt).toContain("const drafts = new Map<string, string>()")
   expect(prompt).toContain("createSignal(promptDrafts.get(props.draftKey))")
-  expect(prompt).toContain("onCleanup(() => promptDrafts.set(draft, text()))")
+  expect(prompt).toContain("promptDrafts.set(draft, text())")
+  expect(prompt).toContain("saveReviewDraft(draft, comments())")
 })
 
 test("switching the draft key saves the old text and restores the new one", () => {
@@ -20,6 +21,7 @@ test("switching the draft key saves the old text and restores the new one", () =
   expect(swap).toBeDefined()
   expect(swap).toContain("promptDrafts.set(draft, untrack(text))")
   expect(swap).toContain("setText(value)")
+  expect(swap).toContain("saveReviewDraft(draft, untrack(comments))")
 })
 
 test("remounts the composer for each session or pending tab", () => {
