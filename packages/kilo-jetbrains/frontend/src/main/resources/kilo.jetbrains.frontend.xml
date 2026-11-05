@@ -425,6 +425,9 @@
         <action id="Kilo.Worktree.OpenLocalDiff"
                 class="ai.kilocode.client.actions.OpenWorktreeLocalDiffAction"/>
 
+        <action id="Kilo.Worktree.UpdateFromBase"
+                class="ai.kilocode.client.actions.UpdateWorktreeFromBaseAction"/>
+
         <action id="Kilo.Worktree.CopyBranchName"
                 class="ai.kilocode.client.actions.CopyBranchNameAction"/>
 
@@ -457,6 +460,7 @@
             <separator/>
             <reference ref="Kilo.Worktree.OpenDiff"/>
             <reference ref="Kilo.Worktree.OpenLocalDiff"/>
+            <reference ref="Kilo.Worktree.UpdateFromBase"/>
             <separator/>
             <reference ref="Kilo.Worktree.CopyBranchName"/>
             <reference ref="Kilo.Worktree.CopyBranchPath"/>
