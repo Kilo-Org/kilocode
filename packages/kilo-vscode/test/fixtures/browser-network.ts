@@ -139,12 +139,6 @@ describe("BrowserNetwork Chromium", () => {
     for (const close of cleanup.splice(0).reverse()) await close()
   })
 
-  after(async () => {
-    await browser?.close()
-    await gateway?.close()
-    process.off("SIGTERM", stop)
-  })
-
   async function session(
     url: URL,
     opts: { proxy?: BrowserProxy; approve?: (url: URL) => Promise<boolean>; browser?: Browser } = {},

@@ -95,8 +95,7 @@ function settle(all: Promise<unknown>[]) {
 }
 
 afterEach(async () => {
-  await settle(streams.splice(0).map((stream) => stream.close()))
-  await settle(pages.splice(0).map((page) => page.close()))
+  await settle([...streams.splice(0).map((stream) => stream.close()), ...pages.splice(0).map((page) => page.close())])
 })
 
 describe("BrowserStream protocol lifecycle", () => {

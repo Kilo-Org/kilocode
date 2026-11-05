@@ -32,7 +32,7 @@ async function launch(): Promise<Probe> {
     .then((browser) => browser)
     .catch((error: unknown) => (error instanceof Error ? error : new Error(String(error))))
   if (browser instanceof Error) return { state: "failed", reason: message(browser) }
-  await browser.close()
+  await browser.close().catch(() => {})
   return { state: "ready" }
 }
 
