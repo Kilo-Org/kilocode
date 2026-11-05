@@ -33,6 +33,9 @@ import { brandingPlugin } from "../src/branding/plugin"
 import { hostMirrorsPlugin } from "../src/mirrors"
 import { KiloBinary } from "../src/binary"
 import { createPluginRuntimePlugin } from "./plugin-runtime"
+// Kilo: the sandbox mutation worker, network relay and seccomp helper ship next to the executable.
+import { KiloSandboxWorker } from "./kilocode/kilo-sandbox-worker"
+import { KiloSandboxNetwork } from "./kilocode/kilo-sandbox-network"
 
 const dir = path.resolve(import.meta.dirname, "..")
 // Kilo: internal releases use `kilo2`, separate from v1. The upstream target names stay the build's internal names.
@@ -56,6 +59,11 @@ const solidPlugin = createSolidTransformPlugin()
 const highlights = Script.preview ? undefined : embed(process.env.OPENCODE_RELEASE_NOTES)
 const releaseAssets = new Map<string, Promise<Map<string, string>>>()
 const modelsSnapshot = modelsSnapshotPlugin(await bundledModelsSnapshot())
+// Kilo: the sandbox helpers are bundled once and copied into every target.
+const [kiloSandboxWorker, kiloSandboxNetwork] = await Promise.all([
+  KiloSandboxWorker.bundle(),
+  KiloSandboxNetwork.bundle(),
+])
 
 const allTargets: {
   os: string
@@ -209,6 +217,10 @@ export default { path: file, version: ${JSON.stringify(opencodePty.version)}, sh
       // FFF_LIBC selects the fff native lib variant: "musl" or "gnu".
       FFF_LIBC: item.os === "linux" ? `'${item.abi ?? "gnu"}'` : "undefined",
       ...(item.os === "linux" ? { "process.env.OPENTUI_LIBC": JSON.stringify(item.abi ?? "glibc") } : {}),
+      // Kilo: sandbox helper paths, relative to the executable.
+      KILO_SANDBOX_MUTATION_WORKER_PATH: JSON.stringify(KiloSandboxWorker.filename),
+      KILO_SANDBOX_NETWORK_RELAY_PATH: item.os === "linux" ? JSON.stringify(KiloSandboxNetwork.relay) : "undefined",
+      KILO_SANDBOX_SECCOMP_PATH: item.os === "linux" ? JSON.stringify(KiloSandboxNetwork.seccomp) : "undefined",
     },
   })
 
@@ -217,6 +229,12 @@ export default { path: file, version: ${JSON.stringify(opencodePty.version)}, sh
     process.exit(1)
   }
   verifySimulationGraph(simulationInputs)
+  // Kilo: copy the sandbox helpers and check that the packaged mutation worker runs.
+  const bin = path.join(outdir, name, "bin")
+  await KiloSandboxWorker.copy(kiloSandboxWorker, bin)
+  if (item.os === "linux") await KiloSandboxNetwork.copy(kiloSandboxNetwork, bin, item.arch as "arm64" | "x64")
+  if (item.os === process.platform && item.arch === process.arch && !item.abi && item.avx2 !== false)
+    await KiloSandboxWorker.smoke(path.join(bin, binary))
   await NativeArch.verify(path.join(outdir, name, "bin", item.os === "win32" ? `${binary}.exe` : binary), item.arch)
 
   // Kilo: the platform packages have the same names as v1's. script/publish.ts publishes them with the `kilo-v2` npm
