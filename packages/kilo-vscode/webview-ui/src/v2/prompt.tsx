@@ -81,7 +81,10 @@ export function PromptInput(props: {
   // Recording is enough to send: the transcript arrives first and the send continues from it. No other speech state
   // may send, or a draft would leave before the transcript is ready and the transcript would become a draft.
   const canSend = () =>
-    !props.disabled && !sending() && (speech.state() === "recording" || (!speech.active() && !!text().trim()))
+    !props.disabled &&
+    !props.blocked &&
+    !sending() &&
+    (speech.state() === "recording" || (!speech.active() && !!text().trim()))
   // The label is the pending-permission hint while blocked, otherwise Send.
   const sendLabel = () => {
     if (props.blocked) return language.t("prompt.action.send.blocked")
