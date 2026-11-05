@@ -76,7 +76,7 @@ function sessionRow(info: SessionV1.SessionInfo): typeof SessionTable.$inferInse
     time_created: info.time.created,
     time_updated: info.time.updated,
     time_compacting: info.time.compacting,
-    time_archived: info.time.archived ?? null, // kilocode_change - full session updates must clear unarchived sessions
+    time_archived: info.time.archived,
   }
 }
 
@@ -255,7 +255,7 @@ const layer = Layer.effectDiscard(
     yield* events.project(SessionV1.Event.Updated, (event) =>
       db
         .update(SessionTable)
-        .set(sessionRow(event.data.info))
+        .set({ ...sessionRow(event.data.info), ...(event.data.unarchived ? { time_archived: null } : {}) }) // kilocode_change
         .where(eq(SessionTable.id, event.data.sessionID))
         .run()
         .pipe(Effect.orDie),
