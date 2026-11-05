@@ -50,3 +50,11 @@ test("resets the draft agent and model when the draft key changes", () => {
   expect(selectors).toContain("draftKey: Accessor<string | undefined> = session")
   expect(sessionView).toContain("createSelection(session, draftKey)")
 })
+
+test("a context action submit keeps the composer guards and falls back to the draft", () => {
+  const submit = prompt.slice(prompt.indexOf("const submit = (external"))
+  expect(submit).toContain("if (!ready()")
+  expect(submit).toContain("putInDraft(external.text, external.items)")
+  expect(submit).toContain("if (external) return putInDraft(external.text, external.items)")
+  expect(prompt).toContain("submit: (value, items) => submit({ text: value, items })")
+})

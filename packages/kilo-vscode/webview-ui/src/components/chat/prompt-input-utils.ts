@@ -93,6 +93,12 @@ export function shiftPastes(pastes: readonly PasteRange[], prev: string, next: s
   const diff = textDiff(prev, next)
   const out: PasteRange[] = []
   for (const paste of pastes) {
+    // A diff that backtracks over a repeated character can start inside the placeholder. The chip did not move when
+    // its old range still spells a placeholder in the new text, so keep it before the position rules drop it.
+    if (validPaste(next, paste)) {
+      out.push(paste)
+      continue
+    }
     if (paste.end <= diff.start) {
       if (validPaste(next, paste)) out.push(paste)
       continue

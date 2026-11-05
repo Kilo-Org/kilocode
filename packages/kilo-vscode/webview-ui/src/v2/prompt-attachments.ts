@@ -12,7 +12,7 @@ export type DraftAttachmentInput = {
   dataUrl: string
 }
 
-/** Add the incoming attachments that are not already present, keeping their order. */
+/** The dedupe key of an attachment: its kind, uri, name and source file when one is known. */
 const attachmentKey = (item: PromptAttachment) =>
   `${item.kind}\u0000${item.uri}\u0000${item.name}\u0000${item.path ?? item.source ?? ""}`
 

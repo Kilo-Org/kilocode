@@ -118,6 +118,13 @@ describe("shiftPastes", () => {
     expect(moved).toEqual(paste(1, 1, "body"))
   })
 
+  it("keeps the backing when the user types at the chip end", () => {
+    const prev = "[Pasted ~5 lines]"
+    const next = "[Pasted ~5 lines]]"
+    const [moved] = shiftPastes([paste(1, 0, "body")], prev, next)
+    expect(moved).toEqual(paste(1, 0, "body"))
+  })
+
   it("moves a block after an insertion", () => {
     const prev = "lead [Pasted ~5 lines]"
     const next = "lead more [Pasted ~5 lines]"
