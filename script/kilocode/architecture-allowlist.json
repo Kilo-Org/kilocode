@@ -19,9 +19,9 @@
       "description": "Direct new Database() / new DatabaseSync() instantiations in Kilo-owned code. Target: all persistence routes through core Database.Service.",
       "allowed": {
         "packages/kilo-cli/src/database.ts": {
-          "count": 1,
+          "count": 2,
           "owner": "kilo-cli",
-          "reason": "One-time copy of an earlier build's database file before the server starts. It opens another build's file read-only for VACUUM INTO, a consistent snapshot even while that build still writes; Database.Service does not exist yet and would run migrations on the old file. Remove with the legacy copy."
+          "reason": "One-time copy of an earlier build's database file before the server starts. It counts sessions in the candidate files and opens the best one read-only for VACUUM INTO, a consistent snapshot even while that build still writes; Database.Service does not exist yet and would run migrations on the old file. Remove with the legacy copy."
         }
       }
     },

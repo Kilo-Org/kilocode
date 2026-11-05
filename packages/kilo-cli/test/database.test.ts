@@ -1,6 +1,6 @@
 import { Database } from "bun:sqlite"
 import { afterEach, expect, test } from "bun:test"
-import { mkdtemp, rm } from "node:fs/promises"
+import { mkdtemp, rm, stat } from "node:fs/promises"
 import os from "node:os"
 import path from "node:path"
 import { KiloDatabase } from "../src/database"
@@ -92,4 +92,53 @@ test("an unreadable earlier file leaves a new database and no stray copy", async
   const file = await KiloDatabase.select({}, { data: dir, channel: "v2" })
   expect(await Bun.file(file).exists()).toBe(false)
   expect((await Array.fromAsync(new Bun.Glob("*.adopt").scan(dir))).length).toBe(0)
+})
+
+test("the copy is owner-only like the database the server opens", async () => {
+  if (process.platform === "win32") return
+  const dir = await data()
+  const old = new Database(path.join(dir, "opencode-v2.db"))
+  old.run("CREATE TABLE session_v2 (id TEXT)")
+  old.run("INSERT INTO session_v2 VALUES ('ses_old')")
+  old.close()
+  const file = await KiloDatabase.select({}, { data: dir, channel: "v2" })
+  expect((await stat(file)).mode & 0o777).toBe(0o600)
+  expect((await stat(path.join(dir, "opencode-v2.db"))).mode & 0o777).toBe(0o644)
+})
+
+test("copies the earlier file of another branch when the file of this channel is empty", async () => {
+  const dir = await data()
+  const empty = new Database(path.join(dir, "opencode-v2.db"))
+  empty.run("CREATE TABLE session_v2 (id TEXT)")
+  empty.close()
+  const full = new Database(path.join(dir, "opencode-am-manifest-packaging.db"))
+  full.run("CREATE TABLE session_v2 (id TEXT)")
+  full.run("INSERT INTO session_v2 VALUES ('ses_branch_a'), ('ses_branch_b')")
+  full.close()
+
+  const file = await KiloDatabase.select({}, { data: dir, channel: "v2" })
+  const copy = new Database(file, { readonly: true })
+  try {
+    expect(copy.query("SELECT id FROM session_v2 ORDER BY id").all()).toEqual([
+      { id: "ses_branch_a" },
+      { id: "ses_branch_b" },
+    ])
+  } finally {
+    copy.close()
+  }
+})
+
+test("an empty file of this channel is still copied when no earlier file has sessions", async () => {
+  const dir = await data()
+  const empty = new Database(path.join(dir, "opencode-v2.db"))
+  empty.run("CREATE TABLE marker (id TEXT)")
+  empty.run("INSERT INTO marker VALUES ('kept')")
+  empty.close()
+  const file = await KiloDatabase.select({}, { data: dir, channel: "v2" })
+  const copy = new Database(file, { readonly: true })
+  try {
+    expect(copy.query("SELECT id FROM marker").all()).toEqual([{ id: "kept" }])
+  } finally {
+    copy.close()
+  }
 })
