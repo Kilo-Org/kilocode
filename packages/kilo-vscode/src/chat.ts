@@ -34,8 +34,10 @@ import { openToolFile, type ToolDiff } from "./tool-diff"
 
 // The sidebar may only write the settings its own UI owns. Other views keep their own write path.
 // The settings each webview may write; the Settings panel writes every Kilo setting through its own handler.
-const VIEW_SETTING_KEYS: Record<"chat" | "agentManager" | "documents", ReadonlySet<string>> = {
+const VIEW_SETTING_KEYS: Record<View, ReadonlySet<string>> = {
   chat: new Set(["showTaskTimeline"]),
+  settings: new Set(),
+  profile: new Set(),
   agentManager: new Set(["showTaskTimeline", "agentManager.pushFixes"]),
   documents: new Set(),
 }
@@ -273,7 +275,7 @@ export function wire(input: {
       void workspace.getConfiguration(NAMESPACE).update("language", message.locale || undefined, true)
       return true
     }
-    // The Kilo Gateway sign-in runs in the Profile view of the sidebar, as main opens its Profile panel.
+    // The Kilo Gateway sign-in runs in the Profile panel, as main opens its Profile tab.
     if (message.type === "openProfile") {
       void commands.executeCommand("kilo-code.v2.profile")
       return true
@@ -349,8 +351,14 @@ export function composerState(context: ExtensionContext): ToWebview[] {
 const EXPANDED = "kilo-code.v2.modelSelectorExpanded"
 const AUTO_APPROVE = "kilo-code.v2.autoApprove"
 const NAMESPACE = "kilo-code.v2"
-// The Agent Manager panel loads its own bundle; the sidebar and the Settings panel share one.
-const ENTRY = { chat: "webview", settings: "webview", agentManager: "agent-manager", documents: "documents" } as const
+// The Agent Manager panel loads its own bundle; the sidebar, the Settings and Profile panels, and Documents share one.
+const ENTRY = {
+  chat: "webview",
+  settings: "webview",
+  profile: "webview",
+  agentManager: "agent-manager",
+  documents: "documents",
+} as const
 const SIZES = [10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24]
 
 export function html(input: {
@@ -413,7 +421,7 @@ export function html(input: {
     }
   }
   html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; }
-  body { background-color: ${input.view === "settings" || input.view === "documents" ? "var(--vscode-editor-background)" : "var(--vscode-sideBar-background, var(--vscode-editor-background))"}; color: var(--vscode-foreground); font-family: var(--vscode-font-family); }
+  body { background-color: ${input.view === "settings" || input.view === "profile" || input.view === "documents" ? "var(--vscode-editor-background)" : "var(--vscode-sideBar-background, var(--vscode-editor-background))"}; color: var(--vscode-foreground); font-family: var(--vscode-font-family); }
   #root { height: 100%; }
   .container { height: 100vh; }
 </style>
@@ -430,7 +438,7 @@ function escape(text: string) {
   return text.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
 }
 
-type View = "chat" | "settings" | "agentManager" | "documents"
+type View = "chat" | "settings" | "profile" | "agentManager" | "documents"
 
 type Surface = Extract<
   ToHost,

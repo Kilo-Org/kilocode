@@ -1,4 +1,4 @@
-// The sidebar: history, profile, or one session laid out like main's ChatView (transcript, docks, prompt).
+// The sidebar: history or one session laid out like main's ChatView (transcript, docks, prompt).
 import { Button } from "@kilocode/kilo-ui/button"
 import { showToast } from "@kilocode/kilo-ui/toast"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
@@ -21,8 +21,6 @@ import { getVSCodeAPI, useVSCode } from "../context/vscode"
 import { useV2 } from "./client"
 import { useDisplaySettings } from "./display-settings"
 import { SessionList } from "./history"
-import ProfileView from "../components/profile/ProfileView"
-import { createProfile } from "./profile"
 import { SessionChanges } from "./session-changes"
 import { SessionView } from "./session-view"
 import { formatReviewCommentsMarkdown } from "../utils/review-comment-markdown"
@@ -33,8 +31,8 @@ export function Chat() {
   const v2 = useV2()
   const language = useLanguage()
   const [session, setSession] = createSignal<string>()
-  const [view, setView] = createSignal<"chat" | "history" | "profile">("chat")
-  // Comments can arrive while the chat composer is unmounted (History or Profile), so hold them until it returns.
+  const [view, setView] = createSignal<"chat" | "history">("chat")
+  // Comments can arrive while the chat composer is unmounted (History), so hold them until it returns.
   const reviewQueue = createReviewAppendQueue()
   const [changes, setChanges] = createSignal(false)
   // Display layouts are Kilo-only config keys, so the host reads them. Ask on connect and after every config change.
@@ -45,8 +43,6 @@ export function Chat() {
     }),
   )
   onCleanup(v2.data.on("config.updated", () => display.request()))
-  // Owned here, so a running sign-in survives switching views.
-  const profile = createProfile()
   const startSession = () => {
     setSession(undefined)
     setView("chat")
@@ -55,7 +51,6 @@ export function Chat() {
   v2.onCommand((name) => {
     if (name === "newSession") startSession()
     if (name === "history") setView("history")
-    if (name === "profile") setView("profile")
   })
 
   const open = (id: string) => {
@@ -188,9 +183,6 @@ export function Chat() {
             <SessionList onOpen={open} />
           </div>
         </div>
-      </Match>
-      <Match when={view() === "profile"}>
-        <ProfileView profile={profile} />
       </Match>
       <Match when={view() === "chat"}>
         <SessionView
