@@ -128,9 +128,6 @@ describe("tool.semantic_search", () => {
   })
 })
 
-// The engine degrades to a scan-only index when the native watcher cannot subscribe, as some containers cannot.
-const watcher = await probeWatcher()
-
 // The real engine in its worker, a real LanceDB store, and a local OpenAI-compatible embedding service whose vectors
 // are hashed bags of words, so related text scores higher without a paid model.
 describe("semantic_search over a real index", () => {
@@ -174,6 +171,7 @@ describe("semantic_search over a real index", () => {
       "// Draws the chart canvas with colored bars for each series.\nexport function drawChart(canvas: string, series: number[]) {\n  return series.map((value) => canvas + value).join(',')\n}\n",
     )
     const published: IndexingStatus[] = []
+    const logs: string[] = []
     const runtime = new IndexingRuntime.Runtime({
       directory,
       home: "/nonexistent-home",
@@ -194,7 +192,7 @@ describe("semantic_search over a real index", () => {
         published.push(status)
       },
       warning: () => {},
-      log: () => {},
+      log: (level, message, extra) => logs.push([level, message, extra ? JSON.stringify(extra) : ""].join(" ").trim()),
       env: {},
     })
     cleanup.unshift(async () => {
@@ -212,7 +210,7 @@ describe("semantic_search over a real index", () => {
       }
       return runtime.current()
     }
-    return { directory, runtime, published, done }
+    return { directory, runtime, published, logs, done }
   }
 
   test("indexes a repository and finds related code", async () => {
@@ -231,48 +229,35 @@ describe("semantic_search over a real index", () => {
     expect(first.output?.split("\n")[2]).toStartWith("1. src/auth.ts:")
   })
 
-  test.skipIf(watcher !== undefined)("follows a file edit through the file watcher", async () => {
-    const { directory, runtime, done } = await repository()
+  test("follows a file edit through the file watcher", async () => {
+    const { directory, runtime, logs, done } = await repository()
     expect((await done()).state).toBe("Complete")
 
     const file = path.join(directory, "src/upload.ts")
     const text =
       "// Waits longer after each failed upload attempt.\nexport function retryDelay(upload: string, attempt: number) {\n  return upload.length + Math.min(30000, 500 * 2 ** attempt)\n}\n"
     await Bun.write(file, text)
-    const found = async () => {
-      for (const round of Array.from({ length: 60 })) {
-        const hits = await runtime.search("retry delay for an upload attempt")
-        if (hits[0]?.payload?.filePath === "src/upload.ts") return true
-        // A creation before the subscription finished is not replayed; a second write is an update it always sees.
-        if (round === 20) await Bun.write(file, text)
-        await Bun.sleep(500)
-      }
-      return false
+    let seen: VectorStoreSearchResult[] = []
+    let status = await runtime.current()
+    for (const round of Array.from({ length: 60 })) {
+      seen = await runtime.search("retry delay for an upload attempt")
+      if (seen[0]?.payload?.filePath === "src/upload.ts") return
+      status = await runtime.current()
+      if (status.state === "Error") break
+      // A creation before the subscription finished is not replayed; a second write is an update it always sees.
+      if (round === 20) await Bun.write(file, text)
+      await Bun.sleep(500)
     }
-    expect(await found()).toBe(true)
+    throw new Error(
+      JSON.stringify(
+        {
+          status,
+          hits: seen.map((hit) => [hit.payload?.filePath, hit.score]),
+          logs: logs.slice(-30),
+        },
+        null,
+        2,
+      ),
+    )
   }, 90_000)
 })
-
-/** The reason the native watcher cannot subscribe to a scratch directory, or undefined when it can. */
-async function probeWatcher() {
-  const directory = await mkdtemp(path.join(os.tmpdir(), "kilo-watch-probe-"))
-  try {
-    const engine = path.dirname(Bun.resolveSync("@kilocode/kilo-indexing/engine", import.meta.dir))
-    const module = (await import(Bun.resolveSync("@parcel/watcher", engine))) as typeof import("@parcel/watcher")
-    const backend =
-      process.platform === "linux"
-        ? "inotify"
-        : process.platform === "darwin"
-          ? "fs-events"
-          : process.platform === "win32"
-            ? "windows"
-            : undefined
-    const subscription = await module.subscribe(directory, () => {}, backend ? { backend } : {})
-    await subscription.unsubscribe()
-    return undefined
-  } catch (error) {
-    return error instanceof Error ? error.message : String(error)
-  } finally {
-    await rm(directory, { recursive: true, force: true })
-  }
-}
