@@ -349,7 +349,8 @@ Slash dispatch allows only `/compact`, `/new` in the same workspace, `/skill <ID
 All other commands produce a visible failed `command.outcome`, never arbitrary shell or command execution.
 Outcomes are `{commandID,status,result?,error?,duplicate?,identity?}`; `status` is `succeeded`, `failed` or `unknown`.
 The SQLite ledger keeps command identities and fingerprints so retries cannot repeat effects after restart or result eviction.
-Result payloads expire after one day, with at most 256 retained globally and 64 KiB per result.
+Result payloads expire after one day, with at most 256 retained globally and 60 KiB per result.
+Larger results return `response_too_large`, including on replay, leaving room for the relay frame envelope.
 Startup and command settlement trim payloads; pending identities are never deleted.
 A duplicate whose result was evicted is reported unknown rather than repeating possible external effects.
 

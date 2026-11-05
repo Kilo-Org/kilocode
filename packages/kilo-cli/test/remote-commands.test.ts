@@ -84,6 +84,7 @@ const fixture = Effect.fn("remote command fixture")(function* () {
     rolloverOnPermissionFetch: false,
     rolloverOnFormState: false,
     questionKeys: ["q0", "q1"],
+    modelName: undefined as string | undefined,
   }
   let runSequence = 0
   const rotateRun = Effect.fn("remote fixture rotate run")(function* (terminal = false) {
@@ -164,7 +165,9 @@ const fixture = Effect.fn("remote command fixture")(function* () {
     headers: { authorization: "do-not-disclose" },
   }
   const agents = { get: () => Effect.succeed(agent), list: () => Effect.succeed([agent]) } as unknown as Agent.Interface
-  const models = { available: () => Effect.succeed([model]) } as unknown as Model.Interface
+  const models = {
+    available: () => Effect.sync(() => [{ ...model, name: control.modelName ?? model.name }]),
+  } as unknown as Model.Interface
   const skills = {
     list: () => Effect.succeed([{ id: Skill.ID.make("safe-skill"), name: "Safe skill", description: "A skill" }]),
   } as unknown as Skill.Interface
@@ -361,19 +364,51 @@ it("upgrades legacy receipts and expires their payloads without deleting dedupe 
       .toMatchObject({ status: "unknown", duplicate: true })
   }))
 
-it("returns large discovery results without retaining their payloads", () =>
+it("returns a bounded actionable discovery failure and replays it without executing again", () =>
   Effect.gen(function* () {
     const f = yield* fixture()
     yield* Effect.promise(() => Promise.all(
       Array.from({ length: 180 }, (_, index) => mkdir(path.join(f.root, `${index}-${"x".repeat(190)}`))),
     ))
     const result = yield* f.commands.instance("list_directories", {}, "large-discovery")
-    expect(result.status).toBe("succeeded")
-    expect(Buffer.byteLength(JSON.stringify(result))).toBeGreaterThan(65_536)
-    expect(yield* f.database.db.get(sql`SELECT outcome FROM _kilo_remote_command WHERE command_id='large-discovery'`))
-      .toEqual({ outcome: null })
+    expect(result).toMatchObject({ status: "failed", error: { code: "response_too_large" } })
+    expect(Buffer.byteLength(JSON.stringify(result))).toBeLessThanOrEqual(60 * 1024)
+    expect(yield* f.database.db.get<{ outcome: string }>(sql`SELECT outcome FROM _kilo_remote_command WHERE command_id='large-discovery'`))
+      .toEqual({ outcome: JSON.stringify(result) })
+    yield* Effect.promise(() => rm(f.root, { recursive: true }))
     expect(yield* f.commands.instance("list_directories", {}, "large-discovery"))
-      .toMatchObject({ status: "unknown", duplicate: true })
+      .toMatchObject({ status: "failed", duplicate: true, error: { code: "response_too_large" } })
+  }))
+
+it("bounds legacy cached results before replaying them", () =>
+  Effect.gen(function* () {
+    const f = yield* fixture()
+    yield* f.commands.instance("list_directories", {}, "legacy-large")
+    yield* f.database.db.run(sql`UPDATE _kilo_remote_command SET outcome=${JSON.stringify({
+      commandID: "legacy-large",
+      status: "succeeded",
+      result: "x".repeat(65_536),
+    })} WHERE command_id='legacy-large'`)
+    yield* Effect.promise(() => rm(f.root, { recursive: true }))
+    expect(yield* f.commands.instance("list_directories", {}, "legacy-large"))
+      .toMatchObject({ status: "failed", duplicate: true, error: { code: "response_too_large" } })
+  }))
+
+it("reserves duplicate flag headroom at the result boundary", () =>
+  Effect.gen(function* () {
+    const f = yield* fixture()
+    f.control.modelName = ""
+    const probe = yield* f.commands.instance("list_models", {}, "probe-id")
+    const replayBytes = Buffer.byteLength(',"duplicate":true')
+    f.control.modelName = "x".repeat(60 * 1024 - replayBytes - Buffer.byteLength(JSON.stringify(probe)))
+    const settled = yield* f.commands.instance("list_models", {}, "boundary")
+    expect(settled.status).toBe("succeeded")
+    const duplicate = yield* f.commands.instance("list_models", {}, "boundary")
+    expect(duplicate).toEqual({ ...settled, duplicate: true })
+    expect(Buffer.byteLength(JSON.stringify(duplicate))).toBe(60 * 1024)
+    f.control.modelName += "x"
+    expect(yield* f.commands.instance("list_models", {}, "overflow"))
+      .toMatchObject({ status: "failed", error: { code: "response_too_large" } })
   }))
 
 it("queued prompts work while live-only commands require current run and incarnation", () =>
