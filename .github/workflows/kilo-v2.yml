@@ -311,17 +311,28 @@ jobs:
               fi
             fi
             # Drop the approvals of the previous head, so auto-merge waits for a fresh review.
-            gh api "repos/$GITHUB_REPOSITORY/pulls/$pr/reviews" --paginate \
-              --jq '.[] | select(.state == "APPROVED") | .id' |
-            while read -r review; do
+            # Auto-merge is armed only when the stale approvals are gone, because the v2 ruleset
+            # does not dismiss them on push by itself.
+            clean=true
+            if ! reviews=$(gh api "repos/$GITHUB_REPOSITORY/pulls/$pr/reviews" --paginate \
+              --jq '.[] | select(.state == "APPROVED") | .id' 2>&1); then
+              echo "::warning::could not read reviews on PR #$pr: $reviews"
+              clean=false
+            fi
+            for review in $reviews; do
               if ! error=$(gh api -X PUT "repos/$GITHUB_REPOSITORY/pulls/$pr/reviews/$review/dismissals" \
                 -f message="The map was regenerated for a newer v2 commit; a fresh review is required." 2>&1 >/dev/null); then
                 echo "::warning::could not dismiss review $review on PR #$pr: $error"
+                clean=false
               fi
             done
             # The map is generated, so it merges by itself once a maintainer approves the delta.
-            if ! output=$(gh pr merge "$pr" --auto --merge 2>&1); then
-              echo "::warning::auto-merge not enabled for PR #$pr: $output"
+            if [ "$clean" = true ]; then
+              if ! output=$(gh pr merge "$pr" --auto --merge 2>&1); then
+                echo "::warning::auto-merge not enabled for PR #$pr: $output"
+              fi
+            else
+              echo "::warning::auto-merge not armed for PR #$pr because a stale approval could not be dismissed"
             fi
             exit 0
           done
