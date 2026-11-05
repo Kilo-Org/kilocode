@@ -11,14 +11,18 @@ import { useV2 } from "./client"
 import { useDisplaySettings } from "./display-settings"
 import { SessionList } from "./history"
 import ProfileView from "../components/profile/ProfileView"
+import { createLocalTabs } from "./local-tabs"
 import { createProfile } from "./profile"
 import { SessionChanges } from "./session-changes"
+import { SessionTabStrip } from "./session-tabs"
 import { SessionView } from "./session-view"
+import { showTabStrip } from "../utils/local-tabs"
+import { focusPrompt } from "../utils/tab-navigation"
 
 export function Chat() {
   const v2 = useV2()
   const language = useLanguage()
-  const [session, setSession] = createSignal<string>()
+  const tabs = createLocalTabs()
   const [view, setView] = createSignal<"chat" | "history" | "profile">("chat")
   const [changes, setChanges] = createSignal(false)
   // Display layouts are Kilo-only config keys, so the host reads them. Ask on connect and after every config change.
@@ -32,20 +36,47 @@ export function Chat() {
   // Owned here, so a running sign-in survives switching views.
   const profile = createProfile()
   const startSession = () => {
-    setSession(undefined)
+    tabs.add()
     setView("chat")
     setChanges(false)
+  }
+  const open = (id: string) => {
+    tabs.open(id)
+    setView("chat")
+    setChanges(false)
+  }
+  const step = (offset: -1 | 1) => {
+    if (!document.hasFocus() || view() !== "chat") return
+    const before = tabs.active()
+    tabs.step(offset)
+    if (tabs.active() !== before) requestAnimationFrame(focusPrompt)
   }
   v2.onCommand((name) => {
     if (name === "newSession") startSession()
     if (name === "history") setView("history")
     if (name === "profile") setView("profile")
+    if (name === "showOpenTabs") {
+      setView("chat")
+      window.dispatchEvent(new Event("showOpenTabs"))
+    }
+    if (name === "tabPrevious") step(-1)
+    if (name === "tabNext") step(1)
   })
 
-  const open = (id: string) => {
-    setSession(id)
-    setView("chat")
-    setChanges(false)
+  const forkSession = (id: string) => {
+    void v2.api.session
+      .fork({ sessionID: id })
+      .then((info) => {
+        v2.data.session.remember(info)
+        tabs.openAfter(id, info.id)
+      })
+      .catch(v2.report)
+  }
+
+  const session = () => tabs.session()
+  const settled = (id: string | undefined, draftKey?: string) => {
+    if (!id) return tabs.close(draftKey ?? tabs.active())
+    tabs.settled(draftKey ?? tabs.active(), id)
   }
 
   // A turn shows its own changes: `from` is the user message that opened it, and the
@@ -131,7 +162,7 @@ export function Chat() {
       <Match when={view() === "chat"}>
         <SessionView
           session={session()}
-          onSession={setSession}
+          onSession={settled}
           actions={toolActions}
           onShowHistory={() => setView("history")}
           onViewTurnChanges={openTurnChanges}
@@ -140,6 +171,13 @@ export function Chat() {
           replacement={
             <Show when={changes() ? session() : undefined} keyed>
               {(id) => <SessionChanges sessionID={id} onClose={() => setChanges(false)} />}
+            </Show>
+          }
+          draftKey={tabs.active()}
+          onMissing={(id) => tabs.close(id)}
+          tabStrip={
+            <Show when={showTabStrip(tabs.ids())}>
+              <SessionTabStrip tabs={tabs} onFork={forkSession} />
             </Show>
           }
         />

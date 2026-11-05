@@ -24,8 +24,11 @@ export function SessionView(props: {
   session: string | undefined
   /** Draft identity for the composer when the session is not enough, for example a pending Agent Manager tab. */
   draftKey?: string
-  /** Receives the session ID a first prompt creates, and undefined when the open session is gone. */
-  onSession: (id: string | undefined) => void
+  /**
+   * Receives the session ID a first prompt creates and the draft key that prompted it, or undefined when the open
+   * session is gone.
+   */
+  onSession: (id: string | undefined, draftKey?: string) => void
   actions: ToolActions
   onShowHistory: () => void
   /** The row above the dock; receives whether the session has messages and the todo element it trails. */
@@ -37,6 +40,8 @@ export function SessionView(props: {
   empty?: () => JSX.Element
   /** Read-only sessions show the transcript without docks and prompt. */
   readOnly?: boolean
+  /** Rendered above the task header, for the sidebar's session tab strip. */
+  tabStrip?: JSX.Element
   /** Opens the proposed changes of an edit permission request. */
   onPreviewEdit?: (files: FileDiffInfo[], sessionID: string) => void
   /** Receives the composer append function for review comments, and undefined when that composer unmounts. */
@@ -136,7 +141,7 @@ export function SessionView(props: {
         return [id, !!id && !!v2.data.session.get(id)] as const
       },
       ([id, known], previous) => {
-        if (id && !known && previous?.[0] === id && previous[1]) props.onSession(undefined)
+        if (id && !known && previous?.[0] === id && previous[1]) props.onSession(undefined, id)
       },
     ),
   )
@@ -171,12 +176,13 @@ export function SessionView(props: {
   })
 
   const send = (text: string) => {
+    const key = draftKey()
     const id = session() ?? selection.create()
     const gate = selection.gate(id)
     // A prompt with a pending switch waits for it, so the attribution has to be read after that switch settles.
     // Without one the selection is current, and it must be read before onSession changes the session identity.
     const model = gate ? undefined : selection.model()
-    props.onSession(id)
+    props.onSession(id, key)
     return v2.data.session
       .prompt({ sessionID: id, text, gate })
       .then(() => {
@@ -196,6 +202,7 @@ export function SessionView(props: {
 
   return (
     <div class="chat-view">
+      {props.tabStrip}
       <Show when={session()} keyed>
         {(id) => (
           <TaskHeader

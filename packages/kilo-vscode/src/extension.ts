@@ -148,8 +148,6 @@ export function activate(context: ExtensionContext) {
   const agentCommands = [
     ["previousSession", "sessionPrevious"],
     ["nextSession", "sessionNext"],
-    ["previousTab", "tabPrevious"],
-    ["nextTab", "tabNext"],
     ["previousTerminal", "terminalPrevious"],
     ["nextTerminal", "terminalNext"],
     ["search", "search"],
@@ -187,6 +185,21 @@ export function activate(context: ExtensionContext) {
     commands.registerCommand("kilo-code.v2.profile", async () => {
       await commands.executeCommand("kilo-code.v2.chat.focus")
       await view.post({ type: "command", name: "profile" })
+    }),
+    // One shortcut pair serves the sidebar and the Agent Manager. Both surfaces receive the action and act only
+    // while they have focus, matching cycleAgentMode.
+    commands.registerCommand("kilo-code.v2.agentManager.previousTab", () => {
+      agentAction("tabPrevious")
+      void view.post({ type: "command", name: "tabPrevious" })
+    }),
+    commands.registerCommand("kilo-code.v2.agentManager.nextTab", () => {
+      agentAction("tabNext")
+      void view.post({ type: "command", name: "tabNext" })
+    }),
+    // The switcher only exists in the sidebar, so the command always opens it there.
+    commands.registerCommand("kilo-code.v2.showOpenTabs", async () => {
+      await commands.executeCommand("kilo-code.v2.chat.focus")
+      await view.post({ type: "command", name: "showOpenTabs" })
     }),
     commands.registerCommand("kilo-code.v2.settings", (...args: unknown[]) => panel.open(args)),
     commands.registerCommand("kilo-code.v2.settingsSearch", () => panel.open([{ search: true }])),

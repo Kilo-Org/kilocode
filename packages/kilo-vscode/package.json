@@ -338,6 +338,11 @@
         "icon": "$(account)"
       },
       {
+        "command": "kilo-code.v2.showOpenTabs",
+        "title": "Show Open Tabs",
+        "category": "Kilo Code (v2)"
+      },
+      {
         "command": "kilo-code.v2.settings",
         "title": "Settings",
         "category": "Kilo Code (v2)",
@@ -623,13 +628,13 @@
         "command": "kilo-code.v2.agentManager.previousTab",
         "key": "ctrl+alt+left",
         "mac": "cmd+alt+left",
-        "when": "activeWebviewPanelId == 'kilo-code.v2.agentManagerPanel'"
+        "when": "kilo-code.v2.sidebarFocused || activeWebviewPanelId == 'kilo-code.v2.agentManagerPanel'"
       },
       {
         "command": "kilo-code.v2.agentManager.nextTab",
         "key": "ctrl+alt+right",
         "mac": "cmd+alt+right",
-        "when": "activeWebviewPanelId == 'kilo-code.v2.agentManagerPanel'"
+        "when": "kilo-code.v2.sidebarFocused || activeWebviewPanelId == 'kilo-code.v2.agentManagerPanel'"
       },
       {
         "command": "kilo-code.v2.agentManager.previousTerminal",
