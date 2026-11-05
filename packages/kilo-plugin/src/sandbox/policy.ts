@@ -289,23 +289,37 @@ const read = Effect.fn("SandboxPolicy.read")(function* (directory: string, sessi
   return stored
 })
 
-// A subagent session without its own state starts with its parent's confinement. It reads the parent's stored state,
-// or the state the parent would start with, without taking the parent's lock: enabling a parent holds the parent
-// lock while it waits for its children's locks.
+// A subagent session without its own state starts with its nearest ancestor's confinement. It walks up the parent
+// chain and takes no lock: enabling a parent holds the parent lock while it waits for its children's locks. A parent
+// that has made no tool call yet has no stored state, so a nested subagent must not stop at it.
 const inherited = Effect.fn("SandboxPolicy.inherited")(function* (
   directory: string,
   sessionID: SessionID,
+  depth = 0,
 ): Effect.fn.Return<Snapshot | undefined, never, Runtime> {
   const runtime = yield* Runtime
   const session = yield* runtime.session(sessionID)
   if (!session?.parentID || (yield* SandboxState.read(sessionID))) return
   const parentDirectory = (yield* runtime.session(session.parentID))?.location.directory ?? directory
-  const parent =
-    (yield* read(parentDirectory, session.parentID)) ??
-    (parentDirectory === directory ? yield* resolveInitial(directory, session.parentID) : undefined)
+  const parent = yield* lineage(parentDirectory, session.parentID, directory, depth)
   if (!parent) return
   return { ...parent, version: 0 } satisfies Snapshot
 })
+
+const lineage = (
+  directory: string,
+  sessionID: SessionID,
+  location: string,
+  depth: number,
+): Effect.Effect<Snapshot | undefined, never, Runtime> =>
+  Effect.gen(function* () {
+    const stored = yield* read(directory, sessionID)
+    if (stored) return stored
+    // A loop in corrupt parent links must not recurse forever.
+    const above = depth < 64 ? yield* inherited(directory, sessionID, depth + 1) : undefined
+    if (above) return above
+    return directory === location ? yield* resolveInitial(directory, sessionID) : undefined
+  })
 
 /** Carries a session's stored state to the directory it moved to, so the move does not reset its confinement. */
 export const move = Effect.fn("SandboxPolicy.move")(function* (sessionID: SessionID, from: string, to: string) {

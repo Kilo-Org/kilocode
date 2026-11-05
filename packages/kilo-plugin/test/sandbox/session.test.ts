@@ -108,6 +108,21 @@ test("carries confinement into another directory without a phantom parent record
   expect(await SandboxStore.read(root, child)).toBeUndefined()
 })
 
+test("a nested subagent inherits a sandboxed ancestor when its parent has no state yet", async () => {
+  const directory = await tempdir()
+  // The config default is off: only the root session was sandboxed, by a toggle that left no directory preference.
+  const value = harness({ directory })
+  const root = addSession(value, session("ses_nested_root", directory))
+  const child = addSession(value, session("ses_nested_child", directory, { parentID: root.id }))
+  const grandchild = addSession(value, session("ses_nested_grandchild", directory, { parentID: child.id }))
+  const confined = { enabled: true, mode: "deny" as const, allowedHosts: [], writablePaths: [], version: 1 }
+  await SandboxStore.write(directory, root.id, confined)
+
+  await run(value, SandboxPolicy.status(grandchild.id))
+
+  expect(await SandboxStore.read(directory, grandchild.id)).toEqual({ ...confined, version: 0 })
+})
+
 test("inherits a fallback when the parent has no stored snapshot", async () => {
   const directory = await tempdir()
   const value = harness({ directory })
