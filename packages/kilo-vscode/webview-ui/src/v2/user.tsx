@@ -1,5 +1,5 @@
 import type { SessionMessageUser } from "@opencode/client"
-import { UserMessageDisplay } from "@kilocode/kilo-ui/message-part"
+import { UserMessageDisplay, type UserMessagePending } from "@kilocode/kilo-ui/message-part"
 import { createMemo, Show } from "solid-js"
 import { partFeedback } from "../../../src/shared/browser-feedback"
 import type { ToHost } from "../../../src/protocol"
@@ -8,7 +8,12 @@ import { useLanguage } from "../context/language"
 import { useVSCode } from "../context/vscode"
 import { BrowserReferences } from "./browser-references"
 
-export function UserMessage(props: { message: SessionMessageUser; rowKey?: string; onFork?: () => void }) {
+export function UserMessage(props: {
+  message: SessionMessageUser
+  rowKey?: string
+  onFork?: () => void
+  pending?: UserMessagePending
+}) {
   const language = useLanguage()
   const vscode = useVSCode()
   // The host opens decodable data URLs in a VS Code editor tab; any other image keeps the in-page preview.
@@ -26,7 +31,13 @@ export function UserMessage(props: { message: SessionMessageUser; rowKey?: strin
     return value?.browserFeedback ? { ...props.message, text: value.body } : props.message
   })
   return (
-    <div class="vscode-session-turn" data-row="user" data-message={props.message.id} data-row-key={props.rowKey}>
+    <div
+      class="vscode-session-turn"
+      data-row="user"
+      data-message={props.message.id}
+      data-row-key={props.rowKey}
+      data-pending={props.pending ? "" : undefined}
+    >
       <div class="vscode-session-turn-user">
         <UserMessageDisplay
           message={message()}
@@ -38,6 +49,7 @@ export function UserMessage(props: { message: SessionMessageUser; rowKey?: strin
             </Show>
           }
           onFork={props.onFork}
+          pending={props.pending}
           onOpenImage={openImage}
         />
       </div>

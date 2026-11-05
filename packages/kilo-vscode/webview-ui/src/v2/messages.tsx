@@ -4,7 +4,7 @@
 import type { SessionInboxUser } from "@opencode/client"
 import { createAutoScroll } from "@kilocode/kilo-ui/hooks"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
-import type { ToolActions } from "@kilocode/kilo-ui/message-part"
+import type { ToolActions, UserMessagePending } from "@kilocode/kilo-ui/message-part"
 import { Spinner } from "@kilocode/kilo-ui/spinner"
 import { type Component, createEffect, createMemo, createSignal, For, on, onCleanup, Show, type JSX } from "solid-js"
 import { Virtualizer, type VirtualizerHandle } from "virtua/solid"
@@ -82,6 +82,8 @@ export function MessageList(props: {
   onScrollToBottomReady?: (handler: (() => void) | undefined) => void
   /** Opens the files changed by one turn. */
   onViewTurnChanges?: (sessionID: string, turnID: string) => void
+  /** The delivery state and controls of a user message the server has not handed to the model yet. */
+  pending?: (messageID: string) => UserMessagePending | undefined
 }) {
   const v2 = useV2()
   const language = useLanguage()
@@ -423,6 +425,7 @@ export function MessageList(props: {
           highlight={() => highlight()}
           onViewTurnChanges={props.onViewTurnChanges}
           onForkMessage={props.onForkMessage}
+          pending={props.pending}
         />
       ) as HTMLElement
     })
@@ -536,7 +539,8 @@ export function MessageList(props: {
                   {(row) => (
                     <div class="message-list-queued" data-queued="true" data-row-key={row.key}>
                       <UserMessage
-                        message={{ id: row.item.id, type: "user", text: row.item.payload.text, time: row.item.time }}
+                        message={{ ...row.item.payload, id: row.item.id, type: "user", time: row.item.time }}
+                        pending={props.pending?.(row.item.id)}
                       />
                     </div>
                   )}
