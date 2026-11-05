@@ -129,13 +129,15 @@ export const Plugin = define({
     // kilo_port(sandbox:41a5c4f8070a) Every tool call runs under its session's sandbox state.
     yield* ctx.tool
       .transform((editor) => {
+        delegated.clear()
         for (const item of editor.list()) {
           if (delegating.has(item.id)) continue
           editor.update(item.id, (tool) => {
             const execute = tool.execute
             const id = item.id
             // MCP tools carry their server's namespace; built-in tools do not.
-            const mcp = item.options?.namespace !== undefined && !isBuiltin(id)
+            const mcp = item.options?.namespace !== undefined && !isBuiltin(id) // kilo_port(sandbox:b534aff3ebec)
+            if (mcp) delegated.add(id)
             tool.execute = (input, context) => {
               const launches = new Set<string>()
               return SandboxPolicy.executeTool(context.sessionID, { id, mcp }, execute(input, context)).pipe(
@@ -198,6 +200,17 @@ export const Plugin = define({
       }),
     )
 
+    // kilo_port(sandbox:4918d15ae745) A network-restricted session does not offer MCP tools, MCP resources or Code
+    // Mode (which calls MCP tools) to the model; a call would fail closed anyway.
+    yield* ctx.session.hook("context", (event) =>
+      Effect.gen(function* () {
+        const status = yield* SandboxPolicy.status(event.sessionID).pipe(provide, Effect.orElseSucceed(() => undefined))
+        if (!status?.network) return
+        for (const id of Object.keys(event.tools))
+          if (delegated.has(id) || hidden.has(id)) delete event.tools[id]
+      }),
+    )
+
     // Sandbox escalation always asks a person; saved or wildcard rules do not approve host access.
     // Code Mode `fetch` asks the webfetch permission and fetches directly, so a restricted session denies it here.
     yield* ctx.permission.hook("evaluate", (event) =>
@@ -228,6 +241,9 @@ export const Plugin = define({
 })
 
 const wrapped = new Set<string>()
+/** MCP tools: delegated authority that needs unrestricted network. */
+const delegated = new Set<string>()
+const hidden = new Set(["list_mcp_resources", "read_mcp_resource", "execute"])
 
 function describe(error: unknown) {
   if (typeof error === "object" && error !== null && "description" in error && typeof error.description === "string")
