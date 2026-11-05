@@ -151,7 +151,7 @@ export class KiloConnectionService {
   constructor(
     context: vscode.ExtensionContext,
     env?: () => Promise<Record<string, string>>,
-    private readonly prepare?: (directory: string) => Promise<void>,
+    private readonly prepare?: (directory: string, signal?: AbortSignal) => Promise<void>,
   ) {
     const state =
       context.workspaceState ??
@@ -205,8 +205,11 @@ export class KiloConnectionService {
     return this.client
   }
 
-  async prepareTools(directory: string): Promise<void> {
-    await this.prepare?.(directory)
+  async prepareTools(directory: string, signal?: AbortSignal): Promise<void> {
+    if (signal?.aborted) {
+      throw signal.reason instanceof Error ? signal.reason : new DOMException("The operation was aborted", "AbortError")
+    }
+    await this.prepare?.(directory, signal)
   }
 
   /**
