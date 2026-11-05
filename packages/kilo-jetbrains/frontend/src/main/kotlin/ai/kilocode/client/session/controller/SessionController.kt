@@ -319,11 +319,12 @@ class SessionController(
         files: List<PromptPartDto> = emptyList(),
         editorContext: EditorContextDto? = null,
         select: PromptSelection? = null,
+        injectedTitle: String? = null,
     ) {
         assertEdt()
         val start = sid ?: ref?.key ?: "pending"
         val exists = sid != null
-        val dto = promptDto(text, files, editorContext, select)
+        val dto = promptDto(text, files, editorContext, select, injectedTitle)
         val props = promptProps(files)
         LOG.debug { "${ChatLogSummary.sid(start)} ${ChatLogSummary.prompt(dto)} ${ChatLogSummary.dir(directory)}" }
         dispatch(Dispatch("prompt", "user", text, props, start, exists)) { id ->
@@ -2615,6 +2616,7 @@ class SessionController(
         files: List<PromptPartDto> = emptyList(),
         editorContext: EditorContextDto? = null,
         select: PromptSelection? = null,
+        injectedTitle: String? = null,
     ): PromptDto {
         val sel = model.model?.let(::parseModel)
         val provider = select?.provider ?: sel?.first
@@ -2624,7 +2626,9 @@ class SessionController(
         // be validated against model.variants yet; only the fallback is filtered.
         val variant = select?.variant ?: model.variant?.takeIf { it in model.variants }
         val parts = buildList {
-            text.takeIf { it.isNotBlank() }?.let { add(PromptPartDto(type = "text", text = it)) }
+            text.takeIf { it.isNotBlank() }?.let {
+                add(PromptPartDto(type = "text", text = it, injectedTitle = injectedTitle))
+            }
             addAll(files)
         }
         return PromptDto(

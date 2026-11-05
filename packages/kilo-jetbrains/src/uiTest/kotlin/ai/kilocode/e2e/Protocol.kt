@@ -112,8 +112,27 @@ data class FixtureDescriptor(
     val fakeLlmScope: String = "",
     val origins: Origins,
     val credentials: Credentials,
+    val project: FixtureProject,
+    val resources: FixtureResources,
     val cleanup: Cleanup,
     val state: State,
+)
+
+@Serializable
+data class FixtureProject(
+    val fixture: String,
+    val gitUrl: String,
+    val branch: String,
+    val model: String,
+    val seed: String,
+)
+
+@Serializable
+data class FixtureResources(
+    val profileId: String? = null,
+    val workspaceId: String? = null,
+    val cloudSessionId: String? = null,
+    val nativeSessionId: String? = null,
 )
 
 @Serializable
