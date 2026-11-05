@@ -79,44 +79,56 @@ function search(
 
     const roots = yield* rootDirectories(runtime)
     const sessions = yield* runtime.list(runtime.project.id).pipe(Effect.orDie)
-    const current = sessions.find((session) => session.id === context.sessionID)
+    const scoped = sessions.filter((session) => inside(roots, session.location.directory))
+    const current = scoped.find((session) => session.id === context.sessionID)
+    let skipped = 0
     const currentMessages = current
-      ? yield* runtime.searchMessages(current.id).pipe(Effect.orDie)
+      ? yield* runtime.searchMessages(current.id).pipe(
+          Effect.catch(() => {
+            skipped++
+            return Effect.succeed([] as ReadonlyArray<SessionMessage.MediaInfo>)
+          }),
+        )
       : ([] as ReadonlyArray<SessionMessage.MediaInfo>)
     const boundary = current ? RecallSearch.active(currentMessages, context.messageID) : context.messageID
 
-    const scoped = yield* Effect.forEach(
-      sessions,
-      (session) =>
-        Effect.gen(function* () {
-          if (!inside(roots, session.location.directory)) return undefined
-          const messages =
-            session.id === context.sessionID
-              ? currentMessages
-              : yield* runtime.searchMessages(session.id).pipe(Effect.orDie)
-          return RecallSearch.toSearchSession(session, messages)
-        }),
-      { concurrency: 8 },
-    ).pipe(Effect.map((items) => items.filter((item) => item !== undefined)))
-
-    const found = yield* Effect.try({
-      try: () =>
-        RecallSearch.search({
+    const accumulator = yield* Effect.try({
+      try: () => {
+        const accumulator = RecallSearch.create({
           query,
-          sessions: scoped,
           limit: params.limit,
           excludeSessionID: context.sessionID,
           excludeFromMessageID: boundary,
-        }),
+        })
+        if (current) accumulator.add(RecallSearch.toSearchSession(current, currentMessages))
+        return accumulator
+      },
       catch: (error) => new Tool.Error({ message: messageOf(error) }),
     })
 
-    const coverage = `Searched ${found.sessions} sessions and evaluated ${found.candidates} transcript candidates.`
-    const safeQuery = RecallSearch.inert(query)
+    yield* Effect.forEach(
+      scoped.filter((session) => session.id !== context.sessionID),
+      (session) =>
+        Effect.gen(function* () {
+          const messages = yield* runtime.searchMessages(session.id).pipe(
+            Effect.catch(() => {
+              skipped++
+              return Effect.succeed(undefined)
+            }),
+          )
+          if (messages) accumulator.add(RecallSearch.toSearchSession(session, messages))
+        }),
+      { concurrency: 8 },
+    )
+
+    const found = accumulator.finish()
+    const coverage = `Searched ${found.sessions} sessions and evaluated ${found.candidates} transcript candidates.${
+      skipped ? ` Skipped ${skipped} sessions whose history could not be decoded.` : ""
+    }`
     if (found.results.length === 0) {
       return {
-        output: RecallSearch.inert(`Search: "${safeQuery}" (no results). No sessions found matching "${query}". ${coverage}`),
-        metadata: { searchedSessions: found.sessions, candidateParts: found.candidates },
+        output: RecallSearch.inert(`Search: "${query}" (no results). No sessions found matching "${query}". ${coverage}`),
+        metadata: { searchedSessions: found.sessions, candidateParts: found.candidates, skippedSessions: skipped },
       }
     }
 
@@ -126,7 +138,7 @@ function search(
     }
     for (const session of found.results) {
       lines.push(
-        `- **${RecallSearch.inert(session.title)}**`,
+        `- **${session.title}**`,
         `  ID: ${session.id} | Updated: ${new Date(session.updated).toISOString()} | Dir: ${session.directory}`,
       )
       if (session.missing?.length) lines.push(`  Partial match, missing: ${session.missing.join(", ")}`)
@@ -137,9 +149,9 @@ function search(
 
     return {
       output: RecallSearch.inert(
-        `Search: "${safeQuery}" (${found.results.length}${found.partial ? " partial" : ""} results)\n${lines.join("\n")}`,
+        `Search: "${query}" (${found.results.length}${found.partial ? " partial" : ""} results)\n${lines.join("\n")}`,
       ),
-      metadata: { searchedSessions: found.sessions, candidateParts: found.candidates },
+      metadata: { searchedSessions: found.sessions, candidateParts: found.candidates, skippedSessions: skipped },
     }
   })
 }
@@ -182,7 +194,11 @@ function read(
       })
     }
 
-    const messages = yield* runtime.messages(session.id).pipe(Effect.orDie)
+    const messages = yield* runtime.messages(session.id).pipe(
+      Effect.catch(() =>
+        fail(`Session "${RecallSearch.inert(session.id)}" history could not be decoded and cannot be read.`),
+      ),
+    )
     const boundary =
       session.id === context.sessionID ? RecallSearch.active(messages, context.messageID) : undefined
     const visible = boundary ? RecallSearch.visible(messages, boundary) : messages

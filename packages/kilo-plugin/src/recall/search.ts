@@ -93,6 +93,116 @@ export namespace RecallSearch {
     phrase: boolean
   }
 
+  export type Accumulator = {
+    add: (session: Session) => void
+    finish: () => Output
+  }
+
+  /**
+   * Build the ranking state for one query. Callers add sessions as they load, so a search never holds the
+   * whole project history in memory at once.
+   */
+  export function create(input: {
+    query: string
+    limit?: number
+    signal?: AbortSignal
+    excludeSessionID?: string
+    excludeFromMessageID?: string
+  }): Accumulator {
+    const parsed = parse(input.query)
+    const full = (1 << parsed.terms.length) - 1
+    const limit = input.limit ?? 20
+    if (!Number.isInteger(limit) || limit < 1 || limit > 50) {
+      throw new Error("Search result limits must be integers from 1 to 50")
+    }
+    const items = new Map<string, Item>()
+    let candidates = 0
+
+    return {
+      add(session) {
+        abort(input.signal)
+        const title = session.id === input.excludeSessionID ? "" : fold(session.title)
+        const titleMask = mask(title, parsed.terms)
+        const fuzzy = titleMask === full ? 0 : approximate(title, parsed.terms, titleMask)
+        const item: Item = {
+          id: session.id,
+          title: session.title,
+          directory: session.directory,
+          updated: session.updated,
+          matches: [],
+          phrase: title.includes(parsed.phrase) ? 5 : 0,
+          titleMask,
+          sourceMask: { user: 0, assistant: 0, reference: 0, error: 0 },
+          mask: titleMask | fuzzy,
+          word: words(title, parsed.terms, titleMask),
+          fuzzy,
+          candidates: Array.from({ length: parsed.terms.length }),
+        }
+        items.set(session.id, item)
+        const excluded =
+          session.id === input.excludeSessionID
+            ? (messageID: string) => messageID >= (input.excludeFromMessageID ?? "")
+            : () => false
+
+        for (const message of session.messages) {
+          if (message.role === "other" || excluded(message.id)) continue
+          for (const part of message.parts) {
+            if (!part.text) continue
+            const normalized = fold(part.text)
+            const matched = mask(normalized, parsed.terms)
+            if (matched === 0 && ASCII.test(part.text)) continue
+            candidates++
+            if (matched === 0) continue
+            const hit: Hit = {
+              partID: part.id,
+              kind: part.kind,
+              text: part.text,
+              role: message.role,
+              mask: matched,
+              word: words(normalized, parsed.terms, matched),
+              phrase: normalized.includes(parsed.phrase),
+            }
+            if (hit.kind === "text") {
+              if (hit.role !== "user" && hit.role !== "assistant") continue
+              consume(item, hit, hit.role, parsed)
+              continue
+            }
+            consume(item, hit, hit.kind === "file" ? "reference" : "error", parsed)
+          }
+        }
+      },
+      finish() {
+        if (items.size === 0) return { results: [], sessions: 0, candidates: 0, partial: false }
+        const best = rank(items.values(), full, limit, (item) => item.mask === full)
+        // Fall back to the sessions covering the most terms when no session contains every term.
+        const partial =
+          best.length === 0 && parsed.terms.length > 1
+            ? rank(items.values(), full, limit, (item) => bits(item.mask) * 2 >= parsed.terms.length)
+            : []
+        for (const item of partial) {
+          item.missing = parsed.terms.filter((_, index) => (item.mask & (1 << index)) === 0)
+        }
+        return {
+          results: (partial.length ? partial : best).map(
+            ({
+              phrase: _phrase,
+              titleMask: _title,
+              sourceMask: _source,
+              mask: _mask,
+              word: _word,
+              fuzzy: _fuzzy,
+              candidates: _candidates,
+              ...item
+            }) => item,
+          ),
+          sessions: items.size,
+          candidates,
+          partial: partial.length > 0,
+        }
+      },
+    }
+  }
+
   export function search(input: {
     query: string
     sessions: ReadonlyArray<Session>
@@ -101,104 +211,9 @@ export namespace RecallSearch {
     excludeSessionID?: string
     excludeFromMessageID?: string
   }): Output {
-    const parsed = parse(input.query)
-    const full = (1 << parsed.terms.length) - 1
-    const limit = input.limit ?? 20
-    if (!Number.isInteger(limit) || limit < 1 || limit > 50) {
-      throw new Error("Search result limits must be integers from 1 to 50")
-    }
-
-    const empty: Output = { results: [], sessions: 0, candidates: 0, partial: false }
-    if (input.sessions.length === 0) return empty
-
-    const items = new Map<string, Item>()
-    for (const session of input.sessions) {
-      abort(input.signal)
-      const title = session.id === input.excludeSessionID ? "" : fold(session.title)
-      const titleMask = mask(title, parsed.terms)
-      const fuzzy = titleMask === full ? 0 : approximate(title, parsed.terms, titleMask)
-      items.set(session.id, {
-        id: session.id,
-        title: session.title,
-        directory: session.directory,
-        updated: session.updated,
-        matches: [],
-        phrase: title.includes(parsed.phrase) ? 5 : 0,
-        titleMask,
-        sourceMask: { user: 0, assistant: 0, reference: 0, error: 0 },
-        mask: titleMask | fuzzy,
-        word: words(title, parsed.terms, titleMask),
-        fuzzy,
-        candidates: Array.from({ length: parsed.terms.length }),
-      })
-    }
-    if (items.size === 0) return empty
-
-    let candidates = 0
-    for (const session of input.sessions) {
-      abort(input.signal)
-      const item = items.get(session.id)
-      if (!item) continue
-      const excluded =
-        session.id === input.excludeSessionID
-          ? (messageID: string) => messageID >= (input.excludeFromMessageID ?? "")
-          : () => false
-
-      for (const message of session.messages) {
-        if (message.role === "other" || excluded(message.id)) continue
-        for (const part of message.parts) {
-          if (!part.text) continue
-          const normalized = fold(part.text)
-          const matched = mask(normalized, parsed.terms)
-          if (matched === 0 && ASCII.test(part.text)) continue
-          candidates++
-          if (matched === 0) continue
-          const hit: Hit = {
-            partID: part.id,
-            kind: part.kind,
-            text: part.text,
-            role: message.role,
-            mask: matched,
-            word: words(normalized, parsed.terms, matched),
-            phrase: normalized.includes(parsed.phrase),
-          }
-          if (hit.kind === "text") {
-            if (hit.role !== "user" && hit.role !== "assistant") continue
-            consume(item, hit, hit.role, parsed)
-            continue
-          }
-          consume(item, hit, hit.kind === "file" ? "reference" : "error", parsed)
-        }
-      }
-    }
-
-    const best = rank(items.values(), full, limit, (item) => item.mask === full)
-    // Fall back to the sessions covering the most terms when no session contains every term.
-    const partial =
-      best.length === 0 && parsed.terms.length > 1
-        ? rank(items.values(), full, limit, (item) => bits(item.mask) * 2 >= parsed.terms.length)
-        : []
-    for (const item of partial) {
-      item.missing = parsed.terms.filter((_, index) => (item.mask & (1 << index)) === 0)
-    }
-
-    return {
-      results: (partial.length ? partial : best).map(
-        ({
-          phrase: _phrase,
-          titleMask: _title,
-          sourceMask: _source,
-          mask: _mask,
-          word: _word,
-          fuzzy: _fuzzy,
-          candidates: _candidates,
-          ...item
-        }) => item,
-      ),
-      sessions: items.size,
-      candidates,
-      partial: partial.length > 0,
-    }
+    const accumulator = create(input)
+    for (const session of input.sessions) accumulator.add(session)
+    return accumulator.finish()
   }
 
   /** Escape historical text so it cannot act as markup in the tool result. */

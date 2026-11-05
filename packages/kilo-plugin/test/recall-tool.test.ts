@@ -82,19 +82,26 @@ function runtime(input: {
   messages: Record<string, ReadonlyArray<SessionMessage.MediaInfo>>
   worktrees?: ReadonlyArray<string>
   project?: { id: Project.ID; directory: string; canonical: string }
+  failSearch?: ReadonlyArray<string>
+  failRead?: ReadonlyArray<string>
 }) {
   const calls: AssertInput[] = []
   const value: Runtime = {
     project: input.project ?? { id: Project.ID.global, directory, canonical: directory },
     list: () => Effect.succeed(input.sessions),
     get: (sessionID) => Effect.succeed(input.sessions.find((session) => session.id === sessionID)),
-    messages: (sessionID) => Effect.succeed(input.messages[sessionID] ?? []),
+    messages: (sessionID) =>
+      input.failRead?.includes(sessionID)
+        ? Effect.fail(new Error("decode failed"))
+        : Effect.succeed(input.messages[sessionID] ?? []),
     searchMessages: (sessionID) =>
-      Effect.succeed(
-        (input.messages[sessionID] ?? []).filter(
-          (message) => message.type === "user" || message.type === "assistant",
-        ),
-      ),
+      input.failSearch?.includes(sessionID)
+        ? Effect.fail(new Error("decode failed"))
+        : Effect.succeed(
+            (input.messages[sessionID] ?? []).filter(
+              (message) => message.type === "user" || message.type === "assistant",
+            ),
+          ),
     worktrees: () => Effect.succeed(input.worktrees ?? []),
     permission: {
       assert: (request) => {
@@ -329,6 +336,57 @@ describe("kilo_local_recall tool", () => {
 
     expect(calls[0]).toMatchObject({ action: "recall", resources: ["search"], save: ["search"] })
     expect(calls[1]).toMatchObject({ action: "recall", resources: ["/project"], save: ["/project"] })
+  })
+
+  test("escapes the query and title once, not twice", async () => {
+    const special = info("ses_special", "A & B <tag>")
+    const { runtime: value } = runtime({
+      sessions: [special],
+      messages: { [special.id]: [user("msg_special", "A & B <tag> needle")] },
+    })
+
+    const result = await execute(makeTool(value), { mode: "search", query: "A & B <tag>" })
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    expect(result.value.output!).toContain("A &amp; B &lt;tag&gt;")
+    expect(result.value.output!).not.toContain("&amp;amp;")
+    expect(result.value.output!).not.toContain("&amp;lt;")
+
+    const missing = await execute(makeTool(value), { mode: "search", query: "Z & Q <missing>" })
+    expect(missing.ok).toBe(true)
+    if (!missing.ok) return
+    expect(missing.value.output!).toContain("No sessions found matching")
+    expect(missing.value.output!).not.toContain("&amp;amp;")
+  })
+
+  test("skips a session whose history cannot be decoded", async () => {
+    const good = info("ses_good", "good session")
+    const bad = info("ses_bad", "bad session")
+    const { runtime: value } = runtime({
+      sessions: [good, bad],
+      messages: { [good.id]: [user("msg_good", "decode-needle")], [bad.id]: [] },
+      failSearch: [bad.id],
+    })
+
+    const result = await execute(makeTool(value), { mode: "search", query: "decode-needle" })
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    expect(result.value.output!).toContain("good session")
+    expect(result.value.output!).toContain("Skipped 1 sessions whose history could not be decoded.")
+    expect(result.value.metadata).toMatchObject({ skippedSessions: 1 })
+  })
+
+  test("reports a decode failure when reading a session", async () => {
+    const bad = info("ses_bad", "bad session")
+    const { runtime: value } = runtime({
+      sessions: [bad],
+      messages: { [bad.id]: [] },
+      failRead: [bad.id],
+    })
+
+    const result = await execute(makeTool(value), { mode: "read", sessionID: bad.id })
+    expect(result.ok).toBe(false)
+    if (!result.ok) expect(result.error.message).toContain("history could not be decoded")
   })
 
   test("rejects an out-of-range result limit", async () => {

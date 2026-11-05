@@ -65,6 +65,16 @@ function seed(directory: string, worktree: string) {
         .pipe(Effect.orDie)
 
     yield* message("ses_root", "msg_root", "user", { text: "root-needle", time: { created: 1 } })
+    yield* message("ses_root", "msg_root_assistant", "assistant", {
+      agent: "code",
+      model: { id: "test", providerID: "test" },
+      content: [{ type: "text", text: "assistant-needle" }],
+      time: { created: 2, completed: 3 },
+    })
+    yield* message("ses_root", "msg_root_synthetic", "synthetic", {
+      text: "synthetic-hidden-needle",
+      time: { created: 4 },
+    })
     yield* message("ses_worktree", "msg_worktree", "user", {
       text: "<system-reminder>worktree-needle</system-reminder>",
       time: { created: 2 },
@@ -165,6 +175,14 @@ describe("recall plugin on the v2 session store", () => {
         const root = yield* Effect.promise(() => run(tool, { mode: "search", query: "root-needle" }))
         expect(root.ok).toBe(true)
         if (root.ok) expect(root.value.output).toContain("root session")
+
+        const assistant = yield* Effect.promise(() => run(tool, { mode: "search", query: "assistant-needle" }))
+        expect(assistant.ok).toBe(true)
+        if (assistant.ok) expect(assistant.value.output).toContain("assistant (msg_root_assistant:0)")
+
+        const synthetic = yield* Effect.promise(() => run(tool, { mode: "search", query: "synthetic-hidden-needle" }))
+        expect(synthetic.ok).toBe(true)
+        if (synthetic.ok) expect(synthetic.value.output).toContain("no results")
 
         const sibling = yield* Effect.promise(() => run(tool, { mode: "search", query: "worktree-needle" }))
         expect(sibling.ok).toBe(true)
