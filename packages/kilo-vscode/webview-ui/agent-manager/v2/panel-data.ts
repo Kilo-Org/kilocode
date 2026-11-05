@@ -37,7 +37,7 @@ export function createPanelData(input: { post: (message: ToHost) => void; api?: 
   const commands = new Set<(name: string) => void>()
   const route = (event: OpenCodeEvent) => targets(event, stores.keys()).forEach((item) => stores.get(item)?.emit(event))
   const connection = createClientConnection(api, { onEvent: route, pageLifecycle: true })
-  const open = (url: string) => input.post({ type: "open", url } as never)
+  const open = (url: string, external?: boolean) => input.post({ type: "open", url, external })
   const onCommand = (handler: (name: string) => void) => {
     commands.add(handler)
     onCleanup(() => commands.delete(handler))
