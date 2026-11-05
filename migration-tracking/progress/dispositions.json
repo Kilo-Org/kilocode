@@ -1294,5 +1294,27 @@
     "v2": "packages/kilo-vscode/test/agent-project-messages.test.ts",
     "note": "The state router is carried by packages/kilo-vscode/webview-ui/agent-manager/project/{state,state-handlers,store}.ts and the host project messages. packages/kilo-vscode/test/agent-project-messages.test.ts covers deferred state, activation and the no-catalog mode.",
     "by": "am-progress-map"
-  }
+  },
+  "module:packages/core/src/kilocode/session/recall-message-index.ts": {
+      "state": "dropped",
+      "note": "The v1 message FTS index and its triggers existed to make SQL recall search fast. v2 recall ranks in memory over SessionStore.messagesWithRefs in packages/kilo-plugin/src/recall/search.ts and creates no store objects, so the index has no v2 counterpart.",
+      "by": "transcript-recall"
+    },
+    "module:packages/core/src/kilocode/session/recall-part-index.ts": {
+      "state": "dropped",
+      "note": "The v1 part FTS index and its triggers existed only for SQL recall search. The v2 recall plugin reads decoded session messages through SessionStore and ranks them in memory, so no part index is built or maintained.",
+      "by": "transcript-recall"
+    },
+    "module:packages/opencode/src/kilocode/session/recall-search.ts": {
+      "state": "ported",
+      "v2": "packages/kilo-plugin/src/recall/search.ts",
+      "note": "RecallSearch query parsing, folding, whole-word ranking, title typo tolerance, partial fallback, snippets and inert escaping are ported unchanged in behavior. The storage boundary is rewritten natively: v2 loads SessionStore messagesWithRefs and filters the project worktree family instead of querying v1 tables.",
+      "by": "transcript-recall"
+    },
+    "module:packages/opencode/test/kilocode/recall-search.test.ts": {
+      "state": "ported",
+      "v2": "packages/kilo-plugin/test/recall-search.test.ts",
+      "note": "The ranking, typo, partial-match, active-turn, reference/error and cancellation assertions are ported to in-memory SearchSession fixtures. Index maintenance, SQL candidate counting and store-specific paging tests do not apply because v2 does not create recall indexes.",
+      "by": "transcript-recall"
+    }
 }
