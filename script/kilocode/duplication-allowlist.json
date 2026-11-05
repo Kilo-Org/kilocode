@@ -144,15 +144,6 @@
       "reason": "Two independent RPC plugins keep the title-agent, primary and small model fallback policy visible in each option scope. Extract when a third caller needs the same policy."
     },
     {
-      "files": ["packages/kilo-vscode/webview-ui/agent-manager/DiffPanel.tsx", "packages/kilo-vscode/webview-ui/diff-viewer/FullScreenDiffView.tsx"],
-      "fingerprint": "9de31f014b4dcb04",
-      "maxMatches": 1,
-      "maxTokens": 143,
-      "kind": "intentional",
-      "owner": "agent-manager",
-      "reason": "The same file entry renders inside the panel and the full-screen diff with different containers and scroll models. A shared component would couple the panel to the diff viewer internals."
-    },
-    {
       "files": ["packages/kilo-vscode/webview-ui/agent-manager/pr/PRComments.tsx", "packages/kilo-vscode/webview-ui/agent-manager/pr/PRConversation.tsx"],
       "fingerprint": "e0308b3819e11865",
       "maxMatches": 1,
