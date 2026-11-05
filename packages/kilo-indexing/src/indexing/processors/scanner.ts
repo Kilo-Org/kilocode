@@ -1,4 +1,4 @@
-import { stat, readFile } from "fs/promises"
+import { realpath, stat, readFile } from "fs/promises"
 import path from "path"
 import { glob } from "glob"
 import {
@@ -7,6 +7,7 @@ import {
   generateRelativeIgnorePath,
 } from "../shared/get-relative-path"
 import { scannerExtensions } from "../shared/supported-extensions"
+import { withinWorkspace } from "../shared/within-workspace"
 import type { CodeBlock, ICodeParser, IEmbedder, IVectorStore, IDirectoryScanner } from "../interfaces"
 import { createHash } from "crypto"
 import { v5 as uuidv5 } from "uuid"
@@ -143,6 +144,7 @@ export class DirectoryScanner implements IDirectoryScanner {
     this._cancelled = false
 
     const directoryPath = directory
+    const workspaceRoot = await realpath(directoryPath).catch(() => path.resolve(directoryPath))
     // Use the directory path directly as the workspace root
     const scanWorkspace = directoryPath
     log.info("starting directory scan", { workspacePath: scanWorkspace })
@@ -153,7 +155,11 @@ export class DirectoryScanner implements IDirectoryScanner {
       absolute: true,
       nodir: true,
       dot: false,
-      ignore: FileIgnore.PATTERNS,
+      ignore: FileIgnore.globs(),
+      // Keep ignore matching case-sensitive on every platform. FileIgnore.match()
+      // compares path segments exactly, so the macOS/Windows nocase default would
+      // prune valid sources (e.g. src/Build/Main.ts) that match() keeps.
+      nocase: false,
       maxDepth: Infinity,
     })
 
@@ -257,6 +263,11 @@ export class DirectoryScanner implements IDirectoryScanner {
         }
 
         try {
+          // A symlink may point outside the workspace; do not read, embed or return its target.
+          if (!(await withinWorkspace(directoryPath, filePath, workspaceRoot))) {
+            skippedCount++
+            return
+          }
           // Check file size
           const stats = await stat(filePath)
           if (this._cancelled) {

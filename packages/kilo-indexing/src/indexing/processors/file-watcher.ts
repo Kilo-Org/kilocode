@@ -34,6 +34,7 @@ import {
   generateRelativeIgnorePath,
 } from "../shared/get-relative-path"
 import { FileIgnore } from "../../file/ignore"
+import { withinWorkspace } from "../shared/within-workspace"
 import { Log } from "../../util/log"
 import type { WorktreeOverlay } from "../worktree-overlay"
 import { sanitizeErrorMessage } from "../shared/validation-helpers"
@@ -89,7 +90,7 @@ function loadParcelWatcher(): typeof import("@parcel/watcher") | undefined {
 // Per-repo .gitignore/.kilocodeignore dirs are unioned in initialize() from the
 // ignore matcher; correctness for indexed files stays in shouldIndex().
 function watcherIgnoreGlobs(): string[] {
-  return FileIgnore.PATTERNS.map((pattern) => (pattern.includes("/") ? pattern : `**/${pattern}`))
+  return FileIgnore.globs()
 }
 
 function withSubscribeTimeout(
@@ -850,6 +851,15 @@ export class FileWatcher implements IFileWatcher {
           path: filePath,
           status: "skipped" as const,
           reason: "File extension is not configured for indexing",
+        }
+      }
+
+      // A symlink may point outside the workspace; do not read, embed or return its target.
+      if (!(await withinWorkspace(this.workspacePath, filePath))) {
+        return {
+          path: filePath,
+          status: "skipped" as const,
+          reason: "File path is outside workspace",
         }
       }
 

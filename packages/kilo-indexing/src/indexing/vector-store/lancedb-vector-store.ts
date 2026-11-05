@@ -3,21 +3,35 @@ import * as path from "path"
 import type { Connection, Table, VectorQuery } from "@lancedb/lancedb"
 import type { IVectorStore } from "../interfaces/vector-store"
 import type { Payload, VectorStoreSearchResult } from "../interfaces"
-import { DEFAULT_MAX_SEARCH_RESULTS, DEFAULT_SEARCH_MIN_SCORE } from "../constants"
+import {
+  DEFAULT_MAX_SEARCH_RESULTS,
+  DEFAULT_SEARCH_MIN_SCORE,
+  LANCEDB_CLEANUP_RETENTION_MS,
+  LANCEDB_COMPACT_EVERY_WRITES,
+} from "../constants"
 import fs from "fs"
 import { Log } from "../../util/log"
 import type { EmbeddingProfile } from "../embedding-profile"
 import { loadLanceDB } from "./lancedb-loader"
 
 const log = Log.create({ service: "lancedb-store" })
-let nativeQueue = Promise.resolve()
 
-function native<T>(run: () => Promise<T>): Promise<T> {
-  const task = nativeQueue.then(run)
-  nativeQueue = task.then(
+// Serializes native LanceDB work per database directory. Queues are keyed by
+// dbPath so concurrent workspaces index in parallel, while operations on the
+// same database (upserts, deletes, compactions, connects) stay serialized.
+const nativeQueues = new Map<string, Promise<void>>()
+
+function native<T>(key: string, run: () => Promise<T>): Promise<T> {
+  const task = (nativeQueues.get(key) ?? Promise.resolve()).then(run)
+  const tail = task.then(
     () => undefined,
     () => undefined,
   )
+  nativeQueues.set(key, tail)
+  // Drop the entry once it settles so workspaces touched long ago do not leak.
+  void tail.finally(() => {
+    if (nativeQueues.get(key) === tail) nativeQueues.delete(key)
+  })
   return task
 }
 
@@ -44,6 +58,10 @@ export class LanceDBVectorStore implements IVectorStore {
   private readonly vectorTableName = "vector"
   private readonly metadataTableName = "metadata"
   private lancedbModule: any = null
+  private _writesSinceCompact = 0
+  private compacting = false
+  private compactQueued = false
+  private pending: Promise<void> = Promise.resolve()
 
   constructor(workspacePath: string, vectorSize: number, dbDirectory: string, profile?: EmbeddingProfile) {
     this.vectorSize = vectorSize
@@ -88,7 +106,7 @@ export class LanceDBVectorStore implements IVectorStore {
   private async getDb(): Promise<Connection> {
     if (this.db) return this.db
 
-    return native(async () => {
+    return native(this.dbPath, async () => {
       if (this.db) return this.db
       const lancedb = await this.loadLanceDBModule()
 
@@ -111,7 +129,7 @@ export class LanceDBVectorStore implements IVectorStore {
 
     try {
       // Try to open existing table
-      const table = await native(() => db.openTable(this.vectorTableName))
+      const table = await native(this.dbPath, () => db.openTable(this.vectorTableName))
       this.table = table
       return table
     } catch (error) {
@@ -176,7 +194,7 @@ export class LanceDBVectorStore implements IVectorStore {
    * @param db The LanceDB connection.
    */
   private async _createVectorTable(db: Connection): Promise<void> {
-    this.table = await native(() => db.createTable(this.vectorTableName, this._createSampleData()))
+    this.table = await native(this.dbPath, () => db.createTable(this.vectorTableName, this._createSampleData()))
     if (this.table) {
       await this.table.delete("id = 'sample'")
     }
@@ -187,7 +205,7 @@ export class LanceDBVectorStore implements IVectorStore {
    * @param db The LanceDB connection.
    */
   private async _createMetadataTable(db: Connection): Promise<void> {
-    await native(() => db.createTable(this.metadataTableName, this._createMetadataData()))
+    await native(this.dbPath, () => db.createTable(this.metadataTableName, this._createMetadataData()))
   }
 
   /**
@@ -228,7 +246,7 @@ export class LanceDBVectorStore implements IVectorStore {
     if (!this.isValidMetadataKey(key)) {
       throw new Error(`Invalid metadata key: ${key}`)
     }
-    const metadataTable = await native(() => db.openTable(this.metadataTableName))
+    const metadataTable = await native(this.dbPath, () => db.openTable(this.metadataTableName))
     const rows = await metadataTable.query().where(`key = '${key}'`).toArray()
     return rows.length > 0 ? rows[0].value : undefined
   }
@@ -273,7 +291,7 @@ export class LanceDBVectorStore implements IVectorStore {
     if (String(schema) !== SCHEMA) throw new Error("Baseline LanceDB index schema does not match the worktree")
     const complete = await this._getMetadataValue(db, KEY.complete)
     if (String(complete) !== "true") throw new Error("Baseline LanceDB index is not complete")
-    this.table = await native(() => db.openTable(this.vectorTableName))
+    this.table = await native(this.dbPath, () => db.openTable(this.vectorTableName))
   }
 
   async initialize(): Promise<boolean> {
@@ -299,7 +317,7 @@ export class LanceDBVectorStore implements IVectorStore {
         return true
       }
 
-      this.table = await native(() => db.openTable(this.vectorTableName))
+      this.table = await native(this.dbPath, () => db.openTable(this.vectorTableName))
 
       const storedVectorSize = metadataTableExists ? await this._getStoredVectorSize(db) : null
       const storedSchema = metadataTableExists ? await this._getMetadataValue(db, KEY.schema) : undefined
@@ -376,24 +394,29 @@ export class LanceDBVectorStore implements IVectorStore {
         endLine: point.payload.endLine,
       }))
 
-      // Delete existing points with same IDs first
-      const existingIds = lanceData.map((d) => d.id)
-      if (existingIds.length > 0) {
-        const bad = existingIds.find((id) => !this.isValidId(id))
-        if (bad) {
-          throw new Error(`Invalid point id format: ${bad}`)
+      // Serialize the delete+add commit against other stores' native work so
+      // concurrent batches cannot race each other or a compaction.
+      await native(this.dbPath, async () => {
+        // Delete existing points with same IDs first
+        const existingIds = lanceData.map((d) => d.id)
+        if (existingIds.length > 0) {
+          const bad = existingIds.find((id) => !this.isValidId(id))
+          if (bad) {
+            throw new Error(`Invalid point id format: ${bad}`)
+          }
+          const escapedIds = existingIds.map((id) => `'${this.escapeSqlString(id)}'`).join(", ")
+          const idFilter = `id IN (${escapedIds})`
+          await table.delete(idFilter)
         }
-        const escapedIds = existingIds.map((id) => `'${this.escapeSqlString(id)}'`).join(", ")
-        const idFilter = `id IN (${escapedIds})`
-        await table.delete(idFilter)
-      }
 
-      // Insert new data
-      await table.add(lanceData)
+        // Insert new data
+        await table.add(lanceData)
+      })
     } catch (error) {
       log.error("Failed to upsert points", { error })
       throw error
     }
+    this.noteWrites(2)
   }
 
   // Temporary till lancedb implements parameter support
@@ -491,11 +514,12 @@ export class LanceDBVectorStore implements IVectorStore {
       // Create filter condition for multiple file paths
       const escapedPaths = normalizedPaths.map((fp) => `'${this.escapeSqlString(fp)}'`).join(", ")
       const filterCondition = `\`filePath\` IN (${escapedPaths})`
-      await table.delete(filterCondition)
+      await native(this.dbPath, () => table.delete(filterCondition))
     } catch (error) {
       log.error("Failed to delete points by file paths", { error })
       throw error
     }
+    this.noteWrites(1)
   }
 
   async deleteCollection(): Promise<void> {
@@ -529,7 +553,7 @@ export class LanceDBVectorStore implements IVectorStore {
         const tableNames = await db.tableNames()
 
         if (tableNames.includes(this.metadataTableName)) {
-          const metadataTable = await native(() => db.openTable(this.metadataTableName))
+          const metadataTable = await native(this.dbPath, () => db.openTable(this.metadataTableName))
           await metadataTable.delete("true")
         }
       } catch (metadataError) {
@@ -559,6 +583,13 @@ export class LanceDBVectorStore implements IVectorStore {
   }
 
   private async closeConnect(): Promise<void> {
+    // Drain compaction work, including a compaction the previous finish queued
+    // in its `finally`: the snapshot above only awaits the compaction running
+    // at call time, so loop until no compaction is outstanding.
+    for (;;) {
+      await this.pending
+      if (!this.compacting && !this.compactQueued) break
+    }
     if (this.table) {
       this.table = null
     }
@@ -566,6 +597,34 @@ export class LanceDBVectorStore implements IVectorStore {
       await this.db.close()
       this.db = null
     }
+  }
+
+  /**
+   * Counts modification operations and schedules compaction once enough have
+   * accumulated, so a long scan does not produce unbounded fragments and version
+   * manifests. Compaction runs in the background and never overlaps itself, so it
+   * cannot block the write that triggered it.
+   */
+  private noteWrites(ops: number): void {
+    this._writesSinceCompact += ops
+    if (this._writesSinceCompact < LANCEDB_COMPACT_EVERY_WRITES) return
+    this._writesSinceCompact = 0
+    this.queueCompact()
+  }
+
+  private queueCompact(): void {
+    if (this.compacting) {
+      this.compactQueued = true
+      return
+    }
+    this.compacting = true
+    this.pending = this.optimizeTable().finally(() => {
+      this.compacting = false
+      if (this.compactQueued) {
+        this.compactQueued = false
+        this.queueCompact()
+      }
+    })
   }
 
   /**
@@ -577,10 +636,15 @@ export class LanceDBVectorStore implements IVectorStore {
     try {
       const table = await this.getTable()
 
-      await table.optimize({
-        cleanupOlderThan: new Date(),
-        deleteUnverified: false,
-      })
+      await native(this.dbPath, () =>
+        table.optimize({
+          // Keep recent versions so concurrent readers/writers never reference a
+          // manifest that was just pruned. A zero-length window (new Date()) makes
+          // every subsequent commit run an auto-cleanup that races other processes.
+          cleanupOlderThan: new Date(Date.now() - LANCEDB_CLEANUP_RETENTION_MS),
+          deleteUnverified: false,
+        }),
+      )
     } catch (error) {
       log.error("Failed to optimize table", { error })
     }
@@ -602,7 +666,7 @@ export class LanceDBVectorStore implements IVectorStore {
         })
         return false
       }
-      const metadataTable = await native(() => db.openTable(this.metadataTableName))
+      const metadataTable = await native(this.dbPath, () => db.openTable(this.metadataTableName))
       const metadataResults = await metadataTable.query().where(`key = '${KEY.complete}'`).toArray()
       const indexed = metadataResults.length > 0 ? String(metadataResults[0].value) === "true" : false
       log.info("LanceDB indexing metadata evaluated", {
@@ -642,7 +706,7 @@ export class LanceDBVectorStore implements IVectorStore {
   async markIndexingComplete(): Promise<void> {
     try {
       const db = await this.getDb()
-      const metadataTable = await native(() => db.openTable(this.metadataTableName))
+      const metadataTable = await native(this.dbPath, () => db.openTable(this.metadataTableName))
       await this._persistEmbeddingProfile(metadataTable)
       await this._upsertMetadata(metadataTable, KEY.complete, "true")
       log.info("Marked indexing as complete")
@@ -659,7 +723,7 @@ export class LanceDBVectorStore implements IVectorStore {
   async markIndexingIncomplete(): Promise<void> {
     try {
       const db = await this.getDb()
-      const metadataTable = await native(() => db.openTable(this.metadataTableName))
+      const metadataTable = await native(this.dbPath, () => db.openTable(this.metadataTableName))
       await this._persistEmbeddingProfile(metadataTable)
       await this._upsertMetadata(metadataTable, KEY.complete, "false")
       log.info("Marked indexing as incomplete (in progress)")

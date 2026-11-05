@@ -83,9 +83,7 @@ export class CodeIndexOllamaEmbedder implements IEmbedder {
           dimensions,
         }),
         signal: controller.signal,
-      })
-
-      clearTimeout(timeoutId)
+      }).finally(() => clearTimeout(timeoutId))
 
       if (!response.ok) {
         let errorBody = "Could not read error body"
@@ -151,8 +149,7 @@ export class CodeIndexOllamaEmbedder implements IEmbedder {
             "Content-Type": "application/json",
           },
           signal: controller.signal,
-        })
-        clearTimeout(timeoutId)
+        }).finally(() => clearTimeout(timeoutId))
 
         if (!modelsResponse.ok) {
           if (modelsResponse.status === 404) {
@@ -206,8 +203,7 @@ export class CodeIndexOllamaEmbedder implements IEmbedder {
             input: ["test"],
           }),
           signal: testController.signal,
-        })
-        clearTimeout(testTimeoutId)
+        }).finally(() => clearTimeout(testTimeoutId))
 
         if (!testResponse.ok) {
           return {
