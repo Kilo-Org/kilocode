@@ -35,6 +35,7 @@ import * as KiloReference from "@/kilocode/reference"
 import { ProviderV2 } from "@opencode-ai/core/provider"
 import { ModelV2 } from "@opencode-ai/core/model"
 import { LocationServiceMap, locationServiceMapLayer } from "@opencode-ai/core/location-services"
+import { PermissionRoot } from "@/kilocode/permission/root" // kilocode_change
 // kilocode_change
 
 export const Info = Schema.Struct({
@@ -199,7 +200,7 @@ const layer = Layer.effect(
                 edit: {
                   "*": "deny",
                   [path.join(".opencode", "plans", "*.md")]: "allow",
-                  [path.relative(ctx.worktree, path.join(Global.Path.data, path.join("plans", "*.md")))]: "allow",
+                  [PermissionRoot.relative(ctx, path.join(Global.Path.data, path.join("plans", "*.md")))]: "allow", // kilocode_change
                 },
               }),
               user,
@@ -325,7 +326,7 @@ const layer = Layer.effect(
         }
 
         // kilocode_change start - rename build→code, add debug/orchestrator/ask, patch plan/explore
-        KiloAgent.patchAgents(agents, defaults, user, kilo, ctx.worktree, whitelistedDirs)
+        KiloAgent.patchAgents(agents, defaults, user, kilo, PermissionRoot.of(ctx), whitelistedDirs)
 
         const agentConfigs = KiloAgent.preprocessConfig(cfg.agent ?? {})
         for (const [key, value] of Object.entries(agentConfigs)) {
@@ -362,7 +363,7 @@ const layer = Layer.effect(
           item.permission = Permission.merge(item.permission, Permission.fromConfig(value.permission ?? {}))
           // kilocode_change start
           KiloAgent.processConfigItem(item)
-          KiloAgent.hardenPlan(key, item, ctx.worktree, user, Permission.fromConfig(value.permission ?? {}))
+          KiloAgent.hardenPlan(key, item, PermissionRoot.of(ctx), user, Permission.fromConfig(value.permission ?? {}))
           KiloAgent.hardenExplore(key, item, user, Permission.fromConfig(value.permission ?? {}))
         }
 
