@@ -606,4 +606,45 @@ export const dict = {
   "agentManager.orphans.deleteButton": "{{count}} klasörü sil ({{size}})",
   "agentManager.orphans.cancel": "İptal",
   "agentManager.error.title": "Agent Manager hatası",
+  "agentManager.readiness.projects.title": '"{{name}}" içinden bir proje seçin',
+  "agentManager.readiness.projects.body":
+    '"{{name}}" bir Git projesi değil, ancak içinde {{count}} proje var. Çalışmak istediğinizi seçin.',
+  "agentManager.readiness.projects.bodyOne":
+    '"{{name}}" bir Git projesi değil, ancak içinde bir proje var. Orada çalışmak için onu seçin.',
+  "agentManager.readiness.projects.use": "{{name}} kullan",
+  "agentManager.readiness.projects.other": "Başka bir klasör seç",
+  "agentManager.readiness.plain.title": '"{{name}}" henüz Git için ayarlanmadı',
+  "agentManager.readiness.plain.body":
+    "Worktree’ler Git gerektirir. Kilo bu klasörde Git’i ayarlayabilir ve dosyalarınız olduğu gibi kalır.",
+  "agentManager.readiness.plain.action": "Git’i ayarla",
+  "agentManager.readiness.plain.other": "Farklı bir klasör seç",
+  "agentManager.readiness.identity.title": "Değişikliklerinizde hangi ad görünsün?",
+  "agentManager.readiness.identity.body":
+    "Git her değişikliği bir ad ve e-posta ile etiketler. Kilo bunları Git kullanıcınız için kaydeder.",
+  "agentManager.readiness.identity.name": "Ad",
+  "agentManager.readiness.identity.email": "E-posta",
+  "agentManager.readiness.identity.saveInit": "Kaydet ve Git’i ayarla",
+  "agentManager.readiness.identity.saveCommit": "Kaydet ve ilk commit’i oluştur",
+  "agentManager.readiness.restricted.title": "Projenizin bulunduğu klasörü seçin",
+  "agentManager.readiness.restricted.body":
+    "Bu sizin ana klasörünüz, bu yüzden Kilo burada Git ayarlamaz. Bunun yerine projenizin kendi klasörünü seçin.",
+  "agentManager.readiness.restricted.action": "Klasör seç",
+  "agentManager.readiness.commit.title": '"{{name}}" için ilk commit gerekiyor',
+  "agentManager.readiness.commit.body":
+    "Worktree’ler en son commit’inizden başlar ve bu projede henüz commit yok. Kilo sizin için boş bir commit oluşturabilir.",
+  "agentManager.readiness.commit.action": "İlk commit’i oluştur",
+  "agentManager.readiness.ready.initGit": "Git ayarlandı.",
+  "agentManager.readiness.ready.initGitNote":
+    "Mevcut dosyalarınız henüz Git’e kaydedilmedi, bu yüzden yeni worktree’ler boş başlar.",
+  "agentManager.readiness.ready.initialCommit": "İlk commit oluşturuldu.",
+  "agentManager.readiness.ready.initialCommitNote":
+    "Mevcut dosyalarınız henüz içinde değil, bu yüzden onları commit edene kadar yeni worktree’ler boş başlar.",
+  "agentManager.readiness.unknown.title": "Kilo bu projeyi kontrol edemedi",
+  "agentManager.readiness.untrusted": "Kilo’nun Git’i ayarlayabilmesi için bu pencereye güvenin.",
+  "agentManager.readiness.error": "Kilo bu adımı tamamlayamadı.",
+  "agentManager.readiness.check": "Tekrar kontrol et",
+  "agentManager.readiness.working.initGit": "Git ayarlanıyor…",
+  "agentManager.readiness.working.initialCommit": "İlk commit oluşturuluyor…",
+  "agentManager.readiness.working.project": "Proje açılıyor…",
+  "agentManager.readiness.blocked": "Worktree oluşturmak için yukarıdaki sorunu düzeltin.",
 }

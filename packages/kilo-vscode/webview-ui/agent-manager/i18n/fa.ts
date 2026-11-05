@@ -596,4 +596,45 @@ export const dict = {
   "agentManager.orphans.deleteButton": "حذف {{count}} پوشه ({{size}})",
   "agentManager.orphans.cancel": "لغو",
   "agentManager.error.title": "خطای Agent Manager",
+  "agentManager.readiness.projects.title": 'یک پروژه در "{{name}}" انتخاب کنید',
+  "agentManager.readiness.projects.body":
+    '"{{name}}" خودش پروژهٔ Git نیست، اما {{count}} پروژه در آن هست. پروژه‌ای را که می‌خواهید در آن کار کنید انتخاب کنید.',
+  "agentManager.readiness.projects.bodyOne":
+    '"{{name}}" خودش پروژهٔ Git نیست، اما یک پروژه در آن هست. برای کار در آن، انتخابش کنید.',
+  "agentManager.readiness.projects.use": "استفاده از {{name}}",
+  "agentManager.readiness.projects.other": "انتخاب پوشهٔ دیگر",
+  "agentManager.readiness.plain.title": '"{{name}}" هنوز برای Git راه‌اندازی نشده است',
+  "agentManager.readiness.plain.body":
+    "Worktreeها به Git نیاز دارند. Kilo می‌تواند آن را در این پوشه راه‌اندازی کند و فایل‌های شما دقیقاً همان‌طور باقی می‌مانند.",
+  "agentManager.readiness.plain.action": "راه‌اندازی Git",
+  "agentManager.readiness.plain.other": "انتخاب پوشهٔ دیگر",
+  "agentManager.readiness.identity.title": "چه نامی روی تغییرات شما ثبت شود؟",
+  "agentManager.readiness.identity.body":
+    "Git هر تغییر را با یک نام و ایمیل برچسب می‌زند. Kilo آن‌ها را برای کاربر Git شما ذخیره می‌کند.",
+  "agentManager.readiness.identity.name": "نام",
+  "agentManager.readiness.identity.email": "ایمیل",
+  "agentManager.readiness.identity.saveInit": "ذخیره و راه‌اندازی Git",
+  "agentManager.readiness.identity.saveCommit": "ذخیره و ایجاد اولین commit",
+  "agentManager.readiness.restricted.title": "پوشه‌ای را که پروژه‌تان در آن است انتخاب کنید",
+  "agentManager.readiness.restricted.body":
+    "این پوشهٔ خانگی شماست، پس Kilo اینجا Git راه‌اندازی نمی‌کند. به‌جای آن پوشهٔ خود پروژه را انتخاب کنید.",
+  "agentManager.readiness.restricted.action": "انتخاب پوشه",
+  "agentManager.readiness.commit.title": '"{{name}}" به اولین commit نیاز دارد',
+  "agentManager.readiness.commit.body":
+    "Worktreeها از آخرین commit شما شروع می‌شوند و این پروژه هنوز commit ندارد. Kilo می‌تواند یک commit خالی برایتان بسازد.",
+  "agentManager.readiness.commit.action": "ایجاد اولین commit",
+  "agentManager.readiness.ready.initGit": "Git راه‌اندازی شد.",
+  "agentManager.readiness.ready.initGitNote":
+    "فایل‌های موجود شما هنوز در Git ذخیره نشده‌اند، پس worktreeهای جدید خالی شروع می‌شوند.",
+  "agentManager.readiness.ready.initialCommit": "اولین commit ایجاد شد.",
+  "agentManager.readiness.ready.initialCommitNote":
+    "فایل‌های موجود شما هنوز در آن نیستند، پس تا وقتی آن‌ها را commit نکنید worktreeهای جدید خالی شروع می‌شوند.",
+  "agentManager.readiness.unknown.title": "Kilo نتوانست این پروژه را بررسی کند",
+  "agentManager.readiness.untrusted": "به این پنجره اعتماد کنید تا Kilo بتواند Git را راه‌اندازی کند.",
+  "agentManager.readiness.error": "Kilo نتوانست این مرحله را کامل کند.",
+  "agentManager.readiness.check": "بررسی دوباره",
+  "agentManager.readiness.working.initGit": "در حال راه‌اندازی Git…",
+  "agentManager.readiness.working.initialCommit": "در حال ایجاد اولین commit…",
+  "agentManager.readiness.working.project": "در حال باز کردن پروژه…",
+  "agentManager.readiness.blocked": "برای ایجاد worktree، مشکل بالا را برطرف کنید.",
 }

@@ -1717,18 +1717,23 @@ const AgentManagerContent: Component = () => {
   const showNewWorktreeDialog = () => {
     if (!loaded()) return
     expandSidebar()
-    dialog.show(() => (
-      <NewWorktreeDialog
-        mode={mode}
-        onClose={() => dialog.close()}
-        projectId={activeProjectId()}
-        projects={projectList}
-        activeProjectId={activeProjectId()}
-        defaultBase={defaultBase}
-        onCreate={creation.schedule}
-        worktrees={dialogRefs}
-      />
-    ))
+    const [closing, setClosing] = createSignal(false)
+    dialog.show(
+      () => (
+        <NewWorktreeDialog
+          closing={closing}
+          mode={mode}
+          onClose={() => dialog.close()}
+          projectId={activeProjectId()}
+          projects={projectList}
+          activeProjectId={activeProjectId()}
+          defaultBase={defaultBase}
+          onCreate={creation.schedule}
+          worktrees={dialogRefs}
+        />
+      ),
+      () => setClosing(true),
+    )
   }
 
   const openLocally = (sid: string) => {

@@ -605,4 +605,45 @@ export const dict = {
   "agentManager.orphans.deleteButton": "{{count}} mappen verwijderen ({{size}})",
   "agentManager.orphans.cancel": "Annuleren",
   "agentManager.error.title": "Agent Manager-fout",
+  "agentManager.readiness.projects.title": 'Kies een project in "{{name}}"',
+  "agentManager.readiness.projects.body":
+    '"{{name}}" is zelf geen Git-project, maar bevat {{count}} projecten. Kies het project waarin je wilt werken.',
+  "agentManager.readiness.projects.bodyOne":
+    '"{{name}}" is zelf geen Git-project, maar bevat een project. Kies het om daar te werken.',
+  "agentManager.readiness.projects.use": "{{name}} gebruiken",
+  "agentManager.readiness.projects.other": "Andere map kiezen",
+  "agentManager.readiness.plain.title": '"{{name}}" is nog niet ingesteld voor Git',
+  "agentManager.readiness.plain.body":
+    "Worktrees hebben Git nodig. Kilo kan het in deze map instellen, en je bestanden blijven precies zoals ze zijn.",
+  "agentManager.readiness.plain.action": "Git instellen",
+  "agentManager.readiness.plain.other": "Een andere map kiezen",
+  "agentManager.readiness.identity.title": "Welke naam moet er bij je wijzigingen staan?",
+  "agentManager.readiness.identity.body":
+    "Git voorziet elke wijziging van een naam en e-mailadres. Kilo bewaart ze voor je Git-gebruiker.",
+  "agentManager.readiness.identity.name": "Naam",
+  "agentManager.readiness.identity.email": "E-mail",
+  "agentManager.readiness.identity.saveInit": "Opslaan en Git instellen",
+  "agentManager.readiness.identity.saveCommit": "Opslaan en eerste commit maken",
+  "agentManager.readiness.restricted.title": "Kies de map waarin je project staat",
+  "agentManager.readiness.restricted.body":
+    "Dit is je thuismap, dus Kilo stelt hier geen Git in. Kies in plaats daarvan de eigen map van je project.",
+  "agentManager.readiness.restricted.action": "Een map kiezen",
+  "agentManager.readiness.commit.title": '"{{name}}" heeft een eerste commit nodig',
+  "agentManager.readiness.commit.body":
+    "Worktrees beginnen bij je laatste commit, en dit project heeft er nog geen. Kilo kan een lege voor je maken.",
+  "agentManager.readiness.commit.action": "Eerste commit maken",
+  "agentManager.readiness.ready.initGit": "Git is ingesteld.",
+  "agentManager.readiness.ready.initGitNote":
+    "Je bestaande bestanden zijn nog niet in Git opgeslagen, dus nieuwe worktrees beginnen leeg.",
+  "agentManager.readiness.ready.initialCommit": "Eerste commit gemaakt.",
+  "agentManager.readiness.ready.initialCommitNote":
+    "Je bestaande bestanden zitten er nog niet in, dus nieuwe worktrees beginnen leeg totdat je ze commit.",
+  "agentManager.readiness.unknown.title": "Kilo kon dit project niet controleren",
+  "agentManager.readiness.untrusted": "Vertrouw dit venster zodat Kilo Git kan instellen.",
+  "agentManager.readiness.error": "Kilo kon deze stap niet voltooien.",
+  "agentManager.readiness.check": "Opnieuw controleren",
+  "agentManager.readiness.working.initGit": "Git wordt ingesteld…",
+  "agentManager.readiness.working.initialCommit": "Eerste commit wordt gemaakt…",
+  "agentManager.readiness.working.project": "Project wordt geopend…",
+  "agentManager.readiness.blocked": "Los het probleem hierboven op om een worktree te maken.",
 }

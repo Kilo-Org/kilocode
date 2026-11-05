@@ -598,4 +598,45 @@ export const dict = {
   "agentManager.orphans.deleteButton": "Usuń {{count}} folderów ({{size}})",
   "agentManager.orphans.cancel": "Anuluj",
   "agentManager.error.title": "Błąd Agent Managera",
+  "agentManager.readiness.projects.title": "Wybierz projekt w folderze „{{name}}”",
+  "agentManager.readiness.projects.body":
+    "„{{name}}” nie jest projektem Git, ale zawiera projekty ({{count}}). Wybierz ten, w którym chcesz pracować.",
+  "agentManager.readiness.projects.bodyOne":
+    "„{{name}}” nie jest projektem Git, ale zawiera projekt. Wybierz go, aby w nim pracować.",
+  "agentManager.readiness.projects.use": "Użyj {{name}}",
+  "agentManager.readiness.projects.other": "Wybierz inny folder",
+  "agentManager.readiness.plain.title": "„{{name}}” nie jest jeszcze skonfigurowany dla Git",
+  "agentManager.readiness.plain.body":
+    "Worktree wymagają Git. Kilo może go skonfigurować w tym folderze, a Twoje pliki pozostaną dokładnie takie, jakie są.",
+  "agentManager.readiness.plain.action": "Skonfiguruj Git",
+  "agentManager.readiness.plain.other": "Wybierz inny folder",
+  "agentManager.readiness.identity.title": "Jakie imię i nazwisko ma widnieć przy Twoich zmianach?",
+  "agentManager.readiness.identity.body":
+    "Git oznacza każdą zmianę imieniem i adresem e-mail. Kilo zapisuje je dla Twojego użytkownika Git.",
+  "agentManager.readiness.identity.name": "Imię i nazwisko",
+  "agentManager.readiness.identity.email": "E-mail",
+  "agentManager.readiness.identity.saveInit": "Zapisz i skonfiguruj Git",
+  "agentManager.readiness.identity.saveCommit": "Zapisz i utwórz pierwszy commit",
+  "agentManager.readiness.restricted.title": "Wybierz folder, w którym jest Twój projekt",
+  "agentManager.readiness.restricted.body":
+    "To Twój folder domowy, więc Kilo nie skonfiguruje tu Git. Wybierz zamiast tego folder swojego projektu.",
+  "agentManager.readiness.restricted.action": "Wybierz folder",
+  "agentManager.readiness.commit.title": "„{{name}}” potrzebuje pierwszego commita",
+  "agentManager.readiness.commit.body":
+    "Worktree zaczynają się od Twojego najnowszego commita, a ten projekt jeszcze go nie ma. Kilo może utworzyć dla Ciebie pusty.",
+  "agentManager.readiness.commit.action": "Utwórz pierwszy commit",
+  "agentManager.readiness.ready.initGit": "Git jest skonfigurowany.",
+  "agentManager.readiness.ready.initGitNote":
+    "Twoje istniejące pliki nie są jeszcze zapisane w Git, więc nowe worktree zaczynają się puste.",
+  "agentManager.readiness.ready.initialCommit": "Utworzono pierwszy commit.",
+  "agentManager.readiness.ready.initialCommitNote":
+    "Twoich istniejących plików jeszcze w nim nie ma, więc nowe worktree zaczynają się puste, dopóki ich nie zatwierdzisz.",
+  "agentManager.readiness.unknown.title": "Kilo nie mógł sprawdzić tego projektu",
+  "agentManager.readiness.untrusted": "Zaufaj temu oknu, aby Kilo mógł skonfigurować Git.",
+  "agentManager.readiness.error": "Kilo nie mógł ukończyć tego kroku.",
+  "agentManager.readiness.check": "Sprawdź ponownie",
+  "agentManager.readiness.working.initGit": "Konfigurowanie Git…",
+  "agentManager.readiness.working.initialCommit": "Tworzenie pierwszego commita…",
+  "agentManager.readiness.working.project": "Otwieranie projektu…",
+  "agentManager.readiness.blocked": "Rozwiąż powyższy problem, aby utworzyć worktree.",
 }

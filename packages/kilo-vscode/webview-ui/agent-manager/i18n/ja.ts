@@ -597,4 +597,45 @@ export const dict = {
   "agentManager.orphans.deleteButton": "{{count}} 個のフォルダーを削除 ({{size}})",
   "agentManager.orphans.cancel": "キャンセル",
   "agentManager.error.title": "Agent Manager エラー",
+  "agentManager.readiness.projects.title": "「{{name}}」内のプロジェクトを選択",
+  "agentManager.readiness.projects.body":
+    "「{{name}}」自体は Git プロジェクトではありませんが、中に {{count}} 個のプロジェクトがあります。作業するプロジェクトを選んでください。",
+  "agentManager.readiness.projects.bodyOne":
+    "「{{name}}」自体は Git プロジェクトではありませんが、中にプロジェクトがあります。そこで作業するには選択してください。",
+  "agentManager.readiness.projects.use": "{{name}} を使用",
+  "agentManager.readiness.projects.other": "別のフォルダーを選択",
+  "agentManager.readiness.plain.title": "「{{name}}」はまだ Git が設定されていません",
+  "agentManager.readiness.plain.body":
+    "Worktree には Git が必要です。Kilo がこのフォルダーに設定でき、ファイルはそのまま残ります。",
+  "agentManager.readiness.plain.action": "Git を設定",
+  "agentManager.readiness.plain.other": "別のフォルダーを選択",
+  "agentManager.readiness.identity.title": "変更に表示する名前は？",
+  "agentManager.readiness.identity.body":
+    "Git はすべての変更に名前とメールアドレスを記録します。Kilo はそれらを Git ユーザー用に保存します。",
+  "agentManager.readiness.identity.name": "名前",
+  "agentManager.readiness.identity.email": "メールアドレス",
+  "agentManager.readiness.identity.saveInit": "保存して Git を設定",
+  "agentManager.readiness.identity.saveCommit": "保存して最初のコミットを作成",
+  "agentManager.readiness.restricted.title": "プロジェクトのフォルダーを選択",
+  "agentManager.readiness.restricted.body":
+    "ここはホームフォルダーなので、Kilo は Git を設定しません。代わりにプロジェクト専用のフォルダーを選んでください。",
+  "agentManager.readiness.restricted.action": "フォルダーを選択",
+  "agentManager.readiness.commit.title": "「{{name}}」には最初のコミットが必要です",
+  "agentManager.readiness.commit.body":
+    "Worktree は最新のコミットから始まりますが、このプロジェクトにはまだコミットがありません。Kilo が空のコミットを作成できます。",
+  "agentManager.readiness.commit.action": "最初のコミットを作成",
+  "agentManager.readiness.ready.initGit": "Git を設定しました。",
+  "agentManager.readiness.ready.initGitNote":
+    "既存のファイルはまだ Git に保存されていないため、新しい worktree は空の状態で始まります。",
+  "agentManager.readiness.ready.initialCommit": "最初のコミットを作成しました。",
+  "agentManager.readiness.ready.initialCommitNote":
+    "既存のファイルはまだ含まれていないため、コミットするまで新しい worktree は空の状態で始まります。",
+  "agentManager.readiness.unknown.title": "Kilo はこのプロジェクトを確認できませんでした",
+  "agentManager.readiness.untrusted": "Kilo が Git を設定できるよう、このウィンドウを信頼してください。",
+  "agentManager.readiness.error": "Kilo はこの手順を完了できませんでした。",
+  "agentManager.readiness.check": "再確認",
+  "agentManager.readiness.working.initGit": "Git を設定しています…",
+  "agentManager.readiness.working.initialCommit": "最初のコミットを作成しています…",
+  "agentManager.readiness.working.project": "プロジェクトを開いています…",
+  "agentManager.readiness.blocked": "worktree を作成するには、上の問題を解決してください。",
 }

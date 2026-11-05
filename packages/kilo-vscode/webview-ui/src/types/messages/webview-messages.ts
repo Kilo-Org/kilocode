@@ -1751,6 +1751,8 @@ export interface DismissAgentMigrationBannerMessage {
 
 export type WebviewMessage =
   | import("./agent-manager").BaseUpdateRequest
+  | import("./agent-manager").CheckReadinessRequest
+  | import("./agent-manager").FixReadinessRequest
   | PRMergeRequest
   | { type: "sessionActivity"; state: Activity }
   | { type: "acknowledgeSession"; sessionID: string; eventID: string }

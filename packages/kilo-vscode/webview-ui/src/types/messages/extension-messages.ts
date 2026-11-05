@@ -1945,6 +1945,7 @@ export type ExtensionMessage =
   | OpenSessionMessage
   | SelectKiloModelMessage
   | AgentManagerBranchesMessage
+  | import("./agent-manager").ReadinessMessage
   | AgentManagerImportResultMessage
   | WorkspaceDirectoryChangedMessage
   | AgentManagerWorktreeDiffMessage

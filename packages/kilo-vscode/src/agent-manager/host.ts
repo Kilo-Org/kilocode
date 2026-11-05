@@ -238,6 +238,9 @@ export interface Host {
   /** Ask VS Code's git extension to re-scan repositories (e.g. after worktree ref migration). */
   refreshGit(): void
 
+  /** Open a repository in VS Code's Source Control view without a picker. */
+  openRepository(root: string): void
+
   /** Dispose all host resources. */
   dispose(): void
 }

@@ -584,4 +584,45 @@ export const dict = {
   "agentManager.orphans.deleteButton": "ลบ {{count}} โฟลเดอร์ ({{size}})",
   "agentManager.orphans.cancel": "ยกเลิก",
   "agentManager.error.title": "ข้อผิดพลาด Agent Manager",
+  "agentManager.readiness.projects.title": 'เลือกโปรเจกต์ใน "{{name}}"',
+  "agentManager.readiness.projects.body":
+    '"{{name}}" ไม่ใช่โปรเจกต์ Git แต่มีโปรเจกต์อยู่ข้างใน {{count}} โปรเจกต์ เลือกโปรเจกต์ที่คุณต้องการทำงาน',
+  "agentManager.readiness.projects.bodyOne":
+    '"{{name}}" ไม่ใช่โปรเจกต์ Git แต่มีโปรเจกต์อยู่ข้างใน เลือกเพื่อทำงานในโปรเจกต์นั้น',
+  "agentManager.readiness.projects.use": "ใช้ {{name}}",
+  "agentManager.readiness.projects.other": "เลือกโฟลเดอร์อื่น",
+  "agentManager.readiness.plain.title": '"{{name}}" ยังไม่ได้ตั้งค่า Git',
+  "agentManager.readiness.plain.body":
+    "Worktree ต้องใช้ Git Kilo ตั้งค่าในโฟลเดอร์นี้ให้ได้ และไฟล์ของคุณจะยังคงเหมือนเดิมทุกประการ",
+  "agentManager.readiness.plain.action": "ตั้งค่า Git",
+  "agentManager.readiness.plain.other": "เลือกโฟลเดอร์อื่น",
+  "agentManager.readiness.identity.title": "ต้องการให้ชื่อใดปรากฏในการเปลี่ยนแปลงของคุณ",
+  "agentManager.readiness.identity.body":
+    "Git จะติดชื่อและอีเมลให้กับทุกการเปลี่ยนแปลง Kilo จะบันทึกไว้สำหรับผู้ใช้ Git ของคุณ",
+  "agentManager.readiness.identity.name": "ชื่อ",
+  "agentManager.readiness.identity.email": "อีเมล",
+  "agentManager.readiness.identity.saveInit": "บันทึกและตั้งค่า Git",
+  "agentManager.readiness.identity.saveCommit": "บันทึกและสร้าง commit แรก",
+  "agentManager.readiness.restricted.title": "เลือกโฟลเดอร์ที่มีโปรเจกต์ของคุณ",
+  "agentManager.readiness.restricted.body":
+    "นี่คือโฟลเดอร์โฮมของคุณ Kilo จึงจะไม่ตั้งค่า Git ที่นี่ โปรดเลือกโฟลเดอร์ของโปรเจกต์แทน",
+  "agentManager.readiness.restricted.action": "เลือกโฟลเดอร์",
+  "agentManager.readiness.commit.title": '"{{name}}" ต้องมี commit แรก',
+  "agentManager.readiness.commit.body":
+    "Worktree เริ่มจาก commit ล่าสุดของคุณ และโปรเจกต์นี้ยังไม่มี commit Kilo สร้าง commit ว่างให้ได้",
+  "agentManager.readiness.commit.action": "สร้าง commit แรก",
+  "agentManager.readiness.ready.initGit": "ตั้งค่า Git แล้ว",
+  "agentManager.readiness.ready.initGitNote":
+    "ไฟล์ที่มีอยู่ของคุณยังไม่ได้บันทึกใน Git ดังนั้น worktree ใหม่จะเริ่มต้นว่างเปล่า",
+  "agentManager.readiness.ready.initialCommit": "สร้าง commit แรกแล้ว",
+  "agentManager.readiness.ready.initialCommitNote":
+    "ไฟล์ที่มีอยู่ของคุณยังไม่อยู่ใน commit นี้ ดังนั้น worktree ใหม่จะว่างเปล่าจนกว่าคุณจะ commit ไฟล์เหล่านั้น",
+  "agentManager.readiness.unknown.title": "Kilo ตรวจสอบโปรเจกต์นี้ไม่ได้",
+  "agentManager.readiness.untrusted": "เชื่อถือหน้าต่างนี้เพื่อให้ Kilo ตั้งค่า Git ได้",
+  "agentManager.readiness.error": "Kilo ทำขั้นตอนนี้ไม่สำเร็จ",
+  "agentManager.readiness.check": "ตรวจสอบอีกครั้ง",
+  "agentManager.readiness.working.initGit": "กำลังตั้งค่า Git…",
+  "agentManager.readiness.working.initialCommit": "กำลังสร้าง commit แรก…",
+  "agentManager.readiness.working.project": "กำลังเปิดโปรเจกต์…",
+  "agentManager.readiness.blocked": "แก้ปัญหาด้านบนเพื่อสร้าง worktree",
 }

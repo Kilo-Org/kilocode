@@ -14,6 +14,7 @@ import { ProjectContexts, type ProjectSnapshot } from "./contexts"
 import type { ProjectMessageDeps } from "./messages"
 import { createSettingsHandler, type SettingsHandler } from "./settings"
 import { poolHome } from "../pool/home"
+import { postBranches } from "../worktree-importer"
 
 export interface ProjectWiring {
   registry: ProjectRegistry
@@ -87,6 +88,18 @@ export function createProjectWiring(opts: {
     selected: opts.selected,
     post: opts.post,
     routeSession: opts.routeSession,
+    openRepository: (root) => opts.host.openRepository(root),
+    branches: (ctx) =>
+      postBranches(
+        {
+          manager: () => ctx.worktreeManager(),
+          state: () => ctx.peekState(),
+          post: opts.post,
+          push: () => opts.pushState(ctx),
+          log: opts.log,
+        },
+        ctx.id,
+      ),
     git: opts.git,
     error: (message) => opts.host.showError(message),
     openSettings: (tab, projectId) => opts.host.openSettings(tab, projectId),

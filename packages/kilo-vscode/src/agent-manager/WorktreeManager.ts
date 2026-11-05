@@ -1048,8 +1048,8 @@ export class WorktreeManager {
   // Git exclude management
   // ---------------------------------------------------------------------------
 
-  async ensureGitExclude(): Promise<void> {
-    const target = await this.excludeTarget()
+  async ensureGitExclude(root = this.root): Promise<void> {
+    const target = await this.excludeTarget(root)
     const items = [
       [".kilo/worktrees/", "Kilo Code agent worktrees"],
       [".kilo/agent-manager.json", "Kilo Agent Manager state"],
@@ -1091,11 +1091,12 @@ export class WorktreeManager {
    * There is deliberately no silent fallback, because a guessed prefix would
    * write ignore patterns anchored to the wrong directory.
    */
-  private async excludeTarget(): Promise<{ file: string; prefix: string }> {
-    const exclude = (await this.git.raw(["rev-parse", "--git-path", "info/exclude"])).trim()
+  private async excludeTarget(root = this.root): Promise<{ file: string; prefix: string }> {
+    const git = path.resolve(root) === path.resolve(this.root) ? this.git : this.client(root)
+    const exclude = (await git.raw(["rev-parse", "--git-path", "info/exclude"])).trim()
     if (!exclude || exclude.startsWith("--")) throw new Error("git rev-parse did not return an exclude path")
-    const prefix = (await this.git.raw(["rev-parse", "--show-prefix"])).trim()
-    return { file: path.resolve(this.root, exclude), prefix }
+    const prefix = (await git.raw(["rev-parse", "--show-prefix"])).trim()
+    return { file: path.resolve(root, exclude), prefix }
   }
 
   /**

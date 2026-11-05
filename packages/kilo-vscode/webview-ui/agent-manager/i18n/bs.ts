@@ -598,4 +598,45 @@ export const dict = {
   "agentManager.orphans.deleteButton": "Izbriši {{count}} foldera ({{size}})",
   "agentManager.orphans.cancel": "Otkaži",
   "agentManager.error.title": "Greška Agent Managera",
+  "agentManager.readiness.projects.title": 'Odaberite projekat unutar "{{name}}"',
+  "agentManager.readiness.projects.body":
+    '"{{name}}" nije Git projekat, ali sadrži projekte ({{count}}). Odaberite onaj u kojem želite raditi.',
+  "agentManager.readiness.projects.bodyOne":
+    '"{{name}}" nije Git projekat, ali sadrži jedan projekat. Odaberite ga da biste radili u njemu.',
+  "agentManager.readiness.projects.use": "Koristi {{name}}",
+  "agentManager.readiness.projects.other": "Odaberi drugi folder",
+  "agentManager.readiness.plain.title": '"{{name}}" još nije podešen za Git',
+  "agentManager.readiness.plain.body":
+    "Worktree-ovi trebaju Git. Kilo ga može podesiti u ovom folderu, a vaši fajlovi ostaju tačno onakvi kakvi jesu.",
+  "agentManager.readiness.plain.action": "Podesi Git",
+  "agentManager.readiness.plain.other": "Odaberi drugi folder",
+  "agentManager.readiness.identity.title": "Koje ime treba stajati na vašim izmjenama?",
+  "agentManager.readiness.identity.body":
+    "Git označava svaku izmjenu imenom i e-mailom. Kilo ih čuva za vašeg Git korisnika.",
+  "agentManager.readiness.identity.name": "Ime",
+  "agentManager.readiness.identity.email": "E-mail",
+  "agentManager.readiness.identity.saveInit": "Sačuvaj i podesi Git",
+  "agentManager.readiness.identity.saveCommit": "Sačuvaj i kreiraj prvi commit",
+  "agentManager.readiness.restricted.title": "Odaberite folder u kojem je vaš projekat",
+  "agentManager.readiness.restricted.body":
+    "Ovo je vaš početni folder, pa Kilo ovdje neće podesiti Git. Umjesto toga odaberite folder svog projekta.",
+  "agentManager.readiness.restricted.action": "Odaberi folder",
+  "agentManager.readiness.commit.title": '"{{name}}" treba prvi commit',
+  "agentManager.readiness.commit.body":
+    "Worktree-ovi počinju od vašeg posljednjeg commita, a ovaj projekat ga još nema. Kilo može kreirati prazan za vas.",
+  "agentManager.readiness.commit.action": "Kreiraj prvi commit",
+  "agentManager.readiness.ready.initGit": "Git je podešen.",
+  "agentManager.readiness.ready.initGitNote":
+    "Vaši postojeći fajlovi još nisu sačuvani u Gitu, pa novi worktree-ovi počinju prazni.",
+  "agentManager.readiness.ready.initialCommit": "Prvi commit je kreiran.",
+  "agentManager.readiness.ready.initialCommitNote":
+    "Vaši postojeći fajlovi još nisu u njemu, pa novi worktree-ovi počinju prazni dok ih ne commitate.",
+  "agentManager.readiness.unknown.title": "Kilo nije mogao provjeriti ovaj projekat",
+  "agentManager.readiness.untrusted": "Vjerujte ovom prozoru kako bi Kilo mogao podesiti Git.",
+  "agentManager.readiness.error": "Kilo nije mogao završiti ovaj korak.",
+  "agentManager.readiness.check": "Provjeri ponovo",
+  "agentManager.readiness.working.initGit": "Podešavanje Gita…",
+  "agentManager.readiness.working.initialCommit": "Kreiranje prvog commita…",
+  "agentManager.readiness.working.project": "Otvaranje projekta…",
+  "agentManager.readiness.blocked": "Riješite problem iznad da biste kreirali worktree.",
 }

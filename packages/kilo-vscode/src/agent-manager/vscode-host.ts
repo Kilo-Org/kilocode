@@ -577,5 +577,11 @@ export class VscodeHost implements Host {
     void vscode.commands.executeCommand("git.refresh")
   }
 
+  openRepository(root: string): void {
+    void Promise.resolve(vscode.commands.executeCommand("git.openRepository", root)).catch((err: unknown) => {
+      console.warn(`[Kilo New] Agent Manager: failed to open ${root} in Git:`, err)
+    })
+  }
+
   dispose(): void {}
 }

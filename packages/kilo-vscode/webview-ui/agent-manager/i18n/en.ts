@@ -595,4 +595,45 @@ export const dict = {
   "agentManager.splash.examples.compare.feature2.text": "Compare Kilo Auto, Claude and GPT on identical work.",
   "agentManager.splash.examples.compare.feature3.name": "Keep the best",
   "agentManager.splash.examples.compare.feature3.text": "Review real diffs side by side, keep one, discard the rest.",
+  "agentManager.readiness.projects.title": 'Pick a project inside "{{name}}"',
+  "agentManager.readiness.projects.body":
+    '"{{name}}" isn\'t a Git project itself, but it has {{count}} projects inside. Choose the one you want to work in.',
+  "agentManager.readiness.projects.bodyOne":
+    '"{{name}}" isn\'t a Git project itself, but it has a project inside. Choose it to work there.',
+  "agentManager.readiness.projects.use": "Use {{name}}",
+  "agentManager.readiness.projects.other": "Choose another folder",
+  "agentManager.readiness.plain.title": '"{{name}}" isn\'t set up for Git yet',
+  "agentManager.readiness.plain.body":
+    "Worktrees need Git. Kilo can set it up in this folder, and your files stay exactly as they are.",
+  "agentManager.readiness.plain.action": "Set up Git",
+  "agentManager.readiness.plain.other": "Choose a different folder",
+  "agentManager.readiness.identity.title": "What name should go on your changes?",
+  "agentManager.readiness.identity.body":
+    "Git labels every change with a name and email. Kilo saves them for your Git user.",
+  "agentManager.readiness.identity.name": "Name",
+  "agentManager.readiness.identity.email": "Email",
+  "agentManager.readiness.identity.saveInit": "Save and set up Git",
+  "agentManager.readiness.identity.saveCommit": "Save and create first commit",
+  "agentManager.readiness.restricted.title": "Pick the folder your project is in",
+  "agentManager.readiness.restricted.body":
+    "This is your home folder, so Kilo won't set up Git here. Choose your project's own folder instead.",
+  "agentManager.readiness.restricted.action": "Choose a folder",
+  "agentManager.readiness.commit.title": '"{{name}}" needs a first commit',
+  "agentManager.readiness.commit.body":
+    "Worktrees start from your latest commit, and this project doesn't have one yet. Kilo can make an empty one for you.",
+  "agentManager.readiness.commit.action": "Create first commit",
+  "agentManager.readiness.ready.initGit": "Git is set up.",
+  "agentManager.readiness.ready.initGitNote":
+    "Your existing files aren't saved in Git yet, so new worktrees start empty.",
+  "agentManager.readiness.ready.initialCommit": "First commit created.",
+  "agentManager.readiness.ready.initialCommitNote":
+    "Your existing files aren't in it yet, so new worktrees start empty until you commit them.",
+  "agentManager.readiness.unknown.title": "Kilo couldn't check this project",
+  "agentManager.readiness.untrusted": "Trust this window to let Kilo set up Git.",
+  "agentManager.readiness.error": "Kilo couldn't finish this step.",
+  "agentManager.readiness.check": "Check again",
+  "agentManager.readiness.working.initGit": "Setting up Git…",
+  "agentManager.readiness.working.initialCommit": "Creating the first commit…",
+  "agentManager.readiness.working.project": "Opening the project…",
+  "agentManager.readiness.blocked": "Fix the problem above to create a worktree.",
 }

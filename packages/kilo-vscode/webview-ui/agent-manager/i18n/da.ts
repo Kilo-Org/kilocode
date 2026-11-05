@@ -597,4 +597,45 @@ export const dict = {
   "agentManager.orphans.deleteButton": "Slet {{count}} mapper ({{size}})",
   "agentManager.orphans.cancel": "Annuller",
   "agentManager.error.title": "Agent Manager-fejl",
+  "agentManager.readiness.projects.title": 'Vælg et projekt i "{{name}}"',
+  "agentManager.readiness.projects.body":
+    '"{{name}}" er ikke selv et Git-projekt, men indeholder {{count}} projekter. Vælg det, du vil arbejde i.',
+  "agentManager.readiness.projects.bodyOne":
+    '"{{name}}" er ikke selv et Git-projekt, men indeholder et projekt. Vælg det for at arbejde der.',
+  "agentManager.readiness.projects.use": "Brug {{name}}",
+  "agentManager.readiness.projects.other": "Vælg en anden mappe",
+  "agentManager.readiness.plain.title": '"{{name}}" er ikke sat op til Git endnu',
+  "agentManager.readiness.plain.body":
+    "Worktrees kræver Git. Kilo kan sætte det op i denne mappe, og dine filer forbliver præcis som de er.",
+  "agentManager.readiness.plain.action": "Sæt Git op",
+  "agentManager.readiness.plain.other": "Vælg en anden mappe",
+  "agentManager.readiness.identity.title": "Hvilket navn skal stå på dine ændringer?",
+  "agentManager.readiness.identity.body":
+    "Git mærker hver ændring med et navn og en e-mail. Kilo gemmer dem for din Git-bruger.",
+  "agentManager.readiness.identity.name": "Navn",
+  "agentManager.readiness.identity.email": "E-mail",
+  "agentManager.readiness.identity.saveInit": "Gem og sæt Git op",
+  "agentManager.readiness.identity.saveCommit": "Gem og opret første commit",
+  "agentManager.readiness.restricted.title": "Vælg den mappe, dit projekt ligger i",
+  "agentManager.readiness.restricted.body":
+    "Dette er din hjemmemappe, så Kilo sætter ikke Git op her. Vælg i stedet dit projekts egen mappe.",
+  "agentManager.readiness.restricted.action": "Vælg en mappe",
+  "agentManager.readiness.commit.title": '"{{name}}" mangler et første commit',
+  "agentManager.readiness.commit.body":
+    "Worktrees starter fra dit seneste commit, og dette projekt har ikke et endnu. Kilo kan oprette et tomt for dig.",
+  "agentManager.readiness.commit.action": "Opret første commit",
+  "agentManager.readiness.ready.initGit": "Git er sat op.",
+  "agentManager.readiness.ready.initGitNote":
+    "Dine eksisterende filer er ikke gemt i Git endnu, så nye worktrees starter tomme.",
+  "agentManager.readiness.ready.initialCommit": "Første commit oprettet.",
+  "agentManager.readiness.ready.initialCommitNote":
+    "Dine eksisterende filer er ikke med i det endnu, så nye worktrees starter tomme, indtil du committer dem.",
+  "agentManager.readiness.unknown.title": "Kilo kunne ikke tjekke dette projekt",
+  "agentManager.readiness.untrusted": "Hav tillid til dette vindue, så Kilo kan sætte Git op.",
+  "agentManager.readiness.error": "Kilo kunne ikke fuldføre dette trin.",
+  "agentManager.readiness.check": "Tjek igen",
+  "agentManager.readiness.working.initGit": "Sætter Git op…",
+  "agentManager.readiness.working.initialCommit": "Opretter første commit…",
+  "agentManager.readiness.working.project": "Åbner projektet…",
+  "agentManager.readiness.blocked": "Ret problemet ovenfor for at oprette et worktree.",
 }

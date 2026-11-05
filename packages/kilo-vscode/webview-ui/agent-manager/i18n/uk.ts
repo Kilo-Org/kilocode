@@ -607,4 +607,45 @@ export const dict = {
   "agentManager.orphans.deleteButton": "Видалити {{count}} тек ({{size}})",
   "agentManager.orphans.cancel": "Скасувати",
   "agentManager.error.title": "Помилка Agent Manager",
+  "agentManager.readiness.projects.title": "Виберіть проєкт у теці «{{name}}»",
+  "agentManager.readiness.projects.body":
+    "«{{name}}» сама не є Git-проєктом, але містить проєкти ({{count}}). Виберіть той, у якому хочете працювати.",
+  "agentManager.readiness.projects.bodyOne":
+    "«{{name}}» сама не є Git-проєктом, але містить проєкт. Виберіть його, щоб працювати в ньому.",
+  "agentManager.readiness.projects.use": "Використати {{name}}",
+  "agentManager.readiness.projects.other": "Вибрати іншу теку",
+  "agentManager.readiness.plain.title": "«{{name}}» ще не налаштовано для Git",
+  "agentManager.readiness.plain.body":
+    "Для worktree потрібен Git. Kilo може налаштувати його в цій теці, а ваші файли залишаться саме такими, як є.",
+  "agentManager.readiness.plain.action": "Налаштувати Git",
+  "agentManager.readiness.plain.other": "Вибрати іншу теку",
+  "agentManager.readiness.identity.title": "Яке ім’я вказувати у ваших змінах?",
+  "agentManager.readiness.identity.body":
+    "Git позначає кожну зміну ім’ям та адресою пошти. Kilo збереже їх для вашого користувача Git.",
+  "agentManager.readiness.identity.name": "Ім’я",
+  "agentManager.readiness.identity.email": "Пошта",
+  "agentManager.readiness.identity.saveInit": "Зберегти й налаштувати Git",
+  "agentManager.readiness.identity.saveCommit": "Зберегти й створити перший коміт",
+  "agentManager.readiness.restricted.title": "Виберіть теку вашого проєкту",
+  "agentManager.readiness.restricted.body":
+    "Це ваша домашня тека, тому Kilo не налаштовуватиме тут Git. Виберіть власну теку проєкту.",
+  "agentManager.readiness.restricted.action": "Вибрати теку",
+  "agentManager.readiness.commit.title": "«{{name}}» потрібен перший коміт",
+  "agentManager.readiness.commit.body":
+    "Worktree створюються від останнього коміту, а в цьому проєкті його ще немає. Kilo може створити порожній коміт за вас.",
+  "agentManager.readiness.commit.action": "Створити перший коміт",
+  "agentManager.readiness.ready.initGit": "Git налаштовано.",
+  "agentManager.readiness.ready.initGitNote":
+    "Ваші наявні файли ще не збережено в Git, тому нові worktree будуть порожніми.",
+  "agentManager.readiness.ready.initialCommit": "Перший коміт створено.",
+  "agentManager.readiness.ready.initialCommitNote":
+    "Ваших наявних файлів у ньому ще немає, тому нові worktree будуть порожніми, доки ви їх не закомітите.",
+  "agentManager.readiness.unknown.title": "Kilo не вдалося перевірити цей проєкт",
+  "agentManager.readiness.untrusted": "Довіртеся цьому вікну, щоб Kilo міг налаштувати Git.",
+  "agentManager.readiness.error": "Kilo не вдалося завершити цей крок.",
+  "agentManager.readiness.check": "Перевірити знову",
+  "agentManager.readiness.working.initGit": "Налаштування Git…",
+  "agentManager.readiness.working.initialCommit": "Створення першого коміту…",
+  "agentManager.readiness.working.project": "Відкриття проєкту…",
+  "agentManager.readiness.blocked": "Виправте проблему вище, щоб створити worktree.",
 }

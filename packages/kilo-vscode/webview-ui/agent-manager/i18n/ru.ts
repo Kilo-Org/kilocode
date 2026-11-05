@@ -601,4 +601,45 @@ export const dict = {
   "agentManager.orphans.deleteButton": "Удалить {{count}} папок ({{size}})",
   "agentManager.orphans.cancel": "Отмена",
   "agentManager.error.title": "Ошибка Agent Manager",
+  "agentManager.readiness.projects.title": "Выберите проект в папке «{{name}}»",
+  "agentManager.readiness.projects.body":
+    "«{{name}}» сама не является Git-проектом, но в ней есть проекты ({{count}}). Выберите тот, в котором хотите работать.",
+  "agentManager.readiness.projects.bodyOne":
+    "«{{name}}» сама не является Git-проектом, но в ней есть проект. Выберите его, чтобы работать в нём.",
+  "agentManager.readiness.projects.use": "Использовать {{name}}",
+  "agentManager.readiness.projects.other": "Выбрать другую папку",
+  "agentManager.readiness.plain.title": "«{{name}}» ещё не настроен для Git",
+  "agentManager.readiness.plain.body":
+    "Для worktree нужен Git. Kilo может настроить его в этой папке, а ваши файлы останутся в точности как есть.",
+  "agentManager.readiness.plain.action": "Настроить Git",
+  "agentManager.readiness.plain.other": "Выбрать другую папку",
+  "agentManager.readiness.identity.title": "Какое имя указывать в ваших изменениях?",
+  "agentManager.readiness.identity.body":
+    "Git помечает каждое изменение именем и адресом почты. Kilo сохранит их для вашего пользователя Git.",
+  "agentManager.readiness.identity.name": "Имя",
+  "agentManager.readiness.identity.email": "Почта",
+  "agentManager.readiness.identity.saveInit": "Сохранить и настроить Git",
+  "agentManager.readiness.identity.saveCommit": "Сохранить и создать первый коммит",
+  "agentManager.readiness.restricted.title": "Выберите папку вашего проекта",
+  "agentManager.readiness.restricted.body":
+    "Это ваша домашняя папка, поэтому Kilo не будет настраивать здесь Git. Выберите собственную папку проекта.",
+  "agentManager.readiness.restricted.action": "Выбрать папку",
+  "agentManager.readiness.commit.title": "«{{name}}» нужен первый коммит",
+  "agentManager.readiness.commit.body":
+    "Worktree создаются от последнего коммита, а в этом проекте его ещё нет. Kilo может создать пустой коммит за вас.",
+  "agentManager.readiness.commit.action": "Создать первый коммит",
+  "agentManager.readiness.ready.initGit": "Git настроен.",
+  "agentManager.readiness.ready.initGitNote":
+    "Ваши существующие файлы ещё не сохранены в Git, поэтому новые worktree будут пустыми.",
+  "agentManager.readiness.ready.initialCommit": "Первый коммит создан.",
+  "agentManager.readiness.ready.initialCommitNote":
+    "Ваших существующих файлов в нём пока нет, поэтому новые worktree будут пустыми, пока вы их не закоммитите.",
+  "agentManager.readiness.unknown.title": "Kilo не удалось проверить этот проект",
+  "agentManager.readiness.untrusted": "Доверьтесь этому окну, чтобы Kilo мог настроить Git.",
+  "agentManager.readiness.error": "Kilo не удалось завершить этот шаг.",
+  "agentManager.readiness.check": "Проверить снова",
+  "agentManager.readiness.working.initGit": "Настройка Git…",
+  "agentManager.readiness.working.initialCommit": "Создание первого коммита…",
+  "agentManager.readiness.working.project": "Открытие проекта…",
+  "agentManager.readiness.blocked": "Исправьте проблему выше, чтобы создать worktree.",
 }

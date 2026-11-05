@@ -586,4 +586,44 @@ export const dict = {
   "agentManager.orphans.deleteButton": "حذف {{count}} مجلد ({{size}})",
   "agentManager.orphans.cancel": "إلغاء",
   "agentManager.error.title": "خطأ في Agent Manager",
+  "agentManager.readiness.projects.title": 'اختر مشروعًا داخل "{{name}}"',
+  "agentManager.readiness.projects.body":
+    '"{{name}}" ليس مشروع Git بحد ذاته، لكنه يحتوي على {{count}} مشاريع. اختر المشروع الذي تريد العمل فيه.',
+  "agentManager.readiness.projects.bodyOne":
+    '"{{name}}" ليس مشروع Git بحد ذاته، لكنه يحتوي على مشروع. اختره للعمل فيه.',
+  "agentManager.readiness.projects.use": "استخدام {{name}}",
+  "agentManager.readiness.projects.other": "اختيار مجلد آخر",
+  "agentManager.readiness.plain.title": '"{{name}}" غير مُعدّ لـ Git بعد',
+  "agentManager.readiness.plain.body":
+    "تحتاج worktrees إلى Git. يمكن لـ Kilo إعداده في هذا المجلد، وتبقى ملفاتك كما هي تمامًا.",
+  "agentManager.readiness.plain.action": "إعداد Git",
+  "agentManager.readiness.plain.other": "اختيار مجلد مختلف",
+  "agentManager.readiness.identity.title": "ما الاسم الذي يجب أن يظهر على تغييراتك؟",
+  "agentManager.readiness.identity.body":
+    "يضع Git اسمًا وبريدًا إلكترونيًا على كل تغيير. يحفظهما Kilo لمستخدم Git الخاص بك.",
+  "agentManager.readiness.identity.name": "الاسم",
+  "agentManager.readiness.identity.email": "البريد الإلكتروني",
+  "agentManager.readiness.identity.saveInit": "حفظ وإعداد Git",
+  "agentManager.readiness.identity.saveCommit": "حفظ وإنشاء أول commit",
+  "agentManager.readiness.restricted.title": "اختر المجلد الذي يوجد فيه مشروعك",
+  "agentManager.readiness.restricted.body":
+    "هذا هو مجلدك الرئيسي، لذا لن يُعدّ Kilo مستودع Git هنا. اختر مجلد مشروعك الخاص بدلًا من ذلك.",
+  "agentManager.readiness.restricted.action": "اختيار مجلد",
+  "agentManager.readiness.commit.title": '"{{name}}" يحتاج إلى أول commit',
+  "agentManager.readiness.commit.body":
+    "تبدأ worktrees من أحدث commit لديك، وهذا المشروع لا يحتوي على أي commit بعد. يمكن لـ Kilo إنشاء commit فارغ لك.",
+  "agentManager.readiness.commit.action": "إنشاء أول commit",
+  "agentManager.readiness.ready.initGit": "تم إعداد Git.",
+  "agentManager.readiness.ready.initGitNote": "ملفاتك الحالية غير محفوظة في Git بعد، لذا تبدأ worktrees الجديدة فارغة.",
+  "agentManager.readiness.ready.initialCommit": "تم إنشاء أول commit.",
+  "agentManager.readiness.ready.initialCommitNote":
+    "ملفاتك الحالية ليست فيه بعد، لذا تبدأ worktrees الجديدة فارغة حتى تقوم بعمل commit لها.",
+  "agentManager.readiness.unknown.title": "تعذّر على Kilo فحص هذا المشروع",
+  "agentManager.readiness.untrusted": "ثق بهذه النافذة ليتمكن Kilo من إعداد Git.",
+  "agentManager.readiness.error": "تعذّر على Kilo إكمال هذه الخطوة.",
+  "agentManager.readiness.check": "التحقق مرة أخرى",
+  "agentManager.readiness.working.initGit": "جارٍ إعداد Git…",
+  "agentManager.readiness.working.initialCommit": "جارٍ إنشاء أول commit…",
+  "agentManager.readiness.working.project": "جارٍ فتح المشروع…",
+  "agentManager.readiness.blocked": "أصلح المشكلة أعلاه لإنشاء worktree.",
 }
