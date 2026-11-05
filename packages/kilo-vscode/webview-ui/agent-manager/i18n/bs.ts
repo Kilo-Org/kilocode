@@ -505,6 +505,56 @@ export const dict = {
   "agentManager.intro.guide": "Pročitajte vodič",
   "agentManager.intro.dismiss": "Preskoči uvod",
   "agentManager.intro.reopen": "Kako radi Agent Manager",
+  "agentManager.splash.preview.label": "Pregled bočne trake Agent Manager",
+  "agentManager.splash.eyebrow": "AGENT MANAGER",
+  "agentManager.splash.compact.subtitle":
+    "Pokreći zadatke paralelno uz worktree radna stabla, delegiraj posao i prati svakog agenta s jednog mjesta.",
+  "agentManager.splash.hide": "Sakrij",
+  "agentManager.splash.hideLabel": "Sakrij uvod u Agent Manager",
+  "agentManager.splash.title": "Stavi flotu Kilo agenata na posao.",
+  "agentManager.splash.subtitle":
+    "Radi na više zadataka paralelno uz worktree radna stabla, delegiraj posao, prati napredak svakog agenta i održavaj više tokova rada u pokretu s jednog mjesta.",
+  "agentManager.splash.hint": "ili",
+  "agentManager.splash.proceed": "nastavi lokalno u polju za poruku ispod",
+  "agentManager.splash.folded.title": "Stavi flotu Kilo agenata na posao",
+  "agentManager.splash.folded.note": "Funkcije kroz više stekova, delegiranje, poređenje modela i još mnogo toga",
+  "agentManager.splash.showExamples": "Prikaži primjere",
+  "agentManager.splash.examples.crossStack.tag": "Više repoa",
+  "agentManager.splash.examples.crossStack.title": "Isporučite funkciju kroz tri repozitorija",
+  "agentManager.splash.examples.crossStack.pitch":
+    "Jedan brief, jedan agent po repozitoriju i cijela funkcija u jednom pregledu.",
+  "agentManager.splash.examples.crossStack.feature1.name": "Projekti s više repozitorija",
+  "agentManager.splash.examples.crossStack.feature1.text":
+    "Backend, frontend i infrastruktura jedan uz drugi u jednom bočnom panelu.",
+  "agentManager.splash.examples.crossStack.feature2.name": "Status sesija uživo",
+  "agentManager.splash.examples.crossStack.feature2.text":
+    "Na prvi pogled vidite šta radi, šta je završeno ili čeka na vas.",
+  "agentManager.splash.examples.crossStack.feature3.name": "PR oznake i brojevi izmjena",
+  "agentManager.splash.examples.crossStack.feature3.text":
+    "Znajte šta je svaki agent promijenio prije nego što otvorite.",
+  "agentManager.splash.examples.delegate.tag": "Delegiranje",
+  "agentManager.splash.examples.delegate.title": "Dajte jednoj sesiji veliki posao",
+  "agentManager.splash.examples.delegate.pitch":
+    "Zamolite jednu sesiju da podijeli veliki posao na paralelne sesije, a zatim uđite u bilo koju od njih.",
+  "agentManager.splash.examples.delegate.feature1.name": "Sesije koje pokreću sesije",
+  "agentManager.splash.examples.delegate.feature1.text":
+    "Sesija može pokrenuti nove sesije, svaku u vlastitom worktree.",
+  "agentManager.splash.examples.delegate.feature2.name": "Izolirani worktree",
+  "agentManager.splash.examples.delegate.feature2.text": "Svaki posao dobija vlastitu kopiju, pa se ništa ne sudara.",
+  "agentManager.splash.examples.delegate.feature3.name": "Uskočite bilo gdje",
+  "agentManager.splash.examples.delegate.feature3.text":
+    "Uđite u bilo koju sesiju koju je pokrenuo ili pratite cijeli posao s vrha.",
+  "agentManager.splash.examples.compare.tag": "Poređenje modela",
+  "agentManager.splash.examples.compare.title": "Isprobajte tri pristupa, zadržite najbolji",
+  "agentManager.splash.examples.compare.pitch":
+    "Pošaljite jedan prompt većem broju agenata ili modela i zadržite najbolji rezultat.",
+  "agentManager.splash.examples.compare.feature1.name": "Pokretanja više verzija",
+  "agentManager.splash.examples.compare.feature1.text": "Pokrenite isti zadatak kao nekoliko verzija odjednom.",
+  "agentManager.splash.examples.compare.feature2.name": "Kombinirajte modele",
+  "agentManager.splash.examples.compare.feature2.text": "Uporedite Kilo Auto, Claude i GPT na identičnom poslu.",
+  "agentManager.splash.examples.compare.feature3.name": "Zadržite najbolji",
+  "agentManager.splash.examples.compare.feature3.text":
+    "Pregledajte stvarne diffove jedan uz drugi, zadržite jedan i odbacite ostale.",
   "agentManager.worktree.health.absent-restorable": "Folder izbrisan",
   "agentManager.worktree.health.absent-restorableNote":
     "Folder je nestao, ali grana {{branch}} još postoji. Vrati ga da nastaviš rad ovdje.",

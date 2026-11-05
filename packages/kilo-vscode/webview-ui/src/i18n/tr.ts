@@ -970,6 +970,9 @@ export const dict = {
   "settings.experimental.conversationPromptHistory.title": "Sohbet başına istem geçmişi",
   "settings.experimental.conversationPromptHistory.description":
     "İstem geçmişini (ArrowUp/ArrowDown) tüm sohbetlerde tek bir geçmiş paylaşmak yerine her sohbet için ayrı tutun.",
+  "settings.experimental.agentManagerSplash.title": "Agent Manager karşılama ekranı",
+  "settings.experimental.agentManagerSplash.description":
+    "İş akışı örnekleriyle yeni Agent Manager tanıtımını deneyin. Hemen uygulanır.",
   "settings.experimental.claudeMigration.title": "Claude Code Geçişi",
   "settings.experimental.claudeMigration.description":
     "Desteklenen genel CLAUDE.md talimatlarını, basit becerileri ve devre dışı MCP tanımlarını bir kez içe aktarın. Orijinal Claude dosyaları değiştirilmez; etkinleştirdikten sonra arka ucu yeniden başlatın.",
