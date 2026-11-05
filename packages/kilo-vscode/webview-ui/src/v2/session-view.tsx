@@ -3,7 +3,7 @@
 import type { FileDiffInfo, ModelRef } from "@opencode/client"
 import type { ToolActions } from "@kilocode/kilo-ui/message-part"
 import { ToolChildSessionProvider, type ToolChildSession } from "@kilocode/kilo-ui/tool-child-session"
-import { createEffect, createMemo, on, onCleanup, Show, type JSX } from "solid-js"
+import { createEffect, createMemo, on, onCleanup, onMount, Show, type JSX } from "solid-js"
 import type { PromptAttachment, ToHost } from "../../../src/protocol"
 import { getVSCodeAPI } from "../context/vscode"
 import { TaskHeader } from "../components/chat/TaskHeader"
@@ -211,6 +211,21 @@ export function SessionView(props: {
     if (id) void v2.api.session.interrupt({ sessionID: id }).catch(v2.report)
   }
 
+  // Escape interrupts the running turn, as v1's ChatView did. A question dock, popover or selector that handles
+  // Escape first consumes the event, so this only fires for a press nothing else used. A read-only view has no
+  // composer, so it also has nothing to interrupt.
+  onMount(() => {
+    if (props.readOnly) return
+    const handler = (event: KeyboardEvent) => {
+      if (event.key !== "Escape" || event.defaultPrevented || event.isComposing) return
+      if (!running() && !working.submitting()) return
+      event.preventDefault()
+      stop()
+    }
+    document.addEventListener("keydown", handler)
+    onCleanup(() => document.removeEventListener("keydown", handler))
+  })
+
   return (
     <div class="chat-view">
       {props.tabStrip}
@@ -231,6 +246,7 @@ export function SessionView(props: {
                 <MessageList
                   session={session()}
                   actions={props.actions}
+                  selection={selection}
                   onSelectSession={(id) => props.actions.openSession?.(id)}
                   onShowHistory={props.onShowHistory}
                   onForkMessage={running() ? undefined : props.onForkMessage}
