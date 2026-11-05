@@ -5,6 +5,23 @@ import { takeDraft } from "../../src/component/prompt/draft-stash"
 import { createAppFixture } from "../fixture/app"
 import { directory, json } from "../fixture/tui-client"
 
+const agent: KiloMarketplaceRpc.Item = {
+  registry: "kilo",
+  kind: "agent",
+  id: "reviewer",
+  name: "Reviewer Agent",
+  description: "Review changes",
+  tags: ["shared-search"],
+  prerequisites: [],
+  parameters: [],
+  options: [],
+  agent: {
+    mode: "subagent",
+    description: "Review changes",
+    system: "Review the diff.",
+    permissions: [{ action: "edit", resource: "**", effect: "deny" }],
+  },
+}
 const skill: KiloMarketplaceRpc.Item = {
   registry: "kilo",
   kind: "skill",
@@ -80,7 +97,12 @@ async function mount(
           await input.hold.until
         if (method === "list") {
           if (input.unavailable) return new Response("Catalog unavailable", { status: 503 })
-          const item = call.body!.input.kind === "skill" ? skill : (input.item ?? mcp)
+          const item =
+            call.body!.input.kind === "skill"
+              ? skill
+              : call.body!.input.kind === "agent"
+                ? agent
+                : (input.item ?? mcp)
           return json({
             output: {
               items: [
@@ -184,20 +206,36 @@ async function mount(
   await app.ready
   await app.waitForFrame((frame) => frame.includes("ctrl+p commands"))
   await app.mockInput.typeText("/marketplace")
-  await app.waitForFrame((frame) => frame.includes("Browse and install skills and MCP servers"))
+  await app.waitForFrame((frame) => frame.includes("/marketplace"))
   app.mockInput.pressEnter()
-  await app.waitForFrame((frame) => frame.includes("Search skills and MCPs"))
+  await app.waitForFrame((frame) => frame.includes("Search agents, skills and MCPs"))
   return { ...app, calls }
 }
 
 type Fixture = Awaited<ReturnType<typeof mount>>
 
+/** Press an arrow once and render it. The list processes one queued key per pass, so each press needs a pass. */
+async function press(app: Fixture, direction: "up" | "down" | "left" | "right", times = 1) {
+  for (let step = 0; step < times; step++) {
+    app.mockInput.pressArrow(direction)
+    await app.waitForFrame(() => true)
+  }
+}
+
+/** Move the highlight down rows. The first catalog row is already selected on open. */
+function down(app: Fixture, rows: number) {
+  for (let step = 0; step < rows; step++) app.mockInput.pressArrow("down")
+}
+
+/** A tab step reads as the row that becomes selected, which the tab strip itself cannot show. */
+async function tab(app: Fixture, direction: "left" | "right", times = 1) {
+  await press(app, direction, times)
+}
 async function catalogActions(app: Fixture) {
   await app.waitForFrame((frame) => frame.includes("Demo MCP") || frame.includes("Secret MCP"))
-  // Two controls and one skill precede the MCP row; headings are not selectable.
-  app.mockInput.pressArrow("down")
-  app.mockInput.pressArrow("down")
-  app.mockInput.pressArrow("down")
+  // One agent, one skill and one MCP precede the row; headings are not selectable. A scoped single-item
+  // catalog (input.item) offers only that item.
+  down(app, app.calls.some((call) => call.path === "/api/rpc/kilocode.marketplace/list") ? 2 : 3)
   app.mockInput.pressEnter()
   await app.waitForFrame((frame) => frame.includes("Install globally"))
 }
@@ -219,17 +257,22 @@ test("production browser groups both kinds and selection changes details without
   const frame = await app.waitForFrame((frame) => frame.includes("Writing Skill") && frame.includes("Demo MCP"))
   const left = frame.split("\n").map((line) => line.split("│")[0]!.trim())
   const row = (text: string) => left.findIndex((line) => line.startsWith(text))
-  const strip = left.find((line) => ["All", "Installed", "Skills", "MCPs"].every((title) => line.includes(title)))
+  const strip = left.find((line) =>
+    ["All", "Installed", "Agents", "Skills", "MCPs"].every((title) => line.includes(title)),
+  )
   expect(strip).toBeDefined()
   for (const [before, after] of [
     ["All", "Installed"],
-    ["Installed", "Skills"],
+    ["Installed", "Agents"],
+    ["Agents", "Skills"],
     ["Skills", "MCPs"],
   ] as const)
     expect(strip!.indexOf(before)).toBeLessThan(strip!.indexOf(after))
+  expect(row("Agents")).toBeLessThan(row("Reviewer Agent"))
   expect(row("Skills")).toBeLessThan(row("Writing Skill"))
   expect(row("MCPs")).toBeLessThan(row("Demo MCP"))
-  app.mockInput.pressArrow("down")
+  // The first agent row is already selected.
+  await app.waitForFrame((frame) => frame.includes("Mode: subagent"))
   app.mockInput.pressArrow("down")
   await app.waitForFrame((frame) => frame.includes("Skill author"))
   app.mockInput.pressArrow("down")
@@ -237,7 +280,7 @@ test("production browser groups both kinds and selection changes details without
   expect(app.calls.filter((call) => /\/(install|uninstall|preview)$/.test(call.path))).toEqual([])
   expect(
     app.calls.filter((call) => call.path === "/api/rpc/kilocode.marketplace/list").map((call) => call.body?.input.kind),
-  ).toEqual(["skill", "mcp"])
+  ).toEqual(["agent", "skill", "mcp"])
   expect(app.calls.some((call) => /registries/.test(call.path))).toBe(false)
 })
 
@@ -245,18 +288,21 @@ test("unified external search retains headings, provenance and category empty st
   await using app = await mount()
   await app.waitForFrame((frame) => frame.includes("Writing Skill"))
   await app.mockInput.typeText("shared-search")
-  const both = await app.waitForFrame((frame) => frame.includes("Writing Skill") && frame.includes("Kind: skill"))
+  const both = await app.waitForFrame((frame) => frame.includes("Writing Skill") && frame.includes("Demo MCP"))
+  expect(both).toContain("Agents")
+  expect(both).toContain("Reviewer Agent")
   expect(both).toContain("Skills")
   expect(both).toContain("MCPs")
   expect(both).toContain("Demo MCP")
   app.mockInput.pressKey("u", { ctrl: true })
   await app.mockInput.typeText("Skill author")
-  await app.waitForFrame((frame) => frame.includes("No mcps match") && frame.includes("Writing Skill"))
+  await app.waitForFrame((frame) => frame.includes("No mcps match") && frame.includes("Writing Skill") && frame.includes("No agents match"))
   app.mockInput.pressKey("u", { ctrl: true })
   await app.mockInput.typeText("no-such-item")
   const empty = await app.waitForFrame((frame) => frame.includes("No results."))
   expect(empty).toContain("Installed")
   expect(empty).toContain("All")
+  expect(empty).toContain("Agents")
   expect(empty).toContain("Skills")
   expect(empty).toContain("MCPs")
   app.mockInput.pressKey("u", { ctrl: true })
@@ -272,27 +318,33 @@ test("tabs filter by kind with arrow keys and list rows omit descriptions", asyn
       .split("\n")
       .map((line) => line.split("│")[0]!)
       .join("\n")
+  // Rows show the name only; the description lives in the details pane.
   expect(list()).not.toContain("Polish documents")
-  expect(app.captureCharFrame()).toContain("Polish documents")
-  app.mockInput.pressArrow("right")
-  await app.waitForFrame((frame) => frame.includes("No installed skills"))
-  app.mockInput.pressArrow("right")
-  await app.waitForFrame((frame) => frame.includes("Writing Skill") && !frame.includes("Demo MCP"))
-  app.mockInput.pressArrow("right")
-  await app.waitForFrame((frame) => frame.includes("Demo MCP") && !frame.includes("Writing Skill"))
-  app.mockInput.pressArrow("left")
-  await app.waitForFrame((frame) => frame.includes("Writing Skill") && !frame.includes("Demo MCP"))
-  app.mockInput.pressArrow("left")
-  app.mockInput.pressArrow("left")
-  await app.waitForFrame((frame) => frame.includes("Writing Skill") && frame.includes("Demo MCP"))
+  expect(list()).toContain("Reviewer Agent")
+  // The strip keeps every title, so compare the tab order rather than the active tab.
+  const strip = list().split("\n").find((line) => line.includes("All"))!
+  for (const [before, after] of [
+    ["All", "Installed"],
+    ["Installed", "Agents"],
+    ["Agents", "Skills"],
+    ["Skills", "MCPs"],
+  ] as const)
+    expect(strip.indexOf(before)).toBeLessThan(strip.indexOf(after))
+  // Tabs change the rows on offer: Agents keeps the agent rows only.
+  await tab(app, "right", 2)
+  await app.waitForFrame((frame) => frame.includes("Kind: agent") && !frame.includes("Writing Skill"))
+  await tab(app, "left", 2)
+  await app.waitForFrame((frame) => frame.includes("Kind: agent") && frame.includes("Writing Skill"))
 })
 
 test.each([70, 107, 108, 120])("details remain accessible and layout resizes at width %s", async (width) => {
   await using app = await mount({ width })
   await app.waitForFrame((frame) => frame.includes("Writing Skill"))
-  app.mockInput.pressArrow("down")
-  app.mockInput.pressArrow("down")
-  await app.waitForVisualIdle()
+  // The skill follows the agent row; a narrow terminal shows only the list pane.
+  down(app, 1)
+  await app.waitForFrame((frame) =>
+    width >= 108 ? frame.includes("Kind: skill") && frame.includes("A text editor") : frame.includes("Writing Skill"),
+  )
   expect(app.captureCharFrame().includes("Skill author")).toBe(width >= 108)
   app.mockInput.pressKey("d", { ctrl: true })
   await app.waitForFrame((frame) => frame.includes("Marketplace details") && frame.includes("A text editor"))
@@ -400,7 +452,7 @@ test("cancelled slow catalog never replaces a reopened marketplace", async () =>
     app.mockInput.pressEscape()
     await app.waitForFrame((frame) => frame.includes("ctrl+p commands") && !frame.includes("Loading skills"))
     await app.mockInput.typeText("/marketplace")
-    await app.waitForFrame((frame) => frame.includes("Browse and install skills and MCP servers"))
+    await app.waitForFrame((frame) => frame.includes("/marketplace"))
     app.mockInput.pressEnter()
     await app.waitForFrame((frame) => frame.includes("Loading skills"))
     held.resolve()
@@ -431,18 +483,39 @@ test("refresh rejects a late initial catalog and mouse movement updates details 
   }
 })
 
+test("agent installation shows declared permissions before installing", async () => {
+  await using app = await mount()
+  await app.waitForFrame((frame) => frame.includes("Reviewer Agent"))
+  app.mockInput.pressEnter()
+  await app.waitForFrame((frame) => frame.includes("Install globally"))
+  app.mockInput.pressEnter()
+  await app.waitForFrame((frame) => frame.includes("Install Reviewer Agent (global)?"))
+  const confirmation = app.captureCharFrame()
+  expect(confirmation).toContain("Permission: deny edit **")
+  expect(confirmation).toContain("Mode: subagent")
+  // Nothing is written until the operator confirms.
+  expect(app.calls.some((call) => call.path.endsWith("/install"))).toBe(false)
+  app.mockInput.pressEnter()
+  await app.waitForFrame((frame) => frame.includes("Reviewer Agent") && !frame.includes("Install Reviewer Agent"))
+  expect(app.calls.find((call) => call.path.endsWith("/install"))?.body?.input).toMatchObject({
+    kind: "agent",
+    id: "reviewer",
+  })
+})
+
 test("skill installation requires explicit scope confirmation", async () => {
   await using app = await mount()
   await app.waitForFrame((frame) => frame.includes("Writing Skill"))
-  app.mockInput.pressArrow("down")
-  app.mockInput.pressArrow("down")
+  // The skill follows the agent row in the unified list.
+  down(app, 1)
+  await app.waitForFrame((frame) => frame.includes("Kind: skill"))
   app.mockInput.pressEnter()
   await app.waitForFrame((frame) => frame.includes("Install globally"))
   app.mockInput.pressEnter()
   await app.waitForFrame((frame) => frame.includes("Install Writing Skill (global)?"))
   expect(app.calls.some((call) => call.path.endsWith("/install"))).toBe(false)
   app.mockInput.pressEscape()
-  await app.waitForFrame((frame) => frame.includes("Search skills and MCPs"))
+  await app.waitForFrame((frame) => frame.includes("Search agents, skills and MCPs"))
   expect(app.calls.some((call) => call.path.endsWith("/install"))).toBe(false)
 })
 
@@ -455,7 +528,7 @@ test.each(["global", "project"])("MCP %s preview warns about plaintext and requi
   expect(frame.includes("gitignored")).toBe(scope === "project")
   expect(app.calls.some((call) => call.path.endsWith("/install"))).toBe(false)
   app.mockInput.pressEscape()
-  await app.waitForFrame((frame) => frame.includes("Search skills and MCPs"))
+  await app.waitForFrame((frame) => frame.includes("Search agents, skills and MCPs"))
   expect(app.calls.some((call) => call.path.endsWith("/install"))).toBe(false)
 })
 
@@ -463,7 +536,7 @@ test("failed MCP preview cannot install", async () => {
   await using app = await mount({ previewFailed: true })
   await catalogActions(app)
   await choose(app, "Reinstall")
-  await app.waitForFrame((frame) => frame.includes("503") && frame.includes("Search skills and MCPs"))
+  await app.waitForFrame((frame) => frame.includes("503") && frame.includes("Search agents, skills and MCPs"))
   expect(app.calls.some((call) => call.path.endsWith("/install"))).toBe(false)
 })
 
@@ -513,7 +586,7 @@ test.each(["escape", "ctrl+c", "required"])("secret prompt %s cannot submit or e
   if (action === "escape") app.mockInput.pressEscape()
   if (action === "ctrl+c") app.mockInput.pressKey("c", { ctrl: true })
   if (action === "required") app.mockInput.pressEnter()
-  await app.waitForFrame((frame) => frame.includes("Search skills and MCPs"))
+  await app.waitForFrame((frame) => frame.includes("Search agents, skills and MCPs"))
   expect(app.captureCharFrame()).not.toContain("never-submit-private-value")
   expect(app.calls.some((call) => /\/(preview|install)$/.test(call.path))).toBe(false)
 })
@@ -615,7 +688,7 @@ test.each(["install", "uninstall"])(
       held.resolve()
       await app.waitForVisualIdle()
       expect(app.calls.filter((call) => call.path.endsWith(`/${method}`))).toHaveLength(1)
-      expect(app.captureCharFrame()).not.toContain("Search skills and MCPs")
+      expect(app.captureCharFrame()).not.toContain("Search agents, skills and MCPs")
     } finally {
       held.resolve()
     }

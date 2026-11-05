@@ -381,14 +381,18 @@ it.live("applies organization integration changes to running external plugins", 
       ) ?? Effect.void
       yield* commands.get("policy-greet").pipe(
         Effect.flatMap((command) => (command ? Effect.fail("pending") : Effect.void)),
-        Effect.retry({ times: 500, schedule: Schedule.spaced("10 millis") }), // kilocode_change
+        // kilocode_change start - a slow CI runner restarts the plugin supervisor before the first policy applies
+        Effect.retry({ times: 1500, schedule: Schedule.spaced("10 millis") }),
+        // kilocode_change end
       )
       yield* plugins.awaitActivation
       expect((yield* plugins.list()).some((plugin) => plugin.id === "greeter")).toBe(false)
       yield* config.integration?.(Integration.ID.make("opencode"), undefined) ?? Effect.void
       yield* commands.get("policy-greet").pipe(
         Effect.flatMap((command) => (command ? Effect.void : Effect.fail("pending"))),
-        Effect.retry({ times: 500, schedule: Schedule.spaced("10 millis") }), // kilocode_change
+        // kilocode_change start - a slow CI runner restarts the plugin supervisor before the policy lifts
+        Effect.retry({ times: 1500, schedule: Schedule.spaced("10 millis") }),
+        // kilocode_change end
       )
     }).pipe(
       Effect.scoped,

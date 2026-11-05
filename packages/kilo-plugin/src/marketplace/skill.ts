@@ -3,6 +3,7 @@ export * as Skill from "./skill"
 import { createHash, randomUUID } from "node:crypto"
 import fs from "node:fs/promises"
 import path from "node:path"
+import { serialized } from "./queue"
 
 // Skill files install in a directory already scanned and watched by the native skill plugin.
 export class SkillError extends Error {
@@ -23,25 +24,6 @@ const MAX_ENTRIES = 4096
 
 export function safe(id: string) {
   return ID.test(id) && !id.includes("..") && !id.endsWith(".") && !RESERVED_ID.test(id)
-}
-
-// Cleanup must not delete another operation's live rollback backup. Aliases share a process-local queue.
-const queues = new Map<string, Promise<unknown>>()
-async function serialized<A>(target: string, task: (target: string) => Promise<A>) {
-  const absolute = path.resolve(target)
-  const canonical = path.join(await resolveDirectory(path.dirname(absolute)), path.basename(absolute))
-  const run = (queues.get(canonical) ?? Promise.resolve()).catch(() => undefined).then(() => task(canonical))
-  queues.set(canonical, run)
-  return run.finally(() => {
-    if (queues.get(canonical) === run) queues.delete(canonical)
-  })
-}
-
-async function resolveDirectory(directory: string): Promise<string> {
-  return fs.realpath(directory).catch(async (error: NodeJS.ErrnoException) => {
-    if (error.code !== "ENOENT") throw error
-    return path.join(await resolveDirectory(path.dirname(directory)), path.basename(directory))
-  })
 }
 
 export async function prepare(input: { root: string; id: string; archive: Uint8Array; select?: string }) {
