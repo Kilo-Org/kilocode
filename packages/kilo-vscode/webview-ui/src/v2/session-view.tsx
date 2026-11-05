@@ -164,7 +164,7 @@ export function SessionView(props: {
   const questioning = () => !blocked() && forms().length > 0
   const selection = createSelection(session, draftKey)
   const autoApprove = createAutoApprove()
-  const sandbox = createSandbox({ session, gate: selection.gate })
+  const sandbox = createSandbox({ session, gate: selection.created })
   const sandboxControl = {
     visible: sandbox.visible,
     ready: sandbox.ready,

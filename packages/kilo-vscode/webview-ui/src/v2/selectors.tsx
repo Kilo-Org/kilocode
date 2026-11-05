@@ -166,6 +166,10 @@ export function createSelection(
       void request.catch(() => undefined).finally(() => creates.delete(created.id))
       return created.id
     },
+    /** The pending create of a session, including its metadata write. */
+    created(id: string) {
+      return creates.get(id)
+    },
     /** The pending switch of a session; a failed switch fails the prompt instead of using another model. */
     gate(id: string) {
       return commits.get(id)

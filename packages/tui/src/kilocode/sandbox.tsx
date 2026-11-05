@@ -14,18 +14,30 @@ export function sandbox(context: Plugin.Context) {
   const rpc = context.client.rpc(KiloSandboxRpc.Definition)
   const [status, setStatus] = createSignal<ReadonlyMap<string, Status>>(new Map())
   const pending = new Set<string>()
+  // A status read that started before a toggle reply or a `changed` event must not put the older value back.
+  const loads = new Map<string, symbol>()
   const set = (sessionID: string, value: Status) => {
+    loads.delete(sessionID)
     setStatus((current) => new Map(current).set(sessionID, value))
   }
+  // A session created by `/sandbox` is not in the event-fed store yet; its RPC calls use the directory it was created in.
+  const created = new Map<string, string>()
   const options = (sessionID: string) => {
-    const directory = context.data.session.get(sessionID)?.location.directory
+    const directory = context.data.session.get(sessionID)?.location.directory ?? created.get(sessionID)
     return directory ? { location: { directory } } : undefined
   }
-  const load = (sessionID: string) =>
-    rpc.status({ sessionID }, options(sessionID)).then(
-      (value) => set(sessionID, value),
-      () => undefined,
+  const load = (sessionID: string) => {
+    const token = Symbol()
+    loads.set(sessionID, token)
+    return rpc.status({ sessionID }, options(sessionID)).then(
+      (value) => {
+        if (loads.get(sessionID) === token) set(sessionID, value)
+      },
+      () => {
+        if (loads.get(sessionID) === token) loads.delete(sessionID)
+      },
     )
+  }
 
   const current = () => {
     const route = context.ui.router.current()
@@ -36,9 +48,10 @@ export function sandbox(context: Plugin.Context) {
     const sessionID = current()
     if (sessionID) return sessionID
     const location = context.location ?? context.data.location.default()
-    const created = await context.client.session.create({ location: { directory: location.directory } })
-    context.ui.router.navigate({ type: "session", sessionID: created.id })
-    return created.id
+    const session = await context.client.session.create({ location: { directory: location.directory } })
+    created.set(session.id, session.location.directory)
+    context.ui.router.navigate({ type: "session", sessionID: session.id })
+    return session.id
   }
 
   const toggle = async () => {

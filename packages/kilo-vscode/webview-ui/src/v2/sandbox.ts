@@ -87,7 +87,8 @@ export function createSandbox(input: {
   const read = async (sessionID: string) => {
     const token = ++reads
     try {
-      await input.gate?.(sessionID)
+      // A failed create or metadata write is reported by the prompt; the status read still answers.
+      await Promise.resolve(input.gate?.(sessionID)).catch(() => undefined)
       const value = await rpc.status({ sessionID }, { location })
       if (token !== reads || input.session() !== sessionID) return
       attempts = 0

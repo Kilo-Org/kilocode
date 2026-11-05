@@ -29,7 +29,7 @@ import {
 import { resolveKiloProfile } from "./settings-paths"
 import { promptKeybindings, watchKeybindings } from "./prompt-keybindings"
 import { readDisplaySettings } from "./display-settings"
-import { SandboxPreference } from "./services/sandbox-preference"
+import { SANDBOX_DEFAULT_KEY, SandboxPreference } from "./services/sandbox-preference"
 import { createSpeechToTextHost } from "./speech-to-text/host"
 import { setSidebarSession, sidebarSession } from "./browser-tab/sidebar-session"
 import { openBrowserLink } from "./browser-links"
@@ -414,11 +414,15 @@ export function wire(input: {
 
 const surfaces = new Set<(message: ToWebview) => void>()
 
-/** The composer state every webview shares through globalState: auto-approve and the expanded model picker. */
+/**
+ * The composer state every webview shares through globalState: auto-approve, the expanded model picker and the
+ * sandbox preference for new sessions. Reset All Settings clears them and sends this again.
+ */
 export function composerState(context: ExtensionContext): ToWebview[] {
   return [
     { type: "autoApproveStateLoaded", value: context.globalState.get(AUTO_APPROVE, false) },
     { type: "modelSelectorExpandedLoaded", value: context.globalState.get(EXPANDED, true) },
+    { type: "sandboxDefaultLoaded", explicit: context.globalState.get<boolean>(SANDBOX_DEFAULT_KEY) },
   ]
 }
 
