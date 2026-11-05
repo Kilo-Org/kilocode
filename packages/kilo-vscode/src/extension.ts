@@ -28,6 +28,7 @@ import { profile } from "./profile-panel"
 import { settings } from "./settings-panel"
 import { createShutdown } from "./shutdown"
 import { toolDiff } from "./tool-diff"
+import { tabShortcutTarget } from "./tab-shortcuts"
 
 let shutdownExtension: (() => Promise<void>) | undefined
 
@@ -205,12 +206,14 @@ export function activate(context: ExtensionContext) {
     // One shortcut pair serves the sidebar and the Agent Manager. The sidebar focus state is more precise than
     // `isActive`, which stays true while the panel is the selected editor tab but the sidebar has focus.
     commands.registerCommand("kilo-code.v2.agentManager.previousTab", () => {
-      if (view.focused()) return void view.post({ type: "command", name: "tabPrevious" })
-      if (agentManager.isActive()) return agentAction("tabPrevious")
+      const target = tabShortcutTarget(view.focused(), agentManager.isActive())
+      if (target === "sidebar") return void view.post({ type: "command", name: "tabPrevious" })
+      if (target === "agentManager") return agentAction("tabPrevious")
     }),
     commands.registerCommand("kilo-code.v2.agentManager.nextTab", () => {
-      if (view.focused()) return void view.post({ type: "command", name: "tabNext" })
-      if (agentManager.isActive()) return agentAction("tabNext")
+      const target = tabShortcutTarget(view.focused(), agentManager.isActive())
+      if (target === "sidebar") return void view.post({ type: "command", name: "tabNext" })
+      if (target === "agentManager") return agentAction("tabNext")
     }),
     // The switcher only exists in the sidebar, so the command always opens it there.
     commands.registerCommand("kilo-code.v2.showOpenTabs", async () => {
