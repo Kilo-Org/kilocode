@@ -376,6 +376,25 @@ describe("kilo_local_recall tool", () => {
     expect(result.value.metadata).toMatchObject({ skippedSessions: 1 })
   })
 
+  test("does not report the current session as both searched and skipped", async () => {
+    const current = info("ses_current", "current session")
+    const good = info("ses_good", "good session")
+    const { runtime: value } = runtime({
+      sessions: [current, good],
+      messages: { [current.id]: [], [good.id]: [user("msg_good", "current-decode-needle")] },
+      failSearch: [current.id],
+    })
+
+    const result = await execute(makeTool(value), { mode: "search", query: "current-decode-needle" })
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    expect(result.value.output!).toContain("good session")
+    expect(result.value.output!).not.toContain("current session")
+    expect(result.value.output!).toContain("Searched 1 sessions")
+    expect(result.value.output!).toContain("Skipped 1 sessions whose history could not be decoded.")
+    expect(result.value.metadata).toMatchObject({ searchedSessions: 1, skippedSessions: 1 })
+  })
+
   test("reports a decode failure when reading a session", async () => {
     const bad = info("ses_bad", "bad session")
     const { runtime: value } = runtime({

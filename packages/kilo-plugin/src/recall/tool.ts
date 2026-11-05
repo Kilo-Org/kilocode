@@ -82,15 +82,17 @@ function search(
     const scoped = sessions.filter((session) => inside(roots, session.location.directory))
     const current = scoped.find((session) => session.id === context.sessionID)
     let skipped = 0
+    let currentFailed = false
     const currentMessages = current
       ? yield* runtime.searchMessages(current.id).pipe(
           Effect.catch(() => {
+            currentFailed = true
             skipped++
             return Effect.succeed([] as ReadonlyArray<SessionMessage.MediaInfo>)
           }),
         )
       : ([] as ReadonlyArray<SessionMessage.MediaInfo>)
-    const boundary = current ? RecallSearch.active(currentMessages, context.messageID) : context.messageID
+    const boundary = current && !currentFailed ? RecallSearch.active(currentMessages, context.messageID) : context.messageID
 
     const accumulator = yield* Effect.try({
       try: () => {
@@ -100,7 +102,7 @@ function search(
           excludeSessionID: context.sessionID,
           excludeFromMessageID: boundary,
         })
-        if (current) accumulator.add(RecallSearch.toSearchSession(current, currentMessages))
+        if (current && !currentFailed) accumulator.add(RecallSearch.toSearchSession(current, currentMessages))
         return accumulator
       },
       catch: (error) => new Tool.Error({ message: messageOf(error) }),
