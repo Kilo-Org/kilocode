@@ -1,4 +1,4 @@
-export * as RemoteCommands from "./commands"
+export * as RemoteCommands from "./command-executor"
 
 import { Cause, DateTime, Effect, Exit, Schema, Semaphore } from "effect"
 import { sql } from "drizzle-orm"

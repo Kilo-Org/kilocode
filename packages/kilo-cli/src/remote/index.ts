@@ -15,7 +15,7 @@ import { parse, type ParseError } from "jsonc-parser"
 import { randomUUID } from "node:crypto"
 import { hostname } from "node:os"
 import path from "node:path"
-import { RemoteCommands } from "./commands"
+import { RemoteCommands } from "./command-executor"
 import { SessionSync } from "../session-sync"
 import { RemoteSocket, type RemoteEnvelope } from "./socket"
 

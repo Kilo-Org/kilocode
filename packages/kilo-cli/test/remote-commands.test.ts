@@ -20,7 +20,7 @@ import { Location } from "@opencode/schema/location"
 import { Project } from "@opencode/schema/project"
 import { Global } from "@opencode/util/global"
 import { testEffect } from "../../core/test/lib/effect"
-import { RemoteCommands } from "../src/remote/commands"
+import { RemoteCommands } from "../src/remote/command-executor"
 
 const it = testEffect(Layer.empty).live
 const id = Session.ID.make("ses_remote_test")
