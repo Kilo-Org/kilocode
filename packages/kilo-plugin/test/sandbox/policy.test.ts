@@ -395,6 +395,22 @@ describe("sandbox policy state", () => {
     expect((await execute(value, SandboxPolicy.status(sessionID))).enabled).toBe(false)
   })
 
+  test("keeps the stored state of a session that moves to another directory", async () => {
+    const from = await tempdir()
+    const to = await tempdir()
+    const sessionID = id("ses_policy_move")
+    const source = harness({ directory: from, config: { sandbox: { enabled: true } } })
+    await execute(source, SandboxPolicy.status(sessionID))
+    await execute(source, SandboxPolicy.move(sessionID, from, to))
+
+    expect(await SandboxStore.read(from, sessionID)).toBeUndefined()
+    expect(await SandboxStore.read(to, sessionID)).toMatchObject({ enabled: true, version: 0 })
+    const target = harness({ directory: to, config: { sandbox: { enabled: false } } })
+    // The destination reads the moved state instead of seeding its own default (here: off).
+    await execute(target, SandboxPolicy.status(sessionID))
+    expect(await SandboxStore.read(to, sessionID)).toMatchObject({ enabled: true, version: 0 })
+  })
+
   test("refreshes an initialized policy from current settings", async () => {
     const directory = await tempdir()
     const value = harness({ directory, config: { sandbox: { enabled: true, network: "allow" } } })

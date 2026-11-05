@@ -22,6 +22,14 @@ function denied(exit: Exit.Exit<unknown, unknown>) {
 
 describe("sandbox tool network classification", () => {
   // kilo_port(sandbox:fd6329a01ac1)
+  test("treats a namespaced tool as MCP even when its name matches a built-in tool", () => {
+    expect(Network.isMcp("session_move", "session")).toBe(true)
+    expect(Network.isMcp("probe_touch", "probe")).toBe(true)
+    expect(Network.isMcp("opencode_custom", "opencode")).toBe(true)
+    expect(Network.isMcp("artifact_create", "opencode")).toBe(false)
+    expect(Network.isMcp("session_move", undefined)).toBe(false)
+  })
+
   test("recognizes the built-in tools and treats every other id as custom", () => {
     expect(Network.isBuiltin("read")).toBe(true)
     expect(Network.isBuiltin("webfetch")).toBe(true)

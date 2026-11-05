@@ -289,8 +289,9 @@ const read = Effect.fn("SandboxPolicy.read")(function* (directory: string, sessi
   return stored
 })
 
-// A subagent session without its own state starts with its parent's confinement. A parent in this directory gets its
-// snapshot first, so a subagent started before any other tool call still inherits the parent's choice.
+// A subagent session without its own state starts with its parent's confinement. It reads the parent's stored state,
+// or the state the parent would start with, without taking the parent's lock: enabling a parent holds the parent
+// lock while it waits for its children's locks.
 const inherited = Effect.fn("SandboxPolicy.inherited")(function* (
   directory: string,
   sessionID: SessionID,
@@ -300,11 +301,27 @@ const inherited = Effect.fn("SandboxPolicy.inherited")(function* (
   if (!session?.parentID || (yield* SandboxState.read(sessionID))) return
   const parentDirectory = (yield* runtime.session(session.parentID))?.location.directory ?? directory
   const parent =
-    parentDirectory === directory
-      ? (yield* snapshot(session.parentID)).state
-      : yield* read(parentDirectory, session.parentID)
+    (yield* read(parentDirectory, session.parentID)) ??
+    (parentDirectory === directory ? yield* resolveInitial(directory, session.parentID) : undefined)
   if (!parent) return
   return { ...parent, version: 0 } satisfies Snapshot
+})
+
+/** Carries a session's stored state to the directory it moved to, so the move does not reset its confinement. */
+export const move = Effect.fn("SandboxPolicy.move")(function* (sessionID: SessionID, from: string, to: string) {
+  if (from === to) return
+  yield* locked(
+    sessionID,
+    Effect.gen(function* () {
+      const state = yield* read(from, sessionID)
+      if (!state) return
+      yield* Effect.promise(() => SandboxStore.write(to, sessionID, state))
+      yield* Effect.promise(() => SandboxStore.remove(from, sessionID))
+      snapshots.delete(key(from, sessionID))
+      synced.delete(key(from, sessionID))
+      snapshots.set(key(to, sessionID), state)
+    }),
+  )
 })
 
 const snapshot: (

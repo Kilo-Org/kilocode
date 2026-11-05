@@ -7,6 +7,7 @@ import { Session } from "@opencode/core/session"
 import { ShellParse } from "@opencode/core/shell/parse"
 import { define } from "@opencode/plugin/effect/plugin"
 import { KiloSandboxRpc } from "@opencode/schema/kilocode/sandbox"
+import type { ListCursor } from "@opencode/schema/session"
 import { Tool } from "@opencode/schema/tool"
 import { Global } from "@opencode/util/global"
 import { Context, Effect, Option, Ref, Stream } from "effect"
@@ -14,9 +15,9 @@ import * as SandboxActivation from "./activation"
 import { SandboxConfig } from "./config"
 import { marker, register, release } from "./environment"
 import { mutates } from "./git"
-import { isBuiltin } from "./network"
+import { isMcp } from "./network"
 import * as SandboxPolicy from "./policy"
-import { Runtime, type Interface as RuntimeInterface } from "./runtime"
+import { Runtime, type Interface as RuntimeInterface, type Target } from "./runtime"
 
 export { layer as environment } from "./environment"
 
@@ -45,6 +46,10 @@ export const Plugin = define({
     const sessions = sessionService.value
     const jobs = jobService.value
     const global = yield* Global.Service
+    // Per Location: each Location has its own tool registry and its own plugin instance.
+    const wrapped = new Set<string>()
+    /** MCP tools: delegated authority that needs unrestricted network. */
+    const delegated = new Set<string>()
     const emit = yield* Ref.make<(event: KiloSandboxRpc.Changed) => Effect.Effect<void>>(() => Effect.void)
 
     const runtime: RuntimeInterface = {
@@ -52,11 +57,19 @@ export const Plugin = define({
       worktree: ctx.location.project.directory,
       config: config.value.entries().pipe(Effect.map((entries) => SandboxConfig.fromEntries(entries, global.config))),
       session: (sessionID) => sessions.get(sessionID).pipe(Effect.option, Effect.map(Option.getOrUndefined)),
-      children: (sessionID) =>
-        sessions.list({ parentID: sessionID }).pipe(
-          Effect.map((page) => page.data.map((child) => ({ id: child.id, directory: child.location.directory }))),
-          Effect.orElseSucceed(() => []),
-        ),
+      // Every direct child: a family larger than one page must not skip children.
+      children: (sessionID) => {
+        const page = (cursor?: ListCursor): Effect.Effect<Target[]> =>
+          sessions.list({ parentID: sessionID, ...(cursor ? { cursor } : {}) }).pipe(
+            Effect.flatMap((result) => {
+              const items = result.data.map((child) => ({ id: child.id, directory: child.location.directory }))
+              if (!result.cursor.next || result.data.length === 0) return Effect.succeed(items)
+              return page(result.cursor.next).pipe(Effect.map((rest) => [...items, ...rest]))
+            }),
+            Effect.orElseSucceed(() => []),
+          )
+        return page()
+      },
       active: sessions.active,
       background: jobs.runningBackground.pipe(
         Effect.map(
@@ -135,8 +148,7 @@ export const Plugin = define({
           editor.update(item.id, (tool) => {
             const execute = tool.execute
             const id = item.id
-            // MCP tools carry their server's namespace; built-in tools do not.
-            const mcp = item.options?.namespace !== undefined && !isBuiltin(id) // kilo_port(sandbox:b534aff3ebec)
+            const mcp = isMcp(id, item.options?.namespace) // kilo_port(sandbox:b534aff3ebec)
             if (mcp) delegated.add(id)
             tool.execute = (input, context) => {
               const launches = new Set<string>()
@@ -232,6 +244,8 @@ export const Plugin = define({
       Stream.runForEach((event) =>
         Effect.gen(function* () {
           if (event.type === "config.updated") return SandboxPolicy.configChanged()
+          if (event.type === "session.moved")
+            return yield* SandboxPolicy.move(event.data.sessionID, runtime.directory, event.data.location.directory)
           if (event.type === "session.deleted")
             yield* SandboxPolicy.dispose(event.data.sessionID, Effect.void).pipe(provide)
         }),
@@ -241,9 +255,6 @@ export const Plugin = define({
   }),
 })
 
-const wrapped = new Set<string>()
-/** MCP tools: delegated authority that needs unrestricted network. */
-const delegated = new Set<string>()
 const hidden = new Set(["list_mcp_resources", "read_mcp_resource", "execute"])
 
 function describe(error: unknown) {
