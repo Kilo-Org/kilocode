@@ -4,6 +4,8 @@ import * as vscode from "vscode"
 import { openFileInEditor, openRelativeFile } from "../src/review-utils"
 
 const execute = spyOn(vscode.commands, "executeCommand")
+// An absolute root on the running platform, so the drive and separators come from `path` itself.
+const repo = path.join(process.cwd(), "repo")
 
 afterEach(() => {
   execute.mockClear()
@@ -11,17 +13,17 @@ afterEach(() => {
 
 describe("openFileInEditor", () => {
   it("delegates to vscode.open so custom image editors can handle the file", () => {
-    openFileInEditor("/repo/assets/banner.png", undefined, undefined, vscode.ViewColumn.One)
+    openFileInEditor(path.join(repo, "assets", "banner.png"), undefined, undefined, vscode.ViewColumn.One)
 
     expect(execute).toHaveBeenCalledTimes(1)
     const [command, uri, options] = execute.mock.calls[0]!
     expect(command).toBe("vscode.open")
-    expect((uri as vscode.Uri).fsPath).toBe(vscode.Uri.file("/repo/assets/banner.png").fsPath)
+    expect((uri as vscode.Uri).fsPath).toBe(path.join(repo, "assets", "banner.png"))
     expect(options).toEqual({ viewColumn: vscode.ViewColumn.One, preview: true })
   })
 
   it("preserves line and column navigation for text editors", () => {
-    openFileInEditor("/repo/src/app.ts", 7, 3, vscode.ViewColumn.One)
+    openFileInEditor(path.join(repo, "src", "app.ts"), 7, 3, vscode.ViewColumn.One)
 
     const options = execute.mock.calls[0]?.[2] as vscode.TextDocumentShowOptions
     expect(options.selection?.start.line).toBe(6)
@@ -31,30 +33,26 @@ describe("openFileInEditor", () => {
 
 describe("openRelativeFile", () => {
   it("resolves diff paths from the selected repository", () => {
-    openRelativeFile("/repo/app_alpha", "README.md")
+    openRelativeFile(path.join(repo, "app_alpha"), "README.md")
 
-    const root = vscode.Uri.file("/repo/app_alpha").fsPath
-    expect((execute.mock.calls[0]?.[1] as vscode.Uri).fsPath).toBe(path.join(root, "README.md"))
+    expect((execute.mock.calls[0]?.[1] as vscode.Uri).fsPath).toBe(path.join(repo, "app_alpha", "README.md"))
   })
 
   it("rejects paths outside the selected repository", () => {
-    openRelativeFile("/repo/app_alpha", "../app_beta/README.md")
+    openRelativeFile(path.join(repo, "app_alpha"), path.join("..", "app_beta", "README.md"))
 
     expect(execute).not.toHaveBeenCalled()
   })
 
   it("opens absolute paths directly, even without a root", () => {
-    openRelativeFile(undefined, "/repo/app_alpha/README.md")
+    openRelativeFile(undefined, path.join(repo, "app_alpha", "README.md"))
 
-    const root = vscode.Uri.file("/repo/app_alpha").fsPath
-    expect((execute.mock.calls[0]?.[1] as vscode.Uri).fsPath).toBe(path.join(root, "README.md"))
+    expect((execute.mock.calls[0]?.[1] as vscode.Uri).fsPath).toBe(path.join(repo, "app_alpha", "README.md"))
   })
 
   it("opens absolute paths that fall outside the selected repository", () => {
-    openRelativeFile("/repo/app_alpha", "/repo/app_beta/README.md")
+    openRelativeFile(path.join(repo, "app_alpha"), path.join(repo, "app_beta", "README.md"))
 
-    expect((execute.mock.calls[0]?.[1] as vscode.Uri).fsPath).toBe(
-      vscode.Uri.file("/repo/app_beta/README.md").fsPath,
-    )
+    expect((execute.mock.calls[0]?.[1] as vscode.Uri).fsPath).toBe(path.join(repo, "app_beta", "README.md"))
   })
 })
