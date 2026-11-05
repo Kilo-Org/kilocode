@@ -18,10 +18,12 @@ function state(store: NotificationStore) {
 }
 
 function current(store: NotificationStore) {
-  const known = cache.get(state(store))
-  if (known) return known
   const stored = store.globalState.get<string[]>(KEY, [])
-  const ids = Array.isArray(stored) ? stored : []
+  const known = cache.get(state(store)) ?? []
+  // Merge the cached IDs with the stored ones: another VS Code window shares globalState, and its dismissals
+  // must not disappear when this window writes next.
+  const ids = [...known]
+  for (const id of Array.isArray(stored) ? stored : []) if (!ids.includes(id)) ids.push(id)
   cache.set(state(store), ids)
   return ids
 }
@@ -55,6 +57,9 @@ export function dismissNotification(store: NotificationStore, id: string): strin
 /** Keeps only the dismissed IDs the Gateway still sends, so a removed notice can appear again. */
 export function syncDismissedNotifications(store: NotificationStore, activeIds: readonly string[]): string[] {
   const ids = current(store)
+  // The Gateway also returns an empty list when signed out or when the request failed, so an empty response must
+  // never erase the dismissed set.
+  if (activeIds.length === 0) return ids
   const active = new Set(activeIds)
   const next = ids.filter((id) => active.has(id))
   if (next.length === ids.length) return ids

@@ -9,6 +9,9 @@ function memory(initial: string[] = []) {
   return {
     writes,
     read: () => stored,
+    external: (ids: string[]) => {
+      stored = ids
+    },
     globalState: {
       get<T>(_key: string, fallback: T) {
         return (stored.length ? stored : fallback) as T
@@ -48,12 +51,38 @@ describe("kilo notifications", () => {
     expect(dismissNotification(store, "kilo.new")).toEqual(["kilo.old", "kilo.kept", "kilo.new"])
     expect(dismissNotification(store, "kilo.new")).toEqual(["kilo.old", "kilo.kept", "kilo.new"])
 
+    await Bun.sleep(0)
+    expect(store.writes.length).toBe(1)
+
     expect(syncDismissedNotifications(store, ["kilo.kept", "kilo.new"])).toEqual(["kilo.kept", "kilo.new"])
     expect(syncDismissedNotifications(store, ["kilo.new"])).toEqual(["kilo.new"])
 
     await Bun.sleep(0)
     expect(store.read()).toEqual(["kilo.new"])
+    expect(store.writes.length).toBe(3)
     expect(store.writes.at(-1)).toEqual(["kilo.new"])
+  })
+
+  it("keeps dismissals when the active list is empty", async () => {
+    const store = memory(["kilo.a", "kilo.b"])
+
+    expect(syncDismissedNotifications(store, [])).toEqual(["kilo.a", "kilo.b"])
+
+    await Bun.sleep(0)
+    expect(store.read()).toEqual(["kilo.a", "kilo.b"])
+    expect(store.writes.length).toBe(0)
+  })
+
+  it("merges dismissals another window wrote to globalState", async () => {
+    const store = memory()
+
+    dismissNotification(store, "kilo.a")
+    await Bun.sleep(0)
+    store.external(["kilo.a", "kilo.b"])
+
+    expect(dismissNotification(store, "kilo.c")).toEqual(["kilo.a", "kilo.b", "kilo.c"])
+    await Bun.sleep(0)
+    expect(store.read()).toEqual(["kilo.a", "kilo.b", "kilo.c"])
   })
 
   it("keeps every ID when Close dismisses several in one tick", async () => {
