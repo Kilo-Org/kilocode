@@ -1,12 +1,16 @@
 {
   "$comment": "Shared-patch baseline (U-L3-01). Read by script/check-shared-patches.ts and script/check-opencode-annotations.ts. Each shared upstream file that Kilo adds or changes needs an entry: rung (3 = seam patch, 4 = feature patch) and the missing seam. `unmarked` allows lines without markers and states why. Raise a limit only in the PR that adds the patch, and lower it when a patch goes away.",
   "limits": {
-    "files": 89,
-    "markedLines": 1512,
+    "files": 90,
+    "markedLines": 1514,
     "unmarkedLines": 264,
     "deletedFiles": 0
   },
   "files": {
+    "packages/cli/src/run/noninteractive.ts": {
+      "rung": 3,
+      "seam": "`run --auto` replies `once` to every permission request. A request whose metadata sets `interactive: true` is rejected instead, so a headless run cannot approve it. The Kilo sandbox asks `sandbox_escalation` with that flag before a Git command runs outside the sandbox. No plugin hook reaches the CLI's permission replies (the permission domain has only `evaluate`), and the host does not own the non-interactive run loop. Upstream never sets the flag, so its behavior does not change."
+    },
     "packages/core/src/tool-output.ts": {
       "rung": 3,
       "seam": "Export the existing layer and cleanup node so the Kilo host can decorate native file allocations while preserving native truncation and cleanup. A plugin cannot observe allocation provenance, and replacing the service without these exports would duplicate the upstream implementation. No algorithm or upstream default changes."

@@ -185,7 +185,8 @@ export const Plugin = define({
               action: "sandbox_escalation",
               resources: [invocation.command],
               save: [],
-              metadata: { command: invocation.command, sandboxEscalation: true },
+              // `interactive`: headless runs (`run --auto`) reject the request instead of approving it.
+              metadata: { command: invocation.command, sandboxEscalation: true, interactive: true },
               source: { type: "tool", messageID: call.messageID, id: call.id },
             })
             .pipe(
