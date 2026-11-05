@@ -96,7 +96,12 @@ export function activate(context: ExtensionContext) {
   const notebooks = new NotebookBroker({
     directories: () => [
       ...(workspace.workspaceFolders ?? []).map((folder) => folder.uri.fsPath),
-      ...(agentManagerRef?.state?.getWorktrees().map((worktree) => worktree.path) ?? []),
+      ...(agentManagerRef
+        ? [...agentManagerRef.contexts.values()].flatMap((project) => [
+            project.root,
+            ...(project.peekState()?.getWorktrees().map((worktree) => worktree.path) ?? []),
+          ])
+        : []),
     ],
     log: (text) => output.appendLine(`Notebook: ${text}`),
   })
