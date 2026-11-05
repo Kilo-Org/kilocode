@@ -13,6 +13,7 @@ import {
   Show,
   createSignal,
   createMemo,
+  createUniqueId,
   createEffect,
   on,
   untrack,
@@ -47,6 +48,9 @@ import { LOCAL, canOpenRootSession, isKnownRootSession, adjacentHint, focusChatS
 import { useBridge } from "./v2/vscode"
 import { V2Scope } from "../src/v2/client"
 import { SessionView } from "../src/v2/session-view"
+import { createComposerQueue } from "../src/v2/composer"
+import type { ToWebview } from "../../src/protocol"
+import type { ReferenceHandler } from "../src/v2/append-ready"
 import { createAppDirectories } from "./app-directories"
 import { createAppSession } from "./app-session"
 import {
@@ -102,6 +106,7 @@ import * as modifier from "./modifier"
 import { ProjectList } from "./ProjectList"
 import { reportFailure } from "./failure-toast"
 import { TabBar } from "./TabBar"
+import { createBrowserPanel } from "./BrowserPanel"
 import { createIntro } from "./intro/AgentManagerIntro"
 import { createShortcutHints } from "./ShortcutHints"
 import { baseUpdateTarget } from "./base-update-target"
@@ -165,6 +170,9 @@ import { createChatFocus, createFocusBridge, createPromptFocus, forgetTerminalFo
 import { createAppDiffPanelFocus } from "./diff-panel-focus"
 import { clampPanelWidth, createPanelResize, maxPanelWidth, minPanelWidth, SidePanel } from "./side-panel-layout"
 import { createSidePanel, sideHostNeeded } from "./side-panel-state"
+import { createDocumentInspector, isMarkdownPath } from "../documents/state"
+import { chunkPaths } from "../src/v2/validate-paths"
+import { DocumentPanelHost } from "./documents/DocumentPanelHost"
 import { SubagentPanel } from "./SubagentPanel"
 import { attachSubagentEvent, createSubagentController } from "./subagent-tabs"
 import { EditPreviewPanel } from "./EditPreviewPanel"
@@ -188,6 +196,7 @@ import { useDisplaySettings } from "../src/v2/display-settings"
 type SidebarSelection = typeof LOCAL | string | null
 const isMac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.userAgent)
 const isPending = (id: string) => id.startsWith(PENDING_PREFIX)
+
 
 const AgentManagerContent: Component = () => {
   const { t } = useLanguage()
@@ -357,7 +366,12 @@ const AgentManagerContent: Component = () => {
   createEffect(
     on(projectList, (next, previous) => {
       const ids = new Set(next.map((project) => project.id))
-      previous?.filter((project) => !ids.has(project.id)).forEach((project) => composers.clearProject(project.id))
+      previous
+        ?.filter((project) => !ids.has(project.id))
+        .forEach((project) => {
+          composers.clearProject(project.id)
+          documentInspector.clearProject(project.id)
+        })
     }),
   )
   const reviewState = createReviewState()
@@ -370,6 +384,34 @@ const AgentManagerContent: Component = () => {
     setDiffStyle(style)
     to({ type: "agentManager.setReviewDiffStyle", style })
   }
+  const documentInspector = createDocumentInspector(
+    {
+      send: (sessionId, file, contextKey) => to({ type: "agentManager.requestDocument", sessionId, file, contextKey }),
+      openFile: (file, sessionId, line, column) => {
+        if (!sessionId) return false
+        to({ type: "agentManager.openFile", sessionId, filePath: file, line, column })
+        return true
+      },
+      copyPath: (file, sessionId) => {
+        if (!sessionId) return false
+        to({ type: "agentManager.copyFilePath", sessionId, filePath: file })
+        return true
+      },
+      onMessage: (handler) =>
+        onHostMessage((message) => {
+          if (message.type === "agentManager.document") handler(message)
+        }),
+    },
+    selection,
+    currentProjectId,
+    () => sidePanel() === SidePanel.Documents,
+    () => {
+      closeHistory()
+      setReviewActive(false)
+      panels.open(SidePanel.Documents)
+    },
+    () => panels.close(SidePanel.Documents),
+  )
   const subagentCtl = createSubagentController({
     project: currentProjectId,
     current: () => sessions.currentSessionID(),
@@ -717,12 +759,17 @@ const AgentManagerContent: Component = () => {
     untrack(() => {
       const current = sessions.currentSessionID()
       if (selection() !== LOCAL || !current || !previous.includes(current) || next.ids.includes(current)) return
-      activateAfterRemoval(previous.filter((id) => id === current || next.ids.includes(id)), current)
+      activateAfterRemoval(
+        previous.filter((id) => id === current || next.ids.includes(id)),
+        current,
+      )
     })
   })
   createEffect(() => {
     const ids = new Set(worktrees().map((wt) => wt.id))
     composers.prune(ids)
+    const selected = selection()
+    documentInspector.prune(currentProjectId() ?? "single", new Set([...ids, "local", ...(selected ? [selected] : [])]))
     untrack(() => diffs.prune(ids))
     setReviewOpenByContext((prev) => {
       const next = pruneReviewState(prev, currentProjectId() ?? "single", ids)
@@ -830,7 +877,7 @@ const AgentManagerContent: Component = () => {
       keepTerminalStack(history(), selection(), contextEmpty(), terms.all().length + terms.sides().length),
   )
   const sideHostVisible = () =>
-    sideHostNeeded(sidePanel(), diffMounted(), terms.sides().length, subagents.tabs().length)
+    sideHostNeeded(sidePanel(), diffMounted(), terms.sides().length, subagents.tabs().length, browser.hasCache() ? 1 : 0)
   const overlay = createMemo((): SetupState | null => {
     if (restricted()) return null
     const state = setup()
@@ -1013,6 +1060,13 @@ const AgentManagerContent: Component = () => {
     routeCatalog: router.routeCatalog,
     routeState: router.routeState,
     font: (font) => font && setTerminalFont(font),
+    activeProject: activeProjectId,
+    currentSession: () => sessions.currentSessionID(),
+    revealBrowser: () => {
+      closeHistory()
+      setReviewActive(false)
+      panels.open(SidePanel.Browser)
+    },
   })
   const preserveSidebarScroll = createSidebarScrollPreserver(() => selection() ?? sessions.currentSessionID())
   const applyActiveState = createProjectHydration({
@@ -1073,10 +1127,33 @@ const AgentManagerContent: Component = () => {
 
   // The composer of the visible session; review comments and Fix with Kilo append to it.
   let promptAppend: ((value: string, send: boolean) => void) | undefined
+  // The same composer's browser reference list; an element picked in the browser panel joins it.
+  let promptReference: ReferenceHandler | undefined
   const appendToPrompt = (text: string, autoSend: boolean) => {
     promptAppend?.(text, autoSend)
     requestChatFocus(true)
   }
+  // Editor and terminal context actions target the visible composer, and wait while no composer is mounted.
+  const composerQueue = createComposerQueue()
+
+  // One browser page per session, kept alive across worktree and session switches.
+  const browser = createBrowserPanel({
+    active: () => sidePanel() === SidePanel.Browser,
+    open: () => {
+      closeHistory()
+      setReviewActive(false)
+      panels.open(SidePanel.Browser)
+    },
+    close: () => panels.close(SidePanel.Browser),
+    sessionId: () => sessions.currentSessionID(),
+    projectId: activeProjectId,
+    sessions: () => sessions.sessions(),
+    onReference: (reference) => {
+      if (reference.sessionId !== sessions.currentSessionID()) return
+      promptReference?.(reference)
+      requestChatFocus(true)
+    },
+  })
 
   const handleSessionCreated = (id: string | undefined) => {
     if (!id) {
@@ -1113,12 +1190,52 @@ const AgentManagerContent: Component = () => {
           }
     editPreview.open(diff, sessionID, diffStyle())
   }
+  // Inline file candidates are validated by the host, which owns filesystem access and the worktree boundary.
+  const fileChecks = new Map<string, { resolve: (existing: string[]) => void; reject: (error: Error) => void }>()
+  const fileCheckPrefix = createUniqueId()
+  let fileCheckCount = 0
+  const stopFileChecks = onHostMessage((message) => {
+    if (message.type !== "agentManager.validateFilesResult") return
+    const pending = fileChecks.get(message.id)
+    if (!pending) return
+    fileChecks.delete(message.id)
+    pending.resolve(message.existing)
+  })
+  onCleanup(() => {
+    stopFileChecks()
+    // Reject on dispose so the shared cache keeps these paths unknown instead of caching them as missing.
+    for (const pending of fileChecks.values()) pending.reject(new Error("validateFiles cancelled"))
+    fileChecks.clear()
+  })
+  // Keep each host request small so one frame with many candidates stays responsive; every path is still checked.
+  const FILE_CHECK_CHUNK = 64
+  const validateFiles = (sessionID: string, paths: string[]) => {
+    const chunks = chunkPaths(paths, FILE_CHECK_CHUNK)
+    return Promise.all(
+      chunks.map(
+        (chunk) =>
+          new Promise<string[]>((resolve, reject) => {
+            const id = `${fileCheckPrefix}-${++fileCheckCount}`
+            fileChecks.set(id, { resolve, reject })
+            to({ type: "agentManager.validateFiles", id, sessionId: sessionID, paths: chunk })
+            setTimeout(() => {
+              const pending = fileChecks.get(id)
+              if (!pending) return
+              fileChecks.delete(id)
+              pending.reject(new Error("validateFiles timed out"))
+            }, 3000)
+          }),
+      ),
+    ).then((results) => results.flat())
+  }
   const toolActions: ToolActions = {
-    openFile: (filePath, line) => {
-      const sessionId = sessions.currentSessionID()
-      if (!sessionId) return
-      to({ type: "agentManager.openFile", sessionId, filePath, line })
+    openFile: (filePath, line, column, sessionID) => {
+      // Tool paths are raw model strings, so the resolver needs the session to pick the worktree or local root.
+      const sessionId = sessionID ?? sessions.currentSessionID() ?? selection() ?? LOCAL
+      if (isMarkdownPath(filePath) && documentInspector.open(filePath, sessionId, line, column)) return
+      to({ type: "agentManager.openFile", sessionId, filePath, line, column })
     },
+    validateFiles,
     openDiff: (diff) => previewEdit([diff]),
     openDiffs: (diffs) => previewEdit(diffs),
     openSession: (id) => {
@@ -1684,6 +1801,7 @@ const AgentManagerContent: Component = () => {
       subagents.open(detail.sessionID, typeof detail.title === "string" ? detail.title : undefined, parent)
     }
     window.addEventListener("agentManager.openSubagent", subagent)
+    const documents = documentInspector.subscribe((message) => documentInspector.documents.onMessage(message))
 
     const terminalDispatch = createTerminalMessageHandler({
       state: terms,
@@ -1721,7 +1839,9 @@ const AgentManagerContent: Component = () => {
       if (message.type === "agentManager.terminal.fontChanged") setTerminalFont(message.font)
       terminalDispatch(message as unknown as Parameters<typeof terminalDispatch>[0])
       stateHandlers.projects(message)
+      stateHandlers.browser(message)
       if (message.type === "agentManager.state") {
+        browser.bind().browser(message.browserAutomation === true)
         preserveSidebarScroll(() => stateHandlers.state(message))
         return
       }
@@ -1866,12 +1986,25 @@ const AgentManagerContent: Component = () => {
       appendToPrompt(text, detail.autoSend)
     }
     window.addEventListener(APPEND_REVIEW_COMMENTS, reviewCommentsEvent)
+    // These host messages are shared with the sidebar protocol, not the Agent Manager message union.
+    const context = vscode.onMessage((raw) => {
+      const message = raw as unknown as ToWebview
+      if (message.type === "appendContext") {
+        composerQueue.push({ type: "attach", items: message.items })
+        requestChatFocus(true)
+        return
+      }
+      if (message.type !== "startPrompt") return
+      composerQueue.push({ type: "submit", text: message.text, items: message.items ?? [] })
+    })
 
     onCleanup(() => {
       keys()
       stopModifier()
       window.removeEventListener("agentManager.openSubagent", subagent)
       window.removeEventListener(APPEND_REVIEW_COMMENTS, reviewCommentsEvent)
+      context()
+      documents()
       unsubscribe()
     })
   })
@@ -1983,9 +2116,7 @@ const AgentManagerContent: Component = () => {
           requestChatFocus(true)
           return true
         }
-        const managed = worktreeSessionIds().has(id)
-          ? managedSessions().find((entry) => entry.id === id)
-          : undefined
+        const managed = worktreeSessionIds().has(id) ? managedSessions().find((entry) => entry.id === id) : undefined
         if (managed?.worktreeId) {
           selectWorktree(managed.worktreeId)
           sessions.selectSession(id)
@@ -2056,6 +2187,8 @@ const AgentManagerContent: Component = () => {
                   onShowHistory={() => openHistory()}
                   empty={intro.render}
                   onAppendReady={(append) => (promptAppend = append)}
+                  onComposerReady={composerQueue.ready}
+                  onReferenceReady={(add) => (promptReference = add)}
                   onPreviewEdit={(files, sessionID) => previewEdit(files, sessionID)}
                   onViewTurnChanges={openTurnChanges}
                   onForkSession={handleForkSession}
@@ -2123,6 +2256,7 @@ const AgentManagerContent: Component = () => {
           />
         </Show>
         <div class="am-diff-panel-wrapper">
+          {browser.render()}
           <DiffPanelCache
             current={diffScopeId}
             context={diffCtx}
@@ -2157,6 +2291,7 @@ const AgentManagerContent: Component = () => {
             onOpenFile={(ctx: string, file: string, line?: number) =>
               to({ type: "agentManager.openFile", sessionId: ctx, filePath: file, line })
             }
+            onOpenDocument={(file: string) => documentInspector.open(file)}
             onRevertFile={(key, ctx, file) => revertCtl.revertFor(key, ctx, review.scope(), file)}
             revertingFiles={revertCtl.revertingFor}
             activeTerminalId={terms.activeId()}
@@ -2198,6 +2333,13 @@ const AgentManagerContent: Component = () => {
           <Show when={editPreview.preview()}>
             <EditPreviewPanel state={editPreview} visible={() => sidePanel() === SidePanel.EditPreview} />
           </Show>
+          <DocumentPanelHost
+            inspector={documentInspector}
+            onClosePanel={() => panels.close(SidePanel.Documents)}
+            onSendAll={focusCtl.focus}
+            activeTerminalId={terms.activeId()}
+            visible={() => sidePanel() === SidePanel.Documents}
+          />
           <SideTerminalPanel
             state={terms}
             contextKey={terms.sideKey}
@@ -2304,15 +2446,15 @@ const AgentManagerContent: Component = () => {
         diffOpen={diffOpen}
         reviewActive={reviewActive}
         onToggleDiff={diffPanels.toggleToolbar}
-        browserOpen={() => false}
-        browserAutomation={() => false}
-        onToggleBrowser={() => undefined}
+        browserOpen={browser.tabs.browserOpen}
+        browserAutomation={browser.tabs.browserAutomation}
+        onToggleBrowser={browser.tabs.onToggleBrowser}
         prStatus={() => activePR()?.pr}
         prOpen={prOpen}
         onTogglePR={togglePRPanel}
-        documentsOpen={() => false}
-        documentsAvailable={() => false}
-        onToggleDocuments={() => undefined}
+        documentsOpen={documentInspector.isOpen}
+        documentsAvailable={documentInspector.available}
+        onToggleDocuments={documentInspector.toggle}
         subagentsAvailable={() => subagentCtl.tabs.tabs().length > 0 || subagentCtl.toolbar.available().length > 0}
         subagentsOpen={() => sidePanel() === SidePanel.Subagents}
         onToggleSubagents={subagentCtl.toolbar.toggle}

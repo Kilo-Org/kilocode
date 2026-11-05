@@ -49,6 +49,13 @@ export type KiloSettingKey =
   | "autocomplete.enableChatAutocomplete"
   | "autocomplete.provider"
   | "autocomplete.model"
+  | "integratedBrowser"
+  | "agentManager.browser.useSystemChrome"
+  | "agentManager.browser.openLinksIn"
+  | "browserAutomation.enabled"
+  | "browserAutomation.useSystemChrome"
+  | "browserAutomation.headless"
+  | "experimental.nativeNotebookTools"
 
 type Json = Record<string, unknown>
 

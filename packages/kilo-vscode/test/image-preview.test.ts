@@ -1,6 +1,5 @@
-// The parseImage tests of v1 `tests/unit/image-preview.test.ts`.
 import { describe, expect, test } from "bun:test"
-import { parseImage } from "../src/image-preview"
+import { buildPreviewPath, getPreviewCommand, getPreviewDir, parseImage, trimEntries } from "../src/image-preview"
 
 describe("parseImage", () => {
   test("parses png data urls and preserves a clean extension", () => {
@@ -24,5 +23,26 @@ describe("parseImage", () => {
 
   test("returns null when the header is not base64", () => {
     expect(parseImage("data:image/png,hello", "screen.png")).toBeNull()
+  })
+})
+
+describe("preview files", () => {
+  test("writes previews into a dedicated storage folder", () => {
+    expect(getPreviewDir()).toBe("image-preview")
+    expect(buildPreviewPath("screen.png", 42)).toBe("image-preview/42-screen.png")
+  })
+
+  test("opens the built-in image preview editor", () => {
+    const uri = { toString: () => "file:///storage/image-preview/42-screen.png" }
+    expect(getPreviewCommand(uri)).toEqual(["imagePreview.previewEditor", { resource: uri, size: "contain" }])
+  })
+
+  test("drops the oldest preview paths once the limit is exceeded", () => {
+    const items = Array.from({ length: 22 }, (_, i) => ({ path: `${String(i).padStart(2, "0")}-screen.png` }))
+    expect(trimEntries(items)).toEqual(["00-screen.png", "01-screen.png"])
+  })
+
+  test("keeps all preview paths when below the limit", () => {
+    expect(trimEntries([{ path: "01-screen.png" }])).toEqual([])
   })
 })

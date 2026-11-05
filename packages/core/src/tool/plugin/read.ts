@@ -115,6 +115,7 @@ export const Plugin = {
               Effect.mapError((error) => {
                 if (error instanceof ToolFailure) return error
                 const message =
+                  error instanceof ReadToolFileSystem.ReaderError || // kilocode_change(read) - keep a reader's failure message
                   error instanceof ReadToolFileSystem.BinaryFileError ||
                   error instanceof ReadToolFileSystem.MediaIngestLimitError ||
                   error instanceof ReadToolFileSystem.OffsetOutOfRangeError ||

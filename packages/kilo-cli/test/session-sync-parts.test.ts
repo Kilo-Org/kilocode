@@ -1,6 +1,6 @@
 import { expect } from "bun:test"
 import { Context, Effect, Exit, Layer, Schema } from "effect"
-import { and, asc, eq, sql } from "drizzle-orm"
+import { and, asc, eq, isNull, sql } from "drizzle-orm"
 import { mkdtemp, mkdir, realpath, rm } from "node:fs/promises"
 import os from "node:os"
 import path from "node:path"
@@ -21,7 +21,7 @@ import { Global } from "@opencode/util/global"
 import { LayerNode } from "@opencode/util/effect/layer-node"
 import { testEffect } from "../../core/test/lib/effect"
 import { Store } from "../src/session-sync/store"
-import { digest, json } from "../src/session-sync/protocol"
+import { type Change, digest, json, jsonNodes, reconstructMessage } from "../src/session-sync/protocol"
 
 const it = testEffect(Layer.empty)
 const sessionID = Session.ID.make("ses_sync_parts")
@@ -83,13 +83,17 @@ const fixture = Effect.gen(function* () {
 type Fixture = Effect.Success<typeof fixture>
 
 const assistantRow = (id = messageID, seq = 0, content: SessionPartData[] = []) => {
-  const { id: _, type, ...data } = encodeMessage(
+  const {
+    id: _,
+    type,
+    ...data
+  } = encodeMessage(
     decodeMessage({
       id,
       type: "assistant",
       agent: "build",
       model: { providerID: "fixture", id: "model", variant: "default" },
-      metadata: { opaque: { nil: null, list: [false, 7, "quoted \"text\"\nline"] } },
+      metadata: { opaque: { nil: null, list: [false, 7, 'quoted "text"\nline'] } },
       native: { provider: { replay: "preserve this", nil: null } },
       content,
       time: { created: 10, completed: 20 },
@@ -123,23 +127,42 @@ const allow = (f: Fixture) =>
     organizationID: null,
     tenant: { type: "user", id: "fixture" },
     userID: "fixture",
-  }).pipe(Effect.andThen(Store.reconcile(f.db, f.directory, true)))
+  }).pipe(
+    Effect.andThen(
+      f.db
+        .update(SessionTable)
+        .set({ time_updated: sql`time_updated` })
+        .where(and(eq(SessionTable.directory, f.directory), isNull(SessionTable.workspace_id)))
+        .run(),
+    ),
+    Effect.andThen(Store.sessions(f.db, f.directory)),
+    Effect.tap((sessions) => Effect.sync(() => expect(sessions.map((session) => session.id)).toContain(sessionID))),
+    Effect.andThen(Store.reconcile(f.db, f.directory, true)),
+  )
 
 // SessionTransfer.export uses this native messages reader. Compare the complete encoded object,
 // not a hand-written content projection, so opaque transcript fields and the original shape survive.
 const captured = (f: Fixture, id = messageID) =>
   Effect.gen(function* () {
-    const row = (yield* Store.dirty(f.db, sessionID)).find((row) => row.kind === "message" && row.id === id)
+    const rows = yield* f.db.all<Store.Dirty>(sql`SELECT * FROM _kilo_sync_dirty WHERE session_id=${sessionID}`)
+    const row = rows.find((row) => row.kind === "message" && row.id === id)
     const native = (yield* f.store.messages({ sessionID, order: "asc" })).find((message) => message.id === id)
     const source = yield* f.db
       .select({ seq: SessionMessageTable.seq })
       .from(SessionMessageTable)
       .where(eq(SessionMessageTable.id, id))
       .get()
-    if (!row || !native || !source) return yield* Effect.die("Missing split history fixture")
+    const session = (yield* Store.sessions(f.db, f.directory))[0]
+    if (!row || !native || !source || !session) return yield* Effect.die("Missing split history fixture")
     expect(row.op).toBe("put")
-    expect(Store.value(row)).toEqual(json({ seq: source.seq, message: encodeMessage(native) }))
-    return row
+    const result = reconstructMessage(
+      Store.value(row),
+      rows.filter((row) => row.kind === "message-part" && row.op === "put").map(Store.value),
+      session.position,
+    )
+    if (!result.complete) return yield* Effect.die("Expected a complete native message snapshot")
+    expect(result.value).toEqual(json({ seq: source.seq, message: encodeMessage(native) }))
+    return { ...row, reconstructed: result.value }
   })
 
 const partRows = (db: Store.DB) =>
@@ -155,9 +178,12 @@ it.live("bootstrap reconstructs ordered split assistant content and leaves legac
     const f = yield* fixture
     const inlineID = SessionMessage.ID.make("msg_sync_inline")
     const inline: SessionPartData[] = [{ type: "text", text: "legacy inline", native: { nil: null } }]
-    yield* f.db.insert(SessionMessageTable).values([assistantRow(), assistantRow(inlineID, 1, inline)]).run()
+    yield* f.db
+      .insert(SessionMessageTable)
+      .values([assistantRow(), assistantRow(inlineID, 1, inline)])
+      .run()
     const reasoning: SessionPartData = { type: "reasoning", text: "first", native: { signature: "opaque", nil: null } }
-    const text: SessionPartData = { type: "text", text: "second\n\"quoted\"", native: { nested: { nil: null } } }
+    const text: SessionPartData = { type: "text", text: 'second\n"quoted"', native: { nested: { nil: null } } }
     const tool: SessionPartData = {
       type: "tool",
       id: "call_original",
@@ -176,14 +202,18 @@ it.live("bootstrap reconstructs ordered split assistant content and leaves legac
     yield* allow(f)
     const split = yield* captured(f)
     const legacy = yield* captured(f, inlineID)
-    expect(Store.value(split)).toEqual(json({
-      seq: 0,
-      message: { ...assistantRow().data, id: messageID, type: "assistant", content: [reasoning, text, tool] },
-    }))
-    expect(Store.value(legacy)).toEqual(json({
-      seq: 1,
-      message: { ...assistantRow(inlineID, 1, inline).data, id: inlineID, type: "assistant" },
-    }))
+    expect(split.reconstructed).toEqual(
+      json({
+        seq: 0,
+        message: { ...assistantRow().data, id: messageID, type: "assistant", content: [reasoning, text, tool] },
+      }),
+    )
+    expect(legacy.reconstructed).toEqual(
+      json({
+        seq: 1,
+        message: { ...assistantRow(inlineID, 1, inline).data, id: inlineID, type: "assistant" },
+      }),
+    )
     expect(
       (yield* f.db.select().from(SessionMessageTable).where(eq(SessionMessageTable.id, messageID)).get())?.data,
     ).toMatchObject({ content: [] })
@@ -209,9 +239,12 @@ it.live("direct part inserts, updates, reordering and deletes capture every curr
       .run()
     const updated = yield* captured(f)
     expect(updated.position).toBeGreaterThan(second.position)
-    expect(Store.value(updated)).toMatchObject({
+    expect(updated.reconstructed).toMatchObject({
       message: {
-        content: [{ type: "text", text: "moved before reasoning" }, { type: "reasoning", text: "first" }],
+        content: [
+          { type: "text", text: "moved before reasoning" },
+          { type: "reasoning", text: "first" },
+        ],
       },
     })
     yield* f.db
@@ -223,7 +256,7 @@ it.live("direct part inserts, updates, reordering and deletes capture every curr
     yield* f.db.delete(SessionPartTable).where(eq(SessionPartTable.message_id, messageID)).run()
     const empty = yield* captured(f)
     expect(empty.position).toBeGreaterThan(removed.position)
-    expect(Store.value(empty)).toMatchObject({ message: { content: [] } })
+    expect(empty.reconstructed).toMatchObject({ message: { content: [] } })
     yield* parts(f.db, [{ ordinal: 0, data: { type: "text", text: "cascade must not resurrect this message" } }])
     yield* f.db.delete(SessionMessageTable).where(eq(SessionMessageTable.id, messageID)).run()
     expect((yield* Store.dirty(f.db, sessionID)).find((row) => row.kind === "message")).toMatchObject({
@@ -249,7 +282,11 @@ it.live("native envelope-first projection captures final parts while old packet 
     const pending = yield* Store.freeze(
       f.db,
       session,
-      [{ op: "put", kind: "message", id: messageID, value: Store.value(before) }],
+      (yield* f.db.all<Store.Dirty>(
+        sql`SELECT * FROM _kilo_sync_dirty WHERE session_id=${sessionID} ORDER BY position`,
+      ))
+        .filter((row) => row.op === "put")
+        .map((row) => ({ op: "put" as const, kind: row.kind, id: row.id, value: Store.value(row) })),
       before.position,
       [],
     )
@@ -302,7 +339,7 @@ it.live("native envelope-first projection captures final parts while old packet 
     yield* f.bus.publish(SessionEvent.MessageContentUpdated, { sessionID, messageID, content: [] })
     const empty = yield* captured(f)
     expect(empty.position).toBeGreaterThan(reduced.position)
-    expect(Store.value(empty)).toMatchObject({ message: { content: [] } })
+    expect(empty.reconstructed).toMatchObject({ message: { content: [] } })
     expect(yield* partRows(f.db)).toEqual([])
   }),
 )
@@ -319,11 +356,7 @@ it.live("split part insert, update and delete capture rolls back with native wri
     const dirty = yield* Store.dirty(f.db, sessionID)
     const sessions = yield* Store.sessions(f.db, f.directory)
     const originalParts = yield* partRows(f.db)
-    const envelope = yield* f.db
-      .select()
-      .from(SessionMessageTable)
-      .where(eq(SessionMessageTable.id, messageID))
-      .get()
+    const envelope = yield* f.db.select().from(SessionMessageTable).where(eq(SessionMessageTable.id, messageID)).get()
     const rolledBack = yield* f.db
       .transaction((tx) =>
         Effect.gen(function* () {
@@ -359,9 +392,9 @@ it.live("split part insert, update and delete capture rolls back with native wri
         .pipe(Effect.exit)
       expect(Exit.isFailure(projected)).toBe(true)
       expect(yield* partRows(f.db)).toEqual(originalParts)
-      expect(
-        yield* f.db.select().from(SessionMessageTable).where(eq(SessionMessageTable.id, messageID)).get(),
-      ).toEqual(envelope)
+      expect(yield* f.db.select().from(SessionMessageTable).where(eq(SessionMessageTable.id, messageID)).get()).toEqual(
+        envelope,
+      )
       expect(yield* Store.dirty(f.db, sessionID)).toEqual(dirty)
       expect(yield* Store.sessions(f.db, f.directory)).toEqual(sessions)
       yield* captured(f)
@@ -369,7 +402,7 @@ it.live("split part insert, update and delete capture rolls back with native wri
   }),
 )
 
-it.live("many native part rewrites retain one lazy position marker and reconstruct only when read", () =>
+it.live("many native part rewrites retain independent bodies and a body-free envelope", () =>
   Effect.gen(function* () {
     const f = yield* fixture
     yield* f.db.insert(SessionMessageTable).values(assistantRow()).run()
@@ -377,45 +410,34 @@ it.live("many native part rewrites retain one lazy position marker and reconstru
       type: "text" as const,
       text: `part ${index}: ${"original".repeat(32)}`,
     }))
-    yield* parts(f.db, content.map((data, ordinal) => ({ ordinal, data })))
-    expect(yield* Store.dirty(f.db, sessionID)).toEqual([])
-    expect(yield* f.db.all(sql`SELECT * FROM _kilo_sync_dirty WHERE session_id=${sessionID}`)).toEqual([])
-    yield* allow(f)
-    const initial = yield* f.db.get<Store.Dirty>(
-      sql`SELECT * FROM _kilo_sync_dirty WHERE session_id=${sessionID} AND kind='message' AND id=${messageID}`,
+    yield* parts(
+      f.db,
+      content.map((data, ordinal) => ({ ordinal, data })),
     )
-    if (!initial) return yield* Effect.die("Missing initial lazy marker")
-    expect(initial.value).toBeNull()
+    yield* allow(f)
+    const initial = yield* captured(f)
+    expect(Store.value(initial)).toMatchObject({ parts: { count: 80, through: initial.position } })
+    expect(initial.value).not.toContain("original")
     yield* f.bus.publish(SessionEvent.MessageContentUpdated, {
       sessionID,
       messageID,
       content: content.map((part) => ({ ...part, text: part.text.replace("original", "rewritten") })),
     })
-    const markers = yield* f.db.all<Store.Dirty>(
-      sql`SELECT * FROM _kilo_sync_dirty WHERE session_id=${sessionID} AND kind='message'`,
-    )
-    expect(markers).toHaveLength(1)
-    const marker = markers[0]
-    if (!marker) return yield* Effect.die("Missing rewritten lazy marker")
-    expect(marker.value).toBeNull()
-    expect(marker.position).toBeGreaterThan(initial.position)
     const current = yield* captured(f)
-    expect(current.position).toBe(marker.position)
-    expect(Store.value(current)).toMatchObject({
+    expect(current.position).toBeGreaterThan(initial.position)
+    expect(current.value).not.toContain("rewritten")
+    expect(current.reconstructed).toMatchObject({
       message: { content: content.map((part) => ({ ...part, text: part.text.replace("original", "rewritten") })) },
     })
     expect(
-      yield* f.db.get(sql`SELECT value,position FROM _kilo_sync_dirty
-        WHERE session_id=${sessionID} AND kind='message' AND id=${messageID}`),
-    ).toEqual({ value: null, position: marker.position })
+      yield* f.db.all(sql`SELECT id FROM _kilo_sync_dirty WHERE session_id=${sessionID} AND kind='message-part'`),
+    ).toHaveLength(80)
     yield* f.bus.publish(SessionEvent.MessageContentUpdated, { sessionID, messageID, content: [] })
-    const empty = yield* captured(f)
-    expect(empty.position).toBeGreaterThan(current.position)
-    expect(Store.value(empty)).toMatchObject({ message: { content: [] } })
+    expect((yield* captured(f)).reconstructed).toMatchObject({ message: { content: [] } })
   }),
 )
 
-it.live("local deletion freezes unread lazy split content before FK cascades without changing a frozen packet", () =>
+it.live("local deletion preserves split snapshots before FK cascades without changing a frozen packet", () =>
   Effect.gen(function* () {
     const f = yield* fixture
     yield* f.db.insert(SessionMessageTable).values(assistantRow()).run()
@@ -423,11 +445,15 @@ it.live("local deletion freezes unread lazy split content before FK cascades wit
     yield* allow(f)
     const before = yield* captured(f)
     const session = (yield* Store.sessions(f.db, f.directory))[0]
-    if (!session) return yield* Effect.die("Missing lazy deletion enrollment")
+    if (!session) return yield* Effect.die("Missing split deletion enrollment")
     const pending = yield* Store.freeze(
       f.db,
       session,
-      [{ op: "put", kind: "message", id: messageID, value: Store.value(before) }],
+      (yield* f.db.all<Store.Dirty>(
+        sql`SELECT * FROM _kilo_sync_dirty WHERE session_id=${sessionID} ORDER BY position`,
+      ))
+        .filter((row) => row.op === "put")
+        .map((row) => ({ op: "put" as const, kind: row.kind, id: row.id, value: Store.value(row) })),
       before.position,
       [],
     )
@@ -444,7 +470,7 @@ it.live("local deletion freezes unread lazy split content before FK cascades wit
     )
     const native = (yield* f.store.messages({ sessionID, order: "asc" }))[0]
     if (!marker || !native) return yield* Effect.die("Missing unread split content")
-    expect(marker.value).toBeNull()
+    expect(marker.value).not.toBeNull()
     expect(marker.position).toBeGreaterThan(pending.through)
     yield* f.bus.publish(SessionEvent.Deleted, { sessionID })
     expect(yield* partRows(f.db)).toEqual([])
@@ -452,7 +478,13 @@ it.live("local deletion freezes unread lazy split content before FK cascades wit
     const retained = (yield* Store.dirty(f.db, sessionID)).find((row) => row.kind === "message")
     if (!retained) return yield* Effect.die("Local deletion erased unread split history")
     expect(retained.position).toBe(marker.position)
-    expect(Store.value(retained)).toEqual(json({ seq: 0, message: encodeMessage(native) }))
+    const retainedParts = yield* f.db.all<Store.Dirty>(
+      sql`SELECT * FROM _kilo_sync_dirty WHERE session_id=${sessionID} AND kind='message-part' AND op='put'`,
+    )
+    expect(reconstructMessage(Store.value(retained), retainedParts.map(Store.value), marker.position)).toEqual({
+      complete: true,
+      value: json({ seq: 0, message: encodeMessage(native) }),
+    })
     expect(
       yield* f.db.get(sql`SELECT value FROM _kilo_sync_dirty
         WHERE session_id=${sessionID} AND kind='message' AND id=${messageID}`),
@@ -474,20 +506,20 @@ it.live("local deletion freezes unread lazy split content before FK cascades wit
   }),
 )
 
-it.live("pre-delete lazy snapshots and native cascades roll back together after a late projector rejects deletion", () =>
+it.live("split snapshots and native cascades roll back together after a late projector rejects deletion", () =>
   Effect.gen(function* () {
     const f = yield* fixture
     yield* f.db.insert(SessionMessageTable).values(assistantRow()).run()
     yield* parts(f.db, [
-      { ordinal: 0, data: { type: "text", text: "keep lazy content" } },
-      { ordinal: 1, data: { type: "reasoning", text: "keep lazy reasoning" } },
+      { ordinal: 0, data: { type: "text", text: "keep snapshot content" } },
+      { ordinal: 1, data: { type: "reasoning", text: "keep snapshot reasoning" } },
     ])
     yield* allow(f)
     const marker = yield* f.db.get<Store.Dirty>(
       sql`SELECT * FROM _kilo_sync_dirty WHERE session_id=${sessionID} AND kind='message' AND id=${messageID}`,
     )
-    if (!marker) return yield* Effect.die("Missing rollback lazy marker")
-    expect(marker.value).toBeNull()
+    if (!marker) return yield* Effect.die("Missing rollback split snapshot")
+    expect(marker.value).not.toBeNull()
     const originalParts = yield* partRows(f.db)
     const sessions = yield* Store.sessions(f.db, f.directory)
     yield* f.bus.project(SessionEvent.Deleted, () => Effect.die("late projector refuses local deletion"))
@@ -504,7 +536,7 @@ it.live("pre-delete lazy snapshots and native cascades roll back together after 
   }),
 )
 
-it.live("the first excluded envelope or part mutation freezes the last authorized lazy value and position", () =>
+it.live("excluded envelope and part mutations preserve the last authorized split values and positions", () =>
   Effect.gen(function* () {
     for (const [scope, mutation] of [
       ["directory", "envelope"],
@@ -524,8 +556,8 @@ it.live("the first excluded envelope or part mutation freezes the last authorize
         sql`SELECT * FROM _kilo_sync_dirty WHERE session_id=${sessionID} AND kind='message' AND id=${messageID}`,
       )
       const native = (yield* f.store.messages({ sessionID, order: "asc" }))[0]
-      if (!marker || !native) return yield* Effect.die("Missing authorized lazy content")
-      expect(marker.value).toBeNull()
+      if (!marker || !native) return yield* Effect.die("Missing authorized split content")
+      expect(marker.value).not.toBeNull()
       const excluded = path.join(path.dirname(f.directory), "excluded")
       yield* Effect.promise(() => mkdir(excluded))
       if (scope === "directory")
@@ -553,8 +585,7 @@ it.live("the first excluded envelope or part mutation freezes the last authorize
           .set({ data: { ...assistantRow().data, metadata: { excluded: true } } })
           .where(eq(SessionMessageTable.id, messageID))
           .run()
-      if (mutation === "insert")
-        yield* parts(f.db, [{ ordinal: 2, data: { type: "text", text: "excluded insert" } }])
+      if (mutation === "insert") yield* parts(f.db, [{ ordinal: 2, data: { type: "text", text: "excluded insert" } }])
       if (mutation === "update")
         yield* f.db
           .update(SessionPartTable)
@@ -574,7 +605,13 @@ it.live("the first excluded envelope or part mutation freezes the last authorize
       if (!frozen) return yield* Effect.die("Excluded mutation erased authorized history")
       expect(frozen.value).not.toBeNull()
       expect(frozen.position).toBe(marker.position)
-      expect(Store.value(frozen)).toEqual(json({ seq: 0, message: encodeMessage(native) }))
+      const retainedParts = yield* f.db.all<Store.Dirty>(
+        sql`SELECT * FROM _kilo_sync_dirty WHERE session_id=${sessionID} AND kind='message-part' AND op='put'`,
+      )
+      expect(reconstructMessage(Store.value(frozen), retainedParts.map(Store.value), marker.position)).toEqual({
+        complete: true,
+        value: json({ seq: 0, message: encodeMessage(native) }),
+      })
       yield* f.db
         .update(SessionPartTable)
         .set({ data: { type: "text", text: "another excluded mutation" } })
@@ -590,7 +627,7 @@ it.live("the first excluded envelope or part mutation freezes the last authorize
   }),
 )
 
-it.live("active message removal does not materialize the lazy value it immediately discards", () =>
+it.live("active message removal discards its envelope without materializing the complete message", () =>
   Effect.gen(function* () {
     const f = yield* fixture
     yield* f.db.insert(SessionMessageTable).values(assistantRow()).run()
@@ -598,13 +635,394 @@ it.live("active message removal does not materialize the lazy value it immediate
     yield* allow(f)
     yield* f.db.run("CREATE TABLE snapshot_observation(value TEXT)")
     yield* f.db.run(`CREATE TRIGGER observe_materialized_message AFTER UPDATE ON _kilo_sync_dirty
-      WHEN OLD.kind='message' AND OLD.value IS NULL AND NEW.value IS NOT NULL BEGIN
+      WHEN NEW.kind='message' AND NEW.op='put' AND instr(NEW.value,'removed without serialization')>0 BEGIN
         INSERT INTO snapshot_observation(value) VALUES(NEW.value);
       END`)
     yield* f.db.delete(SessionMessageTable).where(eq(SessionMessageTable.id, messageID)).run()
     expect(yield* f.db.all(sql`SELECT * FROM snapshot_observation`)).toEqual([])
     expect(
-      (yield* Store.dirty(f.db, sessionID)).find(row => row.kind === "message" && row.id === messageID),
+      (yield* Store.dirty(f.db, sessionID)).find((row) => row.kind === "message" && row.id === messageID),
     ).toMatchObject({ op: "remove", value: null })
   }),
 )
+
+it.live("reader rejects partial, deferred, future and mixed-frontier snapshots and sorts ordinals numerically", () =>
+  Effect.sync(() => {
+    const envelope = json({
+      seq: 7,
+      message: { id: messageID, type: "assistant", native: { nil: null } },
+      parts: { count: 2, through: 20 },
+    })
+    const first = json({
+      messageID,
+      ordinal: 2,
+      position: 10,
+      part: { type: "reasoning", text: "first", native: { nil: null } },
+    })
+    const last = json({ messageID, ordinal: 10, position: 19, part: { type: "text", text: "last" } })
+    expect(reconstructMessage(envelope, [last, first], 20)).toEqual({
+      complete: true,
+      value: {
+        seq: 7,
+        message: {
+          id: messageID,
+          type: "assistant",
+          native: { nil: null },
+          content: [
+            { type: "reasoning", text: "first", native: { nil: null } },
+            { type: "text", text: "last" },
+          ],
+        },
+      },
+    })
+    expect(reconstructMessage(envelope, [first], 20)).toEqual({ complete: false })
+    expect(reconstructMessage(envelope, [last, first], 19)).toEqual({ complete: false })
+    expect(
+      reconstructMessage(
+        envelope,
+        [first, json({ messageID, ordinal: 10, position: 21, part: { type: "text", text: "new" } })],
+        21,
+      ),
+    ).toEqual({ complete: false })
+    expect(
+      reconstructMessage(envelope, [first, json({ messageID, ordinal: 10, position: 19, deferred: true })], 20),
+    ).toEqual({ complete: false })
+    expect(reconstructMessage(envelope, [first, first], 20)).toEqual({ complete: false })
+    const legacy = json({
+      seq: 8,
+      message: {
+        id: messageID,
+        type: "assistant",
+        content: [{ type: "text", text: "legacy", native: { nil: null } }],
+        native: { opaque: [null, true] },
+      },
+    })
+    expect(reconstructMessage(legacy, [first, last], 20)).toEqual({ complete: true, value: legacy })
+  }),
+)
+
+it.live(
+  "direct writes release preceding text, restore deferred tails and keep legacy fallback after last removal",
+  () =>
+    Effect.gen(function* () {
+      const f = yield* fixture
+      const legacy: SessionPartData[] = [{ type: "text", text: "original inline fallback", native: { nil: null } }]
+      const row = assistantRow(messageID, 0, legacy)
+      yield* f.db
+        .insert(SessionMessageTable)
+        .values({ ...row, data: { ...row.data, time: { created: 10 } } })
+        .run()
+      yield* allow(f)
+      yield* parts(f.db, [{ ordinal: 2, data: { type: "text", text: "mutable tail" } }])
+      expect(
+        (yield* Store.dirty(f.db, sessionID)).find(
+          (part) => part.kind === "message-part" && part.id === `${messageID}/2`,
+        )?.value,
+      ).not.toContain("mutable tail")
+      yield* parts(f.db, [{ ordinal: 10, data: { type: "reasoning", text: "next tail" } }])
+      expect(
+        (yield* Store.dirty(f.db, sessionID)).find(
+          (part) => part.kind === "message-part" && part.id === `${messageID}/2`,
+        )?.value,
+      ).toContain("mutable tail")
+      yield* f.db
+        .delete(SessionPartTable)
+        .where(and(eq(SessionPartTable.message_id, messageID), eq(SessionPartTable.ordinal, 10)))
+        .run()
+      expect(
+        (yield* Store.dirty(f.db, sessionID)).find(
+          (part) => part.kind === "message-part" && part.id === `${messageID}/2`,
+        )?.value,
+      ).not.toContain("mutable tail")
+      expect(
+        (yield* Store.dirty(f.db, sessionID)).find(
+          (part) => part.kind === "message-part" && part.id === `${messageID}/10`,
+        ),
+      ).toMatchObject({ op: "remove", cause: "part-removed" })
+      yield* f.db.update(SessionMessageTable).set({ data: row.data }).where(eq(SessionMessageTable.id, messageID)).run()
+      expect((yield* captured(f)).reconstructed).toMatchObject({
+        message: { content: [{ type: "text", text: "mutable tail" }] },
+      })
+      yield* f.db.delete(SessionPartTable).where(eq(SessionPartTable.message_id, messageID)).run()
+      expect((yield* captured(f)).reconstructed).toMatchObject({ message: { content: legacy } })
+    }),
+)
+
+it.live("terminal tool writes release their body even before assistant completion and edits remain exact", () =>
+  Effect.gen(function* () {
+    const f = yield* fixture
+    const row = assistantRow()
+    yield* f.db
+      .insert(SessionMessageTable)
+      .values({ ...row, data: { ...row.data, time: { created: 10 } } })
+      .run()
+    yield* allow(f)
+    const running: SessionPartData = {
+      type: "tool",
+      id: "call_direct",
+      name: "read",
+      time: { created: 10 },
+      state: { status: "running", input: {}, metadata: { partial: "not yet portable" } },
+    }
+    yield* parts(f.db, [{ ordinal: 0, data: running }])
+    expect((yield* Store.dirty(f.db, sessionID)).find((part) => part.kind === "message-part")?.value).not.toContain(
+      "not yet portable",
+    )
+    const completed: SessionPartData = {
+      type: "tool",
+      id: "call_direct",
+      name: "read",
+      native: { opaque: [null, false] },
+      time: { created: 10, completed: 20 },
+      state: { status: "completed", input: {}, content: [{ type: "text", text: "settled output" }] },
+    }
+    yield* f.db
+      .update(SessionPartTable)
+      .set({ data: completed })
+      .where(eq(SessionPartTable.message_id, messageID))
+      .run()
+    yield* captured(f)
+    const edited: SessionPartData = { ...completed, native: { opaque: [null, "direct edit"] } }
+    yield* f.db.update(SessionPartTable).set({ data: edited }).where(eq(SessionPartTable.message_id, messageID)).run()
+    expect((yield* captured(f)).reconstructed).toMatchObject({ message: { content: [edited] } })
+  }),
+)
+
+it.live("JSON admission counts keys and values and accepts exactly 64 nested containers", () =>
+  Effect.sync(() => {
+    expect(jsonNodes({ key: 1 })).toBe(3)
+    expect(jsonNodes(Array.from({ length: 8191 }, () => null))).toBe(8192)
+    expect(jsonNodes(Array.from({ length: 8192 }, () => null))).toBeUndefined()
+    let value: unknown = null
+    for (let depth = 0; depth < 64; depth++) value = [value]
+    expect(jsonNodes(value)).toBe(65)
+    expect(jsonNodes([value])).toBeUndefined()
+  }),
+)
+
+for (const transition of ["non-assistant", "without-content"] as const)
+  it.live(`direct ${transition} message transition removes obsolete parts and restores them on return`, () =>
+    Effect.gen(function* () {
+      const f = yield* fixture
+      const row = assistantRow()
+      yield* f.db.insert(SessionMessageTable).values(row).run()
+      yield* parts(f.db, [
+        { ordinal: 2, data: { type: "text", text: "restored first" } },
+        { ordinal: 10, data: { type: "text", text: "restored last", native: { nil: null } } },
+      ])
+      yield* allow(f)
+      const before = yield* captured(f)
+      if (transition === "non-assistant")
+        yield* f.db
+          .update(SessionMessageTable)
+          .set({ type: "user", data: { text: "replacement", time: { created: 10 } } })
+          .where(eq(SessionMessageTable.id, messageID))
+          .run()
+      else yield* f.db.run(sql`UPDATE session_message SET data=json_remove(data,'$.content') WHERE id=${messageID}`)
+      const removed = yield* Store.dirty(f.db, sessionID)
+      expect(removed.filter((part) => part.kind === "message-part")).toHaveLength(2)
+      for (const part of removed.filter((part) => part.kind === "message-part"))
+        expect(part).toMatchObject({ op: "remove", cause: "part-removed", value: null })
+      const envelope = removed.find((part) => part.kind === "message")
+      if (!envelope) return yield* Effect.die("Expected replacement envelope")
+      expect(Store.value(envelope)).not.toHaveProperty("parts")
+      if (transition === "non-assistant")
+        expect((yield* captured(f)).reconstructed).toMatchObject({ message: { type: "user", text: "replacement" } })
+      yield* f.db
+        .update(SessionMessageTable)
+        .set({ type: row.type, data: row.data })
+        .where(eq(SessionMessageTable.id, messageID))
+        .run()
+      expect((yield* captured(f)).reconstructed).toEqual(before.reconstructed)
+      expect(
+        (yield* Store.dirty(f.db, sessionID))
+          .filter((part) => part.kind === "message-part")
+          .every((part) => part.op === "put"),
+      ).toBe(true)
+    }),
+  )
+
+it.live("initialization removes obsolete lazy snapshot triggers and view", () =>
+  Effect.gen(function* () {
+    const f = yield* fixture
+    for (const name of ["_kilo_sync_message_snapshot", "_kilo_sync_message_scope_snapshot"])
+      yield* f.db.run(`CREATE TRIGGER ${name} BEFORE UPDATE ON session_message BEGIN SELECT 1; END`)
+    yield* f.db.run("CREATE VIEW _kilo_sync_dirty_current AS SELECT * FROM _kilo_sync_dirty")
+    yield* Store.initialize(f.db)
+    expect(
+      yield* f.db.all(sql`SELECT name FROM sqlite_master WHERE name IN
+      ('_kilo_sync_message_snapshot','_kilo_sync_message_scope_snapshot','_kilo_sync_dirty_current')`),
+    ).toEqual([])
+  }),
+)
+
+for (const pause of ["disable", "account", "scope", "alias"] as const)
+  it.live(`a continued message reconciles paused part edits once after ${pause}, ACK and capture restart`, () =>
+    Effect.gen(function* () {
+      const f = yield* fixture
+      const untouchedID = SessionMessage.ID.make("msg_paused_untouched")
+      yield* f.db.insert(SessionMessageTable).values([assistantRow(), assistantRow(untouchedID, 1)]).run()
+      yield* parts(f.db, [
+        { ordinal: 0, data: { type: "text", text: "before update" } },
+        { ordinal: 2, data: { type: "text", text: "unchanged part" } },
+        { ordinal: 5, data: { type: "text", text: "before deletion" } },
+        { ordinal: 10, data: { type: "text", text: "before reorder" } },
+      ])
+      yield* f.db.insert(SessionPartTable).values({
+        session_id: sessionID, message_id: untouchedID, ordinal: 0, type: "text",
+        data: { type: "text", text: "untouched cloud snapshot" },
+      }).run()
+      yield* allow(f)
+      const cloud = new Map<string, Schema.Json>()
+      const settle = () => Effect.gen(function* () {
+        const session = (yield* Store.sessions(f.db, f.directory))[0]
+        if (!session) return yield* Effect.die("Expected an enrolled resumed session")
+        const changes: Change[] = []
+        for (const row of yield* Store.dirty(f.db, sessionID)) {
+          if (row.op === "put") {
+            changes.push({ op: "put", kind: row.kind, id: row.id, value: Store.value(row) })
+            continue
+          }
+          if (row.kind === "session" || row.cause !== "part-removed")
+            return yield* Effect.die("Expected ordinary native part reconciliation")
+          changes.push({ op: "remove", kind: row.kind, id: row.id, cause: row.cause })
+        }
+        const pending = yield* Store.freeze(f.db, session, changes, session.position, [])
+        for (const change of changes)
+          if (change.op === "remove") cloud.delete(`${change.kind}/${change.id}`)
+          else if ("value" in change) cloud.set(`${change.kind}/${change.id}`, change.value)
+        yield* Store.acknowledge(f.db, pending, {
+          version: 1, sessionID, batchID: pending.batch_id, after: pending.after, through: pending.through,
+          digest: pending.digest, revision: session.position, changes: changes.length, committedAt: 30,
+        })
+      })
+      yield* settle()
+      expect(yield* Store.dirty(f.db, sessionID)).toEqual([])
+      const before = new Map(cloud)
+      const inventory = yield* f.db.all(sql`SELECT * FROM _kilo_sync_part ORDER BY session_id,id`)
+      const excluded = path.join(path.dirname(f.directory), "paused-scope")
+      if (pause === "disable") yield* Store.disable(f.db, f.directory)
+      if (pause === "account") yield* f.db.run(sql`UPDATE _kilo_sync_consent SET enabled=0 WHERE directory=${f.directory}`)
+      if (pause === "scope") {
+        yield* Effect.promise(() => mkdir(excluded))
+        yield* f.db.update(SessionTable).set({ directory: excluded }).where(eq(SessionTable.id, sessionID)).run()
+      }
+      if (pause === "alias")
+        yield* f.db.run(sql`UPDATE _kilo_sync_directory SET directory=${excluded}
+          WHERE alias=${storedAbsolutePath(f.directory)}`)
+      yield* f.db.update(SessionPartTable).set({ data: { type: "text", text: "updated during pause" } })
+        .where(and(eq(SessionPartTable.message_id, messageID), eq(SessionPartTable.ordinal, 0))).run()
+      yield* f.db.delete(SessionPartTable)
+        .where(and(eq(SessionPartTable.message_id, messageID), eq(SessionPartTable.ordinal, 5))).run()
+      yield* f.db.update(SessionPartTable).set({ ordinal: 17, data: { type: "text", text: "reordered during pause" } })
+        .where(and(eq(SessionPartTable.message_id, messageID), eq(SessionPartTable.ordinal, 10))).run()
+      yield* parts(f.db, [{ ordinal: 20, data: { type: "text", text: "inserted during pause" } }])
+      yield* f.db.insert(SessionPartTable).values({
+        session_id: sessionID, message_id: untouchedID, ordinal: 9, type: "text",
+        data: { type: "text", text: "completed while paused; stays local" },
+      }).run()
+      yield* f.db.update(SessionMessageTable).set({
+        data: { ...assistantRow(untouchedID, 1).data, time: { created: 10, completed: 30 } },
+      }).where(eq(SessionMessageTable.id, untouchedID)).run()
+      expect(yield* Store.dirty(f.db, sessionID)).toEqual([])
+      expect(yield* f.db.all(sql`SELECT * FROM _kilo_sync_part ORDER BY session_id,id`)).toEqual(inventory)
+      yield* Store.enable(f.db, {
+        directory: f.directory, destination: "http://127.0.0.1:1", local: true, organizationID: null,
+        tenant: { type: "user", id: "fixture" }, userID: "fixture",
+      })
+      if (pause === "scope")
+        yield* f.db.update(SessionTable).set({ directory: f.directory }).where(eq(SessionTable.id, sessionID)).run()
+      yield* Store.reconcile(f.db, f.directory)
+      yield* Store.initialize(f.db)
+      expect((yield* Store.dirty(f.db, sessionID)).some((row) => row.kind === "message" || row.kind === "message-part")).toBe(false)
+      const pending = yield* Store.dirty(f.db, sessionID)
+      const sessions = yield* Store.sessions(f.db, f.directory)
+      const rollback = yield* f.db.transaction((tx) => Effect.gen(function* () {
+        yield* tx.update(SessionPartTable).set({ data: { type: "text", text: "rolled-back continuation" } })
+          .where(and(eq(SessionPartTable.message_id, messageID), eq(SessionPartTable.ordinal, 20))).run()
+        return yield* Effect.fail("rollback resumed snapshot")
+      })).pipe(Effect.exit)
+      expect(Exit.isFailure(rollback)).toBe(true)
+      expect(yield* Store.dirty(f.db, sessionID)).toEqual(pending)
+      expect(yield* Store.sessions(f.db, f.directory)).toEqual(sessions)
+      expect(yield* f.db.all(sql`SELECT * FROM _kilo_sync_part ORDER BY session_id,id`)).toEqual(inventory)
+      expect(yield* f.db.get(sql`SELECT needs_snapshot FROM _kilo_sync_message
+        WHERE session_id=${sessionID} AND id=${messageID}`)).toEqual({ needs_snapshot: 1 })
+      yield* f.db.update(SessionPartTable).set({ data: { type: "text", text: "authorized continuation" } })
+        .where(and(eq(SessionPartTable.message_id, messageID), eq(SessionPartTable.ordinal, 20))).run()
+      const restored = yield* captured(f)
+      const resumed = yield* Store.dirty(f.db, sessionID)
+      for (const ordinal of [5, 10])
+        expect(resumed.find((row) => row.kind === "message-part" && row.id === `${messageID}/${ordinal}`))
+          .toMatchObject({ op: "remove", cause: "part-removed" })
+      const current = resumed.filter((row) => row.kind === "message-part" && row.op === "put")
+      expect(current).toHaveLength(4)
+      expect(current.every((row) => row.position < restored.position)).toBe(true)
+      expect(resumed.some((row) => row.id === untouchedID || row.id.startsWith(`${untouchedID}/`))).toBe(false)
+      yield* settle()
+      expect(reconstructMessage(cloud.get(`message/${messageID}`)!,
+        [...cloud.entries()].filter(([key]) => key.startsWith("message-part/")).map(([, value]) => value),
+        (yield* Store.sessions(f.db, f.directory))[0]!.position)).toEqual({ complete: true, value: restored.reconstructed })
+      expect(cloud.get(`message/${untouchedID}`)).toEqual(before.get(`message/${untouchedID}`))
+      expect(cloud.get(`message-part/${untouchedID}/0`)).toEqual(before.get(`message-part/${untouchedID}/0`))
+      expect(cloud.has(`message-part/${untouchedID}/9`)).toBe(false)
+      yield* f.db.update(SessionPartTable).set({ data: { type: "text", text: "ordinary next revision" } })
+        .where(and(eq(SessionPartTable.message_id, messageID), eq(SessionPartTable.ordinal, 20))).run()
+      expect((yield* Store.dirty(f.db, sessionID)).filter((row) => row.kind === "message-part").map((row) => row.id))
+        .toEqual([`${messageID}/20`])
+    }),
+  )
+
+for (const inactive of ["old", "new", "both"] as const)
+  it.live(`part moves capture either authorized session when ${inactive} scope is inactive`, () =>
+    Effect.gen(function* () {
+      const f = yield* fixture
+      const otherSession = Session.ID.make("ses_sync_parts_other")
+      const otherMessage = SessionMessage.ID.make("msg_sync_parts_other")
+      const otherDirectory = path.join(path.dirname(f.directory), "other-workspace")
+      yield* Effect.promise(() => mkdir(otherDirectory))
+      yield* f.db.insert(SessionTable).values({
+        id: otherSession, project_id: Project.ID.global, directory: otherDirectory,
+        slug: "other-parts", version: "test", time_created: 10, time_updated: 20,
+      }).run()
+      yield* f.db.insert(SessionMessageTable).values([
+        assistantRow(), { ...assistantRow(otherMessage), session_id: otherSession },
+      ]).run()
+      yield* parts(f.db, [{ ordinal: 0, data: { type: "text", text: "moving part" } }])
+      yield* allow(f)
+      yield* Store.enable(f.db, {
+        directory: otherDirectory, destination: "http://127.0.0.1:1", local: true, organizationID: null,
+        tenant: { type: "user", id: "fixture" }, userID: "fixture",
+      })
+      yield* f.db.update(SessionTable).set({ time_updated: sql`time_updated` })
+        .where(eq(SessionTable.id, otherSession)).run()
+      yield* Store.reconcile(f.db, otherDirectory, true)
+      for (const session of yield* Store.sessions(f.db)) {
+        const changes = (yield* Store.dirty(f.db, session.id))
+          .filter((row) => row.op === "put").map((row) => ({
+            op: "put" as const, kind: row.kind, id: row.id, value: Store.value(row),
+          }))
+        const pending = yield* Store.freeze(f.db, session, changes, session.position, [])
+        yield* Store.acknowledge(f.db, pending, {
+          version: 1, sessionID: session.id, batchID: pending.batch_id, after: pending.after,
+          through: pending.through, digest: pending.digest, revision: 1, changes: changes.length, committedAt: 30,
+        })
+      }
+      if (inactive !== "new") yield* Store.disable(f.db, f.directory)
+      if (inactive !== "old") yield* Store.disable(f.db, otherDirectory)
+      yield* f.db.update(SessionPartTable).set({ session_id: otherSession, message_id: otherMessage })
+        .where(eq(SessionPartTable.message_id, messageID)).run()
+      const old = yield* Store.dirty(f.db, sessionID)
+      const next = yield* Store.dirty(f.db, otherSession)
+      if (inactive === "new")
+        expect(old.find((row) => row.kind === "message-part")).toMatchObject({
+          id: `${messageID}/0`, op: "remove", cause: "part-removed",
+        })
+      else expect(old).toEqual([])
+      if (inactive === "old")
+        expect(next.find((row) => row.kind === "message-part")).toMatchObject({
+          id: `${otherMessage}/0`, op: "put", value: expect.stringContaining("moving part"),
+        })
+      else expect(next).toEqual([])
+    }),
+  )

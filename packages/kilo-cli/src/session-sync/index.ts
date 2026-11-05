@@ -16,6 +16,7 @@ import { sql } from "drizzle-orm"
 import path from "node:path"
 import { Store } from "./store"
 import { Assets } from "./assets"
+import { settings } from "./settings"
 import {
   Failure,
   Grant,
@@ -28,6 +29,7 @@ import {
   digest,
   fail,
   limits,
+  jsonNodes,
   sameTenant,
   request,
   retryTime,
@@ -91,15 +93,25 @@ export const captureLayer = <A, E, R>(native: Layer.Layer<A, E, R>) =>
 // Public for scoped consumer tests: the same database, filesystem and HTTP implementation used by
 // the global host node, with explicit live services rather than a second native runtime.
 export const make = Effect.fn("SessionSync.make")(function* (
-  options: { background?: boolean; flushTimeout?: number } = {},
+  options: { background?: boolean; flushTimeout?: number; destination?: string; organizationID?: string | null } = {},
 ) {
   const { db } = yield* Database.Service
   const credentials = yield* Credential.Service
   const global = yield* Global.Service
   const bus = yield* Bus.Service
+  const scope = yield* Effect.scope
+  // Only code constructing a scoped service can inject a peer. No RPC, config or environment input
+  // selects the service destination.
+  const origin = yield* destination(options.destination ?? "https://session-sync.kiloapps.io", options.destination !== undefined).pipe(Effect.orDie)
+  const local = new URL(origin).protocol === "http:"
+  const preference = settings(global.config)
+  let activeOrganization = options.organizationID
+  let discovered: string[] = []
+  let discoveredRevision = -1
+  let discoveredAt = 0
+  const enrollmentErrors = new Map<string, Failure>()
   const lock = Semaphore.makeUnsafe(1)
   const consentLock = Semaphore.makeUnsafe(1)
-  const disabledAt = new Map<string, number>()
   let consentIntent = 0
   let backgroundError: { code: string; message: string } | undefined
   const grants = new Map<string, { credential: string; value: Grant }>()
@@ -163,7 +175,6 @@ export const make = Effect.fn("SessionSync.make")(function* (
     reconciledAt = Date.now()
   })
   yield* Store.initialize(db)
-  yield* reconcile(true)
   yield* reportPrune(true)
   for (const definition of [
     SessionEvent.InboxDelivered,
@@ -206,6 +217,26 @@ export const make = Effect.fn("SessionSync.make")(function* (
     if (!saved || saved.type === "external")
       return yield* fail("credential_unavailable", "Sign in with a personal Kilo account to synchronize sessions")
     return saved.type === "oauth" ? saved.access : saved.key
+  })
+
+  // This gate is local-only, including during construction. A transient unreadable setting retains
+  // the last capture state but never starts transport; an explicit off or sign-out pauses both.
+  const admission = Effect.gen(function* () {
+    const setting = yield* preference.enabled.pipe(Effect.result)
+    if (setting._tag === "Failure") {
+      backgroundError = setting.failure
+      return
+    }
+    if (backgroundError?.code === "settings_unavailable") backgroundError = undefined
+    const token = setting.success ? yield* credential().pipe(Effect.option) : undefined
+    if (!token || token._tag === "None") {
+      verified.clear()
+      enrollmentErrors.clear()
+      yield* db.run("UPDATE _kilo_sync_consent SET enabled=0 WHERE enabled=1").pipe(Effect.orDie)
+      return
+    }
+    yield* observeCredential(digest(token.value))
+    return token.value
   })
 
   const exchange = (input: { destination: string; local: boolean; organizationID: string | null }) =>
@@ -276,12 +307,87 @@ export const make = Effect.fn("SessionSync.make")(function* (
       }),
     )
 
+  const refresh = Effect.fn("SessionSync.refresh")(function* (workspace?: string) {
+    const intent = consentIntent
+    if (!(yield* admission) || activeOrganization === undefined) return false
+    const organizationID = activeOrganization
+    const consents = yield* db.all<Store.Consent>("SELECT * FROM _kilo_sync_consent ORDER BY length(directory) DESC").pipe(Effect.orDie)
+    const revision = yield* Store.reconcileRevision(db)
+    if (revision !== discoveredRevision || Date.now() - discoveredAt >= 60_000) {
+      const directories = yield* db.all<{ directory: string }>("SELECT DISTINCT directory FROM session_v2 WHERE workspace_id IS NULL").pipe(Effect.orDie)
+      const next = new Set<string>()
+      for (const row of directories) {
+        const resolved = yield* Store.canonical(row.directory).pipe(Effect.option)
+        if (resolved._tag === "Some") next.add(resolved.value)
+      }
+      discovered = [...next]
+      discoveredRevision = revision
+      discoveredAt = Date.now()
+    }
+    const workspaces = new Set([...discovered, ...consents.map((c) => c.directory)])
+    if (workspace) {
+      const resolved = yield* Store.canonical(workspace).pipe(Effect.option)
+      if (resolved._tag === "Some") workspaces.add(resolved.value)
+    }
+    for (const directory of enrollmentErrors.keys())
+      if (!workspaces.has(directory)) enrollmentErrors.delete(directory)
+    for (const directory of workspaces) {
+      const pinned = consents.find((c) => Store.contains(c.directory, directory))
+      if (pinned && pinned.directory !== directory) continue
+      const result = yield* Effect.gen(function* () {
+        if (pinned && pinned.destination !== origin)
+          return yield* fail("consent_conflict", "This workspace is pinned to a different destination; synchronization is paused")
+        if (pinned && pinned.organization_id !== organizationID)
+          return yield* fail("account_changed", "Synchronization is paused: select the account and organization pinned when this workspace was enrolled")
+        const grant = yield* exchange({ destination: origin, local, organizationID })
+        if (pinned && (grant.userID !== pinned.user_id || !sameTenant(grant.tenant, { type: pinned.tenant_type, id: pinned.tenant_id })))
+          return yield* fail("account_changed", "Synchronization is paused: sign in to the account pinned when this workspace was enrolled")
+        yield* consentLock.withPermit(Effect.gen(function* () {
+          if (consentIntent !== intent || activeOrganization !== organizationID || !(yield* preference.enabled)) return
+          if (pinned) {
+            if (!pinned.enabled) {
+              yield* db.run(sql`UPDATE _kilo_sync_consent SET enabled=1 WHERE directory=${directory}`).pipe(Effect.orDie)
+              yield* db.run(sql`UPDATE _kilo_sync_session SET error_code=NULL,error_message=NULL,retry_at=0
+                WHERE directory=${directory} AND error_code='account_changed'`).pipe(Effect.orDie)
+            }
+          } else {
+            yield* Store.enable(db, { directory, destination: origin, local, organizationID, tenant: grant.tenant, userID: grant.userID })
+          }
+        }))
+      }).pipe(Effect.result)
+      if (result._tag === "Success") {
+        enrollmentErrors.delete(directory)
+        continue
+      }
+      const error = result.failure
+      if (error.code === "account_changed" || error.code === "consent_conflict")
+        yield* db.run(sql`UPDATE _kilo_sync_consent SET enabled=0 WHERE directory=${directory} AND enabled=1`).pipe(Effect.orDie)
+      enrollmentErrors.set(directory, error)
+    }
+    return true
+  })
+  const ready = (workspace?: string) =>
+    refresh(workspace).pipe(
+      Effect.flatMap((enabled) => enabled ? reconcile().pipe(Effect.as(true)) : Effect.succeed(false)),
+      Effect.catchCause((cause) => {
+        if (Cause.hasInterrupts(cause)) return Effect.failCause(cause).pipe(Effect.orDie)
+        backgroundError = fail("background_error", "Synchronization enrollment is incomplete; pending work is retained", true)
+        return Effect.logError("Session synchronization enrollment failed", cause).pipe(Effect.as(false))
+      }),
+    )
+
   const authenticated = Effect.fn("SessionSync.authenticated")(function* (
     c: Store.Consent,
     url: string,
     method = "GET",
     body?: string | Uint8Array<ArrayBuffer>,
   ) {
+    if (activeOrganization === undefined)
+      return yield* fail("scope_unavailable", "The Gateway is resolving the active organization; pending work is retained", true)
+    if (activeOrganization !== c.organization_id)
+      return yield* fail("account_changed", "Synchronization is paused: select the organization pinned at enrollment")
+    if (c.destination !== origin)
+      return yield* fail("consent_conflict", "Synchronization only supports the fixed Kilo destination")
     const send = Effect.gen(function* () {
       if (!(yield* Store.consent(db, c.directory))?.enabled)
         return yield* fail("sync_disabled", "Synchronization was disabled; the pending packet is retained")
@@ -295,6 +401,10 @@ export const make = Effect.fn("SessionSync.make")(function* (
           "account_changed",
           "Synchronization is paused: sign in to the account pinned when this workspace was enabled",
         )
+      if (activeOrganization === undefined)
+        return yield* fail("scope_unavailable", "The Gateway is resolving the active organization; pending work is retained", true)
+      if (activeOrganization !== c.organization_id)
+        return yield* fail("account_changed", "Synchronization is paused: select the organization pinned at enrollment")
       if (!(yield* Store.consent(db, c.directory))?.enabled)
         return yield* fail("sync_disabled", "Synchronization was disabled; the pending packet is retained")
       return yield* request(url, grant.token, method, body)
@@ -330,6 +440,8 @@ export const make = Effect.fn("SessionSync.make")(function* (
     const rows = yield* Store.dirty(db, session.id)
     if (!rows.length) return
     let changeBytes = 2
+    // The exact outer packet uses fewer than 128 nodes, independently of its scalar IDs.
+    let changeNodes = 128
     const changes: Change[] = []
     const blobs = new Map<string, BlobRef>()
     let through = session.acknowledged
@@ -342,7 +454,8 @@ export const make = Effect.fn("SessionSync.make")(function* (
           (row.cause !== "revert" &&
             row.cause !== "cancel" &&
             row.cause !== "instruction-removed" &&
-            row.cause !== "consumed")
+            row.cause !== "consumed" &&
+            !(row.kind === "message-part" && row.cause === "part-removed"))
         )
           return yield* fail(
             "unclassified_removal",
@@ -353,11 +466,21 @@ export const make = Effect.fn("SessionSync.make")(function* (
           { op: "remove", kind: row.kind, id: row.id, cause: row.cause },
         ]
         const bytes = changeBytes + Buffer.byteLength(JSON.stringify(removals)) - 2 + (changes.length ? 1 : 0)
-        if (changes.length && (changes.length + removals.length > limits.changes || bytes > limits.batch - 4096)) break
+        const nodes = jsonNodes(removals, limits.jsonBatchDepth - 1, limits.jsonBatchNodes)
+        if (nodes === undefined)
+          return yield* fail("packet_too_large", "One portable removal exceeds the service JSON budget")
+        if (
+          changes.length &&
+          (changes.length + removals.length > limits.changes ||
+            bytes > limits.batch - 4096 ||
+            changeNodes + nodes - 1 > limits.jsonBatchNodes)
+        )
+          break
         if (removals.length > limits.changes || bytes > limits.batch - 4096)
           return yield* fail("packet_too_large", "One portable removal exceeds the service packet limit")
         changes.push(...removals)
         changeBytes = bytes
+        changeNodes += nodes - 1
         through = row.position
         continue
       }
@@ -369,7 +492,7 @@ export const make = Effect.fn("SessionSync.make")(function* (
       const assets = yield* Assets.collect(db, global, c.directory, row, value)
       const encoded = JSON.stringify(value)
       const blob =
-        Buffer.byteLength(encoded) > limits.inline
+        Buffer.byteLength(encoded) > limits.inline || jsonNodes(value) === undefined
           ? yield* Assets.body(db, global, row, Buffer.from(encoded))
           : undefined
       const addition: Change[] = [
@@ -380,7 +503,16 @@ export const make = Effect.fn("SessionSync.make")(function* (
         return yield* fail("asset_limit", "One native entity requires more assets than the service packet limit")
       // Leave room for envelope/identities; an oversized next entity starts the next immutable packet.
       const bytes = changeBytes + Buffer.byteLength(JSON.stringify(addition)) - 2 + (changes.length ? 1 : 0)
-      if (changes.length && (changes.length + addition.length > limits.changes || bytes > limits.batch - 4096)) break
+      const nodes = jsonNodes(addition, limits.jsonBatchDepth - 1, limits.jsonBatchNodes)
+      if (nodes === undefined || (changeNodes + nodes - 1 > limits.jsonBatchNodes && !changes.length))
+        return yield* fail("packet_too_large", "One portable entity and its assets exceed the service JSON budget")
+      if (
+        changes.length &&
+        (changes.length + addition.length > limits.changes ||
+          bytes > limits.batch - 4096 ||
+          changeNodes + nodes - 1 > limits.jsonBatchNodes)
+      )
+        break
       if (bytes > limits.batch - 4096)
         return yield* fail(
           "packet_too_large",
@@ -388,6 +520,7 @@ export const make = Effect.fn("SessionSync.make")(function* (
         )
       changes.push(...addition)
       changeBytes = bytes
+      changeNodes += nodes - 1
       for (const ref of [...assets.blobs, ...(blob ? [blob] : [])]) blobs.set(ref.hash, ref)
       through = row.position
     }
@@ -545,6 +678,7 @@ export const make = Effect.fn("SessionSync.make")(function* (
   })
 
   const status = Effect.fn("SessionSync.status")(function* (input: { directory: string }) {
+    yield* ready(input.directory)
     const directory = yield* Store.canonical(input.directory).pipe(
       Effect.orElseSucceed(() => path.resolve(input.directory)),
     )
@@ -576,7 +710,9 @@ export const make = Effect.fn("SessionSync.make")(function* (
             ...(c.last_success === null ? {} : { lastSuccess: c.last_success }),
           }
         : {}),
-      ...(backgroundError || error ? { error: backgroundError ?? error } : {}),
+      ...(backgroundError || enrollmentErrors.get(directory) || error
+        ? { error: backgroundError ?? enrollmentErrors.get(directory) ?? error }
+        : {}),
     })
   })
 
@@ -585,6 +721,7 @@ export const make = Effect.fn("SessionSync.make")(function* (
     force = false,
     passDeadline = Date.now() + 6 * 60_000,
   ) {
+    if (!(yield* ready(only))) return false
     yield* prune()
     const enabled = yield* db.get("SELECT 1 FROM _kilo_sync_consent WHERE enabled=1 LIMIT 1").pipe(Effect.orDie)
     if (!enabled) {
@@ -596,7 +733,6 @@ export const make = Effect.fn("SessionSync.make")(function* (
       Effect.orElseSucceed(() => "signed-out"),
     )
     yield* observeCredential(current)
-    yield* reconcile()
     const rows = yield* db
       .all<Store.SessionRow>(
         sql`SELECT s.* FROM _kilo_sync_session s JOIN _kilo_sync_consent c ON c.directory=s.directory
@@ -704,20 +840,38 @@ export const make = Effect.fn("SessionSync.make")(function* (
     )
 
   const service = KiloSessionSync.Service.of({
+    organization: (input) => Effect.gen(function* () {
+      activeOrganization = input.organizationID
+      verified.clear()
+      if (input.organizationID === undefined) return
+      yield* db.run(sql`UPDATE _kilo_sync_consent SET enabled=0
+        WHERE enabled=1 AND organization_id IS NOT ${input.organizationID}`).pipe(Effect.orDie)
+      if (options.background !== false)
+        yield* lock.withPermit(ready(input.directory)).pipe(Effect.forkIn(scope), Effect.asVoid)
+    }),
     enable: (input) =>
       Effect.gen(function* () {
-        const intent = ++consentIntent
+        const intent = consentIntent
         return yield* lock.withPermit(
           Effect.gen(function* () {
             const directory = yield* Store.canonical(input.directory)
             const epoch = yield* Store.epoch(db, directory)
-            const origin = yield* destination(input.destination, input.local)
-            const grant = yield* exchange({ ...input, destination: origin })
+            if (activeOrganization === undefined) {
+              yield* credential()
+              return yield* fail("scope_unavailable", "Wait for the Gateway to resolve the active organization before enabling synchronization", true)
+            }
+            if (input.organizationID !== activeOrganization)
+              return yield* fail("account_changed", "Select the active gateway organization before enabling synchronization")
+            const grant = yield* exchange({ ...input, destination: origin, local })
             const approvals = yield* Assets.prepareApproval(db, global, directory, input.assets ?? [])
             yield* consentLock.withPermit(
               Effect.gen(function* () {
-                if ((disabledAt.get(directory) ?? 0) > intent)
+                if (consentIntent !== intent)
                   return yield* fail("sync_disabled", "Synchronization was disabled while enable was in progress")
+                if (activeOrganization === undefined)
+                  return yield* fail("scope_unavailable", "The Gateway is resolving the active organization; retry enabling synchronization", true)
+                if (input.organizationID !== activeOrganization)
+                  return yield* fail("account_changed", "The active gateway organization changed while enabling synchronization")
                 verified.clear()
                 yield* Store.enable(
                   db,
@@ -725,12 +879,14 @@ export const make = Effect.fn("SessionSync.make")(function* (
                     ...input,
                     directory,
                     destination: origin,
+                    local,
                     tenant: grant.tenant,
                     userID: grant.userID,
                   },
                   approvals,
                   epoch,
                 )
+                yield* preference.set(true)
               }),
             )
             yield* Store.reconcile(db, directory).pipe(
@@ -756,14 +912,17 @@ export const make = Effect.fn("SessionSync.make")(function* (
       }),
     disable: (input) =>
       Effect.gen(function* () {
-        const intent = ++consentIntent
-        const current = yield* status(input)
+        ++consentIntent
+        const directory = yield* Store.canonical(input.directory).pipe(
+          Effect.orElseSucceed(() => path.resolve(input.directory)),
+        )
         return yield* consentLock.withPermit(
           Effect.gen(function* () {
-            disabledAt.set(current.directory, Math.max(intent, disabledAt.get(current.directory) ?? 0))
             verified.clear()
-            yield* Store.disable(db, current.directory)
-            return yield* status({ directory: current.directory })
+            yield* preference.set(false)
+            const rows = yield* db.all<{ directory: string }>("SELECT directory FROM _kilo_sync_consent").pipe(Effect.orDie)
+            for (const row of rows) yield* Store.disable(db, row.directory)
+            return yield* status({ directory })
           }),
         )
       }),
@@ -772,8 +931,10 @@ export const make = Effect.fn("SessionSync.make")(function* (
       lock.withPermit(
         Effect.gen(function* () {
           const current = yield* status(input)
-          if (!current.enabled)
-            return yield* fail("sync_disabled", "Enable synchronization for this workspace before flushing")
+          if (!current.enabled) {
+            if (current.error) return current
+            return yield* fail("sync_disabled", "Set session_sync to true and sign in before flushing")
+          }
           const deadline = Date.now() + (options.flushTimeout ?? 30_000)
           while (true) {
             const progressed = yield* runPass(current.directory, true, deadline)
@@ -796,6 +957,7 @@ export const make = Effect.fn("SessionSync.make")(function* (
         ),
       ),
   })
+  yield* admission
   if (options.background !== false) {
     const background = lock.withPermit(runPass()).pipe(Effect.catch(() => Effect.void))
     yield* background.pipe(Effect.repeat(Schedule.spaced(1000)), Effect.forkScoped)

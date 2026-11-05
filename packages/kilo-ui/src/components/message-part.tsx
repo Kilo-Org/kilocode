@@ -6,6 +6,7 @@ import {
   For,
   Match,
   on,
+  onCleanup,
   Show,
   Switch,
   type Component,
@@ -21,6 +22,8 @@ import type {
 } from "@opencode/client"
 import { getDirectory, getFilename } from "@opencode/util/path"
 import { checksum } from "@opencode/util/encode"
+import { documentKind, extractFilePathFromHref } from "@opencode-ai/ui/file-path"
+import { checkFile, type ValidateFilesFn } from "../file-link-validator"
 import { useClipboard } from "../context/clipboard"
 import { useDialog } from "../context/dialog"
 import { useFileComponent } from "../context/file"
@@ -62,7 +65,9 @@ export type ToolActionDiff = {
 
 /** Host actions a tool renderer may call. Every action is optional: a client without one renders without it. */
 export type ToolActions = {
-  openFile?: (path: string, line?: number) => void
+  openFile?: (path: string, line?: number, column?: number, sessionID?: string) => void
+  /** Which of `paths` exist for the session, so inline code spans can become file links. */
+  validateFiles?: ValidateFilesFn
   openDiff?: (diff: ToolActionDiff) => void
   /** Opens several changed files at once, for a patch that changes more than one. */
   openDiffs?: (diffs: ToolActionDiff[]) => void
@@ -73,8 +78,9 @@ export type ContentPartProps = {
   item: SessionMessageAssistant["content"][number]
   message: SessionMessageAssistant
   index: number
+  session?: string
   directory?: string
-  open?: (uri: string) => void
+  open?: (uri: string, external?: boolean) => void
   copy?: boolean
   settled?: boolean
   defaultOpen?: boolean
@@ -102,6 +108,8 @@ export function ContentPart(props: ContentPartProps) {
             throughput={props.throughput}
             turnMeta={props.turnMeta}
             open={props.open}
+            actions={props.actions}
+            session={props.session}
           />
         )}
       </Match>
@@ -139,11 +147,151 @@ function TextContent(props: {
   copy?: boolean
   throughput?: JSX.Element
   turnMeta?: JSX.Element
-  open?: (uri: string) => void
+  open?: (uri: string, external?: boolean) => void
+  actions?: ToolActions
+  session?: string
 }) {
   const i18n = useI18n()
   const clipboard = useClipboard()
   const [copied, setCopied] = createSignal(false)
+  const [body, setBody] = createSignal<HTMLDivElement>()
+
+  // Post-render promotion of inline-code file candidates. The Markdown component writes candidates asynchronously,
+  // so a MutationObserver drives validation; a settled path is probed once, and validation is shared across rows.
+  const promote = (el: HTMLElement, path: string, exists: boolean) => {
+    if (!exists) {
+      el.classList.remove("file-link-candidate", "file-link", "document-link", "plan-document-link")
+      el.removeAttribute("data-file-candidate")
+      el.removeAttribute("data-file-path")
+      el.removeAttribute("data-file-kind")
+      el.removeAttribute("data-file-line")
+      el.removeAttribute("data-file-col")
+      el.removeAttribute("title")
+      return
+    }
+    const clean = path.startsWith("./") ? path.slice(2) : path
+    el.classList.remove("file-link-candidate")
+    el.classList.add("file-link")
+    el.setAttribute("data-file-path", clean)
+    el.removeAttribute("data-file-candidate")
+    el.classList.remove("document-link", "plan-document-link")
+    el.removeAttribute("data-file-kind")
+    el.removeAttribute("title")
+    markDocument(el, clean)
+  }
+
+  // A Markdown file reference reads as a document; a plan reference also gets the localized kind hint.
+  const markDocument = (el: HTMLElement, clean: string) => {
+    const kind = documentKind(clean)
+    if (!kind) return
+    el.classList.add(kind === "plan" ? "plan-document-link" : "document-link")
+    el.setAttribute("data-file-kind", kind)
+    if (kind === "plan") el.setAttribute("title", i18n.t("ui.patch.action.plan"))
+  }
+
+  const dispatch = (el: HTMLElement, path: string) => {
+    const session = props.session
+    const validateFiles = props.actions?.validateFiles
+    if (!session || !validateFiles) return
+    void checkFile(session, path, validateFiles).then((exists) => {
+      if (!el.isConnected) return
+      // An unknown result leaves the candidate as is, so a later scan can check it again.
+      if (exists === undefined) return
+      if (!el.classList.contains("file-link-candidate")) return
+      if (el.getAttribute("data-file-candidate") !== path) return
+      promote(el, path, exists)
+    })
+  }
+
+  let flush = () => {}
+  createEffect(
+    on(body, (root) => {
+      if (!root) return
+      const SETTLE_MS = 400
+      const pending = new Map<HTMLElement, { path: string; timer: ReturnType<typeof setTimeout> }>()
+      const arm = (el: HTMLElement, path: string, immediate: boolean) => {
+        const prior = pending.get(el)
+        if (immediate) {
+          if (prior) clearTimeout(prior.timer)
+          pending.delete(el)
+          dispatch(el, path)
+          return
+        }
+        if (prior && prior.path === path) return
+        if (prior) clearTimeout(prior.timer)
+        pending.set(el, {
+          path,
+          timer: setTimeout(() => {
+            pending.delete(el)
+            dispatch(el, path)
+          }, SETTLE_MS),
+        })
+      }
+      const scan = (immediate: boolean) => {
+        const session = props.session
+        const validateFiles = props.actions?.validateFiles
+        if (!validateFiles || !session) return
+        for (const el of root.querySelectorAll<HTMLElement>("code.file-link-candidate")) {
+          const path = el.getAttribute("data-file-candidate") ?? ""
+          if (path) arm(el, path, immediate)
+        }
+        // A link renders with the document glyph; drop it when the target is not a document this session can open.
+        for (const el of root.querySelectorAll<HTMLElement>(
+          "a[data-file-kind][data-file-path]:not([data-file-checked])",
+        )) {
+          const path = el.getAttribute("data-file-path") ?? ""
+          el.setAttribute("data-file-checked", "")
+          void checkFile(session, path, validateFiles).then((exists) => {
+            if (exists === undefined) return el.removeAttribute("data-file-checked")
+            if (exists) return
+            el.classList.remove("document-link", "plan-document-link")
+            el.removeAttribute("data-file-kind")
+          })
+        }
+      }
+      let scheduled = false
+      let frame: number | undefined
+      const schedule = () => {
+        if (scheduled) return
+        scheduled = true
+        frame = requestAnimationFrame(() => {
+          scheduled = false
+          frame = undefined
+          scan(!props.streaming)
+        })
+      }
+      const observer = new MutationObserver((records) => {
+        const relevant = records.some(
+          (record) =>
+            record.type !== "attributes" ||
+            (record.target instanceof HTMLElement && record.target.classList.contains("file-link-candidate")),
+        )
+        if (relevant) schedule()
+      })
+      observer.observe(root, {
+        attributes: true,
+        attributeFilter: ["class", "data-file-candidate", "data-file-line", "data-file-col"],
+        characterData: true,
+        childList: true,
+        subtree: true,
+      })
+      flush = () => scan(!props.streaming)
+      schedule()
+      onCleanup(() => {
+        observer.disconnect()
+        if (frame !== undefined) cancelAnimationFrame(frame)
+        for (const entry of pending.values()) clearTimeout(entry.timer)
+        pending.clear()
+        flush = () => {}
+      })
+    }),
+  )
+  createEffect(
+    on(
+      () => props.streaming,
+      () => flush(),
+    ),
+  )
   const text = createThrottledValue(
     () => props.text.trim(),
     () => (props.streaming ? STREAMING_TEXT_RENDER_THROTTLE_MS : TEXT_RENDER_THROTTLE_MS),
@@ -153,18 +301,76 @@ function TextContent(props: {
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
   }
+  // Link hrefs are model-authored, so they take the same worktree validation as inline code before opening.
+  const openValidated = (path: string, line?: number, column?: number) => {
+    const session = props.session
+    const validateFiles = props.actions?.validateFiles
+    if (!session || !validateFiles) return
+    void checkFile(session, path, validateFiles).then((exists) => {
+      if (exists !== true) return
+      props.actions?.openFile?.(path, line, column, session)
+    })
+  }
+
+  const position = (el: Element, name: string) => {
+    const value = Number.parseInt(el.getAttribute(name) ?? "", 10)
+    return Number.isFinite(value) ? value : undefined
+  }
+
+  const openPathLink = (link: Element) => {
+    const path = link.getAttribute("data-file-path")
+    if (path) openValidated(path, position(link, "data-file-line"), position(link, "data-file-col"))
+  }
+
+  // A link with an href activates through click on Enter; a file link without one needs the key itself.
+  const keydown = (event: KeyboardEvent) => {
+    if (event.key !== "Enter" || !(event.target instanceof Element)) return
+    const link = event.target.closest("a.file-path-link[data-file-path]:not([href])")
+    if (!link) return
+    event.preventDefault()
+    openPathLink(link)
+  }
+
   const click = (event: MouseEvent) => {
-    if (!props.open || !(event.target instanceof Element)) return
+    if (!(event.target instanceof Element)) return
+    const fileLink = event.target.closest(".file-link[data-file-path]")
+    if (fileLink) {
+      const path = fileLink.getAttribute("data-file-path")
+      if (!path) return
+      event.preventDefault()
+      props.actions?.openFile?.(
+        path,
+        position(fileLink, "data-file-line"),
+        position(fileLink, "data-file-col"),
+        props.session,
+      )
+      return
+    }
+    // The renderer keeps the parsed path of a file link in data attributes, because the sanitizer drops `file:` hrefs.
+    const pathLink = event.target.closest("a.file-path-link[data-file-path]")
+    if (pathLink) {
+      event.preventDefault()
+      openPathLink(pathLink)
+      return
+    }
     const anchor = event.target.closest("a[href]")
     const href = anchor?.getAttribute("href")
-    if (!href || !/^https?:\/\//i.test(href)) return
+    if (!href) return
+    const file = extractFilePathFromHref(href)
+    if (file) {
+      event.preventDefault()
+      openValidated(file.path, file.line, file.column)
+      return
+    }
+    if (!props.open || !/^https?:\/\//i.test(href)) return
     event.preventDefault()
-    props.open(href)
+    // Shift-click asks for the system browser even when the host routes links into the Integrated Browser.
+    props.open(href, event.shiftKey)
   }
   return (
     <Show when={text()}>
       <div data-component="text-part">
-        <div data-slot="text-part-body">
+        <div data-slot="text-part-body" ref={setBody} onKeyDown={keydown}>
           <Markdown text={text()} cacheKey={props.id} streaming={props.streaming} onClick={click} />
         </div>
         <Show when={props.copy || props.throughput || props.turnMeta}>
@@ -185,9 +391,7 @@ function TextContent(props: {
                 />
               </Tooltip>
             </Show>
-            <Show when={props.throughput}>
-              {(el) => <span data-slot="assistant-throughput-inline">{el()}</span>}
-            </Show>
+            <Show when={props.throughput}>{(el) => <span data-slot="assistant-throughput-inline">{el()}</span>}</Show>
             <Show when={props.turnMeta}>
               {(el) => (
                 <span data-slot="assistant-turn-meta" class="cursor-default">
@@ -233,7 +437,7 @@ export const ToolRegistry = {
 function ToolContent(props: {
   item: SessionMessageAssistantTool
   directory?: string
-  open?: (uri: string) => void
+  open?: (uri: string, external?: boolean) => void
   defaultOpen?: boolean
   actions?: ToolActions
   hideDetails?: boolean
@@ -328,6 +532,7 @@ function ToolTriggerRow(props: {
   pending: boolean
   subtitle?: string
   args?: string[]
+  action?: JSX.Element
   onClick?: (event: MouseEvent) => void
 }) {
   const detail = () => [props.subtitle, ...(props.args ?? [])].filter(Boolean).join(" ")
@@ -349,6 +554,7 @@ function ToolTriggerRow(props: {
           )}
         </Show>
       </div>
+      <Show when={props.action}>{props.action}</Show>
     </div>
   )
 }
@@ -415,6 +621,16 @@ ToolRegistry.register({
                       props.actions?.openFile?.(path(), line())
                     }
                   : undefined
+              }
+              action={
+                <ToolFileOpenAction
+                  when={!!props.actions?.openFile && !!path()}
+                  onClick={(event) => {
+                    event.preventDefault()
+                    event.stopPropagation()
+                    props.actions?.openFile?.(path(), line())
+                  }}
+                />
               }
             />
           }
@@ -492,12 +708,12 @@ ToolRegistry.register({
   },
 })
 
-function WebfetchMeta(props: { url: string; open?: (uri: string) => void }) {
+function WebfetchMeta(props: { url: string; open?: (uri: string, external?: boolean) => void }) {
   const open = (event: MouseEvent) => {
     event.stopPropagation()
     if (!props.open) return
     event.preventDefault()
-    props.open(props.url)
+    props.open(props.url, event.shiftKey)
   }
   return (
     <span data-slot="webfetch-meta">
@@ -842,11 +1058,12 @@ ToolRegistry.register({
               <span data-slot="basic-tool-tool-title">
                 <TextShimmer text={i18n.t("ui.tool.shell")} active={busy(props.status)} />
               </span>
-              <Show when={string(props.input.workdir)}>
-                {(workdir) => (
+              {/* The shell tool has no description input, so its first command line is the visible summary. */}
+              <Show when={string(props.input.command).trim().split("\n")[0]}>
+                {(command) => (
                   <span data-component="shell-submessage">
                     <span data-slot="basic-tool-tool-subtitle">
-                      <span data-slot="shell-submessage-value">{workdir()}</span>
+                      <span data-slot="shell-submessage-value">{command()}</span>
                     </span>
                   </span>
                 )}
@@ -866,7 +1083,13 @@ ToolRegistry.register({
   },
 })
 
-function ToolFileAccordion(props: { path: string; directory?: string; actions?: JSX.Element; children: JSX.Element }) {
+function ToolFileAccordion(props: {
+  path: string
+  directory?: string
+  actions?: JSX.Element
+  onOpen?: (event: MouseEvent) => void
+  children: JSX.Element
+}) {
   return (
     <Accordion
       multiple
@@ -878,7 +1101,7 @@ function ToolFileAccordion(props: { path: string; directory?: string; actions?: 
         <StickyAccordionHeader>
           <Accordion.Trigger>
             <div data-slot="apply-patch-trigger-content">
-              <div data-slot="apply-patch-file-info">
+              <div data-slot="apply-patch-file-info" classList={{ clickable: !!props.onOpen }} onClick={props.onOpen}>
                 <FileIcon node={{ path: props.path, type: "file" }} />
                 <div data-slot="apply-patch-file-name-container">
                   <Show when={props.path.includes("/")}>
@@ -902,17 +1125,64 @@ function ToolFileAccordion(props: { path: string; directory?: string; actions?: 
   )
 }
 
-function ToolFileMeta(props: { path: string; directory?: string; changes?: FileDiffInfo }) {
+function ToolFileMeta(props: {
+  path: string
+  directory?: string
+  changes?: FileDiffInfo
+  onOpen?: (event: MouseEvent) => void
+}) {
   return (
     <Show when={props.path}>
       <span data-slot="message-part-meta-line" title={props.path}>
-        <span data-slot="message-part-title-filename">{getFilename(props.path)}</span>
+        <span data-slot="message-part-title-filename" classList={{ clickable: !!props.onOpen }} onClick={props.onOpen}>
+          {getFilename(props.path)}
+        </span>
         <Show when={props.path.includes("/")}>
           <span data-slot="message-part-directory-inline">
             {relativizeProjectPath(getDirectory(props.path), props.directory)}
           </span>
         </Show>
         <Show when={props.changes}>{(changes) => <DiffChanges changes={changes()} />}</Show>
+      </span>
+    </Show>
+  )
+}
+
+function FileTitle(props: {
+  title: string
+  pending: boolean
+  path: string
+  directory?: string
+  changes?: FileDiffInfo
+  onOpen?: (event: MouseEvent) => void
+}) {
+  return (
+    <div data-slot="message-part-title-area">
+      <div data-slot="message-part-title">
+        <span data-slot="message-part-title-text">
+          <TextShimmer text={props.title} active={props.pending} />
+        </span>
+        <ToolFileMeta path={props.path} directory={props.directory} changes={props.changes} onOpen={props.onOpen} />
+      </div>
+    </div>
+  )
+}
+
+function ToolFileOpenAction(props: { when: boolean; onClick: (event: MouseEvent) => void }) {
+  const i18n = useI18n()
+  return (
+    <Show when={props.when}>
+      <span data-slot="tool-trigger-actions">
+        <Tooltip value={i18n.t("ui.messagePart.openInEditor")} placement="top" gutter={4}>
+          <IconButton
+            icon="go-to-file"
+            size="small"
+            variant="ghost"
+            onMouseDown={(event) => event.preventDefault()}
+            onClick={props.onClick}
+            aria-label={i18n.t("ui.messagePart.openInEditor")}
+          />
+        </Tooltip>
       </span>
     </Show>
   )
@@ -974,6 +1244,11 @@ ToolRegistry.register({
         deletions: value.deletions,
       })
     }
+    const openFile = (event: MouseEvent) => {
+      event.preventDefault()
+      event.stopPropagation()
+      if (path()) props.actions?.openFile?.(path())
+    }
     return (
       <div data-component="edit-tool">
         <BasicTool
@@ -984,14 +1259,15 @@ ToolRegistry.register({
           hasDetails
           trigger={
             <div data-component="edit-trigger">
-              <div data-slot="message-part-title-area">
-                <div data-slot="message-part-title">
-                  <span data-slot="message-part-title-text">
-                    <TextShimmer text={i18n.t("ui.messagePart.title.edit")} active={busy(props.status)} />
-                  </span>
-                  <ToolFileMeta path={path()} directory={props.directory} changes={diff()} />
-                </div>
-              </div>
+              <FileTitle
+                title={i18n.t("ui.messagePart.title.edit")}
+                pending={busy(props.status)}
+                path={path()}
+                directory={props.directory}
+                changes={diff()}
+                onOpen={props.actions?.openFile ? openFile : undefined}
+              />
+              <ToolFileOpenAction when={!!props.actions?.openFile && !!path()} onClick={openFile} />
               <ToolDiffAction when={canOpenDiff()} onClick={openDiff} />
             </div>
           }
@@ -1001,6 +1277,7 @@ ToolRegistry.register({
               path={path()}
               directory={props.directory}
               actions={<Show when={diff()}>{(file) => <DiffChanges changes={file()} />}</Show>}
+              onOpen={props.actions?.openFile ? openFile : undefined}
             >
               <div data-component="edit-content">
                 <Show when={view()}>
@@ -1051,6 +1328,11 @@ ToolRegistry.register({
       event.stopPropagation()
       openDiff()
     }
+    const openFile = (event: MouseEvent) => {
+      event.preventDefault()
+      event.stopPropagation()
+      if (path()) props.actions?.openFile?.(path())
+    }
     return (
       <div data-component="write-tool">
         <BasicTool
@@ -1062,14 +1344,15 @@ ToolRegistry.register({
           hideDetails={props.hideDetails || unchanged()}
           trigger={
             <div data-component="write-trigger">
-              <div data-slot="message-part-title-area">
-                <div data-slot="message-part-title">
-                  <span data-slot="message-part-title-text">
-                    <TextShimmer text={i18n.t("ui.messagePart.title.write")} active={busy(props.status)} />
-                  </span>
-                  <ToolFileMeta path={path()} directory={props.directory} changes={diff()} />
-                </div>
-              </div>
+              <FileTitle
+                title={i18n.t("ui.messagePart.title.write")}
+                pending={busy(props.status)}
+                path={path()}
+                directory={props.directory}
+                changes={diff()}
+                onOpen={props.actions?.openFile ? openFile : undefined}
+              />
+              <ToolFileOpenAction when={!!props.actions?.openFile && !!path()} onClick={openFile} />
               <ToolDiffAction when={canOpenDiff()} onClick={handleOpenDiffClick} />
             </div>
           }
@@ -1079,6 +1362,7 @@ ToolRegistry.register({
               path={path()}
               directory={props.directory}
               actions={<Show when={diff()}>{(file) => <DiffChanges changes={file()} />}</Show>}
+              onOpen={props.actions?.openFile ? openFile : undefined}
             >
               <div data-component="write-content">
                 <Show
@@ -1141,6 +1425,11 @@ ToolRegistry.register({
       if (!file.patch) return
       const value = normalize(file)
       return value.fileDiff.hunks.length ? value : undefined
+    }
+    const openFile = (file: FileDiffInfo) => (event: MouseEvent) => {
+      event.preventDefault()
+      event.stopPropagation()
+      props.actions?.openFile?.(file.file)
     }
     const openDiff = (file: FileDiffInfo) => {
       const diff = view(file)
@@ -1207,7 +1496,14 @@ ToolRegistry.register({
                     <TextShimmer text={i18n.t("ui.tool.patch")} active={busy(props.status)} />
                   </span>
                   <Show when={single()}>
-                    {(file) => <ToolFileMeta path={file().file} directory={props.directory} changes={file()} />}
+                    {(file) => (
+                      <ToolFileMeta
+                        path={file().file}
+                        directory={props.directory}
+                        changes={file()}
+                        onOpen={props.actions?.openFile ? openFile(file()) : undefined}
+                      />
+                    )}
                   </Show>
                   <Show when={!single() && list().length}>
                     <span data-slot="basic-tool-tool-subtitle">
@@ -1250,7 +1546,11 @@ ToolRegistry.register({
                         <StickyAccordionHeader>
                           <Accordion.Trigger>
                             <div data-slot="apply-patch-trigger-content">
-                              <div data-slot="apply-patch-file-info">
+                              <div
+                                data-slot="apply-patch-file-info"
+                                classList={{ clickable: !!props.actions?.openFile }}
+                                onClick={props.actions?.openFile ? openFile(file) : undefined}
+                              >
                                 <FileIcon node={{ path: file.file, type: "file" }} />
                                 <div data-slot="apply-patch-file-name-container">
                                   <Show when={file.file.includes("/")}>
@@ -1291,7 +1591,12 @@ ToolRegistry.register({
             }
           >
             {(file) => (
-              <ToolFileAccordion path={file().file} directory={props.directory} actions={changes(file())}>
+              <ToolFileAccordion
+                path={file().file}
+                directory={props.directory}
+                actions={changes(file())}
+                onOpen={props.actions?.openFile ? openFile(file()) : undefined}
+              >
                 <Show when={view(file())}>
                   {(diff) => (
                     <div data-component="apply-patch-file-diff">
@@ -1471,11 +1776,34 @@ ToolRegistry.register({
   },
 })
 
+/** One control of a pending user message, for example to queue, steer or delete it. */
+export type UserMessagePendingAction = {
+  key: string
+  icon: IconProps["name"]
+  label: string
+  onClick: () => void
+  disabled?: boolean
+}
+
+/** Input the server admitted but has not delivered to the model yet. */
+export type UserMessagePending = {
+  status: string
+  actions: readonly UserMessagePendingAction[]
+}
+
 export function UserMessageDisplay(props: {
   message: SessionMessageUser
   copyLabel?: string
+  /** Text Copy writes when the bubble shows less than the message holds, for example structured references. */
+  copyText?: string
+  /** Content shown in the bubble above the text, for example Integrated Browser element references. */
+  header?: JSX.Element
   /** Shows a fork action beside Copy, for surfaces that can fork the session from this message. */
   onFork?: () => void
+  /** Dims the message and shows its delivery status and controls in place of the time, fork and copy actions. */
+  pending?: UserMessagePending
+  /** Opens an image attachment outside the webview. Return false to keep the in-page preview for that image. */
+  onOpenImage?: (uri: string, name: string | undefined) => boolean
 }) {
   const i18n = useI18n()
   const clipboard = useClipboard()
@@ -1485,10 +1813,24 @@ export function UserMessageDisplay(props: {
   const stamp = () =>
     new Intl.DateTimeFormat(i18n.locale(), { timeStyle: "short" }).format(new Date(props.message.time.created))
   const copy = async () => {
-    await clipboard.write(props.message.text)
+    await clipboard.write(props.copyText ?? props.message.text)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
   }
+  // A pending message is clamped to a few lines, so long input waiting for delivery does not push the live response
+  // out of view. The toggle shows only when the clamp actually hides text.
+  const [expanded, setExpanded] = createSignal(false)
+  const [clipped, setClipped] = createSignal(false)
+  let textRef: HTMLDivElement | undefined
+  const measure = () => setClipped(!!textRef && textRef.scrollHeight > textRef.clientHeight + 1)
+  createEffect(() => {
+    if (!props.pending || expanded() || !textRef) return setClipped(false)
+    void props.message.text
+    const observer = new ResizeObserver(measure)
+    observer.observe(textRef)
+    measure()
+    onCleanup(() => observer.disconnect())
+  })
   return (
     <div data-component="user-message">
       <Show when={files().length}>
@@ -1498,10 +1840,12 @@ export function UserMessageDisplay(props: {
               <div
                 data-slot="user-message-attachment"
                 data-type={file.mime.startsWith("image/") ? "image" : "file"}
+                data-queued={props.pending ? "" : undefined}
                 onClick={() => {
                   const uri = attachmentUri(file)
-                  if (file.mime.startsWith("image/") && uri)
-                    return dialog.show(() => <ImagePreview src={uri} alt={file.name} />)
+                  if (!file.mime.startsWith("image/") || !uri) return
+                  if (props.onOpenImage?.(uri, file.name)) return
+                  return dialog.show(() => <ImagePreview src={uri} alt={file.name} />)
                 }}
               >
                 <Show
@@ -1528,21 +1872,71 @@ export function UserMessageDisplay(props: {
           </For>
         </div>
       </Show>
-      <Show when={props.message.text}>
+      <Show when={props.message.text || props.header}>
         <div data-slot="user-message-body">
+          {props.header}
           <Show when={props.message.text}>
-            <div data-slot="user-message-text" dir="auto">
-              {props.message.text}
+            <div data-slot="user-message-text" dir="auto" data-queued={props.pending ? "" : undefined}>
+              {/* The clamp sits on an inner box: on the padded bubble, the hidden lines would show in its padding. */}
+              <Show when={props.pending && !expanded()} fallback={props.message.text}>
+                <span ref={textRef} data-slot="user-message-clamp">
+                  {props.message.text}
+                </span>
+              </Show>
             </div>
           </Show>
+          <Show when={props.pending && (clipped() || expanded())}>
+            <button
+              type="button"
+              data-slot="user-message-expand"
+              onClick={(event) => {
+                event.stopPropagation()
+                setExpanded((value) => !value)
+              }}
+            >
+              {i18n.t(expanded() ? "ui.sessionTurn.diffs.showLess" : "ui.common.showMore")}
+            </button>
+          </Show>
         </div>
-        <div data-slot="user-message-copy-wrapper">
-          <span data-slot="user-message-meta-wrap">
-            <span data-slot="user-message-meta-tail" class="text-12-regular text-text-weak cursor-default">
-              {stamp()}
-            </span>
-          </span>
-          <Show when={props.onFork}>
+        {/* Pending controls live in the reserved action row, so delivery swaps content without a height change. */}
+        <div data-slot="user-message-copy-wrapper" data-queued={props.pending ? "" : undefined}>
+          <Show
+            when={props.pending}
+            fallback={
+              <span data-slot="user-message-meta-wrap">
+                <span data-slot="user-message-meta-tail" class="text-12-regular text-text-weak cursor-default">
+                  {stamp()}
+                </span>
+              </span>
+            }
+          >
+            {(pending) => (
+              <div data-slot="user-message-queued-indicator">
+                <TextShimmer text={pending().status} />
+                <For each={pending().actions}>
+                  {(action) => (
+                    <Tooltip value={action.label} placement="top" gutter={4}>
+                      <IconButton
+                        data-slot="user-message-pending-action"
+                        data-action={action.key}
+                        icon={action.icon}
+                        size="normal"
+                        variant="ghost"
+                        disabled={action.disabled}
+                        onMouseDown={(event) => event.preventDefault()}
+                        onClick={(event) => {
+                          event.stopPropagation()
+                          action.onClick()
+                        }}
+                        aria-label={action.label}
+                      />
+                    </Tooltip>
+                  )}
+                </For>
+              </div>
+            )}
+          </Show>
+          <Show when={props.onFork && !props.pending}>
             <Tooltip value={i18n.t("ui.message.forkMessage")} placement="right" gutter={4}>
               <IconButton
                 icon="fork"
@@ -1557,22 +1951,24 @@ export function UserMessageDisplay(props: {
               />
             </Tooltip>
           </Show>
-          <Tooltip
-            value={copied() ? i18n.t("ui.message.copied") : (props.copyLabel ?? i18n.t("ui.message.copyMessage"))}
-            placement="right"
-            gutter={4}
-          >
-            <IconButton
-              icon={copied() ? "check" : "copy"}
-              size="normal"
-              variant="ghost"
-              onMouseDown={(event) => event.preventDefault()}
-              onClick={copy}
-              aria-label={
-                copied() ? i18n.t("ui.message.copied") : (props.copyLabel ?? i18n.t("ui.message.copyMessage"))
-              }
-            />
-          </Tooltip>
+          <Show when={!props.pending}>
+            <Tooltip
+              value={copied() ? i18n.t("ui.message.copied") : (props.copyLabel ?? i18n.t("ui.message.copyMessage"))}
+              placement="right"
+              gutter={4}
+            >
+              <IconButton
+                icon={copied() ? "check" : "copy"}
+                size="normal"
+                variant="ghost"
+                onMouseDown={(event) => event.preventDefault()}
+                onClick={copy}
+                aria-label={
+                  copied() ? i18n.t("ui.message.copied") : (props.copyLabel ?? i18n.t("ui.message.copyMessage"))
+                }
+              />
+            </Tooltip>
+          </Show>
         </div>
       </Show>
     </div>
