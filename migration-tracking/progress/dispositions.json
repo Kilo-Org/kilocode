@@ -1292,7 +1292,7 @@
   "patch:unattributed:core/v1:efe2b3136dab": {
     "state": "native",
     "v2": "packages/core/src/config/normalize.ts",
-    "note": "The v1 `small_model` (NullOr(string)) is mapped natively. normalize.ts migrates it to the title agent model `agents.title.model` through ConfigMigrateV1.modelSelection (packages/core/src/v1/config/migrate.ts); a null value is omitted. packages/core/test/kilocode/config/mapping.test.ts pins both the string and the null outcome.",
+    "note": "The v1 `small_model` (NullOr(string)) maps natively: normalize.ts migrates a string to the title agent model `agents.title.model` through ConfigMigrateV1.modelSelection (packages/core/src/v1/config/migrate.ts). A v1 `null` is not carried: v2 decodes `small_model` as a plain string, so `small_model: null` is skipped with an `invalid` (`skipped malformed recognized value`) normalization diagnostic, the same v1-null/v2-string mismatch as `model` and `default_agent`. packages/core/test/kilocode/config/mapping.test.ts pins the string mapping and all three null diagnostics.",
     "by": "v2-config-keys"
   },
   "patch:unattributed:core/v1:eef8153da721": {

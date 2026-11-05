@@ -6,8 +6,9 @@ import { KiloConfigPolicy } from "@opencode/core/kilocode/config/policy"
 // `config-mapping-v2-gap.md`: every v1 Kilo config key (and the upstream keys v1 relied on) gets a disposition and a
 // pinned outcome. `folded` keys are decoded by `KiloConfigPolicy`; `native` keys are handled by the upstream schema
 // and normalization with no Kilo code; `native-unsupported` keys upstream normalization refuses with a diagnostic;
-// `refused` keys this build accepts from neither and ignores with a diagnostic; `dropped` keys are not carried and
-// have no v2 caller; `open` keys belong to another epic and stay undecided here.
+// `native-invalid` keys upstream normalization recognizes but rejects for this value (for example a v1 `null` where
+// v2 expects a string); `refused` keys this build accepts from neither and ignores with a diagnostic; `dropped` keys
+// are not carried and have no v2 caller; `open` keys belong to another epic and stay undecided here.
 
 interface Base {
   key: string
@@ -20,11 +21,13 @@ type Case =
   | (Base & { disposition: "folded"; value: unknown })
   | (Base & { disposition: "native"; value: unknown })
   | (Base & { disposition: "native-unsupported" })
+  | (Base & { disposition: "native-invalid"; path: readonly string[]; message: string })
   | (Base & { disposition: "refused"; message: string })
   | (Base & { disposition: "dropped" })
   | (Base & { disposition: "open"; note: string })
 
 const unsupported = "omitted unsupported legacy setting"
+const malformed = "skipped malformed recognized value"
 
 const cases: Case[] = [
   // --- Folded: decoded by KiloConfigPolicy (schema field + parse). ---
@@ -94,6 +97,11 @@ const cases: Case[] = [
   { key: "experimental.policies", disposition: "native", input: { experimental: { policies: [{ effect: "deny", action: "provider.use", resource: "openai" }] } }, path: ["policies"], value: [{ action: "provider.use", resource: "openai", effect: "deny" }] },
   { key: "experimental.image_generate", disposition: "native", input: { experimental: { image_generate: true } }, path: ["experimental", "image_generate"], value: true },
 
+  // --- Native-invalid: v1 allowed NullOr(string) for these; v2 expects a string and skips null with a diagnostic. ---
+  { key: "model (null)", disposition: "native-invalid", input: { model: null }, path: ["model"], message: malformed },
+  { key: "small_model (null)", disposition: "native-invalid", input: { small_model: null }, path: ["small_model"], message: malformed },
+  { key: "default_agent (null)", disposition: "native-invalid", input: { default_agent: null }, path: ["default_agent"], message: malformed },
+
   // --- Native-unsupported: upstream v2 refuses the key with a diagnostic, no Kilo code. ---
   { key: "server", disposition: "native-unsupported", input: { server: { port: 1 } }, path: ["server"] },
   { key: "logLevel", disposition: "native-unsupported", input: { logLevel: "INFO" }, path: ["logLevel"] },
@@ -159,6 +167,9 @@ for (const c of cases) {
       case "native-unsupported":
         expect(at(diagnostics)).toContainEqual({ kind: "unsupported", path, message: unsupported })
         break
+      case "native-invalid":
+        expect(at(diagnostics)).toContainEqual({ kind: "invalid", path, message: c.message })
+        break
       case "refused":
         expect(at(diagnostics)).toContainEqual({ kind: "unsupported", path, message: c.message })
         break
@@ -172,8 +183,36 @@ for (const c of cases) {
   })
 }
 
-test("every v1 Kilo key has a decided disposition", () => {
+test("an invalid folded key is ignored and the other fields still fold", () => {
+  const input = { remote_control: "true", web_search: true }
+  const normalized = ConfigNormalize.normalize(input)
+  expect(normalized.type).toBe("normalized")
+  if (normalized.type !== "normalized") return
+  const diagnostics: ConfigNormalize.Diagnostic[] = []
+  const parsed = KiloConfigPolicy.parse(input, normalized.encoded, (diagnostic) => diagnostics.push(diagnostic))
+  expect(diagnostics).toContainEqual({
+    kind: "invalid",
+    path: ["remote_control"],
+    message: "ignored invalid remote_control; expected a boolean",
+  })
+  expect(leaf(parsed, ["remote_control"])).toBeUndefined()
+  expect(leaf(parsed, ["web_search"])).toBe(true)
+})
+
+test("the table is the complete, decided mapping", () => {
   const keys = cases.map((c) => c.key)
   expect(new Set(keys).size).toBe(keys.length)
-  expect(cases.every((c) => c.disposition !== "open" || c.note)).toBe(true)
+  const counts: Record<string, number> = {}
+  for (const c of cases) counts[c.disposition] = (counts[c.disposition] ?? 0) + 1
+  // Per-disposition totals pin the table: a dropped or re-dispositioned row changes them.
+  expect(counts).toEqual({
+    folded: 17,
+    native: 27,
+    "native-unsupported": 11,
+    "native-invalid": 3,
+    refused: 4,
+    dropped: 8,
+    open: 4,
+  })
+  expect(cases.every((c) => c.disposition !== "open" || c.note.length > 0)).toBe(true)
 })
