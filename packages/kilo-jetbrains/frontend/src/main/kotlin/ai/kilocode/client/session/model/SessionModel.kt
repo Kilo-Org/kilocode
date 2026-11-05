@@ -583,7 +583,7 @@ class SessionModel {
                 val text = dto.text ?: return
                 existing.content.clear()
                 existing.content.append(text)
-                existing.injectedTitle = dto.injectedTitle
+                dto.injectedTitle?.let { existing.injectedTitle = it }
             }
             is Reasoning -> {
                 val text = dto.text ?: return

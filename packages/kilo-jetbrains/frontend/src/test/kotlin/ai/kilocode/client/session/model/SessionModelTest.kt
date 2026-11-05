@@ -885,6 +885,19 @@ class SessionModelTest : BasePlatformTestCase() {
         )
     }
 
+    fun `test text delta without metadata preserves the injected title`() {
+        model.upsertMessage(msg("m1", "user"))
+        model.updateContent(
+            "m1",
+            part("p1", "m1", "text", text = "Update the branch", injectedTitle = "Update from main"),
+        )
+        model.updateContent("m1", part("p1", "m1", "text", text = "Update the branch now"))
+
+        val text = model.message("m1")!!.parts["p1"] as Text
+        assertEquals("Update the branch now", text.content.toString())
+        assertEquals("Update from main", text.injectedTitle)
+    }
+
     fun `test loadHistory populates typed contents and fires HistoryLoaded`() {
         model.addMessage(msg("old", "user"))
         events.clear()
@@ -1328,6 +1341,7 @@ class SessionModelTest : BasePlatformTestCase() {
         filename: String? = null,
         synthetic: Boolean? = null,
         source: PartSourceDto? = null,
+        injectedTitle: String? = null,
     ) = PartDto(
         id = id,
         sessionID = "ses",
@@ -1339,6 +1353,7 @@ class SessionModelTest : BasePlatformTestCase() {
         filename = filename,
         synthetic = synthetic,
         source = source,
+        injectedTitle = injectedTitle,
         tool = tool,
         state = state,
         title = title,

@@ -6,6 +6,7 @@ import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.ui.UiStyle
 import com.intellij.ui.HyperlinkLabel
 import com.intellij.ui.components.JBLabel
+import com.intellij.util.concurrency.annotations.RequiresEdt
 import com.intellij.util.ui.JBUI
 import java.awt.BorderLayout
 import javax.swing.JPanel
@@ -36,6 +37,7 @@ internal class InjectedPromptHeader(
         }
     }
 
+    @RequiresEdt
     fun update(title: String, hasPreview: Boolean, expanded: Boolean) {
         open = expanded
         label.text = KiloBundle.message("session.injected.sent", title)
@@ -43,12 +45,14 @@ internal class InjectedPromptHeader(
         syncToggle()
     }
 
+    @RequiresEdt
     fun applyStyle(style: SessionEditorStyle) {
         label.font = style.smallFont
         toggle.font = style.smallFont
         label.foreground = SessionUiStyle.Text.Secondary.foreground()
     }
 
+    @RequiresEdt
     private fun syncToggle() {
         toggle.setHyperlinkText(
             KiloBundle.message(if (open) "session.injected.hide" else "session.injected.show"),

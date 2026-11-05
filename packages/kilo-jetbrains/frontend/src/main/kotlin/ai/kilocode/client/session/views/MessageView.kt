@@ -42,7 +42,6 @@ import com.intellij.ui.components.JBLabel
 import com.intellij.util.concurrency.annotations.RequiresEdt
 import com.intellij.util.ui.JBUI
 import java.awt.BorderLayout
-import java.awt.CardLayout
 import java.awt.Point
 import java.awt.Graphics
 import java.awt.Graphics2D
@@ -799,7 +798,7 @@ class MessageView(
         private val box: JPanel,
     ) : JPanel(BorderLayout()), SessionCopyTarget {
         private val footer = JPanel(BorderLayout()).also { it.isOpaque = false }
-        private val cards = JPanel(CardLayout())
+        private val body = JPanel(BorderLayout())
         val bar = MessageToolbar(
             { prompt?.copyMarkdown(trim = false) },
             revert?.let { fn -> { fn(msg.info.id) } },
@@ -820,8 +819,8 @@ class MessageView(
 
         init {
             isOpaque = false
-            cards.isOpaque = false
-            box.add(cards, BorderLayout.CENTER)
+            body.isOpaque = false
+            box.add(body, BorderLayout.CENTER)
             add(box, BorderLayout.CENTER)
             footer.border = JBUI.Borders.emptyTop(UiStyle.Gap.xs())
             footer.add(placeholder.align(HAlign.RIGHT, VAlign.TOP), BorderLayout.CENTER)
@@ -830,12 +829,14 @@ class MessageView(
 
         override fun copyText(): String? = prompt?.copyMarkdown(trim = false)
 
+        @RequiresEdt
         fun setPrompt(view: PromptView) {
-            if (view.parent !== cards) cards.add(view, FULL)
-            showCard(if (collapsed) PREVIEW else FULL)
+            body.removeAll()
+            body.add(view, BorderLayout.CENTER)
             syncInjected()
         }
 
+        @RequiresEdt
         fun syncInjected() {
             val text = prompt?.let { contents[it.contentId] as? Text }
             val title = text?.injectedTitle
@@ -847,7 +848,7 @@ class MessageView(
                 clearPreview()
                 collapsed = false
                 hasPreview = false
-                showCard(FULL)
+                syncBody()
                 revalidate()
                 repaint()
                 return
@@ -870,14 +871,15 @@ class MessageView(
             }
             node.update(title, hasPreview, !collapsed)
             if (next != null) ensurePreview(next)
-            showCard(if (collapsed) PREVIEW else FULL)
+            syncBody()
             revalidate()
             repaint()
         }
 
+        @RequiresEdt
         fun setCollapsed(value: Boolean) {
             collapsed = value && hasPreview
-            showCard(if (collapsed) PREVIEW else FULL)
+            syncBody()
             header?.update(
                 prompt?.let { contents[it.contentId] as? Text }?.injectedTitle.orEmpty(),
                 hasPreview,
@@ -887,29 +889,45 @@ class MessageView(
             repaint()
         }
 
+        @RequiresEdt
         fun applyStyle(style: SessionEditorStyle) {
             header?.applyStyle(style)
             preview?.applyStyle(style)
         }
 
+        @RequiresEdt
         fun release() {
+            body.removeAll()
             clearPreview()
             header?.let { box.remove(it) }
             header = null
         }
 
+        @RequiresEdt
         private fun clearPreview() {
             preview?.let {
-                cards.remove(it)
+                body.remove(it)
                 Disposer.dispose(it)
             }
             preview = null
         }
 
-        private fun showCard(name: String) {
-            (cards.layout as CardLayout).show(cards, name)
+        @RequiresEdt
+        private fun syncBody() {
+            val node = if (collapsed && preview != null) preview else prompt
+            if (node == null) {
+                body.removeAll()
+                return
+            }
+            if (node.parent !== body) {
+                body.removeAll()
+                body.add(node, BorderLayout.CENTER)
+            }
+            body.revalidate()
+            body.repaint()
         }
 
+        @RequiresEdt
         private fun ensurePreview(text: String) {
             val node = preview
             if (node != null) {
@@ -927,7 +945,6 @@ class MessageView(
                 )
             }
             preview = view
-            cards.add(view, PREVIEW)
         }
 
         @RequiresEdt
@@ -994,8 +1011,6 @@ class MessageView(
 
     private companion object {
         const val ACCESSIBILITY_SUMMARY_LIMIT = 160
-        private const val FULL = "prompt"
-        private const val PREVIEW = "preview"
         private const val ACCESSIBILITY_SCAN_LIMIT = ACCESSIBILITY_SUMMARY_LIMIT * 4
 
         private val FENCE = Regex("```[\\w+#.-]*")

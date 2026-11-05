@@ -128,12 +128,17 @@ class MessageViewTest : BasePlatformTestCase() {
         assertNotNull("attribution label is shown", label)
         assertNotNull("collapse control is shown", toggle)
         assertEquals("Show prompt", toggle!!.text)
-        assertFalse("the full prompt starts collapsed", view.part("p1")!!.isVisible)
+        assertNull("the full prompt is detached while collapsed", view.part("p1")!!.parent)
 
         toggle.doClick()
 
         assertEquals("Hide prompt", toggle.text)
-        assertTrue("expanding shows the full prompt", view.part("p1")!!.isVisible)
+        assertNotNull("expanding attaches the full prompt", view.part("p1")!!.parent)
+
+        toggle.doClick()
+
+        assertEquals("Show prompt", toggle.text)
+        assertNull("collapsing detaches the full prompt again so it no longer sizes the bubble", view.part("p1")!!.parent)
     }
 
     fun `test short injected prompt shows header without a collapse control`() {
