@@ -55,7 +55,11 @@ junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher
 kodein-di = { module = "org.kodein.di:kodein-di-jvm", version.ref = "kodein" }
 zxing-core = { module = "com.google.zxing:core", version.ref = "zxing" }
 commons-compress = { module = "org.apache.commons:commons-compress", version.ref = "commons-compress" }
-security-netty-bom = { module = "io.netty:netty-bom", version.ref = "security-netty" }
+# Only the netty modules ide-starter declares (their 4.2.x POMs pin the rest of the family), not
+# netty-bom: a BOM would also raise unrelated netty 4.1 modules onto the 4.2 line.
+security-netty-buffer = { module = "io.netty:netty-buffer", version.ref = "security-netty" }
+security-netty-codec-compression = { module = "io.netty:netty-codec-compression", version.ref = "security-netty" }
+security-netty-codec-http2 = { module = "io.netty:netty-codec-http2", version.ref = "security-netty" }
 security-jackson-bom = { module = "com.fasterxml.jackson:jackson-bom", version.ref = "security-jackson" }
 security-opentelemetry-bom = { module = "io.opentelemetry:opentelemetry-bom", version.ref = "security-opentelemetry" }
 security-bcprov = { module = "org.bouncycastle:bcprov-jdk18on", version.ref = "security-bouncycastle" }

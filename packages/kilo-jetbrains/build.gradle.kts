@@ -471,14 +471,12 @@ tasks.named<Delete>("clean") {
 }
 
 // ide-starter (UI e2e driver) and the IntelliJ test framework pin vulnerable netty, bouncycastle,
-// jackson, guava, jsoup, OpenTelemetry and lz4 versions, and the newest 2026.1 builds still do.
-// This rule fixes their published metadata: it adds the security BOMs and constraints from
-// libs.versions.toml, which Gradle only ever uses to raise a version, and swaps the abandoned
-// org.lz4 for its maintained fork.
+// jackson, guava, jsoup and OpenTelemetry versions, and the newest 2026.1 builds still do. This
+// rule fixes their published metadata: it adds the security BOMs and constraints from
+// libs.versions.toml, which Gradle only ever uses to raise a version.
 abstract class SecurityFloors @Inject constructor(
     private val boms: List<String>,
     private val floors: List<String>,
-    private val lz4: String,
 ) : ComponentMetadataRule {
     @get:Inject
     abstract val objects: ObjectFactory
@@ -486,7 +484,6 @@ abstract class SecurityFloors @Inject constructor(
     override fun execute(context: ComponentMetadataContext) {
         context.details.allVariants {
             withDependencies {
-                if (removeAll { it.group == "org.lz4" && it.name == "lz4-java" }) add(lz4)
                 boms.forEach { bom ->
                     add(bom) {
                         attributes { attribute(Category.CATEGORY_ATTRIBUTE, objects.named(Category.REGULAR_PLATFORM)) }
@@ -502,14 +499,29 @@ abstract class SecurityFloors @Inject constructor(
 
 fun coords(lib: Provider<MinimalExternalModuleDependency>) = lib.get().let { "${it.module}:${it.version}" }
 
-val boms = listOf(libs.security.netty.bom, libs.security.jackson.bom, libs.security.opentelemetry.bom).map(::coords)
-val floors = listOf(libs.security.bcprov, libs.security.bcpkix, libs.security.guava, libs.security.jsoup).map(::coords)
+val boms = listOf(libs.security.jackson.bom, libs.security.opentelemetry.bom).map(::coords)
+val floors = listOf(
+    libs.security.netty.buffer,
+    libs.security.netty.codec.compression,
+    libs.security.netty.codec.http2,
+    libs.security.bcprov,
+    libs.security.bcpkix,
+    libs.security.guava,
+    libs.security.jsoup,
+).map(::coords)
 val lz4 = coords(libs.security.lz4)
 
 allprojects {
     dependencies.components {
         listOf("com.jetbrains.intellij.tools:ide-starter-squashed", "com.jetbrains.intellij.platform:test-framework-core").forEach {
-            withModule(it, SecurityFloors::class) { params(boms, floors, lz4) }
+            withModule(it, SecurityFloors::class) { params(boms, floors) }
+        }
+    }
+    // org.lz4:lz4-java is abandoned with unfixed advisories (ide-starter pulls it in). Swap it for
+    // its maintained fork wherever it appears in a graph, at any depth.
+    configurations.configureEach {
+        resolutionStrategy.dependencySubstitution {
+            substitute(module("org.lz4:lz4-java")).using(module(lz4)).because("org.lz4 is unmaintained, use the at.yawk.lz4 fork")
         }
     }
 }
