@@ -10,11 +10,14 @@
  * The Cloud local stack must already be running. This script uses the C1 fixture
  * provider, which is also the provider that creates the hosted workspace and stored
  * transcript for the cloud lane.
+ *
+ * For the headless cloud-agent/Linux runner, use script/e2e-headless.ts.
  */
 
 import { existsSync } from "node:fs"
 import { join, resolve } from "node:path"
-import { manifest, run, RunError, type Lane } from "../../kilo-e2e/src/index"
+import { RunError, type Lane } from "../../kilo-e2e/src/index"
+import { runCell } from "./e2e-cell"
 
 const root = resolve(import.meta.dir, "..")
 const args = parse(Bun.argv.slice(2))
@@ -32,7 +35,12 @@ if (!existsSync(providerPath)) {
   process.exit(2)
 }
 
-const lanes: Lane[] = args.lane && args.lane !== "both" ? [args.lane as Lane] : ["local", "cloud"]
+const laneArg = args.lane
+if (laneArg && laneArg !== "both" && laneArg !== "local" && laneArg !== "cloud") {
+  console.error(`[jetbrains-e2e] unknown lane: ${laneArg}`)
+  process.exit(2)
+}
+const lanes: Lane[] = !laneArg || laneArg === "both" ? ["local", "cloud"] : [laneArg]
 const git = Bun.spawnSync(["git", "rev-parse", "HEAD"], { cwd: root, stdout: "pipe", stderr: "pipe" })
 const kiloCommit = git.exitCode === 0 ? new TextDecoder().decode(git.stdout).trim() : null
 
@@ -40,21 +48,14 @@ let failed = false
 for (const lane of lanes) {
   const runId = `jetbrains-session-open-${lane}-${Date.now()}`
   try {
-    const report = await run({
-      manifest: { ...manifest("session.open", lane), timeoutMs: 30 * 60_000 },
-      provider: {
-        id: "cloud-agent-next-fixture",
-        command: [process.execPath, join(root, "script/e2e-cloud-provider.ts"), cloud],
-        timeoutMs: 20 * 60_000,
-      },
-      driver: {
-        id: "jetbrains-starter",
-        command: [process.execPath, join(root, "script/e2e-driver.ts")],
-      },
+    const report = await runCell({
+      root,
+      cloud,
       artifactsDir,
       runId,
-      provenance: { kiloCommit },
-      timeouts: { provider: 20 * 60_000, driver: 32 * 60_000 },
+      scenario: "session.open",
+      lane,
+      kiloCommit,
     })
     console.log(`[jetbrains-e2e] ${lane} session.open ${report.outcome}: ${join(artifactsDir, runId, "evidence.json")}`)
     if (report.outcome !== "passed") failed = true
