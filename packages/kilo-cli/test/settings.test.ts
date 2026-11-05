@@ -183,8 +183,11 @@ test(
     const text = await Bun.file(file).text()
     expect(text).toContain("// keep this comment")
     expect(JSON.parse(text.replace("// keep this comment", ""))).toEqual({ privacy_mode: true })
-    const mode = (await Bun.file(file).stat()).mode & 0o777
-    expect(mode).toBe(0o600)
+    // Windows has no POSIX mode bits, so the 0600 guarantee is only observable elsewhere.
+    if (process.platform !== "win32") {
+      const mode = (await Bun.file(file).stat()).mode & 0o777
+      expect(mode).toBe(0o600)
+    }
   }),
   30_000,
 )
