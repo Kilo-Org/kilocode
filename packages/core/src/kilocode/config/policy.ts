@@ -8,6 +8,20 @@ import { Effect, Option, Schema } from "effect"
 import type { Interface } from "../../config.js"
 import type { ConfigNormalize } from "../../config/normalize.js"
 
+// Allowed hosts are checked by the sandbox plugin, which owns the destination parser.
+const Sandbox = Schema.Struct({
+  enabled: Schema.Boolean.pipe(optional).annotate({ description: "Enable sandbox confinement for new sessions" }),
+  network: Schema.Literals(["allow", "deny"]).pipe(optional).annotate({
+    description: "Control outbound network access from sandboxed tools",
+  }),
+  writable_paths: Schema.Array(Schema.String).pipe(optional).annotate({
+    description: "Additional filesystem paths that sandboxed tools may write to",
+  }),
+  allowed_hosts: Schema.Array(Schema.String).pipe(optional).annotate({
+    description: "Exact network destinations sandboxed tools may access while network restriction is enabled",
+  }),
+})
+
 export class Info extends Config.Info.extend<Info>("KiloConfigPolicy.Info")({
   session_sync: Schema.Boolean.pipe(optional).annotate({
     description: "Synchronize signed-in Kilo sessions and required assets (default: true; global config only)",
@@ -31,6 +45,7 @@ export class Info extends Config.Info.extend<Info>("KiloConfigPolicy.Info")({
     description:
       "Controls whether MCP and generic tool blocks are expanded or collapsed by default in the VS Code chat UI",
   }),
+  sandbox: Sandbox.pipe(optional).annotate({ description: "Sandbox configuration for agent tools" }),
   // kilo_port(unattributed:core/v1:fb80dc4c3dd4)
   commit_message: Schema.Struct({
     prompt: Schema.String.pipe(optional).annotate({
@@ -47,6 +62,7 @@ const policy = Schema.Struct({ hide_prompt_training_models: Schema.optional(Sche
 const privacy = Schema.Struct({ privacy_mode: Schema.optional(Schema.Boolean) })
 const sync = Schema.Struct({ session_sync: Schema.optional(Schema.Boolean) })
 const commit = Schema.Struct({ commit_message: Schema.optional(Schema.Struct({ prompt: Schema.optional(Schema.String) })) })
+const sandboxSetting = Schema.Struct({ sandbox: Schema.optional(Sandbox) })
 const decodeModel = Schema.decodeUnknownOption(ConfigModel.Selection)
 
 function record(value: unknown): value is Record<string, unknown> {
@@ -116,6 +132,13 @@ export function parse(
       kind: "invalid",
       message: "ignored invalid session_sync; expected a boolean (true or false)",
     })
+  const sandboxField = Schema.decodeUnknownOption(sandboxSetting)(input)
+  if (Option.isNone(sandboxField))
+    report?.({
+      path: ["sandbox"],
+      kind: "invalid",
+      message: "ignored invalid sandbox; expected an object with optional enabled, network, writable_paths and allowed_hosts",
+    })
   // Managed policy splitting clears optional fields with undefined; the encoded schema requires omitted keys.
   return Option.getOrUndefined(
     decode(
@@ -126,6 +149,7 @@ export function parse(
           ...Option.getOrElse(privacyField, () => ({})),
           ...Option.getOrElse(message, () => ({})),
           ...Option.getOrElse(synchronization, () => ({})),
+          ...Option.getOrElse(sandboxField, () => ({})),
           ...displaySettings(input),
           workflow_models: models && Object.keys(models).length ? models : undefined,
         }).filter(([, value]) => value !== undefined),
