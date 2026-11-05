@@ -9,7 +9,7 @@ const WEB = ["http:", "https:"]
 export function bridge(input: {
   target: () => Promise<Target>
   post: (message: ToWebview) => void
-  open?: (url: string) => void
+  open?: (url: string, external: boolean) => void
   fetch?: typeof globalThis.fetch
 }) {
   const requests = new Map<number, AbortController>()
@@ -57,7 +57,7 @@ export function bridge(input: {
       if (message.type === "abort") return requests.get(message.id)?.abort()
       // Tool metadata and external form fields come from the model or a server: open web links only, as main does.
       if (message.type === "open" && URL.canParse(message.url) && WEB.includes(new URL(message.url).protocol))
-        input.open?.(message.url)
+        input.open?.(message.url, message.external === true)
     },
     dispose() {
       requests.forEach((abort) => abort.abort())

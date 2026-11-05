@@ -18,19 +18,25 @@ import {
 import type { ToHost } from "../../../src/protocol"
 import { useLanguage } from "../context/language"
 import { getVSCodeAPI, useVSCode } from "../context/vscode"
+import type { ReferenceHandler } from "./append-ready"
 import { useV2 } from "./client"
 import { useDisplaySettings } from "./display-settings"
 import { SessionList } from "./history"
+import { forkText } from "../../../src/agent-manager/fork-handoff"
+import { createLocalTabs } from "./local-tabs"
 import { SessionChanges } from "./session-changes"
+import { SessionTabStrip } from "./session-tabs"
 import { SessionView } from "./session-view"
 import { formatReviewCommentsMarkdown } from "../utils/review-comment-markdown"
 import { chunkPaths } from "./validate-paths"
 import { createReviewAppendQueue } from "./review-queue"
+import { showTabStrip } from "../utils/local-tabs"
+import { focusPrompt } from "../utils/tab-navigation"
 
 export function Chat() {
   const v2 = useV2()
   const language = useLanguage()
-  const [session, setSession] = createSignal<string>()
+  const tabs = createLocalTabs()
   const [view, setView] = createSignal<"chat" | "history">("chat")
   // Comments can arrive while the chat composer is unmounted (History), so hold them until it returns.
   const reviewQueue = createReviewAppendQueue()
@@ -43,24 +49,71 @@ export function Chat() {
     }),
   )
   onCleanup(v2.data.on("config.updated", () => display.request()))
+  // A turn's changes belong to its tab, so switching tabs returns to that tab's chat.
+  createEffect(on(tabs.active, () => setChanges(false), { defer: true }))
   const startSession = () => {
-    setSession(undefined)
+    tabs.add()
     setView("chat")
     setChanges(false)
+  }
+  const open = (id: string) => {
+    tabs.open(id)
+    setView("chat")
+    setChanges(false)
+  }
+  const step = (offset: -1 | 1) => {
+    if (!document.hasFocus() || view() !== "chat") return
+    const before = tabs.active()
+    tabs.step(offset)
+    if (tabs.active() !== before) requestAnimationFrame(focusPrompt)
   }
   v2.onCommand((name) => {
     if (name === "newSession") startSession()
     if (name === "history") setView("history")
+    if (name === "showOpenTabs") {
+      setView("chat")
+      window.dispatchEvent(new Event("showOpenTabs"))
+    }
+    if (name === "tabPrevious") step(-1)
+    if (name === "tabNext") step(1)
   })
 
-  const open = (id: string) => {
-    setSession(id)
-    setView("chat")
-    setChanges(false)
+  const forkSession = (id: string) => {
+    void v2.api.session
+      .fork({ sessionID: id })
+      .then(async (info) => {
+        await v2.api.session
+          .synthetic({ sessionID: info.id, text: forkText({ directory: v2.directory }) })
+          .catch(v2.report)
+        v2.data.session.remember(info)
+        tabs.openAfter(id, info.id)
+      })
+      .catch(v2.report)
   }
 
-  // A document tab in the editor posts review comments here, because this view owns the prompt they belong to.
+  const session = () => tabs.session()
+  const settled = (id: string | undefined, draftKey?: string) => {
+    if (!id) return tabs.close(draftKey ?? tabs.active())
+    tabs.settled(draftKey ?? tabs.active(), id)
+  }
+
+  // A document tab in the editor posts review comments here, because this view owns the prompt they belong to. An
+  // element picked in the Integrated Browser arrives the same way and joins the composer's reference list.
   const vscode = useVSCode()
+  // The editor-tab browser and the Agent Manager share one broker; report which session this sidebar shows.
+  createEffect(() => {
+    const id = session()
+    vscode.postMessage({ type: "sidebar.session", sessionId: id })
+  })
+  let reference: ReferenceHandler | undefined
+  onCleanup(
+    vscode.onMessage((message) => {
+      if (message.type !== "browserReference") return
+      // A tab outlives a session switch, so a reference can arrive for a session the composer no longer shows.
+      if (message.reference.sessionId !== session()) return
+      reference?.(message.reference)
+    }),
+  )
   // File candidates are validated by the host, which owns filesystem access and the worktree boundary.
   const fileChecks = new Map<string, { resolve: (existing: string[]) => void; reject: (error: Error) => void }>()
   const fileCheckPrefix = createUniqueId()
@@ -187,7 +240,8 @@ export function Chat() {
       <Match when={view() === "chat"}>
         <SessionView
           session={session()}
-          onSession={setSession}
+          onSession={settled}
+          onReferenceReady={(value) => (reference = value)}
           actions={toolActions}
           onShowHistory={() => setView("history")}
           onViewTurnChanges={openTurnChanges}
@@ -197,6 +251,13 @@ export function Chat() {
           replacement={
             <Show when={changes() ? session() : undefined} keyed>
               {(id) => <SessionChanges sessionID={id} onClose={() => setChanges(false)} />}
+            </Show>
+          }
+          draftKey={tabs.active()}
+          onMissing={(id) => tabs.close(id)}
+          tabStrip={
+            <Show when={showTabStrip(tabs.ids())}>
+              <SessionTabStrip tabs={tabs} onFork={forkSession} />
             </Show>
           }
         />

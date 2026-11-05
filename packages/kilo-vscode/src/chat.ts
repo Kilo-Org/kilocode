@@ -13,6 +13,7 @@ import {
 import { notifyHostAutoApprove, setHostAutoApprove } from "./agent-manager/provider-auto-approve"
 import type { SettingsHandler } from "./agent-manager/project/settings"
 import { local } from "./local"
+import { dismissNotification, dismissedNotifications, syncDismissedNotifications } from "./notifications"
 import { DISPLAY_DEFAULTS, type ToHost, type ToWebview } from "./protocol"
 import { bridge } from "./relay"
 import { saveImage } from "./save-image"
@@ -30,6 +31,9 @@ import { promptKeybindings, watchKeybindings } from "./prompt-keybindings"
 import { readDisplaySettings } from "./display-settings"
 import { SandboxPreference } from "./services/sandbox-preference"
 import { createSpeechToTextHost } from "./speech-to-text/host"
+import { setSidebarSession, sidebarSession } from "./browser-tab/sidebar-session"
+import { openBrowserLink } from "./browser-links"
+import { DEVTOOLS } from "./browser-tab/html"
 import { documentExists, isMarkdownPath } from "./documents/document-reader"
 import { openToolFile, type ToolDiff } from "./tool-diff"
 
@@ -49,6 +53,8 @@ export function chat(input: {
   directory: string
   trackCostSession: (sessionID: string) => void
   diff: ToolDiff
+  /** Opens a chat web link in the Integrated Browser. Returns false when the tab cannot take it. */
+  openBrowser?: (sessionId: string, url: string) => boolean
   /** The editor tab of the Documents panel, created after this view so it can post comments here. */
   documents?: () => DocumentViewerProvider | undefined
 }) {
@@ -60,7 +66,11 @@ export function chat(input: {
   })
   // Commands sent before the webview bundle listens are lost, and a resolved view is not yet loaded. Keep them until
   // the webview sends its first message, which it does on mount.
-  const state: { view?: WebviewView; loaded: boolean; queued: ToWebview[] } = { loaded: false, queued: [] }
+  const state: { view?: WebviewView; loaded: boolean; focused: boolean; queued: ToWebview[] } = {
+    loaded: false,
+    focused: false,
+    queued: [],
+  }
   const send = (message: ToWebview) => {
     if (!state.view || !state.loaded) {
       state.queued.push(message)
@@ -78,12 +88,15 @@ export function chat(input: {
     composerState(input.context).forEach((message) => void send(message))
   }
   // The cycle keybindings are active only while the webview has focus, as on v1 (`sidebarFocused`).
-  const focus = (focused: boolean) => void commands.executeCommand("setContext", "kilo-code.v2.sidebarFocused", focused)
+  const focus = (focused: boolean) => {
+    state.focused = focused
+    void commands.executeCommand("setContext", "kilo-code.v2.sidebarFocused", focused)
+  }
   const provider: WebviewViewProvider = {
     resolveWebviewView(view) {
       state.view = view
       state.loaded = false
-      const surface = wire({ ...input, webview: view.webview, view: "chat", onMessage: flush })
+      const surface = wire({ ...input, webview: view.webview, view: "chat", onMessage: flush, onFocusChanged: focus })
       const visibility = view.onDidChangeVisibility(() => {
         if (!view.visible) focus(false)
         surface.post({ type: "webviewActiveChanged", active: view.visible })
@@ -105,6 +118,8 @@ export function chat(input: {
         if (state.view !== view) return
         state.view = undefined
         state.loaded = false
+        // A closed sidebar shows no session, so the Agent Manager may claim it again.
+        setSidebarSession(undefined)
       })
     },
   }
@@ -112,6 +127,7 @@ export function chat(input: {
     provider,
     post: send,
     syncState,
+    focused: () => state.focused,
   }
 }
 
@@ -132,6 +148,8 @@ export function wire(input: {
   diff?: ToolDiff
   /** Called on every message from the webview, before it is handled. */
   onMessage?: () => void
+  /** Receives focus changes of the chat sidebar webview. */
+  onFocusChanged?: (focused: boolean) => void
   /** Handles a view-specific message before the standard set. Returns true when it did. */
   handle?: (message: ToHost) => boolean
   onReset?: () => void
@@ -139,6 +157,8 @@ export function wire(input: {
   globals?: Record<string, unknown>
   /** The Agent Manager settings handler the Settings panel shares with the provider. */
   agentManager?: () => SettingsHandler
+  /** Opens a chat web link in the Integrated Browser. Returns false when the tab cannot take it. */
+  openBrowser?: (sessionId: string, url: string) => boolean
   /** The editor tab that previews Markdown files, when this view has one. */
   documents?: () => DocumentViewerProvider | undefined
 }) {
@@ -149,13 +169,24 @@ export function wire(input: {
   const link = bridge({
     target: () => input.server.get(),
     post: (message) => void webview.postMessage(message),
-    open: (url) => void env.openExternal(Uri.parse(url)),
+    open: (url, external) => {
+      const session = sidebarSession()
+      // Without an in-app opener the link goes to the system browser, which is what shift-click asks for.
+      void openBrowserLink(
+        url,
+        external ? undefined : () => (session ? (input.openBrowser?.(session, url) ?? false) : false),
+      )
+    },
     fetch: local,
   })
   const post = (message: ToWebview) => void webview.postMessage(message)
   // The composer state is shared: a change in one open view shows in the others, for example the sidebar and the
   // Agent Manager side by side.
   const others = (message: ToWebview) => surfaces.forEach((target) => target !== post && target(message))
+  const broadcast = (message: ToWebview) => {
+    post(message)
+    others(message)
+  }
   surfaces.add(post)
   // Voice input is host-side: the microphone, the custom endpoint key and the Gateway RPC never reach the webview.
   const speech = createSpeechToTextHost({
@@ -285,6 +316,21 @@ export function wire(input: {
             others(reply)
           })
         return true
+      case "requestDismissedNotifications":
+        post({ type: "dismissedNotificationsLoaded", ids: dismissedNotifications(input.context) })
+        return true
+      case "dismissNotification":
+        broadcast({
+          type: "dismissedNotificationsLoaded",
+          ids: dismissNotification(input.context, message.notificationId),
+        })
+        return true
+      case "syncDismissedNotifications":
+        broadcast({
+          type: "dismissedNotificationsLoaded",
+          ids: syncDismissedNotifications(input.context, message.ids),
+        })
+        return true
       default:
         return false
     }
@@ -312,6 +358,7 @@ export function wire(input: {
     input.onMessage?.()
     if (input.handle?.(message) || speech.handle(message)) return
     if (message.type === "fetch" || message.type === "abort" || message.type === "open") return link.receive(message)
+    if (message.type === "sidebar.session") return setSidebarSession(message.sessionId)
     if (message.type === "trackCostSession") return input.trackCostSession?.(message.sessionID)
     if (isSurface(message)) return handleSurface(message)
     // A chat recovery link opens the Settings panel at the row that owns the problem.
@@ -324,8 +371,10 @@ export function wire(input: {
       })
     if (settings.handle(message)) return
     // Only the sidebar carries the cycle keybindings; the Settings panel must not change their context.
-    if (message.type === "webviewFocusChanged" && input.view === "chat")
+    if (message.type === "webviewFocusChanged" && input.view === "chat") {
+      if (input.onFocusChanged) return input.onFocusChanged(message.focused === true)
       return void commands.executeCommand("setContext", "kilo-code.v2.sidebarFocused", message.focused === true)
+    }
     if (message.type === "copyToClipboard")
       return void env.clipboard.writeText(message.text).then(
         () => post({ type: "clipboardWriteResult", id: message.id, ok: true }),
@@ -410,6 +459,8 @@ export function html(input: {
     `font-src ${input.csp}`,
     `connect-src ${input.csp}`,
     `img-src ${input.csp} data: https:`,
+    // The Agent Manager browser panel embeds DevTools for the open page.
+    ...(input.view === "agentManager" ? [`frame-src ${DEVTOOLS}`] : []),
   ].join("; ")
   const vars = SIZES.map((size) => `--kilo-font-size-${size}: ${(input.size * size) / 13}px;`).join(" ")
   const globals = {
@@ -418,7 +469,6 @@ export function html(input: {
     KILO_MARKDOWN_SHIKI_WORKER_URI: input.markdown,
     KILO_TOP_BAR: false,
     KILO_TOP_BAR_SURFACE: "sidebar_title",
-    KILO_BROWSER_AUTOMATION: false,
     KILO_SANDBOX_CONTROLS: process.platform !== "win32",
     KILO_AGENT_MANAGER_INTRO_DISMISSED: true,
     KILO_SETTINGS: input.settings,

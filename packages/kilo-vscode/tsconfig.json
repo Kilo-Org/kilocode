@@ -21,6 +21,7 @@
     "test"
   ],
   "exclude": [
-    "src/shared"
+    "src/shared",
+    "test/fixtures/browser-panel-render.tsx"
   ]
 }
