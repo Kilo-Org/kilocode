@@ -76,7 +76,7 @@ test("a removed upstream folder with a Kilo copy does not pull new upstream file
   try {
     const result = await analyzeSync("v2", target, base, defaultConfig)
     expect(result.conflicts).toEqual([])
-    // The merge keeps the new file at its upstream path, where the skipFiles cleanup removes it.
+    // The merge keeps the new file at its upstream path, so the sync's skipFiles cleanup can remove it.
     expect(await merge(target, "sync")).toEqual({ success: true, conflicts: [] })
     expect(await Bun.file("packages/session-ui/src/new-machine.ts").exists()).toBe(true)
     expect(await Bun.file("packages/kilo-ui-base/src/new-machine.ts").exists()).toBe(false)
