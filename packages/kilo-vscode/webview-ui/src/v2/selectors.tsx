@@ -197,16 +197,17 @@ export function createSelection(
       // The server reads the sandbox metadata when it first resolves the session state, so write it before the first
       // prompt or status call, which both wait for this request.
       const request = metadata
-        ? created.request.then(() => v2.api.session.update({ sessionID: created.id, metadata }))
+        ? created.request.then(() =>
+            v2.api.session.update({ sessionID: created.id, metadata }).catch((error: unknown) => {
+              // The session keeps the config default while the draft toggle looked applied. A failed create keeps
+              // failing the prompt, which reports it.
+              v2.report(error)
+              throw error
+            }),
+          )
         : created.request
       creates.set(created.id, request)
-      // A rejected write leaves the session on the config default while the draft toggle looked applied, so report
-      // it. A failed create keeps failing the prompt, which reports it.
-      void request
-        .catch((error: unknown) => {
-          if (metadata) v2.report(error)
-        })
-        .finally(() => creates.delete(created.id))
+      void request.catch(() => undefined).finally(() => creates.delete(created.id))
       return created.id
     },
     /** The pending create of a session, including its metadata write. */
