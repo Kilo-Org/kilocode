@@ -1,52 +1,22 @@
 import { KiloNotebook } from "@opencode/schema/kilocode/notebook"
 import { Schema } from "effect"
+import { readEndpoint, takeEndpoint, type Endpoint } from "../broker"
 
 const TIMEOUT = 10 * 60_000
 
 export const PATH = "/notebook/request"
 
-/**
- * The endpoint the VS Code extension prints into the server environment. Its broker listens on loopback only, so
- * any other origin, a path, or credentials mean the value did not come from this host.
- */
-export function broker(): { url: URL; token: string } | undefined {
-  const base = process.env.KILO_NOTEBOOK_BROKER_URL
-  const token = process.env.KILO_NOTEBOOK_BROKER_TOKEN
-  if (!base || !token || !URL.canParse(base)) return undefined
-  const url = new URL(base)
-  if (
-    url.protocol !== "http:" ||
-    url.hostname !== "127.0.0.1" ||
-    !url.port ||
-    url.username ||
-    url.password ||
-    url.pathname !== "/" ||
-    url.search ||
-    url.hash
-  ) {
-    return undefined
-  }
-  return { url, token }
+const captured: { endpoint?: Endpoint } = {}
+
+export function broker(): Endpoint | undefined {
+  return readEndpoint("KILO_NOTEBOOK_BROKER")
 }
 
-const captured: { endpoint?: { url: URL; token: string } } = {}
-
-/**
- * Read the broker endpoint once and remove it from the process environment. Tools and MCP servers inherit this
- * environment, so leaving the token there would let a shell command drive notebooks without the permission prompt.
- * The plugin effect runs again for each Location and after each plugin reload, so later calls return the captured
- * endpoint.
- */
 export function takeBroker() {
-  const endpoint = broker()
-  if (!endpoint) return captured.endpoint
-  captured.endpoint = endpoint
-  delete process.env.KILO_NOTEBOOK_BROKER_URL
-  delete process.env.KILO_NOTEBOOK_BROKER_TOKEN
-  return endpoint
+  return takeEndpoint("KILO_NOTEBOOK_BROKER", captured)
 }
 
-export type Endpoint = { url: URL; token: string }
+export type { Endpoint }
 
 /**
  * One broker call. The host aborts its work when the connection closes, so an interrupted tool or the timeout stops
