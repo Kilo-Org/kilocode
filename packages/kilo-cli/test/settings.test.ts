@@ -17,7 +17,7 @@ import { KiloHost } from "../src/host"
 // conflict, ancestor precedence, the project-wide unset, the symlink guard, and the watcher-driven reload all run
 // against the real files.
 
-type Files = { global?: unknown; project?: unknown; projectDir?: unknown }
+type Files = { global?: unknown; project?: unknown; projectDir?: unknown; outside?: unknown }
 type FilePaths = { directory: string; repoRoot: string; global: string }
 type Paths = FilePaths & {
   /** Raw request for inputs the typed client rejects, such as an empty unset path. */
@@ -52,6 +52,8 @@ const boot =
       await mkdir(path.join(repoRoot, ".kilo2"), { recursive: true })
       await Bun.write(path.join(repoRoot, ".kilo2", "kilo2.json"), JSON.stringify(files.projectDir))
     }
+    // A document above the worktree root: reached only when the reader walks to the filesystem root outside VCS.
+    if (files.outside !== undefined) await Bun.write(path.join(root, "kilo2.json"), JSON.stringify(files.outside))
     if (options.subdirectory) await mkdir(directory, { recursive: true })
     const filePaths = { directory, repoRoot, global }
     await options.setup?.(filePaths)
@@ -256,17 +258,35 @@ test(
 )
 
 test(
-  "outside version control a project write reaches ancestor config",
+  "outside version control a project write reaches config above the worktree root",
   boot(
-    { project: { privacy_mode: true } },
+    { outside: { privacy_mode: true } },
     async (client, { directory, repoRoot }) => {
-      const winner = path.join(repoRoot, "kilo2.json")
+      const winner = path.join(path.dirname(repoRoot), "kilo2.json")
       expect(await settingsTarget(client, directory, "project")).toMatchObject({ path: winner })
       const result = await settingsWrite(client, directory, { scope: "project", set: { shell: "zsh" } })
       expect(result.target.path).toBe(winner)
       expect(JSON.parse(await Bun.file(winner).text())).toEqual({ privacy_mode: true, shell: "zsh" })
     },
     { subdirectory: "sub", git: false },
+  ),
+  30_000,
+)
+
+test(
+  "inside version control a project write ignores config above the worktree root",
+  boot(
+    { outside: { privacy_mode: true } },
+    async (client, { directory, repoRoot }) => {
+      const outside = path.join(path.dirname(repoRoot), "kilo2.json")
+      const fallback = path.join(directory, "kilo2.json")
+      expect(await settingsTarget(client, directory, "project")).toMatchObject({ path: fallback, exists: false })
+      const result = await settingsWrite(client, directory, { scope: "project", set: { shell: "zsh" } })
+      expect(result.target.path).toBe(fallback)
+      // The document above the worktree root is outside the reader's walk and is left alone.
+      expect(JSON.parse(await Bun.file(outside).text())).toEqual({ privacy_mode: true })
+    },
+    { subdirectory: "sub" },
   ),
   30_000,
 )
