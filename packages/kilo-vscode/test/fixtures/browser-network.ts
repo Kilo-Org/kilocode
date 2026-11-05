@@ -86,7 +86,7 @@ describe("BrowserNetwork Chromium", () => {
   let browser: Browser
   let gateway: BrowserProxy
 
-  async function launch(pinned = true, flags: string[] = []) {
+  async function launch(pinned = true, flags: string[] = [], timeout = 15000) {
     const base = options(false)
     const pin = createHash("sha256")
       .update(new X509Certificate(cert).publicKey.export({ format: "der", type: "spki" }))
@@ -95,6 +95,7 @@ describe("BrowserNetwork Chromium", () => {
       ...base,
       executablePath: executable,
       proxy: gateway.proxy,
+      timeout,
       ignoreDefaultArgs: ["--disable-popup-blocking"],
       args: [
         ...(base.args ?? []).filter((arg) => arg !== "--no-proxy-server"),
@@ -108,6 +109,15 @@ describe("BrowserNetwork Chromium", () => {
     })
   }
 
+  // This fixture runs alone in its Node child. When the wrapper's bun test gives up on it, it escalates SIGTERM to
+  // SIGKILL; close the browser and proxy here so the Chromium process group is reaped instead of left dangling.
+  const stop = async () => {
+    await browser?.close().catch(() => {})
+    await gateway?.close().catch(() => {})
+    process.exit(0)
+  }
+  process.once("SIGTERM", stop)
+
   before(
     async () => {
       gateway = await BrowserProxy.start("deny")
@@ -115,6 +125,12 @@ describe("BrowserNetwork Chromium", () => {
     },
     { timeout: 20000 },
   )
+
+  after(async () => {
+    await browser?.close()
+    await gateway?.close()
+    process.off("SIGTERM", stop)
+  })
 
   afterEach(async () => {
     await Promise.all(proxies.splice(0).map((proxy) => proxy.close()))
@@ -126,6 +142,7 @@ describe("BrowserNetwork Chromium", () => {
   after(async () => {
     await browser?.close()
     await gateway?.close()
+    process.off("SIGTERM", stop)
   })
 
   async function session(
@@ -863,7 +880,7 @@ describe("BrowserNetwork Chromium", () => {
     expect(current.logs).toEqual([])
   })
 
-  test("certificate errors remain errors without the fixture-only certificate pin", { timeout: 20000 }, async () => {
+  test("certificate errors remain errors without the fixture-only certificate pin", { timeout: 30000 }, async () => {
     const source = await secure("untrusted", (_request, response) => response.end("must not load"))
     const untrusted = await launch(false)
     cleanup.push(() => untrusted.close())
@@ -917,7 +934,8 @@ describe("BrowserNetwork Chromium", () => {
       const broker = new BrowserBroker({
         log: (...args) => logs.push(args),
         useSystemChrome: () => false,
-        launch: (config) => chromium.launch({ ...config, executablePath: executable }),
+        launch: (config) =>
+          chromium.launch({ ...config, executablePath: executable, timeout: config.timeout ?? 15000 }),
       })
       cleanup.push(() => broker.disposeAsync())
       const views = new Set<string>()

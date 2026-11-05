@@ -1,20 +1,20 @@
 import { afterAll, afterEach, beforeAll, describe, expect, test } from "bun:test"
 import { EventEmitter } from "node:events"
-import { existsSync } from "node:fs"
 import { chromium, type Browser, type Page } from "playwright-core"
 import { BrowserStream } from "../src/services/browser-automation/browser-stream"
 import { source, type BrowserCursor, type BrowserFrame, type BrowserInteraction } from "../src/shared/browser-stream"
+import { chromiumProbe, executable } from "./fixtures/chromium"
 
 const streams: BrowserStream[] = []
 const pages: Page[] = []
 const view = { width: 640, height: 480, revision: 1, active: true }
-const executable = [
-  process.env.CHROME_PATH,
-  "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
-  "/usr/bin/google-chrome",
-  "/usr/bin/chromium",
-  chromium.executablePath(),
-].find((path) => path && existsSync(path))
+const probe = executable ? await chromiumProbe() : ({ state: "missing" } as const)
+
+// A browser that died after launch, or that the probe already failed, leaves ordinary cleanup under Chromium's
+// "Target page, context or browser has been closed". Treat that as done so one dead browser cannot fail every test.
+function closed(error: unknown) {
+  return /has been closed|Browser has been closed/i.test(error instanceof Error ? error.message : String(error))
+}
 
 function jpeg(width = view.width, height = view.height, length = 17) {
   const data = Buffer.alloc(length)
@@ -83,9 +83,20 @@ function protocol(cursor?: (value: BrowserCursor) => void) {
   return { stream, session, page, calls, hooks, frames, logs, scope, send, delivery }
 }
 
+// Settle every cleanup so one failure cannot skip the rest, and ignore the "has been closed" errors a dead browser
+// raises. The original failure, not this cleanup or a cascade, must be the one that fails the test.
+function settle(all: Promise<unknown>[]) {
+  return Promise.allSettled(all).then((results) => {
+    const errors = results.flatMap((result) =>
+      result.status === "rejected" && !closed(result.reason) ? [result.reason] : [],
+    )
+    if (errors.length > 0) throw errors[0]
+  })
+}
+
 afterEach(async () => {
-  await Promise.all(streams.splice(0).map((stream) => stream.close()))
-  await Promise.all(pages.splice(0).map((page) => page.close()))
+  await settle(streams.splice(0).map((stream) => stream.close()))
+  await settle(pages.splice(0).map((page) => page.close()))
 })
 
 describe("BrowserStream protocol lifecycle", () => {
@@ -525,20 +536,32 @@ describe("BrowserStream protocol lifecycle", () => {
   })
 })
 
-describe.skipIf(!executable)("BrowserStream Chromium", () => {
+test.skipIf(probe.state !== "failed")("BrowserStream Chromium launches", () => {
+  if (probe.state === "failed") expect.unreachable(probe.reason)
+})
+
+describe.skipIf(probe.state !== "ready")("BrowserStream Chromium", () => {
   let browser: Browser
 
   beforeAll(async () => {
-    browser = await chromium.launch({
+    browser = await launch()
+  }, 25000)
+
+  async function launch() {
+    const config = {
       executablePath: executable,
       headless: true,
       chromiumSandbox: true,
       args: ["--force-device-scale-factor=2"],
-    })
-  }, 20000)
+      timeout: 10000,
+    }
+    return chromium.launch(config).catch(() => chromium.launch(config))
+  }
 
   afterAll(async () => {
-    await browser?.close()
+    await browser?.close().catch((error: unknown) => {
+      if (!closed(error)) throw error
+    })
   })
 
   async function fixture(cursor?: (value: BrowserCursor) => void) {
@@ -768,7 +791,10 @@ describe.skipIf(!executable)("BrowserStream Chromium", () => {
       expect(reports).toHaveLength(1)
       expect(cursors).toHaveLength(count)
     } finally {
-      await probe.detach()
+      await probe.detach().catch((error: unknown) => {
+        if (closed(error)) return
+        throw error
+      })
     }
   }, 10000)
 
