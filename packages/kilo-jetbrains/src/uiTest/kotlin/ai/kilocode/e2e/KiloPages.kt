@@ -252,6 +252,7 @@ class SessionOpenPage(private val ide: KiloIdePage, private val watchdog: Watchd
         }
         val selected = ide.driver.withContext(OnDispatcher.EDT) { list.selected()?.key }
         if (selected != expected) {
+            ide.driver.withContext(OnDispatcher.EDT) { list.select(expected, false) }
             ide.driver.withContext(OnDispatcher.EDT) { list.focusList() }
             ide.driver.ui.keyboard { enter() }
         }

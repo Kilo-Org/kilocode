@@ -21,7 +21,10 @@ const args = parse(Bun.argv.slice(2))
 const cloud = resolve(args["cloud-repo"] ?? process.env.KILO_E2E_CLOUD_REPO ?? "../cloud")
 const providerPath = join(cloud, "services/cloud-agent-next/test/e2e/fixture-provider.ts")
 const artifactsDir = join(root, "build", "e2e")
-const gitUrl = args["git-url"] ?? process.env.E2E_GIT_URL ?? "https://github.com/octocat/Hello-World.git"
+// K1 prepare/cleanup forward the parent process environment to the provider, not run({ env }).
+// Set it here so --git-url actually reaches the C1 fixture provider.
+const gitUrl = args["git-url"] ?? process.env.E2E_GIT_URL
+if (gitUrl) process.env.E2E_GIT_URL = gitUrl
 
 if (!existsSync(providerPath)) {
   console.error(`[jetbrains-e2e] C1 fixture provider not found at ${providerPath}`)
@@ -50,7 +53,6 @@ for (const lane of lanes) {
       },
       artifactsDir,
       runId,
-      env: { E2E_GIT_URL: gitUrl },
       provenance: { kiloCommit },
       timeouts: { provider: 20 * 60_000, driver: 32 * 60_000 },
     })

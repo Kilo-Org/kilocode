@@ -219,6 +219,7 @@ class JetBrainsDriverTest {
             .redirectErrorStream(true)
             .start()
         if (!proc.waitFor(10, TimeUnit.SECONDS)) {
+            proc.inputStream.close()
             proc.destroyForcibly()
             return@runCatching null
         }
@@ -232,7 +233,11 @@ class JetBrainsDriverTest {
             .redirectErrorStream(true)
             .start()
         proc.inputStream.close()
-        proc.waitFor(10, TimeUnit.SECONDS) && proc.exitValue() == 0
+        if (!proc.waitFor(10, TimeUnit.SECONDS)) {
+            proc.destroyForcibly()
+            return@runCatching false
+        }
+        proc.exitValue() == 0
     }.getOrDefault(false)
 
     private fun openSession(

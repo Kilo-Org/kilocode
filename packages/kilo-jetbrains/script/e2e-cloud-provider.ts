@@ -14,16 +14,20 @@
 import { resolve } from "node:path"
 
 const args = Bun.argv.slice(2)
-const cloud = resolve(args.shift() ?? process.env.KILO_E2E_CLOUD_REPO ?? "../cloud")
 let request: string | undefined
 let result: string | undefined
+let positional: string | undefined
 
 for (let i = 0; i < args.length; i++) {
   const arg = args[i]
   if (arg === "--request") request = args[++i]
   else if (arg === "--result") result = args[++i]
+  else if (arg.startsWith("--")) throw new Error(`unknown argument: ${arg}`)
+  else if (positional === undefined) positional = arg
   else throw new Error(`unknown argument: ${arg}`)
 }
+
+const cloud = resolve(positional ?? process.env.KILO_E2E_CLOUD_REPO ?? "../cloud")
 
 if (!request || !result) throw new Error("--request and --result are required")
 
