@@ -85,8 +85,10 @@ describe("sandbox TUI", () => {
     state.remember("ses_moved", "/created")
     stored = "/moved"
     state.forget()
+    // The store forgets the session later, as eviction or a transient gap would; the creation directory is gone.
+    stored = undefined
     await state.load("ses_moved")
 
-    expect(locations).toEqual([{ location: { directory: "/moved" } }])
+    expect(locations).toEqual([undefined])
   })
 })
