@@ -361,19 +361,34 @@ it("upgrades legacy receipts and expires their payloads without deleting dedupe 
       .toMatchObject({ status: "unknown", duplicate: true })
   }))
 
-it("returns large discovery results without retaining their payloads", () =>
+it("returns a bounded actionable discovery failure and replays it without executing again", () =>
   Effect.gen(function* () {
     const f = yield* fixture()
     yield* Effect.promise(() => Promise.all(
       Array.from({ length: 180 }, (_, index) => mkdir(path.join(f.root, `${index}-${"x".repeat(190)}`))),
     ))
     const result = yield* f.commands.instance("list_directories", {}, "large-discovery")
-    expect(result.status).toBe("succeeded")
-    expect(Buffer.byteLength(JSON.stringify(result))).toBeGreaterThan(65_536)
-    expect(yield* f.database.db.get(sql`SELECT outcome FROM _kilo_remote_command WHERE command_id='large-discovery'`))
-      .toEqual({ outcome: null })
+    expect(result).toMatchObject({ status: "failed", error: { code: "response_too_large" } })
+    expect(Buffer.byteLength(JSON.stringify(result))).toBeLessThanOrEqual(60 * 1024)
+    expect(yield* f.database.db.get<{ outcome: string }>(sql`SELECT outcome FROM _kilo_remote_command WHERE command_id='large-discovery'`))
+      .toEqual({ outcome: JSON.stringify(result) })
+    yield* Effect.promise(() => rm(f.root, { recursive: true }))
     expect(yield* f.commands.instance("list_directories", {}, "large-discovery"))
-      .toMatchObject({ status: "unknown", duplicate: true })
+      .toMatchObject({ status: "failed", duplicate: true, error: { code: "response_too_large" } })
+  }))
+
+it("bounds legacy cached results before replaying them", () =>
+  Effect.gen(function* () {
+    const f = yield* fixture()
+    yield* f.commands.instance("list_directories", {}, "legacy-large")
+    yield* f.database.db.run(sql`UPDATE _kilo_remote_command SET outcome=${JSON.stringify({
+      commandID: "legacy-large",
+      status: "succeeded",
+      result: "x".repeat(65_536),
+    })} WHERE command_id='legacy-large'`)
+    yield* Effect.promise(() => rm(f.root, { recursive: true }))
+    expect(yield* f.commands.instance("list_directories", {}, "legacy-large"))
+      .toMatchObject({ status: "failed", duplicate: true, error: { code: "response_too_large" } })
   }))
 
 it("queued prompts work while live-only commands require current run and incarnation", () =>
