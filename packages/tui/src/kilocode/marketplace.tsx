@@ -22,7 +22,7 @@ type Context = Plugin.Context & {
   cancel: () => void
   signIn: (id: string) => Promise<void>
 }
-type Tab = "all" | "installed" | "skills" | "mcps"
+type Tab = "all" | "installed" | "agents" | "skills" | "mcps"
 type BrowserState = { tab: Tab; query: string; selected?: string }
 type Entry = { item?: Item; record?: Installed }
 type Choice = Entry & { details: boolean; records: readonly Installed[] }
@@ -30,11 +30,13 @@ type Choice = Entry & { details: boolean; records: readonly Installed[] }
 const tabs: { id: Tab; title: string }[] = [
   { id: "all", title: "All" },
   { id: "installed", title: "Installed" },
+  { id: "agents", title: "Agents" },
   { id: "skills", title: "Skills" },
   { id: "mcps", title: "MCPs" },
 ]
 
 const kinds = [
+  { kind: "agent", title: "Agents" },
   { kind: "skill", title: "Skills" },
   { kind: "mcp", title: "MCPs" },
 ] as const
@@ -72,7 +74,7 @@ export default Plugin.define({
             {
               id: "kilo.marketplace",
               title: "Marketplace",
-              description: "Browse and install skills and MCP servers",
+              description: "Browse and install agents, skills and MCP servers",
               group: "Kilo",
               palette: true,
               slash: { name: "marketplace" },
@@ -224,8 +226,7 @@ export function DialogMarketplace(props: {
 
   const visibleKinds = () =>
     kinds.filter(
-      ({ kind }) =>
-        tab() === "all" || tab() === "installed" || (tab() === "skills" ? kind === "skill" : kind === "mcp"),
+      ({ kind }) => tab() === "all" || tab() === "installed" || kind === tab().replace(/s$/, ""),
     )
   const entries = createMemo(() => {
     const text = query().trim().toLowerCase()
@@ -251,7 +252,7 @@ export function DialogMarketplace(props: {
                   record.project,
                   record.config,
                   record.server,
-                  ...skillIds(record),
+                  ...resourceLabels(record).map((label) => label.id),
                   ...recordNotes(record),
                   item?.name,
                   item?.description,
@@ -298,14 +299,19 @@ export function DialogMarketplace(props: {
   const entry = createMemo(() => entries().find((row) => row.value === selected())?.entry)
   const actionable = () => !!(entry()?.item || entry()?.record)
   createEffect(
-    on([entries, loading, inventoryLoading], () => {
+    on([entries, loading, tab, inventoryLoading], () => {
       if (loading() || inventoryLoading()) return
       const value = selected()
       const next =
         value && entries().some((row) => row.value === value && (row.entry.item || row.entry.record))
           ? value
           : entries().find((row) => row.entry.item || row.entry.record)?.value
-      if (!next) return
+      // A tab with nothing to act on has no highlight; clearing it lets the next tab select its first row.
+      if (!next) {
+        props.state.selected = undefined
+        setSelected(undefined)
+        return
+      }
       props.state.selected = next
       setSelected(next)
       queueMicrotask(() => {
@@ -343,7 +349,7 @@ export function DialogMarketplace(props: {
               </For>
             </box>
           }
-          placeholder="Search skills and MCPs..."
+          placeholder="Search agents, skills and MCPs..."
           options={options()}
           skipFilter
           preserveSelection
@@ -437,7 +443,7 @@ export function DialogMarketplace(props: {
             <text fg={theme.text.base}>
               {entry()
                 ? entryDetails(entry()!, records())
-                : "Select a skill or MCP to review details. Enter opens explicit install or removal actions. Installed contains marketplace-managed records only."}
+                : "Select an agent, skill or MCP server to review details. Enter opens explicit install or removal actions. Installed contains marketplace-managed records only."}
             </text>
           </scrollbox>
         </box>
@@ -480,6 +486,11 @@ function entryDetails(entry: Entry, records: readonly Installed[]) {
           item.url ? `URL: ${item.url}` : undefined,
           item.tags.length ? `Tags: ${item.tags.join(", ")}` : undefined,
           ...item.prerequisites.map((value) => `Prerequisite: ${value}`),
+          ...(item.agent?.mode ? [`Mode: ${item.agent.mode}`] : []),
+          ...(item.agent?.model ? [`Model: ${agentModel(item.agent.model)}`] : []),
+          ...(item.agent?.permissions ?? []).map(
+            (rule) => `Permission: ${rule.effect} ${rule.action} ${rule.resource}`,
+          ),
           ...item.options.map(
             (option) =>
               `Install option: ${option.name}${option.description ? ` - ${option.description}` : ""}${option.prerequisites.length ? ` (needs ${option.prerequisites.join(", ")})` : ""}`,
@@ -494,9 +505,8 @@ function entryDetails(entry: Entry, records: readonly Installed[]) {
       `Scope: ${record.scope}`,
       `Status: ${record.status ?? (record.recovering ? "incomplete" : "installed")}`,
       ...(record.project ? [`Project: ${record.project}`] : []),
-      ...skillIds(record).map((id) => `Skill: ${id}`),
+      ...resourceLabels(record).map((label) => `${label.kind}: ${label.id}`),
       ...(record.config ? [`Config: ${record.config}`] : []),
-      ...(record.server ? [`MCP server: ${record.server}`] : []),
       ...recordNotes(record),
       ...(record.status === "modified"
         ? ["Local changes are retained. Reinstall and removal refuse modified resources."]
@@ -605,6 +615,19 @@ async function act(context: Context, item: Item, installed: readonly Installed[]
         ),
         () => resolve(false),
       )
+    })
+    if (!confirmed || context.signal.aborted) return
+  }
+  if (item.kind === "agent") {
+    const confirmed = await context.ui.dialog.confirm({
+      title: `Install ${item.name} (${choice.scope})?`,
+      message: [
+        "Agents run with their own instructions and permissions. Review the source before installing.",
+        ...(item.agent?.permissions ?? []).map((rule) => `Permission: ${rule.effect} ${rule.action} ${rule.resource}`),
+        ...(item.agent?.mode ? [`Mode: ${item.agent.mode}`] : []),
+        "Reinstall replaces owned content with the current catalog entry; it is not version management.",
+      ].join("\n"),
+      label: { confirm: "Install" },
     })
     if (!confirmed || context.signal.aborted) return
   }
@@ -857,13 +880,30 @@ function recordNotes(record: Installed) {
     ...(record.recovering ? ["Installation is incomplete; reinstall to repair it."] : []),
     ...(record.warnings?.length
       ? record.warnings
-      : (record.pending ?? []).map((resource) =>
-          "id" in resource ? `Pending cleanup: skill ${resource.id}` : `Pending cleanup: MCP server ${resource.server}`,
-        )),
+      : (record.pending ?? []).map((resource) => {
+          const [label] = resourceDescriptions({ resources: [resource] })
+          return `Pending cleanup: ${label?.kind ?? "resource"} ${label?.id ?? ""}`.trimEnd()
+        })),
   ]
 }
 
-/** Skill trees owned by a record: the item itself plus any MCP companion skills. */
-function skillIds(record: Installed) {
-  return (record.resources ?? []).flatMap((resource) => ("id" in resource ? [resource.id] : []))
+/** Resources owned by a record, labelled by what they are: the item itself plus any MCP companion skills. */
+function resourceLabels(record: Pick<Installed, "resources">) {
+  return (record.resources ?? []).flatMap((resource) =>
+    "id" in resource
+      ? [{ kind: "Skill", id: resource.id }]
+      : "agent" in resource
+        ? [{ kind: "Agent", id: resource.agent }]
+        : [{ kind: "MCP server", id: resource.server }],
+  )
+}
+
+/** The same labels in lower case, for sentences rather than detail rows. */
+function resourceDescriptions(record: Pick<Installed, "resources">) {
+  return resourceLabels(record).map((label) => ({ kind: label.kind.toLowerCase(), id: label.id }))
+}
+
+function agentModel(model: NonNullable<Item["agent"]>["model"]) {
+  if (model === undefined) return ""
+  return [model.providerID, model.model].filter(Boolean).join("/") + (model.variant ? `#${model.variant}` : "")
 }

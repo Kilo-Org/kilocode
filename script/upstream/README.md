@@ -32,7 +32,7 @@ In an Agent Manager worktree that is already on a fresh branch from `origin/v2`,
 3. Picks the target: the next release that the base does not have, or `--version`. It refuses a target that skips an older release (`--allow-skip` overrides) and a commit that is not on `upstream/dev`.
 4. Analyzes the merge with `git merge-tree` and prints the report: conflicts with a recommendation, new upstream workflows, shared files that Kilo patched and upstream changed, commits added to history, harness change size, and the lag before and after (releases and days).
 5. Creates `sync-v2-x-y` from `origin/v2` (or uses the current branch with `--base-branch HEAD`), enables rerere and trains it from earlier sync merges.
-6. Runs `git merge --no-ff --no-commit` with the sync message, then resolves what it can:
+6. Runs `git merge --no-ff --no-commit` with the sync message, then resolves what it can. The merge and the analysis turn off directory rename detection (`merge.directoryRenames=false`). Otherwise a removed upstream folder looks renamed into a Kilo copy (`packages/session-ui` into `packages/kilo-ui-base`), and git moves new upstream files into the copy, where `skipFiles` does not remove them.
    - `bun script/check-workflows.ts --fix`: removes workflows that Kilo dropped. This also resolves their modify/delete conflicts.
    - `skipFiles`: removes upstream changes and additions under the product areas Kilo removed (desktop, web app, hosted platform, see `utils/config.ts`). This also resolves their modify/delete conflicts.
    - `keepOurs` and Kilo-owned paths (`utils/owned.ts`): keep Kilo's version.

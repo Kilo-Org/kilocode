@@ -8,6 +8,8 @@
  */
 
 import type { FileDiffInfo } from "@opencode/client"
+import type { BrowserElement } from "../services/browser-automation"
+import type { BrowserCursor, BrowserFrame, BrowserInteraction, BrowserViewIdentity, BrowserViewport } from "../shared/browser-stream"
 import type { DiffImage } from "../diff/types"
 import type { Worktree, ManagedSession, Section } from "./WorktreeStateManager"
 import type { WorktreeStats, LocalStats } from "./GitStatsPoller"
@@ -193,6 +195,7 @@ interface StateMessage {
   terminalDestination?: TerminalDestination
   terminalFont?: TerminalFont
   restricted?: boolean
+  browserAutomation?: boolean
 }
 
 /** Project catalog pushed to the webview after registry or context changes. */
@@ -433,6 +436,27 @@ interface WorktreeDiffFileMessage {
   diff: WorktreeDiffEntry | null
 }
 
+/** Which of the requested paths exist for a session, used to turn inline code spans into file links. */
+interface ValidateFilesResultMessage {
+  type: "agentManager.validateFilesResult"
+  id: string
+  existing: string[]
+}
+
+/** One document read for the Documents panel: the canonical path plus the preview, or the read error. */
+interface DocumentMessage {
+  type: "agentManager.document"
+  sessionId: string
+  contextKey?: string
+  file: string
+  requestedFile?: string
+  content?: string
+  kind?: "text" | "image"
+  mime?: string
+  data?: string
+  error?: string
+}
+
 interface RevertWorktreeFileResultMessage {
   type: "agentManager.revertWorktreeFileResult"
   projectId?: string
@@ -490,6 +514,58 @@ interface CommentReactionResultMessage {
   error?: string
 }
 
+interface BrowserStateMessage {
+  type: "agentManager.browserState"
+  browserId: string
+  projectId?: string
+  sessionId: string
+  navigation?: number
+  status: "starting" | "ready" | "loading" | "error" | "closed"
+  inspecting?: boolean
+  url?: string
+  title?: string
+  errors: number
+  logs?: string[]
+  error?: string
+  missing?: "chrome" | "chromium"
+  frameError?: string
+  back?: boolean
+  forward?: boolean
+}
+
+interface BrowserInspectionMessage {
+  type: "agentManager.browserInspection"
+  error?: string
+  requestId: string
+  projectId?: string
+  sessionId: string
+  url?: string
+  title?: string
+  element?: BrowserElement
+  logs: string[]
+  hover?: boolean
+}
+
+interface BrowserFrameMessage extends BrowserFrame {
+  type: "agentManager.browserFrame"
+  projectId?: string
+  sessionId: string
+}
+
+interface BrowserCursorMessage extends BrowserCursor {
+  type: "agentManager.browserCursor"
+  projectId?: string
+  sessionId: string
+}
+
+interface BrowserDevtoolsMessage {
+  type: "agentManager.browserDevtools"
+  browserId: string
+  projectId?: string
+  sessionId: string
+  url: string
+}
+
 interface ActionOutMessage {
   type: "action"
   action: string
@@ -503,6 +579,11 @@ interface RunStatusMessage extends RunStatus {
 
 /** All messages the Agent Manager extension sends to the webview. */
 export type AgentManagerOutMessage =
+  | BrowserStateMessage
+  | BrowserInspectionMessage
+  | BrowserFrameMessage
+  | BrowserCursorMessage
+  | BrowserDevtoolsMessage
   | WorktreeDeletedMessage
   | PRCommentResult
   | WorktreeActivityMessage
@@ -531,6 +612,8 @@ export type AgentManagerOutMessage =
   | WorktreeDiffNoticeMessage
   | WorktreeDiffMessage
   | WorktreeDiffFileMessage
+  | DocumentMessage
+  | ValidateFilesResultMessage
   | RevertWorktreeFileResultMessage
   | DiffBranchesMessage
   | PRStatusOutMessage
@@ -1002,10 +1085,36 @@ interface OpenFileIn {
   column?: number
 }
 
+interface OpenExternalIn {
+  type: "agentManager.openExternal"
+  url: string
+}
+
+interface OpenWebLinkIn {
+  type: "agentManager.openWebLink"
+  url: string
+  /** Shift-click: open in the system browser even when links route into the Integrated Browser. */
+  external?: boolean
+}
+
 interface CopyFilePathIn {
   type: "agentManager.copyFilePath"
   sessionId: string
   filePath: string
+}
+
+interface ValidateFilesIn {
+  type: "agentManager.validateFiles"
+  id: string
+  sessionId: string
+  paths: string[]
+}
+
+interface RequestDocumentIn {
+  type: "agentManager.requestDocument"
+  sessionId: string
+  file: string
+  contextKey?: string
 }
 
 // Pass-through messages intercepted for side effects
@@ -1229,7 +1338,44 @@ interface TerminalDestinationSelectedIn {
 }
 
 /** All messages the Agent Manager expects from the webview (onMessage input). */
+interface BrowserRequestIn {
+  type:
+    | "agentManager.browser.open"
+    | "agentManager.browser.refresh"
+    | "agentManager.browser.back"
+    | "agentManager.browser.forward"
+    | "agentManager.browser.close"
+    | "agentManager.browser.state"
+    | "agentManager.browser.inspect"
+    | "agentManager.browser.input"
+    | "agentManager.browser.devtools"
+    | "agentManager.browser.viewport"
+    | "agentManager.browser.interact"
+    | "agentManager.browser.acknowledge"
+  sessionId: string
+  requestId?: string
+  projectId?: string
+  browserId?: string
+  navigation?: number
+  viewport?: BrowserViewport
+  identity?: BrowserViewIdentity
+  event?: BrowserInteraction
+  sequence?: number
+  url?: string
+  x?: number
+  y?: number
+  width?: number
+  height?: number
+  hover?: boolean
+  click?: boolean
+  theme?: "dark" | "light"
+}
+
+/** All messages the Agent Manager expects from the webview (onMessage input). */
 export type AgentManagerInMessage =
+  | BrowserRequestIn
+  | OpenExternalIn
+  | OpenWebLinkIn
   | PRCommentRequest
   | CreateWorktreeIn
   | RequestProjectsIn
@@ -1303,6 +1449,8 @@ export type AgentManagerInMessage =
   | SetCaffeinationIn
   | OpenFileIn
   | CopyFilePathIn
+  | RequestDocumentIn
+  | ValidateFilesIn
   | GenericOpenFileIn
   | PreviewImageIn
   | SaveImageIn

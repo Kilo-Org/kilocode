@@ -9,10 +9,15 @@ export const limits = {
   inline: 64 * 1024,
   blob: 8 * 1024 * 1024,
   session: 256 * 1024 * 1024,
+  jsonValueNodes: 8192,
+  jsonValueDepth: 64,
+  jsonBatchNodes: 32768,
+  jsonBatchDepth: 67,
 }
 export const Kind = Schema.Literals([
   "session",
   "message",
+  "message-part",
   "inbox",
   "instruction-entry",
   "instruction-state",
@@ -64,7 +69,7 @@ export type Change =
       op: "remove"
       kind: Exclude<Kind, "session">
       id: string
-      cause: "revert" | "cancel" | "instruction-removed" | "consumed"
+      cause: "revert" | "cancel" | "instruction-removed" | "consumed" | "part-removed"
     }
 
 export class Failure extends Schema.TaggedError<Failure>()("SessionSyncFailure", {
@@ -97,6 +102,86 @@ export const digest = (bytes: string | Uint8Array) => createHash("sha256").updat
 export const json = Schema.decodeUnknownSync(Schema.Json)
 export const parse = Schema.decodeUnknownSync(Schema.fromJsonString(Schema.Json))
 export const sameTenant = (a: Tenant, b: Tenant) => a.type === b.type && a.id === b.id
+
+// Keys and values/containers each count as a node. Keys add no depth; a root container
+// has depth one. Stop at the bound without allocating a second tree or traversing the rest.
+export function jsonNodes(value: unknown, maxDepth = limits.jsonValueDepth, maxNodes = limits.jsonValueNodes) {
+  let nodes = 0
+  const visit = (item: unknown, depth: number): boolean => {
+    if (++nodes > maxNodes) return false
+    if (item === null || typeof item !== "object") return true
+    if (depth >= maxDepth) return false
+    if (Array.isArray(item)) {
+      for (const child of item) if (!visit(child, depth + 1)) return false
+      return true
+    }
+    for (const key in item) {
+      if (++nodes > maxNodes || !visit((item as Record<string, unknown>)[key], depth + 1)) return false
+    }
+    return true
+  }
+  return visit(value, 0) ? nodes : undefined
+}
+
+const object = (value: Schema.Json | undefined): value is { [key: string]: Schema.Json } =>
+  value !== null && value !== undefined && typeof value === "object" && !Array.isArray(value)
+
+/**
+ * Reconstruct a message from one revision-consistent entity snapshot. Callers resolve entity blobs
+ * first and pass the source position from that same snapshot, never from a later state request.
+ * Incomplete/deferred snapshots deliberately expose no purportedly complete transcript.
+ */
+export function reconstructMessage(
+  value: Schema.Json,
+  parts: readonly Schema.Json[],
+  position: number,
+): { complete: false } | { complete: true; value: Schema.Json } {
+  if (!object(value) || !object(value.message)) return { complete: false }
+  if (value.parts === undefined) return { complete: true, value }
+  if (!object(value.parts) || value.message.type !== "assistant" || typeof value.message.id !== "string")
+    return { complete: false }
+  const count = value.parts.count
+  const messageID = value.message.id
+  const through = value.parts.through
+  if (
+    typeof count !== "number" ||
+    !Number.isSafeInteger(count) ||
+    count < 1 ||
+    typeof through !== "number" ||
+    !Number.isSafeInteger(through) ||
+    through < 0 ||
+    !Number.isSafeInteger(position) ||
+    position < through
+  )
+    return { complete: false }
+  const matching = parts.filter((part) => object(part) && part.messageID === messageID)
+  if (matching.length !== count) return { complete: false }
+  const ordered: { ordinal: number; part: Schema.Json }[] = []
+  const ordinals = new Set<number>()
+  for (const part of matching) {
+    if (
+      !object(part) ||
+      typeof part.ordinal !== "number" ||
+      !Number.isSafeInteger(part.ordinal) ||
+      typeof part.position !== "number" ||
+      !Number.isSafeInteger(part.position) ||
+      part.position < 0 ||
+      part.position > through ||
+      part.deferred === true ||
+      !object(part.part) ||
+      ordinals.has(part.ordinal)
+    )
+      return { complete: false }
+    ordinals.add(part.ordinal)
+    ordered.push({ ordinal: part.ordinal, part: part.part })
+  }
+  ordered.sort((a, b) => a.ordinal - b.ordinal)
+  const { parts: _, ...envelope } = value
+  return {
+    complete: true,
+    value: { ...envelope, message: { ...value.message, content: ordered.map((part) => part.part) } },
+  }
+}
 export const loopback = (hostname: string) =>
   hostname === "localhost" ||
   hostname === "[::1]" ||
@@ -139,6 +224,7 @@ const decodeError = Schema.decodeUnknownOption(ErrorBody)
 // untrusted and can contain secrets; return a fixed message and a bounded machine-readable code instead.
 const errorCodes: Record<string, true> = {
   invalid_request: true,
+  json_budget_exceeded: true,
   blob_hash_mismatch: true,
   creator_mismatch: true,
   not_found: true,
@@ -157,6 +243,7 @@ const errorCodes: Record<string, true> = {
   request_too_large: true,
   storage_budget_exceeded: true,
   tenant_unavailable: true,
+  service_overloaded: true,
   tenant_budget_exceeded: true,
   rate_limited: true,
   internal_error: true,

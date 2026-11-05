@@ -251,8 +251,9 @@
   },
   "module:packages/opencode/test/kilocode/branch-name.test.ts": {
     "state": "ported",
-    "note": "packages/kilo-plugin/test/branch-name.test.ts carries the parse, reasoning-wrapper, synthetic-message filtering, pending-prompt deduplication, latest-four and truncation assertions, and checks that the instructions stay in the system prompt while the user prompt carries only the messages, at temperature 0.1.",
-    "by": "am-branch-naming"
+    "v2": "packages/kilo-plugin/test/branch-name.test.ts",
+    "note": "packages/kilo-plugin/test/branch-name.test.ts carries branch name generation, prompt and model handling, and the failure paths of the kilocode.branch-name RPC.",
+    "by": "am-progress-map"
   },
   "module:packages/opencode/src/kilocode/kilo-errors.ts": {
     "state": "ported",
@@ -665,6 +666,12 @@
     "note": "webview-ui/src/components/settings/provider-visibility.ts carries disabledProviderOptions and the custom provider package set, and packages/kilo-vscode/test/custom-provider.test.ts asserts both. canChangeProviderKey, visibleConnectedIds and providersWithKiloFallback are not needed on v2: integrations and credentials answer directly (credentials(integration), integration.connections) and the Kilo fallback provider does not exist.",
     "by": "settings-custom-provider"
   },
+  "module:packages/kilo-vscode/webview-ui/src/components/chat/FeedbackDialog.tsx": {
+    "state": "ported",
+    "v2": "packages/kilo-vscode/webview-ui/src/v2/feedback.tsx",
+    "note": "Same logo, three URLs, copy keys, button order and feedback-* classes as the v1 dialog. Links open through the V2 scope (the open host message) because the v1 openExternal webview message does not exist on the v2 relay.",
+    "by": "v2-feedback"
+  },
   "module:packages/kilo-vscode/webview-ui/src/components/settings/ModeCreateView.tsx": {
     "state": "ported",
     "note": "webview-ui/src/components/settings/agent-behaviour/ModeCreateView.tsx on the v2 agent contract: the name becomes the agents.<id> config key with the same slug and uniqueness validation, and Create writes mode \"primary\" with the description and system prompt through useSettingsConfig as one immediate host write.",
@@ -972,6 +979,16 @@
     "note": "packages/kilo-plugin/test/todo-tool.test.ts asserts the v1 description phrases on the Kilo todowrite tool, and the Kilo host registers that tool unconditionally through KiloPlugins.",
     "by": "composer-todos"
   },
+  "module:packages/opencode/src/kilocode/tool/browser-open.ts": {
+    "state": "ported",
+    "note": "packages/kilo-plugin/src/browser/index.ts KiloBrowserToolPlugin registers the browser_open tool on the ToolEditor when the extension host passes KILO_BROWSER_BROKER_URL and KILO_BROWSER_BROKER_TOKEN to the v2 server. The tool keeps the v1 URL policy (public HTTPS, loopback HTTP, 0.0.0.0 as localhost, no credentials), asks the browser_open permission with navigate:<origin> resources, and POSTs to the host broker at /browser/open. packages/kilo-plugin/test/browser.test.ts covers the endpoint guard, destination policy, request shape and broker error text.",
+    "by": "am-browser"
+  },
+  "module:packages/opencode/src/kilocode/tool/browser-open.txt": {
+    "state": "ported",
+    "note": "packages/kilo-plugin/src/browser/browser-open.txt, loaded by the browser_open tool description. The panel wording now names the sidebar Integrated Browser as well as the Agent Manager panel, and states that the tool shows a page instead of clicking.",
+    "by": "am-browser"
+  },
   "module:packages/opencode/src/kilocode/agent-manager/protocol.ts": {
     "state": "ported",
     "v2": "packages/schema/src/kilocode/agent-manager.ts",
@@ -1036,12 +1053,6 @@
     "state": "native",
     "v2": "packages/schema/src/kilocode/agent-manager.ts",
     "note": "The reject route is the reject method of the native kilocode.agent-manager RPC, with the native not_found error served by rpc.call.",
-    "by": "am-progress-map"
-  },
-  "module:packages/opencode/test/kilocode/branch-name.test.ts": {
-    "state": "ported",
-    "v2": "packages/kilo-plugin/test/branch-name.test.ts",
-    "note": "packages/kilo-plugin/test/branch-name.test.ts carries branch name generation, prompt and model handling, and the failure paths of the kilocode.branch-name RPC.",
     "by": "am-progress-map"
   },
   "module:packages/opencode/src/kilocode/snapshot/cleanup.ts": {
@@ -1288,5 +1299,195 @@
     "v2": "packages/kilo-vscode/test/agent-project-messages.test.ts",
     "note": "The state router is carried by packages/kilo-vscode/webview-ui/agent-manager/project/{state,state-handlers,store}.ts and the host project messages. packages/kilo-vscode/test/agent-project-messages.test.ts covers deferred state, activation and the no-catalog mode.",
     "by": "am-progress-map"
+  },
+  "patch:unattributed:core/v1:efe2b3136dab": {
+    "state": "native",
+    "v2": "packages/core/src/config/normalize.ts",
+    "note": "The v1 `small_model` (NullOr(string)) maps natively: normalize.ts migrates a string to the title agent model `agents.title.model` through ConfigMigrateV1.modelSelection (packages/core/src/v1/config/migrate.ts). A v1 `null` is not carried: v2 decodes `small_model` as a plain string, so `small_model: null` is skipped with an `invalid` (`skipped malformed recognized value`) normalization diagnostic, the same v1-null/v2-string mismatch as `model` and `default_agent`. packages/core/test/kilocode/config/mapping.test.ts pins the string mapping and all three null diagnostics.",
+    "by": "v2-config-keys"
+  },
+  "patch:unattributed:core/v1:eef8153da721": {
+    "state": "native",
+    "v2": "packages/core/src/config/normalize.ts",
+    "note": "The hunk only updates the `command` schema description (the customization docs URL). v1 `command` is mapped natively: normalize.ts migrates the map to `commands` with ConfigMigrateV1.migrateCommand. The description text on v2 is upstream's.",
+    "by": "v2-config-keys"
+  },
+  "patch:unattributed:core/v1:803d6139aabf": {
+    "state": "dropped",
+    "note": "The v1 experimental sandbox keys (`experimental.sandbox`, `experimental.sandbox_restrict_network`, `experimental.sandbox_writable_paths`) have no v1 runtime caller (git grep over packages/*/src finds only the schema and the generated SDK types). The live v1 key is the top-level `sandbox` struct, read by packages/opencode/src/kilocode/sandbox/config.ts and folded by KiloConfigPolicy. The experimental aliases are dead fields.",
+    "by": "v2-config-keys"
+  },
+  "module:packages/kilo-vscode/src/shared/code-context.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-vscode/webview-ui/src/v2/prompt-attachments.ts",
+    "note": "Editor selections are now prompt file attachments (PromptAttachment in src/protocol.ts). mergeAttachments replaces mergeCodeContexts with dedupe on kind, uri, name and source path; codeContextLabel becomes the attachment name built by src/services/code-actions/attachments.ts; formatCodeContexts is not needed because the server reads the attachment and sends it to the model as an attached file.",
+    "by": "context-actions"
+  },
+  "module:packages/kilo-vscode/tests/unit/code-context.test.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-vscode/test/prompt-attachments.test.ts",
+    "note": "Merge and dedupe assertions are carried by prompt-attachments.test.ts; label assertions by code-action-attachments.test.ts. The format assertions are dropped with formatCodeContexts (attachments replace inline code blocks).",
+    "by": "context-actions"
+  },
+  "module:packages/opencode/src/kilocode/tool/read-docx.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-plugin/src/read/read-docx.ts",
+    "note": "mammoth extraction is copied unchanged; only the Readable import proof cell is marked.",
+    "by": "read-extensions"
+  },
+  "module:packages/opencode/src/kilocode/tool/xlsx.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-plugin/src/read/xlsx.ts",
+    "note": "SheetJS workbook-to-lines extraction is copied unchanged: sheet labels, hidden-sheet filtering, ODS expansion, the 50,000 row cap, date/time formatting and the 50 MB input limit.",
+    "by": "read-extensions"
+  },
+  "module:packages/opencode/src/kilocode/tool/ods.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-plugin/src/read/ods.ts",
+    "note": "ODS table style visibility parsing is copied unchanged.",
+    "by": "read-extensions"
+  },
+  "module:packages/opencode/src/kilocode/tool/read-extract.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-plugin/src/read/read-extract.ts",
+    "note": "The binary/accepts/limit/open dispatch is copied unchanged; packages/kilo-plugin/src/read/index.ts is the v2 boundary that consumes it.",
+    "by": "read-extensions"
+  },
+  "module:packages/opencode/src/kilocode/tool/notebook.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-plugin/src/read/notebook.ts",
+    "note": "The notebook cell parser is copied; cells() keeps the markdown/code rendering and payload-free fallback, and the caller decodes UTF-8 instead of the unported v1 encoding module.",
+    "by": "read-extensions"
+  },
+  "module:packages/opencode/test/kilocode/read-docx.test.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-plugin/test/read-docx.test.ts",
+    "note": "The DOCX assertions are ported: extraction, pagination, malformed input message, warnings, directory listing and binary/PDF behavior, through the v2 reader boundary.",
+    "by": "read-extensions"
+  },
+  "module:packages/opencode/test/kilocode/read-xlsx.test.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-plugin/test/read-xlsx.test.ts",
+    "note": "The XLSX and ODS assertions are ported with the v2 fixtures: formatted cells, dates and times, hidden sheets, row cap, page limits, sparse ranges, invalid input and the size limit.",
+    "by": "read-extensions"
+  },
+  "module:packages/opencode/test/kilocode/read-notebook.test.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-plugin/test/read-notebook.test.ts",
+    "note": "The notebook assertions are ported: cells only, payload-free output, pagination, raw fallback, ordinary text and PDF reads.",
+    "by": "read-extensions"
+  },
+  "module:packages/kilo-vscode/src/kilo-provider/notifications.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-vscode/src/notifications.ts",
+    "note": "The list now comes from the kilocode.gateway notifications RPC in the webview provider (packages/kilo-vscode/webview-ui/src/context/notifications.tsx) and the showIn filter is packages/kilo-vscode/webview-ui/src/v2/notification-list.ts. The host state is packages/kilo-vscode/src/notifications.ts: it keeps the dismissed IDs, performs an atomic read-modify-write across the Close loop, prunes IDs the Gateway stopped sending, and packages/kilo-vscode/src/chat.ts broadcasts the result to every view. The v1 synthetic local notices (opencode config migration and Claude migration) are separate features and are not part of this cell.",
+    "by": "better-promise"
+  },
+  "module:packages/kilo-vscode/tests/unit/kilo-provider-notifications.test.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-vscode/test/notifications.test.ts",
+    "note": "Covers the showIn filter with dismissed IDs, the Gateway model name shown by the Try model action, and the host state in packages/kilo-vscode/src/notifications.ts: request, idempotent dismiss, pruning against the active list, and a Close loop that dismisses several IDs in one tick. The host-side pass-through of synthetic local notices is not carried with this cell; those notices belong to the config and Claude migration features.",
+    "by": "better-promise"
+  },
+  "module:packages/kilo-vscode/src/kilo-provider/model-usage.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-vscode/src/model-preferences.ts",
+    "note": "recordUsage and validateUsage keep the v1 rules (count and lastUsed per provider/model, malformed entries dropped, the 200 most recently used kept) in the kilo-code.v2.modelUsage globalState key. The webview sends recordModelUsage after a prompt is admitted (v2/session-view.tsx), as v1 sendMessage did.",
+    "by": "model-picker-parity"
+  },
+  "module:packages/kilo-vscode/tests/unit/model-usage-history.test.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-vscode/test/model-preferences.test.ts",
+    "note": "recordUsage increments and stamps the time; validateUsage drops malformed entries and caps the history at 200.",
+    "by": "model-picker-parity"
+  },
+  "module:packages/kilo-vscode/webview-ui/src/context/model-selection.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-vscode/webview-ui/src/v2/model-default.ts",
+    "note": "initialModel keeps the v1 resolveModelSelection order for a new session: agent model, configured model (when still in the catalog), the team default for a team account, the first recent pick still in the catalog, then the server default (kilo-auto/free when signed out). The v1 null result while providers load is not needed: v2 falls through to the server default until the catalog arrives. The session pick lives in createSelection (v2/selectors.tsx).",
+    "by": "model-picker-parity"
+  },
+  "module:packages/kilo-vscode/tests/unit/model-selection.test.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-vscode/test/model-default.test.ts",
+    "note": "Covers agent over configured model, a configured model that left the catalog, the first valid recent, team accounts skipping recents and the fallback. The v1 pending-provider cases have no v2 equivalent (see the model-selection.ts disposition).",
+    "by": "model-picker-parity"
+  },
+  "module:packages/kilo-vscode/docs/features/remember-last-model.md": {
+    "state": "dropped",
+    "note": "Stale v1 design note: it describes an in-memory model and a globalState lastModel key that never shipped. The shipped behavior (persisted recents, config precedence) is ported in v2/model-default.ts and src/model-preferences.ts.",
+    "by": "model-picker-parity"
   }
+,
+  "api:GET /kilocode/notebook": {
+    "state": "dropped",
+    "note": "v1 listed server-initiated notebook requests for the extension to answer; v2 has no server notebook API because the extension owns the workspace over a loopback broker, so there is no pending request to list.",
+    "by": "notebook-tools"
+  },
+  "api:POST /kilocode/notebook/{requestID}/reject": {
+    "state": "dropped",
+    "note": "v1 rejected a server-initiated notebook request through this route; on v2 the server calls the extension broker and the response is the reply, so no reject route exists.",
+    "by": "notebook-tools"
+  },
+  "api:POST /kilocode/notebook/{requestID}/reply": {
+    "state": "dropped",
+    "note": "v1 replied to a server-initiated notebook request through this route; on v2 the server calls the extension broker and receives the result in the same HTTP response.",
+    "by": "notebook-tools"
+  },
+  "module:packages/opencode/src/kilocode/notebook/protocol.ts": {
+    "state": "ported",
+    "v2": "packages/schema/src/kilocode/notebook.ts",
+    "note": "The request, result, output and failure schemas are ported to the KiloNotebook broker contract in packages/schema/src/kilocode/notebook.ts, including the path limits, cell shape, output limits and error codes.",
+    "by": "notebook-tools"
+  },
+  "module:packages/opencode/src/kilocode/notebook/service.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-vscode/src/services/notebook/broker.ts",
+    "note": "NotebookBroker carries request dispatch, loopback token auth, known-directory containment, per-directory ignore rules, cancellation when the caller disconnects, disposal and structured failures. packages/kilo-plugin/src/notebook/broker.ts is the client half.",
+    "by": "notebook-tools"
+  },
+  "module:packages/opencode/test/kilocode/notebook-service.test.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-vscode/test/notebook-broker.test.ts",
+    "note": "The broker tests cover token auth, invalid requests, directory containment, refresh, read/edit dispatch, stale and unexpected failure mapping, caller cancellation and disposal. packages/kilo-plugin/test/notebook.test.ts covers the client request shapes.",
+    "by": "notebook-tools"
+  },
+  "module:packages/opencode/test/kilocode/notebook-tools.test.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-plugin/test/notebook.test.ts",
+    "note": "The plugin tests cover the notebook_read, notebook_edit (create, replace, delete validation) and notebook_execute request bodies, permission actions, bounded output rendering and stale_revision failure mapping.",
+    "by": "notebook-tools"
+  },
+  "patch:notebook:752d64cdd86b": {
+    "state": "dropped",
+    "note": "The v1 HTTP API exercise registered and exercised the three notebook routes. v2 has no notebook routes; the equivalent tool behavior is covered by packages/kilo-plugin/test/notebook.test.ts.",
+    "by": "notebook-tools"
+  },
+  "patch:notebook:c524c93fe185": {
+    "state": "dropped",
+    "note": "v1 registered Notebook.node in the server app runtime. v2 needs no server-side notebook service: the extension broker holds the request state and the plugin only makes loopback calls.",
+    "by": "notebook-tools"
+  },
+  "module:packages/core/src/kilocode/session/recall-message-index.ts": {
+      "state": "dropped",
+      "note": "The v1 message FTS index and its triggers existed to make SQL recall search fast. v2 recall ranks in memory over SessionStore.messagesWithRefs in packages/kilo-plugin/src/recall/search.ts and creates no store objects, so the index has no v2 counterpart.",
+      "by": "transcript-recall"
+    },
+    "module:packages/core/src/kilocode/session/recall-part-index.ts": {
+      "state": "dropped",
+      "note": "The v1 part FTS index and its triggers existed only for SQL recall search. The v2 recall plugin reads decoded session messages through SessionStore and ranks them in memory, so no part index is built or maintained.",
+      "by": "transcript-recall"
+    },
+    "module:packages/opencode/src/kilocode/session/recall-search.ts": {
+      "state": "ported",
+      "v2": "packages/kilo-plugin/src/recall/search.ts",
+      "note": "RecallSearch query parsing, folding, whole-word ranking, title typo tolerance, partial fallback, snippets and inert escaping are ported unchanged in behavior. The storage boundary is rewritten natively: v2 loads SessionStore messagesWithRefs and filters the project worktree family instead of querying v1 tables.",
+      "by": "transcript-recall"
+    },
+    "module:packages/opencode/test/kilocode/recall-search.test.ts": {
+      "state": "ported",
+      "v2": "packages/kilo-plugin/test/recall-search.test.ts",
+      "note": "The ranking, typo, partial-match, active-turn, reference/error and cancellation assertions are ported to in-memory SearchSession fixtures. Index maintenance, SQL candidate counting and store-specific paging tests do not apply because v2 does not create recall indexes.",
+      "by": "transcript-recall"
+    }
 }

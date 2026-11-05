@@ -322,6 +322,21 @@ for (const target of ["local", "wt-b"]) {
   })
 }
 
+describe("draft side panels", () => {
+  it("opens the browser on a draft so it can ask for a session, but not other session panels", () => {
+    createRoot((dispose) => {
+      const panels = createSidePanel({ project: () => "a", selection: () => "local", current: () => undefined })
+      panels.open(SidePanel.EditPreview)
+      expect(panels.panel()).toBeNull()
+      panels.open(SidePanel.Browser)
+      expect(panels.panel()).toBe(SidePanel.Browser)
+      panels.close(SidePanel.Browser)
+      expect(panels.panel()).toBeNull()
+      dispose()
+    })
+  })
+})
+
 describe("needsLocalDraft", () => {
   it("does not create a session when Local already has a terminal tab", () => {
     expect(needsLocalDraft([], [{ id: "terminal:local" }])).toBe(false)

@@ -7,6 +7,14 @@ export function isSmallModel(model: { providerID: string; id: string }) {
   return model.providerID === KILO_GATEWAY_ID && SMALL_MODEL_IDS.has(model.id)
 }
 
+/** Gateway names start with the upstream provider ("MiniMax: ..."); the chat shows only the model name. */
+export function stripSubProviderPrefix(name: string) {
+  const colon = name.indexOf(": ")
+  if (colon < 0) return name
+  if (name.slice(0, colon).toLowerCase() === KILO_GATEWAY_ID) return name
+  return name.slice(colon + 2)
+}
+
 /** The catalog rows a picker shows: enabled, not deprecated, and without the small model unless it is that row. */
 export function pickerModels<T extends { providerID: string; id: string; enabled: boolean; status: string }>(
   models: T[],

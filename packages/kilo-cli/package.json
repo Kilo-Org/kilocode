@@ -34,6 +34,7 @@
     "@opentui/core": "catalog:",
     "@opentui/solid": "catalog:",
     "drizzle-orm": "catalog:",
+    "jsonc-parser": "3.3.1",
     "effect": "catalog:"
   },
   "devDependencies": {

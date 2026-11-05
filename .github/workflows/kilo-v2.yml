@@ -279,6 +279,10 @@ jobs:
               close_stale_prs
               exit 0
             fi
+            pr=$(bot_prs | head -n 1)
+            # The v2 ruleset does not dismiss stale approvals on push. Disarm auto-merge before the
+            # force-push so the new delta cannot land on an approval for the previous head.
+            if [ -n "$pr" ]; then gh pr merge "$pr" --disable-auto >/dev/null 2>&1 || true; fi
             git commit -m "chore(progress): regenerate the map for $base_sha"
             if ! git push --force-with-lease origin HEAD:refs/heads/progress-map-update; then
               # A changed branch or a transient GitHub error (HTTP 500) rejects the push. Wait before retrying.
@@ -291,19 +295,44 @@ jobs:
               echo
               bun script/upstream/progress.ts --compare base.json migration-tracking/progress/progress.json
             } > body.md
-            pr=$(bot_prs | head -n 1)
             if [ -n "$pr" ]; then
               close_stale_prs "$pr"
               gh pr edit "$pr" --body-file body.md
             else
               close_stale_prs
-              if ! gh pr create --base v2 --head progress-map-update \
+              if created=$(gh pr create --base v2 --head progress-map-update \
                 --title "chore(progress): regenerate the map" \
-                --body-file body.md; then
+                --body-file body.md); then
+                pr="${created##*/}"
+              else
                 pr=$(bot_prs | head -n 1)
                 if [ -z "$pr" ]; then exit 1; fi
                 gh pr edit "$pr" --body-file body.md
               fi
+            fi
+            # Drop the approvals of the previous head, so auto-merge waits for a fresh review.
+            # Auto-merge is armed only when the stale approvals are gone, because the v2 ruleset
+            # does not dismiss them on push by itself.
+            clean=true
+            if ! reviews=$(gh api "repos/$GITHUB_REPOSITORY/pulls/$pr/reviews" --paginate \
+              --jq '.[] | select(.state == "APPROVED") | .id' 2>&1); then
+              echo "::warning::could not read reviews on PR #$pr: $reviews"
+              clean=false
+            fi
+            for review in $reviews; do
+              if ! error=$(gh api -X PUT "repos/$GITHUB_REPOSITORY/pulls/$pr/reviews/$review/dismissals" \
+                -f message="The map was regenerated for a newer v2 commit; a fresh review is required." 2>&1 >/dev/null); then
+                echo "::warning::could not dismiss review $review on PR #$pr: $error"
+                clean=false
+              fi
+            done
+            # The map is generated, so it merges by itself once a maintainer approves the delta.
+            if [ "$clean" = true ]; then
+              if ! output=$(gh pr merge "$pr" --auto --merge 2>&1); then
+                echo "::warning::auto-merge not enabled for PR #$pr: $output"
+              fi
+            else
+              echo "::warning::auto-merge not armed for PR #$pr because a stale approval could not be dismissed"
             fi
             exit 0
           done

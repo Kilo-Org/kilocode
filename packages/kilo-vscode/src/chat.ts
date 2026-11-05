@@ -13,10 +13,14 @@ import {
 import { notifyHostAutoApprove, setHostAutoApprove } from "./agent-manager/provider-auto-approve"
 import type { SettingsHandler } from "./agent-manager/project/settings"
 import { local } from "./local"
-import { DISPLAY_DEFAULTS, type ToHost, type ToWebview } from "./protocol"
+import { dismissNotification, dismissedNotifications, syncDismissedNotifications } from "./notifications"
+import { applyModelPreference, readModelPreferences } from "./model-preferences"
+import { DISPLAY_DEFAULTS, type ModelPreferenceMessage, type ToHost, type ToWebview } from "./protocol"
 import { bridge } from "./relay"
 import { saveImage } from "./save-image"
+import { previewImage } from "./preview-image"
 import type { Manager } from "./server"
+import type { DocumentViewerProvider } from "./DocumentViewerProvider"
 import {
   effectiveFontSize,
   KILO_SETTING_KEYS,
@@ -28,13 +32,21 @@ import { resolveKiloProfile } from "./settings-paths"
 import { promptKeybindings, watchKeybindings } from "./prompt-keybindings"
 import { readDisplaySettings } from "./display-settings"
 import { createSpeechToTextHost } from "./speech-to-text/host"
+import { setSidebarSession, sidebarSession } from "./browser-tab/sidebar-session"
+import { openBrowserLink } from "./browser-links"
+import { DEVTOOLS } from "./browser-tab/html"
+import { documentExists, isMarkdownPath } from "./documents/document-reader"
 import { openToolFile, type ToolDiff } from "./tool-diff"
+import { chatFocus } from "./services/code-actions/target"
 
 // The sidebar may only write the settings its own UI owns. Other views keep their own write path.
 // The settings each webview may write; the Settings panel writes every Kilo setting through its own handler.
-const VIEW_SETTING_KEYS: Record<"chat" | "agentManager", ReadonlySet<string>> = {
+const VIEW_SETTING_KEYS: Record<View, ReadonlySet<string>> = {
   chat: new Set(["showTaskTimeline"]),
+  settings: new Set(),
+  profile: new Set(),
   agentManager: new Set(["showTaskTimeline", "agentManager.pushFixes"]),
+  documents: new Set(),
 }
 
 export function chat(input: {
@@ -43,6 +55,10 @@ export function chat(input: {
   directory: string
   trackCostSession: (sessionID: string) => void
   diff: ToolDiff
+  /** Opens a chat web link in the Integrated Browser. Returns false when the tab cannot take it. */
+  openBrowser?: (sessionId: string, url: string) => boolean
+  /** The editor tab of the Documents panel, created after this view so it can post comments here. */
+  documents?: () => DocumentViewerProvider | undefined
 }) {
   // This host owns the persisted auto-approve flag, and the Agent Manager sweep reads it. Record it at activation, so
   // the sweep works before any webview resolves.
@@ -52,7 +68,11 @@ export function chat(input: {
   })
   // Commands sent before the webview bundle listens are lost, and a resolved view is not yet loaded. Keep them until
   // the webview sends its first message, which it does on mount.
-  const state: { view?: WebviewView; loaded: boolean; queued: ToWebview[] } = { loaded: false, queued: [] }
+  const state: { view?: WebviewView; loaded: boolean; focused: boolean; queued: ToWebview[] } = {
+    loaded: false,
+    focused: false,
+    queued: [],
+  }
   const send = (message: ToWebview) => {
     if (!state.view || !state.loaded) {
       state.queued.push(message)
@@ -70,12 +90,15 @@ export function chat(input: {
     composerState(input.context).forEach((message) => void send(message))
   }
   // The cycle keybindings are active only while the webview has focus, as on v1 (`sidebarFocused`).
-  const focus = (focused: boolean) => void commands.executeCommand("setContext", "kilo-code.v2.sidebarFocused", focused)
+  const focus = (focused: boolean) => {
+    state.focused = focused
+    void commands.executeCommand("setContext", "kilo-code.v2.sidebarFocused", focused)
+  }
   const provider: WebviewViewProvider = {
     resolveWebviewView(view) {
       state.view = view
       state.loaded = false
-      const surface = wire({ ...input, webview: view.webview, view: "chat", onMessage: flush })
+      const surface = wire({ ...input, webview: view.webview, view: "chat", onMessage: flush, onFocusChanged: focus })
       const visibility = view.onDidChangeVisibility(() => {
         if (!view.visible) focus(false)
         surface.post({ type: "webviewActiveChanged", active: view.visible })
@@ -97,6 +120,8 @@ export function chat(input: {
         if (state.view !== view) return
         state.view = undefined
         state.loaded = false
+        // A closed sidebar shows no session, so the Agent Manager may claim it again.
+        setSidebarSession(undefined)
       })
     },
   }
@@ -104,6 +129,7 @@ export function chat(input: {
     provider,
     post: send,
     syncState,
+    focused: () => state.focused,
   }
 }
 
@@ -124,6 +150,8 @@ export function wire(input: {
   diff?: ToolDiff
   /** Called on every message from the webview, before it is handled. */
   onMessage?: () => void
+  /** Receives focus changes of the chat sidebar webview. */
+  onFocusChanged?: (focused: boolean) => void
   /** Handles a view-specific message before the standard set. Returns true when it did. */
   handle?: (message: ToHost) => boolean
   onReset?: () => void
@@ -131,6 +159,10 @@ export function wire(input: {
   globals?: Record<string, unknown>
   /** The Agent Manager settings handler the Settings panel shares with the provider. */
   agentManager?: () => SettingsHandler
+  /** Opens a chat web link in the Integrated Browser. Returns false when the tab cannot take it. */
+  openBrowser?: (sessionId: string, url: string) => boolean
+  /** The editor tab that previews Markdown files, when this view has one. */
+  documents?: () => DocumentViewerProvider | undefined
 }) {
   const webview = input.webview
   const root = input.context.extensionUri
@@ -139,13 +171,24 @@ export function wire(input: {
   const link = bridge({
     target: () => input.server.get(),
     post: (message) => void webview.postMessage(message),
-    open: (url) => void env.openExternal(Uri.parse(url)),
+    open: (url, external) => {
+      const session = sidebarSession()
+      // Without an in-app opener the link goes to the system browser, which is what shift-click asks for.
+      void openBrowserLink(
+        url,
+        external ? undefined : () => (session ? (input.openBrowser?.(session, url) ?? false) : false),
+      )
+    },
     fetch: local,
   })
   const post = (message: ToWebview) => void webview.postMessage(message)
   // The composer state is shared: a change in one open view shows in the others, for example the sidebar and the
   // Agent Manager side by side.
   const others = (message: ToWebview) => surfaces.forEach((target) => target !== post && target(message))
+  const broadcast = (message: ToWebview) => {
+    post(message)
+    others(message)
+  }
   surfaces.add(post)
   // Voice input is host-side: the microphone, the custom endpoint key and the Gateway RPC never reach the webview.
   const speech = createSpeechToTextHost({
@@ -166,7 +209,11 @@ export function wire(input: {
           server: input.server,
           directory: input.directory,
           post,
-          onReset: input.onReset,
+          // A reset clears the recents, usage and efforts; every open webview must drop its copy of them.
+          onReset: () => {
+            input.onReset?.()
+            broadcast({ type: "modelPreferencesLoaded", value: readModelPreferences(input.context.globalState) })
+          },
           agentManager: input.agentManager,
         })
       : {
@@ -207,15 +254,40 @@ export function wire(input: {
   }
   const handleSurface = (message: Surface) => {
     switch (message.type) {
-      case "openToolFile":
+      case "openToolFile": {
+        const documents = input.documents?.()
+        if (documents && isMarkdownPath(message.filePath)) {
+          documents.open({
+            file: message.filePath,
+            sessionId: message.sessionID,
+            directory: input.directory,
+            line: message.line,
+            column: message.column,
+          })
+          return
+        }
         return openToolFile(input.directory, message)
+      }
       case "openDiffVirtual":
         return input.diff?.open(message.diff, message.initialDiffStyle)
       case "openDiffsVirtual":
         return input.diff?.openMany(message.diffs, message.initialDiffStyle)
       case "requestDisplaySettings":
         return postDisplaySettings()
+      case "validateFiles": {
+        const existing = message.paths.filter((file) => documentExists(input.directory, file))
+        return post({ type: "validateFilesResult", id: message.id, existing })
+      }
     }
+  }
+  // Every write broadcasts the new state, so a pick in the sidebar shows in the Agent Manager and Settings at once.
+  const handleModelPreferences = async (message: ModelPreferenceMessage) => {
+    const loaded = {
+      type: "modelPreferencesLoaded",
+      value: await applyModelPreference(input.context.globalState, message),
+    } as const
+    post(loaded)
+    if (message.type !== "requestModelPreferences") others(loaded)
   }
   const handleGlobalState = (message: ToHost) => {
     switch (message.type) {
@@ -226,6 +298,13 @@ export function wire(input: {
         void input.context.globalState.update(EXPANDED, message.value)
         others({ type: "modelSelectorExpandedLoaded", value: message.value })
         return true
+      case "requestModelPreferences":
+      case "toggleFavorite":
+      case "persistRecents":
+      case "recordModelUsage":
+      case "persistVariant":
+        void handleModelPreferences(message)
+        return true
       case "requestAutoApproveState":
         post({ type: "autoApproveStateLoaded", value: input.context.globalState.get(AUTO_APPROVE, false) })
         return true
@@ -234,6 +313,21 @@ export function wire(input: {
         others({ type: "autoApproveStateLoaded", value: message.value })
         // The host sweep is the only owner of the decision, so tell it to approve the requests already pending.
         notifyHostAutoApprove()
+        return true
+      case "requestDismissedNotifications":
+        post({ type: "dismissedNotificationsLoaded", ids: dismissedNotifications(input.context) })
+        return true
+      case "dismissNotification":
+        broadcast({
+          type: "dismissedNotificationsLoaded",
+          ids: dismissNotification(input.context, message.notificationId),
+        })
+        return true
+      case "syncDismissedNotifications":
+        broadcast({
+          type: "dismissedNotificationsLoaded",
+          ids: syncDismissedNotifications(input.context, message.ids),
+        })
         return true
       default:
         return false
@@ -245,12 +339,18 @@ export function wire(input: {
       void saveImage(input.saveImageDirectory?.() ?? input.directory, message)
       return true
     }
+    if (message.type === "previewImage") {
+      void previewImage(input.context.globalStorageUri, message).catch((err: unknown) =>
+        console.error("[Kilo] Failed to preview image:", err),
+      )
+      return true
+    }
     // The Language tab applies at once: write `kilo-code.v2.language` and let the change event push it to every view.
     if (message.type === "setLanguage") {
       void workspace.getConfiguration(NAMESPACE).update("language", message.locale || undefined, true)
       return true
     }
-    // The Kilo Gateway sign-in runs in the Profile view of the sidebar, as main opens its Profile panel.
+    // The Kilo Gateway sign-in runs in the Profile panel, as main opens its Profile tab.
     if (message.type === "openProfile") {
       void commands.executeCommand("kilo-code.v2.profile")
       return true
@@ -262,6 +362,7 @@ export function wire(input: {
     input.onMessage?.()
     if (input.handle?.(message) || speech.handle(message)) return
     if (message.type === "fetch" || message.type === "abort" || message.type === "open") return link.receive(message)
+    if (message.type === "sidebar.session") return setSidebarSession(message.sessionId)
     if (message.type === "trackCostSession") return input.trackCostSession?.(message.sessionID)
     if (isSurface(message)) return handleSurface(message)
     // A chat recovery link opens the Settings panel at the row that owns the problem.
@@ -274,8 +375,11 @@ export function wire(input: {
       })
     if (settings.handle(message)) return
     // Only the sidebar carries the cycle keybindings; the Settings panel must not change their context.
-    if (message.type === "webviewFocusChanged" && input.view === "chat")
+    if (message.type === "webviewFocusChanged" && input.view === "chat") {
+      if (message.focused === true) chatFocus.gained("sidebar")
+      if (input.onFocusChanged) return input.onFocusChanged(message.focused === true)
       return void commands.executeCommand("setContext", "kilo-code.v2.sidebarFocused", message.focused === true)
+    }
     if (message.type === "copyToClipboard")
       return void env.clipboard.writeText(message.text).then(
         () => post({ type: "clipboardWriteResult", id: message.id, ok: true }),
@@ -315,19 +419,26 @@ export function wire(input: {
 
 const surfaces = new Set<(message: ToWebview) => void>()
 
-/** The composer state every webview shares through globalState: auto-approve and the expanded model picker. */
+/** The composer state every webview shares through globalState: auto-approve and the model picker preferences. */
 export function composerState(context: ExtensionContext): ToWebview[] {
   return [
     { type: "autoApproveStateLoaded", value: context.globalState.get(AUTO_APPROVE, false) },
     { type: "modelSelectorExpandedLoaded", value: context.globalState.get(EXPANDED, true) },
+    { type: "modelPreferencesLoaded", value: readModelPreferences(context.globalState) },
   ]
 }
 
 const EXPANDED = "kilo-code.v2.modelSelectorExpanded"
 const AUTO_APPROVE = "kilo-code.v2.autoApprove"
 const NAMESPACE = "kilo-code.v2"
-// The Agent Manager panel loads its own bundle; the sidebar and the Settings panel share one.
-const ENTRY = { chat: "webview", settings: "webview", agentManager: "agent-manager" } as const
+// The Agent Manager panel loads its own bundle; the sidebar, the Settings and Profile panels, and Documents share one.
+const ENTRY = {
+  chat: "webview",
+  settings: "webview",
+  profile: "webview",
+  agentManager: "agent-manager",
+  documents: "documents",
+} as const
 const SIZES = [10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24]
 
 export function html(input: {
@@ -354,6 +465,8 @@ export function html(input: {
     `font-src ${input.csp}`,
     `connect-src ${input.csp}`,
     `img-src ${input.csp} data: https:`,
+    // The Agent Manager browser panel embeds DevTools for the open page.
+    ...(input.view === "agentManager" ? [`frame-src ${DEVTOOLS}`] : []),
   ].join("; ")
   const vars = SIZES.map((size) => `--kilo-font-size-${size}: ${(input.size * size) / 13}px;`).join(" ")
   const globals = {
@@ -362,7 +475,6 @@ export function html(input: {
     KILO_MARKDOWN_SHIKI_WORKER_URI: input.markdown,
     KILO_TOP_BAR: false,
     KILO_TOP_BAR_SURFACE: "sidebar_title",
-    KILO_BROWSER_AUTOMATION: false,
     KILO_AGENT_MANAGER_INTRO_DISMISSED: true,
     KILO_SETTINGS: input.settings,
     KILO_EXTENSION_VERSION: input.version,
@@ -378,7 +490,7 @@ export function html(input: {
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta http-equiv="Content-Security-Policy" content="${policy}">
 <link rel="stylesheet" href="${input.style}">
-<title>${input.view === "agentManager" ? "Agent Manager" : "Kilo Code"}</title>
+<title>${input.view === "agentManager" ? "Agent Manager" : input.view === "documents" ? "Documents" : "Kilo Code"}</title>
 <style>
   :root { ${vars} --kilo-font-scale: ${input.size / 13}; --font-size-x-small: var(--kilo-font-size-10); --font-size-small: var(--kilo-font-size-11); --font-size-base: var(--kilo-font-size-13); --font-size-large: var(--kilo-font-size-16); }
   html {
@@ -390,7 +502,7 @@ export function html(input: {
     }
   }
   html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; }
-  body { background-color: ${input.view === "settings" ? "var(--vscode-editor-background)" : "var(--vscode-sideBar-background, var(--vscode-editor-background))"}; color: var(--vscode-foreground); font-family: var(--vscode-font-family); }
+  body { background-color: ${input.view === "settings" || input.view === "profile" || input.view === "documents" ? "var(--vscode-editor-background)" : "var(--vscode-sideBar-background, var(--vscode-editor-background))"}; color: var(--vscode-foreground); font-family: var(--vscode-font-family); }
   #root { height: 100%; }
   .container { height: 100vh; }
 </style>
@@ -407,11 +519,11 @@ function escape(text: string) {
   return text.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
 }
 
-type View = "chat" | "settings" | "agentManager"
+type View = "chat" | "settings" | "profile" | "agentManager" | "documents"
 
 type Surface = Extract<
   ToHost,
-  { type: "openToolFile" | "openDiffVirtual" | "openDiffsVirtual" | "requestDisplaySettings" }
+  { type: "openToolFile" | "openDiffVirtual" | "openDiffsVirtual" | "requestDisplaySettings" | "validateFiles" }
 >
 
 function isSurface(message: ToHost): message is Surface {
@@ -419,6 +531,7 @@ function isSurface(message: ToHost): message is Surface {
     message.type === "openToolFile" ||
     message.type === "openDiffVirtual" ||
     message.type === "openDiffsVirtual" ||
-    message.type === "requestDisplaySettings"
+    message.type === "requestDisplaySettings" ||
+    message.type === "validateFiles"
   )
 }

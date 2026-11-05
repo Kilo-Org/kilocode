@@ -1,6 +1,7 @@
 export * as KiloHost from "./host"
 
 import { KiloPlugins, KiloPostPlugins, KiloSessionSync } from "@kilocode/kilo-plugin"
+import { KiloRead } from "@kilocode/kilo-plugin/read"
 import { App } from "@opencode/core/app"
 import { Bus } from "@opencode/core/bus"
 import { ConfigDiscovery } from "@opencode/core/config/discovery"
@@ -12,7 +13,9 @@ import { Schedule } from "@opencode/core/schedule"
 import { SdkPlugins } from "@opencode/core/plugin/sdk"
 import { SessionRunnerModel } from "@opencode/core/session/runner/model"
 import { SessionProjector } from "@opencode/core/session/projector"
+import { SessionStore } from "@opencode/core/session/store"
 import { ToolOutput } from "@opencode/core/tool-output"
+import { ReadToolFileSystem } from "@opencode/core/tool/read-filesystem"
 import type { Plugin } from "@opencode/plugin/effect/plugin"
 import { makeGlobalNode } from "@opencode/util/effect/app-node"
 import type { LayerNode } from "@opencode/util/effect/layer-node"
@@ -47,14 +50,26 @@ const plugins = makeGlobalNode({
         Global.Service,
         Schedule.Service,
         KiloSessionSync.Service,
+        SessionStore.Service,
       )(
         yield* Effect.context<
-          Bus.Service | FSUtil.Service | Global.Service | Schedule.Service | KiloSessionSync.Service
+          | Bus.Service
+          | FSUtil.Service
+          | Global.Service
+          | Schedule.Service
+          | KiloSessionSync.Service
+          | SessionStore.Service
         >(),
       )
       const register = (
         plugin: Plugin<
-          Bus.Service | FSUtil.Service | Global.Service | Schedule.Service | KiloSessionSync.Service | Scope.Scope
+          | Bus.Service
+          | FSUtil.Service
+          | Global.Service
+          | Schedule.Service
+          | KiloSessionSync.Service
+          | SessionStore.Service
+          | Scope.Scope
         >,
         phase?: "post",
       ) =>
@@ -76,7 +91,7 @@ const plugins = makeGlobalNode({
       yield* Effect.forEach(KiloPostPlugins, (plugin) => register(plugin, "post"))
     }),
   ).pipe(Layer.provideMerge(SdkPlugins.layer)),
-  deps: [Bus.node, FSUtil.node, Global.node, Schedule.node, SessionSync.node],
+  deps: [Bus.node, FSUtil.node, Global.node, Schedule.node, SessionSync.node, SessionStore.node],
 })
 
 /**
@@ -88,6 +103,9 @@ export const overrides: LayerNode.Replacements = [
   LayerNodePlatform.llmClient.replace(LayerNodePlatform.llmClient.mapLayer(KiloGatewayErrors.layer)),
   SessionProjector.node.replace(SessionProjector.node.mapLayer(SessionSync.captureLayer)),
   ToolOutput.node.replace(SessionSyncOutput.node),
+  // Read Office documents and notebooks as text through the native read tool (rung 2, service
+  // replacement): upstream keeps ownership of the tool, its description, pages and instructions.
+  ReadToolFileSystem.node.replace(KiloRead.node),
   SdkPlugins.node.replace(plugins),
   App.node.replace(App.configured(KiloApp)),
   Model.node.replace(

@@ -12,6 +12,7 @@ function host(calls: string[]) {
     staleIds: new Set<string>(),
     destination: { value: () => "tab" },
     contexts: { active: () => undefined },
+    browserAutomation: () => false,
     postToWebview: () => undefined,
     log: () => undefined,
   } as unknown as ProviderStateHost
