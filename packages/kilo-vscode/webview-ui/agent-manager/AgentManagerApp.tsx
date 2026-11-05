@@ -48,6 +48,9 @@ import { LOCAL, canOpenRootSession, isKnownRootSession, adjacentHint, focusChatS
 import { useBridge } from "./v2/vscode"
 import { V2Scope } from "../src/v2/client"
 import { SessionView } from "../src/v2/session-view"
+import { createComposerQueue } from "../src/v2/composer"
+import type { ToWebview } from "../../src/protocol"
+import type { ReferenceHandler } from "../src/v2/append-ready"
 import { createAppDirectories } from "./app-directories"
 import { createAppSession } from "./app-session"
 import {
@@ -103,6 +106,7 @@ import * as modifier from "./modifier"
 import { ProjectList } from "./ProjectList"
 import { reportFailure } from "./failure-toast"
 import { TabBar } from "./TabBar"
+import { createBrowserPanel } from "./BrowserPanel"
 import { createIntro } from "./intro/AgentManagerIntro"
 import { createShortcutHints } from "./ShortcutHints"
 import { baseUpdateTarget } from "./base-update-target"
@@ -192,6 +196,7 @@ import { useDisplaySettings } from "../src/v2/display-settings"
 type SidebarSelection = typeof LOCAL | string | null
 const isMac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.userAgent)
 const isPending = (id: string) => id.startsWith(PENDING_PREFIX)
+
 
 const AgentManagerContent: Component = () => {
   const { t } = useLanguage()
@@ -872,7 +877,7 @@ const AgentManagerContent: Component = () => {
       keepTerminalStack(history(), selection(), contextEmpty(), terms.all().length + terms.sides().length),
   )
   const sideHostVisible = () =>
-    sideHostNeeded(sidePanel(), diffMounted(), terms.sides().length, subagents.tabs().length)
+    sideHostNeeded(sidePanel(), diffMounted(), terms.sides().length, subagents.tabs().length, browser.hasCache() ? 1 : 0)
   const overlay = createMemo((): SetupState | null => {
     if (restricted()) return null
     const state = setup()
@@ -1055,6 +1060,13 @@ const AgentManagerContent: Component = () => {
     routeCatalog: router.routeCatalog,
     routeState: router.routeState,
     font: (font) => font && setTerminalFont(font),
+    activeProject: activeProjectId,
+    currentSession: () => sessions.currentSessionID(),
+    revealBrowser: () => {
+      closeHistory()
+      setReviewActive(false)
+      panels.open(SidePanel.Browser)
+    },
   })
   const preserveSidebarScroll = createSidebarScrollPreserver(() => selection() ?? sessions.currentSessionID())
   const applyActiveState = createProjectHydration({
@@ -1115,10 +1127,33 @@ const AgentManagerContent: Component = () => {
 
   // The composer of the visible session; review comments and Fix with Kilo append to it.
   let promptAppend: ((value: string, send: boolean) => void) | undefined
+  // The same composer's browser reference list; an element picked in the browser panel joins it.
+  let promptReference: ReferenceHandler | undefined
   const appendToPrompt = (text: string, autoSend: boolean) => {
     promptAppend?.(text, autoSend)
     requestChatFocus(true)
   }
+  // Editor and terminal context actions target the visible composer, and wait while no composer is mounted.
+  const composerQueue = createComposerQueue()
+
+  // One browser page per session, kept alive across worktree and session switches.
+  const browser = createBrowserPanel({
+    active: () => sidePanel() === SidePanel.Browser,
+    open: () => {
+      closeHistory()
+      setReviewActive(false)
+      panels.open(SidePanel.Browser)
+    },
+    close: () => panels.close(SidePanel.Browser),
+    sessionId: () => sessions.currentSessionID(),
+    projectId: activeProjectId,
+    sessions: () => sessions.sessions(),
+    onReference: (reference) => {
+      if (reference.sessionId !== sessions.currentSessionID()) return
+      promptReference?.(reference)
+      requestChatFocus(true)
+    },
+  })
 
   const handleSessionCreated = (id: string | undefined) => {
     if (!id) {
@@ -1804,7 +1839,9 @@ const AgentManagerContent: Component = () => {
       if (message.type === "agentManager.terminal.fontChanged") setTerminalFont(message.font)
       terminalDispatch(message as unknown as Parameters<typeof terminalDispatch>[0])
       stateHandlers.projects(message)
+      stateHandlers.browser(message)
       if (message.type === "agentManager.state") {
+        browser.bind().browser(message.browserAutomation === true)
         preserveSidebarScroll(() => stateHandlers.state(message))
         return
       }
@@ -1949,12 +1986,24 @@ const AgentManagerContent: Component = () => {
       appendToPrompt(text, detail.autoSend)
     }
     window.addEventListener(APPEND_REVIEW_COMMENTS, reviewCommentsEvent)
+    // These host messages are shared with the sidebar protocol, not the Agent Manager message union.
+    const context = vscode.onMessage((raw) => {
+      const message = raw as unknown as ToWebview
+      if (message.type === "appendContext") {
+        composerQueue.push({ type: "attach", items: message.items })
+        requestChatFocus(true)
+        return
+      }
+      if (message.type !== "startPrompt") return
+      composerQueue.push({ type: "submit", text: message.text, items: message.items ?? [] })
+    })
 
     onCleanup(() => {
       keys()
       stopModifier()
       window.removeEventListener("agentManager.openSubagent", subagent)
       window.removeEventListener(APPEND_REVIEW_COMMENTS, reviewCommentsEvent)
+      context()
       documents()
       unsubscribe()
     })
@@ -2138,6 +2187,8 @@ const AgentManagerContent: Component = () => {
                   onShowHistory={() => openHistory()}
                   empty={intro.render}
                   onAppendReady={(append) => (promptAppend = append)}
+                  onComposerReady={composerQueue.ready}
+                  onReferenceReady={(add) => (promptReference = add)}
                   onPreviewEdit={(files, sessionID) => previewEdit(files, sessionID)}
                   onViewTurnChanges={openTurnChanges}
                   onForkSession={handleForkSession}
@@ -2205,6 +2256,7 @@ const AgentManagerContent: Component = () => {
           />
         </Show>
         <div class="am-diff-panel-wrapper">
+          {browser.render()}
           <DiffPanelCache
             current={diffScopeId}
             context={diffCtx}
@@ -2394,9 +2446,9 @@ const AgentManagerContent: Component = () => {
         diffOpen={diffOpen}
         reviewActive={reviewActive}
         onToggleDiff={diffPanels.toggleToolbar}
-        browserOpen={() => false}
-        browserAutomation={() => false}
-        onToggleBrowser={() => undefined}
+        browserOpen={browser.tabs.browserOpen}
+        browserAutomation={browser.tabs.browserAutomation}
+        onToggleBrowser={browser.tabs.onToggleBrowser}
         prStatus={() => activePR()?.pr}
         prOpen={prOpen}
         onTogglePR={togglePRPanel}

@@ -120,6 +120,21 @@ describe("bridge", () => {
     expect(opened).toEqual(["https://kilo.ai/a", "http://localhost:3000"])
   })
 
+  test("passes shift-click as a request for the system browser", () => {
+    const opened: Array<[string, boolean]> = []
+    const host = bridge({
+      target: async () => ({ url: "http://server", authorization: "Basic test" }),
+      post: () => {},
+      open: (url, external) => opened.push([url, external]),
+    })
+    host.receive({ type: "open", url: "https://kilo.ai/a", external: true })
+    host.receive({ type: "open", url: "https://kilo.ai/b" })
+    expect(opened).toEqual([
+      ["https://kilo.ai/a", true],
+      ["https://kilo.ai/b", false],
+    ])
+  })
+
   test("ignores messages for unknown requests", () => {
     const web = transport(() => {})
     const stray: ToWebview = { type: "chunk", id: 99, data: new Uint8Array() }

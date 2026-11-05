@@ -7,6 +7,7 @@ import { promptKeybindings, watchKeybindings } from "../prompt-keybindings"
 import type { ToHost, ToWebview } from "../protocol"
 import type { Manager } from "../server"
 import type { Disposable, PanelContext } from "./host"
+import { chatFocus } from "../services/code-actions/target"
 
 export const PANEL_TYPE = "kilo-code.v2.agentManagerPanel"
 const INTRO = "kilo.agentManager.introDismissed"
@@ -79,12 +80,18 @@ export function createPanel(input: {
           onMessage(item)
           return true
         }
+        // Chat links arrive as the shared client's `open`; the provider decides between the panel and the browser.
+        if (item.type === "open" && typeof item.url === "string") {
+          onMessage({ type: "agentManager.openWebLink", url: item.url, external: item.external === true } as PanelMessage)
+          return true
+        }
         if (item.type === "agentManagerFocusChanged") {
           sideTerminal(item.target === "sideTerminal")
           return true
         }
         // Focus can return straight to the side terminal, so the panel reports its current focus target again.
         if (item.type === "webviewFocusChanged") {
+          if (item.focused === true) chatFocus.gained("agentManager")
           if (item.focused === true) void panel.webview.postMessage({ type: "agentManager.focusContextRequested" })
           else sideTerminal(false)
           return false
@@ -110,6 +117,7 @@ export function createPanel(input: {
     })
     const disposed: (() => void)[] = []
     panel.onDidDispose(() => {
+      chatFocus.closed("agentManager")
       sideTerminal(false)
       surface.dispose()
       watcher.dispose()

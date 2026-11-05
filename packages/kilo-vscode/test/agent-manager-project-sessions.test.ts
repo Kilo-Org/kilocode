@@ -120,6 +120,7 @@ async function setup(options: { fail?: string; hold?: string } = {}) {
     stateReady: undefined,
     context: ctx,
     state: ctx.peekState(),
+    browserAutomation: () => false,
     postToWebview: (message: AgentManagerOutMessage) => posts.push(message),
     sendRepoInfo: async () => {},
     initializeState: async () => {},

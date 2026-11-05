@@ -251,8 +251,9 @@
   },
   "module:packages/opencode/test/kilocode/branch-name.test.ts": {
     "state": "ported",
-    "note": "packages/kilo-plugin/test/branch-name.test.ts carries the parse, reasoning-wrapper, synthetic-message filtering, pending-prompt deduplication, latest-four and truncation assertions, and checks that the instructions stay in the system prompt while the user prompt carries only the messages, at temperature 0.1.",
-    "by": "am-branch-naming"
+    "v2": "packages/kilo-plugin/test/branch-name.test.ts",
+    "note": "packages/kilo-plugin/test/branch-name.test.ts carries branch name generation, prompt and model handling, and the failure paths of the kilocode.branch-name RPC.",
+    "by": "am-progress-map"
   },
   "module:packages/opencode/src/kilocode/kilo-errors.ts": {
     "state": "ported",
@@ -978,6 +979,16 @@
     "note": "packages/kilo-plugin/test/todo-tool.test.ts asserts the v1 description phrases on the Kilo todowrite tool, and the Kilo host registers that tool unconditionally through KiloPlugins.",
     "by": "composer-todos"
   },
+  "module:packages/opencode/src/kilocode/tool/browser-open.ts": {
+    "state": "ported",
+    "note": "packages/kilo-plugin/src/browser/index.ts KiloBrowserToolPlugin registers the browser_open tool on the ToolEditor when the extension host passes KILO_BROWSER_BROKER_URL and KILO_BROWSER_BROKER_TOKEN to the v2 server. The tool keeps the v1 URL policy (public HTTPS, loopback HTTP, 0.0.0.0 as localhost, no credentials), asks the browser_open permission with navigate:<origin> resources, and POSTs to the host broker at /browser/open. packages/kilo-plugin/test/browser.test.ts covers the endpoint guard, destination policy, request shape and broker error text.",
+    "by": "am-browser"
+  },
+  "module:packages/opencode/src/kilocode/tool/browser-open.txt": {
+    "state": "ported",
+    "note": "packages/kilo-plugin/src/browser/browser-open.txt, loaded by the browser_open tool description. The panel wording now names the sidebar Integrated Browser as well as the Agent Manager panel, and states that the tool shows a page instead of clicking.",
+    "by": "am-browser"
+  },
   "module:packages/opencode/src/kilocode/agent-manager/protocol.ts": {
     "state": "ported",
     "v2": "packages/schema/src/kilocode/agent-manager.ts",
@@ -1042,12 +1053,6 @@
     "state": "native",
     "v2": "packages/schema/src/kilocode/agent-manager.ts",
     "note": "The reject route is the reject method of the native kilocode.agent-manager RPC, with the native not_found error served by rpc.call.",
-    "by": "am-progress-map"
-  },
-  "module:packages/opencode/test/kilocode/branch-name.test.ts": {
-    "state": "ported",
-    "v2": "packages/kilo-plugin/test/branch-name.test.ts",
-    "note": "packages/kilo-plugin/test/branch-name.test.ts carries branch name generation, prompt and model handling, and the failure paths of the kilocode.branch-name RPC.",
     "by": "am-progress-map"
   },
   "module:packages/opencode/src/kilocode/snapshot/cleanup.ts": {
@@ -1294,6 +1299,66 @@
     "v2": "packages/kilo-vscode/test/agent-project-messages.test.ts",
     "note": "The state router is carried by packages/kilo-vscode/webview-ui/agent-manager/project/{state,state-handlers,store}.ts and the host project messages. packages/kilo-vscode/test/agent-project-messages.test.ts covers deferred state, activation and the no-catalog mode.",
     "by": "am-progress-map"
+  },
+  "module:packages/kilo-vscode/src/shared/code-context.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-vscode/webview-ui/src/v2/prompt-attachments.ts",
+    "note": "Editor selections are now prompt file attachments (PromptAttachment in src/protocol.ts). mergeAttachments replaces mergeCodeContexts with dedupe on kind, uri, name and source path; codeContextLabel becomes the attachment name built by src/services/code-actions/attachments.ts; formatCodeContexts is not needed because the server reads the attachment and sends it to the model as an attached file.",
+    "by": "context-actions"
+  },
+  "module:packages/kilo-vscode/tests/unit/code-context.test.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-vscode/test/prompt-attachments.test.ts",
+    "note": "Merge and dedupe assertions are carried by prompt-attachments.test.ts; label assertions by code-action-attachments.test.ts. The format assertions are dropped with formatCodeContexts (attachments replace inline code blocks).",
+    "by": "context-actions"
+  },
+  "module:packages/opencode/src/kilocode/tool/read-docx.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-plugin/src/read/read-docx.ts",
+    "note": "mammoth extraction is copied unchanged; only the Readable import proof cell is marked.",
+    "by": "read-extensions"
+  },
+  "module:packages/opencode/src/kilocode/tool/xlsx.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-plugin/src/read/xlsx.ts",
+    "note": "SheetJS workbook-to-lines extraction is copied unchanged: sheet labels, hidden-sheet filtering, ODS expansion, the 50,000 row cap, date/time formatting and the 50 MB input limit.",
+    "by": "read-extensions"
+  },
+  "module:packages/opencode/src/kilocode/tool/ods.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-plugin/src/read/ods.ts",
+    "note": "ODS table style visibility parsing is copied unchanged.",
+    "by": "read-extensions"
+  },
+  "module:packages/opencode/src/kilocode/tool/read-extract.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-plugin/src/read/read-extract.ts",
+    "note": "The binary/accepts/limit/open dispatch is copied unchanged; packages/kilo-plugin/src/read/index.ts is the v2 boundary that consumes it.",
+    "by": "read-extensions"
+  },
+  "module:packages/opencode/src/kilocode/tool/notebook.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-plugin/src/read/notebook.ts",
+    "note": "The notebook cell parser is copied; cells() keeps the markdown/code rendering and payload-free fallback, and the caller decodes UTF-8 instead of the unported v1 encoding module.",
+    "by": "read-extensions"
+  },
+  "module:packages/opencode/test/kilocode/read-docx.test.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-plugin/test/read-docx.test.ts",
+    "note": "The DOCX assertions are ported: extraction, pagination, malformed input message, warnings, directory listing and binary/PDF behavior, through the v2 reader boundary.",
+    "by": "read-extensions"
+  },
+  "module:packages/opencode/test/kilocode/read-xlsx.test.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-plugin/test/read-xlsx.test.ts",
+    "note": "The XLSX and ODS assertions are ported with the v2 fixtures: formatted cells, dates and times, hidden sheets, row cap, page limits, sparse ranges, invalid input and the size limit.",
+    "by": "read-extensions"
+  },
+  "module:packages/opencode/test/kilocode/read-notebook.test.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-plugin/test/read-notebook.test.ts",
+    "note": "The notebook assertions are ported: cells only, payload-free output, pagination, raw fallback, ordinary text and PDF reads.",
+    "by": "read-extensions"
   },
   "module:packages/kilo-vscode/src/kilo-provider/notifications.ts": {
     "state": "ported",
