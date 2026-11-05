@@ -2,7 +2,7 @@ import { expect, test } from "bun:test"
 import { readFileSync } from "node:fs"
 import { resolve } from "node:path"
 
-const source = (path: string) => readFileSync(resolve(import.meta.dir, path), "utf8")
+const source = (path: string) => readFileSync(resolve(import.meta.dir, path), "utf8").replace(/\r\n/g, "\n")
 
 const prompt = source("../webview-ui/src/v2/prompt.tsx")
 const sessionView = source("../webview-ui/src/v2/session-view.tsx")

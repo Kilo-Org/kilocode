@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it } from "bun:test"
 import { window } from "vscode"
+import { pathToFileURL } from "node:url"
 import { selectionAttachment, terminalAttachment } from "../src/services/code-actions/attachments"
 import { getEditorContext, type EditorContext } from "../src/services/code-actions/editor-utils"
 
@@ -84,7 +85,7 @@ describe("selectionAttachment", () => {
       },
     } as unknown as typeof window.activeTextEditor
 
-    expect(getEditorContext()?.source).toBe("file:///repo/src/file.ts")
+    expect(getEditorContext()?.source).toBe(pathToFileURL("/repo/src/file.ts").href)
   })
 })
 
