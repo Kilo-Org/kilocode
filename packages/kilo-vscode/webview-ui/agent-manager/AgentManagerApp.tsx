@@ -48,6 +48,8 @@ import { LOCAL, canOpenRootSession, isKnownRootSession, adjacentHint, focusChatS
 import { useBridge } from "./v2/vscode"
 import { V2Scope } from "../src/v2/client"
 import { SessionView } from "../src/v2/session-view"
+import { createComposerQueue } from "../src/v2/composer"
+import type { ToWebview } from "../../src/protocol"
 import type { ReferenceHandler } from "../src/v2/append-ready"
 import { createAppDirectories } from "./app-directories"
 import { createAppSession } from "./app-session"
@@ -1151,6 +1153,8 @@ const AgentManagerContent: Component = () => {
       to({ type: "agentManager.openFile", sessionId, filePath, line })
     },
   }
+  // Editor and terminal context actions target the visible composer, and wait while no composer is mounted.
+  const composerQueue = createComposerQueue()
 
   // One browser page per session, kept alive across worktree and session switches.
   const browser = createBrowserPanel({
@@ -2002,12 +2006,24 @@ const AgentManagerContent: Component = () => {
       appendCommentsToPrompt(comments, detail.autoSend)
     }
     window.addEventListener(APPEND_REVIEW_COMMENTS, reviewCommentsEvent)
+    // These host messages are shared with the sidebar protocol, not the Agent Manager message union.
+    const context = vscode.onMessage((raw) => {
+      const message = raw as unknown as ToWebview
+      if (message.type === "appendContext") {
+        composerQueue.push({ type: "attach", items: message.items })
+        requestChatFocus(true)
+        return
+      }
+      if (message.type !== "startPrompt") return
+      composerQueue.push({ type: "submit", text: message.text, items: message.items ?? [] })
+    })
 
     onCleanup(() => {
       keys()
       stopModifier()
       window.removeEventListener("agentManager.openSubagent", subagent)
       window.removeEventListener(APPEND_REVIEW_COMMENTS, reviewCommentsEvent)
+      context()
       documents()
       unsubscribe()
     })
@@ -2194,6 +2210,7 @@ const AgentManagerContent: Component = () => {
                     empty={intro.render}
                     onAppendReady={(append) => (promptAppend = append)}
                     onReviewAppendReady={(append) => (promptReviewAppend = append)}
+                    onComposerReady={composerQueue.ready}
                     onReferenceReady={(add) => (promptReference = add)}
                     onPreviewEdit={(files, sessionID) => previewEdit(files, sessionID)}
                     onViewTurnChanges={openTurnChanges}

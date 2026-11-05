@@ -2,7 +2,7 @@ import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { showToast } from "@kilocode/kilo-ui/toast"
 import type { JsonValue, ModelRef } from "@opencode/client"
-import { createEffect, createMemo, createSignal, on, onCleanup, onMount, Show, untrack, type JSX } from "solid-js"
+import { createEffect, createMemo, createSignal, For, on, onCleanup, onMount, Show, untrack, type JSX } from "solid-js"
 import type { ReviewCommentEntry } from "../../../src/shared/review-comments"
 import { pushFixes } from "../../agent-manager/pr/pr-push-fixes"
 import { fold, reserve } from "../components/chat/prompt-fold"
@@ -31,11 +31,20 @@ import {
   type ReviewAppendHandler,
 } from "./append-ready"
 import { BrowserReferences } from "./browser-references"
+import type { PromptAttachment } from "../../../src/protocol"
+import { CodeContextChips } from "../components/chat/CodeContextChips"
+import { useImageAttachments } from "../hooks/useImageAttachments"
+import { usePasteCollapse } from "../hooks/usePasteCollapse"
+import { expandPastes } from "../components/chat/prompt-input-utils"
 import { message, useV2 } from "./client"
+import { registerComposer, type ComposerHandle } from "./composer"
+import { attachmentDrafts, fileAttachments, imageAttachment, mergeAttachments, pasteDrafts } from "./prompt-attachments"
 import { cleanEnhancedPrompt, enhancePromptRequest, normalizeEnhancePromptErrorMessage } from "./enhance-prompt"
 import { insertSpacedText } from "./prompt-speech"
 import { PromptOverflow, type OverflowItem } from "./prompt-overflow"
 import { composeReviewPrompt, mergePromptMetadata, mergeReviewComments } from "./review-drafts"
+import { sendMode, sendShortcuts, type SendMode } from "./pending-actions"
+import { PromptHint } from "./prompt-hint"
 
 // Drafts live outside the component so a composer remounted for another session restores its own text, as v1 did.
 // The key is the session id, or the pending tab id before a first prompt creates the session.
@@ -76,8 +85,15 @@ export function PromptInput(props: {
   blocked?: boolean
   /** A pending question tool call. The composer waits for an answer, so Send replaces Stop. */
   questioning?: boolean
-  /** Sends the composed text. `metadata` carries the structured browser references the text also describes. */
-  onSend: (text: string, metadata?: { [key: string]: JsonValue }) => Promise<boolean>
+  /**
+   * Sends the composed text. While the agent runs, `mode` chooses between steering, queueing and stopping to send now.
+   * `input.items` are editor and terminal attachments; `input.metadata` carries browser references.
+   */
+  onSend: (
+    text: string,
+    mode: SendMode,
+    input?: { items?: PromptAttachment[]; metadata?: { [key: string]: JsonValue } },
+  ) => Promise<boolean>
   onStop: () => void
   /** Agent, model and variant controls, before the actions as in main's PromptInput. */
   selectors?: JSX.Element
@@ -89,6 +105,8 @@ export function PromptInput(props: {
   onReferenceReady?: (add: ReferenceHandler | undefined) => void
   /** Receives a function that adds review comments to the draft; undefined on unmount. */
   onReviewAppendReady?: (append: ReviewAppendHandler | undefined) => void
+  /** Receives the context actions handle of this composer; undefined on unmount. */
+  onComposerReady?: (composer: ComposerHandle | undefined) => void
 }) {
   const v2 = useV2()
   const language = useLanguage()
@@ -110,8 +128,27 @@ export function PromptInput(props: {
   }
   const [sending, setSending] = createSignal(false)
   const [enhancing, setEnhancing] = createSignal(false)
+  // Editor selections, files, terminal output and images sent with the next prompt, per draft like the text.
+  const [attachments, setAttachments] = createSignal<PromptAttachment[]>(attachmentDrafts.get(props.draftKey))
+  const paste = usePasteCollapse({ enabled: () => !props.disabled, text })
+  paste.load(untrack(text), pasteDrafts.get(props.draftKey))
+  const images = useImageAttachments()
+  // The hook reads files; the composer keeps one list, so a finished read moves into it.
+  createEffect(() => {
+    const read = images.images()
+    if (read.length === 0) return
+    setAttachments((current) => mergeAttachments(current, read.map(imageAttachment)))
+    images.clear()
+  })
+  images.setFilePathDropHandler((paths) =>
+    setAttachments((current) => mergeAttachments(current, fileAttachments(paths, v2.directory))),
+  )
+  const removeAttachment = (id: string) => setAttachments((current) => current.filter((item) => item.id !== id))
+  const pictures = () => attachments().filter((item) => item.kind === "image")
+  const contexts = () => attachments().filter((item) => item.kind !== "image")
   // The draft Enhance replaced, so Ctrl/Cmd+Z restores it once.
   let preEnhance: string | null = null
+  let preEnhancePastes: string[] = []
   // Ignores a late result after a newer Enhance or a newer edit.
   let enhanceToken = 0
   const refs = { input: undefined as HTMLTextAreaElement | undefined, overlay: undefined as HTMLDivElement | undefined }
@@ -124,22 +161,73 @@ export function PromptInput(props: {
   )
   const speechStatus = useSpeechStatus()
   const canUseSpeech = () => speechStatus.status().enabled
-  // Review comments and browser references are input too, so they can be sent without typed text.
-  const hasDraft = () => !!text().trim() || browsers().length > 0 || comments().length > 0
   // Recording is enough to send: the transcript arrives first and the send continues from it. No other speech state
   // may send, or a draft would leave before the transcript is ready and the transcript would become a draft.
+  const ready = () => !props.disabled && !props.blocked && !sending() && images.pending() === 0
   const canSend = () =>
-    !props.disabled && !props.blocked && !sending() && (speech.state() === "recording" || (!speech.active() && hasDraft()))
+    ready() &&
+    (speech.state() === "recording" ||
+      (!speech.active() &&
+        (!!text().trim() || attachments().length > 0 || browsers().length > 0 || comments().length > 0)))
   // The label is the pending-permission hint while blocked, otherwise Send.
   const sendLabel = () => {
     if (props.blocked) return language.t("prompt.action.send.blocked")
     if (speech.state() === "recording") return language.t("prompt.action.send.recording")
     return language.t("prompt.action.send")
   }
+  // While the agent runs, a held modifier previews its send action on the Send button, so the user sees what Enter or
+  // a click will do before pressing it. The accessible name stays "Send".
+  const [held, setHeld] = createSignal<SendMode>("steer")
+  const hold = (event: KeyboardEvent) => setHeld(sendMode(event, true))
+  const release = () => setHeld("steer")
+  onMount(() => {
+    window.addEventListener("keydown", hold)
+    window.addEventListener("keyup", hold)
+    window.addEventListener("blur", release)
+  })
+  onCleanup(() => {
+    window.removeEventListener("keydown", hold)
+    window.removeEventListener("keyup", hold)
+    window.removeEventListener("blur", release)
+  })
+  // An empty composer during a run suggests one shortcut in its placeholder: queueing, the one Enter cannot do. The
+  // Send tooltip and the modifier preview cover the others.
+  const runningHint = () =>
+    !!props.running &&
+    !props.questioning &&
+    !text() &&
+    !browsers().length &&
+    speech.state() !== "recording" &&
+    v2.connection.status() === "connected"
+  const hintText = (key: string) =>
+    language.t("prompt.placeholder.plainHint", { key, action: language.t("prompt.shortcutHint.queue") })
+  // The placeholder template split around the key, so the key renders as keycaps.
+  const keycaps = () => {
+    const mark = "\u0001"
+    const parts = hintText(mark).split(mark)
+    return { before: parts.at(0) ?? "", after: parts.at(1) ?? "", binding: sendShortcuts().queue }
+  }
+  const busySend = () => props.running && !props.blocked && speech.state() !== "recording"
+  const sendAction = (): SendMode => (busySend() ? held() : "steer")
+  const sendIcon = () => ({ steer: "send", queue: "clock", now: "arrow-right" } as const)[sendAction()]
+  const sendHint = () => {
+    if (!busySend()) return sendLabel()
+    const keys = sendShortcuts()
+    if (held() === "queue") return language.t("prompt.action.queue", { key: keys.queue })
+    if (held() === "now") return language.t("prompt.action.stopAndSend", { key: keys.now })
+    return language.t("prompt.action.steer", keys)
+  }
   // Stop replaces Send while the agent runs and the draft is empty. Typing during a run turns it back into Send,
-  // whose prompt queues behind the running turn. A pending question is not running work. Stop is not shown while the
-  // prompt is still being admitted, because an unadmitted prompt has no execution for Stop to interrupt.
-  const showStop = () => props.running && !hasDraft() && !props.questioning && speech.state() !== "recording"
+  // whose prompt steers the running turn at its next step. A pending question is not running work. Stop is not shown
+  // while the prompt is still being admitted, because an unadmitted prompt has no execution for Stop to interrupt.
+  const showStop = () =>
+    props.running &&
+    !text().trim() &&
+    !browsers().length &&
+    attachments().length === 0 &&
+    comments().length === 0 &&
+    !props.questioning &&
+    speech.state() !== "recording"
 
   const scroll = () => {
     if (!refs.input || !refs.overlay) return
@@ -155,6 +243,11 @@ export function PromptInput(props: {
       (key) => {
         if (key === draft) return
         promptDrafts.set(draft, untrack(text))
+        attachmentDrafts.set(draft, untrack(attachments))
+        pasteDrafts.set(
+          draft,
+          untrack(paste.pastes).map((item) => item.text),
+        )
         keep(draft, untrack(browsers))
         saveReviewDraft(draft, untrack(comments))
         draft = key
@@ -164,6 +257,8 @@ export function PromptInput(props: {
         enhanceToken++
         preEnhance = null
         setText(value)
+        paste.load(value, pasteDrafts.get(key))
+        setAttachments(attachmentDrafts.get(key))
         if (refs.input) {
           refs.input.value = value
           refs.input.scrollTop = 0
@@ -174,6 +269,11 @@ export function PromptInput(props: {
   )
   onCleanup(() => {
     promptDrafts.set(draft, text())
+    attachmentDrafts.set(draft, attachments())
+    pasteDrafts.set(
+      draft,
+      paste.pastes().map((item) => item.text),
+    )
     keep(draft, browsers())
     saveReviewDraft(draft, comments())
   })
@@ -280,33 +380,60 @@ export function PromptInput(props: {
     })
   }
 
-  const submit = () => {
-    if (!canSend()) return
+  // A context action sends its own prompt. It keeps the composer guards and returns its text and chips to the
+  // draft when the composer cannot send or the send fails, so the request is never lost.
+  const putInDraft = (value: string, items: PromptAttachment[]) => {
+    const current = text()
+    setText(current.trim() ? `${current}\n\n${value}` : value)
+    setAttachments((list) => mergeAttachments(list, items))
+    window.dispatchEvent(new CustomEvent("focusPrompt", { detail: { force: true, restore: true } }))
+  }
+
+  const submit = (external?: { text: string; items: PromptAttachment[] }, mode: SendMode = "steer") => {
+    if (!ready() || (speech.active() && speech.state() !== "recording")) {
+      if (external) putInDraft(external.text, external.items)
+      return
+    }
+    if (!external && !canSend()) return
     const draft = text()
-    const picked = browsers()
-    const pending = comments()
-    const browser = browserPrompt(draft, picked)
-    const prompt = composeReviewPrompt(pending, browser.text, pushFixes())
-    // The references and review data hold only strings, numbers and arrays, so they are prompt metadata.
-    const metadata = mergePromptMetadata(
-      browser.metadata as Record<string, JsonValue> | undefined,
-      prompt.metadata,
-    )
+    // Capture the paste ranges before the draft is cleared, so a mismatched placeholder count still expands the
+    // blocks that have backing text.
+    const pastes = paste.pastes()
+    const backing = pastes.map((item) => item.text)
+    const items = external ? external.items : attachments()
+    const picked = external ? [] : browsers()
+    // A context action sends its own text; pending review comments stay in the draft for the user's next prompt.
+    const pending = external ? [] : comments()
+    const prompt = browserPrompt(draft, picked)
     // Clear the draft as soon as it is sent, so the composer is empty while the prompt is admitted. Restore it only
-    // if the send fails and the user has not typed something new.
+    // if the send fails and the user has not typed, attached or picked something new.
     const restore = () => {
-      if (text().trim() || browsers().length || comments().length) return
+      if (external) return putInDraft(external.text, external.items)
+      if (text().trim() || attachments().length > 0 || browsers().length > 0 || comments().length > 0) return
       setText(draft)
+      paste.load(draft, backing)
+      setAttachments(items)
       setBrowsers(picked)
       replaceComments(pending)
     }
-    setText("")
-    setBrowsers([])
-    replaceComments([])
+    if (!external) {
+      setText("")
+      paste.load("", [])
+      setAttachments([])
+      setBrowsers([])
+      replaceComments([])
+    }
+    // The review Markdown leads the text, so the transcript can strip it again with the comments in metadata.
+    const review = external
+      ? { text: external.text, metadata: undefined }
+      : composeReviewPrompt(pending, expandPastes(draft, pastes), pushFixes())
     setSending(true)
     void props
       // The references and review data hold only strings, numbers and arrays, so they are prompt metadata.
-      .onSend(prompt.text, metadata)
+      .onSend(review.text, mode, {
+        items,
+        metadata: mergePromptMetadata(prompt.metadata as { [key: string]: JsonValue } | undefined, review.metadata),
+      })
       .then((ok) => {
         if (ok) preEnhance = null
         else restore()
@@ -318,14 +445,24 @@ export function PromptInput(props: {
       .finally(() => setSending(false))
   }
 
-  const send = () => {
+  const send = (mode: SendMode = "steer") => {
     if (!canSend()) return
     if (speech.state() === "recording") {
       transcribeAndSend()
       return
     }
-    submit()
+    submit(undefined, mode)
   }
+  const queue = () => send("queue")
+
+  registerComposer(props.onComposerReady, {
+    attach: (items) => {
+      setAttachments((current) => mergeAttachments(current, items))
+      window.dispatchEvent(new CustomEvent("focusPrompt", { detail: { force: true, restore: true } }))
+    },
+    // A context action sends on its own and leaves the draft and its chips for the user's next prompt.
+    submit: (value, items) => submit({ text: value, items }),
+  })
 
   registerAppend(props.onAppendReady, (value, shouldSend) => {
     const current = text()
@@ -339,9 +476,9 @@ export function PromptInput(props: {
   // Merges comments into the current draft and sends them at once when the composer was otherwise empty, as v1 did.
   const appendComments = (incoming: ReviewCommentEntry[], shouldSend: boolean) => {
     if (incoming.length === 0) return
-    const empty = !hasDraft()
+    const empty = !text().trim() && attachments().length === 0 && browsers().length === 0 && comments().length === 0
     replaceComments(mergeReviewComments(comments(), incoming))
-    if (shouldSend && empty) submit()
+    if (shouldSend && empty) send()
   }
 
   registerReviewAppend(props.onReviewAppendReady, appendComments)
@@ -384,7 +521,7 @@ export function PromptInput(props: {
 
   const enhance = () => {
     if (!canEnhance()) return
-    const draft = text().trim()
+    const draft = paste.plainText(text()).trim()
     // An empty draft explains the action instead of rewriting nothing.
     if (!draft) {
       setText(language.t("prompt.action.enhanceDescription"))
@@ -392,13 +529,16 @@ export function PromptInput(props: {
       return
     }
     preEnhance = text()
+    preEnhancePastes = paste.pastes().map((item) => item.text)
     const token = ++enhanceToken
     setEnhancing(true)
     void v2.api.generate
       .text({ prompt: enhancePromptRequest(draft), model: props.model })
       .then((response) => {
         if (token !== enhanceToken) return
-        setText(cleanEnhancedPrompt(response.text))
+        const next = cleanEnhancedPrompt(response.text)
+        setText(next)
+        paste.load(next, [])
         focusInput()
       })
       .catch((err: unknown) => {
@@ -429,6 +569,7 @@ export function PromptInput(props: {
     const restored = preEnhance
     preEnhance = null
     setText(restored)
+    paste.load(restored, preEnhancePastes)
     return true
   }
 
@@ -502,7 +643,13 @@ export function PromptInput(props: {
   }
 
   return (
-    <div class="prompt-input-container">
+    <div
+      class="prompt-input-container"
+      classList={{ "prompt-input-container--dragging": images.dragging() }}
+      onDragOver={images.handleDragOver}
+      onDragLeave={images.handleDragLeave}
+      onDrop={images.handleDrop}
+    >
       <Show when={comments().length > 0 && !props.disabled}>
         <ReviewComments
           comments={comments()}
@@ -524,37 +671,109 @@ export function PromptInput(props: {
           />
         </div>
       </Show>
+      <Show when={contexts().length > 0}>
+        <CodeContextChips
+          items={contexts()}
+          disabled={props.disabled}
+          onRemove={removeAttachment}
+          onClear={() => setAttachments(pictures())}
+        />
+      </Show>
+      <Show when={pictures().length > 0}>
+        <div class="image-attachments">
+          <For each={pictures()}>
+            {(img) => (
+              <div class="image-attachment">
+                <img
+                  src={img.uri}
+                  alt={img.name}
+                  title={img.name}
+                  onClick={() => vscode.postMessage({ type: "previewImage", dataUrl: img.uri, filename: img.name })}
+                />
+                <IconButton
+                  icon="close-small"
+                  variant="ghost"
+                  size="small"
+                  class="image-attachment-remove"
+                  disabled={props.disabled}
+                  onClick={() => removeAttachment(img.id)}
+                  aria-label={language.t("ui.promptInput.removeAttachment")}
+                />
+              </div>
+            )}
+          </For>
+        </div>
+      </Show>
       <div class="prompt-input-wrapper">
         <div class="prompt-input-ghost-wrapper">
           <div class="prompt-input-highlight-overlay" ref={(el) => (refs.overlay = el)} aria-hidden="true" dir="auto">
-            <span>{text()}</span>
+            <For each={paste.segments(text())}>
+              {(seg) => (
+                <Show when={seg.kind === "paste"} fallback={<span>{seg.text}</span>}>
+                  <span
+                    class="prompt-input-paste"
+                    title={language.t("prompt.paste.expand")}
+                    onClick={(e) => {
+                      if (props.disabled || !refs.input || seg.paste === undefined) return
+                      e.preventDefault()
+                      e.stopPropagation()
+                      paste.expand(seg.paste, refs.input, setText, () => {
+                        enhanceToken++
+                        preEnhance = null
+                      })
+                    }}
+                  >
+                    {seg.text}
+                  </span>
+                </Show>
+              )}
+            </For>
             <Show when={text().endsWith("\n")}>
               <br />
             </Show>
           </div>
+          <Show when={runningHint()}>
+            <PromptHint {...keycaps()} />
+          </Show>
           <textarea
             ref={(el) => (refs.input = el)}
             class="prompt-input"
-            classList={{ "prompt-input--disabled": props.disabled }}
+            classList={{ "prompt-input--disabled": props.disabled, "prompt-input--keycaps": runningHint() }}
             placeholder={
-              v2.connection.status() === "connected"
-                ? language.t("prompt.placeholder.plain")
-                : language.t("prompt.placeholder.connecting")
+              v2.connection.status() !== "connected"
+                ? language.t("prompt.placeholder.connecting")
+                : runningHint()
+                  ? hintText(sendShortcuts().queue)
+                  : language.t("prompt.placeholder.plain")
             }
             aria-label={language.t("prompt.placeholder.plain")}
             value={text()}
+            onBeforeInput={(e) => paste.beforeInput(e, refs.input)}
             onInput={(e) => {
               // An edit invalidates an in-flight Enhance, so its late result cannot overwrite the new text.
               enhanceToken++
               preEnhance = null
               setText(e.currentTarget.value)
+              paste.afterInput()
             }}
+            onPaste={(e) => {
+              if (props.disabled || !refs.input) return
+              images.handlePaste(e)
+              paste.paste(e, refs.input, setText, () => {
+                enhanceToken++
+                preEnhance = null
+              })
+            }}
+            onCopy={(e) => paste.clipboard(e, refs.input, setText)}
+            onCut={(e) => paste.clipboard(e, refs.input, setText, true)}
             onKeyDown={(e) => {
               if (speechDown(e)) return
               if (undoEnhance(e)) return
+              if (paste.backspace(e, refs.input, setText)) return
+              paste.arrow(e, refs.input)
               if (!isEnterKeyCommitNotIme(e) || e.shiftKey) return
               e.preventDefault()
-              send()
+              send(sendMode(e, props.running))
             }}
             onKeyUp={(e) => {
               speechUp(e)
@@ -610,15 +829,31 @@ export function PromptInput(props: {
             <Show when={canUseSpeech()}>
               <SpeechToTextButton speech={speech} disabled={props.disabled} start={startSpeech} label={language.t} />
             </Show>
+            <Show when={props.running && (!!text().trim() || browsers().length > 0)}>
+              <Tooltip
+                value={language.t("prompt.action.queue", { key: sendShortcuts().queue })}
+                placement="top"
+                openDelay={0}
+              >
+                <IconButton
+                  icon="clock"
+                  variant="ghost"
+                  size="small"
+                  onClick={queue}
+                  disabled={!canSend() || speech.state() === "recording"}
+                  aria-label={language.t("prompt.action.queue", { key: sendShortcuts().queue })}
+                />
+              </Tooltip>
+            </Show>
             <Show
               when={showStop()}
               fallback={
-                <Tooltip value={sendLabel()} placement="top" openDelay={0}>
+                <Tooltip value={sendHint()} placement="top" openDelay={0}>
                   <IconButton
-                    icon="send"
+                    icon={sendIcon()}
                     variant="ghost"
                     size="small"
-                    onClick={send}
+                    onClick={(event) => send(sendMode(event, props.running))}
                     disabled={!canSend()}
                     aria-label={sendLabel()}
                   />

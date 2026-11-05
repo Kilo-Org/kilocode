@@ -9,6 +9,7 @@ import { GatewayOptions } from "./gateway/options"
 import { KiloHandshakePlugin } from "./handshake"
 // kilo_port(provider-usage:ce8e021f1ef6) v1 imported the ProviderUsage Location service into location-services.ts.
 import { KiloProviderUsagePlugin } from "./provider-usage"
+import { KiloReadPlugin } from "./read"
 import { KiloOpenAIPlugin } from "./openai"
 import { KiloMarketplacePlugin } from "./marketplace"
 import { KiloSessionSync } from "./session-sync"
@@ -19,9 +20,12 @@ import { KiloSkillPlugin } from "./skill"
 import { KiloTodoPlugin } from "./todo"
 import { KiloBrowserToolPlugin } from "./browser"
 import { KiloWriteToolPlugin } from "./tool-write"
+// kilo_port(notebook:91a426486dc8) v1 registered the notebook tools and service from the shared server.
+import { KiloNotebookPlugin } from "./notebook"
 import { KiloReview } from "./review"
 // kilo_port(agent-manager:648a508ad347) the protection guard now lives in the Agent Manager plugin.
 import { KiloAgentManagerPlugin } from "./agent-manager"
+import { KiloRecallPlugin } from "./recall"
 
 /**
  * The Kilo plugins on the public plugin API (plugin-first rung 1), in registration order. The Kilo host
@@ -46,13 +50,18 @@ export const KiloPlugins = [
   KiloMarketplacePlugin,
   KiloSessionSync.plugin,
   KiloSkillPlugin,
+  // Rung 1: names the extracted formats in the native read tool description. The host swaps the
+  // reader behind it for the filesystem service (rung 2).
+  KiloReadPlugin,
   KiloTodoPlugin,
   KiloWriteToolPlugin,
   KiloBrowserToolPlugin,
+  KiloNotebookPlugin,
   KiloCommitMessagePlugin,
   KiloPrivacyPlugin,
   KiloBranchNamePlugin,
   KiloAgentManagerPlugin,
+  KiloRecallPlugin,
   // The Kilo review command replaces the built-in `review`. kilo_port(review:efc710228c1f)
   KiloReview.Plugin,
 ] as const

@@ -15,9 +15,18 @@ import type { SettingsHandler } from "./agent-manager/project/settings"
 import type { GitChanges } from "./git-changes"
 import { local } from "./local"
 import { dismissNotification, dismissedNotifications, syncDismissedNotifications } from "./notifications"
-import { DISPLAY_DEFAULTS, type GitChangesStats, type ReviewCommentEntry, type ToHost, type ToWebview } from "./protocol"
+import { applyModelPreference, readModelPreferences } from "./model-preferences"
+import {
+  DISPLAY_DEFAULTS,
+  type GitChangesStats,
+  type ModelPreferenceMessage,
+  type ReviewCommentEntry,
+  type ToHost,
+  type ToWebview,
+} from "./protocol"
 import { bridge } from "./relay"
 import { saveImage } from "./save-image"
+import { previewImage } from "./preview-image"
 import type { Manager } from "./server"
 import type { DocumentViewerProvider } from "./DocumentViewerProvider"
 import {
@@ -36,6 +45,7 @@ import { openBrowserLink } from "./browser-links"
 import { DEVTOOLS } from "./browser-tab/html"
 import { documentExists, isMarkdownPath } from "./documents/document-reader"
 import { openToolFile, type ToolDiff } from "./tool-diff"
+import { chatFocus } from "./services/code-actions/target"
 
 // The sidebar may only write the settings its own UI owns. Other views keep their own write path.
 // The settings each webview may write; the Settings panel writes every Kilo setting through its own handler.
@@ -228,7 +238,11 @@ export function wire(input: {
           server: input.server,
           directory: input.directory,
           post,
-          onReset: input.onReset,
+          // A reset clears the recents, usage and efforts; every open webview must drop its copy of them.
+          onReset: () => {
+            input.onReset?.()
+            broadcast({ type: "modelPreferencesLoaded", value: readModelPreferences(input.context.globalState) })
+          },
           agentManager: input.agentManager,
         })
       : {
@@ -295,6 +309,15 @@ export function wire(input: {
       }
     }
   }
+  // Every write broadcasts the new state, so a pick in the sidebar shows in the Agent Manager and Settings at once.
+  const handleModelPreferences = async (message: ModelPreferenceMessage) => {
+    const loaded = {
+      type: "modelPreferencesLoaded",
+      value: await applyModelPreference(input.context.globalState, message),
+    } as const
+    post(loaded)
+    if (message.type !== "requestModelPreferences") others(loaded)
+  }
   const handleGlobalState = (message: ToHost) => {
     switch (message.type) {
       case "requestModelSelectorExpanded":
@@ -303,6 +326,13 @@ export function wire(input: {
       case "persistModelSelectorExpanded":
         void input.context.globalState.update(EXPANDED, message.value)
         others({ type: "modelSelectorExpandedLoaded", value: message.value })
+        return true
+      case "requestModelPreferences":
+      case "toggleFavorite":
+      case "persistRecents":
+      case "recordModelUsage":
+      case "persistVariant":
+        void handleModelPreferences(message)
         return true
       case "requestAutoApproveState":
         post({ type: "autoApproveStateLoaded", value: input.context.globalState.get(AUTO_APPROVE, false) })
@@ -336,6 +366,12 @@ export function wire(input: {
   const handleLeafMessage = (message: ToHost): boolean => {
     if (message.type === "saveImage") {
       void saveImage(input.saveImageDirectory?.() ?? input.directory, message)
+      return true
+    }
+    if (message.type === "previewImage") {
+      void previewImage(input.context.globalStorageUri, message).catch((err: unknown) =>
+        console.error("[Kilo] Failed to preview image:", err),
+      )
       return true
     }
     // The Language tab applies at once: write `kilo-code.v2.language` and let the change event push it to every view.
@@ -384,6 +420,7 @@ export function wire(input: {
     if (settings.handle(message)) return
     // Only the sidebar carries the cycle keybindings; the Settings panel must not change their context.
     if (message.type === "webviewFocusChanged" && input.view === "chat") {
+      if (message.focused === true) chatFocus.gained("sidebar")
       if (input.onFocusChanged) return input.onFocusChanged(message.focused === true)
       return void commands.executeCommand("setContext", "kilo-code.v2.sidebarFocused", message.focused === true)
     }
@@ -426,11 +463,12 @@ export function wire(input: {
 
 const surfaces = new Set<(message: ToWebview) => void>()
 
-/** The composer state every webview shares through globalState: auto-approve and the expanded model picker. */
+/** The composer state every webview shares through globalState: auto-approve and the model picker preferences. */
 export function composerState(context: ExtensionContext): ToWebview[] {
   return [
     { type: "autoApproveStateLoaded", value: context.globalState.get(AUTO_APPROVE, false) },
     { type: "modelSelectorExpandedLoaded", value: context.globalState.get(EXPANDED, true) },
+    { type: "modelPreferencesLoaded", value: readModelPreferences(context.globalState) },
   ]
 }
 

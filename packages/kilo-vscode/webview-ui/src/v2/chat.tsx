@@ -28,6 +28,7 @@ import { SessionTabStrip } from "./session-tabs"
 import { SessionView } from "./session-view"
 import { chunkPaths } from "./validate-paths"
 import { createReviewAppendQueue } from "./review-queue"
+import { createComposerQueue } from "./composer"
 import { showTabStrip } from "../utils/local-tabs"
 import { focusPrompt } from "../utils/tab-navigation"
 
@@ -38,6 +39,8 @@ export function Chat() {
   const [view, setView] = createSignal<"chat" | "history">("chat")
   // Comments can arrive while the chat composer is unmounted (History), so hold them until it returns.
   const reviewQueue = createReviewAppendQueue()
+  // Editor and terminal context actions target the chat composer too, and wait the same way while it is unmounted.
+  const composerQueue = createComposerQueue()
   const vscode = useVSCode()
   // The working tree counts the host pushes. The button reads the current value without polling.
   const [stats, setStats] = createSignal<GitChangesStats>()
@@ -78,6 +81,12 @@ export function Chat() {
     }
     if (name === "tabPrevious") step(-1)
     if (name === "tabNext") step(1)
+    if (name !== "focusPrompt") return
+    setView("chat")
+    // The composer mounts after the view switch, so focus it on the next frame.
+    requestAnimationFrame(() =>
+      window.dispatchEvent(new CustomEvent("focusPrompt", { detail: { force: true, restore: true } })),
+    )
   })
 
   const forkSession = (id: string) => {
@@ -125,6 +134,16 @@ export function Chat() {
         if (!pending) return
         fileChecks.delete(item.id)
         pending.resolve(item.existing)
+        return
+      }
+      if (item.type === "appendContext") {
+        setView("chat")
+        composerQueue.push({ type: "attach", items: item.items })
+        return
+      }
+      if (item.type === "startPrompt") {
+        setView("chat")
+        composerQueue.push({ type: "submit", text: item.text, items: item.items ?? [] })
         return
       }
       if (item.type !== "appendReviewComments") return
@@ -265,6 +284,7 @@ export function Chat() {
           onViewTurnChanges={openTurnChanges}
           row={row}
           onReviewAppendReady={reviewQueue.ready}
+          onComposerReady={composerQueue.ready}
           draftKey={tabs.active()}
           onMissing={(id) => tabs.close(id)}
           tabStrip={

@@ -4,11 +4,14 @@ import type { FileDiffInfo, JsonValue, ModelRef } from "@opencode/client"
 import type { ToolActions } from "@kilocode/kilo-ui/message-part"
 import { ToolChildSessionProvider, type ToolChildSession } from "@kilocode/kilo-ui/tool-child-session"
 import { createEffect, createMemo, on, onCleanup, onMount, Show, type JSX } from "solid-js"
-import type { ToHost } from "../../../src/protocol"
+import type { PromptAttachment, ToHost } from "../../../src/protocol"
+import { useModelPreferences } from "../context/model-preferences"
 import { getVSCodeAPI } from "../context/vscode"
 import { TaskHeader } from "../components/chat/TaskHeader"
 import { SessionDock } from "../components/chat/SessionDockWorking"
 import type { AppendHandler, ReferenceHandler, ReviewAppendHandler } from "./append-ready"
+import type { ComposerHandle } from "./composer"
+import { toPromptFiles } from "./prompt-attachments"
 import { useV2 } from "./client"
 import { sessionMissing } from "./scope"
 import { childTools, createChildSessions } from "./child-session"
@@ -19,6 +22,8 @@ import { QuestionDock } from "./question"
 import { createSelection, Selectors } from "./selectors"
 import { createAutoApprove } from "./auto-approve"
 import { createWorking } from "./working"
+import { createPending } from "./pending"
+import { steerInterrupts, type SendMode } from "./pending-actions"
 
 export function SessionView(props: {
   session: string | undefined
@@ -47,6 +52,8 @@ export function SessionView(props: {
   onReviewAppendReady?: (append: ReviewAppendHandler | undefined) => void
   /** Receives the composer function that adds an Integrated Browser element reference. */
   onReferenceReady?: (add: ReferenceHandler | undefined) => void
+  /** Receives the composer for editor and terminal context actions, and undefined when that composer unmounts. */
+  onComposerReady?: (composer: ComposerHandle | undefined) => void
   /** Receives each prompt the server admitted, with the model it runs on. */
   onPrompted?: (sessionID: string, text: string, model: ModelRef | undefined) => void
   /** Forks the open session; the header shows the action when set. */
@@ -161,6 +168,7 @@ export function SessionView(props: {
   // Only a pending permission changes the Send label. A pending question leaves Send in place instead of Stop.
   const questioning = () => !blocked() && forms().length > 0
   const selection = createSelection(session, draftKey)
+  const preferences = useModelPreferences()
   const autoApprove = createAutoApprove()
   // The host sends the cycle action for the cycleAgentMode/cyclePreviousAgentMode commands, as in main.
   // A read-only view, for example an Agent Manager subagent, has no composer to cycle.
@@ -171,6 +179,14 @@ export function SessionView(props: {
     })
   const working = createWorking(session)
   let scrollToBottom: (() => void) | undefined
+  // The open composer's append function. Edit takes a pending prompt back into it.
+  let composer: AppendHandler | undefined
+  const pending = createPending({
+    session,
+    readOnly: () => !!props.readOnly,
+    running,
+    edit: (text) => composer?.(text, false),
+  })
   // Counts the in-flight first message too, so the dock reserves the same row on the very first send, as on main.
   // A memo, so the actions row rebuilds only when this flips.
   const hasMessages = createMemo(() => {
@@ -178,23 +194,45 @@ export function SessionView(props: {
     return !!id && (v2.data.session.message.list(id).length > 0 || working.submitting())
   })
 
-  const send = (text: string, metadata?: { [key: string]: JsonValue }) => {
+  const send = async (
+    text: string,
+    mode: SendMode = "steer",
+    input?: { items?: PromptAttachment[]; metadata?: { [key: string]: JsonValue } },
+  ) => {
     const key = draftKey()
     const id = session() ?? selection.create()
     const gate = selection.gate(id)
     // A prompt with a pending switch waits for it, so the attribution has to be read after that switch settles.
     // Without one the selection is current, and it must be read before onSession changes the session identity.
     const model = gate ? undefined : selection.model()
-    // A pending question is dismissed when the user sends instead, as in v1.
-    const pending = forms()
+    // A pending question is dismissed when the user sends instead.
+    const questions = forms()
     props.onSession(id, key)
-    for (const form of pending) {
+    for (const form of questions) {
       void v2.data.session.form.cancel({ sessionID: form.sessionID, formID: form.id }).catch(() => undefined)
     }
+    // A steer reaches a thinking or writing model only by stopping that model call; a running tool finishes first.
+    // Stop before admitting: if the prompt were admitted first, the run could start answering it at a step boundary
+    // and the stop would then end that answer. The partial response stays in the transcript and the run continues
+    // with the prompt. A failed stop still sends the prompt as a steer.
+    const waiting = new Set(v2.data.session.pending.list(id).map((item) => item.id))
+    const interrupt =
+      running() && (mode === "now" || (mode === "steer" && steerInterrupts(v2.data.session.message.list(id), waiting)))
+    if (interrupt) await v2.api.session.interrupt({ sessionID: id, resume: true }).catch((err: unknown) => v2.report(err))
     return v2.data.session
-      .prompt({ sessionID: id, text, gate, metadata })
+      .prompt({
+        sessionID: id,
+        text,
+        gate,
+        metadata: input?.metadata,
+        files: input?.items?.length ? toPromptFiles(input.items) : undefined,
+        delivery: mode === "queue" ? "queue" : "steer",
+      })
       .then(() => {
-        props.onPrompted?.(id, text, gate ? selection.attributed(id) : model)
+        const used = gate ? selection.attributed(id) : model
+        // The Most used group counts sent prompts per model, as v1.
+        if (used) preferences?.recordUsage(used.providerID, used.id)
+        props.onPrompted?.(id, text, used)
         return true
       })
       .catch((err: unknown) => {
@@ -247,6 +285,7 @@ export function SessionView(props: {
               empty={props.empty}
               onScrollToBottomReady={(fn) => (scrollToBottom = fn)}
               onViewTurnChanges={props.onViewTurnChanges}
+              pending={pending}
             />
           </div>
         </ToolChildSessionProvider>
@@ -291,9 +330,13 @@ export function SessionView(props: {
                 questioning={questioning()}
                 onSend={send}
                 onStop={stop}
-                onAppendReady={props.onAppendReady}
+                onAppendReady={(append) => {
+                  composer = append
+                  props.onAppendReady?.(append)
+                }}
                 onReviewAppendReady={props.onReviewAppendReady}
                 onReferenceReady={props.onReferenceReady}
+                onComposerReady={props.onComposerReady}
                 selectors={<Selectors selection={selection} blocked={selectorsBlocked()} />}
                 autoApprove={{ enabled: autoApprove.enabled(), onToggle: autoApprove.toggle }}
               />

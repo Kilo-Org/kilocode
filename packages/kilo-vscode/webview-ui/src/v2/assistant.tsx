@@ -216,7 +216,10 @@ export function AssistantMessage(props: {
             </button>
           </div>
         </Show>
-        <Show when={lastChunk() ? props.message.error : undefined}>{(error) => <ErrorCard error={error()} />}</Show>
+        {/* A step the user stopped is not a failure: its partial output stays and the run continues or ends. */}
+        <Show when={lastChunk() && props.message.error?.type !== "aborted" ? props.message.error : undefined}>
+          {(error) => <ErrorCard error={error()} />}
+        </Show>
       </div>
     </div>
   )

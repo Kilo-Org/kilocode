@@ -215,10 +215,12 @@ export type Ui =
   | { type: "requestDismissedNotifications" }
   | { type: "dismissNotification"; notificationId: string }
   | { type: "syncDismissedNotifications"; ids: string[] }
+  | ModelPreferenceMessage
   | { type: "trackCostSession"; sessionID: string }
   | { type: "webviewFocusChanged"; focused: boolean }
   | { type: "setLanguage"; locale: string }
   | { type: "saveImage"; dataUrl: string; filename: string }
+  | { type: "previewImage"; dataUrl: string; filename: string }
   | { type: "openProfile" }
   | { type: "openToolFile"; filePath: string; line?: number; column?: number; sessionID?: string }
   | { type: "openDiffVirtual"; diff: ToolActionDiff; initialDiffStyle?: "unified" | "split" }
@@ -229,6 +231,27 @@ export type Ui =
   | { type: "openChanges"; sessionID?: string; turnID?: string }
   /** Asks for the working tree change counts of the Changes button. The host answers with `gitChangesStats`. */
   | { type: "requestGitChangesStats" }
+
+export type ModelPreferenceRef = { providerID: string; modelID: string }
+export type ModelUsageMap = Record<string, { count: number; lastUsed: number }>
+
+/**
+ * The shared model picker preferences, as v1: favorites, the recent picks (most recent first), the usage count per
+ * `provider/model` and the remembered reasoning effort per `agent/<agent>/<provider>/<model>` ("" is Default).
+ */
+export type ModelPreferences = {
+  favorites: ModelPreferenceRef[]
+  recents: ModelPreferenceRef[]
+  usage: ModelUsageMap
+  variants: Record<string, string>
+}
+
+export type ModelPreferenceMessage =
+  | { type: "requestModelPreferences" }
+  | ({ type: "toggleFavorite"; action: "add" | "remove" } & ModelPreferenceRef)
+  | { type: "persistRecents"; recents: ModelPreferenceRef[] }
+  | ({ type: "recordModelUsage" } & ModelPreferenceRef)
+  | { type: "persistVariant"; key: string; value: string }
 
 /** Browser replies. The tab frame and cursor carry the stream, the rest carry state or inspection results. */
 export type BrowserOut =
@@ -309,6 +332,26 @@ export type FetchCustomProviderModels = {
   scope?: "global" | "project"
 }
 
+/**
+ * Context the composer attaches to the next prompt: an editor selection, a file, terminal output or an image. It goes
+ * to the server as a prompt file attachment, so the server reads the file (and slices the line range) itself.
+ */
+export type PromptAttachment = {
+  id: string
+  kind: "selection" | "file" | "terminal" | "image"
+  /** A `file:` URI, with `start` and `end` line query parameters for a range, or a base64 `data:` URL. */
+  uri: string
+  /** Chip text in the composer and attachment name in the transcript, for example `math.ts:3-9`. */
+  name: string
+  /** Extra text the model reads with the attachment, for example the workspace path and line range. */
+  description?: string
+  /** The file a `data:` URL was read from, so the model still sees where it came from. */
+  source?: string
+  /** Workspace path and 1-based line, so the chip can open the source. */
+  path?: string
+  line?: number
+}
+
 export type ToWebview =
   | BrowserOut
   | { type: "response"; id: number; status: number; statusText: string; headers: [string, string][] }
@@ -325,11 +368,17 @@ export type ToWebview =
         | "showOpenTabs"
         | "tabPrevious"
         | "tabNext"
+        | "focusPrompt"
     }
+  /** Adds context chips to the composer and focuses it. */
+  | { type: "appendContext"; items: PromptAttachment[] }
+  /** Sends a prompt in the open session at once, without touching the draft. */
+  | { type: "startPrompt"; text: string; items?: PromptAttachment[] }
   | ({ type: "navigate" } & SettingsNavigation)
   | { type: "keybindings"; bindings: Record<string, string> }
   | { type: "clipboardWriteResult"; id: string; ok: boolean; error?: string }
   | { type: "modelSelectorExpandedLoaded"; value: boolean }
+  | { type: "modelPreferencesLoaded"; value: ModelPreferences }
   | { type: "autoApproveStateLoaded"; value: boolean }
   | { type: "dismissedNotificationsLoaded"; ids: string[] }
   | { type: "webviewActiveChanged"; active: boolean }

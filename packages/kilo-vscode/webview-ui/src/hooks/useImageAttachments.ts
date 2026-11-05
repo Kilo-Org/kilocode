@@ -1,6 +1,6 @@
-/** Image attachments and path drops of the New Worktree prompt. */
+/** Image attachments and path drops shared by the composer prompts. */
 import { createSignal } from "solid-js"
-import { extractDropPaths, KILO_FILE_PATH_MIME } from "../src/utils/path-mentions"
+import { extractDropPaths, KILO_FILE_PATH_MIME } from "../utils/path-mentions"
 
 export const ACCEPTED_IMAGE_TYPES = ["image/png", "image/jpeg", "image/gif", "image/webp"]
 
@@ -25,6 +25,7 @@ function leaving(related: EventTarget | null, current: HTMLElement) {
 export function useImageAttachments() {
   const [images, setImages] = createSignal<ImageAttachment[]>([])
   const [dragging, setDragging] = createSignal(false)
+  const [pending, setPending] = createSignal(0)
   let onFilePaths: FilePathDropHandler | undefined
 
   const setFilePathDropHandler = (handler: FilePathDropHandler) => {
@@ -34,6 +35,8 @@ export function useImageAttachments() {
   const add = (file: File) => {
     if (!accepted(file.type)) return
     const reader = new FileReader()
+    setPending((count) => count + 1)
+    reader.onloadend = () => setPending((count) => count - 1)
     reader.onload = () => {
       setImages((prev) => [
         ...prev,
@@ -51,10 +54,10 @@ export function useImageAttachments() {
   const addPaths = (paths: string[]) => onFilePaths?.(paths)
 
   const handlePaste = (event: ClipboardEvent) => {
-    const items = event.clipboardData?.items
-    if (!items) return
+    const data = event.clipboardData
+    if (!data) return
     let handled = false
-    for (const item of items) {
+    for (const item of data.items) {
       if (item.kind !== "file") continue
       const file = item.getAsFile()
       if (!file) continue
@@ -63,9 +66,9 @@ export function useImageAttachments() {
         handled = true
         continue
       }
-      const path = extractDropPaths(event.clipboardData!)
-      if (path) {
-        addPaths(path)
+      const paths = extractDropPaths(data)
+      if (paths) {
+        addPaths(paths)
         handled = true
       }
     }
@@ -74,7 +77,9 @@ export function useImageAttachments() {
 
   const handleDragOver = (event: DragEvent) => {
     if (!event.dataTransfer) return
-    if (![...event.dataTransfer.types].some((type) => type === KILO_FILE_PATH_MIME || type === "Files")) return
+    const types = [...event.dataTransfer.types]
+    if (!types.some((type) => type === KILO_FILE_PATH_MIME || type === "Files" || type === "application/vnd.code.uri-list"))
+      return
     event.preventDefault()
     setDragging(true)
   }
@@ -97,17 +102,21 @@ export function useImageAttachments() {
   }
 
   const remove = (id: string) => setImages((prev) => prev.filter((image) => image.id !== id))
+  const clear = () => setImages([])
   const replace = (value: ImageAttachment[]) => setImages(value)
 
   return {
     images,
     dragging,
+    pending,
     setFilePathDropHandler,
     handlePaste,
     handleDragOver,
     handleDragLeave,
     handleDrop,
+    add,
     remove,
+    clear,
     replace,
   }
 }
