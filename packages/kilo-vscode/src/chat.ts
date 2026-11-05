@@ -41,6 +41,9 @@ import { resolveKiloProfile } from "./settings-paths"
 import { promptKeybindings, watchKeybindings } from "./prompt-keybindings"
 import { readDisplaySettings } from "./display-settings"
 import { createSpeechToTextHost } from "./speech-to-text/host"
+import { setSidebarSession, sidebarSession } from "./browser-tab/sidebar-session"
+import { openBrowserLink } from "./browser-links"
+import { DEVTOOLS } from "./browser-tab/html"
 import { documentExists, isMarkdownPath } from "./documents/document-reader"
 import { openToolFile, type ToolDiff } from "./tool-diff"
 
@@ -60,6 +63,8 @@ export function chat(input: {
   directory: string
   trackCostSession: (sessionID: string) => void
   diff: ToolDiff
+  /** Opens a chat web link in the Integrated Browser. Returns false when the tab cannot take it. */
+  openBrowser?: (sessionId: string, url: string) => boolean
   /** The editor tab of the Documents panel, created after this view so it can post comments here. */
   documents?: () => DocumentViewerProvider | undefined
 }) {
@@ -123,6 +128,8 @@ export function chat(input: {
         if (state.view !== view) return
         state.view = undefined
         state.loaded = false
+        // A closed sidebar shows no session, so the Agent Manager may claim it again.
+        setSidebarSession(undefined)
       })
     },
   }
@@ -160,6 +167,8 @@ export function wire(input: {
   globals?: Record<string, unknown>
   /** The Agent Manager settings handler the Settings panel shares with the provider. */
   agentManager?: () => SettingsHandler
+  /** Opens a chat web link in the Integrated Browser. Returns false when the tab cannot take it. */
+  openBrowser?: (sessionId: string, url: string) => boolean
   /** The editor tab that previews Markdown files, when this view has one. */
   documents?: () => DocumentViewerProvider | undefined
 }) {
@@ -170,7 +179,14 @@ export function wire(input: {
   const link = bridge({
     target: () => input.server.get(),
     post: (message) => void webview.postMessage(message),
-    open: (url) => void env.openExternal(Uri.parse(url)),
+    open: (url, external) => {
+      const session = sidebarSession()
+      // Without an in-app opener the link goes to the system browser, which is what shift-click asks for.
+      void openBrowserLink(
+        url,
+        external ? undefined : () => (session ? (input.openBrowser?.(session, url) ?? false) : false),
+      )
+    },
     fetch: local,
   })
   const post = (message: ToWebview) => void webview.postMessage(message)
@@ -351,6 +367,7 @@ export function wire(input: {
     input.onMessage?.()
     if (input.handle?.(message) || speech.handle(message)) return
     if (message.type === "fetch" || message.type === "abort" || message.type === "open") return link.receive(message)
+    if (message.type === "sidebar.session") return setSidebarSession(message.sessionId)
     if (message.type === "trackCostSession") return input.trackCostSession?.(message.sessionID)
     if (isSurface(message)) return handleSurface(message)
     // A chat recovery link opens the Settings panel at the row that owns the problem.
@@ -452,6 +469,8 @@ export function html(input: {
     `font-src ${input.csp}`,
     `connect-src ${input.csp}`,
     `img-src ${input.csp} data: https:`,
+    // The Agent Manager browser panel embeds DevTools for the open page.
+    ...(input.view === "agentManager" ? [`frame-src ${DEVTOOLS}`] : []),
   ].join("; ")
   const vars = SIZES.map((size) => `--kilo-font-size-${size}: ${(input.size * size) / 13}px;`).join(" ")
   const globals = {
@@ -460,7 +479,6 @@ export function html(input: {
     KILO_MARKDOWN_SHIKI_WORKER_URI: input.markdown,
     KILO_TOP_BAR: false,
     KILO_TOP_BAR_SURFACE: "sidebar_title",
-    KILO_BROWSER_AUTOMATION: false,
     KILO_AGENT_MANAGER_INTRO_DISMISSED: true,
     KILO_SETTINGS: input.settings,
     KILO_EXTENSION_VERSION: input.version,

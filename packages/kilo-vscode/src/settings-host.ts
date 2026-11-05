@@ -43,6 +43,12 @@ export const KILO_SETTING_KEYS = [
   "agentManager.worktreePool",
   "agentManager.terminalButtonDestination",
   "agentManager.pushFixes",
+  "integratedBrowser",
+  "agentManager.browser.useSystemChrome",
+  "agentManager.browser.openLinksIn",
+  "browserAutomation.enabled",
+  "browserAutomation.useSystemChrome",
+  "browserAutomation.headless",
 ] as const
 
 /** `kilo-code.v2.fontSize` when set, otherwise `editor.fontSize`, clamped to the v1 slider range. */

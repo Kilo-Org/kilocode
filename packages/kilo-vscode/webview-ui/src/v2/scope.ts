@@ -23,7 +23,8 @@ export function createV2Scope(input: {
   bindings: Accessor<Record<string, string>>
   onCommand: (handler: (name: string) => void) => void
   /** Opens an external URL through the host. */
-  open: (url: string) => void
+  /** Opens a web link. `external` (shift-click) asks for the system browser instead of the Integrated Browser. */
+  open: (url: string, external?: boolean) => void
 }) {
   const api = input.api
   const directory = input.directory

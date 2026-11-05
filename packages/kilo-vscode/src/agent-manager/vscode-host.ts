@@ -12,6 +12,7 @@ import type { Host, PanelContext, OutputHandle, Disposable } from "./host"
 import type { PRMergeMethod } from "./types"
 import { repoName, validateCloneUrl } from "./project/clone"
 import { checkoutRoot, samePath } from "./project/paths"
+import { integratedBrowserEnabled } from "../services/browser-automation/chrome-setting"
 import { keybindings, watchKeybindings } from "../kilo-provider/shortcut-context"
 import { createPanel } from "./panel"
 import type { Manager } from "../server"
@@ -212,6 +213,21 @@ export class VscodeHost implements Host {
 
   isTrusted(): boolean {
     return vscode.workspace.isTrusted
+  }
+
+  browserAutomation(): boolean {
+    return integratedBrowserEnabled() && vscode.workspace.isTrusted
+  }
+
+  async approveBrowserNavigation(origin: string): Promise<boolean> {
+    if (!vscode.workspace.isTrusted) return false
+    const allow = vscode.l10n.t("Allow")
+    const answer = await vscode.window.showWarningMessage(
+      vscode.l10n.t("Allow the Integrated Browser to navigate to {origin}?", { origin }),
+      { modal: true },
+      allow,
+    )
+    return answer === allow
   }
 
   autoBranchNaming(): { enabled: boolean; prefix: string } {
