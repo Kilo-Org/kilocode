@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test"
-import { pendingActions, sendMode } from "../webview-ui/src/v2/pending-actions"
+import { pendingActions, sendMode, steerInterrupts } from "../webview-ui/src/v2/pending-actions"
 
 const key = (input: { alt?: boolean; ctrl?: boolean; meta?: boolean } = {}) => ({
   altKey: !!input.alt,
@@ -44,5 +44,23 @@ describe("pendingActions", () => {
   test("a prompt with attachments cannot be edited in the text composer", () => {
     expect(pendingActions("steering", false)).toEqual(["now", "queue", "delete"])
     expect(pendingActions("queued", false)).toEqual(["steer", "delete"])
+  })
+})
+
+describe("steerInterrupts", () => {
+  const tool = (status: string) => ({ type: "tool", state: { status } })
+
+  test("a thinking or writing model is stopped so the steer reaches it now", () => {
+    expect(steerInterrupts(undefined)).toBe(true)
+    expect(steerInterrupts({ type: "user" })).toBe(true)
+    expect(steerInterrupts({ type: "assistant", content: [{ type: "reasoning" }] })).toBe(true)
+    expect(steerInterrupts({ type: "assistant", content: [{ type: "text" }, tool("streaming")] })).toBe(true)
+    expect(steerInterrupts({ type: "assistant", content: [tool("completed")] })).toBe(true)
+  })
+
+  test("a running tool or compaction finishes before the steer is delivered", () => {
+    expect(steerInterrupts({ type: "assistant", content: [tool("completed"), tool("running")] })).toBe(false)
+    expect(steerInterrupts({ type: "compaction", status: "running" })).toBe(false)
+    expect(steerInterrupts({ type: "compaction", status: "completed" })).toBe(true)
   })
 })

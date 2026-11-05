@@ -27,6 +27,7 @@ import { cleanEnhancedPrompt, enhancePromptRequest, normalizeEnhancePromptErrorM
 import { insertSpacedText } from "./prompt-speech"
 import { PromptOverflow, type OverflowItem } from "./prompt-overflow"
 import { sendMode, sendShortcuts, type SendMode } from "./pending-actions"
+import { RunningHint } from "./running-hint"
 
 // Drafts live outside the component so a composer remounted for another session restores its own text, as v1 did.
 // The key is the session id, or the pending tab id before a first prompt creates the session.
@@ -111,11 +112,39 @@ export function PromptInput(props: {
     if (speech.state() === "recording") return language.t("prompt.action.send.recording")
     return language.t("prompt.action.send")
   }
-  // The tooltip names the busy-send shortcuts. The accessible name stays "Send".
-  const sendHint = () =>
-    props.running && !props.blocked && speech.state() !== "recording"
-      ? language.t("prompt.action.send.running", sendShortcuts())
-      : sendLabel()
+  // While the agent runs, a held modifier previews its send action on the Send button, so the user sees what Enter or
+  // a click will do before pressing it. The accessible name stays "Send".
+  const [held, setHeld] = createSignal<SendMode>("steer")
+  const hold = (event: KeyboardEvent) => setHeld(sendMode(event, true))
+  const release = () => setHeld("steer")
+  onMount(() => {
+    window.addEventListener("keydown", hold)
+    window.addEventListener("keyup", hold)
+    window.addEventListener("blur", release)
+  })
+  onCleanup(() => {
+    window.removeEventListener("keydown", hold)
+    window.removeEventListener("keyup", hold)
+    window.removeEventListener("blur", release)
+  })
+  // An empty composer during a run shows the send shortcuts as keycaps in place of the placeholder.
+  const runningHint = () =>
+    !!props.running &&
+    !props.questioning &&
+    !text() &&
+    !browsers().length &&
+    speech.state() !== "recording" &&
+    v2.connection.status() === "connected"
+  const busySend = () => props.running && !props.blocked && speech.state() !== "recording"
+  const sendAction = (): SendMode => (busySend() ? held() : "steer")
+  const sendIcon = () => ({ steer: "send", queue: "clock", now: "arrow-right" } as const)[sendAction()]
+  const sendHint = () => {
+    if (!busySend()) return sendLabel()
+    const keys = sendShortcuts()
+    if (held() === "queue") return language.t("prompt.action.queue", { key: keys.queue })
+    if (held() === "now") return language.t("prompt.action.stopAndSend", { key: keys.now })
+    return language.t("prompt.action.steer", keys)
+  }
   // Stop replaces Send while the agent runs and the draft is empty. Typing during a run turns it back into Send,
   // whose prompt steers the running turn at its next step. A pending question is not running work. Stop is not shown
   // while the prompt is still being admitted, because an unadmitted prompt has no execution for Stop to interrupt.
@@ -485,14 +514,19 @@ export function PromptInput(props: {
               <br />
             </Show>
           </div>
+          <Show when={runningHint()}>
+            <RunningHint />
+          </Show>
           <textarea
             ref={(el) => (refs.input = el)}
             class="prompt-input"
-            classList={{ "prompt-input--disabled": props.disabled }}
+            classList={{ "prompt-input--disabled": props.disabled, "prompt-input--keycaps": runningHint() }}
             placeholder={
-              v2.connection.status() === "connected"
-                ? language.t("prompt.placeholder.plain")
-                : language.t("prompt.placeholder.connecting")
+              v2.connection.status() !== "connected"
+                ? language.t("prompt.placeholder.connecting")
+                : runningHint()
+                  ? language.t("prompt.placeholder.running", sendShortcuts())
+                  : language.t("prompt.placeholder.plain")
             }
             aria-label={language.t("prompt.placeholder.plain")}
             value={text()}
@@ -584,10 +618,10 @@ export function PromptInput(props: {
               fallback={
                 <Tooltip value={sendHint()} placement="top" openDelay={0}>
                   <IconButton
-                    icon="send"
+                    icon={sendIcon()}
                     variant="ghost"
                     size="small"
-                    onClick={() => send()}
+                    onClick={(event) => send(sendMode(event, props.running))}
                     disabled={!canSend()}
                     aria-label={sendLabel()}
                   />

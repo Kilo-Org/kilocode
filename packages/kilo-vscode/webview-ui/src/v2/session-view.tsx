@@ -20,7 +20,7 @@ import { createSelection, Selectors } from "./selectors"
 import { createAutoApprove } from "./auto-approve"
 import { createWorking } from "./working"
 import { createPending } from "./pending"
-import type { SendMode } from "./pending-actions"
+import { steerInterrupts, type SendMode } from "./pending-actions"
 
 export function SessionView(props: {
   session: string | undefined
@@ -202,10 +202,13 @@ export function SessionView(props: {
     for (const form of questions) {
       void v2.data.session.form.cancel({ sessionID: form.sessionID, formID: form.id }).catch(() => undefined)
     }
+    // A steer reaches a thinking or writing model only by stopping that model call; a running tool finishes first.
     // Stop before admitting: if the prompt were admitted first, the run could start answering it at a step boundary
-    // and the stop would then end that answer. A failed stop still sends the prompt as a steer.
-    if (mode === "now" && running())
-      await v2.api.session.interrupt({ sessionID: id, resume: true }).catch((err: unknown) => v2.report(err))
+    // and the stop would then end that answer. The partial response stays in the transcript and the run continues
+    // with the prompt. A failed stop still sends the prompt as a steer.
+    const interrupt =
+      running() && (mode === "now" || (mode === "steer" && steerInterrupts(v2.data.session.message.list(id).at(-1))))
+    if (interrupt) await v2.api.session.interrupt({ sessionID: id, resume: true }).catch((err: unknown) => v2.report(err))
     return v2.data.session
       .prompt({ sessionID: id, text, gate, metadata, delivery: mode === "queue" ? "queue" : "steer" })
       .then(() => {
