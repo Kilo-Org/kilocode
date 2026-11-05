@@ -403,9 +403,8 @@ export async function activate(context: vscode.ExtensionContext) {
   provider.setContinueInWorktreeHandler((sessionId, progress) =>
     agentManagerProvider.continueFromSidebar(sessionId, progress),
   )
-  provider.setCreateWorktreeHandler(
-    (baseBranch, branchName) => agentManagerProvider.createFromSidebar(baseBranch, branchName),
-    (directory) => agentManagerProvider.openUpsellTab(directory),
+  provider.setCreateWorktreeHandler((baseBranch, branchName) =>
+    agentManagerProvider.createFromSidebar(baseBranch, branchName),
   )
   // Chat web links open in the Integrated Browser tab for the current session.
   const openLink = (url: string, sessionId?: string) => (sessionId ? browserTabProvider.openUrl(sessionId, url) : false)
@@ -500,9 +499,8 @@ export async function activate(context: vscode.ExtensionContext) {
     tabProvider.setContinueInWorktreeHandler((sessionId, progress) =>
       agentManagerProvider.continueFromSidebar(sessionId, progress),
     )
-    tabProvider.setCreateWorktreeHandler(
-      (baseBranch, branchName) => agentManagerProvider.createFromSidebar(baseBranch, branchName),
-      (directory) => agentManagerProvider.openUpsellTab(directory),
+    tabProvider.setCreateWorktreeHandler((baseBranch, branchName) =>
+      agentManagerProvider.createFromSidebar(baseBranch, branchName),
     )
     tabProvider.setOpenLinkHandler(openLink)
     tabProvider.setDiffVirtualProvider(diffVirtualProvider)
@@ -682,6 +680,7 @@ export async function activate(context: vscode.ExtensionContext) {
       taskTarget().postMessage({ type: "action", action: "closeAllTasks" })
     }),
     vscode.commands.registerCommand("kilo-code.new.agentManagerOpen", () => {
+      provider.rememberAgentManagerOpen()
       agentManagerProvider.openPanel()
     }),
     vscode.commands.registerCommand("kilo-code.new.marketplaceButtonClicked", (directory?: string | null) => {

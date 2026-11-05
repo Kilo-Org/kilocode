@@ -398,11 +398,16 @@ export const dict = {
   "common.edit": "Bewerken",
   "common.loadMore": "Meer laden",
 
-  "sidebar.upsell.title": "Voer een andere taak parallel uit",
-  "sidebar.upsell.body":
-    "Agent Manager geeft elke taak een eigen worktree, zodat de wijzigingen uit deze chat onaangeroerd blijven.",
+  "sidebar.upsell.title": "Zet een vloot Kilo-agenten aan het werk",
+  "sidebar.upsell.body": "Je hoeft niet te wachten tot een taak klaar is.",
+  "sidebar.upsell.parallel": "Voer meerdere sessies tegelijk uit",
+  "sidebar.upsell.worktree": "Geef elke sessie een eigen worktree zodat wijzigingen niet conflicteren",
+  "sidebar.upsell.attention": "Zie in één oogopslag welke sessie je nodig heeft",
   "sidebar.upsell.open": "Agent Manager openen",
-  "sidebar.upsell.dismiss": "Negeren",
+  "sidebar.upsell.later": "Niet nu",
+  "sidebar.upsell.never": "Dit niet meer tonen",
+  "sidebar.upsell.confirmation": "Begrepen. We zullen Agent Manager hier niet meer voorstellen.",
+  "sidebar.upsell.undo": "Ongedaan maken",
   "sidebar.settings": "Instellingen",
 
   "sound.option.alert01": "Melding 01",

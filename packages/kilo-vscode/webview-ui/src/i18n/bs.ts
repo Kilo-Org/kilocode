@@ -395,11 +395,16 @@ export const dict = {
   "common.edit": "Uredi",
   "common.loadMore": "Učitaj još",
 
-  "sidebar.upsell.title": "Pokrenite drugi zadatak paralelno",
-  "sidebar.upsell.body":
-    "Agent Manager svakom zadatku daje vlastito radno stablo, tako da neće dirati izmjene iz ovog razgovora.",
+  "sidebar.upsell.title": "Zaposlite flotu Kilo agenata",
+  "sidebar.upsell.body": "Ne morate čekati da se jedan zadatak završi.",
+  "sidebar.upsell.parallel": "Pokrenite više sesija istovremeno",
+  "sidebar.upsell.worktree": "Dodijelite svakoj vlastito radno stablo kako se izmjene ne bi sukobljavale",
+  "sidebar.upsell.attention": "Na prvi pogled vidite koja vas sesija treba",
   "sidebar.upsell.open": "Otvori Agent Manager",
-  "sidebar.upsell.dismiss": "Odbaci",
+  "sidebar.upsell.later": "Ne sada",
+  "sidebar.upsell.never": "Ne prikazuj ovo ponovo",
+  "sidebar.upsell.confirmation": "Razumijemo. Nećemo više predlagati Agent Manager ovdje.",
+  "sidebar.upsell.undo": "Poništi",
   "sidebar.settings": "Postavke",
 
   "sound.option.alert01": "Upozorenje 01",

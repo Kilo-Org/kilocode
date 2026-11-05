@@ -397,11 +397,16 @@ export const dict = {
   "common.edit": "Редагувати",
   "common.loadMore": "Завантажити більше",
 
-  "sidebar.upsell.title": "Запустіть інше завдання паралельно",
-  "sidebar.upsell.body":
-    "Agent Manager надає кожному завданню окреме робоче дерево, тож воно не зачепить зміни з цього чату.",
+  "sidebar.upsell.title": "Залучіть до роботи цілу флотилію агентів Kilo",
+  "sidebar.upsell.body": "Не потрібно чекати завершення одного завдання.",
+  "sidebar.upsell.parallel": "Запускайте кілька сесій одночасно",
+  "sidebar.upsell.worktree": "Надайте кожній окреме робоче дерево, щоб зміни не конфліктували",
+  "sidebar.upsell.attention": "Одразу бачте, яка сесія потребує вашої уваги",
   "sidebar.upsell.open": "Відкрити Agent Manager",
-  "sidebar.upsell.dismiss": "Закрити",
+  "sidebar.upsell.later": "Не зараз",
+  "sidebar.upsell.never": "Більше не показувати",
+  "sidebar.upsell.confirmation": "Зрозуміло. Ми більше не пропонуватимемо Agent Manager тут.",
+  "sidebar.upsell.undo": "Скасувати",
   "sidebar.settings": "Налаштування",
 
   "sound.option.alert01": "Сигнал 01",

@@ -394,11 +394,16 @@ export const dict = {
   "common.edit": "편집",
   "common.loadMore": "더 불러오기",
 
-  "sidebar.upsell.title": "다른 작업을 병렬로 실행",
-  "sidebar.upsell.body":
-    "에이전트 관리자는 각 작업에 전용 worktree를 할당하므로 이 채팅의 변경 사항에 영향을 주지 않습니다.",
-  "sidebar.upsell.open": "에이전트 관리자 열기",
-  "sidebar.upsell.dismiss": "닫기",
+  "sidebar.upsell.title": "Kilo 에이전트 군단을 가동하세요",
+  "sidebar.upsell.body": "작업 하나가 끝날 때까지 기다릴 필요가 없습니다.",
+  "sidebar.upsell.parallel": "여러 세션을 동시에 실행하세요",
+  "sidebar.upsell.worktree": "각 세션에 전용 worktree를 할당해 변경 사항의 충돌을 방지하세요",
+  "sidebar.upsell.attention": "어떤 세션에 도움이 필요한지 한눈에 확인하세요",
+  "sidebar.upsell.open": "Agent Manager 열기",
+  "sidebar.upsell.later": "나중에",
+  "sidebar.upsell.never": "다시 표시하지 않기",
+  "sidebar.upsell.confirmation": "알겠습니다. 여기서 Agent Manager를 다시 추천하지 않겠습니다.",
+  "sidebar.upsell.undo": "실행 취소",
   "sidebar.settings": "설정",
 
   "sound.option.alert01": "알림 01",

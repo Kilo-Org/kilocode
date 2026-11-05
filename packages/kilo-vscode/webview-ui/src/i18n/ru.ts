@@ -392,11 +392,16 @@ export const dict = {
   "common.edit": "Редактировать",
   "common.loadMore": "Загрузить ещё",
 
-  "sidebar.upsell.title": "Запустите другую задачу параллельно",
-  "sidebar.upsell.body":
-    "Agent Manager выделяет каждой задаче отдельное рабочее дерево, поэтому она не затронет изменения из этого чата.",
+  "sidebar.upsell.title": "Задействуйте целую флотилию агентов Kilo",
+  "sidebar.upsell.body": "Не нужно ждать завершения одной задачи.",
+  "sidebar.upsell.parallel": "Запускайте несколько сессий одновременно",
+  "sidebar.upsell.worktree": "Выделите каждой отдельное рабочее дерево, чтобы изменения не конфликтовали",
+  "sidebar.upsell.attention": "Сразу видите, какой сессии нужно ваше внимание",
   "sidebar.upsell.open": "Открыть Agent Manager",
-  "sidebar.upsell.dismiss": "Закрыть",
+  "sidebar.upsell.later": "Не сейчас",
+  "sidebar.upsell.never": "Больше не показывать",
+  "sidebar.upsell.confirmation": "Понятно. Мы больше не будем предлагать Agent Manager здесь.",
+  "sidebar.upsell.undo": "Отменить",
   "sidebar.settings": "Настройки",
 
   "sound.option.alert01": "Alert 01",

@@ -400,11 +400,16 @@ export const dict = {
   "common.edit": "Rediger",
   "common.loadMore": "Last flere",
 
-  "sidebar.upsell.title": "Kjør en annen oppgave parallelt",
-  "sidebar.upsell.body":
-    "Agent Manager gir hver oppgave sitt eget worktree, slik at den ikke berører endringene fra denne chatten.",
+  "sidebar.upsell.title": "Sett en flåte av Kilo-agenter i arbeid",
+  "sidebar.upsell.body": "Du trenger ikke vente på at én oppgave blir ferdig.",
+  "sidebar.upsell.parallel": "Kjør flere økter samtidig",
+  "sidebar.upsell.worktree": "Gi hver økt sitt eget worktree, slik at endringene ikke kommer i konflikt",
+  "sidebar.upsell.attention": "Se med et øyekast hvilken økt som trenger deg",
   "sidebar.upsell.open": "Åpne Agent Manager",
-  "sidebar.upsell.dismiss": "Avvis",
+  "sidebar.upsell.later": "Ikke nå",
+  "sidebar.upsell.never": "Ikke vis dette igjen",
+  "sidebar.upsell.confirmation": "Forstått. Vi vil ikke foreslå Agent Manager her igjen.",
+  "sidebar.upsell.undo": "Angre",
   "sidebar.settings": "Innstillinger",
 
   "sound.option.alert01": "Varsel 01",

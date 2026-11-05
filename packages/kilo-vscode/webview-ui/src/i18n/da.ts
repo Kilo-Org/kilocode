@@ -393,11 +393,16 @@ export const dict = {
   "common.edit": "Rediger",
   "common.loadMore": "Indlæs flere",
 
-  "sidebar.upsell.title": "Kør en anden opgave parallelt",
-  "sidebar.upsell.body":
-    "Agent Manager giver hver opgave sit eget worktree, så den ikke berører ændringerne fra denne chat.",
+  "sidebar.upsell.title": "Sæt en flåde af Kilo-agenter i arbejde",
+  "sidebar.upsell.body": "Du behøver ikke vente på, at én opgave bliver færdig.",
+  "sidebar.upsell.parallel": "Kør flere sessioner på samme tid",
+  "sidebar.upsell.worktree": "Giv hver session sit eget worktree, så ændringerne ikke kommer i konflikt",
+  "sidebar.upsell.attention": "Se med et blik, hvilken session der har brug for dig",
   "sidebar.upsell.open": "Åbn Agent Manager",
-  "sidebar.upsell.dismiss": "Afvis",
+  "sidebar.upsell.later": "Ikke nu",
+  "sidebar.upsell.never": "Vis ikke dette igen",
+  "sidebar.upsell.confirmation": "Forstået. Vi foreslår ikke Agent Manager her igen.",
+  "sidebar.upsell.undo": "Fortryd",
   "sidebar.settings": "Indstillinger",
 
   "sound.option.alert01": "Alarm 01",

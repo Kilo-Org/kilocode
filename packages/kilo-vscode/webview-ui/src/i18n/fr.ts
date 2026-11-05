@@ -399,11 +399,16 @@ export const dict = {
   "common.edit": "Modifier",
   "common.loadMore": "Charger plus",
 
-  "sidebar.upsell.title": "Exécutez une autre tâche en parallèle",
-  "sidebar.upsell.body":
-    "Agent Manager attribue à chaque tâche son propre worktree, pour qu'elle ne touche pas aux modifications de cette conversation.",
+  "sidebar.upsell.title": "Mettez une flotte d'agents Kilo au travail",
+  "sidebar.upsell.body": "Vous n'avez pas à attendre qu'une tâche se termine.",
+  "sidebar.upsell.parallel": "Exécutez plusieurs sessions en même temps",
+  "sidebar.upsell.worktree": "Attribuez à chacune son propre worktree pour éviter les conflits entre modifications",
+  "sidebar.upsell.attention": "Voyez en un coup d'œil laquelle a besoin de vous",
   "sidebar.upsell.open": "Ouvrir Agent Manager",
-  "sidebar.upsell.dismiss": "Ignorer",
+  "sidebar.upsell.later": "Pas maintenant",
+  "sidebar.upsell.never": "Ne plus afficher ceci",
+  "sidebar.upsell.confirmation": "Compris. Nous ne vous suggérerons plus Agent Manager ici.",
+  "sidebar.upsell.undo": "Annuler",
   "sidebar.settings": "Paramètres",
 
   "settings.indexing.dimension.description":

@@ -89,7 +89,6 @@ import { handleProjectMessage, routeProjectSession, type ProjectMessageDeps } fr
 import { createProjectWiring, type ProjectWiring } from "./project/wiring"
 import { ProjectScope } from "./project/scope"
 import { revealManagedSession } from "./reveal-session"
-import { openUpsellTab, type UpsellDeps } from "./upsell"
 import { resolveWorktreeFile } from "./worktree-file-path"
 import type { AgentManagerOutMessage, AgentManagerInMessage } from "./types"
 import type { Host, PanelContext, OutputHandle, Disposable } from "./host"
@@ -1712,17 +1711,13 @@ export class AgentManagerProvider implements Disposable {
     return this.panel?.sessions.getSessionDirectories() ?? new Map()
   }
 
-  /** Reveal an owned session, or return false so the caller can fall back. */
+  /**
+   * Reveal a session Agent Manager owns: activate its project, open the panel,
+   * and select its worktree and session tab. False means Agent Manager does not
+   * own the session (or its worktree is gone) and the caller should fall back.
+   */
   public revealSession(sessionId: string): Promise<boolean> {
-    return revealManagedSession(sessionId, this.contexts, this.revealDeps())
-  }
-
-  public openUpsellTab(directory: string | undefined): Promise<boolean> {
-    return openUpsellTab(directory, this.contexts, this.revealDeps())
-  }
-
-  private revealDeps(): UpsellDeps {
-    return {
+    return revealManagedSession(sessionId, this.contexts, {
       directories: () => this.getSessionDirectories(),
       activate: (ctx) => this.activateProject(ctx),
       projects: () => this.pushProjects(),
@@ -1730,8 +1725,7 @@ export class AgentManagerProvider implements Disposable {
       state: () => this.waitForStateReady("revealSession"),
       ready: () => this.waitForReady(),
       post: (message) => this.panel?.postMessage(message),
-      error: (message) => this.host.showError(message),
-    }
+    })
   }
 
   public getWorktreeDirectories(): string[] {

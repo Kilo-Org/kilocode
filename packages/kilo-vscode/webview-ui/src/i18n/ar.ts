@@ -386,11 +386,16 @@ export const dict = {
   "common.edit": "تحرير",
   "common.loadMore": "تحميل المزيد",
 
-  "sidebar.upsell.title": "شغّل مهمة أخرى بالتوازي",
-  "sidebar.upsell.body":
-    "يمنح مدير الوكلاء كل مهمة شجرة عمل خاصة بها، لذا لن تمسّ التغييرات التي أُجريت في هذه المحادثة.",
-  "sidebar.upsell.open": "فتح مدير الوكلاء",
-  "sidebar.upsell.dismiss": "إغلاق",
+  "sidebar.upsell.title": "شغّل أسطولًا من وكلاء Kilo",
+  "sidebar.upsell.body": "لا داعي لانتظار انتهاء مهمة واحدة.",
+  "sidebar.upsell.parallel": "شغّل عدة جلسات في الوقت نفسه",
+  "sidebar.upsell.worktree": "خصّص لكل جلسة شجرة عمل مستقلة حتى لا تتعارض التغييرات",
+  "sidebar.upsell.attention": "اعرف بنظرة سريعة أي جلسة تحتاج إليك",
+  "sidebar.upsell.open": "فتح Agent Manager",
+  "sidebar.upsell.later": "ليس الآن",
+  "sidebar.upsell.never": "عدم إظهار هذا مجددًا",
+  "sidebar.upsell.confirmation": "حسنًا. لن نقترح Agent Manager هنا مجددًا.",
+  "sidebar.upsell.undo": "تراجع",
   "sidebar.settings": "الإعدادات",
 
   "sound.option.alert01": "تنبيه 01",

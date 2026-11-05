@@ -1447,10 +1447,6 @@ const AgentManagerContent: Component = () => {
       }
 
       if (msg.type === "agentManager.focusContextRequested") focusCtl.report()
-      if (msg.type === "agentManager.openUpsellTab") {
-        if (isCurrent(msg, currentProjectId())) setUpsell(msg.projectId)
-        return
-      }
       if (msg.type === "agentManager.revealSession") {
         if (currentProjectId() !== msg.projectId) return
         if (msg.worktreeId) focusManagedSession(msg.worktreeId, msg.sessionId, true)
@@ -1801,7 +1797,6 @@ const AgentManagerContent: Component = () => {
     activeProjectId,
     activity,
   })
-  const [upsell, setUpsell] = createSignal<string>()
   const intro = createIntro({
     hints: hints.list,
     base: repoDefaultBranch,
@@ -1810,9 +1805,9 @@ const AgentManagerContent: Component = () => {
     onCreateWorktree: showNewWorktreeDialog,
     onSelectSession: selectChatSession,
     onShowHistory: () => openHistory(),
-    reveal: (fresh) => {
+    reveal: () => {
       const id = session.currentSessionID() ?? activePendingId()
-      if (fresh || !id || session.messages().length || session.loading() || readOnly() || settingUpSelection()) {
+      if (!id || session.messages().length || session.loading() || readOnly() || settingUpSelection()) {
         selectLocal()
         addPendingTab()
       }
@@ -1821,15 +1816,6 @@ const AgentManagerContent: Component = () => {
       setReviewActive(false)
     },
     focus: requestChatFocus,
-  })
-  createEffect(() => {
-    const project = upsell()
-    if (!project) return
-    if (project !== currentProjectId()) return setUpsell(undefined)
-    if (!loaded()) return
-    // Wait for both session and worktree hydration before changing the draft.
-    untrack(() => intro.draft())
-    setUpsell(undefined)
   })
   const handleForkSession = (sessionId: string, messageId?: string) => {
     const sel = selection()

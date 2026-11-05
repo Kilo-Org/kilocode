@@ -1745,7 +1745,11 @@ export interface DismissAgentMigrationBannerMessage {
 }
 
 export type WebviewMessage =
-  | { type: "requestAgentManagerUpsell" | "dismissAgentManagerUpsell" | "openAgentManagerUpsell" }
+  | {
+      type: "agentManagerUpsell"
+      request: string
+      action?: import("../../../../src/shared/agent-manager-upsell").UpsellAction
+    }
   | import("./agent-manager").BaseUpdateRequest
   | PRMergeRequest
   | { type: "sessionActivity"; state: Activity }

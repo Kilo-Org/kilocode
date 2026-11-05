@@ -403,11 +403,16 @@ export const dict = {
   "common.edit": "Bearbeiten",
   "common.loadMore": "Mehr laden",
 
-  "sidebar.upsell.title": "Eine weitere Aufgabe parallel ausführen",
-  "sidebar.upsell.body":
-    "Agent Manager gibt jeder Aufgabe einen eigenen Worktree, sodass sie die Änderungen aus diesem Chat nicht anfasst.",
+  "sidebar.upsell.title": "Setze eine Flotte von Kilo-Agenten ein",
+  "sidebar.upsell.body": "Du musst nicht warten, bis eine Aufgabe fertig ist.",
+  "sidebar.upsell.parallel": "Führe mehrere Sitzungen gleichzeitig aus",
+  "sidebar.upsell.worktree": "Gib jeder Sitzung einen eigenen Worktree, damit Änderungen nicht in Konflikt geraten",
+  "sidebar.upsell.attention": "Sieh auf einen Blick, welche Sitzung dich braucht",
   "sidebar.upsell.open": "Agent Manager öffnen",
-  "sidebar.upsell.dismiss": "Ausblenden",
+  "sidebar.upsell.later": "Nicht jetzt",
+  "sidebar.upsell.never": "Nicht mehr anzeigen",
+  "sidebar.upsell.confirmation": "Verstanden. Wir werden Agent Manager hier nicht mehr vorschlagen.",
+  "sidebar.upsell.undo": "Rückgängig",
   "sidebar.settings": "Einstellungen",
 
   "sound.option.alert01": "Alarm 01",

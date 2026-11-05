@@ -21,7 +21,7 @@ import type { ManagerContext } from "../../utils/shortcut-hint"
 import { PermissionDock } from "./PermissionDock"
 import { SessionDock } from "./SessionDock"
 import { AgentManagerUpsell } from "./AgentManagerUpsell"
-import { AGENT_MANAGER_UPSELL, showAgentManagerUpsell } from "./agent-manager-upsell"
+import { AGENT_MANAGER_UPSELL, sidebarTurns } from "./agent-manager-upsell"
 import { StartupErrorBanner } from "./StartupErrorBanner"
 import { SessionTabStrip } from "./SessionTabStrip"
 import { useSession } from "../../context/session"
@@ -80,28 +80,17 @@ export const ChatView: Component<ChatViewProps> = (props) => {
   // Show "Continue in Worktree": only when explicitly enabled via prop
   const canContinueInWorktree = () => props.continueInWorktree === true
   const ownsPrompts = () => props.interactivePrompts !== false
-  const [dismissed, setDismissed] = createSignal(true)
-  const upsell = createMemo(() =>
-    showAgentManagerUpsell({
-      enabled: AGENT_MANAGER_UPSELL,
-      sidebar: isSidebar(),
-      git: server.gitInstalled(),
-      status: session.status(),
+  const observed = sidebarTurns()
+  const upsell = createMemo(() => {
+    const turn = session.userMessages().at(-1)
+    return observed({
+      id: session.currentSessionID(),
+      turn: turn?.id,
+      busy: session.submitting() || session.status() !== "idle",
       reason: session.closeReason(),
-      files: session.currentSession()?.summary?.files,
-      dismissed: dismissed(),
-    }),
-  )
-  if (AGENT_MANAGER_UPSELL && isSidebar()) {
-    const request = () => vscode.postMessage({ type: "requestAgentManagerUpsell" })
-    onCleanup(
-      vscode.onMessage((message) => {
-        if (message.type === "agentManagerUpsellLoaded") setDismissed(message.dismissed)
-        if (message.type === "extensionDataReady") request()
-      }),
-    )
-    request()
-  }
+      files: typeof turn?.summary === "object" ? turn.summary.diffs?.length : undefined,
+    })
+  })
 
   const id = () => session.currentSessionID()
   const openLink = (event: MouseEvent) => {
@@ -483,9 +472,12 @@ export const ChatView: Component<ChatViewProps> = (props) => {
                   />
                 )}
               </Show>
-              <Show when={upsell()}>
-                <AgentManagerUpsell onDismiss={() => setDismissed(true)} />
-              </Show>
+              <AgentManagerUpsell
+                enabled={AGENT_MANAGER_UPSELL}
+                sidebar={isSidebar() && !props.readonly && !!vscode.sidebarSide()}
+                eligible={upsell()}
+                idle={session.status() === "idle" && !session.submitting() && !dockBlocked() && !session.loading()}
+              />
               <SessionDock
                 blocked={dockBlocked()}
                 hasActions={() => !props.readonly && (hasActions(hasMessages()) || !!goal())}

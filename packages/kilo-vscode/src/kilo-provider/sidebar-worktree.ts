@@ -17,8 +17,6 @@ interface Ctx {
   openChanges: (sessionId?: string, turnId?: string) => Thenable<unknown>
   openProfile: () => Thenable<unknown>
   currentSessionId?: string
-  directory?: string
-  openAgentManagerUpsell?: (directory: string | undefined) => Promise<unknown>
   createWorktree?: (baseBranch?: string, branchName?: string) => Promise<void>
   continueInWorktree?: (
     sessionId: string,
@@ -37,11 +35,6 @@ async function repo(post: Ctx["post"]) {
 }
 
 export async function handleSidebarWorktreeMessage(message: Msg, ctx: Ctx) {
-  if (message.type === "openAgentManagerUpsell") {
-    await ctx.openAgentManagerUpsell?.(ctx.directory)
-    return true
-  }
-
   if (message.type === "openAgentManager") {
     await ctx.openAgentManager()
     return true

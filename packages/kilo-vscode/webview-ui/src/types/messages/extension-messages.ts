@@ -1787,8 +1787,13 @@ export interface AgentManagerBrowserDevtoolsMessage {
 }
 
 export type ExtensionMessage =
-  | { type: "agentManagerUpsellLoaded"; dismissed: boolean }
-  | { type: "agentManager.openUpsellTab"; projectId: string }
+  | {
+      type: "agentManagerUpsellLoaded"
+      request: string
+      state: import("../../../../src/shared/agent-manager-upsell").UpsellState
+      engaged: boolean
+      display: boolean
+    }
   | {
       type: "agentManager.resolveCommentResult" | "agentManager.unresolveCommentResult"
       projectId?: string

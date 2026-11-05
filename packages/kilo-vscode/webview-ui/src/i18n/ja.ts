@@ -394,11 +394,16 @@ export const dict = {
   "common.edit": "編集",
   "common.loadMore": "さらに読み込む",
 
-  "sidebar.upsell.title": "別のタスクを並行して実行",
-  "sidebar.upsell.body":
-    "エージェントマネージャーは各タスクに専用の worktree を割り当てるため、このチャットでの変更に影響しません。",
-  "sidebar.upsell.open": "エージェントマネージャーを開く",
-  "sidebar.upsell.dismiss": "閉じる",
+  "sidebar.upsell.title": "Kilo エージェントのチームを稼働させましょう",
+  "sidebar.upsell.body": "ひとつのタスクが終わるのを待つ必要はありません。",
+  "sidebar.upsell.parallel": "複数のセッションを同時に実行",
+  "sidebar.upsell.worktree": "各セッションに専用の worktree を割り当て、変更の競合を防止",
+  "sidebar.upsell.attention": "対応が必要なセッションをひと目で確認",
+  "sidebar.upsell.open": "Agent Manager を開く",
+  "sidebar.upsell.later": "今はしない",
+  "sidebar.upsell.never": "今後表示しない",
+  "sidebar.upsell.confirmation": "承知しました。ここでは Agent Manager を再びおすすめしません。",
+  "sidebar.upsell.undo": "元に戻す",
   "sidebar.settings": "設定",
 
   "sound.option.alert01": "アラート 01",

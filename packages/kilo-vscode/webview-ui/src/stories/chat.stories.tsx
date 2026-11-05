@@ -11,7 +11,7 @@ import type { Meta, StoryObj } from "storybook-solidjs-vite"
 import type { AssistantMessage } from "@kilocode/sdk/v2"
 import { batch, createEffect, createSignal, onCleanup, onMount, Show } from "solid-js"
 import { AgentManagerUpsell } from "../components/chat/AgentManagerUpsell"
-import { showAgentManagerUpsell } from "../components/chat/agent-manager-upsell"
+import { SidebarUpsell } from "../../../src/kilo-provider/upsell"
 import { StoryProviders, defaultMockData, mockSessionValue } from "./StoryProviders"
 import { Button } from "@kilocode/kilo-ui/button"
 import { Icon } from "@kilocode/kilo-ui/icon"
@@ -147,35 +147,98 @@ const meta: Meta = {
 export default meta
 type Story = StoryObj
 
-function UpsellPreview(props: { enabled: boolean }) {
-  const [dismissed, setDismissed] = createSignal(false)
+function UpsellPreview(props: { width?: number; active?: boolean; enabled?: boolean; sidebar?: boolean }) {
+  const [scene, setScene] = createSignal({
+    active: props.active ?? true,
+    enabled: props.enabled ?? true,
+    sidebar: props.sidebar ?? true,
+    idle: true,
+    eligible: true,
+  })
+  const values = new Map<string, unknown>()
+  const storage = {
+    get: <T,>(key: string, fallback: T) => (values.get(key) as T | undefined) ?? fallback,
+    update: async (key: string, value: unknown) => {
+      values.set(key, value)
+    },
+  }
+  const host = new SidebarUpsell(storage, storage)
+  void host.started("sidebar-one")
+  void host.started("sidebar-two")
+  const api = getVSCodeAPI()
+  const post = api.postMessage
+  api.postMessage = (message) => {
+    post(message)
+    if (message.type !== "agentManagerUpsell") return
+    void host
+      .handle(message.action, scene().active && scene().sidebar)
+      .then((result) =>
+        window.postMessage(
+          { type: "agentManagerUpsellLoaded", request: message.request, ...result },
+          window.location.origin,
+        ),
+      )
+  }
+  const change = (event: Event) =>
+    setScene((previous) => ({ ...previous, ...(event as CustomEvent<Partial<ReturnType<typeof scene>>>).detail }))
+  window.addEventListener("upsellStoryChange", change)
+  onCleanup(() => {
+    api.postMessage = post
+    window.removeEventListener("upsellStoryChange", change)
+  })
+  createEffect(() =>
+    window.postMessage({ type: "webviewActiveChanged", active: scene().active }, window.location.origin),
+  )
   return (
-    <StoryProviders sessionID={SESSION_ID} status="idle">
-      <div>
-        <Show
-          when={showAgentManagerUpsell({
-            enabled: props.enabled,
-            sidebar: true,
-            git: true,
-            status: "idle",
-            reason: "completed",
-            files: 1,
-            dismissed: dismissed(),
-          })}
-        >
-          <AgentManagerUpsell onDismiss={() => setDismissed(true)} />
-        </Show>
+    <StoryProviders sessionID={SESSION_ID} status="idle" noPadding>
+      <div style={{ width: `${props.width ?? 430}px`, "max-width": "100%", padding: "12px 0" }}>
+        <SidebarTopBar surface="sidebar" onNewTask={() => {}} onHistory={() => {}} />
+        <input aria-label="Focus sentinel" />
+        <AgentManagerUpsell
+          enabled={scene().enabled}
+          sidebar={scene().sidebar}
+          eligible={scene().eligible}
+          idle={scene().idle}
+        />
       </div>
     </StoryProviders>
   )
 }
 
 export const ChatAgentManagerUpsell: Story = {
-  render: () => <UpsellPreview enabled={true} />,
+  render: () => <UpsellPreview />,
 }
 
 export const ChatAgentManagerUpsell200: Story = {
-  render: () => <UpsellPreview enabled={true} />,
+  render: () => <UpsellPreview width={200} />,
+}
+
+export const ChatAgentManagerUpsell297: Story = { render: () => <UpsellPreview width={297} /> }
+export const ChatAgentManagerUpsellHidden: Story = { render: () => <UpsellPreview active={false} /> }
+export const ChatAgentManagerUpsellDisabled: Story = { render: () => <UpsellPreview enabled={false} /> }
+export const ChatAgentManagerUpsellEditor: Story = { render: () => <UpsellPreview sidebar={false} /> }
+async function upsellAction(canvas: HTMLElement, selector: string) {
+  const done = Promise.withResolvers<HTMLButtonElement>()
+  const observer = new MutationObserver(() => {
+    const button = canvas.querySelector<HTMLButtonElement>(selector)
+    if (!button) return
+    observer.disconnect()
+    done.resolve(button)
+  })
+  const button = canvas.querySelector<HTMLButtonElement>(selector)
+  if (button) return button.click()
+  observer.observe(canvas, { childList: true, subtree: true })
+  ;(await done.promise).click()
+}
+export const ChatAgentManagerUpsellConfirmation: Story = {
+  render: () => <UpsellPreview />,
+  play: ({ canvasElement }: { canvasElement: HTMLElement }) =>
+    upsellAction(canvasElement, ".agent-manager-upsell-never"),
+}
+export const ChatAgentManagerUpsellDismissed: Story = {
+  render: () => <UpsellPreview />,
+  play: ({ canvasElement }: { canvasElement: HTMLElement }) =>
+    upsellAction(canvasElement, ".agent-manager-upsell-later"),
 }
 
 // ---------------------------------------------------------------------------
