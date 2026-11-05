@@ -9,6 +9,9 @@ import type { Interface } from "../../config.js"
 import type { ConfigNormalize } from "../../config/normalize.js"
 
 export class Info extends Config.Info.extend<Info>("KiloConfigPolicy.Info")({
+  session_sync: Schema.Boolean.pipe(optional).annotate({
+    description: "Synchronize signed-in Kilo sessions and required assets (default: true; global config only)",
+  }),
   hide_prompt_training_models: Schema.Boolean.pipe(optional).annotate({
     description: "Hide Kilo models that can use prompts for training and deny provider data collection",
   }),
@@ -42,6 +45,7 @@ export class Info extends Config.Info.extend<Info>("KiloConfigPolicy.Info")({
 const decode = Schema.decodeUnknownOption(Info, { errors: "all", onExcessProperty: "ignore" })
 const policy = Schema.Struct({ hide_prompt_training_models: Schema.optional(Schema.Boolean) })
 const privacy = Schema.Struct({ privacy_mode: Schema.optional(Schema.Boolean) })
+const sync = Schema.Struct({ session_sync: Schema.optional(Schema.Boolean) })
 const commit = Schema.Struct({ commit_message: Schema.optional(Schema.Struct({ prompt: Schema.optional(Schema.String) })) })
 const decodeModel = Schema.decodeUnknownOption(ConfigModel.Selection)
 
@@ -105,6 +109,13 @@ export function parse(
       message: "ignored invalid commit_message; expected an object with an optional string prompt",
     })
   const models = input instanceof Info ? input.workflow_models : record(input) ? workflowModels(input) : undefined
+  const synchronization = Schema.decodeUnknownOption(sync)(input)
+  if (Option.isNone(synchronization))
+    report?.({
+      path: ["session_sync"],
+      kind: "invalid",
+      message: "ignored invalid session_sync; expected a boolean (true or false)",
+    })
   // Managed policy splitting clears optional fields with undefined; the encoded schema requires omitted keys.
   return Option.getOrUndefined(
     decode(
@@ -114,6 +125,7 @@ export function parse(
           ...raw,
           ...Option.getOrElse(privacyField, () => ({})),
           ...Option.getOrElse(message, () => ({})),
+          ...Option.getOrElse(synchronization, () => ({})),
           ...displaySettings(input),
           workflow_models: models && Object.keys(models).length ? models : undefined,
         }).filter(([, value]) => value !== undefined),

@@ -182,7 +182,12 @@ const layer = Layer.effect(
       }
       yield* Effect.logInfo("creating session", { id, cmd: command, args, cwd })
       const { spawn } = yield* Effect.promise(() => pty())
-      const proc = yield* Effect.sync(() => spawn(command, args, { name: "xterm-256color", cwd, env }))
+      // kilocode_change start - pty: start at the requested size instead of node-pty's default of 80x24
+      const size = input.size
+      const proc = yield* Effect.sync(() =>
+        spawn(command, args, { name: "xterm-256color", cwd, env, ...(size ? { cols: size.cols, rows: size.rows } : {}) }),
+      )
+      // kilocode_change end
       const info: Info = {
         id,
         title: input.title || `Terminal ${id.slice(-4)}`,

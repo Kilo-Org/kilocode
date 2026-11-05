@@ -1,12 +1,20 @@
 {
   "$comment": "Shared-patch baseline (U-L3-01). Read by script/check-shared-patches.ts and script/check-opencode-annotations.ts. Each shared upstream file that Kilo adds or changes needs an entry: rung (3 = seam patch, 4 = feature patch) and the missing seam. `unmarked` allows lines without markers and states why. Raise a limit only in the PR that adds the patch, and lower it when a patch goes away.",
   "limits": {
-    "files": 82,
-    "markedLines": 1202,
-    "unmarkedLines": 225,
+    "files": 88,
+    "markedLines": 1510,
+    "unmarkedLines": 246,
     "deletedFiles": 0
   },
   "files": {
+    "packages/core/src/tool-output.ts": {
+      "rung": 3,
+      "seam": "Export the existing layer and cleanup node so the Kilo host can decorate native file allocations while preserving native truncation and cleanup. A plugin cannot observe allocation provenance, and replacing the service without these exports would duplicate the upstream implementation. No algorithm or upstream default changes."
+    },
+    "specs/v2/session-sync.md": {
+      "rung": 4,
+      "seam": "Repository-specific native session sync design and operator commands. The v2 specification directory holds the producer contract; the cloud repository holds service admission, storage, and rollout. No runtime change."
+    },
     "packages/cli/src/commands/commands.ts": {
       "rung": 3,
       "seam": "Optional full-TUI --model/-m argument, passed to the existing TUI Args.model selector. The CLI command specification is closed and has no host extension for root parameters; no default changes when omitted. Two generic lines across the root specification and default handler replace a custom argument parser or a second host command mirror."
@@ -88,12 +96,12 @@
     },
     "packages/client/src/promise/generated/types.ts": {
       "rung": 3,
-      "seam": "Generated client types for the optional command template and model metadata exposed by the command list API. The client must be regenerated from the public schema.",
+      "seam": "Generated client types for schema additions Kilo exposes: the optional command template and model metadata on the command list API, and the optional PTY create size. The client must be regenerated from the public schema.",
       "unmarked": "Generated TypeScript cannot retain manual marker comments; bun run generate owns this file."
     },
     "packages/protocol/openapi.json": {
       "rung": 3,
-      "seam": "Generated OpenAPI document for the optional command template and model metadata exposed by the command list API. The document is generated from the public schema; editing it by hand is not supported.",
+      "seam": "Generated OpenAPI document for the optional command template and model metadata exposed by the command list API, and the optional PTY create size exposed by packages/schema/src/pty.ts. The document is generated from the public schema; editing it by hand is not supported.",
       "unmarked": "Generated JSON cannot carry marker comments; bun run generate in packages/protocol owns this file."
     },
     "packages/core/package.json": {
@@ -204,7 +212,7 @@
     },
     "packages/tui/src/plugin/builtins.ts": {
       "rung": 4,
-      "seam": "Register the Kilo built-in TUI plugins, including `KiloMarketplace` (`/marketplace`, partial U-E2-23) and `KiloCopySession` (`/copy-session`). The TUI loads its built-in list in its own process, which server-side host/plugin registration cannot reach. Config-driven plugins load npm packages or local files, unavailable in compiled binaries. A generic registration API would require more shared lines for this single list. The behavior stays in tui/src/kilocode/marketplace.tsx and tui/src/kilocode/copy-session.tsx; each adds one import and one list entry."
+      "seam": "Register the Kilo built-in TUI plugins, including `KiloMarketplace` (`/marketplace`, partial U-E2-23), `KiloCopySession` (`/copy-session`) and `KiloTerminalActivity` (OSC 777 session activity for terminals that set KILO_TERMINAL_ACTIVITY). The TUI loads its built-in list in its own process, which server-side host/plugin registration cannot reach. Config-driven plugins load npm packages or local files, unavailable in compiled binaries. A generic registration API would require more shared lines for this single list. The behavior stays in tui/src/kilocode/; each plugin adds one import and one list entry."
     },
     "packages/tui/test/fixture/local.tsx": {
       "rung": 3,
@@ -216,7 +224,7 @@
     },
     "packages/util/src/global.ts": {
       "rung": 3,
-      "seam": "The app directory name under the XDG bases (`const app`) reads `OPENCODE_APP_DIR_NAME` and defaults to `opencode`, so an embedding entry can name its own config, data, cache, state and tmp directories. The Kilo host sets `kilo2` in packages/kilo-cli/src/env.ts before any upstream module loads (U-E1-01 part 1, D-4). One line, no Kilo value. Rung 2 cannot supply it: `Global.layerWith` replaces only the service in one graph, while `Global.Path` and `Flock.setGlobal({ state })` are computed when this module loads and read statically by the log file (util/observability/logging.ts), the server tmp (server/src/process.ts) and the TUI themes (tui/src/mini/theme.ts); `cli/src/server-process.ts` and `cli/src/commands/handlers/default.ts` compile their own `Global` node from those defaults, so the background service and the database stayed under `opencode` with host composition alone (measured: the service read its port from `~/.config/opencode` and logged to `~/.local/share/opencode/log`)."
+      "seam": "Two generic identity knobs with upstream defaults, so an embedding entry can name its own directories. (1) The app directory name under the XDG bases (`const app`) reads `OPENCODE_APP_DIR_NAME` and defaults to `opencode`, naming config, data, cache, state and tmp; the Kilo host sets `kilo2` in packages/kilo-cli/src/env.ts before any upstream module loads (U-E1-01 part 1, D-4). (2) The `home` getter reads `OPENCODE_HOME_DIR` before falling back to os.homedir(), so the host can supply a cleaned home; os.homedir() caches $HOME as read at process start, so a shell newline on HOME survives there and cannot be repaired from the host, and `home` feeds resolvePath's `~` expansion (core/src/file-access.ts) and provider credential paths. The Kilo host sets the cleaned home in packages/kilo-cli/src/global-boot.ts (U-E1-01), matching v1's trimmed getter; OPENCODE_TEST_HOME still wins. No Kilo value in either line. Rung 2 cannot supply them: `Global.layerWith` replaces only the service in one graph, while `Global.Path` and `Flock.setGlobal({ state })` are computed when this module loads and read statically by the log file (util/observability/logging.ts), the server tmp (server/src/process.ts) and the TUI themes (tui/src/mini/theme.ts); `cli/src/server-process.ts` and `cli/src/commands/handlers/default.ts` compile their own `Global` node from those defaults, so the background service and the database stayed under `opencode` with host composition alone (measured: the service read its port from `~/.config/opencode` and logged to `~/.local/share/opencode/log`)."
     },
     "turbo.json": {
       "rung": 3,
@@ -321,7 +329,7 @@
     },
     "packages/core/src/pty.ts": {
       "rung": 3,
-      "seam": "Optional `allowExited` attach input: attach to an exited session to replay its retained output, then deliver the end event with the exit code. The Agent Manager shows the output of a setup or run script that finished before its tab connected. Upstream keeps exited sessions and their output (`pty.list` returns them), but `attach` refuses them and no plugin hook or layer reaches the attach path. Omitted input keeps upstream's `ExitedError`."
+      "seam": "Optional `allowExited` attach input and optional `size` on create. `allowExited` attaches to an exited session to replay its retained output, then delivers the end event with the exit code; the Agent Manager shows the output of a setup or run script that finished before its tab connected. `size` spawns the PTY at the client's dimensions, as `PersistentPty.CreateInput` already does, so the shell's first bytes are not wrapped for 80 columns before the client resizes it. Upstream keeps exited sessions and their output (`pty.list` returns them), but `attach` refuses them, and no plugin hook or layer reaches the create or attach path. Omitted input keeps upstream behavior and node-pty's default size."
     },
     "packages/server/src/handlers/pty.ts": {
       "rung": 3,
@@ -343,6 +351,25 @@
       "rung": 4,
       "seam": "Add `VirtualizerHandle.measure()` and clamp the rendered range to the data length in `virtua`. The v2 VS Code transcript uses `measure()` to re-pin the bottom in the same task when the last live turn is handed to the virtualizer, and the clamp prevents an out-of-range row when the virtual list shrinks. Set through `patchedDependencies` in the root package.json, so the patch applies from the root install. The same patch is on v1. No lower rung: the API lives inside the package and the transcript cannot re-pin before paint without it.",
       "unmarked": "Patch files are applied verbatim; a marker inside the diff would change the patched source. The same patch ships on v1."
+    },
+    "packages/schema/src/pty.ts": {
+      "rung": 3,
+      "seam": "Optional `size` on `Pty.CreateInput`, sharing the size contract with `UpdateInput`. It matches `PersistentPty.CreateInput`, which already carries a size, and lets any client spawn a terminal at its own dimensions. Omitted keeps upstream behavior."
+    },
+    "packages/client/src/effect/api/api.ts": {
+      "rung": 3,
+      "seam": "Generated Effect client types for the optional PTY create size exposed by packages/schema/src/pty.ts. The client must be regenerated from the public schema.",
+      "unmarked": "Generated TypeScript cannot retain manual marker comments; bun run generate owns this file."
+    },
+    "packages/client/src/effect/generated/client.ts": {
+      "rung": 3,
+      "seam": "Generated Effect client operations for the optional PTY create size exposed by packages/schema/src/pty.ts. The client must be regenerated from the public schema.",
+      "unmarked": "Generated TypeScript cannot retain manual marker comments; bun run generate owns this file."
+    },
+    "packages/client/src/promise/generated/client.ts": {
+      "rung": 3,
+      "seam": "Generated promise client operations for the optional PTY create size exposed by packages/schema/src/pty.ts. The client must be regenerated from the public schema.",
+      "unmarked": "Generated TypeScript cannot retain manual marker comments; bun run generate owns this file."
     }
   }
 }

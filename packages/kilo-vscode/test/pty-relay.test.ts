@@ -39,7 +39,7 @@ const http = Bun.serve<SocketData>({
 
 afterAll(() => http.stop(true))
 
-function harness() {
+function harness(options: { hold?: (ptyID: string) => Promise<void> } = {}) {
   received.length = 0
   clients = []
   const messages: AgentManagerOutMessage[] = []
@@ -50,6 +50,7 @@ function harness() {
         token: async ({ ptyID }: { ptyID: string }) => {
           const ticket = `ticket-${tickets.length + 1}-${ptyID}`
           tickets.push(ticket)
+          await options.hold?.(ptyID)
           return { data: { ticket, expires_in: 30 } }
         },
       },
@@ -61,7 +62,11 @@ function harness() {
   } as unknown as AgentManagerConnection
   const relay = new PtyRelay({
     connection,
-    terminal: (terminalId) => (terminalId === "terminal-1" ? { ptyID: "pty-1", directory: "/workspace" } : undefined),
+    terminal: (terminalId) => {
+      if (terminalId === "terminal-1") return { ptyID: "pty-1", directory: "/workspace" }
+      if (terminalId === "terminal-2") return { ptyID: "pty-2", directory: "/workspace" }
+      return undefined
+    },
     post: (message) => messages.push(message),
     log: () => undefined,
   })
@@ -173,6 +178,45 @@ describe("PtyRelay", () => {
     test.relay.dispose()
     await until(() => clients.length === 0)
     expect(closed).toBeGreaterThan(sockets)
+  })
+
+  it("cancels only the pending open of the terminal that closed", async () => {
+    const waits = new Map<string, ReturnType<typeof Promise.withResolvers<void>>>()
+    const hold = (ptyID: string) => {
+      const wait = waits.get(ptyID) ?? Promise.withResolvers<void>()
+      waits.set(ptyID, wait)
+      return wait.promise
+    }
+    const test = harness({ hold })
+    post(test.relay, { type: "agentManager.terminal.socket.open", socketId: "s1", terminalId: "terminal-1" })
+    post(test.relay, { type: "agentManager.terminal.socket.open", socketId: "s2", terminalId: "terminal-2" })
+    await until(() => test.tickets.length === 2)
+
+    test.relay.closeTerminal("terminal-2")
+    for (const wait of waits.values()) wait.resolve()
+    await until(() => clients.length === 1)
+    expect(test.messages).toContainEqual({
+      type: "agentManager.terminal.socket.closed",
+      socketId: "s2",
+      code: 1000,
+      reason: "closed",
+    })
+    expect(test.messages.some((message) => message.type === "agentManager.terminal.socket.opened")).toBe(true)
+    test.relay.dispose()
+  })
+
+  it("drops the sockets of a previous webview but stays usable", async () => {
+    const test = harness()
+    post(test.relay, { type: "agentManager.terminal.socket.open", socketId: "s1", terminalId: "terminal-1" })
+    await until(() => clients.length === 1)
+
+    test.relay.reset()
+    await until(() => clients.length === 0)
+
+    post(test.relay, { type: "agentManager.terminal.socket.open", socketId: "s2", terminalId: "terminal-1" })
+    await until(() => clients.length === 1)
+    expect(test.tickets).toEqual(["ticket-1-pty-1", "ticket-2-pty-1"])
+    test.relay.dispose()
   })
 
   it("mints a fresh ticket for every socket open", async () => {

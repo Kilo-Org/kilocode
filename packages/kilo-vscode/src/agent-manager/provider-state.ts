@@ -37,6 +37,7 @@ export interface ProviderStateHost {
   readonly projectPollers: ProjectPollers
   readonly run: RunController
   readonly terminalRouter: TerminalRouter
+  readonly relay: { reset(): void }
   readonly scripts: { manager: ScriptTerminalManager }
   readonly destination: DestinationState
   readonly healthScheduler: HealthScheduler<ProjectContext>
@@ -59,6 +60,9 @@ export interface ProviderStateHost {
 }
 
 export async function requestState(p: ProviderStateHost): Promise<void> {
+  // A freshly mounted webview owns no terminal sockets, so sockets left by a previous instance are unreachable and
+  // must not keep forwarding frames.
+  p.relay.reset()
   await p.terminalRouter.dispose()
   await p.scripts.manager.snapshot()
   void p.activity.sync(true)

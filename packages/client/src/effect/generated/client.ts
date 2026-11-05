@@ -1440,6 +1440,7 @@ const EndpointPtyCreate = (raw: RawClient["server.pty"]) => (input?: PtyCreateIn
         cwd: input?.["cwd"],
         title: input?.["title"],
         env: input?.["env"],
+        size: input?.["size"],
       },
     }).pipe(Effect.mapError(mapClientError)),
   )
