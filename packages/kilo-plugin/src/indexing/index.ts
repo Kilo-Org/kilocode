@@ -39,9 +39,9 @@ export const KiloIndexingPlugin = define<FSUtil.Service | Global.Service | Scope
       return KiloConfigPolicy.indexingConfig(yield* config.value.entries()) as IndexingConfig | undefined
     })
 
-    // The Gateway plugin registers the account reader during its own setup; wait for it on a cold start.
+    // The Gateway plugin registers the account reader after its first catalog load; wait for it on a cold start.
     const account = async () => {
-      const deadline = Date.now() + 5000
+      const deadline = Date.now() + 30_000
       while (!KiloGatewayAccounts.registered(directory) && Date.now() < deadline) await Bun.sleep(50)
       return KiloGatewayAccounts.get(directory)
     }

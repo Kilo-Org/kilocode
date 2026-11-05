@@ -612,8 +612,6 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
     const start = yield* resolveCurrentAccount
     server = start.server
     gateway = start.gateway
-    const unregister = KiloGatewayAccounts.register(ctx.location.directory, activeAccount)
-    yield* Effect.addFinalizer(() => Effect.sync(unregister))
     const stored = start.organizationID
       ? undefined
       : yield* readSnapshot(snapshotKey(start.account?.baseURL ?? gateway, start.account?.token))
@@ -629,6 +627,9 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
       }
     }
     yield* stored ? Effect.forkIn(reload, scope) : lock.withPermit(loadCatalog(++epoch, 0))
+    // Other Kilo plugins of this Location read the account once the first catalog state has it.
+    const unregister = KiloGatewayAccounts.register(ctx.location.directory, activeAccount)
+    yield* Effect.addFinalizer(() => Effect.sync(unregister))
 
     // v1 loaded organization modes above built-ins and below local agent definitions. This transform
     // occupies that same pre-config position; replay restores built-ins when a mode is removed.
