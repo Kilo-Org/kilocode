@@ -18,6 +18,7 @@ import type { KiloConnectionService } from "../services/cli-backend"
 import { KiloProvider } from "../KiloProvider"
 import { PLATFORM, SNAPSHOT_INITIALIZATION } from "./constants"
 import { keybindings, watchKeybindings } from "../kilo-provider/shortcut-context"
+import { buildChatSettingsMessage } from "../kilo-provider/chat-settings"
 import { DiffVirtualProvider } from "../DiffVirtualProvider"
 import { buildWebviewHtml } from "../utils"
 import { openFileInEditor, getWorkspaceRoot } from "../review-utils"
@@ -28,6 +29,7 @@ import type { RemoteStatusService } from "../services/RemoteStatusService"
 import type { CaffeinationService } from "../services/caffeination"
 
 const INTRO_KEY = "kilo.agentManager.introDismissed"
+const SPLASH_KEY = "kilo.agentManager.splashFolded"
 const PR_MERGE_METHODS_KEY = "agentManager.prMergeMethod"
 
 export class VscodeHost implements Host {
@@ -124,7 +126,9 @@ export class VscodeHost implements Host {
       title: "Agent Manager",
       port,
       browserAutomation: this.browserAutomation(),
+      agentManagerSplash: buildChatSettingsMessage().settings.agentManagerSplash,
       introDismissed: this.context.globalState.get<boolean>(INTRO_KEY) === true,
+      splashFolded: this.context.globalState.get<boolean>(SPLASH_KEY),
       frameSrc: ["localhost", "127.0.0.1"].map((host) => `http://${host}:*`).join(" "),
     })
 
@@ -174,6 +178,10 @@ export class VscodeHost implements Host {
         }
         if (msg.type === "agentManager.requestCaffeination") {
           snapshot()
+          return null
+        }
+        if (msg.type === "agentManager.setSplashFolded") {
+          if (typeof msg.folded === "boolean") await this.context.globalState.update(SPLASH_KEY, msg.folded)
           return null
         }
         if (msg.type !== "agentManager.setIntroDismissed") return opts.onBeforeMessage(msg)

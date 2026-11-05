@@ -4,6 +4,28 @@
 
 ### Minor Changes
 
+- [#15510](https://github.com/Kilo-Org/kilocode/pull/15510) [`20db8f7`](https://github.com/Kilo-Org/kilocode/commit/20db8f72c472842aa42e8b36644f73960e59b7e8) - Organize Agent Manager worktrees in a collapsible tree with responsive updates and reliable menus, hover actions, and drag-and-drop selection.
+
+  Keep expand/collapse controls working with alternative IDE themes.
+
+### Patch Changes
+
+- [#15510](https://github.com/Kilo-Org/kilocode/pull/15510) [`79bb45d`](https://github.com/Kilo-Org/kilocode/commit/79bb45db4016e4b48bae077af6d7630be4cea170) - Align worktree tree rows with list cells: top-level selections start and end on the same outer insets as the worktree list, children indent one native level, and the trailing row menu keeps the list's gap to the selection edge.
+
+- [#15510](https://github.com/Kilo-Org/kilocode/pull/15510) [`fe89a9c`](https://github.com/Kilo-Org/kilocode/commit/fe89a9c8f836bd2a29db3ffbcc12dbc833cfc4b9) - Animate running indicators smoothly in lists and worktree trees using one shared clock that repaints only visible animated rows and stops when idle.
+
+- [#15510](https://github.com/Kilo-Org/kilocode/pull/15510) [`52e82f4`](https://github.com/Kilo-Org/kilocode/commit/52e82f42215a9102e8a491ac2474afd9dc428bf2) - Fix worktree tree rendering crashes when switching to Agents or opening worktree sessions.
+
+- [#15510](https://github.com/Kilo-Org/kilocode/pull/15510) [`7cb8c60`](https://github.com/Kilo-Org/kilocode/commit/7cb8c60f7ff3d330d73bbd7f7055bb95a35ce0f9) - Align worktree tree row icons and text with the disclosure control at every display scale.
+
+- [#15510](https://github.com/Kilo-Org/kilocode/pull/15510) [`6e42c11`](https://github.com/Kilo-Org/kilocode/commit/6e42c1136637228b59c708ab92f1443895871949) - Dismiss hover popups and tooltips around Agent Manager worktree drags and reset drag-scoped hover state once the drag ends.
+
+- [#15597](https://github.com/Kilo-Org/kilocode/pull/15597) [`a44b770`](https://github.com/Kilo-Org/kilocode/commit/a44b770c22e3f9a05e96189597290e03621d22ba) - Expose concise user and assistant message summaries to JetBrains accessibility and UI automation tools.
+
+## 7.9.0
+
+### Minor Changes
+
 - [#15531](https://github.com/Kilo-Org/kilocode/pull/15531) [`de87d2f`](https://github.com/Kilo-Org/kilocode/commit/de87d2f4e13964cd915495451bb8e301ab0bade0) - Continue Cloud sessions directly from Agent Manager with live transcripts, preparation progress, permission and question prompts, and reliable stream recovery. Cloud workspace editors now match local worktree editors, show clear compute and activity status, and support refreshing Cloud workspaces from the row menu.
 
 ## 7.8.16
