@@ -33,6 +33,7 @@ import { Process } from "@/util/process"
 import { parseGitHubRemote } from "@/util/repository"
 import { Effect } from "effect"
 import { GitHubSecurity } from "@/kilocode/security/github" // kilocode_change
+import { patch as patchCommandCode } from "@/kilocode/commandcode/provider" // kilocode_change
 import { extractResponseText, formatPromptTooLargeError } from "./github.shared"
 
 type Context = typeof github.context // kilocode_change - @actions/github 9 no longer exports lib/context
@@ -172,7 +173,7 @@ export const githubInstall = Effect.fn("Cli.github.install")(function* () {
       const providers = await Effect.runPromise(modelsDev.get()).then((p) => {
         // TODO: add guide for copilot, for now just hide it
         delete p["github-copilot"]
-        return p
+        return patchCommandCode(p) // kilocode_change
       })
 
       const provider = await promptProvider()
