@@ -36,6 +36,9 @@ export interface Runtime {
   readonly list: (projectID: Project.ID) => Effect.Effect<ReadonlyArray<Session.Info>, unknown>
   readonly get: (sessionID: Session.ID) => Effect.Effect<Session.Info | undefined, unknown>
   readonly messages: (sessionID: Session.ID) => Effect.Effect<ReadonlyArray<SessionMessage.MediaInfo>, unknown>
+  readonly searchMessages: (
+    sessionID: Session.ID,
+  ) => Effect.Effect<ReadonlyArray<SessionMessage.MediaInfo>, unknown>
   readonly worktrees: () => Effect.Effect<ReadonlyArray<string>, unknown>
   readonly permission: { readonly assert: (input: AssertInput) => Effect.Effect<void, Tool.Error> }
 }
@@ -78,7 +81,7 @@ function search(
     const sessions = yield* runtime.list(runtime.project.id).pipe(Effect.orDie)
     const current = sessions.find((session) => session.id === context.sessionID)
     const currentMessages = current
-      ? yield* runtime.messages(current.id).pipe(Effect.orDie)
+      ? yield* runtime.searchMessages(current.id).pipe(Effect.orDie)
       : ([] as ReadonlyArray<SessionMessage.MediaInfo>)
     const boundary = current ? RecallSearch.active(currentMessages, context.messageID) : context.messageID
 
@@ -90,7 +93,7 @@ function search(
           const messages =
             session.id === context.sessionID
               ? currentMessages
-              : yield* runtime.messages(session.id).pipe(Effect.orDie)
+              : yield* runtime.searchMessages(session.id).pipe(Effect.orDie)
           return RecallSearch.toSearchSession(session, messages)
         }),
       { concurrency: 8 },

@@ -18,8 +18,14 @@ export const KiloRecallPlugin = define<SessionStore.Service | Scope.Scope>({
       },
       list: (projectID) => store.list({ project: projectID }),
       get: (sessionID) => store.get(sessionID),
-      messages: (sessionID) =>
-        store.messagesWithRefs({ sessionID }).pipe(Effect.map((messages) => messages.toReversed())),
+      messages: (sessionID) => store.messagesWithRefs({ sessionID, order: "asc" }),
+      searchMessages: (sessionID) =>
+        Effect.all([
+          store.messagesWithRefs({ sessionID, type: "user", order: "asc" }),
+          store.messagesWithRefs({ sessionID, type: "assistant", order: "asc" }),
+        ], { concurrency: 2 }).pipe(
+          Effect.map(([user, assistant]) => [...user, ...assistant].sort((left, right) => left.id.localeCompare(right.id))),
+        ),
       worktrees: () =>
         ctx.worktree
           .list({ projectID: ctx.location.project.id })

@@ -89,6 +89,12 @@ function runtime(input: {
     list: () => Effect.succeed(input.sessions),
     get: (sessionID) => Effect.succeed(input.sessions.find((session) => session.id === sessionID)),
     messages: (sessionID) => Effect.succeed(input.messages[sessionID] ?? []),
+    searchMessages: (sessionID) =>
+      Effect.succeed(
+        (input.messages[sessionID] ?? []).filter(
+          (message) => message.type === "user" || message.type === "assistant",
+        ),
+      ),
     worktrees: () => Effect.succeed(input.worktrees ?? []),
     permission: {
       assert: (request) => {
