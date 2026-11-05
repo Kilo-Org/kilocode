@@ -37,6 +37,7 @@ import { Money } from "@opencode/schema/money"
 import { Provider } from "@opencode/schema/provider"
 import { Global } from "@opencode/util/global"
 import { KiloOrganizationModes } from "./modes"
+import { KiloGatewayAccounts } from "./accounts"
 import { createHash, randomUUID } from "node:crypto"
 import { Clock, Duration, Effect, Fiber, Option, Schedule, Schema, Scope, Semaphore, Stream } from "effect"
 import { GatewayOptions } from "./options.js"
@@ -611,6 +612,8 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
     const start = yield* resolveCurrentAccount
     server = start.server
     gateway = start.gateway
+    const unregister = KiloGatewayAccounts.register(ctx.location.directory, activeAccount)
+    yield* Effect.addFinalizer(() => Effect.sync(unregister))
     const stored = start.organizationID
       ? undefined
       : yield* readSnapshot(snapshotKey(start.account?.baseURL ?? gateway, start.account?.token))
