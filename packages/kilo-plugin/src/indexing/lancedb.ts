@@ -9,7 +9,11 @@ export const env = "KILO_LANCEDB_PATH"
 export const pkg = "@lancedb/lancedb"
 export const version = "0.26.2"
 
-export const ensure = Effect.fn("LanceDBRuntime.ensure")(function* (store: string | undefined, npm?: Npm.Interface) {
+export const ensure = Effect.fn("LanceDBRuntime.ensure")(function* (
+  store: string | undefined,
+  npm?: Npm.Interface,
+  bundled = resolvable,
+) {
   if (store !== "lancedb") return
   if (process.env[env]) return
   if (process.platform === "darwin" && process.arch === "x64") {
@@ -19,7 +23,7 @@ export const ensure = Effect.fn("LanceDBRuntime.ensure")(function* (store: strin
       ),
     )
   }
-  if (resolvable()) return
+  if (bundled()) return
   if (!npm) return yield* Effect.fail(new Error("LanceDB is unavailable: the npm installer is not available."))
   const installed = yield* npm.add(`${pkg}@${version}`)
   const manifest = yield* Effect.promise(() =>
