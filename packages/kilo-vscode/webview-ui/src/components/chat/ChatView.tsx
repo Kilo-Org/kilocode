@@ -64,6 +64,8 @@ interface ChatViewProps {
   resolveEmbeddedTerminal?: (context?: string) => Promise<string | undefined>
   /** Agent Manager state for the prompt shortcut hint. */
   manager?: () => ManagerContext | undefined
+  /** Explicit preview override; ordinary sidebar usage keeps the development gate. */
+  upsell?: boolean
 }
 
 export const ChatView: Component<ChatViewProps> = (props) => {
@@ -459,6 +461,14 @@ export const ChatView: Component<ChatViewProps> = (props) => {
           </div>
 
           <Show when={dock()}>
+            <div class="agent-manager-upsell-slot">
+              <AgentManagerUpsell
+                enabled={props.upsell ?? AGENT_MANAGER_UPSELL}
+                sidebar={isSidebar() && !props.readonly && !!vscode.sidebarSide()}
+                eligible={upsell()}
+                idle={session.status() === "idle" && !session.submitting() && !dockBlocked() && !session.loading()}
+              />
+            </div>
             <div class="chat-input">
               <Show when={server.connectionState() === "error" && server.errorMessage()}>
                 <StartupErrorBanner errorMessage={server.errorMessage()!} errorDetails={server.errorDetails()!} />
@@ -472,12 +482,6 @@ export const ChatView: Component<ChatViewProps> = (props) => {
                   />
                 )}
               </Show>
-              <AgentManagerUpsell
-                enabled={AGENT_MANAGER_UPSELL}
-                sidebar={isSidebar() && !props.readonly && !!vscode.sidebarSide()}
-                eligible={upsell()}
-                idle={session.status() === "idle" && !session.submitting() && !dockBlocked() && !session.loading()}
-              />
               <SessionDock
                 blocked={dockBlocked()}
                 hasActions={() => !props.readonly && (hasActions(hasMessages()) || !!goal())}

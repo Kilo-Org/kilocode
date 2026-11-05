@@ -1,4 +1,7 @@
 import { afterEach, describe, expect, it, spyOn } from "bun:test"
+import { mkdtemp, rm } from "node:fs/promises"
+import { join } from "node:path"
+import { tmpdir } from "node:os"
 import * as vscode from "vscode"
 import { createKiloClient, type KiloClient, type Session } from "@kilocode/sdk/v2/client"
 import { KiloProvider } from "../../src/KiloProvider"
@@ -7,10 +10,10 @@ import { KiloConnectionService } from "../../src/services/cli-backend/connection
 import { TelemetryProxy } from "../../src/services/telemetry/telemetry-proxy"
 import { TelemetryEventName } from "../../src/services/telemetry/types"
 
-const resources: { dispose(): void }[] = []
+const resources: { dispose(): void | Promise<void> }[] = []
 
-afterEach(() => {
-  for (const resource of resources.splice(0).reverse()) resource.dispose()
+afterEach(async () => {
+  for (const resource of resources.splice(0).reverse()) await resource.dispose()
 })
 
 function storage() {
@@ -36,6 +39,25 @@ function session(id: string): Session {
 }
 
 async function attach(kind: "sidebar" | "panel" | "embedded" = "sidebar") {
+  if (typeof vscode.workspace.createFileSystemWatcher !== "function") {
+    const descriptor = Object.getOwnPropertyDescriptor(vscode.workspace, "createFileSystemWatcher")
+    const disposable = () => ({ dispose() {} })
+    Object.defineProperty(vscode.workspace, "createFileSystemWatcher", {
+      configurable: true,
+      value: () => ({ onDidCreate: disposable, onDidChange: disposable, onDidDelete: disposable, dispose() {} }),
+    })
+    resources.push({
+      dispose: () => {
+        if (!descriptor) {
+          Reflect.deleteProperty(vscode.workspace, "createFileSystemWatcher")
+          return
+        }
+        Object.defineProperty(vscode.workspace, "createFileSystemWatcher", descriptor)
+      },
+    })
+  }
+  const dir = await mkdtemp(join(tmpdir(), "kilo-upsell-host-"))
+  resources.push({ dispose: () => rm(dir, { recursive: true, force: true }) })
   const global = storage()
   const workspace = storage()
   const connection = new KiloConnectionService({} as never)
@@ -43,6 +65,7 @@ async function attach(kind: "sidebar" | "panel" | "embedded" = "sidebar") {
   const provider = new KiloProvider({} as never, connection, {
     globalState: global,
     workspaceState: workspace,
+    globalStorageUri: { fsPath: dir },
   } as never)
   resources.push(provider)
   const internal = provider as unknown as {
@@ -104,6 +127,7 @@ describe("KiloProvider Agent Manager upsell host routing", () => {
 
     host.provider.setStreamVisibility(true)
     await host.receive({ type: "agentManagerUpsell", action: "shown", request: "visible" })
+    await host.receive({ type: "agentManagerUpsell", action: "rendered", request: "rendered" })
     await host.receive({ type: "agentManagerUpsell", request: "state" })
     host.provider.setStreamVisibility(false)
     host.provider.setStreamVisibility(true)
@@ -112,6 +136,7 @@ describe("KiloProvider Agent Manager upsell host routing", () => {
     expect(host.sent).toEqual([
       { type: "agentManagerUpsellLoaded", request: "hidden", state: {}, engaged: true, display: false },
       { type: "agentManagerUpsellLoaded", request: "visible", state: {}, engaged: true, display: true },
+      { type: "agentManagerUpsellLoaded", request: "rendered", state: {}, engaged: true, display: false },
       { type: "agentManagerUpsellLoaded", request: "state", state: {}, engaged: true, display: false },
       { type: "agentManagerUpsellLoaded", request: "repeated", state: {}, engaged: true, display: false },
     ])

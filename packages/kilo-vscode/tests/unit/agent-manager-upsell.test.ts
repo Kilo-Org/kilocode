@@ -1,11 +1,20 @@
-import { describe, expect, it } from "bun:test"
+import { afterEach, describe, expect, it } from "bun:test"
+import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs"
+import { tmpdir } from "node:os"
+import { join } from "node:path"
 import { SidebarUpsell } from "../../src/kilo-provider/upsell"
+import { UpsellPreferences } from "../../src/kilo-provider/upsell-preferences"
 import { eligible, type UpsellState } from "../../src/shared/agent-manager-upsell"
 import { AGENT_MANAGER_UPSELL, sidebarTurns } from "../../webview-ui/src/components/chat/agent-manager-upsell"
 
 const KEY = "upsell.agentManager"
 const WEEK = 7 * 24 * 60 * 60 * 1000
 const NOW = Date.UTC(2026, 10, 5)
+const dirs: string[] = []
+
+afterEach(() => {
+  for (const dir of dirs.splice(0)) rmSync(dir, { recursive: true, force: true })
+})
 
 // Updates become readable only after the persistence boundary completes.
 class Storage {
@@ -41,12 +50,21 @@ class Storage {
 }
 
 function fixture(state: UpsellState = {}, ids = ["first", "second"]) {
-  const global = new Storage()
+  const dir = mkdtempSync(join(tmpdir(), "kilo-upsell-policy-"))
+  dirs.push(dir)
+  const journal = join(dir, "agent-manager-upsell")
+  mkdirSync(journal)
+  writeFileSync(join(journal, "1.json"), JSON.stringify(state))
+  const global = new UpsellPreferences(dir)
   const workspace = new Storage()
   const clock = { now: NOW }
-  global.values.set(KEY, state)
   workspace.values.set(`${KEY}.sessions`, ids)
-  return { global, workspace, clock, host: new SidebarUpsell(global, workspace, () => clock.now) }
+  const writes = () =>
+    readdirSync(journal)
+      .filter((name) => /^[1-9]\d*\.json$/.test(name) && name !== "1.json")
+      .sort((a, b) => Number(a.slice(0, -5)) - Number(b.slice(0, -5)))
+      .map((name) => ({ key: KEY, value: JSON.parse(readFileSync(join(journal, name), "utf8")) as UpsellState }))
+  return { global, workspace, clock, writes, host: new SidebarUpsell(global, workspace, () => clock.now) }
 }
 
 describe("Agent Manager upsell eligibility", () => {
@@ -92,10 +110,10 @@ describe("SidebarUpsell", () => {
     const state = { snoozeCount: 1, snoozedAt: NOW - WEEK }
     const test = fixture(state)
     expect(await test.host.handle(undefined, true)).toEqual({ state, engaged: true, display: false })
-    expect(test.global.writes).toEqual([])
+    expect(test.writes()).toEqual([])
     expect(test.workspace.writes).toEqual([])
     expect((await test.host.handle("shown", true)).display).toBe(true)
-    expect(test.global.writes).toEqual([])
+    expect(test.writes()).toEqual([])
   })
 
   it("counts distinct sidebar starts, persists only two IDs, and reads them in a new host", async () => {
@@ -132,10 +150,14 @@ describe("SidebarUpsell", () => {
     expect(test.workspace.writes).toHaveLength(2)
   })
 
-  it("claims once per host window, survives webview reload requests, and resets in a new host", async () => {
+  it("retains unrendered grants, then latches once per host window across webview reloads", async () => {
     const test = fixture()
+    await test.host.handle("rendered", true)
     const results = await Promise.all([test.host.handle("shown", true), test.host.handle("shown", true)])
-    expect(results.map((result) => result.display)).toEqual([true, false])
+    expect(results.map((result) => result.display)).toEqual([true, true])
+    await test.host.handle("rendered", false)
+    expect((await test.host.handle("shown", true)).display).toBe(true)
+    await test.host.handle("rendered", true)
     expect((await test.host.handle(undefined, true)).display).toBe(false)
     test.clock.now += WEEK
     expect((await test.host.handle("shown", true)).display).toBe(false)
@@ -143,13 +165,13 @@ describe("SidebarUpsell", () => {
     expect((await host.handle("shown", true)).display).toBe(true)
   })
 
-  for (const action of [undefined, "shown", "opened", "not_now", "dont_show_again", "undo"] as const) {
+  for (const action of [undefined, "shown", "rendered", "opened", "not_now", "dont_show_again", "undo"] as const) {
     it(`ignores hidden ${action ?? "load"} without mutating state or claiming an impression`, async () => {
       const state = { snoozeCount: 1, snoozedAt: NOW - WEEK }
       const test = fixture(state)
       expect(await test.host.handle(action, false)).toEqual({ state, engaged: true, display: false })
-      expect(test.global.get(KEY, {})).toEqual(state)
-      expect(test.global.writes).toEqual([])
+      expect(await test.global.read()).toEqual(state)
+      expect(test.writes()).toEqual([])
       expect((await test.host.handle("shown", true)).display).toBe(true)
     })
   }
@@ -174,7 +196,7 @@ describe("SidebarUpsell", () => {
         engaged: true,
         display: false,
       })
-      expect(test.global.get(KEY, {})).toEqual(result.state)
+      expect(await test.global.read()).toEqual(result.state)
       test.clock.now += WEEK - 1
       const next = new SidebarUpsell(test.global, test.workspace, () => test.clock.now)
       expect((await next.handle("shown", true)).display).toBe(false)
@@ -192,12 +214,13 @@ describe("SidebarUpsell", () => {
   it("persists opt-out across hosts and restores the current card on Undo without granting a second claim", async () => {
     const test = fixture()
     expect((await test.host.handle("shown", true)).display).toBe(true)
+    await test.host.handle("rendered", true)
     expect(await test.host.handle("dont_show_again", true)).toEqual({
       state: { optedOut: true },
       engaged: true,
       display: false,
     })
-    expect(test.global.get(KEY, {})).toEqual({ optedOut: true })
+    expect(await test.global.read()).toEqual({ optedOut: true })
     const host = new SidebarUpsell(test.global, test.workspace, () => NOW)
     expect((await host.handle("shown", true)).display).toBe(false)
     expect(await test.host.handle("undo", true)).toEqual({
@@ -205,7 +228,7 @@ describe("SidebarUpsell", () => {
       engaged: true,
       display: true,
     })
-    expect(test.global.get(KEY, {})).toEqual({ optedOut: false })
+    expect(await test.global.read()).toEqual({ optedOut: false })
     expect((await test.host.handle("shown", true)).display).toBe(false)
     expect((await host.handle("shown", true)).display).toBe(true)
   })
@@ -216,7 +239,7 @@ describe("SidebarUpsell", () => {
       if (action === "opened") await test.host.handle("opened", true)
       if (action === "command") await test.host.opened()
       const state = { snoozeCount: 1, snoozedAt: NOW - WEEK, [action === "opened" ? "converted" : "opened"]: true }
-      expect(test.global.get(KEY, {})).toEqual(state)
+      expect(await test.global.read()).toEqual(state)
       const host = new SidebarUpsell(test.global, test.workspace, () => NOW + 100 * WEEK)
       expect((await host.handle("shown", true)).display).toBe(false)
       expect(await host.handle("undo", true)).toEqual({
@@ -235,7 +258,7 @@ describe("SidebarUpsell", () => {
         engaged: true,
         display: false,
       })
-      expect(test.global.get(KEY, {})).toEqual({ ...state, optedOut: false })
+      expect(await test.global.read()).toEqual({ ...state, optedOut: false })
       expect((await test.host.handle("shown", true)).display).toBe(false)
     })
   }
@@ -250,7 +273,7 @@ describe("SidebarUpsell", () => {
       )
       expect((await host.handle(undefined, true)).display).toBe(false)
       expect((await host.handle("shown", true)).display).toBe(false)
-      expect(test.global.writes).toEqual([])
+      expect(test.writes()).toEqual([])
       expect(test.workspace.writes).toEqual([])
     })
 
@@ -265,47 +288,38 @@ describe("SidebarUpsell", () => {
     })
   }
 
-  it("serializes Undo behind a delayed opt-out without losing existing state", async () => {
+  it("serializes Undo behind an in-flight opt-out without losing existing state", async () => {
     const state = { snoozedAt: NOW - WEEK, snoozeCount: 2 }
     const test = fixture(state)
     expect((await test.host.handle("shown", true)).display).toBe(true)
-    const gate = test.global.hold()
+    await test.host.handle("rendered", true)
     const optout = test.host.handle("dont_show_again", true)
-    await gate.entered
     const undo = test.host.handle("undo", true)
     const loaded = test.host.handle(undefined, true)
-    expect(test.global.get(KEY, {})).toEqual(state)
-    expect(test.global.writes).toHaveLength(1)
-    gate.release()
     expect((await optout).state).toEqual({ ...state, optedOut: true })
     expect(await undo).toEqual({ state: { ...state, optedOut: false }, engaged: true, display: true })
     expect(await loaded).toEqual({ state: { ...state, optedOut: false }, engaged: true, display: false })
-    expect(test.global.writes).toEqual([
+    expect(test.writes()).toEqual([
       { key: KEY, value: { ...state, optedOut: true } },
       { key: KEY, value: { ...state, optedOut: false } },
     ])
-    expect(test.global.get(KEY, {})).toEqual({ ...state, optedOut: false })
+    expect(await test.global.read()).toEqual({ ...state, optedOut: false })
     expect((await test.host.handle("shown", true)).display).toBe(false)
   })
 
-  it("serializes later snooze and opening behind delayed Undo persistence", async () => {
+  it("serializes later snooze and opening behind in-flight Undo persistence", async () => {
     const test = fixture({ optedOut: true, snoozeCount: 1 })
-    const gate = test.global.hold()
     const undo = test.host.handle("undo", true)
-    await gate.entered
     const snooze = test.host.handle("not_now", true)
     const opened = test.host.opened()
     const loaded = test.host.handle(undefined, true)
-    expect(test.global.get(KEY, {})).toEqual({ optedOut: true, snoozeCount: 1 })
-    expect(test.global.writes).toHaveLength(1)
-    gate.release()
     expect((await undo).display).toBe(true)
     expect((await snooze).state).toEqual({ optedOut: false, snoozeCount: 2, snoozedAt: NOW })
     await opened
     const state = { optedOut: false, snoozeCount: 2, snoozedAt: NOW, opened: true }
     expect(await loaded).toEqual({ state, engaged: true, display: false })
-    expect(test.global.get(KEY, {})).toEqual(state)
-    expect(test.global.writes.map((entry) => entry.value)).toEqual([
+    expect(await test.global.read()).toEqual(state)
+    expect(test.writes().map((entry) => entry.value)).toEqual([
       { optedOut: false, snoozeCount: 1 },
       { optedOut: false, snoozeCount: 2, snoozedAt: NOW },
       state,

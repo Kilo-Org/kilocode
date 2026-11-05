@@ -70,6 +70,7 @@ import { slimInfo, slimPart, slimParts } from "./kilo-provider/slim-metadata"
 import { ToolInputStream } from "./kilo-provider/tool-input-stream"
 import { handleSidebarWorktreeMessage } from "./kilo-provider/sidebar-worktree"
 import { SidebarUpsell } from "./kilo-provider/upsell"
+import { UpsellPreferences } from "./kilo-provider/upsell-preferences"
 import { parseMessageFiles, type MessageFile } from "./kilo-provider/message-files"
 import { renameSession } from "./kilo-provider/rename-session"
 import { handleFileSearch, type SearchRoot } from "./kilo-provider/file-search"
@@ -616,7 +617,12 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     private readonly extensionContext?: vscode.ExtensionContext,
     private readonly opts: KiloProviderOptions = {},
   ) {
-    this.upsell = new SidebarUpsell(extensionContext?.globalState, extensionContext?.workspaceState)
+    this.upsell = new SidebarUpsell(
+      extensionContext?.globalStorageUri?.fsPath
+        ? new UpsellPreferences(extensionContext.globalStorageUri.fsPath)
+        : undefined,
+      extensionContext?.workspaceState,
+    )
     this.projectDirectory = opts.projectDirectory
     this.slimEditMetadata = opts.slimEditMetadata ?? true
     this.unsubscribeSandboxPreference = this.connectionService.sandboxPreference?.onChange(() => {

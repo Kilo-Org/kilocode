@@ -1,3 +1,9 @@
+.agent-manager-upsell-slot {
+  flex: 0 1 auto;
+  min-height: 0;
+  overflow: auto;
+}
+
 .agent-manager-upsell {
   --upsell-gold: #e3c443;
   --upsell-muted: var(--vscode-descriptionForeground, #a9abb1);

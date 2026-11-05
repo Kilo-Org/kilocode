@@ -10,18 +10,20 @@ export function AgentManagerUpsell(props: { enabled: boolean; sidebar: boolean; 
   const language = useLanguage()
   const vscode = useVSCode()
   const [view, setView] = createSignal<"hidden" | "shown" | "confirmation">("hidden")
-  const visible = () => props.enabled && props.sidebar && props.idle && vscode.active()
+  const [impressed, setImpressed] = createSignal(false)
+  const [exposed, setExposed] = createSignal(false)
+  const visible = () =>
+    props.enabled && props.sidebar && props.idle && vscode.active() && (impressed() || props.eligible)
   const token = crypto.randomUUID()
   let sequence = 0
   let request = ""
   let pending = false
-  let action: UpsellAction | undefined
-  let shown = false
+  let action: UpsellAction | "rendered" | undefined
   let timer: ReturnType<typeof setTimeout> | undefined
   const cancel = () => clearTimeout(timer)
   const track = (action: UpsellAction) =>
     vscode.postMessage({ type: "telemetry", event: TelemetryEventName.AGENT_MANAGER_UPSELL, properties: { action } })
-  const send = (next: UpsellAction) => {
+  const send = (next: UpsellAction | "rendered") => {
     action = next
     request = `${token}:${++sequence}`
     vscode.postMessage({ type: "agentManagerUpsell", request, action: next })
@@ -30,7 +32,6 @@ export function AgentManagerUpsell(props: { enabled: boolean; sidebar: boolean; 
   onCleanup(
     vscode.onMessage((message) => {
       if (message.type !== "agentManagerUpsellLoaded" || message.request !== request) return
-      if (action === "shown" && (!visible() || !props.eligible)) return
       if (message.display) setView("shown")
       if (action === "undo" && !message.display) setView("hidden")
       if (message.state.converted || message.state.opened) setView("hidden")
@@ -45,11 +46,6 @@ export function AgentManagerUpsell(props: { enabled: boolean; sidebar: boolean; 
     pending = true
     send("shown")
   })
-  createEffect(() => {
-    if (shown || !visible() || view() !== "shown") return
-    shown = true
-    track("shown")
-  })
   const act = (action: Exclude<UpsellAction, "shown">) => {
     cancel()
     setView(action === "dont_show_again" ? "confirmation" : action === "undo" ? "shown" : "hidden")
@@ -61,10 +57,27 @@ export function AgentManagerUpsell(props: { enabled: boolean; sidebar: boolean; 
   return (
     <Show when={visible() && view() !== "hidden"}>
       <div
+        ref={(node) => {
+          setExposed(false)
+          const observer = new IntersectionObserver(
+            (entries) => {
+              setExposed(entries.some((entry) => entry.intersectionRatio >= 0.01))
+              if (impressed() || !visible() || view() !== "shown" || !exposed()) return
+              setImpressed(true)
+              send("rendered")
+              track("shown")
+            },
+            { threshold: 0.01 },
+          )
+          observer.observe(node)
+          onCleanup(() => observer.disconnect())
+        }}
         class="agent-manager-upsell"
         classList={{ "agent-manager-upsell-confirmation": view() === "confirmation" }}
         role="status"
         aria-live="polite"
+        aria-hidden={!exposed()}
+        inert={!exposed()}
         onKeyDown={(event) => {
           if (event.key !== "Escape") return
           event.preventDefault()
