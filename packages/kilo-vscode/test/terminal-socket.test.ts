@@ -148,10 +148,43 @@ describe("TerminalSocket", () => {
     test.channel.receive({
       type: "agentManager.terminal.socket.closed",
       socketId: test.socketId,
-      code: 4404,
-      reason: "Terminal is not available",
+      code: 1006,
+      reason: "abnormal closure",
     })
     expect(events).toEqual(["error", "close"])
+  })
+
+  it("ends a gone terminal without a connection error", () => {
+    const test = scene()
+    const events: string[] = []
+    test.channel.receive({ type: "agentManager.terminal.socket.opened", socketId: test.socketId })
+    test.socket.onerror = () => events.push("error")
+    test.socket.onclose = () => events.push("close")
+
+    test.channel.receive({
+      type: "agentManager.terminal.socket.closed",
+      socketId: test.socketId,
+      code: 4404,
+      reason: "session exited",
+    })
+    expect(events).toEqual(["close"])
+  })
+
+  it("does not report a close the client requested", () => {
+    const test = scene()
+    const events: string[] = []
+    test.channel.receive({ type: "agentManager.terminal.socket.opened", socketId: test.socketId })
+    test.socket.onerror = () => events.push("error")
+    test.socket.onclose = () => events.push("close")
+
+    test.socket.close(4009, "terminal replay exceeded limit")
+    test.channel.receive({
+      type: "agentManager.terminal.socket.closed",
+      socketId: test.socketId,
+      code: 4009,
+      reason: "terminal replay exceeded limit",
+    })
+    expect(events).toEqual(["close"])
   })
 
   it("ignores frames of another socket", () => {

@@ -524,6 +524,27 @@ export interface AgentManagerWorktreeDiffMessage {
   diffs: WorktreeFileDiff[]
 }
 
+/** Which requested paths exist for a session, used to turn inline code spans into file links. */
+export interface AgentManagerValidateFilesResultMessage {
+  type: "agentManager.validateFilesResult"
+  id: string
+  existing: string[]
+}
+
+/** One document preview for the Documents panel: the canonical path plus the content, or the read error. */
+export interface AgentManagerDocumentMessage {
+  type: "agentManager.document"
+  sessionId: string
+  contextKey?: string
+  file: string
+  requestedFile?: string
+  content?: string
+  kind?: "text" | "image"
+  mime?: string
+  data?: string
+  error?: string
+}
+
 export interface AgentManagerWorktreeDiffFileMessage {
   type: "agentManager.worktreeDiffFile"
   projectId?: string
@@ -780,6 +801,8 @@ export type AgentManagerExtensionMessage =
   | AgentManagerImportResultMessage
   | AgentManagerWorktreeDiffMessage
   | AgentManagerWorktreeDiffFileMessage
+  | AgentManagerDocumentMessage
+  | AgentManagerValidateFilesResultMessage
   | AgentManagerWorktreeDiffLoadingMessage
   | AgentManagerWorktreeDiffNoticeMessage
   | AgentManagerApplyWorktreeDiffResultMessage
@@ -1136,6 +1159,22 @@ export interface AgentManagerOpenExternalRequest {
   url: string
 }
 
+/** Ask which paths exist for a session. */
+export interface AgentManagerValidateFilesRequest {
+  type: "agentManager.validateFiles"
+  id: string
+  sessionId: string
+  paths: string[]
+}
+
+/** Read a file from the selected worktree for the Documents panel. */
+export interface AgentManagerRequestDocumentRequest {
+  type: "agentManager.requestDocument"
+  sessionId: string
+  file: string
+  contextKey?: string
+}
+
 /** Copy a file's absolute path to the clipboard for a specific session. */
 export interface AgentManagerCopyFilePathRequest {
   type: "agentManager.copyFilePath"
@@ -1484,6 +1523,8 @@ export type AgentManagerWebviewMessage =
   | AgentManagerTerminalSocketSendRequest
   | AgentManagerTerminalSocketCloseRequest
   | AgentManagerOpenFileRequest
+  | AgentManagerRequestDocumentRequest
+  | AgentManagerValidateFilesRequest
   | AgentManagerCopyFilePathRequest
   | CreateMultiVersionRequest
   | SetTabOrderRequest

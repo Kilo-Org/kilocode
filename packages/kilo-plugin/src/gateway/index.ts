@@ -42,6 +42,7 @@ import { Clock, Duration, Effect, Fiber, Option, Schedule, Schema, Scope, Semaph
 import { GatewayOptions } from "./options.js"
 import { GatewayPrompt } from "./prompt.js"
 import { GatewayRouters } from "./routers.js"
+import { KiloSessionSync } from "../session-sync"
 
 // v2 adapter for the Kilo Gateway (issue #14991, PRs 1-3: login, teams, catalog authority, requests, and errors).
 // Kilo logic lives in @kilocode/gateway-core; this file maps it onto the v2 plugin API. The `kilocode.gateway` RPC
@@ -108,6 +109,9 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
   effect: Effect.fn(function* (ctx) {
     const bus = yield* Bus.Service
     const global = yield* Global.Service
+    const sessionSync = yield* Effect.serviceOption(KiloSessionSync.Service)
+    let reportedOrganization: string | null | undefined
+    let reportedToken: string | undefined
     const configService = yield* Effect.serviceOption(Config.Service)
     if (Option.isNone(configService)) return yield* Effect.die(new Error("Kilo Gateway requires location config"))
     const config = configService.value
@@ -218,6 +222,15 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
       if (key && Option.isSome(legacy) && account && KiloAccount.compatible(account)) {
         if (Option.isNone(storedSelection)) yield* ctx.storage.set(key, legacy.value)
         yield* ctx.storage.remove("organization:env")
+      }
+      const activeOrganization = account
+        ? account.organizationID
+        : process.env.KILO_ORG_ID || organizationID || KiloServer.organizationFromUrl(base) || null
+      if (activeOrganization !== reportedOrganization || account?.token !== reportedToken) {
+        reportedOrganization = undefined
+        reportedToken = undefined
+        if (Option.isSome(sessionSync))
+          yield* sessionSync.value.organization({ directory: ctx.location.directory, organizationID: undefined })
       }
       return {
         server: KiloServer.apiBase(configuredServer),
@@ -407,6 +420,17 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
         yield* ctx.agent.reload()
         catalog = { account: current, connection, envActive, models: [], failed: true, failure: { kind: "organization_missing" }, anonymous: false }
         return
+      }
+
+      // A null local selection is provisional until the profile confirms Personal is available or
+      // resolves the default team. Never enroll under Personal before this decision is complete.
+      if (
+        current && Option.isSome(profile) && Option.isSome(sessionSync) &&
+        (organizationID !== reportedOrganization || current.token !== reportedToken)
+      ) {
+        reportedOrganization = organizationID
+        reportedToken = current.token
+        yield* sessionSync.value.organization({ directory: ctx.location.directory, organizationID })
       }
 
       // Organization agents share the same resolved account as the catalog. Errors and empty responses

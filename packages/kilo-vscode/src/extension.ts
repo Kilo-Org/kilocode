@@ -13,6 +13,7 @@ import {
 } from "vscode"
 import { createAgentManagerConnection } from "./agent-manager/connection"
 import { canonicalizePath, samePath } from "./agent-manager/project/paths"
+import { DocumentViewerProvider } from "./DocumentViewerProvider"
 import { AgentManagerProvider } from "./agent-manager/AgentManagerProvider"
 import { createPanel, PANEL_TYPE } from "./agent-manager/panel"
 import { ensureCommandsSkipShell } from "./agent-manager/terminal-host"
@@ -22,7 +23,8 @@ import { editorTabOwns, setEditorTabs, sidebarSession } from "./browser-tab/side
 import { chat } from "./chat"
 import { commitMessageCommand, commitMessageLanguage, connect, type GitExports } from "./commit-message"
 import { createCostAlerts } from "./cost-alert"
-import { command, manager, settingsEnvironment } from "./server"
+import { command, manager, serverHome, settingsEnvironment } from "./server"
+import { usePlanHome } from "./documents/document-reader"
 import { readKiloSettings } from "./settings-host"
 import { registerAutocompleteProvider } from "./services/autocomplete"
 import { BrowserAutomationService, BrowserBroker } from "./services/browser-automation"
@@ -33,10 +35,12 @@ import {
   migrateIntegratedBrowserUseSystemChrome,
 } from "./services/browser-automation/chrome-setting"
 import { createConnection } from "./services/autocomplete/connection"
+import { profile } from "./profile-panel"
 import { settings } from "./settings-panel"
 import { createShutdown } from "./shutdown"
 import type { BrowserReference } from "./shared/browser-feedback"
 import { toolDiff } from "./tool-diff"
+import { tabShortcutTarget } from "./tab-shortcuts"
 
 let shutdownExtension: (() => Promise<void>) | undefined
 
@@ -48,9 +52,7 @@ export function activate(context: ExtensionContext) {
     notify: async (alert) => {
       // This package ships no l10n bundles, so these strings remain English in every VS Code locale.
       const money = (value: number) =>
-        value > 0 && value < 0.00000001
-          ? `$${value}`
-          : `$${value.toFixed(value < 0.0001 ? 8 : value < 1 ? 4 : 2)}`
+        value > 0 && value < 0.00000001 ? `$${value}` : `$${value.toFixed(value < 0.0001 ? 8 : value < 1 ? 4 : 2)}`
       const title = alert.title?.trim() || l10n.t("Session {0}", alert.sessionID.slice(-6))
       const keepGoing = l10n.t("Continue")
       const stop = l10n.t("Stop")
@@ -127,8 +129,11 @@ export function activate(context: ExtensionContext) {
     }
   }
   const shutdown = createShutdown({ log: (text) => output.appendLine(text) })
+  const serverCommand = () => command({ extension: context.extensionPath, storage, env: process.env })
+  // Plan mode writes plans under the server's home, so plan links resolve there too.
+  usePlanHome(serverHome(serverCommand(), process.env))
   const server = manager({
-    command: () => command({ extension: context.extensionPath, storage, env: process.env }),
+    command: serverCommand,
     cwd: directory,
     env: process.env,
     settings: serverSettings,
@@ -168,6 +173,7 @@ export function activate(context: ExtensionContext) {
   context.subscriptions.push({ dispose: autocomplete.dispose })
   registerAutocompleteProvider(context, autocomplete)
   let browserTab: BrowserTabProvider | undefined
+  const documentsRef: { current?: DocumentViewerProvider } = {}
   const view = chat({
     context,
     server,
@@ -175,7 +181,14 @@ export function activate(context: ExtensionContext) {
     trackCostSession: alerts.track,
     diff: diffs,
     openBrowser: (sessionId, url) => browserTab?.openUrl(sessionId, url) ?? false,
+    documents: () => documentsRef.current,
   })
+  const documents = new DocumentViewerProvider({
+    extension: context,
+    directory,
+    onComments: (comments, autoSend) => void view.post({ type: "appendReviewComments", comments, autoSend }),
+  })
+  documentsRef.current = documents
   // The Agent Manager binds first and skips the session the sidebar is showing and sessions with an open editor tab,
   // so a sidebar session opens the editor tab even when the panel has the same directory open.
   const agentHost = new VscodeHost(context, { server, directory })
@@ -229,6 +242,7 @@ export function activate(context: ExtensionContext) {
     onReset: view.syncState,
     agentManager: () => agentManager.settings,
   })
+  const profilePanel = profile({ context, server, directory })
   const agentAction = (action: string) => agentManager.postMessage({ type: "action", action })
   ensureCommandsSkipShell()
   // The cycle keybindings act on the focused composer: the Agent Manager panel when it is active, else the sidebar.
@@ -241,8 +255,6 @@ export function activate(context: ExtensionContext) {
   const agentCommands = [
     ["previousSession", "sessionPrevious"],
     ["nextSession", "sessionNext"],
-    ["previousTab", "tabPrevious"],
-    ["nextTab", "tabNext"],
     ["previousTerminal", "terminalPrevious"],
     ["nextTerminal", "terminalNext"],
     ["search", "search"],
@@ -277,13 +289,28 @@ export function activate(context: ExtensionContext) {
       await commands.executeCommand("kilo-code.v2.chat.focus")
       await view.post({ type: "command", name: "history" })
     }),
-    commands.registerCommand("kilo-code.v2.profile", async () => {
+    commands.registerCommand("kilo-code.v2.profile", () => profilePanel.open()),
+    // One shortcut pair serves the sidebar and the Agent Manager. The sidebar focus state is more precise than
+    // `isActive`, which stays true while the panel is the selected editor tab but the sidebar has focus.
+    commands.registerCommand("kilo-code.v2.agentManager.previousTab", () => {
+      const target = tabShortcutTarget(view.focused(), agentManager.isActive())
+      if (target === "sidebar") return void view.post({ type: "command", name: "tabPrevious" })
+      if (target === "agentManager") return agentAction("tabPrevious")
+    }),
+    commands.registerCommand("kilo-code.v2.agentManager.nextTab", () => {
+      const target = tabShortcutTarget(view.focused(), agentManager.isActive())
+      if (target === "sidebar") return void view.post({ type: "command", name: "tabNext" })
+      if (target === "agentManager") return agentAction("tabNext")
+    }),
+    // The switcher only exists in the sidebar, so the command always opens it there.
+    commands.registerCommand("kilo-code.v2.showOpenTabs", async () => {
       await commands.executeCommand("kilo-code.v2.chat.focus")
-      await view.post({ type: "command", name: "profile" })
+      await view.post({ type: "command", name: "showOpenTabs" })
     }),
     commands.registerCommand("kilo-code.v2.settings", (...args: unknown[]) => panel.open(args)),
     commands.registerCommand("kilo-code.v2.settingsSearch", () => panel.open([{ search: true }])),
     panel,
+    profilePanel,
     // The host sends the action and the webview decides the next agent, as in main: the agent list and
     // the selection live in the webview, and only the server owns the committed value.
     commands.registerCommand("kilo-code.v2.cycleAgentMode", () => cycle("cycleAgentMode")),
@@ -320,6 +347,11 @@ export function activate(context: ExtensionContext) {
     window.registerWebviewPanelSerializer(PANEL_TYPE, {
       deserializeWebviewPanel: async (restored) => agentManager.deserializePanel(restored),
     }),
+    documents,
+    // A restored document tab reloads its own tabs from the messages it missed, so start it empty instead.
+    window.registerWebviewPanelSerializer(DocumentViewerProvider.viewType, {
+      deserializeWebviewPanel: async (restored) => restored.dispose(),
+    }),
     commands.registerCommand("kilo-code.v2.agentManager.open", () => agentManager.openPanel()),
     commands.registerCommand("kilo-code.v2.agentManager.openInNewWindow", async () => {
       agentManager.openPanel()
@@ -329,9 +361,7 @@ export function activate(context: ExtensionContext) {
       commands.registerCommand(`kilo-code.v2.agentManager.${command}`, () => agentAction(action)),
     ),
     ...Array.from({ length: 9 }, (_, index) =>
-      commands.registerCommand(`kilo-code.v2.agentManager.jumpTo${index + 1}`, () =>
-        agentAction(`jumpTo${index + 1}`),
-      ),
+      commands.registerCommand(`kilo-code.v2.agentManager.jumpTo${index + 1}`, () => agentAction(`jumpTo${index + 1}`)),
     ),
     commands.registerCommand("kilo-code.v2.agentManager.advancedWorktree", () => agentManager.openAdvancedWorktree()),
     commands.registerCommand("kilo-code.v2.agentManager.diagnostics", () => {

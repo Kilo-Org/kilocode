@@ -33,6 +33,8 @@ export interface TerminalRoutingDeps {
   log(...args: unknown[]): void
   /** Send a message back to the webview. */
   post(message: AgentManagerOutMessage): void
+  /** A terminal is gone, so its relay sockets must close too. */
+  closed(terminalId: string): void
   /** Return the current terminal font settings. */
   getTerminalFont(): TerminalFont
 }
@@ -88,6 +90,7 @@ export class TerminalRouter {
     }
     if (m.type === "agentManager.terminal.close") {
       void this.manager.close(m.terminalId).then((closed) => {
+        if (closed) this.deps.closed(m.terminalId)
         this.deps.post(
           closed
             ? { type: "agentManager.terminal.closed", terminalId: m.terminalId }

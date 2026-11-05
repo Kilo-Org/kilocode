@@ -160,6 +160,7 @@ const results = await Promise.all([
       webview: path.join(root, "webview-ui/src/index.tsx"),
       "agent-manager": path.join(root, "webview-ui/agent-manager/index.tsx"),
       "browser-tab": path.join(root, "webview-ui/browser-tab/index.tsx"),
+      documents: path.join(root, "webview-ui/documents/index.tsx"),
     },
     outdir: dist,
     format: "iife",

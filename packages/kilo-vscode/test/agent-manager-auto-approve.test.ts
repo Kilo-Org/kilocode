@@ -23,10 +23,25 @@ window.createOutputChannel ??= () => ({ appendLine: () => undefined, show: () =>
 const directories: string[] = []
 
 afterEach(async () => {
-  // Provider shutdown is asynchronous, and a Windows runner can still hold the temporary workspace for a moment.
-  await Bun.sleep(50)
-  for (const dir of directories.splice(0)) fs.rmSync(dir, { recursive: true, force: true, maxRetries: 100, retryDelay: 100 })
+  for (const dir of directories.splice(0)) await removeTemporaryWorkspace(dir)
 })
+
+// Provider shutdown is asynchronous and can still have a process with this directory as its working directory on
+// Windows, which locks it for a moment. Keep retrying, then leave the disposable directory to the OS.
+async function removeTemporaryWorkspace(dir: string) {
+  for (let attempt = 0; attempt < 50; attempt++) {
+    try {
+      fs.rmSync(dir, { recursive: true, force: true })
+      return
+    } catch (error) {
+      if (attempt === 49) {
+        console.warn(`Could not remove the temporary workspace ${dir}: ${String(error)}`)
+        return
+      }
+      await new Promise((resolve) => setTimeout(resolve, 100))
+    }
+  }
+}
 
 const tick = () => new Promise((resolve) => setTimeout(resolve, 0))
 

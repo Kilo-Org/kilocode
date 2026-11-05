@@ -20,7 +20,11 @@ import { initContextState, reconcileProject } from "./project/init"
 import { createPollers, type ProjectPollers } from "./project/pollers"
 import { Semaphore } from "./semaphore"
 import { BranchNamingController } from "./branch-naming"
-import { createWorktreeOnDisk, type CreateWorktreeOnDiskOptions, type CreateWorktreeOnDiskResult } from "./worktree-create"
+import {
+  createWorktreeOnDisk,
+  type CreateWorktreeOnDiskOptions,
+  type CreateWorktreeOnDiskResult,
+} from "./worktree-create"
 import {
   addSessionToLifecycleWorktree,
   closeLifecycleSession,
@@ -63,7 +67,8 @@ import { pruneSubagents, sessionMissing } from "./prune-subagents"
 import { readTerminalFont, watchTerminalFont } from "./terminal-font"
 import { DestinationState, watchTerminalDestination } from "./terminal-destination"
 import { buildKeybindingMap } from "./format-keybinding"
-import { resolveWorktreeFile, sessionDirectory } from "./worktree-file-path"
+import { documentExists, readDocument } from "../documents/document-reader"
+import { resolveWorktreeFile, resolveWorktreeRoot, sessionDirectory } from "./worktree-file-path"
 import { focusPanelPrompt, revealPanel } from "./focus-panel"
 import { formatLog } from "./log-format"
 import { HealthScheduler } from "./worktree-health"
@@ -178,6 +183,7 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
       getProjectId: () => this.projectScope.current()?.id ?? this.contexts.active()?.id,
       log: (...args) => this.log("[XTerm]", ...args),
       post: (message) => this.postToWebview(message),
+      closed: (terminalId) => this.relay.closeTerminal(terminalId),
       getTerminalFont: () => readTerminalFont(),
     })
     this.relay = new PtyRelay({
@@ -190,6 +196,7 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
       connection: this.connection,
       output: this.outputChannel,
       post: (message) => this.postToWebview(message),
+      closed: (terminalId) => this.relay.closeTerminal(terminalId),
     })
     this.unsubFont = watchTerminalFont((font) => {
       this.postToWebview({ type: "agentManager.terminal.fontChanged", font })
@@ -335,7 +342,10 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
       located(() =>
         [...this.contexts.values()].flatMap((ctx) => [
           ctx.root,
-          ...(ctx.peekState()?.getWorktrees().map((wt) => wt.path) ?? []),
+          ...(ctx
+            .peekState()
+            ?.getWorktrees()
+            .map((wt) => wt.path) ?? []),
         ]),
       ),
     )
@@ -347,7 +357,10 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
           ...(workspace ? [workspace] : []),
           ...[...this.contexts.values()].flatMap((ctx) => [
             ctx.root,
-            ...(ctx.peekState()?.getWorktrees().map((wt) => wt.path) ?? []),
+            ...(ctx
+              .peekState()
+              ?.getWorktrees()
+              .map((wt) => wt.path) ?? []),
           ]),
         ]
       },
@@ -369,7 +382,10 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
     this.caffeination = new CaffeinationService(this.connection, () =>
       [...this.contexts.values()].flatMap((ctx) => [
         ctx.root,
-        ...(ctx.peekState()?.getWorktrees().map((wt) => wt.path) ?? []),
+        ...(ctx
+          .peekState()
+          ?.getWorktrees()
+          .map((wt) => wt.path) ?? []),
       ]),
     )
     this.caffeination.onChange((state) => this.postToWebview({ type: "agentManager.caffeination", ...state }))
@@ -444,6 +460,8 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
       this.panel = undefined
       previous.dispose()
     }
+    // Sockets of the previous webview instance cannot be reached by this one.
+    this.relay.reset()
     this.panel = panel
     this.browser.attach(panel)
     void this.statsPoller
@@ -479,6 +497,7 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
       this.connection.view([])
       this.panel = undefined
       void this.terminalRouter.dispose()
+      this.relay.reset()
       this.onVisibilityChange?.(false)
     })
     this.postCaffeination()
@@ -586,7 +605,11 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
 
   public trackVisibleSession(id: string | null): void {
     this.visibleSession = id
-    if (id) this.panelSessions.add(id)
+    if (id) {
+      this.panelSessions.add(id)
+      // Follow the session with its integrated terminal while the terminal panel is open.
+      this.terminalManager.syncOnSessionSwitch(id)
+    }
     // The poller follows the visible session so its fast poll and immediate fetch target the
     // worktree the user is reading. The PR poller belongs to the active project, so a session
     // from another project, a local session, or an unknown one clears the target.
@@ -648,7 +671,16 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
     agent?: string,
     boot?: CreationBoot,
   ): Promise<SessionInfo | null> {
-    return createSessionInWorktree(this as unknown as ProviderSessionHost, worktreePath, branch, worktreeId, timing, model, agent, boot)
+    return createSessionInWorktree(
+      this as unknown as ProviderSessionHost,
+      worktreePath,
+      branch,
+      worktreeId,
+      timing,
+      model,
+      agent,
+      boot,
+    )
   }
 
   public async acquirePtyCleanup(directory: string): Promise<() => void> {
@@ -660,11 +692,7 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
     })
   }
 
-  public notifyWorktreeReady(
-    sessionId: string,
-    result: CreateWorktreeResult,
-    worktreeId?: string,
-  ): void {
+  public notifyWorktreeReady(sessionId: string, result: CreateWorktreeResult, worktreeId?: string): void {
     this.pushState()
     this.postToWebview({
       type: "agentManager.worktreeSetup",
@@ -794,10 +822,9 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
       },
       removeSnapshot: async (root, target) => {
         const client = await this.connection.client()
-        const result = await client.rpc(KiloAgentManagerRpc.Definition).removeSnapshot(
-          { worktree: target },
-          { location: { directory: root } },
-        )
+        const result = await client
+          .rpc(KiloAgentManagerRpc.Definition)
+          .removeSnapshot({ worktree: target }, { location: { directory: root } })
         return result.removed
       },
       withProgress: (title, task) => this.host.withProgress(title, task),
@@ -1039,6 +1066,23 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
     if (target) this.host.openFile(target, line, column)
   }
 
+  public async validateFiles(id: string, sessionId: string, paths: string[]): Promise<void> {
+    // Session roots come from the recovered worktree state, so wait for it as the other session lookups do.
+    await this.waitForStateReady("validateFiles")
+    const root = resolveWorktreeRoot(this.getStateManager(), sessionId, this.getRoot())
+    // An unresolved session is not "every path missing": let the client timeout treat it as unknown.
+    if (!root) return
+    const existing = paths.filter((file) => documentExists(root, file))
+    this.postToWebview({ type: "agentManager.validateFilesResult", id, existing })
+  }
+
+  public async readDocument(sessionId: string, file: string, contextKey?: string): Promise<void> {
+    await this.waitForStateReady("readDocument")
+    const root = resolveWorktreeRoot(this.getStateManager(), sessionId, this.getRoot())
+    const result = root ? readDocument(root, file) : { error: "The document context is no longer available." }
+    this.postToWebview({ type: "agentManager.document", sessionId, file, requestedFile: file, contextKey, ...result })
+  }
+
   public postToWebview(message: AgentManagerOutMessage): void {
 
     if (message.type !== "agentManager.worktreeSetup" || message.projectId) {
@@ -1157,5 +1201,4 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
   public async setReviewMarkdownRender(value: boolean): Promise<void> {
     await setReviewMarkdownRender(value)
   }
-
 }

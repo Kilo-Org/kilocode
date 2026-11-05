@@ -272,7 +272,9 @@
         "@opentui/core": "catalog:",
         "@opentui/solid": "catalog:",
         "babel-preset-solid": "1.9.12",
+        "drizzle-orm": "catalog:",
         "effect": "catalog:",
+        "jsonc-parser": "3.3.1",
       },
       "devDependencies": {
         "@opencode/client": "workspace:*",

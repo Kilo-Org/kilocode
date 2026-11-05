@@ -61,10 +61,15 @@ function closeCode(code: number | undefined): number | undefined {
   return undefined
 }
 
+interface Pending {
+  terminalId: string
+  token: symbol
+}
+
 export class PtyRelay {
   private readonly sockets = new Map<string, Entry>()
-  /** Open requests awaiting a ticket; a close or dispose removes the token. */
-  private readonly tokens = new Map<string, symbol>()
+  /** Open requests awaiting a ticket; a close, terminal close, reset or dispose removes the token. */
+  private readonly tokens = new Map<string, Pending>()
   private disposed = false
 
   constructor(private readonly deps: PtyRelayDeps) {}
@@ -91,18 +96,28 @@ export class PtyRelay {
     for (const [socketId, entry] of this.sockets) {
       if (entry.terminalId === terminalId) this.close(socketId)
     }
-    for (const [socketId] of this.tokens) {
-      const entry = this.sockets.get(socketId)
-      if (!entry || entry.terminalId === terminalId) this.tokens.delete(socketId)
+    for (const [socketId, pending] of this.tokens) {
+      if (pending.terminalId === terminalId) this.tokens.delete(socketId)
     }
   }
 
-  dispose(): void {
-    this.disposed = true
+  /**
+   * Drop every socket while staying usable.
+   *
+   * A webview reload or a closed panel leaves sockets that the next webview instance cannot address, so their frames
+   * would be posted to a webview that never opened them. The terminals themselves stay alive: the next instance opens
+   * its own sockets.
+   */
+  reset(): void {
     this.tokens.clear()
     const entries = [...this.sockets.values()]
     this.sockets.clear()
     for (const entry of entries) entry.socket.close()
+  }
+
+  dispose(): void {
+    this.disposed = true
+    this.reset()
   }
 
   private async open(socketId: string, terminalId: string): Promise<void> {
@@ -112,14 +127,14 @@ export class PtyRelay {
     const target = this.deps.terminal(terminalId)
     if (!target) return this.closed(socketId, NOT_FOUND, "Terminal is not available")
     const token = Symbol(socketId)
-    this.tokens.set(socketId, token)
+    this.tokens.set(socketId, { terminalId, token })
     const url = await ptySocketUrl(this.deps.connection, target.directory, target.ptyID, target.replayExited).catch(
       (error: unknown) => {
         this.deps.log(`PTY socket ${socketId} could not get a ticket: ${getErrorMessage(error)}`)
         return undefined
       },
     )
-    if (this.tokens.get(socketId) !== token) {
+    if (this.tokens.get(socketId)?.token !== token) {
       // A close arrived while the ticket was being minted, so answer it with a normal close.
       if (!this.disposed) this.closed(socketId, CLOSED, "closed")
       return

@@ -12,6 +12,7 @@ export enum SidePanel {
   Subagents = "subagents",
   EditPreview = "edit-preview",
   Browser = "browser",
+  Documents = "documents",
 }
 
 function viewportWidth(viewport: number): number {
