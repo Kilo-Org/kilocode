@@ -243,11 +243,10 @@ class SessionOpenPage(private val ide: KiloIdePage, private val watchdog: Watchd
             readPrompt(scope)?.takeIf { it.state == "Busy" && occurrences(it, token) >= 1 }
         }
 
-    fun awaitComplete(token: String, scope: UiComponent? = null): PromptState =
-        watchdog.value("turn idle with the assistant token '$token'") {
-            readPrompt(scope)?.takeIf {
-                it.state == "Idle" && it.assistant.contains(token) && it.errors.isBlank() && occurrences(it, token) >= 2
-            }
+    /** Waits for the turn to leave Busy, including a terminal failure, so callers can report it. */
+    fun awaitSettled(scope: UiComponent? = null): PromptState =
+        watchdog.value("turn settled after the fake-LLM gate release") {
+            readPrompt(scope)?.takeIf { it.state in settled }
         }
 
     fun hostedEditor(): UiComponent? = ide.showing(HOSTED_EDITOR)
@@ -396,7 +395,7 @@ class SessionOpenPage(private val ide: KiloIdePage, private val watchdog: Watchd
                 ide.driver.withContext(OnDispatcher.EDT) { panel.messageText("assistant") }
             }.getOrDefault(""),
             errors = runCatching {
-                ide.driver.withContext(OnDispatcher.EDT) { panel.assistantErrors() }
+                ide.driver.withContext(OnDispatcher.EDT) { panel.messageErrors() }
             }.getOrDefault(""),
             state = runCatching {
                 ide.driver.withContext(OnDispatcher.EDT) { panel.stateName() }
@@ -453,5 +452,6 @@ class SessionOpenPage(private val ide: KiloIdePage, private val watchdog: Watchd
         const val ACTIVE_TREE_VIEW = "ai.kilocode.client.ui.tree.ActiveTreeView"
         const val ACTIVE_LIST = "ai.kilocode.client.ui.list.ActiveList"
         const val HOSTED_EDITOR = "ai.kilocode.client.agentManager.hosted.HostedWorkspaceEditorPanel"
+        val settled = setOf("Idle", "Error", "TurnEnded", "LoginRequired")
     }
 }

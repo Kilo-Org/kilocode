@@ -88,7 +88,7 @@ interface SessionMessageListPanel {
     fun dump(): String
     fun dumpDetailed(): String
     fun messageText(role: String): String
-    fun assistantErrors(): String
+    fun messageErrors(): String
     fun stateName(): String
     fun stateMessage(): String?
     fun sessionId(): String?

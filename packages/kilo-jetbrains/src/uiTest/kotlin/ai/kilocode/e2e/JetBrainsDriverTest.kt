@@ -11,6 +11,7 @@ import com.intellij.ide.starter.models.TestCase
 import com.intellij.ide.starter.plugins.PluginConfigurator
 import com.intellij.ide.starter.project.LocalProjectInfo
 import com.intellij.ide.starter.runner.Starter
+import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
@@ -31,6 +32,12 @@ import kotlin.time.Duration.Companion.minutes
 @Timeout(value = 45, unit = TimeUnit.MINUTES)
 class JetBrainsDriverTest {
     private val watchdog = Watchdog("jetbrains-driver", 5.minutes)
+
+    @OptIn(ExperimentalSerializationApi::class)
+    private val jsonc = Json {
+        allowComments = true
+        allowTrailingComma = true
+    }
 
     @Test
     fun drive() {
@@ -434,16 +441,25 @@ class JetBrainsDriverTest {
         }
         evidence.pass("stream.release", "HTTP $status")
 
-        val complete = runCatching { page.awaitComplete(token, root) }.getOrElse { error ->
+        val complete = runCatching { page.awaitSettled(root) }.getOrElse { error ->
             capture(ide, window, page, root, lane, "complete-failed")
-            failStream(evidence, "the turn did not settle with the assistant token: ${actionable(error)}")
+            failStream(evidence, "the turn did not settle after the gate release: ${actionable(error)}")
             return
         }
 
-        evidence.pass("assistant.complete", "the transcript renders the completed assistant token")
+        val occurrences = page.occurrences(complete, token)
+        if (complete.state == "Idle" && complete.assistant.contains(token) && complete.errors.isBlank() && occurrences >= 2) {
+            evidence.pass("assistant.complete", "the transcript renders the completed assistant token")
+        } else {
+            evidence.fail(
+                "assistant.complete",
+                "state=${complete.state} errors='${complete.errors.take(400)}' " +
+                    "assistant='${complete.assistant.take(400)}' occurrences=$occurrences",
+            )
+        }
         evidence.state("stream.state", complete.state)
         evidence.state("stream.assistant.final", complete.assistant.take(4000))
-        evidence.state("stream.ui.occurrences", page.occurrences(complete, token))
+        evidence.state("stream.ui.occurrences", occurrences)
         evidence.state("stream.turns", complete.turns)
         evidence.state("transcript.dump", complete.dump.take(4000))
         evidence.state("transcript.detailed", complete.detailed.take(4000))
@@ -461,17 +477,18 @@ class JetBrainsDriverTest {
                 "state=${complete.state}${complete.message?.let { ": $it" } ?: ""}",
             )
         }
-        if (complete.errors.isBlank() && complete.state != "Error") {
-            evidence.pass("prompt.no-error", "no assistant error and no error state")
+        val failed = complete.state == "Error" || complete.state == "TurnEnded" || complete.state == "LoginRequired"
+        if (complete.errors.isBlank() && !failed) {
+            evidence.pass("prompt.no-error", "no message failure and no error state")
         } else {
-            evidence.fail("prompt.no-error", "assistant errors '${complete.errors.take(400)}' state=${complete.state}")
+            evidence.fail("prompt.no-error", "message errors '${complete.errors.take(400)}' state=${complete.state}")
         }
 
         val after = runCatching { fake.scenarioRequests(tag) }.getOrNull()
         val scopedAfter = runCatching { fake.requests(scope) }.getOrNull()
         evidence.state("stream.observations.after", after)
         evidence.state("stream.observations.scope.after", scopedAfter)
-        if (after != null && (before == null || after > before)) {
+        if (before != null && after != null && after > before) {
             evidence.pass("stream.observe", "fake-LLM scenario requests $before -> $after")
         } else {
             evidence.fail("stream.observe", "fake-LLM scenario request count did not increase (before=$before after=$after)")
@@ -604,8 +621,7 @@ class JetBrainsDriverTest {
         runCatching {
             Files.createDirectories(file.parent)
             val existing = if (Files.exists(file)) Files.readString(file) else "{}"
-            val fields = runCatching { Json.parseToJsonElement(existing).jsonObject.toMutableMap() }
-                .getOrElse { mutableMapOf() }
+            val fields = jsonc.parseToJsonElement(existing).jsonObject.toMutableMap()
             fields["model"] = JsonPrimitive(model)
             fields["small_model"] = JsonPrimitive(model)
             Files.writeString(file, JsonObject(fields).toString())

@@ -335,12 +335,21 @@ class SessionMessageListPanel(
             message.parts.values.filterIsInstance<Text>().joinToString("") { it.content.toString() }
         }
 
-    /** Assistant message errors as `type: message`, for authoritative no-error assertions. */
+    /** Message failures the transcript renders: Cloud terminals plus native message errors. */
     @RequiresEdt
-    fun assistantErrors(): String = model.messages()
-        .filter { it.info.role == "assistant" }
-        .mapNotNull { it.info.error }
-        .joinToString(" | ") { "${it.type}: ${it.message.orEmpty()}" }
+    fun messageErrors(): String = model.messages()
+        .mapNotNull { message ->
+            val terminal = message.terminal?.status?.takeIf { it == "failed" || it == "interrupted" }
+            val error = message.info.error
+            when {
+                terminal != null && error != null ->
+                    "${message.info.role}: terminal=$terminal ${error.type}: ${error.message.orEmpty()}"
+                terminal != null -> "${message.info.role}: terminal=$terminal"
+                error != null -> "${message.info.role}: ${error.type}: ${error.message.orEmpty()}"
+                else -> null
+            }
+        }
+        .joinToString(" | ")
 
     /** Simple name of the current session state, e.g. `Busy`, `Idle`, `TurnEnded`, or `Error`. */
     @RequiresEdt

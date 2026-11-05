@@ -136,7 +136,7 @@ class SessionMessageListPanelTest : BasePlatformTestCase() {
 
         assertEquals("hello from prompt", panel.messageText("user"))
         assertEquals("K1-PROMPT-STREAM", panel.messageText("assistant"))
-        assertEquals("", panel.assistantErrors())
+        assertEquals("", panel.messageErrors())
         assertEquals("Idle", panel.stateName())
         assertNull(panel.stateMessage())
         assertNull(panel.sessionId())
@@ -146,9 +146,22 @@ class SessionMessageListPanelTest : BasePlatformTestCase() {
         model.upsertMessage(msg("a1", "assistant").copy(error = failure("boom")))
         model.setState(SessionState.Error("boom", "APIError"))
 
-        assertTrue(panel.assistantErrors().contains("boom"))
+        assertTrue(panel.messageErrors().contains("boom"))
         assertEquals("Error", panel.stateName())
         assertEquals("boom", panel.stateMessage())
+    }
+
+    fun `test reports cloud terminal failures on the user prompt`() {
+        model.upsertMessage(msg("u1", "user"))
+        model.setTerminal(ChatEventDto.MessageTerminal(
+            sessionID = "ses",
+            messageID = "u1",
+            status = "failed",
+            delivery = "accepted",
+            accepted = true,
+        ))
+
+        assertTrue(panel.messageErrors().contains("user: terminal=failed"))
     }
 
     fun `test modified files card follows turn anchor summary`() {
