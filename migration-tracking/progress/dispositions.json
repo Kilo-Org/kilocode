@@ -1371,6 +1371,35 @@
     "v2": "packages/kilo-vscode/test/notifications.test.ts",
     "note": "Covers the showIn filter with dismissed IDs, the Gateway model name shown by the Try model action, and the host state in packages/kilo-vscode/src/notifications.ts: request, idempotent dismiss, pruning against the active list, and a Close loop that dismisses several IDs in one tick. The host-side pass-through of synthetic local notices is not carried with this cell; those notices belong to the config and Claude migration features.",
     "by": "better-promise"
+  },
+  "module:packages/kilo-vscode/src/kilo-provider/model-usage.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-vscode/src/model-preferences.ts",
+    "note": "recordUsage and validateUsage keep the v1 rules (count and lastUsed per provider/model, malformed entries dropped, the 200 most recently used kept) in the kilo-code.v2.modelUsage globalState key. The webview sends recordModelUsage after a prompt is admitted (v2/session-view.tsx), as v1 sendMessage did.",
+    "by": "model-picker-parity"
+  },
+  "module:packages/kilo-vscode/tests/unit/model-usage-history.test.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-vscode/test/model-preferences.test.ts",
+    "note": "recordUsage increments and stamps the time; validateUsage drops malformed entries and caps the history at 200.",
+    "by": "model-picker-parity"
+  },
+  "module:packages/kilo-vscode/webview-ui/src/context/model-selection.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-vscode/webview-ui/src/v2/model-default.ts",
+    "note": "initialModel keeps the v1 resolveModelSelection order for a new session: agent model, configured model (when still in the catalog), the team default for a team account, the first recent pick still in the catalog, then the server default (kilo-auto/free when signed out). The v1 null result while providers load is not needed: v2 falls through to the server default until the catalog arrives. The session pick lives in createSelection (v2/selectors.tsx).",
+    "by": "model-picker-parity"
+  },
+  "module:packages/kilo-vscode/tests/unit/model-selection.test.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-vscode/test/model-default.test.ts",
+    "note": "Covers agent over configured model, a configured model that left the catalog, the first valid recent, team accounts skipping recents and the fallback. The v1 pending-provider cases have no v2 equivalent (see the model-selection.ts disposition).",
+    "by": "model-picker-parity"
+  },
+  "module:packages/kilo-vscode/docs/features/remember-last-model.md": {
+    "state": "dropped",
+    "note": "Stale v1 design note: it describes an in-memory model and a globalState lastModel key that never shipped. The shipped behavior (persisted recents, config precedence) is ported in v2/model-default.ts and src/model-preferences.ts.",
+    "by": "model-picker-parity"
   }
 ,
   "api:GET /kilocode/notebook": {

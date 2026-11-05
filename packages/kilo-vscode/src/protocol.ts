@@ -210,6 +210,7 @@ export type Ui =
   | { type: "requestDismissedNotifications" }
   | { type: "dismissNotification"; notificationId: string }
   | { type: "syncDismissedNotifications"; ids: string[] }
+  | ModelPreferenceMessage
   | { type: "trackCostSession"; sessionID: string }
   | { type: "webviewFocusChanged"; focused: boolean }
   | { type: "setLanguage"; locale: string }
@@ -221,6 +222,27 @@ export type Ui =
   | { type: "openDiffsVirtual"; diffs: ToolActionDiff[]; initialDiffStyle?: "unified" | "split" }
   | { type: "requestDisplaySettings" }
   | { type: "validateFiles"; id: string; sessionID?: string; paths: string[] }
+
+export type ModelPreferenceRef = { providerID: string; modelID: string }
+export type ModelUsageMap = Record<string, { count: number; lastUsed: number }>
+
+/**
+ * The shared model picker preferences, as v1: favorites, the recent picks (most recent first), the usage count per
+ * `provider/model` and the remembered reasoning effort per `agent/<agent>/<provider>/<model>` ("" is Default).
+ */
+export type ModelPreferences = {
+  favorites: ModelPreferenceRef[]
+  recents: ModelPreferenceRef[]
+  usage: ModelUsageMap
+  variants: Record<string, string>
+}
+
+export type ModelPreferenceMessage =
+  | { type: "requestModelPreferences" }
+  | ({ type: "toggleFavorite"; action: "add" | "remove" } & ModelPreferenceRef)
+  | { type: "persistRecents"; recents: ModelPreferenceRef[] }
+  | ({ type: "recordModelUsage" } & ModelPreferenceRef)
+  | { type: "persistVariant"; key: string; value: string }
 
 /** Browser replies. The tab frame and cursor carry the stream, the rest carry state or inspection results. */
 export type BrowserOut =
@@ -347,6 +369,7 @@ export type ToWebview =
   | { type: "keybindings"; bindings: Record<string, string> }
   | { type: "clipboardWriteResult"; id: string; ok: boolean; error?: string }
   | { type: "modelSelectorExpandedLoaded"; value: boolean }
+  | { type: "modelPreferencesLoaded"; value: ModelPreferences }
   | { type: "autoApproveStateLoaded"; value: boolean }
   | { type: "dismissedNotificationsLoaded"; ids: string[] }
   | { type: "webviewActiveChanged"; active: boolean }
