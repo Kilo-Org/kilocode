@@ -4,15 +4,15 @@
     "v1Base": "8100c68b507b53aac6b891edbc3040a6011d8969"
   },
   "summary": {
-    "done": 1594,
-    "total": 9789,
-    "percent": 16.3,
-    "dropped": 65,
+    "done": 1609,
+    "total": 9786,
+    "percent": 16.4,
+    "dropped": 68,
     "kinds": [
       {
         "kind": "module",
-        "done": 1216,
-        "total": 3532
+        "done": 1224,
+        "total": 3529
       },
       {
         "kind": "api",
@@ -26,7 +26,7 @@
       },
       {
         "kind": "test",
-        "done": 281,
+        "done": 288,
         "total": 2780
       }
     ],
@@ -36,7 +36,7 @@
       "seam": 3,
       "patch": 6
     },
-    "coreImports": 40,
+    "coreImports": 41,
     "sharedPatches": {
       "seam": 55,
       "patch": 36
@@ -84,6 +84,7 @@
     "@opencode/core/session/projector",
     "@opencode/core/session/runner/model",
     "@opencode/core/session/runner/prompt/system.txt",
+    "@opencode/core/session/store",
     "@opencode/core/session/system-prompt",
     "@opencode/core/shell",
     "@opencode/core/tool",
@@ -1892,13 +1893,13 @@
     },
     {
       "feature": "session",
-      "done": 0,
-      "total": 115,
-      "dropped": 0,
+      "done": 2,
+      "total": 113,
+      "dropped": 2,
       "kinds": {
         "module": {
-          "done": 0,
-          "total": 25
+          "done": 1,
+          "total": 23
         },
         "api": {
           "done": 0,
@@ -1909,7 +1910,7 @@
           "total": 17
         },
         "test": {
-          "done": 0,
+          "done": 1,
           "total": 69
         }
       }
@@ -6110,13 +6111,13 @@
     },
     {
       "feature": "vscode",
-      "done": 1175,
-      "total": 2042,
-      "dropped": 15,
+      "done": 1188,
+      "total": 2041,
+      "dropped": 16,
       "kinds": {
         "module": {
-          "done": 957,
-          "total": 1432
+          "done": 964,
+          "total": 1431
         },
         "api": {
           "done": 0,
@@ -6127,7 +6128,7 @@
           "total": 0
         },
         "test": {
-          "done": 218,
+          "done": 224,
           "total": 610
         }
       }
@@ -6691,6 +6692,7 @@
     "module:packages/kilo-vscode/src/kilo-provider/fork-session.ts",
     "module:packages/kilo-vscode/src/kilo-provider/git-status.ts",
     "module:packages/kilo-vscode/src/kilo-provider/mcp-oauth.ts",
+    "module:packages/kilo-vscode/src/kilo-provider/model-usage.ts",
     "module:packages/kilo-vscode/src/kilo-provider/notifications.ts",
     "module:packages/kilo-vscode/src/kilo-provider/open-config.ts",
     "module:packages/kilo-vscode/src/kilo-provider/push-fixes-settings.ts",
@@ -7171,6 +7173,11 @@
     "module:packages/kilo-vscode/tests/unit/message-time.test.ts",
     "module:packages/kilo-vscode/tests/unit/mode-io.test.ts",
     "module:packages/kilo-vscode/tests/unit/mode-model.test.ts",
+    "module:packages/kilo-vscode/tests/unit/model-preview-data-line.test.ts",
+    "module:packages/kilo-vscode/tests/unit/model-price-format.test.ts",
+    "module:packages/kilo-vscode/tests/unit/model-selection.test.ts",
+    "module:packages/kilo-vscode/tests/unit/model-selector-utils.test.ts",
+    "module:packages/kilo-vscode/tests/unit/model-usage-history.test.ts",
     "module:packages/kilo-vscode/tests/unit/multi-model-utils.test.ts",
     "module:packages/kilo-vscode/tests/unit/new-worktree-branch.test.ts",
     "module:packages/kilo-vscode/tests/unit/notebook-core.test.ts",
@@ -7203,6 +7210,7 @@
     "module:packages/kilo-vscode/tests/unit/run-script-service.test.ts",
     "module:packages/kilo-vscode/tests/unit/run-terminal-destination.test.ts",
     "module:packages/kilo-vscode/tests/unit/script-terminal-manager.test.ts",
+    "module:packages/kilo-vscode/tests/unit/search-match.test.ts",
     "module:packages/kilo-vscode/tests/unit/session-terminal-manager.test.ts",
     "module:packages/kilo-vscode/tests/unit/settings-io.test.ts",
     "module:packages/kilo-vscode/tests/unit/setup-script-task.test.ts",
@@ -7557,6 +7565,8 @@
     "module:packages/kilo-vscode/webview-ui/src/components/shared/BranchSelect.tsx",
     "module:packages/kilo-vscode/webview-ui/src/components/shared/DeferredPopover.tsx",
     "module:packages/kilo-vscode/webview-ui/src/components/shared/ModeSwitcher.tsx",
+    "module:packages/kilo-vscode/webview-ui/src/components/shared/ModelDescription.tsx",
+    "module:packages/kilo-vscode/webview-ui/src/components/shared/ModelPreview.tsx",
     "module:packages/kilo-vscode/webview-ui/src/components/shared/ModelSelector.tsx",
     "module:packages/kilo-vscode/webview-ui/src/components/shared/PopupSelector.tsx",
     "module:packages/kilo-vscode/webview-ui/src/components/shared/SessionRenameEditor.tsx",
@@ -7564,6 +7574,8 @@
     "module:packages/kilo-vscode/webview-ui/src/components/shared/StatusText.tsx",
     "module:packages/kilo-vscode/webview-ui/src/components/shared/ThinkingSelector.tsx",
     "module:packages/kilo-vscode/webview-ui/src/components/shared/WorkingIndicator.tsx",
+    "module:packages/kilo-vscode/webview-ui/src/components/shared/model-preview-utils.ts",
+    "module:packages/kilo-vscode/webview-ui/src/components/shared/model-selector-utils.ts",
     "module:packages/kilo-vscode/webview-ui/src/components/shared/working-indicator-utils.ts",
     "module:packages/kilo-vscode/webview-ui/src/components/speech-to-text/SpeechToTextButton.tsx",
     "module:packages/kilo-vscode/webview-ui/src/components/speech-to-text/availability.ts",
@@ -7596,6 +7608,7 @@
     "module:packages/kilo-vscode/webview-ui/src/context/language-utils.ts",
     "module:packages/kilo-vscode/webview-ui/src/context/language.tsx",
     "module:packages/kilo-vscode/webview-ui/src/context/mcp-auth.ts",
+    "module:packages/kilo-vscode/webview-ui/src/context/model-selection.ts",
     "module:packages/kilo-vscode/webview-ui/src/context/notifications.tsx",
     "module:packages/kilo-vscode/webview-ui/src/context/rich-provider.tsx",
     "module:packages/kilo-vscode/webview-ui/src/context/todo-revert.ts",
@@ -7675,6 +7688,7 @@
     "module:packages/kilo-vscode/webview-ui/src/utils/prompt-mention-drop.ts",
     "module:packages/kilo-vscode/webview-ui/src/utils/qrcode.ts",
     "module:packages/kilo-vscode/webview-ui/src/utils/review-comment-markdown.ts",
+    "module:packages/kilo-vscode/webview-ui/src/utils/search-match.ts",
     "module:packages/kilo-vscode/webview-ui/src/utils/tab-close.ts",
     "module:packages/kilo-vscode/webview-ui/src/utils/tab-navigation.ts",
     "module:packages/kilo-vscode/webview-ui/src/utils/tab-order.ts",
@@ -7730,6 +7744,7 @@
     "module:packages/opencode/src/kilocode/review/review.txt",
     "module:packages/opencode/src/kilocode/server/httpapi/groups/commit-message.ts",
     "module:packages/opencode/src/kilocode/server/httpapi/handlers/commit-message.ts",
+    "module:packages/opencode/src/kilocode/session/recall-search.ts",
     "module:packages/opencode/src/kilocode/skill-remove.ts",
     "module:packages/opencode/src/kilocode/snapshot/cleanup.ts",
     "module:packages/opencode/src/kilocode/tool/browser-open.ts",
@@ -7771,6 +7786,7 @@
     "module:packages/opencode/test/kilocode/read-docx.test.ts",
     "module:packages/opencode/test/kilocode/read-notebook.test.ts",
     "module:packages/opencode/test/kilocode/read-xlsx.test.ts",
+    "module:packages/opencode/test/kilocode/recall-search.test.ts",
     "module:packages/opencode/test/kilocode/review-command.test.ts",
     "module:packages/opencode/test/kilocode/server/commit-message-no-changes.test.ts",
     "module:packages/opencode/test/kilocode/server/httpapi-kilo-edit.test.ts",
@@ -7882,6 +7898,8 @@
     "api:GET /kilocode/notebook",
     "api:POST /kilocode/notebook/{requestID}/reject",
     "api:POST /kilocode/notebook/{requestID}/reply",
+    "module:packages/core/src/kilocode/session/recall-message-index.ts",
+    "module:packages/core/src/kilocode/session/recall-part-index.ts",
     "module:packages/kilo-gateway/src/auth/device-auth.ts",
     "module:packages/kilo-gateway/src/auth/legacy-migration.ts",
     "module:packages/kilo-gateway/src/loader.ts",
@@ -7893,6 +7911,7 @@
     "module:packages/kilo-gateway/src/types/tui.d.ts",
     "module:packages/kilo-gateway/test/provider.test.ts",
     "module:packages/kilo-vscode/docs/error-handling/autocomplete-settings-link.md",
+    "module:packages/kilo-vscode/docs/features/remember-last-model.md",
     "module:packages/kilo-vscode/src/agent-manager/am-visible-presence.test.ts",
     "module:packages/kilo-vscode/src/agent-manager/am-visible-presence.ts",
     "module:packages/kilo-vscode/src/agent-manager/sandbox-bootstrap.ts",

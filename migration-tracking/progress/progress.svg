@@ -1,8 +1,8 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 334" width="1000" height="334">
 <style>rect{stroke:#0d1117;stroke-width:.5}.d{fill:#2ea043}.o{fill:#6e7681}.x{fill:#d29922}.b{fill:none;stroke-width:2}text{font-family:sans-serif;fill:#fff;stroke:#0d1117;stroke-width:3;paint-order:stroke}</style>
 <rect x="0" y="0" width="1000" height="334" fill="#0d1117" stroke="none"/>
-<text x="4.00" y="21.00" font-size="16">Features: 27.4% (1543/5638)</text>
-<g><title>vscode: 1175/2042 (57.5%), 15 dropped</title>
+<text x="4.00" y="21.00" font-size="16">Features: 27.6% (1558/5635)</text>
+<g><title>vscode: 1188/2041 (58.2%), 16 dropped</title>
 <rect class="d" x="1.00" y="31.00" width="14.74" height="15.44"/>
 <rect class="d" x="15.74" y="31.00" width="14.74" height="15.44"/>
 <rect class="d" x="30.49" y="31.00" width="14.74" height="15.44"/>
@@ -117,8 +117,8 @@
 <rect class="d" x="161.83" y="170.00" width="16.08" height="15.44"/>
 <rect class="d" x="1.00" y="185.44" width="16.08" height="15.44"/>
 <rect class="d" x="17.08" y="185.44" width="16.08" height="15.44"/>
-<rect class="o" x="33.17" y="185.44" width="16.08" height="15.44"/>
-<rect class="o" x="49.25" y="185.44" width="16.08" height="15.44"/>
+<rect class="d" x="33.17" y="185.44" width="16.08" height="15.44"/>
+<rect class="d" x="49.25" y="185.44" width="16.08" height="15.44"/>
 <rect class="o" x="65.33" y="185.44" width="16.08" height="15.44"/>
 <rect class="o" x="81.42" y="185.44" width="16.08" height="15.44"/>
 <rect class="o" x="97.50" y="185.44" width="16.08" height="15.44"/>
@@ -201,7 +201,7 @@
 <rect class="o" x="97.50" y="293.56" width="16.08" height="15.44"/>
 <rect class="o" x="113.58" y="293.56" width="16.08" height="15.44"/>
 <rect class="o" x="129.67" y="293.56" width="16.08" height="15.44"/>
-<rect class="o" x="145.75" y="293.56" width="16.08" height="15.44"/>
+<rect class="x" x="145.75" y="293.56" width="16.08" height="15.44"/>
 <rect class="x" x="161.83" y="293.56" width="16.08" height="15.44"/>
 <rect class="b" x="0.00" y="30.00" width="178.92" height="280.00"/>
 <text x="5.00" y="46.00" font-size="12">vscode</text>
@@ -1077,9 +1077,9 @@
 <rect class="b" x="286.08" y="96.44" width="65.65" height="54.90"/>
 <text x="291.08" y="112.44" font-size="12">cli</text>
 </g>
-<g><title>session: 0/115 (0%)</title>
-<rect class="o" x="352.72" y="97.44" width="4.46" height="4.81"/>
-<rect class="o" x="357.18" y="97.44" width="4.46" height="4.81"/>
+<g><title>session: 2/113 (1.8%), 2 dropped</title>
+<rect class="d" x="352.72" y="97.44" width="4.46" height="4.81"/>
+<rect class="d" x="357.18" y="97.44" width="4.46" height="4.81"/>
 <rect class="o" x="361.64" y="97.44" width="4.46" height="4.81"/>
 <rect class="o" x="366.09" y="97.44" width="4.46" height="4.81"/>
 <rect class="o" x="370.55" y="97.44" width="4.46" height="4.81"/>
@@ -1191,8 +1191,8 @@
 <rect class="o" x="377.23" y="145.54" width="4.90" height="4.81"/>
 <rect class="o" x="382.13" y="145.54" width="4.90" height="4.81"/>
 <rect class="o" x="387.03" y="145.54" width="4.90" height="4.81"/>
-<rect class="o" x="391.93" y="145.54" width="4.90" height="4.81"/>
-<rect class="o" x="396.83" y="145.54" width="4.90" height="4.81"/>
+<rect class="x" x="391.93" y="145.54" width="4.90" height="4.81"/>
+<rect class="x" x="396.83" y="145.54" width="4.90" height="4.81"/>
 <rect class="b" x="351.72" y="96.44" width="51.01" height="54.90"/>
 <text x="356.72" y="112.44" font-size="12">sessi</text>
 </g>
