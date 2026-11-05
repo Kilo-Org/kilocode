@@ -4,7 +4,7 @@ import os from "node:os"
 import path from "node:path"
 import { Deferred, Effect, Exit, Fiber } from "effect"
 import { Global } from "@opencode/util/global"
-import { assertNetwork, assertWrite, enabled, run as runSandbox } from "@kilocode/sandbox"
+import { assertNetwork, assertWrite, backendSupport, enabled, run as runSandbox } from "@kilocode/sandbox"
 import { Session } from "@opencode/schema/session"
 import * as SandboxPolicy from "../../src/sandbox/policy"
 import { Runtime } from "../../src/sandbox/runtime"
@@ -413,10 +413,11 @@ describe("sandbox policy state", () => {
       writablePaths: [path.join(os.homedir(), "sandbox-refresh")],
       version: 1,
     })
+    // The published state is effective: without a backend for the denied network it reports the sandbox off.
     expect(value.published.at(-1)).toMatchObject({
       sessionID,
       directory,
-      enabled: true,
+      enabled: backendSupport({ mode: "deny", allowedHosts: [] }).available,
       network: true,
       version: 1,
     })

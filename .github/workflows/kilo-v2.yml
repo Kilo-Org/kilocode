@@ -435,6 +435,7 @@ jobs:
         run: |
           bun packages/kilo-cli/script/kilocode/bubblewrap.ts --arch x64 --output "$RUNNER_TEMP/bwrap"
           echo "KILO_BWRAP_PATH=$RUNNER_TEMP/bwrap" >> "$GITHUB_ENV"
+          echo "KILO_REQUIRE_LINUX_SANDBOX=1" >> "$GITHUB_ENV"
           sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
 
       - name: Test the Kilo sandbox engine

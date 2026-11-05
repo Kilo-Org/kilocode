@@ -21,8 +21,12 @@ const spawnerLayer = Layer.effect(
   }),
 ).pipe(Layer.provide(LayerNode.compile(CrossSpawnSpawner.node)))
 
-const linux = process.platform === "linux" ? test : test.skip
-const linuxIPv6 = process.platform === "linux" && supportsIPv6() ? test : test.skip
+// The suite needs Bubblewrap and unprivileged user namespaces. The kilo-v2 Kilo packages job builds Bubblewrap and
+// sets KILO_REQUIRE_LINUX_SANDBOX=1, so a missing backend fails there; a Linux runner without Bubblewrap skips it.
+const sandboxed =
+  process.platform === "linux" && (process.env.KILO_REQUIRE_LINUX_SANDBOX === "1" || backendSupport().available)
+const linux = sandboxed ? test : test.skip
+const linuxIPv6 = sandboxed && supportsIPv6() ? test : test.skip
 
 function profile(
   allow: ReadonlyArray<string>,
