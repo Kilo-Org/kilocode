@@ -4,7 +4,6 @@ import { KiloPlugins, KiloPostPlugins, KiloSandbox, KiloSessionSync } from "@kil
 import { networkHttpLayer } from "@kilocode/sandbox"
 import { Environment } from "@opencode/core/environment/index"
 import { LayerNodePlatform as UtilPlatform } from "@opencode/util/effect/app-node-platform"
-import { KiloPlugins, KiloPostPlugins, KiloSessionSync } from "@kilocode/kilo-plugin"
 import { KiloRead } from "@kilocode/kilo-plugin/read"
 import { App } from "@opencode/core/app"
 import { Bus } from "@opencode/core/bus"
