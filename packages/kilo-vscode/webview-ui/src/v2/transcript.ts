@@ -129,12 +129,7 @@ function buildRows(messages: readonly SessionMessageInfo[]) {
       rows.push({ type: "user", key: `${message.id}:user`, turn: range.turn, userTurn: range.userTurn, message })
     } else if (message.type === "assistant" && range) {
       rows.push(...assistantRows(message, range))
-    } else if (
-      message.type === "idle" &&
-      message.error &&
-      message.error.type !== "aborted" &&
-      !stepFailed(messages[index - 1])
-    ) {
+    } else if (message.type === "idle" && message.error && !stepFailed(messages[index - 1])) {
       // A run can fail before any step, for example without a usable model. The
       // idle row carries that error; a failed step shows its own error instead.
       rows.push({

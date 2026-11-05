@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test"
-import { pendingActions, sendMode, steerInterrupts } from "../webview-ui/src/v2/pending-actions"
+import { pendingActions, pendingEditable, sendMode, steerInterrupts } from "../webview-ui/src/v2/pending-actions"
 
 const key = (input: { alt?: boolean; ctrl?: boolean; meta?: boolean } = {}) => ({
   altKey: !!input.alt,
@@ -70,5 +70,22 @@ describe("steerInterrupts", () => {
   test("input that waits for delivery does not hide a running tool", () => {
     const queued = { id: "q1", type: "user" }
     expect(steerInterrupts([user, step(tool("running")), queued], new Set(["q1"]))).toBe(false)
+  })
+
+  test("a trailing notification or instruction update does not hide a running tool", () => {
+    expect(steerInterrupts([user, step(tool("running")), { id: "s1", type: "synthetic" }], none)).toBe(false)
+    expect(steerInterrupts([user, step(tool("running")), { id: "s2", type: "system" }], none)).toBe(false)
+  })
+})
+
+describe("pendingEditable", () => {
+  test("plain text can go back to the composer", () => {
+    expect(pendingEditable({})).toBe(true)
+  })
+
+  test("attachments the composer cannot restore keep Edit hidden", () => {
+    expect(pendingEditable({ files: [{}] })).toBe(false)
+    expect(pendingEditable({ agents: [{}] })).toBe(false)
+    expect(pendingEditable({ skills: [{}] })).toBe(false)
   })
 })

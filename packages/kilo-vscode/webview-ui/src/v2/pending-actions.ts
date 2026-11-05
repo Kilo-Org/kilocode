@@ -5,6 +5,19 @@ import type { DataPendingStatus } from "@opencode/client/solid"
 export type SendMode = "steer" | "queue" | "now"
 export type PendingAction = "now" | "steer" | "queue" | "edit" | "delete"
 
+/**
+ * Whether a pending prompt can go back to the text composer without losing data it carries. The composer restores
+ * plain text only, so files, agents, skills and structured references (review comments, browser references) keep it
+ * out of Edit.
+ */
+export function pendingEditable(payload: {
+  files?: readonly unknown[]
+  agents?: readonly unknown[]
+  skills?: readonly unknown[]
+}): boolean {
+  return !payload.files?.length && !payload.agents?.length && !payload.skills?.length
+}
+
 type Key = Pick<KeyboardEvent, "altKey" | "ctrlKey" | "metaKey">
 type Message = {
   id: string
@@ -32,10 +45,16 @@ export function sendShortcuts(mac = isMac()) {
  * input that is not delivered yet (`pending`), so the decision reads the newest delivered message.
  */
 export function steerInterrupts(messages: readonly Message[], pending: ReadonlySet<string>): boolean {
-  const last = messages.findLast((message) => !pending.has(message.id))
-  if (last?.type === "compaction") return last.status !== "running"
-  if (last?.type !== "assistant") return true
-  return !last.content?.some((item) => item.type === "tool" && item.state?.status === "running")
+  // Scan back to the newest step. Queued and pending input, synthetic notifications and instruction updates can
+  // follow it, and none of them says whether a tool is running.
+  for (let index = messages.length - 1; index >= 0; index--) {
+    const message = messages[index]
+    if (pending.has(message.id) || message.type === "user") continue
+    if (message.type === "assistant")
+      return !message.content?.some((item) => item.type === "tool" && item.state?.status === "running")
+    if (message.type === "compaction") return message.status !== "running"
+  }
+  return true
 }
 
 /** The controls of one pending prompt. Edit needs a text-only prompt, because the composer holds text only. */

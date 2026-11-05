@@ -5,7 +5,7 @@ import { createSignal } from "solid-js"
 import { useLanguage } from "../context/language"
 import { partFeedback } from "../../../src/shared/browser-feedback"
 import { useV2 } from "./client"
-import { pendingActions, type PendingAction } from "./pending-actions"
+import { pendingActions, pendingEditable, type PendingAction } from "./pending-actions"
 
 const ICONS: Record<PendingAction, UserMessagePendingAction["icon"]> = {
   now: "send",
@@ -50,7 +50,13 @@ export function createPending(input: {
       return v2.api.session.inbox.update({ sessionID, inboxID, delivery: action })
     const cancel = v2.api.session.inbox.cancel({ sessionID, inboxID })
     if (action === "delete") return cancel
-    return cancel.then(() => input.edit(text))
+    // Cancel also succeeds for an item that was delivered first. Take the text back only if the item is still
+    // pending and this view still shows that session, so it cannot be sent twice or land in another draft.
+    return cancel.then(() => {
+      const still = v2.data.session.pending.list(sessionID).some((entry) => entry.id === inboxID)
+      if (!still || input.session() !== sessionID) return
+      input.edit(text)
+    })
   }
 
   const label = (action: PendingAction) => {
@@ -68,9 +74,10 @@ export function createPending(input: {
     if (item?.type !== "user") return undefined
     const status = v2.data.session.pending.status(sessionID, item.id)
     if (!status) return undefined
-    // The composer restores plain text only, so a prompt with files or structured references (review comments,
-    // browser references) cannot be taken back without losing data.
-    const editable = !item.payload.files?.length && !partFeedback(item.payload.metadata, item.payload.text)
+    // The composer restores plain text only, so a prompt with attachments or structured references cannot be taken
+    // back without losing data.
+    const editable =
+      pendingEditable(item.payload) && !partFeedback(item.payload.metadata, item.payload.text)
     const actions = input.readOnly() ? [] : pendingActions(status, editable)
     return {
       // A stopped run leaves its queue parked until the user sends this prompt or another one.

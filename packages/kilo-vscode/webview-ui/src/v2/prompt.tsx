@@ -355,7 +355,7 @@ export function PromptInput(props: {
     window.dispatchEvent(new CustomEvent("focusPrompt", { detail: { force: true, restore: true } }))
   }
 
-  const submit = (mode: SendMode = "steer", external?: { text: string; items: PromptAttachment[] }) => {
+  const submit = (external?: { text: string; items: PromptAttachment[] }, mode: SendMode = "steer") => {
     if (!ready() || (speech.active() && speech.state() !== "recording")) {
       if (external) putInDraft(external.text, external.items)
       return
@@ -409,7 +409,7 @@ export function PromptInput(props: {
       transcribeAndSend()
       return
     }
-    submit(mode)
+    submit(undefined, mode)
   }
   const queue = () => send("queue")
 
@@ -419,7 +419,7 @@ export function PromptInput(props: {
       window.dispatchEvent(new CustomEvent("focusPrompt", { detail: { force: true, restore: true } }))
     },
     // A context action sends on its own and leaves the draft and its chips for the user's next prompt.
-    submit: (value, items) => submit("steer", { text: value, items }),
+    submit: (value, items) => submit({ text: value, items }),
   })
 
   registerAppend(props.onAppendReady, (value, shouldSend) => {
