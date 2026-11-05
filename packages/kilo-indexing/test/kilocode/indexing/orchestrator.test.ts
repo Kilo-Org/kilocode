@@ -724,7 +724,10 @@ describe("CodeIndexOrchestrator telemetry", () => {
     const slot = path.join(dir, "locks", createHash("sha256").update("/tmp/ws").digest("hex").substring(0, 16))
     await rm(slot, { recursive: true, force: true })
     await mkdir(slot, { recursive: true })
-    await writeFile(path.join(slot, "meta.json"), JSON.stringify({ token: "rival", pid: process.pid, host: hostname() }))
+    await writeFile(
+      path.join(slot, "meta.json"),
+      JSON.stringify({ token: "rival", pid: process.pid, host: hostname() }),
+    )
     await writeFile(path.join(slot, "heartbeat"), "")
 
     watcher.onDidStartBatchProcessing.fire(["src/a.ts"])
@@ -756,7 +759,10 @@ describe("CodeIndexOrchestrator telemetry", () => {
     const before = store.deleteCount
     await rm(slot, { recursive: true, force: true })
     await mkdir(slot, { recursive: true })
-    await writeFile(path.join(slot, "meta.json"), JSON.stringify({ token: "rival", pid: process.pid, host: hostname() }))
+    await writeFile(
+      path.join(slot, "meta.json"),
+      JSON.stringify({ token: "rival", pid: process.pid, host: hostname() }),
+    )
     await writeFile(path.join(slot, "heartbeat"), "")
 
     await orchestrator.clearIndexData()
@@ -817,6 +823,65 @@ describe("CodeIndexOrchestrator telemetry", () => {
     expect(error?.location).toBe("orchestrator:clearIndexData")
 
     await held?.release()
+    await rm(dir, { recursive: true, force: true })
+  })
+
+  test("releases the writer lock when a cancelled run leaves the watcher paused", async () => {
+    const dir = await mkdtemp(path.join(tmpdir(), "indexing-lock-"))
+    const scanner = new BlockingScanner()
+    const store = new Store("empty", false)
+    const orchestrator = new CodeIndexOrchestrator(
+      createConfig(),
+      new CodeIndexStateManager(),
+      "/tmp/ws",
+      { dir, async clearCacheFile() {}, async flush() {} } as unknown as CacheManager,
+      store as unknown as IVectorStore,
+      scanner as unknown as DirectoryScanner,
+      new Watcher() as unknown as IFileWatcher,
+    )
+
+    const run = orchestrator.startIndexing("background")
+    await scanner.started.promise
+    orchestrator.cancelIndexing()
+    await run
+
+    expect(orchestrator.state).toBe("Standby")
+    // The scan was aborted before the watcher resumed, so this session has no
+    // remaining writer. Holding the lock here would starve every other session
+    // until this process exits.
+    const next = await acquire(dir, "/tmp/ws")
+    expect(next).toBeDefined()
+    await next?.release()
+    await rm(dir, { recursive: true, force: true })
+  })
+
+  test("releases the writer lock when the watcher is stopped", async () => {
+    const dir = await mkdtemp(path.join(tmpdir(), "indexing-lock-"))
+    const store = new Store("empty", false)
+    const orchestrator = new CodeIndexOrchestrator(
+      createConfig(),
+      new CodeIndexStateManager(),
+      "/tmp/ws",
+      { dir, async clearCacheFile() {}, async flush() {} } as unknown as CacheManager,
+      store as unknown as IVectorStore,
+      new Scanner(1, 1, 1) as unknown as DirectoryScanner,
+      new Watcher() as unknown as IFileWatcher,
+    )
+
+    await orchestrator.startIndexing("background")
+    expect(orchestrator.state).toBe("Indexed")
+    expect(await acquire(dir, "/tmp/ws")).toBeUndefined()
+
+    orchestrator.stopWatcher()
+    let next = await acquire(dir, "/tmp/ws")
+    for (let i = 0; i < 100 && !next; i += 1) {
+      await Bun.sleep(5)
+      next = await acquire(dir, "/tmp/ws")
+    }
+    // Disabling or manually stopping indexing stops all writes from this
+    // session, so the lock must not outlive the watcher.
+    expect(next).toBeDefined()
+    await next?.release()
     await rm(dir, { recursive: true, force: true })
   })
 })

@@ -39,6 +39,8 @@ type Data = {
   _retryTask?: Promise<void>
   _retryMaxAttempts: number
   _retryInitialDelayMs: number
+  _lockDelay: number
+  _lockMaxDelay: number
   _recreateServices(): Promise<void>
   handleTelemetry(event: IndexingTelemetryEvent): void
 }
@@ -73,6 +75,13 @@ function createStartError(location = "orchestrator:startIndexing"): IndexingTele
     provider: "openai",
     vectorStore: "lancedb",
     modelId: "text-embedding-3-small",
+  }
+}
+
+function createContentionError(): IndexingTelemetryEvent {
+  return {
+    ...createStartError(),
+    error: "Another session is indexing this workspace.",
   }
 }
 
@@ -567,6 +576,74 @@ describe("CodeIndexManager", () => {
 
     expect(task).toBeUndefined()
     expect(start).toBe(0)
+  })
+
+  test("retries the writer lock after contention instead of parking until restart", async () => {
+    const mgr = new CodeIndexManager("/tmp/ws", "/tmp/cache")
+    const data = createData(mgr)
+    data._lockDelay = 0
+    data._lockMaxDelay = 0
+    let starts = 0
+    data._orchestrator = {
+      state: "Standby",
+      stopWatcher() {},
+      async startIndexing() {
+        starts += 1
+      },
+    }
+
+    data.handleTelemetry(createContentionError())
+    await new Promise((resolve) => setTimeout(resolve, 10))
+
+    // The follower re-checks the lock itself; contention must not go through
+    // the service-recreating recovery loop.
+    expect(starts).toBe(1)
+    await mgr.dispose()
+  })
+
+  test("reports contention once per episode instead of on every backoff", async () => {
+    const mgr = new CodeIndexManager("/tmp/ws", "/tmp/cache")
+    const data = createData(mgr)
+    data._lockDelay = 1_000
+    data._lockMaxDelay = 1_000
+    data._orchestrator = {
+      state: "Standby",
+      stopWatcher() {},
+      async startIndexing() {},
+    }
+    let events = 0
+    mgr.onTelemetry.on(() => {
+      events += 1
+    })
+
+    data.handleTelemetry(createContentionError())
+    data.handleTelemetry(createContentionError())
+
+    // The retry loop sees the same lock until its holder releases; only the
+    // first failure is a new telemetry event.
+    expect(events).toBe(1)
+    await mgr.dispose()
+  })
+
+  test("dispose cancels a pending writer lock retry", async () => {
+    const mgr = new CodeIndexManager("/tmp/ws", "/tmp/cache")
+    const data = createData(mgr)
+    data._lockDelay = 25
+    data._lockMaxDelay = 25
+    let starts = 0
+    data._orchestrator = {
+      state: "Standby",
+      stopWatcher() {},
+      async startIndexing() {
+        starts += 1
+      },
+    }
+
+    data.handleTelemetry(createContentionError())
+    await mgr.dispose()
+    await new Promise((resolve) => setTimeout(resolve, 50))
+
+    expect(starts).toBe(0)
   })
 
   test("retry exhaustion keeps Error and stops future retries", async () => {
