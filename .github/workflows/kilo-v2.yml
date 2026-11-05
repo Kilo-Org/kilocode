@@ -304,7 +304,10 @@ jobs:
                 if [ -z "$pr" ]; then exit 1; fi
                 gh pr edit "$pr" --body-file body.md
               fi
+              pr=$(bot_prs | head -n 1)
             fi
+            # The map is generated, so it merges by itself once a maintainer approves the delta.
+            if [ -n "$pr" ]; then gh pr merge "$pr" --auto --merge || true; fi
             exit 0
           done
           exit 1
