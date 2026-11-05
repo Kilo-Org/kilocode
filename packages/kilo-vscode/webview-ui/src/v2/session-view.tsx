@@ -17,7 +17,7 @@ import { PermissionDock } from "./permission"
 import { PromptInput } from "./prompt"
 import { QuestionDock } from "./question"
 import { createSelection, Selectors } from "./selectors"
-import { AutoApproveAction, createAutoApprove } from "./auto-approve"
+import { createAutoApprove } from "./auto-approve"
 import { createWorking } from "./working"
 
 export function SessionView(props: {
@@ -146,12 +146,14 @@ export function SessionView(props: {
     return !!id && v2.data.session.status(id) === "running"
   }
 
-  // A pending permission or question blocks new prompts.
-  const blocked = () => permissions().length > 0 || forms().length > 0
+  // Questions do not block the prompt, as in v1: a pending question is dismissed when the user sends instead.
+  // Only a permission blocks sending, and the composer stays writable so typing remains possible.
+  const blocked = () => permissions().length > 0
+  const dockBlocked = () => blocked() || forms().length > 0
   // The prompt selectors block only while a permission owns the prompt, as v1; a pending question does not.
   const selectorsBlocked = () => permissions().length > 0
   // Only a pending permission changes the Send label. A pending question leaves Send in place instead of Stop.
-  const questioning = () => permissions().length === 0 && forms().length > 0
+  const questioning = () => !blocked() && forms().length > 0
   const selection = createSelection(session, draftKey)
   const autoApprove = createAutoApprove()
   // The host sends the cycle action for the cycleAgentMode/cyclePreviousAgentMode commands, as in main.
@@ -176,7 +178,12 @@ export function SessionView(props: {
     // A prompt with a pending switch waits for it, so the attribution has to be read after that switch settles.
     // Without one the selection is current, and it must be read before onSession changes the session identity.
     const model = gate ? undefined : selection.model()
+    // A pending question is dismissed when the user sends instead, as in v1.
+    const pending = forms()
     props.onSession(id)
+    for (const form of pending) {
+      void v2.data.session.form.cancel({ sessionID: form.sessionID, formID: form.id }).catch(() => undefined)
+    }
     return v2.data.session
       .prompt({ sessionID: id, text, gate })
       .then(() => {
@@ -246,7 +253,7 @@ export function SessionView(props: {
           </Show>
           <SessionDock
             session={session()}
-            blocked={blocked()}
+            blocked={dockBlocked()}
             actions={(todos) => props.row?.(hasMessages(), todos)}
             hasActions={hasMessages() && !!props.row}
             status={working.status()}
@@ -263,14 +270,14 @@ export function SessionView(props: {
                 draftKey={key}
                 session={session()}
                 running={running()}
-                disabled={v2.connection.status() !== "connected" || !!v2.handshake() || blocked()}
-                blocked={permissions().length > 0}
+                disabled={v2.connection.status() !== "connected" || !!v2.handshake()}
+                blocked={blocked()}
                 questioning={questioning()}
                 onSend={send}
                 onStop={stop}
                 onAppendReady={props.onAppendReady}
                 selectors={<Selectors selection={selection} blocked={selectorsBlocked()} />}
-                actions={<AutoApproveAction enabled={autoApprove.enabled()} onToggle={autoApprove.toggle} />}
+                autoApprove={{ enabled: autoApprove.enabled(), onToggle: autoApprove.toggle }}
               />
             )}
           </Show>

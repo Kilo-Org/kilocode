@@ -5,7 +5,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs"
 import { mkdtemp, mkdir, realpath, rm } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import path from "node:path"
-import { command, environment, manager, parse, settingsEnvironment, start, stop } from "../src/server"
+import { command, environment, manager, parse, serverHome, settingsEnvironment, start, stop } from "../src/server"
 
 const extension = path.resolve(import.meta.dir, "..")
 
@@ -68,8 +68,22 @@ describe("command", () => {
   })
 })
 
+describe("serverHome", () => {
+  test("is the profile home for the isolated dev server", () => {
+    const cmd = { cmd: "bun", args: [], env: { KILO_V2_PROFILE: path.join(tmpdir(), "profile") } }
+    expect(serverHome(cmd, {})).toBe(path.join(tmpdir(), "profile", "home"))
+  })
+
+  test("is the inherited home for the bundled server", () => {
+    expect(serverHome({ cmd: "kilo2", args: [], env: {} }, { OPENCODE_TEST_HOME: "/h" })).toBe("/h")
+  })
+})
+
 test("environment drops v1-only variables and sets the client", () => {
-  const env = environment({ KILO_PARENT_PID: "1", KILO_TELEMETRY_LEVEL: "all", PATH: "/bin" }, { OPENCODE_PASSWORD: "x" })
+  const env = environment(
+    { KILO_PARENT_PID: "1", KILO_TELEMETRY_LEVEL: "all", PATH: "/bin" },
+    { OPENCODE_PASSWORD: "x" },
+  )
   expect(env.KILO_PARENT_PID).toBeUndefined()
   expect(env.KILO_TELEMETRY_LEVEL).toBeUndefined()
   expect(env).toMatchObject({ PATH: "/bin", KILO_CLIENT: "vscode", OPENCODE_PASSWORD: "x", NODE_USE_SYSTEM_CA: "1" })
@@ -202,7 +216,9 @@ test("starts the real v2 server, passes the Kilo handshake and stops when stdin 
     env: { ...process.env, INIT_CWD: root, OPENCODE_PASSWORD: "inherited" },
   })
   const api = OpenCode.make({ baseUrl: server.url, headers: { authorization: server.authorization } })
-  const info = await api.rpc(KiloHandshakeRpc.Definition).get({}, { location: { directory: path.join(root, "workspace") } })
+  const info = await api
+    .rpc(KiloHandshakeRpc.Definition)
+    .get({}, { location: { directory: path.join(root, "workspace") } })
   expect(info.product).toBe("kilo")
   // Without a location, the server creates the session in its own working directory.
   const session = await api.session.create({})

@@ -665,6 +665,12 @@
     "note": "webview-ui/src/components/settings/provider-visibility.ts carries disabledProviderOptions and the custom provider package set, and packages/kilo-vscode/test/custom-provider.test.ts asserts both. canChangeProviderKey, visibleConnectedIds and providersWithKiloFallback are not needed on v2: integrations and credentials answer directly (credentials(integration), integration.connections) and the Kilo fallback provider does not exist.",
     "by": "settings-custom-provider"
   },
+  "module:packages/kilo-vscode/webview-ui/src/components/chat/FeedbackDialog.tsx": {
+    "state": "ported",
+    "v2": "packages/kilo-vscode/webview-ui/src/v2/feedback.tsx",
+    "note": "Same logo, three URLs, copy keys, button order and feedback-* classes as the v1 dialog. Links open through the V2 scope (the open host message) because the v1 openExternal webview message does not exist on the v2 relay.",
+    "by": "v2-feedback"
+  },
   "module:packages/kilo-vscode/webview-ui/src/components/settings/ModeCreateView.tsx": {
     "state": "ported",
     "note": "webview-ui/src/components/settings/agent-behaviour/ModeCreateView.tsx on the v2 agent contract: the name becomes the agents.<id> config key with the same slug and uniqueness validation, and Create writes mode \"primary\" with the description and system prompt through useSettingsConfig as one immediate host write.",
