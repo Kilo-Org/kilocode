@@ -222,17 +222,19 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
           const rows: ModelUsage[][] = []
           for (const member of untrack(members)) {
             if (next.signal.aborted || version !== run) return
-            const messages = await fetchSessionMessages(v2.api, member.id, next.signal)
+            const messages = await fetchSessionMessages(v2.api, member.id, next.signal).catch((error: unknown) => {
+              // A session created here is not on the server until its create request settles. Skip only that
+              // member: the next idle revision loads the usage again.
+              if (sessionMissing(error) && v2.data.session.get(member.id)) return undefined
+              throw error
+            })
             if (next.signal.aborted || version !== run) return
-            rows.push(modelUsage(messages).models)
+            if (messages) rows.push(modelUsage(messages).models)
           }
           if (version !== run) return
           setDetailModels(mergeModelUsage(rows))
         })().catch((error: unknown) => {
           if (next.signal.aborted || version !== run) return
-          // A session created here is not on the server until its create request settles. The next idle revision
-          // loads the usage again, so this is not an error to show.
-          if (sessionMissing(error) && v2.data.session.get(props.sessionID)) return
           v2.report(error)
         })
       },
