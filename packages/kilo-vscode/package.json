@@ -613,6 +613,51 @@
         "title": "Open Integrated Browser",
         "category": "Kilo Code (v2)",
         "icon": "$(globe)"
+      },
+      {
+        "command": "kilo-code.v2.explainCode",
+        "title": "Explain Code",
+        "category": "Kilo Code (v2)"
+      },
+      {
+        "command": "kilo-code.v2.fixCode",
+        "title": "Fix Code",
+        "category": "Kilo Code (v2)"
+      },
+      {
+        "command": "kilo-code.v2.improveCode",
+        "title": "Improve Code",
+        "category": "Kilo Code (v2)"
+      },
+      {
+        "command": "kilo-code.v2.addToContext",
+        "title": "Add to Context",
+        "category": "Kilo Code (v2)"
+      },
+      {
+        "command": "kilo-code.v2.terminalAddToContext",
+        "title": "Add Terminal Content to Context",
+        "category": "Kilo Code (v2)"
+      },
+      {
+        "command": "kilo-code.v2.terminalFixCommand",
+        "title": "Fix This Command",
+        "category": "Kilo Code (v2)"
+      },
+      {
+        "command": "kilo-code.v2.terminalExplainCommand",
+        "title": "Explain This Command",
+        "category": "Kilo Code (v2)"
+      },
+      {
+        "command": "kilo-code.v2.focusChatInput",
+        "title": "Focus Chat Input",
+        "category": "Kilo Code (v2)"
+      },
+      {
+        "command": "kilo-code.v2.generateTerminalCommand",
+        "title": "Generate Terminal Command",
+        "category": "Kilo Code (v2)"
       }
     ],
     "keybindings": [
@@ -834,6 +879,22 @@
         "key": "ctrl+9",
         "mac": "cmd+9",
         "when": "activeWebviewPanelId == 'kilo-code.v2.agentManagerPanel'"
+      },
+      {
+        "command": "kilo-code.v2.addToContext",
+        "key": "ctrl+k ctrl+a",
+        "mac": "cmd+k cmd+a",
+        "when": "editorTextFocus && editorHasSelection"
+      },
+      {
+        "command": "kilo-code.v2.focusChatInput",
+        "key": "ctrl+shift+a",
+        "mac": "cmd+shift+a"
+      },
+      {
+        "command": "kilo-code.v2.generateTerminalCommand",
+        "key": "ctrl+shift+g",
+        "mac": "cmd+shift+g"
       }
     ],
     "menus": {
@@ -878,13 +939,67 @@
           "when": "scmProvider == git"
         }
       ],
+      "editor/context": [
+        {
+          "submenu": "kilo-code.v2.editorContextMenu",
+          "group": "1_kilocode"
+        }
+      ],
+      "kilo-code.v2.editorContextMenu": [
+        {
+          "command": "kilo-code.v2.explainCode",
+          "group": "1_actions@1"
+        },
+        {
+          "command": "kilo-code.v2.fixCode",
+          "group": "1_actions@2"
+        },
+        {
+          "command": "kilo-code.v2.improveCode",
+          "group": "1_actions@3"
+        },
+        {
+          "command": "kilo-code.v2.addToContext",
+          "group": "1_actions@4"
+        }
+      ],
+      "terminal/context": [
+        {
+          "submenu": "kilo-code.v2.terminalContextMenu",
+          "group": "2_kilocode"
+        }
+      ],
+      "kilo-code.v2.terminalContextMenu": [
+        {
+          "command": "kilo-code.v2.terminalAddToContext",
+          "group": "1_actions@1"
+        },
+        {
+          "command": "kilo-code.v2.terminalFixCommand",
+          "group": "1_actions@2"
+        },
+        {
+          "command": "kilo-code.v2.terminalExplainCommand",
+          "group": "1_actions@3"
+        }
+      ],
       "commandPalette": [
         {
           "command": "kilo-code.v2.agentManager.advancedWorktree",
           "when": "false"
         }
       ]
-    }
+    },
+    "submenus": [
+      {
+        "id": "kilo-code.v2.editorContextMenu",
+        "label": "Kilo Code"
+      },
+      {
+        "id": "kilo-code.v2.terminalContextMenu",
+        "label": "Kilo Code"
+      }
+    ]
   },
   "scripts": {
     "build": "bun script/build.ts",

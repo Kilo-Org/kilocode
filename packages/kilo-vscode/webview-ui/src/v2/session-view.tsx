@@ -4,12 +4,14 @@ import type { FileDiffInfo, JsonValue, ModelRef } from "@opencode/client"
 import type { ToolActions } from "@kilocode/kilo-ui/message-part"
 import { ToolChildSessionProvider, type ToolChildSession } from "@kilocode/kilo-ui/tool-child-session"
 import { createEffect, createMemo, on, onCleanup, onMount, Show, type JSX } from "solid-js"
-import type { ToHost } from "../../../src/protocol"
+import type { PromptAttachment, ToHost } from "../../../src/protocol"
 import { useModelPreferences } from "../context/model-preferences"
 import { getVSCodeAPI } from "../context/vscode"
 import { TaskHeader } from "../components/chat/TaskHeader"
 import { SessionDock } from "../components/chat/SessionDockWorking"
 import type { AppendHandler, ReferenceHandler } from "./append-ready"
+import type { ComposerHandle } from "./composer"
+import { toPromptFiles } from "./prompt-attachments"
 import { useV2 } from "./client"
 import { sessionMissing } from "./scope"
 import { childTools, createChildSessions } from "./child-session"
@@ -49,6 +51,8 @@ export function SessionView(props: {
   onAppendReady?: (append: AppendHandler | undefined) => void
   /** Receives the composer function that adds an Integrated Browser element reference. */
   onReferenceReady?: (add: ReferenceHandler | undefined) => void
+  /** Receives the composer for editor and terminal context actions, and undefined when that composer unmounts. */
+  onComposerReady?: (composer: ComposerHandle | undefined) => void
   /** Receives each prompt the server admitted, with the model it runs on. */
   onPrompted?: (sessionID: string, text: string, model: ModelRef | undefined) => void
   /** Forks the open session; the header shows the action when set. */
@@ -181,7 +185,10 @@ export function SessionView(props: {
     return !!id && (v2.data.session.message.list(id).length > 0 || working.submitting())
   })
 
-  const send = (text: string, metadata?: { [key: string]: JsonValue }) => {
+  const send = (
+    text: string,
+    input?: { items?: PromptAttachment[]; metadata?: { [key: string]: JsonValue } },
+  ) => {
     const key = draftKey()
     const id = session() ?? selection.create()
     const gate = selection.gate(id)
@@ -195,7 +202,13 @@ export function SessionView(props: {
       void v2.data.session.form.cancel({ sessionID: form.sessionID, formID: form.id }).catch(() => undefined)
     }
     return v2.data.session
-      .prompt({ sessionID: id, text, gate, metadata })
+      .prompt({
+        sessionID: id,
+        text,
+        gate,
+        metadata: input?.metadata,
+        files: input?.items?.length ? toPromptFiles(input.items) : undefined,
+      })
       .then(() => {
         const used = gate ? selection.attributed(id) : model
         // The Most used group counts sent prompts per model, as v1.
@@ -306,6 +319,7 @@ export function SessionView(props: {
                 onStop={stop}
                 onAppendReady={props.onAppendReady}
                 onReferenceReady={props.onReferenceReady}
+                onComposerReady={props.onComposerReady}
                 selectors={<Selectors selection={selection} blocked={selectorsBlocked()} />}
                 autoApprove={{ enabled: autoApprove.enabled(), onToggle: autoApprove.toggle }}
               />

@@ -2,7 +2,7 @@ import { expect, test } from "bun:test"
 import { readFileSync } from "node:fs"
 import { resolve } from "node:path"
 
-const source = (path: string) => readFileSync(resolve(import.meta.dir, path), "utf8")
+const source = (path: string) => readFileSync(resolve(import.meta.dir, path), "utf8").replace(/\r\n/g, "\n")
 
 const prompt = source("../webview-ui/src/v2/prompt.tsx")
 const sessionView = source("../webview-ui/src/v2/session-view.tsx")
@@ -11,7 +11,11 @@ const selectors = source("../webview-ui/src/v2/selectors.tsx")
 test("restores the composer text from the draft key and saves it on unmount", () => {
   expect(prompt).toContain("const drafts = new Map<string, string>()")
   expect(prompt).toContain("createSignal(promptDrafts.get(props.draftKey))")
-  expect(prompt).toMatch(/onCleanup\(\(\) => \{\s*promptDrafts\.set\(draft, text\(\)\)\s*keep\(draft, browsers\(\)\)/)
+  const cleanup = prompt.match(/onCleanup\(\(\) => \{\n    promptDrafts\.set\(draft, text\(\)\)([\s\S]*?)\n  \}\)/)?.[1]
+  expect(cleanup).toBeDefined()
+  expect(cleanup).toContain("attachmentDrafts.set(draft, attachments())")
+  expect(cleanup).toContain("pasteDrafts.set(")
+  expect(cleanup).toContain("keep(draft, browsers())")
 })
 
 test("keeps browser references with the draft they were picked for", () => {
@@ -26,6 +30,9 @@ test("switching the draft key saves the old text and restores the new one", () =
   expect(swap).toBeDefined()
   expect(swap).toContain("promptDrafts.set(draft, untrack(text))")
   expect(swap).toContain("setText(value)")
+  expect(swap).toContain("attachmentDrafts.set(draft, untrack(attachments))")
+  expect(swap).toContain("paste.load(value, pasteDrafts.get(key))")
+  expect(swap).toContain("setAttachments(attachmentDrafts.get(key))")
 })
 
 test("remounts the composer for each session or pending tab", () => {
@@ -42,4 +49,12 @@ test("resets the draft agent and model when the draft key changes", () => {
   expect(reset).toContain("setDraftModel(undefined)")
   expect(selectors).toContain("draftKey: Accessor<string | undefined> = session")
   expect(sessionView).toContain("createSelection(session, draftKey)")
+})
+
+test("a context action submit keeps the composer guards and falls back to the draft", () => {
+  const submit = prompt.slice(prompt.indexOf("const submit = (external"))
+  expect(submit).toContain("if (!ready()")
+  expect(submit).toContain("putInDraft(external.text, external.items)")
+  expect(submit).toContain("if (external) return putInDraft(external.text, external.items)")
+  expect(prompt).toContain("submit: (value, items) => submit({ text: value, items })")
 })

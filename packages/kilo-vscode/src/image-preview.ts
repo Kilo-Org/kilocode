@@ -1,6 +1,9 @@
-// `parseImage` and its helpers, ported from v1 `src/image-preview.ts`. The editor preview part is not ported yet.
 import path from "node:path"
 import { imageMime } from "./shared/image-data-url"
+
+const IMAGE_PREVIEW_ID = "imagePreview.previewEditor"
+const PREVIEW_DIR = "image-preview"
+const PREVIEW_LIMIT = 20
 
 export function parseImage(dataUrl: string, filename: string) {
   const mime = imageMime(dataUrl)
@@ -12,6 +15,30 @@ export function parseImage(dataUrl: string, filename: string) {
   const ext = getExt(mime)
   const name = buildName(filename, ext)
   return { data, ext, name }
+}
+
+export function buildPreviewPath(name: string, now: number): string {
+  return path.posix.join(PREVIEW_DIR, `${now}-${name}`)
+}
+
+export function getPreviewCommand(uri: {
+  toString(): string
+}): [string, { resource: { toString(): string }; size: "contain" }] {
+  return [IMAGE_PREVIEW_ID, { resource: uri, size: "contain" }]
+}
+
+export function getPreviewDir(): string {
+  return PREVIEW_DIR
+}
+
+/** The oldest preview files once there are more than the limit, so the preview folder does not grow forever. */
+export function trimEntries<T extends { path: string }>(items: T[], limit = PREVIEW_LIMIT): string[] {
+  if (items.length <= limit) return []
+  return items
+    .slice()
+    .sort((a, b) => a.path.localeCompare(b.path))
+    .slice(0, items.length - limit)
+    .map((item) => item.path)
 }
 
 function parseBase64(value: string): Uint8Array | null {

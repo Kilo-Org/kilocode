@@ -18,6 +18,7 @@ import { applyModelPreference, readModelPreferences } from "./model-preferences"
 import { DISPLAY_DEFAULTS, type ModelPreferenceMessage, type ToHost, type ToWebview } from "./protocol"
 import { bridge } from "./relay"
 import { saveImage } from "./save-image"
+import { previewImage } from "./preview-image"
 import type { Manager } from "./server"
 import type { DocumentViewerProvider } from "./DocumentViewerProvider"
 import {
@@ -36,6 +37,7 @@ import { openBrowserLink } from "./browser-links"
 import { DEVTOOLS } from "./browser-tab/html"
 import { documentExists, isMarkdownPath } from "./documents/document-reader"
 import { openToolFile, type ToolDiff } from "./tool-diff"
+import { chatFocus } from "./services/code-actions/target"
 
 // The sidebar may only write the settings its own UI owns. Other views keep their own write path.
 // The settings each webview may write; the Settings panel writes every Kilo setting through its own handler.
@@ -337,6 +339,12 @@ export function wire(input: {
       void saveImage(input.saveImageDirectory?.() ?? input.directory, message)
       return true
     }
+    if (message.type === "previewImage") {
+      void previewImage(input.context.globalStorageUri, message).catch((err: unknown) =>
+        console.error("[Kilo] Failed to preview image:", err),
+      )
+      return true
+    }
     // The Language tab applies at once: write `kilo-code.v2.language` and let the change event push it to every view.
     if (message.type === "setLanguage") {
       void workspace.getConfiguration(NAMESPACE).update("language", message.locale || undefined, true)
@@ -368,6 +376,7 @@ export function wire(input: {
     if (settings.handle(message)) return
     // Only the sidebar carries the cycle keybindings; the Settings panel must not change their context.
     if (message.type === "webviewFocusChanged" && input.view === "chat") {
+      if (message.focused === true) chatFocus.gained("sidebar")
       if (input.onFocusChanged) return input.onFocusChanged(message.focused === true)
       return void commands.executeCommand("setContext", "kilo-code.v2.sidebarFocused", message.focused === true)
     }
