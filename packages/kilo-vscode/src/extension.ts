@@ -24,6 +24,7 @@ import { usePlanHome } from "./documents/document-reader"
 import { readKiloSettings } from "./settings-host"
 import { registerAutocompleteProvider } from "./services/autocomplete"
 import { createConnection } from "./services/autocomplete/connection"
+import { NotebookBroker } from "./services/notebook"
 import { profile } from "./profile-panel"
 import { settings } from "./settings-panel"
 import { createShutdown } from "./shutdown"
@@ -77,13 +78,32 @@ export function activate(context: ExtensionContext) {
     },
   })
   alerts.setLimit(readKiloSettings().maxCost)
+  let agentManagerRef: AgentManagerProvider | undefined
+  // The notebook tools ask this host to change the live editor state. The broker serves them over loopback with a
+  // per-run token, so the server enables the tools only while this host passes the endpoint.
+  const notebooks = new NotebookBroker({
+    directories: () => [
+      ...(workspace.workspaceFolders ?? []).map((folder) => folder.uri.fsPath),
+      ...(agentManagerRef?.state?.getWorktrees().map((worktree) => worktree.path) ?? []),
+    ],
+    log: (text) => output.appendLine(`Notebook: ${text}`),
+  })
   // Read at each start, so a settings change applies to the next server.
-  const serverSettings = () => {
+  const serverSettings = async () => {
     const values = readKiloSettings()
-    return settingsEnvironment({
-      claudeCodeCompat: values.claudeCodeCompat === true,
-      extraCaCerts: typeof values.extraCaCerts === "string" ? values.extraCaCerts : "",
-    })
+    const notebook = workspace.isTrusted
+      ? await notebooks.env().catch((error: unknown) => {
+          output.appendLine(`Notebook broker failed: ${String(error)}`)
+          return {}
+        })
+      : {}
+    return {
+      ...settingsEnvironment({
+        claudeCodeCompat: values.claudeCodeCompat === true,
+        extraCaCerts: typeof values.extraCaCerts === "string" ? values.extraCaCerts : "",
+      }),
+      ...notebook,
+    }
   }
   const shutdown = createShutdown({ log: (text) => output.appendLine(text) })
   const serverCommand = () => command({ extension: context.extensionPath, storage, env: process.env })
@@ -136,7 +156,6 @@ export function activate(context: ExtensionContext) {
   })
   documentsRef.current = documents
   const agentHost = new VscodeHost(context, { server, directory })
-  let agentManagerRef: AgentManagerProvider | undefined
   const agentPanel = createPanel({
     context,
     server,
@@ -189,6 +208,7 @@ export function activate(context: ExtensionContext) {
 
   context.subscriptions.push(
     output,
+    { dispose: () => void notebooks.dispose() },
     { dispose: () => diffs.dispose() },
     workspace.registerTextDocumentContentProvider(diffs.scheme, diffs.provider),
     window.registerWebviewViewProvider("kilo-code.v2.chat", view.provider, {
