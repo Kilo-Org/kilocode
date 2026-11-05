@@ -4,7 +4,7 @@ import path from "node:path"
 import { build } from "esbuild"
 import { solidPlugin } from "esbuild-plugin-solid"
 
-export async function fixture(name: string) {
+export async function fixture(name: string, env: Record<string, string> = {}) {
   const root = path.resolve(import.meta.dir, "../..")
   const webview = path.join(root, "webview-ui")
   const solid = path.dirname(Bun.resolveSync("solid-js/package.json", webview))
@@ -48,7 +48,12 @@ export async function fixture(name: string) {
   const file = path.join(root, `.${name}-${crypto.randomUUID()}.mjs`)
   await Bun.write(file, result.outputFiles[0]!.contents)
   try {
-    const child = Bun.spawnSync(["bun", file], { cwd: webview, stdout: "pipe", stderr: "pipe" })
+    const child = Bun.spawnSync(["bun", file], {
+      cwd: webview,
+      stdout: "pipe",
+      stderr: "pipe",
+      env: { ...process.env, ...env },
+    })
     expect(child.exitCode, child.stdout.toString() + child.stderr.toString()).toBe(0)
   } finally {
     unlinkSync(file)

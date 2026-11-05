@@ -66,8 +66,16 @@ import { sanitizeBranchName } from "../../src/shared/branch-slug"
 import { shouldComposeGoal, submitPayload } from "./new-worktree-command"
 import { createReadiness } from "./worktree-readiness"
 import { ReadinessCard } from "./ReadinessCard"
+import {
+  draftValues,
+  readCached,
+  initialProject,
+  writeAllocations,
+  writeDraft,
+  type VersionCount,
+  type WorktreeDraft,
+} from "./new-worktree-draft"
 
-type VersionCount = 1 | 2 | 3 | 4
 const VERSION_OPTIONS: VersionCount[] = [1, 2, 3, 4]
 // Local dialog actions offered by the prompt slash menu. Server commands
 // (custom commands, skills, MCP prompts, /goal) are always offered; the
@@ -201,10 +209,16 @@ export const NewWorktreeDialog: Component<{
   const click = metrics.click
 
   const [tab, setTab] = createSignal<DialogTab>("new")
-  const [project, setProject] = createSignal(props.projectId ?? props.activeProjectId)
-  const [projectOpen, setProjectOpen] = createSignal(false)
+  const cached = vscode.getState<Record<string, unknown>>()
+  const draft = readCached(cached)
+  const init = draftValues(draft)
   const projects = () => props.projects?.() ?? []
+  const fallback = props.projectId ?? props.activeProjectId
+  // A saved project that no longer exists falls back to today's default; never pick another one.
+  const [project, setProject] = createSignal(initialProject(draft, projects(), props.projectId, props.activeProjectId))
+  const [projectOpen, setProjectOpen] = createSignal(false)
   const showProject = () => projects().length > 0
+  let submitted = false
   const base = () => {
     const id = project()
     return id ? props.defaultBase?.(id) : undefined
@@ -234,12 +248,11 @@ export const NewWorktreeDialog: Component<{
   const [branchSearch, setBranchSearch] = createSignal("")
 
   // --- New tab state ---
-  const [name, setName] = createSignal("")
-  const cached = vscode.getState<Record<string, unknown>>()
+  const [name, setName] = createSignal(init.name)
   const [prompt, setPrompt] = createSignal((cached?.advancedDialogPrompt as string) ?? "")
   const saved = readDialogSelections(cached?.advancedDialogSelections)
-  const [versions, setVersions] = createSignal<VersionCount>(1)
-  const [compareMode, setCompareMode] = createSignal(false)
+  const [versions, setVersions] = createSignal<VersionCount>(init.versions)
+  const [compareMode, setCompareMode] = createSignal(init.compare)
   const initialAgent = restoreAgent(saved.agent, session.agents(), session.selectedAgent())
   const preferences = createDialogPreferences({
     saved,
@@ -251,11 +264,11 @@ export const NewWorktreeDialog: Component<{
     variants: (value) => Object.keys(provider.findModel(value)?.variants ?? {}),
   })
   const { selection, model, agent, variants, effectiveVariant, selectAgent, selectModel, selectVariant } = preferences
-  const [modelAllocations, setModelAllocations] = createSignal<ModelAllocations>(new Map())
+  const [modelAllocations, setModelAllocations] = createSignal<ModelAllocations>(init.allocations)
   const [starting, setStarting] = createSignal(false)
-  const [goalMode, setGoalMode] = createSignal(false)
+  const [goalMode, setGoalMode] = createSignal(init.goal)
   const [enhancing, setEnhancing] = createSignal(false)
-  const [branchName, setBranchName] = createSignal("")
+  const [branchName, setBranchName] = createSignal(init.branch)
   const [baseBranch, setBaseBranch] = createSignal<string | null>(null)
   const [compareOpen, setCompareOpen] = createSignal(false)
   const [sandbox, setSandbox] = createSignal<boolean | undefined>(saved.sandbox)
@@ -381,6 +394,28 @@ export const NewWorktreeDialog: Component<{
     setBaseBranch(next)
     persistBase(project(), next)
   }
+
+  // The rest of the draft lives in webview state too, so a Reload window (or a
+  // plain close and reopen) brings back the whole form. Merge with the latest
+  // state so the other persisted keys are never overwritten.
+  const persistDraft = (value: WorktreeDraft) => {
+    const state = vscode.getState<Record<string, unknown>>() ?? {}
+    vscode.setState({ ...state, advancedDialogDraft: writeDraft(value) })
+  }
+
+  createEffect(() => {
+    // A submitted draft must stay gone: never write it back while closing.
+    if (submitted) return
+    persistDraft({
+      project: project() === fallback ? undefined : project(),
+      name: name(),
+      branch: branchName(),
+      versions: versions(),
+      compare: compareMode(),
+      allocations: writeAllocations(modelAllocations()),
+      goal: goalMode(),
+    })
+  })
 
   createEffect(() => {
     const state = vscode.getState<Record<string, unknown>>() ?? {}
@@ -628,6 +663,8 @@ export const NewWorktreeDialog: Component<{
     })
 
     // A submitted dialog starts fresh next time: keep only the agent and sandbox restore.
+    submitted = true
+    persistDraft({})
     preferences.clear()
     persistPrompt("")
     persistImages([])

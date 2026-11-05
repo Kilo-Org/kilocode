@@ -5,10 +5,14 @@ import type { AgentProjectSnapshot, Readiness, WebviewMessage } from "../../webv
 type Options = {
   projectId?: string
   activeProjectId?: string
+  projectIds?: string[]
   projects?: () => AgentProjectSnapshot[]
   mode?: unknown
   features?: Record<string, boolean>
   state?: Record<string, unknown>
+  persist?: boolean
+  providers?: boolean
+  models?: Record<string, { id: string; name: string }>
 }
 
 const project = (id: string): AgentProjectSnapshot => ({
@@ -28,7 +32,7 @@ export async function newWorktreeHarness(options: Options = {}) {
   Object.defineProperty(window, "origin", { value: window.location.origin })
   const sent: WebviewMessage[] = []
   // A valid saved model is required, or Create stays disabled regardless of readiness.
-  const saved = options.state ?? {
+  const saved: Record<string, unknown> = options.state ?? {
     advancedDialogSelections: { model: { providerID: "kilo", modelID: "m1" } },
     advancedDialogImages: [
       { id: "img", filename: "shot.png", mime: "image/png", dataUrl: "data:image/png;base64,AAAA" },
@@ -37,7 +41,12 @@ export async function newWorktreeHarness(options: Options = {}) {
   const api = {
     postMessage: (message: WebviewMessage) => sent.push(structuredClone(message)),
     getState: () => saved,
-    setState: () => {},
+    setState: options.persist
+      ? (next: Record<string, unknown>) => {
+          for (const key of Object.keys(saved)) delete saved[key]
+          Object.assign(saved, structuredClone(next))
+        }
+      : () => {},
   }
 
   Object.assign(globalThis, {
@@ -114,11 +123,11 @@ export async function newWorktreeHarness(options: Options = {}) {
     discardConfig: () => {},
   }
   const language = { locale: () => "en", setLocale: () => {}, userOverride: () => "", t: (key: string) => key }
-  const projects = options.projects ?? (() => [project("p1"), project("p2")])
+  const projects = options.projects ?? (() => (options.projectIds ?? ["p1", "p2"]).map(project))
   const closes = { value: 0 }
   const [open, setOpen] = createSignal(false)
   const [projectId, setProjectId] = createSignal(options.projectId ?? "p1")
-  const [activeProjectId] = createSignal(options.activeProjectId ?? "p1")
+  const [activeProjectId, setActiveProjectId] = createSignal(options.activeProjectId ?? "p1")
   const Opener = () => {
     const dialog = useDialog()
     const [closing, setClosing] = createSignal(false)
@@ -184,18 +193,26 @@ export async function newWorktreeHarness(options: Options = {}) {
   }
 
   const model = { providerID: "kilo", modelID: "m1" }
+  const loadModels = () =>
+    emit({
+      type: "providersLoaded",
+      organizationId: null,
+      ready: true,
+      providers: {
+        kilo: {
+          id: "kilo",
+          name: "Kilo",
+          models: options.models ?? { m1: { id: "m1", name: "M1" } },
+        },
+      },
+      connected: ["kilo"],
+      defaults: { kilo: "m1" },
+      defaultSelection: model,
+      authMethods: {},
+      authStates: {},
+    })
   await emit({ type: "agentsLoaded", agents: [{ name: "code" }], defaultAgent: "code" })
-  await emit({
-    type: "providersLoaded",
-    organizationId: null,
-    ready: true,
-    providers: { kilo: { id: "kilo", name: "Kilo", models: { m1: { id: "m1", name: "M1" } } } },
-    connected: ["kilo"],
-    defaults: { kilo: "m1" },
-    defaultSelection: model,
-    authMethods: {},
-    authStates: {},
-  })
+  if (options.providers !== false) await loadModels()
 
   const checks = () =>
     sent.filter(
@@ -230,8 +247,9 @@ export async function newWorktreeHarness(options: Options = {}) {
     await new Promise((done) => setTimeout(done, 150))
     await settle()
   }
-  const mount = async (next?: { projectId?: string; activeProjectId?: string }) => {
+  const mount = async (next?: { projectId?: string; activeProjectId?: string; expected?: string }) => {
     setProjectId(next?.projectId ?? options.projectId ?? "p1")
+    setActiveProjectId(next?.activeProjectId ?? options.activeProjectId ?? "p1")
     if (open()) await close()
     await new Promise((done) => setTimeout(done, 150))
     sent.length = 0
@@ -240,7 +258,7 @@ export async function newWorktreeHarness(options: Options = {}) {
     await settle()
     // Mounting checks the selected project once.
     assert.equal(checks().length, 1)
-    assert.equal(checks().at(0)?.projectId, projectId())
+    assert.equal(checks().at(0)?.projectId, next?.expected ?? projectId())
     return checks().at(0)!.requestID
   }
 
@@ -261,6 +279,7 @@ export async function newWorktreeHarness(options: Options = {}) {
     shortcut,
     close,
     mount,
+    loadModels,
     open,
     setOpen,
     closes,
