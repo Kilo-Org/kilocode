@@ -16,6 +16,7 @@
   },
   "dependencies": {
     "@kilocode/gateway-core": "workspace:*",
+    "@kilocode/kilo-indexing": "workspace:*",
     "@opencode/client": "workspace:*",
     "@opencode/core": "workspace:*",
     "@opencode/plugin": "workspace:*",

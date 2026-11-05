@@ -21,9 +21,9 @@
     "@agentclientprotocol/sdk": "1.6.0",
     "@babel/core": "7.29.7",
     "@babel/preset-typescript": "7.27.1",
-    "babel-preset-solid": "1.9.12",
     "@effect/platform-node": "catalog:",
     "@kilocode/gateway-core": "workspace:*",
+    "@kilocode/kilo-indexing": "workspace:*",
     "@kilocode/kilo-plugin": "workspace:*",
     "@opencode/ai": "workspace:*",
     "@opencode/cli": "workspace:*",
@@ -33,9 +33,10 @@
     "@opencode/util": "workspace:*",
     "@opentui/core": "catalog:",
     "@opentui/solid": "catalog:",
+    "babel-preset-solid": "1.9.12",
     "drizzle-orm": "catalog:",
-    "jsonc-parser": "3.3.1",
-    "effect": "catalog:"
+    "effect": "catalog:",
+    "jsonc-parser": "3.3.1"
   },
   "devDependencies": {
     "@opencode/client": "workspace:*",
