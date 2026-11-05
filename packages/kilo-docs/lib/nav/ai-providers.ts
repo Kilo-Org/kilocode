@@ -29,6 +29,7 @@ export const AiProvidersNav: NavSection[] = [
     links: [
       { href: "/ai-providers/openrouter", children: "OpenRouter" },
       { href: "/ai-providers/trustedrouter", children: "TrustedRouter" },
+      { href: "/ai-providers/freeaiapikey", children: "FreeAIapikey" },
       { href: "/ai-providers/requesty", children: "Requesty" },
       { href: "/ai-providers/daoxe", children: "DaoXE" },
       { href: "/ai-providers/unbound", children: "Unbound" },
