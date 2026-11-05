@@ -224,6 +224,19 @@ const ExperimentalTab: Component = () => {
         </SettingsRow>
 
         <SettingsRow
+          title={language.t("settings.experimental.agentManagerSplash.title")}
+          description={language.t("settings.experimental.agentManagerSplash.description")}
+        >
+          <Switch
+            checked={settings().agentManagerSplash === true}
+            onChange={(checked) => applySetting("agentManagerSplash", checked, "experimental.agentManagerSplash")}
+            hideLabel
+          >
+            {language.t("settings.experimental.agentManagerSplash.title")}
+          </Switch>
+        </SettingsRow>
+
+        <SettingsRow
           title={language.t("settings.experimental.claudeMigration.title")}
           description={language.t("settings.experimental.claudeMigration.description")}
         >

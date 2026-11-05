@@ -1,6 +1,9 @@
 [versions]
 intellij-platform = "2026.1"
 intellij-gradle-plugin = "2.19.0"
+# Starter/Driver artifacts are published per IntelliJ Platform build number. 261.22158.277 is the
+# 2026.1 release build used by the UI e2e adapter; keep it aligned with intellij-platform.
+intellij-starter = "261.22158.277"
 # intellij-rpc-plugin is a Kotlin compiler plugin: its Kotlin minor (2.3 in 2.3.21-RC2-0.1) must match
 # kotlin-jvm-plugin and kotlin-serialization-plugin. Bump all three together; build.gradle.kts enforces it.
 intellij-rpc-plugin = "2.3.21-RC2-0.1"
@@ -10,6 +13,9 @@ kotlin-serialization = "1.11.0"
 kotlinx-coroutines = "1.11.0"
 junit = "4.13.2"
 junit-vintage = "6.1.3"
+junit-jupiter = "5.14.4"
+junit-platform = "1.14.4"
+kodein = "7.26.1"
 okhttp = "5.5.1"
 openapi-generator = "7.26.0"
 detekt = "1.23.8"
@@ -18,6 +24,17 @@ autolink = "0.12.0"
 zxing = "3.5.4"
 changelog = "2.5.0"
 commons-compress = "1.28.0"
+# Security floors for transitive build and test dependencies that never ship in the plugin: the
+# Gradle plugin classpath and the IntelliJ test framework / ide-starter. build.gradle.kts applies
+# them as BOMs and constraints, so Gradle only ever raises a version to meet them.
+security-netty = "4.2.19.Final"
+security-jackson = "2.22.4"
+security-opentelemetry = "1.67.0"
+security-bouncycastle = "1.86"
+security-guava = "33.7.2-jre"
+security-handlebars = "4.5.8"
+security-jsoup = "1.23.2"
+security-lz4 = "1.12.1"
 
 [libraries]
 commonmark = { module = "org.commonmark:commonmark", version.ref = "commonmark" }
@@ -29,11 +46,29 @@ okhttp = { module = "com.squareup.okhttp3:okhttp", version.ref = "okhttp" }
 okhttp-sse = { module = "com.squareup.okhttp3:okhttp-sse", version.ref = "okhttp" }
 okhttp-mockwebserver = { module = "com.squareup.okhttp3:mockwebserver", version.ref = "okhttp" }
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlin-serialization" }
+kotlinx-coroutines = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core-jvm", version.ref = "kotlinx-coroutines" }
 kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "kotlinx-coroutines" }
 junit = { module = "junit:junit", version.ref = "junit" }
 junit-vintage-engine = { module = "org.junit.vintage:junit-vintage-engine", version.ref = "junit-vintage" }
+junit-jupiter = { module = "org.junit.jupiter:junit-jupiter", version.ref = "junit-jupiter" }
+junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher", version.ref = "junit-platform" }
+kodein-di = { module = "org.kodein.di:kodein-di-jvm", version.ref = "kodein" }
 zxing-core = { module = "com.google.zxing:core", version.ref = "zxing" }
 commons-compress = { module = "org.apache.commons:commons-compress", version.ref = "commons-compress" }
+# Only the netty modules ide-starter declares (their 4.2.x POMs pin the rest of the family), not
+# netty-bom: a BOM would also raise unrelated netty 4.1 modules onto the 4.2 line.
+security-netty-buffer = { module = "io.netty:netty-buffer", version.ref = "security-netty" }
+security-netty-codec-compression = { module = "io.netty:netty-codec-compression", version.ref = "security-netty" }
+security-netty-codec-http2 = { module = "io.netty:netty-codec-http2", version.ref = "security-netty" }
+security-jackson-bom = { module = "com.fasterxml.jackson:jackson-bom", version.ref = "security-jackson" }
+security-opentelemetry-bom = { module = "io.opentelemetry:opentelemetry-bom", version.ref = "security-opentelemetry" }
+security-bcprov = { module = "org.bouncycastle:bcprov-jdk18on", version.ref = "security-bouncycastle" }
+security-bcpkix = { module = "org.bouncycastle:bcpkix-jdk18on", version.ref = "security-bouncycastle" }
+security-guava = { module = "com.google.guava:guava", version.ref = "security-guava" }
+security-handlebars = { module = "com.github.jknack:handlebars", version.ref = "security-handlebars" }
+security-jsoup = { module = "org.jsoup:jsoup", version.ref = "security-jsoup" }
+# Maintained fork of the abandoned org.lz4:lz4-java (same net.jpountz API).
+security-lz4 = { module = "at.yawk.lz4:lz4-java", version.ref = "security-lz4" }
 
 [plugins]
 detekt = { id = "io.gitlab.arturbosch.detekt", version.ref = "detekt" }

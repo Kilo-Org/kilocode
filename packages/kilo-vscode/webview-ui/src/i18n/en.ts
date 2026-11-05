@@ -974,6 +974,9 @@ export const dict = {
   "settings.experimental.conversationPromptHistory.title": "Per-Conversation Prompt History",
   "settings.experimental.conversationPromptHistory.description":
     "Keep the prompt input history (ArrowUp/ArrowDown recall) separate for each conversation instead of sharing one history across all conversations.",
+  "settings.experimental.agentManagerSplash.title": "Agent Manager splash",
+  "settings.experimental.agentManagerSplash.description":
+    "Try the new Agent Manager introduction with workflow examples. Applies immediately.",
   "settings.experimental.claudeMigration.title": "Claude Code Migration",
   "settings.experimental.claudeMigration.description":
     "On the next backend start, import supported global CLAUDE.md instructions, simple skills, and disabled MCP definitions. This runs once with no automatic retry; global Claude instructions and skills are then handed off to Kilo. Claude files stay unchanged; keep them if you still use Claude Code.",
