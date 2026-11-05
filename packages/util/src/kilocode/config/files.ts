@@ -8,12 +8,21 @@ import path from "path"
 // Internal v2 releases use `kilo2.json`, `kilo2.jsonc` and `.kilo2` (product decision, 2026-10-21), separate from
 // v1's `kilo.json`, `kilo.jsonc` and `.kilo`. There is no implicit legacy fallback. Release migration to the
 // `kilo` names is tracked in U-E3-03 and U-E8-02. The file contents use the v2 schema.
+//
+// The admin-managed system directory is the exception: it keeps the stable product names (`managedFiles`), because
+// an administrator deploys it once and it must keep applying across internal renames (decision 2026-11, #15326).
 
-/** Root files of the global directory, the system directory and each project directory. `.jsonc` wins. */
+/** Root files of the global directory and each project directory. `.jsonc` wins. */
 export const names = ["kilo2.json", "kilo2.jsonc"]
 
 /** Kilo v1 file order, using the internal v2 names inside `.kilo2`: `.json` wins. */
 export const directoryFiles = ["kilo2.jsonc", "kilo2.json"]
+
+/**
+ * Files of the platform managed system directory (`systemDirectory`), the stable product names an administrator
+ * deploys once. `.jsonc` is read first, so `.json` wins.
+ */
+export const managedFiles = ["kilo.jsonc", "kilo.json"]
 
 /** Project config directories at one level. */
 export const directories = [".kilo2"]
