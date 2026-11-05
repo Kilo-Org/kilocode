@@ -15,6 +15,7 @@ import { KiloSessionSync } from "./session-sync"
 
 export { KiloSessionSync }
 import { KiloPrivacyPlugin } from "./privacy"
+import { KiloSettingsPlugin } from "./settings"
 import { KiloSkillPlugin } from "./skill"
 import { KiloTodoPlugin } from "./todo"
 import { KiloWriteToolPlugin } from "./tool-write"
@@ -49,6 +50,7 @@ export const KiloPlugins = [
   KiloWriteToolPlugin,
   KiloCommitMessagePlugin,
   KiloPrivacyPlugin,
+  KiloSettingsPlugin,
   KiloBranchNamePlugin,
   KiloAgentManagerPlugin,
   // The Kilo review command replaces the built-in `review`. kilo_port(review:efc710228c1f)
