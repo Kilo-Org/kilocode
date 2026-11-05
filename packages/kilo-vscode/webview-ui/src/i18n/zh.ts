@@ -215,6 +215,7 @@ export const dict = {
   "prompt.action.stop.background": "停止主智能体。后台智能体将继续运行。",
   "prompt.agents.show": "显示后台智能体",
   "prompt.action.enhance": "优化提示词",
+  "prompt.action.enhanceStop": "停止优化提示词",
   "prompt.action.more": "更多操作",
   "prompt.paste.expand": "点击展开粘贴的文本",
   "prompt.issues.title": "会话问题",

@@ -217,6 +217,7 @@ export const dict = {
   "prompt.action.stop.background": "Parar o agente principal. Os agentes em segundo plano continuam em execução.",
   "prompt.agents.show": "Mostrar agentes em segundo plano",
   "prompt.action.enhance": "Melhorar prompt",
+  "prompt.action.enhanceStop": "Parar de melhorar o prompt",
   "prompt.action.more": "Mais ações",
   "prompt.paste.expand": "Clique para expandir o texto colado",
   "prompt.issues.title": "Kudennoù estez",

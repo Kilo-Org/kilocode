@@ -18,6 +18,11 @@ const EnhancePromptResponse = Schema.Struct({
   text: Schema.String,
 })
 
+export class EnhancePromptFailedError extends Schema.ErrorClass<EnhancePromptFailedError>("EnhancePromptFailedError")(
+  { message: Schema.String },
+  { httpApiStatus: 422 },
+) {}
+
 export const EnhancePromptApi = HttpApi.make("enhance-prompt")
   .add(
     HttpApiGroup.make("enhance-prompt")
@@ -26,7 +31,7 @@ export const EnhancePromptApi = HttpApi.make("enhance-prompt")
           query: WorkspaceRoutingQuery,
           payload: EnhancePromptPayload,
           success: described(EnhancePromptResponse, "Enhanced prompt text"),
-          error: HttpApiError.BadRequest,
+          error: [HttpApiError.BadRequest, EnhancePromptFailedError],
         }).annotateMerge(
           OpenApi.annotations({
             identifier: "enhancePrompt.enhance",

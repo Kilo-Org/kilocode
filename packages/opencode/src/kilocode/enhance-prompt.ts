@@ -1,8 +1,10 @@
-import { generateText } from "ai"
+import { APICallError, RetryError, generateText } from "ai"
 import { randomUUID } from "crypto"
 import { mergeDeep } from "remeda"
 import { Provider } from "@/provider/provider"
 import { ProviderTransform } from "@/provider/transform"
+import { ProviderError } from "@/provider/error"
+import type { ProviderV2 } from "@opencode-ai/core/provider"
 import { AppRuntime } from "@/effect/app-runtime"
 import { Effect } from "effect"
 import * as Log from "@opencode-ai/core/util/log"
@@ -24,12 +26,21 @@ export function clean(text: string) {
   return stripped.replace(/^(['"])([\s\S]*)\1$/, "$2").trim()
 }
 
+/** The provider's own reason for a failed call, in the same words a chat error uses. */
+export function reason(providerID: ProviderV2.ID, err: unknown) {
+  const last = RetryError.isInstance(err) ? err.lastError : err
+  if (APICallError.isInstance(last)) return ProviderError.parseAPICallError({ providerID, error: last }).message
+  if (last instanceof Error) return last.message
+  return String(last)
+}
+
 /**
  * Lightweight prompt enhancement that mirrors the legacy singleCompletionHandler.
  * Calls generateText directly with a prompt-rewrite system instruction, no agent identity,
  * tools, or plugins. The user message is labeled as a draft so it stays rewrite input.
+ * The signal stops the model call (and its retries) when the client gives up.
  */
-export async function enhancePrompt(text: string): Promise<string> {
+export async function enhancePrompt(text: string, signal?: AbortSignal): Promise<string> {
   log.info("enhancing", { length: text.length })
 
   const resolved = await AppRuntime.runPromise(
@@ -51,11 +62,15 @@ export async function enhancePrompt(text: string): Promise<string> {
       mergeDeep(ProviderTransform.smallOptions(resolved.model), resolved.model.options),
     ),
     maxRetries: 3,
+    abortSignal: signal,
     system: INSTRUCTION,
     // Each call is a standalone rewrite, not part of a multi-turn conversation; a fresh ID
     // per call still satisfies the opencode API's "stable per-conversation ID" requirement.
     headers: opencodeSessionHeaders({ providerID: resolved.model.providerID, sessionID: randomUUID() }),
     messages: [{ role: "user" as const, content: `Draft prompt to enhance, not answer:\n\n${text}` }],
+  }).catch((err: unknown) => {
+    if (!signal?.aborted) log.error("failed", { err })
+    throw new Error(reason(resolved.model.providerID, err), { cause: err })
   })
 
   log.info("enhanced", { length: result.text.length })
