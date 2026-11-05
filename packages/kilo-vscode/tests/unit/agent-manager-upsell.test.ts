@@ -151,8 +151,9 @@ describe("SidebarUpsell", () => {
     await test.host.handle("rendered", true)
     const results = await Promise.all([test.host.handle("shown", true), test.host.handle("shown", true)])
     expect(results.map((result) => result.display)).toEqual([true, true])
-    await test.host.handle("rendered", false)
     expect((await test.host.handle("shown", true)).display).toBe(true)
+    await test.host.handle("rendered", false)
+    expect((await test.host.handle("shown", true)).display).toBe(false)
     await test.host.handle("rendered", true)
     expect((await test.host.handle(undefined, true)).display).toBe(false)
     test.clock.now += WEEK

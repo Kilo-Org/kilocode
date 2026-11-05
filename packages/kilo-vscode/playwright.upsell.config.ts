@@ -2,7 +2,7 @@ import { defineConfig } from "@playwright/test"
 
 export default defineConfig({
   testDir: "./tests",
-  testMatch: ["agent-manager-upsell.spec.ts", "upsell-settings.spec.ts"],
+  testMatch: ["agent-manager-upsell.spec.ts", "upsell-authorization.spec.ts", "upsell-settings.spec.ts"],
   outputDir: "./test-results/agent-manager-upsell",
   workers: 1,
   use: {

@@ -142,6 +142,10 @@ test("opt-out confirmation expires after six seconds and Undo cancels the old ti
   await page.clock.pauseAt(new Date("2026-01-01T00:00:01Z"))
   await card(page).getByRole("button", { name: "Don't show this again", exact: true }).click()
   await expect(card(page)).toContainText("Got it. We won't suggest Agent Manager here again.")
+  await scene(page, { enabled: false })
+  await expect(card(page)).toHaveCount(0)
+  await scene(page, { enabled: true })
+  await expect(card(page)).toContainText("Got it. We won't suggest Agent Manager here again.")
   await page.clock.fastForward(5900)
   await expect(card(page)).toBeVisible()
   await card(page).getByRole("button", { name: "Undo", exact: true }).press("Enter")
@@ -201,6 +205,7 @@ test("an accepted reply arriving hidden is retained until the sidebar is visible
   await expect(card(page)).toHaveCount(0)
   expect(await actions(page)).toEqual([])
   await scene(page, { active: true })
+  await deliver(page)
   await expect(card(page)).toBeVisible()
   await impression(page)
   expect(await actions(page)).toEqual(["shown"])
@@ -209,7 +214,7 @@ test("an accepted reply arriving hidden is retained until the sidebar is visible
       (message) => message.type === "agentManagerUpsell" && message.action === "shown",
     ),
   )
-  expect(claims).toHaveLength(1)
+  expect(claims).toHaveLength(2)
 })
 
 test("an in-flight grant waits through a new turn and its delayed changed-file summary", async ({ page }) => {
@@ -224,6 +229,7 @@ test("an in-flight grant waits through a new turn and its delayed changed-file s
   await expect(card(page)).toHaveCount(0)
   expect(await actions(page)).toEqual([])
   await scene(page, { eligible: true })
+  await deliver(page)
   await expect(card(page)).toBeVisible()
   await impression(page)
   expect(await actions(page)).toEqual(["shown"])
