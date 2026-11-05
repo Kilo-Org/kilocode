@@ -33,6 +33,7 @@ import { brandingPlugin } from "../src/branding/plugin"
 import { hostMirrorsPlugin } from "../src/mirrors"
 import { KiloBinary } from "../src/binary"
 import { createPluginRuntimePlugin } from "./plugin-runtime"
+import { copyTreeSitterWasms } from "./tree-sitter"
 
 const dir = path.resolve(import.meta.dirname, "..")
 // Kilo: internal releases use `kilo2`, separate from v1. The upstream target names stay the build's internal names.
@@ -156,7 +157,8 @@ export default { path: file, version: ${JSON.stringify(opencodePty.version)}, sh
   const result = await Bun.build({
     // Kilo: the host entry instead of the upstream CLI entry. It imports the upstream commands and handlers.
     // Upstream's second entrypoint lands next to index.js, where Image.Photon resolves "./photon-worker.js".
-    entrypoints: ["./src/index.ts", "./src/photon-worker.ts"],
+    // Kilo: the codebase indexing worker is the third, resolved the same way as "./indexing-worker.js".
+    entrypoints: ["./src/index.ts", "./src/photon-worker.ts", "./src/indexing-worker.ts"],
     tsconfig: "./tsconfig.json",
     plugins: [
       hostMirrorsPlugin,
@@ -219,6 +221,8 @@ export default { path: file, version: ${JSON.stringify(opencodePty.version)}, sh
     process.exit(1)
   }
   verifySimulationGraph(simulationInputs)
+  // Kilo: the tree-sitter grammars for codebase indexing, next to the executable where the engine looks for them.
+  await copyTreeSitterWasms(path.join(outdir, name, "bin"))
   await NativeArch.verify(path.join(outdir, name, "bin", item.os === "win32" ? `${binary}.exe` : binary), item.arch)
 
   // Kilo: the platform packages have the same names as v1's. script/publish.ts publishes them with the `kilo-v2` npm
