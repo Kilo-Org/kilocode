@@ -21,6 +21,9 @@ import { ModeSwitcherBase } from "../src/components/shared/ModeSwitcher"
 import { ThinkingSelectorBase } from "../src/components/shared/ThinkingSelector"
 import { PromptSelectors } from "../src/components/chat/PromptSelectors"
 import { useLanguage } from "../src/context/language"
+import { useModelPreferences } from "../src/context/model-preferences"
+import { configuredModel, initialModel } from "../src/v2/model-default"
+import { kiloTeam } from "../src/v2/kilo-models"
 import { useBridge } from "./v2/vscode"
 import { convertToMentionPath, insertPathMentions } from "../src/utils/path-mentions"
 import { isEnterKeyCommitNotIme } from "../src/utils/ime-enter"
@@ -179,12 +182,23 @@ export const NewWorktreeDialog: Component<{
   const [compareMode, setCompareMode] = createSignal(false)
   const initialAgent = restoreAgent(saved.agent, props.agents, props.agents[0]?.id ?? "")
   const serverDefault = createDefaultModel(props.store)
+  const modelPreferences = useModelPreferences()
+  void props.store.data.location.config.sync().catch(() => undefined)
   const preferences = createDialogPreferences({
     saved,
     agent: initialAgent,
-    // The same precedence as the sidebar composer: the agent model, then the server default.
+    // The same precedence as the sidebar composer (v1 resolveModelSelection): agent model, configured model, team
+    // default, the most recent pick, then the server default.
     fallback: (agent) => {
-      const model = props.agents.find((item) => item.id === agent)?.model ?? serverDefault()
+      const model = initialModel({
+        agent: props.agents.find((item) => item.id === agent)?.model ?? undefined,
+        configured: configuredModel(props.store.data.location.config.list()),
+        team: kiloTeam(props.store.kiloModels()),
+        recents: modelPreferences?.recents() ?? [],
+        valid: (ref) =>
+          props.models.some((item) => item.enabled && item.providerID === ref.providerID && item.id === ref.id),
+        fallback: serverDefault(),
+      })
       return model ? { providerID: model.providerID, modelID: model.id } : null
     },
     effort: (agent) => props.agents.find((item) => item.id === agent)?.model?.variant,
@@ -931,8 +945,15 @@ export const NewWorktreeDialog: Component<{
                       <ModelSelectorBase
                         models={props.models}
                         providers={props.providers}
+                        gateway={props.store.kiloModels().entries}
                         value={model()}
                         onSelect={selectModel}
+                        onPick={restorePrompt}
+                        onCancel={restorePrompt}
+                        trigger={WORKTREE_PROMPT_SCOPE}
+                        placement="top-start"
+                        portal={false}
+                        deferDismiss
                       />
                     </Show>
                   }
@@ -1068,6 +1089,7 @@ export const NewWorktreeDialog: Component<{
                     onChange={setModelAllocations}
                     models={props.models}
                     providers={props.providers}
+                    gateway={props.store.kiloModels().entries}
                   />
                 </DeferredPopover>
               </div>

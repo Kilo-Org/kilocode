@@ -14,7 +14,18 @@ import { notifyHostAutoApprove, setHostAutoApprove } from "./agent-manager/provi
 import type { SettingsHandler } from "./agent-manager/project/settings"
 import { local } from "./local"
 import { dismissNotification, dismissedNotifications, syncDismissedNotifications } from "./notifications"
-import { DISPLAY_DEFAULTS, type ToHost, type ToWebview } from "./protocol"
+import {
+  FAVORITES_KEY,
+  readModelPreferences,
+  RECENTS_KEY,
+  recordUsage,
+  toggleFavorite,
+  USAGE_KEY,
+  validateRecents,
+  validateVariants,
+  VARIANTS_KEY,
+} from "./model-preferences"
+import { DISPLAY_DEFAULTS, type ModelPreferenceMessage, type ToHost, type ToWebview } from "./protocol"
 import { bridge } from "./relay"
 import { saveImage } from "./save-image"
 import type { Manager } from "./server"
@@ -257,6 +268,22 @@ export function wire(input: {
       }
     }
   }
+  // Every write broadcasts the new state, so a pick in the sidebar shows in the Agent Manager and Settings at once.
+  const handleModelPreferences = async (message: ModelPreferenceMessage) => {
+    const state = input.context.globalState
+    if (message.type === "toggleFavorite")
+      await state.update(FAVORITES_KEY, toggleFavorite(state.get(FAVORITES_KEY), message.action, message))
+    if (message.type === "persistRecents") await state.update(RECENTS_KEY, validateRecents(message.recents))
+    if (message.type === "recordModelUsage") await state.update(USAGE_KEY, recordUsage(state.get(USAGE_KEY), message))
+    if (message.type === "persistVariant")
+      await state.update(VARIANTS_KEY, {
+        ...validateVariants(state.get(VARIANTS_KEY)),
+        [message.key]: message.value,
+      })
+    const loaded = { type: "modelPreferencesLoaded", value: readModelPreferences(state) } as const
+    post(loaded)
+    if (message.type !== "requestModelPreferences") others(loaded)
+  }
   const handleGlobalState = (message: ToHost) => {
     switch (message.type) {
       case "requestModelSelectorExpanded":
@@ -265,6 +292,13 @@ export function wire(input: {
       case "persistModelSelectorExpanded":
         void input.context.globalState.update(EXPANDED, message.value)
         others({ type: "modelSelectorExpandedLoaded", value: message.value })
+        return true
+      case "requestModelPreferences":
+      case "toggleFavorite":
+      case "persistRecents":
+      case "recordModelUsage":
+      case "persistVariant":
+        void handleModelPreferences(message)
         return true
       case "requestAutoApproveState":
         post({ type: "autoApproveStateLoaded", value: input.context.globalState.get(AUTO_APPROVE, false) })
@@ -372,11 +406,12 @@ export function wire(input: {
 
 const surfaces = new Set<(message: ToWebview) => void>()
 
-/** The composer state every webview shares through globalState: auto-approve and the expanded model picker. */
+/** The composer state every webview shares through globalState: auto-approve and the model picker preferences. */
 export function composerState(context: ExtensionContext): ToWebview[] {
   return [
     { type: "autoApproveStateLoaded", value: context.globalState.get(AUTO_APPROVE, false) },
     { type: "modelSelectorExpandedLoaded", value: context.globalState.get(EXPANDED, true) },
+    { type: "modelPreferencesLoaded", value: readModelPreferences(context.globalState) },
   ]
 }
 

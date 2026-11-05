@@ -2,389 +2,398 @@
  * ModelSelector component
  * Popover-based selector for choosing a provider/model in the chat prompt area.
  *
- * ModelSelectorBase is main's compact layout, keyboard model and CSS classes over the native v2 model catalog. Main's
- * favorites, most used, recommended order, preview pane and data-collection badges need v1 provider data that the
- * v2 catalog does not have; they are not ported. The v2 chat binding is in v2/selectors.tsx.
+ * ModelSelectorBase is the v1 picker over the native v2 model catalog: favorites, Auto, Recommended and Most used
+ * groups, the v1 search ranking, keyboard model, expanded preview and badges. The Kilo Gateway metadata comes from the
+ * `kilocode.gateway` `models` RPC (`gateway` prop); favorites, recents and usage come from the optional model
+ * preferences context. The tree state is in model-selector-state.ts, the rows in ModelSelectorRow.tsx and the v2 chat
+ * binding in v2/selectors.tsx.
  */
 
-import type { ModelInfo, ProviderInfo } from "@opencode/client"
-import { createEffect, createMemo, createSelector, createSignal, createUniqueId, onCleanup, Show, untrack } from "solid-js"
+import { createSignal, createMemo, createEffect, createUniqueId, onCleanup, Show } from "solid-js"
 import type { Component } from "solid-js"
-import { Virtualizer, type VirtualizerHandle } from "virtua/solid"
+import type { ModelInfo, ProviderInfo } from "@opencode/client"
+import { Virtualizer } from "virtua/solid"
+import { PopupSelector } from "./PopupSelector"
 import { Button } from "@kilocode/kilo-ui/button"
-import { Tag } from "@kilocode/kilo-ui/tag"
+import { IconButton } from "@kilocode/kilo-ui/icon-button"
+import { Icon } from "@kilocode/kilo-ui/icon"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { useLanguage } from "../../context/language"
-import { isEnterKeyCommitNotIme } from "../../utils/ime-enter"
+import { useModelPreferences } from "../../context/model-preferences"
+import { useVSCode } from "../../context/vscode"
+import type { KiloModelEntry } from "../../v2/kilo-models"
 import { pickerModels } from "./model-selector-filter"
-import { PopupSelector } from "./PopupSelector"
-
-const KILO_GATEWAY_ID = "kilo"
+import { isDataCollectedModel, freeDataLabel, buildTriggerLabel, toPickerModels } from "./model-selector-utils"
+import { createModelTree, dragSplitter } from "./model-selector-state"
+import { ModelSelectorNode } from "./ModelSelectorRow"
+import { ModelPreview } from "./ModelPreview"
 
 export type ModelValue = { providerID: string; modelID: string }
-
-type Group = { key: string; label?: string; models: ModelInfo[] }
-type Node = { key: string; kind: "group"; group: Group } | { key: string; kind: "row"; model: ModelInfo; group: Group }
-
-function rowKey(model: { providerID: string; id: string }) {
-  return `model:${model.providerID}/${model.id}`
-}
-
-function groupKey(key: string) {
-  return `group:${key}`
-}
-
-/** Main's name cleanup: Gateway names end in "(free)", and the free tag already says so. */
-function sanitizeName(name: string) {
-  return name.replace(/[\s:_-]*\(free\)\s*$/i, "").trim()
-}
-
-/** Gateway names start with the upstream provider ("MiniMax: ..."); the trigger shows only the model. */
-function triggerName(model: ModelInfo) {
-  const name = sanitizeName(model.name)
-  const colon = name.indexOf(": ")
-  if (model.providerID !== KILO_GATEWAY_ID || colon < 0) return name
-  return name.slice(colon + 2)
-}
-
-function free(model: ModelInfo) {
-  return model.cost.length > 0 && model.cost.every((cost) => cost.input === 0 && cost.output === 0)
-}
 
 export interface ModelSelectorBaseProps {
   /** The location catalog; undefined while it loads. */
   models: ModelInfo[] | undefined
   providers: ProviderInfo[] | undefined
+  /** Kilo Gateway metadata by model id: order, badges, description. Without it Gateway rows show no Gateway data. */
+  gateway?: ReadonlyMap<string, KiloModelEntry>
   /** Current selection (null = nothing selected) */
   value: ModelValue | null
+  /** Called when the user picks a model */
   onSelect: (providerID: string, modelID: string) => void
+  /** Called after a pick closes the popover */
+  onPick?: () => void
+  /** Called after Escape closes the popover without picking */
+  onCancel?: () => void
+  /** Popover placement — defaults to "top-start" */
+  placement?: "top-start" | "bottom-start" | "bottom-end" | "top-end"
+  /** Allow clearing the selection (shows a "Not set" option) */
+  allowClear?: boolean
+  /** Label shown for the clear option */
+  clearLabel?: string
+  /** Include the kilo-auto/small model in the list — defaults to false */
+  includeAutoSmall?: boolean
+  /** Show favorites group and favorite buttons — defaults to true. */
+  favorites?: boolean
+  /** Delay outside dismissal while the popover opens inside a dialog. */
+  deferDismiss?: boolean
+  /** Render inline instead of through a portal when nested in a dialog. */
+  portal?: boolean
+  /** Accessible purpose of this model setting or selector. */
+  label?: string
+  /** Additional accessible context for this model setting. */
+  description?: string
+  /** Only respond to picker events from this prompt scope. */
+  trigger?: string
   /** Disable this prompt-scoped selector while a permission owns the prompt. */
   blocked?: boolean
   /** Trigger text when nothing is selected. Defaults to the "Select model" prompt label. */
   placeholder?: string
-  /** Accessible name for the selector trigger. */
-  label?: string
   /** Why the Kilo Gateway catalog failed to load, shown when no model is usable. */
   failure?: string
-  /** Offer the Gateway small model. Only the small model row sets this, as on v1. */
-  includeAutoSmall?: boolean
+  /**
+   * Force the compact list layout. Used by inline `@` model references, where
+   * there is no current model for the preview pane and picking is a one-click,
+   * insert-only action. The persisted chat-selector preference is not changed.
+   */
+  collapsed?: boolean
 }
 
 export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
   const language = useLanguage()
+  const vscode = useVSCode()
+  // The preferences are optional, as v1's session context: a picker without them shows no favorites or most used.
+  const prefs = useModelPreferences()
+  const stars = () => !!prefs && props.favorites !== false
   const uid = createUniqueId()
   const listID = `${uid}-models`
+  const previewID = `${uid}-preview`
+  const descriptionID = `${uid}-description`
   const optionID = (key: string) => `${uid}-option-${encodeURIComponent(key)}`
-  const [open, setOpen] = createSignal(false)
-  const [search, setSearch] = createSignal("")
-  const [selectedKey, setSelectedKey] = createSignal("")
-  const [collapsed, setCollapsed] = createSignal<Set<string>>(new Set())
-  const [pointer, setPointer] = createSignal(true)
-  const [virtualizer, setVirtualizer] = createSignal<VirtualizerHandle>()
-  const isSelected = createSelector(selectedKey)
-  let searchRef: HTMLInputElement | undefined
-
-  const hasSearch = () => search().trim().length > 0
+  // Enabled, not deprecated models; the Gateway small model only for its own row.
   const usable = createMemo(() => pickerModels(props.models ?? [], props.includeAutoSmall))
-  const active = createMemo(() =>
-    (props.models ?? []).find(
-      (model) => model.providerID === props.value?.providerID && model.id === props.value?.modelID,
-    ),
-  )
-  const providerName = (id: string) => props.providers?.find((provider) => provider.id === id)?.name ?? id
-
-  const groups = createMemo<Group[]>(() => {
-    if (!open()) return []
-    const query = search().trim().toLowerCase()
-    if (query) {
-      const words = query.split(/\s+/)
-      const models = usable().filter((model) => {
-        const text = `${model.name} ${model.id} ${providerName(model.providerID)}`.toLowerCase()
-        return words.every((word) => text.includes(word))
-      })
-      return models.length === 0 ? [] : [{ key: "search-results", models }]
-    }
-    const map = new Map<string, ModelInfo[]>()
-    for (const model of usable()) map.set(model.providerID, [...(map.get(model.providerID) ?? []), model])
-    // As main: the Kilo Gateway first, then the other providers by name.
-    return [...map.entries()]
-      .toSorted(
-        ([a], [b]) =>
-          Number(b === KILO_GATEWAY_ID) - Number(a === KILO_GATEWAY_ID) ||
-          providerName(a).localeCompare(providerName(b)),
-      )
-      .map(([id, models]) => ({
-        key: id,
-        label: providerName(id),
-        models: models.toSorted((a, b) => a.name.localeCompare(b.name)),
-      }))
+  const activeModel = createMemo(() => {
+    const model = (props.models ?? []).find(
+      (m) => m.providerID === props.value?.providerID && m.id === props.value?.modelID,
+    )
+    return model ? toPickerModels([model], props.providers, props.gateway)[0] : undefined
   })
 
-  const nodes = createMemo<Node[]>(() =>
-    groups().flatMap((group): Node[] => {
-      const rows = group.models.map((model): Node => ({ key: rowKey(model), kind: "row", model, group }))
-      if (!group.label) return rows
-      const head: Node = { key: groupKey(group.key), kind: "group", group }
-      return collapsed().has(group.key) ? [head] : [head, ...rows]
+  const [open, setOpen] = createSignal(false)
+  // The host-persisted expand preference; inline `@` references force the compact layout and never touch it.
+  const expanded = () => !props.collapsed && vscode.getModelSelectorExpanded()
+  const [previewHeight, setPreviewHeight] = createSignal(500)
+  const refs: { wrapper?: HTMLDivElement; splitter?: HTMLDivElement; body?: HTMLDivElement } = {}
+  const chrome = () => (refs.wrapper?.offsetHeight ?? 0) + (refs.splitter?.offsetHeight ?? 0)
+
+  // Only connected providers and the Kilo Gateway, built only while open; the trigger needs no closed catalog.
+  const visibleModels = createMemo(() => (open() ? toPickerModels(usable(), props.providers, props.gateway) : []))
+  const hasProviders = createMemo(() => usable().length > 0)
+  const canOpen = () => hasProviders() || ((props.allowClear ?? false) && !!props.value)
+
+  const tree = createModelTree({
+    open,
+    visible: visibleModels,
+    active: activeModel,
+    value: () => props.value,
+    allowClear: () => props.allowClear ?? false,
+    favorites: () => (stars() ? prefs?.favorites() : undefined),
+    usage: () => prefs?.usage(),
+    recents: () => prefs?.recents(),
+    labels: () => ({
+      favorites: language.t("model.group.favorites"),
+      auto: language.t("model.group.auto"),
+      recommended: language.t("model.group.recommended"),
+      mostUsed: language.t("model.group.mostUsed"),
     }),
-  )
-  const index = createMemo(() => new Map(nodes().map((node, i) => [node.key, i] as const)))
-
-  const scrollRow = (key: string, align: "nearest" | "center" = "nearest") => {
-    const idx = index().get(key)
-    if (idx !== undefined) virtualizer()?.scrollToIndex(idx, { align })
-  }
-
-  // Opening focuses the search field and the active model; a new search selects its first match. As v1, only `open`
-  // and `search` drive this, so toggling a group keeps the cursor on the group.
-  createEffect(() => {
-    if (!open()) {
-      setSearch("")
-      return
-    }
-    search()
-    untrack(() => {
-      const model = active()
-      const key = !hasSearch() && model && index().has(rowKey(model)) ? rowKey(model) : (nodes()[0]?.key ?? "")
-      setSelectedKey(key)
-      requestAnimationFrame(() => {
-        searchRef?.focus()
-        scrollRow(key, hasSearch() ? "nearest" : "center")
-      })
-    })
+    toggleFavorite: (providerID, modelID) => prefs?.toggleFavorite(providerID, modelID),
+    onSelect: (providerID, modelID) => props.onSelect(providerID, modelID),
+    close() {
+      setOpen(false)
+      props.onPick?.()
+    },
+    cancel,
   })
 
-  createEffect(() => {
-    if (props.blocked) setOpen(false)
-  })
-
-  const pick = (model: ModelInfo) => {
-    props.onSelect(model.providerID, model.id)
+  function cancel() {
+    if (!open()) return
     setOpen(false)
-    requestAnimationFrame(() => window.dispatchEvent(new CustomEvent("focusPrompt", { detail: { restore: true } })))
+    props.onCancel?.()
   }
 
-  const toggle = (key: string) => {
-    setSelectedKey(groupKey(key))
-    setCollapsed((prev) => {
-      const next = new Set(prev)
-      if (next.has(key)) next.delete(key)
-      else next.add(key)
-      return next
-    })
+  // Registered before the popover mounts, so a slash-command open restores the prompt before the popover's Escape.
+  const onTrigger = (event: Event) => {
+    const source = (event as CustomEvent<{ source?: string }>).detail?.source
+    if (source !== props.trigger || props.blocked) return
+    setOpen(true)
   }
-
-  const move = (step: number) => {
-    const list = nodes()
-    if (list.length === 0) return
-    const idx = index().get(selectedKey()) ?? (step > 0 ? -1 : list.length)
-    const key = list[Math.max(0, Math.min(idx + step, list.length - 1))]?.key
-    if (!key) return
-    setSelectedKey(key)
-    requestAnimationFrame(() => scrollRow(key))
+  const onEscape = (e: KeyboardEvent) => {
+    if (!open() || e.key !== "Escape") return
+    e.preventDefault()
+    e.stopImmediatePropagation()
+    cancel()
   }
-
-  const onKeyDown = (e: KeyboardEvent) => {
-    if (e.key === "Escape") {
-      e.preventDefault()
+  createEffect(() => {
+    if (props.blocked) {
       setOpen(false)
       return
     }
-    if (e.key === "ArrowDown" || e.key === "ArrowUp") {
-      e.preventDefault()
-      setPointer(false)
-      move(e.key === "ArrowDown" ? 1 : -1)
-      return
-    }
-    const node = nodes()[index().get(selectedKey()) ?? -1]
-    if (!node) return
-    if (!hasSearch() && (e.key === "ArrowLeft" || e.key === "ArrowRight") && node.kind === "group") {
-      e.preventDefault()
-      if (collapsed().has(node.group.key) === (e.key === "ArrowRight")) toggle(node.group.key)
-      return
-    }
-    if (!isEnterKeyCommitNotIme(e)) return
-    e.preventDefault()
-    if (node.kind === "group") return toggle(node.group.key)
-    pick(node.model)
-  }
-
-  const onPointerMove = (e: MouseEvent) => {
-    const key =
-      e.target instanceof Element
-        ? e.target.closest<HTMLElement>('[role="treeitem"][data-key]')?.dataset.key
-        : undefined
-    if (!key) return
-    setPointer(true)
-    setSelectedKey(key)
-  }
+    window.addEventListener("openModelPicker", onTrigger)
+    window.addEventListener("keydown", onEscape, true)
+    onCleanup(() => {
+      window.removeEventListener("openModelPicker", onTrigger)
+      window.removeEventListener("keydown", onEscape, true)
+    })
+  })
 
   // With no usable model, the catalog reason explains more than a selection that cannot resolve.
-  const failure = () => (!active() && props.models && usable().length === 0 ? props.failure : undefined)
-  const triggerLabel = () => {
-    const model = active()
-    if (model) return triggerName(model)
-    if (failure()) return failure()
-    if (props.value) return `${props.value.providerID} / ${props.value.modelID}`
-    if (props.models && usable().length === 0) return language.t("dialog.model.noProviders")
-    return props.placeholder ?? language.t("dialog.model.select.title")
+  const failure = () => (!activeModel() && props.models && !hasProviders() ? props.failure : undefined)
+  const triggerLabel = () =>
+    failure() ??
+    buildTriggerLabel(
+      activeModel()?.name,
+      activeModel()?.providerID,
+      props.value,
+      props.allowClear ?? false,
+      props.clearLabel ?? "",
+      // While the catalog loads, show the prompt instead of "No providers".
+      hasProviders() || !props.models,
+      {
+        select: props.placeholder ?? language.t("dialog.model.select.title"),
+        noProviders: language.t("dialog.model.noProviders"),
+        notSet: language.t("dialog.model.notSet"),
+      },
+    )
+  const label = () => props.label ?? language.t("dialog.model.select.title")
+  const controlLabel = () => `${label()}: ${triggerLabel()}`
+  const searchLabel = () => `${controlLabel()}. ${language.t("dialog.model.search.placeholder")}`
+  const describedBy = () => (props.description ? descriptionID : undefined)
+  const dataLabel = () => freeDataLabel(language.t("model.tag.free"), language.t("model.tag.dataCollected"))
+  const activeCollectsData = () => {
+    const model = activeModel()
+    return !!model && isDataCollectedModel(model)
   }
-  const label = () => `${language.t("dialog.model.select.title")}: ${triggerLabel()}`
-
-  onCleanup(() => setOpen(false))
+  const preview = () => tree.previewModel() ?? activeModel() ?? null
+  const activeOptionID = () =>
+    tree.browsing() && tree.nodeMap().has(tree.selectedKey()) ? optionID(tree.selectedKey()) : undefined
+  const toggleExpanded = () => {
+    if (expanded()) tree.clearPreview()
+    if (!props.collapsed) vscode.setModelSelectorExpanded(!expanded())
+    requestAnimationFrame(() => {
+      tree.focusSearch()
+      tree.scrollToSelection()
+    })
+  }
 
   return (
-    <Tooltip value={active()?.id ?? ""} placement="top" openDelay={0} inactive={!active()}>
-      <PopupSelector
-        expanded={false}
-        preferredWidth={350}
-        preferredHeight={300}
-        minHeight={200}
-        placement="top-start"
-        open={open()}
-        onOpenChange={(value) => {
-          if (value && props.blocked) return
-          setOpen(value)
-        }}
-        triggerAs={Button}
-        triggerProps={{
-          variant: "secondary",
-          size: "normal",
-          get disabled() {
-            return props.blocked || usable().length === 0
-          },
-          get ["aria-label"]() {
-            return props.label ?? label()
-          },
-        }}
-        trigger={
-          <>
-            {/* Keyed so the label remounts on change and the prompt pill can animate it. */}
-            <Show when={triggerLabel()} keyed>
-              {(text) => (
-                // The trigger truncates a long reason; the native title shows all of it.
-                <span class="model-selector-trigger-label" title={failure()}>
-                  {text}
-                </span>
-              )}
-            </Show>
-            <svg class="model-selector-trigger-chevron" width="10" height="10" viewBox="0 0 16 16" fill="currentColor">
-              <path d="M8 4l4 5H4l4-5z" />
-            </svg>
-          </>
-        }
-        class="model-selector-popover"
-      >
-        {(bodyH) => (
-          <div onKeyDown={onKeyDown} class="model-selector-body" style={{ height: `${bodyH()}px` }}>
-            <div class="model-selector-search-wrapper">
-              <input
-                ref={searchRef}
-                data-autofocus
-                class="model-selector-search"
-                type="text"
-                role="combobox"
-                aria-label={`${label()}. ${language.t("dialog.model.search.placeholder")}`}
-                aria-autocomplete="list"
-                aria-haspopup="tree"
-                aria-expanded={open()}
-                aria-controls={listID}
-                aria-activedescendant={index().has(selectedKey()) ? optionID(selectedKey()) : undefined}
-                placeholder={language.t("dialog.model.search.placeholder")}
-                value={search()}
-                onInput={(e) => {
-                  setPointer(false)
-                  setSearch(e.currentTarget.value)
-                }}
-              />
-            </div>
-            <div
-              id={listID}
-              class="model-selector-list"
-              role="tree"
-              aria-label={language.t("dialog.model.select.title")}
-              onMouseMove={onPointerMove}
-            >
-              <Show when={nodes().length === 0}>
-                <div class="model-selector-empty" role="status" aria-live="polite">
-                  {language.t("dialog.model.empty")}
-                </div>
+    <>
+      <Show when={props.description}>
+        <span id={descriptionID} class="model-selector-assistive">
+          {props.description}
+        </span>
+      </Show>
+      <Tooltip value={activeModel()?.id ?? ""} placement="top" openDelay={0} inactive={!activeModel()}>
+        <PopupSelector
+          expanded={expanded()}
+          preferredWidth={350}
+          preferredExpandedWidth={450}
+          preferredHeight={300}
+          preferredExpandedHeight={800}
+          minHeight={200}
+          placement={props.placement ?? "top-start"}
+          deferDismiss={props.deferDismiss}
+          portal={props.portal}
+          open={open()}
+          onOpenChange={(value) => {
+            if (value && props.blocked) return
+            setOpen(value)
+          }}
+          triggerAs={Button}
+          triggerProps={{
+            variant: "secondary",
+            size: "normal",
+            get disabled() {
+              return props.blocked || !canOpen()
+            },
+            get ["aria-label"]() {
+              return controlLabel()
+            },
+            get ["aria-describedby"]() {
+              return describedBy()
+            },
+          }}
+          trigger={
+            <>
+              {/* Keyed so the label remounts on change and the prompt pill can animate it. */}
+              <Show when={triggerLabel()} keyed>
+                {(label) => (
+                  // The trigger truncates a long reason; the native title shows all of it.
+                  <span class="model-selector-trigger-label" title={failure()}>
+                    {label}
+                  </span>
+                )}
               </Show>
-              <Show when={nodes().length > 0}>
-                <Virtualizer ref={setVirtualizer} data={nodes()} bufferSize={120} itemSize={30}>
-                  {(node) => {
-                    const focused = () => isSelected(node.key)
-                    if (node.kind === "group") {
-                      const shown = () => !collapsed().has(node.group.key)
-                      return (
-                        <div
-                          id={optionID(node.key)}
-                          data-key={node.key}
-                          class={`model-selector-group-label${node.group.key !== groups()[0]?.key ? " model-selector-group-label--divided" : ""}${focused() ? " selected" : ""}${focused() && !pointer() ? " keyboard-focused" : ""}`}
-                          role="treeitem"
-                          aria-level={1}
-                          aria-expanded={shown()}
-                          onMouseDown={(e) => e.preventDefault()}
-                          onClick={() => toggle(node.group.key)}
-                        >
-                          <svg
-                            class={`model-selector-group-chevron${shown() ? "" : " model-selector-group-chevron--collapsed"}`}
-                            width="10"
-                            height="10"
-                            viewBox="0 0 16 16"
-                            fill="currentColor"
-                            aria-hidden="true"
-                          >
-                            <path d="M4 6l4 5 4-5H4z" />
-                          </svg>
-                          <span>{node.group.label}</span>
-                        </div>
+              <Show when={activeCollectsData()}>
+                <Tooltip value={dataLabel()} placement="top" openDelay={0}>
+                  <span class="model-selector-trigger-free-data" aria-label={dataLabel()}>
+                    <Icon name="book-open-check" size="small" />
+                  </span>
+                </Tooltip>
+              </Show>
+              <svg
+                class="model-selector-trigger-chevron"
+                width="10"
+                height="10"
+                viewBox="0 0 16 16"
+                fill="currentColor"
+              >
+                <path d="M8 4l4 5H4l4-5z" />
+              </svg>
+            </>
+          }
+          class={`model-selector-popover${expanded() ? " model-selector-popover--expanded" : ""}`}
+        >
+          {(bodyH) => {
+            createEffect(() => {
+              if (!expanded()) return
+              const h = bodyH()
+              if (h === undefined) return
+              setPreviewHeight((h - chrome()) / 2)
+            })
+            return (
+              <div
+                onKeyDown={tree.handleKeyDown}
+                class={`model-selector-body${expanded() ? " model-selector-body--expanded" : ""}`}
+                style={{ height: `${bodyH()}px` }}
+                ref={(el) => (refs.body = el)}
+              >
+                <div class="model-selector-search-wrapper" ref={(el) => (refs.wrapper = el)}>
+                  <input
+                    ref={tree.setSearchRef}
+                    data-autofocus
+                    class="model-selector-search"
+                    type="text"
+                    role="combobox"
+                    aria-label={searchLabel()}
+                    aria-describedby={describedBy()}
+                    aria-autocomplete="list"
+                    aria-haspopup="tree"
+                    aria-expanded={open()}
+                    aria-controls={listID}
+                    aria-activedescendant={activeOptionID()}
+                    placeholder={language.t("dialog.model.search.placeholder")}
+                    value={tree.search()}
+                    onInput={(e) => tree.input(e.currentTarget.value)}
+                    onMouseDown={(e) => {
+                      const input = e.currentTarget
+                      if (input.selectionStart !== input.selectionEnd || input.selectionStart !== input.value.length)
+                        tree.caret()
+                    }}
+                  />
+                  <Show when={!props.collapsed}>
+                    <Tooltip
+                      value={expanded() ? language.t("dialog.model.collapse") : language.t("dialog.model.expand")}
+                      placement="top"
+                    >
+                      <IconButton
+                        icon={expanded() ? "collapse" : "expand"}
+                        size="small"
+                        variant="ghost"
+                        aria-label={
+                          expanded() ? language.t("dialog.model.collapse") : language.t("dialog.model.expand")
+                        }
+                        aria-expanded={expanded()}
+                        aria-controls={previewID}
+                        onClick={toggleExpanded}
+                      />
+                    </Tooltip>
+                  </Show>
+                </div>
+
+                <div
+                  id={listID}
+                  class="model-selector-list"
+                  role="tree"
+                  aria-label={label()}
+                  ref={tree.setListRef}
+                  onMouseMove={tree.pointerMove}
+                >
+                  <Show when={tree.groups().length === 0}>
+                    <div class="model-selector-empty" role="status" aria-live="polite">
+                      {language.t("dialog.model.empty")}
+                    </div>
+                  </Show>
+
+                  <Show when={tree.nodes().length > 0}>
+                    <Virtualizer
+                      ref={tree.setVirtualizer}
+                      data={tree.nodes()}
+                      keepMounted={tree.mounted()}
+                      bufferSize={120}
+                      itemSize={30}
+                    >
+                      {(node) => (
+                        <ModelSelectorNode
+                          node={node}
+                          tree={tree}
+                          optionID={optionID}
+                          expanded={expanded()}
+                          allowClear={props.allowClear ?? false}
+                          clearLabel={props.clearLabel}
+                          unset={!props.value?.providerID}
+                          stars={stars()}
+                          dataLabel={dataLabel()}
+                        />
+                      )}
+                    </Virtualizer>
+                  </Show>
+                </div>
+
+                <Show when={expanded()}>
+                  <div
+                    class="model-selector-splitter"
+                    ref={(el) => (refs.splitter = el)}
+                    onMouseDown={(e) =>
+                      dragSplitter(e, previewHeight(), setPreviewHeight, () =>
+                        refs.body ? refs.body.offsetHeight - chrome() - 80 : undefined,
                       )
                     }
-                    const model = node.model
-                    const chosen = () => active()?.providerID === model.providerID && active()?.id === model.id
-                    const name = sanitizeName(model.name)
-                    const sep = name.indexOf(": ")
-                    return (
-                      <div role="presentation" class={`model-selector-row${focused() ? " selected" : ""}`}>
-                        <div
-                          id={optionID(node.key)}
-                          data-key={node.key}
-                          class={`model-selector-item${focused() && !pointer() ? " keyboard-focused" : ""}${focused() ? " selected" : ""}${chosen() ? " active" : ""}`}
-                          role="treeitem"
-                          aria-level={2}
-                          aria-selected={chosen()}
-                          onClick={() => pick(model)}
-                        >
-                          <div class="model-selector-item-left">
-                            <span class="model-selector-item-name">
-                              <Show
-                                when={sep >= 0}
-                                fallback={<span class="model-selector-item-name-main">{name}</span>}
-                              >
-                                <span class="model-selector-item-name-provider">{name.slice(0, sep)}</span>
-                                <span class="model-selector-item-name-main">{name.slice(sep + 2)}</span>
-                              </Show>
-                            </span>
-                            <Show when={free(model)}>
-                              <span class="model-selector-free-data">
-                                <span class="model-selector-data-badge">
-                                  <Tag data-variant="member">{language.t("model.tag.free")}</Tag>
-                                </span>
-                              </span>
-                            </Show>
-                            <span class="model-selector-item-provider-tag">{providerName(model.providerID)}</span>
-                          </div>
-                        </div>
-                      </div>
-                    )
-                  }}
-                </Virtualizer>
-              </Show>
-            </div>
-          </div>
-        )}
-      </PopupSelector>
-    </Tooltip>
+                  />
+                </Show>
+                <div
+                  id={previewID}
+                  aria-hidden={!expanded()}
+                  class={`model-selector-preview${expanded() ? " model-selector-preview--visible" : ""}`}
+                  style={expanded() ? { height: `${previewHeight()}px` } : {}}
+                >
+                  <Show when={expanded()}>
+                    <ModelPreview model={preview()} models={visibleModels()} favorites={stars()} />
+                  </Show>
+                </div>
+              </div>
+            )
+          }}
+        </PopupSelector>
+      </Tooltip>
+    </>
   )
 }

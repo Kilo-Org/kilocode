@@ -6,6 +6,7 @@ import { KiloHandshakeRpc } from "@opencode/schema/kilocode/handshake"
 import { createEffect, createSignal, on, type Accessor } from "solid-js"
 import type { events } from "./events"
 import { createKiloCatalog } from "./kilo-catalog"
+import { createKiloModels } from "./kilo-models"
 
 type Connection = ReturnType<typeof createClientConnection>
 type Events = ReturnType<typeof events>
@@ -42,6 +43,7 @@ export function createV2Scope(input: {
     onError: (err) => setError(message(err)),
   })
   const kiloFailure = createKiloCatalog({ api, directory, status: connection.status, on: input.event.on })
+  const kiloModels = createKiloModels({ api, directory, models: () => data.location.model.list() })
 
   createEffect(
     on(connection.status, (status) => {
@@ -76,6 +78,8 @@ export function createV2Scope(input: {
     error,
     /** Why the Kilo Gateway catalog failed to load; undefined while it is usable or loading. */
     kiloFailure,
+    /** The Kilo Gateway model metadata and the account team, for the model pickers. */
+    kiloModels,
     setError,
     report: (err: unknown) => setError(message(err)),
     open: input.open,
