@@ -403,6 +403,11 @@ export const dict = {
   "common.edit": "Bearbeiten",
   "common.loadMore": "Mehr laden",
 
+  "sidebar.upsell.title": "Eine weitere Aufgabe parallel ausführen",
+  "sidebar.upsell.body":
+    "Agent Manager gibt jeder Aufgabe einen eigenen Worktree, sodass sie die Änderungen aus diesem Chat nicht anfasst.",
+  "sidebar.upsell.open": "Agent Manager öffnen",
+  "sidebar.upsell.dismiss": "Ausblenden",
   "sidebar.settings": "Einstellungen",
 
   "sound.option.alert01": "Alarm 01",

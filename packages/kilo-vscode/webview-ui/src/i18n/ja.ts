@@ -394,6 +394,11 @@ export const dict = {
   "common.edit": "編集",
   "common.loadMore": "さらに読み込む",
 
+  "sidebar.upsell.title": "別のタスクを並行して実行",
+  "sidebar.upsell.body":
+    "エージェントマネージャーは各タスクに専用の worktree を割り当てるため、このチャットでの変更に影響しません。",
+  "sidebar.upsell.open": "エージェントマネージャーを開く",
+  "sidebar.upsell.dismiss": "閉じる",
   "sidebar.settings": "設定",
 
   "sound.option.alert01": "アラート 01",

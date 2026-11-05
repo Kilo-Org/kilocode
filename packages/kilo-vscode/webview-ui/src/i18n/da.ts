@@ -393,6 +393,11 @@ export const dict = {
   "common.edit": "Rediger",
   "common.loadMore": "Indlæs flere",
 
+  "sidebar.upsell.title": "Kør en anden opgave parallelt",
+  "sidebar.upsell.body":
+    "Agent Manager giver hver opgave sit eget worktree, så den ikke berører ændringerne fra denne chat.",
+  "sidebar.upsell.open": "Åbn Agent Manager",
+  "sidebar.upsell.dismiss": "Afvis",
   "sidebar.settings": "Indstillinger",
 
   "sound.option.alert01": "Alarm 01",

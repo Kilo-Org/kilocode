@@ -399,6 +399,11 @@ export const dict = {
   "common.edit": "Modifier",
   "common.loadMore": "Charger plus",
 
+  "sidebar.upsell.title": "Exécutez une autre tâche en parallèle",
+  "sidebar.upsell.body":
+    "Agent Manager attribue à chaque tâche son propre worktree, pour qu'elle ne touche pas aux modifications de cette conversation.",
+  "sidebar.upsell.open": "Ouvrir Agent Manager",
+  "sidebar.upsell.dismiss": "Ignorer",
   "sidebar.settings": "Paramètres",
 
   "settings.indexing.dimension.description":

@@ -395,6 +395,11 @@ export const dict = {
   "common.edit": "Edytuj",
   "common.loadMore": "Załaduj więcej",
 
+  "sidebar.upsell.title": "Uruchom kolejne zadanie równolegle",
+  "sidebar.upsell.body":
+    "Agent Manager przydziela każdemu zadaniu osobne drzewo robocze, dzięki czemu nie naruszy ono zmian z tego czatu.",
+  "sidebar.upsell.open": "Otwórz Agent Manager",
+  "sidebar.upsell.dismiss": "Odrzuć",
   "sidebar.settings": "Ustawienia",
 
   "sound.option.alert01": "Alert 01",

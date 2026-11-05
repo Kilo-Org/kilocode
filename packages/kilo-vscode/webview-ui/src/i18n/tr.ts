@@ -393,6 +393,11 @@ export const dict = {
   "common.edit": "Düzenle",
   "common.loadMore": "Daha fazla yükle",
 
+  "sidebar.upsell.title": "Başka bir görevi paralel çalıştırın",
+  "sidebar.upsell.body":
+    "Agent Manager her göreve kendi worktree'sini verir, böylece görev bu sohbetteki değişikliklere dokunmaz.",
+  "sidebar.upsell.open": "Agent Manager'ı aç",
+  "sidebar.upsell.dismiss": "Kapat",
   "sidebar.settings": "Ayarlar",
 
   "sound.option.alert01": "Uyarı 01",

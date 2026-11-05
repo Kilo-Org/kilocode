@@ -68,6 +68,7 @@ import { normalize, type SSEPayload, type SyncPayload, type WirePayload } from "
 import { slimInfo, slimPart, slimParts } from "./kilo-provider/slim-metadata"
 import { ToolInputStream } from "./kilo-provider/tool-input-stream"
 import { handleSidebarWorktreeMessage } from "./kilo-provider/sidebar-worktree"
+import { handleUpsellMessage } from "./kilo-provider/upsell"
 import { parseMessageFiles, type MessageFile } from "./kilo-provider/message-files"
 import { renameSession } from "./kilo-provider/rename-session"
 import { handleFileSearch, type SearchRoot } from "./kilo-provider/file-search"
@@ -598,6 +599,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     | null = null
 
   private createWorktreeHandler: ((baseBranch?: string, branchName?: string) => Promise<void>) | null = null
+  private upsellHandler: ((directory: string | undefined) => Promise<unknown>) | undefined
 
   private openLinkHandler: ((url: string, sessionID?: string) => boolean) | null = null
 
@@ -1216,8 +1218,12 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.continueInWorktreeHandler = handler
   }
 
-  public setCreateWorktreeHandler(handler: (baseBranch?: string, branchName?: string) => Promise<void>): void {
+  public setCreateWorktreeHandler(
+    handler: (baseBranch?: string, branchName?: string) => Promise<void>,
+    upsell?: (directory: string | undefined) => Promise<unknown>,
+  ): void {
     this.createWorktreeHandler = handler
+    this.upsellHandler = upsell
   }
 
   public setOpenLinkHandler(handler: (url: string, sessionID?: string) => boolean): void {
@@ -1314,6 +1320,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       if (await this.handleMcpMessage(message)) return
       if (await this.handleAgentManagerSettingsMessage(message)) return
       if (await this.handleAutoCleanupMessage(message)) return
+      if (await handleUpsellMessage(message.type, this.extensionContext?.globalState, (msg) => this.postMessage(msg)))
+        return
       if (
         await handleWorkStyleMessage({
           message,
@@ -1331,6 +1339,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           openChanges: (sessionId?: string, turnId?: string) => this.openChanges(sessionId, turnId),
           openProfile: () => vscode.commands.executeCommand("kilo-code.new.profileButtonClicked"),
           currentSessionId: this.currentSession?.id,
+          directory: this.getWorkspaceDirectory(this.currentSession?.id),
+          openAgentManagerUpsell: this.upsellHandler,
           createWorktree: async (baseBranch, branchName) => {
             await this.createWorktreeHandler?.(baseBranch, branchName)
           },

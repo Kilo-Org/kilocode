@@ -363,6 +363,10 @@ export const dict = {
   "common.edit": "ویرایش",
   "common.loadMore": "بارگذاری بیشتر",
 
+  "sidebar.upsell.title": "کار دیگری را به‌صورت موازی اجرا کنید",
+  "sidebar.upsell.body": "مدیر عامل‌ها به هر کار یک worktree اختصاصی می‌دهد تا به تغییرات این گفتگو دست نزند.",
+  "sidebar.upsell.open": "باز کردن مدیر عامل‌ها",
+  "sidebar.upsell.dismiss": "بستن",
   "sidebar.settings": "تنظیمات",
 
   "sound.option.alert01": "هشدار ۰۱",

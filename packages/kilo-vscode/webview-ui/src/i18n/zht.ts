@@ -376,6 +376,10 @@ export const dict = {
   "common.edit": "編輯",
   "common.loadMore": "載入更多",
 
+  "sidebar.upsell.title": "平行執行另一個任務",
+  "sidebar.upsell.body": "代理管理器會為每個任務分配獨立的工作樹，因此不會影響此聊天中的變更。",
+  "sidebar.upsell.open": "開啟代理管理器",
+  "sidebar.upsell.dismiss": "忽略",
   "sidebar.settings": "設定",
 
   "sound.option.alert01": "警報 01",

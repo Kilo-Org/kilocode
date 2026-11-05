@@ -392,6 +392,10 @@ export const dict = {
   "common.edit": "แก้ไข",
   "common.loadMore": "โหลดเพิ่มเติม",
 
+  "sidebar.upsell.title": "รันงานอื่นควบคู่กัน",
+  "sidebar.upsell.body": "ตัวจัดการเอเจนต์จะให้แต่ละงานมี worktree ของตัวเอง จึงไม่กระทบการเปลี่ยนแปลงจากแชทนี้",
+  "sidebar.upsell.open": "เปิดตัวจัดการเอเจนต์",
+  "sidebar.upsell.dismiss": "ปิด",
   "sidebar.settings": "การตั้งค่า",
 
   "sound.option.alert01": "เสียงเตือน 01",

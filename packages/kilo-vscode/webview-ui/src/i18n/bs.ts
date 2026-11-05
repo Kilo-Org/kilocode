@@ -395,6 +395,11 @@ export const dict = {
   "common.edit": "Uredi",
   "common.loadMore": "Učitaj još",
 
+  "sidebar.upsell.title": "Pokrenite drugi zadatak paralelno",
+  "sidebar.upsell.body":
+    "Agent Manager svakom zadatku daje vlastito radno stablo, tako da neće dirati izmjene iz ovog razgovora.",
+  "sidebar.upsell.open": "Otvori Agent Manager",
+  "sidebar.upsell.dismiss": "Odbaci",
   "sidebar.settings": "Postavke",
 
   "sound.option.alert01": "Upozorenje 01",

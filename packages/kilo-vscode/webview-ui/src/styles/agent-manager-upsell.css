@@ -1,0 +1,19 @@
+.agent-manager-upsell {
+  margin-bottom: 8px;
+}
+
+.agent-manager-upsell-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.agent-manager-upsell [data-component="button"] {
+  max-width: 100%;
+  height: auto;
+  min-height: 24px;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  text-align: start;
+}

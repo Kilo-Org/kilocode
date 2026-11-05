@@ -9,7 +9,9 @@
 
 import type { Meta, StoryObj } from "storybook-solidjs-vite"
 import type { AssistantMessage } from "@kilocode/sdk/v2"
-import { batch, createEffect, createSignal, onCleanup, onMount } from "solid-js"
+import { batch, createEffect, createSignal, onCleanup, onMount, Show } from "solid-js"
+import { AgentManagerUpsell } from "../components/chat/AgentManagerUpsell"
+import { showAgentManagerUpsell } from "../components/chat/agent-manager-upsell"
 import { StoryProviders, defaultMockData, mockSessionValue } from "./StoryProviders"
 import { Button } from "@kilocode/kilo-ui/button"
 import { Icon } from "@kilocode/kilo-ui/icon"
@@ -144,6 +146,37 @@ const meta: Meta = {
 }
 export default meta
 type Story = StoryObj
+
+function UpsellPreview(props: { enabled: boolean }) {
+  const [dismissed, setDismissed] = createSignal(false)
+  return (
+    <StoryProviders sessionID={SESSION_ID} status="idle">
+      <div>
+        <Show
+          when={showAgentManagerUpsell({
+            enabled: props.enabled,
+            sidebar: true,
+            git: true,
+            status: "idle",
+            reason: "completed",
+            files: 1,
+            dismissed: dismissed(),
+          })}
+        >
+          <AgentManagerUpsell onDismiss={() => setDismissed(true)} />
+        </Show>
+      </div>
+    </StoryProviders>
+  )
+}
+
+export const ChatAgentManagerUpsell: Story = {
+  render: () => <UpsellPreview enabled={true} />,
+}
+
+export const ChatAgentManagerUpsell200: Story = {
+  render: () => <UpsellPreview enabled={true} />,
+}
 
 // ---------------------------------------------------------------------------
 // ChatView stories

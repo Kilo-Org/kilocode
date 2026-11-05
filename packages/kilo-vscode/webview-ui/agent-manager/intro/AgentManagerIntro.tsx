@@ -22,7 +22,7 @@ export function createIntro(opts: {
   onCreateWorktree: () => void
   onSelectSession?: (id: string) => void
   onShowHistory?: () => void
-  reveal: () => void
+  reveal: (fresh?: boolean) => void
   focus: () => void
   hints?: () => JSX.Element
 }) {
@@ -34,13 +34,15 @@ export function createIntro(opts: {
     setDismissed(value)
     vscode.postMessage({ type: "agentManager.setIntroDismissed", dismissed: value })
   }
+  const open = (fresh = false) => {
+    opts.reveal(fresh)
+    save(false)
+    opts.focus()
+  }
   const state = {
     visible: () => !dismissed(),
-    open: () => {
-      opts.reveal()
-      save(false)
-      opts.focus()
-    },
+    open: () => open(),
+    draft: () => open(true),
     dismiss: () => {
       save(true)
       opts.focus()

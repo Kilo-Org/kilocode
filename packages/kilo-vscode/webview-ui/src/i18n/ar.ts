@@ -386,6 +386,11 @@ export const dict = {
   "common.edit": "تحرير",
   "common.loadMore": "تحميل المزيد",
 
+  "sidebar.upsell.title": "شغّل مهمة أخرى بالتوازي",
+  "sidebar.upsell.body":
+    "يمنح مدير الوكلاء كل مهمة شجرة عمل خاصة بها، لذا لن تمسّ التغييرات التي أُجريت في هذه المحادثة.",
+  "sidebar.upsell.open": "فتح مدير الوكلاء",
+  "sidebar.upsell.dismiss": "إغلاق",
   "sidebar.settings": "الإعدادات",
 
   "sound.option.alert01": "تنبيه 01",

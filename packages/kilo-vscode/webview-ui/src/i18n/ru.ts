@@ -392,6 +392,11 @@ export const dict = {
   "common.edit": "Редактировать",
   "common.loadMore": "Загрузить ещё",
 
+  "sidebar.upsell.title": "Запустите другую задачу параллельно",
+  "sidebar.upsell.body":
+    "Agent Manager выделяет каждой задаче отдельное рабочее дерево, поэтому она не затронет изменения из этого чата.",
+  "sidebar.upsell.open": "Открыть Agent Manager",
+  "sidebar.upsell.dismiss": "Закрыть",
   "sidebar.settings": "Настройки",
 
   "sound.option.alert01": "Alert 01",

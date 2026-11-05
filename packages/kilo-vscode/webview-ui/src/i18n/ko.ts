@@ -394,6 +394,11 @@ export const dict = {
   "common.edit": "편집",
   "common.loadMore": "더 불러오기",
 
+  "sidebar.upsell.title": "다른 작업을 병렬로 실행",
+  "sidebar.upsell.body":
+    "에이전트 관리자는 각 작업에 전용 worktree를 할당하므로 이 채팅의 변경 사항에 영향을 주지 않습니다.",
+  "sidebar.upsell.open": "에이전트 관리자 열기",
+  "sidebar.upsell.dismiss": "닫기",
   "sidebar.settings": "설정",
 
   "sound.option.alert01": "알림 01",

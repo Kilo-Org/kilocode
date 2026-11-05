@@ -358,6 +358,10 @@ export const dict = {
   "common.edit": "Edit",
   "common.loadMore": "Load more",
 
+  "sidebar.upsell.title": "Run another task in parallel",
+  "sidebar.upsell.body": "Agent Manager gives each task its own worktree, so it won't touch this chat's changes.",
+  "sidebar.upsell.open": "Open Agent Manager",
+  "sidebar.upsell.dismiss": "Dismiss",
   "sidebar.settings": "Settings",
 
   "sound.option.alert01": "Alert 01",
