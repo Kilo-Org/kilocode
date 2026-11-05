@@ -12,7 +12,6 @@ import type { AssistantMessage } from "@kilocode/sdk/v2"
 import { batch, createEffect, createSignal, onCleanup, onMount, Show } from "solid-js"
 import { AgentManagerUpsell } from "../components/chat/AgentManagerUpsell"
 import { SidebarUpsell } from "../../../src/kilo-provider/upsell"
-import { apply, type UpsellState } from "../../../src/shared/agent-manager-upsell"
 import { StoryProviders, defaultMockData, mockSessionValue } from "./StoryProviders"
 import { Button } from "@kilocode/kilo-ui/button"
 import { Icon } from "@kilocode/kilo-ui/icon"
@@ -171,14 +170,7 @@ function UpsellPreview(props: {
       values.set(key, value)
     },
   }
-  let state: UpsellState = {}
-  const host = new SidebarUpsell(
-    {
-      read: async () => state,
-      update: async (action, now) => (state = apply(state, action, now)),
-    },
-    storage,
-  )
+  const host = new SidebarUpsell(storage, storage)
   void host.started("sidebar-one")
   void host.started("sidebar-two")
   const api = getVSCodeAPI()

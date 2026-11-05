@@ -1,5 +1,4 @@
-import { eligible, type UpsellAction, type UpsellState } from "../shared/agent-manager-upsell"
-import type { UpsellPreferences } from "./upsell-preferences"
+import { apply, eligible, type UpsellAction, type UpsellState } from "../shared/agent-manager-upsell"
 
 type Storage = {
   get<T>(key: string, fallback: T): T
@@ -15,7 +14,7 @@ export class SidebarUpsell {
   private queue = Promise.resolve()
 
   constructor(
-    private readonly prefs: Pick<UpsellPreferences, "read" | "update"> | undefined,
+    private readonly global: Storage | undefined,
     private readonly workspace: Storage | undefined,
     private readonly clock = Date.now,
   ) {}
@@ -39,14 +38,17 @@ export class SidebarUpsell {
 
   opened() {
     return this.enqueue(async () => {
-      await this.prefs?.update("observed", this.clock())
+      if (!this.global) return
+      const state = this.global.get<UpsellState>(KEY, {})
+      if (state.opened) return
+      await this.global.update(KEY, { ...state, opened: true })
     })
   }
 
   handle(action: UpsellAction | "rendered" | undefined, visible: boolean) {
     return this.enqueue(async () => {
       if (action === "rendered" && this.granted) this.shown = true
-      const state: UpsellState = (await this.prefs?.read()) ?? { optedOut: true }
+      const state = this.global?.get<UpsellState>(KEY, {}) ?? { optedOut: true }
       const engaged = (this.workspace?.get<string[]>(`${KEY}.sessions`, []) ?? []).length >= 2
       if (!action || action === "rendered") return { state, engaged, display: false }
       if (!visible) return { state, engaged, display: false }
@@ -56,11 +58,12 @@ export class SidebarUpsell {
         return { state, engaged, display }
       }
       if (this.granted) this.shown = true
-      const next = (await this.prefs?.update(action, this.clock())) ?? state
+      const next = apply(state, action, this.clock())
+      if (next !== state) await this.global?.update(KEY, next)
       return {
         state: next,
         engaged,
-        display: action === "undo" && !!this.prefs && engaged && eligible(next, this.clock()),
+        display: action === "undo" && !!this.global && engaged && eligible(next, this.clock()),
       }
     })
   }

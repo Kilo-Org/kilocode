@@ -1,15 +1,10 @@
 import { expect, test, type Page } from "@playwright/test"
-import { mkdtemp, rm } from "node:fs/promises"
-import { tmpdir } from "node:os"
-import { join } from "node:path"
 import { createRequire } from "node:module"
 import type { SidebarUpsell as Host } from "../src/kilo-provider/upsell"
 import type { WebviewMessage } from "../webview-ui/src/types/messages"
 
 const require = createRequire(import.meta.url)
 const { SidebarUpsell } = require("../src/kilo-provider/upsell") as typeof import("../src/kilo-provider/upsell")
-const { UpsellPreferences } =
-  require("../src/kilo-provider/upsell-preferences") as typeof import("../src/kilo-provider/upsell-preferences")
 
 type Request = Extract<WebviewMessage, { type: "agentManagerUpsell" }>
 type Reply = Awaited<ReturnType<Host["handle"]>> & { type: "agentManagerUpsellLoaded"; request: string }
@@ -19,11 +14,6 @@ type Boundary = Window & {
   authorize(message: Request): Promise<Omit<Reply, "type" | "request">>
   deliver(): void
 }
-
-const dirs: string[] = []
-test.afterEach(async () => {
-  await Promise.all(dirs.splice(0).map((dir) => rm(dir, { recursive: true, force: true })))
-})
 
 async function received(page: Page, stage: "queued" | "delivered", action: Request["action"], count = 1) {
   await page.evaluate(
@@ -51,13 +41,18 @@ async function visible(page: Page, active: boolean) {
 }
 
 async function attach(page: Page, delayed = false) {
-  const dir = await mkdtemp(join(tmpdir(), "kilo-upsell-authorization-"))
-  dirs.push(dir)
-  const prefs = new UpsellPreferences(dir)
+  // Fake only the VS Code Memento boundary for completed, sequential updates.
+  const values = new Map<string, unknown>()
+  const global = {
+    get: <T>(key: string, fallback: T) => structuredClone((values.get(key) as T | undefined) ?? fallback),
+    update: async (key: string, value: unknown) => {
+      values.set(key, structuredClone(value))
+    },
+  }
   const workspace = { get: <T>(_key: string, _fallback: T) => ["one", "two"] as T, update: async () => {} }
   const clock = { now: 10_000 }
-  const host = new SidebarUpsell(prefs, workspace, () => clock.now)
-  const other = new SidebarUpsell(new UpsellPreferences(dir), workspace, () => clock.now)
+  const host = new SidebarUpsell(global, workspace, () => clock.now)
+  const other = new SidebarUpsell(global, workspace, () => clock.now)
   const scene = { active: true }
   const ack = { ready: Promise.withResolvers<void>(), release: Promise.withResolvers<void>() }
   await page.exposeFunction("authorize", async (message: Request) => {
@@ -115,7 +110,7 @@ async function attach(page: Page, delayed = false) {
 
 for (const key of ["active", "enabled"] as const) {
   for (const action of ["dont_show_again", "not_now"] as const) {
-    test(`an unseen grant revalidates another host's ${action} after ${key} resumes`, async ({ page }) => {
+    test(`an unseen grant rereads completed Memento ${action} after ${key} resumes`, async ({ page }) => {
       const fixture = await attach(page)
       fixture.scene.active = key !== "active"
       await page.evaluate(
@@ -214,7 +209,7 @@ for (const delayed of [false, true]) {
   })
 }
 
-test("a clipped unseen grant revalidates authoritative opt-out before resize exposes it", async ({ page }) => {
+test("a clipped unseen grant rereads completed Memento opt-out before resize exposes it", async ({ page }) => {
   const fixture = await attach(page)
   await page.setViewportSize({ width: 430, height: 1 })
   await page.evaluate(() => {

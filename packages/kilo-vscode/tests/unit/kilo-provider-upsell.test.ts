@@ -1,7 +1,4 @@
 import { afterEach, describe, expect, it, spyOn } from "bun:test"
-import { mkdtemp, rm } from "node:fs/promises"
-import { join } from "node:path"
-import { tmpdir } from "node:os"
 import * as vscode from "vscode"
 import { createKiloClient, type KiloClient, type Session } from "@kilocode/sdk/v2/client"
 import { KiloProvider } from "../../src/KiloProvider"
@@ -39,25 +36,6 @@ function session(id: string): Session {
 }
 
 async function attach(kind: "sidebar" | "panel" | "embedded" = "sidebar") {
-  if (typeof vscode.workspace.createFileSystemWatcher !== "function") {
-    const descriptor = Object.getOwnPropertyDescriptor(vscode.workspace, "createFileSystemWatcher")
-    const disposable = () => ({ dispose() {} })
-    Object.defineProperty(vscode.workspace, "createFileSystemWatcher", {
-      configurable: true,
-      value: () => ({ onDidCreate: disposable, onDidChange: disposable, onDidDelete: disposable, dispose() {} }),
-    })
-    resources.push({
-      dispose: () => {
-        if (!descriptor) {
-          Reflect.deleteProperty(vscode.workspace, "createFileSystemWatcher")
-          return
-        }
-        Object.defineProperty(vscode.workspace, "createFileSystemWatcher", descriptor)
-      },
-    })
-  }
-  const dir = await mkdtemp(join(tmpdir(), "kilo-upsell-host-"))
-  resources.push({ dispose: () => rm(dir, { recursive: true, force: true }) })
   const global = storage()
   const workspace = storage()
   const connection = new KiloConnectionService({} as never)
@@ -65,7 +43,6 @@ async function attach(kind: "sidebar" | "panel" | "embedded" = "sidebar") {
   const provider = new KiloProvider({} as never, connection, {
     globalState: global,
     workspaceState: workspace,
-    globalStorageUri: { fsPath: dir },
   } as never)
   resources.push(provider)
   const internal = provider as unknown as {
@@ -94,6 +71,35 @@ async function attach(kind: "sidebar" | "panel" | "embedded" = "sidebar") {
 }
 
 describe("KiloProvider Agent Manager upsell host routing", () => {
+  it("ignores an unknown runtime action without clearing or writing preferences", async () => {
+    const host = await attach()
+    await host.global.update("upsell.agentManager", { optedOut: true })
+    const update = spyOn(host.global, "update")
+    try {
+      await host.receive({ type: "agentManagerUpsell", action: "unexpected", request: "unknown" })
+      expect(host.global.get("upsell.agentManager", {})).toEqual({ optedOut: true })
+      expect(update).not.toHaveBeenCalled()
+    } finally {
+      update.mockRestore()
+    }
+  })
+
+  it("persists sidebar preferences through the supplied extension globalState", async () => {
+    const host = await attach()
+    for (const action of ["not_now", "dont_show_again", "undo", "opened"]) {
+      await host.receive({ type: "agentManagerUpsell", action, request: action })
+    }
+    expect(host.global.get("upsell.agentManager", {})).toEqual({
+      snoozeCount: 1,
+      snoozedAt: expect.any(Number),
+      optedOut: false,
+      converted: true,
+    })
+    host.provider.rememberAgentManagerOpen()
+    await host.internal.upsell.handle(undefined, true)
+    expect(host.global.get("upsell.agentManager", {})).toMatchObject({ opened: true, converted: true, optedOut: false })
+  })
+
   it("replies only from the ordinary sidebar, preserving the request ID", async () => {
     for (const kind of ["sidebar", "panel", "embedded"] as const) {
       const host = await attach(kind)

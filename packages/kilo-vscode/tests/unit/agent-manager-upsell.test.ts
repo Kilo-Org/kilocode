@@ -1,25 +1,17 @@
-import { afterEach, describe, expect, it } from "bun:test"
-import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs"
-import { tmpdir } from "node:os"
-import { join } from "node:path"
+import { describe, expect, it } from "bun:test"
 import { SidebarUpsell } from "../../src/kilo-provider/upsell"
-import { UpsellPreferences } from "../../src/kilo-provider/upsell-preferences"
 import { eligible, type UpsellState } from "../../src/shared/agent-manager-upsell"
 import { sidebarTurns } from "../../webview-ui/src/components/chat/agent-manager-upsell"
 
 const KEY = "upsell.agentManager"
 const WEEK = 7 * 24 * 60 * 60 * 1000
 const NOW = Date.UTC(2026, 10, 5)
-const dirs: string[] = []
-
-afterEach(() => {
-  for (const dir of dirs.splice(0)) rmSync(dir, { recursive: true, force: true })
-})
 
 // Updates become readable only after the persistence boundary completes.
 class Storage {
   readonly values = new Map<string, unknown>()
   readonly writes: { key: string; value: unknown }[] = []
+  failure?: Error
   private gate?: {
     entered: ReturnType<typeof Promise.withResolvers<void>>
     release: ReturnType<typeof Promise.withResolvers<void>>
@@ -38,6 +30,11 @@ class Storage {
       gate.entered.resolve()
       await gate.release.promise
     }
+    if (this.failure) {
+      const err = this.failure
+      this.failure = undefined
+      throw err
+    }
     this.values.set(key, entry.value)
   }
 
@@ -50,20 +47,12 @@ class Storage {
 }
 
 function fixture(state: UpsellState = {}, ids = ["first", "second"]) {
-  const dir = mkdtempSync(join(tmpdir(), "kilo-upsell-policy-"))
-  dirs.push(dir)
-  const journal = join(dir, "agent-manager-upsell")
-  mkdirSync(journal)
-  writeFileSync(join(journal, "1.json"), JSON.stringify(state))
-  const global = new UpsellPreferences(dir)
+  const global = new Storage()
+  global.values.set(KEY, state)
   const workspace = new Storage()
   const clock = { now: NOW }
   workspace.values.set(`${KEY}.sessions`, ids)
-  const writes = () =>
-    readdirSync(journal)
-      .filter((name) => /^[1-9]\d*\.json$/.test(name) && name !== "1.json")
-      .sort((a, b) => Number(a.slice(0, -5)) - Number(b.slice(0, -5)))
-      .map((name) => ({ key: KEY, value: JSON.parse(readFileSync(join(journal, name), "utf8")) as UpsellState }))
+  const writes = () => global.writes
   return { global, workspace, clock, writes, host: new SidebarUpsell(global, workspace, () => clock.now) }
 }
 
@@ -167,7 +156,7 @@ describe("SidebarUpsell", () => {
       const state = { snoozeCount: 1, snoozedAt: NOW - WEEK }
       const test = fixture(state)
       expect(await test.host.handle(action, false)).toEqual({ state, engaged: true, display: false })
-      expect(await test.global.read()).toEqual(state)
+      expect(test.global.get(KEY, {})).toEqual(state)
       expect(test.writes()).toEqual([])
       expect((await test.host.handle("shown", true)).display).toBe(true)
     })
@@ -193,7 +182,7 @@ describe("SidebarUpsell", () => {
         engaged: true,
         display: false,
       })
-      expect(await test.global.read()).toEqual(result.state)
+      expect(test.global.get(KEY, {})).toEqual(result.state)
       test.clock.now += WEEK - 1
       const next = new SidebarUpsell(test.global, test.workspace, () => test.clock.now)
       expect((await next.handle("shown", true)).display).toBe(false)
@@ -217,7 +206,7 @@ describe("SidebarUpsell", () => {
       engaged: true,
       display: false,
     })
-    expect(await test.global.read()).toEqual({ optedOut: true })
+    expect(test.global.get(KEY, {})).toEqual({ optedOut: true })
     const host = new SidebarUpsell(test.global, test.workspace, () => NOW)
     expect((await host.handle("shown", true)).display).toBe(false)
     expect(await test.host.handle("undo", true)).toEqual({
@@ -225,7 +214,7 @@ describe("SidebarUpsell", () => {
       engaged: true,
       display: true,
     })
-    expect(await test.global.read()).toEqual({ optedOut: false })
+    expect(test.global.get(KEY, {})).toEqual({ optedOut: false })
     expect((await test.host.handle("shown", true)).display).toBe(false)
     expect((await host.handle("shown", true)).display).toBe(true)
   })
@@ -236,7 +225,7 @@ describe("SidebarUpsell", () => {
       if (action === "opened") await test.host.handle("opened", true)
       if (action === "command") await test.host.opened()
       const state = { snoozeCount: 1, snoozedAt: NOW - WEEK, [action === "opened" ? "converted" : "opened"]: true }
-      expect(await test.global.read()).toEqual(state)
+      expect(test.global.get(KEY, {})).toEqual(state)
       const host = new SidebarUpsell(test.global, test.workspace, () => NOW + 100 * WEEK)
       expect((await host.handle("shown", true)).display).toBe(false)
       expect(await host.handle("undo", true)).toEqual({
@@ -255,7 +244,7 @@ describe("SidebarUpsell", () => {
         engaged: true,
         display: false,
       })
-      expect(await test.global.read()).toEqual({ ...state, optedOut: false })
+      expect(test.global.get(KEY, {})).toEqual({ ...state, optedOut: false })
       expect((await test.host.handle("shown", true)).display).toBe(false)
     })
   }
@@ -290,9 +279,14 @@ describe("SidebarUpsell", () => {
     const test = fixture(state)
     expect((await test.host.handle("shown", true)).display).toBe(true)
     await test.host.handle("rendered", true)
+    const gate = test.global.hold()
     const optout = test.host.handle("dont_show_again", true)
+    await gate.entered
     const undo = test.host.handle("undo", true)
     const loaded = test.host.handle(undefined, true)
+    expect(test.global.get(KEY, {})).toEqual(state)
+    expect(test.writes()).toHaveLength(1)
+    gate.release()
     expect((await optout).state).toEqual({ ...state, optedOut: true })
     expect(await undo).toEqual({ state: { ...state, optedOut: false }, engaged: true, display: true })
     expect(await loaded).toEqual({ state: { ...state, optedOut: false }, engaged: true, display: false })
@@ -300,27 +294,56 @@ describe("SidebarUpsell", () => {
       { key: KEY, value: { ...state, optedOut: true } },
       { key: KEY, value: { ...state, optedOut: false } },
     ])
-    expect(await test.global.read()).toEqual({ ...state, optedOut: false })
+    expect(test.global.get(KEY, {})).toEqual({ ...state, optedOut: false })
     expect((await test.host.handle("shown", true)).display).toBe(false)
   })
 
   it("serializes later snooze and opening behind in-flight Undo persistence", async () => {
     const test = fixture({ optedOut: true, snoozeCount: 1 })
+    const gate = test.global.hold()
     const undo = test.host.handle("undo", true)
+    await gate.entered
     const snooze = test.host.handle("not_now", true)
     const opened = test.host.opened()
     const loaded = test.host.handle(undefined, true)
+    expect(test.global.get(KEY, {})).toEqual({ optedOut: true, snoozeCount: 1 })
+    expect(test.writes()).toHaveLength(1)
+    gate.release()
     expect((await undo).display).toBe(true)
     expect((await snooze).state).toEqual({ optedOut: false, snoozeCount: 2, snoozedAt: NOW })
     await opened
     const state = { optedOut: false, snoozeCount: 2, snoozedAt: NOW, opened: true }
     expect(await loaded).toEqual({ state, engaged: true, display: false })
-    expect(await test.global.read()).toEqual(state)
+    expect(test.global.get(KEY, {})).toEqual(state)
     expect(test.writes().map((entry) => entry.value)).toEqual([
       { optedOut: false, snoozeCount: 1 },
       { optedOut: false, snoozeCount: 2, snoozedAt: NOW },
       state,
     ])
+  })
+
+  it("keeps routine Agent Manager opening idempotent without discarding other preferences", async () => {
+    const test = fixture({ optedOut: true, snoozeCount: 1 })
+    await Promise.all([test.host.opened(), test.host.opened(), test.host.opened()])
+    expect(test.global.get(KEY, {})).toEqual({ optedOut: true, snoozeCount: 1, opened: true })
+    expect(test.writes()).toHaveLength(1)
+  })
+
+  it("never shortens a recorded snooze when the clock moves backwards", async () => {
+    const test = fixture({ snoozedAt: NOW + WEEK, snoozeCount: 1 })
+    await test.host.handle("not_now", true)
+    expect(test.global.get(KEY, {})).toEqual({ snoozedAt: NOW + WEEK, snoozeCount: 2 })
+  })
+
+  it("reports a failed globalState write and allows the next queued action to persist", async () => {
+    const state = { snoozeCount: 1, snoozedAt: NOW - WEEK }
+    const test = fixture(state)
+    test.global.failure = new Error("globalState update failed")
+    const optout = test.host.handle("dont_show_again", true)
+    const undo = test.host.handle("undo", true)
+    await expect(optout).rejects.toThrow("globalState update failed")
+    expect(await undo).toEqual({ state: { ...state, optedOut: false }, engaged: true, display: true })
+    expect(test.global.get(KEY, {})).toEqual({ ...state, optedOut: false })
   })
 })
 
