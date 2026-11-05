@@ -165,6 +165,34 @@ it.instance(
   },
 )
 it.instance(
+  "getSmallModel keeps the session model for a local server reached over the LAN",
+  Effect.gen(function* () {
+    for (const key of ["KILO_API_KEY", "KILO_AUTH_CONTENT", "KILO_CONFIG_CONTENT"]) {
+      yield* clearEnv(key)
+    }
+    const model = yield* Provider.use.getSmallModel(ProviderV2.ID.make("lmstudio"))
+    expect(model).toBeUndefined()
+  }),
+  {
+    config: {
+      provider: {
+        lmstudio: {
+          name: "LM Studio",
+          npm: "@ai-sdk/openai-compatible",
+          models: {
+            // The catalog still lists uninstalled models; a LAN host does not
+            // make them available, so the cheap pick must stay disabled.
+            "openai/gpt-oss-20b": { release_date: "2026-01-01" },
+            "qwen/qwen3-coder-30b": { release_date: "2026-02-01" },
+          },
+          options: { baseURL: "http://192.168.1.50:1234/v1" },
+        },
+        kilo: null,
+      },
+    },
+  },
+)
+it.instance(
   "getSmallModel returns undefined without kilo credentials when the provider has no chat-capable model",
   Effect.gen(function* () {
     for (const key of ["KILO_API_KEY", "KILO_AUTH_CONTENT", "KILO_CONFIG_CONTENT"]) {
