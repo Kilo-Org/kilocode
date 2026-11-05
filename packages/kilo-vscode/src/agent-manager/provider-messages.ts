@@ -76,6 +76,8 @@ export interface MessageHost {
   sendDiffBranches: (sessionId: string, scope?: string, projectId?: string) => Promise<void>
   openWorktreeDirectory: (worktreeId: string) => void
   openWorktreeFile: (id: string, filePath: string, line?: number, column?: number) => void
+  readDocument: (sessionId: string, file: string, contextKey?: string) => Promise<void>
+  validateFiles: (id: string, sessionId: string, paths: string[]) => Promise<void>
   runKey: (worktreeId: string) => string
   view: (sessionIds: string[]) => void
   trackOpenSessions: (sessionIds: string[]) => void
@@ -114,11 +116,7 @@ async function shouldWaitForState(m: AgentManagerInMessage, ctx: ProjectContext,
   return true
 }
 
-async function handleWorktree(
-  m: AgentManagerInMessage,
-  ctx: ProjectContext,
-  host: MessageHost,
-): Promise<boolean> {
+async function handleWorktree(m: AgentManagerInMessage, ctx: ProjectContext, host: MessageHost): Promise<boolean> {
   if (m.type === "agentManager.createWorktree") {
     await host.onCreateWorktree(m.baseBranch, m.branchName)
     return true
@@ -288,7 +286,15 @@ function handleState(m: AgentManagerInMessage, host: MessageHost): boolean {
     host.state()?.setSidebarCollapsed(m.collapsed)
     return true
   }
-  if (handleSection(host.state(), m, () => host.pushState(), (...args) => host.log(...args))) return true
+  if (
+    handleSection(
+      host.state(),
+      m,
+      () => host.pushState(),
+      (...args) => host.log(...args),
+    )
+  )
+    return true
   if (m.type === "agentManager.setReviewDiffStyle") {
     host.state()?.setReviewDiffStyle(m.style)
     return true
@@ -333,10 +339,7 @@ async function handleDiff(m: AgentManagerInMessage, host: MessageHost): Promise<
     return true
   }
   if (m.type === "agentManager.requestWorktreeDiffFile") {
-    void host.diffs.requestFile(
-      composeDiffId(m.sessionId, normalizeScope(m.scope), m.diffSessionId, m.turnId),
-      m.file,
-    )
+    void host.diffs.requestFile(composeDiffId(m.sessionId, normalizeScope(m.scope), m.diffSessionId, m.turnId), m.file)
     return true
   }
   if (m.type === "agentManager.applyWorktreeDiff") {
@@ -368,6 +371,18 @@ async function handleDiff(m: AgentManagerInMessage, host: MessageHost): Promise<
   }
   if (m.type === "agentManager.openFile") {
     host.openWorktreeFile(m.sessionId, m.filePath, m.line, m.column)
+    return true
+  }
+  if (m.type === "agentManager.openExternal") {
+    if (URL.canParse(m.url) && ["http:", "https:"].includes(new URL(m.url).protocol)) host.host.openExternal(m.url)
+    return true
+  }
+  if (m.type === "agentManager.validateFiles") {
+    void host.validateFiles(m.id, m.sessionId, m.paths)
+    return true
+  }
+  if (m.type === "agentManager.requestDocument") {
+    void host.readDocument(m.sessionId, m.file, m.contextKey)
     return true
   }
   if (m.type === "agentManager.copyFilePath") {

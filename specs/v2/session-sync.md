@@ -39,7 +39,7 @@ Workspace config cannot enable or disable sync.
 Atomic setting replacement makes up to eight attempts for transient file-sharing errors, with at most 700 ms of backoff.
 If a reader still denies replacement, the command returns a retryable `settings_unavailable` error and leaves the original file intact; it never truncates the file in place.
 Setting false or signing out pauses journal capture and network activity, keeping the cloud copy and pending local work.
-Set it back to true (or use `sync enable`) to resume; completed history from the pause is not recaptured.
+Set it back to true (or use `sync enable`) to resume; untouched messages, including completed history from the pause, are not recaptured.
 Transport and grant-refresh outages retain enrolled workspace capture and pending changes.
 Enrollment runs in the host background scope; starting the CLI never waits for the sync destination.
 Sync includes sessions you create or continue after sync is on; it does not bootstrap untouched existing history.
@@ -95,11 +95,12 @@ Do not require retention of the complete internal event log merely to synchroniz
 
 A coalescing dirty set records entity identity and source position.
 Unsent changes to the same entity can collapse to the newest value.
-Assistant-part writes journal identity and position without reserializing the growing message for each part.
-One snapshot read reconstructs ordered native parts with their captured position before packet preparation.
-Read identities first and materialize values incrementally within the packet byte budget.
-One oversized entity can be read alone for externalization; do not stage a page of oversized values.
-Preserve that value before local deletion or the first mutation outside its consent boundary removes the native source.
+Assistant messages with persisted native parts use a body-free message envelope and independent `message-part` entities.
+Every value is materialized with its source position in the native write transaction; no lazy full-message read can
+accidentally include a later out-of-scope write. Ordinary part updates never read or serialize all other part bodies.
+Read dirty identities first and materialize values incrementally within the packet byte budget.
+One oversized released part can be read alone for externalization; do not stage a page of oversized values.
+Local deletion and excluded mutations retain captured snapshots. A resumed message's first write reconciles its current parts and missing IDs once; body-free identity inventory survives ACK/restart, and re-enabling alone never recaptures history.
 Freeze a bounded immutable packet before network transmission.
 Keep that packet and its acknowledgement state in durable local storage.
 Only clear work covered by the acknowledged packet.
@@ -114,15 +115,16 @@ A restored database must not reuse an acknowledged position for different conten
 
 ## Portable entity set
 
-| Kind                | Captured state                                                                                                               |
-| ------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
-| `session`           | Encoded native session metadata and settings, excluding active machine bindings.                                             |
-| `message`           | Native transcript messages with stable identity and ordering, reconstructing ordered persisted assistant parts when present. |
-| `inbox`             | Pending input needed to reconstruct the session.                                                                             |
-| `instruction-entry` | API-managed instruction values and observed removals.                                                                        |
-| `instruction-state` | Current and epoch-initial instruction state.                                                                                 |
-| `instruction-blob`  | Referenced immutable instruction values.                                                                                     |
-| `asset`             | Durable references and metadata for required attachment and tool-output bytes.                                               |
+| Kind | Captured state |
+|---|---|
+| `session` | Encoded native session metadata and settings, excluding active machine bindings. |
+| `message` | Native transcript messages with stable identity and ordering; split assistants carry a body-free envelope. |
+| `message-part` | One persisted assistant part, addressed by `<messageID>/<ordinal>`, or an explicit deferred placeholder. |
+| `inbox` | Pending input needed to reconstruct the session. |
+| `instruction-entry` | API-managed instruction values and observed removals. |
+| `instruction-state` | Current and epoch-initial instruction state. |
+| `instruction-blob` | Referenced immutable instruction values. |
+| `asset` | Durable references and metadata for required attachment and tool-output bytes. |
 
 Normalize local references through an explicit asset mapping.
 Recorded paths are display information, not authority to read another machine's files.
@@ -160,6 +162,8 @@ Keep a received retry deadline even when the response body fails.
 Explicit flush does not bypass server retry deadlines.
 `rate_limited` is retryable HTTP 429 with an integer-seconds `Retry-After` header and JSON `error.retryAt`.
 `tenant_unavailable` is retryable HTTP 503 with `Retry-After` and JSON `error.retryAt`.
+`service_overloaded` is retryable HTTP 503 with `Retry-After: 3` and JSON `error.retryAt`.
+It follows the same durable server-deadline and jittered-backoff path; cloud overload does not trigger immediate reconciliation.
 `tenant_budget_exceeded` is HTTP 413 with `error.details` containing the `sessions` and `bytes` limits.
 It pauses the session until enable or flush retries it.
 State, entity, blob-read, and batch requests use a per-session in-memory budget of 1200 requests per minute.
@@ -177,11 +181,49 @@ Do not overwrite the cloud with an older snapshot.
 
 ## Incremental content and assets
 
-Do not serialize a growing assistant message after every token.
-The initial delivery captures persistent native state and periodic checkpoints.
-Fine-grained watched delivery extends capture with bounded content chunks, not whole-message replacements.
-An append names its content generation and expected offset.
-An edit or replacement invalidates obsolete append targets.
+### Assistant parts and completeness
+
+A split assistant `message` value is `{seq,message,parts:{count,through}}`: `message` is the native encoded
+assistant object with only `content` removed. `through` is this envelope's dirty source position.
+A `message-part` value is `{messageID,ordinal,position,part}`; `part` is the unchanged native encoded part
+and `position` is its own dirty source position. Its entity ID is `<messageID>/<ordinal>`.
+Capture the changed part (and any newly released predecessor) before the envelope.
+The message's `seq` orders messages; numeric native ordinals order parts, never lexicographic entity IDs.
+An assistant with no native part rows keeps its exact legacy inline message content; removing the last
+native part restores that inline fallback. Opaque native/provider fields remain intact.
+
+Active trailing text/reasoning is represented by `{messageID,ordinal,position,deferred:true}`, without its
+mutable body. A new higher ordinal releases the preceding trailing text/reasoning; assistant
+`time.completed` releases the current trailing text/reasoning. Tool bodies remain deferred until their
+state is `completed` or `error`, even if another ordinal already exists.
+Direct edits to released parts still recapture their exact current native value.
+Deferred entities are explicit incomplete data, not silently suppressed updates or a complete transcript.
+An interrupted/deleted unfinished message can therefore retain an incomplete snapshot.
+This bounds ordinary streaming uploads to envelope/placeholder metadata plus each settled body, rather
+than repeatedly uploading a large mutable text or tool body as a new content-addressed blob.
+
+Readers must obtain all pages at one cloud revision, resolve entity blobs, and use the `position`
+returned on those pages (not a later state request). A split message is complete only when source position is at least `parts.through`,
+the number of matching part entities equals `parts.count`, all ordinals are unique, no part position
+exceeds `parts.through`, and no part is deferred. Otherwise retry a fresh revision-consistent snapshot
+or show an explicit incomplete state. Never join pages from different revisions or infer completion
+from count alone. `reconstructMessage` in the producer protocol implements this rule and restores the
+native `{seq,message}` object without changing opaque values.
+Ordinary native part removal/reordering uses semantic cause `part-removed`; semantic revert preserves
+`revert`. Removing a part also removes its obsolete asset mappings in the same packet.
+Changing a native message to a non-assistant type or removing its content field also tombstones
+its previously split part entities and their asset mappings. Returning to a split assistant
+recaptures the retained native part rows.
+
+The default-on producer is merged but not released, and the service namespaces held zero sessions
+before this protocol change. This is a clean wire change, with no migration or dual-format aliases.
+
+Inline values are limited to 64 KiB, 8192 JSON nodes, and 64 nested containers. Every value/container
+and object key counts as a node; keys add no depth. Wider/deeper native JSON is externalized as a
+content-addressed entity blob even below 64 KiB. Packets remain within 512 KiB, 64 changes, 32768
+JSON nodes including protocol metadata, and 67 nested containers. Preparation splits by both bytes
+and nodes, leaving bounded headroom for the outer packet; it never sends a valid native value into
+a permanent inline JSON-budget rejection.
 
 Upload assets outside the state transaction and verify their content hashes.
 Upload required blobs before admitting their references.

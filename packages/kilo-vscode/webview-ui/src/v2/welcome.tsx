@@ -1,10 +1,12 @@
 // main's sidebar empty state (components/chat/WelcomeEmptyState.tsx) on v2 sessions.
+import { useDialog } from "@kilocode/kilo-ui/context/dialog"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { createSignal, For, Show, type JSX } from "solid-js"
 import { AnimatedKiloLogo, reduced } from "../components/brand/AnimatedKiloLogo"
 import { useLanguage } from "../context/language"
 import { formatRelativeDate } from "../utils/date"
 import { useV2 } from "./client"
+import { FeedbackDialog } from "./feedback"
 
 const RECENT = 3
 
@@ -52,6 +54,7 @@ export function Welcome(props: {
 }) {
   const v2 = useV2()
   const language = useLanguage()
+  const dialog = useDialog()
   const recent = () => v2.data.session.list().filter((item) => !item.parentID).slice(0, RECENT)
 
   return (
@@ -77,6 +80,10 @@ export function Welcome(props: {
           </button>
         </div>
       </Show>
+      <button class="feedback-button" onClick={() => dialog.show(() => <FeedbackDialog />)}>
+        <Icon name="bubble-5" size="small" />
+        {language.t("feedback.button")}
+      </button>
       {props.footer}
     </div>
   )

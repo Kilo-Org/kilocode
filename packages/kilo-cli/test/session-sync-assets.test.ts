@@ -313,61 +313,114 @@ for (const collected of [false, true])
         const hash = digest(bytes)
         const toolID = SessionMessage.ID.make("msg_deleted_media_tool")
         const inboxID = SessionMessage.ID.make("msg_deleted_media_inbox")
-        yield* Effect.scoped(Effect.gen(function* () {
-          const s = yield* boot(f.root)
-          yield* seed(s.db, f.directory)
-          yield* enable(s.db, f.directory)
-          const user = SessionBlob.split({
-            text: "user",
-            files: [{ data: bytes.toString("base64"), mime: "application/octet-stream", source: { type: "inline" as const } }],
-            time: { created: 1 },
-          })
-          const tool = SessionBlob.split(toolData(`data:application/octet-stream;base64,${bytes.toString("base64")}`))
-          yield* SessionBlob.save(s.db, [...user.blobs, ...tool.blobs])
-          yield* s.db.insert(SessionMessageTable).values({
-            session_id: id, id: messageID, type: "user", seq: 0, data: user.data,
-          }).run()
-          yield* s.db.insert(SessionMessageTable).values({
-            session_id: id, id: toolID, type: "assistant", seq: 1, data: { ...tool.data, content: [] },
-          }).run()
-          const part = tool.data.content[0]
-          if (!part) return yield* Effect.die("Expected native media tool part")
-          yield* s.db.insert(SessionPartTable).values({
-            session_id: id, message_id: toolID, ordinal: 0, type: part.type, data: part,
-          }).run()
-          yield* s.db.insert(SessionInboxTable).values({
-            session_id: id, id: inboxID, type: "user", enqueued_seq: 2, delivery: "queue",
-            payload: { text: "queued", files: user.data.files },
-          }).run()
-          for (const [entityID, seq, hashes] of [
-            [messageID, 0, user.hashes], [toolID, 1, tool.hashes], [inboxID, 2, user.hashes],
-          ] as const)
-            yield* SessionBlob.recordHashes(s.db, { sessionID: id, messageID: entityID, seq }, hashes)
-          if (collected)
-            for (const [kind, entityID] of [["message", messageID], ["message", toolID], ["inbox", inboxID]] as const)
-              yield* capture(s, f.directory, kind, entityID)
-          expect(yield* Store.packet(s.db, id)).toBeUndefined()
-          // The native helper uses Database.db inside its transaction context, just like the projector.
-          // A rolled-back cleanup leaves no ownership snapshots.
-          expect(yield* s.db.transaction(() => Effect.gen(function* () {
-            yield* SessionBlob.releaseSession(s.db, id)
-            return yield* Effect.fail("rollback native cleanup")
-          })).pipe(Effect.result)).toMatchObject({ _tag: "Failure" })
-          expect(yield* s.db.all(sql`SELECT hash FROM _kilo_sync_media`)).toEqual([])
-          expect(yield* s.db.all(sql`SELECT hash FROM blob`)).toEqual([{ hash }])
-          yield* s.db.transaction((tx) => Effect.gen(function* () {
-            yield* SessionBlob.releaseSession(s.db, id)
-            yield* tx.delete(SessionTable).where(eq(SessionTable.id, id)).run()
-          }))
-          expect(yield* s.db.all(sql`SELECT hash FROM blob`)).toEqual([])
-          expect(yield* s.db.all(sql`SELECT hash FROM blob_ref`)).toEqual([])
-          expect(yield* s.db.all(sql`SELECT hash,bytes FROM _kilo_sync_media`)).toEqual([
-            { hash, bytes: bytes.byteLength },
-          ])
-          expect(yield* s.db.all(sql`SELECT entity_id FROM _kilo_sync_media_reference ORDER BY entity_id`)).toEqual(
-            [messageID, toolID, inboxID].sort().map((entity_id) => ({ entity_id })),
-          )
-        }))
+        yield* Effect.scoped(
+          Effect.gen(function* () {
+            const s = yield* boot(f.root)
+            yield* seed(s.db, f.directory)
+            yield* enable(s.db, f.directory)
+            const user = SessionBlob.split({
+              text: "user",
+              files: [
+                {
+                  data: bytes.toString("base64"),
+                  mime: "application/octet-stream",
+                  source: { type: "inline" as const },
+                },
+              ],
+              time: { created: 1 },
+            })
+            const tool = SessionBlob.split(toolData(`data:application/octet-stream;base64,${bytes.toString("base64")}`))
+            yield* SessionBlob.save(s.db, [...user.blobs, ...tool.blobs])
+            yield* s.db
+              .insert(SessionMessageTable)
+              .values({
+                session_id: id,
+                id: messageID,
+                type: "user",
+                seq: 0,
+                data: user.data,
+              })
+              .run()
+            yield* s.db
+              .insert(SessionMessageTable)
+              .values({
+                session_id: id,
+                id: toolID,
+                type: "assistant",
+                seq: 1,
+                data: { ...tool.data, content: [] },
+              })
+              .run()
+            const part = tool.data.content[0]
+            if (!part) return yield* Effect.die("Expected native media tool part")
+            yield* s.db
+              .insert(SessionPartTable)
+              .values(
+                [0, 1].map((ordinal) => ({
+                  session_id: id,
+                  message_id: toolID,
+                  ordinal,
+                  type: part.type,
+                  data: part,
+                })),
+              )
+              .run()
+            yield* s.db
+              .insert(SessionInboxTable)
+              .values({
+                session_id: id,
+                id: inboxID,
+                type: "user",
+                enqueued_seq: 2,
+                delivery: "queue",
+                payload: { text: "queued", files: user.data.files },
+              })
+              .run()
+            for (const [entityID, seq, hashes] of [
+              [messageID, 0, user.hashes],
+              [toolID, 1, tool.hashes],
+              [inboxID, 2, user.hashes],
+            ] as const)
+              yield* SessionBlob.recordHashes(s.db, { sessionID: id, messageID: entityID, seq }, hashes)
+            if (collected)
+              for (const [kind, entityID] of [
+                ["message", messageID],
+                ["message-part", `${toolID}/0`],
+                ["message-part", `${toolID}/1`],
+                ["inbox", inboxID],
+              ] as const)
+                yield* capture(s, f.directory, kind, entityID)
+            expect(yield* Store.packet(s.db, id)).toBeUndefined()
+            // The native helper uses Database.db inside its transaction context, just like the projector.
+            // A rolled-back cleanup leaves no ownership snapshots.
+            expect(
+              yield* s.db
+                .transaction(() =>
+                  Effect.gen(function* () {
+                    yield* SessionBlob.releaseSession(s.db, id)
+                    return yield* Effect.fail("rollback native cleanup")
+                  }),
+                )
+                .pipe(Effect.result),
+            ).toMatchObject({ _tag: "Failure" })
+            expect(yield* s.db.all(sql`SELECT hash FROM _kilo_sync_media`)).toEqual([])
+            expect(yield* s.db.all(sql`SELECT hash FROM blob`)).toEqual([{ hash }])
+            yield* s.db.transaction((tx) =>
+              Effect.gen(function* () {
+                yield* SessionBlob.releaseSession(s.db, id)
+                yield* tx.delete(SessionTable).where(eq(SessionTable.id, id)).run()
+              }),
+            )
+            expect(yield* s.db.all(sql`SELECT hash FROM blob`)).toEqual([])
+            expect(yield* s.db.all(sql`SELECT hash FROM blob_ref`)).toEqual([])
+            expect(yield* s.db.all(sql`SELECT hash,bytes FROM _kilo_sync_media`)).toEqual([
+              { hash, bytes: bytes.byteLength },
+            ])
+            expect(yield* s.db.all(sql`SELECT entity_id FROM _kilo_sync_media_reference ORDER BY entity_id`)).toEqual(
+              [messageID, toolID, inboxID].sort().map((entity_id) => ({ entity_id })),
+            )
+          }),
+        )
         const restarted = yield* boot(f.root)
         yield* Assets.prune(restarted.db, restarted.global)
         // A retained content address is not global authorization for another entity.
@@ -378,7 +431,12 @@ for (const collected of [false, true])
         expect(yield* Assets.collect(restarted.db, restarted.global, f.directory, unowned, {
           message: { type: "user", files: [{ uri: `media:${hash}`, mime: "text/plain", source: { type: "inline" } }] },
         }).pipe(Effect.result)).toMatchObject({ _tag: "Failure", failure: { code: "asset_error" } })
-        for (const [kind, entityID] of [["message", messageID], ["message", toolID], ["inbox", inboxID]] as const) {
+        for (const [kind, entityID] of [
+          ["message", messageID],
+          ["message-part", `${toolID}/0`],
+          ["message-part", `${toolID}/1`],
+          ["inbox", inboxID],
+        ] as const) {
           const captured = yield* capture(restarted, f.directory, kind, entityID)
           expect(captured.assets.blobs).toEqual([{ hash, bytes: bytes.byteLength }])
           expect(JSON.stringify(captured.value)).toContain(`media:${hash}`)
@@ -389,7 +447,9 @@ for (const collected of [false, true])
             captured.assets.blobs,
           )
           expect(packet.body).toContain(`media:${hash}`)
-          expect(Buffer.from(yield* Assets.read(restarted.global, id, { hash, bytes: bytes.byteLength }))).toEqual(bytes)
+          expect(Buffer.from(yield* Assets.read(restarted.global, id, { hash, bytes: bytes.byteLength }))).toEqual(
+            bytes,
+          )
           yield* acknowledge(restarted.db, packet)
         }
         expect(yield* restarted.db.all(sql`SELECT hash FROM _kilo_sync_media_reference`)).toEqual([])
@@ -422,7 +482,7 @@ it.live("native cleanup never preserves media from a workspace that has not opte
   }),
 )
 
-it.live("legacy asset migration reconstructs acknowledged native split parts before pruning their only byte snapshot", () =>
+it.live("legacy asset migration preserves acknowledged native part snapshots before pruning their only bytes", () =>
   Effect.gen(function* () {
     const f = yield* fixture
     const s = yield* boot(f.root)
@@ -444,11 +504,20 @@ it.live("legacy asset migration reconstructs acknowledged native split parts bef
     yield* s.db.insert(SessionPartTable).values({
       session_id: id, message_id: messageID, ordinal: 0, type: part.type, data: part,
     }).run()
-    const captured = yield* capture(s, f.directory, "message", messageID)
-    const packet = yield* freeze(
+    const captured = yield* capture(s, f.directory, "message-part", `${messageID}/0`)
+    const session = (yield* Store.sessions(s.db, f.directory))[0]
+    if (!session) return yield* Effect.die("Expected an enrolled split fixture")
+    const rows = yield* Store.dirty(s.db, id)
+    const packet = yield* Store.freeze(
       s.db,
-      captured.row,
-      [...captured.assets.changes, { op: "put", kind: "message", id: messageID, value: captured.value }],
+      session,
+      [
+        ...captured.assets.changes,
+        ...rows
+          .filter((row) => row.op === "put")
+          .map((row) => ({ op: "put" as const, kind: row.kind, id: row.id, value: Store.value(row) })),
+      ],
+      session.position,
       captured.assets.blobs,
     )
     yield* acknowledge(s.db, packet)
@@ -458,8 +527,93 @@ it.live("legacy asset migration reconstructs acknowledged native split parts bef
     yield* s.db.run(sql`DELETE FROM _kilo_sync_asset_reference WHERE session_id=${id}`)
     yield* Assets.prune(s.db, s.global)
     expect(yield* s.db.all(sql`SELECT entity_id,hash FROM _kilo_sync_asset_reference WHERE session_id=${id}`)).toEqual([
-      { entity_id: messageID, hash: digest(bytes) },
+      { entity_id: `${messageID}/0`, hash: digest(bytes) },
     ])
     expect(Buffer.from(yield* Assets.read(s.global, id, { hash: digest(bytes), bytes: bytes.byteLength }))).toEqual(bytes)
   }),
 )
+
+for (const transition of ["delete", "non-assistant", "without-content"] as const)
+  it.live(`split tool ${transition} removes part-local asset mappings with the part's semantic cause`, () =>
+    Effect.gen(function* () {
+      const f = yield* fixture
+      const s = yield* boot(f.root)
+      yield* seed(s.db, f.directory)
+      yield* enable(s.db, f.directory)
+      const file = path.join(s.global.data, "tool-output", "split-tool.bin")
+      const bytes = Buffer.from("part-owned native output")
+      yield* Effect.promise(async () => {
+        await mkdir(path.dirname(file), { recursive: true })
+        await writeFile(file, bytes)
+      })
+      yield* Assets.owned(s.db, s.global, f.directory, file)
+      const data = toolData(pathToFileURL(file).href)
+      const part = data.content[0]
+      if (!part) return yield* Effect.die("Expected a tool asset fixture")
+      yield* s.db
+        .insert(SessionMessageTable)
+        .values({
+          session_id: id,
+          id: messageID,
+          type: "assistant",
+          seq: 0,
+          data: { ...data, content: [] },
+        })
+        .run()
+      yield* s.db
+        .insert(SessionPartTable)
+        .values({
+          session_id: id,
+          message_id: messageID,
+          ordinal: 10,
+          type: part.type,
+          data: part,
+        })
+        .run()
+      const partID = `${messageID}/10`
+      const captured = yield* capture(s, f.directory, "message-part", partID)
+      const mappingID = digest(`message-part:${partID}:/part/state/content/0`)
+      expect(captured.assets.changes).toEqual([
+        {
+          op: "put",
+          kind: "asset",
+          id: mappingID,
+          value: {
+            entity: { kind: "message-part", id: partID },
+            pointer: "/part/state/content/0",
+            reference: pathToFileURL(file).href,
+            blob: { hash: digest(bytes), bytes: bytes.byteLength },
+            mime: "application/octet-stream",
+          },
+        },
+      ])
+      const packet = yield* freeze(
+        s.db,
+        captured.row,
+        [...captured.assets.changes, { op: "put", kind: "message-part", id: partID, value: captured.value }],
+        captured.assets.blobs,
+      )
+      yield* acknowledge(s.db, packet)
+      if (transition === "delete")
+        yield* s.db.delete(SessionPartTable).where(eq(SessionPartTable.message_id, messageID)).run()
+      if (transition === "non-assistant")
+        yield* s.db
+          .update(SessionMessageTable)
+          .set({ type: "user", data: { text: "replacement", time: { created: 1 } } })
+          .where(eq(SessionMessageTable.id, messageID))
+          .run()
+      if (transition === "without-content")
+        yield* s.db.run(sql`UPDATE session_message SET data=json_remove(data,'$.content') WHERE id=${messageID}`)
+      const removed = (yield* Store.dirty(s.db, id)).find((row) => row.kind === "message-part")
+      if (!removed) return yield* Effect.die("Expected a part removal")
+      expect(removed).toMatchObject({ op: "remove", cause: "part-removed" })
+      const removals = yield* Assets.remove(s.db, removed)
+      expect(removals).toEqual([{ op: "remove", kind: "asset", id: mappingID, cause: "part-removed" }])
+      const removedPacket = yield* freeze(s.db, removed, [
+        ...removals,
+        { op: "remove", kind: "message-part", id: partID, cause: "part-removed" },
+      ])
+      yield* acknowledge(s.db, removedPacket)
+      expect(yield* s.db.all(sql`SELECT * FROM _kilo_sync_asset_mapping WHERE session_id=${id}`)).toEqual([])
+    }),
+  )

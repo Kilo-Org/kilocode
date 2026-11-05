@@ -29,6 +29,7 @@ import {
   digest,
   fail,
   limits,
+  jsonNodes,
   sameTenant,
   request,
   retryTime,
@@ -439,6 +440,8 @@ export const make = Effect.fn("SessionSync.make")(function* (
     const rows = yield* Store.dirty(db, session.id)
     if (!rows.length) return
     let changeBytes = 2
+    // The exact outer packet uses fewer than 128 nodes, independently of its scalar IDs.
+    let changeNodes = 128
     const changes: Change[] = []
     const blobs = new Map<string, BlobRef>()
     let through = session.acknowledged
@@ -451,7 +454,8 @@ export const make = Effect.fn("SessionSync.make")(function* (
           (row.cause !== "revert" &&
             row.cause !== "cancel" &&
             row.cause !== "instruction-removed" &&
-            row.cause !== "consumed")
+            row.cause !== "consumed" &&
+            !(row.kind === "message-part" && row.cause === "part-removed"))
         )
           return yield* fail(
             "unclassified_removal",
@@ -462,11 +466,21 @@ export const make = Effect.fn("SessionSync.make")(function* (
           { op: "remove", kind: row.kind, id: row.id, cause: row.cause },
         ]
         const bytes = changeBytes + Buffer.byteLength(JSON.stringify(removals)) - 2 + (changes.length ? 1 : 0)
-        if (changes.length && (changes.length + removals.length > limits.changes || bytes > limits.batch - 4096)) break
+        const nodes = jsonNodes(removals, limits.jsonBatchDepth - 1, limits.jsonBatchNodes)
+        if (nodes === undefined)
+          return yield* fail("packet_too_large", "One portable removal exceeds the service JSON budget")
+        if (
+          changes.length &&
+          (changes.length + removals.length > limits.changes ||
+            bytes > limits.batch - 4096 ||
+            changeNodes + nodes - 1 > limits.jsonBatchNodes)
+        )
+          break
         if (removals.length > limits.changes || bytes > limits.batch - 4096)
           return yield* fail("packet_too_large", "One portable removal exceeds the service packet limit")
         changes.push(...removals)
         changeBytes = bytes
+        changeNodes += nodes - 1
         through = row.position
         continue
       }
@@ -478,7 +492,7 @@ export const make = Effect.fn("SessionSync.make")(function* (
       const assets = yield* Assets.collect(db, global, c.directory, row, value)
       const encoded = JSON.stringify(value)
       const blob =
-        Buffer.byteLength(encoded) > limits.inline
+        Buffer.byteLength(encoded) > limits.inline || jsonNodes(value) === undefined
           ? yield* Assets.body(db, global, row, Buffer.from(encoded))
           : undefined
       const addition: Change[] = [
@@ -489,7 +503,16 @@ export const make = Effect.fn("SessionSync.make")(function* (
         return yield* fail("asset_limit", "One native entity requires more assets than the service packet limit")
       // Leave room for envelope/identities; an oversized next entity starts the next immutable packet.
       const bytes = changeBytes + Buffer.byteLength(JSON.stringify(addition)) - 2 + (changes.length ? 1 : 0)
-      if (changes.length && (changes.length + addition.length > limits.changes || bytes > limits.batch - 4096)) break
+      const nodes = jsonNodes(addition, limits.jsonBatchDepth - 1, limits.jsonBatchNodes)
+      if (nodes === undefined || (changeNodes + nodes - 1 > limits.jsonBatchNodes && !changes.length))
+        return yield* fail("packet_too_large", "One portable entity and its assets exceed the service JSON budget")
+      if (
+        changes.length &&
+        (changes.length + addition.length > limits.changes ||
+          bytes > limits.batch - 4096 ||
+          changeNodes + nodes - 1 > limits.jsonBatchNodes)
+      )
+        break
       if (bytes > limits.batch - 4096)
         return yield* fail(
           "packet_too_large",
@@ -497,6 +520,7 @@ export const make = Effect.fn("SessionSync.make")(function* (
         )
       changes.push(...addition)
       changeBytes = bytes
+      changeNodes += nodes - 1
       for (const ref of [...assets.blobs, ...(blob ? [blob] : [])]) blobs.set(ref.hash, ref)
       through = row.position
     }

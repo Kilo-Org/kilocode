@@ -1,7 +1,9 @@
-import type { JSX } from "solid-js"
+import type { JSX, ParentProps } from "solid-js"
 import { render } from "solid-js/web"
 import { File } from "../src/components/file"
 import { ToolRegistry, type ToolProps } from "../src/components/message-part"
+import { DialogProvider } from "../src/context/dialog"
+import { MarkedProvider } from "../src/context/marked"
 import { FileComponentProvider } from "../src/context/file"
 
 export type Mounted = {
@@ -32,15 +34,23 @@ const defaults: ToolProps = {
   attachments: [],
 }
 
+const Providers = (props: ParentProps) => (
+  <DialogProvider>
+    <MarkedProvider>
+      <FileComponentProvider component={File}>{props.children}</FileComponentProvider>
+    </MarkedProvider>
+  </DialogProvider>
+)
+
+export function mountRich(view: () => JSX.Element) {
+  return mount(() => <Providers>{view()}</Providers>)
+}
+
 export function mountTool(name: string, props: Partial<ToolProps> = {}) {
   const Renderer = ToolRegistry.render(name)
   if (!Renderer) throw new Error(`No renderer registered for ${name}`)
   const merged = { ...defaults, ...props, tool: name }
-  return mount(() => (
-    <FileComponentProvider component={File}>
-      <Renderer {...merged} />
-    </FileComponentProvider>
-  ))
+  return mountRich(() => <Renderer {...merged} />)
 }
 
 export async function waitFor<T>(probe: () => T | null | undefined, timeout = 1000) {

@@ -1,7 +1,7 @@
 import { expect, spyOn } from "bun:test"
 import { KiloSessionSync } from "@kilocode/kilo-plugin"
 import { Context, Effect, Fiber, Layer, Schedule, Schema } from "effect"
-import { eq, sql } from "drizzle-orm"
+import { and, eq, sql } from "drizzle-orm"
 import { mkdtemp, mkdir, readFile, readdir, realpath, rm, symlink, unlink, utimes, writeFile } from "node:fs/promises"
 import os from "node:os"
 import path from "node:path"
@@ -20,9 +20,11 @@ import { ProjectTable } from "@opencode/core/project/sql"
 import {
   SessionTable,
   SessionMessageTable,
+  SessionPartTable,
   InstructionEntryTable,
   InstructionStateTable,
   InstructionBlobTable,
+  type SessionPartData,
 } from "@opencode/core/session/sql"
 import { SessionProjector } from "@opencode/core/session/projector"
 import { SessionEvent } from "@opencode/core/session/event"
@@ -40,7 +42,17 @@ import { SessionSync } from "../src/session-sync"
 import { Store } from "../src/session-sync/store"
 import { Assets } from "../src/session-sync/assets"
 import { SessionSyncOutput } from "../src/session-sync/tool-output"
-import { type Receipt, type Tenant, Kind, digest, limits, parse } from "../src/session-sync/protocol"
+import {
+  type Receipt,
+  type Tenant,
+  Kind,
+  digest,
+  limits,
+  parse,
+  json,
+  reconstructMessage,
+  jsonNodes,
+} from "../src/session-sync/protocol"
 
 const it = testEffect(Layer.empty)
 const id = Session.ID.make("ses_sync_consumer")
@@ -1133,7 +1145,7 @@ it.live("idle passes skip reconciliation and a newly journaled directory still e
     expect((yield* s.sync.flush({ directory: f.directory })).pending).toBe(0)
     yield* s.db.run("CREATE TABLE _test_reconcile_count(value INTEGER NOT NULL)")
     yield* s.db.run("INSERT INTO _test_reconcile_count VALUES(0)")
-    yield* s.db.run(`CREATE TRIGGER _test_reconcile_count AFTER INSERT ON _kilo_sync_directory BEGIN
+    yield* s.db.run(`CREATE TRIGGER _test_reconcile_count BEFORE INSERT ON _kilo_sync_directory BEGIN
       UPDATE _test_reconcile_count SET value=value+1;
     END`)
     for (let index = 0; index < 5; index++)
@@ -1211,7 +1223,7 @@ for (const move of ["directory", "workspace"] as const)
       expect((yield* Store.sessions(s.db, f.directory)).find((row) => row.id === id)?.bootstrap_complete).toBe(1)
       yield* s.db.run("CREATE TABLE _test_move_scan(value INTEGER NOT NULL)")
       yield* s.db.run("INSERT INTO _test_move_scan VALUES(0)")
-      yield* s.db.run(`CREATE TRIGGER _test_move_scan AFTER INSERT ON _kilo_sync_directory BEGIN
+      yield* s.db.run(`CREATE TRIGGER _test_move_scan BEFORE INSERT ON _kilo_sync_directory BEGIN
         UPDATE _test_move_scan SET value=value+1;
       END`)
       const enrolled = yield* Store.reconcileRevision(s.db)
@@ -3063,5 +3075,391 @@ it.live("a server deadline still covers a native capture made while its response
     expect(f.backend.control.sessionRequests).toBe(requests)
     yield* s.db.run(sql`UPDATE _kilo_sync_session SET server_retry_at=0 WHERE id=${id}`)
     expect((yield* s.sync.flush({ directory: f.directory })).pending).toBe(0)
+  }),
+)
+
+it.live(
+  "real producer streams 1000 native parts with linear transmitted bytes and exact reconstruction",
+  () =>
+    Effect.gen(function* () {
+      const f = yield* fixture
+      const s = yield* boot(f)
+      yield* signIn(s.credentials)
+      yield* seed(s.db, f.directory)
+      yield* allow(s.db, f.directory, f.backend)
+      const {
+        id: _,
+        type,
+        ...data
+      } = Schema.decodeUnknownSync(Schema.toEncoded(SessionMessage.Assistant))({
+        id: messageID,
+        type: "assistant",
+        agent: "build",
+        model: { providerID: "fixture", id: "model", variant: "default" },
+        metadata: { opaque: { nil: null } },
+        native: { signature: "exact" },
+        content: [],
+        time: { created: 10 },
+      })
+      yield* s.db.insert(SessionMessageTable).values({ session_id: id, id: messageID, type, seq: 0, data }).run()
+      const content = Array.from({ length: 1000 }, (_, ordinal) => ({
+        type: "text" as const,
+        text: `${ordinal}:` + "x".repeat(1024),
+        native: { nil: null },
+      }))
+      const emptyBytes = Buffer.byteLength(JSON.stringify({ seq: 0, message: { ...data, id: messageID, type } }))
+      let partBytes = 0
+      let replacementPayloadBytes = 0
+      for (const [ordinal, part] of content.entries()) {
+        partBytes += Buffer.byteLength(JSON.stringify(part))
+        replacementPayloadBytes += emptyBytes + partBytes + ordinal
+        yield* s.db
+          .insert(SessionPartTable)
+          .values({
+            session_id: id,
+            message_id: messageID,
+            ordinal,
+            type: part.type,
+            data: part,
+          })
+          .run()
+        const status = yield* s.sync.flush({ directory: f.directory })
+        expect(status.error).toBeUndefined()
+        expect(status.pending).toBe(0)
+        const state = f.backend.states.get(id)!
+        expect(
+          reconstructMessage(
+            state.entities.get(`message/${messageID}`)!,
+            [...state.entities.entries()].filter(([key]) => key.startsWith("message-part/")).map(([, value]) => value),
+            state.position,
+          ),
+        ).toEqual({ complete: false })
+      }
+      yield* s.db
+        .update(SessionMessageTable)
+        .set({ data: { ...data, time: { created: 10, completed: 20 } } })
+        .where(eq(SessionMessageTable.id, messageID))
+        .run()
+      expect((yield* s.sync.flush({ directory: f.directory })).pending).toBe(0)
+      const state = f.backend.states.get(id)!
+      const restored = reconstructMessage(
+        state.entities.get(`message/${messageID}`)!,
+        [...state.entities.entries()].filter(([key]) => key.startsWith("message-part/")).map(([, value]) => value),
+        state.position,
+      )
+      expect(restored).toEqual({
+        complete: true,
+        value: json({
+          seq: 0,
+          message: { ...data, id: messageID, type, content, time: { created: 10, completed: 20 } },
+        }),
+      })
+      const bytes =
+        f.backend.bodies.reduce((sum, body) => sum + Buffer.byteLength(body), 0) +
+        f.backend.blobRequests.reduce((sum, hash) => sum + f.backend.blobs.get(`${id}/${hash}`)!.byteLength, 0)
+      const finalBytes = Buffer.byteLength(JSON.stringify(restored.complete ? restored.value : null))
+      expect(bytes).toBeLessThan(finalBytes * 4)
+      expect(f.backend.blobRequests).toHaveLength(0)
+      console.log(
+        JSON.stringify({
+          scenario: "1000-native-parts",
+          afterBatchAndBlobBytes: bytes,
+          finalPayloadBytes: finalBytes,
+          beforeFullMessagePayloadBytes: replacementPayloadBytes + finalBytes,
+          baselineScope: "native JSON payload only; excludes batch metadata",
+        }),
+      )
+    }),
+  120_000,
+)
+
+for (const partType of ["text", "reasoning", "tool"] as const)
+  it.live(
+    `real producer defers a 200KiB mutable ${partType} body for 100 revisions and uploads it once settled`,
+    () =>
+      Effect.gen(function* () {
+        const f = yield* fixture
+        const s = yield* boot(f)
+        yield* signIn(s.credentials)
+        yield* seed(s.db, f.directory)
+        yield* allow(s.db, f.directory, f.backend)
+        const {
+          id: _,
+          type,
+          ...data
+        } = Schema.decodeUnknownSync(Schema.toEncoded(SessionMessage.Assistant))({
+          id: messageID,
+          type: "assistant",
+          agent: "build",
+          model: { providerID: "fixture", id: "model", variant: "default" },
+          content: [],
+          time: { created: 10 },
+        })
+        yield* s.db.insert(SessionMessageTable).values({ session_id: id, id: messageID, type, seq: 0, data }).run()
+        const body = "x".repeat(200 * 1024)
+        let replacementPayloadBytes = 0
+        for (let revision = 0; revision < 100; revision++) {
+          const part =
+            partType === "tool"
+              ? {
+                  type: "tool" as const,
+                  id: "call_large",
+                  name: "fixture",
+                  time: { created: 10 },
+                  state: { status: "running" as const, input: {}, metadata: { output: `${revision}:${body}` } },
+                }
+              : { type: partType, text: `${revision}:${body}` }
+          replacementPayloadBytes += Buffer.byteLength(
+            JSON.stringify({ seq: 0, message: { ...data, id: messageID, type, content: [part] } }),
+          )
+          yield* s.db
+            .insert(SessionPartTable)
+            .values({
+              session_id: id,
+              message_id: messageID,
+              ordinal: 0,
+              type: part.type,
+              data: part,
+            })
+            .onConflictDoUpdate({
+              target: [SessionPartTable.message_id, SessionPartTable.ordinal],
+              set: { data: part },
+            })
+            .run()
+          expect((yield* s.sync.flush({ directory: f.directory })).pending).toBe(0)
+          expect(f.backend.blobRequests).toHaveLength(0)
+          expect(f.backend.states.get(id)?.entities.get(`message-part/${messageID}/0`)).toMatchObject({
+            deferred: true,
+          })
+        }
+        const finalPart: SessionPartData =
+          partType === "tool"
+            ? {
+                type: "tool" as const,
+                id: "call_large",
+                name: "fixture",
+                time: { created: 10, completed: 20 },
+                state: {
+                  status: "completed" as const,
+                  input: {},
+                  content: [{ type: "text" as const, text: `99:${body}` }],
+                },
+              }
+            : { type: partType, text: `99:${body}` }
+        if (partType === "tool")
+          yield* s.db
+            .update(SessionPartTable)
+            .set({ data: finalPart })
+            .where(eq(SessionPartTable.message_id, messageID))
+            .run()
+        yield* s.db
+          .update(SessionMessageTable)
+          .set({ data: { ...data, time: { created: 10, completed: 20 } } })
+          .where(eq(SessionMessageTable.id, messageID))
+          .run()
+        expect((yield* s.sync.flush({ directory: f.directory })).pending).toBe(0)
+        const state = f.backend.states.get(id)!
+        expect(
+          reconstructMessage(
+            state.entities.get(`message/${messageID}`)!,
+            [state.entities.get(`message-part/${messageID}/0`)!],
+            state.position,
+          ),
+        ).toEqual({
+          complete: true,
+          value: json({
+            seq: 0,
+            message: { ...data, id: messageID, type, content: [finalPart], time: { created: 10, completed: 20 } },
+          }),
+        })
+        expect(f.backend.blobRequests).toHaveLength(1)
+        const bytes =
+          f.backend.bodies.reduce((sum, value) => sum + Buffer.byteLength(value), 0) +
+          f.backend.blobRequests.reduce((sum, hash) => sum + f.backend.blobs.get(`${id}/${hash}`)!.byteLength, 0)
+        expect(bytes).toBeLessThan(body.length * 2)
+        replacementPayloadBytes += Buffer.byteLength(
+          JSON.stringify({
+            seq: 0,
+            message: { ...data, id: messageID, type, content: [finalPart], time: { created: 10, completed: 20 } },
+          }),
+        )
+        console.log(
+          JSON.stringify({
+            scenario: `200KiB-${partType}-100-revisions`,
+            afterBatchAndBlobBytes: bytes,
+            bodyBytes: body.length,
+            beforeFullMessagePayloadBytes: replacementPayloadBytes,
+            baselineScope: "native JSON payload only; excludes batch metadata",
+          }),
+        )
+      }),
+    60_000,
+  )
+
+it.live("producer externalizes node-heavy and deep values and splits aggregate JSON nodes below the byte limit", () =>
+  Effect.gen(function* () {
+    const f = yield* fixture
+    const s = yield* boot(f)
+    yield* signIn(s.credentials)
+    yield* seed(s.db, f.directory)
+    yield* allow(s.db, f.directory, f.backend)
+    const wide = Array.from({ length: 8192 }, () => 0)
+    let deep: Schema.Json = null
+    for (let level = 0; level < 65; level++) deep = [deep]
+    for (const [seq, metadata] of [wide, deep].entries()) {
+      const message = SessionMessage.ID.make(`msg_budget_blob_${seq}`)
+      yield* writeMessage(s.db, "externalized structured metadata", id, seq, message)
+      yield* s.db.run(
+        sql`UPDATE session_message SET data=json_set(data,'$.metadata',json_object('fixture',json(${JSON.stringify(metadata)}))) WHERE id=${message}`,
+      )
+    }
+    expect((yield* s.sync.flush({ directory: f.directory })).pending).toBe(0)
+    expect(f.backend.blobRequests).toHaveLength(2)
+    const start = f.backend.bodies.length
+    for (let seq = 2; seq < 12; seq++) {
+      const message = SessionMessage.ID.make(`msg_budget_inline_${seq}`)
+      yield* writeMessage(s.db, "bounded structured metadata", id, seq, message)
+      yield* s.db.run(
+        sql`UPDATE session_message SET data=json_set(data,'$.metadata',json_object('fixture',json(${JSON.stringify(wide.slice(0, 4000))}))) WHERE id=${message}`,
+      )
+    }
+    expect((yield* s.sync.flush({ directory: f.directory })).pending).toBe(0)
+    expect(f.backend.bodies.length - start).toBeGreaterThan(1)
+    for (const body of f.backend.bodies) {
+      const packet = readPacket(body)
+      expect(jsonNodes(packet, limits.jsonBatchDepth, limits.jsonBatchNodes)).toBeDefined()
+      expect(Buffer.byteLength(body)).toBeLessThanOrEqual(limits.batch)
+      for (const change of packet.changes) if (change.value !== undefined) expect(jsonNodes(change.value)).toBeDefined()
+    }
+    expect(f.backend.blobRequests).toHaveLength(2)
+    expect(f.backend.states.get(id)?.entities.size).toBe(13)
+  }),
+)
+
+it.live("semantic revert removes independent native parts with the same cause as their message", () =>
+  Effect.gen(function* () {
+    const f = yield* fixture
+    const s = yield* boot(f)
+    yield* signIn(s.credentials)
+    yield* seed(s.db, f.directory)
+    yield* allow(s.db, f.directory, f.backend)
+    yield* writeMessage(s.db, "retained boundary")
+    const assistantID = SessionMessage.ID.make("msg_revert_split")
+    const {
+      id: _,
+      type,
+      ...data
+    } = Schema.decodeUnknownSync(Schema.toEncoded(SessionMessage.Assistant))({
+      id: assistantID,
+      type: "assistant",
+      agent: "build",
+      model: { providerID: "fixture", id: "model", variant: "default" },
+      content: [],
+      time: { created: 10, completed: 20 },
+    })
+    yield* s.db.insert(SessionMessageTable).values({ session_id: id, id: assistantID, type, seq: 1, data }).run()
+    yield* s.db
+      .insert(SessionPartTable)
+      .values({
+        session_id: id,
+        message_id: assistantID,
+        ordinal: 3,
+        type: "text",
+        data: { type: "text", text: "reverted output" },
+      })
+      .run()
+    expect((yield* s.sync.flush({ directory: f.directory })).pending).toBe(0)
+    expect(f.backend.states.get(id)?.entities.has(`message-part/${assistantID}/3`)).toBe(true)
+    yield* s.bus.publish(SessionEvent.RevertEvent.Committed, { sessionID: id, to: assistantID })
+    const dirty = yield* Store.dirty(s.db, id)
+    expect(dirty.find((row) => row.kind === "message" && row.id === assistantID)).toMatchObject({
+      op: "remove",
+      cause: "revert",
+    })
+    expect(dirty.find((row) => row.kind === "message-part" && row.id === `${assistantID}/3`)).toMatchObject({
+      op: "remove",
+      cause: "revert",
+    })
+    expect((yield* s.sync.flush({ directory: f.directory })).pending).toBe(0)
+    expect(f.backend.states.get(id)?.entities.has(`message/${assistantID}`)).toBe(false)
+    expect(f.backend.states.get(id)?.entities.has(`message-part/${assistantID}/3`)).toBe(false)
+    expect(f.backend.states.get(id)?.entities.has(`message/${messageID}`)).toBe(true)
+  }),
+)
+
+it.live("organization-paused native parts reconcile only their continued message after an acknowledged restart", () =>
+  Effect.gen(function* () {
+    const f = yield* fixture
+    const untouchedID = SessionMessage.ID.make("msg_org_paused_untouched")
+    const { id: _, type, ...data } = Schema.decodeUnknownSync(Schema.toEncoded(SessionMessage.Assistant))({
+      id: messageID, type: "assistant", agent: "build",
+      model: { providerID: "fixture", id: "model", variant: "default" },
+      native: { signature: "preserved across organization pause" },
+      content: [], time: { created: 10 },
+    })
+    const first: SessionPartData = { type: "text", text: "captured before organization switch" }
+    const removed: SessionPartData = { type: "text", text: "removed during organization pause" }
+    const privatePart: SessionPartData = { type: "text", text: "completed during pause without continuation" }
+    yield* Effect.scoped(Effect.gen(function* () {
+      const s = yield* boot(f, { organizationID: "org-first" })
+      yield* signIn(s.credentials)
+      yield* seed(s.db, f.directory)
+      yield* s.sync.status({ directory: f.directory })
+      yield* s.db.insert(SessionMessageTable).values([
+        { session_id: id, id: messageID, type, seq: 0, data },
+        { session_id: id, id: untouchedID, type, seq: 1, data },
+      ]).run()
+      yield* s.db.insert(SessionPartTable).values([
+        { session_id: id, message_id: messageID, ordinal: 0, type: first.type, data: first },
+        { session_id: id, message_id: messageID, ordinal: 5, type: removed.type, data: removed },
+        { session_id: id, message_id: untouchedID, ordinal: 0, type: first.type, data: first },
+      ]).run()
+      expect((yield* s.sync.flush({ directory: f.directory })).pending).toBe(0)
+      const before = new Map(f.backend.states.get(id)!.entities)
+      yield* s.sync.organization({ directory: f.directory, organizationID: "org-second" })
+      expect((yield* Store.consent(s.db, f.directory))?.enabled).toBe(0)
+      yield* s.db.update(SessionPartTable).set({ data: { type: "text", text: "updated during pause" } })
+        .where(and(eq(SessionPartTable.message_id, messageID), eq(SessionPartTable.ordinal, 0))).run()
+      yield* s.db.delete(SessionPartTable)
+        .where(and(eq(SessionPartTable.message_id, messageID), eq(SessionPartTable.ordinal, 5))).run()
+      yield* s.db.insert(SessionPartTable).values([
+        { session_id: id, message_id: messageID, ordinal: 10, type: privatePart.type, data: privatePart },
+        { session_id: id, message_id: untouchedID, ordinal: 9, type: privatePart.type, data: privatePart },
+      ]).run()
+      yield* s.db.update(SessionMessageTable).set({ data: { ...data, time: { created: 10, completed: 30 } } })
+        .where(eq(SessionMessageTable.id, untouchedID)).run()
+      expect(yield* Store.dirty(s.db, id)).toEqual([])
+      yield* s.sync.organization({ directory: f.directory, organizationID: "org-first" })
+      expect((yield* s.sync.flush({ directory: f.directory })).pending).toBe(0)
+      expect(f.backend.states.get(id)!.entities).toEqual(before)
+    }))
+    const before = new Map(f.backend.states.get(id)!.entities)
+    const s = yield* boot(f, { organizationID: "org-first" })
+    expect((yield* s.sync.flush({ directory: f.directory })).pending).toBe(0)
+    expect(f.backend.states.get(id)!.entities).toEqual(before)
+    const continued: SessionPartData = { type: "text", text: "authorized continuation after restart", native: { nil: null } }
+    yield* s.db.insert(SessionPartTable).values({
+      session_id: id, message_id: messageID, ordinal: 20, type: continued.type, data: continued,
+    }).run()
+    expect((yield* s.sync.flush({ directory: f.directory })).pending).toBe(0)
+    const incomplete = f.backend.states.get(id)!
+    expect(reconstructMessage(incomplete.entities.get(`message/${messageID}`)!,
+      [...incomplete.entities.entries()].filter(([key]) => key.startsWith("message-part/")).map(([, value]) => value),
+      incomplete.position)).toEqual({ complete: false })
+    yield* s.db.update(SessionMessageTable).set({ data: { ...data, time: { created: 10, completed: 40 } } })
+      .where(eq(SessionMessageTable.id, messageID)).run()
+    expect((yield* s.sync.flush({ directory: f.directory })).pending).toBe(0)
+    const state = f.backend.states.get(id)!
+    expect(reconstructMessage(state.entities.get(`message/${messageID}`)!,
+      [...state.entities.entries()].filter(([key]) => key.startsWith("message-part/")).map(([, value]) => value),
+      state.position)).toEqual({ complete: true, value: json({
+        seq: 0, message: { ...data, id: messageID, type, content: [
+          { type: "text", text: "updated during pause" }, privatePart, continued,
+        ], time: { created: 10, completed: 40 } },
+      }) })
+    expect(state.entities.has(`message-part/${messageID}/5`)).toBe(false)
+    expect(state.entities.get(`message/${untouchedID}`)).toEqual(before.get(`message/${untouchedID}`))
+    expect(state.entities.get(`message-part/${untouchedID}/0`)).toEqual(before.get(`message-part/${untouchedID}/0`))
+    expect(state.entities.has(`message-part/${untouchedID}/9`)).toBe(false)
   }),
 )

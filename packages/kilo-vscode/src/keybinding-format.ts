@@ -125,10 +125,12 @@ export function userKeybindingFiles(storage: string): string[] {
   return files.map((file) => path.normalize(file))
 }
 
-/** Prompt actions whose keybindings are forwarded to the webview, keyed by command id. */
+/** Prompt and tab actions whose keybindings are forwarded to the webview, keyed by command id. */
 export const PROMPT_COMMANDS: Record<string, string> = {
   "kilo-code.v2.cycleAgentMode": "cycleAgentMode",
   "kilo-code.v2.cyclePreviousAgentMode": "cyclePreviousAgentMode",
+  "kilo-code.v2.agentManager.previousTab": "previousTab",
+  "kilo-code.v2.agentManager.nextTab": "nextTab",
 }
 
 /** Format the prompt-action keybindings, with the user's keybindings.json applied. */

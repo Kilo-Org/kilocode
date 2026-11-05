@@ -1,4 +1,4 @@
-import type { ToolActions } from "@kilocode/kilo-ui/message-part"
+import type { ToolActions, UserMessagePending } from "@kilocode/kilo-ui/message-part"
 import { Match, Switch } from "solid-js"
 import type { TimelineHighlight } from "../utils/timeline/highlight"
 import { AssistantMessage, ErrorCard } from "./assistant"
@@ -14,6 +14,8 @@ export function TranscriptRowView(props: {
   onViewTurnChanges?: (sessionID: string, turnID: string) => void
   /** Forks the session before the user message, when the surface can fork. */
   onForkMessage?: (sessionID: string, messageID: string) => void
+  /** The delivery state of a user message the server has not handed to the model yet. */
+  pending?: (messageID: string) => UserMessagePending | undefined
 }) {
   const viewTurnChanges = () => {
     const turn = props.row.type === "assistant" ? props.row.userTurn : undefined
@@ -28,6 +30,7 @@ export function TranscriptRowView(props: {
             <UserMessage
               message={row().message}
               rowKey={row().key}
+              pending={props.pending?.(row().message.id)}
               onFork={
                 props.onForkMessage
                   ? () => props.onForkMessage?.(props.session, row().message.id)
