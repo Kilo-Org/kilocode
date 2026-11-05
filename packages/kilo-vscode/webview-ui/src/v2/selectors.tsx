@@ -4,15 +4,18 @@
 import type { JsonValue, ModelRef } from "@opencode/client"
 import { createModelAttribution } from "./attribution"
 import { TooltipKeybind } from "@kilocode/kilo-ui/tooltip"
-import { createEffect, createSignal, on, onCleanup, onMount, type Accessor } from "solid-js"
+import { createEffect, createMemo, createSignal, on, onCleanup, onMount, type Accessor } from "solid-js"
 import { PromptSelectors } from "../components/chat/PromptSelectors"
 import { ModelSelectorBase } from "../components/shared/ModelSelector"
 import { ModeSwitcherBase } from "../components/shared/ModeSwitcher"
 import { ThinkingSelectorBase } from "../components/shared/ThinkingSelector"
 import { useLanguage } from "../context/language"
+import { useModelPreferences } from "../context/model-preferences"
 import { useV2, type V2 } from "./client"
 import { failureMessage } from "./kilo-catalog"
 import { shiftTabCyclesVariant } from "./kilo-settings"
+import { configuredModel, initialModel } from "./model-default"
+import { kiloTeam } from "./kilo-models"
 import { cycleVariant, preserveVariant } from "./variant"
 
 const DEFAULT = "default"
@@ -22,6 +25,7 @@ export function createSelection(
   draftKey: Accessor<string | undefined> = session,
 ) {
   const v2 = useV2()
+  const prefs = useModelPreferences()
   const [draftAgent, setDraftAgent] = createSignal<string>()
   const [draftModel, setDraftModel] = createSignal<ModelRef>()
   const fallback = createDefaultModel(v2)
@@ -37,6 +41,7 @@ export function createSelection(
         v2.data.location.agent.sync(),
         v2.data.location.model.sync(),
         v2.data.location.provider.sync(),
+        v2.data.location.config.sync(),
       ]).catch(v2.report)
     }),
   )
@@ -75,18 +80,39 @@ export function createSelection(
     const id = session() ? info()?.agent : draftAgent()
     return agents().find((item) => item.id === id) ?? agents()[0]
   }
-  const model = (): ModelRef | undefined => {
-    const value = (session() ? info()?.model : draftModel()) ?? agent()?.model ?? fallback()
-    // The server reports "no explicit variant" as "default" (core session/info.ts), as the TUI normalizes it.
-    if (value?.variant !== DEFAULT) return value
-    return { id: value.id, providerID: value.providerID }
-  }
   const models = () => v2.data.location.model.list()
-  const variants = () => {
-    const current = model()
-    const found = models()?.find((item) => item.providerID === current?.providerID && item.id === current?.id)
-    return found?.variants.map((variant) => variant.id) ?? []
+  const find = (ref: { providerID: string; id: string } | undefined) =>
+    ref ? models()?.find((item) => item.providerID === ref.providerID && item.id === ref.id && item.enabled) : undefined
+  const variantsOf = (ref: { providerID: string; id: string } | undefined) =>
+    find(ref)?.variants.map((variant) => variant.id) ?? []
+  const configured = createMemo(() => configuredModel(v2.data.location.config.list()))
+  const initial = () =>
+    initialModel({
+      agent: agent()?.model ?? undefined,
+      configured: configured(),
+      team: kiloTeam(v2.kiloModels()),
+      recents: prefs?.recents() ?? [],
+      valid: (ref) => !!find(ref),
+      fallback: fallback(),
+    })
+  // The remembered effort of the agent on a model: v1 keeps the last effort a new session chose ("" is Default), on
+  // the nearest effort the model still has.
+  const remembered = (ref: { providerID: string; id: string }) => {
+    const id = agent()?.id
+    const saved = id ? prefs?.variant(id, ref.providerID, ref.id) : undefined
+    return saved ? preserveVariant(saved, variantsOf(ref)) : undefined
   }
+  const model = (): ModelRef | undefined => {
+    const own = session() ? info()?.model : draftModel()
+    const value = own ?? initial()
+    // The server reports "no explicit variant" as "default" (core session/info.ts), as the TUI normalizes it.
+    if (value?.variant === DEFAULT) return { id: value.id, providerID: value.providerID }
+    if (own || !value) return value
+    // A configured or agent effort the model no longer has moves to the nearest one, as v1 and the TUI.
+    const variant = value.variant ? preserveVariant(value.variant, variantsOf(value)) : remembered(value)
+    return { id: value.id, providerID: value.providerID, ...(variant ? { variant } : {}) }
+  }
+  const variants = () => variantsOf(model())
 
   const commit = (id: string, run: () => Promise<unknown>) => {
     const request = Promise.all([creates.get(id), commits.get(id)])
@@ -112,6 +138,11 @@ export function createSelection(
         },
       ),
     )
+  }
+
+  const remember = (ref: { providerID: string; id: string }, variant: string | undefined) => {
+    const id = agent()?.id
+    if (id) prefs?.rememberVariant(id, ref.providerID, ref.id, variant)
   }
 
   // The same writer for a click and a cycle: a draft keeps the value locally, an existing session commits
@@ -145,14 +176,20 @@ export function createSelection(
     },
     selectModel(providerID: string, modelID: string) {
       const current = model()
-      const found = models()?.find((item) => item.providerID === providerID && item.id === modelID)
-      // Carry the effort to the new model when it has it or a nearby effort, as v1; otherwise fall back to default.
-      const variant = preserveVariant(current?.variant, found?.variants.map((item) => item.id) ?? [])
-      setModel({ id: modelID, providerID, ...(variant ? { variant } : {}) })
+      const next = { providerID, id: modelID }
+      // Carry the effort to the new model when it has it or a nearby effort, as v1. Without an effort, the new model
+      // keeps the effort the agent last chose for it.
+      const variant = (current?.variant && preserveVariant(current.variant, variantsOf(next))) || remembered(next)
+      prefs?.pushRecent(providerID, modelID)
+      if (!session() && variant) remember(next, variant)
+      setModel({ ...next, ...(variant ? { variant } : {}) })
     },
     selectVariant(variant: string | undefined) {
       const current = model()
-      if (current) setModel({ id: current.id, providerID: current.providerID, ...(variant ? { variant } : {}) })
+      if (!current) return
+      // A new session remembers the effort for the next one; a session keeps it on the server only, as v1.
+      if (!session()) remember(current, variant)
+      setModel({ id: current.id, providerID: current.providerID, ...(variant ? { variant } : {}) })
     },
     /** Creates a session with the current selection, then writes the metadata the caller passes. */
     create(metadata?: Record<string, JsonValue>) {
@@ -232,6 +269,9 @@ export function Selectors(props: { selection: Selection; blocked: boolean }) {
     window.addEventListener("keydown", onKeyDown, true)
     onCleanup(() => window.removeEventListener("keydown", onKeyDown, true))
   })
+  // As v1's chat ModelSelector: a pick or Escape returns focus to the prompt.
+  const restore = () =>
+    requestAnimationFrame(() => window.dispatchEvent(new CustomEvent("focusPrompt", { detail: { restore: true } })))
   // The cycle shortcut label the host resolved, as main's modeHint(): the keybind shows next to the title,
   // and an empty keybind hides the tooltip.
   const keybind = () => v2.bindings().cycleAgentMode ?? ""
@@ -260,10 +300,13 @@ export function Selectors(props: { selection: Selection; blocked: boolean }) {
         <ModelSelectorBase
           models={props.selection.models()}
           providers={props.selection.providers()}
+          gateway={v2.kiloModels().entries}
           value={model()}
           blocked={props.blocked}
           failure={failureMessage(language.t, v2.kiloFailure())}
           onSelect={props.selection.selectModel}
+          onPick={restore}
+          onCancel={restore}
         />
       }
       variant={

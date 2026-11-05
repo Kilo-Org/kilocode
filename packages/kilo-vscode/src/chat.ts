@@ -14,7 +14,8 @@ import { notifyHostAutoApprove, setHostAutoApprove } from "./agent-manager/provi
 import type { SettingsHandler } from "./agent-manager/project/settings"
 import { local } from "./local"
 import { dismissNotification, dismissedNotifications, syncDismissedNotifications } from "./notifications"
-import { DISPLAY_DEFAULTS, type ToHost, type ToWebview } from "./protocol"
+import { applyModelPreference, readModelPreferences } from "./model-preferences"
+import { DISPLAY_DEFAULTS, type ModelPreferenceMessage, type ToHost, type ToWebview } from "./protocol"
 import { bridge } from "./relay"
 import { saveImage } from "./save-image"
 import { previewImage } from "./preview-image"
@@ -209,7 +210,11 @@ export function wire(input: {
           server: input.server,
           directory: input.directory,
           post,
-          onReset: input.onReset,
+          // A reset clears the recents, usage and efforts; every open webview must drop its copy of them.
+          onReset: () => {
+            input.onReset?.()
+            broadcast({ type: "modelPreferencesLoaded", value: readModelPreferences(input.context.globalState) })
+          },
           agentManager: input.agentManager,
         })
       : {
@@ -276,6 +281,15 @@ export function wire(input: {
       }
     }
   }
+  // Every write broadcasts the new state, so a pick in the sidebar shows in the Agent Manager and Settings at once.
+  const handleModelPreferences = async (message: ModelPreferenceMessage) => {
+    const loaded = {
+      type: "modelPreferencesLoaded",
+      value: await applyModelPreference(input.context.globalState, message),
+    } as const
+    post(loaded)
+    if (message.type !== "requestModelPreferences") others(loaded)
+  }
   const sandboxPreference = new SandboxPreference(input.context.globalState)
   // The configured default comes from the `kilocode.sandbox` RPC; the host only keeps the user's draft preference.
   const sandboxDefaultMessage = async (): Promise<ToWebview> => ({
@@ -290,6 +304,13 @@ export function wire(input: {
       case "persistModelSelectorExpanded":
         void input.context.globalState.update(EXPANDED, message.value)
         others({ type: "modelSelectorExpandedLoaded", value: message.value })
+        return true
+      case "requestModelPreferences":
+      case "toggleFavorite":
+      case "persistRecents":
+      case "recordModelUsage":
+      case "persistVariant":
+        void handleModelPreferences(message)
         return true
       case "requestAutoApproveState":
         post({ type: "autoApproveStateLoaded", value: input.context.globalState.get(AUTO_APPROVE, false) })
@@ -424,13 +445,14 @@ export function wire(input: {
 const surfaces = new Set<(message: ToWebview) => void>()
 
 /**
- * The composer state every webview shares through globalState: auto-approve, the expanded model picker and the
+ * The composer state every webview shares through globalState: auto-approve, the model picker preferences and the
  * sandbox preference for new sessions. Reset All Settings clears them and sends this again.
  */
 export function composerState(context: ExtensionContext): ToWebview[] {
   return [
     { type: "autoApproveStateLoaded", value: context.globalState.get(AUTO_APPROVE, false) },
     { type: "modelSelectorExpandedLoaded", value: context.globalState.get(EXPANDED, true) },
+    { type: "modelPreferencesLoaded", value: readModelPreferences(context.globalState) },
     { type: "sandboxDefaultLoaded", explicit: context.globalState.get<boolean>(SANDBOX_DEFAULT_KEY) },
   ]
 }

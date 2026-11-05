@@ -16,6 +16,7 @@ import { candidateConfigFiles, chooseConfigFile, configDirectories } from "./ope
 import { resolveGlobalConfigDir, resolveKiloProfile, canonicalPath, matchConfigDocument } from "./settings-paths"
 import type { AgentManagerSettings, ConfigEdit, ConfigScope, ToHost, ToWebview } from "./protocol"
 import type { Manager } from "./server"
+import { MODEL_RESET_KEYS } from "./model-preferences"
 
 const NAMESPACE = "kilo-code.v2"
 
@@ -79,10 +80,12 @@ export async function writeKiloSettings(values: Record<string, unknown>) {
 }
 
 /** webview globalState keys that are not configuration, cleared by Reset All Settings. */
+// As v1, a reset clears the model recents, usage and remembered efforts, but keeps the favorites.
 const GLOBAL_STATE_KEYS = [
   "kilo-code.v2.modelSelectorExpanded",
   "kilo-code.v2.autoApprove",
   "kilo-code.v2.sandbox.newSessionDefault",
+  ...MODEL_RESET_KEYS,
 ]
 
 interface ConfigEntry {
