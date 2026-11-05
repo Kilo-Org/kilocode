@@ -1,7 +1,7 @@
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { showToast } from "@kilocode/kilo-ui/toast"
-import type { ModelRef, JsonValue } from "@opencode/client"
+import type { JsonValue, ModelRef } from "@opencode/client"
 import { createEffect, createMemo, createSignal, on, onCleanup, onMount, Show, untrack, type JSX } from "solid-js"
 import type { ReviewCommentEntry } from "../../../src/shared/review-comments"
 import { pushFixes } from "../../agent-manager/pr/pr-push-fixes"
@@ -22,16 +22,36 @@ import {
   promptFocusAllowed,
 } from "../utils/focus"
 import { isEnterKeyCommitNotIme } from "../utils/ime-enter"
-import { registerAppend, registerReviewAppend, type AppendHandler, type ReviewAppendHandler } from "./append-ready"
+import { browserPrompt, mergeBrowserReferences, type BrowserReference } from "../../../src/shared/browser-feedback"
+import {
+  registerAppend,
+  registerReviewAppend,
+  type AppendHandler,
+  type ReferenceHandler,
+  type ReviewAppendHandler,
+} from "./append-ready"
+import { BrowserReferences } from "./browser-references"
 import { message, useV2 } from "./client"
 import { cleanEnhancedPrompt, enhancePromptRequest, normalizeEnhancePromptErrorMessage } from "./enhance-prompt"
 import { insertSpacedText } from "./prompt-speech"
 import { PromptOverflow, type OverflowItem } from "./prompt-overflow"
-import { composeReviewPrompt, mergeReviewComments } from "./review-drafts"
+import { composeReviewPrompt, mergePromptMetadata, mergeReviewComments } from "./review-drafts"
 
 // Drafts live outside the component so a composer remounted for another session restores its own text, as v1 did.
 // The key is the session id, or the pending tab id before a first prompt creates the session.
 const drafts = new Map<string, string>()
+
+// Browser references picked for each draft, kept with the same key as the draft text.
+const references = new Map<string, BrowserReference[]>()
+
+// Pending review comments follow the same key as the text, so switching sessions neither loses nor mixes them.
+const reviewDrafts = new Map<string, ReviewCommentEntry[]>()
+
+function saveReviewDraft(key: string | undefined, comments: ReviewCommentEntry[]) {
+  if (!key) return
+  if (comments.length === 0) reviewDrafts.delete(key)
+  else reviewDrafts.set(key, comments)
+}
 
 export const promptDrafts = {
   get(key: string | undefined) {
@@ -42,15 +62,6 @@ export const promptDrafts = {
     if (value) drafts.set(key, value)
     else drafts.delete(key)
   },
-}
-
-// Pending review comments follow the same key as the text, so switching sessions neither loses nor mixes them.
-const reviewDrafts = new Map<string, ReviewCommentEntry[]>()
-
-function saveReviewDraft(key: string | undefined, comments: ReviewCommentEntry[]) {
-  if (!key) return
-  if (comments.length === 0) reviewDrafts.delete(key)
-  else reviewDrafts.set(key, comments)
 }
 
 export function PromptInput(props: {
@@ -65,7 +76,8 @@ export function PromptInput(props: {
   blocked?: boolean
   /** A pending question tool call. The composer waits for an answer, so Send replaces Stop. */
   questioning?: boolean
-  onSend: (text: string, metadata?: Record<string, JsonValue>) => Promise<boolean>
+  /** Sends the composed text. `metadata` carries the structured browser references the text also describes. */
+  onSend: (text: string, metadata?: { [key: string]: JsonValue }) => Promise<boolean>
   onStop: () => void
   /** Agent, model and variant controls, before the actions as in main's PromptInput. */
   selectors?: JSX.Element
@@ -73,15 +85,29 @@ export function PromptInput(props: {
   autoApprove?: { enabled: boolean; onToggle: () => void }
   /** Receives a function that appends text to the draft and, when `send` is true, sends it; undefined on unmount. */
   onAppendReady?: (append: AppendHandler | undefined) => void
+  /** Receives a function that adds a browser reference to this draft; undefined on unmount. */
+  onReferenceReady?: (add: ReferenceHandler | undefined) => void
   /** Receives a function that adds review comments to the draft; undefined on unmount. */
   onReviewAppendReady?: (append: ReviewAppendHandler | undefined) => void
 }) {
   const v2 = useV2()
   const language = useLanguage()
   const [text, setText] = createSignal(promptDrafts.get(props.draftKey))
+  const [browsers, setBrowsers] = createSignal(props.draftKey ? (references.get(props.draftKey) ?? []) : [])
+  const keep = (key: string | undefined, list: BrowserReference[]) => {
+    if (!key) return
+    if (list.length) references.set(key, list)
+    else references.delete(key)
+  }
   const [comments, setComments] = createSignal(
     props.draftKey ? (reviewDrafts.get(props.draftKey) ?? []) : ([] as ReviewCommentEntry[]),
   )
+  // The key the composer is editing, so a comment change lands in the right draft entry.
+  let draft = props.draftKey
+  const replaceComments = (next: ReviewCommentEntry[]) => {
+    setComments(next)
+    saveReviewDraft(draft, next)
+  }
   const [sending, setSending] = createSignal(false)
   const [enhancing, setEnhancing] = createSignal(false)
   // The draft Enhance replaced, so Ctrl/Cmd+Z restores it once.
@@ -98,15 +124,12 @@ export function PromptInput(props: {
   )
   const speechStatus = useSpeechStatus()
   const canUseSpeech = () => speechStatus.status().enabled
-  // Review comments are input too: they can be sent without any typed text.
-  const hasDraft = () => !!text().trim() || comments().length > 0
+  // Review comments and browser references are input too, so they can be sent without typed text.
+  const hasDraft = () => !!text().trim() || browsers().length > 0 || comments().length > 0
   // Recording is enough to send: the transcript arrives first and the send continues from it. No other speech state
   // may send, or a draft would leave before the transcript is ready and the transcript would become a draft.
   const canSend = () =>
-    !props.disabled &&
-    !props.blocked &&
-    !sending() &&
-    (speech.state() === "recording" || (!speech.active() && hasDraft()))
+    !props.disabled && !props.blocked && !sending() && (speech.state() === "recording" || (!speech.active() && hasDraft()))
   // The label is the pending-permission hint while blocked, otherwise Send.
   const sendLabel = () => {
     if (props.blocked) return language.t("prompt.action.send.blocked")
@@ -124,13 +147,6 @@ export function PromptInput(props: {
     refs.overlay.scrollLeft = refs.input.scrollLeft
   }
 
-  // The key the composer is editing, so a comment change lands in the right draft entry.
-  let draft = props.draftKey
-  const replaceComments = (next: ReviewCommentEntry[]) => {
-    setComments(next)
-    saveReviewDraft(draft, next)
-  }
-
   // Switching drafts saves the text of the draft being left and restores the target draft. SessionView normally
   // remounts this component for another key; this also covers a key change without a remount.
   createEffect(
@@ -139,13 +155,15 @@ export function PromptInput(props: {
       (key) => {
         if (key === draft) return
         promptDrafts.set(draft, untrack(text))
+        keep(draft, untrack(browsers))
         saveReviewDraft(draft, untrack(comments))
         draft = key
+        setBrowsers(key ? (references.get(key) ?? []) : [])
+        setComments((key ? reviewDrafts.get(key) : undefined) ?? [])
         const value = promptDrafts.get(key)
         enhanceToken++
         preEnhance = null
         setText(value)
-        setComments((key ? reviewDrafts.get(key) : undefined) ?? [])
         if (refs.input) {
           refs.input.value = value
           refs.input.scrollTop = 0
@@ -156,6 +174,7 @@ export function PromptInput(props: {
   )
   onCleanup(() => {
     promptDrafts.set(draft, text())
+    keep(draft, browsers())
     saveReviewDraft(draft, comments())
   })
 
@@ -263,20 +282,31 @@ export function PromptInput(props: {
 
   const submit = () => {
     if (!canSend()) return
-    const body = text()
+    const draft = text()
+    const picked = browsers()
     const pending = comments()
-    const prompt = composeReviewPrompt(pending, body, pushFixes())
+    const browser = browserPrompt(draft, picked)
+    const prompt = composeReviewPrompt(pending, browser.text, pushFixes())
+    // The references and review data hold only strings, numbers and arrays, so they are prompt metadata.
+    const metadata = mergePromptMetadata(
+      browser.metadata as Record<string, JsonValue> | undefined,
+      prompt.metadata,
+    )
     // Clear the draft as soon as it is sent, so the composer is empty while the prompt is admitted. Restore it only
     // if the send fails and the user has not typed something new.
-    setText("")
-    replaceComments([])
     const restore = () => {
-      if (!text().trim()) setText(body)
-      if (comments().length === 0) replaceComments(pending)
+      if (text().trim() || browsers().length || comments().length) return
+      setText(draft)
+      setBrowsers(picked)
+      replaceComments(pending)
     }
+    setText("")
+    setBrowsers([])
+    replaceComments([])
     setSending(true)
     void props
-      .onSend(prompt.text, prompt.metadata)
+      // The references and review data hold only strings, numbers and arrays, so they are prompt metadata.
+      .onSend(prompt.text, metadata)
       .then((ok) => {
         if (ok) preEnhance = null
         else restore()
@@ -297,14 +327,6 @@ export function PromptInput(props: {
     submit()
   }
 
-  // Merges comments into the current draft and sends them at once when the composer was otherwise empty, as v1 did.
-  const appendComments = (incoming: ReviewCommentEntry[], shouldSend: boolean) => {
-    if (incoming.length === 0) return
-    const empty = !text().trim() && comments().length === 0
-    replaceComments(mergeReviewComments(comments(), incoming))
-    if (shouldSend && empty) submit()
-  }
-
   registerAppend(props.onAppendReady, (value, shouldSend) => {
     const current = text()
     enhanceToken++
@@ -314,7 +336,22 @@ export function PromptInput(props: {
     else focusInput()
   })
 
+  // Merges comments into the current draft and sends them at once when the composer was otherwise empty, as v1 did.
+  const appendComments = (incoming: ReviewCommentEntry[], shouldSend: boolean) => {
+    if (incoming.length === 0) return
+    const empty = !hasDraft()
+    replaceComments(mergeReviewComments(comments(), incoming))
+    if (shouldSend && empty) submit()
+  }
+
   registerReviewAppend(props.onReviewAppendReady, appendComments)
+
+  // A reference for another session is dropped: the browser tab can outlive the session the composer shows.
+  registerAppend<ReferenceHandler>(props.onReferenceReady, (reference) => {
+    if (props.session && reference.sessionId !== props.session) return
+    setBrowsers((current) => mergeBrowserReferences(current, reference))
+    focusInput()
+  })
 
   const shortcut = createSpeechShortcut({
     speech,
@@ -466,17 +503,26 @@ export function PromptInput(props: {
 
   return (
     <div class="prompt-input-container">
-      <Show when={comments().length > 0}>
+      <Show when={comments().length > 0 && !props.disabled}>
         <ReviewComments
           comments={comments()}
           sessionID={props.session}
-          onRemove={(id) => {
-            if (!props.disabled) replaceComments(comments().filter((item) => item.id !== id))
-          }}
-          onClear={(ids) => {
-            if (!props.disabled) replaceComments(comments().filter((item) => !ids.includes(item.id)))
-          }}
+          onRemove={(id) => replaceComments(comments().filter((item) => item.id !== id))}
+          onClear={() => replaceComments([])}
         />
+      </Show>
+      <Show when={browsers().length > 0}>
+        <div data-component="browser-references">
+          <BrowserReferences
+            references={browsers()}
+            onRemove={(id) => {
+              if (!props.disabled) setBrowsers((current) => current.filter((item) => item.id !== id))
+            }}
+            onClear={() => {
+              if (!props.disabled) setBrowsers([])
+            }}
+          />
+        </div>
       </Show>
       <div class="prompt-input-wrapper">
         <div class="prompt-input-ghost-wrapper">

@@ -1,4 +1,5 @@
 import { onCleanup } from "solid-js"
+import type { BrowserReference } from "../../../src/shared/browser-feedback"
 import type { ReviewCommentEntry } from "../../../src/shared/review-comments"
 
 export type AppendHandler = (value: string, send: boolean) => void
@@ -6,15 +7,15 @@ export type AppendHandler = (value: string, send: boolean) => void
 /** Adds review comments to the composer draft, where they show as chips instead of markdown text. */
 export type ReviewAppendHandler = (comments: ReviewCommentEntry[], send: boolean) => void
 
+/** Adds an element picked in the Integrated Browser to the composer's reference list. */
+export type ReferenceHandler = (reference: BrowserReference) => void
+
 /**
- * Hands the composer append function to its caller and clears it when the composer disposes. A caller that keeps
- * this function must not append into a composer that already unmounted.
+ * Hands a composer function to its caller and clears it when the composer disposes. A caller that keeps this
+ * function must not call it into a composer that already unmounted.
  */
-export function registerAppend(
-  report: ((append: AppendHandler | undefined) => void) | undefined,
-  append: AppendHandler,
-) {
-  report?.(append)
+export function registerAppend<T = AppendHandler>(report: ((value: T | undefined) => void) | undefined, value: T) {
+  report?.(value)
   onCleanup(() => report?.(undefined))
 }
 

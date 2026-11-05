@@ -172,4 +172,19 @@ describe("createPanelData", () => {
       dispose()
     })
   })
+
+  test("forwards shift-click so the host opens the system browser", async () => {
+    const api = OpenCode.make({ baseUrl: `http://127.0.0.1:${server.port}` })
+    await createRoot(async (dispose) => {
+      const posted: unknown[] = []
+      const panel = createPanelData({ post: (message) => posted.push(message), api })
+      panel.store(ROOT).open("https://kilo.ai/a", true)
+      panel.store(ROOT).open("https://kilo.ai/b")
+      expect(posted.filter((item) => (item as { type: string }).type === "open")).toEqual([
+        { type: "open", url: "https://kilo.ai/a", external: true },
+        { type: "open", url: "https://kilo.ai/b", external: undefined },
+      ])
+      dispose()
+    })
+  })
 })

@@ -11,8 +11,17 @@ const selectors = source("../webview-ui/src/v2/selectors.tsx")
 test("restores the composer text from the draft key and saves it on unmount", () => {
   expect(prompt).toContain("const drafts = new Map<string, string>()")
   expect(prompt).toContain("createSignal(promptDrafts.get(props.draftKey))")
-  expect(prompt).toContain("promptDrafts.set(draft, text())")
-  expect(prompt).toContain("saveReviewDraft(draft, comments())")
+  expect(prompt).toMatch(
+    /onCleanup\(\(\) => \{\s*promptDrafts\.set\(draft, text\(\)\)\s*keep\(draft, browsers\(\)\)\s*saveReviewDraft\(draft, comments\(\)\)/,
+  )
+})
+
+test("keeps browser references and review comments with the draft they belong to", () => {
+  const swap = prompt.match(/on\(\s*\(\) => props\.draftKey,([\s\S]*?)\n    \),/)?.[1]
+  expect(swap).toContain("keep(draft, untrack(browsers))")
+  expect(swap).toContain("setBrowsers(key ? (references.get(key) ?? []) : [])")
+  expect(swap).toContain("saveReviewDraft(draft, untrack(comments))")
+  expect(swap).toContain("setComments((key ? reviewDrafts.get(key) : undefined) ?? [])")
 })
 
 test("switching the draft key saves the old text and restores the new one", () => {

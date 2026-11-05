@@ -1,14 +1,14 @@
 // One session laid out like main's ChatView: task header, transcript, docks and prompt. The sidebar shows one at a
 // time; the Agent Manager shows one per selected tab, each in the store of its directory.
-import type { FileDiffInfo, ModelRef, JsonValue } from "@opencode/client"
+import type { FileDiffInfo, JsonValue, ModelRef } from "@opencode/client"
 import type { ToolActions } from "@kilocode/kilo-ui/message-part"
 import { ToolChildSessionProvider, type ToolChildSession } from "@kilocode/kilo-ui/tool-child-session"
-import { createEffect, createMemo, on, onCleanup, Show, type JSX } from "solid-js"
+import { createEffect, createMemo, on, onCleanup, onMount, Show, type JSX } from "solid-js"
 import type { ToHost } from "../../../src/protocol"
 import { getVSCodeAPI } from "../context/vscode"
 import { TaskHeader } from "../components/chat/TaskHeader"
 import { SessionDock } from "../components/chat/SessionDockWorking"
-import type { AppendHandler, ReviewAppendHandler } from "./append-ready"
+import type { AppendHandler, ReferenceHandler, ReviewAppendHandler } from "./append-ready"
 import { useV2 } from "./client"
 import { sessionMissing } from "./scope"
 import { childTools, createChildSessions } from "./child-session"
@@ -45,6 +45,8 @@ export function SessionView(props: {
   onAppendReady?: (append: AppendHandler | undefined) => void
   /** Receives the composer review-comment function, and undefined when that composer unmounts. */
   onReviewAppendReady?: (append: ReviewAppendHandler | undefined) => void
+  /** Receives the composer function that adds an Integrated Browser element reference. */
+  onReferenceReady?: (add: ReferenceHandler | undefined) => void
   /** Receives each prompt the server admitted, with the model it runs on. */
   onPrompted?: (sessionID: string, text: string, model: ModelRef | undefined) => void
   /** Forks the open session; the header shows the action when set. */
@@ -176,7 +178,7 @@ export function SessionView(props: {
     return !!id && (v2.data.session.message.list(id).length > 0 || working.submitting())
   })
 
-  const send = (text: string, metadata?: Record<string, JsonValue>) => {
+  const send = (text: string, metadata?: { [key: string]: JsonValue }) => {
     const key = draftKey()
     const id = session() ?? selection.create()
     const gate = selection.gate(id)
@@ -206,6 +208,21 @@ export function SessionView(props: {
     if (id) void v2.api.session.interrupt({ sessionID: id }).catch(v2.report)
   }
 
+  // Escape interrupts the running turn, as v1's ChatView did. A question dock, popover or selector that handles
+  // Escape first consumes the event, so this only fires for a press nothing else used. A read-only view has no
+  // composer, so it also has nothing to interrupt.
+  onMount(() => {
+    if (props.readOnly) return
+    const handler = (event: KeyboardEvent) => {
+      if (event.key !== "Escape" || event.defaultPrevented || event.isComposing) return
+      if (!running() && !working.submitting()) return
+      event.preventDefault()
+      stop()
+    }
+    document.addEventListener("keydown", handler)
+    onCleanup(() => document.removeEventListener("keydown", handler))
+  })
+
   return (
     <div class="chat-view">
       {props.tabStrip}
@@ -223,6 +240,7 @@ export function SessionView(props: {
             <MessageList
               session={session()}
               actions={props.actions}
+              selection={selection}
               onSelectSession={(id) => props.actions.openSession?.(id)}
               onShowHistory={props.onShowHistory}
               onForkMessage={running() ? undefined : props.onForkMessage}
@@ -275,6 +293,7 @@ export function SessionView(props: {
                 onStop={stop}
                 onAppendReady={props.onAppendReady}
                 onReviewAppendReady={props.onReviewAppendReady}
+                onReferenceReady={props.onReferenceReady}
                 selectors={<Selectors selection={selection} blocked={selectorsBlocked()} />}
                 autoApprove={{ enabled: autoApprove.enabled(), onToggle: autoApprove.toggle }}
               />

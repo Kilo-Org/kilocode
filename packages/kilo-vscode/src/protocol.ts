@@ -2,6 +2,15 @@
 // requests through the host (`fetch`), and the host streams each response back in order.
 import type { ReviewCommentData, ReviewCommentEntry } from "./shared/review-comments"
 
+import type { BrowserReference } from "./shared/browser-feedback"
+import type {
+  BrowserCursor,
+  BrowserFrame,
+  BrowserInteraction,
+  BrowserViewIdentity,
+  BrowserViewport,
+} from "./shared/browser-stream"
+
 export type Request = {
   type: "fetch"
   id: number
@@ -98,14 +107,94 @@ export type SpeechToTextStatus = {
 
 export type ToHost =
   | Request
+  | BrowserTab
+  | { type: "sidebar.session"; sessionId?: string }
   | { type: "abort"; id: number }
-  | { type: "open"; url: string }
+  | { type: "open"; url: string; external?: boolean }
   | Ui
   | Settings
   | Speech
   | ({ type: "openSettingsTab" } & SettingsNavigation)
   | { type: "settingsReady" }
   | { type: "settingsTabChanged"; tab: string }
+
+/**
+ * The editor-tab Integrated Browser. The tab is host-driven: it renders a browser the extension host runs, so every
+ * command and event crosses postMessage. `kind` suffixes match `BrowserControlKind` in the host.
+ */
+export type BrowserTab =
+  | { type: "browserTab.ready" }
+  | { type: "browserTab.openSettings" }
+  | { type: "browserTab.openExternal"; url: string }
+  | { type: "browserTab.reference"; sessionId: string; reference: BrowserReference }
+  | BrowserScopeMessage<"browserTab.state">
+  | BrowserScopeMessage<"browserTab.open"> & { url: string }
+  | BrowserScopeMessage<"browserTab.refresh">
+  | BrowserScopeMessage<"browserTab.back">
+  | BrowserScopeMessage<"browserTab.forward">
+  | BrowserScopeMessage<"browserTab.close">
+  | BrowserScopeMessage<"browserTab.devtools"> & { theme: "dark" | "light" }
+  | BrowserScopeMessage<"browserTab.input"> & BrowserPositionMessage & { click: boolean }
+  | BrowserScopeMessage<"browserTab.inspect"> & BrowserPositionMessage & { hover: boolean; requestId: string }
+  | BrowserScopeMessage<"browserTab.viewport"> & {
+      browserId: string
+      navigation: number
+      viewport: BrowserViewport
+    }
+  | BrowserScopeMessage<"browserTab.interact"> & { identity: BrowserViewIdentity; event: BrowserInteraction }
+  | BrowserScopeMessage<"browserTab.acknowledge"> & { identity: BrowserViewIdentity; sequence: number }
+
+export type BrowserScopeMessage<Type extends string> = {
+  type: Type
+  sessionId: string
+  projectId?: string
+}
+
+export type BrowserPositionMessage = { x: number; y: number; width: number; height: number }
+
+/** The fields every browser state message carries, so a new field reaches the tab as well as the panel. */
+export type BrowserStatePayload = BrowserScopeMessage<"browserTab.state"> & {
+  browserId: string
+  navigation?: number
+  status: "starting" | "ready" | "loading" | "error" | "closed"
+  inspecting?: boolean
+  url?: string
+  title?: string
+  errors: number
+  logs?: string[]
+  error?: string
+  missing?: "chrome" | "chromium"
+  frameError?: string
+  back?: boolean
+  forward?: boolean
+}
+
+export type BrowserElementPayload = {
+  tag: string
+  id?: string
+  classes?: string
+  text?: string
+  selector?: string
+  rect?: { x: number; y: number; width: number; height: number }
+  hierarchy?: string[]
+  html?: string
+  styles?: { color?: string; backgroundColor?: string }
+  source?: { file: string; line?: number; column?: number }
+}
+
+export type BrowserInspectionPayload = BrowserScopeMessage<"browserTab.inspection"> & {
+  requestId: string
+  url?: string
+  title?: string
+  element?: BrowserElementPayload
+  logs: string[]
+  hover?: boolean
+  error?: string
+}
+
+export type BrowserFramePayload = BrowserScopeMessage<"browserTab.frame"> & BrowserFrame
+export type BrowserCursorPayload = BrowserScopeMessage<"browserTab.cursor"> & BrowserCursor
+export type BrowserDevtoolsPayload = BrowserScopeMessage<"browserTab.devtools"> & { browserId: string; url: string }
 
 /** Voice input: the host owns the microphone, the custom endpoint and the Gateway RPC. */
 export type Speech =
@@ -123,6 +212,9 @@ export type Ui =
   | { type: "persistModelSelectorExpanded"; value: boolean }
   | { type: "requestAutoApproveState" }
   | { type: "persistAutoApproveState"; value: boolean }
+  | { type: "requestDismissedNotifications" }
+  | { type: "dismissNotification"; notificationId: string }
+  | { type: "syncDismissedNotifications"; ids: string[] }
   | { type: "trackCostSession"; sessionID: string }
   | { type: "webviewFocusChanged"; focused: boolean }
   | { type: "setLanguage"; locale: string }
@@ -137,6 +229,16 @@ export type Ui =
   | { type: "openChanges"; sessionID?: string; turnID?: string }
   /** Asks for the working tree change counts of the Changes button. The host answers with `gitChangesStats`. */
   | { type: "requestGitChangesStats" }
+
+/** Browser replies. The tab frame and cursor carry the stream, the rest carry state or inspection results. */
+export type BrowserOut =
+  | BrowserScopeMessage<"browserTab.scope"> & { browserAutomation: boolean }
+  | BrowserStatePayload
+  | BrowserFramePayload
+  | BrowserCursorPayload
+  | BrowserInspectionPayload
+  | BrowserDevtoolsPayload
+  | { type: "browserReference"; reference: BrowserReference }
 
 /** Settings panel messages the host handles directly (it reads and writes the config files). */
 export type Settings =
@@ -208,6 +310,7 @@ export type FetchCustomProviderModels = {
 }
 
 export type ToWebview =
+  | BrowserOut
   | { type: "response"; id: number; status: number; statusText: string; headers: [string, string][] }
   | { type: "chunk"; id: number; data: Uint8Array }
   | { type: "end"; id: number }
@@ -228,6 +331,7 @@ export type ToWebview =
   | { type: "clipboardWriteResult"; id: string; ok: boolean; error?: string }
   | { type: "modelSelectorExpandedLoaded"; value: boolean }
   | { type: "autoApproveStateLoaded"; value: boolean }
+  | { type: "dismissedNotificationsLoaded"; ids: string[] }
   | { type: "webviewActiveChanged"; active: boolean }
   | { type: "validateFilesResult"; id: string; existing: string[] }
   | { type: "appendReviewComments"; comments: ReviewCommentEntry[]; autoSend: boolean }

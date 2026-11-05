@@ -52,6 +52,21 @@ test("syncs the next release with a merge commit and keeps deleted workflows del
   expect(await r.git("status", "--porcelain")).toBe("")
 })
 
+test("removes upstream files under a dropped package when the merge is clean", async () => {
+  await using r = await fixture()
+  await r.write("packages/session-ui/src/new-machine.ts", "export const machine = 1\n")
+  await r.release("v2.0.27", "2026-10-12T00:00:00Z")
+  await linkUpstream(r)
+  await r.git("switch", "-q", "-c", "sync-v2-0-27", "v2")
+
+  const result = await run(r)
+  expect(result.code).toBe(0)
+  expect(result.output).toContain("Removed 1 skipped file(s)")
+  expect(await Bun.file(path.join(r.dir, "packages/session-ui/src/new-machine.ts")).exists()).toBe(false)
+  expect(await r.git("show", "--name-only", "--format=", "HEAD")).not.toContain("session-ui")
+  expect(await r.git("status", "--porcelain")).toBe("")
+})
+
 test("stops for a new upstream workflow and a code conflict, with the merge in progress", async () => {
   await using r = await fixture()
   await r.write(".github/workflows/upstream-new.yml", "name: upstream-new\n")

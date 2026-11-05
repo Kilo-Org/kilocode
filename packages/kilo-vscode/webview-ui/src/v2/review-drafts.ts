@@ -17,6 +17,20 @@ export function mergeReviewComments(current: ReviewCommentEntry[], incoming: Rev
 }
 
 /**
+ * Adds the review data to metadata that already carries other composer data, such as browser references. Both
+ * producers write under `kilo`, so the two keys must merge instead of replacing each other.
+ */
+export function mergePromptMetadata(
+  base: Record<string, JsonValue> | undefined,
+  review: Record<string, JsonValue> | undefined,
+) {
+  if (!base || !review) return review ?? base
+  const kilo = (value: JsonValue | undefined) =>
+    value && typeof value === "object" && !Array.isArray(value) ? value : {}
+  return { ...base, ...review, kilo: { ...kilo(base.kilo), ...kilo(review.kilo) } }
+}
+
+/**
  * The text and metadata of one send. The review markdown prefix stays in the text, as v1 sent it, and the metadata
  * lets the transcript strip that prefix again. `push` is the `agentManager.pushFixes` setting; the user's own text
  * comes last so it can override the default push behavior.

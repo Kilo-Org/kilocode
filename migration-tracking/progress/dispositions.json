@@ -978,6 +978,16 @@
     "note": "packages/kilo-plugin/test/todo-tool.test.ts asserts the v1 description phrases on the Kilo todowrite tool, and the Kilo host registers that tool unconditionally through KiloPlugins.",
     "by": "composer-todos"
   },
+  "module:packages/opencode/src/kilocode/tool/browser-open.ts": {
+    "state": "ported",
+    "note": "packages/kilo-plugin/src/browser/index.ts KiloBrowserToolPlugin registers the browser_open tool on the ToolEditor when the extension host passes KILO_BROWSER_BROKER_URL and KILO_BROWSER_BROKER_TOKEN to the v2 server. The tool keeps the v1 URL policy (public HTTPS, loopback HTTP, 0.0.0.0 as localhost, no credentials), asks the browser_open permission with navigate:<origin> resources, and POSTs to the host broker at /browser/open. packages/kilo-plugin/test/browser.test.ts covers the endpoint guard, destination policy, request shape and broker error text.",
+    "by": "am-browser"
+  },
+  "module:packages/opencode/src/kilocode/tool/browser-open.txt": {
+    "state": "ported",
+    "note": "packages/kilo-plugin/src/browser/browser-open.txt, loaded by the browser_open tool description. The panel wording now names the sidebar Integrated Browser as well as the Agent Manager panel, and states that the tool shows a page instead of clicking.",
+    "by": "am-browser"
+  },
   "module:packages/opencode/src/kilocode/agent-manager/protocol.ts": {
     "state": "ported",
     "v2": "packages/schema/src/kilocode/agent-manager.ts",
@@ -1294,5 +1304,17 @@
     "v2": "packages/kilo-vscode/test/agent-project-messages.test.ts",
     "note": "The state router is carried by packages/kilo-vscode/webview-ui/agent-manager/project/{state,state-handlers,store}.ts and the host project messages. packages/kilo-vscode/test/agent-project-messages.test.ts covers deferred state, activation and the no-catalog mode.",
     "by": "am-progress-map"
+  },
+  "module:packages/kilo-vscode/src/kilo-provider/notifications.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-vscode/src/notifications.ts",
+    "note": "The list now comes from the kilocode.gateway notifications RPC in the webview provider (packages/kilo-vscode/webview-ui/src/context/notifications.tsx) and the showIn filter is packages/kilo-vscode/webview-ui/src/v2/notification-list.ts. The host state is packages/kilo-vscode/src/notifications.ts: it keeps the dismissed IDs, performs an atomic read-modify-write across the Close loop, prunes IDs the Gateway stopped sending, and packages/kilo-vscode/src/chat.ts broadcasts the result to every view. The v1 synthetic local notices (opencode config migration and Claude migration) are separate features and are not part of this cell.",
+    "by": "better-promise"
+  },
+  "module:packages/kilo-vscode/tests/unit/kilo-provider-notifications.test.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-vscode/test/notifications.test.ts",
+    "note": "Covers the showIn filter with dismissed IDs, the Gateway model name shown by the Try model action, and the host state in packages/kilo-vscode/src/notifications.ts: request, idempotent dismiss, pruning against the active list, and a Close loop that dismisses several IDs in one tick. The host-side pass-through of synthetic local notices is not carried with this cell; those notices belong to the config and Claude migration features.",
+    "by": "better-promise"
   }
 }
