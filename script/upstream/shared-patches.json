@@ -1,9 +1,9 @@
 {
   "$comment": "Shared-patch baseline (U-L3-01). Read by script/check-shared-patches.ts and script/check-opencode-annotations.ts. Each shared upstream file that Kilo adds or changes needs an entry: rung (3 = seam patch, 4 = feature patch) and the missing seam. `unmarked` allows lines without markers and states why. Raise a limit only in the PR that adds the patch, and lower it when a patch goes away.",
   "limits": {
-    "files": 93,
+    "files": 94,
     "markedLines": 1583,
-    "unmarkedLines": 277,
+    "unmarkedLines": 312,
     "deletedFiles": 0
   },
   "files": {
@@ -391,6 +391,11 @@
     "packages/patchmark/test/slow-inputs.test.ts": {
       "rung": 4,
       "seam": "Kilo CI stability: the 1 MB one-char-at-a-time streaming test keeps its deterministic scan-work assertion, but the wall-clock timeout in the same test is upstream's default, and Windows CI runners crossed it at ~18 s against a 15 s ceiling. The input is reduced to 256 KB, which keeps the identical constant-work-per-character bound, and the timeout is raised to 60 s as a guard for catastrophic regressions only. No seam: bun's per-test timeout and the payload size are inside an upstream test file, and the test suite belongs to the upstream package that Kilo cannot replace (inline patch, option 4)."
+    },
+    "patches/zod@4.6.7.patch": {
+      "rung": 4,
+      "seam": "zod 4.6's `flattenRef` reads `ctx.seen.get(schema).ref` unguarded, but `processSchema` registers a schema's `parent` only in the branch it skips when the schema carries a custom `toJSONSchema` override. A field with both a refinement and an override is absent from `seen` while flattening still recurses into it, so `Tool.definition` threw `TypeError: undefined is not an object (evaluating 'seen.ref')` and every prompt that built tool schemas failed. The sibling lookup three lines below already guards the same map with `?.`. Patching keeps the security-motivated 4.1.8 to 4.6 upgrade instead of pinning back. No lower rung: the fault is inside zod's shipped converter, which no host or plugin hook replaces, and the conversion result is consumed before any Kilo module sees it.",
+      "unmarked": "A patch file is applied verbatim; a marker inside the diff would change the patched source."
     }
   }
 }
