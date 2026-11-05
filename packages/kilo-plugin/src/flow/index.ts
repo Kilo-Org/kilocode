@@ -940,15 +940,8 @@ function complete(
   if (event.type === "session.execution.succeeded" && background.has(event.data.sessionID)) return Effect.void
   return Effect.gen(function* () {
     const session = yield* ctx.session.get({ sessionID: event.data.sessionID })
-    const metadata = Option.getOrUndefined(decodeMetadata(session.metadata?.[metadataKey]))
-    if (!metadata) return
-    yield* flowLock(runtime, metadata.flowID).withPermit(
+    yield* withStoredRun(ctx, runtime, session, (stored) =>
       Effect.gen(function* () {
-        const stored = Option.getOrUndefined(
-          decodeRun(yield* ctx.storage.get(runKey({ flowID: metadata.flowID, id: metadata.runID }))),
-        )
-        if (!stored || stored.sessionID !== session.id) return
-        if (stored.status !== "starting" && stored.status !== "running") return
         const completed = event.created
         const status =
           event.type === "session.execution.succeeded"
@@ -978,6 +971,27 @@ function complete(
 function permissionFailed(ctx: Plugin.Context, runtime: Runtime, sessionID: Session.ID, tool: string, message: string) {
   return Effect.gen(function* () {
     const session = yield* ctx.session.get({ sessionID })
+    yield* withStoredRun(ctx, runtime, session, (stored) =>
+      persistRun(ctx, {
+        ...stored,
+        error: `Flow permission policy blocked ${tool}: ${message}`,
+        time: { ...stored.time, updated: Date.now() },
+      }),
+    )
+  }).pipe(
+    Effect.catchCause((cause) =>
+      Effect.logWarning("failed to record Flow permission error", { sessionID, tool, cause }),
+    ),
+  )
+}
+
+function withStoredRun(
+  ctx: Plugin.Context,
+  runtime: Runtime,
+  session: Session.Info,
+  update: (run: KiloFlowRpc.Run) => Effect.Effect<void>,
+) {
+  return Effect.gen(function* () {
     const metadata = Option.getOrUndefined(decodeMetadata(session.metadata?.[metadataKey]))
     if (!metadata) return
     yield* flowLock(runtime, metadata.flowID).withPermit(
@@ -987,18 +1001,10 @@ function permissionFailed(ctx: Plugin.Context, runtime: Runtime, sessionID: Sess
         )
         if (!stored || stored.sessionID !== session.id) return
         if (stored.status !== "starting" && stored.status !== "running") return
-        yield* persistRun(ctx, {
-          ...stored,
-          error: `Flow permission policy blocked ${tool}: ${message}`,
-          time: { ...stored.time, updated: Date.now() },
-        })
+        yield* update(stored)
       }),
     )
-  }).pipe(
-    Effect.catchCause((cause) =>
-      Effect.logWarning("failed to record Flow permission error", { sessionID, tool, cause }),
-    ),
-  )
+  })
 }
 
 function runKey(run: Pick<KiloFlowRpc.Run, "flowID" | "id">) {
