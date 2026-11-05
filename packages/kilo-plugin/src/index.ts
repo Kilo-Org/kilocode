@@ -18,6 +18,8 @@ import { KiloPrivacyPlugin } from "./privacy"
 import { KiloSkillPlugin } from "./skill"
 import { KiloTodoPlugin } from "./todo"
 import { KiloWriteToolPlugin } from "./tool-write"
+// kilo_port(notebook:91a426486dc8) v1 registered the notebook tools and service from the shared server.
+import { KiloNotebookPlugin } from "./notebook"
 import { KiloReview } from "./review"
 // kilo_port(agent-manager:648a508ad347) the protection guard now lives in the Agent Manager plugin.
 import { KiloAgentManagerPlugin } from "./agent-manager"
@@ -47,6 +49,7 @@ export const KiloPlugins = [
   KiloSkillPlugin,
   KiloTodoPlugin,
   KiloWriteToolPlugin,
+  KiloNotebookPlugin,
   KiloCommitMessagePlugin,
   KiloPrivacyPlugin,
   KiloBranchNamePlugin,
