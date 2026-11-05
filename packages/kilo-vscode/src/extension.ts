@@ -42,6 +42,7 @@ import {
   registerCodeActions,
   registerTerminalActions,
 } from "./services/code-actions"
+import { NotebookBroker, notebookToolsEnabled } from "./services/notebook"
 import { profile } from "./profile-panel"
 import { settings } from "./settings-panel"
 import { createShutdown } from "./shutdown"
@@ -96,6 +97,21 @@ export function activate(context: ExtensionContext) {
     },
   })
   alerts.setLimit(readKiloSettings().maxCost)
+  let agentManagerRef: AgentManagerProvider | undefined
+  // The notebook tools ask this host to change the live editor state. The broker serves them over loopback with a
+  // per-run token, so the server enables the tools only while this host passes the endpoint.
+  const notebooks = new NotebookBroker({
+    directories: () => [
+      ...(workspace.workspaceFolders ?? []).map((folder) => folder.uri.fsPath),
+      ...(agentManagerRef
+        ? [...agentManagerRef.contexts.values()].flatMap((project) => [
+            project.root,
+            ...(project.peekState()?.getWorktrees().map((worktree) => worktree.path) ?? []),
+          ])
+        : []),
+    ],
+    log: (text) => output.appendLine(`Notebook: ${text}`),
+  })
 
   void migrateIntegratedBrowserUseSystemChrome().catch((error: unknown) =>
     output.appendLine(`Integrated Browser Chrome preference migration failed: ${String(error)}`),
@@ -116,8 +132,8 @@ export function activate(context: ExtensionContext) {
     { dispose: () => broker.dispose() },
   )
 
-  // Read at each start, so a settings change applies to the next server. The broker endpoint is set only while the
-  // Integrated Browser is enabled, so a session sees the browser_open tool exactly when the feature is on.
+  // Read at each start, so a settings change applies to the next server. Each broker endpoint is set only while the
+  // feature is enabled, so a session sees each tool exactly when the feature is on.
   const serverSettings = async () => {
     const values = readKiloSettings()
     const browser =
@@ -127,12 +143,19 @@ export function activate(context: ExtensionContext) {
             return {}
           })
         : {}
+    const notebook = notebookToolsEnabled()
+      ? await notebooks.env().catch((error: unknown) => {
+          output.appendLine(`Notebook broker failed: ${String(error)}`)
+          return {}
+        })
+      : {}
     return {
       ...settingsEnvironment({
         claudeCodeCompat: values.claudeCodeCompat === true,
         extraCaCerts: typeof values.extraCaCerts === "string" ? values.extraCaCerts : "",
       }),
       ...browser,
+      ...notebook,
     }
   }
   const shutdown = createShutdown({ log: (text) => output.appendLine(text) })
@@ -199,7 +222,6 @@ export function activate(context: ExtensionContext) {
   // The Agent Manager binds first and skips the session the sidebar is showing and sessions with an open editor tab,
   // so a sidebar session opens the editor tab even when the panel has the same directory open.
   const agentHost = new VscodeHost(context, { server, directory })
-  let agentManagerRef: AgentManagerProvider | undefined
   const agentPanel = createPanel({
     context,
     server,
@@ -293,6 +315,7 @@ export function activate(context: ExtensionContext) {
 
   context.subscriptions.push(
     output,
+    { dispose: () => void notebooks.dispose() },
     { dispose: () => diffs.dispose() },
     workspace.registerTextDocumentContentProvider(diffs.scheme, diffs.provider),
     window.registerWebviewViewProvider("kilo-code.v2.chat", view.provider, {
@@ -356,7 +379,8 @@ export function activate(context: ExtensionContext) {
       if (
         event.affectsConfiguration("kilo-code.v2.claudeCodeCompat") ||
         event.affectsConfiguration("kilo-code.v2.extraCaCerts") ||
-        event.affectsConfiguration("kilo-code.v2.integratedBrowser")
+        event.affectsConfiguration("kilo-code.v2.integratedBrowser") ||
+        event.affectsConfiguration("kilo-code.v2.experimental.nativeNotebookTools")
       )
         void server.stop()
       if (event.affectsConfiguration("kilo-code.v2.integratedBrowser")) agentManager.browserAutomationChanged()
