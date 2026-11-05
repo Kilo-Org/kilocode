@@ -1,6 +1,8 @@
 package ai.kilocode.backend.run
 
+import ai.kilocode.backend.repo.RepoRoots
 import ai.kilocode.backend.rpc.readWorktreeState
+import ai.kilocode.backend.rpc.worktreeStateFile
 import ai.kilocode.log.KiloLog
 import ai.kilocode.rpc.dto.RunConfigDto
 import ai.kilocode.rpc.dto.RunConfigListDto
@@ -719,7 +721,8 @@ class WorktreeRunManager internal constructor(
 
     /** Worktree label for the clone name: stored display name, else the directory basename. */
     private suspend fun label(repo: String, worktree: String): String = withContext(Dispatchers.IO) {
-        val store = Path.of(repo).normalize().resolve(".kilo").resolve("worktree-names.json")
+        val dir = Path.of(repo).normalize()
+        val store = worktreeStateFile(RepoRoots.resolve(dir) ?: dir)
         val named = readWorktreeState(store).names[worktree]?.trim()
         if (!named.isNullOrEmpty()) return@withContext named
         worktree.trimEnd('/').substringAfterLast('/').ifBlank { worktree }

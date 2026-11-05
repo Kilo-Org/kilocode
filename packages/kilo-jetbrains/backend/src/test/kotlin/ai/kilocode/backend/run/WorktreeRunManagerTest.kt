@@ -1,5 +1,6 @@
 package ai.kilocode.backend.run
 
+import ai.kilocode.backend.rpc.worktreeStateFile
 import ai.kilocode.backend.testing.PlainApplicationConfig
 import ai.kilocode.backend.testing.ConfigTypes
 import ai.kilocode.backend.testing.PlainApplicationType
@@ -759,7 +760,7 @@ class WorktreeRunManagerTest : BasePlatformTestCase() {
         val settings = add(type, "dev")
         val repo = requireNotNull(project.basePath)
         val wt = "$repo/.kilo/worktrees/feature"
-        val store = Path.of(repo).resolve(".kilo").resolve("worktree-names.json")
+        val store = worktreeStateFile(Path.of(repo))
         Files.createDirectories(store.parent)
         Files.writeString(store, """{"names":{"$wt":"My Feature"}}""")
         try {
