@@ -18,6 +18,7 @@ import {
 import { applyPinnedTabs, reorderPinnedTabs, togglePinnedTab } from "../utils/tab-order"
 import { useV2 } from "./client"
 import { promptDrafts } from "./prompt"
+import { attachmentDrafts, pasteDrafts } from "./prompt-attachments"
 import { sessionMissing } from "./scope"
 
 interface StoredTabs extends Record<string, unknown> {
@@ -104,10 +105,17 @@ export function createLocalTabs(): LocalTabsValue {
     return id
   }
 
+  // Pending ids are one-shot, so their drafts, attachments and paste backing would never be reused.
+  const clearDraft = (id: string) => {
+    promptDrafts.set(id, "")
+    attachmentDrafts.set(id, [])
+    pasteDrafts.set(id, [])
+  }
+
   const dropDraft = (id: string) => {
     if (!isPendingTab(id)) return
     // The composer unmounts after this, and its cleanup writes the draft back. Clear it after that write.
-    queueMicrotask(() => promptDrafts.set(id, ""))
+    queueMicrotask(() => clearDraft(id))
   }
 
   const close = (id: string) => {
@@ -149,7 +157,7 @@ export function createLocalTabs(): LocalTabsValue {
     if (isPendingTab(draftKey)) {
       const next = replacePendingTab(current(), draftKey, id)
       apply(next)
-      promptDrafts.set(draftKey, "")
+      clearDraft(draftKey)
       return
     }
     if (!ids().includes(id)) open(id)

@@ -1300,6 +1300,18 @@
     "note": "The state router is carried by packages/kilo-vscode/webview-ui/agent-manager/project/{state,state-handlers,store}.ts and the host project messages. packages/kilo-vscode/test/agent-project-messages.test.ts covers deferred state, activation and the no-catalog mode.",
     "by": "am-progress-map"
   },
+  "module:packages/kilo-vscode/src/shared/code-context.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-vscode/webview-ui/src/v2/prompt-attachments.ts",
+    "note": "Editor selections are now prompt file attachments (PromptAttachment in src/protocol.ts). mergeAttachments replaces mergeCodeContexts with dedupe on kind, uri, name and source path; codeContextLabel becomes the attachment name built by src/services/code-actions/attachments.ts; formatCodeContexts is not needed because the server reads the attachment and sends it to the model as an attached file.",
+    "by": "context-actions"
+  },
+  "module:packages/kilo-vscode/tests/unit/code-context.test.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-vscode/test/prompt-attachments.test.ts",
+    "note": "Merge and dedupe assertions are carried by prompt-attachments.test.ts; label assertions by code-action-attachments.test.ts. The format assertions are dropped with formatCodeContexts (attachments replace inline code blocks).",
+    "by": "context-actions"
+  },
   "module:packages/opencode/src/kilocode/tool/read-docx.ts": {
     "state": "ported",
     "v2": "packages/kilo-plugin/src/read/read-docx.ts",
