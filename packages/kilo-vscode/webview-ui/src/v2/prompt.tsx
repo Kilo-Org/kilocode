@@ -26,6 +26,7 @@ import { message, useV2 } from "./client"
 import { cleanEnhancedPrompt, enhancePromptRequest, normalizeEnhancePromptErrorMessage } from "./enhance-prompt"
 import { insertSpacedText } from "./prompt-speech"
 import { PromptOverflow, type OverflowItem } from "./prompt-overflow"
+import { sendMode, sendShortcuts, type SendMode } from "./pending-actions"
 
 // Drafts live outside the component so a composer remounted for another session restores its own text, as v1 did.
 // The key is the session id, or the pending tab id before a first prompt creates the session.
@@ -57,8 +58,11 @@ export function PromptInput(props: {
   blocked?: boolean
   /** A pending question tool call. The composer waits for an answer, so Send replaces Stop. */
   questioning?: boolean
-  /** Sends the composed text. `metadata` carries the structured browser references the text also describes. */
-  onSend: (text: string, metadata?: { [key: string]: JsonValue }) => Promise<boolean>
+  /**
+   * Sends the composed text. While the agent runs, `mode` chooses between steering, queueing and stopping to send now.
+   * `metadata` carries the structured browser references the text also describes.
+   */
+  onSend: (text: string, mode: SendMode, metadata?: { [key: string]: JsonValue }) => Promise<boolean>
   onStop: () => void
   /** Agent, model and variant controls, before the actions as in main's PromptInput. */
   selectors?: JSX.Element
@@ -107,9 +111,14 @@ export function PromptInput(props: {
     if (speech.state() === "recording") return language.t("prompt.action.send.recording")
     return language.t("prompt.action.send")
   }
+  // The tooltip names the busy-send shortcuts. The accessible name stays "Send".
+  const sendHint = () =>
+    props.running && !props.blocked && speech.state() !== "recording"
+      ? language.t("prompt.action.send.running", sendShortcuts())
+      : sendLabel()
   // Stop replaces Send while the agent runs and the draft is empty. Typing during a run turns it back into Send,
-  // whose prompt queues behind the running turn. A pending question is not running work. Stop is not shown while the
-  // prompt is still being admitted, because an unadmitted prompt has no execution for Stop to interrupt.
+  // whose prompt steers the running turn at its next step. A pending question is not running work. Stop is not shown
+  // while the prompt is still being admitted, because an unadmitted prompt has no execution for Stop to interrupt.
   const showStop = () =>
     props.running && !text().trim() && !browsers().length && !props.questioning && speech.state() !== "recording"
 
@@ -250,7 +259,7 @@ export function PromptInput(props: {
     })
   }
 
-  const submit = () => {
+  const submit = (mode: SendMode = "steer") => {
     if (!canSend()) return
     const draft = text()
     const picked = browsers()
@@ -267,7 +276,7 @@ export function PromptInput(props: {
     setSending(true)
     void props
       // The references hold only strings, numbers and arrays, so they are the JSON the prompt metadata requires.
-      .onSend(prompt.text, prompt.metadata as { [key: string]: JsonValue } | undefined)
+      .onSend(prompt.text, mode, prompt.metadata as { [key: string]: JsonValue } | undefined)
       .then((ok) => {
         if (ok) preEnhance = null
         else restore()
@@ -279,14 +288,15 @@ export function PromptInput(props: {
       .finally(() => setSending(false))
   }
 
-  const send = () => {
+  const send = (mode: SendMode = "steer") => {
     if (!canSend()) return
     if (speech.state() === "recording") {
       transcribeAndSend()
       return
     }
-    submit()
+    submit(mode)
   }
+  const queue = () => send("queue")
 
   registerAppend(props.onAppendReady, (value, shouldSend) => {
     const current = text()
@@ -497,7 +507,7 @@ export function PromptInput(props: {
               if (undoEnhance(e)) return
               if (!isEnterKeyCommitNotIme(e) || e.shiftKey) return
               e.preventDefault()
-              send()
+              send(sendMode(e, props.running))
             }}
             onKeyUp={(e) => {
               speechUp(e)
@@ -553,15 +563,31 @@ export function PromptInput(props: {
             <Show when={canUseSpeech()}>
               <SpeechToTextButton speech={speech} disabled={props.disabled} start={startSpeech} label={language.t} />
             </Show>
+            <Show when={props.running && (!!text().trim() || browsers().length > 0)}>
+              <Tooltip
+                value={language.t("prompt.action.queue", { key: sendShortcuts().queue })}
+                placement="top"
+                openDelay={0}
+              >
+                <IconButton
+                  icon="clock"
+                  variant="ghost"
+                  size="small"
+                  onClick={queue}
+                  disabled={!canSend() || speech.state() === "recording"}
+                  aria-label={language.t("prompt.action.queue", { key: sendShortcuts().queue })}
+                />
+              </Tooltip>
+            </Show>
             <Show
               when={showStop()}
               fallback={
-                <Tooltip value={sendLabel()} placement="top" openDelay={0}>
+                <Tooltip value={sendHint()} placement="top" openDelay={0}>
                   <IconButton
                     icon="send"
                     variant="ghost"
                     size="small"
-                    onClick={send}
+                    onClick={() => send()}
                     disabled={!canSend()}
                     aria-label={sendLabel()}
                   />

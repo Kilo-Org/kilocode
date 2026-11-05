@@ -19,6 +19,8 @@ import { QuestionDock } from "./question"
 import { createSelection, Selectors } from "./selectors"
 import { createAutoApprove } from "./auto-approve"
 import { createWorking } from "./working"
+import { createPending } from "./pending"
+import type { SendMode } from "./pending-actions"
 
 export function SessionView(props: {
   session: string | undefined
@@ -172,6 +174,14 @@ export function SessionView(props: {
     })
   const working = createWorking(session)
   let scrollToBottom: (() => void) | undefined
+  // The open composer's append function. Edit takes a pending prompt back into it.
+  let composer: AppendHandler | undefined
+  const pending = createPending({
+    session,
+    readOnly: () => !!props.readOnly,
+    running,
+    edit: (text) => composer?.(text, false),
+  })
   // Counts the in-flight first message too, so the dock reserves the same row on the very first send, as on main.
   // A memo, so the actions row rebuilds only when this flips.
   const hasMessages = createMemo(() => {
@@ -179,21 +189,25 @@ export function SessionView(props: {
     return !!id && (v2.data.session.message.list(id).length > 0 || working.submitting())
   })
 
-  const send = (text: string, metadata?: { [key: string]: JsonValue }) => {
+  const send = async (text: string, mode: SendMode = "steer", metadata?: { [key: string]: JsonValue }) => {
     const key = draftKey()
     const id = session() ?? selection.create()
     const gate = selection.gate(id)
     // A prompt with a pending switch waits for it, so the attribution has to be read after that switch settles.
     // Without one the selection is current, and it must be read before onSession changes the session identity.
     const model = gate ? undefined : selection.model()
-    // A pending question is dismissed when the user sends instead, as in v1.
-    const pending = forms()
+    // A pending question is dismissed when the user sends instead.
+    const questions = forms()
     props.onSession(id, key)
-    for (const form of pending) {
+    for (const form of questions) {
       void v2.data.session.form.cancel({ sessionID: form.sessionID, formID: form.id }).catch(() => undefined)
     }
+    // Stop before admitting: if the prompt were admitted first, the run could start answering it at a step boundary
+    // and the stop would then end that answer. A failed stop still sends the prompt as a steer.
+    if (mode === "now" && running())
+      await v2.api.session.interrupt({ sessionID: id, resume: true }).catch((err: unknown) => v2.report(err))
     return v2.data.session
-      .prompt({ sessionID: id, text, gate, metadata })
+      .prompt({ sessionID: id, text, gate, metadata, delivery: mode === "queue" ? "queue" : "steer" })
       .then(() => {
         props.onPrompted?.(id, text, gate ? selection.attributed(id) : model)
         return true
@@ -251,6 +265,7 @@ export function SessionView(props: {
                   empty={props.empty}
                   onScrollToBottomReady={(fn) => (scrollToBottom = fn)}
                   onViewTurnChanges={props.onViewTurnChanges}
+                  pending={pending}
                 />
               }
             >
@@ -299,7 +314,10 @@ export function SessionView(props: {
                 questioning={questioning()}
                 onSend={send}
                 onStop={stop}
-                onAppendReady={props.onAppendReady}
+                onAppendReady={(append) => {
+                  composer = append
+                  props.onAppendReady?.(append)
+                }}
                 onReferenceReady={props.onReferenceReady}
                 selectors={<Selectors selection={selection} blocked={selectorsBlocked()} />}
                 autoApprove={{ enabled: autoApprove.enabled(), onToggle: autoApprove.toggle }}

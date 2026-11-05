@@ -1776,6 +1776,21 @@ ToolRegistry.register({
   },
 })
 
+/** One control of a pending user message, for example to queue, steer or delete it. */
+export type UserMessagePendingAction = {
+  key: string
+  icon: IconProps["name"]
+  label: string
+  onClick: () => void
+  disabled?: boolean
+}
+
+/** Input the server admitted but has not delivered to the model yet. */
+export type UserMessagePending = {
+  status: string
+  actions: readonly UserMessagePendingAction[]
+}
+
 export function UserMessageDisplay(props: {
   message: SessionMessageUser
   copyLabel?: string
@@ -1785,6 +1800,8 @@ export function UserMessageDisplay(props: {
   header?: JSX.Element
   /** Shows a fork action beside Copy, for surfaces that can fork the session from this message. */
   onFork?: () => void
+  /** Dims the message and shows its delivery status and controls in place of the time, fork and copy actions. */
+  pending?: UserMessagePending
 }) {
   const i18n = useI18n()
   const clipboard = useClipboard()
@@ -1807,6 +1824,7 @@ export function UserMessageDisplay(props: {
               <div
                 data-slot="user-message-attachment"
                 data-type={file.mime.startsWith("image/") ? "image" : "file"}
+                data-queued={props.pending ? "" : undefined}
                 onClick={() => {
                   const uri = attachmentUri(file)
                   if (file.mime.startsWith("image/") && uri)
@@ -1841,18 +1859,50 @@ export function UserMessageDisplay(props: {
         <div data-slot="user-message-body">
           {props.header}
           <Show when={props.message.text}>
-            <div data-slot="user-message-text" dir="auto">
+            <div data-slot="user-message-text" dir="auto" data-queued={props.pending ? "" : undefined}>
               {props.message.text}
             </div>
           </Show>
         </div>
-        <div data-slot="user-message-copy-wrapper">
-          <span data-slot="user-message-meta-wrap">
-            <span data-slot="user-message-meta-tail" class="text-12-regular text-text-weak cursor-default">
-              {stamp()}
-            </span>
-          </span>
-          <Show when={props.onFork}>
+        {/* Pending controls live in the reserved action row, so delivery swaps content without a height change. */}
+        <div data-slot="user-message-copy-wrapper" data-queued={props.pending ? "" : undefined}>
+          <Show
+            when={props.pending}
+            fallback={
+              <span data-slot="user-message-meta-wrap">
+                <span data-slot="user-message-meta-tail" class="text-12-regular text-text-weak cursor-default">
+                  {stamp()}
+                </span>
+              </span>
+            }
+          >
+            {(pending) => (
+              <div data-slot="user-message-queued-indicator">
+                <TextShimmer text={pending().status} />
+                <For each={pending().actions}>
+                  {(action) => (
+                    <Tooltip value={action.label} placement="top" gutter={4}>
+                      <IconButton
+                        data-slot="user-message-pending-action"
+                        data-action={action.key}
+                        icon={action.icon}
+                        size="normal"
+                        variant="ghost"
+                        disabled={action.disabled}
+                        onMouseDown={(event) => event.preventDefault()}
+                        onClick={(event) => {
+                          event.stopPropagation()
+                          action.onClick()
+                        }}
+                        aria-label={action.label}
+                      />
+                    </Tooltip>
+                  )}
+                </For>
+              </div>
+            )}
+          </Show>
+          <Show when={props.onFork && !props.pending}>
             <Tooltip value={i18n.t("ui.message.forkMessage")} placement="right" gutter={4}>
               <IconButton
                 icon="fork"
@@ -1867,22 +1917,24 @@ export function UserMessageDisplay(props: {
               />
             </Tooltip>
           </Show>
-          <Tooltip
-            value={copied() ? i18n.t("ui.message.copied") : (props.copyLabel ?? i18n.t("ui.message.copyMessage"))}
-            placement="right"
-            gutter={4}
-          >
-            <IconButton
-              icon={copied() ? "check" : "copy"}
-              size="normal"
-              variant="ghost"
-              onMouseDown={(event) => event.preventDefault()}
-              onClick={copy}
-              aria-label={
-                copied() ? i18n.t("ui.message.copied") : (props.copyLabel ?? i18n.t("ui.message.copyMessage"))
-              }
-            />
-          </Tooltip>
+          <Show when={!props.pending}>
+            <Tooltip
+              value={copied() ? i18n.t("ui.message.copied") : (props.copyLabel ?? i18n.t("ui.message.copyMessage"))}
+              placement="right"
+              gutter={4}
+            >
+              <IconButton
+                icon={copied() ? "check" : "copy"}
+                size="normal"
+                variant="ghost"
+                onMouseDown={(event) => event.preventDefault()}
+                onClick={copy}
+                aria-label={
+                  copied() ? i18n.t("ui.message.copied") : (props.copyLabel ?? i18n.t("ui.message.copyMessage"))
+                }
+              />
+            </Tooltip>
+          </Show>
         </div>
       </Show>
     </div>
