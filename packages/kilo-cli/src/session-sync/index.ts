@@ -239,7 +239,7 @@ export const make = Effect.fn("SessionSync.make")(function* (
     return token.value
   })
 
-  const exchange = (input: { destination: string; local: boolean; organizationID: string | null }) =>
+  const exchange = (input: { destination: string; local: boolean; organizationID: string | null; minValidityMs?: number }) =>
     exchangeLock.withPermit(
       Effect.gen(function* () {
         const origin = yield* destination(input.destination, input.local)
@@ -256,7 +256,7 @@ export const make = Effect.fn("SessionSync.make")(function* (
             cooldown.retry_at,
           )
         const cached = grants.get(key)
-        if (cached?.credential === credentialID && Date.parse(cached.value.expiresAt) > Date.now() + 5000)
+        if (cached?.credential === credentialID && Date.parse(cached.value.expiresAt) > Date.now() + (input.minValidityMs ?? 5000))
           return cached.value
         const grant = yield* request(
           `${origin}/v1/auth/exchange`,
@@ -838,8 +838,59 @@ export const make = Effect.fn("SessionSync.make")(function* (
         return Effect.logError("Session synchronization pass failed", cause).pipe(Effect.andThen(Effect.fail(error)))
       }),
     )
+  const livePosition = (sessionID: string) =>
+    db.get<{ sourceID: string; position: number }>(
+      sql`SELECT s.source_id AS sourceID,s.position FROM _kilo_sync_session s
+        JOIN _kilo_sync_consent c ON c.directory=s.directory
+        WHERE s.id=${sessionID} AND s.local_deleted=0 AND c.enabled=1`,
+    ).pipe(Effect.orDie)
+  const live = Effect.fn("SessionSync.live")(function* (workspace?: string) {
+    if (!(yield* ready(workspace)) || activeOrganization === undefined) return
+    const grant = yield* exchange({ destination: origin, local, organizationID: activeOrganization })
+    if (workspace) {
+      const directory = yield* Store.canonical(workspace)
+      const consent = yield* Store.consent(db, directory)
+      if (!consent?.enabled || consent.user_id !== grant.userID ||
+        !sameTenant({ type: consent.tenant_type, id: consent.tenant_id }, grant.tenant)) return
+    }
+    const sessions = yield* db.all<{
+      sessionID: string; directory: string; sourceID: string; position: number
+    }>(sql`SELECT s.id AS sessionID,s.directory,s.source_id AS sourceID,s.position
+      FROM _kilo_sync_session s JOIN _kilo_sync_consent c ON c.directory=s.directory
+      WHERE c.enabled=1 AND s.local_deleted=0 AND s.bootstrap_complete=1 AND s.acknowledged>0
+        AND c.user_id=${grant.userID} AND c.tenant_type=${grant.tenant.type} AND c.tenant_id=${grant.tenant.id}
+      ORDER BY s.id`).pipe(Effect.orDie)
+    return {
+      destination: origin,
+      identity: `${observedCredential}:${grant.tenant.type}:${grant.tenant.id}:${grant.userID}`,
+      organizationID: activeOrganization,
+      tenant: grant.tenant,
+      userID: grant.userID,
+      sessions,
+    }
+  })
+  const liveTicket = Effect.fn("SessionSync.liveTicket")(function* (sessionID?: string) {
+    const current = yield* live()
+    if (!current) return yield* fail("sync_disabled", "Sign in and enable synchronization before connecting remotely")
+    if (sessionID && !current.sessions.some((session) => session.sessionID === sessionID))
+      return yield* fail("session_unavailable", "This session is not synchronized under the active account")
+    // A short cached grant would mint another ticket whose renewal time is already due.
+    const grant = yield* exchange({ destination: origin, local, organizationID: current.organizationID, minValidityMs: 60_000 })
+    return yield* request(
+      `${origin}/v1/${sessionID ? `sessions/${encodeURIComponent(sessionID)}/live-ticket` : "presence/ticket"}`,
+      grant.token,
+      "POST",
+      JSON.stringify({ role: "runner" }),
+    ).pipe(Effect.flatMap((value) => decode(
+      Schema.Struct({ ticket: Schema.String, expiresAt: Schema.String }), value,
+    )))
+  })
+
 
   const service = KiloSessionSync.Service.of({
+    live,
+    liveTicket,
+    livePosition,
     organization: (input) => Effect.gen(function* () {
       activeOrganization = input.organizationID
       verified.clear()

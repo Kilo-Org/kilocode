@@ -1,6 +1,6 @@
 export * as KiloHost from "./host"
 
-import { KiloPlugins, KiloPostPlugins, KiloSessionSync } from "@kilocode/kilo-plugin"
+import { KiloPlugins, KiloPostPlugins, KiloRemote, KiloSessionSync } from "@kilocode/kilo-plugin"
 import { KiloRead } from "@kilocode/kilo-plugin/read"
 import { App } from "@opencode/core/app"
 import { Bus } from "@opencode/core/bus"
@@ -26,6 +26,7 @@ import { KiloGatewayModel } from "./gateway-model"
 import { KiloSmallModel } from "./small-model"
 import { SessionSync } from "./session-sync"
 import { SessionSyncOutput } from "./session-sync/tool-output"
+import { Remote } from "./remote"
 
 /**
  * The duration in milliseconds of the last activation of each Kilo plugin, by plugin ID. The startup ratchet
@@ -42,11 +43,11 @@ const plugins = makeGlobalNode({
   layer: Layer.effectDiscard(
     Effect.gen(function* () {
       const sdk = yield* SdkPlugins.Service
-      const services = Context.pick(Bus.Service, FSUtil.Service, Global.Service, KiloSessionSync.Service)(
-        yield* Effect.context<Bus.Service | FSUtil.Service | Global.Service | KiloSessionSync.Service>(),
+      const services = Context.pick(Bus.Service, FSUtil.Service, Global.Service, KiloSessionSync.Service, KiloRemote.Service)(
+        yield* Effect.context<Bus.Service | FSUtil.Service | Global.Service | KiloSessionSync.Service | KiloRemote.Service>(),
       )
       const register = (
-        plugin: Plugin<Bus.Service | FSUtil.Service | Global.Service | KiloSessionSync.Service | Scope.Scope>,
+        plugin: Plugin<Bus.Service | FSUtil.Service | Global.Service | KiloSessionSync.Service | KiloRemote.Service | Scope.Scope>,
         phase?: "post",
       ) =>
         sdk.register(
@@ -67,7 +68,7 @@ const plugins = makeGlobalNode({
       yield* Effect.forEach(KiloPostPlugins, (plugin) => register(plugin, "post"))
     }),
   ).pipe(Layer.provideMerge(SdkPlugins.layer)),
-  deps: [Bus.node, FSUtil.node, Global.node, SessionSync.node],
+  deps: [Bus.node, FSUtil.node, Global.node, SessionSync.node, Remote.node],
 })
 
 /**

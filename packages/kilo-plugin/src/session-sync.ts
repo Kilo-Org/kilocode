@@ -10,7 +10,22 @@ interface EnableInput {
   assets?: readonly string[]
 }
 
+export interface LiveContext {
+  destination: string
+  identity: string
+  organizationID: string | null
+  tenant: { type: "user" | "organization"; id: string }
+  userID: string
+  sessions: readonly { sessionID: string; directory: string; sourceID: string; position: number }[]
+}
+
 interface Interface {
+  readonly live: (directory?: string) => Effect.Effect<LiveContext | undefined, KiloSessionSyncRpc.Failure>
+  readonly liveTicket: (sessionID?: string) => Effect.Effect<{
+    ticket: string
+    expiresAt: string
+  }, KiloSessionSyncRpc.Failure>
+  readonly livePosition: (sessionID: string) => Effect.Effect<{ sourceID: string; position: number } | undefined>
   /** Undefined suspends enrollment/transport until the Gateway has resolved its effective tenant. */
   readonly organization: (input: { directory: string; organizationID: string | null | undefined }) => Effect.Effect<void>
   readonly enable: (input: EnableInput) => Effect.Effect<KiloSessionSyncRpc.Status, KiloSessionSyncRpc.Failure>

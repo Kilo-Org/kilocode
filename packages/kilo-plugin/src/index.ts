@@ -13,8 +13,10 @@ import { KiloReadPlugin } from "./read"
 import { KiloOpenAIPlugin } from "./openai"
 import { KiloMarketplacePlugin } from "./marketplace"
 import { KiloSessionSync } from "./session-sync"
+import { KiloRemote } from "./remote"
 
 export { KiloSessionSync }
+export { KiloRemote }
 import { KiloPrivacyPlugin } from "./privacy"
 import { KiloSkillPlugin } from "./skill"
 import { KiloTodoPlugin } from "./todo"
@@ -46,6 +48,7 @@ export const KiloPlugins = [
   KiloOpenAIPlugin,
   KiloMarketplacePlugin,
   KiloSessionSync.plugin,
+  KiloRemote.plugin,
   KiloSkillPlugin,
   // Rung 1: names the extracted formats in the native read tool description. The host swaps the
   // reader behind it for the filesystem service (rung 2).

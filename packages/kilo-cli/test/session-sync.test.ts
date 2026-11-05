@@ -103,6 +103,7 @@ const peer = () => {
     hangExchange: false,
     exchangeFailures: false,
     exchanges: 0,
+    grantLifetime: 600_000,
     quota: false,
     retryAfter: false,
     gatedReads: 0,
@@ -152,7 +153,7 @@ const peer = () => {
         return Response.json({
           version: 1,
           token: grantToken,
-          expiresAt: new Date(Date.now() + 600_000).toISOString(),
+          expiresAt: new Date(Date.now() + control.grantLifetime).toISOString(),
           tenant,
           userID,
         })
@@ -170,6 +171,8 @@ const peer = () => {
         )
       const grant = grants.get(token)
       if (!grant) return error("invalid_grant", 401)
+      if (url.pathname === "/v1/presence/ticket")
+        return Response.json({ ticket: "fixture-presence-ticket", expiresAt: new Date(Date.now() + 120_000).toISOString() })
       if (control.mode === "hang") {
         entered.resolve()
         await gate.promise
@@ -3461,5 +3464,49 @@ it.live("organization-paused native parts reconcile only their continued message
     expect(state.entities.get(`message/${untouchedID}`)).toEqual(before.get(`message/${untouchedID}`))
     expect(state.entities.get(`message-part/${untouchedID}/0`)).toEqual(before.get(`message-part/${untouchedID}/0`))
     expect(state.entities.has(`message-part/${untouchedID}/9`)).toBe(false)
+  }),
+)
+
+it.live("live renewal exchanges a short cached grant before minting another ticket, and sync off closes admission", () =>
+  Effect.gen(function* () {
+    const f = yield* fixture
+    f.backend.control.grantLifetime = 45_000
+    const s = yield* boot(f)
+    yield* signIn(s.credentials)
+    expect(yield* s.sync.live()).toMatchObject({ userID: "alice" })
+    const exchanges = f.backend.control.exchanges
+    f.backend.control.grantLifetime = 300_000
+    expect((yield* s.sync.liveTicket()).ticket).toBe("fixture-presence-ticket")
+    expect(f.backend.control.exchanges).toBe(exchanges + 1)
+    yield* s.sync.disable({ directory: f.directory })
+    expect(yield* s.sync.live()).toBeUndefined()
+    const disabled = yield* s.sync.liveTicket().pipe(Effect.result)
+    expect(disabled._tag).toBe("Failure")
+    expect(f.backend.control.exchanges).toBe(exchanges + 1)
+  }),
+)
+
+it.live("remote presence pauses a launch workspace pinned to a different signed-in account", () =>
+  Effect.gen(function* () {
+    const f = yield* fixture
+    const s = yield* boot(f)
+    yield* signIn(s.credentials)
+    expect(yield* s.sync.live(f.directory)).toMatchObject({ userID: "alice" })
+    yield* signIn(s.credentials, "bob")
+    expect(yield* s.sync.live(f.directory)).toBeUndefined()
+    expect((yield* s.sync.status({ directory: f.directory })).enabled).toBe(false)
+  }),
+)
+
+it.live("remote discovery waits for the initial cloud snapshot acknowledgement", () =>
+  Effect.gen(function* () {
+    const f = yield* fixture
+    const s = yield* boot(f)
+    yield* signIn(s.credentials)
+    yield* s.sync.live(f.directory)
+    yield* seed(s.db, f.directory)
+    expect((yield* s.sync.live(f.directory))?.sessions).toHaveLength(0)
+    yield* s.sync.flush({ directory: f.directory })
+    expect((yield* s.sync.live(f.directory))?.sessions.map((session) => session.sessionID)).toContain(id)
   }),
 )
