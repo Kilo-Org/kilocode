@@ -23,7 +23,7 @@ import {
   trackedSessionInventory,
   type LocalTabState,
 } from "../webview-ui/src/utils/local-tabs"
-import { reorderTabs } from "../webview-ui/src/utils/tab-order"
+import { applyPinnedTabs, reorderPinnedTabs, reorderTabs, togglePinnedTab } from "../webview-ui/src/utils/tab-order"
 
 const pending = (id = "sidebar-pending:1") => id
 const makePending =
@@ -406,5 +406,31 @@ describe("adjacent session tabs", () => {
     expect(adjacentTabHint(ids, "s2", "s3", kb)).toBe("⌘⌥→")
     expect(adjacentTabHint(ids, "s2", "s2", kb)).toBe("")
     expect(adjacentTabHint(ids, "s1", "s3", kb)).toBe("")
+  })
+})
+
+describe("pinned session tabs", () => {
+  const items = (ids: string[]) => ids.map((id) => ({ id }))
+
+  it("places pinned tabs first in pin order without dropping the drag order", () => {
+    expect(applyPinnedTabs(items(["s1", "s2", "s3", "s4"]), ["s3", "s1"])).toEqual(items(["s3", "s1", "s2", "s4"]))
+  })
+
+  it("appends a new pin after the existing pins", () => {
+    expect(togglePinnedTab(["s1"], "s2")).toEqual(["s1", "s2"])
+    expect(togglePinnedTab(["s1", "s2"], "s1")).toEqual(["s2"])
+  })
+
+  it("reorders within a group and rejects a move across the pinned boundary", () => {
+    expect(reorderPinnedTabs(["s1", "s2", "s3"], ["s1"], "s1", "missing")).toBeUndefined()
+    expect(reorderPinnedTabs(["s1", "s2", "s3"], ["s1", "s3"], "s3", "s1")).toEqual({
+      ids: ["s1", "s2", "s3"],
+      pinned: ["s3", "s1"],
+    })
+    expect(reorderPinnedTabs(["s1", "s2", "s3"], ["s1"], "s2", "s3")).toEqual({
+      ids: ["s1", "s3", "s2"],
+      pinned: ["s1"],
+    })
+    expect(reorderPinnedTabs(["s1", "s2"], ["s1"], "s1", "s2")).toBeUndefined()
   })
 })
