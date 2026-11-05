@@ -1,10 +1,12 @@
-// The providers every Kilo webview mounts: theme, dialogs, the VS Code API, language, rich content and toasts. The host
-// pushes `kilo-code.v2.*` changes here, so the language and the font size follow without a reload.
+// The providers every Kilo webview mounts: theme, dialogs, the VS Code API, language, rich content, the model picker
+// preferences and toasts. The host pushes `kilo-code.v2.*` changes here, so the language and the font size follow
+// without a reload.
 import { onCleanup, type ParentComponent } from "solid-js"
 import { DialogProvider } from "@kilocode/kilo-ui/context/dialog"
 import { ThemeProvider } from "@kilocode/kilo-ui/theme"
 import { Toast } from "@kilocode/kilo-ui/toast"
 import { LanguageProvider } from "../context/language"
+import { ModelPreferencesProvider } from "../context/model-preferences"
 import { RichProvider } from "../context/rich-provider"
 import { useVSCode, VSCodeProvider } from "../context/vscode"
 import { applyKiloSettings, kiloSettings } from "./kilo-settings"
@@ -34,7 +36,9 @@ const LiveSettings: ParentComponent = (props) => {
       vscodeLanguage={() => vscodeLanguage}
       languageOverride={() => kiloSettings().language as string | undefined}
     >
-      <RichProvider>{props.children}</RichProvider>
+      <RichProvider>
+        <ModelPreferencesProvider>{props.children}</ModelPreferencesProvider>
+      </RichProvider>
     </LanguageProvider>
   )
 }

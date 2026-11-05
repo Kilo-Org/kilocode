@@ -11,13 +11,16 @@ test("Gateway modes override built-in agents before config, and post-config step
     "kilocode.marketplace",
     "kilocode.session-sync",
     "kilocode.skill",
+    "kilocode.read",
     "kilocode.tool-todo",
     "kilocode.tool-write",
     "kilocode.tool-browser",
+    "kilocode.tool-notebook",
     "kilocode.commit-message",
     "kilocode.privacy",
     "kilocode.branch-name",
     "kilocode.agent-manager",
+    "kilocode.recall",
     "kilocode.review",
   ])
   expect(KiloPostPlugins.map((plugin) => plugin.id)).toEqual([

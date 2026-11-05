@@ -165,6 +165,10 @@ describe("KiloAgentPlugin", () => {
       expect(effect("edit", "src/index.ts")).toBe("deny")
       expect(effect("subagent", "general")).toBe("deny")
       expect(effect("unknown_plugin_tool", "*")).toBe("deny")
+      // A notebook MCP server emits `notebook_*`, so the read-only modes deny all three actions.
+      expect(effect("notebook_read", "book.ipynb")).toBe("deny")
+      expect(effect("notebook_edit", "book.ipynb")).toBe("deny")
+      expect(effect("notebook_execute", "book.ipynb")).toBe("deny")
       expect(effect("shell", "git log -5")).toBe("allow")
       expect(effect("shell", "gh pr view 1")).toBe("allow")
       expect(effect("shell", "gh pr merge 1")).toBe("ask")

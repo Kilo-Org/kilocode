@@ -134,7 +134,6 @@ const EXCLUDED_KEYS = new Set([
   "settings.experimental.imageGeneration.title",
   "settings.experimental.imageGenerationModel.title",
   "settings.experimental.mcpTimeout.title",
-  "settings.experimental.nativeNotebookTools.title",
   "settings.experimental.remote.title",
   "settings.context.compaction.title",
   "settings.context.compactionLimit.title",
