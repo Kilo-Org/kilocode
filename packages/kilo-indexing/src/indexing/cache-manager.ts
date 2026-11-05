@@ -19,8 +19,8 @@ export class CacheManager implements ICacheManager {
   private saveTask = Promise.resolve()
 
   constructor(
-    private readonly cacheDirectory: string,
-    private readonly workspacePath: string,
+    cacheDirectory: string,
+    workspacePath: string,
   ) {
     const hash = createHash("sha256").update(workspacePath).digest("hex")
     this.cachePath = path.join(cacheDirectory, `roo-index-cache-${hash}.json`)

@@ -48,7 +48,6 @@ interface OpenRouterEmbeddingResponse {
 export class OpenRouterEmbedder implements IEmbedder {
   private embeddingsClient: OpenAI
   private readonly defaultModelId: string
-  private readonly apiKey: string
   private readonly maxItemTokens: number
   private readonly baseUrl: string = "https://openrouter.ai/api/v1"
   private readonly specificProvider?: string
@@ -76,7 +75,6 @@ export class OpenRouterEmbedder implements IEmbedder {
       throw new Error("API key is required for OpenRouter embedder")
     }
 
-    this.apiKey = apiKey
     // Only set specificProvider if it's not the default value
     this.specificProvider =
       specificProvider && specificProvider !== OPENROUTER_DEFAULT_PROVIDER_NAME ? specificProvider : undefined

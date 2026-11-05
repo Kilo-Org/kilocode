@@ -47,7 +47,6 @@ export class CodeIndexManager {
   private _baselineChecked = 0
   private _baselineSigned = 0
   private _baselineRefresh: Promise<void> | undefined
-  private _overlay: WorktreeOverlay | undefined
   private _isRecoveringFromError = false
   private _retryTimer: ReturnType<typeof setTimeout> | undefined
   private _retryResolve: (() => void) | undefined
@@ -629,7 +628,6 @@ export class CodeIndexManager {
     this._baselineSignature = baseline?.signature
     this._baselineStamp = baseline?.stamp
     this._baselineSigned = Date.now()
-    this._overlay = baseline?.overlay
     this._stateManager.setSystemState("Standby", "")
     log.info("indexing services are ready", { workspacePath: this.workspacePath })
   }

@@ -1,7 +1,3 @@
-import { Log } from "../../util/log"
-
-const log = Log.create({ service: "indexing-validation" })
-
 /**
  * Sanitizes error messages by removing sensitive information like file paths and URLs
  * @param errorMessage The error message to sanitize
