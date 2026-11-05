@@ -2,7 +2,8 @@ import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { showToast } from "@kilocode/kilo-ui/toast"
 import type { ModelRef } from "@opencode/client"
-import { createEffect, createSignal, on, onCleanup, onMount, Show, untrack, type JSX } from "solid-js"
+import { createEffect, createMemo, createSignal, on, onCleanup, onMount, Show, untrack, type JSX } from "solid-js"
+import { fold, reserve } from "../components/chat/prompt-fold"
 import { SpeechToTextButton } from "../components/speech-to-text/SpeechToTextButton"
 import { createSpeechShortcut } from "../components/speech-to-text/shortcut"
 import { useSpeechStatus } from "../components/speech-to-text/status"
@@ -22,6 +23,7 @@ import { registerAppend, type AppendHandler } from "./append-ready"
 import { message, useV2 } from "./client"
 import { cleanEnhancedPrompt, enhancePromptRequest, normalizeEnhancePromptErrorMessage } from "./enhance-prompt"
 import { insertSpacedText } from "./prompt-speech"
+import { PromptOverflow, type OverflowItem } from "./prompt-overflow"
 
 // Drafts live outside the component so a composer remounted for another session restores its own text, as v1 did.
 // The key is the session id, or the pending tab id before a first prompt creates the session.
@@ -54,8 +56,8 @@ export function PromptInput(props: {
   onStop: () => void
   /** Agent, model and variant controls, before the actions as in main's PromptInput. */
   selectors?: JSX.Element
-  /** Prompt toolbar actions (auto-approve, and later indexing, sandbox and enhance as on main). */
-  actions?: JSX.Element
+  /** Auto-approve for permission requests. The toggle folds into the overflow menu like edge actions. */
+  autoApprove?: { enabled: boolean; onToggle: () => void }
   /** Receives a function that appends text to the draft and, when `send` is true, sends it; undefined on unmount. */
   onAppendReady?: (append: AppendHandler | undefined) => void
 }) {
@@ -342,6 +344,75 @@ export function PromptInput(props: {
     return true
   }
 
+  // Progressive toolbar fold, driven by the toolbar width and font size only.
+  // The list goes from low to high priority, so low priority actions fold first
+  // and the actions next to voice and send stay in place. All sizes are read
+  // from the DOM, so a larger font scales the fold steps.
+  let hintRef: HTMLDivElement | undefined
+  let pinnedRef: HTMLDivElement | undefined
+  const [metrics, setMetrics] = createSignal({ width: Number.POSITIVE_INFINITY, pinned: 0, slot: 26, reserve: 210 })
+  onMount(() => {
+    const measure = () => {
+      const hint = hintRef
+      const pinned = pinnedRef
+      if (!hint || !pinned) return
+      const box = getComputedStyle(hint)
+      const actions = pinned.parentElement
+      const button = actions?.querySelector<HTMLElement>(".prompt-action [data-component='icon-button']")
+      const gap = actions ? parseFloat(getComputedStyle(actions).columnGap) || 0 : 0
+      setMetrics({
+        width:
+          hint.clientWidth -
+          parseFloat(box.paddingLeft) -
+          parseFloat(box.paddingRight) -
+          (parseFloat(box.columnGap) || 0),
+        pinned: pinned.getBoundingClientRect().width,
+        slot: (button?.getBoundingClientRect().width ?? 22) + gap,
+        reserve: reserve(hint),
+      })
+    }
+    const observer = new ResizeObserver(measure)
+    if (hintRef) observer.observe(hintRef)
+    if (pinnedRef) observer.observe(pinnedRef)
+    onCleanup(() => observer.disconnect())
+  })
+  const foldable = createMemo<OverflowItem[]>(() => {
+    const list: OverflowItem[] = [
+      {
+        key: "enhance",
+        icon: "wand-sparkles",
+        label: language.t("prompt.action.enhance"),
+        disabled: !canEnhance(),
+        busy: enhancing(),
+        run: enhance,
+      },
+    ]
+    const autoApprove = props.autoApprove
+    if (autoApprove)
+      list.push({
+        key: "approve",
+        icon: "shield",
+        label: language.t(
+          autoApprove.enabled ? "prompt.action.autoApprove.disable" : "prompt.action.autoApprove.enable",
+        ),
+        description: language.t("prompt.action.autoApprove.sandboxExcluded"),
+        tone: autoApprove.enabled ? "success" : undefined,
+        dot: autoApprove.enabled ? "success" : undefined,
+        run: autoApprove.onToggle,
+      })
+    return list
+  })
+  const shown = createMemo(() => fold({ ...metrics(), count: foldable().length }))
+  const hidden = createMemo(() => foldable().slice(0, foldable().length - shown()))
+  const folded = (key: string) => hidden().some((item) => item.key === key)
+  const approveTooltip = () => {
+    const autoApprove = props.autoApprove
+    if (!autoApprove) return ""
+    return `${language.t(
+      autoApprove.enabled ? "prompt.action.autoApprove.enabled" : "prompt.action.autoApprove.disabled",
+    )} ${language.t("prompt.action.autoApprove.sandboxExcluded")}`
+  }
+
   return (
     <div class="prompt-input-container">
       <div class="prompt-input-wrapper">
@@ -387,10 +458,13 @@ export function PromptInput(props: {
           />
         </div>
       </div>
-      <div class="prompt-input-hint">
+      <div class="prompt-input-hint" ref={(el) => (hintRef = el)}>
         {props.selectors}
         <div class="prompt-input-hint-actions">
-          <div class="prompt-action">
+          <div class="prompt-action" data-folded={hidden().length === 0 ? "" : undefined}>
+            <PromptOverflow items={hidden()} />
+          </div>
+          <div class="prompt-action" data-folded={folded("enhance") ? "" : undefined}>
             <Tooltip value={language.t("prompt.action.enhance")} placement="top" openDelay={0}>
               <IconButton
                 icon="wand-sparkles"
@@ -403,8 +477,27 @@ export function PromptInput(props: {
               />
             </Tooltip>
           </div>
-          {props.actions}
-          <div class="prompt-input-hint-pinned">
+          <Show when={props.autoApprove}>
+            {(autoApprove) => (
+              <div class="prompt-action" data-folded={folded("approve") ? "" : undefined}>
+                <Tooltip value={approveTooltip()} placement="top" openDelay={0}>
+                  <IconButton
+                    icon="shield"
+                    variant="ghost"
+                    size="small"
+                    onClick={autoApprove().onToggle}
+                    aria-label={language.t(
+                      autoApprove().enabled ? "prompt.action.autoApprove.disable" : "prompt.action.autoApprove.enable",
+                    )}
+                    aria-pressed={autoApprove().enabled}
+                    class="prompt-status-button"
+                    classList={{ "prompt-status-button--active": autoApprove().enabled }}
+                  />
+                </Tooltip>
+              </div>
+            )}
+          </Show>
+          <div class="prompt-input-hint-pinned" ref={(el) => (pinnedRef = el)}>
             <Show when={canUseSpeech()}>
               <SpeechToTextButton speech={speech} disabled={props.disabled} start={startSpeech} label={language.t} />
             </Show>

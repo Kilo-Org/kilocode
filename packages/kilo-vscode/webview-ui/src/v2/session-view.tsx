@@ -17,7 +17,7 @@ import { PermissionDock } from "./permission"
 import { PromptInput } from "./prompt"
 import { QuestionDock } from "./question"
 import { createSelection, Selectors } from "./selectors"
-import { AutoApproveAction, createAutoApprove } from "./auto-approve"
+import { createAutoApprove } from "./auto-approve"
 import { createWorking } from "./working"
 
 export function SessionView(props: {
@@ -269,7 +269,7 @@ export function SessionView(props: {
                 onStop={stop}
                 onAppendReady={props.onAppendReady}
                 selectors={<Selectors selection={selection} blocked={selectorsBlocked()} />}
-                actions={<AutoApproveAction enabled={autoApprove.enabled()} onToggle={autoApprove.toggle} />}
+                autoApprove={{ enabled: autoApprove.enabled(), onToggle: autoApprove.toggle }}
               />
             )}
           </Show>
