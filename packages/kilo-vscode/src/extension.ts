@@ -19,7 +19,8 @@ import { VscodeHost } from "./agent-manager/vscode-host"
 import { chat } from "./chat"
 import { commitMessageCommand, commitMessageLanguage, connect, type GitExports } from "./commit-message"
 import { createCostAlerts } from "./cost-alert"
-import { command, manager, settingsEnvironment } from "./server"
+import { command, manager, serverHome, settingsEnvironment } from "./server"
+import { usePlanHome } from "./documents/document-reader"
 import { readKiloSettings } from "./settings-host"
 import { registerAutocompleteProvider } from "./services/autocomplete"
 import { createConnection } from "./services/autocomplete/connection"
@@ -37,9 +38,7 @@ export function activate(context: ExtensionContext) {
     notify: async (alert) => {
       // This package ships no l10n bundles, so these strings remain English in every VS Code locale.
       const money = (value: number) =>
-        value > 0 && value < 0.00000001
-          ? `$${value}`
-          : `$${value.toFixed(value < 0.0001 ? 8 : value < 1 ? 4 : 2)}`
+        value > 0 && value < 0.00000001 ? `$${value}` : `$${value.toFixed(value < 0.0001 ? 8 : value < 1 ? 4 : 2)}`
       const title = alert.title?.trim() || l10n.t("Session {0}", alert.sessionID.slice(-6))
       const keepGoing = l10n.t("Continue")
       const stop = l10n.t("Stop")
@@ -85,8 +84,11 @@ export function activate(context: ExtensionContext) {
     })
   }
   const shutdown = createShutdown({ log: (text) => output.appendLine(text) })
+  const serverCommand = () => command({ extension: context.extensionPath, storage, env: process.env })
+  // Plan mode writes plans under the server's home, so plan links resolve there too.
+  usePlanHome(serverHome(serverCommand(), process.env))
   const server = manager({
-    command: () => command({ extension: context.extensionPath, storage, env: process.env }),
+    command: serverCommand,
     cwd: directory,
     env: process.env,
     settings: serverSettings,
@@ -253,9 +255,7 @@ export function activate(context: ExtensionContext) {
       commands.registerCommand(`kilo-code.v2.agentManager.${command}`, () => agentAction(action)),
     ),
     ...Array.from({ length: 9 }, (_, index) =>
-      commands.registerCommand(`kilo-code.v2.agentManager.jumpTo${index + 1}`, () =>
-        agentAction(`jumpTo${index + 1}`),
-      ),
+      commands.registerCommand(`kilo-code.v2.agentManager.jumpTo${index + 1}`, () => agentAction(`jumpTo${index + 1}`)),
     ),
     commands.registerCommand("kilo-code.v2.agentManager.advancedWorktree", () => agentManager.openAdvancedWorktree()),
     commands.registerCommand("kilo-code.v2.agentManager.diagnostics", () => {

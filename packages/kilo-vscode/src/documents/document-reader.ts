@@ -31,8 +31,16 @@ export function isInsideWorktree(
   return target === base || target.startsWith(base + sep)
 }
 
+// The server's home, which can differ from this process's home (the isolated dev profile moves it).
+let serverHome: string | undefined
+
+/** Read plans from the home directory of the server this extension starts. */
+export function usePlanHome(home: string): void {
+  serverHome = home
+}
+
 /** The server's plan directory, the one place outside the worktree whose files the preview shows. */
-export function plansDir(home = process.env.OPENCODE_TEST_HOME ?? os.homedir()): string {
+export function plansDir(home = serverHome ?? process.env.OPENCODE_TEST_HOME ?? os.homedir()): string {
   return path.join(home, ".opencode", "plan")
 }
 
