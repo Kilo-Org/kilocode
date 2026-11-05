@@ -6,6 +6,7 @@
     "build:production": "bun script/build.ts --production",
     "e2e:driver": "bun script/e2e-driver.ts",
     "e2e:smoke": "bun script/e2e-smoke.ts",
+    "e2e:session-open": "bun script/e2e-session-open.ts",
     "typecheck": "./gradlew typecheck",
     "test": "./gradlew test",
     "test:ci": "bun script/test-ci.ts"
