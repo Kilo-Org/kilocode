@@ -31,6 +31,7 @@ test("a pending message shows its status and controls instead of fork and copy",
 
   expect(view.host.querySelector('[data-slot="user-message-text"]')?.hasAttribute("data-queued")).toBe(true)
   expect(view.host.querySelector('[data-slot="user-message-queued-indicator"]')?.textContent).toContain("Queued")
+  expect(view.host.querySelector('[data-slot="user-message-clamp"]')?.textContent).toBe("Check the tests")
   expect(view.host.querySelector('[aria-label="Fork to new session"]')).toBeNull()
   expect(view.host.querySelector('[aria-label="Copy message"]')).toBeNull()
 
@@ -47,6 +48,7 @@ test("a delivered message keeps its fork and copy actions", () => {
 
   expect(view.host.querySelector('[data-slot="user-message-queued-indicator"]')).toBeNull()
   expect(view.host.querySelector('[data-slot="user-message-text"]')?.hasAttribute("data-queued")).toBe(false)
+  expect(view.host.querySelector('[data-slot="user-message-clamp"]')).toBeNull()
   expect(view.host.querySelector('[aria-label="Fork to new session"]')).not.toBeNull()
   expect(view.host.querySelector('[aria-label="Copy message"]')).not.toBeNull()
 })

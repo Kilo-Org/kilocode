@@ -737,6 +737,7 @@ export const dict = {
   "session.prompts.first": "First prompt",
   "session.prompts.latest": "Latest prompt",
   "session.prompts.overflow": "{{count}} earlier prompts",
+  "session.queued.count": "{{count}} queued for after this turn",
   "session.pending.status.steering": "Sends after the current step",
   "session.pending.status.starting": "Sending",
   "session.pending.status.stranded": "Not sent",

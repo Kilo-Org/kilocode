@@ -49,18 +49,26 @@ describe("pendingActions", () => {
 
 describe("steerInterrupts", () => {
   const tool = (status: string) => ({ type: "tool", state: { status } })
+  const none = new Set<string>()
+  const user = { id: "u1", type: "user" }
+  const step = (...content: { type: string; state?: { status: string } }[]) => ({ id: "a1", type: "assistant", content })
 
   test("a thinking or writing model is stopped so the steer reaches it now", () => {
-    expect(steerInterrupts(undefined)).toBe(true)
-    expect(steerInterrupts({ type: "user" })).toBe(true)
-    expect(steerInterrupts({ type: "assistant", content: [{ type: "reasoning" }] })).toBe(true)
-    expect(steerInterrupts({ type: "assistant", content: [{ type: "text" }, tool("streaming")] })).toBe(true)
-    expect(steerInterrupts({ type: "assistant", content: [tool("completed")] })).toBe(true)
+    expect(steerInterrupts([], none)).toBe(true)
+    expect(steerInterrupts([user], none)).toBe(true)
+    expect(steerInterrupts([user, step({ type: "reasoning" })], none)).toBe(true)
+    expect(steerInterrupts([user, step({ type: "text" }, tool("streaming"))], none)).toBe(true)
+    expect(steerInterrupts([user, step(tool("completed"))], none)).toBe(true)
   })
 
   test("a running tool or compaction finishes before the steer is delivered", () => {
-    expect(steerInterrupts({ type: "assistant", content: [tool("completed"), tool("running")] })).toBe(false)
-    expect(steerInterrupts({ type: "compaction", status: "running" })).toBe(false)
-    expect(steerInterrupts({ type: "compaction", status: "completed" })).toBe(true)
+    expect(steerInterrupts([user, step(tool("completed"), tool("running"))], none)).toBe(false)
+    expect(steerInterrupts([{ id: "c1", type: "compaction", status: "running" }], none)).toBe(false)
+    expect(steerInterrupts([{ id: "c1", type: "compaction", status: "completed" }], none)).toBe(true)
+  })
+
+  test("input that waits for delivery does not hide a running tool", () => {
+    const queued = { id: "q1", type: "user" }
+    expect(steerInterrupts([user, step(tool("running")), queued], new Set(["q1"]))).toBe(false)
   })
 })

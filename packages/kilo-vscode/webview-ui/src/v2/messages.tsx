@@ -37,7 +37,6 @@ import {
 } from "./transcript-cache"
 import { createRowHandoff } from "./transcript-row-handoff"
 import { TranscriptRowView } from "./transcript-row"
-import { UserMessage } from "./user"
 import { Welcome } from "./welcome"
 
 /**
@@ -98,7 +97,7 @@ export function MessageList(props: {
   const [pendingRestore, setPendingRestore] = createSignal<string>()
 
   // createData already puts pending user input into the message list. Only queued
-  // input waits for the end of the turn, so it moves below the transcript.
+  // input waits for the end of the turn, so it leaves the transcript for the queued dock above the composer.
   const queued = () => {
     const id = props.session
     if (!id) return []
@@ -535,16 +534,6 @@ export function MessageList(props: {
                   </Show>
                   <For each={directKeys()}>{(key) => <Row id={key} />}</For>
                 </div>
-                <For each={partition().queued}>
-                  {(row) => (
-                    <div class="message-list-queued" data-queued="true" data-row-key={row.key}>
-                      <UserMessage
-                        message={{ ...row.item.payload, id: row.item.id, type: "user", time: row.item.time }}
-                        pending={props.pending?.(row.item.id)}
-                      />
-                    </div>
-                  )}
-                </For>
               </>
             )}
           </Show>

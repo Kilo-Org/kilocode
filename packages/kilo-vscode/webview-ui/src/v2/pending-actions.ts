@@ -6,7 +6,12 @@ export type SendMode = "steer" | "queue" | "now"
 export type PendingAction = "now" | "steer" | "queue" | "edit" | "delete"
 
 type Key = Pick<KeyboardEvent, "altKey" | "ctrlKey" | "metaKey">
-type Last = { type: string; status?: string; content?: readonly { type: string; state?: { status: string } }[] }
+type Message = {
+  id: string
+  type: string
+  status?: string
+  content?: readonly { type: string; state?: { status: string } }[]
+}
 
 /** The delivery a composer keystroke asks for. The modifiers only change a send while the session runs. */
 export function sendMode(event: Key, running: boolean, mac = isMac()): SendMode {
@@ -23,9 +28,11 @@ export function sendShortcuts(mac = isMac()) {
 /**
  * Whether a steer has to stop the current model call to reach the model now. That is the case while the model
  * thinks or writes: the next step boundary only comes after the whole response. A running tool or compaction is not
- * stopped; the steer is delivered when it finishes, which is the next step boundary. `last` is the newest message.
+ * stopped; the steer is delivered when it finishes, which is the next step boundary. The message list also holds
+ * input that is not delivered yet (`pending`), so the decision reads the newest delivered message.
  */
-export function steerInterrupts(last: Last | undefined): boolean {
+export function steerInterrupts(messages: readonly Message[], pending: ReadonlySet<string>): boolean {
+  const last = messages.findLast((message) => !pending.has(message.id))
   if (last?.type === "compaction") return last.status !== "running"
   if (last?.type !== "assistant") return true
   return !last.content?.some((item) => item.type === "tool" && item.state?.status === "running")

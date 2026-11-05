@@ -20,6 +20,7 @@ import { createSelection, Selectors } from "./selectors"
 import { createAutoApprove } from "./auto-approve"
 import { createWorking } from "./working"
 import { createPending } from "./pending"
+import { QueuedDock } from "./queued-dock"
 import { steerInterrupts, type SendMode } from "./pending-actions"
 
 export function SessionView(props: {
@@ -206,8 +207,9 @@ export function SessionView(props: {
     // Stop before admitting: if the prompt were admitted first, the run could start answering it at a step boundary
     // and the stop would then end that answer. The partial response stays in the transcript and the run continues
     // with the prompt. A failed stop still sends the prompt as a steer.
+    const waiting = new Set(v2.data.session.pending.list(id).map((item) => item.id))
     const interrupt =
-      running() && (mode === "now" || (mode === "steer" && steerInterrupts(v2.data.session.message.list(id).at(-1))))
+      running() && (mode === "now" || (mode === "steer" && steerInterrupts(v2.data.session.message.list(id), waiting)))
     if (interrupt) await v2.api.session.interrupt({ sessionID: id, resume: true }).catch((err: unknown) => v2.report(err))
     return v2.data.session
       .prompt({ sessionID: id, text, gate, metadata, delivery: mode === "queue" ? "queue" : "steer" })
@@ -306,6 +308,7 @@ export function SessionView(props: {
             onCancel={stop}
             onScrollToBottom={() => scrollToBottom?.()}
           />
+          <QueuedDock session={session()} pending={pending} />
           <Show when={draftKey()} keyed>
             {(key) => (
               <PromptInput

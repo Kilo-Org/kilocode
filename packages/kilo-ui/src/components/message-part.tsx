@@ -1815,6 +1815,20 @@ export function UserMessageDisplay(props: {
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
   }
+  // A pending message is clamped to a few lines, so long input waiting for delivery does not push the live response
+  // out of view. The toggle shows only when the clamp actually hides text.
+  const [expanded, setExpanded] = createSignal(false)
+  const [clipped, setClipped] = createSignal(false)
+  let textRef: HTMLDivElement | undefined
+  const measure = () => setClipped(!!textRef && textRef.scrollHeight > textRef.clientHeight + 1)
+  createEffect(() => {
+    if (!props.pending || expanded() || !textRef) return setClipped(false)
+    void props.message.text
+    const observer = new ResizeObserver(measure)
+    observer.observe(textRef)
+    measure()
+    onCleanup(() => observer.disconnect())
+  })
   return (
     <div data-component="user-message">
       <Show when={files().length}>
@@ -1860,8 +1874,25 @@ export function UserMessageDisplay(props: {
           {props.header}
           <Show when={props.message.text}>
             <div data-slot="user-message-text" dir="auto" data-queued={props.pending ? "" : undefined}>
-              {props.message.text}
+              {/* The clamp sits on an inner box: on the padded bubble, the hidden lines would show in its padding. */}
+              <Show when={props.pending && !expanded()} fallback={props.message.text}>
+                <span ref={textRef} data-slot="user-message-clamp">
+                  {props.message.text}
+                </span>
+              </Show>
             </div>
+          </Show>
+          <Show when={props.pending && (clipped() || expanded())}>
+            <button
+              type="button"
+              data-slot="user-message-expand"
+              onClick={(event) => {
+                event.stopPropagation()
+                setExpanded((value) => !value)
+              }}
+            >
+              {i18n.t(expanded() ? "ui.sessionTurn.diffs.showLess" : "ui.common.showMore")}
+            </button>
           </Show>
         </div>
         {/* Pending controls live in the reserved action row, so delivery swaps content without a height change. */}
