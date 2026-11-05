@@ -25,6 +25,7 @@ import { ShutdownDeadline } from "@opencode/cli/shutdown-deadline"
 import { KiloApp } from "./app"
 import { AutoCommand } from "./auto/auto"
 import { SyncCommand } from "./sync/sync"
+import { RemoteCommand } from "./remote/remote"
 
 import { ensurePluginRuntime } from "./index"
 
@@ -49,7 +50,7 @@ if (process.env.OPENCODE_SSH_ASKPASS_PORT) {
 }
 
 // Kilo-owned commands alongside the upstream commands.
-const KiloCommands = { ...Commands, commands: { ...Commands.commands, auto: AutoCommand, sync: SyncCommand } }
+const KiloCommands = { ...Commands, commands: { ...Commands.commands, auto: AutoCommand, sync: SyncCommand, remote: RemoteCommand } }
 
 const Handlers = Runtime.handlers(KiloCommands, {
   $: () => import("@opencode/cli/commands/handlers/default"),
@@ -107,6 +108,8 @@ const Handlers = Runtime.handlers(KiloCommands, {
   },
   // Kilo: the server gets the Kilo plugins and service overrides.
   serve: () => import("./serve"),
+  // Kilo: private, long-lived remote host.
+  remote: () => import("./remote/headless"),
   // Kilo: workspace session synchronization.
   sync: {
     enable: () => import("./sync/enable"),

@@ -190,6 +190,7 @@ export interface PanelInput {
  */
 export interface SlotMap {
   readonly app: Readonly<Record<string, never>>
+  readonly "app.header": Readonly<Record<string, never>> // kilocode_change(remote) seam - plugin status above the main view
   readonly "home.footer": Readonly<Record<string, never>>
   readonly "home.footer.status": Readonly<Record<string, never>>
   readonly "home.bottom": Readonly<Record<string, never>> // kilocode_change(gateway) seam - plugin slot below the home prompt

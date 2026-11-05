@@ -1436,6 +1436,7 @@ function App() {
         <box flexGrow={1} minWidth={0} flexDirection="column">
           <Show when={plugins.ready()}>
             <box flexGrow={1} minHeight={0} flexDirection="column">
+              <Slot path="app.header" /* kilocode_change(remote) seam - optional plugin header */ />
               <Show when={tabsVisible() && !tabsVertical()}>
                 <SessionTabs />
               </Show>
