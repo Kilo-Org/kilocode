@@ -5,6 +5,7 @@ import {
   ExtensionMode,
   extensions,
   l10n,
+  languages,
   ProgressLocation,
   window,
   workspace,
@@ -24,6 +25,12 @@ import { usePlanHome } from "./documents/document-reader"
 import { readKiloSettings } from "./settings-host"
 import { registerAutocompleteProvider } from "./services/autocomplete"
 import { createConnection } from "./services/autocomplete/connection"
+import {
+  createChatTarget,
+  KiloCodeActionProvider,
+  registerCodeActions,
+  registerTerminalActions,
+} from "./services/code-actions"
 import { profile } from "./profile-panel"
 import { settings } from "./settings-panel"
 import { createShutdown } from "./shutdown"
@@ -155,6 +162,16 @@ export function activate(context: ExtensionContext) {
     agentManager: () => agentManager.settings,
   })
   const profilePanel = profile({ context, server, directory })
+  const chatTarget = createChatTarget({ view, agentManager })
+  registerCodeActions(context, chatTarget)
+  registerTerminalActions(context, chatTarget)
+  context.subscriptions.push(
+    languages.registerCodeActionsProvider(
+      { scheme: "file" },
+      new KiloCodeActionProvider(),
+      KiloCodeActionProvider.metadata,
+    ),
+  )
   const agentAction = (action: string) => agentManager.postMessage({ type: "action", action })
   ensureCommandsSkipShell()
   // The cycle keybindings act on the focused composer: the Agent Manager panel when it is active, else the sidebar.

@@ -26,6 +26,7 @@ import { SessionView } from "./session-view"
 import { formatReviewCommentsMarkdown } from "../utils/review-comment-markdown"
 import { chunkPaths } from "./validate-paths"
 import { createReviewAppendQueue } from "./review-queue"
+import { createComposerQueue } from "./composer"
 
 export function Chat() {
   const v2 = useV2()
@@ -34,6 +35,8 @@ export function Chat() {
   const [view, setView] = createSignal<"chat" | "history">("chat")
   // Comments can arrive while the chat composer is unmounted (History), so hold them until it returns.
   const reviewQueue = createReviewAppendQueue()
+  // Editor and terminal context actions target the chat composer too, and wait the same way while it is unmounted.
+  const composerQueue = createComposerQueue()
   const [changes, setChanges] = createSignal(false)
   // Display layouts are Kilo-only config keys, so the host reads them. Ask on connect and after every config change.
   const display = useDisplaySettings()
@@ -51,6 +54,12 @@ export function Chat() {
   v2.onCommand((name) => {
     if (name === "newSession") startSession()
     if (name === "history") setView("history")
+    if (name !== "focusPrompt") return
+    setView("chat")
+    // The composer mounts after the view switch, so focus it on the next frame.
+    requestAnimationFrame(() =>
+      window.dispatchEvent(new CustomEvent("focusPrompt", { detail: { force: true, restore: true } })),
+    )
   })
 
   const open = (id: string) => {
@@ -72,6 +81,18 @@ export function Chat() {
         if (!pending) return
         fileChecks.delete(item.id)
         pending.resolve(item.existing)
+        return
+      }
+      if (item.type === "appendContext") {
+        setView("chat")
+        setChanges(false)
+        composerQueue.push({ type: "attach", items: item.items })
+        return
+      }
+      if (item.type === "startPrompt") {
+        setView("chat")
+        setChanges(false)
+        composerQueue.push({ type: "submit", text: item.text, items: item.items ?? [] })
         return
       }
       if (item.type !== "appendReviewComments") return
@@ -193,6 +214,7 @@ export function Chat() {
           onViewTurnChanges={openTurnChanges}
           row={row}
           onAppendReady={reviewQueue.ready}
+          onComposerReady={composerQueue.ready}
           replace={changes() && !!session()}
           replacement={
             <Show when={changes() ? session() : undefined} keyed>

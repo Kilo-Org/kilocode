@@ -122,6 +122,7 @@ export type Ui =
   | { type: "webviewFocusChanged"; focused: boolean }
   | { type: "setLanguage"; locale: string }
   | { type: "saveImage"; dataUrl: string; filename: string }
+  | { type: "previewImage"; dataUrl: string; filename: string }
   | { type: "openProfile" }
   | { type: "openToolFile"; filePath: string; line?: number; column?: number; sessionID?: string }
   | { type: "openDiffVirtual"; diff: ToolActionDiff; initialDiffStyle?: "unified" | "split" }
@@ -198,12 +199,36 @@ export type FetchCustomProviderModels = {
   scope?: "global" | "project"
 }
 
+/**
+ * Context the composer attaches to the next prompt: an editor selection, a file, terminal output or an image. It goes
+ * to the server as a prompt file attachment, so the server reads the file (and slices the line range) itself.
+ */
+export type PromptAttachment = {
+  id: string
+  kind: "selection" | "file" | "terminal" | "image"
+  /** A `file:` URI, with `start` and `end` line query parameters for a range, or a base64 `data:` URL. */
+  uri: string
+  /** Chip text in the composer and attachment name in the transcript, for example `math.ts:3-9`. */
+  name: string
+  /** Extra text the model reads with the attachment, for example the workspace path and line range. */
+  description?: string
+  /** The file a `data:` URL was read from, so the model still sees where it came from. */
+  source?: string
+  /** Workspace path and 1-based line, so the chip can open the source. */
+  path?: string
+  line?: number
+}
+
 export type ToWebview =
   | { type: "response"; id: number; status: number; statusText: string; headers: [string, string][] }
   | { type: "chunk"; id: number; data: Uint8Array }
   | { type: "end"; id: number }
   | { type: "error"; id: number; message: string }
-  | { type: "command"; name: "newSession" | "history" | "cycleAgentMode" | "cyclePreviousAgentMode" }
+  | { type: "command"; name: "newSession" | "history" | "cycleAgentMode" | "cyclePreviousAgentMode" | "focusPrompt" }
+  /** Adds context chips to the composer and focuses it. */
+  | { type: "appendContext"; items: PromptAttachment[] }
+  /** Sends a prompt in the open session at once, without touching the draft. */
+  | { type: "startPrompt"; text: string; items?: PromptAttachment[] }
   | ({ type: "navigate" } & SettingsNavigation)
   | { type: "keybindings"; bindings: Record<string, string> }
   | { type: "clipboardWriteResult"; id: string; ok: boolean; error?: string }

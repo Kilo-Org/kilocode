@@ -1779,6 +1779,8 @@ export function UserMessageDisplay(props: {
   copyLabel?: string
   /** Shows a fork action beside Copy, for surfaces that can fork the session from this message. */
   onFork?: () => void
+  /** Opens an image attachment outside the webview. Return false to keep the in-page preview for that image. */
+  onOpenImage?: (uri: string, name: string | undefined) => boolean
 }) {
   const i18n = useI18n()
   const clipboard = useClipboard()
@@ -1803,8 +1805,9 @@ export function UserMessageDisplay(props: {
                 data-type={file.mime.startsWith("image/") ? "image" : "file"}
                 onClick={() => {
                   const uri = attachmentUri(file)
-                  if (file.mime.startsWith("image/") && uri)
-                    return dialog.show(() => <ImagePreview src={uri} alt={file.name} />)
+                  if (!file.mime.startsWith("image/") || !uri) return
+                  if (props.onOpenImage?.(uri, file.name)) return
+                  return dialog.show(() => <ImagePreview src={uri} alt={file.name} />)
                 }}
               >
                 <Show
