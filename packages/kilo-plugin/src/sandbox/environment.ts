@@ -1,6 +1,5 @@
 import { randomUUID } from "node:crypto"
 import { dirname } from "node:path"
-import { NodeFileSystem } from "@effect/platform-node"
 import { batchMutations, decorateFileSystem, enabled, ensureDirectory, prepareCommand } from "@kilocode/sandbox"
 import { Environment } from "@opencode/core/environment/index"
 import { Context, Effect, FileSystem, Layer, PlatformError } from "effect"
@@ -63,6 +62,8 @@ function prepare(command: ChildProcess.Command) {
   })
 }
 
+const node = Effect.promise(() => import("@effect/platform-node"))
+
 function failed(path: string) {
   return (cause: unknown) => new Environment.Failed({ path, cause })
 }
@@ -72,16 +73,24 @@ export function confine(base: Pick<Environment.Interface["spawner"], "spawn">) {
   return make((command) => prepare(command).pipe(Effect.flatMap((next) => base.spawn(next))))
 }
 
+
 function decorate(base: Environment.Interface): Environment.Interface {
   const spawner = confine(base.spawner)
-  // Writes from a sandboxed tool call go through the sandbox mutation worker, which runs inside the profile.
-  const confined = <A, E>(path: string, fallback: Effect.Effect<A, E>, mutation: (fs: FileSystem.FileSystem) => Effect.Effect<A, PlatformError.PlatformError>) =>
+  // Writes from a sandboxed tool call go through the sandbox mutation worker, which runs inside the profile. The Node
+  // file system loads on the first confined write: importing it at module load costs every host start.
+  const confined = <A, E>(
+    path: string,
+    fallback: Effect.Effect<A, E>,
+    mutation: (fs: FileSystem.FileSystem) => Effect.Effect<A, PlatformError.PlatformError>,
+  ) =>
     Effect.flatMap(enabled, (active): Effect.Effect<A, E | Environment.Failed> => {
       if (!active) return fallback
-      return Effect.gen(function* () {
-        const fs = decorateFileSystem(yield* FileSystem.FileSystem)
-        return yield* batchMutations(mutation(fs))
-      }).pipe(Effect.provide(NodeFileSystem.layer), Effect.mapError(failed(path)))
+      return Effect.flatMap(node, ({ NodeFileSystem }) =>
+        Effect.gen(function* () {
+          const fs = decorateFileSystem(yield* FileSystem.FileSystem)
+          return yield* batchMutations(mutation(fs))
+        }).pipe(Effect.provide(NodeFileSystem.layer), Effect.mapError(failed(path))),
+      )
     })
   const files: Environment.Files = {
     ...base.files,

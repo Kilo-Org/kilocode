@@ -110,15 +110,18 @@ test(
       expect(toggled.version).toBe(support.available ? 1 : 0)
       expect(toggled.enabled).toBe(support.available)
       expect(toggled.network).toBe(support.available)
-      await until(() => changed().length > 0, "the sandbox status event arrives")
-      expect(changed().at(-1)?.data).toMatchObject({
-        sessionID,
-        directory: session.location.directory,
-        enabled: support.available,
-        version: support.available ? 1 : 0,
-      })
 
-      if (support.available) {
+      if (!support.available) {
+        // Without a backend the toggle refuses to enable and publishes nothing; the caller reads the reply.
+        expect(changed()).toHaveLength(0)
+      } else {
+        await until(() => changed().length > 0, "the sandbox status event arrives")
+        expect(changed().at(-1)?.data).toMatchObject({
+          sessionID,
+          directory: session.location.directory,
+          enabled: true,
+          version: 1,
+        })
         expect(await SandboxStore.read(session.location.directory, sessionID)).toEqual({
           enabled: true,
           mode: "deny",

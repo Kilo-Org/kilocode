@@ -441,6 +441,11 @@ jobs:
         working-directory: packages/kilo-sandbox
         run: bun test
 
+      # The RPC test covers the publish path, which needs an available backend; Bubblewrap is installed above.
+      - name: Test the sandbox RPC with Bubblewrap
+        working-directory: packages/kilo-cli
+        run: bun test test/sandbox.test.ts
+
       - name: Test the Kilo plugin
         working-directory: packages/kilo-plugin
         run: bun test
