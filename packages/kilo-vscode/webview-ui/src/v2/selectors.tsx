@@ -200,7 +200,13 @@ export function createSelection(
         ? created.request.then(() => v2.api.session.update({ sessionID: created.id, metadata }))
         : created.request
       creates.set(created.id, request)
-      void request.catch(() => undefined).finally(() => creates.delete(created.id))
+      // A rejected write leaves the session on the config default while the draft toggle looked applied, so report
+      // it. A failed create keeps failing the prompt, which reports it.
+      void request
+        .catch((error: unknown) => {
+          if (metadata) v2.report(error)
+        })
+        .finally(() => creates.delete(created.id))
       return created.id
     },
     /** The pending create of a session, including its metadata write. */
