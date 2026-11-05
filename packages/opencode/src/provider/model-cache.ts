@@ -1,6 +1,6 @@
 // kilocode_change - new file
 import { fetchKiloModels, type KiloModelsResult } from "@kilocode/kilo-gateway"
-import { Context, Deferred, Duration, Effect, Exit, Fiber, Layer, Schema, Scope } from "effect"
+import { Cache, Context, Deferred, Duration, Effect, Exit, Fiber, Layer, Schema, Scope } from "effect"
 import { FetchHttpClient, HttpClient, HttpClientRequest, HttpClientResponse } from "effect/unstable/http"
 import { Config } from "../config/config"
 import { Auth } from "../auth"
@@ -20,6 +20,7 @@ type Failure = NonNullable<KiloModelsResult["error"]>
 type Result = { readonly models: Models; readonly error?: Failure }
 type View = { models?: Models; timestamp?: number; empty?: boolean }
 type Flight = { readonly done: Deferred.Deferred<Result, unknown>; version: number }
+type Target = { readonly url: string; readonly key?: string; readonly headers?: Record<string, string> }
 
 export interface KiloModels {
   readonly fetch: (options: KiloOptions) => Effect.Effect<KiloModelsResult, unknown>
@@ -49,6 +50,8 @@ export interface Interface {
   readonly fetch: (providerID: string, options?: Options) => Effect.Effect<Models, unknown>
   readonly refresh: (providerID: string, options?: Options) => Effect.Effect<Models, unknown>
   readonly clear: (providerID: string) => Effect.Effect<void>
+  /** Model IDs from an OpenAI-compatible `/models` endpoint. Never fails; failures resolve to an empty list. */
+  readonly discover: (target: Target) => Effect.Effect<string[]>
 }
 
 export class Service extends Context.Service<Service, Interface>()("@kilocode/ModelCache") {}
@@ -56,9 +59,9 @@ export class Service extends Context.Service<Service, Interface>()("@kilocode/Mo
 const log = Log.create({ service: "model-cache" })
 const ttl = Duration.minutes(5)
 const APERTIS_BASE_URL = "https://api.apertis.ai/v1"
-const ApertisItem = Schema.Struct({ id: Schema.String, owned_by: Schema.optional(Schema.String) })
-const ApertisResponse = Schema.Struct({ data: Schema.optional(Schema.Array(ApertisItem)) })
-type ApertisItem = Schema.Schema.Type<typeof ApertisItem>
+const Item = Schema.Struct({ id: Schema.String, owned_by: Schema.optional(Schema.String) })
+const Listing = Schema.Struct({ data: Schema.optional(Schema.Array(Item)) })
+type Item = Schema.Schema.Type<typeof Item>
 
 export const layer: Layer.Layer<
   Service,
@@ -86,7 +89,7 @@ export const layer: Layer.Layer<
       return [...failures.keys()]
     })
 
-    const aperture = (item: ApertisItem): Models[string] => ({
+    const aperture = (item: Item): Models[string] => ({
       id: item.id,
       name: item.id,
       family: item.owned_by ?? "",
@@ -100,28 +103,56 @@ export const layer: Layer.Layer<
       modalities: { input: ["text", "image"], output: ["text"] },
     })
 
+    // GET {url}/models on an OpenAI-compatible endpoint. The 10 second cap covers the body read too and
+    // ignores the provider's own request timeout, which may be disabled, so a stalled endpoint cannot
+    // hold up provider loading.
+    const list = Effect.fn("ModelCache.list")(function* (target: Target) {
+      const base = HttpClientRequest.get(`${target.url.replace(/\/+$/, "")}/models`).pipe(HttpClientRequest.acceptJson)
+      // Configured headers win over the bearer token, matching how the AI SDK sends chat requests.
+      const request = HttpClientRequest.setHeaders(
+        target.key ? HttpClientRequest.bearerToken(base, target.key) : base,
+        target.headers ?? {},
+      )
+      const response = yield* http.execute(request)
+      if (response.status < 200 || response.status >= 300) {
+        log.error("model fetch failed", { url: target.url, status: response.status })
+        return []
+      }
+
+      const json = yield* HttpClientResponse.schemaBodyJson(Listing)(response)
+      return json.data ?? []
+    }, Effect.timeout("10 seconds"))
+
     const fetchApertisModels = Effect.fn("ModelCache.fetchApertisModels")(function* (options: Options) {
-      const baseURL = options.baseURL ?? APERTIS_BASE_URL
       if (!options.apiKey) {
         log.debug("no API key for apertis, skipping model fetch")
         return {}
       }
 
-      const url = `${baseURL.replace(/\/+$/, "")}/models`
-      const response = yield* HttpClientRequest.get(url).pipe(
-        HttpClientRequest.acceptJson,
-        HttpClientRequest.bearerToken(options.apiKey),
-        http.execute,
-        Effect.timeout("10 seconds"),
-      )
-      if (response.status < 200 || response.status >= 300) {
-        log.error("apertis model fetch failed", { status: response.status })
-        return {}
-      }
-
-      const json = yield* HttpClientResponse.schemaBodyJson(ApertisResponse)(response)
-      return Object.fromEntries((json.data ?? []).map((item) => [item.id, aperture(item)]))
+      const items = yield* list({ url: options.baseURL ?? APERTIS_BASE_URL, key: options.apiKey })
+      return Object.fromEntries(items.map((item) => [item.id, aperture(item)]))
     })
+
+    // Keyed by the whole target so a changed URL, key or header set gets its own entry. Failures are
+    // cached as an empty list for the TTL as well, so an unreachable endpoint costs one bounded wait.
+    const discovered = yield* Cache.make({
+      capacity: 64,
+      timeToLive: ttl,
+      lookup: (id: string) => {
+        const target: Target = JSON.parse(id)
+        return list(target).pipe(
+          Effect.map((items) => items.map((item) => item.id)),
+          Effect.catch((error) =>
+            Effect.sync(() => {
+              log.warn("model discovery failed", { url: target.url, error: String(error) })
+              return []
+            }),
+          ),
+        )
+      },
+    })
+
+    const discover = (target: Target) => Cache.get(discovered, JSON.stringify(target))
 
     const authOptions = Effect.fn("ModelCache.authOptions")(function* (providerID: string) {
       if (providerID !== "kilo" && providerID !== "apertis") return {}
@@ -376,7 +407,7 @@ export const layer: Layer.Layer<
       log.debug("no cache to clear", { providerID })
     })
 
-    return Service.of({ getFailure, failedProviders, get, fetch, refresh, clear })
+    return Service.of({ getFailure, failedProviders, get, fetch, refresh, clear, discover })
   }),
 )
 
