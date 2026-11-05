@@ -93,7 +93,7 @@ export function beginBoot(start: () => Promise<Record<string, unknown>>, timing?
  * diff controller, telemetry, and the webview boundary.
  */
 export interface LifecycleHost {
-  createOnDisk: (opts?: CreateWorktreeOnDiskOptions) => Promise<CreateWorktreeOnDiskResult | null>
+  createOnDisk: (opts: CreateWorktreeOnDiskOptions) => Promise<CreateWorktreeOnDiskResult | null>
   hasScript: () => boolean
   runSetup: (dir: string, branch: string, id: string, early?: () => Promise<void>) => Promise<void>
   createSession: (
@@ -172,7 +172,7 @@ export async function createLifecycleWorktree(
   await initContextState(ctx, host.log)
   timing.mark("context")
 
-  const created = await host.createOnDisk({ baseBranch: opts.baseBranch, branchName: opts.branchName })
+  const created = await host.createOnDisk({ entry: "quick", baseBranch: opts.baseBranch, branchName: opts.branchName })
   timing.mark("create")
   if (!created) {
     timing.end()
@@ -454,7 +454,7 @@ export async function promoteLifecycleSession(
   sessionId: string,
 ): Promise<null> {
   await initContextState(ctx, host.log)
-  const created = await host.createOnDisk({})
+  const created = await host.createOnDisk({ entry: "other" })
   if (!created) return null
 
   // Run setup script for new worktree (blocks until complete, shows in overlay)

@@ -5,12 +5,13 @@ import { capture as captureGitState, apply as applyGitState, type GitSnapshot } 
 import { getErrorMessage } from "../kilo-provider-utils"
 import { PLATFORM } from "./constants"
 import { recordForkHandoff } from "./fork-handoff"
+import type { WorktreeEntry } from "./worktree-create"
 
 export interface ContinueContext {
   root: string
   binary?: string
   getClient: () => KiloClient
-  createWorktreeOnDisk: (opts: { baseBranch: string; baseRef: string }) => Promise<{
+  createWorktreeOnDisk: (opts: { entry: WorktreeEntry; baseBranch: string; baseRef: string }) => Promise<{
     worktree: { id: string }
     result: CreateWorktreeResult
   } | null>
@@ -56,7 +57,7 @@ export async function prepareWorktree(
   branch: string,
   head: string,
 ): Promise<StepResult<{ worktreeId: string; result: CreateWorktreeResult }>> {
-  const created = await ctx.createWorktreeOnDisk({ baseBranch: branch, baseRef: head })
+  const created = await ctx.createWorktreeOnDisk({ entry: "other", baseBranch: branch, baseRef: head })
   if (!created) return { ok: false, error: "Failed to create worktree" }
   await ctx.runSetupScript(created.result.path, created.result.branch, created.worktree.id)
   return { ok: true, value: { worktreeId: created.worktree.id, result: created.result } }

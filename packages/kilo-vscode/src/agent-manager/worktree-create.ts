@@ -2,10 +2,17 @@ import type { Worktree, WorktreeStateManager } from "./WorktreeStateManager"
 import type { WorktreeManager, CreateWorktreeResult } from "./WorktreeManager"
 import { chooseBaseBranch } from "./base-branch"
 import { classifyWorktreeError, type WorktreeSetupErrorCode } from "./git-import"
+import { NO_GIT_REPO } from "./git-errors"
 import { PLATFORM } from "./constants"
-import type { AgentManagerOutMessage } from "./types"
+import type { AgentManagerInMessage, AgentManagerOutMessage } from "./types"
+
+/** Which surface started a creation, for telemetry: the New Worktree modal, quick create, or anything else. */
+export type WorktreeEntry = "modal" | "quick" | "other"
+
+type Capture = (event: string, properties?: Record<string, unknown>) => void
 
 export type CreateWorktreeOnDiskOptions = {
+  entry: WorktreeEntry
   groupId?: string
   baseBranch?: string
   baseRef?: string
@@ -30,15 +37,32 @@ export interface CreateWorktreeOnDiskContext {
   getWorktreeManager: () => WorktreeManager | undefined
   getStateManager: () => WorktreeStateManager | undefined
   postToWebview: (message: AgentManagerOutMessage) => void
-  capture: (event: string, properties?: Record<string, unknown>) => void
+  capture: Capture
   pushState: () => void
   log: (...args: unknown[]) => void
 }
 
-function report(opts: CreateWorktreeOnDiskOptions | undefined, failure: WorktreeCreationFailure): void {
-  const onError = opts?.onError
+function report(opts: CreateWorktreeOnDiskOptions, failure: WorktreeCreationFailure): void {
+  const onError = opts.onError
   if (!onError) return
   onError(failure)
+}
+
+/** Send the creation error event. Never add prompt text, branch names or paths here. */
+function fail(capture: Capture, entry: WorktreeEntry, error: string, errorCode?: WorktreeSetupErrorCode): void {
+  capture("Agent Manager Session Error", { source: PLATFORM, error, context: "createWorktree", errorCode, entry })
+}
+
+/** Report a creation that cannot start because no project context exists. Returns null for early returns. */
+export function reportNoRepo(capture: Capture, entry: WorktreeEntry): null {
+  fail(capture, entry, NO_GIT_REPO, "not_git_repo")
+  return null
+}
+
+/** Report a create message dropped because it targets an unknown project. Other messages are ignored. */
+export function reportDropped(capture: Capture, type: AgentManagerInMessage["type"]): void {
+  if (type === "agentManager.createMultiVersion") fail(capture, "modal", NO_GIT_REPO, "project_unavailable")
+  if (type === "agentManager.createWorktree") fail(capture, "quick", NO_GIT_REPO, "project_unavailable")
 }
 
 /**
@@ -48,37 +72,34 @@ function report(opts: CreateWorktreeOnDiskOptions | undefined, failure: Worktree
  */
 export async function createWorktreeOnDisk(
   ctx: CreateWorktreeOnDiskContext,
-  opts?: CreateWorktreeOnDiskOptions,
+  opts: CreateWorktreeOnDiskOptions,
 ): Promise<CreateWorktreeOnDiskResult | null> {
   const manager = ctx.getWorktreeManager()
   const state = ctx.getStateManager()
   if (!manager || !state) {
-    const message = "Open a folder that contains a git repository to use worktrees"
-    report(opts, { message, code: "not_git_repo" })
+    report(opts, { message: NO_GIT_REPO, code: "not_git_repo" })
     ctx.postToWebview({
       type: "agentManager.worktreeSetup",
       status: "error",
-      message,
+      message: NO_GIT_REPO,
       errorCode: "not_git_repo",
     })
-    return null
+    return reportNoRepo(ctx.capture, opts.entry)
   }
 
   ctx.postToWebview({ type: "agentManager.worktreeSetup", status: "creating", message: "Creating git worktree..." })
 
   // Resolve effective base branch using configured default
-  const effectiveBase = opts?.existingBranch
-    ? undefined
-    : await resolveBaseBranch(ctx, manager, state, opts?.baseBranch)
+  const effectiveBase = opts.existingBranch ? undefined : await resolveBaseBranch(ctx, manager, state, opts.baseBranch)
 
   let result: CreateWorktreeResult
   try {
     result = await manager.createWorktree({
-      prompt: opts?.name || "kilo",
-      baseBranch: effectiveBase ?? opts?.baseBranch,
-      baseRef: opts?.baseRef,
-      branchName: opts?.branchName,
-      existingBranch: opts?.existingBranch,
+      prompt: opts.name || "kilo",
+      baseBranch: effectiveBase ?? opts.baseBranch,
+      baseRef: opts.baseRef,
+      branchName: opts.branchName,
+      existingBranch: opts.existingBranch,
     })
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error)
@@ -95,11 +116,7 @@ export async function createWorktreeOnDisk(
       message: msg,
       errorCode,
     })
-    ctx.capture("Agent Manager Session Error", {
-      source: PLATFORM,
-      error: msg,
-      context: "createWorktree",
-    })
+    fail(ctx.capture, opts.entry, msg, errorCode)
     return null
   }
 
@@ -108,9 +125,9 @@ export async function createWorktreeOnDisk(
     path: result.path,
     parentBranch: result.parentBranch,
     remote: result.remote,
-    groupId: opts?.groupId,
-    label: opts?.label,
-    branchOwned: !opts?.existingBranch,
+    groupId: opts.groupId,
+    label: opts.label,
+    branchOwned: !opts.existingBranch,
   })
 
   // Push state immediately so the sidebar shows the new worktree with a loading indicator

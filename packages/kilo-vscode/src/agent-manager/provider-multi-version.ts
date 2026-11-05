@@ -171,6 +171,7 @@ async function prepareVersion(
   // Display names retain automatic slugging; explicit Git branches stay literal.
   const branch = spec.branchName ? version.branch : sanitizeBranchName(version.branch ?? "") || undefined
   const wt = await host.createOnDisk({
+    entry: "modal",
     groupId: spec.groupId,
     baseBranch: spec.baseBranch,
     branchName: branch,

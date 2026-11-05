@@ -32,7 +32,7 @@ import {
   type BranchListItem,
 } from "./git-import"
 import { pathKey } from "./project/paths"
-import { MISSING_GIT } from "./git-errors"
+import { MISSING_GIT, missingDeveloperTools } from "./git-errors"
 import { Semaphore } from "./semaphore"
 
 const TEMP_PREFIX = ".kilo-delete-"
@@ -219,8 +219,9 @@ export class WorktreeManager {
   }
 
   /**
-   * True only when a `git --version` probe failed to spawn. Callers use this to decide whether a
-   * downstream `ENOENT` really means "git is missing" instead of "that directory is gone".
+   * True only when a `git --version` probe failed to spawn or reported missing macOS developer tools. Callers
+   * use this to decide whether a downstream `ENOENT` really means "git is missing" instead of "that directory
+   * is gone".
    */
   get gitProbeFailed(): boolean {
     return this.probeFailed
@@ -377,6 +378,11 @@ export class WorktreeManager {
       this.gitAvailable = false
       if (error instanceof Error && "code" in error && (error as NodeJS.ErrnoException).code === "ENOENT") {
         // The probe runs without a cwd, so ENOENT here can only mean the binary is missing.
+        this.probeFailed = true
+        throw new Error(MISSING_GIT)
+      }
+      if (error instanceof Error && missingDeveloperTools(error.message)) {
+        // Apple's /usr/bin/git shim exits 1 with this output when the Command Line Tools are missing.
         this.probeFailed = true
         throw new Error(MISSING_GIT)
       }
