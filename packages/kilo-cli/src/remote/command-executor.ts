@@ -124,24 +124,29 @@ export const make = Effect.fn("RemoteCommands.make")(function* (options: Options
     catch: () => new Failure({ code: "directory_unavailable", message: "Launch directory is unavailable" }),
   })
   yield* database.db
-    .run(
-      sql`CREATE TABLE IF NOT EXISTS _kilo_remote_command (
-    scope TEXT NOT NULL, command_id TEXT NOT NULL, fingerprint TEXT NOT NULL,
-    outcome TEXT, created_at INTEGER NOT NULL DEFAULT 0, PRIMARY KEY(scope, command_id))`,
+    .transaction((tx) =>
+      Effect.gen(function* () {
+        yield* tx.run(sql`CREATE TABLE IF NOT EXISTS _kilo_remote_command (
+          scope TEXT NOT NULL, command_id TEXT NOT NULL, fingerprint TEXT NOT NULL,
+          outcome TEXT, created_at INTEGER NOT NULL DEFAULT 0, PRIMARY KEY(scope, command_id))`)
+        const columns = yield* tx.all<{ name: string }>("PRAGMA table_info(_kilo_remote_command)")
+        if (!columns.some((column) => column.name === "created_at"))
+          yield* tx.run("ALTER TABLE _kilo_remote_command ADD COLUMN created_at INTEGER NOT NULL DEFAULT 0")
+        yield* tx.run(sql`CREATE INDEX IF NOT EXISTS _kilo_remote_command_results
+          ON _kilo_remote_command(created_at DESC) WHERE outcome IS NOT NULL`)
+      }),
     )
     .pipe(Effect.orDie)
-  // Discovery outcomes (directories, models, agents) can be large, so keep only the
-  // recent settled receipts. Unsettled rows fence a retry and must never be pruned.
-  yield* database.db
-    .run(
-      sql`DELETE FROM _kilo_remote_command WHERE outcome IS NOT NULL AND rowid IN (
-      SELECT rowid FROM (
-        SELECT rowid, row_number() OVER (PARTITION BY scope ORDER BY created_at DESC, rowid DESC) AS n
-        FROM _kilo_remote_command WHERE outcome IS NOT NULL
-      ) WHERE n > 256 OR created_at < ${Date.now()} - 86_400_000
-    )`,
-    )
-    .pipe(Effect.orDie)
+  // Trim result payloads, never command identities: old retries must not repeat effects.
+  const prune = () =>
+    database.db
+      .run(sql`UPDATE _kilo_remote_command SET outcome=NULL WHERE outcome IS NOT NULL
+        AND (created_at < ${Date.now() - 86_400_000} OR rowid NOT IN (
+          SELECT rowid FROM _kilo_remote_command WHERE outcome IS NOT NULL
+          ORDER BY created_at DESC,rowid DESC LIMIT 256
+        ))`)
+      .pipe(Effect.orDie)
+  yield* prune()
   yield* database.db
     .run(
       sql`CREATE TABLE IF NOT EXISTS _kilo_remote_run (
@@ -516,13 +521,15 @@ export const make = Effect.fn("RemoteCommands.make")(function* (options: Options
     const current = sessionID ? yield* identity(sessionID).pipe(Effect.orElseSucceed(() => undefined)) : undefined
     if (current) outcome.identity = current
     // Capacity is transient and checked before any creation, so the same command ID must be retryable.
+    const encoded = JSON.stringify(outcome)
     yield* database.db
       .run(
         outcome.error?.code === "remote_capacity"
           ? sql`DELETE FROM _kilo_remote_command WHERE scope=${scope} AND command_id=${commandID}`
-          : sql`UPDATE _kilo_remote_command SET outcome=${JSON.stringify(outcome)} WHERE scope=${scope} AND command_id=${commandID}`,
+          : sql`UPDATE _kilo_remote_command SET outcome=${Buffer.byteLength(encoded) <= 65_536 ? encoded : null} WHERE scope=${scope} AND command_id=${commandID}`,
       )
       .pipe(Effect.orDie)
+    yield* prune()
     return outcome
   })
   return {

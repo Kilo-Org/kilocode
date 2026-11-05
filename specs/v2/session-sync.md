@@ -348,8 +348,10 @@ Permission/question request IDs must belong to that running session.
 Slash dispatch allows only `/compact`, `/new` in the same workspace, `/skill <ID>`, `/models` and `/agents`.
 All other commands produce a visible failed `command.outcome`, never arbitrary shell or command execution.
 Outcomes are `{commandID,status,result?,error?,duplicate?,identity?}`; `status` is `succeeded`, `failed` or `unknown`.
-The SQLite receipt ledger prevents re-execution of a retried command ID, including after process restart.
-An uncertain admitted operation is reported unknown rather than repeating possible external effects.
+The SQLite ledger keeps command identities and fingerprints so retries cannot repeat effects after restart or result eviction.
+Result payloads expire after one day, with at most 256 retained globally and 64 KiB per result.
+Startup and command settlement trim payloads; pending identities are never deleted.
+A duplicate whose result was evicted is reported unknown rather than repeating possible external effects.
 
 Tickets are carried in Authorization Bearer headers, never query strings.
 Fresh tickets renew at `reauthAt` before expiry; account/sync changes close transport without changing enrollment.

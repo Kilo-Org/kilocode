@@ -322,6 +322,60 @@ it("never reexecutes a durably admitted command with unknown settlement", () =>
     expect(f.calls.prompt).toBe(1)
   }))
 
+it("evicted command results never allow a completed or unsettled effect to run again", () =>
+  Effect.gen(function* () {
+    const f = yield* fixture()
+    yield* f.commands.session(id, "send_message", { text: "settled" }, false, "old-settled")
+    yield* f.commands.session(id, "send_message", { text: "pending" }, false, "old-pending")
+    yield* f.database.db.run(sql`UPDATE _kilo_remote_command SET outcome=NULL WHERE command_id='old-pending'`)
+    for (let index = 0; index < 260; index++)
+      yield* f.commands.instance("list_directories", {}, `discovery-${index}`)
+    expect(yield* f.database.db.get(sql`SELECT count(*) AS n FROM _kilo_remote_command WHERE outcome IS NOT NULL`))
+      .toMatchObject({ n: 256 })
+    for (const [commandID, text] of [["old-settled", "settled"], ["old-pending", "pending"]])
+      expect(yield* f.commands.session(id, "send_message", { text }, false, commandID))
+        .toMatchObject({ status: "unknown", duplicate: true })
+    expect((yield* f.commands.session(id, "send_message", { text: "different" }, false, "old-settled")).error?.code)
+      .toBe("command_conflict")
+    expect(f.calls.prompt).toBe(2)
+    const restarted = yield* f.boot()
+    expect(yield* restarted.session(id, "send_message", { text: "settled" }, false, "old-settled"))
+      .toMatchObject({ status: "unknown", duplicate: true })
+    expect(f.calls.prompt).toBe(2)
+  }))
+
+it("upgrades legacy receipts and expires their payloads without deleting dedupe identities", () =>
+  Effect.gen(function* () {
+    const f = yield* fixture()
+    yield* f.commands.session(id, "send_message", { text: "legacy" }, false, "legacy")
+    yield* f.database.db.run(sql`DROP INDEX _kilo_remote_command_results`)
+    yield* f.database.db.run(sql`ALTER TABLE _kilo_remote_command DROP COLUMN created_at`)
+    const restarted = yield* f.boot()
+    expect(yield* restarted.session(id, "send_message", { text: "legacy" }, false, "legacy"))
+      .toMatchObject({ status: "unknown", duplicate: true })
+    expect(f.calls.prompt).toBe(1)
+    yield* restarted.instance("list_directories", {}, "expired")
+    yield* f.database.db.run(sql`UPDATE _kilo_remote_command SET created_at=${Date.now() - 86_400_001} WHERE command_id='expired'`)
+    const again = yield* f.boot()
+    expect(yield* again.instance("list_directories", {}, "expired"))
+      .toMatchObject({ status: "unknown", duplicate: true })
+  }))
+
+it("returns large discovery results without retaining their payloads", () =>
+  Effect.gen(function* () {
+    const f = yield* fixture()
+    yield* Effect.promise(() => Promise.all(
+      Array.from({ length: 180 }, (_, index) => mkdir(path.join(f.root, `${index}-${"x".repeat(190)}`))),
+    ))
+    const result = yield* f.commands.instance("list_directories", {}, "large-discovery")
+    expect(result.status).toBe("succeeded")
+    expect(Buffer.byteLength(JSON.stringify(result))).toBeGreaterThan(65_536)
+    expect(yield* f.database.db.get(sql`SELECT outcome FROM _kilo_remote_command WHERE command_id='large-discovery'`))
+      .toEqual({ outcome: null })
+    expect(yield* f.commands.instance("list_directories", {}, "large-discovery"))
+      .toMatchObject({ status: "unknown", duplicate: true })
+  }))
+
 it("queued prompts work while live-only commands require current run and incarnation", () =>
   Effect.gen(function* () {
     const f = yield* fixture()
