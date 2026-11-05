@@ -75,9 +75,11 @@ export type Options = {
 type Owner = { userID: string; organizationID: string | null | undefined }
 
 // Leave room for the presence reply or session-event envelope inside a 64 KiB frame.
-function boundedOutcome(outcome: Outcome): Outcome {
-  if (Buffer.byteLength(JSON.stringify(outcome)) <= 60 * 1024) return outcome
-  return {
+function encodeOutcome(outcome: Outcome): { outcome: Outcome; encoded: string } {
+  const encoded = JSON.stringify(outcome)
+  const replayBytes = outcome.duplicate ? 0 : Buffer.byteLength(',"duplicate":true')
+  if (Buffer.byteLength(encoded) + replayBytes <= 60 * 1024) return { outcome, encoded }
+  const bounded: Outcome = {
     commandID: outcome.commandID,
     status: "failed",
     ...(outcome.identity ? { identity: outcome.identity } : {}),
@@ -87,6 +89,7 @@ function boundedOutcome(outcome: Outcome): Outcome {
       message: "The command ran, but its result exceeds the remote response limit",
     },
   }
+  return { outcome: bounded, encoded: JSON.stringify(bounded) }
 }
 
 const decode = <S extends Schema.Top & { readonly DecodingServices: never }>(schema: S, input: unknown) =>
@@ -516,14 +519,14 @@ export const make = Effect.fn("RemoteCommands.make")(function* (options: Options
           error: { code: "command_conflict", message: "Command ID already addresses a different command" },
         }
       return row.outcome
-        ? boundedOutcome({ ...(JSON.parse(row.outcome) as Outcome), duplicate: true })
+        ? encodeOutcome({ ...(JSON.parse(row.outcome) as Outcome), duplicate: true }).outcome
         : { commandID, status: "unknown", duplicate: true }
     }
     // A crash between admission and settlement stays unknown. Replaying it could repeat a side effect.
     const exit = yield* Effect.exit(run)
     if (Exit.isFailure(exit) && Cause.hasInterrupts(exit.cause)) return yield* Effect.interrupt
     const error = Exit.isFailure(exit) ? Cause.squash(exit.cause) : undefined
-    let outcome: Outcome = Exit.isSuccess(exit)
+    const outcome: Outcome = Exit.isSuccess(exit)
       ? { commandID, status: "succeeded", result: exit.value }
       : {
           commandID,
@@ -535,18 +538,17 @@ export const make = Effect.fn("RemoteCommands.make")(function* (options: Options
         }
     const current = sessionID ? yield* identity(sessionID).pipe(Effect.orElseSucceed(() => undefined)) : undefined
     if (current) outcome.identity = current
-    outcome = boundedOutcome(outcome)
+    const bounded = encodeOutcome(outcome)
     // Capacity is transient and checked before any creation, so the same command ID must be retryable.
-    const encoded = JSON.stringify(outcome)
     yield* database.db
       .run(
-        outcome.error?.code === "remote_capacity"
+        bounded.outcome.error?.code === "remote_capacity"
           ? sql`DELETE FROM _kilo_remote_command WHERE scope=${scope} AND command_id=${commandID}`
-          : sql`UPDATE _kilo_remote_command SET outcome=${encoded} WHERE scope=${scope} AND command_id=${commandID}`,
+          : sql`UPDATE _kilo_remote_command SET outcome=${bounded.encoded} WHERE scope=${scope} AND command_id=${commandID}`,
       )
       .pipe(Effect.orDie)
     yield* prune()
-    return outcome
+    return bounded.outcome
   })
   return {
     incarnation,
