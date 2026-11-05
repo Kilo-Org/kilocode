@@ -1432,6 +1432,18 @@
     "note": "v1 checked the legacy SSE stream carries sandbox.status.changed. v2 has no legacy SSE (principle 3); the round trip test boots the host and checks the rpc.kilocode.sandbox.changed event through the generated client.",
     "by": "sandbox-port"
   },
+  "module:packages/kilo-vscode/src/shared/code-context.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-vscode/webview-ui/src/v2/prompt-attachments.ts",
+    "note": "Editor selections are now prompt file attachments (PromptAttachment in src/protocol.ts). mergeAttachments replaces mergeCodeContexts with dedupe on kind, uri, name and source path; codeContextLabel becomes the attachment name built by src/services/code-actions/attachments.ts; formatCodeContexts is not needed because the server reads the attachment and sends it to the model as an attached file.",
+    "by": "context-actions"
+  },
+  "module:packages/kilo-vscode/tests/unit/code-context.test.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-vscode/test/prompt-attachments.test.ts",
+    "note": "Merge and dedupe assertions are carried by prompt-attachments.test.ts; label assertions by code-action-attachments.test.ts. The format assertions are dropped with formatCodeContexts (attachments replace inline code blocks).",
+    "by": "context-actions"
+  },
   "module:packages/opencode/src/kilocode/tool/read-docx.ts": {
     "state": "ported",
     "v2": "packages/kilo-plugin/src/read/read-docx.ts",
@@ -1491,5 +1503,55 @@
     "v2": "packages/kilo-vscode/test/notifications.test.ts",
     "note": "Covers the showIn filter with dismissed IDs, the Gateway model name shown by the Try model action, and the host state in packages/kilo-vscode/src/notifications.ts: request, idempotent dismiss, pruning against the active list, and a Close loop that dismisses several IDs in one tick. The host-side pass-through of synthetic local notices is not carried with this cell; those notices belong to the config and Claude migration features.",
     "by": "better-promise"
+  }
+,
+  "api:GET /kilocode/notebook": {
+    "state": "dropped",
+    "note": "v1 listed server-initiated notebook requests for the extension to answer; v2 has no server notebook API because the extension owns the workspace over a loopback broker, so there is no pending request to list.",
+    "by": "notebook-tools"
+  },
+  "api:POST /kilocode/notebook/{requestID}/reject": {
+    "state": "dropped",
+    "note": "v1 rejected a server-initiated notebook request through this route; on v2 the server calls the extension broker and the response is the reply, so no reject route exists.",
+    "by": "notebook-tools"
+  },
+  "api:POST /kilocode/notebook/{requestID}/reply": {
+    "state": "dropped",
+    "note": "v1 replied to a server-initiated notebook request through this route; on v2 the server calls the extension broker and receives the result in the same HTTP response.",
+    "by": "notebook-tools"
+  },
+  "module:packages/opencode/src/kilocode/notebook/protocol.ts": {
+    "state": "ported",
+    "v2": "packages/schema/src/kilocode/notebook.ts",
+    "note": "The request, result, output and failure schemas are ported to the KiloNotebook broker contract in packages/schema/src/kilocode/notebook.ts, including the path limits, cell shape, output limits and error codes.",
+    "by": "notebook-tools"
+  },
+  "module:packages/opencode/src/kilocode/notebook/service.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-vscode/src/services/notebook/broker.ts",
+    "note": "NotebookBroker carries request dispatch, loopback token auth, known-directory containment, per-directory ignore rules, cancellation when the caller disconnects, disposal and structured failures. packages/kilo-plugin/src/notebook/broker.ts is the client half.",
+    "by": "notebook-tools"
+  },
+  "module:packages/opencode/test/kilocode/notebook-service.test.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-vscode/test/notebook-broker.test.ts",
+    "note": "The broker tests cover token auth, invalid requests, directory containment, refresh, read/edit dispatch, stale and unexpected failure mapping, caller cancellation and disposal. packages/kilo-plugin/test/notebook.test.ts covers the client request shapes.",
+    "by": "notebook-tools"
+  },
+  "module:packages/opencode/test/kilocode/notebook-tools.test.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-plugin/test/notebook.test.ts",
+    "note": "The plugin tests cover the notebook_read, notebook_edit (create, replace, delete validation) and notebook_execute request bodies, permission actions, bounded output rendering and stale_revision failure mapping.",
+    "by": "notebook-tools"
+  },
+  "patch:notebook:752d64cdd86b": {
+    "state": "dropped",
+    "note": "The v1 HTTP API exercise registered and exercised the three notebook routes. v2 has no notebook routes; the equivalent tool behavior is covered by packages/kilo-plugin/test/notebook.test.ts.",
+    "by": "notebook-tools"
+  },
+  "patch:notebook:c524c93fe185": {
+    "state": "dropped",
+    "note": "v1 registered Notebook.node in the server app runtime. v2 needs no server-side notebook service: the extension broker holds the request state and the plugin only makes loopback calls.",
+    "by": "notebook-tools"
   }
 }

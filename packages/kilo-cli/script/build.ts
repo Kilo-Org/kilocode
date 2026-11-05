@@ -210,6 +210,8 @@ export default { path: file, version: ${JSON.stringify(opencodePty.version)}, sh
     },
     define: {
       KILO_BRANDING_COMPILED: "true",
+      // Kilo: the build channel, which names the session database (src/database.ts).
+      KILO2_CHANNEL: `'${Script.channel}'`,
       OPENCODE_VERSION: `'${Script.version}'`,
       // Kilo: the command name that help and usage text show.
       OPENCODE_CLI_NAME: `'${binary}'`,
