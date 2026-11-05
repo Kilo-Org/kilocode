@@ -85,7 +85,8 @@ function host(input: {
     directory: input.directory,
     home: input.home ?? "/nonexistent-home",
     root: path.join(input.directory, ".index-root"),
-    settings: async () => ({ indexing: input.indexing, auth: input.auth ?? {} }),
+    config: async () => input.indexing,
+    auth: async () => input.auth ?? {},
     catalog: async () => {
       record.catalogs++
       return input.catalog ?? emptyCatalog

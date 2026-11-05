@@ -78,18 +78,15 @@ export const KiloIndexingPlugin = define<FSUtil.Service | Global.Service | Scope
       directory,
       home: global.home,
       root: path.join(global.state, "indexing"),
-      settings: async () => {
-        const [cfg, current] = await Promise.all([Effect.runPromise(indexing()), account()])
+      config: async () => {
+        const cfg = await Effect.runPromise(indexing())
         state.enabled = cfg?.enabled
-        const auth = resolveKiloIndexingAuth({
-          config: { indexing: cfg },
-          auth: accountAuth(current),
-          env: {},
-        })
-        return {
-          indexing: cfg,
-          auth: { ...auth, baseUrl: auth.baseUrl ?? (current ? current.server : undefined) },
-        }
+        return cfg
+      },
+      auth: async () => {
+        const [cfg, current] = await Promise.all([Effect.runPromise(indexing()), account()])
+        const auth = resolveKiloIndexingAuth({ config: { indexing: cfg }, auth: accountAuth(current), env: {} })
+        return { ...auth, baseUrl: auth.baseUrl ?? (current ? current.server : undefined) }
       },
       catalog: (auth) =>
         Effect.runPromise(

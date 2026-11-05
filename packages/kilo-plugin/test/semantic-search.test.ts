@@ -128,6 +128,9 @@ describe("tool.semantic_search", () => {
   })
 })
 
+// The engine degrades to a scan-only index when the native watcher cannot subscribe, as some containers cannot.
+const watcher = await probeWatcher()
+
 // The real engine in its worker, a real LanceDB store, and a local OpenAI-compatible embedding service whose vectors
 // are hashed bags of words, so related text scores higher without a paid model.
 describe("semantic_search over a real index", () => {
@@ -144,7 +147,7 @@ describe("semantic_search over a real index", () => {
     return vector.map((value) => value / norm)
   }
 
-  test("indexes a repository, finds related code and follows a file edit", async () => {
+  async function repository() {
     const server = Bun.serve({
       hostname: "127.0.0.1",
       port: 0,
@@ -161,11 +164,6 @@ describe("semantic_search over a real index", () => {
     })
     const directory = await realpath(await mkdtemp(path.join(os.tmpdir(), "kilo-semantic-")))
     const root = await realpath(await mkdtemp(path.join(os.tmpdir(), "kilo-semantic-index-")))
-    cleanup.push(async () => {
-      server.stop(true)
-      await rm(directory, { recursive: true, force: true })
-      await rm(root, { recursive: true, force: true })
-    })
     await mkdir(path.join(directory, "src"))
     await Bun.write(
       path.join(directory, "src/auth.ts"),
@@ -175,23 +173,20 @@ describe("semantic_search over a real index", () => {
       path.join(directory, "src/render.ts"),
       "// Draws the chart canvas with colored bars for each series.\nexport function drawChart(canvas: string, series: number[]) {\n  return series.map((value) => canvas + value).join(',')\n}\n",
     )
-
     const published: IndexingStatus[] = []
     const runtime = new IndexingRuntime.Runtime({
       directory,
       home: "/nonexistent-home",
       root,
-      settings: async () => ({
-        indexing: {
-          enabled: true,
-          provider: "openai-compatible",
-          model: "fixture-model",
-          dimension: 64,
-          searchMinScore: 0.1,
-          "openai-compatible": { baseUrl: `http://127.0.0.1:${server.port}/v1`, apiKey: "fixture" },
-        },
-        auth: {},
+      config: async () => ({
+        enabled: true,
+        provider: "openai-compatible",
+        model: "fixture-model",
+        dimension: 64,
+        searchMinScore: 0.1,
+        "openai-compatible": { baseUrl: `http://127.0.0.1:${server.port}/v1`, apiKey: "fixture" },
       }),
+      auth: async () => ({}),
       catalog: async () => ({ defaultModel: "", models: [], aliases: {} }),
       lancedb: async () => {},
       primary: async () => undefined,
@@ -202,17 +197,26 @@ describe("semantic_search over a real index", () => {
       log: () => {},
       env: {},
     })
-    cleanup.unshift(() => runtime.dispose())
-
+    cleanup.unshift(async () => {
+      await runtime.dispose()
+      server.stop(true)
+      await rm(directory, { recursive: true, force: true })
+      await rm(root, { recursive: true, force: true })
+    })
     await runtime.init()
     const done = async () => {
-      for (const _ of Array.from({ length: 200 })) {
+      for (const _ of Array.from({ length: 400 })) {
         const status = await runtime.current()
         if (status.state === "Complete" || status.state === "Error") return status
         await Bun.sleep(50)
       }
       return runtime.current()
     }
+    return { directory, runtime, published, done }
+  }
+
+  test("indexes a repository and finds related code", async () => {
+    const { directory, runtime, published, done } = await repository()
     expect((await done()).state).toBe("Complete")
     expect(runtime.ready()).toBe(true)
     expect(published.some((status) => status.state === "In Progress")).toBe(true)
@@ -225,19 +229,50 @@ describe("semantic_search over a real index", () => {
     })
     const first = await Effect.runPromise(search.execute({ query: "hash the login password with salt" }, context))
     expect(first.output?.split("\n")[2]).toStartWith("1. src/auth.ts:")
+  })
 
-    await Bun.write(
-      path.join(directory, "src/upload.ts"),
-      "// Waits longer after each failed upload attempt.\nexport function retryDelay(upload: string, attempt: number) {\n  return upload.length + Math.min(30000, 500 * 2 ** attempt)\n}\n",
-    )
+  test.skipIf(watcher !== undefined)("follows a file edit through the file watcher", async () => {
+    const { directory, runtime, done } = await repository()
+    expect((await done()).state).toBe("Complete")
+
+    const file = path.join(directory, "src/upload.ts")
+    const text =
+      "// Waits longer after each failed upload attempt.\nexport function retryDelay(upload: string, attempt: number) {\n  return upload.length + Math.min(30000, 500 * 2 ** attempt)\n}\n"
+    await Bun.write(file, text)
     const found = async () => {
-      for (const _ of Array.from({ length: 100 })) {
+      for (const round of Array.from({ length: 60 })) {
         const hits = await runtime.search("retry delay for an upload attempt")
         if (hits[0]?.payload?.filePath === "src/upload.ts") return true
-        await Bun.sleep(100)
+        // A creation before the subscription finished is not replayed; a second write is an update it always sees.
+        if (round === 20) await Bun.write(file, text)
+        await Bun.sleep(500)
       }
       return false
     }
     expect(await found()).toBe(true)
-  }, 60_000)
+  }, 90_000)
 })
+
+/** The reason the native watcher cannot subscribe to a scratch directory, or undefined when it can. */
+async function probeWatcher() {
+  const directory = await mkdtemp(path.join(os.tmpdir(), "kilo-watch-probe-"))
+  try {
+    const engine = path.dirname(Bun.resolveSync("@kilocode/kilo-indexing/engine", import.meta.dir))
+    const module = (await import(Bun.resolveSync("@parcel/watcher", engine))) as typeof import("@parcel/watcher")
+    const backend =
+      process.platform === "linux"
+        ? "inotify"
+        : process.platform === "darwin"
+          ? "fs-events"
+          : process.platform === "win32"
+            ? "windows"
+            : undefined
+    const subscription = await module.subscribe(directory, () => {}, backend ? { backend } : {})
+    await subscription.unsubscribe()
+    return undefined
+  } catch (error) {
+    return error instanceof Error ? error.message : String(error)
+  } finally {
+    await rm(directory, { recursive: true, force: true })
+  }
+}

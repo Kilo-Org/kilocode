@@ -3,7 +3,10 @@
   "scanner": "jscpd@5.0.16",
   "exceptions": [
     {
-      "files": ["packages/kilo-gateway-core/src/embedding-catalog.ts", "packages/schema/src/kilocode/gateway.ts"],
+      "files": [
+        "packages/kilo-gateway-core/src/embedding-catalog.ts",
+        "packages/schema/src/kilocode/gateway.ts"
+      ],
       "fingerprint": "f7242c5610a78010",
       "maxMatches": 1,
       "maxTokens": 101,
@@ -60,7 +63,10 @@
       "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."
     },
     {
-      "files": ["packages/kilo-ui-base/src/components/checkbox.css", "packages/kilo-ui-base/src/components/switch.css"],
+      "files": [
+        "packages/kilo-ui-base/src/components/checkbox.css",
+        "packages/kilo-ui-base/src/components/switch.css"
+      ],
       "fingerprint": "488901765c9f6d46",
       "maxMatches": 1,
       "maxTokens": 106,
@@ -69,7 +75,10 @@
       "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."
     },
     {
-      "files": ["packages/kilo-ui-base/src/components/file.tsx", "packages/kilo-ui/src/components/code.tsx"],
+      "files": [
+        "packages/kilo-ui-base/src/components/file.tsx",
+        "packages/kilo-ui/src/components/code.tsx"
+      ],
       "fingerprint": "5d772c9ec05c9a8f",
       "maxMatches": 1,
       "maxTokens": 124,
@@ -78,7 +87,10 @@
       "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."
     },
     {
-      "files": ["packages/kilo-ui-base/src/components/list.css", "packages/kilo-ui-base/src/components/list.css"],
+      "files": [
+        "packages/kilo-ui-base/src/components/list.css",
+        "packages/kilo-ui-base/src/components/list.css"
+      ],
       "fingerprint": "705e109b64f643bd",
       "maxMatches": 1,
       "maxTokens": 120,
@@ -99,7 +111,10 @@
       "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."
     },
     {
-      "files": ["packages/kilo-ui-base/src/context/marked.tsx", "packages/kilo-ui-base/src/pierre/kilo-diff-theme.ts"],
+      "files": [
+        "packages/kilo-ui-base/src/context/marked.tsx",
+        "packages/kilo-ui-base/src/pierre/kilo-diff-theme.ts"
+      ],
       "fingerprint": "4a4914cc3e27ad36",
       "maxMatches": 1,
       "maxTokens": 958,
@@ -108,7 +123,10 @@
       "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."
     },
     {
-      "files": ["packages/kilo-ui-base/src/pierre/commented-lines.ts", "packages/kilo-ui/src/components/code.tsx"],
+      "files": [
+        "packages/kilo-ui-base/src/pierre/commented-lines.ts",
+        "packages/kilo-ui/src/components/code.tsx"
+      ],
       "fingerprint": "243ef86ddb1f1c3f",
       "maxMatches": 1,
       "maxTokens": 147,
@@ -117,7 +135,10 @@
       "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."
     },
     {
-      "files": ["packages/kilo-ui-base/src/pierre/commented-lines.ts", "packages/kilo-ui/src/pierre/diff-dom.ts"],
+      "files": [
+        "packages/kilo-ui-base/src/pierre/commented-lines.ts",
+        "packages/kilo-ui/src/pierre/diff-dom.ts"
+      ],
       "fingerprint": "b3d3c18494a28a1a",
       "maxMatches": 1,
       "maxTokens": 122,
@@ -126,7 +147,10 @@
       "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."
     },
     {
-      "files": ["packages/kilo-ui-base/src/pierre/file-find.ts", "packages/kilo-ui/src/components/code.tsx"],
+      "files": [
+        "packages/kilo-ui-base/src/pierre/file-find.ts",
+        "packages/kilo-ui/src/components/code.tsx"
+      ],
       "fingerprint": "38631e8afc0eaf81",
       "maxMatches": 1,
       "maxTokens": 101,
@@ -135,7 +159,10 @@
       "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."
     },
     {
-      "files": ["packages/kilo-plugin/src/branch-name/index.ts", "packages/kilo-plugin/src/commit-message/index.ts"],
+      "files": [
+        "packages/kilo-plugin/src/branch-name/index.ts",
+        "packages/kilo-plugin/src/commit-message/index.ts"
+      ],
       "fingerprint": "dbd36e8bac0eb84e",
       "maxMatches": 1,
       "maxTokens": 151,
@@ -144,13 +171,52 @@
       "reason": "Two independent RPC plugins keep the title-agent, primary and small model fallback policy visible in each option scope. Extract when a third caller needs the same policy."
     },
     {
-      "files": ["packages/kilo-vscode/webview-ui/agent-manager/pr/PRComments.tsx", "packages/kilo-vscode/webview-ui/agent-manager/pr/PRConversation.tsx"],
+      "files": [
+        "packages/kilo-vscode/webview-ui/agent-manager/pr/PRComments.tsx",
+        "packages/kilo-vscode/webview-ui/agent-manager/pr/PRConversation.tsx"
+      ],
       "fingerprint": "e0308b3819e11865",
       "maxMatches": 1,
       "maxTokens": 105,
       "kind": "intentional",
       "owner": "agent-manager",
       "reason": "Both PR views build the same reaction controller for one worktree. Kept in each view because the message scope follows the view that renders the comments."
+    },
+    {
+      "files": [
+        "packages/kilo-indexing/src/file-extensions.ts",
+        "packages/kilo-vscode/webview-ui/src/components/settings/indexing-tab-state.ts"
+      ],
+      "fingerprint": "1a4d2c7262ecac7f",
+      "maxMatches": 1,
+      "maxTokens": 182,
+      "kind": "intentional",
+      "owner": "codebase-indexing",
+      "reason": "The webview bundle cannot import the Node-only engine package, and the tab normalizes the extension list the same way the engine does (v1 had both files in the same shape). Extract into a web-safe shared module when a third consumer needs the rules."
+    },
+    {
+      "files": [
+        "packages/kilo-indexing/src/indexing/embedders/openai-compatible.ts",
+        "packages/kilo-indexing/src/indexing/embedders/openrouter.ts"
+      ],
+      "fingerprint": "3171ca0591b4e23b",
+      "maxMatches": 1,
+      "maxTokens": 168,
+      "kind": "intentional",
+      "owner": "kilo-indexing",
+      "reason": "Engine code copied unchanged from v1: the two embedders keep their own response parsing so a provider change is local. Extract in a separate behavior-preserving engine change."
+    },
+    {
+      "files": [
+        "packages/kilo-indexing/src/kilo-embedding-models.ts",
+        "packages/kilo-vscode/webview-ui/src/context/kilo-embedding-models.tsx"
+      ],
+      "fingerprint": "8083392d37a0ce89",
+      "maxMatches": 1,
+      "maxTokens": 134,
+      "kind": "intentional",
+      "owner": "codebase-indexing",
+      "reason": "The webview reads the Gateway embedding catalog for the model picker and the engine reads it for model resolution; the webview bundle cannot import the Node-only engine package (v1 had both files). Extract into a web-safe shared module when a third consumer needs the catalog shape."
     }
   ]
 }

@@ -22,8 +22,10 @@ export interface Host {
   readonly home: string
   /** The index root: one LanceDB store per project below it. */
   readonly root: string
-  /** The effective `indexing` config and the Kilo credentials for the `kilo` embedder. */
-  readonly settings: () => Promise<{ indexing?: IndexingConfig; auth: KiloIndexingAuth }>
+  /** The effective `indexing` config. */
+  readonly config: () => Promise<IndexingConfig | undefined>
+  /** The Kilo credentials for the `kilo` embedder. Read only when indexing is on, so a disabled Location waits for nothing. */
+  readonly auth: () => Promise<KiloIndexingAuth>
   readonly catalog: (auth: KiloIndexingAuth) => Promise<KiloEmbeddingModelCatalog>
   readonly lancedb: (store: string | undefined) => Promise<void>
   /** The primary checkout of the directory's repository, or undefined outside Git. */
@@ -238,17 +240,22 @@ export class Runtime {
       host.log("warn", "indexing directory resolution failed", { err, workspacePath: dir })
       return this.track(hit, await this.inert(() => failed(err)))
     }
-    const baseline = await this.baselineDirectory(dir).catch(() => undefined)
+    // A disabled Location answers from the config alone: no Git query, no account wait, no worker.
+    const config = await host.config()
+    if (!input(config, this.env["KILO_PLATFORM"]).enabled) {
+      return this.track(hit, await this.inert(() => disabledIndexingStatus()))
+    }
+
     const project = (await host.primary(dir).catch(() => undefined)) ?? dir
     this.project = project
     if (this.env["KILO_PLATFORM"] === "vscode" && !consent.get(project)) {
       return this.track(hit, await this.inert(() => noConsent()))
     }
+    const baseline = await this.baselineDirectory(dir).catch(() => undefined)
 
     host.log("info", "initializing project indexing", { workspacePath: dir, baselineDirectory: baseline })
-    const settings = await host.settings()
-    const auth = settings.auth
-    const merged = indexingWithKiloDefault(settings.indexing, auth) ?? {}
+    const auth = await host.auth()
+    const merged = indexingWithKiloDefault(config, auth) ?? {}
     let cfgInput: Input
     try {
       cfgInput = await model(host, enrichKilo(input(merged, this.env["KILO_PLATFORM"]), auth), auth)
@@ -351,12 +358,6 @@ export class Runtime {
     await report()
 
     if (hit.disposed) return base
-
-    if (!cfgInput.enabled) {
-      box.status = disabledIndexingStatus()
-      await report()
-      return base
-    }
 
     // Telemetry events are not forwarded yet: the v2 telemetry sink belongs to the usage and telemetry epic.
     const telemetry = () => {}
