@@ -20,9 +20,11 @@ import { ProjectTable } from "@opencode/core/project/sql"
 import {
   SessionTable,
   SessionMessageTable,
+  SessionPartTable,
   InstructionEntryTable,
   InstructionStateTable,
   InstructionBlobTable,
+  type SessionPartData,
 } from "@opencode/core/session/sql"
 import { SessionProjector } from "@opencode/core/session/projector"
 import { SessionEvent } from "@opencode/core/session/event"
@@ -40,7 +42,17 @@ import { SessionSync } from "../src/session-sync"
 import { Store } from "../src/session-sync/store"
 import { Assets } from "../src/session-sync/assets"
 import { SessionSyncOutput } from "../src/session-sync/tool-output"
-import { type Receipt, type Tenant, Kind, digest, limits, parse } from "../src/session-sync/protocol"
+import {
+  type Receipt,
+  type Tenant,
+  Kind,
+  digest,
+  limits,
+  parse,
+  json,
+  reconstructMessage,
+  jsonNodes,
+} from "../src/session-sync/protocol"
 
 const it = testEffect(Layer.empty)
 const id = Session.ID.make("ses_sync_consumer")
@@ -133,8 +145,10 @@ const peer = () => {
           await gate.promise
         }
         const userID = token.slice("fixture:".length).split("#")[0] ?? ""
-        const { organizationID } = await request.json() as { organizationID?: string }
-        const tenant: Tenant = organizationID ? { type: "organization", id: organizationID } : { type: "user", id: userID }
+        const { organizationID } = (await request.json()) as { organizationID?: string }
+        const tenant: Tenant = organizationID
+          ? { type: "organization", id: organizationID }
+          : { type: "user", id: userID }
         const grantToken = `grant:${userID}:${organizationID ?? "personal"}`
         grants.set(grantToken, { userID, tenant })
         return Response.json({
@@ -246,7 +260,14 @@ const peer = () => {
         const value = Schema.decodeUnknownSync(Schema.Struct({ version: Schema.Literal(1), sourceID: Schema.String }))(
           await request.json(),
         )
-        state = { sourceID: value.sourceID, creatorID: userID, tenant: grant.tenant, position: 0, lastReceipt: null, entities: new Map() }
+        state = {
+          sourceID: value.sourceID,
+          creatorID: userID,
+          tenant: grant.tenant,
+          position: 0,
+          lastReceipt: null,
+          entities: new Map(),
+        }
         states.set(sessionID, state)
       }
       if (!state) return error("session_not_found", 404)
@@ -259,20 +280,17 @@ const peer = () => {
           deletedAt: Date.now(),
         })
       const response = control.stateRetryAfter
-        ? Response.json(
-            { error: { code: "internal_error" } },
-            { status: 503, headers: { "Retry-After": "120" } },
-          )
+        ? Response.json({ error: { code: "internal_error" } }, { status: 503, headers: { "Retry-After": "120" } })
         : Response.json({
-        version: 1,
-        sessionID,
-        deleted: false,
-        tenant: state.tenant,
-        creatorID: state.creatorID,
-        sourceID: control.sourceConflict ? randomUUID() : state.sourceID,
-        position: state.position,
-        lastReceipt: state.lastReceipt,
-      })
+            version: 1,
+            sessionID,
+            deleted: false,
+            tenant: state.tenant,
+            creatorID: state.creatorID,
+            sourceID: control.sourceConflict ? randomUUID() : state.sourceID,
+            position: state.position,
+            lastReceipt: state.lastReceipt,
+          })
       if (request.method === "GET" && control.stateGate) {
         entered.resolve()
         control.gatedReads++
@@ -355,7 +373,10 @@ const boot = (
         SessionSync.node.replace(
           makeGlobalNode({
             service: KiloSessionSync.Service,
-            layer: Layer.effect(KiloSessionSync.Service, SessionSync.make({ background: false, destination: f.backend.url, organizationID: null, ...options })),
+            layer: Layer.effect(
+              KiloSessionSync.Service,
+              SessionSync.make({ background: false, destination: f.backend.url, organizationID: null, ...options }),
+            ),
             deps: [Database.node, Bus.node, SessionProjector.node, Credential.node, Global.node],
           }),
         ),
@@ -448,8 +469,10 @@ const allow = (db: Store.DB, directory: string, backend: { url: string }) =>
     userID: "alice",
   }).pipe(
     Effect.andThen(Store.reconcile(db, directory, true)),
-    Effect.andThen(db.run(sql`UPDATE session_v2 SET time_updated=time_updated WHERE workspace_id IS NULL AND directory IN
-      (SELECT alias FROM _kilo_sync_directory WHERE directory=${directory})`)),
+    Effect.andThen(
+      db.run(sql`UPDATE session_v2 SET time_updated=time_updated WHERE workspace_id IS NULL AND directory IN
+      (SELECT alias FROM _kilo_sync_directory WHERE directory=${directory})`),
+    ),
     Effect.andThen(Store.reconcile(db, directory, true)),
   )
 const signIn = (credentials: Credential.Interface, user = "alice") =>
@@ -460,13 +483,14 @@ const signIn = (credentials: Credential.Interface, user = "alice") =>
 const enableAfterNativeWrite = (
   s: Effect.Success<ReturnType<typeof boot>>,
   input: Parameters<typeof s.sync.enable>[0],
-) => Effect.gen(function* () {
-  const status = yield* s.sync.enable(input)
-  yield* s.db.run(sql`UPDATE session_v2 SET title=title
+) =>
+  Effect.gen(function* () {
+    const status = yield* s.sync.enable(input)
+    yield* s.db.run(sql`UPDATE session_v2 SET title=title
     WHERE directory IN (SELECT alias FROM _kilo_sync_directory WHERE directory=${input.directory}) AND workspace_id IS NULL
     AND NOT EXISTS (SELECT 1 FROM _kilo_sync_session captured WHERE captured.id=session_v2.id)`)
-  return status
-})
+    return status
+  })
 const writeTool = (
   db: Store.DB,
   metadata: Record<string, Schema.Json> = {},
@@ -742,7 +766,7 @@ it.live(
           yield* signIn(s.credentials)
           yield* seed(s.db, f.directory)
           yield* writeMessage(s.db, "offline persistent message")
-          yield* enableAfterNativeWrite(s, { directory: f.directory, organizationID: null, })
+          yield* enableAfterNativeWrite(s, { directory: f.directory, organizationID: null })
           f.backend.control.mode = "offline"
           expect((yield* s.sync.flush({ directory: f.directory })).pending).toBeGreaterThan(0)
           const packet = yield* Store.packet(s.db, id)
@@ -860,7 +884,8 @@ for (const setting of ["signed-out", "off"] as const)
       expect(yield* Store.dirty(s.db, id)).toEqual([])
       expect(yield* Store.sessions(s.db, f.directory)).toEqual([])
       expect(yield* s.sync.flush({ directory: f.directory }).pipe(Effect.result)).toMatchObject({
-        _tag: "Failure", failure: { code: "sync_disabled" },
+        _tag: "Failure",
+        failure: { code: "sync_disabled" },
       })
       expect(f.backend.control.sessionRequests).toBe(0)
       expect(f.backend.control.exchanges).toBe(0)
@@ -876,7 +901,9 @@ it.live("default enrollment captures new sessions but leaves existing history un
     yield* writeMessage(s.db, "history before sign in")
     yield* signIn(s.credentials)
     expect(yield* s.sync.status({ directory: f.directory })).toMatchObject({
-      enabled: true, userID: "alice", destination: f.backend.url,
+      enabled: true,
+      userID: "alice",
+      destination: f.backend.url,
     })
     expect((yield* s.sync.flush({ directory: f.directory })).pending).toBe(0)
     expect(f.backend.states.has(id)).toBe(false)
@@ -915,11 +942,16 @@ it.live("the first subsequent native write admits an existing session after defa
 it.live("global jsonc session_sync overrides json and workspace settings cannot enable capture", () =>
   Effect.gen(function* () {
     const f = yield* fixture
-    yield* Effect.promise(() => Promise.all([
-      writeFile(path.join(f.root, "config", "kilo2.json"), '{"session_sync":true}'),
-      writeFile(path.join(f.root, "config", "kilo2.jsonc"), '{"session_sync":false,"destination":"https://other.invalid"}'),
-      writeFile(path.join(f.directory, "kilo2.jsonc"), '{"session_sync":true}'),
-    ]))
+    yield* Effect.promise(() =>
+      Promise.all([
+        writeFile(path.join(f.root, "config", "kilo2.json"), '{"session_sync":true}'),
+        writeFile(
+          path.join(f.root, "config", "kilo2.jsonc"),
+          '{"session_sync":false,"destination":"https://other.invalid"}',
+        ),
+        writeFile(path.join(f.directory, "kilo2.jsonc"), '{"session_sync":true}'),
+      ]),
+    )
     const s = yield* boot(f)
     yield* signIn(s.credentials)
     yield* seed(s.db, f.directory)
@@ -928,7 +960,8 @@ it.live("global jsonc session_sync overrides json and workspace settings cannot 
     expect(yield* Store.dirty(s.db, id)).toEqual([])
     expect(f.backend.control.sessionRequests).toBe(0)
     expect(yield* enableAfterNativeWrite(s, { directory: f.directory, organizationID: null })).toMatchObject({
-      enabled: true, destination: f.backend.url,
+      enabled: true,
+      destination: f.backend.url,
     })
   }),
 )
@@ -936,17 +969,22 @@ it.live("global jsonc session_sync overrides json and workspace settings cannot 
 it.live("construction returns while persisted sign-in exchange is hanging and local work can continue", () =>
   Effect.gen(function* () {
     const f = yield* fixture
-    yield* Effect.scoped(Effect.gen(function* () {
-      const s = yield* boot(f)
-      yield* seed(s.db, f.directory)
-      yield* signIn(s.credentials)
-    }))
-    yield* Effect.acquireRelease(
-      Effect.sync(() => { f.backend.control.hangExchange = true }),
-      () => Effect.sync(() => {
-        f.backend.control.hangExchange = false
-        f.backend.gate.resolve()
+    yield* Effect.scoped(
+      Effect.gen(function* () {
+        const s = yield* boot(f)
+        yield* seed(s.db, f.directory)
+        yield* signIn(s.credentials)
       }),
+    )
+    yield* Effect.acquireRelease(
+      Effect.sync(() => {
+        f.backend.control.hangExchange = true
+      }),
+      () =>
+        Effect.sync(() => {
+          f.backend.control.hangExchange = false
+          f.backend.gate.resolve()
+        }),
     )
     const constructed = yield* boot(f, { background: true }).pipe(Effect.timeoutOption(3000))
     expect(constructed._tag).toBe("Some")
@@ -983,15 +1021,21 @@ it.live("retryable enrollment exchange preserves pinned capture and drains write
     f.backend.control.exchangeFailures = true
     yield* signIn(s.credentials, "alice#outage")
     expect(yield* s.sync.status({ directory: f.directory })).toMatchObject({
-      enabled: true, error: { code: "auth_unavailable" },
+      enabled: true,
+      error: { code: "auth_unavailable" },
     })
     yield* writeMessage(s.db, "captured while credential exchange is unavailable")
-    expect((yield* Store.dirty(s.db, id)).find((row) => row.kind === "message" && row.id === messageID)?.position)
-      .toBeGreaterThan(packet!.through)
+    expect(
+      (yield* Store.dirty(s.db, id)).find((row) => row.kind === "message" && row.id === messageID)?.position,
+    ).toBeGreaterThan(packet!.through)
     expect(yield* Store.packet(s.db, id)).toEqual(packet)
     expect(yield* Store.consent(s.db, f.directory)).toMatchObject({
-      enabled: 1, source_id: pinned!.source_id, user_id: pinned!.user_id,
-      destination: pinned!.destination, tenant_type: pinned!.tenant_type, tenant_id: pinned!.tenant_id,
+      enabled: 1,
+      source_id: pinned!.source_id,
+      user_id: pinned!.user_id,
+      destination: pinned!.destination,
+      tenant_type: pinned!.tenant_type,
+      tenant_id: pinned!.tenant_id,
     })
     expect(f.backend.control.sessionRequests).toBe(requests)
     f.backend.control.exchangeFailures = false
@@ -1015,7 +1059,8 @@ it.live("a workspace enrollment failure does not pollute a healthy workspace sta
     yield* s.sync.status({ directory: f.directory })
     yield* s.db.run(sql`UPDATE _kilo_sync_consent SET user_id='bob',tenant_id='bob' WHERE directory=${f.excluded}`)
     expect(yield* s.sync.status({ directory: f.excluded })).toMatchObject({
-      enabled: false, error: { code: "account_changed" },
+      enabled: false,
+      error: { code: "account_changed" },
     })
     const healthy = yield* s.sync.status({ directory: f.directory })
     expect(healthy.enabled).toBe(true)
@@ -1040,7 +1085,9 @@ it.live("automatic enrollment follows the active organization and switching it p
     yield* signIn(s.credentials)
     yield* seed(s.db, f.directory)
     expect(yield* s.sync.status({ directory: f.directory })).toMatchObject({
-      enabled: true, tenant: { type: "organization", id: "org-first" }, userID: "alice",
+      enabled: true,
+      tenant: { type: "organization", id: "org-first" },
+      userID: "alice",
     })
     yield* writeMessage(s.db, "organization history")
     expect((yield* s.sync.flush({ directory: f.directory })).pending).toBe(0)
@@ -1049,18 +1096,23 @@ it.live("automatic enrollment follows the active organization and switching it p
     const requests = f.backend.control.sessionRequests
     yield* s.sync.organization({ directory: f.directory, organizationID: "org-second" })
     expect(yield* s.sync.status({ directory: f.directory })).toMatchObject({
-      enabled: false, tenant: { type: "organization", id: "org-first" }, error: { code: "account_changed" },
+      enabled: false,
+      tenant: { type: "organization", id: "org-first" },
+      error: { code: "account_changed" },
     })
     yield* writeMessage(s.db, "must not capture under a different organization")
     expect(yield* Store.dirty(s.db, id)).toEqual([])
     expect(yield* s.sync.flush({ directory: f.directory })).toMatchObject({ error: { code: "account_changed" } })
     expect(f.backend.control.sessionRequests).toBe(requests)
     expect(yield* Store.consent(s.db, f.directory)).toMatchObject({
-      source_id: pinned!.source_id, organization_id: "org-first", tenant_id: "org-first",
+      source_id: pinned!.source_id,
+      organization_id: "org-first",
+      tenant_id: "org-first",
     })
     yield* s.sync.organization({ directory: f.directory, organizationID: "org-first" })
     expect(yield* s.sync.status({ directory: f.directory })).toMatchObject({
-      enabled: true, tenant: { type: "organization", id: "org-first" },
+      enabled: true,
+      tenant: { type: "organization", id: "org-first" },
     })
     yield* writeMessage(s.db, "organization capture resumes")
     expect((yield* s.sync.flush({ directory: f.directory })).pending).toBe(0)
@@ -1080,12 +1132,14 @@ it.live("an unresolved organization cannot enroll while existing capture waits s
     expect((yield* s.sync.status({ directory: f.directory })).enabled).toBe(false)
     expect(yield* Store.consent(s.db, f.directory)).toBeUndefined()
     expect(yield* s.sync.enable({ directory: f.directory, organizationID: null }).pipe(Effect.result)).toMatchObject({
-      _tag: "Failure", failure: { code: "scope_unavailable", retryable: true },
+      _tag: "Failure",
+      failure: { code: "scope_unavailable", retryable: true },
     })
     expect(f.backend.control.exchanges).toBe(0)
     yield* s.sync.organization({ directory: f.directory, organizationID: "org-resolved" })
     expect(yield* s.sync.status({ directory: f.directory })).toMatchObject({
-      enabled: true, tenant: { type: "organization", id: "org-resolved" },
+      enabled: true,
+      tenant: { type: "organization", id: "org-resolved" },
     })
     yield* writeMessage(s.db, "confirmed organization")
     expect((yield* s.sync.flush({ directory: f.directory })).pending).toBe(0)
@@ -1107,17 +1161,21 @@ it.live("an unresolved organization cannot enroll while existing capture waits s
 it.live("startup automatically enrolls every native local workspace for persisted sign in", () =>
   Effect.gen(function* () {
     const f = yield* fixture
-    yield* Effect.scoped(Effect.gen(function* () {
-      const s = yield* boot(f)
-      yield* seed(s.db, f.directory)
-      yield* seed(s.db, f.excluded, Session.ID.make("ses_other_native"))
-      yield* signIn(s.credentials)
-    }))
+    yield* Effect.scoped(
+      Effect.gen(function* () {
+        const s = yield* boot(f)
+        yield* seed(s.db, f.directory)
+        yield* seed(s.db, f.excluded, Session.ID.make("ses_other_native"))
+        yield* signIn(s.credentials)
+      }),
+    )
     const s = yield* boot(f)
     yield* s.sync.status({ directory: f.directory })
     for (const directory of [f.directory, f.excluded])
       expect(yield* Store.consent(s.db, directory)).toMatchObject({
-        enabled: 1, destination: f.backend.url, user_id: "alice",
+        enabled: 1,
+        destination: f.backend.url,
+        user_id: "alice",
       })
     expect(f.backend.states.size).toBe(0)
   }),
@@ -1136,8 +1194,7 @@ it.live("idle passes skip reconciliation and a newly journaled directory still e
     yield* s.db.run(`CREATE TRIGGER _test_reconcile_count AFTER INSERT ON _kilo_sync_directory BEGIN
       UPDATE _test_reconcile_count SET value=value+1;
     END`)
-    for (let index = 0; index < 5; index++)
-      expect((yield* s.sync.flush({ directory: f.directory })).pending).toBe(0)
+    for (let index = 0; index < 5; index++) expect((yield* s.sync.flush({ directory: f.directory })).pending).toBe(0)
     expect(yield* s.db.get("SELECT value FROM _test_reconcile_count")).toEqual({ value: 0 })
     const child = path.join(f.directory, "new-directory")
     yield* Effect.promise(() => mkdir(child))
@@ -1167,10 +1224,12 @@ it.live("idle discovery skips other workspace realpaths until the native journal
     const canonical = Store.canonical
     let scans = 0
     yield* Effect.acquireRelease(
-      Effect.sync(() => spyOn(Store, "canonical").mockImplementation((directory) => {
-        if (directory === (storedAbsolutePath(f.excluded) ?? f.excluded)) scans++
-        return canonical(directory)
-      })),
+      Effect.sync(() =>
+        spyOn(Store, "canonical").mockImplementation((directory) => {
+          if (directory === (storedAbsolutePath(f.excluded) ?? f.excluded)) scans++
+          return canonical(directory)
+        }),
+      ),
       (probe) => Effect.sync(() => probe.mockRestore()),
     )
     for (let index = 0; index < 3; index++) yield* s.sync.flush({ directory: f.directory })
@@ -1192,15 +1251,21 @@ for (const move of ["directory", "workspace"] as const)
       yield* seed(s.db, f.directory, Session.ID.make("ses_move_anchor"))
       yield* seed(s.db, move === "directory" ? f.excluded : f.directory)
       if (move === "workspace")
-        yield* s.db.update(SessionTable).set({ workspace_id: Workspace.ID.make("wrk_remote") }).where(eq(SessionTable.id, id)).run()
+        yield* s.db
+          .update(SessionTable)
+          .set({ workspace_id: Workspace.ID.make("wrk_remote") })
+          .where(eq(SessionTable.id, id))
+          .run()
       yield* writeMessage(s.db, "persisted before entering consent")
       yield* enableAfterNativeWrite(s, { directory: f.directory, organizationID: null })
       expect((yield* s.sync.flush({ directory: f.directory })).pending).toBe(0)
       expect(f.backend.states.has(id)).toBe(false)
       const before = yield* Store.reconcileRevision(s.db)
-      yield* s.db.update(SessionTable)
+      yield* s.db
+        .update(SessionTable)
         .set(move === "directory" ? { directory: child } : { workspace_id: null })
-        .where(eq(SessionTable.id, id)).run()
+        .where(eq(SessionTable.id, id))
+        .run()
       expect(yield* Store.reconcileRevision(s.db)).toBeGreaterThan(before)
       yield* Store.reconcile(s.db, f.directory, true)
       yield* writeMessage(s.db, "persisted before entering consent")
@@ -1215,9 +1280,11 @@ for (const move of ["directory", "workspace"] as const)
         UPDATE _test_move_scan SET value=value+1;
       END`)
       const enrolled = yield* Store.reconcileRevision(s.db)
-      yield* s.db.update(SessionTable)
+      yield* s.db
+        .update(SessionTable)
         .set(move === "directory" ? { directory: f.excluded } : { workspace_id: Workspace.ID.make("wrk_remote") })
-        .where(eq(SessionTable.id, id)).run()
+        .where(eq(SessionTable.id, id))
+        .run()
       expect(yield* Store.reconcileRevision(s.db)).toBeGreaterThan(enrolled)
       const requests = f.backend.control.sessionRequests
       expect((yield* s.sync.flush({ directory: f.directory })).pending).toBe(0)
@@ -1229,42 +1296,56 @@ for (const move of ["directory", "workspace"] as const)
     }),
   )
 
-it.live("verification is capped at 256 sessions and idle local deletion releases its cache entry", () =>
-  Effect.gen(function* () {
-    const f = yield* fixture
-    const s = yield* boot(f)
-    yield* signIn(s.credentials)
-    yield* enableAfterNativeWrite(s, { directory: f.directory, organizationID: null })
-    const ids = Array.from({ length: 258 }, (_, index) =>
-      Session.ID.make(`ses_verified_${index.toString().padStart(3, "0")}`),
-    )
-    for (const sessionID of ids.slice(0, 256)) {
-      yield* seed(s.db, f.directory, sessionID)
+it.live(
+  "verification is capped at 256 sessions and idle local deletion releases its cache entry",
+  () =>
+    Effect.gen(function* () {
+      const f = yield* fixture
+      const s = yield* boot(f)
+      yield* signIn(s.credentials)
+      yield* enableAfterNativeWrite(s, { directory: f.directory, organizationID: null })
+      const ids = Array.from({ length: 258 }, (_, index) =>
+        Session.ID.make(`ses_verified_${index.toString().padStart(3, "0")}`),
+      )
+      for (const sessionID of ids.slice(0, 256)) {
+        yield* seed(s.db, f.directory, sessionID)
+        expect((yield* s.sync.flush({ directory: f.directory })).pending).toBe(0)
+      }
+      expect(f.backend.control.stateReads).toBe(256)
+      const beforeDelete = yield* Store.reconcileRevision(s.db)
+      yield* s.db.delete(SessionTable).where(eq(SessionTable.id, ids[255]!)).run()
+      expect(yield* Store.reconcileRevision(s.db)).toBeGreaterThan(beforeDelete)
       expect((yield* s.sync.flush({ directory: f.directory })).pending).toBe(0)
-    }
-    expect(f.backend.control.stateReads).toBe(256)
-    const beforeDelete = yield* Store.reconcileRevision(s.db)
-    yield* s.db.delete(SessionTable).where(eq(SessionTable.id, ids[255]!)).run()
-    expect(yield* Store.reconcileRevision(s.db)).toBeGreaterThan(beforeDelete)
-    expect((yield* s.sync.flush({ directory: f.directory })).pending).toBe(0)
-    yield* seed(s.db, f.directory, ids[256]!)
-    expect((yield* s.sync.flush({ directory: f.directory })).pending).toBe(0)
-    expect(f.backend.control.stateReads).toBe(257)
-    // Removing the newest entry leaves room without evicting the oldest live session.
-    yield* writeMessage(s.db, "oldest retained after deletion", ids[0]!, 0, SessionMessage.ID.make("msg_verified_oldest"))
-    expect((yield* s.sync.flush({ directory: f.directory })).pending).toBe(0)
-    expect(f.backend.control.stateReads).toBe(257)
-    yield* seed(s.db, f.directory, ids[257]!)
-    expect((yield* s.sync.flush({ directory: f.directory })).pending).toBe(0)
-    expect(f.backend.control.stateReads).toBe(258)
-    // One more live session evicts the oldest remaining verification.
-    yield* writeMessage(s.db, "evicted session checks state again", ids[1]!, 0, SessionMessage.ID.make("msg_verified_evicted"))
-    expect((yield* s.sync.flush({ directory: f.directory })).pending).toBe(0)
-    expect(f.backend.control.stateReads).toBe(259)
-    yield* writeMessage(s.db, "newest remains verified", ids[257]!, 0, SessionMessage.ID.make("msg_verified_newest"))
-    expect((yield* s.sync.flush({ directory: f.directory })).pending).toBe(0)
-    expect(f.backend.control.stateReads).toBe(259)
-  }),
+      yield* seed(s.db, f.directory, ids[256]!)
+      expect((yield* s.sync.flush({ directory: f.directory })).pending).toBe(0)
+      expect(f.backend.control.stateReads).toBe(257)
+      // Removing the newest entry leaves room without evicting the oldest live session.
+      yield* writeMessage(
+        s.db,
+        "oldest retained after deletion",
+        ids[0]!,
+        0,
+        SessionMessage.ID.make("msg_verified_oldest"),
+      )
+      expect((yield* s.sync.flush({ directory: f.directory })).pending).toBe(0)
+      expect(f.backend.control.stateReads).toBe(257)
+      yield* seed(s.db, f.directory, ids[257]!)
+      expect((yield* s.sync.flush({ directory: f.directory })).pending).toBe(0)
+      expect(f.backend.control.stateReads).toBe(258)
+      // One more live session evicts the oldest remaining verification.
+      yield* writeMessage(
+        s.db,
+        "evicted session checks state again",
+        ids[1]!,
+        0,
+        SessionMessage.ID.make("msg_verified_evicted"),
+      )
+      expect((yield* s.sync.flush({ directory: f.directory })).pending).toBe(0)
+      expect(f.backend.control.stateReads).toBe(259)
+      yield* writeMessage(s.db, "newest remains verified", ids[257]!, 0, SessionMessage.ID.make("msg_verified_newest"))
+      expect((yield* s.sync.flush({ directory: f.directory })).pending).toBe(0)
+      expect(f.backend.control.stateReads).toBe(259)
+    }),
   20_000,
 )
 
@@ -1390,8 +1471,7 @@ it.live(
           yield* signIn(s.credentials)
           yield* seed(s.db, f.directory)
           yield* writeTool(s.db, { truncated: true, outputPath: output })
-          yield* enableAfterNativeWrite(s, { directory: f.directory, organizationID: null,
-          assets: [output], })
+          yield* enableAfterNativeWrite(s, { directory: f.directory, organizationID: null, assets: [output] })
           f.backend.control.mode = "offline"
           yield* s.sync.flush({ directory: f.directory })
           const packet = yield* Store.packet(s.db, id)
@@ -1488,9 +1568,9 @@ it.live("disable stops capture and transport, and resume does not recapture comp
     expect(f.backend.states.get(id)?.entities.get(`message/${messageID}`)).toMatchObject({
       message: { text: "first admitted message" },
     })
-    expect(
-      yield* enableAfterNativeWrite(s, { directory: f.directory, organizationID: null }),
-    ).toMatchObject({ pending: 0 })
+    expect(yield* enableAfterNativeWrite(s, { directory: f.directory, organizationID: null })).toMatchObject({
+      pending: 0,
+    })
     expect((yield* s.sync.flush({ directory: f.directory })).pending).toBe(0)
     expect(f.backend.states.get(id)?.entities.get(`message/${messageID}`)).toMatchObject({
       message: { text: "first admitted message" },
@@ -1709,15 +1789,20 @@ it.live("identity reuse while paused stays visible without journaling paused cha
     yield* s.db.update(SessionTable).set({ title: "paused identity reuse" }).where(eq(SessionTable.id, id)).run()
     expect(yield* Store.dirty(s.db, id)).toEqual([])
     expect(yield* s.sync.status({ directory: f.directory })).toMatchObject({
-      enabled: false, pending: 0, error: { code: "identity_conflict" },
+      enabled: false,
+      pending: 0,
+      error: { code: "identity_conflict" },
     })
     expect(yield* s.sync.enable({ directory: f.directory, organizationID: null })).toMatchObject({
-      enabled: true, error: { code: "identity_conflict" },
+      enabled: true,
+      error: { code: "identity_conflict" },
     })
     expect(yield* s.sync.flush({ directory: f.directory })).toMatchObject({ error: { code: "identity_conflict" } })
     expect(yield* Store.dirty(s.db, id)).toEqual([])
     expect((yield* Store.sessions(s.db, f.directory))[0]).toMatchObject({
-      acknowledged: original!.acknowledged, local_deleted: 1, error_code: "identity_conflict",
+      acknowledged: original!.acknowledged,
+      local_deleted: 1,
+      error_code: "identity_conflict",
     })
     expect(f.backend.control.sessionRequests).toBe(requests)
     expect(f.backend.states.get(id)?.entities.get(`message/${messageID}`)).toMatchObject({
@@ -1767,7 +1852,7 @@ it.live(
           yield* enableAfterNativeWrite(s, { directory: f.directory, organizationID: null })
           yield* seed(s.db, f.directory)
           yield* writeMessage(s.db, "restart auth recovery")
-          yield* enableAfterNativeWrite(s, { directory: f.directory, organizationID: null, })
+          yield* enableAfterNativeWrite(s, { directory: f.directory, organizationID: null })
           yield* signIn(s.credentials, "bob")
           expect((yield* s.sync.flush({ directory: f.directory })).error?.code).toBe("account_changed")
           yield* s.credentials.activate(alice.id)
@@ -1824,14 +1909,18 @@ it.live("account switching pauses the pinned workspace without capture or upload
     const requests = f.backend.control.sessionRequests
     yield* signIn(s.credentials, "bob")
     expect(yield* s.sync.status({ directory: f.directory })).toMatchObject({
-      enabled: false, userID: "alice", error: { code: "account_changed" },
+      enabled: false,
+      userID: "alice",
+      error: { code: "account_changed" },
     })
     yield* writeMessage(s.db, "must not capture under bob")
     expect(yield* Store.dirty(s.db, id)).toEqual([])
     expect(yield* s.sync.flush({ directory: f.directory })).toMatchObject({ error: { code: "account_changed" } })
     expect(f.backend.control.sessionRequests).toBe(requests)
     expect(yield* Store.consent(s.db, f.directory)).toMatchObject({
-      user_id: before!.user_id, destination: before!.destination, source_id: before!.source_id,
+      user_id: before!.user_id,
+      destination: before!.destination,
+      source_id: before!.source_id,
     })
     yield* s.credentials.activate(alice.id)
     expect((yield* s.sync.flush({ directory: f.directory })).pending).toBe(0)
@@ -1921,8 +2010,7 @@ it.live("forged user metadata and tool inputs stay opaque, and another workspace
     yield* writeTool(s.db, {}, pathToFileURL(file).href)
     expect((yield* s.sync.flush({ directory: f.directory })).error?.code).toBe("asset_error")
     expect(f.backend.blobs.size).toBe(0)
-    yield* enableAfterNativeWrite(s, { directory: f.directory, organizationID: null,
-    assets: [file], })
+    yield* enableAfterNativeWrite(s, { directory: f.directory, organizationID: null, assets: [file] })
     expect((yield* s.sync.flush({ directory: f.directory })).pending).toBe(0)
     expect(Buffer.from(f.backend.blobs.get(`${id}/${digest("excluded workspace secret")}`) ?? []).toString()).toBe(
       "excluded workspace secret",
@@ -1940,9 +2028,11 @@ it.live(
       yield* seed(s.db, f.directory)
       const pipe = path.join(f.directory, "named-pipe")
       yield* Effect.sync(() => execFileSync("mkfifo", [pipe]))
-      const result = yield* enableAfterNativeWrite(s, { directory: f.directory, organizationID: null,
-      assets: [pipe], })
-        .pipe(Effect.result, Effect.timeoutOption(1000))
+      const result = yield* enableAfterNativeWrite(s, {
+        directory: f.directory,
+        organizationID: null,
+        assets: [pipe],
+      }).pipe(Effect.result, Effect.timeoutOption(1000))
       expect(result).toMatchObject({ _tag: "Some", value: { _tag: "Failure", failure: { code: "asset_error" } } })
       expect(yield* s.db.all(sql`SELECT * FROM _kilo_sync_allowed_asset`)).toEqual([])
       expect(f.backend.blobs.size).toBe(0)
@@ -1961,9 +2051,11 @@ it.live(
       const file = path.join(f.directory, "approved.txt")
       yield* Effect.promise(() => writeFile(file, "exact approved bytes"))
       expect(
-        yield* enableAfterNativeWrite(s, { directory: f.directory, organizationID: null,
-        assets: [file, path.join(f.directory, "missing")], })
-          .pipe(Effect.result),
+        yield* enableAfterNativeWrite(s, {
+          directory: f.directory,
+          organizationID: null,
+          assets: [file, path.join(f.directory, "missing")],
+        }).pipe(Effect.result),
       ).toMatchObject({ _tag: "Failure", failure: { code: "asset_error" } })
       for (const table of [
         "_kilo_sync_consent",
@@ -1976,9 +2068,9 @@ it.live(
       yield* s.db.run(`CREATE TRIGGER _test_sync_approval_abort BEFORE INSERT ON _kilo_sync_allowed_asset
       BEGIN SELECT RAISE(ABORT,'approval commit interrupted'); END`)
       expect(
-        yield* enableAfterNativeWrite(s, { directory: f.directory, organizationID: null,
-        assets: [file], })
-          .pipe(Effect.exit),
+        yield* enableAfterNativeWrite(s, { directory: f.directory, organizationID: null, assets: [file] }).pipe(
+          Effect.exit,
+        ),
       ).toMatchObject({ _tag: "Failure" })
       for (const table of [
         "_kilo_sync_consent",
@@ -1990,17 +2082,18 @@ it.live(
         expect(yield* s.db.all(`SELECT * FROM ${table}`)).toEqual([])
       yield* s.db.run(`DROP TRIGGER _test_sync_approval_abort`)
       yield* signIn(s.credentials, "bob")
-      const enabled = yield* enableAfterNativeWrite(s, { directory: f.directory, organizationID: null,
-      assets: [file], })
+      const enabled = yield* enableAfterNativeWrite(s, { directory: f.directory, organizationID: null, assets: [file] })
       expect(enabled).toMatchObject({ enabled: true, destination: f.backend.url, userID: "bob" })
       if (enabled.sourceID === undefined) return yield* Effect.die("Enabled sync status omitted its source")
       const before = yield* s.db.all(sql`SELECT * FROM _kilo_sync_allowed_asset`)
       const replacement = path.join(f.directory, "new-approval.txt")
       yield* Effect.promise(() => writeFile(replacement, "a new approval must roll back too"))
       expect(
-        yield* enableAfterNativeWrite(s, { directory: f.directory, organizationID: null,
-        assets: [replacement, path.join(f.directory, "missing")], })
-          .pipe(Effect.result),
+        yield* enableAfterNativeWrite(s, {
+          directory: f.directory,
+          organizationID: null,
+          assets: [replacement, path.join(f.directory, "missing")],
+        }).pipe(Effect.result),
       ).toMatchObject({ _tag: "Failure", failure: { code: "asset_error" } })
       expect(yield* s.db.all(sql`SELECT * FROM _kilo_sync_allowed_asset`)).toEqual(before)
       expect((yield* s.sync.flush({ directory: f.directory })).pending).toBe(0)
@@ -2018,11 +2111,14 @@ it.live("concurrent enables for separate workspaces both succeed without a disab
     const other = Session.ID.make("ses_concurrent_enable")
     yield* seed(s.db, f.excluded, other)
     yield* Effect.acquireRelease(
-      Effect.sync(() => { f.backend.control.hangExchange = true }),
-      () => Effect.sync(() => {
-        f.backend.control.hangExchange = false
-        f.backend.gate.resolve()
+      Effect.sync(() => {
+        f.backend.control.hangExchange = true
       }),
+      () =>
+        Effect.sync(() => {
+          f.backend.control.hangExchange = false
+          f.backend.gate.resolve()
+        }),
     )
     const enabling = yield* Effect.all(
       [f.directory, f.excluded].map((directory) =>
@@ -2041,8 +2137,7 @@ it.live("concurrent enables for separate workspaces both succeed without a disab
       expect(yield* Store.consent(s.db, directory)).toMatchObject({ enabled: 1, user_id: "alice" })
     yield* writeMessage(s.db, "first concurrent workspace")
     yield* writeMessage(s.db, "second concurrent workspace", other, 0, SessionMessage.ID.make("msg_concurrent_enable"))
-    for (const directory of [f.directory, f.excluded])
-      expect((yield* s.sync.flush({ directory })).pending).toBe(0)
+    for (const directory of [f.directory, f.excluded]) expect((yield* s.sync.flush({ directory })).pending).toBe(0)
     expect(f.backend.states.has(id)).toBe(true)
     expect(f.backend.states.has(other)).toBe(true)
   }),
@@ -2064,7 +2159,8 @@ it.live("disable from a nonexistent directory still pauses all capture and uploa
     expect(yield* Store.dirty(s.db, id)).toEqual([])
     expect((yield* s.sync.status({ directory: f.directory })).enabled).toBe(false)
     expect(yield* s.sync.flush({ directory: f.directory }).pipe(Effect.result)).toMatchObject({
-      _tag: "Failure", failure: { code: "sync_disabled" },
+      _tag: "Failure",
+      failure: { code: "sync_disabled" },
     })
     expect(f.backend.control.sessionRequests).toBe(requests)
     expect(f.backend.control.exchanges).toBe(exchanges)
@@ -2078,8 +2174,10 @@ it.live("disable fences an earlier enable awaiting first account exchange withou
     yield* signIn(s.credentials)
     yield* seed(s.db, f.directory)
     f.backend.control.hangExchange = true
-    const enabling = yield* enableAfterNativeWrite(s, { directory: f.directory, organizationID: null, })
-      .pipe(Effect.result, Effect.forkScoped)
+    const enabling = yield* enableAfterNativeWrite(s, { directory: f.directory, organizationID: null }).pipe(
+      Effect.result,
+      Effect.forkScoped,
+    )
     yield* Effect.promise(() => f.backend.entered.promise)
     expect(yield* s.sync.disable({ directory: f.directory }).pipe(Effect.timeoutOption(500))).toMatchObject({
       _tag: "Some",
@@ -2348,8 +2446,7 @@ it.live(
       const approved = path.join(f.directory, "approved-unused.txt")
       const approvedBytes = Buffer.from("workspace approval survives without a transcript")
       yield* Effect.promise(() => writeFile(approved, approvedBytes))
-      yield* enableAfterNativeWrite(s, { directory: f.directory, organizationID: null,
-      assets: [approved], })
+      yield* enableAfterNativeWrite(s, { directory: f.directory, organizationID: null, assets: [approved] })
       const output = yield* s.output(f.directory)
       const bytes = Buffer.from("current native snapshot")
       const file = yield* output.save(bytes, ".bin")
@@ -2541,8 +2638,7 @@ it.live("durable approval preparation pins survive GC and expired pins cannot co
     )
     expect(yield* s.db.all(sql`SELECT * FROM _kilo_sync_preparation`)).toEqual([])
     yield* signIn(s.credentials)
-    yield* enableAfterNativeWrite(s, { directory: f.directory, organizationID: null,
-    assets: [file], })
+    yield* enableAfterNativeWrite(s, { directory: f.directory, organizationID: null, assets: [file] })
     expect((yield* s.sync.flush({ directory: f.directory })).pending).toBe(0)
   }),
 )
@@ -2695,14 +2791,13 @@ it.live("persists one exchange outage cooldown across sessions, restart, flush a
         expect(f.backend.control.exchanges).toBe(1)
         expect(yield* s.db.all(sql`SELECT * FROM _kilo_sync_exchange_cooldown`)).toHaveLength(1)
         expect(f.backend.control.sessionRequests).toBe(0)
-        expect((yield* Store.sessions(s.db, f.directory))).toHaveLength(40)
+        expect(yield* Store.sessions(s.db, f.directory)).toHaveLength(40)
       }),
     )
     const s = yield* boot(f)
     yield* s.sync.flush({ directory: f.directory })
     expect(
-      yield* enableAfterNativeWrite(s, { directory: f.directory, organizationID: null, })
-        .pipe(Effect.result),
+      yield* enableAfterNativeWrite(s, { directory: f.directory, organizationID: null }).pipe(Effect.result),
     ).toMatchObject({ _tag: "Failure", failure: { code: "auth_unavailable", retryable: true } })
     yield* s.sync.flush({ directory: f.directory })
     expect(f.backend.control.exchanges).toBe(1)
@@ -2712,11 +2807,11 @@ it.live("persists one exchange outage cooldown across sessions, restart, flush a
     // A refreshed token for the same account must both exchange and drain old sessions.
     yield* signIn(s.credentials, "alice#refreshed")
     f.backend.control.exchangeFailures = false
-    const enabled = yield* enableAfterNativeWrite(s, { directory: f.directory, organizationID: null, })
+    const enabled = yield* enableAfterNativeWrite(s, { directory: f.directory, organizationID: null })
     expect(enabled.enabled).toBe(true)
     expect(f.backend.control.exchanges).toBe(2)
     expect((yield* s.sync.flush({ directory: f.directory })).pending).toBe(0)
-    expect((yield* Store.sessions(s.db, f.directory)).every(row => row.server_retry_at === 0)).toBe(true)
+    expect((yield* Store.sessions(s.db, f.directory)).every((row) => row.server_retry_at === 0)).toBe(true)
   }),
 )
 
@@ -2885,45 +2980,47 @@ it.live("an aborted retry response retains its deadline and prevents the next fl
   }),
 )
 
-it.live("bounds distinct externalized revision hints and clears them on disable and local deletion", () =>
-  Effect.gen(function* () {
-    const f = yield* fixture
-    const s = yield* boot(f)
-    yield* signIn(s.credentials)
-    yield* seed(s.db, f.directory)
-    yield* allow(s.db, f.directory, f.backend)
-    const text = "x".repeat(65 * 1024)
-    for (let revision = 0; revision < 260; revision++) {
-      yield* writeMessage(s.db, `${revision}:${text}`)
-      expect((yield* s.sync.flush({ directory: f.directory })).pending).toBe(0)
+it.live(
+  "bounds distinct externalized revision hints and clears them on disable and local deletion",
+  () =>
+    Effect.gen(function* () {
+      const f = yield* fixture
+      const s = yield* boot(f)
+      yield* signIn(s.credentials)
+      yield* seed(s.db, f.directory)
+      yield* allow(s.db, f.directory, f.backend)
+      const text = "x".repeat(65 * 1024)
+      for (let revision = 0; revision < 260; revision++) {
+        yield* writeMessage(s.db, `${revision}:${text}`)
+        expect((yield* s.sync.flush({ directory: f.directory })).pending).toBe(0)
+        expect(
+          (yield* s.db.get<{ count: number }>(
+            sql`SELECT count(*) AS count FROM _kilo_sync_known_blob WHERE session_id=${id}`,
+          ))?.count,
+        ).toBeLessThanOrEqual(256)
+      }
       expect(
         (yield* s.db.get<{ count: number }>(
           sql`SELECT count(*) AS count FROM _kilo_sync_known_blob WHERE session_id=${id}`,
         ))?.count,
-      ).toBeLessThanOrEqual(256)
-    }
-    expect(
-      (yield* s.db.get<{ count: number }>(
-        sql`SELECT count(*) AS count FROM _kilo_sync_known_blob WHERE session_id=${id}`,
-      ))?.count,
-    ).toBe(256)
-    const oldest = f.backend.blobRequests[0]!
-    const newest = f.backend.blobRequests.at(-1)!
-    expect(
-      yield* s.db.get(sql`SELECT hash FROM _kilo_sync_known_blob WHERE session_id=${id} AND hash=${oldest}`),
-    ).toBeUndefined()
-    expect(
-      yield* s.db.get(sql`SELECT hash FROM _kilo_sync_known_blob WHERE session_id=${id} AND hash=${newest}`),
-    ).toBeDefined()
-    yield* s.sync.disable({ directory: f.directory })
-    expect(yield* s.db.all(sql`SELECT hash FROM _kilo_sync_known_blob WHERE session_id=${id}`)).toEqual([])
-    yield* enableAfterNativeWrite(s, { directory: f.directory, organizationID: null })
-    yield* writeMessage(s.db, `after-enable:${text}`)
-    expect((yield* s.sync.flush({ directory: f.directory })).pending).toBe(0)
-    expect(yield* s.db.all(sql`SELECT hash FROM _kilo_sync_known_blob WHERE session_id=${id}`)).toHaveLength(1)
-    yield* s.bus.publish(SessionEvent.Deleted, { sessionID: id })
-    expect(yield* s.db.all(sql`SELECT hash FROM _kilo_sync_known_blob WHERE session_id=${id}`)).toEqual([])
-  }),
+      ).toBe(256)
+      const oldest = f.backend.blobRequests[0]!
+      const newest = f.backend.blobRequests.at(-1)!
+      expect(
+        yield* s.db.get(sql`SELECT hash FROM _kilo_sync_known_blob WHERE session_id=${id} AND hash=${oldest}`),
+      ).toBeUndefined()
+      expect(
+        yield* s.db.get(sql`SELECT hash FROM _kilo_sync_known_blob WHERE session_id=${id} AND hash=${newest}`),
+      ).toBeDefined()
+      yield* s.sync.disable({ directory: f.directory })
+      expect(yield* s.db.all(sql`SELECT hash FROM _kilo_sync_known_blob WHERE session_id=${id}`)).toEqual([])
+      yield* enableAfterNativeWrite(s, { directory: f.directory, organizationID: null })
+      yield* writeMessage(s.db, `after-enable:${text}`)
+      expect((yield* s.sync.flush({ directory: f.directory })).pending).toBe(0)
+      expect(yield* s.db.all(sql`SELECT hash FROM _kilo_sync_known_blob WHERE session_id=${id}`)).toHaveLength(1)
+      yield* s.bus.publish(SessionEvent.Deleted, { sessionID: id })
+      expect(yield* s.db.all(sql`SELECT hash FROM _kilo_sync_known_blob WHERE session_id=${id}`)).toEqual([])
+    }),
   90_000,
 )
 
@@ -2953,16 +3050,18 @@ it.live("upgrades an unbounded hint table to its newest per-session entries", ()
 it.live("a restarted producer preserves the same credential deadline but accepts a refreshed credential", () =>
   Effect.gen(function* () {
     const f = yield* fixture
-    yield* Effect.scoped(Effect.gen(function* () {
-      const s = yield* boot(f)
-      yield* signIn(s.credentials)
-      yield* seed(s.db, f.directory)
-      yield* allow(s.db, f.directory, f.backend)
-      f.backend.control.mode = "offline"
-      f.backend.control.retryAfter = true
-      expect((yield* s.sync.flush({ directory: f.directory })).pending).toBeGreaterThan(0)
-      expect((yield* Store.sessions(s.db, f.directory))[0]?.retry_credential).toBe(digest("fixture:alice"))
-    }))
+    yield* Effect.scoped(
+      Effect.gen(function* () {
+        const s = yield* boot(f)
+        yield* signIn(s.credentials)
+        yield* seed(s.db, f.directory)
+        yield* allow(s.db, f.directory, f.backend)
+        f.backend.control.mode = "offline"
+        f.backend.control.retryAfter = true
+        expect((yield* s.sync.flush({ directory: f.directory })).pending).toBeGreaterThan(0)
+        expect((yield* Store.sessions(s.db, f.directory))[0]?.retry_credential).toBe(digest("fixture:alice"))
+      }),
+    )
     const s = yield* boot(f)
     f.backend.control.mode = "online"
     const requests = f.backend.control.sessionRequests
@@ -3003,7 +3102,7 @@ it.live("post-consent cleanup failure reports enabled state and retries cleanup 
       VALUES('expired-cleanup','cleanup-proof','unused',1,0)`)
     yield* s.db.run(`CREATE TRIGGER fail_cleanup BEFORE DELETE ON _kilo_sync_preparation
       BEGIN SELECT RAISE(FAIL,'synthetic cleanup failure'); END`)
-    const enabled = yield* enableAfterNativeWrite(s, { directory: f.directory, organizationID: null, })
+    const enabled = yield* enableAfterNativeWrite(s, { directory: f.directory, organizationID: null })
     expect(enabled).toMatchObject({ enabled: true, error: { code: "background_error" } })
     expect((yield* Store.consent(s.db, f.directory))?.enabled).toBe(1)
     yield* s.db.run("DROP TRIGGER fail_cleanup")
@@ -3017,16 +3116,18 @@ it.live("post-consent cleanup failure reports enabled state and retries cleanup 
 it.live("startup cleanup defects preserve native service availability and retry after repair", () =>
   Effect.gen(function* () {
     const f = yield* fixture
-    yield* Effect.scoped(Effect.gen(function* () {
-      const s = yield* boot(f)
-      yield* signIn(s.credentials)
-      yield* seed(s.db, f.directory)
-      yield* allow(s.db, f.directory, f.backend)
-      yield* s.db.run(`INSERT INTO _kilo_sync_preparation(token,namespace,hash,bytes,deadline)
+    yield* Effect.scoped(
+      Effect.gen(function* () {
+        const s = yield* boot(f)
+        yield* signIn(s.credentials)
+        yield* seed(s.db, f.directory)
+        yield* allow(s.db, f.directory, f.backend)
+        yield* s.db.run(`INSERT INTO _kilo_sync_preparation(token,namespace,hash,bytes,deadline)
         VALUES('startup-cleanup','cleanup-proof','unused',1,0)`)
-      yield* s.db.run(`CREATE TRIGGER fail_cleanup BEFORE DELETE ON _kilo_sync_preparation
+        yield* s.db.run(`CREATE TRIGGER fail_cleanup BEFORE DELETE ON _kilo_sync_preparation
         BEGIN SELECT RAISE(FAIL,'synthetic startup cleanup failure'); END`)
-    }))
+      }),
+    )
     const s = yield* boot(f)
     expect(yield* s.sync.status({ directory: f.directory })).toMatchObject({
       enabled: true,
@@ -3063,5 +3164,314 @@ it.live("a server deadline still covers a native capture made while its response
     expect(f.backend.control.sessionRequests).toBe(requests)
     yield* s.db.run(sql`UPDATE _kilo_sync_session SET server_retry_at=0 WHERE id=${id}`)
     expect((yield* s.sync.flush({ directory: f.directory })).pending).toBe(0)
+  }),
+)
+
+it.live(
+  "real producer streams 1000 native parts with linear transmitted bytes and exact reconstruction",
+  () =>
+    Effect.gen(function* () {
+      const f = yield* fixture
+      const s = yield* boot(f)
+      yield* signIn(s.credentials)
+      yield* seed(s.db, f.directory)
+      yield* allow(s.db, f.directory, f.backend)
+      const {
+        id: _,
+        type,
+        ...data
+      } = Schema.decodeUnknownSync(Schema.toEncoded(SessionMessage.Assistant))({
+        id: messageID,
+        type: "assistant",
+        agent: "build",
+        model: { providerID: "fixture", id: "model", variant: "default" },
+        metadata: { opaque: { nil: null } },
+        native: { signature: "exact" },
+        content: [],
+        time: { created: 10 },
+      })
+      yield* s.db.insert(SessionMessageTable).values({ session_id: id, id: messageID, type, seq: 0, data }).run()
+      const content = Array.from({ length: 1000 }, (_, ordinal) => ({
+        type: "text" as const,
+        text: `${ordinal}:` + "x".repeat(1024),
+        native: { nil: null },
+      }))
+      const emptyBytes = Buffer.byteLength(JSON.stringify({ seq: 0, message: { ...data, id: messageID, type } }))
+      let partBytes = 0
+      let replacementPayloadBytes = 0
+      for (const [ordinal, part] of content.entries()) {
+        partBytes += Buffer.byteLength(JSON.stringify(part))
+        replacementPayloadBytes += emptyBytes + partBytes + ordinal
+        yield* s.db
+          .insert(SessionPartTable)
+          .values({
+            session_id: id,
+            message_id: messageID,
+            ordinal,
+            type: part.type,
+            data: part,
+          })
+          .run()
+        const status = yield* s.sync.flush({ directory: f.directory })
+        expect(status.error).toBeUndefined()
+        expect(status.pending).toBe(0)
+        const state = f.backend.states.get(id)!
+        expect(
+          reconstructMessage(
+            state.entities.get(`message/${messageID}`)!,
+            [...state.entities.entries()].filter(([key]) => key.startsWith("message-part/")).map(([, value]) => value),
+            state.position,
+          ),
+        ).toEqual({ complete: false })
+      }
+      yield* s.db
+        .update(SessionMessageTable)
+        .set({ data: { ...data, time: { created: 10, completed: 20 } } })
+        .where(eq(SessionMessageTable.id, messageID))
+        .run()
+      expect((yield* s.sync.flush({ directory: f.directory })).pending).toBe(0)
+      const state = f.backend.states.get(id)!
+      const restored = reconstructMessage(
+        state.entities.get(`message/${messageID}`)!,
+        [...state.entities.entries()].filter(([key]) => key.startsWith("message-part/")).map(([, value]) => value),
+        state.position,
+      )
+      expect(restored).toEqual({
+        complete: true,
+        value: json({
+          seq: 0,
+          message: { ...data, id: messageID, type, content, time: { created: 10, completed: 20 } },
+        }),
+      })
+      const bytes =
+        f.backend.bodies.reduce((sum, body) => sum + Buffer.byteLength(body), 0) +
+        f.backend.blobRequests.reduce((sum, hash) => sum + f.backend.blobs.get(`${id}/${hash}`)!.byteLength, 0)
+      const finalBytes = Buffer.byteLength(JSON.stringify(restored.complete ? restored.value : null))
+      expect(bytes).toBeLessThan(finalBytes * 4)
+      expect(f.backend.blobRequests).toHaveLength(0)
+      console.log(
+        JSON.stringify({
+          scenario: "1000-native-parts",
+          afterBatchAndBlobBytes: bytes,
+          finalPayloadBytes: finalBytes,
+          beforeFullMessagePayloadBytes: replacementPayloadBytes + finalBytes,
+          baselineScope: "native JSON payload only; excludes batch metadata",
+        }),
+      )
+    }),
+  120_000,
+)
+
+for (const partType of ["text", "reasoning", "tool"] as const)
+  it.live(
+    `real producer defers a 200KiB mutable ${partType} body for 100 revisions and uploads it once settled`,
+    () =>
+      Effect.gen(function* () {
+        const f = yield* fixture
+        const s = yield* boot(f)
+        yield* signIn(s.credentials)
+        yield* seed(s.db, f.directory)
+        yield* allow(s.db, f.directory, f.backend)
+        const {
+          id: _,
+          type,
+          ...data
+        } = Schema.decodeUnknownSync(Schema.toEncoded(SessionMessage.Assistant))({
+          id: messageID,
+          type: "assistant",
+          agent: "build",
+          model: { providerID: "fixture", id: "model", variant: "default" },
+          content: [],
+          time: { created: 10 },
+        })
+        yield* s.db.insert(SessionMessageTable).values({ session_id: id, id: messageID, type, seq: 0, data }).run()
+        const body = "x".repeat(200 * 1024)
+        let replacementPayloadBytes = 0
+        for (let revision = 0; revision < 100; revision++) {
+          const part =
+            partType === "tool"
+              ? {
+                  type: "tool" as const,
+                  id: "call_large",
+                  name: "fixture",
+                  time: { created: 10 },
+                  state: { status: "running" as const, input: {}, metadata: { output: `${revision}:${body}` } },
+                }
+              : { type: partType, text: `${revision}:${body}` }
+          replacementPayloadBytes += Buffer.byteLength(
+            JSON.stringify({ seq: 0, message: { ...data, id: messageID, type, content: [part] } }),
+          )
+          yield* s.db
+            .insert(SessionPartTable)
+            .values({
+              session_id: id,
+              message_id: messageID,
+              ordinal: 0,
+              type: part.type,
+              data: part,
+            })
+            .onConflictDoUpdate({
+              target: [SessionPartTable.message_id, SessionPartTable.ordinal],
+              set: { data: part },
+            })
+            .run()
+          expect((yield* s.sync.flush({ directory: f.directory })).pending).toBe(0)
+          expect(f.backend.blobRequests).toHaveLength(0)
+          expect(f.backend.states.get(id)?.entities.get(`message-part/${messageID}/0`)).toMatchObject({
+            deferred: true,
+          })
+        }
+        const finalPart: SessionPartData =
+          partType === "tool"
+            ? {
+                type: "tool" as const,
+                id: "call_large",
+                name: "fixture",
+                time: { created: 10, completed: 20 },
+                state: {
+                  status: "completed" as const,
+                  input: {},
+                  content: [{ type: "text" as const, text: `99:${body}` }],
+                },
+              }
+            : { type: partType, text: `99:${body}` }
+        if (partType === "tool")
+          yield* s.db
+            .update(SessionPartTable)
+            .set({ data: finalPart })
+            .where(eq(SessionPartTable.message_id, messageID))
+            .run()
+        yield* s.db
+          .update(SessionMessageTable)
+          .set({ data: { ...data, time: { created: 10, completed: 20 } } })
+          .where(eq(SessionMessageTable.id, messageID))
+          .run()
+        expect((yield* s.sync.flush({ directory: f.directory })).pending).toBe(0)
+        const state = f.backend.states.get(id)!
+        expect(
+          reconstructMessage(
+            state.entities.get(`message/${messageID}`)!,
+            [state.entities.get(`message-part/${messageID}/0`)!],
+            state.position,
+          ),
+        ).toEqual({
+          complete: true,
+          value: json({
+            seq: 0,
+            message: { ...data, id: messageID, type, content: [finalPart], time: { created: 10, completed: 20 } },
+          }),
+        })
+        expect(f.backend.blobRequests).toHaveLength(1)
+        const bytes =
+          f.backend.bodies.reduce((sum, value) => sum + Buffer.byteLength(value), 0) +
+          f.backend.blobRequests.reduce((sum, hash) => sum + f.backend.blobs.get(`${id}/${hash}`)!.byteLength, 0)
+        expect(bytes).toBeLessThan(body.length * 2)
+        replacementPayloadBytes += Buffer.byteLength(
+          JSON.stringify({
+            seq: 0,
+            message: { ...data, id: messageID, type, content: [finalPart], time: { created: 10, completed: 20 } },
+          }),
+        )
+        console.log(
+          JSON.stringify({
+            scenario: `200KiB-${partType}-100-revisions`,
+            afterBatchAndBlobBytes: bytes,
+            bodyBytes: body.length,
+            beforeFullMessagePayloadBytes: replacementPayloadBytes,
+            baselineScope: "native JSON payload only; excludes batch metadata",
+          }),
+        )
+      }),
+    60_000,
+  )
+
+it.live("producer externalizes node-heavy and deep values and splits aggregate JSON nodes below the byte limit", () =>
+  Effect.gen(function* () {
+    const f = yield* fixture
+    const s = yield* boot(f)
+    yield* signIn(s.credentials)
+    yield* seed(s.db, f.directory)
+    yield* allow(s.db, f.directory, f.backend)
+    const wide = Array.from({ length: 8192 }, () => 0)
+    let deep: Schema.Json = null
+    for (let level = 0; level < 65; level++) deep = [deep]
+    for (const [seq, metadata] of [wide, deep].entries()) {
+      const message = SessionMessage.ID.make(`msg_budget_blob_${seq}`)
+      yield* writeMessage(s.db, "externalized structured metadata", id, seq, message)
+      yield* s.db.run(
+        sql`UPDATE session_message SET data=json_set(data,'$.metadata',json_object('fixture',json(${JSON.stringify(metadata)}))) WHERE id=${message}`,
+      )
+    }
+    expect((yield* s.sync.flush({ directory: f.directory })).pending).toBe(0)
+    expect(f.backend.blobRequests).toHaveLength(2)
+    const start = f.backend.bodies.length
+    for (let seq = 2; seq < 12; seq++) {
+      const message = SessionMessage.ID.make(`msg_budget_inline_${seq}`)
+      yield* writeMessage(s.db, "bounded structured metadata", id, seq, message)
+      yield* s.db.run(
+        sql`UPDATE session_message SET data=json_set(data,'$.metadata',json_object('fixture',json(${JSON.stringify(wide.slice(0, 4000))}))) WHERE id=${message}`,
+      )
+    }
+    expect((yield* s.sync.flush({ directory: f.directory })).pending).toBe(0)
+    expect(f.backend.bodies.length - start).toBeGreaterThan(1)
+    for (const body of f.backend.bodies) {
+      const packet = readPacket(body)
+      expect(jsonNodes(packet, limits.jsonBatchDepth, limits.jsonBatchNodes)).toBeDefined()
+      expect(Buffer.byteLength(body)).toBeLessThanOrEqual(limits.batch)
+      for (const change of packet.changes) if (change.value !== undefined) expect(jsonNodes(change.value)).toBeDefined()
+    }
+    expect(f.backend.blobRequests).toHaveLength(2)
+    expect(f.backend.states.get(id)?.entities.size).toBe(13)
+  }),
+)
+
+it.live("semantic revert removes independent native parts with the same cause as their message", () =>
+  Effect.gen(function* () {
+    const f = yield* fixture
+    const s = yield* boot(f)
+    yield* signIn(s.credentials)
+    yield* seed(s.db, f.directory)
+    yield* allow(s.db, f.directory, f.backend)
+    yield* writeMessage(s.db, "retained boundary")
+    const assistantID = SessionMessage.ID.make("msg_revert_split")
+    const {
+      id: _,
+      type,
+      ...data
+    } = Schema.decodeUnknownSync(Schema.toEncoded(SessionMessage.Assistant))({
+      id: assistantID,
+      type: "assistant",
+      agent: "build",
+      model: { providerID: "fixture", id: "model", variant: "default" },
+      content: [],
+      time: { created: 10, completed: 20 },
+    })
+    yield* s.db.insert(SessionMessageTable).values({ session_id: id, id: assistantID, type, seq: 1, data }).run()
+    yield* s.db
+      .insert(SessionPartTable)
+      .values({
+        session_id: id,
+        message_id: assistantID,
+        ordinal: 3,
+        type: "text",
+        data: { type: "text", text: "reverted output" },
+      })
+      .run()
+    expect((yield* s.sync.flush({ directory: f.directory })).pending).toBe(0)
+    expect(f.backend.states.get(id)?.entities.has(`message-part/${assistantID}/3`)).toBe(true)
+    yield* s.bus.publish(SessionEvent.RevertEvent.Committed, { sessionID: id, to: assistantID })
+    const dirty = yield* Store.dirty(s.db, id)
+    expect(dirty.find((row) => row.kind === "message" && row.id === assistantID)).toMatchObject({
+      op: "remove",
+      cause: "revert",
+    })
+    expect(dirty.find((row) => row.kind === "message-part" && row.id === `${assistantID}/3`)).toMatchObject({
+      op: "remove",
+      cause: "revert",
+    })
+    expect((yield* s.sync.flush({ directory: f.directory })).pending).toBe(0)
+    expect(f.backend.states.get(id)?.entities.has(`message/${assistantID}`)).toBe(false)
+    expect(f.backend.states.get(id)?.entities.has(`message-part/${assistantID}/3`)).toBe(false)
+    expect(f.backend.states.get(id)?.entities.has(`message/${messageID}`)).toBe(true)
   }),
 )

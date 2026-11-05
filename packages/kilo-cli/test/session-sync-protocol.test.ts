@@ -353,9 +353,35 @@ for (const status of [429, 503]) {
   )
 }
 
-it.live("preserves retryable tenant unavailability and its retry deadline", () =>
+for (const code of ["tenant_unavailable", "service_overloaded"]) {
+  it.live(`preserves retryable ${code} and its retry deadline`, () =>
+    Effect.gen(function* () {
+      const floor = Date.now() + 120_000
+      const server = yield* Effect.acquireRelease(
+        Effect.sync(() =>
+          Bun.serve({
+            hostname: "127.0.0.1",
+            port: 0,
+            fetch: () =>
+              Response.json({ error: { code, retryAt: floor } }, { status: 503, headers: { "Retry-After": "60" } }),
+          }),
+        ),
+        (server) =>
+          Effect.sync(() => {
+            server.stop(true)
+          }),
+      )
+      expect(yield* request(`${server.url}unavailable`, token).pipe(Effect.result)).toMatchObject({
+        _tag: "Failure",
+        failure: { code, retryable: true, retryAt: floor },
+      })
+    }),
+  )
+}
+
+it.live("honors overload Retry-After when it exceeds the JSON deadline", () =>
   Effect.gen(function* () {
-    const floor = Date.now() + 120_000
+    const before = Date.now()
     const server = yield* Effect.acquireRelease(
       Effect.sync(() =>
         Bun.serve({
@@ -363,8 +389,8 @@ it.live("preserves retryable tenant unavailability and its retry deadline", () =
           port: 0,
           fetch: () =>
             Response.json(
-              { error: { code: "tenant_unavailable", retryAt: floor } },
-              { status: 503, headers: { "Retry-After": "60" } },
+              { error: { code: "service_overloaded", retryAt: before + 1000 } },
+              { status: 503, headers: { "Retry-After": "3" } },
             ),
         }),
       ),
@@ -373,9 +399,11 @@ it.live("preserves retryable tenant unavailability and its retry deadline", () =
           server.stop(true)
         }),
     )
-    expect(yield* request(`${server.url}unavailable`, token).pipe(Effect.result)).toMatchObject({
-      _tag: "Failure",
-      failure: { code: "tenant_unavailable", retryable: true, retryAt: floor },
-    })
+    const result = yield* request(`${server.url}overloaded`, token).pipe(Effect.result)
+    if (result._tag !== "Failure") return yield* Effect.die("Expected overload backpressure")
+    expect(result.failure.code).toBe("service_overloaded")
+    expect(result.failure.retryable).toBe(true)
+    expect(result.failure.retryAt).toBeGreaterThanOrEqual(before + 3000)
+    expect(retryTime(1, result.failure.retryAt)).toBeGreaterThanOrEqual(before + 3000)
   }),
 )
