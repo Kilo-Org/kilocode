@@ -514,6 +514,55 @@ export const dict = {
   "agentManager.intro.guide": "Leer la guía",
   "agentManager.intro.dismiss": "Omitir introducción",
   "agentManager.intro.reopen": "Cómo funciona Agent Manager",
+  "agentManager.splash.preview.label": "Vista previa de la barra lateral de Agent Manager",
+  "agentManager.splash.eyebrow": "AGENT MANAGER",
+  "agentManager.splash.compact.subtitle":
+    "Ejecuta tareas en paralelo con worktrees, delega trabajo y sigue a cada agente desde un solo lugar.",
+  "agentManager.splash.hide": "Ocultar",
+  "agentManager.splash.hideLabel": "Ocultar la introducción de Agent Manager",
+  "agentManager.splash.title": "Pon a trabajar una flota de agentes de Kilo.",
+  "agentManager.splash.subtitle":
+    "Aborda varias tareas en paralelo con worktrees, delega trabajo, sigue el progreso de cada agente y mantén varios flujos de trabajo en marcha desde un solo lugar.",
+  "agentManager.splash.hint": "o",
+  "agentManager.splash.proceed": "continúa localmente en el cuadro de mensaje de abajo",
+  "agentManager.splash.folded.title": "Pon a trabajar una flota de agentes de Kilo",
+  "agentManager.splash.folded.note": "Funciones entre stacks, delegación, comparación de modelos y más",
+  "agentManager.splash.showExamples": "Ver ejemplos",
+  "agentManager.splash.examples.crossStack.tag": "Multi-repo",
+  "agentManager.splash.examples.crossStack.title": "Una función en tres repos",
+  "agentManager.splash.examples.crossStack.pitch":
+    "Un encargo, un agente por repositorio y toda la función en una sola vista.",
+  "agentManager.splash.examples.crossStack.feature1.name": "Proyectos multirrepositorio",
+  "agentManager.splash.examples.crossStack.feature1.text":
+    "Backend, frontend e infraestructura uno al lado del otro en una sola barra lateral.",
+  "agentManager.splash.examples.crossStack.feature2.name": "Estado de sesión en vivo",
+  "agentManager.splash.examples.crossStack.feature2.text":
+    "Mira de un vistazo qué está trabajando, terminado o esperándote.",
+  "agentManager.splash.examples.crossStack.feature3.name": "Insignias de PR y recuentos de diff",
+  "agentManager.splash.examples.crossStack.feature3.text": "Sabes qué cambió cada agente antes de abrirlo.",
+  "agentManager.splash.examples.delegate.tag": "Delegar",
+  "agentManager.splash.examples.delegate.title": "Encarga una gran tarea a una sesión",
+  "agentManager.splash.examples.delegate.pitch":
+    "Pide a una sesión que divida una gran tarea en sesiones paralelas y luego entra en cualquiera de ellas.",
+  "agentManager.splash.examples.delegate.feature1.name": "Sesiones que inician sesiones",
+  "agentManager.splash.examples.delegate.feature1.text":
+    "Una sesión puede iniciar nuevas sesiones, cada una en su propio worktree.",
+  "agentManager.splash.examples.delegate.feature2.name": "Worktrees aislados",
+  "agentManager.splash.examples.delegate.feature2.text": "Cada trabajo recibe su propia copia, así nada choca.",
+  "agentManager.splash.examples.delegate.feature3.name": "Intervén donde quieras",
+  "agentManager.splash.examples.delegate.feature3.text":
+    "Entra en cualquier sesión que haya iniciado o sigue todo el trabajo desde arriba.",
+  "agentManager.splash.examples.compare.tag": "Comparar modelos",
+  "agentManager.splash.examples.compare.title": "Prueba tres, elige el mejor",
+  "agentManager.splash.examples.compare.pitch":
+    "Envía un prompt a varios agentes o modelos y conserva el mejor resultado.",
+  "agentManager.splash.examples.compare.feature1.name": "Ejecuciones con varias versiones",
+  "agentManager.splash.examples.compare.feature1.text": "Ejecuta la misma tarea como varias versiones a la vez.",
+  "agentManager.splash.examples.compare.feature2.name": "Combina modelos",
+  "agentManager.splash.examples.compare.feature2.text": "Compara Kilo Auto, Claude y GPT en un trabajo idéntico.",
+  "agentManager.splash.examples.compare.feature3.name": "Conserva el mejor",
+  "agentManager.splash.examples.compare.feature3.text":
+    "Revisa diffs reales lado a lado, conserva uno y descarta el resto.",
   "agentManager.worktree.health.absent-restorable": "Carpeta eliminada",
   "agentManager.worktree.health.absent-restorableNote":
     "La carpeta no está, pero la rama {{branch}} sigue existiendo. Restáurala para seguir trabajando aquí.",
