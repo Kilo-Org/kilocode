@@ -15,6 +15,13 @@ test("restores the composer text from the draft key and saves it on unmount", ()
   expect(cleanup).toBeDefined()
   expect(cleanup).toContain("attachmentDrafts.set(draft, attachments())")
   expect(cleanup).toContain("pasteDrafts.set(")
+  expect(cleanup).toContain("keep(draft, browsers())")
+})
+
+test("keeps browser references with the draft they were picked for", () => {
+  const swap = prompt.match(/on\(\s*\(\) => props\.draftKey,([\s\S]*?)\n    \),/)?.[1]
+  expect(swap).toContain("keep(draft, untrack(browsers))")
+  expect(swap).toContain("setBrowsers(key ? (references.get(key) ?? []) : [])")
 })
 
 test("switching the draft key saves the old text and restores the new one", () => {

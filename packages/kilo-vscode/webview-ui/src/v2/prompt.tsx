@@ -1,10 +1,8 @@
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { showToast } from "@kilocode/kilo-ui/toast"
-import type { ModelRef } from "@opencode/client"
+import type { JsonValue, ModelRef } from "@opencode/client"
 import { createEffect, createMemo, createSignal, For, on, onCleanup, onMount, Show, untrack, type JSX } from "solid-js"
-import type { PromptAttachment } from "../../../src/protocol"
-import { CodeContextChips } from "../components/chat/CodeContextChips"
 import { fold, reserve } from "../components/chat/prompt-fold"
 import { SpeechToTextButton } from "../components/speech-to-text/SpeechToTextButton"
 import { createSpeechShortcut } from "../components/speech-to-text/shortcut"
@@ -21,9 +19,13 @@ import {
   promptFocusAllowed,
 } from "../utils/focus"
 import { isEnterKeyCommitNotIme } from "../utils/ime-enter"
+import { browserPrompt, mergeBrowserReferences, type BrowserReference } from "../../../src/shared/browser-feedback"
+import { registerAppend, type AppendHandler, type ReferenceHandler } from "./append-ready"
+import { BrowserReferences } from "./browser-references"
+import type { PromptAttachment } from "../../../src/protocol"
+import { CodeContextChips } from "../components/chat/CodeContextChips"
 import { useImageAttachments } from "../hooks/useImageAttachments"
 import { usePasteCollapse } from "../hooks/usePasteCollapse"
-import { registerAppend, type AppendHandler } from "./append-ready"
 import { message, useV2 } from "./client"
 import { registerComposer, type ComposerHandle } from "./composer"
 import { attachmentDrafts, fileAttachments, imageAttachment, mergeAttachments, pasteDrafts } from "./prompt-attachments"
@@ -34,6 +36,9 @@ import { PromptOverflow, type OverflowItem } from "./prompt-overflow"
 // Drafts live outside the component so a composer remounted for another session restores its own text, as v1 did.
 // The key is the session id, or the pending tab id before a first prompt creates the session.
 const drafts = new Map<string, string>()
+
+// Browser references picked for each draft, kept with the same key as the draft text.
+const references = new Map<string, BrowserReference[]>()
 
 export const promptDrafts = {
   get(key: string | undefined) {
@@ -58,7 +63,11 @@ export function PromptInput(props: {
   blocked?: boolean
   /** A pending question tool call. The composer waits for an answer, so Send replaces Stop. */
   questioning?: boolean
-  onSend: (text: string, items: PromptAttachment[]) => Promise<boolean>
+  /** Sends the composed text. `items` are editor and terminal attachments; `metadata` carries browser references. */
+  onSend: (
+    text: string,
+    input?: { items?: PromptAttachment[]; metadata?: { [key: string]: JsonValue } },
+  ) => Promise<boolean>
   onStop: () => void
   /** Agent, model and variant controls, before the actions as in main's PromptInput. */
   selectors?: JSX.Element
@@ -66,12 +75,20 @@ export function PromptInput(props: {
   autoApprove?: { enabled: boolean; onToggle: () => void }
   /** Receives a function that appends text to the draft and, when `send` is true, sends it; undefined on unmount. */
   onAppendReady?: (append: AppendHandler | undefined) => void
+  /** Receives a function that adds a browser reference to this draft; undefined on unmount. */
+  onReferenceReady?: (add: ReferenceHandler | undefined) => void
   /** Receives the context actions handle of this composer; undefined on unmount. */
   onComposerReady?: (composer: ComposerHandle | undefined) => void
 }) {
   const v2 = useV2()
   const language = useLanguage()
   const [text, setText] = createSignal(promptDrafts.get(props.draftKey))
+  const [browsers, setBrowsers] = createSignal(props.draftKey ? (references.get(props.draftKey) ?? []) : [])
+  const keep = (key: string | undefined, list: BrowserReference[]) => {
+    if (!key) return
+    if (list.length) references.set(key, list)
+    else references.delete(key)
+  }
   const [sending, setSending] = createSignal(false)
   const [enhancing, setEnhancing] = createSignal(false)
   // Editor selections, files, terminal output and images sent with the next prompt, per draft like the text.
@@ -114,7 +131,8 @@ export function PromptInput(props: {
     !props.blocked &&
     !sending() &&
     images.pending() === 0 &&
-    (speech.state() === "recording" || (!speech.active() && (!!text().trim() || attachments().length > 0)))
+    (speech.state() === "recording" ||
+      (!speech.active() && (!!text().trim() || attachments().length > 0 || browsers().length > 0)))
   // The label is the pending-permission hint while blocked, otherwise Send.
   const sendLabel = () => {
     if (props.blocked) return language.t("prompt.action.send.blocked")
@@ -125,7 +143,12 @@ export function PromptInput(props: {
   // whose prompt queues behind the running turn. A pending question is not running work. Stop is not shown while the
   // prompt is still being admitted, because an unadmitted prompt has no execution for Stop to interrupt.
   const showStop = () =>
-    props.running && !text().trim() && attachments().length === 0 && !props.questioning && speech.state() !== "recording"
+    props.running &&
+    !text().trim() &&
+    !browsers().length &&
+    attachments().length === 0 &&
+    !props.questioning &&
+    speech.state() !== "recording"
 
   const scroll = () => {
     if (!refs.input || !refs.overlay) return
@@ -147,7 +170,9 @@ export function PromptInput(props: {
           draft,
           untrack(paste.pastes).map((item) => item.text),
         )
+        keep(draft, untrack(browsers))
         draft = key
+        setBrowsers(key ? (references.get(key) ?? []) : [])
         const value = promptDrafts.get(key)
         enhanceToken++
         preEnhance = null
@@ -169,6 +194,7 @@ export function PromptInput(props: {
       draft,
       paste.pastes().map((item) => item.text),
     )
+    keep(draft, browsers())
   })
 
   createEffect(() => {
@@ -278,20 +304,28 @@ export function PromptInput(props: {
     const draft = text()
     const backing = paste.pastes().map((item) => item.text)
     const items = attachments()
+    const picked = browsers()
+    const prompt = browserPrompt(draft, picked)
     // Clear the draft as soon as it is sent, so the composer is empty while the prompt is admitted. Restore it only
-    // if the send fails and the user has not typed or attached something new.
-    setText("")
-    paste.load("", [])
-    setAttachments([])
-    setSending(true)
+    // if the send fails and the user has not typed, attached or picked something new.
     const restore = () => {
-      if (text().trim() || attachments().length > 0) return
+      if (text().trim() || attachments().length > 0 || browsers().length > 0) return
       setText(draft)
       paste.load(draft, backing)
       setAttachments(items)
+      setBrowsers(picked)
     }
+    setText("")
+    paste.load("", [])
+    setAttachments([])
+    setBrowsers([])
+    setSending(true)
     void props
-      .onSend(paste.plainTextFor(draft, backing).trim(), items)
+      // The references hold only strings, numbers and arrays, so they are the JSON the prompt metadata requires.
+      .onSend(paste.plainTextFor(draft, backing).trim(), {
+        items,
+        metadata: prompt.metadata as { [key: string]: JsonValue } | undefined,
+      })
       .then((ok) => {
         if (ok) preEnhance = null
         else restore()
@@ -312,17 +346,14 @@ export function PromptInput(props: {
     submit()
   }
 
-  const focusComposer = () =>
-    window.dispatchEvent(new CustomEvent("focusPrompt", { detail: { force: true, restore: true } }))
-
   registerComposer(props.onComposerReady, {
     attach: (items) => {
       setAttachments((current) => mergeAttachments(current, items))
-      focusComposer()
+      window.dispatchEvent(new CustomEvent("focusPrompt", { detail: { force: true, restore: true } }))
     },
     // A context action sends on its own and leaves the draft and its chips for the user's next prompt.
     submit: (value, items) => {
-      void props.onSend(value, items).catch((err: unknown) => v2.report(err))
+      void props.onSend(value, { items }).catch((err: unknown) => v2.report(err))
     },
   })
 
@@ -333,6 +364,13 @@ export function PromptInput(props: {
     setText(current.trim() ? `${current}\n\n${value}` : value)
     if (shouldSend) send()
     else focusInput()
+  })
+
+  // A reference for another session is dropped: the browser tab can outlive the session the composer shows.
+  registerAppend<ReferenceHandler>(props.onReferenceReady, (reference) => {
+    if (props.session && reference.sessionId !== props.session) return
+    setBrowsers((current) => mergeBrowserReferences(current, reference))
+    focusInput()
   })
 
   const shortcut = createSpeechShortcut({
@@ -495,6 +533,19 @@ export function PromptInput(props: {
       onDragLeave={images.handleDragLeave}
       onDrop={images.handleDrop}
     >
+      <Show when={browsers().length > 0}>
+        <div data-component="browser-references">
+          <BrowserReferences
+            references={browsers()}
+            onRemove={(id) => {
+              if (!props.disabled) setBrowsers((current) => current.filter((item) => item.id !== id))
+            }}
+            onClear={() => {
+              if (!props.disabled) setBrowsers([])
+            }}
+          />
+        </div>
+      </Show>
       <Show when={contexts().length > 0}>
         <CodeContextChips
           items={contexts()}

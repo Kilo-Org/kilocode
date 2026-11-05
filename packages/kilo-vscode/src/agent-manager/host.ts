@@ -120,6 +120,12 @@ export interface Host {
   /** Whether the workspace permits executing configured scripts. */
   isTrusted(): boolean
 
+  /** Whether the Integrated Browser is available to this workspace. */
+  browserAutomation(): boolean
+
+  /** Ask the user to approve a browser navigation to an origin. */
+  approveBrowserNavigation?(origin: string): Promise<boolean>
+
   /** Read the user's automatic branch naming preferences. */
   autoBranchNaming(): { enabled: boolean; prefix: string }
 

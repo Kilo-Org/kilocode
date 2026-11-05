@@ -317,6 +317,47 @@
           "type": "boolean",
           "default": true,
           "description": "Agent Manager: when you send pull request CI failures or review comments to the agent, or update a worktree from its base, ask the agent to commit and push so the pull request updates. Permission prompts still apply. Disable to keep commits manual."
+        },
+        "kilo-code.v2.integratedBrowser": {
+          "type": "boolean",
+          "default": true,
+          "scope": "application",
+          "markdownDescription": "Enable the Integrated Browser tab and the Agent Manager browser panel, and expose the `browser_open` tool to sessions. Enabled by default."
+        },
+        "kilo-code.v2.agentManager.browser.useSystemChrome": {
+          "type": "boolean",
+          "default": true,
+          "scope": "application",
+          "description": "Use system-installed Google Chrome for the Integrated Browser. Disable only when a compatible Playwright Chromium browser is already installed."
+        },
+        "kilo-code.v2.agentManager.browser.openLinksIn": {
+          "type": "string",
+          "enum": [
+            "external",
+            "integrated"
+          ],
+          "enumDescriptions": [
+            "Open web links in your default browser.",
+            "Open web links in a browser tab from the sidebar, or in the browser panel from Agent Manager."
+          ],
+          "default": "integrated",
+          "scope": "application",
+          "description": "Choose where web links open from Kilo chats. Requires the Integrated Browser."
+        },
+        "kilo-code.v2.browserAutomation.enabled": {
+          "type": "boolean",
+          "default": false,
+          "markdownDescription": "Enable browser automation powered by Playwright. When enabled, the AI agent can interact with web pages in a visible Chrome window."
+        },
+        "kilo-code.v2.browserAutomation.useSystemChrome": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "Use your system's installed Chrome browser instead of downloading a separate Chromium instance."
+        },
+        "kilo-code.v2.browserAutomation.headless": {
+          "type": "boolean",
+          "default": false,
+          "markdownDescription": "Run browser automation in headless mode (no visible window). When disabled, you can watch the agent interact with the browser."
         }
       }
     },
@@ -566,6 +607,12 @@
         "command": "kilo-code.v2.agentManager.jumpTo9",
         "title": "Agent Manager: Jump to Item 9",
         "category": "Kilo Code (v2)"
+      },
+      {
+        "command": "kilo-code.v2.openBrowser",
+        "title": "Open Integrated Browser",
+        "category": "Kilo Code (v2)",
+        "icon": "$(globe)"
       },
       {
         "command": "kilo-code.v2.explainCode",
@@ -986,10 +1033,12 @@
     "friendly-words": "1.3.1",
     "fuzzysort": "catalog:",
     "ignore": "7.0.5",
+    "ipaddr.js": "1.9.1",
     "js-tiktoken": "1.0.21",
     "jsonc-parser": "3.3.1",
     "lru-cache": "11.5.2",
     "marked": "catalog:",
+    "playwright-core": "1.57.0",
     "quick-lru": "7.3.0",
     "simple-git": "4.0.2",
     "solid-js": "catalog:",
@@ -1007,6 +1056,7 @@
     "@types/node": "catalog:",
     "@types/qrcode": "^1.5.6",
     "@types/vscode": "1.95.0",
+    "@playwright/test": "catalog:",
     "@types/ws": "8.18.1",
     "@typescript/native": "catalog:",
     "@vscode/vsce": "^4.0.0",

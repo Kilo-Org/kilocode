@@ -6,11 +6,12 @@ export type PermissionRuleset = Permission.Rule[]
 
 const RESTRICTION_ORDER: Record<PermissionLevel, number> = { allow: 0, ask: 1, deny: 2 }
 
-// The level shown for a tool with no configured rule. The built-in policy starts by allowing every tool, and the
-// shell table is the only appended default that asks.
+// The level shown for a tool with no configured rule. The built-in policy starts by allowing every tool. The shell
+// table asks, and the browser plugin asks for browser_open unless a rule names it.
 export const DEFAULT_RULES: PermissionRuleset = [
   { action: "*", resource: "*", effect: "allow" },
   { action: "shell", resource: "*", effect: "ask" },
+  { action: "browser_open", resource: "*", effect: "ask" },
 ]
 
 // The webview cannot import core, so this mirrors `core/util/wildcard.ts` so levels match the cli evaluation.

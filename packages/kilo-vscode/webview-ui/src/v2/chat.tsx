@@ -18,6 +18,7 @@ import {
 import type { ToHost } from "../../../src/protocol"
 import { useLanguage } from "../context/language"
 import { getVSCodeAPI, useVSCode } from "../context/vscode"
+import type { ReferenceHandler } from "./append-ready"
 import { useV2 } from "./client"
 import { useDisplaySettings } from "./display-settings"
 import { SessionList } from "./history"
@@ -105,8 +106,23 @@ export function Chat() {
     tabs.settled(draftKey ?? tabs.active(), id)
   }
 
-  // A document tab in the editor posts review comments here, because this view owns the prompt they belong to.
+  // A document tab in the editor posts review comments here, because this view owns the prompt they belong to. An
+  // element picked in the Integrated Browser arrives the same way and joins the composer's reference list.
   const vscode = useVSCode()
+  // The editor-tab browser and the Agent Manager share one broker; report which session this sidebar shows.
+  createEffect(() => {
+    const id = session()
+    vscode.postMessage({ type: "sidebar.session", sessionId: id })
+  })
+  let reference: ReferenceHandler | undefined
+  onCleanup(
+    vscode.onMessage((message) => {
+      if (message.type !== "browserReference") return
+      // A tab outlives a session switch, so a reference can arrive for a session the composer no longer shows.
+      if (message.reference.sessionId !== session()) return
+      reference?.(message.reference)
+    }),
+  )
   // File candidates are validated by the host, which owns filesystem access and the worktree boundary.
   const fileChecks = new Map<string, { resolve: (existing: string[]) => void; reject: (error: Error) => void }>()
   const fileCheckPrefix = createUniqueId()
@@ -246,6 +262,7 @@ export function Chat() {
         <SessionView
           session={session()}
           onSession={settled}
+          onReferenceReady={(value) => (reference = value)}
           actions={toolActions}
           onShowHistory={() => setView("history")}
           onViewTurnChanges={openTurnChanges}
