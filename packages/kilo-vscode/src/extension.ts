@@ -24,7 +24,7 @@ import { editorTabOwns, setEditorTabs, sidebarSession } from "./browser-tab/side
 import { chat } from "./chat"
 import { commitMessageCommand, commitMessageLanguage, connect, type GitExports } from "./commit-message"
 import { createCostAlerts } from "./cost-alert"
-import { command, manager, serverHome, settingsEnvironment } from "./server"
+import { command, indexingEnvironment, manager, serverHome, settingsEnvironment } from "./server"
 import { usePlanHome } from "./documents/document-reader"
 import { readKiloSettings } from "./settings-host"
 import { registerAutocompleteProvider } from "./services/autocomplete"
@@ -47,6 +47,7 @@ import { profile } from "./profile-panel"
 import { settings } from "./settings-panel"
 import { createShutdown } from "./shutdown"
 import type { BrowserReference } from "./shared/browser-feedback"
+import { indexingHost, type IndexingHost } from "./indexing/host"
 import { toolDiff } from "./tool-diff"
 import { tabShortcutTarget } from "./tab-shortcuts"
 
@@ -156,12 +157,14 @@ export function activate(context: ExtensionContext) {
       }),
       ...browser,
       ...notebook,
+      ...indexingEnvironment(workspace.workspaceFolders?.length),
     }
   }
   const shutdown = createShutdown({ log: (text) => output.appendLine(text) })
   const serverCommand = () => command({ extension: context.extensionPath, storage, env: process.env })
   // Plan mode writes plans under the server's home, so plan links resolve there too.
   usePlanHome(serverHome(serverCommand(), process.env))
+  let indexing: IndexingHost | undefined
   const server = manager({
     command: serverCommand,
     cwd: directory,
@@ -175,6 +178,8 @@ export function activate(context: ExtensionContext) {
       alerts.start(started)
       autocomplete.started()
       void automation.started()
+      // Consent lives in globalState; a fresh server starts without it, so re-send it for the workspace project.
+      void indexing?.sync()
     },
     onStop: () => {
       shutdown.stopped()
@@ -198,6 +203,17 @@ export function activate(context: ExtensionContext) {
   })
   void automation.syncWithSettings()
   context.subscriptions.push({ dispose: () => automation.dispose() })
+  const indexingService = indexingHost({
+    context,
+    server,
+    directory: () => workspace.workspaceFolders?.[0]?.uri.fsPath,
+    log: (message, error) => {
+      output.appendLine(`Indexing: ${message}: ${String(error)}`)
+      console.error(`Kilo indexing: ${message}`, error)
+    },
+  })
+  indexing = indexingService
+  context.subscriptions.push(indexingService)
   const connection = createAgentManagerConnection({ server })
   const autocomplete = createConnection({ server, directory })
   context.subscriptions.push({ dispose: autocomplete.dispose })
