@@ -7,36 +7,51 @@ import { KiloSettingsRpc } from "@opencode/schema/kilocode/settings"
 import { createRoutes } from "@opencode/server/routes"
 import { Context, Effect, Layer, References } from "effect"
 import { HttpEffect, HttpRouter, HttpServer } from "effect/http"
-import { mkdir, mkdtemp, realpath, rm } from "node:fs/promises"
+import { mkdir, mkdtemp, realpath, rm, symlink } from "node:fs/promises"
 import os from "node:os"
 import path from "node:path"
 import { KiloHost } from "../src/host"
 
 // The kilocode.settings RPC through the real host and the generated client, with real global and project kilo2.json
-// files. The settings plugin resolves the write target with KiloConfigWriter, so the round trip, the revision
-// conflict, the project-wide unset, and the watcher-driven reload all run against the real files.
+// files. The settings plugin resolves each write to the reader's effective document, so the round trip, the revision
+// conflict, ancestor precedence, the project-wide unset, the symlink guard, and the watcher-driven reload all run
+// against the real files.
 
 type Files = { global?: unknown; project?: unknown; projectDir?: unknown }
-type Paths = { directory: string; global: string }
+type FilePaths = { directory: string; repoRoot: string; global: string }
+type Paths = FilePaths & {
+  /** Raw request for inputs the typed client rejects, such as an empty unset path. */
+  request: (url: string, init?: RequestInit) => Promise<Response>
+}
+type Options = {
+  filewatcher?: boolean
+  /** Run the server in this subdirectory of the git root, so ancestor project config is in scope. */
+  subdirectory?: string
+  /** Extra setup after the config files are written, for example a symlinked config directory. */
+  setup?: (paths: FilePaths) => Promise<void>
+}
 
 const boot =
-  (files: Files, body: (client: Client, paths: Paths) => Promise<void>, options: { filewatcher?: boolean } = {}) =>
+  (files: Files, body: (client: Client, paths: Paths) => Promise<void>, options: Options = {}) =>
   async () => {
     using backend = fixture()
     const root = await realpath(await mkdtemp(path.join(os.tmpdir(), "kilo-settings-rpc-")))
-    const directory = path.join(root, "repo")
+    const repoRoot = path.join(root, "repo")
+    const directory = options.subdirectory ? path.join(repoRoot, options.subdirectory) : repoRoot
     const global = path.join(root, "global")
-    await $`git init -q -b main ${directory}`.quiet()
+    await $`git init -q -b main ${repoRoot}`.quiet()
     if (files.global !== undefined) {
       await mkdir(global, { recursive: true })
       await Bun.write(path.join(global, "kilo2.json"), JSON.stringify(files.global))
     }
-    if (files.project !== undefined)
-      await Bun.write(path.join(directory, "kilo2.json"), JSON.stringify(files.project))
+    if (files.project !== undefined) await Bun.write(path.join(repoRoot, "kilo2.json"), JSON.stringify(files.project))
     if (files.projectDir !== undefined) {
-      await mkdir(path.join(directory, ".kilo2"), { recursive: true })
-      await Bun.write(path.join(directory, ".kilo2", "kilo2.json"), JSON.stringify(files.projectDir))
+      await mkdir(path.join(repoRoot, ".kilo2"), { recursive: true })
+      await Bun.write(path.join(repoRoot, ".kilo2", "kilo2.json"), JSON.stringify(files.projectDir))
     }
+    if (options.subdirectory) await mkdir(directory, { recursive: true })
+    const filePaths = { directory, repoRoot, global }
+    await options.setup?.(filePaths)
     const previous = { KILO_API_URL: process.env.KILO_API_URL, KILO_API_KEY: process.env.KILO_API_KEY }
     process.env.KILO_API_URL = backend.url
     delete process.env.KILO_API_KEY
@@ -69,7 +84,8 @@ const boot =
                 { preconnect: fetch.preconnect },
               ),
             })
-            yield* Effect.promise(() => body(client, { directory, global }))
+            const request = (url: string, init?: RequestInit) => handler(new Request(new URL(url, "http://kilo.local"), init))
+            yield* Effect.promise(() => body(client, { ...filePaths, request }))
           }),
         ).pipe(Effect.provideService(References.MinimumLogLevel, "Error")),
       )
@@ -214,5 +230,58 @@ test(
     },
     { filewatcher: true },
   ),
+  30_000,
+)
+
+test(
+  "a project write resolves to the reader's highest-precedence document, including an ancestor",
+  boot(
+    { projectDir: { privacy_mode: true } },
+    async (client, { directory, repoRoot }) => {
+      const winner = path.join(repoRoot, ".kilo2", "kilo2.json")
+      expect(await settingsTarget(client, directory, "project")).toMatchObject({ path: winner, exists: true })
+      const result = await settingsWrite(client, directory, { scope: "project", set: { shell: "zsh" } })
+      expect(result.changed).toBe(true)
+      expect(result.target.path).toBe(winner)
+      // The write does not create a lower-precedence file that the reader would ignore.
+      expect(await Bun.file(path.join(directory, "kilo2.json")).exists()).toBe(false)
+      expect(JSON.parse(await Bun.file(winner).text())).toEqual({ privacy_mode: true, shell: "zsh" })
+    },
+    { subdirectory: "packages/app" },
+  ),
+  30_000,
+)
+
+test.skipIf(process.platform === "win32")(
+  "a symlinked config directory cannot redirect a project write outside the project",
+  boot(
+    { global: { privacy_mode: true } },
+    async (client, { directory, global }) => {
+      const failure = await settingsWrite(client, directory, { scope: "project", unset: [["privacy_mode"]] }).then(
+        () => undefined,
+        (error: unknown) => error as { type: string },
+      )
+      expect(failure?.type).toBe("failed")
+      expect(JSON.parse(await Bun.file(path.join(global, "kilo2.json")).text())).toEqual({ privacy_mode: true })
+    },
+    { setup: async ({ repoRoot, global }) => void (await symlink(global, path.join(repoRoot, ".kilo2"), "dir")) },
+  ),
+  30_000,
+)
+
+test(
+  "an empty unset path is rejected",
+  boot({ global: { privacy_mode: true } }, async (_client, { directory, request }) => {
+    const response = await request(
+      `/api/rpc/kilocode.settings/write?location%5Bdirectory%5D=${encodeURIComponent(directory)}`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json", authorization: `Basic ${btoa("opencode:secret")}` },
+        body: JSON.stringify({ input: { scope: "global", unset: [[]] } }),
+      },
+    )
+    expect(response.status).toBe(400)
+    expect(await response.text()).toContain("rpc.invalid_input")
+  }),
   30_000,
 )

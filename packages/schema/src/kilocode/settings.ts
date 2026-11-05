@@ -12,12 +12,10 @@ import { optional } from "../schema.js"
 // as structured error data: a client turns `conflict` into 409 and shows the current `target` for a retry, and the
 // other names into a failure status. `target` reads the file a write resolves to and its revision before a write.
 //
-// The v1 `shadow` check (a nearer file wins, so the write would not take effect) is deliberately not carried. Its
-// v1 implementation compared the raw patch against every later-loading source, but a project document that sets a
-// Kilo key can load after the global target while the key is still governed by any-value rules (privacy mode is on
-// when any document sets `true`), so a blocking structural check would reject correct writes. The writer targets the
-// same file order the reader uses, and v2 reloads the effective config after a write, so the client observes an
-// override through `config.updated` instead of a pre-write gate. Managed-source precedence remains in slice 3.
+// A write resolves to the highest-precedence document the reader loads for the scope (see the handler), so it cannot
+// be shadowed into a no-op by a nearer file. That replaces the v1 `shadow` gate, which compared the raw patch against
+// every later-loading source and rejected valid any-value writes (privacy mode is on when any document sets `true`).
+// Managed and system precedence still outrank a project write and remain in slice 3 (#15326).
 const portable = Schema.toStandardSchemaV1
 
 export const Scope = Schema.Literals(["global", "project"])
@@ -68,16 +66,17 @@ export const Definition = Rpc.define({
       errors: { failed: portable(Failed) },
     },
     /**
-     * Set the keys of `set` and remove the paths of `unset` in the scope's document. `set` values are set at their
-     * leaf paths; a `null` value removes. A project `unset` also clears the path from the other project documents
-     * that set it. `expected` fails a stale revision or a changed target instead of overwriting a newer file.
+     * Set the keys of `set` and remove the paths of `unset` in the scope's effective document. `set` values are set
+     * at their leaf paths; a `null` value removes. A project `unset` also clears the path from the other project
+     * documents that set it. `expected` fails a stale revision or a changed target instead of overwriting a newer
+     * file.
      */
     write: {
       input: portable(
         Schema.Struct({
           scope: Scope,
-          set: optional(Schema.Record(Schema.String, Schema.Unknown)),
-          unset: optional(Schema.Array(Schema.Array(Schema.String))),
+          set: optional(Schema.Record(Schema.String, Schema.Json)),
+          unset: optional(Schema.Array(Schema.NonEmptyArray(Schema.String))),
           expected: optional(Schema.Struct({ path: Schema.String, revision: Schema.String })),
         }),
       ),
