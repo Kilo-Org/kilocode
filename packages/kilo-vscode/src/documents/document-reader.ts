@@ -75,11 +75,10 @@ export function resolveDocumentPath(
     const base = fs.realpathSync(root)
     const target = path.isAbsolute(file) ? file : path.resolve(root, file)
     // A bare plan name belongs to the plan directory when the worktree has no such file, because the model
-    // often links the plan by its file name after writing it there.
-    const candidates =
-      !path.isAbsolute(file) && !file.includes("/") && !file.includes("\\")
-        ? [target, path.join(plansDir(), file)]
-        : [target]
+    // often links the plan by its file name after writing it there. Inline candidates arrive as `./name`.
+    const name = file.replace(/^\.[\\/]/, "")
+    const bare = !path.isAbsolute(name) && !name.includes("/") && !name.includes("\\")
+    const candidates = bare ? [target, path.join(plansDir(), name)] : [target]
     const resolved = candidates.reduce<string | undefined>((found, candidate) => {
       if (found) return found
       try {

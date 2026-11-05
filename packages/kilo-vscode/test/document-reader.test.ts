@@ -116,6 +116,22 @@ describe("readDocument", () => {
     })
   })
 
+  it("resolves a dot-prefixed plan file name from the plan directory", () => {
+    withHome(() => {
+      const root = workspace()
+      const dir = plansDir()
+      fs.mkdirSync(dir, { recursive: true })
+      const plan = path.join(dir, "42-dot.md")
+      fs.writeFileSync(plan, "# Dot plan\n")
+
+      expect(readDocument(root, "./42-dot.md")).toEqual({
+        file: fs.realpathSync(plan),
+        kind: "text",
+        content: "# Dot plan\n",
+      })
+    })
+  })
+
   it("resolves a bare plan file name from the plan directory", () => {
     withHome(() => {
       const root = workspace()
