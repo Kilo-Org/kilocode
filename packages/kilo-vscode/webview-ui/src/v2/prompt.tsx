@@ -34,6 +34,8 @@ import { attachmentDrafts, fileAttachments, imageAttachment, mergeAttachments, p
 import { cleanEnhancedPrompt, enhancePromptRequest, normalizeEnhancePromptErrorMessage } from "./enhance-prompt"
 import { insertSpacedText } from "./prompt-speech"
 import { PromptOverflow, type OverflowItem } from "./prompt-overflow"
+import { sendMode, sendShortcuts, type SendMode } from "./pending-actions"
+import { PromptHint } from "./prompt-hint"
 
 // Drafts live outside the component so a composer remounted for another session restores its own text, as v1 did.
 // The key is the session id, or the pending tab id before a first prompt creates the session.
@@ -65,9 +67,13 @@ export function PromptInput(props: {
   blocked?: boolean
   /** A pending question tool call. The composer waits for an answer, so Send replaces Stop. */
   questioning?: boolean
-  /** Sends the composed text. `items` are editor and terminal attachments; `metadata` carries browser references. */
+  /**
+   * Sends the composed text. While the agent runs, `mode` chooses between steering, queueing and stopping to send now.
+   * `input.items` are editor and terminal attachments; `input.metadata` carries browser references.
+   */
   onSend: (
     text: string,
+    mode: SendMode,
     input?: { items?: PromptAttachment[]; metadata?: { [key: string]: JsonValue } },
   ) => Promise<boolean>
   onStop: () => void
@@ -150,9 +156,51 @@ export function PromptInput(props: {
     if (speech.state() === "recording") return language.t("prompt.action.send.recording")
     return language.t("prompt.action.send")
   }
+  // While the agent runs, a held modifier previews its send action on the Send button, so the user sees what Enter or
+  // a click will do before pressing it. The accessible name stays "Send".
+  const [held, setHeld] = createSignal<SendMode>("steer")
+  const hold = (event: KeyboardEvent) => setHeld(sendMode(event, true))
+  const release = () => setHeld("steer")
+  onMount(() => {
+    window.addEventListener("keydown", hold)
+    window.addEventListener("keyup", hold)
+    window.addEventListener("blur", release)
+  })
+  onCleanup(() => {
+    window.removeEventListener("keydown", hold)
+    window.removeEventListener("keyup", hold)
+    window.removeEventListener("blur", release)
+  })
+  // An empty composer during a run suggests one shortcut in its placeholder: queueing, the one Enter cannot do. The
+  // Send tooltip and the modifier preview cover the others.
+  const runningHint = () =>
+    !!props.running &&
+    !props.questioning &&
+    !text() &&
+    !browsers().length &&
+    speech.state() !== "recording" &&
+    v2.connection.status() === "connected"
+  const hintText = (key: string) =>
+    language.t("prompt.placeholder.plainHint", { key, action: language.t("prompt.shortcutHint.queue") })
+  // The placeholder template split around the key, so the key renders as keycaps.
+  const keycaps = () => {
+    const mark = "\u0001"
+    const parts = hintText(mark).split(mark)
+    return { before: parts.at(0) ?? "", after: parts.at(1) ?? "", binding: sendShortcuts().queue }
+  }
+  const busySend = () => props.running && !props.blocked && speech.state() !== "recording"
+  const sendAction = (): SendMode => (busySend() ? held() : "steer")
+  const sendIcon = () => ({ steer: "send", queue: "clock", now: "arrow-right" } as const)[sendAction()]
+  const sendHint = () => {
+    if (!busySend()) return sendLabel()
+    const keys = sendShortcuts()
+    if (held() === "queue") return language.t("prompt.action.queue", { key: keys.queue })
+    if (held() === "now") return language.t("prompt.action.stopAndSend", { key: keys.now })
+    return language.t("prompt.action.steer", keys)
+  }
   // Stop replaces Send while the agent runs and the draft is empty. Typing during a run turns it back into Send,
-  // whose prompt queues behind the running turn. A pending question is not running work. Stop is not shown while the
-  // prompt is still being admitted, because an unadmitted prompt has no execution for Stop to interrupt.
+  // whose prompt steers the running turn at its next step. A pending question is not running work. Stop is not shown
+  // while the prompt is still being admitted, because an unadmitted prompt has no execution for Stop to interrupt.
   const showStop = () =>
     props.running &&
     !text().trim() &&
@@ -319,7 +367,7 @@ export function PromptInput(props: {
     window.dispatchEvent(new CustomEvent("focusPrompt", { detail: { force: true, restore: true } }))
   }
 
-  const submit = (external?: { text: string; items: PromptAttachment[] }) => {
+  const submit = (external?: { text: string; items: PromptAttachment[] }, mode: SendMode = "steer") => {
     if (!ready() || (speech.active() && speech.state() !== "recording")) {
       if (external) putInDraft(external.text, external.items)
       return
@@ -352,7 +400,7 @@ export function PromptInput(props: {
     setSending(true)
     void props
       // The references hold only strings, numbers and arrays, so they are the JSON the prompt metadata requires.
-      .onSend(external ? external.text : expandPastes(draft, pastes).trim(), {
+      .onSend(external ? external.text : expandPastes(draft, pastes).trim(), mode, {
         items,
         metadata: prompt.metadata as { [key: string]: JsonValue } | undefined,
       })
@@ -367,14 +415,15 @@ export function PromptInput(props: {
       .finally(() => setSending(false))
   }
 
-  const send = () => {
+  const send = (mode: SendMode = "steer") => {
     if (!canSend()) return
     if (speech.state() === "recording") {
       transcribeAndSend()
       return
     }
-    submit()
+    submit(undefined, mode)
   }
+  const queue = () => send("queue")
 
   registerComposer(props.onComposerReady, {
     attach: (items) => {
@@ -649,14 +698,19 @@ export function PromptInput(props: {
               <br />
             </Show>
           </div>
+          <Show when={runningHint()}>
+            <PromptHint {...keycaps()} />
+          </Show>
           <textarea
             ref={(el) => (refs.input = el)}
             class="prompt-input"
-            classList={{ "prompt-input--disabled": props.disabled }}
+            classList={{ "prompt-input--disabled": props.disabled, "prompt-input--keycaps": runningHint() }}
             placeholder={
-              v2.connection.status() === "connected"
-                ? language.t("prompt.placeholder.plain")
-                : language.t("prompt.placeholder.connecting")
+              v2.connection.status() !== "connected"
+                ? language.t("prompt.placeholder.connecting")
+                : runningHint()
+                  ? hintText(sendShortcuts().queue)
+                  : language.t("prompt.placeholder.plain")
             }
             aria-label={language.t("prompt.placeholder.plain")}
             value={text()}
@@ -685,7 +739,7 @@ export function PromptInput(props: {
               paste.arrow(e, refs.input)
               if (!isEnterKeyCommitNotIme(e) || e.shiftKey) return
               e.preventDefault()
-              send()
+              send(sendMode(e, props.running))
             }}
             onKeyUp={(e) => {
               speechUp(e)
@@ -756,15 +810,31 @@ export function PromptInput(props: {
             <Show when={canUseSpeech()}>
               <SpeechToTextButton speech={speech} disabled={props.disabled} start={startSpeech} label={language.t} />
             </Show>
+            <Show when={props.running && (!!text().trim() || browsers().length > 0)}>
+              <Tooltip
+                value={language.t("prompt.action.queue", { key: sendShortcuts().queue })}
+                placement="top"
+                openDelay={0}
+              >
+                <IconButton
+                  icon="clock"
+                  variant="ghost"
+                  size="small"
+                  onClick={queue}
+                  disabled={!canSend() || speech.state() === "recording"}
+                  aria-label={language.t("prompt.action.queue", { key: sendShortcuts().queue })}
+                />
+              </Tooltip>
+            </Show>
             <Show
               when={showStop()}
               fallback={
-                <Tooltip value={sendLabel()} placement="top" openDelay={0}>
+                <Tooltip value={sendHint()} placement="top" openDelay={0}>
                   <IconButton
-                    icon="send"
+                    icon={sendIcon()}
                     variant="ghost"
                     size="small"
-                    onClick={send}
+                    onClick={(event) => send(sendMode(event, props.running))}
                     disabled={!canSend()}
                     aria-label={sendLabel()}
                   />
