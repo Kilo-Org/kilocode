@@ -27,7 +27,10 @@ function control(message: BrowserMessage): BrowserControlMessage {
   return browserControlMessage(message.type.slice(prefix.length) as BrowserControlKind, message)
 }
 
-function route(contexts: ProjectContexts, message: BrowserMessage): { project: string; directory: string } | undefined {
+function route(
+  contexts: ProjectContexts,
+  message: { sessionId: string; projectId?: string },
+): { project: string; directory: string } | undefined {
   const ctx = contexts.resolve(message.projectId ?? contexts.active()?.id ?? "")
   if (!ctx) return
   const state = ctx.peekState()
@@ -37,6 +40,15 @@ function route(contexts: ProjectContexts, message: BrowserMessage): { project: s
   const worktree = session?.worktreeId ?? live?.worktreeId
   const directory = worktree ? state?.getWorktree(worktree)?.path : ctx.root
   return directory ? { project: ctx.id, directory } : undefined
+}
+
+/**
+ * The project that can route a browser request for the session, trying `preferred` first. A subagent's child session or
+ * a session of a project that is not loaded has none, so the caller can fall back instead of dropping the request.
+ */
+export function routableProject(contexts: ProjectContexts, sessionId: string, preferred?: string): string | undefined {
+  const ids = [preferred, ...[...contexts.values()].map((ctx) => ctx.id)].filter((id): id is string => !!id)
+  return ids.map((id) => route(contexts, { sessionId, projectId: id })?.project).find((id) => !!id)
 }
 
 function surface(

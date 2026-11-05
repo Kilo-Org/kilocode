@@ -1121,6 +1121,40 @@ describe("BrowserBroker", () => {
     expect(broker.get("sb")).toMatchObject({ projectId: "b" })
   })
 
+  test("suspend with an owner pauses only that owner's streams", async () => {
+    const calls: string[] = []
+    const protocol = Object.assign(new EventEmitter(), {
+      send: async (method: string) => {
+        calls.push(method)
+        return {}
+      },
+      detach: async () => undefined,
+    })
+    const page = Object.assign(new EventEmitter(), {
+      url: () => "http://localhost:3000/",
+      title: async () => "Application",
+      screenshot: async () => Buffer.from("jpeg"),
+      context: () => ({ newCDPSession: async () => protocol }),
+      mainFrame: () => page,
+      goto: async () => undefined,
+      reload: async () => undefined,
+      setViewportSize: async () => undefined,
+      evaluate: async () => undefined,
+    })
+    const broker = fixture(page)
+    const panel = broker.bind((route) => (route.directory === "/a" ? { ...route, projectId: "a" } : undefined))
+    broker.bind((route) => (route.directory === "/b" ? route : undefined))
+    const viewport = { width: 640, height: 480, revision: 1, active: true }
+    const a = await broker.open({ sessionId: "sa", directory: "/a", projectId: "a" }, "http://localhost:3000/")
+    const b = await broker.open({ sessionId: "sb", directory: "/b" }, "http://localhost:3000/")
+    await broker.viewport("sa", "a", a.browserId, a.navigation, viewport)
+    await broker.viewport("sb", undefined, b.browserId, b.navigation, viewport)
+    expect(calls.filter((call) => call === "Page.startScreencast")).toHaveLength(2)
+    broker.suspend(panel)
+    await Bun.sleep(10)
+    expect(calls.filter((call) => call === "Page.stopScreencast")).toHaveLength(1)
+  })
+
   test("closeOwned cancels an in-flight open for its own surface", async () => {
     const entered = Promise.withResolvers<void>()
     const release = Promise.withResolvers<void>()

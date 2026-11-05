@@ -66,14 +66,14 @@ export function createBrowserLifecycle(input: {
     attach(panel: Panel): void {
       current = panel
       panel.onDidChangeVisibility((visible) => {
-        if (current === panel && !visible) browser.suspend()
+        if (current === panel && !visible) browser.suspend(owner)
       })
       panel.onDidDispose(() => {
         if (current !== panel) return
         current = undefined
-        browser.suspend()
+        browser.suspend(owner)
       })
-      if (!panel.visible) browser.suspend()
+      if (!panel.visible) browser.suspend(owner)
       browser.replay(post)
     },
     handle(message: AgentManagerInMessage): boolean {

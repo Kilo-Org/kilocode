@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, spyOn, test } from "bun:test"
 import { EventEmitter } from "node:events"
-import { browserMessage, handleBrowserMessage } from "../src/agent-manager/browser-message"
+import { browserMessage, handleBrowserMessage, routableProject } from "../src/agent-manager/browser-message"
 import { createBrowserLifecycle } from "../src/agent-manager/browser-lifecycle"
 import { canonicalizePath, samePath } from "../src/agent-manager/project/paths"
 import type { Host } from "../src/agent-manager/host"
@@ -223,6 +223,8 @@ describe("browser inspection responses", () => {
     expect(suspend).not.toHaveBeenCalled()
     first.events.emit("visible", false)
     expect(suspend).toHaveBeenCalledTimes(1)
+    // The panel pauses only its own streams, so a visible editor tab keeps streaming.
+    expect(suspend.mock.calls[0]?.[0]).toBeDefined()
     const second = panel()
     lifecycle.attach(second)
     first.events.emit("visible", false)
@@ -236,6 +238,25 @@ describe("browser inspection responses", () => {
     second.events.emit("visible", false)
     expect(suspend).not.toHaveBeenCalled()
     suspend.mockRestore()
+  })
+
+  test("finds the project that routes a session, and none for a session no project knows", () => {
+    const project = (id: string, sessions: string[]) => ({
+      id,
+      root: `/${id}`,
+      peekState: () => undefined,
+      sessions: () => sessions.map((item) => ({ id: item })),
+    })
+    const items = [project("a", ["one"]), project("b", ["two"])]
+    const contexts = {
+      resolve: (id: string) => items.find((item) => item.id === id),
+      active: () => items[0],
+      values: () => items.values(),
+    } as unknown as ProjectContexts
+    expect(routableProject(contexts, "two", "a")).toBe("b")
+    expect(routableProject(contexts, "one", "b")).toBe("a")
+    // A subagent's child session is not in any catalog, so the link falls back to the system browser.
+    expect(routableProject(contexts, "child")).toBeUndefined()
   })
 
   test("leaves an open editor tab's session with the tab after the sidebar switches away", async () => {

@@ -48,6 +48,7 @@ import { SessionTerminalManager } from "./SessionTerminalManager"
 import { createTerminalHost } from "./terminal-host"
 import { shouldOpenLinkInIntegratedBrowser } from "../browser-links"
 import { createBrowserLifecycle } from "./browser-lifecycle"
+import { routableProject } from "./browser-message"
 import { editorTabOwns } from "../browser-tab/sidebar-session"
 import type { BrowserBroker } from "../services/browser-automation"
 import { TerminalRouter } from "./terminal-routing"
@@ -569,12 +570,13 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
   }
 
   /**
-   * Chat links open in the Integrated Browser for the visible session when it is enabled, else externally.
-   * Shift-click (`external`) always opens the system browser.
+   * Chat links open in the Integrated Browser for the visible session when it is enabled and a project can route that
+   * session, else externally. Shift-click (`external`) always opens the system browser.
    */
   private openWebLink(url: string, external: boolean): void {
     const session = this.visibleSession
-    const project = this.projectScope.current()?.id ?? this.contexts.active()?.id
+    const preferred = this.projectScope.current()?.id ?? this.contexts.active()?.id
+    const project = session ? routableProject(this.contexts, session, preferred) : undefined
     if (!external && session && project && shouldOpenLinkInIntegratedBrowser(url)) {
       void this.browser.handle({ type: "agentManager.browser.open", sessionId: session, projectId: project, url })
       return
@@ -1084,7 +1086,6 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
   }
 
   public postToWebview(message: AgentManagerOutMessage): void {
-
     if (message.type !== "agentManager.worktreeSetup" || message.projectId) {
       this.panel?.postMessage(message)
       return

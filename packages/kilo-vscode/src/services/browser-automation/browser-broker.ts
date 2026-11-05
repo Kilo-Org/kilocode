@@ -475,9 +475,11 @@ export class BrowserBroker {
     return this.view(sessionId, projectId, identity) ? copied : undefined
   }
 
-  suspend(): void {
+  /** Pause frame streams. With `owner`, only that surface's streams pause, so a visible surface keeps streaming. */
+  suspend(owner?: BrowserOwner): void {
     for (const entry of this.entries.values()) {
       if (!entry.viewport || !entry.stream) continue
+      if (owner && entry.owner !== owner) continue
       entry.viewport = { ...entry.viewport, active: false }
       void entry.stream
         .configure(entry.viewport)
