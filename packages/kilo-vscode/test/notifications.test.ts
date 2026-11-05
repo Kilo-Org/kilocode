@@ -1,6 +1,27 @@
 import { describe, expect, it } from "bun:test"
 import { stripSubProviderPrefix } from "../webview-ui/src/components/shared/model-selector-filter"
 import { visibleNotifications } from "../webview-ui/src/v2/notification-list"
+import { dismissNotification, dismissedNotifications, syncDismissedNotifications } from "../src/notifications"
+
+function memory(initial: string[] = []) {
+  let stored = initial
+  const writes: string[][] = []
+  return {
+    writes,
+    read: () => stored,
+    globalState: {
+      get<T>(_key: string, fallback: T) {
+        return (stored.length ? stored : fallback) as T
+      },
+      async update(_key: string, value: string[]) {
+        // A delayed write models globalState, which is asynchronous in the extension host.
+        await Promise.resolve()
+        stored = value
+        writes.push([...value])
+      },
+    },
+  }
+}
 
 describe("kilo notifications", () => {
   it("keeps extension notices and hides dismissed and other surfaces", () => {
@@ -18,5 +39,32 @@ describe("kilo notifications", () => {
     expect(stripSubProviderPrefix("MiniMax: MiniMax M2")).toBe("MiniMax M2")
     expect(stripSubProviderPrefix("Kilo: Auto")).toBe("Kilo: Auto")
     expect(stripSubProviderPrefix("Auto")).toBe("Auto")
+  })
+
+  it("persists dismissals once and prunes IDs the Gateway stopped sending", async () => {
+    const store = memory(["kilo.old", "kilo.kept"])
+
+    expect(dismissedNotifications(store)).toEqual(["kilo.old", "kilo.kept"])
+    expect(dismissNotification(store, "kilo.new")).toEqual(["kilo.old", "kilo.kept", "kilo.new"])
+    expect(dismissNotification(store, "kilo.new")).toEqual(["kilo.old", "kilo.kept", "kilo.new"])
+
+    expect(syncDismissedNotifications(store, ["kilo.kept", "kilo.new"])).toEqual(["kilo.kept", "kilo.new"])
+    expect(syncDismissedNotifications(store, ["kilo.new"])).toEqual(["kilo.new"])
+
+    await Bun.sleep(0)
+    expect(store.read()).toEqual(["kilo.new"])
+    expect(store.writes.at(-1)).toEqual(["kilo.new"])
+  })
+
+  it("keeps every ID when Close dismisses several in one tick", async () => {
+    const store = memory()
+
+    dismissNotification(store, "kilo.a")
+    dismissNotification(store, "kilo.b")
+    dismissNotification(store, "kilo.c")
+
+    await Bun.sleep(0)
+    expect(store.read()).toEqual(["kilo.a", "kilo.b", "kilo.c"])
+    expect(store.writes.at(-1)).toEqual(["kilo.a", "kilo.b", "kilo.c"])
   })
 })

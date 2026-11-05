@@ -1291,14 +1291,14 @@
   },
   "module:packages/kilo-vscode/src/kilo-provider/notifications.ts": {
     "state": "ported",
-    "v2": "packages/kilo-vscode/webview-ui/src/context/notifications.tsx",
-    "note": "The list now comes from the kilocode.gateway notifications RPC in the webview provider (packages/kilo-vscode/webview-ui/src/context/notifications.tsx) and the showIn filter is packages/kilo-vscode/webview-ui/src/v2/notification-list.ts. The host keeps the dismissed IDs in global state and broadcasts them from packages/kilo-vscode/src/chat.ts (DISMISSED, requestDismissedNotifications, dismissNotification), so every window hides the same items. The v1 synthetic local notices (opencode config migration and Claude migration) are separate features and are not part of this cell.",
+    "v2": "packages/kilo-vscode/src/notifications.ts",
+    "note": "The list now comes from the kilocode.gateway notifications RPC in the webview provider (packages/kilo-vscode/webview-ui/src/context/notifications.tsx) and the showIn filter is packages/kilo-vscode/webview-ui/src/v2/notification-list.ts. The host state is packages/kilo-vscode/src/notifications.ts: it keeps the dismissed IDs, performs an atomic read-modify-write across the Close loop, prunes IDs the Gateway stopped sending, and packages/kilo-vscode/src/chat.ts broadcasts the result to every view. The v1 synthetic local notices (opencode config migration and Claude migration) are separate features and are not part of this cell.",
     "by": "better-promise"
   },
   "module:packages/kilo-vscode/tests/unit/kilo-provider-notifications.test.ts": {
     "state": "ported",
     "v2": "packages/kilo-vscode/test/notifications.test.ts",
-    "note": "Covers the showIn filter with dismissed IDs and the Gateway model name shown by the Try model action. The host-side pass-through of synthetic local notices is not carried with this cell; those notices belong to the config and Claude migration features.",
+    "note": "Covers the showIn filter with dismissed IDs, the Gateway model name shown by the Try model action, and the host state in packages/kilo-vscode/src/notifications.ts: request, idempotent dismiss, pruning against the active list, and a Close loop that dismisses several IDs in one tick. The host-side pass-through of synthetic local notices is not carried with this cell; those notices belong to the config and Claude migration features.",
     "by": "better-promise"
   }
 }

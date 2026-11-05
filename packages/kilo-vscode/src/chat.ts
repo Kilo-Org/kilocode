@@ -13,6 +13,7 @@ import {
 import { notifyHostAutoApprove, setHostAutoApprove } from "./agent-manager/provider-auto-approve"
 import type { SettingsHandler } from "./agent-manager/project/settings"
 import { local } from "./local"
+import { dismissNotification, dismissedNotifications, syncDismissedNotifications } from "./notifications"
 import { DISPLAY_DEFAULTS, type ToHost, type ToWebview } from "./protocol"
 import { bridge } from "./relay"
 import { saveImage } from "./save-image"
@@ -242,14 +243,18 @@ export function wire(input: {
       case "requestDismissedNotifications":
         post({ type: "dismissedNotificationsLoaded", ids: dismissedNotifications(input.context) })
         return true
-      case "dismissNotification": {
-        const ids = dismissedNotifications(input.context)
-        if (ids.includes(message.notificationId)) return true
-        const next = [...ids, message.notificationId]
-        void input.context.globalState.update(DISMISSED, next)
-        broadcast({ type: "dismissedNotificationsLoaded", ids: next })
+      case "dismissNotification":
+        broadcast({
+          type: "dismissedNotificationsLoaded",
+          ids: dismissNotification(input.context, message.notificationId),
+        })
         return true
-      }
+      case "syncDismissedNotifications":
+        broadcast({
+          type: "dismissedNotificationsLoaded",
+          ids: syncDismissedNotifications(input.context, message.ids),
+        })
+        return true
       default:
         return false
     }
@@ -338,14 +343,8 @@ export function composerState(context: ExtensionContext): ToWebview[] {
   ]
 }
 
-/** The notification IDs this window already dismissed, shared by every view. */
-function dismissedNotifications(context: ExtensionContext): string[] {
-  return context.globalState.get<string[]>(DISMISSED, [])
-}
-
 const EXPANDED = "kilo-code.v2.modelSelectorExpanded"
 const AUTO_APPROVE = "kilo-code.v2.autoApprove"
-const DISMISSED = "kilo-code.v2.dismissedNotificationIds"
 const NAMESPACE = "kilo-code.v2"
 // The Agent Manager panel loads its own bundle; the sidebar and the Settings panel share one.
 const ENTRY = { chat: "webview", settings: "webview", agentManager: "agent-manager" } as const

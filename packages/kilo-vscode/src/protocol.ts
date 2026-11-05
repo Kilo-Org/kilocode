@@ -119,6 +119,7 @@ export type Ui =
   | { type: "persistAutoApproveState"; value: boolean }
   | { type: "requestDismissedNotifications" }
   | { type: "dismissNotification"; notificationId: string }
+  | { type: "syncDismissedNotifications"; ids: string[] }
   | { type: "trackCostSession"; sessionID: string }
   | { type: "webviewFocusChanged"; focused: boolean }
   | { type: "setLanguage"; locale: string }

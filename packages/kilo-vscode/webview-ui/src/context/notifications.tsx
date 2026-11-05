@@ -38,7 +38,10 @@ export const NotificationsProvider: ParentComponent = (props) => {
     void rpc
       .notifications({}, { location })
       .then((items) => {
-        if (current === read) setNotifications(items)
+        if (current !== read) return
+        setNotifications(items)
+        // The host keeps only the dismissed IDs this list still contains, so a removed notice can appear again.
+        vscode.postMessage({ type: "syncDismissedNotifications", ids: items.map((item) => item.id) })
       })
       // A failed fetch keeps the list shown, as on v1.
       .catch(() => undefined)
