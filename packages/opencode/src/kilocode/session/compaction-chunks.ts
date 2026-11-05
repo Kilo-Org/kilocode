@@ -63,6 +63,16 @@ export namespace KiloCompactionChunks {
     session: Pick<Session.Interface, "removePart" | "updateMessage">
   }) {
     return Effect.gen(function* () {
+      // The single-request path leaves a content-filter finish without an error of
+      // its own, and the empty answer that follows would be reported as a retryable
+      // empty summary. Name the failure here so one rule covers both paths (#15806).
+      if (!input.message.error && input.message.finish === "content-filter") {
+        input.message.error = new SessionV1.ContentFilterError({ message: CONTENT_FILTERED }).toObject()
+        input.message.finish = "error"
+        input.message.time.completed = Date.now()
+        yield* input.session.updateMessage(input.message)
+        return "stop" as const
+      }
       if (input.message.finish !== "length") return input.result
       const parts = yield* MessageV2.parts(input.message.id)
       for (const part of parts)

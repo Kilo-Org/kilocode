@@ -256,13 +256,19 @@ function fakeRuntime(
   }
 }
 
-async function failure(error?: MessageV2.Assistant["error"], empty = false, truncated = false, filtered = false) {
+async function failure(
+  error?: MessageV2.Assistant["error"],
+  empty = false,
+  truncated = false,
+  filtered = false,
+  size = 80_000,
+) {
   await using tmp = await tmpdir()
   return provideTestInstance({
     directory: tmp.path,
     fn: async () => {
       const session = await svc.create({})
-      await user(session.id, "oversized " + "x".repeat(80_000))
+      await user(session.id, size > 0 ? "oversized " + "x".repeat(size) : "short question")
       await Effect.runPromise(
         KiloSessionCompaction.create({
           session: store,
@@ -474,6 +480,23 @@ describe("KiloCompactionChunks", () => {
 
   test("reports a content-filtered summary without asking for a retry", async () => {
     const result = await failure(undefined, false, false, true)
+
+    expect(result.errors).toHaveLength(1)
+    expect(result.result).toBe("stop")
+    expect(result.summary?.info.role).toBe("assistant")
+    if (result.summary?.info.role !== "assistant") return
+    expect(result.summary.info.finish).toBe("error")
+    expect(result.summary.info.error?.name).toBe("ContentFilterError")
+    if (result.summary.info.error?.name !== "ContentFilterError") return
+    expect(result.summary.info.error.data.message).toBe(KiloCompactionChunks.CONTENT_FILTERED)
+    const rendered = result.summary.parts.filter((part) => part.type === "text").map((part) => part.text)
+    expect(rendered).toEqual([KiloCompactionChunks.CONTENT_FILTERED])
+    expect(rendered.some((text) => text.includes(KiloCompactionChunks.EMPTY_SUMMARY))).toBe(false)
+    expect(result.errors[0].error?.name).toBe("ContentFilterError")
+  })
+
+  test("reports a content-filtered summary on the single-request path", async () => {
+    const result = await failure(undefined, false, false, true, 0)
 
     expect(result.errors).toHaveLength(1)
     expect(result.result).toBe("stop")
