@@ -42,10 +42,14 @@ test("default OFF, live opt-in and OFF use the real settings row and ChatView ga
     key: "experimental.agentManagerUpsell",
     value: true,
   })
+  await expect
+    .poll(async () => (await requests(page)).filter((message) => message.action === "rendered").length)
+    .toBe(1)
   await enable(page, false)
   await expect(card(page)).toHaveCount(0)
   await enable(page, true)
-  await expect(card(page)).toBeVisible()
+  await expect(card(page)).toHaveCount(0)
+  expect((await requests(page)).filter((message) => message.action === "rendered")).toHaveLength(1)
 })
 
 test("live enable fails closed while the authoritative policy reply is pending", async ({ page }) => {
