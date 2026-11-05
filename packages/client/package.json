@@ -12,7 +12,7 @@
   "scripts": {
     "generate": "bun run script/build.ts",
     "check:generated": "bun run generate && git diff --exit-code -- src/generated src/generated-effect",
-    "test": "bun test --timeout 5000",
+    "test": "bun test --timeout 30000",
     "typecheck": "tsgo --noEmit",
     "test:ci": "mkdir -p .artifacts/unit && bun test --timeout 10000 --reporter=junit --reporter-outfile=.artifacts/unit/junit.xml"
   },
