@@ -1532,8 +1532,7 @@
     "state": "dropped",
     "note": "Stale v1 design note: it describes an in-memory model and a globalState lastModel key that never shipped. The shipped behavior (persisted recents, config precedence) is ported in v2/model-default.ts and src/model-preferences.ts.",
     "by": "model-picker-parity"
-  }
-,
+  },
   "api:GET /kilocode/notebook": {
     "state": "dropped",
     "note": "v1 listed server-initiated notebook requests for the extension to answer; v2 has no server notebook API because the extension owns the workspace over a loopback broker, so there is no pending request to list.",
@@ -1584,25 +1583,42 @@
     "by": "notebook-tools"
   },
   "module:packages/core/src/kilocode/session/recall-message-index.ts": {
-      "state": "dropped",
-      "note": "The v1 message FTS index and its triggers existed to make SQL recall search fast. v2 recall ranks in memory over SessionStore.messagesWithRefs in packages/kilo-plugin/src/recall/search.ts and creates no store objects, so the index has no v2 counterpart.",
-      "by": "transcript-recall"
-    },
-    "module:packages/core/src/kilocode/session/recall-part-index.ts": {
-      "state": "dropped",
-      "note": "The v1 part FTS index and its triggers existed only for SQL recall search. The v2 recall plugin reads decoded session messages through SessionStore and ranks them in memory, so no part index is built or maintained.",
-      "by": "transcript-recall"
-    },
-    "module:packages/opencode/src/kilocode/session/recall-search.ts": {
-      "state": "ported",
-      "v2": "packages/kilo-plugin/src/recall/search.ts",
-      "note": "RecallSearch query parsing, folding, whole-word ranking, title typo tolerance, partial fallback, snippets and inert escaping are ported unchanged in behavior. The storage boundary is rewritten natively: v2 loads SessionStore messagesWithRefs and filters the project worktree family instead of querying v1 tables.",
-      "by": "transcript-recall"
-    },
-    "module:packages/opencode/test/kilocode/recall-search.test.ts": {
-      "state": "ported",
-      "v2": "packages/kilo-plugin/test/recall-search.test.ts",
-      "note": "The ranking, typo, partial-match, active-turn, reference/error and cancellation assertions are ported to in-memory SearchSession fixtures. Index maintenance, SQL candidate counting and store-specific paging tests do not apply because v2 does not create recall indexes.",
-      "by": "transcript-recall"
-    }
+    "state": "dropped",
+    "note": "The v1 message FTS index and its triggers existed to make SQL recall search fast. v2 recall ranks in memory over SessionStore.messagesWithRefs in packages/kilo-plugin/src/recall/search.ts and creates no store objects, so the index has no v2 counterpart.",
+    "by": "transcript-recall"
+  },
+  "module:packages/core/src/kilocode/session/recall-part-index.ts": {
+    "state": "dropped",
+    "note": "The v1 part FTS index and its triggers existed only for SQL recall search. The v2 recall plugin reads decoded session messages through SessionStore and ranks them in memory, so no part index is built or maintained.",
+    "by": "transcript-recall"
+  },
+  "module:packages/opencode/src/kilocode/session/recall-search.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-plugin/src/recall/search.ts",
+    "note": "RecallSearch query parsing, folding, whole-word ranking, title typo tolerance, partial fallback, snippets and inert escaping are ported unchanged in behavior. The storage boundary is rewritten natively: v2 loads SessionStore messagesWithRefs and filters the project worktree family instead of querying v1 tables.",
+    "by": "transcript-recall"
+  },
+  "module:packages/opencode/test/kilocode/recall-search.test.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-plugin/test/recall-search.test.ts",
+    "note": "The ranking, typo, partial-match, active-turn, reference/error and cancellation assertions are ported to in-memory SearchSession fixtures. Index maintenance, SQL candidate counting and store-specific paging tests do not apply because v2 does not create recall indexes.",
+    "by": "transcript-recall"
+  },
+  "patch:unattributed:core/v1:efe2b3136dab": {
+    "state": "native",
+    "v2": "packages/core/src/config/normalize.ts",
+    "note": "The v1 `small_model` (NullOr(string)) maps natively: normalize.ts migrates a string to the title agent model `agents.title.model` through ConfigMigrateV1.modelSelection (packages/core/src/v1/config/migrate.ts). A v1 `null` is not carried: v2 decodes `small_model` as a plain string, so `small_model: null` is skipped with an `invalid` (`skipped malformed recognized value`) normalization diagnostic, the same v1-null/v2-string mismatch as `model` and `default_agent`. packages/core/test/kilocode/config/mapping.test.ts pins the string mapping and all three null diagnostics.",
+    "by": "v2-config-keys"
+  },
+  "patch:unattributed:core/v1:eef8153da721": {
+    "state": "native",
+    "v2": "packages/core/src/config/normalize.ts",
+    "note": "The hunk only updates the `command` schema description (the customization docs URL). v1 `command` is mapped natively: normalize.ts migrates the map to `commands` with ConfigMigrateV1.migrateCommand. The description text on v2 is upstream's.",
+    "by": "v2-config-keys"
+  },
+  "patch:unattributed:core/v1:803d6139aabf": {
+    "state": "dropped",
+    "note": "The v1 experimental sandbox keys (`experimental.sandbox`, `experimental.sandbox_restrict_network`, `experimental.sandbox_writable_paths`) have no v1 runtime caller (git grep over packages/*/src finds only the schema and the generated SDK types). The live v1 key is the top-level `sandbox` struct, read by packages/opencode/src/kilocode/sandbox/config.ts and folded by KiloConfigPolicy. The experimental aliases are dead fields.",
+    "by": "v2-config-keys"
+  }
 }
