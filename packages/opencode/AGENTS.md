@@ -73,6 +73,10 @@ Hono-based HTTP server with OpenAPI spec generation. SSE for real-time events. W
 
 Uses the **Vercel AI SDK** as the abstraction layer. Providers are loaded from a bundled map or dynamically installed at runtime. Models come from models.dev (external API), cached locally.
 
+## Session Retries
+
+Chat completion retry limit precedence: `experimental.chatMaxRetries` (config) > `KILO_SESSION_RETRY_LIMIT` (env) > `SessionRetry.RETRY_MAX_RETRIES` (default). The limit is reduced by retries already used within the session. Kilo-specific wiring lives in `KiloSessionProcessor.retryOpts` (`src/kilocode/session/processor.ts`), spread into `SessionRetry.policy()` in the shared `src/session/processor.ts` behind `kilocode_change` markers.
+
 ## Fork Isolation Rule
 
 `opencode/` is a fork of upstream opencode. When a change must touch a shared upstream file, extract the Kilo-specific logic into a mirror file under `src/kilocode/<same/path>.ts` (tests under `test/kilocode/<same/path>.test.ts`) and call into it from the upstream file behind a single `kilocode_change` marker. Example: a Kilo override for `src/cli/cmd/tui/component/dialog-provider.tsx` lives at `src/kilocode/cli/cmd/tui/component/dialog-provider.tsx`. Avoid inlining Kilo-specific logic directly into shared upstream files. Files and directories whose path contains `kilocode` never need `kilocode_change` markers.
