@@ -165,9 +165,13 @@
     "open": "11.0.4",
     "astro": "catalog:",
     "@astrojs/starlight": "catalog:",
-    "solid-js": "catalog:"
+    "solid-js": "catalog:",
+    "@anthropic-ai/sandbox-runtime": {
+      "zod": "4.6.7"
+    }
   },
   "patchedDependencies": {
+    "@anthropic-ai/sandbox-runtime@0.0.63": "patches/@anthropic-ai%2Fsandbox-runtime@0.0.63.patch",
     "@ai-sdk/openai-compatible@2.0.41": "patches/@ai-sdk%2Fopenai-compatible@2.0.41.patch",
     "@dnd-kit/dom@0.5.0": "patches/@dnd-kit%2Fdom@0.5.0.patch",
     "@npmcli/agent@4.0.2": "patches/@npmcli%2Fagent@4.0.2.patch",
