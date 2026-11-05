@@ -20,6 +20,7 @@
   "activationEvents": [
     "onStartupFinished",
     "onWebviewPanel:kilo-code.v2.settingsPanel",
+    "onWebviewPanel:kilo-code.v2.profilePanel",
     "onWebviewPanel:kilo-code.v2.agentManagerPanel"
   ],
   "contributes": {

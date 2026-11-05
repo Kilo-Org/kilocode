@@ -22,6 +22,7 @@ import { command, manager, settingsEnvironment } from "./server"
 import { readKiloSettings } from "./settings-host"
 import { registerAutocompleteProvider } from "./services/autocomplete"
 import { createConnection } from "./services/autocomplete/connection"
+import { profile } from "./profile-panel"
 import { settings } from "./settings-panel"
 import { createShutdown } from "./shutdown"
 import { toolDiff } from "./tool-diff"
@@ -136,6 +137,7 @@ export function activate(context: ExtensionContext) {
     onReset: view.syncState,
     agentManager: () => agentManager.settings,
   })
+  const profilePanel = profile({ context, server, directory })
   const agentAction = (action: string) => agentManager.postMessage({ type: "action", action })
   ensureCommandsSkipShell()
   // The cycle keybindings act on the focused composer: the Agent Manager panel when it is active, else the sidebar.
@@ -184,13 +186,11 @@ export function activate(context: ExtensionContext) {
       await commands.executeCommand("kilo-code.v2.chat.focus")
       await view.post({ type: "command", name: "history" })
     }),
-    commands.registerCommand("kilo-code.v2.profile", async () => {
-      await commands.executeCommand("kilo-code.v2.chat.focus")
-      await view.post({ type: "command", name: "profile" })
-    }),
+    commands.registerCommand("kilo-code.v2.profile", () => profilePanel.open()),
     commands.registerCommand("kilo-code.v2.settings", (...args: unknown[]) => panel.open(args)),
     commands.registerCommand("kilo-code.v2.settingsSearch", () => panel.open([{ search: true }])),
     panel,
+    profilePanel,
     // The host sends the action and the webview decides the next agent, as in main: the agent list and
     // the selection live in the webview, and only the server owns the committed value.
     commands.registerCommand("kilo-code.v2.cycleAgentMode", () => cycle("cycleAgentMode")),
