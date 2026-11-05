@@ -58,6 +58,17 @@ export class PathKindError extends Schema.TaggedError<PathKindError>()("ReadTool
   }
 }
 
+// kilocode_change start - read seam: an out-of-core reader reports its own message to the model
+export class ReaderError extends Schema.TaggedError<ReaderError>()("ReadTool.ReaderError", {
+  resource: Schema.String,
+  detail: Schema.String,
+}) {
+  override get message() {
+    return this.detail
+  }
+}
+// kilocode_change end
+
 export type ReadError =
   | Environment.NotFound
   | Environment.Failed
@@ -65,6 +76,7 @@ export type ReadError =
   | MediaIngestLimitError
   | OffsetOutOfRangeError
   | PathKindError
+  | ReaderError // kilocode_change - read seam: typed failures from a reader implementation
 
 export const PageInput = Schema.Struct({
   offset: Schema.optionalKey(NonNegativeInt),
