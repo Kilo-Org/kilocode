@@ -79,13 +79,13 @@ async function adopt(file: string, data: string, channel: string, shared: boolea
   }
   const files = candidates(data, channel, shared)
   // The earlier file with the most sessions, so an empty file of this channel cannot hide the sessions of a branch.
+  // Each candidate is opened once.
   const populated = files
-    .filter((file) => sessions(file) > 0)
-    .reduce<{ file: string; sessions: number } | undefined>(
-      (winner, file) => (!winner || sessions(file) > winner.sessions ? { file, sessions: sessions(file) } : winner),
-      undefined,
-    )
-  const source = populated?.file ?? (files.includes(legacy(data, channel, shared)) ? legacy(data, channel, shared) : undefined)
+    .map((file) => ({ file, sessions: sessions(file) }))
+    .filter((entry) => entry.sessions > 0)
+    .toSorted((a, b) => b.sessions - a.sessions)
+  const primary = legacy(data, channel, shared)
+  const source = populated[0]?.file ?? (files.includes(primary) ? primary : undefined)
   if (!source) return
   const temp = `${file}.${process.pid}.adopt`
   try {

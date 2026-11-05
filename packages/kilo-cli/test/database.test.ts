@@ -101,9 +101,11 @@ test("the copy is owner-only like the database the server opens", async () => {
   old.run("CREATE TABLE session_v2 (id TEXT)")
   old.run("INSERT INTO session_v2 VALUES ('ses_old')")
   old.close()
+  // The source keeps the mode SQLite and the umask gave it; only the copy is owner-only.
+  const sourceMode = (await stat(path.join(dir, "opencode-v2.db"))).mode & 0o777
   const file = await KiloDatabase.select({}, { data: dir, channel: "v2" })
   expect((await stat(file)).mode & 0o777).toBe(0o600)
-  expect((await stat(path.join(dir, "opencode-v2.db"))).mode & 0o777).toBe(0o644)
+  expect((await stat(path.join(dir, "opencode-v2.db"))).mode & 0o777).toBe(sourceMode)
 })
 
 test("copies the earlier file of another branch when the file of this channel is empty", async () => {
