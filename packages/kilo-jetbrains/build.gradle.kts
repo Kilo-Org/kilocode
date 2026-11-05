@@ -4,8 +4,27 @@ import org.jetbrains.intellij.platform.gradle.TestFrameworkType
 import org.jetbrains.intellij.platform.gradle.tasks.InstrumentCodeTask
 import org.jetbrains.intellij.platform.gradle.tasks.RunIdeTask
 import org.jetbrains.intellij.platform.gradle.tasks.aware.SplitModeAware.PluginInstallationTarget
+import org.gradle.api.tasks.testing.Test
+import org.gradle.api.tasks.testing.logging.TestExceptionFormat
+import org.gradle.process.CommandLineArgumentProvider
 import java.io.File
 import java.time.LocalDate
+import javax.inject.Inject
+
+// The Gradle plugin classpath gets vulnerable jackson, guava, handlebars and jsoup from the IntelliJ
+// Platform plugin (plugin-repository-rest-client) and openapi-generator, and their latest releases
+// still pin them. Raise them to the security floors in libs.versions.toml. openapi-generator is
+// declared below with `apply false` so it resolves in this same classpath.
+buildscript {
+    dependencies {
+        classpath(platform(libs.security.jackson.bom))
+        constraints {
+            classpath(libs.security.guava)
+            classpath(libs.security.handlebars)
+            classpath(libs.security.jsoup)
+        }
+    }
+}
 
 group = "ai.kilocode.jetbrains"
 
@@ -87,6 +106,7 @@ fun gitTag(): String? {
 
 val release = providers.gradleProperty("production").map { it.toBoolean() }.orElse(false).get()
 val pinned = providers.gradleProperty("kilo.cli.pinned").map { it.trim().toBoolean() }.orElse(true).get()
+val e2e = providers.gradleProperty("kilo.e2e").map { it.trim().toBoolean() }.orElse(false).get()
 val override = providers.gradleProperty("kilo.version").orNull?.trim()?.takeIf { it.isNotEmpty() }
 val prop = providers.gradleProperty("kilo.jetbrains.version").orNull?.trim()?.takeIf { it.isNotEmpty() }
 val tag = gitTag()?.removePrefix("jetbrains/v")
@@ -96,6 +116,14 @@ val ver = override?.let(::checked) ?: prop?.let(::checked) ?: if (release) check
 
 if (release && !pinned) error(
     "kilo.cli.pinned=false is a dev-only mode and cannot be released. Set kilo.cli.pinned=true before a production/publish build."
+)
+
+if (e2e && pinned) error(
+    "The Kilo UI e2e task requires the local repo CLI. Pass -Pkilo.cli.pinned=false (and -Pkilo.e2e=true) or run through packages/kilo-jetbrains/script/e2e-driver.ts."
+)
+
+if (e2e && release) error(
+    "The Kilo UI e2e task cannot run in a production/release build. Drop -Pproduction=true."
 )
 
 // Kotlin and the IntelliJ RPC compiler plugin must move together. The RPC plugin is a Kotlin compiler
@@ -166,8 +194,13 @@ plugins {
     alias(libs.plugins.detekt)
     alias(libs.plugins.changelog)
 
-    alias(libs.plugins.kotlin) apply false
-    alias(libs.plugins.kotlin.serialization) apply false
+    alias(libs.plugins.kotlin)
+    alias(libs.plugins.kotlin.serialization)
+    alias(libs.plugins.openapi.generator) apply false
+}
+
+kotlin {
+    jvmToolchain(21)
 }
 
 changelog {
@@ -222,6 +255,14 @@ allprojects {
     }
 }
 
+val uiE2e = sourceSets.create("uiTest") {
+    compileClasspath = project.configurations[compileClasspathConfigurationName]
+    runtimeClasspath = files(
+        project.configurations[runtimeClasspathConfigurationName],
+        output,
+        project.layout.buildDirectory.dir("classes/kotlin/uiTest"),
+    )
+}
 dependencies {
     intellijPlatform {
         intellijIdea(libs.versions.intellij.platform)
@@ -230,7 +271,19 @@ dependencies {
         pluginModule(implementation(project(":frontend")))
         pluginModule(implementation(project(":backend")))
         testFramework(TestFrameworkType.Platform)
+        testFramework(
+            TestFrameworkType.Starter,
+            libs.versions.intellij.starter.get(),
+            configurationName = "uiTestImplementation",
+        )
     }
+
+    "uiTestImplementation"(kotlin("stdlib"))
+    "uiTestImplementation"(libs.junit.jupiter)
+    "uiTestRuntimeOnly"(libs.junit.platform.launcher)
+    "uiTestImplementation"(libs.kodein.di)
+    "uiTestImplementation"(libs.kotlinx.coroutines)
+    "uiTestImplementation"(libs.kotlinx.serialization.json)
 }
 
 intellijPlatform {
@@ -278,6 +331,76 @@ intellijPlatform {
     }
 }
 
+val e2eRequest = providers.gradleProperty("kilo.e2e.request")
+val e2eResult = providers.gradleProperty("kilo.e2e.result")
+val backendCliArchive = project(":backend").layout.buildDirectory.file("generated/kilo-cli-res/kilo-cli.zip")
+
+val uiTest by intellijPlatformTesting.testIdeUi.registering {
+    splitMode.set(true)
+    pluginInstallationTarget.set(PluginInstallationTarget.BOTH)
+    testFramework(TestFrameworkType.Starter, libs.versions.intellij.starter.get())
+
+    task {
+        group = "verification"
+        description = "Run the headful Starter/Driver split-mode Kilo UI adapter"
+        notCompatibleWithConfigurationCache("Kilo UI e2e consumes request/result paths and the descriptor environment at execution time")
+        testClassesDirs = files(uiE2e.output.classesDirs, layout.buildDirectory.dir("classes/kotlin/uiTest"))
+        classpath = uiE2e.runtimeClasspath
+        useJUnitPlatform()
+        maxHeapSize = "4g"
+        maxParallelForks = 1
+        outputs.upToDateWhen { false }
+        filter { includeTestsMatching("ai.kilocode.e2e.JetBrainsDriverTest") }
+        testLogging {
+            events("passed", "failed", "skipped")
+            showStandardStreams = true
+            exceptionFormat = TestExceptionFormat.FULL
+        }
+        systemProperty("java.awt.headless", "false")
+        systemProperty("kilo.e2e.pinned", pinned.toString())
+        jvmArgumentProviders += CommandLineArgumentProvider {
+            listOf(
+                "-Dkilo.e2e.request=${e2eRequest.orNull.orEmpty()}",
+                "-Dkilo.e2e.result=${e2eResult.orNull.orEmpty()}",
+                "-Dkilo.e2e.pluginArchive=${archiveFile.get().asFile.absolutePath}",
+                "-Dkilo.e2e.cliArchive=${backendCliArchive.get().asFile.absolutePath}",
+                "-Dkilo.e2e.cliMode=${if (pinned) "released" else "repo"}",
+                "-Dkilo.e2e.ideVersion=${libs.versions.intellij.platform.get()}",
+            )
+        }
+        doFirst {
+            if (!e2e) throw GradleException(
+                "uiTest requires -Pkilo.e2e=true and -Pkilo.cli.pinned=false. " +
+                    "Run packages/kilo-jetbrains/script/e2e-driver.ts instead.",
+            )
+            if (pinned) throw GradleException(
+                "uiTest requires -Pkilo.cli.pinned=false so the plugin uses the local repo CLI.",
+            )
+            if (e2eRequest.orNull.isNullOrBlank()) throw GradleException("uiTest requires -Pkilo.e2e.request=<path>.")
+            if (e2eResult.orNull.isNullOrBlank()) throw GradleException("uiTest requires -Pkilo.e2e.result=<path>.")
+        }
+    }
+}
+
+if (!pinned) {
+    tasks.named("uiTest") {
+        dependsOn(":backend:buildRepoCli")
+    }
+}
+
+tasks.register<Test>("uiTestUnit") {
+    group = "verification"
+    description = "Run the non-IDE K1 protocol and redaction tests"
+    testClassesDirs = files(uiE2e.output.classesDirs, layout.buildDirectory.dir("classes/kotlin/uiTest"))
+    classpath = uiE2e.runtimeClasspath
+    useJUnitPlatform()
+    filter { includeTestsMatching("ai.kilocode.e2e.ProtocolTest") }
+    testLogging {
+        events("passed", "failed", "skipped")
+        exceptionFormat = TestExceptionFormat.FULL
+    }
+}
+
 tasks {
     named("verifyPluginSignature") {
         dependsOn("signPlugin")
@@ -303,7 +426,8 @@ tasks {
 }
 
 // Compile-only typecheck: verifies Kotlin compiles (including generated API client)
-// without running buildPlugin.
+// without running buildPlugin. compileUiTestKotlin keeps the headful Starter/Driver adapter
+// covered in CI without launching an IDE.
 tasks.register("typecheck") {
     dependsOn(
         ":shared:compileKotlin",
@@ -311,6 +435,7 @@ tasks.register("typecheck") {
         ":backend:compileKotlin",
         ":frontend:compileTestKotlin",
         ":backend:compileTestKotlin",
+        "compileUiTestKotlin",
     )
 }
 
@@ -343,4 +468,60 @@ tasks.withType<RunIdeTask> {
 
 tasks.named<Delete>("clean") {
     delete(layout.buildDirectory)
+}
+
+// ide-starter (UI e2e driver) and the IntelliJ test framework pin vulnerable netty, bouncycastle,
+// jackson, guava, jsoup and OpenTelemetry versions, and the newest 2026.1 builds still do. This
+// rule fixes their published metadata: it adds the security BOMs and constraints from
+// libs.versions.toml, which Gradle only ever uses to raise a version.
+abstract class SecurityFloors @Inject constructor(
+    private val boms: List<String>,
+    private val floors: List<String>,
+) : ComponentMetadataRule {
+    @get:Inject
+    abstract val objects: ObjectFactory
+
+    override fun execute(context: ComponentMetadataContext) {
+        context.details.allVariants {
+            withDependencies {
+                boms.forEach { bom ->
+                    add(bom) {
+                        attributes { attribute(Category.CATEGORY_ATTRIBUTE, objects.named(Category.REGULAR_PLATFORM)) }
+                    }
+                }
+            }
+            withDependencyConstraints {
+                floors.forEach { add(it) }
+            }
+        }
+    }
+}
+
+fun coords(lib: Provider<MinimalExternalModuleDependency>) = lib.get().let { "${it.module}:${it.version}" }
+
+val boms = listOf(libs.security.jackson.bom, libs.security.opentelemetry.bom).map(::coords)
+val floors = listOf(
+    libs.security.netty.buffer,
+    libs.security.netty.codec.compression,
+    libs.security.netty.codec.http2,
+    libs.security.bcprov,
+    libs.security.bcpkix,
+    libs.security.guava,
+    libs.security.jsoup,
+).map(::coords)
+val lz4 = coords(libs.security.lz4)
+
+allprojects {
+    dependencies.components {
+        listOf("com.jetbrains.intellij.tools:ide-starter-squashed", "com.jetbrains.intellij.platform:test-framework-core").forEach {
+            withModule(it, SecurityFloors::class) { params(boms, floors) }
+        }
+    }
+    // org.lz4:lz4-java is abandoned with unfixed advisories (ide-starter pulls it in). Swap it for
+    // its maintained fork wherever it appears in a graph, at any depth.
+    configurations.configureEach {
+        resolutionStrategy.dependencySubstitution {
+            substitute(module("org.lz4:lz4-java")).using(module(lz4)).because("org.lz4 is unmaintained, use the at.yawk.lz4 fork")
+        }
+    }
 }

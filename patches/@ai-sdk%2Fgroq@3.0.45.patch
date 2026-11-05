@@ -1,0 +1,79 @@
+diff --git a/dist/index.d.mts b/dist/index.d.mts
+index d24d69f87b01a70394822a1a66a16ee45ae69d2f..628e8824e2bce2249b8797dfe08d0c07a985d12c 100644
+--- a/dist/index.d.mts
++++ b/dist/index.d.mts
+@@ -10,13 +10,7 @@ declare const groqLanguageModelOptions: z.ZodObject<{
+         raw: "raw";
+         hidden: "hidden";
+     }>>;
+-    reasoningEffort: z.ZodOptional<z.ZodEnum<{
+-        none: "none";
+-        default: "default";
+-        low: "low";
+-        medium: "medium";
+-        high: "high";
+-    }>>;
++    reasoningEffort: z.ZodOptional<z.ZodString>;
+     parallelToolCalls: z.ZodOptional<z.ZodBoolean>;
+     user: z.ZodOptional<z.ZodString>;
+     structuredOutputs: z.ZodOptional<z.ZodBoolean>;
+diff --git a/dist/index.d.ts b/dist/index.d.ts
+index d24d69f87b01a70394822a1a66a16ee45ae69d2f..628e8824e2bce2249b8797dfe08d0c07a985d12c 100644
+--- a/dist/index.d.ts
++++ b/dist/index.d.ts
+@@ -10,13 +10,7 @@ declare const groqLanguageModelOptions: z.ZodObject<{
+         raw: "raw";
+         hidden: "hidden";
+     }>>;
+-    reasoningEffort: z.ZodOptional<z.ZodEnum<{
+-        none: "none";
+-        default: "default";
+-        low: "low";
+-        medium: "medium";
+-        high: "high";
+-    }>>;
++    reasoningEffort: z.ZodOptional<z.ZodString>;
+     parallelToolCalls: z.ZodOptional<z.ZodBoolean>;
+     user: z.ZodOptional<z.ZodString>;
+     structuredOutputs: z.ZodOptional<z.ZodBoolean>;
+diff --git a/dist/index.js b/dist/index.js
+index e29d165bee5dcf8d46a39847f22638c8367212cd..4d1a5b2618851451a285b0d858d8de8dba16d262 100644
+--- a/dist/index.js
++++ b/dist/index.js
+@@ -214,7 +214,7 @@ var groqLanguageModelOptions = import_v4.z.object({
+    * Specifies the reasoning effort level for model inference.
+    * @see https://console.groq.com/docs/reasoning#reasoning-effort
+    */
+-  reasoningEffort: import_v4.z.enum(["none", "default", "low", "medium", "high"]).optional(),
++  reasoningEffort: import_v4.z.string().optional(),
+   /**
+    * Whether to enable parallel function calling during tool use. Default to true.
+    */
+diff --git a/dist/index.mjs b/dist/index.mjs
+index b303766ac21449e2b3e4c2b9711623018c855c83..1478f5c6a6e9ea618d58f323907b1f6ffdce3119 100644
+--- a/dist/index.mjs
++++ b/dist/index.mjs
+@@ -203,7 +203,7 @@ var groqLanguageModelOptions = z.object({
+    * Specifies the reasoning effort level for model inference.
+    * @see https://console.groq.com/docs/reasoning#reasoning-effort
+    */
+-  reasoningEffort: z.enum(["none", "default", "low", "medium", "high"]).optional(),
++  reasoningEffort: z.string().optional(),
+   /**
+    * Whether to enable parallel function calling during tool use. Default to true.
+    */
+diff --git a/src/groq-chat-options.ts b/src/groq-chat-options.ts
+index 8049f566c01fb9cf48e4d0a165e26ea0b253bafb..959a46c7eff9f79502c14dc179b9de5232262e51 100644
+--- a/src/groq-chat-options.ts
++++ b/src/groq-chat-options.ts
+@@ -33,9 +33,7 @@ export const groqLanguageModelOptions = z.object({
+    * Specifies the reasoning effort level for model inference.
+    * @see https://console.groq.com/docs/reasoning#reasoning-effort
+    */
+-  reasoningEffort: z
+-    .enum(['none', 'default', 'low', 'medium', 'high'])
+-    .optional(),
++  reasoningEffort: z.string().optional(),
+ 
+   /**
+    * Whether to enable parallel function calling during tool use. Default to true.

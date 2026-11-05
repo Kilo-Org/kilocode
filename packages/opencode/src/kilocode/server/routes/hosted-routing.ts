@@ -269,6 +269,21 @@ const STATUS: Record<Failure | FailureCode, number> = {
   invalid_response: 502,
   rejected: 409,
   unknown_provider: 503,
+  worktree_dirty: 409,
+  branch_detached: 409,
+  branch_no_upstream: 409,
+  branch_not_pushed: 409,
+  remote_unsupported: 400,
+  session_not_in_worktree: 400,
+  session_busy: 409,
+  session_changed: 409,
+  sync_unavailable: 503,
+  sync_failed: 503,
+  organization_mismatch: 409,
+  insufficient_balance: 402,
+  continuation_incomplete: 409,
+  creation_in_progress: 409,
+  operation_key_reuse_mismatch: 409,
 }
 
 const MESSAGE: Record<Failure | FailureCode, string> = {
@@ -286,6 +301,21 @@ const MESSAGE: Record<Failure | FailureCode, string> = {
   invalid_response: "Hosted session returned an invalid response",
   rejected: "Hosted session rejected this request",
   unknown_provider: "Session host provider is not registered",
+  worktree_dirty: "The worktree has uncommitted changes",
+  branch_detached: "HEAD is detached",
+  branch_no_upstream: "The branch has no upstream",
+  branch_not_pushed: "The branch is not pushed to the remote",
+  remote_unsupported: "The remote repository is not supported",
+  session_not_in_worktree: "A selected session is not in this worktree",
+  session_busy: "A selected session is busy or waiting for input",
+  session_changed: "A session changed during preparation",
+  sync_unavailable: "Session sync is unavailable",
+  sync_failed: "Sessions did not finish syncing",
+  organization_mismatch: "Selected sessions belong to different accounts",
+  insufficient_balance: "Kilo Cloud requires additional balance",
+  continuation_incomplete: "Kilo Cloud created part of this workspace",
+  creation_in_progress: "Kilo Cloud is still completing this workspace",
+  operation_key_reuse_mismatch: "This operation key was used for a different request",
 }
 
 function failure(reason: Failure | FailureCode) {

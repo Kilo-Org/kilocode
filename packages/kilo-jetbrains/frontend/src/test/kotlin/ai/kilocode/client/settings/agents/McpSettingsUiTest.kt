@@ -13,7 +13,7 @@ import ai.kilocode.client.testing.FakeAppRpcApi
 import ai.kilocode.client.testing.FakeMarketplaceRpcApi
 import ai.kilocode.client.testing.fire
 import ai.kilocode.client.testing.rowLines
-import ai.kilocode.client.ui.list.ActiveListItem
+import ai.kilocode.client.ui.active.ActiveItem
 import ai.kilocode.client.ui.list.activeListCellBounds
 import ai.kilocode.client.ui.list.activeListHits
 import ai.kilocode.rpc.dto.ConfigDto
@@ -761,12 +761,12 @@ class McpSettingsUiTest : BasePlatformTestCase() {
         }
     }
 
-    private fun rows(panel: McpSettingsUi): List<ActiveListItem> {
+    private fun rows(panel: McpSettingsUi): List<ActiveItem> {
         val model = list(panel).model
         return (0 until model.size).map { model.getElementAt(it) }
     }
 
-    private fun list(panel: McpSettingsUi) = components(panel).filterIsInstance<JBList<ActiveListItem>>().single()
+    private fun list(panel: McpSettingsUi) = components(panel).filterIsInstance<JBList<ActiveItem>>().single()
 
     private fun bannerIntro(info: SettingsInfo): String {
         val pane = UIUtil.findComponentOfType(info, javax.swing.JEditorPane::class.java) ?: error("no banner text")
@@ -812,12 +812,12 @@ class McpSettingsUiTest : BasePlatformTestCase() {
 
     private fun center(rect: java.awt.Rectangle) = Point(rect.x + rect.width / 2, rect.y + rect.height / 2)
 
-    private fun click(list: JBList<ActiveListItem>, point: Point) {
+    private fun click(list: JBList<ActiveItem>, point: Point) {
         fire(list, mouse(list, MouseEvent.MOUSE_PRESSED, point))
         fire(list, mouse(list, MouseEvent.MOUSE_RELEASED, point))
     }
 
-    private fun mouse(list: JBList<ActiveListItem>, id: Int, point: Point, count: Int = 1) = MouseEvent(
+    private fun mouse(list: JBList<ActiveItem>, id: Int, point: Point, count: Int = 1) = MouseEvent(
         list,
         id,
         System.currentTimeMillis(),

@@ -41,6 +41,7 @@ const active = new Set([
   "community-triage-test.yml",
   "containers.yml",
   "dependabot-auto-merge.yml",
+  "dependency-submission.yml",
   "docs-build.yml",
   "docs-check-links.yml",
   "docs-sync.yml",
