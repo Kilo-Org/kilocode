@@ -31,7 +31,9 @@ import {
   parseArgs,
   parseJavaMajor,
   parseStackStatus,
+  providerLogName,
   renderSummary,
+  resolveEnvironment,
   usage,
   type CellResult,
   type Options,
@@ -93,6 +95,8 @@ async function main(): Promise<number> {
     console.log(usage(defaults))
     return EXIT.passed
   }
+  options = resolveEnvironment(options, process.env)
+  if (options.gitUrl) process.env.E2E_GIT_URL = options.gitUrl
 
   const problems = preflight(options)
   if (problems.length > 0) {
@@ -209,7 +213,7 @@ async function main(): Promise<number> {
       cells,
       exitCode,
     })
-    writeFileSync(summaryPath, summary)
+    writeFileSync(summaryPath, summary, { mode: 0o600 })
     console.log(`[headless] summary: ${summaryPath}`)
     if (setupError) console.error(`[headless] ${setupError.message}`)
     console.log(`[headless] exit ${exitCode}`)
@@ -251,7 +255,7 @@ async function runOne(
         : { code: "driver_result", message: message(error) }
     const evidencePath = error instanceof RunError ? error.evidencePath : undefined
     const evidence = evidencePath ? readEvidence(evidencePath) : undefined
-    const providerLog = providerTail(evidencePath)
+    const providerLog = providerTail(evidencePath, failure.code)
     if (evidence) {
       const result = cellResult(evidence)
       return { ...result, failure: result.failure ?? failure, providerLog }
@@ -313,9 +317,9 @@ function printCell(cell: CellResult, runRoot: string) {
   if (cell.providerLog) console.error(`[headless] provider output (tail):\n${cell.providerLog}`)
 }
 
-function providerTail(evidencePath: string | undefined): string | undefined {
+function providerTail(evidencePath: string | undefined, code: string): string | undefined {
   if (!evidencePath) return undefined
-  const log = join(dirname(evidencePath), "provider.log")
+  const log = join(dirname(evidencePath), providerLogName(code))
   if (!existsSync(log)) return undefined
   try {
     return readFileSync(log, "utf8").split(/\r?\n/).slice(-30).join("\n").slice(-6000)
@@ -601,20 +605,22 @@ async function runInherit(
 ): Promise<CommandExit> {
   if (signal?.aborted) return { code: null, timedOut: false }
   const proc = Bun.spawn(command, { cwd, env: process.env, stdout: "inherit", stderr: "inherit" })
-  const onAbort = () => {
-    if (proc.exitCode === null) proc.kill()
-  }
-  signal?.addEventListener("abort", onAbort, { once: true })
-  let timedOut = false
   let force: ReturnType<typeof setTimeout> | undefined
-  const timer = setTimeout(() => {
-    if (proc.exitCode !== null) return
-    timedOut = true
-    console.error(`[headless] command timed out after ${timeoutMs}ms: ${command.join(" ")}`)
+  const terminate = () => {
+    if (force) return
     proc.kill()
     force = setTimeout(() => {
       if (proc.exitCode === null) proc.kill(9)
     }, 5_000)
+  }
+  const onAbort = () => terminate()
+  signal?.addEventListener("abort", onAbort, { once: true })
+  let timedOut = false
+  const timer = setTimeout(() => {
+    if (proc.exitCode !== null) return
+    timedOut = true
+    console.error(`[headless] command timed out after ${timeoutMs}ms: ${command.join(" ")}`)
+    terminate()
   }, timeoutMs)
   const code = await proc.exited
   clearTimeout(timer)
@@ -633,19 +639,21 @@ async function capture(
   const proc = Bun.spawn(command, { cwd, env: process.env, stdout: "pipe", stderr: "pipe" })
   const stdout = new Response(proc.stdout).text()
   const stderr = new Response(proc.stderr).text()
-  const onAbort = () => {
-    if (proc.exitCode === null) proc.kill()
-  }
-  signal?.addEventListener("abort", onAbort, { once: true })
-  let timedOut = false
   let force: ReturnType<typeof setTimeout> | undefined
-  const timer = setTimeout(() => {
-    if (proc.exitCode !== null) return
-    timedOut = true
+  const terminate = () => {
+    if (force) return
     proc.kill()
     force = setTimeout(() => {
       if (proc.exitCode === null) proc.kill(9)
     }, 5_000)
+  }
+  const onAbort = () => terminate()
+  signal?.addEventListener("abort", onAbort, { once: true })
+  let timedOut = false
+  const timer = setTimeout(() => {
+    if (proc.exitCode !== null) return
+    timedOut = true
+    terminate()
   }, timeoutMs)
   const code = await proc.exited
   clearTimeout(timer)
@@ -656,7 +664,8 @@ async function capture(
 
 function runSync(command: string, args: string[]): { code: number | null; output: string } {
   const result = spawnSync(command, args, { encoding: "utf8", timeout: 15_000 })
-  return { code: result.status, output: `${result.stdout ?? ""}${result.stderr ?? ""}` }
+  const text = (value: string | Buffer | null) => (value == null ? "" : value.toString())
+  return { code: result.status, output: `${text(result.stdout)}${text(result.stderr)}` }
 }
 
 function gitCommit(dir: string): string | null {

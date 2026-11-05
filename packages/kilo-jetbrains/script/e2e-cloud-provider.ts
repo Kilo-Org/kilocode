@@ -10,8 +10,8 @@
  * Usage (used by script/e2e-session-open.ts):
  *   bun script/e2e-cloud-provider.ts <cloud-repo> --request <file> --result <file>
  *
- * The child output is mirrored to `provider.log` next to the result so a failed
- * prepare/cleanup stays diagnosable even though K1 captures the driver streams.
+ * The child output is mirrored to `provider-<operation>.log` next to the result so a
+ * failed prepare/cleanup stays diagnosable even though K1 captures the driver streams.
  */
 
 import { mkdirSync, writeFileSync } from "node:fs"
@@ -43,7 +43,7 @@ if (operation !== "prepare" && operation !== "cleanup") {
   throw new Error(`unsupported provider operation: ${operation}`)
 }
 
-const logPath = join(dirname(result), "provider.log")
+const logPath = join(dirname(result), `provider-${operation}.log`)
 const proc = Bun.spawn(
   [
     "pnpm",

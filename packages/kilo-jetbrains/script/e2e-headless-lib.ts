@@ -121,6 +121,18 @@ export function parseArgs(argv: string[], defaults: { artifacts: string }): Opti
   return options
 }
 
+/** Fill documented environment fallbacks only when the corresponding flag is absent. */
+export function resolveEnvironment(
+  options: Options,
+  env: Record<string, string | undefined> = process.env,
+): Options {
+  return {
+    ...options,
+    cloud: options.cloud ?? (env.KILO_E2E_CLOUD_REPO ? resolve(env.KILO_E2E_CLOUD_REPO) : undefined),
+    gitUrl: options.gitUrl ?? env.E2E_GIT_URL,
+  }
+}
+
 function isScenarioId(value: string): value is ScenarioID {
   return SCENARIO_IDS.some((id) => id === value)
 }
@@ -244,6 +256,11 @@ export type SummaryInput = {
   exitCode: number
 }
 
+/** Name of the C1 provider log for the operation that failed. */
+export function providerLogName(code: string): string {
+  return code === "cleanup_failed" ? "provider-cleanup.log" : "provider-prepare.log"
+}
+
 export function failureHint(code: string): string {
   switch (code) {
     case "config":
@@ -339,7 +356,13 @@ export function renderSummary(input: SummaryInput): string {
 
   const providerLogs = input.cells.filter((cell) => cell.providerLog)
   if (providerLogs.length > 0) {
-    lines.push("", "## Provider output", "")
+    lines.push(
+      "",
+      "## Provider output",
+      "",
+      "_Unsanitized local-stack output; review before sharing._",
+      "",
+    )
     for (const cell of providerLogs) {
       lines.push(`### \`${cell.lane}\` \`${cell.scenario}\``, "", "```text", cell.providerLog ?? "", "```")
     }

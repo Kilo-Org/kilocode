@@ -8,7 +8,9 @@ import {
   parseArgs,
   parseJavaMajor,
   parseStackStatus,
+  providerLogName,
   renderSummary,
+  resolveEnvironment,
   validRunId,
   type CellResult,
 } from "./e2e-headless-lib"
@@ -57,6 +59,34 @@ describe("parseArgs", () => {
   test("requires a value after value flags", () => {
     expect(() => parseArgs(["--lane"], defaults)).toThrow(UsageError)
     expect(() => parseArgs(["--cloud-repo", "--help"], defaults)).toThrow(UsageError)
+  })
+})
+
+describe("environment fallbacks", () => {
+  test("uses KILO_E2E_CLOUD_REPO and E2E_GIT_URL when flags are absent", () => {
+    const options = resolveEnvironment(parseArgs([], defaults), {
+      KILO_E2E_CLOUD_REPO: "./cloud",
+      E2E_GIT_URL: "https://example.com/fixture.git",
+    })
+    expect(options.cloud).toBe(`${process.cwd()}/cloud`)
+    expect(options.gitUrl).toBe("https://example.com/fixture.git")
+  })
+
+  test("flags win over environment values", () => {
+    const options = resolveEnvironment(
+      parseArgs(["--cloud-repo", "/tmp/flag-cloud", "--git-url", "https://flag.example/fixture.git"], defaults),
+      { KILO_E2E_CLOUD_REPO: "/tmp/env-cloud", E2E_GIT_URL: "https://env.example/fixture.git" },
+    )
+    expect(options.cloud).toBe("/tmp/flag-cloud")
+    expect(options.gitUrl).toBe("https://flag.example/fixture.git")
+  })
+})
+
+describe("provider logs", () => {
+  test("reads the prepare log for prepare failures and cleanup log for cleanup failures", () => {
+    expect(providerLogName("provider_failed")).toBe("provider-prepare.log")
+    expect(providerLogName("cleanup_failed")).toBe("provider-cleanup.log")
+    expect(providerLogName("driver_failed")).toBe("provider-prepare.log")
   })
 })
 
@@ -197,6 +227,7 @@ describe("summary", () => {
     expect(summary).toContain("driver_failed")
     expect(summary).toContain(failureHint("driver_failed"))
     expect(summary).toContain("## Provider output")
+    expect(summary).toContain("_Unsanitized local-stack output; review before sharing._")
     expect(summary).toContain("provider exploded")
   })
 
