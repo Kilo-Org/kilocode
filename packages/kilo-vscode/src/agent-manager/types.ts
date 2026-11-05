@@ -433,6 +433,27 @@ interface WorktreeDiffFileMessage {
   diff: WorktreeDiffEntry | null
 }
 
+/** Which of the requested paths exist for a session, used to turn inline code spans into file links. */
+interface ValidateFilesResultMessage {
+  type: "agentManager.validateFilesResult"
+  id: string
+  existing: string[]
+}
+
+/** One document read for the Documents panel: the canonical path plus the preview, or the read error. */
+interface DocumentMessage {
+  type: "agentManager.document"
+  sessionId: string
+  contextKey?: string
+  file: string
+  requestedFile?: string
+  content?: string
+  kind?: "text" | "image"
+  mime?: string
+  data?: string
+  error?: string
+}
+
 interface RevertWorktreeFileResultMessage {
   type: "agentManager.revertWorktreeFileResult"
   projectId?: string
@@ -531,6 +552,8 @@ export type AgentManagerOutMessage =
   | WorktreeDiffNoticeMessage
   | WorktreeDiffMessage
   | WorktreeDiffFileMessage
+  | DocumentMessage
+  | ValidateFilesResultMessage
   | RevertWorktreeFileResultMessage
   | DiffBranchesMessage
   | PRStatusOutMessage
@@ -1008,6 +1031,20 @@ interface CopyFilePathIn {
   filePath: string
 }
 
+interface ValidateFilesIn {
+  type: "agentManager.validateFiles"
+  id: string
+  sessionId: string
+  paths: string[]
+}
+
+interface RequestDocumentIn {
+  type: "agentManager.requestDocument"
+  sessionId: string
+  file: string
+  contextKey?: string
+}
+
 // Pass-through messages intercepted for side effects
 interface GenericOpenFileIn {
   type: "openFile"
@@ -1303,6 +1340,8 @@ export type AgentManagerInMessage =
   | SetCaffeinationIn
   | OpenFileIn
   | CopyFilePathIn
+  | RequestDocumentIn
+  | ValidateFilesIn
   | GenericOpenFileIn
   | PreviewImageIn
   | SaveImageIn

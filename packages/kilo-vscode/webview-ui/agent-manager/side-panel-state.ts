@@ -7,6 +7,7 @@ const ownership: Record<SidePanel, "worktree" | "session"> = {
   [SidePanel.Terminal]: "worktree",
   [SidePanel.Subagents]: "session",
   [SidePanel.EditPreview]: "session",
+  [SidePanel.Documents]: "worktree",
 }
 
 /** True when the side host must stay mounted. */
