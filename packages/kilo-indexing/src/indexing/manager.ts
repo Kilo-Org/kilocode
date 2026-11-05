@@ -13,6 +13,7 @@ import {
 import { CodeIndexStateManager } from "./state-manager"
 import { CodeIndexServiceFactory } from "./service-factory"
 import { CodeIndexSearchService } from "./search-service"
+import { WRITER_CONTENTION_MESSAGE } from "./writer-lock"
 import { CodeIndexOrchestrator } from "./orchestrator"
 import { CacheManager } from "./cache-manager"
 import { Emitter } from "./runtime"
@@ -197,7 +198,7 @@ export class CodeIndexManager {
   }
 
   private handleTelemetry(event: IndexingTelemetryEvent): void {
-    const contention = event.type === "error" && event.error.includes("Another session is indexing this workspace")
+    const contention = event.type === "error" && event.error.includes(WRITER_CONTENTION_MESSAGE)
 
     // Report the first contention of an episode, not every backoff retry: the
     // retry loop is expected to see the same lock until its holder releases.

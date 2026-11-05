@@ -19,7 +19,7 @@ import { Log } from "../util/log"
 import { sanitizeErrorMessage } from "./shared/validation-helpers"
 import { DEFAULT_VECTOR_STORE } from "./constants"
 import type { WorktreeOverlay } from "./worktree-overlay"
-import { acquire, type Writer } from "./writer-lock"
+import { acquire, WRITER_CONTENTION_MESSAGE, type Writer } from "./writer-lock"
 
 const log = Log.create({ service: "indexing-orchestrator" })
 
@@ -321,11 +321,11 @@ export class CodeIndexOrchestrator {
         // no record of the missed run.
         this.emitError(
           "orchestrator:startIndexing",
-          new Error("Another session is indexing this workspace."),
+          new Error(`${WRITER_CONTENTION_MESSAGE}.`),
           "scan",
           trigger,
         )
-        this.stateManager.setSystemState("Standby", "Another session is indexing this workspace.")
+        this.stateManager.setSystemState("Standby", `${WRITER_CONTENTION_MESSAGE}.`)
         return
       }
 
@@ -633,12 +633,12 @@ export class CodeIndexOrchestrator {
       // retry the clear once the other session finishes.
       this.emitError(
         "orchestrator:clearIndexData",
-        new Error("Another session is indexing this workspace; index data was not cleared."),
+        new Error(`${WRITER_CONTENTION_MESSAGE}; index data was not cleared.`),
         "scan",
       )
       this.stateManager.setSystemState(
         "Error",
-        "Another session is indexing this workspace; index data was not cleared.",
+        `${WRITER_CONTENTION_MESSAGE}; index data was not cleared.`,
       )
       return
     }
@@ -662,12 +662,12 @@ export class CodeIndexOrchestrator {
       if (!retry) {
         this.emitError(
           "orchestrator:clearIndexData",
-          new Error("Another session is indexing this workspace; index data was not cleared."),
+          new Error(`${WRITER_CONTENTION_MESSAGE}; index data was not cleared.`),
           "scan",
         )
         this.stateManager.setSystemState(
           "Error",
-          "Another session is indexing this workspace; index data was not cleared.",
+          `${WRITER_CONTENTION_MESSAGE}; index data was not cleared.`,
         )
         return
       }

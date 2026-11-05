@@ -6,6 +6,13 @@ import { Log } from "../util/log"
 
 const log = Log.create({ service: "indexing-writer-lock" })
 
+/**
+ * Shown when this session cannot take the per-workspace writer lock. The
+ * manager keys its contention retry on this text, so both sides import it
+ * rather than repeating the string.
+ */
+export const WRITER_CONTENTION_MESSAGE = "Another session is indexing this workspace"
+
 const STALE_MS = 60_000
 const BEAT_MS = Math.floor(STALE_MS / 3)
 
