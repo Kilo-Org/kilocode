@@ -35,7 +35,7 @@ import {
   migrateIntegratedBrowserUseSystemChrome,
 } from "./services/browser-automation/chrome-setting"
 import { createConnection } from "./services/autocomplete/connection"
-import { NotebookBroker } from "./services/notebook"
+import { NotebookBroker, notebookToolsEnabled } from "./services/notebook"
 import { profile } from "./profile-panel"
 import { settings } from "./settings-panel"
 import { createShutdown } from "./shutdown"
@@ -136,7 +136,7 @@ export function activate(context: ExtensionContext) {
             return {}
           })
         : {}
-    const notebook = workspace.isTrusted
+    const notebook = notebookToolsEnabled()
       ? await notebooks.env().catch((error: unknown) => {
           output.appendLine(`Notebook broker failed: ${String(error)}`)
           return {}
@@ -362,7 +362,8 @@ export function activate(context: ExtensionContext) {
       if (
         event.affectsConfiguration("kilo-code.v2.claudeCodeCompat") ||
         event.affectsConfiguration("kilo-code.v2.extraCaCerts") ||
-        event.affectsConfiguration("kilo-code.v2.integratedBrowser")
+        event.affectsConfiguration("kilo-code.v2.integratedBrowser") ||
+        event.affectsConfiguration("kilo-code.v2.experimental.nativeNotebookTools")
       )
         void server.stop()
       if (event.affectsConfiguration("kilo-code.v2.integratedBrowser")) agentManager.browserAutomationChanged()
