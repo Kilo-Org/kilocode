@@ -21,14 +21,19 @@ import { getVSCodeAPI, useVSCode } from "../context/vscode"
 import { useV2 } from "./client"
 import { useDisplaySettings } from "./display-settings"
 import { SessionList } from "./history"
+import { forkText } from "../../../src/agent-manager/fork-handoff"
+import { createLocalTabs } from "./local-tabs"
+import { SessionTabStrip } from "./session-tabs"
 import { SessionView } from "./session-view"
 import { chunkPaths } from "./validate-paths"
 import { createReviewAppendQueue } from "./review-queue"
+import { showTabStrip } from "../utils/local-tabs"
+import { focusPrompt } from "../utils/tab-navigation"
 
 export function Chat() {
   const v2 = useV2()
   const language = useLanguage()
-  const [session, setSession] = createSignal<string>()
+  const tabs = createLocalTabs()
   const [view, setView] = createSignal<"chat" | "history">("chat")
   // Comments can arrive while the chat composer is unmounted (History), so hold them until it returns.
   const reviewQueue = createReviewAppendQueue()
@@ -50,17 +55,47 @@ export function Chat() {
   )
   onCleanup(v2.data.on("config.updated", () => display.request()))
   const startSession = () => {
-    setSession(undefined)
+    tabs.add()
     setView("chat")
+  }
+  const open = (id: string) => {
+    tabs.open(id)
+    setView("chat")
+  }
+  const step = (offset: -1 | 1) => {
+    if (!document.hasFocus() || view() !== "chat") return
+    const before = tabs.active()
+    tabs.step(offset)
+    if (tabs.active() !== before) requestAnimationFrame(focusPrompt)
   }
   v2.onCommand((name) => {
     if (name === "newSession") startSession()
     if (name === "history") setView("history")
+    if (name === "showOpenTabs") {
+      setView("chat")
+      window.dispatchEvent(new Event("showOpenTabs"))
+    }
+    if (name === "tabPrevious") step(-1)
+    if (name === "tabNext") step(1)
   })
 
-  const open = (id: string) => {
-    setSession(id)
-    setView("chat")
+  const forkSession = (id: string) => {
+    void v2.api.session
+      .fork({ sessionID: id })
+      .then(async (info) => {
+        await v2.api.session
+          .synthetic({ sessionID: info.id, text: forkText({ directory: v2.directory }) })
+          .catch(v2.report)
+        v2.data.session.remember(info)
+        tabs.openAfter(id, info.id)
+      })
+      .catch(v2.report)
+  }
+
+  const session = () => tabs.session()
+  const settled = (id: string | undefined, draftKey?: string) => {
+    if (!id) return tabs.close(draftKey ?? tabs.active())
+    tabs.settled(draftKey ?? tabs.active(), id)
   }
 
   // A document tab in the editor posts review comments here, because this view owns the prompt they belong to.
@@ -208,12 +243,19 @@ export function Chat() {
       <Match when={view() === "chat"}>
         <SessionView
           session={session()}
-          onSession={setSession}
+          onSession={settled}
           actions={toolActions}
           onShowHistory={() => setView("history")}
           onViewTurnChanges={openTurnChanges}
           row={row}
           onReviewAppendReady={reviewQueue.ready}
+          draftKey={tabs.active()}
+          onMissing={(id) => tabs.close(id)}
+          tabStrip={
+            <Show when={showTabStrip(tabs.ids())}>
+              <SessionTabStrip tabs={tabs} onFork={forkSession} />
+            </Show>
+          }
         />
       </Match>
     </Switch>
