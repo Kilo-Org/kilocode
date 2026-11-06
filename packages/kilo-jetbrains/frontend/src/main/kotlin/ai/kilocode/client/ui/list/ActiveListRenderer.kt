@@ -129,8 +129,6 @@ internal class ActiveListRenderer(
         return body.buttons(x + origin.x, y + origin.y)
     }
 
-    fun setTrailingInset(value: Int) = body.setTrailingInset(value)
-
     fun bodyPreferredHeight(
         list: JList<out ActiveItem>,
         value: ActiveItem,

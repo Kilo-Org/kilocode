@@ -28,14 +28,11 @@ import com.intellij.util.ui.components.BorderLayoutPanel
 import java.awt.Color
 import java.awt.Cursor
 import java.awt.Rectangle
-import java.awt.event.ComponentAdapter
-import java.awt.event.ComponentEvent
 import java.awt.event.KeyEvent
 import javax.swing.JComponent
 import javax.swing.JViewport
 import javax.swing.KeyStroke
 import javax.swing.ScrollPaneConstants
-import javax.swing.SwingUtilities
 import javax.swing.UIManager
 import javax.swing.event.DocumentEvent
 
@@ -100,33 +97,6 @@ internal class ActiveList(
             scroll.border = JBUI.Borders.emptyTop(UiStyle.Gap.SM)
         } ?: run { scroll.border = JBUI.Borders.empty() }
         addToCenter(scroll)
-        scroll.verticalScrollBar.addComponentListener(object : ComponentAdapter() {
-            override fun componentShown(e: ComponentEvent) = updateTrailing()
-
-            override fun componentHidden(e: ComponentEvent) = updateTrailing()
-
-            override fun componentResized(e: ComponentEvent) = updateTrailing()
-        })
-    }
-
-    override fun doLayout() {
-        super.doLayout()
-        updateTrailing()
-    }
-
-    /**
-     * Keeps row content out from under an overlay scrollbar. Where the scrollbar sits on top of the
-     * list edge it receives the pointer events for those pixels, so the menu hover fill must stop
-     * before it or it would paint an area that can never be hovered.
-     */
-    private fun updateTrailing() {
-        val bar = scroll.verticalScrollBar
-        val overlap = if (!bar.isVisible || bar.width <= 0 || view.width <= 0) 0 else {
-            val barX = SwingUtilities.convertPoint(bar, 0, 0, scroll).x
-            val viewRight = SwingUtilities.convertPoint(view, view.width, 0, scroll).x
-            (viewRight - barX).coerceIn(0, view.width)
-        }
-        view.setTrailingInset(overlap)
     }
 
     override fun getBackground(): Color {
