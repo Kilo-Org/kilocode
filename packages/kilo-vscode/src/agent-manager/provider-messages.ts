@@ -13,7 +13,6 @@ import { STATE_GATED } from "./project/state-gate"
 import { handleSection } from "./section-handler"
 import { handleTabLayoutMessage } from "./tab-layout"
 import { handleRunMessage } from "./run/message"
-import { handleDestination, type DestinationState } from "./terminal-destination"
 import { normalizeBaseBranch } from "./base-branch"
 import { handleBaseUpdate } from "./base-update"
 import { pushFixes } from "../kilo-provider/push-fixes-settings"
@@ -24,7 +23,6 @@ import type { BranchNamingController } from "./branch-naming"
 import type { WorktreeImporter } from "./worktree-importer"
 import type { WorktreeDiffController } from "./worktree-diff-controller"
 import type { TerminalRouter } from "./terminal-routing"
-import type { SessionTerminalManager } from "./SessionTerminalManager"
 import type { ScriptTerminalManager } from "./ScriptTerminalManager"
 import type { RunController } from "./run/controller"
 import type { RecoveryMessage } from "./worktree-recovery"
@@ -41,10 +39,8 @@ export interface MessageHost {
   importer: WorktreeImporter
   diffs: WorktreeDiffController
   terminals: TerminalRouter
-  integrated: SessionTerminalManager
   scripts: { manager: ScriptTerminalManager }
   run: RunController
-  destination: DestinationState
   panel: () => PanelContext | undefined
   context: () => ProjectContext | undefined
   state: () => WorktreeStateManager | undefined
@@ -221,24 +217,7 @@ function handleUi(m: AgentManagerInMessage, host: MessageHost): boolean {
     void host.configureSetupScript()
     return true
   }
-  if (handleDestination(host.destination, m, (message) => host.log("[XTerm]", message))) return true
   if (handleRunMessage(host.run, m, (id) => host.runKey(id))) return true
-  if (m.type === "agentManager.showTerminal") {
-    host.integrated.showTerminal(m.sessionId, host.state())
-    return true
-  }
-  if (m.type === "agentManager.showLocalTerminal") {
-    host.integrated.showLocalTerminal()
-    return true
-  }
-  if (m.type === "agentManager.showWorktreeTerminal") {
-    host.integrated.showWorktreeTerminal(m.worktreeId, host.state())
-    return true
-  }
-  if (m.type === "agentManager.showExistingLocalTerminal") {
-    host.integrated.syncLocalOnSessionSwitch()
-    return true
-  }
   if (m.type === "agentManager.openWorktree") {
     host.openWorktreeDirectory(m.worktreeId)
     return true

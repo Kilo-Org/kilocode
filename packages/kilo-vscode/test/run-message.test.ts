@@ -16,16 +16,15 @@ function controller() {
 }
 
 describe("Agent Manager Run messages", () => {
-  it.each(["agentManager", "vscode"] as const)("forwards the %s dropdown destination", (destination) => {
+  it("forwards the run request for a worktree", () => {
     const item = controller()
     const msg = {
       type: "agentManager.runScript",
       worktreeId: "wt-1",
-      destination,
     } satisfies AgentManagerInMessage
 
     expect(handleRunMessage(item.value, msg)).toBe(true)
-    expect(item.run).toHaveBeenCalledWith("wt-1", destination)
+    expect(item.run).toHaveBeenCalledWith("wt-1")
   })
 
   it("applies the project qualifier to the shared local key", () => {
@@ -35,11 +34,11 @@ describe("Agent Manager Run messages", () => {
     expect(
       handleRunMessage(
         item.value,
-        { type: "agentManager.runScript", worktreeId: "local", destination: "vscode" } as AgentManagerInMessage,
+        { type: "agentManager.runScript", worktreeId: "local" } as AgentManagerInMessage,
         qualify,
       ),
     ).toBe(true)
-    expect(item.run).toHaveBeenCalledWith("prj-a:local", "vscode")
+    expect(item.run).toHaveBeenCalledWith("prj-a:local")
 
     expect(
       handleRunMessage(
@@ -58,11 +57,11 @@ describe("Agent Manager Run messages", () => {
     expect(
       handleRunMessage(
         item.value,
-        { type: "agentManager.runScript", worktreeId: "wt-1", destination: "vscode" } as AgentManagerInMessage,
+        { type: "agentManager.runScript", worktreeId: "wt-1" } as AgentManagerInMessage,
         qualify,
       ),
     ).toBe(true)
-    expect(item.run).toHaveBeenCalledWith("wt-1", "vscode")
+    expect(item.run).toHaveBeenCalledWith("wt-1")
 
     expect(
       handleRunMessage(item.value, {

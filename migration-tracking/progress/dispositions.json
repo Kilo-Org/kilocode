@@ -1621,6 +1621,51 @@
     "note": "The v1 experimental sandbox keys (`experimental.sandbox`, `experimental.sandbox_restrict_network`, `experimental.sandbox_writable_paths`) have no v1 runtime caller (git grep over packages/*/src finds only the schema and the generated SDK types). The live v1 key is the top-level `sandbox` struct, read by packages/opencode/src/kilocode/sandbox/config.ts and folded by KiloConfigPolicy. The experimental aliases are dead fields.",
     "by": "v2-config-keys"
   },
+  "module:packages/kilo-vscode/src/agent-manager/SessionTerminalManager.ts": {
+    "state": "dropped",
+    "note": "v2 intentionally removes the Agent Manager VS Code terminal destination so the embedded panel terminal is the only terminal. This module managed VS Code integrated terminals and has no v2 replacement.",
+    "by": "boiled-message"
+  },
+  "module:packages/kilo-vscode/src/agent-manager/run/destination.ts": {
+    "state": "dropped",
+    "note": "The v2 run path always uses the embedded script terminal, so the destination selector between the panel and a VS Code task is removed.",
+    "by": "boiled-message"
+  },
+  "module:packages/kilo-vscode/src/agent-manager/run/task.ts": {
+    "state": "dropped",
+    "note": "The v2 run path always uses the embedded script terminal; the VS Code ProcessExecution task adapter is removed.",
+    "by": "boiled-message"
+  },
+  "module:packages/kilo-vscode/src/agent-manager/task-runner.ts": {
+    "state": "dropped",
+    "note": "Worktree setup now always runs in the embedded script terminal; the VS Code task runner is removed with the destination setting.",
+    "by": "boiled-message"
+  },
+  "module:packages/kilo-vscode/src/agent-manager/terminal-destination.ts": {
+    "state": "dropped",
+    "note": "The terminal destination setting, its watcher and its persistence are removed. A stored value is cleared at activation by clearLegacyTerminalDestination.",
+    "by": "boiled-message"
+  },
+  "module:packages/kilo-vscode/tests/unit/agent-manager-terminal-destination.test.ts": {
+    "state": "dropped",
+    "note": "Tested the removed destination setting and its panel-local override rules; both are gone. The single terminal path is covered by test/agent-manager-terminal-side.test.ts and test/terminal-destination-cleanup.test.ts.",
+    "by": "boiled-message"
+  },
+  "module:packages/kilo-vscode/tests/unit/run-terminal-destination.test.ts": {
+    "state": "dropped",
+    "note": "Tested the removed run destination selector. The embedded run start is covered by test/run-controller.test.ts and test/run-message.test.ts.",
+    "by": "boiled-message"
+  },
+  "module:packages/kilo-vscode/tests/unit/session-terminal-manager.test.ts": {
+    "state": "dropped",
+    "note": "Tested the removed VS Code integrated terminal manager. The embedded terminal panel is covered by test/agent-manager-terminal-state.test.ts and test/agent-manager-terminal-side.test.ts.",
+    "by": "boiled-message"
+  },
+  "module:packages/kilo-vscode/webview-ui/agent-manager/terminal/TerminalDestinationButton.tsx": {
+    "state": "dropped",
+    "note": "The split button and its destination dropdown are removed. TabBar renders one terminal toggle for the embedded panel, covered by test/agent-manager-terminal-side.test.ts.",
+    "by": "boiled-message"
+  },
   "module:packages/kilo-vscode/src/kilo-provider/work-style-apply.ts": {
     "state": "ported",
     "v2": "packages/kilo-vscode/src/shared/work-style-presets.ts#buildWorkStylePlan, packages/kilo-vscode/src/work-style-host.ts#apply",
