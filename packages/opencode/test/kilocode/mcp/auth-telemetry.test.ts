@@ -66,7 +66,9 @@ function serveOAuthMcp(mode: Mode) {
               },
             })
           }
-          if (url.pathname === "/.well-known/oauth-protected-resource/mcp")
+          // A server that no longer requires auth stops advertising it; one that still advertises
+          // OAuth after an anonymous connect is started explicitly (Kilo-Org/kilocode#15492).
+          if (!anonymous && url.pathname === "/.well-known/oauth-protected-resource/mcp")
             return Response.json({
               resource: `${origin}/mcp`,
               authorization_servers: [origin],

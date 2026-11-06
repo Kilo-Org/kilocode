@@ -59,6 +59,12 @@ function serveOAuthMcp(options: OAuthMcpOptions = {}) {
           const origin = url.origin
           const mcpUrl = `${origin}/mcp`
 
+          // kilocode_change start - a server that allows anonymous access no longer advertises
+          // OAuth; one that still does is authorized explicitly (Kilo-Org/kilocode#15492)
+          if (!requiresAuth && url.pathname.startsWith("/.well-known/oauth-protected-resource")) {
+            return new Response("Not found", { status: 404 })
+          }
+          // kilocode_change end
           if (url.pathname === "/.well-known/oauth-protected-resource/mcp") {
             return Response.json({
               resource: mcpUrl,
