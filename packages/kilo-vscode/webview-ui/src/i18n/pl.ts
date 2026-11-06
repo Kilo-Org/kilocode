@@ -1333,6 +1333,11 @@ export const dict = {
     "Wybierz, czy bloki narzędzi MCP i ogólnych mają być początkowo rozwinięte czy zwinięte.",
   "settings.display.mcpTool.expanded": "Rozwinięte",
   "settings.display.mcpTool.collapsed": "Zwinięte",
+  "settings.display.codeMode.title": "Bloki Code Mode",
+  "settings.display.codeMode.description":
+    "Wybierz, czy bloki Code Mode mają się zaczynać z wyświetloną listą wywołań narzędzi, czy w jednej linii. Skrypt pozostaje zawsze ukryty, dopóki go nie otworzysz.",
+  "settings.display.codeMode.expanded": "Rozwinięte",
+  "settings.display.codeMode.collapsed": "Zwinięte",
 
   "settings.display.shortcutHints.title": "Pokaż podpowiedzi skrótów",
   "settings.display.shortcutHints.description":

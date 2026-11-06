@@ -14,7 +14,7 @@ import SessionPreview from "./SessionPreview"
 import SettingsRow from "./SettingsRow"
 import Switch from "./Switch"
 
-type LayoutKey = "terminal_command_display" | "code_edit_display" | "mcp_tool_display"
+type LayoutKey = "terminal_command_display" | "code_edit_display" | "mcp_tool_display" | "code_mode_display"
 
 const LAYOUT_OPTIONS: { value: ToolDisplayLayout; labelKey: string }[] = [
   { value: "expanded", labelKey: "expanded" },
@@ -25,6 +25,7 @@ const LAYOUT_DEFAULTS: Record<LayoutKey, ToolDisplayLayout> = {
   terminal_command_display: DISPLAY_DEFAULTS.terminalCommandDisplay,
   code_edit_display: DISPLAY_DEFAULTS.codeEditDisplay,
   mcp_tool_display: DISPLAY_DEFAULTS.mcpToolDisplay,
+  code_mode_display: DISPLAY_DEFAULTS.codeModeDisplay,
 }
 
 const REASONING_OPTIONS: { value: ReasoningDisplay; labelKey: string }[] = [
@@ -45,15 +46,16 @@ const DisplayTab: Component = () => {
   // The display keys are Kilo-only, so the config API drops them. Read them from the raw target files, as the
   // Commit Message tab reads its prompt, and write them back through the same file edit.
   const raw = (scope: SettingsScope, key: LayoutKey | "reasoning_display") => config.raw(scope)?.[key]
-  const layout = (key: LayoutKey) => {
+  const explicit = (key: LayoutKey): ToolDisplayLayout | undefined => {
     const pending = config.optimistic([key])?.value
     if (pending === "expanded" || pending === "collapsed") return pending
     const project = raw("project", key)
     const global = raw("global", key)
     if (project === "expanded" || project === "collapsed") return project
     if (global === "expanded" || global === "collapsed") return global
-    return LAYOUT_DEFAULTS[key]
+    return undefined
   }
+  const layout = (key: LayoutKey) => explicit(key) ?? LAYOUT_DEFAULTS[key]
   const reasoning = (): ReasoningDisplay => {
     const pending = config.optimistic(["reasoning_display"])?.value
     if (pending === "expanded" || pending === "preview" || pending === "headline") return pending
@@ -75,6 +77,8 @@ const DisplayTab: Component = () => {
       layout("terminal_command_display") === preset.display.terminal_command_display &&
       layout("code_edit_display") === preset.display.code_edit_display &&
       layout("mcp_tool_display") === preset.display.mcp_tool_display &&
+      // A preset applied before this key existed never wrote it, so an unset key still matches the preset.
+      (explicit("code_mode_display") ?? preset.display.code_mode_display) === preset.display.code_mode_display &&
       (config.setting("showAutoApprovalReason") !== false) === preset.settings.showAutoApprovalReason
     )
   }
@@ -89,6 +93,7 @@ const DisplayTab: Component = () => {
       ),
       config.set(["code_edit_display"], preset.display.code_edit_display, source("code_edit_display")),
       config.set(["mcp_tool_display"], preset.display.mcp_tool_display, source("mcp_tool_display")),
+      config.set(["code_mode_display"], preset.display.code_mode_display, source("code_mode_display")),
       config.set(["reasoning_display"], preset.display.reasoning_display, source("reasoning_display")),
     ])
     // A failed write already shows its own error toast; do not apply the rest of a half-written preset.
@@ -281,6 +286,25 @@ const DisplayTab: Component = () => {
             onSelect={(option) => {
               if (!option || option.value === layout("code_edit_display")) return
               void applyLayout("code_edit_display", option.value)
+            }}
+            variant="secondary"
+            size="small"
+            triggerVariant="settings"
+          />
+        </SettingsRow>
+
+        <SettingsRow
+          title={language.t("settings.display.codeMode.title")}
+          description={language.t("settings.display.codeMode.description")}
+        >
+          <Select
+            options={LAYOUT_OPTIONS}
+            current={LAYOUT_OPTIONS.find((option) => option.value === layout("code_mode_display"))}
+            value={(option) => option.value}
+            label={(option) => language.t(`settings.display.codeMode.${option.labelKey}`)}
+            onSelect={(option) => {
+              if (!option || option.value === layout("code_mode_display")) return
+              void applyLayout("code_mode_display", option.value)
             }}
             variant="secondary"
             size="small"

@@ -1330,6 +1330,11 @@ export const dict = {
   "settings.display.mcpTool.description": "Choose whether MCP and generic tool blocks start expanded or collapsed.",
   "settings.display.mcpTool.expanded": "Expanded",
   "settings.display.mcpTool.collapsed": "Collapsed",
+  "settings.display.codeMode.title": "Code Mode Blocks",
+  "settings.display.codeMode.description":
+    "Choose whether Code Mode blocks start with their tool calls listed or as one line. The script always stays hidden until you open it.",
+  "settings.display.codeMode.expanded": "Expanded",
+  "settings.display.codeMode.collapsed": "Collapsed",
   "settings.display.shortcutHints.title": "Show shortcut hints",
   "settings.display.shortcutHints.description":
     "Show the keyboard shortcut that fits what you do now in the empty prompt, for example how to add selected code or return to the prompt.",

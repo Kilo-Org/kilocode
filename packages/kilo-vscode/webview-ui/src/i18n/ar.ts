@@ -1292,6 +1292,11 @@ export const dict = {
   "settings.display.mcpTool.description": "اختر ما إذا كانت كتل أدوات MCP والأدوات العامة تبدأ موسّعة أم مطوية.",
   "settings.display.mcpTool.expanded": "موسّعة",
   "settings.display.mcpTool.collapsed": "مطوية",
+  "settings.display.codeMode.title": "كتل Code Mode",
+  "settings.display.codeMode.description":
+    "اختر ما إذا كانت كتل Code Mode تبدأ بقائمة استدعاءات الأدوات الخاصة بها أم كسطر واحد. يظل النص البرمجي مخفيًا دائمًا حتى تفتحه.",
+  "settings.display.codeMode.expanded": "موسّعة",
+  "settings.display.codeMode.collapsed": "مطوية",
 
   "settings.display.shortcutHints.title": "إظهار تلميحات الاختصارات",
   "settings.display.shortcutHints.description":

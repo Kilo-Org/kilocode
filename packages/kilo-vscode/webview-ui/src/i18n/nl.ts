@@ -1297,6 +1297,11 @@ export const dict = {
     "Kies of blokken met MCP- en algemene tools standaard uitgeklapt of ingeklapt zijn.",
   "settings.display.mcpTool.expanded": "Uitgeklapt",
   "settings.display.mcpTool.collapsed": "Ingeklapt",
+  "settings.display.codeMode.title": "Code Mode-blokken",
+  "settings.display.codeMode.description":
+    "Kies of Code Mode-blokken beginnen met hun tool-aanroepen in een lijst of als één regel. Het script blijft altijd verborgen tot je het opent.",
+  "settings.display.codeMode.expanded": "Uitgeklapt",
+  "settings.display.codeMode.collapsed": "Ingeklapt",
 
   "settings.display.shortcutHints.title": "Sneltoetstips tonen",
   "settings.display.shortcutHints.description":

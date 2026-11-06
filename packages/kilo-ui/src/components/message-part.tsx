@@ -34,6 +34,7 @@ import { BasicTool, initialOpen, rememberOpen, useToolApprovalLine } from "./bas
 import { Card } from "./card"
 import { attachmentUri, fileDiffs, relativizeProjectPath, toolOutput } from "./content-data"
 import { DiffChanges } from "./diff-changes"
+import { ExecuteTool } from "./execute-tool"
 import { FileIcon } from "./file-icon"
 import { Icon, type IconProps } from "./icon"
 import { IconButton } from "./icon-button"
@@ -417,6 +418,8 @@ export type ToolProps = {
   partID: string
   output: string
   status: string
+  /** When the call was created, started running and finished. */
+  time?: SessionMessageAssistantTool["time"]
   attachments: ToolFileContent[]
   directory?: string
   openUrl?: (uri: string) => void
@@ -485,6 +488,7 @@ function ToolContent(props: {
                 partID={props.item.id}
                 output={toolOutput(props.item)}
                 status={state().status === "streaming" ? "pending" : state().status}
+                time={props.item.time}
                 attachments={attachments()}
                 directory={props.directory}
                 openUrl={props.open}
@@ -1088,6 +1092,8 @@ ToolRegistry.register({
     )
   },
 })
+
+ToolRegistry.register({ name: "execute", render: ExecuteTool })
 
 function ToolFileAccordion(props: {
   path: string

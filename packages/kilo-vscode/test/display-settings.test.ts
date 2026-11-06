@@ -52,6 +52,7 @@ describe("readDisplaySettings", () => {
       terminalCommandDisplay: "collapsed",
       codeEditDisplay: "expanded",
       mcpToolDisplay: "collapsed",
+      codeModeDisplay: "collapsed",
       reasoningDisplay: "expanded",
     })
   })
@@ -68,6 +69,7 @@ describe("readDisplaySettings", () => {
       terminalCommandDisplay: "expanded",
       codeEditDisplay: "collapsed",
       mcpToolDisplay: "collapsed",
+      codeModeDisplay: "collapsed",
       reasoningDisplay: "expanded",
     })
   })
