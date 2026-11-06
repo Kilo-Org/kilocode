@@ -265,7 +265,7 @@ export function parse(
           ...Option.getOrElse(synchronization, () => ({})),
           ...Option.getOrElse(indexingField, () => ({})),
           ...Option.getOrElse(sandboxField, () => ({})),
-          ...displaySettings(input),
+          ...displaySettings(input, report),
           ...decodedSettings,
           workflow_models: models && Object.keys(models).length ? models : undefined,
         }).filter(([, value]) => value !== undefined),
@@ -274,13 +274,16 @@ export function parse(
   )
 }
 
-/** The display layouts, ignoring an invalid value instead of failing the whole document. */
-function displaySettings(input: unknown) {
+/** The display layouts, ignoring an invalid value with a diagnostic instead of failing the whole document. */
+function displaySettings(input: unknown, report?: (diagnostic: ConfigNormalize.Diagnostic) => void) {
   if (!record(input)) return {}
   const decodeLayout = Schema.decodeUnknownOption(Schema.Literals(["expanded", "collapsed"]))
   return Object.fromEntries(
     ["terminal_command_display", "code_edit_display", "mcp_tool_display", "code_mode_display"].flatMap((key) => {
+      if (input[key] === undefined) return []
       const value = Option.getOrUndefined(decodeLayout(input[key]))
+      if (value === undefined)
+        report?.({ path: [key], kind: "invalid", message: `ignored invalid ${key}; expected "expanded" or "collapsed"` })
       return value === undefined ? [] : [[key, value]]
     }),
   )

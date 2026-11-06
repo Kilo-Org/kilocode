@@ -503,8 +503,8 @@
   },
   "module:packages/opencode/src/kilocode/kilo-commands.tsx": {
     "state": "ported",
-    "note": "v1 registered all Kilo slash commands in one useBindings list. v2 has a native command registry: each TUI plugin registers its commands with context.keymap.layer and slash names (packages/tui/src/context/keymap.tsx), so each feature registers its own. Ported commands: /teams (team, org, orgs) and /profile (me, whoami) in packages/tui/src/kilocode/gateway.tsx, /usage (plans, quota) in packages/tui/src/kilocode/usage.tsx, /about in packages/tui/src/kilocode/dialog-about.tsx, all in group Kilo. The other v1 entries belong to their own features and stay open there: /remote (tui remote-tui.tsx, cloud sessions), /indexing (components dialog-indexing.tsx), /privacy (U-E9-12).",
-    "by": "kilo-commands-dialogs"
+    "note": "v1 registered all Kilo slash commands in one useBindings list. v2 has a native command registry: each TUI plugin registers its commands with context.keymap.layer and slash names (packages/tui/src/context/keymap.tsx), so each feature registers its own. Ported commands: /teams (team, org, orgs) and /profile (me, whoami) in packages/tui/src/kilocode/gateway.tsx, /usage (plans, quota) in packages/tui/src/kilocode/usage.tsx, /about in packages/tui/src/kilocode/dialog-about.tsx, and /privacy in packages/tui/src/kilocode/privacy.tsx (registered alongside /profile by packages/tui/src/kilocode/gateway.tsx; state-dependent title, global write and project unset through the kilocode.settings RPC), all in group Kilo. The other v1 entries belong to their own features and stay open there: /remote (tui remote-tui.tsx, cloud sessions), /indexing (components dialog-indexing.tsx).",
+    "by": "v2-privacy-toggle"
   },
   "module:packages/opencode/src/kilocode/components/kilo-news.tsx": {
     "state": "ported",
@@ -1894,5 +1894,23 @@
     "v2": "packages/kilo-vscode/webview-ui/src/context/work-style.tsx",
     "note": "The saved and failed toasts are inline in the v2 WorkStyleProvider.",
     "by": "pickle-hydrofoil"
+  },
+  "module:packages/opencode/src/kilocode/config/overlay.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-plugin/src/settings.ts",
+    "note": "Write half: target/projectTarget/globalTarget/revision/patch and Scope/Patch/Target -> the kilocode.settings RPC (packages/kilo-plugin/src/settings.ts, contract packages/schema/src/kilocode/settings.ts, #15837): target resolves to the reader's highest-precedence kilo2.json for the scope with a sha256 revision, write applies set/unset with target-changed/revision-conflict guards. The v2 target is the reader's effective document, not v1's first-existing candidate, which also replaces shadow (#15837 decision: a write resolves to the effective document instead of failing 422). project/projectDirs/globalDirs/withAgents (project and global config loading with agents) are native upstream Config discovery with the Kilo layout (packages/core/src/kilocode/config/discovery.ts). resolve and its Result read model had four v1 consumers: kilo-console (effective/global/project/sources/fields/collections/targets; console retired by #15320 U-E8-03, not carried), VS Code config-snapshot.ts (targets and collections.mcp source; v2 VS Code derives both from the native api.config.get document entries in packages/kilo-vscode/src/settings-host.ts targets and webview-ui/src/v2/settings-config.tsx source(path), managed flag in src/config-policy.ts), TUI dialog-indexing (overlay global/project indexing; v2 kilocode.indexing config/config.update RPC), and marketplace/paths.ts (targets; v2 KiloConfigFiles.writeCandidates in kilo-plugin/src/marketplace). The console-only fields (fields, Resolved.editable/reason, sources in the response) are dropped with the console.",
+    "by": "v2-config-closeout"
+  },
+  "module:packages/opencode/src/kilocode/config/writer.ts": {
+    "state": "ported",
+    "v2": "packages/core/src/kilocode/config/write.ts",
+    "note": "KiloConfigWriter (core/src/kilocode/config/write.ts, #15789) carries the JSONC-preserving edit, revision guard and atomic write; the kilocode.settings RPC (kilo-plugin/src/settings.ts, #15837) carries write() with target-changed and revision-conflict (target-not-writable maps to the RPC's failed error for a target outside the scope, or an io failure). Ported here: excess-key validation (KiloConfigValidate.unknownKeys against KiloConfigPolicy.Info, the full v2 kilo2.json schema; reader-migrated legacy names such as permission or autoupdate are refused for set, a null removal is allowed for any key, and the derived workflow_models is refused), lower+validate before write (KiloConfigValidate.check runs the reader's ConfigNormalize + KiloConfigPolicy.parse pipeline on the edited text and refuses new invalid/unsupported issues or such issues on a set path with the RPC invalid error, file untouched; a native-over-legacy conflict does not block; invalid display layouts now report a diagnostic so they are caught too), and patchJsonc's scalar-to-object replacement plus no-op removal of an absent path (RPC expandSet and writer). Not carried: the permission '*' merge (it targets v1's permission.<tool> map; v2 permissions is an ordered rule array and the v1 key is refused on write), sandboxChanged (v1 emitted config.updated{sandbox} for sandbox/policy.ts; v2 kilo-plugin/src/sandbox/index.ts reconciles on every config.updated, which the watcher emits after a settings write, #15861), beforeWrite (test-only hook in config-overlay.test.ts; the v2 guard is the writer's revision check under its lock). Mode: v1 kept the existing mode and created project files with the umask; v2 writes 0600 always (#15789 decision).",
+    "by": "v2-config-closeout"
+  },
+  "module:packages/opencode/test/kilocode/patch-jsonc.test.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-cli/test/settings.test.ts",
+    "note": "The scalar-to-object transition (an object set over a non-object node replaces it, siblings untouched) is asserted through the real RPC in 'an object set over a non-object value replaces it, and a removal of an absent path is a no-op'; the writer's refusal of a value below a scalar is in packages/core/test/kilocode/config/write.test.ts. The v1 permission string-to-object case is not carried: v2 refuses the v1 permission key on write (permissions is an ordered rule array).",
+    "by": "v2-config-closeout"
   }
 }
