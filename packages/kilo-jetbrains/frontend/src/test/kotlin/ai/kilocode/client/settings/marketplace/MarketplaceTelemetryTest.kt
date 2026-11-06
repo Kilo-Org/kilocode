@@ -31,7 +31,6 @@ class MarketplaceTelemetryTest {
                 "id" to "airbyte-agent-mcp",
                 "type" to "mcp",
                 "target" to "global",
-                "hasParameters" to "true",
                 "installationMethodName" to "Hosted",
             ),
             props,
