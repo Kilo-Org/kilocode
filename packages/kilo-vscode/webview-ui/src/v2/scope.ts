@@ -2,10 +2,9 @@
 // extension tests can load it.
 import type { OpenCodeClient } from "@opencode/client"
 import { createClientConnection, createData } from "@opencode/client/solid"
-import { KiloHandshakeRpc } from "@opencode/schema/kilocode/handshake"
 import { createEffect, createSignal, on, type Accessor } from "solid-js"
+import { createConnectionMetadata, type ConnectionMetadata } from "./connection-metadata"
 import type { events } from "./events"
-import { createKiloCatalog } from "./kilo-catalog"
 import { createKiloModels } from "./kilo-models"
 
 type Connection = ReturnType<typeof createClientConnection>
@@ -20,6 +19,10 @@ export function createV2Scope(input: {
   connection: Connection
   event: Events
   directory: string
+  /** Server-wide metadata shared by every store of one connection. Created here when omitted. */
+  shared?: ConnectionMetadata
+  /** Whether the session list of this directory is shown. A hidden directory loads it when it becomes visible. */
+  visible?: Accessor<boolean>
   bindings: Accessor<Record<string, string>>
   onCommand: (handler: (name: string) => void) => void
   /** Opens an external URL through the host. */
@@ -33,8 +36,6 @@ export function createV2Scope(input: {
   const extensionVersion =
     (window as unknown as { KILO_EXTENSION_VERSION?: string }).KILO_EXTENSION_VERSION ?? ""
   const [error, setError] = createSignal("")
-  const [version, setVersion] = createSignal("")
-  const [handshake, setHandshake] = createSignal("")
   const [loading, setLoading] = createSignal(true)
   const data = createData({
     api: () => api,
@@ -43,27 +44,41 @@ export function createV2Scope(input: {
     event: input.event,
     onError: (err) => setError(message(err)),
   })
-  const kiloFailure = createKiloCatalog({ api, directory, status: connection.status, on: input.event.on })
-  const kiloModels = createKiloModels({ api, directory, models: () => data.location.model.list() })
-
+  const metadata =
+    input.shared ??
+    createConnectionMetadata({
+      api,
+      connection,
+      subscribe: (type, handler) => input.event.on(type, handler),
+    })
+  metadata.attach(directory)
+  const kiloModels = createKiloModels({
+    api,
+    directory,
+    models: () => data.location.model.list(),
+    cache: metadata.kiloModelsCache,
+  })
+  const visible = input.visible ?? (() => true)
+  const state = { listed: false }
   createEffect(
     on(connection.status, (status) => {
-      if (status !== "connected") return
-      setLoading(true)
-      void api.session
-        .list({ directory, parentID: null, order: "desc", limit: 50 })
-        .then((response) => response.data.forEach(data.session.remember))
-        .catch((err: unknown) => setError(message(err)))
-        .finally(() => setLoading(false))
-      void api
-        .rpc(KiloHandshakeRpc.Definition)
-        .get({}, { location: { directory } })
-        .then((info) => {
-          setVersion(info.version)
-          setHandshake("")
-        })
-        .catch((err: unknown) => setHandshake(`Not a Kilo v2 server: ${message(err)}`))
+      if (status !== "connected") state.listed = false
     }),
+  )
+  createEffect(
+    on(
+      () => [connection.status(), visible()] as const,
+      ([status, show]) => {
+        if (status !== "connected" || !show || state.listed) return
+        state.listed = true
+        setLoading(true)
+        void api.session
+          .list({ directory, parentID: null, order: "desc", limit: 50 })
+          .then((response) => response.data.forEach(data.session.remember))
+          .catch((err: unknown) => setError(message(err)))
+          .finally(() => setLoading(false))
+      },
+    ),
   )
 
   return {
@@ -73,12 +88,12 @@ export function createV2Scope(input: {
     connection,
     loading,
     bindings: input.bindings,
-    version,
+    version: metadata.version,
     extensionVersion,
-    handshake,
+    handshake: metadata.handshake,
     error,
     /** Why the Kilo Gateway catalog failed to load; undefined while it is usable or loading. */
-    kiloFailure,
+    kiloFailure: metadata.kiloFailure,
     /** The Kilo Gateway model metadata and the account team, for the model pickers. */
     kiloModels,
     setError,

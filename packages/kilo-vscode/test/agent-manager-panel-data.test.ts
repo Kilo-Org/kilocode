@@ -27,6 +27,7 @@ const OTHER = "/other"
 const encoder = new TextEncoder()
 const streams = new Set<ReadableStreamDefaultController<Uint8Array>>()
 const sessions = new Map<string, string>()
+const requests: { path: string; directory: string | null }[] = []
 
 function created(id: string, directory: string) {
   sessions.set(id, directory)
@@ -41,7 +42,13 @@ function created(id: string, directory: string) {
 }
 
 function emit(event: unknown) {
-  streams.forEach((controller) => controller.enqueue(encoder.encode(`data: ${JSON.stringify(event)}\n\n`)))
+  for (const controller of [...streams]) {
+    try {
+      controller.enqueue(encoder.encode(`data: ${JSON.stringify(event)}\n\n`))
+    } catch {
+      streams.delete(controller)
+    }
+  }
 }
 
 const json = (body: unknown) => new Response(JSON.stringify(body), { headers: { "content-type": "application/json" } })
@@ -50,6 +57,7 @@ const server = Bun.serve({
   port: 0,
   fetch(request) {
     const url = new URL(request.url)
+    requests.push({ path: url.pathname, directory: url.searchParams.get("directory") })
     if (url.pathname === "/api/event") {
       const body = new ReadableStream<Uint8Array>({
         start(controller) {
@@ -118,6 +126,41 @@ describe("targets", () => {
 })
 
 describe("createPanelData", () => {
+  test("reads the handshake and catalog once for every store of one connection", async () => {
+    requests.length = 0
+    const api = OpenCode.make({ baseUrl: `http://127.0.0.1:${server.port}` })
+    await createRoot(async (dispose) => {
+      const panel = createPanelData({ post: () => {}, api })
+      panel.store(ROOT)
+      panel.store(WORKTREE)
+      await until(() => requests.some((item) => item.path.includes("kilocode.handshake")))
+      await Bun.sleep(50)
+      expect(requests.filter((item) => item.path.includes("kilocode.handshake"))).toHaveLength(1)
+      expect(requests.filter((item) => item.path.includes("catalog.status"))).toHaveLength(1)
+      dispose()
+    })
+  })
+
+  test("loads a session list only for a shown directory", async () => {
+    requests.length = 0
+    const api = OpenCode.make({ baseUrl: `http://127.0.0.1:${server.port}` })
+    await createRoot(async (dispose) => {
+      const panel = createPanelData({ post: () => {}, api })
+      panel.store(WORKTREE)
+      await until(() => panel.connection.status() === "connected")
+      await Bun.sleep(50)
+      expect(requests.filter((item) => item.path === "/api/session" && item.directory === WORKTREE)).toHaveLength(0)
+      panel.show([WORKTREE])
+      await until(() =>
+        requests.some((item) => item.path === "/api/session" && item.directory === WORKTREE),
+      )
+      expect(
+        requests.filter((item) => item.path === "/api/session" && item.directory === WORKTREE).length,
+      ).toBe(1)
+      dispose()
+    })
+  })
+
   test("fans one event stream out to lazily created directory stores", async () => {
     const api = OpenCode.make({ baseUrl: `http://127.0.0.1:${server.port}` })
     await createRoot(async (dispose) => {
