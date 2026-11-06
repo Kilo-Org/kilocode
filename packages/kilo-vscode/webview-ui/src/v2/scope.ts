@@ -37,7 +37,7 @@ export function createV2Scope(input: {
   const chat = input.chat ?? true
   // The host inlines the extension version; the server handshake reports the server version separately.
   const extensionVersion =
-    (window as unknown as { KILO_EXTENSION_VERSION?: string }).KILO_EXTENSION_VERSION ?? ""
+    typeof window === "undefined" ? "" : ((window as unknown as { KILO_EXTENSION_VERSION?: string }).KILO_EXTENSION_VERSION ?? "")
   const [error, setError] = createSignal("")
   const [version, setVersion] = createSignal("")
   const [handshake, setHandshake] = createSignal("")

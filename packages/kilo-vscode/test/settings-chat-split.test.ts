@@ -11,8 +11,6 @@ const { createRoot, createSignal } = (await import(CLIENT_SOLID)) as {
   createRoot: <T>(fn: (dispose: () => void) => T) => T
   createSignal: <T>(value: T) => [() => T, (value: T) => void]
 }
-// The webview reads the inlined version from `window`.
-Object.assign(globalThis, { window: { KILO_EXTENSION_VERSION: "1.0.0" } })
 const { createV2Scope } = await import("../webview-ui/src/v2/scope")
 const { events } = await import("../webview-ui/src/v2/events")
 
