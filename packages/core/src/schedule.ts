@@ -33,6 +33,8 @@ import { SessionSchema } from "./session/schema.js"
 import { SessionInboxTable } from "./session/sql.js"
 import { ScheduleCheck } from "./schedule/check.js"
 import { ScheduleTable } from "./schedule/sql.js"
+import { PluginHooks } from "./plugin/hooks.js" // kilocode_change(flows) seam - offer due schedules to location plugins
+import { Plugin } from "./plugin.js" // kilocode_change(flows) seam - await location plugin activation before offering schedules
 
 export { ID, Info, CreateInput, Request, Condition, ConditionInput, When, Status, Outcome, toCreateInput }
 
@@ -58,9 +60,16 @@ export class DisabledError extends Schema.TaggedError<DisabledError>()("Schedule
   }
 }
 
+// kilocode_change start - flows seam: an internal owner can create a hook-claimed schedule without the native feature flag
+export interface CreateOptions {
+  readonly requireEnabled?: boolean
+}
+// kilocode_change end
+
 export interface Interface {
   readonly create: (
     input: CreateInput,
+    options?: CreateOptions, // kilocode_change(flows) seam - preserve the enabled check by default
   ) => Effect.Effect<Info, InvalidError | DisabledError | Session.NotFoundError | Permission.Error>
   readonly list: (input?: { readonly sessionID?: SessionSchema.ID }) => Effect.Effect<Info[]>
   readonly get: (id: ID) => Effect.Effect<Info, NotFoundError>
@@ -284,7 +293,15 @@ const layer = Layer.effect(
       return id
     })
 
-    const fire = Effect.fnUntraced(function* (row: Row, session: SessionSchema.Info, due: number, now: number) {
+    // kilocode_change start - flows seam: a claimed occurrence advances without admitting the native prompt
+    const fire = Effect.fnUntraced(function* (
+      row: Row,
+      session: SessionSchema.Info,
+      due: number,
+      now: number,
+      claimed = false,
+    ) {
+      // kilocode_change end
       const late = now - due >= LATE_AFTER
       const next = following(row, now)
 
@@ -423,7 +440,11 @@ const layer = Layer.effect(
       }
 
       const run = row.run_count + 1
-      const id = yield* admitWake(row, session.id, run, due, late, row.action.prompt)
+      // kilocode_change start - flows seam: preserve the deterministic native message identity without admitting it
+      const id = claimed || row.action.type === "hook"
+        ? SessionMessage.ID.make(`msg_${row.id}_${run}`)
+        : yield* admitWake(row, session.id, run, due, late, row.action.prompt)
+      // kilocode_change end
       const remaining = row.remaining_runs === null ? null : row.remaining_runs - 1
       const done = finished(row, next, remaining)
       yield* db
@@ -449,7 +470,22 @@ const layer = Layer.effect(
       if (due === null || row.session_id === null) return
       if (!(yield* claimLeader(yield* Clock.currentTimeMillis))) return
       const session = yield* sessions.get(row.session_id)
-      if (!(yield* settings(session)).enabled) {
+      // kilocode_change start - flows seam: offer the due occurrence to activated location plugins before prompt delivery; a claimed occurrence is owned by its plugin, so only unclaimed ones honor the native flag
+      const claimed =
+        row.check === null
+          ? yield* Effect.gen(function* () {
+              yield* Plugin.awaitActivation
+              const hooks = yield* PluginHooks.Service
+              return (
+                (yield* hooks.trigger("session", "experimental.schedule", {
+                  sessionID: session.id,
+                  schedule: toInfo(row),
+                })).claimed === true
+              )
+            }).pipe(instances.provide(session))
+          : false
+      // kilocode_change end
+      if (!claimed && !(yield* settings(session)).enabled) { // kilocode_change(flows) seam - plugin-claimed occurrences bypass the native flag
         // Reading the flag boots the Session's location, so check again in an hour rather than every tick. The row
         // keeps its due time, so once the flag is back on it catches up like any missed slot.
         yield* update(row, { last_outcome: "disabled", retry_at: now + DISABLED_RETRY, time_updated: now })
@@ -469,7 +505,7 @@ const layer = Layer.effect(
         })
         return
       }
-      yield* fire(row, session, due, now)
+      yield* fire(row, session, due, now, claimed) // kilocode_change(flows) seam - claimed occurrences suppress admission
     })
 
     const tickAt = Effect.fnUntraced(function* (now: number) {
@@ -699,14 +735,20 @@ const layer = Layer.effect(
     })
 
     return Service.of({
-      create: Effect.fn("Schedule.create")(function* (input) {
+      // kilocode_change start - flows seam: accept the optional internal creation policy
+      create: Effect.fn("Schedule.create")(function* (input, options) {
+        // kilocode_change end
         const session = yield* sessions.get(input.sessionID)
+        if (input.action.type === "hook" && (input.if !== undefined || input.until !== undefined)) // kilocode_change(flows) seam - hook actions never use native conditions
+          return yield* new InvalidError({ reason: "Hook-owned schedule actions do not support conditions" }) // kilocode_change(flows) seam - a hook action must never reach native conditional admission
         const config = yield* settings(session).pipe(
           Effect.catchTag("FileSystem.DirectoryNotFoundError", () =>
             Effect.fail(new InvalidError({ reason: `Session directory does not exist: ${session.location.directory}` })),
           ),
         )
-        if (!config.enabled) return yield* new DisabledError()
+        // kilocode_change start - flows seam: internal hook owners may schedule while the native UI remains disabled
+        if (!config.enabled && options?.requireEnabled !== false) return yield* new DisabledError()
+        // kilocode_change end
         const check = yield* resolveStoredCheck(input)
         const when = input.when ?? (check?.mode === "until" ? DEFAULT_UNTIL_EVERY : undefined)
         if (when === undefined)

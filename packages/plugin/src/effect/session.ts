@@ -7,6 +7,7 @@ import type { Session } from "@opencode/schema/session"
 import type { SessionInbox } from "@opencode/schema/session-inbox"
 import type { SessionError } from "@opencode/schema/session-error"
 import type { SessionMessage } from "@opencode/schema/session-message"
+import type { Schedule } from "@opencode/schema/schedule" // kilocode_change(flows) seam - due schedule hook payload
 import type { TokenUsage } from "@opencode/schema/token-usage"
 import type { JsonSchema, Types } from "effect"
 import type { ModelHooks } from "./registration.js"
@@ -190,6 +191,18 @@ export interface SessionIdle {
   readonly background: ReadonlyArray<SessionIdleBackground>
 }
 
+// kilocode_change start - flows seam: let a location plugin claim a due schedule before it prompts the Session
+/**
+ * Runs before a due time schedule prompts its Session. Set `claimed` to suppress the prompt while preserving the
+ * schedule's normal advancement. Experimental.
+ */
+export interface SessionSchedule {
+  readonly sessionID: Session.ID
+  readonly schedule: Schedule.Info
+  claimed?: boolean
+}
+// kilocode_change end
+
 export interface SessionHooks {
   readonly prompt: SessionPrompt
   readonly context: SessionContext
@@ -205,6 +218,7 @@ export interface SessionHooks {
   readonly "experimental.ws.receive": SessionWebSocketReceive
   readonly retry: SessionRetry
   readonly "experimental.idle": SessionIdle
+  readonly "experimental.schedule": SessionSchedule // kilocode_change(flows) seam - scheduled action claim hook
 }
 
 export type SessionDomain = Pick<

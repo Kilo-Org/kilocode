@@ -18,6 +18,7 @@ import { KiloRemote } from "./remote"
 export { KiloSessionSync }
 export { KiloRemote }
 import { KiloPrivacyPlugin } from "./privacy"
+import { KiloFlowPlugin } from "./flow"
 import { KiloSettingsPlugin } from "./settings"
 import { KiloSkillPlugin } from "./skill"
 import { KiloTodoPlugin } from "./todo"
@@ -55,6 +56,7 @@ export const KiloPlugins = [
   KiloProviderUsagePlugin,
   KiloOpenAIPlugin,
   KiloMarketplacePlugin,
+  KiloFlowPlugin,
   KiloSessionSync.plugin,
   KiloRemote.plugin,
   KiloSkillPlugin,
