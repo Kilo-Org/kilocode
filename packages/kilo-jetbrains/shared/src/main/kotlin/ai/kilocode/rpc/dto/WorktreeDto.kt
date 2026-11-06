@@ -13,6 +13,12 @@ data class WorktreeDto(
     val locked: Boolean = false,   // git worktree lock — blocks a plain remove
     val lockReason: String? = null, // optional reason recorded when the tree was locked
     val prunable: Boolean = false, // git marks metadata stale because the directory is gone
+    /** Saved base branch this worktree was created from, when recorded. */
+    val parentBranch: String? = null,
+    /** Remote recorded for [parentBranch], e.g. `origin`. Null means resolve the base's upstream. */
+    val remote: String? = null,
+    /** False when [parentBranch] is only the current main branch, not a recorded base. */
+    val parentBranchRecorded: Boolean = false,
 )
 
 @Serializable

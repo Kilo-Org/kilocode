@@ -28,6 +28,7 @@ Use **Chat** for the current workspace and **Agents** to manage parallel tasks i
 - In the **Agents** list, the main workspace appears as its own row and local worktrees are nested under an always-visible **Local worktrees** group. Collapse or expand the group to hide or show local worktrees, and drag local worktree rows to reorder them. The main workspace stays at the top and rows cannot move between groups.
 - Open a worktree to see its sessions in an editor tab. Its session list is scoped to that worktree; use the list toggle to hide or show it.
 - Worktree rows show session activity, pull request checks and reviews, unresolved review conversations, merge conflicts, and active build/run processes. Use the row menu to copy the branch name, directory, or pull request reference.
+- Choose **Update from Base** in a worktree's row menu to have its agent fetch the saved base branch's remote and merge the latest commit. For worktrees created before the saved base metadata existed, the agent first asks you to confirm the main branch as the base. The agent preserves staged, unstaged, and untracked work without using Git stash, resolves conflicts, and runs checks; it does not push or merge the base.
 
 ### Worktree setup scripts
 

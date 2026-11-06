@@ -10,7 +10,11 @@ import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.session.views.question.QuestionResultView
 import ai.kilocode.rpc.dto.MessageDto
 import ai.kilocode.rpc.dto.MessageTimeDto
+import com.intellij.ui.HyperlinkLabel
+import com.intellij.ui.components.JBLabel
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
+import java.awt.Component
+import java.awt.Container
 import javax.swing.SwingUtilities
 
 class MessageViewTest : BasePlatformTestCase() {
@@ -100,7 +104,59 @@ class MessageViewTest : BasePlatformTestCase() {
         assertNotNull(promptView)
         assertNotNull(noticeView)
         assertFalse("notice is not a separate top-level row", view.components.contains(noticeView))
-        assertTrue("notice sits inside the prompt box", SwingUtilities.isDescendingFrom(noticeView, promptView!!.parent))
+        assertTrue(
+            "notice sits inside the prompt box",
+            SwingUtilities.isDescendingFrom(noticeView, promptView!!.parent.parent),
+        )
+    }
+
+    // A prompt Kilo composed shows the same attribution header as VS Code and starts collapsed to
+    // its first paragraph, with a control that expands it again.
+    fun `test injected prompt shows header and collapses to the first paragraph`() {
+        val msg = Message(MessageDto("m1", "ses_user", "user", MessageTimeDto(0.0)))
+        val view = MessageView(msg, openFile = { _, _ -> })
+
+        val text = Text("p1").also {
+            it.injectedTitle = "Update from main"
+            it.content.append("Update the current branch in the worktree.\n\nSecond paragraph.\n\nThird paragraph.")
+        }
+        msg.parts["p1"] = text
+        view.upsertPart(text)
+
+        val label = find(view) { it is JBLabel && it.text == "Sent by Kilo \u00B7 Update from main" }
+        val toggle = find(view) { it is HyperlinkLabel } as? HyperlinkLabel
+        assertNotNull("attribution label is shown", label)
+        assertNotNull("collapse control is shown", toggle)
+        assertEquals("Show prompt", toggle!!.text)
+        assertNull("the full prompt is detached while collapsed", view.part("p1")!!.parent)
+
+        toggle.doClick()
+
+        assertEquals("Hide prompt", toggle.text)
+        assertNotNull("expanding attaches the full prompt", view.part("p1")!!.parent)
+
+        toggle.doClick()
+
+        assertEquals("Show prompt", toggle.text)
+        assertNull("collapsing detaches the full prompt again so it no longer sizes the bubble", view.part("p1")!!.parent)
+    }
+
+    fun `test short injected prompt shows header without a collapse control`() {
+        val msg = Message(MessageDto("m1", "ses_short", "user", MessageTimeDto(0.0)))
+        val view = MessageView(msg, openFile = { _, _ -> })
+
+        val text = Text("p1").also {
+            it.injectedTitle = "Update from main"
+            it.content.append("Short prompt.")
+        }
+        msg.parts["p1"] = text
+        view.upsertPart(text)
+
+        assertNotNull(find(view) { it is JBLabel && it.text == "Sent by Kilo \u00B7 Update from main" })
+        val toggle = find(view) { it is HyperlinkLabel } as? HyperlinkLabel
+        assertNotNull(toggle)
+        assertFalse("a short prompt has nothing to collapse", toggle!!.isVisible)
+        assertTrue(view.part("p1")!!.isVisible)
     }
 
     // An unrecognized notice kind (a newer server) must not leak the raw snake_case token into the
@@ -116,5 +172,11 @@ class MessageViewTest : BasePlatformTestCase() {
         val text = (view.part("p1") as NoticeView).text()
         assertEquals(KiloBundle.message("session.notice.unknown"), text)
         assertFalse(text.contains("some_future_notice_kind"))
+    }
+
+    private fun find(root: Component, predicate: (Component) -> Boolean): Component? {
+        if (predicate(root)) return root
+        if (root !is Container) return null
+        return root.components.firstNotNullOfOrNull { find(it, predicate) }
     }
 }

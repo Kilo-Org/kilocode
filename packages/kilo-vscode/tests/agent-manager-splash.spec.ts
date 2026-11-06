@@ -93,8 +93,15 @@ test("example selection works with cards and tabs, including RTL", async ({ page
   await expect(page.locator(".am-splash-compact-panel:visible")).toHaveCount(1)
   await page.goto("/iframe.html?id=agentmanager--splash-rtl-story-1280&viewMode=story")
   const rtl = page.locator(".am-splash-card")
-  const order = await rtl.evaluateAll((nodes) => nodes.map((node) => node.getBoundingClientRect().x))
-  expect(order[0]).toBeGreaterThan(order[1]!)
+  // The story renders after navigation; measure only once both cards exist.
+  await expect
+    .poll(() =>
+      rtl.evaluateAll((nodes) => {
+        const order = nodes.map((node) => node.getBoundingClientRect().x)
+        return order.length >= 2 && order[0]! > order[1]!
+      }),
+    )
+    .toBe(true)
   await rtl.first().focus()
   await page.keyboard.press("Enter")
   await expect(rtl.first()).toHaveAttribute("aria-current", "true")

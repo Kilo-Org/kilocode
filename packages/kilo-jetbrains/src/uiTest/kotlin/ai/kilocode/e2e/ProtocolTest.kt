@@ -6,6 +6,7 @@ import java.nio.file.Path
 import kotlin.io.path.readText
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
 
 class ProtocolTest {
@@ -74,7 +75,11 @@ class ProtocolTest {
         val artifacts = dir.resolve("artifacts")
         Files.createDirectories(artifacts)
         val request = request(dir, artifacts).let {
-            it.copy(scenario = it.scenario.copy(requires = listOf("transcript.read")))
+            it.copy(
+                scenario = it.scenario.copy(
+                    requires = listOf("transcript.read", "stream.observe", "permission.answer"),
+                ),
+            )
         }
         val evidence = DriverEvidence(request, descriptor(dir))
         evidence.pass("transcript.visible")
@@ -85,7 +90,7 @@ class ProtocolTest {
         val text = resultPath.readText()
         assertTrue(text.contains("\"clientHash\":null"), text)
         assertTrue(text.contains("\"cliHash\":null"), text)
-        assertTrue(text.contains("\"capabilities\":[]"), text)
+        assertTrue(text.contains("\"capabilities\":[\"transcript.read\",\"stream.observe\"]"), text)
         assertFalse(text.contains("\"detail\":null"), text)
     }
 
@@ -103,6 +108,75 @@ class ProtocolTest {
         // K1 gates capabilities before outcome; a failed result must echo requirements so the
         // missing-assertion diagnostic is not replaced by a capability error.
         assertTrue(text.contains("\"capabilities\":[\"transcript.read\"]"), text)
+    }
+
+    @Test
+    fun rejectsDescriptorWithoutProjectOrResources() {
+        val dir = Files.createTempDirectory("k1-descriptor")
+        val file = dir.resolve("descriptor.json")
+        Files.writeString(
+            file,
+            """
+            {
+              "schemaVersion": 1,
+              "runId": "run-2",
+              "lane": "cloud",
+              "fakeLlmScope": "kilo-e2e-run-2",
+              "origins": {"web": "http://127.0.0.1:1", "cloudAgent": "http://127.0.0.1:2"},
+              "credentials": {"apiKey": "secret-api-key"},
+              "cleanup": {"token": "secret-cleanup-token", "ids": []},
+              "state": {
+                "data": "${dir.resolve("state/data")}",
+                "config": "${dir.resolve("state/config")}",
+                "state": "${dir.resolve("state/state")}",
+                "cache": "${dir.resolve("state/cache")}"
+              }
+            }
+            """.trimIndent(),
+        )
+        assertThrows(DescriptorException::class.java) { DriverProtocol.descriptor(file) }
+    }
+
+    @Test
+    fun parsesCloudDescriptorResources() {
+        val dir = Files.createTempDirectory("k1-cloud-descriptor")
+        val file = dir.resolve("descriptor.json")
+        Files.writeString(
+            file,
+            """
+            {
+              "schemaVersion": 1,
+              "runId": "run-2",
+              "lane": "cloud",
+              "fakeLlmScope": "kilo-e2e-run-2",
+              "origins": {"web": "http://127.0.0.1:1", "cloudAgent": "http://127.0.0.1:2"},
+              "credentials": {"apiKey": "secret-api-key"},
+              "project": {
+                "fixture": "deterministic-git",
+                "gitUrl": "https://github.com/octocat/Hello-World.git",
+                "branch": "main",
+                "model": "kilo/fake-deterministic",
+                "seed": "kilo-e2e"
+              },
+              "resources": {
+                "workspaceId": "ws-run-2",
+                "cloudSessionId": "cs-run-2",
+                "nativeSessionId": "ns-run-2"
+              },
+              "cleanup": {"token": "secret-cleanup-token", "ids": []},
+              "state": {
+                "data": "${dir.resolve("state/data")}",
+                "config": "${dir.resolve("state/config")}",
+                "state": "${dir.resolve("state/state")}",
+                "cache": "${dir.resolve("state/cache")}"
+              }
+            }
+            """.trimIndent(),
+        )
+        val descriptor = DriverProtocol.descriptor(file)
+        assertEquals("https://github.com/octocat/Hello-World.git", descriptor.project.gitUrl)
+        assertEquals("ws-run-2", descriptor.resources.workspaceId)
+        assertEquals("ns-run-2", descriptor.resources.nativeSessionId)
     }
 
     private fun request(dir: Path, artifacts: Path) = DriverRequest(
@@ -133,6 +207,14 @@ class ProtocolTest {
         lane = "local",
         origins = Origins(web = "http://127.0.0.1:1", cloudAgent = "http://127.0.0.1:2"),
         credentials = Credentials("secret-api-key", "secret-org"),
+        project = FixtureProject(
+            fixture = "deterministic-git",
+            gitUrl = "file://${dir.resolve("project")}",
+            branch = "main",
+            model = "kilo/fake-deterministic",
+            seed = "kilo-e2e",
+        ),
+        resources = FixtureResources(),
         cleanup = Cleanup("secret-cleanup-token", emptyList()),
         state = State(
             data = dir.resolve("state/data").toString(),
