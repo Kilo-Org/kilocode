@@ -83,7 +83,12 @@ export async function writeKiloSettings(values: Record<string, unknown>) {
 
 /** webview globalState keys that are not configuration, cleared by Reset All Settings. */
 // As v1, a reset clears the model recents, usage and remembered efforts, but keeps the favorites.
-const GLOBAL_STATE_KEYS = ["kilo-code.v2.modelSelectorExpanded", "kilo-code.v2.autoApprove", ...MODEL_RESET_KEYS]
+const GLOBAL_STATE_KEYS = [
+  "kilo-code.v2.modelSelectorExpanded",
+  "kilo-code.v2.autoApprove",
+  "kilo-code.v2.sandbox.newSessionDefault",
+  ...MODEL_RESET_KEYS,
+]
 
 export function settingsHost(input: {
   context: ExtensionContext

@@ -32,6 +32,7 @@ import { resolveKiloProfile } from "./settings-paths"
 import { promptKeybindings, watchKeybindings } from "./prompt-keybindings"
 import { readDisplaySettings } from "./display-settings"
 import { workStyleHost } from "./work-style-host"
+import { SANDBOX_DEFAULT_KEY, SandboxPreference } from "./services/sandbox-preference"
 import { createSpeechToTextHost } from "./speech-to-text/host"
 import { setSidebarSession, sidebarSession } from "./browser-tab/sidebar-session"
 import { openBrowserLink } from "./browser-links"
@@ -303,6 +304,12 @@ export function wire(input: {
     post(loaded)
     if (message.type !== "requestModelPreferences") others(loaded)
   }
+  const sandboxPreference = new SandboxPreference(input.context.globalState)
+  // The configured default comes from the `kilocode.sandbox` RPC; the host only keeps the user's draft preference.
+  const sandboxDefaultMessage = async (): Promise<ToWebview> => ({
+    type: "sandboxDefaultLoaded",
+    explicit: sandboxPreference.explicit(),
+  })
   const handleGlobalState = (message: ToHost) => {
     switch (message.type) {
       case "requestModelSelectorExpanded":
@@ -327,6 +334,24 @@ export function wire(input: {
         others({ type: "autoApproveStateLoaded", value: message.value })
         // The host sweep is the only owner of the decision, so tell it to approve the requests already pending.
         notifyHostAutoApprove()
+        return true
+      case "requestSandboxDefault":
+        void sandboxDefaultMessage().then((reply) => post(reply))
+        return true
+      case "persistSandboxDefault":
+        void sandboxPreference
+          .set(message.enabled)
+          .then(async () => {
+            const reply = await sandboxDefaultMessage()
+            post(reply)
+            others(reply)
+          })
+          .catch(async () => {
+            // A failed write keeps the stored value; send it back so the composer does not show the guess.
+            const reply = await sandboxDefaultMessage()
+            post(reply)
+            others(reply)
+          })
         return true
       case "requestDismissedNotifications":
         post({ type: "dismissedNotificationsLoaded", ids: dismissedNotifications(input.context) })
@@ -437,12 +462,16 @@ export function wire(input: {
 
 const surfaces = new Set<(message: ToWebview) => void>()
 
-/** The composer state every webview shares through globalState: auto-approve and the model picker preferences. */
+/**
+ * The composer state every webview shares through globalState: auto-approve, the model picker preferences and the
+ * sandbox preference for new sessions. Reset All Settings clears them and sends this again.
+ */
 export function composerState(context: ExtensionContext): ToWebview[] {
   return [
     { type: "autoApproveStateLoaded", value: context.globalState.get(AUTO_APPROVE, false) },
     { type: "modelSelectorExpandedLoaded", value: context.globalState.get(EXPANDED, true) },
     { type: "modelPreferencesLoaded", value: readModelPreferences(context.globalState) },
+    { type: "sandboxDefaultLoaded", explicit: context.globalState.get<boolean>(SANDBOX_DEFAULT_KEY) },
   ]
 }
 
@@ -493,6 +522,7 @@ export function html(input: {
     KILO_MARKDOWN_SHIKI_WORKER_URI: input.markdown,
     KILO_TOP_BAR: false,
     KILO_TOP_BAR_SURFACE: "sidebar_title",
+    KILO_SANDBOX_CONTROLS: process.platform !== "win32",
     KILO_AGENT_MANAGER_INTRO_DISMISSED: true,
     KILO_SETTINGS: input.settings,
     KILO_EXTENSION_VERSION: input.version,
