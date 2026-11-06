@@ -14,6 +14,7 @@ import { PRAvatar } from "../../../agent-manager/pr/PRAvatar"
 import { useLanguage } from "../../context/language"
 import { getVSCodeAPI } from "../../context/vscode"
 import { fileName } from "./prompt-input-utils"
+import { PromptRowActions } from "./PromptRowActions"
 import { PromptShowMore } from "./PromptShowMore"
 import { useReviewCommentActions } from "./review-actions"
 
@@ -193,27 +194,10 @@ function Group(props: ReviewCommentsProps & { source: "local" | "pr" | "ci" }) {
                       />
                     </Tooltip>
                   </Show>
-                  <Show when={file(item)}>
-                    <Tooltip value={language.t("agentManager.diff.openFile")} placement="top">
-                      <IconButton
-                        icon="go-to-file"
-                        size="small"
-                        variant="ghost"
-                        aria-label={language.t("agentManager.diff.openFile")}
-                        onClick={() => reveal(item)}
-                      />
-                    </Tooltip>
-                  </Show>
-                  <Show when={props.onRemove}>
-                    <button
-                      type="button"
-                      class="prompt-review-row-remove"
-                      onClick={() => props.onRemove?.(item.id)}
-                      aria-label={language.t("common.delete")}
-                    >
-                      ×
-                    </button>
-                  </Show>
+                  <PromptRowActions
+                    onOpen={file(item) ? () => reveal(item) : undefined}
+                    onRemove={props.onRemove ? () => props.onRemove?.(item.id) : undefined}
+                  />
                 </div>
 
                 <Show when={full().includes(item.id)}>
