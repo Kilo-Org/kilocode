@@ -1,12 +1,22 @@
 import { describe, expect, test } from "bun:test"
 import { OpenCode } from "@opencode/client"
 import { KiloHandshakeRpc } from "@opencode/schema/kilocode/handshake"
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs"
 import { mkdtemp, mkdir, realpath, rm } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import path from "node:path"
-import { command, environment, manager, parse, settingsEnvironment, start, stop } from "../src/server"
+import { command, environment, indexingEnvironment, manager, parse, serverHome, settingsEnvironment, start, stop } from "../src/server"
 
 const extension = path.resolve(import.meta.dir, "..")
+
+function checkout() {
+  const dir = mkdtempSync(path.join(tmpdir(), "kilo-vscode-checkout-"))
+  const extension = path.join(dir, "packages", "kilo-vscode")
+  mkdirSync(extension, { recursive: true })
+  mkdirSync(path.join(dir, "script"), { recursive: true })
+  writeFileSync(path.join(dir, "script", "dev-isolated.ts"), "")
+  return { dir, extension }
+}
 
 describe("parse", () => {
   test("reads the URL from a complete JSON line", () => {
@@ -24,15 +34,19 @@ describe("parse", () => {
 
 describe("command", () => {
   test("uses the repository dev entry with an isolated profile when bin/kilo2 is missing", () => {
+    const { dir, extension } = checkout()
     const found = command({ extension, storage: "/storage", env: {} })
-    expect(found?.args).toEqual([path.resolve(extension, "../../script/dev-isolated.ts"), "serve", "--port", "0", "--stdio"])
+    expect(found?.args).toEqual([path.join(dir, "script", "dev-isolated.ts"), "serve", "--port", "0", "--stdio"])
     expect(found?.env).toEqual({ KILO_V2_PROFILE: path.join("/storage", "profile") })
+    rmSync(dir, { recursive: true })
   })
 
   test("keeps an explicit KILO_V2_PROFILE", () => {
+    const { dir, extension } = checkout()
     expect(command({ extension, storage: "/storage", env: { KILO_V2_PROFILE: "/p" } })?.env).toEqual({
       KILO_V2_PROFILE: "/p",
     })
+    rmSync(dir, { recursive: true })
   })
 
   test("prefers a bundled bin/kilo2", async () => {
@@ -54,11 +68,31 @@ describe("command", () => {
   })
 })
 
+describe("serverHome", () => {
+  test("is the profile home for the isolated dev server", () => {
+    const cmd = { cmd: "bun", args: [], env: { KILO_V2_PROFILE: path.join(tmpdir(), "profile") } }
+    expect(serverHome(cmd, {})).toBe(path.join(tmpdir(), "profile", "home"))
+  })
+
+  test("is the inherited home for the bundled server", () => {
+    expect(serverHome({ cmd: "kilo2", args: [], env: {} }, { OPENCODE_TEST_HOME: "/h" })).toBe("/h")
+  })
+})
+
 test("environment drops v1-only variables and sets the client", () => {
-  const env = environment({ KILO_PARENT_PID: "1", KILO_TELEMETRY_LEVEL: "all", PATH: "/bin" }, { OPENCODE_PASSWORD: "x" })
+  const env = environment(
+    { KILO_PARENT_PID: "1", KILO_TELEMETRY_LEVEL: "all", PATH: "/bin" },
+    { OPENCODE_PASSWORD: "x" },
+  )
   expect(env.KILO_PARENT_PID).toBeUndefined()
   expect(env.KILO_TELEMETRY_LEVEL).toBeUndefined()
-  expect(env).toMatchObject({ PATH: "/bin", KILO_CLIENT: "vscode", OPENCODE_PASSWORD: "x", NODE_USE_SYSTEM_CA: "1" })
+  expect(env).toMatchObject({
+    PATH: "/bin",
+    KILO_CLIENT: "vscode",
+    KILO_PLATFORM: "vscode",
+    OPENCODE_PASSWORD: "x",
+    NODE_USE_SYSTEM_CA: "1",
+  })
 })
 
 test("environment drops inherited server passwords", () => {
@@ -66,6 +100,18 @@ test("environment drops inherited server passwords", () => {
   expect(env.OPENCODE_PASSWORD).toBeUndefined()
   expect(env.OPENCODE_SERVER_PASSWORD).toBeUndefined()
   expect(env.KILO_SERVER_PASSWORD).toBeUndefined()
+})
+
+
+describe("indexingEnvironment", () => {
+  test("disables indexing when no workspace folder is open", () => {
+    expect(indexingEnvironment(undefined)).toEqual({ KILO_DISABLE_CODEBASE_INDEXING: "vscode-no-workspace" })
+    expect(indexingEnvironment(0)).toEqual({ KILO_DISABLE_CODEBASE_INDEXING: "vscode-no-workspace" })
+  })
+
+  test("leaves indexing on when a workspace folder is open", () => {
+    expect(indexingEnvironment(1)).toEqual({})
+  })
 })
 
 describe("settingsEnvironment", () => {
@@ -125,7 +171,7 @@ test("manager keeps a failed start, reports it once and retries after a restart"
   expect(second).not.toBe(first)
   await expect(second).rejects.toThrow("exited during startup")
   expect(errors).toHaveLength(2)
-  await rm(root, { recursive: true, force: true })
+  await rm(root, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 })
 })
 
 test("manager reports every started and stopped server", async () => {
@@ -188,7 +234,9 @@ test("starts the real v2 server, passes the Kilo handshake and stops when stdin 
     env: { ...process.env, INIT_CWD: root, OPENCODE_PASSWORD: "inherited" },
   })
   const api = OpenCode.make({ baseUrl: server.url, headers: { authorization: server.authorization } })
-  const info = await api.rpc(KiloHandshakeRpc.Definition).get({}, { location: { directory: path.join(root, "workspace") } })
+  const info = await api
+    .rpc(KiloHandshakeRpc.Definition)
+    .get({}, { location: { directory: path.join(root, "workspace") } })
   expect(info.product).toBe("kilo")
   // Without a location, the server creates the session in its own working directory.
   const session = await api.session.create({})
@@ -198,5 +246,5 @@ test("starts the real v2 server, passes the Kilo handshake and stops when stdin 
   const exited = new Promise((resolve) => server.process.once("exit", resolve))
   stop(server.process)
   await exited
-  await rm(root, { recursive: true, force: true })
+  await rm(root, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 })
 }, 90_000)

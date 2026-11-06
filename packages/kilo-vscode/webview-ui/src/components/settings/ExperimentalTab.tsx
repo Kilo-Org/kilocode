@@ -65,7 +65,6 @@ const ExperimentalTab: Component = () => {
         <SettingsRow
           title={language.t("settings.experimental.lsp.title")}
           description={language.t("settings.experimental.lsp.description")}
-          last
         >
           <Switch
             checked={config.value(["lsp"]) !== false}
@@ -73,6 +72,33 @@ const ExperimentalTab: Component = () => {
             hideLabel
           >
             {language.t("settings.experimental.lsp.title")}
+          </Switch>
+        </SettingsRow>
+
+        <SettingsRow
+          title={language.t("settings.experimental.conversationPromptHistory.title")}
+          description={language.t("settings.experimental.conversationPromptHistory.description")}
+        >
+          <Switch
+            checked={config.setting("experimental.conversationPromptHistory") === true}
+            onChange={(checked) => config.setSetting("experimental.conversationPromptHistory", checked)}
+            hideLabel
+          >
+            {language.t("settings.experimental.conversationPromptHistory.title")}
+          </Switch>
+        </SettingsRow>
+
+        <SettingsRow
+          title={language.t("settings.experimental.nativeNotebookTools.title")}
+          description={language.t("settings.experimental.nativeNotebookTools.description")}
+          last
+        >
+          <Switch
+            checked={config.setting("experimental.nativeNotebookTools") === true}
+            onChange={(checked) => config.setSetting("experimental.nativeNotebookTools", checked)}
+            hideLabel
+          >
+            {language.t("settings.experimental.nativeNotebookTools.title")}
           </Switch>
         </SettingsRow>
       </Card>

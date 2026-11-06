@@ -311,6 +311,7 @@ export const dict = {
   "notification.permission.descriptionSandboxEscalation":
     "Dit voert het hele commando uit zonder beperkingen voor het bestandssysteem en netwerk, alleen voor dit commando. Git moet naar .git schrijven, dat alleen-lezen is in de sandbox en bij een gekoppelde worktree buiten de worktree ligt. Bash-toestemmingsregels en automatisch goedkeuren keuren deze aanvraag nooit automatisch goed.",
   "ui.permission.manageAutoApprove": "Beheer automatisch goedkeuren regels",
+  "ui.permission.noChanges": "Geen wijzigingen.",
   "ui.permission.reject": "Weigeren",
   "ui.permission.feedbackPlaceholder": "Vertel Kilo wat het anders moet doen",
   "ui.permission.feedbackHint": "Enter om te weigeren, Esc om te annuleren",
@@ -353,6 +354,8 @@ export const dict = {
 
   "session.tab.review": "Beoordelen",
   "session.review.filesChanged": "{{count}} bestanden gewijzigd",
+  "session.review.viewTurnChanges": "Wijzigingen van de beurt bekijken",
+  "session.review.turnChangesEmpty": "Geen wijzigingen in deze beurt.",
   "session.review.loadingChanges": "Wijzigingen laden...",
   "session.review.noChanges": "Geen wijzigingen",
 
@@ -1294,6 +1297,11 @@ export const dict = {
     "Kies of blokken met MCP- en algemene tools standaard uitgeklapt of ingeklapt zijn.",
   "settings.display.mcpTool.expanded": "Uitgeklapt",
   "settings.display.mcpTool.collapsed": "Ingeklapt",
+  "settings.display.codeMode.title": "Code Mode-blokken",
+  "settings.display.codeMode.description":
+    "Kies of Code Mode-blokken beginnen met hun tool-aanroepen in een lijst of als één regel. Het script blijft altijd verborgen tot je het opent.",
+  "settings.display.codeMode.expanded": "Uitgeklapt",
+  "settings.display.codeMode.collapsed": "Ingeklapt",
 
   "settings.display.shortcutHints.title": "Sneltoetstips tonen",
   "settings.display.shortcutHints.description":
@@ -1477,6 +1485,8 @@ export const dict = {
   "diffViewer.source.unstaged.tooltip":
     "Bestanden gewijzigd in je werkboom maar nog niet gestaged, plus niet-gevolgde (nieuwe) bestanden.",
   "diffViewer.source.session.label": "Sessie",
+  "diffViewer.source.turn.tooltip": "Bestanden die Kilo tijdens één beurt heeft gewijzigd.",
+  "diffViewer.source.turn.label": "Beurt",
   "diffViewer.source.session.tooltip":
     "Bestanden die door Kilo tijdens de huidige sessie zijn gewijzigd, gebaseerd op snapshots per beurt. Wordt gereset bij het starten van een nieuwe sessie.",
   "diffViewer.group.session": "Sessie",

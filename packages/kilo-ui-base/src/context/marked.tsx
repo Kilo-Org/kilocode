@@ -10,6 +10,7 @@ import { bundledLanguages, type BundledLanguage } from "shiki"
 import {
   extractSuffix,
   normalizeCandidatePath,
+  documentKind,
   extractFilePathFromHref,
   looksLikeCandidate,
   escapeAttribute,
@@ -723,7 +724,17 @@ export const createMarkedParser = (props: { nativeParser?: NativeMarkdownParser 
           // and opens the file instead.
           const isFile = href ? extractFilePathFromHref(href) : undefined
           if (isFile) {
-            return `<a href="${safeHref}"${titleAttr} class="external-link file-path-link" target="_blank" rel="noopener noreferrer">${text}</a>`
+            const kind = documentKind(isFile.path)
+            const documentClass = kind === "plan" ? " plan-document-link" : kind ? " document-link" : ""
+            const documentKindAttr = kind ? ` data-file-kind="${kind}"` : ""
+            // The sanitizer drops `file:` hrefs, so the parsed path also goes into data attributes for the click handler.
+            const fileAttrs =
+              ` data-file-path="${escapeAttribute(isFile.path)}"` +
+              (isFile.line ? ` data-file-line="${isFile.line}"` : "") +
+              (isFile.column ? ` data-file-col="${isFile.column}"` : "") +
+              // The sanitizer drops `file:` and drive-letter hrefs, so keep every file link focusable and announced.
+              ` tabindex="0" role="link"`
+            return `<a href="${safeHref}"${titleAttr} class="external-link file-path-link${documentClass}"${documentKindAttr}${fileAttrs} target="_blank" rel="noopener noreferrer">${text}</a>`
           }
           return `<a href="${safeHref}"${titleAttr} class="external-link" target="_blank" rel="noopener noreferrer">${text}</a>`
           // kilocode_change end

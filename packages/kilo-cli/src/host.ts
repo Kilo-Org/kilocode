@@ -1,6 +1,10 @@
 export * as KiloHost from "./host"
 
-import { KiloPlugins, KiloPostPlugins } from "@kilocode/kilo-plugin"
+import { KiloPlugins, KiloPostPlugins, KiloRemote, KiloSandbox, KiloSessionSync } from "@kilocode/kilo-plugin"
+import { networkHttpLayer } from "@kilocode/sandbox"
+import { Environment } from "@opencode/core/environment/index"
+import { LayerNodePlatform as UtilPlatform } from "@opencode/util/effect/app-node-platform"
+import { KiloRead } from "@kilocode/kilo-plugin/read"
 import { App } from "@opencode/core/app"
 import { Bus } from "@opencode/core/bus"
 import { ConfigDiscovery } from "@opencode/core/config/discovery"
@@ -8,8 +12,13 @@ import { ModelResolver } from "@opencode/core/model-resolver"
 import { LayerNodePlatform } from "@opencode/core/effect/app-node-platform"
 import { KiloConfigDiscovery } from "@opencode/core/kilocode/config/discovery"
 import { Model } from "@opencode/core/model"
+import { Schedule } from "@opencode/core/schedule"
 import { SdkPlugins } from "@opencode/core/plugin/sdk"
 import { SessionRunnerModel } from "@opencode/core/session/runner/model"
+import { SessionProjector } from "@opencode/core/session/projector"
+import { SessionStore } from "@opencode/core/session/store"
+import { ToolOutput } from "@opencode/core/tool-output"
+import { ReadToolFileSystem } from "@opencode/core/tool/read-filesystem"
 import type { Plugin } from "@opencode/plugin/effect/plugin"
 import { makeGlobalNode } from "@opencode/util/effect/app-node"
 import type { LayerNode } from "@opencode/util/effect/layer-node"
@@ -20,6 +29,9 @@ import { KiloApp } from "./app"
 import { KiloGatewayErrors } from "./gateway-errors"
 import { KiloGatewayModel } from "./gateway-model"
 import { KiloSmallModel } from "./small-model"
+import { SessionSync } from "./session-sync"
+import { SessionSyncOutput } from "./session-sync/tool-output"
+import { Remote } from "./remote"
 
 /**
  * The duration in milliseconds of the last activation of each Kilo plugin, by plugin ID. The startup ratchet
@@ -36,11 +48,36 @@ const plugins = makeGlobalNode({
   layer: Layer.effectDiscard(
     Effect.gen(function* () {
       const sdk = yield* SdkPlugins.Service
-      const services = Context.pick(Bus.Service, FSUtil.Service, Global.Service)(
-        yield* Effect.context<Bus.Service | FSUtil.Service | Global.Service>(),
+      const services = Context.pick(
+        Bus.Service,
+        FSUtil.Service,
+        Global.Service,
+        Schedule.Service,
+        KiloSessionSync.Service,
+        KiloRemote.Service,
+        SessionStore.Service,
+      )(
+        yield* Effect.context<
+          | Bus.Service
+          | FSUtil.Service
+          | Global.Service
+          | Schedule.Service
+          | KiloSessionSync.Service
+          | KiloRemote.Service
+          | SessionStore.Service
+        >(),
       )
       const register = (
-        plugin: Plugin<Bus.Service | FSUtil.Service | Global.Service | Scope.Scope>,
+        plugin: Plugin<
+          | Bus.Service
+          | FSUtil.Service
+          | Global.Service
+          | Schedule.Service
+          | KiloSessionSync.Service
+          | KiloRemote.Service
+          | SessionStore.Service
+          | Scope.Scope
+        >,
         phase?: "post",
       ) =>
         sdk.register(
@@ -61,7 +98,7 @@ const plugins = makeGlobalNode({
       yield* Effect.forEach(KiloPostPlugins, (plugin) => register(plugin, "post"))
     }),
   ).pipe(Layer.provideMerge(SdkPlugins.layer)),
-  deps: [Bus.node, FSUtil.node, Global.node],
+  deps: [Bus.node, FSUtil.node, Global.node, Schedule.node, SessionSync.node, Remote.node, SessionStore.node],
 })
 
 /**
@@ -71,6 +108,11 @@ const plugins = makeGlobalNode({
  */
 export const overrides: LayerNode.Replacements = [
   LayerNodePlatform.llmClient.replace(LayerNodePlatform.llmClient.mapLayer(KiloGatewayErrors.layer)),
+  SessionProjector.node.replace(SessionProjector.node.mapLayer(SessionSync.captureLayer)),
+  ToolOutput.node.replace(SessionSyncOutput.node),
+  // Read Office documents and notebooks as text through the native read tool (rung 2, service
+  // replacement): upstream keeps ownership of the tool, its description, pages and instructions.
+  ReadToolFileSystem.node.replace(KiloRead.node),
   SdkPlugins.node.replace(plugins),
   App.node.replace(App.configured(KiloApp)),
   Model.node.replace(
@@ -88,4 +130,10 @@ export const overrides: LayerNode.Replacements = [
   SessionRunnerModel.node.replace(KiloGatewayModel.node),
   // kilo_port(unattributed:config:546539fc1643) kilo_port(unattributed:config:8cdbdec70393)
   ConfigDiscovery.node.replace(Layer.succeed(ConfigDiscovery.LayoutService, KiloConfigDiscovery.layout)),
+  // A sandboxed tool call spawns, writes and sends HTTP requests inside its sandbox profile.
+  // kilo_port(sandbox:b09868b61af4)
+  Environment.node.replace(Environment.node.mapLayer(KiloSandbox.environment)),
+  UtilPlatform.httpClient.replace(
+    UtilPlatform.httpClient.mapLayer((layer) => networkHttpLayer.pipe(Layer.provide(layer))),
+  ),
 ]

@@ -312,6 +312,7 @@ export const dict = {
   "notification.permission.descriptionSandboxEscalation":
     "Esto ejecuta todo el comando con las restricciones de sistema de archivos y de red eliminadas, solo para este comando. Git debe escribir en .git, que es de solo lectura en la sandbox y está fuera del árbol de trabajo en un worktree vinculado. Las reglas de permiso de Bash y la aprobación automática nunca aprueban esta solicitud automáticamente.",
   "ui.permission.manageAutoApprove": "Gestionar reglas de aprobación automática",
+  "ui.permission.noChanges": "Sin cambios.",
   "ui.permission.reject": "Rechazar",
   "ui.permission.feedbackPlaceholder": "Dile a Kilo qué debe hacer de otra forma",
   "ui.permission.feedbackHint": "Enter para rechazar, Esc para cancelar",
@@ -354,6 +355,8 @@ export const dict = {
 
   "session.tab.review": "Revisión",
   "session.review.filesChanged": "{{count}} Archivos Cambiados",
+  "session.review.viewTurnChanges": "Ver cambios del turno",
+  "session.review.turnChangesEmpty": "Sin cambios en este turno.",
   "session.review.loadingChanges": "Cargando cambios...",
   "session.review.noChanges": "Sin cambios",
   "session.messages.loadingEarlier": "Cargando mensajes anteriores...",
@@ -1344,6 +1347,11 @@ export const dict = {
     "Elige si los bloques de herramientas MCP y genéricas aparecen inicialmente expandidos o contraídos.",
   "settings.display.mcpTool.expanded": "Expandidos",
   "settings.display.mcpTool.collapsed": "Contraídos",
+  "settings.display.codeMode.title": "Bloques de Code Mode",
+  "settings.display.codeMode.description":
+    "Elige si los bloques de Code Mode empiezan con sus llamadas a herramientas en una lista o en una sola línea. El script siempre permanece oculto hasta que lo abras.",
+  "settings.display.codeMode.expanded": "Expandidos",
+  "settings.display.codeMode.collapsed": "Contraídos",
 
   "settings.display.shortcutHints.title": "Mostrar sugerencias de atajos",
   "settings.display.shortcutHints.description":
@@ -1469,6 +1477,8 @@ export const dict = {
   "diffViewer.source.unstaged.tooltip":
     "Archivos modificados en tu árbol de trabajo pero que aún no están en el área de preparación, más archivos no rastreados (nuevos).",
   "diffViewer.source.session.label": "Sesión",
+  "diffViewer.source.turn.tooltip": "Archivos modificados por Kilo durante un turno.",
+  "diffViewer.source.turn.label": "Turno",
   "diffViewer.source.session.tooltip":
     "Archivos modificados por Kilo durante la sesión actual, basado en snapshots por turno. Se reinicia al empezar una nueva sesión.",
   "diffViewer.group.session": "Sesión",

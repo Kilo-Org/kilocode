@@ -142,6 +142,7 @@ export const PtyHandler = HttpApiBuilder.group(Api, "server.pty", (handlers) =>
                 cursor,
                 onData: (chunk) => Queue.offerUnsafe(outbox, chunk),
                 onEnd: () => Queue.offerUnsafe(outbox, new Socket.CloseEvent(1000)),
+                allowExited: url.searchParams.get("replayExited") === "1", // kilocode_change
               })
               .pipe(
                 Effect.catchTags({

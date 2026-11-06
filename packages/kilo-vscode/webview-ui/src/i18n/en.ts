@@ -202,6 +202,7 @@ export const dict = {
   "prompt.shortcutHint.type": "to type",
   "prompt.shortcutHint.sessions": "to switch session",
   "prompt.shortcutHint.stop": "to stop",
+  "prompt.shortcutHint.queue": "to queue",
   "prompt.shortcutHint.changes": "to review changes",
   "prompt.shortcutHint.pr": "to open the PR",
   "prompt.shortcutHint.mode": "Next mode",
@@ -209,6 +210,9 @@ export const dict = {
   "prompt.action.continue": "Continue",
   "prompt.action.send.blocked": "Answer or dismiss the pending question first",
   "prompt.action.send.recording": "Transcribe and send",
+  "prompt.action.steer": "Steer now ({{steer}}). A running tool finishes first. {{queue}} queues, {{now}} stops everything",
+  "prompt.action.queue": "Queue for after this turn ({{key}})",
+  "prompt.action.stopAndSend": "Stop everything, including running tools, and send ({{key}})",
   "prompt.action.stop": "Stop",
   "prompt.action.stop.background": "Stop main agent. Background agents keep running.",
   "prompt.agents.show": "Show background agents",
@@ -303,6 +307,7 @@ export const dict = {
   "notification.permission.descriptionSandboxEscalation":
     "This runs the whole command with filesystem and network restrictions removed, for this command only. Git must write to .git, which is read-only in the sandbox and outside the worktree in a linked worktree. Bash allow rules and auto-approve never approve this prompt automatically.",
   "ui.permission.manageAutoApprove": "Manage Auto-Approve Rules",
+  "ui.permission.noChanges": "No changes.",
   "ui.permission.reject": "Reject",
   "ui.permission.feedbackPlaceholder": "Tell Kilo what to do differently",
   "ui.permission.feedbackHint": "Enter to reject, Esc to cancel",
@@ -345,6 +350,8 @@ export const dict = {
 
   "session.tab.review": "Review",
   "session.review.filesChanged": "{{count}} Files Changed",
+  "session.review.viewTurnChanges": "View turn changes",
+  "session.review.turnChangesEmpty": "No changes in this turn.",
   "session.review.loadingChanges": "Loading changes...",
   "session.review.noChanges": "No changes",
 
@@ -730,6 +737,17 @@ export const dict = {
   "session.prompts.first": "First prompt",
   "session.prompts.latest": "Latest prompt",
   "session.prompts.overflow": "{{count}} earlier prompts",
+  "session.pending.status.steering": "Sends after the current step",
+  "session.pending.status.starting": "Sending",
+  "session.pending.status.stranded": "Not sent",
+  "session.pending.status.queued": "Queued for after this turn",
+  "session.pending.status.paused": "Queued, paused until you send",
+  "session.pending.action.stopAndSend": "Stop everything and send now",
+  "session.pending.action.send": "Send now",
+  "session.pending.action.steer": "Send after the current step",
+  "session.pending.action.queue": "Move to queue",
+  "session.pending.action.edit": "Edit",
+  "session.pending.action.delete": "Delete",
   "session.status.writingResponse": "Writing response...",
   "session.status.retry": "Retrying…",
   "session.status.working": "Working...",
@@ -802,6 +820,7 @@ export const dict = {
   "prompt.placeholder.connecting": "Connecting to server...",
   "prompt.placeholder.default": "Type a message, @ to mention files... (Enter to send, Shift+Enter for new line)",
   "prompt.placeholder.plain": "Type a message... (Enter to send, Shift+Enter for new line)",
+  "prompt.placeholder.plainHint": "Type a message... ({{key}} {{action}})",
   "prompt.placeholder.hint": "Type a message, @ to mention files... ({{key}} {{action}})",
   "prompt.placeholder.error": "Connection failed. Check the output panel or restart the extension.",
 
@@ -1311,6 +1330,11 @@ export const dict = {
   "settings.display.mcpTool.description": "Choose whether MCP and generic tool blocks start expanded or collapsed.",
   "settings.display.mcpTool.expanded": "Expanded",
   "settings.display.mcpTool.collapsed": "Collapsed",
+  "settings.display.codeMode.title": "Code Mode Blocks",
+  "settings.display.codeMode.description":
+    "Choose whether Code Mode blocks start with their tool calls listed or as one line. The script always stays hidden until you open it.",
+  "settings.display.codeMode.expanded": "Expanded",
+  "settings.display.codeMode.collapsed": "Collapsed",
   "settings.display.shortcutHints.title": "Show shortcut hints",
   "settings.display.shortcutHints.description":
     "Show the keyboard shortcut that fits what you do now in the empty prompt, for example how to add selected code or return to the prompt.",
@@ -1452,6 +1476,8 @@ export const dict = {
   "diffViewer.source.session.label": "Session",
   "diffViewer.source.session.tooltip":
     "Files changed by Kilo during the current session, based on per-turn snapshots. Resets when you start a new session.",
+  "diffViewer.source.turn.label": "Turn",
+  "diffViewer.source.turn.tooltip": "Files changed by Kilo during one turn.",
   "diffViewer.group.session": "Session",
   "diffViewer.group.git": "Git",
   "diffViewer.notice.snapshotsDisabled":

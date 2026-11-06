@@ -6,6 +6,7 @@ import { KiloGatewayRpc } from "@opencode/schema/kilocode/gateway"
 import { ProviderUsage } from "@opencode/schema/kilocode/provider-usage"
 import { createSignal, onCleanup } from "solid-js"
 import { useV2 } from "./client"
+import { accountAction } from "./profile-account"
 
 const KILO = "kilo"
 const POLL = 1000
@@ -26,6 +27,8 @@ export type DeviceAuthState = {
   error?: string
 }
 
+
+
 export function createProfile() {
   const v2 = useV2()
   const location = { directory: v2.directory }
@@ -37,22 +40,59 @@ export function createProfile() {
   const [usage, setUsage] = createSignal<ProviderUsage.Info>()
   const [usageLoading, setUsageLoading] = createSignal(false)
   const [usageError, setUsageError] = createSignal<string>()
-  const state: { attempt?: string; timer?: ReturnType<typeof setTimeout>; usage: number } = { usage: 0 }
+  const state: {
+    attempt?: string
+    timer?: ReturnType<typeof setTimeout>
+    usage: number
+    profile: number
+    held: boolean
+  } = { usage: 0, profile: 0, held: false }
 
-  const refresh = async () => {
-    // Only the contract's `unauthorized` error means signed out; other failures are real errors.
-    const status = await rpc.authStatus({}, { location }).catch((error: { type?: string }) => {
+  // Only the contract's `unauthorized` error means signed out; other failures are real errors.
+  const status = () =>
+    rpc.authStatus({}, { location }).catch((error: { type?: string }) => {
       if (error?.type === "unauthorized") return undefined
       throw error
     })
-    if (!status?.authenticated) return void setData(null)
+
+  const account = async (): Promise<ProfileData | null> => {
+    if (!(await status())?.authenticated) return null
     const [profile, balance, kiloPass] = await Promise.all([
       rpc.profile({}, { location }),
       rpc.balance({}, { location }).catch(() => null),
       rpc.kiloPass({}, { location }).catch(() => null),
     ])
-    setData({ profile, balance, kiloPass })
+    return { profile, balance, kiloPass }
   }
+
+  const refresh = async () => {
+    // As usage: only the latest read writes, so an answer for an earlier account cannot replace a newer one.
+    const read = ++state.profile
+    const next = await account()
+    if (read !== state.profile) return
+    setData(next)
+    // A completed sign-in shows its success state until the account loads (see the `provider.updated` handler).
+    if (next && auth().status === "success") setAuth({ status: "idle" })
+  }
+
+  // The OAuth attempt completes when the credential is saved, but the Gateway loads the new account after that, and
+  // reports it as signed out until the load ends with `provider.updated`. Other clients can also sign in or out or
+  // switch the team. So after each `provider.updated` of this directory, read the account again when it changed.
+  onCleanup(
+    v2.data.on("provider.updated", (event) => {
+      if (event.location?.directory !== v2.directory) return
+      void status()
+        .then((current) => {
+          const action = accountAction(data(), current, state.held)
+          state.held = action === "hold"
+          if (action !== "refresh" && action !== "clear") return
+          // As v1: a new account invalidates the cached usage.
+          loadUsage(true)
+          return refresh()
+        })
+        .catch(v2.report)
+    }),
+  )
 
   const stop = () => {
     clearTimeout(state.timer)
@@ -80,9 +120,7 @@ export function createProfile() {
         loadUsage(true)
         // The attempt stays set until the refresh settles, so a failed refresh reaches the error state below.
         return refresh().then(() => {
-          if (state.attempt !== attempt) return
-          state.attempt = undefined
-          setAuth({ status: "idle" })
+          if (state.attempt === attempt) state.attempt = undefined
         })
       })
       .catch((error: unknown) => {

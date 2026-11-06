@@ -33,7 +33,6 @@ export function createSettings() {
     loaded: () => v2.data.location.integration.list() !== undefined,
     integration: (id: string) => integrations().find((item) => item.id === id),
     connection: v2.connection.status,
-    kiloFailure: v2.kiloFailure,
     connectionError: v2.connection.error,
     version: v2.version,
     extensionVersion: () => v2.extensionVersion,
@@ -106,6 +105,7 @@ export function SettingsView() {
       subtab: message.subtab,
       focus: message.focus,
       titleKey: message.titleKey,
+      projectId: message.projectId,
     })
     setNavigation((count) => count + 1)
     if (message.search) setSearchRequest((count) => count + 1)
@@ -120,6 +120,7 @@ export function SettingsView() {
         subtab={target().subtab}
         focus={target().focus}
         titleKey={target().titleKey}
+        projectId={target().projectId}
         navigation={navigation()}
         searchRequest={searchRequest()}
         onTabChange={(tab) => vscode.postMessage({ type: "settingsTabChanged", tab } satisfies ToHost as never)}

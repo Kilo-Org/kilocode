@@ -69,7 +69,7 @@ export async function runThemeSmoke(executable?: string) {
         check()
         const timeout = setTimeout(
           () => found.reject(new Error(`Timed out waiting for ${label}\n${Bun.stripANSI(state.output)}`)),
-          45_000,
+          90_000,
         )
         try {
           await Promise.race([
@@ -83,11 +83,22 @@ export async function runThemeSmoke(executable?: string) {
           state.change = () => {}
         }
       }
-      const send = async (keys: string, label: string, predicate: (output: string) => boolean) => {
+      // `retry` for a key that is safe to repeat: a slow runner can drop it or paint after the wait started.
+      const send = async (
+        keys: string,
+        label: string,
+        predicate: (output: string) => boolean,
+        retry = false,
+      ) => {
         state.output = ""
         const found = until(label, predicate)
         terminal.write(keys)
-        await found
+        const again = retry ? setInterval(() => terminal.write(keys), 10_000) : undefined
+        try {
+          await found
+        } finally {
+          if (again) clearInterval(again)
+        }
       }
       try {
         await until(`default Kilo ${mode} home screen`, (output) => isKiloHome(output, mode))
@@ -97,7 +108,11 @@ export async function runThemeSmoke(executable?: string) {
         await send("opencode", "OpenCode preview", (output) =>
           output.includes(mode === "dark" ? ";250;178;131" : ";59;125;216"),
         )
-        await send("\x1b", "Kilo restored on cancel", (output) => hasKiloPrompt(output, mode))
+        // Let the preview frame finish before Escape. A slow runner can still be applying the filtered
+        // theme when the dialog closes, which leaves the preview active and hides the restored prompt.
+        await Bun.sleep(500)
+        // Escape cancels the preview and is safe to repeat when a slow runner drops or delays it.
+        await send("\x1b", "Kilo restored on cancel", (output) => hasKiloPrompt(output, mode), true)
         console.log(`PASS: ${binary ? "compiled" : "source"} ${mode} picker, upstream preview and cancel`)
       } finally {
         try {

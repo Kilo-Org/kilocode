@@ -233,6 +233,7 @@ export const dict = {
   "notification.permission.descriptionSandboxEscalation":
     "Questo esegue l'intero comando senza le restrizioni di filesystem e rete, solo per questo comando. Git deve scrivere in .git, che è di sola lettura nella sandbox e si trova fuori dall'albero di lavoro in un worktree collegato. Le regole di autorizzazione Bash e l'approvazione automatica non approvano mai automaticamente questa richiesta.",
   "ui.permission.manageAutoApprove": "Gestisci regole approvazione automatica",
+  "ui.permission.noChanges": "Nessuna modifica.",
   "ui.permission.reject": "Rifiuta",
   "ui.permission.feedbackPlaceholder": "Di' a Kilo cosa fare diversamente",
   "ui.permission.feedbackHint": "Enter per rifiutare, Esc per annullare",
@@ -274,6 +275,8 @@ export const dict = {
   "ui.approval.outsideWorkspace": "(fuori dall'area di lavoro: {{file}})",
   "session.tab.review": "Revisione",
   "session.review.filesChanged": "{{count}} file modificati",
+  "session.review.viewTurnChanges": "Visualizza le modifiche del turno",
+  "session.review.turnChangesEmpty": "Nessuna modifica in questo turno.",
   "session.review.loadingChanges": "Caricamento modifiche...",
   "session.review.noChanges": "Nessuna modifica",
   "session.messages.loadingEarlier": "Caricamento messaggi precedenti...",
@@ -1175,6 +1178,11 @@ export const dict = {
   "settings.display.mcpTool.description": "Scegli se i blocchi strumento MCP e generici iniziano espansi o compressi.",
   "settings.display.mcpTool.expanded": "Espansi",
   "settings.display.mcpTool.collapsed": "Compressi",
+  "settings.display.codeMode.title": "Blocchi Code Mode",
+  "settings.display.codeMode.description":
+    "Scegli se i blocchi Code Mode iniziano con le chiamate agli strumenti elencate o su una sola riga. Lo script resta sempre nascosto finché non lo apri.",
+  "settings.display.codeMode.expanded": "Espansi",
+  "settings.display.codeMode.collapsed": "Compressi",
 
   "settings.display.shortcutHints.title": "Mostra suggerimenti scorciatoie",
   "settings.display.shortcutHints.description":
@@ -1307,6 +1315,8 @@ export const dict = {
   "diffViewer.source.unstaged.tooltip":
     "File modificati nel working tree ma non ancora sottoposti a staging, più file non tracciati (nuovi).",
   "diffViewer.source.session.label": "Sessione",
+  "diffViewer.source.turn.tooltip": "File modificati da Kilo durante un turno.",
+  "diffViewer.source.turn.label": "Turno",
   "diffViewer.source.session.tooltip":
     "File modificati da Kilo durante la sessione corrente, basati su snapshot per turno. Si resetta quando inizi una nuova sessione.",
   "diffViewer.group.session": "Sessione",

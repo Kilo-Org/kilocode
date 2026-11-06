@@ -6,15 +6,18 @@ import { mkdir, readFile, stat, writeFile } from "node:fs/promises"
 import path from "node:path"
 import { commands, workspace, Uri, window, type ExtensionContext } from "vscode"
 import { KiloConfigFiles } from "@opencode/util/kilocode/config/files"
+import type { SettingsHandler } from "./agent-manager/project/settings"
 import { applyConfigEdits, configWriteQueue, isKiloConfigFile } from "./config-file-edit"
 import { configPolicy, type PolicyDocument } from "./config-policy"
 import { fetchCustomProviderModels } from "./custom-provider-models"
 import { local } from "./local"
 import { validAutocompleteSetting } from "./services/autocomplete/settings"
 import { candidateConfigFiles, chooseConfigFile, configDirectories } from "./open-config"
-import { resolveGlobalConfigDir, resolveKiloProfile, canonicalPath, matchConfigDocument } from "./settings-paths"
-import type { ConfigEdit, ConfigScope, ToHost, ToWebview } from "./protocol"
+import { configTargets, type ConfigEntry } from "./config-targets"
+import { resolveKiloProfile, canonicalPath } from "./settings-paths"
 import type { Manager } from "./server"
+import type { AgentManagerSettings, ConfigEdit, ConfigScope, ToHost, ToWebview } from "./protocol"
+import { MODEL_RESET_KEYS } from "./model-preferences"
 
 const NAMESPACE = "kilo-code.v2"
 
@@ -24,16 +27,32 @@ export const KILO_SETTING_KEYS = [
   "language",
   "chat.shiftTabCyclesVariant",
   "showTokenThroughput",
+  "diff.renderMarkdown",
   "showTaskTimeline",
+  "showShortcutHints",
+  "showAutoApprovalReason",
   "maxCost",
   "claudeCodeCompat",
   "extraCaCerts",
   "languageCommitMessage",
+  "indexing.showButtonWhenDisabled",
   "autocomplete.enableAutoTrigger",
   "autocomplete.enableSmartInlineTaskKeybinding",
   "autocomplete.enableChatAutocomplete",
   "autocomplete.provider",
   "autocomplete.model",
+  "agentManager.autoBranchNaming",
+  "agentManager.branchPrefix",
+  "agentManager.worktreePool",
+  "agentManager.pushFixes",
+  "integratedBrowser",
+  "agentManager.browser.useSystemChrome",
+  "agentManager.browser.openLinksIn",
+  "browserAutomation.enabled",
+  "browserAutomation.useSystemChrome",
+  "browserAutomation.headless",
+  "experimental.nativeNotebookTools",
+  "experimental.conversationPromptHistory",
 ] as const
 
 /** `kilo-code.v2.fontSize` when set, otherwise `editor.fontSize`, clamped to the v1 slider range. */
@@ -64,12 +83,13 @@ export async function writeKiloSettings(values: Record<string, unknown>) {
 }
 
 /** webview globalState keys that are not configuration, cleared by Reset All Settings. */
-const GLOBAL_STATE_KEYS = ["kilo-code.v2.modelSelectorExpanded", "kilo-code.v2.autoApprove"]
-
-interface ConfigEntry {
-  type: "document" | "directory"
-  path?: string
-}
+// As v1, a reset clears the model recents, usage and remembered efforts, but keeps the favorites.
+const GLOBAL_STATE_KEYS = [
+  "kilo-code.v2.modelSelectorExpanded",
+  "kilo-code.v2.autoApprove",
+  "kilo-code.v2.sandbox.newSessionDefault",
+  ...MODEL_RESET_KEYS,
+]
 
 export function settingsHost(input: {
   context: ExtensionContext
@@ -77,6 +97,8 @@ export function settingsHost(input: {
   directory: string
   post: (message: ToWebview) => void
   onReset?: () => void
+  /** The Agent Manager project settings handler, owned by the provider. Absent in views without a provider. */
+  agentManager?: () => SettingsHandler | undefined
 }) {
   // The dev entry (`script/dev-isolated.ts`) keeps everything under `KILO_V2_PROFILE`, and `server.ts` defaults that
   // to the extension storage. A bundled server inherits the host environment and uses XDG paths directly.
@@ -97,32 +119,12 @@ export function settingsHost(input: {
   }
 
   /** The global and project config files, from the server's config documents. */
-  const targets = async (found?: ConfigEntry[]) => {
-    const list = found ?? (await entries())
-    const documents = new Map<string, string>()
-    const directories: string[] = []
-    for (const entry of list) {
-      if (!entry.path) continue
-      const real = await canonicalPath(entry.path)
-      if (entry.type === "document") documents.set(real, entry.path)
-      else directories.push(real)
-    }
-
-    // The project target never depends on the global directory. A missing global directory entry (the directory does
-    // not exist yet) falls back to the same path the spawned server uses, and `writeConfig` creates it.
-    const projectRoot = await canonicalPath(input.directory)
-    const project =
-      (await matchConfigDocument(KiloConfigFiles.writeCandidates(projectRoot, false), documents)) ??
-      path.join(projectRoot, KiloConfigFiles.newFile)
-    const globalDir = await canonicalPath(
-      directories.find((directory) => !KiloConfigFiles.directories.includes(path.basename(directory))) ??
-        resolveGlobalConfigDir(process.env, profile),
-    )
-    const global =
-      (await matchConfigDocument(KiloConfigFiles.writeCandidates(globalDir, true), documents)) ??
-      path.join(globalDir, KiloConfigFiles.newFile)
-    return { global, project }
-  }
+  const targets = async (found?: ConfigEntry[]) =>
+    configTargets({
+      entries: found ?? (await entries()),
+      directory: input.directory,
+      profile,
+    })
 
   /** Offer the existing files of a scope plus its missing target, with the server document list as loaded status. */
   const pickConfigFile = async (scope: ConfigScope, target: string, list: ConfigEntry[]) => {
@@ -213,12 +215,13 @@ export function settingsHost(input: {
         if (!isKiloConfigFile(file)) throw new Error(`Refused a config write outside a Kilo config file: ${file}`)
         const existing = await read(file)
         if (existing.trim().length === 0 && edits.every((edit) => edit.value === undefined)) {
-          input.post({ type: "configWritten", id, ok: true })
+          input.post({ type: "configWritten", id, ok: true, file: { scope, path: files[scope], text: existing } })
           return
         }
+        const text = applyConfigEdits(existing, edits)
         await mkdir(path.dirname(file), { recursive: true })
-        await writeFile(file, applyConfigEdits(existing, edits))
-        input.post({ type: "configWritten", id, ok: true })
+        await writeFile(file, text)
+        input.post({ type: "configWritten", id, ok: true, file: { scope, path: files[scope], text } })
       } catch (error) {
         input.post({
           type: "configWritten",
@@ -270,6 +273,42 @@ export function settingsHost(input: {
     }
   }
 
+  /** The Agent Manager rows read and write a project the provider owns, so the handler stays provider-scoped. */
+  const handleAgentManager = async (message: AgentManagerSettings) => {
+    const handler = input.agentManager?.()
+    if (!handler) return
+    if (message.type === "agentManagerSettings") {
+      const projects = await handler.projects(message.projectId)
+      const projectId = projects.some((project) => project.id === message.projectId)
+        ? message.projectId
+        : projects[0]?.id
+      input.post({ type: "agentManagerSettingsLoaded", requestId: message.requestId, projectId, projects })
+      return
+    }
+    if (message.type === "agentManagerSettingsBranches") {
+      const result = await handler.branches(message.projectId)
+      input.post(
+        result
+          ? { type: "agentManagerSettingsBranchesLoaded", requestId: message.requestId, ...result }
+          : { type: "agentManagerSettingsBranchesLoaded", requestId: message.requestId, projectId: message.projectId, error: "Could not read the branches of this project." },
+      )
+      return
+    }
+    if (message.type === "agentManagerSetDefaultBaseBranch") {
+      await handler.setDefaultBaseBranch(message.projectId, message.branch)
+    } else if (message.type === "agentManagerConfigureSetupScript") {
+      await handler.configureSetupScript(message.projectId)
+    }
+    // Both writes change the project snapshot, so the rows refresh from the same handler.
+    const projects = await handler.projects(message.projectId)
+    input.post({
+      type: "agentManagerSettingsLoaded",
+      requestId: message.requestId,
+      projectId: message.projectId,
+      projects,
+    })
+  }
+
   const handle = (message: ToHost) => {
     if (message.type === "configRead") {
       void readConfig()
@@ -297,6 +336,15 @@ export function settingsHost(input: {
     }
     if (message.type === "openVSCodeSettings") {
       void commands.executeCommand("workbench.action.openSettings", message.query)
+      return true
+    }
+    if (
+      message.type === "agentManagerSettings" ||
+      message.type === "agentManagerSettingsBranches" ||
+      message.type === "agentManagerSetDefaultBaseBranch" ||
+      message.type === "agentManagerConfigureSetupScript"
+    ) {
+      void handleAgentManager(message)
       return true
     }
     if (message.type === "fetchCustomProviderModels") {

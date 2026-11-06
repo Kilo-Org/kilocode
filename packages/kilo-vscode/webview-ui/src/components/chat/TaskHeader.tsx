@@ -15,6 +15,7 @@ import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { useLanguage } from "../../context/language"
 import { SessionRenameEditor } from "../shared/SessionRenameEditor"
 import { useV2 } from "../../v2/client"
+import { sessionMissing } from "../../v2/scope"
 import { setTaskTimelineVisible, taskTimelineVisible } from "../../v2/kilo-settings"
 import {
   childLabels,
@@ -39,6 +40,8 @@ import { renderable } from "../../utils/timeline/timeline-parts"
 interface TaskHeaderProps {
   sessionID: string
   readonly?: boolean
+  /** Forks the session, for surfaces that can fork it from the header. */
+  onFork?: () => void
 }
 
 export const TaskHeader: Component<TaskHeaderProps> = (props) => {
@@ -219,9 +222,14 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
           const rows: ModelUsage[][] = []
           for (const member of untrack(members)) {
             if (next.signal.aborted || version !== run) return
-            const messages = await fetchSessionMessages(v2.api, member.id, next.signal)
+            const messages = await fetchSessionMessages(v2.api, member.id, next.signal).catch((error: unknown) => {
+              // A session created here is not on the server until its create request settles. Skip only that
+              // member: the next idle revision loads the usage again.
+              if (sessionMissing(error) && v2.data.session.get(member.id)) return undefined
+              throw error
+            })
             if (next.signal.aborted || version !== run) return
-            rows.push(modelUsage(messages).models)
+            if (messages) rows.push(modelUsage(messages).models)
           }
           if (version !== run) return
           setDetailModels(mergeModelUsage(rows))
@@ -344,6 +352,17 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
                 <span>{ctx().pct ?? ctx().tokens}</span>
               </Tooltip>
             )}
+          </Show>
+          <Show when={props.onFork}>
+            <Tooltip value={language.t("agentManager.tab.forkSession")} placement="bottom">
+              <IconButton
+                icon="fork"
+                size="small"
+                variant="ghost"
+                onClick={() => props.onFork?.()}
+                aria-label={language.t("agentManager.tab.forkSession")}
+              />
+            </Tooltip>
           </Show>
           <Show when={!props.readonly}>
             <Tooltip value={language.t("command.session.compact")} placement="bottom">

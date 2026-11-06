@@ -309,6 +309,7 @@ export const dict = {
   "notification.permission.descriptionSandboxEscalation":
     "このコマンドに限り、ファイルシステムとネットワークの制限を外してコマンド全体を実行します。Git は .git に書き込む必要があります。.git はサンドボックス内では読み取り専用で、リンクされた worktree では worktree の外にあります。Bash の許可ルールと自動承認がこのプロンプトを自動で承認することはありません。",
   "ui.permission.manageAutoApprove": "自動承認ルールを管理",
+  "ui.permission.noChanges": "変更はありません。",
   "ui.permission.reject": "拒否",
   "ui.permission.feedbackPlaceholder": "Kilo にどう変更してほしいか伝える",
   "ui.permission.feedbackHint": "Enter で拒否、Esc でキャンセル",
@@ -351,6 +352,8 @@ export const dict = {
 
   "session.tab.review": "レビュー",
   "session.review.filesChanged": "{{count}} ファイル変更",
+  "session.review.viewTurnChanges": "ターンの変更を表示",
+  "session.review.turnChangesEmpty": "このターンに変更はありません。",
   "session.review.loadingChanges": "変更を読み込み中...",
   "session.review.noChanges": "変更なし",
   "session.messages.loadingEarlier": "以前のメッセージを読み込み中...",
@@ -1316,6 +1319,11 @@ export const dict = {
   "settings.display.mcpTool.description": "MCPおよび汎用ツールブロックを最初から展開するか折りたたむかを選択します。",
   "settings.display.mcpTool.expanded": "展開",
   "settings.display.mcpTool.collapsed": "折りたたみ",
+  "settings.display.codeMode.title": "Code Mode ブロック",
+  "settings.display.codeMode.description":
+    "Code Mode ブロックを、ツール呼び出しを一覧表示した状態で開始するか 1 行で開始するかを選択します。スクリプトは開くまで常に非表示です。",
+  "settings.display.codeMode.expanded": "展開",
+  "settings.display.codeMode.collapsed": "折りたたみ",
 
   "settings.display.shortcutHints.title": "ショートカットのヒントを表示",
   "settings.display.shortcutHints.description":
@@ -1441,6 +1449,8 @@ export const dict = {
   "diffViewer.source.unstaged.tooltip":
     "作業ツリーで変更されたがまだステージングされていないファイルと、追跡されていない（新しい）ファイル。",
   "diffViewer.source.session.label": "セッション",
+  "diffViewer.source.turn.tooltip": "1 回のターンで Kilo が変更したファイル。",
+  "diffViewer.source.turn.label": "ターン",
   "diffViewer.source.session.tooltip":
     "現在のセッション中に Kilo が変更したファイル。ターンごとのスナップショットに基づきます。新しいセッションを開始するとリセットされます。",
   "diffViewer.group.session": "セッション",

@@ -414,6 +414,26 @@ html[data-theme="kilo-vscode"] [data-component="bash-output"] {
     }
   }
 
+  /* A pending message shows three lines; the toggle below the bubble shows the rest. */
+  [data-slot="user-message-clamp"] {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+    overflow: hidden;
+  }
+
+  [data-slot="user-message-expand"] {
+    display: block;
+    margin-left: auto;
+    padding: 2px 0 0;
+    border: 0;
+    background: none;
+    color: var(--text-interactive-base, var(--vscode-textLink-foreground));
+    font: inherit;
+    font-size: var(--font-size-small);
+    cursor: pointer;
+  }
+
   [data-slot="user-message-queued-indicator"] {
     display: inline-flex;
     align-items: center;
@@ -815,4 +835,348 @@ html[data-theme="kilo-vscode"] [data-component="reasoning-part"] {
     opacity: 0.9;
     line-height: var(--line-height-large);
   }
+}
+
+/* Code Mode execute card. It borrows the todo ring and the working status line: a ring with one segment
+   per tool call replaces the icon, and the subtitle names the call running now. */
+[data-component="execute-tool"] {
+  --execute-ok: var(--vscode-testing-iconPassed, var(--icon-success-base));
+  --execute-accent: var(--vscode-progressBar-background, var(--text-interactive-base));
+  --execute-error: var(--icon-critical-base);
+  --execute-track: color-mix(in srgb, var(--text-weak) 32%, transparent);
+  --execute-ease: cubic-bezier(0.22, 1, 0.36, 1);
+
+  [data-slot="execute-duration"] {
+    flex: 0 0 auto;
+    color: var(--text-weak);
+    font-size: var(--font-size-small);
+    font-variant-numeric: tabular-nums;
+  }
+
+  &[data-failed] [data-component="execute-ticker"] {
+    color: var(--execute-error);
+  }
+}
+
+[data-slot="execute-ring"] {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+  flex: none;
+
+  svg {
+    display: block;
+    width: 16px;
+    height: 16px;
+    overflow: visible;
+  }
+
+  [data-component="spinner"] {
+    width: 14px;
+    color: var(--text-weak);
+  }
+
+  /* One ripple when a watched script finishes. */
+  &::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border: 2px solid var(--execute-ok);
+    border-radius: 50%;
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  &[data-celebrate]::after {
+    animation: execute-ripple 900ms var(--execute-ease);
+  }
+
+  /* A finished card is history: the check stays quiet next to the live ones. */
+  &[data-done]:not([data-celebrate]) {
+    opacity: 0.7;
+  }
+}
+
+[data-slot="execute-segment"],
+[data-slot="execute-track"],
+[data-slot="execute-fill"] {
+  fill: none;
+  stroke: var(--execute-track);
+  stroke-width: 2.2;
+  transition: stroke 300ms ease;
+}
+
+[data-slot="execute-segment"][data-status="running"] {
+  stroke: var(--execute-accent);
+  animation: execute-breathe 1.6s ease-in-out infinite;
+}
+
+[data-slot="execute-segment"][data-status="completed"],
+[data-slot="execute-fill"] {
+  stroke: var(--execute-ok);
+}
+
+[data-slot="execute-segment"][data-status="error"],
+[data-slot="execute-fill"][data-failed] {
+  stroke: var(--execute-error);
+}
+
+[data-slot="execute-fill"] {
+  stroke-linecap: round;
+  transition: stroke-dashoffset 520ms var(--execute-ease);
+}
+
+[data-slot="execute-check-bg"] {
+  fill: color-mix(in srgb, var(--execute-ok) 18%, transparent);
+  stroke: var(--execute-ok);
+  stroke-width: 1.6;
+}
+
+[data-slot="execute-check"] {
+  fill: none;
+  stroke: var(--execute-ok);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 12;
+
+  [data-celebrate] & {
+    animation: execute-check-draw 380ms ease-out 160ms backwards;
+  }
+}
+
+/* Both lines share one cell, so the outgoing line never widens the subtitle. The padding gives the lines
+   room to travel without changing the row height. */
+[data-component="execute-ticker"] {
+  display: inline-grid;
+  grid-template-columns: minmax(0, 1fr);
+  padding-block: 0.6em;
+  margin-block: -0.6em;
+}
+
+[data-slot="execute-ticker-line"] {
+  grid-area: 1 / 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  animation: execute-line-in 240ms var(--execute-ease) both;
+
+  &[data-still] {
+    animation: none;
+  }
+
+  &[data-old] {
+    animation: execute-line-out 180ms var(--execute-ease) forwards;
+  }
+}
+
+[data-slot="execute-body"] {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 2px 0 0 2px;
+  font-family: var(--font-family-sans);
+  font-size: var(--font-size-small);
+  line-height: var(--line-height-large);
+  color: var(--text-base);
+}
+
+[data-slot="execute-calls"] {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+[data-slot="execute-call"][data-live] {
+  animation: execute-line-in 240ms var(--execute-ease) both;
+}
+
+[data-slot="execute-call"] {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  min-width: 0;
+  padding-block: 2px;
+  font-family: var(--font-family-mono);
+  font-feature-settings: var(--font-family-mono--font-feature-settings);
+  font-size: var(--kilo-font-size-12, 12px);
+  line-height: 18px;
+}
+
+/* The arguments keep the order the script sent them, so a long first value would hide the rest on one line.
+   Two lines show both, and the title carries the full text. */
+[data-slot="execute-call-text"] {
+  min-width: 0;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  /* Fill both lines; breaking only at spaces would push a long URL to the second line and cut it there. */
+  word-break: break-all;
+}
+
+[data-slot="execute-call-mark"] {
+  display: inline-grid;
+  place-items: center;
+  width: 14px;
+  height: 18px;
+  flex: none;
+  color: var(--text-weak);
+
+  [data-component="spinner"] {
+    width: 12px;
+  }
+
+  [data-status="error"] & {
+    color: var(--execute-error);
+  }
+}
+
+/* A status this client does not know yet: shown, but neutral. */
+[data-slot="execute-call-dot"] {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+[data-slot="execute-call-name"] {
+  color: var(--text-strong);
+}
+
+[data-slot="execute-call-args"] {
+  color: var(--text-weak);
+}
+
+[data-slot="execute-call"][data-status="error"] [data-slot="execute-call-name"] {
+  color: var(--execute-error);
+}
+
+[data-slot="execute-error"] {
+  display: block;
+  padding-left: 22px;
+  color: var(--execute-error);
+  overflow-wrap: anywhere;
+}
+
+[data-slot="execute-more"],
+[data-slot="execute-script-toggle"] {
+  all: unset;
+  align-self: flex-start;
+  padding-left: 22px;
+  min-height: 22px;
+  color: var(--text-weak);
+  cursor: pointer;
+
+  &:hover {
+    color: var(--text-base);
+  }
+
+  &:focus-visible {
+    outline: 1px solid var(--border-interactive-base, var(--text-interactive-base));
+    outline-offset: 2px;
+    border-radius: 2px;
+  }
+}
+
+[data-slot="execute-script-toggle"] {
+  margin-top: 2px;
+}
+
+[data-slot="execute-details"] {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+[data-slot="execute-details-section"] {
+  border: 1px solid var(--border-weak-base);
+  border-radius: var(--radius-sm, 4px);
+  background: var(--surface-tool-output-base, var(--surface-raised-base));
+  overflow: hidden;
+
+  [data-component="file"] {
+    max-height: 320px;
+    overflow: auto;
+  }
+}
+
+[data-slot="execute-details-header"] {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 26px;
+  padding: 0 4px 0 10px;
+  font-size: 11px;
+  color: var(--text-weak);
+}
+
+[data-slot="execute-details-error"] {
+  margin: 0;
+  padding: 4px 10px 8px;
+  max-height: 320px;
+  overflow: auto;
+  font-family: var(--font-family-mono);
+  font-size: var(--kilo-font-size-12, 12px);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  color: var(--execute-error);
+}
+
+@keyframes execute-line-in {
+  from {
+    opacity: 0;
+    filter: blur(1.5px);
+    transform: translateY(0.45em);
+  }
+}
+
+@keyframes execute-line-out {
+  to {
+    opacity: 0;
+    filter: blur(1.5px);
+    transform: translateY(-0.45em);
+  }
+}
+
+@keyframes execute-breathe {
+  50% {
+    opacity: 0.45;
+  }
+}
+
+@keyframes execute-check-draw {
+  from {
+    stroke-dashoffset: 12;
+  }
+}
+
+@keyframes execute-ripple {
+  0% {
+    opacity: 0.7;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(2.8);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-component="execute-tool"] *,
+  [data-component="execute-tool"] *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+body.vscode-reduce-motion [data-component="execute-tool"] :is(*, *::after) {
+  animation: none !important;
+  transition: none !important;
 }

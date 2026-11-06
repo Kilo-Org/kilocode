@@ -1,58 +1,33 @@
-// The v2 sidebar and the Settings panel: main's providers for theme, dialogs, language and rich content, with the v2
-// data layer. The host pushes `kilo-code.v2.*` changes here, so the language and the font size follow without a reload.
-import { onCleanup, Show, type ParentComponent } from "solid-js"
-import { DialogProvider } from "@kilocode/kilo-ui/context/dialog"
-import { ThemeProvider } from "@kilocode/kilo-ui/theme"
-import { Toast } from "@kilocode/kilo-ui/toast"
-import { LanguageProvider } from "../context/language"
-import { RichProvider } from "../context/rich-provider"
-import { useVSCode, VSCodeProvider } from "../context/vscode"
+// The v2 sidebar: the shared webview providers with the v2 data layer. The Settings and Profile panels have their
+// own entry (`webview-ui/settings`), so this bundle carries only the chat transcript and its content.
 import { SpeechToTextStatusProvider } from "../components/speech-to-text/status"
+import { NotificationsProvider } from "../context/notifications"
+import { WorkStyleProvider } from "../context/work-style"
+import { IndexingProvider } from "../context/indexing"
+import { KiloEmbeddingModelsProvider } from "../context/kilo-embedding-models"
 import { Chat } from "./chat"
 import { V2Provider } from "./client"
-import { applyKiloSettings, kiloSettings } from "./kilo-settings"
-import { SettingsView } from "./settings"
+import { WebviewShell } from "./shell"
 import "../styles/chat.css"
 
 export default function App(props: { directory: string; view: string }) {
   return (
-    <ThemeProvider defaultTheme="kilo-vscode">
-      <DialogProvider>
-        <VSCodeProvider>
-          <LiveSettings directory={props.directory} view={props.view} />
-        </VSCodeProvider>
-        <Toast.Region />
-      </DialogProvider>
-    </ThemeProvider>
-  )
-}
-
-/** The language and font size follow the pushed `kilo-code.v2.*` settings. */
-const LiveSettings: ParentComponent<{ directory: string; view: string }> = (props) => {
-  const vscode = useVSCode()
-  // The VS Code language is fixed at load; the resolved locale later rewrites `document.documentElement.lang`.
-  const vscodeLanguage = document.documentElement.lang
-  const unsubscribe = vscode.onMessage((raw) => {
-    const message = raw as unknown as { type?: string; values?: Record<string, unknown> }
-    if (message.type === "vscodeSettingsLoaded" && message.values) applyKiloSettings(message.values)
-  })
-  onCleanup(unsubscribe)
-  return (
-    <LanguageProvider
-      vscodeLanguage={() => vscodeLanguage}
-      languageOverride={() => kiloSettings().language as string | undefined}
-    >
-      <RichProvider>
-        <V2Provider directory={props.directory}>
-          <SpeechToTextStatusProvider>
-            <div class="container">
-              <Show when={props.view === "settings"} fallback={<Chat />}>
-                <SettingsView />
-              </Show>
-            </div>
-          </SpeechToTextStatusProvider>
-        </V2Provider>
-      </RichProvider>
-    </LanguageProvider>
+    <WebviewShell>
+      <V2Provider directory={props.directory}>
+        <KiloEmbeddingModelsProvider>
+          <IndexingProvider>
+            <NotificationsProvider>
+              <SpeechToTextStatusProvider>
+                <div class="container">
+                  <WorkStyleProvider>
+                    <Chat />
+                  </WorkStyleProvider>
+                </div>
+              </SpeechToTextStatusProvider>
+            </NotificationsProvider>
+          </IndexingProvider>
+        </KiloEmbeddingModelsProvider>
+      </V2Provider>
+    </WebviewShell>
   )
 }

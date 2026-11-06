@@ -53,6 +53,25 @@ test("evicts a whole family while preserving metadata and attention", async () =
   }
 })
 
+// kilocode_change start
+test("evicts one session's messages without clearing its family", async () => {
+  const setup = fixture()
+  try {
+    await setup.data.session.message.sync("ses_parent")
+    await setup.data.session.message.sync("ses_child")
+
+    setup.data.session.message.evict("ses_child")
+
+    expect(setup.data.session.message.list("ses_child")).toEqual([])
+    expect(setup.data.session.message.get("ses_child", "msg_page")).toBeUndefined()
+    // The parent transcript stays loaded, because the inspector releases only the subagent.
+    expect(setup.data.session.message.get("ses_parent", "msg_page")).toBeDefined()
+  } finally {
+    setup.dispose()
+  }
+})
+// kilocode_change end
+
 test("evicting an in-flight read leaves the next sync invalidated", async () => {
   const requested = Promise.withResolvers<void>()
   const release = Promise.withResolvers<void>()

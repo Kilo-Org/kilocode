@@ -310,6 +310,7 @@ export const dict = {
   "notification.permission.descriptionSandboxEscalation":
     "Команда повністю виконується без обмежень файлової системи та мережі, лише для цієї команди. Git має записувати в .git, який доступний лише для читання в пісочниці та розташований поза робочим деревом у пов'язаному worktree. Правила дозволів Bash і автоматичне схвалення ніколи не схвалюють цей запит автоматично.",
   "ui.permission.manageAutoApprove": "Керувати правилами автоматичного схвалення",
+  "ui.permission.noChanges": "Змін немає.",
   "ui.permission.reject": "Відхилити",
   "ui.permission.feedbackPlaceholder": "Скажіть Kilo, що зробити інакше",
   "ui.permission.feedbackHint": "Enter для відхилення, Esc для скасування",
@@ -353,6 +354,8 @@ export const dict = {
 
   "session.tab.review": "Огляд",
   "session.review.filesChanged": "{{count}} файлів змінено",
+  "session.review.viewTurnChanges": "Переглянути зміни за хід",
+  "session.review.turnChangesEmpty": "У цьому ході немає змін.",
   "session.review.loadingChanges": "Завантаження змін...",
   "session.review.noChanges": "Змін немає",
 
@@ -1281,6 +1284,11 @@ export const dict = {
     "Виберіть, чи будуть блоки MCP та загальних інструментів спочатку розгорнутими чи згорнутими.",
   "settings.display.mcpTool.expanded": "Розгорнуті",
   "settings.display.mcpTool.collapsed": "Згорнуті",
+  "settings.display.codeMode.title": "Блоки Code Mode",
+  "settings.display.codeMode.description":
+    "Виберіть, чи блоки Code Mode починаються зі списку викликів інструментів, чи з одного рядка. Скрипт завжди залишається прихованим, доки ви його не відкриєте.",
+  "settings.display.codeMode.expanded": "Розгорнуті",
+  "settings.display.codeMode.collapsed": "Згорнуті",
 
   "settings.display.shortcutHints.title": "Показувати підказки клавіш",
   "settings.display.shortcutHints.description":
@@ -1465,6 +1473,8 @@ export const dict = {
   "diffViewer.source.unstaged.tooltip":
     "Файли, змінені в робочому дереві, але ще не підготовлені, плюс невідстежувані (нові) файли.",
   "diffViewer.source.session.label": "Сесія",
+  "diffViewer.source.turn.tooltip": "Файли, змінені Kilo за один хід.",
+  "diffViewer.source.turn.label": "Хід",
   "diffViewer.source.session.tooltip":
     "Файли, змінені Kilo під час поточної сесії, на основі знімків по ходу. Скидається при старті нової сесії.",
   "diffViewer.group.session": "Сесія",

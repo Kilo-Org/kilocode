@@ -165,6 +165,10 @@ describe("KiloAgentPlugin", () => {
       expect(effect("edit", "src/index.ts")).toBe("deny")
       expect(effect("subagent", "general")).toBe("deny")
       expect(effect("unknown_plugin_tool", "*")).toBe("deny")
+      // A notebook MCP server emits `notebook_*`, so the read-only modes deny all three actions.
+      expect(effect("notebook_read", "book.ipynb")).toBe("deny")
+      expect(effect("notebook_edit", "book.ipynb")).toBe("deny")
+      expect(effect("notebook_execute", "book.ipynb")).toBe("deny")
       expect(effect("shell", "git log -5")).toBe("allow")
       expect(effect("shell", "gh pr view 1")).toBe("allow")
       expect(effect("shell", "gh pr merge 1")).toBe("ask")
@@ -190,6 +194,167 @@ describe("KiloAgentPlugin", () => {
       expect(Permission.evaluate("skill", "review", rules).effect).toBe("allow")
       expect(Permission.evaluate("shell", "ls", rules).effect).toBe("deny")
       expect(Permission.evaluate("edit", "src/index.ts", rules).effect).toBe("deny")
+    }),
+  )
+
+  it.effect("limits Explore to read-only shell and denies gh and find", () =>
+    Effect.gen(function* () {
+      yield* setup()
+      const rules = yield* permissions("explore")
+      const effect = (action: string, resource: string) => Permission.evaluate(action, resource, rules).effect
+      // The 28 read-only commands in the shared allowlist.
+      for (const command of [
+        "cat a",
+        "head a",
+        "tail a",
+        "less a",
+        "ls -la",
+        "tree .",
+        "pwd",
+        "echo hi",
+        "wc -l a",
+        "which node",
+        "type cd",
+        "file a",
+        "diff a b",
+        "du -sh .",
+        "df -h",
+        "date",
+        "uname -a",
+        "whoami",
+        "printenv PATH",
+        "man ls",
+        "grep x a",
+        "rg x",
+        "ag x",
+        "sort a",
+        "uniq a",
+        "cut -f1 a",
+        "tr a b",
+        "jq . a",
+      ])
+        expect(effect("shell", command)).toBe("allow")
+      // The 20 read-only git subcommands.
+      for (const command of [
+        "git log -5",
+        "git show HEAD",
+        "git diff",
+        "git status",
+        "git blame a",
+        "git rev-parse HEAD",
+        "git rev-list HEAD",
+        "git ls-files",
+        "git ls-tree HEAD",
+        "git ls-remote origin",
+        "git shortlog",
+        "git describe",
+        "git cat-file -p HEAD",
+        "git name-rev HEAD",
+        "git stash list",
+        "git tag -l",
+        "git branch --list",
+        "git branch -a",
+        "git branch -r",
+        "git remote -v",
+      ])
+        expect(effect("shell", command)).toBe("allow")
+      // Mutating git and arbitrary commands still need approval or are denied.
+      expect(effect("shell", "git push")).toBe("deny")
+      expect(effect("shell", "rm -rf src")).toBe("deny")
+      expect(effect("shell", "cat a > b")).toBe("deny")
+      // Explore cannot answer a prompt, so gh is denied rather than asked, and find is denied outright.
+      expect(effect("shell", "gh pr view 1")).toBe("deny")
+      expect(effect("shell", "find . -name x")).toBe("deny")
+      // The rest of the Explore tool set is unchanged.
+      expect(effect("grep", "*")).toBe("allow")
+      expect(effect("glob", "*")).toBe("allow")
+      expect(effect("read", "src/index.ts")).toBe("allow")
+      expect(effect("read", ".env")).toBe("ask")
+      expect(effect("subagent", "general")).toBe("deny")
+      expect(effect("edit", "src/index.ts")).toBe("deny")
+    }),
+  )
+
+  it.effect("keeps Explore read-only when global config allows more shell", () =>
+    Effect.gen(function* () {
+      const { agents } = yield* configure({
+        permissions: [{ action: "shell", resource: "*", effect: "allow" }],
+      })
+      const explore = yield* agents.get(Agent.ID.make("explore"))
+      const effect = (action: string, resource: string) =>
+        Permission.evaluate(action, resource, explore?.permissions ?? []).effect
+      expect(effect("shell", "git log -5")).toBe("allow")
+      expect(effect("shell", "git push")).toBe("deny")
+      expect(effect("shell", "rm -rf src")).toBe("deny")
+      expect(effect("shell", "gh pr view 1")).toBe("deny")
+      expect(effect("shell", "find . -name x")).toBe("deny")
+    }),
+  )
+
+  it.effect("keeps Explore read-only when a per-agent config allows more shell", () =>
+    Effect.gen(function* () {
+      const { agents } = yield* configure({
+        agents: { explore: { permissions: [{ action: "shell", resource: "*", effect: "allow" }] } },
+      })
+      const explore = yield* agents.get(Agent.ID.make("explore"))
+      const effect = (action: string, resource: string) =>
+        Permission.evaluate(action, resource, explore?.permissions ?? []).effect
+      expect(effect("shell", "git log -5")).toBe("allow")
+      expect(effect("shell", "git push")).toBe("deny")
+      expect(effect("shell", "rm -rf src")).toBe("deny")
+      expect(effect("shell", "gh pr view 1")).toBe("deny")
+      expect(effect("shell", "find . -name x")).toBe("deny")
+    }),
+  )
+
+  it.effect("keeps a global shell deny on a read-only command denied for Explore", () =>
+    Effect.gen(function* () {
+      const { agents } = yield* configure({
+        permissions: [{ action: "shell", resource: "git log *", effect: "deny" }],
+      })
+      const explore = yield* agents.get(Agent.ID.make("explore"))
+      const effect = (resource: string) => Permission.evaluate("shell", resource, explore?.permissions ?? []).effect
+      // A user deny on a command the table allows stays denied; other read-only commands still work.
+      expect(effect("git log -5")).toBe("deny")
+      expect(effect("cat a")).toBe("allow")
+    }),
+  )
+
+  it.effect("keeps a per-agent shell deny on a read-only command denied for Explore", () =>
+    Effect.gen(function* () {
+      const { agents } = yield* configure({
+        agents: { explore: { permissions: [{ action: "shell", resource: "cat *", effect: "deny" }] } },
+      })
+      const explore = yield* agents.get(Agent.ID.make("explore"))
+      const effect = (resource: string) => Permission.evaluate("shell", resource, explore?.permissions ?? []).effect
+      expect(effect("cat a")).toBe("deny")
+      expect(effect("git log -5")).toBe("allow")
+    }),
+  )
+
+  it.effect("keeps a broad global shell deny on Explore denied", () =>
+    Effect.gen(function* () {
+      const { agents } = yield* configure({ permissions: [{ action: "shell", resource: "*", effect: "deny" }] })
+      const explore = yield* agents.get(Agent.ID.make("explore"))
+      expect(Permission.evaluate("shell", "cat a", explore?.permissions ?? []).effect).toBe("deny")
+    }),
+  )
+
+  it.effect("keeps a broad global catch-all deny on Explore shell denied", () =>
+    Effect.gen(function* () {
+      const { agents } = yield* configure({ permissions: [{ action: "*", resource: "*", effect: "deny" }] })
+      const explore = yield* agents.get(Agent.ID.make("explore"))
+      expect(Permission.evaluate("shell", "cat a", explore?.permissions ?? []).effect).toBe("deny")
+    }),
+  )
+
+  it.effect("keeps a broad per-agent shell deny on Explore denied", () =>
+    Effect.gen(function* () {
+      const { agents } = yield* configure({
+        agents: { explore: { permissions: [{ action: "shell", resource: "*", effect: "deny" }] } },
+      })
+      const explore = yield* agents.get(Agent.ID.make("explore"))
+      expect(Permission.evaluate("shell", "cat a", explore?.permissions ?? []).effect).toBe("deny")
     }),
   )
 

@@ -309,6 +309,7 @@ export const dict = {
   "notification.permission.descriptionSandboxEscalation":
     "Ovo izvršava cijelu komandu bez ograničenja datotečnog sistema i mreže, samo za ovu komandu. Git mora pisati u .git, koji je samo za čitanje u sandboxu i nalazi se izvan radnog stabla u povezanom worktreeu. Bash pravila dozvola i automatsko odobravanje nikada ne odobravaju ovaj upit automatski.",
   "ui.permission.manageAutoApprove": "Upravljanje pravilima automatskog odobravanja",
+  "ui.permission.noChanges": "Nema promjena.",
   "ui.permission.reject": "Odbij",
   "ui.permission.feedbackPlaceholder": "Recite Kilu šta da uradi drugačije",
   "ui.permission.feedbackHint": "Enter za odbijanje, Esc za otkazivanje",
@@ -351,6 +352,8 @@ export const dict = {
 
   "session.tab.review": "Pregled",
   "session.review.filesChanged": "Izmijenjeno {{count}} datoteka",
+  "session.review.viewTurnChanges": "Prikaži promjene u turi",
+  "session.review.turnChangesEmpty": "Nema promjena u ovoj turi.",
   "session.review.loadingChanges": "Učitavanje izmjena...",
   "session.review.noChanges": "Nema izmjena",
 
@@ -1327,6 +1330,11 @@ export const dict = {
     "Odaberite da li će blokovi MCP i generičkih alata u početku biti prošireni ili sažeti.",
   "settings.display.mcpTool.expanded": "Prošireni",
   "settings.display.mcpTool.collapsed": "Sažeti",
+  "settings.display.codeMode.title": "Blokovi Code Mode",
+  "settings.display.codeMode.description":
+    "Odaberite da li blokovi Code Mode počinju s navedenim pozivima alata ili kao jedan red. Skripta je uvijek skrivena dok je ne otvorite.",
+  "settings.display.codeMode.expanded": "Prošireni",
+  "settings.display.codeMode.collapsed": "Sažeti",
 
   "settings.display.shortcutHints.title": "Prikaži savjete za prečice",
   "settings.display.shortcutHints.description":
@@ -1453,6 +1461,8 @@ export const dict = {
   "diffViewer.source.unstaged.tooltip":
     "Datoteke izmijenjene u radnom stablu ali još nisu pripremljene, plus nepraćene (nove) datoteke.",
   "diffViewer.source.session.label": "Sesija",
+  "diffViewer.source.turn.tooltip": "Datoteke koje je Kilo promijenio tokom jedne ture.",
+  "diffViewer.source.turn.label": "Tura",
   "diffViewer.source.session.tooltip":
     "Datoteke koje je Kilo promijenio tokom trenutne sesije, na osnovu snapshota po koraku. Resetuje se kada pokrenete novu sesiju.",
   "diffViewer.group.session": "Sesija",

@@ -1,9 +1,10 @@
 import type { SessionMessageAssistant } from "@opencode/client"
-import { createMemo, createSignal, For, Show, type JSX } from "solid-js"
+import { createEffect, createMemo, createSignal, For, on, Show, type JSX } from "solid-js"
 import { Button } from "@kilocode/kilo-ui/button"
 import { ContentPart, useGrowIn, type ToolActions } from "@kilocode/kilo-ui/message-part"
 import { Card } from "@kilocode/kilo-ui/card"
 import { Collapsible } from "@kilocode/kilo-ui/collapsible"
+import { DiffChanges } from "@kilocode/kilo-ui/diff-changes"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { useToolMotion, useToolSize } from "@kilocode/kilo-ui/tool-motion"
@@ -18,8 +19,9 @@ import { useV2 } from "./client"
 import { displaySettings } from "./display-settings"
 import { tokenThroughputVisible } from "./kilo-settings"
 import { mcpServerFromError } from "./mcp-error"
-import { formatTokenThroughput, turnMetadata } from "./message-status"
+import { formatTokenThroughput, type TurnMetadata } from "./message-status"
 import { toolDefaultOpen } from "./tool-default-open"
+import { turnDiffs, type TurnFile } from "./turn-diffs"
 
 export function AssistantMessage(props: {
   message: SessionMessageAssistant
@@ -27,23 +29,52 @@ export function AssistantMessage(props: {
   actions?: ToolActions
   /** The task-timeline bar under the pointer or keyboard focus, if any. */
   highlight?: () => TimelineHighlight | undefined
+  /** The message content rendered by this row. A large message is split across several rows. */
+  parts?: SessionMessageAssistant["content"]
+  /** Index of the first rendered content item in the message. */
+  start?: number
+  /** The turn footer metadata, attached to the turn's carrier row by the transcript partition. */
+  metadata?: TurnMetadata
+  /** The user message that started the turn, used to read the turn's changes. */
+  userTurn?: string
+  rowKey?: string
+  /** Opens the files changed by this turn. */
+  onViewTurnChanges?: () => void
 }) {
   const v2 = useV2()
   const language = useLanguage()
   const vscode = useVSCode()
   const done = () => props.message.time.completed !== undefined
-  const copy = () =>
-    done() ? props.message.content.findLastIndex((item) => item.type === "text" && !!item.text.trim()) : -1
-  const messages = () => v2.data.session.message.list(props.session)
-  // The turn's terminal step drives the timing and rate; its last text-bearing
-  // step carries them, so an empty or error-terminal step still shows them on
-  // the earlier text row.
-  const metadata = createMemo(() => turnMetadata(props.message, messages()))
-  const isCarrier = () => metadata()?.carrierID === props.message.id
-  const timing = createMemo(() => (isCarrier() ? metadata()?.timing : undefined))
-  const throughputValue = createMemo(() =>
-    isCarrier() && tokenThroughputVisible() ? metadata()?.tokensPerSecond : undefined,
+  // Each step is its own message, so only the turn's carrier step gets the copy row, which keeps it to one per turn.
+  const copy = createMemo(() =>
+    done() && props.metadata
+      ? props.message.content.findLastIndex((item) => item.type === "text" && !!item.text.trim())
+      : -1,
   )
+  const parts = () => props.parts ?? props.message.content
+  const offset = () => props.start ?? 0
+  // The error belongs to the whole message, so only its last row renders it.
+  const lastChunk = () => offset() + parts().length >= props.message.content.length
+  // A completed turn keeps its changed files, read once and reused when the row mounts again.
+  const [turnFiles, setTurnFiles] = createSignal<TurnFile[]>([])
+  createEffect(
+    on(
+      () => [props.metadata, props.userTurn, lastChunk()] as const,
+      ([metadata, turn]) => {
+        if (!metadata || !turn || !lastChunk()) return
+        const cached = turnDiffs.read(props.session, turn)
+        if (cached) return setTurnFiles(cached)
+        void turnDiffs
+          .request(props.session, turn, (query) => v2.api.session.diff(query))
+          .then(setTurnFiles, (error: unknown) => {
+            console.error("[Kilo New] Failed to read the turn changes", error)
+            setTurnFiles([])
+          })
+      },
+    ),
+  )
+  const timing = () => props.metadata?.timing
+  const throughputValue = () => (tokenThroughputVisible() ? props.metadata?.tokensPerSecond : undefined)
   const throughputEl = createMemo<JSX.Element | undefined>(() => {
     const value = throughputValue()
     if (value === undefined) return undefined
@@ -89,32 +120,33 @@ export function AssistantMessage(props: {
   }
   // The todo list is a status row rather than a tool block, so it stays open as before; every other tool follows
   // the display layouts.
-  const defaultOpen = (tool: string) =>
-    tool === "todowrite" ? true : toolDefaultOpen(tool, displaySettings())
+  const defaultOpen = (tool: string) => (tool === "todowrite" ? true : toolDefaultOpen(tool, displaySettings()))
   return (
     <div
       class="vscode-session-turn"
       data-row="assistant"
       data-message={props.message.id}
       data-session={props.session}
+      data-row-key={props.rowKey}
       data-live={!done() ? "" : undefined}
     >
       <div class="vscode-session-turn-assistant">
-        <For each={props.message.content}>
+        <For each={parts()}>
           {(item, index) => {
+            const at = () => offset() + index()
             const [el, setEl] = createSignal<HTMLDivElement>()
             const [body, setBody] = createSignal<HTMLDivElement>()
             const motion =
               item.type === "tool" ? useToolMotion({ id: item.id, status: () => item.state.status }) : undefined
             if (motion) useToolSize({ el, body, active: () => motion.live() && !done(), motion })
-            // As on v1: a live text part reveals with a grow-in; reasoning and tool parts animate their own height.
+            // A live text part reveals with a grow-in; reasoning and tool parts animate their own height.
             useGrowIn(el, item.type === "text" && !done())
-            const key = partKey(props.message.id, item, index())
+            const key = partKey(props.message.id, item, at())
             const highlighted = () =>
               props.highlight?.()?.msgId === props.message.id && props.highlight?.()?.partId === key
             const highlightColor = () => {
               if (!highlighted()) return undefined
-              const part = timelinePart(props.message, item, index())
+              const part = timelinePart(props.message, item, at())
               return part ? color(part) : undefined
             }
             return (
@@ -141,26 +173,59 @@ export function AssistantMessage(props: {
                 }}
               >
                 <div ref={setBody} data-slot="tool-part-body">
-                  <ContentPart
-                    item={item}
-                    message={props.message}
-                    index={index()}
-                    directory={v2.directory}
-                    open={v2.open}
-                    copy={index() === copy()}
-                    throughput={index() === copy() ? throughputEl() : undefined}
-                    turnMeta={index() === copy() ? turnMetaEl() : undefined}
-                    settled={index() < props.message.content.length - 1}
-                    defaultOpen={item.type === "tool" ? defaultOpen(item.name) : undefined}
-                    actions={props.actions}
-                    errorAction={errorAction}
-                  />
+                  {/* A card reads its open state once. Keying it on its own layout remounts only the cards whose
+                      layout changed, so a settings change shows in open sessions at once. */}
+                  <Show when={item.type === "tool" ? `layout:${defaultOpen(item.name)}` : "content"} keyed>
+                    {(_layout) => (
+                      <ContentPart
+                        item={item}
+                        message={props.message}
+                        index={at()}
+                        session={props.session}
+                        directory={v2.directory}
+                        open={v2.open}
+                        copy={at() === copy()}
+                        throughput={at() === copy() ? throughputEl() : undefined}
+                        turnMeta={at() === copy() ? turnMetaEl() : undefined}
+                        settled={at() < props.message.content.length - 1}
+                        defaultOpen={item.type === "tool" ? defaultOpen(item.name) : undefined}
+                        reasoningDisplay={displaySettings().reasoningDisplay}
+                        actions={props.actions}
+                        errorAction={errorAction}
+                      />
+                    )}
+                  </Show>
                 </div>
               </div>
             )
           }}
         </For>
-        <Show when={props.message.error}>{(error) => <ErrorCard error={error()} />}</Show>
+        <Show when={props.onViewTurnChanges && lastChunk() && turnFiles().length > 0}>
+          <div class="vscode-session-turn-diffs" data-component="session-turn">
+            <button
+              type="button"
+              class="vscode-session-turn-diffs-trigger"
+              onClick={() => props.onViewTurnChanges?.()}
+              aria-label={language.t("ui.sessionReview.change.modified")}
+            >
+              <span data-slot="session-turn-diffs-label">{language.t("ui.sessionReview.change.modified")}</span>
+              <span data-slot="session-turn-diffs-count">
+                {turnFiles().length}{" "}
+                {language.t(turnFiles().length === 1 ? "ui.common.file.one" : "ui.common.file.other")}
+              </span>
+              <span data-slot="session-turn-diffs-meta">
+                <DiffChanges changes={turnFiles()} variant="bars" />
+              </span>
+              <span data-slot="session-turn-diffs-chevron" aria-hidden="true">
+                <Icon name="chevron-right" size="small" />
+              </span>
+            </button>
+          </div>
+        </Show>
+        {/* A step the user stopped is not a failure: its partial output stays and the run continues or ends. */}
+        <Show when={lastChunk() && props.message.error?.type !== "aborted" ? props.message.error : undefined}>
+          {(error) => <ErrorCard error={error()} />}
+        </Show>
       </div>
     </div>
   )

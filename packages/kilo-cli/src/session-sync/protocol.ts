@@ -1,0 +1,367 @@
+import { createHash } from "node:crypto"
+import { lookup } from "node:dns/promises"
+import { isIP } from "node:net"
+import { Effect, Schema } from "effect"
+
+export const limits = {
+  changes: 64,
+  batch: 512 * 1024,
+  inline: 64 * 1024,
+  blob: 8 * 1024 * 1024,
+  session: 256 * 1024 * 1024,
+  jsonValueNodes: 8192,
+  jsonValueDepth: 64,
+  jsonBatchNodes: 32768,
+  jsonBatchDepth: 67,
+}
+export const Kind = Schema.Literals([
+  "session",
+  "message",
+  "message-part",
+  "inbox",
+  "instruction-entry",
+  "instruction-state",
+  "instruction-blob",
+  "asset",
+])
+export type Kind = typeof Kind.Type
+export const Tenant = Schema.Struct({ type: Schema.Literals(["user", "organization"]), id: Schema.String })
+export type Tenant = typeof Tenant.Type
+export const Grant = Schema.Struct({
+  version: Schema.Literal(1),
+  token: Schema.String,
+  expiresAt: Schema.String,
+  tenant: Tenant,
+  userID: Schema.String,
+})
+export type Grant = typeof Grant.Type
+export const Receipt = Schema.Struct({
+  version: Schema.Literal(1),
+  sessionID: Schema.String,
+  batchID: Schema.String,
+  after: Schema.Number,
+  through: Schema.Number,
+  revision: Schema.Number,
+  changes: Schema.Number,
+  digest: Schema.String,
+  committedAt: Schema.Number,
+})
+export type Receipt = typeof Receipt.Type
+export const State = Schema.Union([
+  Schema.Struct({ version: Schema.Literal(1), sessionID: Schema.String, deleted: Schema.Literal(true) }),
+  Schema.Struct({
+    version: Schema.Literal(1),
+    sessionID: Schema.String,
+    deleted: Schema.Literal(false),
+    tenant: Tenant,
+    creatorID: Schema.String,
+    sourceID: Schema.String,
+    position: Schema.Number,
+    lastReceipt: Schema.NullOr(Receipt),
+  }),
+])
+export type State = typeof State.Type
+export type BlobRef = { hash: string; bytes: number }
+export type Change =
+  | { op: "put"; kind: Kind; id: string; value: Schema.Json }
+  | { op: "put"; kind: Kind; id: string; blob: BlobRef }
+  | {
+      op: "remove"
+      kind: Exclude<Kind, "session">
+      id: string
+      cause: "revert" | "cancel" | "instruction-removed" | "consumed" | "part-removed"
+    }
+
+export class Failure extends Schema.TaggedError<Failure>()("SessionSyncFailure", {
+  code: Schema.String,
+  message: Schema.String,
+  retryable: Schema.Boolean,
+  retryAt: Schema.optional(Schema.Number),
+  hash: Schema.optional(Schema.String),
+}) {}
+
+export const fail = (code: string, message: string, retryable = false, retryAt?: number, hash?: string) =>
+  new Failure({
+    code,
+    message,
+    retryable,
+    ...(retryAt === undefined ? {} : { retryAt }),
+    ...(hash === undefined ? {} : { hash }),
+  })
+
+export const retryTime = (attempts: number, retryAt = 0, now = Date.now(), random = Math.random()) =>
+  Math.max(now, retryAt) + Math.floor(random * Math.min(60_000, 1000 * 2 ** Math.min(attempts, 6)))
+
+const retryHeader = (value: string | null, now: number) => {
+  if (value === null) return 0
+  if (/^\d+$/.test(value.trim())) return now + Number(value) * 1000
+  const date = Date.parse(value)
+  return Number.isFinite(date) ? date : 0
+}
+export const digest = (bytes: string | Uint8Array) => createHash("sha256").update(bytes).digest("hex")
+export const json = Schema.decodeUnknownSync(Schema.Json)
+export const parse = Schema.decodeUnknownSync(Schema.fromJsonString(Schema.Json))
+export const sameTenant = (a: Tenant, b: Tenant) => a.type === b.type && a.id === b.id
+
+// Keys and values/containers each count as a node. Keys add no depth; a root container
+// has depth one. Stop at the bound without allocating a second tree or traversing the rest.
+export function jsonNodes(value: unknown, maxDepth = limits.jsonValueDepth, maxNodes = limits.jsonValueNodes) {
+  let nodes = 0
+  const visit = (item: unknown, depth: number): boolean => {
+    if (++nodes > maxNodes) return false
+    if (item === null || typeof item !== "object") return true
+    if (depth >= maxDepth) return false
+    if (Array.isArray(item)) {
+      for (const child of item) if (!visit(child, depth + 1)) return false
+      return true
+    }
+    for (const key in item) {
+      if (++nodes > maxNodes || !visit((item as Record<string, unknown>)[key], depth + 1)) return false
+    }
+    return true
+  }
+  return visit(value, 0) ? nodes : undefined
+}
+
+const object = (value: Schema.Json | undefined): value is { [key: string]: Schema.Json } =>
+  value !== null && value !== undefined && typeof value === "object" && !Array.isArray(value)
+
+/**
+ * Reconstruct a message from one revision-consistent entity snapshot. Callers resolve entity blobs
+ * first and pass the source position from that same snapshot, never from a later state request.
+ * Incomplete/deferred snapshots deliberately expose no purportedly complete transcript.
+ */
+export function reconstructMessage(
+  value: Schema.Json,
+  parts: readonly Schema.Json[],
+  position: number,
+): { complete: false } | { complete: true; value: Schema.Json } {
+  if (!object(value) || !object(value.message)) return { complete: false }
+  if (value.parts === undefined) return { complete: true, value }
+  if (!object(value.parts) || value.message.type !== "assistant" || typeof value.message.id !== "string")
+    return { complete: false }
+  const count = value.parts.count
+  const messageID = value.message.id
+  const through = value.parts.through
+  if (
+    typeof count !== "number" ||
+    !Number.isSafeInteger(count) ||
+    count < 1 ||
+    typeof through !== "number" ||
+    !Number.isSafeInteger(through) ||
+    through < 0 ||
+    !Number.isSafeInteger(position) ||
+    position < through
+  )
+    return { complete: false }
+  const matching = parts.filter((part) => object(part) && part.messageID === messageID)
+  if (matching.length !== count) return { complete: false }
+  const ordered: { ordinal: number; part: Schema.Json }[] = []
+  const ordinals = new Set<number>()
+  for (const part of matching) {
+    if (
+      !object(part) ||
+      typeof part.ordinal !== "number" ||
+      !Number.isSafeInteger(part.ordinal) ||
+      typeof part.position !== "number" ||
+      !Number.isSafeInteger(part.position) ||
+      part.position < 0 ||
+      part.position > through ||
+      part.deferred === true ||
+      !object(part.part) ||
+      ordinals.has(part.ordinal)
+    )
+      return { complete: false }
+    ordinals.add(part.ordinal)
+    ordered.push({ ordinal: part.ordinal, part: part.part })
+  }
+  ordered.sort((a, b) => a.ordinal - b.ordinal)
+  const { parts: _, ...envelope } = value
+  return {
+    complete: true,
+    value: { ...envelope, message: { ...value.message, content: ordered.map((part) => part.part) } },
+  }
+}
+export const loopback = (hostname: string) =>
+  hostname === "localhost" ||
+  hostname === "[::1]" ||
+  hostname === "::1" ||
+  (isIP(hostname) === 4 && hostname.startsWith("127."))
+
+export const destination = Effect.fn("SessionSync.destination")(function* (input: string, local: boolean) {
+  const url = yield* Effect.try({
+    try: () => new URL(input),
+    catch: () => fail("invalid_destination", "A valid sync service URL is required"),
+  })
+  if (url.username || url.password || url.search || url.hash || (url.pathname !== "/" && url.pathname !== ""))
+    return yield* fail(
+      "invalid_destination",
+      "The sync URL must be an origin without credentials, path, query, or fragment",
+    )
+  if (url.protocol !== "https:" && !(local && url.protocol === "http:" && loopback(url.hostname)))
+    return yield* fail("invalid_destination", "Use HTTPS, or explicit --local with an HTTP loopback address")
+  if (url.protocol === "http:" && url.hostname === "localhost") {
+    const addresses = yield* Effect.tryPromise({
+      try: () => lookup(url.hostname, { all: true }),
+      catch: () => fail("invalid_destination", "Cannot resolve the local sync service"),
+    })
+    if (!addresses.length || addresses.some((entry) => !loopback(entry.address)))
+      return yield* fail("invalid_destination", "The local sync service must resolve only to loopback addresses")
+  }
+  return url.origin
+})
+
+const ErrorBody = Schema.Struct({
+  error: Schema.Struct({
+    code: Schema.String,
+    retryAt: Schema.optional(Schema.Number),
+    details: Schema.optional(Schema.Struct({ hash: Schema.optional(Schema.String) })),
+  }),
+})
+const decodeError = Schema.decodeUnknownOption(ErrorBody)
+
+// Neither personal credentials nor short-lived grants may cross a redirect. Service error bodies are
+// untrusted and can contain secrets; return a fixed message and a bounded machine-readable code instead.
+const errorCodes: Record<string, true> = {
+  invalid_request: true,
+  json_budget_exceeded: true,
+  blob_hash_mismatch: true,
+  creator_mismatch: true,
+  not_found: true,
+  session_not_found: true,
+  blob_not_found: true,
+  source_conflict: true,
+  batch_conflict: true,
+  batch_superseded: true,
+  position_conflict: true,
+  blob_missing: true,
+  revision_changed: true,
+  upload_timeout: true,
+  upload_in_progress: true,
+  session_deleted: true,
+  length_required: true,
+  request_too_large: true,
+  storage_budget_exceeded: true,
+  tenant_unavailable: true,
+  service_overloaded: true,
+  tenant_budget_exceeded: true,
+  rate_limited: true,
+  internal_error: true,
+  invalid_credential: true,
+  unsupported_credential: true,
+  auth_unavailable: true,
+  account_blocked: true,
+  organization_access_denied: true,
+  unauthenticated: true,
+  invalid_grant: true,
+  method_not_allowed: true,
+}
+
+export const request = Effect.fn("SessionSync.request")(function* (
+  url: string,
+  token: string,
+  method = "GET",
+  body?: string | Uint8Array<ArrayBuffer>,
+) {
+  const bytes = body === undefined ? 0 : typeof body === "string" ? Buffer.byteLength(body) : body.byteLength
+  // Allow 32 KiB/s plus handshake time, bounded by the service's five-minute blob lease.
+  const timeout = Math.min(300_000, 30_000 + Math.ceil(bytes / (32 * 1024)) * 1000)
+  let receivedRetryAt = 0
+  const response = yield* Effect.tryPromise({
+    try: async (signal) => {
+      const deadline = AbortSignal.any([signal, AbortSignal.timeout(timeout)])
+      const response = await fetch(url, {
+        method,
+        redirect: "error",
+        signal: deadline,
+        headers: {
+          authorization: `Bearer ${token}`,
+          ...(body === undefined
+            ? {}
+            : {
+                "content-type": typeof body === "string" ? "application/json" : "application/octet-stream",
+                "content-length": String(bytes),
+              }),
+        },
+        body,
+      })
+      const retryAt =
+        response.status === 429 || response.status === 503
+          ? retryHeader(response.headers.get("retry-after"), Date.now())
+          : 0
+      receivedRetryAt = retryAt
+      if (!response.body) return { ok: response.ok, status: response.status, text: "", retryAt }
+      const reader = response.body.getReader()
+      const cancel = () => {
+        void reader.cancel().catch(() => undefined)
+      }
+      deadline.addEventListener("abort", cancel, { once: true })
+      // These responses contain only grants, state, or acknowledgements, never entity/blob downloads.
+      const buffer = new Uint8Array(64 * 1024)
+      let length = 0
+      try {
+        deadline.throwIfAborted()
+        while (true) {
+          const chunk = await reader.read()
+          deadline.throwIfAborted()
+          if (chunk.done)
+            return {
+              ok: response.ok,
+              status: response.status,
+              retryAt,
+              text: new TextDecoder().decode(buffer.subarray(0, length)),
+            }
+          if (chunk.value.byteLength > buffer.byteLength - length) {
+            await reader.cancel().catch(() => undefined)
+            throw fail(
+              "response_too_large",
+              "The sync service returned an oversized response; pending changes are retained",
+              response.status >= 500 || response.status === 408 || response.status === 429,
+              retryAt || undefined,
+            )
+          }
+          buffer.set(chunk.value, length)
+          length += chunk.value.byteLength
+        }
+      } finally {
+        deadline.removeEventListener("abort", cancel)
+        reader.releaseLock()
+      }
+    },
+    catch: (cause) =>
+      cause instanceof Failure
+        ? cause
+        : fail(
+            "network_error",
+            "The sync service is unreachable; pending changes are retained",
+            true,
+            receivedRetryAt || undefined,
+          ),
+  })
+  const decoded = Schema.decodeUnknownOption(Schema.fromJsonString(Schema.Unknown))(response.text)
+  if (!response.ok) {
+    const error = decoded._tag === "Some" ? decodeError(decoded.value) : undefined
+    const raw = error?._tag === "Some" ? error.value.error.code : `http_${response.status}`
+    const code = Object.hasOwn(errorCodes, raw) ? raw : `http_${response.status}`
+    return yield* fail(
+      code,
+      `Sync service rejected the request (${code})`,
+      code !== "tenant_budget_exceeded" &&
+        (response.status >= 500 ||
+          response.status === 408 ||
+          response.status === 429 ||
+          code === "upload_in_progress" ||
+          code === "blob_missing" ||
+          code === "rate_limited"),
+      Math.max(response.retryAt, error?._tag === "Some" ? (error.value.error.retryAt ?? 0) : 0) || undefined,
+      error?._tag === "Some" ? error.value.error.details?.hash : undefined,
+    )
+  }
+  if (decoded._tag === "None") return yield* fail("invalid_response", "The sync service returned an invalid response")
+  return decoded.value
+})
+
+export const decode = <A, I>(schema: Schema.Codec<A, I>, value: unknown) =>
+  Schema.decodeUnknownEffect(schema)(value).pipe(
+    Effect.mapError(() => fail("invalid_response", "The sync service returned an invalid response")),
+  )

@@ -11,6 +11,9 @@
 
 import { dict as en } from "../../i18n/en"
 import { dict as agentManagerEn } from "../../../agent-manager/i18n/en"
+import { createSettingsIndex, escapeRegExp, searchSettingsIndex } from "./settings-search-index"
+export { createSettingsIndex, searchSettingsIndex }
+export type { SettingsSearchIndex } from "./settings-search-index"
 
 export interface SettingsTab {
   id: string
@@ -103,6 +106,9 @@ const GROUP_TABS: Record<string, string> = {
 const KEY_TAB_OVERRIDES: Record<string, string> = {
   "settings.context.compactionModel.title": "models",
   "settings.autocomplete.model.title": "models",
+  "settings.experimental.browserAutomation.title": "browser",
+  "settings.experimental.browserAutomation.systemChrome.title": "browser",
+  "settings.experimental.browserLinks.title": "browser",
 }
 
 /** Agent Behaviour rows rendered without opening a separate editor or dialog. */
@@ -122,22 +128,14 @@ const EXCLUDED_KEYS = new Set([
   "settings.autoCleanup.lastRun.title",
   "settings.autoApprove.maxCost.title",
   "settings.webTools.webSearch.title",
-  "settings.browser.enable.title",
-  "settings.browser.headless.title",
-  "settings.browser.systemChrome.title",
   "settings.experimental.batch.title",
-  "settings.experimental.browserAutomation.title",
-  "settings.experimental.browserAutomation.systemChrome.title",
-  "settings.experimental.browserLinks.title",
   "settings.experimental.claudeMigration.title",
   "settings.experimental.codeMode.title",
   "settings.experimental.continueOnDeny.title",
-  "settings.experimental.conversationPromptHistory.title",
   "settings.experimental.globIncludeIgnored.title",
   "settings.experimental.imageGeneration.title",
   "settings.experimental.imageGenerationModel.title",
   "settings.experimental.mcpTimeout.title",
-  "settings.experimental.nativeNotebookTools.title",
   "settings.experimental.remote.title",
   "settings.context.compaction.title",
   "settings.context.compactionLimit.title",
@@ -251,130 +249,13 @@ export interface SettingsSearchResult extends SettingsNavigationTarget {
 
 type Translate = (key: string) => string
 
-function descriptionKeyFor(entry: SettingsEntry): string {
-  if (entry.descriptionKey) return entry.descriptionKey
-  return entry.titleKey.endsWith(".title") ? entry.titleKey.replace(/\.title$/, ".description") : ""
-}
-
-/** Resolve a description key, treating a missing translation as absent. */
-function readDescription(key: string, translate: Translate): string | undefined {
-  if (!key) return undefined
-  const text = translate(key)
-  return text === key ? undefined : text
-}
-
-interface QueryToken {
-  raw: string
-  word: RegExp
-}
-
-function scoreToken(token: QueryToken, title: string, keywords: string, description: string, tab: string): number {
-  if (title === token.raw) return 120
-  if (title.startsWith(token.raw)) return 70
-  if (token.word.test(title)) return 50
-  if (title.includes(token.raw)) return 30
-  if (keywords.includes(token.raw)) return 20
-  if (description.includes(token.raw)) return 10
-  if (tab.includes(token.raw)) return 5
-  return 0
-}
-
-function escapeRegExp(value: string): string {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
-}
-
-/**
- * Rank settings and tabs against a free-text query.
- *
- * Every whitespace-separated token must match somewhere (title, keywords,
- * description, or tab name). Token matches in the title score highest so the
- * most relevant settings float to the top. An empty query returns no results.
- *
- * Results are grouped by the tab that owns them, in order of that tab's best
- * match, and stay score-ordered within each group. The grouped list is what the
- * results pane renders, and keyboard selection indexes into this array, so a
- * tab must stay contiguous or Enter could open a different setting than the
- * highlighted one.
- *
- * The index is small (about 120 entries), so this runs synchronously on every
- * keystroke. Regexes and translations are computed once per call to keep it
- * well under a frame.
- */
 export function searchSettings(
   query: string,
   translate: Translate,
   entries: SettingsEntry[] = SETTINGS_ENTRIES,
   tabs: SettingsTab[] = SETTINGS_TABS,
 ): SettingsSearchResult[] {
-  const tokens: QueryToken[] = query
-    .trim()
-    .toLowerCase()
-    .split(/\s+/)
-    .filter(Boolean)
-    .map((raw) => ({ raw, word: new RegExp(`\\b${escapeRegExp(raw)}`) }))
-  if (tokens.length === 0) return []
-
-  const tabLabels = new Map<string, string>()
-  for (const tab of tabs) tabLabels.set(tab.id, translate(tab.titleKey).toLowerCase())
-
-  const results: SettingsSearchResult[] = []
-
-  for (const entry of entries) {
-    const tab = entry.tab
-    if (!tabLabels.has(tab)) continue
-    const titleRaw = translate(entry.titleKey)
-    const title = titleRaw.toLowerCase()
-    const descriptionKey = descriptionKeyFor(entry)
-    const descriptionRaw = readDescription(descriptionKey, translate)
-    const description = (descriptionRaw ?? "").toLowerCase()
-    const keywords = (entry.keywords ?? []).join(" ").toLowerCase()
-    const tabLabel = tabLabels.get(tab) ?? ""
-    const haystack = `${title} ${keywords} ${description} ${tabLabel}`
-    const matched = tokens.every((token) => haystack.includes(token.raw))
-    if (!matched) continue
-    const score = tokens.reduce((sum, token) => sum + scoreToken(token, title, keywords, description, tabLabel), 0)
-    results.push({
-      tab,
-      ...(entry.subtab ? { subtab: entry.subtab } : {}),
-      titleKey: entry.titleKey,
-      descriptionKey: descriptionKey || undefined,
-      title: titleRaw,
-      description: descriptionRaw,
-      score,
-      tabOnly: false,
-    })
-  }
-
-  const seen = new Set(results.map((result) => result.tab))
-  for (const tab of tabs) {
-    const label = translate(tab.titleKey)
-    const lower = label.toLowerCase()
-    const keywords = (tab.keywords ?? []).join(" ").toLowerCase()
-    const matched = tokens.every((token) => lower.includes(token.raw) || keywords.includes(token.raw))
-    if (!matched) continue
-    if (seen.has(tab.id)) {
-      const existing = results.find((result) => result.tab === tab.id)
-      if (existing) existing.score += 5
-      continue
-    }
-    results.push({
-      tab: tab.id,
-      titleKey: tab.titleKey,
-      title: label,
-      score: tokens.length * 5,
-      tabOnly: true,
-    })
-  }
-
-  const sorted = results.sort((a, b) => b.score - a.score || a.title.localeCompare(b.title))
-
-  const grouped = new Map<string, SettingsSearchResult[]>()
-  for (const result of sorted) {
-    const list = grouped.get(result.tab)
-    if (list) list.push(result)
-    else grouped.set(result.tab, [result])
-  }
-  return [...grouped.values()].flat()
+  return searchSettingsIndex(createSettingsIndex(entries, tabs, translate), query)
 }
 
 export interface SearchSegment {
