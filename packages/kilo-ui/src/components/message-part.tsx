@@ -576,7 +576,7 @@ function McpTool(props: ToolProps) {
   const input = () =>
     Object.keys(props.input).length ? "```json\n" + JSON.stringify(props.input, null, 2) + "\n```" : ""
   return (
-    <BasicTool {...props} icon="mcp" trigger={{ title: props.tool, subtitle: subtitle() }}>
+    <BasicTool {...props} defer icon="mcp" trigger={{ title: props.tool, subtitle: subtitle() }}>
       <Show when={input()}>
         <div data-slot="mcp-section-label">{i18n.t("ui.messagePart.mcp.input")}</div>
         <Output text={input()} />
@@ -667,6 +667,7 @@ ToolRegistry.register({
     return (
       <BasicTool
         {...props}
+        defer
         icon="magnifying-glass-menu"
         trigger={
           <ToolTriggerRow
@@ -692,6 +693,7 @@ ToolRegistry.register({
     return (
       <BasicTool
         {...props}
+        defer
         icon="magnifying-glass-menu"
         trigger={
           <ToolTriggerRow
