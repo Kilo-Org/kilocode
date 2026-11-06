@@ -103,8 +103,8 @@ describe("extension manifest", () => {
     expect(open).toBe(unbind + 1)
   })
 
-  it("shows the task timeline by default", () => {
-    expect(manifest.contributes.configuration.properties["kilo-code.v2.showTaskTimeline"]?.default).toBe(true)
+  it("collapses the task timeline by default", () => {
+    expect(manifest.contributes.configuration.properties["kilo-code.v2.showTaskTimeline"]?.default).toBe(false)
   })
 
   it("carries the CLI and bundles into the VSIX", () => {
