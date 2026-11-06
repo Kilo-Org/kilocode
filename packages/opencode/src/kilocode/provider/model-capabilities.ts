@@ -1,10 +1,6 @@
 export namespace ConfigModelCapabilities {
   export type Modality = "text" | "audio" | "image" | "video" | "pdf"
 
-  // The attachment flag semantically means "accepts file/visual attachments",
-  // which the runtime maps to the image and pdf input modalities.
-  export const ATTACHMENT_MODALITIES = ["image", "pdf"] as const
-
   const MODALITIES = ["text", "audio", "image", "video", "pdf"] as const
 
   export type Capabilities = {
@@ -27,10 +23,13 @@ export namespace ConfigModelCapabilities {
   // here keeps attachment-only configs working (image guard, mobile/console
   // attachment guard) instead of letting each flag silently disagree (#15790).
   //
-  // The gate is an actual modalities.input array, not the mere presence of a
-  // modalities object: an output-only modalities entry must neither block the
-  // attachment image backfill nor overwrite the capabilities the catalog
-  // already derived for the model.
+  // Implicit derivation keys off the image modality only, so on every
+  // non-explicit path `attachment` stays equal to `input.image`: a guard
+  // reading either flag then makes the same call. pdf/audio/video remain
+  // opt-in through explicit modalities. The gate is an actual
+  // modalities.input array, not the mere presence of a modalities object: an
+  // output-only modalities entry must neither block the attachment image
+  // backfill nor overwrite the capabilities the catalog already derived.
   export function resolve(
     model: ModelInput,
     existing?: { capabilities: Capabilities },
@@ -45,9 +44,8 @@ export namespace ConfigModelCapabilities {
       model.attachment === true || model.attachment === false
         ? model.attachment
         : hasInputModalities
-          ? inputModalities.some((m) =>
-              (ATTACHMENT_MODALITIES as readonly string[]).includes(m),
-            )
+          ? // Image-only derivation keeps attachment and input.image in lockstep.
+            inputModalities.includes("image")
           : (existing?.capabilities.attachment ?? false)
 
     const input = Object.fromEntries(

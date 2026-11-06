@@ -30,12 +30,22 @@ describe("ConfigModelCapabilities.resolve", () => {
     expect(caps.output.text).toBe(true)
   })
 
-  test("pdf input modality also derives attachment", () => {
-    const caps = resolve({ modalities: { input: ["pdf"] } })
+  test("pdf-only input modality does not derive attachment", () => {
+    const caps = resolve({ modalities: { input: ["text", "pdf"] } })
 
-    expect(caps.attachment).toBe(true)
+    expect(caps.attachment).toBe(false)
     expect(caps.input.pdf).toBe(true)
     expect(caps.input.image).toBe(false)
+  })
+
+  test("image and pdf input modalities derive attachment with both enabled", () => {
+    const caps = resolve({
+      modalities: { input: ["text", "image", "pdf"], output: ["text"] },
+    })
+
+    expect(caps.attachment).toBe(true)
+    expect(caps.input.image).toBe(true)
+    expect(caps.input.pdf).toBe(true)
   })
 
   test("attachment and modalities together match the explicit configuration", () => {
