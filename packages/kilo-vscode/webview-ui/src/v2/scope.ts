@@ -24,6 +24,11 @@ export function createV2Scope(input: {
   /** Whether the session list of this directory is shown. A hidden directory loads it when it becomes visible. */
   visible?: Accessor<boolean>
   bindings: Accessor<Record<string, string>>
+  /**
+   * Loads the sidebar data: the session list and the Kilo Gateway catalog status. The Settings and Profile panels
+   * pass false, because neither renders a transcript and neither shows the catalog failure.
+   */
+  chat?: boolean
   onCommand: (handler: (name: string) => void) => void
   /** Opens an external URL through the host. */
   /** Opens a web link. `external` (shift-click) asks for the system browser instead of the Integrated Browser. */
@@ -32,9 +37,10 @@ export function createV2Scope(input: {
   const api = input.api
   const directory = input.directory
   const connection = input.connection
+  const chat = input.chat ?? true
   // The host inlines the extension version; the server handshake reports the server version separately.
   const extensionVersion =
-    (window as unknown as { KILO_EXTENSION_VERSION?: string }).KILO_EXTENSION_VERSION ?? ""
+    typeof window === "undefined" ? "" : ((window as unknown as { KILO_EXTENSION_VERSION?: string }).KILO_EXTENSION_VERSION ?? "")
   const [error, setError] = createSignal("")
   const [loading, setLoading] = createSignal(true)
   const data = createData({
@@ -49,6 +55,7 @@ export function createV2Scope(input: {
     createConnectionMetadata({
       api,
       connection,
+      chat,
       subscribe: (type, handler) => input.event.on(type, handler),
     })
   metadata.attach(directory)
@@ -69,6 +76,10 @@ export function createV2Scope(input: {
     on(
       () => [connection.status(), visible()] as const,
       ([status, show]) => {
+        if (!chat) {
+          setLoading(false)
+          return
+        }
         if (status !== "connected" || !show || state.listed) return
         state.listed = true
         setLoading(true)

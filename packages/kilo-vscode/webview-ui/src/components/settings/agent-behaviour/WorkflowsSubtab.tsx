@@ -5,7 +5,6 @@ import { Component, For, Show, createEffect, createMemo, createSignal, on } from
 import { Card } from "@kilocode/kilo-ui/card"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { useLanguage } from "../../../context/language"
-import { getVSCodeAPI } from "../../../context/vscode"
 import { useV2 } from "../../../v2/client"
 import { useSettingsConfig } from "../../../v2/settings-config"
 import { preserveVariant } from "../../../v2/variant"
@@ -132,9 +131,7 @@ const WorkflowsSubtab: Component = () => {
   }
 
   const save = (path: string[], value: unknown, scope: "project" | "global", preserveAliases = false) => {
-    void config.set(path, value, scope, preserveAliases).then((ok) => {
-      if (ok) getVSCodeAPI().postMessage({ type: "configRead" } as never)
-    })
+    void config.set(path, value, scope, preserveAliases)
   }
 
   const setModel = (name: string, value: ModelPickerValue | undefined) => {
