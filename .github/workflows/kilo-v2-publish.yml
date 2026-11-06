@@ -63,6 +63,7 @@ permissions:
 
 env:
   KILO_CHANNEL: v2
+  VSIX_TARGETS: "darwin-arm64 darwin-x64 win32-x64 linux-x64 linux-arm64"
 
 jobs:
   build:
@@ -301,24 +302,17 @@ jobs:
             echo "Install: \`npm i @kilocode/client@kilo-v2\`, or \`npm i @opencode/client@npm:@kilocode/client@kilo-v2\` to keep the upstream import name."
           } >> "$GITHUB_STEP_SUMMARY"
 
-  # Packages the preview extension on pull requests and publishes it as a pre-release on both stores from a
-  # `v2` dispatch. It is a separate id from v1, so users keep Kilo Code v1 installed and opt into the preview.
-  # The Marketplace rejects semver pre-release versions, so the package gets a plain `0.1.<run number>` version.
-  # Windows and macOS binary signing and SBOM evidence are deferred.
-  publish-vscode:
-    name: VS Code extension
-    needs:
-      - build
-      - smoke
-      - smoke-windows
+  # Packages the preview extension on pull requests and on a `v2` dispatch. A pull request stops here, so the
+  # packaging path is checked without publishing. The publish job below runs only on a `v2` dispatch.
+  package-vscode:
+    name: package VS Code extension
+    needs: build
     if: github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/v2')
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     concurrency:
-      group: kilo-v2-publish-vscode
+      group: kilo-v2-package-vscode
       cancel-in-progress: false
-    env:
-      VSIX_TARGETS: "darwin-arm64 darwin-x64 win32-x64 linux-x64 linux-arm64"
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -357,7 +351,7 @@ jobs:
             bun run package --target="$target"
           done
 
-      # Keep the packages when a later publish step fails, so a rerun can inspect or publish them.
+      # Keep the packages for the publish job and for inspection when a later publish fails.
       - name: Upload VSIX artifacts
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
@@ -367,8 +361,38 @@ jobs:
           overwrite: true
           retention-days: 7
 
+  # Publishes the packaged VSIXs on a `v2` dispatch after the CLI smoke tests pass. The extension is a separate
+  # id from v1, so users keep Kilo Code v1 installed and opt into the preview. Windows and macOS binary signing
+  # and SBOM evidence are deferred.
+  publish-vscode:
+    name: publish VS Code extension
+    needs:
+      - package-vscode
+      - smoke
+      - smoke-windows
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/v2'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    concurrency:
+      group: kilo-v2-publish-vscode
+      cancel-in-progress: false
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup Bun and install dependencies
+        uses: ./.github/actions/setup-bun
+
+      - name: Download VSIX artifacts
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: kilo-vscode-preview
+          path: packages/kilo-vscode/out
+
       - name: Publish to VS Code Marketplace
-        if: ${{ github.event_name == 'workflow_dispatch' && !inputs.dry_run }}
+        if: ${{ !inputs.dry_run }}
         working-directory: packages/kilo-vscode
         env:
           VSCE_PAT: ${{ secrets.VSCE_TOKEN }}
@@ -379,7 +403,7 @@ jobs:
           done
 
       - name: Publish to Open VSX
-        if: ${{ github.event_name == 'workflow_dispatch' && !inputs.dry_run }}
+        if: ${{ !inputs.dry_run }}
         working-directory: packages/kilo-vscode
         env:
           OVSX_PAT: ${{ secrets.OVSX_TOKEN }}
@@ -390,7 +414,7 @@ jobs:
           done
 
       - name: Summary
-        if: ${{ github.event_name == 'workflow_dispatch' && !inputs.dry_run }}
+        if: ${{ !inputs.dry_run }}
         run: |
           {
             echo "Published \`kilocode.kilo-code-v2@0.1.${{ github.run_number }}\` as a pre-release."

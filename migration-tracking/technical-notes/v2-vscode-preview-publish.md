@@ -1,12 +1,13 @@
 # VS Code v2 preview publishing
 
-The `publish-vscode` job in `.github/workflows/kilo-v2-publish.yml` publishes `kilocode.kilo-code-v2` as a pre-release on the VS Code Marketplace and Open VSX.
+The `package-vscode` job in `.github/workflows/kilo-v2-publish.yml` packages and uploads the preview VSIXs. The `publish-vscode` job publishes them as a pre-release on the VS Code Marketplace and Open VSX.
 
 - The extension id is separate from v1 (`kilocode.kilo-code`), so both extensions can stay installed. The v2 server keeps its data in the separate `kilo2` directory.
 - The version is `0.1.<run number>`. The Marketplace accepts only `major.minor.patch` and rejects the CLI's `0.0.0-v2-<number>` version.
 - Initial targets: `darwin-arm64`, `darwin-x64`, `win32-x64`, `linux-x64`, `linux-arm64`. Add `alpine-x64`, `alpine-arm64` and `win32-arm64` after the first preview.
 - Secrets: `VSCE_TOKEN` for the VS Code Marketplace and `OVSX_TOKEN` for Open VSX.
-- The job runs the lockfile-installed `@vscode/vsce` and `ovsx`, passes the Open VSX token through `OVSX_PAT`, and runs the extension typecheck and lint before packaging.
+- The package job runs the extension typecheck and lint before packaging. The publish job runs the lockfile-installed `@vscode/vsce` and `ovsx` and passes the Open VSX token through `OVSX_PAT`.
+- The publish job waits for `build`, `package-vscode`, `smoke` and `smoke-windows`.
 - Pull requests that change the publish flow package and upload the VSIXs without publishing.
 
 ## Verify before the first publish
