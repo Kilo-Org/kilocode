@@ -81,8 +81,12 @@ internal class ActiveList(
 
     init {
         view.onSelect = onSelect
-        // Any movement, including mid-drag: the row a popup points at has already left that position.
-        scroll.verticalScrollBar.addAdjustmentListener { onScroll?.invoke() }
+        // Any movement, including mid-drag: the row a popup points at has already left that position,
+        // and the button under the pointer is no longer the one that was hovered.
+        scroll.verticalScrollBar.addAdjustmentListener {
+            view.resetHover()
+            onScroll?.invoke()
+        }
         // Center the scroll pane so the list fills the panel vertically and horizontally, with the
         // search field pinned above it.
         if (surface == ActiveSurface.ToolWindow) isOpaque = true
