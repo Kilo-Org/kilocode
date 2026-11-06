@@ -5,7 +5,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs"
 import { mkdtemp, mkdir, realpath, rm } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import path from "node:path"
-import { command, environment, manager, parse, serverHome, settingsEnvironment, start, stop } from "../src/server"
+import { command, environment, indexingEnvironment, manager, parse, serverHome, settingsEnvironment, start, stop } from "../src/server"
 
 const extension = path.resolve(import.meta.dir, "..")
 
@@ -86,7 +86,13 @@ test("environment drops v1-only variables and sets the client", () => {
   )
   expect(env.KILO_PARENT_PID).toBeUndefined()
   expect(env.KILO_TELEMETRY_LEVEL).toBeUndefined()
-  expect(env).toMatchObject({ PATH: "/bin", KILO_CLIENT: "vscode", OPENCODE_PASSWORD: "x", NODE_USE_SYSTEM_CA: "1" })
+  expect(env).toMatchObject({
+    PATH: "/bin",
+    KILO_CLIENT: "vscode",
+    KILO_PLATFORM: "vscode",
+    OPENCODE_PASSWORD: "x",
+    NODE_USE_SYSTEM_CA: "1",
+  })
 })
 
 test("environment drops inherited server passwords", () => {
@@ -94,6 +100,18 @@ test("environment drops inherited server passwords", () => {
   expect(env.OPENCODE_PASSWORD).toBeUndefined()
   expect(env.OPENCODE_SERVER_PASSWORD).toBeUndefined()
   expect(env.KILO_SERVER_PASSWORD).toBeUndefined()
+})
+
+
+describe("indexingEnvironment", () => {
+  test("disables indexing when no workspace folder is open", () => {
+    expect(indexingEnvironment(undefined)).toEqual({ KILO_DISABLE_CODEBASE_INDEXING: "vscode-no-workspace" })
+    expect(indexingEnvironment(0)).toEqual({ KILO_DISABLE_CODEBASE_INDEXING: "vscode-no-workspace" })
+  })
+
+  test("leaves indexing on when a workspace folder is open", () => {
+    expect(indexingEnvironment(1)).toEqual({})
+  })
 })
 
 describe("settingsEnvironment", () => {

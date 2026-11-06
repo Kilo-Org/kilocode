@@ -1,5 +1,6 @@
 // Messages between the webview and the extension host. The webview has no server credentials: it sends HTTP
 // requests through the host (`fetch`), and the host streams each response back in order.
+import type { KiloIndexingRpc } from "@opencode/schema/kilocode/indexing"
 import type { ReviewCommentData, ReviewCommentEntry } from "./shared/review-comments"
 
 import type { BrowserReference } from "./shared/browser-feedback"
@@ -114,6 +115,7 @@ export type ToHost =
   | Ui
   | Settings
   | Speech
+  | Indexing
   | ({ type: "openSettingsTab" } & SettingsNavigation)
   | { type: "settingsReady" }
   | { type: "settingsTabChanged"; tab: string }
@@ -195,6 +197,25 @@ export type BrowserInspectionPayload = BrowserScopeMessage<"browserTab.inspectio
 export type BrowserFramePayload = BrowserScopeMessage<"browserTab.frame"> & BrowserFrame
 export type BrowserCursorPayload = BrowserScopeMessage<"browserTab.cursor"> & BrowserCursor
 export type BrowserDevtoolsPayload = BrowserScopeMessage<"browserTab.devtools"> & { browserId: string; url: string }
+/** Codebase indexing consent and project list. The consent itself is machine-local in globalState. */
+export type Indexing =
+  | { type: "requestIndexingSettings"; projectId?: string }
+  | { type: "setIndexingConsent"; projectId: string; enabled: boolean }
+
+export type IndexingProject = {
+  id: string
+  root: string
+  /** The location the RPC calls target. Omitted for the primary project, which is the server's own location. */
+  directory?: string
+  label: string
+}
+
+export type IndexingSettings = {
+  showButtonWhenDisabled: boolean
+  consent: boolean
+  projects: IndexingProject[]
+  projectId?: string
+}
 
 /** Voice input: the host owns the microphone, the custom endpoint and the Gateway RPC. */
 export type Speech =
@@ -401,6 +422,8 @@ export type ToWebview =
     }
   | { type: "configWritten"; id: number; ok: boolean; error?: string }
   | { type: "vscodeSettingsLoaded"; values: Record<string, unknown> }
+  | { type: "indexingSettingsLoaded"; settings: IndexingSettings }
+  | { type: "indexingStatusLoaded"; status: KiloIndexingRpc.Status; projectId?: string }
   | {
       type: "agentManagerSettingsLoaded"
       requestId: string

@@ -23,6 +23,7 @@
     "@babel/preset-typescript": "7.27.1",
     "@effect/platform-node": "catalog:",
     "@kilocode/gateway-core": "workspace:*",
+    "@kilocode/kilo-indexing": "workspace:*",
     "@kilocode/kilo-plugin": "workspace:*",
     "@kilocode/sandbox": "workspace:*",
     "@opencode/ai": "workspace:*",
