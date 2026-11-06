@@ -64,8 +64,19 @@ import { createDialogPreferences } from "./new-worktree-models"
 import { validBranch } from "./new-worktree-branch"
 import { sanitizeBranchName } from "../../src/shared/branch-slug"
 import { shouldComposeGoal, submitPayload } from "./new-worktree-command"
+import { createReadiness, tooltip } from "./worktree-readiness"
+import { ReadinessCard } from "./ReadinessCard"
+import {
+  draftValues,
+  readCached,
+  initialProject,
+  markReopen,
+  writeAllocations,
+  saveDraft,
+  type VersionCount,
+  type WorktreeDraft,
+} from "./new-worktree-draft"
 
-type VersionCount = 1 | 2 | 3 | 4
 const VERSION_OPTIONS: VersionCount[] = [1, 2, 3, 4]
 // Local dialog actions offered by the prompt slash menu. Server commands
 // (custom commands, skills, MCP prompts, /goal) are always offered; the
@@ -178,6 +189,7 @@ function cacheBranches(id: string, branches: BranchInfo[], detected: string) {
 
 export const NewWorktreeDialog: Component<{
   onClose: () => void
+  closing: () => boolean
   defaultBase?: (projectId: string) => string | undefined
   projectId?: string
   projects?: () => AgentProjectSnapshot[]
@@ -198,13 +210,51 @@ export const NewWorktreeDialog: Component<{
   const click = metrics.click
 
   const [tab, setTab] = createSignal<DialogTab>("new")
-  const [project, setProject] = createSignal(props.projectId ?? props.activeProjectId)
-  const [projectOpen, setProjectOpen] = createSignal(false)
+  const cached = vscode.getState<Record<string, unknown>>()
+  const draft = readCached(cached)
+  const init = draftValues(draft)
   const projects = () => props.projects?.() ?? []
+  const fallback = props.projectId ?? props.activeProjectId
+  // A saved project that no longer exists falls back to today's default; never pick another one.
+  const [project, setProject] = createSignal(initialProject(draft, projects(), props.projectId, props.activeProjectId))
+  const [projectOpen, setProjectOpen] = createSignal(false)
   const showProject = () => projects().length > 0
+  let submitted = false
   const base = () => {
     const id = project()
     return id ? props.defaultBase?.(id) : undefined
+  }
+  let createButton: HTMLButtonElement | undefined
+  let card: HTMLDivElement | undefined
+  /** Move focus to Create unless the user is already focused outside the readiness card. */
+  const focusCreate = () => {
+    const active = document.activeElement
+    if (active && active !== document.body && !card?.contains(active)) return
+    createButton?.focus()
+  }
+  const readiness = createReadiness({
+    project,
+    entry: "modal",
+    onRecovered: () => queueMicrotask(focusCreate),
+  })
+  // A readiness fix changes the project on disk: hold the project choice still until it finishes.
+  const busy = () => {
+    const status = readiness.state().status
+    return status === "fixing" || status === "installing"
+  }
+  const blockedTooltip = () => {
+    const info = tooltip(readiness.state())
+    return t(info.key, info.params)
+  }
+  // Create stays focusable while blocked so its tooltip works on hover and keyboard focus.
+  const blocked = () => (readiness.blocked() ? true : undefined)
+  /** Move focus to the readiness card's action, or its title when it has none. */
+  const focusCard = () => {
+    if (closed || props.closing()) return
+    const target =
+      card?.querySelector<HTMLElement>("[data-readiness-action]:not(:disabled)") ??
+      card?.querySelector<HTMLElement>("[data-readiness-title]")
+    target?.focus()
   }
 
   // --- Shared branch data (used by both New tab's base branch selector and Import tab) ---
@@ -216,12 +266,11 @@ export const NewWorktreeDialog: Component<{
   const [branchSearch, setBranchSearch] = createSignal("")
 
   // --- New tab state ---
-  const [name, setName] = createSignal("")
-  const cached = vscode.getState<Record<string, unknown>>()
+  const [name, setName] = createSignal(init.name)
   const [prompt, setPrompt] = createSignal((cached?.advancedDialogPrompt as string) ?? "")
   const saved = readDialogSelections(cached?.advancedDialogSelections)
-  const [versions, setVersions] = createSignal<VersionCount>(1)
-  const [compareMode, setCompareMode] = createSignal(false)
+  const [versions, setVersions] = createSignal<VersionCount>(init.versions)
+  const [compareMode, setCompareMode] = createSignal(init.compare)
   const initialAgent = restoreAgent(saved.agent, session.agents(), session.selectedAgent())
   const preferences = createDialogPreferences({
     saved,
@@ -233,11 +282,11 @@ export const NewWorktreeDialog: Component<{
     variants: (value) => Object.keys(provider.findModel(value)?.variants ?? {}),
   })
   const { selection, model, agent, variants, effectiveVariant, selectAgent, selectModel, selectVariant } = preferences
-  const [modelAllocations, setModelAllocations] = createSignal<ModelAllocations>(new Map())
+  const [modelAllocations, setModelAllocations] = createSignal<ModelAllocations>(init.allocations)
   const [starting, setStarting] = createSignal(false)
-  const [goalMode, setGoalMode] = createSignal(false)
+  const [goalMode, setGoalMode] = createSignal(init.goal)
   const [enhancing, setEnhancing] = createSignal(false)
-  const [branchName, setBranchName] = createSignal("")
+  const [branchName, setBranchName] = createSignal(init.branch)
   const [baseBranch, setBaseBranch] = createSignal<string | null>(null)
   const [compareOpen, setCompareOpen] = createSignal(false)
   const [sandbox, setSandbox] = createSignal<boolean | undefined>(saved.sandbox)
@@ -364,6 +413,28 @@ export const NewWorktreeDialog: Component<{
     persistBase(project(), next)
   }
 
+  // The rest of the draft lives in webview state too, so a Reload window (or a
+  // plain close and reopen) brings back the whole form. Merge with the latest
+  // state so the other persisted keys are never overwritten.
+  const persistDraft = (value: WorktreeDraft) => {
+    const state = vscode.getState<Record<string, unknown>>() ?? {}
+    vscode.setState(saveDraft(state, value))
+  }
+
+  createEffect(() => {
+    // A submitted draft must stay gone: never write it back while closing.
+    if (submitted) return
+    persistDraft({
+      project: project() === fallback ? undefined : project(),
+      name: name(),
+      branch: branchName(),
+      versions: versions(),
+      compare: compareMode(),
+      allocations: writeAllocations(modelAllocations()),
+      goal: goalMode(),
+    })
+  })
+
   createEffect(() => {
     const state = vscode.getState<Record<string, unknown>>() ?? {}
     vscode.setState({
@@ -407,7 +478,7 @@ export const NewWorktreeDialog: Component<{
         name: "project",
         description: t("agentManager.dialog.project.select"),
         hints: [],
-        action: () => setProjectOpen(true),
+        action: () => setProjectOpen(!busy()),
       },
     ],
   )
@@ -439,6 +510,7 @@ export const NewWorktreeDialog: Component<{
     // Resize textarea if restoring a cached prompt
     if (prompt()) adjustHeight()
     const focus = () => {
+      if (closed || props.closing()) return
       textareaRef?.focus({ preventScroll: true })
       const end = textareaRef?.value.length ?? 0
       textareaRef?.setSelectionRange(end, end)
@@ -463,6 +535,7 @@ export const NewWorktreeDialog: Component<{
       setBranchSearch("")
       setBaseBranch(id ? (drafts()[id] ?? null) : null)
       vscode.postMessage({ type: "agentManager.requestBranches", projectId: id })
+      void readiness.check()
     }),
   )
 
@@ -508,8 +581,47 @@ export const NewWorktreeDialog: Component<{
     return files.length > 0 ? files : undefined
   }
 
+  // Creation waits for the selected project's readiness (C1). A blocked project keeps the
+  // dialog open with every field intact; a missed deadline or failed check creates as before.
+  let gate = false
+  let closed = false
+  onCleanup(() => {
+    closed = true
+  })
   const handleSubmit = () => {
-    if (!canSubmit()) return
+    if (closed || props.closing() || gate || !canSubmit()) return
+    if (readiness.blocked()) {
+      focusCard()
+      return
+    }
+    const target = project()
+    if (!target) {
+      create()
+      return
+    }
+    gate = true
+    const version = readiness.revision()
+    // Creation must re-probe the tools now, even when the dialog already looks ready.
+    void readiness.check(false, false, true).then(() => {
+      gate = false
+      if (closed || props.closing() || project() !== target || readiness.revision() !== version) return
+      if (readiness.blocked()) {
+        focusCard()
+        return
+      }
+      if (canSubmit()) create()
+    })
+  }
+
+  /** After a fix: follow a project switch, and offer Create once the project is ready. Never submits. */
+  const recover = async (pending: Promise<string | undefined>) => {
+    const selected = await pending
+    if (closed || props.closing()) return
+    if (selected) setProject(selected)
+    if (readiness.state().status === "ready") focusCreate()
+  }
+
+  const create = () => {
     const customBranch = branchName().trim() || undefined
     if (!validBranch(customBranch)) {
       showToast({
@@ -562,6 +674,8 @@ export const NewWorktreeDialog: Component<{
     })
 
     // A submitted dialog starts fresh next time: keep only the agent and sandbox restore.
+    submitted = true
+    persistDraft({})
     preferences.clear()
     persistPrompt("")
     persistImages([])
@@ -793,11 +907,12 @@ export const NewWorktreeDialog: Component<{
       projects={projects()}
       project={project()}
       onProject={(id) => {
+        if (closed || props.closing() || busy()) return
         track("project_select", { changed: id !== props.activeProjectId })
         setProject(id)
       }}
-      projectOpen={projectOpen()}
-      onProjectOpen={setProjectOpen}
+      projectOpen={projectOpen() && !busy()}
+      onProjectOpen={(open) => setProjectOpen(open && !busy())}
       branch={local.branch}
       branches={branches()}
       loading={branchesLoading()}
@@ -811,7 +926,7 @@ export const NewWorktreeDialog: Component<{
         track("base_branch_set_default")
         vscode.postMessage({ type: "agentManager.setDefaultBaseBranch", projectId: project(), branch: name })
       }}
-      disabled={starting() || isPending()}
+      disabled={starting() || isPending() || busy()}
     />
   )
 
@@ -1147,6 +1262,20 @@ export const NewWorktreeDialog: Component<{
                 </div>
               </div>
             </div>
+            <ReadinessCard
+              ref={(el) => {
+                card = el
+              }}
+              state={readiness.state()}
+              onFix={(fix, identity) => void recover(readiness.fix(fix, identity ? { identity } : {}))}
+              onProject={(root) => void recover(readiness.fix("useProject", { target: root }))}
+              onFolder={() => void recover(readiness.fix("pickFolder"))}
+              onCheck={readiness.recheck}
+              onReload={() => {
+                vscode.setState(markReopen(vscode.getState<Record<string, unknown>>() ?? {}))
+                vscode.postMessage({ type: "agentManager.reloadWindow" })
+              }}
+            />
           </div>
           {/* Footer: run options on the left, the action on the right. Always visible. */}
           <div class="am-nv-dialog-footer">
@@ -1253,33 +1382,37 @@ export const NewWorktreeDialog: Component<{
                 </DeferredPopover>
               </div>
             </Show>
-            <Button
-              variant="primary"
-              size="large"
-              class="am-nv-submit"
-              onClick={click("create_worktree", "configure_worktree_dialog", handleSubmit, () => ({
-                mode: mode(),
-                versionCount: total(),
-                customBranch: !!branchName().trim(),
-                customBase: customBase(),
-                hasPrompt: !!prompt().trim(),
-                hasAttachments: imageAttach.images().length > 0,
-              }))}
-              disabled={!canSubmit()}
-            >
-              <Show
-                when={!starting()}
-                fallback={
-                  <>
-                    <Spinner class="am-nv-spinner" />
-                    <span>{t("agentManager.dialog.creating")}</span>
-                  </>
-                }
+            <Tooltip value={blockedTooltip()} inactive={!readiness.blocked()} placement="top">
+              <Button
+                ref={createButton}
+                variant="primary"
+                size="large"
+                class="am-nv-submit"
+                aria-disabled={blocked()}
+                onClick={click("create_worktree", "configure_worktree_dialog", handleSubmit, () => ({
+                  mode: mode(),
+                  versionCount: total(),
+                  customBranch: !!branchName().trim(),
+                  customBase: customBase(),
+                  hasPrompt: !!prompt().trim(),
+                  hasAttachments: imageAttach.images().length > 0,
+                }))}
+                disabled={!canSubmit()}
               >
-                <span>{goalMode() ? t("prompt.goal.start") : t("agentManager.dialog.createWorktree")}</span>
-                <kbd class="am-nv-submit-kbd">{isMac ? "\u2318\u21b5" : "Ctrl+\u21b5"}</kbd>
-              </Show>
-            </Button>
+                <Show
+                  when={!starting()}
+                  fallback={
+                    <>
+                      <Spinner class="am-nv-spinner" />
+                      <span>{t("agentManager.dialog.creating")}</span>
+                    </>
+                  }
+                >
+                  <span>{goalMode() ? t("prompt.goal.start") : t("agentManager.dialog.createWorktree")}</span>
+                  <kbd class="am-nv-submit-kbd">{isMac ? "\u2318\u21b5" : "Ctrl+\u21b5"}</kbd>
+                </Show>
+              </Button>
+            </Tooltip>
           </div>
         </div>
       </Show>

@@ -11,6 +11,11 @@ import * as path from "node:path"
 import type { Session } from "@kilocode/sdk/v2/client"
 import type { Host, PanelContext, OutputHandle, SessionProvider, Disposable } from "./host"
 import type { PRMergeMethod } from "./types"
+import type { InstallCommand } from "./worktree-install"
+import { executeVscodeTask } from "./task-runner"
+import { APPLE_LAUNCH_TIMEOUT_MS, INSTALL_TIMEOUT_MS } from "../shared/worktree-readiness"
+import { stderrText } from "./git-errors"
+import { exec } from "../util/process"
 import { ProjectRouteService } from "./project/route"
 import { repoName, validateCloneUrl } from "./project/clone"
 import { samePath } from "./project/paths"
@@ -31,7 +36,6 @@ import type { CaffeinationService } from "../services/caffeination"
 const INTRO_KEY = "kilo.agentManager.introDismissed"
 const SPLASH_KEY = "kilo.agentManager.splashFolded"
 const PR_MERGE_METHODS_KEY = "agentManager.prMergeMethod"
-
 export class VscodeHost implements Host {
   private diffVirtual: DiffVirtualProvider | undefined
   private autoApprove: AutoApproveController | undefined
@@ -575,6 +579,45 @@ export class VscodeHost implements Host {
 
   refreshGit(): void {
     void vscode.commands.executeCommand("git.refresh")
+  }
+
+  openRepository(root: string): void {
+    void Promise.resolve(vscode.commands.executeCommand("git.openRepository", root)).catch((err: unknown) => {
+      console.warn(`[Kilo New] Agent Manager: failed to open ${root} in Git:`, err)
+    })
+  }
+
+  async runInstall(name: string, command: InstallCommand): Promise<number | undefined> {
+    if (command.mode === "launcher") {
+      return await exec(command.command, command.args, {
+        cwd: command.cwd,
+        env: command.env,
+        timeout: APPLE_LAUNCH_TIMEOUT_MS,
+      }).then(
+        () => 0,
+        (error: unknown) => {
+          const stderr = stderrText(error)
+          if (stderr) throw new Error(stderr)
+          const code = (error as { code?: unknown }).code
+          if (typeof code === "number") return code
+          throw error
+        },
+      )
+    }
+    return await executeVscodeTask(
+      { command: command.command, args: command.args, cwd: command.cwd, env: command.env },
+      { timeout: INSTALL_TIMEOUT_MS, name, stop: true },
+    )
+  }
+
+  onWindowFocus(cb: () => void): Disposable {
+    return vscode.window.onDidChangeWindowState((state) => {
+      if (state.focused) cb()
+    })
+  }
+
+  reloadWindow(): void {
+    void vscode.commands.executeCommand("workbench.action.reloadWindow")
   }
 
   dispose(): void {}

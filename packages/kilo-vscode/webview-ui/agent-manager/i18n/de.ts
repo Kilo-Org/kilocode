@@ -610,4 +610,78 @@ export const dict = {
   "agentManager.orphans.deleteButton": "{{count}} Ordner löschen ({{size}})",
   "agentManager.orphans.cancel": "Abbrechen",
   "agentManager.error.title": "Agent-Manager-Fehler",
+  "agentManager.readiness.projects.title": "Wähle ein Projekt in „{{name}}“",
+  "agentManager.readiness.projects.body":
+    "„{{name}}“ ist selbst kein Git-Projekt, enthält aber {{count}} Projekte. Wähle das aus, in dem du arbeiten möchtest.",
+  "agentManager.readiness.projects.bodyOne":
+    "„{{name}}“ ist selbst kein Git-Projekt, enthält aber ein Projekt. Wähle es aus, um dort zu arbeiten.",
+  "agentManager.readiness.projects.use": "{{name}} verwenden",
+  "agentManager.readiness.projects.other": "Anderen Ordner wählen",
+  "agentManager.readiness.plain.title": "„{{name}}“ ist noch nicht für Git eingerichtet",
+  "agentManager.readiness.plain.body":
+    "Worktrees brauchen Git. Kilo kann es in diesem Ordner einrichten, und deine Dateien bleiben genau so, wie sie sind.",
+  "agentManager.readiness.plain.action": "Git einrichten",
+  "agentManager.readiness.plain.other": "Anderen Ordner wählen",
+  "agentManager.readiness.identity.title": "Welcher Name soll bei deinen Änderungen stehen?",
+  "agentManager.readiness.identity.body":
+    "Git versieht jede Änderung mit einem Namen und einer E-Mail-Adresse. Kilo speichert sie für deinen Git-Benutzer.",
+  "agentManager.readiness.identity.name": "Name",
+  "agentManager.readiness.identity.email": "E-Mail",
+  "agentManager.readiness.identity.saveInit": "Speichern und Git einrichten",
+  "agentManager.readiness.identity.saveCommit": "Speichern und ersten Commit erstellen",
+  "agentManager.readiness.restricted.title": "Wähle den Ordner, in dem dein Projekt liegt",
+  "agentManager.readiness.restricted.body":
+    "Das ist dein Home-Ordner, deshalb richtet Kilo hier kein Git ein. Wähle stattdessen den eigenen Ordner deines Projekts.",
+  "agentManager.readiness.restricted.action": "Ordner wählen",
+  "agentManager.readiness.commit.title": "„{{name}}“ braucht einen ersten Commit",
+  "agentManager.readiness.commit.body":
+    "Worktrees starten bei deinem neuesten Commit, und dieses Projekt hat noch keinen. Kilo kann einen leeren für dich erstellen.",
+  "agentManager.readiness.commit.action": "Ersten Commit erstellen",
+  "agentManager.readiness.ready.initGit": "Git ist eingerichtet.",
+  "agentManager.readiness.ready.initGitNote":
+    "Deine vorhandenen Dateien sind noch nicht in Git gespeichert, daher starten neue Worktrees leer.",
+  "agentManager.readiness.ready.initialCommit": "Erster Commit erstellt.",
+  "agentManager.readiness.ready.initialCommitNote":
+    "Deine vorhandenen Dateien sind noch nicht darin enthalten, daher starten neue Worktrees leer, bis du sie committest.",
+  "agentManager.readiness.unknown.title": "Kilo konnte dieses Projekt nicht prüfen",
+  "agentManager.readiness.untrusted": "Vertraue diesem Fenster, damit Kilo Git einrichten kann.",
+  "agentManager.readiness.error": "Kilo konnte diesen Schritt nicht abschließen.",
+  "agentManager.readiness.check": "Erneut prüfen",
+  "agentManager.readiness.working.initGit": "Git wird eingerichtet…",
+  "agentManager.readiness.working.initialCommit": "Erster Commit wird erstellt…",
+  "agentManager.readiness.working.project": "Projekt wird geöffnet…",
+  "agentManager.readiness.blocked": "Behebe das Problem oben, um einen Worktree zu erstellen.",
+  "agentManager.readiness.blockedGit": "Installiere zuerst Git. Du kannst deine Aufgabe weiter schreiben.",
+  "agentManager.readiness.blockedLfs": "Installiere zuerst Git LFS. Du kannst deine Aufgabe weiter schreiben.",
+  "agentManager.readiness.git.title": "Kilo braucht Git, um Worktrees zu erstellen",
+  "agentManager.readiness.git.body":
+    "Git ist auf diesem Computer noch nicht installiert. Installiere es und kehre dann zu diesem Fenster zurück. Deine Aufgabe bleibt hier.",
+  "agentManager.readiness.git.bodyMac":
+    "Git ist auf diesem Mac noch nicht installiert. Installiere es und kehre dann zu diesem Fenster zurück. Deine Aufgabe bleibt hier.",
+  "agentManager.readiness.lfs.title": "{{name}} benötigt Git LFS",
+  "agentManager.readiness.lfs.body":
+    "Dieses Projekt speichert einige große Dateien in Git LFS, das noch nicht installiert ist. Installiere es und kehre dann zu diesem Fenster zurück. Deine Aufgabe bleibt hier.",
+  "agentManager.readiness.tool.install": "{{tool}} installieren",
+  "agentManager.readiness.tool.get": "{{tool}} herunterladen",
+  "agentManager.readiness.tool.other": "Andere Installationswege",
+  "agentManager.readiness.install.apple.title": "Installation im Apple-Fenster abschließen",
+  "agentManager.readiness.install.apple.body": "Kilo prüft erneut, wenn du zu diesem Fenster zurückkehrst.",
+  "agentManager.readiness.install.terminal.title": "{{tool}} wird installiert…",
+  "agentManager.readiness.install.terminal.body":
+    "Die Installation läuft im Terminal unten. Kilo prüft erneut, wenn sie abgeschlossen ist.",
+  "agentManager.readiness.install.stale.title": "{{tool}} ist installiert, aber VS Code erkennt es noch nicht",
+  "agentManager.readiness.install.stale.body":
+    "Ein Neuladen des Fensters behebt das meistens. Deine Aufgabe kehrt nach dem Neuladen zurück.",
+  "agentManager.readiness.install.reload": "Fenster neu laden",
+  "agentManager.readiness.ready.git": "Git ist bereit.",
+  "agentManager.readiness.ready.lfs": "Git LFS ist bereit.",
+  "agentManager.readiness.install.failed":
+    "Die Installation wurde mit Code {{code}} beendet – sieh dir die Terminalausgabe an.",
+  "agentManager.readiness.install.stopped": "Die Installation wurde gestoppt – sieh dir die Terminalausgabe an.",
+  "agentManager.readiness.lfsSetup.title": "{{name}} benötigt eingerichtetes Git LFS",
+  "agentManager.readiness.lfsSetup.body":
+    "Git LFS ist installiert, aber noch nicht für deinen Git-Benutzer eingerichtet. Richte es ein, um Worktrees zu erstellen.",
+  "agentManager.readiness.lfsSetup.action": "Git LFS einrichten",
+  "agentManager.readiness.blockedLfsSetup": "Richte zuerst Git LFS ein. Du kannst deine Aufgabe weiter schreiben.",
+  "agentManager.readiness.working.setupLfs": "Git LFS wird eingerichtet…",
 }

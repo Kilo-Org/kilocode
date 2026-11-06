@@ -200,17 +200,22 @@ export const ProjectList: Component<Props> = (props) => {
     return select({ projectId: item.projectId, kind: "session", sessionId: item.sessionId })
   }
   const newWorktree = (projectId: string) => {
-    dialog.show(() => (
-      <NewWorktreeDialog
-        projectId={projectId}
-        projects={() => props.projects}
-        activeProjectId={props.selectedProject}
-        defaultBase={props.defaultBase}
-        onCreate={props.onCreate}
-        mode={props.mode}
-        onClose={() => dialog.close()}
-      />
-    ))
+    const [closing, setClosing] = createSignal(false)
+    dialog.show(
+      () => (
+        <NewWorktreeDialog
+          closing={closing}
+          projectId={projectId}
+          projects={() => props.projects}
+          activeProjectId={props.selectedProject}
+          defaultBase={props.defaultBase}
+          onCreate={props.onCreate}
+          mode={props.mode}
+          onClose={() => dialog.close()}
+        />
+      ),
+      () => setClosing(true),
+    )
   }
   const newProject = () => {
     dialog.show(() => <NewProjectDialog onClose={() => dialog.close()} />)
