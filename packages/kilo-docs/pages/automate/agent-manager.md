@@ -535,11 +535,13 @@ The project and worktree context owns document tabs, loaded content, and comment
 
 ## Browser previews
 
-Enable **Browser Automation** in **Settings > Experimental** to show the Browser panel. It is off by default. Open the panel with the **Browser** button and enter your local application's URL. Each session has its own browser, with developer tools and console diagnostics beside the preview.
+Enable **Integrated Browser** in **Settings > Experimental** to show the Browser panel. It is off by default. Open the panel with the **Browser** button and enter a local application URL or a public HTTPS URL. Each session has its own browser, with developer tools and console diagnostics beside the preview.
 
 Use **Select element** to attach an element reference to your next message. It includes enough page context for Kilo to identify the element, plus a source file and line when the page provides a verifiable location. Add your instruction before sending it.
 
-The agent can open the application with `browser_open`. Its automation browser accepts only HTTP URLs on `localhost` or `127.0.0.1` and blocks other origins, including external assets and APIs on separate ports. Serve the resources the agent needs from the same loopback origin. These restrictions apply to the automation browser, not the independent visible preview iframe.
+Web links in Kilo chats open in the Integrated Browser while it is enabled. To open a link in your system browser instead, hold **Shift** as you click it, or set **Open links in** to **System browser** in **Settings > Experimental**. The same setting applies to the sidebar and Kilo editor tabs.
+
+The agent can open a page with `browser_open`. Its automation browser accepts HTTP URLs on `localhost` or `127.0.0.1` and public HTTPS URLs, and blocks other destinations, including private remote hosts and plain HTTP on any other host. A local application can load public HTTPS resources across origins, but its own documents and plain HTTP or WebSocket resources must stay on the approved loopback origin. These restrictions apply to the automation browser, not the independent visible preview iframe.
 
 Kilo uses system Google Chrome by default. In WSL, if Chrome is missing and you have not explicitly set a browser preference, Kilo tries an installed compatible Playwright Chromium browser. Set **Use System Chrome** under **Settings > Experimental** to choose Chrome (on) or Chromium (off). Chromium must match the extension's bundled `playwright-core` version.
 

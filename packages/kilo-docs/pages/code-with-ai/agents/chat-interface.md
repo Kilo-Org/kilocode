@@ -64,10 +64,15 @@ Open your terminal and run `kilo` to launch the interactive terminal interface (
 - **Action buttons** - Approve or reject proposed changes, answer questions
 - **Agent dropdown** - Switch between agents (e.g. Code, Ask, Plan) from the sidebar
 - **Session management** - Start new sessions or [search and resume previous ones](/docs/code-with-ai/agents/session-history)
+- **Focus the input** - Press `Cmd+Shift+A` (macOS) or `Ctrl+Shift+A` (Windows/Linux) to move focus to the chat input from anywhere in VS Code
 
 **Providing context:**
 
 The extension automatically passes context from your editor, including your open tabs and active file. You can type `@` in the chat input to get file and terminal autocomplete suggestions. Use `@filename` to attach a file. In the sidebar, `@terminal` includes the active VS Code terminal output. In Agent Manager, it includes the focused terminal for the selected session or worktree, including embedded **Run** and **Setup** tabs. You can also mention file paths naturally in your message (e.g., "update src/utils.ts to add a helper function"). The agent can also discover files on its own using its built-in tools.
+
+**Large pastes:**
+
+Pasting 15 or more lines, or more than 4,000 characters, collapses into a `[Pasted ~N lines]` chip so the prompt stays readable. Click the chip to expand the pasted text in place.
 
 **Exporting local transcripts:**
 
@@ -91,6 +96,12 @@ When more than one session is open, the sidebar and Kilo editor tabs show a sess
 | `Cmd+Shift+Left` / `Right` | `Ctrl+Shift+Left` / `Right` | Move the focused session tab left / right |
 
 Hover a session tab next to the active tab to see its shortcut. When the prompt is empty, its placeholder also shows the shortcut. To hide these prompt hints, turn off **Show shortcut hints** in **Settings > Display**. To change the keys, search for **Previous Session Tab** or **Next Session Tab** in **Keyboard Shortcuts**. These are the same keys that switch tabs in the Agent Manager, and each window acts on the surface that has focus.
+
+Right-click a session tab to pin it, close it, close the other tabs, close the tabs to its right, or fork the session into a new tab. Run **Kilo Code: Show Open Tabs** from the Command Palette to open a switcher that lists every open tab. Open tabs, their order, and pinned state are restored when you reload the window.
+
+**Viewing documents:**
+
+Clicking a Markdown reference (`.md`, `.mdx`, or `.markdown`) in chat opens it in a rendered **Documents** editor tab instead of a plain text editor. The tab shows rendered Markdown by default; use the preview/source toggle to switch to syntax-highlighted source, and use **Open file** to open the document in the native editor at its original line. The tab previews inline images (PNG, JPEG, GIF, WebP, and SVG), copies the content or path, and adds line comments that you send back to the chat prompt.
 
 {% /tab %}
 {% tab label="CLI" %}
@@ -116,8 +127,9 @@ Type `@` in the TUI to get file autocomplete suggestions, or mention file paths 
 
 **Click to act:**
 
-- File paths → Opens the file
+- File paths → Opens the file; a Markdown reference opens in the rendered Documents tab
 - URLs → Opens in browser
+- Images → Opens an image attachment from the chat input or transcript in a VS Code editor tab
 - Messages → Expand/collapse details
 - Code blocks → Copy button appears
 - Mermaid code blocks → Fenced `mermaid` blocks render as diagrams after the message finishes streaming. The source remains copyable, invalid Mermaid syntax stays visible in a contained error state, and the Zoom action opens a fullscreen viewer with zoom and pan controls.

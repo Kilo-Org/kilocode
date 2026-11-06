@@ -683,6 +683,8 @@ Add to `~/.config/kilo/config.json`:
 }
 ```
 
+Or set `KILO_REMOTE=1` in the environment where you launch Kilo to enable remote mode for that process without editing your config.
+
 ### Using Remote Mode
 
 Once enabled, start a CLI session and open [Cloud Agents](https://app.kilo.ai/cloud). Your local session appears in the dashboard. See [Cloud Agent Remote Connections](/docs/code-with-ai/platforms/cloud-agent#remote-connections) for details.

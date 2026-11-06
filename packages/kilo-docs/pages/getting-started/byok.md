@@ -143,6 +143,12 @@ These rules apply to saved API keys. Eligible requests use a connected ChatGPT s
 - If the key is invalid, the request fails. It does not fall back to using Kilo's keys.
 - Subscription-based providers (such as the Z.ai Coding Plan or Kimi Code) only expose the models included in that plan. Select one of those models to route traffic through your subscription.
 
+### Prioritize BYOK keys
+
+An account or organization can have more than one BYOK key. When multiple keys can serve the same request, the list order sets their priority, so put the key you want Kilo to prefer first. Reorder keys with the up and down controls on the [BYOK page](https://app.kilo.ai/byok).
+
+Organization owners and admins can reorder organization keys for all members of the organization; personal key order is separate. ChatGPT connections are not part of key priorities.
+
 ## Using BYOK in the Extensions and CLI
 
 - BYOK works with the Kilo Gateway provider. Users should ensure that is set as the active [provider](/docs/ai-providers).

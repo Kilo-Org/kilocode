@@ -41,6 +41,8 @@ These tools help Kilo Code understand your code and project:
 - `glob` - Finds files matching a glob pattern
 - `grep` - Searches file contents with regex
 
+`read` also extracts text from files it would otherwise treat as binary: Word documents (`.docx`), spreadsheets (`.xlsx`, `.ods`), and Jupyter notebooks (`.ipynb`). Extracted content returns as line-numbered text with the same `offset` and `limit` pagination as any other file. For spreadsheets, Kilo labels each sheet, hides hidden sheets, formats dates and times, and caps the read at 50,000 rows or 50 MB. For notebooks, only markdown and code cells are returned; cell outputs and metadata are omitted. Text, image, and PDF reads are unchanged. This lets the agent inspect common project files without a separate conversion step.
+
 ### Edit Tools
 
 These tools help Kilo Code make changes to your code:
@@ -96,9 +98,9 @@ Set the `KILO_WEBSEARCH_PROVIDER` environment variable to force a provider:
 
 The VS Code extension has a built-in browser automation tool powered by [Playwright MCP](https://www.npmjs.com/package/@playwright/mcp). Enable it in **Settings → Web Tools → Browser Automation**. When enabled, it registers an MCP server named `kilo-playwright` and exposes browser tools that follow the same permission model as all MCP tools.
 
-The VS Code extension's experimental `browser_open` tool opens a local application in Agent Manager's Integrated Browser panel and returns a screenshot and diagnostics. Enable **Integrated Browser** under **Settings > Experimental**. It requires installed Chrome or compatible Playwright Chromium. It is independent from Playwright MCP.
+The VS Code extension's experimental `browser_open` tool opens a page in Agent Manager's Integrated Browser panel and returns a screenshot and diagnostics. Enable **Integrated Browser** under **Settings > Experimental**. It requires installed Chrome or compatible Playwright Chromium. It is independent from Playwright MCP.
 
-The `browser_open` automation browser accepts HTTP URLs on `localhost` or `127.0.0.1` only, and blocks resources from other origins. See [Browser previews](/docs/automate/agent-manager#browser-previews) for setup and element feedback.
+The `browser_open` automation browser accepts HTTP URLs on `localhost` or `127.0.0.1` and public HTTPS URLs, and blocks other destinations. See [Browser previews](/docs/automate/agent-manager#browser-previews) for setup and element feedback.
 
 This restriction is specific to `browser_open`, not Kilo's web access in general. Use `websearch` and `webfetch` to find and read public web pages. Browser tools from a separately configured MCP server can provide interactive web browsing according to that server's capabilities and permissions.
 

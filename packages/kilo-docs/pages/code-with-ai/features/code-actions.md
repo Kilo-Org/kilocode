@@ -32,4 +32,8 @@ The extension also adds code actions to the **terminal context menu**:
 - **Fix Command:** Asks Kilo to fix a failed terminal command.
 - **Explain Command:** Asks Kilo to explain a terminal command or its output.
 
+### Generating a terminal command
+
+Press `Cmd+Shift+G` (macOS) or `Ctrl+Shift+G` (Windows/Linux) to describe a terminal command in plain language, for example "find all .ts files modified in the last 24 hours". Kilo generates the command in the active chat, where you can review it before running it.
+
 By using Kilo Code's Code Actions, you can quickly get AI-powered assistance directly within your coding workflow. This can save you time and help you write better code.

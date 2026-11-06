@@ -274,6 +274,8 @@ Available experimental settings include:
 - **LSP integration** - expose language server diagnostics to the agent
 - **Paste summary** - summarize large clipboard pastes before including them
 - **Batch tool** - allow the agent to batch multiple tool calls in one step
+- **Integrated Browser** - preview and interact with local applications and public HTTPS pages in Agent Manager and the sidebar browser tab, and expose the `browser_open` tool to sessions (off by default). See [Browser previews](/docs/automate/agent-manager#browser-previews)
+- **Open links in** - choose whether web links in Kilo chats open in the Integrated Browser (default) or your system browser. Requires the Integrated Browser
 - **Search Ignored Paths** - list folders or files the agent's `glob` tool should search even when `.gitignore` or other ignore files exclude them, such as `packages/*/dist` (`experimental.glob_include_ignored`, empty by default). Patterns are gitignore-style and relative to the workspace: a pattern without a slash matches folders at any depth, and a single file inside an ignored folder is listed by its path (for example `build/report.json`). Ignored or hidden folders inside a listed folder stay skipped, and `.git` is never searched
 - **Claude Code Migration** - import supported global Claude Code configuration once (off by default)
 - **OpenTelemetry** - enable Kilo telemetry and optional OTLP export when configured

@@ -55,6 +55,7 @@ The Auto Approve tab lists the following tool-specific permissions. Some tools a
 | `todoread` / `todowrite` | Reading and updating the todo list |
 | `websearch` | Performing web searches |
 | `webfetch` | Fetching content from URLs |
+| `browser_open` | Opening pages in the Integrated Browser (`navigate:<origin>`) |
 | `doom_loop` | Allowing the agent to continue after repeated failures |
 
 ## Runtime Permission Requests
@@ -127,6 +128,7 @@ Permissions are configured under the `permission` key in `kilo.jsonc`. The follo
 | `todoread` / `todowrite` | Reading and updating the todo list |
 | `websearch` | Performing web searches |
 | `webfetch` | Fetching content from URLs |
+| `browser_open` | Opening pages in the Integrated Browser (`navigate:<origin>`) |
 | `doom_loop` | Allowing the agent to continue after repeated failures |
 
 ## Glob-Pattern Rules

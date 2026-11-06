@@ -31,6 +31,7 @@ Key features include:
 - **[Custom Subagents](/docs/customize/custom-subagents)** — Define specialized sub-agents for the `task` tool
 - **Charts** — Ask for a chart or plot and get an inline data visualization in the chat
 - **Open in Tab** — Pop the chat out into a full editor tab
+- **[Documents tab](/docs/code-with-ai/agents/chat-interface)** — Markdown references open in a rendered, interactive document tab with image previews, copy actions, and line comments
 - **[Notifications](/docs/getting-started/settings/notifications)** - Choose sounds, VS Code alerts, or OS notifications when a session needs attention
 - **[Keep Awake](/docs/getting-started/settings/keep-awake)** - Optionally prevent system sleep while agents work in a local VS Code window
 - **Transcript export:** Save complete local session transcripts as Markdown files
