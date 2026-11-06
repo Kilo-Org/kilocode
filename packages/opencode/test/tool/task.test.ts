@@ -685,6 +685,84 @@ describe("tool.task", () => {
   )
   // kilocode_change end
 
+  // kilocode_change start - #34: a subagent that ends without any non-synthetic text is a failure,
+  // not an empty success the parent reads as "no findings"
+  it.instance("fails when the subagent produced no text output", () =>
+    Effect.gen(function* () {
+      const sessions = yield* Session.Service
+      const { chat, assistant } = yield* seed()
+      const tool = yield* TaskTool
+      const def = yield* tool.init()
+      const promptOps: TaskPromptOps = {
+        ...stubOps(),
+        prompt: (input) =>
+          Effect.sync(() => {
+            const rep = reply(input, "")
+            const id = MessageID.ascending()
+            return {
+              ...rep,
+              parts: [
+                {
+                  id: PartID.ascending(),
+                  messageID: id,
+                  sessionID: input.sessionID,
+                  type: "text",
+                  text: "",
+                  synthetic: true,
+                },
+                {
+                  id: PartID.ascending(),
+                  messageID: id,
+                  sessionID: input.sessionID,
+                  type: "tool",
+                  tool: "read",
+                  callID: "call-1",
+                  state: {
+                    status: "completed" as const,
+                    input: { filePath: "README.md" },
+                    output: "readme body",
+                    title: "readme.md",
+                    metadata: {},
+                    time: { start: Date.now(), end: Date.now() },
+                  },
+                },
+              ],
+            }
+          }),
+      }
+
+      const exit = yield* def
+        .execute(
+          {
+            description: "review the change",
+            prompt: "Return NO_FINDINGS if there are none",
+            subagent_type: "general",
+          },
+          {
+            sessionID: chat.id,
+            messageID: assistant.id,
+            agent: "build",
+            abort: new AbortController().signal,
+            extra: { promptOps },
+            messages: [],
+            metadata: () => Effect.void,
+            ask: () => Effect.void,
+          },
+        )
+        .pipe(Effect.exit)
+
+      expect(Exit.isFailure(exit)).toBe(true)
+
+      const childId = (yield* sessions.children(chat.id))[0]?.id
+      expect(childId).toBeDefined()
+      const squashed = Exit.isFailure(exit) ? Cause.squash(exit.cause) : undefined
+      const message = squashed instanceof Error ? squashed.message : String(squashed)
+      expect(message).toContain('Sub-agent "general" produced no text output')
+      expect(message).toContain(`task_id="${childId}"`)
+    }),
+  )
+  // kilocode_change end
+
   it.instance("prevents subagents from launching subagents by default", () =>
     Effect.gen(function* () {
       const sessions = yield* Session.Service
