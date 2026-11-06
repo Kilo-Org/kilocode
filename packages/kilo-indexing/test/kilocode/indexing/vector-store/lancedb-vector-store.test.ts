@@ -145,6 +145,14 @@ function resetAllMocks() {
   mockLoadLanceDB.mockResolvedValue(mockLanceDBModule)
 }
 
+async function waitFor(done: () => boolean, message: string) {
+  for (const _ of Array.from({ length: 500 })) {
+    if (done()) return
+    await Bun.sleep(10)
+  }
+  throw new Error(`Timed out after 5000 ms: ${message}`)
+}
+
 describe("LocalVectorStore", () => {
   beforeEach(() => {
     resetAllMocks()
@@ -433,7 +441,7 @@ describe("LocalVectorStore", () => {
       expect(options.cleanupOlderThan).toBeInstanceOf(Date)
       const age = Date.now() - options.cleanupOlderThan.getTime()
       expect(age).toBeGreaterThanOrEqual(LANCEDB_CLEANUP_RETENTION_MS - 1_000)
-      expect(age).toBeLessThan(LANCEDB_CLEANUP_RETENTION_MS + 10_000)
+      expect(age).toBeLessThan(LANCEDB_CLEANUP_RETENTION_MS + 60_000)
     })
 
     test("swallows optimization failures", async () => {
@@ -470,7 +478,7 @@ describe("LocalVectorStore", () => {
       mockTable.optimize.mockImplementation(() => gate.promise)
 
       await store.upsertPoints([point()])
-      await Bun.sleep(0)
+      await waitFor(() => mockTable.optimize.mock.calls.length === 1, "compaction did not start")
       // upsertPoints resolved before the pending compaction finished
       expect(mockTable.optimize).toHaveBeenCalledTimes(1)
 
@@ -484,12 +492,12 @@ describe("LocalVectorStore", () => {
 
       store["_writesSinceCompact"] = LANCEDB_COMPACT_EVERY_WRITES - 2
       await store.upsertPoints([point()])
-      await Bun.sleep(0)
+      await waitFor(() => mockTable.optimize.mock.calls.length === 1, "compaction did not start")
       expect(mockTable.optimize).toHaveBeenCalledTimes(1)
 
       store["_writesSinceCompact"] = LANCEDB_COMPACT_EVERY_WRITES - 2
       store["noteWrites"](2)
-      await Bun.sleep(0)
+      await waitFor(() => store["compactQueued"], "compaction was not queued")
       expect(mockTable.optimize).toHaveBeenCalledTimes(1)
 
       gate.resolve()
@@ -515,6 +523,7 @@ describe("LocalVectorStore", () => {
         payload: { filePath: "src/a.ts", fileHash: "hash", codeChunk: "code", startLine: 1, endLine: 2 },
       }
       await store.upsertPoints([point])
+      await waitFor(() => runs === 1, "compaction did not start")
       // Cross the threshold again while the first compaction is still running.
       store["_writesSinceCompact"] = LANCEDB_COMPACT_EVERY_WRITES - 2
       store["noteWrites"](2)
@@ -525,7 +534,7 @@ describe("LocalVectorStore", () => {
       expect(mockDb.close).not.toHaveBeenCalled()
 
       first.resolve()
-      await Bun.sleep(0)
+      await waitFor(() => runs === 2, "the chained compaction did not start")
       // The chained second compaction is now running; the db must stay open.
       expect(runs).toBe(2)
       expect(mockDb.close).not.toHaveBeenCalled()

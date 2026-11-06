@@ -13,7 +13,7 @@ import { OpenAICompatibleEmbedder } from "../../../../src/indexing/embedders/ope
 
 // Mock global fetch
 const mockFetch = mock() as any
-global.fetch = mockFetch
+const originalFetch = global.fetch
 
 describe("OpenAICompatibleEmbedder", () => {
   let embedder: OpenAICompatibleEmbedder
@@ -23,6 +23,7 @@ describe("OpenAICompatibleEmbedder", () => {
   const testModelId = "text-embedding-3-small"
 
   beforeEach(() => {
+    global.fetch = mockFetch
     mockEmbeddingsCreate.mockReset()
     mockFetch.mockReset()
     setOpenAIConstructorHook(undefined)
@@ -39,6 +40,7 @@ describe("OpenAICompatibleEmbedder", () => {
   })
 
   afterEach(() => {
+    global.fetch = originalFetch
     mockEmbeddingsCreate.mockReset()
     mockFetch.mockReset()
     setOpenAIConstructorHook(undefined)

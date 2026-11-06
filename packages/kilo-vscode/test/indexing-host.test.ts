@@ -31,7 +31,13 @@ const disabled: Status = {
   percent: 0,
 }
 
-const flush = () => new Promise((resolve) => setTimeout(resolve, 0))
+const waitFor = async (done: () => boolean, message: string) => {
+  for (const _ of Array.from({ length: 500 })) {
+    if (done()) return
+    await Bun.sleep(5)
+  }
+  throw new Error(`Timed out: ${message}`)
+}
 
 function setup(input: {
   directory?: string
@@ -161,7 +167,7 @@ describe("indexing host consent", () => {
     })
 
     const reading = fixture.host.requestSettings()
-    await flush()
+    await waitFor(() => fixture.statuses.length === 1, "status read did not start")
     await fixture.host.setConsent(projectId("/repo"), true)
     older.resolve(initial)
     await reading

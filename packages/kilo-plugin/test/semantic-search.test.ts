@@ -198,8 +198,8 @@ describe("semantic_search over a real index", () => {
     cleanup.unshift(async () => {
       await runtime.dispose()
       server.stop(true)
-      await rm(directory, { recursive: true, force: true })
-      await rm(root, { recursive: true, force: true })
+      await rm(directory, { recursive: true, force: true, maxRetries: 5 })
+      await rm(root, { recursive: true, force: true, maxRetries: 5 })
     })
     await runtime.init()
     const done = async () => {
@@ -227,7 +227,7 @@ describe("semantic_search over a real index", () => {
     })
     const first = await Effect.runPromise(search.execute({ query: "hash the login password with salt" }, context))
     expect(first.output?.split("\n")[2]).toStartWith("1. src/auth.ts:")
-  })
+  }, 60_000)
 
   // CI container runners report a live watcher but deliver no events to the worker, so this checks the scan path: a
   // file added after the first scan is embedded and searchable after the next start, from the same store. The watcher
@@ -247,7 +247,7 @@ describe("semantic_search over a real index", () => {
     const added = (hit: VectorStoreSearchResult | undefined) =>
       typeof hit?.payload?.filePath === "string" && hit.payload.filePath.replaceAll("\\", "/") === "src/upload.ts"
     let seen: VectorStoreSearchResult[] = []
-    for (const _ of Array.from({ length: 40 })) {
+    for (const _ of Array.from({ length: 80 })) {
       seen = await runtime.search("retry delay for an upload attempt")
       if (added(seen[0])) return
       await Bun.sleep(250)

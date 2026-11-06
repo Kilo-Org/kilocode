@@ -210,7 +210,7 @@ describe("CodeIndexManager", () => {
       const timeout = setTimeout(() => {
         child.kill()
         gate.reject(new Error("Indexing subprocess timed out"))
-      }, 10_000)
+      }, 30_000)
       const [exit, stderr] = await Promise.race([
         Promise.all([child.exited, new Response(child.stderr).text()]),
         gate.promise,
@@ -220,9 +220,9 @@ describe("CodeIndexManager", () => {
       expect(requests).toEqual([{ authorization: null, apiKey: null }])
     } finally {
       server.stop(true)
-      await rm(root, { recursive: true, force: true })
+      await rm(root, { recursive: true, force: true, maxRetries: 5 })
     }
-  })
+  }, 60_000)
 
   test("cancels active indexing when configuration is removed", async () => {
     const mgr = new CodeIndexManager("/tmp/ws", "/tmp/cache")

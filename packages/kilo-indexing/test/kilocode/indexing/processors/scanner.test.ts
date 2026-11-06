@@ -389,8 +389,8 @@ describe("DirectoryScanner", () => {
       expect(cache.getHash(blocked)).toBeUndefined()
       expect(cache.getHash(open)).toBeDefined()
     } finally {
-      await rm(root, { recursive: true, force: true })
-      await rm(cacheDir, { recursive: true, force: true })
+      await rm(root, { recursive: true, force: true, maxRetries: 5 })
+      await rm(cacheDir, { recursive: true, force: true, maxRetries: 5 })
     }
   })
 
@@ -454,8 +454,8 @@ describe("DirectoryScanner", () => {
       expect(cache.getHash(kept)).toBeDefined()
       expect(cache.getHash(pruned)).toBeUndefined()
     } finally {
-      await rm(root, { recursive: true, force: true })
-      await rm(cacheDir, { recursive: true, force: true })
+      await rm(root, { recursive: true, force: true, maxRetries: 5 })
+      await rm(cacheDir, { recursive: true, force: true, maxRetries: 5 })
     }
   })
 
@@ -476,7 +476,7 @@ describe("DirectoryScanner", () => {
       const { readdirSync } = await import("fs")
       if (readdirSync(probe).length < 2) return
     } finally {
-      await rm(probe, { recursive: true, force: true })
+      await rm(probe, { recursive: true, force: true, maxRetries: 5 })
     }
     const root = await mkdtemp(join(tmpdir(), "scanner-test-"))
     const cacheDir = await mkdtemp(join(tmpdir(), "scanner-cache-"))
@@ -507,8 +507,8 @@ describe("DirectoryScanner", () => {
       expect(cache.getHash(keptDesktop)).toBeDefined()
       expect(cache.getHash(pruned)).toBeUndefined()
     } finally {
-      await rm(root, { recursive: true, force: true })
-      await rm(cacheDir, { recursive: true, force: true })
+      await rm(root, { recursive: true, force: true, maxRetries: 5 })
+      await rm(cacheDir, { recursive: true, force: true, maxRetries: 5 })
     }
   })
 })

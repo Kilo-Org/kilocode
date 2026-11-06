@@ -8,6 +8,8 @@ const root = path.resolve(import.meta.dir, "..")
 const webview = path.join(root, "webview-ui")
 
 describe("reusable browser view", () => {
+  // The build and the child run take about 1 s locally but more than 5 s on loaded Windows runners. A timeout makes
+  // Bun kill the shared esbuild service, and later esbuild tests in this process then fail with EPIPE.
   test("renders and emits commands without Agent Manager or VS Code providers", async () => {
     const solid = path.dirname(Bun.resolveSync("solid-js/package.json", webview))
     const aliases: Record<string, string> = {
@@ -39,10 +41,16 @@ describe("reusable browser view", () => {
     const file = path.join(root, `.browser-panel-render-${crypto.randomUUID()}.mjs`)
     await Bun.write(file, result.outputFiles[0]!.contents)
     try {
-      const child = Bun.spawnSync([process.execPath, file], { cwd: webview, stdout: "pipe", stderr: "pipe" })
-      expect(child.exitCode, child.stdout.toString() + child.stderr.toString()).toBe(0)
+      // Spawn async so a slow, loaded runner does not block the event loop and the test timeout stays accurate.
+      const child = Bun.spawn([process.execPath, file], { cwd: webview, stdout: "pipe", stderr: "pipe" })
+      const [stdout, stderr, code] = await Promise.all([
+        new Response(child.stdout).text(),
+        new Response(child.stderr).text(),
+        child.exited,
+      ])
+      expect(code, stdout + stderr).toBe(0)
     } finally {
       unlinkSync(file)
     }
-  })
+  }, 60_000)
 })

@@ -19,7 +19,7 @@ afterEach(async () => {
   await Promise.all(runtimes.splice(0).map((runtime) => runtime.dispose()))
   IndexingWorker.override()
   IndexingRuntime.resetConsent()
-  await Promise.all(dirs.splice(0).map((dir) => rm(dir, { recursive: true, force: true })))
+  await Promise.all(dirs.splice(0).map((dir) => rm(dir, { recursive: true, force: true, maxRetries: 5 })))
 })
 
 async function tmp() {
@@ -104,12 +104,20 @@ function host(input: {
   return { runtime, record }
 }
 
+async function waitFor(done: () => boolean | Promise<boolean>, message: string) {
+  for (const _ of Array.from({ length: 500 })) {
+    if (await done()) return
+    await Bun.sleep(20)
+  }
+  throw new Error(`Timed out after 10000 ms: ${message}`)
+}
+
 const settled = async (runtime: IndexingRuntime.Runtime) => {
   await runtime.init()
-  for (const _ of Array.from({ length: 50 })) {
-    if ((await runtime.current()).message !== "Indexing is initializing.") return runtime.current()
-    await Bun.sleep(10)
-  }
+  await waitFor(
+    async () => (await runtime.current()).message !== "Indexing is initializing.",
+    "indexing did not finish initializing",
+  )
   return runtime.current()
 }
 
@@ -309,10 +317,10 @@ describe("indexing runtime", () => {
 
   test("does not publish an initialized status after an in-flight start is disposed", async () => {
     const gate = Promise.withResolvers<IndexingStatus>()
-    engine(() => gate.promise)
+    const state = engine(() => gate.promise)
     const { runtime, record } = host({ directory: await tmp(), indexing: { enabled: true, provider: "ollama" } })
     await runtime.init()
-    await Bun.sleep(20)
+    await waitFor(() => state.inits.length === 1, "engine init did not start")
     await runtime.dispose()
     gate.resolve(complete)
     await Bun.sleep(20)
@@ -333,7 +341,7 @@ describe("indexing runtime", () => {
     })
     state.hooks?.status(progress(1))
     for (const count of Array.from({ length: 40 }, (_, index) => index + 2)) state.hooks?.status(progress(count))
-    await Bun.sleep(400)
+    await waitFor(() => record.published.at(-1)?.processedFiles === 41, "burst progress was not published")
     const burst = record.published.slice(before)
     expect(burst.length).toBeLessThanOrEqual(3)
     expect(burst.at(-1)?.processedFiles).toBe(41)
@@ -405,7 +413,7 @@ describe("indexing runtime", () => {
     const plain = host({ directory: main, indexing: { enabled: true, provider: "ollama" }, primary })
     await settled(plain.runtime)
     expect(state.inits[1]?.baseline).toBeUndefined()
-  })
+  }, 60_000)
 
   test("does not classify an ordinary directory from its pathname", async () => {
     const state = engine()

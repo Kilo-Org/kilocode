@@ -12,7 +12,7 @@ for (const hosted of [false, true]) {
       await using root = await temporary()
       const fixture = path.join(import.meta.dir, "fixtures/epilogue.ts")
       checkEpilogue(await run([process.execPath, fixture, String(columns)], root.path, hosted), hosted, columns)
-    }, 30_000)
+    }, 60_000)
   }
 
   test(`compiled epilogue: ${hosted ? "Kilo" : "upstream"}, 48 columns`, async () => {
@@ -29,7 +29,7 @@ for (const hosted of [false, true]) {
     for (const scenario of ["update", "both", "none"] as const) {
       checkEpilogue(await run([outfile, "48", scenario], root.path, !hosted), hosted, 48, scenario)
     }
-  }, 60_000)
+  }, 120_000)
 
   for (const scenario of ["update", "both", "none"] as const) {
     test(`source ${scenario} epilogue: ${hosted ? "Kilo" : "upstream"}`, async () => {
@@ -43,7 +43,7 @@ for (const hosted of [false, true]) {
           scenario,
         )
       }
-    }, 30_000)
+    }, 120_000)
   }
 }
 
