@@ -2307,6 +2307,17 @@ body.am-wt-dragging-active * {
   position: relative;
 }
 
+/* The intro shows here only until the chat store exists. Center it like the empty message list it replaces, so the
+   preview does not jump from the top to the center when the store arrives. */
+.am-intro-fallback {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  align-items: center;
+  justify-content: center;
+  overflow: auto;
+}
+
 .am-chat-wrapper.am-chat-wrapper-hidden {
   display: none;
 }

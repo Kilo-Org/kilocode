@@ -286,6 +286,13 @@ const AgentManagerContent: Component = () => {
   const rootDirectory = createMemo(() => directories.root(activeProjectId() ?? currentProjectId()))
   const appSession = createAppSession({ vscode, directories, rootDirectory })
   const panel = appSession.panel
+  // The open session is visible, so its directory loads a session list before the worktree card selection settles.
+  createEffect(() => {
+    const id = appSession.sessions.currentSessionID()
+    if (!id) return
+    const directory = directories.directoryOf(id)
+    if (directory) panel.show([directory])
+  })
   // Display layouts are Kilo-only config keys, so the host reads them. Ask on connect and after every config change.
   const display = useDisplaySettings()
   createEffect(
@@ -2184,9 +2191,11 @@ const AgentManagerContent: Component = () => {
           when={chatStore()}
           keyed
           fallback={
-            <Show when={appSession.rootStore()} keyed fallback={intro.render()}>
-              {(store) => <V2Scope value={store}>{intro.render()}</V2Scope>}
-            </Show>
+            <div class="am-intro-fallback">
+              <Show when={appSession.rootStore()} keyed fallback={intro.render()}>
+                {(store) => <V2Scope value={store}>{intro.render()}</V2Scope>}
+              </Show>
+            </div>
           }
         >
           {(store) => (
