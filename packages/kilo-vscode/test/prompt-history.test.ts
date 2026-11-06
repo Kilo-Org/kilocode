@@ -9,6 +9,7 @@ import {
   MAX,
   MAX_CONVERSATIONS,
   MAX_ENTRY,
+  MAX_MOVES,
 } from "../webview-ui/src/hooks/usePromptHistory"
 
 describe("canNavigate", () => {
@@ -294,6 +295,33 @@ describe("usePromptHistory — per-conversation isolation", () => {
       setSid("ses-race")
       history.append("first prompt", "pending-race")
       expect(history.navigate("up", "", 0, [])?.text).toBe("first prompt")
+      dispose()
+    })
+  })
+
+  it("restores the saved draft and pastes after navigating down through history", () => {
+    createRoot((dispose) => {
+      const [sid] = createSignal<string | undefined>("ses-down-restore")
+      const history = usePromptHistory(sid)
+      history.append("first")
+      history.append("second")
+
+      expect(history.navigate("up", "my draft", 0, ["paste body"])).toEqual({ text: "second", pastes: [] })
+      expect(history.navigate("up", "second", 0, [])?.text).toBe("first")
+      expect(history.navigate("down", "first", 0, [])?.text).toBe("second")
+      expect(history.navigate("down", "second", 0, [])).toEqual({ text: "my draft", pastes: ["paste body"] })
+      dispose()
+    })
+  })
+
+  it("keeps the recent pending-key aliases when many moves never receive an entry", () => {
+    createRoot((dispose) => {
+      for (let i = 0; i < MAX_MOVES + 10; i++) movePromptHistory(`pending-bound-${i}`, `ses-bound-${i}`)
+      const last = MAX_MOVES + 9
+      const [sid] = createSignal<string | undefined>(`ses-bound-${last}`)
+      const history = usePromptHistory(sid)
+      history.append("late prompt", `pending-bound-${last}`)
+      expect(history.navigate("up", "", 0, [])?.text).toBe("late prompt")
       dispose()
     })
   })

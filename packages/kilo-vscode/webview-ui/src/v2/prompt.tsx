@@ -3,7 +3,7 @@ import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { showToast } from "@kilocode/kilo-ui/toast"
 import type { JsonValue, ModelRef } from "@opencode/client"
 import { createEffect, createMemo, createSignal, For, on, onCleanup, onMount, Show, untrack, type JSX } from "solid-js"
-import type { ReviewCommentEntry } from "../../../src/shared/review-comments"
+import { record, type ReviewCommentEntry } from "../../../src/shared/review-comments"
 import { pushFixes } from "../../agent-manager/pr/pr-push-fixes"
 import { fold, reserve } from "../components/chat/prompt-fold"
 import { ReviewComments } from "../components/chat/ReviewComments"
@@ -63,6 +63,11 @@ const references = new Map<string, BrowserReference[]>()
 
 // Older review prompts carry the section in the text without review metadata.
 const REVIEW_PREFIX = /^## Review Comments\n[\s\S]*?\n\n/
+
+// Prompts Kilo composed on the user's behalf, such as a worktree update, are not the user's own history.
+function injected(metadata: { [key: string]: JsonValue } | undefined): boolean {
+  return typeof record(record(record(metadata)?.kilo)?.injected)?.title === "string"
+}
 
 // Pending review comments follow the same key as the text, so switching sessions neither loses nor mixes them.
 const reviewDrafts = new Map<string, ReviewCommentEntry[]>()
@@ -167,7 +172,7 @@ export function PromptInput(props: {
       const id = props.session
       if (!id) return []
       return v2.data.session.message.list(id).flatMap((item) => {
-        if (item.type !== "user") return []
+        if (item.type !== "user" || injected(item.metadata)) return []
         const value = partFeedback(item.metadata, item.text)?.body ?? item.text.replace(REVIEW_PREFIX, "")
         return value.trim() ? [value] : []
       })
@@ -634,6 +639,7 @@ export function PromptInput(props: {
   const historyKey = (event: KeyboardEvent) => {
     if (event.key !== "ArrowUp" && event.key !== "ArrowDown") return false
     if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey || event.isComposing) return false
+    if (props.disabled || sending()) return false
     const input = refs.input
     if (!input) return false
     const cursor = input.selectionStart ?? 0
@@ -646,6 +652,8 @@ export function PromptInput(props: {
       paste.pastes().map((item) => item.text),
     )
     if (!entry) return false
+    enhanceToken++
+    preEnhance = null
     event.preventDefault()
     setText(entry.text)
     paste.load(entry.text, entry.pastes)

@@ -24,6 +24,8 @@ const GLOBAL_KEY = "global"
 export const MAX_CONVERSATIONS = 50
 /** Per-conversation mode only: longer prompts are not remembered, to protect the storage quota. */
 export const MAX_ENTRY = 10_000
+/** Cap on remembered pending-key moves whose first entry never arrived. */
+export const MAX_MOVES = 100
 const EMPTY: string[] = []
 
 // Insertion order doubles as recency order: touching a key re-inserts it at the end.
@@ -180,6 +182,8 @@ export function movePromptHistory(from: string, to: string) {
   if (source === target) return
   const list = store.get(source)
   if (!list) {
+    const oldest = moved.keys().next().value
+    if (moved.size >= MAX_MOVES && oldest !== undefined) moved.delete(oldest)
     moved.set(from, target)
     return
   }
@@ -307,7 +311,11 @@ export function usePromptHistory(key: Accessor<string | undefined>, shared?: Acc
 
   function append(text: string, targetKey?: string) {
     const all = shared?.() === true
-    if (!text.trim() || (!all && text.length > MAX_ENTRY)) return
+    if (!text.trim() || (!all && text.length > MAX_ENTRY)) {
+      // A send with nothing to record will never append, so drop its pending-key alias now.
+      if (!all && targetKey !== undefined) follow(targetKey)
+      return
+    }
     // No conversation key yet: recording would leak into every other brand-new conversation.
     if (!all && targetKey === undefined && key() === undefined) return
     // An explicit targetKey names the session the message actually belongs to; it may
