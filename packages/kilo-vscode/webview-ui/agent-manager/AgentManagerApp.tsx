@@ -2193,7 +2193,6 @@ const AgentManagerContent: Component = () => {
         >
           {(store) => (
             <V2Scope value={store}>
-            <V2Scope value={store}>
               <ReviewCommentActionsContext.Provider value={reviewCommentActions}>
                 <SpeechToTextStatusProvider>
                   <SessionView
@@ -2229,7 +2228,6 @@ const AgentManagerContent: Component = () => {
                   />
                 </SpeechToTextStatusProvider>
               </ReviewCommentActionsContext.Provider>
-            </V2Scope>
             </V2Scope>
           )}
         </Show>

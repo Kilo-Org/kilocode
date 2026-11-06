@@ -383,6 +383,7 @@ export type ToWebview =
   | { type: "dismissedNotificationsLoaded"; ids: string[] }
   | { type: "webviewActiveChanged"; active: boolean }
   | { type: "validateFilesResult"; id: string; existing: string[] }
+  /** Review comments for the composer from the Changes or a document tab. `autoSend` sends an otherwise empty draft. */
   | { type: "appendReviewComments"; comments: ReviewCommentEntry[]; autoSend: boolean }
   | {
       type: "configLoaded"
@@ -405,7 +406,6 @@ export type ToWebview =
       error?: string
     } & AgentManagerSettingsBranchPayload)
   | { type: "displaySettingsLoaded"; values: DisplaySettings; error?: string }
-  /** Review comments from the Changes tab. The composer shows them, and sends them at once when `autoSend` is set. */
   /** The working tree change counts of the Changes button; absent when the directory is not a git repository. */
   | { type: "gitChangesStats"; stats?: GitChangesStats }
   | { type: "speechToTextConfigLoaded"; status: SpeechToTextStatus }
