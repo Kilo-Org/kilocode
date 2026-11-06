@@ -1,6 +1,7 @@
 import type ParcelWatcher from "@parcel/watcher"
 // @ts-ignore - the wrapper subpath ships without type declarations
 import { createWrapper } from "@parcel/watcher/wrapper"
+import { realpathSync } from "fs"
 import { stat, readFile } from "fs/promises"
 import { createHash } from "crypto"
 import path from "path"
@@ -129,6 +130,14 @@ function withSubscribeTimeout(
 
 // @parcel/watcher subscribes without a blocking initial walk (reporting only
 // future changes), so it does not stall startup the way chokidar did under bun.
+function realWorkspace(directory: string) {
+  try {
+    return realpathSync.native(directory)
+  } catch {
+    return undefined
+  }
+}
+
 const parcelSubscribe: FileWatchSubscribe = (directory, onEvents, ignore) => {
   const parcel = loadParcelWatcher()
   if (!parcel) {
@@ -173,13 +182,24 @@ export class FileWatcher implements IFileWatcher {
   }>()
   public readonly onDidFinishBatchProcessing = new Emitter<BatchProcessingSummary>()
 
+  private realWorkspacePath?: string
+
   // @parcel/watcher reports "update" where the pipeline expects "change".
   private readonly onWatchEvents = (events: readonly FileWatchEvent[]): void => {
     for (const event of events) {
       const type: "create" | "change" | "delete" =
         event.type === "create" ? "create" : event.type === "delete" ? "delete" : "change"
-      this.handleFileEvent(event.path, type, true)
+      this.handleFileEvent(this.workspaceSpelling(event.path), type, true)
     }
+  }
+
+  // The native watcher reports real paths (macOS reports /private/tmp for /tmp). A workspace opened through a
+  // symlink would match no event, so events are mapped back to the workspace path that the cache and store use.
+  private workspaceSpelling(file: string) {
+    const real = this.realWorkspacePath
+    if (!real || real === this.workspacePath) return file
+    if (file !== real && !file.startsWith(real + path.sep)) return file
+    return this.workspacePath + file.slice(real.length)
   }
 
   constructor(
@@ -256,6 +276,7 @@ export class FileWatcher implements IFileWatcher {
     // from the native watch, so a large repo doesn't exhaust inotify descriptors
     // (ENOSPC) watching trees we never index.
     const ignore = [...new Set([...watcherIgnoreGlobs(), ...(this.ignoreInstance?.watchIgnoreGlobs?.() ?? [])])]
+    this.realWorkspacePath = realWorkspace(this.workspacePath)
 
     const ready = this.subscribeFn(this.workspacePath, this.onWatchEvents, ignore).then(
       (subscription) => {

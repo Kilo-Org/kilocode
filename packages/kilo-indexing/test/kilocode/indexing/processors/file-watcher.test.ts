@@ -1,5 +1,5 @@
 import { describe, test, expect } from "bun:test"
-import { mkdtemp, mkdir, rename, rm, symlink, writeFile } from "fs/promises"
+import { mkdtemp, mkdir, realpath, rename, rm, symlink, writeFile } from "fs/promises"
 import { tmpdir } from "os"
 import path from "path"
 import { createHash } from "crypto"
@@ -501,6 +501,26 @@ describe("FileWatcher subscription", () => {
     expect(store.points).toEqual([])
     expect(store.deletions).toEqual([])
     await watcher.shutdown()
+  })
+
+  test("maps real-path events back to a workspace opened through a symlink", async () => {
+    const backend = createFakeBackend()
+    const real = await realpath(await mkdtemp(path.join(tmpdir(), "file-watcher-real-")))
+    const alias = path.join(await realpath(tmpdir()), `file-watcher-alias-${path.basename(real)}`)
+    await symlink(real, alias, "junction")
+    const { watcher, cache, store, drain } = await makeWatcher(backend.subscribe, undefined, alias)
+    try {
+      await watcher.initialize()
+      await writeFile(path.join(real, "note.md"), "aliased content ".repeat(30))
+      backend.emit([{ path: path.join(real, "note.md"), type: "create" }])
+      await drain()
+      expect(cache.getHash(path.join(alias, "note.md"))).toBeDefined()
+      expect(store.points.length).toBeGreaterThan(0)
+    } finally {
+      await watcher.shutdown()
+      await rm(alias, { force: true })
+      await rm(real, { recursive: true, force: true })
+    }
   })
 
   test("clears the chunks of an indexed file that became a link outside the workspace", async () => {
