@@ -80,6 +80,7 @@ class KiloHostedService internal constructor(
         private const val STATUS_CONCURRENCY = 8
         private const val INITIAL_BACKOFF_MS = 1_000L
         private const val MAX_BACKOFF_MS = 10_000L
+        private const val PROMPT_LIMIT = 16
     }
 
     data class HostedState(
@@ -165,7 +166,9 @@ class KiloHostedService internal constructor(
     }
     private val watches = mutableMapOf<String, Watch>()
     private val retired = mutableMapOf<String, Set<String>>()
-    private val prompts = java.util.concurrent.ConcurrentHashMap<String, PromptDto>()
+    private val prompts = object : java.util.LinkedHashMap<String, PromptDto>(PROMPT_LIMIT, 0.75f, false) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, PromptDto>?) = size > PROMPT_LIMIT
+    }
 
     init {
         if (app != null) {
@@ -369,7 +372,7 @@ class KiloHostedService internal constructor(
     }
 
     /** The create API already submitted this prompt; seed the editor without sending it twice. */
-    fun takePrompt(session: String): PromptDto? = prompts.remove(session)
+    fun takePrompt(session: String): PromptDto? = synchronized(lock) { prompts.remove(session) }
 
     private fun seed(result: HostedMutationResultDto, text: String, agent: HostedAgentDto, message: String, run: Long) = synchronized(lock) {
         val session = result.session ?: return@synchronized

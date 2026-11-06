@@ -257,6 +257,42 @@ class SessionRecoveryTest : SessionControllerTestBase() {
         assertEquals(listOf("real"), m.model.messages().single().parts.keys.toList())
     }
 
+    fun `test hosted history loads when readiness stays unknown`() {
+        val id = "hosted:kilo-cloud:worktree_unknown:ses_unknown"
+        val before = rpc.historyCalls
+        controller(id, ready = false)
+
+        assertEquals("Unknown readiness must not load immediately", before, rpc.historyCalls)
+        pause(SessionController.HOSTED_UNKNOWN_GRACE_MS)
+        flush()
+        assertTrue("Unknown readiness must eventually fall back to loading history", rpc.historyCalls > before)
+    }
+
+    fun `test failed preparation retry keeps the optimistic prompt retryable`() {
+        val id = "hosted:kilo-cloud:worktree_retry:ses_retry"
+        projectRpc.state.value = workspaceReady()
+        val m = controller(id)
+        collect(m)
+        flush()
+        edt {
+            m.seedHostedPrompt(PromptDto(
+                parts = listOf(PromptPartDto(type = "text", text = "Prepare this workspace")),
+                messageID = "msg_retry", agent = "code", providerID = "kilo", modelID = "gpt-5",
+            ))
+        }
+        val failure = HostedSystemEventDto(id, "preparing", action = "attempt_failed",
+            failure = "workspace_setup_failed", triggerMessageID = "msg_retry")
+        rpc.promptThrows = IllegalStateException("Cloud unavailable")
+        edt { m.retryPreparation(failure) }
+        flush()
+
+        edt {
+            assertTrue(m.model.state is SessionState.Error)
+            assertEquals(1, m.model.messages().count { it.info.role == "user" })
+            assertTrue("The failed retry must leave the prompt retryable", m.canRetryPreparation())
+        }
+    }
+
     fun `test preparation retry requires the current failure and preserves native pending state`() {
         val id = "hosted:kilo-cloud:worktree_one:ses_one"
         projectRpc.state.value = workspaceReady()

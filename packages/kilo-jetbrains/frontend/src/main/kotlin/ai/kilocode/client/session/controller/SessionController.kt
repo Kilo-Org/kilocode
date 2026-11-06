@@ -142,6 +142,7 @@ class SessionController(
         internal const val RECENT_LIMIT = 5
         internal const val DISPLAY_DELAY_MS = 1_000L
         internal const val REVERT_TIMEOUT_MS = 30_000L
+        internal const val HOSTED_UNKNOWN_GRACE_MS = 2_000L
         private const val FOLLOWUP_TTL_MS = 30_000L
         private const val FOLLOWUP_NEW_SESSION = "Start new session"
     }
@@ -192,6 +193,7 @@ class SessionController(
     private var sessionLoadState: SessionLoadState = SessionLoadState.Idle
     private var hostedToken: SessionLoadState.Loading? = null
     private var hostedStarted = false
+    private var hostedFallback: UiTimer? = null
     // The app-readiness observed on the previous AppChanged tick. Recovery requires both a later
     // non-READY -> READY edge and a READY observed before that edge: restored tabs commonly see
     // DISCONNECTED -> READY on their initial connection, which history recovery already covers.
@@ -706,6 +708,7 @@ class SessionController(
         promptRevision++
         initial = null
         val tail = model.messages().lastOrNull { it.info.role == "user" }
+        val tailOptimistic = tail?.let { model.isOptimistic(it.info.id) } == true
         tail?.let { model.removeOptimistic(it.info.id) }
         addOptimistic(prompt)
         LOG.info("${ChatLogSummary.sid(id)} kind=retry preparation=true")
@@ -719,7 +722,9 @@ class SessionController(
                 LOG.warn("${ChatLogSummary.sid(id)} kind=retry preparation=true failed message=${e.message}", e)
                 edt {
                     if (disposed) return@edt
-                    prompt.messageID?.let(model::removeOptimistic)
+                    // Keep the replacement prompt when the removed tail was optimistic. Otherwise
+                    // the failed retry would erase the only user text and disable further retries.
+                    if (!tailOptimistic) prompt.messageID?.let(model::removeOptimistic)
                     model.setState(SessionState.Error(e.message ?: KiloBundle.message("session.error.prompt")))
                 }
             }
@@ -1303,6 +1308,7 @@ class SessionController(
             is SessionRef.Hosted -> {
                 val token = SessionLoadState.Loading()
                 hostedToken = token
+                scheduleHostedFallback()
                 subscribeEvents()
             }
             null -> Unit
@@ -1514,18 +1520,43 @@ class SessionController(
         }
     }
 
-    /** Hosted history stays deferred until Cloud reports preparation complete. */
+    /** Hosted history stays deferred until Cloud reports preparation complete or readiness is unknown. */
     @RequiresEdt
     internal fun hostedPreparation(readiness: HostedReadiness) {
         assertEdt()
         if (disposed || ref !is SessionRef.Hosted || hostedStarted) return
-        if (readiness != HostedReadiness.Ready) return
-        hostedToken?.let { token ->
-            hostedToken = null
-            hostedStarted = true
-            startSessionLoading(token)
-            loadSession(token)
+        when (readiness) {
+            HostedReadiness.Ready -> loadHosted()
+            HostedReadiness.Preparing,
+            HostedReadiness.Failed -> cancelHostedFallback()
+            HostedReadiness.Unknown -> scheduleHostedFallback()
         }
+    }
+
+    @RequiresEdt
+    private fun scheduleHostedFallback() {
+        if (hostedFallback?.isRunning() == true) return
+        hostedFallback = timers.timer(HOSTED_UNKNOWN_GRACE_MS.toInt(), repeats = false) {
+            hostedFallback = null
+            if (!disposed) loadHosted()
+        }.also { it.start() }
+    }
+
+    @RequiresEdt
+    private fun cancelHostedFallback() {
+        hostedFallback?.stop()
+        hostedFallback = null
+    }
+
+    @RequiresEdt
+    private fun loadHosted() {
+        if (hostedStarted) return
+        val token = hostedToken ?: return
+        cancelHostedFallback()
+        hostedToken = null
+        hostedStarted = true
+        startSessionLoading(token)
+        loadSession(token)
     }
 
     private fun importCloud(id: String, token: SessionLoadState.Loading) {
@@ -3395,6 +3426,7 @@ class SessionController(
             replay = null
             hydration?.cancel()
             hydration = null
+            cancelHostedFallback()
             connectionDelay.dispose()
             cancelSubscriptions()
             promptRecoveryJob?.cancel()

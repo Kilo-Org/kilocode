@@ -96,6 +96,7 @@ class KiloBackendHostedManager(
         private const val INITIAL_BACKOFF_MS = 500L
         private const val OUTPUT_LIMIT = 65_536
         private const val ATTEMPT_LIMIT = 2
+        internal const val COLLECTOR_CAPACITY = 64
         private val MODEL = Regex("[a-zA-Z0-9._/\\-:~]{1,255}")
         private val AGENT = Regex("[a-z][a-z0-9-]{0,49}")
         private val MESSAGE = Regex("msg_[0-9a-f]{12}[0-9A-Za-z]{14}")
@@ -126,21 +127,21 @@ class KiloBackendHostedManager(
         val revision = java.util.concurrent.atomic.AtomicLong()
         private val replay = linkedMapOf<Triple<String, String?, String?>, HostedSystemEventDto>()
         private val attempts = linkedMapOf<String, Double>()
-        private val collectors = mutableSetOf<Channel<HostedSystemEventDto>>()
+        private val collectors = mutableSetOf<Collector>()
 
         val retained: Boolean get() = retainers > 0
         val unused: Boolean get() = retainers == 0 && subscribers == 0 && calls == 0
 
         @Synchronized
-        fun subscribe(channel: Channel<HostedSystemEventDto>) {
-            replay.values.forEach { channel.trySend(it).getOrThrow() }
-            collectors.add(channel)
+        fun subscribe(collector: Collector) {
+            replay.values.forEach(collector::offer)
+            collectors.add(collector)
         }
 
         @Synchronized
-        fun unsubscribe(channel: Channel<HostedSystemEventDto>) {
-            collectors.remove(channel)
-            channel.cancel()
+        fun unsubscribe(collector: Collector) {
+            collectors.remove(collector)
+            collector.close()
         }
 
         @Synchronized
@@ -199,7 +200,7 @@ class KiloBackendHostedManager(
             } else event
             replay.remove(key)
             replay[key] = value
-            collectors.forEach { it.trySend(value).getOrThrow() }
+            collectors.forEach { it.offer(value) }
         }
 
         @Synchronized
@@ -210,6 +211,58 @@ class KiloBackendHostedManager(
             attempts.clear()
             channels.forEach { it.close() }
         }
+    }
+
+    internal class Collector {
+        private val queue = ArrayDeque<HostedSystemEventDto>()
+        private val wake = Channel<Unit>(Channel.CONFLATED)
+        private var closed = false
+
+        @Synchronized
+        fun offer(event: HostedSystemEventDto) {
+            if (closed) return
+            if (event.action == "step_output") {
+                val step = event.stepID ?: event.step
+                val index = queue.indexOfLast {
+                    it.action == "step_output" && it.attemptID == event.attemptID && (it.stepID ?: it.step) == step
+                }
+                if (index >= 0) {
+                    queue[index] = event
+                    wake.trySend(Unit)
+                    return
+                }
+            }
+            queue.addLast(event)
+            while (queue.size > COLLECTOR_CAPACITY) {
+                val index = queue.indexOfFirst {
+                    it.action == "step_output" || (it.kind == "preparing" && !terminal(it))
+                }
+                if (index < 0) break
+                queue.removeAt(index)
+            }
+            wake.trySend(Unit)
+        }
+
+        suspend fun receive(): HostedSystemEventDto? {
+            while (true) {
+                synchronized(this) {
+                    if (queue.isNotEmpty()) return queue.removeAt(0)
+                    if (closed) return null
+                }
+                wake.receive()
+            }
+        }
+
+        @Synchronized
+        fun close() {
+            closed = true
+            wake.trySend(Unit)
+        }
+
+        private fun terminal(event: HostedSystemEventDto): Boolean =
+            event.failure != null ||
+                event.action in setOf("failed", "step_failed", "attempt_failed", "attempt_completed") ||
+                (event.kind == "cloud.status" && event.cloudStatus == "error")
     }
 
     private class HostedHttpException(val code: Int, message: String) : RuntimeException(message)
@@ -487,21 +540,24 @@ class KiloBackendHostedManager(
         return flow {
             // Register before ensure() can start the passive feed. Slow RPC collectors must not
             // drop a preparation failure or prevent another session's replay from progressing.
-            val channel = Channel<HostedSystemEventDto>(Channel.UNLIMITED)
+            val collector = Collector()
             val state = lock.withLock {
                 continuity.computeIfAbsent(composite) { Continuity() }.also {
-                    it.subscribe(channel)
+                    it.subscribe(collector)
                     it.subscribers++
                     it.organizationID = organizationID ?: it.organizationID
                 }
             }
             try {
                 ensure(composite, organizationID)
-                for (event in channel) emit(event)
+                while (true) {
+                    val event = collector.receive() ?: break
+                    emit(event)
+                }
             } finally {
                 withContext(kotlinx.coroutines.NonCancellable) {
                     lock.withLock {
-                        state.unsubscribe(channel)
+                        state.unsubscribe(collector)
                         state.subscribers--
                         if (continuity[composite] === state && state.subscribers == 0) {
                             attachments[composite]?.let { attachment ->

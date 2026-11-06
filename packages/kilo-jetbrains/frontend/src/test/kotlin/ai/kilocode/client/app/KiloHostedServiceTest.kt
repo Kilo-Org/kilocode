@@ -109,6 +109,28 @@ class KiloHostedServiceTest {
     }
 
     @Test
+    fun `seeded prompts are bounded when editors never open`() = runBlocking {
+        val rpc = FakeRpc()
+        val service = KiloHostedService(cs, rpc, gate = { true }, log = TestLog())
+        val agent = HostedAgentDto("code", "kilo/kilo-auto/free")
+        repeat(17) { index ->
+            val session = session("bounded-$index")
+            rpc.mutation = HostedMutationResultDto(session = session, messageID = "msg_accepted_$index")
+            service.create(HostedCreateWorkspaceDto(
+                HostedRepositoryDto("github", repo = "org/repo"),
+                "profile",
+                "prompt $index",
+                agent,
+                "create-$index",
+                "msg_request_$index",
+            ))
+        }
+
+        assertNull(service.takePrompt(session("bounded-0").id))
+        assertEquals("prompt 16", service.takePrompt(session("bounded-16").id)?.parts?.single()?.text)
+    }
+
+    @Test
     fun `failed workspace status reads settle as unavailable rather than loading indefinitely`() = runBlocking {
         val ref = HostedWorkspaceRefDto("cloud", "one")
         val rpc = object : KiloHostedRpcApi by FakeRpc(mapOf(null to HostedWorkspaceListDto(listOf(HostedWorkspaceDto(ref))))) {

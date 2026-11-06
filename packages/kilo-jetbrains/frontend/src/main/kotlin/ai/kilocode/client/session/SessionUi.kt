@@ -1229,7 +1229,7 @@ class SessionUi(
 
     @RequiresEdt
     private fun userMessageIds() = controller.model.messages()
-        .filter { it.info.role == "user" && !controller.model.isOptimistic(it.info.id) }
+        .filter { it.info.role == "user" }
         .map { it.info.id }
         .toSet()
 
