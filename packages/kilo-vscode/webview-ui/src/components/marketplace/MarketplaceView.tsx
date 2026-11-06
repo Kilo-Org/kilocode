@@ -63,7 +63,7 @@ export const MarketplaceView = () => {
         setFocus((prev) => ({ token: (prev?.token ?? 0) + 1 }))
       }
       if (msg.type === "marketplaceRemoveResult") {
-        // The panel host emits `Marketplace Item Removed` once the removal succeeds.
+        // The CLI reports `Marketplace Item Removed` once the removal succeeds.
         if (msg.success) {
           fetchData()
         } else {
@@ -99,7 +99,7 @@ export const MarketplaceView = () => {
         item={item}
         onClose={() => dialog.close()}
         onInstallResult={(success) => {
-          // The panel host emits `Marketplace Item Installed`, so a dialog closed mid-install still counts.
+          // The CLI reports `Marketplace Item Installed`, so a dialog closed mid-install still counts.
           if (success) fetchData()
         }}
       />

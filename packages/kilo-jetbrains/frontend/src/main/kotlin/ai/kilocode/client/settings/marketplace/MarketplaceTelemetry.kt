@@ -3,8 +3,8 @@ package ai.kilocode.client.settings.marketplace
 import ai.kilocode.rpc.dto.MarketplaceItemDto
 
 /**
- * Properties for the marketplace telemetry events. `itemId`, `itemType`, and `itemName` match the
- * VS Code extension so one report covers both IDEs; `id` and `type` stay for earlier reports.
+ * Properties for the marketplace click events. `itemId`, `itemType`, and `itemName` match the
+ * keys the CLI sends on `Marketplace Item Installed`/`Removed`; `id` and `type` stay for earlier reports.
  */
 internal fun marketplaceProps(item: MarketplaceItemDto, request: MarketplaceInstallRequest): Map<String, String> {
     val method = request.parameters["__method"]?.takeIf { it.isNotBlank() }
