@@ -22339,8 +22339,26 @@
         "anyOf": [
           {
             "$ref": "#/components/schemas/Schedule.Action.Prompt"
+          },
+          {
+            "$ref": "#/components/schemas/Schedule.Action.Hook"
           }
         ]
+      },
+      "Schedule.Action.Hook": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": ["hook"]
+          },
+          "prompt": {
+            "type": "string"
+          }
+        },
+        "required": ["type", "prompt"],
+        "additionalProperties": false,
+        "description": "An action owned by the experimental schedule hook. The prompt is descriptive and is never admitted."
       },
       "Schedule.Action.Prompt": {
         "type": "object",

@@ -1,9 +1,9 @@
 {
   "$comment": "Shared-patch baseline (U-L3-01). Read by script/check-shared-patches.ts and script/check-opencode-annotations.ts. Each shared upstream file that Kilo adds or changes needs an entry: rung (3 = seam patch, 4 = feature patch) and the missing seam. `unmarked` allows lines without markers and states why. Raise a limit only in the PR that adds the patch, and lower it when a patch goes away.",
   "limits": {
-    "files": 98,
-    "markedLines": 1590,
-    "unmarkedLines": 279,
+    "files": 101,
+    "markedLines": 1660,
+    "unmarkedLines": 299,
     "deletedFiles": 0
   },
   "files": {
@@ -105,7 +105,7 @@
     },
     "packages/protocol/openapi.json": {
       "rung": 3,
-      "seam": "Generated OpenAPI document for the optional command template and model metadata exposed by the command list API, and the optional PTY create size exposed by packages/schema/src/pty.ts. The document is generated from the public schema; editing it by hand is not supported.",
+      "seam": "Generated OpenAPI document for the optional command template and model metadata exposed by the command list API, the optional PTY create size exposed by packages/schema/src/pty.ts, and the `hook` action variant of `Schedule.Action` that lets Kilo-owned Flows own a schedule row without admitting a native prompt. The document is generated from the public schema; editing it by hand is not supported.",
       "unmarked": "Generated JSON cannot carry marker comments; bun run generate in packages/protocol owns this file."
     },
     "packages/core/package.json": {
@@ -116,6 +116,14 @@
     "packages/core/src/config.ts": {
       "rung": 3,
       "seam": "Config discovery layout (feature `config`): `ConfigDiscovery.LayoutService`, a global node with upstream defaults (`opencode.json`, `opencode.jsonc`, `.opencode`, no walk bound) that discovery and `Config` read for the root file names, the project directory names, the file order inside those directories, the upward-walk bound and the global write target (the last existing name). Optional systemFiles and parse hooks let a host select managed file order and decode its own config schema from raw and normalized fields; the decoder also preserves host fields when managed policies split from settings. Optional input normalization and command document composition let the host apply model-only overrides after file discovery. Upstream's integration reloads (v2.2) run discovery with a captured layer context, so that context also carries the layout service. Without the hooks, the default graph and canonical schema behave as upstream. The Kilo host supplies kilo2 names, file orders, a worktree boundary and Kilo-owned config policy. Rungs 1 and 2 cannot do it alone: config parsing precedes plugins, the command editor cannot update captured definitions, and replacing Config.node would lose the server's configured options. Codebase indexing (feature `indexing`): an optional `reload` re-reads the config sources after a host write, so a saved `indexing` key applies also when `fs.filewatcher` is false. It runs the same reload as the watcher and publishes `config.updated` when the result changes. Without a caller nothing changes. Rungs 1 and 2 cannot do it: the reload is a closure inside the Config layer."
+    },
+    "packages/core/src/schedule.ts": {
+      "rung": 3,
+      "seam": "Generic due-schedule claim seam for location plugins. An experimental session hook receives a due time schedule before native prompt admission; claiming it suppresses that prompt while preserving the scheduler's existing leader election, advancement, retry and outcome bookkeeping. A hook-owned action remains suppressed when its owner is unavailable and rejects native conditions that could otherwise admit it. Schedule.create accepts an internal optional requireEnabled flag so a host plugin can own a backing schedule without enabling OpenCode's native schedule UI; the default remains true. The hook runs before the native experimental.schedules check, and only unclaimed occurrences honor that flag, so a plugin-owned schedule keeps firing while the native UI is disabled; a hook failure leaves the row unclaimed and uses the existing failed-retry backoff. Kilo managed Flows use the hook and option, but no Kilo value lives here. Rungs 1 and 2 cannot reach the scheduler between its due-time claim and prompt admission, and a second plugin-owned timing loop would duplicate leader election and advancement behavior."
+    },
+    "packages/schema/src/schedule.ts": {
+      "rung": 3,
+      "seam": "Add a generic hook-owned schedule action alongside the native prompt action. The scheduler advances it without native prompt admission even when its plugin owner is unavailable, while the public schedule-create request remains prompt-only. A plugin hook cannot make the stored action safe before plugin activation, and host composition cannot persist ownership in the shared schedule model."
     },
     "packages/core/src/config/discovery.ts": {
       "rung": 3,
@@ -205,6 +213,10 @@
     "packages/tui/src/context/session-terminals.tsx": {
       "rung": 4,
       "seam": "Return whether an attached terminal input writer accepted the data. Terminal input is a TUI-local persistent connection; no TUI plugin editor or server hook can replace the provider or receive a detached input safely."
+    },
+    "packages/tui/src/util/permission.ts": {
+      "rung": 4,
+      "seam": "Call the Kilo-owned Flow permission presenter before the unchanged custom-action fallback. The public TUI plugin API cannot replace the built-in permission prompt or its presentation function; only the Flow action opts into resource-list presentation, so ordinary upstream custom permissions keep their default output."
     },
     "packages/tui/src/context/local.tsx": {
       "rung": 4,
@@ -301,7 +313,7 @@
     },
     "packages/plugin/src/effect/session.ts": {
       "rung": 3,
-      "seam": "Session `route` hook: a plugin may send one model request to another catalog model (`target`) before the request is built. Kilo custom auto routers (ADR 0005, v1 #15183) need it: the routing worker picks a client model or a Gateway model per request from the request messages and tools. No existing hook reaches the model of a request: `context` and `model.request` see a readonly model ref and run after the model is resolved, and the model, provider and AI SDK editors change the catalog, not one request. Type-only: the hook interface and its `SessionHooks` entry."
+      "seam": "Session hooks for host-owned behavior. The `route` hook lets a plugin select another catalog model before a request is built; no existing hook reaches the request model early enough. The experimental `schedule` hook carries a due time schedule and a mutable claimed flag so a location plugin can take ownership before native prompt admission; no existing hook runs between scheduler leader election and admission. Both are generic type-only hooks with no Kilo values."
     },
     "packages/core/src/session/model-request.ts": {
       "rung": 3,
