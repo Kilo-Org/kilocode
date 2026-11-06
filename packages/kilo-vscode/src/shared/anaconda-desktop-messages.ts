@@ -3,7 +3,8 @@ import type { AnacondaDesktopStatus } from "@kilocode/sdk/v2/client"
 export type AnacondaDesktopAction = "status" | "open" | "sync"
 
 export type AnacondaDesktopWebviewMessage =
-  | { type: "anacondaDesktopStatus"; requestId: string }
+  // `refresh` skips the backend status cache; set it for a user-driven re-check.
+  | { type: "anacondaDesktopStatus"; requestId: string; refresh?: boolean }
   | { type: "anacondaDesktopOpen"; requestId: string }
   | {
       type: "anacondaDesktopSync"

@@ -46,7 +46,7 @@ export class AnacondaDesktopBridge {
     try {
       if (message.type === "anacondaDesktopStatus") {
         const response = await ctx.client.anacondaDesktop.status(
-          { directory: ctx.directory },
+          { directory: ctx.directory, refresh: message.refresh === true },
           { throwOnError: true, signal: ctrl.signal },
         )
         if (!response.data) throw new Error("Failed to check Anaconda Desktop")

@@ -6,8 +6,10 @@ import { InstanceContextMiddleware } from "@/server/routes/instance/httpapi/midd
 import {
   WorkspaceRoutingMiddleware,
   WorkspaceRoutingQuery,
+  WorkspaceRoutingQueryFields,
 } from "@/server/routes/instance/httpapi/middleware/workspace-routing"
 import { described } from "@/server/routes/instance/httpapi/groups/metadata"
+import { QueryBoolean } from "@/server/routes/instance/httpapi/groups/query"
 
 const root = "/kilocode/anaconda-desktop"
 
@@ -19,6 +21,12 @@ export const AnacondaDesktopPaths = {
 
 export const AnacondaDesktopSyncPayload = Schema.Struct({
   acknowledgeToolLimitations: Schema.optional(Schema.Boolean),
+})
+
+/** `refresh=true` bypasses the status cache so an explicit re-check is never served a throttled value. */
+export const AnacondaDesktopStatusQuery = Schema.Struct({
+  ...WorkspaceRoutingQueryFields,
+  refresh: Schema.optional(QueryBoolean),
 })
 
 export class AnacondaDesktopConflictError extends Schema.ErrorClass<AnacondaDesktopConflictError>(
@@ -47,13 +55,14 @@ export const AnacondaDesktopApi = HttpApi.make("anaconda-desktop")
     HttpApiGroup.make("anaconda-desktop")
       .add(
         HttpApiEndpoint.get("status", AnacondaDesktopPaths.status, {
-          query: WorkspaceRoutingQuery,
+          query: AnacondaDesktopStatusQuery,
           success: described(Status, "Anaconda Desktop setup status"),
         }).annotateMerge(
           OpenApi.annotations({
             identifier: "anacondaDesktop.status",
             summary: "Get Anaconda Desktop setup status",
-            description: "Discover the locally installed Anaconda Desktop and its active inference server.",
+            description:
+              "Discover the locally installed Anaconda Desktop and its active inference server. Results are throttled; pass refresh=true to force a fresh check.",
           }),
         ),
         HttpApiEndpoint.post("open", AnacondaDesktopPaths.open, {
