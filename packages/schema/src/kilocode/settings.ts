@@ -69,8 +69,9 @@ export const Definition = Rpc.define({
      * Set the keys of `set` and remove the paths of `unset` in the scope's effective document. `set` values are set
      * at their leaf paths; a `null` value removes. A project `unset` also clears the path from the other project
      * documents that set it. `expected` fails a stale revision or a changed target instead of overwriting a newer
-     * file. `invalid` refuses a top-level key outside the config schema, or a value the reader would skip, and leaves
-     * the file unchanged.
+     * file. `invalid` refuses a top-level key outside the canonical v2 config schema (a legacy name the reader still
+     * migrates, such as `autoupdate`, is refused for `set`, while a `null` value still removes any key), a value the
+     * reader would skip, or a target that is not valid JSONC, and leaves the file unchanged.
      */
     write: {
       input: portable(
