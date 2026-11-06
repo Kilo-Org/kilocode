@@ -61,7 +61,7 @@ import { WorktreeDiffController } from "./worktree-diff-controller"
 import { DiffSourceCatalog } from "../diff/sources/catalog"
 import { createLocalDiff } from "./local-diff"
 import { sendDiffBranches as postDiffBranches } from "./project/diff-branches"
-import { samePath } from "./project/paths"
+import { canonicalizePath, samePath } from "./project/paths"
 import { pruneSubagents, sessionMissing } from "./prune-subagents"
 import { readTerminalFont, watchTerminalFont } from "./terminal-font"
 import { buildKeybindingMap } from "./format-keybinding"
@@ -977,10 +977,11 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
   /** The project that owns a directory, so a sidebar action stays on the workspace the sidebar shows. */
   private contextForDirectory(directory?: string): ProjectContext | undefined {
     if (!directory) return this.context
-    const byDirectory = this.contexts.byDirectory(directory)
+    const canonical = canonicalizePath(directory)
+    const byDirectory = this.contexts.byDirectory(canonical)
     if (byDirectory) return byDirectory
     const pinned = this.contexts.pinned()
-    if (pinned && samePath(pinned.root, directory)) return pinned
+    if (pinned && samePath(pinned.root, canonical)) return pinned
     return this.context
   }
 
