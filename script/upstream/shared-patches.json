@@ -1,9 +1,9 @@
 {
   "$comment": "Shared-patch baseline (U-L3-01). Read by script/check-shared-patches.ts and script/check-opencode-annotations.ts. Each shared upstream file that Kilo adds or changes needs an entry: rung (3 = seam patch, 4 = feature patch) and the missing seam. `unmarked` allows lines without markers and states why. Raise a limit only in the PR that adds the patch, and lower it when a patch goes away.",
   "limits": {
-    "files": 96,
+    "files": 98,
     "markedLines": 1588,
-    "unmarkedLines": 277,
+    "unmarkedLines": 279,
     "deletedFiles": 0
   },
   "files": {
@@ -346,6 +346,16 @@
     "packages/server/src/handlers/pty.ts": {
       "rung": 3,
       "seam": "Pass `replayExited=1` from the PTY connect query to the `allowExited` attach input in packages/core/src/pty.ts. The connect route is the only path a client reaches `attach` through, and its handler has no extension point for query options. Without the query parameter the route behaves as upstream."
+    },
+    "packages/client/package.json": {
+      "rung": 4,
+      "seam": "Test timing only: the `test` script raises the per-test timeout from 5000 ms to 30000 ms, matching the rest of the workspace. The 5 s ceiling was tight for the suites that regenerate or compile client output and hit the filesystem, and it timed out on slower shared CI runners before the tests themselves failed. Ported from #15879. No seam: the flag is a literal inside upstream's script string and no host or plugin can pass bun test options in its place.",
+      "unmarked": "JSON has no comments."
+    },
+    "packages/httpapi-codegen/package.json": {
+      "rung": 4,
+      "seam": "Test timing only: the `test` script raises the per-test timeout from 5000 ms to 30000 ms, matching the rest of the workspace. The 5 s ceiling was tight for the suites that generate and compile codegen output and spawn processes, and it timed out on slower shared CI runners before the tests themselves failed. Ported from #15879. No seam: the flag is a literal inside upstream's script string and no host or plugin can pass bun test options in its place.",
+      "unmarked": "JSON has no comments."
     },
     "packages/client/src/solid/data.ts": {
       "rung": 3,
