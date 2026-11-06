@@ -270,10 +270,12 @@ export function PromptInput(props: {
     const input = refs.input
     if (!input) return
     if (!fieldSizing) {
+      const previous = input.style.height
       input.style.height = "auto"
       // As in main: size to the content, which includes a wrapped placeholder.
       const height = Math.min(input.scrollHeight, 200)
-      if (height !== fitted) {
+      if (height === fitted && previous) input.style.height = previous
+      else {
         fitted = height
         input.style.height = `${height}px`
       }
