@@ -446,6 +446,46 @@ class PromptRailItemsTest : BasePlatformTestCase() {
         )
     }
 
+    fun `test a non-string header falls back to the question text`() {
+        val model = SessionModel()
+        model.upsertMessage(message("u1", "user"))
+        model.updateContent("u1", part("p1", "u1", "text", "Build it"))
+        model.upsertMessage(message("a1", "assistant"))
+        model.updateContent(
+            "a1",
+            toolPart(
+                "q1",
+                "a1",
+                input = mapOf("questions" to """[{"question":"Pick one","header":{"nested":true}}]"""),
+                metadata = mapOf("answers" to """[["Postgres"]]"""),
+            ),
+        )
+
+        val item = PromptRailItems.items(model).single { it.kind == PromptRailKind.QUESTION }
+
+        assertEquals("Pick one", item.prompt)
+    }
+
+    fun `test a code-only answer still previews its text`() {
+        val model = SessionModel()
+        model.upsertMessage(message("u1", "user"))
+        model.updateContent("u1", part("p1", "u1", "text", "Build it"))
+        model.upsertMessage(message("a1", "assistant"))
+        model.updateContent(
+            "a1",
+            toolPart(
+                "q1",
+                "a1",
+                input = mapOf("questions" to """[{"question":"How?","header":"Command"}]"""),
+                metadata = mapOf("answers" to """[["`bun test`"]]"""),
+            ),
+        )
+
+        val item = PromptRailItems.items(model).single { it.kind == PromptRailKind.QUESTION }
+
+        assertTrue("a code-only answer must not preview as blank", item.answer.contains("bun test"))
+    }
+
     private fun message(id: String, role: String) = MessageDto(
         id = id,
         sessionID = "ses",

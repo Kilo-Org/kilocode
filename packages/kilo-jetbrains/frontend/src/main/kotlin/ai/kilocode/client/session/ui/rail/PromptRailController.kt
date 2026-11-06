@@ -249,7 +249,7 @@ internal class PromptRailController(
         val part = item.part
         if (message != null && part != null) {
             messages.expandPart(message, part)
-            if (scroll.scrollPartTop(message, part)) onRevealPart(message, part)
+            if (scroll.scrollPartPinned(message, part)) onRevealPart(message, part)
             return
         }
         if (scroll.scrollMessageTop(item.id)) onReveal(item.id)

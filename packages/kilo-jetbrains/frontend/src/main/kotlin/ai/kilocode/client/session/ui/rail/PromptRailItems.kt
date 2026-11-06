@@ -162,7 +162,9 @@ object PromptRailItems {
      * of lines the reasoning preview shows once it is no longer streaming.
      */
     private fun answers(answers: List<String>): String {
-        val lines = answers.map(::preview).filter { it.isNotBlank() }
+        // preview() drops fenced and inline code, so a code-only answer would become blank even though
+        // the user did answer. Fall back to the raw text rather than showing the navigator's no-answer label.
+        val lines = answers.map { raw -> preview(raw).ifBlank { raw.trim() } }.filter { it.isNotBlank() }
         if (lines.isEmpty()) return ""
         val room = SessionUiStyle.View.Reasoning.BODY_LINES
         val kept = lines.take(room)

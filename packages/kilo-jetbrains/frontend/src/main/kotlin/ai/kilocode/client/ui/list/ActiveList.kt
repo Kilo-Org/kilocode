@@ -28,6 +28,7 @@ import com.intellij.util.ui.components.BorderLayoutPanel
 import java.awt.Color
 import java.awt.Cursor
 import java.awt.Rectangle
+import java.awt.event.KeyAdapter
 import java.awt.event.KeyEvent
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
@@ -95,6 +96,19 @@ internal class ActiveList(
         }
         scroll.addMouseWheelListener { onScroll?.invoke() }
         view.list.addMouseWheelListener { onScroll?.invoke() }
+        // ScrollingUtil's page/home/end bindings move the viewport without changing the selection, so
+        // the selection callback does not cover them. Treat those keys as the user taking over too.
+        view.list.addKeyListener(object : KeyAdapter() {
+            override fun keyPressed(e: KeyEvent) {
+                if (e.keyCode == KeyEvent.VK_PAGE_UP ||
+                    e.keyCode == KeyEvent.VK_PAGE_DOWN ||
+                    e.keyCode == KeyEvent.VK_HOME ||
+                    e.keyCode == KeyEvent.VK_END
+                ) {
+                    onScroll?.invoke()
+                }
+            }
+        })
         scroll.verticalScrollBar.addMouseListener(object : MouseAdapter() {
             override fun mousePressed(e: MouseEvent) {
                 onScroll?.invoke()

@@ -21,6 +21,7 @@ import com.intellij.openapi.Disposable
 import com.intellij.openapi.util.Disposer
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBTextArea
+import com.intellij.util.concurrency.annotations.RequiresEdt
 import com.intellij.util.ui.JBUI
 import java.awt.Color
 import java.awt.Component
@@ -98,12 +99,15 @@ class QuestionResultView(
      * Applies the transcript's question-block default. A manual toggle wins over later setting changes
      * unless the caller forces a reapply, matching the other transcript cards.
      */
+    @RequiresEdt
     override fun syncTranscriptDisplay(display: TranscriptDisplay, force: Boolean): Boolean {
         if (!force && touched) return false
         val next = display.question
         if (!force && this.display == next) return false
         this.display = next
         if (next == BlockDisplay.EXPANDED) expand() else collapse()
+        // expand()/collapse() only move the body; the chevron is owned by the header sync.
+        syncExpandable(true)
         refresh()
         return true
     }

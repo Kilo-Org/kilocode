@@ -154,9 +154,27 @@ class QuestionResultViewTest : BasePlatformTestCase() {
 
         assertTrue(view.syncTranscriptDisplay(TranscriptDisplay(ReasoningDisplay.EXPANDED, question = BlockDisplay.COLLAPSED)))
         assertFalse("The display setting collapses the card", view.isExpanded())
+        assertTrue("The collapsed chevron must follow the body", icons(view).contains(SessionViewIcons.chevronCollapsed))
 
         assertTrue(view.syncTranscriptDisplay(TranscriptDisplay(ReasoningDisplay.EXPANDED, question = BlockDisplay.EXPANDED)))
         assertTrue("The display setting expands the card", view.isExpanded())
+        assertTrue("The expanded chevron must follow the body", icons(view).contains(SessionViewIcons.chevronExpanded))
+    }
+
+    fun `test programmatic open syncs the collapsed chevron`() {
+        val view = QuestionResultView(
+            completedTool(
+                input = mapOf("questions" to """[{"question":"Q1"}]"""),
+                metadata = mapOf("answers" to """[["A1"]]"""),
+            ),
+            display = BlockDisplay.COLLAPSED,
+        )
+        assertTrue(icons(view).contains(SessionViewIcons.chevronCollapsed))
+
+        assertTrue(view.open())
+
+        assertTrue(view.isExpanded())
+        assertTrue("Opening outside toggle must update the chevron", icons(view).contains(SessionViewIcons.chevronExpanded))
     }
 
     fun `test toggle collapses and expands body`() {

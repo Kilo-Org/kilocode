@@ -212,6 +212,24 @@ class PromptRailPopupTest : BasePlatformTestCase() {
         Disposer.dispose(fix.popup.disposable)
     }
 
+    fun `test keyboard scrolling stops revealing the hovered row on resize`() {
+        val fix = shown(40)
+        fix.popup.select(39)
+        assertTrue("precondition: the hovered row scrolls down", fix.port.viewPosition.y > 0)
+
+        val list = findList(fix.popup.component) ?: error("expected a JList of rows")
+        // Key events need a focused component in a showing window, so invoke the installed listener
+        // directly; this still covers the wiring under test.
+        val key = KeyEvent(list, KeyEvent.KEY_PRESSED, 0L, 0, KeyEvent.VK_PAGE_UP, KeyEvent.CHAR_UNDEFINED)
+        list.keyListeners.forEach { it.keyPressed(key) }
+        val after = fix.port.viewPosition
+        fix.port.extentSize = Dimension(CAP_W, CAP_H - 80)
+
+        assertEquals("keyboard scrolling must stop the resize follow", after, fix.port.viewPosition)
+
+        Disposer.dispose(fix.popup.disposable)
+    }
+
     /**
      * The balloon lays the list out after sizing it, and that pass updates the scrollbar model too.
      * That is not the user scrolling, so it must not drop the follow: the hovered row still has to be

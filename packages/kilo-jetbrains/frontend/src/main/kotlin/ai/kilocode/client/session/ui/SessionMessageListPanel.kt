@@ -294,7 +294,7 @@ class SessionMessageListPanel(
     @RequiresEdt
     fun expandPart(message: String, part: String): Boolean {
         val view = msgToView[message]?.part(part) as? AbstractSessionPartView ?: return false
-        if (!view.expand()) return false
+        if (!view.open()) return false
         view.revalidate()
         reflow()
         return true

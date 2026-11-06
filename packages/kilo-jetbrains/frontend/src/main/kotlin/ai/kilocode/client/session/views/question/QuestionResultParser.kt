@@ -3,6 +3,7 @@ package ai.kilocode.client.session.views.question
 import ai.kilocode.client.session.model.Tool
 import ai.kilocode.client.session.model.ToolExecState
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
@@ -64,11 +65,16 @@ internal object QuestionResultParser {
         val arr = runCatching { json.parseToJsonElement(raw).jsonArray }.getOrNull() ?: return null
         return arr.map { elem ->
             val obj = runCatching { elem.jsonObject }.getOrNull()
-            val question = obj?.get("question")?.jsonPrimitive?.contentOrNull.orEmpty()
-            val header = obj?.get("header")?.jsonPrimitive?.contentOrNull.orEmpty()
-            question to header
+            text(obj, "question") to text(obj, "header")
         }
     }
+
+    /**
+     * A string field of [obj], or empty for a missing or non-string value. Reading [jsonPrimitive] on an
+     * object/array throws, and a malformed tool payload must not take down the whole navigator rebuild.
+     */
+    private fun text(obj: JsonObject?, key: String): String =
+        runCatching { obj?.get(key)?.jsonPrimitive?.contentOrNull }.getOrNull().orEmpty()
 
     private fun parseAnswers(raw: String?): List<List<String>> {
         val arr = raw

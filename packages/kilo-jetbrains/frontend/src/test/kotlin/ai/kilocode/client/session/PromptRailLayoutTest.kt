@@ -169,7 +169,7 @@ class PromptRailLayoutTest : SessionUiTestBase() {
                     ),
                 ),
             )
-            fillTranscript(2, start = 1)
+            fillTranscript(6, start = 1)
             layoutAll(ui)
             ui.promptRail.refresh()
             find<SessionRootPanel>(ui).overlay.doLayout()
@@ -191,6 +191,7 @@ class PromptRailLayoutTest : SessionUiTestBase() {
             drainScroll()
 
             assertTrue("a navigator jump opens the collapsed question card", question.isExpanded())
+            assertEquals("the jumped-to question must become the active entry", index, rail.active())
             assertSame(
                 "the navigator must outline the question card it landed on",
                 question,
