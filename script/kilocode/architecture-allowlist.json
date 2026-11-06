@@ -34,7 +34,7 @@
       "allowed": {}
     },
     "kilo-test-process-state": {
-      "description": "Process-wide state in Kilo-owned tests (packages/kilo-*/test/**, packages/*/test/kilocode/**): mock.module, spyOn(globalThis), and module-scope global or process.env writes. bun test runs all files of a package in one process, so this state leaks into the next files. bunfig preload files are exempt. Target: inject the dependency, or set and restore the value in hooks.",
+      "description": "Process-wide state in Kilo-owned tests (packages/kilo-*/test/**, packages/*/test/kilocode/**, and *.test, *.spec and __tests__ files next to Kilo source): mock.module, spyOn(globalThis), and module-scope global or process.env writes. bun test runs all files of a package in one process, so this state leaks into the next files. bunfig preload files are exempt. Target: inject the dependency, or set and restore the value in hooks.",
       "allowed": {
         "packages/cli/test/kilocode/config/updater-policy.test.ts": {
           "count": 1,
@@ -239,7 +239,7 @@
       }
     },
     "kilo-module-state": {
-      "description": "Top-level let, Map and Set in Kilo-owned source, counted per package. Module-level state is shared by every caller in the process and needs reset hooks that couple tests. Target: keep state in an instance that a service, layer or runtime owns.",
+      "description": "Top-level let, Map and Set in Kilo-owned source, counted per package. Co-located test files are not counted. Module-level state is shared by every caller in the process and needs reset hooks that couple tests. Target: keep state in an instance that a service, layer or runtime owns.",
       "allowed": {
         "packages/kilo-cli": {
           "count": 9,
@@ -277,7 +277,7 @@
           "reason": "Baseline when the rule started: top-level let, Map and Set in this package's source. Lower the count when state moves into an instance that a service, layer or runtime owns."
         },
         "packages/kilo-vscode": {
-          "count": 52,
+          "count": 50,
           "owner": "kilo-vscode",
           "reason": "Baseline when the rule started: top-level let, Map and Set in this package's source. Lower the count when state moves into an instance that a service, layer or runtime owns."
         },

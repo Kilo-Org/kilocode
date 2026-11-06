@@ -34,6 +34,7 @@ import {
   type Entry,
   type Violation,
 } from "./kilocode/architecture-rules"
+import { PROCESS_STATE } from "./kilocode/test/process-state"
 
 const ROOT = path.resolve(import.meta.dir, "..")
 const ALLOWLIST_PATH = path.join(ROOT, "script", "kilocode", "architecture-allowlist.json")
@@ -79,9 +80,12 @@ const PRELOADS = new Set(
     )
   ).flat(),
 )
-const KILO_TESTS = uniqueFiles(["packages/kilo-*/test/**/*.{ts,tsx}", "packages/*/test/kilocode/**/*.{ts,tsx}"]).filter(
-  (file) => !PRELOADS.has(file),
-)
+// Tests next to the source (`*.test.ts`, `*.spec.ts`, `__tests__/`) run in the same `bun test` process as test/.
+const COLOCATED_TEST = /\.(?:test|spec)\.tsx?$|\/__tests__\//
+const KILO_TESTS = uniqueFiles(["packages/kilo-*/test/**/*.{ts,tsx}", "packages/*/test/kilocode/**/*.{ts,tsx}"])
+  .concat(KILO_FILES.filter((file) => COLOCATED_TEST.test(file)))
+  .filter((file) => !PRELOADS.has(file))
+const KILO_SOURCE = KILO_FILES.filter((file) => !COLOCATED_TEST.test(file))
 
 // ---------------------------------------------------------------------------
 // Rule 1: Core Directionality Guard
@@ -299,18 +303,9 @@ violations.push(
 // Rule 7: Kilo Test Process-Wide State
 // ---------------------------------------------------------------------------
 
-// The same process-wide state that script/kilocode/test/test-runner.ts runs in its own process, plus module-scope
-// global writes. A write inside a hook or a test is not counted: the file can restore it.
-const PROCESS_STATE = [
-  /\bmock\.module\s*\(/g,
-  /\bspyOn\s*\(\s*globalThis\b/g,
-  /^process\.env\b/gm,
-  /^delete\s+process\.env\b/gm,
-  /^(?:globalThis|global)\.[\w$]+\s*=(?!=)/gm,
-]
-
 const processStateHits = new Map<string, number>()
 for (const file of KILO_TESTS) {
+  // The same list the test runner uses to run a file in its own process.
   const count = countMatches(code(await read(file)), PROCESS_STATE)
   if (count > 0) processStateHits.set(file, count)
 }
@@ -353,7 +348,7 @@ violations.push(
 
 // Counted per package, not per file: the target is fewer process-global singletons in each domain.
 const moduleStateHits = new Map<string, number>()
-for (const file of KILO_FILES) {
+for (const file of KILO_SOURCE) {
   const count = countMatches(code(await read(file)), [
     /^(?:export\s+)?let\s/gm,
     /^(?:export\s+)?const\s+[\w$]+(?:\s*:[^=\n]+)?\s*=\s*new\s+(?:Map|Set)\b/gm,
