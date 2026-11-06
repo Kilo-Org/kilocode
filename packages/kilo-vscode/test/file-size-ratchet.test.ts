@@ -23,7 +23,7 @@ const MAX_LINES: Record<string, number> = {
   "webview-ui/src/components/settings/agent-behaviour/ModeEditView.tsx": 550,
   "webview-ui/src/components/settings/agent-behaviour/McpSubtab.tsx": 500,
   "webview-ui/src/components/profile/DeviceAuthCard.tsx": 450,
-  "webview-ui/src/components/settings/settings-search.ts": 450,
+  "webview-ui/src/components/settings/settings-search.ts": 300,
   "webview-ui/src/components/shared/ModelSelector.tsx": 400,
 }
 
