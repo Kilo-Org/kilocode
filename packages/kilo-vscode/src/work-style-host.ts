@@ -100,9 +100,8 @@ async function current(deps: Deps) {
 
 async function initialize(deps: Deps) {
   if (state() !== "unset") return
-  const sessions = await hasAnySession(deps).catch(() => undefined)
-  // A failed probe is unknown, not an existing user. Leave the state unset so the next request retries.
-  if (sessions === undefined) return
+  // A failed probe propagates: the request answers skipped without persisting, so a later request retries.
+  const sessions = await hasAnySession(deps)
   if (state() !== "unset") return
   // A project that already has sessions is an existing user; do not show the picker again.
   if (getInitialWorkStyle(sessions) === "skipped") await setState("skipped")
