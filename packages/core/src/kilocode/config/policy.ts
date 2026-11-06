@@ -8,6 +8,7 @@ import { optional } from "@opencode/schema/schema"
 import { Effect, Option, Schema } from "effect"
 import type { Interface } from "../../config.js"
 import type { ConfigNormalize } from "../../config/normalize.js"
+import { KiloConfigExcess } from "./excess.js"
 
 // Allowed hosts are checked by the sandbox plugin, which owns the destination parser.
 const Sandbox = Schema.Struct({
@@ -107,6 +108,10 @@ export class Info extends Config.Info.extend<Info>("KiloConfigPolicy.Info")({
   indexing: KiloIndexingRpc.Config.pipe(optional),
 }) {}
 
+// The recognized top-level keys: the full v2 schema without the derived `workflow_models` (built from model-only
+// `commands`). The writer (`validate.ts`) shares this set so a read and a write cannot drift.
+export const known = new Set(Object.keys(Info.fields).filter((key) => key !== "workflow_models"))
+
 const decode = Schema.decodeUnknownOption(Info, { errors: "all", onExcessProperty: "ignore" })
 const policy = Schema.Struct({ hide_prompt_training_models: Schema.optional(Schema.Boolean) })
 const privacy = Schema.Struct({ privacy_mode: Schema.optional(Schema.Boolean) })
@@ -157,6 +162,9 @@ function kiloSettings(input: unknown, report?: (diagnostic: ConfigNormalize.Diag
 const refused = {
   console: "ignored console; Kilo Console settings are not carried on this build",
 } as const
+
+// `workflow_models` is derived from model-only `commands` entries; `refused` keys have their own diagnostic.
+const skipExcess = new Set(["workflow_models", ...Object.keys(refused)])
 
 const refusedExperimental = {
   semantic_indexing: "ignored retired experimental.semantic_indexing; use indexing.enabled instead",
@@ -230,6 +238,7 @@ export function parse(
       message: "ignored invalid commit_message; expected an object with an optional string prompt",
     })
   const models = input instanceof Info ? input.workflow_models : record(input) ? workflowModels(input) : undefined
+  KiloConfigExcess.report(input, known, skipExcess, report)
   refusedSettings(input, report)
   const decodedSettings = kiloSettings(input, report)
   const synchronization = Schema.decodeUnknownOption(sync)(input)
