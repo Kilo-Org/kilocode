@@ -10,6 +10,7 @@ import {
   visibleParts,
   type RevertBoundary,
 } from "../../webview-ui/src/context/session-queue"
+import { requestSendQueuedNow } from "../../webview-ui/src/context/send-now"
 import type {
   ExtensionMessage,
   Message,
@@ -691,6 +692,70 @@ describe("queued deletion cleanup", () => {
   it.each(interruptions)("releases the waiter and listener after timeout or interruption: %p", async (message) => {
     const state = setup(1)
     if (message) state.emit(message)
+    expect(await state.promise).toBe(false)
+    expect(state.listeners.size).toBe(0)
+  })
+})
+
+describe("requestSendQueuedNow", () => {
+  const setup = (timeout = 1_000) => {
+    const listeners = new Set<(message: ExtensionMessage) => void>()
+    const sent: WebviewMessage[] = []
+    const promise = requestSendQueuedNow(
+      {
+        onMessage: (handler) => {
+          listeners.add(handler)
+          return () => {
+            listeners.delete(handler)
+          }
+        },
+        postMessage: (message) => {
+          sent.push(message)
+        },
+      },
+      "session",
+      "message",
+      timeout,
+    )
+    return {
+      promise,
+      listeners,
+      sent,
+      emit: (message: ExtensionMessage) => listeners.forEach((handler) => handler(message)),
+    }
+  }
+
+  it.each([true, false])("settles only on the matching result: %p", async (success) => {
+    const state = setup()
+    const request = state.sent.at(0)
+    if (request?.type !== "sendQueuedNow") throw new Error("Missing send-now request")
+    expect(request.messageID).toBe("message")
+    state.emit({
+      type: "sendQueuedNowResult",
+      sessionID: "session",
+      messageID: "message",
+      requestID: "other",
+      success: !success,
+    })
+    state.emit({
+      type: "sendQueuedNowResult",
+      sessionID: "session",
+      messageID: "message",
+      requestID: request.requestID,
+      success,
+    })
+    expect(await state.promise).toBe(success)
+    expect(state.listeners.size).toBe(0)
+  })
+
+  it("fails when the connection drops", async () => {
+    const state = setup()
+    state.emit({ type: "connectionState", state: "disconnected" } as ExtensionMessage)
+    expect(await state.promise).toBe(false)
+  })
+
+  it("fails on timeout", async () => {
+    const state = setup(5)
     expect(await state.promise).toBe(false)
     expect(state.listeners.size).toBe(0)
   })

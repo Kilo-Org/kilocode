@@ -132,6 +132,7 @@ export const dict = {
   "ui.messagePart.openInEditor": "Відкрити в редакторі",
 
   // Message feedback (thumbs up/down per assistant response)
+  "ui.message.sendQueuedNow": "Надіслати зараз (перериває поточний крок)",
   "ui.message.feedback.helpful": "Це було корисно",
   "ui.message.feedback.notHelpful": "Це не було корисно",
   "ui.message.feedback.clearRating": "Очистити оцінку",

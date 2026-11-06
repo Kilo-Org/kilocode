@@ -129,6 +129,7 @@ export const dict = {
   "ui.messagePart.openInEditor": "エディタで開く",
 
   // Message feedback (thumbs up/down per assistant response)
+  "ui.message.sendQueuedNow": "今すぐ送信（現在のステップを中断）",
   "ui.message.feedback.helpful": "役に立ちました",
   "ui.message.feedback.notHelpful": "役に立ちませんでした",
   "ui.message.feedback.clearRating": "評価をクリア",

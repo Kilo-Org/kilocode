@@ -60,6 +60,11 @@ export const AbortQuery = Schema.Struct({
       description:
         "Abort scope. Defaults to tree, which stops the session and all descendants. Session stops the current agent and foreground work, but keeps asynchronous subagents and stores their results without resuming until the user continues.",
     }),
+  ),  promote: Schema.optional(
+    MessageID.annotate({
+      description:
+        "Queued user message to run next. The active turn is interrupted while the rest of the queue is kept. Returns false when the message is no longer queued.",
+    }),
   ),
 })
 // kilocode_change end

@@ -71,6 +71,7 @@ export enum TelemetryEventName {
   AGENT_MANAGER_SESSION_STARTED = "Agent Manager Session Started",
   AGENT_MANAGER_SESSION_COMPLETED = "Agent Manager Session Completed",
   AGENT_MANAGER_SESSION_STOPPED = "Agent Manager Session Stopped",
+  QUEUED_MESSAGE_SENT_NOW = "Queued Message Sent Now",
   AGENT_MANAGER_SESSION_ERROR = "Agent Manager Session Error",
   AGENT_MANAGER_LOGIN_ISSUE = "Agent Manager Login Issue",
   AGENT_MANAGER_WORKTREE_HEALTH = "Agent Manager Worktree Health",

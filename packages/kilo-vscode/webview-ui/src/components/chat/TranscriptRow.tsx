@@ -78,6 +78,11 @@ export const TranscriptRowView: Component<TranscriptRowViewProps> = (props) => {
               onFork={
                 props.onForkMessage ? () => props.onForkMessage?.(row().message.sessionID, row().message.id) : undefined
               }
+              onSendNow={
+                row().queued && !props.readonly
+                  ? () => void session.sendQueuedNow(row().message.sessionID, row().message.id)
+                  : undefined
+              }
               onDelete={
                 row().queued && !props.readonly
                   ? () => session.deleteQueuedMessage(row().message.sessionID, row().message.id)

@@ -4898,6 +4898,7 @@ export class Session2 extends HeyApiClient {
       directory?: string
       workspace?: string
       scope?: "session" | "tree"
+      promote?: string
     },
     options?: Options<never, ThrowOnError>,
   ) {
@@ -4910,6 +4911,7 @@ export class Session2 extends HeyApiClient {
             { in: "query", key: "directory" },
             { in: "query", key: "workspace" },
             { in: "query", key: "scope" },
+            { in: "query", key: "promote" },
           ],
         },
       ],

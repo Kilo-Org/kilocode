@@ -132,6 +132,7 @@ export const dict = {
   "ui.messagePart.openInEditor": "Düzenleyicide Aç",
 
   // Message feedback (thumbs up/down per assistant response)
+  "ui.message.sendQueuedNow": "Şimdi gönder (geçerli adımı keser)",
   "ui.message.feedback.helpful": "Bu yardımcı oldu",
   "ui.message.feedback.notHelpful": "Bu yardımcı olmadı",
   "ui.message.feedback.clearRating": "Değerlendirmeyi temizle",

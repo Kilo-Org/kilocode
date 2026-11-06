@@ -14532,6 +14532,10 @@ export type SessionAbortData = {
      * Abort scope. Defaults to tree, which stops the session and all descendants. Session stops the current agent and foreground work, but keeps asynchronous subagents and stores their results without resuming until the user continues.
      */
     scope?: "session" | "tree"
+    /**
+     * Queued user message to run next. The active turn is interrupted while the rest of the queue is kept. Returns false when the message is no longer queued.
+     */
+    promote?: string
   }
   url: "/session/{sessionID}/abort"
 }

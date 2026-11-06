@@ -1902,3 +1902,41 @@ export const BoardOpen: Story = {
     </StoryProviders>
   ),
 }
+
+// ---------------------------------------------------------------------------
+// Queued user messages expose Send now, Edit, and Delete next to the shimmer.
+// ---------------------------------------------------------------------------
+
+function queuedMessage(id: string, text: string, disabled = false) {
+  const message: Message = {
+    id,
+    sessionID: SESSION_ID,
+    role: "user",
+    createdAt: new Date(0).toISOString(),
+    time: { created: 0 },
+  }
+  const parts: Part[] = [{ id: `${id}-part`, sessionID: SESSION_ID, messageID: id, type: "text", text }]
+  return (
+    <VscodeUserMessage
+      message={message}
+      parts={parts}
+      queued
+      queuedDisabled={disabled}
+      onSendNow={() => undefined}
+      onEdit={() => undefined}
+      onDelete={() => undefined}
+    />
+  )
+}
+
+export const UserMessageQueuedSendNow: Story = {
+  name: "User message — queued with Send now",
+  render: () => (
+    <StoryProviders>
+      <div style={{ display: "flex", "flex-direction": "column", gap: "16px", padding: "16px" }}>
+        {queuedMessage("queued-send-now-1", "Actually, skip the migration and just update the README.")}
+        {queuedMessage("queued-send-now-2", "Disconnected: queued actions are disabled.", true)}
+      </div>
+    </StoryProviders>
+  ),
+}

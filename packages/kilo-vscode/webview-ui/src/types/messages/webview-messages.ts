@@ -86,6 +86,13 @@ export interface UnrevertSessionRequest {
   sessionID: string
 }
 
+export interface SendQueuedNowRequest {
+  type: "sendQueuedNow"
+  sessionID: string
+  messageID: string
+  requestID: string
+}
+
 export interface DeleteMessageRequest {
   type: "deleteMessage"
   sessionID: string
@@ -1766,6 +1773,7 @@ export type WebviewMessage =
   | RevertSessionRequest
   | UnrevertSessionRequest
   | DeleteMessageRequest
+  | SendQueuedNowRequest
   | PermissionResponseRequest
   | CreateSessionRequest
   | ClearSessionRequest

@@ -23,8 +23,10 @@ import { buildWebviewHtml, getWebviewFontSize, isCursorHost } from "./utils"
 import { saveImage } from "./kilo-provider/save-image"
 import { handleEditorAction } from "./kilo-provider/editor-actions"
 import { exportTranscript } from "./kilo-provider/export-transcript"
+import { sendQueuedNow, surface } from "./kilo-provider/send-now"
 import {
   TelemetryProxy,
+  TelemetryEventName,
   type TelemetryPropertiesProvider,
   pushTelemetryState,
   watchTelemetryState,
@@ -1402,6 +1404,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           break
         case "deleteMessage":
           await this.handleDeleteMessage(message.sessionID, message.messageID, message.requestID)
+          break
+        case "sendQueuedNow":
+          await this.handleSendQueuedNow(message.sessionID, message.messageID, message.requestID)
           break
         case "permissionResponse":
           await handlePermissionResponse(
@@ -2785,6 +2790,36 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       })
       this.postMessage({ ...result, success: false })
     }
+  }
+
+  private async handleSendQueuedNow(sessionID: string, messageID: string, requestID: string): Promise<void> {
+    const result = { type: "sendQueuedNowResult" as const, sessionID, messageID, requestID }
+    const client = this.client
+    if (!client) {
+      this.postMessage({ ...result, success: false })
+      return
+    }
+    this.cancelRetry(sessionID)
+    const promoted = await sendQueuedNow({
+      client,
+      sessionID,
+      messageID,
+      dir: this.getWorkspaceDirectory(sessionID),
+    }).catch((error: unknown) => {
+      console.error("[Kilo New] KiloProvider: Failed to send queued message now:", error)
+      this.postMessage({ type: "error", message: getErrorMessage(error) || "Failed to send message now", sessionID })
+      return undefined
+    })
+    if (promoted === undefined) {
+      this.postMessage({ ...result, success: false })
+      return
+    }
+    TelemetryProxy.capture(TelemetryEventName.QUEUED_MESSAGE_SENT_NOW, {
+      sessionId: sessionID,
+      surface: surface(this.opts),
+      outcome: promoted ? "promoted" : "not_queued",
+    })
+    this.postMessage({ ...result, success: true })
   }
 
   /**

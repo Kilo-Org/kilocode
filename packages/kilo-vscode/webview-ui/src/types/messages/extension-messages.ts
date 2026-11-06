@@ -262,6 +262,14 @@ export interface MessageRemovedMessage {
   messageID: string
 }
 
+export interface SendQueuedNowResultMessage {
+  type: "sendQueuedNowResult"
+  sessionID: string
+  messageID: string
+  requestID: string
+  success: boolean
+}
+
 export interface DeleteMessageResultMessage {
   type: "deleteMessageResult"
   sessionID: string
@@ -1837,6 +1845,7 @@ export type ExtensionMessage =
   | SessionDeletedMessage
   | MessageRemovedMessage
   | DeleteMessageResultMessage
+  | SendQueuedNowResultMessage
   | MessagesLoadedMessage
   | SessionModelUsageLoadedMessage
   | SessionModelUsageChangedMessage

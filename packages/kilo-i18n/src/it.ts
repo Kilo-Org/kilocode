@@ -130,6 +130,8 @@ export const dict = {
   "ui.messagePart.openInDiffViewer": "Apri nel visualizzatore diff",
   "ui.messagePart.openInEditor": "Apri nell'editor",
 
+  "ui.message.sendQueuedNow": "Invia ora (interrompe il passaggio corrente)",
+
   "ui.message.feedback.helpful": "È stato utile",
   "ui.message.feedback.notHelpful": "Non è stato utile",
   "ui.message.feedback.clearRating": "Cancella valutazione",

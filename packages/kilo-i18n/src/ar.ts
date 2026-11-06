@@ -127,6 +127,7 @@ export const dict = {
   "ui.messagePart.openInEditor": "فتح في المحرر",
 
   // Message feedback (thumbs up/down per assistant response)
+  "ui.message.sendQueuedNow": "أرسل الآن (يقاطع الخطوة الحالية)",
   "ui.message.feedback.helpful": "كان هذا مفيدًا",
   "ui.message.feedback.notHelpful": "لم يكن هذا مفيدًا",
   "ui.message.feedback.clearRating": "مسح التقييم",

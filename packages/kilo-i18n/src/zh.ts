@@ -122,6 +122,7 @@ export const dict = {
   "ui.messagePart.openInEditor": "在编辑器中打开",
 
   // Message feedback (thumbs up/down per assistant response)
+  "ui.message.sendQueuedNow": "立即发送（中断当前步骤）",
   "ui.message.feedback.helpful": "这有帮助",
   "ui.message.feedback.notHelpful": "这没有帮助",
   "ui.message.feedback.clearRating": "清除评分",

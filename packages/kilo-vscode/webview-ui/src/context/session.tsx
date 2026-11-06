@@ -99,6 +99,7 @@ import { type ReviewMessageData } from "../../../src/shared/review-comments"
 import { REVERT_ERROR_CODE } from "../../../src/shared/revert-error"
 import type { BrowserFeedbackData } from "../../../src/shared/browser-feedback"
 import { activeUserMessageID, removeQueuedMessage, visibleMessages as filterVisibleMessages } from "./session-queue"
+import { requestSendQueuedNow } from "./send-now"
 import { clearSessionDraftDiscarded, deleteDraftsForSession } from "../utils/draft-store"
 import { createAbortState } from "./abort-state"
 import { goalControl } from "../../../src/kilo-provider/command-completion"
@@ -3041,6 +3042,7 @@ export const SessionProvider: ParentComponent = (props) => {
     revertSession,
     unrevertSession,
     deleteQueuedMessage,
+    sendQueuedNow: (sessionID: string, messageID: string) => requestSendQueuedNow(vscode, sessionID, messageID),
     submit,
     sendMessage,
     sendCommand,

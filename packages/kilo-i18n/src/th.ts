@@ -130,6 +130,7 @@ export const dict = {
   "ui.messagePart.openInEditor": "เปิดในตัวแก้ไข",
 
   // Message feedback (thumbs up/down per assistant response)
+  "ui.message.sendQueuedNow": "ส่งทันที (ขัดจังหวะขั้นตอนปัจจุบัน)",
   "ui.message.feedback.helpful": "สิ่งนี้มีประโยชน์",
   "ui.message.feedback.notHelpful": "สิ่งนี้ไม่มีประโยชน์",
   "ui.message.feedback.clearRating": "ล้างการให้คะแนน",

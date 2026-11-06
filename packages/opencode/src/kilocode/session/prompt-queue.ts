@@ -10,6 +10,8 @@ type Slot = {
   readonly previous: Promise<void>
   readonly done: PromiseWithResolvers<void>
   readonly tail: Promise<void>
+  // Resolved by promote() handoff so this slot can run before its predecessors finish.
+  readonly go: PromiseWithResolvers<void>
 }
 
 type Target = {
@@ -38,6 +40,12 @@ export namespace KiloSessionPromptQueue {
   // reads this to keep an active goal running after a user prompt preempts its
   // continuation turn instead of settling the goal to paused.
   const superseded = new Map<SessionID, Set<MessageID>>()
+  // Message promoted via "Send now": it runs before every other waiting slot.
+  const priority = new Map<SessionID, MessageID>()
+  // Waiting slots by message ID so a promoted slot can be started early.
+  const slots = new Map<SessionID, Map<MessageID, Slot>>()
+  // Sessions whose next cancel() must keep the queue (interrupt-and-promote).
+  const keep = new Set<SessionID>()
   let seq = 0
 
   /** @internal - test-only helper */
@@ -49,7 +57,10 @@ export namespace KiloSessionPromptQueue {
       latest.has(sessionID) ||
       activeSince.has(sessionID) ||
       waiting.has(sessionID) ||
-      superseded.has(sessionID)
+      superseded.has(sessionID) ||
+      priority.has(sessionID) ||
+      slots.has(sessionID) ||
+      keep.has(sessionID)
     )
   }
 
@@ -85,6 +96,9 @@ export namespace KiloSessionPromptQueue {
 
   export function cancel(sessionID: SessionID) {
     return Effect.sync(() => {
+      // Interrupt-and-promote stops the active turn but keeps the waiting queue.
+      if (keep.delete(sessionID)) return
+      priority.delete(sessionID)
       if (!tails.has(sessionID)) {
         versions.delete(sessionID)
         targets.delete(sessionID)
@@ -115,6 +129,7 @@ export namespace KiloSessionPromptQueue {
       const cancelled = dropped.get(sessionID) ?? new Set<MessageID>()
       cancelled.add(messageID)
       dropped.set(sessionID, cancelled)
+      if (priority.get(sessionID) === messageID) priority.delete(sessionID)
       return true
     })
   }
@@ -138,6 +153,45 @@ export namespace KiloSessionPromptQueue {
     superseded.delete(sessionID)
     return set.has(target)
   }
+
+  /**
+   * Move a waiting message to the front of the queue so it runs as soon as the
+   * active slot finishes, ahead of earlier queued messages. When `interrupt` is
+   * true the next cancel() for this session keeps the queue, so the caller can
+   * stop the active turn without losing the other queued prompts.
+   * Returns false when the message is not waiting (already started or stale).
+   */
+  export function promote(sessionID: SessionID, messageID: MessageID, interrupt = true) {
+    return Effect.sync(() => {
+      const list = waiting.get(sessionID) ?? []
+      if (!list.includes(messageID)) return false
+      priority.set(sessionID, messageID)
+      if (interrupt) keep.add(sessionID)
+      publishIfChanged(sessionID, [messageID, ...list.filter((id) => id !== messageID)])
+      return true
+    })
+  }
+
+  // Release a keep flag set by promote() when the caller did not cancel.
+  export function release(sessionID: SessionID) {
+    keep.delete(sessionID)
+  }
+
+  // When another message was promoted, hand off to it and wait until it has run.
+  const yieldTo = (sessionID: SessionID, target: MessageID) =>
+    Effect.promise(async () => {
+      for (;;) {
+        const id = priority.get(sessionID)
+        if (id == null || id === target) return
+        const slot = slots.get(sessionID)?.get(id)
+        if (!slot) {
+          priority.delete(sessionID)
+          return
+        }
+        slot.go.resolve()
+        await slot.done.promise
+      }
+    })
 
   /**
    * Exempt an injected user message from being hidden by scope().
@@ -235,13 +289,31 @@ export namespace KiloSessionPromptQueue {
           const list = waiting.get(sessionID) ?? []
           publishIfChanged(sessionID, [...list, target])
         }
-        return { seq: mine, version: version(sessionID), target, previous, done, tail } satisfies Slot
+        const slot = {
+          seq: mine,
+          version: version(sessionID),
+          target,
+          previous,
+          done,
+          tail,
+          go: Promise.withResolvers<void>(),
+        } satisfies Slot
+        if (!startsImmediately) {
+          const map = slots.get(sessionID) ?? new Map<MessageID, Slot>()
+          map.set(target, slot)
+          slots.set(sessionID, map)
+        }
+        return slot
       }),
       (slot) =>
         reserved.pipe(
-          Effect.andThen(Effect.promise(() => settle(slot.previous))),
+          Effect.andThen(Effect.promise(() => Promise.race([settle(slot.previous), slot.go.promise]))),
+          Effect.andThen(
+            Effect.suspend(() => (isCancelled(sessionID, slot) ? Effect.void : yieldTo(sessionID, target))),
+          ),
           Effect.flatMap(() => {
             if (isCancelled(sessionID, slot)) return cancelled
+            if (priority.get(sessionID) === target) priority.delete(sessionID)
             // Snapshot the latest seq at the moment this slot actually starts
             // running. hasFollowup compares against this value so the slot only
             // breaks when something newer than itself arrives.
@@ -251,11 +323,11 @@ export namespace KiloSessionPromptQueue {
             // and publish the updated snapshot. Cancelled slots never reach
             // this branch, so the waiting list retains only truly-pending IDs.
             const list = waiting.get(sessionID)
-            if (list && list.length > 0) {
-              const head = list[0]
-              if (head === target) {
-                publishIfChanged(sessionID, list.slice(1))
-              }
+            if (list && list.includes(target)) {
+              publishIfChanged(
+                sessionID,
+                list.filter((id) => id !== target),
+              )
             }
             return Effect.acquireUseRelease(
               Effect.sync(() => {
@@ -271,19 +343,37 @@ export namespace KiloSessionPromptQueue {
         ),
       (slot) =>
         Effect.sync(() => {
+          const map = slots.get(sessionID)
+          if (map?.get(target) === slot) map.delete(target)
+          if (map?.size === 0) slots.delete(sessionID)
           slot.done.resolve()
           if (tails.get(sessionID) !== slot.tail) return
-          tails.delete(sessionID)
-          versions.delete(sessionID)
-          targets.delete(sessionID)
-          dropped.delete(sessionID)
-          latest.delete(sessionID)
-          activeSince.delete(sessionID)
-          superseded.delete(sessionID)
-          // Last slot of the session finished cleanly;
-          // drop any lingering waiting entry and clear internal state.
-          waiting.delete(sessionID)
+          // A promoted slot can finish while its predecessors still wait; the
+          // session is idle only once the whole chain has settled.
+          if (slots.get(sessionID)?.size) {
+            void slot.tail.then(() => {
+              if (tails.get(sessionID) === slot.tail) clear(sessionID)
+            })
+            return
+          }
+          clear(sessionID)
         }),
     )
+  }
+
+  const clear = (sessionID: SessionID) => {
+    tails.delete(sessionID)
+    versions.delete(sessionID)
+    targets.delete(sessionID)
+    dropped.delete(sessionID)
+    latest.delete(sessionID)
+    activeSince.delete(sessionID)
+    superseded.delete(sessionID)
+    priority.delete(sessionID)
+    keep.delete(sessionID)
+    slots.delete(sessionID)
+    // Last slot of the session finished cleanly;
+    // drop any lingering waiting entry and clear internal state.
+    waiting.delete(sessionID)
   }
 }

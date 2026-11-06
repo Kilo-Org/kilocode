@@ -131,6 +131,7 @@ export const dict = {
   "ui.messagePart.openInEditor": "Åbn i editor",
 
   // Message feedback (thumbs up/down per assistant response)
+  "ui.message.sendQueuedNow": "Send nu (afbryder det aktuelle trin)",
   "ui.message.feedback.helpful": "Dette var nyttigt",
   "ui.message.feedback.notHelpful": "Dette var ikke nyttigt",
   "ui.message.feedback.clearRating": "Ryd bedømmelse",

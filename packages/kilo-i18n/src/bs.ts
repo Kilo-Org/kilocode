@@ -136,6 +136,7 @@ export const dict = {
   "ui.messagePart.openInEditor": "Otvori u editoru",
 
   // Message feedback (thumbs up/down per assistant response)
+  "ui.message.sendQueuedNow": "Pošalji sada (prekida trenutni korak)",
   "ui.message.feedback.helpful": "Ovo je bilo korisno",
   "ui.message.feedback.notHelpful": "Ovo nije bilo korisno",
   "ui.message.feedback.clearRating": "Obriši ocjenu",

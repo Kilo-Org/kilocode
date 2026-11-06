@@ -128,6 +128,7 @@ export const dict = {
   "ui.messagePart.openInEditor": "편집기에서 열기",
 
   // Message feedback (thumbs up/down per assistant response)
+  "ui.message.sendQueuedNow": "지금 보내기 (현재 단계 중단)",
   "ui.message.feedback.helpful": "도움이 됐어요",
   "ui.message.feedback.notHelpful": "도움이 안 됐어요",
   "ui.message.feedback.clearRating": "평가 지우기",

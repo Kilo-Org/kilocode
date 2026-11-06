@@ -800,6 +800,7 @@ export function UserMessageDisplay(props: {
   edit?: { label: string; onClick: () => void; disabled?: boolean }
   queuedDisabled?: boolean
   onDelete?: () => void
+  onSendNow?: () => void
   onFork?: () => void
   onRevert?: () => void
   revertDisabled?: boolean
@@ -893,6 +894,26 @@ export function UserMessageDisplay(props: {
     </Show>
   )
 
+  const SendNow = () => (
+    <Show when={props.onSendNow}>
+      <Tooltip value={i18n.t("ui.message.sendQueuedNow")} placement="right" gutter={4}>
+        <IconButton
+          data-slot="user-message-send-now"
+          icon="arrow-up"
+          size="small"
+          variant="ghost"
+          disabled={props.queuedDisabled}
+          onMouseDown={(event) => event.preventDefault()}
+          onClick={(event) => {
+            event.stopPropagation()
+            props.onSendNow?.()
+          }}
+          aria-label={i18n.t("ui.message.sendQueuedNow")}
+        />
+      </Tooltip>
+    </Show>
+  )
+
   const Edit = () => (
     <Show when={props.edit}>
       {(edit) => (
@@ -954,6 +975,7 @@ export function UserMessageDisplay(props: {
         <Show when={!text() && !props.header && !props.bubbleHeader && props.queued}>
           <div data-slot="user-message-queued-indicator">
             <TextShimmer text={i18n.t("ui.message.queued")} />
+            <SendNow />
             <Edit />
             <Delete />
           </div>
@@ -980,6 +1002,7 @@ export function UserMessageDisplay(props: {
               <Show when={props.queued}>
                 <div data-slot="user-message-queued-indicator">
                   <TextShimmer text={i18n.t("ui.message.queued")} />
+                  <SendNow />
                   <Edit />
                   <Delete />
                 </div>
@@ -1914,7 +1937,9 @@ PART_MAPPING["reasoning"] = function ReasoningPartDisplay(props: MessagePartProp
   }
 
   // Throttle markdown re-renders during streaming
-  const display = createThrottledValue(text, () => (done() ? TEXT_RENDER_THROTTLE_MS : STREAMING_TEXT_RENDER_THROTTLE_MS))
+  const display = createThrottledValue(text, () =>
+    done() ? TEXT_RENDER_THROTTLE_MS : STREAMING_TEXT_RENDER_THROTTLE_MS,
+  )
   const view = createMemo(() => reasoningHeading(display(), !done()))
 
   const id = (props.part as any).id as string

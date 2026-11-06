@@ -133,6 +133,7 @@ export const dict = {
   "ui.messagePart.openInEditor": "Ouvrir dans l'éditeur",
 
   // Message feedback (thumbs up/down per assistant response)
+  "ui.message.sendQueuedNow": "Envoyer maintenant (interrompt l'étape en cours)",
   "ui.message.feedback.helpful": "C'était utile",
   "ui.message.feedback.notHelpful": "Ce n'était pas utile",
   "ui.message.feedback.clearRating": "Effacer la notation",

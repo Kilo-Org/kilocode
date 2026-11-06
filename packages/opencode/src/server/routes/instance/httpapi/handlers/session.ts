@@ -248,6 +248,14 @@ export const sessionHandlers = HttpApiBuilder.group(InstanceHttpApi, "session", 
       params: { sessionID: SessionID }
       query: typeof AbortQuery.Type
     }) {
+      if (ctx.query.promote) {
+        const promoted = yield* KiloSessionPromptQueue.promote(ctx.params.sessionID, ctx.query.promote)
+        if (!promoted) return false
+        yield* promptSvc
+          .cancel(ctx.params.sessionID, ctx.query.scope)
+          .pipe(Effect.ensuring(Effect.sync(() => KiloSessionPromptQueue.release(ctx.params.sessionID))))
+        return true
+      }
       yield* promptSvc.cancel(ctx.params.sessionID, ctx.query.scope)
       return true
     })
