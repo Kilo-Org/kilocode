@@ -141,7 +141,16 @@ class MockCliServer : AutoCloseable {
     @Volatile var hostedProviders = """{"providers":[]}"""
     @Volatile var hostedWorkspaces = """{"items":[],"cursor":null}"""
     @Volatile var hostedWorkspace = """{"id":{"providerID":"cloud","workspaceID":"wrk_1"},"name":"Cloud Workspace","repository":{"provider":"github","url":"https://github.com/Kilo-Org/kilocode","branch":"main"},"deletionState":"active","created":1.0,"updated":2.0,"lastActivity":3.0,"sessions":[]}"""
-    @Volatile var hostedWorkspaceStatus = """{"deletionState":"active","compute":{"status":"running","detailCode":"ready"},"activity":{"activeSessionCount":1,"hasActiveTurn":false},"wakeOnInput":{"available":true},"billing":{"blocked":false,"rate":{"estimatedHourlyMicrodollars":1000000}},"observedAt":1.0}"""
+    @Volatile var hostedWorkspaceStatus = """{"id":{"providerID":"cloud","workspaceID":"wrk_1"},"deletionState":"active","compute":{"status":"active","detailCode":"sandbox_ready","observedAt":1.0,"estimatedSleepAt":null},"activity":{"activeSessionCount":1,"hasActiveTurn":false},"wakeOnInput":{"available":true,"blockedReason":null},"billing":{"payer":null,"sku":null,"blocked":false,"enforcementRequested":false,"intervalStartedAt":null,"rate":{"rateCentsPerSecond":"0","estimatedHourlyMicrodollars":1000000}},"observedAt":1.0,"deletion":{"started":false,"completed":false,"startedAt":null,"phase":"not_started","sessionCount":0,"runtimeLocationCount":0,"completedRuntimeLocationCount":0,"remainingRuntimeLocationCount":0}}"""
+    @Volatile var hostedProfiles = """{"items":[{"id":"00000000-0000-4000-8000-000000000001","name":"Default","description":null,"isDefault":true}]}"""
+    @Volatile var hostedCreate = """{"workspace":{"providerID":"cloud","workspaceID":"wrk_1"},"session":{"providerID":"cloud","sessionID":"ses_cloud"},"messageID":"msg_create","replayed":false}"""
+    @Volatile var hostedStart = """{"workspace":{"providerID":"cloud","workspaceID":"wrk_1"},"session":{"providerID":"cloud","sessionID":"ses_cloud_2"},"messageID":"msg_start","replayed":false}"""
+    @Volatile var hostedDelete = """{"workspace":{"providerID":"cloud","workspaceID":"wrk_1"},"success":true}"""
+    @Volatile var hostedManagementStatus = 200
+    @Volatile var lastHostedCreateBody: String? = null
+    @Volatile var lastHostedStartBody: String? = null
+    @Volatile var lastHostedDeletePath: String? = null
+    @Volatile var lastHostedProfilesPath: String? = null
     @Volatile var hostedAttach = """{"attachmentID":"wrk_att_test","session":{"providerID":"cloud","sessionID":"ses_cloud"},"expiresAt":${System.currentTimeMillis() + 600_000}}"""
     @Volatile var hostedAttachStatus = 200
     val hostedAttachStatuses = ConcurrentLinkedQueue<Int>()
@@ -620,6 +629,22 @@ class MockCliServer : AutoCloseable {
                     respond(output, cloudSessionImportStatus, cloudSessionImport)
                 }
                 bare == "/kilocode/session-host/provider" -> respond(output, 200, hostedProviders)
+                bare == "/kilocode/session-host/workspace/profiles" && method == "GET" -> {
+                    lastHostedProfilesPath = path
+                    respond(output, hostedManagementStatus, hostedProfiles)
+                }
+                bare == "/kilocode/session-host/workspace" && method == "POST" -> {
+                    lastHostedCreateBody = body
+                    respond(output, hostedManagementStatus, hostedCreate)
+                }
+                bare.matches(Regex("/kilocode/session-host/workspace/[^/]+/[^/]+/session")) && method == "POST" -> {
+                    lastHostedStartBody = body
+                    respond(output, hostedManagementStatus, hostedStart)
+                }
+                bare.matches(Regex("/kilocode/session-host/workspace/[^/]+/[^/]+")) && method == "DELETE" -> {
+                    lastHostedDeletePath = path
+                    respond(output, hostedManagementStatus, hostedDelete)
+                }
                 bare == "/kilocode/session-host/workspace" -> {
                     lastHostedWorkspacePath = path
                     respond(output, 200, hostedWorkspaces)

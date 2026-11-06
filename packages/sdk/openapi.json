@@ -45533,7 +45533,7 @@
             "$ref": "#/components/schemas/SessionHostOrganizationID"
           }
         },
-        "required": ["repository", "profile", "prompt", "agent", "operationKey", "messageID"],
+        "required": ["repository", "prompt", "agent", "operationKey", "messageID"],
         "additionalProperties": false
       },
       "SessionHostCreateWorkspaceResult": {

@@ -345,10 +345,7 @@ export const ProfileOverrides = Schema.Struct({
 }).annotate({ identifier: "SessionHostProfileOverrides" })
 export type ProfileOverrides = Schema.Schema.Type<typeof ProfileOverrides>
 
-/**
- * Cloud resolves this profile server-side. The id is required because an
- * Agent Manager workspace must resolve to a named Cloud profile.
- */
+/** Cloud resolves an explicitly selected profile server-side. */
 export const Profile = Schema.Struct({
   id: Schema.String.check(Schema.isUUID()),
   overrides: Schema.optional(ProfileOverrides),
@@ -417,10 +414,11 @@ export type DeleteWorkspaceResult = Schema.Schema.Type<typeof DeleteWorkspaceRes
  * Create a hosted workspace and its root session. `operationKey` is required so
  * a retried request is admitted once, and `messageID` names the root initial
  * message so an ambiguous failure can be retried without a duplicate turn.
+ * Omit `profile` to create without a profile override.
  */
 export const CreateWorkspaceInput = Schema.Struct({
   repository: Repository,
-  profile: Profile,
+  profile: Schema.optional(Profile),
   prompt: Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(100_000)),
   agent: Agent,
   operationKey: Schema.String.check(Schema.isUUID()),

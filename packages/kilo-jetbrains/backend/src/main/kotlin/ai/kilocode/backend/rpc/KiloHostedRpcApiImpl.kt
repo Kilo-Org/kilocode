@@ -5,10 +5,15 @@ package ai.kilocode.backend.rpc
 import ai.kilocode.backend.app.KiloAppState
 import ai.kilocode.backend.app.KiloBackendAppService
 import ai.kilocode.rpc.KiloHostedRpcApi
+import ai.kilocode.rpc.dto.HostedCreateWorkspaceDto
+import ai.kilocode.rpc.dto.HostedDeleteResultDto
+import ai.kilocode.rpc.dto.HostedMutationResultDto
 import ai.kilocode.rpc.dto.HostedProviderDto
+import ai.kilocode.rpc.dto.HostedStartSessionDto
 import ai.kilocode.rpc.dto.HostedSystemEventDto
 import ai.kilocode.rpc.dto.HostedWorkspaceDto
 import ai.kilocode.rpc.dto.HostedWorkspaceListDto
+import ai.kilocode.rpc.dto.HostedWorkspaceProfileListDto
 import ai.kilocode.rpc.dto.HostedWorkspaceRefDto
 import ai.kilocode.rpc.dto.HostedWorkspaceStatusDto
 import com.intellij.openapi.components.service
@@ -53,6 +58,35 @@ class KiloHostedRpcApiImpl internal constructor(
     ): HostedWorkspaceStatusDto {
         app.requireReady()
         return app.hosted.workspaceStatus(ref, organizationID ?: organization())
+    }
+
+    override suspend fun workspaceProfiles(organizationID: String?): HostedWorkspaceProfileListDto {
+        app.requireReady()
+        return app.hosted.workspaceProfiles(organizationID ?: organization())
+    }
+
+    override suspend fun createWorkspace(request: HostedCreateWorkspaceDto): HostedMutationResultDto {
+        app.requireReady()
+        return app.hosted.createWorkspace(request.copy(organizationID = request.organizationID ?: organization()))
+    }
+
+    override suspend fun startWorkspaceSession(
+        ref: HostedWorkspaceRefDto,
+        request: HostedStartSessionDto,
+    ): HostedMutationResultDto {
+        app.requireReady()
+        return app.hosted.startWorkspaceSession(
+            ref,
+            request.copy(organizationID = request.organizationID ?: organization()),
+        )
+    }
+
+    override suspend fun deleteWorkspace(
+        ref: HostedWorkspaceRefDto,
+        organizationID: String?,
+    ): HostedDeleteResultDto {
+        app.requireReady()
+        return app.hosted.deleteWorkspace(ref, organizationID ?: organization())
     }
 
     override suspend fun systemEvents(

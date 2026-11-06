@@ -20,6 +20,14 @@ internal class HostedWorkspaceCache {
         items[dto.ref.key] = dto.copy(sessions = emptyList(), sessionCursor = null)
     }
 
+    fun remove(ref: HostedWorkspaceRefDto) {
+        items.remove(ref.key)
+    }
+
+    fun clear() {
+        items.clear()
+    }
+
     private companion object {
         const val LIMIT = 256
     }

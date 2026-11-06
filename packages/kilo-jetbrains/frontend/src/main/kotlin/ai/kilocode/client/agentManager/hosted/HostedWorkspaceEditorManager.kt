@@ -2,9 +2,11 @@ package ai.kilocode.client.agentManager.hosted
 
 import ai.kilocode.client.agentManager.WorkspaceSessionEditorManager
 import ai.kilocode.client.app.Workspace
+import ai.kilocode.client.app.HostedReadiness
 import ai.kilocode.client.session.SessionRef
 import ai.kilocode.client.session.SessionUi
 import ai.kilocode.rpc.dto.HostedSystemEventDto
+import ai.kilocode.rpc.dto.PromptDto
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Disposer
@@ -31,6 +33,8 @@ class HostedWorkspaceEditorManager(
     override val supportsFork: Boolean get() = false
     override val supportsNewWorktree: Boolean get() = false
     override val supportsMoveToWorktree: Boolean get() = false
+    var onNewSession: (() -> Unit)? = null
+    var onDeleteWorkspace: (() -> Unit)? = null
 
     override fun showHistory(back: (() -> Unit)?) {
         // The workspace editor already lists every hosted root session.
@@ -38,7 +42,23 @@ class HostedWorkspaceEditorManager(
 
     @RequiresEdt
     override fun newSession() {
-        // Opening this editor must not create a hosted session.
+        onNewSession?.invoke()
+    }
+
+    @RequiresEdt
+    fun closeSession(ref: SessionRef.Hosted) {
+        forceSession(ref.key)
+        if (currentUi() == null) clearCurrent()
+    }
+
+    @RequiresEdt
+    fun deleteWorkspace() {
+        onDeleteWorkspace?.invoke()
+    }
+
+    @RequiresEdt
+    fun clearPresentation() {
+        clearCurrent()
     }
 
     @RequiresEdt
@@ -53,7 +73,21 @@ class HostedWorkspaceEditorManager(
     }
 
     @RequiresEdt
-    fun setPreparation(event: HostedSystemEventDto?) {
-        currentUi()?.setHostedPreparation(event)
+    fun setPreparation(readiness: HostedReadiness, event: HostedSystemEventDto?) {
+        currentUi()?.setHostedPreparation(readiness, event)
+    }
+
+    @RequiresEdt
+    fun setTitles(titles: Map<String, String>) {
+        if (titles.isEmpty()) return
+        openSessions().forEach { ui ->
+            val id = ui.id ?: return@forEach
+            titles[id]?.let(ui::setHostedTitle)
+        }
+    }
+
+    @RequiresEdt
+    fun seedPrompt(prompt: PromptDto) {
+        currentUi()?.seedHostedPrompt(prompt)
     }
 }
