@@ -54,6 +54,7 @@ export interface ModelSelectorBaseProps {
   includeAutoSmall?: boolean
   /** Show favorites group and favorite buttons — defaults to true. */
   favorites?: boolean
+  descriptionRenderer?: Component<{ text: string }>
   /** Delay outside dismissal while the popover opens inside a dialog. */
   deferDismiss?: boolean
   /** Render inline instead of through a portal when nested in a dialog. */
@@ -92,9 +93,7 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
   // Enabled, not deprecated models; the Gateway small model only for its own row.
   const usable = createMemo(() => pickerModels(props.models ?? [], props.includeAutoSmall))
   const activeModel = createMemo(() => {
-    const model = (props.models ?? []).find(
-      (m) => m.providerID === props.value?.providerID && m.id === props.value?.modelID,
-    )
+    const model = (props.models ?? []).find((m) => m.providerID === props.value?.providerID && m.id === props.value?.modelID)
     return model ? toPickerModels([model], props.providers, props.gateway)[0] : undefined
   })
 
@@ -386,7 +385,7 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
                   style={expanded() ? { height: `${previewHeight()}px` } : {}}
                 >
                   <Show when={expanded()}>
-                    <ModelPreview model={preview()} models={visibleModels()} favorites={stars()} />
+                    <ModelPreview model={preview()} models={visibleModels()} favorites={stars()} description={props.descriptionRenderer} />
                   </Show>
                 </div>
               </div>
