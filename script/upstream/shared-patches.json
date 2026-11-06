@@ -3,7 +3,7 @@
   "limits": {
     "files": 101,
     "markedLines": 1659,
-    "unmarkedLines": 281,
+    "unmarkedLines": 299,
     "deletedFiles": 0
   },
   "files": {
@@ -105,7 +105,7 @@
     },
     "packages/protocol/openapi.json": {
       "rung": 3,
-      "seam": "Generated OpenAPI document for the optional command template and model metadata exposed by the command list API, and the optional PTY create size exposed by packages/schema/src/pty.ts. The document is generated from the public schema; editing it by hand is not supported.",
+      "seam": "Generated OpenAPI document for the optional command template and model metadata exposed by the command list API, the optional PTY create size exposed by packages/schema/src/pty.ts, and the `hook` action variant of `Schedule.Action` that lets Kilo-owned Flows own a schedule row without admitting a native prompt. The document is generated from the public schema; editing it by hand is not supported.",
       "unmarked": "Generated JSON cannot carry marker comments; bun run generate in packages/protocol owns this file."
     },
     "packages/core/package.json": {
