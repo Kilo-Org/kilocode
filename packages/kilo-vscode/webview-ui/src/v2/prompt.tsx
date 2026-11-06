@@ -3,13 +3,17 @@ import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { showToast } from "@kilocode/kilo-ui/toast"
 import type { JsonValue, ModelRef } from "@opencode/client"
 import { createEffect, createMemo, createSignal, For, on, onCleanup, onMount, Show, untrack, type JSX } from "solid-js"
+import type { ReviewCommentEntry } from "../../../src/shared/review-comments"
+import { pushFixes } from "../../agent-manager/pr/pr-push-fixes"
 import { fold, reserve } from "../components/chat/prompt-fold"
+import { ReviewComments } from "../components/chat/ReviewComments"
 import { SandboxButtonBase, SandboxTooltipContent } from "../components/shared/SandboxButton"
 import { SpeechToTextButton } from "../components/speech-to-text/SpeechToTextButton"
 import { createSpeechShortcut } from "../components/speech-to-text/shortcut"
 import { useSpeechStatus } from "../components/speech-to-text/status"
 import { useSpeechToText } from "../components/speech-to-text/useSpeechToText"
 import { useLanguage } from "../context/language"
+import { useIndexing } from "../context/indexing"
 import { useVSCode } from "../context/vscode"
 import {
   hasPopup,
@@ -21,7 +25,13 @@ import {
 } from "../utils/focus"
 import { isEnterKeyCommitNotIme } from "../utils/ime-enter"
 import { browserPrompt, mergeBrowserReferences, type BrowserReference } from "../../../src/shared/browser-feedback"
-import { registerAppend, type AppendHandler, type ReferenceHandler } from "./append-ready"
+import {
+  registerAppend,
+  registerReviewAppend,
+  type AppendHandler,
+  type ReferenceHandler,
+  type ReviewAppendHandler,
+} from "./append-ready"
 import { BrowserReferences } from "./browser-references"
 import type { PromptAttachment } from "../../../src/protocol"
 import { CodeContextChips } from "../components/chat/CodeContextChips"
@@ -34,6 +44,7 @@ import { attachmentDrafts, fileAttachments, imageAttachment, mergeAttachments, p
 import { cleanEnhancedPrompt, enhancePromptRequest, normalizeEnhancePromptErrorMessage } from "./enhance-prompt"
 import { insertSpacedText } from "./prompt-speech"
 import { PromptOverflow, type OverflowItem } from "./prompt-overflow"
+import { composeReviewPrompt, mergePromptMetadata, mergeReviewComments } from "./review-drafts"
 import { sendMode, sendShortcuts, type SendMode } from "./pending-actions"
 import { PromptHint } from "./prompt-hint"
 
@@ -46,6 +57,15 @@ const fieldSizing = typeof CSS !== "undefined" && CSS.supports("field-sizing", "
 
 // Browser references picked for each draft, kept with the same key as the draft text.
 const references = new Map<string, BrowserReference[]>()
+
+// Pending review comments follow the same key as the text, so switching sessions neither loses nor mixes them.
+const reviewDrafts = new Map<string, ReviewCommentEntry[]>()
+
+function saveReviewDraft(key: string | undefined, comments: ReviewCommentEntry[]) {
+  if (!key) return
+  if (comments.length === 0) reviewDrafts.delete(key)
+  else reviewDrafts.set(key, comments)
+}
 
 export const promptDrafts = {
   get(key: string | undefined) {
@@ -99,17 +119,29 @@ export function PromptInput(props: {
   onAppendReady?: (append: AppendHandler | undefined) => void
   /** Receives a function that adds a browser reference to this draft; undefined on unmount. */
   onReferenceReady?: (add: ReferenceHandler | undefined) => void
+  /** Receives a function that adds review comments to the draft; undefined on unmount. */
+  onReviewAppendReady?: (append: ReviewAppendHandler | undefined) => void
   /** Receives the context actions handle of this composer; undefined on unmount. */
   onComposerReady?: (composer: ComposerHandle | undefined) => void
 }) {
   const v2 = useV2()
   const language = useLanguage()
+  const indexing = useIndexing()
   const [text, setText] = createSignal(promptDrafts.get(props.draftKey))
   const [browsers, setBrowsers] = createSignal(props.draftKey ? (references.get(props.draftKey) ?? []) : [])
   const keep = (key: string | undefined, list: BrowserReference[]) => {
     if (!key) return
     if (list.length) references.set(key, list)
     else references.delete(key)
+  }
+  const [comments, setComments] = createSignal(
+    props.draftKey ? (reviewDrafts.get(props.draftKey) ?? []) : ([] as ReviewCommentEntry[]),
+  )
+  // The key the composer is editing, so a comment change lands in the right draft entry.
+  let draft = props.draftKey
+  const replaceComments = (next: ReviewCommentEntry[]) => {
+    setComments(next)
+    saveReviewDraft(draft, next)
   }
   const [sending, setSending] = createSignal(false)
   const [enhancing, setEnhancing] = createSignal(false)
@@ -152,7 +184,8 @@ export function PromptInput(props: {
   const canSend = () =>
     ready() &&
     (speech.state() === "recording" ||
-      (!speech.active() && (!!text().trim() || attachments().length > 0 || browsers().length > 0)))
+      (!speech.active() &&
+        (!!text().trim() || attachments().length > 0 || browsers().length > 0 || comments().length > 0)))
   // The label is the pending-permission hint while blocked, otherwise Send.
   const sendLabel = () => {
     if (props.blocked) return language.t("prompt.action.send.blocked")
@@ -209,6 +242,7 @@ export function PromptInput(props: {
     !text().trim() &&
     !browsers().length &&
     attachments().length === 0 &&
+    comments().length === 0 &&
     !props.questioning &&
     speech.state() !== "recording"
 
@@ -220,7 +254,6 @@ export function PromptInput(props: {
 
   // Switching drafts saves the text of the draft being left and restores the target draft. SessionView normally
   // remounts this component for another key; this also covers a key change without a remount.
-  let draft = props.draftKey
   createEffect(
     on(
       () => props.draftKey,
@@ -233,8 +266,10 @@ export function PromptInput(props: {
           untrack(paste.pastes).map((item) => item.text),
         )
         keep(draft, untrack(browsers))
+        saveReviewDraft(draft, untrack(comments))
         draft = key
         setBrowsers(key ? (references.get(key) ?? []) : [])
+        setComments((key ? reviewDrafts.get(key) : undefined) ?? [])
         const value = promptDrafts.get(key)
         enhanceToken++
         preEnhance = null
@@ -257,6 +292,7 @@ export function PromptInput(props: {
       paste.pastes().map((item) => item.text),
     )
     keep(draft, browsers())
+    saveReviewDraft(draft, comments())
   })
 
   // kilocode_change start: batch the auto-height pass into one frame. Reading
@@ -416,29 +452,37 @@ export function PromptInput(props: {
     const backing = pastes.map((item) => item.text)
     const items = external ? external.items : attachments()
     const picked = external ? [] : browsers()
+    // A context action sends its own text; pending review comments stay in the draft for the user's next prompt.
+    const pending = external ? [] : comments()
     const prompt = browserPrompt(draft, picked)
     // Clear the draft as soon as it is sent, so the composer is empty while the prompt is admitted. Restore it only
     // if the send fails and the user has not typed, attached or picked something new.
     const restore = () => {
       if (external) return putInDraft(external.text, external.items)
-      if (text().trim() || attachments().length > 0 || browsers().length > 0) return
+      if (text().trim() || attachments().length > 0 || browsers().length > 0 || comments().length > 0) return
       setText(draft)
       paste.load(draft, backing)
       setAttachments(items)
       setBrowsers(picked)
+      replaceComments(pending)
     }
     if (!external) {
       setText("")
       paste.load("", [])
       setAttachments([])
       setBrowsers([])
+      replaceComments([])
     }
+    // The review Markdown leads the text, so the transcript can strip it again with the comments in metadata.
+    const review = external
+      ? { text: external.text, metadata: undefined }
+      : composeReviewPrompt(pending, expandPastes(draft, pastes), pushFixes())
     setSending(true)
     void props
-      // The references hold only strings, numbers and arrays, so they are the JSON the prompt metadata requires.
-      .onSend(external ? external.text : expandPastes(draft, pastes).trim(), mode, {
+      // The references and review data hold only strings, numbers and arrays, so they are prompt metadata.
+      .onSend(review.text, mode, {
         items,
-        metadata: prompt.metadata as { [key: string]: JsonValue } | undefined,
+        metadata: mergePromptMetadata(prompt.metadata as { [key: string]: JsonValue } | undefined, review.metadata),
       })
       .then((ok) => {
         if (ok) preEnhance = null
@@ -478,6 +522,16 @@ export function PromptInput(props: {
     if (shouldSend) send()
     else focusInput()
   })
+
+  // Merges comments into the current draft and sends them at once when the composer was otherwise empty, as v1 did.
+  const appendComments = (incoming: ReviewCommentEntry[], shouldSend: boolean) => {
+    if (incoming.length === 0) return
+    const empty = !text().trim() && attachments().length === 0 && browsers().length === 0 && comments().length === 0
+    replaceComments(mergeReviewComments(comments(), incoming))
+    if (shouldSend && empty) send()
+  }
+
+  registerReviewAppend(props.onReviewAppendReady, appendComments)
 
   // A reference for another session is dropped: the browser tab can outlive the session the composer shows.
   registerAppend<ReferenceHandler>(props.onReferenceReady, (reference) => {
@@ -601,8 +655,21 @@ export function PromptInput(props: {
     if (pinnedRef) observer.observe(pinnedRef)
     onCleanup(() => observer.disconnect())
   })
+  const openIndexingSettings = () => vscode.postMessage({ type: "openSettingsTab", tab: "indexing" })
+  const indexingAction = (): OverflowItem => {
+    const tone = indexing.tone()
+    return {
+      key: "indexing",
+      icon: "database",
+      label: language.t("prompt.action.indexing"),
+      description: indexing.status().message || indexing.label(),
+      tone: tone === "muted" ? undefined : tone,
+      dot: tone === "muted" ? undefined : tone,
+      run: openIndexingSettings,
+    }
+  }
   const foldable = createMemo<OverflowItem[]>(() => {
-    const list: OverflowItem[] = []
+    const list: OverflowItem[] = indexing.buttonVisible() ? [indexingAction()] : []
     const sandbox = props.sandbox
     if (sandbox?.visible())
       list.push({
@@ -660,6 +727,14 @@ export function PromptInput(props: {
       onDragLeave={images.handleDragLeave}
       onDrop={images.handleDrop}
     >
+      <Show when={comments().length > 0 && !props.disabled}>
+        <ReviewComments
+          comments={comments()}
+          sessionID={props.session}
+          onRemove={(id) => replaceComments(comments().filter((item) => item.id !== id))}
+          onClear={() => replaceComments([])}
+        />
+      </Show>
       <Show when={browsers().length > 0}>
         <div data-component="browser-references">
           <BrowserReferences
@@ -794,6 +869,20 @@ export function PromptInput(props: {
           <div class="prompt-action" data-folded={hidden().length === 0 ? "" : undefined}>
             <PromptOverflow items={hidden()} />
           </div>
+          <Show when={indexing.buttonVisible()}>
+            <div class="prompt-action" data-folded={folded("indexing") ? "" : undefined}>
+              <Tooltip value={indexing.status().message || indexing.label()} placement="top" openDelay={0}>
+                <IconButton
+                  icon="database"
+                  variant="ghost"
+                  size="small"
+                  onClick={openIndexingSettings}
+                  aria-label={language.t("prompt.action.indexing")}
+                  class={`prompt-indexing-button prompt-indexing-button--${indexing.tone()}`}
+                />
+              </Tooltip>
+            </div>
+          </Show>
           <Show when={props.sandbox?.visible() ? props.sandbox : undefined}>
             {(sandbox) => (
               <div class="prompt-action" data-folded={folded("sandbox") ? "" : undefined}>

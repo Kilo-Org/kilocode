@@ -16,12 +16,15 @@ test("restores the composer text from the draft key and saves it on unmount", ()
   expect(cleanup).toContain("attachmentDrafts.set(draft, attachments())")
   expect(cleanup).toContain("pasteDrafts.set(")
   expect(cleanup).toContain("keep(draft, browsers())")
+  expect(cleanup).toContain("saveReviewDraft(draft, comments())")
 })
 
-test("keeps browser references with the draft they were picked for", () => {
+test("keeps browser references and review comments with the draft they belong to", () => {
   const swap = prompt.match(/on\(\s*\(\) => props\.draftKey,([\s\S]*?)\n    \),/)?.[1]
   expect(swap).toContain("keep(draft, untrack(browsers))")
   expect(swap).toContain("setBrowsers(key ? (references.get(key) ?? []) : [])")
+  expect(swap).toContain("saveReviewDraft(draft, untrack(comments))")
+  expect(swap).toContain("setComments((key ? reviewDrafts.get(key) : undefined) ?? [])")
 })
 
 test("switching the draft key saves the old text and restores the new one", () => {
@@ -30,6 +33,7 @@ test("switching the draft key saves the old text and restores the new one", () =
   expect(swap).toBeDefined()
   expect(swap).toContain("promptDrafts.set(draft, untrack(text))")
   expect(swap).toContain("setText(value)")
+  expect(swap).toContain("saveReviewDraft(draft, untrack(comments))")
   expect(swap).toContain("attachmentDrafts.set(draft, untrack(attachments))")
   expect(swap).toContain("paste.load(value, pasteDrafts.get(key))")
   expect(swap).toContain("setAttachments(attachmentDrafts.get(key))")

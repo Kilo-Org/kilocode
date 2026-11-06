@@ -9,7 +9,7 @@ import { useModelPreferences } from "../context/model-preferences"
 import { getVSCodeAPI } from "../context/vscode"
 import { TaskHeader } from "../components/chat/TaskHeader"
 import { SessionDock } from "../components/chat/SessionDockWorking"
-import type { AppendHandler, ReferenceHandler } from "./append-ready"
+import type { AppendHandler, ReferenceHandler, ReviewAppendHandler } from "./append-ready"
 import type { ComposerHandle } from "./composer"
 import { toPromptFiles } from "./prompt-attachments"
 import { useV2 } from "./client"
@@ -39,9 +39,6 @@ export function SessionView(props: {
   onShowHistory: () => void
   /** The row above the dock; receives whether the session has messages and the todo element it trails. */
   row?: (hasMessages: boolean, todos: JSX.Element) => JSX.Element
-  /** Replaces the transcript with `replacement` while true, for example with the session changes. */
-  replace?: boolean
-  replacement?: JSX.Element
   /** Replaces the welcome screen of an empty session. */
   empty?: () => JSX.Element
   /** Read-only sessions show the transcript without docks and prompt. */
@@ -52,6 +49,8 @@ export function SessionView(props: {
   onPreviewEdit?: (files: FileDiffInfo[], sessionID: string) => void
   /** Receives the composer append function for review comments, and undefined when that composer unmounts. */
   onAppendReady?: (append: AppendHandler | undefined) => void
+  /** Receives the composer review-comment function, and undefined when that composer unmounts. */
+  onReviewAppendReady?: (append: ReviewAppendHandler | undefined) => void
   /** Receives the composer function that adds an Integrated Browser element reference. */
   onReferenceReady?: (add: ReferenceHandler | undefined) => void
   /** Receives the composer for editor and terminal context actions, and undefined when that composer unmounts. */
@@ -290,25 +289,18 @@ export function SessionView(props: {
       <div class="chat-messages-wrapper">
         <ToolChildSessionProvider value={childSessions}>
           <div class="chat-messages">
-            <Show
-              when={props.replace}
-              fallback={
-                <MessageList
-                  session={session()}
-                  actions={props.actions}
-                  selection={selection}
-                  onSelectSession={(id) => props.actions.openSession?.(id)}
-                  onShowHistory={props.onShowHistory}
-                  onForkMessage={running() ? undefined : props.onForkMessage}
-                  empty={props.empty}
-                  onScrollToBottomReady={(fn) => (scrollToBottom = fn)}
-                  onViewTurnChanges={props.onViewTurnChanges}
-                  pending={pending}
-                />
-              }
-            >
-              {props.replacement}
-            </Show>
+            <MessageList
+              session={session()}
+              actions={props.actions}
+              selection={selection}
+              onSelectSession={(id) => props.actions.openSession?.(id)}
+              onShowHistory={props.onShowHistory}
+              onForkMessage={running() ? undefined : props.onForkMessage}
+              empty={props.empty}
+              onScrollToBottomReady={(fn) => (scrollToBottom = fn)}
+              onViewTurnChanges={props.onViewTurnChanges}
+              pending={pending}
+            />
           </div>
         </ToolChildSessionProvider>
       </div>
@@ -356,6 +348,7 @@ export function SessionView(props: {
                   composer = append
                   props.onAppendReady?.(append)
                 }}
+                onReviewAppendReady={props.onReviewAppendReady}
                 onReferenceReady={props.onReferenceReady}
                 onComposerReady={props.onComposerReady}
                 selectors={<Selectors selection={selection} blocked={selectorsBlocked()} />}

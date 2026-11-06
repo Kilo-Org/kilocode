@@ -58,6 +58,7 @@ const cases: Case[] = [
   { key: "memory_model", disposition: "folded", input: { memory_model: "anthropic/claude-haiku" }, value: "anthropic/claude-haiku" },
   { key: "web_search", disposition: "folded", input: { web_search: true }, value: true },
   { key: "retention", disposition: "folded", input: { retention: { enabled: true, maxAgeDays: 7 } }, value: { enabled: true, maxAgeDays: 7 } },
+  { key: "indexing", disposition: "folded", input: { indexing: { enabled: true } }, value: { enabled: true } },
 
   // --- Native: upstream v2 maps the key, no Kilo code. ---
   { key: "model", disposition: "native", input: { model: "anthropic/claude-sonnet-4" }, path: ["model"], value: { providerID: "anthropic", model: "claude-sonnet-4" } },
@@ -132,7 +133,6 @@ const cases: Case[] = [
   { key: "experimental.speech_to_text_api_key", disposition: "dropped", input: { experimental: { speech_to_text_api_key: "k" } }, path: ["experimental", "speech_to_text_api_key"] },
 
   // --- Open: owned by another epic, undecided here. Reported in the PR. ---
-  { key: "indexing", disposition: "open", input: { indexing: { enabled: true } }, note: "#15308 memory and indexing (M2)" },
   { key: "compaction.threshold_percent", disposition: "open", input: { compaction: { threshold_percent: 80 } }, path: ["compaction", "threshold_percent"], note: "#15300 session policy maps it to compaction.buffer" },
   { key: "experimental.native_notebook_tools", disposition: "open", input: { experimental: { native_notebook_tools: true } }, path: ["experimental", "native_notebook_tools"], note: "#15302 tools" },
   { key: "experimental.code_mode", disposition: "open", input: { experimental: { code_mode: true } }, path: ["experimental", "code_mode"], note: "#15302 tools" },
@@ -206,13 +206,13 @@ test("the table is the complete, decided mapping", () => {
   for (const c of cases) counts[c.disposition] = (counts[c.disposition] ?? 0) + 1
   // Per-disposition totals pin the table: a dropped or re-dispositioned row changes them.
   expect(counts).toEqual({
-    folded: 17,
+    folded: 18,
     native: 27,
     "native-unsupported": 11,
     "native-invalid": 3,
     refused: 4,
     dropped: 8,
-    open: 4,
+    open: 3,
   })
   expect(cases.every((c) => c.disposition !== "open" || c.note.length > 0)).toBe(true)
 })

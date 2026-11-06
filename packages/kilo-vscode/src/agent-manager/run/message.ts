@@ -17,7 +17,7 @@ export function handleRunMessage(
     return true
   }
   if (msg.type === "agentManager.runScript") {
-    void run.run(qualify?.(msg.worktreeId) ?? msg.worktreeId, msg.destination)
+    void run.run(qualify?.(msg.worktreeId) ?? msg.worktreeId)
     return true
   }
   if (msg.type === "agentManager.stopRunScript") {
