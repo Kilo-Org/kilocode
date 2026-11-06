@@ -388,6 +388,7 @@ export const dict = {
   "common.signIn": "サインイン",
   "common.dismiss": "閉じる",
   "common.requestFailed": "リクエスト失敗",
+  "common.copyFailed": "コピーに失敗しました",
   "common.rename": "名前変更",
   "common.delete": "削除",
   "common.close": "閉じる",

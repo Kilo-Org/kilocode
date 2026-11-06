@@ -386,6 +386,7 @@ export const dict = {
   "common.signIn": "เข้าสู่ระบบ",
   "common.dismiss": "ปิด",
   "common.requestFailed": "คำขอล้มเหลว",
+  "common.copyFailed": "คัดลอกไม่สำเร็จ",
   "common.rename": "เปลี่ยนชื่อ",
   "common.delete": "ลบ",
   "common.close": "ปิด",
