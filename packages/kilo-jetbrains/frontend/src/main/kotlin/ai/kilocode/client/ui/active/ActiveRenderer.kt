@@ -7,6 +7,8 @@ import ai.kilocode.client.ui.FilledBadgeIcon
 import ai.kilocode.client.ui.LayeredOverlayPanel
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.animationFrame
+import ai.kilocode.client.ui.iconButtonSize
+import ai.kilocode.client.ui.paintActionHover
 import ai.kilocode.client.ui.layout.HAlign
 import ai.kilocode.client.ui.layout.LayoutPass
 import ai.kilocode.client.ui.layout.Stack
@@ -28,6 +30,7 @@ import java.awt.BorderLayout
 import java.awt.Color
 import java.awt.Cursor
 import java.awt.Dimension
+import java.awt.Graphics
 import java.awt.Point
 import java.awt.Rectangle
 import java.awt.image.BufferedImage
@@ -62,6 +65,8 @@ internal data class ActiveRenderState(
     val width: Int,
     val actionsVisible: Boolean,
     val menuVisible: Boolean,
+    /** Id of the button cell under the pointer, or null when the pointer is over the row body. */
+    val hoveredCell: String? = null,
     val opaque: Boolean = true,
     val bodyHeight: Int? = null,
     val interactive: Boolean = true,
@@ -190,8 +195,9 @@ internal class ActiveRenderer(
         descWrap?.let { UiStyle.Components.transparent(it) }
         layers.addOverlay(pill) { host, child ->
             val size = child.preferredSize
-            // The dropdown column, so the pill clears it when a list opts into both.
-            val gap = if (menu != null) glyph.preferredSize.width else 0
+            // The dropdown column. The rectangle's x already subtracts the row's trailing inset, so the
+            // pill ends exactly where the menu strip begins.
+            val gap = if (menu != null) spacer.preferredSize.width else 0
             Rectangle(
                 (host.width - size.width - row.insets.right - gap).coerceAtLeast(0),
                 ((host.height - size.height) / 2).coerceAtLeast(0),
@@ -209,12 +215,17 @@ internal class ActiveRenderer(
             tail.add(spacer, BorderLayout.EAST)
             row.remove(endPane)
             row.add(tail, BorderLayout.EAST)
-            // Stretch the glyph column top-to-bottom so its whole height is a click target; the icon
-            // stays centered within by the label's own alignment. Width stays at the icon's preferred
-            // size, inside the row's trailing padding and the native rounded selection.
-            layers.addOverlay(glyph) { host, child ->
-                val width = child.preferredSize.width.coerceAtMost(host.width)
-                Rectangle((host.width - row.insets.right - width).coerceAtLeast(0), 0, width, host.height)
+            // Keep the menu button at the standard icon-button size: the same 24px square and
+            // padding as the other icon controls, with the pill wrapping the icon instead of
+            // stretching over the trailing strip.
+            layers.addOverlay(glyph) { host, _ ->
+                val size = iconButtonSize(glyph.icon ?: AllIcons.Actions.More)
+                Rectangle(
+                    (host.width - row.insets.right - size.width).coerceAtLeast(0),
+                    ((host.height - size.height) / 2).coerceAtLeast(0),
+                    size.width.coerceAtMost(host.width),
+                    size.height.coerceAtMost(host.height),
+                )
             }
         }
         add(wrap, BorderLayout.CENTER)
@@ -246,6 +257,9 @@ internal class ActiveRenderer(
         (row.layout as BorderLayout).hgap = if (menu == null) iconGap else 0
         row.border = JBUI.Borders.empty(UiStyle.Gap.MD, cfg.leadInset, UiStyle.Gap.MD, UiStyle.Gap.SM)
         mark.border = if (menu == null) JBUI.Borders.empty() else JBUI.Borders.emptyRight(activeIconGap())
+        // Reserve the standard icon-button width around the menu glyph, so the row content and the
+        // action pill clear the padded button rather than only its icon.
+        spacer.border = JBUI.Borders.empty(0, UiStyle.Gap.SM)
     }
 
     override fun updateUI() {
@@ -289,7 +303,7 @@ internal class ActiveRenderer(
         // The row's ordinary text color rather than the muted one: a labelled glyph is a figure the user is
         // meant to read, and the muted tone made it fainter than the neutral glyph beside it. Selection
         // aware, so a highlighted row does not leave the count dark on dark blue.
-        syncBadges(value, state.foreground, state.time)
+        syncBadges(value, state.foreground, state.time, state.hoveredCell)
         // A selected row paints its title in the selection foreground; recolor a tinted glyph to
         // match so it reads as part of the highlighted text. Colored status icons opt out and keep
         // their own hue.
@@ -319,7 +333,7 @@ internal class ActiveRenderer(
         }
         val data = if (value.progress != null) null else value.metrics
         metrics.isEnabled = state.enabled && !value.disabled
-        metrics.update(data)
+        metrics.update(data, state.hoveredCell == metrics.cellId)
         val end = value.progress ?: value.trailing.orEmpty()
         trail.text = end
         trail.isVisible = end.isNotBlank() && data == null
@@ -327,7 +341,7 @@ internal class ActiveRenderer(
         descLine.isVisible = descBody.isVisible || detailsPane.isVisible
         trail.foreground = weak
 
-        syncCells(value, state.actionsVisible, state.time)
+        syncCells(value, state.actionsVisible, state.time, state.hoveredCell)
         if (!state.interactive) {
             cells.components.forEach { it.isVisible = false }
             cells.isVisible = false
@@ -335,6 +349,7 @@ internal class ActiveRenderer(
         }
         cellPane.isVisible = cells.isVisible
         pill.isVisible = cells.isVisible
+        if (menu != null) glyph.update(activeMenuCell(), state.time, state.hoveredCell == ACTIVE_MENU_CELL)
         glyph.isVisible = state.menuVisible
         // Match the row's own background so the pill never paints a focused-selection highlight
         // on a row that is not the focused selection (e.g. a hovered, unselected row).
@@ -360,6 +375,9 @@ internal class ActiveRenderer(
 
     /** The reusable row body, without list-only chrome such as section bands. */
     fun body(): JComponent = wrap
+
+    /** Hit regions of the row's interactive buttons, in this renderer's coordinates. */
+    fun buttons(x: Int = 0, y: Int = 0): List<ActiveHit> = activeHitCells(this, x, y)
 
     fun setBodyHeight(height: Int?) {
         if (bodyHeight == height) return
@@ -406,32 +424,32 @@ internal class ActiveRenderer(
         return image to Point(wrap.x.coerceAtLeast(0), wrap.y.coerceAtLeast(0))
     }
 
-    private fun syncBadges(item: ActiveItem, color: Color, time: Long) {
+    private fun syncBadges(item: ActiveItem, color: Color, time: Long, hovered: String?) {
         val hidden = item.progress != null
         val gap = activeIconGap()
         leading.border = JBUI.Borders.emptyRight(gap)
         badges.border = JBUI.Borders.emptyLeft(gap)
-        syncBadges(leading, if (hidden) emptyList() else item.leading, color, time)
-        syncBadges(badges, if (hidden) emptyList() else item.badges, color, time)
-        syncBadges(secondary, if (hidden) emptyList() else item.secondaryBadges, color, time)
+        syncBadges(leading, if (hidden) emptyList() else item.leading, color, time, hovered)
+        syncBadges(badges, if (hidden) emptyList() else item.badges, color, time, hovered)
+        syncBadges(secondary, if (hidden) emptyList() else item.secondaryBadges, color, time, hovered)
     }
 
-    private fun syncBadges(stack: JPanel, items: List<ActiveBadge>, color: Color, time: Long) {
+    private fun syncBadges(stack: JPanel, items: List<ActiveBadge>, color: Color, time: Long, hovered: String?) {
         while (stack.componentCount > items.size) stack.remove(stack.componentCount - 1)
         while (stack.componentCount < items.size) stack.add(ActiveBadgeCell())
         stack.isVisible = items.isNotEmpty()
         for (i in items.indices) {
-            (stack.getComponent(i) as ActiveBadgeCell).update(items[i], color, time)
+            (stack.getComponent(i) as ActiveBadgeCell).update(items[i], color, time, hovered == items[i].id)
         }
     }
 
-    private fun syncCells(item: ActiveItem, selected: Boolean, time: Long) {
+    private fun syncCells(item: ActiveItem, selected: Boolean, time: Long, hovered: String?) {
         val visible = activeVisibleCells(item, selected)
         while (cells.componentCount > visible.size) cells.remove(cells.componentCount - 1)
         while (cells.componentCount < visible.size) cells.add(ActiveActionCell())
         cells.isVisible = visible.isNotEmpty()
         for (i in visible.indices) {
-            (cells.getComponent(i) as ActiveActionCell).update(visible[i], time)
+            (cells.getComponent(i) as ActiveActionCell).update(visible[i], time, hovered == visible[i].id)
         }
     }
 }
@@ -448,7 +466,7 @@ internal class ActiveChangesCell @RequiresEdt constructor() : JPanel(BorderLayou
     }
 
     @RequiresEdt
-    fun update(data: ActiveMetrics?) {
+    fun update(data: ActiveMetrics?, hovered: Boolean = false) {
         this.data = data
         panel.update(
             data?.files ?: 0,
@@ -462,6 +480,7 @@ internal class ActiveChangesCell @RequiresEdt constructor() : JPanel(BorderLayou
         )
         panel.setActions(data?.action.takeIf { isEnabled })
         isVisible = panel.isVisible
+        panel.hovered(hovered && cellEnabled())
         toolTipText = panel.toolTipText
     }
 
@@ -478,11 +497,12 @@ internal class ActiveChangesCell @RequiresEdt constructor() : JPanel(BorderLayou
 
 internal class ActiveActionCell : JBLabel(), ActiveHitCell {
     private var cell: ActiveCell? = null
+    private var over = false
 
     override var cellId: String = ""
         private set
 
-    fun update(cell: ActiveCell, time: Long = UiTimers.now()) {
+    fun update(cell: ActiveCell, time: Long = UiTimers.now(), hovered: Boolean = false) {
         this.cell = cell
         cellId = cell.id
         text = if (cell.iconOnly) "" else cell.label
@@ -491,6 +511,12 @@ internal class ActiveActionCell : JBLabel(), ActiveHitCell {
         horizontalAlignment = SwingConstants.CENTER
         isEnabled = cell.enabled
         if (!cell.iconOnly) UiStyle.Components.actionLabel(this, isEnabled)
+        this.over = hovered && cellEnabled()
+    }
+
+    override fun paintComponent(g: Graphics) {
+        if (over && cellEnabled()) paintActionHover(g, width, height)
+        super.paintComponent(g)
     }
 
     override fun cellEnabled(): Boolean = cell?.enabled ?: false
@@ -510,6 +536,8 @@ internal class ActiveActionCell : JBLabel(), ActiveHitCell {
 /** A retained badge pill or status glyph that opts into list hit-testing when its model carries an id. */
 internal class ActiveBadgeCell : JBLabel(), ActiveHitCell {
     private var badge: ActiveBadge? = null
+    private var over = false
+    private var padded = false
 
     override var cellId: String = ""
         private set
@@ -520,7 +548,7 @@ internal class ActiveBadgeCell : JBLabel(), ActiveHitCell {
      * [JBLabel]'s own foreground is a UIResource that does not inherit from the transparent stack it sits
      * in, so a count would otherwise be unreadable on a selected row.
      */
-    fun update(badge: ActiveBadge, color: Color? = null, time: Long = UiTimers.now()) {
+    fun update(badge: ActiveBadge, color: Color? = null, time: Long = UiTimers.now(), hovered: Boolean = false) {
         this.badge = badge
         cellId = badge.id.orEmpty()
         val next = animationFrame(badge.icon, time) ?: pill(badge)
@@ -540,7 +568,21 @@ internal class ActiveBadgeCell : JBLabel(), ActiveHitCell {
             if (iconTextGap != gap) iconTextGap = gap
             if (color != null && foreground != color) foreground = color
         }
+        // A worded pill is an opaque icon that would hide the hover fill behind it, so only that form
+        // reserves the halo [HoverArea] gives its content. A bare glyph shows the fill through its
+        // transparent parts; a badge with no action stays unpadded and inert.
+        val pad = cellEnabled() && badge.icon == null
+        if (padded != pad) {
+            padded = pad
+            border = if (pad) JBUI.Borders.empty(0, UiStyle.Gap.xs()) else JBUI.Borders.empty()
+        }
+        this.over = hovered && cellEnabled()
         toolTipText = cellTooltip()
+    }
+
+    override fun paintComponent(g: Graphics) {
+        if (over && cellEnabled()) paintActionHover(g, width, height)
+        super.paintComponent(g)
     }
 
     private fun pill(badge: ActiveBadge): Icon {

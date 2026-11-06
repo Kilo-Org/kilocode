@@ -88,10 +88,13 @@ internal class ActiveList(
 
     init {
         view.onSelect = onSelect
-        // Only real user gestures count as scrolling. A viewport laying out — a balloon resizing, a
-        // relayout — updates the scrollbar model too, and an owner such as the prompt navigator must
-        // not mistake that for the user taking over the list and drop its pending reveal.
+        // The row and button under the pointer move with every scroll, including a programmatic
+        // relayout, so their hover is always cleared. Only real user gestures count as scrolling for
+        // [onScroll]: a viewport laying out — a balloon resizing, a relayout — updates the scrollbar
+        // model too, and an owner such as the prompt navigator must not mistake that for the user taking
+        // over the list and drop its pending reveal.
         scroll.verticalScrollBar.addAdjustmentListener { event ->
+            view.resetHover()
             if (event.valueIsAdjusting) onScroll?.invoke()
         }
         scroll.addMouseWheelListener { onScroll?.invoke() }

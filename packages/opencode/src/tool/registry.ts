@@ -50,7 +50,7 @@ import { ApplyPatchTool } from "./apply_patch"
 import { Glob } from "@opencode-ai/core/util/glob"
 import path from "path"
 import { pathToFileURL } from "url"
-import { Effect, Layer, Context, Option } from "effect" // kilocode_change
+import { Effect, Layer, Context, Option, Result } from "effect" // kilocode_change
 import { ChildProcessSpawner } from "effect/unstable/process/ChildProcessSpawner"
 import { HttpClient } from "effect/unstable/http" // kilocode_change
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
@@ -242,6 +242,26 @@ const layer = Layer.effect(
           }
         }
 
+        // kilocode_change start - a plugin tool whose args Zod cannot convert to JSON Schema must not
+        // abort the whole registry: `zodJsonSchema` throws for `z.custom`, `z.instanceof`, `z.symbol`,
+        // BigInt defaults and duplicate `meta({ id })`, and the throw used to escape the state
+        // constructor so the session received no tools at all.
+        const register = Effect.fn("ToolRegistry.registerPlugin")(function* (id: string, def: ToolDefinition) {
+          const result = Result.try({
+            try: () => fromPlugin(id, def),
+            catch: (error) => error,
+          })
+          if (Result.isFailure(result)) {
+            yield* Effect.logError("skipping plugin tool with unconvertible schema", {
+              tool: id,
+              error: result.failure instanceof Error ? result.failure.message : String(result.failure),
+            })
+            return
+          }
+          custom.push(result.success)
+        })
+        // kilocode_change end
+
         const dirs = yield* config.directories()
         const matches = dirs.flatMap((dir) =>
           Glob.scanSync("{tool,tools}/*.{js,ts}", { cwd: dir, absolute: true, dot: true, symlink: true }),
@@ -254,14 +274,14 @@ const layer = Layer.effect(
           const mod = yield* Effect.promise(() => import(pathToFileURL(match).href))
           for (const [id, def] of Object.entries(mod)) {
             if (!isPluginTool(def)) continue
-            custom.push(fromPlugin(id === "default" ? namespace : `${namespace}_${id}`, def))
+            yield* register(id === "default" ? namespace : `${namespace}_${id}`, def) // kilocode_change
           }
         }
 
         const plugins = yield* plugin.list()
         for (const p of plugins) {
           for (const [id, def] of Object.entries(p.tool ?? {})) {
-            custom.push(fromPlugin(id, def))
+            yield* register(id, def) // kilocode_change
           }
         }
 

@@ -28,6 +28,10 @@ internal fun activeRegions(item: ActiveItem): Map<String, () -> Unit> {
     return out
 }
 
+/** Whether [item] renders any hit-testable button cell a row container can hover. */
+internal fun activeHoverable(item: ActiveItem, menu: ActiveMenu<*>?): Boolean =
+    menu != null || item.cells.isNotEmpty() || activeRegions(item).isNotEmpty()
+
 internal fun activeRenameCell(label: String = KiloBundle.message("common.rename")) = ActiveCell(
     ACTIVE_RENAME_CELL,
     label,
