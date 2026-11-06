@@ -1,9 +1,10 @@
 import type { SessionMessageAssistant } from "@opencode/client"
-import { createMemo, createSignal, For, Show, type JSX } from "solid-js"
+import { createEffect, createMemo, createSignal, For, on, Show, type JSX } from "solid-js"
 import { Button } from "@kilocode/kilo-ui/button"
 import { ContentPart, useGrowIn, type ToolActions } from "@kilocode/kilo-ui/message-part"
 import { Card } from "@kilocode/kilo-ui/card"
 import { Collapsible } from "@kilocode/kilo-ui/collapsible"
+import { DiffChanges } from "@kilocode/kilo-ui/diff-changes"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { useToolMotion, useToolSize } from "@kilocode/kilo-ui/tool-motion"
@@ -20,6 +21,7 @@ import { tokenThroughputVisible } from "./kilo-settings"
 import { mcpServerFromError } from "./mcp-error"
 import { formatTokenThroughput, type TurnMetadata } from "./message-status"
 import { toolDefaultOpen } from "./tool-default-open"
+import { turnDiffs, type TurnFile } from "./turn-diffs"
 
 export function AssistantMessage(props: {
   message: SessionMessageAssistant
@@ -33,6 +35,8 @@ export function AssistantMessage(props: {
   start?: number
   /** The turn footer metadata, attached to the turn's carrier row by the transcript partition. */
   metadata?: TurnMetadata
+  /** The user message that started the turn, used to read the turn's changes. */
+  userTurn?: string
   rowKey?: string
   /** Opens the files changed by this turn. */
   onViewTurnChanges?: () => void
@@ -51,6 +55,25 @@ export function AssistantMessage(props: {
   const offset = () => props.start ?? 0
   // The error belongs to the whole message, so only its last row renders it.
   const lastChunk = () => offset() + parts().length >= props.message.content.length
+  // A completed turn keeps its changed files, read once and reused when the row mounts again.
+  const [turnFiles, setTurnFiles] = createSignal<TurnFile[]>([])
+  createEffect(
+    on(
+      () => [props.metadata, props.userTurn, lastChunk()] as const,
+      ([metadata, turn]) => {
+        if (!metadata || !turn || !lastChunk()) return
+        const cached = turnDiffs.read(props.session, turn)
+        if (cached) return setTurnFiles(cached)
+        void turnDiffs.request(props.session, turn, (query) => v2.api.session.diff(query)).then(
+          setTurnFiles,
+          (error: unknown) => {
+            console.error("[Kilo New] Failed to read the turn changes", error)
+            setTurnFiles([])
+          },
+        )
+      },
+    ),
+  )
   const timing = () => props.metadata?.timing
   const throughputValue = () => (tokenThroughputVisible() ? props.metadata?.tokensPerSecond : undefined)
   const throughputEl = createMemo<JSX.Element | undefined>(() => {
@@ -172,11 +195,26 @@ export function AssistantMessage(props: {
             )
           }}
         </For>
-        <Show when={props.onViewTurnChanges && lastChunk() && props.metadata}>
-          <div class="vscode-session-turn-changes">
-            <Button variant="ghost" size="small" onClick={() => props.onViewTurnChanges?.()}>
-              {language.t("session.review.viewTurnChanges")}
-            </Button>
+        <Show when={props.onViewTurnChanges && lastChunk() && turnFiles().length > 0}>
+          <div class="vscode-session-turn-diffs" data-component="session-turn">
+            <button
+              type="button"
+              class="vscode-session-turn-diffs-trigger"
+              onClick={() => props.onViewTurnChanges?.()}
+              aria-label={language.t("ui.sessionReview.change.modified")}
+            >
+              <span data-slot="session-turn-diffs-label">{language.t("ui.sessionReview.change.modified")}</span>
+              <span data-slot="session-turn-diffs-count">
+                {turnFiles().length}{" "}
+                {language.t(turnFiles().length === 1 ? "ui.common.file.one" : "ui.common.file.other")}
+              </span>
+              <span data-slot="session-turn-diffs-meta">
+                <DiffChanges changes={turnFiles()} variant="bars" />
+              </span>
+              <span data-slot="session-turn-diffs-chevron" aria-hidden="true">
+                <Icon name="chevron-right" size="small" />
+              </span>
+            </button>
           </div>
         </Show>
         {/* A step the user stopped is not a failure: its partial output stays and the run continues or ends. */}

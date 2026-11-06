@@ -152,6 +152,14 @@
           "default": false,
           "markdownDescription": "Render Markdown files in Kilo diff viewers by default. Toggle this from a Markdown file header in the diff viewer."
         },
+        "kilo-code.v2.diff.style": {
+          "type": "string",
+          "enum": [
+            "unified",
+            "split"
+          ],
+          "markdownDescription": "Remembered unified/split choice for Kilo diff viewers. Set automatically the first time you toggle the style in a diff viewer."
+        },
         "kilo-code.v2.showTaskTimeline": {
           "type": "boolean",
           "default": false,
@@ -423,6 +431,11 @@
       {
         "command": "kilo-code.v2.restartServer",
         "title": "Restart Server",
+        "category": "Kilo Code (v2)"
+      },
+      {
+        "command": "kilo-code.v2.showChanges",
+        "title": "Show Changes",
         "category": "Kilo Code (v2)"
       },
       {
@@ -1031,7 +1044,7 @@
     "snapshot:install": "bun script/snapshot.ts install",
     "extension": "bun script/launch.ts",
     "typecheck": "tsc --noEmit && tsc --noEmit -p webview-ui",
-    "lint": "cd ../.. && oxlint --config .oxlintrc.json packages/kilo-vscode/src packages/kilo-vscode/webview-ui/src packages/kilo-vscode/webview-ui/agent-manager packages/kilo-vscode/webview-ui/diff-viewer packages/kilo-vscode/webview-ui/documents packages/kilo-vscode/script packages/kilo-vscode/test",
+    "lint": "cd ../.. && oxlint --config .oxlintrc.json packages/kilo-vscode/src packages/kilo-vscode/webview-ui/src packages/kilo-vscode/webview-ui/agent-manager packages/kilo-vscode/webview-ui/diff-viewer packages/kilo-vscode/webview-ui/documents packages/kilo-vscode/webview-ui/diff-virtual packages/kilo-vscode/script packages/kilo-vscode/test",
     "test": "bun test"
   },
   "dependencies": {
