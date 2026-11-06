@@ -98,7 +98,7 @@ type Themes = {
   lock(): void
   unlock(): void
   setMode(mode?: "dark" | "light", persist?: boolean): boolean
-  set(theme: string, persist?: boolean): boolean
+  set(theme: string, persist?: boolean): boolean // kilocode_change(theme-preview)
   afterPaint(): void
   onError(handler: ThemeErrorHandler): () => void
   readonly ready: boolean
@@ -337,6 +337,7 @@ const themeContext = createSimpleContext({
         pin(requested, persist)
         return true
       },
+      // kilocode_change start - theme-preview: previews stay in memory until the picker confirms them
       set(theme: string, persist = true) {
         if (!has(theme)) return false
         setStore("active", theme)
@@ -349,6 +350,7 @@ const themeContext = createSimpleContext({
             .catch(() => {})
         return true
       },
+      // kilocode_change end
       afterPaint,
       onError: themeErrors.onError,
       get ready() {
