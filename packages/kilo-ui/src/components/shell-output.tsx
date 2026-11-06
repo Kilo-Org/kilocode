@@ -10,13 +10,14 @@ import { IconButton } from "./icon-button"
 import { bashLineUpdate } from "./tool-utils"
 import { Tooltip } from "./tooltip"
 
-function Copy(props: { value: string }) {
+function Copy(props: { value: () => string }) {
   const i18n = useI18n()
   const clipboard = useClipboard()
   const [copied, setCopied] = createSignal(false)
   const copy = async () => {
-    if (!props.value) return
-    await clipboard.write(props.value)
+    const value = props.value()
+    if (!value) return
+    await clipboard.write(value)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
   }
@@ -52,17 +53,47 @@ async function highlight(text: string) {
   }
 }
 
+function strip(text: string) {
+  return stripAnsi(text)
+    .replace(/\r\n/g, "\n")
+    .split("\n")
+    .map((line) => {
+      if (!line.includes("\r")) return line
+      return line.split("\r").findLast((frame) => frame !== "") ?? ""
+    })
+    .join("\n")
+}
+
+// Strips only the appended, newline-terminated part of a growing output. The
+// unfinished last line is re-stripped on each update so a carriage return or an
+// escape sequence split across updates still settles correctly.
+function createIncrementalStrip() {
+  const state = { source: "", consumed: 0, text: "", tail: "" }
+  return (raw: string) => {
+    if (!raw.startsWith(state.source)) {
+      state.source = ""
+      state.consumed = 0
+      state.text = ""
+      state.tail = ""
+    }
+    const delta = raw.slice(state.consumed)
+    state.source = raw
+    const end = delta.lastIndexOf("\n")
+    if (end === -1) {
+      state.tail = strip(delta)
+      return state.text + state.tail
+    }
+    state.text += strip(delta.slice(0, end + 1))
+    state.consumed += end + 1
+    state.tail = strip(raw.slice(state.consumed))
+    return state.text + state.tail
+  }
+}
+
 export function ShellOutput(props: { cmd: string; output: string; active: boolean; running: boolean }) {
-  const output = createMemo(() =>
-    stripAnsi(props.output)
-      .replace(/\r\n/g, "\n")
-      .split("\n")
-      .map((line) => {
-        if (!line.includes("\r")) return line
-        return line.split("\r").findLast((frame) => frame !== "") ?? ""
-      })
-      .join("\n"),
-  )
+  const output = createMemo(() => strip(props.output))
+  const stream = createIncrementalStrip()
+  const plain = { node: undefined as HTMLDivElement | undefined, text: "" }
   const [command, setCommand] = createSignal<HTMLDivElement>()
   const [result, setResult] = createSignal<HTMLDivElement>()
   const rendered = { lines: [] as string[], version: 0 }
@@ -113,6 +144,22 @@ export function ShellOutput(props: { cmd: string; output: string; active: boolea
     code.insertAdjacentHTML("beforeend", separator + inner)
     rendered.lines = lines
   }
+  const showPlain = (node: HTMLDivElement, text: string) => {
+    if (plain.node !== node) {
+      plain.node = node
+      plain.text = ""
+      node.innerHTML = `<pre data-slot="bash-pre"><code></code></pre>`
+    }
+    const code = node.querySelector("code")
+    if (!code) return
+    if (text.startsWith(plain.text)) {
+      const delta = text.slice(plain.text.length)
+      if (delta) code.append(document.createTextNode(delta))
+    } else {
+      code.textContent = text
+    }
+    plain.text = text
+  }
   createEffect(() => {
     const node = command()
     const text = props.cmd
@@ -126,15 +173,25 @@ export function ShellOutput(props: { cmd: string; output: string; active: boolea
   })
   createEffect(() => {
     const node = result()
-    const text = output()
+    const text = props.output
     if (!node) return
     if (!props.active || !text) {
       rendered.version++
       rendered.lines = []
+      plain.node = undefined
+      plain.text = ""
       if (!text) node.innerHTML = ""
       return
     }
-    void paint(node, text, ++rendered.version)
+    if (props.running) {
+      rendered.version++
+      rendered.lines = []
+      showPlain(node, stream(text))
+      return
+    }
+    plain.node = undefined
+    plain.text = ""
+    void paint(node, output(), ++rendered.version)
   })
   onCleanup(() => {
     rendered.version++
@@ -149,17 +206,17 @@ export function ShellOutput(props: { cmd: string; output: string; active: boolea
             </span>
             <div data-slot="bash-section-code" data-scrollable ref={setCommand} />
             <div data-slot="bash-section-actions">
-              <Copy value={props.cmd} />
+              <Copy value={() => props.cmd} />
             </div>
           </div>
         </div>
       </Show>
-      <Show when={output()}>
+      <Show when={props.output}>
         <div data-slot="bash-terminal" data-kind="output">
           <div data-slot="bash-section" data-kind="output">
             <div data-slot="bash-section-code" data-scrollable ref={bind} />
             <div data-slot="bash-section-actions">
-              <Copy value={output()} />
+              <Copy value={() => output()} />
             </div>
           </div>
         </div>
