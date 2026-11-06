@@ -75,7 +75,7 @@ Each repository can have one saved environment that applies automatically when a
 
 - A sandbox size
 - Network access
-- One setup script
+- A setup script and a start script
 - Variables, including secrets (encrypted at rest)
 
 Open **Env** beside a repository to create or edit its environment. In an organization, owners and admins can manage repository environments. Other members can open an environment from the **Env** chip or Cloud Agent settings to view its scripts and variables read-only; editing, save, delete, and upload controls, and sandbox selection, are unavailable to them.
@@ -94,11 +94,18 @@ The baseline is always allowed, so **Limited** and **None** still clone, push, a
 
 Network access applies when the environment is prepared. A child session started from another session inherits the parent environment's policy; if the inherited policy cannot be validated, the child does not start instead of running with broader access.
 
-When a repository environment applies, its setup script replaces the setup commands from the selected [agent environment profile](#agent-environment-profiles). The profile's variables and agent settings still apply. A warning beside the profile picker explains when a profile's setup is replaced.
+When a repository environment applies, its setup script replaces the setup commands from the selected [agent environment profile](#agent-environment-profiles). The profile's variables and agent settings still apply. A warning beside the profile picker explains when a profile's setup is replaced. The start script is not part of a profile, so it always runs in addition.
 
 Repository environments follow the same automatic-resolution policy as automatic profiles: sessions started by automated code reviews, Security Agent sessions, and unknown origins do not automatically receive a repository environment.
 
-Setup scripts run through Bash with `-e -o pipefail`, so the script stops at the first failing command. New and replaced variable values are encrypted; values stored before encryption remain compatible.
+### Setup script vs. start script
+
+The two scripts run at different times:
+
+- **Setup script** — the heavy work that builds the workspace, such as installing dependencies. It runs when Kilo builds the environment snapshot and when a workspace starts without a complete snapshot. Changing it takes effect after the next environment build.
+- **Start script** — work that must run every time a workspace starts, such as launching a service. It runs after setup, or on its own when a workspace starts from a snapshot, and again when a restored workspace starts. It does not run when a sibling chat joins a workspace that is already running. Because it is not a build input, changing it does not require rebuilding the snapshot.
+
+A workspace that starts entirely from an environment snapshot skips the environment's setup (the build already ran it) but still runs request-supplied setup commands and then the start script. Both scripts run through Bash with `-e -o pipefail`, so each stops at the first failing command, and a failing or timed-out command fails preparation. New and replaced variable values are encrypted; values stored before encryption remain compatible.
 
 ## Queueing follow-up messages
 
@@ -184,6 +191,20 @@ Drag the divider between the list and the diff to resize the file list between 2
 Use the side-by-side toggle in the file viewer to switch between a unified diff and a split, side-by-side diff. The viewer starts in unified and remembers your choice for the files you open next. The markdown preview is unaffected.
 
 These are saved snapshots, not a live view of the checkout. Diffs may be unavailable for binary, unsupported, or large files, or when there are too many changes to save in full.
+
+## Pull request status
+
+When a session is linked to a GitHub pull request, a PR badge appears on its row in the sidebar. Hover the badge to see the linked pull request's cached status without leaving the session:
+
+- **Checks** — how many checks passed, failed, and are pending, plus skipped and unknown counts when present. When the cached inventory may be missing earlier checks, the row is labelled **Checks (observed)**.
+- **Unresolved threads** — the number of unresolved review threads.
+- **Merge conflicts** — whether GitHub can merge the branch into its base without conflicts. No conflicts does not mean the pull request is ready to merge.
+- **Merge status** — the merge state GitHub reports, such as clean, blocked, behind the base branch, checks failing, conflicts, or draft.
+- **Base** — the pull request's base branch.
+- **Review** — approved, changes requested, or awaiting review.
+- **Synced** — when the status was last received.
+
+The popover shows cached status from GitHub webhooks rather than querying GitHub while you hover. Select **Refresh** to request the latest status; the action appears when the status has not synced yet and otherwise at most once every 60 seconds. Values GitHub has not reported yet show as **Unknown**, and the popover notes which evidence is missing. Select the badge to open the pull request on GitHub.
 
 ## Previewing a running app
 
