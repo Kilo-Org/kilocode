@@ -32,6 +32,10 @@ export const Payload = {
     orgId: Schema.optional(Text),
   }),
   list_directories: Schema.Struct({ directory: Schema.optional(Text) }),
+  list_models: Schema.Struct({
+    cursor: Schema.optional(Schema.Int.check(Schema.isGreaterThanOrEqualTo(0))),
+    catalogRevision: Schema.optional(Text),
+  }),
   send_message: Schema.Struct({
     text: Text,
     delivery: Schema.optional(Schema.Literals(["queue", "steer"])),
@@ -158,11 +162,13 @@ export const make = Effect.fn("RemoteCommands.make")(function* (options: Options
   // Trim result payloads, never command identities: old retries must not repeat effects.
   const prune = () =>
     database.db
-      .run(sql`UPDATE _kilo_remote_command SET outcome=NULL WHERE outcome IS NOT NULL
+      .run(
+        sql`UPDATE _kilo_remote_command SET outcome=NULL WHERE outcome IS NOT NULL
         AND (created_at < ${Date.now() - 86_400_000} OR rowid NOT IN (
           SELECT rowid FROM _kilo_remote_command WHERE outcome IS NOT NULL
           ORDER BY created_at DESC,rowid DESC LIMIT 256
-        ))`)
+        ))`,
+      )
       .pipe(Effect.orDie)
   yield* prune()
   yield* database.db
@@ -254,19 +260,38 @@ export const make = Effect.fn("RemoteCommands.make")(function* (options: Options
         return yield* failure("model_unavailable", "Model or variant is not selectable")
     }
   })
-  const discover = (type: string) =>
+  const discover = (type: string, cursor = 0, expectedRevision?: string) =>
     Effect.gen(function* () {
       if (type === "list_models") {
         const models = yield* Model.Service
-        return {
-          models: (yield* models.available()).map((model) => ({
-            id: model.id,
-            providerID: model.providerID,
-            name: model.name,
-            limit: model.limit,
-            variants: model.variants.map((variant) => ({ id: variant.id })),
-          })),
+        const available = (yield* models.available()).map((model) => ({
+          id: model.id,
+          providerID: model.providerID,
+          name: model.name,
+          limit: model.limit,
+          variants: model.variants.map((variant) => ({ id: variant.id })),
+        }))
+        const catalogRevision = hash(JSON.stringify(available))
+        if (
+          (cursor > 0 && expectedRevision === undefined) ||
+          (expectedRevision !== undefined && expectedRevision !== catalogRevision)
+        )
+          return yield* failure("catalog_changed", "Model catalog changed. Refresh host options to try again.")
+        const page = []
+        let bytes = 0
+        let next = cursor
+        for (; next < available.length; next++) {
+          const item = available[next]!
+          const size = Buffer.byteLength(JSON.stringify(item)) + 1
+          if (bytes + size > 48 * 1024) {
+            if (page.length === 0)
+              return yield* failure("model_too_large", "A model entry exceeds the discovery page limit")
+            break
+          }
+          page.push(item)
+          bytes += size
         }
+        return { models: page, nextCursor: next < available.length ? next : null, catalogRevision }
       }
       const agents = yield* Agent.Service
       return {
@@ -320,7 +345,14 @@ export const make = Effect.fn("RemoteCommands.make")(function* (options: Options
       )
       return { directory: target, directories: directories.filter((entry) => entry !== undefined) }
     }
-    if (type === "list_models" || type === "list_agents") {
+    if (type === "list_models") {
+      const input = yield* decode(Payload.list_models, payload)
+      return yield* scoped(
+        Location.Ref.make({ directory: AbsolutePath.make(root) }),
+        discover(type, input.cursor, input.catalogRevision),
+      )
+    }
+    if (type === "list_agents") {
       yield* decode(Payload.empty, payload)
       return yield* scoped(Location.Ref.make({ directory: AbsolutePath.make(root) }), discover(type))
     }
@@ -427,7 +459,11 @@ export const make = Effect.fn("RemoteCommands.make")(function* (options: Options
       yield* options.detach(sessionID)
       return { sessionID, detached: true }
     }
-    if (type === "list_models" || type === "list_agents") {
+    if (type === "list_models") {
+      const input = yield* decode(Payload.list_models, payload)
+      return yield* discover(type, input.cursor, input.catalogRevision).pipe(instances.provide(session))
+    }
+    if (type === "list_agents") {
       yield* decode(Payload.empty, payload)
       return yield* discover(type).pipe(instances.provide(session))
     }
