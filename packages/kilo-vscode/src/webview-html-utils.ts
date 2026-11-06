@@ -35,6 +35,7 @@ export function buildCspString(
     // Allow the bundled Shiki highlighting worker (loaded as a webview resource).
     `worker-src ${cspSource}`,
     `font-src ${cspSource}`,
+    `media-src ${cspSource}`,
     `connect-src ${cspSource} ${connectSrc}`,
     `img-src ${cspSource} data: https:`,
     ...(frame ? [`frame-src ${frame}`] : []),
