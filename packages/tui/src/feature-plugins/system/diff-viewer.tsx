@@ -436,6 +436,7 @@ function DiffViewer(props: { api: TuiPluginApi }) {
       name: "diff.close",
       title: "Close diff viewer",
       category: "VCS",
+      namespace: "palette", // kilocode_change
       run() {
         const returnRoute = params()?.returnRoute
         props.api.ui.dialog.clear()
@@ -1058,6 +1059,8 @@ const tui: TuiPlugin = async (api) => {
     },
   ])
 
+  const closed = () => api.route.current.name !== ROUTE // kilocode_change
+
   api.keymap.registerLayer({
     commands: [
       {
@@ -1066,7 +1069,9 @@ const tui: TuiPlugin = async (api) => {
         slashName: "diff",
         category: "VCS",
         namespace: "palette",
+        enabled: closed, // kilocode_change
         run() {
+          if (!closed()) return // kilocode_change
           api.route.navigate(ROUTE, {
             mode: "git",
             sessionID: "params" in api.route.current ? api.route.current.params?.sessionID : undefined,
