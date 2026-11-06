@@ -4,13 +4,17 @@ import { createSettingsHandler } from "../src/agent-manager/project/settings"
 
 describe("Agent Manager settings project rows", () => {
   it("returns the cached snapshot while the first project init is still running", async () => {
+    let ensured = 0
     const context = {
       id: "p1",
       root: "/repo",
       missing: () => false,
       lifecycle: "ready",
       generation: 1,
-      ensureReady: () => new Promise(() => {}),
+      ensureReady: () => {
+        ensured++
+        return new Promise(() => {})
+      },
       peekState: () => ({ getDefaultBaseBranch: () => "main" }),
       peekSetup: () => ({ resolveScript: () => ({ path: "/repo/script/setup" }) }),
       setupService: () => ({ resolveScript: () => undefined }),
@@ -37,5 +41,7 @@ describe("Agent Manager settings project rows", () => {
         setupScriptPath: "/repo/script/setup",
       },
     ])
+    // The rows resolved before the background init finished, but the init did start.
+    expect(ensured).toBe(1)
   })
 })

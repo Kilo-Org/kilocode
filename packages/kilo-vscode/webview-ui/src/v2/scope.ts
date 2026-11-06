@@ -3,7 +3,7 @@
 import type { OpenCodeClient } from "@opencode/client"
 import { createClientConnection, createData } from "@opencode/client/solid"
 import { createEffect, createSignal, on, type Accessor } from "solid-js"
-import { catalogEvent, createConnectionMetadata, type ConnectionMetadata } from "./connection-metadata"
+import { createConnectionMetadata, type ConnectionMetadata } from "./connection-metadata"
 import type { events } from "./events"
 import { createKiloModels } from "./kilo-models"
 
@@ -49,7 +49,7 @@ export function createV2Scope(input: {
     createConnectionMetadata({
       api,
       connection,
-      subscribe: (handler) => input.event.on(catalogEvent, handler),
+      subscribe: (type, handler) => input.event.on(type, handler),
     })
   metadata.attach(directory)
   const kiloModels = createKiloModels({

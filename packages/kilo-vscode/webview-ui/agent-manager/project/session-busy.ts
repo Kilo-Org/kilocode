@@ -28,7 +28,17 @@ export function createSessionActivity(opts: {
     return new Map([...states].map(([id, values]) => [id, strongest(values)]))
   }
   const local = createMemo(() => strongest(opts.local().map((id) => opts.activityFor(id))))
-  const managed = createMemo(() => group(opts.managed()))
+  // The active project's session rows read the managed state, which has no outcome. Use the host catalog for the
+  // finished state, because an unselected worktree does not load its own session list.
+  const managed = createMemo(() => {
+    const catalog = new Map((opts.projects()[opts.active() ?? ""] ?? []).map((item) => [item.id, item]))
+    return group(
+      opts.managed().map((item) => {
+        const info = catalog.get(item.id)
+        return info?.time ? { ...item, time: info.time, outcome: info.outcome } : item
+      }),
+    )
+  })
   const projects = createMemo(() => {
     const values = new Map<string, Map<string | null, Activity>>()
     for (const [id, items] of Object.entries(opts.projects())) values.set(id, group(items))

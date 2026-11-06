@@ -22,7 +22,7 @@ const EMPTY: KiloModels = { entries: new Map(), organizationID: undefined, ready
 export type KiloModelsCache = {
   readonly value: Accessor<KiloModels>
   readonly set: Setter<KiloModels>
-  readonly state: { read: number }
+  readonly state: { read: number; source?: readonly ModelInfo[] }
 }
 
 export function createKiloModelsCache(): KiloModelsCache {
@@ -55,6 +55,10 @@ export function createKiloModels(input: {
   createEffect(
     on(input.models, (models) => {
       if (!models) return
+      // One connection reads once per model list value. A different array means a catalog reload, for example after
+      // a sign-in or a team switch, and reads again.
+      if (cache.state.source === models) return
+      cache.state.source = models
       const read = ++cache.state.read
       // Without Kilo models there is no team default to prefer (the server default is not a team model), so the
       // recents may win. A team switch reload keeps the team it had before.

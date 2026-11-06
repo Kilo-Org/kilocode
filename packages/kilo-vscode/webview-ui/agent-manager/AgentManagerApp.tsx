@@ -818,15 +818,22 @@ const AgentManagerContent: Component = () => {
     if (!list) return new Set<string>()
     return new Set(list.filter(isKnownRootSession).map((item) => item.id))
   })
-  // Every root session the panel knows; the history tabs narrow it to the project or its worktrees.
-  const historyList = createMemo(() =>
-    sessions
-      .sessions()
+  // Every root session the panel knows; the history tabs narrow it to the project or its worktrees. The host catalog
+  // keeps the sessions of worktrees whose store has not loaded a session list yet.
+  const historyList = createMemo(() => {
+    const known = new Map<string, SessionInfo>()
+    for (const session of sessions.sessions()) known.set(session.id, session)
+    const projects = new Set([currentProjectId(), historyProject()].filter((id): id is string => !!id))
+    for (const project of projects)
+      for (const session of projectSessionsLive()[project] ?? [])
+        if (!known.has(session.id)) known.set(session.id, session)
+    return [...known.values()]
       .filter(
         (session) =>
           isKnownRootSession(session) || managedSessions().some((item) => item.id === session.id && item.worktreeId),
-      ),
-  )
+      )
+      .toSorted((a, b) => b.time.updated - a.time.updated)
+  })
   const localSessions = createLocalSessions({
     ids: localSessionIDs,
     sessions: () => {

@@ -22,33 +22,47 @@ export function createSessions(input: {
   // belongs to the store of its own directory.
   const owns = (item: V2, info: SessionInfo) => key(info.location.directory) === item.directory
 
-  // One entry per loaded session: the copy of its own store, else the first store that has it. Built once per store
-  // change so the scope lookup and the session list do not rescan every store on each call.
-  const index = createMemo(() => {
-    const result = new Map<string, { item: V2; info: SessionInfo }>()
+  // The owning store of each loaded session. The map changes only when a session appears, disappears, or moves, so a
+  // session record update does not invalidate every scope lookup.
+  const owners = createMemo<Map<string, V2>>((previous) => {
+    const next = new Map<string, V2>()
     for (const item of stores())
       for (const info of item.data.session.list()) {
-        const existing = result.get(info.id)
-        if (!existing || owns(item, info)) result.set(info.id, { item, info })
+        const existing = next.get(info.id)
+        if (!existing || owns(item, info)) next.set(info.id, item)
       }
-    return result
-  })
+    if (previous.size === next.size) {
+      let same = true
+      for (const [id, item] of next)
+        if (previous.get(id) !== item) {
+          same = false
+          break
+        }
+      if (same) return previous
+    }
+    return next
+  }, new Map())
 
   // The store of the session's directory, else the store of its known directory, else the project root store. A
   // directory whose store is not shown yet is not created here: its session list would load for nothing.
   const scope = (sessionID: string): V2 | undefined => {
-    const found = index().get(sessionID)?.item
+    const found = owners().get(sessionID)
     if (found) return found
     const directory = input.directoryOf(sessionID)
     const existing = directory ? input.panel.find(directory) : undefined
     return existing ?? stores()[0]
   }
 
-  const sessions = createMemo(() =>
-    [...index().values()]
-      .flatMap((entry) => (entry.info.parentID ? [] : [entry.info]))
-      .toSorted((a, b) => b.time.updated - a.time.updated),
-  )
+  // One entry per session: the copy of its own store, else the first store that has it.
+  const sessions = createMemo(() => {
+    const result = new Map<string, SessionInfo>()
+    for (const item of stores())
+      for (const info of item.data.session.list()) {
+        if (info.parentID) continue
+        if (!result.has(info.id) || owns(item, info)) result.set(info.id, info)
+      }
+    return [...result.values()].toSorted((a, b) => b.time.updated - a.time.updated)
+  })
 
   return {
     sessions,

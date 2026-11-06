@@ -6,6 +6,7 @@ import { createClientConnection } from "@opencode/client/solid"
 import { createRoot, createSignal, onCleanup } from "solid-js"
 import { createV2Scope, type V2 } from "../../src/v2/scope"
 import { createConnectionMetadata, type ConnectionMetadata } from "../../src/v2/connection-metadata"
+import { catalogEvent } from "../../src/v2/kilo-catalog"
 import { events } from "../../src/v2/events"
 import { transport } from "../../src/v2/transport"
 import type { ToHost, ToWebview } from "../../../src/protocol"
@@ -36,13 +37,23 @@ export function createPanelData(input: { post: (message: ToHost) => void; api?: 
   const stores = new Map<string, Entry>()
   const [bindings, setBindings] = createSignal<Record<string, string>>({})
   const commands = new Set<(name: string) => void>()
+  const catalogHandlers = new Set<() => void>()
   let metadata: ConnectionMetadata | undefined
   const route = (event: OpenCodeEvent) => {
-    metadata?.receive(event)
+    if (event.type === catalogEvent) catalogHandlers.forEach((handler) => handler())
     targets(event, stores.keys()).forEach((item) => stores.get(item)?.emit(event))
   }
   const connection = createClientConnection(api, { onEvent: route, pageLifecycle: true })
-  metadata = createConnectionMetadata({ api, connection })
+  metadata = createConnectionMetadata({
+    api,
+    connection,
+    subscribe: (_type, handler) => {
+      catalogHandlers.add(handler)
+      return () => {
+        catalogHandlers.delete(handler)
+      }
+    },
+  })
   const open = (url: string, external?: boolean) => input.post({ type: "open", url, external })
   const onCommand = (handler: (name: string) => void) => {
     commands.add(handler)

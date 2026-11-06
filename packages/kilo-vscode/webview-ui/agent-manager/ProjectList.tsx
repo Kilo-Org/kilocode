@@ -57,7 +57,7 @@ interface Props {
   busy: (projectId: string, id: string) => boolean
   blocked: (projectId: string, id: string) => boolean
   activityFor: (projectId: string, worktreeId: string | null) => Activity
-  sessionActivity: (id: string) => Activity
+  sessionActivity: (id: string, info?: Pick<ProjectSessionInfo, "outcome" | "time">) => Activity
   bindings: Record<string, string>
   t: LanguageContextValue["t"]
   onSearchRef: (ref: SidebarSearchMenuRef) => void
@@ -196,7 +196,7 @@ export const ProjectList: Component<Props> = (props) => {
           meta: [project.label, where],
           search: [project.label, where, wt?.branch, session.title, session.id].filter(Boolean).join(" "),
           updatedAt: new Date(session.time.updated).toISOString(),
-          state: props.sessionActivity(session.id),
+          state: props.sessionActivity(session.id, session),
           visible: project.expanded,
           sessionId: session.id,
           location: session.worktreeId ? "worktree" : "local",
