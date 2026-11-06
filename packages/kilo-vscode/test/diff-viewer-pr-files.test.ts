@@ -35,11 +35,21 @@ function setup() {
       failed: () => "load failed",
     }),
   )
-  const settle = (message: Record<string, unknown>, result: Record<string, unknown>) =>
+  const settled = new Set<unknown>()
+  const settle = (message: Record<string, unknown>, result: Record<string, unknown>) => {
+    settled.add(message.requestId)
     events.dispatchEvent(
       new MessageEvent("message", { data: { ...message, type: "agentManager.loadPRFilesResult", ...result } }),
     )
-  return { files, posted, settle }
+  }
+  // Every request carries a 30 second timer. Answer the ones a test leaves open, so none outlives the test.
+  const drain = () => {
+    for (const message of posted) {
+      if (message.type !== "agentManager.loadPRFiles" || settled.has(message.requestId)) continue
+      settle(message, { success: true, snapshot: snapshot(String(message.requestId)) })
+    }
+  }
+  return { files, posted, settle, drain }
 }
 
 const snapshot = (id: string) => ({ id, head: id, files: [] })
@@ -53,6 +63,7 @@ describe("createPRFiles", () => {
 
     expect(h.files.loading()).toBe(true)
     expect(h.files.snapshot()?.id).toBe("a")
+    h.drain()
   })
 
   it("retries the same refs after a failed refresh", () => {
@@ -80,6 +91,7 @@ describe("createPRFiles", () => {
     h.files.request(target("a"))
 
     expect(h.posted).toHaveLength(1)
+    h.drain()
   })
 
   it("clears the snapshot for another PR", () => {
@@ -89,5 +101,6 @@ describe("createPRFiles", () => {
     h.files.request({ ...target("a"), prNumber: 8, prUrl: `${url}8` })
 
     expect(h.files.snapshot()).toBeUndefined()
+    h.drain()
   })
 })
