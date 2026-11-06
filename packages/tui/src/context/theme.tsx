@@ -98,7 +98,7 @@ type Themes = {
   lock(): void
   unlock(): void
   setMode(mode?: "dark" | "light", persist?: boolean): boolean
-  set(theme: string): boolean
+  set(theme: string, persist?: boolean): boolean
   afterPaint(): void
   onError(handler: ThemeErrorHandler): () => void
   readonly ready: boolean
@@ -337,15 +337,16 @@ const themeContext = createSimpleContext({
         pin(requested, persist)
         return true
       },
-      set(theme: string) {
+      set(theme: string, persist = true) {
         if (!has(theme)) return false
         setStore("active", theme)
         if (theme === "system") refreshPalette()
-        void configState
-          .update((draft) => {
-            draft.theme = { ...draft.theme, name: theme }
-          })
-          .catch(() => {})
+        if (persist)
+          void configState
+            .update((draft) => {
+              draft.theme = { ...draft.theme, name: theme }
+            })
+            .catch(() => {})
         return true
       },
       afterPaint,

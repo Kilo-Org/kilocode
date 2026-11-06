@@ -18,7 +18,7 @@ export function DialogThemeList(props: { onClose?: () => void }) {
   const initial = themes.selected
 
   onCleanup(() => {
-    if (!confirmed) themes.set(initial)
+    if (!confirmed) themes.set(initial, false)
   })
 
   return (
@@ -30,7 +30,7 @@ export function DialogThemeList(props: { onClose?: () => void }) {
       current={initial}
       onCancel={props.onClose}
       onMove={(opt) => {
-        themes.set(opt.value)
+        themes.set(opt.value, false)
       }}
       onSelect={(opt) => {
         themes.set(opt.value)
@@ -43,12 +43,12 @@ export function DialogThemeList(props: { onClose?: () => void }) {
       }}
       onFilter={(query) => {
         if (query.length === 0) {
-          themes.set(initial)
+          themes.set(initial, false)
           return
         }
 
         const first = ref.filtered[0]
-        if (first) themes.set(first.value)
+        if (first) themes.set(first.value, false)
       }}
     />
   )

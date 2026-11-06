@@ -54,6 +54,11 @@ test("offers opencode2 only while the new designs experiment is enabled", async 
     expect(themes.set("opencode2")).toBeTrue()
     expect(theme.background.base.equals(resolveThemeDocument(getOpenCode2Theme(), "dark").background.base)).toBeTrue()
 
+    expect(themes.set("opencode", false)).toBeTrue()
+    expect(themes.selected).toBe("opencode")
+    expect(settings.theme?.name).toBe("opencode2")
+    expect(themes.set("opencode2")).toBeTrue()
+
     await config.update((draft) => {
       draft.experimental = { "new-designs": false }
     })
