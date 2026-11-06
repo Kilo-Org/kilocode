@@ -46,15 +46,16 @@ const DisplayTab: Component = () => {
   // The display keys are Kilo-only, so the config API drops them. Read them from the raw target files, as the
   // Commit Message tab reads its prompt, and write them back through the same file edit.
   const raw = (scope: SettingsScope, key: LayoutKey | "reasoning_display") => config.raw(scope)?.[key]
-  const layout = (key: LayoutKey) => {
+  const explicit = (key: LayoutKey): ToolDisplayLayout | undefined => {
     const pending = config.optimistic([key])?.value
     if (pending === "expanded" || pending === "collapsed") return pending
     const project = raw("project", key)
     const global = raw("global", key)
     if (project === "expanded" || project === "collapsed") return project
     if (global === "expanded" || global === "collapsed") return global
-    return LAYOUT_DEFAULTS[key]
+    return undefined
   }
+  const layout = (key: LayoutKey) => explicit(key) ?? LAYOUT_DEFAULTS[key]
   const reasoning = (): ReasoningDisplay => {
     const pending = config.optimistic(["reasoning_display"])?.value
     if (pending === "expanded" || pending === "preview" || pending === "headline") return pending
@@ -76,7 +77,8 @@ const DisplayTab: Component = () => {
       layout("terminal_command_display") === preset.display.terminal_command_display &&
       layout("code_edit_display") === preset.display.code_edit_display &&
       layout("mcp_tool_display") === preset.display.mcp_tool_display &&
-      layout("code_mode_display") === preset.display.code_mode_display &&
+      // A preset applied before this key existed never wrote it, so an unset key still matches the preset.
+      (explicit("code_mode_display") ?? preset.display.code_mode_display) === preset.display.code_mode_display &&
       (config.setting("showAutoApprovalReason") !== false) === preset.settings.showAutoApprovalReason
     )
   }

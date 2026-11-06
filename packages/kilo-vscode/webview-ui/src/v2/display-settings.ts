@@ -4,6 +4,7 @@ import { createSignal, onCleanup } from "solid-js"
 import { resetToolOpenState } from "@kilocode/kilo-ui/tool-open-state"
 import { DISPLAY_DEFAULTS, type DisplaySettings, type ToHost, type ToWebview } from "../../../src/protocol"
 import { useVSCode } from "../context/vscode"
+import { layoutChanged } from "./display-layout"
 
 const [displaySettings, setDisplaySettings] = createSignal<DisplaySettings>(DISPLAY_DEFAULTS)
 
@@ -25,13 +26,4 @@ export function useDisplaySettings() {
     values: displaySettings,
     request: () => vscode.postMessage({ type: "requestDisplaySettings" } satisfies ToHost as never),
   }
-}
-
-function layoutChanged(previous: DisplaySettings, next: DisplaySettings) {
-  return (
-    previous.terminalCommandDisplay !== next.terminalCommandDisplay ||
-    previous.codeEditDisplay !== next.codeEditDisplay ||
-    previous.mcpToolDisplay !== next.mcpToolDisplay ||
-    previous.codeModeDisplay !== next.codeModeDisplay
-  )
 }

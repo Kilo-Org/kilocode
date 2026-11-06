@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, expect, test } from "bun:test"
 import { executeArgs, executeCalls, executeRaw } from "../src/components/execute-data"
 import { resetToolOpenState } from "../src/components/tool-open-state"
-import { mountTool, waitFor, type Mounted } from "./harness"
+import { mountTool, trigger, waitFor, type Mounted } from "./harness"
 
 let mounted: Mounted[] = []
 
@@ -59,10 +59,11 @@ test("a running card names the running call, or says it is working after a pause
   mounted.push(idle)
   expect(subtitle(idle)).toBe("read")
   await waitFor(() => subtitle(idle) === "Working", 1500)
-  expect(idle.host.querySelector('[data-slot="execute-call-args"]')?.textContent).toBe(" path=a.ts")
+  const args = await waitFor(() => idle.host.querySelector('[data-slot="execute-call-args"]'))
+  expect(args.textContent).toBe(" path=a.ts")
 })
 
-test("a finished card summarizes the calls and keeps the script behind one click", () => {
+test("a finished card summarizes the calls and keeps the script behind one click", async () => {
   const card = mountTool("execute", {
     input: { code: "return 1" },
     metadata: {
@@ -78,6 +79,8 @@ test("a finished card summarizes the calls and keeps the script behind one click
   mounted.push(card)
 
   expect(subtitle(card)).toBe("3 calls · fetch, github.get_issue · 1 failed")
+  // The body is deferred like every other tool card, so it builds a moment after the card opens.
+  await waitFor(() => card.host.querySelector('[data-slot="execute-call"]'))
   // A failed call keeps the ring open, so the finish is never shown as clean.
   expect(card.host.querySelector('[data-slot="execute-check"]')).toBeNull()
   expect([...card.host.querySelectorAll('[data-slot="execute-call-name"]')].map((item) => item.textContent)).toEqual([
@@ -90,7 +93,7 @@ test("a finished card summarizes the calls and keeps the script behind one click
   expect(card.host.querySelector('[data-slot="execute-details"]')).not.toBeNull()
 })
 
-test("a failed script shows its own error once, apart from the calls", () => {
+test("a failed script shows its own error once, apart from the calls", async () => {
   const card = mountTool("execute", {
     input: { code: "throw new Error('boom')" },
     metadata: {
@@ -106,11 +109,12 @@ test("a failed script shows its own error once, apart from the calls", () => {
   mounted.push(card)
 
   expect(subtitle(card)).toBe("Script failed")
+  await waitFor(() => card.host.querySelector('[data-slot="execute-error"]'))
   expect(card.host.querySelector('[data-slot="execute-error"]')?.textContent).toBe("file:// URLs are not browser URLs.")
   expect(card.host.querySelector('[data-slot="execute-segment"][data-status="error"]')).not.toBeNull()
 })
 
-test("an unknown status stays visible as a neutral row, and long runs fold the earliest calls", () => {
+test("an unknown status stays visible as a neutral row, and long runs fold the earliest calls", async () => {
   const card = mountTool("execute", {
     metadata: {
       toolCalls: [
@@ -126,6 +130,7 @@ test("an unknown status stays visible as a neutral row, and long runs fold the e
   })
   mounted.push(card)
 
+  await waitFor(() => card.host.querySelector('[data-slot="execute-call"]'))
   expect(card.host.querySelectorAll('[data-slot="execute-call"]')).toHaveLength(6)
   expect(card.host.querySelector('[data-slot="execute-more"]')?.textContent).toBe("3 earlier calls")
   card.host.querySelector<HTMLElement>('[data-slot="execute-more"]')?.click()
@@ -135,18 +140,26 @@ test("an unknown status stays visible as a neutral row, and long runs fold the e
 })
 
 test("a display layout change clears remembered open states so the new default wins", async () => {
-  const first = mountTool("execute", {
+  const props = {
     metadata: { toolCalls: [{ tool: "fetch", status: "completed", input: { url: "https://a.test" } }] },
-    forceOpen: true,
-  })
-  expect(first.host.querySelector('[data-slot="collapsible-trigger"]')?.getAttribute("aria-expanded")).toBe("true")
+    partID: "execute-remembered",
+  }
+  const expanded = (card: Mounted) => trigger(card.host).getAttribute("aria-expanded")
+
+  // A click stores the open state for this call, and a remount restores it over the collapsed default.
+  const first = mountTool("execute", props)
+  expect(expanded(first)).toBe("false")
+  trigger(first.host).click()
+  expect(expanded(first)).toBe("true")
   first.dispose()
+
+  const kept = mountTool("execute", props)
+  expect(expanded(kept)).toBe("true")
+  kept.dispose()
 
   resetToolOpenState()
 
-  const second = mountTool("execute", {
-    metadata: { toolCalls: [{ tool: "fetch", status: "completed", input: { url: "https://a.test" } }] },
-  })
-  mounted.push(second)
-  expect(second.host.querySelector('[data-slot="collapsible-trigger"]')?.getAttribute("aria-expanded")).toBe("false")
+  const reset = mountTool("execute", props)
+  mounted.push(reset)
+  expect(expanded(reset)).toBe("false")
 })

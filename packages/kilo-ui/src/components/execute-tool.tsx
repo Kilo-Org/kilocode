@@ -95,6 +95,7 @@ export function ExecuteTool(props: ToolProps) {
         icon="code"
         iconNode={<ExecuteRing calls={calls()} running={running()} failed={failed() || errors() > 0} live={live} />}
         hasDetails
+        defer
         defaultOpen={props.defaultOpen ?? false}
         allowPendingToggle
         trigger={
