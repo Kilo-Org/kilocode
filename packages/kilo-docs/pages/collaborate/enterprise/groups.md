@@ -13,6 +13,12 @@ This is an **Enterprise-only** feature. The Groups page and policy enforcement a
 
 **Model access** is the first policy type. It grants models and providers to the members of a group, layered on top of the organization-wide [Model Access Controls](/docs/collaborate/enterprise/model-access-controls). More policy types are planned.
 
+## When to use Groups vs sub-organizations
+
+Use **Groups** when you want to give different people different model access inside one organization. Members, credits, and usage stay shared across the organization.
+
+Use [sub-organizations](/docs/collaborate/enterprise/sub-organizations) when you need separate budgets, membership, and policy boundaries, such as one per team, business unit, or cost center.
+
 ## Roles
 
 | Role | What they can do |
