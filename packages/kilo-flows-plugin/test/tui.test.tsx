@@ -10,6 +10,7 @@ import PeriodicPlugin, { FlowsDialog } from "../src/tui"
 const color = RGBA.fromInts(200, 200, 200, 255)
 const selectedText = RGBA.fromInts(20, 20, 20, 255)
 const selectedBackground = RGBA.fromInts(255, 221, 0, 255)
+const errorText = RGBA.fromInts(220, 30, 30, 255)
 const stateful = {
   base: color,
   hovered: color,
@@ -30,7 +31,7 @@ const theme = {
     formfield: selectedFormfield,
     feedback: {
       success: { base: color, muted: color },
-      error: { base: color, muted: color },
+      error: { base: errorText, muted: color },
       warning: { base: color, muted: color },
       info: { base: color, muted: color },
     },
@@ -80,6 +81,8 @@ const flow = (input: {
   next?: number
   error?: string
   run?: KiloFlowRpc.RunStatus
+  prompt?: string
+  permissions?: KiloFlowRpc.PermissionGrant[]
 }) => {
   const managed = input.managed ?? input.run !== undefined
   return Schema.decodeUnknownSync(KiloFlowRpc.Info)({
@@ -99,8 +102,10 @@ const flow = (input: {
       model: { providerID: "kilo", id: "test-model" },
       agent: "build",
     },
-    prompt: "Run it",
-    ...(managed ? { permissions: [{ action: "shell", resource: "taskctl *" }] } : {}),
+    prompt: input.prompt ?? "Run it",
+    ...(managed
+      ? { permissions: input.permissions ?? [{ action: "shell", resource: "taskctl *" }] }
+      : {}),
     status: input.status,
     ...(input.next === undefined ? {} : { nextRunAt: input.next }),
     ...(input.run ? { latestRun: run(input.id, input.run) } : {}),
@@ -140,7 +145,10 @@ test("registers /periodic as a large popup", async () => {
   const commands: KeymapCommand[] = []
   let renderSlot: (() => unknown) | undefined
   let renderDialog: (() => unknown) | undefined
+  let closeDialog: (() => void) | undefined
   let dialogOptions: unknown
+  let cleared = 0
+  let unregistered = 0
   const cleanup = await PeriodicPlugin.setup({
     keymap: {
       layer(factory: () => { commands: readonly KeymapCommand[] }) {
@@ -149,16 +157,22 @@ test("registers /periodic as a large popup", async () => {
     },
     ui: {
       dialog: {
-        show(render: () => unknown) {
+        show(render: () => unknown, onClose?: () => void) {
+          closeDialog?.()
           renderDialog = render
+          closeDialog = onClose
         },
         set(options: unknown) {
           dialogOptions = options
         },
+        clear() {
+          cleared++
+          closeDialog?.()
+        },
       },
       slot(claim: { render: () => unknown }) {
         renderSlot = claim.render
-        return () => {}
+        return () => unregistered++
       },
     },
   } as unknown as Plugin.Context)
@@ -166,9 +180,12 @@ test("registers /periodic as a large popup", async () => {
   const open = commands.find((entry) => entry.id === "periodic.open")
   expect(open?.slash).toEqual({ name: "periodic" })
   open?.run()
+  open?.run()
   expect(renderDialog).toBeFunction()
   expect(dialogOptions).toEqual({ size: "large" })
   if (typeof cleanup === "function") await cleanup()
+  expect(cleared).toBe(1)
+  expect(unregistered).toBe(1)
 })
 
 test("shows loading, empty, and sorted single-line summaries", async () => {
@@ -188,6 +205,8 @@ test("shows loading, empty, and sorted single-line summaries", async () => {
       "ctrl+r",
       "up,k",
       "down,j",
+      "pageup",
+      "pagedown",
       "return",
       "r",
       "e",
@@ -239,6 +258,75 @@ test("shows loading, empty, and sorted single-line summaries", async () => {
     expect(selected?.fg.equals(selected?.bg)).toBeFalse()
   } finally {
     populated.renderer.destroy()
+  }
+})
+
+test("fits short terminals, scrolls details, and restores the selected row", async () => {
+  const commands: KeymapCommand[] = []
+  const flows = Array.from({ length: 20 }, (_, index) =>
+    flow({
+      id: `flw_${index.toString().padStart(2, "0")}`,
+      name: `Flow ${index.toString().padStart(2, "0")}`,
+      status: "active",
+      managed: true,
+      ...(index === 16
+        ? {
+            prompt: "Inspect every item in this deliberately long unattended task. ".repeat(10),
+            error: "Health marker at the end of details",
+          }
+        : {}),
+    }),
+  )
+  const app = await testRender(
+    () => <FlowsDialog context={context(commands)} load={() => Promise.resolve(output(flows))} />,
+    { width: 88, height: 24 },
+  )
+  try {
+    app.renderer.start()
+    await app.waitForFrame((frame) => frame.includes("20 tasks"))
+    for (let index = 0; index < 16; index++) command(commands, "down,j").run()
+    await app.waitForFrame((frame) => frame.includes("› Flow 16"))
+    command(commands, "return").run()
+    await app.waitForFrame((frame) => frame.includes("Periodic / Flow 16") && frame.includes("Run now"))
+    expect(app.captureCharFrame()).not.toContain("Health marker at the end of details")
+    command(commands, "pagedown").run()
+    await app.waitForFrame((frame) => frame.includes("Health marker at the end of details"))
+    command(commands, "escape").run()
+    await app.waitForFrame((frame) => frame.includes("› Flow 16") && frame.includes("20 tasks"))
+  } finally {
+    app.renderer.destroy()
+  }
+})
+
+test("truncates long summaries and titles without hiding dialog controls", async () => {
+  const commands: KeymapCommand[] = []
+  const app = await testRender(
+    () => (
+      <FlowsDialog
+        context={context(commands)}
+        load={() =>
+          Promise.resolve(
+            output([
+              flow({
+                id: "flw_long",
+                name: "A very long periodic Flow name that cannot fit inside a narrow terminal",
+                status: "active",
+                managed: true,
+              }),
+            ]),
+          )
+        }
+      />
+    ),
+    { width: 40, height: 20 },
+  )
+  try {
+    app.renderer.start()
+    await app.waitForFrame((frame) => frame.includes("esc close") && frame.includes("1 task"))
+    command(commands, "return").run()
+    await app.waitForFrame((frame) => frame.includes("esc back") && frame.includes("Run now"))
+  } finally {
+    app.renderer.destroy()
   }
 })
 
@@ -338,6 +426,14 @@ test("runs, disables, enables, and deletes a managed Flow from its details", asy
     await app.waitForFrame((frame) => frame.includes("Controlled"))
     command(commands, "return").run()
     await app.waitForFrame((frame) => frame.includes("Disable") && frame.includes("Run now"))
+    command(commands, "d").run()
+    await app.waitForFrame((frame) => frame.includes("Delete Controlled?"))
+    command(commands, "n").run()
+    await app.waitForFrame((frame) => frame.includes("Periodic / Controlled") && !frame.includes("Delete Controlled?"))
+    command(commands, "d").run()
+    await app.waitForFrame((frame) => frame.includes("Delete Controlled?"))
+    command(commands, "escape").run()
+    await app.waitForFrame((frame) => frame.includes("Periodic / Controlled") && !frame.includes("Delete Controlled?"))
     command(commands, "e").run()
     await app.waitForFrame((frame) => frame.includes("Disabled Controlled"))
     command(commands, "e").run()
@@ -349,6 +445,78 @@ test("runs, disables, enables, and deletes a managed Flow from its details", asy
     command(commands, "y").run()
     await app.waitForFrame((frame) => frame.includes("Deleted Controlled") && frame.includes("No periodic flows"))
     expect(calls).toEqual(["pause", "resume", "run", "remove"])
+  } finally {
+    app.renderer.destroy()
+  }
+})
+
+test("recovers when a Flow disappears during delete confirmation", async () => {
+  const commands: KeymapCommand[] = []
+  let calls = 0
+  const app = await testRender(
+    () => (
+      <FlowsDialog
+        context={context(commands)}
+        load={() => {
+          calls++
+          return Promise.resolve(
+            calls === 1
+              ? output([flow({ id: "flw_removed", name: "Removed elsewhere", status: "active", managed: true })])
+              : output(),
+          )
+        }}
+      />
+    ),
+    { width: 88, height: 24 },
+  )
+  try {
+    app.renderer.start()
+    await app.waitForFrame((frame) => frame.includes("Removed elsewhere"))
+    command(commands, "return").run()
+    await app.waitForFrame((frame) => frame.includes("Periodic / Removed elsewhere"))
+    command(commands, "d").run()
+    await app.waitForFrame((frame) => frame.includes("Delete Removed elsewhere?"))
+    command(commands, "ctrl+r").run()
+    await app.waitForFrame((frame) => frame.includes("No periodic flows"))
+    expect(enabled(command(commands, "r"))).toBeTrue()
+    expect(enabled(command(commands, "y"))).toBeFalse()
+  } finally {
+    app.renderer.destroy()
+  }
+})
+
+test("shows failed and rejected run attempts as errors", async () => {
+  const commands: KeymapCommand[] = []
+  let calls = 0
+  const active = flow({ id: "flw_failure", name: "Failure", status: "active", managed: true })
+  const app = await testRender(
+    () => (
+      <FlowsDialog
+        context={context(commands)}
+        load={() => Promise.resolve(output([active]))}
+        run={() => {
+          calls++
+          if (calls === 1) return Promise.resolve(run("flw_failure", "failed"))
+          return Promise.reject(new Error("executor unavailable"))
+        }}
+      />
+    ),
+    { width: 88, height: 24 },
+  )
+  try {
+    app.renderer.start()
+    await app.waitForFrame((frame) => frame.includes("Failure"))
+    command(commands, "return").run()
+    await app.waitForFrame((frame) => frame.includes("Run now"))
+    command(commands, "r").run()
+    await app.waitForFrame((frame) => frame.includes("Failed Failure"))
+    const failed = app
+      .captureSpans()
+      .lines.flatMap((line) => line.spans)
+      .find((span) => span.text.includes("Failed Failure"))
+    expect(failed?.fg.equals(errorText)).toBeTrue()
+    command(commands, "r").run()
+    await app.waitForFrame((frame) => frame.includes("Run failed: executor unavailable"))
   } finally {
     app.renderer.destroy()
   }

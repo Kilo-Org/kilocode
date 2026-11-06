@@ -1,6 +1,7 @@
 import { Plugin } from "@opencode/plugin/tui"
 import type { KiloFlowRpc } from "@opencode/schema/kilocode/flow"
 import { TextAttributes, type ScrollBoxRenderable } from "@opentui/core"
+import { useTerminalDimensions } from "@opentui/solid"
 import { createEffect, createMemo, createSignal, For, onCleanup, onMount, Show, type JSX } from "solid-js"
 
 type Load = (signal: AbortSignal) => Promise<KiloFlowRpc.ListOutput>
@@ -34,7 +35,9 @@ export function FlowsDialog(props: {
   let mutation: AbortController | undefined
   let timer: ReturnType<typeof setInterval> | undefined
   let scroll: ScrollBoxRenderable | undefined
+  let detailScroll: ScrollBoxRenderable | undefined
   const theme = () => props.context.theme.surface("dialog")
+  const dimensions = useTerminalDimensions()
   const load =
     props.load ??
     (async (signal) => {
@@ -84,6 +87,12 @@ export function FlowsDialog(props: {
   const flows = createMemo(() => [...(result()?.flows ?? [])].sort(compare))
   const detail = createMemo(() => flows().find((flow) => key(flow) === detailKey()))
   const warning = createMemo(() => (!stale() ? result()?.warnings[0] : undefined))
+  const banners = createMemo(() => Number(stale()) + Number(notice() !== undefined) + Number(warning() !== undefined))
+  const availableHeight = createMemo(() => dimensions().height - Math.floor(dimensions().height / 4))
+  const listHeight = createMemo(() => Math.max(1, Math.min(15, availableHeight() - 6 - banners() * 2)))
+  const detailHeight = createMemo(() =>
+    Math.max(1, Math.min(16, availableHeight() - (confirmingDelete() ? 8 : 7) - banners() * 2)),
+  )
 
   // Re-sorting after a refresh or a status change keeps the cursor on the same Flow rather than the same row.
   function replace(next: KiloFlowRpc.ListOutput) {
@@ -112,6 +121,11 @@ export function FlowsDialog(props: {
     const next = Math.max(0, Math.min(flows().length - 1, selected() + offset))
     setSelected(next)
     reveal(next)
+  }
+
+  function scrollDetail(offset: number, viewport = false) {
+    if (!detailScroll || detailScroll.isDestroyed) return
+    detailScroll.scrollBy(offset, viewport ? "viewport" : undefined)
   }
 
   function showDetail(flow: KiloFlowRpc.Info | undefined) {
@@ -255,8 +269,32 @@ export function FlowsDialog(props: {
         run: back,
       },
       { bind: "ctrl+r", title: "Refresh periodic flows", group: "Periodic", run: () => void refresh() },
-      { bind: "up,k", title: "Previous Flow", group: "Periodic", enabled: () => !detail(), run: () => move(-1) },
-      { bind: "down,j", title: "Next Flow", group: "Periodic", enabled: () => !detail(), run: () => move(1) },
+      {
+        bind: "up,k",
+        title: detail() ? "Scroll details up" : "Previous Flow",
+        group: "Periodic",
+        run: () => (detail() ? scrollDetail(-1) : move(-1)),
+      },
+      {
+        bind: "down,j",
+        title: detail() ? "Scroll details down" : "Next Flow",
+        group: "Periodic",
+        run: () => (detail() ? scrollDetail(1) : move(1)),
+      },
+      {
+        bind: "pageup",
+        title: "Previous details page",
+        group: "Periodic",
+        enabled: () => detail() !== undefined,
+        run: () => scrollDetail(-1, true),
+      },
+      {
+        bind: "pagedown",
+        title: "Next details page",
+        group: "Periodic",
+        enabled: () => detail() !== undefined,
+        run: () => scrollDetail(1, true),
+      },
       {
         bind: "return",
         title: "Show Flow details",
@@ -325,7 +363,9 @@ export function FlowsDialog(props: {
     const last = Math.max(0, flows().length - 1)
     if (selected() > last) setSelected(last)
     const current = detailKey()
-    if (current && !flows().some((flow) => key(flow) === current)) setDetailKey()
+    if (!current || flows().some((flow) => key(flow) === current)) return
+    setConfirmingDelete(false)
+    setDetailKey()
   })
 
   onMount(() => {
@@ -342,7 +382,15 @@ export function FlowsDialog(props: {
   return (
     <box paddingLeft={3} paddingRight={3} paddingBottom={1} gap={1}>
       <box flexDirection="row" justifyContent="space-between" gap={2}>
-        <text attributes={TextAttributes.BOLD} fg={theme().text.base} wrapMode="none">
+        <text
+          attributes={TextAttributes.BOLD}
+          fg={theme().text.base}
+          wrapMode="none"
+          truncate
+          flexGrow={1}
+          flexShrink={1}
+          minWidth={0}
+        >
           {detail() ? `Periodic / ${detail()?.name}` : "Periodic"}
         </text>
         <text fg={theme().text.muted} flexShrink={0}>
@@ -350,14 +398,20 @@ export function FlowsDialog(props: {
         </text>
       </box>
       <Show when={stale()}>
-        <text fg={theme().text.feedback.warning.base}>Stale · refresh failed: {error()}</text>
+        <text fg={theme().text.feedback.warning.base} wrapMode="none" truncate minWidth={0}>
+          Stale · refresh failed: {error()}
+        </text>
       </Show>
       <Show when={notice()}>
-        {(current) => <text fg={theme().text.feedback[current().variant].base}>{current().message}</text>}
+        {(current) => (
+          <text fg={theme().text.feedback[current().variant].base} wrapMode="none" truncate minWidth={0}>
+            {current().message}
+          </text>
+        )}
       </Show>
       <Show when={warning()}>
         {(current) => (
-          <text fg={theme().text.feedback.warning.base}>
+          <text fg={theme().text.feedback.warning.base} wrapMode="none" truncate minWidth={0}>
             {result()?.warnings.length} source warning{result()?.warnings.length === 1 ? "" : "s"}: {current().message}
           </text>
         )}
@@ -385,55 +439,59 @@ export function FlowsDialog(props: {
           <text fg={theme().text.muted}>Press r to refresh.</text>
         </box>
       </Show>
-      <Show when={flows().length > 0 && !detail()}>
-        <scrollbox maxHeight={15} width="100%" ref={(element: ScrollBoxRenderable) => (scroll = element)}>
-          <For each={flows()}>
-            {(flow, index) => {
-              const active = () => index() === selected()
-              const foreground = () => (active() ? theme().text.action.primary.focused : theme().text.base)
-              const secondary = () => (active() ? theme().text.action.primary.focused : theme().text.muted)
-              return (
-                <box
-                  width="100%"
-                  paddingLeft={1}
-                  paddingRight={1}
-                  backgroundColor={active() ? theme().background.action.primary.focused : undefined}
-                  onMouseOver={() => setSelected(index())}
-                  onMouseUp={() => showDetail(flow)}
-                >
-                  <text wrapMode="none" overflow="hidden" fg={foreground()}>
-                    <span style={{ fg: foreground() }}>
-                      {active() ? "›" : " "} {flow.name}
-                    </span>
-                    <span style={{ fg: secondary() }}>{` · ${trigger(flow.trigger)} · `}</span>
-                    <span style={{ fg: active() ? foreground() : statusColor(flow.status, theme()) }}>
-                      {label(flow.status)}
-                    </span>
-                    <Show when={flow.nextRunAt === undefined ? undefined : flow.nextRunAt}>
-                      {(next) => (
-                        <span style={{ fg: secondary() }}>{` · next ${date(next())}`}</span>
-                      )}
-                    </Show>
-                    <Show when={flow.reference.type === "native-schedule"}>
-                      <span style={{ fg: secondary() }}>{" · Unmanaged"}</span>
-                    </Show>
-                  </text>
-                </box>
-              )
-            }}
-          </For>
-        </scrollbox>
-        <box flexDirection="row" justifyContent="space-between" gap={2}>
-          <text fg={theme().text.muted}>
-            {flows().length} task{flows().length === 1 ? "" : "s"}
-          </text>
-          <text fg={theme().text.muted}>↑/↓ select · enter details · r refresh</text>
+      <Show when={flows().length > 0}>
+        <box visible={!detail()} gap={1}>
+          <scrollbox maxHeight={listHeight()} width="100%" ref={(element: ScrollBoxRenderable) => (scroll = element)}>
+            <For each={flows()}>
+              {(flow, index) => {
+                const active = () => index() === selected()
+                const foreground = () => (active() ? theme().text.action.primary.focused : theme().text.base)
+                const secondary = () => (active() ? theme().text.action.primary.focused : theme().text.muted)
+                return (
+                  <box
+                    width="100%"
+                    paddingLeft={1}
+                    paddingRight={1}
+                    backgroundColor={active() ? theme().background.action.primary.focused : undefined}
+                    onMouseOver={() => setSelected(index())}
+                    onMouseUp={() => showDetail(flow)}
+                  >
+                    <text wrapMode="none" truncate minWidth={0} fg={foreground()}>
+                      <span style={{ fg: foreground() }}>
+                        {active() ? "›" : " "} {flow.name}
+                      </span>
+                      <span style={{ fg: secondary() }}>{` · ${trigger(flow.trigger)} · `}</span>
+                      <span style={{ fg: active() ? foreground() : statusColor(flow.status, theme()) }}>
+                        {label(flow.status)}
+                      </span>
+                      <Show when={flow.nextRunAt === undefined ? undefined : flow.nextRunAt}>
+                        {(next) => (
+                          <span style={{ fg: secondary() }}>{` · next ${date(next())}`}</span>
+                        )}
+                      </Show>
+                      <Show when={flow.reference.type === "native-schedule"}>
+                        <span style={{ fg: secondary() }}>{" · Unmanaged"}</span>
+                      </Show>
+                    </text>
+                  </box>
+                )
+              }}
+            </For>
+          </scrollbox>
+          <box flexDirection="row" justifyContent="space-between" gap={2}>
+            <text fg={theme().text.muted} flexShrink={0}>
+              {flows().length} task{flows().length === 1 ? "" : "s"}
+            </text>
+            <text fg={theme().text.muted} wrapMode="none" truncate minWidth={0}>
+              ↑/↓ select · enter details · r refresh
+            </text>
+          </box>
         </box>
       </Show>
       <Show when={detail()}>
         {(flow) => (
           <>
-            <scrollbox maxHeight={16} width="100%">
+            <scrollbox maxHeight={detailHeight()} width="100%" ref={(element: ScrollBoxRenderable) => (detailScroll = element)}>
               <box gap={0}>
                 <DetailRow label="Status" theme={theme()}>
                   <span style={{ fg: statusColor(flow().status, theme()) }}>{label(flow().status)}</span>
@@ -512,7 +570,7 @@ export function FlowsDialog(props: {
               }
             >
               <box gap={1}>
-                <text fg={theme().text.feedback.warning.base}>
+                <text fg={theme().text.feedback.warning.base} wrapMode="none" truncate minWidth={0}>
                   Delete {flow().name}? Future runs stop and retained run records are removed.
                 </text>
                 <box flexDirection="row" gap={1}>
@@ -633,6 +691,7 @@ function message(value: unknown) {
 export default Plugin.define({
   id: "kilocode.flows",
   setup(context) {
+    let dialogOwner: object | undefined
     const unregisterSlot = context.ui.slot({
       append: "app",
       render() {
@@ -647,7 +706,14 @@ export default Plugin.define({
               palette: true,
               slash: { name: "periodic" },
               run() {
-                context.ui.dialog.show(() => <FlowsDialog context={context} />)
+                const owner = {}
+                dialogOwner = owner
+                context.ui.dialog.show(
+                  () => <FlowsDialog context={context} />,
+                  () => {
+                    if (dialogOwner === owner) dialogOwner = undefined
+                  },
+                )
                 context.ui.dialog.set({ size: "large" })
               },
             },
@@ -656,6 +722,9 @@ export default Plugin.define({
         return null
       },
     })
-    return unregisterSlot
+    return () => {
+      unregisterSlot()
+      if (dialogOwner) context.ui.dialog.clear()
+    }
   },
 })
