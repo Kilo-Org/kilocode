@@ -451,6 +451,26 @@ export namespace KiloSession {
       }
       const current = input.currentDirectory ? worktree(Filesystem.resolve(input.currentDirectory)) : undefined
 
+      // The worktree check touches the filesystem but depends only on the directory, so run it
+      // once per directory and let SQL keep the limit instead of filtering every row in memory.
+      if (dirs.length > 0) {
+        const seen = yield* db
+          .selectDistinct({ directory: SessionTable.directory })
+          .from(SessionTable)
+          .where(and(...conditions))
+          .all()
+          .pipe(Effect.orDie)
+        const allowed = seen
+          .map((row) => row.directory)
+          .filter((dir) => {
+            const root = worktree(Filesystem.resolve(dir))
+            if (!root) return false
+            return input.currentDirectory ? root === current : true
+          })
+        if (allowed.length === 0) return []
+        conditions.push(inArray(SessionTable.directory, allowed))
+      }
+
       const query =
         conditions.length > 0
           ? db
@@ -458,21 +478,13 @@ export namespace KiloSession {
               .from(SessionTable)
               .where(and(...conditions))
           : db.select().from(SessionTable)
-      const ordered = query.orderBy(desc(SessionTable.time_updated), desc(SessionTable.id))
-      const rows = yield* (dirs.length ? ordered.all() : ordered.limit(limit).all()).pipe(Effect.orDie)
+      const list = yield* query
+        .orderBy(desc(SessionTable.time_updated), desc(SessionTable.id))
+        .limit(limit)
+        .all()
+        .pipe(Effect.orDie)
 
-      const list =
-        dirs.length > 0
-          ? rows.filter((row) => {
-              const dir = Filesystem.resolve(row.directory)
-              const root = worktree(dir)
-              if (!root) return false
-              if (input.currentDirectory) return root === current
-              return true
-            })
-          : rows
-
-      const ids = [...new Set(list.slice(0, limit).map((row) => row.project_id))]
+      const ids = [...new Set(list.map((row) => row.project_id))]
       const projects = new Map<string, ProjectInfo>()
 
       if (ids.length > 0) {
@@ -491,7 +503,7 @@ export namespace KiloSession {
         }
       }
 
-      return list.slice(0, limit).map((row) => {
+      return list.map((row) => {
         const project = projects.get(row.project_id) ?? null
         return { ...input.fromRow(row), project } as T & { project: ProjectInfo | null }
       })
