@@ -319,7 +319,7 @@ export const SessionHostApi = HttpApi.make("session-host")
           "clearWorkspacePersonalDefaultProfile",
           SessionHostPaths.workspaceProfilePersonalDefaultDetail,
           {
-            params: { profileID: Schema.String },
+            params: { profileID: Schema.String.check(Schema.isUUID()) },
             success: described(WorkspaceProfileDefaultResult, "Personal default profile cleared"),
             error: SessionErrors,
           },
