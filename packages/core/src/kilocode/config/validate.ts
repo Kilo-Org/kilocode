@@ -14,8 +14,9 @@ export interface Edit {
   readonly value: unknown
 }
 
-// `workflow_models` is derived from model-only `commands` entries; the reader ignores the key in a document.
-const known = new Set(Object.keys(KiloConfigPolicy.Info.fields).filter((key) => key !== "workflow_models"))
+// The reader's recognized set, shared so a read and a write cannot drift: `workflow_models` is derived from
+// model-only `commands` entries and the reader ignores the key in a document.
+const known = KiloConfigPolicy.known
 const formatting = { tabSize: 2, insertSpaces: true } as const
 
 /**
