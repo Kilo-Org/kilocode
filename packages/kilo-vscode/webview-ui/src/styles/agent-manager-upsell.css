@@ -5,8 +5,10 @@
 }
 
 .agent-manager-upsell {
+  container: agent-manager-upsell / inline-size;
   --upsell-gold: #e3c443;
   --upsell-muted: var(--vscode-descriptionForeground, #a9abb1);
+  font-size: var(--kilo-font-size-13);
   margin: 0 12px 10px;
   min-width: 0;
   border-radius: 10px;
@@ -89,10 +91,23 @@
   flex: none;
 }
 .agent-manager-upsell-actions {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
   align-items: center;
   gap: 4px;
-  flex-wrap: wrap;
+}
+.agent-manager-upsell-choices {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+.agent-manager-upsell-choices > [data-component="button"] {
+  justify-self: start;
+}
+.agent-manager-upsell-choices > .agent-manager-upsell-primary {
+  justify-self: stretch;
 }
 .agent-manager-upsell [data-component="button"] {
   font-family: inherit;
@@ -101,11 +116,11 @@
   height: auto;
   min-height: 0;
   max-width: 100%;
-  white-space: normal;
-  overflow-wrap: anywhere;
+  white-space: nowrap;
+  overflow-wrap: normal;
   text-align: start;
   border: 0;
-  padding: 7px 6px;
+  padding: 7px 4px;
   background: none;
   color: var(--upsell-muted);
   box-shadow: none;
@@ -115,7 +130,7 @@
   background: none;
 }
 .agent-manager-upsell [data-component="button"].agent-manager-upsell-primary {
-  padding: 7px 12px;
+  padding: 7px 8px;
   gap: 6px;
   border-radius: 5px;
   background: var(--upsell-gold);
@@ -130,13 +145,33 @@
 .agent-manager-upsell .agent-manager-upsell-primary [data-slot="icon-svg"] {
   color: inherit;
 }
+.agent-manager-upsell-primary [data-component="icon"] {
+  display: none;
+  width: 13px;
+  height: 13px;
+  flex: none;
+}
 .agent-manager-upsell [data-component="button"].agent-manager-upsell-never {
-  margin-left: auto;
+  justify-self: end;
+  padding-inline: 0;
   font-size: calc((var(--kilo-font-size-11) + var(--kilo-font-size-12)) / 2);
   color: var(--vscode-disabledForeground, #7d7f85);
 }
 .agent-manager-upsell [data-component="button"].agent-manager-upsell-never:hover {
   color: var(--vscode-foreground, #d6d7da);
+}
+@container agent-manager-upsell (min-width: 20em) {
+  .agent-manager-upsell-choices {
+    display: flex;
+  }
+  .agent-manager-upsell-primary [data-component="icon"] {
+    display: flex;
+  }
+}
+@container agent-manager-upsell (min-width: 29em) {
+  .agent-manager-upsell-actions {
+    grid-template-columns: minmax(0, 1fr) max-content;
+  }
 }
 .agent-manager-upsell-confirmation {
   border: 1px solid var(--vscode-widget-border, #2f3136);

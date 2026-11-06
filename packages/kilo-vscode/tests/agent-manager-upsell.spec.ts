@@ -6,6 +6,65 @@ async function scene(page: Page, detail: Record<string, boolean>) {
 }
 
 const card = (page: Page) => page.locator(".agent-manager-upsell")
+async function layout(page: Page, rows: number) {
+  const bounds = await card(page).locator(".agent-manager-upsell-actions").boundingBox()
+  const buttons = await card(page)
+    .locator(".agent-manager-upsell-actions button")
+    .evaluateAll((nodes) =>
+      nodes.map((node) => {
+        const box = node.getBoundingClientRect()
+        const style = getComputedStyle(node)
+        const ink = Array.from(node.childNodes)
+          .filter((child) => child.nodeType === Node.TEXT_NODE && child.textContent?.trim())
+          .flatMap((child) => {
+            const range = document.createRange()
+            range.selectNodeContents(child)
+            return Array.from(range.getClientRects(), (rect) => ({
+              x: rect.x,
+              y: rect.y,
+              width: rect.width,
+              height: rect.height,
+            }))
+          })
+        return {
+          x: box.x,
+          y: box.y,
+          width: box.width,
+          height: box.height,
+          center: box.y + box.height / 2,
+          ink,
+          space: style.whiteSpace,
+          wrap: style.overflowWrap,
+          clipped: node.scrollWidth > node.clientWidth,
+        }
+      }),
+    )
+  expect(buttons).toHaveLength(3)
+  for (const button of buttons) {
+    expect(button.space).toBe("nowrap")
+    expect(button.wrap).toBe("normal")
+    expect(button.clipped).toBe(false)
+    expect(button.ink).toHaveLength(1)
+    expect(button.x).toBeGreaterThanOrEqual(bounds!.x - 0.5)
+    expect(button.x + button.width).toBeLessThanOrEqual(bounds!.x + bounds!.width + 0.5)
+    for (const ink of button.ink) {
+      expect(ink.x).toBeGreaterThanOrEqual(button.x - 0.5)
+      expect(ink.x + ink.width).toBeLessThanOrEqual(button.x + button.width + 0.5)
+      expect(ink.y + ink.height).toBeLessThanOrEqual(button.y + button.height + 0.5)
+    }
+  }
+  const centers = buttons.map((button) => button.center)
+  expect(new Set(centers.map((center) => Math.round(center))).size).toBe(rows)
+  if (rows === 1) expect(Math.max(...centers) - Math.min(...centers)).toBeLessThanOrEqual(0.5)
+  if (rows === 2) {
+    expect(Math.abs(centers.at(0)! - centers.at(1)!)).toBeLessThanOrEqual(0.5)
+    expect(centers.at(2)!).toBeGreaterThan(centers.at(1)!)
+  }
+  if (rows === 3) {
+    expect(centers.at(1)!).toBeGreaterThan(centers.at(0)!)
+    expect(centers.at(2)!).toBeGreaterThan(centers.at(1)!)
+  }
+}
 async function arrow(page: Page) {
   const button = card(page).locator(".agent-manager-upsell-primary")
   const color = await button.evaluate((node) => getComputedStyle(node).color)
@@ -320,11 +379,17 @@ for (const theme of ["light-modern", "hc-black", "hc-light"]) {
     expect(colors.background).toContain("gradient")
     expect(colors.text).not.toBe("rgba(0, 0, 0, 0)")
     await arrow(page)
+    await layout(page, 1)
     await page.screenshot({ path: info.outputPath(`final-${theme}.png`) })
   })
 }
 
-for (const width of [200, 297, 430]) {
+for (const [width, rows] of [
+  [200, 3],
+  [297, 2],
+  [420, 1],
+  [430, 1],
+] as const) {
   test(`final toast wraps without clipping at ${width}px`, async ({ page }, info) => {
     await page.setViewportSize({ width, height: 800 })
     await page.emulateMedia({ reducedMotion: "reduce" })
@@ -332,6 +397,7 @@ for (const width of [200, 297, 430]) {
     await expect(card(page)).toBeVisible()
     await expect(card(page)).toHaveCSS("animation-name", "none")
     await arrow(page)
+    await layout(page, rows)
     const bounds = await card(page).evaluate((node) => ({
       width: node.clientWidth,
       scroll: node.scrollWidth,
@@ -340,10 +406,12 @@ for (const width of [200, 297, 430]) {
     expect(bounds.scroll).toBeLessThanOrEqual(bounds.width)
     expect(bounds.animation).toBe("none")
     for (const button of await card(page).getByRole("button").all()) {
+      await button.click({ trial: true })
       const box = await button.boundingBox()
       expect(box!.x).toBeGreaterThanOrEqual(12)
       expect(box!.x + box!.width).toBeLessThanOrEqual(width - 12)
     }
+    await page.mouse.move(0, 0)
     await page.screenshot({ path: info.outputPath(`final-shown-${width}.png`) })
     await card(page).getByRole("button", { name: "Don't show this again", exact: true }).click()
     await page.screenshot({ path: info.outputPath(`final-confirmation-${width}.png`) })
@@ -352,3 +420,38 @@ for (const width of [200, 297, 430]) {
     await page.screenshot({ path: info.outputPath(`final-dismissed-${width}.png`) })
   })
 }
+
+test("actions follow the card container rather than a wider iframe", async ({ page }, info) => {
+  await page.setViewportSize({ width: 800, height: 800 })
+  await page.emulateMedia({ reducedMotion: "reduce" })
+  await page.goto("/iframe.html?id=chat--chat-agent-manager-upsell&viewMode=story")
+  await expect(card(page)).toBeVisible()
+  for (const [width, rows] of [
+    [420, 1],
+    [297, 2],
+    [200, 3],
+  ] as const) {
+    await card(page).evaluate((node, width) => {
+      node.parentElement!.style.width = `${width}px`
+    }, width)
+    expect((await card(page).boundingBox())!.width).toBe(width - 24)
+    await layout(page, rows)
+    await page.screenshot({ path: info.outputPath(`options-container-${width}.png`) })
+  }
+})
+
+test("larger UI text uses deliberate rows instead of broken action labels", async ({ page }, info) => {
+  await page.setViewportSize({ width: 430, height: 800 })
+  await page.emulateMedia({ reducedMotion: "reduce" })
+  await page.goto("/iframe.html?id=chat--chat-agent-manager-upsell&viewMode=story")
+  await expect(card(page)).toBeVisible()
+  await page.evaluate(() => window.postMessage({ type: "fontSizeChanged", fontSize: 16 }, window.location.origin))
+  await expect(card(page).locator(".agent-manager-upsell-primary")).toHaveCSS("font-size", "15.3846px")
+  await layout(page, 2)
+  await page.screenshot({ path: info.outputPath("options-font-16-430.png") })
+  await card(page).evaluate((node) => {
+    node.parentElement!.style.width = "297px"
+  })
+  await layout(page, 3)
+  await page.screenshot({ path: info.outputPath("options-font-16-297.png") })
+})

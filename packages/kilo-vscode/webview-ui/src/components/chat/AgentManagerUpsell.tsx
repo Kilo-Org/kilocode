@@ -162,13 +162,15 @@ export function AgentManagerUpsell(props: { enabled: boolean; sidebar: boolean; 
               </For>
             </div>
             <div class="agent-manager-upsell-actions">
-              <Button class="agent-manager-upsell-primary" onClick={() => act("opened")}>
-                {language.t("sidebar.upsell.open")}
-                <Icon name="arrow-right" size="small" />
-              </Button>
-              <Button variant="ghost" class="agent-manager-upsell-later" onClick={() => act("not_now")}>
-                {language.t("sidebar.upsell.later")}
-              </Button>
+              <div class="agent-manager-upsell-choices">
+                <Button class="agent-manager-upsell-primary" onClick={() => act("opened")}>
+                  {language.t("sidebar.upsell.open")}
+                  <Icon name="arrow-right" size="small" />
+                </Button>
+                <Button variant="ghost" class="agent-manager-upsell-later" onClick={() => act("not_now")}>
+                  {language.t("sidebar.upsell.later")}
+                </Button>
+              </div>
               <Button variant="ghost" class="agent-manager-upsell-never" onClick={() => act("dont_show_again")}>
                 {language.t("sidebar.upsell.never")}
               </Button>
