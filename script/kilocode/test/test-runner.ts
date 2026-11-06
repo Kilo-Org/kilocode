@@ -24,6 +24,7 @@
 import os from "node:os"
 import path from "node:path"
 import fs from "node:fs/promises"
+import { PROCESS_STATE } from "./process-state"
 import { attr } from "./test-durations"
 import { TestShard } from "./test-shard"
 
@@ -33,8 +34,6 @@ const DURATIONS = path.join(import.meta.dir, "test-durations.json")
 const BATCH_MS = 10_000
 // Weight of a file without a measurement.
 const DEFAULT_MS = 1_500
-// Process-wide state that would leak into the other files of a batch.
-const UNSAFE = [/\bmock\.module\s*\(/, /\bspyOn\s*\(\s*globalThis\b/, /^process\.env[.[]/m]
 
 const argv = process.argv.slice(2)
 
@@ -235,7 +234,7 @@ async function batch(files: string[]) {
   const unsafe = new Set<string>()
   for (const file of files) {
     const source = await Bun.file(path.join(cwd, file)).text()
-    if (UNSAFE.some((marker) => marker.test(source))) unsafe.add(file)
+    if (PROCESS_STATE.some((marker) => marker.test(source))) unsafe.add(file)
   }
   // Path order keeps a directory together; a chunk closes when the next file would pass BATCH_MS.
   const chunks = files

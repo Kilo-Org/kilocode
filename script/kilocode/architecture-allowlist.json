@@ -32,6 +32,261 @@
     "kilo-httpapi-handlers": {
       "description": "Raw OS or process operations in Kilo-owned HTTP handler files. Target: delegate to domain Effect services.",
       "allowed": {}
+    },
+    "kilo-test-process-state": {
+      "description": "Process-wide state in Kilo-owned tests (packages/kilo-*/test/**, packages/*/test/kilocode/**, and *.test, *.spec and __tests__ files next to Kilo source): mock.module, spyOn(globalThis), and module-scope global or process.env writes. bun test runs all files of a package in one process, so this state leaks into the next files. bunfig preload files are exempt. Target: inject the dependency, or set and restore the value in hooks.",
+      "allowed": {
+        "packages/cli/test/kilocode/config/updater-policy.test.ts": {
+          "count": 1,
+          "owner": "cli",
+          "reason": "Spies on the global fetch to observe outgoing requests. Target: inject the fetch function."
+        },
+        "packages/kilo-cli/test/fixtures/logo-preflight.ts": {
+          "count": 1,
+          "owner": "kilo-cli",
+          "reason": "Entry script of a branding child process: it runs in its own process, so the env write cannot leak into other test files."
+        },
+        "packages/kilo-cli/test/fixtures/logo-render.ts": {
+          "count": 1,
+          "owner": "kilo-cli",
+          "reason": "Entry script of a branding child process: it runs in its own process, so the env write cannot leak into other test files."
+        },
+        "packages/kilo-cli/test/session-sync-protocol.test.ts": {
+          "count": 2,
+          "owner": "kilo-cli",
+          "reason": "Spies on the global fetch to observe outgoing requests. Target: inject the fetch function."
+        },
+        "packages/kilo-cli/test/sync.test.ts": {
+          "count": 1,
+          "owner": "kilo-cli",
+          "reason": "Spies on the global fetch to observe outgoing requests. Target: inject the fetch function."
+        },
+        "packages/kilo-indexing/test/kilocode/indexing/embedders/bedrock.test.ts": {
+          "count": 2,
+          "owner": "kilo-indexing",
+          "reason": "Mocks the AWS Bedrock SDK and credential provider. Target: inject the Bedrock client."
+        },
+        "packages/kilo-indexing/test/kilocode/indexing/embedders/gemini.test.ts": {
+          "count": 1,
+          "owner": "kilo-indexing",
+          "reason": "Mocks the openai SDK; the files share openAIMockFactory to limit cross-file interference. Target: inject the client through the embedder constructor hook."
+        },
+        "packages/kilo-indexing/test/kilocode/indexing/embedders/kilo.test.ts": {
+          "count": 1,
+          "owner": "kilo-indexing",
+          "reason": "Mocks the openai SDK; the files share openAIMockFactory to limit cross-file interference. Target: inject the client through the embedder constructor hook."
+        },
+        "packages/kilo-indexing/test/kilocode/indexing/embedders/mistral.test.ts": {
+          "count": 1,
+          "owner": "kilo-indexing",
+          "reason": "Mocks the openai SDK; the files share openAIMockFactory to limit cross-file interference. Target: inject the client through the embedder constructor hook."
+        },
+        "packages/kilo-indexing/test/kilocode/indexing/embedders/openai-compatible-rate-limit.test.ts": {
+          "count": 1,
+          "owner": "kilo-indexing",
+          "reason": "Mocks the openai SDK; the files share openAIMockFactory to limit cross-file interference. Target: inject the client through the embedder constructor hook."
+        },
+        "packages/kilo-indexing/test/kilocode/indexing/embedders/openai-compatible.test.ts": {
+          "count": 1,
+          "owner": "kilo-indexing",
+          "reason": "Mocks the openai SDK; the files share openAIMockFactory to limit cross-file interference. Target: inject the client through the embedder constructor hook."
+        },
+        "packages/kilo-indexing/test/kilocode/indexing/embedders/openai.test.ts": {
+          "count": 1,
+          "owner": "kilo-indexing",
+          "reason": "Mocks the openai SDK; the files share openAIMockFactory to limit cross-file interference. Target: inject the client through the embedder constructor hook."
+        },
+        "packages/kilo-indexing/test/kilocode/indexing/embedders/openrouter.test.ts": {
+          "count": 1,
+          "owner": "kilo-indexing",
+          "reason": "Mocks the openai SDK; the files share openAIMockFactory to limit cross-file interference. Target: inject the client through the embedder constructor hook."
+        },
+        "packages/kilo-indexing/test/kilocode/indexing/embedders/vercel-ai-gateway.test.ts": {
+          "count": 1,
+          "owner": "kilo-indexing",
+          "reason": "Mocks the openai SDK; the files share openAIMockFactory to limit cross-file interference. Target: inject the client through the embedder constructor hook."
+        },
+        "packages/kilo-indexing/test/kilocode/indexing/processors/parser.test.ts": {
+          "count": 2,
+          "owner": "kilo-indexing",
+          "reason": "Mocks the tree-sitter language and markdown parsers. Target: inject the parser loaders."
+        },
+        "packages/kilo-indexing/test/kilocode/indexing/service-factory.test.ts": {
+          "count": 1,
+          "owner": "kilo-indexing",
+          "reason": "Mocks the openai SDK; the files share openAIMockFactory to limit cross-file interference. Target: inject the client through the embedder constructor hook."
+        },
+        "packages/kilo-indexing/test/kilocode/indexing/vector-store/lancedb-vector-store.test.ts": {
+          "count": 2,
+          "owner": "kilo-indexing",
+          "reason": "Mocks LanceDB and its loader. Target: inject the connection."
+        },
+        "packages/kilo-indexing/test/kilocode/indexing/vector-store/qdrant-client.test.ts": {
+          "count": 1,
+          "owner": "kilo-indexing",
+          "reason": "Mocks the Qdrant REST client. Target: inject the client."
+        },
+        "packages/kilo-indexing/test/kilocode/tree-sitter/index.test.ts": {
+          "count": 1,
+          "owner": "kilo-indexing",
+          "reason": "Mocks the language parser loader. Target: inject the loader."
+        },
+        "packages/kilo-plugin/test/browser-permission.test.ts": {
+          "count": 2,
+          "owner": "kilo-plugin",
+          "reason": "Sets the browser broker env at module scope. Target: set and restore it in hooks, or inject the broker settings."
+        },
+        "packages/kilo-vscode/test/agent-manager-panel-data.test.ts": {
+          "count": 2,
+          "owner": "kilo-vscode",
+          "reason": "Mocks solid-js to run webview state outside a renderer. Target: run the state under a Solid root, or move the logic out of Solid."
+        },
+        "packages/kilo-vscode/test/kilo-catalog.test.ts": {
+          "count": 1,
+          "owner": "kilo-vscode",
+          "reason": "Mocks solid-js to run webview state outside a renderer. Target: run the state under a Solid root, or move the logic out of Solid."
+        }
+      }
+    },
+    "kilo-test-blocking-spawn": {
+      "description": "Synchronous child processes (spawnSync, execSync, execFileSync) in Kilo-owned tests. They block the test process, so Bun cannot stop the test at its timeout, and the timeout then kills shared helpers for the next files. Target: Bun.spawn with a kill timer below the test timeout.",
+      "allowed": {
+        "packages/kilo-cli/test/session-sync.test.ts": {
+          "count": 1,
+          "owner": "kilo-cli",
+          "reason": "One mkfifo call to create a named pipe fixture. Target: async spawn."
+        },
+        "packages/kilo-plugin/test/sandbox/linux-sandbox.test.ts": {
+          "count": 6,
+          "owner": "kilo-plugin",
+          "reason": "Sandbox probes: most calls run inside the sandboxed child script, and the rest wait for a short probe. Target: async spawn with a kill timer."
+        },
+        "packages/kilo-vscode/test/agent-project-init.test.ts": {
+          "count": 3,
+          "owner": "kilo-vscode",
+          "reason": "Synchronous git commands that build repository fixtures. Target: async git with a kill timer."
+        },
+        "packages/kilo-vscode/test/agent-project-messages.test.ts": {
+          "count": 5,
+          "owner": "kilo-vscode",
+          "reason": "Synchronous git commands that build repository fixtures. Target: async git with a kill timer."
+        },
+        "packages/kilo-vscode/test/am-pr-utils.test.ts": {
+          "count": 1,
+          "owner": "kilo-vscode",
+          "reason": "Synchronous git commands that build repository fixtures. Target: async git with a kill timer."
+        },
+        "packages/kilo-vscode/test/git-changes.test.ts": {
+          "count": 1,
+          "owner": "kilo-vscode",
+          "reason": "Synchronous git commands that build repository fixtures. Target: async git with a kill timer."
+        },
+        "packages/kilo-vscode/test/git-ops.test.ts": {
+          "count": 1,
+          "owner": "kilo-vscode",
+          "reason": "Synchronous git commands that build repository fixtures. Target: async git with a kill timer."
+        },
+        "packages/kilo-vscode/test/git-stats-poller.test.ts": {
+          "count": 3,
+          "owner": "kilo-vscode",
+          "reason": "Synchronous git commands that build repository fixtures. Target: async git with a kill timer."
+        },
+        "packages/kilo-vscode/test/git-stats-snapshot.test.ts": {
+          "count": 1,
+          "owner": "kilo-vscode",
+          "reason": "Synchronous git commands that build repository fixtures. Target: async git with a kill timer."
+        },
+        "packages/kilo-vscode/test/local-diff.test.ts": {
+          "count": 1,
+          "owner": "kilo-vscode",
+          "reason": "Synchronous git commands that build repository fixtures. Target: async git with a kill timer."
+        },
+        "packages/kilo-vscode/test/new-worktree-branch.test.ts": {
+          "count": 2,
+          "owner": "kilo-vscode",
+          "reason": "Synchronous git commands that build repository fixtures. Target: async git with a kill timer."
+        },
+        "packages/kilo-vscode/test/worktree-create.test.ts": {
+          "count": 1,
+          "owner": "kilo-vscode",
+          "reason": "Synchronous git commands that build repository fixtures. Target: async git with a kill timer."
+        },
+        "packages/kilo-vscode/test/worktree-manager.test.ts": {
+          "count": 2,
+          "owner": "kilo-vscode",
+          "reason": "Synchronous git commands that build repository fixtures. Target: async git with a kill timer."
+        },
+        "packages/kilo-vscode/test/worktree-pool-sweep.test.ts": {
+          "count": 1,
+          "owner": "kilo-vscode",
+          "reason": "Synchronous git commands that build repository fixtures. Target: async git with a kill timer."
+        },
+        "packages/kilo-vscode/test/worktree-pool.test.ts": {
+          "count": 1,
+          "owner": "kilo-vscode",
+          "reason": "Synchronous git commands that build repository fixtures. Target: async git with a kill timer."
+        },
+        "packages/kilo-vscode/test/worktree-reconcile.test.ts": {
+          "count": 1,
+          "owner": "kilo-vscode",
+          "reason": "Synchronous git commands that build repository fixtures. Target: async git with a kill timer."
+        },
+        "packages/kilo-vscode/test/worktree-recovery.test.ts": {
+          "count": 1,
+          "owner": "kilo-vscode",
+          "reason": "Synchronous git commands that build repository fixtures. Target: async git with a kill timer."
+        }
+      }
+    },
+    "kilo-module-state": {
+      "description": "Top-level let, Map and Set in Kilo-owned source, counted per package. Co-located test files are not counted. Module-level state is shared by every caller in the process and needs reset hooks that couple tests. Target: keep state in an instance that a service, layer or runtime owns.",
+      "allowed": {
+        "packages/kilo-cli": {
+          "count": 9,
+          "owner": "kilo-cli",
+          "reason": "Baseline when the rule started: top-level let, Map and Set in this package's source. Lower the count when state moves into an instance that a service, layer or runtime owns."
+        },
+        "packages/kilo-gateway-core": {
+          "count": 6,
+          "owner": "kilo-gateway-core",
+          "reason": "Baseline when the rule started: top-level let, Map and Set in this package's source. Lower the count when state moves into an instance that a service, layer or runtime owns."
+        },
+        "packages/kilo-indexing": {
+          "count": 5,
+          "owner": "kilo-indexing",
+          "reason": "Baseline when the rule started: top-level let, Map and Set in this package's source. Lower the count when state moves into an instance that a service, layer or runtime owns."
+        },
+        "packages/kilo-plugin": {
+          "count": 45,
+          "owner": "kilo-plugin",
+          "reason": "Baseline when the rule started: top-level let, Map and Set in this package's source. Lower the count when state moves into an instance that a service, layer or runtime owns."
+        },
+        "packages/kilo-sandbox": {
+          "count": 3,
+          "owner": "kilo-sandbox",
+          "reason": "Baseline when the rule started: top-level let, Map and Set in this package's source. Lower the count when state moves into an instance that a service, layer or runtime owns."
+        },
+        "packages/kilo-ui": {
+          "count": 26,
+          "owner": "kilo-ui",
+          "reason": "Baseline when the rule started: top-level let, Map and Set in this package's source. Lower the count when state moves into an instance that a service, layer or runtime owns."
+        },
+        "packages/kilo-ui-base": {
+          "count": 28,
+          "owner": "kilo-ui-base",
+          "reason": "Baseline when the rule started: top-level let, Map and Set in this package's source. Lower the count when state moves into an instance that a service, layer or runtime owns."
+        },
+        "packages/kilo-vscode": {
+          "count": 50,
+          "owner": "kilo-vscode",
+          "reason": "Baseline when the rule started: top-level let, Map and Set in this package's source. Lower the count when state moves into an instance that a service, layer or runtime owns."
+        },
+        "packages/tui": {
+          "count": 4,
+          "owner": "tui",
+          "reason": "Baseline when the rule started: top-level let, Map and Set in this package's source. Lower the count when state moves into an instance that a service, layer or runtime owns."
+        }
+      }
     }
   }
 }

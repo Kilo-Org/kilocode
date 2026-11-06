@@ -31,6 +31,36 @@ export function importSpecifiers(text: string) {
   return specifiers
 }
 
+// Blanks comment lines, so a rule does not count a pattern that a comment only names. Line based: a `//` line and a
+// block comment that starts a line are blanked up to the line with `*/`. A trailing comment after code stays, and so
+// does a template-literal line, unless it starts with `//` or `/*`.
+export function code(text: string) {
+  const state = { block: false }
+  return text
+    .split("\n")
+    .map((line) => {
+      const trimmed = line.trim()
+      if (state.block) {
+        state.block = !trimmed.includes("*/")
+        return ""
+      }
+      if (trimmed.startsWith("//")) return ""
+      if (!trimmed.startsWith("/*")) return line
+      state.block = !trimmed.slice(2).includes("*/")
+      return ""
+    })
+    .join("\n")
+}
+
+// Counts every match of each pattern. A pattern without the `g` flag counts all its matches too.
+export function countMatches(text: string, patterns: RegExp[]) {
+  return patterns.reduce(
+    (total, pattern) =>
+      total + [...text.matchAll(new RegExp(pattern.source, pattern.flags.replace("g", "") + "g"))].length,
+    0,
+  )
+}
+
 export function forbiddenDirection(specifier: string, forbidden: string[]) {
   if (isInternalAlias(specifier)) return "internal alias (@/)"
   if (forbidden.some((pkg) => isPackage(specifier, pkg))) return "higher layer package"
