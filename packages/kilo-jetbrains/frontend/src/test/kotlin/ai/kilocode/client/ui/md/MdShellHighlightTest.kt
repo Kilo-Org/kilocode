@@ -44,6 +44,41 @@ class MdShellHighlightTest : BasePlatformTestCase() {
         assertTrue(spans.contains("FOO" to DefaultLanguageHighlighterColors.STATIC_FIELD))
     }
 
+    fun `test ranges reads unclosed parentheses in linear time`() {
+        // An unclosed "(" followed by many lines made the git refs pattern backtrack cubically (#15507).
+        val text = "error (see details\n" + "src/main/kotlin/File.kt\n".repeat(400)
+        val input = ReadBudget(text, budget = text.length * 50)
+
+        MdShellHighlight.ranges(input)
+
+        assertTrue("read ${input.reads} chars for ${text.length} chars of input", input.reads <= input.budget)
+    }
+
+    fun `test ranges highlights git refs only`() {
+        val display = MdShellHighlight.project("abc1234 (HEAD -> main, origin/main) fix (see notes) for (feature/x)")
+        val spans = spans(display).filter { it.second == DefaultLanguageHighlighterColors.KEYWORD }.map { it.first }
+
+        assertEquals(listOf("(HEAD -> main, origin/main)", "(feature/x)"), spans)
+    }
+
+    /** Fails fast once the regex engine reads more characters than [budget]. */
+    private class ReadBudget(private val text: String, val budget: Int) : CharSequence {
+        var reads = 0
+            private set
+
+        override val length get() = text.length
+
+        override fun get(index: Int): Char {
+            reads++
+            if (reads > budget) throw AssertionError("read more than $budget chars for ${text.length} chars of input")
+            return text[index]
+        }
+
+        override fun subSequence(startIndex: Int, endIndex: Int) = text.subSequence(startIndex, endIndex)
+
+        override fun toString() = text
+    }
+
     private fun spans(display: ShellDisplay) = display.ranges.map {
         display.text.substring(it.start, it.end) to it.key
     }
