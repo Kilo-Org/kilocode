@@ -397,6 +397,16 @@ export const dict = {
   "common.edit": "Редагувати",
   "common.loadMore": "Завантажити більше",
 
+  "sidebar.upsell.title": "Залучіть до роботи цілу флотилію агентів Kilo",
+  "sidebar.upsell.body": "Не потрібно чекати завершення одного завдання.",
+  "sidebar.upsell.parallel": "Запускайте кілька сесій одночасно",
+  "sidebar.upsell.worktree": "Надайте кожній окреме робоче дерево, щоб зміни не конфліктували",
+  "sidebar.upsell.attention": "Одразу бачте, яка сесія потребує вашої уваги",
+  "sidebar.upsell.open": "Відкрити Agent Manager",
+  "sidebar.upsell.later": "Не зараз",
+  "sidebar.upsell.never": "Більше не показувати",
+  "sidebar.upsell.confirmation": "Зрозуміло. Ми більше не пропонуватимемо Agent Manager тут.",
+  "sidebar.upsell.undo": "Скасувати",
   "sidebar.settings": "Налаштування",
 
   "sound.option.alert01": "Сигнал 01",
@@ -1484,6 +1494,9 @@ export const dict = {
   "chat.search.close": "Закрити пошук",
   "chat.search.invalidRegex": "Недійсний регулярний вираз",
   "chat.search.noResults": "Немає результатів",
+  "settings.experimental.agentManagerUpsell.title": "Запрошення до Agent Manager на бічній панелі",
+  "settings.experimental.agentManagerUpsell.description":
+    "Показувати необов'язкове запрошення спробувати Agent Manager на бічній панелі Kilo після завдань із програмування. Типово вимкнено.",
   "settings.experimental.browserAutomation.title": "Вбудований браузер",
   "settings.experimental.browserAutomation.description":
     "Показуйте попередній перегляд локальних застосунків в Agent Manager і надавайте інструмент browser_open сесіям Agent Manager.",

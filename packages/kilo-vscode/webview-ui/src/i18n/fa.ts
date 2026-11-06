@@ -363,6 +363,16 @@ export const dict = {
   "common.edit": "ویرایش",
   "common.loadMore": "بارگذاری بیشتر",
 
+  "sidebar.upsell.title": "ناوگانی از عامل‌های Kilo را به کار بگیرید",
+  "sidebar.upsell.body": "لازم نیست منتظر تمام شدن یک کار بمانید.",
+  "sidebar.upsell.parallel": "چند جلسه را هم‌زمان اجرا کنید",
+  "sidebar.upsell.worktree": "به هر جلسه یک worktree اختصاصی بدهید تا تغییرات با هم تداخل نداشته باشند",
+  "sidebar.upsell.attention": "با یک نگاه ببینید کدام جلسه به شما نیاز دارد",
+  "sidebar.upsell.open": "باز کردن Agent Manager",
+  "sidebar.upsell.later": "الان نه",
+  "sidebar.upsell.never": "دیگر این را نشان نده",
+  "sidebar.upsell.confirmation": "متوجه شدیم. دیگر Agent Manager را اینجا پیشنهاد نمی‌کنیم.",
+  "sidebar.upsell.undo": "واگرد",
   "sidebar.settings": "تنظیمات",
 
   "sound.option.alert01": "هشدار ۰۱",
@@ -1465,6 +1475,9 @@ export const dict = {
   "chat.search.close": "بستن جستجو",
   "chat.search.invalidRegex": "عبارت منظم نامعتبر",
   "chat.search.noResults": "نتیجه‌ای یافت نشد",
+  "settings.experimental.agentManagerUpsell.title": "دعوت به استفاده از Agent Manager در نوار کناری",
+  "settings.experimental.agentManagerUpsell.description":
+    "پس از کارهای برنامه‌نویسی، یک دعوت اختیاری برای امتحان کردن Agent Manager در نوار کناری Kilo نمایش دهید. به‌طور پیش‌فرض غیرفعال است.",
   "settings.experimental.browserAutomation.title": "مرورگر یکپارچه",
   "settings.experimental.browserAutomation.description":
     "پیش‌نمایش برنامه‌های محلی را در Agent Manager نشان دهید و ابزار browser_open را در اختیار جلسات Agent Manager قرار دهید.",

@@ -394,6 +394,16 @@ export const dict = {
   "common.edit": "편집",
   "common.loadMore": "더 불러오기",
 
+  "sidebar.upsell.title": "Kilo 에이전트 군단을 가동하세요",
+  "sidebar.upsell.body": "작업 하나가 끝날 때까지 기다릴 필요가 없습니다.",
+  "sidebar.upsell.parallel": "여러 세션을 동시에 실행하세요",
+  "sidebar.upsell.worktree": "각 세션에 전용 worktree를 할당해 변경 사항의 충돌을 방지하세요",
+  "sidebar.upsell.attention": "어떤 세션에 도움이 필요한지 한눈에 확인하세요",
+  "sidebar.upsell.open": "Agent Manager 열기",
+  "sidebar.upsell.later": "나중에",
+  "sidebar.upsell.never": "다시 표시하지 않기",
+  "sidebar.upsell.confirmation": "알겠습니다. 여기서 Agent Manager를 다시 추천하지 않겠습니다.",
+  "sidebar.upsell.undo": "실행 취소",
   "sidebar.settings": "설정",
 
   "sound.option.alert01": "알림 01",
@@ -1443,6 +1453,9 @@ export const dict = {
   "chat.search.close": "검색 닫기",
   "chat.search.invalidRegex": "정규식이 잘못되었습니다",
   "chat.search.noResults": "검색 결과 없음",
+  "settings.experimental.agentManagerUpsell.title": "사이드바의 Agent Manager 초대",
+  "settings.experimental.agentManagerUpsell.description":
+    "코딩 작업 후 Kilo 사이드바에 Agent Manager를 사용해 보도록 권하는 선택적 초대를 표시합니다. 기본적으로 비활성화되어 있습니다.",
   "settings.experimental.browserAutomation.title": "통합 브라우저",
   "settings.experimental.browserAutomation.description":
     "Agent Manager에서 로컬 애플리케이션 미리보기를 표시하고 browser_open 도구를 Agent Manager 세션에 노출합니다.",

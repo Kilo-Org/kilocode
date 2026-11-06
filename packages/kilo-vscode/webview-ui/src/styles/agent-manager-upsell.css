@@ -1,0 +1,223 @@
+.agent-manager-upsell-slot {
+  flex: 0 1 auto;
+  min-height: 0;
+  overflow: auto;
+}
+
+.agent-manager-upsell {
+  container: agent-manager-upsell / inline-size;
+  --upsell-gold: #e3c443;
+  --upsell-muted: var(--vscode-descriptionForeground, #a9abb1);
+  font-size: var(--kilo-font-size-13);
+  margin: 0 12px 10px;
+  min-width: 0;
+  border-radius: 10px;
+  padding: 1px;
+  background: linear-gradient(135deg, rgb(227 196 67 / 55%), rgb(227 196 67 / 8%) 40%, rgb(106 167 214 / 25%));
+  box-shadow: 0 18px 50px rgb(0 0 0 / 60%);
+  animation: agent-manager-upsell-rise 450ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  overflow-wrap: anywhere;
+}
+
+.agent-manager-upsell-body {
+  border-radius: 9px;
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--vscode-sideBar-background, #24252a) 85%, #686a77),
+    var(--vscode-sideBar-background, #1c1d21)
+  );
+  padding: 14px 14px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+}
+
+.agent-manager-upsell-heading {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+.agent-manager-upsell-tile {
+  width: 26px;
+  height: 26px;
+  border-radius: 5px;
+  background: var(--upsell-gold);
+  color: #141414;
+  font-size: var(--kilo-font-size-11);
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  box-shadow: 0 0 18px rgb(227 196 67 / 35%);
+}
+.agent-manager-upsell-copy {
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.agent-manager-upsell-title {
+  font-size: calc((var(--kilo-font-size-13) + var(--kilo-font-size-14)) / 2);
+  line-height: 1.3;
+  font-weight: 650;
+  color: var(--vscode-foreground, #f0f1f3);
+}
+.agent-manager-upsell-subtitle {
+  font-size: var(--kilo-font-size-12);
+  line-height: 1.5;
+  color: var(--upsell-muted);
+}
+.agent-manager-upsell-benefits {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding-left: 2px;
+}
+.agent-manager-upsell-benefits > div {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: var(--kilo-font-size-12);
+  line-height: 1.45;
+  color: var(--vscode-foreground, #c9cace);
+}
+.agent-manager-upsell-benefits [data-component="icon"] {
+  color: var(--upsell-gold);
+  width: 13px;
+  height: 13px;
+  margin-top: 2px;
+  flex: none;
+}
+.agent-manager-upsell-actions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: center;
+  gap: 4px;
+}
+.agent-manager-upsell-choices {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+.agent-manager-upsell-choices > [data-component="button"] {
+  justify-self: start;
+}
+.agent-manager-upsell-choices > .agent-manager-upsell-primary {
+  justify-self: stretch;
+}
+.agent-manager-upsell [data-component="button"] {
+  font-family: inherit;
+  font-size: calc((var(--kilo-font-size-12) + var(--kilo-font-size-13)) / 2);
+  line-height: normal;
+  height: auto;
+  min-height: 0;
+  max-width: 100%;
+  white-space: nowrap;
+  overflow-wrap: normal;
+  text-align: start;
+  border: 0;
+  padding: 7px 4px;
+  background: none;
+  color: var(--upsell-muted);
+  box-shadow: none;
+}
+.agent-manager-upsell [data-component="button"]:hover {
+  color: var(--vscode-foreground, #d6d7da);
+  background: none;
+}
+.agent-manager-upsell [data-component="button"].agent-manager-upsell-primary {
+  padding: 7px 8px;
+  gap: 6px;
+  border-radius: 5px;
+  background: var(--upsell-gold);
+  color: #16171a;
+  font-weight: 600;
+}
+.agent-manager-upsell [data-component="button"].agent-manager-upsell-primary:hover {
+  background: #efd35a;
+  color: #16171a;
+}
+.agent-manager-upsell .agent-manager-upsell-primary [data-component="icon"],
+.agent-manager-upsell .agent-manager-upsell-primary [data-slot="icon-svg"] {
+  color: inherit;
+}
+.agent-manager-upsell-primary [data-component="icon"] {
+  display: none;
+  width: 13px;
+  height: 13px;
+  flex: none;
+}
+.agent-manager-upsell [data-component="button"].agent-manager-upsell-never {
+  justify-self: end;
+  padding-inline: 0;
+  font-size: calc((var(--kilo-font-size-11) + var(--kilo-font-size-12)) / 2);
+  color: var(--vscode-disabledForeground, #7d7f85);
+}
+.agent-manager-upsell [data-component="button"].agent-manager-upsell-never:hover {
+  color: var(--vscode-foreground, #d6d7da);
+}
+@container agent-manager-upsell (max-width: 20em) {
+  .agent-manager-upsell-body {
+    padding-inline: 8px;
+  }
+  .agent-manager-upsell [data-component="button"].agent-manager-upsell-primary {
+    padding-inline: 4px;
+  }
+}
+@container agent-manager-upsell (min-width: 20em) {
+  .agent-manager-upsell-choices {
+    display: flex;
+  }
+}
+@container agent-manager-upsell (min-width: 22em) {
+  .agent-manager-upsell-primary [data-component="icon"] {
+    display: flex;
+  }
+}
+@container agent-manager-upsell (min-width: 29em) {
+  .agent-manager-upsell-actions {
+    grid-template-columns: minmax(0, 1fr) max-content;
+  }
+}
+.agent-manager-upsell-confirmation {
+  border: 1px solid var(--vscode-widget-border, #2f3136);
+  border-radius: 6px;
+  background: var(--vscode-sideBar-background, #1f2023);
+  padding: 8px 10px;
+  box-shadow: none;
+}
+.agent-manager-upsell-confirmation-body {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--kilo-font-size-12);
+  color: var(--upsell-muted);
+}
+.agent-manager-upsell-confirmation-body > span {
+  flex: 1;
+  min-width: 0;
+}
+.agent-manager-upsell [data-component="button"].agent-manager-upsell-undo {
+  flex: none;
+  color: var(--vscode-textLink-foreground, #6aa7d6);
+  padding: 2px 4px;
+}
+@keyframes agent-manager-upsell-rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .agent-manager-upsell {
+    animation: none;
+  }
+}

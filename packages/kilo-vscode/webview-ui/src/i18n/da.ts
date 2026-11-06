@@ -393,6 +393,16 @@ export const dict = {
   "common.edit": "Rediger",
   "common.loadMore": "Indlæs flere",
 
+  "sidebar.upsell.title": "Sæt en flåde af Kilo-agenter i arbejde",
+  "sidebar.upsell.body": "Du behøver ikke vente på, at én opgave bliver færdig.",
+  "sidebar.upsell.parallel": "Kør flere sessioner på samme tid",
+  "sidebar.upsell.worktree": "Giv hver session sit eget worktree, så ændringerne ikke kommer i konflikt",
+  "sidebar.upsell.attention": "Se med et blik, hvilken session der har brug for dig",
+  "sidebar.upsell.open": "Åbn Agent Manager",
+  "sidebar.upsell.later": "Ikke nu",
+  "sidebar.upsell.never": "Vis ikke dette igen",
+  "sidebar.upsell.confirmation": "Forstået. Vi foreslår ikke Agent Manager her igen.",
+  "sidebar.upsell.undo": "Fortryd",
   "sidebar.settings": "Indstillinger",
 
   "sound.option.alert01": "Alarm 01",
@@ -1466,6 +1476,9 @@ export const dict = {
   "chat.search.close": "Luk søgning",
   "chat.search.invalidRegex": "Ugyldigt regulært udtryk",
   "chat.search.noResults": "Ingen resultater",
+  "settings.experimental.agentManagerUpsell.title": "Invitation til Agent Manager i sidepanelet",
+  "settings.experimental.agentManagerUpsell.description":
+    "Vis en valgfri invitation til at prøve Agent Manager i Kilos sidepanel efter programmeringsopgaver. Deaktiveret som standard.",
   "settings.experimental.browserAutomation.title": "Integreret browser",
   "settings.experimental.browserAutomation.description":
     "Vis forhåndsvisninger af lokale applikationer i Agent Manager, og gør værktøjet browser_open tilgængeligt for Agent Manager-sessioner.",

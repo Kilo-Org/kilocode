@@ -378,6 +378,16 @@ export const dict = {
   "common.edit": "编辑",
   "common.loadMore": "加载更多",
 
+  "sidebar.upsell.title": "让一支 Kilo 智能体团队为你工作",
+  "sidebar.upsell.body": "不必等一个任务完成后再开始下一个。",
+  "sidebar.upsell.parallel": "同时运行多个会话",
+  "sidebar.upsell.worktree": "为每个会话分配独立的工作树，避免更改冲突",
+  "sidebar.upsell.attention": "一眼看出哪个会话需要你处理",
+  "sidebar.upsell.open": "打开 Agent Manager",
+  "sidebar.upsell.later": "暂时不用",
+  "sidebar.upsell.never": "不再显示",
+  "sidebar.upsell.confirmation": "知道了。我们不会再在这里推荐 Agent Manager。",
+  "sidebar.upsell.undo": "撤销",
   "sidebar.settings": "设置",
 
   "sound.option.alert01": "警报 01",
@@ -1384,6 +1394,9 @@ export const dict = {
   "chat.search.close": "关闭搜索",
   "chat.search.invalidRegex": "正则表达式无效",
   "chat.search.noResults": "无结果",
+  "settings.experimental.agentManagerUpsell.title": "侧边栏 Agent Manager 邀请",
+  "settings.experimental.agentManagerUpsell.description":
+    "在编码任务完成后，在 Kilo 侧边栏显示可选的 Agent Manager 试用邀请。默认禁用。",
   "settings.experimental.browserAutomation.title": "集成浏览器",
   "settings.experimental.browserAutomation.description":
     "在 Agent Manager 中显示本地应用预览，并向 Agent Manager 会话公开 browser_open 工具。",

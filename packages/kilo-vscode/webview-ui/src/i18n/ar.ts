@@ -386,6 +386,16 @@ export const dict = {
   "common.edit": "تحرير",
   "common.loadMore": "تحميل المزيد",
 
+  "sidebar.upsell.title": "شغّل أسطولًا من وكلاء Kilo",
+  "sidebar.upsell.body": "لا داعي لانتظار انتهاء مهمة واحدة.",
+  "sidebar.upsell.parallel": "شغّل عدة جلسات في الوقت نفسه",
+  "sidebar.upsell.worktree": "خصّص لكل جلسة شجرة عمل مستقلة حتى لا تتعارض التغييرات",
+  "sidebar.upsell.attention": "اعرف بنظرة سريعة أي جلسة تحتاج إليك",
+  "sidebar.upsell.open": "فتح Agent Manager",
+  "sidebar.upsell.later": "ليس الآن",
+  "sidebar.upsell.never": "عدم إظهار هذا مجددًا",
+  "sidebar.upsell.confirmation": "حسنًا. لن نقترح Agent Manager هنا مجددًا.",
+  "sidebar.upsell.undo": "تراجع",
   "sidebar.settings": "الإعدادات",
 
   "sound.option.alert01": "تنبيه 01",
@@ -1434,6 +1444,9 @@ export const dict = {
   "chat.search.close": "إغلاق البحث",
   "chat.search.invalidRegex": "تعبير عادي غير صالح",
   "chat.search.noResults": "لا توجد نتائج",
+  "settings.experimental.agentManagerUpsell.title": "دعوة لتجربة Agent Manager في الشريط الجانبي",
+  "settings.experimental.agentManagerUpsell.description":
+    "عرض دعوة اختيارية لتجربة Agent Manager في الشريط الجانبي لـ Kilo بعد مهام البرمجة. معطّل افتراضيًا.",
   "settings.experimental.browserAutomation.title": "المتصفح المدمج",
   "settings.experimental.browserAutomation.description":
     "عرض معاينات التطبيقات المحلية في Agent Manager وإتاحة أداة browser_open لجلسات Agent Manager.",

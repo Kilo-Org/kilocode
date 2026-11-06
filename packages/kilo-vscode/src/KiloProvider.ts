@@ -25,6 +25,7 @@ import { handleEditorAction } from "./kilo-provider/editor-actions"
 import { exportTranscript } from "./kilo-provider/export-transcript"
 import {
   TelemetryProxy,
+  TelemetryEventName,
   type TelemetryPropertiesProvider,
   pushTelemetryState,
   watchTelemetryState,
@@ -68,6 +69,7 @@ import { normalize, type SSEPayload, type SyncPayload, type WirePayload } from "
 import { slimInfo, slimPart, slimParts } from "./kilo-provider/slim-metadata"
 import { ToolInputStream } from "./kilo-provider/tool-input-stream"
 import { handleSidebarWorktreeMessage } from "./kilo-provider/sidebar-worktree"
+import { SidebarUpsell } from "./kilo-provider/upsell"
 import { parseMessageFiles, type MessageFile } from "./kilo-provider/message-files"
 import { renameSession } from "./kilo-provider/rename-session"
 import { handleFileSearch, type SearchRoot } from "./kilo-provider/file-search"
@@ -422,6 +424,7 @@ function withGlobalSpeechToTextMessage(message: unknown): unknown {
 export class KiloProvider implements vscode.WebviewViewProvider, TelemetryPropertiesProvider {
   public static readonly viewType = "kilo-code.SidebarProvider"
   private readonly instanceId = crypto.randomUUID()
+  private readonly upsell: SidebarUpsell
 
   private webview: vscode.Webview | null = null
   private currentSession: Session | null = null
@@ -613,6 +616,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     private readonly extensionContext?: vscode.ExtensionContext,
     private readonly opts: KiloProviderOptions = {},
   ) {
+    this.upsell = new SidebarUpsell(extensionContext?.globalState, extensionContext?.workspaceState)
     this.projectDirectory = opts.projectDirectory
     this.slimEditMetadata = opts.slimEditMetadata ?? true
     this.unsubscribeSandboxPreference = this.connectionService.sandboxPreference?.onChange(() => {
@@ -644,6 +648,10 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         this.postMessage({ type: "action", action: "restoreInput" })
       },
     })
+  }
+
+  public rememberAgentManagerOpen(): void {
+    void this.upsell.opened().catch((err) => console.error("[Kilo New] Could not remember Agent Manager usage:", err))
   }
 
   setRemoteService(service: RemoteStatusService): void {
@@ -1314,6 +1322,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       if (await this.handleMcpMessage(message)) return
       if (await this.handleAgentManagerSettingsMessage(message)) return
       if (await this.handleAutoCleanupMessage(message)) return
+      if (await this.handleSidebarUpsell(message)) return
       if (
         await handleWorkStyleMessage({
           message,
@@ -1773,6 +1782,24 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     })
     this.webviewMessageDisposable = watchFontSizeConfig((msg) => this.postMessage(msg), this.webviewMessageDisposable)
     this.webviewMessageDisposable = watchWorkStyleConfig((msg) => this.postMessage(msg), this.webviewMessageDisposable)
+  }
+
+  private async handleSidebarUpsell(
+    message: import("../webview-ui/src/types/messages").WebviewMessage,
+  ): Promise<boolean> {
+    if (message.type === "agentManagerUpsell") {
+      if (!this.view || this.panel) return true
+      const result = await this.upsell.handle(message.action, this.active)
+      this.postMessage({ type: "agentManagerUpsellLoaded", request: message.request, ...result })
+      return true
+    }
+    if (message.type !== "telemetry" || message.event !== TelemetryEventName.AGENT_MANAGER_UPSELL) return false
+    if (!this.view || this.panel || !this.active) return true
+    const action = message.properties?.action
+    if (typeof action === "string" && ["shown", "opened", "not_now", "dont_show_again", "undo"].includes(action)) {
+      TelemetryProxy.capture(message.event, { action })
+    }
+    return true
   }
 
   private async sendWebviewMessage(message: SendWebviewMessage): Promise<void> {
@@ -2271,6 +2298,11 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       }
       this.trackDirectory(session.id, workspaceDir)
       this.trackedSessionIds.add(session.id)
+      if (this.view && !this.panel) {
+        void this.upsell
+          .started(session.id)
+          .catch((err) => console.error("[Kilo New] Could not remember sidebar session:", err))
+      }
 
       // Notify webview of the new session
       this.postMessage({
@@ -4285,6 +4317,11 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         }
         this.trackDirectory(session.id, dir)
         this.trackedSessionIds.add(session.id)
+        if (this.view && !this.panel) {
+          void this.upsell
+            .started(session.id)
+            .catch((err) => console.error("[Kilo New] Could not remember sidebar session:", err))
+        }
         this.postMessage({
           type: "sessionCreated",
           projectId: project,
@@ -4485,6 +4522,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       maxCost: this.maxCostSetting(),
       languageCommitMessage: this.commitMessageLanguageSetting(),
       claudeMigration: this.claudeMigrationSetting(),
+      agentManagerUpsell: vscode.workspace
+        .getConfiguration("kilo-code.new.experimental")
+        .get<boolean>("agentManagerUpsell", false),
       browserAutomation: this.browserAutomationSetting(),
       conversationPromptHistory: this.conversationPromptHistorySetting(),
       agentManagerBrowserUseSystemChrome: integratedBrowserUseSystemChrome(),
