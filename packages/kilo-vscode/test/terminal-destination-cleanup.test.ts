@@ -2,17 +2,25 @@ import { afterEach, describe, expect, test } from "bun:test"
 import * as vscode from "vscode"
 import { clearLegacyTerminalDestination } from "../src/agent-manager/terminal-host"
 
+const SECTION = "kilo-code.v2.agentManager"
+const KEY = "terminalButtonDestination"
+
 describe("retired terminal destination setting", () => {
   const descriptors = Object.getOwnPropertyDescriptors(vscode.workspace)
-  let writes: Array<{ key: string; value: unknown; target: unknown }> = []
+  let reads: Array<{ section: string; key: string }> = []
+  let writes: Array<{ section: string; key: string; value: unknown; target: unknown }> = []
 
   function config(value: string | undefined) {
+    reads = []
     writes = []
-    vscode.workspace.getConfiguration = ((_section: string) =>
+    vscode.workspace.getConfiguration = ((section: string) =>
       ({
-        inspect: () => ({ globalValue: value }),
+        inspect: (key: string) => {
+          reads.push({ section, key })
+          return section === SECTION && key === KEY ? { globalValue: value } : {}
+        },
         update: async (key: string, next: unknown, target: unknown) => {
-          writes.push({ key, value: next, target })
+          writes.push({ section, key, value: next, target })
         },
       }) as unknown as vscode.WorkspaceConfiguration) as typeof vscode.workspace.getConfiguration
   }
@@ -24,8 +32,9 @@ describe("retired terminal destination setting", () => {
   test("clears a stored destination from the global settings", async () => {
     config("vscode")
     await clearLegacyTerminalDestination()
+    expect(reads).toEqual([{ section: SECTION, key: KEY }])
     expect(writes).toEqual([
-      { key: "terminalButtonDestination", value: undefined, target: vscode.ConfigurationTarget.Global },
+      { section: SECTION, key: KEY, value: undefined, target: vscode.ConfigurationTarget.Global },
     ])
   })
 
