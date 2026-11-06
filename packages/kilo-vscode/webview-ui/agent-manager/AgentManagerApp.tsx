@@ -32,7 +32,6 @@ import type {
   LocalGitStats,
   PRStatus,
   SessionInfo,
-  TerminalDestination,
   TerminalFont,
   WorktreeGitStats,
 } from "../src/types/messages/agent-manager"
@@ -132,9 +131,6 @@ import {
   createAmbientSetup,
   hasSetupTerminal,
   keepTerminalStack,
-  readSavedDestination,
-  resolveRunScriptRequest,
-  resolveVscodeTerminalRequest,
 } from "./terminal"
 import { createEmbeddedTerminalReader } from "./terminal/output"
 import { focusCurrentTab, renderTab, renderTerminalLayer, renderNewTabButton } from "./tab-rendering"
@@ -159,9 +155,13 @@ import type { ReviewComment } from "../diff-viewer/review-comments"
 import type { PRComment } from "./pr/pr-types"
 import {
   APPEND_REVIEW_COMMENTS,
-  takeReviewCommentsForPrompt,
+  takeReviewCommentsForPromptBatch,
   type AppendReviewCommentsDetail,
 } from "../diff-viewer/review-annotations"
+import { ReviewCommentActionsContext, type ReviewCommentActions } from "../src/components/chat/review-actions"
+import { openPRComment } from "../src/utils/pr-review"
+import type { ReviewAppendHandler } from "../src/v2/append-ready"
+import { formatReviewCommentsMarkdown, type ReviewCommentEntry } from "../../src/shared/review-comments"
 import { createMarkdownRender } from "./review-preferences"
 import { buildShortcutCategories } from "./shortcuts"
 import { ShortcutsDialog } from "./ShortcutsDialog"
@@ -637,18 +637,18 @@ const AgentManagerContent: Component = () => {
     },
     refresh: ({ projectId, worktreeId }) => to({ type: "agentManager.refreshPR", projectId, worktreeId }),
   })
-  const runWorktree = (id: string, destination: TerminalDestination) => {
+  const runWorktree = (id: string) => {
     const state = runStatuses()[id]?.state ?? "idle"
     if (state === "running" || state === "stopping") {
       to({ type: "agentManager.stopRunScript", worktreeId: id })
       return
     }
-    to(resolveRunScriptRequest(id, destination))
+    to({ type: "agentManager.runScript", worktreeId: id })
   }
   const configureRunScript = () => to({ type: "agentManager.configureRunScript" })
   const runSelected = () => {
     const sel = selection()
-    if (sel) runWorktree(sel, sideCtl.destination())
+    if (sel) runWorktree(sel)
   }
   reportRemoteSessions(vscode, localSessionIDs, managedSessions, isPending)
   const releaseTabs = () => setTabWidths(false)
@@ -1127,11 +1127,27 @@ const AgentManagerContent: Component = () => {
 
   // The composer of the visible session; review comments and Fix with Kilo append to it.
   let promptAppend: ((value: string, send: boolean) => void) | undefined
+  let promptReviewAppend: ReviewAppendHandler | undefined
   // The same composer's browser reference list; an element picked in the browser panel joins it.
   let promptReference: ReferenceHandler | undefined
   const appendToPrompt = (text: string, autoSend: boolean) => {
     promptAppend?.(text, autoSend)
     requestChatFocus(true)
+  }
+  const appendCommentsToPrompt = (comments: ReviewCommentEntry[], autoSend: boolean) => {
+    // A composer without review-comment support still gets the batch as markdown text.
+    if (promptReviewAppend) promptReviewAppend(comments, autoSend)
+    else appendToPrompt(formatReviewCommentsMarkdown(comments), autoSend)
+    requestChatFocus(true)
+  }
+  // Review comment rows open files and PR threads through the surface that owns those panels.
+  const reviewCommentActions: ReviewCommentActions = {
+    showInDiff: (comment, sessionID) => openPRComment(comment, sessionID ?? sessions.currentSessionID()),
+    openFile: (filePath, line, sessionID) => {
+      const sessionId = sessionID ?? sessions.currentSessionID()
+      if (!sessionId) return
+      to({ type: "agentManager.openFile", sessionId, filePath, line })
+    },
   }
   // Editor and terminal context actions target the visible composer, and wait while no composer is mounted.
   const composerQueue = createComposerQueue()
@@ -1342,19 +1358,6 @@ const AgentManagerContent: Component = () => {
       panels.close(SidePanel.Terminal)
     },
     refocus: requestChatFocus,
-    postMessage: to,
-    track: () => undefined,
-    saved: readSavedDestination(vscode.getState<Record<string, unknown>>()),
-    save: (destination) =>
-      vscode.setState({ ...vscode.getState<Record<string, unknown>>(), terminalDestination: destination }),
-    openVscode: () =>
-      to(
-        resolveVscodeTerminalRequest(
-          selection(),
-          sessions.currentSessionID(),
-          (worktree) => managedSessions().find((entry) => entry.worktreeId === worktree)?.id,
-        ),
-      ),
   })
   createEffect(on(terms.sideKey, (key, previous) => sideCtl.syncContext(key, previous), { defer: true }))
   const handleReviewTabMouseDown = (event: MouseEvent) => {
@@ -1746,7 +1749,7 @@ const AgentManagerContent: Component = () => {
             requestAnimationFrame(() => sidebarSearchMenu?.open())
           }
         },
-        showTerminal: () => sideCtl.openPreferred("keyboard_shortcut"),
+        showTerminal: () => sideCtl.toggle("keyboard_shortcut"),
         toggleDiff: () => diffPanels.toggleCommand(),
         newTab: handleNewTabForCurrentSelection,
         closeTask: () => closeFocusedTask(visibleTabId(), tabLookup(), handleCloseTab),
@@ -1826,7 +1829,6 @@ const AgentManagerContent: Component = () => {
         terms.setSideActive(contextKey, terminalId)
         terms.requestFocus(terminalId)
       },
-      onDestinationChanged: (destination) => sideCtl.syncDefault(destination),
     })
 
     const unsubscribe = vscode.onMessage((raw) => {
@@ -1981,9 +1983,9 @@ const AgentManagerContent: Component = () => {
 
     const reviewCommentsEvent = (event: Event) => {
       const detail = (event as CustomEvent<AppendReviewCommentsDetail>).detail
-      const text = takeReviewCommentsForPrompt(detail)
-      if (text === undefined) return
-      appendToPrompt(text, detail.autoSend)
+      const comments = takeReviewCommentsForPromptBatch(detail)
+      if (!comments) return
+      appendCommentsToPrompt(comments, detail.autoSend)
     }
     window.addEventListener(APPEND_REVIEW_COMMENTS, reviewCommentsEvent)
     // These host messages are shared with the sidebar protocol, not the Agent Manager message union.
@@ -2173,38 +2175,41 @@ const AgentManagerContent: Component = () => {
         >
           {(store) => (
             <V2Scope value={store}>
-              <SpeechToTextStatusProvider>
-                <SessionView
-                  session={
-                    sessions.currentSessionID() && !isPending(sessions.currentSessionID()!)
-                      ? sessions.currentSessionID()
-                      : undefined
-                  }
-                  draftKey={sessions.currentSessionID() ?? activePendingId()}
-                  readOnly={readOnly()}
-                  onSession={handleSessionCreated}
-                  actions={toolActions}
-                  onShowHistory={() => openHistory()}
-                  empty={intro.render}
-                  onAppendReady={(append) => (promptAppend = append)}
-                  onComposerReady={composerQueue.ready}
-                  onReferenceReady={(add) => (promptReference = add)}
-                  onPreviewEdit={(files, sessionID) => previewEdit(files, sessionID)}
-                  onViewTurnChanges={openTurnChanges}
-                  onForkSession={handleForkSession}
-                  onForkMessage={handleForkSession}
-                  onMissing={(id) => handleCloseTab(id)}
-                  onPrompted={(sessionId, text, model) =>
-                    to({
-                      type: "agentManager.promptSent",
-                      sessionId,
-                      text,
-                      providerID: model?.providerID,
-                      modelID: model?.id,
-                    })
-                  }
-                />
-              </SpeechToTextStatusProvider>
+              <ReviewCommentActionsContext.Provider value={reviewCommentActions}>
+                <SpeechToTextStatusProvider>
+                  <SessionView
+                    session={
+                      sessions.currentSessionID() && !isPending(sessions.currentSessionID()!)
+                        ? sessions.currentSessionID()
+                        : undefined
+                    }
+                    draftKey={sessions.currentSessionID() ?? activePendingId()}
+                    readOnly={readOnly()}
+                    onSession={handleSessionCreated}
+                    actions={toolActions}
+                    onShowHistory={() => openHistory()}
+                    empty={intro.render}
+                    onAppendReady={(append) => (promptAppend = append)}
+                    onReviewAppendReady={(append) => (promptReviewAppend = append)}
+                    onComposerReady={composerQueue.ready}
+                    onReferenceReady={(add) => (promptReference = add)}
+                    onPreviewEdit={(files, sessionID) => previewEdit(files, sessionID)}
+                    onViewTurnChanges={openTurnChanges}
+                    onForkSession={handleForkSession}
+                    onForkMessage={handleForkSession}
+                    onMissing={(id) => handleCloseTab(id)}
+                    onPrompted={(sessionId, text, model) =>
+                      to({
+                        type: "agentManager.promptSent",
+                        sessionId,
+                        text,
+                        providerID: model?.providerID,
+                        modelID: model?.id,
+                      })
+                    }
+                  />
+                </SpeechToTextStatusProvider>
+              </ReviewCommentActionsContext.Provider>
             </V2Scope>
           )}
         </Show>
@@ -2441,7 +2446,7 @@ const AgentManagerContent: Component = () => {
         onOpen={openWorktreeDirectory}
         runStatuses={runStatuses}
         runConfigured={runScriptConfigured}
-        onRun={(id) => runWorktree(id, sideCtl.destination())}
+        onRun={runWorktree}
         onConfigureRun={configureRunScript}
         diffOpen={diffOpen}
         reviewActive={reviewActive}
@@ -2458,14 +2463,12 @@ const AgentManagerContent: Component = () => {
         subagentsAvailable={() => subagentCtl.tabs.tabs().length > 0 || subagentCtl.toolbar.available().length > 0}
         subagentsOpen={() => sidePanel() === SidePanel.Subagents}
         onToggleSubagents={subagentCtl.toolbar.toggle}
-        terminalDestination={sideCtl.destination}
-        terminalDestinationActive={() => sidePanel() === SidePanel.Terminal}
+        terminalOpen={() => sidePanel() === SidePanel.Terminal}
         terminalKeybind={() => kb().showTerminal ?? ""}
-        onTerminalDestinationOpen={() => {
+        onTerminalOpen={() => {
           cancelAmbientSetup()
-          sideCtl.openPreferred("tab_toolbar")
+          sideCtl.toggle("tab_toolbar")
         }}
-        onTerminalDestinationChoose={sideCtl.choose}
       />
 
       <Show when={restricted()}>

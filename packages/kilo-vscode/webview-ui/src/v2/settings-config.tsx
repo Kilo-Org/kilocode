@@ -44,6 +44,7 @@ export type KiloSettingKey =
   | "claudeCodeCompat"
   | "extraCaCerts"
   | "languageCommitMessage"
+  | "indexing.showButtonWhenDisabled"
   | "autocomplete.enableAutoTrigger"
   | "autocomplete.enableSmartInlineTaskKeybinding"
   | "autocomplete.enableChatAutocomplete"

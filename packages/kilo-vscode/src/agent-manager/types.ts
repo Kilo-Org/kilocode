@@ -21,7 +21,6 @@ import type { TerminalFont } from "./terminal-font"
 import type { ProjectSnapshot } from "./project/contexts"
 import type { ProjectSessionView } from "./project/session-view"
 import type { SidebarTarget } from "./project/route"
-import type { TerminalDestination } from "./terminal-destination"
 
 type ScriptTerminalKind = "run" | "setup"
 type ScriptTerminalState = "running" | "stopping" | "exited" | "failed"
@@ -192,7 +191,6 @@ interface StateMessage {
   projectId?: string
   /** Last selected sidebar target for seamless project-switch restore. */
   activeTarget?: SidebarTarget
-  terminalDestination?: TerminalDestination
   terminalFont?: TerminalFont
   restricted?: boolean
   browserAutomation?: boolean
@@ -260,11 +258,6 @@ interface TerminalErrorMessage {
   /** Set when the error answers a specific create request. */
   createId?: string
   message: string
-}
-
-interface TerminalDestinationChangedMessage {
-  type: "agentManager.terminal.destinationChanged"
-  destination: TerminalDestination
 }
 
 interface TerminalFontChangedMessage {
@@ -626,7 +619,6 @@ export type AgentManagerOutMessage =
   | TerminalRestartedMessage
   | TerminalClosedMessage
   | TerminalErrorMessage
-  | TerminalDestinationChangedMessage
   | TerminalFontChangedMessage
   | ScriptTerminalsMessage
   | TerminalSocketOpenedMessage
@@ -812,25 +804,10 @@ interface RunScriptIn {
   type: "agentManager.runScript"
   projectId?: string
   worktreeId: string
-  destination: TerminalDestination
 }
 
 interface StopRunScriptIn {
   type: "agentManager.stopRunScript"
-  worktreeId: string
-}
-
-interface ShowTerminalIn {
-  type: "agentManager.showTerminal"
-  sessionId: string
-}
-
-interface ShowLocalTerminalIn {
-  type: "agentManager.showLocalTerminal"
-}
-
-interface ShowWorktreeTerminalIn {
-  type: "agentManager.showWorktreeTerminal"
   worktreeId: string
 }
 
@@ -843,10 +820,6 @@ interface OpenWorktreeIn {
 interface CopyToClipboardIn {
   type: "agentManager.copyToClipboard"
   text: string
-}
-
-interface ShowExistingLocalTerminalIn {
-  type: "agentManager.showExistingLocalTerminal"
 }
 
 interface RequestRepoInfoIn {
@@ -1332,11 +1305,6 @@ interface TerminalSocketCloseIn {
   reason?: string
 }
 
-interface TerminalDestinationSelectedIn {
-  type: "agentManager.terminal.destinationSelected"
-  destination: TerminalDestination
-}
-
 /** All messages the Agent Manager expects from the webview (onMessage input). */
 interface BrowserRequestIn {
   type:
@@ -1408,12 +1376,8 @@ export type AgentManagerInMessage =
   | ConfigureRunScriptIn
   | RunScriptIn
   | StopRunScriptIn
-  | ShowTerminalIn
-  | ShowLocalTerminalIn
-  | ShowWorktreeTerminalIn
   | OpenWorktreeIn
   | CopyToClipboardIn
-  | ShowExistingLocalTerminalIn
   | RequestRepoInfoIn
   | CreateMultiVersionIn
   | RenameWorktreeIn
@@ -1477,4 +1441,3 @@ export type AgentManagerInMessage =
   | TerminalSocketOpenIn
   | TerminalSocketSendIn
   | TerminalSocketCloseIn
-  | TerminalDestinationSelectedIn

@@ -44,8 +44,6 @@ import { createWorktreeActivity } from "./worktree-activity"
 import { handleSessionLifecycle } from "./session-lifecycle"
 import { runningFromEvent } from "../session-status"
 import { WorktreeImporter } from "./worktree-importer"
-import { SessionTerminalManager } from "./SessionTerminalManager"
-import { createTerminalHost } from "./terminal-host"
 import { shouldOpenLinkInIntegratedBrowser } from "../browser-links"
 import { createBrowserLifecycle } from "./browser-lifecycle"
 import { routableProject } from "./browser-message"
@@ -55,7 +53,6 @@ import { TerminalRouter } from "./terminal-routing"
 import { acquirePtyCleanup } from "./pty-cleanup"
 import { PtyRelay } from "./pty-relay"
 import { KiloAgentManagerRpc } from "@opencode/schema/kilocode/agent-manager"
-import { executeVscodeTask } from "./task-runner"
 import { createRunController, createScriptTerminalRuntime } from "./script-terminal-runtime"
 import type { RunController } from "./run/controller"
 import { createOrchestrationBridge } from "./orchestration-setup"
@@ -66,7 +63,6 @@ import { createLocalDiff } from "./local-diff"
 import { sendDiffBranches as postDiffBranches } from "./project/diff-branches"
 import { pruneSubagents, sessionMissing } from "./prune-subagents"
 import { readTerminalFont, watchTerminalFont } from "./terminal-font"
-import { DestinationState, watchTerminalDestination } from "./terminal-destination"
 import { buildKeybindingMap } from "./format-keybinding"
 import { documentExists, readDocument } from "../documents/document-reader"
 import { resolveWorktreeFile, resolveWorktreeRoot, sessionDirectory } from "./worktree-file-path"
@@ -123,7 +119,6 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
   public readonly projects: ProjectMessageDeps
   public readonly projectScope = new ProjectScope()
   public readonly importer: WorktreeImporter
-  public readonly terminalManager: SessionTerminalManager
   public readonly terminalRouter: TerminalRouter
   public readonly relay: PtyRelay
   public readonly scripts: ReturnType<typeof createScriptTerminalRuntime>
@@ -146,7 +141,6 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
   public readonly activity: ReturnType<typeof createWorktreeActivity>
   public readonly unsubFont: () => void
   public readonly unsubProjects: () => void
-  public readonly unsubDestination: () => void
   public readonly unsubEvents: () => void
   public readonly autoApprove: ReturnType<typeof createHostAutoApprove>
   public readonly unsubAutoApprove: () => void
@@ -155,7 +149,6 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
     await this.reconcileAndPush(ctx)
     if (this.contexts.active()?.id === ctx.id) this.pushState(ctx)
   })
-  public destination = new DestinationState()
   public closing: Promise<void> | undefined
   public onVisibilityChange: ((visible: boolean) => void) | undefined
   public readonly panelSessions = new Set<string>()
@@ -173,10 +166,6 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
     browser?: BrowserBroker,
   ) {
     this.outputChannel = host.createOutput("Kilo Agent Manager")
-    this.terminalManager = new SessionTerminalManager(
-      (message) => this.outputChannel.appendLine(`[SessionTerminal] ${message}`),
-      createTerminalHost(),
-    )
     this.terminalRouter = new TerminalRouter({
       connection: this.connection,
       getRoot: () => this.getRoot(),
@@ -202,10 +191,6 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
     this.unsubFont = watchTerminalFont((font) => {
       this.postToWebview({ type: "agentManager.terminal.fontChanged", font })
       void this.scripts.manager.snapshot()
-    })
-    this.unsubDestination = watchTerminalDestination((destination) => {
-      this.destination.sync(destination)
-      this.postToWebview({ type: "agentManager.terminal.destinationChanged", destination })
     })
     this.run = createRunController({
       manager: this.scripts.manager,
@@ -609,8 +594,6 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
     this.visibleSession = id
     if (id) {
       this.panelSessions.add(id)
-      // Follow the session with its integrated terminal while the terminal panel is open.
-      this.terminalManager.syncOnSessionSwitch(id)
     }
     // The poller follows the visible session so its fast poll and immediate fetch target the
     // worktree the user is reading. The PR poller belongs to the active project, so a session
@@ -688,7 +671,6 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
   public async acquirePtyCleanup(directory: string): Promise<() => void> {
     return acquirePtyCleanup(directory, {
       terminals: this.terminalRouter,
-      integrated: this.terminalManager,
       scripts: this.scripts.manager,
       connection: this.connection,
     })
@@ -909,8 +891,8 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
 
   public async runSetupScriptForWorktree(
     worktreePath: string,
-    branch?: string,
-    worktreeId?: string,
+    branch: string | undefined,
+    worktreeId: string,
     early?: () => Promise<void>,
   ): Promise<void> {
     const root = this.getRoot()
@@ -918,13 +900,11 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
     await runLifecycleSetup(
       {
         service: this.getSetupScriptService(),
-        destination: this.destination.value(),
         projectId: this.context?.id,
         worktreeId,
         branch,
         trusted: () => this.host.isTrusted(),
         manager: this.scripts.manager,
-        vscode: executeVscodeTask,
         log: (msg) => this.outputChannel.appendLine(`[SetupScript] ${msg}`),
         post: (message) => this.postToWebview(message),
       },

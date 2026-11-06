@@ -83,9 +83,6 @@ export interface TerminalFont {
   fontSize: number
 }
 
-/** Where the terminal button / Focus Terminal shortcut opens a terminal. */
-export type TerminalDestination = "vscode" | "agentManager"
-
 /** Where a terminal lives: main tab strip or right-side inspector panel. */
 export type TerminalPlacement = "tab" | "side"
 
@@ -342,7 +339,6 @@ export interface AgentManagerStateMessage {
   projectId?: string
   /** Last selected sidebar target for seamless project-switch restore. */
   activeTarget?: AgentManagerSidebarTarget
-  terminalDestination?: TerminalDestination
   terminalFont?: TerminalFont
   restricted?: boolean
   browserAutomation?: boolean
@@ -432,11 +428,6 @@ export interface AgentManagerTerminalErrorMessage {
   /** Set when the error answers a specific create request. */
   createId?: string
   message: string
-}
-
-export interface AgentManagerTerminalDestinationChangedMessage {
-  type: "agentManager.terminal.destinationChanged"
-  destination: TerminalDestination
 }
 
 /** Provider-owned script terminal (Run/Setup). Full snapshots replace only these terminal kinds. */
@@ -789,7 +780,6 @@ export type AgentManagerExtensionMessage =
   | AgentManagerTerminalFontChangedMessage
   | AgentManagerTerminalClosedMessage
   | AgentManagerTerminalErrorMessage
-  | AgentManagerTerminalDestinationChangedMessage
   | AgentManagerScriptTerminalsMessage
   | AgentManagerTerminalSocketOpenedMessage
   | AgentManagerTerminalSocketMessage
@@ -1036,28 +1026,10 @@ export interface RunScriptRequest {
   type: "agentManager.runScript"
   projectId?: string
   worktreeId: string
-  destination: TerminalDestination
 }
 
 export interface StopRunScriptRequest {
   type: "agentManager.stopRunScript"
-  worktreeId: string
-}
-
-/** Show the terminal for a session. */
-export interface ShowTerminalRequest {
-  type: "agentManager.showTerminal"
-  sessionId: string
-}
-
-/** Show the terminal for the local workspace when no session is active. */
-export interface ShowLocalTerminalRequest {
-  type: "agentManager.showLocalTerminal"
-}
-
-/** Show a terminal rooted at a worktree directory that has no session. */
-export interface ShowWorktreeTerminalRequest {
-  type: "agentManager.showWorktreeTerminal"
   worktreeId: string
 }
 
@@ -1076,11 +1048,6 @@ export interface AgentManagerCopyToClipboardRequest {
 export interface AgentManagerSetIntroDismissedRequest {
   type: "agentManager.setIntroDismissed"
   dismissed: boolean
-}
-
-/** Show the existing local terminal when switching to local context. */
-export interface ShowExistingLocalTerminalRequest {
-  type: "agentManager.showExistingLocalTerminal"
 }
 
 /** Create a new xterm terminal in the given worktree context (null = workspace root). */
@@ -1103,11 +1070,6 @@ export interface AgentManagerTerminalCloseRequest {
 export interface AgentManagerTerminalStopRequest {
   type: "agentManager.terminal.stop"
   terminalId: string
-}
-
-export interface AgentManagerTerminalDestinationSelectedRequest {
-  type: "agentManager.terminal.destinationSelected"
-  destination: TerminalDestination
 }
 
 /** Notify the host of an xterm resize so it can update the backend PTY dimensions. */
@@ -1506,17 +1468,12 @@ export type AgentManagerWebviewMessage =
   | ConfigureRunScriptRequest
   | RunScriptRequest
   | StopRunScriptRequest
-  | ShowTerminalRequest
-  | ShowLocalTerminalRequest
-  | ShowWorktreeTerminalRequest
   | OpenWorktreeRequest
   | AgentManagerCopyToClipboardRequest
   | AgentManagerSetIntroDismissedRequest
-  | ShowExistingLocalTerminalRequest
   | AgentManagerTerminalCreateRequest
   | AgentManagerTerminalCloseRequest
   | AgentManagerTerminalStopRequest
-  | AgentManagerTerminalDestinationSelectedRequest
   | AgentManagerTerminalResizeRequest
   | AgentManagerTerminalRestartRequest
   | AgentManagerTerminalSocketOpenRequest

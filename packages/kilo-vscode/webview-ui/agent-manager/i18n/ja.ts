@@ -128,7 +128,6 @@ export const dict = {
   "agentManager.tab.unpin": "ピン留めを解除",
   "agentManager.tab.pinned": "ピン留め済み",
   "agentManager.tab.terminal": "ターミナル",
-  "agentManager.tab.openTerminal": "ターミナルを開く",
   "agentManager.tab.newOptions": "新しいタブのその他のオプション",
   "agentManager.sidebarSearch.label": "Worktreeとセッションを検索",
   "agentManager.sidebarSearch.scope":
@@ -148,9 +147,6 @@ export const dict = {
   "agentManager.terminal.add": "新しいターミナル",
   "agentManager.terminal.empty": "ここにはまだターミナルがありません",
   "agentManager.terminal.start": "ターミナルを開始",
-  "agentManager.terminal.destination": "ターミナルボタンで開く場所を選択",
-  "agentManager.terminal.openInVscode": "VS Codeのターミナル",
-  "agentManager.terminal.openInPanel": "Agent Managerパネル",
   "agentManager.terminal.errorTitle": "ターミナルエラー",
   "agentManager.setup.failed": "ワークスペースのセットアップに失敗しました",
   "agentManager.setup.settingUp": "ワークスペースをセットアップ中",

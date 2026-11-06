@@ -31,21 +31,6 @@
         "**/.kilocode/worktrees/**": true
       }
     },
-    "taskDefinitions": [
-      {
-        "type": "kilo-worktree-setup",
-        "properties": {
-          "script": {
-            "type": "string",
-            "description": "The setup script command to execute"
-          },
-          "worktree": {
-            "type": "string",
-            "description": "The worktree directory the setup script runs in"
-          }
-        }
-      }
-    ],
     "icons": {
       "kilo-v2-logo": {
         "description": "Kilo Code (v2) logo",
@@ -152,6 +137,14 @@
           "default": false,
           "markdownDescription": "Render Markdown files in Kilo diff viewers by default. Toggle this from a Markdown file header in the diff viewer."
         },
+        "kilo-code.v2.diff.style": {
+          "type": "string",
+          "enum": [
+            "unified",
+            "split"
+          ],
+          "markdownDescription": "Remembered unified/split choice for Kilo diff viewers. Set automatically the first time you toggle the style in a diff viewer."
+        },
         "kilo-code.v2.showTaskTimeline": {
           "type": "boolean",
           "default": false,
@@ -161,6 +154,11 @@
           "type": "boolean",
           "default": true,
           "markdownDescription": "Show keyboard shortcuts in the empty Agent Manager session view."
+        },
+        "kilo-code.v2.indexing.showButtonWhenDisabled": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "Show the indexing button below the prompt while indexing is off. If hidden, open Settings > Indexing to enable indexing."
         },
         "kilo-code.v2.maxCost": {
           "type": "number",
@@ -299,20 +297,6 @@
           "scope": "application",
           "description": "Pre-warm a ready worktree in the background so new Agent Manager sessions start faster. Uses extra disk space equal to one checkout per open project. Turn off to create worktrees only on demand."
         },
-        "kilo-code.v2.agentManager.terminalButtonDestination": {
-          "type": "string",
-          "scope": "application",
-          "default": "agentManager",
-          "enum": [
-            "vscode",
-            "agentManager"
-          ],
-          "enumDescriptions": [
-            "Open or focus the VS Code integrated terminal.",
-            "Open or focus an embedded terminal in the Agent Manager side panel."
-          ],
-          "description": "Default destination for the Agent Manager terminal button and Focus Terminal keyboard shortcut. The terminal button's dropdown remembers its own choice per Agent Manager panel; this setting only applies to panels that never picked one."
-        },
         "kilo-code.v2.agentManager.pushFixes": {
           "type": "boolean",
           "default": true,
@@ -406,6 +390,11 @@
       {
         "command": "kilo-code.v2.restartServer",
         "title": "Restart Server",
+        "category": "Kilo Code (v2)"
+      },
+      {
+        "command": "kilo-code.v2.showChanges",
+        "title": "Show Changes",
         "category": "Kilo Code (v2)"
       },
       {
@@ -1014,7 +1003,7 @@
     "snapshot:install": "bun script/snapshot.ts install",
     "extension": "bun script/launch.ts",
     "typecheck": "tsc --noEmit && tsc --noEmit -p webview-ui",
-    "lint": "cd ../.. && oxlint --config .oxlintrc.json packages/kilo-vscode/src packages/kilo-vscode/webview-ui/src packages/kilo-vscode/webview-ui/agent-manager packages/kilo-vscode/webview-ui/diff-viewer packages/kilo-vscode/webview-ui/documents packages/kilo-vscode/script packages/kilo-vscode/test",
+    "lint": "cd ../.. && oxlint --config .oxlintrc.json packages/kilo-vscode/src packages/kilo-vscode/webview-ui/src packages/kilo-vscode/webview-ui/agent-manager packages/kilo-vscode/webview-ui/diff-viewer packages/kilo-vscode/webview-ui/documents packages/kilo-vscode/webview-ui/diff-virtual packages/kilo-vscode/script packages/kilo-vscode/test",
     "test": "bun test"
   },
   "dependencies": {

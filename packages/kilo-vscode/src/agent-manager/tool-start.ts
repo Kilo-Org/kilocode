@@ -59,7 +59,7 @@ export interface ToolDeps {
   claimRequest?: (requestID: string) => boolean
   cleanupWorktree: (wid: string, dir: string) => Promise<void>
   hasScript: () => boolean
-  setup: (dir: string, branch?: string, id?: string, early?: () => Promise<void>) => Promise<void>
+  setup: (dir: string, branch: string | undefined, id: string, early?: () => Promise<void>) => Promise<void>
   createSessionInWorktree: (
     dir: string,
     branch: string,
