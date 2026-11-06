@@ -14,10 +14,19 @@
  * 4. kilo-database-constructors: Direct SQLite instantiation in Kilo-owned code is restricted.
  * 5. kilo-tool-process-env: Direct process.env reads in Kilo tools must be classified.
  * 6. kilo-httpapi-handlers: Kilo-owned handlers must not call raw OS or process operations.
+ * 7. kilo-test-process-state: Kilo tests must not change process-wide state that leaks into other test files.
+ * 8. kilo-test-blocking-spawn: Kilo tests must not start child processes synchronously.
+ * 9. kilo-module-state: Module-level mutable state in Kilo-owned source is counted per package.
+ *
+ * Rules 7 to 9 keep each test file and each domain independent. `bun test` runs all files of a package in one
+ * process, so a module mock, a global or an env write in one file changes the next file, and module-level state
+ * needs reset hooks that couple the tests to each other. Order-dependent tests pass alone and fail in CI.
  */
 
 import path from "node:path"
 import {
+  code,
+  countMatches,
   forbiddenDirection,
   HIGHER_LAYERS,
   importSpecifiers,
@@ -56,6 +65,23 @@ function read(file: string) {
 // ---------------------------------------------------------------------------
 
 const KILO_FILES = uniqueFiles(["packages/kilo-*/src/**/*.{ts,tsx}", "packages/*/src/kilocode/**/*.{ts,tsx}"])
+// A bunfig preload is the one place for deliberate process-wide test setup, so the test rules skip it.
+const PRELOADS = new Set(
+  (
+    await Promise.all(
+      scan("packages/*/bunfig.toml").map(async (file) =>
+        [...(await read(file)).matchAll(/\bpreload\s*=\s*\[([^\]]*)\]/g)].flatMap((match) =>
+          [...match[1]!.matchAll(/["']\.\/([^"']+)["']/g)].map((entry) =>
+            path.posix.join(path.posix.dirname(file), entry[1]!),
+          ),
+        ),
+      ),
+    )
+  ).flat(),
+)
+const KILO_TESTS = uniqueFiles(["packages/kilo-*/test/**/*.{ts,tsx}", "packages/*/test/kilocode/**/*.{ts,tsx}"]).filter(
+  (file) => !PRELOADS.has(file),
+)
 
 // ---------------------------------------------------------------------------
 // Rule 1: Core Directionality Guard
@@ -270,6 +296,84 @@ violations.push(
 )
 
 // ---------------------------------------------------------------------------
+// Rule 7: Kilo Test Process-Wide State
+// ---------------------------------------------------------------------------
+
+// The same process-wide state that script/kilocode/test/test-runner.ts runs in its own process, plus module-scope
+// global writes. A write inside a hook or a test is not counted: the file can restore it.
+const PROCESS_STATE = [
+  /\bmock\.module\s*\(/g,
+  /\bspyOn\s*\(\s*globalThis\b/g,
+  /^process\.env\b/gm,
+  /^delete\s+process\.env\b/gm,
+  /^(?:globalThis|global)\.[\w$]+\s*=(?!=)/gm,
+]
+
+const processStateHits = new Map<string, number>()
+for (const file of KILO_TESTS) {
+  const count = countMatches(code(await read(file)), PROCESS_STATE)
+  if (count > 0) processStateHits.set(file, count)
+}
+
+violations.push(
+  ...ratchet("kilo-test-process-state", processStateHits, allowed("kilo-test-process-state"), {
+    unclassified: (count) =>
+      `Process-wide test state (${count} site(s)): mock.module, spyOn(globalThis), or a module-scope global or process.env write. It leaks into the other files of the same bun test process. Inject the dependency, or set and restore the value in beforeEach/afterEach.`,
+    drift: (file, expected, count) =>
+      `Ratchet drift for process-wide test state in ${file}: expected ${expected}, found ${count}. Update script/kilocode/architecture-allowlist.json!`,
+    stale: (file) =>
+      `Stale test-process-state entry: no process-wide test state found in ${file}. Remove from script/kilocode/architecture-allowlist.json!`,
+  }),
+)
+
+// ---------------------------------------------------------------------------
+// Rule 8: Kilo Test Blocking Spawn
+// ---------------------------------------------------------------------------
+
+const blockingHits = new Map<string, number>()
+for (const file of KILO_TESTS) {
+  const count = countMatches(code(await read(file)), [/\b(?:spawnSync|execSync|execFileSync)\s*\(/g])
+  if (count > 0) blockingHits.set(file, count)
+}
+
+violations.push(
+  ...ratchet("kilo-test-blocking-spawn", blockingHits, allowed("kilo-test-blocking-spawn"), {
+    unclassified: (count) =>
+      `Synchronous child process in a Kilo test (${count} site(s)). It blocks the test process, so Bun cannot stop it at the test timeout, and the timeout then kills shared helpers such as the esbuild service for the next files. Use Bun.spawn with a kill timer below the test timeout.`,
+    drift: (file, expected, count) =>
+      `Ratchet drift for synchronous child processes in ${file}: expected ${expected}, found ${count}. Update script/kilocode/architecture-allowlist.json!`,
+    stale: (file) =>
+      `Stale test-blocking-spawn entry: no synchronous child process found in ${file}. Remove from script/kilocode/architecture-allowlist.json!`,
+  }),
+)
+
+// ---------------------------------------------------------------------------
+// Rule 9: Kilo Module-Level State (per package)
+// ---------------------------------------------------------------------------
+
+// Counted per package, not per file: the target is fewer process-global singletons in each domain.
+const moduleStateHits = new Map<string, number>()
+for (const file of KILO_FILES) {
+  const count = countMatches(code(await read(file)), [
+    /^(?:export\s+)?let\s/gm,
+    /^(?:export\s+)?const\s+[\w$]+(?:\s*:[^=\n]+)?\s*=\s*new\s+(?:Map|Set)\b/gm,
+  ])
+  const pkg = file.split("/").slice(0, 2).join("/")
+  if (count > 0) moduleStateHits.set(pkg, (moduleStateHits.get(pkg) ?? 0) + count)
+}
+
+violations.push(
+  ...ratchet("kilo-module-state", moduleStateHits, allowed("kilo-module-state"), {
+    unclassified: (count) =>
+      `Module-level mutable state (${count} site(s)): a top-level let, Map or Set. It is shared by every caller in the process and needs reset hooks in tests. Keep the state in an instance that a service, layer or runtime owns.`,
+    drift: (pkg, expected, count) =>
+      `Ratchet drift for module-level state in ${pkg}: expected ${expected}, found ${count}. Keep new state in an owned instance, or update script/kilocode/architecture-allowlist.json with the reason!`,
+    stale: (pkg) =>
+      `Stale module-state entry: no module-level state found in ${pkg}. Remove from script/kilocode/architecture-allowlist.json!`,
+  }),
+)
+
+// ---------------------------------------------------------------------------
 // Output & Exit
 // ---------------------------------------------------------------------------
 
@@ -291,6 +395,9 @@ const rules = [
   "kilo-database-constructors",
   "kilo-tool-process-env",
   "kilo-httpapi-handlers",
+  "kilo-test-process-state",
+  "kilo-test-blocking-spawn",
+  "kilo-module-state",
 ]
 const totalTracked = rules.reduce((total, rule) => total + Object.keys(allowed(rule)).length, 0)
 

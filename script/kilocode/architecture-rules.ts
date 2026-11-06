@@ -31,6 +31,15 @@ export function importSpecifiers(text: string) {
   return specifiers
 }
 
+// Drops comment lines, so a rule does not count a pattern that a comment only names.
+export function code(text: string) {
+  return text.replace(/^\s*(?:\/\/|\/?\*).*$/gm, "")
+}
+
+export function countMatches(text: string, patterns: RegExp[]) {
+  return patterns.reduce((total, pattern) => total + [...text.matchAll(pattern)].length, 0)
+}
+
 export function forbiddenDirection(specifier: string, forbidden: string[]) {
   if (isInternalAlias(specifier)) return "internal alias (@/)"
   if (forbidden.some((pkg) => isPackage(specifier, pkg))) return "higher layer package"
