@@ -15,6 +15,7 @@ import {
   type MarketplaceActionContext,
 } from "./services/marketplace/actions"
 import type { InstallMarketplaceItemOptions, MarketplaceItem } from "./services/marketplace/types"
+import * as events from "./services/marketplace/telemetry"
 import { TelemetryProxy } from "./services/telemetry"
 import { TelemetryEventName } from "./services/telemetry/types"
 import { mcpAuth } from "./services/mcp-auth"
@@ -344,7 +345,11 @@ export class MarketplacePanelProvider implements vscode.Disposable {
       this.project ?? undefined,
       this.directory(),
     )
-    if (result.success) void vscode.window.showInformationMessage(`Successfully installed ${item.name}`)
+    if (result.success) {
+      // Emitted here, not from the install dialog, so closing the dialog mid-install still counts.
+      TelemetryProxy.capture(TelemetryEventName.MARKETPLACE_ITEM_INSTALLED, events.installed(item, opts))
+      void vscode.window.showInformationMessage(`Successfully installed ${item.name}`)
+    }
     if (result.success && item.type === "mcp") {
       mcpRemoval(this.connection).emit({ directory: this.directory(), name: item.id, phase: "installed" })
     }
@@ -366,7 +371,10 @@ export class MarketplacePanelProvider implements vscode.Disposable {
       this.project ?? undefined,
       this.directory(),
     )
-    if (result.success) void vscode.window.showInformationMessage(`Successfully removed ${item.name}`)
+    if (result.success) {
+      TelemetryProxy.capture(TelemetryEventName.MARKETPLACE_ITEM_REMOVED, events.removed(item, scope))
+      void vscode.window.showInformationMessage(`Successfully removed ${item.name}`)
+    }
     // Mirror install()'s auth refresh so a removed server's stale "needs
     // sign-in" state clears for every provider sharing this McpAuthService
     // (sidebar, chat tabs, Settings) via its onChange broadcast.
