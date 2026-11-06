@@ -1,5 +1,7 @@
 package ai.kilocode.client.ui.list
 
+import ai.kilocode.client.ui.active.ActiveDeleteOptions
+import ai.kilocode.client.ui.active.activeDeleteContent
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.ui.components.JBCheckBox
 import java.awt.Component
@@ -11,8 +13,8 @@ class ActiveListDeletePopupTest : BasePlatformTestCase() {
     fun `test delete content confirms without gate`() {
         val hides = mutableListOf<Unit>()
         val confirms = mutableListOf<Boolean>()
-        val content = activeListDeleteContent(
-            ActiveListDeleteOptions(message = "Delete item?"),
+        val content = activeDeleteContent(
+            ActiveDeleteOptions(message = "Delete item?"),
             hide = { hides += Unit },
             confirm = { confirms += it },
         )
@@ -28,8 +30,8 @@ class ActiveListDeletePopupTest : BasePlatformTestCase() {
     fun `test delete content requires gate confirmation`() {
         val hides = mutableListOf<Unit>()
         val confirms = mutableListOf<Boolean>()
-        val content = activeListDeleteContent(
-            ActiveListDeleteOptions(message = "Delete item?", gate = "Confirm delete"),
+        val content = activeDeleteContent(
+            ActiveDeleteOptions(message = "Delete item?", gate = "Confirm delete"),
             hide = { hides += Unit },
             confirm = { confirms += it },
         )

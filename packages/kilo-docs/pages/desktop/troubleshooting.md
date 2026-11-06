@@ -1,6 +1,6 @@
 ---
 title: "Troubleshooting"
-description: "Fixes for common Kilo Desktop issues, including the local server, git, and local models."
+description: "Fixes for common Kilo Desktop issues, including the local server, git, workspaces, and local models."
 ---
 
 # Troubleshooting
@@ -20,10 +20,15 @@ Kilo Desktop runs the agent through a local server (a `kilo serve` process) that
 Git integration needs your system `git`. If the tools are missing or not working:
 
 - Confirm `git` is installed and on your `PATH`. 
+- If you see *Kilo Desktop needs Git 2.17 or newer, but found Git …*, your `git` is too old. Update Git (run `git --version` to check), then restart Kilo Desktop.
 - If the folder isn't a git repository, use **Initialize Git** in the Changes tab to create one. See [Git integration](/docs/desktop/features/git#set-up-git-for-a-folder).
 - For bare or unsafe repositories, the branch switcher is intentionally hidden. Kilo Desktop shows a short explanation instead of a broken control.
 - **macOS:** if git reports that you haven't agreed to the Xcode license, run `sudo xcodebuild -license` in Terminal, accept it, then try again.
 - **macOS:** if you see *Git was not found. Install Git, then restart Kilo Desktop.*, the Xcode Command Line Tools may be missing. Run `xcode-select --install` in Terminal, then restart Kilo Desktop.
+
+## A workspace shows a warning icon
+
+One or more of the workspace's folders can't be found — it was moved, renamed, deleted, or is on a drive that isn't connected. Select the warning icon to open **Edit workspace**. Use **Add folder** to choose the folder's new location and remove the old entry with **×**. If the folder you removed was **Primary**, the first remaining folder becomes primary, so select **Make primary** on the right folder if needed. Then select **Save**.
 
 ## The agent asks you to sign in
 
