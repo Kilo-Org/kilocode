@@ -113,6 +113,7 @@ export namespace KilocodeConfigOverlay {
     ["indexing", "ollama", "baseUrl"],
     ["indexing", "openai-compatible", "baseUrl"],
     ["indexing", "openai-compatible", "apiKey"],
+    ["indexing", "openai-compatible", "sendDimensions"],
     ["indexing", "gemini", "apiKey"],
     ["indexing", "mistral", "apiKey"],
     ["indexing", "vercel-ai-gateway", "apiKey"],
