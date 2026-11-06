@@ -136,34 +136,34 @@ test("lists local schedules and creates managed definitions through the Kilo Flo
             const rpc = client.rpc(KiloFlowRpc.Definition)
             const output = await rpc.list({}, { location: { directory: nested } })
             expect(output.warnings).toEqual([])
-            expect(output.flows).toHaveLength(2)
-            expect(output.flows).toEqual(
-              expect.arrayContaining([
-                expect.objectContaining({
-                  reference: { type: "native-schedule", scheduleID: time.id },
-                  trigger: expect.objectContaining({ type: "time" }),
-                  context: expect.objectContaining({
-                    directory: nested,
-                    sessionID: first.id,
-                    model: expect.objectContaining({ providerID: "kilo", id: "kilo-auto/free" }),
-                    agent: "build",
-                  }),
+            expect(output.flows).toEqual([
+              expect.objectContaining({
+                reference: { type: "native-schedule", scheduleID: time.id },
+                trigger: expect.objectContaining({ type: "time" }),
+                context: expect.objectContaining({
+                  directory: nested,
+                  sessionID: first.id,
+                  model: expect.objectContaining({ providerID: "kilo", id: "kilo-auto/free" }),
+                  agent: "build",
                 }),
-                expect.objectContaining({
-                  reference: { type: "native-schedule", scheduleID: poll.id },
-                  trigger: expect.objectContaining({ type: "poll", mode: "if" }),
-                  context: expect.objectContaining({ directory: projects[1], sessionID: second.id, agent: "plan" }),
-                }),
-              ]),
-            )
-            expect(new Set(output.flows.map((flow) => flow.context.projectID)).size).toBe(2)
+              }),
+            ])
+            const secondOutput = await rpc.list({}, { location: { directory: projects[1]! } })
+            expect(secondOutput.warnings).toEqual([])
+            expect(secondOutput.flows).toEqual([
+              expect.objectContaining({
+                reference: { type: "native-schedule", scheduleID: poll.id },
+                trigger: expect.objectContaining({ type: "poll", mode: "if" }),
+                context: expect.objectContaining({ directory: projects[1], sessionID: second.id, agent: "plan" }),
+              }),
+            ])
 
-            const requestedPermissions = [{ action: "shell", resource: "git status *" }]
+            const requestedPermissions = [{ action: "shell", resource: "taskctl *" }]
             const permissions = [
               { action: "read", resource: "*" },
               { action: "glob", resource: "*" },
               { action: "grep", resource: "*" },
-              { action: "shell", resource: "*" },
+              { action: "shell", resource: "taskctl *" },
             ]
             const creating = rpc.create(
               {
@@ -184,9 +184,9 @@ test("lists local schedules and creates managed definitions through the Kilo Flo
               expect.objectContaining({
                 sessionID: first.id,
                 action: "flow",
-                resources: ["read: *", "glob: *", "grep: *", "shell: *"],
+                resources: ["read: *", "glob: *", "grep: *", "shell: taskctl *"],
                 message:
-                  "Approve this Flow's unattended permissions:\n- read: *\n- glob: *\n- grep: *\n- shell: *",
+                  "Approve this Flow's unattended permissions:\n- read: *\n- glob: *\n- grep: *\n- shell: taskctl *",
                 metadata: {
                   "kilocode.flow": expect.objectContaining({
                     name: "Weekly maintenance",
@@ -222,6 +222,23 @@ test("lists local schedules and creates managed definitions through the Kilo Flo
               nextRunAt: expect.any(Number),
               health: { status: "healthy" },
             })
+            if (created.reference.type !== "managed" || !created.reference.scheduleID)
+              throw new Error("Expected a managed Flow with a backing schedule")
+            const createdFlowID = created.reference.flowID
+            const createdScheduleID = created.reference.scheduleID
+            const crossProject = await rpc.list({}, { location: { directory: projects[1]! } })
+            expect(
+              crossProject.flows.some(
+                (flow) => flow.reference.type === "managed" && flow.reference.flowID === createdFlowID,
+              ),
+            ).toBeFalse()
+            expect(
+              crossProject.flows.some(
+                (flow) =>
+                  flow.reference.type === "native-schedule" &&
+                  flow.reference.scheduleID === createdScheduleID,
+              ),
+            ).toBeFalse()
             const baselinePermissions = permissions.slice(0, 3)
             const creatingReadOnly = rpc.create(
               {
@@ -353,8 +370,8 @@ test("lists local schedules and creates managed definitions through the Kilo Flo
             )
             const rejection = await eventually(
               () => client.permission.request.list({ location: { directory: nested } }),
-              (result) => result.data.some((request) => request.resources.includes("shell: *")),
-            ).then((result) => result.data.find((request) => request.resources.includes("shell: *")))
+              (result) => result.data.some((request) => request.resources.includes("shell: rm *")),
+            ).then((result) => result.data.find((request) => request.resources.includes("shell: rm *")))
             if (!rejection) throw new Error("Expected a rejectable Flow permission request")
             await client.permission.reply({
               sessionID: rejection.sessionID,
@@ -368,8 +385,7 @@ test("lists local schedules and creates managed definitions through the Kilo Flo
               ),
             ).toBeFalse()
 
-            if (created.reference.type !== "managed") throw new Error("Expected a managed Flow")
-            const flowID = created.reference.flowID
+            const flowID = createdFlowID
             await expect(
               rpc.run({ flowID: created.reference.flowID }, { location: { directory: projects[1]! } }),
             ).rejects.toThrow(`Flow ${created.reference.flowID} does not exist`)

@@ -1,6 +1,7 @@
 import { expect, test } from "bun:test"
 import { Agent } from "@opencode/core/agent"
 import { Model } from "@opencode/core/model"
+import { Permission } from "@opencode/core/permission"
 import { Plugin } from "@opencode/core/plugin"
 import { PluginHost } from "@opencode/core/plugin/host"
 import { PluginHooks } from "@opencode/core/plugin/hooks"
@@ -222,41 +223,73 @@ test("a skipped occurrence does not hide the latest executable run", () => {
 
 test("describes the exact unattended permission contract to a Flow executor", () => {
   expect(
-    permissionInstructions([
-      { action: "shell", resource: "git *" },
-      { action: "edit", resource: "/home/user/status.txt" },
-      { action: "external_directory", resource: "/home/user/*" },
-    ]),
+    permissionInstructions(
+      [
+        { action: "shell", resource: "taskctl *" },
+        { action: "edit", resource: "/home/user/status.txt" },
+        { action: "external_directory", resource: "/home/user/*" },
+      ],
+      ["write", "shell", "read"],
+    ),
   ).toBe(
     [
       "You are running an unattended Flow. No user is present to approve additional permissions.",
+      "Available tools for this run:",
+      "- read",
+      "- shell",
+      "- write",
       "Approved permission patterns:",
-      "- shell: git *",
+      "- shell: taskctl *",
       "- edit: /home/user/status.txt",
       "- external_directory: /home/user/*",
-      "Permission resources are wildcard patterns matched against actual tool requests. Choose tool inputs that match these patterns exactly.",
-      "For shell calls, every parsed command in a compound command must match an approved shell pattern. Prefer dedicated read, edit, or write tools over shell redirection when their actions are approved.",
-      "Do not make exploratory or preflight tool calls outside the allowlist, and do not work around or repeatedly retry a denied operation. If the allowlist cannot complete the task, report the missing action and resource.",
+      "Everything not matched by an approved action and resource pattern is denied.",
+      "How permission resources are matched:",
+      "- read and edit match Location-relative file paths; write, patch, and opencode use the edit action.",
+      "- glob and grep match their pattern text, not the directory searched.",
+      "- shell matches every parsed command in a compound command separately.",
+      "- webfetch matches the requested URL and every redirect URL; websearch matches the query text.",
+      "- Paths outside the Location also require an external_directory rule for the containing directory wildcard.",
+      "- MCP tool actions use the exposed tool name and currently request resource `*`.",
+      "Choose tool inputs that match these patterns exactly. Prefer dedicated read, edit, or write tools over shell redirection when their actions are approved.",
+      "Do not make exploratory or preflight tool calls outside the allowlist, and do not work around or retry a denied operation. If the allowlist cannot complete the task, report the missing action and resource.",
     ].join("\n"),
   )
 })
 
-test("expands requested permissions into reviewed capabilities", () => {
+test("preserves requested permission resources and removes exact duplicates", () => {
   expect(
     flowPermissions([
-      { action: "shell", resource: "git status *" },
-      { action: "edit", resource: "/workspace/status.txt" },
-      { action: "edit", resource: "/workspace/report.txt" },
+      { action: "shell", resource: "taskctl *" },
+      { action: "edit", resource: "reports/*" },
+      { action: "edit", resource: "reports/*" },
+      { action: "webfetch", resource: "https://api.example.com/*" },
+      { action: "github_create_issue", resource: "*" },
       { action: "external_directory", resource: "/home/user/*" },
     ]),
   ).toEqual([
     { action: "read", resource: "*" },
     { action: "glob", resource: "*" },
     { action: "grep", resource: "*" },
-    { action: "shell", resource: "*" },
-    { action: "edit", resource: "*" },
+    { action: "shell", resource: "taskctl *" },
+    { action: "edit", resource: "reports/*" },
+    { action: "webfetch", resource: "https://api.example.com/*" },
+    { action: "github_create_issue", resource: "*" },
     { action: "external_directory", resource: "/home/user/*" },
   ])
+})
+
+test("scoped Flow permissions allow matching resources and deny everything else", () => {
+  const rules = [
+    { action: "*", resource: "*", effect: "deny" as const },
+    ...flowPermissions([
+      { action: "shell", resource: "taskctl *" },
+      { action: "edit", resource: "reports/*" },
+    ]).map((permission) => ({ ...permission, effect: "allow" as const })),
+  ]
+  expect(Permission.evaluate("shell", "taskctl inspect --short", rules).effect).toBe("allow")
+  expect(Permission.evaluate("shell", "otherctl inspect", rules).effect).toBe("deny")
+  expect(Permission.evaluate("edit", "reports/daily.md", rules).effect).toBe("allow")
+  expect(Permission.evaluate("edit", "src/index.ts", rules).effect).toBe("deny")
 })
 
 test.each(["/home/user/*", "C:\\Users\\me\\*", "\\\\server\\share\\*"])(
@@ -265,6 +298,20 @@ test.each(["/home/user/*", "C:\\Users\\me\\*", "\\\\server\\share\\*"])(
     expect(validatePermissions([{ action: "external_directory", resource }])).toBeUndefined()
   },
 )
+
+test.each(["/home/user/*", "C:\\Users\\me\\*", "\\\\server\\share\\*"])(
+  "rejects absolute directory wildcard %s as a shell resource",
+  (resource) => {
+    const error = validatePermissions([{ action: "shell", resource }])
+    expect(error).toContain(`shell permission ${resource} is an absolute directory wildcard`)
+    expect(error).toContain(`use external_directory: ${resource}`)
+    expect(error).toContain("add separate shell permissions for the required commands")
+  },
+)
+
+test("accepts an absolute executable command pattern as a shell resource", () => {
+  expect(validatePermissions([{ action: "shell", resource: "/usr/bin/taskctl *" }])).toBeUndefined()
+})
 
 test.each(["*", "/*", "home/user/*", "../home/user/*", "/home/user/../*"])(
   "rejects unbounded external directory permission %s",
@@ -289,6 +336,12 @@ test("missing Sessions and malformed stored records are isolated", () => {
   })
   const valid = record("flw_valid", Schedule.ID.make("sch_valid"))
   expect(storedRecord(`flow:v1:${valid.id}`, JSON.stringify(valid))).toEqual({ record: valid })
+  const legacy = Schema.decodeUnknownSync(KiloFlowRpc.Record)({
+    ...valid,
+    id: "flw_legacy",
+    permissions: [{ action: "shell", resource: "*" }],
+  })
+  expect(storedRecord(`flow:v1:${legacy.id}`, JSON.stringify(legacy))).toEqual({ record: legacy })
 })
 
 it.live("registers and executes the managed Flow creation and run tools", () =>
@@ -367,13 +420,70 @@ it.live("registers and executes the managed Flow creation and run tools", () =>
       )
       .pipe(Effect.flip)
     expect(wildcardAction.message).toContain("must name one concrete capability")
+    const directoryShell = yield* flowCreate
+      .execute(
+        {
+          name: "Invalid shell directory",
+          when: { every: "1 day", tz: "UTC" },
+          prompt: "Run a command outside the project",
+          worktree: "reuse",
+          permissions: [{ action: "shell", resource: "/home/user/*" }],
+        },
+        {
+          sessionID: source.id,
+          agent: Agent.ID.make("build"),
+          messageID: SessionMessage.ID.create(),
+          id: Tool.CallID.make("call_invalid_flow_shell_directory"),
+          progress: () => Effect.void,
+        },
+      )
+      .pipe(Effect.flip)
+    expect(directoryShell.message).toContain("shell resources must match command text")
+    expect(directoryShell.message).toContain("use external_directory: /home/user/*")
+    expect(backingSchedules.size).toBe(0)
+    const invalidStored = Schema.decodeUnknownSync(KiloFlowRpc.Record)({
+      ...record("flw_invalid_stored"),
+      execution: {
+        type: "local",
+        mode: "fresh",
+        sourceSessionID: source.id,
+        worktree: "reuse",
+      },
+      context: {
+        directory: source.location.directory,
+        projectID: source.projectID,
+        sessionID: source.id,
+        model: source.model,
+        agent: source.agent,
+      },
+      permissions: [{ action: "shell", resource: "/home/user/*" }],
+    })
+    yield* context.storage.set(`flow:v1:${invalidStored.id}`, JSON.stringify(invalidStored))
+    const invalidStoredRun = yield* flowRun
+      .execute(
+        { flowID: invalidStored.id },
+        {
+          sessionID: source.id,
+          agent: Agent.ID.make("build"),
+          messageID: SessionMessage.ID.create(),
+          id: Tool.CallID.make("call_invalid_stored_flow_run"),
+          progress: () => Effect.void,
+        },
+      )
+      .pipe(Effect.flip)
+    expect(invalidStoredRun.message).toContain(`Flow ${invalidStored.id} has invalid permissions`)
+    expect(invalidStoredRun.message).toContain("shell resources must match command text")
+    yield* context.storage.remove(`flow:v1:${invalidStored.id}`)
     const created = yield* flowCreate.execute(
       {
         name: "Nightly check",
         when: { every: "1 day", tz: "UTC" },
         prompt: "Check the project",
         worktree: "reuse",
-        permissions: [],
+        permissions: [
+          { action: "shell", resource: "taskctl *" },
+          { action: "edit", resource: "reports/*" },
+        ],
       },
       {
         sessionID: source.id,
@@ -391,6 +501,8 @@ it.live("registers and executes the managed Flow creation and run tools", () =>
         { action: "read", resource: "*" },
         { action: "glob", resource: "*" },
         { action: "grep", resource: "*" },
+        { action: "shell", resource: "taskctl *" },
+        { action: "edit", resource: "reports/*" },
       ],
       status: "active",
       nextRunAt: expect.any(Number),
@@ -482,10 +594,12 @@ it.live("registers and executes the managed Flow creation and run tools", () =>
     if (!execution.output?.sessionID) return yield* Effect.die("Expected flow_run to return a Session ID")
     const permissions = [
       { action: "*", resource: "*", effect: "deny" as const },
-      { action: "shell", resource: "git *", effect: "allow" as const },
-      { action: "edit", resource: "/home/user/status.txt", effect: "allow" as const },
+      { action: "read", resource: "*", effect: "allow" as const },
+      { action: "glob", resource: "*", effect: "allow" as const },
+      { action: "grep", resource: "*", effect: "allow" as const },
+      { action: "shell", resource: "taskctl *", effect: "allow" as const },
+      { action: "edit", resource: "reports/*", effect: "allow" as const },
     ]
-    yield* context.session.update({ sessionID: execution.output.sessionID, permissions })
     expect(yield* context.session.get({ sessionID: execution.output.sessionID })).toMatchObject({
       id: execution.output.sessionID,
       title: "Flow: Nightly check",
@@ -503,14 +617,41 @@ it.live("registers and executes the managed Flow creation and run tools", () =>
       system: [{ type: "text", text: "Base instructions" }],
       messages: [],
       options: {},
-      tools: {},
+      tools: {
+        write: { description: "Write a file", input: {} },
+        shell: { description: "Run a command", input: {} },
+        read: { description: "Read a file", input: {} },
+      },
     })
-    expect(request.system.at(-1)?.text).toContain("- shell: git *")
-    expect(request.system.at(-1)?.text).toContain("- edit: /home/user/status.txt")
+    expect(request.system.at(-1)?.text).toContain("Available tools for this run:\n- read\n- shell\n- write")
+    expect(request.system.at(-1)?.text).toContain("- shell: taskctl *")
+    expect(request.system.at(-1)?.text).toContain("- edit: reports/*")
+    yield* hooks.trigger("tool", "execute.after", {
+      tool: "shell",
+      sessionID: execution.output.sessionID,
+      agent: Agent.ID.make("build"),
+      messageID: SessionMessage.ID.create(),
+      id: Tool.CallID.make("call_flow_denied_shell"),
+      input: { command: "otherctl mutate" },
+      status: "error",
+      error: new Tool.Error({
+        message: "Permission denied: shell",
+        error: new Permission.BlockedError({
+          rules: [{ action: "*", resource: "*", effect: "deny" }],
+          permission: "shell",
+          resources: ["otherctl mutate"],
+        }),
+      }),
+    })
+    expect(yield* context.storage.get(`flow-run:v1:${execution.output.flowID}:${execution.output.id}`)).toContain(
+      'Flow permission policy blocked shell for \\"otherctl mutate\\" while running shell',
+    )
     yield* context.session.wait({ sessionID: execution.output.sessionID })
-    expect(yield* context.session.get({ sessionID: execution.output.sessionID })).toMatchObject({ outcome: "failed" })
+    expect(yield* context.session.get({ sessionID: execution.output.sessionID })).toMatchObject({
+      outcome: "interrupted",
+    })
     yield* Effect.yieldNow
-    expect(yield* list(context, schedules)).toMatchObject({
+    expect(yield* list(context, schedules, source.projectID)).toMatchObject({
       flows: [
         {
           name: "Nightly check",
@@ -529,7 +670,7 @@ it.live("registers and executes the managed Flow creation and run tools", () =>
       warnings: [],
     })
     yield* context.storage.set(`flow-run:v1:${created.output.reference.flowID}:bad`, "not json")
-    expect(yield* list(context, schedules)).toMatchObject({
+    expect(yield* list(context, schedules, source.projectID)).toMatchObject({
       warnings: [
         {
           source: "managed-run",

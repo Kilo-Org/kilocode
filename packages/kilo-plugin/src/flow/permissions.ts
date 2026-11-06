@@ -11,6 +11,11 @@ export function validatePermissions(permissions: readonly KiloFlowRpc.Permission
     (permission) => permission.action.length === 0 || permission.action.includes("*") || permission.action.includes("?"),
   )
   if (action) return `permission action ${action.action || "(empty)"} must name one concrete capability`
+  const shellDirectory = permissions.find(
+    (permission) => permission.action === "shell" && absoluteDirectoryWildcard(permission.resource),
+  )
+  if (shellDirectory)
+    return `shell permission ${shellDirectory.resource} is an absolute directory wildcard, but shell resources must match command text; use external_directory: ${shellDirectory.resource} for the path and add separate shell permissions for the required commands, such as command-name *`
   const external = permissions.find(
     (permission) => permission.action === "external_directory" && !boundedExternal(permission.resource),
   )
@@ -19,29 +24,37 @@ export function validatePermissions(permissions: readonly KiloFlowRpc.Permission
 }
 
 export function flowPermissions(permissions: readonly KiloFlowRpc.PermissionGrant[]) {
-  return [
-    ...baselinePermissions,
-    ...permissions.map((permission) =>
-      permission.action === "external_directory" ? permission : { ...permission, resource: "*" },
-    ),
-  ].filter(
+  return [...baselinePermissions, ...permissions].filter(
     (permission, index, all) =>
       all.findIndex((item) => item.action === permission.action && item.resource === permission.resource) === index,
   )
 }
 
-export function permissionInstructions(permissions: readonly KiloFlowRpc.PermissionGrant[]) {
+export function permissionInstructions(
+  permissions: readonly KiloFlowRpc.PermissionGrant[],
+  tools: readonly string[] = [],
+) {
+  const available = tools.length === 0 ? ["- None."] : tools.toSorted().map((tool) => `- ${tool}`)
   const allowed =
     permissions.length === 0
       ? ["- No tool permissions are approved."]
       : permissions.map((permission) => `- ${permission.action}: ${permission.resource}`)
   return [
     "You are running an unattended Flow. No user is present to approve additional permissions.",
+    "Available tools for this run:",
+    ...available,
     "Approved permission patterns:",
     ...allowed,
-    "Permission resources are wildcard patterns matched against actual tool requests. Choose tool inputs that match these patterns exactly.",
-    "For shell calls, every parsed command in a compound command must match an approved shell pattern. Prefer dedicated read, edit, or write tools over shell redirection when their actions are approved.",
-    "Do not make exploratory or preflight tool calls outside the allowlist, and do not work around or repeatedly retry a denied operation. If the allowlist cannot complete the task, report the missing action and resource.",
+    "Everything not matched by an approved action and resource pattern is denied.",
+    "How permission resources are matched:",
+    "- read and edit match Location-relative file paths; write, patch, and opencode use the edit action.",
+    "- glob and grep match their pattern text, not the directory searched.",
+    "- shell matches every parsed command in a compound command separately.",
+    "- webfetch matches the requested URL and every redirect URL; websearch matches the query text.",
+    "- Paths outside the Location also require an external_directory rule for the containing directory wildcard.",
+    "- MCP tool actions use the exposed tool name and currently request resource `*`.",
+    "Choose tool inputs that match these patterns exactly. Prefer dedicated read, edit, or write tools over shell redirection when their actions are approved.",
+    "Do not make exploratory or preflight tool calls outside the allowlist, and do not work around or retry a denied operation. If the allowlist cannot complete the task, report the missing action and resource.",
   ].join("\n")
 }
 
@@ -59,4 +72,8 @@ function boundedExternal(resource: string) {
   if (/^[A-Za-z]:\//.test(prefix)) return true
   if (!prefix.startsWith("/")) return false
   return true
+}
+
+function absoluteDirectoryWildcard(resource: string) {
+  return resource.replaceAll("\\", "/").endsWith("/*") && boundedExternal(resource)
 }

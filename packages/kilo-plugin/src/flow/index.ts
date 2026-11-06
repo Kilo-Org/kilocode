@@ -35,7 +35,11 @@ const decodeFlowID = Schema.decodeUnknownOption(KiloFlowRpc.ID)
 const decodeRunID = Schema.decodeUnknownOption(KiloFlowRpc.RunID)
 const decodeMetadata = Schema.decodeUnknownOption(Schema.Struct({ flowID: KiloFlowRpc.ID, runID: KiloFlowRpc.RunID }))
 const decodeBlockedPermission = Schema.decodeUnknownOption(
-  Schema.Struct({ _tag: Schema.Literal("Permission.BlockedError") }),
+  Schema.Struct({
+    _tag: Schema.Literal("Permission.BlockedError"),
+    permission: Schema.String,
+    resources: Schema.Array(Schema.String),
+  }),
 )
 
 type Runtime = {
@@ -70,6 +74,7 @@ export const KiloFlowPlugin = define({
           type: "text",
           text: permissionInstructions(
             (session.permissions ?? []).filter((permission) => permission.effect === "allow"),
+            Object.keys(event.tools),
           ),
         })
       }).pipe(
@@ -93,8 +98,10 @@ export const KiloFlowPlugin = define({
       }),
     )
     yield* ctx.tool.hook("execute.after", (event) => {
-      if (event.status !== "error" || Option.isNone(decodeBlockedPermission(event.error.error))) return Effect.void
-      return permissionFailed(ctx, runtime, event.sessionID, event.tool, event.error.message)
+      if (event.status !== "error") return Effect.void
+      const blocked = Option.getOrUndefined(decodeBlockedPermission(event.error.error))
+      if (!blocked) return Effect.void
+      return permissionFailed(ctx, runtime, event.sessionID, event.tool, blocked.permission, blocked.resources)
     })
     yield* ctx.event
       .subscribe({
@@ -109,7 +116,7 @@ export const KiloFlowPlugin = define({
       )
     yield* ctx.rpc
       .register(KiloFlowRpc.Definition, {
-        list: () => list(ctx, schedules),
+        list: () => list(ctx, schedules, ctx.location.project.id),
         create: (input, context) =>
           create(ctx, schedules, input, ctx.location.project.id).pipe(
             Effect.mapError((error) => context.error("failed", error.message)),
@@ -138,7 +145,7 @@ export const KiloFlowPlugin = define({
         editor.add({
           name: "flow_create",
           description:
-            "Create a scheduled managed local Flow from this Session. Every new Flow receives repository-local read, glob, and grep access. Before calling, identify every additional tool action the Flow may need, such as edit, shell, webfetch, or an MCP tool. Additional grants are capability-scoped: each requested action is approved with resource `*`, so the run is not coupled to inputs predicted during creation. external_directory is the exception and must remain a bounded directory wildcard such as `/home/user/*`. The user reviews the final baseline plus additional capabilities before the Flow is stored. The executor receives this same allowlist as a constraint. Use an empty list when the baseline is sufficient. The Flow appears in /periodic, runs automatically on its schedule, and can also be started manually with flow_run.",
+            "Create a scheduled managed local Flow from this Session. Every new Flow receives repository-local read, glob, and grep access. Before calling, identify every additional unattended permission action and its narrowest stable resource pattern. Shell resources match parsed command text, such as `taskctl *`; never use a filesystem directory as a shell resource. File actions use paths or patterns, such as `edit: reports/*`. webfetch uses URL patterns, websearch uses query patterns, and MCP tools currently require resource `*` because their permission requests are capability-wide. Paths outside the Flow directory also require external_directory with a bounded directory wildcard such as `/home/user/*`, separately from any shell command permission needed to operate there. The user reviews the exact baseline plus additional patterns before the Flow is stored, and the executor receives the available tools and same allowlist as constraints. Use an empty list when the baseline is sufficient. The Flow appears in /periodic, runs automatically on its schedule, and can also be started manually with flow_run.",
           input: KiloFlowRpc.CreateRequest,
           output: KiloFlowRpc.Info,
           options: { codemode: true },
@@ -551,6 +558,7 @@ function failRun(ctx: Plugin.Context, run: KiloFlowRpc.Run, error: unknown) {
 export function list(
   ctx: Plugin.Context,
   schedules: Pick<Schedule.Interface, "list">,
+  projectID: Session.Info["projectID"],
 ): Effect.Effect<KiloFlowRpc.ListOutput> {
   return Effect.gen(function* () {
     const observedAt = Date.now()
@@ -566,9 +574,10 @@ export function list(
           ]
         : []
     const stored = yield* records(ctx)
+    const scopedRecords = stored.records.filter((record) => record.context.projectID === projectID)
     const storedRuns = yield* runs(
       ctx,
-      stored.records.map((record) => record.id),
+      scopedRecords.map((record) => record.id),
     )
     const sessions = yield* Effect.forEach(
       native,
@@ -584,12 +593,23 @@ export function list(
               .pipe(Effect.map((session) => [schedule.id, Option.getOrUndefined(session)] as const)),
       { concurrency: "unbounded" },
     ).pipe(Effect.map((entries) => new Map(entries)))
+    const managedScheduleIDs = new Set(
+      stored.records.flatMap((record) => (record.scheduleID ? [record.scheduleID] : [])),
+    )
+    const scopedManagedScheduleIDs = new Set(
+      scopedRecords.flatMap((record) => (record.scheduleID ? [record.scheduleID] : [])),
+    )
+    const scopedSchedules = native.filter(
+      (schedule) =>
+        scopedManagedScheduleIDs.has(schedule.id) ||
+        (!managedScheduleIDs.has(schedule.id) && sessions.get(schedule.id)?.projectID === projectID),
+    )
     return assemble({
-      records: stored.records,
+      records: scopedRecords,
       runs: storedRuns.runs,
-      schedules: native,
+      schedules: scopedSchedules,
       sessions,
-      warnings: [...nativeWarnings, ...stored.warnings, ...storedRuns.warnings],
+      warnings: [...nativeWarnings, ...storedRuns.warnings],
       observedAt,
     })
   })
@@ -943,18 +963,17 @@ function complete(
     yield* withStoredRun(ctx, runtime, session, (stored) =>
       Effect.gen(function* () {
         const completed = event.created
-        const status =
-          event.type === "session.execution.succeeded"
-            ? stored.error
-              ? "failed"
-              : "succeeded"
+        const status = stored.error
+          ? "failed"
+          : event.type === "session.execution.succeeded"
+            ? "succeeded"
             : event.type === "session.execution.failed"
               ? "failed"
               : "interrupted"
         const updated: KiloFlowRpc.Run = {
           ...stored,
           status,
-          ...(event.type === "session.execution.failed" ? { error: event.data.error.message } : {}),
+          ...(event.type === "session.execution.failed" && !stored.error ? { error: event.data.error.message } : {}),
           time: { ...stored.time, updated: completed, completed },
         }
         yield* persistRun(ctx, updated)
@@ -968,16 +987,24 @@ function complete(
   )
 }
 
-function permissionFailed(ctx: Plugin.Context, runtime: Runtime, sessionID: Session.ID, tool: string, message: string) {
+function permissionFailed(
+  ctx: Plugin.Context,
+  runtime: Runtime,
+  sessionID: Session.ID,
+  tool: string,
+  permission: string,
+  resources: readonly string[],
+) {
   return Effect.gen(function* () {
     const session = yield* ctx.session.get({ sessionID })
     yield* withStoredRun(ctx, runtime, session, (stored) =>
       persistRun(ctx, {
         ...stored,
-        error: `Flow permission policy blocked ${tool}: ${message}`,
+        error: `Flow permission policy blocked ${permission} for ${resources.map((resource) => JSON.stringify(resource)).join(", ")} while running ${tool}`,
         time: { ...stored.time, updated: Date.now() },
       }),
     )
+    yield* ctx.session.interrupt({ sessionID }).pipe(Effect.ignore)
   }).pipe(
     Effect.catchCause((cause) =>
       Effect.logWarning("failed to record Flow permission error", { sessionID, tool, cause }),

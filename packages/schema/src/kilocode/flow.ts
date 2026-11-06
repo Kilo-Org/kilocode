@@ -85,6 +85,17 @@ export const PermissionGrant = Schema.Struct({
 }).annotate({ identifier: "KiloFlow.PermissionGrant" })
 export type PermissionGrant = typeof PermissionGrant.Type
 
+const CreatePermissionGrant = Schema.Struct({
+  action: Permission.Rule.fields.action.annotate({
+    description:
+      "Concrete permission capability. Common actions include shell, edit, read, glob, grep, webfetch, websearch, external_directory, and an exposed MCP tool name.",
+  }),
+  resource: Permission.Rule.fields.resource.annotate({
+    description:
+      "Wildcard pattern in the action's resource domain. shell matches parsed command text such as `taskctl *`, never a filesystem directory. File actions use paths or search patterns. webfetch uses URLs, websearch uses query text, external_directory uses a bounded absolute directory wildcard such as `/home/user/*`, and MCP tool actions currently use `*`.",
+  }),
+})
+
 export const ManagedReference = Schema.Struct({
   type: Schema.tag("managed"),
   flowID: ID,
@@ -198,9 +209,9 @@ const CreateFields = {
   worktree: Schema.Literals(["reuse", "new"]).annotate({
     description: "Reuse the source directory or create a new worktree for each run.",
   }),
-  permissions: Schema.Array(PermissionGrant).annotate({
+  permissions: Schema.Array(CreatePermissionGrant).annotate({
     description:
-      "Additional unattended tool capabilities beyond the repository-local read, glob, and grep baseline added to every new Flow. Identify each action the Flow may need, such as edit, shell, webfetch, or an MCP tool. Requested actions are stored with resource `*` so execution is not coupled to inputs predicted during creation. external_directory is the exception and must use a bounded directory wildcard such as `/home/user/*`; an exact directory path does not cover its contents. The user reviews the final baseline plus additional capabilities before creation, and the executor receives that list as a constraint. Use an empty array when the baseline is sufficient.",
+      "Additional unattended permission patterns beyond the repository-local read, glob, and grep baseline added to every new Flow. Identify each action and its narrowest stable resource. Shell resources match parsed command text, such as `taskctl *`; filesystem paths never belong in shell resources. File actions use paths or search patterns, webfetch uses URL patterns, websearch uses query patterns, and MCP tools currently require resource `*`. Paths outside the Flow directory also need external_directory with a bounded directory wildcard such as `/home/user/*`, separately from any command permission; an exact directory path does not cover its contents. The user reviews the exact baseline plus additional patterns before creation, and the executor receives the available tools and same allowlist as constraints. Use an empty array when the baseline is sufficient.",
   }),
   model: Model.Ref.pipe(optional).annotate({ description: "Model override. Defaults to the source Session model." }),
   agent: Agent.ID.pipe(optional).annotate({ description: "Agent override. Defaults to the source Session agent." }),
