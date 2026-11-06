@@ -106,6 +106,16 @@ export type SpeechToTextStatus = {
   readonly catalogError?: string
 }
 
+/**
+ * Worktree actions of the sidebar chat. The host routes them to the Agent Manager provider, which owns worktree
+ * creation and movement.
+ */
+export type SidebarWorktree =
+  | { type: "continueInWorktree"; sessionId: string }
+  | { type: "agentManager.createWorktree"; baseBranch?: string; branchName?: string }
+  | { type: "agentManager.requestRepoInfo" }
+  | { type: "openAdvancedWorktree" }
+
 export type ToHost =
   | Request
   | BrowserTab
@@ -116,6 +126,7 @@ export type ToHost =
   | Settings
   | Speech
   | Indexing
+  | SidebarWorktree
   | ({ type: "openSettingsTab" } & SettingsNavigation)
   | { type: "settingsReady" }
   | { type: "settingsTabChanged"; tab: string }
@@ -438,6 +449,10 @@ export type ToWebview =
   | { type: "displaySettingsLoaded"; values: DisplaySettings; error?: string }
   /** The working tree change counts of the Changes button; absent when the directory is not a git repository. */
   | { type: "gitChangesStats"; stats?: GitChangesStats }
+  /** The current branch of the workspace, for the sidebar New Worktree menu. Absent outside a git repository. */
+  | { type: "agentManager.repoInfo"; branch?: string }
+  /** Progress of a sidebar conversation moving into a worktree. */
+  | { type: "continueInWorktreeProgress"; status: string; detail?: string; error?: string }
   | { type: "speechToTextConfigLoaded"; status: SpeechToTextStatus }
   | { type: "speechToTextStarted"; requestId: string }
   | { type: "speechToTextResult"; requestId: string; text: string }

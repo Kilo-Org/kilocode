@@ -59,6 +59,18 @@ const VIEW_SETTING_KEYS: Record<View, ReadonlySet<string>> = {
   diffViewer: new Set(),
 }
 
+/** The Agent Manager worktree actions of the sidebar chat. */
+export type ChatWorktree = {
+  /** Moves a conversation into a new worktree, reporting each step. */
+  continue: (sessionId: string, progress: (status: string, detail?: string, error?: string) => void) => Promise<void>
+  /** Creates a worktree, then opens the Agent Manager. */
+  create: (baseBranch?: string, branchName?: string) => Promise<void>
+  /** Opens the Agent Manager worktree dialog. */
+  advanced: () => Promise<void>
+  /** The current branch of the workspace, for the New Worktree menu. */
+  branch: () => Promise<string | undefined>
+}
+
 export function chat(input: {
   context: ExtensionContext
   server: Manager
@@ -72,6 +84,8 @@ export function chat(input: {
   changes?: ChangesTab
   /** Creates the working tree stats source of this view, pushing each change to `onStats`. */
   gitStats?: (onStats: (stats?: GitChangesStats) => void) => GitChanges
+  /** The Agent Manager worktree actions of the sidebar chat. */
+  worktree?: ChatWorktree
 }) {
   // This host owns the persisted auto-approve flag, and the Agent Manager sweep reads it. Record it at activation, so
   // the sweep works before any webview resolves.
@@ -178,6 +192,8 @@ export function wire(input: {
   changes?: ChangesTab
   /** Reads the working tree change counts of the Changes button. */
   gitStats?: () => Promise<GitChangesStats | undefined>
+  /** The Agent Manager worktree actions of the sidebar chat. */
+  worktree?: ChatWorktree
   /** Called on every message from the webview, before it is handled. */
   onMessage?: () => void
   /** Receives focus changes of the chat sidebar webview. */
@@ -395,6 +411,42 @@ export function wire(input: {
         return false
     }
   }
+  // The sidebar worktree actions go to the Agent Manager, which owns worktree creation and movement.
+  const handleWorktreeMessage = (message: ToHost): boolean => {
+    if (message.type === "agentManager.requestRepoInfo") {
+      void (input.worktree?.branch() ?? Promise.resolve(undefined))
+        .catch(() => undefined)
+        .then((branch) => post({ type: "agentManager.repoInfo", branch }))
+      return true
+    }
+    if (message.type === "continueInWorktree") {
+      if (!input.worktree) {
+        post({ type: "continueInWorktreeProgress", status: "error", error: "Continue in Worktree is not available" })
+        return true
+      }
+      void input.worktree
+        .continue(message.sessionId, (status, detail, error) =>
+          post({ type: "continueInWorktreeProgress", status, detail, error }),
+        )
+        .catch((error: unknown) =>
+          post({ type: "continueInWorktreeProgress", status: "error", error: errorText(error) }),
+        )
+      return true
+    }
+    if (message.type === "agentManager.createWorktree") {
+      void input.worktree?.create(message.baseBranch, message.branchName).catch((error: unknown) => {
+        post({ type: "continueInWorktreeProgress", status: "error", error: errorText(error) })
+      })
+      return true
+    }
+    if (message.type === "openAdvancedWorktree") {
+      void input.worktree?.advanced().catch((error: unknown) => {
+        post({ type: "continueInWorktreeProgress", status: "error", error: errorText(error) })
+      })
+      return true
+    }
+    return false
+  }
   // Leaf host actions that carry no state, kept together so the main handler stays within the complexity limit.
   const handleLeafMessage = (message: ToHost): boolean => {
     if (message.type === "saveImage") {
@@ -423,6 +475,7 @@ export function wire(input: {
         .then((stats) => post({ type: "gitChangesStats", stats }))
       return true
     }
+    if (handleWorktreeMessage(message)) return true
     // The Kilo Gateway sign-in runs in the Profile panel, as main opens its Profile tab.
     if (message.type === "openProfile") {
       void commands.executeCommand("kilo-code.v2.profile")
@@ -605,6 +658,10 @@ export function html(input: {
 
 function escape(text: string) {
   return text.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+}
+
+function errorText(error: unknown) {
+  return error instanceof Error ? error.message : String(error)
 }
 
 type View = "chat" | "settings" | "profile" | "agentManager" | "documents" | "diffViewer"

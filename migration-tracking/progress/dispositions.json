@@ -656,6 +656,12 @@
     "note": "webview-ui/src/components/settings/CustomProviderValidation.ts carries the {env:VAR} key spelling (parseEnvKey) and the config value builder; CustomProviderDialog.tsx carries MASKED_CUSTOM_PROVIDER_KEY and stores the key as a v2 credential through settings.connectKey (the config provider registers a key method). The v1 deep-merge null sentinels are not needed: the host writes providers.<id> with jsonc-parser modify and removes the v1 provider.<id> alias in the same pass.",
     "by": "settings-custom-provider"
   },
+  "module:packages/kilo-vscode/tests/unit/fork-session.test.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-vscode/test/fork-session.test.ts",
+    "note": "Covers the message boundary, the selected worktree directory, registration of the fork, and that the fork is still reported when the handoff fails. The handoff asserts resume false so the fork does not start a model reply.",
+    "by": "rose-antarctopelta"
+  },
   "module:packages/kilo-vscode/tests/unit/custom-provider-dialog-validate.test.ts": {
     "state": "ported",
     "note": "packages/kilo-vscode/test/custom-provider.test.ts carries the assertions: provider ID format, duplicate model ids, base URL format, model capability mapping (reasoning and image), header completeness and the {env:VAR} key spelling, plus the providers.<id> write and the provider alias removal.",
@@ -671,6 +677,12 @@
     "v2": "packages/kilo-vscode/webview-ui/src/v2/feedback.tsx",
     "note": "Same logo, three URLs, copy keys, button order and feedback-* classes as the v1 dialog. Links open through the V2 scope (the open host message) because the v1 openExternal webview message does not exist on the v2 relay.",
     "by": "v2-feedback"
+  },
+  "module:packages/kilo-vscode/webview-ui/src/components/chat/SessionTabStrip.tsx": {
+    "state": "ported",
+    "v2": "packages/kilo-vscode/webview-ui/src/v2/session-tabs.tsx",
+    "note": "Same drag reorder, pin, middle-click and context-menu close, close others/right, keyboard navigation, activity labels, tab switcher, width and prompt-mention drop. The v2 strip takes the local tabs and onFork as props; fork runs from the v2 session API and opens the fork after the source.",
+    "by": "rose-antarctopelta"
   },
   "module:packages/kilo-vscode/webview-ui/src/components/settings/ModeCreateView.tsx": {
     "state": "ported",

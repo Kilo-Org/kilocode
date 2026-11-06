@@ -243,6 +243,19 @@ export function activate(context: ExtensionContext) {
     diff: diffs,
     changes,
     gitStats: (onStats) => gitChanges({ directory, onStats }),
+    worktree: {
+      continue: (sessionId, progress) =>
+        agentManagerRef?.continueFromSidebar(sessionId, progress) ?? Promise.resolve(),
+      create: (baseBranch, branchName) =>
+        agentManagerRef?.createFromSidebar(baseBranch, branchName) ?? Promise.resolve(),
+      advanced: () => agentManagerRef?.openAdvancedWorktree() ?? Promise.resolve(),
+      branch: () =>
+        agentManagerRef
+          ?.getWorktreeManager()
+          ?.currentBranch()
+          .then((branch) => branch || undefined)
+          .catch(() => undefined) ?? Promise.resolve(undefined),
+    },
     openBrowser: (sessionId, url) => browserTab?.openUrl(sessionId, url) ?? false,
     documents: () => documentsRef.current,
   })

@@ -79,7 +79,11 @@ describe("continue-in-worktree steps", () => {
     expect(fork).toHaveBeenCalledWith({ sessionID: "session-1" })
     expect(move).toHaveBeenCalledWith({ sessionID: "forked", directory: "/tmp/wt" })
     expect(synthetic).toHaveBeenCalledWith(
-      expect.objectContaining({ sessionID: "forked", text: expect.stringContaining("/tmp/wt") }),
+      expect.objectContaining({
+        sessionID: "forked",
+        text: expect.stringContaining("/tmp/wt"),
+        resume: false,
+      }),
     )
   })
 

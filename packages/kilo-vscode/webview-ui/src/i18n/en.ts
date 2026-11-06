@@ -788,6 +788,7 @@ export const dict = {
   "sidebar.session.changes.title": "Changes",
   "sidebar.session.changes.openAll": "Open All",
   "sidebar.session.newSession.tooltip": "Start a fresh conversation while keeping the current session intact.",
+  "sidebar.session.forkBusy": "Wait for the session to finish before forking it.",
   "sidebar.session.newWorktree": "New Worktree",
   "sidebar.session.newWorktree.tooltip":
     "Create an isolated git worktree to experiment safely, keep changes separated, and run parallel sessions without disrupting your current branch.",

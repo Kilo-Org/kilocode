@@ -1,6 +1,9 @@
 // The sidebar: history or one session laid out like main's ChatView (transcript, docks, prompt).
 import { Button } from "@kilocode/kilo-ui/button"
+import { DropdownMenu } from "@kilocode/kilo-ui/dropdown-menu"
 import { Icon } from "@kilocode/kilo-ui/icon"
+import { Spinner } from "@kilocode/kilo-ui/spinner"
+import { showToast } from "@kilocode/kilo-ui/toast"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import type { ToolActions } from "@kilocode/kilo-ui/message-part"
 import {
@@ -22,7 +25,7 @@ import type { ReferenceHandler } from "./append-ready"
 import { useV2 } from "./client"
 import { useDisplaySettings } from "./display-settings"
 import { SessionList } from "./history"
-import { forkText } from "../../../src/agent-manager/fork-handoff"
+import { recordForkHandoff } from "../../../src/agent-manager/fork-handoff"
 import { createLocalTabs } from "./local-tabs"
 import { SessionTabStrip } from "./session-tabs"
 import { SessionView } from "./session-view"
@@ -50,6 +53,29 @@ export function Chat() {
   })
   onCleanup(stopStats)
   vscode.postMessage({ type: "requestGitChangesStats" } satisfies ToHost as never)
+  // The Agent Manager owns worktree creation and movement, so the sidebar asks it for the branch and reports its steps.
+  const [transferring, setTransferring] = createSignal(false)
+  const [transferDetail, setTransferDetail] = createSignal("")
+  const [repoBranch, setRepoBranch] = createSignal<string>()
+  const stopWorktree = vscode.onMessage((raw) => {
+    const message = raw as ToWebview
+    if (message.type === "agentManager.repoInfo") return setRepoBranch(message.branch)
+    if (message.type !== "continueInWorktreeProgress") return
+    if (message.status === "done") {
+      setTransferring(false)
+      setTransferDetail("")
+      return
+    }
+    if (message.status === "error") {
+      setTransferring(false)
+      setTransferDetail("")
+      showToast({ variant: "error", title: message.error ?? language.t("sidebar.session.progress.failed") })
+      return
+    }
+    setTransferDetail(language.t(`sidebar.session.progress.${message.status}`))
+  })
+  onCleanup(stopWorktree)
+  vscode.postMessage({ type: "agentManager.requestRepoInfo" } satisfies ToHost as never)
   // Display layouts are Kilo-only config keys, so the host reads them. Ask on connect and after every config change.
   const display = useDisplaySettings()
   createEffect(
@@ -89,13 +115,15 @@ export function Chat() {
     )
   })
 
-  const forkSession = (id: string) => {
+  const forkSession = (id: string, messageId?: string) => {
+    if (v2.data.session.status(id) === "running") {
+      showToast({ title: language.t("sidebar.session.forkBusy") })
+      return
+    }
     void v2.api.session
-      .fork({ sessionID: id })
+      .fork({ sessionID: id, ...(messageId ? { before: messageId } : {}) })
       .then(async (info) => {
-        await v2.api.session
-          .synthetic({ sessionID: info.id, text: forkText({ directory: v2.directory }) })
-          .catch(v2.report)
+        await recordForkHandoff({ client: v2.api, sessionId: info.id, directory: v2.directory }).catch(v2.report)
         v2.data.session.remember(info)
         tabs.openAfter(id, info.id)
       })
@@ -178,8 +206,7 @@ export function Chat() {
     ).then((results) => results.flat())
   }
   // The Changes tab opens the whole working tree of the session, as v1's Changes button did.
-  const openChanges = () =>
-    vscode.postMessage({ type: "openChanges", sessionID: session() } satisfies ToHost as never)
+  const openChanges = () => vscode.postMessage({ type: "openChanges", sessionID: session() } satisfies ToHost as never)
 
   // A turn opens the Changes tab in turn scope: `turnID` is the user message that started it.
   const openTurnChanges = (sessionID: string, turnID: string) =>
@@ -217,12 +244,38 @@ export function Chat() {
     )
   }
 
-  // main's ChatView actions row. New Session and Changes have v2 counterparts: the worktree and fork actions need
-  // the Agent Manager.
+  const worktreeTooltip = language.t("sidebar.session.newWorktree.tooltip")
+  const advancedTooltip = language.t("sidebar.session.configureWorktree.tooltip")
+  const moveTooltip = () => {
+    const value = stats()
+    if (!value?.files) return language.t("sidebar.session.moveToWorktree.tooltip.empty")
+    if (value.files === 1) return language.t("sidebar.session.moveToWorktree.tooltip.one")
+    return language.t("sidebar.session.moveToWorktree.tooltip.other", { files: value.files })
+  }
+
+  let worktreeRef: HTMLDivElement | undefined
+  const startWorktree = () => vscode.postMessage({ type: "agentManager.createWorktree" } satisfies ToHost as never)
+  const startWorktreeFromBranch = () => {
+    const branch = repoBranch()
+    if (!branch) return
+    vscode.postMessage({ type: "agentManager.createWorktree", baseBranch: branch } satisfies ToHost as never)
+  }
+  const showAdvancedWorktree = () => vscode.postMessage({ type: "openAdvancedWorktree" } satisfies ToHost as never)
+  const moveToWorktree = () => {
+    if (transferring()) return
+    const id = session()
+    if (!id) return
+    setTransferring(true)
+    setTransferDetail(language.t("sidebar.session.progress.capturing"))
+    vscode.postMessage({ type: "continueInWorktree", sessionId: id } satisfies ToHost as never)
+  }
+
+  // The session actions row: New Session, the worktree actions, Changes and the todo chip. The worktree actions
+  // need a git repository, and their branch comes from the Agent Manager.
   const row = (hasMessages: boolean, todos: JSX.Element) => (
-    <Show when={hasMessages}>
-      <div class="new-task-button-wrapper">
-        <div class="session-actions-row">
+    <div class="new-task-button-wrapper">
+      <div class="session-actions-row">
+        <Show when={hasMessages}>
           <Tooltip value={language.t("sidebar.session.newSession.tooltip")} placement="top">
             <Button
               variant="secondary"
@@ -234,6 +287,72 @@ export function Chat() {
               {language.t("sidebar.session.newSession")}
             </Button>
           </Tooltip>
+        </Show>
+        <Show when={repoBranch()}>
+          <div class="session-worktree-split" ref={worktreeRef}>
+            <Tooltip value={worktreeTooltip} placement="top">
+              <Button
+                variant="secondary"
+                size="small"
+                class="session-worktree-main"
+                onClick={startWorktree}
+                aria-label={language.t("sidebar.session.newWorktree")}
+              >
+                {language.t("sidebar.session.newWorktree")}
+              </Button>
+            </Tooltip>
+            <DropdownMenu gutter={4} placement="top-start" getAnchorRect={() => worktreeRef?.getBoundingClientRect()}>
+              <Tooltip value={advancedTooltip} placement="top">
+                <DropdownMenu.Trigger
+                  class="session-worktree-split-arrow"
+                  aria-label={language.t("agentManager.worktree.advancedOptions")}
+                >
+                  <Icon name="chevron-down" size="small" />
+                </DropdownMenu.Trigger>
+              </Tooltip>
+              <DropdownMenu.Portal>
+                <DropdownMenu.Content class="session-worktree-split-menu">
+                  <DropdownMenu.Item disabled={!repoBranch()} onSelect={startWorktreeFromBranch}>
+                    <span class="session-worktree-menu-gap" aria-hidden="true" />
+                    <DropdownMenu.ItemLabel class="session-worktree-menu-label">
+                      <span>{language.t("sidebar.session.newWorktree.from")}</span>
+                      <span class="session-worktree-menu-branch">
+                        <Icon name="branch" size="small" />
+                        <strong>{repoBranch() ?? language.t("sidebar.session.currentBranch")}</strong>
+                      </span>
+                    </DropdownMenu.ItemLabel>
+                  </DropdownMenu.Item>
+                  <DropdownMenu.Item onSelect={showAdvancedWorktree}>
+                    <Icon name="settings-gear" size="small" />
+                    <DropdownMenu.ItemLabel>
+                      {language.t("agentManager.dialog.configureWorktree")}
+                    </DropdownMenu.ItemLabel>
+                  </DropdownMenu.Item>
+                </DropdownMenu.Content>
+              </DropdownMenu.Portal>
+            </DropdownMenu>
+          </div>
+        </Show>
+        <Show when={hasMessages && repoBranch()}>
+          <Tooltip value={moveTooltip()} placement="top">
+            <Button
+              variant="ghost"
+              size="small"
+              class="session-move-action"
+              aria-disabled={transferring()}
+              onClick={moveToWorktree}
+              aria-label={language.t("sidebar.session.moveToWorktree")}
+            >
+              <Show when={transferring()} fallback={<Icon name="branch" size="small" />}>
+                <Spinner class="chat-spinner-small" />
+              </Show>
+              <span class="session-move-label">
+                {transferring() ? transferDetail() : language.t("sidebar.session.moveToWorktree")}
+              </span>
+            </Button>
+          </Tooltip>
+        </Show>
+        <Show when={hasMessages}>
           <Tooltip value={changesTooltip()} placement="top" class="session-move-changes-trigger">
             <Button
               variant="ghost"
@@ -254,10 +373,10 @@ export function Chat() {
               </Show>
             </Button>
           </Tooltip>
-          {todos}
-        </div>
+        </Show>
+        {todos}
       </div>
-    </Show>
+    </div>
   )
 
   return (
@@ -282,6 +401,8 @@ export function Chat() {
           actions={toolActions}
           onShowHistory={() => setView("history")}
           onViewTurnChanges={openTurnChanges}
+          onForkMessage={forkSession}
+          onForkSession={forkSession}
           row={row}
           onReviewAppendReady={reviewQueue.ready}
           onComposerReady={composerQueue.ready}

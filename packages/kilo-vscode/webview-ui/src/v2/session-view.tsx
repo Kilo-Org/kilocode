@@ -282,7 +282,7 @@ export function SessionView(props: {
         {(id) => (
           <TaskHeader
             sessionID={id}
-            onFork={props.onForkSession ? () => props.onForkSession?.(id) : undefined}
+            onFork={props.onForkSession && hasMessages() ? () => props.onForkSession?.(id) : undefined}
           />
         )}
       </Show>
