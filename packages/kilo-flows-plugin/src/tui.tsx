@@ -213,6 +213,10 @@ export function FlowsDialog(props: {
     try {
       const started = await run(flowID, signal)
       if (signal.aborted) return
+      if (started.status === "skipped") {
+        setNotice({ message: `Skipped ${flow.name}: another run is active.`, variant: "info" })
+        return
+      }
       const current = result()
       if (!current) return
       replace({
@@ -347,7 +351,9 @@ export function FlowsDialog(props: {
         title: "Cancel Flow deletion",
         group: "Periodic",
         enabled: confirmingDelete,
-        run: () => setConfirmingDelete(false),
+        run: () => {
+          setConfirmingDelete(false)
+        },
       },
       {
         bind: "v",
@@ -453,6 +459,7 @@ export function FlowsDialog(props: {
                     paddingLeft={1}
                     paddingRight={1}
                     backgroundColor={active() ? theme().background.action.primary.focused : undefined}
+                    onMouseDown={() => setSelected(index())}
                     onMouseOver={() => setSelected(index())}
                     onMouseUp={() => showDetail(flow)}
                   >

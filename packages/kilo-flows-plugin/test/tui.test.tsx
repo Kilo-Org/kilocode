@@ -298,6 +298,38 @@ test("fits short terminals, scrolls details, and restores the selected row", asy
   }
 })
 
+test("keeps the clicked Flow selected when returning from details", async () => {
+  const commands: KeymapCommand[] = []
+  const app = await testRender(
+    () => (
+      <FlowsDialog
+        context={context(commands)}
+        load={() =>
+          Promise.resolve(
+            output([
+              flow({ id: "flw_first", name: "First", status: "active", managed: true }),
+              flow({ id: "flw_second", name: "Second", status: "active", managed: true }),
+            ]),
+          )
+        }
+      />
+    ),
+    { width: 88, height: 24 },
+  )
+  try {
+    app.renderer.start()
+    await app.waitForFrame((frame) => frame.includes("First") && frame.includes("Second"))
+    const rows = app.captureCharFrame().split("\n")
+    const row = rows.findIndex((line) => line.includes("Second"))
+    await app.mockMouse.click(rows[row]!.indexOf("Second"), row)
+    await app.waitForFrame((frame) => frame.includes("Periodic / Second"))
+    command(commands, "escape").run()
+    await app.waitForFrame((frame) => frame.includes("› Second"))
+  } finally {
+    app.renderer.destroy()
+  }
+})
+
 test("truncates long summaries and titles without hiding dialog controls", async () => {
   const commands: KeymapCommand[] = []
   const app = await testRender(
@@ -428,7 +460,7 @@ test("runs, disables, enables, and deletes a managed Flow from its details", asy
     await app.waitForFrame((frame) => frame.includes("Disable") && frame.includes("Run now"))
     command(commands, "d").run()
     await app.waitForFrame((frame) => frame.includes("Delete Controlled?"))
-    command(commands, "n").run()
+    expect(command(commands, "n").run()).toBeUndefined()
     await app.waitForFrame((frame) => frame.includes("Periodic / Controlled") && !frame.includes("Delete Controlled?"))
     command(commands, "d").run()
     await app.waitForFrame((frame) => frame.includes("Delete Controlled?"))
@@ -517,6 +549,49 @@ test("shows failed and rejected run attempts as errors", async () => {
     expect(failed?.fg.equals(errorText)).toBeTrue()
     command(commands, "r").run()
     await app.waitForFrame((frame) => frame.includes("Run failed: executor unavailable"))
+  } finally {
+    app.renderer.destroy()
+  }
+})
+
+test("keeps the latest real run when a manual run is skipped", async () => {
+  const commands: KeymapCommand[] = []
+  const focused: string[] = []
+  const active = flow({ id: "flw_busy", name: "Busy", status: "active", run: "running" })
+  const app = await testRender(
+    () => (
+      <FlowsDialog
+        context={context(commands, [], focused)}
+        load={() => Promise.resolve(output([active]))}
+        run={() =>
+          Promise.resolve(
+            Schema.decodeUnknownSync(KiloFlowRpc.Run)({
+              version: 1,
+              id: "flr_skipped",
+              flowID: "flw_busy",
+              status: "skipped",
+              worktree: "reuse",
+              time: { created: 30, updated: 30, completed: 30 },
+            }),
+          )
+        }
+      />
+    ),
+    { width: 88, height: 24 },
+  )
+  try {
+    app.renderer.start()
+    await app.waitForFrame((frame) => frame.includes("Busy"))
+    command(commands, "return").run()
+    await app.waitForFrame((frame) => frame.includes("Latest run") && frame.includes("Running"))
+    command(commands, "r").run()
+    await app.waitForFrame((frame) => frame.includes("Skipped Busy: another run is active."))
+    const frame = app.captureCharFrame()
+    expect(frame).toContain("Running")
+    expect(frame).toContain("View session")
+    expect(frame).not.toContain("Latest run Skipped")
+    command(commands, "v").run()
+    expect(focused).toEqual(["ses_flow_run"])
   } finally {
     app.renderer.destroy()
   }
