@@ -359,6 +359,7 @@
         "@kilocode/gateway-core": "workspace:*",
         "@kilocode/kilo-indexing": "workspace:*",
         "@kilocode/sandbox": "workspace:*",
+        "@opencode/ai": "workspace:*",
         "@opencode/client": "workspace:*",
         "@opencode/core": "workspace:*",
         "@opencode/plugin": "workspace:*",
@@ -370,7 +371,6 @@
         "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz",
       },
       "devDependencies": {
-        "@opencode/ai": "workspace:*",
         "@tsconfig/bun": "catalog:",
         "@types/bun": "catalog:",
         "@types/node": "catalog:",

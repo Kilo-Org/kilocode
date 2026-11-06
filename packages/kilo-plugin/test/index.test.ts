@@ -26,6 +26,7 @@ test("Gateway modes override built-in agents before config, and post-config step
     "kilocode.recall",
     "kilocode.indexing",
     "kilocode.review",
+    "kilocode.question",
   ])
   expect(KiloPostPlugins.map((plugin) => plugin.id)).toEqual([
     "kilocode.gateway.policy",

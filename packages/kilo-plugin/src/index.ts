@@ -27,6 +27,7 @@ import { KiloWriteToolPlugin } from "./tool-write"
 // kilo_port(notebook:91a426486dc8) v1 registered the notebook tools and service from the shared server.
 import { KiloNotebookPlugin } from "./notebook"
 import { KiloReview } from "./review"
+import { KiloQuestionPlugin } from "./question"
 // kilo_port(agent-manager:648a508ad347) the protection guard now lives in the Agent Manager plugin.
 import { KiloAgentManagerPlugin } from "./agent-manager"
 import { KiloRecallPlugin } from "./recall"
@@ -77,6 +78,7 @@ export const KiloPlugins = [
   KiloIndexingPlugin,
   // The Kilo review command replaces the built-in `review`. kilo_port(review:efc710228c1f)
   KiloReview.Plugin,
+  KiloQuestionPlugin.Plugin,
 ] as const
 
 /** Kilo plugins that run after the config plugins: the host registers them with phase `post`. */

@@ -1912,5 +1912,10 @@
     "v2": "packages/kilo-cli/test/settings.test.ts",
     "note": "The scalar-to-object transition (an object set over a non-object node replaces it, siblings untouched) is asserted through the real RPC in 'an object set over a non-object value replaces it, and a removal of an absent path is a no-op'; the writer's refusal of a value below a scalar is in packages/core/test/kilocode/config/write.test.ts. The v1 permission string-to-object case is not carried: v2 refuses the v1 permission key on write (permissions is an ordered rule array).",
     "by": "v2-config-closeout"
+  },
+  "module:packages/opencode/test/kilocode/question-option-schema.test.ts": {
+    "state": "ported",
+    "note": "packages/kilo-plugin/test/question-option-schema.test.ts carries the mode and labelKey/descriptionKey assertions against KiloQuestion.Option (packages/schema/src/kilocode/question.ts): mode round-trips, mode is optional, labelKey and descriptionKey round-trip, plus omission of undefined hints on encode. The v1 source-marker checks guarded a kilocode_change block in a shared file; v2 has no shared-file change, and the plugin test instead fails when upstream's question tool schema or executor drifts from the Kilo mirror (KiloQuestionPlugin). The v1 'question defaults' assertion covers the `default` hint, which is out of scope here and tracked with patch:unattributed:schema/v1:85a47cb2581a under #15332.",
+    "by": "v2-question-mode"
   }
 }
