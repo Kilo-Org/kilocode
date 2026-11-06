@@ -1,12 +1,16 @@
 {
   "$comment": "Shared-patch baseline (U-L3-01). Read by script/check-shared-patches.ts and script/check-opencode-annotations.ts. Each shared upstream file that Kilo adds or changes needs an entry: rung (3 = seam patch, 4 = feature patch) and the missing seam. `unmarked` allows lines without markers and states why. Raise a limit only in the PR that adds the patch, and lower it when a patch goes away.",
   "limits": {
-    "files": 95,
-    "markedLines": 1584,
+    "files": 98,
+    "markedLines": 1588,
     "unmarkedLines": 279,
     "deletedFiles": 0
   },
   "files": {
+    "packages/cli/src/run/noninteractive.ts": {
+      "rung": 3,
+      "seam": "`run --auto` replies `once` to every permission request. A request whose metadata sets `interactive: true` is rejected instead, so a headless run cannot approve it. The Kilo sandbox asks `sandbox_escalation` with that flag before a Git command runs outside the sandbox. No plugin hook reaches the CLI's permission replies (the permission domain has only `evaluate`), and the host does not own the non-interactive run loop. Upstream never sets the flag, so its behavior does not change."
+    },
     "packages/core/src/tool-output.ts": {
       "rung": 3,
       "seam": "Export the existing layer and cleanup node so the Kilo host can decorate native file allocations while preserving native truncation and cleanup. A plugin cannot observe allocation provenance, and replacing the service without these exports would duplicate the upstream implementation. No algorithm or upstream default changes."
@@ -140,6 +144,10 @@
     "packages/schema/src/file-diff.ts": {
       "rung": 4,
       "seam": "Optional `moved` flag on a file diff so clients can label a rename. The patch tool output is this shared struct and no plugin can add a field to an upstream schema; without the flag both clients report a rename as an unlabelled modification. Every other producer omits it, so upstream behavior and defaults are unchanged."
+    },
+    "packages/core/src/tool/mcp.ts": {
+      "rung": 3,
+      "seam": "Mark every MCP tool registration with `mcp: true`. The sandbox plugin must treat an MCP tool as delegated network authority even when a server named `opencode` exposes a tool named like a built-in, and namespace plus declared name cannot separate the two. Provenance exists only at registration and no plugin hook observes it. Without the sandbox plugin nothing reads the flag, so upstream behavior and defaults are unchanged."
     },
     "packages/core/src/tool/plugin/patch.ts": {
       "rung": 4,
@@ -369,6 +377,10 @@
     "packages/schema/src/pty.ts": {
       "rung": 3,
       "seam": "Optional `size` on `Pty.CreateInput`, sharing the size contract with `UpdateInput`. It matches `PersistentPty.CreateInput`, which already carries a size, and lets any client spawn a terminal at its own dimensions. Omitted keeps upstream behavior."
+    },
+    "packages/schema/src/tool.ts": {
+      "rung": 3,
+      "seam": "Optional `mcp` provenance on tool options, set by the MCP registration so the sandbox plugin can never read a namespaced MCP tool as a built-in. The tool registry schema is shared and closed to plugin extension. Omitted keeps upstream behavior."
     },
     "packages/client/src/effect/api/api.ts": {
       "rung": 3,
