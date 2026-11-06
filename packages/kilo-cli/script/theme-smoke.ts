@@ -108,6 +108,9 @@ export async function runThemeSmoke(executable?: string) {
         await send("opencode", "OpenCode preview", (output) =>
           output.includes(mode === "dark" ? ";250;178;131" : ";59;125;216"),
         )
+        // Let the preview frame finish before Escape. A slow runner can still be applying the filtered
+        // theme when the dialog closes, which leaves the preview active and hides the restored prompt.
+        await Bun.sleep(500)
         // Escape cancels the preview and is safe to repeat when a slow runner drops or delays it.
         await send("\x1b", "Kilo restored on cancel", (output) => hasKiloPrompt(output, mode), true)
         console.log(`PASS: ${binary ? "compiled" : "source"} ${mode} picker, upstream preview and cancel`)
