@@ -374,6 +374,15 @@
   scrollbar-gutter: stable;
 }
 
+/* Size from the content without a scrollHeight measurement. max-height above
+   keeps the long-draft cap and the textarea scrolls past it as before. */
+@supports (field-sizing: content) {
+  .prompt-input {
+    field-sizing: content;
+    height: auto;
+  }
+}
+
 .prompt-input:focus {
   border-color: var(--vscode-focusBorder);
 }

@@ -3,7 +3,7 @@ import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { showToast } from "@kilocode/kilo-ui/toast"
 import type { JsonValue, ModelRef } from "@opencode/client"
 import { createEffect, createMemo, createSignal, For, on, onCleanup, onMount, Show, untrack, type JSX } from "solid-js"
-import type { ReviewCommentEntry } from "../../../src/shared/review-comments"
+import { record, type ReviewCommentEntry } from "../../../src/shared/review-comments"
 import { pushFixes } from "../../agent-manager/pr/pr-push-fixes"
 import { fold, reserve } from "../components/chat/prompt-fold"
 import { ReviewComments } from "../components/chat/ReviewComments"
@@ -24,7 +24,12 @@ import {
   promptFocusAllowed,
 } from "../utils/focus"
 import { isEnterKeyCommitNotIme } from "../utils/ime-enter"
-import { browserPrompt, mergeBrowserReferences, type BrowserReference } from "../../../src/shared/browser-feedback"
+import {
+  browserPrompt,
+  mergeBrowserReferences,
+  partFeedback,
+  type BrowserReference,
+} from "../../../src/shared/browser-feedback"
 import {
   registerAppend,
   registerReviewAppend,
@@ -37,6 +42,7 @@ import type { PromptAttachment } from "../../../src/protocol"
 import { CodeContextChips } from "../components/chat/CodeContextChips"
 import { useImageAttachments } from "../hooks/useImageAttachments"
 import { usePasteCollapse } from "../hooks/usePasteCollapse"
+import { usePromptHistory } from "../hooks/usePromptHistory"
 import { expandPastes } from "../components/chat/prompt-input-utils"
 import { message, useV2 } from "./client"
 import { registerComposer, type ComposerHandle } from "./composer"
@@ -44,6 +50,7 @@ import { attachmentDrafts, fileAttachments, imageAttachment, mergeAttachments, p
 import { cleanEnhancedPrompt, enhancePromptRequest, normalizeEnhancePromptErrorMessage } from "./enhance-prompt"
 import { insertSpacedText } from "./prompt-speech"
 import { PromptOverflow, type OverflowItem } from "./prompt-overflow"
+import { kiloSettings } from "./kilo-settings"
 import { composeReviewPrompt, mergePromptMetadata, mergeReviewComments } from "./review-drafts"
 import { sendMode, sendShortcuts, type SendMode } from "./pending-actions"
 import { PromptHint } from "./prompt-hint"
@@ -52,8 +59,19 @@ import { PromptHint } from "./prompt-hint"
 // The key is the session id, or the pending tab id before a first prompt creates the session.
 const drafts = new Map<string, string>()
 
+// field-sizing grows the textarea from its content, so the composer needs no scrollHeight measurement.
+const fieldSizing = typeof CSS !== "undefined" && CSS.supports("field-sizing", "content")
+
 // Browser references picked for each draft, kept with the same key as the draft text.
 const references = new Map<string, BrowserReference[]>()
+
+// Older review prompts carry the section in the text without review metadata.
+const REVIEW_PREFIX = /^## Review Comments\n[\s\S]*?\n\n/
+
+// Prompts Kilo composed on the user's behalf, such as a worktree update, are not the user's own history.
+function injected(metadata: { [key: string]: JsonValue } | undefined): boolean {
+  return typeof record(record(record(metadata)?.kilo)?.injected)?.title === "string"
+}
 
 // Pending review comments follow the same key as the text, so switching sessions neither loses nor mixes them.
 const reviewDrafts = new Map<string, ReviewCommentEntry[]>()
@@ -146,6 +164,31 @@ export function PromptInput(props: {
   const [attachments, setAttachments] = createSignal<PromptAttachment[]>(attachmentDrafts.get(props.draftKey))
   const paste = usePasteCollapse({ enabled: () => !props.disabled, text })
   paste.load(untrack(text), pasteDrafts.get(props.draftKey))
+  // Shared across conversations unless the user opts in to a separate history per conversation.
+  const scoped = () => kiloSettings()["experimental.conversationPromptHistory"] === true
+  const history = usePromptHistory(
+    () => props.draftKey,
+    () => !scoped(),
+  )
+  // A loaded session contributes its user messages, so recall includes prompts sent before this composer mounted.
+  // Compare the texts, not the message list, so assistant streaming does not seed again on every update.
+  const sessionHistory = createMemo(
+    () => {
+      const id = props.session
+      if (!id) return []
+      return v2.data.session.message.list(id).flatMap((item) => {
+        if (item.type !== "user" || injected(item.metadata)) return []
+        const value = partFeedback(item.metadata, item.text)?.body ?? item.text.replace(REVIEW_PREFIX, "")
+        return value.trim() ? [value] : []
+      })
+    },
+    undefined,
+    { equals: (left, right) => left.length === right.length && left.every((value, index) => value === right[index]) },
+  )
+  createEffect(() => {
+    const texts = sessionHistory()
+    if (texts.length > 0) history.seed(texts)
+  })
   const images = useImageAttachments()
   // The hook reads files; the composer keeps one list, so a finished read moves into it.
   createEffect(() => {
@@ -265,6 +308,7 @@ export function PromptInput(props: {
         keep(draft, untrack(browsers))
         saveReviewDraft(draft, untrack(comments))
         draft = key
+        history.reset()
         setBrowsers(key ? (references.get(key) ?? []) : [])
         setComments((key ? reviewDrafts.get(key) : undefined) ?? [])
         const value = promptDrafts.get(key)
@@ -292,14 +336,47 @@ export function PromptInput(props: {
     saveReviewDraft(draft, comments())
   })
 
+  // kilocode_change start: batch the auto-height pass into one frame. Reading
+  // scrollHeight after a height write forces a synchronous layout on every
+  // keystroke, so the measurement waits for the frame and only writes a height
+  // that changed. Browsers with field-sizing size the textarea from CSS alone.
+  let fitFrame: number | undefined
+  let fitted = 0
+  let firstFit = true
+  const fit = () => {
+    const input = refs.input
+    if (!input) return
+    if (!fieldSizing) {
+      const previous = input.style.height
+      input.style.height = "auto"
+      // As in main: size to the content, which includes a wrapped placeholder.
+      const height = Math.min(input.scrollHeight, 200)
+      if (height === fitted && previous) input.style.height = previous
+      else {
+        fitted = height
+        input.style.height = `${height}px`
+      }
+    }
+    scroll()
+  }
   createEffect(() => {
     text()
     if (!refs.input) return
-    refs.input.style.height = "auto"
-    // As in main: size to the content, which includes a wrapped placeholder.
-    refs.input.style.height = `${Math.min(refs.input.scrollHeight, 200)}px`
-    scroll()
+    if (firstFit) {
+      firstFit = false
+      fit()
+      return
+    }
+    if (fitFrame !== undefined) return
+    fitFrame = requestAnimationFrame(() => {
+      fitFrame = undefined
+      fit()
+    })
   })
+  onCleanup(() => {
+    if (fitFrame !== undefined) cancelAnimationFrame(fitFrame)
+  })
+  // kilocode_change end
 
   const focusInput = () => refs.input?.focus({ preventScroll: true })
   // The restore chain outlives the event that started it, so every handle is tracked and dropped on unmount.
@@ -374,6 +451,7 @@ export function PromptInput(props: {
     const result = insertSpacedText(current, value, start, end)
     enhanceToken++
     preEnhance = null
+    history.reset()
     setText(result.text)
     if (!ref) return
     ref.value = result.text
@@ -398,6 +476,7 @@ export function PromptInput(props: {
   // draft when the composer cannot send or the send fails, so the request is never lost.
   const putInDraft = (value: string, items: PromptAttachment[]) => {
     const current = text()
+    history.reset()
     setText(current.trim() ? `${current}\n\n${value}` : value)
     setAttachments((list) => mergeAttachments(list, items))
     window.dispatchEvent(new CustomEvent("focusPrompt", { detail: { force: true, restore: true } }))
@@ -419,6 +498,9 @@ export function PromptInput(props: {
     // A context action sends its own text; pending review comments stay in the draft for the user's next prompt.
     const pending = external ? [] : comments()
     const prompt = browserPrompt(draft, picked)
+    const sent = external ? external.text : expandPastes(draft, pastes).trim()
+    // The draft key identifies the conversation this send belongs to, even when the session is created first.
+    const key = props.draftKey
     // Clear the draft as soon as it is sent, so the composer is empty while the prompt is admitted. Restore it only
     // if the send fails and the user has not typed, attached or picked something new.
     const restore = () => {
@@ -451,6 +533,9 @@ export function PromptInput(props: {
       .then((ok) => {
         if (ok) preEnhance = null
         else restore()
+        if (!ok || external) return
+        history.append(sent, key)
+        history.reset()
       })
       .catch((err: unknown) => {
         v2.report(err)
@@ -482,6 +567,7 @@ export function PromptInput(props: {
     const current = text()
     enhanceToken++
     preEnhance = null
+    history.reset()
     setText(current.trim() ? `${current}\n\n${value}` : value)
     if (shouldSend) send()
     else focusInput()
@@ -584,6 +670,34 @@ export function PromptInput(props: {
     preEnhance = null
     setText(restored)
     paste.load(restored, preEnhancePastes)
+    return true
+  }
+
+  // Arrow Up/Down at a cursor boundary cycles through sent prompts, keeping the current draft.
+  const historyKey = (event: KeyboardEvent) => {
+    if (event.key !== "ArrowUp" && event.key !== "ArrowDown") return false
+    if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey || event.isComposing) return false
+    if (props.disabled || sending()) return false
+    const input = refs.input
+    if (!input) return false
+    const cursor = input.selectionStart ?? 0
+    if (cursor !== (input.selectionEnd ?? cursor)) return false
+    const direction = event.key === "ArrowUp" ? ("up" as const) : ("down" as const)
+    const entry = history.navigate(
+      direction,
+      text(),
+      cursor,
+      paste.pastes().map((item) => item.text),
+    )
+    if (!entry) return false
+    enhanceToken++
+    preEnhance = null
+    event.preventDefault()
+    setText(entry.text)
+    paste.load(entry.text, entry.pastes)
+    input.value = entry.text
+    const pos = direction === "up" ? 0 : entry.text.length
+    input.setSelectionRange(pos, pos)
     return true
   }
 
@@ -761,6 +875,7 @@ export function PromptInput(props: {
                       paste.expand(seg.paste, refs.input, setText, () => {
                         enhanceToken++
                         preEnhance = null
+                        history.reset()
                       })
                     }}
                   >
@@ -794,6 +909,7 @@ export function PromptInput(props: {
               // An edit invalidates an in-flight Enhance, so its late result cannot overwrite the new text.
               enhanceToken++
               preEnhance = null
+              history.reset()
               setText(e.currentTarget.value)
               paste.afterInput()
             }}
@@ -812,6 +928,7 @@ export function PromptInput(props: {
               if (undoEnhance(e)) return
               if (paste.backspace(e, refs.input, setText)) return
               paste.arrow(e, refs.input)
+              if (historyKey(e)) return
               if (!isEnterKeyCommitNotIme(e) || e.shiftKey) return
               e.preventDefault()
               send(sendMode(e, props.running))

@@ -13,9 +13,10 @@ import { fetchCustomProviderModels } from "./custom-provider-models"
 import { local } from "./local"
 import { validAutocompleteSetting } from "./services/autocomplete/settings"
 import { candidateConfigFiles, chooseConfigFile, configDirectories } from "./open-config"
-import { resolveGlobalConfigDir, resolveKiloProfile, canonicalPath, matchConfigDocument } from "./settings-paths"
-import type { AgentManagerSettings, ConfigEdit, ConfigScope, ToHost, ToWebview } from "./protocol"
+import { configTargets, type ConfigEntry } from "./config-targets"
+import { resolveKiloProfile, canonicalPath } from "./settings-paths"
 import type { Manager } from "./server"
+import type { AgentManagerSettings, ConfigEdit, ConfigScope, ToHost, ToWebview } from "./protocol"
 import { MODEL_RESET_KEYS } from "./model-preferences"
 
 const NAMESPACE = "kilo-code.v2"
@@ -29,6 +30,7 @@ export const KILO_SETTING_KEYS = [
   "diff.renderMarkdown",
   "showTaskTimeline",
   "showShortcutHints",
+  "showAutoApprovalReason",
   "maxCost",
   "claudeCodeCompat",
   "extraCaCerts",
@@ -50,6 +52,7 @@ export const KILO_SETTING_KEYS = [
   "browserAutomation.useSystemChrome",
   "browserAutomation.headless",
   "experimental.nativeNotebookTools",
+  "experimental.conversationPromptHistory",
 ] as const
 
 /** `kilo-code.v2.fontSize` when set, otherwise `editor.fontSize`, clamped to the v1 slider range. */
@@ -88,11 +91,6 @@ const GLOBAL_STATE_KEYS = [
   ...MODEL_RESET_KEYS,
 ]
 
-interface ConfigEntry {
-  type: "document" | "directory"
-  path?: string
-}
-
 export function settingsHost(input: {
   context: ExtensionContext
   server: Manager
@@ -121,32 +119,12 @@ export function settingsHost(input: {
   }
 
   /** The global and project config files, from the server's config documents. */
-  const targets = async (found?: ConfigEntry[]) => {
-    const list = found ?? (await entries())
-    const documents = new Map<string, string>()
-    const directories: string[] = []
-    for (const entry of list) {
-      if (!entry.path) continue
-      const real = await canonicalPath(entry.path)
-      if (entry.type === "document") documents.set(real, entry.path)
-      else directories.push(real)
-    }
-
-    // The project target never depends on the global directory. A missing global directory entry (the directory does
-    // not exist yet) falls back to the same path the spawned server uses, and `writeConfig` creates it.
-    const projectRoot = await canonicalPath(input.directory)
-    const project =
-      (await matchConfigDocument(KiloConfigFiles.writeCandidates(projectRoot, false), documents)) ??
-      path.join(projectRoot, KiloConfigFiles.newFile)
-    const globalDir = await canonicalPath(
-      directories.find((directory) => !KiloConfigFiles.directories.includes(path.basename(directory))) ??
-        resolveGlobalConfigDir(process.env, profile),
-    )
-    const global =
-      (await matchConfigDocument(KiloConfigFiles.writeCandidates(globalDir, true), documents)) ??
-      path.join(globalDir, KiloConfigFiles.newFile)
-    return { global, project }
-  }
+  const targets = async (found?: ConfigEntry[]) =>
+    configTargets({
+      entries: found ?? (await entries()),
+      directory: input.directory,
+      profile,
+    })
 
   /** Offer the existing files of a scope plus its missing target, with the server document list as loaded status. */
   const pickConfigFile = async (scope: ConfigScope, target: string, list: ConfigEntry[]) => {

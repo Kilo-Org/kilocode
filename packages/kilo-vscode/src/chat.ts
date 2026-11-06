@@ -38,6 +38,7 @@ import {
 import { resolveKiloProfile } from "./settings-paths"
 import { promptKeybindings, watchKeybindings } from "./prompt-keybindings"
 import { readDisplaySettings } from "./display-settings"
+import { workStyleHost } from "./work-style-host"
 import { SANDBOX_DEFAULT_KEY, SandboxPreference } from "./services/sandbox-preference"
 import { createSpeechToTextHost } from "./speech-to-text/host"
 import { setSidebarSession, sidebarSession } from "./browser-tab/sidebar-session"
@@ -177,6 +178,10 @@ export function chat(input: {
  * Connects one webview (the sidebar view or an editor panel) to the server relay and the host messages, and loads
  * the webview bundle. `view` selects the root view of the bundle.
  */
+function isWorkStyleMessage(message: ToHost) {
+  return message.type === "requestWorkStyle" || message.type === "applyWorkStyle" || message.type === "setWorkStyle"
+}
+
 export function wire(input: {
   context: ExtensionContext
   server: Manager
@@ -283,6 +288,15 @@ export function wire(input: {
           },
           dispose() {},
         }
+  const workStyle =
+    view === "settings"
+      ? { handle: async (_message: ToHost) => false }
+      : workStyleHost({
+          context: input.context,
+          server: input.server,
+          directory: input.directory,
+          post,
+        })
   // The sidebar carries the live Kilo settings: push a fresh value when any of them changes.
   const settingsWatch =
     input.view !== "settings"
@@ -494,6 +508,10 @@ export function wire(input: {
 
   const subscription = webview.onDidReceiveMessage((message: ToHost) => {
     input.onMessage?.()
+    if (isWorkStyleMessage(message)) {
+      void workStyle.handle(message)
+      return
+    }
     if (input.handle?.(message) || speech.handle(message)) return
     if (message.type === "fetch" || message.type === "abort" || message.type === "open") return link.receive(message)
     if (message.type === "sidebar.session") return setSidebarSession(message.sessionId)

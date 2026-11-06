@@ -73,8 +73,9 @@ export function createDefaultOptions<T>(style: FileDiffOptions<T>["diffStyle"]) 
 }
 
 // Extends upstream DiffProps with a `fileDiff` variant so Pierre can render
-// a precomputed FileDiffMetadata directly. The pair (before/after) variant
-// stays compatible with upstream usage.
+// a precomputed FileDiffMetadata directly, and a patch-only variant so callers
+// can defer parsing a patch until the diff becomes visible. The pair
+// (before/after) variant stays compatible with upstream usage.
 type DiffShared<T> = FileDiffOptions<T> & {
   annotations?: DiffLineAnnotation<T>[]
   selectedLines?: SelectedLineRange | null
@@ -111,4 +112,11 @@ type DiffPatch<T> = DiffShared<T> & {
   patch?: undefined
 }
 
-export type DiffProps<T = {}> = DiffPair<T> | DiffPatch<T>
+type DiffPatchText<T> = DiffShared<T> & {
+  patch: string
+  before?: undefined
+  after?: undefined
+  fileDiff?: undefined
+}
+
+export type DiffProps<T = {}> = DiffPair<T> | DiffPatch<T> | DiffPatchText<T>
