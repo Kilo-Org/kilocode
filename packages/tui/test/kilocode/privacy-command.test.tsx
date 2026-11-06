@@ -19,28 +19,22 @@ async function launch(options: {
 }) {
   const writes: Write[] = []
   const privacy = { enabled: options.enabled }
-  // A test can delay the body of the next privacy read so it resolves after a toggle.
-  let delayNext = 0
+  // A test can hold the next privacy read and release it after a toggle.
+  let holdNext = false
+  let held: PromiseWithResolvers<Response> | undefined
+  let started = Promise.withResolvers<void>()
+  let stale: Response | undefined
   let gets = 0
   const app = await createAppFixture({
     fetch: async (url, request) => {
       if (url.pathname === "/api/rpc/kilocode.privacy/get") {
         gets++
-        if (delayNext) {
-          const ms = delayNext
-          delayNext = 0
-          const enabled = privacy.enabled
-          return new Response(
-            new ReadableStream({
-              start(controller) {
-                setTimeout(() => {
-                  controller.enqueue(new TextEncoder().encode(JSON.stringify({ output: { enabled } })))
-                  controller.close()
-                }, ms)
-              },
-            }),
-            { headers: { "content-type": "application/json" } },
-          )
+        if (holdNext) {
+          holdNext = false
+          stale = json({ output: { enabled: privacy.enabled } })
+          held = Promise.withResolvers<Response>()
+          started.resolve()
+          return held.promise
         }
         return json({ output: { enabled: privacy.enabled } })
       }
@@ -83,8 +77,13 @@ async function launch(options: {
     writes,
     privacy,
     gets: () => gets,
-    delayNext: (ms: number) => {
-      delayNext = ms
+    holdNext: () => {
+      holdNext = true
+      started = Promise.withResolvers<void>()
+    },
+    release: async () => {
+      await started.promise
+      held?.resolve(stale!)
     },
   })
 }
@@ -186,14 +185,15 @@ test("a conflict retries the write once and then succeeds", async () => {
 test("a privacy read started before a toggle cannot restore the old title", async () => {
   await using app = await launch({ enabled: true })
   await app.waitFor(() => app.gets() >= 1)
-  // Delay the body of the next config.updated read so it resolves after the toggle. The fetch has already
-  // resolved, so abort does not cancel the body; only the generation check can discard the stale result.
-  app.delayNext(500)
+  // Hold a config.updated read, toggle off, then release it. The read cannot resolve before the toggle, so the
+  // assertion is deterministic; its stale `enabled: true` would restore the wrong title without the generation check.
+  app.holdNext()
   app.events.emit({ id: "evt_privacy_stale", type: "config.updated", created: 1, location: { directory }, data: {} })
   await app.waitFor(() => app.gets() >= 2)
   await run(app)
   await app.waitForFrame((frame) => frame.includes("Privacy mode disabled"))
-  await Bun.sleep(700)
+  await app.release()
+  await Bun.sleep(200)
   await app.mockInput.pressKey("p", { ctrl: true })
   await app.waitFor(() => app.renderer.currentFocusedEditor instanceof InputRenderable)
   await app.mockInput.typeText("privacy mode")
