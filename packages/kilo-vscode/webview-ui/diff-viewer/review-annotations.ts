@@ -182,11 +182,19 @@ export function sendReviewComments(comments: ReviewCommentEntry[], activeTermina
  * Prompt composer side of the handoff. It takes only batches with no terminal
  * target, so a targeted send never reaches the composer as well.
  */
-export function takeReviewCommentsForPrompt(detail: AppendReviewCommentsDetail | undefined): string | undefined {
+export function takeReviewCommentsForPromptBatch(
+  detail: AppendReviewCommentsDetail | undefined,
+): ReviewCommentEntry[] | undefined {
   if (!detail || detail.handled || detail.targetTerminalId) return undefined
   if (detail.comments.length === 0) return undefined
   detail.handled = true
-  return formatReviewCommentsMarkdown(detail.comments)
+  return detail.comments
+}
+
+/** The same handoff as markdown text, for a composer that has no review-comment chips. */
+export function takeReviewCommentsForPrompt(detail: AppendReviewCommentsDetail | undefined): string | undefined {
+  const comments = takeReviewCommentsForPromptBatch(detail)
+  return comments ? formatReviewCommentsMarkdown(comments) : undefined
 }
 
 /** Terminal side of the handoff. It takes only the batch addressed to `terminalId`. */

@@ -4,6 +4,7 @@ import { createMemo, Show } from "solid-js"
 import { partFeedback } from "../../../src/shared/browser-feedback"
 import type { ToHost } from "../../../src/protocol"
 import { imageMime } from "../../../src/shared/image-data-url"
+import { ReviewComments } from "../components/chat/ReviewComments"
 import { useLanguage } from "../context/language"
 import { useVSCode } from "../context/vscode"
 import { BrowserReferences } from "./browser-references"
@@ -11,6 +12,7 @@ import { BrowserReferences } from "./browser-references"
 export function UserMessage(props: {
   message: SessionMessageUser
   rowKey?: string
+  sessionID?: string
   onFork?: () => void
   pending?: UserMessagePending
 }) {
@@ -22,13 +24,15 @@ export function UserMessage(props: {
     vscode.postMessage({ type: "previewImage", dataUrl: uri, filename: name || "image" } satisfies ToHost)
     return true
   }
-  // A prompt with browser references carries them in metadata and starts with their Markdown, as in v1. The bubble
-  // shows them as cards and the user's own text below; Copy keeps the full text the model received.
+  // A prompt can carry review comments and browser references in metadata, and starts with their Markdown. When the
+  // parts agree, the cards show them and the bubble shows only the user's own text, as v1's user message did. Copy
+  // keeps the full text the model received.
   const parsed = createMemo(() => partFeedback(props.message.metadata, props.message.text))
+  const review = () => parsed()?.review
   const feedback = () => parsed()?.browserFeedback
   const message = createMemo(() => {
     const value = parsed()
-    return value?.browserFeedback ? { ...props.message, text: value.body } : props.message
+    return value ? { ...props.message, text: value.body } : props.message
   })
   return (
     <div
@@ -39,6 +43,9 @@ export function UserMessage(props: {
       data-pending={props.pending ? "" : undefined}
     >
       <div class="vscode-session-turn-user">
+        <Show when={review()}>
+          {(value) => <ReviewComments comments={value().comments} sessionID={props.sessionID} variant="message" />}
+        </Show>
         <UserMessageDisplay
           message={message()}
           copyLabel={language.t("ui.message.copyMessage")}

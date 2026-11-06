@@ -57,6 +57,13 @@ html[data-theme="kilo-vscode"]
     border-right-width 180ms ease;
 }
 
+/* The handle updates the width every animation frame. A transition on this
+   element would restart on each update and animate four layout properties,
+   which reflows the sidebar and the main pane twice per frame. */
+.am-sidebar:has(> [data-component="resize-handle"][data-dragging]) {
+  transition: none;
+}
+
 .am-sidebar-collapsed {
   min-width: 0;
   padding-left: 0;

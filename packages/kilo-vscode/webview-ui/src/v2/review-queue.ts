@@ -1,7 +1,9 @@
-export type ReviewAppend = (value: string, send: boolean) => void
+import type { ReviewCommentEntry } from "../../../src/shared/review-comments"
+
+export type ReviewAppend = (comments: ReviewCommentEntry[], send: boolean) => void
 
 interface PendingReview {
-  value: string
+  comments: ReviewCommentEntry[]
   send: boolean
 }
 
@@ -17,18 +19,18 @@ export function createReviewAppendQueue() {
   const ready = (next?: ReviewAppend) => {
     append = next
     if (!append || pending.length === 0) return
-    const value = pending.map((item) => item.value).join("\n\n")
+    const comments = pending.flatMap((item) => item.comments)
     const send = pending.some((item) => item.send)
     pending = []
-    append(value, send)
+    append(comments, send)
   }
 
-  const push = (value: string, send: boolean) => {
+  const push = (comments: ReviewCommentEntry[], send: boolean) => {
     if (append) {
-      append(value, send)
+      append(comments, send)
       return
     }
-    pending.push({ value, send })
+    pending.push({ comments, send })
   }
 
   return { ready, push }
