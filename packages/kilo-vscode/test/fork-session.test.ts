@@ -5,8 +5,8 @@ import { forkSession, type ForkContext } from "../src/agent-manager/fork-session
 
 const noop = () => {}
 
-function session(id: string): SessionInfo {
-  return { id } as SessionInfo
+function session(id: string, directory = "/repo"): SessionInfo {
+  return { id, location: { directory } } as SessionInfo
 }
 
 function ctx(client: unknown, overrides: Partial<ForkContext> = {}): ForkContext {
@@ -38,7 +38,7 @@ describe("agent manager fork session", () => {
     )
 
     expect(fork).toHaveBeenCalledWith({ sessionID: "source", before: "message" })
-    expect(move).toHaveBeenCalledWith({ sessionID: "forked", directory: "/repo" })
+    expect(move).not.toHaveBeenCalled()
     expect(synthetic).toHaveBeenCalledWith({
       sessionID: "forked",
       text: forkText({ directory: "/repo" }),
@@ -73,6 +73,91 @@ describe("agent manager fork session", () => {
     )
     expect(addSession).toHaveBeenCalledWith("forked", "worktree")
     expect(register).toHaveBeenCalledWith("forked", "/repo/.kilo/worktrees/feature")
+  })
+
+  it("does not move a fork that already inherits the worktree directory", async () => {
+    const move = mock(async () => undefined)
+    const state = { getWorktree: () => ({ path: "/repo/.kilo/worktrees/feature" }), addSession: noop }
+
+    await forkSession(
+      ctx(
+        {
+          session: {
+            fork: mock(async () => session("forked", "/repo/.kilo/worktrees/feature")),
+            move,
+            synthetic: noop,
+          },
+        },
+        { state: state as never, directory: "/repo" },
+      ),
+      "source",
+      "worktree",
+    )
+
+    expect(move).not.toHaveBeenCalled()
+  })
+
+  it("creates a fresh session when the source has no messages", async () => {
+    const get = mock(async () => ({
+      id: "source",
+      title: "Empty",
+      agent: "code",
+      model: { id: "model", providerID: "provider" },
+      metadata: { kilocode: { platform: "agent-manager" } },
+      location: { directory: "/repo" },
+    }))
+    const create = mock(async () => session("forked"))
+    const notify = mock(() => undefined)
+    const postError = mock(() => undefined)
+
+    await forkSession(
+      ctx(
+        {
+          session: {
+            fork: mock(async () => {
+              throw new Error("Cannot fork empty session: source")
+            }),
+            get,
+            create,
+            move: noop,
+            synthetic: noop,
+          },
+        },
+        { notifyForked: notify, postError },
+      ),
+      "source",
+    )
+
+    expect(create).toHaveBeenCalledWith({
+      location: { directory: "/repo" },
+      title: "Empty",
+      agent: "code",
+      model: { id: "model", providerID: "provider" },
+      metadata: { kilocode: { platform: "agent-manager" } },
+    })
+    expect(notify).toHaveBeenCalledWith(expect.objectContaining({ id: "forked" }), "source", undefined)
+    expect(postError).not.toHaveBeenCalled()
+  })
+
+  it("reports other fork errors", async () => {
+    const postError = mock(() => undefined)
+
+    const result = await forkSession(
+      ctx(
+        {
+          session: {
+            fork: mock(async () => {
+              throw new Error("session not found")
+            }),
+          },
+        },
+        { postError },
+      ),
+      "source",
+    )
+
+    expect(result).toBeNull()
+    expect(postError).toHaveBeenCalledWith("Failed to fork session: session not found")
   })
 
   it("still exposes the fork when recording the handoff fails", async () => {

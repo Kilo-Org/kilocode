@@ -418,7 +418,6 @@ export function Chat() {
           onShowHistory={() => setView("history")}
           onViewTurnChanges={openTurnChanges}
           onForkMessage={forkSession}
-          onForkSession={forkSession}
           row={row}
           onReviewAppendReady={reviewQueue.ready}
           onComposerReady={composerQueue.ready}

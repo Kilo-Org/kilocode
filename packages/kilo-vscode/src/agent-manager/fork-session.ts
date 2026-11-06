@@ -2,6 +2,7 @@ import type { OpenCodeClient, SessionInfo } from "@opencode/client"
 import { getErrorMessage } from "./errors"
 import type { WorktreeStateManager } from "./WorktreeStateManager"
 import { recordForkHandoff } from "./fork-handoff"
+import { canonicalizePath, samePath } from "./project/paths"
 
 export interface ForkContext {
   client: () => Promise<OpenCodeClient>
@@ -42,13 +43,27 @@ export async function forkSession(
 
   let forked: SessionInfo
   try {
-    forked = await client.session.fork(
-      { sessionID: sessionId, ...(messageId ? { before: messageId } : {}) },
-    )
-    if (directory) await client.session.move({ sessionID: forked.id, directory })
+    forked = await client.session.fork({ sessionID: sessionId, ...(messageId ? { before: messageId } : {}) })
+    const current = forked.location?.directory
+    if (directory && (!current || !samePath(canonicalizePath(current), canonicalizePath(directory)))) {
+      await client.session.move({ sessionID: forked.id, directory })
+    }
   } catch (error) {
-    ctx.postError(`Failed to fork session: ${getErrorMessage(error)}`)
-    return null
+    if (!messageId && getErrorMessage(error).toLowerCase().includes("empty session")) {
+      // An empty source has no boundary to copy. A fresh session with its settings is the useful fork.
+      forked = await client.session.get({ sessionID: sessionId }).then((source) =>
+        client.session.create({
+          ...(directory ? { location: { directory } } : {}),
+          ...(source.title ? { title: source.title } : {}),
+          ...(source.agent ? { agent: source.agent } : {}),
+          ...(source.model ? { model: source.model } : {}),
+          ...(source.metadata ? { metadata: source.metadata } : {}),
+        }),
+      )
+    } else {
+      ctx.postError(`Failed to fork session: ${getErrorMessage(error)}`)
+      return null
+    }
   }
 
   if (worktreeId && ctx.state) {

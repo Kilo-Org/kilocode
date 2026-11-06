@@ -62,7 +62,6 @@ export function SessionView(props: {
   /** Receives each prompt the server admitted, with the model it runs on. */
   onPrompted?: (sessionID: string, text: string, model: ModelRef | undefined) => void
   /** Forks the open session; the header shows the action when set. */
-  onForkSession?: (sessionID: string) => void
   /** Forks the session before a user message; each message shows the action when set. */
   onForkMessage?: (sessionID: string, messageID: string) => void
   /** Receives a session the server does not have (deleted, or from another database) instead of an error card. */
@@ -298,12 +297,7 @@ export function SessionView(props: {
     <div class="chat-view">
       {props.tabStrip}
       <Show when={session()} keyed>
-        {(id) => (
-          <TaskHeader
-            sessionID={id}
-            onFork={props.onForkSession && hasMessages() ? () => props.onForkSession?.(id) : undefined}
-          />
-        )}
+        {(id) => <TaskHeader sessionID={id} />}
       </Show>
       <div class="chat-messages-wrapper">
         <ToolChildSessionProvider value={childSessions}>

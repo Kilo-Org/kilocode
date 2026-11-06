@@ -831,29 +831,40 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
     return addSessionToLifecycleWorktree(ctx, this.lifecycleHost, worktreeId, sessionId)
   }
 
-  public onForkSession(sessionId: string, worktreeId?: string, messageId?: string): Promise<null> {
-    return forkSession(
-      {
-        client: () => this.connection.client(),
-        state: this.getStateManager(),
-        directory: this.getRoot(),
-        postError: (message) => this.postToWebview({ type: "error", message }),
-        registerWorktreeSession: (sid, dir) => this.registerWorktreeSession(sid, dir),
-        pushState: () => this.pushState(),
-        notifyForked: (session, from, worktree) =>
-          this.postToWebview({
-            type: "agentManager.sessionForked",
-            projectId: this.context?.id,
-            sessionId: session.id,
-            forkedFromId: from,
-            worktreeId: worktree,
-          }),
-        log: (...args) => this.log(...args),
-      },
-      sessionId,
-      worktreeId,
-      messageId,
-    )
+  public async onForkSession(sessionId: string, worktreeId?: string, messageId?: string): Promise<null> {
+    const context =
+      (worktreeId ? this.contexts.byWorktree(worktreeId) : undefined) ??
+      this.contexts.byLiveSession(sessionId) ??
+      this.context
+    const fork = () =>
+      forkSession(
+        {
+          client: () => this.connection.client(),
+          state: context?.stateManager(),
+          directory: context?.root,
+          postError: (message) => this.postToWebview({ type: "error", message }),
+          registerWorktreeSession: (sid, dir) => this.registerWorktreeSession(sid, dir),
+          pushState: () => this.pushState(),
+          notifyForked: (session, from, worktree) =>
+            this.postToWebview({
+              type: "agentManager.sessionForked",
+              projectId: context?.id,
+              sessionId: session.id,
+              forkedFromId: from,
+              worktreeId: worktree,
+              session,
+            }),
+          log: (...args) => this.log(...args),
+        },
+        sessionId,
+        worktreeId,
+        messageId,
+      )
+    if (!context) return fork()
+    return this.projectScope.run(context, async () => {
+      await this.waitForStateReady("onForkSession")
+      return fork()
+    })
   }
 
   public async onCloseSession(sessionId: string): Promise<null> {
