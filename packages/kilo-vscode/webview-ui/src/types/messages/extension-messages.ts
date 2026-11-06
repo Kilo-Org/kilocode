@@ -1397,6 +1397,7 @@ export interface EnhancePromptResultMessage {
 export interface EnhancePromptErrorMessage {
   type: "enhancePromptError"
   error: string
+  reason: "failed" | "timeout"
   requestId: string
 }
 

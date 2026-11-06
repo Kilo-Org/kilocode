@@ -1198,3 +1198,29 @@ body.vscode-reduce-motion .prompt-issues-menu {
     transform: scale(0.94);
   }
 }
+
+.prompt-enhance-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px;
+  color: var(--text-base);
+}
+
+.prompt-enhance-status[data-kind="failed"] > [data-component="icon"],
+.prompt-enhance-status[data-kind="timeout"] > [data-component="icon"] {
+  color: var(--icon-warning-base);
+}
+
+.prompt-enhance-status-text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.prompt-enhance-status-id {
+  color: var(--text-weak);
+  font-size: 0.9em;
+}
