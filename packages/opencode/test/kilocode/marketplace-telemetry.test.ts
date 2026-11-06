@@ -218,7 +218,38 @@ describe("marketplace telemetry from the CLI", () => {
     expect(removed.map((entry) => entry.itemId)).toEqual(["catalog-skill"])
   })
 
+  // Both removals delete the item: whichever runs second finds nothing, so exactly one reports.
   test("counts overlapping removals of the same item once", async () => {
+    await using tmp = await tmpdir()
+    const file = await skill(tmp.path)
+    const item = { id: "catalog-skill", type: "skill" }
+    const where = { directory: tmp.path }
+    const remove = Effect.promise(() => unlink(file).then(quiet, quiet))
+
+    await Effect.runPromise(
+      Effect.gen(function* () {
+        const gate = yield* Deferred.make<void>()
+        const started = yield* Deferred.make<void>()
+        const first = yield* MarketplaceTelemetry.removal(
+          where,
+          item,
+          Deferred.succeed(started, undefined).pipe(Effect.andThen(Deferred.await(gate)), Effect.andThen(remove)),
+        ).pipe(Effect.forkChild)
+        yield* Deferred.await(started)
+        const second = yield* MarketplaceTelemetry.removal(where, item, remove).pipe(Effect.forkChild)
+        yield* Deferred.succeed(gate, undefined)
+        yield* Fiber.join(first)
+        yield* Fiber.join(second)
+      }),
+    )
+    await settle(removed, 2)
+
+    expect(removed.map((entry) => entry.itemId)).toEqual(["catalog-skill"])
+  })
+
+  // The first removal deletes nothing (another scope, say) and finishes; the overlapping one deletes
+  // the item afterwards. Sharing the first one's snapshots would count this zero times.
+  test("counts an overlapping removal that deletes after the first one finished", async () => {
     await using tmp = await tmpdir()
     const file = await skill(tmp.path)
     const item = { id: "catalog-skill", type: "skill" }
@@ -226,39 +257,35 @@ describe("marketplace telemetry from the CLI", () => {
 
     await Effect.runPromise(
       Effect.gen(function* () {
-        const gate = yield* Deferred.make<void>()
+        const first = yield* Deferred.make<void>()
+        const later = yield* Deferred.make<void>()
         const started = yield* Deferred.make<void>()
-        // The run only starts after the first removal took its "before" snapshot.
-        const first = yield* MarketplaceTelemetry.removal(
+        const noop = yield* MarketplaceTelemetry.removal(
           where,
           item,
-          Deferred.succeed(started, undefined).pipe(
-            Effect.andThen(Deferred.await(gate)),
-            Effect.andThen(
-              Effect.promise(() =>
-                unlink(file).then(
-                  () => undefined,
-                  () => undefined,
-                ),
-              ),
-            ),
-          ),
+          Deferred.succeed(started, undefined).pipe(Effect.andThen(Deferred.await(first))),
         ).pipe(Effect.forkChild)
         yield* Deferred.await(started)
-        yield* MarketplaceTelemetry.removal(
+        const real = yield* MarketplaceTelemetry.removal(
           where,
           item,
-          Effect.promise(() => unlink(file)),
-        )
-        yield* Deferred.succeed(gate, undefined)
-        yield* Fiber.join(first)
+          Deferred.await(later).pipe(Effect.andThen(Effect.promise(() => unlink(file)))),
+        ).pipe(Effect.forkChild)
+        yield* Deferred.succeed(first, undefined)
+        yield* Fiber.join(noop)
+        yield* Deferred.succeed(later, undefined)
+        yield* Fiber.join(real)
       }),
     )
-    await settle(removed, 2)
+    await settle(removed)
 
     expect(removed.map((entry) => entry.itemId)).toEqual(["catalog-skill"])
   })
 })
+
+function quiet() {
+  return undefined
+}
 
 async function skill(root: string) {
   const dir = path.join(root, ".kilo", "skills", "catalog-skill")

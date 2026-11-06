@@ -15,8 +15,8 @@ import type { MarketplaceInstallPayload, Scope } from "./schema"
 
 const log = Log.create({ service: "marketplace.telemetry" })
 const SCOPES: readonly Scope[] = ["project", "global"]
-/** In-flight removals, keyed by directory, type, and id, holding each one's "before" snapshot. */
-const active = new Map<string, Promise<boolean[]>>()
+/** The last observed removal per directory, type, and id; the next one starts after it settles. */
+const queue = new Map<string, Promise<void>>()
 
 type Item = { id: string; type: string }
 type Where = { directory: string; worktree?: string }
@@ -107,30 +107,37 @@ export function removal<A, E, R>(where: Where, item: Item, run: Effect.Effect<A,
   return Effect.gen(function* () {
     if (!Telemetry.isEnabled()) return yield* run
     const key = `${where.directory}\0${item.type}\0${item.id}`
-    // An overlapping removal of the same item would see the same before/after pair and count it
-    // twice, so the removal already watching reports it. Waiting for that watcher's "before"
-    // snapshot first keeps this removal from finishing unseen in between.
-    const pending = active.get(key)
-    if (pending) return yield* Effect.promise(() => pending).pipe(Effect.andThen(run))
+    // Overlapping removals of the same item would share before/after pairs, counting one removal
+    // twice or not at all. Running them one after another gives each its own pair; the installer
+    // already serializes the writes per scope, so this adds no meaningful wait.
     return yield* Effect.acquireUseRelease(
       Effect.sync(() => {
-        const seen = snapshot(where, item)
-        active.set(key, seen)
-        return seen
+        const prior = queue.get(key) ?? Promise.resolve()
+        const done = Promise.withResolvers<void>()
+        const tail = prior.then(() => done.promise)
+        queue.set(key, tail)
+        return { prior, done, tail }
       }),
-      (seen) =>
-        Effect.gen(function* () {
-          const before = yield* Effect.promise(() => seen)
-          // Check afterwards even when the removal fails: it can delete files before a later step errors.
-          const check = Effect.promise(() => snapshot(where, item)).pipe(
-            Effect.map((after) => {
-              const scopes = SCOPES.filter((_, index) => before[index] && !after[index])
-              if (scopes.length > 0) void report(item, scopes)
-            }),
-          )
-          return yield* run.pipe(Effect.ensuring(check))
+      (slot) => Effect.promise(() => slot.prior).pipe(Effect.andThen(observe(where, item, run))),
+      (slot) =>
+        Effect.sync(() => {
+          slot.done.resolve()
+          if (queue.get(key) === slot.tail) queue.delete(key)
         }),
-      () => Effect.sync(() => active.delete(key)),
     )
+  })
+}
+
+function observe<A, E, R>(where: Where, item: Item, run: Effect.Effect<A, E, R>) {
+  return Effect.gen(function* () {
+    const before = yield* Effect.promise(() => snapshot(where, item))
+    // Check afterwards even when the removal fails: it can delete files before a later step errors.
+    const check = Effect.promise(() => snapshot(where, item)).pipe(
+      Effect.map((after) => {
+        const scopes = SCOPES.filter((_, index) => before[index] && !after[index])
+        if (scopes.length > 0) void report(item, scopes)
+      }),
+    )
+    return yield* run.pipe(Effect.ensuring(check))
   })
 }
