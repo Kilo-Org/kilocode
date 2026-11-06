@@ -246,7 +246,7 @@ internal class MarketplaceSettingsUi(
         val request = dialog.result()
         Telemetry.send(
             if (request.remove) "Marketplace Uninstall Clicked" else "Marketplace Install Clicked",
-            mapOf("type" to item.type, "id" to item.id, "target" to request.target),
+            marketplaceProps(item, request),
         )
         act(item, request)
     }
@@ -277,10 +277,8 @@ internal class MarketplaceSettingsUi(
                 }
                 if (!result.success) throw SettingsMessageException(result.error ?: failedText(request.remove))
                 if (item.type == "skill" || item.type == "mcp") service<KiloAgentBehaviorService>().reloadSkills(dir)
-                Telemetry.send(
-                    if (request.remove) "Marketplace Item Removed" else "Marketplace Item Installed",
-                    mapOf("type" to item.type, "id" to item.id, "target" to request.target),
-                )
+                // The CLI reports `Marketplace Item Installed`/`Removed` for every client; sending them here
+                // too would double count.
                 if (!request.remove && item.type == "mcp") {
                     val needs = service<KiloMcpAuthService>().refresh(dir)
                     if (item.id in needs) withContext(edt) { authPrompt = item }
