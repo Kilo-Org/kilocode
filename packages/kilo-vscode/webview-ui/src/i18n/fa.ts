@@ -700,6 +700,10 @@ export const dict = {
   "settings.indexing.dimension.description": "برای تشخیص خودکار بُعد جاسازی از مدل، خالی بگذارید.",
   "settings.indexing.dimension.placeholder": "خودکار",
   "settings.indexing.providerField.description": "تنظیم اتصال مخصوص ارائه‌دهنده.",
+  "settings.indexing.providerField.documentPrompt.description":
+    "پارامتر اختیاری prompt_name برای نمایه‌سازی کد و به‌روزرسانی فایل‌ها. به پشتیبانی نقطهٔ پایانی نیاز دارد. تغییر آن باعث بازسازی نمایه می‌شود.",
+  "settings.indexing.providerField.queryPrompt.description":
+    "پارامتر اختیاری prompt_name برای جستجوی کد. به پشتیبانی نقطهٔ پایانی نیاز دارد.",
   "settings.indexing.vectorStore.title": "فروشگاه برداری",
   "settings.indexing.vectorStore.description": "محل ذخیره‌سازی جاسازی‌های ایندکس‌شده را انتخاب کنید.",
   "settings.indexing.lancedbDirectory.title": "پوشه LanceDB",

@@ -502,6 +502,50 @@ describe("QdrantVectorStore", () => {
   })
 
   describe("initialize", () => {
+    test.each(["document", ""])("persists and reloads document prompt %j", async (prompt) => {
+      const profile = {
+        provider: "openai-compatible" as const,
+        modelId: "embeddinggemma-2",
+        dimension: mockVectorSize,
+        documentPrompt: prompt,
+      }
+      const store = new QdrantVectorStore(mockWorkspacePath, mockQdrantUrl, mockVectorSize, mockApiKey, profile)
+
+      await store.markIndexingComplete()
+      const request = mockUpsert.mock.calls.at(-1)?.at(1)
+      const payload = request?.points?.at(0)?.payload
+      expect(payload?.embedding_document_prompt).toBe(prompt)
+      expect(store["getStoredProfile"](payload)).toEqual(profile)
+    })
+
+    test("recreates unchanged-dimension vectors when a document prompt is added", async () => {
+      const store = new QdrantVectorStore(mockWorkspacePath, mockQdrantUrl, mockVectorSize, mockApiKey, {
+        provider: "openai-compatible",
+        modelId: "embeddinggemma-2",
+        dimension: mockVectorSize,
+        documentPrompt: "document",
+      })
+      mockGetCollection
+        .mockResolvedValueOnce({
+          points_count: 7,
+          config: { params: { vectors: { size: mockVectorSize } } },
+        })
+        .mockRejectedValueOnce({ response: { status: 404 }, message: "Not found" })
+      mockRetrieve.mockResolvedValue([
+        {
+          payload: {
+            index_schema: 2,
+            embedding_provider: "openai-compatible",
+            embedding_model_id: "embeddinggemma-2",
+            embedding_dimension: mockVectorSize,
+          },
+        },
+      ])
+
+      expect(await store.initialize()).toBe(true)
+      expect(mockDeleteCollection).toHaveBeenCalledTimes(1)
+    })
+
     test("opens a complete compatible baseline without mutating it", async () => {
       mockGetCollection.mockResolvedValue({
         points_count: 3,

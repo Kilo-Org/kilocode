@@ -58,6 +58,14 @@ export const IndexingConfig = z
       .object({
         baseUrl: z.string().optional(),
         apiKey: z.string().optional(),
+        documentPrompt: z
+          .string()
+          .optional()
+          .describe("Prompt name for indexed code; empty disables the server default"),
+        queryPrompt: z
+          .string()
+          .optional()
+          .describe("Prompt name for search queries; empty disables the server default"),
       })
       .strict()
       .optional()
@@ -179,6 +187,12 @@ export const IndexingSchema = Schema.Struct({
     Schema.Struct({
       baseUrl: Schema.optional(Schema.String),
       apiKey: Schema.optional(Schema.String),
+      documentPrompt: Schema.optional(Schema.String).annotate({
+        description: "Prompt name for indexed code; empty disables the server default",
+      }),
+      queryPrompt: Schema.optional(Schema.String).annotate({
+        description: "Prompt name for search queries; empty disables the server default",
+      }),
     }),
   ).annotate({ description: "OpenAI-compatible embedding provider options" }),
   gemini: Schema.optional(
@@ -272,6 +286,8 @@ export function toIndexingConfigInput(cfg: IndexingConfig | undefined): Indexing
     ollamaBaseUrl: cfg?.ollama?.baseUrl,
     openAiCompatibleBaseUrl: cfg?.["openai-compatible"]?.baseUrl,
     openAiCompatibleApiKey: cfg?.["openai-compatible"]?.apiKey,
+    openAiCompatibleDocumentPrompt: cfg?.["openai-compatible"]?.documentPrompt,
+    openAiCompatibleQueryPrompt: cfg?.["openai-compatible"]?.queryPrompt,
     geminiApiKey: cfg?.gemini?.apiKey,
     mistralApiKey: cfg?.mistral?.apiKey,
     vercelAiGatewayApiKey: cfg?.["vercel-ai-gateway"]?.apiKey,

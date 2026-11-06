@@ -479,6 +479,10 @@ export const dict = {
   "settings.indexing.kiloSignIn.description": "Melden Sie sich bei Kilo an, um gehostete Embeddings zu verwenden.",
   "settings.indexing.provider.title": "Embedding-Anbieter",
   "settings.indexing.providerField.description": "Anbieterspezifische Verbindungseinstellung.",
+  "settings.indexing.providerField.documentPrompt.description":
+    "Optionaler prompt_name für die Codeindizierung und Dateiaktualisierungen. Erfordert Unterstützung durch den Endpunkt. Eine Änderung erstellt den Index neu.",
+  "settings.indexing.providerField.queryPrompt.description":
+    "Optionaler prompt_name für die Codesuche. Erfordert Unterstützung durch den Endpunkt.",
   "settings.indexing.qdrantApiKey.description": "Optionaler API-Schlüssel für die Qdrant-Instanz.",
   "settings.indexing.qdrantApiKey.placeholder": "Optionaler API-Schlüssel",
   "settings.indexing.fileExtensions.title": "Dateierweiterungen",

@@ -2293,6 +2293,8 @@ export type IndexingConfig = {
   "openai-compatible"?: {
     baseUrl?: string
     apiKey?: string
+    documentPrompt?: string
+    queryPrompt?: string
   }
   gemini?: {
     apiKey?: string

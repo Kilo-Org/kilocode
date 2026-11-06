@@ -145,7 +145,7 @@ You can also edit the `indexing` section directly. This is the full shape of the
 |---|---|---|---|
 | **OpenAI** | `openai` | `{ apiKey }` | Default: `text-embedding-3-small`. |
 | **Ollama** | `ollama` | `{ baseUrl }` | No API costs. Runs fully offline. |
-| **OpenAI-Compatible** | `openai-compatible` | `{ baseUrl, apiKey? }` | For self-hosted or third-party endpoints, including unauthenticated local servers. |
+| **OpenAI-Compatible** | `openai-compatible` | `{ baseUrl, apiKey?, documentPrompt?, queryPrompt? }` | For self-hosted or third-party endpoints, including unauthenticated local servers. |
 | **Gemini** | `gemini` | `{ apiKey }` | Supports `gemini-embedding-001`. |
 | **Mistral** | `mistral` | `{ apiKey }` | Use a standard [Mistral Studio](https://console.mistral.ai/api-keys/) API key, as in the [autocomplete setup guide](/docs/code-with-ai/features/autocomplete/mistral-setup). Legacy Codestral-only keys do not support embeddings. |
 | **Vercel AI Gateway** | `vercel-ai-gateway` | `{ apiKey }` | Routes through [Vercel AI Gateway](https://vercel.com/docs/ai-gateway). |
@@ -168,6 +168,45 @@ When indexing is enabled, the CLI shows an indexing status badge at the bottom o
 
 {% /tab %}
 {% /tabs %}
+
+## OpenAI-compatible prompt names
+
+Some embedding models use different instructions for source code and search queries. If your OpenAI-compatible endpoint supports the `prompt_name` request field, set **Document Prompt Name** and **Query Prompt Name** in the VS Code Indexing settings, or configure `documentPrompt` and `queryPrompt` in `kilo.jsonc`.
+
+Kilo sends the document prompt during the initial scan and subsequent file updates, and the query prompt when searching. Prompt names are optional and case-sensitive. When a setting is omitted, Kilo sends no `prompt_name` for that operation, preserving the endpoint's default behavior. In JSON configuration, an explicit empty string sends `"prompt_name": ""`, which endpoints such as Gufo use to disable a server default. Clearing a prompt field in the settings UI removes the setting.
+
+### Gufo with EmbeddingGemma 2
+
+Use a Gufo build that includes [named prompt support, contributed by jabata in PR #823](https://github.com/gufo-org/gufo/pull/823). Keep the model's `config_sentence_transformers.json` in its checkpoint directory, because Gufo reads the available prompts from that file.
+
+```bash
+gufo serve embedding --model /path/to/embeddinggemma-2 --port 8080
+```
+
+Add these settings to your global or project `kilo.jsonc`:
+
+```json
+{
+  "indexing": {
+    "enabled": true,
+    "provider": "openai-compatible",
+    "model": "embeddinggemma-2",
+    "dimension": 768,
+    "vectorStore": "lancedb",
+    "openai-compatible": {
+      "baseUrl": "http://127.0.0.1:8080/v1",
+      "documentPrompt": "document",
+      "queryPrompt": "CodeRetrieval"
+    }
+  }
+}
+```
+
+Use the Gufo host reachable from the extension's backend. In a remote VS Code window, `127.0.0.1` refers to the remote machine. The model ID must match Gufo's served model name. Keep all 768 dimensions for maximum embedding quality.
+
+Gufo applies `title: none | text: ` to code chunks and `task: code retrieval | query: ` to searches. Kilo sends the original text, so do not also prepend these prefixes yourself. Both named settings override Gufo's global default for their respective operations; a single `--default-prompt-name` cannot choose the correct prompt for both operations.
+
+Changing `documentPrompt` makes the existing index incompatible and rebuilds its vectors. Changing only `queryPrompt` does not require re-embedding documents. If you change the model or document formatting on the server without changing Kilo's configuration, rebuild the index yourself so searches do not mix incompatible vectors.
 
 ## Setting Up Qdrant
 

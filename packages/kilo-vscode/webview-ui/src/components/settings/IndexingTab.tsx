@@ -65,7 +65,9 @@ function sourceLabel(source: IndexingSource) {
   return ""
 }
 
-function providerFields(provider: ProviderId | undefined): Array<{ key: string; label: string; placeholder: string }> {
+function providerFields(
+  provider: ProviderId | undefined,
+): Array<{ key: string; label: string; placeholder: string; descriptionKey?: string }> {
   if (provider === "kilo") return []
   if (provider === "openai") return [{ key: "apiKey", label: "API Key", placeholder: "sk-..." }]
   if (provider === "ollama") return [{ key: "baseUrl", label: "Base URL", placeholder: "http://localhost:11434" }]
@@ -73,6 +75,18 @@ function providerFields(provider: ProviderId | undefined): Array<{ key: string; 
     return [
       { key: "baseUrl", label: "Base URL", placeholder: "https://api.example.com/v1" },
       { key: "apiKey", label: "API Key (optional)", placeholder: "sk-..." },
+      {
+        key: "documentPrompt",
+        label: "Document Prompt Name",
+        placeholder: "e.g. document",
+        descriptionKey: "settings.indexing.providerField.documentPrompt.description",
+      },
+      {
+        key: "queryPrompt",
+        label: "Query Prompt Name",
+        placeholder: "e.g. CodeRetrieval",
+        descriptionKey: "settings.indexing.providerField.queryPrompt.description",
+      },
     ]
   }
   if (provider === "gemini") return [{ key: "apiKey", label: "API Key", placeholder: "AI..." }]
@@ -283,9 +297,10 @@ const IndexingTab: Component = () => {
   }
 
   const saveProviderField = (group: ProviderId, key: string, value: string) => {
+    const draftKey = `${scope()}.${group}.${key}`
+    if (providerDrafts()[draftKey] === undefined) return
     const current = (raw()[group] as Record<string, string | undefined> | undefined) ?? {}
     updateIndexing({ [group]: { ...current, [key]: value.trim() || undefined } })
-    const draftKey = `${scope()}.${group}.${key}`
     setProviderDrafts((prev) => Object.fromEntries(Object.entries(prev).filter(([entry]) => entry !== draftKey)))
   }
 
@@ -496,9 +511,10 @@ const IndexingTab: Component = () => {
                 {(field, index) => (
                   <SettingsRow
                     title={`${name} ${field.label}`}
-                    description={description(language.t("settings.indexing.providerField.description"), [
-                      [group, field.key],
-                    ])}
+                    description={description(
+                      language.t(field.descriptionKey ?? "settings.indexing.providerField.description"),
+                      [[group, field.key]],
+                    )}
                     tag={() => tag(scope(), [[group, field.key]])}
                     last={index() === fields.length - 1}
                   >
