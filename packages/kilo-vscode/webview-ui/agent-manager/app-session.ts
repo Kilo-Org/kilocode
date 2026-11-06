@@ -8,7 +8,6 @@
 import type { AgentInfo, CommandInfo, ModelInfo, ProviderInfo } from "@opencode/client"
 import { createEffect, createMemo, on, onCleanup, type Accessor } from "solid-js"
 import type { AgentManagerSendInitialMessage } from "../src/types/messages/agent-manager"
-import type { SessionSearchItem } from "../src/utils/prompt-mention-drop"
 import type { V2 } from "../src/v2/scope"
 import type { VSCodeContext } from "./v2/vscode"
 import type { AppDirectories } from "./app-directories"
@@ -33,6 +32,9 @@ export function createAppSession(opts: {
     directories: opts.directories.sessionDirectories,
     directoryOf: opts.directories.directoryOf,
   })
+
+  // Load session lists only for directories the panel shows; a worktree loads its list when it is selected.
+  createEffect(() => panel.show(opts.directories.visibleDirectories()))
 
   const rootStore = createMemo(() => {
     const directory = opts.rootDirectory()
@@ -63,13 +65,6 @@ export function createAppSession(opts: {
   const agents = (): AgentInfo[] =>
     (rootStore()?.data.location.agent.list() ?? []).filter((agent) => agent.mode !== "subagent" && !agent.hidden)
   const commands = (): CommandInfo[] => rootStore()?.data.location.command.list() ?? []
-
-  /** Sessions the panel already loaded, offered as past-chat mentions of the New Worktree dialog. */
-  const mentionSessions = (): SessionSearchItem[] =>
-    sessions
-      .sessions()
-      .map((info) => ({ id: info.id, title: info.title ?? "", updated: info.time.updated }))
-      .filter((item) => item.title.length > 0)
 
   const storeFor = (directory: string | undefined): V2 | undefined => {
     if (directory) return panel.store(directory)
@@ -108,7 +103,6 @@ export function createAppSession(opts: {
     providers,
     agents,
     commands,
-    mentionSessions,
     switchModel,
     sendInitial,
   }
