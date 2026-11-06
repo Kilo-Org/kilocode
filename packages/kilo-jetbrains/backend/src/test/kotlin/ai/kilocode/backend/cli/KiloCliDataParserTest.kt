@@ -1837,6 +1837,22 @@ class KiloCliDataParserTest {
         }
 
         @Test
+        fun `parseMessages - reads injected prompt title from text metadata`() {
+            val raw = """[
+                {
+                    "info": { "id": "m1", "sessionID": "s1", "role": "user", "time": { "created": 1.0 } },
+                    "parts": [
+                        { "id": "p1", "sessionID": "s1", "messageID": "m1", "type": "text", "text": "Update the branch", "metadata": { "kilo": { "injected": { "title": "Update from main" } } } }
+                    ]
+                }
+            ]"""
+
+            val result = KiloCliDataParser.parseMessages(raw).single()
+
+            assertEquals("Update from main", result.parts[0].injectedTitle)
+        }
+
+        @Test
         fun `parseMessages - message with tool parts`() {
             val raw = """[{
                 "info": { "id": "m1", "sessionID": "s1", "role": "assistant", "time": { "created": 1.0 } },
@@ -2694,6 +2710,18 @@ class KiloCliDataParserTest {
 
             assertEquals(
                 """{"parts":[{"type":"text","text":"Explain this selection"},{"type":"text","text":"Note: the user selected lines 2-3","synthetic":true},{"type":"file","mime":"text/plain","url":"file:///tmp/App.kt?start=2&end=3","filename":"App.kt"}]}""",
+                result,
+            )
+        }
+
+        @Test
+        fun `buildPromptJson - writes injected title as text metadata`() {
+            val prompt = PromptDto(parts = listOf(PromptPartDto(type = "text", text = "update", injectedTitle = "Update from main")))
+
+            val result = KiloCliDataParser.buildPromptJson(prompt)
+
+            assertEquals(
+                """{"parts":[{"type":"text","text":"update","metadata":{"kilo":{"injected":{"title":"Update from main"}}}}]}""",
                 result,
             )
         }

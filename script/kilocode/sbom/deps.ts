@@ -14,105 +14,12 @@
 
 import fs from "node:fs"
 import path from "node:path"
+import { entry, purl, resolve, type Info, type Lock } from "./lock"
 import { ref, type Component, type Gap } from "./model"
 
-export type Lock = {
-  lockfileVersion: number
-  workspaces: Record<
-    string,
-    {
-      name?: string
-      version?: string
-      dependencies?: Record<string, string>
-      devDependencies?: Record<string, string>
-      optionalDependencies?: Record<string, string>
-      peerDependencies?: Record<string, string>
-    }
-  >
-  packages: Record<string, unknown[]>
-  catalog?: Record<string, string>
-  catalogs?: Record<string, Record<string, string>>
-}
+export { load, purl, segments, type Lock } from "./lock"
 
 export type Platform = { os?: string; arch?: string; libc?: string }
-
-type Info = {
-  dependencies?: Record<string, string>
-  optionalDependencies?: Record<string, string>
-  peerDependencies?: Record<string, string>
-  os?: string | string[]
-  cpu?: string | string[]
-  libc?: string | string[]
-}
-
-type Resolved = {
-  key: string
-  name: string
-  version: string
-  kind: "npm" | "workspace" | "other"
-  integrity?: string
-  info: Info
-}
-
-/** `bun.lock` is JSONC. Bun's module loader understands it; JSON.parse does not. */
-export async function load(file: string) {
-  const module = await import(path.resolve(file))
-  return ((module as { default?: Lock }).default ?? module) as Lock
-}
-
-/**
- * Split a lockfile key into node_modules path segments, keeping `@scope/name`
- * together so nested resolution does not treat a scope as its own directory.
- */
-export function segments(key: string) {
-  const parts = key.split("/")
-  const out: string[] = []
-  let i = 0
-  while (i < parts.length) {
-    const part = parts[i]
-    if (part.startsWith("@") && i + 1 < parts.length) {
-      out.push(`${part}/${parts[i + 1]}`)
-      i += 2
-      continue
-    }
-    out.push(part)
-    i += 1
-  }
-  return out
-}
-
-function identifier(value: string) {
-  const at = value.lastIndexOf("@")
-  if (at <= 0) return { name: value, version: "" }
-  return { name: value.slice(0, at), version: value.slice(at + 1) }
-}
-
-function entry(lock: Lock, key: string): Resolved | undefined {
-  const value = lock.packages[key]
-  if (!Array.isArray(value) || typeof value[0] !== "string") return undefined
-  const parsed = identifier(value[0])
-  const info = (value.find((item) => typeof item === "object" && item !== null) ?? {}) as Info
-  const integrity = value.slice(1).find((item) => typeof item === "string" && item.includes("-")) as string | undefined
-  const kind = parsed.version.startsWith("workspace:") ? "workspace" : /^\d/.test(parsed.version) ? "npm" : "other"
-  return {
-    key,
-    name: parsed.name,
-    version: parsed.version,
-    kind,
-    info,
-    integrity: kind === "npm" ? integrity : undefined,
-  }
-}
-
-/** node_modules resolution: nearest nested copy wins, then walk up to the root. */
-function resolve(lock: Lock, from: string, name: string) {
-  const parts = from === "" ? [] : segments(from)
-  for (let depth = parts.length; depth >= 0; depth--) {
-    const key = [...parts.slice(0, depth), name].join("/")
-    if (lock.packages[key]) return key
-  }
-  return undefined
-}
 
 /** npm allows `os`/`cpu`/`libc` to be a single string or an array. */
 function list(value: string | string[] | undefined) {
@@ -141,11 +48,6 @@ export type Closure = {
   dependencies: Record<string, string[]>
   roots: string[]
   gaps: Gap[]
-}
-
-export function purl(name: string, version: string) {
-  const encoded = name.startsWith("@") ? `%40${name.slice(1)}` : name
-  return `pkg:npm/${encoded}@${version}`
 }
 
 /**

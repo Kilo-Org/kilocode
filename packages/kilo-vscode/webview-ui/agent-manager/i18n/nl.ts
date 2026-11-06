@@ -514,6 +514,54 @@ export const dict = {
   "agentManager.intro.guide": "Lees de handleiding",
   "agentManager.intro.dismiss": "Introductie overslaan",
   "agentManager.intro.reopen": "Hoe Agent Manager werkt",
+  "agentManager.splash.preview.label": "Voorbeeld van Agent Manager-zijbalk",
+  "agentManager.splash.eyebrow": "AGENT MANAGER",
+  "agentManager.splash.compact.subtitle":
+    "Voer taken parallel uit met worktrees, delegeer werk en volg elke agent vanuit één plek.",
+  "agentManager.splash.hide": "Verbergen",
+  "agentManager.splash.hideLabel": "Introductie van Agent Manager verbergen",
+  "agentManager.splash.title": "Zet een vloot Kilo-agenten aan het werk.",
+  "agentManager.splash.subtitle":
+    "Pak meerdere taken parallel aan met worktrees, delegeer werk, volg de voortgang van elke agent en houd meerdere werkstromen vanuit één plek in beweging.",
+  "agentManager.splash.hint": "of",
+  "agentManager.splash.proceed": "ga lokaal verder in het berichtvak hieronder",
+  "agentManager.splash.folded.title": "Zet een vloot Kilo-agenten aan het werk",
+  "agentManager.splash.folded.note": "Functies over stacks heen, delegeren, modelvergelijkingen en meer",
+  "agentManager.splash.showExamples": "Voorbeelden bekijken",
+  "agentManager.splash.examples.crossStack.tag": "Multi-repo",
+  "agentManager.splash.examples.crossStack.title": "Eén functie, drie repo's",
+  "agentManager.splash.examples.crossStack.pitch":
+    "Eén briefing, één agent per repo en de hele functie in één overzicht.",
+  "agentManager.splash.examples.crossStack.feature1.name": "Multi-repo-projecten",
+  "agentManager.splash.examples.crossStack.feature1.text": "Backend, frontend en infra naast elkaar in één zijbalk.",
+  "agentManager.splash.examples.crossStack.feature2.name": "Live sessiestatus",
+  "agentManager.splash.examples.crossStack.feature2.text":
+    "Zie in één oogopslag wat er werkt, klaar is of op je wacht.",
+  "agentManager.splash.examples.crossStack.feature3.name": "PR-badges en diff-tellingen",
+  "agentManager.splash.examples.crossStack.feature3.text": "Weet wat elke agent heeft gewijzigd voordat je het opent.",
+  "agentManager.splash.examples.delegate.tag": "Delegeren",
+  "agentManager.splash.examples.delegate.title": "Geef één sessie een grote klus",
+  "agentManager.splash.examples.delegate.pitch":
+    "Vraag één sessie om een grote klus op te delen in parallelle sessies en stap daarna in welke je maar wilt.",
+  "agentManager.splash.examples.delegate.feature1.name": "Sessies die sessies starten",
+  "agentManager.splash.examples.delegate.feature1.text":
+    "Een sessie kan nieuwe sessies starten, elk in een eigen worktree.",
+  "agentManager.splash.examples.delegate.feature2.name": "Geïsoleerde worktrees",
+  "agentManager.splash.examples.delegate.feature2.text": "Elk werk krijgt een eigen kopie, zodat niets botst.",
+  "agentManager.splash.examples.delegate.feature3.name": "Stap overal in",
+  "agentManager.splash.examples.delegate.feature3.text":
+    "Spring in elke gestarte sessie of volg de hele klus van bovenaf.",
+  "agentManager.splash.examples.compare.tag": "Modellen vergelijken",
+  "agentManager.splash.examples.compare.title": "Kies de beste van drie",
+  "agentManager.splash.examples.compare.pitch":
+    "Stuur één prompt naar meerdere agents of modellen en houd het beste resultaat.",
+  "agentManager.splash.examples.compare.feature1.name": "Multi-versie-runs",
+  "agentManager.splash.examples.compare.feature1.text": "Voer dezelfde taak tegelijk als meerdere versies uit.",
+  "agentManager.splash.examples.compare.feature2.name": "Mix modellen",
+  "agentManager.splash.examples.compare.feature2.text": "Vergelijk Kilo Auto, Claude en GPT op identiek werk.",
+  "agentManager.splash.examples.compare.feature3.name": "Houd de beste",
+  "agentManager.splash.examples.compare.feature3.text":
+    "Bekijk echte diffs naast elkaar, houd er één en gooi de rest weg.",
   "agentManager.worktree.health.absent-restorable": "Map verwijderd",
   "agentManager.worktree.health.absent-restorableNote":
     "De map is weg, maar branch {{branch}} bestaat nog. Herstel hem om hier verder te werken.",

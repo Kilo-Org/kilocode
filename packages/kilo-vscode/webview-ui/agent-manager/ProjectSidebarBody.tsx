@@ -1,4 +1,4 @@
-import { For, Show, createMemo, createSignal, onCleanup, type Component } from "solid-js"
+import { For, Show, createMemo, createSignal, onCleanup, type Component, type JSX } from "solid-js"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import {
   DragDropProvider,
@@ -67,6 +67,8 @@ interface Props {
   renamingSection: () => string | undefined
   onRenameEnd: () => void
   shortcutMap?: () => Map<string, number>
+  /** Decorative badge for a section, worktree or version group id, used by the splash preview. */
+  marker?: (id: string) => JSX.Element | undefined
 }
 
 /** Permanent real sidebar body for one expanded project. */
@@ -350,6 +352,7 @@ export const ProjectSidebarBody: Component<Props> = (props) => {
           onOpen={() => post({ type: "agentManager.openWorktree", worktreeId: worktree.id })}
           onOpenComments={() => props.onOpenComments?.(props.project.id, worktree.id)}
           onOpenPR={() => props.onOpenPR?.(props.project.id, worktree.id)}
+          marker={props.marker}
         />
       </div>
     )
@@ -447,6 +450,7 @@ export const ProjectSidebarBody: Component<Props> = (props) => {
                         section={section}
                         dropId={scope("section", section.id)}
                         count={memberCount(section.id)}
+                        marker={props.marker?.(section.id)}
                         autoRename={props.renamingSection() === section.id}
                         onRenameEnd={() => {
                           if (props.renamingSection() === section.id) props.onRenameEnd()
