@@ -195,3 +195,16 @@ for (const [name, input] of [
     expect(output.textContent).toContain("marker")
   })
 }
+
+test("a deferred grep card mounts its output when a display layout opens it by default", async () => {
+  const card = mountTool("grep", {
+    input: { pattern: "marker", path: "src" },
+    output: "src/a.ts:1: marker",
+    partID: "grep-default-open",
+    defaultOpen: true,
+  })
+  mounted.push(card)
+
+  const output = await waitFor(() => card.host.querySelector('[data-component="tool-output"]'))
+  expect(output.textContent).toContain("marker")
+})
