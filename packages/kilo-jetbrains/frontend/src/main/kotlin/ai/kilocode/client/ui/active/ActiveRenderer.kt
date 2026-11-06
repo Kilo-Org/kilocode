@@ -143,7 +143,7 @@ internal class ActiveRenderer(
     // The dropdown button keeps the overlay approach: a real empty-icon [spacer] holds the trailing
     // column in the row layout, and the [glyph] button floats over that slot, revealed on hover,
     // so the row body is laid out beside the column and never shifts.
-    private val glyph = ActiveActionCell().apply { hoverFlushLeft = true }
+    private val glyph = ActiveActionCell()
     private val spacer = JBLabel(EmptyIcon.create(AllIcons.Actions.More))
     private val row = JPanel(BorderLayout(UiStyle.Gap.md(), 0)).apply {
         add(mark, BorderLayout.WEST)
@@ -214,18 +214,15 @@ internal class ActiveRenderer(
             tail.add(spacer, BorderLayout.EAST)
             row.remove(endPane)
             row.add(tail, BorderLayout.EAST)
-            // The menu button owns the whole trailing strip, not just the glyph: its hit region and
-            // hover fill run from the reserved column out to the row's right edge, full height. The
-            // right border keeps the icon centred over the column while the extra padding widens the
-            // target and the pill into that strip.
-            layers.addOverlay(glyph) { host, _ ->
-                val width = spacer.preferredSize.width.coerceAtMost(host.width)
-                val inset = row.insets.right
+            // Keep the menu button the same compact size as the other row glyphs: its hit region and
+            // hover fill wrap the icon instead of stretching over the trailing strip.
+            layers.addOverlay(glyph) { host, child ->
+                val size = child.preferredSize
                 Rectangle(
-                    (host.width - inset - width).coerceAtLeast(0),
-                    0,
-                    (width + inset).coerceAtMost(host.width),
-                    host.height,
+                    (host.width - row.insets.right - size.width).coerceAtLeast(0),
+                    ((host.height - size.height) / 2).coerceAtLeast(0),
+                    size.width.coerceAtMost(host.width),
+                    size.height.coerceAtMost(host.height),
                 )
             }
         }
@@ -258,9 +255,6 @@ internal class ActiveRenderer(
         (row.layout as BorderLayout).hgap = if (menu == null) iconGap else 0
         row.border = JBUI.Borders.empty(UiStyle.Gap.MD, cfg.leadInset, UiStyle.Gap.MD, UiStyle.Gap.SM)
         mark.border = if (menu == null) JBUI.Borders.empty() else JBUI.Borders.emptyRight(activeIconGap())
-        // The menu overlay is wider than its reserved column so the whole trailing strip is a button.
-        // The matching right border keeps the glyph centred over the column itself.
-        glyph.border = if (menu == null) JBUI.Borders.empty() else JBUI.Borders.emptyRight(UiStyle.Gap.SM)
     }
 
     override fun updateUI() {
@@ -500,9 +494,6 @@ internal class ActiveActionCell : JBLabel(), ActiveHitCell {
     private var cell: ActiveCell? = null
     private var over = false
 
-    /** A control flush with the row content keeps square left corners in its hover fill. */
-    var hoverFlushLeft = false
-
     override var cellId: String = ""
         private set
 
@@ -519,7 +510,7 @@ internal class ActiveActionCell : JBLabel(), ActiveHitCell {
     }
 
     override fun paintComponent(g: Graphics) {
-        if (over && cellEnabled()) paintActionHover(g, width, height, roundLeft = !hoverFlushLeft)
+        if (over && cellEnabled()) paintActionHover(g, width, height)
         super.paintComponent(g)
     }
 

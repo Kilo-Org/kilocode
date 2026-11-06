@@ -8,7 +8,7 @@ import ai.kilocode.client.ui.list.ActiveListRenderer
 import ai.kilocode.client.ui.list.ActiveSection
 import ai.kilocode.client.ui.AnimationIcon
 import ai.kilocode.client.ui.LiveBadgeIcon
-import ai.kilocode.client.ui.paintActionHover
+import ai.kilocode.client.ui.UiStyle
 import com.intellij.icons.AllIcons
 import com.intellij.openapi.actionSystem.DataKey
 import com.intellij.openapi.actionSystem.DefaultActionGroup
@@ -91,24 +91,6 @@ class ActiveRendererTest : BasePlatformTestCase() {
         assertTrue(bounds.contains(hit.bounds))
     }
 
-    fun `test flush left action hover keeps the left edge square`() {
-        fun alpha(roundLeft: Boolean): Int {
-            val image = BufferedImage(24, 24, BufferedImage.TYPE_INT_ARGB)
-            val graphics = image.createGraphics()
-            try {
-                paintActionHover(graphics, 24, 24, roundLeft)
-            } finally {
-                graphics.dispose()
-            }
-            return java.awt.Color(image.getRGB(0, 0), true).alpha
-        }
-
-        val round = alpha(true)
-        val square = alpha(false)
-        assertTrue("A rounded pill barely covers its left corner", round < 128)
-        assertTrue("A flush control fills its left corner", square > round)
-    }
-
     fun `test menu glyph paints the standard hover fill when it is the hovered cell`() {
         val menu = ActiveMenu(DataKey.create<String>("renderer.menu.hover.fill"), DefaultActionGroup(), { it.key })
         val tree = ActiveTree("", menu = menu)
@@ -138,7 +120,7 @@ class ActiveRendererTest : BasePlatformTestCase() {
         val hit = renderer.buttons().single { it.id == ACTIVE_MENU_CELL }
         val lit = paint(ACTIVE_MENU_CELL)
         val x = hit.bounds.x + 1
-        val y = 2
+        val y = hit.bounds.y + 1
         assertTrue("The menu glyph must paint the hover fill", plain.getRGB(x, y) != lit.getRGB(x, y))
     }
 
@@ -599,9 +581,8 @@ class ActiveRendererTest : BasePlatformTestCase() {
             frame.x + frame.width)
         assertEquals("Body and selection share the cell", frame, body)
 
-        // The row body supplies the same small cell padding as the list. The menu button then fills
-        // the trailing gutter out to the selection edge, so its glyph stays centred in the reserved
-        // column while the whole strip is a click and hover target.
+        // The row body supplies the same small cell padding as the list. The menu button is a compact
+        // icon-sized overlay that keeps the row's trailing inset, matching the other row glyphs.
         val renderer = ActiveRenderer(menu = menu)
         renderer.render(view.state(entry, true, false, body.width).copy(menuVisible = true))
         renderer.setSize(body.width, renderer.preferredSize.height)
@@ -611,7 +592,8 @@ class ActiveRendererTest : BasePlatformTestCase() {
         val right = SwingUtilities.convertPoint(cell, cell.width, 0, renderer).x
         assertEquals("Menu keeps the shared trailing inset", renderer.width, body.width)
         assertTrue("Menu button stays inside the selection", body.x + right <= frame.x + frame.width)
-        assertEquals("Menu button fills the trailing gutter", 0, frame.x + frame.width - (body.x + right))
+        assertEquals("Menu button keeps the row's trailing inset", JBUI.scale(UiStyle.Gap.SM),
+            frame.x + frame.width - (body.x + right))
     }
 
     private fun descendants(component: java.awt.Component): List<java.awt.Component> =

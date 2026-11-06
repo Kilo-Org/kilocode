@@ -121,8 +121,8 @@ class ActiveTreeInteractionTest : BasePlatformTestCase() {
         assertNull(view.state(second, false, false).hoveredCell)
     }
 
-    fun `test the whole trailing menu strip is hoverable and clickable`() {
-        val menu = ActiveMenu(DataKey.create<String>("test.menu.strip"), DefaultActionGroup(), { it.key })
+    fun `test the menu button is hoverable around its compact icon box`() {
+        val menu = ActiveMenu(DataKey.create<String>("test.menu.compact"), DefaultActionGroup(), { it.key })
         val tree = ActiveTree("", menu = menu)
         tree.update(listOf(ActiveTreeNode(BadgeRow("a")), ActiveTreeNode(BadgeRow("b"))))
         val view = tree.preferredFocus() as ActiveTreeView
@@ -133,7 +133,12 @@ class ActiveTreeInteractionTest : BasePlatformTestCase() {
         moveTo(view, Point(frame.x + 1, frame.y + frame.height / 2))
         val hit = view.regions.hits(entry).single { it.id == ACTIVE_MENU_CELL }
         val cell = requireNotNull(view.regions.cell(entry))
-        assertEquals(cell.x + cell.width, hit.bounds.x + hit.bounds.width)
+
+        assertTrue("The menu hover is not stretched over the row height", hit.bounds.height < cell.height)
+        assertEquals("The menu hover stays vertically centered", frame.y + (frame.height - hit.bounds.height) / 2,
+            hit.bounds.y)
+        assertTrue("The menu hover stays inside the trailing edge",
+            hit.bounds.x + hit.bounds.width <= cell.x + cell.width)
 
         for (x in listOf(hit.bounds.x, hit.bounds.x + hit.bounds.width / 2, hit.bounds.x + hit.bounds.width - 1)) {
             moveTo(view, Point(x, hit.bounds.y + hit.bounds.height / 2))
