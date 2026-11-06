@@ -455,3 +455,30 @@ test("larger UI text uses deliberate rows instead of broken action labels", asyn
   await layout(page, 3)
   await page.screenshot({ path: info.outputPath("options-font-16-297.png") })
 })
+
+for (const font of ["Arial", "Verdana"]) {
+  for (const [width, rows] of [
+    [200, 3],
+    [297, 2],
+    [300, 2],
+    [312, 2],
+  ] as const) {
+    test(`${font} action labels fit the ${width}px card without clipping`, async ({ page }, info) => {
+      await page.setViewportSize({ width, height: 800 })
+      await page.emulateMedia({ reducedMotion: "reduce" })
+      await page.goto("/iframe.html?id=chat--chat-agent-manager-upsell&viewMode=story")
+      await expect(card(page)).toBeVisible()
+      // Exercise installed-font metric variation, not a substitute for the actual Linux system font.
+      await card(page).evaluate((node, font) => {
+        node.style.fontFamily = font
+      }, font)
+      await layout(page, rows)
+      const icon = card(page).locator('.agent-manager-upsell-primary [data-component="icon"]')
+      if (width < 312) await expect(icon).not.toBeVisible()
+      if (width === 312) await expect(icon).toBeVisible()
+      for (const button of await card(page).getByRole("button").all()) await button.click({ trial: true })
+      await page.mouse.move(0, 0)
+      await page.screenshot({ path: info.outputPath(`narrow-${font}-${width}.png`) })
+    })
+  }
+}

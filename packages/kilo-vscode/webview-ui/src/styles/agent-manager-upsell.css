@@ -160,10 +160,20 @@
 .agent-manager-upsell [data-component="button"].agent-manager-upsell-never:hover {
   color: var(--vscode-foreground, #d6d7da);
 }
+@container agent-manager-upsell (max-width: 20em) {
+  .agent-manager-upsell-body {
+    padding-inline: 8px;
+  }
+  .agent-manager-upsell [data-component="button"].agent-manager-upsell-primary {
+    padding-inline: 4px;
+  }
+}
 @container agent-manager-upsell (min-width: 20em) {
   .agent-manager-upsell-choices {
     display: flex;
   }
+}
+@container agent-manager-upsell (min-width: 22em) {
   .agent-manager-upsell-primary [data-component="icon"] {
     display: flex;
   }
