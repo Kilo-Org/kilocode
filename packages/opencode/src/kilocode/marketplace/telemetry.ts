@@ -15,6 +15,7 @@ import type { MarketplaceInstallPayload, Scope } from "./schema"
 
 const log = Log.create({ service: "marketplace.telemetry" })
 const SCOPES: readonly Scope[] = ["project", "global"]
+const active = new Set<string>()
 
 type Item = { id: string; type: string }
 type Where = { directory: string; worktree?: string }
@@ -103,12 +104,25 @@ function report(item: Item, scopes: readonly Scope[]) {
  */
 export function removal<A, E, R>(where: Where, item: Item, run: Effect.Effect<A, E, R>) {
   return Effect.gen(function* () {
-    if (!Telemetry.isEnabled()) return yield* run
-    const before = yield* Effect.promise(() => snapshot(where, item))
-    const result = yield* run
-    const after = yield* Effect.promise(() => snapshot(where, item))
-    const scopes = SCOPES.filter((_, index) => before[index] && !after[index])
-    if (scopes.length > 0) void report(item, scopes)
-    return result
+    const key = `${where.directory}\0${item.type}\0${item.id}`
+    // An overlapping removal of the same item would see the same before/after pair and count it
+    // twice; the one already watching reports it.
+    if (!Telemetry.isEnabled() || active.has(key)) return yield* run
+    return yield* Effect.acquireUseRelease(
+      Effect.sync(() => active.add(key)),
+      () =>
+        Effect.gen(function* () {
+          const before = yield* Effect.promise(() => snapshot(where, item))
+          // Check afterwards even when the removal fails: it can delete files before a later step errors.
+          const check = Effect.promise(() => snapshot(where, item)).pipe(
+            Effect.map((after) => {
+              const scopes = SCOPES.filter((_, index) => before[index] && !after[index])
+              if (scopes.length > 0) void report(item, scopes)
+            }),
+          )
+          return yield* run.pipe(Effect.ensuring(check))
+        }),
+      () => Effect.sync(() => active.delete(key)),
+    )
   })
 }

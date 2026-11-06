@@ -1,11 +1,12 @@
-import { afterEach, beforeEach, describe, expect, spyOn, test } from "bun:test"
-import { ConfigProvider, Layer } from "effect"
+import { afterAll, afterEach, beforeEach, describe, expect, spyOn, test } from "bun:test"
+import { ConfigProvider, Deferred, Effect, Fiber, Layer } from "effect"
 import { HttpRouter } from "effect/unstable/http"
 import * as Log from "@opencode-ai/core/util/log"
-import { mkdir, writeFile } from "fs/promises"
+import { mkdir, unlink, writeFile } from "fs/promises"
 import path from "path"
 import { Telemetry, type MarketplaceItemProperties } from "@kilocode/kilo-telemetry"
 import { KilocodePaths } from "../../src/kilocode/server/httpapi/groups/kilocode"
+import * as MarketplaceTelemetry from "../../src/kilocode/marketplace/telemetry"
 import * as HttpApiServer from "../../src/server/routes/instance/httpapi/server"
 import { resetDatabase } from "../fixture/db"
 import { disposeAllInstances, tmpdir } from "../fixture/fixture"
@@ -54,6 +55,8 @@ beforeEach(() => {
     spyOn(Telemetry, "trackMarketplaceItemRemoved").mockImplementation((props) => void removed.push(props)),
   )
 })
+
+afterAll(() => catalog.stop(true))
 
 afterEach(async () => {
   for (const spy of spies.splice(0)) spy.mockRestore()
@@ -200,4 +203,67 @@ describe("marketplace telemetry from the CLI", () => {
       { itemId: "catalog-agent", itemType: "agent", itemName: "Catalog Agent", target: "project", catalog: "custom" },
     ])
   })
+
+  test("reports a removal that deleted files before failing", async () => {
+    await using tmp = await tmpdir()
+    const file = await skill(tmp.path)
+    const run = Effect.promise(() => unlink(file)).pipe(Effect.andThen(Effect.fail("config rewrite failed")))
+
+    const exit = await Effect.runPromiseExit(
+      MarketplaceTelemetry.removal({ directory: tmp.path }, { id: "catalog-skill", type: "skill" }, run),
+    )
+    await settle(removed)
+
+    expect(exit._tag).toBe("Failure")
+    expect(removed.map((entry) => entry.itemId)).toEqual(["catalog-skill"])
+  })
+
+  test("counts overlapping removals of the same item once", async () => {
+    await using tmp = await tmpdir()
+    const file = await skill(tmp.path)
+    const item = { id: "catalog-skill", type: "skill" }
+    const where = { directory: tmp.path }
+
+    await Effect.runPromise(
+      Effect.gen(function* () {
+        const gate = yield* Deferred.make<void>()
+        const started = yield* Deferred.make<void>()
+        // The run only starts after the first removal took its "before" snapshot.
+        const first = yield* MarketplaceTelemetry.removal(
+          where,
+          item,
+          Deferred.succeed(started, undefined).pipe(
+            Effect.andThen(Deferred.await(gate)),
+            Effect.andThen(
+              Effect.promise(() =>
+                unlink(file).then(
+                  () => undefined,
+                  () => undefined,
+                ),
+              ),
+            ),
+          ),
+        ).pipe(Effect.forkChild)
+        yield* Deferred.await(started)
+        yield* MarketplaceTelemetry.removal(
+          where,
+          item,
+          Effect.promise(() => unlink(file)),
+        )
+        yield* Deferred.succeed(gate, undefined)
+        yield* Fiber.join(first)
+      }),
+    )
+    await settle(removed, 2)
+
+    expect(removed.map((entry) => entry.itemId)).toEqual(["catalog-skill"])
+  })
 })
+
+async function skill(root: string) {
+  const dir = path.join(root, ".kilo", "skills", "catalog-skill")
+  await mkdir(dir, { recursive: true })
+  const file = path.join(dir, "SKILL.md")
+  await writeFile(file, "---\nname: catalog-skill\ndescription: A skill\n---\n\n# Skill\n")
+  return file
+}
