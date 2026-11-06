@@ -32,7 +32,6 @@ import type {
   LocalGitStats,
   PRStatus,
   SessionInfo,
-  TerminalDestination,
   TerminalFont,
   WorktreeGitStats,
 } from "../src/types/messages/agent-manager"
@@ -132,9 +131,6 @@ import {
   createAmbientSetup,
   hasSetupTerminal,
   keepTerminalStack,
-  readSavedDestination,
-  resolveRunScriptRequest,
-  resolveVscodeTerminalRequest,
 } from "./terminal"
 import { createEmbeddedTerminalReader } from "./terminal/output"
 import { focusCurrentTab, renderTab, renderTerminalLayer, renderNewTabButton } from "./tab-rendering"
@@ -641,18 +637,18 @@ const AgentManagerContent: Component = () => {
     },
     refresh: ({ projectId, worktreeId }) => to({ type: "agentManager.refreshPR", projectId, worktreeId }),
   })
-  const runWorktree = (id: string, destination: TerminalDestination) => {
+  const runWorktree = (id: string) => {
     const state = runStatuses()[id]?.state ?? "idle"
     if (state === "running" || state === "stopping") {
       to({ type: "agentManager.stopRunScript", worktreeId: id })
       return
     }
-    to(resolveRunScriptRequest(id, destination))
+    to({ type: "agentManager.runScript", worktreeId: id })
   }
   const configureRunScript = () => to({ type: "agentManager.configureRunScript" })
   const runSelected = () => {
     const sel = selection()
-    if (sel) runWorktree(sel, sideCtl.destination())
+    if (sel) runWorktree(sel)
   }
   reportRemoteSessions(vscode, localSessionIDs, managedSessions, isPending)
   const releaseTabs = () => setTabWidths(false)
@@ -1362,19 +1358,6 @@ const AgentManagerContent: Component = () => {
       panels.close(SidePanel.Terminal)
     },
     refocus: requestChatFocus,
-    postMessage: to,
-    track: () => undefined,
-    saved: readSavedDestination(vscode.getState<Record<string, unknown>>()),
-    save: (destination) =>
-      vscode.setState({ ...vscode.getState<Record<string, unknown>>(), terminalDestination: destination }),
-    openVscode: () =>
-      to(
-        resolveVscodeTerminalRequest(
-          selection(),
-          sessions.currentSessionID(),
-          (worktree) => managedSessions().find((entry) => entry.worktreeId === worktree)?.id,
-        ),
-      ),
   })
   createEffect(on(terms.sideKey, (key, previous) => sideCtl.syncContext(key, previous), { defer: true }))
   const handleReviewTabMouseDown = (event: MouseEvent) => {
@@ -1766,7 +1749,7 @@ const AgentManagerContent: Component = () => {
             requestAnimationFrame(() => sidebarSearchMenu?.open())
           }
         },
-        showTerminal: () => sideCtl.openPreferred("keyboard_shortcut"),
+        showTerminal: () => sideCtl.toggle("keyboard_shortcut"),
         toggleDiff: () => diffPanels.toggleCommand(),
         newTab: handleNewTabForCurrentSelection,
         closeTask: () => closeFocusedTask(visibleTabId(), tabLookup(), handleCloseTab),
@@ -1846,7 +1829,6 @@ const AgentManagerContent: Component = () => {
         terms.setSideActive(contextKey, terminalId)
         terms.requestFocus(terminalId)
       },
-      onDestinationChanged: (destination) => sideCtl.syncDefault(destination),
     })
 
     const unsubscribe = vscode.onMessage((raw) => {
@@ -2464,7 +2446,7 @@ const AgentManagerContent: Component = () => {
         onOpen={openWorktreeDirectory}
         runStatuses={runStatuses}
         runConfigured={runScriptConfigured}
-        onRun={(id) => runWorktree(id, sideCtl.destination())}
+        onRun={runWorktree}
         onConfigureRun={configureRunScript}
         diffOpen={diffOpen}
         reviewActive={reviewActive}
@@ -2481,14 +2463,12 @@ const AgentManagerContent: Component = () => {
         subagentsAvailable={() => subagentCtl.tabs.tabs().length > 0 || subagentCtl.toolbar.available().length > 0}
         subagentsOpen={() => sidePanel() === SidePanel.Subagents}
         onToggleSubagents={subagentCtl.toolbar.toggle}
-        terminalDestination={sideCtl.destination}
-        terminalDestinationActive={() => sidePanel() === SidePanel.Terminal}
+        terminalOpen={() => sidePanel() === SidePanel.Terminal}
         terminalKeybind={() => kb().showTerminal ?? ""}
-        onTerminalDestinationOpen={() => {
+        onTerminalOpen={() => {
           cancelAmbientSetup()
-          sideCtl.openPreferred("tab_toolbar")
+          sideCtl.toggle("tab_toolbar")
         }}
-        onTerminalDestinationChoose={sideCtl.choose}
       />
 
       <Show when={restricted()}>

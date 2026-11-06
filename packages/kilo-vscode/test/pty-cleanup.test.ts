@@ -3,7 +3,6 @@ import type { AgentManagerConnection } from "../src/agent-manager/connection"
 import type { OpenCodeClient } from "@opencode/client"
 import { acquirePtyCleanup, teardown } from "../src/agent-manager/pty-cleanup"
 import type { ScriptTerminalManager } from "../src/agent-manager/ScriptTerminalManager"
-import type { SessionTerminalManager } from "../src/agent-manager/SessionTerminalManager"
 import type { TerminalRouter } from "../src/agent-manager/terminal-routing"
 
 function connection(client: unknown): AgentManagerConnection {
@@ -49,7 +48,7 @@ describe("Agent Manager PTY cleanup", () => {
     await expect(teardown(connection(client), "/root/.kilo/worktrees/wt")).rejects.toThrow("offline")
   })
 
-  it("closes integrated terminals before removing embedded worktree PTYs", async () => {
+  it("closes worktree terminals before removing embedded worktree PTYs", async () => {
     const calls: string[] = []
     const client = {
       debug: {
@@ -74,20 +73,14 @@ describe("Agent Manager PTY cleanup", () => {
       },
       closeDirectory: async () => calls.push("close-scripts"),
     } as unknown as ScriptTerminalManager
-    const integrated = {
-      closeDirectory: (dir: string) => calls.push(`integrated:${dir}`),
-    } as unknown as SessionTerminalManager
-
     const release = await acquirePtyCleanup("/worktree", {
       terminals,
-      integrated,
       scripts,
       connection: connection(client),
     })
     expect(calls).toEqual([
       "block-terminals",
       "block-scripts",
-      "integrated:/worktree",
       "close-terminals",
       "close-scripts",
       "teardown",

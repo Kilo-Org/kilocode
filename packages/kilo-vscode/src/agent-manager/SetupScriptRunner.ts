@@ -5,7 +5,6 @@
  * actual execution to an injected RunTask callback (provided by the caller).
  */
 
-import * as path from "node:path"
 import { SetupScriptService, type SetupScriptInfo } from "./SetupScriptService"
 
 interface SetupScriptEnvironment {
@@ -15,7 +14,7 @@ interface SetupScriptEnvironment {
   repoPath: string
 }
 
-export interface SetupTaskConfig {
+interface SetupTaskConfig {
   command: string
   args: string[]
   cwd: string
@@ -45,18 +44,6 @@ export function buildSetupTaskCommand(script: SetupScriptInfo): { command: strin
   return {
     command: "sh",
     args: [script.path],
-  }
-}
-
-/**
- * VS Code task identity for one worktree. VS Code reuses an active task with the
- * same definition instead of starting a new one, so the worktree path must be part
- * of it. Otherwise a concurrent setup attaches to another worktree's execution.
- */
-export function setupTaskIdentity(config: SetupTaskConfig) {
-  return {
-    definition: { type: "kilo-worktree-setup", script: config.command, worktree: config.cwd },
-    name: `Worktree Setup (${path.basename(config.cwd)})`,
   }
 }
 

@@ -137,7 +137,6 @@ export const dict = {
   "agentManager.tab.unpin": "Sabitlemeyi kaldır",
   "agentManager.tab.pinned": "Sabitlendi",
   "agentManager.tab.terminal": "Terminal",
-  "agentManager.tab.openTerminal": "Terminali Aç",
   "agentManager.tab.newOptions": "Daha fazla yeni sekme seçeneği",
   "agentManager.sidebarSearch.label": "Worktree'leri ve oturumları ara",
   "agentManager.sidebarSearch.scope":
@@ -157,9 +156,6 @@ export const dict = {
   "agentManager.terminal.add": "Yeni terminal",
   "agentManager.terminal.empty": "Burada henüz terminal yok",
   "agentManager.terminal.start": "Terminali başlat",
-  "agentManager.terminal.destination": "Terminal düğmesinin ne açacağını seçin",
-  "agentManager.terminal.openInVscode": "VS Code terminali",
-  "agentManager.terminal.openInPanel": "Agent Manager paneli",
   "agentManager.terminal.errorTitle": "Terminal hatası",
 
   "agentManager.setup.failed": "Worktree kurulumu başarısız",

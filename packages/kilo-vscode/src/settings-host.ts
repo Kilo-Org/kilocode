@@ -42,7 +42,6 @@ export const KILO_SETTING_KEYS = [
   "agentManager.autoBranchNaming",
   "agentManager.branchPrefix",
   "agentManager.worktreePool",
-  "agentManager.terminalButtonDestination",
   "agentManager.pushFixes",
   "integratedBrowser",
   "agentManager.browser.useSystemChrome",
