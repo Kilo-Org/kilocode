@@ -135,7 +135,6 @@ export const dict = {
   "agentManager.tab.unpin": "Lösen",
   "agentManager.tab.pinned": "Angeheftet",
   "agentManager.tab.terminal": "Terminal",
-  "agentManager.tab.openTerminal": "Terminal öffnen",
   "agentManager.tab.newOptions": "Weitere Tab-Optionen",
   "agentManager.sidebarSearch.label": "Worktrees und Sitzungen durchsuchen",
   "agentManager.sidebarSearch.scope":
@@ -155,9 +154,6 @@ export const dict = {
   "agentManager.terminal.add": "Neues Terminal",
   "agentManager.terminal.empty": "Hier ist noch kein Terminal",
   "agentManager.terminal.start": "Terminal starten",
-  "agentManager.terminal.destination": "Auswählen, was die Terminal-Schaltfläche öffnet",
-  "agentManager.terminal.openInVscode": "VS Code-Terminal",
-  "agentManager.terminal.openInPanel": "Agent Manager-Panel",
   "agentManager.terminal.errorTitle": "Terminal-Fehler",
   "agentManager.setup.failed": "Einrichtung des Arbeitsbereichs fehlgeschlagen",
   "agentManager.setup.settingUp": "Arbeitsbereich wird eingerichtet",

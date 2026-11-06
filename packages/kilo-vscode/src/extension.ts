@@ -17,7 +17,7 @@ import { canonicalizePath, samePath } from "./agent-manager/project/paths"
 import { DocumentViewerProvider } from "./DocumentViewerProvider"
 import { AgentManagerProvider } from "./agent-manager/AgentManagerProvider"
 import { createPanel, PANEL_TYPE } from "./agent-manager/panel"
-import { ensureCommandsSkipShell } from "./agent-manager/terminal-host"
+import { clearLegacyTerminalDestination, ensureCommandsSkipShell } from "./agent-manager/terminal-host"
 import { VscodeHost } from "./agent-manager/vscode-host"
 import { BrowserTabProvider } from "./browser-tab/BrowserTabProvider"
 import { editorTabOwns, setEditorTabs, sidebarSession } from "./browser-tab/sidebar-session"
@@ -284,6 +284,9 @@ export function activate(context: ExtensionContext) {
   )
   const agentAction = (action: string) => agentManager.postMessage({ type: "action", action })
   ensureCommandsSkipShell()
+  void clearLegacyTerminalDestination().catch((error: unknown) =>
+    output.appendLine(`Terminal destination cleanup failed: ${String(error)}`),
+  )
   // The cycle keybindings act on the focused composer: the Agent Manager panel when it is active, else the sidebar.
   // The panel receives an action, so an open dialog handles it before the session behind the dialog.
   const cycle = async (name: "cycleAgentMode" | "cyclePreviousAgentMode") => {
