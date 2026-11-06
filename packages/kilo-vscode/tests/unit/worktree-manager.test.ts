@@ -1510,6 +1510,25 @@ describe("WorktreeManager helpers", () => {
     await fs.mkdir(path.join(root, ".git", "lfs"), { recursive: true })
     expect(await mgr.repoUsesLfs()).toBe(true)
   })
+
+  it("creates a worktree from a subdirectory of the repository", async () => {
+    const root = await createTempRepo()
+    const sub = path.join(root, "web")
+    await fs.mkdir(sub, { recursive: true })
+    const lfs = path.join(root, ".git", "lfs")
+    await fs.mkdir(lfs, { recursive: true })
+    const mgr = createManager(sub)
+
+    expect(await mgr.repoUsesLfs()).toBe(true)
+    await fs.rm(lfs, { recursive: true, force: true })
+    expect(await mgr.repoUsesLfs()).toBe(false)
+
+    const result = await mgr.createWorktree({ prompt: "subdir" })
+    expect((await fs.stat(path.join(result.path, ".git"))).isFile()).toBe(true)
+    expect(result.path.startsWith(sub + path.sep)).toBe(true)
+    const status = await simpleGit(root).raw(["status", "--porcelain", "--untracked-files=all"])
+    expect(status.trim()).toBe("")
+  })
 })
 
 describe("WorktreeManager.resolveStartPoint", () => {
