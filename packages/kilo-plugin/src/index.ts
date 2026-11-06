@@ -13,9 +13,12 @@ import { KiloReadPlugin } from "./read"
 import { KiloOpenAIPlugin } from "./openai"
 import { KiloMarketplacePlugin } from "./marketplace"
 import { KiloSessionSync } from "./session-sync"
+import { KiloRemote } from "./remote"
 
 export { KiloSessionSync }
+export { KiloRemote }
 import { KiloPrivacyPlugin } from "./privacy"
+import { KiloSettingsPlugin } from "./settings"
 import { KiloSkillPlugin } from "./skill"
 import { KiloTodoPlugin } from "./todo"
 import { KiloBrowserToolPlugin } from "./browser"
@@ -26,6 +29,9 @@ import { KiloReview } from "./review"
 // kilo_port(agent-manager:648a508ad347) the protection guard now lives in the Agent Manager plugin.
 import { KiloAgentManagerPlugin } from "./agent-manager"
 import { KiloRecallPlugin } from "./recall"
+import { KiloSandbox } from "./sandbox"
+
+export { KiloSandbox }
 
 /**
  * The Kilo plugins on the public plugin API (plugin-first rung 1), in registration order. The Kilo host
@@ -49,6 +55,7 @@ export const KiloPlugins = [
   KiloOpenAIPlugin,
   KiloMarketplacePlugin,
   KiloSessionSync.plugin,
+  KiloRemote.plugin,
   KiloSkillPlugin,
   // Rung 1: names the extracted formats in the native read tool description. The host swaps the
   // reader behind it for the filesystem service (rung 2).
@@ -59,6 +66,7 @@ export const KiloPlugins = [
   KiloNotebookPlugin,
   KiloCommitMessagePlugin,
   KiloPrivacyPlugin,
+  KiloSettingsPlugin,
   KiloBranchNamePlugin,
   KiloAgentManagerPlugin,
   KiloRecallPlugin,
@@ -72,4 +80,6 @@ export const KiloPostPlugins = [
   KiloAgentPlugin.Ceiling,
   GatewayOptions.Plugin,
   OpencodeFreeTier.Plugin,
+  // The sandbox wraps every tool, so it registers after the config plugins and their tools.
+  KiloSandbox.Plugin,
 ] as const

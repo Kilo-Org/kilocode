@@ -1,17 +1,10 @@
 import { expect, test } from "bun:test"
-import { existsSync } from "node:fs"
-import { chromium } from "playwright-core"
+import { chromiumProbe, executable } from "./fixtures/chromium"
 import { node } from "./fixtures/node"
 
-const executable = [
-  process.env.CHROME_PATH,
-  "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
-  "/usr/bin/google-chrome",
-  "/usr/bin/chromium",
-  chromium.executablePath(),
-].find((path) => path && existsSync(path))
+const probe = executable ? await chromiumProbe() : ({ state: "missing" } as const)
 
-test.skipIf(!executable)(
+test.skipIf(probe.state !== "ready")(
   "browser network Chromium checks run in the extension host's Node runtime",
   async () => {
     const result = await node("browser-network", {
@@ -27,3 +20,7 @@ test.skipIf(!executable)(
   },
   190_000,
 )
+
+test.skipIf(probe.state !== "failed")("browser network Chromium launches", () => {
+  if (probe.state === "failed") expect.unreachable(probe.reason)
+})

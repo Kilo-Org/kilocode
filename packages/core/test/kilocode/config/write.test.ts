@@ -82,15 +82,15 @@ describe("KiloConfigWriter", () => {
     }).pipe(Effect.provide(layer())),
   )
 
-  it.effect("resolves project candidates in .kilo2 before root order", () =>
+  it.effect("resolves project candidates to the reader's winner: .kilo2 before root, later read file first", () =>
     Effect.gen(function* () {
       const tmp = yield* tmpdirScoped()
       const dot = path.join(tmp.path, ".kilo2")
-      const expected = path.join(dot, "kilo2.jsonc")
+      const expected = path.join(dot, "kilo2.json")
       yield* put(path.join(tmp.path, "kilo2.json"), `{"shell": "a"}\n`)
       yield* put(path.join(tmp.path, "kilo2.jsonc"), `{"shell": "b"}\n`)
-      yield* put(path.join(dot, "kilo2.json"), `{"shell": "c"}\n`)
-      yield* put(expected, `{"shell": "d"}\n`)
+      yield* put(expected, `{"shell": "c"}\n`)
+      yield* put(path.join(dot, "kilo2.jsonc"), `{"shell": "d"}\n`)
       const writer = yield* KiloConfigWriter.Service
       expect(yield* writer.target({ directory: tmp.path })).toBe(expected)
 

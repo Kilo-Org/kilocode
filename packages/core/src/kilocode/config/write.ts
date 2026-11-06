@@ -36,6 +36,12 @@ export interface Target {
   readonly directory: string
   /** Resolve against the global config directory instead of a project directory; changes the candidate order. */
   readonly global?: boolean
+  /**
+   * Write exactly this file instead of the scope's first existing write candidate. The settings RPC uses it to
+   * remove a key from a project document that is not the resolved target, so a project unset clears every document
+   * that sets the value rather than only the one a `set` would edit.
+   */
+  readonly file?: string
 }
 
 export interface WriteInput {
@@ -150,7 +156,7 @@ export const layer = (options?: Options) =>
 
       const write = Effect.fn("KiloConfigWriter.write")(
         function* (input: WriteInput) {
-          const file = yield* target(input.target)
+          const file = input.target.file ?? (yield* target(input.target))
           const current = yield* read(file)
           const text = current ?? "{}\n"
           const errors: ParseError[] = []

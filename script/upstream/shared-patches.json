@@ -1,12 +1,16 @@
 {
   "$comment": "Shared-patch baseline (U-L3-01). Read by script/check-shared-patches.ts and script/check-opencode-annotations.ts. Each shared upstream file that Kilo adds or changes needs an entry: rung (3 = seam patch, 4 = feature patch) and the missing seam. `unmarked` allows lines without markers and states why. Raise a limit only in the PR that adds the patch, and lower it when a patch goes away.",
   "limits": {
-    "files": 91,
-    "markedLines": 1522,
-    "unmarkedLines": 277,
+    "files": 98,
+    "markedLines": 1588,
+    "unmarkedLines": 279,
     "deletedFiles": 0
   },
   "files": {
+    "packages/cli/src/run/noninteractive.ts": {
+      "rung": 3,
+      "seam": "`run --auto` replies `once` to every permission request. A request whose metadata sets `interactive: true` is rejected instead, so a headless run cannot approve it. The Kilo sandbox asks `sandbox_escalation` with that flag before a Git command runs outside the sandbox. No plugin hook reaches the CLI's permission replies (the permission domain has only `evaluate`), and the host does not own the non-interactive run loop. Upstream never sets the flag, so its behavior does not change."
+    },
     "packages/core/src/tool-output.ts": {
       "rung": 3,
       "seam": "Export the existing layer and cleanup node so the Kilo host can decorate native file allocations while preserving native truncation and cleanup. A plugin cannot observe allocation provenance, and replacing the service without these exports would duplicate the upstream implementation. No algorithm or upstream default changes."
@@ -141,6 +145,10 @@
       "rung": 4,
       "seam": "Optional `moved` flag on a file diff so clients can label a rename. The patch tool output is this shared struct and no plugin can add a field to an upstream schema; without the flag both clients report a rename as an unlabelled modification. Every other producer omits it, so upstream behavior and defaults are unchanged."
     },
+    "packages/core/src/tool/mcp.ts": {
+      "rung": 3,
+      "seam": "Mark every MCP tool registration with `mcp: true`. The sandbox plugin must treat an MCP tool as delegated network authority even when a server named `opencode` exposes a tool named like a built-in, and namespace plus declared name cannot separate the two. Provenance exists only at registration and no plugin hook observes it. Without the sandbox plugin nothing reads the flag, so upstream behavior and defaults are unchanged."
+    },
     "packages/core/src/tool/plugin/patch.ts": {
       "rung": 4,
       "seam": "Set the optional `moved` flag when an update hunk has a move target. The move already applies here; only the result metadata loses the fact that it was a rename. The tool has no plugin hook for its own result metadata, and add, delete and plain update hunks stay unchanged."
@@ -167,7 +175,7 @@
     },
     "packages/core/test/plugin/supervisor-reload.test.ts": {
       "rung": 3,
-      "seam": "Test timing only: the organization integration test waits up to 5 s (500 retries of 10 ms) for each plugin reload instead of 2 s, the same budget as the other reload wait in the file (200 retries of 25 ms). The 2 s budget ran out on loaded CI runners. No product code changes. No seam: the retry budget is a literal inside the upstream test."
+      "seam": "Test timing only: the organization integration test waits up to 15 s (1500 retries of 10 ms) for each plugin reload instead of 2 s. The 2 s budget and a 5 s budget both ran out on loaded Linux CI runners, where the plugin supervisor restart outran the window. No product code changes. No seam: the retry budget is a literal inside the upstream test."
     },
     "packages/core/test/filesystem/watcher.test.ts": {
       "rung": 4,
@@ -204,7 +212,11 @@
     },
     "packages/plugin/src/tui/context.ts": {
       "rung": 3,
-      "seam": "Declare the `home.bottom` slot path in the public `SlotMap`, so a TUI plugin can render below the home prompt, as the v1 `home_bottom` slot allowed (Kilo Gateway news uses it). The v2 home screen publishes only `home.footer` and `home.footer.status`; a `before`/`after` claim on those places content at the bottom of the screen, not below the prompt. Rungs 1 and 2 cannot add a slot path: `SlotMap` is the closed public type of the plugin API. One generic line with no Kilo value."
+      "seam": "Declare the `home.bottom` slot path in the public `SlotMap`, so a TUI plugin can render below the home prompt, as the v1 `home_bottom` slot allowed (Kilo Gateway news uses it). The v2 home screen publishes only `home.footer` and `home.footer.status`; a `before`/`after` claim on those places content at the bottom of the screen, not below the prompt. Also declare `app.header` for plugin status above the main view; existing slots are below the view or inside the session composer/sidebar, so none can supply a process-wide header indicator. Rungs 1 and 2 cannot add a slot path: `SlotMap` is the closed public type of the plugin API. Two generic lines with no Kilo value."
+    },
+    "packages/tui/src/app.tsx": {
+      "rung": 3,
+      "seam": "Render the optional `app.header` slot above the main view and session tabs. Existing slots cannot place a process-wide status indicator at the top of both home and session screens, and server host composition cannot alter the TUI layout. One generic line; without a claim it renders nothing and preserves upstream defaults."
     },
     "packages/tui/src/routes/home.tsx": {
       "rung": 3,
@@ -212,7 +224,7 @@
     },
     "packages/tui/src/plugin/builtins.ts": {
       "rung": 4,
-      "seam": "Register the Kilo built-in TUI plugins, including `KiloMarketplace` (`/marketplace`, partial U-E2-23), `KiloCopySession` (`/copy-session`) and `KiloTerminalActivity` (OSC 777 session activity for terminals that set KILO_TERMINAL_ACTIVITY). The TUI loads its built-in list in its own process, which server-side host/plugin registration cannot reach. Config-driven plugins load npm packages or local files, unavailable in compiled binaries. A generic registration API would require more shared lines for this single list. The behavior stays in tui/src/kilocode/; each plugin adds one import and one list entry."
+      "seam": "Register the Kilo built-in TUI plugins, including `KiloMarketplace` (`/marketplace`, partial U-E2-23), `KiloCopySession` (`/copy-session`), `KiloTerminalActivity` (OSC 777 session activity for terminals that set KILO_TERMINAL_ACTIVITY) and `KiloRemote` (`/remote` and the remote-control header indicator, registered only by the kilo2 host identity). The TUI loads its built-in list in its own process, which server-side host/plugin registration cannot reach. Config-driven plugins load npm packages or local files, unavailable in compiled binaries. A generic registration API would require more shared lines for this single list. The behavior stays in tui/src/kilocode/; each plugin adds one import and one list entry."
     },
     "packages/tui/test/fixture/local.tsx": {
       "rung": 3,
@@ -335,6 +347,16 @@
       "rung": 3,
       "seam": "Pass `replayExited=1` from the PTY connect query to the `allowExited` attach input in packages/core/src/pty.ts. The connect route is the only path a client reaches `attach` through, and its handler has no extension point for query options. Without the query parameter the route behaves as upstream."
     },
+    "packages/client/package.json": {
+      "rung": 4,
+      "seam": "Test timing only: the `test` script raises the per-test timeout from 5000 ms to 30000 ms, matching the rest of the workspace. The 5 s ceiling was tight for the suites that regenerate or compile client output and hit the filesystem, and it timed out on slower shared CI runners before the tests themselves failed. Ported from #15879. No seam: the flag is a literal inside upstream's script string and no host or plugin can pass bun test options in its place.",
+      "unmarked": "JSON has no comments."
+    },
+    "packages/httpapi-codegen/package.json": {
+      "rung": 4,
+      "seam": "Test timing only: the `test` script raises the per-test timeout from 5000 ms to 30000 ms, matching the rest of the workspace. The 5 s ceiling was tight for the suites that generate and compile codegen output and spawn processes, and it timed out on slower shared CI runners before the tests themselves failed. Ported from #15879. No seam: the flag is a literal inside upstream's script string and no host or plugin can pass bun test options in its place.",
+      "unmarked": "JSON has no comments."
+    },
     "packages/client/src/solid/data.ts": {
       "rung": 3,
       "seam": "Adds a per-session `session.message.evict(sessionID)` that drops one session's cached messages. The existing `session.evict` clears the root and every known descendant, so the Agent Manager inspector cannot release one subagent without blanking the parent transcript. Also adds `session.message.startLoaded(sessionID)`, which reports whether the last fetched page was shorter than the requested limit. The server returns a next cursor for the last non-empty page even when nothing is older, so a transcript cannot otherwise know that its loaded window reaches the start. Omitted calls behave as upstream."
@@ -355,6 +377,10 @@
     "packages/schema/src/pty.ts": {
       "rung": 3,
       "seam": "Optional `size` on `Pty.CreateInput`, sharing the size contract with `UpdateInput`. It matches `PersistentPty.CreateInput`, which already carries a size, and lets any client spawn a terminal at its own dimensions. Omitted keeps upstream behavior."
+    },
+    "packages/schema/src/tool.ts": {
+      "rung": 3,
+      "seam": "Optional `mcp` provenance on tool options, set by the MCP registration so the sandbox plugin can never read a namespaced MCP tool as a built-in. The tool registry schema is shared and closed to plugin extension. Omitted keeps upstream behavior."
     },
     "packages/client/src/effect/api/api.ts": {
       "rung": 3,
@@ -383,6 +409,10 @@
       "rung": 4,
       "seam": "Mammoth 1.12.0 is written for the @xmldom/xmldom 0.8 errorHandler API. Kilo raises xmldom to the patched 0.9 line for the XML injection and resource-consumption fixes, so mammoth's xml reader must use the 0.9 onError API and pass text/xml. Set through patchedDependencies in the root package.json, so the patch applies from the root install. The same patch and override ship on v1. No lower rung: the parser call is inside mammoth's shipped lib/xml/xmldom.js and no host or plugin hook replaces that module.",
       "unmarked": "A patch file is applied verbatim; a marker inside the diff would change the patched source. The same patch ships on v1."
+    },
+    "packages/patchmark/test/slow-inputs.test.ts": {
+      "rung": 4,
+      "seam": "Kilo CI stability: the 1 MB one-char-at-a-time streaming test keeps its deterministic scan-work assertion, but the wall-clock timeout in the same test is upstream's default, and Windows CI runners crossed it at ~18 s against a 15 s ceiling. The input is reduced to 256 KB, which keeps the identical constant-work-per-character bound, and the timeout is raised to 60 s as a guard for catastrophic regressions only. No seam: bun's per-test timeout and the payload size are inside an upstream test file, and the test suite belongs to the upstream package that Kilo cannot replace (inline patch, option 4)."
     }
   }
 }

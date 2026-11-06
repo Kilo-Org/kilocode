@@ -1300,6 +1300,138 @@
     "note": "The state router is carried by packages/kilo-vscode/webview-ui/agent-manager/project/{state,state-handlers,store}.ts and the host project messages. packages/kilo-vscode/test/agent-project-messages.test.ts covers deferred state, activation and the no-catalog mode.",
     "by": "am-progress-map"
   },
+  "module:packages/opencode/src/kilocode/sandbox/activation.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-plugin/src/sandbox/activation.ts",
+    "note": "family and idle: a toggle that enables the sandbox waits until no member of the session family runs a step or owns a running background job. Reads the family, active sessions and background jobs through the plugin's Runtime service (Session.Service list/active, Job.Service runningBackground) instead of v1 Instance and BackgroundJob.",
+    "by": "sandbox-port"
+  },
+  "module:packages/opencode/src/kilocode/sandbox/config.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-plugin/src/sandbox/config.ts",
+    "note": "SandboxConfig.resolve and scope unchanged. fromEntries replaces v1's config merge: it reads the `sandbox` key from the location's KiloConfigPolicy documents in priority order, lets only global documents widen the sandbox (project documents can only enable it or deny network), and a later document replaces each field it sets, as v1 mergeDeep did. The key schema is in core/src/kilocode/config/policy.ts.",
+    "by": "sandbox-port"
+  },
+  "module:packages/opencode/src/kilocode/sandbox/event.ts": {
+    "state": "ported",
+    "v2": "packages/schema/src/kilocode/sandbox.ts",
+    "note": "The sandbox.status.changed bus event is the `changed` event of the kilocode.sandbox RPC contract (KiloSandboxRpc.Changed), published by policy.ts through Runtime.publish and emitted by the plugin's RPC registration. Adds `network` so clients need no config read.",
+    "by": "sandbox-port"
+  },
+  "module:packages/opencode/src/kilocode/sandbox/git.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-plugin/src/sandbox/git.ts",
+    "note": "Copied unchanged: the Git command classifier that decides which commands need host access. The shell create.before hook in index.ts asks the sandbox_escalation permission for them.",
+    "by": "sandbox-port"
+  },
+  "module:packages/opencode/src/kilocode/sandbox/network-tools.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-plugin/src/sandbox/network-tools.ts",
+    "note": "Same three lists (opaque, host, builtin) with v2 tool names: shell instead of bash, subagent instead of task, the v2 schedule/artifact/worktree tools, and Kilo's agent_manager tools. A tool outside the list is delegated authority and runs only with unrestricted network.",
+    "by": "sandbox-port"
+  },
+  "module:packages/opencode/src/kilocode/sandbox/policy.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-plugin/src/sandbox/policy.ts",
+    "note": "Copied with the boundary rewritten: the Runtime service (directory, worktree, config, session, children, active, background, publish) replaces v1 Config/Database/Instance/Bus. Subagent sessions inherit the parent's snapshot through Session.Info.parentID (lazy, no token). executeEscalated, executeMcp, retire and peek are gone: escalation is the shell hook in index.ts, MCP goes through executeTool with the mcp flag. Profile deny list protects <state>/sandbox and the kilo2 config dir and denies the KILO2_/OPENCODE_ config and server variables.",
+    "by": "sandbox-port"
+  },
+  "module:packages/opencode/src/kilocode/sandbox/preference.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-plugin/src/sandbox/preference.ts",
+    "note": "Copied; the root is <kilo2 state>/sandbox/preference (root.ts) instead of a sibling of the opencode state dir.",
+    "by": "sandbox-port"
+  },
+  "module:packages/opencode/src/kilocode/sandbox/state.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-plugin/src/sandbox/state.ts",
+    "note": "Session metadata key kilocode.sandbox {enabled, version}, now parsed with a Schema; read through Runtime.session instead of the v1 session table.",
+    "by": "sandbox-port"
+  },
+  "module:packages/opencode/src/kilocode/sandbox/store.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-plugin/src/sandbox/store.ts",
+    "note": "Copied; the root is <kilo2 state>/sandbox/policy (root.ts).",
+    "by": "sandbox-port"
+  },
+  "module:packages/core/test/kilocode/linux-sandbox.test.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-plugin/test/sandbox/linux-sandbox.test.ts",
+    "note": "All 26 Linux Bubblewrap tests copied; they spawn through the plugin's confine() spawner decorator (the code the host uses) instead of the v1 core spawner patch. Run in CI by the kilo-v2 kilo packages job with a built Bubblewrap; 104/105 sandbox tests pass on Linux as a non-root user.",
+    "by": "sandbox-port"
+  },
+  "module:packages/opencode/test/kilocode/sandbox/config-network.test.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-plugin/test/sandbox/config-network.test.ts",
+    "note": "Configured allowed host through the proxy, blocked host 403, deny fails before the server, allow reaches the server, through a test Runtime instead of v1 TestConfig/InstanceRef.",
+    "by": "sandbox-port"
+  },
+  "module:packages/opencode/test/kilocode/sandbox/git.test.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-plugin/test/sandbox/git.test.ts",
+    "note": "Full read-only and mutating tables, compound commands and non-Git commands.",
+    "by": "sandbox-port"
+  },
+  "module:packages/opencode/test/kilocode/sandbox/http-tools.test.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-plugin/test/sandbox/network.test.ts",
+    "note": "Webfetch classification and HTTP allow/deny/proxy through the decorated client are in network.test.ts and config-network.test.ts. Browser broker cases are not carried: v2 has no browser_open tool. Webfetch redirect/cancel internals were v1 tool plumbing.",
+    "by": "sandbox-port"
+  },
+  "module:packages/opencode/test/kilocode/sandbox/macos-confinement.test.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-plugin/test/sandbox/macos-confinement.test.ts",
+    "note": "Real seatbelt: write inside works, outside and .git denied, allowed after disable; direct network denied; proxy allows only the configured host. v1 write/edit/patch tool internals are covered by the mutation worker tests in packages/kilo-sandbox.",
+    "by": "sandbox-port"
+  },
+  "module:packages/opencode/test/kilocode/sandbox/policy.test.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-plugin/test/sandbox/policy.test.ts",
+    "note": "Profile roots and worktree isolation, state directories, network modes and the state machine (defaults, metadata/preference precedence, toggle persistence, dispose, refresh and publish, activation serialization).",
+    "by": "sandbox-port"
+  },
+  "module:packages/opencode/test/kilocode/sandbox/sdk-config.test.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-plugin/test/sandbox/config.test.ts",
+    "note": "The v1 SDK config type assertion: v2 has no v1 SDK (principle 3). The sandbox config fields and their scoping are asserted against KiloConfigPolicy documents in config.test.ts.",
+    "by": "sandbox-port"
+  },
+  "module:packages/opencode/test/kilocode/sandbox/session-tools.test.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-plugin/test/sandbox/policy.test.ts",
+    "note": "Model-originated writes and shell commands confined to the active worktree, concurrent profile isolation and .git denial are in policy.test.ts and macos-confinement.test.ts. v1 tool resolution and permission provenance metadata were v1 session plumbing.",
+    "by": "sandbox-port"
+  },
+  "module:packages/opencode/test/kilocode/sandbox/session.test.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-plugin/test/sandbox/session.test.ts",
+    "note": "Subagent inheritance through parentID, child state precedence, network and write intersection, cross-directory inheritance, activation family and idle.",
+    "by": "sandbox-port"
+  },
+  "module:packages/opencode/test/kilocode/sandbox/shell-network.test.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-plugin/test/sandbox/shell-network.test.ts",
+    "note": "Configured allow reaches a real TCP peer from a sandboxed spawn; deny blocks it.",
+    "by": "sandbox-port"
+  },
+  "module:packages/opencode/test/kilocode/sandbox/state.test.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-plugin/test/sandbox/state.test.ts",
+    "note": "Metadata parse, store and preference round trips, corrupt state rejected, dispose, canonical state root.",
+    "by": "sandbox-port"
+  },
+  "module:packages/opencode/test/kilocode/sandbox/tui.test.ts": {
+    "state": "ported",
+    "v2": "packages/tui/test/kilocode/sandbox.test.ts",
+    "note": "The prompt footer indicator of the v2 TUI plugin (packages/tui/src/kilocode/sandbox.tsx). v1 source-text assertions on the v1 TUI plugin are not carried.",
+    "by": "sandbox-port"
+  },
+  "module:packages/opencode/test/kilocode/legacy-sse-event.test.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-cli/test/sandbox.test.ts",
+    "note": "v1 checked the legacy SSE stream carries sandbox.status.changed. v2 has no legacy SSE (principle 3); the round trip test boots the host and checks the rpc.kilocode.sandbox.changed event through the generated client.",
+    "by": "sandbox-port"
+  },
   "module:packages/kilo-vscode/src/shared/code-context.ts": {
     "state": "ported",
     "v2": "packages/kilo-vscode/webview-ui/src/v2/prompt-attachments.ts",
@@ -1400,8 +1532,7 @@
     "state": "dropped",
     "note": "Stale v1 design note: it describes an in-memory model and a globalState lastModel key that never shipped. The shipped behavior (persisted recents, config precedence) is ported in v2/model-default.ts and src/model-preferences.ts.",
     "by": "model-picker-parity"
-  }
-,
+  },
   "api:GET /kilocode/notebook": {
     "state": "dropped",
     "note": "v1 listed server-initiated notebook requests for the extension to answer; v2 has no server notebook API because the extension owns the workspace over a loopback broker, so there is no pending request to list.",
@@ -1452,25 +1583,42 @@
     "by": "notebook-tools"
   },
   "module:packages/core/src/kilocode/session/recall-message-index.ts": {
-      "state": "dropped",
-      "note": "The v1 message FTS index and its triggers existed to make SQL recall search fast. v2 recall ranks in memory over SessionStore.messagesWithRefs in packages/kilo-plugin/src/recall/search.ts and creates no store objects, so the index has no v2 counterpart.",
-      "by": "transcript-recall"
-    },
-    "module:packages/core/src/kilocode/session/recall-part-index.ts": {
-      "state": "dropped",
-      "note": "The v1 part FTS index and its triggers existed only for SQL recall search. The v2 recall plugin reads decoded session messages through SessionStore and ranks them in memory, so no part index is built or maintained.",
-      "by": "transcript-recall"
-    },
-    "module:packages/opencode/src/kilocode/session/recall-search.ts": {
-      "state": "ported",
-      "v2": "packages/kilo-plugin/src/recall/search.ts",
-      "note": "RecallSearch query parsing, folding, whole-word ranking, title typo tolerance, partial fallback, snippets and inert escaping are ported unchanged in behavior. The storage boundary is rewritten natively: v2 loads SessionStore messagesWithRefs and filters the project worktree family instead of querying v1 tables.",
-      "by": "transcript-recall"
-    },
-    "module:packages/opencode/test/kilocode/recall-search.test.ts": {
-      "state": "ported",
-      "v2": "packages/kilo-plugin/test/recall-search.test.ts",
-      "note": "The ranking, typo, partial-match, active-turn, reference/error and cancellation assertions are ported to in-memory SearchSession fixtures. Index maintenance, SQL candidate counting and store-specific paging tests do not apply because v2 does not create recall indexes.",
-      "by": "transcript-recall"
-    }
+    "state": "dropped",
+    "note": "The v1 message FTS index and its triggers existed to make SQL recall search fast. v2 recall ranks in memory over SessionStore.messagesWithRefs in packages/kilo-plugin/src/recall/search.ts and creates no store objects, so the index has no v2 counterpart.",
+    "by": "transcript-recall"
+  },
+  "module:packages/core/src/kilocode/session/recall-part-index.ts": {
+    "state": "dropped",
+    "note": "The v1 part FTS index and its triggers existed only for SQL recall search. The v2 recall plugin reads decoded session messages through SessionStore and ranks them in memory, so no part index is built or maintained.",
+    "by": "transcript-recall"
+  },
+  "module:packages/opencode/src/kilocode/session/recall-search.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-plugin/src/recall/search.ts",
+    "note": "RecallSearch query parsing, folding, whole-word ranking, title typo tolerance, partial fallback, snippets and inert escaping are ported unchanged in behavior. The storage boundary is rewritten natively: v2 loads SessionStore messagesWithRefs and filters the project worktree family instead of querying v1 tables.",
+    "by": "transcript-recall"
+  },
+  "module:packages/opencode/test/kilocode/recall-search.test.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-plugin/test/recall-search.test.ts",
+    "note": "The ranking, typo, partial-match, active-turn, reference/error and cancellation assertions are ported to in-memory SearchSession fixtures. Index maintenance, SQL candidate counting and store-specific paging tests do not apply because v2 does not create recall indexes.",
+    "by": "transcript-recall"
+  },
+  "patch:unattributed:core/v1:efe2b3136dab": {
+    "state": "native",
+    "v2": "packages/core/src/config/normalize.ts",
+    "note": "The v1 `small_model` (NullOr(string)) maps natively: normalize.ts migrates a string to the title agent model `agents.title.model` through ConfigMigrateV1.modelSelection (packages/core/src/v1/config/migrate.ts). A v1 `null` is not carried: v2 decodes `small_model` as a plain string, so `small_model: null` is skipped with an `invalid` (`skipped malformed recognized value`) normalization diagnostic, the same v1-null/v2-string mismatch as `model` and `default_agent`. packages/core/test/kilocode/config/mapping.test.ts pins the string mapping and all three null diagnostics.",
+    "by": "v2-config-keys"
+  },
+  "patch:unattributed:core/v1:eef8153da721": {
+    "state": "native",
+    "v2": "packages/core/src/config/normalize.ts",
+    "note": "The hunk only updates the `command` schema description (the customization docs URL). v1 `command` is mapped natively: normalize.ts migrates the map to `commands` with ConfigMigrateV1.migrateCommand. The description text on v2 is upstream's.",
+    "by": "v2-config-keys"
+  },
+  "patch:unattributed:core/v1:803d6139aabf": {
+    "state": "dropped",
+    "note": "The v1 experimental sandbox keys (`experimental.sandbox`, `experimental.sandbox_restrict_network`, `experimental.sandbox_writable_paths`) have no v1 runtime caller (git grep over packages/*/src finds only the schema and the generated SDK types). The live v1 key is the top-level `sandbox` struct, read by packages/opencode/src/kilocode/sandbox/config.ts and folded by KiloConfigPolicy. The experimental aliases are dead fields.",
+    "by": "v2-config-keys"
+  }
 }
