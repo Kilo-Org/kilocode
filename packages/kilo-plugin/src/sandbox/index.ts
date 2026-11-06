@@ -149,7 +149,7 @@ export const Plugin = define({
             const execute = tool.execute
             const id = item.id
             const name = item.name
-            const mcp = isMcp({ name, namespace: item.options?.namespace, mcp: item.options?.mcp }) // kilo_port(sandbox:b534aff3ebec)
+            const mcp = isMcp(item) // kilo_port(sandbox:b534aff3ebec)
             if (mcp) delegated.add(id)
             tool.execute = (input, context) => {
               const launches = new Set<string>()

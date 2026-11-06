@@ -1,3 +1,4 @@
+import { Tool } from "@opencode/schema/tool"
 import { Effect } from "effect"
 import { assertNetwork, assertSandbox } from "@kilocode/sandbox"
 import { builtin, host, opaque } from "./network-tools"
@@ -13,11 +14,13 @@ export function isBuiltin(id: string) {
 /**
  * An MCP tool: delegated authority that needs unrestricted network. The MCP registration marks its tools, because a
  * server named `opencode` with a tool named `read` produces the same namespace and declared name as a namespaced
- * built-in. Without the mark, a namespaced tool is MCP unless it is one of the `opencode`-namespaced built-ins.
+ * built-in. Without the mark, a namespaced tool is MCP unless it is one of the `opencode`-namespaced built-ins. It
+ * takes the registry entry itself, so the mark cannot be dropped between the registry and this check.
  */
-export function isMcp(value: { name: string; namespace?: string; mcp?: true }) {
-  if (value.mcp) return true
-  return value.namespace !== undefined && !(value.namespace === "opencode" && known.has(value.name))
+export function isMcp(tool: Pick<Tool.Info, "name" | "options">) {
+  if (tool.options?.mcp) return true
+  const namespace = tool.options?.namespace
+  return namespace !== undefined && !(namespace === "opencode" && known.has(tool.name))
 }
 
 export function tool<A, E, R>(value: { id: string; name?: string; mcp?: boolean }, effect: Effect.Effect<A, E, R>) {
