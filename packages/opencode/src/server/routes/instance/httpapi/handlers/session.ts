@@ -249,8 +249,14 @@ export const sessionHandlers = HttpApiBuilder.group(InstanceHttpApi, "session", 
       query: typeof AbortQuery.Type
     }) {
       if (ctx.query.promote) {
+        const before = KiloSessionPromptQueue.active(ctx.params.sessionID)
         const promoted = yield* KiloSessionPromptQueue.promote(ctx.params.sessionID, ctx.query.promote)
         if (!promoted) return false
+        // The turn may have ended on its own and handed off already; never cancel the next turn.
+        if (KiloSessionPromptQueue.active(ctx.params.sessionID) !== before) {
+          KiloSessionPromptQueue.release(ctx.params.sessionID)
+          return true
+        }
         yield* promptSvc
           .cancel(ctx.params.sessionID, ctx.query.scope)
           .pipe(Effect.ensuring(Effect.sync(() => KiloSessionPromptQueue.release(ctx.params.sessionID))))
