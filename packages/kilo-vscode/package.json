@@ -172,6 +172,11 @@
           "default": "unset",
           "markdownDescription": "The work style chosen on first run. Set by the onboarding picker."
         },
+        "kilo-code.v2.indexing.showButtonWhenDisabled": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "Show the indexing button below the prompt while indexing is off. If hidden, open Settings > Indexing to enable indexing."
+        },
         "kilo-code.v2.maxCost": {
           "type": "number",
           "default": 0,

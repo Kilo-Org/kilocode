@@ -13,6 +13,7 @@ import { createSpeechShortcut } from "../components/speech-to-text/shortcut"
 import { useSpeechStatus } from "../components/speech-to-text/status"
 import { useSpeechToText } from "../components/speech-to-text/useSpeechToText"
 import { useLanguage } from "../context/language"
+import { useIndexing } from "../context/indexing"
 import { useVSCode } from "../context/vscode"
 import {
   hasPopup,
@@ -122,6 +123,7 @@ export function PromptInput(props: {
 }) {
   const v2 = useV2()
   const language = useLanguage()
+  const indexing = useIndexing()
   const [text, setText] = createSignal(promptDrafts.get(props.draftKey))
   const [browsers, setBrowsers] = createSignal(props.draftKey ? (references.get(props.draftKey) ?? []) : [])
   const keep = (key: string | undefined, list: BrowserReference[]) => {
@@ -617,8 +619,21 @@ export function PromptInput(props: {
     if (pinnedRef) observer.observe(pinnedRef)
     onCleanup(() => observer.disconnect())
   })
+  const openIndexingSettings = () => vscode.postMessage({ type: "openSettingsTab", tab: "indexing" })
+  const indexingAction = (): OverflowItem => {
+    const tone = indexing.tone()
+    return {
+      key: "indexing",
+      icon: "database",
+      label: language.t("prompt.action.indexing"),
+      description: indexing.status().message || indexing.label(),
+      tone: tone === "muted" ? undefined : tone,
+      dot: tone === "muted" ? undefined : tone,
+      run: openIndexingSettings,
+    }
+  }
   const foldable = createMemo<OverflowItem[]>(() => {
-    const list: OverflowItem[] = []
+    const list: OverflowItem[] = indexing.buttonVisible() ? [indexingAction()] : []
     const sandbox = props.sandbox
     if (sandbox?.visible())
       list.push({
@@ -818,6 +833,20 @@ export function PromptInput(props: {
           <div class="prompt-action" data-folded={hidden().length === 0 ? "" : undefined}>
             <PromptOverflow items={hidden()} />
           </div>
+          <Show when={indexing.buttonVisible()}>
+            <div class="prompt-action" data-folded={folded("indexing") ? "" : undefined}>
+              <Tooltip value={indexing.status().message || indexing.label()} placement="top" openDelay={0}>
+                <IconButton
+                  icon="database"
+                  variant="ghost"
+                  size="small"
+                  onClick={openIndexingSettings}
+                  aria-label={language.t("prompt.action.indexing")}
+                  class={`prompt-indexing-button prompt-indexing-button--${indexing.tone()}`}
+                />
+              </Tooltip>
+            </div>
+          </Show>
           <Show when={props.sandbox?.visible() ? props.sandbox : undefined}>
             {(sandbox) => (
               <div class="prompt-action" data-folded={folded("sandbox") ? "" : undefined}>

@@ -45,13 +45,14 @@ import { setSidebarSession, sidebarSession } from "./browser-tab/sidebar-session
 import { openBrowserLink } from "./browser-links"
 import { DEVTOOLS } from "./browser-tab/html"
 import { documentExists, isMarkdownPath } from "./documents/document-reader"
+import { indexingHost } from "./indexing/host"
 import { openToolFile, type ToolDiff } from "./tool-diff"
 import { chatFocus } from "./services/code-actions/target"
 
 // The sidebar may only write the settings its own UI owns. Other views keep their own write path.
 // The settings each webview may write; the Settings panel writes every Kilo setting through its own handler.
 const VIEW_SETTING_KEYS: Record<View, ReadonlySet<string>> = {
-  chat: new Set(["showTaskTimeline"]),
+  chat: new Set(["showTaskTimeline", "indexing.showButtonWhenDisabled"]),
   settings: new Set(),
   profile: new Set(),
   agentManager: new Set(["showTaskTimeline", "agentManager.pushFixes"]),
@@ -216,6 +217,14 @@ export function wire(input: {
     fetch: local,
   })
   const post = (message: ToWebview) => void webview.postMessage(message)
+  // The consent store is machine-local, so one host per extension answers every view.
+  const indexing = indexingHost({
+    context: input.context,
+    server: input.server,
+    directory: () => input.directory,
+    log: (message, error) => console.error(`Kilo indexing: ${message}`, error),
+  })
+  const detachIndexing = indexing.attach(post)
   // The composer state is shared: a change in one open view shows in the others, for example the sidebar and the
   // Agent Manager side by side.
   const others = (message: ToWebview) => surfaces.forEach((target) => target !== post && target(message))
@@ -433,6 +442,14 @@ export function wire(input: {
       void commands.executeCommand("kilo-code.v2.profile")
       return true
     }
+    if (message.type === "requestIndexingSettings") {
+      void indexing.requestSettings(message.projectId)
+      return true
+    }
+    if (message.type === "setIndexingConsent") {
+      void indexing.setConsent(message.projectId, message.enabled)
+      return true
+    }
     return false
   }
 
@@ -492,6 +509,7 @@ export function wire(input: {
       link.dispose()
       speech.dispose()
       surfaces.delete(post)
+      detachIndexing()
       settings.dispose()
       settingsWatch?.dispose()
       subscription.dispose()
