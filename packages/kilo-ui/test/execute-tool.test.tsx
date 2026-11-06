@@ -133,3 +133,20 @@ test("an unknown status stays visible as a neutral row, and long runs fold the e
     card.host.querySelector('[data-slot="execute-call"][data-status="queued"] [data-slot="execute-call-dot"]'),
   ).not.toBeNull()
 })
+
+test("a display layout change clears remembered open states so the new default wins", async () => {
+  const first = mountTool("execute", {
+    metadata: { toolCalls: [{ tool: "fetch", status: "completed", input: { url: "https://a.test" } }] },
+    forceOpen: true,
+  })
+  expect(first.host.querySelector('[data-slot="collapsible-trigger"]')?.getAttribute("aria-expanded")).toBe("true")
+  first.dispose()
+
+  resetToolOpenState()
+
+  const second = mountTool("execute", {
+    metadata: { toolCalls: [{ tool: "fetch", status: "completed", input: { url: "https://a.test" } }] },
+  })
+  mounted.push(second)
+  expect(second.host.querySelector('[data-slot="collapsible-trigger"]')?.getAttribute("aria-expanded")).toBe("false")
+})

@@ -295,7 +295,13 @@ export function wire(input: {
     void input.server
       .get()
       .then((server) => readDisplaySettings({ server, directory: input.directory }))
-      .then((values) => post({ type: "displaySettingsLoaded", values }))
+      .then((values) => {
+        // Every surface that renders a transcript shares these settings, so a change in Settings must reach the
+        // sidebar and the Agent Manager too; answering only the requester left them on the old layout.
+        const message = { type: "displaySettingsLoaded", values } as const
+        post(message)
+        others(message)
+      })
       .catch((error: unknown) =>
         post({
           type: "displaySettingsLoaded",
