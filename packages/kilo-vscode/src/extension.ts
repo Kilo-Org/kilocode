@@ -208,7 +208,14 @@ export function activate(context: ExtensionContext) {
   // The Changes editor tab diffs the workspace, the staged and unstaged tree, a session, or one turn. Its catalog
   // reads server session diffs through the same connection as the Agent Manager.
   const diffCatalog = new DiffSourceCatalog(connection)
-  const changes = new DiffViewerProvider({ context, server, directory, catalog: diffCatalog })
+  // The view is created just below; comments arrive only after the user opens the panel and sends them.
+  const changes = new DiffViewerProvider({
+    context,
+    server,
+    directory,
+    catalog: diffCatalog,
+    onComments: (comments, autoSend) => void view.post({ type: "appendReviewComments", comments, autoSend }),
+  })
   let browserTab: BrowserTabProvider | undefined
   // The Documents panel is an editor tab created after this view, so the view receives it through a lazy getter.
   const documentsRef: { current?: DocumentViewerProvider } = {}

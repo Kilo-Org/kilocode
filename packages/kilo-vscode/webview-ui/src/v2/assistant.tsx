@@ -1,4 +1,4 @@
-import type { FileDiffInfo, SessionMessageAssistant } from "@opencode/client"
+import type { SessionMessageAssistant } from "@opencode/client"
 import { createEffect, createMemo, createSignal, For, on, Show, type JSX } from "solid-js"
 import { Button } from "@kilocode/kilo-ui/button"
 import { ContentPart, useGrowIn, type ToolActions } from "@kilocode/kilo-ui/message-part"
@@ -21,7 +21,7 @@ import { tokenThroughputVisible } from "./kilo-settings"
 import { mcpServerFromError } from "./mcp-error"
 import { formatTokenThroughput, type TurnMetadata } from "./message-status"
 import { toolDefaultOpen } from "./tool-default-open"
-import { turnDiffs } from "./turn-diffs"
+import { turnDiffs, type TurnFile } from "./turn-diffs"
 
 export function AssistantMessage(props: {
   message: SessionMessageAssistant
@@ -56,7 +56,7 @@ export function AssistantMessage(props: {
   // The error belongs to the whole message, so only its last row renders it.
   const lastChunk = () => offset() + parts().length >= props.message.content.length
   // A completed turn keeps its changed files, read once and reused when the row mounts again.
-  const [turnFiles, setTurnFiles] = createSignal<FileDiffInfo[]>([])
+  const [turnFiles, setTurnFiles] = createSignal<TurnFile[]>([])
   createEffect(
     on(
       () => [props.metadata, props.userTurn, lastChunk()] as const,

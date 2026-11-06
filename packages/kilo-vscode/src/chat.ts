@@ -20,7 +20,6 @@ import {
   DISPLAY_DEFAULTS,
   type GitChangesStats,
   type ModelPreferenceMessage,
-  type ReviewCommentEntry,
   type ToHost,
   type ToWebview,
 } from "./protocol"
@@ -379,13 +378,9 @@ export function wire(input: {
       void workspace.getConfiguration(NAMESPACE).update("language", message.locale || undefined, true)
       return true
     }
-    // The Changes tab sends its review comments back to the composer of the view that opened it.
+    // The Changes tab sends its review comments to this view's composer through the provider's own sink.
     if (message.type === "openChanges") {
-      input.changes?.open({
-        sessionId: message.sessionID,
-        turnId: message.turnID,
-        onComments: (comments, autoSend) => post({ type: "appendReviewComments", comments, autoSend }),
-      })
+      input.changes?.open({ sessionId: message.sessionID, turnId: message.turnID })
       return true
     }
     if (message.type === "requestGitChangesStats") {
@@ -568,11 +563,7 @@ type View = "chat" | "settings" | "profile" | "agentManager" | "documents" | "di
 
 /** The Changes editor tab: the session, working tree and turn diffs with review comments. */
 export type ChangesTab = {
-  open(input: {
-    sessionId?: string
-    turnId?: string
-    onComments: (comments: ReviewCommentEntry[], autoSend: boolean) => void
-  }): void
+  open(input: { sessionId?: string; turnId?: string }): void
 }
 
 type Surface = Extract<

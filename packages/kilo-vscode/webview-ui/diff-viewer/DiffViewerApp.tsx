@@ -69,6 +69,8 @@ export const DiffViewerApp: Component = () => {
   const [prError, setPRError] = createSignal<string>()
   let prKey = ""
   let prRequestId = ""
+  // The PR the current snapshot or request belongs to.
+  let prTarget: PRTarget | undefined
 
   const prDiffs = createMemo(() => {
     const snapshot = prSnapshot()
@@ -131,6 +133,7 @@ export const DiffViewerApp: Component = () => {
   const resetPR = () => {
     prKey = ""
     prRequestId = ""
+    prTarget = undefined
     setPRSnapshot(undefined)
     setPRLoading(false)
     setPRError(undefined)
@@ -144,10 +147,14 @@ export const DiffViewerApp: Component = () => {
     }
     const key = JSON.stringify(next)
     if (prKey === key && (prLoading() || prSnapshot())) return
+    // A ref-only refresh (a push or rebase) keeps the previous snapshot until the new one loads. An empty diff list
+    // would make the review controller drop the unsent comments that no longer match a file.
+    const refresh = samePR(prTarget, next)
     prKey = key
+    prTarget = next
     const requestId = crypto.randomUUID()
     prRequestId = requestId
-    setPRSnapshot(undefined)
+    if (!refresh) setPRSnapshot(undefined)
     setPRLoading(true)
     setPRError(undefined)
     reviewRequest({ ...next, type: "agentManager.loadPRFiles", requestId }, post, (result) => {

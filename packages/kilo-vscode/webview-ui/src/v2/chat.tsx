@@ -212,7 +212,7 @@ export function Chat() {
         <span class="session-changes-tooltip-separator">·</span>
         <span class="session-diff-add">+{value.additions}</span>
         <span class="session-diff-del">-{value.deletions}</span>
-        <span>{language.t("sidebar.session.showChanges.tooltip.empty")}</span>
+        <span>{language.t("command.session.show.changes")}</span>
       </span>
     )
   }

@@ -36,10 +36,12 @@ export function gitChanges(input: {
     left?.deletions === right?.deletions
 
   const publish = (value: GitChangesStats | undefined) => {
+    // A read that finishes after the view hid or disposed must not push into a webview that is gone. It must not count
+    // as shown either, or the first read after the view shows again would match it and push nothing.
+    if (!active) return
     if (same(latest, value)) return
     latest = value
-    // A read that finishes after the view hid or disposed must not push into a webview that is gone.
-    if (active) input.onStats(value)
+    input.onStats(value)
   }
 
   const measure = () =>

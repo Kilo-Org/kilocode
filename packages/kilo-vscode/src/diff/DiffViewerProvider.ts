@@ -28,7 +28,6 @@ type OpenArgs = {
   directory?: string
   file?: string
   comment?: PRReviewCommentData
-  onComments?: CommentHandler
   beside?: boolean
 }
 
@@ -48,10 +47,6 @@ function openSource(arg: OpenArgs | undefined, sessionId: string | undefined): s
   return turnSourceId(sessionId, arg.turnId)
 }
 
-function openTarget(arg: OpenArgs | undefined, handler: CommentHandler | undefined): CommentHandler | undefined {
-  return typeof arg?.onComments === "function" ? arg.onComments : handler
-}
-
 type ReactionRequest = {
   commentId: string
   reaction: Parameters<typeof addCommentReaction>[1]
@@ -65,9 +60,10 @@ function reactionRequest(msg: Record<string, unknown>): ReactionRequest | undefi
   return { commentId: msg.commentId, reaction: msg.reaction, add: msg.add }
 }
 
-function hasReactionComment(pr: PRStatus | undefined, id: string): boolean {
+export function hasReactionComment(pr: PRStatus | undefined, id: string): boolean {
   return (
-    pr?.comments?.comments.some((comment) => comment.id === id) ||
+    // A reply has its own reaction buttons, so its id is a valid target too.
+    pr?.comments?.comments.some((comment) => comment.id === id || comment.replies?.some((reply) => reply.id === id)) ||
     pr?.conversation?.some((comment) => comment.id === id) ||
     false
   )
@@ -117,9 +113,7 @@ export class DiffViewerProvider implements vscode.Disposable, ChangesTab {
   private surface: vscode.Disposable | undefined
   private ctx: PanelContext | undefined
   private controller: SourceController | undefined
-  private commentHandler: CommentHandler | undefined
   private baseBranchOverride: string | undefined
-  private target: CommentHandler | undefined
   private readonly prPolling: ReturnType<typeof createDiffPRPolling>
   private readonly reviews: PRReviewActions
   private focusPending = false
@@ -141,6 +135,11 @@ export class DiffViewerProvider implements vscode.Disposable, ChangesTab {
       server: Manager
       directory: string
       catalog: DiffSourceCatalog
+      /**
+       * Receives the comments the user sends to chat. The sidebar is the only chat that opens this panel, so every
+       * open shares one destination instead of carrying its own callback.
+       */
+      onComments: CommentHandler
     },
     opts: DiffViewerProviderOptions = {},
   ) {
@@ -169,26 +168,17 @@ export class DiffViewerProvider implements vscode.Disposable, ChangesTab {
     })
   }
 
-  setCommentHandler(handler: CommentHandler): void {
-    this.commentHandler = handler
-  }
-
   /** The Changes tab contract of the sidebar. */
-  open(input: { sessionId?: string; turnId?: string; onComments: CommentHandler }): void {
-    this.openFromCommand({
-      sessionId: input.sessionId,
-      turnId: input.turnId,
-      onComments: input.onComments,
-    })
+  open(input: { sessionId?: string; turnId?: string }): void {
+    this.openFromCommand({ sessionId: input.sessionId, turnId: input.turnId })
   }
 
-  openPanel(ctx: PanelContext, target: CommentHandler | undefined = this.commentHandler): void {
+  openPanel(ctx: PanelContext): void {
     const generation = ++this.openGeneration
     const previous = this.ctx
     const changed = previous !== undefined && this.contextKey(previous) !== this.contextKey(ctx)
     if (previous && (previous.dir ?? previous.workspaceRoot) !== (ctx.dir ?? ctx.workspaceRoot))
       this.baseBranchOverride = undefined
-    this.target = target
     this.focusPending = !!ctx.comment
     this.ctx = { ...ctx, baseBranchOverride: this.baseBranchOverride }
 
@@ -221,10 +211,7 @@ export class DiffViewerProvider implements vscode.Disposable, ChangesTab {
   openFromCommand(arg?: OpenArgs): void {
     const sessionId = arg?.sessionId ?? this.sessionIdProvider()
     const dir = openDirectory(arg, sessionId, this.sessionDirectoryProvider)
-    this.openPanel(
-      context(arg, sessionId, dir, openSource(arg, sessionId)),
-      openTarget(arg, this.target ?? this.commentHandler),
-    )
+    this.openPanel(context(arg, sessionId, dir, openSource(arg, sessionId)))
   }
 
   /**
@@ -237,9 +224,10 @@ export class DiffViewerProvider implements vscode.Disposable, ChangesTab {
 
   dispose(): void {
     this.prPolling.stop()
-    this.target = undefined
     this.controller?.dispose()
     this.controller = undefined
+    // Close the webview first: its dispose handler logs, so it must run before the output channel is gone.
+    this.panel?.dispose()
     this.disposePanel()
     this.output.dispose()
   }
@@ -292,7 +280,6 @@ export class DiffViewerProvider implements vscode.Disposable, ChangesTab {
     this.controller?.dispose()
     this.controller = undefined
     this.prPolling.stop()
-    this.target = undefined
     this.baseBranchOverride = undefined
     this.disposePanel()
   }
@@ -320,6 +307,8 @@ export class DiffViewerProvider implements vscode.Disposable, ChangesTab {
       this.send({
         type: "agentManager.commentReactionResult",
         worktreeId: "diff",
+        // The webview drops a result whose project differs from the PR it shows, so echo the request's project.
+        ...(typeof msg.projectId === "string" ? { projectId: msg.projectId } : {}),
         commentId,
         reaction,
         add,
@@ -356,7 +345,7 @@ export class DiffViewerProvider implements vscode.Disposable, ChangesTab {
       void this.activate(msg.id, this.openGeneration, false)
     },
     "diffViewer.sendComments": (msg) => {
-      if (Array.isArray(msg.comments)) this.target?.(msg.comments as ReviewCommentEntry[], !!msg.autoSend)
+      if (Array.isArray(msg.comments)) this.input.onComments(msg.comments as ReviewCommentEntry[], !!msg.autoSend)
     },
     "agentManager.copyToClipboard": (msg) => {
       if (typeof msg.text === "string") void vscode.env.clipboard.writeText(msg.text)
@@ -386,6 +375,7 @@ export class DiffViewerProvider implements vscode.Disposable, ChangesTab {
       const branch = typeof msg.branch === "string" && msg.branch.length > 0 ? msg.branch : undefined
       this.baseBranchOverride = branch
       if (this.ctx) {
+        // Drops an activation still running for the old base. The PR identity does not change.
         this.openGeneration += 1
         this.ctx = { ...this.ctx, baseBranchOverride: branch }
         this.controller?.setContext(this.ctx)
@@ -546,7 +536,8 @@ export class DiffViewerProvider implements vscode.Disposable, ChangesTab {
     const directory = this.ctx?.dir ?? this.ctx?.workspaceRoot
     if (!this.panel || !pr || !branch || !directory) return
     return {
-      token: JSON.stringify([this.identity, this.openGeneration, branch, pr.number, pr.url]),
+      // The PR identity only. A re-open or a base-branch change shows the same PR, so unsent comments must survive it.
+      token: JSON.stringify([this.identity, branch, pr.number, pr.url]),
       directory,
       branch,
       pr,

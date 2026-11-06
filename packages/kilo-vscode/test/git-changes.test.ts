@@ -86,3 +86,36 @@ test(
   },
   10000,
 )
+
+test(
+  "pushes the counts again after a read finished while the view was hidden",
+  async () => {
+    await withRepo(async (dir) => {
+      let publish: (value: GitChangesStats | undefined) => void = () => {}
+      const shown = new Promise<GitChangesStats | undefined>((resolve) => {
+        publish = resolve
+      })
+      const pushed: Array<GitChangesStats | undefined> = []
+      const stats = gitChanges({
+        directory: dir,
+        onStats: (value) => {
+          pushed.push(value)
+          publish(value)
+        },
+      })
+      try {
+        // The read starts while visible and finishes after the view hid.
+        stats.setVisible(true)
+        stats.setVisible(false)
+        await stats.read()
+        await Bun.sleep(200)
+        expect(pushed).toEqual([])
+        stats.setVisible(true)
+        expect(await shown).toEqual({ files: 1, additions: 2, deletions: 0 })
+      } finally {
+        stats.dispose()
+      }
+    })
+  },
+  10000,
+)

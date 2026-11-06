@@ -60,4 +60,27 @@ describe("createTurnDiffs", () => {
     expect(await second).toBe(await first)
     expect(calls).toBe(1)
   })
+
+  test("keeps only the counts the row shows", async () => {
+    const cache = createTurnDiffs()
+    const files = await cache.request("ses_1", "msg_1", () =>
+      Promise.resolve([{ file: "a.ts", patch: "large patch", additions: 3, deletions: 2, status: "modified" }]),
+    )
+
+    expect(files).toEqual([{ file: "a.ts", additions: 3, deletions: 2 }])
+  })
+
+  test("evicts the least recently used turn past the limit", async () => {
+    const cache = createTurnDiffs(2)
+    const run = record()
+
+    await cache.request("ses_1", "msg_1", run.fetch)
+    await cache.request("ses_1", "msg_2", run.fetch)
+    cache.read("ses_1", "msg_1")
+    await cache.request("ses_1", "msg_3", run.fetch)
+
+    expect(cache.read("ses_1", "msg_1")).toBeDefined()
+    expect(cache.read("ses_1", "msg_2")).toBeUndefined()
+    expect(cache.read("ses_1", "msg_3")).toBeDefined()
+  })
 })
