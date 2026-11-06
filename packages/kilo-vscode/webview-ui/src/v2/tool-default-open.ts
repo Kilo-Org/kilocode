@@ -29,6 +29,8 @@ const BUILTIN_NON_MCP_TOOLS = new Set([
   "semantic_search",
   "subagent",
   "task",
+  // Code Mode: its header already shows the live progress, so the card decides and starts closed.
+  "execute",
   "todowrite",
   "todoread",
   "question",

@@ -28,5 +28,6 @@ describe("toolDefaultOpen", () => {
     expect(toolDefaultOpen("read", open)).toBeUndefined()
     expect(toolDefaultOpen("grep", open)).toBeUndefined()
     expect(toolDefaultOpen("skill", open)).toBeUndefined()
+    expect(toolDefaultOpen("execute", open)).toBeUndefined()
   })
 })
