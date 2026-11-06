@@ -255,6 +255,117 @@ describe("git-transfer", () => {
       expect(content).toBe("brand new\n")
     })
 
+    it.skipIf(process.platform === "win32")("preserves an untracked symlink instead of copying its target", async () => {
+      await fs.writeFile(path.join(dir, "settings.txt"), "original\n")
+      await git(["add", "settings.txt"], dir)
+      await git(["commit", "-m", "settings"], dir)
+      await git(["worktree", "remove", "--force", target], dir)
+      await git(["worktree", "add", "-B", "test-wt", target, "HEAD"], dir)
+      await fs.writeFile(path.join(dir, "plain.txt"), "plain\n")
+      await fs.symlink("settings.txt", path.join(dir, "active.txt"))
+      await fs.mkdir(path.join(dir, "sub"))
+      await fs.symlink("../settings.txt", path.join(dir, "sub", "active.txt"))
+
+      const snapshot = await capture(dir, noop)
+      const links = snapshot.untracked
+        .filter((file) => file.link != null)
+        .map((file) => [file.path, file.link])
+        .sort()
+      expect(links).toEqual([
+        ["active.txt", "settings.txt"],
+        ["sub/active.txt", "../settings.txt"],
+      ])
+      expect(snapshot.untracked.find((file) => file.path === "plain.txt")?.content.toString()).toBe("plain\n")
+      expect(snapshot.untracked.find((file) => file.path === "plain.txt")?.link).toBeUndefined()
+
+      expect(await apply(snapshot, target, noop)).toEqual({ ok: true })
+
+      const link = path.join(target, "active.txt")
+      expect((await fs.lstat(link)).isSymbolicLink()).toBe(true)
+      expect(await fs.readlink(link)).toBe("settings.txt")
+      expect(await fs.readFile(link, "utf8")).toBe("original\n")
+      await fs.writeFile(path.join(target, "settings.txt"), "changed\n")
+      expect(await fs.readFile(link, "utf8")).toBe("changed\n")
+      expect((await fs.lstat(path.join(target, "plain.txt"))).isFile()).toBe(true)
+      expect(await fs.readFile(path.join(target, "plain.txt"), "utf8")).toBe("plain\n")
+      const nested = path.join(target, "sub", "active.txt")
+      expect(await fs.readlink(nested)).toBe("../settings.txt")
+      expect(await fs.readFile(nested, "utf8")).toBe("changed\n")
+      expect(await fs.readlink(path.join(dir, "active.txt"))).toBe("settings.txt")
+      expect(await fs.readFile(path.join(dir, "settings.txt"), "utf8")).toBe("original\n")
+    })
+
+    it.skipIf(process.platform === "win32")("preserves a dangling untracked symlink", async () => {
+      await fs.symlink("missing.txt", path.join(dir, "active.txt"))
+      const snapshot = await capture(dir, noop)
+      expect(snapshot.untracked).toHaveLength(1)
+      expect(snapshot.untracked[0]?.link).toBe("missing.txt")
+
+      expect(await apply(snapshot, target, noop)).toEqual({ ok: true })
+
+      const link = path.join(target, "active.txt")
+      expect((await fs.lstat(link)).isSymbolicLink()).toBe(true)
+      expect(await fs.readlink(link)).toBe("missing.txt")
+      await expect(fs.readFile(link)).rejects.toThrow()
+    })
+
+    it.skipIf(process.platform === "win32")("preserves an untracked symlink that points outside the repo", async () => {
+      const outside = path.join(os.tmpdir(), `git-transfer-secret-${Date.now()}.txt`)
+      await fs.writeFile(outside, "secret\n")
+      const rel = path.relative(dir, outside)
+      try {
+        await fs.symlink(rel, path.join(dir, "leak.txt"))
+        await fs.symlink(outside, path.join(dir, "abs.txt"))
+        const snapshot = await capture(dir, noop)
+        expect(snapshot.untracked.find((file) => file.path === "leak.txt")?.link).toBe(rel)
+        expect(snapshot.untracked.find((file) => file.path === "abs.txt")?.link).toBe(outside)
+
+        expect(await apply(snapshot, target, noop)).toEqual({ ok: true })
+
+        const leak = path.join(target, "leak.txt")
+        const abs = path.join(target, "abs.txt")
+        expect((await fs.lstat(leak)).isSymbolicLink()).toBe(true)
+        expect((await fs.lstat(abs)).isSymbolicLink()).toBe(true)
+        expect(await fs.readlink(leak)).toBe(rel)
+        expect(await fs.readlink(abs)).toBe(outside)
+        expect((await fs.lstat(leak)).isFile()).toBe(false)
+      } finally {
+        await fs.rm(outside, { force: true })
+      }
+    })
+
+    it.skipIf(process.platform === "win32")("replaces an existing file with an untracked symlink", async () => {
+      await fs.mkdir(path.join(dir, "sub"))
+      await fs.symlink("missing.txt", path.join(dir, "sub", "active.txt"))
+      const snapshot = await capture(dir, noop)
+      await fs.mkdir(path.join(target, "sub"))
+      await fs.writeFile(path.join(target, "sub", "active.txt"), "stale\n")
+
+      expect(await apply(snapshot, target, noop)).toEqual({ ok: true })
+
+      const link = path.join(target, "sub", "active.txt")
+      expect((await fs.lstat(link)).isSymbolicLink()).toBe(true)
+      expect(await fs.readlink(link)).toBe("missing.txt")
+    })
+
+    it.skipIf(process.platform === "win32")("reports failure when an untracked symlink cannot be created", async () => {
+      await fs.mkdir(path.join(dir, "sub"))
+      await fs.symlink("missing.txt", path.join(dir, "sub", "active.txt"))
+      const logs: unknown[][] = []
+      const log = (...args: unknown[]) => {
+        logs.push(args)
+      }
+      const snapshot = await capture(dir, log)
+      await fs.mkdir(path.join(target, "sub", "active.txt"), { recursive: true })
+
+      const result = await apply(snapshot, target, log)
+
+      expect(result.ok).toBe(false)
+      expect(result.error).toContain("sub/active.txt")
+      expect(logs.some((line) => line.join(" ").includes("sub/active.txt"))).toBe(true)
+      expect((await fs.lstat(path.join(target, "sub", "active.txt"))).isDirectory()).toBe(true)
+    })
+
     it("creates subdirectories for untracked files", async () => {
       await fs.mkdir(path.join(dir, "a", "b"), { recursive: true })
       await fs.writeFile(path.join(dir, "a", "b", "c.txt"), "nested\n")
