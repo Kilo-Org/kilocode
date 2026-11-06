@@ -21,6 +21,7 @@ import { $ } from "bun"
 import { mkdir, rm } from "node:fs/promises"
 import path from "node:path"
 import { Script } from "@opencode/script"
+import { KiloSandboxNetwork } from "./kilocode/kilo-sandbox-network"
 
 const dir = path.resolve(import.meta.dirname, "..")
 const root = path.join(dir, "dist")
@@ -81,11 +82,32 @@ await rm(launcher, { recursive: true, force: true })
 await mkdir(path.join(launcher, "bin"), { recursive: true })
 // Upstream's postinstall script finds the platform package by the `-<os>-<arch>` suffix, so it works for Kilo names.
 // Only its messages name OpenCode.
+// Kilo: the sandbox resolves its helpers next to the executable, so the launcher copies them from the platform
+// package together with the binary. Linux proxy mode also needs the network relay and the seccomp helper.
+const helpers = ["bwrap", "licenses", "kilo-sandbox-mutation-worker.js", KiloSandboxNetwork.relay, KiloSandboxNetwork.seccomp]
+const executables = ["bwrap", KiloSandboxNetwork.seccomp]
+const postinstall = (await Bun.file(path.join(dir, "..", "cli", "script", "postinstall.mjs")).text())
+  .replaceAll("OpenCode", "Kilo")
+  .replaceAll("opencode-install-", "kilo-install-")
+const copied = "    fs.copyFileSync(source, targetBinary)\n  }\n  fs.chmodSync(targetBinary, 0o755)\n"
+if (!postinstall.includes(copied)) throw new Error("postinstall.mjs changed: cannot add the sandbox helper copy")
 await Bun.write(
   path.join(launcher, "postinstall.mjs"),
-  (await Bun.file(path.join(dir, "..", "cli", "script", "postinstall.mjs")).text())
-    .replaceAll("OpenCode", "Kilo")
-    .replaceAll("opencode-install-", "kilo-install-"),
+  postinstall.replace(
+    copied,
+    copied +
+      [
+        `  for (const name of ${JSON.stringify(helpers)}) {`,
+        "    const from = path.join(path.dirname(source), name)",
+        "    if (!fs.existsSync(from)) continue",
+        "    const to = path.join(path.dirname(targetBinary), name)",
+        "    fs.rmSync(to, { recursive: true, force: true })",
+        "    fs.cpSync(from, to, { recursive: true })",
+        `    if (${JSON.stringify(executables)}.includes(name)) fs.chmodSync(to, 0o755)`,
+        "  }",
+        "",
+      ].join("\n"),
+  ),
 )
 // The postinstall script replaces this placeholder with the binary. It stays only when install scripts are disabled.
 await Bun.write(

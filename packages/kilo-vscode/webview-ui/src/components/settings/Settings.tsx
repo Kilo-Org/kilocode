@@ -35,7 +35,7 @@ export interface SettingsProps {
   projectId?: string
 }
 
-const READY_TABS = SETTINGS_TABS_V2.filter((tab) => tab.ready)
+const READY_TABS = SETTINGS_TABS_V2.filter((tab) => tab.ready && (tab.visible?.() ?? true))
 const READY_IDS = new Set(READY_TABS.map((tab) => tab.id))
 
 const initialTab = (tab?: string) => (tab && READY_IDS.has(tab) ? tab : (READY_TABS[0]?.id ?? "providers"))

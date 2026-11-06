@@ -11,6 +11,7 @@ import type { Host } from "../src/agent-manager/host"
 import {
   createHostAutoApprove,
   setHostAutoApprove,
+  shouldApprove,
   type HostAutoApproveState,
 } from "../src/agent-manager/provider-auto-approve"
 
@@ -140,6 +141,13 @@ describe("host auto-approve sweep", () => {
     await tick()
 
     expect(replied).toEqual(["per_once"])
+  })
+
+  test("never approves a request whose action is sandbox_escalation", () => {
+    const escalation = { id: "per_action", sessionID: "ses_1", action: "sandbox_escalation", resources: [] } as never
+    const normal = { id: "per_bash", sessionID: "ses_1", action: "bash", resources: ["ls"] } as never
+    expect(shouldApprove(escalation, true, new Set())).toBe(false)
+    expect(shouldApprove(normal, true, new Set())).toBe(true)
   })
 })
 
