@@ -22,6 +22,8 @@ import { VscodeHost } from "./agent-manager/vscode-host"
 import { BrowserTabProvider } from "./browser-tab/BrowserTabProvider"
 import { editorTabOwns, setEditorTabs, sidebarSession } from "./browser-tab/sidebar-session"
 import { chat } from "./chat"
+import { DiffViewerProvider } from "./diff/DiffViewerProvider"
+import { DiffSourceCatalog } from "./diff/sources/catalog"
 import { commitMessageCommand, commitMessageLanguage, connect, type GitExports } from "./commit-message"
 import { createCostAlerts } from "./cost-alert"
 import { command, manager, serverHome, settingsEnvironment } from "./server"
@@ -47,7 +49,8 @@ import { profile } from "./profile-panel"
 import { settings } from "./settings-panel"
 import { createShutdown } from "./shutdown"
 import type { BrowserReference } from "./shared/browser-feedback"
-import { toolDiff } from "./tool-diff"
+import { DiffVirtualProvider } from "./DiffVirtualProvider"
+import { gitChanges } from "./git-changes"
 import { tabShortcutTarget } from "./tab-shortcuts"
 
 let shutdownExtension: (() => Promise<void>) | undefined
@@ -190,7 +193,7 @@ export function activate(context: ExtensionContext) {
       })
     },
   })
-  const diffs = toolDiff()
+  const diffs = new DiffVirtualProvider(context.extensionUri)
   // Registers the optional Playwright MCP server in the v2 server. It is independent from the Integrated Browser.
   const automation = new BrowserAutomationService({
     server,
@@ -202,7 +205,19 @@ export function activate(context: ExtensionContext) {
   const autocomplete = createConnection({ server, directory })
   context.subscriptions.push({ dispose: autocomplete.dispose })
   registerAutocompleteProvider(context, autocomplete)
+  // The Changes editor tab diffs the workspace, the staged and unstaged tree, a session, or one turn. Its catalog
+  // reads server session diffs through the same connection as the Agent Manager.
+  const diffCatalog = new DiffSourceCatalog(connection)
+  // The view is created just below; comments arrive only after the user opens the panel and sends them.
+  const changes = new DiffViewerProvider({
+    context,
+    server,
+    directory,
+    catalog: diffCatalog,
+    onComments: (comments, autoSend) => void view.post({ type: "appendReviewComments", comments, autoSend }),
+  })
   let browserTab: BrowserTabProvider | undefined
+  // The Documents panel is an editor tab created after this view, so the view receives it through a lazy getter.
   const documentsRef: { current?: DocumentViewerProvider } = {}
   const view = chat({
     context,
@@ -210,6 +225,8 @@ export function activate(context: ExtensionContext) {
     directory,
     trackCostSession: alerts.track,
     diff: diffs,
+    changes,
+    gitStats: (onStats) => gitChanges({ directory, onStats }),
     openBrowser: (sessionId, url) => browserTab?.openUrl(sessionId, url) ?? false,
     documents: () => documentsRef.current,
   })
@@ -317,7 +334,15 @@ export function activate(context: ExtensionContext) {
     output,
     { dispose: () => void notebooks.dispose() },
     { dispose: () => diffs.dispose() },
-    workspace.registerTextDocumentContentProvider(diffs.scheme, diffs.provider),
+    diffCatalog,
+    changes,
+    commands.registerCommand(
+      "kilo-code.v2.showChanges",
+      (arg?: Parameters<DiffViewerProvider["openFromCommand"]>[0]) => changes.openFromCommand(arg),
+    ),
+    window.registerWebviewPanelSerializer(DiffViewerProvider.viewType, {
+      deserializeWebviewPanel: async (panel) => changes.deserializePanel(panel),
+    }),
     window.registerWebviewViewProvider("kilo-code.v2.chat", view.provider, {
       webviewOptions: { retainContextWhenHidden: true },
     }),
