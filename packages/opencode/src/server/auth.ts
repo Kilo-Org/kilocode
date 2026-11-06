@@ -3,6 +3,7 @@ export * as ServerAuth from "./auth"
 import { ConfigService } from "@/effect/config-service"
 import { Flag } from "@opencode-ai/core/flag/flag"
 import { Config as EffectConfig, Context, Option, Redacted } from "effect"
+import { ServerPassword } from "@/kilocode/server/password" // kilocode_change
 
 export type Credentials = {
   password?: string
@@ -15,7 +16,12 @@ export type DecodedCredentials = {
 }
 
 export class Config extends ConfigService.Service<Config>()("@opencode/ServerAuthConfig", {
-  password: EffectConfig.string("KILO_SERVER_PASSWORD").pipe(EffectConfig.option),
+  // kilocode_change start - use the password loaded from KILO_SERVER_PASSWORD_FILE (set only when the env var is empty or unset)
+  password: EffectConfig.string("KILO_SERVER_PASSWORD").pipe(
+    EffectConfig.option,
+    EffectConfig.map((value) => Option.orElse(Option.fromNullishOr(ServerPassword.get()), () => value)),
+  ),
+  // kilocode_change end
   username: EffectConfig.string("KILO_SERVER_USERNAME").pipe(EffectConfig.withDefault("kilo")), // kilocode_change
 }) {}
 
