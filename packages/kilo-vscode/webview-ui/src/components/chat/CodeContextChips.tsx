@@ -2,12 +2,11 @@ import { For, Show, createMemo, createSignal, type Component } from "solid-js"
 import { Button } from "@kilocode/kilo-ui/button"
 import { FileIcon } from "@kilocode/kilo-ui/file-icon"
 import { Icon } from "@kilocode/kilo-ui/icon"
-import { IconButton } from "@kilocode/kilo-ui/icon-button"
-import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import type { PromptAttachment, ToHost } from "../../../../src/protocol"
 import { useLanguage } from "../../context/language"
 import { useVSCode } from "../../context/vscode"
 import { attachmentText } from "../../v2/prompt-attachments"
+import { PromptRowActions } from "./PromptRowActions"
 import { PromptShowMore } from "./PromptShowMore"
 
 /** Rows rendered before the "show more" toggle takes over. */
@@ -107,28 +106,11 @@ export const CodeContextChips: Component<CodeContextChipsProps> = (props) => {
                       <span class="prompt-review-row-preview">{preview(item)}</span>
                     </Show>
                   </button>
-                  <Show when={item.path}>
-                    <Tooltip value={language.t("agentManager.diff.openFile")} placement="top">
-                      <IconButton
-                        icon="go-to-file"
-                        size="small"
-                        variant="ghost"
-                        aria-label={language.t("agentManager.diff.openFile")}
-                        onClick={() => reveal(item)}
-                      />
-                    </Tooltip>
-                  </Show>
-                  <Show when={props.onRemove}>
-                    <button
-                      type="button"
-                      class="prompt-review-row-remove"
-                      onClick={() => props.onRemove?.(item.id)}
-                      aria-label={language.t("common.delete")}
-                      disabled={props.disabled}
-                    >
-                      ×
-                    </button>
-                  </Show>
+                  <PromptRowActions
+                    onOpen={item.path ? () => reveal(item) : undefined}
+                    onRemove={props.onRemove ? () => props.onRemove?.(item.id) : undefined}
+                    disabled={props.disabled}
+                  />
                 </div>
 
                 <Show when={full().includes(item.id)}>

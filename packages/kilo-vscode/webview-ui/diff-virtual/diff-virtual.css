@@ -1,0 +1,5 @@
+/* The panel body owns the height, so the review layout fills it and its file list is the only scroller. */
+#root {
+  display: flex;
+  flex-direction: column;
+}

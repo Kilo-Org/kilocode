@@ -25,7 +25,6 @@ import { hydrateExpanded } from "./project/hydrate"
 import { getReviewMarkdownRender } from "./provider-messages"
 import { readTerminalFont } from "./terminal-font"
 import { isRestrictedRoot } from "./home-workspace"
-import type { DestinationState } from "./terminal-destination"
 
 export interface ProviderStateHost {
   readonly contexts: ProjectContexts
@@ -39,7 +38,6 @@ export interface ProviderStateHost {
   readonly terminalRouter: TerminalRouter
   readonly relay: { reset(): void }
   readonly scripts: { manager: ScriptTerminalManager }
-  readonly destination: DestinationState
   readonly healthScheduler: HealthScheduler<ProjectContext>
   readonly busySessions: Set<string>
   readonly staleIds: Set<string>
@@ -192,7 +190,6 @@ export function pushState(p: ProviderStateHost, ctx?: ProjectContext): void {
     sidebarCollapsed: state.getSidebarCollapsed(),
     reviewDiffStyle: state.getReviewDiffStyle(),
     reviewMarkdownRender: getReviewMarkdownRender(),
-    terminalDestination: p.destination.value(),
     terminalFont: readTerminalFont(),
     isGitRepo: true,
     restricted: isRestrictedRoot(target.root),
@@ -221,7 +218,6 @@ export function pushEmptyState(p: ProviderStateHost): void {
     staleWorktreeIds: [],
     reviewDiffStyle: "unified",
     reviewMarkdownRender: getReviewMarkdownRender(),
-    terminalDestination: p.destination.value(),
     terminalFont: readTerminalFont(),
     isGitRepo: false,
     restricted: isRestrictedRoot(p.contexts.active()?.root),

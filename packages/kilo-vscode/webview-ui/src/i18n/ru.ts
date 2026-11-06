@@ -1325,6 +1325,11 @@ export const dict = {
     "Выберите, будут ли блоки MCP и общих инструментов изначально развёрнуты или свёрнуты.",
   "settings.display.mcpTool.expanded": "Развёрнуты",
   "settings.display.mcpTool.collapsed": "Свёрнуты",
+  "settings.display.codeMode.title": "Блоки Code Mode",
+  "settings.display.codeMode.description":
+    "Выберите, будут ли блоки Code Mode начинаться со списка вызовов инструментов или с одной строки. Скрипт всегда остаётся скрытым, пока вы его не откроете.",
+  "settings.display.codeMode.expanded": "Развёрнуты",
+  "settings.display.codeMode.collapsed": "Свёрнуты",
 
   "settings.display.shortcutHints.title": "Показывать подсказки по сочетаниям клавиш",
   "settings.display.shortcutHints.description":

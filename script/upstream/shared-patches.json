@@ -1,12 +1,16 @@
 {
   "$comment": "Shared-patch baseline (U-L3-01). Read by script/check-shared-patches.ts and script/check-opencode-annotations.ts. Each shared upstream file that Kilo adds or changes needs an entry: rung (3 = seam patch, 4 = feature patch) and the missing seam. `unmarked` allows lines without markers and states why. Raise a limit only in the PR that adds the patch, and lower it when a patch goes away.",
   "limits": {
-    "files": 93,
-    "markedLines": 1586,
-    "unmarkedLines": 277,
+    "files": 98,
+    "markedLines": 1592,
+    "unmarkedLines": 279,
     "deletedFiles": 0
   },
   "files": {
+    "packages/cli/src/run/noninteractive.ts": {
+      "rung": 3,
+      "seam": "`run --auto` replies `once` to every permission request. A request whose metadata sets `interactive: true` is rejected instead, so a headless run cannot approve it. The Kilo sandbox asks `sandbox_escalation` with that flag before a Git command runs outside the sandbox. No plugin hook reaches the CLI's permission replies (the permission domain has only `evaluate`), and the host does not own the non-interactive run loop. Upstream never sets the flag, so its behavior does not change."
+    },
     "packages/core/src/tool-output.ts": {
       "rung": 3,
       "seam": "Export the existing layer and cleanup node so the Kilo host can decorate native file allocations while preserving native truncation and cleanup. A plugin cannot observe allocation provenance, and replacing the service without these exports would duplicate the upstream implementation. No algorithm or upstream default changes."
@@ -111,7 +115,7 @@
     },
     "packages/core/src/config.ts": {
       "rung": 3,
-      "seam": "Config discovery layout (feature `config`): `ConfigDiscovery.LayoutService`, a global node with upstream defaults (`opencode.json`, `opencode.jsonc`, `.opencode`, no walk bound) that discovery and `Config` read for the root file names, the project directory names, the file order inside those directories, the upward-walk bound and the global write target (the last existing name). Optional systemFiles and parse hooks let a host select managed file order and decode its own config schema from raw and normalized fields; the decoder also preserves host fields when managed policies split from settings. Optional input normalization and command document composition let the host apply model-only overrides after file discovery. Upstream's integration reloads (v2.2) run discovery with a captured layer context, so that context also carries the layout service. Without the hooks, the default graph and canonical schema behave as upstream. The Kilo host supplies kilo2 names, file orders, a worktree boundary and Kilo-owned config policy. Rungs 1 and 2 cannot do it alone: config parsing precedes plugins, the command editor cannot update captured definitions, and replacing Config.node would lose the server's configured options."
+      "seam": "Config discovery layout (feature `config`): `ConfigDiscovery.LayoutService`, a global node with upstream defaults (`opencode.json`, `opencode.jsonc`, `.opencode`, no walk bound) that discovery and `Config` read for the root file names, the project directory names, the file order inside those directories, the upward-walk bound and the global write target (the last existing name). Optional systemFiles and parse hooks let a host select managed file order and decode its own config schema from raw and normalized fields; the decoder also preserves host fields when managed policies split from settings. Optional input normalization and command document composition let the host apply model-only overrides after file discovery. Upstream's integration reloads (v2.2) run discovery with a captured layer context, so that context also carries the layout service. Without the hooks, the default graph and canonical schema behave as upstream. The Kilo host supplies kilo2 names, file orders, a worktree boundary and Kilo-owned config policy. Rungs 1 and 2 cannot do it alone: config parsing precedes plugins, the command editor cannot update captured definitions, and replacing Config.node would lose the server's configured options. Codebase indexing (feature `indexing`): an optional `reload` re-reads the config sources after a host write, so a saved `indexing` key applies also when `fs.filewatcher` is false. It runs the same reload as the watcher and publishes `config.updated` when the result changes. Without a caller nothing changes. Rungs 1 and 2 cannot do it: the reload is a closure inside the Config layer."
     },
     "packages/core/src/config/discovery.ts": {
       "rung": 3,
@@ -140,6 +144,10 @@
     "packages/schema/src/file-diff.ts": {
       "rung": 4,
       "seam": "Optional `moved` flag on a file diff so clients can label a rename. The patch tool output is this shared struct and no plugin can add a field to an upstream schema; without the flag both clients report a rename as an unlabelled modification. Every other producer omits it, so upstream behavior and defaults are unchanged."
+    },
+    "packages/core/src/tool/mcp.ts": {
+      "rung": 3,
+      "seam": "Mark every MCP tool registration with `mcp: true`. The sandbox plugin must treat an MCP tool as delegated network authority even when a server named `opencode` exposes a tool named like a built-in, and namespace plus declared name cannot separate the two. Provenance exists only at registration and no plugin hook observes it. Without the sandbox plugin nothing reads the flag, so upstream behavior and defaults are unchanged."
     },
     "packages/core/src/tool/plugin/patch.ts": {
       "rung": 4,
@@ -216,7 +224,7 @@
     },
     "packages/tui/src/plugin/builtins.ts": {
       "rung": 4,
-      "seam": "Register the Kilo built-in TUI plugins, including `KiloMarketplace` (`/marketplace`, partial U-E2-23), `KiloCopySession` (`/copy-session`), `KiloPrivacy` (`/privacy`), `KiloTerminalActivity` (OSC 777 session activity for terminals that set KILO_TERMINAL_ACTIVITY) and `KiloRemote` (`/remote` and the remote-control header indicator, registered only by the kilo2 host identity). The TUI loads its built-in list in its own process, which server-side host/plugin registration cannot reach. Config-driven plugins load npm packages or local files, unavailable in compiled binaries. A generic registration API would require more shared lines for this single list. The behavior stays in tui/src/kilocode/; each plugin adds one import and one list entry."
+      "seam": "Register the Kilo built-in TUI plugins, including `KiloMarketplace` (`/marketplace`, partial U-E2-23), `KiloSession` (`/copy-session` and `/sandbox`), `KiloPrivacy` (`/privacy`), `KiloTerminalActivity` (OSC 777 session activity for terminals that set KILO_TERMINAL_ACTIVITY) and `KiloRemote` (`/remote` and the remote-control header indicator, registered only by the kilo2 host identity). The TUI loads its built-in list in its own process, which server-side host/plugin registration cannot reach. Config-driven plugins load npm packages or local files, unavailable in compiled binaries. A generic registration API would require more shared lines for this single list. The behavior stays in tui/src/kilocode/; each plugin adds one import and one list entry."
     },
     "packages/tui/test/fixture/local.tsx": {
       "rung": 3,
@@ -339,6 +347,16 @@
       "rung": 3,
       "seam": "Pass `replayExited=1` from the PTY connect query to the `allowExited` attach input in packages/core/src/pty.ts. The connect route is the only path a client reaches `attach` through, and its handler has no extension point for query options. Without the query parameter the route behaves as upstream."
     },
+    "packages/client/package.json": {
+      "rung": 4,
+      "seam": "Test timing only: the `test` script raises the per-test timeout from 5000 ms to 30000 ms, matching the rest of the workspace. The 5 s ceiling was tight for the suites that regenerate or compile client output and hit the filesystem, and it timed out on slower shared CI runners before the tests themselves failed. Ported from #15879. No seam: the flag is a literal inside upstream's script string and no host or plugin can pass bun test options in its place.",
+      "unmarked": "JSON has no comments."
+    },
+    "packages/httpapi-codegen/package.json": {
+      "rung": 4,
+      "seam": "Test timing only: the `test` script raises the per-test timeout from 5000 ms to 30000 ms, matching the rest of the workspace. The 5 s ceiling was tight for the suites that generate and compile codegen output and spawn processes, and it timed out on slower shared CI runners before the tests themselves failed. Ported from #15879. No seam: the flag is a literal inside upstream's script string and no host or plugin can pass bun test options in its place.",
+      "unmarked": "JSON has no comments."
+    },
     "packages/client/src/solid/data.ts": {
       "rung": 3,
       "seam": "Adds a per-session `session.message.evict(sessionID)` that drops one session's cached messages. The existing `session.evict` clears the root and every known descendant, so the Agent Manager inspector cannot release one subagent without blanking the parent transcript. Also adds `session.message.startLoaded(sessionID)`, which reports whether the last fetched page was shorter than the requested limit. The server returns a next cursor for the last non-empty page even when nothing is older, so a transcript cannot otherwise know that its loaded window reaches the start. Omitted calls behave as upstream."
@@ -359,6 +377,10 @@
     "packages/schema/src/pty.ts": {
       "rung": 3,
       "seam": "Optional `size` on `Pty.CreateInput`, sharing the size contract with `UpdateInput`. It matches `PersistentPty.CreateInput`, which already carries a size, and lets any client spawn a terminal at its own dimensions. Omitted keeps upstream behavior."
+    },
+    "packages/schema/src/tool.ts": {
+      "rung": 3,
+      "seam": "Optional `mcp` provenance on tool options, set by the MCP registration so the sandbox plugin can never read a namespaced MCP tool as a built-in. The tool registry schema is shared and closed to plugin extension. Omitted keeps upstream behavior."
     },
     "packages/client/src/effect/api/api.ts": {
       "rung": 3,

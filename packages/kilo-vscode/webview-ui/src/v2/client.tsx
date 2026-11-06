@@ -11,7 +11,7 @@ import { transport } from "./transport"
 
 export { message, type V2 } from "./scope"
 
-function create(directory: string) {
+function create(directory: string, chat: boolean) {
   const vscode = getVSCodeAPI()
   const bridge = transport((message) => vscode.postMessage(message as never))
   const api: OpenCodeClient = OpenCode.make({ baseUrl: "http://kilo.invalid", fetch: bridge.fetch })
@@ -37,6 +37,7 @@ function create(directory: string) {
     event,
     directory,
     bindings,
+    chat,
     onCommand(handler) {
       commands.add(handler)
       onCleanup(() => commands.delete(handler))
@@ -47,8 +48,8 @@ function create(directory: string) {
 
 const Context = createContext<V2>()
 
-export const V2Provider: ParentComponent<{ directory: string }> = (props) => (
-  <Context.Provider value={create(props.directory)}>{props.children}</Context.Provider>
+export const V2Provider: ParentComponent<{ directory: string; chat?: boolean }> = (props) => (
+  <Context.Provider value={create(props.directory, props.chat ?? true)}>{props.children}</Context.Provider>
 )
 
 /** Provides an existing directory scope, for example one Agent Manager worktree. */

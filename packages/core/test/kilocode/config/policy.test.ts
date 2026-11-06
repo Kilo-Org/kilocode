@@ -167,6 +167,7 @@ test("the display layouts are Kilo settings, and an invalid layout is ignored", 
     terminal_command_display: "collapsed",
     code_edit_display: "expanded",
     mcp_tool_display: "collapsed",
+    code_mode_display: "expanded",
     shell: "valid",
   }
   const normalized = ConfigNormalize.normalize(valid)
@@ -175,6 +176,7 @@ test("the display layouts are Kilo settings, and an invalid layout is ignored", 
     terminal_command_display: "collapsed",
     code_edit_display: "expanded",
     mcp_tool_display: "collapsed",
+    code_mode_display: "expanded",
   })
 
   const invalid = { terminal_command_display: "hidden", code_edit_display: "expanded", shell: "valid" }

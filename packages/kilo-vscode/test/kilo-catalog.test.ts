@@ -73,6 +73,22 @@ describe("failureNeedsSignIn", () => {
 })
 
 describe("createKiloCatalog", () => {
+  test("waits for a directory before it reads", async () => {
+    const catalog = makeCatalog()
+    try {
+      catalog.setDirectory(undefined)
+      catalog.setStatus("connected")
+      await tick()
+      expect(catalog.calls).toHaveLength(0)
+
+      catalog.setDirectory("/project")
+      await tick()
+      expect(catalog.calls).toHaveLength(1)
+    } finally {
+      catalog.dispose()
+    }
+  })
+
   test("refreshes on each connected transition and on each catalog event", async () => {
     const catalog = makeCatalog()
     try {
@@ -152,6 +168,7 @@ const tick = () => new Promise((resolve) => setTimeout(resolve, 0))
 
 function makeCatalog() {
   const [status, setStatus] = createSignal("disconnected")
+  const [directory, setDirectory] = createSignal<string | undefined>("/project")
   const listeners = new Set<(event: OpenCodeEvent) => void>()
   const calls: Array<{
     resolve: (value: { failure?: KiloGatewayRpc.CatalogFailure }) => void
@@ -167,7 +184,7 @@ function makeCatalog() {
   const setup = createRoot((dispose) => ({
     failure: createKiloCatalog({
       api,
-      directory: "/project",
+      directory,
       status,
       on: (_type, handler) => {
         listeners.add(handler)
@@ -181,6 +198,7 @@ function makeCatalog() {
     ...setup,
     calls,
     setStatus,
+    setDirectory,
     emit: (status: KiloGatewayRpc.CatalogStatus = { failure: null }) => {
       for (const listener of listeners) listener({ data: status } as unknown as OpenCodeEvent)
     },

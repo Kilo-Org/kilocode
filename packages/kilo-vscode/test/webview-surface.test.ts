@@ -21,6 +21,24 @@ const surface = (view: "chat" | "settings" | "profile" | "agentManager") => {
   return match[1]
 }
 
+const page = (view: "chat" | "settings" | "profile" | "agentManager") => html({ ...base, view })
+
+describe("webview script loading", () => {
+  test("only the Settings and Profile panels load an ES module", () => {
+    expect(page("settings")).toContain('type="module"')
+    expect(page("profile")).toContain('type="module"')
+    expect(page("chat")).not.toContain('type="module"')
+    expect(page("agentManager")).not.toContain('type="module"')
+  })
+
+  test("only the module panels allow their chunks with strict-dynamic", () => {
+    expect(page("settings")).toContain("'strict-dynamic'")
+    expect(page("profile")).toContain("'strict-dynamic'")
+    expect(page("chat")).not.toContain("'strict-dynamic'")
+    expect(page("agentManager")).not.toContain("'strict-dynamic'")
+  })
+})
+
 describe("webview body surface", () => {
   test("the sidebar and the Agent Manager share the sidebar background", () => {
     const sidebar = "var(--vscode-sideBar-background, var(--vscode-editor-background))"
