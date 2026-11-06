@@ -563,10 +563,12 @@ export function html(input: {
   globals?: Record<string, unknown>
 }) {
   const nonce = randomBytes(16).toString("hex")
+  // The Settings and Profile panels load an ES module that imports its lazy tab chunks from the webview origin.
+  const module = input.view === "settings" || input.view === "profile"
   const policy = [
     "default-src 'none'",
     `style-src 'unsafe-inline' ${input.csp}`,
-    `script-src 'nonce-${nonce}' 'wasm-unsafe-eval'`,
+    `script-src 'nonce-${nonce}'${module ? " 'strict-dynamic'" : ""} 'wasm-unsafe-eval'`,
     `worker-src ${input.csp}`,
     `font-src ${input.csp}`,
     `connect-src ${input.csp}`,
@@ -617,7 +619,7 @@ export function html(input: {
 <body>
 <div id="root" data-directory="${escape(input.directory)}" data-view="${input.view ?? "chat"}"></div>
 <script nonce="${nonce}">${script}</script>
-<script nonce="${nonce}" src="${input.script}"></script>
+<script nonce="${nonce}"${module ? ' type="module"' : ""} src="${input.script}"></script>
 </body>
 </html>`
 }
