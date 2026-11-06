@@ -20,6 +20,8 @@ export function PermissionDiff(props: { files: FileDiffInfo[] }) {
       <For each={props.files}>
         {(file) => {
           const path = createMemo(() => splitPath(file.file))
+          // `patch` is required by the type, but older or plugin-provided metadata can omit it.
+          const patch = () => (typeof file.patch === "string" ? file.patch : "")
           return (
             <div data-slot="permission-diff">
               <div data-slot="permission-diff-header">
@@ -40,10 +42,10 @@ export function PermissionDiff(props: { files: FileDiffInfo[] }) {
               </div>
               <div data-slot="permission-diff-content">
                 <Show
-                  when={file.patch.trim().length > 0}
+                  when={/^@@/m.test(patch())}
                   fallback={<div data-slot="permission-diff-empty">{language.t("ui.permission.noChanges")}</div>}
                 >
-                  <Diff patch={file.patch} diffStyle="unified" hunkSeparators="simple" />
+                  <Diff patch={patch()} diffStyle="unified" hunkSeparators="simple" />
                 </Show>
               </div>
             </div>

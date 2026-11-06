@@ -69,13 +69,14 @@ function strip(text: string) {
 // escape sequence split across updates still settles correctly.
 function createIncrementalStrip() {
   const state = { source: "", consumed: 0, text: "", tail: "" }
-  return (raw: string) => {
-    if (!raw.startsWith(state.source)) {
-      state.source = ""
-      state.consumed = 0
-      state.text = ""
-      state.tail = ""
-    }
+  const reset = () => {
+    state.source = ""
+    state.consumed = 0
+    state.text = ""
+    state.tail = ""
+  }
+  const update = (raw: string) => {
+    if (!raw.startsWith(state.source)) reset()
     const delta = raw.slice(state.consumed)
     state.source = raw
     const end = delta.lastIndexOf("\n")
@@ -88,6 +89,7 @@ function createIncrementalStrip() {
     state.tail = strip(raw.slice(state.consumed))
     return state.text + state.tail
   }
+  return { update, reset }
 }
 
 export function ShellOutput(props: { cmd: string; output: string; active: boolean; running: boolean }) {
@@ -154,7 +156,11 @@ export function ShellOutput(props: { cmd: string; output: string; active: boolea
     if (!code) return
     if (text.startsWith(plain.text)) {
       const delta = text.slice(plain.text.length)
-      if (delta) code.append(document.createTextNode(delta))
+      if (delta) {
+        const last = code.lastChild
+        if (last?.nodeType === Node.TEXT_NODE) (last as Text).appendData(delta)
+        else code.append(document.createTextNode(delta))
+      }
     } else {
       code.textContent = text
     }
@@ -180,21 +186,24 @@ export function ShellOutput(props: { cmd: string; output: string; active: boolea
       rendered.lines = []
       plain.node = undefined
       plain.text = ""
+      stream.reset()
       if (!text) node.innerHTML = ""
       return
     }
     if (props.running) {
       rendered.version++
       rendered.lines = []
-      showPlain(node, stream(text))
+      showPlain(node, stream.update(text))
       return
     }
     plain.node = undefined
     plain.text = ""
+    stream.reset()
     void paint(node, output(), ++rendered.version)
   })
   onCleanup(() => {
     rendered.version++
+    stream.reset()
   })
   return (
     <div data-component="bash-output">

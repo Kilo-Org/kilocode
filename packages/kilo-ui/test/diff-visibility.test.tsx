@@ -1,4 +1,5 @@
 import { expect, test } from "bun:test"
+import { processFile } from "@pierre/diffs"
 import { Diff } from "../src/components/diff"
 import { mount } from "./harness"
 
@@ -28,16 +29,22 @@ class DeferredObserver {
 test("patch-only diff parses nothing until it becomes visible", async () => {
   const original = globalThis.IntersectionObserver
   globalThis.IntersectionObserver = DeferredObserver as never
+  const patch = ["--- a/file.ts", "+++ b/file.ts", "@@ -1,3 +1,3 @@", " a", "-b", "+c", " d"].join("\n")
+  const value = mount(() => <Diff patch={patch} diffStyle="unified" hunkSeparators="simple" />)
   try {
-    const patch = ["@@ -1,3 +1,3 @@", " a", "-b", "+c", " d"].join("\n")
-    const value = mount(() => <Diff patch={patch} diffStyle="unified" hunkSeparators="simple" />)
     await new Promise((resolve) => setTimeout(resolve, 50))
 
     expect(DeferredObserver.current?.targets.size).toBe(1)
     expect((value.host.firstElementChild as HTMLElement).innerHTML).toBe("")
 
-    value.dispose()
+    // Bun's test DOM cannot run Pierre's highlighter, so the rendered-line
+    // assertion lives in the VS Code harness. This covers the parse boundary:
+    // the same patch the visible branch passes to processFile has hunks.
+    expect(processFile(patch)?.hunks.length).toBeGreaterThan(0)
+    DeferredObserver.current?.fire()
+    await new Promise((resolve) => setTimeout(resolve, 50))
   } finally {
+    value.dispose()
     globalThis.IntersectionObserver = original
   }
 })
