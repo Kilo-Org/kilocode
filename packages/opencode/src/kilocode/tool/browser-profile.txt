@@ -1,0 +1,15 @@
+Start the Playwright browser, or change the browser, device emulation, viewport, and window mode it runs in. This does not affect browser_open.
+
+No browser runs at first, and the Playwright browser tools (kilo-playwright_browser_*) do not exist until you start one. When a task needs a browser, call this tool first with the browser to use. Pick the one the task calls for: the browser or device the user names, or the first allowed browser when nothing is specified. Do not call it with no arguments first to look around. An empty call only reports the current profile and the allowed browsers.
+
+Change the profile later only when the task needs it: the user names another browser or device, asks for cross-browser or responsive checks, or a bug is specific to one engine. Do not test every browser unless the user asks for it.
+
+A change restarts the browser. Open pages, cookies, and logins are lost, so finish the checks in one profile before you switch, then navigate again. Any device, size, or headless mode you do not pass again is reset to the default. To change only the window size within a profile, use kilo-playwright_browser_resize instead, which keeps the page.
+
+The browser window is visible by default so the user can watch. Pass headless only when the user asks for it or the machine has no display.
+
+Browsers: chrome and msedge are the installed browsers. chromium, firefox, and webkit are Playwright builds. webkit is the engine behind Safari, but it is not Safari itself, and device emulation is not a real phone. Say so when you report results. Firefox cannot emulate mobile devices. Device names must be Playwright device names, and unknown names are rejected.
+
+One browser is shared by all chat sessions in the workspace folder. If another session is using it, the change is refused. Tell the user and continue with other work instead of retrying in a loop.
+
+If a browser is not installed, do not install it yourself. Pass on what the error tells the user to do, and use another allowed browser meanwhile.
