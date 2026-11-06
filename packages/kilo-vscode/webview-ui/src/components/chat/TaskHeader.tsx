@@ -25,6 +25,7 @@ import { useProvider } from "../../context/provider"
 import { buildTriggerLabel, sanitizeName } from "../shared/model-selector-utils"
 import { SessionRenameEditor } from "../shared/SessionRenameEditor"
 import type { ExtensionMessage } from "../../types/messages"
+import { AgentMapButton, useAgentMapAvailable } from "./AgentMap"
 
 interface TaskHeaderProps {
   readonly?: boolean
@@ -38,6 +39,7 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
   const title = createMemo(() => session.currentSession()?.title ?? language.t("command.session.new"))
   const canRename = createMemo(() => !props.readonly && !!session.currentSession())
   const hasMessages = createMemo(() => session.messages().length > 0)
+  const agents = useAgentMapAvailable()
   const busy = createMemo(() => session.status() === "busy")
   const canCompact = createMemo(() => !busy() && session.visibleMessages().length > 0 && !!session.selected())
 
@@ -261,6 +263,9 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
                 aria-label={language.t("command.session.compact")}
               />
             </Tooltip>
+          </Show>
+          <Show when={agents()}>
+            <AgentMapButton readonly={props.readonly} />
           </Show>
           <Show when={hasMessages()}>
             <Tooltip value={language.t("chat.search.toggle")} placement="bottom">

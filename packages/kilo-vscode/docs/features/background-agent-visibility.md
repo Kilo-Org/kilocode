@@ -2,6 +2,8 @@
 
 **Priority:** P1
 
+> The dock's avatar stack and its agent panel were later replaced by the agent map button and the agent map dialog. See [agent-map.md](agent-map.md). The state sources below still apply.
+
 Background subagents are enabled by default, so a session can have several async agents running at once. The parent transcript shows a task card while the agent runs and injects the result when it finishes, but the card scrolls away. Once it is off screen there is no way to see that agents are still running, how many, or what they are doing.
 
 The CLI already solves this. It keeps a per-session subagent list with status (`running`, `done`, `cancelled`, `error`), shows a `subagents` hint in the status line, and opens a subagent inspector tab. See `packages/opencode/src/cli/cmd/run/subagent-data.ts` and `footer.command.tsx`.
@@ -89,4 +91,4 @@ The strip itself does not sync any child session. It only reads status, so listi
 
 - The strip marks agents that need permission or question input, but the user must open the child inspector or editor tab to answer it.
 - The strip has no elapsed-time counter or dedicated keyboard shortcut.
-- Finished rows can be dismissed locally, but dismissal does not delete the child session or backend job record.
+- Finished agents cannot be dismissed. They count until the next user message, and the agent map can hide them with Hide finished.

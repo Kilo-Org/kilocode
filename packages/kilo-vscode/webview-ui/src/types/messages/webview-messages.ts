@@ -14,6 +14,7 @@ import type { AnacondaDesktopWebviewMessage } from "../../../../src/shared/anaco
 import type { RequestMigrationDataMessage, StartMigrationMessage } from "./migration"
 import type { MemoryShowMessage, MemoryOperationMessage, RequestMemoryMessage } from "./memory"
 import type { RequestSessionBoardMessage, ResetSessionBoardMessage } from "./board"
+import type { RequestAgentMapMessage, StopBackgroundProcessMessage } from "./agent-map"
 import type { Activity } from "../../utils/session-activity"
 import type { PRReactionContent } from "../../../agent-manager/pr/pr-types"
 import type { PRMergeRequest } from "../../../../src/shared/pr-comment-actions"
@@ -1766,6 +1767,8 @@ export type WebviewMessage =
   | RequestBackgroundJobsMessage
   | RequestSessionBoardMessage
   | ResetSessionBoardMessage
+  | RequestAgentMapMessage
+  | StopBackgroundProcessMessage
   | CancelBackgroundJobMessage
   | PromoteBackgroundJobMessage
   | RevertSessionRequest
