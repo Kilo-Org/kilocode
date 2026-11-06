@@ -8,20 +8,20 @@ Measures Kilo's v1 delta: Kilo `main` pinned at `fb7e96eda540` (the v1 target) c
 
 ## Summary
 
-**1609 / 9786 cells done (16.4%)**, 68 dropped. `███░░░░░░░░░░░░░`
+**1615 / 9785 cells done (16.5%)**, 69 dropped. `███░░░░░░░░░░░░░`
 
 | Kind | Done | Total | % |
 |---|---:|---:|---:|
 | module | 1224 | 3529 | 34.7% |
 | api | 11 | 36 | 30.6% |
-| patch | 86 | 3441 | 2.5% |
+| patch | 92 | 3440 | 2.7% |
 | test | 288 | 2780 | 10.4% |
 
 Not counted: 1428 branding-only hunks (rename script territory), 561 marker-only hunks (block boundaries), generated files. Patch attribution: 0 by tag, 261 by import, 97 by identifier, 4163 unattributed (see below).
 
-Landed by rung, for patch cells closed by a done-proof: 54 plugin, 8 host, 3 seam, 6 patch.
+Landed by rung, for patch cells closed by a done-proof: 58 plugin, 8 host, 3 seam, 6 patch.
 
-Ratchets: 41 core-internal upstream modules imported by Kilo packages and adapters (`@opencode/core/app`, `@opencode/core/bus`, `@opencode/core/config`, `@opencode/core/config/discovery`, `@opencode/core/config/normalize`, `@opencode/core/config/plugin/skill-file`, `@opencode/core/credential`, `@opencode/core/database/database`, `@opencode/core/database/path`, `@opencode/core/effect/app-node-platform`, `@opencode/core/environment`, `@opencode/core/file-access`, `@opencode/core/generate`, `@opencode/core/location`, `@opencode/core/model`, `@opencode/core/model-resolver`, `@opencode/core/permission`, `@opencode/core/plugin/provider/openai`, `@opencode/core/plugin/sdk`, `@opencode/core/plugin/system-prompt/anthropic.txt`, `@opencode/core/plugin/system-prompt/gpt-astra.txt`, `@opencode/core/plugin/system-prompt/gpt.txt`, `@opencode/core/plugin/system-prompt/kimi.txt`, `@opencode/core/plugin/system-prompt/trinity.txt`, `@opencode/core/provider`, `@opencode/core/rpc`, `@opencode/core/schema`, `@opencode/core/session/event`, `@opencode/core/session/projector`, `@opencode/core/session/runner/model`, `@opencode/core/session/runner/prompt/system.txt`, `@opencode/core/session/store`, `@opencode/core/session/system-prompt`, `@opencode/core/shell`, `@opencode/core/tool`, `@opencode/core/tool-output`, `@opencode/core/tool/plugin/file-diff`, `@opencode/core/tool/plugin/todo`, `@opencode/core/tool/read-filesystem`, `@opencode/core/util/wildcard`, `@opencode/core/variant`); 91 shared patches by rung: 55 seam, 36 patch (`script/upstream/shared-patches.json`).
+Ratchets: 47 core-internal upstream modules imported by Kilo packages and adapters (`@opencode/core/agent`, `@opencode/core/app`, `@opencode/core/bus`, `@opencode/core/config`, `@opencode/core/config/discovery`, `@opencode/core/config/normalize`, `@opencode/core/config/plugin/skill-file`, `@opencode/core/credential`, `@opencode/core/database/database`, `@opencode/core/database/path`, `@opencode/core/effect/app-node-platform`, `@opencode/core/environment`, `@opencode/core/file-access`, `@opencode/core/form`, `@opencode/core/generate`, `@opencode/core/instance/service`, `@opencode/core/location`, `@opencode/core/location-service-map`, `@opencode/core/model`, `@opencode/core/model-resolver`, `@opencode/core/permission`, `@opencode/core/plugin/provider/openai`, `@opencode/core/plugin/sdk`, `@opencode/core/plugin/system-prompt/anthropic.txt`, `@opencode/core/plugin/system-prompt/gpt-astra.txt`, `@opencode/core/plugin/system-prompt/gpt.txt`, `@opencode/core/plugin/system-prompt/kimi.txt`, `@opencode/core/plugin/system-prompt/trinity.txt`, `@opencode/core/provider`, `@opencode/core/rpc`, `@opencode/core/schema`, `@opencode/core/session`, `@opencode/core/session/event`, `@opencode/core/session/projector`, `@opencode/core/session/runner/model`, `@opencode/core/session/runner/prompt/system.txt`, `@opencode/core/session/store`, `@opencode/core/session/system-prompt`, `@opencode/core/shell`, `@opencode/core/skill`, `@opencode/core/tool`, `@opencode/core/tool-output`, `@opencode/core/tool/plugin/file-diff`, `@opencode/core/tool/plugin/todo`, `@opencode/core/tool/read-filesystem`, `@opencode/core/util/wildcard`, `@opencode/core/variant`); 95 shared patches by rung: 56 seam, 39 patch (`script/upstream/shared-patches.json`).
 
 ## History
 
@@ -41,8 +41,8 @@ One point per day from the committed `progress.json` on v2's first-parent histor
 | 2026-10-28 | 594 | 9819 | 6% |
 | 2026-10-29 | 597 | 9819 | 6.1% |
 | 2026-10-30 | 646 | 9817 | 6.6% |
-| 2026-11-05 | 1594 | 9789 | 16.3% |
-| now | 1609 | 9786 | 16.4% |
+| 2026-11-05 | 1609 | 9786 | 16.4% |
+| now | 1615 | 9785 | 16.5% |
 
 ## Features
 
@@ -176,8 +176,8 @@ Hunks in shared upstream files with no `kilocode_change(<feature>)` tag, no Kilo
 | core/tool | 0/54 |  | 0/54 | 0% |
 | script | 0/54 |  | 0/54 | 0% |
 | core/session | 0/51 |  | 0/51 | 0% |
-| core/v1 | 1/51 |  | 1/51 | 2% |
 | plugin | 0/51 |  | 0/51 | 0% |
+| core/v1 | 7/50 |  | 7/50 | 14% |
 | skill | 0/39 |  | 0/39 | 0% |
 | permission | 0/36 |  | 0/36 | 0% |
 | effect | 0/33 |  | 0/33 | 0% |
@@ -379,6 +379,7 @@ Hunks in shared upstream files with no `kilocode_change(<feature>)` tag, no Kilo
 - `patch:unattributed:agent:8c603298aa6d`: RuntimeFlags in the agent service fed Scout and the shared agent board rules. The v2 agents plugin reads no runtime flags: Scout is not ported (U-E11-05), and the board unit adds its own rules. (agents-plugin)
 - `patch:unattributed:agent:92890c7740e7`: Scout agent. Scout (experimental, default off) is not ported. U-E11-05 records the decision. (agents-plugin)
 - `patch:unattributed:agent:d88711e4e0f0`: Rule for the `suggest` tool, which v2 does not have yet. The suggest unit (U-E2-16) adds the rule with the tool (#14999, differences table). (agents-plugin)
+- `patch:unattributed:core/v1:803d6139aabf`: The v1 experimental sandbox keys (`experimental.sandbox`, `experimental.sandbox_restrict_network`, `experimental.sandbox_writable_paths`) have no v1 runtime caller (git grep over packages/*/src finds only the schema and the generated SDK types). The live v1 key is the top-level `sandbox` struct, read by packages/opencode/src/kilocode/sandbox/config.ts and folded by KiloConfigPolicy. The experimental aliases are dead fields. (v2-config-keys)
 - `patch:unattributed:tui/component:902bf97fd9cb`: v1 hunk ranked the upstream 'Popular providers' rows of the model picker with rankProviderOptions while searching. Upstream v2 removed those rows from component/dialog-model.tsx (signed-out users reach integrations through the 'View all integrations' action, which opens DialogIntegration), so there is no provider row left to rank. Model search ranking is ported in packages/tui/src/kilocode/model-picker.ts. (kilo-model-picker)
 
 ## Counting rules

@@ -4,10 +4,10 @@
     "v1Base": "8100c68b507b53aac6b891edbc3040a6011d8969"
   },
   "summary": {
-    "done": 1609,
-    "total": 9786,
-    "percent": 16.4,
-    "dropped": 68,
+    "done": 1615,
+    "total": 9785,
+    "percent": 16.5,
+    "dropped": 69,
     "kinds": [
       {
         "kind": "module",
@@ -21,8 +21,8 @@
       },
       {
         "kind": "patch",
-        "done": 86,
-        "total": 3441
+        "done": 92,
+        "total": 3440
       },
       {
         "kind": "test",
@@ -31,15 +31,15 @@
       }
     ],
     "landed": {
-      "plugin": 54,
+      "plugin": 58,
       "host": 8,
       "seam": 3,
       "patch": 6
     },
-    "coreImports": 41,
+    "coreImports": 47,
     "sharedPatches": {
-      "seam": 55,
-      "patch": 36
+      "seam": 56,
+      "patch": 39
     }
   },
   "notCounted": {
@@ -53,6 +53,7 @@
     "unattributed": 4163
   },
   "coreImports": [
+    "@opencode/core/agent",
     "@opencode/core/app",
     "@opencode/core/bus",
     "@opencode/core/config",
@@ -65,8 +66,11 @@
     "@opencode/core/effect/app-node-platform",
     "@opencode/core/environment",
     "@opencode/core/file-access",
+    "@opencode/core/form",
     "@opencode/core/generate",
+    "@opencode/core/instance/service",
     "@opencode/core/location",
+    "@opencode/core/location-service-map",
     "@opencode/core/model",
     "@opencode/core/model-resolver",
     "@opencode/core/permission",
@@ -80,6 +84,7 @@
     "@opencode/core/provider",
     "@opencode/core/rpc",
     "@opencode/core/schema",
+    "@opencode/core/session",
     "@opencode/core/session/event",
     "@opencode/core/session/projector",
     "@opencode/core/session/runner/model",
@@ -87,6 +92,7 @@
     "@opencode/core/session/store",
     "@opencode/core/session/system-prompt",
     "@opencode/core/shell",
+    "@opencode/core/skill",
     "@opencode/core/tool",
     "@opencode/core/tool-output",
     "@opencode/core/tool/plugin/file-diff",
@@ -3579,9 +3585,9 @@
     },
     {
       "feature": "unattributed:core/v1",
-      "done": 1,
-      "total": 51,
-      "dropped": 0,
+      "done": 7,
+      "total": 50,
+      "dropped": 1,
       "kinds": {
         "module": {
           "done": 0,
@@ -3592,8 +3598,8 @@
           "total": 0
         },
         "patch": {
-          "done": 1,
-          "total": 51
+          "done": 7,
+          "total": 50
         },
         "test": {
           "done": 0,
@@ -3601,7 +3607,7 @@
         }
       },
       "landed": {
-        "plugin": 1,
+        "plugin": 5,
         "host": 0,
         "seam": 0,
         "patch": 0
@@ -6257,6 +6263,10 @@
     "patch:unattributed:config:73db79553730": "plugin",
     "patch:unattributed:config:8cdbdec70393": "host",
     "patch:unattributed:core/database:a155cf41e765": "host",
+    "patch:unattributed:core/v1:159079a2d8a3": "plugin",
+    "patch:unattributed:core/v1:2e351a955982": "plugin",
+    "patch:unattributed:core/v1:a177a3c0a84c": "plugin",
+    "patch:unattributed:core/v1:a4a32558d64b": "plugin",
     "patch:unattributed:core/v1:fb80dc4c3dd4": "plugin",
     "patch:unattributed:session:13cc4c3e6a51": "plugin",
     "patch:unattributed:session:142910b3fc8c": "plugin",
@@ -7866,6 +7876,12 @@
     "patch:unattributed:config:73db79553730",
     "patch:unattributed:config:8cdbdec70393",
     "patch:unattributed:core/database:a155cf41e765",
+    "patch:unattributed:core/v1:159079a2d8a3",
+    "patch:unattributed:core/v1:2e351a955982",
+    "patch:unattributed:core/v1:a177a3c0a84c",
+    "patch:unattributed:core/v1:a4a32558d64b",
+    "patch:unattributed:core/v1:eef8153da721",
+    "patch:unattributed:core/v1:efe2b3136dab",
     "patch:unattributed:core/v1:fb80dc4c3dd4",
     "patch:unattributed:session:13cc4c3e6a51",
     "patch:unattributed:session:142910b3fc8c",
@@ -7962,6 +7978,7 @@
     "patch:unattributed:agent:8c603298aa6d",
     "patch:unattributed:agent:92890c7740e7",
     "patch:unattributed:agent:d88711e4e0f0",
+    "patch:unattributed:core/v1:803d6139aabf",
     "patch:unattributed:tui/component:902bf97fd9cb"
   ]
 }
