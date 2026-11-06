@@ -1,9 +1,13 @@
 import { describe, it, expect } from "bun:test"
 import {
   ACCEPTED_IMAGE_TYPES,
+  dataUrlText,
   isAcceptedImageType,
+  isDataAttachment,
   isDragLeavingComponent,
+  textDataUrl,
 } from "../../webview-ui/src/hooks/image-attachments-utils"
+import { buildTerminalAttachment } from "../../webview-ui/src/hooks/terminal-context-utils"
 
 describe("ACCEPTED_IMAGE_TYPES", () => {
   it("includes the standard image MIME types", () => {
@@ -54,5 +58,57 @@ describe("isDragLeavingComponent", () => {
     const outside = {} as EventTarget
     const container = { contains: () => false } as unknown as HTMLElement
     expect(isDragLeavingComponent(outside, container)).toBe(true)
+  })
+})
+
+describe("textDataUrl", () => {
+  it("encodes UTF-8 text as a text/plain data URL", () => {
+    const text = "# Notes\nunicode: é ✓ 日本\n"
+    const url = textDataUrl(new TextEncoder().encode(text))
+    expect(url?.startsWith("data:text/plain;base64,")).toBe(true)
+    expect(Buffer.from(url!.slice("data:text/plain;base64,".length), "base64").toString("utf8")).toBe(text)
+  })
+
+  it("encodes an empty file", () => {
+    expect(textDataUrl(new Uint8Array())).toBe("data:text/plain;base64,")
+  })
+
+  it("rejects data with NUL bytes", () => {
+    expect(textDataUrl(new Uint8Array([0x25, 0x50, 0x44, 0x46, 0x00, 0x01]))).toBeUndefined()
+  })
+
+  it("rejects invalid UTF-8", () => {
+    expect(textDataUrl(new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0xff, 0xfe]))).toBeUndefined()
+  })
+})
+
+describe("dataUrlText", () => {
+  it("decodes the UTF-8 text of a dropped file", () => {
+    const text = "# Notes\nunicode: é ✓ 日本\n"
+    expect(dataUrlText(textDataUrl(new TextEncoder().encode(text))!)).toBe(text)
+  })
+
+  it("decodes a percent-encoded data URL", () => {
+    const terminal = buildTerminalAttachment("check @terminal", "$ ls -la\n100% done")
+    expect(dataUrlText(terminal!.url)).toBe("$ ls -la\n100% done")
+  })
+})
+
+describe("isDataAttachment", () => {
+  it("accepts image and text data URLs", () => {
+    expect(isDataAttachment({ mime: "image/png", url: "data:image/png;base64,abc" })).toBe(true)
+    expect(isDataAttachment({ mime: "text/plain", url: "data:text/plain;base64,abc" })).toBe(true)
+  })
+
+  it("rejects other mime types and non-data URLs", () => {
+    expect(isDataAttachment({ mime: "application/pdf", url: "data:application/pdf;base64,abc" })).toBe(false)
+    expect(isDataAttachment({ mime: "text/plain", url: "file:///repo/a.ts" })).toBe(false)
+    expect(isDataAttachment({ mime: "image/png", url: "https://example.com/a.png" })).toBe(false)
+  })
+
+  it("rejects mention context, which is a text data URL with a mention span", () => {
+    const terminal = buildTerminalAttachment("check @terminal", "$ ls")
+    expect(terminal?.url.startsWith("data:text/plain")).toBe(true)
+    expect(terminal && isDataAttachment(terminal)).toBe(false)
   })
 })

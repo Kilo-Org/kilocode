@@ -87,7 +87,16 @@ describe("transcriptRows", () => {
       [{ ...part("context", "u1"), synthetic: true }],
       [{ ...part("blank", "u1"), text: " \n\t" }],
       [{ id: "compact", messageID: "u1", type: "compaction", auto: true }],
-      [{ id: "file", messageID: "u1", type: "file", mime: "text/plain", url: "data:,context" }],
+      [
+        {
+          id: "file",
+          messageID: "u1",
+          type: "file",
+          mime: "text/plain",
+          url: "data:,context",
+          source: { type: "file", path: "terminal", text: { value: "@terminal", start: 0, end: 9 } },
+        },
+      ],
     ]
 
     for (const parts of cases) {
@@ -97,6 +106,15 @@ describe("transcriptRows", () => {
 
       expect(rows).toEqual([])
     }
+  })
+
+  it("shows a queued message that has only a dropped file", () => {
+    const parts: Part[] = [
+      { id: "file", messageID: "u1", type: "file", mime: "text/plain", url: "data:,notes", filename: "notes.md" },
+    ]
+    const rows = transcriptRows(messageTurns([user("u1")]), lookup({ u1: parts }), { queued: new Set(["u1"]) })
+
+    expect(rows.map((row) => row.type)).toEqual(["user"])
   })
 
   it("shows a queued message when its visible text arrives after metadata and context", () => {

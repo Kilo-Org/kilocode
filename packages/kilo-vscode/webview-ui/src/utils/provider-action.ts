@@ -36,16 +36,29 @@ type Handlers = {
   onConnected?: (message: ProviderConnectedMessage) => void
   onDisconnected?: (message: ProviderDisconnectedMessage) => void
   onError?: (message: ProviderActionErrorMessage) => void
+  /** Called when no reply arrives within `timeout` ms. Later replies for the request are ignored. */
+  onTimeout?: () => void
+  timeout?: number
 }
 
+type Entry = Handlers & { timer?: ReturnType<typeof setTimeout> }
+
 export function createProviderAction(vscode: Transport) {
-  const pending = new Map<string, Handlers>()
+  const pending = new Map<string, Entry>()
+
+  function take(requestId: string) {
+    const item = pending.get(requestId)
+    if (!item) return
+    pending.delete(requestId)
+    clearTimeout(item.timer)
+    return item
+  }
+
   const unsubscribe = vscode.onMessage((message) => {
     if (!("requestId" in message)) return
 
-    const item = pending.get(message.requestId)
+    const item = take(message.requestId)
     if (!item) return
-    pending.delete(message.requestId)
 
     if (message.type === "providerOAuthReady") {
       item.onOAuthReady?.(message)
@@ -69,17 +82,18 @@ export function createProviderAction(vscode: Transport) {
 
   function send(message: ProviderRequestInput, handlers: Handlers = {}) {
     const requestId = crypto.randomUUID()
-    pending.set(requestId, handlers)
+    const timer = handlers.timeout ? setTimeout(() => take(requestId)?.onTimeout?.(), handlers.timeout) : undefined
+    pending.set(requestId, { ...handlers, timer })
     vscode.postMessage({ ...message, requestId } as ProviderRequest)
     return requestId
   }
 
   function clear(requestId?: string) {
     if (requestId) {
-      pending.delete(requestId)
+      take(requestId)
       return
     }
-    pending.clear()
+    for (const id of [...pending.keys()]) take(id)
   }
 
   function dispose() {
