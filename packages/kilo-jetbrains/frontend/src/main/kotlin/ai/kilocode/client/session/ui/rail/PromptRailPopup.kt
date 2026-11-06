@@ -6,9 +6,9 @@ import ai.kilocode.client.ui.HoverIcon
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.layout.Stack
 import ai.kilocode.client.ui.list.ActiveList
-import ai.kilocode.client.ui.list.ActiveListConfig
-import ai.kilocode.client.ui.list.ActiveListItem
-import ai.kilocode.client.ui.list.ActiveListRowHeight
+import ai.kilocode.client.ui.active.ActiveConfig
+import ai.kilocode.client.ui.active.ActiveItem
+import ai.kilocode.client.ui.active.ActiveRowHeight
 import ai.kilocode.client.ui.popup.SidePopupContent
 import com.intellij.icons.AllIcons
 import com.intellij.openapi.util.Disposer
@@ -51,7 +51,7 @@ internal class PromptRailPopup(
         override val key: String,
         override val title: String,
         override val description: String?,
-    ) : ActiveListItem
+    ) : ActiveItem
 
     private val disposer = Disposer.newDisposable("PromptRailPopup")
 
@@ -77,9 +77,9 @@ internal class PromptRailPopup(
 
     private val rows = ActiveList(
         emptyText = "",
-        cfg = ActiveListConfig(
+        cfg = ActiveConfig(
             // A prompt and the start of its answer both need their own line, and the answer wraps.
-            height = ActiveListRowHeight.PREFERRED,
+            height = ActiveRowHeight.PREFERRED,
             wrapDescription = true,
             // The row already shows the answer preview it would repeat, and a tooltip inside a balloon
             // that itself opened on hover reads as a surface stacked on a surface.

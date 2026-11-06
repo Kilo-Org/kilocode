@@ -154,6 +154,79 @@ class WorktreeSessionEditorManagerTest : BasePlatformTestCase() {
         assertEquals(1, requested.size)
     }
 
+    fun `test submit prompt sends into the session already on screen`() {
+        val session = session("ses_1", updated = 1.0)
+        val manager = manager()
+        edt { manager.openSession(SessionRef.Local(session)) }
+        flush()
+
+        edt { manager.submitPrompt("update from base", "Update from main") }
+        waitUntil { rpc.prompts.any { it.first == "ses_1" } }
+
+        val sent = rpc.prompts.single { it.first == "ses_1" }
+        assertEquals(DIR, sent.second)
+        val part = sent.third.parts.single { it.text == "update from base" }
+        assertEquals("Update from main", part.injectedTitle)
+    }
+
+    fun `test submit prompt while the editor starts is sent once the session opens`() {
+        rpc.listed += session("ses_1", updated = 1.0)
+        val manager = manager()
+
+        edt { manager.submitPrompt("update from base", "Update from main") }
+        edt { manager.start() }
+        flush()
+
+        waitUntil { rpc.prompts.any { it.first == "ses_1" } }
+        assertTrue(rpc.prompts.single { it.first == "ses_1" }.third.parts.any { it.text == "update from base" })
+    }
+
+    fun `test queued startup prompt preserves recovered draft and is sent once`() {
+        rpc.createThrows = IllegalStateException("Kilo backend is not ready")
+        val manager = manager()
+        edt {
+            manager.submitPrompt("update from base", "Update from main")
+            manager.start()
+        }
+        flush()
+        val fallback = edt { manager.component.getComponent(0) as SessionUi }
+        val item = PromptAttachment("file", "notes.txt", "text/plain", "file:///tmp/notes.txt")
+        edt {
+            prompt(fallback).setText("Keep this fallback draft")
+            prompt(fallback).addAttachmentForTest(item)
+        }
+
+        rpc.createThrows = null
+        edt { manager.start() }
+        waitUntil { rpc.prompts.size == 1 }
+        edt { manager.start() }
+        flush()
+
+        val sent = rpc.prompts.single()
+        val part = sent.third.parts.single { it.text == "update from base" }
+        assertEquals("Update from main", part.injectedTitle)
+        edt {
+            val active = manager.component.getComponent(0) as SessionUi
+            assertEquals(active.id, sent.first)
+            assertEquals("Keep this fallback draft", prompt(active).text())
+            assertEquals(listOf(item), prompt(active).attachments())
+            assertTrue(Disposer.isDisposed(fallback))
+        }
+    }
+
+    fun `test the project base update service finds the open worktree editor`() {
+        val session = session("ses_1", updated = 1.0)
+        val manager = manager()
+        edt { manager.openSession(SessionRef.Local(session)) }
+        flush()
+
+        val sent = edt { project.service<WorktreeBaseUpdatePrompts>().submit(DIR, "update from base", "Update from main") }
+        waitUntil { rpc.prompts.any { it.first == "ses_1" } }
+
+        assertTrue("the project service must see the editor's registration", sent)
+        assertTrue(rpc.prompts.single { it.first == "ses_1" }.third.parts.any { it.text == "update from base" })
+    }
+
     fun `test start opens most recent listed session`() {
         rpc.listed += session("ses_old", updated = 1.0)
         rpc.listed += session("ses_new", updated = 3.0)
@@ -443,7 +516,10 @@ class WorktreeSessionEditorManagerTest : BasePlatformTestCase() {
         rpc.session = session("ses_new", updated = 4.0).copy(title = "New session")
         val manager = manager()
 
-        edt { manager.start() }
+        edt {
+            service<PendingWorktreePrompt>().put(DIR, PendingPrompt("fix the bug"))
+            manager.start()
+        }
         flush()
 
         // No real session yet, but the editor shows the empty session panel instead of a blank void.
@@ -459,9 +535,10 @@ class WorktreeSessionEditorManagerTest : BasePlatformTestCase() {
         // Backend recovers -> starting again creates and shows the real session.
         rpc.createThrows = null
         edt { manager.start() }
-        flush()
+        waitUntil { rpc.prompts.any { it.first == "ses_new" } }
 
         assertEquals(listOf(DIR to null, DIR to "ses_new"), created)
+        assertTrue(rpc.prompts.single().third.parts.any { it.text == "fix the bug" })
         edt {
             val active = manager.component.getComponent(0) as SessionUi
             assertEquals("ses_new", active.id)

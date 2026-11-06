@@ -15,11 +15,12 @@ import ai.kilocode.client.session.history.HistoryTime
 import ai.kilocode.client.session.history.LocalHistoryItem
 import ai.kilocode.client.telemetry.Telemetry
 import ai.kilocode.client.util.edt
-import ai.kilocode.client.ui.list.ActiveListDeleteOptions
-import ai.kilocode.client.ui.list.ActiveListEditOptions
-import ai.kilocode.client.ui.list.ActiveListItem
-import ai.kilocode.client.ui.list.ActiveListMenu
-import ai.kilocode.client.ui.list.ActiveListSelection
+import ai.kilocode.client.ui.active.ActiveDeleteOptions
+import ai.kilocode.client.ui.active.ActiveItem
+import ai.kilocode.client.ui.active.ActiveEditOptions
+import ai.kilocode.client.ui.active.ActiveMenu
+import ai.kilocode.client.ui.active.ActiveSelection
+import ai.kilocode.client.ui.list.ActiveSection
 import ai.kilocode.log.KiloLog
 import ai.kilocode.rpc.dto.SessionDto
 import ai.kilocode.rpc.dto.WorktreeDirtyDto
@@ -66,8 +67,8 @@ class WorktreeSessionEditorPanel @RequiresEdt constructor(
     private val controller: WorktreeSessionListController,
     private val worktree: ai.kilocode.client.app.Workspace,
     private val project: Project? = null,
-    private val confirm: ((RelativePoint, ActiveListDeleteOptions, () -> Unit) -> Unit)? = null,
-    private val edit: ((RelativePoint, ActiveListEditOptions, (String) -> Unit) -> Unit)? = null,
+    private val confirm: ((RelativePoint, ActiveDeleteOptions, () -> Unit) -> Unit)? = null,
+    private val edit: ((RelativePoint, ActiveEditOptions, (String) -> Unit) -> Unit)? = null,
     private val openWorktree: ((String) -> Unit)? = null,
     // Persisted per-worktree session list visibility; null means the user has not chosen yet.
     private val load: ((Boolean?) -> Unit) -> Unit = { done ->
@@ -106,7 +107,7 @@ class WorktreeSessionEditorPanel @RequiresEdt constructor(
             content = manager.component,
             header = prHeader,
             actions = DefaultActionGroup(add, rename, delete),
-            menu = ActiveListMenu(WorktreeSessionDataKeys.SESSION, group, element = { row ->
+            menu = ActiveMenu(WorktreeSessionDataKeys.SESSION, group, element = { row ->
                 item(row.key)?.takeIf { canFork(it) || canMove(it) || canRename(it) || canDelete(it) }
             }),
             open = ::open,
@@ -139,7 +140,7 @@ class WorktreeSessionEditorPanel @RequiresEdt constructor(
         if (keys.isEmpty()) return
         val view = UIUtil.findComponentOfType(list, com.intellij.ui.components.JBList::class.java) ?: return
         val indexes = keys.mapNotNull { key ->
-            (0 until view.model.size).firstOrNull { idx -> (view.model.getElementAt(idx) as? ActiveListItem)?.key == key }
+            (0 until view.model.size).firstOrNull { idx -> (view.model.getElementAt(idx) as? ActiveItem)?.key == key }
         }
         view.selectedIndices = indexes.toIntArray()
     }
@@ -212,11 +213,11 @@ class WorktreeSessionEditorPanel @RequiresEdt constructor(
         } else {
             KiloBundle.message("worktree.session.delete.confirm.message.multiple", active.size)
         }
-        val opts = ActiveListDeleteOptions(
+        val opts = ActiveDeleteOptions(
             message = msg,
             detail = KiloBundle.message("worktree.session.delete.confirm.detail"),
         )
-        val handler = confirm ?: { anchor: RelativePoint, options: ActiveListDeleteOptions, run: () -> Unit ->
+        val handler = confirm ?: { anchor: RelativePoint, options: ActiveDeleteOptions, run: () -> Unit ->
             list.confirmDelete(anchor, options) { run() }
         }
         handler(list.point(active[0], cell), opts) { manager.deleteSessions(active) }
@@ -227,10 +228,10 @@ class WorktreeSessionEditorPanel @RequiresEdt constructor(
         if (key == SessionHost.NEW || key in manager.deleting()) return
         val value = title(key)
         if (!list.select(key)) return
-        val handler = edit ?: { anchor: RelativePoint, opts: ActiveListEditOptions, commit: (String) -> Unit ->
+        val handler = edit ?: { anchor: RelativePoint, opts: ActiveEditOptions, commit: (String) -> Unit ->
             list.editName(anchor, opts, commit)
         }
-        handler(list.point(key, cell), ActiveListEditOptions(value)) { name ->
+        handler(list.point(key, cell), ActiveEditOptions(value)) { name ->
             manager.renameSession(key, name)
         }
     }
@@ -343,7 +344,7 @@ class WorktreeSessionEditorPanel @RequiresEdt constructor(
     }
 
     @RequiresEdt
-    private fun open(row: ActiveListItem, focus: Boolean) {
+    private fun open(row: ActiveItem, focus: Boolean) {
         if (row.key == SessionHost.NEW) {
             manager.newSession()
             return
@@ -354,7 +355,7 @@ class WorktreeSessionEditorPanel @RequiresEdt constructor(
 
     @RequiresEdt
     private fun sync() {
-        val rows = mutableListOf<ActiveListItem>()
+        val rows = mutableListOf<ActiveItem>()
         val key = manager.currentKey()
         val pending = manager.hasPendingNew()
         val kinds = manager.activity()
@@ -367,7 +368,7 @@ class WorktreeSessionEditorPanel @RequiresEdt constructor(
         // The host owns which session is shown, so it also owns the selection: name the row and let
         // the list hold that key until a refresh brings it in.
         val shown = if (pending) SessionHost.NEW else key
-        list.update(rows, shown?.let { ActiveListSelection.Key(it) } ?: ActiveListSelection.Preserve)
+        list.update(rows, shown?.let { ActiveSelection.Key(it) } ?: ActiveSelection.Preserve)
         syncToggle(controller.sessions().mapTo(mutableSetOf()) { it.id }, kinds, key, deleting)
     }
 
@@ -498,7 +499,7 @@ class WorktreeSessionEditorPanel @RequiresEdt constructor(
         }
     }
 
-    private object NewRow : ActiveListItem {
+    private object NewRow : ActiveSection {
         override val key: String get() = SessionHost.NEW
         override val title: String get() = KiloBundle.message("worktree.session.new")
         // Group the pending session under Today so it appears inside the list right away instead of

@@ -14,6 +14,7 @@ data class PendingPrompt(
     val provider: String? = null,
     val model: String? = null,
     val variant: String? = null,
+    val injectedTitle: String? = null,
 )
 
 /**

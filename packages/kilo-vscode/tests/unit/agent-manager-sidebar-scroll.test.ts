@@ -30,7 +30,10 @@ function list(cls = "am-worktree-list") {
   const el = window.document.createElement("div")
   el.className = cls
   Object.defineProperty(el, "scrollTop", { configurable: true, value: 0, writable: true })
-  window.document.body.append(el)
+  const sidebar = window.document.createElement("div")
+  sidebar.className = "am-sidebar"
+  sidebar.append(el)
+  window.document.body.append(sidebar)
   return el
 }
 
@@ -44,6 +47,29 @@ function flush() {
 }
 
 describe("Agent Manager sidebar scroll preservation", () => {
+  it("never captures decorative splash previews outside the live sidebar", () => {
+    const preview = window.document.createElement("div")
+    preview.setAttribute("aria-hidden", "true")
+    const projects = window.document.createElement("div")
+    projects.className = "am-projects-list"
+    const worktrees = window.document.createElement("div")
+    worktrees.className = "am-worktree-list"
+    preview.append(projects, worktrees)
+    window.document.body.append(preview)
+    projects.scrollTop = 120
+    worktrees.scrollTop = 80
+    const preserve = preserver()
+
+    preserve(() => {
+      projects.scrollTop = 0
+      worktrees.scrollTop = 0
+    })
+    flush()
+
+    expect(projects.scrollTop).toBe(0)
+    expect(worktrees.scrollTop).toBe(0)
+  })
+
   it("restores the scroll offset after the state update has rendered", () => {
     const el = list()
     el.scrollTop = 240

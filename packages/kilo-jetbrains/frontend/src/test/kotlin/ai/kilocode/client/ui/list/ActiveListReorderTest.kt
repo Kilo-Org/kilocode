@@ -1,5 +1,9 @@
 package ai.kilocode.client.ui.list
 
+import ai.kilocode.client.ui.active.ActiveMove
+import ai.kilocode.client.ui.active.ActiveReorder
+import ai.kilocode.client.ui.active.ActiveItem
+import ai.kilocode.client.ui.active.ActiveConfig
 import ai.kilocode.client.testing.fire
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.util.ui.UIUtil
@@ -16,7 +20,7 @@ class ActiveListReorderTest : BasePlatformTestCase() {
         val rows = rows("a", "b", "c")
         val out = activeListGapRows(rows, "c", 0, 20)
         assertEquals(listOf("c", "a", "b"), out.map { it.key })
-        assertTrue(out[0] is ActiveListGap)
+        assertTrue(out[0] is ActiveGap)
         assertEquals(3, out.size)
     }
 
@@ -34,7 +38,7 @@ class ActiveListReorderTest : BasePlatformTestCase() {
     }
 
     fun `test pick up opens a gap and drop reorders firing the move`() {
-        val moves = mutableListOf<ActiveListMove>()
+        val moves = mutableListOf<ActiveMove>()
         val view = view(moves)
         view.update(sectioned())
         layout(view)
@@ -46,7 +50,7 @@ class ActiveListReorderTest : BasePlatformTestCase() {
         // The real row is gone from the model; a gap holds its old key at the new index.
         val display = display(view)
         assertEquals(listOf("cur", "c", "a", "b"), display.map { it.key })
-        assertTrue(display[1] is ActiveListGap)
+        assertTrue(display[1] is ActiveGap)
 
         view.drop()
         assertEquals(listOf("cur", "c", "a", "b"), display(view).map { it.key })
@@ -58,7 +62,7 @@ class ActiveListReorderTest : BasePlatformTestCase() {
     }
 
     fun `test drop anchors the moved row for owner refresh`() {
-        val moves = mutableListOf<ActiveListMove>()
+        val moves = mutableListOf<ActiveMove>()
         val view = view(moves)
         view.update(sectioned())
         layout(view)
@@ -72,7 +76,7 @@ class ActiveListReorderTest : BasePlatformTestCase() {
     }
 
     fun `test drag cannot leave its section and never displaces the current row`() {
-        val moves = mutableListOf<ActiveListMove>()
+        val moves = mutableListOf<ActiveMove>()
         val view = view(moves)
         view.update(sectioned())
         layout(view)
@@ -83,7 +87,7 @@ class ActiveListReorderTest : BasePlatformTestCase() {
     }
 
     fun `test cancel restores the original order and fires nothing`() {
-        val moves = mutableListOf<ActiveListMove>()
+        val moves = mutableListOf<ActiveMove>()
         val view = view(moves)
         view.update(sectioned())
         layout(view)
@@ -96,7 +100,7 @@ class ActiveListReorderTest : BasePlatformTestCase() {
     }
 
     fun `test an external update that drops the dragged key cancels the drag`() {
-        val moves = mutableListOf<ActiveListMove>()
+        val moves = mutableListOf<ActiveMove>()
         val view = view(moves)
         view.update(sectioned())
         layout(view)
@@ -155,7 +159,7 @@ class ActiveListReorderTest : BasePlatformTestCase() {
     }
 
     fun `test the gap keeps the dragged row body height when rows size to content`() {
-        val view = view(mutableListOf(), ActiveListConfig.Preferred)
+        val view = view(mutableListOf(), ActiveConfig.Preferred)
         view.update(sectioned())
         layout(view)
         val body = heights(view)[2]
@@ -261,13 +265,13 @@ class ActiveListReorderTest : BasePlatformTestCase() {
     }
 
     private fun view(
-        moves: MutableList<ActiveListMove>,
-        cfg: ActiveListConfig = ActiveListConfig.Equal,
+        moves: MutableList<ActiveMove>,
+        cfg: ActiveConfig = ActiveConfig.Equal,
     ): ActiveListView {
         return ActiveListView(
             empty = "",
             cfg = cfg,
-            reorder = ActiveListReorder(
+            reorder = ActiveReorder(
                 movable = { it.section != null },
                 onMove = { moves += it },
             ),
@@ -283,7 +287,7 @@ class ActiveListReorderTest : BasePlatformTestCase() {
         UIUtil.dispatchAllInvocationEvents()
     }
 
-    private fun display(view: ActiveListView): List<ActiveListItem> {
+    private fun display(view: ActiveListView): List<ActiveItem> {
         return (0 until view.list.model.size).map { view.list.model.getElementAt(it) }
     }
 
@@ -304,13 +308,13 @@ class ActiveListReorderTest : BasePlatformTestCase() {
         return Point(bounds.x + 8, bounds.y + bounds.height / 2)
     }
 
-    private fun sectioned(): List<ActiveListItem> {
+    private fun sectioned(): List<ActiveItem> {
         return listOf(row("cur", null), row("a", "wt"), row("b", "wt"), row("c", "wt"))
     }
 
-    private fun rows(vararg keys: String): List<ActiveListItem> = keys.map { row(it, "wt") }
+    private fun rows(vararg keys: String): List<ActiveItem> = keys.map { row(it, "wt") }
 
-    private fun row(key: String, section: String?, identity: Any = key): ActiveListItem = object : ActiveListItem {
+    private fun row(key: String, section: String?, identity: Any = key): ActiveItem = object : ActiveSection {
         override val key = key
         override val identity = identity
         override val title = key

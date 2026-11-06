@@ -39,6 +39,11 @@ const SCRIPT = `
       tool: "kilo_memory_recall",
       state: { status: "completed", input: {}, output: "memory", title: "Memory recalled" },
     },
+    { id: "generated-image", type: "file", mime: "image/png", url: "data:image/png;base64,AAAA" },
+    { id: "empty-image", type: "file", mime: "image/png", url: "" },
+    { id: "legacy-image", type: "file", mime: "image/png", url: "file:///repo/dot.png" },
+    { id: "hosted-image", type: "file", mime: "IMAGE/PNG", url: "HTTPS://cdn.example.com/dot.png" },
+    { id: "generated-audio", type: "file", mime: "audio/wav", url: "data:audio/wav;base64,AAAA" },
   ]
   const visible = parts.filter((part) => isRenderable(part, message)).map((part) => part.id)
 
@@ -53,6 +58,8 @@ const SCRIPT = `
     "read-running",
     "memory-running",
     "memory-completed",
+    "generated-image",
+    "hosted-image",
   ]
   if (visible.length !== expected.length || visible.some((id, index) => id !== expected[index])) {
     fail("did not exclude transcript-invisible parts")

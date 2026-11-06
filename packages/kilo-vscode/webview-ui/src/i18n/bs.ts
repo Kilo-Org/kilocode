@@ -979,6 +979,9 @@ export const dict = {
   "settings.experimental.conversationPromptHistory.title": "Historija upita po razgovoru",
   "settings.experimental.conversationPromptHistory.description":
     "Čuvajte historiju upita (ArrowUp/ArrowDown) zasebno za svaki razgovor umjesto da dijelite jednu historiju među svim razgovorima.",
+  "settings.experimental.agentManagerSplash.title": "Početni ekran Agent Managera",
+  "settings.experimental.agentManagerSplash.description":
+    "Isprobajte novi uvod u Agent Manager s primjerima radnih tokova. Primjenjuje se odmah.",
   "settings.experimental.claudeMigration.title": "Claude Code migracija",
   "settings.experimental.claudeMigration.description":
     "Jednom uvezite podržane globalne CLAUDE.md upute, jednostavne vještine i onemogućene MCP definicije. Originalne Claude datoteke ostaju nepromijenjene; ponovo pokrenite backend nakon uključivanja.",

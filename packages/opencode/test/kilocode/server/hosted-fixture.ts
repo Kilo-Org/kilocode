@@ -32,6 +32,10 @@ export function provider(
       Effect.fail(
         new HostedFailure({ code: "invalid_request", message: "createWorkspace is not supported", retryable: false }),
       ),
+    continueWorkspace: () =>
+      Effect.fail(
+        new HostedFailure({ code: "invalid_request", message: "continueWorkspace is not supported", retryable: false }),
+      ),
     startWorkspaceSession: () =>
       Effect.fail(
         new HostedFailure({
