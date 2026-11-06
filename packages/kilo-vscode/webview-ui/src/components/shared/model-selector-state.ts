@@ -19,6 +19,15 @@ import {
 
 const EMPTY = new Map<string, never>()
 
+/** Keys that read the result list, so they must see the settled query before they act. */
+export function actsOnList(e: KeyboardEvent, navigating: boolean): boolean {
+  if (e.target instanceof HTMLButtonElement) return false
+  if (e.key === "ArrowDown" || e.key === "ArrowUp") return true
+  if (isEnterKeyCommitNotIme(e)) return true
+  if (!navigating) return false
+  return e.key === "ArrowLeft" || e.key === "ArrowRight" || e.key === "Home" || e.key === "End"
+}
+
 export function createModelTree(env: {
   open: Accessor<boolean>
   visible: Accessor<PickerModel[]>
@@ -36,7 +45,10 @@ export function createModelTree(env: {
   cancel: () => void
 }) {
   const [search, setSearch] = createSignal("")
-  const hasSearch = () => search().trim().length > 0
+  // The input updates immediately; the ranking uses the settled query so a
+  // fast typist does not rescan the catalog on every key event.
+  const [searched, setSearched] = createSignal("")
+  const hasSearch = () => searched().trim().length > 0
   const [selectedKey, setSelectedKey] = createSignal(CLEAR_KEY)
   const [browsing, setBrowsing] = createSignal(false)
   const [navigating, setNavigating] = createSignal(false)
@@ -54,26 +66,32 @@ export function createModelTree(env: {
   const [pointer, setPointer] = createSignal(true)
   const [anchor, setAnchor] = createSignal<ScrollAnchor | null>(null)
   const refs: { search?: HTMLInputElement; list?: HTMLDivElement } = {}
-  const timers: { preview?: ReturnType<typeof setTimeout>; scroll?: number; previous?: string } = {}
+  const timers: {
+    preview?: ReturnType<typeof setTimeout>
+    search?: number
+    scroll?: number
+    previous?: string
+  } = {}
   const pointerAt: { x?: number; y?: number } = {}
+
+  // Live set of favorited keys — drives star icon visual state (filled vs outline)
+  // and the search tie-break. Toggling never changes the list structure, so no
+  // items jump.
+  const favoriteKeys = createMemo(() => {
+    if (!env.open()) return new Set<string>()
+    return new Set(env.favorites()?.map((f) => modelKey(f.providerID, f.modelID)))
+  })
 
   // Flat filtered list for keyboard navigation
   const filtered = createMemo(() => {
     if (!env.open()) return []
-    const q = search().trim()
+    const q = searched().trim()
     if (!q) return env.visible()
     return rankModelSearch(env.visible(), q, {
       usage: env.usage(),
-      favorites: new Set(env.favorites()?.map((item) => modelKey(item.providerID, item.modelID))),
+      favorites: favoriteKeys(),
       recent: env.recents(),
     })
-  })
-
-  // Live set of favorited keys — drives star icon visual state (filled vs outline).
-  // Toggling never changes the list structure, so no items jump.
-  const favoriteKeys = createMemo(() => {
-    if (!env.open()) return new Set<string>()
-    return new Set(env.favorites()?.map((f) => modelKey(f.providerID, f.modelID)))
   })
 
   const favoriteModels = createMemo(() => {
@@ -197,7 +215,7 @@ export function createModelTree(env: {
   // Falls back to defaultKey when the active model is filtered out.
   createEffect(() => {
     if (!env.open()) return
-    const query = search()
+    const query = searched()
     const list = filtered()
     const searchChanged = query !== timers.previous
     timers.previous = query
@@ -256,15 +274,43 @@ export function createModelTree(env: {
     setBrowsing(false)
     setNavigating(false)
     setSearch("")
+    setSearched("")
     clearTimeout(timers.preview)
+    cancelSearch()
     if (timers.scroll !== undefined) cancelAnimationFrame(timers.scroll)
     timers.scroll = undefined
   })
 
   onCleanup(() => {
     clearTimeout(timers.preview)
+    cancelSearch()
     if (timers.scroll !== undefined) cancelAnimationFrame(timers.scroll)
   })
+
+  function cancelSearch() {
+    if (timers.search !== undefined) cancelAnimationFrame(timers.search)
+    timers.search = undefined
+  }
+
+  function flushSearch() {
+    if (timers.search === undefined) return
+    cancelSearch()
+    setSearched(search())
+  }
+
+  // Defer the catalog scan to the next frame, so several key events in one frame
+  // run one ranking pass and the input handler itself stays short.
+  function scheduleSearch(value: string) {
+    cancelSearch()
+    if (!value.trim()) {
+      setSearched(value)
+      return
+    }
+    timers.search = requestAnimationFrame(() => {
+      timers.search = undefined
+      setSearched(value)
+    })
+  }
 
   function pick(model: PickerModel) {
     env.onSelect(model.providerID, model.id)
@@ -380,6 +426,9 @@ export function createModelTree(env: {
   // Home, End, Left and Right act only after the user moved through the tree, as v1. A focused button (expand, star,
   // Select) keeps its own Enter and arrow keys.
   function handleKeyDown(e: KeyboardEvent) {
+    // Only keys that act on the list commit the pending query. Other keys leave
+    // same-frame input events free to share one scan.
+    if (actsOnList(e, navigating())) flushSearch()
     const list = nodes()
     if (e.key === "Escape") {
       e.preventDefault()
@@ -436,6 +485,7 @@ export function createModelTree(env: {
       setBrowsing(false)
       setNavigating(false)
       setSearch(value)
+      scheduleSearch(value)
     },
     /** A click that moves the caret leaves tree browsing, so the screen reader follows the text again. */
     caret() {

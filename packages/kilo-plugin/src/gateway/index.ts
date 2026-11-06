@@ -37,6 +37,7 @@ import { Money } from "@opencode/schema/money"
 import { Provider } from "@opencode/schema/provider"
 import { Global } from "@opencode/util/global"
 import { KiloOrganizationModes } from "./modes"
+import { KiloGatewayAccounts } from "./accounts"
 import { createHash, randomUUID } from "node:crypto"
 import { Clock, Duration, Effect, Fiber, Option, Schedule, Schema, Scope, Semaphore, Stream } from "effect"
 import { GatewayOptions } from "./options.js"
@@ -626,6 +627,9 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
       }
     }
     yield* stored ? Effect.forkIn(reload, scope) : lock.withPermit(loadCatalog(++epoch, 0))
+    // Other Kilo plugins of this Location read the account once the first catalog state has it.
+    const unregister = KiloGatewayAccounts.register(ctx.location.directory, activeAccount)
+    yield* Effect.addFinalizer(() => Effect.sync(unregister))
 
     // v1 loaded organization modes above built-ins and below local agent definitions. This transform
     // occupies that same pre-config position; replay restores built-ins when a mode is removed.

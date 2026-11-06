@@ -2,7 +2,8 @@ import { afterEach, beforeEach, expect, test } from "bun:test"
 import type { ToolActionDiff } from "../src/components/message-part"
 import { resetToolOpenState } from "../src/components/tool-open-state"
 import { editedFile, patchedFiles, unchangedFile, writtenFile } from "./fixtures"
-import { mountTool, waitFor, type Mounted } from "./harness"
+import { mountRich, mountTool, trigger, waitFor, type Mounted } from "./harness"
+import { ContentPart } from "../src/components/message-part"
 
 let mounted: Mounted[] = []
 
@@ -176,4 +177,65 @@ test("patch card lists every file in a multi-file patch", async () => {
   expect(names).toEqual(["math.ts", "legacy.ts"])
   expect(card.host.querySelector('[data-slot="basic-tool-tool-subtitle"]')?.textContent).toContain("2 files")
   expect(card.host.querySelector('[data-slot="apply-patch-change"][data-type="removed"]')).not.toBeNull()
+})
+
+for (const [name, input] of [
+  ["grep", { pattern: "marker", path: "src" }],
+  ["glob", { pattern: "**/*.ts", path: "src" }],
+] as const) {
+  test(`${name} card defers its output body until the card expands`, async () => {
+    const card = mountTool(name, { input, output: "src/a.ts:1: marker", partID: `${name}-defer` })
+    mounted.push(card)
+
+    expect(card.host.querySelector('[data-component="tool-output"]')).toBeNull()
+
+    trigger(card.host).click()
+    expect(card.host.querySelector('[data-component="tool-output"]')).toBeNull()
+
+    const output = await waitFor(() => card.host.querySelector('[data-component="tool-output"]'))
+    expect(output.textContent).toContain("marker")
+  })
+}
+
+test("a deferred tool card opened by default mounts its output", async () => {
+  const card = mountTool("grep", {
+    input: { pattern: "marker", path: "src" },
+    output: "src/a.ts:1: marker",
+    partID: "grep-default-open",
+    defaultOpen: true,
+  })
+  mounted.push(card)
+
+  const output = await waitFor(() => card.host.querySelector('[data-component="tool-output"]'))
+  expect(output.textContent).toContain("marker")
+})
+
+test("a deferred MCP card opened by a display layout mounts its body", async () => {
+  const message = {
+    id: "mcp-message",
+    type: "assistant" as const,
+    time: { created: 1 },
+    agent: "default",
+    model: { id: "test", providerID: "test" },
+    cost: 0,
+    tokens: { input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } },
+    content: [],
+  }
+  const item = {
+    type: "tool" as const,
+    id: "mcp-default-open",
+    name: "sample_docs_lookup",
+    state: {
+      status: "completed" as const,
+      input: { query: "marker" },
+      content: [{ type: "text" as const, text: "result" }],
+      metadata: {},
+    },
+    time: { created: 1 },
+  }
+  const card = mountRich(() => <ContentPart item={item} message={message} index={0} defaultOpen />)
+  mounted.push(card)
+
+  const body = await waitFor(() => card.host.querySelector('[data-slot="mcp-section-label"]'))
+  expect(body).not.toBeNull()
 })

@@ -16,8 +16,6 @@ import {
 } from "../src/agent-manager/provider-auto-approve"
 
 const window = vscode.window as unknown as Record<string, unknown>
-window.onDidCloseTerminal ??= () => ({ dispose: () => undefined })
-window.onDidChangeActiveTerminal ??= () => ({ dispose: () => undefined })
 window.createTerminal ??= () => ({ show: () => undefined, dispose: () => undefined, exitStatus: undefined })
 window.createOutputChannel ??= () => ({ appendLine: () => undefined, show: () => undefined, dispose: () => undefined })
 
