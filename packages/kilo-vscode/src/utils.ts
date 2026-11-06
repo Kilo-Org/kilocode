@@ -18,6 +18,14 @@ export function getWebviewFontSize(): number {
   return clamp(raw)
 }
 
+/** How much motion the chat webview is allowed to run. */
+export type Animations = "full" | "reduced" | "off"
+
+export function getWebviewAnimations(): Animations {
+  const raw = vscode.workspace.getConfiguration("kilo-code.new").get<string>("uiAnimations", "full")
+  return raw === "reduced" || raw === "off" ? raw : "full"
+}
+
 /**
  * True when running inside Cursor rather than real VS Code (or another
  * fork). Cursor's Secondary Side Bar support is known to be unreliable for

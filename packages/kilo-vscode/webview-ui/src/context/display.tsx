@@ -13,6 +13,7 @@ import { useConfig } from "./config"
 import { useVSCode } from "./vscode"
 import type { ExtensionMessage } from "../types/messages"
 import { applyFontSize, clampFontSize, readFontSize } from "../font-size"
+import { applyAnimations, type Animations } from "../animations"
 import { resolveReasoningDisplay } from "../utils/reasoning-display"
 import type { ReasoningDisplay } from "../types/messages"
 import { ToolApprovalVisibilityProvider } from "@kilocode/kilo-ui/tool-approval"
@@ -37,6 +38,8 @@ export const DisplayProvider: ParentComponent = (props) => {
   const vscode = useVSCode()
   const reasoningDisplay = createMemo(() => resolveReasoningDisplay(config()))
   const [fontSize, setFontSizeSignal] = createSignal(readFontSize())
+  const [animations, setAnimations] = createSignal<Animations>("full")
+  const [focused, setFocused] = createSignal(true)
   const [throughputVisible, setThroughputVisible] = createSignal(true)
   const [autoApprovalReasonVisible, setAutoApprovalReasonVisible] = createSignal(true)
 
@@ -50,12 +53,34 @@ export const DisplayProvider: ParentComponent = (props) => {
   const unsubscribe = vscode.onMessage((message: ExtensionMessage) => {
     if (message.type === "ready" && message.fontSize !== undefined) setFontSizeSignal(clampFontSize(message.fontSize))
     if (message.type === "fontSizeChanged") setFontSizeSignal(clampFontSize(message.fontSize))
+    if (message.type === "ready" && message.animations !== undefined) setAnimations(message.animations)
+    if (message.type === "ready" && message.focused !== undefined) setFocused(message.focused)
+    if (message.type === "animationsChanged") {
+      setAnimations(message.animations)
+      setFocused(message.focused)
+    }
     if (message.type === "throughputSettingLoaded") setThroughputVisible(Boolean(message.visible))
     if (message.type === "autoApprovalReasonSettingLoaded") setAutoApprovalReasonVisible(Boolean(message.visible))
   })
 
   createEffect(() => {
     applyFontSize(fontSize())
+  })
+
+  createEffect(() => {
+    applyAnimations(animations(), focused())
+  })
+
+  // A view that is not on screen has no reason to animate, and the extension
+  // does not know about tab visibility.
+  const visibility = () => {
+    applyAnimations(animations(), focused())
+  }
+  onMount(() => {
+    document.addEventListener("visibilitychange", visibility)
+  })
+  onCleanup(() => {
+    document.removeEventListener("visibilitychange", visibility)
   })
 
   onCleanup(unsubscribe)
