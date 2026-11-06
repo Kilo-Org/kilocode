@@ -54,6 +54,16 @@ export function matchLegacyKiloOpenApi(input: Record<string, unknown>) {
   const profileSummary = spec.components?.schemas?.SessionHostWorkspaceProfileSummary?.properties
   if (profileSummary?.description) profileSummary.description = nullable(profileSummary.description)
 
+  const profilePage = spec.components?.schemas?.SessionHostWorkspaceProfilePage?.properties
+  for (const field of [
+    "personalDefaultProfileID",
+    "organizationDefaultProfileID",
+    "effectiveDefaultProfileID",
+  ] as const) {
+    const value = profilePage?.[field]
+    if (profilePage && value) profilePage[field] = nullable(value)
+  }
+
   const workspaceStatus = spec.components?.schemas?.SessionHostWorkspaceStatus?.properties
   const compute = workspaceStatus?.compute?.properties
   if (compute?.estimatedSleepAt) compute.estimatedSleepAt = nullable(compute.estimatedSleepAt)

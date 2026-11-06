@@ -77,6 +77,16 @@ describe("Kilo PublicApi OpenAPI contract", () => {
         path: SessionHostPaths.workspaceProfiles,
         id: "sessionHost.listWorkspaceProfiles",
       },
+      {
+        method: "post" as const,
+        path: SessionHostPaths.workspaceProfilePersonalDefault,
+        id: "sessionHost.setWorkspacePersonalDefaultProfile",
+      },
+      {
+        method: "delete" as const,
+        path: SessionHostPaths.workspaceProfilePersonalDefaultDetail,
+        id: "sessionHost.clearWorkspacePersonalDefaultProfile",
+      },
       { method: "post" as const, path: SessionHostPaths.workspace, id: "sessionHost.createWorkspace" },
       { method: "post" as const, path: SessionHostPaths.workspaceContinue, id: "sessionHost.continueWorkspace" },
       { method: "get" as const, path: SessionHostPaths.workspaceDetail, id: "sessionHost.getWorkspace" },
@@ -106,13 +116,25 @@ describe("Kilo PublicApi OpenAPI contract", () => {
     expect(hosted).toEqual(routes.map((route) => route.id).sort())
   })
 
-  test("keeps authorized workspace profile descriptions nullable", () => {
+  test("keeps authorized workspace profile descriptions and defaults nullable", () => {
     const spec = OpenApi.fromApi(PublicApi)
     const summary = spec.components?.schemas?.SessionHostWorkspaceProfileSummary?.properties
     const description = summary ? Object.entries(summary).find(([field]) => field === "description")?.[1] : undefined
     expect(description).toEqual({
       anyOf: [expect.objectContaining({ type: "string" }), { type: "null" }],
     })
+
+    const page = spec.components?.schemas?.SessionHostWorkspaceProfilePage?.properties
+    for (const field of [
+      "personalDefaultProfileID",
+      "organizationDefaultProfileID",
+      "effectiveDefaultProfileID",
+    ]) {
+      const value = page ? Object.entries(page).find(([key]) => key === field)?.[1] : undefined
+      expect(value).toEqual({
+        anyOf: [expect.objectContaining({ type: "string" }), { type: "null" }],
+      })
+    }
   })
 
   test("keeps passive hosted workspace status fields nullable", () => {

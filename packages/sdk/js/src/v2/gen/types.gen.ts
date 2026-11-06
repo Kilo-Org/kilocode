@@ -5051,18 +5051,18 @@ export type SessionHostAgent = {
 
 export type SessionHostCreateWorkspaceInput = {
   repository: SessionHostRepository
-  profile: SessionHostProfile
-  prompt: string
+  profile?: SessionHostProfile
+  prompt?: string
   agent: SessionHostAgent
   operationKey: string
-  messageID: string
+  messageID?: string
   organizationID?: SessionHostOrganizationId
 }
 
 export type SessionHostCreateWorkspaceResult = {
   workspace: SessionHostWorkspaceIdentity
   session: SessionHostIdentity
-  messageID: string
+  messageID?: string
   replayed: boolean
 }
 
@@ -5106,15 +5106,31 @@ export type SessionHostInsufficientBalanceError = {
   retryable: boolean
 }
 
+export type SessionHostWorkspaceProfileOwner = "user" | "organization"
+
 export type SessionHostWorkspaceProfileSummary = {
   id: string
   name: string
   description: string | null
-  isDefault: boolean
+  ownerType: SessionHostWorkspaceProfileOwner
+  isPersonalDefault: boolean
+  isOrganizationDefault: boolean
 }
 
 export type SessionHostWorkspaceProfilePage = {
-  items: Array<SessionHostWorkspaceProfileSummary>
+  personalProfiles: Array<SessionHostWorkspaceProfileSummary>
+  organizationProfiles: Array<SessionHostWorkspaceProfileSummary>
+  personalDefaultProfileID: string | null
+  organizationDefaultProfileID: string | null
+  effectiveDefaultProfileID: string | null
+}
+
+export type SessionHostWorkspaceProfileDefaultInput = {
+  id: string
+}
+
+export type SessionHostWorkspaceProfileDefaultResult = {
+  success: true
 }
 
 export type SessionHostWorkspaceComputeStatus =
@@ -19571,6 +19587,102 @@ export type SessionHostListWorkspaceProfilesResponses = {
 
 export type SessionHostListWorkspaceProfilesResponse =
   SessionHostListWorkspaceProfilesResponses[keyof SessionHostListWorkspaceProfilesResponses]
+
+export type SessionHostSetWorkspacePersonalDefaultProfileData = {
+  body?: SessionHostWorkspaceProfileDefaultInput
+  path?: never
+  query?: never
+  url: "/kilocode/session-host/workspace/profiles/personal-default"
+}
+
+export type SessionHostSetWorkspacePersonalDefaultProfileErrors = {
+  /**
+   * InvalidRequestError
+   */
+  400: InvalidRequestError
+  /**
+   * SessionHostPaymentRequiredError
+   */
+  402: SessionHostPaymentRequiredError
+  /**
+   * NotFoundError
+   */
+  404: NotFoundError
+  /**
+   * ConflictError
+   */
+  409: ConflictError
+  /**
+   * UpstreamError
+   */
+  502: UpstreamError
+  /**
+   * ServiceUnavailableError
+   */
+  503: ServiceUnavailableError
+}
+
+export type SessionHostSetWorkspacePersonalDefaultProfileError =
+  SessionHostSetWorkspacePersonalDefaultProfileErrors[keyof SessionHostSetWorkspacePersonalDefaultProfileErrors]
+
+export type SessionHostSetWorkspacePersonalDefaultProfileResponses = {
+  /**
+   * Personal default profile set
+   */
+  200: SessionHostWorkspaceProfileDefaultResult
+}
+
+export type SessionHostSetWorkspacePersonalDefaultProfileResponse =
+  SessionHostSetWorkspacePersonalDefaultProfileResponses[keyof SessionHostSetWorkspacePersonalDefaultProfileResponses]
+
+export type SessionHostClearWorkspacePersonalDefaultProfileData = {
+  body?: never
+  path: {
+    profileID: string
+  }
+  query?: never
+  url: "/kilocode/session-host/workspace/profiles/personal-default/{profileID}"
+}
+
+export type SessionHostClearWorkspacePersonalDefaultProfileErrors = {
+  /**
+   * InvalidRequestError
+   */
+  400: InvalidRequestError
+  /**
+   * SessionHostPaymentRequiredError
+   */
+  402: SessionHostPaymentRequiredError
+  /**
+   * NotFoundError
+   */
+  404: NotFoundError
+  /**
+   * ConflictError
+   */
+  409: ConflictError
+  /**
+   * UpstreamError
+   */
+  502: UpstreamError
+  /**
+   * ServiceUnavailableError
+   */
+  503: ServiceUnavailableError
+}
+
+export type SessionHostClearWorkspacePersonalDefaultProfileError =
+  SessionHostClearWorkspacePersonalDefaultProfileErrors[keyof SessionHostClearWorkspacePersonalDefaultProfileErrors]
+
+export type SessionHostClearWorkspacePersonalDefaultProfileResponses = {
+  /**
+   * Personal default profile cleared
+   */
+  200: SessionHostWorkspaceProfileDefaultResult
+}
+
+export type SessionHostClearWorkspacePersonalDefaultProfileResponse =
+  SessionHostClearWorkspacePersonalDefaultProfileResponses[keyof SessionHostClearWorkspacePersonalDefaultProfileResponses]
 
 export type SessionHostDeleteWorkspaceData = {
   body?: never

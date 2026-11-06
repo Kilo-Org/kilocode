@@ -21,6 +21,8 @@ import {
   StartResult,
   Transport,
   WorkspaceID,
+  WorkspaceProfileDefaultInput,
+  WorkspaceProfileDefaultResult,
   WorkspaceProfilePage,
   WorkspaceSessionStartBody,
   WorkspaceSessionStartResult,
@@ -50,6 +52,8 @@ export const SessionHostPaths = {
   workspace: `${root}/workspace`,
   workspaceContinue: `${root}/workspace/continue`,
   workspaceProfiles: `${root}/workspace/profiles`,
+  workspaceProfilePersonalDefault: `${root}/workspace/profiles/personal-default`,
+  workspaceProfilePersonalDefaultDetail: `${root}/workspace/profiles/personal-default/:profileID`,
   workspaceDetail: `${root}/workspace/:providerID/:workspaceID`,
   workspaceStatus: `${root}/workspace/:providerID/:workspaceID/status`,
   workspaceSession: `${root}/workspace/:providerID/:workspaceID/session`,
@@ -272,7 +276,7 @@ export const SessionHostApi = HttpApi.make("session-host")
             identifier: "sessionHost.createWorkspace",
             summary: "Create a hosted workspace",
             description:
-              "Create a hosted workspace and its root session. Reuse the same operation key and message ID to retry safely.",
+              "Create a hosted workspace and, optionally, its root initial turn and explicit profile. Omit prompt and messageID to create an empty workspace; Cloud applies the effective default profile when profile is omitted. Reuse the same operation key and message ID to retry safely.",
           }),
         ),
         HttpApiEndpoint.post("continueWorkspace", SessionHostPaths.workspaceContinue, {
@@ -296,7 +300,35 @@ export const SessionHostApi = HttpApi.make("session-host")
             identifier: "sessionHost.listWorkspaceProfiles",
             summary: "List workspace creation profiles",
             description:
-              "List authorized profile summaries for workspace creation. Secret and environment values are never returned.",
+              "List personal and organization profile summaries for workspace creation with their default flags. Secret and environment values are never returned.",
+          }),
+        ),
+        HttpApiEndpoint.post("setWorkspacePersonalDefaultProfile", SessionHostPaths.workspaceProfilePersonalDefault, {
+          payload: WorkspaceProfileDefaultInput,
+          success: described(WorkspaceProfileDefaultResult, "Personal default profile set"),
+          error: SessionErrors,
+        }).annotateMerge(
+          OpenApi.annotations({
+            identifier: "sessionHost.setWorkspacePersonalDefaultProfile",
+            summary: "Set the personal default workspace profile",
+            description:
+              "Set the authenticated user's personal default profile for workspace creation. The profile must be owned by the caller.",
+          }),
+        ),
+        HttpApiEndpoint.delete(
+          "clearWorkspacePersonalDefaultProfile",
+          SessionHostPaths.workspaceProfilePersonalDefaultDetail,
+          {
+            params: { profileID: Schema.String.check(Schema.isUUID()) },
+            success: described(WorkspaceProfileDefaultResult, "Personal default profile cleared"),
+            error: SessionErrors,
+          },
+        ).annotateMerge(
+          OpenApi.annotations({
+            identifier: "sessionHost.clearWorkspacePersonalDefaultProfile",
+            summary: "Clear the personal default workspace profile",
+            description:
+              "Clear the authenticated user's personal default profile for workspace creation. The profile must be owned by the caller.",
           }),
         ),
         HttpApiEndpoint.get("getWorkspace", SessionHostPaths.workspaceDetail, {
