@@ -1,6 +1,7 @@
 import { createEffect, createMemo, createSignal, createUniqueId, on, onCleanup, onMount } from "solid-js"
 import {
-  searchSettings,
+  createSettingsIndex,
+  searchSettingsIndex,
   type SettingsEntry,
   type SettingsNavigationTarget,
   type SettingsSearchResult,
@@ -17,27 +18,61 @@ export function useSettingsSearch(opts: {
   searchRequest?: () => number | undefined
 }) {
   const [query, setQuery] = createSignal("")
+  const [searched, setSearched] = createSignal("")
   const [active, setActive] = createSignal(0)
   const [focusTick, setFocusTick] = createSignal(0)
   const listId = createUniqueId()
+  const timers: { search?: number } = {}
 
-  const results = createMemo(() => searchSettings(query(), opts.translate, opts.entries?.(), opts.tabs()))
+  // The translated labels only change with the language or the row catalog, so
+  // typing reuses them instead of normalizing every row on each keystroke.
+  const index = createMemo(() => createSettingsIndex(opts.entries?.(), opts.tabs(), opts.translate))
+  const results = createMemo(() => searchSettingsIndex(index(), searched()))
   const searching = () => query().trim().length > 0
+  const pending = () => query() !== searched()
   const activeId = () => (results().length > 0 ? `${listId}-${Math.min(active(), results().length - 1)}` : undefined)
+
+  const cancel = () => {
+    if (timers.search !== undefined) cancelAnimationFrame(timers.search)
+    timers.search = undefined
+  }
+
+  const flush = () => {
+    cancel()
+    setSearched(query())
+  }
+
+  // Defer the scan to the next frame, so several key events in one frame run a
+  // single search and the input handler itself stays short.
+  const schedule = (value: string) => {
+    cancel()
+    if (value.trim().length === 0) {
+      setSearched(value)
+      return
+    }
+    timers.search = requestAnimationFrame(() => {
+      timers.search = undefined
+      setSearched(value)
+    })
+  }
 
   const input = (value: string) => {
     setQuery(value)
     setActive(0)
+    schedule(value)
   }
 
   const clear = () => {
+    cancel()
     setQuery("")
+    setSearched("")
     setActive(0)
   }
 
   const focus = () => setFocusTick((count) => count + 1)
 
   const move = (delta: number) => {
+    flush()
     const total = results().length
     if (total === 0) return
     setActive((current) => (Math.min(current, total - 1) + delta + total) % total)
@@ -72,6 +107,7 @@ export function useSettingsSearch(opts: {
     navigate({ tab: result.tab, subtab: result.subtab, titleKey: result.tabOnly ? undefined : result.titleKey })
 
   const choose = () => {
+    flush()
     const next = results().at(Math.min(active(), results().length - 1))
     if (next) select(next)
   }
@@ -84,6 +120,8 @@ export function useSettingsSearch(opts: {
       },
     ),
   )
+
+  onCleanup(cancel)
 
   // Cmd/Ctrl+F opens search, matching the chat search shortcut.
   onMount(() => {
@@ -98,6 +136,8 @@ export function useSettingsSearch(opts: {
 
   return {
     query,
+    resultsQuery: searched,
+    pending,
     input,
     clear,
     focus,

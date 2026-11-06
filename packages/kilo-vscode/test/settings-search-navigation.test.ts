@@ -1,5 +1,11 @@
 import { describe, expect, test } from "bun:test"
-import { SETTINGS_ENTRIES, searchSettings } from "../webview-ui/src/components/settings/settings-search"
+import {
+  createSettingsIndex,
+  SETTINGS_ENTRIES,
+  SETTINGS_TABS,
+  searchSettings,
+  searchSettingsIndex,
+} from "../webview-ui/src/components/settings/settings-search"
 import { dict } from "../webview-ui/src/i18n/en"
 
 const translate = (key: string) => (dict as Record<string, string>)[key] ?? key
@@ -40,6 +46,13 @@ describe("settings search targets", () => {
   ])("finds the Commit Message row for %s", (query, titleKey) => {
     const result = searchSettings(query, translate).find((item) => item.titleKey === titleKey)
     expect(result).toMatchObject({ tab: "commitMessage", tabOnly: false })
+  })
+
+  test("reuses the normalized index for the same results", () => {
+    const index = createSettingsIndex(SETTINGS_ENTRIES, SETTINGS_TABS, translate)
+    for (const query of ["model", "agent", "mcp servers", "theme", ""]) {
+      expect(searchSettingsIndex(index, query)).toEqual(searchSettings(query, translate))
+    }
   })
 
   test("does not index agent dialog and editor rows that cannot be revealed", () => {
