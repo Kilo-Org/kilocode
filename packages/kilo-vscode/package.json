@@ -3,6 +3,28 @@
   "name": "kilo-code-v2",
   "displayName": "Kilo Code (v2 preview)",
   "description": "Kilo Code on the Kilo v2 server",
+  "icon": "assets/icon.png",
+  "author": {
+    "name": "Kilo Code"
+  },
+  "categories": [
+    "AI",
+    "Chat",
+    "Programming Languages"
+  ],
+  "keywords": [
+    "kilo",
+    "kilo code",
+    "ai",
+    "agent",
+    "coding agent",
+    "chat",
+    "autocomplete"
+  ],
+  "galleryBanner": {
+    "color": "#FFFFFF",
+    "theme": "light"
+  },
   "publisher": "kilocode",
   "version": "0.0.1",
   "private": true,
@@ -1070,6 +1092,7 @@
     "babel-preset-solid": "1.9.15",
     "esbuild": "0.27.2",
     "happy-dom": "20.8.9",
+    "ovsx": "1.3.0",
     "qrcode": "^1.5.4"
   }
 }
