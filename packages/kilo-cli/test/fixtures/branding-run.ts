@@ -9,12 +9,16 @@ import { logo } from "../../../tui/src/logo"
 
 export const repo = path.resolve(import.meta.dir, "../../../..")
 
+// A compiled fixture starts immediately, so multi-child compiled tests use a smaller per-child limit and stay inside
+// their own timeout. Only a source run pays the cold transpile cost.
+export const COMPILED_RUN_TIMEOUT = 20_000
+
 export async function temporary() {
   const directory = await mkdtemp(path.join(os.tmpdir(), "kilo-branding-"))
   return { path: directory, [Symbol.asyncDispose]: () => rm(directory, { recursive: true, force: true }) }
 }
 
-export async function run(command: string[], root: string, hosted: boolean, exitCode = 0) {
+export async function run(command: string[], root: string, hosted: boolean, exitCode = 0, timeout = 50_000) {
   const child = Bun.spawn(command, {
     cwd: repo,
     env: {
@@ -37,9 +41,9 @@ export async function run(command: string[], root: string, hosted: boolean, exit
     },
     stdout: "pipe",
     stderr: "pipe",
-    // A cold source run transpiles the TUI and takes more than 15 s on loaded Windows runners. Stay below the 60 s
-    // test timeout so a stuck child still fails with its stderr.
-    timeout: 50_000,
+    // A cold source run transpiles the TUI and takes more than 15 s on loaded Windows runners. Stay below the test
+    // timeout so a stuck child still fails with its stderr.
+    timeout,
     killSignal: "SIGKILL",
   })
   const [stdout, stderr, code] = await Promise.all([

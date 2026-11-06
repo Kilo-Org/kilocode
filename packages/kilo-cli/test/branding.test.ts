@@ -5,7 +5,7 @@ import { createSolidTransformPlugin } from "@opentui/solid/bun-plugin"
 import { brandingPlugin } from "../src/branding/plugin"
 import { KiloBranding } from "../src/branding/text"
 import { compileDefine } from "./fixtures/compile-define"
-import { repo, run, temporary } from "./fixtures/branding-run"
+import { COMPILED_RUN_TIMEOUT, repo, run, temporary } from "./fixtures/branding-run"
 
 const entry = path.join(import.meta.dir, "fixtures/branding.ts")
 
@@ -113,7 +113,7 @@ for (const hosted of [false, true]) {
       define: compileDefine,
     })
     expect(result.success, result.logs.map(String).join("\n")).toBe(true)
-    checkPages(await run([outfile], root.path, !hosted), hosted)
+    checkPages(await run([outfile], root.path, !hosted, 0, COMPILED_RUN_TIMEOUT), hosted)
   }, 60_000)
 }
 
@@ -134,7 +134,7 @@ for (const hosted of [false, true]) {
       define: compileDefine,
     })
     expect(result.success, result.logs.map(String).join("\n")).toBe(true)
-    checkOnboarding(await run([outfile], root.path, !hosted), hosted)
+    checkOnboarding(await run([outfile], root.path, !hosted, 0, COMPILED_RUN_TIMEOUT), hosted)
   }, 60_000)
 }
 

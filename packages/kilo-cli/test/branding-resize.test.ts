@@ -4,7 +4,7 @@ import { createSolidTransformPlugin } from "@opentui/solid/bun-plugin"
 import { brandingPlugin } from "../src/branding/plugin"
 import { createPluginRuntimePlugin } from "../script/plugin-runtime"
 import { compileDefine } from "./fixtures/compile-define"
-import { checkEpilogue, run, temporary } from "./fixtures/branding-run"
+import { COMPILED_RUN_TIMEOUT, checkEpilogue, run, temporary } from "./fixtures/branding-run"
 
 for (const hosted of [false, true]) {
   for (const columns of [
@@ -40,7 +40,7 @@ for (const hosted of [false, true]) {
       [55, 56],
       [56, 55],
     ]) {
-      const output = await run([outfile, ...columns.map(String)], root.path, !hosted)
+      const output = await run([outfile, ...columns.map(String)], root.path, !hosted, 0, COMPILED_RUN_TIMEOUT)
       checkEpilogue(output, hosted, columns.at(-1)!)
     }
   }, 120_000)

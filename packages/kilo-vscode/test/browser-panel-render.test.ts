@@ -41,13 +41,15 @@ describe("reusable browser view", () => {
     const file = path.join(root, `.browser-panel-render-${crypto.randomUUID()}.mjs`)
     await Bun.write(file, result.outputFiles[0]!.contents)
     try {
-      // Spawn async so a slow, loaded runner does not block the event loop and the test timeout stays accurate.
+      // Spawn async so a slow, loaded runner does not block the event loop. Kill a stuck child before the test
+      // timeout, so it cannot outlive the run and the failure still reports its output.
       const child = Bun.spawn([process.execPath, file], { cwd: webview, stdout: "pipe", stderr: "pipe" })
+      const kill = setTimeout(() => child.kill("SIGKILL"), 30_000)
       const [stdout, stderr, code] = await Promise.all([
         new Response(child.stdout).text(),
         new Response(child.stderr).text(),
         child.exited,
-      ])
+      ]).finally(() => clearTimeout(kill))
       expect(code, stdout + stderr).toBe(0)
     } finally {
       unlinkSync(file)

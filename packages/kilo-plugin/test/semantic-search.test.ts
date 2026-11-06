@@ -232,6 +232,7 @@ describe("semantic_search over a real index", () => {
   // CI container runners report a live watcher but deliver no events to the worker, so this checks the scan path: a
   // file added after the first scan is embedded and searchable after the next start, from the same store. The watcher
   // itself is covered by the engine's processor tests and the CLI self-test.
+  // Two `done()` waits of up to 20 s plus the 20 s search loop need more than the old 60 s budget.
   test("picks up a file added after the first scan", async () => {
     const { directory, runtime, logs, done } = await repository()
     expect((await done()).state).toBe("Complete")
@@ -255,5 +256,5 @@ describe("semantic_search over a real index", () => {
     throw new Error(
       JSON.stringify({ hits: seen.map((hit) => [hit.payload?.filePath, hit.score]), logs: logs.slice(-20) }, null, 2),
     )
-  }, 60_000)
+  }, 120_000)
 })
