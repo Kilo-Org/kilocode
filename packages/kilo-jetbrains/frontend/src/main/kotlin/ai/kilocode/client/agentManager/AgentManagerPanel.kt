@@ -9,6 +9,9 @@ import ai.kilocode.client.agentManager.worktree.NewWorktreeHandle
 import ai.kilocode.client.agentManager.worktree.NewWorktreePlan
 import ai.kilocode.client.agentManager.worktree.GhBanner
 import ai.kilocode.client.agentManager.orphans.OrphanBanner
+import ai.kilocode.client.agentManager.worktree.PendingPrompt
+import ai.kilocode.client.agentManager.worktree.PendingWorktreePrompt
+import ai.kilocode.client.agentManager.worktree.WorktreeBaseUpdatePrompts
 import ai.kilocode.client.agentManager.worktree.WorktreeController
 import ai.kilocode.client.agentManager.worktree.WorktreeDataKeys
 import ai.kilocode.client.agentManager.worktree.WorktreeIcons
@@ -16,6 +19,7 @@ import ai.kilocode.client.agentManager.worktree.WorktreeRunBinding
 import ai.kilocode.client.agentManager.worktree.WorktreeStatusBinding
 import ai.kilocode.client.agentManager.worktree.WorktreeStatusService
 import ai.kilocode.client.agentManager.worktree.WorktreeNameCache
+import ai.kilocode.client.agentManager.worktree.worktreeBaseUpdatePrompt
 import ai.kilocode.client.agentManager.worktree.runWorktreeSetupScript
 import ai.kilocode.client.app.KiloHostedService
 import ai.kilocode.client.app.KiloWorkspaceService
@@ -170,7 +174,7 @@ class AgentManagerPanel(
             WorktreeDataKeys.WORKTREE, group, element = { row ->
                 (row as? WorktreeRow)?.dto?.takeIf {
                     canRename(it) || canDelete(it) || canOpenPr(it) || canOpenDiff(it) || canOpenLocalDiff(it) ||
-                        canOpenSetupScript(it) || canRunSetup(it) || canCopyBranch(it)
+                        canOpenSetupScript(it) || canRunSetup(it) || canCopyBranch(it) || canUpdateFromBase(it)
                 }
             },
             alternate = ActiveMenu(HostedWorkspaceDataKeys.WORKSPACE, group, element = { row ->
@@ -347,6 +351,24 @@ class AgentManagerPanel(
         val target = project ?: return
         if (controller.progress(item.id) != null) return
         openWorktreeSession(target, item, focus)
+    }
+
+    internal fun canUpdateFromBase(item: WorktreeDto?): Boolean {
+        if (item == null || item.main || controller.progress(item.id) != null) return false
+        return !item.parentBranch.isNullOrBlank()
+    }
+
+    internal fun updateFromBase(item: WorktreeDto) {
+        val target = project ?: return
+        if (!canUpdateFromBase(item)) return
+        val parent = item.parentBranch?.takeIf { it.isNotBlank() } ?: return
+        Telemetry.send("Worktree Action", mapOf("action" to "update_from_base"))
+        val title = "Update from $parent"
+        val text = worktreeBaseUpdatePrompt(item.path, parent, item.remote, item.parentBranchRecorded)
+        if (!target.service<WorktreeBaseUpdatePrompts>().submit(item.path, text, title)) {
+            target.service<PendingWorktreePrompt>().put(item.path, PendingPrompt(text, injectedTitle = title))
+        }
+        open(item, focus = true)
     }
 
     private fun close(item: WorktreeDto) {

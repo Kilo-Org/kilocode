@@ -18,6 +18,8 @@ class DriverEvidence(
             descriptor?.credentials?.apiKey,
             descriptor?.credentials?.orgId,
             descriptor?.cleanup?.token,
+            System.getenv("FAKE_LLM_ADMIN_TOKEN"),
+            FakeLlm.LOCAL_ADMIN,
         ),
     )
     private val lines = mutableListOf<String>()
@@ -72,6 +74,9 @@ class DriverEvidence(
 
     fun hasFailure(): Boolean = assertions.any { it.status == "failed" }
 
+    fun passed(name: String): Boolean =
+        assertions.lastOrNull { it.name == name }?.status == "passed"
+
     fun write(resultPath: Path) {
         val passed = canPass()
         // On a passing run only claim capabilities the adapter exercises. On a failed run echo the
@@ -111,8 +116,8 @@ class DriverEvidence(
 
     companion object {
         // Only list capabilities this adapter actually exercises so the K1 capability gate cannot pass
-        // a scenario the driver does not implement. J2 adds "transcript.read" when it reads transcripts.
-        private val SUPPORTED_CAPABILITIES = emptySet<String>()
+        // a scenario the driver does not implement.
+        private val SUPPORTED_CAPABILITIES = setOf("transcript.read", "stream.observe")
     }
 
     fun copyIdeLogs(backend: Path?, frontend: Path?) {
