@@ -9,6 +9,9 @@ import fs from "node:fs"
 import path from "path"
 import { Global } from "@opencode-ai/core/global"
 
+const SESSION_ID_PATTERN = /^[A-Za-z0-9_-]+$/
+const CLOUD_AGENT = new Set(["true", "1"])
+
 // The allowlist root is the literal `/tmp`, not `os.tmpdir()`: `os.tmpdir()`
 // follows `TMPDIR`, so deriving from it could point the model back at a denied
 // path if that override ever reaches the server process.
@@ -16,9 +19,9 @@ const ALLOWLIST_ROOT = "/tmp"
 
 export function sessionTmp() {
   const cloud = process.env["KILO_CLOUD_AGENT"]?.toLowerCase()
-  if (cloud !== "true" && cloud !== "1") return Global.Path.tmp
+  if (!CLOUD_AGENT.has(cloud ?? "")) return Global.Path.tmp
   const session = process.env.SESSION_ID
-  if (!session || !/^[A-Za-z0-9_-]+$/.test(session)) return Global.Path.tmp
+  if (!session || !SESSION_ID_PATTERN.test(session)) return Global.Path.tmp
   const dir = path.join(ALLOWLIST_ROOT, session)
   try {
     fs.mkdirSync(dir, { recursive: true, mode: 0o700 })
@@ -27,5 +30,25 @@ export function sessionTmp() {
     return dir
   } catch {
     return Global.Path.tmp
+  }
+}
+
+// Session tool descriptions are assembled per request, unlike the cached shell
+// tool definition. Replace its shared local path there so parallel sessions use
+// distinct directories without changing the sandbox's existing writable root.
+export function forLocalSession(description: string, sessionID: string) {
+  const cloud = process.env["KILO_CLOUD_AGENT"]?.toLowerCase()
+  if (CLOUD_AGENT.has(cloud ?? "") || !SESSION_ID_PATTERN.test(sessionID)) return description
+
+  const shared = `Use \`${Global.Path.tmp}\` for temporary work outside the workspace.`
+  if (!description.includes(shared)) return description
+
+  const dir = path.join(Global.Path.tmp, sessionID)
+  try {
+    fs.mkdirSync(dir, { recursive: true, mode: 0o700 })
+    if (!fs.lstatSync(dir).isDirectory()) return description
+    return description.replace(shared, `Use \`${dir}\` for temporary work outside the workspace.`)
+  } catch {
+    return description
   }
 }
