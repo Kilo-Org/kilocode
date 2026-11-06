@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test"
-import { project, type Projection } from "../../kilo-ui-base/src/components/markdown-stream"
+import { project, stream, type Projection } from "../../kilo-ui-base/src/components/markdown-stream"
 
 // A code-heavy answer with the constructs a streaming render must keep: code
 // fences, tables, lists, links, nested markdown and an unterminated fence.
@@ -47,15 +47,23 @@ describe("project", () => {
     }
   })
 
-  it("settles without losing or reordering blocks", () => {
+  it("settles to the same blocks as one full lex pass", () => {
     const { frames, settled } = streamed(answer, 3)
     const live = frames.at(-1)!
+    const full = stream(answer, true)
+    // The incremental window must partition the text exactly like a full lex, so
+    // every block renders the same content it would from one pass.
+    expect(settled.blocks.map((block) => block.raw)).toEqual(full.map((block) => block.raw))
+    expect(settled.blocks.filter((block) => block.mode === "code").map((block) => block.src)).toEqual(
+      full.filter((block) => block.mode === "code").map((block) => block.src),
+    )
+    // Settling keeps the streamed layout and only flips live blocks to full.
     expect(settled.blocks.map((block) => block.raw)).toEqual(live.blocks.map((block) => block.raw))
     expect(settled.blocks.filter((block) => block.mode === "code").length).toBe(
       live.blocks.filter((block) => block.mode === "code").length,
     )
     for (const block of settled.blocks) {
-      if (block.mode === "code") expect(block.src).not.toContain("```")
+      if (block.mode === "code") expect(block.src).not.toMatch(/^(?:```|~~~)/)
       else expect(block.src).toBe(block.raw)
     }
   })
