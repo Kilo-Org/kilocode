@@ -15,6 +15,48 @@ function inlineStoryUrl() {
   return `/iframe.html?id=${INLINE_STORY_ID}&viewMode=story&globals=${GLOBALS}`
 }
 
+async function materialize(page: Page) {
+  const result = await page.locator(".am-diff-content").evaluate(async (el) => {
+    const frame = () => {
+      const ready = Promise.withResolvers<void>()
+      requestAnimationFrame(() => ready.resolve())
+      return ready.promise
+    }
+    const initial = Array.from(el.querySelectorAll("[data-file-path]"), (row) => row.getAttribute("data-file-path"))
+    const measured = new Set<string>()
+    const timeout = performance.now() + 20_000
+    while (true) {
+      if (performance.now() > timeout) throw new Error("Diff rows did not finish rendering before the scroll check")
+      await frame()
+      const bounds = el.getBoundingClientRect()
+      const rows = Array.from(el.querySelectorAll<HTMLElement>("[data-file-path]")).filter((row) => {
+        const rect = row.getBoundingClientRect()
+        return rect.bottom > bounds.top && rect.top < bounds.bottom
+      })
+      // Reaching the estimated bottom does not mean deferred rows have rendered.
+      // Keep each visible row in view until Pierre has released its height pin.
+      if (
+        !rows.length ||
+        !rows.every((row) => {
+          const diff = row.querySelector<HTMLElement>('[data-component="diff"]')
+          return (
+            diff?.querySelector("diffs-container")?.shadowRoot?.querySelector("[data-line]") &&
+            diff.style.minHeight === ""
+          )
+        })
+      )
+        continue
+      for (const row of rows) measured.add(row.dataset.filePath!)
+      if (el.scrollTop >= el.scrollHeight - el.clientHeight - 1) break
+      el.scrollTop = Math.min(el.scrollHeight - el.clientHeight, el.scrollTop + 120)
+    }
+    for (let index = 0; index < 30; index++) await frame()
+    return { initial, measured: [...measured] }
+  })
+  expect(result.measured).toEqual(Array.from({ length: 5 }, (_, index) => `src/review-${index}.ts`))
+  return result.initial
+}
+
 async function disableAnimations(page: Page) {
   await page.addStyleTag({
     content: `
@@ -319,14 +361,13 @@ test("keeps the inline diff position stable while scrolling upward", async ({ pa
   await disableAnimations(page)
   await page.waitForSelector(".am-diff-content diffs-container", { state: "attached" })
 
-  const result = await page.locator(".am-diff-content").evaluate(async (el) => {
+  const files = await materialize(page)
+  const result = await page.locator(".am-diff-content").evaluate(async (el, files) => {
     const frame = () => new Promise((resolve) => requestAnimationFrame(resolve))
     const settle = async (count: number) => {
       for (let i = 0; i < count; i++) await frame()
     }
-    const seen = new Set(
-      Array.from(el.querySelectorAll("[data-file-path]"), (row) => row.getAttribute("data-file-path")),
-    )
+    const seen = new Set(files)
     let remounts = 0
     const observer = new MutationObserver((records) => {
       for (const record of records) {
@@ -343,14 +384,6 @@ test("keeps the inline diff position stable while scrolling upward", async ({ pa
     })
     observer.observe(el, { childList: true, subtree: true })
 
-    // Materialize every row once, then start from the settled bottom. The bug
-    // appears when upward scrolling re-creates rows above the viewport.
-    while (el.scrollTop < el.scrollHeight - el.clientHeight - 1) {
-      el.scrollTop = Math.min(el.scrollHeight - el.clientHeight, el.scrollTop + 120)
-      await frame()
-    }
-    await settle(30)
-
     let correction = 0
     let range = 0
     while (el.scrollTop > 0) {
@@ -363,7 +396,7 @@ test("keeps the inline diff position stable while scrolling upward", async ({ pa
     }
     observer.disconnect()
     return { correction, range, remounts }
-  })
+  }, files)
 
   expect(result.remounts).toBeGreaterThan(0)
   expect(result.correction).toBeLessThanOrEqual(1)
@@ -378,50 +411,19 @@ test("keeps the inline diff position stable when the row width changes", async (
 
   const scroll = page.locator(".am-diff-content")
   // Materialize every row at the wider layout so each row records its height.
-  const mounted = await scroll.evaluate(async (el) => {
-    const frame = () => new Promise((resolve) => requestAnimationFrame(resolve))
-    const initial = Array.from(el.querySelectorAll("[data-file-path]"), (row) => row.getAttribute("data-file-path"))
-    const measured = new Set<string>()
-    while (true) {
-      await frame()
-      const bounds = el.getBoundingClientRect()
-      const rows = Array.from(el.querySelectorAll<HTMLElement>("[data-file-path]")).filter((row) => {
-        const rect = row.getBoundingClientRect()
-        return rect.bottom > bounds.top && rect.top < bounds.bottom
-      })
-      // Reaching the estimated bottom does not mean deferred rows have rendered.
-      // Keep each visible row in view until Pierre has released its height pin.
-      if (
-        !rows.length ||
-        !rows.every((row) => {
-          const diff = row.querySelector<HTMLElement>('[data-component="diff"]')
-          return (
-            diff?.querySelector("diffs-container")?.shadowRoot?.querySelector("[data-line]") &&
-            diff.style.minHeight === ""
-          )
-        })
-      )
-        continue
-      for (const row of rows) measured.add(row.dataset.filePath!)
-      if (el.scrollTop >= el.scrollHeight - el.clientHeight - 1) break
-      el.scrollTop = Math.min(el.scrollHeight - el.clientHeight, el.scrollTop + 120)
-    }
-    for (let index = 0; index < 30; index++) await frame()
-    return { initial, measured: [...measured] }
-  })
-  expect(mounted.measured).toEqual(Array.from({ length: 5 }, (_, index) => `src/review-${index}.ts`))
+  const files = await materialize(page)
 
   // A width change (panel resize or scrollbar toggle) leaves the measured
   // heights on a different width, so a remounted row must reuse the last
   // measured height instead of collapsing to the capped estimate.
   await page.setViewportSize({ width: 880, height: 760 })
 
-  const result = await scroll.evaluate(async (el, initial) => {
+  const result = await scroll.evaluate(async (el, files) => {
     const frame = () => new Promise((resolve) => requestAnimationFrame(resolve))
     const settle = async (count: number) => {
       for (let index = 0; index < count; index++) await frame()
     }
-    const seen = new Set(initial)
+    const seen = new Set(files)
     let remounts = 0
     const observer = new MutationObserver((records) => {
       for (const record of records) {
@@ -450,7 +452,7 @@ test("keeps the inline diff position stable when the row width changes", async (
     }
     observer.disconnect()
     return { correction, range, remounts }
-  }, mounted.initial)
+  }, files)
 
   expect(result.remounts).toBeGreaterThan(0)
   expect(result.correction).toBeLessThanOrEqual(1)
