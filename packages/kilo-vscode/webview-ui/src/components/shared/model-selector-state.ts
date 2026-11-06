@@ -19,6 +19,15 @@ import {
 
 const EMPTY = new Map<string, never>()
 
+/** Keys that read the result list, so they must see the settled query before they act. */
+export function actsOnList(e: KeyboardEvent, navigating: boolean): boolean {
+  if (e.target instanceof HTMLButtonElement) return false
+  if (e.key === "ArrowDown" || e.key === "ArrowUp") return true
+  if (isEnterKeyCommitNotIme(e)) return true
+  if (!navigating) return false
+  return e.key === "ArrowLeft" || e.key === "ArrowRight" || e.key === "Home" || e.key === "End"
+}
+
 export function createModelTree(env: {
   open: Accessor<boolean>
   visible: Accessor<PickerModel[]>
@@ -414,20 +423,12 @@ export function createModelTree(env: {
     env.toggleFavorite(model.providerID, model.id)
   }
 
-  function actsOnList(e: KeyboardEvent): boolean {
-    if (e.target instanceof HTMLButtonElement) return false
-    if (e.key === "ArrowDown" || e.key === "ArrowUp") return true
-    if (isEnterKeyCommitNotIme(e)) return true
-    if (!navigating()) return false
-    return e.key === "ArrowLeft" || e.key === "ArrowRight" || e.key === "Home" || e.key === "End"
-  }
-
   // Home, End, Left and Right act only after the user moved through the tree, as v1. A focused button (expand, star,
   // Select) keeps its own Enter and arrow keys.
   function handleKeyDown(e: KeyboardEvent) {
     // Only keys that act on the list commit the pending query. Other keys leave
     // same-frame input events free to share one scan.
-    if (actsOnList(e)) flushSearch()
+    if (actsOnList(e, navigating())) flushSearch()
     const list = nodes()
     if (e.key === "Escape") {
       e.preventDefault()
