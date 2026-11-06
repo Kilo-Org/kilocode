@@ -9,7 +9,6 @@ import { useLanguage } from "../src/context/language"
 import { getVSCodeAPI, useVSCode } from "../src/context/vscode"
 import type { WebviewMessage } from "../src/types/messages"
 import type { PRComment } from "../agent-manager/pr/pr-types"
-import { reviewRequest } from "../agent-manager/pr/pr-review-request"
 import { createDiffCommentForms } from "../agent-manager/pr/diff-comment-forms"
 import {
   APPEND_REVIEW_COMMENTS,
@@ -17,7 +16,8 @@ import {
 } from "./review-annotations"
 import type { BranchInfo, DiffViewerNotice, WorktreeFileDiff } from "../src/types/messages/agent-manager"
 import type { DiffSourceCapabilities, DiffSourceDescriptor } from "../../src/diff/sources/types"
-import type { PRDiffSnapshot, PRTarget } from "../../src/shared/pr-comment-actions"
+import type { PRTarget } from "../../src/shared/pr-comment-actions"
+import { createPRFiles, samePR } from "./pr-files"
 import type { ReviewComment } from "./review-comments"
 import { DiffPickerHeader } from "./DiffPickerHeader"
 import { BaseBranchPicker } from "./BaseBranchPicker"
@@ -28,11 +28,6 @@ type DiffStyle = "unified" | "split"
 type DiffViewerMessage = { type: string } & Record<string, unknown>
 
 const post = (message: DiffViewerMessage) => getVSCodeAPI().postMessage(message as unknown as WebviewMessage)
-
-// Compare only the PR identity. Ref-only refreshes must not clear local comments.
-function samePR(a: PRTarget | undefined, b: PRTarget | undefined) {
-  return a?.projectId === b?.projectId && a?.prNumber === b?.prNumber && a?.prUrl === b?.prUrl
-}
 
 export const DiffViewerApp: Component = () => {
   const vscode = useVSCode()
@@ -64,13 +59,10 @@ export const DiffViewerApp: Component = () => {
   const [currentBranch, setCurrentBranch] = createSignal<string | undefined>(undefined)
   const [branchesLoading, setBranchesLoading] = createSignal(false)
   const [prMode, setPRMode] = createSignal(false)
-  const [prSnapshot, setPRSnapshot] = createSignal<PRDiffSnapshot>()
-  const [prLoading, setPRLoading] = createSignal(false)
-  const [prError, setPRError] = createSignal<string>()
-  let prKey = ""
-  let prRequestId = ""
-  // The PR the current snapshot or request belongs to.
-  let prTarget: PRTarget | undefined
+  const pr = createPRFiles({ post, failed: () => t("diffViewer.comment.loadFailed") })
+  const prSnapshot = pr.snapshot
+  const prLoading = pr.loading
+  const prError = pr.error
 
   const prDiffs = createMemo(() => {
     const snapshot = prSnapshot()
@@ -131,43 +123,13 @@ export const DiffViewerApp: Component = () => {
 
   // Clear all PR-specific state so a new source, target, or request starts clean.
   const resetPR = () => {
-    prKey = ""
-    prRequestId = ""
-    prTarget = undefined
-    setPRSnapshot(undefined)
-    setPRLoading(false)
-    setPRError(undefined)
+    pr.reset()
     setPRMode(false)
   }
 
   const requestPRFiles = (next: PRTarget | undefined) => {
-    if (!next) {
-      resetPR()
-      return
-    }
-    const key = JSON.stringify(next)
-    if (prKey === key && (prLoading() || prSnapshot())) return
-    // A ref-only refresh (a push or rebase) keeps the previous snapshot until the new one loads. An empty diff list
-    // would make the review controller drop the unsent comments that no longer match a file.
-    const refresh = samePR(prTarget, next)
-    prKey = key
-    prTarget = next
-    const requestId = crypto.randomUUID()
-    prRequestId = requestId
-    if (!refresh) setPRSnapshot(undefined)
-    setPRLoading(true)
-    setPRError(undefined)
-    reviewRequest({ ...next, type: "agentManager.loadPRFiles", requestId }, post, (result) => {
-      if (prKey !== key || prRequestId !== requestId) return
-      if (result.type !== "agentManager.loadPRFilesResult") return
-      if (!result.success || !result.snapshot) {
-        setPRLoading(false)
-        setPRError(result.error || t("diffViewer.comment.loadFailed"))
-        return
-      }
-      setPRSnapshot(result.snapshot)
-      setPRLoading(false)
-    })
+    if (!next) return resetPR()
+    pr.request(next)
   }
 
   const togglePRMode = () => {
@@ -283,7 +245,7 @@ export const DiffViewerApp: Component = () => {
       setDiffStyle(savedDiffStyle() ?? "unified")
       setReverting(new Set<string>())
       setNotice(undefined)
-      setPRError(undefined)
+      pr.clearError()
       setPRMode(false)
     }),
   )
