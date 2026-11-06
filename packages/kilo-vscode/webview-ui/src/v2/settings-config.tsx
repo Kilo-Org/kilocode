@@ -119,15 +119,10 @@ export function createSettingsConfig() {
   const toastError = (message: string) =>
     showToast({ variant: "error", title: language.t("settings.saveBar.saveFailed"), description: message })
 
-  // Apply one raw document and drop only the optimistic values its content now covers, so an in-flight edit keeps
-  // its value.
+  // Apply one raw document. A write keeps its optimistic value until the merged config covers it, see the effect
+  // below, so a control does not revert while the server is still reloading the file.
   const applyFile = (scope: SettingsScope, file: ConfigFileContent) => {
     setFiles((current) => ({ ...current, [scope]: file }))
-    setOptimistic((list) =>
-      list.filter(
-        (item) => item.scope !== scope || !sameValue(readPath(parseJson(file.text), item.path), item.value),
-      ),
-    )
   }
 
   const unsubscribe = vscode.onMessage((raw) => {
@@ -194,6 +189,25 @@ export function createSettingsConfig() {
 
   /** True while a write for this path is in flight, so a caller can prefer `value()` over the raw file. */
   const pending = (path: string[]) => inflight().some((item) => item.path === pathKey(path))
+
+  // Drop an optimistic value once the merged config carries it, or carries a different effective value. A Kilo-only
+  // key never appears in the merged config, so it keeps its optimistic value until the panel reopens.
+  createEffect(
+    on(
+      entries,
+      () => {
+        const current = merged()
+        setOptimistic((list) =>
+          list.filter((item) => {
+            if (pending(item.path)) return true
+            const next = readPath(current, item.path)
+            return next === undefined || sameValue(next, item.value)
+          }),
+        )
+      },
+      { defer: true },
+    ),
+  )
 
   const write = (scope: SettingsScope, edits: ConfigEdit[]) =>
     new Promise<{ ok: boolean; error?: string }>((resolve) => {
