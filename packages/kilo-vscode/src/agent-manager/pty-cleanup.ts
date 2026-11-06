@@ -1,6 +1,5 @@
 import type { AgentManagerConnection } from "./connection"
 import type { ScriptTerminalManager } from "./ScriptTerminalManager"
-import type { SessionTerminalManager } from "./SessionTerminalManager"
 import type { TerminalRouter } from "./terminal-routing"
 
 export async function block(target: string, blocked: Map<string, number>, creates?: Set<Promise<unknown>>) {
@@ -41,14 +40,12 @@ export async function acquirePtyCleanup(
   directory: string,
   input: {
     terminals: TerminalRouter
-    integrated: SessionTerminalManager
     scripts: ScriptTerminalManager
     connection: AgentManagerConnection
   },
 ) {
   const releases = await Promise.all([input.terminals.blockDirectory(directory), input.scripts.blockDirectory(directory)])
   try {
-    input.integrated.closeDirectory(directory)
     await input.terminals.closeDirectory(directory)
     await input.scripts.closeDirectory(directory)
     await teardown(input.connection, directory)
