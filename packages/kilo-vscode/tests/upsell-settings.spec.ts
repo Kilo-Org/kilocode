@@ -28,6 +28,48 @@ test.beforeEach(async ({ page }) => {
   })
 })
 
+test("420x720 sidebar exposes the invitation above its visible composer exactly once", async ({ page }, info) => {
+  await page.setViewportSize({ width: 420, height: 720 })
+  await page.goto("/iframe.html?id=upsell-settings--sidebar&viewMode=story")
+  await enable(page, true)
+  await page.getByRole("button", { name: "Toggle turn", exact: true }).click()
+  await expect(card(page)).toHaveAttribute("aria-hidden", "false")
+  await expect(card(page)).not.toHaveAttribute("inert", "")
+  await expect(card(page)).toBeInViewport()
+  await expect(page.locator(".prompt-input-container")).toBeInViewport({ ratio: 1 })
+  const bounds = await page.evaluate(() => {
+    const card = document.querySelector(".agent-manager-upsell")!.getBoundingClientRect()
+    const slot = document.querySelector(".agent-manager-upsell-slot")!.getBoundingClientRect()
+    const composer = document.querySelector(".prompt-input-container")!.getBoundingClientRect()
+    const width = Math.max(0, Math.min(card.right, slot.right, innerWidth) - Math.max(card.left, slot.left, 0))
+    const height = Math.max(0, Math.min(card.bottom, slot.bottom, innerHeight) - Math.max(card.top, slot.top, 0))
+    return {
+      viewport: { width: innerWidth, height: innerHeight },
+      card: card.toJSON(),
+      composer: composer.toJSON(),
+      width,
+      height,
+    }
+  })
+  expect(bounds.width * bounds.height).toBeGreaterThan(0)
+  expect(bounds.card.bottom).toBeLessThanOrEqual(bounds.composer.top)
+  expect(bounds.composer.bottom).toBeLessThanOrEqual(720)
+  await expect
+    .poll(async () => (await requests(page)).filter((message) => message.action === "rendered").length)
+    .toBe(1)
+  const impressions = await page.evaluate(
+    () =>
+      (window as Window & { sent: WebviewMessage[] }).sent.filter(
+        (message) =>
+          message.type === "telemetry" &&
+          message.event === "Agent Manager Upsell" &&
+          message.properties?.action === "shown",
+      ).length,
+  )
+  expect(impressions).toBe(1)
+  await info.attach("viewport-bounds", { body: JSON.stringify(bounds), contentType: "application/json" })
+})
+
 test("default OFF, live opt-in and OFF use the real settings row and ChatView gate", async ({ page }) => {
   await page.goto("/iframe.html?id=upsell-settings--sidebar&viewMode=story")
   await expect(toggle(page)).toBeAttached({ timeout: 20_000 })

@@ -86,7 +86,7 @@ function Preview(props: { surface?: "editor" | "manager" }) {
   } as unknown as SessionContextValue
   const chat = () => (
     <SessionContext.Provider value={session}>
-      <div style={{ height: "800px", display: "flex", "flex-direction": "column" }}>
+      <div style={{ flex: "1", "min-height": "0", display: "flex", "flex-direction": "column", overflow: "hidden" }}>
         <Show when={mounted()}>
           <ChatView />
         </Show>
@@ -95,16 +95,29 @@ function Preview(props: { surface?: "editor" | "manager" }) {
   )
   return (
     <StoryProviders noPadding>
-      <div style={{ "max-height": "240px", overflow: "auto" }}>
-        <ImageModelsProvider>
-          <ExperimentalTab />
-        </ImageModelsProvider>
+      <div
+        style={{
+          height: "100dvh",
+          "min-height": "0",
+          display: "flex",
+          "flex-direction": "column",
+          gap: "8px",
+          overflow: "hidden",
+        }}
+      >
+        <div style={{ "max-height": "min(240px, 30dvh)", "flex-shrink": "0", overflow: "auto" }}>
+          <ImageModelsProvider>
+            <ExperimentalTab />
+          </ImageModelsProvider>
+        </div>
+        <div style={{ display: "flex", gap: "8px", padding: "0 12px", "flex-shrink": "0" }}>
+          <button onClick={() => setBusy(!busy())}>Toggle turn</button>
+          <button onClick={() => setMounted(!mounted())}>Toggle chat mount</button>
+        </div>
+        <Show when={props.surface === "manager"} fallback={chat()}>
+          <WorktreeModeProvider>{chat()}</WorktreeModeProvider>
+        </Show>
       </div>
-      <button onClick={() => setBusy(!busy())}>Toggle turn</button>
-      <button onClick={() => setMounted(!mounted())}>Toggle chat mount</button>
-      <Show when={props.surface === "manager"} fallback={chat()}>
-        <WorktreeModeProvider>{chat()}</WorktreeModeProvider>
-      </Show>
     </StoryProviders>
   )
 }
