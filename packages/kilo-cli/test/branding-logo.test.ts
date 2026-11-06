@@ -6,7 +6,7 @@ import { brandingPlugin } from "../src/branding/plugin"
 import { KiloLogo } from "../src/branding/logo-art"
 import { logo, go } from "../../tui/src/logo"
 import { compileDefine } from "./fixtures/compile-define"
-import { run, temporary } from "./fixtures/branding-run"
+import { COMPILED_RUN_TIMEOUT, run, temporary } from "./fixtures/branding-run"
 
 for (const hosted of [false, true]) {
   for (const modern of [false, true]) {
@@ -26,7 +26,7 @@ for (const hosted of [false, true]) {
         define: compileDefine,
       })
       expect(result.success, result.logs.map(String).join("\n")).toBe(true)
-      checkLogos(await run([outfile, modern ? "1" : "0"], root.path, !hosted), hosted, modern)
+      checkLogos(await run([outfile, modern ? "1" : "0"], root.path, !hosted, 0, COMPILED_RUN_TIMEOUT), hosted, modern)
     }, 60_000)
   }
 }

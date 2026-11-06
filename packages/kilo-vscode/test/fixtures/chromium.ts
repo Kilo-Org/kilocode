@@ -2,9 +2,10 @@ import { existsSync } from "node:fs"
 import { chromium } from "playwright-core"
 import { options } from "../../src/services/browser-automation/browser-runtime"
 
-// Deliberately below the 20 s hook budgets the suites use: a launch that reaches this bound cannot be told apart
-// from a hook timeout any more, and the hook timeout used to kill the child and orphan the Chromium (#15871).
-const PROBE_TIMEOUT = 15_000
+// Both suites await the probe at module scope, so no hook or test budget applies and the launch may take longer than
+// one. A 15 s bound failed on loaded 4 vCPU runners, where a cold launch exceeded it. The bound stays far below the
+// job timeout, and a real launch failure still reports the path and error.
+const PROBE_TIMEOUT = 45_000
 
 export const executable = [
   process.env.CHROME_PATH,

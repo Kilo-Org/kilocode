@@ -6,7 +6,7 @@ import { wasmDirectory } from "../src/indexing/tree-sitter"
 
 const dirs: string[] = []
 afterEach(async () => {
-  await Promise.all(dirs.splice(0).map((dir) => rm(dir, { recursive: true, force: true })))
+  await Promise.all(dirs.splice(0).map((dir) => rm(dir, { recursive: true, force: true, maxRetries: 5 })))
 })
 
 async function layout(files: string[]) {

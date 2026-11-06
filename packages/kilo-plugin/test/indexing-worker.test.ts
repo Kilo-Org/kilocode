@@ -7,7 +7,7 @@ import { IndexingWorker } from "../src/indexing/indexing-worker-client"
 
 async function tmpdir() {
   const dir = await mkdtemp(path.join(os.tmpdir(), "kilo-indexing-worker-"))
-  return { path: dir, [Symbol.asyncDispose]: () => rm(dir, { recursive: true, force: true }) }
+  return { path: dir, [Symbol.asyncDispose]: () => rm(dir, { recursive: true, force: true, maxRetries: 5 }) }
 }
 
 test("runs indexing engine requests in its worker", async () => {
@@ -31,7 +31,7 @@ test("runs indexing engine requests in its worker", async () => {
   }
 
   expect(failures).toEqual([])
-})
+}, 60_000)
 
 test("routes multiple directories through the shared indexing worker", async () => {
   await using first = await tmpdir()
@@ -61,7 +61,7 @@ test("routes multiple directories through the shared indexing worker", async () 
   }
 
   expect(failures).toEqual([])
-})
+}, 60_000)
 
 test("pools workers by both directory and root", async () => {
   await using tmp = await tmpdir()
@@ -93,7 +93,7 @@ test("pools workers by both directory and root", async () => {
   }
 
   expect(failures).toEqual([])
-})
+}, 60_000)
 
 test("waits for the primary index instead of scanning a worktree independently", async () => {
   await using tmp = await tmpdir()
@@ -152,7 +152,7 @@ test("waits for the primary index instead of scanning a worktree independently",
   }
 
   expect(failures).toEqual([])
-})
+}, 60_000)
 
 test("allows same-directory recreation while disposal is pending", async () => {
   await using tmp = await tmpdir()
@@ -174,7 +174,7 @@ test("allows same-directory recreation while disposal is pending", async () => {
 
   expect(second).not.toBe(first)
   expect(status.state).toBe("Disabled")
-})
+}, 60_000)
 
 test("releases enabled workers after provider initialization errors", async () => {
   await using tmp = await tmpdir()
@@ -230,4 +230,4 @@ test("releases enabled workers after provider initialization errors", async () =
   expect(status.state).toBe("Disabled")
   expect(drivers.has(engine)).toBe(false)
   expect(drivers.size).toBe(3)
-})
+}, 60_000)

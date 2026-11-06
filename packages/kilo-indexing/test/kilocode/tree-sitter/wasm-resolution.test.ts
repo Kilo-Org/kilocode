@@ -26,7 +26,7 @@ describe("tree-sitter WASM resolution", () => {
       expect(resolveCoreRuntimeWasmPath()).toBe(join(dir, "tree-sitter.wasm"))
       expect(resolveLanguageWasmPath("typescript").wasmPath).toBe(join(dir, "tree-sitter-typescript.wasm"))
     } finally {
-      await rm(root, { recursive: true, force: true })
+      await rm(root, { recursive: true, force: true, maxRetries: 5 })
     }
   })
 })
