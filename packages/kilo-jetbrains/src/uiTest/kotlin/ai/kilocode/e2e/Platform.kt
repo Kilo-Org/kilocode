@@ -9,6 +9,7 @@ const val KILO_PLUGIN_ID = "ai.kilocode.jetbrains"
 const val KILO_FRONTEND_MODULE = "$KILO_PLUGIN_ID/kilo.jetbrains.frontend"
 const val KILO_BACKEND_MODULE = "$KILO_PLUGIN_ID/kilo.jetbrains.backend"
 const val KILO_TOOL_WINDOW_ID = "Kilo Code"
+const val KILO_CLOUD_PROVIDER_ID = "kilo-cloud"
 
 @Remote("com.intellij.openapi.application.ApplicationManager")
 interface ApplicationManager {
@@ -72,4 +73,54 @@ interface BackendAppService {
 interface CliProps {
     fun pinned(): Boolean
     fun cliVersion(): String?
+}
+
+@Remote("ai.kilocode.client.session.ui.prompt.PromptPanel", plugin = KILO_FRONTEND_MODULE)
+interface PromptPanel {
+    fun setText(value: String)
+    fun send()
+    fun isSendEnabled(): Boolean
+}
+
+@Remote("ai.kilocode.client.session.ui.SessionMessageListPanel", plugin = KILO_FRONTEND_MODULE)
+interface SessionMessageListPanel {
+    fun turnCount(): Int
+    fun dump(): String
+    fun dumpDetailed(): String
+    fun messageText(role: String): String
+    fun messageErrors(): String
+    fun stateName(): String
+    fun stateMessage(): String?
+    fun sessionId(): String?
+}
+
+@Remote("ai.kilocode.client.ui.active.ActiveItem", plugin = KILO_FRONTEND_MODULE)
+interface ActiveItem {
+    val key: String
+    val tooltip: String?
+}
+
+@Remote("ai.kilocode.client.ui.tree.ActiveTree", plugin = KILO_FRONTEND_MODULE)
+interface ActiveTree {
+    fun select(key: String, scroll: Boolean): Boolean
+    fun selected(): ActiveItem?
+}
+
+@Remote("ai.kilocode.client.agentManager.WorkspaceSessionEditorPanel", plugin = KILO_FRONTEND_MODULE)
+interface WorkspaceSessionEditorPanel {
+    @Suppress("FunctionName")
+    fun `getList$frontend`(): ActiveList
+}
+
+@Remote("ai.kilocode.client.ui.tree.ActiveTreeView", plugin = KILO_FRONTEND_MODULE)
+interface ActiveTreeView {
+    @Suppress("FunctionName")
+    fun `open$frontend`(item: ActiveItem, focus: Boolean)
+}
+
+@Remote("ai.kilocode.client.ui.list.ActiveList", plugin = KILO_FRONTEND_MODULE)
+interface ActiveList {
+    fun select(key: String, scroll: Boolean): Boolean
+    fun selected(): ActiveItem?
+    fun focusList()
 }
