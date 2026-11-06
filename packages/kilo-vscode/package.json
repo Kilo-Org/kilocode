@@ -330,6 +330,12 @@
           "scope": "application",
           "markdownDescription": "Expose the `notebook_read`, `notebook_edit` and `notebook_execute` tools to sessions when a notebook-capable host is attached. Disabled by default."
         },
+        "kilo-code.v2.experimental.conversationPromptHistory": {
+          "type": "boolean",
+          "default": false,
+          "scope": "application",
+          "description": "Keep the prompt input history (ArrowUp/ArrowDown recall) separate for each conversation instead of sharing one history across all conversations."
+        },
         "kilo-code.v2.agentManager.browser.useSystemChrome": {
           "type": "boolean",
           "default": true,
