@@ -417,6 +417,8 @@ import type {
   SessionGetResponses,
   SessionHostAttachErrors,
   SessionHostAttachResponses,
+  SessionHostClearWorkspacePersonalDefaultProfileErrors,
+  SessionHostClearWorkspacePersonalDefaultProfileResponses,
   SessionHostContinueWorkspaceErrors,
   SessionHostContinueWorkspaceInput,
   SessionHostContinueWorkspaceResponses,
@@ -445,6 +447,8 @@ import type {
   SessionHostProviderId,
   SessionHostProvidersErrors,
   SessionHostProvidersResponses,
+  SessionHostSetWorkspacePersonalDefaultProfileErrors,
+  SessionHostSetWorkspacePersonalDefaultProfileResponses,
   SessionHostStartErrors,
   SessionHostStartInput,
   SessionHostStartResponses,
@@ -453,6 +457,7 @@ import type {
   SessionHostTranscriptErrors,
   SessionHostTranscriptResponses,
   SessionHostWorkspaceId,
+  SessionHostWorkspaceProfileDefaultInput,
   SessionHostWorkspaceSessionStartBody,
   SessionInitErrors,
   SessionInitResponses,
@@ -9816,7 +9821,7 @@ export class SessionHost extends HeyApiClient {
   /**
    * Create a hosted workspace
    *
-   * Create a hosted workspace and its root session. Reuse the same operation key and message ID to retry safely.
+   * Create a hosted workspace and, optionally, its root initial turn and explicit profile. Omit prompt and messageID to create an empty workspace; Cloud applies the effective default profile when profile is omitted. Reuse the same operation key and message ID to retry safely.
    */
   public createWorkspace<ThrowOnError extends boolean = false>(
     parameters?: {
@@ -9878,7 +9883,7 @@ export class SessionHost extends HeyApiClient {
   /**
    * List workspace creation profiles
    *
-   * List authorized profile summaries for workspace creation. Secret and environment values are never returned.
+   * List personal and organization profile summaries for workspace creation with their default flags. Secret and environment values are never returned.
    */
   public listWorkspaceProfiles<ThrowOnError extends boolean = false>(
     parameters?: {
@@ -9893,6 +9898,60 @@ export class SessionHost extends HeyApiClient {
       ThrowOnError
     >({
       url: "/kilocode/session-host/workspace/profiles",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Set the personal default workspace profile
+   *
+   * Set the authenticated user's personal default profile for workspace creation. The profile must be owned by the caller.
+   */
+  public setWorkspacePersonalDefaultProfile<ThrowOnError extends boolean = false>(
+    parameters?: {
+      sessionHostWorkspaceProfileDefaultInput?: SessionHostWorkspaceProfileDefaultInput
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [{ args: [{ key: "sessionHostWorkspaceProfileDefaultInput", map: "body" }] }],
+    )
+    return (options?.client ?? this.client).post<
+      SessionHostSetWorkspacePersonalDefaultProfileResponses,
+      SessionHostSetWorkspacePersonalDefaultProfileErrors,
+      ThrowOnError
+    >({
+      url: "/kilocode/session-host/workspace/profiles/personal-default",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
+
+  /**
+   * Clear the personal default workspace profile
+   *
+   * Clear the authenticated user's personal default profile for workspace creation. The profile must be owned by the caller.
+   */
+  public clearWorkspacePersonalDefaultProfile<ThrowOnError extends boolean = false>(
+    parameters: {
+      profileID: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams([parameters], [{ args: [{ in: "path", key: "profileID" }] }])
+    return (options?.client ?? this.client).delete<
+      SessionHostClearWorkspacePersonalDefaultProfileResponses,
+      SessionHostClearWorkspacePersonalDefaultProfileErrors,
+      ThrowOnError
+    >({
+      url: "/kilocode/session-host/workspace/profiles/personal-default/{profileID}",
       ...options,
       ...params,
     })
