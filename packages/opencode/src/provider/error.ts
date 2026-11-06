@@ -105,6 +105,10 @@ export type ParsedStreamError =
       message: string
       isRetryable: boolean
       responseBody: string
+      // kilocode_change start - propagate numeric HTTP status (e.g. 504) from
+      // stream error frames so downstream consumers can classify the error.
+      statusCode?: number
+      // kilocode_change end
     }
 
 export function parseStreamError(input: unknown): ParsedStreamError | undefined {
