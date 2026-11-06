@@ -209,7 +209,7 @@ export class AttentionService implements vscode.Disposable {
     const os = Boolean(this.opts.os) && config.get<boolean>("OSNotifications", false) && !focused
     // Independent of focus: this asks whether the exact session is already the
     // one in view, not whether the window has OS focus.
-    const panel = config.get<boolean>("notifications", false) && !this.opts.visible?.(sessionID)
+    const panel = config.get<boolean>("notifications", true) && !this.opts.visible?.(sessionID)
     return { os, vscode: panel }
   }
 
