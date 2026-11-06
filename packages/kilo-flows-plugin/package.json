@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json.schemastore.org/package.json",
+  "name": "@kilocode/flows-plugin",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Local prototype for managing Kilo flows.",
+  "type": "module",
+  "exports": {
+    "./tui": "./src/tui.tsx"
+  },
+  "scripts": {
+    "test": "bun test",
+    "typecheck": "bun check --no-script",
+    "typecheck:tsc": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@opencode/plugin": "workspace:*",
+    "@opentui/core": "catalog:",
+    "@opentui/solid": "catalog:",
+    "solid-js": "catalog:"
+  },
+  "devDependencies": {
+    "@opencode/schema": "workspace:*",
+    "@tsconfig/bun": "catalog:",
+    "@typescript/native": "catalog:",
+    "effect": "catalog:"
+  }
+}
