@@ -1,8 +1,8 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it, mock } from "bun:test"
 import * as vscode from "vscode"
 import type { InstallMarketplaceItemOptions, MarketplaceItem } from "../../src/services/marketplace/types"
-import { installed, removed } from "../../src/services/marketplace/telemetry"
 import { TelemetryProxy } from "../../src/services/telemetry"
+import { TelemetryEventName } from "../../src/services/telemetry/types"
 import { mcpAuth } from "../../src/services/mcp-auth"
 
 const { MarketplacePanelProvider } = await import("../../src/MarketplacePanelProvider")
@@ -20,50 +20,10 @@ interface Internals {
 
 const mcp = { id: "airbyte-agent-mcp", type: "mcp", name: "Airbyte Agent MCP" } as MarketplaceItem
 
-describe("marketplace event properties", () => {
-  it("uses the shared itemId/itemType keys and the method the host installed", () => {
-    expect(installed(mcp, { target: "global", parameters: { __method: "Hosted", TOKEN: "secret-value" } })).toEqual({
-      itemId: "airbyte-agent-mcp",
-      itemType: "mcp",
-      itemName: "Airbyte Agent MCP",
-      target: "global",
-      hasParameters: true,
-      installationMethodName: "Hosted",
-    })
-  })
-
-  it("never reports parameter values", () => {
-    const props = installed(mcp, { parameters: { TOKEN: "secret-value" } })
-    expect(JSON.stringify(props)).not.toContain("secret-value")
-  })
-
-  it("defaults the target to project like the installer, and omits absent extras", () => {
-    expect(installed(mcp, {})).toEqual({
-      itemId: "airbyte-agent-mcp",
-      itemType: "mcp",
-      itemName: "Airbyte Agent MCP",
-      target: "project",
-    })
-  })
-
-  it("does not count the method selector as a parameter", () => {
-    expect(installed(mcp, { parameters: { __method: "Hosted" } }).hasParameters).toBeUndefined()
-  })
-
-  it("describes removals", () => {
-    expect(removed(mcp, "project")).toEqual({
-      itemId: "airbyte-agent-mcp",
-      itemType: "mcp",
-      itemName: "Airbyte Agent MCP",
-      target: "project",
-    })
-  })
-})
-
-// The panel host, not the install dialog, owns these events so they survive the dialog closing.
-// A real HTTP server stands in for the CLI's /telemetry/capture route.
+// The CLI reports `Marketplace Item Installed`/`Removed` for every client. The extension sending them
+// too would count each install twice. A real HTTP server stands in for the CLI's /telemetry/capture.
 describe("MarketplacePanelProvider marketplace telemetry", () => {
-  const seen: { event: string; properties: Record<string, unknown> }[] = []
+  const seen: { event: string }[] = []
   const env = vscode.env as { isTelemetryEnabled: boolean }
   const before = env.isTelemetryEnabled
   const server = Bun.serve({
@@ -88,7 +48,7 @@ describe("MarketplacePanelProvider marketplace telemetry", () => {
     seen.length = 0
   })
 
-  function panel(result: Result) {
+  function panel() {
     const connection = {
       getClient: () => undefined,
       getClientAsync: async () => ({}),
@@ -98,42 +58,19 @@ describe("MarketplacePanelProvider marketplace telemetry", () => {
     } as never
     mcpAuth(connection).refresh = mock(async () => [] as string[])
     const internal = new MarketplacePanelProvider({} as never, connection, {} as never) as unknown as Internals
-    internal.marketplace.install = mock(async () => result)
-    internal.marketplace.remove = mock(async () => result)
+    internal.marketplace.install = mock(async () => ({ success: true, slug: mcp.id }))
+    internal.marketplace.remove = mock(async () => ({ success: true, slug: mcp.id }))
     return internal
   }
 
-  async function settle(count: number) {
-    for (let i = 0; i < 100 && seen.length < count; i++) await Bun.sleep(10)
-  }
+  it("leaves install and removal events to the CLI", async () => {
+    const internal = panel()
+    await internal.install(mcp, { target: "global", parameters: { __method: "Hosted" } })
+    await internal.remove(mcp, "global")
+    // Proves the endpoint is reachable, so an empty result is not a dead proxy.
+    TelemetryProxy.capture(TelemetryEventName.MARKETPLACE_TAB_VIEWED)
+    for (let i = 0; i < 100 && seen.length === 0; i++) await Bun.sleep(10)
 
-  it("emits Marketplace Item Installed when the install succeeds", async () => {
-    await panel({ success: true, slug: mcp.id }).install(mcp, { target: "global", parameters: { __method: "Hosted" } })
-    await settle(1)
-
-    expect(seen.map((entry) => entry.event)).toEqual(["Marketplace Item Installed"])
-    expect(seen[0]?.properties).toMatchObject({
-      itemId: "airbyte-agent-mcp",
-      itemType: "mcp",
-      target: "global",
-      installationMethodName: "Hosted",
-    })
-  })
-
-  it("emits Marketplace Item Removed when the removal succeeds", async () => {
-    await panel({ success: true, slug: mcp.id }).remove(mcp, "global")
-    await settle(1)
-
-    expect(seen.map((entry) => entry.event)).toEqual(["Marketplace Item Removed"])
-    expect(seen[0]?.properties).toMatchObject({ itemId: "airbyte-agent-mcp", itemType: "mcp", target: "global" })
-  })
-
-  it("emits nothing when the install or removal fails", async () => {
-    const failed = panel({ success: false, slug: mcp.id, error: "boom" })
-    await failed.install(mcp, { target: "global" })
-    await failed.remove(mcp, "global")
-    await Bun.sleep(50)
-
-    expect(seen).toEqual([])
+    expect(seen.map((entry) => entry.event)).toEqual(["Marketplace Tab Viewed"])
   })
 })

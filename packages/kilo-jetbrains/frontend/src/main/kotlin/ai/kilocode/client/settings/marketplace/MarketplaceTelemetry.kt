@@ -3,9 +3,9 @@ package ai.kilocode.client.settings.marketplace
 import ai.kilocode.rpc.dto.MarketplaceItemDto
 
 /**
- * Properties for the marketplace telemetry events. `itemId`, `itemType`, and `itemName` match the
- * VS Code extension so one report covers both IDEs; `id` and `type` stay for earlier reports.
- * `hasParameters` is left out: telemetry here is string-only, and VS Code sends it as a boolean, so a
+ * Properties for the marketplace click events. `itemId`, `itemType`, and `itemName` match the
+ * keys the CLI sends on `Marketplace Item Installed`/`Removed`; `id` and `type` stay for earlier reports.
+ * `hasParameters` is left out: telemetry here is string-only, and the CLI sends it as a boolean, so a
  * shared key would split one report column across two types.
  */
 internal fun marketplaceProps(item: MarketplaceItemDto, request: MarketplaceInstallRequest): Map<String, String> {
