@@ -30,7 +30,6 @@ export const MarketplaceView = () => {
   const [relevance, setRelevance] = createSignal<MarketplaceRelevanceMetadata>(EMPTY_RELEVANCE)
   const [fetching, setFetching] = createSignal(true)
   const [errors, setErrors] = createSignal<string[]>([])
-  const [pending, setPending] = createSignal<{ item: MarketplaceItem; scope: "project" | "global" } | null>(null)
   const [showMigrationBanner, setShowMigrationBanner] = createSignal(false)
   const [search, setSearch] = createSignal("")
   const [focus, setFocus] = createSignal<MarketplaceFocus>()
@@ -64,17 +63,8 @@ export const MarketplaceView = () => {
         setFocus((prev) => ({ token: (prev?.token ?? 0) + 1 }))
       }
       if (msg.type === "marketplaceRemoveResult") {
-        const removed = pending()
-        setPending(null)
+        // The CLI reports `Marketplace Item Removed` once the removal succeeds.
         if (msg.success) {
-          if (removed) {
-            telemetry(TelemetryEventName.MARKETPLACE_ITEM_REMOVED, {
-              itemId: removed.item.id,
-              itemType: removed.item.type,
-              itemName: removed.item.name,
-              target: removed.scope,
-            })
-          }
           fetchData()
         } else {
           setErrors((prev) => [...prev, msg.error ?? t("marketplace.remove.failed", { name: msg.slug })])
@@ -108,18 +98,9 @@ export const MarketplaceView = () => {
       <InstallModal
         item={item}
         onClose={() => dialog.close()}
-        onInstallResult={(success, scope, extra) => {
-          if (success) {
-            telemetry(TelemetryEventName.MARKETPLACE_ITEM_INSTALLED, {
-              itemId: item.id,
-              itemType: item.type,
-              itemName: item.name,
-              target: scope,
-              ...(extra?.hasParameters && { hasParameters: true }),
-              ...(extra?.installationMethodName && { installationMethodName: extra.installationMethodName }),
-            })
-            fetchData()
-          }
+        onInstallResult={(success) => {
+          // The CLI reports `Marketplace Item Installed`, so a dialog closed mid-install still counts.
+          if (success) fetchData()
         }}
       />
     ))
@@ -132,7 +113,6 @@ export const MarketplaceView = () => {
         scope={scope}
         onClose={() => dialog.close()}
         onConfirm={() => {
-          setPending({ item, scope })
           vscode.postMessage({
             type: "removeInstalledMarketplaceItem",
             mpItem: item,
