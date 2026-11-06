@@ -157,37 +157,88 @@ function words(value: string): string[] {
     .filter(Boolean)
 }
 
-function tokenScore(token: string, value: string): number {
-  const list = words(value)
+/** Per-model search text, normalized once because the same catalog is scanned on every keystroke. */
+interface SearchFields {
+  raw: string
+  name: string
+  nameWords: string[]
+  rawWords: string[]
+  idWords: string[]
+  nameCollapsed: string
+  rawCollapsed: string
+  idCollapsed: string
+  providerWords: string[]
+  providerCollapsed: string
+}
+
+const searchFields = new WeakMap<PickerModel, SearchFields>()
+
+function fieldsFor(model: PickerModel): SearchFields {
+  const cached = searchFields.get(model)
+  if (cached) return cached
+  const raw = sanitizeName(model.name)
+  const name = stripSubProviderPrefix(raw)
+  const fields = {
+    raw,
+    name,
+    nameWords: words(name),
+    rawWords: words(raw),
+    idWords: words(model.id),
+    nameCollapsed: collapse(name),
+    rawCollapsed: collapse(raw),
+    idCollapsed: collapse(model.id),
+    providerWords: words(model.providerName),
+    providerCollapsed: collapse(model.providerName),
+  }
+  searchFields.set(model, fields)
+  return fields
+}
+
+function tokenScore(
+  token: string,
+  collapsed: string,
+  value: string,
+  list: string[],
+  valueCollapsed: string,
+): number {
   if (list.includes(token)) return 1000
   if (list.some((word) => word.startsWith(token))) return 700
-  if (collapse(value).includes(collapse(token))) return 400
+  if (valueCollapsed.includes(collapsed)) return 400
   if (searchMatch(token, value)) return 250
   return -1
 }
 
 function matchScore(model: PickerModel, query: string): number | undefined {
-  const raw = sanitizeName(model.name)
-  const name = stripSubProviderPrefix(raw)
+  const fields = fieldsFor(model)
   const tokens = words(query)
   if (tokens.length === 0) return 0
 
   const scores = tokens.map((token) => {
-    const modelScore = Math.max(tokenScore(token, name), tokenScore(token, raw), tokenScore(token, model.id))
-    const providerScore = modelScore < 0 ? tokenScore(token, model.providerName) : -1
+    const collapsed = collapse(token)
+    const modelScore = Math.max(
+      tokenScore(token, collapsed, fields.name, fields.nameWords, fields.nameCollapsed),
+      tokenScore(token, collapsed, fields.raw, fields.rawWords, fields.rawCollapsed),
+      tokenScore(token, collapsed, model.id, fields.idWords, fields.idCollapsed),
+    )
+    const providerScore =
+      modelScore < 0
+        ? tokenScore(token, collapsed, model.providerName, fields.providerWords, fields.providerCollapsed)
+        : -1
     return { modelScore, providerScore }
   })
   if (scores.some((score) => score.modelScore < 0 && score.providerScore < 0)) return undefined
 
   const modelScore = scores.reduce((sum, score) => sum + Math.max(score.modelScore, 0), 0)
   const providerScore = scores.reduce((sum, score) => sum + Math.max(score.providerScore, 0), 0)
+  const collapsed = collapse(query)
   const exact =
-    collapse(query) === collapse(name) || collapse(query) === collapse(raw) || collapse(query) === collapse(model.id)
+    collapsed === fields.nameCollapsed || collapsed === fields.rawCollapsed || collapsed === fields.idCollapsed
   return modelScore + Math.floor(providerScore / 10) + (exact ? 5000 : 0)
 }
 
 function logicalModelKey(model: PickerModel): string {
-  return collapse(stripSubProviderPrefix(sanitizeName(model.name))) || collapse(model.id)
+  const fields = fieldsFor(model)
+  return fields.nameCollapsed || fields.idCollapsed
 }
 
 function usageFor(model: PickerModel, usage: ModelUsageMap | undefined) {

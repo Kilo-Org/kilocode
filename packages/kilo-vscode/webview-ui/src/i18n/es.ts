@@ -1347,6 +1347,11 @@ export const dict = {
     "Elige si los bloques de herramientas MCP y genéricas aparecen inicialmente expandidos o contraídos.",
   "settings.display.mcpTool.expanded": "Expandidos",
   "settings.display.mcpTool.collapsed": "Contraídos",
+  "settings.display.codeMode.title": "Bloques de Code Mode",
+  "settings.display.codeMode.description":
+    "Elige si los bloques de Code Mode empiezan con sus llamadas a herramientas en una lista o en una sola línea. El script siempre permanece oculto hasta que lo abras.",
+  "settings.display.codeMode.expanded": "Expandidos",
+  "settings.display.codeMode.collapsed": "Contraídos",
 
   "settings.display.shortcutHints.title": "Mostrar sugerencias de atajos",
   "settings.display.shortcutHints.description":

@@ -49,6 +49,7 @@ export function TranscriptRowView(props: {
               parts={row().parts}
               start={row().start}
               metadata={row().metadata}
+              userTurn={row().userTurn}
               rowKey={row().key}
               onViewTurnChanges={viewTurnChanges()}
             />

@@ -6,13 +6,17 @@ import { ToolChildSessionProvider, type ToolChildSession } from "@kilocode/kilo-
 import { createEffect, createMemo, on, onCleanup, onMount, Show, type JSX } from "solid-js"
 import type { PromptAttachment, ToHost } from "../../../src/protocol"
 import { useModelPreferences } from "../context/model-preferences"
+import { useWorkStyleOptional } from "../context/work-style"
 import { getVSCodeAPI } from "../context/vscode"
+import { movePromptHistory } from "../hooks/usePromptHistory"
+import { kiloSettings } from "./kilo-settings"
 import { TaskHeader } from "../components/chat/TaskHeader"
 import { SessionDock } from "../components/chat/SessionDockWorking"
-import type { AppendHandler, ReferenceHandler } from "./append-ready"
+import type { AppendHandler, ReferenceHandler, ReviewAppendHandler } from "./append-ready"
 import type { ComposerHandle } from "./composer"
 import { toPromptFiles } from "./prompt-attachments"
 import { useV2 } from "./client"
+import { useDisplaySettings } from "./display-settings"
 import { sessionMissing } from "./scope"
 import { childTools, createChildSessions } from "./child-session"
 import { MessageList } from "./messages"
@@ -21,6 +25,7 @@ import { PromptInput } from "./prompt"
 import { QuestionDock } from "./question"
 import { createSelection, Selectors } from "./selectors"
 import { createAutoApprove } from "./auto-approve"
+import { createSandbox } from "./sandbox"
 import { createWorking } from "./working"
 import { createPending } from "./pending"
 import { steerInterrupts, type SendMode } from "./pending-actions"
@@ -38,9 +43,6 @@ export function SessionView(props: {
   onShowHistory: () => void
   /** The row above the dock; receives whether the session has messages and the todo element it trails. */
   row?: (hasMessages: boolean, todos: JSX.Element) => JSX.Element
-  /** Replaces the transcript with `replacement` while true, for example with the session changes. */
-  replace?: boolean
-  replacement?: JSX.Element
   /** Replaces the welcome screen of an empty session. */
   empty?: () => JSX.Element
   /** Read-only sessions show the transcript without docks and prompt. */
@@ -51,6 +53,8 @@ export function SessionView(props: {
   onPreviewEdit?: (files: FileDiffInfo[], sessionID: string) => void
   /** Receives the composer append function for review comments, and undefined when that composer unmounts. */
   onAppendReady?: (append: AppendHandler | undefined) => void
+  /** Receives the composer review-comment function, and undefined when that composer unmounts. */
+  onReviewAppendReady?: (append: ReviewAppendHandler | undefined) => void
   /** Receives the composer function that adds an Integrated Browser element reference. */
   onReferenceReady?: (add: ReferenceHandler | undefined) => void
   /** Receives the composer for editor and terminal context actions, and undefined when that composer unmounts. */
@@ -68,6 +72,16 @@ export function SessionView(props: {
 }) {
   const v2 = useV2()
   const session = () => props.session
+  const work = useWorkStyleOptional()
+  // Display layouts and the reasoning mode are Kilo-only config keys, so the host reads them. Every surface that
+  // renders a transcript asks on connect and after each config change.
+  const display = useDisplaySettings()
+  createEffect(
+    on(v2.connection.status, (status) => {
+      if (status === "connected") display.request()
+    }),
+  )
+  onCleanup(v2.data.on("config.updated", () => display.request()))
   // Each session and pending tab has its own composer draft. The keyed mount below discards the previous composer
   // state and the draft store restores the text of the target one.
   const draftKey = () => props.draftKey ?? session() ?? "new"
@@ -171,6 +185,17 @@ export function SessionView(props: {
   const selection = createSelection(session, draftKey)
   const preferences = useModelPreferences()
   const autoApprove = createAutoApprove()
+  const sandbox = createSandbox({ session, gate: selection.created })
+  const sandboxControl = {
+    visible: sandbox.visible,
+    ready: sandbox.ready,
+    enabled: sandbox.enabled,
+    available: sandbox.available,
+    reason: sandbox.reason,
+    network: sandbox.network,
+    disabled: sandbox.disabled,
+    onToggle: sandbox.toggle,
+  }
   // The host sends the cycle action for the cycleAgentMode/cyclePreviousAgentMode commands, as in main.
   // A read-only view, for example an Agent Manager subagent, has no composer to cycle.
   if (!props.readOnly)
@@ -201,7 +226,11 @@ export function SessionView(props: {
     input?: { items?: PromptAttachment[]; metadata?: { [key: string]: JsonValue } },
   ) => {
     const key = draftKey()
-    const id = session() ?? selection.create()
+    // The first prompt is a task start too; skip an unset work style so the picker does not return later.
+    work?.skip()
+    // A created session is seeded with the resolved sandbox default before the first prompt.
+    const seed = session() ? undefined : await sandbox.metadata()
+    const id = session() ?? selection.create(seed)
     const gate = selection.gate(id)
     // A prompt with a pending switch waits for it, so the attribution has to be read after that switch settles.
     // Without one the selection is current, and it must be read before onSession changes the session identity.
@@ -209,6 +238,9 @@ export function SessionView(props: {
     // A pending question is dismissed when the user sends instead.
     const questions = forms()
     props.onSession(id, key)
+    // The first prompt settles the draft tab into a session key. Carry the history a late append still targets.
+    const scopedHistory = kiloSettings()["experimental.conversationPromptHistory"] === true
+    if (key !== id && scopedHistory) movePromptHistory(key, id)
     for (const form of questions) {
       void v2.data.session.form.cancel({ sessionID: form.sessionID, formID: form.id }).catch(() => undefined)
     }
@@ -276,25 +308,18 @@ export function SessionView(props: {
       <div class="chat-messages-wrapper">
         <ToolChildSessionProvider value={childSessions}>
           <div class="chat-messages">
-            <Show
-              when={props.replace}
-              fallback={
-                <MessageList
-                  session={session()}
-                  actions={props.actions}
-                  selection={selection}
-                  onSelectSession={(id) => props.actions.openSession?.(id)}
-                  onShowHistory={props.onShowHistory}
-                  onForkMessage={running() ? undefined : props.onForkMessage}
-                  empty={props.empty}
-                  onScrollToBottomReady={(fn) => (scrollToBottom = fn)}
-                  onViewTurnChanges={props.onViewTurnChanges}
-                  pending={pending}
-                />
-              }
-            >
-              {props.replacement}
-            </Show>
+            <MessageList
+              session={session()}
+              actions={props.actions}
+              selection={selection}
+              onSelectSession={(id) => props.actions.openSession?.(id)}
+              onShowHistory={props.onShowHistory}
+              onForkMessage={running() ? undefined : props.onForkMessage}
+              empty={props.empty}
+              onScrollToBottomReady={(fn) => (scrollToBottom = fn)}
+              onViewTurnChanges={props.onViewTurnChanges}
+              pending={pending}
+            />
           </div>
         </ToolChildSessionProvider>
       </div>
@@ -342,10 +367,12 @@ export function SessionView(props: {
                   composer = append
                   props.onAppendReady?.(append)
                 }}
+                onReviewAppendReady={props.onReviewAppendReady}
                 onReferenceReady={props.onReferenceReady}
                 onComposerReady={props.onComposerReady}
                 selectors={<Selectors selection={selection} blocked={selectorsBlocked()} />}
                 autoApprove={{ enabled: autoApprove.enabled(), onToggle: autoApprove.toggle }}
+                sandbox={sandboxControl}
               />
             )}
           </Show>

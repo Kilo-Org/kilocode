@@ -1,7 +1,7 @@
 // Agent, model and reasoning variant for the prompt, on native v2 data. The server session owns the selection: an
 // existing session commits each change with switchAgent/switchModel and shows the server's value. Before a session
 // exists, the choice is a local draft that `create` passes to session.create.
-import type { ModelRef } from "@opencode/client"
+import type { JsonValue, ModelRef } from "@opencode/client"
 import { createModelAttribution } from "./attribution"
 import { TooltipKeybind } from "@kilocode/kilo-ui/tooltip"
 import { createEffect, createMemo, createSignal, on, onCleanup, onMount, type Accessor } from "solid-js"
@@ -191,12 +191,28 @@ export function createSelection(
       if (!session()) remember(current, variant)
       setModel({ id: current.id, providerID: current.providerID, ...(variant ? { variant } : {}) })
     },
-    /** Creates a session with the current selection. */
-    create() {
+    /** Creates a session with the current selection, then writes the metadata the caller passes. */
+    create(metadata?: Record<string, JsonValue>) {
       const created = v2.data.session.create({ agent: agent()?.id, model: model() })
-      creates.set(created.id, created.request)
-      void created.request.catch(() => undefined).finally(() => creates.delete(created.id))
+      // The server reads the sandbox metadata when it first resolves the session state, so write it before the first
+      // prompt or status call, which both wait for this request.
+      const request = metadata
+        ? created.request.then(() =>
+            v2.api.session.update({ sessionID: created.id, metadata }).catch((error: unknown) => {
+              // The session keeps the config default while the draft toggle looked applied. A failed create keeps
+              // failing the prompt, which reports it.
+              v2.report(error)
+              throw error
+            }),
+          )
+        : created.request
+      creates.set(created.id, request)
+      void request.catch(() => undefined).finally(() => creates.delete(created.id))
       return created.id
+    },
+    /** The pending create of a session, including its metadata write. */
+    created(id: string) {
+      return creates.get(id)
     },
     /** The pending switch of a session; a failed switch fails the prompt instead of using another model. */
     gate(id: string) {

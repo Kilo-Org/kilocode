@@ -1,14 +1,10 @@
 /**
  * Embedded setup-script execution through the canonical PTY script-terminal
- * runtime. Selected by the Agent Manager terminal destination; the VS Code
- * task runner (task-runner.ts) remains the integrated-terminal path. Remove
- * the integrated path together with the "VS Code terminal" dropdown option
- * once the embedded path is the only one.
+ * runtime.
  *
- * Exit-code semantics mirror task-runner.ts: resolve with the exit code
- * (undefined when unknown), reject on execution errors and timeout. The
- * SetupScriptRunner treats every outcome as best-effort, so worktree
- * creation continues even when the script fails.
+ * Resolves with the exit code (undefined when unknown) and rejects on
+ * execution errors and timeout. The SetupScriptRunner treats every outcome
+ * as best-effort, so worktree creation continues even when the script fails.
  */
 
 import { getShellEnvironment } from "./shell-env"
@@ -16,7 +12,6 @@ import { SetupScriptRunner, type RunTask } from "./SetupScriptRunner"
 import type { SetupScriptService } from "./SetupScriptService"
 import type { RunHandle } from "./run/manager"
 import type { ScriptTerminalManager } from "./ScriptTerminalManager"
-import type { TerminalDestination } from "./terminal-destination"
 import type { AgentManagerOutMessage } from "./types"
 
 const TIMEOUT_MS = 5 * 60 * 1000
@@ -31,7 +26,7 @@ interface Input {
   worktreeId: string
   trusted(): boolean
   log(msg: string): void
-  /** Test hook; defaults to the same five minutes as task-runner.ts. */
+  /** Test hook; defaults to five minutes. */
   timeoutMs?: number
   /** Test hook; defaults to a 15s reconcile cadence while the script runs. */
   watchdogMs?: number
@@ -39,33 +34,7 @@ interface Input {
   env?: () => Promise<Record<string, string>>
 }
 
-interface PickInput extends Omit<Input, "worktreeId"> {
-  destination: TerminalDestination
-  worktreeId: string | undefined
-  /** Integrated-terminal task runner, used whenever the embedded path is off. */
-  vscode: RunTask
-}
-
-/**
- * Pick where a worktree setup script executes. The terminal destination
- * dropdown owns the choice. The embedded path enforces workspace trust
- * itself; it never silently redirects a selected destination to VS Code.
- */
-export function pickSetupTask(input: PickInput): RunTask {
-  const worktreeId = input.worktreeId
-  if (input.destination !== "agentManager" || !worktreeId) return input.vscode
-  return createSetupScriptTask({
-    manager: input.manager,
-    projectId: input.projectId,
-    worktreeId,
-    trusted: input.trusted,
-    log: input.log,
-    timeoutMs: input.timeoutMs,
-    env: input.env,
-  })
-}
-
-interface FlowInput extends PickInput {
+interface FlowInput extends Input {
   service: SetupScriptService | undefined
   branch?: string
   post(message: AgentManagerOutMessage): void
@@ -86,7 +55,7 @@ export async function runWorktreeSetupScript(
     branch: input.branch,
     worktreeId: input.worktreeId,
   })
-  const runner = new SetupScriptRunner(input.log, service, pickSetupTask(input), (message) => {
+  const runner = new SetupScriptRunner(input.log, service, createSetupScriptTask(input), (message) => {
     if (message === "Setup script was stopped") return
     input.post({
       type: "agentManager.worktreeSetup",

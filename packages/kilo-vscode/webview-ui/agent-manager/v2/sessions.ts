@@ -1,10 +1,10 @@
 // The sessions of the Agent Manager over the per-directory stores of the panel. A session lives in the store of its
 // directory: a worktree session in the store of the worktree path, a local session in the store of the project root.
-// The sidebar, the tabs and the history read the root sessions of every directory of the active project.
+// The sidebar, the tabs and the history read the root sessions of the directories whose stores are shown.
 import type { SessionInfo } from "@opencode/client"
 import { createMemo, createSignal } from "solid-js"
 import type { V2 } from "../../src/v2/scope"
-import { sessionActivity, type Activity } from "./activity"
+import { activityOf, sessionActivity, type Activity } from "./activity"
 import { key, type PanelData } from "./panel-data"
 
 export function createSessions(input: {
@@ -22,17 +22,35 @@ export function createSessions(input: {
   // belongs to the store of its own directory.
   const owns = (item: V2, info: SessionInfo) => key(info.location.directory) === item.directory
 
-  // The store of the session's directory, else the store of its known directory, else the project root store.
+  // The owning store of each loaded session. The map changes only when a session appears, disappears, or moves, so a
+  // session record update does not invalidate every scope lookup.
+  const owners = createMemo<Map<string, V2>>((previous) => {
+    const next = new Map<string, V2>()
+    for (const item of stores())
+      for (const info of item.data.session.list()) {
+        const existing = next.get(info.id)
+        if (!existing || owns(item, info)) next.set(info.id, item)
+      }
+    if (previous.size === next.size) {
+      let same = true
+      for (const [id, item] of next)
+        if (previous.get(id) !== item) {
+          same = false
+          break
+        }
+      if (same) return previous
+    }
+    return next
+  }, new Map())
+
+  // The store of the session's directory, else the store of its known directory, else the project root store. A
+  // directory whose store is not shown yet is not created here: its session list would load for nothing.
   const scope = (sessionID: string): V2 | undefined => {
-    const holders = stores().flatMap((item) => {
-      const info = item.data.session.get(sessionID)
-      return info ? [{ item, info }] : []
-    })
-    const found = (holders.find((entry) => owns(entry.item, entry.info)) ?? holders[0])?.item
+    const found = owners().get(sessionID)
     if (found) return found
     const directory = input.directoryOf(sessionID)
-    if (directory) return input.panel.store(directory)
-    return stores()[0]
+    const existing = directory ? input.panel.find(directory) : undefined
+    return existing ?? stores()[0]
   }
 
   // One entry per session: the copy of its own store, else the first store that has it.
@@ -54,10 +72,12 @@ export function createSessions(input: {
     setCurrentSessionID: setCurrent,
     selectSession: (sessionID: string) => setCurrent(sessionID),
     clearCurrentSession: () => setCurrent(undefined),
-    activityFor(sessionID: string): Activity {
+    activityFor(sessionID: string, info?: Pick<SessionInfo, "outcome" | "time">): Activity {
       const item = scope(sessionID)
-      if (!item) return "idle"
-      return sessionActivity(item.data, sessionID, connected())
+      if (!item) return info ? activityOf(info) : "idle"
+      const live = sessionActivity(item.data, sessionID, connected())
+      // Without a loaded session record the store only knows live events; the host catalog keeps the finished state.
+      return live === "idle" && info ? activityOf(info) : live
     },
     isSubmitting(sessionID: string) {
       const item = scope(sessionID)

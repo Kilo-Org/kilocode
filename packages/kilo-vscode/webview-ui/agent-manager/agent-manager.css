@@ -57,6 +57,13 @@ html[data-theme="kilo-vscode"]
     border-right-width 180ms ease;
 }
 
+/* The handle updates the width every animation frame. A transition on this
+   element would restart on each update and animate four layout properties,
+   which reflows the sidebar and the main pane twice per frame. */
+.am-sidebar:has(> [data-component="resize-handle"][data-dragging]) {
+  transition: none;
+}
+
 .am-sidebar-collapsed {
   min-width: 0;
   padding-left: 0;
@@ -2305,6 +2312,17 @@ body.am-wt-dragging-active * {
   flex: 1;
   min-height: 0;
   position: relative;
+}
+
+/* The intro shows here only until the chat store exists. Center it like the empty message list it replaces, so the
+   preview does not jump from the top to the center when the store arrives. */
+.am-intro-fallback {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  align-items: safe center;
+  justify-content: center;
+  overflow: auto;
 }
 
 .am-chat-wrapper.am-chat-wrapper-hidden {

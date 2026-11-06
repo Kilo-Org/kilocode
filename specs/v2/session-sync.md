@@ -8,8 +8,8 @@ Native v2 CLI sessions synchronize to Kilo by default while the user is signed i
 It includes persistent change capture, incremental uploads, private assets, retry, and restart recovery.
 The CLI remains usable offline.
 
-Mobile viewing, remote commands, legacy import, and ownership handoff are later deliveries of this design.
-They are not inactive implementations in the initial producer.
+Native remote viewing and control use a separate ephemeral live relay and durable opaque command mailbox.
+Legacy import and ownership handoff remain separate deliveries.
 
 The cloud repository owns service routes, admission, and storage semantics in
 [`services/session-sync/README.md`](https://github.com/Kilo-Org/cloud/blob/main/services/session-sync/README.md).
@@ -78,8 +78,8 @@ Status reports pending changes and a structured error.
 Flush exits unsuccessfully if pending work or an error remains.
 An unavailable destination does not stop local agent execution.
 
-The initial implementation captures persisted native state, not ephemeral token deltas.
-It does not expose remote viewing, control, restore, or handoff commands.
+Durable capture remains independent of ephemeral live events and remote control.
+Offline operation and authoritative synchronized snapshots do not depend on a live socket.
 
 ## Capture boundary
 
@@ -309,7 +309,55 @@ Maintain a bounded pending packet rather than loading an entire workspace into m
 A graceful exit attempts a bounded drain but correctness does not depend on shutdown hooks.
 An abrupt exit retains recoverable work on disk.
 
-## Future viewing and control
+## Native remote viewing and control
+
+`kilo2 remote` starts a private headless host, advertises kind `remote`, and waits until a signal.
+It requires Kilo sign-in and synchronization. It never enables control on an unrelated background daemon.
+The launch directory is the boundary for new sessions and directory discovery; canonical paths reject symlink escapes.
+`create_session` accepts optional directory, title, agent, model, variant and matching organization.
+An organization argument cannot change the active signed-in organization.
+
+Ordinary processes default to control disabled. `/remote` toggles it and shows a header indicator.
+`remote_control: true` in global `kilo2.jsonc` or `KILO_REMOTE=1` enables control at startup.
+The authenticated local API exposes `GET /remote/status`, `POST /remote/enable` and `POST /remote/disable`.
+Each returns `{enabled, connected}`; repeated enable/disable calls are idempotent.
+
+Signed-in processes with sync on keep one presence socket, independently of control acceptance.
+Only sessions created or continued in this process are advertised as live; untouched synchronized history is not.
+Ownership and relay sockets are bounded to the 100-session presence advertisement limit.
+New activity evicts the least-recently active unwatched session; identity changes clear process ownership.
+Native text/reasoning deltas, part/tool updates, permission/question requests and execution lifecycle events
+are published only while a viewer watches the session, including when remote control is disabled.
+Runner event bodies are `{version:1,syncPosition,sourceID,incarnation,runID?,data}`.
+`data` is the native bus envelope, or the command outcome for `command.outcome`.
+The sync position identifies the local durable capture boundary, not the relay sequence or server receipt.
+On each watch/re-watch and runner reconnect, and whenever run or pending-request state changes, the runner emits
+`remote.state` with `{version:1,syncPosition,sourceID,incarnation,runID:null|string,running:boolean,pending:{permissions:[{requestID,tool,summary}],questions:[{requestID,fields}]}}`.
+This inventory replaces the viewer's pending state; `fields` retain native form keys and schemas.
+`runID` is the opaque durable execution-start event ID, never a timestamp; idle state uses null.
+The initial state follows relay hello even if the watch arrived before the session socket connected.
+
+Instance commands are `create_session`, `list_directories`, `list_models` and `list_agents`.
+Session commands are `send_message`, `interrupt`, `drop_queued_message`, `permission_respond`,
+`question_reply`, `question_reject`, `send_command`, `list_commands`, `list_models`, `list_agents`,
+`detach` and `session.renamed`.
+There is no clone/fork-at-message, suggestion or pull-request-link command because this native surface has no equivalent.
+`send_message` accepts native queue/steer delivery; its command ID is durably admitted before acknowledgement.
+Interrupt and permission/question responses require `liveOnly:true`, the current runner incarnation and run ID.
+Permission/question request IDs must belong to that running session.
+Slash dispatch allows only `/compact`, `/new` in the same workspace, `/skill <ID>`, `/models` and `/agents`.
+All other commands produce a visible failed `command.outcome`, never arbitrary shell or command execution.
+Outcomes are `{commandID,status,result?,error?,duplicate?,identity?}`; `status` is `succeeded`, `failed` or `unknown`.
+The SQLite ledger keeps command identities and fingerprints so retries cannot repeat effects after restart or result eviction.
+Result payloads expire after one day, with at most 256 retained globally and 60 KiB per result.
+Larger results return `response_too_large`, including on replay, leaving room for the relay frame envelope.
+Startup and command settlement trim payloads; pending identities are never deleted.
+A duplicate whose result was evicted is reported unknown rather than repeating possible external effects.
+
+Tickets are carried in Authorization Bearer headers, never query strings.
+Fresh tickets renew at `reauthAt` before expiry; account/sync changes close transport without changing enrollment.
+Reconnects respect server hints and add jitter. Session-runner close 4009 is terminal for that session;
+presence close 4009 may retry. Relay loss never changes durable sync authority.
 
 A remote client persists its projection and applied cursor atomically.
 It loads recent content first, pages history, and resumes from a service cursor.
@@ -320,7 +368,7 @@ Remote prompts use a durable command ID and a runner receipt ledger outside reve
 Cloud-queued, runner-admitted, and model-delivered are distinct states.
 Offline prompts retain visible expiry.
 Cancel and approval replies bind to their exact run or request and runner incarnation.
-Permission replies support allow-once and reject, not persistent workspace grants.
+Permission replies use native once/always/reject policy; request and run validation precedes any reply.
 Do not replay uncertain external tool effects automatically.
 
 Default continuation elsewhere creates a fork from verified portable state.

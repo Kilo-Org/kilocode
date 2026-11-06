@@ -2,7 +2,6 @@ import type { FileDiffInfo } from "@opencode/client"
 import { Diff } from "@kilocode/kilo-ui/diff"
 import { DiffChanges } from "@kilocode/kilo-ui/diff-changes"
 import { FileIcon } from "@kilocode/kilo-ui/file-icon"
-import { normalize } from "@kilocode/kilo-ui/session-diff"
 import { For, Show, createMemo } from "solid-js"
 import { useLanguage } from "../context/language"
 
@@ -21,7 +20,8 @@ export function PermissionDiff(props: { files: FileDiffInfo[] }) {
       <For each={props.files}>
         {(file) => {
           const path = createMemo(() => splitPath(file.file))
-          const view = createMemo(() => normalize(file))
+          // `patch` is required by the type, but older or plugin-provided metadata can omit it.
+          const patch = () => (typeof file.patch === "string" ? file.patch : "")
           return (
             <div data-slot="permission-diff">
               <div data-slot="permission-diff-header">
@@ -42,10 +42,10 @@ export function PermissionDiff(props: { files: FileDiffInfo[] }) {
               </div>
               <div data-slot="permission-diff-content">
                 <Show
-                  when={view().fileDiff.hunks.length > 0}
+                  when={/^@@/m.test(patch())}
                   fallback={<div data-slot="permission-diff-empty">{language.t("ui.permission.noChanges")}</div>}
                 >
-                  <Diff fileDiff={view().fileDiff} diffStyle="unified" hunkSeparators="simple" visible={true} />
+                  <Diff patch={patch()} diffStyle="unified" hunkSeparators="simple" />
                 </Show>
               </div>
             </div>

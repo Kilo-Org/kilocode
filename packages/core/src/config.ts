@@ -48,6 +48,7 @@ export interface Interface {
   readonly commandMetadata?: boolean // kilocode_change(workflow-model) seam - optional command metadata
   /** Updates supported global config fields while preserving unrelated JSONC content. */
   readonly update?: (patch: Patch) => Effect.Effect<void, FSUtil.Error>
+  readonly reload?: () => Effect.Effect<void> // kilocode_change(indexing) seam - re-read config sources after a host write, also without a file watcher
   /**
    * Replaces, or clears with `undefined`, the document an integration connection contributes. It loads right after
    * managed policies: its settings layer below remote, user, and project config, while its policies outrank theirs.
@@ -508,6 +509,7 @@ export const layer = (options?: Options) =>
         commandDocuments: (entries, documents) => layout.commandDocuments?.(entries, documents) ?? documents, // kilocode_change(workflow-model) seam - host command document composition
         commandMetadata: layout.commandMetadata, // kilocode_change(workflow-model) seam - optional command metadata
         update,
+        reload: () => reload().pipe(Effect.provide(context), Effect.catchCause((cause) => Effect.logError("failed to reload config", { cause }))), // kilocode_change(indexing) seam
         integration: Effect.fn("Config.integration")(function* (integrationID, document) {
           if (isDeepStrictEqual(integrations.get(integrationID), document)) return
           integrations.delete(integrationID)

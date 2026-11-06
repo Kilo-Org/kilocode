@@ -1,11 +1,20 @@
 import type { GitOps } from "../agent-manager/GitOps"
+import type { PRReviewCommentData } from "../shared/review-comments"
 
 /** Host-side context of one diff panel. Kept out of `types.ts` so the webview never pulls Node modules. */
 export interface PanelContext {
   workspaceRoot: string | undefined
   sessionId?: string
+  /** A PR review comment the panel opens and focuses. */
+  comment?: PRReviewCommentData
+  /** Open the panel beside the active editor column. */
+  beside?: boolean
   /** Overrides the computed default source on open. */
   initialSourceId?: string
+  /** Select a file when the source first loads. */
+  initialFile?: string
+  /** Render Markdown when the viewer was opened from a Markdown file link. */
+  initialMarkdown?: boolean
   /** Hides the source picker header in the diff viewer. */
   hidePicker?: boolean
   /** User-picked base branch for the workspace source. Undefined = auto. */

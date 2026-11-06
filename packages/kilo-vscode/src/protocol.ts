@@ -1,6 +1,8 @@
 // Messages between the webview and the extension host. The webview has no server credentials: it sends HTTP
 // requests through the host (`fetch`), and the host streams each response back in order.
-import type { ReviewCommentData } from "./shared/review-comments"
+import type { KiloIndexingRpc } from "@opencode/schema/kilocode/indexing"
+import type { ReviewCommentData, ReviewCommentEntry } from "./shared/review-comments"
+import type { WorkStyle, WorkStyleState } from "./shared/work-style-presets"
 
 import type { BrowserReference } from "./shared/browser-feedback"
 import type {
@@ -26,6 +28,11 @@ export type ConfigEdit = { path: string[]; value?: unknown; preserveAliases?: bo
 
 export type ConfigScope = "global" | "project"
 
+export type { ReviewCommentData, ReviewCommentEntry }
+
+/** Working tree change counts against the base, as the v1 Changes button showed them. */
+export type GitChangesStats = { files: number; additions: number; deletions: number }
+
 export type ConfigFileContent = { path: string; text: string }
 
 /**
@@ -43,20 +50,26 @@ export type ConfigPolicy = { hidePromptTrainingModels: boolean; managed: boolean
 
 export type ToolDisplayLayout = "expanded" | "collapsed"
 
+export type ReasoningDisplay = "expanded" | "preview" | "headline"
+
 /**
- * How the chat starts each kind of tool block. The three Kilo config keys are not in the config API, so the host
- * reads the config documents and sends the effective values, with the same defaults as v1.
+ * How the chat starts each kind of tool block and reasoning block. The Kilo config keys are not in the config API, so
+ * the host reads the config documents and sends the effective values, with the same defaults as v1.
  */
 export type DisplaySettings = {
   terminalCommandDisplay: ToolDisplayLayout
   codeEditDisplay: ToolDisplayLayout
   mcpToolDisplay: ToolDisplayLayout
+  codeModeDisplay: ToolDisplayLayout
+  reasoningDisplay: ReasoningDisplay
 }
 
 export const DISPLAY_DEFAULTS: DisplaySettings = {
   terminalCommandDisplay: "expanded",
   codeEditDisplay: "collapsed",
   mcpToolDisplay: "collapsed",
+  codeModeDisplay: "collapsed",
+  reasoningDisplay: "expanded",
 }
 
 /**
@@ -109,9 +122,13 @@ export type ToHost =
   | Ui
   | Settings
   | Speech
+  | Indexing
   | ({ type: "openSettingsTab" } & SettingsNavigation)
   | { type: "settingsReady" }
   | { type: "settingsTabChanged"; tab: string }
+  | { type: "requestWorkStyle" }
+  | { type: "applyWorkStyle"; style: WorkStyle }
+  | { type: "setWorkStyle"; style: WorkStyleState }
 
 /**
  * The editor-tab Integrated Browser. The tab is host-driven: it renders a browser the extension host runs, so every
@@ -190,6 +207,25 @@ export type BrowserInspectionPayload = BrowserScopeMessage<"browserTab.inspectio
 export type BrowserFramePayload = BrowserScopeMessage<"browserTab.frame"> & BrowserFrame
 export type BrowserCursorPayload = BrowserScopeMessage<"browserTab.cursor"> & BrowserCursor
 export type BrowserDevtoolsPayload = BrowserScopeMessage<"browserTab.devtools"> & { browserId: string; url: string }
+/** Codebase indexing consent and project list. The consent itself is machine-local in globalState. */
+export type Indexing =
+  | { type: "requestIndexingSettings"; projectId?: string }
+  | { type: "setIndexingConsent"; projectId: string; enabled: boolean }
+
+export type IndexingProject = {
+  id: string
+  root: string
+  /** The location the RPC calls target. Omitted for the primary project, which is the server's own location. */
+  directory?: string
+  label: string
+}
+
+export type IndexingSettings = {
+  showButtonWhenDisabled: boolean
+  consent: boolean
+  projects: IndexingProject[]
+  projectId?: string
+}
 
 /** Voice input: the host owns the microphone, the custom endpoint and the Gateway RPC. */
 export type Speech =
@@ -207,6 +243,8 @@ export type Ui =
   | { type: "persistModelSelectorExpanded"; value: boolean }
   | { type: "requestAutoApproveState" }
   | { type: "persistAutoApproveState"; value: boolean }
+  | { type: "requestSandboxDefault" }
+  | { type: "persistSandboxDefault"; enabled: boolean }
   | { type: "requestDismissedNotifications" }
   | { type: "dismissNotification"; notificationId: string }
   | { type: "syncDismissedNotifications"; ids: string[] }
@@ -222,6 +260,10 @@ export type Ui =
   | { type: "openDiffsVirtual"; diffs: ToolActionDiff[]; initialDiffStyle?: "unified" | "split" }
   | { type: "requestDisplaySettings" }
   | { type: "validateFiles"; id: string; sessionID?: string; paths: string[] }
+  /** Opens the Changes editor tab. `turnID` opens the turn scope of that user message instead of the picker. */
+  | { type: "openChanges"; sessionID?: string; turnID?: string }
+  /** Asks for the working tree change counts of the Changes button. The host answers with `gitChangesStats`. */
+  | { type: "requestGitChangesStats" }
 
 export type ModelPreferenceRef = { providerID: string; modelID: string }
 export type ModelUsageMap = Record<string, { count: number; lastUsed: number }>
@@ -371,10 +413,19 @@ export type ToWebview =
   | { type: "modelSelectorExpandedLoaded"; value: boolean }
   | { type: "modelPreferencesLoaded"; value: ModelPreferences }
   | { type: "autoApproveStateLoaded"; value: boolean }
+  | { type: "workStyleLoaded"; style: WorkStyleState }
+  | { type: "workStyleApplied"; style: WorkStyle }
+  | { type: "workStyleApplyFailed"; message: string; rollbackFailed: boolean }
+  | {
+      type: "sandboxDefaultLoaded"
+      /** The stored preference for new sessions, absent when the user has not chosen a default. */
+      explicit?: boolean
+    }
   | { type: "dismissedNotificationsLoaded"; ids: string[] }
   | { type: "webviewActiveChanged"; active: boolean }
   | { type: "validateFilesResult"; id: string; existing: string[] }
-  | { type: "appendReviewComments"; comments: ReviewCommentData[]; autoSend: boolean }
+  /** Review comments for the composer from the Changes or a document tab. `autoSend` sends an otherwise empty draft. */
+  | { type: "appendReviewComments"; comments: ReviewCommentEntry[]; autoSend: boolean }
   | {
       type: "configLoaded"
       global: ConfigFileContent
@@ -384,6 +435,8 @@ export type ToWebview =
     }
   | { type: "configWritten"; id: number; ok: boolean; error?: string }
   | { type: "vscodeSettingsLoaded"; values: Record<string, unknown> }
+  | { type: "indexingSettingsLoaded"; settings: IndexingSettings }
+  | { type: "indexingStatusLoaded"; status: KiloIndexingRpc.Status; projectId?: string }
   | {
       type: "agentManagerSettingsLoaded"
       requestId: string
@@ -396,6 +449,8 @@ export type ToWebview =
       error?: string
     } & AgentManagerSettingsBranchPayload)
   | { type: "displaySettingsLoaded"; values: DisplaySettings; error?: string }
+  /** The working tree change counts of the Changes button; absent when the directory is not a git repository. */
+  | { type: "gitChangesStats"; stats?: GitChangesStats }
   | { type: "speechToTextConfigLoaded"; status: SpeechToTextStatus }
   | { type: "speechToTextStarted"; requestId: string }
   | { type: "speechToTextResult"; requestId: string; text: string }

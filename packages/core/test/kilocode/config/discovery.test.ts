@@ -11,6 +11,7 @@ import { Watcher } from "@opencode/core/filesystem/watcher"
 import { KiloConfigDiscovery } from "@opencode/core/kilocode/config/discovery"
 import { KiloConfigPolicy } from "@opencode/core/kilocode/config/policy"
 import { Location } from "@opencode/core/location"
+import { ManagedPolicy } from "@opencode/core/managed-policy"
 import { AbsolutePath } from "@opencode/core/schema"
 import { WellKnown } from "@opencode/core/wellknown"
 import { Global } from "@opencode/util/global"
@@ -86,6 +87,8 @@ describe("Kilo config discovery", () => {
     expect(system("win32", { ProgramData: "D:\\ProgramData" })).toBe(AbsolutePath.make("D:\\ProgramData\\kilo"))
     expect(system("win32", { ProgramData: "D:/ProgramData/" })).toBe(AbsolutePath.make("D:\\ProgramData\\kilo"))
     expect(system("win32", {})).toBe(AbsolutePath.make("C:\\ProgramData\\kilo"))
+    // The managed directory keeps the stable product names, not the internal `kilo2.*` names.
+    expect(KiloConfigDiscovery.layout.systemFiles).toEqual(["kilo.jsonc", "kilo.json"])
     expect(ConfigDiscovery.systemDirectory("darwin", {})).toBe(
       AbsolutePath.make("/Library/Application Support/opencode"),
     )
@@ -115,13 +118,14 @@ describe("Kilo config discovery", () => {
       yield* write(path.join(global, "kilo2.jsonc"), { hide_prompt_training_models: false, shell: "user" })
       yield* write(explicit, { hide_prompt_training_models: false, shell: "explicit" })
       yield* write(path.join(project, ".kilo2", "kilo2.json"), { hide_prompt_training_models: false, shell: "project" })
-      yield* write(path.join(managed, "kilo2.jsonc"), { hide_prompt_training_models: false, shell: "managed-jsonc" })
-      yield* write(path.join(managed, "kilo2.json"), {
+      yield* write(path.join(managed, "kilo.jsonc"), { hide_prompt_training_models: false, shell: "managed-jsonc" })
+      yield* write(path.join(managed, "kilo.json"), {
         hide_prompt_training_models: true,
         shell: "managed-json",
         policies: [{ effect: "deny", action: "tool.use", resource: "shell:*" }],
       })
-      yield* write(path.join(managed, "kilo.json"), { hide_prompt_training_models: false, shell: "legacy-kilo" })
+      // The managed directory keeps the stable product names, so an internal or OpenCode-named file is ignored.
+      yield* write(path.join(managed, "kilo2.json"), { hide_prompt_training_models: false, shell: "internal-kilo2" })
       yield* write(path.join(managed, "opencode.json"), { hide_prompt_training_models: false, shell: "opencode" })
 
       yield* Effect.gen(function* () {
@@ -156,6 +160,36 @@ describe("Kilo config discovery", () => {
     }),
   )
 
+  it.live("a project or global layer cannot override a managed policy or a managed setting", () =>
+    Effect.gen(function* () {
+      const tmp = yield* tmpdirScoped()
+      const project = path.join(tmp.path, "repo")
+      const global = path.join(tmp.path, "global")
+      const managed = path.join(tmp.path, "managed")
+      // The managed deny for `shell:*` outranks the nearest project allow for the same resource.
+      yield* write(path.join(global, "kilo2.json"), {
+        shell: "user",
+        policies: [{ effect: "allow", action: "tool.use", resource: "shell:*" }],
+      })
+      yield* write(path.join(project, "kilo2.json"), {
+        shell: "project",
+        policies: [{ effect: "allow", action: "tool.use", resource: "shell:*" }],
+      })
+      yield* write(path.join(managed, "kilo.json"), {
+        shell: "managed",
+        policies: [{ effect: "deny", action: "tool.use", resource: "shell:*" }],
+      })
+
+      yield* Effect.gen(function* () {
+        const config = yield* Config.Service
+        const entries = yield* config.entries()
+        const statements = ManagedPolicy.statements(entries)
+        expect(ManagedPolicy.decision(statements, "tool.use", "shell:rm -rf")).toBe("deny")
+        expect(Config.latest(entries, "shell")).toBe("managed")
+      }).pipe(Effect.provide(configLayer({ directory: project, global, git: true, options: { system: managed } })))
+    }),
+  )
+
   it.live(
     "warns about a malformed managed privacy flag without dropping permission policies or logging its value",
     () => {
@@ -166,7 +200,7 @@ describe("Kilo config discovery", () => {
         const project = path.join(tmp.path, "repo")
         const global = path.join(tmp.path, "global")
         const managed = path.join(tmp.path, "managed")
-        const file = path.join(managed, "kilo2.json")
+        const file = path.join(managed, "kilo.json")
         yield* write(path.join(project, "kilo2.json"), { hide_prompt_training_models: false })
         yield* write(file, {
           hide_prompt_training_models: "sensitive-invalid-value",
@@ -243,7 +277,7 @@ describe("Kilo config discovery", () => {
       const managed = path.join(tmp.path, "managed")
       const plist = path.join(tmp.path, "managed.plist")
       yield* write(path.join(project, "kilo2.json"), { hide_prompt_training_models: false })
-      yield* write(path.join(managed, "kilo2.json"), { hide_prompt_training_models: false, shell: "managed" })
+      yield* write(path.join(managed, "kilo.json"), { hide_prompt_training_models: false, shell: "managed" })
       yield* Effect.promise(() =>
         fs.writeFile(
           plist,

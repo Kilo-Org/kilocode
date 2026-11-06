@@ -1363,6 +1363,11 @@ export const dict = {
     "Choisissez si les blocs d'outils MCP et génériques sont initialement développés ou réduits.",
   "settings.display.mcpTool.expanded": "Développés",
   "settings.display.mcpTool.collapsed": "Réduits",
+  "settings.display.codeMode.title": "Blocs Code Mode",
+  "settings.display.codeMode.description":
+    "Choisissez si les blocs Code Mode démarrent avec leurs appels d'outils listés ou sur une seule ligne. Le script reste toujours masqué jusqu'à ce que vous l'ouvriez.",
+  "settings.display.codeMode.expanded": "Développés",
+  "settings.display.codeMode.collapsed": "Réduits",
 
   "settings.display.shortcutHints.title": "Afficher les astuces de raccourcis",
   "settings.display.shortcutHints.description":

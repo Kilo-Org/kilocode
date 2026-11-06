@@ -4,14 +4,14 @@
     "v1Base": "8100c68b507b53aac6b891edbc3040a6011d8969"
   },
   "summary": {
-    "done": 1609,
-    "total": 9786,
-    "percent": 16.4,
-    "dropped": 68,
+    "done": 1685,
+    "total": 9785,
+    "percent": 17.2,
+    "dropped": 69,
     "kinds": [
       {
         "kind": "module",
-        "done": 1224,
+        "done": 1256,
         "total": 3529
       },
       {
@@ -21,25 +21,25 @@
       },
       {
         "kind": "patch",
-        "done": 86,
-        "total": 3441
+        "done": 103,
+        "total": 3440
       },
       {
         "kind": "test",
-        "done": 288,
+        "done": 315,
         "total": 2780
       }
     ],
     "landed": {
-      "plugin": 54,
-      "host": 8,
+      "plugin": 66,
+      "host": 14,
       "seam": 3,
       "patch": 6
     },
-    "coreImports": 41,
+    "coreImports": 49,
     "sharedPatches": {
-      "seam": 55,
-      "patch": 36
+      "seam": 59,
+      "patch": 39
     }
   },
   "notCounted": {
@@ -53,6 +53,7 @@
     "unattributed": 4163
   },
   "coreImports": [
+    "@opencode/core/agent",
     "@opencode/core/app",
     "@opencode/core/bus",
     "@opencode/core/config",
@@ -65,8 +66,12 @@
     "@opencode/core/effect/app-node-platform",
     "@opencode/core/environment",
     "@opencode/core/file-access",
+    "@opencode/core/form",
     "@opencode/core/generate",
+    "@opencode/core/instance/service",
+    "@opencode/core/job",
     "@opencode/core/location",
+    "@opencode/core/location-service-map",
     "@opencode/core/model",
     "@opencode/core/model-resolver",
     "@opencode/core/permission",
@@ -80,6 +85,7 @@
     "@opencode/core/provider",
     "@opencode/core/rpc",
     "@opencode/core/schema",
+    "@opencode/core/session",
     "@opencode/core/session/event",
     "@opencode/core/session/projector",
     "@opencode/core/session/runner/model",
@@ -87,6 +93,8 @@
     "@opencode/core/session/store",
     "@opencode/core/session/system-prompt",
     "@opencode/core/shell",
+    "@opencode/core/shell/parse",
+    "@opencode/core/skill",
     "@opencode/core/tool",
     "@opencode/core/tool-output",
     "@opencode/core/tool/plugin/file-diff",
@@ -1767,12 +1775,12 @@
     },
     {
       "feature": "sandbox",
-      "done": 0,
+      "done": 64,
       "total": 66,
       "dropped": 0,
       "kinds": {
         "module": {
-          "done": 0,
+          "done": 28,
           "total": 29
         },
         "api": {
@@ -1780,13 +1788,19 @@
           "total": 0
         },
         "patch": {
-          "done": 0,
+          "done": 11,
           "total": 12
         },
         "test": {
-          "done": 0,
+          "done": 25,
           "total": 25
         }
+      },
+      "landed": {
+        "plugin": 8,
+        "host": 6,
+        "seam": 0,
+        "patch": 0
       }
     },
     {
@@ -3579,9 +3593,9 @@
     },
     {
       "feature": "unattributed:core/v1",
-      "done": 1,
-      "total": 51,
-      "dropped": 0,
+      "done": 7,
+      "total": 50,
+      "dropped": 1,
       "kinds": {
         "module": {
           "done": 0,
@@ -3592,8 +3606,8 @@
           "total": 0
         },
         "patch": {
-          "done": 1,
-          "total": 51
+          "done": 7,
+          "total": 50
         },
         "test": {
           "done": 0,
@@ -3601,7 +3615,7 @@
         }
       },
       "landed": {
-        "plugin": 1,
+        "plugin": 5,
         "host": 0,
         "seam": 0,
         "patch": 0
@@ -6111,12 +6125,12 @@
     },
     {
       "feature": "vscode",
-      "done": 1188,
+      "done": 1194,
       "total": 2041,
       "dropped": 16,
       "kinds": {
         "module": {
-          "done": 964,
+          "done": 968,
           "total": 1431
         },
         "api": {
@@ -6128,7 +6142,7 @@
           "total": 0
         },
         "test": {
-          "done": 224,
+          "done": 226,
           "total": 610
         }
       }
@@ -6242,6 +6256,19 @@
     "patch:provider-usage:b0945f511fb3": "plugin",
     "patch:provider-usage:ce8e021f1ef6": "plugin",
     "patch:review:efc710228c1f": "plugin",
+    "patch:sandbox:00aa0cba90d1": "host",
+    "patch:sandbox:37cf5fea540a": "plugin",
+    "patch:sandbox:41a5c4f8070a": "plugin",
+    "patch:sandbox:4918d15ae745": "plugin",
+    "patch:sandbox:7d95c6cc13bc": "host",
+    "patch:sandbox:859933ff55db": "plugin",
+    "patch:sandbox:980b9e91078b": "host",
+    "patch:sandbox:b09868b61af4": "host",
+    "patch:sandbox:b534aff3ebec": "plugin",
+    "patch:sandbox:d1999e0669a5": "plugin",
+    "patch:sandbox:ea078ae48b40": "host",
+    "patch:sandbox:fb2d03fdb710": "host",
+    "patch:sandbox:fd6329a01ac1": "plugin",
     "patch:server:5e0f8563b425": "plugin",
     "patch:snapshot:80d332891272": "plugin",
     "patch:snapshot:8579451b046f": "plugin",
@@ -6257,6 +6284,10 @@
     "patch:unattributed:config:73db79553730": "plugin",
     "patch:unattributed:config:8cdbdec70393": "host",
     "patch:unattributed:core/database:a155cf41e765": "host",
+    "patch:unattributed:core/v1:159079a2d8a3": "plugin",
+    "patch:unattributed:core/v1:2e351a955982": "plugin",
+    "patch:unattributed:core/v1:a177a3c0a84c": "plugin",
+    "patch:unattributed:core/v1:a4a32558d64b": "plugin",
     "patch:unattributed:core/v1:fb80dc4c3dd4": "plugin",
     "patch:unattributed:session:13cc4c3e6a51": "plugin",
     "patch:unattributed:session:142910b3fc8c": "plugin",
@@ -6305,6 +6336,7 @@
     "module:packages/core/src/kilocode/provider-usage/minimax/usage.ts",
     "module:packages/core/src/kilocode/spotlight.ts",
     "module:packages/core/test/kilocode/global.test.ts",
+    "module:packages/core/test/kilocode/linux-sandbox.test.ts",
     "module:packages/kilo-gateway/src/api/constants.ts",
     "module:packages/kilo-gateway/src/api/embedding-models.ts",
     "module:packages/kilo-gateway/src/api/kilo-pass.ts",
@@ -6368,6 +6400,32 @@
     "module:packages/kilo-i18n/src/uk.ts",
     "module:packages/kilo-i18n/src/zh.ts",
     "module:packages/kilo-i18n/src/zht.ts",
+    "module:packages/kilo-sandbox/src/backend.ts",
+    "module:packages/kilo-sandbox/src/bubblewrap.ts",
+    "module:packages/kilo-sandbox/src/context.ts",
+    "module:packages/kilo-sandbox/src/destination.ts",
+    "module:packages/kilo-sandbox/src/filesystem.ts",
+    "module:packages/kilo-sandbox/src/index.ts",
+    "module:packages/kilo-sandbox/src/kilo-sandbox-mutation-worker.ts",
+    "module:packages/kilo-sandbox/src/kilo-sandbox-network-relay.ts",
+    "module:packages/kilo-sandbox/src/mutation-protocol.ts",
+    "module:packages/kilo-sandbox/src/mutation.ts",
+    "module:packages/kilo-sandbox/src/network.ts",
+    "module:packages/kilo-sandbox/src/path.ts",
+    "module:packages/kilo-sandbox/src/profile.ts",
+    "module:packages/kilo-sandbox/src/proxy.ts",
+    "module:packages/kilo-sandbox/src/seatbelt-base.ts",
+    "module:packages/kilo-sandbox/src/seatbelt-network.ts",
+    "module:packages/kilo-sandbox/src/seatbelt.ts",
+    "module:packages/kilo-sandbox/src/tls-client-hello.ts",
+    "module:packages/kilo-sandbox/test/backend.test.ts",
+    "module:packages/kilo-sandbox/test/context.test.ts",
+    "module:packages/kilo-sandbox/test/destination.test.ts",
+    "module:packages/kilo-sandbox/test/filesystem.test.ts",
+    "module:packages/kilo-sandbox/test/kilo-sandbox-mutation-worker.test.ts",
+    "module:packages/kilo-sandbox/test/network.test.ts",
+    "module:packages/kilo-sandbox/test/proxy.test.ts",
+    "module:packages/kilo-sandbox/test/seatbelt-network.test.ts",
     "module:packages/kilo-ui/src/components/accordion.css",
     "module:packages/kilo-ui/src/components/accordion.tsx",
     "module:packages/kilo-ui/src/components/agent-avatar-identity.ts",
@@ -7014,6 +7072,7 @@
     "module:packages/kilo-vscode/src/services/notebook/path.ts",
     "module:packages/kilo-vscode/src/services/notebook/revision.ts",
     "module:packages/kilo-vscode/src/services/notebook/types.ts",
+    "module:packages/kilo-vscode/src/services/sandbox-preference.ts",
     "module:packages/kilo-vscode/src/services/task-cleanup/failure.ts",
     "module:packages/kilo-vscode/src/services/telemetry/errors.ts",
     "module:packages/kilo-vscode/src/services/telemetry/index.ts",
@@ -7209,6 +7268,8 @@
     "module:packages/kilo-vscode/tests/unit/run-script-manager.test.ts",
     "module:packages/kilo-vscode/tests/unit/run-script-service.test.ts",
     "module:packages/kilo-vscode/tests/unit/run-terminal-destination.test.ts",
+    "module:packages/kilo-vscode/tests/unit/sandbox-preference.test.ts",
+    "module:packages/kilo-vscode/tests/unit/sandboxing-settings.test.ts",
     "module:packages/kilo-vscode/tests/unit/script-terminal-manager.test.ts",
     "module:packages/kilo-vscode/tests/unit/search-match.test.ts",
     "module:packages/kilo-vscode/tests/unit/session-terminal-manager.test.ts",
@@ -7545,6 +7606,7 @@
     "module:packages/kilo-vscode/webview-ui/src/components/settings/ProviderConnectDialog.tsx",
     "module:packages/kilo-vscode/webview-ui/src/components/settings/ProviderSelectDialog.tsx",
     "module:packages/kilo-vscode/webview-ui/src/components/settings/ProvidersTab.tsx",
+    "module:packages/kilo-vscode/webview-ui/src/components/settings/SandboxingTab.tsx",
     "module:packages/kilo-vscode/webview-ui/src/components/settings/Settings.tsx",
     "module:packages/kilo-vscode/webview-ui/src/components/settings/SettingsRow.tsx",
     "module:packages/kilo-vscode/webview-ui/src/components/settings/SettingsSearch.tsx",
@@ -7558,6 +7620,7 @@
     "module:packages/kilo-vscode/webview-ui/src/components/settings/permission-utils.ts",
     "module:packages/kilo-vscode/webview-ui/src/components/settings/provider-catalog.ts",
     "module:packages/kilo-vscode/webview-ui/src/components/settings/provider-visibility.ts",
+    "module:packages/kilo-vscode/webview-ui/src/components/settings/sandboxing.ts",
     "module:packages/kilo-vscode/webview-ui/src/components/settings/settings-io.ts",
     "module:packages/kilo-vscode/webview-ui/src/components/settings/settings-search.ts",
     "module:packages/kilo-vscode/webview-ui/src/components/settings/useSettingsSearch.ts",
@@ -7569,6 +7632,7 @@
     "module:packages/kilo-vscode/webview-ui/src/components/shared/ModelPreview.tsx",
     "module:packages/kilo-vscode/webview-ui/src/components/shared/ModelSelector.tsx",
     "module:packages/kilo-vscode/webview-ui/src/components/shared/PopupSelector.tsx",
+    "module:packages/kilo-vscode/webview-ui/src/components/shared/SandboxButton.tsx",
     "module:packages/kilo-vscode/webview-ui/src/components/shared/SessionRenameEditor.tsx",
     "module:packages/kilo-vscode/webview-ui/src/components/shared/ShortcutKeys.tsx",
     "module:packages/kilo-vscode/webview-ui/src/components/shared/StatusText.tsx",
@@ -7742,6 +7806,16 @@
     "module:packages/opencode/src/kilocode/primary-worktree.ts",
     "module:packages/opencode/src/kilocode/review/command.ts",
     "module:packages/opencode/src/kilocode/review/review.txt",
+    "module:packages/opencode/src/kilocode/sandbox/activation.ts",
+    "module:packages/opencode/src/kilocode/sandbox/config.ts",
+    "module:packages/opencode/src/kilocode/sandbox/event.ts",
+    "module:packages/opencode/src/kilocode/sandbox/git.ts",
+    "module:packages/opencode/src/kilocode/sandbox/network-tools.ts",
+    "module:packages/opencode/src/kilocode/sandbox/network.ts",
+    "module:packages/opencode/src/kilocode/sandbox/policy.ts",
+    "module:packages/opencode/src/kilocode/sandbox/preference.ts",
+    "module:packages/opencode/src/kilocode/sandbox/state.ts",
+    "module:packages/opencode/src/kilocode/sandbox/store.ts",
     "module:packages/opencode/src/kilocode/server/httpapi/groups/commit-message.ts",
     "module:packages/opencode/src/kilocode/server/httpapi/handlers/commit-message.ts",
     "module:packages/opencode/src/kilocode/session/recall-search.ts",
@@ -7774,6 +7848,7 @@
     "module:packages/opencode/test/kilocode/free-model-disclosure.test.ts",
     "module:packages/opencode/test/kilocode/kilo-errors.test.ts",
     "module:packages/opencode/test/kilocode/kilo-gateway-headers.test.ts",
+    "module:packages/opencode/test/kilocode/legacy-sse-event.test.ts",
     "module:packages/opencode/test/kilocode/marketplace-companions.test.ts",
     "module:packages/opencode/test/kilocode/marketplace-installer.test.ts",
     "module:packages/opencode/test/kilocode/model-info-panel-utils.test.ts",
@@ -7788,6 +7863,18 @@
     "module:packages/opencode/test/kilocode/read-xlsx.test.ts",
     "module:packages/opencode/test/kilocode/recall-search.test.ts",
     "module:packages/opencode/test/kilocode/review-command.test.ts",
+    "module:packages/opencode/test/kilocode/sandbox/config-network.test.ts",
+    "module:packages/opencode/test/kilocode/sandbox/git.test.ts",
+    "module:packages/opencode/test/kilocode/sandbox/http-tools.test.ts",
+    "module:packages/opencode/test/kilocode/sandbox/macos-confinement.test.ts",
+    "module:packages/opencode/test/kilocode/sandbox/network.test.ts",
+    "module:packages/opencode/test/kilocode/sandbox/policy.test.ts",
+    "module:packages/opencode/test/kilocode/sandbox/sdk-config.test.ts",
+    "module:packages/opencode/test/kilocode/sandbox/session-tools.test.ts",
+    "module:packages/opencode/test/kilocode/sandbox/session.test.ts",
+    "module:packages/opencode/test/kilocode/sandbox/shell-network.test.ts",
+    "module:packages/opencode/test/kilocode/sandbox/state.test.ts",
+    "module:packages/opencode/test/kilocode/sandbox/tui.test.ts",
     "module:packages/opencode/test/kilocode/server/commit-message-no-changes.test.ts",
     "module:packages/opencode/test/kilocode/server/httpapi-kilo-edit.test.ts",
     "module:packages/opencode/test/kilocode/sidebar-footer.test.ts",
@@ -7837,6 +7924,20 @@
     "patch:provider-usage:b0945f511fb3",
     "patch:provider-usage:ce8e021f1ef6",
     "patch:review:efc710228c1f",
+    "patch:sandbox:00aa0cba90d1",
+    "patch:sandbox:37cf5fea540a",
+    "patch:sandbox:41a5c4f8070a",
+    "patch:sandbox:41a5c4f8070a",
+    "patch:sandbox:4918d15ae745",
+    "patch:sandbox:7d95c6cc13bc",
+    "patch:sandbox:859933ff55db",
+    "patch:sandbox:980b9e91078b",
+    "patch:sandbox:b09868b61af4",
+    "patch:sandbox:b534aff3ebec",
+    "patch:sandbox:d1999e0669a5",
+    "patch:sandbox:ea078ae48b40",
+    "patch:sandbox:fb2d03fdb710",
+    "patch:sandbox:fd6329a01ac1",
     "patch:server:5e0f8563b425",
     "patch:snapshot:80d332891272",
     "patch:snapshot:8579451b046f",
@@ -7866,6 +7967,12 @@
     "patch:unattributed:config:73db79553730",
     "patch:unattributed:config:8cdbdec70393",
     "patch:unattributed:core/database:a155cf41e765",
+    "patch:unattributed:core/v1:159079a2d8a3",
+    "patch:unattributed:core/v1:2e351a955982",
+    "patch:unattributed:core/v1:a177a3c0a84c",
+    "patch:unattributed:core/v1:a4a32558d64b",
+    "patch:unattributed:core/v1:eef8153da721",
+    "patch:unattributed:core/v1:efe2b3136dab",
     "patch:unattributed:core/v1:fb80dc4c3dd4",
     "patch:unattributed:session:13cc4c3e6a51",
     "patch:unattributed:session:142910b3fc8c",
@@ -7962,6 +8069,7 @@
     "patch:unattributed:agent:8c603298aa6d",
     "patch:unattributed:agent:92890c7740e7",
     "patch:unattributed:agent:d88711e4e0f0",
+    "patch:unattributed:core/v1:803d6139aabf",
     "patch:unattributed:tui/component:902bf97fd9cb"
   ]
 }

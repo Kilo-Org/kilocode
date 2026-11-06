@@ -7,16 +7,11 @@ import { mergeUserKeybindings } from "../src/keybinding-format"
 const ROOT = join(import.meta.dir, "..")
 
 type Binding = { command: string; key?: string; mac?: string; when?: string }
-type Contribution = {
-  type: string
-  properties: Record<string, { type: string; description?: string }>
-}
 type Manifest = {
   scripts: Record<string, string>
   repository: { type: string; url: string; directory: string }
   contributes: {
     configurationDefaults: Record<string, Record<string, boolean>>
-    taskDefinitions: Contribution[]
     configuration: { properties: Record<string, { default?: unknown }> }
     keybindings: Binding[]
   }
@@ -86,12 +81,6 @@ describe("extension manifest", () => {
     })
   })
 
-  it("declares the worktree setup task the setup runner creates", () => {
-    const definition = manifest.contributes.taskDefinitions.find((item) => item.type === "kilo-worktree-setup")
-    expect(definition?.properties.script.type).toBe("string")
-    expect(definition?.properties.worktree.type).toBe("string")
-  })
-
   it("unbinds the Problems view from the Agent Manager shortcut", () => {
     const unbind = manifest.contributes.keybindings.findIndex(
       (binding) => binding.command === "-workbench.actions.view.problems" && binding.key === "ctrl+shift+m",
@@ -103,8 +92,8 @@ describe("extension manifest", () => {
     expect(open).toBe(unbind + 1)
   })
 
-  it("shows the task timeline by default", () => {
-    expect(manifest.contributes.configuration.properties["kilo-code.v2.showTaskTimeline"]?.default).toBe(true)
+  it("collapses the task timeline by default", () => {
+    expect(manifest.contributes.configuration.properties["kilo-code.v2.showTaskTimeline"]?.default).toBe(false)
   })
 
   it("carries the CLI and bundles into the VSIX", () => {
