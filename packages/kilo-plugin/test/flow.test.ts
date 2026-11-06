@@ -19,6 +19,7 @@ import { testEffect } from "../../core/test/lib/effect"
 import { PluginTestLayer } from "../../core/test/plugin/fixture"
 
 const backingSchedules = new Map<Schedule.ID, Schedule.Info>()
+const createOptions: (Schedule.CreateOptions | undefined)[] = []
 let scheduleCounter = 0
 
 const it = testEffect(
@@ -26,8 +27,9 @@ const it = testEffect(
     PluginTestLayer,
     Layer.mock(Schedule.Service, {
       list: () => Effect.succeed([...backingSchedules.values()]),
-      create: (input) =>
+      create: (input, options) =>
         Effect.sync(() => {
+          createOptions.push(options)
           const now = Date.now()
           const schedule = Schema.decodeUnknownSync(Schedule.Info)({
             id: `sch_flow_${++scheduleCounter}`,
@@ -347,6 +349,7 @@ test("missing Sessions and malformed stored records are isolated", () => {
 it.live("registers and executes the managed Flow creation and run tools", () =>
   Effect.gen(function* () {
     backingSchedules.clear()
+    createOptions.length = 0
     scheduleCounter = 0
     const plugins = yield* Plugin.Service
     const context = yield* PluginHost.make(plugins)
@@ -507,6 +510,9 @@ it.live("registers and executes the managed Flow creation and run tools", () =>
       status: "active",
       nextRunAt: expect.any(Number),
     })
+    // The backing row must exist even where native schedules are disabled; the scheduler then fires it only when
+    // the Flow hook claims it (packages/kilo-cli/test/flow.test.ts covers the disabled project end to end).
+    expect(createOptions).toEqual([{ requireEnabled: false }])
     const backing = (yield* schedules.list())[0]
     if (!backing?.nextDueAt) return yield* Effect.die("Expected a due backing schedule")
     expect(yield* context.storage.get(`flow-schedule:v1:${backing.id}`)).toBe(created.output.reference.flowID)
@@ -515,6 +521,29 @@ it.live("registers and executes the managed Flow creation and run tools", () =>
       schedule: { ...backing, id: Schedule.ID.make("sch_mimic") },
     })
     expect(mimic.claimed).toBeUndefined()
+    yield* context.storage.set("flow-schedule:v1:sch_stale", "flw_missing")
+    const stale = yield* (yield* PluginHooks.Service).trigger("session", "experimental.schedule", {
+      sessionID: source.id,
+      schedule: { ...backing, id: Schedule.ID.make("sch_stale") },
+    })
+    expect(stale.claimed).toBeUndefined()
+    expect(yield* context.storage.get("flow-schedule:v1:sch_stale")).toBeUndefined()
+    const broken = Schema.decodeUnknownSync(KiloFlowRpc.Record)({
+      ...record("flw_broken", Schedule.ID.make("sch_broken")),
+      context: { directory: source.location.directory, projectID: source.projectID, agent: source.agent },
+    })
+    yield* context.storage.set(`flow:v1:${broken.id}`, JSON.stringify(broken))
+    yield* context.storage.set("flow-schedule:v1:sch_broken", broken.id)
+    const failedStart = yield* (yield* PluginHooks.Service)
+      .trigger("session", "experimental.schedule", {
+        sessionID: source.id,
+        schedule: { ...backing, id: Schedule.ID.make("sch_broken") },
+      })
+      .pipe(Effect.exit)
+    // A failed start stays unclaimed so the scheduler keeps the due time and retries it.
+    expect(failedStart._tag).toBe("Failure")
+    yield* context.storage.remove(`flow:v1:${broken.id}`)
+    yield* context.storage.remove("flow-schedule:v1:sch_broken")
     const activeID = KiloFlowRpc.RunID.make("flr_active")
     const active: KiloFlowRpc.Run = {
       version: 1,
@@ -564,7 +593,8 @@ it.live("registers and executes the managed Flow creation and run tools", () =>
       (yield* context.storage.scan({
         prefix: `flow-run:v1:${created.output.reference.flowID}:`,
       })).entries,
-    ).toHaveLength(20)
+    ).toHaveLength(21)
+    // Skipped placeholders keep their own budget of 20, so the active run and real history are never evicted.
     expect(yield* context.storage.get(`flow-run:v1:${active.flowID}:${active.id}`)).toBeDefined()
     yield* context.storage.remove(`flow-run:v1:${active.flowID}:${active.id}`)
     const attempts = yield* Effect.all(
@@ -670,6 +700,9 @@ it.live("registers and executes the managed Flow creation and run tools", () =>
       warnings: [],
     })
     yield* context.storage.set(`flow-run:v1:${created.output.reference.flowID}:bad`, "not json")
+    expect((yield* list(context, schedules, source.projectID)).warnings).toEqual([])
+    // The latest-run index avoids scanning run records on every poll; a rebuild reports malformed records.
+    yield* context.storage.remove(`flow-latest:v1:${created.output.reference.flowID}`)
     expect(yield* list(context, schedules, source.projectID)).toMatchObject({
       warnings: [
         {
@@ -679,5 +712,27 @@ it.live("registers and executes the managed Flow creation and run tools", () =>
         },
       ],
     })
+    yield* context.storage.remove(`flow-run:v1:${created.output.reference.flowID}:bad`)
+    const later = { ...backing, nextDueAt: DateTime.add(backing.nextDueAt, { days: 1 }) }
+    const laterID = KiloFlowRpc.RunID.make(
+      `flr_${created.output.reference.flowID.slice(4)}_${DateTime.toEpochMillis(later.nextDueAt)}`,
+    )
+    yield* context.storage.set(
+      `flow-run:v1:${created.output.reference.flowID}:${laterID}`,
+      JSON.stringify({
+        version: 1,
+        id: laterID,
+        flowID: created.output.reference.flowID,
+        status: "skipped",
+        worktree: "reuse",
+        time: { created: 1, updated: 1, completed: 1 },
+      }),
+    )
+    const retried = yield* hooks.trigger("session", "experimental.schedule", { sessionID: source.id, schedule: later })
+    // A slot skipped while another run was active is attempted again when it is re-dispatched.
+    expect(retried.claimed).toBeTrue()
+    expect(yield* context.storage.get(`flow-run:v1:${created.output.reference.flowID}:${laterID}`)).toContain(
+      '"status":"running"',
+    )
   }),
 )

@@ -470,13 +470,7 @@ const layer = Layer.effect(
       if (due === null || row.session_id === null) return
       if (!(yield* claimLeader(yield* Clock.currentTimeMillis))) return
       const session = yield* sessions.get(row.session_id)
-      if (!(yield* settings(session)).enabled) {
-        // Reading the flag boots the Session's location, so check again in an hour rather than every tick. The row
-        // keeps its due time, so once the flag is back on it catches up like any missed slot.
-        yield* update(row, { last_outcome: "disabled", retry_at: now + DISABLED_RETRY, time_updated: now })
-        return
-      }
-      // kilocode_change start - flows seam: offer the due occurrence to activated location plugins before prompt delivery
+      // kilocode_change start - flows seam: offer the due occurrence to activated location plugins before prompt delivery; a claimed occurrence is owned by its plugin, so only unclaimed ones honor the native flag
       const claimed =
         row.check === null
           ? yield* Effect.gen(function* () {
@@ -491,6 +485,12 @@ const layer = Layer.effect(
             }).pipe(instances.provide(session))
           : false
       // kilocode_change end
+      if (!claimed && !(yield* settings(session)).enabled) { // kilocode_change(flows) seam - plugin-claimed occurrences bypass the native flag
+        // Reading the flag boots the Session's location, so check again in an hour rather than every tick. The row
+        // keeps its due time, so once the flag is back on it catches up like any missed slot.
+        yield* update(row, { last_outcome: "disabled", retry_at: now + DISABLED_RETRY, time_updated: now })
+        return
+      }
       if (row.last_message_id !== null && (yield* pending(row.last_message_id))) {
         // The wake that followed admission may have been lost; waking again is harmless.
         yield* execution.wake(session.id)

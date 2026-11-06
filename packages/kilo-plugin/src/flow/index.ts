@@ -24,15 +24,23 @@ const prefix = "flow:v1:"
 const runPrefix = "flow-run:v1:"
 const activePrefix = "flow-active:v1:"
 const schedulePrefix = "flow-schedule:v1:"
+const latestPrefix = "flow-latest:v1:"
 const metadataKey = "kilocode.flow"
 const permissionAction = "flow"
 const retainedRuns = 20
+const lookups = 8
 const decodeRecord = Schema.decodeUnknownOption(
   Schema.Union([KiloFlowRpc.Record, Schema.fromJsonString(KiloFlowRpc.Record)]),
 )
 const decodeRun = Schema.decodeUnknownOption(Schema.Union([KiloFlowRpc.Run, Schema.fromJsonString(KiloFlowRpc.Run)]))
 const decodeFlowID = Schema.decodeUnknownOption(KiloFlowRpc.ID)
 const decodeRunID = Schema.decodeUnknownOption(KiloFlowRpc.RunID)
+const decodeOwner = Schema.decodeUnknownOption(
+  Schema.Union([
+    Schema.Struct({ context: Schema.Struct({ projectID: Schema.String }) }),
+    Schema.fromJsonString(Schema.Struct({ context: Schema.Struct({ projectID: Schema.String }) })),
+  ]),
+)
 const decodeMetadata = Schema.decodeUnknownOption(Schema.Struct({ flowID: KiloFlowRpc.ID, runID: KiloFlowRpc.RunID }))
 const decodeBlockedPermission = Schema.decodeUnknownOption(
   Schema.Struct({
@@ -61,8 +69,11 @@ export const KiloFlowPlugin = define({
       Effect.gen(function* () {
         const flowID = Option.getOrUndefined(decodeFlowID(yield* ctx.storage.get(scheduleKey(event.schedule.id))))
         if (flowID === undefined) return
+        // Claim only once the occurrence has started or was deliberately skipped. A start failure dies here so the
+        // scheduler keeps the due time and retries with its failed-retry backoff instead of advancing the row.
+        const outcome = yield* scheduled(ctx, event.schedule, flowID, runtime).pipe(Effect.orDie)
+        if (outcome === "orphaned") return
         event.claimed = true
-        yield* scheduled(ctx, event.schedule, flowID, runtime)
       }),
     )
     yield* ctx.session.hook("context", (event) =>
@@ -151,17 +162,20 @@ export const KiloFlowPlugin = define({
           options: { codemode: true },
           execute: (input, context) => {
             const selection = selections.get(context.sessionID)
-            return create(
-              ctx,
-              schedules,
-              {
-                ...input,
-                sourceSessionID: context.sessionID,
-                model: input.model ?? selection?.model,
-                agent: input.agent ?? selection?.agent ?? context.agent,
-              },
-              undefined,
-            ).pipe(
+            return ctx.session.get({ sessionID: context.sessionID }).pipe(
+              Effect.flatMap((session) =>
+                create(
+                  ctx,
+                  schedules,
+                  {
+                    ...input,
+                    sourceSessionID: context.sessionID,
+                    model: input.model ?? selection?.model,
+                    agent: input.agent ?? selection?.agent ?? context.agent,
+                  },
+                  session.projectID,
+                ),
+              ),
               Effect.map((flow) => ({
                 output: flow,
                 content: `Created scheduled Flow ${flow.name} with ${permissionSummary(flow.permissions ?? [])}. Start an extra run manually with flow_run using Flow ID ${flow.reference.type === "managed" ? flow.reference.flowID : "unknown"}.`,
@@ -335,8 +349,7 @@ function control(
       ? schedules.pause(record.scheduleID)
       : schedules.resume(record.scheduleID)
     ).pipe(Effect.mapError((error) => new Error(error.message)))
-    const storedRuns = yield* runs(ctx, [record.id])
-    return managed(record, schedule, latestRun(storedRuns.runs, record.id))
+    return managed(record, schedule, (yield* latest(ctx, record.id)).run)
   })
 }
 
@@ -358,15 +371,17 @@ function remove(
           yield* schedules.remove(record.scheduleID).pipe(
             Effect.catchTag("Schedule.NotFoundError", () => Effect.void),
           )
-        yield* removeRuns(ctx, record.id)
+        // Remove the definition keys first so a failed run cleanup cannot leave a half-removed Flow listed.
         yield* Effect.all(
           [
             ctx.storage.remove(`${prefix}${record.id}`),
             ctx.storage.remove(activeKey(record.id)),
+            ctx.storage.remove(latestKey(record.id)),
             ...(record.scheduleID ? [ctx.storage.remove(scheduleKey(record.scheduleID))] : []),
           ],
           { discard: true },
         )
+        yield* removeRuns(ctx, record.id)
       }),
     )
     if (runtime.locks.get(record.id) === lock) runtime.locks.delete(record.id)
@@ -391,11 +406,15 @@ export function scheduled(
   schedule: Schedule.Info,
   flowID: KiloFlowRpc.ID,
   runtime: Runtime,
-): Effect.Effect<"fired" | "skipped" | "failed"> {
+): Effect.Effect<"fired" | "skipped" | "orphaned", Error> {
   return Effect.gen(function* () {
     const record = Option.getOrUndefined(decodeRecord(yield* ctx.storage.get(`${prefix}${flowID}`)))
-    if (!record || record.id !== flowID || (record.scheduleID !== undefined && record.scheduleID !== schedule.id))
-      return yield* Effect.fail(new Error(`Backing schedule ${schedule.id} has no matching Flow ${flowID}`))
+    if (!record || record.id !== flowID || (record.scheduleID !== undefined && record.scheduleID !== schedule.id)) {
+      // A stale index must not retry forever; the hook action is never admitted, so the row simply advances.
+      yield* Effect.logWarning("removing stale Flow schedule index", { scheduleID: schedule.id, flowID })
+      yield* ctx.storage.remove(scheduleKey(schedule.id))
+      return "orphaned" as const
+    }
     if (schedule.nextDueAt === undefined)
       return yield* Effect.fail(new Error(`Backing schedule ${schedule.id} has no due time`))
     const dueAt = DateTime.toEpochMillis(schedule.nextDueAt)
@@ -406,16 +425,11 @@ export function scheduled(
       runtime,
       { scheduleID: schedule.id, dueAt },
     )
-    if (execution.status === "skipped") return "skipped"
-    if (execution.status === "failed") return "failed"
-    return "fired"
-  }).pipe(
-    Effect.catchCause((cause) =>
-      Effect.logError("scheduled Flow failed to dispatch", { scheduleID: schedule.id, flowID, cause }).pipe(
-        Effect.as("failed" as const),
-      ),
-    ),
-  )
+    if (execution.status === "skipped") return "skipped" as const
+    if (execution.status === "failed" && execution.time.started === undefined)
+      return yield* Effect.fail(new Error(execution.error ?? `Flow ${record.id} failed to start`))
+    return "fired" as const
+  })
 }
 
 function start(
@@ -438,7 +452,9 @@ function start(
 
       const key = runKey({ flowID: record.id, id: runID })
       const existing = Option.getOrUndefined(decodeRun(yield* ctx.storage.get(key)))
-      if (existing?.flowID === record.id && existing.id === runID) return existing
+      // A re-dispatched occurrence reuses its deterministic run. Only a run that reached its Session is final:
+      // a skipped slot or a start that failed before the Session existed is attempted again.
+      if (existing?.flowID === record.id && existing.id === runID && !retryable(existing)) return existing
 
       const now = Date.now()
       if (yield* reconcileFlowActive(ctx, record.id)) {
@@ -575,12 +591,19 @@ export function list(
         : []
     const stored = yield* records(ctx)
     const scopedRecords = stored.records.filter((record) => record.context.projectID === projectID)
-    const storedRuns = yield* runs(
-      ctx,
-      scopedRecords.map((record) => record.id),
+    // Storage failures and records whose owner can't be read stay visible; another project's records stay hidden.
+    const storedWarnings = stored.warnings
+      .filter((item) => item.projectID === undefined || item.projectID === projectID)
+      .map((item) => item.warning)
+    const latestRuns = yield* Effect.forEach(scopedRecords, (record) => latest(ctx, record.id), {
+      concurrency: lookups,
+    })
+    const managedScheduleIDs = new Set(
+      stored.records.flatMap((record) => (record.scheduleID ? [record.scheduleID] : [])),
     )
+    const unowned = native.filter((schedule) => !managedScheduleIDs.has(schedule.id))
     const sessions = yield* Effect.forEach(
-      native,
+      unowned,
       (schedule) =>
         schedule.sessionID === undefined
           ? Effect.succeed([schedule.id, undefined] as const)
@@ -591,11 +614,8 @@ export function list(
                 Effect.catchCause(() => Effect.succeed(Option.none<Session.Info>())),
               )
               .pipe(Effect.map((session) => [schedule.id, Option.getOrUndefined(session)] as const)),
-      { concurrency: "unbounded" },
+      { concurrency: lookups },
     ).pipe(Effect.map((entries) => new Map(entries)))
-    const managedScheduleIDs = new Set(
-      stored.records.flatMap((record) => (record.scheduleID ? [record.scheduleID] : [])),
-    )
     const scopedManagedScheduleIDs = new Set(
       scopedRecords.flatMap((record) => (record.scheduleID ? [record.scheduleID] : [])),
     )
@@ -606,10 +626,10 @@ export function list(
     )
     return assemble({
       records: scopedRecords,
-      runs: storedRuns.runs,
+      runs: latestRuns.flatMap((item) => (item.run ? [item.run] : [])),
       schedules: scopedSchedules,
       sessions,
-      warnings: [...nativeWarnings, ...storedRuns.warnings],
+      warnings: [...nativeWarnings, ...storedWarnings, ...latestRuns.flatMap((item) => item.warnings)],
       observedAt,
     })
   })
@@ -705,7 +725,7 @@ function managed(
   }
 }
 
-function outcome(run: KiloFlowRpc.Run): KiloFlowRpc.Outcome | undefined {
+function outcome(run: KiloFlowRpc.Run): KiloFlowRpc.RunOutcome | undefined {
   if (run.status === "succeeded" || run.status === "failed" || run.status === "interrupted" || run.status === "skipped")
     return run.status
   return undefined
@@ -769,27 +789,38 @@ function instant(value: DateTime.Utc | undefined) {
   return value && DateTime.toEpochMillis(value)
 }
 
-function records(ctx: Plugin.Context) {
+type Entry = { readonly key: string; readonly value: Schema.Json }
+
+/** Pages through a storage prefix. A failed or defective scan keeps the entries already read and reports why. */
+function scan(ctx: Plugin.Context, from: string) {
+  const entries: Entry[] = []
   return Effect.gen(function* () {
-    const found: KiloFlowRpc.Record[] = []
-    const warnings: KiloFlowRpc.Warning[] = []
     let after: string | undefined
     do {
-      const page = yield* ctx.storage.scan({ prefix, after }).pipe(Effect.result)
-      if (page._tag === "Failure") {
-        warnings.push({
-          source: "managed",
-          message: `Couldn't read managed Flow records: ${Cause.pretty(page.failure)}`,
-        })
-        break
-      }
-      page.success.entries.forEach((entry) => {
-        const decoded = storedRecord(entry.key, entry.value)
-        if (decoded.record) found.push(decoded.record)
-        if (decoded.warning) warnings.push(decoded.warning)
-      })
-      after = page.success.next
+      const page = yield* ctx.storage.scan({ prefix: from, after })
+      entries.push(...page.entries)
+      after = page.next
     } while (after !== undefined)
+    return { entries, error: undefined as string | undefined }
+  }).pipe(
+    Effect.catchCause((cause) =>
+      Cause.hasInterruptsOnly(cause) ? Effect.interrupt : Effect.succeed({ entries, error: Cause.pretty(cause) }),
+    ),
+  )
+}
+
+function records(ctx: Plugin.Context) {
+  return Effect.gen(function* () {
+    const page = yield* scan(ctx, prefix)
+    const found: KiloFlowRpc.Record[] = []
+    const warnings: { readonly warning: KiloFlowRpc.Warning; readonly projectID?: string }[] = page.error
+      ? [{ warning: { source: "managed", message: `Couldn't read managed Flow records: ${page.error}` } }]
+      : []
+    page.entries.forEach((entry) => {
+      const decoded = storedRecord(entry.key, entry.value)
+      if (decoded.record) found.push(decoded.record)
+      if (decoded.warning) warnings.push({ warning: decoded.warning, projectID: owner(entry.value) })
+    })
     return { records: found, warnings }
   })
 }
@@ -802,29 +833,23 @@ function runs(ctx: Plugin.Context, flowIDs: readonly KiloFlowRpc.ID[]) {
       flowIDs,
       (flowID) =>
         Effect.gen(function* () {
-          let after: string | undefined
-          do {
-            const page = yield* ctx.storage.scan({ prefix: `${runPrefix}${flowID}:`, after }).pipe(Effect.result)
-            if (page._tag === "Failure") {
+          const page = yield* scan(ctx, `${runPrefix}${flowID}:`)
+          if (page.error)
+            warnings.push({
+              source: "managed-run",
+              reference: flowID,
+              message: `Couldn't read Flow run records: ${page.error}`,
+            })
+          page.entries.forEach((entry) => {
+            const decoded = Option.getOrUndefined(decodeRun(entry.value))
+            if (decoded && decoded.flowID === flowID && entry.key === runKey(decoded)) found.push(decoded)
+            else
               warnings.push({
                 source: "managed-run",
-                reference: flowID,
-                message: `Couldn't read Flow run records: ${Cause.pretty(page.failure)}`,
+                reference: entry.key,
+                message: "Stored Flow run record is malformed or stale",
               })
-              break
-            }
-            page.success.entries.forEach((entry) => {
-              const decoded = Option.getOrUndefined(decodeRun(entry.value))
-              if (decoded && decoded.flowID === flowID && entry.key === runKey(decoded)) found.push(decoded)
-              else
-                warnings.push({
-                  source: "managed-run",
-                  reference: entry.key,
-                  message: "Stored Flow run record is malformed or stale",
-                })
-            })
-            after = page.success.next
-          } while (after !== undefined)
+          })
         }),
       { discard: true },
     )
@@ -832,25 +857,40 @@ function runs(ctx: Plugin.Context, flowIDs: readonly KiloFlowRpc.ID[]) {
   })
 }
 
+function newest(left: KiloFlowRpc.Run, right: KiloFlowRpc.Run) {
+  return right.time.created - left.time.created || right.id.localeCompare(left.id)
+}
+
 function latestRun(runs: readonly KiloFlowRpc.Run[], flowID: KiloFlowRpc.ID) {
-  return runs
-    .filter((run) => run.flowID === flowID && run.status !== "skipped")
-    .toSorted(
-      (left, right) =>
-        right.time.created - left.time.created || right.id.localeCompare(left.id),
-    )[0]
+  return runs.filter((run) => run.flowID === flowID && run.status !== "skipped").toSorted(newest)[0]
+}
+
+/** Reads the latest non-skipped run through its index, rebuilding the index from the run records when it is absent. */
+function latest(ctx: Plugin.Context, flowID: KiloFlowRpc.ID) {
+  return Effect.gen(function* () {
+    const id = Option.getOrUndefined(decodeRunID(yield* ctx.storage.get(latestKey(flowID))))
+    const indexed = id && Option.getOrUndefined(decodeRun(yield* ctx.storage.get(runKey({ flowID, id }))))
+    if (indexed && indexed.flowID === flowID && indexed.id === id && indexed.status !== "skipped")
+      return { run: indexed, warnings: [] }
+    const stored = yield* runs(ctx, [flowID])
+    const run = latestRun(stored.runs, flowID)
+    if (run) yield* ctx.storage.set(latestKey(flowID), run.id)
+    if (!run && id) yield* ctx.storage.remove(latestKey(flowID))
+    return { run, warnings: stored.warnings }
+  })
 }
 
 function pruneRuns(ctx: Plugin.Context, flowID: KiloFlowRpc.ID) {
   return Effect.gen(function* () {
     const stored = yield* runs(ctx, [flowID])
     const active = Option.getOrUndefined(decodeRunID(yield* ctx.storage.get(activeKey(flowID))))
-    const keep = new Set<KiloFlowRpc.RunID>(active ? [active] : [])
-    stored.runs
-      .toSorted((left, right) => right.time.created - left.time.created || right.id.localeCompare(left.id))
-      .forEach((run) => {
-        if (keep.size < retainedRuns) keep.add(run.id)
-      })
+    const sorted = stored.runs.toSorted(newest)
+    // Skipped placeholders have their own budget so frequent skips never evict real execution history.
+    const keep = new Set<KiloFlowRpc.RunID>([
+      ...(active ? [active] : []),
+      ...sorted.filter((run) => run.status !== "skipped").slice(0, retainedRuns).map((run) => run.id),
+      ...sorted.filter((run) => run.status === "skipped").slice(0, retainedRuns).map((run) => run.id),
+    ])
     const stale = stored.runs.filter((run) => !keep.has(run.id))
     yield* Effect.forEach(stale, (run) => ctx.storage.remove(runKey(run)), { discard: true })
   })
@@ -858,19 +898,25 @@ function pruneRuns(ctx: Plugin.Context, flowID: KiloFlowRpc.ID) {
 
 function removeRuns(ctx: Plugin.Context, flowID: KiloFlowRpc.ID) {
   return Effect.gen(function* () {
-    let after: string | undefined
-    do {
-      const page = yield* ctx.storage.scan({ prefix: `${runPrefix}${flowID}:`, after })
-      yield* Effect.forEach(page.entries, (entry) => ctx.storage.remove(entry.key), { discard: true })
-      after = page.next
-    } while (after !== undefined)
+    const page = yield* scan(ctx, `${runPrefix}${flowID}:`)
+    yield* Effect.forEach(page.entries, (entry) => ctx.storage.remove(entry.key), { discard: true })
+    if (page.error) yield* Effect.logWarning("failed to remove every Flow run record", { flowID, error: page.error })
   })
 }
 
 function persistRun(ctx: Plugin.Context, run: KiloFlowRpc.Run) {
-  return ctx.storage
-    .set(runKey(run), JSON.stringify(run))
-    .pipe(Effect.andThen(pruneRuns(ctx, run.flowID)))
+  return Effect.gen(function* () {
+    yield* ctx.storage.set(runKey(run), JSON.stringify(run))
+    if (run.status !== "skipped") {
+      const id = Option.getOrUndefined(decodeRunID(yield* ctx.storage.get(latestKey(run.flowID))))
+      const current =
+        id && id !== run.id
+          ? Option.getOrUndefined(decodeRun(yield* ctx.storage.get(runKey({ flowID: run.flowID, id }))))
+          : undefined
+      if (id !== run.id && (!current || newest(run, current) <= 0)) yield* ctx.storage.set(latestKey(run.flowID), run.id)
+    }
+    yield* pruneRuns(ctx, run.flowID)
+  })
 }
 
 function reconcileActive(ctx: Plugin.Context, runtime: Runtime) {
@@ -950,6 +996,19 @@ function scheduleKey(scheduleID: Schedule.ID) {
   return `${schedulePrefix}${scheduleID}`
 }
 
+function latestKey(flowID: KiloFlowRpc.ID) {
+  return `${latestPrefix}${flowID}`
+}
+
+/** The project of a stored record that no longer decodes, when its context can still be read. */
+function owner(value: Schema.Json) {
+  return Option.getOrUndefined(decodeOwner(value))?.context.projectID
+}
+
+function retryable(run: KiloFlowRpc.Run) {
+  return run.status === "skipped" || (run.status === "failed" && run.time.started === undefined)
+}
+
 function complete(
   ctx: Plugin.Context,
   runtime: Runtime,
@@ -997,14 +1056,15 @@ function permissionFailed(
 ) {
   return Effect.gen(function* () {
     const session = yield* ctx.session.get({ sessionID })
-    yield* withStoredRun(ctx, runtime, session, (stored) =>
+    const matched = yield* withStoredRun(ctx, runtime, session, (stored) =>
       persistRun(ctx, {
         ...stored,
         error: `Flow permission policy blocked ${permission} for ${resources.map((resource) => JSON.stringify(resource)).join(", ")} while running ${tool}`,
         time: { ...stored.time, updated: Date.now() },
       }),
     )
-    yield* ctx.session.interrupt({ sessionID }).pipe(Effect.ignore)
+    // Only an active Flow run is stopped. Ordinary Sessions keep the tool error and continue.
+    if (matched) yield* ctx.session.interrupt({ sessionID }).pipe(Effect.ignore)
   }).pipe(
     Effect.catchCause((cause) =>
       Effect.logWarning("failed to record Flow permission error", { sessionID, tool, cause }),
@@ -1020,15 +1080,16 @@ function withStoredRun(
 ) {
   return Effect.gen(function* () {
     const metadata = Option.getOrUndefined(decodeMetadata(session.metadata?.[metadataKey]))
-    if (!metadata) return
-    yield* flowLock(runtime, metadata.flowID).withPermit(
+    if (!metadata) return false
+    return yield* flowLock(runtime, metadata.flowID).withPermit(
       Effect.gen(function* () {
         const stored = Option.getOrUndefined(
           decodeRun(yield* ctx.storage.get(runKey({ flowID: metadata.flowID, id: metadata.runID }))),
         )
-        if (!stored || stored.sessionID !== session.id) return
-        if (stored.status !== "starting" && stored.status !== "running") return
+        if (!stored || stored.sessionID !== session.id) return false
+        if (stored.status !== "starting" && stored.status !== "running") return false
         yield* update(stored)
+        return true
       }),
     )
   })

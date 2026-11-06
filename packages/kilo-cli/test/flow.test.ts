@@ -440,7 +440,7 @@ test("lists local schedules and creates managed definitions through the Kilo Flo
                 sourceSessionID: disabled.id,
                 name: "Disabled reminder",
                 when: { in: "10 millis" },
-                prompt: "This must not run while schedules are disabled",
+                prompt: "Runs although native schedules are disabled",
                 worktree: "reuse",
                 permissions: [],
               },
@@ -461,12 +461,22 @@ test("lists local schedules and creates managed definitions through the Kilo Flo
             const disabledFlowID = disabledFlow.reference.flowID
             await Bun.sleep(20)
             await Effect.runPromise(schedules.tick)
+            // The Flow owns its backing row, so it fires even though native schedules are off in this project;
+            // the native prompt is still never admitted to the source Session.
             expect((await client.message.list({ sessionID: disabled.id })).data).toEqual([])
+            expect(await client.session.inbox.list({ sessionID: disabled.id })).toEqual([])
             const disabledListed = (await rpc.list({}, { location: { directory: projects[2]! } })).flows.find(
               (flow) => flow.reference.type === "managed" && flow.reference.flowID === disabledFlowID,
             )
-            expect(disabledListed).toMatchObject({ name: "Disabled reminder", lastOutcome: "disabled" })
-            expect(disabledListed?.latestRun).toBeUndefined()
+            expect(disabledListed).toMatchObject({
+              name: "Disabled reminder",
+              status: "completed",
+              lastOutcome: expect.stringMatching(/^(fired|succeeded|failed)$/),
+              latestRun: expect.objectContaining({
+                status: expect.stringMatching(/^(running|succeeded|failed)$/),
+                scheduled: expect.objectContaining({ scheduleID: disabledFlow.reference.scheduleID }),
+              }),
+            })
             await rpc.remove(
               { flowID: disabledFlowID },
               { location: { directory: projects[2]! } },

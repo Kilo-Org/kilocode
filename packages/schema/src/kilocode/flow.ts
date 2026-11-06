@@ -160,8 +160,20 @@ export const Run = Schema.Struct({
 }).annotate({ identifier: "KiloFlow.Run.V1" })
 export type Run = typeof Run.Type
 
-export const Outcome = Schema.Union([Schedule.Outcome, Schema.Literals(["succeeded", "interrupted"])]).annotate({
+/** Outcome of a managed Flow run, the only outcome a managed Flow reports once it has run. */
+export const RunOutcome = Schema.Literals(["succeeded", "failed", "interrupted", "skipped"]).annotate({
+  identifier: "KiloFlow.RunOutcome",
+})
+export type RunOutcome = typeof RunOutcome.Type
+
+/**
+ * A run outcome for a managed Flow that has run. A native schedule, or a managed Flow before its first run, reports
+ * its backing schedule's outcome instead.
+ */
+export const Outcome = Schema.Union([RunOutcome, Schedule.Outcome]).annotate({
   identifier: "KiloFlow.Outcome",
+  description:
+    "Managed Flows report a run outcome (succeeded, failed, interrupted, skipped) once they have run. Native schedules, and managed Flows before their first run, report the backing schedule's outcome.",
 })
 export type Outcome = typeof Outcome.Type
 

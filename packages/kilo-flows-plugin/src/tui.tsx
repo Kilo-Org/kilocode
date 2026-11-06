@@ -64,6 +64,17 @@ export function FlowsPage(props: {
   const flows = createMemo(() => [...(result()?.flows ?? [])].sort(compare))
   const warning = createMemo(() => (!stale() ? result()?.warnings[0] : undefined))
 
+  // Re-sorting after a refresh or a status change keeps the cursor on the same Flow rather than the same row.
+  function replace(next: KiloFlowRpc.ListOutput) {
+    const current = flows()[selected()]
+    setResult(next)
+    if (!current) return
+    const index = flows().findIndex((flow) => key(flow) === key(current))
+    if (index < 0 || index === selected()) return
+    setSelected(index)
+    reveal(index)
+  }
+
   function reveal(index: number) {
     props.context.renderer.requestAnimationFrame(() => {
       const row = scroll?.getChildren()[index]
@@ -113,7 +124,7 @@ export function FlowsPage(props: {
       if (signal.aborted) return
       const current = result()
       if (!current) return
-      setResult({
+      replace({
         ...current,
         flows:
           method === "remove"
@@ -144,7 +155,7 @@ export function FlowsPage(props: {
     try {
       const next = await load(signal)
       if (signal.aborted) return
-      setResult(next)
+      replace(next)
       setError("")
       setStale(false)
     } catch (cause) {
@@ -309,9 +320,14 @@ export function FlowsPage(props: {
   )
 }
 
+const rank: Record<KiloFlowRpc.Status, number> = { error: 0, active: 1, paused: 2, completed: 3 }
+
+function key(flow: KiloFlowRpc.Info) {
+  return flow.reference.type === "managed" ? flow.reference.flowID : flow.reference.scheduleID
+}
+
 function compare(left: KiloFlowRpc.Info, right: KiloFlowRpc.Info) {
-  const rank = { error: 0, active: 1, paused: 2, completed: 3 }
-  const ordered = rank[left.status] - rank[right.status]
+  const ordered = (rank[left.status] ?? rank.error) - (rank[right.status] ?? rank.error)
   if (ordered !== 0) return ordered
   if (left.status === "active" && right.status === "active")
     return (left.nextRunAt ?? Number.POSITIVE_INFINITY) - (right.nextRunAt ?? Number.POSITIVE_INFINITY)
