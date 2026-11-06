@@ -1,4 +1,22 @@
 {
+  "module:packages/core/src/kilocode/db-preflight.ts": {
+    "state": "native",
+    "v2": "packages/core/src/database/database.ts",
+    "note": "v1's DbPreflight.assertWritable existed so a read-only database did not crash startup at PRAGMA wal_checkpoint. v2 gained restrictToOwner (packages/core/src/database/database.ts:88), which chmods the db and its -wal/-shm to 0o600 (restoring the write bit for an owned file on POSIX) in layer() before the pragmas run, so the crash the preflight guarded is already prevented natively. The only residual v1 behavior not carried is turning a few rare opaque errors (a non-owned file, or a custom KILO2_DB in a bad directory) into actionable messages; that enhancement was judged not worth a shared-file patch (PR #15800).",
+    "by": "db-preflight-native"
+  },
+  "module:packages/core/test/kilocode/db-preflight.test.ts": {
+    "state": "native",
+    "v2": "packages/core/test/database.test.ts",
+    "note": "The v1 preflight test asserted the db is writable before the pragmas. v2's packages/core/test/database.test.ts ('tightens an existing database and sidecars') covers restrictToOwner restoring 0o600 on an existing db and sidecars, which is the equivalent guarantee.",
+    "by": "db-preflight-native"
+  },
+  "patch:db-preflight:7186ff6558e9": {
+    "state": "native",
+    "v2": "packages/core/src/database/database.ts",
+    "note": "The v1 database.ts hunk's db-preflight behavior (writable db before wal_checkpoint) is native via restrictToOwner; the hunk's other sub-behaviors are native in v2 (pragma ordering, build-time path resolution via Layer.unwrap, channel path in cli/src/database-path.ts) or tracked under the already-resolved database-compat feature. No Kilo patch is needed.",
+    "by": "db-preflight-native"
+  },
   "module:packages/core/src/kilocode/global.ts": {
     "state": "ported",
     "v2": "packages/kilo-cli/src/global-resilience.ts",
