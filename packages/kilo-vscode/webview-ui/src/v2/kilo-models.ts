@@ -4,7 +4,7 @@
 // default model over the recent picks.
 import type { ModelInfo, OpenCodeClient } from "@opencode/client"
 import { KiloGatewayRpc } from "@opencode/schema/kilocode/gateway"
-import { createEffect, createSignal, on, type Accessor } from "solid-js"
+import { createEffect, createSignal, on, type Accessor, type Setter } from "solid-js"
 
 export type KiloModelEntry = KiloGatewayRpc.ModelEntry
 
@@ -17,6 +17,18 @@ export type KiloModels = {
 }
 
 const EMPTY: KiloModels = { entries: new Map(), organizationID: undefined, ready: false }
+
+/** The metadata of one server connection, shared by every directory store that reads it. */
+export type KiloModelsCache = {
+  readonly value: Accessor<KiloModels>
+  readonly set: Setter<KiloModels>
+  readonly state: { read: number }
+}
+
+export function createKiloModelsCache(): KiloModelsCache {
+  const [value, set] = createSignal(EMPTY)
+  return { value, set, state: { read: 0 } }
+}
 
 /** Whether a new session takes the team default: undefined until the account is known. */
 export function kiloTeam(value: KiloModels) {
@@ -34,26 +46,27 @@ export function createKiloModels(input: {
   api: OpenCodeClient
   directory: string
   models: Accessor<ModelInfo[] | undefined>
+  /** Shared per connection by the Agent Manager; a store created alone keeps its own copy. */
+  cache?: KiloModelsCache
 }): Accessor<KiloModels> {
   const rpc = input.api.rpc(KiloGatewayRpc.Definition)
   const location = { location: { directory: input.directory } }
-  const [value, setValue] = createSignal(EMPTY)
-  const state = { read: 0 }
+  const cache = input.cache ?? createKiloModelsCache()
   createEffect(
     on(input.models, (models) => {
-      const read = ++state.read
       if (!models) return
+      const read = ++cache.state.read
       // Without Kilo models there is no team default to prefer (the server default is not a team model), so the
       // recents may win. A team switch reload keeps the team it had before.
-      if (!models.some((model) => model.providerID === "kilo")) return setValue((prev) => ({ ...prev, ready: true }))
+      if (!models.some((model) => model.providerID === "kilo")) return cache.set((prev) => ({ ...prev, ready: true }))
       void Promise.all([
         rpc.models({}, location).catch(() => []),
         rpc.authStatus({}, location).catch(() => undefined),
       ]).then(([entries, auth]) => {
-        if (read !== state.read) return
+        if (read !== cache.state.read) return
         // A failed account read keeps the account unknown (or the team known before), so a recent pick cannot
         // replace the team default of a team account.
-        setValue((prev) => ({
+        cache.set((prev) => ({
           entries: new Map(entries.map((entry) => [entry.id, entry])),
           organizationID: auth ? (auth.authenticated ? auth.organizationID : undefined) : prev.organizationID,
           ready: auth ? true : prev.ready,
@@ -61,5 +74,5 @@ export function createKiloModels(input: {
       })
     }),
   )
-  return value
+  return cache.value
 }

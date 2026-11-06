@@ -798,6 +798,17 @@ const AgentManagerContent: Component = () => {
     managed: managedSessions,
     locals: localSet,
   })
+  // Past-chat mentions use the loaded session lists plus the host catalog, so a worktree whose store is not shown yet
+  // still offers its sessions.
+  const mentionSessions = createMemo(() => {
+    const known = new Map<string, { id: string; title: string; updated: number }>()
+    const add = (info: { id: string; title?: string; time: { updated: number } }) => {
+      if (info.title) known.set(info.id, { id: info.id, title: info.title, updated: info.time.updated })
+    }
+    for (const info of sessions.sessions()) add(info)
+    for (const info of projectSessionsLive()[currentProjectId() ?? ""] ?? []) add(info)
+    return [...known.values()].toSorted((a, b) => b.updated - a.updated)
+  })
   const { references, dialogRefs } = createMentionRefs(vscode, registry.active, projectSessionsLive.current, selection)
   const historySessionIds = createMemo(() => {
     const pid = historyProject()
@@ -1707,7 +1718,7 @@ const AgentManagerContent: Component = () => {
             providers={appSession.providers()}
             agents={appSession.agents()}
             commands={appSession.commands()}
-            sessions={appSession.mentionSessions()}
+            sessions={mentionSessions()}
           />
         </SpeechToTextStatusProvider>
       </V2Scope>

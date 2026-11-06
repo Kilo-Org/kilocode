@@ -34,6 +34,9 @@ export function createAppSession(opts: {
     directoryOf: opts.directories.directoryOf,
   })
 
+  // Load session lists only for directories the panel shows; a worktree loads its list when it is selected.
+  createEffect(() => panel.show(opts.directories.visibleDirectories()))
+
   const rootStore = createMemo(() => {
     const directory = opts.rootDirectory()
     return directory ? panel.store(directory) : undefined
