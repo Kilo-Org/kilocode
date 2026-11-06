@@ -43,6 +43,8 @@ export function SessionView(props: {
   onShowHistory: () => void
   /** The row above the dock; receives whether the session has messages and the todo element it trails. */
   row?: (hasMessages: boolean, todos: JSX.Element) => JSX.Element
+  /** Shows the row before the first message too. */
+  rowWhenEmpty?: boolean
   /** Replaces the welcome screen of an empty session. */
   empty?: () => JSX.Element
   /** Read-only sessions show the transcript without docks and prompt. */
@@ -61,7 +63,6 @@ export function SessionView(props: {
   onComposerReady?: (composer: ComposerHandle | undefined) => void
   /** Receives each prompt the server admitted, with the model it runs on. */
   onPrompted?: (sessionID: string, text: string, model: ModelRef | undefined) => void
-  /** Forks the open session; the header shows the action when set. */
   /** Forks the session before a user message; each message shows the action when set. */
   onForkMessage?: (sessionID: string, messageID: string) => void
   /** Receives a session the server does not have (deleted, or from another database) instead of an error card. */
@@ -337,7 +338,7 @@ export function SessionView(props: {
             session={session()}
             blocked={dockBlocked()}
             actions={(todos) => props.row?.(hasMessages(), todos)}
-            hasActions={!!props.row}
+            hasActions={!!props.row && (hasMessages() || !!props.rowWhenEmpty)}
             status={working.status()}
             submitting={working.submitting()}
             timing={working.timing()}

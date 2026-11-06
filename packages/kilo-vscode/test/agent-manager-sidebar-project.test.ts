@@ -97,7 +97,7 @@ function providerFor(workspace: string, projects: string[]) {
 }
 
 describe("sidebar worktree project routing", () => {
-  it("resolves the sidebar directory instead of the active Agent Manager project", async () => {
+  it("reads the branch of the workspace project instead of the active Agent Manager project", async () => {
     const sidebar = repo("sidebar", "sidebar")
     const other = repo("other", "other")
     const provider = providerFor(sidebar, [other])
@@ -105,48 +105,27 @@ describe("sidebar worktree project routing", () => {
       provider.contexts.activate(projectIdFor(canonicalizePath(other)))
       expect(provider.contexts.active()?.root).toBe(canonicalizePath(other))
 
-      expect(await provider.branchFor(sidebar)).toBe("sidebar")
-      expect(await provider.branchFor(other)).toBe("other")
+      expect(await provider.workspaceBranch()).toBe("sidebar")
     } finally {
       await provider.dispose()
     }
   })
 
-  it("canonicalizes a symlinked sidebar directory", async () => {
-    const sidebar = repo("sidebar", "sidebar")
-    const other = repo("other", "other")
-    const link = path.join(fs.mkdtempSync(path.join(os.tmpdir(), "kilo-sidebar-link-")), "link")
-    fs.symlinkSync(sidebar, link, "dir")
-    const provider = providerFor(link, [other])
-    try {
-      provider.contexts.activate(projectIdFor(canonicalizePath(other)))
-      expect(provider.contexts.active()?.root).toBe(canonicalizePath(other))
-
-      expect(await provider.branchFor(link)).toBe("sidebar")
-    } finally {
-      await provider.dispose()
-      fs.rmSync(path.dirname(link), { recursive: true, force: true })
-    }
-  })
-
-  it("runs continueInWorktree inside the sidebar project scope", async () => {
+  it("shows the workspace project and runs continueInWorktree in its scope", async () => {
     const sidebar = repo("sidebar", "sidebar")
     const other = repo("other", "other")
     const provider = providerFor(sidebar, [other])
     try {
       provider.contexts.activate(projectIdFor(canonicalizePath(other)))
-      const shown: string[] = []
       const scopes: string[] = []
-      ;(provider as unknown as { showProject: (ctx: ProjectContext) => void }).showProject = (ctx) =>
-        shown.push(ctx.root)
       provider.projectScope.run = ((ctx: ProjectContext) => {
         scopes.push(ctx.root)
         return Promise.resolve(undefined)
       }) as never
 
-      await provider.continueFromSidebar("ses_sidebar", () => undefined, sidebar)
+      await provider.continueFromSidebar("ses_sidebar", () => undefined)
 
-      expect(shown).toEqual([canonicalizePath(sidebar)])
+      expect(provider.contexts.active()?.root).toBe(canonicalizePath(sidebar))
       expect(scopes).toEqual([canonicalizePath(sidebar)])
     } finally {
       await provider.dispose()

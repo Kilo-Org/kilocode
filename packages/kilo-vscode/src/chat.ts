@@ -10,6 +10,7 @@ import {
   type WebviewView,
   type WebviewViewProvider,
 } from "vscode"
+import { getErrorMessage } from "./agent-manager/errors"
 import { notifyHostAutoApprove, setHostAutoApprove } from "./agent-manager/provider-auto-approve"
 import type { SettingsHandler } from "./agent-manager/project/settings"
 import type { GitChanges } from "./git-changes"
@@ -663,26 +664,24 @@ export function routeWorktreeMessage(
       .continue(message.sessionId, (status, detail, error) =>
         post({ type: "continueInWorktreeProgress", status, detail, error }),
       )
-      .catch((error: unknown) => post({ type: "continueInWorktreeProgress", status: "error", error: errorText(error) }))
+      .catch((error: unknown) =>
+        post({ type: "continueInWorktreeProgress", status: "error", error: getErrorMessage(error) }),
+      )
     return true
   }
   if (message.type === "agentManager.createWorktree") {
     void worktree?.create(message.baseBranch, message.branchName).catch((error: unknown) => {
-      post({ type: "continueInWorktreeProgress", status: "error", error: errorText(error) })
+      post({ type: "continueInWorktreeProgress", status: "error", error: getErrorMessage(error) })
     })
     return true
   }
   if (message.type === "openAdvancedWorktree") {
     void worktree?.advanced().catch((error: unknown) => {
-      post({ type: "continueInWorktreeProgress", status: "error", error: errorText(error) })
+      post({ type: "continueInWorktreeProgress", status: "error", error: getErrorMessage(error) })
     })
     return true
   }
   return false
-}
-
-function errorText(error: unknown) {
-  return error instanceof Error ? error.message : String(error)
 }
 
 type View = "chat" | "settings" | "profile" | "agentManager" | "documents" | "diffViewer"

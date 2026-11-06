@@ -5,6 +5,12 @@ import { forkSession, type ForkContext } from "../src/agent-manager/fork-session
 
 const noop = () => {}
 
+// The client throws declared errors with the body fields on the error.
+const emptySession = Object.assign(new Error("Cannot fork empty session: source"), {
+  _tag: "InvalidRequestError",
+  kind: "empty_session",
+})
+
 function session(id: string, directory = "/repo"): SessionInfo {
   return { id, location: { directory } } as SessionInfo
 }
@@ -47,17 +53,18 @@ describe("agent manager fork session", () => {
     expect(notify).toHaveBeenCalledWith(expect.objectContaining({ id: "forked" }), "source", undefined)
   })
 
-  it("uses the selected worktree directory and registers the fork there", async () => {
+  it("moves the fork into the selected worktree and reports its new location", async () => {
     const move = mock(async () => undefined)
     const synthetic = mock(async () => undefined)
     const register = mock(() => undefined)
     const addSession = mock(() => undefined)
+    const notify = mock(() => undefined)
     const state = { getWorktree: () => ({ path: "/repo/.kilo/worktrees/feature" }), addSession }
 
     await forkSession(
       ctx(
         { session: { fork: mock(async () => session("forked")), move, synthetic } },
-        { state: state as never, directory: "/repo", registerWorktreeSession: register },
+        { state: state as never, directory: "/repo", registerWorktreeSession: register, notifyForked: notify },
       ),
       "source",
       "worktree",
@@ -73,6 +80,11 @@ describe("agent manager fork session", () => {
     )
     expect(addSession).toHaveBeenCalledWith("forked", "worktree")
     expect(register).toHaveBeenCalledWith("forked", "/repo/.kilo/worktrees/feature")
+    expect(notify).toHaveBeenCalledWith(
+      expect.objectContaining({ id: "forked", location: { directory: "/repo/.kilo/worktrees/feature" } }),
+      "source",
+      "worktree",
+    )
   })
 
   it("does not move a fork that already inherits the worktree directory", async () => {
@@ -115,7 +127,7 @@ describe("agent manager fork session", () => {
         {
           session: {
             fork: mock(async () => {
-              throw new Error("Cannot fork empty session: source")
+              throw emptySession
             }),
             get,
             create,
@@ -137,6 +149,32 @@ describe("agent manager fork session", () => {
     })
     expect(notify).toHaveBeenCalledWith(expect.objectContaining({ id: "forked" }), "source", undefined)
     expect(postError).not.toHaveBeenCalled()
+  })
+
+  it("reports a failed empty-session fallback", async () => {
+    const postError = mock(() => undefined)
+    const notify = mock(() => undefined)
+
+    const result = await forkSession(
+      ctx(
+        {
+          session: {
+            fork: mock(async () => {
+              throw emptySession
+            }),
+            get: mock(async () => {
+              throw new Error("session not found")
+            }),
+          },
+        },
+        { postError, notifyForked: notify },
+      ),
+      "source",
+    )
+
+    expect(result).toBeNull()
+    expect(postError).toHaveBeenCalledWith("Failed to fork session: session not found")
+    expect(notify).not.toHaveBeenCalled()
   })
 
   it("reports other fork errors", async () => {

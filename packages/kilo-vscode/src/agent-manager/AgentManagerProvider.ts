@@ -61,7 +61,6 @@ import { WorktreeDiffController } from "./worktree-diff-controller"
 import { DiffSourceCatalog } from "../diff/sources/catalog"
 import { createLocalDiff } from "./local-diff"
 import { sendDiffBranches as postDiffBranches } from "./project/diff-branches"
-import { canonicalizePath, samePath } from "./project/paths"
 import { pruneSubagents, sessionMissing } from "./prune-subagents"
 import { readTerminalFont, watchTerminalFont } from "./terminal-font"
 import { buildKeybindingMap } from "./format-keybinding"
@@ -831,40 +830,30 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
     return addSessionToLifecycleWorktree(ctx, this.lifecycleHost, worktreeId, sessionId)
   }
 
-  public async onForkSession(sessionId: string, worktreeId?: string, messageId?: string): Promise<null> {
-    const context =
-      (worktreeId ? this.contexts.byWorktree(worktreeId) : undefined) ??
-      this.contexts.byLiveSession(sessionId) ??
-      this.context
-    const fork = () =>
-      forkSession(
-        {
-          client: () => this.connection.client(),
-          state: context?.stateManager(),
-          directory: context?.root,
-          postError: (message) => this.postToWebview({ type: "error", message }),
-          registerWorktreeSession: (sid, dir) => this.registerWorktreeSession(sid, dir),
-          pushState: () => this.pushState(),
-          notifyForked: (session, from, worktree) =>
-            this.postToWebview({
-              type: "agentManager.sessionForked",
-              projectId: context?.id,
-              sessionId: session.id,
-              forkedFromId: from,
-              worktreeId: worktree,
-              session,
-            }),
-          log: (...args) => this.log(...args),
-        },
-        sessionId,
-        worktreeId,
-        messageId,
-      )
-    if (!context) return fork()
-    return this.projectScope.run(context, async () => {
-      await this.waitForStateReady("onForkSession")
-      return fork()
-    })
+  public onForkSession(sessionId: string, worktreeId?: string, messageId?: string): Promise<null> {
+    return forkSession(
+      {
+        client: () => this.connection.client(),
+        state: this.getStateManager(),
+        directory: this.getRoot(),
+        postError: (message) => this.postToWebview({ type: "error", message }),
+        registerWorktreeSession: (sid, dir) => this.registerWorktreeSession(sid, dir),
+        pushState: () => this.pushState(),
+        notifyForked: (session, from, worktree) =>
+          this.postToWebview({
+            type: "agentManager.sessionForked",
+            projectId: this.context?.id,
+            sessionId: session.id,
+            forkedFromId: from,
+            worktreeId: worktree,
+            session,
+          }),
+        log: (...args) => this.log(...args),
+      },
+      sessionId,
+      worktreeId,
+      messageId,
+    )
   }
 
   public async onCloseSession(sessionId: string): Promise<null> {
@@ -983,25 +972,6 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
 
   public getRoot(): string | undefined {
     return this.context?.root
-  }
-
-  /** The project that owns a directory, so a sidebar action stays on the workspace the sidebar shows. */
-  private contextForDirectory(directory?: string): ProjectContext | undefined {
-    if (!directory) return this.context
-    const canonical = canonicalizePath(directory)
-    const byDirectory = this.contexts.byDirectory(canonical)
-    if (byDirectory) return byDirectory
-    const pinned = this.contexts.pinned()
-    if (pinned && samePath(pinned.root, canonical)) return pinned
-    return this.context
-  }
-
-  /** Show the sidebar workspace in the panel before an action that opens it. */
-  private showProject(context: ProjectContext): void {
-    if (this.contexts.active()?.id === context.id) return
-    this.contexts.activate(context.id)
-    this.activateProject(context)
-    this.pushProjects()
   }
 
   public getWorktreeManager(): WorktreeManager | undefined {
@@ -1165,35 +1135,41 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
   public continueFromSidebar(
     sessionId: string,
     progress: (status: string, detail?: string, error?: string) => void,
-    directory?: string,
   ): Promise<void> {
-    const context = this.contextForDirectory(directory)
-    if (!context) return continueFromSidebar(this.api(), sessionId, progress)
-    if (directory) this.showProject(context)
-    return this.projectScope.run(context, () => continueFromSidebar(this.api(), sessionId, progress))
+    return this.inWorkspaceProject(() => continueFromSidebar(this.api(), sessionId, progress))
   }
 
-  public createFromSidebar(baseBranch?: string, branchName?: string, directory?: string): Promise<void> {
-    const context = this.contextForDirectory(directory)
-    if (!context) return createFromSidebar(this.api(), baseBranch, branchName)
-    if (directory) this.showProject(context)
-    return this.projectScope.run(context, () => createFromSidebar(this.api(), baseBranch, branchName))
+  public createFromSidebar(baseBranch?: string, branchName?: string): Promise<void> {
+    return this.inWorkspaceProject(() => createFromSidebar(this.api(), baseBranch, branchName))
   }
 
-  public openAdvancedWorktree(directory?: string): Promise<void> {
-    const context = this.contextForDirectory(directory)
-    if (!context) return openAdvancedWorktree(this.api())
-    if (directory) this.showProject(context)
-    return this.projectScope.run(context, () => openAdvancedWorktree(this.api()))
+  public openAdvancedWorktree(): Promise<void> {
+    return this.inWorkspaceProject(() => openAdvancedWorktree(this.api()))
   }
 
-  public branchFor(directory?: string): Promise<string | undefined> {
-    const manager = this.contextForDirectory(directory)?.worktreeManager()
+  /** The current branch of the workspace project, for the sidebar New Worktree menu. */
+  public workspaceBranch(): Promise<string | undefined> {
+    const manager = this.contexts.pinned()?.worktreeManager()
     if (!manager) return Promise.resolve(undefined)
     return manager
       .currentBranch()
       .then((branch) => branch || undefined)
       .catch(() => undefined)
+  }
+
+  /**
+   * Runs a sidebar action on the workspace project, which the sidebar shows, and not on the project the panel shows.
+   * The panel switches to that project first, because the action opens it.
+   */
+  private inWorkspaceProject(action: () => Promise<void>): Promise<void> {
+    const context = this.contexts.pinned()
+    if (!context) return action()
+    if (this.contexts.active()?.id !== context.id) {
+      this.contexts.activate(context.id)
+      this.activateProject(context)
+      this.pushProjects()
+    }
+    return this.projectScope.run(context, action)
   }
 
   public diagnose(): Promise<void> {
