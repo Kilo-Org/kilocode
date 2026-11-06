@@ -13,6 +13,7 @@ import type { AppendHandler, ReferenceHandler } from "./append-ready"
 import type { ComposerHandle } from "./composer"
 import { toPromptFiles } from "./prompt-attachments"
 import { useV2 } from "./client"
+import { useDisplaySettings } from "./display-settings"
 import { sessionMissing } from "./scope"
 import { childTools, createChildSessions } from "./child-session"
 import { MessageList } from "./messages"
@@ -68,6 +69,15 @@ export function SessionView(props: {
 }) {
   const v2 = useV2()
   const session = () => props.session
+  // Display layouts and the reasoning mode are Kilo-only config keys, so the host reads them. Every surface that
+  // renders a transcript asks on connect and after each config change.
+  const display = useDisplaySettings()
+  createEffect(
+    on(v2.connection.status, (status) => {
+      if (status === "connected") display.request()
+    }),
+  )
+  onCleanup(v2.data.on("config.updated", () => display.request()))
   // Each session and pending tab has its own composer draft. The keyed mount below discards the previous composer
   // state and the draft store restores the text of the target one.
   const draftKey = () => props.draftKey ?? session() ?? "new"

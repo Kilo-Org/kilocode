@@ -36,6 +36,7 @@ export type KiloSettingKey =
   | "chat.shiftTabCyclesVariant"
   | "showShortcutHints"
   | "showTokenThroughput"
+  | "showAutoApprovalReason"
   | "agentManager.autoBranchNaming"
   | "agentManager.branchPrefix"
   | "agentManager.worktreePool"

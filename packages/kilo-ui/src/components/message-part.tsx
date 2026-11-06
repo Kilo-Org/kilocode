@@ -40,6 +40,7 @@ import { IconButton } from "./icon-button"
 import { ImagePreview } from "./image-preview"
 import { Markdown } from "./markdown"
 import { ReasoningContent } from "./reasoning-content"
+import type { ReasoningDisplay } from "./reasoning-open"
 import { normalize } from "./session-diff"
 import { ShellOutput } from "./shell-output"
 import { StickyAccordionHeader } from "./sticky-accordion-header"
@@ -84,6 +85,8 @@ export type ContentPartProps = {
   copy?: boolean
   settled?: boolean
   defaultOpen?: boolean
+  /** How a reasoning part starts: expanded, a capped preview, or a headline only. */
+  reasoningDisplay?: ReasoningDisplay
   /** Turn generation rate shown in the action row of the copy-carrying text part. */
   throughput?: JSX.Element
   /** Finish clock and turn duration shown in the same action row. */
@@ -119,6 +122,7 @@ export function ContentPart(props: ContentPartProps) {
             item={item()}
             id={`${props.message.id}:${props.index}`}
             settled={props.settled || props.message.time.completed !== undefined}
+            mode={props.reasoningDisplay}
           />
         )}
       </Match>

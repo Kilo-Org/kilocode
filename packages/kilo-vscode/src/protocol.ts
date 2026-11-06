@@ -1,6 +1,7 @@
 // Messages between the webview and the extension host. The webview has no server credentials: it sends HTTP
 // requests through the host (`fetch`), and the host streams each response back in order.
 import type { ReviewCommentData } from "./shared/review-comments"
+import type { WorkStyle, WorkStyleState } from "./shared/work-style-presets"
 
 import type { BrowserReference } from "./shared/browser-feedback"
 import type {
@@ -43,20 +44,24 @@ export type ConfigPolicy = { hidePromptTrainingModels: boolean; managed: boolean
 
 export type ToolDisplayLayout = "expanded" | "collapsed"
 
+export type ReasoningDisplay = "expanded" | "preview" | "headline"
+
 /**
- * How the chat starts each kind of tool block. The three Kilo config keys are not in the config API, so the host
- * reads the config documents and sends the effective values, with the same defaults as v1.
+ * How the chat starts each kind of tool block and reasoning block. The Kilo config keys are not in the config API, so
+ * the host reads the config documents and sends the effective values, with the same defaults as v1.
  */
 export type DisplaySettings = {
   terminalCommandDisplay: ToolDisplayLayout
   codeEditDisplay: ToolDisplayLayout
   mcpToolDisplay: ToolDisplayLayout
+  reasoningDisplay: ReasoningDisplay
 }
 
 export const DISPLAY_DEFAULTS: DisplaySettings = {
   terminalCommandDisplay: "expanded",
   codeEditDisplay: "collapsed",
   mcpToolDisplay: "collapsed",
+  reasoningDisplay: "expanded",
 }
 
 /**
@@ -112,6 +117,9 @@ export type ToHost =
   | ({ type: "openSettingsTab" } & SettingsNavigation)
   | { type: "settingsReady" }
   | { type: "settingsTabChanged"; tab: string }
+  | { type: "requestWorkStyle" }
+  | { type: "applyWorkStyle"; style: WorkStyle }
+  | { type: "setWorkStyle"; style: WorkStyleState }
 
 /**
  * The editor-tab Integrated Browser. The tab is host-driven: it renders a browser the extension host runs, so every
@@ -371,6 +379,9 @@ export type ToWebview =
   | { type: "modelSelectorExpandedLoaded"; value: boolean }
   | { type: "modelPreferencesLoaded"; value: ModelPreferences }
   | { type: "autoApproveStateLoaded"; value: boolean }
+  | { type: "workStyleLoaded"; style: WorkStyleState }
+  | { type: "workStyleApplied"; style: WorkStyle }
+  | { type: "workStyleApplyFailed"; message: string; rollbackFailed: boolean }
   | { type: "dismissedNotificationsLoaded"; ids: string[] }
   | { type: "webviewActiveChanged"; active: boolean }
   | { type: "validateFilesResult"; id: string; existing: string[] }
