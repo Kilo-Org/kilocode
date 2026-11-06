@@ -8,6 +8,7 @@ import ai.kilocode.client.session.model.Outcome
 import ai.kilocode.client.session.model.SessionModel
 import ai.kilocode.client.session.model.SessionModelEvent
 import ai.kilocode.client.session.model.SessionState
+import ai.kilocode.client.session.model.Text
 import ai.kilocode.client.session.model.FileAttachment
 import ai.kilocode.client.session.model.ToolCallRef
 import ai.kilocode.client.session.settings.TranscriptDisplay
@@ -325,6 +326,50 @@ class SessionMessageListPanel(
             }
         }
     }.trimEnd()
+
+    /** Authoritative text of every rendered [role] message, in order. */
+    @RequiresEdt
+    fun messageText(role: String): String = model.messages()
+        .filter { it.info.role == role }
+        .joinToString("\n") { message ->
+            message.parts.values.filterIsInstance<Text>().joinToString("") { it.content.toString() }
+        }
+
+    /** Message failures the transcript renders: Cloud terminals plus native message errors. */
+    @RequiresEdt
+    fun messageErrors(): String = model.messages()
+        .mapNotNull { message ->
+            val terminal = message.terminal?.status?.takeIf { it == "failed" || it == "interrupted" }
+            val error = message.info.error
+            when {
+                terminal != null && error != null ->
+                    "${message.info.role}: terminal=$terminal ${error.type}: ${error.message.orEmpty()}"
+                terminal != null -> "${message.info.role}: terminal=$terminal"
+                error != null -> "${message.info.role}: ${error.type}: ${error.message.orEmpty()}"
+                else -> null
+            }
+        }
+        .joinToString(" | ")
+
+    /** Simple name of the current session state, e.g. `Busy`, `Idle`, `TurnEnded`, or `Error`. */
+    @RequiresEdt
+    fun stateName(): String = model.state::class.simpleName ?: "Unknown"
+
+    /** Human-readable detail carried by states that expose one. */
+    @RequiresEdt
+    fun stateMessage(): String? = when (val state = model.state) {
+        is SessionState.Busy -> state.text
+        is SessionState.Error -> state.message
+        is SessionState.TurnEnded -> state.finish ?: state.outcome.name
+        is SessionState.Retry -> state.message
+        is SessionState.Offline -> state.message
+        is SessionState.LoginRequired -> state.message
+        else -> null
+    }
+
+    /** Loaded session id, or null while no session is attached. */
+    @RequiresEdt
+    fun sessionId(): String? = model.session?.id
 
     @RequiresEdt
     internal fun reflow(): Boolean {

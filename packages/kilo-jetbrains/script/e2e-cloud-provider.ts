@@ -9,9 +9,15 @@
  *
  * Usage (used by script/e2e-session-open.ts):
  *   bun script/e2e-cloud-provider.ts <cloud-repo> --request <file> --result <file>
+ *
+ * The child output is mirrored to `provider-<operation>.log` next to the result so a
+ * failed prepare/cleanup stays diagnosable even though K1 captures the driver streams.
  */
 
-import { resolve } from "node:path"
+import { mkdirSync, writeFileSync } from "node:fs"
+import { dirname, join, resolve } from "node:path"
+
+const LOG_LIMIT = 200_000
 
 const args = Bun.argv.slice(2)
 let request: string | undefined
@@ -37,6 +43,7 @@ if (operation !== "prepare" && operation !== "cleanup") {
   throw new Error(`unsupported provider operation: ${operation}`)
 }
 
+const logPath = join(dirname(result), `provider-${operation}.log`)
 const proc = Bun.spawn(
   [
     "pnpm",
@@ -51,7 +58,25 @@ const proc = Bun.spawn(
     "--result",
     result,
   ],
-  { cwd: cloud, env: process.env, stdout: "inherit", stderr: "inherit" },
+  { cwd: cloud, env: process.env, stdout: "pipe", stderr: "pipe" },
 )
 
-process.exit(await proc.exited)
+let output = ""
+async function pump(stream: ReadableStream<Uint8Array>) {
+  const reader = stream.getReader()
+  const decoder = new TextDecoder()
+  while (true) {
+    const { done, value } = await reader.read()
+    if (done) break
+    const text = decoder.decode(value, { stream: true })
+    output = (output + text).slice(-LOG_LIMIT)
+    process.stderr.write(text)
+  }
+}
+
+const pumps = [pump(proc.stdout), pump(proc.stderr)]
+const code = await proc.exited
+await Promise.allSettled(pumps)
+mkdirSync(dirname(logPath), { recursive: true })
+writeFileSync(logPath, output, { mode: 0o600 })
+process.exit(code)

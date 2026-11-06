@@ -46,6 +46,12 @@ class KiloIdePage(val driver: Driver, val watchdog: Watchdog, val evidence: Driv
             runCatching { it.component.isShowing() }.getOrDefault(false)
         }
 
+    fun showingIn(root: UiComponent, javaClass: String): UiComponent? = runCatching {
+        root.xx("//div[@javaclass='$javaClass']").list().firstOrNull {
+            runCatching { it.component.isShowing() }.getOrDefault(false)
+        }
+    }.getOrNull()
+
     fun awaitAny(name: String, vararg classes: String) {
         watchdog.await(name) { classes.any(::shows) }
     }
@@ -179,6 +185,20 @@ data class TranscriptState(
     val detailed: String,
 )
 
+data class PromptState(
+    val text: String,
+    val accessibleNames: List<String>,
+    val turns: Int,
+    val dump: String,
+    val detailed: String,
+    val user: String,
+    val assistant: String,
+    val errors: String,
+    val state: String,
+    val message: String?,
+    val session: String?,
+)
+
 data class HostedRowState(
     val key: String,
     val selectedKey: String,
@@ -186,17 +206,20 @@ data class HostedRowState(
 )
 
 /**
- * `session.open` page object for both lanes. It only uses the real prompt, transcript, and Agent
- * Manager components plus the loaded transcript model's public dump helpers.
+ * `session.open` / `prompt.stream` page object for both lanes. It only uses the real prompt,
+ * transcript, and Agent Manager components plus the loaded transcript model's public helpers.
  */
 class SessionOpenPage(private val ide: KiloIdePage, private val watchdog: Watchdog) {
-    fun submitLocal(token: String) {
-        val panel = watchdog.value("Chat prompt panel visible") {
-            ide.showing(PROMPT_PANEL)?.let { ide.driver.cast(it.component, PromptPanel::class) }
+    fun submitLocal(token: String) = submit(token)
+
+    fun submit(text: String, scope: UiComponent? = null) {
+        val component = watchdog.value("Chat prompt panel visible") {
+            if (scope == null) ide.showing(PROMPT_PANEL) else ide.showingIn(scope, PROMPT_PANEL)
         }
-        ide.driver.withContext(OnDispatcher.EDT) { panel.setText(token) }
+        val panel = ide.driver.cast(component.component, PromptPanel::class)
+        ide.driver.withContext(OnDispatcher.EDT) { panel.setText(text) }
         try {
-            watchdog.await("Chat prompt accepts the K1 token") {
+            watchdog.await("Chat prompt accepts the submitted text") {
                 ide.driver.withContext(OnDispatcher.EDT) { panel.isSendEnabled() }
             }
         } catch (error: Throwable) {
@@ -206,13 +229,38 @@ class SessionOpenPage(private val ide: KiloIdePage, private val watchdog: Watchd
         ide.driver.withContext(OnDispatcher.EDT) { panel.send() }
     }
 
-    fun awaitModel(): TranscriptState =
-        watchdog.value("transcript model loaded") { readModel() }
+    fun awaitModel(scope: UiComponent? = null): TranscriptState =
+        watchdog.value("transcript model loaded") { readModel(scope) }
 
-    fun awaitRender(token: String): TranscriptState =
-        watchdog.value("transcript renders '$token'") { readRender(token) }
+    fun awaitLoaded(scope: UiComponent? = null): PromptState =
+        watchdog.value("transcript model loaded") { readPrompt(scope)?.takeIf(::loaded) }
 
-    fun transcriptComponent(): Component? = ide.showing(SESSION_MESSAGE_LIST)?.component
+    fun awaitRender(token: String, scope: UiComponent? = null): TranscriptState =
+        watchdog.value("transcript renders '$token'") { readRender(token, scope) }
+
+    fun awaitStreaming(token: String, scope: UiComponent? = null): PromptState =
+        watchdog.value("turn busy while the fake-LLM gate holds '$token'") {
+            readPrompt(scope)?.takeIf { it.state == "Busy" && occurrences(it, token) >= 1 }
+        }
+
+    /** Waits for the turn to leave Busy, including a terminal failure, so callers can report it. */
+    fun awaitSettled(scope: UiComponent? = null): PromptState =
+        watchdog.value("turn settled after the fake-LLM gate release") {
+            readPrompt(scope)?.takeIf { it.state in settled }
+        }
+
+    fun hostedEditor(): UiComponent? = ide.showing(HOSTED_EDITOR)
+
+    fun transcriptComponent(scope: UiComponent? = null): Component? =
+        (if (scope == null) ide.showing(SESSION_MESSAGE_LIST) else ide.showingIn(scope, SESSION_MESSAGE_LIST))?.component
+
+    /** Rendered occurrences of [token], taking the stronger of component text and accessible names. */
+    fun occurrences(state: PromptState, token: String): Int {
+        if (token.isEmpty()) return 0
+        val text = state.text.split(token).size - 1
+        val names = state.accessibleNames.joinToString("\n").split(token).size - 1
+        return maxOf(text, names)
+    }
 
     fun discoverHosted(workspaceId: String): HostedRowState {
         val key = hostedKey(workspaceId)
@@ -289,27 +337,27 @@ class SessionOpenPage(private val ide: KiloIdePage, private val watchdog: Watchd
         return null
     }
 
-    private fun readModel(): TranscriptState? {
-        val state = readState() ?: return null
+    private fun readModel(scope: UiComponent? = null): TranscriptState? {
+        val state = readState(scope) ?: return null
         if (state.turns <= 0 || state.dump.isBlank()) return null
         if (!state.dump.contains("user#")) return null
         if (!state.detailed.contains("PromptView#")) return null
         return state
     }
 
-    private fun readRender(token: String): TranscriptState? {
-        val state = readState() ?: return null
+    private fun readRender(token: String, scope: UiComponent? = null): TranscriptState? {
+        val state = readState(scope) ?: return null
         val visible = state.text.contains(token) || state.accessibleNames.any { it.contains(token) }
         return state.takeIf { visible }
     }
 
-    private fun readState(): TranscriptState? {
-        val component = ide.showing(SESSION_MESSAGE_LIST) ?: return null
+    private fun readState(scope: UiComponent? = null): TranscriptState? {
+        val component = showingTranscript(scope) ?: return null
         val panel = runCatching {
             ide.driver.cast(component.component, SessionMessageListPanel::class)
         }.getOrNull() ?: return null
         return TranscriptState(
-            text = runCatching { component.getAllTexts().joinToString("\n") { it.text } }.getOrDefault(""),
+            text = componentText(component),
             accessibleNames = accessibleNames(component),
             turns = runCatching {
                 ide.driver.withContext(OnDispatcher.EDT) { panel.turnCount() }
@@ -322,6 +370,53 @@ class SessionOpenPage(private val ide: KiloIdePage, private val watchdog: Watchd
             }.getOrDefault(""),
         )
     }
+
+    private fun readPrompt(scope: UiComponent? = null): PromptState? {
+        val component = showingTranscript(scope) ?: return null
+        val panel = runCatching {
+            ide.driver.cast(component.component, SessionMessageListPanel::class)
+        }.getOrNull() ?: return null
+        return PromptState(
+            text = componentText(component),
+            accessibleNames = accessibleNames(component),
+            turns = runCatching {
+                ide.driver.withContext(OnDispatcher.EDT) { panel.turnCount() }
+            }.getOrDefault(0),
+            dump = runCatching {
+                ide.driver.withContext(OnDispatcher.EDT) { panel.dump() }
+            }.getOrDefault(""),
+            detailed = runCatching {
+                ide.driver.withContext(OnDispatcher.EDT) { panel.dumpDetailed() }
+            }.getOrDefault(""),
+            user = runCatching {
+                ide.driver.withContext(OnDispatcher.EDT) { panel.messageText("user") }
+            }.getOrDefault(""),
+            assistant = runCatching {
+                ide.driver.withContext(OnDispatcher.EDT) { panel.messageText("assistant") }
+            }.getOrDefault(""),
+            errors = runCatching {
+                ide.driver.withContext(OnDispatcher.EDT) { panel.messageErrors() }
+            }.getOrDefault(""),
+            state = runCatching {
+                ide.driver.withContext(OnDispatcher.EDT) { panel.stateName() }
+            }.getOrDefault("Unknown"),
+            message = runCatching {
+                ide.driver.withContext(OnDispatcher.EDT) { panel.stateMessage() }
+            }.getOrNull(),
+            session = runCatching {
+                ide.driver.withContext(OnDispatcher.EDT) { panel.sessionId() }
+            }.getOrNull(),
+        )
+    }
+
+    private fun loaded(state: PromptState): Boolean =
+        state.turns > 0 && state.dump.contains("user#") && state.detailed.contains("PromptView#")
+
+    private fun showingTranscript(scope: UiComponent?): UiComponent? =
+        if (scope == null) ide.showing(SESSION_MESSAGE_LIST) else ide.showingIn(scope, SESSION_MESSAGE_LIST)
+
+    private fun componentText(component: UiComponent): String =
+        runCatching { component.getAllTexts().joinToString("\n") { it.text } }.getOrDefault("")
 
     private fun accessibleNames(component: UiComponent): List<String> = runCatching {
         component.searchContext.findAll("//div[@accessiblename]").mapNotNull {
@@ -357,5 +452,6 @@ class SessionOpenPage(private val ide: KiloIdePage, private val watchdog: Watchd
         const val ACTIVE_TREE_VIEW = "ai.kilocode.client.ui.tree.ActiveTreeView"
         const val ACTIVE_LIST = "ai.kilocode.client.ui.list.ActiveList"
         const val HOSTED_EDITOR = "ai.kilocode.client.agentManager.hosted.HostedWorkspaceEditorPanel"
+        val settled = setOf("Idle", "Error", "TurnEnded", "LoginRequired")
     }
 }

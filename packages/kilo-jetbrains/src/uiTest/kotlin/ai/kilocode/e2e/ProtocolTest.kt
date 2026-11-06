@@ -90,7 +90,7 @@ class ProtocolTest {
         val text = resultPath.readText()
         assertTrue(text.contains("\"clientHash\":null"), text)
         assertTrue(text.contains("\"cliHash\":null"), text)
-        assertTrue(text.contains("\"capabilities\":[\"transcript.read\"]"), text)
+        assertTrue(text.contains("\"capabilities\":[\"transcript.read\",\"stream.observe\"]"), text)
         assertFalse(text.contains("\"detail\":null"), text)
     }
 
