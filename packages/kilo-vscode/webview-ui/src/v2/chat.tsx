@@ -1,6 +1,6 @@
 // The sidebar: history or one session laid out like main's ChatView (transcript, docks, prompt).
 import { Button } from "@kilocode/kilo-ui/button"
-import { showToast } from "@kilocode/kilo-ui/toast"
+import { Icon } from "@kilocode/kilo-ui/icon"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import type { ToolActions } from "@kilocode/kilo-ui/message-part"
 import {
@@ -15,19 +15,17 @@ import {
   Show,
   Switch,
 } from "solid-js"
-import type { ToHost } from "../../../src/protocol"
+import type { GitChangesStats, ToHost, ToWebview } from "../../../src/protocol"
 import { useLanguage } from "../context/language"
 import { getVSCodeAPI, useVSCode } from "../context/vscode"
+import { useWorkStyle } from "../context/work-style"
 import type { ReferenceHandler } from "./append-ready"
 import { useV2 } from "./client"
-import { useDisplaySettings } from "./display-settings"
 import { SessionList } from "./history"
 import { forkText } from "../../../src/agent-manager/fork-handoff"
 import { createLocalTabs } from "./local-tabs"
-import { SessionChanges } from "./session-changes"
 import { SessionTabStrip } from "./session-tabs"
 import { SessionView } from "./session-view"
-import { formatReviewCommentsMarkdown } from "../utils/review-comment-markdown"
 import { chunkPaths } from "./validate-paths"
 import { createReviewAppendQueue } from "./review-queue"
 import { createComposerQueue } from "./composer"
@@ -37,6 +35,7 @@ import { focusPrompt } from "../utils/tab-navigation"
 export function Chat() {
   const v2 = useV2()
   const language = useLanguage()
+  const work = useWorkStyle()
   const tabs = createLocalTabs()
   const [view, setView] = createSignal<"chat" | "history">("chat")
   // Comments can arrive while the chat composer is unmounted (History), so hold them until it returns.
@@ -44,25 +43,25 @@ export function Chat() {
   // Editor and terminal context actions target the chat composer too, and wait the same way while it is unmounted.
   const composerQueue = createComposerQueue()
   const [changes, setChanges] = createSignal(false)
-  // Display layouts are Kilo-only config keys, so the host reads them. Ask on connect and after every config change.
-  const display = useDisplaySettings()
-  createEffect(
-    on(v2.connection.status, (status) => {
-      if (status === "connected") display.request()
-    }),
-  )
-  onCleanup(v2.data.on("config.updated", () => display.request()))
+  const vscode = useVSCode()
+  // The working tree counts the host pushes. The button reads the current value without polling.
+  const [stats, setStats] = createSignal<GitChangesStats>()
+  const stopStats = vscode.onMessage((raw) => {
+    const message = raw as ToWebview
+    if (message.type === "gitChangesStats") setStats(message.stats)
+  })
+  onCleanup(stopStats)
+  vscode.postMessage({ type: "requestGitChangesStats" } satisfies ToHost as never)
   // A turn's changes belong to its tab, so switching tabs returns to that tab's chat.
   createEffect(on(tabs.active, () => setChanges(false), { defer: true }))
   const startSession = () => {
+    work.skip()
     tabs.add()
     setView("chat")
-    setChanges(false)
   }
   const open = (id: string) => {
     tabs.open(id)
     setView("chat")
-    setChanges(false)
   }
   const step = (offset: -1 | 1) => {
     if (!document.hasFocus() || view() !== "chat") return
@@ -106,9 +105,7 @@ export function Chat() {
     tabs.settled(draftKey ?? tabs.active(), id)
   }
 
-  // A document tab in the editor posts review comments here, because this view owns the prompt they belong to. An
-  // element picked in the Integrated Browser arrives the same way and joins the composer's reference list.
-  const vscode = useVSCode()
+  // An element picked in the Integrated Browser arrives for this view and joins the composer's reference list.
   // The editor-tab browser and the Agent Manager share one broker; report which session this sidebar shows.
   createEffect(() => {
     const id = session()
@@ -138,18 +135,16 @@ export function Chat() {
       }
       if (item.type === "appendContext") {
         setView("chat")
-        setChanges(false)
         composerQueue.push({ type: "attach", items: item.items })
         return
       }
       if (item.type === "startPrompt") {
         setView("chat")
-        setChanges(false)
         composerQueue.push({ type: "submit", text: item.text, items: item.items ?? [] })
         return
       }
       if (item.type !== "appendReviewComments") return
-      reviewQueue.push(formatReviewCommentsMarkdown(item.comments), item.autoSend)
+      reviewQueue.push(item.comments, item.autoSend)
     })
     onCleanup(() => {
       message()
@@ -179,28 +174,13 @@ export function Chat() {
       ),
     ).then((results) => results.flat())
   }
-  // A turn shows its own changes: `from` is the user message that opened it, and the
-  // server ends the range at the next idle marker.
-  const openTurnChanges = (sessionID: string, turnID: string) => {
-    void v2.api.session
-      .diff({ sessionID, from: turnID })
-      .then((files) => {
-        if (files.length === 0) {
-          showToast(language.t("session.review.turnChangesEmpty"))
-          return
-        }
-        getVSCodeAPI().postMessage({
-          type: "openDiffsVirtual",
-          diffs: files.map((file) => ({
-            file: file.file,
-            patch: file.patch,
-            additions: file.additions,
-            deletions: file.deletions,
-          })),
-        } satisfies ToHost as never)
-      })
-      .catch(v2.report)
-  }
+  // The Changes tab opens the whole working tree of the session, as v1's Changes button did.
+  const openChanges = () =>
+    vscode.postMessage({ type: "openChanges", sessionID: session() } satisfies ToHost as never)
+
+  // A turn opens the Changes tab in turn scope: `turnID` is the user message that started it.
+  const openTurnChanges = (sessionID: string, turnID: string) =>
+    vscode.postMessage({ type: "openChanges", sessionID, turnID } satisfies ToHost as never)
 
   // What a tool renderer may ask the host to open. The host owns the editor and the diff surfaces.
   const toolActions: ToolActions = {
@@ -218,8 +198,24 @@ export function Chat() {
     openSession: open,
   }
 
+  const changesTooltip = () => {
+    const value = stats()
+    if (!value?.files) return language.t("sidebar.session.showChanges.tooltip.empty")
+    return (
+      <span class="session-changes-tooltip">
+        <span>
+          {value.files} {language.t(value.files === 1 ? "ui.common.file.one" : "ui.common.file.other")}
+        </span>
+        <span class="session-changes-tooltip-separator">·</span>
+        <span class="session-diff-add">+{value.additions}</span>
+        <span class="session-diff-del">-{value.deletions}</span>
+        <span>{language.t("command.session.show.changes")}</span>
+      </span>
+    )
+  }
+
   // main's ChatView actions row. New Session and Changes have v2 counterparts: the worktree and fork actions need
-  // the Agent Manager, and the changes view lists this session's files instead of the working tree.
+  // the Agent Manager.
   const row = (hasMessages: boolean, todos: JSX.Element) => (
     <Show when={hasMessages}>
       <div class="new-task-button-wrapper">
@@ -235,9 +231,26 @@ export function Chat() {
               {language.t("sidebar.session.newSession")}
             </Button>
           </Tooltip>
-          <Button variant="secondary" size="small" aria-pressed={changes()} onClick={() => setChanges((open) => !open)}>
-            {language.t("sidebar.session.changes.title")}
-          </Button>
+          <Tooltip value={changesTooltip()} placement="top" class="session-move-changes-trigger">
+            <Button
+              variant="ghost"
+              size="small"
+              class="session-move-changes"
+              classList={{
+                "session-move-changes--empty": !stats()?.files,
+                "session-move-changes--has-changes": !!stats()?.files,
+              }}
+              onClick={openChanges}
+              aria-label={language.t("command.session.show.changes")}
+            >
+              <Icon name="layers" size="small" />
+              <Show when={stats()?.files}>
+                <span class="session-diff-add">+{stats()!.additions}</span>
+                <span class="session-diff-del">-{stats()!.deletions}</span>
+                <span class="session-move-dot" aria-hidden="true" />
+              </Show>
+            </Button>
+          </Tooltip>
           {todos}
         </div>
       </div>
@@ -267,14 +280,8 @@ export function Chat() {
           onShowHistory={() => setView("history")}
           onViewTurnChanges={openTurnChanges}
           row={row}
-          onAppendReady={reviewQueue.ready}
+          onReviewAppendReady={reviewQueue.ready}
           onComposerReady={composerQueue.ready}
-          replace={changes() && !!session()}
-          replacement={
-            <Show when={changes() ? session() : undefined} keyed>
-              {(id) => <SessionChanges sessionID={id} onClose={() => setChanges(false)} />}
-            </Show>
-          }
           draftKey={tabs.active()}
           onMissing={(id) => tabs.close(id)}
           tabStrip={

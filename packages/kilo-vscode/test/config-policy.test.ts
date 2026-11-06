@@ -50,6 +50,7 @@ describe("displaySettings", () => {
       terminalCommandDisplay: "expanded",
       codeEditDisplay: "collapsed",
       mcpToolDisplay: "collapsed",
+      reasoningDisplay: "expanded",
     })
   })
 
@@ -65,6 +66,7 @@ describe("displaySettings", () => {
       terminalCommandDisplay: "expanded",
       codeEditDisplay: "expanded",
       mcpToolDisplay: "expanded",
+      reasoningDisplay: "expanded",
     })
   })
 
@@ -77,6 +79,33 @@ describe("displaySettings", () => {
       terminalCommandDisplay: "expanded",
       codeEditDisplay: "collapsed",
       mcpToolDisplay: "expanded",
+      reasoningDisplay: "expanded",
     })
+  })
+
+  test("reads the reasoning mode and lets an explicit mode win over the legacy boolean", () => {
+    const documents = [
+      { path: targets.global, text: '{"auto_collapse_reasoning": true}' },
+      { path: targets.project, text: '{"reasoning_display": "headline"}' },
+    ]
+    expect(displaySettings(documents).reasoningDisplay).toBe("headline")
+  })
+
+  test("maps the legacy auto_collapse_reasoning boolean to preview or expanded", () => {
+    expect(
+      displaySettings([{ path: targets.global, text: '{"auto_collapse_reasoning": true}' }]).reasoningDisplay,
+    ).toBe("preview")
+    expect(
+      displaySettings([
+        { path: targets.global, text: '{"auto_collapse_reasoning": true}' },
+        { path: targets.project, text: '{"auto_collapse_reasoning": false}' },
+      ]).reasoningDisplay,
+    ).toBe("expanded")
+  })
+
+  test("ignores an invalid reasoning mode", () => {
+    expect(
+      displaySettings([{ path: targets.global, text: '{"reasoning_display": "collapsed"}' }]).reasoningDisplay,
+    ).toBe("expanded")
   })
 })

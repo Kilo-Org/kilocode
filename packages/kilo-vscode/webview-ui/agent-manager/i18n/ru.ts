@@ -131,7 +131,6 @@ export const dict = {
   "agentManager.tab.unpin": "Открепить",
   "agentManager.tab.pinned": "Закреплена",
   "agentManager.tab.terminal": "Терминал",
-  "agentManager.tab.openTerminal": "Открыть терминал",
   "agentManager.tab.newOptions": "Другие параметры новой вкладки",
   "agentManager.sidebarSearch.label": "Поиск по Worktree и сессиям",
   "agentManager.sidebarSearch.scope":
@@ -151,9 +150,6 @@ export const dict = {
   "agentManager.terminal.add": "Новый терминал",
   "agentManager.terminal.empty": "Здесь пока нет терминала",
   "agentManager.terminal.start": "Запустить терминал",
-  "agentManager.terminal.destination": "Выберите, где будет открываться терминал",
-  "agentManager.terminal.openInVscode": "Терминал VS Code",
-  "agentManager.terminal.openInPanel": "Панель Agent Manager",
   "agentManager.terminal.errorTitle": "Ошибка терминала",
   "agentManager.setup.failed": "Не удалось настроить рабочее пространство",
   "agentManager.setup.settingUp": "Настройка рабочего пространства",

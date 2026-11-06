@@ -8,7 +8,6 @@ import type { Host, OutputHandle, PanelContext } from "./host"
 import type { GitOps } from "./GitOps"
 import type { WorktreeStateManager } from "./WorktreeStateManager"
 import type { WorktreeManager } from "./WorktreeManager"
-import type { SessionTerminalManager } from "./SessionTerminalManager"
 import type { TerminalRouter } from "./terminal-routing"
 import type { WorktreeDiffController } from "./worktree-diff-controller"
 import type { DiffSourceCatalog } from "../diff/sources/catalog"
@@ -38,7 +37,6 @@ export interface ProviderApiHost {
   readonly naming: BranchNamingController
   readonly healthScheduler: { dispose(): void }
   readonly projectPollers: { dispose(): void }
-  readonly terminalManager: SessionTerminalManager
   readonly relay: { dispose(): void }
   readonly terminalRouter: TerminalRouter
   readonly scripts: { dispose(): Promise<void> }
@@ -50,7 +48,6 @@ export interface ProviderApiHost {
   readonly unsubEvents: () => void
   readonly unsubFont: () => void
   readonly unsubProjects: () => void
-  readonly unsubDestination: () => void
   panel: PanelContext | undefined
   closing: Promise<void> | undefined
   stateReady: Promise<void> | undefined
@@ -63,7 +60,7 @@ export interface ProviderApiHost {
   getStateManager(): WorktreeStateManager | undefined
   getWorktreeManager(): WorktreeManager | undefined
   createWorktreeOnDisk(opts?: CreateWorktreeOnDiskOptions): Promise<CreateWorktreeOnDiskResult | null>
-  runSetupScriptForWorktree(path: string, branch?: string, id?: string): Promise<void>
+  runSetupScriptForWorktree(path: string, branch: string | undefined, id: string): Promise<void>
   onCreateWorktree(baseBranch?: string, branchName?: string): Promise<null>
   onDeleteWorktree(id: string): Promise<null>
   registerWorktreeSession(sessionId: string, directory: string): void
@@ -204,7 +201,6 @@ export async function disposeAsync(p: ProviderApiHost): Promise<void> {
   p.unsubEvents()
   p.unsubFont()
   p.unsubProjects()
-  p.unsubDestination()
   await p.scripts.dispose()
   await p.caffeination.dispose()
   p.orchestration.dispose()
@@ -217,7 +213,6 @@ export async function disposeAsync(p: ProviderApiHost): Promise<void> {
   p.gitOps.dispose()
   p.prBridge.poller.stop()
   p.run.dispose()
-  p.terminalManager.dispose()
   p.relay.dispose()
   await p.terminalRouter.dispose()
   const panel = p.panel

@@ -131,11 +131,14 @@ test(
           const pending = yield* waitForPending(rpc, location)
           expect(pending).toHaveLength(1)
           expect(pending[0]?.operation).toBe("overview")
-          expect(
-            events().some(
-              (event) => event.type === "rpc.kilocode.agent-manager.requested" && event.data?.operation === "overview",
+          // The event stream is independent of the pending list, so it can arrive after the poll.
+          yield* Effect.promise(() =>
+            waitFor(() =>
+              events().some(
+                (event) => event.type === "rpc.kilocode.agent-manager.requested" && event.data?.operation === "overview",
+              ),
             ),
-          ).toBe(true)
+          )
 
           yield* Effect.promise(() =>
             rpc.reply(

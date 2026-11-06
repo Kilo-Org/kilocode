@@ -132,7 +132,6 @@ const EXCLUDED_KEYS = new Set([
   "settings.experimental.claudeMigration.title",
   "settings.experimental.codeMode.title",
   "settings.experimental.continueOnDeny.title",
-  "settings.experimental.conversationPromptHistory.title",
   "settings.experimental.globIncludeIgnored.title",
   "settings.experimental.imageGeneration.title",
   "settings.experimental.imageGenerationModel.title",

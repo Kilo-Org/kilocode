@@ -10,6 +10,9 @@ export function reviewRequest(
 ) {
   let timer: ReturnType<typeof setTimeout> | undefined
   let done = false
+  // Keep the listener target from request time. A timer that fires after the page context went away must not throw on
+  // a missing `window`.
+  const events = typeof window === "undefined" ? undefined : window
   const failure = {
     type: `${message.type}Result`,
     ...(message.projectId === undefined ? {} : { projectId: message.projectId }),
@@ -26,7 +29,7 @@ export function reviewRequest(
   const finish = (result: PRCommentResult) => {
     if (done) return
     done = true
-    window.removeEventListener("message", handler)
+    events?.removeEventListener("message", handler)
     if (timer !== undefined) clearTimeout(timer)
     timer = undefined
     settle(result)
@@ -51,7 +54,7 @@ export function reviewRequest(
       return
     finish(result)
   }
-  window.addEventListener("message", handler)
+  events?.addEventListener("message", handler)
   timer = setTimeout(() => finish(failure), timeout)
   post(message as never)
   return () => {
@@ -61,7 +64,7 @@ export function reviewRequest(
     }
     if (done) return
     done = true
-    window.removeEventListener("message", handler)
+    events?.removeEventListener("message", handler)
     if (timer !== undefined) clearTimeout(timer)
     timer = undefined
   }

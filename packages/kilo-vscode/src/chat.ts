@@ -12,10 +12,17 @@ import {
 } from "vscode"
 import { notifyHostAutoApprove, setHostAutoApprove } from "./agent-manager/provider-auto-approve"
 import type { SettingsHandler } from "./agent-manager/project/settings"
+import type { GitChanges } from "./git-changes"
 import { local } from "./local"
 import { dismissNotification, dismissedNotifications, syncDismissedNotifications } from "./notifications"
 import { applyModelPreference, readModelPreferences } from "./model-preferences"
-import { DISPLAY_DEFAULTS, type ModelPreferenceMessage, type ToHost, type ToWebview } from "./protocol"
+import {
+  DISPLAY_DEFAULTS,
+  type GitChangesStats,
+  type ModelPreferenceMessage,
+  type ToHost,
+  type ToWebview,
+} from "./protocol"
 import { bridge } from "./relay"
 import { saveImage } from "./save-image"
 import { previewImage } from "./preview-image"
@@ -31,23 +38,26 @@ import {
 import { resolveKiloProfile } from "./settings-paths"
 import { promptKeybindings, watchKeybindings } from "./prompt-keybindings"
 import { readDisplaySettings } from "./display-settings"
+import { workStyleHost } from "./work-style-host"
 import { SANDBOX_DEFAULT_KEY, SandboxPreference } from "./services/sandbox-preference"
 import { createSpeechToTextHost } from "./speech-to-text/host"
 import { setSidebarSession, sidebarSession } from "./browser-tab/sidebar-session"
 import { openBrowserLink } from "./browser-links"
 import { DEVTOOLS } from "./browser-tab/html"
 import { documentExists, isMarkdownPath } from "./documents/document-reader"
+import { indexingHost } from "./indexing/host"
 import { openToolFile, type ToolDiff } from "./tool-diff"
 import { chatFocus } from "./services/code-actions/target"
 
 // The sidebar may only write the settings its own UI owns. Other views keep their own write path.
 // The settings each webview may write; the Settings panel writes every Kilo setting through its own handler.
 const VIEW_SETTING_KEYS: Record<View, ReadonlySet<string>> = {
-  chat: new Set(["showTaskTimeline"]),
+  chat: new Set(["showTaskTimeline", "indexing.showButtonWhenDisabled"]),
   settings: new Set(),
   profile: new Set(),
   agentManager: new Set(["showTaskTimeline", "agentManager.pushFixes"]),
   documents: new Set(),
+  diffViewer: new Set(),
 }
 
 export function chat(input: {
@@ -60,6 +70,9 @@ export function chat(input: {
   openBrowser?: (sessionId: string, url: string) => boolean
   /** The editor tab of the Documents panel, created after this view so it can post comments here. */
   documents?: () => DocumentViewerProvider | undefined
+  changes?: ChangesTab
+  /** Creates the working tree stats source of this view, pushing each change to `onStats`. */
+  gitStats?: (onStats: (stats?: GitChangesStats) => void) => GitChanges
 }) {
   // This host owns the persisted auto-approve flag, and the Agent Manager sweep reads it. Record it at activation, so
   // the sweep works before any webview resolves.
@@ -99,9 +112,21 @@ export function chat(input: {
     resolveWebviewView(view) {
       state.view = view
       state.loaded = false
-      const surface = wire({ ...input, webview: view.webview, view: "chat", onMessage: flush, onFocusChanged: focus })
+      // The button follows the working tree while the sidebar is visible. Hidden views stop polling and read the
+      // current value only after they show again.
+      const stats = input.gitStats?.((value) => void send({ type: "gitChangesStats", stats: value }))
+      const surface = wire({
+        ...input,
+        webview: view.webview,
+        view: "chat",
+        onMessage: flush,
+        onFocusChanged: focus,
+        gitStats: () => stats?.read() ?? Promise.resolve(undefined),
+      })
+      stats?.setVisible(view.visible)
       const visibility = view.onDidChangeVisibility(() => {
         if (!view.visible) focus(false)
+        stats?.setVisible(view.visible)
         surface.post({ type: "webviewActiveChanged", active: view.visible })
         // A hidden webview may not receive the reset notification.
         if (view.visible) syncState()
@@ -115,6 +140,7 @@ export function chat(input: {
       void send({ type: "keybindings", bindings: promptKeybindings(input.context) })
       view.onDidDispose(() => {
         surface.dispose()
+        stats?.dispose()
         visibility.dispose()
         keybindings.dispose()
         focus(false)
@@ -138,6 +164,10 @@ export function chat(input: {
  * Connects one webview (the sidebar view or an editor panel) to the server relay and the host messages, and loads
  * the webview bundle. `view` selects the root view of the bundle.
  */
+function isWorkStyleMessage(message: ToHost) {
+  return message.type === "requestWorkStyle" || message.type === "applyWorkStyle" || message.type === "setWorkStyle"
+}
+
 export function wire(input: {
   context: ExtensionContext
   server: Manager
@@ -149,6 +179,10 @@ export function wire(input: {
   saveImageDirectory?: () => string | undefined
   /** The tool diff surfaces of the chat view. Settings has none. */
   diff?: ToolDiff
+  /** The Changes editor tab the chat view opens. Settings has none. */
+  changes?: ChangesTab
+  /** Reads the working tree change counts of the Changes button. */
+  gitStats?: () => Promise<GitChangesStats | undefined>
   /** Called on every message from the webview, before it is handled. */
   onMessage?: () => void
   /** Receives focus changes of the chat sidebar webview. */
@@ -183,6 +217,14 @@ export function wire(input: {
     fetch: local,
   })
   const post = (message: ToWebview) => void webview.postMessage(message)
+  // The consent store is machine-local, so one host per extension answers every view.
+  const indexing = indexingHost({
+    context: input.context,
+    server: input.server,
+    directory: () => input.directory,
+    log: (message, error) => console.error(`Kilo indexing: ${message}`, error),
+  })
+  const detachIndexing = indexing.attach(post)
   // The composer state is shared: a change in one open view shows in the others, for example the sidebar and the
   // Agent Manager side by side.
   const others = (message: ToWebview) => surfaces.forEach((target) => target !== post && target(message))
@@ -230,6 +272,15 @@ export function wire(input: {
           },
           dispose() {},
         }
+  const workStyle =
+    view === "settings"
+      ? { handle: async (_message: ToHost) => false }
+      : workStyleHost({
+          context: input.context,
+          server: input.server,
+          directory: input.directory,
+          post,
+        })
   // The sidebar carries the live Kilo settings: push a fresh value when any of them changes.
   const settingsWatch =
     input.view !== "settings"
@@ -375,9 +426,28 @@ export function wire(input: {
       void workspace.getConfiguration(NAMESPACE).update("language", message.locale || undefined, true)
       return true
     }
+    // The Changes tab sends its review comments to this view's composer through the provider's own sink.
+    if (message.type === "openChanges") {
+      input.changes?.open({ sessionId: message.sessionID, turnId: message.turnID })
+      return true
+    }
+    if (message.type === "requestGitChangesStats") {
+      void (input.gitStats?.() ?? Promise.resolve(undefined))
+        .catch(() => undefined)
+        .then((stats) => post({ type: "gitChangesStats", stats }))
+      return true
+    }
     // The Kilo Gateway sign-in runs in the Profile panel, as main opens its Profile tab.
     if (message.type === "openProfile") {
       void commands.executeCommand("kilo-code.v2.profile")
+      return true
+    }
+    if (message.type === "requestIndexingSettings") {
+      void indexing.requestSettings(message.projectId)
+      return true
+    }
+    if (message.type === "setIndexingConsent") {
+      void indexing.setConsent(message.projectId, message.enabled)
       return true
     }
     return false
@@ -385,6 +455,10 @@ export function wire(input: {
 
   const subscription = webview.onDidReceiveMessage((message: ToHost) => {
     input.onMessage?.()
+    if (isWorkStyleMessage(message)) {
+      void workStyle.handle(message)
+      return
+    }
     if (input.handle?.(message) || speech.handle(message)) return
     if (message.type === "fetch" || message.type === "abort" || message.type === "open") return link.receive(message)
     if (message.type === "sidebar.session") return setSidebarSession(message.sessionId)
@@ -435,6 +509,7 @@ export function wire(input: {
       link.dispose()
       speech.dispose()
       surfaces.delete(post)
+      detachIndexing()
       settings.dispose()
       settingsWatch?.dispose()
       subscription.dispose()
@@ -467,6 +542,7 @@ const ENTRY = {
   profile: "webview",
   agentManager: "agent-manager",
   documents: "documents",
+  diffViewer: "diff-viewer",
 } as const
 const SIZES = [10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24]
 
@@ -520,7 +596,7 @@ export function html(input: {
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta http-equiv="Content-Security-Policy" content="${policy}">
 <link rel="stylesheet" href="${input.style}">
-<title>${input.view === "agentManager" ? "Agent Manager" : input.view === "documents" ? "Documents" : "Kilo Code"}</title>
+<title>${input.view === "agentManager" ? "Agent Manager" : input.view === "documents" ? "Documents" : input.view === "diffViewer" ? "Changes" : "Kilo Code"}</title>
 <style>
   :root { ${vars} --kilo-font-scale: ${input.size / 13}; --font-size-x-small: var(--kilo-font-size-10); --font-size-small: var(--kilo-font-size-11); --font-size-base: var(--kilo-font-size-13); --font-size-large: var(--kilo-font-size-16); }
   html {
@@ -549,7 +625,12 @@ function escape(text: string) {
   return text.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
 }
 
-type View = "chat" | "settings" | "profile" | "agentManager" | "documents"
+type View = "chat" | "settings" | "profile" | "agentManager" | "documents" | "diffViewer"
+
+/** The Changes editor tab: the session, working tree and turn diffs with review comments. */
+export type ChangesTab = {
+  open(input: { sessionId?: string; turnId?: string }): void
+}
 
 type Surface = Extract<
   ToHost,
