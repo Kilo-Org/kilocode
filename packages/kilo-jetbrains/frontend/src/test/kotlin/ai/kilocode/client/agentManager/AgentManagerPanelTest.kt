@@ -18,6 +18,7 @@ import ai.kilocode.client.agentManager.hosted.HostedManagementService
 import ai.kilocode.client.agentManager.hosted.HostedWorkspaceEditorKind
 import ai.kilocode.client.agentManager.hosted.HostedWorkspaceRemoval
 import ai.kilocode.client.agentManager.hosted.HostedWorkspaceRow
+import ai.kilocode.client.agentManager.hosted.HostedWorkspaceRowData
 import ai.kilocode.client.agentManager.hosted.HostedWorkspaceIcons
 import ai.kilocode.client.agentManager.hosted.HostedWorkspaceDataKeys
 import ai.kilocode.client.agentManager.worktree.WorktreeDataKeys
@@ -1115,8 +1116,9 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
             list.doLayout()
             UIUtil.dispatchAllInvocationEvents()
             list.clearSelection()
+            val bounds = rowBounds(list, 0)
             val renderer = rendered(list, leafEntry(list, 0), false, true)
-            renderer.setSize(rowBounds(list, 0).width, rowBounds(list, 0).height)
+            renderer.setSize(bounds.width, bounds.height)
             components(renderer).filterIsInstance<Container>().forEach { it.doLayout() }
             assertEquals(
                 listOf("3 files", "-1", "+2"),
@@ -1863,6 +1865,11 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         waitUntil { rows(panel) == 4 }
         val view = tree(panel)
         edt {
+            val cloud = (0 until view.rowCount)
+                .map { view.getPathForRow(it).lastPathComponent as ActiveEntry }
+                .single { it.item.title == KiloBundle.message("worktree.section.cloud") }
+            assertEquals(listOf(ref.key, other.key), (0 until cloud.childCount)
+                .map { (cloud.getChildAt(it) as ActiveEntry).key })
             assertTrue(view.select(ref.key))
             val row = row(panel, 2) as HostedWorkspaceRow
             assertEquals("Active", row.badges.single().text)
@@ -1910,7 +1917,7 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         }
     }
 
-    fun `test cloud create shows a pending row immediately and delete reuses local progress`() {
+    fun `test cloud create without a profile shows a pending row and delete reuses local progress`() {
         val createdRef = HostedWorkspaceRefDto("cloud", "created")
         val session = HostedWorkspaceSessionDto(
             HostedIDs.session(createdRef.providerID, createdRef.workspaceID, "root"),
@@ -1935,6 +1942,7 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
             override suspend fun workspaceProfiles(organizationID: String?) =
                 ai.kilocode.rpc.dto.HostedWorkspaceProfileListDto()
             override suspend fun createWorkspace(request: HostedCreateWorkspaceDto): HostedMutationResultDto {
+                assertNull(request.profileID)
                 createGate.await()
                 createdOnce = true
                 return HostedMutationResultDto(workspace = created, session = session)
@@ -1958,7 +1966,6 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
 
         val request = HostedCreateWorkspaceDto(
             repository = HostedRepositoryDto("github", repo = "kilo-org/example"),
-            profileID = "profile",
             prompt = "Build it",
             agent = HostedAgentDto("code", "kilo/kilo-auto/free"),
             operationKey = "00000000-0000-4000-8000-000000000001",
@@ -2128,11 +2135,39 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         assertEquals(createdRef.key, (row(panel, 1) as HostedWorkspaceRow).data.dto.ref.key)
     }
 
+    fun `test cloud workspace row uses latest session title`() {
+        val ref = HostedWorkspaceRefDto("cloud", "workspace")
+        val old = HostedWorkspaceSessionDto(
+            id = HostedIDs.session(ref.providerID, ref.workspaceID, "old"),
+            nativeSessionID = "old",
+            title = "Old title",
+            updated = 1.0,
+        )
+        val latest = old.copy(
+            id = HostedIDs.session(ref.providerID, ref.workspaceID, "latest"),
+            nativeSessionID = "latest",
+            title = "OpenRouter API access",
+            updated = 2.0,
+        )
+        val dto = HostedWorkspaceDto(
+            ref = ref,
+            name = "Workspace name",
+            branch = "kilo/branch",
+            sessions = listOf(old, latest),
+        )
+        val row = HostedWorkspaceRow(HostedWorkspaceRowData(dto, null))
+        assertEquals("OpenRouter API access", row.title)
+        assertEquals("kilo/branch", row.description)
+        assertTrue(row.search.contains("OpenRouter API access"))
+    }
+
     fun `test cloud create is retired after repeated successful omissions`() {
         val createdRef = HostedWorkspaceRefDto("cloud", "created")
         val session = HostedWorkspaceSessionDto(
-            HostedIDs.session(createdRef.providerID, createdRef.workspaceID, "root"),
-            "root",
+            id = HostedIDs.session(createdRef.providerID, createdRef.workspaceID, "root"),
+            nativeSessionID = "root",
+            title = "OpenRouter API access",
+            updated = 2.0,
         )
         val created = HostedWorkspaceDto(createdRef, name = "Created", sessions = listOf(session))
         val calls = java.util.concurrent.atomic.AtomicInteger()
@@ -2172,8 +2207,16 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         )
         edt { panel.createHosted(request) }
         waitUntil { rows(panel) == 2 && calls.get() == 2 && !hosted.state.value.loading }
+        assertEquals("OpenRouter API access", (row(panel, 1) as HostedWorkspaceRow).title)
 
-        repeat(HOSTED_MISS_LIMIT - 1) {
+        repeat(5) {
+            val count = calls.get()
+            edt { hosted.refresh(project.basePath!!) }
+            waitUntil { calls.get() > count && !hosted.state.value.loading }
+        }
+        assertEquals(2, rows(panel))
+
+        repeat(HOSTED_MISS_LIMIT - 1 - 5) {
             val count = calls.get()
             edt { hosted.refresh(project.basePath!!) }
             waitUntil { calls.get() > count && !hosted.state.value.loading }
@@ -2224,6 +2267,57 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         )
         edt { panel.createHosted(request) }
         waitUntil { rows(panel) == 2 }
+
+        edt { project.service<HostedWorkspaceRemoval>().delete(createdRef, project.basePath!!) }
+        waitUntil { rows(panel) == 1 }
+    }
+
+    fun `test deleting a discovered workspace hides it before discovery catches up`() {
+        val createdRef = HostedWorkspaceRefDto("cloud", "discovered")
+        val session = HostedWorkspaceSessionDto(
+            HostedIDs.session(createdRef.providerID, createdRef.workspaceID, "root"),
+            "root",
+        )
+        val created = HostedWorkspaceDto(createdRef, name = "Discovered", sessions = listOf(session))
+        var createdOnce = false
+        val hosted = KiloHostedService(coroutines.scope, object : KiloHostedRpcApi {
+            override suspend fun providers(): List<HostedProviderDto> = emptyList()
+            override suspend fun workspaces(repositoryUrl: String?, cursor: String?, organizationID: String?) =
+                HostedWorkspaceListDto(if (createdOnce) listOf(created) else emptyList())
+            override suspend fun workspace(ref: HostedWorkspaceRefDto, sessionCursor: String?, organizationID: String?) = created
+            override suspend fun workspaceStatus(ref: HostedWorkspaceRefDto, organizationID: String?) =
+                HostedWorkspaceStatusDto(ref, "active", "active", "sandbox_ready", 100.0)
+            override suspend fun systemEvents(ref: HostedWorkspaceRefDto, sessionID: String, organizationID: String?): Flow<HostedSystemEventDto> = emptyFlow()
+            override suspend fun workspaceProfiles(organizationID: String?) =
+                ai.kilocode.rpc.dto.HostedWorkspaceProfileListDto()
+            override suspend fun createWorkspace(request: HostedCreateWorkspaceDto): HostedMutationResultDto {
+                createdOnce = true
+                return HostedMutationResultDto(workspace = created, session = session)
+            }
+            override suspend fun startWorkspaceSession(ref: HostedWorkspaceRefDto, request: ai.kilocode.rpc.dto.HostedStartSessionDto) =
+                HostedMutationResultDto()
+            override suspend fun deleteWorkspace(ref: HostedWorkspaceRefDto, organizationID: String?) =
+                HostedDeleteResultDto(ref, success = true)
+        }, gate = { true }, log = TestLog(), repo = { "https://github.com/kilo-org/example" })
+        project.replaceService(KiloHostedService::class.java, hosted, testRootDisposable)
+        project.replaceService(KiloSessionService::class.java,
+            KiloSessionService(project, coroutines.scope, FakeSessionRpcApi()), testRootDisposable)
+        rpc.listed += main()
+        val controller = WorktreeController(service, project.basePath!!, coroutines.scope)
+        val panel = edt { AgentManagerPanel(testRootDisposable, controller, project) }
+        edt { controller.reload() }
+        waitUntil { rows(panel) == 1 }
+
+        val request = HostedCreateWorkspaceDto(
+            repository = HostedRepositoryDto("github", repo = "kilo-org/example"),
+            profileID = "profile",
+            prompt = "Build it",
+            agent = HostedAgentDto("code", "kilo/kilo-auto/free"),
+            operationKey = "00000000-0000-4000-8000-000000000006",
+            messageID = "msg_00000000000600000000000000",
+        )
+        edt { panel.createHosted(request) }
+        waitUntil { rows(panel) == 2 && hosted.state.value.items.any { it.ref == createdRef } }
 
         edt { project.service<HostedWorkspaceRemoval>().delete(createdRef, project.basePath!!) }
         waitUntil { rows(panel) == 1 }

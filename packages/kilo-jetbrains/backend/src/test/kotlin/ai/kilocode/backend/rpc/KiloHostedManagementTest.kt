@@ -108,6 +108,27 @@ class KiloHostedManagementTest {
     }
 
     @Test
+    fun `workspace creation omits an absent profile from the local Session Host request`() = runBlocking(Dispatchers.Default) {
+        val app = app(TestLog())
+        ready(app)
+
+        val created = KiloHostedRpcApiImpl(app).createWorkspace(
+            HostedCreateWorkspaceDto(
+                repository = HostedRepositoryDto("git", url = "https://example.com/repo.git"),
+                prompt = "Build it",
+                agent = HostedAgentDto("code", "kilo/kilo-auto/free"),
+                operationKey = "00000000-0000-4000-8000-000000000002",
+                messageID = "msg_create",
+            ),
+        )
+
+        assertNull(created.failure)
+        val body = Json.parseToJsonElement(assertNotNull(mock.lastHostedCreateBody)).jsonObject
+        assertEquals(setOf("repository", "prompt", "agent", "operationKey", "messageID"), body.keys)
+        assertFalse(body.containsKey("profile"))
+    }
+
+    @Test
     fun `delete treats a missing workspace as already removed`() = runBlocking(Dispatchers.Default) {
         mock.hostedManagementStatus = 404
         val app = app(TestLog())

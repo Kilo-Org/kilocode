@@ -122,10 +122,13 @@ import com.intellij.util.ui.components.BorderLayoutPanel
 import ai.kilocode.client.util.edt
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.awt.Color
 import java.awt.Component
 import java.awt.Point
@@ -136,7 +139,7 @@ import javax.swing.event.ListDataListener
 import javax.swing.JComponent
 import javax.swing.SwingUtilities
 
-internal const val HOSTED_MISS_LIMIT = 5
+internal const val HOSTED_MISS_LIMIT = 20
 
 /**
  * Agent Manager panel: a git-worktree list with search and a delete action revealed on selection,
@@ -164,8 +167,11 @@ class AgentManagerPanel(
     private val pendingHosted = linkedMapOf<String, HostedWorkspaceDto>()
     private val createdHosted = linkedMapOf<String, HostedWorkspaceDto>()
     private val missedHosted = mutableMapOf<String, Int>()
+    private val removedHosted = mutableSetOf<String>()
+    private var hostedRun = -1L
     private var deletingHosted: Set<String> = emptySet()
     private val groupRow = LocalWorktreesRow()
+    private val cloudRow = CloudWorktreesRow()
     private val tree = ActiveTree(
         KiloBundle.message("worktree.empty"),
         cfg = ActiveConfig(
@@ -213,6 +219,7 @@ class AgentManagerPanel(
     private var hostedIdentity: String? = null
     private var hostedEpoch = 0L
     private val hostedCs = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    private var hostedRefresh: Job? = null
     private var activity = emptyMap<String, SessionActivityKind>()
     private var observed = emptySet<String>()
     private var hovered: String? = null
@@ -243,23 +250,29 @@ class AgentManagerPanel(
                 hosted.observe(this) { state ->
                     edt({ !target.isDisposed && !Disposer.isDisposed(this) }) {
                         if (state.signedOut) {
+                            hostedRun = -1L
                             if (!hostedState.signedOut) clearHostedOverlays(target)
                         } else if (!state.loading && state.error == null) {
-                            val keys = state.items.mapTo(HashSet()) { it.ref.key }
-                            createdHosted.keys.filter(keys::contains).forEach {
-                                createdHosted.remove(it)
-                                missedHosted.remove(it)
-                            }
-                            // A stale discovery or eventual consistency may omit a new workspace briefly.
-                            createdHosted.keys.toList().forEach { key ->
-                                val missed = (missedHosted[key] ?: 0) + 1
-                                if (missed < HOSTED_MISS_LIMIT) {
-                                    missedHosted[key] = missed
-                                    return@forEach
+                            val run = hosted.refreshes.value
+                            if (run != hostedRun) {
+                                hostedRun = run
+                                val keys = state.items.mapTo(HashSet()) { it.ref.key }
+                                removedHosted.retainAll(keys)
+                                createdHosted.keys.filter(keys::contains).forEach {
+                                    createdHosted.remove(it)
+                                    missedHosted.remove(it)
                                 }
-                                val workspace = createdHosted.remove(key)
-                                missedHosted.remove(key)
-                                if (workspace != null) closeHostedPending(target, workspace)
+                                // A stale discovery or eventual consistency may omit a new workspace briefly.
+                                createdHosted.keys.toList().forEach { key ->
+                                    val missed = (missedHosted[key] ?: 0) + 1
+                                    if (missed < HOSTED_MISS_LIMIT) {
+                                        missedHosted[key] = missed
+                                        return@forEach
+                                    }
+                                    val workspace = createdHosted.remove(key)
+                                    missedHosted.remove(key)
+                                    if (workspace != null) closeHostedPending(target, workspace)
+                                }
                             }
                         }
                         hostedState = state
@@ -297,6 +310,7 @@ class AgentManagerPanel(
                         edt({ !target.isDisposed && !Disposer.isDisposed(this@AgentManagerPanel) }) {
                             createdHosted.remove(ref.key)
                             missedHosted.remove(ref.key)
+                            removedHosted.add(ref.key)
                             sync()
                         }
                     }
@@ -494,6 +508,8 @@ class AgentManagerPanel(
         pendingHosted.clear()
         createdHosted.clear()
         missedHosted.clear()
+        removedHosted.clear()
+        hostedRun = -1L
     }
 
     @RequiresEdt
@@ -548,22 +564,6 @@ class AgentManagerPanel(
                 sync()
                 target.service<KiloHostedService>().refresh(controller.directory)
             }
-        }
-    }
-
-    @RequiresEdt
-    internal fun removeHosted(item: HostedWorkspaceDto) {
-        val target = project ?: return
-        val opts = ActiveDeleteOptions(
-            message = KiloBundle.message("hosted.workspace.remove.message"),
-            button = KiloBundle.message("hosted.workspace.remove.button"),
-        )
-        val anchor = tree.point(item.ref.key) ?: return
-        tree.confirmDelete(anchor, opts) {
-            target.service<HostedManagementService>().remove(item.ref)
-            service<HostedWorkspaceCache>().remove(item.ref)
-            target.service<KiloVfsManager>().close(HostedWorkspaceEditorKind.ID, hostedWorkspaceParams(item))
-            sync()
         }
     }
 
@@ -893,7 +893,8 @@ val local = (0 until controller.model.size).map {
         }
         val hosted = if (hostedState.enabled) {
             val management = project?.service<HostedManagementService>()
-            val visible = management?.visible(hostedState.items) ?: hostedState.items
+            val visible = (management?.visible(hostedState.items) ?: hostedState.items)
+                .filterNot { it.ref.key in removedHosted }
             val keys = visible.mapTo(mutableSetOf()) { it.ref.key }
             val pending = if (hostedState.signedOut) emptyList() else pendingHosted.values.map {
                 HostedWorkspaceRowData(it, null, null, KiloBundle.message("hosted.workspace.progress.creating.short"))
@@ -923,7 +924,9 @@ val local = (0 until controller.model.size).map {
             buildList {
                 current?.let { add(ActiveTreeNode(it)) }
                 add(ActiveTreeNode(groupRow, local.map { ActiveTreeNode(it) }))
-                hosted.forEach { add(ActiveTreeNode(it)) }
+                if (hostedState.enabled) {
+                    add(ActiveTreeNode(cloudRow, hosted.map { ActiveTreeNode(it) }))
+                }
             },
             ActiveSelection.Preserve,
         )
@@ -1060,9 +1063,26 @@ val local = (0 until controller.model.size).map {
                 sessions.activitySnapshot() to statuses.keys
             }.collect { (kinds, known) ->
                 edt({ !target.isDisposed && !Disposer.isDisposed(this@AgentManagerPanel) }) {
+                    val idle = activity.any { (id, kind) ->
+                        kind == SessionActivityKind.RUNNING && !kinds.containsKey(id) &&
+                            HostedIDs.parseSession(id) != null
+                    }
                     activity = kinds
                     observed = known
                     sync()
+                    if (idle) scheduleHostedRefresh()
+                }
+            }
+        }
+    }
+
+    private fun scheduleHostedRefresh() {
+        hostedRefresh?.cancel()
+        hostedRefresh = hostedCs.launch {
+            delay(2_000)
+            withContext(Dispatchers.Main) {
+                if (project?.isDisposed == false) {
+                    project.service<KiloHostedService>().refresh(controller.directory)
                 }
             }
         }
@@ -1083,6 +1103,7 @@ val local = (0 until controller.model.size).map {
     }
 
     override fun dispose() {
+        hostedRefresh?.cancel()
         hostedCs.cancel()
         controller.onSelect = null
         controller.onCreated = null
@@ -1147,6 +1168,12 @@ val local = (0 until controller.model.size).map {
         override val key: String get() = "kilo:worktree-group:local"
         override val identity: Any get() = key
         override val title: String get() = KiloBundle.message("worktree.group.local")
+    }
+
+    private inner class CloudWorktreesRow : ActiveItem {
+        override val key: String get() = "kilo:worktree-group:cloud"
+        override val identity: Any get() = key
+        override val title: String get() = KiloBundle.message("worktree.section.cloud")
     }
 
     private inner class WorktreeRow(

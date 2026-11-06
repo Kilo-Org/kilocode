@@ -2,9 +2,11 @@ package ai.kilocode.client.agentManager.hosted
 
 import ai.kilocode.client.agentManager.WorkspaceSessionEditorManager
 import ai.kilocode.client.app.Workspace
+import ai.kilocode.client.app.HostedReadiness
 import ai.kilocode.client.session.SessionRef
 import ai.kilocode.client.session.SessionUi
 import ai.kilocode.rpc.dto.HostedSystemEventDto
+import ai.kilocode.rpc.dto.PromptDto
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Disposer
@@ -71,7 +73,21 @@ class HostedWorkspaceEditorManager(
     }
 
     @RequiresEdt
-    fun setPreparation(event: HostedSystemEventDto?) {
-        currentUi()?.setHostedPreparation(event)
+    fun setPreparation(readiness: HostedReadiness, event: HostedSystemEventDto?) {
+        currentUi()?.setHostedPreparation(readiness, event)
+    }
+
+    @RequiresEdt
+    fun setTitles(titles: Map<String, String>) {
+        if (titles.isEmpty()) return
+        openSessions().forEach { ui ->
+            val id = ui.id ?: return@forEach
+            titles[id]?.let(ui::setHostedTitle)
+        }
+    }
+
+    @RequiresEdt
+    fun seedPrompt(prompt: PromptDto) {
+        currentUi()?.seedHostedPrompt(prompt)
     }
 }

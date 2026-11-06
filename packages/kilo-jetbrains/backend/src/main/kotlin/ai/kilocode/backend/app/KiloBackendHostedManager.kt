@@ -45,12 +45,9 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -97,6 +94,8 @@ class KiloBackendHostedManager(
         private const val SESSION_LIMIT = "50"
         private const val MAX_BACKOFF_MS = 10_000L
         private const val INITIAL_BACKOFF_MS = 500L
+        private const val OUTPUT_LIMIT = 65_536
+        private const val ATTEMPT_LIMIT = 2
         private val MODEL = Regex("[a-zA-Z0-9._/\\-:~]{1,255}")
         private val AGENT = Regex("[a-z][a-z0-9-]{0,49}")
         private val MESSAGE = Regex("msg_[0-9a-f]{12}[0-9A-Za-z]{14}")
@@ -125,9 +124,92 @@ class KiloBackendHostedManager(
         var snapshot = false
         var generation: String? = null
         val revision = java.util.concurrent.atomic.AtomicLong()
+        private val replay = linkedMapOf<Triple<String, String?, String?>, HostedSystemEventDto>()
+        private val attempts = linkedMapOf<String, Double>()
+        private val collectors = mutableSetOf<Channel<HostedSystemEventDto>>()
 
         val retained: Boolean get() = retainers > 0
         val unused: Boolean get() = retainers == 0 && subscribers == 0 && calls == 0
+
+        @Synchronized
+        fun subscribe(channel: Channel<HostedSystemEventDto>) {
+            replay.values.forEach { channel.trySend(it).getOrThrow() }
+            collectors.add(channel)
+        }
+
+        @Synchronized
+        fun unsubscribe(channel: Channel<HostedSystemEventDto>) {
+            collectors.remove(channel)
+            channel.cancel()
+        }
+
+        @Synchronized
+        fun publish(event: HostedSystemEventDto) {
+            val attempt = event.attemptID
+            if (event.kind == "preparing" && attempt != null) {
+                if (attempt !in attempts && attempts.size == ATTEMPT_LIMIT) {
+                    val oldest = attempts.entries.first()
+                    // Cloud replays every attempt before its independent steps. An evicted
+                    // historical step must not displace the current attempt's diagnostics.
+                    if (event.observedAt > 0 && oldest.value > event.observedAt) return
+                    attempts.remove(oldest.key)
+                    replay.keys.removeAll { it.second == oldest.key }
+                }
+                attempts[attempt] = maxOf(attempts[attempt] ?: 0.0, event.observedAt)
+            }
+            // Keep the latest envelope for every attempt/step, not the last N events globally.
+            val step = event.stepID ?: event.step?.takeUnless { event.action?.startsWith("attempt_") == true }
+            val key = Triple(event.kind, event.attemptID, step)
+            val previous = replay[key]
+            val failed = event.action in setOf("failed", "step_failed", "attempt_failed")
+            val before = previous?.revision
+            val revision = event.revision
+            if (event.kind == "preparing") {
+                if (previous?.action in setOf("failed", "step_failed", "attempt_failed") && !failed) return
+                if (before != null && revision != null) {
+                    if (before > revision) return
+                    if (before == revision && event.action == "step_output") return
+                }
+            }
+            val value = if (event.kind == "preparing" && step != null) {
+                val output = when {
+                    event.action == "step_started" -> event.output
+                    event.action == "step_output" && event.output != null -> previous?.output.orEmpty() + event.output
+                    event.output != null -> event.output
+                    else -> previous?.output
+                }
+                val bytes = output?.toByteArray(Charsets.UTF_8)
+                var offset = ((bytes?.size ?: 0) - OUTPUT_LIMIT).coerceAtLeast(0)
+                // A byte-tail cut may land inside a UTF-8 code point.
+                while (bytes?.getOrNull(offset)?.toInt()?.and(0xC0) == 0x80) offset++
+                val tail = bytes?.decodeToString(startIndex = offset)
+                event.copy(
+                    stepKind = event.stepKind ?: previous?.stepKind,
+                    output = tail,
+                    outputTruncated = event.outputTruncated || (bytes?.size ?: 0) > OUTPUT_LIMIT ||
+                        (event.action != "step_started" && (event.output == null || event.action == "step_output") &&
+                            previous?.outputTruncated == true),
+                    detail = if (!failed || tail == null || tail.isEmpty()) event.detail else {
+                        val header = event.detail?.removeSuffix(event.output?.let { "\n$it" }.orEmpty())
+                            ?: previous?.detail?.removeSuffix(previous.output?.let { "\n$it" }.orEmpty())
+                            ?: "${event.message ?: previous?.message ?: "Preparation step"} failed"
+                        "$header\n$tail"
+                    },
+                )
+            } else event
+            replay.remove(key)
+            replay[key] = value
+            collectors.forEach { it.trySend(value).getOrThrow() }
+        }
+
+        @Synchronized
+        fun close() {
+            val channels = collectors.toList()
+            collectors.clear()
+            replay.clear()
+            attempts.clear()
+            channels.forEach { it.close() }
+        }
     }
 
     private class HostedHttpException(val code: Int, message: String) : RuntimeException(message)
@@ -145,10 +227,6 @@ class KiloBackendHostedManager(
 
     private val _statuses = MutableStateFlow<Map<String, SessionStatusDto>>(emptyMap())
     val statuses: StateFlow<Map<String, SessionStatusDto>> = _statuses.asStateFlow()
-
-    // Replayed so a workspace editor opened just after attach still gets the latest preparation step.
-    private val _system = MutableSharedFlow<HostedSystemEventDto>(replay = 8, extraBufferCapacity = 64)
-    val systemEvents = _system.asSharedFlow()
 
     private var api: DefaultApi? = null
     private var http: OkHttpClient? = null
@@ -407,20 +485,25 @@ class KiloBackendHostedManager(
     suspend fun systemEvents(ref: HostedWorkspaceRefDto, native: String, organizationID: String?): Flow<HostedSystemEventDto> {
         val composite = HostedIDs.session(ref.providerID, ref.workspaceID, native)
         return flow {
+            // Register before ensure() can start the passive feed. Slow RPC collectors must not
+            // drop a preparation failure or prevent another session's replay from progressing.
+            val channel = Channel<HostedSystemEventDto>(Channel.UNLIMITED)
             val state = lock.withLock {
                 continuity.computeIfAbsent(composite) { Continuity() }.also {
+                    it.subscribe(channel)
                     it.subscribers++
                     it.organizationID = organizationID ?: it.organizationID
                 }
             }
             try {
                 ensure(composite, organizationID)
-                systemEvents.filter { it.sessionID == composite }.collect { emit(it) }
+                for (event in channel) emit(event)
             } finally {
                 withContext(kotlinx.coroutines.NonCancellable) {
                     lock.withLock {
+                        state.unsubscribe(channel)
                         state.subscribers--
-                        if (state.subscribers == 0) {
+                        if (continuity[composite] === state && state.subscribers == 0) {
                             attachments[composite]?.let { attachment ->
                                 attachment.system?.cancel()
                                 attachment.system = null
@@ -458,8 +541,11 @@ class KiloBackendHostedManager(
 
     suspend fun messages(id: String, organizationID: String?): List<MessageWithPartsDto> =
         attached(id, organizationID) { attachment ->
-            val raw = get("/session/${attachment.native}/message?workspace=${encode(attachment.id)}", "messages")
-                ?: return@attached emptyList()
+            val raw = get(
+                "/session/${attachment.native}/message?workspace=${encode(attachment.id)}",
+                "messages",
+                strict = true,
+            ) ?: error("Hosted messages response missing")
             HostedEventMapper.messages(KiloCliDataParser.parseMessages(raw), id)
         }
 
@@ -885,9 +971,20 @@ class KiloBackendHostedManager(
         var backoff = INITIAL_BACKOFF_MS
         while (started && attachments[attachment.session] === attachment) {
             val opened = stream("/cloud-agent/event?workspace=${encode(attachment.id)}") { type, data ->
-                runCatching { HostedSystemEventParser.parse(attachment.session, attachment.native, type, data) }
+                val event = runCatching { HostedSystemEventParser.parse(attachment.session, attachment.native, type, data) }
                     .onFailure { log.warn("hosted system event parse failed message=${it.message}") }
-                    .getOrNull()?.let { _system.tryEmit(it) }
+                    .getOrNull()
+                if (event == null) {
+                    log.debug { "hosted system event ignored session=${attachment.session} type=${type ?: "message"}" }
+                    return@stream
+                }
+                log.debug {
+                    "hosted system event session=${attachment.session} kind=${event.kind} " +
+                        "action=${event.action} attempt=${event.attemptID} revision=${event.revision}"
+                }
+                lock.withLock {
+                    if (attachments[attachment.session] === attachment) continuity[attachment.session]?.publish(event)
+                }
             }
             if (!started || attachments[attachment.session] !== attachment) return
             if (opened in setOf(404, 410)) {
@@ -924,6 +1021,7 @@ class KiloBackendHostedManager(
             override fun onOpen(eventSource: EventSource, response: okhttp3.Response) {
                 source.set(eventSource)
                 code.set(response.code)
+                log.debug { "hosted stream connected path=$path code=${response.code}" }
                 frames.trySend(Frame(null, null))
             }
 
@@ -984,9 +1082,10 @@ class KiloBackendHostedManager(
     }
 
     private fun discard(id: String, state: Continuity) {
-        if (!state.unused) return
+        if (!state.unused || continuity[id] !== state) return
         attachments.remove(id)?.let { close(it) }
         continuity.remove(id, state)
+        state.close()
         _statuses.update { it - id }
     }
 
@@ -995,6 +1094,7 @@ class KiloBackendHostedManager(
         statusJob = null
         attachments.values.forEach { close(it, detach, client = client) }
         attachments.clear()
+        continuity.values.forEach { it.close() }
         continuity.clear()
         lifecycle?.cancel()
         lifecycle = null
@@ -1032,7 +1132,7 @@ class KiloBackendHostedManager(
             }
             request.repository.branch?.takeIf { it.isNotBlank() }?.let { put("branch", it) }
         }
-        putJsonObject("profile") { put("id", request.profileID) }
+        request.profileID?.let { putJsonObject("profile") { put("id", it) } }
         put("prompt", request.prompt)
         putJsonObject("agent") {
             put("mode", request.agent.mode)
@@ -1143,7 +1243,7 @@ class KiloBackendHostedManager(
                     attachment.recovery?.cancel()
                 }
                 attachments.remove(id)
-                continuity.remove(id)
+                continuity.remove(id)?.close()
                 sessions.remove(id)
             }
             _statuses.update { statuses -> statuses.filterKeys { id ->

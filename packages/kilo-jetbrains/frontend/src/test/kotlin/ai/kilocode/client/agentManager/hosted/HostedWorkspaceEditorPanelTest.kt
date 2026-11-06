@@ -25,20 +25,30 @@ import javax.swing.SwingUtilities
 import ai.kilocode.client.ui.layout.Stack
 import ai.kilocode.client.session.ui.ProgressPanel
 import ai.kilocode.client.session.SessionUi
+import ai.kilocode.client.session.ui.prompt.PromptPanel
+import ai.kilocode.client.session.views.LoginRequiredView
+import ai.kilocode.client.session.views.SessionOutcomeView
+import ai.kilocode.client.session.views.TextView
+import ai.kilocode.client.session.views.permission.PermissionView
+import ai.kilocode.client.session.views.question.QuestionView
 import ai.kilocode.client.util.edtWait
 import ai.kilocode.client.vfs.KiloEditorKindRegistry
 import ai.kilocode.client.vfs.KiloVirtualFileSystem
 import com.intellij.openapi.components.service
 import com.intellij.openapi.fileEditor.FileEditorManager
 import ai.kilocode.rpc.KiloHostedRpcApi
+import ai.kilocode.rpc.dto.ChatEventDto
 import ai.kilocode.rpc.dto.HostedAgentDto
 import ai.kilocode.rpc.dto.HostedCreateWorkspaceDto
 import ai.kilocode.rpc.dto.HostedDeleteResultDto
 import ai.kilocode.rpc.dto.HostedMutationResultDto
 import ai.kilocode.rpc.dto.HostedProviderDto
+import ai.kilocode.rpc.dto.HostedRepositoryDto
 import ai.kilocode.rpc.dto.HostedStartSessionDto
 import ai.kilocode.rpc.dto.HostedWorkspaceProfileListDto
 import ai.kilocode.rpc.dto.HostedSystemEventDto
+import ai.kilocode.rpc.dto.SessionActivityDto
+import ai.kilocode.rpc.dto.SessionActivityKindDto
 import ai.kilocode.rpc.dto.HostedWorkspaceDto
 import ai.kilocode.rpc.dto.HostedWorkspaceListDto
 import ai.kilocode.rpc.dto.HostedWorkspaceRefDto
@@ -48,6 +58,13 @@ import ai.kilocode.rpc.dto.KiloAppStateDto
 import ai.kilocode.rpc.dto.KiloAppStatusDto
 import ai.kilocode.rpc.dto.KiloWorkspaceStateDto
 import ai.kilocode.rpc.dto.KiloWorkspaceStatusDto
+import ai.kilocode.rpc.dto.MessageErrorDto
+import ai.kilocode.rpc.dto.MessageDto
+import ai.kilocode.rpc.dto.MessageTimeDto
+import ai.kilocode.rpc.dto.PartDto
+import ai.kilocode.rpc.dto.PermissionRequestDto
+import ai.kilocode.rpc.dto.QuestionInfoDto
+import ai.kilocode.rpc.dto.QuestionRequestDto
 import ai.kilocode.rpc.dto.SessionStatusDto
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.util.Disposer
@@ -62,11 +79,14 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.launch
 import java.awt.Component
 import java.awt.Container
 import java.awt.event.ActionEvent
 import java.awt.event.KeyEvent
 import javax.swing.JComponent
+import javax.swing.JButton
+import javax.swing.JTextArea
 import javax.swing.KeyStroke
 
 class HostedWorkspaceEditorPanelTest : BasePlatformTestCase() {
@@ -82,7 +102,7 @@ class HostedWorkspaceEditorPanelTest : BasePlatformTestCase() {
         super.setUp()
         coroutines = TestCoroutines()
         rpc = FakeHosted(ref)
-        sessions = FakeSessionRpcApi()
+        sessions = FakeSessionRpcApi().also { it.session = it.session.copy(id = key) }
         hosted = KiloHostedService(coroutines.scope, rpc, gate = { true }, log = TestLog(), repo = { "repo" })
         project.replaceService(KiloHostedService::class.java, hosted, testRootDisposable)
         project.replaceService(KiloSessionService::class.java,
@@ -95,6 +115,7 @@ class HostedWorkspaceEditorPanelTest : BasePlatformTestCase() {
             it.state.value = KiloWorkspaceStateDto(KiloWorkspaceStatusDto.READY)
         }), testRootDisposable)
         panel = edtWait { HostedWorkspaceEditorPanel(testRootDisposable, project, ref, "Cloud workspace") }
+        emit(HostedSystemEventDto(key, "cloud.status", cloudStatus = "idle", observedAt = 1.0))
         assertTrue(coroutines.pumpUntil { edtWait {
             badge().segments.singleOrNull()?.text == "Sleeping" && descendants(panel).any { it is SessionUi }
         } })
@@ -140,6 +161,33 @@ class HostedWorkspaceEditorPanelTest : BasePlatformTestCase() {
         edtWait { assertSame(footer, descendants(panel).filterIsInstance<ProgressPanel>().single()) }
     }
 
+    fun testHistoryWaitsForPreparationAndShowsPhase() {
+        val fake = FakeHosted(ref)
+        fake.events.tryEmit(HostedSystemEventDto(key, "preparing", step = "sandbox", action = "attempt_started",
+            attemptID = "attempt_1", message = "Creating sandbox", observedAt = 1.0, revision = 1))
+        project.replaceService(KiloHostedService::class.java,
+            KiloHostedService(coroutines.scope, fake, gate = { true }, log = TestLog(), repo = { "repo" }), testRootDisposable)
+        edtWait { Disposer.dispose(panel) }
+        edtWait { project.service<HostedManagementService>().forget(ref) }
+        coroutines.drain()
+        val before = sessions.historyCalls
+        panel = edtWait { HostedWorkspaceEditorPanel(testRootDisposable, project, ref, "Cloud workspace") }
+        assertTrue(coroutines.pumpUntil { edtWait {
+            descendants(panel).filterIsInstance<SessionUi>().any { ui ->
+                descendants(ui).filterIsInstance<ProgressPanel>().any {
+                    it.isVisible && it.labelText() == "Creating sandbox"
+                }
+            }
+        } })
+        assertEquals("History must wait for Cloud preparation", before, sessions.historyCalls)
+        assertTrue(fake.events.tryEmit(HostedSystemEventDto(key, "preparing", action = "attempt_completed",
+            attemptID = "attempt_1", observedAt = 2.0, revision = 2)))
+        assertTrue(coroutines.pumpUntil { sessions.historyCalls == before + 1 })
+        assertTrue(coroutines.pumpUntil { edtWait {
+            descendants(panel).filterIsInstance<ProgressPanel>().none { it.isVisible }
+        } })
+    }
+
     fun testSessionBadgesUpdateWithoutReloadingOrChangingSelection() {
         val list = edtWait { descendants(panel).filterIsInstance<JBList<*>>().single() }
         val selection = edtWait { (list.selectedValue as ActiveItem).key }
@@ -159,12 +207,16 @@ class HostedWorkspaceEditorPanelTest : BasePlatformTestCase() {
         assertEquals(1, rpc.collectors)
     }
 
-    fun testPreparationFailureRemainsMountedAfterIdleAndRestartReusesFooter() {
+    fun testPreparationFailureUsesOutcomeCardAndNewAttemptProgress() {
         emit(HostedSystemEventDto(key, "preparing", action = "attempt_failed", attemptID = "attempt_1",
             failure = "workspace_setup_failed", message = "Finishing setup", observedAt = 110.0, revision = 8))
         assertTrue(coroutines.pumpUntil { edtWait {
-            descendants(panel).filterIsInstance<ProgressPanel>().any {
-                it.isVisible && it.labelText().startsWith(KiloBundle.message("hosted.workspace.preparation.setupFailed"))
+            descendants(panel).any { it is SessionOutcomeView }
+        } })
+        val card = edtWait { descendants(panel).filterIsInstance<SessionOutcomeView>().single() }
+        assertTrue(coroutines.pumpUntil { edtWait {
+            card.isVisible && descendants(card).filterIsInstance<javax.swing.JTextArea>().any {
+                it.text.contains(KiloBundle.message("hosted.workspace.preparation.setupFailed"))
             }
         } })
         val footer = edtWait { descendants(panel).filterIsInstance<ProgressPanel>().single() }
@@ -172,15 +224,218 @@ class HostedWorkspaceEditorPanelTest : BasePlatformTestCase() {
         assertTrue(coroutines.pumpUntil { hosted.state.value.failure(key) != null &&
             hosted.state.value.preparations[key]?.cloudStatus == "error" })
         edtWait {
-            assertTrue(footer.isVisible)
-            assertSame(footer, descendants(panel).filterIsInstance<ProgressPanel>().single())
+            assertTrue(card.isVisible)
+            assertSame(card, descendants(panel).filterIsInstance<SessionOutcomeView>().single())
         }
         emit(HostedSystemEventDto(key, "preparing", action = "attempt_started", attemptID = "attempt_2",
             message = "New preparation", observedAt = 200.0, revision = 1))
-        assertTrue(coroutines.pumpUntil { edtWait { footer.labelText() == "New preparation" } })
+        assertTrue(coroutines.pumpUntil { edtWait { !card.isVisible && footer.isVisible && footer.labelText() == "New preparation" } })
         edtWait { assertSame(footer, descendants(panel).filterIsInstance<ProgressPanel>().single()) }
         assertNull(hosted.state.value.failure(key))
         assertEquals("sleeping", hosted.state.value.statuses[ref.key]?.computeStatus)
+    }
+
+    fun testCreatePromptFailureOverridesHistory503AndFailedRetryWithoutNativeIdle() {
+        val root = rpc.rootSessions.first()
+        rpc.mutation = HostedMutationResultDto(
+            workspace = HostedWorkspaceDto(ref, sessions = rpc.rootSessions),
+            session = root,
+            messageID = "msg_initial",
+        )
+        sessions.pendingError = IllegalStateException("HTTP 503")
+        sessions.historyGate = CompletableDeferred<Unit>().also {
+            it.completeExceptionally(IllegalStateException("HTTP 503"))
+        }
+        coroutines.scope.launch {
+            hosted.create(HostedCreateWorkspaceDto(
+                HostedRepositoryDto("github", repo = "Kilo-Org/cloud-agent-e2e-playground"), "profile",
+                "Tell me about Kilo Code", HostedAgentDto("code", "kilo/kilo-auto/free"), "create", "msg_initial",
+            ))
+        }
+        coroutines.drain()
+        edtWait {
+            Disposer.dispose(panel)
+            panel = HostedWorkspaceEditorPanel(testRootDisposable, project, ref, "Cloud workspace")
+        }
+        assertTrue(coroutines.pumpUntil { edtWait { descendants(panel).any { it is SessionUi } } })
+        assertTrue(coroutines.pumpUntil { edtWait {
+            descendants(panel).filterIsInstance<SessionOutcomeView>().any { card ->
+                card.isVisible && descendants(card).filterIsInstance<JTextArea>().any {
+                    it.text == KiloBundle.message("hosted.session.error.unavailable")
+                }
+            }
+        } })
+        assertTrue("Creating the workspace must not submit its initial prompt twice", sessions.prompts.isEmpty())
+        val failed = HostedSystemEventDto(key, "preparing", action = "attempt_failed", attemptID = "attempt_1",
+            failure = "workspace_setup_failed", triggerMessageID = "msg_initial", revision = 21, observedAt = 120.0)
+        emit(failed)
+        val output = "Setup command 1 failed (exit code 1)\nbash: line 1: cd: cloud-agent: No such file or directory\n"
+        emit(failed.copy(action = "failed", step = "setup_commands", stepID = "setup_command:0",
+            stepKind = "setup_command", detail = output, revision = 19, observedAt = 110.0, outputTruncated = true))
+        assertTrue(coroutines.pumpUntil { edtWait {
+            descendants(panel).filterIsInstance<JTextArea>().any {
+                it.text.contains(output) && it.text.contains(KiloBundle.message("hosted.workspace.preparation.outputTruncated"))
+            }
+        } })
+        val card = edtWait { descendants(panel).filterIsInstance<SessionOutcomeView>().single() }
+        val area = edtWait { descendants(card).filterIsInstance<JTextArea>().single { it.text.contains(output) } }
+        val footer = edtWait { descendants(panel).filterIsInstance<ProgressPanel>().single() }
+        edtWait {
+            assertTrue(card.isVisible)
+            val button = descendants(card).filterIsInstance<JButton>()
+                .single { it.text == KiloBundle.message("session.outcome.retry") }
+            button.doClick()
+        }
+        assertTrue(coroutines.pumpUntil { sessions.prompts.isNotEmpty() })
+        assertEquals("Tell me about Kilo Code", sessions.prompts.single().third.parts.single().text)
+        val retry = sessions.prompts.single().third.messageID!!
+        emit(HostedSystemEventDto(key, "preparing", action = "attempt_started", attemptID = "attempt_2",
+            triggerMessageID = retry, message = "Retrying setup", revision = 1, observedAt = 200.0))
+        assertTrue(coroutines.pumpUntil { edtWait {
+            !card.isVisible && footer.isVisible && footer.labelText() == "Retrying setup"
+        } })
+
+        emit(failed.copy(attemptID = "attempt_2", triggerMessageID = retry, observedAt = 210.0,
+            detail = output, outputTruncated = true))
+
+        assertTrue(coroutines.pumpUntil { edtWait {
+            card.isVisible && area.text.contains(output) &&
+                descendants(card).filterIsInstance<JButton>().any { it.text == KiloBundle.message("session.outcome.retry") }
+        } })
+        edtWait {
+            assertSame(card, descendants(panel).filterIsInstance<SessionOutcomeView>().single())
+            assertSame(area, descendants(card).filterIsInstance<JTextArea>().single { it.text.contains(output) })
+            assertSame(footer, descendants(panel).filterIsInstance<ProgressPanel>().single())
+            assertFalse("Stale native progress must yield to the setup failure", footer.isVisible)
+            assertTrue("Failure presentation must not rewrite native Busy", descendants(panel).filterIsInstance<PromptPanel>().single().isStopEnabled)
+            descendants(card).filterIsInstance<JButton>()
+                .single { it.text == KiloBundle.message("session.outcome.retry") }.doClick()
+        }
+        assertTrue("A second failed preparation must remain retryable without native idle",
+            coroutines.pumpUntil { sessions.prompts.size == 2 })
+        val next = sessions.prompts.last().third.messageID!!
+        assertTrue(retry != next)
+        emit(failed.copy(attemptID = "attempt_3", triggerMessageID = next, observedAt = 300.0, detail = output))
+        assertTrue(coroutines.pumpUntil { edtWait { card.isVisible && area.text.contains(output) } })
+        edtWait {
+            descendants(card).filterIsInstance<JButton>()
+                .single { it.text == KiloBundle.message("session.outcome.dismiss") }.doClick()
+            assertFalse(card.isVisible)
+            assertTrue(descendants(panel).filterIsInstance<PromptPanel>().single().isStopEnabled)
+        }
+        emit(HostedSystemEventDto(key, "cloud.sandbox.status", sandboxStatus = "stopped", observedAt = 400.0))
+        assertTrue(coroutines.pumpUntil { edtWait { badge().segments.singleOrNull()?.text == "Stopped" } })
+        edtWait { assertFalse("Unrelated hosted refresh must not reopen a dismissed failure", card.isVisible) }
+        emit(failed.copy(attemptID = "attempt_3", triggerMessageID = next, observedAt = 410.0, detail = "$output\nLate detail", revision = 22))
+        assertTrue(coroutines.pumpUntil { hosted.state.value.failure(key)?.revision == 22L })
+        emit(HostedSystemEventDto(key, "cloud.sandbox.status", sandboxStatus = "sleeping", observedAt = 420.0))
+        assertTrue(coroutines.pumpUntil { edtWait { badge().segments.singleOrNull()?.text == "Sleeping" } })
+        edtWait { assertFalse("Replay or enrichment of the same dismissed attempt must stay dismissed", card.isVisible) }
+        emit(HostedSystemEventDto(key, "preparing", action = "attempt_started", attemptID = "attempt_4",
+            triggerMessageID = next, message = "Preparing a new attempt", observedAt = 500.0))
+        assertTrue(coroutines.pumpUntil { edtWait { footer.labelText() == "Preparing a new attempt" && footer.isVisible } })
+        emit(failed.copy(attemptID = "attempt_4", triggerMessageID = next, observedAt = 510.0, detail = output))
+        assertTrue(coroutines.pumpUntil { edtWait { card.isVisible && area.text.contains(output) } })
+        assertEquals(2, sessions.prompts.size)
+    }
+
+    fun testPreparationFailureDoesNotClobberNewerPromptOrPendingInteractions() {
+        val ui = edtWait { descendants(panel).filterIsInstance<SessionUi>().single() }
+        edtWait { ui.submitPrompt("First prompt") }
+        assertTrue(coroutines.pumpUntil { sessions.prompts.size == 1 })
+        assertTrue(sessions.events.tryEmit(ChatEventDto.SessionStatusChanged(key, SessionStatusDto("busy"))))
+        assertTrue(coroutines.pumpUntil { edtWait { descendants(panel).filterIsInstance<PromptPanel>().single().isStopEnabled } })
+        val first = sessions.prompts.single().third.messageID!!
+        val failure = HostedSystemEventDto(key, "preparing", action = "attempt_failed", attemptID = "attempt_1",
+            triggerMessageID = first, failure = "workspace_setup_failed", detail = "Setup command 1 failed", revision = 2)
+        emit(failure)
+        val card = edtWait { descendants(panel).filterIsInstance<SessionOutcomeView>().single() }
+        assertTrue(coroutines.pumpUntil { edtWait { card.isVisible } })
+
+        edtWait { ui.submitPrompt("Newer prompt") }
+        assertTrue(coroutines.pumpUntil { sessions.prompts.size == 2 })
+        val current = sessions.prompts.last().third.messageID!!
+        emit(failure.copy(detail = "Late output for the older prompt", revision = 3))
+        assertTrue(coroutines.pumpUntil { hosted.state.value.failure(key)?.detail == "Late output for the older prompt" })
+        edtWait {
+            assertFalse(card.isVisible)
+            assertTrue(descendants(panel).filterIsInstance<PromptPanel>().single().isStopEnabled)
+        }
+
+        emit(failure.copy(attemptID = "attempt_2", triggerMessageID = current, revision = 4))
+        assertTrue(coroutines.pumpUntil { edtWait { card.isVisible } })
+        assertTrue(sessions.events.tryEmit(ChatEventDto.QuestionAsked(key,
+            QuestionRequestDto("question", key, listOf(QuestionInfoDto("Proceed?", "Question"))))))
+        assertTrue(coroutines.pumpUntil { edtWait {
+            descendants(panel).filterIsInstance<QuestionView>().single().isVisible && !card.isVisible
+        } })
+        emit(failure.copy(attemptID = "attempt_2", triggerMessageID = current, revision = 5))
+        assertTrue(coroutines.pumpUntil { hosted.state.value.failure(key)?.revision == 5L })
+        edtWait { assertTrue(descendants(panel).filterIsInstance<QuestionView>().single().isVisible); assertFalse(card.isVisible) }
+
+        assertTrue(sessions.events.tryEmit(ChatEventDto.QuestionRejected(key, "question")))
+        assertTrue(sessions.events.tryEmit(ChatEventDto.PermissionAsked(key,
+            PermissionRequestDto("permission", key, "edit", listOf("*.kt")))))
+        assertTrue(coroutines.pumpUntil { edtWait {
+            descendants(panel).filterIsInstance<PermissionView>().single().isVisible && !card.isVisible
+        } })
+        emit(failure.copy(attemptID = "attempt_2", triggerMessageID = current, revision = 6))
+        assertTrue(coroutines.pumpUntil { hosted.state.value.failure(key)?.revision == 6L })
+        edtWait { assertTrue(descendants(panel).filterIsInstance<PermissionView>().single().isVisible); assertFalse(card.isVisible) }
+
+        assertTrue(sessions.events.tryEmit(ChatEventDto.Error(key,
+            MessageErrorDto("APIError", statusCode = 401, responseBody = """{"code":"PAID_MODEL_AUTH_REQUIRED"}"""))))
+        assertTrue(coroutines.pumpUntil { edtWait {
+            descendants(panel).filterIsInstance<LoginRequiredView>().single().isVisible && !card.isVisible
+        } })
+        emit(failure.copy(attemptID = "attempt_2", triggerMessageID = current, revision = 7))
+        assertTrue(coroutines.pumpUntil { hosted.state.value.failure(key)?.revision == 7L })
+        edtWait { assertTrue(descendants(panel).filterIsInstance<LoginRequiredView>().single().isVisible); assertFalse(card.isVisible) }
+        assertEquals(2, sessions.prompts.size)
+        assertTrue(sessions.permissionReplies.isEmpty())
+        assertTrue(sessions.questionReplies.isEmpty())
+    }
+
+    fun testLateInitialHistory503CannotReplaceCurrentBusyPreparationFailure() {
+        val before = sessions.historyCalls
+        val gate = CompletableDeferred<Unit>()
+        sessions.historyGate = gate
+        edtWait {
+            Disposer.dispose(panel)
+            panel = HostedWorkspaceEditorPanel(testRootDisposable, project, ref, "Cloud workspace")
+        }
+        assertTrue(coroutines.pumpUntil { sessions.historyCalls > before && edtWait {
+            descendants(panel).any { it is SessionUi }
+        } })
+        edtWait { descendants(panel).filterIsInstance<SessionUi>().single().submitPrompt("Prepare the workspace") }
+        assertTrue(coroutines.pumpUntil { sessions.prompts.size == 1 })
+        // Transcript parts wait for history; preparation and native status can advance independently.
+        assertTrue(sessions.events.tryEmit(ChatEventDto.SessionStatusChanged(key, SessionStatusDto("busy"))))
+        val id = sessions.prompts.single().third.messageID!!
+        val output = "Setup command 1 failed (exit code 1)\nbash: line 1: cd: cloud-agent: No such file or directory"
+        emit(HostedSystemEventDto(key, "preparing", action = "attempt_failed", attemptID = "attempt_1",
+            triggerMessageID = id, failure = "workspace_setup_failed", detail = output))
+        val card = edtWait { descendants(panel).filterIsInstance<SessionOutcomeView>().single() }
+        assertTrue(coroutines.pumpUntil { edtWait {
+            card.isVisible && descendants(card).filterIsInstance<JTextArea>().any { it.text.contains(output) }
+        } })
+        assertTrue(sessions.events.tryEmit(ChatEventDto.MessageUpdated(key,
+            MessageDto(id, key, "user", MessageTimeDto(200.0)))))
+        assertTrue(sessions.events.tryEmit(ChatEventDto.PartUpdated(key,
+            PartDto("native", key, id, "text", text = "Native prompt accepted"))))
+        gate.completeExceptionally(IllegalStateException("HTTP 503"))
+
+        assertTrue("Settling initial history must release queued native content", coroutines.pumpUntil { edtWait {
+            descendants(panel).filterIsInstance<TextView>().any { it.markdown() == "Native prompt accepted" }
+        } })
+        edtWait {
+            assertTrue("A stale initial error must not replace the current native Busy", descendants(panel).filterIsInstance<PromptPanel>().single().isStopEnabled)
+            assertTrue(card.isVisible)
+            assertTrue(descendants(card).filterIsInstance<JTextArea>().any { it.text.contains(output) })
+            assertFalse(descendants(card).filterIsInstance<JTextArea>().any { it.text == "HTTP 503" })
+            assertNotNull(descendants(card).filterIsInstance<JButton>()
+                .singleOrNull { it.text == KiloBundle.message("session.outcome.retry") })
+        }
     }
 
     fun testCloudUsesSharedEditorHeaderRowsAndWorktreeSessionStyling() {
@@ -203,6 +458,38 @@ class HostedWorkspaceEditorPanelTest : BasePlatformTestCase() {
             iter.next()
             assertEquals(SimpleTextAttributes.STYLE_PLAIN, iter.textAttributes.style)
         }
+    }
+
+    fun testCloudSessionTitleRefreshesFromWorkspace() {
+        assertTrue(coroutines.pumpUntil { edtWait {
+            descendants(panel).filterIsInstance<SessionUi>().single().title() == "Selected session"
+        } })
+        val current = rpc.rootSessions
+        rpc.rootSessions = current.mapIndexed { index, session ->
+            if (index == 0) session.copy(title = "OpenRouter API access", updated = 3.0) else session
+        }
+        hosted.refresh("repo")
+        assertTrue(coroutines.pumpUntil { edtWait {
+            val list = descendants(panel).filterIsInstance<JBList<*>>().single()
+            val row = (0 until list.model.size).map { list.model.getElementAt(it) as ActiveItem }
+                .firstOrNull { it.key == key }
+            descendants(panel).filterIsInstance<SessionUi>().single().title() == "OpenRouter API access" &&
+                row?.title == "OpenRouter API access"
+        } })
+    }
+
+    fun testHostedIdleDetectsCompletedTurn() {
+        val running = SessionActivityDto(directory = "/cloud-agent/sessions/selected", kind = SessionActivityKindDto.RUNNING)
+        val current = listOf(HostedWorkspaceSessionDto(
+            id = key,
+            nativeSessionID = "selected",
+            title = "Selected session",
+            updated = 1.0,
+        ))
+        assertTrue(hostedIdle(mapOf(key to running), emptyMap(), ref.workspaceID, current))
+        assertTrue(hostedIdle(mapOf("selected" to running), emptyMap(), ref.workspaceID, current))
+        assertFalse(hostedIdle(mapOf(key to running), mapOf(key to running), ref.workspaceID, current))
+        assertFalse(hostedIdle(mapOf(key to running), emptyMap(), "other", emptyList()))
     }
 
     fun testHeaderUsesTheRowBadgeAndSeparateHourlyPriceWithoutRefreshControl() {
@@ -399,6 +686,7 @@ class HostedWorkspaceEditorPanelTest : BasePlatformTestCase() {
         var gate: CompletableDeferred<Unit>? = null
         var name: String? = null
         var list = HostedWorkspaceListDto()
+        var mutation = HostedMutationResultDto()
         var rootSessions = listOf(
             HostedWorkspaceSessionDto("${ref.key}:selected", "selected", "Selected session", updated = 2.0),
             HostedWorkspaceSessionDto("${ref.key}:other", "other", "New session - 2026-07-30T19:01:40.945Z", updated = 1.0),
@@ -415,7 +703,7 @@ class HostedWorkspaceEditorPanelTest : BasePlatformTestCase() {
             return HostedWorkspaceStatusDto(ref, "active", "sleeping", "sandbox_stopped", 100.0, rateMicrodollarsPerHour = 1_200_000)
         }
         override suspend fun workspaceProfiles(organizationID: String?) = HostedWorkspaceProfileListDto()
-        override suspend fun createWorkspace(request: HostedCreateWorkspaceDto) = HostedMutationResultDto()
+        override suspend fun createWorkspace(request: HostedCreateWorkspaceDto) = mutation
         override suspend fun startWorkspaceSession(ref: HostedWorkspaceRefDto, request: HostedStartSessionDto) =
             HostedMutationResultDto()
         override suspend fun deleteWorkspace(ref: HostedWorkspaceRefDto, organizationID: String?) =

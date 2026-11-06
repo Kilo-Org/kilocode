@@ -77,6 +77,7 @@ class AgentManagerAddActionTest : BasePlatformTestCase() {
 
         assertFalse(hint.contains("<hr"))
         assertFalse(hint.contains("coming soon", ignoreCase = true))
+        assertEquals("Move tasks between local and Cloud anytime.", hint)
     }
 
     fun `test add group items carry branch and cloud icons`() {
@@ -92,7 +93,7 @@ class AgentManagerAddActionTest : BasePlatformTestCase() {
         assertTrue(action.isPopup)
         assertTrue(action.templatePresentation.isPerformGroup)
         assertEquals(
-            listOf("New Task in Local Worktree", "New Task on Cloud"),
+            listOf("Local Worktree Task", "Cloud Task"),
             action.getChildren(null).map { it.templatePresentation.text },
         )
     }

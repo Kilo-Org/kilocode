@@ -5051,7 +5051,7 @@ export type SessionHostAgent = {
 
 export type SessionHostCreateWorkspaceInput = {
   repository: SessionHostRepository
-  profile: SessionHostProfile
+  profile?: SessionHostProfile
   prompt: string
   agent: SessionHostAgent
   operationKey: string

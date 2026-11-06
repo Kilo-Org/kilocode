@@ -24,6 +24,7 @@ import ai.kilocode.client.session.views.question.QuestionView
 import ai.kilocode.client.session.views.TurnView
 import ai.kilocode.client.session.views.base.PartView
 import ai.kilocode.client.session.views.failureText
+import ai.kilocode.rpc.dto.HostedSystemEventDto
 import ai.kilocode.client.util.EdtDrain
 import ai.kilocode.client.util.edtLater
 import com.intellij.openapi.application.ApplicationManager
@@ -143,6 +144,24 @@ class SessionMessageListPanel(
             refresh()
         }
 
+    private var preparationFailure: Pair<String, HostedSystemEventDto>? = null
+
+    /** Keeps provider-safe preparation detail on the standard, retained outcome card. */
+    @RequiresEdt
+    fun setPreparationFailure(failure: HostedSystemEventDto?, message: String = "") {
+        val next = failure?.let { message to it }
+        if (preparationFailure == next) return
+        preparationFailure = next
+        syncActive(model.state)
+        anchorFooter()
+        refresh()
+    }
+
+    @RequiresEdt
+    fun preparationFailure(state: SessionState = model.state): HostedSystemEventDto? = preparationFailure?.second?.takeIf {
+        state.showsPreparation(it, model.messages().lastOrNull { msg -> msg.info.role == "user" }?.info)
+    }
+
     /** Progress footer — always the last child inside the scroll. */
     val progress = ProgressPanel(model, parent)
 
@@ -211,9 +230,16 @@ class SessionMessageListPanel(
                     refresh()
                 }
 
-                // Message events: structural changes are handled via turn events above.
                 is SessionModelEvent.MessageAdded,
-                is SessionModelEvent.MessageRemoved,
+                is SessionModelEvent.MessageRemoved -> {
+                    // A new prompt may supersede preparation without changing the native Busy state.
+                    if (preparationFailure != null &&
+                        (event !is SessionModelEvent.MessageAdded || event.info.info.role == "user")) {
+                        syncActive()
+                        refresh()
+                    }
+                }
+
                 is SessionModelEvent.TodosUpdated,
                 is SessionModelEvent.BackgroundAgentsUpdated,
                 is SessionModelEvent.SessionUpdated,
@@ -230,7 +256,11 @@ class SessionMessageListPanel(
                     if (changed && turn != null) (layout as? SessionLayout)?.forget(turn)
                     // A failure landing on the tail decides whether the footer prints the reason or only
                     // offers Retry, so the footer has to be re-evaluated with it.
-                    if (changed && id == tail()) syncActive()
+                    if ((changed && id == tail()) ||
+                        (preparationFailure != null && event.info.info.role == "user")) {
+                        syncActive()
+                        changed = true
+                    }
                     val view = turnViews[id]
                     if (view?.setDiffs(event.info.info.summary?.diffs.orEmpty()) == true) {
                         (layout as? SessionLayout)?.forget(view)
@@ -601,6 +631,16 @@ class SessionMessageListPanel(
      * but visibility is controlled here.
      */
     private fun syncActive(state: SessionState = model.state) {
+        if (preparationFailure(state) != null) {
+            progress.isVisible = false
+            setHiddenQuestionTool(null)
+            question?.hideView()
+            permission?.hideView()
+            login?.hideView()
+            outcome?.showError(preparationFailure!!.first, null)
+            return
+        }
+        if (state is SessionState.Busy || state is SessionState.Retry || state is SessionState.Offline) progress.isVisible = true
         when (state) {
             is SessionState.AwaitingQuestion -> {
                 setHiddenQuestionTool(state.question.tool)
@@ -633,7 +673,7 @@ class SessionMessageListPanel(
                 // before an assistant message existed — have no card, so they still print in full.
                 // Trimmed: the state message is the raw error text, while the card normalizes it.
                 if (explained() == state.message.trim()) outcome?.showRetry()
-                else outcome?.showError(state.message, state.kind)
+                else outcome?.showError(state.message, state.kind, state.dismissible)
             }
             is SessionState.TurnEnded -> {
                 setHiddenQuestionTool(null)

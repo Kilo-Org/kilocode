@@ -20,7 +20,7 @@ import javax.swing.JComponent
 internal data class HostedCreatePlan(
     val prompt: String,
     val branch: String?,
-    val profileID: String,
+    val profileID: String?,
     val agent: String,
     val model: String,
     val variant: String?,
@@ -37,12 +37,20 @@ internal class HostedWorkspaceDialog @RequiresEdt constructor(
     app: KiloAppService = service(),
     workspaces: KiloWorkspaceService = service(),
 ) : AgentManagerDialog(parent, project, directory, false, app, workspaces) {
+    private object None
+
     private val branch = JBTextField(branch).apply {
         emptyText.text = KiloBundle.message("hosted.workspace.dialog.branch.placeholder")
     }
     private val repository = ComboBox(arrayOf(hostedRepositoryName(repositoryUrl)))
-    private val profile = ComboBox(profiles.toTypedArray()).apply {
-        renderer = SimpleListCellRenderer.create("") { it.name }
+    private val profile = ComboBox((listOf(None) + profiles).toTypedArray()).apply {
+        renderer = SimpleListCellRenderer.create("") {
+            when (it) {
+                None -> KiloBundle.message("hosted.workspace.dialog.profile.none")
+                is HostedWorkspaceProfileDto -> it.name
+                else -> ""
+            }
+        }
     }
     private var result: HostedCreatePlan? = null
 
@@ -65,8 +73,8 @@ internal class HostedWorkspaceDialog @RequiresEdt constructor(
         pending()?.let { it.agent == null || it.model == null || it.provider != "kilo" } ?: true ->
             ValidationInfo(KiloBundle.message("hosted.workspace.create.noModel"), prompt)
         !withWorkspace -> null
-        profile.selectedItem as? HostedWorkspaceProfileDto !in profiles ->
-            ValidationInfo(KiloBundle.message("hosted.workspace.dialog.profile.required"), profile)
+        profile.selectedItem !== None && profile.selectedItem as? HostedWorkspaceProfileDto !in profiles ->
+            ValidationInfo(KiloBundle.message("hosted.workspace.dialog.profile.invalid"), profile)
         else -> null
     }
 
@@ -103,14 +111,14 @@ internal class HostedWorkspaceDialog @RequiresEdt constructor(
             return
         }
         val selected = profile.selectedItem as? HostedWorkspaceProfileDto
-        if (withWorkspace && (selected == null || selected !in profiles)) {
-            setErrorText(KiloBundle.message("hosted.workspace.dialog.profile.required"), profile)
+        if (withWorkspace && profile.selectedItem !== None && selected !in profiles) {
+            setErrorText(KiloBundle.message("hosted.workspace.dialog.profile.invalid"), profile)
             return
         }
         result = HostedCreatePlan(
             prompt = picked.text,
             branch = branch.text.trim().takeIf { withWorkspace && it.isNotBlank() },
-            profileID = selected?.id.orEmpty(),
+            profileID = selected?.id.takeIf { withWorkspace },
             agent = mode,
             model = "${picked.provider}/$model",
             variant = picked.variant,

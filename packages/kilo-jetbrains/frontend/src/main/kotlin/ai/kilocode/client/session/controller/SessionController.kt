@@ -1,7 +1,9 @@
 package ai.kilocode.client.session.controller
 
 import ai.kilocode.client.KiloNotifications
+import ai.kilocode.client.agentManager.hosted.hostedMessageID
 import ai.kilocode.client.app.KiloAppService
+import ai.kilocode.client.app.HostedReadiness
 import ai.kilocode.client.app.KiloSessionService
 import ai.kilocode.client.app.Workspace
 import ai.kilocode.client.plugin.KiloBundle
@@ -45,6 +47,8 @@ import ai.kilocode.rpc.dto.KiloWorkspaceStatusDto
 import ai.kilocode.rpc.dto.LoadErrorDto
 import ai.kilocode.rpc.dto.MessageDto
 import ai.kilocode.rpc.dto.MessageErrorDto
+import ai.kilocode.rpc.dto.MessageTimeDto
+import ai.kilocode.rpc.dto.HostedSystemEventDto
 import ai.kilocode.rpc.dto.MessageWithPartsDto
 import ai.kilocode.rpc.dto.ModelSelectionDto
 import ai.kilocode.rpc.dto.ProfileDto
@@ -180,11 +184,14 @@ class SessionController(
     // then reconciled when the operation releases so an underlying server turn is not lost.
     private var revertDeferred: SessionState? = null
     private var creating: CompletableDeferred<String?>? = null
+    private var initial: PromptDto? = null
     private val pending = LinkedHashMap<String, Permission>()
     private val childJobs: MutableMap<String, Job> = mutableMapOf()
     private val childIds: MutableSet<String> = mutableSetOf()
     private val childParts: MutableMap<PartKey, String> = mutableMapOf()
     private var sessionLoadState: SessionLoadState = SessionLoadState.Idle
+    private var hostedToken: SessionLoadState.Loading? = null
+    private var hostedStarted = false
     // The app-readiness observed on the previous AppChanged tick. Recovery requires both a later
     // non-READY -> READY edge and a READY observed before that edge: restored tabs commonly see
     // DISCONNECTED -> READY on their initial connection, which history recovery already covers.
@@ -314,6 +321,25 @@ class SessionController(
         }
     }
 
+    /** Display the prompt already submitted by Cloud workspace/session creation without resending it. */
+    @RequiresEdt
+    fun seedHostedPrompt(prompt: PromptDto) {
+        if (ref !is SessionRef.Hosted) return
+        val id = prompt.messageID ?: return
+        if (model.message(id) != null) return
+        initial = prompt
+        addOptimistic(prompt)
+        showSession()
+    }
+
+    @RequiresEdt
+    private fun restoreInitial() {
+        val prompt = initial ?: return
+        val id = prompt.messageID ?: return
+        if (model.message(id) == null) addOptimistic(prompt)
+        else if (!model.isOptimistic(id)) initial = null
+    }
+
     fun prompt(
         text: String,
         files: List<PromptPartDto> = emptyList(),
@@ -323,10 +349,14 @@ class SessionController(
         assertEdt()
         val start = sid ?: ref?.key ?: "pending"
         val exists = sid != null
-        val dto = promptDto(text, files, editorContext, select)
+        val hosted = ref is SessionRef.Hosted
+        val messageID = if (hosted) hostedMessageID() else null
+        val dto = promptDto(text, files, editorContext, select).let {
+            if (messageID != null) it.copy(messageID = messageID) else it
+        }
         val props = promptProps(files)
         LOG.debug { "${ChatLogSummary.sid(start)} ${ChatLogSummary.prompt(dto)} ${ChatLogSummary.dir(directory)}" }
-        dispatch(Dispatch("prompt", "user", text, props, start, exists)) { id ->
+        dispatch(Dispatch("prompt", "user", text, props, start, exists), if (hosted) dto else null) { id ->
             sessions.prompt(id, directory, dto)
         }
     }
@@ -343,9 +373,10 @@ class SessionController(
         }
     }
 
-    private fun dispatch(data: Dispatch, send: suspend (String) -> Unit) {
+    private fun dispatch(data: Dispatch, optimistic: PromptDto? = null, send: suspend (String) -> Unit) {
         assertEdt()
         if (revertOp != null) return
+        if (ref is SessionRef.Hosted) promptRevision++
         // New work, so the previous cancellation is settled. Turn open clears this too, but a send that
         // never reaches a turn would otherwise leave a stale Stop suppressing the next explanation.
         stopRequested = false
@@ -357,6 +388,7 @@ class SessionController(
             "textLength" to bucket(data.text),
         ) + props)
         showSession()
+        optimistic?.let(::addOptimistic)
         val pending = sid?.let { CompletableDeferred(it) } ?: session()
         cs.launch {
             try {
@@ -371,11 +403,37 @@ class SessionController(
                     if (disposed) return@edt
                     val msg = e.message ?: KiloBundle.message("session.error.prompt")
                     updateModel {
+                        optimistic?.messageID?.let(model::removeOptimistic)
                         model.setState(SessionState.Error(msg))
                     }
                 }
             }
         }
+    }
+
+    private fun addOptimistic(prompt: PromptDto) {
+        val id = prompt.messageID ?: return
+        val sessionID = sid.orEmpty()
+        val dto = MessageDto(
+            id = id,
+            sessionID = sessionID,
+            role = "user",
+            time = MessageTimeDto(System.currentTimeMillis().toDouble()),
+            agent = prompt.agent,
+            providerID = prompt.providerID,
+            modelID = prompt.modelID,
+        )
+        val parts = prompt.parts.mapIndexedNotNull { index, part ->
+            val text = part.text
+            if (part.type != "text" || text == null) null else PartDto(
+                id = "prt_optimistic_${id}_$index",
+                sessionID = sessionID,
+                messageID = id,
+                type = "text",
+                text = text,
+            )
+        }
+        model.addOptimisticUser(dto, parts)
     }
 
     private fun session(): CompletableDeferred<String?> {
@@ -622,9 +680,101 @@ class SessionController(
         }
     }
 
+    /** Whether a failed Cloud preparation can be retried by replaying the last user prompt. */
+    @RequiresEdt
+    fun canRetryPreparation(failure: HostedSystemEventDto? = null): Boolean {
+        if (ref !is SessionRef.Hosted || sid == null || revertOp != null) return false
+        val state = model.state
+        val latest = model.messages().lastOrNull { it.info.role == "user" }?.info
+        if (failure != null) {
+            if (failure.sessionID != sid || !state.showsPreparation(failure, latest)) return false
+        } else if (state.isBusy() || state is SessionState.LoginRequired) return false
+        return preparationPrompt() != null
+    }
+
+    /**
+     * Retry Cloud workspace preparation. Cloud retries preparation when a prompt is submitted, so
+     * replay the last user text with a fresh canonical message ID. The optimistic prompt is dropped
+     * first; a prompt already returned by Cloud stays in the transcript.
+     */
+    fun retryPreparation(failure: HostedSystemEventDto? = null) {
+        assertEdt()
+        val id = sid ?: return
+        if (!canRetryPreparation(failure)) return
+        val prompt = preparationPrompt() ?: return
+        promptRevision++
+        initial = null
+        val tail = model.messages().lastOrNull { it.info.role == "user" }
+        tail?.let { model.removeOptimistic(it.info.id) }
+        addOptimistic(prompt)
+        LOG.info("${ChatLogSummary.sid(id)} kind=retry preparation=true")
+        model.setState(SessionState.Busy(KiloBundle.message("hosted.workspace.preparation.retrying")))
+        cs.launch {
+            try {
+                sessions.prompt(id, directory, prompt)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                LOG.warn("${ChatLogSummary.sid(id)} kind=retry preparation=true failed message=${e.message}", e)
+                edt {
+                    if (disposed) return@edt
+                    prompt.messageID?.let(model::removeOptimistic)
+                    model.setState(SessionState.Error(e.message ?: KiloBundle.message("session.error.prompt")))
+                }
+            }
+        }
+    }
+
+    private fun preparationPrompt(): PromptDto? {
+        val msg = model.messages().lastOrNull { it.info.role == "user" } ?: return null
+        val parts = msg.parts.values.filterIsInstance<Text>().mapNotNull { text ->
+            text.content.toString().takeIf { it.isNotBlank() }?.let { PromptPartDto(type = "text", text = it) }
+        }
+        if (parts.isEmpty()) return null
+        return PromptDto(
+            parts = parts,
+            messageID = hostedMessageID(),
+            providerID = msg.info.providerID,
+            modelID = msg.info.modelID,
+            agent = msg.info.agent,
+        )
+    }
+
     /** Whether the error card should offer Retry. Gates the action so it is never painted as a no-op. */
     @RequiresEdt
     fun canRetry(): Boolean = retryTarget() != null
+
+    /** Retry a failed history load without replaying the last prompt. */
+    @RequiresEdt
+    fun canRetryLoad(): Boolean =
+        (model.state as? SessionState.Error)?.retryable == true && sid != null && !disposed
+
+    @RequiresEdt
+    fun retryLoad() {
+        assertEdt()
+        if (!canRetryLoad()) return
+        val token = SessionLoadState.Loading()
+        startSessionLoading(token)
+        loadSession(token)
+    }
+
+    private fun historyError(target: SessionRef, e: Exception): SessionState.Error {
+        val raw = e.message.orEmpty().ifBlank { KiloBundle.message("history.error.local") }
+        if (target !is SessionRef.Hosted) return SessionState.Error(raw)
+        val status = Regex("""HTTP (\d{3})""").find(raw)?.groupValues?.get(1)?.toIntOrNull()
+        val message = when {
+            status == 503 || status == 502 || status == 504 || raw.contains("KILO_LIVE_RUNTIME_UNAVAILABLE") ->
+                KiloBundle.message("hosted.session.error.unavailable")
+            status == 404 || raw.contains("not found", ignoreCase = true) ->
+                KiloBundle.message("hosted.session.error.missing")
+            else -> KiloBundle.message("hosted.session.error.load")
+        }
+        return SessionState.Error(
+            message = message,
+            retryable = status == null || status >= 500,
+            dismissible = status != null && status in 400..499,
+        )
+    }
 
     /**
      * The failed tail turn to continue, or null when retry does not apply: no session, an operation
@@ -1151,8 +1301,7 @@ class SessionController(
             }
             is SessionRef.Hosted -> {
                 val token = SessionLoadState.Loading()
-                startSessionLoading(token)
-                loadSession(token)
+                hostedToken = token
                 subscribeEvents()
             }
             null -> Unit
@@ -1320,6 +1469,7 @@ class SessionController(
                         this@SessionController.model.loadHistory(items)
                         syncHistoryAgent(items)
                         if (session != null) this@SessionController.model.setSession(session)
+                        restoreInitial()
                     }
                 }
                 recoverPending(id, revision)
@@ -1336,12 +1486,17 @@ class SessionController(
                     loaded(!model.isEmpty())
                 }
             } catch (e: Exception) {
+                if (e is CancellationException) throw e
                 LOG.warn("${ChatLogSummary.sid(id)} kind=history dir=${ChatLogSummary.dir(directory)} failed message=${e.message}", e)
                 edt {
                     if (disposed) return@edt
                     if (sid != id) return@edt
+                    if (target is SessionRef.Hosted) {
+                        if (epoch != generation) return@edt
+                        if (promptRevision != revision) return@edt
+                    }
                     updateModel {
-                        model.setState(SessionState.Error(e.message ?: KiloBundle.message("history.error.local")))
+                        model.setState(historyError(target, e))
                     }
                     showSession()
                     loaded(false)
@@ -1355,6 +1510,20 @@ class SessionController(
                 updates.holdFlush(false)
                 updates.requestFlush(true)
             }
+        }
+    }
+
+    /** Hosted history stays deferred until Cloud reports preparation complete. */
+    @RequiresEdt
+    internal fun hostedPreparation(readiness: HostedReadiness) {
+        assertEdt()
+        if (disposed || ref !is SessionRef.Hosted || hostedStarted) return
+        if (readiness != HostedReadiness.Ready) return
+        hostedToken?.let { token ->
+            hostedToken = null
+            hostedStarted = true
+            startSessionLoading(token)
+            loadSession(token)
         }
     }
 
@@ -1892,6 +2061,7 @@ class SessionController(
         LOG.debug { ChatLogSummary.event(event) }
         when (event) {
             is ChatEventDto.MessageUpdated -> {
+                if (event.info.id == initial?.messageID) initial = null
                 val added = model.upsertMessage(event.info)
                 syncMessagePrefs(event.info)
                 if (added) showSession()
@@ -2083,6 +2253,7 @@ class SessionController(
             childParts.clear()
             childParts.putAll(children(items))
             model.loadHistory(items)
+            restoreInitial()
             events.filterIsInstance<ChatEventDto.MessageTerminal>().forEach(model::setTerminal)
             syncHistoryAgent(items)
             events.filterIsInstance<ChatEventDto.SessionDiffChanged>().lastOrNull()?.let { model.setDiff(it.diff) }
@@ -2146,6 +2317,7 @@ class SessionController(
                     updateModel {
                         snapshots.clear()
                         this@SessionController.model.loadHistory(items)
+                        restoreInitial()
                         if (session != null) this@SessionController.model.setSession(session)
                         tail.forEach(::handle)
                     }
@@ -2427,11 +2599,13 @@ class SessionController(
                 if (model.state is SessionState.AwaitingPermission) return
                 SessionState.Idle
             }
-            "busy" -> {
-                val current = model.state
-                if (current is SessionState.Idle || current is SessionState.Error || current is SessionState.TurnEnded)
+            "busy" -> when (model.state) {
+                is SessionState.Loading,
+                is SessionState.Idle,
+                is SessionState.Error,
+                is SessionState.TurnEnded ->
                     SessionState.Busy(KiloBundle.message("session.status.considering"))
-                else return // already in a more specific phase
+                else -> return // already in a more specific phase
             }
             "retry" -> SessionState.Retry(
                 message = dto.message ?: "",

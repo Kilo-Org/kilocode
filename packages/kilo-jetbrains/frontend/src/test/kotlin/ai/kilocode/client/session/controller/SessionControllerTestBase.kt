@@ -15,6 +15,7 @@ import ai.kilocode.client.app.KiloWorkspaceService
 import ai.kilocode.client.app.Workspace
 import ai.kilocode.client.plugin.KiloPluginSettings
 import ai.kilocode.client.session.SessionRef
+import ai.kilocode.client.app.HostedReadiness
 import ai.kilocode.log.KiloLog
 import ai.kilocode.rpc.dto.AgentDto
 import ai.kilocode.rpc.dto.AgentsDto
@@ -205,6 +206,7 @@ abstract class SessionControllerTestBase : BasePlatformTestCase() {
         )
         controllers.add(m)
         roots[m] = root
+        if (ref is SessionRef.Hosted) edt { m.hostedPreparation(HostedReadiness.Ready) }
         return m
     }
 

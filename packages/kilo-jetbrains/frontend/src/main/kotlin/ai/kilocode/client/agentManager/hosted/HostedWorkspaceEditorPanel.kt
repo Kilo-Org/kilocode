@@ -2,6 +2,7 @@ package ai.kilocode.client.agentManager.hosted
 
 import ai.kilocode.client.KiloNotifications
 import ai.kilocode.client.app.KiloHostedService
+import ai.kilocode.client.app.HostedReadiness
 import ai.kilocode.client.app.KiloSessionService
 import ai.kilocode.client.app.KiloAppService
 import ai.kilocode.client.agentManager.WorkspaceSessionEditorPanel
@@ -24,6 +25,8 @@ import ai.kilocode.rpc.dto.HostedStartSessionDto
 import ai.kilocode.rpc.dto.HostedWorkspaceDto
 import ai.kilocode.rpc.dto.HostedWorkspaceRefDto
 import ai.kilocode.rpc.dto.HostedWorkspaceSessionDto
+import ai.kilocode.rpc.dto.SessionActivityDto
+import ai.kilocode.rpc.dto.SessionActivityKindDto
 import com.intellij.icons.AllIcons
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.actionSystem.DataSink
@@ -39,8 +42,10 @@ import com.intellij.util.concurrency.annotations.RequiresEdt
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
@@ -54,6 +59,16 @@ import java.awt.Point
  * the right, using the same editor chrome and rows as a local worktree. Only backend capabilities
  * differ: Cloud has no local create/delete/rename/fork controls.
  */
+internal fun hostedIdle(
+    previous: Map<String, SessionActivityDto>,
+    next: Map<String, SessionActivityDto>,
+    workspace: String,
+    sessions: List<HostedWorkspaceSessionDto>,
+): Boolean = previous.keys.any { key ->
+    previous[key]?.kind == SessionActivityKindDto.RUNNING && !next.containsKey(key) &&
+        (key.contains(workspace) || sessions.any { it.nativeSessionID == key })
+}
+
 class HostedWorkspaceEditorPanel @RequiresEdt constructor(
     parent: Disposable,
     private val project: Project,
@@ -83,6 +98,7 @@ class HostedWorkspaceEditorPanel @RequiresEdt constructor(
     private var selected: String? = null
     private var started = false
     private var loadGeneration = 0L
+    private var titleRefresh: Job? = null
     private var identity: String? = null
     private var signedOut = false
 
@@ -142,9 +158,15 @@ class HostedWorkspaceEditorPanel @RequiresEdt constructor(
         }
         cs.launch {
             val service = project.service<KiloSessionService>()
-            combine(service.activity, service.statuses) { _, _ -> Unit }.collect {
+            var last = service.activity.value
+            combine(service.activity, service.statuses) { activity, _ -> activity }.collect { activity ->
+                val previous = last
+                last = activity
                 withContext(Dispatchers.Main) {
-                    if (started && !Disposer.isDisposed(this@HostedWorkspaceEditorPanel)) sync(select = false)
+                    if (started && !Disposer.isDisposed(this@HostedWorkspaceEditorPanel)) {
+                        sync(select = false)
+                        if (hostedIdle(previous, activity, ref.workspaceID, sessions)) scheduleTitleRefresh()
+                    }
                 }
             }
         }
@@ -180,6 +202,7 @@ class HostedWorkspaceEditorPanel @RequiresEdt constructor(
 
     override fun dispose() {
         loadGeneration++
+        titleRefresh?.cancel()
         manager.onPresent = null
         manager.onListChanged = null
         manager.onNewSession = null
@@ -237,10 +260,24 @@ class HostedWorkspaceEditorPanel @RequiresEdt constructor(
         }
     }
 
+    private fun scheduleTitleRefresh() {
+        titleRefresh?.cancel()
+        titleRefresh = cs.launch {
+            delay(2_000)
+            withContext(Dispatchers.Main) {
+                if (started && !Disposer.isDisposed(this@HostedWorkspaceEditorPanel)) reload()
+            }
+        }
+    }
+
     @RequiresEdt
     private fun applyStatus() {
         val state = hosted.state.value
-        manager.setPreparation(selected?.let { state.failure(it) ?: state.preparation(it) })
+        val session = selected
+        manager.setPreparation(
+            session?.let(state::readiness) ?: HostedReadiness.Unknown,
+            session?.let { state.preparations[it] },
+        )
         val item = state.presentation(ref)
         compute.update(HostedWorkspaceStatus.of(item).badge())
         compute.toolTipText = KiloBundle.message("hosted.workspace.status.tooltip")
@@ -254,6 +291,13 @@ class HostedWorkspaceEditorPanel @RequiresEdt constructor(
 
     @RequiresEdt
     private fun sync(select: Boolean = true) {
+        manager.setTitles(buildMap {
+            sessions.forEach { session ->
+                val title = session.title?.takeIf { it.isNotBlank() } ?: return@forEach
+                put(session.id, title)
+                put(session.nativeSessionID, title)
+            }
+        })
         val kinds = manager.activity()
         val titles = manager.titles()
         val closed = management.closed(ref)
@@ -300,6 +344,7 @@ class HostedWorkspaceEditorPanel @RequiresEdt constructor(
         management.select(ref, item.id)
         val hostedRef = SessionRef.Hosted(ref.providerID, ref.workspaceID, item.nativeSessionID, item.title)
         manager.show(hostedRef, focus)
+        hosted.takePrompt(item.id)?.let(manager::seedPrompt)
         applyStatus()
     }
 

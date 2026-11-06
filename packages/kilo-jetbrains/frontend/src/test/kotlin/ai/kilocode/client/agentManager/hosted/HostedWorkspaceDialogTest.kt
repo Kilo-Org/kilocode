@@ -43,7 +43,7 @@ class HostedWorkspaceDialogTest : BasePlatformTestCase() {
     private lateinit var workspaces: KiloWorkspaceService
     private var dialog: HostedWorkspaceDialog? = null
     private val profiles = listOf(
-        HostedWorkspaceProfileDto("profile-dev", "Standard"),
+        HostedWorkspaceProfileDto("profile-dev", "Standard", isDefault = true),
         HostedWorkspaceProfileDto("profile-prod", "Standard"),
     )
 
@@ -108,9 +108,41 @@ class HostedWorkspaceDialogTest : BasePlatformTestCase() {
         }
 
         assertEquals(
-            HostedCreatePlan("Build cloud feature", null, "profile-dev", "build", "kilo/gpt-5", "low"),
+            HostedCreatePlan("Build cloud feature", null, null, "build", "kilo/gpt-5", "low"),
             created(),
         )
+    }
+
+    fun `test a non-default profile is never selected implicitly`() {
+        open(profiles = profiles.map { it.copy(isDefault = false) })
+        ready()
+
+        edt {
+            assertEquals(0, profile().selectedIndex)
+            assertSame(profile().getItemAt(0), profile().selectedItem)
+            assertNull(requireNotNull(dialog).validationForTest())
+            assertTrue(okButton().isEnabled)
+            profile().selectedIndex = 2
+            assertTrue(okButton().isEnabled)
+            submit()
+        }
+
+        assertEquals("profile-prod", created().profileID)
+    }
+
+    fun `test a declared default never overrides the no profile selection`() {
+        open(profiles = profiles.map { it.copy(isDefault = it.id == "profile-prod") })
+        ready()
+
+        edt {
+            assertEquals(3, profile().itemCount)
+            assertEquals(0, profile().selectedIndex)
+            assertSame(profile().getItemAt(0), profile().selectedItem)
+            assertTrue(okButton().isEnabled)
+            submit()
+        }
+
+        assertNull(created().profileID)
     }
 
     fun `test prompt send retains chosen mode model reasoning branch and profile ID`() {
@@ -119,7 +151,7 @@ class HostedWorkspaceDialogTest : BasePlatformTestCase() {
         edt {
             assertEquals("seed/branch", branch().text)
             branch().text = "  feature/cloud  "
-            profile().selectedIndex = 1
+            profile().selectedIndex = 2
             prompt().mode.cycle()
             prompt().model.cycle()
         }
@@ -253,7 +285,7 @@ class HostedWorkspaceDialogTest : BasePlatformTestCase() {
 
         val plan = created()
         assertNull(plan.branch)
-        assertEquals("", plan.profileID)
+        assertNull(plan.profileID)
         assertEquals("kilo/gpt-5", plan.model)
     }
 
@@ -274,29 +306,52 @@ class HostedWorkspaceDialogTest : BasePlatformTestCase() {
         }
     }
 
-    fun `test missing workspace profile validation does not create a plan`() {
+    fun `test an empty profile list allows workspace creation without a profile`() {
         open(profiles = emptyList())
         ready()
 
         edt {
-            assertFalse(okButton().isEnabled)
-            assertEquals(
-                KiloBundle.message("hosted.workspace.dialog.profile.required"),
-                requireNotNull(dialog).validationForTest()?.message,
-            )
+            assertEquals(1, profile().itemCount)
+            assertEquals(0, profile().selectedIndex)
+            assertSame(profile().getItemAt(0), profile().selectedItem)
+            assertNull(requireNotNull(dialog).validationForTest())
+            assertTrue(okButton().isEnabled)
             submit()
-            rejected()
         }
+
+        assertNull(created().profileID)
     }
 
-    fun `test clearing the selected workspace profile does not create a plan`() {
+    fun `test selecting no profile clears an explicit workspace profile`() {
         open()
         ready()
 
         edt {
-            profile().selectedIndex = -1
+            profile().selectedIndex = 2
+            profile().selectedIndex = 0
+            assertTrue(okButton().isEnabled)
             submit()
-            rejected()
+        }
+
+        assertNull(created().profileID)
+    }
+
+    fun `test unknown workspace profile selections cannot create a plan`() {
+        open()
+        ready()
+
+        for (selected in listOf(null, HostedWorkspaceProfileDto("unknown", "Standard"), "unknown")) {
+            edt {
+                profile().model.selectedItem = selected
+                assertFalse(okButton().isEnabled)
+                assertEquals(
+                    KiloBundle.message("hosted.workspace.dialog.profile.invalid"),
+                    requireNotNull(dialog).validationForTest()?.message,
+                )
+                prompt().send()
+            }
+            coroutines.drain()
+            edt { rejected() }
         }
     }
 
@@ -437,7 +492,7 @@ class HostedWorkspaceDialogTest : BasePlatformTestCase() {
         controls().filterIsInstance<ComboBox<*>>().single { it.getItemAt(0) is String }
 
     private fun profile(): ComboBox<*> =
-        controls().filterIsInstance<ComboBox<*>>().single { it.getItemAt(0) is HostedWorkspaceProfileDto }
+        controls().filterIsInstance<ComboBox<*>>().single { it.getItemAt(0) !is String }
 
     private fun assertPromptCentered() {
         val layout = requireNotNull(prompt().parent).layout as java.awt.BorderLayout

@@ -163,7 +163,7 @@ data class HostedAgentDto(
 @Serializable
 data class HostedCreateWorkspaceDto(
     val repository: HostedRepositoryDto,
-    val profileID: String,
+    val profileID: String? = null,
     val prompt: String,
     val agent: HostedAgentDto,
     val operationKey: String,
@@ -240,7 +240,12 @@ data class HostedSystemEventDto(
     val revision: Long? = null,
     /** Explicit provider safe-error code only; never a raw server error or progress detail. */
     val failure: String? = null,
-    /** Failed step label, final setup output line, or provider-safe error detail. */
+    /** Failed step label, full provider-retained output tail, or provider-safe error detail. */
     val detail: String? = null,
     val triggerMessageID: String? = null,
+    val stepID: String? = null,
+    val stepKind: String? = null,
+    /** Provider-bounded preparation output tail; the backend accumulates live chunks before delivery. */
+    val output: String? = null,
+    val outputTruncated: Boolean = false,
 )

@@ -132,6 +132,7 @@ class HostedWorkspaceRowTest : BasePlatformTestCase() {
         val cases = mapOf(
             "active" to "Active", "running" to "Active", "setting_up" to "Setting Up",
             "sleeping" to "Sleeping", "starting" to "Starting", "stopping" to "Stopping",
+            "failed" to "Failed",
             "stopped" to "Stopped", "error" to "Unavailable", "unreachable" to "Unavailable",
             "unknown" to "Unknown",
         )

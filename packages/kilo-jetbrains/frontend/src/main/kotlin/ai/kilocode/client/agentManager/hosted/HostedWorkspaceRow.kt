@@ -27,7 +27,12 @@ internal class HostedWorkspaceRow(
     override val key: String get() = dto.ref.key
     override val identity: Any get() = "hosted:${dto.ref.key}"
     override val title: String
-        get() = HostedWorkspaceTitle.text(dto.name, dto.branch, dto.ref.workspaceID)
+        get() = HostedWorkspaceTitle.text(
+            dto.name,
+            dto.branch,
+            dto.ref.workspaceID,
+            dto.sessions.maxByOrNull { it.updated }?.title,
+        )
     override val description: String?
         get() = dto.branch?.takeIf { it.isNotBlank() }
     override val tooltip: String?
@@ -39,8 +44,8 @@ internal class HostedWorkspaceRow(
     override val inlineBadges: Boolean get() = true
     override val section: String get() = KiloBundle.message("worktree.section.cloud")
     override val search: String
-        get() = listOfNotNull(dto.name, dto.repositoryUrl, dto.branch, dto.ref.providerID, dto.ref.workspaceID)
-            .joinToString(" ")
+        get() = (listOfNotNull(dto.name, dto.repositoryUrl, dto.branch, dto.ref.providerID, dto.ref.workspaceID) +
+            dto.sessions.mapNotNull { it.title }).joinToString(" ")
     override val progress: String? get() = data.progress
     override val badges: List<ActiveBadge>
         get() = if (data.progress == null) listOf(HostedWorkspaceStatus.of(status).badge()) else emptyList()

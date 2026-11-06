@@ -20,7 +20,9 @@ internal class HostedSessionRow(
     override val key: String get() = item.id
     override val title: String
         get() {
-            val name = live?.takeIf { it.isNotBlank() } ?: item.title
+            val name = item.title.takeIf { it.isNotBlank() }
+                ?: live?.takeIf { it.isNotBlank() }
+                ?: ""
             if (name.isBlank()) return KiloBundle.message("hosted.workspace.session.untitled")
             if (isDefaultSessionTitle(name)) return KiloBundle.message("worktree.session.new")
             return name

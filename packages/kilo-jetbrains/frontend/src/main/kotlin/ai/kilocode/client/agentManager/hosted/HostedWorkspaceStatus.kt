@@ -13,6 +13,7 @@ internal enum class HostedWorkspaceStatus(private val value: String, private val
     SETTING_UP("settingUp", UiStyle.Badge.Secondary),
     SLEEPING("sleeping", UiStyle.Badge.Secondary),
     STARTING("starting", UiStyle.Badge.Secondary),
+    FAILED("failed", UiStyle.Badge.ActivityError),
     STOPPING("stopping", UiStyle.Badge.Secondary),
     STOPPED("stopped", UiStyle.Badge.Secondary),
     DELETING("deleting", UiStyle.Badge.Secondary),
@@ -40,6 +41,7 @@ internal enum class HostedWorkspaceStatus(private val value: String, private val
                 "setting_up" -> SETTING_UP
                 "sleeping" -> SLEEPING
                 "starting" -> STARTING
+                "failed" -> FAILED
                 "stopping" -> STOPPING
                 "stopped" -> STOPPED
                 "error", "unreachable", "unavailable" -> UNAVAILABLE

@@ -18,6 +18,7 @@ import com.intellij.openapi.components.service
 import com.intellij.openapi.project.DumbAware
 import com.intellij.openapi.ui.popup.JBPopupFactory
 import com.intellij.util.concurrency.annotations.RequiresEdt
+import com.intellij.util.ui.JBUI
 import javax.swing.JComponent
 import javax.swing.SwingConstants
 
@@ -57,6 +58,7 @@ class AgentManagerAddAction : ActionGroup(
             true,
         )
         popup.setAdText(KiloBundle.message("agentManager.add.hint"), SwingConstants.LEFT)
+        popup.setMinimumSize(JBUI.size(360, 1))
         popup.showUnderneathOf(e.inputEvent?.component ?: panel.component)
     }
 

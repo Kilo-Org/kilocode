@@ -83,6 +83,9 @@ abstract class SessionHost(
     }.toMap()
 
     @RequiresEdt
+    protected fun openSessions(): List<SessionUi> = all.toList()
+
+    @RequiresEdt
     override fun activityChanged() {
         current?.syncActivity()
     }

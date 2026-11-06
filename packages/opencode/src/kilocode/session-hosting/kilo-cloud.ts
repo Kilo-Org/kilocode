@@ -916,7 +916,7 @@ export function provider(options: Options): Provider {
         operationKey: input.operationKey,
         clientProvenance: "agent-manager",
         repository: repositoryPayload(input.repository),
-        profile: profilePayload(input.profile),
+        ...(input.profile ? { profile: profilePayload(input.profile) } : {}),
         message: { prompt: input.prompt, id: input.messageID },
         agent: agentPayload(input.agent),
         ...(auth.organizationID ? { options: { kilocodeOrganizationId: auth.organizationID } } : {}),
