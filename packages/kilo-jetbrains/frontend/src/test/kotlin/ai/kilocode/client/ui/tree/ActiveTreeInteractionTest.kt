@@ -7,6 +7,8 @@ import ai.kilocode.client.ui.active.ACTIVE_MENU_CELL
 import ai.kilocode.client.ui.active.ActiveMove
 import ai.kilocode.client.ui.active.ActiveReorder
 import ai.kilocode.client.ui.UiStyle
+import ai.kilocode.client.ui.iconButtonSize
+import com.intellij.icons.AllIcons
 import com.intellij.openapi.actionSystem.DataKey
 import com.intellij.openapi.actionSystem.DefaultActionGroup
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
@@ -133,7 +135,10 @@ class ActiveTreeInteractionTest : BasePlatformTestCase() {
         moveTo(view, Point(frame.x + 1, frame.y + frame.height / 2))
         val hit = view.regions.hits(entry).single { it.id == ACTIVE_MENU_CELL }
         val cell = requireNotNull(view.regions.cell(entry))
+        val standard = iconButtonSize(AllIcons.Actions.More)
 
+        assertEquals("The menu hover uses the standard icon-button width", standard.width, hit.bounds.width)
+        assertEquals("The menu hover uses the standard icon-button height", standard.height, hit.bounds.height)
         assertTrue("The menu hover is not stretched over the row height", hit.bounds.height < cell.height)
         assertEquals("The menu hover stays vertically centered", frame.y + (frame.height - hit.bounds.height) / 2,
             hit.bounds.y)

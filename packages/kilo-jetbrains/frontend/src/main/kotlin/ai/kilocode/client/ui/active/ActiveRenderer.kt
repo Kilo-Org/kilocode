@@ -7,6 +7,7 @@ import ai.kilocode.client.ui.FilledBadgeIcon
 import ai.kilocode.client.ui.LayeredOverlayPanel
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.animationFrame
+import ai.kilocode.client.ui.iconButtonSize
 import ai.kilocode.client.ui.paintActionHover
 import ai.kilocode.client.ui.layout.HAlign
 import ai.kilocode.client.ui.layout.LayoutPass
@@ -214,10 +215,11 @@ internal class ActiveRenderer(
             tail.add(spacer, BorderLayout.EAST)
             row.remove(endPane)
             row.add(tail, BorderLayout.EAST)
-            // Keep the menu button the same compact size as the other row glyphs: its hit region and
-            // hover fill wrap the icon instead of stretching over the trailing strip.
-            layers.addOverlay(glyph) { host, child ->
-                val size = child.preferredSize
+            // Keep the menu button at the standard icon-button size: the same 24px square and
+            // padding as the other icon controls, with the pill wrapping the icon instead of
+            // stretching over the trailing strip.
+            layers.addOverlay(glyph) { host, _ ->
+                val size = iconButtonSize(glyph.icon ?: AllIcons.Actions.More)
                 Rectangle(
                     (host.width - row.insets.right - size.width).coerceAtLeast(0),
                     ((host.height - size.height) / 2).coerceAtLeast(0),
@@ -255,6 +257,9 @@ internal class ActiveRenderer(
         (row.layout as BorderLayout).hgap = if (menu == null) iconGap else 0
         row.border = JBUI.Borders.empty(UiStyle.Gap.MD, cfg.leadInset, UiStyle.Gap.MD, UiStyle.Gap.SM)
         mark.border = if (menu == null) JBUI.Borders.empty() else JBUI.Borders.emptyRight(activeIconGap())
+        // Reserve the standard icon-button width around the menu glyph, so the row content and the
+        // action pill clear the padded button rather than only its icon.
+        spacer.border = JBUI.Borders.empty(0, UiStyle.Gap.SM)
     }
 
     override fun updateUI() {
