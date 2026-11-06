@@ -94,6 +94,9 @@ async function resume(info: Info, inst?: InstanceContext, inPlace = false, kind?
               .prompt({
                 sessionID: info.sessionID,
                 agent: info.agent,
+                model: session.model ? { providerID: session.model.providerID, modelID: session.model.id } : undefined,
+                variant:
+                  session.model?.variant && session.model.variant !== "default" ? session.model.variant : undefined,
                 parts: [
                   {
                     type: "text",
