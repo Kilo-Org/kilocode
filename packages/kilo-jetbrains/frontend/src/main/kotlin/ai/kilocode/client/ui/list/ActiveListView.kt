@@ -283,6 +283,9 @@ internal class ActiveListView(
         })
         list.addComponentListener(object : ComponentAdapter() {
             override fun componentResized(e: ComponentEvent) {
+                // Cached button regions are laid out for the previous width. Drop them so the next
+                // pointer move rebuilds right-aligned hit targets for the new size.
+                hover.invalidate()
                 if (extent == list.width || !cfg.wrapDescription) return
                 extent = list.width
                 resetCellSizes()

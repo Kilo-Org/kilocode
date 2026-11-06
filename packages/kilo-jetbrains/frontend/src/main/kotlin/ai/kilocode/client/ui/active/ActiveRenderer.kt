@@ -194,8 +194,9 @@ internal class ActiveRenderer(
         descWrap?.let { UiStyle.Components.transparent(it) }
         layers.addOverlay(pill) { host, child ->
             val size = child.preferredSize
-            // The dropdown column plus its trailing padding, so the pill clears the whole button.
-            val gap = if (menu != null) spacer.preferredSize.width + row.insets.right else 0
+            // The dropdown column. The rectangle's x already subtracts the row's trailing inset, so the
+            // pill ends exactly where the menu strip begins.
+            val gap = if (menu != null) spacer.preferredSize.width else 0
             Rectangle(
                 (host.width - size.width - row.insets.right - gap).coerceAtLeast(0),
                 ((host.height - size.height) / 2).coerceAtLeast(0),

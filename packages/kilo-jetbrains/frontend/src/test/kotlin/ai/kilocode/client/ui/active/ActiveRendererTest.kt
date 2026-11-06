@@ -20,6 +20,7 @@ import ai.kilocode.client.session.ui.PickerRow
 import com.intellij.util.ui.JBUI
 import com.intellij.ui.components.JBLabel
 import javax.swing.JComponent
+import javax.swing.JPanel
 import javax.swing.SwingUtilities
 import java.awt.AlphaComposite
 import java.awt.Point
@@ -517,6 +518,50 @@ class ActiveRendererTest : BasePlatformTestCase() {
             })
         }
     }
+    fun `test selected action pill ends where the menu strip starts`() {
+        val menu = ActiveMenu(DataKey.create<String>("renderer.pill.gap"), DefaultActionGroup(), { it.key })
+        val item = object : ActiveItem {
+            override val key = "action-pill"
+            override val title = "Row with actions"
+            override val cells = listOf(ActiveCell("run", "Run", alwaysVisible = true))
+        }
+        val renderer = ActiveRenderer(menu = menu)
+        val background = UIUtil.getPanelBackground()
+        val selection = UIUtil.getListBackground(true, true)
+        renderer.render(
+            ActiveRenderState(
+                item = item,
+                selected = true,
+                focused = true,
+                active = true,
+                hovered = true,
+                enabled = true,
+                background = background,
+                selectionColor = selection,
+                paintSelection = true,
+                backdrop = selection,
+                foreground = UIUtil.getListForeground(true, true),
+                pillBackground = selection,
+                width = 400,
+                actionsVisible = true,
+                menuVisible = true,
+                opaque = true,
+                bodyHeight = 48,
+            ),
+        )
+        renderer.setSize(400, renderer.preferredSize.height)
+        activeLayout(renderer)
+        val menuHit = renderer.buttons().single { it.id == ACTIVE_MENU_CELL }
+        val action = descendants(renderer).filterIsInstance<ActiveActionCell>().single { it.cellId == "run" }
+        // The pill is the overlay child: the first ancestor whose parent is the null-layout overlay.
+        val pill = generateSequence(action as java.awt.Component) { it.parent }
+            .takeWhile { it !== renderer }
+            .first { it is JPanel && it.parent is JPanel && (it.parent as JPanel).layout == null }
+        val right = SwingUtilities.convertPoint(pill, pill.width, 0, renderer).x
+
+        assertEquals("The action pill ends exactly where the menu strip begins", menuHit.bounds.x, right)
+    }
+
     fun `test tree and list top level selection share outer insets and menu gap`() {
         val menu = ActiveMenu(DataKey.create<String>("renderer.insets"), DefaultActionGroup(), { it.key })
         val tree = ActiveTree("", menu = menu)
