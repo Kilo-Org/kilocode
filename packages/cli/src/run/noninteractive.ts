@@ -163,6 +163,7 @@ export async function runNonInteractivePrompt(input: Input) {
     sessionID: string
     action: string
     resources: ReadonlyArray<string>
+    metadata?: Readonly<Record<string, unknown>> // kilocode_change(sandbox) seam - a request can require a person
   }) => {
     // Nobody can approve here. Outside V1 compatibility, reject with feedback so the tool fails
     // as ordinary model-visible output and the model continues without the action.
@@ -179,7 +180,7 @@ export async function runNonInteractivePrompt(input: Input) {
       .reply({
         sessionID: request.sessionID,
         requestID: request.id,
-        decision: input.auto ? "once" : "reject",
+        decision: input.auto && request.metadata?.["interactive"] !== true ? "once" : "reject", // kilocode_change(sandbox) seam - --auto never approves a request that requires a person
         ...(continuing ? { message: PERMISSION_REJECTED_FEEDBACK } : {}),
       })
       .catch(() => {})

@@ -4,6 +4,7 @@
 import { lazy, type Component } from "solid-js"
 import type { SettingsData } from "../../v2/settings"
 import type { SettingsNavigationTarget } from "./settings-search"
+import { sandboxControls } from "./sandboxing"
 
 /** Props every tab component receives. */
 export interface SettingsTabProps {
@@ -25,6 +26,8 @@ export interface SettingsTabV2 {
   icon: string
   title: string
   ready: boolean
+  /** Renders only when the platform supports it, such as the sandbox controls outside Windows. */
+  visible?: () => boolean
   component: Component<SettingsTabProps>
 }
 
@@ -119,6 +122,14 @@ export const SETTINGS_TABS_V2: SettingsTabV2[] = [
     title: "settings.experimental.title",
     ready: true,
     component: lazy(() => import("./ExperimentalTab")),
+  },
+  {
+    id: "sandboxing",
+    icon: "shield",
+    title: "settings.sandboxing.title",
+    ready: true,
+    visible: sandboxControls,
+    component: lazy(() => import("./SandboxingTab")),
   },
   {
     id: "language",

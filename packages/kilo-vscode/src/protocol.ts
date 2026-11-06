@@ -228,6 +228,8 @@ export type Ui =
   | { type: "persistModelSelectorExpanded"; value: boolean }
   | { type: "requestAutoApproveState" }
   | { type: "persistAutoApproveState"; value: boolean }
+  | { type: "requestSandboxDefault" }
+  | { type: "persistSandboxDefault"; enabled: boolean }
   | { type: "requestDismissedNotifications" }
   | { type: "dismissNotification"; notificationId: string }
   | { type: "syncDismissedNotifications"; ids: string[] }
@@ -392,6 +394,11 @@ export type ToWebview =
   | { type: "modelSelectorExpandedLoaded"; value: boolean }
   | { type: "modelPreferencesLoaded"; value: ModelPreferences }
   | { type: "autoApproveStateLoaded"; value: boolean }
+  | {
+      type: "sandboxDefaultLoaded"
+      /** The stored preference for new sessions, absent when the user has not chosen a default. */
+      explicit?: boolean
+    }
   | { type: "dismissedNotificationsLoaded"; ids: string[] }
   | { type: "webviewActiveChanged"; active: boolean }
   | { type: "validateFilesResult"; id: string; existing: string[] }
