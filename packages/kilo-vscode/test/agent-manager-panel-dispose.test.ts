@@ -5,8 +5,6 @@ import type { AgentManagerConnection } from "../src/agent-manager/connection"
 import type { Host, PanelContext } from "../src/agent-manager/host"
 
 const window = vscode.window as unknown as Record<string, unknown>
-window.onDidCloseTerminal ??= () => ({ dispose: () => undefined })
-window.onDidChangeActiveTerminal ??= () => ({ dispose: () => undefined })
 window.createTerminal ??= () => ({ show: () => undefined, dispose: () => undefined, exitStatus: undefined })
 window.createOutputChannel ??= () => ({ appendLine: () => undefined, show: () => undefined, dispose: () => undefined })
 

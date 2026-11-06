@@ -10,7 +10,6 @@ function host(calls: string[]) {
     stateReady: undefined,
     state: undefined,
     staleIds: new Set<string>(),
-    destination: { value: () => "tab" },
     contexts: { active: () => undefined },
     browserAutomation: () => false,
     postToWebview: () => undefined,

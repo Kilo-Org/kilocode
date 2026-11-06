@@ -3,6 +3,9 @@ import { Match, Switch } from "solid-js"
 import ProfileView from "../components/profile/ProfileView"
 import { SpeechToTextStatusProvider } from "../components/speech-to-text/status"
 import { NotificationsProvider } from "../context/notifications"
+import { WorkStyleProvider } from "../context/work-style"
+import { IndexingProvider } from "../context/indexing"
+import { KiloEmbeddingModelsProvider } from "../context/kilo-embedding-models"
 import { Chat } from "./chat"
 import { V2Provider } from "./client"
 import { createProfile } from "./profile"
@@ -14,20 +17,30 @@ export default function App(props: { directory: string; view: string }) {
   return (
     <WebviewShell>
       <V2Provider directory={props.directory}>
-        <NotificationsProvider>
-          <SpeechToTextStatusProvider>
-            <div class="container">
-              <Switch fallback={<Chat />}>
-                <Match when={props.view === "settings"}>
-                  <SettingsView />
-                </Match>
-                <Match when={props.view === "profile"}>
-                  <ProfilePanel />
-                </Match>
-              </Switch>
-            </div>
-          </SpeechToTextStatusProvider>
-        </NotificationsProvider>
+        <KiloEmbeddingModelsProvider>
+          <IndexingProvider>
+            <NotificationsProvider>
+              <SpeechToTextStatusProvider>
+                <div class="container">
+                  <Switch
+                    fallback={
+                      <WorkStyleProvider>
+                        <Chat />
+                      </WorkStyleProvider>
+                    }
+                  >
+                    <Match when={props.view === "settings"}>
+                      <SettingsView />
+                    </Match>
+                    <Match when={props.view === "profile"}>
+                      <ProfilePanel />
+                    </Match>
+                  </Switch>
+                </div>
+              </SpeechToTextStatusProvider>
+            </NotificationsProvider>
+          </IndexingProvider>
+        </KiloEmbeddingModelsProvider>
       </V2Provider>
     </WebviewShell>
   )

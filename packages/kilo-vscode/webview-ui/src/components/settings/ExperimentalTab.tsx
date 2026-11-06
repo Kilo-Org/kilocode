@@ -76,6 +76,19 @@ const ExperimentalTab: Component = () => {
         </SettingsRow>
 
         <SettingsRow
+          title={language.t("settings.experimental.conversationPromptHistory.title")}
+          description={language.t("settings.experimental.conversationPromptHistory.description")}
+        >
+          <Switch
+            checked={config.setting("experimental.conversationPromptHistory") === true}
+            onChange={(checked) => config.setSetting("experimental.conversationPromptHistory", checked)}
+            hideLabel
+          >
+            {language.t("settings.experimental.conversationPromptHistory.title")}
+          </Switch>
+        </SettingsRow>
+
+        <SettingsRow
           title={language.t("settings.experimental.nativeNotebookTools.title")}
           description={language.t("settings.experimental.nativeNotebookTools.description")}
           last

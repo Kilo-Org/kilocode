@@ -3,9 +3,8 @@ import * as fs from "node:fs"
 import * as os from "node:os"
 import * as path from "node:path"
 import type { ScriptTerminalManager } from "../src/agent-manager/ScriptTerminalManager"
-import { createSetupScriptTask, pickSetupTask, runWorktreeSetupScript } from "../src/agent-manager/setup-script-task"
+import { createSetupScriptTask, runWorktreeSetupScript } from "../src/agent-manager/setup-script-task"
 import { SetupScriptService } from "../src/agent-manager/SetupScriptService"
-import { setupTaskIdentity, type RunTask } from "../src/agent-manager/SetupScriptRunner"
 import type { AgentManagerOutMessage } from "../src/agent-manager/types"
 import { failure } from "./setup/failure"
 
@@ -259,51 +258,6 @@ describe("createSetupScriptTask", () => {
   })
 })
 
-describe("pickSetupTask", () => {
-  function pick(opts: { destination: "vscode" | "agentManager"; worktreeId?: string; trusted?: boolean }) {
-    const vscode: RunTask = async () => 0
-    const ctx = harness({ trusted: opts.trusted })
-    const task = pickSetupTask({
-      destination: opts.destination,
-      worktreeId: opts.worktreeId,
-      trusted: () => opts.trusted ?? true,
-      manager: ctx.manager,
-      log: () => undefined,
-      vscode,
-      env: async () => ({}),
-    })
-    return { task, vscode, ctx }
-  }
-
-  it("uses the integrated task runner when the destination is the VS Code terminal", () => {
-    const { task, vscode, ctx } = pick({ destination: "vscode", worktreeId: "wt-1" })
-    expect(task).toBe(vscode)
-    expect(ctx.starts).toEqual([])
-  })
-
-  it("uses the integrated task runner without a worktree id", () => {
-    const { task, vscode } = pick({ destination: "agentManager" })
-    expect(task).toBe(vscode)
-  })
-
-  it("does not redirect an untrusted embedded selection to VS Code", async () => {
-    const { task, vscode } = pick({ destination: "agentManager", worktreeId: "wt-1", trusted: false })
-    expect(task).not.toBe(vscode)
-    expect(await failure(task(config))).toContain("Trust the workspace before running setup scripts")
-  })
-
-  it("uses the embedded script terminal when the Agent Manager panel is selected", async () => {
-    const { task, vscode, ctx } = pick({ destination: "agentManager", worktreeId: "wt-1" })
-    expect(task).not.toBe(vscode)
-
-    const result = task(config)
-    await wait()
-    expect(ctx.starts[0]?.kind).toBe("setup")
-    ctx.starts[0]?.done({ exitCode: 0 })
-    expect(await result).toBe(0)
-  })
-})
-
 describe("runWorktreeSetupScript", () => {
   function root(script: boolean): string {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), "kilo-setup-flow-"))
@@ -314,36 +268,26 @@ describe("runWorktreeSetupScript", () => {
     return dir
   }
 
-  function flow(
-    script: boolean,
-    opts?: { destination?: "vscode" | "agentManager"; code?: number; projectId?: string; error?: Error },
-  ) {
+  function flow(script: boolean, opts?: { projectId?: string; startError?: Error }) {
     const posted: AgentManagerOutMessage[] = []
-    const runs: string[] = []
-    const ctx = harness()
-    const vscode: RunTask = async (cfg) => {
-      runs.push(cfg.cwd)
-      if (opts?.error) throw opts.error
-      return opts?.code ?? 0
-    }
+    const ctx = harness({ startError: opts?.startError })
     const input = {
       service: new SetupScriptService(root(script)),
-      destination: opts?.destination ?? ("vscode" as const),
       projectId: opts?.projectId,
       worktreeId: "wt-1",
       trusted: () => true,
       manager: ctx.manager,
       log: () => undefined,
-      vscode,
       env: async () => ({}),
       post: (message: AgentManagerOutMessage) => posted.push(message),
     }
-    return { input, posted, runs, ctx }
+    return { input, posted, ctx }
   }
 
-  it("posts progress and executes through the picked runner", async () => {
-    const scene = flow(true, { code: 0 })
-    await runWorktreeSetupScript(scene.input, { worktreePath: "/repo/worktree", repoPath: "/repo" })
+  it("posts progress and executes through the script terminal", async () => {
+    const scene = flow(true)
+    const result = runWorktreeSetupScript(scene.input, { worktreePath: "/repo/worktree", repoPath: "/repo" })
+    await new Promise((resolve) => setTimeout(resolve, 0))
 
     expect(scene.posted).toEqual([
       {
@@ -353,11 +297,14 @@ describe("runWorktreeSetupScript", () => {
         worktreeId: "wt-1",
       },
     ])
-    expect(scene.runs).toEqual(["/repo/worktree"])
+    expect(scene.ctx.starts[0]?.kind).toBe("setup")
+    expect(scene.ctx.starts[0]?.config.cwd).toBe("/repo/worktree")
+    scene.ctx.starts[0]?.done({ exitCode: 0 })
+    await result
   })
 
-  it("stamps progress and embedded terminals with the owning project", async () => {
-    const scene = flow(true, { destination: "agentManager", projectId: "prj-a" })
+  it("stamps progress and script terminals with the owning project", async () => {
+    const scene = flow(true, { projectId: "prj-a" })
     const result = runWorktreeSetupScript(scene.input, { worktreePath: "/repo/worktree", repoPath: "/repo" })
     await new Promise((resolve) => setTimeout(resolve, 0))
 
@@ -372,15 +319,16 @@ describe("runWorktreeSetupScript", () => {
     await runWorktreeSetupScript(scene.input, { worktreePath: "/repo/worktree", repoPath: "/repo" })
 
     expect(scene.posted).toEqual([])
-    expect(scene.runs).toEqual([])
+    expect(scene.ctx.starts).toEqual([])
   })
 
   it("keeps worktree creation best-effort when the script fails", async () => {
-    const scene = flow(true, { code: 3 })
-    expect(
-      await runWorktreeSetupScript(scene.input, { worktreePath: "/repo/worktree", repoPath: "/repo" }),
-    ).toBeUndefined()
-    expect(scene.runs).toEqual(["/repo/worktree"])
+    const scene = flow(true)
+    const result = runWorktreeSetupScript(scene.input, { worktreePath: "/repo/worktree", repoPath: "/repo" })
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    scene.ctx.starts[0]?.done({ exitCode: 3 })
+
+    expect(await result).toBeUndefined()
     expect(scene.posted).toContainEqual({
       type: "agentManager.worktreeSetup",
       status: "error",
@@ -389,26 +337,14 @@ describe("runWorktreeSetupScript", () => {
     })
   })
 
-  it("reports a VS Code task that fails to start instead of assuming success", async () => {
-    const scene = flow(true, { error: new Error("Failed to start setup task: boom") })
+  it("reports a script terminal that fails to start instead of assuming success", async () => {
+    const scene = flow(true, { startError: new Error("Failed to start setup terminal: boom") })
     await runWorktreeSetupScript(scene.input, { worktreePath: "/repo/worktree", repoPath: "/repo" })
     expect(scene.posted).toContainEqual({
       type: "agentManager.worktreeSetup",
       status: "error",
-      message: "Failed to start setup task: boom",
+      message: "Failed to start setup terminal: boom",
       worktreeId: "wt-1",
     })
-  })
-})
-
-describe("setupTaskIdentity", () => {
-  it("gives each worktree its own VS Code task identity", () => {
-    const a = setupTaskIdentity({ ...config, cwd: "/repo/.kilo/worktrees/a" })
-    const b = setupTaskIdentity({ ...config, cwd: "/repo/.kilo/worktrees/b" })
-
-    expect(a.definition).not.toEqual(b.definition)
-    expect(a.name).not.toBe(b.name)
-    expect(a.definition).toEqual({ type: "kilo-worktree-setup", script: "sh", worktree: "/repo/.kilo/worktrees/a" })
-    expect(a.name).toBe("Worktree Setup (a)")
   })
 })

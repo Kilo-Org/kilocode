@@ -66,3 +66,31 @@ test("hideDetails removes the body and the expand arrow", () => {
   expect(value.host.querySelector('[data-slot="collapsible-arrow"]')).toBeNull()
   expect(value.host.querySelector('[data-component="tool-trigger"]')?.getAttribute("data-hide-details")).toBe("true")
 })
+
+test("defer does not construct the details body while collapsed", async () => {
+  let built = 0
+  const Body = () => {
+    built++
+    return <span data-testid="deferred">deferred body</span>
+  }
+  const value = mount(() => (
+    <BasicTool
+      defer
+      icon="code-lines"
+      status="completed"
+      trigger={{ title: "Grep", subtitle: "src", args: ["3 files"] }}
+    >
+      <Body />
+    </BasicTool>
+  ))
+  mounted.push(value)
+
+  expect(built).toBe(0)
+  expect(value.host.querySelector('[data-testid="deferred"]')).toBeNull()
+
+  trigger(value.host).click()
+  const details = await waitFor(() => value.host.querySelector('[data-testid="deferred"]'))
+
+  expect(built).toBe(1)
+  expect(details.textContent).toBe("deferred body")
+})

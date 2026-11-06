@@ -33,6 +33,7 @@ import { brandingPlugin } from "../src/branding/plugin"
 import { hostMirrorsPlugin } from "../src/mirrors"
 import { KiloBinary } from "../src/binary"
 import { createPluginRuntimePlugin } from "./plugin-runtime"
+import { copyTreeSitterWasms } from "./tree-sitter"
 // Kilo: the sandbox mutation worker, network relay and seccomp helper ship next to the executable.
 import { KiloSandboxWorker } from "./kilocode/kilo-sandbox-worker"
 import { KiloSandboxNetwork } from "./kilocode/kilo-sandbox-network"
@@ -171,7 +172,9 @@ export default { path: file, version: ${JSON.stringify(opencodePty.version)}, sh
   const result = await Bun.build({
     // Kilo: the host entry instead of the upstream CLI entry. It imports the upstream commands and handlers.
     // Upstream's second entrypoint lands next to index.js, where Image.Photon resolves "./photon-worker.js".
-    entrypoints: ["./src/index.ts", "./src/photon-worker.ts"],
+    // Kilo: the codebase indexing worker is the third, resolved the same way as "./indexing-worker.js".
+    // kilo_port(indexing:d76a31906cd4)
+    entrypoints: ["./src/index.ts", "./src/photon-worker.ts", "./src/indexing-worker.ts"],
     tsconfig: "./tsconfig.json",
     plugins: [
       hostMirrorsPlugin,
@@ -245,6 +248,8 @@ export default { path: file, version: ${JSON.stringify(opencodePty.version)}, sh
   if (item.os === "linux") await KiloSandboxNetwork.copy(kiloSandboxNetwork, bin, item.arch as "arm64" | "x64")
   if (item.os === process.platform && item.arch === process.arch && !item.abi && item.avx2 !== false)
     await KiloSandboxWorker.smoke(path.join(bin, binary)) // kilo_port(sandbox:980b9e91078b)
+  // Kilo: the tree-sitter grammars for codebase indexing, next to the executable where the engine looks for them.
+  await copyTreeSitterWasms(bin)
   await NativeArch.verify(path.join(outdir, name, "bin", item.os === "win32" ? `${binary}.exe` : binary), item.arch)
 
   // Kilo: a Linux package ships the sandbox runtime helper and Bubblewrap, so its LICENSE carries their notices.

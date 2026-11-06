@@ -134,7 +134,6 @@ export const dict = {
   "agentManager.tab.unpin": "Losmaken",
   "agentManager.tab.pinned": "Vastgemaakt",
   "agentManager.tab.terminal": "Terminal",
-  "agentManager.tab.openTerminal": "Terminal openen",
   "agentManager.tab.newOptions": "Meer opties voor nieuwe tabblad",
   "agentManager.sidebarSearch.label": "Worktrees en sessies doorzoeken",
   "agentManager.sidebarSearch.scope": "Doorzoekt de lokale werkruimte, lokale sessies, Worktrees en hun sessies",
@@ -153,9 +152,6 @@ export const dict = {
   "agentManager.terminal.add": "Nieuwe terminal",
   "agentManager.terminal.empty": "Hier is nog geen terminal",
   "agentManager.terminal.start": "Terminal starten",
-  "agentManager.terminal.destination": "Kies wat de terminalknop opent",
-  "agentManager.terminal.openInVscode": "VS Code-terminal",
-  "agentManager.terminal.openInPanel": "Agent Manager-paneel",
   "agentManager.terminal.errorTitle": "Terminalfout",
 
   "agentManager.setup.failed": "Worktree setup mislukt",
