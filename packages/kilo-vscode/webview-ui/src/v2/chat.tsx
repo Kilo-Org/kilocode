@@ -59,6 +59,14 @@ export function Chat() {
   const [transferring, setTransferring] = createSignal(false)
   const [transferDetail, setTransferDetail] = createSignal("")
   const [repoBranch, setRepoBranch] = createSignal<string>()
+  // The branch changes after a checkout, so refresh it when the view returns and after a worktree action.
+  let branchAsked = 0
+  const requestRepoBranch = () => {
+    const now = Date.now()
+    if (now - branchAsked < 2000) return
+    branchAsked = now
+    vscode.postMessage({ type: "agentManager.requestRepoInfo" } satisfies ToHost as never)
+  }
   const stopWorktree = vscode.onMessage((raw) => {
     const message = raw as ToWebview
     if (message.type === "agentManager.repoInfo") return setRepoBranch(message.branch)
@@ -66,18 +74,25 @@ export function Chat() {
     if (message.status === "done") {
       setTransferring(false)
       setTransferDetail("")
+      requestRepoBranch()
       return
     }
     if (message.status === "error") {
       setTransferring(false)
       setTransferDetail("")
+      requestRepoBranch()
       showToast({ variant: "error", title: message.error ?? language.t("sidebar.session.progress.failed") })
       return
     }
     setTransferDetail(language.t(`sidebar.session.progress.${message.status}`))
   })
   onCleanup(stopWorktree)
-  vscode.postMessage({ type: "agentManager.requestRepoInfo" } satisfies ToHost as never)
+  const onVisible = () => {
+    if (document.visibilityState === "visible") requestRepoBranch()
+  }
+  document.addEventListener("visibilitychange", onVisible)
+  onCleanup(() => document.removeEventListener("visibilitychange", onVisible))
+  requestRepoBranch()
   // A turn's changes belong to its tab, so switching tabs returns to that tab's chat.
   createEffect(on(tabs.active, () => setChanges(false), { defer: true }))
   const startSession = () => {
@@ -112,11 +127,14 @@ export function Chat() {
     )
   })
 
+  const [forking, setForking] = createSignal<string>()
   const forkSession = (id: string, messageId?: string) => {
+    if (forking() === id) return
     if (v2.data.session.status(id) === "running") {
       showToast({ title: language.t("sidebar.session.forkBusy") })
       return
     }
+    setForking(id)
     void v2.api.session
       .fork({ sessionID: id, ...(messageId ? { before: messageId } : {}) })
       .then(async (info) => {
@@ -125,6 +143,7 @@ export function Chat() {
         tabs.openAfter(id, info.id)
       })
       .catch(v2.report)
+      .finally(() => setForking((value) => (value === id ? undefined : value)))
   }
 
   const session = () => tabs.session()
@@ -272,7 +291,7 @@ export function Chat() {
   const row = (hasMessages: boolean, todos: JSX.Element) => (
     <div class="new-task-button-wrapper">
       <div class="session-actions-row">
-        <Show when={hasMessages}>
+        <Show when={hasMessages || !repoBranch()}>
           <Tooltip value={language.t("sidebar.session.newSession.tooltip")} placement="top">
             <Button
               variant="secondary"

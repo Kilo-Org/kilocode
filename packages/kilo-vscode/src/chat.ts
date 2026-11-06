@@ -425,42 +425,6 @@ export function wire(input: {
         return false
     }
   }
-  // The sidebar worktree actions go to the Agent Manager, which owns worktree creation and movement.
-  const handleWorktreeMessage = (message: ToHost): boolean => {
-    if (message.type === "agentManager.requestRepoInfo") {
-      void (input.worktree?.branch() ?? Promise.resolve(undefined))
-        .catch(() => undefined)
-        .then((branch) => post({ type: "agentManager.repoInfo", branch }))
-      return true
-    }
-    if (message.type === "continueInWorktree") {
-      if (!input.worktree) {
-        post({ type: "continueInWorktreeProgress", status: "error", error: "Continue in Worktree is not available" })
-        return true
-      }
-      void input.worktree
-        .continue(message.sessionId, (status, detail, error) =>
-          post({ type: "continueInWorktreeProgress", status, detail, error }),
-        )
-        .catch((error: unknown) =>
-          post({ type: "continueInWorktreeProgress", status: "error", error: errorText(error) }),
-        )
-      return true
-    }
-    if (message.type === "agentManager.createWorktree") {
-      void input.worktree?.create(message.baseBranch, message.branchName).catch((error: unknown) => {
-        post({ type: "continueInWorktreeProgress", status: "error", error: errorText(error) })
-      })
-      return true
-    }
-    if (message.type === "openAdvancedWorktree") {
-      void input.worktree?.advanced().catch((error: unknown) => {
-        post({ type: "continueInWorktreeProgress", status: "error", error: errorText(error) })
-      })
-      return true
-    }
-    return false
-  }
   // Leaf host actions that carry no state, kept together so the main handler stays within the complexity limit.
   const handleLeafMessage = (message: ToHost): boolean => {
     if (message.type === "saveImage") {
@@ -489,7 +453,7 @@ export function wire(input: {
         .then((stats) => post({ type: "gitChangesStats", stats }))
       return true
     }
-    if (handleWorktreeMessage(message)) return true
+    if (routeWorktreeMessage(message, input.worktree, post)) return true
     // The Kilo Gateway sign-in runs in the Profile panel, as main opens its Profile tab.
     if (message.type === "openProfile") {
       void commands.executeCommand("kilo-code.v2.profile")
@@ -676,6 +640,45 @@ export function html(input: {
 
 function escape(text: string) {
   return text.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+}
+
+/** Routes the sidebar worktree actions to the Agent Manager worktree hooks. */
+export function routeWorktreeMessage(
+  message: ToHost,
+  worktree: ChatWorktree | undefined,
+  post: (message: ToWebview) => void,
+): boolean {
+  if (message.type === "agentManager.requestRepoInfo") {
+    void (worktree?.branch() ?? Promise.resolve(undefined))
+      .catch(() => undefined)
+      .then((branch) => post({ type: "agentManager.repoInfo", branch }))
+    return true
+  }
+  if (message.type === "continueInWorktree") {
+    if (!worktree) {
+      post({ type: "continueInWorktreeProgress", status: "error", error: "Continue in Worktree is not available" })
+      return true
+    }
+    void worktree
+      .continue(message.sessionId, (status, detail, error) =>
+        post({ type: "continueInWorktreeProgress", status, detail, error }),
+      )
+      .catch((error: unknown) => post({ type: "continueInWorktreeProgress", status: "error", error: errorText(error) }))
+    return true
+  }
+  if (message.type === "agentManager.createWorktree") {
+    void worktree?.create(message.baseBranch, message.branchName).catch((error: unknown) => {
+      post({ type: "continueInWorktreeProgress", status: "error", error: errorText(error) })
+    })
+    return true
+  }
+  if (message.type === "openAdvancedWorktree") {
+    void worktree?.advanced().catch((error: unknown) => {
+      post({ type: "continueInWorktreeProgress", status: "error", error: errorText(error) })
+    })
+    return true
+  }
+  return false
 }
 
 function errorText(error: unknown) {

@@ -343,7 +343,7 @@ export function SessionView(props: {
             session={session()}
             blocked={dockBlocked()}
             actions={(todos) => props.row?.(hasMessages(), todos)}
-            hasActions={hasMessages() && !!props.row}
+            hasActions={!!props.row}
             status={working.status()}
             submitting={working.submitting()}
             timing={working.timing()}

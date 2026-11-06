@@ -61,6 +61,7 @@ import { WorktreeDiffController } from "./worktree-diff-controller"
 import { DiffSourceCatalog } from "../diff/sources/catalog"
 import { createLocalDiff } from "./local-diff"
 import { sendDiffBranches as postDiffBranches } from "./project/diff-branches"
+import { samePath } from "./project/paths"
 import { pruneSubagents, sessionMissing } from "./prune-subagents"
 import { readTerminalFont, watchTerminalFont } from "./terminal-font"
 import { buildKeybindingMap } from "./format-keybinding"
@@ -973,6 +974,24 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
     return this.context?.root
   }
 
+  /** The project that owns a directory, so a sidebar action stays on the workspace the sidebar shows. */
+  private contextForDirectory(directory?: string): ProjectContext | undefined {
+    if (!directory) return this.context
+    const byDirectory = this.contexts.byDirectory(directory)
+    if (byDirectory) return byDirectory
+    const pinned = this.contexts.pinned()
+    if (pinned && samePath(pinned.root, directory)) return pinned
+    return this.context
+  }
+
+  /** Show the sidebar workspace in the panel before an action that opens it. */
+  private showProject(context: ProjectContext): void {
+    if (this.contexts.active()?.id === context.id) return
+    this.contexts.activate(context.id)
+    this.activateProject(context)
+    this.pushProjects()
+  }
+
   public getWorktreeManager(): WorktreeManager | undefined {
     return this.context?.worktreeManager()
   }
@@ -1134,16 +1153,35 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
   public continueFromSidebar(
     sessionId: string,
     progress: (status: string, detail?: string, error?: string) => void,
+    directory?: string,
   ): Promise<void> {
-    return continueFromSidebar(this.api(), sessionId, progress)
+    const context = this.contextForDirectory(directory)
+    if (!context) return continueFromSidebar(this.api(), sessionId, progress)
+    if (directory) this.showProject(context)
+    return this.projectScope.run(context, () => continueFromSidebar(this.api(), sessionId, progress))
   }
 
-  public createFromSidebar(baseBranch?: string, branchName?: string): Promise<void> {
-    return createFromSidebar(this.api(), baseBranch, branchName)
+  public createFromSidebar(baseBranch?: string, branchName?: string, directory?: string): Promise<void> {
+    const context = this.contextForDirectory(directory)
+    if (!context) return createFromSidebar(this.api(), baseBranch, branchName)
+    if (directory) this.showProject(context)
+    return this.projectScope.run(context, () => createFromSidebar(this.api(), baseBranch, branchName))
   }
 
-  public openAdvancedWorktree(): Promise<void> {
-    return openAdvancedWorktree(this.api())
+  public openAdvancedWorktree(directory?: string): Promise<void> {
+    const context = this.contextForDirectory(directory)
+    if (!context) return openAdvancedWorktree(this.api())
+    if (directory) this.showProject(context)
+    return this.projectScope.run(context, () => openAdvancedWorktree(this.api()))
+  }
+
+  public branchFor(directory?: string): Promise<string | undefined> {
+    const manager = this.contextForDirectory(directory)?.worktreeManager()
+    if (!manager) return Promise.resolve(undefined)
+    return manager
+      .currentBranch()
+      .then((branch) => branch || undefined)
+      .catch(() => undefined)
   }
 
   public diagnose(): Promise<void> {

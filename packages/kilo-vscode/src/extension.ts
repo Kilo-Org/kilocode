@@ -245,16 +245,11 @@ export function activate(context: ExtensionContext) {
     gitStats: (onStats) => gitChanges({ directory, onStats }),
     worktree: {
       continue: (sessionId, progress) =>
-        agentManagerRef?.continueFromSidebar(sessionId, progress) ?? Promise.resolve(),
+        agentManagerRef?.continueFromSidebar(sessionId, progress, directory) ?? Promise.resolve(),
       create: (baseBranch, branchName) =>
-        agentManagerRef?.createFromSidebar(baseBranch, branchName) ?? Promise.resolve(),
-      advanced: () => agentManagerRef?.openAdvancedWorktree() ?? Promise.resolve(),
-      branch: () =>
-        agentManagerRef
-          ?.getWorktreeManager()
-          ?.currentBranch()
-          .then((branch) => branch || undefined)
-          .catch(() => undefined) ?? Promise.resolve(undefined),
+        agentManagerRef?.createFromSidebar(baseBranch, branchName, directory) ?? Promise.resolve(),
+      advanced: () => agentManagerRef?.openAdvancedWorktree(directory) ?? Promise.resolve(),
+      branch: () => agentManagerRef?.branchFor(directory) ?? Promise.resolve(undefined),
     },
     openBrowser: (sessionId, url) => browserTab?.openUrl(sessionId, url) ?? false,
     documents: () => documentsRef.current,
