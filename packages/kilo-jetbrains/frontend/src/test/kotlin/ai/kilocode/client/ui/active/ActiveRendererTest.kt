@@ -562,6 +562,52 @@ class ActiveRendererTest : BasePlatformTestCase() {
         assertEquals("The action pill ends exactly where the menu strip begins", menuHit.bounds.x, right)
     }
 
+    fun `test trailing inset keeps the menu hover inside the pointer-reachable edge`() {
+        val menu = ActiveMenu(DataKey.create<String>("renderer.pill.trailing"), DefaultActionGroup(), { it.key })
+        val item = object : ActiveItem {
+            override val key = "trailing"
+            override val title = "Row with actions"
+            override val cells = listOf(ActiveCell("run", "Run", alwaysVisible = true))
+        }
+        val renderer = ActiveRenderer(menu = menu)
+        renderer.setTrailingInset(12)
+        val background = UIUtil.getPanelBackground()
+        val selection = UIUtil.getListBackground(true, true)
+        renderer.render(
+            ActiveRenderState(
+                item = item,
+                selected = true,
+                focused = true,
+                active = true,
+                hovered = true,
+                enabled = true,
+                background = background,
+                selectionColor = selection,
+                paintSelection = true,
+                backdrop = selection,
+                foreground = UIUtil.getListForeground(true, true),
+                pillBackground = selection,
+                width = 400,
+                actionsVisible = true,
+                menuVisible = true,
+                opaque = true,
+                bodyHeight = 48,
+            ),
+        )
+        renderer.setSize(400, renderer.preferredSize.height)
+        activeLayout(renderer)
+        val menuHit = renderer.buttons().single { it.id == ACTIVE_MENU_CELL }
+        val action = descendants(renderer).filterIsInstance<ActiveActionCell>().single { it.cellId == "run" }
+        val pill = generateSequence(action as java.awt.Component) { it.parent }
+            .takeWhile { it !== renderer }
+            .first { it is JPanel && it.parent is JPanel && (it.parent as JPanel).layout == null }
+        val pillRight = SwingUtilities.convertPoint(pill, pill.width, 0, renderer).x
+
+        assertEquals("The menu hit region stops before the overlay scrollbar", 388,
+            menuHit.bounds.x + menuHit.bounds.width)
+        assertEquals("The action pill still clears the menu strip", menuHit.bounds.x, pillRight)
+    }
+
     fun `test tree and list top level selection share outer insets and menu gap`() {
         val menu = ActiveMenu(DataKey.create<String>("renderer.insets"), DefaultActionGroup(), { it.key })
         val tree = ActiveTree("", menu = menu)

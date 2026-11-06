@@ -81,6 +81,7 @@ internal class ActiveListView(
     // Row and button-cell hover share one state holder, so only one element is ever hovered and the
     // hit regions of the current row are rebuilt once per entry instead of on every mouse move.
     private val hover = ActiveHover()
+    private var trailingInset = -1
     internal val list: JBList<ActiveItem> = object : JBList<ActiveItem>(model), ActiveListActive {
         override fun active(): Boolean = popups > 0
 
@@ -619,6 +620,17 @@ internal class ActiveListView(
     internal fun resetHover() {
         checkEdt()
         setHovered(-1)
+    }
+
+    /** Reserves trailing pixels the pointer cannot reach and drops hit regions built for the old edge. */
+    @RequiresEdt
+    internal fun setTrailingInset(value: Int) {
+        checkEdt()
+        if (trailingInset == value) return
+        trailingInset = value
+        renderer.setTrailingInset(value)
+        hover.invalidate()
+        list.repaint()
     }
 
     /** Hit regions of [idx]'s buttons, or none when the row has nothing interactive. */

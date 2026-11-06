@@ -150,6 +150,9 @@ internal class ActiveRenderer(
         add(textPane, BorderLayout.CENTER)
         add(endPane, BorderLayout.EAST)
     }
+    // Width at the trailing edge that pointer events cannot reach, such as an overlay scrollbar. The
+    // row content and its hover buttons stop before it so the painted hover area stays clickable.
+    private var trailing = 0
     private val layers = object : LayeredOverlayPanel(
         content = JPanel(BorderLayout()).apply { add(row, BorderLayout.CENTER) },
     ) {
@@ -215,16 +218,15 @@ internal class ActiveRenderer(
             row.remove(endPane)
             row.add(tail, BorderLayout.EAST)
             // The menu button owns the whole trailing strip, not just the glyph: its hit region and
-            // hover fill run from the reserved column out to the row's right edge, full height. The
-            // right border keeps the icon centred over the column while the extra padding widens the
-            // target and the pill into that strip.
+            // hover fill run from the reserved column out to the row's usable right edge, full height.
+            // The right border keeps the icon centred over the column while the extra padding widens
+            // the target and the pill into that strip.
             layers.addOverlay(glyph) { host, _ ->
                 val width = spacer.preferredSize.width.coerceAtMost(host.width)
-                val inset = row.insets.right
                 Rectangle(
-                    (host.width - inset - width).coerceAtLeast(0),
+                    (host.width - row.insets.right - width).coerceAtLeast(0),
                     0,
-                    (width + inset).coerceAtMost(host.width),
+                    (width + UiStyle.Gap.SM).coerceAtMost(host.width),
                     host.height,
                 )
             }
@@ -256,7 +258,7 @@ internal class ActiveRenderer(
         // Keep the row close to the selection edge. The frame's own cap already provides the outer
         // separation; this is only the content inset inside it, shared by lists and trees.
         (row.layout as BorderLayout).hgap = if (menu == null) iconGap else 0
-        row.border = JBUI.Borders.empty(UiStyle.Gap.MD, cfg.leadInset, UiStyle.Gap.MD, UiStyle.Gap.SM)
+        row.border = JBUI.Borders.empty(UiStyle.Gap.MD, cfg.leadInset, UiStyle.Gap.MD, UiStyle.Gap.SM + trailing)
         mark.border = if (menu == null) JBUI.Borders.empty() else JBUI.Borders.emptyRight(activeIconGap())
         // The menu overlay is wider than its reserved column so the whole trailing strip is a button.
         // The matching right border keeps the glyph centred over the column itself.
@@ -379,6 +381,20 @@ internal class ActiveRenderer(
 
     /** Hit regions of the row's interactive buttons, in this renderer's coordinates. */
     fun buttons(x: Int = 0, y: Int = 0): List<ActiveHit> = activeHitCells(this, x, y)
+
+    /**
+     * Reserves [value] pixels at the trailing edge that pointer events cannot reach, such as an
+     * overlay scrollbar. Row content and hover targets stop before it so the painted hover area and
+     * the hit region stay the same size.
+     */
+    @RequiresEdt
+    fun setTrailingInset(value: Int) {
+        val next = value.coerceAtLeast(0)
+        if (trailing == next) return
+        trailing = next
+        syncScale()
+        activeInvalidate(this)
+    }
 
     fun setBodyHeight(height: Int?) {
         if (bodyHeight == height) return

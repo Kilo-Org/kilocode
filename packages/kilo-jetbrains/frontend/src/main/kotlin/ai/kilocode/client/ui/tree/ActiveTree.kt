@@ -58,6 +58,8 @@ import java.awt.Graphics
 import java.awt.Image
 import java.awt.Point
 import java.awt.Rectangle
+import java.awt.event.ComponentAdapter
+import java.awt.event.ComponentEvent
 import java.awt.event.InputEvent
 import java.awt.event.KeyEvent
 import java.awt.event.MouseEvent
@@ -137,7 +139,10 @@ internal class ActiveTree(
 
     init {
         view.onSelect = actions.select
-        view.onGeometry = { onScroll?.invoke() }
+        view.onGeometry = {
+            updateTrailing()
+            onScroll?.invoke()
+        }
         view.onDragStart = { onDragStart?.invoke() }
         view.onDragEnd = { onDragEnd?.invoke() }
         scroll.verticalScrollBar.addAdjustmentListener { view.geometry() }
@@ -149,6 +154,33 @@ internal class ActiveTree(
         scroll.verticalScrollBar.putClientProperty(JBScrollPane.IGNORE_SCROLLBAR_IN_INSETS, true)
         scroll.horizontalScrollBar.putClientProperty(JBScrollPane.IGNORE_SCROLLBAR_IN_INSETS, true)
         addToCenter(scroll)
+        scroll.verticalScrollBar.addComponentListener(object : ComponentAdapter() {
+            override fun componentShown(e: ComponentEvent) = updateTrailing()
+
+            override fun componentHidden(e: ComponentEvent) = updateTrailing()
+
+            override fun componentResized(e: ComponentEvent) = updateTrailing()
+        })
+    }
+
+    override fun doLayout() {
+        super.doLayout()
+        updateTrailing()
+    }
+
+    /**
+     * Keeps the row content out from under an overlay scrollbar. The scrollbar can sit on top of the
+     * tree's trailing edge on macOS, where it receives the pointer events for those pixels; without
+     * this reservation the menu hover fill would be painted there but never receive hover.
+     */
+    private fun updateTrailing() {
+        val bar = scroll.verticalScrollBar
+        val overlap = if (!bar.isVisible || bar.width <= 0 || view.width <= 0) 0 else {
+            val barX = SwingUtilities.convertPoint(bar, 0, 0, scroll).x
+            val viewRight = SwingUtilities.convertPoint(view, view.width, 0, scroll).x
+            (viewRight - barX).coerceIn(0, view.width)
+        }
+        view.setTrailingInset(overlap)
     }
 
     override fun getBackground(): Color {
@@ -267,6 +299,7 @@ internal class ActiveTreeView(
     private val expandedOnce = HashSet<String>()
     private var hoveredKey: String? = null
     private val button = ActiveHover()
+    private var trailingInset = -1
     private var anchorKey: String? = null
     private var pending: String? = null
     private var pendingRefresh = false
@@ -875,6 +908,16 @@ internal class ActiveTreeView(
         if (row >= 0) getRowBounds(row)?.let { repaint(0, it.y, width, it.height) }
     }
 
+    /** Reserves trailing pixels the pointer cannot reach and drops hit regions built for the old edge. */
+    @RequiresEdt
+    internal fun setTrailingInset(value: Int) {
+        if (trailingInset == value) return
+        trailingInset = value
+        renderer.setTrailingInset(value)
+        button.invalidate()
+        repaint()
+    }
+
     private fun hits(entry: ActiveEntry): List<ActiveHit> = regions.hits(entry)
 
 
@@ -1146,6 +1189,8 @@ internal class ActiveTreeRenderer(
 
     /** Hit regions of the current render's buttons, in tree coordinates. */
     fun buttons(x: Int, y: Int): List<ActiveHit> = active.buttons(x, y)
+
+    internal fun setTrailingInset(value: Int) = active.setTrailingInset(value)
 
     fun preferredHeight(state: ActiveRenderState, width: Int): Int =
         active.bodyPreferredHeight(state.copy(width = width))
