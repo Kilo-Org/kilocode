@@ -14,6 +14,8 @@ import ai.kilocode.client.session.SessionRef
 import ai.kilocode.client.session.SessionUi
 import ai.kilocode.client.session.SessionUiFactory
 import ai.kilocode.client.session.controller.SessionController
+import ai.kilocode.client.session.model.PromptAttachment
+import ai.kilocode.client.session.ui.prompt.PromptPanel
 import ai.kilocode.client.testing.FakeAppRpcApi
 import ai.kilocode.client.testing.FakeSessionRpcApi
 import ai.kilocode.client.testing.FakeWorkspaceRpcApi
@@ -38,6 +40,8 @@ import com.intellij.openapi.util.registry.Registry
 import com.intellij.openapi.util.registry.RegistryKeyDescriptor
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import kotlinx.coroutines.CompletableDeferred
+import java.awt.Component
+import java.awt.Container
 import javax.swing.JComponent
 import javax.swing.JPanel
 
@@ -175,6 +179,39 @@ class WorktreeSessionEditorManagerTest : BasePlatformTestCase() {
 
         waitUntil { rpc.prompts.any { it.first == "ses_1" } }
         assertTrue(rpc.prompts.single { it.first == "ses_1" }.third.parts.any { it.text == "update from base" })
+    }
+
+    fun `test queued startup prompt preserves recovered draft and is sent once`() {
+        rpc.createThrows = IllegalStateException("Kilo backend is not ready")
+        val manager = manager()
+        edt {
+            manager.submitPrompt("update from base", "Update from main")
+            manager.start()
+        }
+        flush()
+        val fallback = edt { manager.component.getComponent(0) as SessionUi }
+        val item = PromptAttachment("file", "notes.txt", "text/plain", "file:///tmp/notes.txt")
+        edt {
+            prompt(fallback).setText("Keep this fallback draft")
+            prompt(fallback).addAttachmentForTest(item)
+        }
+
+        rpc.createThrows = null
+        edt { manager.start() }
+        waitUntil { rpc.prompts.size == 1 }
+        edt { manager.start() }
+        flush()
+
+        val sent = rpc.prompts.single()
+        val part = sent.third.parts.single { it.text == "update from base" }
+        assertEquals("Update from main", part.injectedTitle)
+        edt {
+            val active = manager.component.getComponent(0) as SessionUi
+            assertEquals(active.id, sent.first)
+            assertEquals("Keep this fallback draft", prompt(active).text())
+            assertEquals(listOf(item), prompt(active).attachments())
+            assertTrue(Disposer.isDisposed(fallback))
+        }
     }
 
     fun `test the project base update service finds the open worktree editor`() {
@@ -479,20 +516,64 @@ class WorktreeSessionEditorManagerTest : BasePlatformTestCase() {
         rpc.session = session("ses_new", updated = 4.0).copy(title = "New session")
         val manager = manager()
 
-        edt { manager.start() }
+        edt {
+            service<PendingWorktreePrompt>().put(DIR, PendingPrompt("fix the bug"))
+            manager.start()
+        }
         flush()
 
         // No real session yet, but the editor shows the empty session panel instead of a blank void.
         assertTrue(edt { manager.component.getComponent(0) } is SessionUi)
         assertEquals(listOf(DIR to null), created)
+        val fallback = edt { manager.component.getComponent(0) as SessionUi }
+        val item = PromptAttachment("file", "notes.txt", "text/plain", "file:///tmp/notes.txt")
+        edt {
+            prompt(fallback).setText("Keep this fallback draft")
+            prompt(fallback).addAttachmentForTest(item)
+        }
 
         // Backend recovers -> starting again creates and shows the real session.
         rpc.createThrows = null
         edt { manager.start() }
-        flush()
+        waitUntil { rpc.prompts.any { it.first == "ses_new" } }
 
         assertEquals(listOf(DIR to null, DIR to "ses_new"), created)
-        assertTrue(edt { manager.component.getComponent(0) } is SessionUi)
+        assertTrue(rpc.prompts.single().third.parts.any { it.text == "fix the bug" })
+        edt {
+            val active = manager.component.getComponent(0) as SessionUi
+            assertEquals("ses_new", active.id)
+            assertEquals("Keep this fallback draft", prompt(active).text())
+            assertEquals(listOf(item), prompt(active).attachments())
+            assertTrue(Disposer.isDisposed(fallback))
+            assertEquals(listOf(active), ui)
+        }
+    }
+
+    fun `test retry restores fallback draft into recovered listed session`() {
+        rpc.createThrows = IllegalStateException("Kilo backend is not ready")
+        val manager = manager()
+        edt { manager.start() }
+        flush()
+        val fallback = edt { manager.component.getComponent(0) as SessionUi }
+        val item = PromptAttachment("file", "notes.txt", "text/plain", "file:///tmp/notes.txt")
+        edt {
+            prompt(fallback).setText("Keep this fallback draft")
+            prompt(fallback).addAttachmentForTest(item)
+        }
+
+        rpc.createThrows = null
+        rpc.listed += session("ses_recovered", updated = 4.0)
+        edt { manager.start() }
+        flush()
+
+        edt {
+            val active = manager.component.getComponent(0) as SessionUi
+            assertEquals("ses_recovered", active.id)
+            assertEquals("Keep this fallback draft", prompt(active).text())
+            assertEquals(listOf(item), prompt(active).attachments())
+            assertEquals(listOf(active), ui)
+        }
+        assertEquals(1, rpc.creates)
     }
 
     fun `test session appears after migration completes`() {
@@ -506,6 +587,8 @@ class WorktreeSessionEditorManagerTest : BasePlatformTestCase() {
         edt { manager.start() }
         flush()
         assertEquals(listOf(DIR to null), created)
+        val fallback = edt { manager.component.getComponent(0) as SessionUi }
+        edt { prompt(fallback).setText("Keep this migration draft") }
 
         // Migration finishes -> the manager re-runs start() and the real session appears.
         rpc.createThrows = null
@@ -513,6 +596,10 @@ class WorktreeSessionEditorManagerTest : BasePlatformTestCase() {
         flush()
 
         assertEquals(listOf(DIR to null, DIR to "ses_new"), created)
+        edt {
+            assertEquals("Keep this migration draft", prompt(manager.component.getComponent(0)).text())
+            assertFalse(ui.contains(fallback))
+        }
     }
 
     fun `test base defaults to false until resolved`() {
@@ -759,6 +846,15 @@ class WorktreeSessionEditorManagerTest : BasePlatformTestCase() {
     }
 
     private fun pump() = pumpEdt()
+
+    private fun prompt(root: Component): PromptPanel {
+        fun find(node: Component): PromptPanel? {
+            if (node is PromptPanel) return node
+            if (node !is Container) return null
+            return node.components.firstNotNullOfOrNull(::find)
+        }
+        return requireNotNull(find(root)) { "PromptPanel not found" }
+    }
 
     private fun <T> edt(block: () -> T): T = edtWait(block)
 

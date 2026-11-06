@@ -1,6 +1,7 @@
 package ai.kilocode.client.session
 
 import ai.kilocode.client.session.controller.SessionController
+import ai.kilocode.client.session.model.PromptDraft
 import ai.kilocode.client.session.ui.empty.EmptySessionPanel
 import ai.kilocode.client.app.KiloWorkspaceService
 import ai.kilocode.client.app.Workspace
@@ -31,6 +32,7 @@ abstract class SessionHost(
     protected val opened = mutableMapOf<String, SessionUi>()
     private val all = mutableSetOf<SessionUi>()
     private val activeTimers = mutableMapOf<SessionUi, UiTimer>()
+    private val drafts = mutableMapOf<String, PromptDraft>()
     private var current: SessionUi? = null
     private var latest: SessionUi? = null
 
@@ -39,7 +41,7 @@ abstract class SessionHost(
         val active = current
         if (active?.blank == true) return
         register(active)
-        show(create(project, root, this, null, timers))
+        show(newSessionUi())
         onSessionsChanged()
     }
 
@@ -108,15 +110,32 @@ abstract class SessionHost(
     protected fun currentUi(): SessionUi? = current
 
     /**
-     * Present an empty, lazily-created session panel so a host never sits on a blank void while a
-     * real session cannot be created yet (e.g. the backend is paused for migration). Unlike
-     * [newSession] it does not fire [onSessionsChanged], so it won't kick off list reloads.
+     * Show a lazily-created empty session panel or retained draft while a real session cannot be
+     * created yet (e.g. the backend is paused for migration). Unlike [newSession], this does not
+     * fire [onSessionsChanged], so it won't kick off list reloads.
      */
     @RequiresEdt
-    protected fun showBlank() {
+    protected fun showNewSession() {
         if (current?.blank == true) return
-        show(create(project, root, this, null, timers))
+        show(newSessionUi())
     }
+
+    /** Move the fallback composer's draft into the session opened after backend recovery. */
+    @RequiresEdt
+    protected fun recover(ref: SessionRef, focus: Boolean) {
+        val fallback = all.firstOrNull { it.blank && it.hasDraft() }
+        openSession(ref, focus)
+        val ui = current ?: return
+        if (fallback == null || ui === fallback || ui.hasDraft()) return
+        fallback.draft()?.let { draft ->
+            ui.restore(draft)
+            disposeUi(fallback)
+        }
+    }
+
+    @RequiresEdt
+    private fun newSessionUi(): SessionUi = all.firstOrNull { it.blank && it.hasDraft() }
+        ?: create(project, root, this, null, timers)
 
     @RequiresEdt
     fun currentKey(): String? {
@@ -130,6 +149,7 @@ abstract class SessionHost(
 
     @RequiresEdt
     protected open fun removeSession(id: String) {
+        forget(id)
         val ui = opened.remove(id) ?: return
         disposeUi(ui)
         onSessionsChanged()
@@ -137,6 +157,7 @@ abstract class SessionHost(
 
     @RequiresEdt
     protected fun disposeSession(id: String) {
+        forget(id)
         val ui = opened[id] ?: return
         disposeUi(ui)
         onSessionsChanged()
@@ -144,6 +165,7 @@ abstract class SessionHost(
 
     @RequiresEdt
     protected fun forceSession(id: String) {
+        forget(id)
         val ui = opened[id] ?: return
         disposeUi(ui)
     }
@@ -177,6 +199,7 @@ abstract class SessionHost(
     protected fun release(ui: SessionUi?) {
         if (ui == null) return
         if (ui.cacheKey == null) {
+            if (ui.hasDraft()) return
             disposeUi(ui)
             return
         }
@@ -202,7 +225,20 @@ abstract class SessionHost(
             opened[ref.key] = it
             val local = (ref as? SessionRef.Local)?.session?.id
             if (local != null) opened.putIfAbsent(local, it)
+            val draft = drafts[ref.key]
+            if (draft != null) {
+                val keys = drafts.filterValues { saved -> saved === draft }.keys.toList()
+                keys.forEach { key -> opened[key] = it }
+                forget(ref.key)
+                it.restore(draft)
+            }
         }
+    }
+
+    @RequiresEdt
+    private fun forget(id: String) {
+        val draft = drafts[id] ?: return
+        drafts.entries.removeIf { it.value === draft }
     }
 
     @RequiresEdt
@@ -222,6 +258,11 @@ abstract class SessionHost(
         val timer = timers.timer(delay, repeats = false) {
             activeTimers.remove(ui)
             if (ui === current || ui !in all) return@timer
+            // Keep only composer data when the inactive transcript and controller are disposed.
+            ui.draft()?.let { draft ->
+                register(ui)
+                opened.filterValues { it === ui }.keys.forEach { drafts[it] = draft }
+            }
             disposeUi(ui)
             onSessionsChanged()
         }
@@ -246,6 +287,7 @@ abstract class SessionHost(
         activeTimers.values.forEach { it.stop() }
         activeTimers.clear()
         opened.clear()
+        drafts.clear()
         all.clear()
         current = null
         latest = null
