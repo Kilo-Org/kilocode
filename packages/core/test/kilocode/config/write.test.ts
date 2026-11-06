@@ -293,4 +293,31 @@ describe("KiloConfigWriter", () => {
       expect(JSON.parse(yield* read(file))).toEqual({ shell: "zsh" })
     }).pipe(Effect.provide(layer())),
   )
+
+  it.effect("treats a removal of an absent nested path as a no-op", () =>
+    Effect.gen(function* () {
+      const tmp = yield* tmpdirScoped()
+      const file = path.join(tmp.path, "kilo2.json")
+      yield* put(file, `{\n  "shell": "zsh"\n}\n`)
+      const writer = yield* KiloConfigWriter.Service
+      yield* writer.write({ target: { directory: tmp.path, global: true }, path: ["sandbox", "network"], value: undefined })
+      expect(JSON.parse(yield* read(file))).toEqual({ shell: "zsh" })
+    }).pipe(Effect.provide(layer())),
+  )
+
+  it.effect("refuses a value below a non-object node as invalid and leaves the file unchanged", () =>
+    Effect.gen(function* () {
+      const tmp = yield* tmpdirScoped()
+      const file = path.join(tmp.path, "kilo2.json")
+      const original = `{\n  "shell": "zsh"\n}\n`
+      yield* put(file, original)
+      const writer = yield* KiloConfigWriter.Service
+      const error = yield* Effect.flip(
+        writer.write({ target: { directory: tmp.path, global: true }, path: ["shell", "name"], value: "x" }),
+      )
+      expect(error.reason).toBe("invalid")
+      expect(error.message).toContain("cannot edit shell.name")
+      expect(yield* read(file)).toBe(original)
+    }).pipe(Effect.provide(layer())),
+  )
 })
