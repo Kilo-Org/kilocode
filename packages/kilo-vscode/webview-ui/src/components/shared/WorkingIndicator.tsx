@@ -140,7 +140,7 @@ export const WorkingIndicator: Component<WorkingIndicatorProps> = (props) => {
               console.error("[Kilo New] Failed to copy retry error", err)
               showToast({
                 variant: "error",
-                title: language.t("common.requestFailed"),
+                title: language.t("common.copyFailed"),
                 description: err instanceof Error ? err.message : String(err),
               })
             })

@@ -142,7 +142,7 @@ test.describe.serial("retry error clipboard", () => {
     const copy = page.locator(".working-copy")
     await copy.click()
     const toast = page.locator('[data-component="toast"][data-variant="error"]')
-    await expect(toast).toContainText("Request failed")
+    await expect(toast).toContainText("Failed to copy")
     await expect(toast).toContainText("Clipboard unavailable")
     await expect(page.locator('[data-component="toast"][data-variant="success"]')).toBeHidden()
     await expect(copy).toHaveText("Copy error")

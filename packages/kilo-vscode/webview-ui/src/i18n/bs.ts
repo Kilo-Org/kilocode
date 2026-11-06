@@ -389,6 +389,7 @@ export const dict = {
   "common.signIn": "Prijava",
   "common.dismiss": "Odbaci",
   "common.requestFailed": "Zahtjev nije uspio",
+  "common.copyFailed": "Kopiranje nije uspjelo",
   "common.rename": "Preimenuj",
   "common.delete": "Izbriši",
   "common.close": "Zatvori",
