@@ -25,6 +25,7 @@ export interface Message {
   error?: { name: string; data?: Record<string, unknown> }
   sessionErrorID?: string
   summary?: { title?: string; body?: string; diffs?: unknown[] } | boolean
+  estimate?: number
   cost?: number
   tokens?: TokenUsage
   finish?: string

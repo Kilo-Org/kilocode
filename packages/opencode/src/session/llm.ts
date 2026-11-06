@@ -28,6 +28,7 @@ import { Auth } from "@/auth"
 import { InstanceState } from "@/effect/instance-state"
 import { KiloSession } from "@/kilocode/session"
 import { KiloLLM } from "@/kilocode/session/llm"
+import { KiloContextUsage } from "@/kilocode/session/context-usage"
 import { KiloSessionOverflow } from "@/kilocode/session/overflow"
 import { KiloToolSchema } from "@/kilocode/session/tool-schema"
 import { KiloMessageDiagnostics } from "@/kilocode/session/message-diagnostics"
@@ -64,6 +65,7 @@ export type StreamInput = {
   retries?: number
   toolChoice?: "auto" | "required" | "none"
   preflight?: boolean // kilocode_change - enable proactive threshold compaction for normal session turns
+  onContextOverhead?: (overhead: number) => void // kilocode_change - persist normal-request overhead with its assistant
   reportedContextTokens?: number // kilocode_change - provider-reported context size from the last finished turn, source of truth for the output cap
 }
 
@@ -179,9 +181,14 @@ const live: Layer.Layer<
       const preflight = input.preflight === true && KiloSessionOverflow.enabled({ cfg, model: input.model })
       const cap = KiloLLM.needsEstimate({ model: input.model, configured: base.params.maxOutputTokens })
       const usage =
-        cap || preflight
-          ? KiloSessionOverflow.measure({ messages: estimated, tools })
-          : undefined
+        cap || input.preflight === true ? KiloSessionOverflow.measure({ messages: estimated, tools }) : undefined
+      KiloContextUsage.record(
+        input.sessionID,
+        input.preflight,
+        usage,
+        { agent: input.agent.name, providerID: input.model.providerID, modelID: input.model.id },
+        input.onContextOverhead,
+      )
       const maxOutputTokens = KiloLLM.capOutputTokens({
         model: input.model,
         messages: estimated,
