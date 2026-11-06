@@ -21,18 +21,17 @@ export function privacyLayer(context: Plugin.Context) {
   const [pending, setPending] = createSignal(false)
   // A privacy read started before a toggle must not replace the toggle's newer result.
   let generation = 0
-  let inflight: AbortController | undefined
+  let inflight = false
 
   const refresh = async () => {
     if (pending() || inflight) return
-    const controller = new AbortController()
-    inflight = controller
+    inflight = true
     const current = ++generation
     try {
-      const enabled = await privacyMode(context.client, location(), controller.signal)
+      const enabled = await privacyMode(context.client, location())
       if (current === generation) setActive(enabled)
     } finally {
-      if (inflight === controller) inflight = undefined
+      inflight = false
     }
   }
 
@@ -59,7 +58,6 @@ export function privacyLayer(context: Plugin.Context) {
     if (pending()) return
     setPending(true)
     generation++
-    inflight?.abort()
     const next = !active()
     try {
       try {
