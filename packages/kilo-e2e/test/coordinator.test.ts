@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test"
 import { join } from "node:path"
 import { RunError, run } from "../src/coordinator"
 import { manifest } from "../src/scenarios"
-import { command, options, readEvidence, rejected, sandbox } from "./helpers"
+import { abortWhenDriverStarts, command, options, readEvidence, rejected, sandbox } from "./helpers"
 
 describe("coordinator success", () => {
   test("runs local and cloud cells with normalized evidence and clean teardown", async () => {
@@ -94,7 +94,7 @@ describe("coordinator cleanup guarantees", () => {
   test("cleans up after driver cancellation", async () => {
     await sandbox(async (dir) => {
       const controller = new AbortController()
-      const timer = setTimeout(() => controller.abort(), 200)
+      const stop = abortWhenDriverStarts(dir, controller)
       try {
         const error = await rejected(
           run(
@@ -107,7 +107,7 @@ describe("coordinator cleanup guarantees", () => {
         )
         expect(error.code).toBe("cancelled")
       } finally {
-        clearTimeout(timer)
+        stop()
       }
       const evidence = await readEvidence(dir)
       expect(evidence.outcome).toBe("cancelled")
@@ -131,7 +131,7 @@ describe("coordinator cleanup guarantees", () => {
   test("escalates to SIGKILL when a driver ignores SIGTERM", async () => {
     await sandbox(async (dir) => {
       const controller = new AbortController()
-      const timer = setTimeout(() => controller.abort(), 300)
+      const stop = abortWhenDriverStarts(dir, controller)
       try {
         const error = await rejected(
           run(
@@ -144,11 +144,14 @@ describe("coordinator cleanup guarantees", () => {
         )
         expect(error.code).toBe("cancelled")
       } finally {
-        clearTimeout(timer)
+        stop()
       }
       const evidence = await readEvidence(dir)
       expect(evidence.outcome).toBe("cancelled")
       expect(evidence.cleanup.removed).toHaveLength(2)
+      // The driver ignored a delivered SIGTERM yet the run finished, so SIGKILL ended it.
+      // Windows has no catchable SIGTERM: kill() terminates the process directly.
+      if (process.platform !== "win32") expect(await Bun.file(join(dir, "run", "driver-sigterm")).exists()).toBe(true)
     })
   })
 

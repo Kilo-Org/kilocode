@@ -56,8 +56,10 @@ class SessionUiEditorSelectionTest : SessionUiTestBase() {
             String::class.java,
             List::class.java,
             PromptSelection::class.java,
+            Boolean::class.javaPrimitiveType,
+            String::class.java,
         ).apply { isAccessible = true }
-        fun submit(text: String) = edtWait { send.invoke(ui, text, emptyList<PromptPartDto>(), null) }
+        fun submit(text: String) = edtWait { send.invoke(ui, text, emptyList<PromptPartDto>(), null, true, null) }
         workspaceRpc.fileResolver = { path ->
             listOf(WorkspaceFileDto(path, path.substringAfterLast('/'))).takeIf { path == "Selected.kt" }.orEmpty()
         }
@@ -116,9 +118,11 @@ class SessionUiEditorSelectionTest : SessionUiTestBase() {
             String::class.java,
             List::class.java,
             PromptSelection::class.java,
+            Boolean::class.javaPrimitiveType,
+            String::class.java,
         )
         method.isAccessible = true
-        edtWait { method.invoke(ui, "Explain this selection", listOf(attachment), null) }
+        edtWait { method.invoke(ui, "Explain this selection", listOf(attachment), null, true, null) }
         assertTrue("prompt was not dispatched", pumpUntil { rpc.prompts.isNotEmpty() })
 
         val parts = rpc.prompts.single().third.parts

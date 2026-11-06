@@ -23,6 +23,7 @@ const CSS_FILES = [
   path.join(ROOT, "webview-ui/agent-manager/agent-manager.css"),
   path.join(ROOT, "webview-ui/agent-manager/agent-manager-review.css"),
   path.join(ROOT, "webview-ui/agent-manager/intro/intro.css"),
+  path.join(ROOT, "webview-ui/agent-manager/splash/splash.css"),
   path.join(ROOT, "webview-ui/browser/browser.css"),
 ]
 const TSX_FILES = [
@@ -31,6 +32,11 @@ const TSX_FILES = [
   path.join(ROOT, "webview-ui/agent-manager/ShortcutHints.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/intro/AgentManagerIntro.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/intro/IntroGraph.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/splash/Splash.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/splash/Cards.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/splash/Compact.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/splash/Preview.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/splash/markers.tsx"),
   path.join(ROOT, "webview-ui/src/components/chat/MessageList.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/SubagentPanel.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/EditPreviewPanel.tsx"),
@@ -176,7 +182,7 @@ describe("Agent Manager CSS/TSX Consistency", () => {
     const defined = new Set(cssMatches.map((m) => m[1]))
 
     // Extract am- classes referenced in TSX (class="am-..." or `am-...`)
-    const tsxMatches = [...tsx.matchAll(/\bam-[a-z0-9-]+/g)]
+    const tsxMatches = [...tsx.matchAll(/(?<![\w-])am-[a-z0-9-]+/g)]
     const used = [...new Set(tsxMatches.map((m) => m[0]))]
 
     const missing = used.filter((c) => !defined.has(c))

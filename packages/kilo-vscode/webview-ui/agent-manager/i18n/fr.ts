@@ -515,6 +515,56 @@ export const dict = {
   "agentManager.intro.guide": "Lire le guide",
   "agentManager.intro.dismiss": "Ignorer l'introduction",
   "agentManager.intro.reopen": "Fonctionnement d'Agent Manager",
+  "agentManager.splash.preview.label": "Aperçu de la barre latérale d’Agent Manager",
+  "agentManager.splash.eyebrow": "AGENT MANAGER",
+  "agentManager.splash.compact.subtitle":
+    "Exécutez des tâches en parallèle avec des worktrees, déléguez le travail et suivez chaque agent depuis un seul endroit.",
+  "agentManager.splash.hide": "Masquer",
+  "agentManager.splash.hideLabel": "Masquer la présentation d'Agent Manager",
+  "agentManager.splash.title": "Mettez une flotte d'agents Kilo au travail.",
+  "agentManager.splash.subtitle":
+    "Traitez plusieurs tâches en parallèle avec des worktrees, déléguez le travail, suivez la progression de chaque agent et faites avancer plusieurs flux de travail depuis un seul endroit.",
+  "agentManager.splash.hint": "ou",
+  "agentManager.splash.proceed": "continuez localement dans le champ de message ci-dessous",
+  "agentManager.splash.folded.title": "Mettez une flotte d'agents Kilo au travail",
+  "agentManager.splash.folded.note": "Fonctionnalités multi-stacks, délégation, comparaison de modèles et plus",
+  "agentManager.splash.showExamples": "Voir des exemples",
+  "agentManager.splash.examples.crossStack.tag": "Multi-dépôt",
+  "agentManager.splash.examples.crossStack.title": "Une fonction, trois dépôts",
+  "agentManager.splash.examples.crossStack.pitch":
+    "Un brief, un agent par dépôt et toute la fonctionnalité dans une seule vue.",
+  "agentManager.splash.examples.crossStack.feature1.name": "Projets multi-dépôts",
+  "agentManager.splash.examples.crossStack.feature1.text":
+    "Backend, frontend et infra côte à côte dans une seule barre latérale.",
+  "agentManager.splash.examples.crossStack.feature2.name": "État des sessions en direct",
+  "agentManager.splash.examples.crossStack.feature2.text":
+    "Voyez d’un coup d’œil ce qui travaille, ce qui est terminé ou ce qui vous attend.",
+  "agentManager.splash.examples.crossStack.feature3.name": "Badges de PR et compteurs de diff",
+  "agentManager.splash.examples.crossStack.feature3.text": "Sachez ce que chaque agent a modifié avant de l’ouvrir.",
+  "agentManager.splash.examples.delegate.tag": "Déléguer",
+  "agentManager.splash.examples.delegate.title": "Confiez une grande tâche à une session",
+  "agentManager.splash.examples.delegate.pitch":
+    "Demandez à une session de répartir une grande tâche en sessions parallèles, puis rejoignez celle de votre choix.",
+  "agentManager.splash.examples.delegate.feature1.name": "Des sessions qui lancent des sessions",
+  "agentManager.splash.examples.delegate.feature1.text":
+    "Une session peut lancer de nouvelles sessions, chacune dans son propre worktree.",
+  "agentManager.splash.examples.delegate.feature2.name": "Worktrees isolés",
+  "agentManager.splash.examples.delegate.feature2.text":
+    "Chaque travail a sa propre copie, donc rien n’entre en collision.",
+  "agentManager.splash.examples.delegate.feature3.name": "Intervenez n’importe où",
+  "agentManager.splash.examples.delegate.feature3.text":
+    "Rejoignez une session lancée ou suivez tout le travail depuis le sommet.",
+  "agentManager.splash.examples.compare.tag": "Comparer les modèles",
+  "agentManager.splash.examples.compare.title": "Testez trois, gardez le meilleur",
+  "agentManager.splash.examples.compare.pitch":
+    "Envoyez un prompt à plusieurs agents ou modèles et gardez le meilleur résultat.",
+  "agentManager.splash.examples.compare.feature1.name": "Exécutions multi-versions",
+  "agentManager.splash.examples.compare.feature1.text": "Lancez la même tâche en plusieurs versions à la fois.",
+  "agentManager.splash.examples.compare.feature2.name": "Mélangez les modèles",
+  "agentManager.splash.examples.compare.feature2.text": "Comparez Kilo Auto, Claude et GPT sur un travail identique.",
+  "agentManager.splash.examples.compare.feature3.name": "Gardez le meilleur",
+  "agentManager.splash.examples.compare.feature3.text":
+    "Examinez de vrais diffs côte à côte, gardez-en un et abandonnez le reste.",
   "agentManager.worktree.health.absent-restorable": "Dossier supprimé",
   "agentManager.worktree.health.absent-restorableNote":
     "Le dossier a disparu, mais la branche {{branch}} existe toujours. Restaurez-le pour continuer à travailler ici.",
