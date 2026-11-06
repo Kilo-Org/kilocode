@@ -1,6 +1,6 @@
 // Host side of the first-run work style picker. The webview cannot write the Kilo config, so the host reads the
 // config documents, applies only the values that are still unset, and stores the choice as a VS Code setting.
-import { mkdir, readFile, writeFile } from "node:fs/promises"
+import { mkdir, readFile, rm, writeFile } from "node:fs/promises"
 import path from "node:path"
 import { ConfigurationTarget, workspace, type ExtensionContext } from "vscode"
 import { parse } from "jsonc-parser/lib/esm/main.js"
@@ -95,16 +95,14 @@ async function current(deps: Deps) {
     if (entry.type !== "document" || !entry.path) continue
     texts.push(await readFile(entry.path, "utf8").catch(() => ""))
   }
-  const existing = await readFile(targets.global, "utf8").catch((error: NodeJS.ErrnoException) => {
-    if (error.code === "ENOENT") return ""
-    throw error
-  })
-  return { target: targets.global, existing, values: values(texts) }
+  return { target: targets.global, values: values(texts) }
 }
 
 async function initialize(deps: Deps) {
   if (state() !== "unset") return
-  const sessions = await hasAnySession(deps).catch(() => true)
+  const sessions = await hasAnySession(deps).catch(() => undefined)
+  // A failed probe is unknown, not an existing user. Leave the state unset so the next request retries.
+  if (sessions === undefined) return
   if (state() !== "unset") return
   // A project that already has sessions is an existing user; do not show the picker again.
   if (getInitialWorkStyle(sessions) === "skipped") await setState("skipped")
@@ -128,7 +126,8 @@ async function apply(deps: Deps, style: WorkStyle) {
   const edits: ConfigEdit[] = Object.entries(plan.config).map(([key, value]) => ({ path: [key], value }))
   const previousState = settings.inspect(WORK_STYLE_KEY)?.globalValue
   const previousSettings = Object.fromEntries(SETTING_KEYS.map((key) => [key, settings.inspect(key)?.globalValue]))
-  let written = false
+  let writeAttempted = false
+  let previous: { text: string; existed: boolean } | undefined
 
   try {
     if (edits.length > 0) {
@@ -136,10 +135,18 @@ async function apply(deps: Deps, style: WorkStyle) {
         if (!isKiloConfigFile(config.target)) {
           throw new Error(`Refused a config write outside a Kilo config file: ${config.target}`)
         }
+        // Read inside the queue so a concurrent settings or speech write is not overwritten by a stale snapshot.
+        previous = await readFile(config.target, "utf8").then(
+          (text) => ({ text, existed: true }),
+          (error: NodeJS.ErrnoException) => {
+            if (error.code === "ENOENT") return { text: "", existed: false }
+            throw error
+          },
+        )
+        writeAttempted = true
         await mkdir(path.dirname(config.target), { recursive: true })
-        await writeFile(config.target, applyConfigEdits(config.existing, edits))
+        await writeFile(config.target, applyConfigEdits(previous.text, edits))
       })
-      written = true
     }
     for (const [key, value] of Object.entries(plan.settings)) {
       await settings.update(key, value, ConfigurationTarget.Global)
@@ -154,7 +161,13 @@ async function apply(deps: Deps, style: WorkStyle) {
     await Promise.resolve(settings.update(WORK_STYLE_KEY, previousState, ConfigurationTarget.Global)).catch(() =>
       rollback.push(WORK_STYLE_KEY),
     )
-    if (written) await writeFile(config.target, config.existing).catch(() => rollback.push("config"))
+    if (writeAttempted && previous) {
+      const restore = previous
+      await configWriteQueue(async () => {
+        if (restore.existed) await writeFile(config.target, restore.text)
+        else await rm(config.target, { force: true })
+      }).catch(() => rollback.push("config"))
+    }
     return { ok: false as const, error: message(error), rollbackFailed: rollback.length > 0 }
   }
 }

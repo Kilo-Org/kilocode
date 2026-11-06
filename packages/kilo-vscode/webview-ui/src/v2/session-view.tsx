@@ -6,6 +6,7 @@ import { ToolChildSessionProvider, type ToolChildSession } from "@kilocode/kilo-
 import { createEffect, createMemo, on, onCleanup, onMount, Show, type JSX } from "solid-js"
 import type { PromptAttachment, ToHost } from "../../../src/protocol"
 import { useModelPreferences } from "../context/model-preferences"
+import { useWorkStyleOptional } from "../context/work-style"
 import { getVSCodeAPI } from "../context/vscode"
 import { TaskHeader } from "../components/chat/TaskHeader"
 import { SessionDock } from "../components/chat/SessionDockWorking"
@@ -69,6 +70,7 @@ export function SessionView(props: {
 }) {
   const v2 = useV2()
   const session = () => props.session
+  const work = useWorkStyleOptional()
   // Display layouts and the reasoning mode are Kilo-only config keys, so the host reads them. Every surface that
   // renders a transcript asks on connect and after each config change.
   const display = useDisplaySettings()
@@ -222,6 +224,8 @@ export function SessionView(props: {
     input?: { items?: PromptAttachment[]; metadata?: { [key: string]: JsonValue } },
   ) => {
     const key = draftKey()
+    // The first prompt is a task start too; skip an unset work style so the picker does not return later.
+    work?.skip()
     // A created session is seeded with the resolved sandbox default before the first prompt.
     const seed = session() ? undefined : await sandbox.metadata()
     const id = session() ?? selection.create(seed)

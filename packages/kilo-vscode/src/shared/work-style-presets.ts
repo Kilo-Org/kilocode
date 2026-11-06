@@ -142,7 +142,11 @@ export function buildWorkStylePlan(input: {
   if (input.config.reasoning_display === undefined && input.config.auto_collapse_reasoning === undefined) {
     config.reasoning_display = preset.display.reasoning_display
   }
-  if (!hasRules(input.config.permissions) && !hasRules(input.config.permission)) {
+  if (
+    !hasRules(input.config.permissions) &&
+    !hasRules(input.config.permission) &&
+    !hasRules(input.config.tools)
+  ) {
     config.permissions = preset.permissions
   }
   const settings: Partial<WorkStyleSettings> = {}

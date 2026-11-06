@@ -107,6 +107,15 @@ describe("buildWorkStylePlan", () => {
     ).toEqual(getWorkStylePreset("autonomous").permissions)
   })
 
+  test("treats the legacy tools block as permission config and leaves it alone", () => {
+    const plan = buildWorkStylePlan({
+      style: "human-in-the-loop",
+      config: { tools: { bash: false } },
+      settingCustomized: noSettings,
+    })
+    expect(plan.config.permissions).toBeUndefined()
+  })
+
   test("leaves a setting the user customized in VS Code alone", () => {
     const plan = buildWorkStylePlan({
       style: "autonomous",

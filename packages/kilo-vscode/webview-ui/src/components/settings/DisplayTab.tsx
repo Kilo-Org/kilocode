@@ -81,7 +81,7 @@ const DisplayTab: Component = () => {
   const applyPreset = async (style: WorkStyle) => {
     const preset = getWorkStylePreset(style)
     const source = (key: string) => config.source([key]) ?? "global"
-    await Promise.all([
+    const results = await Promise.all([
       config.set(
         ["terminal_command_display"],
         preset.display.terminal_command_display,
@@ -91,6 +91,8 @@ const DisplayTab: Component = () => {
       config.set(["mcp_tool_display"], preset.display.mcp_tool_display, source("mcp_tool_display")),
       config.set(["reasoning_display"], preset.display.reasoning_display, source("reasoning_display")),
     ])
+    // A failed write already shows its own error toast; do not apply the rest of a half-written preset.
+    if (results.some((ok) => !ok)) return
     config.setSetting("showAutoApprovalReason", preset.settings.showAutoApprovalReason)
     display.request()
   }
