@@ -375,12 +375,12 @@ describe("Wakeup cron", () => {
       // adjust can release several already-armed windows; the property under
       // test is that the schedule keeps firing, not a fixed number of fires.
       // The bounded loop keeps the assertion honest if that re-arm is dropped.
-      // The re-arm runs in a forked fiber, so an adjust can run before that
-      // fiber arms its window and release nothing. Yield each pass and keep a
-      // generous bound so the loop waits for the schedule under load instead of
-      // exhausting while the arming fiber still waits for a scheduler turn.
-      for (let attempt = 0; attempt < 200 && recorder.calls.length < 2; attempt++) {
-        yield* Effect.yieldNow
+      // Re-arming also reads and writes real files. Yield to the host event loop,
+      // not just the Effect scheduler, so virtual-clock advances cannot starve
+      // the I/O completions needed to arm the next timer.
+      const deadline = Date.now() + 5_000
+      while (recorder.calls.length < 2 && Date.now() < deadline) {
+        yield* Effect.promise(() => new Promise<void>((resolve) => setImmediate(resolve)))
         yield* TestClock.adjust("2 minutes")
       }
       expect(recorder.calls.length).toBeGreaterThanOrEqual(2)
