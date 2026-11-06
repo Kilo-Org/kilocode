@@ -87,6 +87,11 @@ interface SessionMessageListPanel {
     fun turnCount(): Int
     fun dump(): String
     fun dumpDetailed(): String
+    fun messageText(role: String): String
+    fun messageErrors(): String
+    fun stateName(): String
+    fun stateMessage(): String?
+    fun sessionId(): String?
 }
 
 @Remote("ai.kilocode.client.ui.active.ActiveItem", plugin = KILO_FRONTEND_MODULE)

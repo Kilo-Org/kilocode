@@ -1,11 +1,12 @@
 #!/usr/bin/env bun
 
 /**
- * Run the K1 `session.open` scenario for the JetBrains local and/or Cloud lane.
+ * Run a K1 scenario for the JetBrains local and/or Cloud lane.
  *
  * Usage:
  *   KILO_E2E_CLOUD_REPO=../cloud bun script/e2e-session-open.ts --lane both
- *   bun script/e2e-session-open.ts --lane cloud --cloud-repo ../cloud --git-url https://github.com/octocat/Hello-World.git
+ *   bun script/e2e-session-open.ts --scenario prompt.stream --lane both --cloud-repo ../cloud
+ *   bun script/e2e-session-open.ts --scenario prompt.stream --lane cloud --cloud-repo ../cloud --git-url https://github.com/octocat/Hello-World.git
  *
  * The Cloud local stack must already be running. This script uses the C1 fixture
  * provider, which is also the provider that creates the hosted workspace and stored
@@ -16,7 +17,7 @@
 
 import { existsSync } from "node:fs"
 import { join, resolve } from "node:path"
-import { RunError, type Lane } from "../../kilo-e2e/src/index"
+import { RunError, SCENARIO_IDS, type Lane, type ScenarioID } from "../../kilo-e2e/src/index"
 import { runCell } from "./e2e-cell"
 
 const root = resolve(import.meta.dir, "..")
@@ -35,6 +36,13 @@ if (!existsSync(providerPath)) {
   process.exit(2)
 }
 
+const scenarioArg = args.scenario ?? "session.open"
+if (!(SCENARIO_IDS as readonly string[]).includes(scenarioArg)) {
+  console.error(`[jetbrains-e2e] unknown scenario: ${scenarioArg} (expected ${SCENARIO_IDS.join(", ")})`)
+  process.exit(2)
+}
+const scenario = scenarioArg as ScenarioID
+
 const laneArg = args.lane
 if (laneArg && laneArg !== "both" && laneArg !== "local" && laneArg !== "cloud") {
   console.error(`[jetbrains-e2e] unknown lane: ${laneArg}`)
@@ -46,24 +54,24 @@ const kiloCommit = git.exitCode === 0 ? new TextDecoder().decode(git.stdout).tri
 
 let failed = false
 for (const lane of lanes) {
-  const runId = `jetbrains-session-open-${lane}-${Date.now()}`
+  const runId = `jetbrains-${scenario.replaceAll(".", "-")}-${lane}-${Date.now()}`
   try {
     const report = await runCell({
       root,
       cloud,
       artifactsDir,
       runId,
-      scenario: "session.open",
+      scenario,
       lane,
       kiloCommit,
     })
-    console.log(`[jetbrains-e2e] ${lane} session.open ${report.outcome}: ${join(artifactsDir, runId, "evidence.json")}`)
+    console.log(`[jetbrains-e2e] ${lane} ${scenario} ${report.outcome}: ${join(artifactsDir, runId, "evidence.json")}`)
     if (report.outcome !== "passed") failed = true
   } catch (error) {
     failed = true
     const evidence = error instanceof RunError ? error.evidencePath : undefined
     console.error(
-      `[jetbrains-e2e] ${lane} session.open failed: ${error instanceof Error ? error.message : String(error)}`,
+      `[jetbrains-e2e] ${lane} ${scenario} failed: ${error instanceof Error ? error.message : String(error)}`,
     )
     if (evidence) console.error(`[jetbrains-e2e] ${lane} evidence: ${evidence}`)
   }
