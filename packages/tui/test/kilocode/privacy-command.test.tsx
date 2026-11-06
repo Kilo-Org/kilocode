@@ -15,13 +15,27 @@ type Write = {
 
 async function launch(options: {
   enabled: boolean
+  holdFirstGet?: boolean
   onWrite?: (input: Write, writes: readonly Write[]) => Response | undefined
 }) {
   const writes: Write[] = []
   const privacy = { enabled: options.enabled }
+  // Hold the first privacy read so a test can resolve it after a toggle and prove it is discarded.
+  const held = options.holdFirstGet ? Promise.withResolvers<Response>() : undefined
+  const started = Promise.withResolvers<void>()
+  let holdFirst = options.holdFirstGet ?? false
+  let stale: Response | undefined
   const app = await createAppFixture({
     fetch: async (url, request) => {
-      if (url.pathname === "/api/rpc/kilocode.privacy/get") return json({ output: { enabled: privacy.enabled } })
+      if (url.pathname === "/api/rpc/kilocode.privacy/get") {
+        if (holdFirst) {
+          holdFirst = false
+          stale = json({ output: { enabled: privacy.enabled } })
+          started.resolve()
+          return held!.promise
+        }
+        return json({ output: { enabled: privacy.enabled } })
+      }
       if (url.pathname === "/api/rpc/kilocode.settings/target") {
         const body = (await request.json()) as { input: { scope: string } }
         return json({
@@ -57,7 +71,14 @@ async function launch(options: {
   })
   await app.ready
   await app.waitForFrame((frame) => frame.includes("ctrl+p commands"))
-  return Object.assign(app, { writes, privacy })
+  return Object.assign(app, {
+    writes,
+    privacy,
+    release: async () => {
+      await started.promise
+      held?.resolve(stale!)
+    },
+  })
 }
 
 async function run(app: Awaited<ReturnType<typeof launch>>) {
@@ -152,4 +173,17 @@ test("a conflict retries the write once and then succeeds", async () => {
       expected: { path: `${directory}/global-kilo2.json`, revision: "global-rev" },
     },
   ])
+})
+
+test("a privacy read started before a toggle cannot restore the old title", async () => {
+  await using app = await launch({ enabled: false, holdFirstGet: true })
+  await run(app)
+  await app.waitForFrame((frame) => frame.includes("Privacy mode enabled"))
+  // Resolve the read that started before the toggle; it still carries the old `enabled: false`.
+  await app.release()
+  await Bun.sleep(200)
+  await app.mockInput.pressKey("p", { ctrl: true })
+  await app.waitFor(() => app.renderer.currentFocusedEditor instanceof InputRenderable)
+  await app.mockInput.typeText("privacy mode")
+  await app.waitForFrame((frame) => frame.includes("Disable privacy mode"))
 })
