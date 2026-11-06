@@ -154,7 +154,7 @@
         },
         "kilo-code.v2.showTaskTimeline": {
           "type": "boolean",
-          "default": true,
+          "default": false,
           "markdownDescription": "Show the task timeline graph in the chat header."
         },
         "kilo-code.v2.showShortcutHints": {
