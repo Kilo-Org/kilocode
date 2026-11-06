@@ -143,6 +143,27 @@ if (!existsSync(dirname(result))) fail(`result directory does not exist: ${dirna
 const payload = readRequest(request)
 rmSync(result, { force: true })
 
+// K1 maps the fixture bearer to KILO_API_KEY, but the JetBrains Cloud workspace surface gates on
+// the CLI profile, and the CLI profile endpoint accepts OAuth access tokens (not API keys). The C1
+// fixture bearer is a valid `/api/profile` bearer, so present it in the OAuth shape the fixture
+// needs. The secret never goes on argv.
+const env: Record<string, string | undefined> = { ...process.env }
+if (payload.descriptorPath && existsSync(payload.descriptorPath)) {
+  try {
+    const descriptor = JSON.parse(readFileSync(payload.descriptorPath, "utf8")) as {
+      credentials?: { apiKey?: string }
+    }
+    const key = descriptor.credentials?.apiKey
+    if (key) {
+      env.KILO_AUTH_CONTENT = JSON.stringify({
+        kilo: { type: "oauth", access: key, refresh: "kilo-e2e-fixture", expires: Date.now() + 3_600_000 },
+      })
+    }
+  } catch {
+    // Leave the inherited auth environment untouched when the descriptor is unreadable.
+  }
+}
+
 const command = [
   gradlew,
   "uiTest",
@@ -163,7 +184,7 @@ const budget =
 
 const child = Bun.spawn(command, {
   cwd: root,
-  env: process.env,
+  env,
   stdout: "pipe",
   stderr: "pipe",
 })

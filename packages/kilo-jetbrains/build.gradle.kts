@@ -9,6 +9,22 @@ import org.gradle.api.tasks.testing.logging.TestExceptionFormat
 import org.gradle.process.CommandLineArgumentProvider
 import java.io.File
 import java.time.LocalDate
+import javax.inject.Inject
+
+// The Gradle plugin classpath gets vulnerable jackson, guava, handlebars and jsoup from the IntelliJ
+// Platform plugin (plugin-repository-rest-client) and openapi-generator, and their latest releases
+// still pin them. Raise them to the security floors in libs.versions.toml. openapi-generator is
+// declared below with `apply false` so it resolves in this same classpath.
+buildscript {
+    dependencies {
+        classpath(platform(libs.security.jackson.bom))
+        constraints {
+            classpath(libs.security.guava)
+            classpath(libs.security.handlebars)
+            classpath(libs.security.jsoup)
+        }
+    }
+}
 
 group = "ai.kilocode.jetbrains"
 
@@ -180,6 +196,7 @@ plugins {
 
     alias(libs.plugins.kotlin)
     alias(libs.plugins.kotlin.serialization)
+    alias(libs.plugins.openapi.generator) apply false
 }
 
 kotlin {
@@ -451,4 +468,60 @@ tasks.withType<RunIdeTask> {
 
 tasks.named<Delete>("clean") {
     delete(layout.buildDirectory)
+}
+
+// ide-starter (UI e2e driver) and the IntelliJ test framework pin vulnerable netty, bouncycastle,
+// jackson, guava, jsoup and OpenTelemetry versions, and the newest 2026.1 builds still do. This
+// rule fixes their published metadata: it adds the security BOMs and constraints from
+// libs.versions.toml, which Gradle only ever uses to raise a version.
+abstract class SecurityFloors @Inject constructor(
+    private val boms: List<String>,
+    private val floors: List<String>,
+) : ComponentMetadataRule {
+    @get:Inject
+    abstract val objects: ObjectFactory
+
+    override fun execute(context: ComponentMetadataContext) {
+        context.details.allVariants {
+            withDependencies {
+                boms.forEach { bom ->
+                    add(bom) {
+                        attributes { attribute(Category.CATEGORY_ATTRIBUTE, objects.named(Category.REGULAR_PLATFORM)) }
+                    }
+                }
+            }
+            withDependencyConstraints {
+                floors.forEach { add(it) }
+            }
+        }
+    }
+}
+
+fun coords(lib: Provider<MinimalExternalModuleDependency>) = lib.get().let { "${it.module}:${it.version}" }
+
+val boms = listOf(libs.security.jackson.bom, libs.security.opentelemetry.bom).map(::coords)
+val floors = listOf(
+    libs.security.netty.buffer,
+    libs.security.netty.codec.compression,
+    libs.security.netty.codec.http2,
+    libs.security.bcprov,
+    libs.security.bcpkix,
+    libs.security.guava,
+    libs.security.jsoup,
+).map(::coords)
+val lz4 = coords(libs.security.lz4)
+
+allprojects {
+    dependencies.components {
+        listOf("com.jetbrains.intellij.tools:ide-starter-squashed", "com.jetbrains.intellij.platform:test-framework-core").forEach {
+            withModule(it, SecurityFloors::class) { params(boms, floors) }
+        }
+    }
+    // org.lz4:lz4-java is abandoned with unfixed advisories (ide-starter pulls it in). Swap it for
+    // its maintained fork wherever it appears in a graph, at any depth.
+    configurations.configureEach {
+        resolutionStrategy.dependencySubstitution {
+            substitute(module("org.lz4:lz4-java")).using(module(lz4)).because("org.lz4 is unmaintained, use the at.yawk.lz4 fork")
+        }
+    }
 }
