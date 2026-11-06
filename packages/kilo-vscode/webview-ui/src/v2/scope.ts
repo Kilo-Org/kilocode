@@ -21,6 +21,11 @@ export function createV2Scope(input: {
   event: Events
   directory: string
   bindings: Accessor<Record<string, string>>
+  /**
+   * Loads the sidebar data: the session list and the Kilo Gateway catalog status. The Settings and Profile panels
+   * pass false, because neither renders a transcript and neither shows the catalog failure.
+   */
+  chat?: boolean
   onCommand: (handler: (name: string) => void) => void
   /** Opens an external URL through the host. */
   /** Opens a web link. `external` (shift-click) asks for the system browser instead of the Integrated Browser. */
@@ -29,6 +34,7 @@ export function createV2Scope(input: {
   const api = input.api
   const directory = input.directory
   const connection = input.connection
+  const chat = input.chat ?? true
   // The host inlines the extension version; the server handshake reports the server version separately.
   const extensionVersion =
     (window as unknown as { KILO_EXTENSION_VERSION?: string }).KILO_EXTENSION_VERSION ?? ""
@@ -43,18 +49,20 @@ export function createV2Scope(input: {
     event: input.event,
     onError: (err) => setError(message(err)),
   })
-  const kiloFailure = createKiloCatalog({ api, directory, status: connection.status, on: input.event.on })
+  const kiloFailure = chat ? createKiloCatalog({ api, directory, status: connection.status, on: input.event.on }) : () => undefined
   const kiloModels = createKiloModels({ api, directory, models: () => data.location.model.list() })
 
   createEffect(
     on(connection.status, (status) => {
       if (status !== "connected") return
-      setLoading(true)
-      void api.session
-        .list({ directory, parentID: null, order: "desc", limit: 50 })
-        .then((response) => response.data.forEach(data.session.remember))
-        .catch((err: unknown) => setError(message(err)))
-        .finally(() => setLoading(false))
+      if (chat) {
+        setLoading(true)
+        void api.session
+          .list({ directory, parentID: null, order: "desc", limit: 50 })
+          .then((response) => response.data.forEach(data.session.remember))
+          .catch((err: unknown) => setError(message(err)))
+          .finally(() => setLoading(false))
+      } else setLoading(false)
       void api
         .rpc(KiloHandshakeRpc.Definition)
         .get({}, { location: { directory } })

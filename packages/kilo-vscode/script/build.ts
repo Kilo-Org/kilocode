@@ -158,6 +158,7 @@ const results = await Promise.all([
     ...common,
     entryPoints: {
       webview: path.join(root, "webview-ui/src/index.tsx"),
+      settings: path.join(root, "webview-ui/settings/index.tsx"),
       "agent-manager": path.join(root, "webview-ui/agent-manager/index.tsx"),
       "browser-tab": path.join(root, "webview-ui/browser-tab/index.tsx"),
       documents: path.join(root, "webview-ui/documents/index.tsx"),

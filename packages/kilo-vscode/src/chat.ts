@@ -460,11 +460,12 @@ export function composerState(context: ExtensionContext): ToWebview[] {
 const EXPANDED = "kilo-code.v2.modelSelectorExpanded"
 const AUTO_APPROVE = "kilo-code.v2.autoApprove"
 const NAMESPACE = "kilo-code.v2"
-// The Agent Manager panel loads its own bundle; the sidebar, the Settings and Profile panels, and Documents share one.
+// The sidebar and the Agent Manager load their own bundles; the Settings and Profile panels share a third one that
+// does not carry the chat transcript or its rich content.
 const ENTRY = {
   chat: "webview",
-  settings: "webview",
-  profile: "webview",
+  settings: "settings",
+  profile: "settings",
   agentManager: "agent-manager",
   documents: "documents",
 } as const

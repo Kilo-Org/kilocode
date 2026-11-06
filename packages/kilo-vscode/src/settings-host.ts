@@ -237,12 +237,13 @@ export function settingsHost(input: {
         if (!isKiloConfigFile(file)) throw new Error(`Refused a config write outside a Kilo config file: ${file}`)
         const existing = await read(file)
         if (existing.trim().length === 0 && edits.every((edit) => edit.value === undefined)) {
-          input.post({ type: "configWritten", id, ok: true })
+          input.post({ type: "configWritten", id, ok: true, file: { scope, path: files[scope], text: existing } })
           return
         }
+        const text = applyConfigEdits(existing, edits)
         await mkdir(path.dirname(file), { recursive: true })
-        await writeFile(file, applyConfigEdits(existing, edits))
-        input.post({ type: "configWritten", id, ok: true })
+        await writeFile(file, text)
+        input.post({ type: "configWritten", id, ok: true, file: { scope, path: files[scope], text } })
       } catch (error) {
         input.post({
           type: "configWritten",

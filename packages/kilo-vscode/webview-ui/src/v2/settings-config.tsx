@@ -118,25 +118,33 @@ export function createSettingsConfig() {
   const toastError = (message: string) =>
     showToast({ variant: "error", title: language.t("settings.saveBar.saveFailed"), description: message })
 
+  // Apply one raw document and drop only the optimistic values its content now covers, so an in-flight edit keeps
+  // its value.
+  const applyFile = (scope: SettingsScope, file: ConfigFileContent) => {
+    setFiles((current) => ({ ...current, [scope]: file }))
+    setOptimistic((list) =>
+      list.filter(
+        (item) => item.scope !== scope || !sameValue(readPath(parseJson(file.text), item.path), item.value),
+      ),
+    )
+  }
+
   const unsubscribe = vscode.onMessage((raw) => {
     const message = raw as unknown as ToWebview
     if (message.type === "configLoaded") {
       if (message.error) toastError(message.error)
-      setFiles({ global: message.global, project: message.project })
+      applyFile("global", message.global)
+      applyFile("project", message.project)
       setPolicy(message.policy)
       filesReady.open()
-      // Drop only the optimistic values the new file content now covers, so an in-flight edit keeps its value.
-      setOptimistic((list) =>
-        list.filter((item) => {
-          const text = item.scope === "project" ? message.project.text : message.global.text
-          return !sameValue(readPath(parseJson(text), item.path), item.value)
-        }),
-      )
       return
     }
     if (message.type === "configWritten") {
       const resolve = writers.get(message.id)
       writers.delete(message.id)
+      const file = message.file
+      // A write carries the document it wrote, so the panel does not read every config file again for one edit.
+      if (file) applyFile(file.scope, { path: file.path, text: file.text })
       resolve?.({ ok: message.ok, error: message.error })
       return
     }
@@ -156,12 +164,6 @@ export function createSettingsConfig() {
   post({ type: "configRead" })
 
   const entries = () => v2.data.location.config.list() ?? []
-
-  // The server reloads a written file on its own, then `config.updated` resyncs the config resource. Re-read the raw
-  // files; the `configLoaded` reply drops the optimistic values the new content covers.
-  createEffect(
-    on(entries, () => post({ type: "configRead" }), { defer: true }),
-  )
 
   const merged = createMemo(() => mergeConfigDocuments(entries()))
 
