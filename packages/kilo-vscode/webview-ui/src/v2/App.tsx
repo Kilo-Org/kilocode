@@ -3,6 +3,7 @@ import { Match, Switch } from "solid-js"
 import ProfileView from "../components/profile/ProfileView"
 import { SpeechToTextStatusProvider } from "../components/speech-to-text/status"
 import { NotificationsProvider } from "../context/notifications"
+import { WorkStyleProvider } from "../context/work-style"
 import { IndexingProvider } from "../context/indexing"
 import { KiloEmbeddingModelsProvider } from "../context/kilo-embedding-models"
 import { Chat } from "./chat"
@@ -21,7 +22,13 @@ export default function App(props: { directory: string; view: string }) {
             <NotificationsProvider>
               <SpeechToTextStatusProvider>
                 <div class="container">
-                  <Switch fallback={<Chat />}>
+                  <Switch
+                    fallback={
+                      <WorkStyleProvider>
+                        <Chat />
+                      </WorkStyleProvider>
+                    }
+                  >
                     <Match when={props.view === "settings"}>
                       <SettingsView />
                     </Match>

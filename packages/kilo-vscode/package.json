@@ -155,6 +155,23 @@
           "default": true,
           "markdownDescription": "Show keyboard shortcuts in the empty Agent Manager session view."
         },
+        "kilo-code.v2.showAutoApprovalReason": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "Show why a tool call was auto-approved, such as a matching permission rule or an agent default."
+        },
+        "kilo-code.v2.agentWorkStyle": {
+          "type": "string",
+          "enum": ["unset", "human-in-the-loop", "autonomous", "skipped"],
+          "enumDescriptions": [
+            "No work style chosen yet; the onboarding picker is shown for a project with no sessions.",
+            "Review first: ask before edits and commands, and expand tool details.",
+            "High autonomy: edit and run commands in the workspace without asking, with compact tool details.",
+            "The user started working without choosing a work style."
+          ],
+          "default": "unset",
+          "markdownDescription": "The work style chosen on first run. Set by the onboarding picker."
+        },
         "kilo-code.v2.indexing.showButtonWhenDisabled": {
           "type": "boolean",
           "default": true,

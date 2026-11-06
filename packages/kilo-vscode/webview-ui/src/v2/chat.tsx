@@ -18,9 +18,9 @@ import {
 import type { GitChangesStats, ToHost, ToWebview } from "../../../src/protocol"
 import { useLanguage } from "../context/language"
 import { getVSCodeAPI, useVSCode } from "../context/vscode"
+import { useWorkStyle } from "../context/work-style"
 import type { ReferenceHandler } from "./append-ready"
 import { useV2 } from "./client"
-import { useDisplaySettings } from "./display-settings"
 import { SessionList } from "./history"
 import { forkText } from "../../../src/agent-manager/fork-handoff"
 import { createLocalTabs } from "./local-tabs"
@@ -35,12 +35,14 @@ import { focusPrompt } from "../utils/tab-navigation"
 export function Chat() {
   const v2 = useV2()
   const language = useLanguage()
+  const work = useWorkStyle()
   const tabs = createLocalTabs()
   const [view, setView] = createSignal<"chat" | "history">("chat")
   // Comments can arrive while the chat composer is unmounted (History), so hold them until it returns.
   const reviewQueue = createReviewAppendQueue()
   // Editor and terminal context actions target the chat composer too, and wait the same way while it is unmounted.
   const composerQueue = createComposerQueue()
+  const [changes, setChanges] = createSignal(false)
   const vscode = useVSCode()
   // The working tree counts the host pushes. The button reads the current value without polling.
   const [stats, setStats] = createSignal<GitChangesStats>()
@@ -50,15 +52,10 @@ export function Chat() {
   })
   onCleanup(stopStats)
   vscode.postMessage({ type: "requestGitChangesStats" } satisfies ToHost as never)
-  // Display layouts are Kilo-only config keys, so the host reads them. Ask on connect and after every config change.
-  const display = useDisplaySettings()
-  createEffect(
-    on(v2.connection.status, (status) => {
-      if (status === "connected") display.request()
-    }),
-  )
-  onCleanup(v2.data.on("config.updated", () => display.request()))
+  // A turn's changes belong to its tab, so switching tabs returns to that tab's chat.
+  createEffect(on(tabs.active, () => setChanges(false), { defer: true }))
   const startSession = () => {
+    work.skip()
     tabs.add()
     setView("chat")
   }

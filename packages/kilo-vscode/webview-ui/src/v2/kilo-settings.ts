@@ -53,6 +53,11 @@ export function tokenThroughputVisible(): boolean {
   return kiloSettings()["showTokenThroughput"] !== false
 }
 
+/** `kilo-code.v2.showAutoApprovalReason`, on by default. */
+export function autoApprovalReasonVisible(): boolean {
+  return kiloSettings()["showAutoApprovalReason"] !== false
+}
+
 /** `kilo-code.v2.showTaskTimeline`, collapsed by default. */
 export function taskTimelineVisible(): boolean {
   return kiloSettings()["showTaskTimeline"] === true

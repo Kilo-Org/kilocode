@@ -186,6 +186,7 @@ export function AssistantMessage(props: {
                     turnMeta={at() === copy() ? turnMetaEl() : undefined}
                     settled={at() < props.message.content.length - 1}
                     defaultOpen={item.type === "tool" ? defaultOpen(item.name) : undefined}
+                    reasoningDisplay={displaySettings().reasoningDisplay}
                     actions={props.actions}
                     errorAction={errorAction}
                   />
