@@ -40,6 +40,7 @@ internal class TranscriptSettingsUi(timers: UiTimerSource = UiTimers) : BorderLa
     private val terminal = blockToggle(draft.terminal) { value -> update { it.copy(terminal = value) } }
     private val codeEdit = blockToggle(draft.codeEdit) { value -> update { it.copy(codeEdit = value) } }
     private val mcpTool = blockToggle(draft.mcpTool) { value -> update { it.copy(mcpTool = value) } }
+    private val question = blockToggle(draft.question) { value -> update { it.copy(question = value) } }
     private val hoverPreview = SettingsToggle(draft.hoverPreview) { value -> update { it.copy(hoverPreview = value) } }
     private val preview = TranscriptPreview(display = { draft }, timers = timers)
     private val controls = SettingsPanel().apply {
@@ -78,6 +79,13 @@ internal class TranscriptSettingsUi(timers: UiTimerSource = UiTimers) : BorderLa
                     KiloBundle.message("settings.transcript.mcpTool.title"),
                     KiloBundle.message("settings.transcript.mcpTool.description"),
                     mcpTool,
+                ),
+            )
+            .row(
+                SettingsRow(
+                    KiloBundle.message("settings.transcript.question.title"),
+                    KiloBundle.message("settings.transcript.question.description"),
+                    question,
                 ),
             )
             .row(
@@ -148,6 +156,7 @@ internal class TranscriptSettingsUi(timers: UiTimerSource = UiTimers) : BorderLa
         terminal.isSelected = draft.terminal == BlockDisplay.EXPANDED
         codeEdit.isSelected = draft.codeEdit == BlockDisplay.EXPANDED
         mcpTool.isSelected = draft.mcpTool == BlockDisplay.EXPANDED
+        question.isSelected = draft.question == BlockDisplay.EXPANDED
         hoverPreview.isSelected = draft.hoverPreview
     }
 
@@ -156,7 +165,8 @@ internal class TranscriptSettingsUi(timers: UiTimerSource = UiTimers) : BorderLa
             previous.reasoning != next.reasoning ||
                 previous.terminal != next.terminal ||
                 previous.codeEdit != next.codeEdit ||
-                previous.mcpTool != next.mcpTool
+                previous.mcpTool != next.mcpTool ||
+                previous.question != next.question
 
         private fun reasoningLabel(value: ReasoningDisplay): String = when (value) {
             ReasoningDisplay.EXPANDED -> KiloBundle.message("settings.transcript.option.expanded")

@@ -23,6 +23,7 @@ import ai.kilocode.client.session.views.SessionOutcomeView
 import ai.kilocode.client.session.views.permission.PermissionView
 import ai.kilocode.client.session.views.question.QuestionView
 import ai.kilocode.client.session.views.TurnView
+import ai.kilocode.client.session.views.base.AbstractSessionPartView
 import ai.kilocode.client.session.views.base.PartView
 import ai.kilocode.client.session.views.failureText
 import ai.kilocode.client.util.EdtDrain
@@ -286,6 +287,19 @@ class SessionMessageListPanel(
 
     /** Find the rendered component for one part of a message, or null if neither has a view. */
     fun findPart(message: String, part: String): JComponent? = msgToView[message]?.part(part)
+
+    /**
+     * Opens the collapsible card for one part before the navigator scrolls to it, so a question jump
+     * lands on the answers instead of a collapsed header. Returns whether the card was expanded.
+     */
+    @RequiresEdt
+    fun expandPart(message: String, part: String): Boolean {
+        val view = msgToView[message]?.part(part) as? AbstractSessionPartView ?: return false
+        if (!view.open()) return false
+        view.revalidate()
+        reflow()
+        return true
+    }
 
     /** Find only a user prompt's painted bubble, excluding its toolbar/footer. */
     fun findPrompt(message: String): JComponent? = msgToView[message]?.promptTarget()
