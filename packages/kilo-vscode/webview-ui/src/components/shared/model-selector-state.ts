@@ -414,12 +414,20 @@ export function createModelTree(env: {
     env.toggleFavorite(model.providerID, model.id)
   }
 
+  function actsOnList(e: KeyboardEvent): boolean {
+    if (e.target instanceof HTMLButtonElement) return false
+    if (e.key === "ArrowDown" || e.key === "ArrowUp") return true
+    if (isEnterKeyCommitNotIme(e)) return true
+    if (!navigating()) return false
+    return e.key === "ArrowLeft" || e.key === "ArrowRight" || e.key === "Home" || e.key === "End"
+  }
+
   // Home, End, Left and Right act only after the user moved through the tree, as v1. A focused button (expand, star,
   // Select) keeps its own Enter and arrow keys.
   function handleKeyDown(e: KeyboardEvent) {
-    // A key that acts on the list commits the pending query first, so Enter and
-    // the arrow keys never use the previous result set.
-    flushSearch()
+    // Only keys that act on the list commit the pending query. Other keys leave
+    // same-frame input events free to share one scan.
+    if (actsOnList(e)) flushSearch()
     const list = nodes()
     if (e.key === "Escape") {
       e.preventDefault()
