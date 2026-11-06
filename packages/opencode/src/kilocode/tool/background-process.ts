@@ -37,6 +37,14 @@ export const Params = Schema.Struct({
   ready: Schema.optional(BackgroundProcess.Ready).annotate({
     description: "Optional readiness probe for start and monitor",
   }),
+  // kilocode_change start - expose wake detection through the tool schema
+  wake: Schema.optional(BackgroundProcess.Wake).annotate({
+    description:
+      "Optional wake detection. Provide `pattern` to inject a SessionPrompt into the " +
+      "owning session whenever a stdout or stderr line matches the regex. Events within " +
+      "the configured cooldown are queued, never dropped.",
+  }),
+  // kilocode_change end - expose wake detection through the tool schema
   lines: Schema.optional(PositiveInt).annotate({
     description: `For monitor: maximum output lines to capture (default ${MONITOR_LINES}, clamped to ${MONITOR_LINES_MIN}..${MONITOR_LINES_MAX})`,
   }),
@@ -134,6 +142,19 @@ function pattern(ready?: BackgroundProcess.Ready) {
     return `Invalid ready pattern: ${err instanceof Error ? err.message : String(err)}`
   }
 }
+
+// kilocode_change start - pre-compile the wake pattern so the tool can fail before
+// the process ever starts when given a malformed regex.
+function wakePatternError(wake?: BackgroundProcess.Wake) {
+  if (!wake?.pattern) return
+  try {
+    new RegExp(wake.pattern)
+  } catch (err) {
+    return `Invalid wake pattern: ${err instanceof Error ? err.message : String(err)}`
+  }
+}
+// kilocode_change end - pre-compile the wake pattern so the tool can fail before
+// the process ever starts when given a malformed regex.
 
 function clamp(value: number | undefined, min: number, max: number, fallback: number) {
   if (value == null) return fallback
@@ -281,6 +302,10 @@ export const BackgroundProcessTool = Tool.define<typeof Params, Meta, never, "ba
         if (params.inherit && !parentID) return invalid(params.action, "inherit requires a subagent session")
         const err = pattern(params.ready)
         if (err) return invalid(params.action, err)
+        // kilocode_change start - surface wake pattern errors before launching
+        const wakeErr = wakePatternError(params.wake)
+        if (wakeErr) return invalid(params.action, wakeErr)
+        // kilocode_change end - surface wake pattern errors before launching
         const inst = yield* InstanceState.context
         const cwd = path.resolve(inst.directory, params.workdir ?? inst.directory)
         if (!containsPath(cwd, inst)) {
@@ -309,6 +334,9 @@ export const BackgroundProcessTool = Tool.define<typeof Params, Meta, never, "ba
             ready: params.ready,
             lifetime: params.persistent ? "persistent" : params.inherit ? "parent" : "session",
             parentID,
+            // kilocode_change start - forward wake detection parameters
+            wake: params.wake,
+            // kilocode_change end - forward wake detection parameters
           }),
         )
         if (params.action === "monitor") return yield* monitor(params, ctx, info)
