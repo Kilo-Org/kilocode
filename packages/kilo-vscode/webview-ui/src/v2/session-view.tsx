@@ -7,6 +7,8 @@ import { createEffect, createMemo, on, onCleanup, onMount, Show, type JSX } from
 import type { PromptAttachment, ToHost } from "../../../src/protocol"
 import { useModelPreferences } from "../context/model-preferences"
 import { getVSCodeAPI } from "../context/vscode"
+import { movePromptHistory } from "../hooks/usePromptHistory"
+import { kiloSettings } from "./kilo-settings"
 import { TaskHeader } from "../components/chat/TaskHeader"
 import { SessionDock } from "../components/chat/SessionDockWorking"
 import type { AppendHandler, ReferenceHandler, ReviewAppendHandler } from "./append-ready"
@@ -222,6 +224,9 @@ export function SessionView(props: {
     // A pending question is dismissed when the user sends instead.
     const questions = forms()
     props.onSession(id, key)
+    // The first prompt settles the draft tab into a session key. Carry the history a late append still targets.
+    const scopedHistory = kiloSettings()["experimental.conversationPromptHistory"] === true
+    if (key !== id && scopedHistory) movePromptHistory(key, id)
     for (const form of questions) {
       void v2.data.session.form.cancel({ sessionID: form.sessionID, formID: form.id }).catch(() => undefined)
     }

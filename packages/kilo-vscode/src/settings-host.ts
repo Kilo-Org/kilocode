@@ -50,6 +50,7 @@ export const KILO_SETTING_KEYS = [
   "browserAutomation.useSystemChrome",
   "browserAutomation.headless",
   "experimental.nativeNotebookTools",
+  "experimental.conversationPromptHistory",
 ] as const
 
 /** `kilo-code.v2.fontSize` when set, otherwise `editor.fontSize`, clamped to the v1 slider range. */

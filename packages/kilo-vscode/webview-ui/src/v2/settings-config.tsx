@@ -57,6 +57,7 @@ export type KiloSettingKey =
   | "browserAutomation.useSystemChrome"
   | "browserAutomation.headless"
   | "experimental.nativeNotebookTools"
+  | "experimental.conversationPromptHistory"
 
 type Json = Record<string, unknown>
 

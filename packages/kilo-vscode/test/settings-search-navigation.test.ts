@@ -42,6 +42,13 @@ describe("settings search targets", () => {
     expect(result).toMatchObject({ tab: "commitMessage", tabOnly: false })
   })
 
+  test("finds the per-conversation prompt history row", () => {
+    const result = searchSettings("prompt history", translate).find(
+      (item) => item.titleKey === "settings.experimental.conversationPromptHistory.title",
+    )
+    expect(result).toMatchObject({ tab: "experimental", tabOnly: false })
+  })
+
   test("does not index agent dialog and editor rows that cannot be revealed", () => {
     const keys = SETTINGS_ENTRIES.map((entry) => entry.titleKey)
     expect(keys).not.toContain("settings.agentBehaviour.removeMcp.title")
