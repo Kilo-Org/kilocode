@@ -114,10 +114,14 @@ describe("sidebar worktree project routing", () => {
 
   it("canonicalizes a symlinked sidebar directory", async () => {
     const sidebar = repo("sidebar", "sidebar")
+    const other = repo("other", "other")
     const link = path.join(fs.mkdtempSync(path.join(os.tmpdir(), "kilo-sidebar-link-")), "link")
     fs.symlinkSync(sidebar, link, "dir")
-    const provider = providerFor(link, [])
+    const provider = providerFor(link, [other])
     try {
+      provider.contexts.activate(projectIdFor(canonicalizePath(other)))
+      expect(provider.contexts.active()?.root).toBe(canonicalizePath(other))
+
       expect(await provider.branchFor(link)).toBe("sidebar")
     } finally {
       await provider.dispose()
