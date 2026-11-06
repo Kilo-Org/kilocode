@@ -65,6 +65,17 @@ jobs:
       - name: Setup Bun and install dependencies
         uses: ./.github/actions/setup-bun
 
+      # Linux targets compile the bundled Bubblewrap sandbox helper with Zig.
+      - name: Setup Zig for Linux sandbox helpers
+        if: runner.os == 'Linux'
+        run: |
+          curl --fail --location --retry 3 \
+            https://ziglang.org/download/0.14.0/zig-linux-x86_64-0.14.0.tar.xz \
+            --output "$RUNNER_TEMP/zig.tar.xz"
+          echo "473ec26806133cf4d1918caf1a410f8403a13d979726a9045b421b685031a982  $RUNNER_TEMP/zig.tar.xz" | sha256sum --check --status
+          tar -xJf "$RUNNER_TEMP/zig.tar.xz" -C "$RUNNER_TEMP"
+          echo "$RUNNER_TEMP/zig-linux-x86_64-0.14.0" >> "$GITHUB_PATH"
+
       # All targets on one runner. Bun cross-compiles, and the build installs the native packages of every target.
       # The version is 0.0.0-v2-<run number>.
       - name: Build the Kilo host for all targets

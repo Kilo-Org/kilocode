@@ -1021,6 +1021,7 @@
     "@kilocode/gateway-core": "workspace:*",
     "@kilocode/kilo-i18n": "workspace:*",
     "@kilocode/kilo-ui": "workspace:*",
+    "@kilocode/sandbox": "workspace:*",
     "@kobalte/core": "catalog:",
     "@lottiefiles/dotlottie-web": "0.63.0",
     "@opencode-ai/ui": "workspace:*",
