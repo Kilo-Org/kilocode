@@ -1,7 +1,7 @@
 import { Plugin } from "@opencode/plugin/tui"
 import type { KiloFlowRpc } from "@opencode/schema/kilocode/flow"
 import { TextAttributes, type ScrollBoxRenderable } from "@opentui/core"
-import { createEffect, createMemo, createSignal, For, onCleanup, onMount, Show } from "solid-js"
+import { createEffect, createMemo, createSignal, For, onCleanup, onMount, Show, type JSX } from "solid-js"
 
 type Load = (signal: AbortSignal) => Promise<KiloFlowRpc.ListOutput>
 type Control = (
@@ -9,27 +9,32 @@ type Control = (
   flowID: KiloFlowRpc.ID,
   signal: AbortSignal,
 ) => Promise<KiloFlowRpc.Info | undefined>
-type PageContext = Pick<Plugin.Context, "client" | "data" | "keymap" | "renderer" | "ui">
+type Run = (flowID: KiloFlowRpc.ID, signal: AbortSignal) => Promise<KiloFlowRpc.Run>
+type DialogContext = Pick<Plugin.Context, "client" | "data" | "keymap" | "renderer" | "theme" | "ui">
+type Notice = { readonly message: string; readonly variant: "success" | "error" | "info" }
 
-export function FlowsPage(props: {
-  context: PageContext
-  onClose: () => void
+export function FlowsDialog(props: {
+  context: DialogContext
   load?: Load
   control?: Control
+  run?: Run
   pollMilliseconds?: number
 }) {
   const [result, setResult] = createSignal<KiloFlowRpc.ListOutput>()
   const [loading, setLoading] = createSignal(true)
   const [error, setError] = createSignal("")
-  const [notice, setNotice] = createSignal("")
+  const [notice, setNotice] = createSignal<Notice>()
   const [stale, setStale] = createSignal(false)
   const [changing, setChanging] = createSignal(false)
   const [selected, setSelected] = createSignal(0)
+  const [detailKey, setDetailKey] = createSignal<string>()
+  const [confirmingDelete, setConfirmingDelete] = createSignal(false)
   const mounted = new AbortController()
   let active: AbortController | undefined
   let mutation: AbortController | undefined
   let timer: ReturnType<typeof setInterval> | undefined
   let scroll: ScrollBoxRenderable | undefined
+  const theme = () => props.context.theme.surface("dialog")
   const load =
     props.load ??
     (async (signal) => {
@@ -61,7 +66,23 @@ export function FlowsPage(props: {
       // SAFETY: The Kilo server validates these method outputs with KiloFlowRpc.Definition.
       return response.output as KiloFlowRpc.Info
     })
+  const run =
+    props.run ??
+    (async (flowID, signal) => {
+      const response = await props.context.client.rpc.call(
+        {
+          rpcID: "kilocode.flow",
+          method: "run",
+          input: { flowID },
+          location: props.context.data.location.default(),
+        },
+        { signal },
+      )
+      // SAFETY: The Kilo server validates this method's output with KiloFlowRpc.Definition before returning it.
+      return response.output as KiloFlowRpc.Run
+    })
   const flows = createMemo(() => [...(result()?.flows ?? [])].sort(compare))
+  const detail = createMemo(() => flows().find((flow) => key(flow) === detailKey()))
   const warning = createMemo(() => (!stale() ? result()?.warnings[0] : undefined))
 
   // Re-sorting after a refresh or a status change keeps the cursor on the same Flow rather than the same row.
@@ -87,59 +108,113 @@ export function FlowsPage(props: {
   }
 
   function move(offset: number) {
-    if (flows().length === 0) return
+    if (flows().length === 0 || detail()) return
     const next = Math.max(0, Math.min(flows().length - 1, selected() + offset))
     setSelected(next)
     reveal(next)
   }
 
-  function open(flow: KiloFlowRpc.Info | undefined) {
-    const sessionID = flow?.latestRun?.sessionID
-    if (!sessionID) {
-      setNotice(`${flow?.name ?? "This Flow"} has not run yet.`)
+  function showDetail(flow: KiloFlowRpc.Info | undefined) {
+    if (!flow) return
+    setNotice()
+    setConfirmingDelete(false)
+    setDetailKey(key(flow))
+  }
+
+  function back() {
+    if (confirmingDelete()) {
+      setConfirmingDelete(false)
       return
     }
-    setNotice("")
+    setNotice()
+    setDetailKey()
+  }
+
+  function viewSession(flow: KiloFlowRpc.Info | undefined) {
+    const sessionID = flow?.latestRun?.sessionID
+    if (!sessionID) {
+      setNotice({ message: `${flow?.name ?? "This Flow"} has not run yet.`, variant: "info" })
+      return
+    }
+    props.context.ui.dialog.clear()
+    if (props.context.ui.tabs.focus(sessionID)) return
     props.context.ui.router.navigate({ type: "session", sessionID })
   }
 
   async function change(method: "pause" | "resume" | "remove", flow: KiloFlowRpc.Info | undefined) {
     if (!flow || flow.reference.type !== "managed" || mutation) return
     const flowID = flow.reference.flowID
-    if (method === "remove") {
-      const confirmed = await props.context.ui.dialog.confirm({
-        title: `Remove ${flow.name}?`,
-        message: "This stops future runs, interrupts an active run, and removes the local Flow definition.",
-        label: { confirm: "Remove" },
-      })
-      if (!confirmed || mounted.signal.aborted) return
-    }
     const request = new AbortController()
     mutation = request
     setChanging(true)
-    setNotice("")
+    setNotice()
     const signal = AbortSignal.any([mounted.signal, request.signal])
     try {
       const updated = await control(method, flowID, signal)
       if (signal.aborted) return
       const current = result()
       if (!current) return
+      if (method === "remove") {
+        setDetailKey()
+        setConfirmingDelete(false)
+        replace({
+          ...current,
+          flows: current.flows.filter(
+            (item) => item.reference.type !== "managed" || item.reference.flowID !== flowID,
+          ),
+        })
+        setNotice({ message: `Deleted ${flow.name}.`, variant: "success" })
+        return
+      }
       replace({
         ...current,
-        flows:
-          method === "remove"
-            ? current.flows.filter(
-                (item) => item.reference.type !== "managed" || item.reference.flowID !== flowID,
-              )
-            : current.flows.map((item) =>
-                item.reference.type === "managed" && item.reference.flowID === flowID && updated
-                  ? updated
-                  : item,
-              ),
+        flows: current.flows.map((item) =>
+          item.reference.type === "managed" && item.reference.flowID === flowID && updated ? updated : item,
+        ),
       })
-      setNotice(method === "remove" ? `Removed ${flow.name}.` : `${method === "pause" ? "Paused" : "Resumed"} ${flow.name}.`)
+      setNotice({
+        message: `${method === "pause" ? "Disabled" : "Enabled"} ${flow.name}.`,
+        variant: "success",
+      })
     } catch (cause) {
-      if (!signal.aborted) setNotice(`${method === "remove" ? "Remove" : "Update"} failed: ${cause instanceof Error ? cause.message : String(cause)}`)
+      if (!signal.aborted)
+        setNotice({
+          message: `${method === "remove" ? "Delete" : "Update"} failed: ${message(cause)}`,
+          variant: "error",
+        })
+    } finally {
+      if (mutation === request) mutation = undefined
+      if (!signal.aborted) setChanging(false)
+    }
+  }
+
+  async function runNow(flow: KiloFlowRpc.Info | undefined) {
+    if (!flow || flow.reference.type !== "managed" || mutation) return
+    const flowID = flow.reference.flowID
+    const request = new AbortController()
+    mutation = request
+    setChanging(true)
+    setNotice()
+    const signal = AbortSignal.any([mounted.signal, request.signal])
+    try {
+      const started = await run(flowID, signal)
+      if (signal.aborted) return
+      const current = result()
+      if (!current) return
+      replace({
+        ...current,
+        flows: current.flows.map((item) =>
+          item.reference.type === "managed" && item.reference.flowID === flowID
+            ? { ...item, latestRun: started, lastRunAt: started.time.started ?? started.time.created }
+            : item,
+        ),
+      })
+      setNotice({
+        message: `${label(started.status)} ${flow.name}.`,
+        variant: started.status === "failed" || started.status === "interrupted" ? "error" : "success",
+      })
+    } catch (cause) {
+      if (!signal.aborted) setNotice({ message: `Run failed: ${message(cause)}`, variant: "error" })
     } finally {
       if (mutation === request) mutation = undefined
       if (!signal.aborted) setChanging(false)
@@ -160,7 +235,7 @@ export function FlowsPage(props: {
       setStale(false)
     } catch (cause) {
       if (signal.aborted) return
-      setError(cause instanceof Error ? cause.message : String(cause))
+      setError(message(cause))
       setStale(result() !== undefined)
     } finally {
       if (active === request) active = undefined
@@ -169,42 +244,79 @@ export function FlowsPage(props: {
   }
 
   props.context.keymap.layer(() => ({
+    mode: "modal",
+    priority: 1,
     commands: [
-      { bind: "escape", title: "Back", group: "Flows", run: props.onClose },
-      { bind: "r", title: "Refresh", group: "Flows", run: () => void refresh() },
-      { bind: "up,k", title: "Previous Flow", group: "Flows", run: () => move(-1) },
-      { bind: "down,j", title: "Next Flow", group: "Flows", run: () => move(1) },
+      {
+        bind: "escape",
+        title: confirmingDelete() ? "Cancel delete" : "Back to periodic flows",
+        group: "Periodic",
+        enabled: () => detail() !== undefined,
+        run: back,
+      },
+      { bind: "ctrl+r", title: "Refresh periodic flows", group: "Periodic", run: () => void refresh() },
+      { bind: "up,k", title: "Previous Flow", group: "Periodic", enabled: () => !detail(), run: () => move(-1) },
+      { bind: "down,j", title: "Next Flow", group: "Periodic", enabled: () => !detail(), run: () => move(1) },
       {
         bind: "return",
-        title: "Open latest run",
-        group: "Flows",
-        enabled: () => flows()[selected()]?.latestRun?.sessionID !== undefined,
-        run: () => open(flows()[selected()]),
+        title: "Show Flow details",
+        group: "Periodic",
+        enabled: () => !detail() && flows().length > 0,
+        run: () => showDetail(flows()[selected()]),
       },
       {
-        bind: "p",
-        title: "Pause or resume Flow",
-        group: "Flows",
+        bind: "r",
+        title: detail() ? "Run Flow now" : "Refresh periodic flows",
+        group: "Periodic",
+        enabled: () => !changing() && (!detail() || detail()?.reference.type === "managed") && !confirmingDelete(),
+        run: () => (detail() ? void runNow(detail()) : void refresh()),
+      },
+      {
+        bind: "e",
+        title: "Enable or disable Flow",
+        group: "Periodic",
         enabled: () => {
-          const flow = flows()[selected()]
+          const flow = detail()
           return (
             !changing() &&
+            !confirmingDelete() &&
             flow?.reference.type === "managed" &&
             (flow.status === "active" || flow.status === "paused")
           )
         },
         run: () => {
-          const flow = flows()[selected()]
+          const flow = detail()
           if (!flow) return
           void change(flow.status === "paused" ? "resume" : "pause", flow)
         },
       },
       {
         bind: "d",
-        title: "Remove Flow",
-        group: "Flows",
-        enabled: () => !changing() && flows()[selected()]?.reference.type === "managed",
-        run: () => void change("remove", flows()[selected()]),
+        title: "Delete Flow",
+        group: "Periodic",
+        enabled: () => !changing() && !confirmingDelete() && detail()?.reference.type === "managed",
+        run: () => setConfirmingDelete(true),
+      },
+      {
+        bind: "y",
+        title: "Confirm Flow deletion",
+        group: "Periodic",
+        enabled: confirmingDelete,
+        run: () => void change("remove", detail()),
+      },
+      {
+        bind: "n",
+        title: "Cancel Flow deletion",
+        group: "Periodic",
+        enabled: confirmingDelete,
+        run: () => setConfirmingDelete(false),
+      },
+      {
+        bind: "v",
+        title: "View latest run Session",
+        group: "Periodic",
+        enabled: () => !confirmingDelete() && detail()?.latestRun?.sessionID !== undefined,
+        run: () => viewSession(detail()),
       },
     ],
   }))
@@ -212,6 +324,8 @@ export function FlowsPage(props: {
   createEffect(() => {
     const last = Math.max(0, flows().length - 1)
     if (selected() > last) setSelected(last)
+    const current = detailKey()
+    if (current && !flows().some((flow) => key(flow) === current)) setDetailKey()
   })
 
   onMount(() => {
@@ -226,96 +340,225 @@ export function FlowsPage(props: {
   })
 
   return (
-    <box width="100%" height="100%" flexDirection="column" padding={1} gap={1}>
-      <box flexDirection="row" justifyContent="space-between">
-        <text attributes={TextAttributes.BOLD}>Flows</text>
-        <text>↑/↓ select · enter open · p pause/resume · d remove · r refresh · esc back</text>
+    <box paddingLeft={3} paddingRight={3} paddingBottom={1} gap={1}>
+      <box flexDirection="row" justifyContent="space-between" gap={2}>
+        <text attributes={TextAttributes.BOLD} fg={theme().text.base} wrapMode="none">
+          {detail() ? `Periodic / ${detail()?.name}` : "Periodic"}
+        </text>
+        <text fg={theme().text.muted} flexShrink={0}>
+          {detail() ? "esc back" : "esc close"}
+        </text>
       </box>
       <Show when={stale()}>
-        <text>Stale · refresh failed: {error()}</text>
+        <text fg={theme().text.feedback.warning.base}>Stale · refresh failed: {error()}</text>
       </Show>
-      <Show when={notice()}>{(message) => <text>{message()}</text>}</Show>
+      <Show when={notice()}>
+        {(current) => <text fg={theme().text.feedback[current().variant].base}>{current().message}</text>}
+      </Show>
       <Show when={warning()}>
         {(current) => (
-          <text>
+          <text fg={theme().text.feedback.warning.base}>
             {result()?.warnings.length} source warning{result()?.warnings.length === 1 ? "" : "s"}: {current().message}
           </text>
         )}
       </Show>
       <Show when={loading() && !result()}>
-        <box flexGrow={1} alignItems="center" justifyContent="center">
-          <text>Loading local flows…</text>
+        <box height={8} alignItems="center" justifyContent="center">
+          <text fg={theme().text.muted}>Loading local flows…</text>
         </box>
       </Show>
       <Show when={!loading() && !result()}>
-        <box flexGrow={1} flexDirection="column" alignItems="center" justifyContent="center" gap={1}>
-          <text attributes={TextAttributes.BOLD}>Couldn’t load flows</text>
-          <text>{error()}</text>
-          <text>Press r to retry.</text>
+        <box height={8} alignItems="center" justifyContent="center" gap={1}>
+          <text attributes={TextAttributes.BOLD} fg={theme().text.feedback.error.base}>
+            Couldn’t load flows
+          </text>
+          <text fg={theme().text.muted}>{error()}</text>
+          <text fg={theme().text.muted}>Press r to retry.</text>
         </box>
       </Show>
       <Show when={result() && flows().length === 0}>
-        <box flexGrow={1} flexDirection="column" alignItems="center" justifyContent="center" gap={1}>
-          <text attributes={TextAttributes.BOLD}>No local flows</text>
-          <text>Native schedules and managed Kilo flows will appear here.</text>
-          <text>Press r to refresh.</text>
+        <box height={8} alignItems="center" justifyContent="center" gap={1}>
+          <text attributes={TextAttributes.BOLD} fg={theme().text.base}>
+            No periodic flows
+          </text>
+          <text fg={theme().text.muted}>Scheduled local tasks will appear here.</text>
+          <text fg={theme().text.muted}>Press r to refresh.</text>
         </box>
       </Show>
-      <Show when={flows().length > 0}>
-        <scrollbox flexGrow={1} width="100%" ref={(element: ScrollBoxRenderable) => (scroll = element)}>
+      <Show when={flows().length > 0 && !detail()}>
+        <scrollbox maxHeight={15} width="100%" ref={(element: ScrollBoxRenderable) => (scroll = element)}>
           <For each={flows()}>
-            {(flow, index) => (
-              <box
-                width="100%"
-                flexDirection="column"
-                paddingBottom={1}
-                onMouseOver={() => setSelected(index())}
-                onMouseUp={() => open(flow)}
-              >
-                <box flexDirection="row" gap={1}>
-                  <text>{index() === selected() ? "›" : " "}</text>
-                  <text attributes={TextAttributes.BOLD}>{flow.name}</text>
-                  <text>[Local]</text>
-                  <Show when={flow.reference.type === "native-schedule"}>
-                    <text>[Unmanaged]</text>
-                  </Show>
+            {(flow, index) => {
+              const active = () => index() === selected()
+              const foreground = () => (active() ? theme().text.action.primary.focused : theme().text.base)
+              const secondary = () => (active() ? theme().text.action.primary.focused : theme().text.muted)
+              return (
+                <box
+                  width="100%"
+                  paddingLeft={1}
+                  paddingRight={1}
+                  backgroundColor={active() ? theme().background.action.primary.focused : undefined}
+                  onMouseOver={() => setSelected(index())}
+                  onMouseUp={() => showDetail(flow)}
+                >
+                  <text wrapMode="none" overflow="hidden" fg={foreground()}>
+                    <span style={{ fg: foreground() }}>
+                      {active() ? "›" : " "} {flow.name}
+                    </span>
+                    <span style={{ fg: secondary() }}>{` · ${trigger(flow.trigger)} · `}</span>
+                    <span style={{ fg: active() ? foreground() : statusColor(flow.status, theme()) }}>
+                      {label(flow.status)}
+                    </span>
+                    <Show when={flow.nextRunAt === undefined ? undefined : flow.nextRunAt}>
+                      {(next) => (
+                        <span style={{ fg: secondary() }}>{` · next ${date(next())}`}</span>
+                      )}
+                    </Show>
+                    <Show when={flow.reference.type === "native-schedule"}>
+                      <span style={{ fg: secondary() }}>{" · Unmanaged"}</span>
+                    </Show>
+                  </text>
                 </box>
-                <text>
-                  {trigger(flow.trigger)} · Schedule {flow.status}
-                  {flow.nextRunAt === undefined ? "" : ` · next ${date(flow.nextRunAt)}`}
-                </text>
-                <text>
-                  {flow.context.directory ?? "Location unavailable"}
-                  {flow.context.projectID ? ` · ${flow.context.projectID}` : ""}
-                </text>
-                <Show when={flow.permissions}>
+              )
+            }}
+          </For>
+        </scrollbox>
+        <box flexDirection="row" justifyContent="space-between" gap={2}>
+          <text fg={theme().text.muted}>
+            {flows().length} task{flows().length === 1 ? "" : "s"}
+          </text>
+          <text fg={theme().text.muted}>↑/↓ select · enter details · r refresh</text>
+        </box>
+      </Show>
+      <Show when={detail()}>
+        {(flow) => (
+          <>
+            <scrollbox maxHeight={16} width="100%">
+              <box gap={0}>
+                <DetailRow label="Status" theme={theme()}>
+                  <span style={{ fg: statusColor(flow().status, theme()) }}>{label(flow().status)}</span>
+                  {nextRun(flow())}
+                </DetailRow>
+                <DetailRow label="Trigger" theme={theme()}>{trigger(flow().trigger)}</DetailRow>
+                <DetailRow label="Location" theme={theme()}>
+                  {flow().context.directory ?? "Unavailable"}
+                  {flow().context.projectID ? ` · ${flow().context.projectID}` : ""}
+                </DetailRow>
+                <DetailRow label="Execution" theme={theme()}>
+                  {execution(flow().execution)}
+                </DetailRow>
+                <Show when={flow().context.model}>
+                  {(model) => <DetailRow label="Model" theme={theme()}>{`${model().providerID}/${model().id}`}</DetailRow>}
+                </Show>
+                <Show when={flow().context.agent}>
+                  {(agent) => <DetailRow label="Agent" theme={theme()}>{agent()}</DetailRow>}
+                </Show>
+                <DetailRow label="Prompt" theme={theme()}>{flow().prompt}</DetailRow>
+                <Show when={flow().permissions}>
                   {(permissions) => (
-                    <text>
-                      Permissions: {permissions().length === 0 ? "none" : permissions().map(permission).join(", ")}
-                    </text>
+                    <DetailRow label="Permissions" theme={theme()}>
+                      {permissions().length === 0 ? "None" : permissions().map(permission).join(", ")}
+                    </DetailRow>
                   )}
                 </Show>
-                <Show when={flow.latestRun}>
-                  {(run) => (
+                <Show when={flow().latestRun}>
+                  {(latest) => (
                     <>
-                      <text>
-                        Latest run: {label(run().status)} ·{" "}
-                        {date(run().time.completed ?? run().time.started ?? run().time.created)}
-                        {run().sessionID ? ` · session ${run().sessionID}` : ""}
-                      </text>
-                      <Show when={run().directory}>{(directory) => <text>Run directory: {directory()}</text>}</Show>
-                      <Show when={run().error}>{(message) => <text>Run error: {summary(message())}</text>}</Show>
+                      <DetailRow label="Latest run" theme={theme()}>
+                        {label(latest().status)} · {date(latest().time.completed ?? latest().time.started ?? latest().time.created)}
+                      </DetailRow>
+                      <Show when={latest().directory}>
+                        {(directory) => <DetailRow label="Run location" theme={theme()}>{directory()}</DetailRow>}
+                      </Show>
+                      <Show when={latest().error}>
+                        {(runError) => <DetailRow label="Run error" theme={theme()}>{summary(runError())}</DetailRow>}
+                      </Show>
                     </>
                   )}
                 </Show>
-                <Show when={flow.health.status === "error"}>
-                  <text>Error: {flow.health.status === "error" ? flow.health.message : ""}</text>
+                <Show when={healthMessage(flow().health)}>
+                  {(health) => (
+                    <DetailRow label="Health" theme={theme()}>
+                      <span style={{ fg: theme().text.feedback.error.base }}>{health()}</span>
+                    </DetailRow>
+                  )}
                 </Show>
               </box>
-            )}
-          </For>
-        </scrollbox>
+            </scrollbox>
+            <Show when={flow().reference.type === "native-schedule"}>
+              <text fg={theme().text.muted}>Unmanaged schedules are read-only.</text>
+            </Show>
+            <Show
+              when={confirmingDelete()}
+              fallback={
+                <box flexDirection="row" flexWrap="wrap" gap={1}>
+                  <Show when={flow().reference.type === "managed" && (flow().status === "active" || flow().status === "paused")}>
+                    <Action
+                      label={flow().status === "paused" ? "Enable" : "Disable"}
+                      shortcut="e"
+                      theme={theme()}
+                      disabled={changing()}
+                      onTrigger={() => void change(flow().status === "paused" ? "resume" : "pause", flow())}
+                    />
+                  </Show>
+                  <Show when={flow().reference.type === "managed"}>
+                    <Action label="Run now" shortcut="r" theme={theme()} disabled={changing()} onTrigger={() => void runNow(flow())} />
+                    <Action label="Delete" shortcut="d" theme={theme()} disabled={changing()} onTrigger={() => setConfirmingDelete(true)} />
+                  </Show>
+                  <Show when={flow().latestRun?.sessionID}>
+                    <Action label="View session" shortcut="v" theme={theme()} onTrigger={() => viewSession(flow())} />
+                  </Show>
+                </box>
+              }
+            >
+              <box gap={1}>
+                <text fg={theme().text.feedback.warning.base}>
+                  Delete {flow().name}? Future runs stop and retained run records are removed.
+                </text>
+                <box flexDirection="row" gap={1}>
+                  <Action label="Cancel" shortcut="n" theme={theme()} onTrigger={() => setConfirmingDelete(false)} />
+                  <Action label="Delete" shortcut="y" theme={theme()} onTrigger={() => void change("remove", flow())} />
+                </box>
+              </box>
+            </Show>
+          </>
+        )}
       </Show>
+    </box>
+  )
+}
+
+function DetailRow(props: { label: string; theme: Plugin.Context["theme"]; children: JSX.Element }) {
+  return (
+    <box flexDirection="row" gap={1}>
+      <text width={12} flexShrink={0} fg={props.theme.text.muted}>{props.label}</text>
+      <text flexGrow={1} wrapMode="word" fg={props.theme.text.base}>{props.children}</text>
+    </box>
+  )
+}
+
+function Action(props: {
+  label: string
+  shortcut: string
+  theme: Plugin.Context["theme"]
+  disabled?: boolean
+  onTrigger: () => void
+}) {
+  const [hovered, setHovered] = createSignal(false)
+  return (
+    <box
+      paddingLeft={1}
+      paddingRight={1}
+      backgroundColor={hovered() && !props.disabled ? props.theme.background.action.secondary.hovered : undefined}
+      onMouseOver={() => setHovered(true)}
+      onMouseOut={() => setHovered(false)}
+      onMouseUp={() => {
+        if (!props.disabled) props.onTrigger()
+      }}
+    >
+      <text fg={props.disabled ? props.theme.text.action.secondary.disabled : props.theme.text.action.secondary.base}>
+        {props.label} <span style={{ fg: props.theme.text.muted }}>{props.shortcut}</span>
+      </text>
     </box>
   )
 }
@@ -351,8 +594,28 @@ function date(value: number) {
   return new Date(value).toLocaleString()
 }
 
-function label(value: KiloFlowRpc.RunStatus) {
+function label(value: KiloFlowRpc.Status | KiloFlowRpc.RunStatus) {
   return value.charAt(0).toUpperCase() + value.slice(1)
+}
+
+function statusColor(value: KiloFlowRpc.Status, theme: Plugin.Context["theme"]) {
+  if (value === "error") return theme.text.feedback.error.base
+  if (value === "paused") return theme.text.feedback.warning.base
+  if (value === "completed") return theme.text.feedback.success.base
+  return theme.text.feedback.info.base
+}
+
+function nextRun(flow: KiloFlowRpc.Info) {
+  return flow.nextRunAt === undefined ? "" : ` · next ${date(flow.nextRunAt)}`
+}
+
+function execution(value: KiloFlowRpc.Execution) {
+  if (value.mode === "fresh") return `Local · fresh Session · ${value.worktree} worktree`
+  return "Local · Session reuse"
+}
+
+function healthMessage(value: KiloFlowRpc.Health) {
+  if (value.status === "error") return value.message
 }
 
 function summary(value: string) {
@@ -363,14 +626,13 @@ function permission(value: KiloFlowRpc.PermissionGrant) {
   return `${value.action} ${value.resource}`
 }
 
+function message(value: unknown) {
+  return value instanceof Error ? value.message : String(value)
+}
+
 export default Plugin.define({
   id: "kilocode.flows",
   setup(context) {
-    let previous = { ...context.ui.router.current() }
-    const unregisterRoute = context.ui.router.register({
-      name: "periodic",
-      render: () => <FlowsPage context={context} onClose={() => context.ui.router.navigate(previous)} />,
-    })
     const unregisterSlot = context.ui.slot({
       append: "app",
       render() {
@@ -385,11 +647,8 @@ export default Plugin.define({
               palette: true,
               slash: { name: "periodic" },
               run() {
-                const current = context.ui.router.current()
-                if (current.type === "plugin" && current.name === "periodic") return
-                previous = { ...current }
-                context.ui.dialog.clear()
-                context.ui.router.navigate({ type: "plugin", name: "periodic" })
+                context.ui.dialog.show(() => <FlowsDialog context={context} />)
+                context.ui.dialog.set({ size: "large" })
               },
             },
           ],
@@ -397,9 +656,6 @@ export default Plugin.define({
         return null
       },
     })
-    return () => {
-      unregisterSlot()
-      unregisterRoute()
-    }
+    return unregisterSlot
   },
 })

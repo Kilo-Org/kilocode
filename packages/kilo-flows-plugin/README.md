@@ -1,8 +1,9 @@
 # Flows plugin prototype
 
 This local TUI plugin adds `/periodic` and lists the managed Kilo flows and unmanaged native schedules reported by the
-local server. The page refreshes every 10 seconds while open; press `r` to refresh immediately. Use the arrow keys or
-`j`/`k` to select a Flow and Enter to open its latest run Session.
+local server. The popup refreshes every 10 seconds while open; press `r` to refresh immediately. Use the arrow keys or
+`j`/`k` to select a Flow and Enter to open its details. Managed Flow details provide actions to enable or disable the
+schedule, start a run, delete the Flow, and view its latest run Session. Unmanaged schedules remain read-only.
 
 Agents can create scheduled definitions with `flow_create` and start an extra run immediately with `flow_run`. Each
 run creates a fresh Session in the saved directory, or in a new worktree when the Flow requests one. Creation asks the
@@ -11,9 +12,9 @@ allowlist instead of waiting for an interactive response. If a scheduled occurre
 starting or running execution, the occurrence is recorded as skipped and is not queued.
 
 New Flows automatically include repository-local `read`, `glob`, and `grep` access. Creation asks for any additional
-tool capabilities and shows the combined allowlist for approval. Additional actions are capability-scoped with resource
-`*`; `external_directory` remains a bounded path grant. Existing Flow records keep their previously approved
-permissions and can be recreated to adopt the broader policy.
+tool capabilities and shows the combined allowlist for approval. Additional actions preserve their approved resource
+patterns; `external_directory` remains a bounded path grant. Existing Flow records keep their previously approved
+permissions.
 
 The scheduler runs inside Kilo's managed background service. It survives closing the TUI, but this prototype does not
 install an operating-system startup service: after a reboot, a Kilo client must start or discover the background
@@ -27,4 +28,4 @@ OPENCODE_CLI_CONFIG_CONTENT="{\"plugins\":[\"$PWD/packages/kilo-flows-plugin\"]}
 bun dev . --standalone
 ```
 
-Type `/periodic` and press Enter. Press Escape to return to the previous page.
+Type `/periodic` and press Enter. Press Escape from the list to close the popup.

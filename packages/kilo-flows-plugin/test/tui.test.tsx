@@ -1,69 +1,124 @@
 import { expect, test } from "bun:test"
 import { Plugin } from "@opencode/plugin/tui"
-import { KiloFlowRpc } from "@opencode/schema/kilocode/flow"
 import type { KeymapCommand } from "@opencode/plugin/tui/context"
+import { KiloFlowRpc } from "@opencode/schema/kilocode/flow"
+import { RGBA } from "@opentui/core"
 import { testRender } from "@opentui/solid"
 import { Schema } from "effect"
-import PeriodicPlugin, { FlowsPage } from "../src/tui"
+import PeriodicPlugin, { FlowsDialog } from "../src/tui"
 
-function context(commands: KeymapCommand[], destinations: unknown[] = [], focused: string[] = []) {
+const color = RGBA.fromInts(200, 200, 200, 255)
+const selectedText = RGBA.fromInts(20, 20, 20, 255)
+const selectedBackground = RGBA.fromInts(255, 221, 0, 255)
+const stateful = {
+  base: color,
+  hovered: color,
+  focused: color,
+  selected: color,
+  disabled: color,
+  state: () => color,
+}
+const selectedAction = { ...stateful, focused: selectedText }
+const selectedFormfield = { ...stateful, focused: selectedBackground }
+const selectedActionBackground = { ...stateful, focused: selectedBackground }
+const theme = {
+  text: {
+    base: color,
+    muted: color,
+    faint: color,
+    action: { primary: selectedAction, secondary: stateful },
+    formfield: selectedFormfield,
+    feedback: {
+      success: { base: color, muted: color },
+      error: { base: color, muted: color },
+      warning: { base: color, muted: color },
+      info: { base: color, muted: color },
+    },
+  },
+  background: { action: { primary: selectedActionBackground, secondary: stateful } },
+  surface() {
+    return theme
+  },
+} as unknown as Plugin.Context["theme"]
+
+function context(
+  commands: KeymapCommand[],
+  destinations: unknown[] = [],
+  focused: string[] = [],
+  cleared: boolean[] = [],
+  focus = true,
+) {
   return {
     client: undefined,
     data: { location: { default: () => ({ directory: "/workspace" }) } },
     renderer: { requestAnimationFrame: (callback: () => void) => callback() },
+    theme,
     keymap: {
       layer(factory: () => { commands: readonly KeymapCommand[] }) {
         commands.push(...factory().commands)
       },
     },
     ui: {
-      dialog: { confirm: () => Promise.resolve(true) },
+      dialog: { clear: () => cleared.push(true) },
       router: { navigate: (destination: unknown) => destinations.push(destination) },
       tabs: {
         focus(sessionID: string) {
+          if (!focus) return false
           focused.push(sessionID)
           return true
         },
       },
     },
-  } as unknown as Pick<Plugin.Context, "client" | "data" | "keymap" | "renderer" | "ui">
+  } as unknown as Pick<Plugin.Context, "client" | "data" | "keymap" | "renderer" | "theme" | "ui">
 }
 
 const flow = (input: {
   id: string
   name: string
   status: KiloFlowRpc.Status
+  managed?: boolean
   next?: number
   error?: string
   run?: KiloFlowRpc.RunStatus
-}) =>
-  Schema.decodeUnknownSync(KiloFlowRpc.Info)({
-    reference: input.run ? { type: "managed", flowID: input.id } : { type: "native-schedule", scheduleID: input.id },
+}) => {
+  const managed = input.managed ?? input.run !== undefined
+  return Schema.decodeUnknownSync(KiloFlowRpc.Info)({
+    reference: managed
+      ? { type: "managed", flowID: input.id }
+      : { type: "native-schedule", scheduleID: input.id },
     name: input.name,
     authority: { type: "local" },
     trigger: { type: "time", when: { type: "every", every: "1 hour" }, timezone: "UTC" },
-    execution: { type: "local", mode: "session-reuse", sessionID: "ses_tui" },
-    context: { directory: "/workspace", projectID: "proj_tui", sessionID: "ses_tui" },
+    execution: managed
+      ? { type: "local", mode: "fresh", sourceSessionID: "ses_tui", worktree: "reuse" }
+      : { type: "local", mode: "session-reuse", sessionID: "ses_tui" },
+    context: {
+      directory: "/workspace",
+      projectID: "proj_tui",
+      sessionID: "ses_tui",
+      model: { providerID: "kilo", id: "test-model" },
+      agent: "build",
+    },
     prompt: "Run it",
-    ...(input.run ? { permissions: [{ action: "shell", resource: "git status *" }] } : {}),
+    ...(managed ? { permissions: [{ action: "shell", resource: "taskctl *" }] } : {}),
     status: input.status,
     ...(input.next === undefined ? {} : { nextRunAt: input.next }),
-    ...(input.run
-      ? {
-          latestRun: {
-            version: 1,
-            id: "flr_tui",
-            flowID: input.id,
-            status: input.run,
-            worktree: "reuse",
-            sessionID: "ses_flow_run",
-            directory: "/workspace/run",
-            time: { created: 10, updated: 20, started: 10, ...(input.run === "running" ? {} : { completed: 20 }) },
-          },
-        }
-      : {}),
+    ...(input.run ? { latestRun: run(input.id, input.run) } : {}),
     health: input.error ? { status: "error", message: input.error } : { status: "healthy" },
     time: { created: 1, updated: 2 },
+  })
+}
+
+const run = (flowID: string, status: KiloFlowRpc.RunStatus = "starting") =>
+  Schema.decodeUnknownSync(KiloFlowRpc.Run)({
+    version: 1,
+    id: "flr_tui",
+    flowID,
+    status,
+    worktree: "reuse",
+    sessionID: "ses_flow_run",
+    directory: "/workspace/run",
+    time: { created: 10, updated: 20, started: 10, ...(status === "running" ? {} : { completed: 20 }) },
   })
 
 const output = (flows: readonly KiloFlowRpc.Info[] = [], warnings: readonly KiloFlowRpc.Warning[] = []) => ({
@@ -72,10 +127,20 @@ const output = (flows: readonly KiloFlowRpc.Info[] = [], warnings: readonly Kilo
   observedAt: 1,
 })
 
-test("registers /periodic and navigates to the periodic page", async () => {
+function command(commands: readonly KeymapCommand[], bind: string) {
+  return commands.find((entry) => entry.bind === bind)!
+}
+
+function enabled(value: KeymapCommand) {
+  if (typeof value.enabled === "function") return value.enabled()
+  return value.enabled !== false
+}
+
+test("registers /periodic as a large popup", async () => {
   const commands: KeymapCommand[] = []
-  const destinations: unknown[] = []
   let renderSlot: (() => unknown) | undefined
+  let renderDialog: (() => unknown) | undefined
+  let dialogOptions: unknown
   const cleanup = await PeriodicPlugin.setup({
     keymap: {
       layer(factory: () => { commands: readonly KeymapCommand[] }) {
@@ -83,11 +148,13 @@ test("registers /periodic and navigates to the periodic page", async () => {
       },
     },
     ui: {
-      dialog: { clear() {} },
-      router: {
-        current: () => ({ type: "home" }),
-        navigate: (destination: unknown) => destinations.push(destination),
-        register: () => () => {},
+      dialog: {
+        show(render: () => unknown) {
+          renderDialog = render
+        },
+        set(options: unknown) {
+          dialogOptions = options
+        },
       },
       slot(claim: { render: () => unknown }) {
         renderSlot = claim.render
@@ -96,35 +163,47 @@ test("registers /periodic and navigates to the periodic page", async () => {
     },
   } as unknown as Plugin.Context)
   renderSlot?.()
-  const command = commands.find((entry) => entry.id === "periodic.open")
-  expect(command?.slash).toEqual({ name: "periodic" })
-  command?.run()
-  expect(destinations).toEqual([{ type: "plugin", name: "periodic" }])
+  const open = commands.find((entry) => entry.id === "periodic.open")
+  expect(open?.slash).toEqual({ name: "periodic" })
+  open?.run()
+  expect(renderDialog).toBeFunction()
+  expect(dialogOptions).toEqual({ size: "large" })
   if (typeof cleanup === "function") await cleanup()
 })
 
-test("shows loading, empty, populated, and sorted states", async () => {
+test("shows loading, empty, and sorted single-line summaries", async () => {
   const pending = Promise.withResolvers<KiloFlowRpc.ListOutput>()
   const commands: KeymapCommand[] = []
-  const app = await testRender(
-    () => <FlowsPage context={context(commands)} onClose={() => {}} load={() => pending.promise} />,
-    { width: 100, height: 24 },
-  )
+  const app = await testRender(() => <FlowsDialog context={context(commands)} load={() => pending.promise} />, {
+    width: 88,
+    height: 24,
+  })
   try {
     app.renderer.start()
     await app.waitForFrame((frame) => frame.includes("Loading local flows"))
     pending.resolve(output())
-    await app.waitForFrame((frame) => frame.includes("No local flows"))
-    expect(commands.map((command) => command.bind)).toEqual(["escape", "r", "up,k", "down,j", "return", "p", "d"])
+    await app.waitForFrame((frame) => frame.includes("No periodic flows"))
+    expect(commands.map((entry) => entry.bind)).toEqual([
+      "escape",
+      "ctrl+r",
+      "up,k",
+      "down,j",
+      "return",
+      "r",
+      "e",
+      "d",
+      "y",
+      "n",
+      "v",
+    ])
   } finally {
     app.renderer.destroy()
   }
 
   const populated = await testRender(
     () => (
-      <FlowsPage
+      <FlowsDialog
         context={context([])}
-        onClose={() => {}}
         load={() =>
           Promise.resolve(
             output([
@@ -138,52 +217,162 @@ test("shows loading, empty, populated, and sorted states", async () => {
         }
       />
     ),
-    { width: 100, height: 30 },
+    { width: 88, height: 24 },
   )
   try {
     populated.renderer.start()
     await populated.waitForFrame((frame) => frame.includes("Completed"))
     const frame = populated.captureCharFrame()
-    expect(["Broken", "Earlier", "Later", "Paused", "Completed"].map((name) => frame.indexOf(name))).toEqual(
-      [...["Broken", "Earlier", "Later", "Paused", "Completed"].map((name) => frame.indexOf(name))].toSorted(
-        (left, right) => left - right,
-      ),
+    const names = ["Broken", "Earlier", "Later", "Paused", "Completed"]
+    expect(names.map((name) => frame.indexOf(name))).toEqual(
+      [...names.map((name) => frame.indexOf(name))].toSorted((left, right) => left - right),
     )
-    expect(frame).toContain("[Local] [Unmanaged]")
     expect(frame).toContain("Every 1 hour")
-    expect(frame).toContain("/workspace")
+    expect(frame).toContain("Unmanaged")
+    expect(frame).toContain("5 tasks")
+    expect(frame).not.toContain("/workspace")
+    const selected = populated
+      .captureSpans()
+      .lines.flatMap((line) => line.spans)
+      .find((span) => span.text.includes("Broken"))
+    expect(selected?.fg.equals(selectedText)).toBeTrue()
+    expect(selected?.fg.equals(selected?.bg)).toBeFalse()
   } finally {
     populated.renderer.destroy()
   }
 })
 
-test("separates schedule state from run state and opens the latest run Session", async () => {
+test("opens Flow details and focuses the latest run Session", async () => {
   const commands: KeymapCommand[] = []
   const destinations: unknown[] = []
   const focused: string[] = []
+  const cleared: boolean[] = []
   const app = await testRender(
     () => (
-      <FlowsPage
-        context={context(commands, destinations, focused)}
-        onClose={() => {}}
+      <FlowsDialog
+        context={context(commands, destinations, focused, cleared)}
         load={() =>
-          Promise.resolve(output([flow({ id: "flw_manual", name: "Manual", status: "paused", run: "running" })]))
+          Promise.resolve(
+            output([flow({ id: "flw_manual", name: "Manual", status: "paused", run: "running" })]),
+          )
         }
       />
     ),
-    { width: 120, height: 20 },
+    { width: 88, height: 24 },
   )
   try {
     app.renderer.start()
-    await app.waitForFrame((frame) => frame.includes("Latest run: Running"))
+    await app.waitForFrame((frame) => frame.includes("Manual") && frame.includes("1 task"))
+    command(commands, "return").run()
+    await app.waitForFrame((frame) => frame.includes("Periodic / Manual") && frame.includes("View session"))
     const frame = app.captureCharFrame()
-    expect(frame).toContain("Schedule paused")
-    expect(frame).toContain("session ses_flow_run")
-    expect(frame).toContain("Run directory: /workspace/run")
-    expect(frame).toContain("Permissions: shell git status *")
-    commands.find((command) => command.bind === "return")!.run()
+    expect(frame).toContain("Status")
+    expect(frame).toContain("Paused")
+    expect(frame).toContain("Prompt")
+    expect(frame).toContain("Run it")
+    expect(frame).toContain("Permissions")
+    expect(frame).toContain("shell taskctl *")
+    expect(frame).toContain("Run location")
+    expect(frame).toContain("/workspace/run")
+    command(commands, "v").run()
+    expect(cleared).toEqual([true])
+    expect(focused).toEqual(["ses_flow_run"])
+    expect(destinations).toEqual([])
+  } finally {
+    app.renderer.destroy()
+  }
+})
+
+test("falls back to Session navigation when tabs are unavailable", async () => {
+  const commands: KeymapCommand[] = []
+  const destinations: unknown[] = []
+  const app = await testRender(
+    () => (
+      <FlowsDialog
+        context={context(commands, destinations, [], [], false)}
+        load={() =>
+          Promise.resolve(
+            output([flow({ id: "flw_navigation", name: "Navigation", status: "active", run: "succeeded" })]),
+          )
+        }
+      />
+    ),
+    { width: 88, height: 24 },
+  )
+  try {
+    app.renderer.start()
+    await app.waitForFrame((frame) => frame.includes("Navigation"))
+    command(commands, "return").run()
+    await app.waitForFrame((frame) => frame.includes("View session"))
+    command(commands, "v").run()
     expect(destinations).toEqual([{ type: "session", sessionID: "ses_flow_run" }])
-    expect(focused).toEqual([])
+  } finally {
+    app.renderer.destroy()
+  }
+})
+
+test("runs, disables, enables, and deletes a managed Flow from its details", async () => {
+  const commands: KeymapCommand[] = []
+  const calls: string[] = []
+  const active = flow({ id: "flw_control", name: "Controlled", status: "active", managed: true })
+  const app = await testRender(
+    () => (
+      <FlowsDialog
+        context={context(commands)}
+        load={() => Promise.resolve(output([active]))}
+        control={(method) => {
+          calls.push(method)
+          if (method === "remove") return Promise.resolve(undefined)
+          return Promise.resolve({ ...active, status: method === "pause" ? "paused" : "active" })
+        }}
+        run={() => {
+          calls.push("run")
+          return Promise.resolve(run("flw_control"))
+        }}
+      />
+    ),
+    { width: 88, height: 24 },
+  )
+  try {
+    app.renderer.start()
+    await app.waitForFrame((frame) => frame.includes("Controlled"))
+    command(commands, "return").run()
+    await app.waitForFrame((frame) => frame.includes("Disable") && frame.includes("Run now"))
+    command(commands, "e").run()
+    await app.waitForFrame((frame) => frame.includes("Disabled Controlled"))
+    command(commands, "e").run()
+    await app.waitForFrame((frame) => frame.includes("Enabled Controlled"))
+    command(commands, "r").run()
+    await app.waitForFrame((frame) => frame.includes("Starting Controlled"))
+    command(commands, "d").run()
+    await app.waitForFrame((frame) => frame.includes("Delete Controlled?") && frame.includes("retained run records"))
+    command(commands, "y").run()
+    await app.waitForFrame((frame) => frame.includes("Deleted Controlled") && frame.includes("No periodic flows"))
+    expect(calls).toEqual(["pause", "resume", "run", "remove"])
+  } finally {
+    app.renderer.destroy()
+  }
+})
+
+test("keeps unmanaged schedules read-only in details", async () => {
+  const commands: KeymapCommand[] = []
+  const app = await testRender(
+    () => (
+      <FlowsDialog
+        context={context(commands)}
+        load={() => Promise.resolve(output([flow({ id: "sch_native", name: "Native", status: "active" })]))}
+      />
+    ),
+    { width: 88, height: 24 },
+  )
+  try {
+    app.renderer.start()
+    await app.waitForFrame((frame) => frame.includes("Native"))
+    command(commands, "return").run()
+    await app.waitForFrame((frame) => frame.includes("Unmanaged schedules are read-only"))
+    expect(enabled(command(commands, "r"))).toBeFalse()
+    expect(enabled(command(commands, "e"))).toBeFalse()
+    expect(enabled(command(commands, "d"))).toBeFalse()
   } finally {
     app.renderer.destroy()
   }
@@ -194,9 +383,8 @@ test("keeps the last successful result visible and marks it stale after refresh 
   let calls = 0
   const app = await testRender(
     () => (
-      <FlowsPage
+      <FlowsDialog
         context={context(commands)}
-        onClose={() => {}}
         load={() => {
           calls++
           if (calls === 1)
@@ -205,48 +393,14 @@ test("keeps the last successful result visible and marks it stale after refresh 
         }}
       />
     ),
-    { width: 100, height: 20 },
+    { width: 88, height: 20 },
   )
   try {
     app.renderer.start()
     await app.waitForFrame((frame) => frame.includes("Kept flow"))
-    commands.find((command) => command.bind === "r")!.run()
+    command(commands, "r").run()
     await app.waitForFrame((frame) => frame.includes("Stale") && frame.includes("server unavailable"))
     expect(app.captureCharFrame()).toContain("Kept flow")
-  } finally {
-    app.renderer.destroy()
-  }
-})
-
-test("pauses, resumes, and removes managed flows", async () => {
-  const commands: KeymapCommand[] = []
-  const calls: string[] = []
-  const active = flow({ id: "flw_control", name: "Controlled", status: "active", run: "running" })
-  const app = await testRender(
-    () => (
-      <FlowsPage
-        context={context(commands)}
-        onClose={() => {}}
-        load={() => Promise.resolve(output([active]))}
-        control={(method) => {
-          calls.push(method)
-          if (method === "remove") return Promise.resolve(undefined)
-          return Promise.resolve({ ...active, status: method === "pause" ? "paused" : "active" })
-        }}
-      />
-    ),
-    { width: 120, height: 20 },
-  )
-  try {
-    app.renderer.start()
-    await app.waitForFrame((frame) => frame.includes("Controlled"))
-    commands.find((command) => command.bind === "p")!.run()
-    await app.waitForFrame((frame) => frame.includes("Paused Controlled"))
-    commands.find((command) => command.bind === "p")!.run()
-    await app.waitForFrame((frame) => frame.includes("Resumed Controlled"))
-    commands.find((command) => command.bind === "d")!.run()
-    await app.waitForFrame((frame) => frame.includes("Removed Controlled"))
-    expect(calls).toEqual(["pause", "resume", "remove"])
   } finally {
     app.renderer.destroy()
   }
@@ -257,22 +411,21 @@ test("shows a retryable initial error and aborts an outstanding request on unmou
   let calls = 0
   const app = await testRender(
     () => (
-      <FlowsPage
+      <FlowsDialog
         context={context(commands)}
-        onClose={() => {}}
         load={() => {
           calls++
           return calls === 1 ? Promise.reject(new Error("offline")) : Promise.resolve(output())
         }}
       />
     ),
-    { width: 80, height: 16 },
+    { width: 88, height: 20 },
   )
   try {
     app.renderer.start()
     await app.waitForFrame((frame) => frame.includes("Couldn’t load flows") && frame.includes("Press r to retry"))
-    commands.find((command) => command.bind === "r")!.run()
-    await app.waitForFrame((frame) => frame.includes("No local flows"))
+    command(commands, "r").run()
+    await app.waitForFrame((frame) => frame.includes("No periodic flows"))
   } finally {
     app.renderer.destroy()
   }
@@ -283,9 +436,8 @@ test("shows a retryable initial error and aborts an outstanding request on unmou
   const cleanupCommands: KeymapCommand[] = []
   const cleanup = await testRender(
     () => (
-      <FlowsPage
+      <FlowsDialog
         context={context(cleanupCommands)}
-        onClose={() => {}}
         pollMilliseconds={5}
         load={(current) => {
           requests++
@@ -294,11 +446,11 @@ test("shows a retryable initial error and aborts an outstanding request on unmou
         }}
       />
     ),
-    { width: 80, height: 16 },
+    { width: 88, height: 20 },
   )
   cleanup.renderer.start()
   await cleanup.waitForFrame((frame) => frame.includes("Loading local flows"))
-  cleanupCommands.find((command) => command.bind === "r")!.run()
+  command(cleanupCommands, "r").run()
   await Bun.sleep(15)
   expect(requests).toBe(1)
   cleanup.renderer.destroy()
