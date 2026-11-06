@@ -61,12 +61,19 @@
 }
 
 .am-splash-hide[data-component="button"] {
+  flex-shrink: 0;
   margin-inline-start: auto;
-  color: var(--text-weak);
+  padding-inline: calc(var(--spacing) * 3);
+  border-style: solid;
+  border-width: 1px;
+  border-color: var(--vscode-button-secondaryBorder, var(--border-base));
+  background: var(--vscode-button-secondaryBackground, var(--surface-inset-base));
+  color: var(--vscode-button-secondaryForeground, var(--text-base));
+  font-weight: 600;
 }
 
 .am-splash-hide[data-component="button"]:hover {
-  color: var(--text-base);
+  background: var(--vscode-button-secondaryHoverBackground, var(--surface-base-hover));
 }
 
 .am-splash-title {
