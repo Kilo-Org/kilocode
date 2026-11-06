@@ -16,14 +16,16 @@ export function systemDirectory(platform: NodeJS.Platform = process.platform, en
 /**
  * Kilo config discovery as a value for the generic discovery layout (`ConfigDiscovery.Layout`). The Kilo host
  * replaces `ConfigDiscovery.node` with it (packages/kilo-cli/src/host.ts), so every server it starts reads
- * `kilo2.json`, `kilo2.jsonc` and `.kilo2` and stops the upward walk at the worktree root. The global write target
- * follows from `names`: the last existing name, else `kilo2.jsonc`, preserving Kilo v1's file order with v2 names.
+ * `kilo2.json`, `kilo2.jsonc` and `.kilo2` and stops the upward walk at the worktree root. The platform managed
+ * system directory stays at the stable product path and reads the stable product names (`managedFiles`), so an
+ * administrator's deployed policy keeps applying across internal releases. The global write target follows from
+ * `names`: the last existing name, else `kilo2.jsonc`, preserving Kilo v1's file order with v2 names.
  */
 export const layout: ConfigDiscovery.Layout = {
   names: KiloConfigFiles.names,
   directories: KiloConfigFiles.directories,
   directoryFiles: KiloConfigFiles.directoryFiles,
-  systemFiles: KiloConfigFiles.directoryFiles, // kilo_port(unattributed:config:73db79553730) managed .jsonc before .json
+  systemFiles: KiloConfigFiles.managedFiles, // kilo_port(unattributed:config:73db79553730) managed .jsonc before .json
   systemDirectory,
   normalize: KiloConfigPolicy.normalize,
   commandDocuments: KiloConfigPolicy.commandDocuments,

@@ -1,6 +1,6 @@
 export * as KiloHost from "./host"
 
-import { KiloPlugins, KiloPostPlugins, KiloSandbox, KiloSessionSync } from "@kilocode/kilo-plugin"
+import { KiloPlugins, KiloPostPlugins, KiloRemote, KiloSandbox, KiloSessionSync } from "@kilocode/kilo-plugin"
 import { networkHttpLayer } from "@kilocode/sandbox"
 import { Environment } from "@opencode/core/environment/index"
 import { LayerNodePlatform as UtilPlatform } from "@opencode/util/effect/app-node-platform"
@@ -30,6 +30,7 @@ import { KiloGatewayModel } from "./gateway-model"
 import { KiloSmallModel } from "./small-model"
 import { SessionSync } from "./session-sync"
 import { SessionSyncOutput } from "./session-sync/tool-output"
+import { Remote } from "./remote"
 
 /**
  * The duration in milliseconds of the last activation of each Kilo plugin, by plugin ID. The startup ratchet
@@ -51,15 +52,16 @@ const plugins = makeGlobalNode({
         FSUtil.Service,
         Global.Service,
         KiloSessionSync.Service,
+        KiloRemote.Service,
         SessionStore.Service,
       )(
         yield* Effect.context<
-          Bus.Service | FSUtil.Service | Global.Service | KiloSessionSync.Service | SessionStore.Service
+          Bus.Service | FSUtil.Service | Global.Service | KiloSessionSync.Service | KiloRemote.Service | SessionStore.Service
         >(),
       )
       const register = (
         plugin: Plugin<
-          Bus.Service | FSUtil.Service | Global.Service | KiloSessionSync.Service | SessionStore.Service | Scope.Scope
+          Bus.Service | FSUtil.Service | Global.Service | KiloSessionSync.Service | KiloRemote.Service | SessionStore.Service | Scope.Scope
         >,
         phase?: "post",
       ) =>
@@ -81,7 +83,7 @@ const plugins = makeGlobalNode({
       yield* Effect.forEach(KiloPostPlugins, (plugin) => register(plugin, "post"))
     }),
   ).pipe(Layer.provideMerge(SdkPlugins.layer)),
-  deps: [Bus.node, FSUtil.node, Global.node, SessionSync.node, SessionStore.node],
+  deps: [Bus.node, FSUtil.node, Global.node, SessionSync.node, Remote.node, SessionStore.node],
 })
 
 /**
