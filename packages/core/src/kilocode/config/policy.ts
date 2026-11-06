@@ -55,6 +55,10 @@ export class Info extends Config.Info.extend<Info>("KiloConfigPolicy.Info")({
     description:
       "Controls whether MCP and generic tool blocks are expanded or collapsed by default in the VS Code chat UI",
   }),
+  code_mode_display: Schema.Literals(["expanded", "collapsed"]).pipe(optional).annotate({
+    description:
+      "Controls whether Code Mode blocks list their tool calls (expanded) or show one line (collapsed) by default in the VS Code chat UI. The script stays hidden until opened",
+  }),
   // kilo_port(unattributed:core/v1:159079a2d8a3)
   remote_control: Schema.Boolean.pipe(optional).annotate({
     description: "Enable remote control of sessions via Kilo Cloud",
@@ -275,7 +279,7 @@ function displaySettings(input: unknown) {
   if (!record(input)) return {}
   const decodeLayout = Schema.decodeUnknownOption(Schema.Literals(["expanded", "collapsed"]))
   return Object.fromEntries(
-    ["terminal_command_display", "code_edit_display", "mcp_tool_display"].flatMap((key) => {
+    ["terminal_command_display", "code_edit_display", "mcp_tool_display", "code_mode_display"].flatMap((key) => {
       const value = Option.getOrUndefined(decodeLayout(input[key]))
       return value === undefined ? [] : [[key, value]]
     }),

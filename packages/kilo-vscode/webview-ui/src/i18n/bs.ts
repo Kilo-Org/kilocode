@@ -1330,6 +1330,11 @@ export const dict = {
     "Odaberite da li će blokovi MCP i generičkih alata u početku biti prošireni ili sažeti.",
   "settings.display.mcpTool.expanded": "Prošireni",
   "settings.display.mcpTool.collapsed": "Sažeti",
+  "settings.display.codeMode.title": "Blokovi Code Mode",
+  "settings.display.codeMode.description":
+    "Odaberite da li blokovi Code Mode počinju s navedenim pozivima alata ili kao jedan red. Skripta je uvijek skrivena dok je ne otvorite.",
+  "settings.display.codeMode.expanded": "Prošireni",
+  "settings.display.codeMode.collapsed": "Sažeti",
 
   "settings.display.shortcutHints.title": "Prikaži savjete za prečice",
   "settings.display.shortcutHints.description":

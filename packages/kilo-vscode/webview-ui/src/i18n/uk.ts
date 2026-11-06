@@ -1284,6 +1284,11 @@ export const dict = {
     "Виберіть, чи будуть блоки MCP та загальних інструментів спочатку розгорнутими чи згорнутими.",
   "settings.display.mcpTool.expanded": "Розгорнуті",
   "settings.display.mcpTool.collapsed": "Згорнуті",
+  "settings.display.codeMode.title": "Блоки Code Mode",
+  "settings.display.codeMode.description":
+    "Виберіть, чи блоки Code Mode починаються зі списку викликів інструментів, чи з одного рядка. Скрипт завжди залишається прихованим, доки ви його не відкриєте.",
+  "settings.display.codeMode.expanded": "Розгорнуті",
+  "settings.display.codeMode.collapsed": "Згорнуті",
 
   "settings.display.shortcutHints.title": "Показувати підказки клавіш",
   "settings.display.shortcutHints.description":

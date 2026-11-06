@@ -60,6 +60,7 @@ export type DisplaySettings = {
   terminalCommandDisplay: ToolDisplayLayout
   codeEditDisplay: ToolDisplayLayout
   mcpToolDisplay: ToolDisplayLayout
+  codeModeDisplay: ToolDisplayLayout
   reasoningDisplay: ReasoningDisplay
 }
 
@@ -67,6 +68,7 @@ export const DISPLAY_DEFAULTS: DisplaySettings = {
   terminalCommandDisplay: "expanded",
   codeEditDisplay: "collapsed",
   mcpToolDisplay: "collapsed",
+  codeModeDisplay: "collapsed",
   reasoningDisplay: "expanded",
 }
 

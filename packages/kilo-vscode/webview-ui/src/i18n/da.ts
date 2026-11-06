@@ -1324,6 +1324,11 @@ export const dict = {
   "settings.display.mcpTool.description": "Vælg, om MCP- og generiske værktøjsblokke starter foldet ud eller sammen.",
   "settings.display.mcpTool.expanded": "Foldet ud",
   "settings.display.mcpTool.collapsed": "Foldet sammen",
+  "settings.display.codeMode.title": "Code Mode-blokke",
+  "settings.display.codeMode.description":
+    "Vælg, om Code Mode-blokke starter med værktøjskaldene vist i en liste eller som én linje. Scriptet forbliver altid skjult, indtil du åbner det.",
+  "settings.display.codeMode.expanded": "Foldet ud",
+  "settings.display.codeMode.collapsed": "Foldet sammen",
 
   "settings.display.shortcutHints.title": "Vis genvejstips",
   "settings.display.shortcutHints.description":
