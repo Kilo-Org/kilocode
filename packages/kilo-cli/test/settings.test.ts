@@ -316,6 +316,59 @@ test.skipIf(process.platform === "win32")(
   30_000,
 )
 
+const failure = (promise: Promise<unknown>) =>
+  promise.then(
+    () => undefined,
+    (error: unknown) => error as { type: string; data: { message: string; path?: string } },
+  )
+
+test(
+  "an unrecognized key is refused as invalid and the file is left unchanged",
+  boot({ global: { shell: "sh" } }, async (client, { directory, global }) => {
+    const file = path.join(global, "kilo2.json")
+    const before = await Bun.file(file).text()
+    const error = await failure(settingsWrite(client, directory, { scope: "global", set: { bogus: 1, permission: {} } }))
+    expect(error?.type).toBe("invalid")
+    expect(error?.data).toEqual({ message: "Unrecognized keys: bogus, permission", path: file })
+    expect(await Bun.file(file).text()).toBe(before)
+  }),
+  30_000,
+)
+
+test(
+  "a value the reader would skip is refused as invalid and the file is left unchanged",
+  boot({ global: { shell: "sh" } }, async (client, { directory, global }) => {
+    const file = path.join(global, "kilo2.json")
+    const before = await Bun.file(file).text()
+    const upstream = await failure(settingsWrite(client, directory, { scope: "global", set: { shell: 5 } }))
+    expect(upstream?.type).toBe("invalid")
+    expect(upstream?.data.message).toContain("$.shell: skipped malformed recognized value")
+    const kilo = await failure(
+      settingsWrite(client, directory, { scope: "global", set: { privacy_mode: true, sandbox: { network: "maybe" } } }),
+    )
+    expect(kilo?.type).toBe("invalid")
+    expect(kilo?.data.message).toContain("$.sandbox: ignored invalid sandbox")
+    // The valid key in the same request is not written either.
+    expect(await Bun.file(file).text()).toBe(before)
+  }),
+  30_000,
+)
+
+test(
+  "an object set over a non-object value replaces it, and a removal of an absent path is a no-op",
+  boot({ global: { mcp: { servers: "none" }, shell: "sh" } }, async (client, { directory, global }) => {
+    const file = path.join(global, "kilo2.json")
+    const server = { type: "remote", url: "https://mcp.example.com" }
+    const result = await settingsWrite(client, directory, { scope: "global", set: { mcp: { servers: { docs: server } } } })
+    expect(result.changed).toBe(true)
+    expect(JSON.parse(await Bun.file(file).text())).toEqual({ mcp: { servers: { docs: server } }, shell: "sh" })
+    const noop = await settingsWrite(client, directory, { scope: "global", unset: [["sandbox", "network"], ["shell", "x"]] })
+    expect(noop.changed).toBe(false)
+    expect(JSON.parse(await Bun.file(file).text())).toEqual({ mcp: { servers: { docs: server } }, shell: "sh" })
+  }),
+  30_000,
+)
+
 test(
   "an empty unset path is rejected",
   boot({ global: { privacy_mode: true } }, async (_client, { directory, request }) => {

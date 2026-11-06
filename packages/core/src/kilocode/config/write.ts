@@ -2,7 +2,15 @@ export * as KiloConfigWriter from "./write.js"
 
 import { createHash, randomUUID } from "node:crypto"
 import path from "node:path"
-import { applyEdits, modify, parse, printParseErrorCode, type ParseError } from "jsonc-parser"
+import {
+  applyEdits,
+  findNodeAtLocation,
+  modify,
+  parse,
+  parseTree,
+  printParseErrorCode,
+  type ParseError,
+} from "jsonc-parser"
 import { Cause, Context, Effect, Exit, Layer, Option, Schema, Semaphore } from "effect"
 import type { PlatformError } from "effect/PlatformError"
 import { FSUtil } from "@opencode/util/fs-util"
@@ -19,9 +27,10 @@ export class WriteError extends Schema.TaggedError<WriteError>()("KiloConfigWrit
   cause: Schema.optional(Schema.Defect()),
 }) {
   override get message() {
+    const detail = this.cause instanceof Error ? this.cause.message : this.cause && String(this.cause)
+    if (this.reason === "invalid" && this.method === "edit") return `${this.file} was left unchanged: ${detail}`
     if (this.reason === "invalid") return `${this.file} is not valid JSON or JSONC; it was left unchanged`
     if (this.reason === "conflict") return `${this.file} changed since the caller read it`
-    const detail = this.cause instanceof Error ? this.cause.message : this.cause && String(this.cause)
     return `Kilo config write failed: ${this.method}${detail ? `: ${detail}` : ""}`
   }
 }
@@ -174,7 +183,22 @@ export const layer = (options?: Options) =>
             const matched = expected === null ? current === undefined : current !== undefined && expected === before
             if (!matched) return yield* new WriteError({ method: "write", reason: "conflict", file })
           }
-          const updated = applyEdits(text, modify(text, [...input.path], input.value, { formattingOptions: formatting }))
+          // jsonc-parser throws on a removal whose parent is absent and on a value set below a non-object node. A
+          // removal of an absent path has nothing to remove; any other edit that cannot apply leaves the file as is.
+          const tree = parseTree(text)
+          const absent = input.value === undefined && (!tree || !findNodeAtLocation(tree, [...input.path]))
+          const updated = absent
+            ? text
+            : yield* Effect.try({
+                try: () => applyEdits(text, modify(text, [...input.path], input.value, { formattingOptions: formatting })),
+                catch: (cause) =>
+                  new WriteError({
+                    method: "edit",
+                    reason: "invalid",
+                    file,
+                    cause: `cannot edit ${input.path.join(".")}: ${cause instanceof Error ? cause.message : String(cause)}`,
+                  }),
+              })
           const content = updated.endsWith("\n") ? updated : `${updated}\n`
           yield* writeAtomic(file, content).pipe(Effect.mapError(mapIO("write", file)))
           yield* options?.reload ?? Effect.void

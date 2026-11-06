@@ -1,5 +1,6 @@
 import { Config } from "@opencode/core/config"
 import { systemDirectory } from "@opencode/core/kilocode/config/discovery"
+import { KiloConfigValidate } from "@opencode/core/kilocode/config/validate"
 import { KiloConfigWriter } from "@opencode/core/kilocode/config/write"
 import { define } from "@opencode/plugin/effect/plugin"
 import { KiloSettingsRpc } from "@opencode/schema/kilocode/settings"
@@ -7,6 +8,7 @@ import { FSUtil } from "@opencode/util/fs-util"
 import { Global } from "@opencode/util/global"
 import { KiloConfigFiles } from "@opencode/util/kilocode/config/files"
 import { Context, Effect, Layer, Option, type Scope as EffectScope } from "effect"
+import { parse } from "jsonc-parser"
 import path from "node:path"
 
 // The `kilocode.settings` RPC: the write half of the v1 `PATCH /config/overlay`. It resolves the global or project
@@ -29,11 +31,33 @@ function hasPath(input: unknown, parts: readonly string[]) {
   return true
 }
 
-/** Expand a `set` object into leaf edits; a `null` value removes, as in the v1 overlay patch. */
-function expandSet(prefix: readonly string[], value: unknown, edits: Edit[]) {
+function readPath(input: unknown, parts: readonly string[]) {
+  let current: unknown = input
+  for (const part of parts) {
+    if (!isRecord(current)) return undefined
+    current = current[part]
+  }
+  return current
+}
+
+/** A `set` object with its `null` (remove) entries dropped, for a value that replaces a whole node. */
+function withoutNulls(value: unknown): unknown {
+  if (!isRecord(value)) return value
+  return Object.fromEntries(
+    Object.entries(value).flatMap(([key, child]) => (child === null ? [] : [[key, withoutNulls(child)]])),
+  )
+}
+
+/**
+ * Expand a `set` object into leaf edits against the current document; a `null` value removes. An object set over a
+ * node that is not an object (for example a string) replaces that node, since a leaf edit cannot descend into it.
+ */
+function expandSet(prefix: readonly string[], value: unknown, edits: Edit[], document: unknown) {
   if (value === null) return edits.push({ path: prefix, value: undefined })
   if (isRecord(value)) {
-    for (const [key, child] of Object.entries(value)) expandSet([...prefix, key], child, edits)
+    const current = readPath(document, prefix)
+    if (current !== undefined && !isRecord(current)) return edits.push({ path: prefix, value: withoutNulls(value) })
+    for (const [key, child] of Object.entries(value)) expandSet([...prefix, key], child, edits, document)
     return
   }
   edits.push({ path: prefix, value })
@@ -153,18 +177,34 @@ export const KiloSettingsPlugin = define<FSUtil.Service | Global.Service | Effec
                 }),
               )
 
+            const invalid = (message: string) =>
+              Effect.fail(context.error("invalid", message, { message, path: file }))
+            const unknown = KiloConfigValidate.unknownKeys(input.set ?? {})
+            if (unknown.length > 0)
+              return yield* invalid(`Unrecognized key${unknown.length === 1 ? "" : "s"}: ${unknown.join(", ")}`)
+
+            const text = before
+              ? yield* fs
+                  .readFileString(file)
+                  .pipe(Effect.mapError((error) => context.error("failed", error.message, { message: error.message })))
+              : "{}\n"
+            const document: unknown = parse(text, [], { allowTrailingComma: true })
             const edits: Edit[] = []
-            for (const [key, value] of Object.entries(input.set ?? {})) expandSet([key], value, edits)
+            for (const [key, value] of Object.entries(input.set ?? {})) expandSet([key], value, edits, document)
             for (const parts of input.unset ?? []) {
               if (parts.length === 0) continue
               edits.push({ path: parts, value: undefined })
             }
             const removals = edits.filter((edit) => edit.value === undefined).map((edit) => edit.path)
-            // A removal on a file that does not exist has nothing to remove; skip it so the RPC never creates an
-            // empty file for a no-op, as the v1 overlay did. A project removal may still reach another document.
-            const applicable = edits.filter((edit) => edit.value !== undefined || before !== undefined)
+            // A removal of a path the target does not define has nothing to remove; skip it so the RPC never creates
+            // an empty file for a no-op. A project removal may still reach another document.
+            const applicable = edits.filter((edit) => edit.value !== undefined || hasPath(document, edit.path))
             if (applicable.length === 0 && !(scope === "project" && removals.length > 0))
               return { scope, target: current, changed: false }
+            // Validate the edited target as the reader will load it, so a value the reader would skip is refused
+            // here instead of reported as written.
+            const issues = KiloConfigValidate.check(text, applicable)
+            if (issues.length > 0) return yield* invalid(`${file} was left unchanged: ${issues.join("; ")}`)
 
             const guard = (error: KiloConfigWriter.WriteError) =>
               Effect.gen(function* () {
@@ -188,12 +228,13 @@ export const KiloSettingsPlugin = define<FSUtil.Service | Global.Service | Effec
                 )
               })
 
-            // The first write carries the caller's guard; later edits carry the previous write's revision, so a
-            // concurrent external change still fails instead of clobbering.
-            let revision = expected?.revision
+            // The first write is guarded by the revision that was validated (the caller's, when given, matched it
+            // above); later edits carry the previous write's revision, so a concurrent external change fails instead
+            // of clobbering or skipping validation.
+            let revision: string | null = before?.hash ?? null
             for (const edit of applicable) {
               const result = yield* writer
-                .write({ target: { ...writeTarget(scope), file }, path: edit.path, value: edit.value, ...(revision ? { expectedRevision: revision } : {}) })
+                .write({ target: { ...writeTarget(scope), file }, path: edit.path, value: edit.value, expectedRevision: revision })
                 .pipe(Effect.catchTag("KiloConfigWriterError", guard))
               revision = result.revision
             }
